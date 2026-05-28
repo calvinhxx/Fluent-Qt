@@ -1,0 +1,8 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>res/Segoe Fluent Icons.ttf</file>
+        <file>res/SegoeUI-VF.ttf</file>
+    </qresource>
+</RCC>
+

@@ -1,0 +1,4 @@
+add_qt_test_module(test_scrollbar TestScrollBar.cpp)
+add_qt_test_module(test_scroll_view TestScrollView.cpp)
+add_qt_test_module(test_annotated_scrollbar TestAnnotatedScrollBar.cpp)
+add_qt_test_module(test_pips_pager TestPipsPager.cpp)

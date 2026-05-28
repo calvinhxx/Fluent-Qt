@@ -1,0 +1,14 @@
+# Vs workspace files
+*.vs
+
+# binary files
+build/
+
+# custom user files
+*.user
+CMakeUserPresets.json
+.vscode/settings.json
+.qtcreator/
+
+# mac
+.DS_Store
