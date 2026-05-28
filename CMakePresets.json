@@ -1,0 +1,105 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "vcpkg-base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTING": "ON"
+      }
+    },
+    {
+      "name": "vcpkg-osx",
+      "displayName": "vcpkg macOS arm64 Debug",
+      "description": "Apple Silicon build using vcpkg manifest dependencies. Qt is discovered from the local Qt installation.",
+      "inherits": "vcpkg-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "arm64-osx"
+      }
+    },
+    {
+      "name": "vcpkg-osx-x64",
+      "displayName": "vcpkg macOS x64 Debug",
+      "description": "Intel/Rosetta macOS build using vcpkg manifest dependencies. Qt is discovered from the local Qt installation.",
+      "inherits": "vcpkg-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-osx"
+      }
+    },
+    {
+      "name": "vcpkg-windows",
+      "displayName": "vcpkg Windows x64 Debug",
+      "description": "Windows x64 build using vcpkg manifest dependencies. Qt Creator, Visual Studio, or the shell selects the generator and compiler.",
+      "inherits": "vcpkg-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "vcpkg-osx",
+      "configurePreset": "vcpkg-osx",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vcpkg-osx-x64",
+      "configurePreset": "vcpkg-osx-x64",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vcpkg-windows",
+      "configurePreset": "vcpkg-windows",
+      "configuration": "Debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "vcpkg-osx",
+      "configurePreset": "vcpkg-osx",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vcpkg-osx-x64",
+      "configurePreset": "vcpkg-osx-x64",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vcpkg-windows",
+      "configurePreset": "vcpkg-windows",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
