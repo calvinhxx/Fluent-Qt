@@ -1,6 +1,6 @@
 # Overlay Behavior Contract
 
-本项目的 transient overlay（`Popup`、`Flyout`、`ComboBox` dropdown、`DrawerView`）默认使用 same-window overlay 模型：打开时挂载到 owning top-level `QWidget`，保持 `Qt::Widget` 子控件语义，不创建独立 `Qt::Window` 或 `Qt::Dialog`。相关 helper 的 canonical 位置是 `src/view/foundation/overlay/`，属于 view foundation 通用能力，不是一个独立组件分类。
+本项目的 transient overlay（`Popup`、`Flyout`、`ComboBox` dropdown、`DrawerView`）默认使用 same-window overlay 模型：打开时挂载到 owning top-level `QWidget`，保持 `Qt::Widget` 子控件语义，不创建独立 `Qt::Window` 或 `Qt::Dialog`。相关 helper 的 canonical 位置是 `src/components/foundation/overlay/`，命名空间是 `fluent::overlay`，属于 component foundation 通用能力，不是一个独立组件分类。
 
 ## Geometry
 

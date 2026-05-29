@@ -7,7 +7,7 @@ with OpenSpec, README, CMake, and agent instructions.
 
 ## CTest Labels
 
-- Register Qt view tests with `add_qt_test_module(test_<name> Test<Name>.cpp
+- Register Qt component tests with `add_qt_test_module(test_<name> Test<Name>.cpp
   [extra sources...])`.
 - The helper applies these labels to discovered tests: `qt`, `unit`,
   source-directory labels, target name, and component name.
@@ -39,14 +39,14 @@ ctest --preset vcpkg-osx -N -L '^platform_macos$'
 - For manual UI review, run the test binary directly:
 
 ```bash
-./build/vcpkg-osx/tests/views/<category>/<test_target> --gtest_filter="*VisualCheck*"
+./build/vcpkg-osx/tests/components/<category>/<test_target> --gtest_filter="*VisualCheck*"
 ```
 
 - For deterministic snapshot generation, run a migrated VisualCheck binary with
   `VISUAL_SNAPSHOT=1`:
 
 ```bash
-VISUAL_SNAPSHOT=1 ./build/vcpkg-osx/tests/views/textfields/test_label --gtest_filter="LabelTest.VisualCheck"
+VISUAL_SNAPSHOT=1 ./build/vcpkg-osx/tests/components/textfields/test_label --gtest_filter="LabelTest.VisualCheck"
 ```
 
 - Snapshot files are written to `build/vcpkg-osx/visual/` using stable names such
@@ -66,7 +66,7 @@ VISUAL_SNAPSHOT=1 ./build/vcpkg-osx/tests/views/textfields/test_label --gtest_fi
 
 ## Component Directories
 
-- `src/view/` should only contain directories with implemented components.
+- `src/components/` should only contain directories with implemented components.
 - Do not keep empty placeholder directories.
 - Create a new component directory only when the first component in that
   category lands.

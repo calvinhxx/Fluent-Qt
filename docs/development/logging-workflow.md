@@ -58,7 +58,7 @@ SPDLOG_LEVEL=debug SKIP_VISUAL_TEST=1 ./build/vcpkg-osx/tests/test_project_loggi
 ```bash
 SPDLOG_LEVEL=debug \
 SPDLOG_FILE=build/logs/spdlog.log \
-SKIP_VISUAL_TEST=1 ./build/vcpkg-osx/tests/views/navigation/test_navigation_view
+SKIP_VISUAL_TEST=1 ./build/vcpkg-osx/tests/components/navigation/test_navigation_view
 ```
 
 ## Qt Log Bridge

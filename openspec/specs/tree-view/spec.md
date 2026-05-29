@@ -106,7 +106,7 @@ The system SHALL include automated tests and VisualCheck coverage for TreeView s
 #### Scenario: VisualCheck sample
 - **WHEN** manual TreeView VisualCheck is run without `SKIP_VISUAL_TEST=1`
 - **THEN** it MUST display a nested Fluent TreeView sample with actions or controls that demonstrate upward, downward, inward, and outward selected indicator transitions
-- **AND** the VisualCheck layout MUST use repository VisualCheck conventions, including `AnchorLayout` for the primary arrangement and project Fluent components where equivalents exist
+- **AND** the VisualCheck layout MUST use repository VisualCheck conventions, including `fluent::AnchorLayout` for the primary arrangement and project Fluent components where equivalents exist
 
 #### Scenario: VisualCheck automation guard
 - **WHEN** `SKIP_VISUAL_TEST=1` is set

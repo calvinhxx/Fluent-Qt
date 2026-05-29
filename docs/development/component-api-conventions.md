@@ -1,18 +1,22 @@
 # Component API Conventions
 
 Use these conventions when adding, reviewing, or auditing public Fluent component
-APIs under `src/view/**`.
+APIs under `src/components/**`.
 
 ## Scope
 
-- Treat public widgets under `src/view/**` as component API.
-- Treat `FluentElement`, `QMLPlus`, private headers, design tokens, and
+- Treat public widgets under `src/components/**` as component API.
+- Treat `fluent::FluentElement`, `fluent::QMLPlus`, private headers, design tokens, and
   compatibility helpers as supporting infrastructure unless the task explicitly
   targets them.
-- View foundation infrastructure lives under `src/view/foundation/`. Prefer
-  canonical includes such as `view/foundation/FluentElement.h`,
-  `view/foundation/QMLPlus.h`, and `view/foundation/overlay/...` in project
+- Component foundation infrastructure lives under `src/components/foundation/`. Prefer
+  canonical includes such as `components/foundation/FluentElement.h`,
+  `components/foundation/QMLPlus.h`, and `components/foundation/overlay/...` in project
   code.
+- Public reusable component APIs use the canonical `fluent` namespace. The
+  previous `view::...` component namespace was removed as a deliberate breaking
+  migration; do not add `view` namespace aliases, compatibility typedefs, or
+  forwarding declarations for new code.
 - When performing an audit, update [Component API Audit](component-api-audit.md)
   with inventory, findings, intentional deviations, applied fixes, deferred
   follow-ups, and validation notes.
@@ -20,9 +24,9 @@ APIs under `src/view/**`.
 ## Inheritance and Ownership
 
 - Public widgets should expose Qt child containment, Fluent theme access, and
-  `QMLPlus` support directly or through an established project base such as
-  `view::basicinput::Button`.
-- Button-like entry surfaces should derive from `view::basicinput::Button` when
+  `fluent::QMLPlus` support directly or through an established project base such as
+  `fluent::basicinput::Button`.
+- Button-like entry surfaces should derive from `fluent::basicinput::Button` when
   they do not require a more specialized Qt base class.
 - Views and host components should keep caller-owned content caller-owned. Do
   not move application page choice, item composition, model ownership, or
@@ -94,7 +98,7 @@ APIs under `src/view/**`.
 
 ## Tests and VisualCheck
 
-- Each component should have a focused `tests/views/<category>/Test<Name>.cpp`
+- Each component should have a focused `tests/components/<category>/Test<Name>.cpp`
   file when it exposes public behavior.
 - Inheritance assertions are expected when the public contract depends on a Qt
   base or project base class.
