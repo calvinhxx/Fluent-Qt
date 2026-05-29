@@ -43,6 +43,12 @@ Qt Kit、编译器、generator 或 SDK。
 IDE Kit、shell 环境，或已被 git 忽略的 `CMakeUserPresets.json` 提供。如果 Qt 不在 CMake
 默认搜索路径中，把 `CMAKE_PREFIX_PATH` 或 `Qt6_DIR` 放进本机 user preset。
 
+## 项目结构
+
+- [src/components/](src/components/)：可复用 Fluent Qt 组件与 component foundation。
+- [tests/components/](tests/components/)：与组件分类对应的 GTest / VisualCheck 测试。
+- [app/](app/)：Gallery 应用层代码，按 model / view / viewmodel 组织。
+
 ## 开发文档
 
 可复用开发规则集中在 [docs/development/README.md](docs/development/README.md):

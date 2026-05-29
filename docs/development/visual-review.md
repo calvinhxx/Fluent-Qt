@@ -16,19 +16,19 @@ review after visual, theme, painting, or layout changes.
 Default build output uses the `vcpkg-osx` preset:
 
 ```bash
-./build/vcpkg-osx/tests/views/<category>/test_<snake_case_name>
+./build/vcpkg-osx/tests/components/<category>/test_<snake_case_name>
 ```
 
 Examples:
 
 ```bash
-./build/vcpkg-osx/tests/views/basicinput/test_button
-./build/vcpkg-osx/tests/views/basicinput/test_combo_box
-./build/vcpkg-osx/tests/views/collections/test_list_view
-./build/vcpkg-osx/tests/views/collections/test_tree_view
-./build/vcpkg-osx/tests/views/dialogs_flyouts/test_popup
-./build/vcpkg-osx/tests/views/navigation/test_navigation_view
-./build/vcpkg-osx/tests/views/date_time/test_calendar_date_picker
+./build/vcpkg-osx/tests/components/basicinput/test_button
+./build/vcpkg-osx/tests/components/basicinput/test_combo_box
+./build/vcpkg-osx/tests/components/collections/test_list_view
+./build/vcpkg-osx/tests/components/collections/test_tree_view
+./build/vcpkg-osx/tests/components/dialogs_flyouts/test_popup
+./build/vcpkg-osx/tests/components/navigation/test_navigation_view
+./build/vcpkg-osx/tests/components/date_time/test_calendar_date_picker
 ```
 
 If another preset is used, replace `vcpkg-osx` in the path with that preset name.
@@ -52,7 +52,7 @@ cmake --build --preset vcpkg-osx
 Run only VisualCheck tests. The window closes when the reviewer closes it.
 
 ```bash
-./build/vcpkg-osx/tests/views/<category>/test_<name> --gtest_filter="*VisualCheck*"
+./build/vcpkg-osx/tests/components/<category>/test_<name> --gtest_filter="*VisualCheck*"
 ```
 
 Do not set `SKIP_VISUAL_TEST` for manual review. Automated CTest runs set

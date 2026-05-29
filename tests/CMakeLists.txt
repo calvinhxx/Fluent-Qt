@@ -97,4 +97,4 @@ endmacro()
 # 按源码目录结构添加子目录，Qt Creator 工程树会呈现层级
 add_qt_test_module(test_project_logging TestProjectLogging.cpp)
 add_qt_test_module(test_qt_test_environment TestQtTestEnvironment.cpp)
-add_subdirectory(views)
+add_subdirectory(components)

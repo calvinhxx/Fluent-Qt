@@ -88,8 +88,8 @@ Prefer comments like this:
 |------|-----------------|----------|
 | `src/design/` | Medium-high | Explain token families, measurement units, source assumptions, and semantic usage. |
 | `src/compatibility/` | High | Explain Qt version and platform differences that affect call sites. |
-| `src/view/foundation/` | High | Document mixin contracts, ownership, lifecycle callbacks, and shared infrastructure. |
-| `src/view/**` | Medium | Document public component APIs and subtle layout/rendering behavior; avoid repeating Qt basics. |
+| `src/components/foundation/` | High | Document mixin contracts, ownership, lifecycle callbacks, and shared infrastructure. |
+| `src/components/**` | Medium | Document public component APIs and subtle layout/rendering behavior; avoid repeating Qt basics. |
 | `src/utils/` | Medium-high | Document operational behavior such as log paths, environment variables, debug-only helpers, and lifetime assumptions. |
 
 ## Module Summary Comments

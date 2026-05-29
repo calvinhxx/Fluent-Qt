@@ -20,7 +20,7 @@
 
 ### Requirement: TeachingTip SHALL expose a bare content host for caller-assembled content
 
-TeachingTip 不内置任何固定内容 schema（无 title/subtitle/icon/hero/buttons 属性）。组件 MUST 通过 `contentHost()` 暴露一个 `QWidget*` 容器，其几何精确等于 card 可用区域（`cardSize`），调用方通过 AnchorLayout 在其上自由组装内容。
+TeachingTip 不内置任何固定内容 schema（无 title/subtitle/icon/hero/buttons 属性）。组件 MUST 通过 `contentHost()` 暴露一个 `QWidget*` 容器，其几何精确等于 card 可用区域（`cardSize`），调用方通过 fluent::AnchorLayout 在其上自由组装内容。
 
 #### Scenario: contentHost 尺寸等于 cardSize
 - **WHEN** `setCardSize(QSize(300, 160))` 后调用 `showAt(target)`

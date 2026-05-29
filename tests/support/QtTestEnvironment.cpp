@@ -1,6 +1,6 @@
 #include "QtTestEnvironment.h"
 
-#include "view/foundation/FluentElement.h"
+#include "components/foundation/FluentElement.h"
 
 #include <QApplication>
 #include <QDir>
@@ -119,10 +119,10 @@ QString visualSnapshotFilePath(const QString& variant)
     if (snapshotSize.isEmpty())
         return ::testing::AssertionFailure() << "Visual snapshot window size is empty";
 
-    const auto previousTheme = FluentElement::currentTheme();
-    FluentElement::setTheme(options.theme == VisualSnapshotTheme::Dark
-                                ? FluentElement::Dark
-                                : FluentElement::Light);
+    const auto previousTheme = fluent::FluentElement::currentTheme();
+    fluent::FluentElement::setTheme(options.theme == VisualSnapshotTheme::Dark
+                                        ? fluent::FluentElement::Dark
+                                        : fluent::FluentElement::Light);
 
     window->setFixedSize(snapshotSize);
     window->ensurePolished();
@@ -134,7 +134,7 @@ QString visualSnapshotFilePath(const QString& variant)
     }
 
     const QPixmap snapshot = window->grab();
-    FluentElement::setTheme(previousTheme);
+    fluent::FluentElement::setTheme(previousTheme);
 
     if (snapshot.isNull())
         return ::testing::AssertionFailure() << "Visual snapshot grab returned a null pixmap";

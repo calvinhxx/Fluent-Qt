@@ -2,20 +2,20 @@
 
 ## Purpose
 
-规范窗口 chrome 相关平台差异的兼容层：将 Windows custom chrome、macOS 原生窗口控制、fallback 平台、Qt5/Qt6 native event 差异集中封装在 `src/compatibility/`，避免泄漏到 `src/view/windowing/` UI 层。
+规范窗口 chrome 相关平台差异的兼容层：将 Windows custom chrome、macOS 原生窗口控制、fallback 平台、Qt5/Qt6 native event 差异集中封装在 `src/compatibility/`，避免泄漏到 `src/components/windowing/` UI 层。
 
 ## Requirements
 
 ### Requirement: 窗口平台差异 SHALL 集中在 compatibility 层
 
-系统 MUST 在 `src/compatibility/` 提供窗口 chrome 兼容层，封装 Win/mac/native Qt 的平台差异。`src/view/windowing/` 下的 UI 源码 MUST NOT 直接 include Windows SDK、AppKit/Objective-C 头，也 MUST NOT 散落 `Q_OS_WIN`、`Q_OS_MAC` 或 `QT_VERSION_CHECK` 条件分支；必要分支 MUST 位于 compatibility 层。
+系统 MUST 在 `src/compatibility/` 提供窗口 chrome 兼容层，封装 Win/mac/native Qt 的平台差异。`src/components/windowing/` 下的 UI 源码 MUST NOT 直接 include Windows SDK、AppKit/Objective-C 头，也 MUST NOT 散落 `Q_OS_WIN`、`Q_OS_MAC` 或 `QT_VERSION_CHECK` 条件分支；必要分支 MUST 位于 compatibility 层。
 
 #### Scenario: windowing UI 层没有平台宏
-- **WHEN** 搜索 `src/view/windowing/` 下源码中的 `Q_OS_WIN`、`Q_OS_MAC`、`_WIN32`、`__APPLE__`、`QT_VERSION_CHECK`
+- **WHEN** 搜索 `src/components/windowing/` 下源码中的 `Q_OS_WIN`、`Q_OS_MAC`、`_WIN32`、`__APPLE__`、`QT_VERSION_CHECK`
 - **THEN** MUST 没有命中，平台与 Qt 版本差异 MUST 由 `src/compatibility/` 封装
 
 #### Scenario: 原生平台头不泄漏到 windowing
-- **WHEN** 搜索 `src/view/windowing/` 下源码中的 `windows.h`、`dwmapi.h`、`Cocoa`、`AppKit`
+- **WHEN** 搜索 `src/components/windowing/` 下源码中的 `windows.h`、`dwmapi.h`、`Cocoa`、`AppKit`
 - **THEN** MUST 没有命中
 
 ### Requirement: WindowChromeCompat SHALL 提供统一 chrome 操作

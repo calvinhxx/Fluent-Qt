@@ -28,25 +28,25 @@ ctest --preset vcpkg-osx --output-on-failure
 - [src/design/](src/design/) contains Fluent design tokens for color, spacing, typography, radius, material, elevation, animation, and breakpoints.
 - [src/compatibility/](src/compatibility/) contains Qt and platform compatibility helpers. Use `compatibility/QtCompat.h` and `FluentEnterEvent` instead of direct `QEnterEvent` in new `enterEvent` overrides.
 - [src/utils/](src/utils/) contains shared logging and debug overlay helpers. Prefer `LOG_TRACE`, `LOG_DEBUG`, `LOG_INFO`, `LOG_WARN`, and `LOG_ERROR` from [src/utils/Log.h](src/utils/Log.h) over direct `spdlog` calls in components.
-- [src/view/foundation/](src/view/foundation/) contains shared component infrastructure such as `FluentElement`, `QMLPlus`, AnchorLayout, and overlay contracts.
-- [src/view/](src/view/) is grouped by component category; view tests mirror those categories under [tests/views/](tests/views/).
+- [src/components/foundation/](src/components/foundation/) contains shared component infrastructure such as `fluent::FluentElement`, `fluent::QMLPlus`, `fluent::AnchorLayout`, and `fluent::overlay` contracts.
+- [src/components/](src/components/) is grouped by component category; component tests mirror those categories under [tests/components/](tests/components/).
 
 ## Component Conventions
 
 - Follow [docs/development/component-api-conventions.md](docs/development/component-api-conventions.md) and [docs/development/component-api-audit.md](docs/development/component-api-audit.md) when adding or changing public component APIs.
 - Public non-trivial APIs under `src/` use concise Doxygen comments with English `@brief` plus a `zh_CN:` line. Do not mechanically rewrite untouched comments; see [docs/development/comment-style.md](docs/development/comment-style.md).
 - For visible UI in tests and demos, prefer existing project Fluent components over raw Qt widgets when an equivalent exists.
-- Spell shared mixin inheritance as `public FluentElement, public QMLPlus` in component classes.
+- Within `namespace fluent::<category>`, spell shared mixin inheritance as `public FluentElement, public QMLPlus`; outside component namespaces, qualify them as `fluent::FluentElement` and `fluent::QMLPlus`.
 - New visible components should compose existing Fluent components before adding raw Qt widgets or duplicating paint/style code.
-- Do not keep empty placeholder directories under `src/view/`. When adding or removing a component directory, update the relevant OpenSpec specs, README overview, tests CMake, and this agent instruction file.
+- Do not keep empty placeholder directories under `src/components/`. When adding or removing a component directory, update the relevant OpenSpec specs, README overview, tests CMake, and this agent instruction file.
 
 ## Testing Conventions
 
-- Register view tests with `add_qt_test_module(test_<name> Test<Name>.cpp [extra sources...])`.
+- Register component tests with `add_qt_test_module(test_<name> Test<Name>.cpp [extra sources...])`.
 - Individual test files must not duplicate shared Qt setup such as `QApplication`, `Q_INIT_RESOURCE(resources)`, app style, or Segoe font loading; that belongs to [tests/support/QtGTestMain.cpp](tests/support/QtGTestMain.cpp).
 - Keep `SetUpTestSuite()` for component-specific metatype registration, global test data, or initialization that cannot be shared.
 - VisualCheck tests must guard on `SKIP_VISUAL_TEST`, show the window, and block with `qApp->exec()` until the window closes. Do not replace that contract with `QTest::qWait()`.
-- Use `view::AnchorLayout` for primary VisualCheck layouts and control panels; detailed rules are in [docs/development/qt-component-test-conventions.md](docs/development/qt-component-test-conventions.md) and [docs/development/visual-review.md](docs/development/visual-review.md).
+- Use `fluent::AnchorLayout` for primary VisualCheck layouts and control panels; detailed rules are in [docs/development/qt-component-test-conventions.md](docs/development/qt-component-test-conventions.md) and [docs/development/visual-review.md](docs/development/visual-review.md).
 
 ## Diagnostics and Review
 
