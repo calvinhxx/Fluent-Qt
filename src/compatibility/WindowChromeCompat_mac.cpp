@@ -4,6 +4,8 @@
 
 #include <QGuiApplication>
 
+#include <cmath>
+
 #include <CoreGraphics/CoreGraphics.h>
 #include <objc/message.h>
 #include <objc/objc.h>
@@ -306,6 +308,32 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
         return;
 
     syncUnifiedTitleBarGeometry(window, options);
+}
+
+int nativeTitleBarLeadingInset(QWidget* window) {
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        return 0;
+
+    id nsWindow = nativeWindowFor(window);
+    if (!nsWindow || !respondsTo(nsWindow, selector("standardWindowButton:")))
+        return 0;
+
+    // Read the zoom button (rightmost traffic light) frame to determine
+    // how much leading space the native controls occupy.
+    // zh_CN: 读取缩放按钮（最右侧交通灯）的 frame，以确定原生控件占用的前置宽度。
+    id zoomButton = sendUnsignedLongReturnsId(nsWindow, "standardWindowButton:", NSWindowZoomButton);
+    if (!zoomButton || !respondsTo(zoomButton, selector("frame")))
+        return 0;
+
+    const CGRect frame = sendRect(zoomButton, "frame");
+    if (frame.size.width <= 0)
+        return 0;
+
+    // frame is in Cocoa points which map 1:1 to Qt logical pixel coordinates.
+    // Add an 8-point gap after the rightmost button.
+    // zh_CN: Cocoa points 与 Qt 逻辑像素 1:1 对应，末尾留 8pt 间距。
+    constexpr int kTrailingGap = 8;
+    return static_cast<int>(std::ceil(frame.origin.x + frame.size.width)) + kTrailingGap;
 }
 
 } // namespace detail

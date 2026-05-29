@@ -48,6 +48,11 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
     Q_UNUSED(options);
 }
 
+int nativeTitleBarLeadingInset(QWidget* window) {
+    Q_UNUSED(window);
+    return 0;
+}
+
 } // namespace detail
 } // namespace compatibility
 

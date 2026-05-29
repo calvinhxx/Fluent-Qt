@@ -15,6 +15,7 @@ bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos);
 bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos);
 bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptions& options);
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options);
+int nativeTitleBarLeadingInset(QWidget* window);
 }
 
 namespace {
@@ -103,7 +104,7 @@ bool WindowChromeCompat::prefersNativeMacControls() const {
 }
 
 int WindowChromeCompat::nativeTitleBarLeadingInset() const {
-    return prefersNativeMacControls() ? 140 : 0;
+    return prefersNativeMacControls() ? detail::nativeTitleBarLeadingInset(m_window) : 0;
 }
 
 int WindowChromeCompat::nativeTitleBarTrailingInset() const {

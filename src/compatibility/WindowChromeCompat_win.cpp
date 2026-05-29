@@ -329,6 +329,11 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
                  SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
 }
 
+int nativeTitleBarLeadingInset(QWidget* window) {
+    Q_UNUSED(window);
+    return 0;
+}
+
 } // namespace detail
 } // namespace compatibility
 
