@@ -74,6 +74,7 @@ private slots:
     void handleTitleBarDragMoved(const QPoint& globalPos);
     void handleTitleBarDragFinished();
     void handleTitleBarDoubleClicked(const QPoint& globalPos);
+    void handleTitleBarContextMenuRequested(const QPoint& globalPos);
 
 private:
     void setupCaptionButtons();

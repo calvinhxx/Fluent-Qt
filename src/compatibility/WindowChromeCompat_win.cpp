@@ -193,6 +193,10 @@ bool handleCustomChromeMinMaxInfo(MSG* msg, FluentNativeEventResult* result) {
 
 namespace detail {
 
+// Forward declaration — full definition follows handlePlatformNativeEvent.
+// zh_CN: 前向声明，完整定义在 handlePlatformNativeEvent 之后。
+bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos);
+
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options) {
     if (!window)
         return;
@@ -228,6 +232,23 @@ bool handlePlatformNativeEvent(QWidget* window,
 
     if (msg->message == WM_NCDESTROY) {
         clearChromeTopMargin(msg->hwnd);
+    }
+
+    // Handle right-click on the caption area: show the system menu on button-up
+    // (matching DefWindowProc behavior which shows system menu on WM_NCRBUTTONUP).
+    // This must be done explicitly because DwmDefWindowProc may consume the message
+    // before DefWindowProc gets a chance to show the menu.
+    // zh_CN: 在 caption 区域处理右键松开：显示系统菜单（与 DefWindowProc 在 WM_NCRBUTTONUP
+    // zh_CN: 上的行为一致）。由于 DwmDefWindowProc 可能先消费该消息，需在此显式处理。
+    if (msg->message == WM_NCRBUTTONUP) {
+        const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
+        const QPoint localPos = window->mapFromGlobal(globalPos);
+        const auto hit = WindowChromeCompat::classifyHitTest(options, window->size(), localPos);
+        if (hit == WindowChromeCompat::HitTest::Caption) {
+            showPlatformSystemMenu(window, globalPos);
+            *result = 0;
+            return true;
+        }
     }
 
     if (handleCustomChromeMinMaxInfo(msg, result))
@@ -302,6 +323,39 @@ bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptio
         return false;
 
     SendMessageW(hwnd, WM_NCLBUTTONDBLCLK, HTCAPTION, 0);
+    return true;
+}
+
+bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos) {
+    HWND hwnd = hwndForWindow(window);
+    if (!hwnd)
+        return false;
+
+    HMENU systemMenu = GetSystemMenu(hwnd, FALSE);
+    if (!systemMenu)
+        return false;
+
+    // Update menu item states to reflect current window state.
+    // zh_CN: 根据当前窗口状态更新菜单项的启用/禁用状态。
+    const bool isMaximized = IsZoomed(hwnd) != FALSE;
+    const bool isMinimized = IsIconic(hwnd) != FALSE;
+    const bool canResize = (GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME) != 0;
+
+    EnableMenuItem(systemMenu, SC_RESTORE,  MF_BYCOMMAND | ((isMaximized || isMinimized) ? MF_ENABLED : MF_GRAYED));
+    EnableMenuItem(systemMenu, SC_MOVE,     MF_BYCOMMAND | (isMaximized ? MF_GRAYED : MF_ENABLED));
+    EnableMenuItem(systemMenu, SC_SIZE,     MF_BYCOMMAND | (!isMaximized && canResize ? MF_ENABLED : MF_GRAYED));
+    EnableMenuItem(systemMenu, SC_MINIMIZE, MF_BYCOMMAND | MF_ENABLED);
+    EnableMenuItem(systemMenu, SC_MAXIMIZE, MF_BYCOMMAND | (isMaximized ? MF_GRAYED : MF_ENABLED));
+    EnableMenuItem(systemMenu, SC_CLOSE,    MF_BYCOMMAND | MF_ENABLED);
+
+    SetForegroundWindow(hwnd);
+    const UINT cmd = TrackPopupMenu(systemMenu,
+                                    TPM_LEFTALIGN | TPM_TOPALIGN | TPM_RETURNCMD,
+                                    globalPos.x(), globalPos.y(),
+                                    0, hwnd, nullptr);
+    if (cmd != 0)
+        PostMessageW(hwnd, WM_SYSCOMMAND, static_cast<WPARAM>(cmd), 0);
+
     return true;
 }
 

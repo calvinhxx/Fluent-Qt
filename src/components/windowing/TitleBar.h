@@ -74,6 +74,7 @@ signals:
     void dragMoved(const QPoint& globalPos);
     void dragFinished();
     void doubleClicked(const QPoint& globalPos);
+    void contextMenuRequested(const QPoint& globalPos);
     void chromeGeometryChanged();
 
 protected:

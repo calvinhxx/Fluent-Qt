@@ -51,6 +51,7 @@ Window::Window(QWidget* parent)
     connect(m_titleBar, &TitleBar::dragMoved, this, &Window::handleTitleBarDragMoved);
     connect(m_titleBar, &TitleBar::dragFinished, this, &Window::handleTitleBarDragFinished);
     connect(m_titleBar, &TitleBar::doubleClicked, this, &Window::handleTitleBarDoubleClicked);
+    connect(m_titleBar, &TitleBar::contextMenuRequested, this, &Window::handleTitleBarContextMenuRequested);
     connect(m_titleBar, &TitleBar::titleBarHeightChanged, this, &Window::syncCaptionButtons);
 
     onThemeUpdated();
@@ -304,6 +305,10 @@ void Window::handleTitleBarDoubleClicked(const QPoint& globalPos) {
     }
 
     toggleMaximizeRestore();
+}
+
+void Window::handleTitleBarContextMenuRequested(const QPoint& globalPos) {
+    m_chrome.showSystemMenu(globalPos);
 }
 
 } // namespace fluent::windowing

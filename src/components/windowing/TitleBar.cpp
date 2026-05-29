@@ -148,6 +148,20 @@ void TitleBar::mousePressEvent(QMouseEvent* event) {
         event->accept();
         return;
     }
+
+    if (event->button() == Qt::RightButton) {
+        for (const QRect& exclusion : dragExclusionRects()) {
+            if (exclusion.contains(event->pos())) {
+                QWidget::mousePressEvent(event);
+                return;
+            }
+        }
+
+        emit contextMenuRequested(fluentMouseGlobalPos(event));
+        event->accept();
+        return;
+    }
+
     QWidget::mousePressEvent(event);
 }
 

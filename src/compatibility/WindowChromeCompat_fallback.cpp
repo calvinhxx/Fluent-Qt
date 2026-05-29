@@ -43,6 +43,12 @@ bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptio
     return false;
 }
 
+bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos) {
+    Q_UNUSED(window);
+    Q_UNUSED(globalPos);
+    return false;
+}
+
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options) {
     Q_UNUSED(window);
     Q_UNUSED(options);

@@ -137,6 +137,12 @@ public:
      */
     bool performTitleBarDoubleClick();
 
+    /**
+     * @brief Shows the platform system menu at the given global screen position.
+     * zh_CN: 在指定全局屏幕坐标处显示平台系统菜单。
+     */
+    bool showSystemMenu(const QPoint& globalPos);
+
     bool usesCustomWindowChrome() const;
     bool prefersNativeMacControls() const;
     int nativeTitleBarLeadingInset() const;
