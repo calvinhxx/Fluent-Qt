@@ -197,7 +197,6 @@ private:
 
     ::fluent::basicinput::Button* m_queryButton = nullptr;
     ::fluent::basicinput::Button* m_clearButton = nullptr;
-    ::fluent::AnchorLayout* m_buttonLayout = nullptr;
     SuggestionListPopup* m_suggestionPopup = nullptr;
 
     TextChangeReason m_nextChangeReason = TextChangeReason::ProgrammaticChange;

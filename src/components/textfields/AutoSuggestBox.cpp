@@ -545,8 +545,6 @@ int AutoSuggestBox::inputTextVerticalPadding() const {
 }
 
 void AutoSuggestBox::initializeButtons() {
-    m_buttonLayout = new ::fluent::AnchorLayout(this);
-
     m_queryButton = new ::fluent::basicinput::Button(this);
     m_queryButton->setObjectName("AutoSuggestBoxQueryButton");
     m_queryButton->setFluentStyle(::fluent::basicinput::Button::Subtle);
@@ -556,7 +554,6 @@ void AutoSuggestBox::initializeButtons() {
     m_queryButton->setFixedSize(m_queryButtonSize, m_queryButtonSize);
     m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::FontSize::Body,
                                 Typography::FontFamily::SegoeFluentIcons);
-    m_buttonLayout->addWidget(m_queryButton);
 
     connect(m_queryButton, &::fluent::basicinput::Button::clicked, this, [this]() {
         closeSuggestionList();
@@ -572,7 +569,6 @@ void AutoSuggestBox::initializeButtons() {
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     m_clearButton->setIconGlyph(Typography::Icons::Cancel, Typography::FontSize::Body,
                                 Typography::FontFamily::SegoeFluentIcons);
-    m_buttonLayout->addWidget(m_clearButton);
 
     connect(m_clearButton, &::fluent::basicinput::Button::clicked, this, [this]() {
         setTextWithReason(QString(), TextChangeReason::UserInput);
@@ -584,38 +580,26 @@ void AutoSuggestBox::initializeButtons() {
 }
 
 void AutoSuggestBox::updateButtonGeometry() {
-    using Edge = ::fluent::AnchorLayout::Edge;
-    const int centerOffset = inputTop() / 2;
+    const QRect input = inputRect();
 
     if (m_queryButton) {
         m_queryButton->setFixedSize(m_queryButtonSize, m_queryButtonSize);
-        auto* anchors = m_queryButton->anchors();
-        anchors->left = {};
-        anchors->right = {};
-        anchors->verticalCenter = {this, Edge::VCenter, centerOffset};
-
-        if (m_queryButtonPlacement == QueryButtonPlacement::Left) {
-            anchors->left = {this, Edge::Left, kButtonEdgeMargin};
-        } else {
-            anchors->right = {this, Edge::Right, -kButtonEdgeMargin};
-        }
+        const int y = input.top() + (input.height() - m_queryButtonSize) / 2;
+        const int x = m_queryButtonPlacement == QueryButtonPlacement::Left
+            ? input.left() + kButtonEdgeMargin
+            : input.right() + 1 - kButtonEdgeMargin - m_queryButtonSize;
+        m_queryButton->setGeometry(x, y, m_queryButtonSize, m_queryButtonSize);
     }
 
     if (m_clearButton) {
         const bool queryVisible = m_queryIconVisible;
         m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
-        auto* anchors = m_clearButton->anchors();
-        anchors->left = {};
-        anchors->right = {};
-        anchors->verticalCenter = {this, Edge::VCenter, centerOffset};
-        anchors->right = queryVisible && m_queryButtonPlacement == QueryButtonPlacement::Right
-            ? ::fluent::AnchorLayout::Anchor(m_queryButton, Edge::Left, -1)
-            : ::fluent::AnchorLayout::Anchor(this, Edge::Right, -kButtonEdgeMargin);
-    }
-
-    if (m_buttonLayout) {
-        m_buttonLayout->invalidate();
-        m_buttonLayout->setGeometry(rect());
+        const int y = input.top() + (input.height() - m_clearButtonSize) / 2;
+        const int right = queryVisible && m_queryButtonPlacement == QueryButtonPlacement::Right && m_queryButton
+            ? m_queryButton->geometry().left() - 1
+            : input.right() + 1 - kButtonEdgeMargin;
+        const int x = right - m_clearButtonSize;
+        m_clearButton->setGeometry(x, y, m_clearButtonSize, m_clearButtonSize);
     }
 }
 

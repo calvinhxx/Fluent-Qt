@@ -189,6 +189,25 @@ TEST_F(AutoSuggestBoxTest, CompactInputAndButtonSizes) {
     EXPECT_LT(clearButton->geometry().right(), queryButton->geometry().left());
 }
 
+TEST_F(AutoSuggestBoxTest, ButtonsCenterWithinInputRectWhenHostHeightDiffers) {
+    AutoSuggestBox box(window);
+    box.setInputHeight(28);
+    box.setQueryButtonSize(24);
+    box.setClearButtonSize(24);
+    box.setFixedSize(240, 36);
+    box.setText("query");
+    QApplication::processEvents();
+
+    auto* queryButton = box.findChild<Button*>("AutoSuggestBoxQueryButton");
+    auto* clearButton = box.findChild<Button*>("AutoSuggestBoxClearButton");
+    ASSERT_NE(queryButton, nullptr);
+    ASSERT_NE(clearButton, nullptr);
+
+    EXPECT_EQ(queryButton->geometry().top(), 2);
+    EXPECT_EQ(clearButton->geometry().top(), 2);
+    EXPECT_LT(clearButton->geometry().right(), queryButton->geometry().left());
+}
+
 TEST_F(AutoSuggestBoxTest, QueryButtonPlacementSupportsLeftAndRight) {
     AutoSuggestBox box(window);
     box.resize(240, box.sizeHint().height());
