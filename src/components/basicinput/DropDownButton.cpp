@@ -121,6 +121,7 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
     QFont iconFont(m_iconFontFamily);
     iconFont.setPixelSize(m_chevronSize);
     painter.setFont(iconFont);
+    const qreal pressEffect = qSin(m_pressProgress * M_PI);
 
     // 获取图标颜色 (复用 Button 的语义颜色，但在按压时做细微变化)
     const auto& colors = themeColors();
@@ -131,9 +132,9 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
         // 所有启用态统一采用“变暗”动画效果：
         // Accent 使用 textOnAccent，普通按钮使用 textPrimary
         textColor = (fluentStyle() == Accent) ? colors.textOnAccent : colors.textPrimary;
-        if (m_pressProgress > 0.0) {
+        if (pressEffect > 0.0) {
             // 1.0 → 0.5，明显的压下去的感觉
-            qreal alphaFactor = 1.0 - 0.5 * m_pressProgress;
+            qreal alphaFactor = 1.0 - 0.5 * pressEffect;
             int alpha = static_cast<int>(255 * alphaFactor);
             textColor.setAlpha(alpha);
         }
@@ -145,7 +146,7 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
     // chevronOffset.x() 作为与右侧边缘的间距（padding），chevronOffset.y() 为垂直微调
     QRect chevronRect = rect().adjusted(0, 0, -m_chevronOffset.x(), 0);
     const qreal maxOffset = 3.0; // 最大下移 3 像素（点击动画）
-    qreal pressOffset = maxOffset * qSin(m_pressProgress * M_PI); // 0→max→0
+    qreal pressOffset = maxOffset * pressEffect; // 0→max→0
     chevronRect.translate(0,
                           static_cast<int>(pressOffset) + m_chevronOffset.y());
     painter.drawText(chevronRect, Qt::AlignRight | Qt::AlignVCenter, m_chevronGlyph);

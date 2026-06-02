@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QTimer>
 #include <QtTest/QSignalSpy>
+#include <QtTest/QTest>
 #include "components/menus_toolbars/Menu.h"
 #include "components/basicinput/DropDownButton.h"
 #include "components/foundation/QMLPlus.h"
@@ -57,6 +58,20 @@ TEST_F(DropDownButtonTest, OpenSetterAliasTracksStateAndSignals) {
     button.setOpen(false);
     EXPECT_FALSE(button.isOpen());
     EXPECT_EQ(spy.count(), 2);
+}
+
+TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress) {
+    DropDownButton button("Options");
+    button.resize(140, 32);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+
+    QTest::mousePress(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
+
+    QTRY_VERIFY_WITH_TIMEOUT(button.pressProgress() > 0.0, 300);
+    QTRY_VERIFY_WITH_TIMEOUT(qFuzzyCompare(button.pressProgress(), 1.0), 1000);
+
+    QTest::mouseRelease(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
 }
 
 TEST_F(DropDownButtonTest, VisualCheck) {
