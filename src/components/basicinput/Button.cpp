@@ -334,7 +334,7 @@ void Button::paintEvent(QPaintEvent*) {
             QFont iconFont(m_iconFontFamily);
             iconFont.setPixelSize(m_iconPixelSize);
             painter.setFont(iconFont);
-            QRectF iconRect(startX + m_iconOffset.x(), 0, iconWidth, height());
+            QRectF iconRect(startX + m_iconOffset.x(), m_iconOffset.y(), iconWidth, height());
             painter.drawText(iconRect, Qt::AlignCenter | Qt::AlignVCenter, m_iconGlyph);
             painter.setFont(font());
         } else if (!pix.isNull()) {
@@ -351,7 +351,7 @@ void Button::paintEvent(QPaintEvent*) {
             QFont iconFont(m_iconFontFamily);
             iconFont.setPixelSize(m_iconPixelSize);
             painter.setFont(iconFont);
-            QRectF iconRect(startX + m_iconOffset.x(), 0, iconWidth, height());
+            QRectF iconRect(startX + m_iconOffset.x(), m_iconOffset.y(), iconWidth, height());
             painter.drawText(iconRect, Qt::AlignCenter | Qt::AlignVCenter, m_iconGlyph);
             painter.setFont(font());
             startX += iconWidth + gap;

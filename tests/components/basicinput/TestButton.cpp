@@ -4,6 +4,7 @@
 #include <QTimer>
 #include <QStyle>
 #include <QGroupBox>
+#include <QImage>
 #include <QPixmap>
 #include <QPainter>
 #include <QMargins>
@@ -18,6 +19,50 @@
 using namespace fluent::basicinput;
 using namespace fluent::textfields;
 using namespace fluent;
+
+namespace {
+
+qreal renderedDarkPixelCenterY(int iconOffsetY) {
+    Button button;
+    button.setAttribute(Qt::WA_DontShowOnScreen);
+    button.setFluentStyle(Button::Subtle);
+    button.setFluentLayout(Button::IconOnly);
+    button.setIconGlyph(Typography::Icons::GlobalNav,
+                        Typography::FontSize::Body,
+                        Typography::FontFamily::SegoeFluentIcons);
+    button.setIconOffset(QPoint(0, iconOffsetY));
+    button.setFixedSize(48, 48);
+    button.ensurePolished();
+    button.show();
+    QApplication::processEvents();
+
+    QImage image(button.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    button.render(&painter);
+    painter.end();
+
+    qreal weightedY = 0.0;
+    qreal totalWeight = 0.0;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            const QColor pixel = QColor::fromRgba(image.pixel(x, y));
+            const int alpha = pixel.alpha();
+            const int luminance = (pixel.red() * 299 + pixel.green() * 587 + pixel.blue() * 114) / 1000;
+            if (alpha <= 16 || luminance >= 128)
+                continue;
+
+            const qreal weight = alpha * (255 - luminance);
+            weightedY += y * weight;
+            totalWeight += weight;
+        }
+    }
+
+    return totalWeight > 0.0 ? weightedY / totalWeight : -1.0;
+}
+
+} // namespace
 
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -46,6 +91,15 @@ protected:
     FluentTestWindow* window;
     AnchorLayout* layout;
 };
+
+TEST_F(ButtonTest, IconOffsetYMovesIconFontRendering) {
+    const qreal baselineCenterY = renderedDarkPixelCenterY(0);
+    const qreal shiftedCenterY = renderedDarkPixelCenterY(6);
+
+    ASSERT_GE(baselineCenterY, 0.0);
+    ASSERT_GE(shiftedCenterY, 0.0);
+    EXPECT_GT(shiftedCenterY - baselineCenterY, 4.0);
+}
 
 TEST_F(ButtonTest, VisualPropertyVerification) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
