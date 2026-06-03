@@ -5,11 +5,40 @@ review after visual, theme, painting, or layout changes.
 
 ## When to Use
 
+- Confirming subjective visual polish after geometry-focused tests pass.
 - Validating rendering after `paintEvent()` changes.
 - Checking Light/Dark theme behavior.
 - Reviewing spacing, typography, rounded corners, shadows, and interaction
   states.
 - Debugging component-specific visual regressions.
+
+For application-level layout correctness issues under `app/` such as centering,
+fixed sizes, edge alignment, spacing, and containment, start with geometry
+assertions or a geometry dump before relying on screenshot interpretation.
+Reusable components under `src/components/` keep their existing component test
+contracts unless a specific component visual bug needs geometry evidence.
+
+## App Geometry-First Layout Checks
+
+See [App Visual Geometry Verification](app-visual-geometry-verification.md) for
+the canonical app-only workflow.
+
+Use geometry tests for deterministic app layout contracts:
+
+- Stable widget discovery through object names such as
+  `GalleryTitleBar.SearchBox`.
+- Center alignment, widget size, spacing, containment, and logical icon size.
+- Failure output that reports rectangles, centers, size hints, and visibility.
+
+Enable opt-in geometry dumps when a focused test needs textual layout evidence:
+
+```bash
+FLUENT_QT_GEOMETRY_DUMP=1 ctest --preset vcpkg-osx -L '^test_gallery_shell_framework$' --output-on-failure
+```
+
+Use screenshots after these checks when the question is visual polish rather
+than geometry: perceived balance, color, typography, icon sharpness, material,
+or animation.
 
 ## Find the Test Binary
 

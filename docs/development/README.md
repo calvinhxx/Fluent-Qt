@@ -10,6 +10,7 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [Source Comment Style](comment-style.md)
 - [Logging Workflow](logging-workflow.md)
 - [Testing Workflow](testing-workflow.md)
+- [App Visual Geometry Verification](app-visual-geometry-verification.md)
 - [Qt Component Test Conventions](qt-component-test-conventions.md)
 - [Visual Review](visual-review.md)
 
