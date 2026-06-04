@@ -22,16 +22,19 @@ using namespace fluent;
 
 namespace {
 
-qreal renderedDarkPixelCenterY(int iconOffsetY) {
+qreal renderedDarkPixelCenterY(int iconOffsetY,
+                               const QSize& buttonSize = QSize(48, 48),
+                               int iconPixelSize = Typography::FontSize::Body,
+                               const QString& iconGlyph = Typography::Icons::GlobalNav) {
     Button button;
     button.setAttribute(Qt::WA_DontShowOnScreen);
     button.setFluentStyle(Button::Subtle);
     button.setFluentLayout(Button::IconOnly);
-    button.setIconGlyph(Typography::Icons::GlobalNav,
-                        Typography::FontSize::Body,
+    button.setIconGlyph(iconGlyph,
+                        iconPixelSize,
                         Typography::FontFamily::SegoeFluentIcons);
     button.setIconOffset(QPoint(0, iconOffsetY));
-    button.setFixedSize(48, 48);
+    button.setFixedSize(buttonSize);
     button.ensurePolished();
     button.show();
     QApplication::processEvents();
@@ -99,6 +102,25 @@ TEST_F(ButtonTest, IconOffsetYMovesIconFontRendering) {
     ASSERT_GE(baselineCenterY, 0.0);
     ASSERT_GE(shiftedCenterY, 0.0);
     EXPECT_GT(shiftedCenterY - baselineCenterY, 4.0);
+}
+
+TEST_F(ButtonTest, IconFontRenderingIsVisuallyCenteredByDefault) {
+    const QSize titleBarButtonSize(24, 24);
+    const qreal expectedCenterY = (titleBarButtonSize.height() - 1) / 2.0;
+
+    const qreal backCenterY = renderedDarkPixelCenterY(0,
+                                                       titleBarButtonSize,
+                                                       Typography::FontSize::Caption,
+                                                       Typography::Icons::TitleBarBack);
+    const qreal menuCenterY = renderedDarkPixelCenterY(0,
+                                                       titleBarButtonSize,
+                                                       Typography::FontSize::Caption,
+                                                       Typography::Icons::GlobalNav);
+
+    ASSERT_GE(backCenterY, 0.0);
+    ASSERT_GE(menuCenterY, 0.0);
+    EXPECT_NEAR(backCenterY, expectedCenterY, 0.25);
+    EXPECT_NEAR(menuCenterY, expectedCenterY, 0.25);
 }
 
 TEST_F(ButtonTest, VisualPropertyVerification) {
@@ -176,13 +198,12 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l1->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(l1);
 
-    // IconBefore + IconFont（略微向下 1px，让 glyph 视觉更居中）
+    // IconBefore + IconFont
     Button* l2 = new Button("Icon Before", window);
     l2->setFluentLayout(Button::IconBefore);
     l2->setIconGlyph(Typography::Icons::GlobalNav,
                      Typography::FontSize::Caption,
                      Typography::FontFamily::SegoeFluentIcons);
-    l2->setIconOffset(QPoint(0, 1));
     l2->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l2->anchors()->left = {l1, Edge::Right, 20};
     layout->addWidget(l2);
@@ -194,7 +215,6 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l3->setIconGlyph(Typography::Icons::More,
                      Typography::FontSize::Caption,
                      Typography::FontFamily::SegoeFluentIcons);
-    l3->setIconOffset(QPoint(0, 1));
     l3->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l3->anchors()->left = {l2, Edge::Right, 20};
     layout->addWidget(l3);
@@ -205,7 +225,6 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l4->setIconGlyph(Typography::Icons::ChevronRight,
                      Typography::FontSize::Caption,
                      Typography::FontFamily::SegoeFluentIcons);
-    l4->setIconOffset(QPoint(0, 1));
     l4->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l4->anchors()->left = {l3, Edge::Right, 20};
     layout->addWidget(l4);
@@ -217,7 +236,6 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l5->setIconGlyph(Typography::Icons::More,
                      Typography::FontSize::Caption,
                      Typography::FontFamily::SegoeFluentIcons);
-    l5->setIconOffset(QPoint(0, 1));
     l5->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l5->anchors()->left = {l4, Edge::Right, 20};
     layout->addWidget(l5);
