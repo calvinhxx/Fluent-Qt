@@ -16,6 +16,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_TESTING "Enable testing and build tests" ON)
+option(FLUENT_QT_BUILD_GALLERY "Build the Fluent Qt Gallery application" ON)
 
 if(MSVC)
 	add_definitions(-DUNICODE -D_UNICODE)
@@ -62,6 +63,10 @@ target_link_libraries(fluent_qt_lib
 	spdlog::spdlog
 )
 target_include_directories(fluent_qt_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+if(FLUENT_QT_BUILD_GALLERY)
+	add_subdirectory(app)
+endif()
 
 # ut
 if(BUILD_TESTING)

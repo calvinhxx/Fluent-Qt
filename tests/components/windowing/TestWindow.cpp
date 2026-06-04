@@ -302,10 +302,18 @@ TEST_F(WindowTest, TitleBarHeightIsConfigurable) {
 TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar) {
     Window window;
     const bool customChrome = WindowChromeCompat::platformPrefersCustomWindowChrome();
-    const bool nativeMacTitleBar = (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::MacOS);
+    const bool macPlatform = (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::MacOS);
+    const bool cocoaRuntime = QGuiApplication::platformName() == QStringLiteral("cocoa");
 
-    EXPECT_EQ(window.titleBar()->isHidden(), !(customChrome || nativeMacTitleBar));
-    EXPECT_EQ(window.titleBar()->systemReservedLeadingWidth() > 0, nativeMacTitleBar);
+    if (macPlatform) {
+        window.resize(520, 360);
+        window.show();
+        QApplication::processEvents();
+        QApplication::processEvents();
+    }
+
+    EXPECT_EQ(window.titleBar()->isHidden(), !(customChrome || macPlatform));
+    EXPECT_EQ(window.titleBar()->systemReservedLeadingWidth() > 0, macPlatform && cocoaRuntime);
 #ifdef Q_OS_WIN
     EXPECT_GT(window.titleBar()->systemReservedTrailingWidth(), 0);
 #else
@@ -313,7 +321,7 @@ TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar) {
 #endif
 
 #if defined(Q_OS_MAC) && QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-    if (nativeMacTitleBar) {
+    if (macPlatform) {
         EXPECT_TRUE(window.windowFlags().testFlag(Qt::ExpandedClientAreaHint));
         EXPECT_TRUE(window.windowFlags().testFlag(Qt::NoTitleBarBackgroundHint));
         EXPECT_FALSE(window.testAttribute(Qt::WA_ContentsMarginsRespectsSafeArea));

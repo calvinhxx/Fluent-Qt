@@ -3,6 +3,6 @@
     <qresource prefix="/">
         <file>res/Segoe Fluent Icons.ttf</file>
         <file>res/SegoeUI-VF.ttf</file>
+        <file>app/assets/winui-gallery-app-icon.png</file>
     </qresource>
 </RCC>
-

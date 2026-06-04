@@ -86,7 +86,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
-    static constexpr int kDefaultHeight = 38;
+    static constexpr int kDefaultHeight = 36;
 
     bool isDragExcludedWidget(const QWidget* widget) const;
     void updateContentWidgetAnchor();
