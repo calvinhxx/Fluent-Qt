@@ -7,6 +7,22 @@ namespace fluent {
 
 // --- AnchorLayout 实现 (保持不变) ---
 
+namespace {
+
+QSize effectiveItemSize(const QLayoutItem* item) {
+    if (!item)
+        return QSize();
+
+    QSize size = item->sizeHint();
+    if (const QWidget* widget = item->widget()) {
+        size = size.expandedTo(widget->minimumSize());
+        size = size.boundedTo(widget->maximumSize());
+    }
+    return size;
+}
+
+} // namespace
+
 AnchorLayout::AnchorLayout(QWidget* parent) : QLayout(parent) {
     setContentsMargins(0, 0, 0, 0);
 }
@@ -98,12 +114,12 @@ void AnchorLayout::setGeometry(const QRect& rect) {
         if (QWidget* w = it.item->widget()) {
             if (auto* qp = dynamic_cast<QMLPlus*>(w)) it.anchors = *(qp->anchors());
         }
-        it.geometry = QRect(parentRect.topLeft(), it.item->sizeHint());
+        it.geometry = QRect(parentRect.topLeft(), effectiveItemSize(it.item));
     }
     for (int pass = 0; pass < 5; ++pass) {
         bool changed = false;
         for (Item& it : m_items) {
-            QRect old = it.geometry; QSize s = it.item->sizeHint();
+            QRect old = it.geometry; QSize s = effectiveItemSize(it.item);
             if (it.anchors.fill) { it.geometry = parentRect.marginsRemoved(it.anchors.fillMargins); }
             else {
                 if (it.anchors.horizontalCenter.edge != Edge::None) {
