@@ -40,6 +40,26 @@ LOG_DEBUG("NavigationView layout mode=Top width=960");
 LOG_WARN("QMLPlus bindFailed reason=host-not-qwidget");
 ```
 
+## Gallery App Anchors
+
+For the gallery app under `app/`, keep logs at workflow boundaries where a
+route or page changes hands. These anchors should make a route lifecycle
+searchable without logging every paint, delegate, or layout frame.
+
+- `GalleryNavigationViewModel` should log catalog build counts, route counts,
+  and the default route.
+- `GalleryNavigationState` should log selected-route transitions with
+  `old=<id> new=<id>`.
+- `GalleryWindow` should log `selectRoute` and `applyRoute` decisions with
+  `routeId`, rejection `reason`, and `pageType` when a page is created.
+- `GalleryNavigationPane` should log user item clicks, child-toggle intent, and
+  selection application or clearing. A missing index in the footer pane is a
+  normal trace-level condition when the selected route belongs to the main pane.
+- Page objects such as `PlaceholderPage` and `SettingsPage` should log page
+  creation with the bound `routeId`.
+- Keep delegate paint paths, row size hints, animation ticks, and scroll-thumb
+  painting quiet unless diagnosing a specific rendering bug.
+
 ## Runtime Controls
 
 - Default logging should stay conservative for normal local runs and CTest.
