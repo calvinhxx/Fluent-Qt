@@ -46,8 +46,8 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(ButtonLayout fluentLayout READ fluentLayout WRITE setFluentLayout NOTIFY fluentLayoutChanged)
     /**
-     * @brief Forces the focus visual even when the widget does not have keyboard focus.
-     * zh_CN: 即使控件没有物理焦点，也强制绘制焦点框。
+     * @brief Controls whether the focus visual frame is painted.
+     * zh_CN: 控制是否绘制焦点视觉框。
      */
     Q_PROPERTY(bool focusVisual READ hasFocusVisual WRITE setFocusVisual NOTIFY focusVisualChanged)
     /**

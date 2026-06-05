@@ -307,7 +307,7 @@ void Button::paintEvent(QPaintEvent*) {
         painter.drawPath(roundedRectPath(contentRect.adjusted(0.5, 0.5, -0.5, -0.5), radii));
     }
 
-    if (state != Disabled && (hasFocus() || m_focusVisual)) {
+    if (state != Disabled && hasFocus() && m_focusVisual) {
         // 使用更柔和的文本次要色，并设置一定的透明度，使其不那么“黑”
         QColor focusColor = colors.textSecondary;
         focusColor.setAlpha(120); // 约 47% 不透明度
