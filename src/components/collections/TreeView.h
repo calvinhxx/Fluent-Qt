@@ -4,6 +4,7 @@
 #include <QTreeView>
 #include <QPersistentModelIndex>
 #include <QHash>
+#include <QRectF>
 #include <QStandardItemModel>
 
 #include "components/foundation/FluentElement.h"
@@ -56,6 +57,17 @@ public:
         Outward
     };
     Q_ENUM(IndicatorHierarchyTransition)
+
+    /**
+     * @brief Style parameters used by the moving selection indicator overlay.
+     * zh_CN: 移动选中指示器覆盖层使用的样式参数。
+     */
+    struct SelectionIndicatorStyle {
+        qreal inset = 6.0;
+        qreal width = 3.0;
+        qreal height = 16.0;
+        int insetRole = -1;
+    };
 
     /**
      * @brief Selection mode used by the collection view.
@@ -123,6 +135,7 @@ public:
     explicit TreeView(QWidget* parent = nullptr);
     ~TreeView() override = default;
 
+    QModelIndex indexAt(const QPoint& point) const override;
     void setModel(QAbstractItemModel* model) override;
     void setSelectionModel(QItemSelectionModel* selectionModel) override;
 
@@ -176,6 +189,33 @@ public:
     QModelIndex indicatorMotionPreviousIndex() const;
     QModelIndex indicatorMotionCurrentIndex() const;
 
+    // --- Selected indicator pill rendering ---
+    // zh_CN: 选中指示器药丸的绘制开关与样式参数。
+    /**
+     * @brief Returns the current selected indicator geometry in viewport coordinates.
+     * zh_CN: 返回当前选中指示器在 viewport 坐标系中的几何区域。
+     */
+    QRectF selectedIndicatorRect() const;
+    /**
+     * @brief Returns selected indicator geometry for a normalized transition progress.
+     * zh_CN: 返回指定归一化过渡进度下的选中指示器几何区域。
+     */
+    QRectF selectedIndicatorRect(qreal progress) const;
+    /**
+     * @brief Returns the style used by the selected indicator overlay.
+     * zh_CN: 返回选中指示器覆盖层使用的样式。
+     */
+    SelectionIndicatorStyle selectionIndicatorStyle() const { return m_selectionIndicatorStyle; }
+    /**
+     * @brief Sets the style used by the selected indicator overlay.
+     * zh_CN: 设置选中指示器覆盖层使用的样式。
+     */
+    void setSelectionIndicatorStyle(const SelectionIndicatorStyle& style);
+    bool selectionIndicatorVisible() const { return m_selectionIndicatorVisible; }
+    void setSelectionIndicatorVisible(bool visible);
+    qreal selectionIndicatorInset() const { return m_selectionIndicatorStyle.inset; }
+    void setSelectionIndicatorInset(qreal inset);
+
     ::fluent::scrolling::ScrollBar* verticalFluentScrollBar() const;
     ::fluent::scrolling::ScrollBar* horizontalFluentScrollBar() const;
 
@@ -189,6 +229,7 @@ signals:
     void backgroundVisibleChanged();
     void headerTextChanged();
     void placeholderTextChanged();
+    void itemPressed(const QModelIndex& index);
     void itemClicked(const QModelIndex& index);
     void canReorderItemsChanged();
     void itemReordered(const QModelIndex& srcParent, int srcRow,
@@ -197,6 +238,7 @@ signals:
     void indicatorMotionDirectionChanged();
     void indicatorHierarchyTransitionChanged();
     void indicatorMotionAnimationEnabledChanged();
+    void selectionIndicatorStyleChanged();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -238,12 +280,23 @@ private:
     void setIndicatorMotionProgress(qreal progress);
     void setIndicatorMotionDirection(IndicatorVerticalDirection direction);
     void setIndicatorHierarchyTransition(IndicatorHierarchyTransition transition);
+
+    // --- Selected indicator pill geometry / painting ---
+    QRectF selectedIndicatorBaseRect(const QModelIndex& index) const;
+    QRectF currentSelectedIndicatorRect() const;
+    void paintSelectedIndicator(QPainter& painter) const;
     void syncCheckStatesWithSelection(const QItemSelection& selected, const QItemSelection& deselected);
     bool shouldSyncCheckStateWithSelection(const QModelIndex& index) const;
     void applyCheckStateToSubtree(const QModelIndex& index, Qt::CheckState state);
     void updateAncestorCheckStates(const QModelIndex& index);
     Qt::CheckState aggregateChildCheckState(const QModelIndex& parent) const;
     void setCheckStateAndSelection(const QModelIndex& index, Qt::CheckState state);
+    void clearExpandRevealState();
+    void completeActiveExpandReveal();
+    qreal computeSubtreeHeight(const QModelIndex& parent) const;
+    void startExpandReveal(const QModelIndex& parent);
+    void startCollapseReveal(const QModelIndex& parent);
+    void finalizeDeferredCollapse();
 
     // Drag helpers — file-manager style
     void computeDropTarget(const QPoint& pos);
@@ -283,6 +336,10 @@ private:
     bool m_indicatorMotionAnimationEnabled = true;
     bool m_syncingCheckStateWithSelection = false;
 
+    // --- Selected indicator pill rendering ---
+    bool m_selectionIndicatorVisible = false;
+    SelectionIndicatorStyle m_selectionIndicatorStyle;
+
     // --- Drag reorder (file-manager style) ---
     enum class DropMode { None, Between, OnItem };
     bool m_canReorderItems = false;
@@ -301,9 +358,8 @@ private:
     QPersistentModelIndex m_animParent;
     bool m_animEnabled = true;
     bool m_animExpanding = true;   // true=expand, false=collapse
-
-    // Chevron rotation progress per-index: 0.0=collapsed(right), 1.0=expanded(down)
-    QHash<QPersistentModelIndex, QVariantAnimation*> m_chevronAnims;
+    qreal m_animSubtreeHeight = 0.0;       // pixel height of the animating subtree
+    bool m_pendingCollapseFinalize = false; // deferred collapse: actually collapse on finish
 
 public:
     /** Query chevron rotation progress for delegate painting. 0=right, 1=down. */

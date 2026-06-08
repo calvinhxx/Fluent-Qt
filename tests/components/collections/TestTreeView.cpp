@@ -545,6 +545,205 @@ TEST_F(TreeViewTest, IndicatorMotionProgressAnimatesWhenEnabled) {
     EXPECT_DOUBLE_EQ(tv->selectedIndicatorProgress(personal), 1.0);
 }
 
+TEST_F(TreeViewTest, SelectionIndicatorVisibilityAndStyleSetters) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+
+    EXPECT_FALSE(tv->selectionIndicatorVisible());
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorInset(), 6.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorStyle().width, 3.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorStyle().height, 16.0);
+    EXPECT_EQ(tv->selectionIndicatorStyle().insetRole, -1);
+
+    tv->setSelectionIndicatorVisible(true);
+    EXPECT_TRUE(tv->selectionIndicatorVisible());
+
+    QSignalSpy styleSpy(tv, &TreeView::selectionIndicatorStyleChanged);
+    constexpr int kIndicatorInsetRole = Qt::UserRole + 120;
+    TreeView::SelectionIndicatorStyle style = tv->selectionIndicatorStyle();
+    style.inset = 8.0;
+    style.width = 5.0;
+    style.height = 12.0;
+    style.insetRole = kIndicatorInsetRole;
+    tv->setSelectionIndicatorStyle(style);
+    EXPECT_EQ(styleSpy.count(), 1);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorInset(), 8.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorStyle().width, 5.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorStyle().height, 12.0);
+    EXPECT_EQ(tv->selectionIndicatorStyle().insetRole, kIndicatorInsetRole);
+
+    tv->setSelectionIndicatorInset(7.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorInset(), 7.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorStyle().width, 5.0);
+    EXPECT_EQ(tv->selectionIndicatorStyle().insetRole, kIndicatorInsetRole);
+
+    tv->setFixedSize(350, 400);
+    showOffscreen(window);
+    const QModelIndex work = model->index(0, 0);
+    model->item(0)->setData(42.0, kIndicatorInsetRole);
+    tv->setSelectedItem(work);
+    processEvents();
+    EXPECT_NEAR(tv->selectedIndicatorRect(1.0).left(),
+                tv->visualRect(work).left() + 42.0,
+                0.01);
+}
+
+TEST_F(TreeViewTest, SelectionIndicatorPaintsAccentPillNearLeftOfSelectedRow) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setSelectionIndicatorVisible(true);
+    tv->setSelectionIndicatorInset(7.0);
+    tv->setIndicatorMotionAnimationEnabled(false);
+    tv->setFixedSize(350, 400);
+    showOffscreen(window);
+
+    const QModelIndex work = model->index(0, 0);
+    tv->setSelectedItem(work);
+    processEvents();
+
+    const QColor accent = tv->themeColors().accentDefault;
+    const QRect rowRect = tv->visualRect(work);
+    // The pill sits a few px inside the left edge of the row.
+    const QRect pillProbe(0, rowRect.top(), 14, rowRect.height());
+    EXPECT_TRUE(hasAccentPixelInRect(tv->viewport(), pillProbe, accent));
+    // ...and nothing accent-colored on the far right of the row.
+    const QRect rightProbe(rowRect.right() - 20, rowRect.top(), 20, rowRect.height());
+    EXPECT_FALSE(hasAccentPixelInRect(tv->viewport(), rightProbe, accent));
+}
+
+TEST_F(TreeViewTest, AnimatedCollapseDefersModelCollapseUntilFinished) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setFixedSize(350, 400);
+    showOffscreen(window);
+
+    const QModelIndex work = model->index(0, 0);
+    tv->toggleExpanded(work);
+    processEvents();
+    EXPECT_TRUE(tv->isExpanded(work));
+
+    // Collapse is animated while on screen: the row stays expanded mid-flight.
+    tv->toggleExpanded(work);
+    processEvents();
+    EXPECT_TRUE(tv->isExpanded(work));
+
+    // After the reveal finishes the real collapse lands.
+    for (int i = 0; i < 60 && tv->isExpanded(work); ++i)
+        QTest::qWait(10);
+    EXPECT_FALSE(tv->isExpanded(work));
+}
+
+TEST_F(TreeViewTest, AnimatedCollapseReversesBackToExpandedOnRetoggle) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setFixedSize(350, 400);
+    showOffscreen(window);
+
+    const QModelIndex work = model->index(0, 0);
+    tv->toggleExpanded(work);
+    for (int i = 0; i < 60 && !tv->isExpanded(work); ++i)
+        QTest::qWait(10);
+    QTest::qWait(300);   // settle the expand reveal
+    processEvents();
+    ASSERT_TRUE(tv->isExpanded(work));
+
+    // Begin an animated collapse, then immediately re-toggle to reverse it.
+    tv->toggleExpanded(work);   // start deferred collapse
+    QTest::qWait(40);           // let it run partway
+    tv->toggleExpanded(work);   // reverse → expand again
+    QTest::qWait(320);
+    processEvents();
+    EXPECT_TRUE(tv->isExpanded(work));   // never actually collapsed
+}
+
+TEST_F(TreeViewTest, ExpandRevealCommitsWhenAnotherParentToggles) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setFixedSize(350, 400);
+    showOffscreen(window);
+
+    const QModelIndex work = model->index(0, 0);
+    const QModelIndex personal = model->index(1, 0);
+    ASSERT_FALSE(tv->isExpanded(work));
+    ASSERT_FALSE(tv->isExpanded(personal));
+
+    tv->toggleExpanded(work);
+    QTest::qWait(40);
+    processEvents();
+    ASSERT_TRUE(tv->isExpanded(work));
+
+    tv->toggleExpanded(personal);
+    processEvents();
+    EXPECT_TRUE(tv->isExpanded(work));
+    EXPECT_TRUE(tv->isExpanded(personal));
+    EXPECT_DOUBLE_EQ(tv->chevronRotation(work), 1.0);
+}
+
+TEST_F(TreeViewTest, CollapseRevealFinalizesWhenAnotherParentToggles) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setFixedSize(350, 400);
+    showOffscreen(window);
+
+    const QModelIndex work = model->index(0, 0);
+    const QModelIndex personal = model->index(1, 0);
+    tv->expandAll();
+    processEvents();
+    ASSERT_TRUE(tv->isExpanded(work));
+    ASSERT_TRUE(tv->isExpanded(personal));
+
+    tv->toggleExpanded(work);
+    QTest::qWait(40);
+    processEvents();
+    ASSERT_TRUE(tv->isExpanded(work));
+
+    tv->toggleExpanded(personal);
+    processEvents();
+    EXPECT_FALSE(tv->isExpanded(work));
+    EXPECT_TRUE(tv->isExpanded(personal));
+
+    for (int i = 0; i < 60 && tv->isExpanded(personal); ++i)
+        QTest::qWait(10);
+    EXPECT_FALSE(tv->isExpanded(personal));
+}
+
+TEST_F(TreeViewTest, AnimatedCollapseHitTestingFollowsVisualRows) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setFixedSize(350, 400);
+    showOffscreen(window);
+
+    const QModelIndex work = model->index(0, 0);
+    const QModelIndex firstChild = model->item(0)->child(0)->index();
+    const QModelIndex secondChild = model->item(0)->child(1)->index();
+    const QModelIndex personal = model->index(1, 0);
+
+    tv->toggleExpanded(work);
+    QTest::qWait(320);
+    processEvents();
+    ASSERT_TRUE(tv->isExpanded(work));
+
+    const qreal subtreeHeight = tv->visualRect(firstChild).height() + tv->visualRect(secondChild).height();
+    const QRect personalRect = tv->visualRect(personal);
+    ASSERT_FALSE(personalRect.isEmpty());
+
+    tv->toggleExpanded(work);
+    QTest::qWait(80);
+    processEvents();
+
+    const qreal progress = tv->chevronRotation(work);
+    ASSERT_GT(progress, 0.0);
+    ASSERT_LT(progress, 1.0);
+
+    const QPoint visualPersonalCenter = personalRect.center()
+        - QPoint(0, qRound(subtreeHeight * (1.0 - progress)));
+    EXPECT_EQ(tv->indexAt(visualPersonalCenter), personal);
+
+    QTest::mouseClick(tv->viewport(), Qt::LeftButton, Qt::NoModifier, visualPersonalCenter);
+    processEvents();
+    EXPECT_EQ(tv->selectedItem(), personal);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Expand / Collapse
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -628,6 +827,25 @@ TEST_F(TreeViewTest, ExpandAnimationTriggered) {
 
     // State changes immediately even during animation
     EXPECT_TRUE(tv->isExpanded(workIdx));
+}
+
+TEST_F(TreeViewTest, ExpandAnimationExposesChildrenDuringReveal) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->resize(300, 400);
+    window->resize(320, 420);
+    showOffscreen(window);
+
+    QModelIndex workIdx = model->index(0, 0);
+    QModelIndex childIdx = model->index(0, 0, workIdx);
+    ASSERT_TRUE(childIdx.isValid());
+    EXPECT_TRUE(tv->visualRect(childIdx).isEmpty());
+
+    tv->expand(workIdx);
+    QApplication::processEvents();
+
+    EXPECT_TRUE(tv->isExpanded(workIdx));
+    EXPECT_FALSE(tv->visualRect(childIdx).isEmpty());
 }
 
 TEST_F(TreeViewTest, ExpandAnimationCompletesCleanly) {
@@ -857,6 +1075,26 @@ TEST_F(TreeViewTest, ItemClickedSignalEmitted) {
     EXPECT_EQ(clickedIdx, idx);
 }
 
+TEST_F(TreeViewTest, ItemPressedSignalEmittedOnMousePress) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setFixedSize(300, 400);
+
+    showOffscreen(window);
+
+    QSignalSpy spy(tv, &TreeView::itemPressed);
+
+    const QModelIndex idx = model->index(0, 0);
+    const QRect rect = tv->visualRect(idx);
+    QTest::mousePress(tv->viewport(), Qt::LeftButton, Qt::NoModifier, rect.center());
+    QApplication::processEvents();
+
+    EXPECT_GE(spy.count(), 1);
+    const QModelIndex pressedIdx = spy.at(0).at(0).value<QModelIndex>();
+    EXPECT_EQ(pressedIdx, idx);
+    QTest::mouseRelease(tv->viewport(), Qt::LeftButton, Qt::NoModifier, rect.center());
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Chevron-only expand & checkbox click
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -895,9 +1133,11 @@ TEST_F(TreeViewTest, ClickChevronAreaExpands) {
     QApplication::processEvents();
     EXPECT_TRUE(tv->isExpanded(workIdx));
 
-    // Click again to collapse
+    // Click again to collapse. When the pane is on screen the collapse is
+    // animated, so the real model collapse is deferred until the reveal finishes.
     QTest::mouseClick(tv->viewport(), Qt::LeftButton, Qt::NoModifier, chevronCenter);
-    QApplication::processEvents();
+    for (int i = 0; i < 60 && tv->isExpanded(workIdx); ++i)
+        QTest::qWait(10);
     EXPECT_FALSE(tv->isExpanded(workIdx));
 }
 
@@ -1474,6 +1714,80 @@ TEST_F(TreeViewTest, DelegateSelectedIndicatorFollowsHierarchicalRowLocalPositio
     EXPECT_NEAR(parentRect.left() + 4, parentAccentX, 2);
     EXPECT_NEAR(childRect.left() + 4, childAccentX, 2);
     EXPECT_GT(childAccentX, parentAccentX);
+}
+
+TEST_F(TreeViewTest, SelectedIndicatorAnchorsToTargetDuringHierarchyTransitions) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setFixedSize(350, 400);
+    tv->setSelectionIndicatorVisible(true);
+    tv->expandAll();
+    showOffscreen(window);
+
+    const QModelIndex parent = model->index(0, 0);
+    const QModelIndex child = model->item(0)->child(0)->index();
+
+    tv->setSelectedItem(parent);
+    processEvents();
+    const QRectF parentSettled = tv->selectedIndicatorRect(1.0);
+
+    tv->setSelectedItem(child);
+    processEvents();
+    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::Inward);
+    const QRectF inwardTarget = tv->selectedIndicatorRect(1.0);
+    const QRectF inwardMid = tv->selectedIndicatorRect(0.5);
+    const qreal inwardLinearX = (parentSettled.left() + inwardTarget.left()) / 2.0;
+    EXPECT_GT(inwardMid.left(), inwardLinearX);
+    EXPECT_NEAR(inwardMid.left(), inwardTarget.left(), 0.01);
+    EXPECT_NEAR(inwardMid.height(), inwardTarget.height(), 0.01);
+
+    tv->setIndicatorMotionAnimationEnabled(false);
+    tv->setSelectedItem(child);
+    processEvents();
+    const QRectF childSettled = tv->selectedIndicatorRect(1.0);
+
+    tv->setIndicatorMotionAnimationEnabled(true);
+    tv->setSelectedItem(parent);
+    processEvents();
+    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::Outward);
+    const QRectF outwardTarget = tv->selectedIndicatorRect(1.0);
+    const QRectF outwardMid = tv->selectedIndicatorRect(0.5);
+    const qreal outwardLinearX = (childSettled.left() + outwardTarget.left()) / 2.0;
+    EXPECT_LT(outwardMid.left(), outwardLinearX);
+    EXPECT_NEAR(outwardMid.left(), outwardTarget.left(), 0.01);
+    EXPECT_NEAR(outwardMid.height(), outwardTarget.height(), 0.01);
+}
+
+TEST_F(TreeViewTest, CollapsingParentAfterChildToParentSelectionKeepsParentIndicator) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setFixedSize(350, 400);
+    tv->setSelectionIndicatorVisible(true);
+    tv->expandAll();
+    showOffscreen(window);
+
+    const QModelIndex parent = model->index(0, 0);
+    const QModelIndex child = model->item(0)->child(0)->index();
+    ASSERT_TRUE(tv->isExpanded(parent));
+
+    tv->setSelectedItem(child);
+    processEvents();
+    EXPECT_EQ(tv->indicatorMotionCurrentIndex(), child);
+
+    tv->setSelectedItem(parent);
+    processEvents();
+    EXPECT_EQ(tv->indicatorMotionCurrentIndex(), parent);
+    EXPECT_EQ(tv->indicatorMotionPreviousIndex(), child);
+    EXPECT_EQ(tv->indicatorHierarchyTransition(), TreeView::IndicatorHierarchyTransition::Outward);
+
+    tv->toggleExpanded(parent);
+    for (int i = 0; i < 60 && tv->isExpanded(parent); ++i)
+        QTest::qWait(10);
+    processEvents();
+
+    EXPECT_FALSE(tv->isExpanded(parent));
+    EXPECT_EQ(tv->indicatorMotionCurrentIndex(), parent);
+    EXPECT_FALSE(tv->selectedIndicatorRect(1.0).isEmpty());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
