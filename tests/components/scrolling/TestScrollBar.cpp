@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include <QApplication>
+#include <QImage>
+#include <QPixmap>
 #include <QWidget>
 #include <QTimer>
 #include <QStyle>
@@ -15,6 +17,32 @@ using namespace fluent::scrolling;
 using namespace fluent::textfields;
 using namespace fluent::basicinput;
 using namespace fluent;
+
+namespace {
+
+QImage renderScrollBarImage(ScrollBar* scrollBar) {
+    QPixmap pixmap(scrollBar->size());
+    pixmap.fill(Qt::transparent);
+    scrollBar->render(&pixmap);
+    return pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
+}
+
+QRect alphaBounds(const QImage& image) {
+    QRect bounds;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (QColor::fromRgba(image.pixel(x, y)).alpha() > 0)
+                bounds = bounds.united(QRect(x, y, 1, 1));
+        }
+    }
+    return bounds;
+}
+
+int pixelAlpha(const QImage& image, int x, int y) {
+    return QColor::fromRgba(image.pixel(x, y)).alpha();
+}
+
+} // namespace
 
 // Helper Window Class
 class FluentTestScrollWindow : public QWidget, public fluent::FluentElement {
@@ -44,6 +72,33 @@ protected:
     FluentTestScrollWindow* window;
     AnchorLayout* layout;
 };
+
+TEST_F(ScrollBarTest, VerticalThumbKeepsRoundedCapsAtExtremes) {
+    ScrollBar scrollBar(Qt::Vertical);
+    scrollBar.setThickness(9);
+    scrollBar.setFixedSize(9, 96);
+    scrollBar.setRange(0, 100);
+    scrollBar.setPageStep(20);
+    scrollBar.setOpacity(1.0);
+
+    scrollBar.setValue(scrollBar.minimum());
+    QImage topImage = renderScrollBarImage(&scrollBar);
+    QRect topBounds = alphaBounds(topImage);
+    ASSERT_TRUE(topBounds.isValid());
+    EXPECT_GT(topBounds.top(), 0);
+    EXPECT_GT(pixelAlpha(topImage, topBounds.center().x(), topBounds.top()), 0);
+    EXPECT_EQ(pixelAlpha(topImage, topBounds.left(), topBounds.top()), 0);
+    EXPECT_EQ(pixelAlpha(topImage, topBounds.right(), topBounds.top()), 0);
+
+    scrollBar.setValue(scrollBar.maximum());
+    QImage bottomImage = renderScrollBarImage(&scrollBar);
+    QRect bottomBounds = alphaBounds(bottomImage);
+    ASSERT_TRUE(bottomBounds.isValid());
+    EXPECT_LT(bottomBounds.bottom(), bottomImage.height() - 1);
+    EXPECT_GT(pixelAlpha(bottomImage, bottomBounds.center().x(), bottomBounds.bottom()), 0);
+    EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.left(), bottomBounds.bottom()), 0);
+    EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.right(), bottomBounds.bottom()), 0);
+}
 
 TEST_F(ScrollBarTest, VisualPropertyVerification) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
