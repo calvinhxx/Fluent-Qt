@@ -1,0 +1,128 @@
+#include "GalleryComponentCatalog.h"
+
+#include "design/Typography.h"
+
+namespace fluent::gallery {
+
+const QVector<GalleryComponentCategory>& galleryComponentCatalog()
+{
+    static const QVector<GalleryComponentCategory> catalog{
+        {QStringLiteral("basic-input"),
+         QStringLiteral("Basic input"),
+         QStringLiteral("basicinput"),
+         Typography::Icons::CheckMark,
+         {
+             {QStringLiteral("button"), QStringLiteral("Button"), Typography::Icons::Add},
+             {QStringLiteral("checkbox"), QStringLiteral("CheckBox"), Typography::Icons::CheckMark},
+             {QStringLiteral("combobox"), QStringLiteral("ComboBox"), Typography::Icons::ChevronDown},
+             {QStringLiteral("dropdown-button"), QStringLiteral("DropDownButton"), Typography::Icons::ChevronDownMed},
+             {QStringLiteral("hyperlink-button"), QStringLiteral("HyperlinkButton"), Typography::Icons::Link},
+             {QStringLiteral("radio-button"), QStringLiteral("RadioButton"), Typography::Icons::CheckmarkBadge12},
+             {QStringLiteral("rating-control"), QStringLiteral("RatingControl"), Typography::Icons::FavoriteStar},
+             {QStringLiteral("repeat-button"), QStringLiteral("RepeatButton"), Typography::Icons::Refresh},
+             {QStringLiteral("slider"), QStringLiteral("Slider"), Typography::Icons::SelectAll},
+             {QStringLiteral("split-button"), QStringLiteral("SplitButton"), Typography::Icons::ChevronDown},
+             {QStringLiteral("toggle-button"), QStringLiteral("ToggleButton"), Typography::Icons::Power},
+             {QStringLiteral("toggle-split-button"), QStringLiteral("ToggleSplitButton"), Typography::Icons::ChevronDown},
+             {QStringLiteral("toggle-switch"), QStringLiteral("ToggleSwitch"), Typography::Icons::Power}
+         }},
+        {QStringLiteral("collections"),
+         QStringLiteral("Collections"),
+         QStringLiteral("collections"),
+         Typography::Icons::Grid,
+         {
+             {QStringLiteral("drawer-view"), QStringLiteral("DrawerView"), Typography::Icons::List},
+             {QStringLiteral("flip-view"), QStringLiteral("FlipView"), Typography::Icons::Forward},
+             {QStringLiteral("flow-view"), QStringLiteral("FlowView"), Typography::Icons::Grid},
+             {QStringLiteral("grid-view"), QStringLiteral("GridView"), Typography::Icons::Grid},
+             {QStringLiteral("list-view"), QStringLiteral("ListView"), Typography::Icons::List},
+             {QStringLiteral("split-view"), QStringLiteral("SplitView"), Typography::Icons::BackToWindow},
+             {QStringLiteral("stack-view"), QStringLiteral("StackView"), Typography::Icons::AllApps},
+             {QStringLiteral("tree-view"), QStringLiteral("TreeView"), Typography::Icons::Folder}
+         }},
+        {QStringLiteral("date-time"),
+         QStringLiteral("Date & time"),
+         QStringLiteral("date_time"),
+         Typography::Icons::Calendar,
+         {
+             {QStringLiteral("calendar-date-picker"), QStringLiteral("CalendarDatePicker"), Typography::Icons::Calendar},
+             {QStringLiteral("calendar-view"), QStringLiteral("CalendarView"), Typography::Icons::Calendar},
+             {QStringLiteral("date-picker"), QStringLiteral("DatePicker"), Typography::Icons::Calendar},
+             {QStringLiteral("time-picker"), QStringLiteral("TimePicker"), Typography::Icons::Clock}
+         }},
+        {QStringLiteral("dialogs-flyouts"),
+         QStringLiteral("Dialogs & flyouts"),
+         QStringLiteral("dialogs_flyouts"),
+         Typography::Icons::Message,
+         {
+             {QStringLiteral("content-dialog"), QStringLiteral("ContentDialog"), Typography::Icons::Message},
+             {QStringLiteral("dialog"), QStringLiteral("Dialog"), Typography::Icons::Message},
+             {QStringLiteral("flyout"), QStringLiteral("Flyout"), Typography::Icons::Message},
+             {QStringLiteral("popup"), QStringLiteral("Popup"), Typography::Icons::BackToWindow},
+             {QStringLiteral("teaching-tip"), QStringLiteral("TeachingTip"), Typography::Icons::Info}
+         }},
+        {QStringLiteral("menus-toolbars"),
+         QStringLiteral("Menus & toolbars"),
+         QStringLiteral("menus_toolbars"),
+         Typography::Icons::Save,
+         {
+             {QStringLiteral("menu"), QStringLiteral("Menu"), Typography::Icons::List},
+             {QStringLiteral("menu-bar"), QStringLiteral("MenuBar"), Typography::Icons::Save}
+         }},
+        {QStringLiteral("navigation"),
+         QStringLiteral("Navigation"),
+         QStringLiteral("navigation"),
+         Typography::Icons::GlobalNav,
+         {
+             {QStringLiteral("breadcrumb"), QStringLiteral("Breadcrumb"), Typography::Icons::ChevronRight},
+             {QStringLiteral("navigation-view"), QStringLiteral("NavigationView"), Typography::Icons::GlobalNav},
+             {QStringLiteral("pivot"), QStringLiteral("Pivot"), Typography::Icons::AllApps},
+             {QStringLiteral("selector-bar"), QStringLiteral("SelectorBar"), Typography::Icons::SelectAll},
+             {QStringLiteral("tab-view"), QStringLiteral("TabView"), Typography::Icons::AllApps}
+         }},
+        {QStringLiteral("scrolling"),
+         QStringLiteral("Scrolling"),
+         QStringLiteral("scrolling"),
+         Typography::Icons::Down,
+         {
+             {QStringLiteral("annotated-scrollbar"), QStringLiteral("AnnotatedScrollBar"), Typography::Icons::List},
+             {QStringLiteral("pips-pager"), QStringLiteral("PipsPager"), Typography::Icons::More},
+             {QStringLiteral("scrollbar"), QStringLiteral("ScrollBar"), Typography::Icons::Down},
+             {QStringLiteral("scroll-view"), QStringLiteral("ScrollView"), Typography::Icons::Down}
+         }},
+        {QStringLiteral("status-info"),
+         QStringLiteral("Status & info"),
+         QStringLiteral("status_info"),
+         Typography::Icons::Info,
+         {
+             {QStringLiteral("info-badge"), QStringLiteral("InfoBadge"), Typography::Icons::Info},
+             {QStringLiteral("info-bar"), QStringLiteral("InfoBar"), Typography::Icons::Info},
+             {QStringLiteral("progress-bar"), QStringLiteral("ProgressBar"), Typography::Icons::Refresh},
+             {QStringLiteral("progress-ring"), QStringLiteral("ProgressRing"), Typography::Icons::Refresh},
+             {QStringLiteral("tooltip"), QStringLiteral("ToolTip"), Typography::Icons::Info}
+         }},
+        {QStringLiteral("text-fields"),
+         QStringLiteral("Text fields"),
+         QStringLiteral("textfields"),
+         Typography::Icons::Edit,
+         {
+             {QStringLiteral("auto-suggest-box"), QStringLiteral("AutoSuggestBox"), Typography::Icons::Search},
+             {QStringLiteral("label"), QStringLiteral("Label"), Typography::Icons::Font},
+             {QStringLiteral("line-edit"), QStringLiteral("LineEdit"), Typography::Icons::Edit},
+             {QStringLiteral("number-box"), QStringLiteral("NumberBox"), Typography::Icons::Calculator},
+             {QStringLiteral("password-box"), QStringLiteral("PasswordBox"), Typography::Icons::Lock},
+             {QStringLiteral("text-edit"), QStringLiteral("TextEdit"), Typography::Icons::Edit}
+         }},
+        {QStringLiteral("windowing"),
+         QStringLiteral("Windowing"),
+         QStringLiteral("windowing"),
+         Typography::Icons::BackToWindow,
+         {
+             {QStringLiteral("title-bar"), QStringLiteral("TitleBar"), Typography::Icons::BackToWindow},
+             {QStringLiteral("window"), QStringLiteral("Window"), Typography::Icons::FullScreen}
+         }}
+    };
+    return catalog;
+}
+
+} // namespace fluent::gallery

@@ -7,6 +7,7 @@
 #include "components/basicinput/Button.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "utils/Log.h"
 
 namespace fluent::gallery {
 
@@ -39,6 +40,8 @@ PlaceholderPage::PlaceholderPage(const GalleryNavigationItem& item, QWidget* par
     layout->addStretch(1);
 
     applyPalette();
+    LOG_DEBUG(QStringLiteral("PlaceholderPage created routeId=%1 title=%2 color=%3")
+                  .arg(m_routeId, m_title, m_placeholderColor.name(QColor::HexRgb)));
 }
 
 void PlaceholderPage::onThemeUpdated()

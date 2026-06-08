@@ -5,6 +5,7 @@
 #include <QWidget>
 
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/QMLPlus.h"
 #include "model/GalleryNavigationItem.h"
 
 namespace fluent::textfields {
@@ -13,7 +14,7 @@ class Label;
 
 namespace fluent::gallery {
 
-class PlaceholderPage : public QWidget, public FluentElement {
+class PlaceholderPage : public QWidget, public FluentElement, public QMLPlus {
 public:
     explicit PlaceholderPage(const GalleryNavigationItem& item, QWidget* parent = nullptr);
 

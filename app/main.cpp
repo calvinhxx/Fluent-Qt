@@ -20,6 +20,8 @@ int main(int argc, char** argv)
 
     initializeFluentQtResources();
     utils::logging::initialize();
+    LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2")
+                 .arg(QApplication::applicationName(), QApplication::organizationName()));
     app.setWindowIcon(fluent::gallery::appicon::icon());
 
     fluent::gallery::GalleryWindow window;

@@ -1,21 +1,402 @@
 #include "GalleryNavigationPane.h"
 
-#include <QHBoxLayout>
+#include <functional>
+#include <QAbstractItemView>
+#include <QMouseEvent>
+#include <QPalette>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPropertyAnimation>
+#include <QStandardItem>
+#include <QStandardItemModel>
+#include <QStyledItemDelegate>
 #include <QStyle>
+#include <QTimer>
+#include <QTreeView>
+#include <QVariant>
 #include <QVBoxLayout>
 
-#include "components/basicinput/Button.h"
-#include "components/textfields/Label.h"
+#include "compatibility/QtCompat.h"
+#include "components/dialogs_flyouts/Popup.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/collections/TreeView.h"
+#include "components/scrolling/ScrollBar.h"
 #include "design/Typography.h"
+#include "utils/Log.h"
 
 namespace fluent::gallery {
+
+namespace {
+
+enum GalleryNavigationRole {
+    RouteIdRole = Qt::UserRole + 1,
+    KindRole,
+    ParentRouteIdRole,
+    IconGlyphRole,
+    IndicatorInsetRole
+};
+
+constexpr int kSectionHeight = 32;
+constexpr int kRouteHeight = 36;
+constexpr int kCompactPaneWidth = 48;
+constexpr int kCompactFlyoutHorizontalOffset = 8;
+constexpr int kCompactFlyoutVerticalOffset = -4;
+constexpr int kCompactFlyoutEntranceOffset = 8;
+constexpr int kCompactFlyoutWindowMargin = 12;
+constexpr QMargins kCompactFlyoutContentMargins(3, 4, 3, 4);
+constexpr qreal kRowLeftInset = 4.0;
+constexpr qreal kRowRightInset = 12.0;
+constexpr qreal kRowVerticalInset = 2.0;
+constexpr qreal kContentStart = 12.0;
+constexpr qreal kIconAreaWidth = 20.0;
+constexpr qreal kIconTextGap = 11.0;
+constexpr qreal kTextStart = kContentStart + kIconAreaWidth + kIconTextGap;
+constexpr qreal kChevronAreaWidth = 28.0;
+constexpr qreal kChevronRightInset = 10.0;
+constexpr qreal kTextRightGap = 8.0;
+constexpr qreal kSelectionIndicatorWidth = 3.0;
+constexpr qreal kSelectionIndicatorHeight = 14.0;
+constexpr qreal kSelectionIndicatorTextGap = 8.0;
+constexpr int kRouteTextPixelSize = 13;
+
+int viewportWidthForOption(const QStyleOptionViewItem& option)
+{
+    const auto* itemView = qobject_cast<const QAbstractItemView*>(option.widget);
+    return itemView && itemView->viewport() ? itemView->viewport()->width() : option.rect.width();
+}
+
+bool compactForOption(const QStyleOptionViewItem& option)
+{
+    for (const QWidget* widget = option.widget; widget; widget = widget->parentWidget()) {
+        const QVariant compact = widget->property("galleryCompact");
+        if (compact.isValid())
+            return compact.toBool();
+    }
+    return false;
+}
+
+qreal compactVisualProgressForOption(const QStyleOptionViewItem& option)
+{
+    for (const QWidget* widget = option.widget; widget; widget = widget->parentWidget()) {
+        const QVariant progress = widget->property("galleryCompactVisualProgress");
+        if (progress.isValid())
+            return qBound<qreal>(0.0, progress.toDouble(), 1.0);
+    }
+    return compactForOption(option) ? 1.0 : 0.0;
+}
+
+QRectF rowBackgroundRectForOption(const QStyleOptionViewItem& option)
+{
+    const bool compact = compactForOption(option);
+    const qreal compactProgress = compactVisualProgressForOption(option);
+    const bool fullyCompact = compact && compactProgress >= 0.999;
+    const qreal availableWidth = fullyCompact ? kCompactPaneWidth : viewportWidthForOption(option);
+    const qreal rightInset = compact ? kRowLeftInset : kRowRightInset;
+    return QRectF(kRowLeftInset,
+                  option.rect.top() + kRowVerticalInset,
+                  qMax<qreal>(0.0, availableWidth - kRowLeftInset - rightInset),
+                  option.rect.height() - 2.0 * kRowVerticalInset);
+}
+
+QRectF chevronRectForOption(const QStyleOptionViewItem& option)
+{
+    const QRectF backgroundRect = rowBackgroundRectForOption(option);
+    return QRectF(backgroundRect.right() - kChevronRightInset - kChevronAreaWidth,
+                  backgroundRect.top(),
+                  kChevronAreaWidth,
+                  backgroundRect.height());
+}
+
+class GalleryNavigationDelegate : public QStyledItemDelegate {
+public:
+    explicit GalleryNavigationDelegate(fluent::FluentElement* themeHost, QObject* parent = nullptr)
+        : QStyledItemDelegate(parent)
+        , m_themeHost(themeHost)
+    {
+    }
+
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        const auto kind = static_cast<GalleryNavigationItem::Kind>(index.data(KindRole).toInt());
+        if (kind == GalleryNavigationItem::Kind::SectionHeader) {
+            const qreal compactProgress = compactVisualProgressForOption(option);
+            return QSize(1, qRound(kSectionHeight * (1.0 - compactProgress)));
+        }
+        return QSize(1, kRouteHeight);
+    }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
+    {
+        if (!index.isValid() || !m_themeHost)
+            return;
+
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setRenderHint(QPainter::TextAntialiasing);
+
+        const auto colors = m_themeHost->themeColors();
+        const auto radius = m_themeHost->themeRadius();
+        const auto kind = static_cast<GalleryNavigationItem::Kind>(index.data(KindRole).toInt());
+        const QString text = index.data(Qt::DisplayRole).toString();
+        const bool compact = compactForOption(option);
+        const qreal compactProgress = compactVisualProgressForOption(option);
+        const qreal expandedOpacity = qBound<qreal>(0.0, 1.0 - compactProgress, 1.0);
+
+        if (kind == GalleryNavigationItem::Kind::SectionHeader) {
+            if (expandedOpacity <= 0.01) {
+                painter->restore();
+                return;
+            }
+            painter->setFont(m_themeHost->themeFont(Typography::FontRole::Caption).toQFont());
+            painter->setPen(colors.textSecondary);
+            painter->setOpacity(expandedOpacity);
+            painter->drawText(option.rect.adjusted(qRound(16 - 6 * compactProgress), 6, -8, 0),
+                              Qt::AlignLeft | Qt::AlignVCenter,
+                              text);
+            painter->restore();
+            return;
+        }
+
+        const QRectF backgroundRect = rowBackgroundRectForOption(option);
+
+        const bool selected = option.state & QStyle::State_Selected;
+        const bool hovered = option.state & QStyle::State_MouseOver;
+        const bool pressed = (option.state & QStyle::State_Sunken) && hovered;
+
+        QColor background = Qt::transparent;
+        if (pressed)
+            background = colors.subtleTertiary;
+        else if (selected || hovered)
+            background = colors.subtleSecondary;
+
+        if (background.alpha() > 0) {
+            QPainterPath path;
+            path.addRoundedRect(backgroundRect, radius.control, radius.control);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(background);
+            painter->drawPath(path);
+        }
+
+        // The selected indicator pill is painted by the TreeView overlay so it can
+        // slide between rows with direction-aware motion.
+        // zh_CN: 选中指示器药丸由 TreeView 覆盖层绘制，可在行间带方向感地滑动。
+
+        const bool hasChildren = index.model() && index.model()->hasChildren(index);
+        QRectF chevronRect;
+        const qreal chevronOpacity = compact ? 0.0 : expandedOpacity;
+        if (hasChildren && chevronOpacity > 0.01) {
+            const auto* treeView = qobject_cast<const fluent::collections::TreeView*>(option.widget);
+            const qreal progress = treeView
+                ? treeView->chevronRotation(index)
+                : (qobject_cast<const QTreeView*>(option.widget)
+                       && qobject_cast<const QTreeView*>(option.widget)->isExpanded(index) ? 1.0 : 0.0);
+            chevronRect = chevronRectForOption(option);
+            QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+            iconFont.setPixelSize(9);
+            painter->setFont(iconFont);
+            painter->setPen(colors.textSecondary);
+            painter->save();
+            painter->setOpacity(chevronOpacity);
+            painter->translate(chevronRect.center());
+            painter->rotate(180.0 * qBound<qreal>(0.0, progress, 1.0));
+            painter->translate(-chevronRect.center());
+            painter->drawText(chevronRect,
+                              Qt::AlignCenter,
+                              Typography::Icons::ChevronDownMed);
+            painter->restore();
+        }
+
+        const QString iconGlyph = index.data(IconGlyphRole).toString();
+        const bool hasIcon = !iconGlyph.isEmpty();
+        const qreal contentLeft = backgroundRect.left() + kContentStart;
+        const qreal compactIconLeft = qMax<qreal>(0.0, (kCompactPaneWidth - kIconAreaWidth) / 2.0);
+        const qreal iconLeft = contentLeft + (compactIconLeft - contentLeft) * compactProgress;
+        qreal textX = kind == GalleryNavigationItem::Kind::ComponentRoute
+            ? backgroundRect.left() + kTextStart
+            : contentLeft;
+        if (!iconGlyph.isEmpty()) {
+            QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+            iconFont.setPixelSize(15);
+            painter->setFont(iconFont);
+            painter->setPen(selected ? colors.textPrimary : colors.textSecondary);
+            painter->drawText(QRectF(iconLeft,
+                                     backgroundRect.top(),
+                                     kIconAreaWidth,
+                                     backgroundRect.height()),
+                              Qt::AlignCenter,
+                              iconGlyph);
+            textX = backgroundRect.left() + kTextStart;
+        } else if (!hasIcon && kind != GalleryNavigationItem::Kind::ComponentRoute) {
+            textX = backgroundRect.left() + kTextStart;
+        }
+
+        // Selected rows keep the regular text weight — no bold highlight.
+        // zh_CN: 选中行保持常规字重，不做字体加粗高亮。
+        QFont textFont = m_themeHost->themeFont(Typography::FontRole::Body).toQFont();
+        textFont.setPixelSize(kRouteTextPixelSize);
+        painter->setFont(textFont);
+        painter->setPen(colors.textPrimary);
+        const qreal textRight = hasChildren && !compact
+            ? chevronRect.left() - kTextRightGap
+            : backgroundRect.right() - kTextRightGap;
+        const QRectF textRect(textX - 6.0 * compactProgress,
+                              backgroundRect.top(),
+                              qMax<qreal>(0.0, textRight - textX),
+                              backgroundRect.height());
+        if (expandedOpacity > 0.01) {
+            painter->save();
+            painter->setOpacity(expandedOpacity);
+            painter->drawText(textRect,
+                              Qt::AlignLeft | Qt::AlignVCenter,
+                              painter->fontMetrics().elidedText(text, Qt::ElideRight, qRound(textRect.width())));
+            painter->restore();
+        }
+        painter->restore();
+    }
+
+private:
+    fluent::FluentElement* m_themeHost = nullptr;
+};
+
+class CompactFlyoutRow : public QWidget, public fluent::FluentElement {
+public:
+    CompactFlyoutRow(const QString& routeId,
+                     const QString& text,
+                     bool selected,
+                     QWidget* parent = nullptr)
+        : QWidget(parent)
+        , m_routeId(routeId)
+        , m_text(text)
+        , m_selected(selected)
+    {
+        setObjectName(QStringLiteral("galleryCompactNavigationFlyoutRow_%1").arg(routeId));
+        setMouseTracking(true);
+        setFocusPolicy(Qt::NoFocus);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        setFixedHeight(kRouteHeight);
+    }
+
+    QSize sizeHint() const override
+    {
+        const QFont font = themeFont(Typography::FontRole::Body).toQFont();
+        const QFontMetrics metrics(font);
+        return QSize(qMax(208, metrics.horizontalAdvance(m_text) + 28), kRouteHeight);
+    }
+
+    std::function<void(const QString&)> onActivated;
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+
+        const auto colors = themeColors();
+        const auto radius = themeRadius();
+        const QRectF itemRect = rect().adjusted(4, 2, -4, -2);
+
+        QColor background = Qt::transparent;
+        if (m_pressed)
+            background = colors.subtleTertiary;
+        else if (m_selected || m_hovered)
+            background = colors.subtleSecondary;
+
+        if (background.alpha() > 0) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(background);
+            painter.drawRoundedRect(itemRect, radius.control, radius.control);
+        }
+
+        QFont textFont = themeFont(Typography::FontRole::Body).toQFont();
+        textFont.setPixelSize(kRouteTextPixelSize);
+        painter.setFont(textFont);
+        painter.setPen(colors.textPrimary);
+        const QRect textRect(14, 0, qMax(0, width() - 24), height());
+        painter.drawText(textRect,
+                         Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
+                         painter.fontMetrics().elidedText(m_text, Qt::ElideRight, textRect.width()));
+    }
+
+    void enterEvent(FluentEnterEvent* event) override
+    {
+        QWidget::enterEvent(event);
+        m_hovered = true;
+        update();
+    }
+
+    void leaveEvent(QEvent* event) override
+    {
+        QWidget::leaveEvent(event);
+        m_hovered = false;
+        m_pressed = false;
+        update();
+    }
+
+    void mousePressEvent(QMouseEvent* event) override
+    {
+        if (event->button() == Qt::LeftButton) {
+            m_pressed = true;
+            update();
+            event->accept();
+            return;
+        }
+        QWidget::mousePressEvent(event);
+    }
+
+    void mouseReleaseEvent(QMouseEvent* event) override
+    {
+        const bool activate = m_pressed && rect().contains(event->pos()) && event->button() == Qt::LeftButton;
+        m_pressed = false;
+        update();
+        if (activate) {
+            if (onActivated)
+                onActivated(m_routeId);
+            event->accept();
+            return;
+        }
+        QWidget::mouseReleaseEvent(event);
+    }
+
+private:
+    QString m_routeId;
+    QString m_text;
+    bool m_selected = false;
+    bool m_hovered = false;
+    bool m_pressed = false;
+};
+
+class CompactFlyoutPanel : public QWidget, public fluent::FluentElement {
+public:
+    explicit CompactFlyoutPanel(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+        setAttribute(Qt::WA_OpaquePaintEvent);
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        painter.fillRect(rect(), themeColors().bgLayer);
+    }
+};
+
+} // namespace
 
 GalleryNavigationPane::GalleryNavigationPane(const QVector<GalleryNavigationItem>& items, QWidget* parent)
     : QWidget(parent)
     , m_items(items)
 {
     setObjectName(QStringLiteral("galleryNavigationPane"));
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    setSizePolicy(QSizePolicy::Expanding, isFooterOnly() ? QSizePolicy::Fixed : QSizePolicy::Expanding);
+    setMinimumHeight(isFooterOnly() ? kRouteHeight + 9 : 0);
+    m_compactVisualAnimation = new QPropertyAnimation(this, "compactVisualProgress", this);
+    connect(m_compactVisualAnimation, &QPropertyAnimation::finished,
+            this, [this]() {
+                setCompactVisualProgress(m_compact ? 1.0 : 0.0);
+                updateCompactRowVisibility();
+            });
     rebuild();
 }
 
@@ -23,7 +404,7 @@ QStringList GalleryNavigationPane::routeIds() const
 {
     QStringList ids;
     for (const GalleryNavigationItem& item : m_items) {
-        if (!item.sectionHeader)
+        if (item.kind != GalleryNavigationItem::Kind::SectionHeader)
             ids.append(item.id);
     }
     return ids;
@@ -39,97 +420,411 @@ QStringList GalleryNavigationPane::visibleTitles() const
 
 bool GalleryNavigationPane::containsRoute(const QString& routeId) const
 {
-    return m_buttons.contains(routeId);
+    return m_routeIndexes.contains(routeId);
+}
+
+QModelIndex GalleryNavigationPane::indexForRouteId(const QString& routeId) const
+{
+    const auto iterator = m_routeIndexes.constFind(routeId);
+    return iterator == m_routeIndexes.constEnd() ? QModelIndex() : QModelIndex(iterator.value());
 }
 
 void GalleryNavigationPane::setSelectedRouteId(const QString& routeId)
 {
     if (m_selectedRouteId == routeId)
         return;
+    LOG_DEBUG(QStringLiteral("GalleryNavigationPane selectedRouteChanged object=%1 old=%2 new=%3")
+                  .arg(objectName(), m_selectedRouteId, routeId));
     m_selectedRouteId = routeId;
     updateButtonStyles();
+    emit selectedRouteIdChanged(m_selectedRouteId);
+}
+
+void GalleryNavigationPane::setCompact(bool compact)
+{
+    if (m_compact == compact)
+        return;
+
+    m_compact = compact;
+    LOG_DEBUG(QStringLiteral("GalleryNavigationPane compactChanged object=%1 compact=%2")
+                  .arg(objectName(), compact ? QStringLiteral("true") : QStringLiteral("false")));
+    syncCompactVisualProperties();
+    if (compact && m_treeView)
+        m_treeView->collapseAll();
+    if (!compact)
+        closeCompactFlyout();
+    updateCompactRowVisibility();
+    updateButtonStyles();
+    startCompactVisualTransition(compact);
+    emit compactChanged(m_compact);
+}
+
+void GalleryNavigationPane::setCompactVisualProgress(qreal progress)
+{
+    const qreal normalized = qBound<qreal>(0.0, progress, 1.0);
+    if (qAbs(m_compactVisualProgress - normalized) <= 0.0001)
+        return;
+
+    const bool wasFullyCompact = m_compact && m_compactVisualProgress >= 0.999;
+    m_compactVisualProgress = normalized;
+    syncCompactVisualProperties();
+    const bool isFullyCompact = m_compact && m_compactVisualProgress >= 0.999;
+    if (wasFullyCompact != isFullyCompact || !m_compact)
+        updateCompactRowVisibility();
+    if (m_treeView) {
+        m_treeView->doItemsLayout();
+        if (m_treeView->viewport())
+            m_treeView->viewport()->update();
+    }
 }
 
 void GalleryNavigationPane::onThemeUpdated()
 {
-    updateButtonStyles();
+    updateDividerColor();
+    if (m_treeView && m_treeView->viewport())
+        m_treeView->viewport()->update();
 }
 
 void GalleryNavigationPane::rebuild()
 {
-    auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(6, 12, 6, 6);
-    layout->setSpacing(2);
+    m_routeIndexes.clear();
 
-    for (const GalleryNavigationItem& item : m_items) {
-        if (item.sectionHeader) {
-            layout->addWidget(createSectionHeader(item));
-        } else {
-            auto* row = new QWidget(this);
-            auto* rowLayout = new QHBoxLayout(row);
-            rowLayout->setContentsMargins(6 + item.depth * 18, 0, 0, 0);
-            rowLayout->setSpacing(0);
-            rowLayout->addWidget(createRouteButton(item));
-            layout->addWidget(row);
-        }
+    auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
+    outerLayout->setSpacing(0);
+
+    if (isFooterOnly()) {
+        m_divider = new QWidget(this);
+        m_divider->setObjectName(QStringLiteral("galleryFooterNavigationDivider"));
+        m_divider->setFixedHeight(1);
+        m_divider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        m_divider->setAutoFillBackground(true);
+        outerLayout->addWidget(m_divider);
+        updateDividerColor();
     }
 
-    layout->addStretch(1);
+    m_treeView = new fluent::collections::TreeView(this);
+    m_treeView->setObjectName(isFooterOnly()
+                                  ? QStringLiteral("galleryFooterNavigationTreeView")
+                                  : QStringLiteral("galleryMainNavigationTreeView"));
+    syncCompactVisualProperties();
+    LOG_DEBUG(QStringLiteral("GalleryNavigationPane rebuild tree=%1 itemCount=%2 footerOnly=%3")
+                  .arg(m_treeView->objectName())
+                  .arg(m_items.size())
+                  .arg(isFooterOnly() ? QStringLiteral("true") : QStringLiteral("false")));
+    m_treeView->setBorderVisible(false);
+    m_treeView->setBackgroundVisible(false);
+    m_treeView->setIndentation(0);
+    m_treeView->setIndicatorMotionAnimationEnabled(true);
+    m_treeView->setSelectionIndicatorVisible(true);
+    fluent::collections::TreeView::SelectionIndicatorStyle indicatorStyle;
+    indicatorStyle.inset = kRowLeftInset + 3.0;
+    indicatorStyle.width = kSelectionIndicatorWidth;
+    indicatorStyle.height = kSelectionIndicatorHeight;
+    indicatorStyle.insetRole = IndicatorInsetRole;
+    m_treeView->setSelectionIndicatorStyle(indicatorStyle);
+    m_treeView->setSelectionMode(fluent::collections::TreeView::TreeSelectionMode::Single);
+    m_treeView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    if (auto* scrollBar = m_treeView->verticalFluentScrollBar())
+        scrollBar->setThickness(5);
+
+    m_model = new QStandardItemModel(m_treeView);
+    QHash<QString, QStandardItem*> categoryItems;
+    for (const GalleryNavigationItem& item : m_items)
+        appendNavigationItem(m_model, categoryItems, item);
+
+    m_treeView->setModel(m_model);
+    m_treeView->setItemDelegate(new GalleryNavigationDelegate(this, m_treeView));
+    if (!isFooterOnly())
+        m_treeView->collapseAll();
+    updateCompactRowVisibility();
+
+    connect(m_treeView, &fluent::collections::TreeView::itemPressed,
+            this, [this](const QModelIndex& index) {
+                const QString routeId = index.data(RouteIdRole).toString();
+                if (routeId.isEmpty()) {
+                    LOG_TRACE(QStringLiteral("GalleryNavigationPane itemPressed tree=%1 state=ignored reason=empty-route")
+                                  .arg(m_treeView ? m_treeView->objectName() : objectName()));
+                    return;
+                }
+                const bool hasChildren = m_model && m_model->hasChildren(index);
+                LOG_DEBUG(QStringLiteral("GalleryNavigationPane itemPressed tree=%1 routeId=%2 hasChildren=%3")
+                              .arg(m_treeView ? m_treeView->objectName() : objectName(),
+                                   routeId,
+                                   hasChildren ? QStringLiteral("true") : QStringLiteral("false")));
+                setSelectedRouteId(routeId);
+                if (m_compact && hasChildren) {
+                    showCompactFlyoutForIndex(index);
+                } else if (m_treeView && hasChildren) {
+                    m_treeView->toggleExpanded(index);
+                } else if (m_compact) {
+                    closeCompactFlyout();
+                }
+                emit routeActivated(routeId);
+            });
+
+    outerLayout->addWidget(m_treeView);
     updateButtonStyles();
+    LOG_DEBUG(QStringLiteral("GalleryNavigationPane modelReady tree=%1 routes=%2 footerOnly=%3")
+                  .arg(m_treeView->objectName())
+                  .arg(m_routeIndexes.size())
+                  .arg(isFooterOnly() ? QStringLiteral("true") : QStringLiteral("false")));
+}
+
+void GalleryNavigationPane::updateDividerColor()
+{
+    if (!m_divider)
+        return;
+
+    QPalette palette = m_divider->palette();
+    palette.setColor(QPalette::Window, themeColors().strokeDivider);
+    m_divider->setPalette(palette);
+    m_divider->update();
 }
 
 void GalleryNavigationPane::updateButtonStyles()
 {
-    for (auto iterator = m_buttons.begin(); iterator != m_buttons.end(); ++iterator) {
-        fluent::basicinput::Button* button = iterator.value();
-        if (!button)
-            continue;
-        const bool selected = iterator.key() == m_selectedRouteId;
-        button->setFluentStyle(fluent::basicinput::Button::Subtle);
-        button->setFocusVisual(selected);
-        button->setProperty("gallerySelected", selected);
-        button->style()->unpolish(button);
-        button->style()->polish(button);
-        button->update();
+    if (!m_treeView || !m_treeView->selectionModel())
+        return;
+
+    const QModelIndex index = indexForRouteId(m_selectedRouteId);
+    if (!index.isValid()) {
+        m_treeView->clearSelection();
+        m_treeView->setCurrentIndex(QModelIndex());
+        LOG_TRACE(QStringLiteral("GalleryNavigationPane selectionCleared tree=%1 routeId=%2 reason=missing-index")
+                      .arg(m_treeView->objectName(), m_selectedRouteId));
+        return;
+    }
+
+    if (!m_compact) {
+        QModelIndex parentIndex = index.parent();
+        while (parentIndex.isValid()) {
+            m_treeView->expand(parentIndex);
+            parentIndex = parentIndex.parent();
+        }
+    }
+
+    const QModelIndex visualIndex = visualSelectionIndex(index);
+    m_treeView->setSelectedItem(visualIndex);
+    m_treeView->scrollTo(visualIndex, QAbstractItemView::EnsureVisible);
+    LOG_TRACE(QStringLiteral("GalleryNavigationPane selectionApplied tree=%1 routeId=%2")
+                  .arg(m_treeView->objectName(), m_selectedRouteId));
+}
+
+void GalleryNavigationPane::updateCompactRowVisibility()
+{
+    if (!m_treeView || !m_model)
+        return;
+
+    const bool hideSectionHeaders = m_compact && m_compactVisualProgress >= 0.999;
+    for (int row = 0; row < m_model->rowCount(); ++row) {
+        const QModelIndex index = m_model->index(row, 0);
+        const auto kind = static_cast<GalleryNavigationItem::Kind>(index.data(KindRole).toInt());
+        m_treeView->setRowHidden(row, QModelIndex(),
+                                 hideSectionHeaders && kind == GalleryNavigationItem::Kind::SectionHeader);
     }
 }
 
-QWidget* GalleryNavigationPane::createSectionHeader(const GalleryNavigationItem& item)
+void GalleryNavigationPane::syncCompactVisualProperties()
 {
-    auto* label = new fluent::textfields::Label(item.title, this);
-    label->setObjectName(QStringLiteral("galleryNavigationSection_%1").arg(item.title));
-    label->setFluentTypography(Typography::FontRole::BodyStrong);
-    label->setFixedHeight(34);
-    label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    label->setContentsMargins(10, 8, 0, 0);
-    return label;
+    if (!m_treeView)
+        return;
+
+    m_treeView->setProperty("galleryCompact", m_compact);
+    m_treeView->setProperty("galleryCompactVisualProgress", m_compactVisualProgress);
+    if (m_treeView->viewport()) {
+        m_treeView->viewport()->setProperty("galleryCompact", m_compact);
+        m_treeView->viewport()->setProperty("galleryCompactVisualProgress", m_compactVisualProgress);
+    }
 }
 
-fluent::basicinput::Button* GalleryNavigationPane::createRouteButton(const GalleryNavigationItem& item)
+void GalleryNavigationPane::startCompactVisualTransition(bool compact)
 {
-    const QString text = item.expandable
-        ? QStringLiteral("%1    %2").arg(item.title, Typography::Icons::ChevronDownMed)
-        : item.title;
-    auto* button = new fluent::basicinput::Button(text, this);
-    button->setObjectName(QStringLiteral("galleryNavigation_%1").arg(item.id));
-    button->setProperty("galleryRouteId", item.id);
-    button->setProperty("galleryExpandable", item.expandable);
-    button->setFluentStyle(fluent::basicinput::Button::Subtle);
-    button->setFluentSize(fluent::basicinput::Button::StandardSize);
-    button->setFluentLayout(item.iconGlyph.isEmpty()
-                                ? fluent::basicinput::Button::TextOnly
-                                : fluent::basicinput::Button::IconBefore);
-    if (!item.iconGlyph.isEmpty())
-        button->setIconGlyph(item.iconGlyph, 16);
-    button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    button->setMinimumHeight(36);
-    button->setToolTip(item.title);
+    const qreal endValue = compact ? 1.0 : 0.0;
+    if (!m_compactVisualAnimation || qAbs(m_compactVisualProgress - endValue) <= 0.0001) {
+        setCompactVisualProgress(endValue);
+        updateCompactRowVisibility();
+        return;
+    }
 
-    m_buttons.insert(item.id, button);
-    connect(button, &QPushButton::clicked, this, [this, routeId = item.id]() {
-        emit routeActivated(routeId);
-    });
-    return button;
+    if (!isVisible() || !window() || !window()->isVisible()) {
+        if (m_compactVisualAnimation)
+            m_compactVisualAnimation->stop();
+        setCompactVisualProgress(endValue);
+        updateCompactRowVisibility();
+        return;
+    }
+
+    const auto animation = themeAnimation();
+    m_compactVisualAnimation->stop();
+    m_compactVisualAnimation->setDuration(animation.normal);
+    m_compactVisualAnimation->setEasingCurve(animation.decelerate);
+    m_compactVisualAnimation->setStartValue(m_compactVisualProgress);
+    m_compactVisualAnimation->setEndValue(endValue);
+    m_compactVisualAnimation->start();
+}
+
+QModelIndex GalleryNavigationPane::visualSelectionIndex(const QModelIndex& routeIndex) const
+{
+    if (!m_compact || !routeIndex.isValid())
+        return routeIndex;
+
+    const QModelIndex parentIndex = routeIndex.parent();
+    return parentIndex.isValid() ? parentIndex : routeIndex;
+}
+
+void GalleryNavigationPane::showCompactFlyoutForIndex(const QModelIndex& index)
+{
+    if (!m_compact || !m_treeView || !m_model || !index.isValid() || !m_model->hasChildren(index))
+        return;
+
+    closeCompactFlyout(false);
+
+    const QRect visualRect = m_treeView->visualRect(index);
+    if (visualRect.isEmpty())
+        return;
+
+    if (!m_compactFlyoutAnchor) {
+        m_compactFlyoutAnchor = new QWidget(m_treeView->viewport());
+        m_compactFlyoutAnchor->setObjectName(QStringLiteral("galleryCompactNavigationFlyoutAnchor"));
+        m_compactFlyoutAnchor->setAttribute(Qt::WA_TransparentForMouseEvents);
+    }
+    m_compactFlyoutAnchor->setGeometry(0,
+                                       visualRect.top(),
+                                       kCompactPaneWidth,
+                                       visualRect.height());
+    m_compactFlyoutAnchor->show();
+
+    m_compactFlyout = new fluent::dialogs_flyouts::Popup(this);
+    m_compactFlyout->setObjectName(QStringLiteral("galleryCompactNavigationFlyout"));
+    m_compactFlyout->setAnimationEnabled(true);
+    m_compactFlyout->setClosePolicy(fluent::dialogs_flyouts::Popup::ClosePolicy(
+        fluent::dialogs_flyouts::Popup::CloseOnPressOutside |
+        fluent::dialogs_flyouts::Popup::CloseOnEscape));
+
+    m_compactFlyoutPanel = new CompactFlyoutPanel(m_compactFlyout);
+    m_compactFlyoutPanel->setObjectName(QStringLiteral("galleryCompactNavigationFlyoutPanel"));
+    auto* layout = new QVBoxLayout(m_compactFlyoutPanel);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(2);
+
+    for (int row = 0; row < m_model->rowCount(index); ++row) {
+        const QModelIndex childIndex = m_model->index(row, 0, index);
+        const QString routeId = childIndex.data(RouteIdRole).toString();
+        if (routeId.isEmpty())
+            continue;
+        auto* itemRow = new CompactFlyoutRow(routeId,
+                                             childIndex.data(Qt::DisplayRole).toString(),
+                                             routeId == m_selectedRouteId,
+                                             m_compactFlyoutPanel);
+        itemRow->onActivated = [this](const QString& activatedRouteId) {
+            setSelectedRouteId(activatedRouteId);
+            emit routeActivated(activatedRouteId);
+            QTimer::singleShot(0, this, [this]() {
+                closeCompactFlyout();
+            });
+        };
+        layout->addWidget(itemRow);
+    }
+
+    const QSize contentSize = m_compactFlyoutPanel->sizeHint();
+    QWidget* topLevel = m_treeView->window();
+    const QPoint anchorTopLeft = m_compactFlyoutAnchor->mapTo(topLevel, QPoint(0, 0));
+    const int safeTop = qMax(kCompactFlyoutWindowMargin,
+                             m_treeView->mapTo(topLevel, QPoint(0, 0)).y() + kCompactFlyoutWindowMargin);
+    const int safeBottom = topLevel->height() - kCompactFlyoutWindowMargin;
+    const int maxVisibleHeight = qMax(kRouteHeight, safeBottom - safeTop);
+    const QSize cardSize(contentSize.width() + kCompactFlyoutContentMargins.left() + kCompactFlyoutContentMargins.right(),
+                         qMin(contentSize.height() + kCompactFlyoutContentMargins.top() + kCompactFlyoutContentMargins.bottom(),
+                              maxVisibleHeight));
+    const int preferredTop = anchorTopLeft.y() + kCompactFlyoutVerticalOffset;
+    const int cardTop = qBound(safeTop,
+                               preferredTop,
+                               qMax(safeTop, safeBottom - cardSize.height()));
+    const int cardLeft = anchorTopLeft.x() + m_compactFlyoutAnchor->width() + kCompactFlyoutHorizontalOffset;
+
+    const QRect contentRect = QRect(QPoint(0, 0), cardSize).marginsRemoved(kCompactFlyoutContentMargins);
+    m_compactFlyoutPanel->resize(QSize(contentRect.width(), contentSize.height()));
+    m_compactFlyout->resize(fluent::overlay::outerSizeForVisibleCard(cardSize));
+    m_compactFlyoutPanel->setGeometry(fluent::overlay::visibleCardRect(m_compactFlyout->rect())
+                                          .marginsRemoved(kCompactFlyoutContentMargins));
+    m_compactFlyoutPanel->show();
+    m_compactFlyout->setPosition(topLevel, QPoint(cardLeft, cardTop));
+    m_compactFlyout->open();
+
+    const QPoint endPos = m_compactFlyout->pos();
+    auto* positionAnimation = new QPropertyAnimation(m_compactFlyout, "pos", m_compactFlyout);
+    positionAnimation->setDuration(themeAnimation().fast);
+    positionAnimation->setEasingCurve(themeAnimation().decelerate);
+    positionAnimation->setStartValue(endPos - QPoint(kCompactFlyoutEntranceOffset, 0));
+    positionAnimation->setEndValue(endPos);
+    m_compactFlyout->move(positionAnimation->startValue().toPoint());
+    positionAnimation->start(QAbstractAnimation::DeleteWhenStopped);
+
+    LOG_DEBUG(QStringLiteral("GalleryNavigationPane compactFlyoutOpened parentRouteId=%1 childCount=%2")
+                  .arg(index.data(RouteIdRole).toString())
+                  .arg(m_model->rowCount(index)));
+}
+
+void GalleryNavigationPane::closeCompactFlyout(bool animated)
+{
+    if (m_compactFlyout) {
+        auto* popup = m_compactFlyout;
+        m_compactFlyout = nullptr;
+        m_compactFlyoutPanel = nullptr;
+        if (animated && popup->isVisible()) {
+            connect(popup, &fluent::dialogs_flyouts::Popup::closed,
+                    popup, &QObject::deleteLater);
+            popup->close();
+        } else {
+            popup->hide();
+            popup->deleteLater();
+        }
+    }
+    if (m_compactFlyoutAnchor)
+        m_compactFlyoutAnchor->hide();
+}
+
+bool GalleryNavigationPane::isFooterOnly() const
+{
+    return m_items.size() == 1 && m_items.first().kind == GalleryNavigationItem::Kind::FooterRoute;
+}
+
+QStandardItem* GalleryNavigationPane::createItem(const GalleryNavigationItem& item)
+{
+    auto* standardItem = new QStandardItem(item.title);
+    standardItem->setEditable(false);
+    standardItem->setData(item.id, RouteIdRole);
+    standardItem->setData(static_cast<int>(item.kind), KindRole);
+    standardItem->setData(item.parentId, ParentRouteIdRole);
+    standardItem->setData(item.kind == GalleryNavigationItem::Kind::ComponentRoute ? QString() : item.iconGlyph,
+                          IconGlyphRole);
+    if (item.kind == GalleryNavigationItem::Kind::ComponentRoute)
+        standardItem->setData(kRowLeftInset + kTextStart
+                                  - kSelectionIndicatorWidth
+                                  - kSelectionIndicatorTextGap,
+                              IndicatorInsetRole);
+    standardItem->setFlags(item.kind == GalleryNavigationItem::Kind::SectionHeader
+                               ? Qt::ItemIsEnabled
+                               : Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    return standardItem;
+}
+
+void GalleryNavigationPane::appendNavigationItem(QStandardItemModel* model,
+                                                 QHash<QString, QStandardItem*>& categoryItems,
+                                                 const GalleryNavigationItem& item)
+{
+    QStandardItem* standardItem = createItem(item);
+    if (item.kind == GalleryNavigationItem::Kind::ComponentRoute && categoryItems.contains(item.parentId)) {
+        categoryItems.value(item.parentId)->appendRow(standardItem);
+    } else {
+        model->appendRow(standardItem);
+    }
+
+    if (item.kind == GalleryNavigationItem::Kind::CategoryRoute)
+        categoryItems.insert(item.id, standardItem);
+    if (item.kind != GalleryNavigationItem::Kind::SectionHeader && !item.id.isEmpty())
+        m_routeIndexes.insert(item.id, QPersistentModelIndex(standardItem->index()));
 }
 
 } // namespace fluent::gallery

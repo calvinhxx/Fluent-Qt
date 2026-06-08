@@ -159,7 +159,7 @@ namespace Typography {
         const QString Mail            = QString::fromUtf16(u"\uE715");
         const QString People          = QString::fromUtf16(u"\uE716");
         const QString Phone           = QString::fromUtf16(u"\uE717");
-        const QString Message         = QString::fromUtf16(u"\uE891");
+        const QString Message         = QString::fromUtf16(u"\uE8BD");
         const QString Send            = QString::fromUtf16(u"\uE724");
         const QString Contact         = QString::fromUtf16(u"\uE77B");
         const QString Group           = QString::fromUtf16(u"\uE902");
