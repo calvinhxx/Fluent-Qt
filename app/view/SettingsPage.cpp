@@ -10,6 +10,7 @@
 #include "components/basicinput/Button.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "utils/Log.h"
 
 namespace fluent::gallery {
 
@@ -73,6 +74,8 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     outerLayout->addWidget(scrollArea);
 
     applyPalette();
+    LOG_DEBUG(QStringLiteral("SettingsPage created routeId=%1 title=%2")
+                  .arg(m_routeId, item.title));
 }
 
 void SettingsPage::onThemeUpdated()

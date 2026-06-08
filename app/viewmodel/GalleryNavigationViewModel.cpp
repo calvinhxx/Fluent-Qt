@@ -1,25 +1,31 @@
 #include "GalleryNavigationViewModel.h"
 
+#include "model/GalleryComponentCatalog.h"
 #include "design/Typography.h"
+#include "utils/Log.h"
 
 namespace fluent::gallery {
 
 namespace {
 
-GalleryNavigationItem route(const QString& id,
-                            const QString& title,
-                            const QString& group,
-                            const QString& iconGlyph,
-                            const QColor& color,
-                            int depth = 0,
-                            bool expandable = false)
+GalleryNavigationItem node(GalleryNavigationItem::Kind kind,
+                           const QString& id,
+                           const QString& title,
+                           const QString& group,
+                           const QString& iconGlyph,
+                           const QColor& color,
+                           const QString& parentId = QString(),
+                           int depth = 0,
+                           bool expandable = false)
 {
     GalleryNavigationItem item;
     item.id = id;
     item.title = title;
     item.group = group;
+    item.parentId = parentId;
     item.iconGlyph = iconGlyph;
     item.placeholderColor = color;
+    item.kind = kind;
     item.depth = depth;
     item.expandable = expandable;
     return item;
@@ -29,130 +35,120 @@ GalleryNavigationItem section(const QString& title)
 {
     GalleryNavigationItem item;
     item.title = title;
+    item.kind = GalleryNavigationItem::Kind::SectionHeader;
     item.sectionHeader = true;
     return item;
+}
+
+QColor componentColor(int categoryIndex, int componentIndex)
+{
+    static const QVector<QColor> colors{
+        QColor(QStringLiteral("#F2FBF8")),
+        QColor(QStringLiteral("#FFF6FA")),
+        QColor(QStringLiteral("#F3FBFF")),
+        QColor(QStringLiteral("#FFF9EA")),
+        QColor(QStringLiteral("#F8F8F8")),
+        QColor(QStringLiteral("#F0FBFA")),
+        QColor(QStringLiteral("#F8F5FF")),
+        QColor(QStringLiteral("#F6FAF2")),
+        QColor(QStringLiteral("#F7F7FF")),
+        QColor(QStringLiteral("#F3F7FA"))
+    };
+    return colors.at((categoryIndex + componentIndex) % colors.size());
 }
 
 } // namespace
 
 GalleryNavigationViewModel::GalleryNavigationViewModel()
-    : m_items({
-          route(QStringLiteral("home"),
-                QStringLiteral("Home"),
-                QStringLiteral("Root"),
-                Typography::Icons::Home,
-                QColor(QStringLiteral("#F4F8FF"))),
-          route(QStringLiteral("fundamentals"),
-                QStringLiteral("Fundamentals"),
-                QStringLiteral("Root"),
-                Typography::Icons::Document,
-                QColor(QStringLiteral("#F5FAEF")),
-                0,
-                true),
-          route(QStringLiteral("design"),
-                QStringLiteral("Design"),
-                QStringLiteral("Root"),
-                Typography::Icons::Brush,
-                QColor(QStringLiteral("#FBF7FF")),
-                0,
-                true),
-          route(QStringLiteral("accessibility"),
-                QStringLiteral("Accessibility"),
-                QStringLiteral("Root"),
-                Typography::Icons::People,
-                QColor(QStringLiteral("#FFF8EF")),
-                0,
-                true),
-          section(QStringLiteral("Controls")),
-          route(QStringLiteral("all-controls"),
-                QStringLiteral("All"),
-                QStringLiteral("Controls"),
-                Typography::Icons::AllApps,
-                QColor(QStringLiteral("#F8F8FF"))),
-          route(QStringLiteral("basic-input"),
-                QStringLiteral("Basic input"),
-                QStringLiteral("Controls"),
-                Typography::Icons::CheckMark,
-                QColor(QStringLiteral("#F2FBF8")),
-                0,
-                true),
-          route(QStringLiteral("collections"),
-                QStringLiteral("Collections"),
-                QStringLiteral("Controls"),
-                Typography::Icons::Grid,
-                QColor(QStringLiteral("#FFF6FA")),
-                0,
-                true),
-          route(QStringLiteral("date-time"),
-                QStringLiteral("Date & time"),
-                QStringLiteral("Controls"),
-                Typography::Icons::Calendar,
-                QColor(QStringLiteral("#F3FBFF")),
-                0,
-                true),
-          route(QStringLiteral("dialogs-flyouts"),
-                QStringLiteral("Dialogs & flyouts"),
-                QStringLiteral("Controls"),
-                Typography::Icons::Message,
-                QColor(QStringLiteral("#FFF9EA")),
-                0,
-                true),
-          route(QStringLiteral("layout"),
-                QStringLiteral("Layout"),
-                QStringLiteral("Controls"),
-                Typography::Icons::List,
-                QColor(QStringLiteral("#F7F7F7")),
-                0,
-                true),
-          route(QStringLiteral("media"),
-                QStringLiteral("Media"),
-                QStringLiteral("Controls"),
-                Typography::Icons::Play,
-                QColor(QStringLiteral("#F4F7FF")),
-                0,
-                true),
-          route(QStringLiteral("menus-toolbars"),
-                QStringLiteral("Menus & toolbars"),
-                QStringLiteral("Controls"),
-                Typography::Icons::Save,
-                QColor(QStringLiteral("#F8F8F8")),
-                0,
-                true),
-          route(QStringLiteral("motion"),
-                QStringLiteral("Motion"),
-                QStringLiteral("Controls"),
-                Typography::Icons::Refresh,
-                QColor(QStringLiteral("#FFF9F1")),
-                0,
-                true),
-          route(QStringLiteral("navigation"),
-                QStringLiteral("Navigation"),
-                QStringLiteral("Controls"),
-                Typography::Icons::GlobalNav,
-                QColor(QStringLiteral("#F0FBFA")),
-                0,
-                true),
-          route(QStringLiteral("scrolling"),
-                QStringLiteral("Scrolling"),
-                QStringLiteral("Controls"),
-                Typography::Icons::Down,
-                QColor(QStringLiteral("#F8F5FF")),
-                0,
-                true),
-          route(QStringLiteral("settings"),
-                QStringLiteral("Settings"),
-                QStringLiteral("Footer"),
-                Typography::Icons::Settings,
-                QColor(QStringLiteral("#F7F7F7")))
-      })
 {
+    m_items.append(node(GalleryNavigationItem::Kind::RootRoute,
+                        QStringLiteral("home"),
+                        QStringLiteral("Home"),
+                        QStringLiteral("Root"),
+                        Typography::Icons::Home,
+                        QColor(QStringLiteral("#F4F8FF"))));
+    m_items.append(section(QStringLiteral("Controls")));
+    m_items.append(node(GalleryNavigationItem::Kind::RootRoute,
+                        QStringLiteral("all-controls"),
+                        QStringLiteral("All"),
+                        QStringLiteral("Controls"),
+                        Typography::Icons::AllApps,
+                        QColor(QStringLiteral("#F8F8FF")),
+                        QStringLiteral("controls")));
+
+    const QVector<GalleryComponentCategory>& catalog = galleryComponentCatalog();
+    for (int categoryIndex = 0; categoryIndex < catalog.size(); ++categoryIndex) {
+        const GalleryComponentCategory& category = catalog.at(categoryIndex);
+        m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute,
+                            category.id,
+                            category.title,
+                            QStringLiteral("Controls"),
+                            category.iconGlyph,
+                            componentColor(categoryIndex, 0),
+                            QStringLiteral("controls"),
+                            0,
+                            !category.components.isEmpty()));
+        for (int componentIndex = 0; componentIndex < category.components.size(); ++componentIndex) {
+            const GalleryComponentEntry& component = category.components.at(componentIndex);
+            m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute,
+                                component.id,
+                                component.title,
+                                category.title,
+                                component.iconGlyph,
+                                componentColor(categoryIndex, componentIndex + 1),
+                                category.id,
+                                1));
+        }
+    }
+
+    m_items.append(node(GalleryNavigationItem::Kind::FooterRoute,
+                        QStringLiteral("settings"),
+                        QStringLiteral("Settings"),
+                        QStringLiteral("Footer"),
+                        Typography::Icons::Settings,
+                        QColor(QStringLiteral("#F7F7F7"))));
+
+    int routeCount = 0;
+    int categoryCount = 0;
+    int componentCount = 0;
+    int footerCount = 0;
+    for (const GalleryNavigationItem& item : m_items) {
+        switch (item.kind) {
+        case GalleryNavigationItem::Kind::SectionHeader:
+            break;
+        case GalleryNavigationItem::Kind::CategoryRoute:
+            ++routeCount;
+            ++categoryCount;
+            break;
+        case GalleryNavigationItem::Kind::ComponentRoute:
+            ++routeCount;
+            ++componentCount;
+            break;
+        case GalleryNavigationItem::Kind::FooterRoute:
+            ++routeCount;
+            ++footerCount;
+            break;
+        case GalleryNavigationItem::Kind::RootRoute:
+            ++routeCount;
+            break;
+        }
+    }
+
+    LOG_DEBUG(QStringLiteral("GalleryNavigationViewModel build catalogCategories=%1 totalItems=%2 routes=%3 categories=%4 components=%5 footerRoutes=%6 defaultRoute=%7")
+                  .arg(catalog.size())
+                  .arg(m_items.size())
+                  .arg(routeCount)
+                  .arg(categoryCount)
+                  .arg(componentCount)
+                  .arg(footerCount)
+                  .arg(defaultRouteId()));
 }
 
 QVector<GalleryNavigationItem> GalleryNavigationViewModel::mainPaneItems() const
 {
     QVector<GalleryNavigationItem> paneItems;
     for (const GalleryNavigationItem& item : m_items) {
-        if (item.id != QStringLiteral("settings"))
+        if (item.kind != GalleryNavigationItem::Kind::FooterRoute)
             paneItems.append(item);
     }
     return paneItems;
@@ -170,7 +166,7 @@ QStringList GalleryNavigationViewModel::navigationEntryIds() const
 {
     QStringList ids;
     for (const GalleryNavigationItem& item : m_items) {
-        if (!item.sectionHeader)
+        if (item.kind != GalleryNavigationItem::Kind::SectionHeader)
             ids.append(item.id);
     }
     return ids;
@@ -192,10 +188,17 @@ QString GalleryNavigationViewModel::defaultRouteId() const
 const GalleryNavigationItem* GalleryNavigationViewModel::itemById(const QString& id) const
 {
     for (const GalleryNavigationItem& item : m_items) {
-        if (!item.sectionHeader && item.id == id)
+        if (item.kind != GalleryNavigationItem::Kind::SectionHeader && item.id == id)
             return &item;
     }
     return nullptr;
+}
+
+QString GalleryNavigationViewModel::parentRouteId(const QString& id) const
+{
+    if (const GalleryNavigationItem* item = itemById(id))
+        return item->parentId;
+    return QString();
 }
 
 } // namespace fluent::gallery

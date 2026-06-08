@@ -20,6 +20,7 @@ public:
     QStringList visibleTitles() const;
     QString defaultRouteId() const;
     const GalleryNavigationItem* itemById(const QString& id) const;
+    QString parentRouteId(const QString& id) const;
 
 private:
     QVector<GalleryNavigationItem> m_items;

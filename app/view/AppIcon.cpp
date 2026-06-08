@@ -7,6 +7,8 @@
 #include <QString>
 #include <QtGlobal>
 
+#include "utils/Log.h"
+
 namespace fluent::gallery::appicon {
 namespace {
 
@@ -40,8 +42,11 @@ QPixmap fallbackPixmap(int logicalSize, qreal devicePixelRatio)
 QIcon icon()
 {
     QPixmap source(QString::fromLatin1(kIconResourcePath));
-    if (source.isNull())
+    if (source.isNull()) {
+        LOG_WARN(QStringLiteral("AppIcon fallback caller=icon reason=missing-resource path=%1")
+                     .arg(QString::fromLatin1(kIconResourcePath)));
         return QIcon(fallbackPixmap(256, 1.0));
+    }
 
 #ifdef Q_OS_MAC
     // macOS Dock icon spec: content should occupy ~80% of the canvas (~10% padding each side).
@@ -72,8 +77,13 @@ QPixmap pixmap(int logicalSize, qreal devicePixelRatio)
     const int targetSize = qRound(normalizedLogicalSize * normalizedDevicePixelRatio);
 
     QPixmap source(QString::fromLatin1(kIconResourcePath));
-    if (source.isNull())
+    if (source.isNull()) {
+        LOG_WARN(QStringLiteral("AppIcon fallback caller=pixmap reason=missing-resource path=%1 logicalSize=%2 devicePixelRatio=%3")
+                     .arg(QString::fromLatin1(kIconResourcePath))
+                     .arg(normalizedLogicalSize)
+                     .arg(normalizedDevicePixelRatio));
         return fallbackPixmap(normalizedLogicalSize, normalizedDevicePixelRatio);
+    }
 
     QPixmap scaled = source.scaled(QSize(targetSize, targetSize),
                                    Qt::KeepAspectRatio,
