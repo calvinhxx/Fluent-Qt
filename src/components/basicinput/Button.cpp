@@ -248,6 +248,8 @@ void Button::paintEvent(QPaintEvent*) {
 
     bool checked = isChecked();
     QColor bgColor, textColor, borderColor;
+    // borderColor is the Fluent surface stroke; keyboard focus is painted by
+    // the separate focusVisual block below.
     
     // 如果是 Accent 风格，或者按钮处于 Checked 状态且是 Standard 风格
     if (m_style == Accent || (checked && m_style == Standard)) {
@@ -279,9 +281,9 @@ void Button::paintEvent(QPaintEvent*) {
     }
 
     if (state == Disabled) {
-        bgColor = colors.controlDisabled;
+        bgColor = m_style == Subtle ? Qt::transparent : colors.controlDisabled;
         textColor = colors.textDisabled;
-        borderColor = colors.strokeDivider;
+        borderColor = m_style == Subtle ? Qt::transparent : colors.strokeDivider;
     } else if (m_criticalOnHover && (state == Hover || state == Pressed)) {
         bgColor = state == Pressed ? colors.systemCritical.darker(115) : colors.systemCritical;
         textColor = colors.textOnAccent;

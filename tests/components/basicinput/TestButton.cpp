@@ -65,6 +65,21 @@ qreal renderedDarkPixelCenterY(int iconOffsetY,
     return totalWeight > 0.0 ? weightedY / totalWeight : -1.0;
 }
 
+QImage renderButtonToImage(Button& button)
+{
+    button.ensurePolished();
+    button.show();
+    QApplication::processEvents();
+
+    QImage image(button.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    button.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    painter.end();
+    return image;
+}
+
 } // namespace
 
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
@@ -121,6 +136,26 @@ TEST_F(ButtonTest, IconFontRenderingIsVisuallyCenteredByDefault) {
     ASSERT_GE(menuCenterY, 0.0);
     EXPECT_NEAR(backCenterY, expectedCenterY, 0.25);
     EXPECT_NEAR(menuCenterY, expectedCenterY, 0.25);
+}
+
+TEST_F(ButtonTest, DisabledSubtleButtonKeepsTransparentSurface) {
+    Button button;
+    button.setAttribute(Qt::WA_DontShowOnScreen);
+    button.setFluentStyle(Button::Subtle);
+    button.setFluentLayout(Button::IconOnly);
+    button.setFixedSize(24, 24);
+    button.setEnabled(false);
+
+    const QImage image = renderButtonToImage(button);
+    int visiblePixels = 0;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (QColor::fromRgba(image.pixel(x, y)).alpha() > 8)
+                ++visiblePixels;
+        }
+    }
+
+    EXPECT_EQ(visiblePixels, 0);
 }
 
 TEST_F(ButtonTest, VisualPropertyVerification) {
