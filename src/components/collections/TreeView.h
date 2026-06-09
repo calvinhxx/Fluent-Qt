@@ -104,6 +104,11 @@ public:
      * zh_CN: 是否启用树指示器动效动画。
      */
     Q_PROPERTY(bool indicatorMotionAnimationEnabled READ isIndicatorMotionAnimationEnabled WRITE setIndicatorMotionAnimationEnabled NOTIFY indicatorMotionAnimationEnabledChanged)
+    /**
+     * @brief Whether the Fluent horizontal scroll overlay is allowed to appear.
+     * zh_CN: 控制 Fluent 水平滚动条覆盖层是否允许显示。
+     */
+    Q_PROPERTY(bool horizontalFluentScrollBarEnabled READ isHorizontalFluentScrollBarEnabled WRITE setHorizontalFluentScrollBarEnabled)
 
     /**
      * @brief Whether the control frame border is painted.
@@ -218,6 +223,16 @@ public:
 
     ::fluent::scrolling::ScrollBar* verticalFluentScrollBar() const;
     ::fluent::scrolling::ScrollBar* horizontalFluentScrollBar() const;
+    /**
+     * @brief Returns whether the Fluent horizontal scroll overlay may be shown.
+     * zh_CN: 返回 Fluent 水平滚动条覆盖层是否允许显示。
+     */
+    bool isHorizontalFluentScrollBarEnabled() const { return m_horizontalFluentScrollBarEnabled; }
+    /**
+     * @brief Enables or disables the Fluent horizontal scroll overlay.
+     * zh_CN: 启用或禁用 Fluent 水平滚动条覆盖层。
+     */
+    void setHorizontalFluentScrollBarEnabled(bool enabled);
 
     void refreshFluentScrollChrome();
 
@@ -315,6 +330,7 @@ private:
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     ::fluent::scrolling::ScrollBar* m_hScrollBar = nullptr;
+    bool m_horizontalFluentScrollBarEnabled = true;
     bool m_viewportHovered = false;
 
     // --- Overscroll bounce ---

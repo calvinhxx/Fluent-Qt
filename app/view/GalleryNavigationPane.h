@@ -30,6 +30,7 @@ class GalleryNavigationPane : public QWidget, public FluentElement, public QMLPl
     Q_PROPERTY(QString selectedRouteId READ selectedRouteId WRITE setSelectedRouteId NOTIFY selectedRouteIdChanged)
     Q_PROPERTY(bool compact READ isCompact WRITE setCompact NOTIFY compactChanged)
     Q_PROPERTY(qreal compactVisualProgress READ compactVisualProgress WRITE setCompactVisualProgress)
+    Q_PROPERTY(qreal settingsIconRotation READ settingsIconRotation WRITE setSettingsIconRotation)
 
 public:
     explicit GalleryNavigationPane(const QVector<GalleryNavigationItem>& items, QWidget* parent = nullptr);
@@ -41,9 +42,11 @@ public:
     QModelIndex indexForRouteId(const QString& routeId) const;
     bool isCompact() const { return m_compact; }
     qreal compactVisualProgress() const { return m_compactVisualProgress; }
+    qreal settingsIconRotation() const { return m_settingsIconRotation; }
     void setSelectedRouteId(const QString& routeId);
     void setCompact(bool compact);
     void setCompactVisualProgress(qreal progress);
+    void setSettingsIconRotation(qreal rotation);
     void onThemeUpdated() override;
 
 signals:
@@ -54,10 +57,10 @@ signals:
 private:
     void rebuild();
     void updateButtonStyles();
-    void updateDividerColor();
     void updateCompactRowVisibility();
     void syncCompactVisualProperties();
     void startCompactVisualTransition(bool compact);
+    void startSettingsIconRotation();
     QModelIndex visualSelectionIndex(const QModelIndex& routeIndex) const;
     void showCompactFlyoutForIndex(const QModelIndex& index);
     void closeCompactFlyout(bool animated = true);
@@ -73,11 +76,12 @@ private:
     fluent::dialogs_flyouts::Popup* m_compactFlyout = nullptr;
     QWidget* m_compactFlyoutPanel = nullptr;
     QWidget* m_compactFlyoutAnchor = nullptr;
-    QWidget* m_divider = nullptr;
     QPropertyAnimation* m_compactVisualAnimation = nullptr;
+    QPropertyAnimation* m_settingsIconRotationAnimation = nullptr;
     QHash<QString, QPersistentModelIndex> m_routeIndexes;
     QString m_selectedRouteId;
     qreal m_compactVisualProgress = 0.0;
+    qreal m_settingsIconRotation = 0.0;
     bool m_compact = false;
 };
 
