@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
 
 #include <QApplication>
+#include <QEvent>
 #include <QLabel>
 #include <QPixmap>
 #include <QPointer>
+#include <QPropertyAnimation>
 #include <QRect>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -250,6 +252,38 @@ TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
     EXPECT_EQ(menuButton->iconOffset(), QPoint(0, 0));
     EXPECT_FALSE(backButton->isEnabled());
     EXPECT_TRUE(menuButton->isEnabled());
+    QEvent menuEnterEvent(QEvent::Enter);
+    QApplication::sendEvent(menuButton, &menuEnterEvent);
+    QApplication::processEvents();
+    EXPECT_EQ(menuButton->findChild<QPropertyAnimation*>(
+                  QStringLiteral("galleryTitleBarIconJitterAnimation")),
+              nullptr);
+    QTest::mousePress(menuButton, Qt::LeftButton, Qt::NoModifier, menuButton->rect().center());
+    QApplication::processEvents();
+    auto* menuJitterAnimation = menuButton->findChild<QPropertyAnimation*>(
+        QStringLiteral("galleryTitleBarIconJitterAnimation"));
+    ASSERT_NE(menuJitterAnimation, nullptr);
+    EXPECT_EQ(menuJitterAnimation->state(), QAbstractAnimation::Running);
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    QApplication::processEvents();
+    ASSERT_TRUE(backButton->isEnabled());
+    QEvent backEnterEvent(QEvent::Enter);
+    QApplication::sendEvent(backButton, &backEnterEvent);
+    QApplication::processEvents();
+    EXPECT_EQ(backButton->findChild<QPropertyAnimation*>(
+                  QStringLiteral("galleryTitleBarIconJitterAnimation")),
+              nullptr);
+    QTest::mousePress(backButton, Qt::LeftButton, Qt::NoModifier, backButton->rect().center());
+    QApplication::processEvents();
+    auto* backJitterAnimation = backButton->findChild<QPropertyAnimation*>(
+        QStringLiteral("galleryTitleBarIconJitterAnimation"));
+    ASSERT_NE(backJitterAnimation, nullptr);
+    EXPECT_EQ(backJitterAnimation->state(), QAbstractAnimation::Running);
+    QTest::qWait(220);
+    QApplication::processEvents();
+    EXPECT_EQ(backButton->iconOffset(), QPoint(0, 0));
+    EXPECT_EQ(menuButton->iconOffset(), QPoint(0, 0));
     EXPECT_TRUE(vg::sizeIs(menuButton, QSize(24, 24)));
     EXPECT_TRUE(vg::sizeIs(appIcon, QSize(18, 18)));
     EXPECT_EQ(mappedGeometry(appIcon, titleBar).center().y(),
@@ -610,7 +644,7 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationRowClickTogglesCategory)
     EXPECT_FALSE(tree->isExpanded(categoryIndex));
 }
 
-TEST_F(GalleryShellFrameworkTest, FooterNavigationIsSeparatedFromMainPane)
+TEST_F(GalleryShellFrameworkTest, FooterNavigationHasNoNativeTopDivider)
 {
     GalleryWindow window;
     window.resize(1180, 760);
@@ -620,11 +654,7 @@ TEST_F(GalleryShellFrameworkTest, FooterNavigationIsSeparatedFromMainPane)
     auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(footerPane, nullptr);
     auto* divider = footerPane->findChild<QWidget*>(QStringLiteral("galleryFooterNavigationDivider"));
-    ASSERT_NE(divider, nullptr);
-    EXPECT_TRUE(divider->isVisibleTo(footerPane));
-    EXPECT_EQ(divider->height(), 1);
-    EXPECT_EQ(divider->geometry().top(), 0);
-    EXPECT_GE(divider->width(), footerPane->width() - 1);
+    EXPECT_EQ(divider, nullptr);
 }
 
 TEST_F(GalleryShellFrameworkTest, MainNavigationScrollbarUsesInsetOverlay)
@@ -647,6 +677,9 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationScrollbarUsesInsetOverlay)
     ASSERT_GT(tree->verticalScrollBar()->maximum(), tree->verticalScrollBar()->minimum());
     ASSERT_TRUE(scrollBar->isVisible());
     EXPECT_EQ(scrollBar->thickness(), 5);
+    EXPECT_FALSE(tree->isHorizontalFluentScrollBarEnabled());
+    ASSERT_NE(tree->horizontalFluentScrollBar(), nullptr);
+    EXPECT_FALSE(tree->horizontalFluentScrollBar()->isVisible());
 
     const QRect barGeometry = scrollBar->geometry();
     EXPECT_GE(barGeometry.left(), tree->rect().left());
@@ -770,10 +803,32 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
 
     auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(footerPane, nullptr);
-    clickNavigationRoute(footerPane, QStringLiteral("settings"));
+    auto* settingsRotationAnimation = footerPane->findChild<QPropertyAnimation*>(
+        QStringLiteral("gallerySettingsIconRotationAnimation"));
+    ASSERT_NE(settingsRotationAnimation, nullptr);
+    EXPECT_EQ(settingsRotationAnimation->state(), QAbstractAnimation::Stopped);
+    EXPECT_NEAR(footerPane->settingsIconRotation(), 0.0, 0.001);
+
+    TreeView* footerTree = navigationTree(footerPane);
+    ASSERT_NE(footerTree, nullptr);
+    const QModelIndex settingsIndex = footerPane->indexForRouteId(QStringLiteral("settings"));
+    ASSERT_TRUE(settingsIndex.isValid());
+    const QRect settingsRect = footerTree->visualRect(settingsIndex);
+    ASSERT_FALSE(settingsRect.isEmpty());
+    const QPoint settingsPoint = settingsRect.center();
+    QTest::mousePress(footerTree->viewport(), Qt::LeftButton, Qt::NoModifier, settingsPoint);
     QApplication::processEvents();
 
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("settings"));
+    EXPECT_EQ(settingsRotationAnimation->state(), QAbstractAnimation::Running);
+    QTest::qWait(80);
+    QApplication::processEvents();
+    EXPECT_GT(footerPane->settingsIconRotation(), 0.0);
+    QTest::mouseRelease(footerTree->viewport(), Qt::LeftButton, Qt::NoModifier, settingsPoint);
+    QTest::qWait(360);
+    QApplication::processEvents();
+    EXPECT_EQ(settingsRotationAnimation->state(), QAbstractAnimation::Stopped);
+    EXPECT_NEAR(footerPane->settingsIconRotation(), 0.0, 0.001);
     ASSERT_NE(window.currentSettingsPage(), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(window.currentSettingsPage()), nullptr);
     EXPECT_EQ(window.currentSettingsPage()->titleLabel()->text(), QStringLiteral("Settings"));

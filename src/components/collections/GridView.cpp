@@ -82,8 +82,8 @@ GridView::GridView(QWidget* parent)
 
     // --- Overscroll bounce ---
     m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(300);
-    m_bounceAnim->setEasingCurve(QEasingCurve::OutCubic);
+    m_bounceAnim->setDuration(::Animation::Duration::Normal);
+    m_bounceAnim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
     connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
         m_overscrollY = v.toReal();
         viewport()->update();

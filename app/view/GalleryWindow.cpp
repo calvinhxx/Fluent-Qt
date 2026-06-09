@@ -1,7 +1,10 @@
 #include "GalleryWindow.h"
 
+#include <QAbstractAnimation>
+#include <QEvent>
 #include <QLabel>
 #include <QPoint>
+#include <QPropertyAnimation>
 #include <QTimer>
 
 #include "components/basicinput/Button.h"
@@ -31,6 +34,7 @@ constexpr int kTitleBarButtonIconSize = 12;
 constexpr int kTitleBarTitleHeight = 24;
 constexpr int kTitleBarSearchWidth = 360;
 constexpr int kTitleBarSearchHeight = 28;
+constexpr char kTitleBarIconJitterAnimationName[] = "galleryTitleBarIconJitterAnimation";
 
 int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
 {
@@ -39,6 +43,33 @@ int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
     return bar->systemReservedLeadingWidth() > 0
         ? bar->systemReservedLeadingWidth() + kTitleBarHorizontalMargin
         : kTitleBarHorizontalMargin;
+}
+
+void startTitleBarIconJitter(fluent::basicinput::Button* button)
+{
+    if (!button || !button->isEnabled())
+        return;
+
+    if (auto* currentAnimation = button->findChild<QPropertyAnimation*>(QString::fromLatin1(kTitleBarIconJitterAnimationName))) {
+        currentAnimation->stop();
+        currentAnimation->deleteLater();
+    }
+
+    button->setIconOffset(QPoint(0, 0));
+    auto* animation = new QPropertyAnimation(button, "iconOffset", button);
+    animation->setObjectName(QString::fromLatin1(kTitleBarIconJitterAnimationName));
+    const auto motion = button->themeAnimation();
+    animation->setDuration(motion.normal);
+    animation->setEasingCurve(motion.standard);
+    animation->setStartValue(QPoint(0, 0));
+    animation->setKeyValueAt(0.35, QPoint(-1, 0));
+    animation->setKeyValueAt(0.65, QPoint(1, 0));
+    animation->setEndValue(QPoint(0, 0));
+    QObject::connect(animation, &QPropertyAnimation::finished,
+                     button, [button]() {
+                         button->setIconOffset(QPoint(0, 0));
+                     });
+    animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 } // namespace
@@ -52,7 +83,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     setWindowIcon(appicon::icon());
     setMinimumSize(980, 640);
 
-    buildTitleBarContent();
+    createTitleBarContent();
     buildNavigationShell();
     selectRoute(m_navigationViewModel.defaultRouteId());
     LOG_INFO(QStringLiteral("GalleryWindow constructed defaultRoute=%1")
@@ -157,11 +188,6 @@ SettingsPage* GalleryWindow::currentSettingsPage() const
     return dynamic_cast<SettingsPage*>(m_navigationView->contentHost()->pageWidget(0));
 }
 
-void GalleryWindow::buildTitleBarContent()
-{
-    createTitleBarContent();
-}
-
 void GalleryWindow::buildNavigationShell()
 {
     m_navigationView = new fluent::navigation::NavigationView(this);
@@ -252,6 +278,7 @@ void GalleryWindow::createTitleBarContent()
     backButton->setFocusPolicy(Qt::NoFocus);
     backButton->setToolTip(QStringLiteral("Back"));
     backButton->setEnabled(false);
+    backButton->installEventFilter(this);
     connect(backButton, &fluent::basicinput::Button::clicked,
             this, [this]() {
                 navigateBack();
@@ -268,6 +295,7 @@ void GalleryWindow::createTitleBarContent()
     menuButton->setFocusPolicy(Qt::NoFocus);
     menuButton->setToolTip(QStringLiteral("Toggle navigation pane"));
     menuButton->setEnabled(false);
+    menuButton->installEventFilter(this);
     connect(menuButton, &fluent::basicinput::Button::clicked,
             this, [this]() {
                 toggleNavigationDisplayMode();
@@ -336,6 +364,16 @@ void GalleryWindow::createTitleBarContent()
                   .arg(kTitleBarSearchWidth)
                   .arg(kTitleBarSearchHeight)
                   .arg(kTitleBarButtonSize));
+}
+
+bool GalleryWindow::eventFilter(QObject* watched, QEvent* event)
+{
+    if ((watched == m_backButton || watched == m_menuButton)
+        && event->type() == QEvent::MouseButtonPress) {
+        startTitleBarIconJitter(qobject_cast<fluent::basicinput::Button*>(watched));
+    }
+
+    return fluent::windowing::Window::eventFilter(watched, event);
 }
 
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)

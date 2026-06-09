@@ -135,8 +135,8 @@ TreeView::TreeView(QWidget* parent)
 
     // --- Overscroll bounce ---
     m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(300);
-    m_bounceAnim->setEasingCurve(QEasingCurve::OutCubic);
+    m_bounceAnim->setDuration(::Animation::Duration::Normal);
+    m_bounceAnim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
     connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
         m_overscrollY = v.toReal();
         viewport()->update();
@@ -516,6 +516,16 @@ QRectF TreeView::selectedIndicatorRect(qreal progress) const {
 
 ::fluent::scrolling::ScrollBar* TreeView::horizontalFluentScrollBar() const {
     return m_hScrollBar;
+}
+
+void TreeView::setHorizontalFluentScrollBarEnabled(bool enabled) {
+    if (m_horizontalFluentScrollBarEnabled == enabled)
+        return;
+
+    m_horizontalFluentScrollBarEnabled = enabled;
+    if (!m_horizontalFluentScrollBarEnabled && m_hScrollBar)
+        m_hScrollBar->hide();
+    syncFluentHScrollBar();
 }
 
 // ── Paint ─────────────────────────────────────────────────────────────────────
@@ -1597,6 +1607,11 @@ void TreeView::syncFluentHScrollBar() {
     }
 
     if (!m_hScrollBar) return;
+
+    if (!m_horizontalFluentScrollBarEnabled) {
+        m_hScrollBar->hide();
+        return;
+    }
 
     auto* native = horizontalScrollBar();
     m_hScrollBar->setRange(native->minimum(), native->maximum());

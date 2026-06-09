@@ -7,6 +7,7 @@
 #include "viewmodel/GalleryNavigationState.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 
+class QEvent;
 class QTimer;
 
 namespace fluent::basicinput {
@@ -35,7 +36,8 @@ public:
     SettingsPage* currentSettingsPage() const;
 
 private:
-    void buildTitleBarContent();
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
     void buildNavigationShell();
     bool applyRoute(const QString& routeId);
     void createTitleBarContent();

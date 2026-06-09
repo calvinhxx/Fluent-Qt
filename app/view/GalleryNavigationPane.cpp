@@ -1,9 +1,9 @@
 #include "GalleryNavigationPane.h"
 
+#include <cmath>
 #include <functional>
 #include <QAbstractItemView>
 #include <QMouseEvent>
-#include <QPalette>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPropertyAnimation>
@@ -58,6 +58,7 @@ constexpr qreal kSelectionIndicatorWidth = 3.0;
 constexpr qreal kSelectionIndicatorHeight = 14.0;
 constexpr qreal kSelectionIndicatorTextGap = 8.0;
 constexpr int kRouteTextPixelSize = 13;
+constexpr qreal kSettingsIconRotationDegrees = 360.0;
 
 int viewportWidthForOption(const QStyleOptionViewItem& option)
 {
@@ -83,6 +84,16 @@ qreal compactVisualProgressForOption(const QStyleOptionViewItem& option)
             return qBound<qreal>(0.0, progress.toDouble(), 1.0);
     }
     return compactForOption(option) ? 1.0 : 0.0;
+}
+
+qreal settingsIconRotationForOption(const QStyleOptionViewItem& option)
+{
+    for (const QWidget* widget = option.widget; widget; widget = widget->parentWidget()) {
+        const QVariant rotation = widget->property("gallerySettingsIconRotation");
+        if (rotation.isValid())
+            return rotation.toDouble();
+    }
+    return 0.0;
 }
 
 QRectF rowBackgroundRectForOption(const QStyleOptionViewItem& option)
@@ -219,12 +230,27 @@ public:
             iconFont.setPixelSize(15);
             painter->setFont(iconFont);
             painter->setPen(selected ? colors.textPrimary : colors.textSecondary);
-            painter->drawText(QRectF(iconLeft,
-                                     backgroundRect.top(),
-                                     kIconAreaWidth,
-                                     backgroundRect.height()),
-                              Qt::AlignCenter,
-                              iconGlyph);
+            const QRectF iconRect(iconLeft,
+                                  backgroundRect.top(),
+                                  kIconAreaWidth,
+                                  backgroundRect.height());
+            const qreal iconRotation = index.data(RouteIdRole).toString() == QStringLiteral("settings")
+                ? settingsIconRotationForOption(option)
+                : 0.0;
+            if (!qFuzzyIsNull(iconRotation)) {
+                painter->save();
+                painter->translate(iconRect.center());
+                painter->rotate(iconRotation);
+                painter->translate(-iconRect.center());
+                painter->drawText(iconRect,
+                                  Qt::AlignCenter,
+                                  iconGlyph);
+                painter->restore();
+            } else {
+                painter->drawText(iconRect,
+                                  Qt::AlignCenter,
+                                  iconGlyph);
+            }
             textX = backgroundRect.left() + kTextStart;
         } else if (!hasIcon && kind != GalleryNavigationItem::Kind::ComponentRoute) {
             textX = backgroundRect.left() + kTextStart;
@@ -397,6 +423,16 @@ GalleryNavigationPane::GalleryNavigationPane(const QVector<GalleryNavigationItem
                 setCompactVisualProgress(m_compact ? 1.0 : 0.0);
                 updateCompactRowVisibility();
             });
+    m_settingsIconRotationAnimation = new QPropertyAnimation(this, "settingsIconRotation", this);
+    m_settingsIconRotationAnimation->setObjectName(QStringLiteral("gallerySettingsIconRotationAnimation"));
+    connect(m_settingsIconRotationAnimation, &QPropertyAnimation::valueChanged,
+            this, [this](const QVariant& value) {
+                setSettingsIconRotation(value.toReal());
+            });
+    connect(m_settingsIconRotationAnimation, &QPropertyAnimation::finished,
+            this, [this]() {
+                setSettingsIconRotation(0.0);
+            });
     rebuild();
 }
 
@@ -478,9 +514,26 @@ void GalleryNavigationPane::setCompactVisualProgress(qreal progress)
     }
 }
 
+void GalleryNavigationPane::setSettingsIconRotation(qreal rotation)
+{
+    qreal normalized = std::fmod(rotation, kSettingsIconRotationDegrees);
+    if (normalized < 0)
+        normalized += kSettingsIconRotationDegrees;
+    if (qAbs(m_settingsIconRotation - normalized) <= 0.0001)
+        return;
+
+    m_settingsIconRotation = normalized;
+    if (m_treeView) {
+        m_treeView->setProperty("gallerySettingsIconRotation", m_settingsIconRotation);
+        if (m_treeView->viewport()) {
+            m_treeView->viewport()->setProperty("gallerySettingsIconRotation", m_settingsIconRotation);
+            m_treeView->viewport()->update();
+        }
+    }
+}
+
 void GalleryNavigationPane::onThemeUpdated()
 {
-    updateDividerColor();
     if (m_treeView && m_treeView->viewport())
         m_treeView->viewport()->update();
 }
@@ -493,16 +546,6 @@ void GalleryNavigationPane::rebuild()
     outerLayout->setContentsMargins(0, 0, 0, 0);
     outerLayout->setSpacing(0);
 
-    if (isFooterOnly()) {
-        m_divider = new QWidget(this);
-        m_divider->setObjectName(QStringLiteral("galleryFooterNavigationDivider"));
-        m_divider->setFixedHeight(1);
-        m_divider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-        m_divider->setAutoFillBackground(true);
-        outerLayout->addWidget(m_divider);
-        updateDividerColor();
-    }
-
     m_treeView = new fluent::collections::TreeView(this);
     m_treeView->setObjectName(isFooterOnly()
                                   ? QStringLiteral("galleryFooterNavigationTreeView")
@@ -514,6 +557,7 @@ void GalleryNavigationPane::rebuild()
                   .arg(isFooterOnly() ? QStringLiteral("true") : QStringLiteral("false")));
     m_treeView->setBorderVisible(false);
     m_treeView->setBackgroundVisible(false);
+    m_treeView->setHorizontalFluentScrollBarEnabled(false);
     m_treeView->setIndentation(0);
     m_treeView->setIndicatorMotionAnimationEnabled(true);
     m_treeView->setSelectionIndicatorVisible(true);
@@ -552,6 +596,8 @@ void GalleryNavigationPane::rebuild()
                               .arg(m_treeView ? m_treeView->objectName() : objectName(),
                                    routeId,
                                    hasChildren ? QStringLiteral("true") : QStringLiteral("false")));
+                if (routeId == QStringLiteral("settings"))
+                    startSettingsIconRotation();
                 setSelectedRouteId(routeId);
                 if (m_compact && hasChildren) {
                     showCompactFlyoutForIndex(index);
@@ -569,17 +615,6 @@ void GalleryNavigationPane::rebuild()
                   .arg(m_treeView->objectName())
                   .arg(m_routeIndexes.size())
                   .arg(isFooterOnly() ? QStringLiteral("true") : QStringLiteral("false")));
-}
-
-void GalleryNavigationPane::updateDividerColor()
-{
-    if (!m_divider)
-        return;
-
-    QPalette palette = m_divider->palette();
-    palette.setColor(QPalette::Window, themeColors().strokeDivider);
-    m_divider->setPalette(palette);
-    m_divider->update();
 }
 
 void GalleryNavigationPane::updateButtonStyles()
@@ -632,9 +667,11 @@ void GalleryNavigationPane::syncCompactVisualProperties()
 
     m_treeView->setProperty("galleryCompact", m_compact);
     m_treeView->setProperty("galleryCompactVisualProgress", m_compactVisualProgress);
+    m_treeView->setProperty("gallerySettingsIconRotation", m_settingsIconRotation);
     if (m_treeView->viewport()) {
         m_treeView->viewport()->setProperty("galleryCompact", m_compact);
         m_treeView->viewport()->setProperty("galleryCompactVisualProgress", m_compactVisualProgress);
+        m_treeView->viewport()->setProperty("gallerySettingsIconRotation", m_settingsIconRotation);
     }
 }
 
@@ -662,6 +699,25 @@ void GalleryNavigationPane::startCompactVisualTransition(bool compact)
     m_compactVisualAnimation->setStartValue(m_compactVisualProgress);
     m_compactVisualAnimation->setEndValue(endValue);
     m_compactVisualAnimation->start();
+}
+
+void GalleryNavigationPane::startSettingsIconRotation()
+{
+    if (!m_settingsIconRotationAnimation)
+        return;
+
+    if (!isVisible() || !window() || !window()->isVisible()) {
+        setSettingsIconRotation(0.0);
+        return;
+    }
+
+    m_settingsIconRotationAnimation->stop();
+    const auto animation = themeAnimation();
+    m_settingsIconRotationAnimation->setDuration(animation.slow);
+    m_settingsIconRotationAnimation->setEasingCurve(animation.decelerate);
+    m_settingsIconRotationAnimation->setStartValue(m_settingsIconRotation);
+    m_settingsIconRotationAnimation->setEndValue(m_settingsIconRotation + kSettingsIconRotationDegrees - 0.01);
+    m_settingsIconRotationAnimation->start();
 }
 
 QModelIndex GalleryNavigationPane::visualSelectionIndex(const QModelIndex& routeIndex) const
