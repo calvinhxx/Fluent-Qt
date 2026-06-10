@@ -59,6 +59,16 @@ public:
     void clearPages();
     bool movePage(int from, int to);
 
+    /**
+     * @brief Switches the current page, optionally animating in a direction.
+     * zh_CN: 切换当前页面，可按方向播放转场动画。
+     *
+     * direction >= 0 plays the forward transition (incoming page slides in from the
+     * effect's side); direction < 0 reverses it (incoming page slides in from the
+     * opposite side), matching back navigation.
+     * zh_CN: direction >= 0 播放前进转场（新页面从效果方向侧滑入）；direction < 0 反向
+     * 播放（新页面从相反侧滑入），对应后退导航。
+     */
     void setCurrentIndex(int index, int direction = 0, bool animated = true);
     void setTransitionAnimationEnabled(bool enabled);
     bool transitionAnimationEnabled() const { return m_transitionAnimationEnabled; }
@@ -85,10 +95,12 @@ private:
     PageRecord makePage(QWidget* widget);
     void removeStackWidget(QWidget* widget);
     void deletePlaceholder(const PageRecord& page);
+    QWidget* detachPage(const PageRecord& page);
+    void discardTransitionGroup();
     void setBusy(bool busy);
     void finishTransition(int targetIndex, QWidget* toWidget);
     bool canAnimate(QWidget* fromWidget, QWidget* toWidget, bool requested) const;
-    QPoint transitionStartOffset(const QRect& rect) const;
+    QPoint transitionStartOffset(const QRect& rect, int direction) const;
     void showOnlyStackWidget(QWidget* currentWidget);
     void normalizeCurrentIndexAfterRemoval(int removedIndex);
     QWidget* stackWidgetAt(int index) const;
