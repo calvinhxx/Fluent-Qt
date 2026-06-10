@@ -22,11 +22,7 @@ StackContentHost::StackContentHost(QWidget* parent)
 
 StackContentHost::~StackContentHost()
 {
-    if (m_transitionGroup) {
-        m_transitionGroup->stop();
-        m_transitionGroup->deleteLater();
-        m_transitionGroup = nullptr;
-    }
+    discardTransitionGroup();
 }
 
 QWidget* StackContentHost::pageWidget(int index) const
@@ -55,15 +51,7 @@ QWidget* StackContentHost::replacePage(int index, QWidget* widget)
     if (index < 0 || index >= m_pages.size())
         return nullptr;
 
-    PageRecord oldPage = m_pages.at(index);
-    QWidget* oldContent = oldPage.content.data();
-    removeStackWidget(oldPage.stackWidget);
-    if (oldPage.placeholder) {
-        deletePlaceholder(oldPage);
-        oldContent = nullptr;
-    } else if (oldContent) {
-        oldContent->setParent(nullptr);
-    }
+    QWidget* oldContent = detachPage(m_pages.at(index));
 
     PageRecord newPage = makePage(widget);
     m_pages[index] = newPage;
@@ -83,15 +71,7 @@ QWidget* StackContentHost::takePage(int index)
     if (index < 0 || index >= m_pages.size())
         return nullptr;
 
-    PageRecord page = m_pages.takeAt(index);
-    QWidget* content = page.content.data();
-    removeStackWidget(page.stackWidget);
-    if (page.placeholder) {
-        deletePlaceholder(page);
-        content = nullptr;
-    } else if (content) {
-        content->setParent(nullptr);
-    }
+    QWidget* content = detachPage(m_pages.takeAt(index));
 
     normalizeCurrentIndexAfterRemoval(index);
     if (m_currentIndex >= 0 && m_currentIndex < m_pages.size()) {
@@ -105,14 +85,8 @@ QWidget* StackContentHost::takePage(int index)
 
 void StackContentHost::clearPages()
 {
-    for (const PageRecord& page : std::as_const(m_pages)) {
-        removeStackWidget(page.stackWidget);
-        if (page.placeholder) {
-            deletePlaceholder(page);
-        } else if (QWidget* content = page.content.data()) {
-            content->setParent(nullptr);
-        }
-    }
+    for (const PageRecord& page : std::as_const(m_pages))
+        detachPage(page);
     m_pages.clear();
     const bool changed = m_currentIndex != -1;
     m_currentIndex = -1;
@@ -147,15 +121,12 @@ bool StackContentHost::movePage(int from, int to)
 
 void StackContentHost::setCurrentIndex(int index, int direction, bool animated)
 {
-    Q_UNUSED(direction)
     const int normalized = index >= 0 && index < m_pages.size() ? index : -1;
     if (m_currentIndex == normalized)
         return;
 
     if (m_transitionGroup) {
-        m_transitionGroup->stop();
-        m_transitionGroup->deleteLater();
-        m_transitionGroup = nullptr;
+        discardTransitionGroup();
         setBusy(false);
         showOnlyStackWidget(stackWidgetAt(m_currentIndex));
     }
@@ -166,24 +137,18 @@ void StackContentHost::setCurrentIndex(int index, int direction, bool animated)
     emit currentIndexChanged(m_currentIndex);
 
     if (!toWidget) {
-        m_layout->setStackingMode(QStackedLayout::StackOne);
         showOnlyStackWidget(nullptr);
         return;
     }
 
     if (!canAnimate(fromWidget, toWidget, animated)) {
-        m_layout->setStackingMode(QStackedLayout::StackOne);
-        m_layout->setCurrentWidget(toWidget);
         showOnlyStackWidget(toWidget);
         return;
     }
 
     const QRect endRect = rect();
-    const QPoint startOffset = transitionStartOffset(endRect);
+    const QPoint startOffset = transitionStartOffset(endRect, direction);
 
-    Q_UNUSED(fromWidget)
-    m_layout->setStackingMode(QStackedLayout::StackOne);
-    m_layout->setCurrentWidget(toWidget);
     showOnlyStackWidget(toWidget);
     toWidget->setGeometry(QRect(endRect.topLeft() + startOffset, endRect.size()));
     toWidget->show();
@@ -277,6 +242,28 @@ void StackContentHost::deletePlaceholder(const PageRecord& page)
         page.stackWidget->deleteLater();
 }
 
+QWidget* StackContentHost::detachPage(const PageRecord& page)
+{
+    removeStackWidget(page.stackWidget);
+    if (page.placeholder) {
+        deletePlaceholder(page);
+        return nullptr;
+    }
+    QWidget* content = page.content.data();
+    if (content)
+        content->setParent(nullptr);
+    return content;
+}
+
+void StackContentHost::discardTransitionGroup()
+{
+    if (!m_transitionGroup)
+        return;
+    m_transitionGroup->stop();
+    m_transitionGroup->deleteLater();
+    m_transitionGroup = nullptr;
+}
+
 void StackContentHost::setBusy(bool busy)
 {
     if (m_busy == busy)
@@ -287,18 +274,12 @@ void StackContentHost::setBusy(bool busy)
 
 void StackContentHost::finishTransition(int targetIndex, QWidget* toWidget)
 {
-    if (m_transitionGroup) {
-        m_transitionGroup->deleteLater();
-        m_transitionGroup = nullptr;
-    }
+    discardTransitionGroup();
 
-    m_layout->setStackingMode(QStackedLayout::StackOne);
-    if (targetIndex >= 0 && targetIndex < m_pages.size() && toWidget) {
-        m_layout->setCurrentWidget(toWidget);
+    if (targetIndex >= 0 && targetIndex < m_pages.size() && toWidget)
         showOnlyStackWidget(toWidget);
-    } else {
+    else
         showOnlyStackWidget(nullptr);
-    }
     setBusy(false);
 }
 
@@ -315,16 +296,18 @@ bool StackContentHost::canAnimate(QWidget* fromWidget, QWidget* toWidget, bool r
         && fromWidget != toWidget;
 }
 
-QPoint StackContentHost::transitionStartOffset(const QRect& rect) const
+QPoint StackContentHost::transitionStartOffset(const QRect& rect, int direction) const
 {
+    // direction < 0 (back navigation) mirrors the incoming slide to the opposite side.
+    const int sign = direction < 0 ? -1 : 1;
     switch (m_transitionEffect) {
     case TransitionEffect::SlideFromLeft: {
         const int travel = qMax(1, qRound(rect.width() * 0.28));
-        return QPoint(-travel, 0);
+        return QPoint(-travel * sign, 0);
     }
     case TransitionEffect::SlideFromBottom: {
         const int travel = qMax(1, qRound(rect.height() * 0.28));
-        return QPoint(0, travel);
+        return QPoint(0, travel * sign);
     }
     }
     return QPoint();
@@ -332,6 +315,8 @@ QPoint StackContentHost::transitionStartOffset(const QRect& rect) const
 
 void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
 {
+    if (currentWidget)
+        m_layout->setCurrentWidget(currentWidget);
     for (const PageRecord& page : std::as_const(m_pages)) {
         QWidget* stackWidget = page.stackWidget.data();
         if (!stackWidget)
