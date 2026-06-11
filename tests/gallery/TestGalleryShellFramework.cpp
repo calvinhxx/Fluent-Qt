@@ -21,26 +21,30 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/navigation/NavigationView.h"
 #include "components/scrolling/ScrollBar.h"
+#include "components/scrolling/ScrollView.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
 #include "design/Typography.h"
-#include "view/GalleryNavigationPane.h"
+#include "view/pages/GalleryContentPage.h"
+#include "view/shell/GalleryNavigationPane.h"
+#include "view/widgets/GalleryEntryCard.h"
 #include "VisualGeometryTestUtils.h"
-#include "view/GalleryWindow.h"
-#include "view/PlaceholderPage.h"
-#include "view/SettingsPage.h"
+#include "view/shell/GalleryWindow.h"
+#include "view/pages/SettingsPage.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 
 using fluent::basicinput::Button;
 using fluent::collections::TreeView;
 using fluent::dialogs_flyouts::Popup;
+using fluent::gallery::GalleryContentPage;
+using fluent::gallery::GalleryEntryCard;
 using fluent::gallery::GalleryNavigationPane;
 using fluent::gallery::GalleryNavigationViewModel;
 using fluent::gallery::GalleryWindow;
-using fluent::gallery::PlaceholderPage;
 using fluent::gallery::SettingsPage;
 using fluent::navigation::NavigationView;
+using fluent::scrolling::ScrollView;
 using fluent::textfields::AutoSuggestBox;
 using fluent::windowing::TitleBar;
 namespace vg = fluent::testutils::visual_geometry;
@@ -173,7 +177,7 @@ protected:
     }
 };
 
-TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomePlaceholder)
+TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
 {
     GalleryWindow window;
 
@@ -193,12 +197,64 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomePlaceholder)
     ASSERT_NE(searchBox, nullptr);
     EXPECT_EQ(searchBox->placeholderText(), QStringLiteral("Search controls and samples..."));
 
-    PlaceholderPage* page = window.currentPlaceholderPage();
+    // Home now resolves to a real content page rather than a placeholder.
+    GalleryContentPage* page = window.currentContentPage();
     ASSERT_NE(page, nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(page), nullptr);
     EXPECT_EQ(page->routeId(), QStringLiteral("home"));
     ASSERT_NE(page->titleLabel(), nullptr);
     EXPECT_EQ(page->titleLabel()->text(), QStringLiteral("Home"));
+    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
+}
+
+TEST_F(GalleryShellFrameworkTest, ContentPageReservesVerticalScrollbarGutter)
+{
+    GalleryWindow window;
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+
+    auto* scrollView = window.findChild<ScrollView*>(QStringLiteral("galleryContentScrollArea"));
+    ASSERT_NE(scrollView, nullptr);
+    EXPECT_EQ(scrollView->verticalScrollBarVisibility(), ScrollView::ScrollBarVisibility::Visible);
+    EXPECT_EQ(scrollView->verticalScrollBarPolicy(), Qt::ScrollBarAlwaysOn);
+}
+
+TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAfterFree)
+{
+    // Regression: a featured card triggers navigation from inside its own
+    // mouseReleaseEvent. Navigation replaces and frees the home page, which is the
+    // card's ancestor and is still dispatching the event. Freeing it synchronously was a
+    // use-after-free crash (SIGSEGV in QApplication::notify); the page must be deferred.
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+
+    auto* card = window.findChild<GalleryEntryCard*>();
+    ASSERT_NE(card, nullptr);
+    const QString targetRouteId = card->targetRouteId();
+    ASSERT_FALSE(targetRouteId.isEmpty());
+
+    QPointer<GalleryContentPage> homePage = window.currentContentPage();
+    ASSERT_NE(homePage.data(), nullptr);
+    QPointer<GalleryEntryCard> cardGuard = card;
+
+    // Deliver a real click: this synchronously re-enters navigation and replaces the page
+    // that owns `card`. Surviving to the next statement is itself the crash assertion.
+    QTest::mouseClick(card, Qt::LeftButton, Qt::NoModifier, card->rect().center());
+    EXPECT_EQ(window.currentRouteId(), targetRouteId);
+
+    // The previous page (and its card) must still be alive immediately after the event...
+    EXPECT_FALSE(homePage.isNull());
+    EXPECT_FALSE(cardGuard.isNull());
+
+    // ...and only freed once control returns to the event loop.
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    EXPECT_TRUE(homePage.isNull());
+    EXPECT_TRUE(cardGuard.isNull());
+
+    GalleryContentPage* newPage = window.currentContentPage();
+    ASSERT_NE(newPage, nullptr);
+    EXPECT_EQ(newPage->routeId(), targetRouteId);
 }
 
 TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
@@ -726,30 +782,88 @@ TEST_F(GalleryShellFrameworkTest, ComponentRoutesRetainParentCategories)
     EXPECT_TRUE(model.parentRouteId(QStringLiteral("settings")).isEmpty());
 }
 
-TEST_F(GalleryShellFrameworkTest, SelectRouteSwitchesPlaceholderContent)
+TEST_F(GalleryShellFrameworkTest, SelectRouteSwitchesContentPages)
 {
     GalleryWindow window;
     auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
     auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     ASSERT_NE(footerPane, nullptr);
-    PlaceholderPage* homePage = window.currentPlaceholderPage();
-    ASSERT_NE(homePage, nullptr);
-    const QColor homeColor = homePage->placeholderColor();
+    // Home is a content page, so no placeholder is present initially.
+    ASSERT_NE(window.currentContentPage(), nullptr);
+    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
+
+    // Every catalog route now resolves to a real content page; placeholders are
+    // reserved for hypothetical routes without content metadata.
+    // zh_CN: 目录路由现在全部解析为真实内容页；占位页只留给没有内容元数据的假想路由。
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("checkbox")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("checkbox"));
+    EXPECT_EQ(mainPane->selectedRouteId(), QStringLiteral("checkbox"));
+    EXPECT_EQ(footerPane->selectedRouteId(), QStringLiteral("checkbox"));
+    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
+    GalleryContentPage* checkboxPage = window.currentContentPage();
+    ASSERT_NE(checkboxPage, nullptr);
+    EXPECT_EQ(checkboxPage->routeId(), QStringLiteral("checkbox"));
+    EXPECT_EQ(checkboxPage->title(), QStringLiteral("CheckBox"));
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("combobox")));
+    GalleryContentPage* comboboxPage = window.currentContentPage();
+    ASSERT_NE(comboboxPage, nullptr);
+    EXPECT_EQ(comboboxPage->routeId(), QStringLiteral("combobox"));
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("button"));
-    EXPECT_EQ(mainPane->selectedRouteId(), QStringLiteral("button"));
-    EXPECT_EQ(footerPane->selectedRouteId(), QStringLiteral("button"));
-
-    PlaceholderPage* buttonPage = window.currentPlaceholderPage();
+    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
+    GalleryContentPage* buttonPage = window.currentContentPage();
     ASSERT_NE(buttonPage, nullptr);
     EXPECT_EQ(buttonPage->routeId(), QStringLiteral("button"));
-    EXPECT_EQ(buttonPage->titleLabel()->text(), QStringLiteral("Button"));
-    EXPECT_NE(buttonPage->placeholderColor(), homeColor);
 
     EXPECT_FALSE(window.selectRoute(QStringLiteral("missing-route")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("button"));
+}
+
+TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
+{
+    GalleryWindow window;
+
+    // Exact (case-insensitive) title match wins.
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("checkbox")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("checkbox"));
+
+    // Partial matches fall back to the first containing title.
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("Progress")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("progress-bar"));
+
+    // Category titles navigate too; unknown text changes nothing.
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("Date & time")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("date-time"));
+    EXPECT_FALSE(window.navigateToSearchResult(QStringLiteral("no-such-control")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("date-time"));
+
+    // The title-bar search box suggests every navigable route title.
+    auto* searchBox = window.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
+    ASSERT_NE(searchBox, nullptr);
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("CheckBox")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Scrolling")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Settings")));
+
+    // Typing narrows the suggestions to containing titles (owner-side filtering).
+    window.show();
+    QApplication::processEvents();
+    searchBox->setFocus();
+    QTest::keyClicks(searchBox, QStringLiteral("progress"));
+    QApplication::processEvents();
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("ProgressBar")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("ProgressRing")));
+    EXPECT_FALSE(searchBox->suggestions().contains(QStringLiteral("CheckBox")));
+
+    // Retyping re-filters against the full title list, not the narrowed one.
+    searchBox->clear();
+    QTest::keyClicks(searchBox, QStringLiteral("date"));
+    QApplication::processEvents();
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Date & time")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("DatePicker")));
+    EXPECT_FALSE(searchBox->suggestions().contains(QStringLiteral("ProgressBar")));
 }
 
 TEST_F(GalleryShellFrameworkTest, BackButtonReturnsThroughNavigationHistory)
@@ -798,8 +912,9 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
     QApplication::processEvents();
 
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("button"));
-    ASSERT_NE(window.currentPlaceholderPage(), nullptr);
-    EXPECT_EQ(window.currentPlaceholderPage()->titleLabel()->text(), QStringLiteral("Button"));
+    ASSERT_NE(window.currentContentPage(), nullptr);
+    EXPECT_EQ(window.currentContentPage()->title(), QStringLiteral("Button"));
+    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
 
     auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(footerPane, nullptr);
