@@ -2,6 +2,8 @@
 
 #include <QApplication>
 #include <QFrame>
+#include <QGraphicsOpacityEffect>
+#include <QImage>
 #include <QLabel>
 #include <QLayout>
 #include <QMargins>
@@ -396,4 +398,22 @@ TEST_F(GalleryContentPagesTest, GalleryToastUsesOverlayMarginAndSuccessBadge)
     ASSERT_NE(icon, nullptr);
     EXPECT_EQ(icon->size(), QSize(26, 26));
     EXPECT_TRUE(icon->styleSheet().contains(QStringLiteral("background")));
+
+    auto* opacity = qobject_cast<QGraphicsOpacityEffect*>(toast->graphicsEffect());
+    ASSERT_NE(opacity, nullptr);
+    opacity->setOpacity(1.0);
+
+    QImage rendered(toast->size(), QImage::Format_ARGB32_Premultiplied);
+    rendered.fill(Qt::transparent);
+    toast->render(&rendered);
+
+    const QRect cardRect = fluent::overlay::visibleCardRect(toast->rect());
+    const auto alphaAt = [&rendered](const QPoint& point) {
+        return QColor::fromRgba(rendered.pixel(point)).alpha();
+    };
+    const int topHaloAlpha = alphaAt(QPoint(cardRect.center().x(), cardRect.top() - 4));
+    const int bottomShadowAlpha = alphaAt(QPoint(cardRect.center().x(), cardRect.bottom() + 8));
+    EXPECT_LT(topHaloAlpha, 10);
+    EXPECT_GT(bottomShadowAlpha, topHaloAlpha);
+    EXPECT_LT(bottomShadowAlpha, 48);
 }
