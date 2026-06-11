@@ -312,9 +312,11 @@ void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
 
     m_animation->setStartValue(m_fraction);
     m_animation->setEndValue(target);
-    const int duration = qMax(80, qRound(themeAnimation().normal * qAbs(target - m_fraction)));
+    const auto motion = themeAnimation();
+    const double distance = qAbs(target - m_fraction);
+    const int duration = qRound(motion.fast + (motion.slow - motion.fast) * distance);
     m_animation->setDuration(duration);
-    m_animation->setEasingCurve(themeAnimation().decelerate);
+    m_animation->setEasingCurve(motion.standard);
     m_animation->start();
 }
 

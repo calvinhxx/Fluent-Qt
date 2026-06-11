@@ -39,6 +39,8 @@ constexpr int kSlideDistance = 12;    // slide-down distance while entering
 constexpr int kCornerRadius = 20;     // full capsule for the ~40px-tall pill
 constexpr int kBadgeSize    = 26;     // success badge diameter
 constexpr int kBadgeGlyphPx = 13;     // glyph size inside the success badge
+constexpr int kToastShadowLayers = 8;
+constexpr double kToastShadowOpacityScale = 0.10;
 
 /**
  * @brief A light, translucent success toast (a rounded pill) themed with Fluent tokens.
@@ -114,17 +116,22 @@ protected:
         p.setPen(Qt::NoPen);
         const QRectF cardRect = QRectF(::fluent::overlay::visibleCardRect(rect(), kShadowMargin));
 
-        // Match dialogs/flyouts: paint elevation as many low-alpha shells instead of a few
-        // enlarged solid shapes. The latter creates the visible gray ring around the pill.
-        // zh_CN: 对齐 dialogs/flyouts：用多层低透明度壳层绘制 elevation，避免少量实心扩张层形成灰圈。
-        constexpr int kShadowLayers = 10;
-        for (int i = 0; i < kShadowLayers; ++i) {
-            const double ratio = 1.0 - static_cast<double>(i) / kShadowLayers;
+        // Toasts are much smaller than dialogs/flyouts, so use a lighter, mostly downward
+        // shadow. Expanding equally in every direction makes a dark halo around the capsule.
+        // zh_CN: toast 比 dialog/flyout 小很多，使用更轻、主要向下的阴影。四周等量扩散会在胶囊外形成深色光环。
+        for (int i = 0; i < kToastShadowLayers; ++i) {
+            const double ratio = 1.0 - static_cast<double>(i) / kToastShadowLayers;
             QColor shadow = m_shadowColor;
-            shadow.setAlphaF(m_shadowOpacity * ratio * 0.35);
+            shadow.setAlphaF(m_shadowOpacity * ratio * kToastShadowOpacityScale);
             p.setBrush(shadow);
-            const QRectF shadowRect = cardRect.adjusted(-i, -i, i, i).translated(0, 2);
-            p.drawRoundedRect(shadowRect, kCornerRadius + i, kCornerRadius + i);
+            const qreal spread = i + 1;
+            const QRectF shadowRect = cardRect
+                                          .adjusted(-spread, -spread * 0.25,
+                                                    spread, spread * 0.85)
+                                          .translated(0, 3);
+            p.drawRoundedRect(shadowRect,
+                              kCornerRadius + spread,
+                              kCornerRadius + spread);
         }
 
         const QRectF fillRect = cardRect.adjusted(0.5, 0.5, -0.5, -0.5);
@@ -166,7 +173,7 @@ private:
         m_text->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
                                   .arg(cssColor(colors.textPrimary)));
 
-        const Elevation::ShadowParams sp = themeShadow(Elevation::High);
+        const Elevation::ShadowParams sp = themeShadow(Elevation::Medium);
         m_shadowColor = sp.color;
         m_shadowOpacity = sp.opacity;
         update();
