@@ -445,6 +445,13 @@ void ScrollView::applyZoomToContent() {
     if (!m_contentWidget || m_unscaledContentSize.isEmpty())
         return;
 
+    // Resizable content is sized by QScrollArea to fill/scroll its viewport; pinning it
+    // to a fixed zoom size here would defeat widgetResizable and collapse flow layouts.
+    // zh_CN: 可伸缩内容由 QScrollArea 负责填充/滚动其视口；在此固定缩放尺寸会破坏
+    // widgetResizable 并使流式布局塌缩。
+    if (widgetResizable())
+        return;
+
     const QSize scaledSize(std::max(1, qRound(m_unscaledContentSize.width() * m_zoomFactor)),
                            std::max(1, qRound(m_unscaledContentSize.height() * m_zoomFactor)));
     if (m_zoomAwareContent)
