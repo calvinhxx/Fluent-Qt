@@ -4,5 +4,49 @@
         <file>res/Segoe Fluent Icons.ttf</file>
         <file>res/SegoeUI-VF.ttf</file>
         <file>app/assets/winui-gallery-app-icon.png</file>
+        <file>app/assets/control_images/Placeholder.png</file>
+        <file>app/assets/control_images/basic-input/Button.png</file>
+        <file>app/assets/control_images/basic-input/CheckBox.png</file>
+        <file>app/assets/control_images/basic-input/ComboBox.png</file>
+        <file>app/assets/control_images/basic-input/DropDownButton.png</file>
+        <file>app/assets/control_images/basic-input/HyperlinkButton.png</file>
+        <file>app/assets/control_images/basic-input/RadioButton.png</file>
+        <file>app/assets/control_images/basic-input/RatingControl.png</file>
+        <file>app/assets/control_images/basic-input/RepeatButton.png</file>
+        <file>app/assets/control_images/basic-input/Slider.png</file>
+        <file>app/assets/control_images/basic-input/SplitButton.png</file>
+        <file>app/assets/control_images/basic-input/ToggleButton.png</file>
+        <file>app/assets/control_images/basic-input/ToggleSplitButton.png</file>
+        <file>app/assets/control_images/basic-input/ToggleSwitch.png</file>
+        <file>app/assets/control_images/collections/FlipView.png</file>
+        <file>app/assets/control_images/collections/GridView.png</file>
+        <file>app/assets/control_images/collections/ListView.png</file>
+        <file>app/assets/control_images/collections/SplitView.png</file>
+        <file>app/assets/control_images/collections/TreeView.png</file>
+        <file>app/assets/control_images/date-time/CalendarDatePicker.png</file>
+        <file>app/assets/control_images/date-time/CalendarView.png</file>
+        <file>app/assets/control_images/date-time/DatePicker.png</file>
+        <file>app/assets/control_images/date-time/TimePicker.png</file>
+        <file>app/assets/control_images/dialogs-flyouts/ContentDialog.png</file>
+        <file>app/assets/control_images/dialogs-flyouts/Flyout.png</file>
+        <file>app/assets/control_images/dialogs-flyouts/Popup.png</file>
+        <file>app/assets/control_images/dialogs-flyouts/TeachingTip.png</file>
+        <file>app/assets/control_images/menus-toolbars/MenuBar.png</file>
+        <file>app/assets/control_images/navigation/Breadcrumb.png</file>
+        <file>app/assets/control_images/navigation/NavigationView.png</file>
+        <file>app/assets/control_images/navigation/Pivot.png</file>
+        <file>app/assets/control_images/navigation/TabView.png</file>
+        <file>app/assets/control_images/scrolling/AnnotatedScrollBar.png</file>
+        <file>app/assets/control_images/scrolling/PipsPager.png</file>
+        <file>app/assets/control_images/scrolling/ScrollView.png</file>
+        <file>app/assets/control_images/status-info/InfoBadge.png</file>
+        <file>app/assets/control_images/status-info/InfoBar.png</file>
+        <file>app/assets/control_images/status-info/ProgressBar.png</file>
+        <file>app/assets/control_images/status-info/ProgressRing.png</file>
+        <file>app/assets/control_images/status-info/ToolTip.png</file>
+        <file>app/assets/control_images/text-fields/AutoSuggestBox.png</file>
+        <file>app/assets/control_images/text-fields/NumberBox.png</file>
+        <file>app/assets/control_images/text-fields/PasswordBox.png</file>
+        <file>app/assets/control_images/windowing/TitleBar.png</file>
     </qresource>
 </RCC>

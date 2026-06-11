@@ -17,9 +17,11 @@
 #include "design/Typography.h"
 #include "utils/Log.h"
 #include "AppIcon.h"
+#include "view/pages/GalleryContentPage.h"
 #include "GalleryNavigationPane.h"
-#include "PlaceholderPage.h"
-#include "SettingsPage.h"
+#include "view/pages/GalleryPageFactory.h"
+#include "view/pages/PlaceholderPage.h"
+#include "view/pages/SettingsPage.h"
 
 namespace fluent::gallery {
 namespace {
@@ -126,6 +128,37 @@ bool GalleryWindow::selectRoute(const QString& routeId)
     return applyRoute(routeId);
 }
 
+bool GalleryWindow::navigateToSearchResult(const QString& searchText)
+{
+    const QString needle = searchText.trimmed();
+    if (needle.isEmpty())
+        return false;
+
+    QString exactRouteId;
+    QString partialRouteId;
+    for (const GalleryNavigationItem& item : m_navigationViewModel.items()) {
+        if (item.kind == GalleryNavigationItem::Kind::SectionHeader)
+            continue;
+        if (item.title.compare(needle, Qt::CaseInsensitive) == 0) {
+            exactRouteId = item.id;
+            break;
+        }
+        if (partialRouteId.isEmpty() && item.title.contains(needle, Qt::CaseInsensitive))
+            partialRouteId = item.id;
+    }
+
+    const QString routeId = exactRouteId.isEmpty() ? partialRouteId : exactRouteId;
+    if (routeId.isEmpty()) {
+        LOG_DEBUG(QStringLiteral("GalleryWindow searchNavigate miss text=%1").arg(needle));
+        return false;
+    }
+
+    LOG_DEBUG(QStringLiteral("GalleryWindow searchNavigate text=%1 routeId=%2 match=%3")
+                  .arg(needle, routeId,
+                       exactRouteId.isEmpty() ? QStringLiteral("partial") : QStringLiteral("exact")));
+    return selectRoute(routeId);
+}
+
 bool GalleryWindow::applyRoute(const QString& routeId)
 {
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
@@ -149,15 +182,23 @@ bool GalleryWindow::applyRoute(const QString& routeId)
 
     m_currentRouteId = routeId;
 
-    const QString pageType = routeId == QStringLiteral("settings")
-        ? QStringLiteral("SettingsPage")
-        : QStringLiteral("PlaceholderPage");
-    LOG_DEBUG(QStringLiteral("GalleryWindow applyRoute routeId=%1 pageType=%2 title=%3")
-                  .arg(routeId, pageType, item->title));
+    GalleryPageFactory pageFactory(m_navigationViewModel);
+    QWidget* page = pageFactory.createPage(routeId);
+    if (!page)
+        page = new PlaceholderPage(*item);
 
-    QWidget* page = routeId == QStringLiteral("settings")
-        ? static_cast<QWidget*>(new SettingsPage(*item))
-        : static_cast<QWidget*>(new PlaceholderPage(*item));
+    if (auto* contentPage = dynamic_cast<GalleryContentPage*>(page)) {
+        connect(contentPage, &GalleryContentPage::routeActivated,
+                this, [this](const QString& activatedRouteId) {
+                    selectRoute(activatedRouteId);
+                });
+    }
+
+    LOG_DEBUG(QStringLiteral("GalleryWindow applyRoute routeId=%1 pageType=%2 title=%3")
+                  .arg(routeId,
+                       QString::fromLatin1(page->metaObject()->className()),
+                       item->title));
+
     auto* contentHost = m_navigationView->contentHost();
     if (contentHost->count() == 0) {
         contentHost->insertPage(0, page);
@@ -166,12 +207,26 @@ bool GalleryWindow::applyRoute(const QString& routeId)
                       .arg(routeId));
     } else {
         QWidget* previousPage = contentHost->replacePage(0, page);
-        delete previousPage;
+        // Defer deletion: an in-page card (e.g. a Home featured card) may trigger this
+        // navigation from inside its own mouseReleaseEvent, so the previous page is still
+        // dispatching the event. Deleting it now is a use-after-free; deleteLater frees it
+        // once control returns to the event loop.
+        // zh_CN: 延迟删除：页面内卡片可能在自身 mouseReleaseEvent 中触发此次导航，旧页面仍在
+        // 派发事件，立即删除会造成 use-after-free；deleteLater 等回到事件循环后再释放。
+        if (previousPage)
+            previousPage->deleteLater();
         contentHost->setCurrentIndex(0, 0, false);
         LOG_TRACE(QStringLiteral("GalleryWindow contentHost pageReplaced routeId=%1")
                       .arg(routeId));
     }
     return true;
+}
+
+GalleryContentPage* GalleryWindow::currentContentPage() const
+{
+    if (!m_navigationView)
+        return nullptr;
+    return dynamic_cast<GalleryContentPage*>(m_navigationView->contentHost()->pageWidget(0));
 }
 
 PlaceholderPage* GalleryWindow::currentPlaceholderPage() const
@@ -342,18 +397,52 @@ void GalleryWindow::createTitleBarContent()
     layout->addAnchoredWidget(title, titleAnchors);
 
     auto* searchBox = new fluent::textfields::AutoSuggestBox(bar);
+    m_searchBox = searchBox;
     searchBox->setObjectName(QStringLiteral("GalleryTitleBar.SearchBox"));
     searchBox->setPlaceholderText(QStringLiteral("Search controls and samples..."));
-    searchBox->setSuggestions(QStringList{
-        QStringLiteral("Button"),
-        QStringLiteral("NavigationView"),
-        QStringLiteral("AutoSuggestBox"),
-        QStringLiteral("Settings")
-    });
+    // Suggest every navigable title so search reaches the same routes as the pane.
+    // zh_CN: 把所有可导航标题作为建议项，搜索可达范围与导航栏一致。
+    QStringList searchTitles;
+    for (const GalleryNavigationItem& item : m_navigationViewModel.items()) {
+        if (item.kind != GalleryNavigationItem::Kind::SectionHeader)
+            searchTitles.append(item.title);
+    }
+    searchTitles.sort(Qt::CaseInsensitive);
+    searchBox->setSuggestions(searchTitles);
     searchBox->setInputHeight(kTitleBarSearchHeight);
     searchBox->setQueryButtonSize(24);
     searchBox->setClearButtonSize(24);
     searchBox->setFixedSize(kTitleBarSearchWidth, kTitleBarSearchHeight);
+    // AutoSuggestBox leaves filtering to the owner (WinUI semantics), so narrow
+    // the suggestion list to titles containing the typed text.
+    // zh_CN: AutoSuggestBox 把过滤交给使用方（WinUI 语义），按输入收窄建议列表。
+    connect(searchBox, &fluent::textfields::AutoSuggestBox::textChangedWithReason,
+            searchBox,
+            [searchBox, searchTitles](const QString& text,
+                                      fluent::textfields::AutoSuggestBox::TextChangeReason reason) {
+                if (reason != fluent::textfields::AutoSuggestBox::TextChangeReason::UserInput)
+                    return;
+                const QString needle = text.trimmed();
+                if (needle.isEmpty()) {
+                    searchBox->setSuggestions(searchTitles);
+                    return;
+                }
+                QStringList filtered;
+                for (const QString& title : searchTitles) {
+                    if (title.contains(needle, Qt::CaseInsensitive))
+                        filtered.append(title);
+                }
+                searchBox->setSuggestions(filtered);
+            });
+    connect(searchBox, &fluent::textfields::AutoSuggestBox::querySubmitted,
+            this, [this](const QString& queryText, const QVariant& chosenSuggestion) {
+                const QString chosen = chosenSuggestion.toString();
+                navigateToSearchResult(chosen.isEmpty() ? queryText : chosen);
+            });
+    connect(searchBox, &fluent::textfields::AutoSuggestBox::suggestionChosen,
+            this, [this](const QVariant& item) {
+                navigateToSearchResult(item.toString());
+            });
 
     fluent::AnchorLayout::Anchors searchAnchors;
     searchAnchors.horizontalCenter = {bar, Edge::HCenter, 0};

@@ -1,5 +1,8 @@
 #include "GalleryComponentCatalog.h"
 
+#include <QFile>
+#include <QHash>
+
 #include "design/Typography.h"
 
 namespace fluent::gallery {
@@ -123,6 +126,31 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          }}
     };
     return catalog;
+}
+
+QString galleryControlImageResource(const QString& controlTitle)
+{
+    static const QString placeholder =
+        QStringLiteral(":/app/assets/control_images/Placeholder.png");
+
+    // Map each control title to its category id once, straight from the catalog, so the
+    // folder layout and the lookup never drift apart.
+    // zh_CN: 从目录里一次性建立"控件标题 → 分类 id"映射，保证文件夹结构与查找逻辑不会脱节。
+    static const QHash<QString, QString> titleToCategory = []() {
+        QHash<QString, QString> map;
+        for (const GalleryComponentCategory& category : galleryComponentCatalog())
+            for (const GalleryComponentEntry& component : category.components)
+                map.insert(component.title, category.id);
+        return map;
+    }();
+
+    const auto it = titleToCategory.constFind(controlTitle);
+    if (it == titleToCategory.constEnd())
+        return placeholder;
+
+    const QString candidate = QStringLiteral(":/app/assets/control_images/%1/%2.png")
+                                  .arg(it.value(), controlTitle);
+    return QFile::exists(candidate) ? candidate : placeholder;
 }
 
 } // namespace fluent::gallery

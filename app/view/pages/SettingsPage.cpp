@@ -4,10 +4,10 @@
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QPalette>
-#include <QScrollArea>
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
 #include "utils/Log.h"
@@ -26,11 +26,13 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     outerLayout->setContentsMargins(0, 0, 0, 0);
     outerLayout->setSpacing(0);
 
-    auto* scrollArea = new QScrollArea(this);
+    auto* scrollArea = new fluent::scrolling::ScrollView(this);
     scrollArea->setObjectName(QStringLiteral("gallerySettingsScrollArea"));
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setHorizontalScrollMode(fluent::scrolling::ScrollView::ScrollMode::Disabled);
+    scrollArea->setHorizontalScrollBarVisibility(
+        fluent::scrolling::ScrollView::ScrollBarVisibility::Hidden);
 
     auto* page = new QWidget(scrollArea);
     page->setObjectName(QStringLiteral("gallerySettingsViewport"));
