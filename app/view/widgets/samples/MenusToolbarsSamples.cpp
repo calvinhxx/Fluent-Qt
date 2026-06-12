@@ -57,6 +57,10 @@ QVector<GallerySample> menuBarSamples()
                                   "menuBar->addMenu(fileMenu);"),
                    [](QWidget* parent) {
                        auto* menuBar = new FluentMenuBar(parent);
+                       // The sample card already paints its own surface, so the bar
+                       // drops its square canvas fill to match the other previews.
+                       // zh_CN: 样例卡片已有自身底色，菜单栏关闭直角画布填充以与其他预览一致。
+                       menuBar->setBackgroundVisible(false);
 
                        auto* fileMenu = new FluentMenu(QStringLiteral("File"), menuBar);
                        fileMenu->addAction(QStringLiteral("New"));

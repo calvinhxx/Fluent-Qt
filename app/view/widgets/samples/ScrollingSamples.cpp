@@ -1,5 +1,6 @@
 #include "ScrollingSamples.h"
 
+#include <QLabel>
 #include <QVBoxLayout>
 
 #include "components/scrolling/AnnotatedScrollBar.h"
@@ -19,6 +20,7 @@ using fluent::scrolling::PipsPager;
 using fluent::scrolling::ScrollBar;
 using fluent::scrolling::ScrollView;
 using fluent::textfields::Label;
+using samples::gradientPixmap;
 using samples::horizontalGroup;
 using samples::makeSample;
 using samples::verticalGroup;
@@ -51,6 +53,10 @@ QVector<GallerySample> annotatedScrollBarSamples()
                        bar->addLabel(AnnotatedScrollBarLabel(QStringLiteral("May"), 350));
                        bar->addLabel(AnnotatedScrollBarLabel(QStringLiteral("June"), 700));
                        Label* status = makeStatusLabel(group, QStringLiteral("Offset: 0"));
+                       // Reserve the widest offset so live drags never reflow the row.
+                       // zh_CN: 预留最大偏移宽度，拖动时的实时更新不再回流整行。
+                       status->setMinimumWidth(status->fontMetrics().horizontalAdvance(
+                           QStringLiteral("Offset: 8888")));
                        QObject::connect(bar, &AnnotatedScrollBar::valueChanged,
                                         status, [status](int value) {
                                             status->setText(QStringLiteral("Offset: %1").arg(value));
@@ -66,23 +72,49 @@ QVector<GallerySample> pipsPagerSamples()
 {
     return {
         makeSample(QStringLiteral("pips-pager-basic"),
-                   QStringLiteral("Dot pagination"),
-                   QStringLiteral("Click a pip or the chevrons to switch pages."),
+                   QStringLiteral("Dot pagination with paged content"),
+                   QStringLiteral("Click a pip or the chevrons; the picture above follows the selected page."),
                    QStringLiteral("auto* pager = new PipsPager(this);\n"
                                   "pager->setNumberOfPages(5);\n"
                                   "connect(pager, &PipsPager::selectedPageIndexChanged,\n"
                                   "        this, [](int index) { /* show page */ });"),
                    [](QWidget* parent) {
                        QWidget* group = verticalGroup(parent, 10);
+
+                       // Pre-render one picture per page so pips drive real content.
+                       // zh_CN: 为每页预先渲染一张图片，让圆点真正驱动内容切换。
+                       const QSize pageSize(320, 150);
+                       struct Page { QString caption; QColor from; QColor to; };
+                       const QVector<Page> pages{
+                           {QStringLiteral("Sunrise"), QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)},
+                           {QStringLiteral("Ocean"), QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2)},
+                           {QStringLiteral("Forest"), QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B)},
+                           {QStringLiteral("Dusk"), QColor(0x6B, 0x4F, 0xA2), QColor(0xC2, 0x6F, 0xB8)},
+                           {QStringLiteral("Desert"), QColor(0xC8, 0x6B, 0x2D), QColor(0xE8, 0xC0, 0x6E)}};
+                       QVector<QPixmap> pictures;
+                       for (int i = 0; i < pages.size(); ++i) {
+                           const Page& page = pages.at(i);
+                           pictures.append(gradientPixmap(
+                               pageSize, page.from, page.to,
+                               QStringLiteral("%1 — page %2 of %3")
+                                   .arg(page.caption).arg(i + 1).arg(pages.size())));
+                       }
+
+                       auto* picture = new QLabel(group);
+                       picture->setPixmap(pictures.first());
+                       picture->setFixedSize(pageSize);
+
                        auto* pager = new PipsPager(group);
-                       pager->setNumberOfPages(5);
-                       Label* status = makeStatusLabel(group, QStringLiteral("Page 1 of 5"));
+                       pager->setNumberOfPages(pages.size());
                        QObject::connect(pager, &PipsPager::selectedPageIndexChanged,
-                                        status, [status](int index) {
-                                            status->setText(QStringLiteral("Page %1 of 5").arg(index + 1));
+                                        picture, [picture, pictures](int index) {
+                                            if (index >= 0 && index < pictures.size())
+                                                picture->setPixmap(pictures.at(index));
                                         });
+                       group->layout()->addWidget(picture);
                        group->layout()->addWidget(pager);
-                       group->layout()->addWidget(status);
+                       static_cast<QVBoxLayout*>(group->layout())
+                           ->setAlignment(pager, Qt::AlignHCenter);
                        return group;
                    })
     };
@@ -104,6 +136,8 @@ QVector<GallerySample> scrollBarSamples()
                        scrollBar->setValue(40);
                        scrollBar->setFixedWidth(300);
                        Label* status = makeStatusLabel(group, QStringLiteral("Value: 40"));
+                       status->setMinimumWidth(status->fontMetrics().horizontalAdvance(
+                           QStringLiteral("Value: 888")));
                        QObject::connect(scrollBar, &ScrollBar::valueChanged,
                                         status, [status](int value) {
                                             status->setText(QStringLiteral("Value: %1").arg(value));
@@ -127,21 +161,14 @@ QVector<GallerySample> scrollViewSamples()
                        auto* scrollView = new ScrollView(parent);
                        scrollView->setFixedSize(420, 200);
 
-                       auto* content = new QWidget(scrollView);
-                       content->setFixedSize(620, 420);
-                       content->setStyleSheet(QStringLiteral(
-                           "background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
-                           " stop:0 #DCE8F8, stop:0.5 #DFF3E3, stop:1 #FBE8DC);"));
-                       auto* layout = new QVBoxLayout(content);
-                       layout->setContentsMargins(16, 16, 16, 16);
-                       layout->setSpacing(10);
-                       for (int line = 1; line <= 12; ++line) {
-                           auto* label = new Label(QStringLiteral("Scrollable line %1").arg(line), content);
-                           label->setFluentTypography(Typography::FontRole::Body);
-                           label->setStyleSheet(QStringLiteral("color: #444; background: transparent;"));
-                           layout->addWidget(label);
-                       }
-                       layout->addStretch(1);
+                       // A picture larger than the viewport exercises both scrollbars.
+                       // zh_CN: 比视口更大的图片同时演示横向与纵向滚动条。
+                       auto* content = new QLabel(scrollView);
+                       const QSize pictureSize(680, 440);
+                       content->setPixmap(gradientPixmap(
+                           pictureSize, QColor(0x1E, 0x6F, 0xD9), QColor(0xA9, 0xE3, 0x4B),
+                           QStringLiteral("Pan around — the picture is larger than the viewport")));
+                       content->setFixedSize(pictureSize);
                        scrollView->setWidget(content);
                        return scrollView;
                    })

@@ -151,19 +151,6 @@ QVector<GallerySample> colorPickerSamples()
                        // zh_CN: 锚点布局把输入区排在色谱下方，预览需要足够空间避免重叠。
                        picker->setMinimumSize(420, 480);
                        return picker;
-                   }),
-        makeSample(QStringLiteral("color-picker-no-alpha"),
-                   QStringLiteral("ColorPicker without alpha"),
-                   QStringLiteral("Hide the alpha channel when transparency is not meaningful."),
-                   QStringLiteral("auto* picker = new ColorPicker(this);\n"
-                                  "picker->setAlphaEnabled(false);\n"
-                                  "picker->setColor(QColor(255, 185, 0));"),
-                   [](QWidget* parent) {
-                       auto* picker = new ColorPicker(parent);
-                       picker->setAlphaEnabled(false);
-                       picker->setColor(QColor(255, 185, 0));
-                       picker->setMinimumSize(420, 420);
-                       return picker;
                    })
     };
 }
@@ -256,14 +243,12 @@ QVector<GallerySample> hyperlinkButtonSamples()
         makeSample(QStringLiteral("hyperlink-button-basic"),
                    QStringLiteral("HyperlinkButton with a URL"),
                    QStringLiteral("Clicking opens the URL in the default browser."),
-                   QStringLiteral("auto* link = new HyperlinkButton(\n"
-                                  "    \"calvinhxx/Fluent-QT\",\n"
-                                  "    QUrl(\"https://github.com/calvinhxx/Fluent-QT\"), this);"),
+                   QStringLiteral("auto* link = new HyperlinkButton(\"calvinhxx/Fluent-QT\", this);\n"
+                                  "link->setUrl(QUrl(\"https://github.com/calvinhxx/Fluent-QT\"));"),
                    [](QWidget* parent) {
-                       return new HyperlinkButton(
-                           QStringLiteral("calvinhxx/Fluent-QT"),
-                           QUrl(QStringLiteral("https://github.com/calvinhxx/Fluent-QT")),
-                           parent);
+                       auto* link = new HyperlinkButton(QStringLiteral("calvinhxx/Fluent-QT"), parent);
+                       link->setUrl(QUrl(QStringLiteral("https://github.com/calvinhxx/Fluent-QT")));
+                       return link;
                    })
     };
 }
@@ -276,6 +261,7 @@ QVector<GallerySample> radioButtonSamples()
                    QStringLiteral("Sibling radio buttons are mutually exclusive by default."),
                    QStringLiteral("auto* first = new RadioButton(\"Option 1\", this);\n"
                                   "auto* second = new RadioButton(\"Option 2\", this);\n"
+                                  "auto* third = new RadioButton(\"Option 3\", this);\n"
                                   "first->setChecked(true);"),
                    [](QWidget* parent) {
                        QWidget* group = verticalGroup(parent, 8);
@@ -326,6 +312,11 @@ QVector<GallerySample> repeatButtonSamples()
                        QWidget* group = horizontalGroup(parent, 12);
                        auto* button = new RepeatButton(QStringLiteral("Click and hold"), group);
                        Label* counter = makeValueLabel(group, QStringLiteral("Clicks: 0"));
+                       // Reserve the widest count up front so rapid repeats never
+                       // grow the label and re-trigger the row layout.
+                       // zh_CN: 预留最大计数宽度，连发更新不再撑大标签、回流整行。
+                       counter->setMinimumWidth(counter->fontMetrics().horizontalAdvance(
+                           QStringLiteral("Clicks: 8888")));
                        QObject::connect(button, &RepeatButton::clicked,
                                         counter, [counter]() {
                                             const int count = counter->property("clickCount").toInt() + 1;
@@ -355,6 +346,8 @@ QVector<GallerySample> sliderSamples()
                        slider->setValue(30);
                        slider->setFixedWidth(240);
                        Label* value = makeValueLabel(group, QStringLiteral("30"));
+                       value->setMinimumWidth(
+                           value->fontMetrics().horizontalAdvance(QStringLiteral("888")));
                        QObject::connect(slider, &Slider::valueChanged,
                                         value, [value](int newValue) {
                                             value->setText(QString::number(newValue));

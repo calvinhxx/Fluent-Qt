@@ -87,7 +87,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
 
     createTitleBarContent();
     buildNavigationShell();
-    selectRoute(m_navigationViewModel.defaultRouteId());
+    showInitialRouteContent();
     LOG_INFO(QStringLiteral("GalleryWindow constructed defaultRoute=%1")
                  .arg(m_navigationViewModel.defaultRouteId()));
 }
@@ -123,9 +123,9 @@ bool GalleryWindow::selectRoute(const QString& routeId)
         return true;
     }
 
-    LOG_TRACE(QStringLiteral("GalleryWindow selectRoute routeId=%1 state=apply-current")
+    LOG_TRACE(QStringLiteral("GalleryWindow selectRoute routeId=%1 state=show-current")
                   .arg(routeId));
-    return applyRoute(routeId);
+    return showRouteContent(routeId);
 }
 
 bool GalleryWindow::navigateToSearchResult(const QString& searchText)
@@ -159,46 +159,65 @@ bool GalleryWindow::navigateToSearchResult(const QString& searchText)
     return selectRoute(routeId);
 }
 
-bool GalleryWindow::applyRoute(const QString& routeId)
+void GalleryWindow::showInitialRouteContent()
+{
+    selectRoute(m_navigationViewModel.defaultRouteId());
+}
+
+bool GalleryWindow::showRouteContent(const QString& routeId)
 {
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
     if (!m_navigationView) {
-        LOG_WARN(QStringLiteral("GalleryWindow applyRoute rejected routeId=%1 reason=missing-navigation-view")
+        LOG_WARN(QStringLiteral("GalleryWindow showRouteContent rejected routeId=%1 reason=missing-navigation-view")
                      .arg(routeId));
         return false;
     }
 
     if (!item) {
-        LOG_WARN(QStringLiteral("GalleryWindow applyRoute rejected routeId=%1 reason=missing-route")
+        LOG_WARN(QStringLiteral("GalleryWindow showRouteContent rejected routeId=%1 reason=missing-route")
                      .arg(routeId));
         return false;
     }
 
     if (m_currentRouteId == routeId && m_navigationView->contentHost()->count() > 0) {
-        LOG_TRACE(QStringLiteral("GalleryWindow applyRoute skipped routeId=%1 reason=already-current")
+        LOG_TRACE(QStringLiteral("GalleryWindow showRouteContent skipped routeId=%1 reason=already-current")
                       .arg(routeId));
         return true;
     }
 
-    m_currentRouteId = routeId;
+    QWidget* page = createRouteContentPage(routeId, *item);
+    connectRouteContentNavigation(page);
 
+    m_currentRouteId = routeId;
+    LOG_DEBUG(QStringLiteral("GalleryWindow showRouteContent routeId=%1 pageType=%2 title=%3")
+                  .arg(routeId,
+                       QString::fromLatin1(page->metaObject()->className()),
+                       item->title));
+
+    replaceRouteContentPage(routeId, page);
+    return true;
+}
+
+QWidget* GalleryWindow::createRouteContentPage(const QString& routeId,
+                                               const GalleryNavigationItem& fallbackItem) const
+{
     GalleryPageFactory pageFactory(m_navigationViewModel);
     QWidget* page = pageFactory.createPage(routeId);
-    if (!page)
-        page = new PlaceholderPage(*item);
+    return page ? page : new PlaceholderPage(fallbackItem);
+}
 
+void GalleryWindow::connectRouteContentNavigation(QWidget* page)
+{
     if (auto* contentPage = dynamic_cast<GalleryContentPage*>(page)) {
         connect(contentPage, &GalleryContentPage::routeActivated,
                 this, [this](const QString& activatedRouteId) {
                     selectRoute(activatedRouteId);
                 });
     }
+}
 
-    LOG_DEBUG(QStringLiteral("GalleryWindow applyRoute routeId=%1 pageType=%2 title=%3")
-                  .arg(routeId,
-                       QString::fromLatin1(page->metaObject()->className()),
-                       item->title));
-
+void GalleryWindow::replaceRouteContentPage(const QString& routeId, QWidget* page)
+{
     auto* contentHost = m_navigationView->contentHost();
     if (contentHost->count() == 0) {
         contentHost->insertPage(0, page);
@@ -219,7 +238,6 @@ bool GalleryWindow::applyRoute(const QString& routeId)
         LOG_TRACE(QStringLiteral("GalleryWindow contentHost pageReplaced routeId=%1")
                       .arg(routeId));
     }
-    return true;
 }
 
 GalleryContentPage* GalleryWindow::currentContentPage() const
@@ -470,7 +488,7 @@ void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
     LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1")
                   .arg(routeId));
     recordNavigationHistory(routeId);
-    applyRoute(routeId);
+    showRouteContent(routeId);
 }
 
 void GalleryWindow::recordNavigationHistory(const QString& nextRouteId)
@@ -508,7 +526,7 @@ bool GalleryWindow::navigateBack()
     if (m_navigationState.selectedRouteId() != routeId)
         m_navigationState.setSelectedRouteId(routeId);
     else
-        applyRoute(routeId);
+        showRouteContent(routeId);
     m_isNavigatingHistory = false;
     updateNavigationCommands();
     return m_currentRouteId == routeId;

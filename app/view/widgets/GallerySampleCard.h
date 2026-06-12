@@ -44,6 +44,7 @@ protected:
 private:
     void applyPalette();
     void updateAnchoredLayout();
+    void updateCardHeight();
     int preferredHeightForWidget(QWidget* widget, int width) const;
     int calculatedHeightForWidth(int width) const;
     int contentWidthForCardWidth(int width) const;

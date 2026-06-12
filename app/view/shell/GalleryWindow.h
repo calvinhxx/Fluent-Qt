@@ -9,6 +9,7 @@
 
 class QEvent;
 class QTimer;
+class QWidget;
 
 namespace fluent::basicinput {
 class Button;
@@ -26,6 +27,7 @@ namespace fluent::gallery {
 
 class GalleryNavigationPane;
 class GalleryContentPage;
+class GalleryNavigationItem;
 class PlaceholderPage;
 class SettingsPage;
 
@@ -54,8 +56,13 @@ private:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
     void buildNavigationShell();
-    bool applyRoute(const QString& routeId);
     void createTitleBarContent();
+    void showInitialRouteContent();
+    bool showRouteContent(const QString& routeId);
+    QWidget* createRouteContentPage(const QString& routeId,
+                                    const GalleryNavigationItem& fallbackItem) const;
+    void connectRouteContentNavigation(QWidget* page);
+    void replaceRouteContentPage(const QString& routeId, QWidget* page);
     void handleSelectedRouteChanged(const QString& routeId);
     void recordNavigationHistory(const QString& nextRouteId);
     bool navigateBack();

@@ -19,6 +19,7 @@
 #include <QStandardItemModel>
 #include <QStyleOptionViewItem>
 #include <QVariantAnimation>
+#include <QWheelEvent>
 
 #include "compatibility/QtCompat.h"
 #include "design/CornerRadius.h"
@@ -593,6 +594,45 @@ void FlowView::mouseReleaseEvent(QMouseEvent* event)
     m_dragSourceIndices.clear();
     m_dragPressIntercepted = false;
     m_pressedRow = -1;
+}
+
+void FlowView::wheelEvent(QWheelEvent* event)
+{
+    if (!isEnabled()) {
+        event->ignore();
+        return;
+    }
+
+    QScrollBar* bar = verticalScrollBar();
+    if (!bar || bar->maximum() <= bar->minimum()) {
+        event->ignore();
+        return;
+    }
+
+    const QPoint pixelDelta = event->pixelDelta();
+    const QPoint angleDelta = event->angleDelta();
+    const qreal scrollPx = !pixelDelta.isNull()
+        ? static_cast<qreal>(pixelDelta.y())
+        : angleDelta.y() / 120.0 * bar->singleStep() * 3.0;
+
+    if (qFuzzyIsNull(scrollPx)) {
+        event->ignore();
+        return;
+    }
+
+    const int previous = bar->value();
+    const int target = qBound(bar->minimum(),
+                              previous - qRound(scrollPx),
+                              bar->maximum());
+    if (target != previous) {
+        bar->setValue(target);
+        syncFluentScrollBar();
+        viewport()->update();
+        event->accept();
+        return;
+    }
+
+    event->ignore();
 }
 
 QModelIndex FlowView::moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers)

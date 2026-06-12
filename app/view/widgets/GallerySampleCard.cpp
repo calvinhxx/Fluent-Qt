@@ -1,5 +1,7 @@
 #include "GallerySampleCard.h"
 
+#include <QCoreApplication>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QResizeEvent>
 #include <QSizePolicy>
@@ -72,8 +74,12 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
 
     if (!sample.codeSnippet.isEmpty()) {
         m_codeBlock = new GalleryCodeBlock(sample.codeSnippet, this);
+        // Expander animation only changes the card's own height; skip the full
+        // child re-measure so each animation frame costs one layout pass, not two.
+        // zh_CN: expander 动画只改变卡片自身高度；跳过子项的整体重测量，
+        // 让每个动画帧只走一遍布局而不是两遍。
         connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this,
-                [this]() { updateAnchoredLayout(); });
+                [this]() { updateCardHeight(); });
     }
 
     using Edge = AnchorLayout::Edge;
@@ -158,13 +164,30 @@ void GallerySampleCard::updateAnchoredLayout()
     setStableHeight(m_descriptionLabel);
     setStableHeight(m_previewSurface);
 
-    const int cardHeight = calculatedHeightForWidth(cardWidth);
-    if (minimumHeight() != cardHeight || maximumHeight() != cardHeight)
-        setFixedHeight(cardHeight);
+    updateCardHeight();
 
     if (layout())
         layout()->activate();
     updateGeometry();
+}
+
+void GallerySampleCard::updateCardHeight()
+{
+    const int cardWidth = qMax(width(), kMinimumCardWidth);
+    const int cardHeight = calculatedHeightForWidth(cardWidth);
+    if (minimumHeight() == cardHeight && maximumHeight() == cardHeight)
+        return;
+    setFixedHeight(cardHeight);
+    // The code block has already resized itself by the time this runs, but the
+    // card and the page column only follow on the queued layout pass. A frame
+    // composited in between paints the block overflowing the card while the
+    // cards below sit still — the intermittent toggle jitter. Deliver the
+    // queued layout passes now so every painted frame is geometry-consistent.
+    // zh_CN: 走到这里时代码块已先行改变了自身高度，而卡片和页面纵列要等排队的
+    // 布局事件才跟上；若系统恰好在两者之间合成一帧，就会画出代码块溢出卡片、
+    // 下方卡片纹丝不动的画面——即偶现的切换抖动。此处立刻派发排队的布局事件，
+    // 保证每一帧画面几何一致。
+    QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
 }
 
 int GallerySampleCard::preferredHeightForWidget(QWidget* widget, int width) const

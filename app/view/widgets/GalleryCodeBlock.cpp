@@ -313,8 +313,12 @@ void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
     m_animation->setStartValue(m_fraction);
     m_animation->setEndValue(target);
     const auto motion = themeAnimation();
+    // Full toggles run at the normal token, not slow: a 400ms tail makes the
+    // last few pixels crawl, which reads as the page stuttering near the end.
+    // zh_CN: 整段切换用 normal 而非 slow：400ms 的尾段让最后几像素缓慢爬行，
+    // 观感上像页面在收尾时抖动。
     const double distance = qAbs(target - m_fraction);
-    const int duration = qRound(motion.fast + (motion.slow - motion.fast) * distance);
+    const int duration = qRound(motion.fast + (motion.normal - motion.fast) * distance);
     m_animation->setDuration(duration);
     m_animation->setEasingCurve(motion.standard);
     m_animation->start();
@@ -325,12 +329,22 @@ QSize GalleryCodeBlock::sizeHint() const
     int width = 360;
     if (m_header)
         width = qMax(width, m_header->sizeHint().width());
-    return QSize(width, kHeaderHeight + currentContentHeight());
+    return QSize(width, blockHeightForContent(currentContentHeight()));
 }
 
 QSize GalleryCodeBlock::minimumSizeHint() const
 {
-    return QSize(0, kHeaderHeight + currentContentHeight());
+    return QSize(0, blockHeightForContent(currentContentHeight()));
+}
+
+int GalleryCodeBlock::blockHeightForContent(int contentHeight) const
+{
+    // The content area sits 1px below the header (its divider line); include
+    // that pixel whenever content shows, or the expanded body's bottom edge is
+    // clipped by exactly one row.
+    // zh_CN: 内容区位于头部下方 1px（分隔线）；只要内容可见就计入这 1px，
+    // 否则展开态的底边正好被裁掉一行。
+    return kHeaderHeight + (contentHeight > 0 ? 1 + contentHeight : 0);
 }
 
 void GalleryCodeBlock::resizeEvent(QResizeEvent* event)
@@ -372,7 +386,7 @@ void GalleryCodeBlock::applyFraction(double fraction)
 {
     m_fraction = qBound(0.0, fraction, 1.0);
     const int contentHeight = currentContentHeight();
-    const int blockHeight = kHeaderHeight + contentHeight;
+    const int blockHeight = blockHeightForContent(contentHeight);
     m_content->setFixedHeight(contentHeight);
     if (minimumHeight() != blockHeight || maximumHeight() != blockHeight)
         setFixedHeight(blockHeight);

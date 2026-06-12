@@ -299,6 +299,36 @@ TEST_F(FlowViewTest, ScrollingHeaderPlaceholderThemeAndAccessibility)
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
 }
 
+TEST_F(FlowViewTest, WheelScrollConsumesEventWhenFlowCanScroll)
+{
+    auto* flow = new FlowView(window);
+    flow->setGeometry(0, 0, 260, 120);
+    flow->setContentMargins(QMargins());
+    flow->setHorizontalSpacing(8);
+    flow->setVerticalSpacing(8);
+    attachDelegate(flow);
+
+    QStringList labels;
+    QList<QSize> sizes;
+    for (int row = 0; row < 12; ++row) {
+        labels << QStringLiteral("Photo %1").arg(row + 1);
+        sizes << QSize(120, 56);
+    }
+    flow->setModel(createModel(flow, labels, sizes));
+    showOffscreen(window);
+
+    ASSERT_GT(flow->verticalScrollBar()->maximum(), 0);
+    const int before = flow->verticalScrollBar()->value();
+    const QPoint wheelPoint = flow->viewport()->rect().center();
+    FLUENT_MAKE_WHEEL_EVENT(wheel, wheelPoint.x(), wheelPoint.y(), -120, Qt::NoModifier);
+    wheel.setAccepted(false);
+    QApplication::sendEvent(flow->viewport(), &wheel);
+    processEvents();
+
+    EXPECT_TRUE(wheel.isAccepted());
+    EXPECT_GT(flow->verticalScrollBar()->value(), before);
+}
+
 TEST_F(FlowViewTest, PointerSelectionKeyboardNavigationAndDisabledState)
 {
     auto* flow = new FlowView(window);

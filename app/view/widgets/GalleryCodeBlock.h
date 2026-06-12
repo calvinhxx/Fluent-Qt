@@ -63,6 +63,7 @@ private:
     void applyHighlightedCode();
     int naturalContentHeight() const;
     int currentContentHeight() const;
+    int blockHeightForContent(int contentHeight) const;
     void updateContentInnerGeometry();
     void applyFraction(double fraction);
     double currentFraction() const { return m_fraction; }

@@ -35,11 +35,24 @@ class FluentMenuBar : public QMenuBar, public FluentElement, public QMLPlus {
      * zh_CN: 菜单文本使用的 Fluent 排版样式。
      */
     Q_PROPERTY(QString fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
+    /**
+     * @brief Whether the bar paints its canvas background.
+     * zh_CN: 是否绘制菜单栏的画布背景。
+     *
+     * Disable it to let the bar blend into a host surface that already paints
+     * its own background, such as a card or a custom title bar.
+     * zh_CN: 关闭后菜单栏融入自带背景的宿主表面，例如卡片或自定义标题栏。
+     */
+    Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
 public:
     explicit FluentMenuBar(QWidget* parent = nullptr);
 
     void setFontStyle(const QString& style);
     QString fontStyle() const { return m_fontStyle; }
+
+    bool backgroundVisible() const { return m_backgroundVisible; }
+    bool isBackgroundVisible() const { return backgroundVisible(); }
+    void setBackgroundVisible(bool visible);
 
     QRect fluentActionGeometry(QAction* action) const;
     QAction* hoveredAction() const { return m_hoveredAction; }
@@ -51,6 +64,7 @@ public:
 
 signals:
     void fontStyleChanged();
+    void backgroundVisibleChanged(bool visible);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -88,6 +102,7 @@ private:
     void closeOpenMenu();
 
     QString m_fontStyle = QStringLiteral("Body");
+    bool m_backgroundVisible = true;
     mutable QHash<QAction*, QRect> m_actionRects;
     mutable bool m_layoutDirty = true;
     QAction* m_hoveredAction = nullptr;

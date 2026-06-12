@@ -325,6 +325,30 @@ TEST_F(MenuBarTest, TopLevelGeometryVisibilityAndThemeAreDeterministic)
     EXPECT_EQ(sample.bar->fluentActionGeometry(sample.fileAction).height(), beforeTheme.height());
 }
 
+TEST_F(MenuBarTest, BackgroundVisiblePropertyTogglesAndNotifies)
+{
+    MenuBarSample sample = createSimpleMenuBar(window);
+    sample.bar->setParent(window);
+    showAndProcess(*sample.bar);
+
+    // Painted canvas background is the default; hiding it lets the bar blend
+    // into host surfaces such as gallery sample cards.
+    // zh_CN: 默认绘制画布背景；隐藏后菜单栏可融入样例卡片等宿主表面。
+    EXPECT_TRUE(sample.bar->backgroundVisible());
+
+    QSignalSpy spy(sample.bar, &FluentMenuBar::backgroundVisibleChanged);
+    sample.bar->setBackgroundVisible(false);
+    EXPECT_FALSE(sample.bar->backgroundVisible());
+    EXPECT_EQ(spy.count(), 1);
+
+    sample.bar->setBackgroundVisible(false); // same value: no extra signal
+    EXPECT_EQ(spy.count(), 1);
+
+    sample.bar->setBackgroundVisible(true);
+    EXPECT_TRUE(sample.bar->backgroundVisible());
+    EXPECT_EQ(spy.count(), 2);
+}
+
 TEST_F(MenuBarTest, PointerAndKeyboardInteractionsUseQtActions)
 {
     MenuBarSample sample = createSimpleMenuBar(window, true);

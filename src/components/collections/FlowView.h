@@ -15,6 +15,7 @@ class QMouseEvent;
 class QPaintEvent;
 class QResizeEvent;
 class QShowEvent;
+class QWheelEvent;
 class QVariantAnimation;
 
 namespace fluent::scrolling { class ScrollBar; }
@@ -200,6 +201,7 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
 
     QModelIndex moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers) override;
     int horizontalOffset() const override;

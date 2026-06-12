@@ -97,6 +97,15 @@ QRect FluentMenuBar::fluentActionGeometry(QAction* action) const
     return m_actionRects.value(action);
 }
 
+void FluentMenuBar::setBackgroundVisible(bool visible)
+{
+    if (m_backgroundVisible == visible)
+        return;
+    m_backgroundVisible = visible;
+    update();
+    emit backgroundVisibleChanged(visible);
+}
+
 void FluentMenuBar::onThemeUpdated()
 {
     setFont(themeFont(m_fontStyle).toQFont());
@@ -115,7 +124,8 @@ void FluentMenuBar::paintEvent(QPaintEvent*)
 
     const auto& colors = themeColors();
     const Metrics currentMetrics = metrics();
-    painter.fillRect(rect(), colors.bgCanvas);
+    if (m_backgroundVisible)
+        painter.fillRect(rect(), colors.bgCanvas);
     painter.setFont(font());
 
     for (QAction* action : actions()) {

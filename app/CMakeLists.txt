@@ -19,5 +19,6 @@ target_link_libraries(fluent_qt_gallery
     PRIVATE
     fluent_qt_lib
     Qt${QT_VERSION_MAJOR}::Widgets
+    Qt${QT_VERSION_MAJOR}::Network
 )
 target_include_directories(fluent_qt_gallery PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

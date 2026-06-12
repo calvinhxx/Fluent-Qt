@@ -23,9 +23,11 @@ using fluent::navigation::Breadcrumb;
 using fluent::navigation::NavigationView;
 using fluent::navigation::Pivot;
 using fluent::navigation::SelectorBar;
+using fluent::navigation::SelectorBarItem;
 using fluent::navigation::StackContentHost;
 using fluent::navigation::TabView;
 using fluent::textfields::Label;
+using samples::glyphPixmap;
 using samples::makeSample;
 using samples::verticalGroup;
 
@@ -41,18 +43,31 @@ QVector<GallerySample> breadcrumbSamples()
     return {
         makeSample(QStringLiteral("breadcrumb-basic"),
                    QStringLiteral("Breadcrumb trail"),
-                   QStringLiteral("Clicking an ancestor truncates the trail back to it."),
+                   QStringLiteral("Clicking an ancestor truncates the trail back to it; the label echoes the click."),
                    QStringLiteral("auto* breadcrumb = new Breadcrumb(this);\n"
                                   "breadcrumb->setItems({\"Home\", \"Documents\",\n"
-                                  "                      \"Design\", \"Northwind\"});"),
+                                  "                      \"Design\", \"Northwind\", \"Images\"});\n"
+                                  "connect(breadcrumb, &Breadcrumb::itemClicked,\n"
+                                  "        this, [](int index) { /* navigate */ });"),
                    [](QWidget* parent) {
-                       auto* breadcrumb = new Breadcrumb(parent);
-                       breadcrumb->setItems(QStringList{
+                       QWidget* group = verticalGroup(parent, 10);
+                       auto* breadcrumb = new Breadcrumb(group);
+                       const QStringList trail{
                            QStringLiteral("Home"), QStringLiteral("Documents"),
                            QStringLiteral("Design"), QStringLiteral("Northwind"),
-                           QStringLiteral("Images")});
+                           QStringLiteral("Images")};
+                       breadcrumb->setItems(trail);
                        breadcrumb->setMinimumWidth(380);
-                       return breadcrumb;
+                       Label* status = makeStatusLabel(
+                           group, QStringLiteral("Current folder: Images"));
+                       QObject::connect(breadcrumb, &Breadcrumb::itemClicked,
+                                        status, [status, breadcrumb](int index) {
+                                            status->setText(QStringLiteral("Current folder: %1")
+                                                                .arg(breadcrumb->items().value(index).text));
+                                        });
+                       group->layout()->addWidget(breadcrumb);
+                       group->layout()->addWidget(status);
+                       return group;
                    })
     };
 }
@@ -77,23 +92,28 @@ QVector<GallerySample> navigationViewSamples()
                        auto* paneList = new ListView(navView);
                        paneList->setBorderVisible(false);
                        paneList->setBackgroundVisible(false);
+                       paneList->setIconSize(QSize(20, 20));
                        auto* paneModel = new QStandardItemModel(paneList);
-                       const QStringList paneTitles{
-                           QStringLiteral("Home"),
-                           QStringLiteral("Apps"),
-                           QStringLiteral("Games")};
-                       for (const QString& title : paneTitles) {
-                           auto* item = new QStandardItem(title);
+                       struct PaneEntry { QString title; QString glyph; };
+                       const QVector<PaneEntry> paneEntries{
+                           {QStringLiteral("Home"), Typography::Icons::Home},
+                           {QStringLiteral("Apps"), Typography::Icons::AllApps},
+                           {QStringLiteral("Games"), Typography::Icons::Controller}};
+                       const QColor paneIconColor(0x00, 0x78, 0xD4);
+                       for (const PaneEntry& entry : paneEntries) {
+                           auto* item = new QStandardItem(entry.title);
                            item->setEditable(false);
+                           item->setIcon(glyphPixmap(entry.glyph, paneIconColor, 20));
                            paneModel->appendRow(item);
                        }
                        paneList->setModel(paneModel);
                        navView->setMainChromeWidget(paneList);
 
                        StackContentHost* contentHost = navView->contentHost();
-                       for (int i = 0; i < paneTitles.size(); ++i) {
+                       for (int i = 0; i < paneEntries.size(); ++i) {
                            auto* page = new Label(
-                               QStringLiteral("%1 page content").arg(paneTitles.at(i)), contentHost);
+                               QStringLiteral("%1 page content").arg(paneEntries.at(i).title),
+                               contentHost);
                            page->setFluentTypography(Typography::FontRole::Body);
                            page->setAlignment(Qt::AlignLeft | Qt::AlignTop);
                            page->setContentsMargins(16, 16, 16, 16);
@@ -120,6 +140,7 @@ QVector<GallerySample> pivotSamples()
                    QStringLiteral("auto* pivot = new Pivot(this);\n"
                                   "pivot->addItem(\"All\");\n"
                                   "pivot->addItem(\"Unread\");\n"
+                                  "pivot->addItem(\"Flagged\");\n"
                                   "pivot->setSelectedIndex(0);"),
                    [](QWidget* parent) {
                        QWidget* group = verticalGroup(parent, 10);
@@ -145,18 +166,22 @@ QVector<GallerySample> selectorBarSamples()
 {
     return {
         makeSample(QStringLiteral("selector-bar-basic"),
-                   QStringLiteral("SelectorBar with live selection"),
+                   QStringLiteral("SelectorBar with icon items"),
                    QStringLiteral("A lightweight row of selectable items for view switching."),
                    QStringLiteral("auto* selector = new SelectorBar(this);\n"
-                                  "selector->addItem(\"Recent\");\n"
-                                  "selector->addItem(\"Shared\");\n"
+                                  "selector->addItem({\"Recent\", Typography::Icons::History});\n"
+                                  "selector->addItem({\"Shared\", Typography::Icons::Share});\n"
+                                  "selector->addItem({\"Favorites\", Typography::Icons::FavoriteStar});\n"
                                   "selector->setSelectedIndex(0);"),
                    [](QWidget* parent) {
                        QWidget* group = verticalGroup(parent, 10);
                        auto* selector = new SelectorBar(group);
-                       selector->addItem(QStringLiteral("Recent"));
-                       selector->addItem(QStringLiteral("Shared"));
-                       selector->addItem(QStringLiteral("Favorites"));
+                       selector->addItem(SelectorBarItem(QStringLiteral("Recent"),
+                                                         Typography::Icons::History));
+                       selector->addItem(SelectorBarItem(QStringLiteral("Shared"),
+                                                         Typography::Icons::Share));
+                       selector->addItem(SelectorBarItem(QStringLiteral("Favorites"),
+                                                         Typography::Icons::FavoriteStar));
                        selector->setSelectedIndex(0);
                        Label* status = makeStatusLabel(group, QStringLiteral("View: Recent"));
                        QObject::connect(selector, &SelectorBar::selectedIndexChanged,
@@ -175,27 +200,24 @@ QVector<GallerySample> tabViewSamples()
 {
     return {
         makeSample(QStringLiteral("tab-view-basic"),
-                   QStringLiteral("Tabbed content"),
-                   QStringLiteral("Selecting a tab swaps the hosted content below the strip."),
+                   QStringLiteral("Closable tabs with an add button"),
+                   QStringLiteral("Selecting a tab swaps the hosted content; tabs can be closed and added."),
                    QStringLiteral("auto* tabView = new TabView(this);\n"
-                                  "tabView->addTab(\"Overview\");\n"
-                                  "connect(tabView, &TabView::currentChanged,\n"
-                                  "        stack, &QStackedWidget::setCurrentIndex);"),
+                                  "tabView->setTabsClosable(true);\n"
+                                  "tabView->setAddTabButtonVisible(true);\n"
+                                  "connect(tabView, &TabView::addTabRequested,\n"
+                                  "        this, [tabView] { tabView->addTab(\"New tab\"); });\n"
+                                  "connect(tabView, &TabView::tabCloseRequested,\n"
+                                  "        this, [tabView](int i) { tabView->closeTab(i); });"),
                    [](QWidget* parent) {
                        auto* container = verticalGroup(parent, 0);
 
                        auto* tabView = new TabView(container);
-                       tabView->setAddTabButtonVisible(false);
-                       tabView->setTabsClosable(false);
+                       tabView->setAddTabButtonVisible(true);
+                       tabView->setTabsClosable(true);
 
                        auto* contentHost = new StackContentHost(container);
-                       const QStringList tabTitles{
-                           QStringLiteral("Overview"),
-                           QStringLiteral("Details"),
-                           QStringLiteral("Activity")};
-                       int pageIndex = 0;
-                       for (const QString& title : tabTitles) {
-                           tabView->addTab(title);
+                       auto makePage = [contentHost](const QString& title) {
                            auto* page = new Label(
                                QStringLiteral("%1 content hosted by the selected tab.").arg(title),
                                contentHost);
@@ -203,7 +225,16 @@ QVector<GallerySample> tabViewSamples()
                            page->setAlignment(Qt::AlignLeft | Qt::AlignTop);
                            page->setWordWrap(true);
                            page->setContentsMargins(4, 12, 4, 4);
-                           contentHost->insertPage(pageIndex, page);
+                           return page;
+                       };
+                       const QStringList tabTitles{
+                           QStringLiteral("Overview"),
+                           QStringLiteral("Details"),
+                           QStringLiteral("Activity")};
+                       int pageIndex = 0;
+                       for (const QString& title : tabTitles) {
+                           tabView->addTab(title);
+                           contentHost->insertPage(pageIndex, makePage(title));
                            ++pageIndex;
                        }
                        tabView->setSelectedIndex(0);
@@ -212,6 +243,25 @@ QVector<GallerySample> tabViewSamples()
                                         contentHost, [contentHost](int index) {
                                             if (index >= 0 && index < contentHost->count())
                                                 contentHost->setCurrentIndex(index);
+                                        });
+                       // The add button appends a fresh document tab plus its page.
+                       // zh_CN: 加号按钮追加一个新的文档页签及其页面。
+                       QObject::connect(tabView, &TabView::addTabRequested,
+                                        contentHost, [tabView, contentHost, makePage]() {
+                                            static int documentNumber = 0;
+                                            const QString title = QStringLiteral("Document %1")
+                                                                      .arg(++documentNumber);
+                                            const int index = tabView->addTab(title);
+                                            contentHost->insertPage(index, makePage(title));
+                                            tabView->setSelectedIndex(index);
+                                        });
+                       // Closing a tab removes its hosted page as well.
+                       // zh_CN: 关闭页签时同步移除承载的页面。
+                       QObject::connect(tabView, &TabView::tabCloseRequested,
+                                        contentHost, [tabView, contentHost](int index) {
+                                            tabView->closeTab(index);
+                                            if (QWidget* page = contentHost->takePage(index))
+                                                page->deleteLater();
                                         });
 
                        container->layout()->addWidget(tabView);
