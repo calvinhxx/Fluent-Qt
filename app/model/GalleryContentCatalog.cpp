@@ -42,6 +42,8 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("A control that responds to user input and raises a click event.")},
         {QStringLiteral("checkbox"),
          QStringLiteral("Lets people select or clear an option, with an optional indeterminate state.")},
+        {QStringLiteral("color-picker"),
+         QStringLiteral("A spectrum surface for picking a color, with RGB, hex, and optional alpha editing.")},
         {QStringLiteral("combobox"),
          QStringLiteral("A drop-down list for selecting one item from a set of options.")},
         {QStringLiteral("dropdown-button"),

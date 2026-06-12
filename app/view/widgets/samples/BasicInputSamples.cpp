@@ -6,6 +6,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/basicinput/CheckBox.h"
+#include "components/basicinput/ColorPicker.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/DropDownButton.h"
 #include "components/basicinput/HyperlinkButton.h"
@@ -27,6 +28,7 @@ namespace {
 
 using fluent::basicinput::Button;
 using fluent::basicinput::CheckBox;
+using fluent::basicinput::ColorPicker;
 using fluent::basicinput::ComboBox;
 using fluent::basicinput::DropDownButton;
 using fluent::basicinput::HyperlinkButton;
@@ -127,6 +129,41 @@ QVector<GallerySample> checkBoxSamples()
                        checkBox->setTristate(true);
                        checkBox->setCheckState(Qt::PartiallyChecked);
                        return checkBox;
+                   })
+    };
+}
+
+QVector<GallerySample> colorPickerSamples()
+{
+    return {
+        makeSample(QStringLiteral("color-picker-basic"),
+                   QStringLiteral("ColorPicker"),
+                   QStringLiteral("Pick from the spectrum; RGB, hex, and alpha inputs stay in sync."),
+                   QStringLiteral("auto* picker = new ColorPicker(this);\n"
+                                  "picker->setColor(QColor(0, 120, 212));\n"
+                                  "connect(picker, &ColorPicker::colorChanged,\n"
+                                  "        this, [](const QColor& color) { /* apply */ });"),
+                   [](QWidget* parent) {
+                       auto* picker = new ColorPicker(parent);
+                       picker->setColor(QColor(0, 120, 212));
+                       // The anchor layout stacks inputs below the spectrum, so the
+                       // preview needs enough room to keep them from overlapping.
+                       // zh_CN: 锚点布局把输入区排在色谱下方，预览需要足够空间避免重叠。
+                       picker->setMinimumSize(420, 480);
+                       return picker;
+                   }),
+        makeSample(QStringLiteral("color-picker-no-alpha"),
+                   QStringLiteral("ColorPicker without alpha"),
+                   QStringLiteral("Hide the alpha channel when transparency is not meaningful."),
+                   QStringLiteral("auto* picker = new ColorPicker(this);\n"
+                                  "picker->setAlphaEnabled(false);\n"
+                                  "picker->setColor(QColor(255, 185, 0));"),
+                   [](QWidget* parent) {
+                       auto* picker = new ColorPicker(parent);
+                       picker->setAlphaEnabled(false);
+                       picker->setColor(QColor(255, 185, 0));
+                       picker->setMinimumSize(420, 420);
+                       return picker;
                    })
     };
 }
@@ -417,6 +454,8 @@ QVector<GallerySample> basicInputSamples(const QString& routeId)
         return buttonSamples();
     if (routeId == QStringLiteral("checkbox"))
         return checkBoxSamples();
+    if (routeId == QStringLiteral("color-picker"))
+        return colorPickerSamples();
     if (routeId == QStringLiteral("combobox"))
         return comboBoxSamples();
     if (routeId == QStringLiteral("dropdown-button"))

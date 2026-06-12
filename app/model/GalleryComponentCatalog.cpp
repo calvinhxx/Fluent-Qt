@@ -17,6 +17,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          {
              {QStringLiteral("button"), QStringLiteral("Button"), Typography::Icons::Add},
              {QStringLiteral("checkbox"), QStringLiteral("CheckBox"), Typography::Icons::CheckMark},
+             {QStringLiteral("color-picker"), QStringLiteral("ColorPicker"), Typography::Icons::Color},
              {QStringLiteral("combobox"), QStringLiteral("ComboBox"), Typography::Icons::ChevronDown},
              {QStringLiteral("dropdown-button"), QStringLiteral("DropDownButton"), Typography::Icons::ChevronDownMed},
              {QStringLiteral("hyperlink-button"), QStringLiteral("HyperlinkButton"), Typography::Icons::Link},
