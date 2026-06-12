@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QFrame>
+#include <QFile>
 #include <QGraphicsOpacityEffect>
 #include <QImage>
 #include <QLabel>
@@ -15,6 +16,7 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
+#include "model/GalleryComponentCatalog.h"
 #include "model/GalleryContentCatalog.h"
 #include "view/pages/GalleryCategoryPage.h"
 #include "view/widgets/GalleryCodeBlock.h"
@@ -35,6 +37,8 @@ using fluent::gallery::GalleryEntryCard;
 using fluent::gallery::GalleryNavigationViewModel;
 using fluent::gallery::GallerySampleCard;
 using fluent::gallery::GalleryWindow;
+using fluent::gallery::galleryComponentCatalog;
+using fluent::gallery::galleryControlImageResource;
 using fluent::gallery::galleryContentCatalog;
 using fluent::gallery::galleryContentEntry;
 
@@ -147,6 +151,20 @@ TEST_F(GalleryContentPagesTest, AllControlsRouteListsEveryComponent)
             ++componentCount;
     }
     EXPECT_EQ(page->componentRouteIds().size(), componentCount);
+}
+
+TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledControlImages)
+{
+    const QString placeholder =
+        QStringLiteral(":/app/assets/control_images/Placeholder.png");
+
+    for (const auto& category : galleryComponentCatalog()) {
+        for (const auto& component : category.components) {
+            const QString resource = galleryControlImageResource(component.title);
+            EXPECT_NE(resource, placeholder) << component.title.toStdString();
+            EXPECT_TRUE(QFile::exists(resource)) << resource.toStdString();
+        }
+    }
 }
 
 // Task 6.2: category routes build category overview pages with component cards.
