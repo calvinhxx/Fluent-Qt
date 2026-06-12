@@ -78,6 +78,9 @@ public:
     qreal pressProgress() const { return m_pressProgress; }
     void setPressProgress(qreal value);
 
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+
 signals:
     void openChanged();
     void chevronChanged();
@@ -85,9 +88,11 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    QRectF contentPaintRect(const QRectF& surfaceRect) const override;
 
 private:
     void initAnimation();
+    int chevronReserveWidth() const;
 
     QMenu* m_menu = nullptr;
     bool m_isOpen = false;

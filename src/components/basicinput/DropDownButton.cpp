@@ -60,6 +60,7 @@ void DropDownButton::setIconFontFamily(const QString& family) {
 void DropDownButton::setChevronSize(int size) {
     if (m_chevronSize == size) return;
     m_chevronSize = size;
+    updateGeometry();
     update();
     emit chevronChanged();
 }
@@ -67,6 +68,7 @@ void DropDownButton::setChevronSize(int size) {
 void DropDownButton::setChevronOffset(const QPoint& offset) {
     if (m_chevronOffset == offset) return;
     m_chevronOffset = offset;
+    updateGeometry();
     update();
     emit chevronChanged();
 }
@@ -77,6 +79,28 @@ void DropDownButton::setPressProgress(qreal value) {
         return;
     m_pressProgress = clamped;
     update();
+}
+
+QSize DropDownButton::sizeHint() const {
+    QSize size = Button::sizeHint();
+    size.rwidth() += chevronReserveWidth();
+    return size;
+}
+
+QSize DropDownButton::minimumSizeHint() const {
+    return sizeHint();
+}
+
+QRectF DropDownButton::contentPaintRect(const QRectF& surfaceRect) const {
+    const qreal reserve = qMin(surfaceRect.width(),
+                               static_cast<qreal>(chevronReserveWidth()));
+    return surfaceRect.adjusted(0, 0, -reserve, 0);
+}
+
+int DropDownButton::chevronReserveWidth() const {
+    const auto& spacing = themeSpacing();
+    const int gap = fluentSize() == Small ? spacing.gap.tight : spacing.gap.normal;
+    return gap + qMax(0, m_chevronSize) + qMax(0, m_chevronOffset.x());
 }
 
 void DropDownButton::mousePressEvent(QMouseEvent* event) {
