@@ -28,7 +28,8 @@ public:
     QSet<FluentElement*> elements;
 
     void notifyAll() {
-        // 使用副本遍历，防止回调中对象销毁导致迭代器失效
+        // Iterate over a copy: callbacks may destroy elements and invalidate iterators.
+        // zh_CN: 使用副本遍历，防止回调中对象销毁导致迭代器失效。
         auto copy = elements;
         for (auto* e : copy) {
             if (elements.contains(e)) {

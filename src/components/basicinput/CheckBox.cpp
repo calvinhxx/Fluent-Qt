@@ -85,8 +85,8 @@ QSize CheckBox::sizeHint() const {
     const auto& spacing = themeSpacing();
     QFontMetrics fm(font());
     
-    // 使用可配置的属性
-    int w = m_boxSize + m_boxMargin * 2; // 左侧 margin + 方框 + 右侧 margin
+    // Configurable metrics. zh_CN: 使用可配置的属性。
+    int w = m_boxSize + m_boxMargin * 2; // Left margin + box + right margin. zh_CN: 左 margin + 方框 + 右 margin。
     if (!text().isEmpty()) {
         w += m_textGap + fm.horizontalAdvance(text());
     }
@@ -113,15 +113,16 @@ void CheckBox::paintEvent(QPaintEvent*) {
     bool enabled = isEnabled();
     Qt::CheckState state = checkState();
 
-    // 1. 整体背景 (Hover 态) - 限制在实际内容区域
+    // 1. Hover background, clamped to the actual content area.
+    // zh_CN: 整体背景（Hover 态），限制在实际内容区域。
     if (enabled && isHover && m_hoverBackgroundEnabled) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.subtleSecondary);
-        // 稍微缩进，避免背景贴边
+        // Slight inset so the fill never touches the edge. zh_CN: 稍微缩进，避免背景贴边。
         painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1), radius.control, radius.control);
     }
 
-    // 2. 绘制复选框方框
+    // 2. Paint the checkbox box. zh_CN: 绘制复选框方框。
     int boxY = (height() - m_boxSize) / 2;
     QRectF boxRect(m_boxMargin, boxY, m_boxSize, m_boxSize);
     
@@ -136,36 +137,38 @@ void CheckBox::paintEvent(QPaintEvent*) {
         boxBorder = isHover ? colors.strokeStrong : colors.strokeDefault;
         iconColor = Qt::transparent;
     } else {
-        // Checked 或 Indeterminate：使用 Accent 颜色，且不显示独立边框
+        // Checked or indeterminate: accent fill without a separate border.
+        // zh_CN: Checked 或 Indeterminate——使用 Accent 颜色且无独立边框。
         boxBg = isPressed ? colors.accentTertiary : (isHover ? colors.accentSecondary : colors.accentDefault);
         boxBorder = Qt::transparent;
         iconColor = colors.textOnAccent;
     }
 
-    // 绘制方框底色
+    // Paint the box fill. zh_CN: 绘制方框底色。
     painter.setPen(Qt::NoPen);
     painter.setBrush(boxBg);
     painter.drawRoundedRect(boxRect, radius.control, radius.control);
 
-    // 绘制方框描边 (仅在未选中时)
+    // Paint the box outline (unchecked only). zh_CN: 绘制方框描边（仅未选中时）。
     if (boxBorder != Qt::transparent) {
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(boxBorder, 1.0));
         painter.drawRoundedRect(boxRect.adjusted(0.5, 0.5, -0.5, -0.5), radius.control, radius.control);
     }
 
-    // 3. 绘制内部图标 (iconfont)
+    // 3. Paint the inner glyph (icon font). zh_CN: 绘制内部图标。
     if (state != Qt::Unchecked) {
         painter.save();
         
         QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
-        // 使用设计 Token：Checked 使用 Body 字号，Indeterminate 使用 Caption 字号
+        // Token sizes: Body for checked, Caption for indeterminate.
+        // zh_CN: 设计 Token——Checked 用 Body 字号，Indeterminate 用 Caption 字号。
         int fontSize = (state == Qt::Checked) ? Typography::FontSize::Body : Typography::FontSize::Caption;
         iconFont.setPixelSize(fontSize);
         painter.setFont(iconFont);
         painter.setPen(iconColor);
         
-        // 动画效果
+        // Animated reveal. zh_CN: 动画效果。
         painter.setOpacity(m_checkProgress);
         if (state == Qt::Checked) {
             painter.translate(boxRect.center());
@@ -179,12 +182,13 @@ void CheckBox::paintEvent(QPaintEvent*) {
         painter.restore();
     }
 
-    // 4. 绘制文本
+    // 4. Paint the text. zh_CN: 绘制文本。
     if (!text().isEmpty()) {
         painter.setFont(font());
         painter.setPen(enabled ? colors.textPrimary : colors.textDisabled);
         
-        // 文本区域起始位置 = 左侧边距 + 方框 + 文字间距
+        // Text starts after the left margin, box, and text gap.
+        // zh_CN: 文本起始位置 = 左侧边距 + 方框 + 文字间距。
         QRectF textRect = rect().adjusted(m_boxMargin + m_boxSize + m_textGap, 0, -m_boxMargin, 0);
         painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, text());
     }

@@ -22,18 +22,19 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     setWindowOpacity(kHiddenOpacity);
     
     m_textBlock = new Label(this);
-    // 确保标签背景透明，以便由 ToolTip 的 paintEvent 处理背景绘制
+    // Keep the label background transparent so ToolTip::paintEvent owns it.
+    // zh_CN: 确保标签背景透明，由 ToolTip 的 paintEvent 处理背景绘制。
     m_textBlock->setAttribute(Qt::WA_TranslucentBackground);
     m_textBlock->setStyleSheet("background-color: transparent;");
     
-    // 1. 设置 ToolTip 文本样式: 默认使用 Caption 字号，不加粗
+    // 1. Text style: Caption size, regular weight by default. zh_CN: 默认使用 Caption 字号，不加粗。
     QFont f = m_textBlock->font();
     f.setBold(false); 
     f.setPixelSize(Typography::FontSize::Caption);
     m_textBlock->setFont(f);
     m_textBlock->setAlignment(Qt::AlignCenter);
 
-    // 2. 初始化内边距
+    // 2. Initialize the padding. zh_CN: 初始化内边距。
     m_margins = QMargins(themeSpacing().small, themeSpacing().xSmall, 
                         themeSpacing().small, themeSpacing().xSmall);
 
@@ -43,7 +44,7 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     
     setLayout(layout);
     
-    // 3. 初始颜色设置
+    // 3. Initial colors. zh_CN: 初始颜色设置。
     const auto& c = themeColors();
     m_bgColor = c.bgSolid; 
     m_borderColor = c.strokeDivider;
@@ -128,7 +129,7 @@ void ToolTip::paintEvent(QPaintEvent*) {
 
     const auto& r = themeRadius();
     
-    // 1. 绘制背景和边框
+    // 1. Paint the background and border. zh_CN: 绘制背景和边框。
     p.setBrush(m_bgColor);
     p.setPen(QPen(m_borderColor, 1));
     p.drawRoundedRect(rect().adjusted(0,0,-1,-1), r.overlay, r.overlay);

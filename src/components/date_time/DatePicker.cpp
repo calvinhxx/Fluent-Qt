@@ -15,7 +15,6 @@
 #include <QtMath>
 
 #include "compatibility/QtCompat.h"
-#include "design/Animation.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/basicinput/Button.h"
@@ -253,8 +252,8 @@ PickerColumn::PickerColumn(DatePickerFlyout* flyout, DatePicker::DateField field
     setFocusPolicy(Qt::StrongFocus);
 
     m_navButtonAnimation = new QVariantAnimation(this);
-    m_navButtonAnimation->setDuration(::Animation::Duration::Fast);
-    m_navButtonAnimation->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_navButtonAnimation->setDuration(themeAnimation().fast);
+    m_navButtonAnimation->setEasingCurve(themeAnimation().decelerate);
     connect(m_navButtonAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         m_navButtonOpacity = value.toReal();
         refreshProperties();
@@ -309,7 +308,9 @@ void PickerColumn::paintEvent(QPaintEvent*)
     const auto colors = themeColors();
     const auto radius = themeRadius();
 
-    // macOS 子控件不支持逐像素 alpha 合成，显式填充背景防止列内容叠加
+    // macOS child widgets lack per-pixel alpha compositing; fill the background
+    // explicitly so column content never stacks.
+    // zh_CN: macOS 子控件不支持逐像素 alpha 合成，显式填充背景防止列内容叠加。
     painter.fillRect(rect(), colors.bgLayer);
 
     const bool canPrevious = m_flyout && m_flyout->canShift(m_field, -1);

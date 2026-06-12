@@ -88,7 +88,7 @@ private:
     void normalizePopupLayering();
     void drawShadow(QPainter& painter, const QRect& contentRect);
 
-    // 与 drawShadow 扩散范围一致，略留余量自然淡出
+    // Matches the drawShadow spread with a little headroom for a natural fade. zh_CN: 与 drawShadow 扩散范围一致，略留余量自然淡出。
     const int m_shadowSize = ::Spacing::Standard;
 
     QString m_fontStyle = QStringLiteral("Body");

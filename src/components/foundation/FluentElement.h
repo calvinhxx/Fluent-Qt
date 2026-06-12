@@ -44,12 +44,12 @@ public:
         // Stroke Colors
         QColor strokeDefault, strokeSecondary, strokeStrong;
         QColor strokeCard, strokeDivider, strokeSurface;
-        QColor strokeFocusOuter, strokeFocusInner;  // 焦点环双层描边
+        QColor strokeFocusOuter, strokeFocusInner;  // Two-layer focus ring strokes. zh_CN: 焦点环双层描边。
 
         // Text Colors
         QColor textPrimary, textSecondary, textTertiary, textDisabled;
-        QColor textOnAccent;        // 强调色背景上的文字（白/黑）
-        QColor textAccentPrimary;   // 普通背景上的强调色文字（深蓝/亮蓝）
+        QColor textOnAccent;        // Text on accent backgrounds (white/black). zh_CN: 强调色背景上的文字。
+        QColor textAccentPrimary;   // Accent text on plain backgrounds (dark/light blue). zh_CN: 普通背景上的强调色文字。
 
         // Backgrounds & Neutrals
         QColor bgCanvas, bgLayer, bgLayerAlt, bgSolid;
@@ -67,10 +67,10 @@ public:
 
     struct FontStyle {
         QString family;
-        QString styleName;   // Segoe UI Variable 光学尺寸变体，如 "Text Regular"
+        QString styleName;   // Segoe UI Variable optical-size variant, e.g. "Text Regular". zh_CN: 光学尺寸变体。
         int size;
         int weight;
-        int lineHeight;      // 绝对行高（px），来自 Figma MCP 实测值
+        int lineHeight;      // Absolute line height in px, measured from Figma. zh_CN: 绝对行高，Figma 实测值。
         QFont toQFont() const {
             QFont font(family, -1, weight);
             font.setPixelSize(size);
@@ -81,20 +81,20 @@ public:
     };
 
     struct Radius {
-        int none;     // 0  直角
-        int control;  // 4  页面内控件
-        int overlay;  // 8  浮层容器（Dialog、Tooltip、Flyout）
+        int none;     // 0: square corners. zh_CN: 直角。
+        int control;  // 4: in-page controls. zh_CN: 页面内控件。
+        int overlay;  // 8: overlay containers (Dialog, ToolTip, Flyout). zh_CN: 浮层容器。
     };
 
     struct Spacing {
         struct {
             int controlH, controlV;
             int card, dialog;
-            int textFieldH, textFieldV;   // 输入框内边距
-            int listItemH, listItemV;     // 列表项内边距
+            int textFieldH, textFieldV;   // Text-field padding. zh_CN: 输入框内边距。
+            int listItemH, listItemV;     // List-item padding. zh_CN: 列表项内边距。
         } padding;
         struct { int tight, normal, loose, section; } gap;
-        struct { int small, standard, large; } controlHeight;  // 标准控件高度
+        struct { int small, standard, large; } controlHeight;  // Standard control heights. zh_CN: 标准控件高度。
         int xSmall, small, medium, standard, large, xLarge, xxLarge;
     };
 
@@ -148,7 +148,7 @@ protected:
     FluentElement();
     virtual ~FluentElement();
 
-    FluentElementPrivate* d_ptr; // PImpl 指针
+    FluentElementPrivate* d_ptr; // PImpl pointer. zh_CN: PImpl 指针。
 
 private:
     Q_DISABLE_COPY(FluentElement)

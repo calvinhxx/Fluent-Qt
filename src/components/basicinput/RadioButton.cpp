@@ -71,7 +71,7 @@ void RadioButton::setTextFont(const QFont& font) {
 
 void RadioButton::nextCheckState() {
     QRadioButton::nextCheckState();
-    // 重置 hover 缩放
+    // Reset the hover scale. zh_CN: 重置 hover 缩放。
     m_dotScale = 1.0;
     if (m_checkAnimation) {
         m_checkAnimation->stop();
@@ -112,7 +112,7 @@ void RadioButton::paintEvent(QPaintEvent*) {
     bool enabled = isEnabled();
     bool checked = isChecked();
 
-    // ── 1. 外圈 ──────────────────────────────────────────────────
+    // ── 1. Outer ring. zh_CN: 外圈 ───────────────────────────────
     QRectF circleRect(0, 0, m_circleSize, m_circleSize);
 
     QColor outerBg, outerBorder;
@@ -121,37 +121,40 @@ void RadioButton::paintEvent(QPaintEvent*) {
         outerBg = colors.controlDisabled;
         outerBorder = colors.strokeDivider;
     } else if (checked) {
-        // WinUI 3: 选中态外圈用 Accent 填充，无独立描边
+        // WinUI 3: the checked ring fills with accent and has no outline.
+        // zh_CN: 选中态外圈用 Accent 填充，无独立描边。
         outerBg = isPressed ? colors.accentTertiary
                             : (isHover ? colors.accentSecondary : colors.accentDefault);
         outerBorder = Qt::transparent;
     } else {
-        // 未选中：普通控件底色 + 描边
+        // Unchecked: standard control fill plus outline. zh_CN: 未选中——普通控件底色 + 描边。
         outerBg = isPressed ? colors.controlTertiary
                             : (isHover ? colors.controlSecondary : colors.controlDefault);
         outerBorder = isHover ? colors.strokeStrong : colors.strokeDefault;
     }
 
-    // 绘制外圈底色（圆形）
+    // Paint the ring fill (circle). zh_CN: 绘制外圈底色（圆形）。
     painter.setPen(Qt::NoPen);
     painter.setBrush(outerBg);
     painter.drawEllipse(circleRect);
 
-    // 绘制外圈描边（仅未选中态）
+    // Paint the ring outline (unchecked only). zh_CN: 绘制外圈描边（仅未选中态）。
     if (outerBorder != Qt::transparent) {
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(outerBorder, 1.0));
         painter.drawEllipse(circleRect.adjusted(0.5, 0.5, -0.5, -0.5));
     }
 
-    // ── 2. 内圆点（选中态）──────────────────────────────────────
+    // ── 2. Inner dot (checked). zh_CN: 内圆点（选中态）──────────
     if (checked || m_checkProgress < 1.0) {
         QColor dotColor = enabled ? colors.textOnAccent : colors.textDisabled;
 
-        // 内圆点直径 ≈ 外圈的 50%，WinUI 3 典型比例
+        // Dot diameter ≈ 50% of the ring, the typical WinUI 3 ratio.
+        // zh_CN: 内圆点直径约为外圈的 50%，WinUI 3 典型比例。
         const qreal dotDiameter = m_circleSize * 0.5;
 
-        // checkProgress 驱动选中/取消动画，dotScale 驱动 hover 缩放
+        // checkProgress drives check/uncheck; dotScale drives hover scaling.
+        // zh_CN: checkProgress 驱动选中/取消动画，dotScale 驱动 hover 缩放。
         qreal scale = checked ? m_checkProgress : (1.0 - m_checkProgress);
         scale *= m_dotScale;
         if (scale > 0.0) {
@@ -165,7 +168,7 @@ void RadioButton::paintEvent(QPaintEvent*) {
         }
     }
 
-    // ── 3. 文本 ──────────────────────────────────────────────────
+    // ── 3. Text. zh_CN: 文本 ─────────────────────────────────────
     if (!text().isEmpty()) {
         painter.setFont(m_textFont);
         painter.setPen(enabled ? colors.textPrimary : colors.textDisabled);
@@ -179,7 +182,7 @@ void RadioButton::enterEvent(FluentEnterEvent* event) {
     if (isChecked() && isEnabled()) {
         m_dotScaleAnimation->stop();
         m_dotScaleAnimation->setStartValue(m_dotScale);
-        m_dotScaleAnimation->setEndValue(1.2); // hover 时内圆点放大 20%
+        m_dotScaleAnimation->setEndValue(1.2); // The dot grows 20% on hover. zh_CN: hover 时内圆点放大 20%。
         m_dotScaleAnimation->start();
     }
 }

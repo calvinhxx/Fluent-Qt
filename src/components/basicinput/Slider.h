@@ -36,7 +36,7 @@ class Slider : public QSlider, public FluentElement, public QMLPlus {
      * zh_CN: 滑块轨道高度，单位为像素。
      */
     Q_PROPERTY(int trackHeight READ trackHeight WRITE setTrackHeight)
-    // 动画属性
+    // Animated properties. zh_CN: 动画属性。
     /**
      * @brief Hover animation ratio for slider visuals.
      * zh_CN: 滑块视觉使用的悬停动画比例。
@@ -88,12 +88,12 @@ private:
     void hideToolTip();
 
     int m_handleSize = 20; // WinUI 3 Standard Thumb (5 * BaseUnit)
-    int m_trackHeight = ::Spacing::XSmall; // 默认 4px
-    int m_visualMargin = 2; // 避免抗锯齿被裁切的边距
-    int m_defaultLength = 160; // 默认长度
+    int m_trackHeight = ::Spacing::XSmall; // Defaults to 4px. zh_CN: 默认 4px。
+    int m_visualMargin = 2; // Margin so antialiasing is never clipped. zh_CN: 避免抗锯齿被裁切的边距。
+    int m_defaultLength = 160; // Default length. zh_CN: 默认长度。
     bool m_isPressed = false;
 
-    // 动画状态
+    // Animation state. zh_CN: 动画状态。
     qreal m_hoverRatio = 0.0;
     qreal m_pressRatio = 0.0;
     QPropertyAnimation* m_hoverAnim = nullptr;

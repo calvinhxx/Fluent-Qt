@@ -16,16 +16,19 @@
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
-#include "design/Animation.h"
 #include "design/CornerRadius.h"
+#include "design/Animation.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::collections {
 
 namespace {
 
+// Namespace-scope constant: no FluentElement instance, so read the raw token.
+// zh_CN: 命名空间级常量没有 FluentElement 实例，直接读原始 token。
 constexpr int kExpandRevealDuration = ::Animation::Duration::Fast;
 
 bool qrealFuzzyEquals(qreal lhs, qreal rhs) {
@@ -89,10 +92,10 @@ TreeView::TreeView(QWidget* parent)
     setMouseTracking(true);
     setIndentation(16);                 // WinUI 3: 16px per level
     setItemsExpandable(true);
-    setRootIsDecorated(false);          // 由 delegate 绘制 chevron，禁用原生展开箭头
-    setAnimated(false);                 // 使用 TreeView 自绘 reveal，避免 Qt 内置动画延迟暴露子项
-    setExpandsOnDoubleClick(false);     // 单击展开，禁用双击
-    setHeaderHidden(true);              // 隐藏列标题
+    setRootIsDecorated(false);          // The delegate paints the chevron; native arrows off. zh_CN: 由 delegate 绘制 chevron，禁用原生展开箭头。
+    setAnimated(false);                 // Custom reveal painting; Qt's animation delays child exposure. zh_CN: 自绘 reveal，避免 Qt 内置动画延迟暴露子项。
+    setExpandsOnDoubleClick(false);     // Single-click expands; double-click off. zh_CN: 单击展开，禁用双击。
+    setHeaderHidden(true);              // Hide column headers. zh_CN: 隐藏列标题。
 
     QTreeView::setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -113,30 +116,23 @@ TreeView::TreeView(QWidget* parent)
     m_headerLabel->setIndent(::Spacing::Padding::ListItemHorizontal);
     m_headerLabel->hide();
 
-    // --- Fluent scroll bar (vertical) ---
-    m_vScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Vertical, this);
-    m_vScrollBar->setObjectName(QStringLiteral("fluentTreeViewVScrollBar"));
-    m_vScrollBar->hide();
+    // --- Fluent scroll bars ---
+    m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(
+        Qt::Vertical, this, verticalScrollBar(),
+        QStringLiteral("fluentTreeViewVScrollBar"));
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged,
+            this, &TreeView::syncFluentScrollBar);
 
-    auto* nativeVBar = verticalScrollBar();
-    connect(nativeVBar,  &QScrollBar::valueChanged, m_vScrollBar, &QScrollBar::setValue);
-    connect(m_vScrollBar, &QScrollBar::valueChanged, nativeVBar,  &QScrollBar::setValue);
-    connect(nativeVBar, &QScrollBar::rangeChanged, this, &TreeView::syncFluentScrollBar);
-
-    // --- Fluent scroll bar (horizontal) ---
-    m_hScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Horizontal, this);
-    m_hScrollBar->setObjectName(QStringLiteral("fluentTreeViewHScrollBar"));
-    m_hScrollBar->hide();
-
-    auto* nativeHBar = horizontalScrollBar();
-    connect(nativeHBar,  &QScrollBar::valueChanged, m_hScrollBar, &QScrollBar::setValue);
-    connect(m_hScrollBar, &QScrollBar::valueChanged, nativeHBar,  &QScrollBar::setValue);
-    connect(nativeHBar, &QScrollBar::rangeChanged, this, &TreeView::syncFluentHScrollBar);
+    m_hScrollBar = ::fluent::scrolling::createOverlayScrollBar(
+        Qt::Horizontal, this, horizontalScrollBar(),
+        QStringLiteral("fluentTreeViewHScrollBar"));
+    connect(horizontalScrollBar(), &QScrollBar::rangeChanged,
+            this, &TreeView::syncFluentHScrollBar);
 
     // --- Overscroll bounce ---
     m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(::Animation::Duration::Normal);
-    m_bounceAnim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_bounceAnim->setDuration(themeAnimation().normal);
+    m_bounceAnim->setEasingCurve(themeAnimation().decelerate);
     connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
         m_overscrollY = v.toReal();
         viewport()->update();
@@ -149,8 +145,8 @@ TreeView::TreeView(QWidget* parent)
 
     // --- Selected indicator motion ---
     m_indicatorMotionAnim = new QVariantAnimation(this);
-    m_indicatorMotionAnim->setDuration(::Animation::Duration::Normal);
-    m_indicatorMotionAnim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_indicatorMotionAnim->setDuration(themeAnimation().normal);
+    m_indicatorMotionAnim->setEasingCurve(themeAnimation().decelerate);
     m_indicatorMotionAnim->setStartValue(0.0);
     m_indicatorMotionAnim->setEndValue(1.0);
     connect(m_indicatorMotionAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
@@ -172,7 +168,7 @@ TreeView::TreeView(QWidget* parent)
     // zh_CN: 单个可逆动画驱动子树高度展开；收起为延迟收起，先动画再真正折叠。
     m_expandRevealAnim = new QVariantAnimation(this);
     m_expandRevealAnim->setDuration(kExpandRevealDuration);
-    m_expandRevealAnim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Standard));
+    m_expandRevealAnim->setEasingCurve(themeAnimation().standard);
     connect(m_expandRevealAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant&) {
         if (viewport())
             viewport()->update();
@@ -673,7 +669,7 @@ void TreeView::showEvent(QShowEvent* event) {
     QTreeView::showEvent(event);
     updateViewportMargins();
     layoutHeader();
-    // 延迟滚动和同步，避免首帧闪缩
+    // Defer scrolling and sync to avoid a first-frame flash. zh_CN: 延迟滚动和同步，避免首帧闪缩。
     QTimer::singleShot(0, this, [this]() {
         if (currentIndex().isValid()) {
             scrollTo(currentIndex(), QAbstractItemView::EnsureVisible);
@@ -801,7 +797,8 @@ void TreeView::selectionChanged(const QItemSelection& selected, const QItemSelec
 
 void TreeView::drawBranches(QPainter* /*painter*/, const QRect& /*rect*/,
                             const QModelIndex& /*index*/) const {
-    // 不绘制原生 branch 指示器 — delegate 自行绘制 Fluent 风格 chevron
+    // Skip native branch indicators; the delegate paints Fluent chevrons.
+    // zh_CN: 不绘制原生 branch 指示器 — delegate 自行绘制 Fluent 风格 chevron。
 }
 
 void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options,
@@ -1561,7 +1558,7 @@ void TreeView::layoutHeader() {
 }
 
 void TreeView::updateViewportMargins() {
-    int top = 2;  // 首行边距，配合 delegate bgRect inset 实现 ListView 同等间距
+    int top = 2;  // First-row margin; with the delegate bgRect inset it matches ListView spacing. zh_CN: 首行边距，配合 delegate bgRect inset 与 ListView 间距一致。
     if (m_headerLabel && m_headerLabel->isVisible()) {
         top = m_headerLabel->sizeHint().height() + ::Spacing::Gap::Normal;
     }
@@ -1569,22 +1566,10 @@ void TreeView::updateViewportMargins() {
 }
 
 void TreeView::syncFluentScrollBar() {
-    for (auto* sb : {verticalScrollBar(), horizontalScrollBar()}) {
-        if (sb) {
-            sb->setAttribute(Qt::WA_DontShowOnScreen, true);
-            sb->hide();
-        }
-    }
-
+    ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
     if (!m_vScrollBar) return;
-
-    auto* native = verticalScrollBar();
-    m_vScrollBar->setRange(native->minimum(), native->maximum());
-    m_vScrollBar->setPageStep(native->pageStep());
-
-    const bool needScroll = native->maximum() > native->minimum();
-    m_vScrollBar->setVisible(needScroll);
-    if (!needScroll) return;
+    if (!::fluent::scrolling::mirrorNativeScrollBar(m_vScrollBar, verticalScrollBar()))
+        return;
 
     constexpr int kScrollBarRightInset = 4;
     constexpr int kScrollBarVerticalInset = 4;
@@ -1592,20 +1577,13 @@ void TreeView::syncFluentScrollBar() {
     const int top = (m_headerLabel && m_headerLabel->isVisible())
                         ? m_headerLabel->geometry().bottom() + 1 + kScrollBarVerticalInset
                         : r.top() + kScrollBarVerticalInset;
-    const int x = r.right() - m_vScrollBar->thickness() - kScrollBarRightInset + 1;
-    const int h = qMax(0, r.bottom() - top - kScrollBarVerticalInset + 1);
-    m_vScrollBar->setGeometry(x, top, m_vScrollBar->thickness(), h);
-    m_vScrollBar->raise();
+    ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top,
+                                                kScrollBarRightInset,
+                                                kScrollBarVerticalInset - 1);
 }
 
 void TreeView::syncFluentHScrollBar() {
-    for (auto* sb : {verticalScrollBar(), horizontalScrollBar()}) {
-        if (sb) {
-            sb->setAttribute(Qt::WA_DontShowOnScreen, true);
-            sb->hide();
-        }
-    }
-
+    ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
     if (!m_hScrollBar) return;
 
     if (!m_horizontalFluentScrollBarEnabled) {
@@ -1613,22 +1591,15 @@ void TreeView::syncFluentHScrollBar() {
         return;
     }
 
-    auto* native = horizontalScrollBar();
-    m_hScrollBar->setRange(native->minimum(), native->maximum());
-    m_hScrollBar->setPageStep(native->pageStep());
-
-    const bool needScroll = native->maximum() > native->minimum();
-    m_hScrollBar->setVisible(needScroll);
-    if (!needScroll) return;
+    if (!::fluent::scrolling::mirrorNativeScrollBar(m_hScrollBar, horizontalScrollBar()))
+        return;
 
     constexpr int kScrollBarHorizontalInset = 4;
     constexpr int kScrollBarBottomInset = 4;
-    const QRect r = rect();
-    const int left = r.left() + kScrollBarHorizontalInset;
-    const int w = qMax(0, r.width() - 2 * kScrollBarHorizontalInset);
-    const int y = r.bottom() - m_hScrollBar->thickness() - kScrollBarBottomInset + 1;
-    m_hScrollBar->setGeometry(left, y, w, m_hScrollBar->thickness());
-    m_hScrollBar->raise();
+    ::fluent::scrolling::placeHorizontalScrollBar(m_hScrollBar, rect(),
+                                                  kScrollBarHorizontalInset,
+                                                  kScrollBarHorizontalInset,
+                                                  kScrollBarBottomInset);
 }
 
 void TreeView::refreshFluentScrollChrome() {

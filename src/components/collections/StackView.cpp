@@ -425,8 +425,8 @@ QSize StackView::minimumSizeHint() const
 
 void StackView::onThemeUpdated()
 {
-    if (m_transitionDuration == ::Animation::Duration::Normal)
-        m_transitionDuration = themeAnimation().normal;
+    // Duration tokens are theme-independent; only the painted surface refreshes.
+    // zh_CN: 时长 token 不随主题变化，这里只需刷新绘制表面。
     update();
 }
 

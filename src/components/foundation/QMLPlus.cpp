@@ -5,7 +5,7 @@
 
 namespace fluent {
 
-// --- AnchorLayout 实现 (保持不变) ---
+// --- AnchorLayout implementation. zh_CN: AnchorLayout 实现。---
 
 namespace {
 
@@ -90,13 +90,20 @@ void AnchorLayout::setGeometry(const QRect& rect) {
     QLayout::setGeometry(rect);
     if (m_items.isEmpty()) return;
 
-    // 首次布局：在查询 sizeHint() 之前，确保每个子控件的字体 metrics 已正确解析。
+    // First layout pass: make sure each child's font metrics resolve before
+    // sizeHint() is queried.
     //
-    // 原因：FluentElement 在构造时调用 onThemeUpdated() 设置 pixelSize 字体，
-    // 但此时控件尚未加入窗口体系，macOS 上变量字体（Segoe UI Variable）的 metrics
-    // 可能未完全初始化。QStyle::polish() 也可能覆盖自定义字体。
-    // 因此在首次 setGeometry() 中：先 ensurePolished()（让 style 就位），
-    // 再 onThemeUpdated()（重新应用 Fluent 字体），保证 sizeHint() 返回正确尺寸。
+    // FluentElement applies pixel-size fonts in onThemeUpdated() during
+    // construction, but the widget is not yet in a window hierarchy and on
+    // macOS variable fonts (Segoe UI Variable) may not have final metrics;
+    // QStyle::polish() can also overwrite custom fonts. So on the first
+    // setGeometry(): ensurePolished() first (style lands), then
+    // onThemeUpdated() (Fluent fonts reapplied) so sizeHint() is correct.
+    // zh_CN: 首次布局——在查询 sizeHint() 前确保子控件字体 metrics 已解析。
+    // FluentElement 构造时即调用 onThemeUpdated() 设置 pixelSize 字体，但控件
+    // 尚未入窗，macOS 上变量字体（Segoe UI Variable）metrics 可能未初始化，
+    // QStyle::polish() 也可能覆盖自定义字体；因此首次 setGeometry() 先
+    // ensurePolished() 再 onThemeUpdated()，保证 sizeHint() 正确。
     if (m_firstLayout) {
         m_firstLayout = false;
         for (const Item& it : m_items) {
@@ -148,7 +155,7 @@ void AnchorLayout::setGeometry(const QRect& rect) {
     for (const Item& it : m_items) it.item->widget()->setGeometry(it.geometry);
 }
 
-// --- PropertyBinder 实现 (保持不变) ---
+// --- PropertyBinder implementation. zh_CN: PropertyBinder 实现。---
 
 PropertyLink::PropertyLink(QObject* from, const QMetaProperty& fromProp, QObject* to, const QMetaProperty& toProp, QObject* parent)
     : QObject(parent), m_from(from), m_fromProp(fromProp), m_to(to), m_toProp(toProp) {}
@@ -167,7 +174,8 @@ void PropertyBinder::bind(QObject* s, const char* sp, QObject* t, const char* tp
     
     auto* link1 = new PropertyLink(s, sProp, t, tProp, t);
     
-    // 使用新的信号槽连接语法，更安全且跨版本兼容
+    // The pointer-based connect syntax is safer and version-portable.
+    // zh_CN: 使用新的信号槽连接语法，更安全且跨版本兼容。
     QObject::connect(s, sProp.notifySignal(), link1, link1->metaObject()->method(link1->metaObject()->indexOfMethod("syncToTarget()")));
     
     link1->syncToTarget();
@@ -178,7 +186,7 @@ void PropertyBinder::bind(QObject* s, const char* sp, QObject* t, const char* tp
     }
 }
 
-// --- QMLPlus 实现 (优化后) ---
+// --- QMLPlus implementation. zh_CN: QMLPlus 实现。---
 
 QMLPlus::QMLPlus() : m_anchors(nullptr), m_currentState("") {}
 QMLPlus::~QMLPlus() { delete m_anchors; }
@@ -197,7 +205,7 @@ void QMLPlus::addState(const QMLState& state) {
 }
 
 void QMLPlus::bind(const char* tp, QObject* s, const char* sp, PropertyBinder::Direction dir) {
-    // 自动发现混入 QMLPlus 的 QWidget 宿主
+    // Auto-discovers the QWidget host that mixes in QMLPlus. zh_CN: 自动发现混入 QMLPlus 的 QWidget 宿主。
     if (auto* host = dynamic_cast<QWidget*>(this)) {
         PropertyBinder::bind(s, sp, host, tp, dir);
     } else {

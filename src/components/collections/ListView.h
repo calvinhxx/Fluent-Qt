@@ -222,8 +222,13 @@ public:
     ::fluent::scrolling::ScrollBar* horizontalFluentScrollBar() const;
 
     /**
-     * 隐藏 QAbstractScrollArea 内置滚动条并刷新 Fluent 纵向条（QComboBox 弹层等场景下
-     * 平台/样式可能把系统滚动条重新显示出来，需在 show 后再次压制）。
+     * @brief Suppresses the built-in scroll bars and refreshes the fluent ones.
+     * zh_CN: 隐藏内置滚动条并刷新 Fluent 滚动条。
+     *
+     * Platform styles may re-show the native bars (e.g. inside QComboBox
+     * popups), so this must run again after show.
+     * zh_CN: 平台/样式可能重新显示系统滚动条（如 QComboBox 弹层场景），
+     * 需在 show 后再次压制。
      */
     void refreshFluentScrollChrome();
 
@@ -323,8 +328,8 @@ private:
     QString m_placeholderText;
     QWidget* m_header = nullptr;
     QWidget* m_footer = nullptr;
-    bool m_ownsHeader = false;   // 内部通过 setHeaderText 创建的 QLabel
-    bool m_ownsFooter = false;   // 内部通过 setFooterText 创建的 QLabel
+    bool m_ownsHeader = false;   // QLabel created internally via setHeaderText. zh_CN: 内部通过 setHeaderText 创建的 QLabel。
+    bool m_ownsFooter = false;   // QLabel created internally via setFooterText. zh_CN: 内部通过 setFooterText 创建的 QLabel。
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     ::fluent::scrolling::ScrollBar* m_hScrollBar = nullptr;
@@ -334,12 +339,12 @@ private:
     bool m_canReorderItems = false;
     bool m_isDragging = false;
     int  m_dragSourceRow = -1;
-    int  m_dropTargetRow = -1;      // 拖拽指示线位置
+    int  m_dropTargetRow = -1;      // Drop indicator position. zh_CN: 拖拽指示线位置。
     QPoint m_dragStartPos;
     QPoint m_dragCurrentPos;
     QPixmap m_dragPixmap;
-    QHash<int, qreal>              m_dragOffsets;  // row → 当前 Y 位移 px
-    QHash<int, QVariantAnimation*> m_dragAnims;    // row → 位移动画
+    QHash<int, qreal>              m_dragOffsets;  // row → current Y offset in px. zh_CN: row → 当前 Y 位移。
+    QHash<int, QVariantAnimation*> m_dragAnims;    // row → displacement animation. zh_CN: row → 位移动画。
     mutable bool m_paintingWithOffsets = false;
 
     // --- Section ---

@@ -23,7 +23,7 @@ void RatingControl::onThemeUpdated()
     update();
 }
 
-// ── 属性 setter ─────────────────────────────────────────────────────────────
+// ── Property setters. zh_CN: 属性 setter ────────────────────────────────────
 
 void RatingControl::setValue(double value)
 {
@@ -108,7 +108,7 @@ void RatingControl::setCaptionFontRole(const QString& role)
     emit captionFontRoleChanged();
 }
 
-// ── 几何辅助 ─────────────────────────────────────────────────────────────────
+// ── Geometry helpers. zh_CN: 几何辅助 ────────────────────────────────────────
 
 QSize RatingControl::iconCellSize() const
 {
@@ -153,7 +153,7 @@ QSize RatingControl::minimumSizeHint() const
     return QSize(starsAreaWidth(), iconCellSize().height());
 }
 
-// ── 鼠标 → 评分值映射 ───────────────────────────────────────────────────────
+// ── Mouse-to-rating mapping. zh_CN: 鼠标 → 评分值映射 ───────────────────────
 
 double RatingControl::ratingFromPosition(int x) const
 {
@@ -169,7 +169,7 @@ double RatingControl::ratingFromPosition(int x) const
     return 0;
 }
 
-// ── 绘制 ─────────────────────────────────────────────────────────────────────
+// ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
 
 void RatingControl::paintEvent(QPaintEvent* /*event*/)
 {
@@ -177,7 +177,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     p.setRenderHint(QPainter::Antialiasing);
     const auto& c = themeColors();
 
-    // 确定要显示的值
+    // Resolve the displayed value. zh_CN: 确定要显示的值。
     bool isHoverPreview = m_isHovered && !m_isReadOnly && m_hoverValue > 0;
     double displayValue = isHoverPreview
         ? m_hoverValue
@@ -185,12 +185,12 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     bool isPlaceholder = (m_value < 0 && !isHoverPreview);
     bool isDisabled = !isEnabled();
 
-    // 图标字体
+    // Icon font. zh_CN: 图标字体。
     QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
     iconFont.setPixelSize(m_starSize);
     p.setFont(iconFont);
 
-    // 状态颜色
+    // State colors. zh_CN: 状态颜色。
     QColor filledColor, emptyColor;
     if (isDisabled) {
         filledColor = c.textDisabled;
@@ -206,7 +206,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         emptyColor = c.strokeSecondary;
     }
 
-    // 逐星绘制
+    // Paint star by star. zh_CN: 逐星绘制。
     for (int i = 0; i < m_maxRating; ++i) {
         QRectF rect = starRect(i);
         double fillFraction = qBound(0.0, displayValue - i, 1.0);
@@ -218,7 +218,8 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
             p.setPen(emptyColor);
             p.drawText(rect, Qt::AlignCenter, Typography::Icons::FavoriteStar);
         } else {
-            // 部分填充：先画空心，再用裁剪区域画实心
+            // Partial fill: paint the outline, then the solid star inside a clip.
+            // zh_CN: 部分填充——先画空心，再用裁剪区域画实心。
             p.setPen(emptyColor);
             p.drawText(rect, Qt::AlignCenter, Typography::Icons::FavoriteStar);
             p.save();
@@ -230,7 +231,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         }
     }
 
-    // 标题文字
+    // Caption text. zh_CN: 标题文字。
     if (!m_caption.isEmpty()) {
         QFont captionFont = themeFont(m_captionFontRole).toQFont();
         p.setFont(captionFont);
@@ -241,7 +242,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     }
 }
 
-// ── 鼠标交互 ─────────────────────────────────────────────────────────────────
+// ── Mouse interaction. zh_CN: 鼠标交互 ───────────────────────────────────────
 
 void RatingControl::enterEvent(FluentEnterEvent* event)
 {

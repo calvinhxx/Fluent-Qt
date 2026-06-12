@@ -22,10 +22,10 @@
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
-#include "design/Animation.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::collections {
@@ -171,7 +171,7 @@ ListView::ListView(QWidget* parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setMouseTracking(true);
-    setSpacing(2);  // item 四周留 2px 内边距，兼顾首尾 item 与边框的间隙
+    setSpacing(2);  // 2px around each item, also spacing first/last from the border. zh_CN: item 四周留 2px，兼顾首尾与边框的间隙。
 
     QListView::setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -182,32 +182,26 @@ ListView::ListView(QWidget* parent)
         emit itemClicked(idx.row());
     });
 
-    // Header/footer 初始为空 —— 由 setHeader() / setHeaderText() 按需创建
+    // Header/footer start empty; setHeader()/setHeaderText() create them on demand.
+    // zh_CN: Header/footer 初始为空 —— 由 setHeader() / setHeaderText() 按需创建。
 
-    // --- Fluent scroll bar (vertical) ---
-    m_vScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Vertical, this);
-    m_vScrollBar->setObjectName(QStringLiteral("fluentListViewScrollBar"));
-    m_vScrollBar->hide();
+    // --- Fluent scroll bars ---
+    m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(
+        Qt::Vertical, this, verticalScrollBar(),
+        QStringLiteral("fluentListViewScrollBar"));
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged,
+            this, &ListView::syncFluentScrollBar);
 
-    auto* nativeVBar = verticalScrollBar();
-    connect(nativeVBar,  &QScrollBar::valueChanged, m_vScrollBar, &QScrollBar::setValue);
-    connect(m_vScrollBar, &QScrollBar::valueChanged, nativeVBar,  &QScrollBar::setValue);
-    connect(nativeVBar, &QScrollBar::rangeChanged, this, &ListView::syncFluentScrollBar);
-
-    // --- Fluent scroll bar (horizontal) ---
-    m_hScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Horizontal, this);
-    m_hScrollBar->setObjectName(QStringLiteral("fluentListViewHScrollBar"));
-    m_hScrollBar->hide();
-
-    auto* nativeHBar = horizontalScrollBar();
-    connect(nativeHBar,  &QScrollBar::valueChanged, m_hScrollBar, &QScrollBar::setValue);
-    connect(m_hScrollBar, &QScrollBar::valueChanged, nativeHBar,  &QScrollBar::setValue);
-    connect(nativeHBar, &QScrollBar::rangeChanged, this, &ListView::syncFluentHScrollBar);
+    m_hScrollBar = ::fluent::scrolling::createOverlayScrollBar(
+        Qt::Horizontal, this, horizontalScrollBar(),
+        QStringLiteral("fluentListViewHScrollBar"));
+    connect(horizontalScrollBar(), &QScrollBar::rangeChanged,
+            this, &ListView::syncFluentHScrollBar);
 
     // --- Overscroll bounce ---
     m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(::Animation::Duration::Normal);
-    m_bounceAnim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_bounceAnim->setDuration(themeAnimation().normal);
+    m_bounceAnim->setEasingCurve(themeAnimation().decelerate);
     connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
         if (flow() == LeftToRight)
             m_overscrollX = v.toReal();
@@ -230,8 +224,8 @@ ListView::ListView(QWidget* parent)
 
     // --- Selected indicator motion ---
     m_selectedIndicatorAnimation = new QVariantAnimation(this);
-    m_selectedIndicatorAnimation->setDuration(::Animation::Duration::Normal);
-    m_selectedIndicatorAnimation->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_selectedIndicatorAnimation->setDuration(themeAnimation().normal);
+    m_selectedIndicatorAnimation->setEasingCurve(themeAnimation().decelerate);
     m_selectedIndicatorAnimation->setStartValue(0.0);
     m_selectedIndicatorAnimation->setEndValue(1.0);
     connect(m_selectedIndicatorAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
@@ -357,7 +351,7 @@ void ListView::setBackgroundVisible(bool visible) {
 void ListView::setHeader(QWidget* widget) {
     if (m_header == widget) return;
 
-    // 清理旧 header
+    // Tear down the old header. zh_CN: 清理旧 header。
     if (m_header) {
         m_header->hide();
         if (m_ownsHeader) {
@@ -381,7 +375,7 @@ void ListView::setHeader(QWidget* widget) {
 void ListView::setFooter(QWidget* widget) {
     if (m_footer == widget) return;
 
-    // 清理旧 footer
+    // Tear down the old footer. zh_CN: 清理旧 footer。
     if (m_footer) {
         m_footer->hide();
         if (m_ownsFooter) {
@@ -407,12 +401,13 @@ void ListView::setHeaderText(const QString& text) {
     m_headerText = text;
 
     if (text.isEmpty()) {
-        // 清空便捷文本 → 移除内部 label
+        // Clearing the convenience text removes the internal label.
+        // zh_CN: 清空便捷文本 → 移除内部 label。
         if (m_ownsHeader) {
             setHeader(nullptr);
         }
     } else {
-        // 复用已有 label 或新建
+        // Reuse the existing label or create one. zh_CN: 复用已有 label 或新建。
         auto* lbl = m_ownsHeader ? qobject_cast<QLabel*>(m_header) : nullptr;
         if (!lbl) {
             lbl = new QLabel(this);
@@ -422,7 +417,7 @@ void ListView::setHeaderText(const QString& text) {
             m_ownsHeader = true;
         }
         lbl->setText(text);
-        applyThemeStyle();    // 确保字体已设置，sizeHint 准确
+        applyThemeStyle();    // Fonts must be set for an accurate sizeHint. zh_CN: 确保字体已设置，sizeHint 准确。
     }
     emit headerTextChanged();
 }
@@ -535,7 +530,9 @@ void ListView::setSelectedIndex(int index) {
     if (isVisible()) {
         setCurrentIndex(idx);
     } else {
-        // 未显示前不触发 scrollTo，避免在 viewport 未正确 layout 时产生错误滚动
+        // Skip scrollTo before showing; the viewport is not laid out yet and
+        // would scroll wrongly.
+        // zh_CN: 未显示前不触发 scrollTo，避免 viewport 未布局时产生错误滚动。
         selectionModel()->setCurrentIndex(idx,
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Current | QItemSelectionModel::Rows);
     }
@@ -697,7 +694,7 @@ void ListView::paintEvent(QPaintEvent* event) {
     const auto& c = themeColors();
     const int r = CornerRadius::Control;
 
-    // --- 1. 绘制容器背景 ---
+    // --- 1. Container background. zh_CN: 绘制容器背景。---
     if (m_backgroundVisible) {
         QPainter p(viewport());
         p.setRenderHint(QPainter::Antialiasing);
@@ -705,7 +702,7 @@ void ListView::paintEvent(QPaintEvent* event) {
         p.end();
     }
 
-    // --- 2. 空列表占位符 ---
+    // --- 2. Empty placeholder. zh_CN: 空列表占位符。---
     const bool isEmpty = !model() || model()->rowCount() == 0;
     if (isEmpty && !m_placeholderText.isEmpty()) {
         QPainter ph(viewport());
@@ -716,15 +713,17 @@ void ListView::paintEvent(QPaintEvent* event) {
         ph.end();
     }
 
-    // --- 3. 绘制列表项（QListView 默认绘制） ---
-    // 拖拽时应用位移偏移：通过 visualRect override 临时返回偏移后的矩形
+    // --- 3. Items via QListView's default painting. While dragging, the
+    // visualRect override temporarily returns displaced rects. ---
+    // zh_CN: 绘制列表项（QListView 默认绘制）；拖拽时通过 visualRect override
+    // 临时返回偏移后的矩形。
     m_paintingWithOffsets = !m_dragOffsets.isEmpty();
     QListView::paintEvent(event);
     m_paintingWithOffsets = false;
 
     // --- 3.5 Section headers are now handled by SectionProxyDelegate ---
 
-    // --- 3.6 选中指示器覆盖层 ---
+    // --- 3.6 Selection indicator overlay. zh_CN: 选中指示器覆盖层。---
     if (!m_isDragging) {
         QPainter ip(viewport());
         ip.setRenderHint(QPainter::Antialiasing);
@@ -732,7 +731,7 @@ void ListView::paintEvent(QPaintEvent* event) {
         ip.end();
     }
 
-    // --- 3.7 绘制拖拽指示线 ---
+    // --- 3.7 Drop indicator line. zh_CN: 绘制拖拽指示线。---
     if (m_isDragging && m_dropTargetRow >= 0 && model()) {
         m_paintingWithOffsets = !m_dragOffsets.isEmpty();
         QPainter dp(viewport());
@@ -759,7 +758,7 @@ void ListView::paintEvent(QPaintEvent* event) {
         dp.end();
     }
 
-    // --- 3.8 拖拽浮动图层 ---
+    // --- 3.8 Drag ghost layer. zh_CN: 拖拽浮动图层。---
     if (m_isDragging && !m_dragPixmap.isNull()) {
         QPainter fp(viewport());
         fp.setRenderHint(QPainter::Antialiasing);
@@ -770,7 +769,8 @@ void ListView::paintEvent(QPaintEvent* event) {
         fp.end();
     }
 
-    // --- 4. 圆角遮罩：用父背景色覆盖四角区域（抗锯齿，替代 setMask） ---
+    // --- 4. Corner mask: cover the four corners with the parent background
+    // (antialiased, replaces setMask). zh_CN: 圆角遮罩——用父背景色覆盖四角。---
     if (m_borderVisible || m_backgroundVisible) {
         QPainter cp(viewport());
         cp.setRenderHint(QPainter::Antialiasing);
@@ -781,7 +781,7 @@ void ListView::paintEvent(QPaintEvent* event) {
         roundedArea.addRoundedRect(QRectF(viewport()->rect()), r, r);
         QPainterPath corners = fullRect - roundedArea;
 
-        // 从父控件取背景色；回退到 bgCanvas
+        // Take the parent's background, falling back to bgCanvas. zh_CN: 从父控件取背景色，回退到 bgCanvas。
         QColor parentBg = c.bgCanvas;
         if (parentWidget()) {
             const QPalette& pp = parentWidget()->palette();
@@ -792,7 +792,7 @@ void ListView::paintEvent(QPaintEvent* event) {
         cp.end();
     }
 
-    // --- 5. 容器边框 ---
+    // --- 5. Container border. zh_CN: 容器边框。---
     if (m_borderVisible) {
         QPainter bp(viewport());
         bp.setRenderHint(QPainter::Antialiasing);
@@ -827,7 +827,9 @@ void ListView::showEvent(QShowEvent* event) {
     syncFluentHScrollBar();
     layoutHeader();
     layoutFooter();
-    // widget 初次显示时用正确的 viewport 尺寸重新定位到当前选中项
+    // On first show, re-anchor to the current selection with the proper
+    // viewport size.
+    // zh_CN: 初次显示时用正确的 viewport 尺寸重新定位到当前选中项。
     if (currentIndex().isValid()) {
         scrollTo(currentIndex(), QAbstractItemView::EnsureVisible);
     }
@@ -1552,8 +1554,8 @@ void ListView::startMultiSelectedIndicatorReveal(const QModelIndex& index) {
         return;
 
     auto* animation = new QVariantAnimation(this);
-    animation->setDuration(::Animation::Duration::Fast);
-    animation->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    animation->setDuration(themeAnimation().fast);
+    animation->setEasingCurve(themeAnimation().decelerate);
     animation->setStartValue(0.0);
     animation->setEndValue(1.0);
     m_multiIndicatorAnimations.insert(persistent, animation);
@@ -1782,65 +1784,38 @@ void ListView::updateViewportMargins() {
 }
 
 /**
- * 统一管理 Fluent 纵向滚动条：压制原生条、同步 range/pageStep、定位、显隐。
- * 平台/样式可能在 show/resize 后重新显示原生条，因此需要反复调用。
+ * @brief Re-syncs the fluent vertical bar: suppress, mirror, then place.
+ * zh_CN: 重新同步 Fluent 纵向滚动条：压制原生条、镜像模型、再摆放。
+ *
+ * Platform styles may re-show the native bars after show/resize, so this
+ * runs repeatedly. The shared steps live in OverlayScrollChrome; only the
+ * header-aware anchor math stays here.
+ * zh_CN: 平台/样式可能在 show/resize 后重新显示原生条，因此需反复调用。
+ * 共享步骤收敛在 OverlayScrollChrome，这里只保留感知 header 的锚点计算。
  */
 void ListView::syncFluentScrollBar() {
-    // 压制原生滚动条
-    for (auto* sb : {verticalScrollBar(), horizontalScrollBar()}) {
-        if (sb) {
-            sb->setAttribute(Qt::WA_DontShowOnScreen, true);
-            sb->hide();
-        }
-    }
-
+    ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
     if (!m_vScrollBar) return;
+    if (!::fluent::scrolling::mirrorNativeScrollBar(m_vScrollBar, verticalScrollBar()))
+        return;
 
-    auto* native = verticalScrollBar();
-    m_vScrollBar->setRange(native->minimum(), native->maximum());
-    m_vScrollBar->setPageStep(native->pageStep());
-
-    const bool needScroll = native->maximum() > native->minimum();
-    m_vScrollBar->setVisible(needScroll);
-    if (!needScroll) return;
-
-    // 定位：右侧内缩，尊重 header 偏移
     const QRect r = rect();
     const int top = (m_header && m_header->isVisible())
                         ? m_header->geometry().bottom() + 2
                         : r.top() + 2;
-    const int x = r.right() - kScrollBarEdgeInset - m_vScrollBar->thickness() + 1;
-    const int h = r.bottom() - top - 2;
-    m_vScrollBar->setGeometry(x, top, m_vScrollBar->thickness(), h);
-    m_vScrollBar->raise();
+    ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top,
+                                                kScrollBarEdgeInset, /*bottomInset=*/2);
 }
 
 void ListView::syncFluentHScrollBar() {
-    // 压制原生滚动条
-    for (auto* sb : {verticalScrollBar(), horizontalScrollBar()}) {
-        if (sb) {
-            sb->setAttribute(Qt::WA_DontShowOnScreen, true);
-            sb->hide();
-        }
-    }
-
+    ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
     if (!m_hScrollBar) return;
+    if (!::fluent::scrolling::mirrorNativeScrollBar(m_hScrollBar, horizontalScrollBar()))
+        return;
 
-    auto* native = horizontalScrollBar();
-    m_hScrollBar->setRange(native->minimum(), native->maximum());
-    m_hScrollBar->setPageStep(native->pageStep());
-
-    const bool needScroll = native->maximum() > native->minimum();
-    m_hScrollBar->setVisible(needScroll);
-    if (!needScroll) return;
-
-    // 定位：底部边缘
-    const QRect r = rect();
-    const int left = r.left() + 2;
-    const int w = r.width() - 4;
-    const int y = r.bottom() - m_hScrollBar->thickness() + 1;
-    m_hScrollBar->setGeometry(left, y, w, m_hScrollBar->thickness());
-    m_hScrollBar->raise();
+    ::fluent::scrolling::placeHorizontalScrollBar(m_hScrollBar, rect(),
+                                                  /*leftInset=*/2, /*rightInset=*/2,
+                                                  /*bottomInset=*/0);
 }
 
 void ListView::refreshFluentScrollChrome() {
@@ -1895,8 +1870,8 @@ void ListView::updateDragDisplacement() {
         auto* anim = new QVariantAnimation(this);
         anim->setStartValue(current);
         anim->setEndValue(target);
-        anim->setDuration(::Animation::Duration::Fast);
-        anim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+        anim->setDuration(themeAnimation().fast);
+        anim->setEasingCurve(themeAnimation().decelerate);
         connect(anim, &QVariantAnimation::valueChanged, this, [this, i](const QVariant& v) {
             m_dragOffsets[i] = v.toReal();
             viewport()->update();

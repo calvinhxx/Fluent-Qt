@@ -15,6 +15,7 @@
 #include <QFontMetrics>
 
 #include "design/Typography.h"
+#include "components/foundation/overlay/OverlayShadow.h"
 
 namespace fluent::menus_toolbars {
 
@@ -141,7 +142,9 @@ void FluentMenuItem::onThemeUpdated() {
 
 FluentMenu::FluentMenu(const QString& title, QWidget* parent)
     : QMenu(title, parent) {
-    // 顶层无边框 + 禁用系统阴影，由自身绘制阴影与圆角
+    // Frameless top-level with system shadow disabled; shadow and rounding are
+    // painted by the menu itself.
+    // zh_CN: 顶层无边框并禁用系统阴影，阴影与圆角由自身绘制。
     setWindowFlags((windowFlags() & ~Qt::WindowType_Mask)
                    | Qt::Popup
                    | Qt::FramelessWindowHint
@@ -166,11 +169,14 @@ void FluentMenu::onThemeUpdated() {
     const auto& s = themeSpacing();
     int vPadding = s.gap.tight; // 4px
 
-    // 同步菜单字体（影响 QMenu 内部的 actionGeometry 高度计算）
+    // Sync the menu font; it feeds QMenu's internal actionGeometry heights.
+    // zh_CN: 同步菜单字体（影响 QMenu 内部 actionGeometry 高度计算）。
     setFont(themeFont(m_fontStyle).toQFont());
 
-    // 使用 margins 为阴影和内部 padding 预留空间
-    // 这样 QMenu 的 sizeHint 会自动包含这些边距，确保窗口足够大
+    // Reserve shadow and inner padding via margins so QMenu's sizeHint includes
+    // them and the popup window is large enough.
+    // zh_CN: 用 margins 为阴影和内部 padding 预留空间，QMenu 的 sizeHint 会自动
+    // 包含这些边距，确保窗口足够大。
     setContentsMargins(m_shadowSize, m_shadowSize + vPadding, m_shadowSize, m_shadowSize + vPadding);
     const int separatorHeight = s.gap.normal + 1;
     const int itemVerticalPadding = s.padding.listItemV;
@@ -299,7 +305,7 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     p.setRenderHint(QPainter::Antialiasing);
     p.setRenderHint(QPainter::TextAntialiasing);
 
-    // 1. 透明清屏
+    // 1. Clear to transparent. zh_CN: 透明清屏。
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(rect(), Qt::transparent);
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
@@ -308,7 +314,7 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 
-    // 2. 计算 items 垂直范围
+    // 2. Vertical extent of the items. zh_CN: 计算 items 垂直范围。
     QRect itemsRect;
     for (QAction* action : actions()) {
         if (action->isVisible()) {
@@ -318,17 +324,20 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
 
     if (itemsRect.isEmpty()) return;
 
-    // 底板矩形只依赖最终 popup 尺寸，不依赖 QMenu 内部 action 宽度。
+    // The card rect depends only on the final popup size, not on QMenu's
+    // internal action widths.
+    // zh_CN: 底板矩形只依赖最终 popup 尺寸，不依赖 QMenu 内部 action 宽度。
     QRect contentRect = rect().adjusted(m_shadowSize, m_shadowSize, -m_shadowSize, -m_shadowSize);
 
-    // 揭示动画：从顶部向下裁剪（progress < 1 时限制可见高度）
+    // Reveal animation: clip downward from the top while progress < 1.
+    // zh_CN: 揭示动画：progress < 1 时从顶部向下裁剪可见高度。
     if (m_revealProgress < 1.0)
         p.setClipRect(QRectF(0, 0, width(), height() * m_revealProgress));
 
-    // 3. 绘制多层软阴影
+    // 3. Paint the layered soft shadow. zh_CN: 绘制多层软阴影。
     drawShadow(p, contentRect);
 
-    // 4. 绘制圆角背景与边框
+    // 4. Paint the rounded background and border. zh_CN: 绘制圆角背景与边框。
     int r = radius.overlay;
     p.save();
     QPainterPath clipPath;
@@ -339,9 +348,13 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     p.setBrush(colors.bgLayer);
     p.drawRoundedRect(contentRect, r, r);
 
-    // 5. 绘制菜单项
-    // itemInset: 高亮背景与分割线距底板边缘的统一水平缩进（4px，与底板圆角视觉对齐）
-    // textPadding: 文字距底板边缘的水平内边距（12px，ControlHorizontal）
+    // 5. Paint the menu items.
+    // itemInset: shared horizontal inset for highlights and separators
+    // (4px, visually aligned with the card rounding).
+    // textPadding: horizontal text padding from the card edge (12px, ControlHorizontal).
+    // zh_CN: 绘制菜单项。itemInset：高亮背景与分割线距底板边缘的统一水平缩进
+    // （4px，与底板圆角视觉对齐）；textPadding：文字距底板边缘的水平内边距
+    // （12px，ControlHorizontal）。
     const int plateLeft    = contentRect.left();
     const int plateWidth   = contentRect.width();
     const int itemInset    = spacing.gap.tight;          // 4
@@ -351,14 +364,17 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     const int shortcutColumn = maxShortcutWidth(this, fontMetrics);
     const int trailingColumn = hasSubmenuAction(this) ? ::Spacing::ControlHeight::Small : ::Spacing::Small;
 
-    // 明确设置绘制字体，防止 shadow 循环中字体被污染
+    // Set the paint font explicitly so the shadow pass cannot pollute it.
+    // zh_CN: 明确设置绘制字体，防止 shadow 循环中字体被污染。
     p.setFont(font());
 
     for (QAction* action : actions()) {
         if (!action->isVisible()) continue;
 
         QRect itemRect = actionGeometry(action);
-        // 规范化水平范围：统一对齐到底板边界（actionGeometry 可能不含 shadow margin）
+        // Normalize the horizontal span to the card bounds (actionGeometry may
+        // exclude the shadow margin).
+        // zh_CN: 规范化水平范围：统一对齐到底板边界（actionGeometry 可能不含 shadow margin）。
         itemRect.setLeft(plateLeft);
         itemRect.setWidth(plateWidth);
 
@@ -461,8 +477,10 @@ void FluentMenu::showEvent(QShowEvent* event) {
         updateGeometry();
     }
 
-    // 修正阴影 margin 偏移。顶层菜单需要完整抵消阴影；级联子菜单保留一个小间距，
-    // 避免父菜单阴影区域压到子菜单内容。
+    // Compensate the shadow margin: top-level menus cancel it fully, cascaded
+    // submenus keep a small gap so the parent's shadow never covers their content.
+    // zh_CN: 修正阴影 margin 偏移——顶层菜单完整抵消阴影；级联子菜单保留小间距，
+    // 避免父菜单阴影压到子菜单内容。
     const auto& spacing = themeSpacing();
     QPoint targetPos = pos();
     const int horizontalOffset = hasMenuParent(this)
@@ -476,11 +494,14 @@ void FluentMenu::showEvent(QShowEvent* event) {
         normalizePopupLayering();
     });
 
-    // 初始状态：完全透明，揭示进度归零
+    // Initial state: fully transparent with reveal progress at zero.
+    // zh_CN: 初始状态：完全透明，揭示进度归零。
     m_revealProgress = 0.0;
     setWindowOpacity(0.0);
 
-    // 高度揭示动画（从顶部向下展开，匹配 WinUI 3 PopupThemeTransition）
+    // Height reveal animation, expanding downward to match the WinUI 3
+    // PopupThemeTransition.
+    // zh_CN: 高度揭示动画（从顶部向下展开，匹配 WinUI 3 PopupThemeTransition）。
     auto* revealAnim = new QVariantAnimation(this);
     revealAnim->setStartValue(0.0);
     revealAnim->setEndValue(1.0);
@@ -492,7 +513,7 @@ void FluentMenu::showEvent(QShowEvent* event) {
     });
     revealAnim->start(QAbstractAnimation::DeleteWhenStopped);
 
-    // 透明度淡入动画
+    // Opacity fade-in animation. zh_CN: 透明度淡入动画。
     auto* opacityAnim = new QPropertyAnimation(this, "windowOpacity");
     opacityAnim->setDuration(themeAnimation().fast);
     opacityAnim->setStartValue(0.0);
@@ -513,25 +534,12 @@ void FluentMenu::normalizePopupLayering()
 }
 
 void FluentMenu::drawShadow(QPainter& painter, const QRect& contentRect) {
-    const auto& s = themeShadow(Elevation::High);
-    const int layers = 10;
-    const int spreadStep = 1;
-    int r = themeRadius().overlay;
-
-    for (int i = 0; i < layers; ++i) {
-        double ratio = 1.0 - static_cast<double>(i) / layers;
-        QColor sc = s.color;
-        sc.setAlphaF(s.opacity * ratio * 0.18);
-
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(sc);
-
-        int spread = i * spreadStep;
-        int offsetY = 2;
-        painter.drawRoundedRect(
-            contentRect.adjusted(-spread, -spread, spread, spread).translated(0, offsetY),
-            r + spread, r + spread);
-    }
+    // Menus float close to their anchor, so they carry a lighter shadow than
+    // modal surfaces.
+    // zh_CN: 菜单紧贴锚点浮动，阴影强度低于模态表面。
+    ::fluent::overlay::paintLayeredShadow(painter, contentRect, themeRadius().overlay,
+                                          themeShadow(Elevation::High),
+                                          /*intensity=*/0.18);
 }
 
 } // namespace fluent::menus_toolbars

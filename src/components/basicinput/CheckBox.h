@@ -67,7 +67,7 @@ public:
     bool hoverBackgroundEnabled() const { return m_hoverBackgroundEnabled; }
     void setHoverBackgroundEnabled(bool enabled);
 
-    // 提供给布局系统的尺寸提示
+    // Size hints for the layout system. zh_CN: 提供给布局系统的尺寸提示。
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
@@ -85,10 +85,10 @@ private:
     void initAnimation();
 
     qreal m_checkProgress = 1.0; 
-    int m_boxSize = 20; // 默认 20px
-    int m_boxMargin = 8; // 默认 8px
-    int m_textGap = 8; // 默认 8px
-    bool m_hoverBackgroundEnabled = false; // 默认不启用 hover 背景
+    int m_boxSize = 20; // Defaults to 20px. zh_CN: 默认 20px。
+    int m_boxMargin = 8; // Defaults to 8px. zh_CN: 默认 8px。
+    int m_textGap = 8; // Defaults to 8px. zh_CN: 默认 8px。
+    bool m_hoverBackgroundEnabled = false; // Hover fill off by default. zh_CN: 默认不启用 hover 背景。
     QPropertyAnimation* m_checkAnimation = nullptr;
 };
 

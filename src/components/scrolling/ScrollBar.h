@@ -53,7 +53,8 @@ signals:
     void thicknessChanged();
 
 protected:
-    // 尺寸提示：厚度由 thickness 控制，长度沿用 QScrollBar 默认逻辑
+    // Size hint: thickness from the property, length from QScrollBar defaults.
+    // zh_CN: 厚度由 thickness 控制，长度沿用 QScrollBar 默认逻辑。
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
@@ -70,15 +71,15 @@ protected:
 private:
     void init();
 
-    // --- 尺寸与视觉参数（避免在 cpp 中硬编码 magic number） ---
-    int      m_thickness      = 7;                     ///< 控件实际厚度（像素），始终占位此宽度/高度
-    int      m_minThumbLength = 16;                    ///< Thumb 的最小长度（像素）
-    QMargins m_thumbPadding   = QMargins(1, 1, 1, 1);  ///< Thumb 与背景轨道的左右/上下间距
+    // --- Size and visual metrics (no magic numbers in the cpp). zh_CN: 尺寸与视觉参数。---
+    int      m_thickness      = 7;                     ///< Widget thickness in px; always occupies this extent. zh_CN: 控件实际厚度，始终占位此宽/高。
+    int      m_minThumbLength = 16;                    ///< Minimum thumb length in px. zh_CN: Thumb 最小长度。
+    QMargins m_thumbPadding   = QMargins(1, 1, 1, 1);  ///< Thumb padding against the track. zh_CN: Thumb 与轨道的四向间距。
 
     bool m_isHovered = false;
     bool m_isPressed = false;
 
-    // Overlay 淡入/淡出
+    // Overlay fade in/out. zh_CN: Overlay 淡入/淡出。
     qreal               m_opacity       = 0.0;
     QPropertyAnimation* m_opacityAnim   = nullptr;
     QTimer*             m_autoHideTimer = nullptr;

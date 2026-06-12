@@ -87,9 +87,12 @@ public:
     double popupProgress() const { return m_popupProgress; }
     void   setPopupProgress(double p);
 
-    /// 相对于指定 widget 的局部坐标定位 popup 左上角。
-    /// 若 relativeTo 为 topLevelWidget，则等价于相对于顶层窗口定位。
-    /// 坐标以可见卡片左上角为准，open() 内部自动补偿阴影 margin。
+    /// Positions the popup's top-left in the given widget's local coordinates;
+    /// with relativeTo == topLevelWidget this is window-relative. Coordinates
+    /// reference the visible card corner; open() compensates the shadow margin.
+    /// Without a call, open() centers the popup.
+    /// zh_CN: 以指定 widget 的局部坐标定位 popup 左上角；relativeTo 为顶层窗口时
+    /// 等价于相对顶层定位。坐标以可见卡片左上角为准，open() 自动补偿阴影 margin；
     /// 未调用则 open() 时自动居中。
     void setPosition(QWidget* relativeTo, const QPoint& localPos);
 
@@ -111,7 +114,8 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
-    /// 子类可重写以自定义 open() 时的定位策略（Flyout 会重写）
+    /// Subclasses may override the open()-time placement (Flyout does).
+    /// zh_CN: 子类可重写 open() 时的定位策略（Flyout 会重写）。
     virtual QPoint computePosition() const;
 
 private:
