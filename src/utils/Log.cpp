@@ -17,6 +17,7 @@
 #include <spdlog/sinks/msvc_sink.h>
 #endif
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
@@ -106,11 +107,16 @@ std::shared_ptr<spdlog::logger> createLogger(const utils::logging::Initializatio
             QDir().mkpath(dirPath);
 
         try {
-            // 单文件最大 5 MB，保留 3 个轮转备份
-            constexpr std::size_t kMaxFileSize = 5 * 1024 * 1024;
-            constexpr std::size_t kMaxFiles    = 3;
+            // spdlog keeps the active file plus maxRotatedFiles numbered backups,
+            // so the on-disk total is maxRotatedFiles + 1.
+            // zh_CN: spdlog 保留当前文件加 maxRotatedFiles 个编号备份，
+            // 磁盘文件总数为 maxRotatedFiles + 1。
+            const auto maxFileSize = static_cast<std::size_t>(
+                std::max<qint64>(options.maxFileSizeBytes, 1024));
+            const auto maxFiles = static_cast<std::size_t>(
+                std::max(options.maxRotatedFiles, 1));
             sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-                filePath.toStdString(), kMaxFileSize, kMaxFiles));
+                filePath.toStdString(), maxFileSize, maxFiles));
         } catch (const spdlog::spdlog_ex& ex) {
             std::fprintf(stderr, "spdlog: failed to open log file '%s': %s\n",
                          filePath.toLocal8Bit().constData(), ex.what());
@@ -121,7 +127,12 @@ std::shared_ptr<spdlog::logger> createLogger(const utils::logging::Initializatio
     created->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%s:%#] %v");
     created->set_level(toSpdlogLevel(utils::logging::levelFromName(
         qEnvironmentVariable(kLevelEnvVar), options.defaultLevel)));
-    created->flush_on(spdlog::level::warn);
+    // Flush from info up: lifecycle lines reach the file as they happen, and an
+    // abnormal exit cannot lose them. Volume at info level is low enough that
+    // per-line flushing costs nothing noticeable; debug/trace bursts stay buffered.
+    // zh_CN: 从 info 起即刷盘：生命周期日志实时落入文件，异常退出也不会丢失。
+    // info 级别量很小，逐行刷盘开销可忽略；debug/trace 洪峰仍走缓冲。
+    created->flush_on(spdlog::level::info);
     spdlog::register_logger(created);
     spdlog::set_default_logger(created);
     return created;

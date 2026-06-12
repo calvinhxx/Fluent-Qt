@@ -33,6 +33,13 @@ struct InitializationOptions {
     // Explicit file path wins; empty falls back to SPDLOG_FILE.
     // zh_CN: 显式路径优先；为空时退回到 SPDLOG_FILE 环境变量。
     QString logFilePath;
+
+    // Size-based rotation: a full file shifts into numbered backups
+    // (<name>.1, <name>.2, ...); with 2 backups at most 3 files live on disk.
+    // zh_CN: 按大小轮转：写满的文件平移为编号备份（<name>.1、<name>.2……）；
+    // 保留 2 个备份时磁盘上最多存在 3 个文件。
+    qint64 maxFileSizeBytes = 5 * 1024 * 1024;
+    int maxRotatedFiles = 2;
 };
 
 /**

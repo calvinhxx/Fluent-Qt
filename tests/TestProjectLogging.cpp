@@ -1,8 +1,11 @@
 #include "utils/Log.h"
 
 #include <QByteArray>
+#include <QDir>
 #include <QFile>
+#include <QStandardPaths>
 #include <QString>
+#include <QStringList>
 #include <QTemporaryDir>
 #include <QtGlobal>
 #include <gtest/gtest.h>
@@ -175,6 +178,52 @@ TEST(ProjectLoggingTest, AllLevelsWriteToConfiguredLogFile)
     expectContainsText(logText, levelSampleMessage(QStringLiteral("file"), QStringLiteral("critical")));
 
     utils::logging::shutdown();
+}
+
+TEST(ProjectLoggingTest, RotationKeepsAtMostThreeFilesOnDisk)
+{
+    EnvVarGuard levelGuard("SPDLOG_LEVEL");
+    EnvVarGuard fileGuard("SPDLOG_FILE");
+    qunsetenv("SPDLOG_LEVEL");
+    qunsetenv("SPDLOG_FILE");
+    QTemporaryDir dir;
+    ASSERT_TRUE(dir.isValid());
+
+    utils::logging::shutdown();
+    utils::logging::InitializationOptions options;
+    options.logFilePath = dir.filePath(QStringLiteral("rotation.log"));
+    // A tiny size cap forces several rotations from a short burst of lines.
+    // zh_CN: 极小的尺寸上限让一小段日志就触发多次轮转。
+    options.maxFileSizeBytes = 1024;
+    options.maxRotatedFiles = 2;
+    utils::logging::initialize(options);
+
+    for (int i = 0; i < 200; ++i) {
+        LOG_WARN(QStringLiteral("ProjectLoggingTest rotation filler line=%1 padding=%2")
+                     .arg(i)
+                     .arg(QString(80, QLatin1Char('x'))));
+    }
+    utils::logging::flush();
+
+    const QStringList files = QDir(dir.path()).entryList(QDir::Files, QDir::Name);
+    EXPECT_EQ(3, files.size()) << files.join(QStringLiteral(", ")).toStdString();
+    EXPECT_TRUE(files.contains(QStringLiteral("rotation.log")));
+    EXPECT_TRUE(files.contains(QStringLiteral("rotation.1.log")));
+    EXPECT_TRUE(files.contains(QStringLiteral("rotation.2.log")));
+
+    utils::logging::shutdown();
+}
+
+TEST(ProjectLoggingTest, DefaultLogFilePathUsesAppLocalLogsDirectory)
+{
+    const QString path = utils::logging::defaultLogFilePath();
+    ASSERT_FALSE(path.isEmpty());
+
+    const QString expectedDir =
+        QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+        + QStringLiteral("/logs/");
+    EXPECT_TRUE(path.startsWith(expectedDir)) << path.toStdString();
+    EXPECT_TRUE(path.endsWith(QStringLiteral(".log"))) << path.toStdString();
 }
 
 TEST(ProjectLoggingTest, QtWarningBridgeWritesThroughProjectLogger)

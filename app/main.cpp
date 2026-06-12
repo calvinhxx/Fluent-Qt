@@ -24,9 +24,22 @@ int main(int argc, char** argv)
     QApplication::setOrganizationName(QStringLiteral("Fluent-QT"));
 
     initializeFluentQtResources();
-    utils::logging::initialize();
-    LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2")
-                 .arg(QApplication::applicationName(), QApplication::organizationName()));
+
+    // App logging policy: persist to the platform log file by default at Info
+    // level, and route Qt's own qWarning/qDebug through the same logger. The
+    // component library itself stays silent; SPDLOG_LEVEL still overrides the
+    // level for ad-hoc debugging (the explicit file path wins over SPDLOG_FILE).
+    // zh_CN: 应用日志策略：默认以 Info 级别持久化到平台日志文件，并把 Qt 自身的
+    // qWarning/qDebug 汇入同一日志器。组件库本身保持静默；SPDLOG_LEVEL 环境变量
+    // 仍可临时覆盖级别（显式文件路径优先于 SPDLOG_FILE）。
+    utils::logging::InitializationOptions loggingOptions;
+    loggingOptions.defaultLevel = utils::logging::Level::Info;
+    loggingOptions.installQtMessageHandler = true;
+    loggingOptions.logFilePath = utils::logging::defaultLogFilePath();
+    utils::logging::initialize(loggingOptions);
+    LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2 logFile=%3")
+                 .arg(QApplication::applicationName(), QApplication::organizationName(),
+                      loggingOptions.logFilePath));
     app.setWindowIcon(fluent::gallery::appicon::icon());
 
     fluent::gallery::GalleryWindow window;
