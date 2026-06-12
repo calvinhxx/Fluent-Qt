@@ -17,9 +17,7 @@ namespace {
     constexpr int kKnobHover = 14;
     constexpr int kKnobPressedW = 17;
     constexpr int kKnobPressedH = 14;
-    constexpr int kKnobTravel = 20;     // Knob travel distance to the On state. zh_CN: On 状态 knob 平移距离。
     constexpr int kContentGap = 10;     // Gap between switch and content text (ToggleSwitchPreContentMargin). zh_CN: 开关与文字间距。
-    constexpr int kHeaderGap = 4;       // Gap between the header and the switch row. zh_CN: Header 与开关行间距。
     constexpr qreal kTrackRadius = kTrackH / 2.0;
 }
 
@@ -54,15 +52,6 @@ void ToggleSwitch::setIsOn(bool on)
     animateKnob(on);
     update();
     emit toggled(m_isOn);
-}
-
-void ToggleSwitch::setHeader(const QString& header)
-{
-    if (m_header == header) return;
-    m_header = header;
-    updateGeometry();
-    update();
-    emit headerChanged(m_header);
 }
 
 void ToggleSwitch::setOnContent(const QString& content)
@@ -111,14 +100,9 @@ int ToggleSwitch::contentAreaX() const
 
 QRectF ToggleSwitch::trackRect() const
 {
-    int y = 0;
-    if (!m_header.isEmpty()) {
-        QFontMetrics fm(font());
-        y = fm.height() + kHeaderGap;
-    }
     // Center vertically in the control row. zh_CN: 垂直居中到控件行。
     int rowH = qMax(kTrackH, QFontMetrics(font()).height());
-    int trackY = y + (rowH - kTrackH) / 2;
+    int trackY = (rowH - kTrackH) / 2;
     return QRectF(0, trackY, kTrackW, kTrackH);
 }
 
@@ -155,12 +139,6 @@ QSize ToggleSwitch::sizeHint() const
     int w = kTrackW + kContentGap + contentTextW;
     int h = qMax(kTrackH, fm.height());
 
-    if (!m_header.isEmpty()) {
-        int headerW = fm.horizontalAdvance(m_header);
-        w = qMax(w, headerW);
-        h += fm.height() + kHeaderGap;
-    }
-
     return QSize(w, h);
 }
 
@@ -195,15 +173,6 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
 
     const auto& c = themeColors();
     bool enabled = isEnabled();
-
-    // ── Header ──
-    if (!m_header.isEmpty()) {
-        p.setFont(font());
-        p.setPen(enabled ? c.textPrimary : c.textDisabled);
-        QFontMetrics fm(font());
-        QRect headerRect(0, 0, width(), fm.height());
-        p.drawText(headerRect, Qt::AlignVCenter | Qt::AlignLeft, m_header);
-    }
 
     // ── Track ──
     QRectF track = trackRect();

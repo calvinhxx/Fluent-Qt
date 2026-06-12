@@ -87,14 +87,14 @@ public:
         description->setWordWrap(true);
         description->setTextElideMode(Qt::ElideRight);
 
+        auto* notificationLabel = new Label(QStringLiteral("Notifications"), this);
         auto* notificationSwitch = new ToggleSwitch(this);
-        notificationSwitch->setHeader(QStringLiteral("Notifications"));
         notificationSwitch->setOnContent(QStringLiteral("On"));
         notificationSwitch->setOffContent(QStringLiteral("Off"));
         notificationSwitch->setIsOn(true);
 
+        auto* compactLabel = new Label(QStringLiteral("Compact mode"), this);
         auto* compactSwitch = new ToggleSwitch(this);
-        compactSwitch->setHeader(QStringLiteral("Compact mode"));
         compactSwitch->setOnContent(QStringLiteral("On"));
         compactSwitch->setOffContent(QStringLiteral("Off"));
 
@@ -120,14 +120,24 @@ public:
         descriptionAnchors.right = {this, Edge::Right, -20};
         layout->addAnchoredWidget(description, descriptionAnchors);
 
+        fluent::AnchorLayout::Anchors notificationLabelAnchors;
+        notificationLabelAnchors.left = {this, Edge::Left, 20};
+        notificationLabelAnchors.top = {description, Edge::Bottom, 16};
+        layout->addAnchoredWidget(notificationLabel, notificationLabelAnchors);
+
         fluent::AnchorLayout::Anchors notificationAnchors;
-        notificationAnchors.left = {this, Edge::Left, 20};
-        notificationAnchors.top = {description, Edge::Bottom, 16};
+        notificationAnchors.left = {notificationLabel, Edge::Left, 0};
+        notificationAnchors.top = {notificationLabel, Edge::Bottom, 4};
         layout->addAnchoredWidget(notificationSwitch, notificationAnchors);
 
+        fluent::AnchorLayout::Anchors compactLabelAnchors;
+        compactLabelAnchors.left = {notificationSwitch, Edge::Left, 0};
+        compactLabelAnchors.top = {notificationSwitch, Edge::Bottom, 12};
+        layout->addAnchoredWidget(compactLabel, compactLabelAnchors);
+
         fluent::AnchorLayout::Anchors compactAnchors;
-        compactAnchors.left = {this, Edge::Left, 20};
-        compactAnchors.top = {notificationSwitch, Edge::Bottom, 12};
+        compactAnchors.left = {compactLabel, Edge::Left, 0};
+        compactAnchors.top = {compactLabel, Edge::Bottom, 4};
         layout->addAnchoredWidget(compactSwitch, compactAnchors);
 
         fluent::AnchorLayout::Anchors applyAnchors;
@@ -703,14 +713,14 @@ TEST_F(DrawerViewTest, VisualCheck)
     auto* themeButton = new Button(QStringLiteral("Theme"), window);
     themeButton->setFixedSize(84, 32);
 
+    auto* modalLabel = new Label(QStringLiteral("Modal"), window);
     auto* modalSwitch = new ToggleSwitch(window);
-    modalSwitch->setHeader(QStringLiteral("Modal"));
     modalSwitch->setIsOn(true);
+    auto* dimLabel = new Label(QStringLiteral("Dim"), window);
     auto* dimSwitch = new ToggleSwitch(window);
-    dimSwitch->setHeader(QStringLiteral("Dim"));
     dimSwitch->setIsOn(true);
+    auto* interactiveLabel = new Label(QStringLiteral("Interactive"), window);
     auto* interactiveSwitch = new ToggleSwitch(window);
-    interactiveSwitch->setHeader(QStringLiteral("Interactive"));
     interactiveSwitch->setIsOn(true);
 
     auto* preview = new ContentPane(QStringLiteral("Use the buttons above or drag from an edge."), window);
@@ -747,19 +757,34 @@ TEST_F(DrawerViewTest, VisualCheck)
     bottomAnchors.top = {leftButton, Edge::Top, 0};
     layout->addAnchoredWidget(bottomButton, bottomAnchors);
 
+    fluent::AnchorLayout::Anchors modalLabelAnchors;
+    modalLabelAnchors.left = {window, Edge::Left, 28};
+    modalLabelAnchors.top = {leftButton, Edge::Bottom, 18};
+    layout->addAnchoredWidget(modalLabel, modalLabelAnchors);
+
     fluent::AnchorLayout::Anchors modalAnchors;
-    modalAnchors.left = {window, Edge::Left, 28};
-    modalAnchors.top = {leftButton, Edge::Bottom, 18};
+    modalAnchors.left = {modalLabel, Edge::Left, 0};
+    modalAnchors.top = {modalLabel, Edge::Bottom, 4};
     layout->addAnchoredWidget(modalSwitch, modalAnchors);
 
+    fluent::AnchorLayout::Anchors dimLabelAnchors;
+    dimLabelAnchors.left = {modalSwitch, Edge::Right, 32};
+    dimLabelAnchors.top = {modalLabel, Edge::Top, 0};
+    layout->addAnchoredWidget(dimLabel, dimLabelAnchors);
+
     fluent::AnchorLayout::Anchors dimAnchors;
-    dimAnchors.left = {modalSwitch, Edge::Right, 32};
-    dimAnchors.top = {modalSwitch, Edge::Top, 0};
+    dimAnchors.left = {dimLabel, Edge::Left, 0};
+    dimAnchors.top = {dimLabel, Edge::Bottom, 4};
     layout->addAnchoredWidget(dimSwitch, dimAnchors);
 
+    fluent::AnchorLayout::Anchors interactiveLabelAnchors;
+    interactiveLabelAnchors.left = {dimSwitch, Edge::Right, 32};
+    interactiveLabelAnchors.top = {modalLabel, Edge::Top, 0};
+    layout->addAnchoredWidget(interactiveLabel, interactiveLabelAnchors);
+
     fluent::AnchorLayout::Anchors interactiveAnchors;
-    interactiveAnchors.left = {dimSwitch, Edge::Right, 32};
-    interactiveAnchors.top = {modalSwitch, Edge::Top, 0};
+    interactiveAnchors.left = {interactiveLabel, Edge::Left, 0};
+    interactiveAnchors.top = {interactiveLabel, Edge::Bottom, 4};
     layout->addAnchoredWidget(interactiveSwitch, interactiveAnchors);
 
     fluent::AnchorLayout::Anchors previewAnchors;
