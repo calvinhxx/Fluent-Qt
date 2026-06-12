@@ -59,6 +59,7 @@ private:
     void updateButtonStyles();
     void updateCompactRowVisibility();
     void syncCompactVisualProperties();
+    void updateDividerPalette();
     void startCompactVisualTransition(bool compact);
     void startSettingsIconRotation();
     QModelIndex visualSelectionIndex(const QModelIndex& routeIndex) const;
@@ -73,6 +74,7 @@ private:
     QVector<GalleryNavigationItem> m_items;
     QStandardItemModel* m_model = nullptr;
     fluent::collections::TreeView* m_treeView = nullptr;
+    QWidget* m_footerDivider = nullptr;
     fluent::dialogs_flyouts::Popup* m_compactFlyout = nullptr;
     QWidget* m_compactFlyoutPanel = nullptr;
     QWidget* m_compactFlyoutAnchor = nullptr;

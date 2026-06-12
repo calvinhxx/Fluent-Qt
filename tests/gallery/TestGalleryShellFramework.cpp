@@ -700,7 +700,7 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationRowClickTogglesCategory)
     EXPECT_FALSE(tree->isExpanded(categoryIndex));
 }
 
-TEST_F(GalleryShellFrameworkTest, FooterNavigationHasNoNativeTopDivider)
+TEST_F(GalleryShellFrameworkTest, FooterNavigationHasTopDivider)
 {
     GalleryWindow window;
     window.resize(1180, 760);
@@ -709,8 +709,11 @@ TEST_F(GalleryShellFrameworkTest, FooterNavigationHasNoNativeTopDivider)
 
     auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(footerPane, nullptr);
+
     auto* divider = footerPane->findChild<QWidget*>(QStringLiteral("galleryFooterNavigationDivider"));
-    EXPECT_EQ(divider, nullptr);
+    ASSERT_NE(divider, nullptr);
+    EXPECT_EQ(divider->height(), 1);
+    EXPECT_TRUE(divider->isVisibleTo(footerPane));
 }
 
 TEST_F(GalleryShellFrameworkTest, MainNavigationScrollbarUsesInsetOverlay)
