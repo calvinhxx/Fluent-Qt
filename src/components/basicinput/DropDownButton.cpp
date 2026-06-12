@@ -21,7 +21,8 @@ DropDownButton::DropDownButton(QWidget* parent)
 void DropDownButton::initAnimation() {
     if (m_pressAnimation) return;
     m_pressAnimation = new QPropertyAnimation(this, "pressProgress");
-    // 使用全局动画规范：慢速对比效果 + 减速曲线
+    // Global motion tokens: slow contrast with a decelerate curve.
+    // zh_CN: 使用全局动画规范——慢速对比效果 + 减速曲线。
     m_pressAnimation->setDuration(themeAnimation().slow);
     m_pressAnimation->setEasingCurve(themeAnimation().decelerate);
 }
@@ -105,7 +106,9 @@ int DropDownButton::chevronReserveWidth() const {
 
 void DropDownButton::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
-        // 点击时触发一次“向下压+回弹”的动画（与 open 状态无关）
+        // Clicking plays one press-down-and-rebound animation, independent of
+        // the open state.
+        // zh_CN: 点击触发一次“向下压+回弹”动画（与 open 状态无关）。
         if (m_pressAnimation) {
             m_pressAnimation->stop();
             m_pressAnimation->setStartValue(0.0);
@@ -122,42 +125,44 @@ void DropDownButton::mousePressEvent(QMouseEvent* event) {
 }
 
 void DropDownButton::paintEvent(QPaintEvent* event) {
-    // 1. 如果菜单开启，锁定为按下状态
+    // 1. Lock the pressed look while the menu is open. zh_CN: 菜单开启时锁定为按下状态。
     InteractionState oldState = interactionState();
     if (m_isOpen) {
         const_cast<DropDownButton*>(this)->setInteractionState(Pressed);
     }
 
-    // 2. 调用基类绘制基础按钮
+    // 2. Let the base class paint the plain button. zh_CN: 调用基类绘制基础按钮。
     Button::paintEvent(event);
 
-    // 3. 恢复状态
+    // 3. Restore the state. zh_CN: 恢复状态。
     if (m_isOpen) {
         const_cast<DropDownButton*>(this)->setInteractionState(oldState);
     }
 
-    // 4. 绘制 Chevron 图标
+    // 4. Paint the chevron glyph. zh_CN: 绘制 Chevron 图标。
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
 
-    // 设置图标字体（字号保持不变）
+    // Icon font with the size unchanged. zh_CN: 设置图标字体（字号保持不变）。
     QFont iconFont(m_iconFontFamily);
     iconFont.setPixelSize(m_chevronSize);
     painter.setFont(iconFont);
     const qreal pressEffect = qSin(m_pressProgress * M_PI);
 
-    // 获取图标颜色 (复用 Button 的语义颜色，但在按压时做细微变化)
+    // Icon color reuses Button's semantic colors with a subtle pressed tweak.
+    // zh_CN: 图标颜色复用 Button 的语义色，按压时做细微变化。
     const auto& colors = themeColors();
     QColor textColor;
     if (!isEnabled()) {
         textColor = colors.textDisabled;
     } else {
-        // 所有启用态统一采用“变暗”动画效果：
-        // Accent 使用 textOnAccent，普通按钮使用 textPrimary
+        // All enabled states share the dimming animation: accent buttons use
+        // textOnAccent, standard buttons textPrimary.
+        // zh_CN: 启用态统一采用“变暗”动画——Accent 用 textOnAccent，普通按钮用 textPrimary。
         textColor = (fluentStyle() == Accent) ? colors.textOnAccent : colors.textPrimary;
         if (pressEffect > 0.0) {
-            // 1.0 → 0.5，明显的压下去的感觉
+            // 1.0 → 0.5 for a clear pressed feel. zh_CN: 1.0 → 0.5，明显的按压感。
             qreal alphaFactor = 1.0 - 0.5 * pressEffect;
             int alpha = static_cast<int>(255 * alphaFactor);
             textColor.setAlpha(alpha);
@@ -166,10 +171,13 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
     
     painter.setPen(textColor);
 
-    // 绘制图标：根据动画进度沿 Y 轴下移后弹回 + 开发者自定义的偏移
-    // chevronOffset.x() 作为与右侧边缘的间距（padding），chevronOffset.y() 为垂直微调
+    // Paint the glyph: it dips down along Y with the animation then rebounds,
+    // plus the developer offset; chevronOffset.x() is the right-edge padding and
+    // chevronOffset.y() the vertical tweak.
+    // zh_CN: 绘制图标——按动画进度沿 Y 轴下移后弹回，再叠加自定义偏移；
+    // chevronOffset.x() 为右缘间距，chevronOffset.y() 为垂直微调。
     QRect chevronRect = rect().adjusted(0, 0, -m_chevronOffset.x(), 0);
-    const qreal maxOffset = 3.0; // 最大下移 3 像素（点击动画）
+    const qreal maxOffset = 3.0; // Max 3px dip for the click animation. zh_CN: 最大下移 3 像素。
     qreal pressOffset = maxOffset * pressEffect; // 0→max→0
     chevronRect.translate(0,
                           static_cast<int>(pressOffset) + m_chevronOffset.y());

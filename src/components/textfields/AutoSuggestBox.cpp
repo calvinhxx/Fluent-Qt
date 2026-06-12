@@ -83,7 +83,8 @@ public:
         if (bgColor.alpha() > 0) {
             painter->setPen(Qt::NoPen);
             painter->setBrush(bgColor);
-            painter->drawRoundedRect(bgRect, 4, 4);
+            painter->drawRoundedRect(bgRect, m_themeHost->themeRadius().control,
+                                      m_themeHost->themeRadius().control);
         }
 
         painter->setFont(m_themeHost->themeFont(m_fontRole).toQFont());

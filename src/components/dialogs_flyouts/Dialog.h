@@ -132,8 +132,8 @@ private:
     int    m_closingResult     = 0;
 
     QPropertyAnimation* m_animation;
-    QPropertyAnimation* m_smokeAnim       = nullptr;  // Smoke 淡入淡出动画
-    bool                m_smokeFadingOut  = false;    // 标记 Smoke 当前是否正在淡出
+    QPropertyAnimation* m_smokeAnim       = nullptr;  // Smoke fade animation. zh_CN: Smoke 淡入淡出动画。
+    bool                m_smokeFadingOut  = false;    // Whether the smoke is fading out. zh_CN: Smoke 是否正在淡出。
     QSize               m_targetSize;
     QSize               m_savedMinSize;
     QSize               m_savedMaxSize;

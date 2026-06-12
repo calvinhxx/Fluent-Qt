@@ -40,7 +40,7 @@ public:
     QMargins margins() const { return m_margins; }
     void setMargins(const QMargins& margins);
 
-    // 影子 QWidget::setFont 以应用到内部的标签
+    // Shadows QWidget::setFont so it reaches the inner label. zh_CN: 影子 QWidget::setFont 以应用到内部标签。
     void setFont(const QFont& font);
 
     bool isAnimationEnabled() const { return m_animationEnabled; }

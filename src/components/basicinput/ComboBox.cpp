@@ -37,7 +37,7 @@ public:
 
 namespace fluent::basicinput {
 
-// ─── ComboBoxItemDelegate 实现 ──────────────────────────────────────────────
+// ─── ComboBoxItemDelegate implementation. zh_CN: ComboBoxItemDelegate 实现 ──
 
 ComboBoxItemDelegate::ComboBoxItemDelegate(FluentElement* themeHost, QAbstractItemView* view,
                                            QObject* parent)
@@ -117,7 +117,7 @@ QSize ComboBoxItemDelegate::sizeHint(const QStyleOptionViewItem&, const QModelIn
     return QSize(0, ::Spacing::ControlHeight::Large);
 }
 
-// ─── ComboBoxPopup 实现 ─────────────────────────────────────────────────────
+// ─── ComboBoxPopup implementation. zh_CN: ComboBoxPopup 实现 ────────────────
 
 ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox)
     : Flyout(comboBox), m_comboBox(comboBox) {
@@ -250,7 +250,7 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event) {
     return Flyout::eventFilter(watched, event);
 }
 
-// ─── ComboBox 主体实现 ──────────────────────────────────────────────────────
+// ─── ComboBox implementation. zh_CN: ComboBox 主体实现 ─────────────────────
 
 ComboBox::ComboBox(QWidget* parent) : QComboBox(parent) {
     setAttribute(Qt::WA_Hover);
@@ -462,7 +462,7 @@ void ComboBox::onPopupHidden() {
     if (needsUpdate) update();
 }
 
-// ── 输入事件 ─────────────────────────────────────────────────────────────────
+// ── Input events. zh_CN: 输入事件 ────────────────────────────────────────────
 
 void ComboBox::enterEvent(FluentEnterEvent* event) {
     m_hovered = true;
@@ -537,7 +537,7 @@ bool ComboBox::eventFilter(QObject* watched, QEvent* event) {
     return QComboBox::eventFilter(watched, event);
 }
 
-// ── 绘制 ─────────────────────────────────────────────────────────────────────
+// ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
 
 void ComboBox::paintEvent(QPaintEvent*) {
     QPainter painter(this);

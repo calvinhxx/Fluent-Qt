@@ -13,7 +13,6 @@
 #include <QWheelEvent>
 
 #include "compatibility/QtCompat.h"
-#include "design/Animation.h"
 #include "design/Typography.h"
 
 namespace fluent::date_time {
@@ -137,8 +136,8 @@ CalendarView::CalendarView(QWidget* parent)
     m_visibleMonth = todayMonth();
     m_focusedDate = QDate::currentDate();
     m_monthTransitionAnimation = new QVariantAnimation(this);
-    m_monthTransitionAnimation->setDuration(::Animation::Duration::Normal);
-    m_monthTransitionAnimation->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_monthTransitionAnimation->setDuration(themeAnimation().normal);
+    m_monthTransitionAnimation->setEasingCurve(themeAnimation().decelerate);
     connect(m_monthTransitionAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         m_monthTransitionProgress = value.toReal();
         refreshProperties();
@@ -151,8 +150,8 @@ CalendarView::CalendarView(QWidget* parent)
         refreshHoverFromCursor();
     });
     m_contentTransitionAnimation = new QVariantAnimation(this);
-    m_contentTransitionAnimation->setDuration(::Animation::Duration::Normal);
-    m_contentTransitionAnimation->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_contentTransitionAnimation->setDuration(themeAnimation().normal);
+    m_contentTransitionAnimation->setEasingCurve(themeAnimation().decelerate);
     connect(m_contentTransitionAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         m_contentTransitionProgress = value.toReal();
         refreshProperties();

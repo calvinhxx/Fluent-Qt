@@ -1,11 +1,12 @@
 #include "ToggleButton.h"
+#include "design/CornerRadius.h"
 
 namespace fluent::basicinput {
 
 ToggleButton::ToggleButton(const QString& text, QWidget* parent)
     : Button(text, parent) {
     setCheckable(true);
-    // 连接 toggled 信号来同步 m_checkState
+    // Keep m_checkState in sync via the toggled signal. zh_CN: 连接 toggled 信号同步 m_checkState。
     connect(this, &QPushButton::toggled, this, [this](bool checked) {
         setCheckState(checked ? Qt::Checked : Qt::Unchecked);
     });
@@ -51,10 +52,12 @@ void ToggleButton::onThemeUpdated() {
 }
 
 void ToggleButton::paintEvent(QPaintEvent* event) {
-    // 如果是中间态，我们需要特殊的绘制逻辑，或者稍微修改颜色
+    // The indeterminate state needs its own visual treatment.
+    // zh_CN: 中间态需要单独的绘制处理。
     if (m_threeState && m_checkState == Qt::PartiallyChecked) {
-        // 这里可以实现中间态的视觉效果，例如在按钮底部显示一个 Accent 色的指示条
-        // 或者使用半透明的 Accent 背景。为了简单起见，我们暂时让它表现得像 Accent 悬停态。
+        // Rendered as the plain button plus a bottom accent bar; a translucent
+        // accent fill would be an alternative.
+        // zh_CN: 以普通按钮加底部 Accent 指示条呈现；半透明 Accent 背景是可选方案。
         Button::paintEvent(event);
         
         QPainter p(this);
@@ -62,13 +65,13 @@ void ToggleButton::paintEvent(QPaintEvent* event) {
         const auto& colors = themeColors();
         const auto& radius = themeRadius();
         
-        // 在底部画一个小横条表示中间态
+        // A small bottom bar marks the indeterminate state. zh_CN: 底部小横条表示中间态。
         int barHeight = 2;
         int barWidth = width() / 2;
         QRect barRect((width() - barWidth) / 2, height() - barHeight - 4, barWidth, barHeight);
         p.setPen(Qt::NoPen);
         p.setBrush(colors.accentDefault);
-        p.drawRoundedRect(barRect, 1, 1);
+        p.drawRoundedRect(barRect, ::CornerRadius::Indicator, ::CornerRadius::Indicator);
     } else {
         Button::paintEvent(event);
     }

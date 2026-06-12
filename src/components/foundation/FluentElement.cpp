@@ -11,7 +11,7 @@
 
 namespace fluent {
 
-// --- FluentElement 生命周期管理 ---
+// --- FluentElement lifetime management. zh_CN: FluentElement 生命周期管理。---
 
 FluentElement::FluentElement() : d_ptr(new FluentElementPrivate(this)) {
     FluentThemeManager::instance()->elements.insert(this);
@@ -22,7 +22,7 @@ FluentElement::~FluentElement() {
     delete d_ptr;
 }
 
-// --- 静态全局管理 ---
+// --- Static global management. zh_CN: 静态全局管理。---
 
 void FluentElement::setTheme(Theme theme) {
     auto* mgr = FluentThemeManager::instance();
@@ -37,12 +37,13 @@ FluentElement::Theme FluentElement::currentTheme() {
     return FluentThemeManager::instance()->currentTheme;
 }
 
-// --- 数据获取实现 ---
+// --- Token accessors. zh_CN: 数据获取实现。---
 
 FluentElement::Colors FluentElement::themeColors() const {
     Colors c;
 
-    // 用 lambda 统一填充，避免 Light/Dark 两块完全重复
+    // One fill lambda keeps the Light/Dark blocks from duplicating each other.
+    // zh_CN: 用 lambda 统一填充，避免 Light/Dark 两块完全重复。
     auto fill = [&](
         const QColor& accentDef, const QColor& accentSec, const QColor& accentTer, const QColor& accentDis,
         const QColor& ctrlDef, const QColor& ctrlSec, const QColor& ctrlTer, const QColor& ctrlDis,

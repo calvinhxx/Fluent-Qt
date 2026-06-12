@@ -123,7 +123,7 @@ void TeachingTip::setCardSize(const QSize& size) {
 
 void TeachingTip::showAt(QWidget* targetWidget) {
     setTarget(targetWidget);
-    updateWidgetSize();  // target 已设置，重新计算含 tailInsets 的 widget 尺寸
+    updateWidgetSize();  // Target set: recompute the widget size with tailInsets. zh_CN: target 已设置，重新计算含 tailInsets 的尺寸。
     open();
 }
 
@@ -213,7 +213,9 @@ void TeachingTip::paintEvent(QPaintEvent*) {
             if (placement == BottomRight) centerX = localTargetRect.right() - qMin(24, localTargetRect.width() / 2);
             centerX = qBound(visualCardRect.left() + radius + kTailHalfWidth,
                              centerX, visualCardRect.right() - radius - kTailHalfWidth);
-            // 底边两点向 card 内 +2px，确保 united() 有面积重叠，消除接缝线
+            // The base points push 2px into the card so united() overlaps with
+            // area, removing the seam line.
+            // zh_CN: 底边两点向 card 内 +2px，确保 united() 有面积重叠，消除接缝线。
             tail << QPoint(centerX - kTailHalfWidth, visualCardRect.top() + 2)
                  << QPoint(centerX + kTailHalfWidth, visualCardRect.top() + 2)
                  << QPoint(centerX, visualCardRect.top() - kTailSize);
@@ -263,11 +265,13 @@ void TeachingTip::paintEvent(QPaintEvent*) {
     }
 
     const auto& colors = themeColors();
-    // 先填充整个 bubble（card + tail），无描边
+    // Fill the whole bubble (card + tail) first, with no stroke.
+    // zh_CN: 先填充整个 bubble（card + tail），无描边。
     painter.setBrush(colors.bgLayer);
     painter.setPen(Qt::NoPen);
     painter.drawPath(bubblePath);
-    // 对整个 bubble 外轮廓描边：united path 无内部接缝，tail 基部不会出现横线
+    // Stroke the united outline: no inner seams, so the tail base shows no line.
+    // zh_CN: 对整个 bubble 外轮廓描边——united path 无内部接缝，tail 基部不出现横线。
     painter.setBrush(Qt::NoBrush);
     painter.setPen(QPen(colors.strokeDefault, 1));
     painter.drawPath(bubblePath);
@@ -314,9 +318,11 @@ TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& c
     QWidget* top = m_target ? m_target->window() : nullptr;
     if (targetRect.isEmpty() || !top) return Bottom;
 
-    // 只检查主轴方向是否有足够空间（与 Flyout 一致）。
-    // 横轴溢出由 clampCardTopLeft 修正，不纳入 fits 判断，避免 Bottom/Top 因
-    // 卡片横向居中超出窗口边缘而被错误跳过。
+    // Only the main axis is checked for space, matching Flyout. Cross-axis
+    // overflow is fixed by clampCardTopLeft and excluded from the fits test,
+    // so Bottom/Top are never skipped just because centering overflows an edge.
+    // zh_CN: 只检查主轴方向空间（与 Flyout 一致）；横轴溢出由 clampCardTopLeft
+    // 修正，不纳入 fits 判断，避免 Bottom/Top 因横向居中超出窗口边缘被误跳过。
     const auto fits = [&](PreferredPlacement placement) {
         const QPoint p = cardTopLeftForPlacement(placement, targetRect, cardSize);
         if (isBottomPlacement(placement))

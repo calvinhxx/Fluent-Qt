@@ -35,12 +35,12 @@ class Flyout : public Popup {
 
 public:
     enum Placement {
-        Top,        ///< 在 anchor 上方
-        Bottom,     ///< 在 anchor 下方
-        Left,       ///< 在 anchor 左侧
-        Right,      ///< 在 anchor 右侧
-        Full,       ///< 顶层窗口居中（与基类默认一致）
-        Auto,       ///< 优先 Bottom，空间不足时自动反转到 Top
+        Top,        ///< Above the anchor. zh_CN: 在 anchor 上方。
+        Bottom,     ///< Below the anchor. zh_CN: 在 anchor 下方。
+        Left,       ///< Left of the anchor. zh_CN: 在 anchor 左侧。
+        Right,      ///< Right of the anchor. zh_CN: 在 anchor 右侧。
+        Full,       ///< Centered in the top-level window (base-class default). zh_CN: 顶层窗口居中。
+        Auto,       ///< Prefer Bottom, flipping to Top when space runs out. zh_CN: 优先 Bottom，空间不足时反转到 Top。
     };
     Q_ENUM(Placement)
 
@@ -58,33 +58,38 @@ public:
 
     QWidget*  anchor() const             { return m_anchor.data(); }
 
-    /// 在指定 anchor 控件上弹出 flyout。等价于 setAnchor(anchor) + open()。
+    /// Opens the flyout at the anchor; equals setAnchor(anchor) + open().
+    /// zh_CN: 在指定 anchor 控件上弹出 flyout，等价于 setAnchor(anchor) + open()。
     void showAt(QWidget* anchor);
 
-    /// 仅设置 anchor，不立即弹出。
+    /// Sets the anchor without opening. zh_CN: 仅设置 anchor，不立即弹出。
     void setAnchor(QWidget* anchor);
 
 signals:
     void placementChanged(Placement p);
 
 protected:
-    /// 重写：根据 anchor 几何 + Placement + 自身尺寸返回 move() 目标坐标
-    /// （含 shadow margin 偏移补偿）
+    /// Override: computes the move() target from the anchor geometry, the
+    /// placement, and the flyout size (including shadow-margin compensation).
+    /// zh_CN: 重写——按 anchor 几何 + Placement + 自身尺寸返回 move() 目标坐标
+    /// （含 shadow margin 偏移补偿）。
     QPoint computePosition() const override;
 
 private:
-    /// Auto 模式下根据可用空间决定实际 placement
+    /// Resolves the effective placement from available space in Auto mode.
+    /// zh_CN: Auto 模式下根据可用空间决定实际 placement。
     Placement resolveAutoPlacement() const;
 
-    /// 把 anchor 的几何映射到 top-level 坐标系
+    /// Maps the anchor geometry into top-level coordinates. zh_CN: 把 anchor 几何映射到 top-level 坐标系。
     QRect anchorRectInTopLevel() const;
 
-    /// 在 top-level 矩形内 clamp 卡片位置（基于「卡片左上角」）
+    /// Clamps the card position (by its top-left) inside the top-level rect.
+    /// zh_CN: 在 top-level 矩形内 clamp 卡片位置（基于卡片左上角）。
     QPoint clampCardPos(const QPoint& cardTopLeft) const;
 
     QPointer<QWidget> m_anchor;
     Placement m_placement = Bottom;
-    int       m_anchorOffset = 8;     // WinUI 标准间距
+    int       m_anchorOffset = 8;     // Standard WinUI gap. zh_CN: WinUI 标准间距。
     bool      m_clampToWindow = true;
 };
 

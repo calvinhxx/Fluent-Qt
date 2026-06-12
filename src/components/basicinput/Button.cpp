@@ -93,7 +93,7 @@ Button::Button(const QString& text, QWidget* parent) : QPushButton(text, parent)
 #ifdef Q_OS_MAC
     setAttribute(Qt::WA_MacShowFocusRect, false);
 #endif
-    setFont(themeFont("Body").toQFont()); // 默认 Body，后续可用 setFont() 覆盖
+    setFont(themeFont("Body").toQFont()); // Body by default; callers may setFont() later. zh_CN: 默认 Body，后续可用 setFont() 覆盖。
 }
 
 Button::Button(QWidget* parent) : QPushButton(parent) {
@@ -111,7 +111,7 @@ void Button::setFluentStyle(ButtonStyle style) {
 void Button::setFluentSize(ButtonSize size) {
     if (m_size != size) { 
         m_size = size; 
-        updateGeometry(); // 关键：通知布局系统尺寸已变化
+        updateGeometry(); // Required: tell the layout system the size changed. zh_CN: 关键：通知布局系统尺寸已变化。
         update(); 
         emit fluentSizeChanged(); 
     }
@@ -183,20 +183,21 @@ void Button::setIconGlyph(const QString& glyph,
         m_iconGlyph.clear();
         m_iconFontFamily.clear();
         m_iconPixelSize = 0;
-        setIcon(QIcon()); // 清除普通图标
+        setIcon(QIcon()); // Clear the regular icon. zh_CN: 清除普通图标。
         update();
         return;
     }
 
-    // 保存 iconfont 信息，在 paintEvent 中直接绘制（参考 DropDownButton 方案）
+    // Store the icon-font glyph and paint it directly in paintEvent (same approach as DropDownButton).
+    // zh_CN: 保存 iconfont 信息，在 paintEvent 中直接绘制（参考 DropDownButton 方案）。
     m_iconGlyph = glyph;
     m_iconFontFamily = family;
     m_iconPixelSize = pixelSize;
     
-    // 清除普通图标，使用 iconfont 绘制
+    // Drop the regular icon in favor of icon-font painting. zh_CN: 清除普通图标，使用 iconfont 绘制。
     setIcon(QIcon());
     
-    // 更新尺寸提示
+    // Refresh the size hint. zh_CN: 更新尺寸提示。
     updateGeometry();
     update();
 }
@@ -205,20 +206,20 @@ QSize Button::sizeHint() const {
     const auto& spacing = themeSpacing();
     QFontMetrics fm(font());
 
-    // 1. 基于 Token 计算内边距 (Padding)
-    // 水平内边距：Small(8px), Standard(12px), Large(16px)
+    // 1. Padding from spacing tokens. zh_CN: 基于 Token 计算内边距。
+    // Horizontal padding: Small(8px), Standard(12px), Large(16px). zh_CN: 水平内边距。
     int hPadding = (m_size == Small) ? spacing.small : (m_size == Large ? spacing.standard : spacing.padding.controlH);
-    // 垂直内边距：Small(4px), Standard(6px), Large(8px)
+    // Vertical padding: Small(4px), Standard(6px), Large(8px). zh_CN: 垂直内边距。
     int vPadding = (m_size == Small) ? spacing.gap.tight : (m_size == Large ? spacing.small : spacing.padding.controlV);
-    // 图标间距：Small(4px), Standard(8px)
+    // Icon gap: Small(4px), Standard(8px). zh_CN: 图标间距。
     int iconGap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
 
-    // 2. 计算动态高度：高度 = 字体高度 + 上下内边距
+    // 2. Dynamic height: font height plus vertical padding. zh_CN: 高度 = 字体高度 + 上下内边距。
     int dynamicHeight = fm.height() + vPadding * 2;
 
-    // 3. 计算内容所需的总宽度
+    // 3. Total width required by the content. zh_CN: 计算内容所需的总宽度。
     QString txt = text();
-    // 优先使用 iconfont，否则使用普通图标
+    // Prefer the icon font, falling back to the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
     bool hasIconFont = !m_iconGlyph.isEmpty();
     QSize icSize = hasIconFont ? QSize(m_iconPixelSize, m_iconPixelSize) : iconSize();
     int contentWidth = fm.horizontalAdvance(txt);
@@ -244,7 +245,7 @@ void Button::paintEvent(QPaintEvent*) {
     const auto& colors = themeColors();
     const auto& spacing = themeSpacing();
 
-    // 1. 确定交互状态
+    // 1. Resolve the interaction state. zh_CN: 确定交互状态。
     InteractionState state = m_interactionState;
     if (!isEnabled()) {
         state = Disabled;
@@ -253,7 +254,7 @@ void Button::paintEvent(QPaintEvent*) {
         else if (underMouse()) state = Hover;
     }
 
-    // 2. 获取色值，字体使用 QPushButton 的 font()
+    // 2. Resolve colors; the font comes from QPushButton's font(). zh_CN: 获取色值，字体使用 QPushButton 的 font()。
     painter.setFont(font());
 
     bool checked = isChecked();
@@ -261,7 +262,7 @@ void Button::paintEvent(QPaintEvent*) {
     // borderColor is the Fluent surface stroke; keyboard focus is painted by
     // the separate focusVisual block below.
     
-    // 如果是 Accent 风格，或者按钮处于 Checked 状态且是 Standard 风格
+    // Accent style, or a checked button in Standard style. zh_CN: Accent 风格，或 Checked 状态的 Standard 风格。
     if (m_style == Accent || (checked && m_style == Standard)) {
         bgColor = colors.accentDefault;
         textColor = colors.textOnAccent;
@@ -269,7 +270,7 @@ void Button::paintEvent(QPaintEvent*) {
         if (state == Hover) bgColor = colors.accentSecondary;
         if (state == Pressed) {
             bgColor = colors.accentTertiary;
-            borderColor = Qt::transparent; // 按下时边框扁平化
+            borderColor = Qt::transparent; // Border flattens while pressed. zh_CN: 按下时边框扁平化。
         }
     } else if (m_style == Subtle) {
         bgColor = Qt::transparent;
@@ -277,7 +278,7 @@ void Button::paintEvent(QPaintEvent*) {
         borderColor = Qt::transparent;
         if (state == Hover) bgColor = colors.subtleSecondary;
         if (state == Pressed) bgColor = colors.subtleTertiary;
-        if (checked && state == Rest) bgColor = colors.subtleSecondary; // 选中态默认带一点背景
+        if (checked && state == Rest) bgColor = colors.subtleSecondary; // Checked rest state keeps a subtle fill. zh_CN: 选中态默认带一点背景。
     } else {
         bgColor = colors.controlDefault;
         textColor = colors.textPrimary;
@@ -285,8 +286,8 @@ void Button::paintEvent(QPaintEvent*) {
         if (state == Hover) bgColor = colors.controlSecondary;
         if (state == Pressed) {
             bgColor = colors.controlTertiary;
-            borderColor = colors.strokeDivider; // 按下时边框颜色变淡且扁平
-            textColor = colors.textSecondary;    // 文字稍微变淡
+            borderColor = colors.strokeDivider; // Pressed border fades and flattens. zh_CN: 按下时边框颜色变淡且扁平。
+            textColor = colors.textSecondary;    // Text dims slightly. zh_CN: 文字稍微变淡。
         }
     }
 
@@ -300,11 +301,11 @@ void Button::paintEvent(QPaintEvent*) {
         borderColor = Qt::transparent;
     }
 
-    // 3. 绘制背景和边框
+    // 3. Paint the background and border. zh_CN: 绘制背景和边框。
     QRectF contentRect = rect();
     const QMargins radii = cornerRadii();
     
-    // 如果是按下状态，内容稍微向下偏移 0.5 像素（模拟点击感）
+    // While pressed, nudge the content down 0.5px to suggest the press. zh_CN: 按下时内容下移 0.5 像素，模拟点击感。
     if (state == Pressed && m_style != Subtle) {
         contentRect.translate(0, 0.5);
     }
@@ -320,18 +321,19 @@ void Button::paintEvent(QPaintEvent*) {
     }
 
     if (state != Disabled && hasFocus() && m_focusVisual) {
-        // 使用更柔和的文本次要色，并设置一定的透明度，使其不那么“黑”
+        // Use the softer secondary text color with some transparency so it reads less harsh.
+        // zh_CN: 使用更柔和的文本次要色并加一定透明度，使其不那么“黑”。
         QColor focusColor = colors.textSecondary;
-        focusColor.setAlpha(120); // 约 47% 不透明度
+        focusColor.setAlpha(120); // About 47% opacity. zh_CN: 约 47% 不透明度。
         
         painter.setPen(QPen(focusColor, 1.0));
         painter.setBrush(Qt::NoBrush);
         
-        // 恢复为 1.5 像素内缩
+        // Restore the 1.5px inset. zh_CN: 恢复为 1.5 像素内缩。
         painter.drawPath(roundedRectPath(contentRect.adjusted(1.5, 1.5, -1.5, -1.5), adjustedRadii(radii, -1)));
     }
 
-    // 4. 计算并绘制图标和文字 (使用 Token 间距)
+    // 4. Lay out and paint the icon and text using token gaps. zh_CN: 使用 Token 间距计算并绘制图标和文字。
     QString txt = (m_layout == IconOnly) ? "" : text();
     bool hasIconFont = !m_iconGlyph.isEmpty();
     QPixmap pix = (m_layout == TextOnly || hasIconFont || icon().isNull()) ? QPixmap() : icon().pixmap(iconSize());
@@ -340,7 +342,7 @@ void Button::paintEvent(QPaintEvent*) {
     QFontMetrics fm = painter.fontMetrics();
     int txtWidth = txt.isEmpty() ? 0 : fm.horizontalAdvance(txt);
     
-    // 计算图标宽度：优先使用 iconfont，否则使用普通图标
+    // Icon width: prefer the icon font, else the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
     int iconWidth = 0;
     int iconHeight = 0;
     if (hasIconFont) {
@@ -359,10 +361,10 @@ void Button::paintEvent(QPaintEvent*) {
     double centerY = layoutRect.center().y();
 
     painter.setPen(textColor);
-    painter.setRenderHint(QPainter::TextAntialiasing); // 确保 iconfont 文字抗锯齿
+    painter.setRenderHint(QPainter::TextAntialiasing); // Keep icon-font glyphs antialiased. zh_CN: 确保 iconfont 文字抗锯齿。
     
     if (m_layout == IconAfter) {
-        // 文本在前，图标在后
+        // Text first, icon after. zh_CN: 文本在前，图标在后。
         if (!txt.isEmpty()) {
             painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()),
                              Qt::AlignCenter, txt);
@@ -381,7 +383,7 @@ void Button::paintEvent(QPaintEvent*) {
                                pix);
         }
     } else {
-        // 图标在前，文本在后（或仅图标）
+        // Icon first, text after (or icon only). zh_CN: 图标在前，文本在后（或仅图标）。
         if (hasIconFont) {
             QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
             drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily,

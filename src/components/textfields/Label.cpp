@@ -60,10 +60,11 @@ void Label::setFont(const QFont& font) {
 }
 
 void Label::onThemeUpdated() {
-    // 1. 使用保存的样式名更新字体 (解决切换主题后字体统一的问题)
+    // 1. Reapply the stored style name so fonts stay consistent across theme swaps.
+    // zh_CN: 使用保存的样式名更新字体（解决切换主题后字体统一问题）。
     setFont(themeFont(m_styleName).toQFont());
 
-    // 2. 更新颜色
+    // 2. Refresh the color. zh_CN: 更新颜色。
     const auto& c = themeColors();
     QPalette p = palette();
     p.setColor(QPalette::WindowText, c.textPrimary);

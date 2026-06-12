@@ -13,7 +13,7 @@ void ToggleSplitButton::mouseReleaseEvent(QMouseEvent* event) {
         SplitPart releasePart = getPartAt(event->pos());
         
         if (releasePart == Secondary && m_pressPart == Secondary) {
-            // 点击的是下拉区：弹出菜单，但不触发切换状态
+            // Drop-down zone clicked: open the menu without toggling. zh_CN: 点击下拉区——弹出菜单，但不触发切换。
             if (menu()) {
                 QPoint popupPos = mapToGlobal(rect().bottomLeft());
                 menu()->exec(popupPos);
@@ -25,7 +25,8 @@ void ToggleSplitButton::mouseReleaseEvent(QMouseEvent* event) {
         }
     }
     
-    // 如果是点击左侧或其它情况，执行 SplitButton (进而执行 QPushButton) 逻辑处理点击/切换
+    // Primary-zone clicks fall through to SplitButton (and QPushButton) for click/toggle handling.
+// zh_CN: 点击左侧或其它情况，交由 SplitButton（进而 QPushButton）处理点击/切换。
     SplitButton::mouseReleaseEvent(event);
 }
 

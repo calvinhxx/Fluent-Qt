@@ -9,7 +9,7 @@
 
 namespace fluent::basicinput {
 
-// ── WinUI 3 ToggleSwitch 尺寸常量（来自 ToggleSwitch_themeresources.xaml）───
+// ── WinUI 3 ToggleSwitch metrics (from ToggleSwitch_themeresources.xaml). zh_CN: 尺寸常量 ──
 namespace {
     constexpr int kTrackW = 40;
     constexpr int kTrackH = 20;
@@ -17,9 +17,9 @@ namespace {
     constexpr int kKnobHover = 14;
     constexpr int kKnobPressedW = 17;
     constexpr int kKnobPressedH = 14;
-    constexpr int kKnobTravel = 20;     // On 状态 knob 平移距离
-    constexpr int kContentGap = 10;     // 开关与文字间距 (ToggleSwitchPreContentMargin)
-    constexpr int kHeaderGap = 4;       // Header 与开关行间距
+    constexpr int kKnobTravel = 20;     // Knob travel distance to the On state. zh_CN: On 状态 knob 平移距离。
+    constexpr int kContentGap = 10;     // Gap between switch and content text (ToggleSwitchPreContentMargin). zh_CN: 开关与文字间距。
+    constexpr int kHeaderGap = 4;       // Gap between the header and the switch row. zh_CN: Header 与开关行间距。
     constexpr qreal kTrackRadius = kTrackH / 2.0;
 }
 
@@ -45,7 +45,7 @@ void ToggleSwitch::onThemeUpdated()
     update();
 }
 
-// ── 属性 setter ─────────────────────────────────────────────────────────────
+// ── Property setters. zh_CN: 属性 setter ────────────────────────────────────
 
 void ToggleSwitch::setIsOn(bool on)
 {
@@ -102,7 +102,7 @@ void ToggleSwitch::setKnobPosition(qreal pos)
     update();
 }
 
-// ── 几何辅助 ─────────────────────────────────────────────────────────────────
+// ── Geometry helpers. zh_CN: 几何辅助 ────────────────────────────────────────
 
 int ToggleSwitch::contentAreaX() const
 {
@@ -116,7 +116,7 @@ QRectF ToggleSwitch::trackRect() const
         QFontMetrics fm(font());
         y = fm.height() + kHeaderGap;
     }
-    // 垂直居中到控件行
+    // Center vertically in the control row. zh_CN: 垂直居中到控件行。
     int rowH = qMax(kTrackH, QFontMetrics(font()).height());
     int trackY = y + (rowH - kTrackH) / 2;
     return QRectF(0, trackY, kTrackW, kTrackH);
@@ -137,7 +137,7 @@ QRectF ToggleSwitch::knobRect() const
         knobH = kKnobNormal;
     }
 
-    // knob 中心 Y = track 中心
+    // Knob center Y equals the track center. zh_CN: knob 中心 Y = track 中心。
     qreal cy = track.center().y();
     // knob X travel: from left to right inside track
     qreal offX = track.left() + (kTrackH - knobW) / 2.0;
@@ -169,7 +169,7 @@ QSize ToggleSwitch::minimumSizeHint() const
     return QSize(kTrackW, kTrackH);
 }
 
-// ── 动画 ─────────────────────────────────────────────────────────────────────
+// ── Animation. zh_CN: 动画 ───────────────────────────────────────────────────
 
 void ToggleSwitch::animateKnob(bool toOn)
 {
@@ -185,7 +185,7 @@ void ToggleSwitch::toggle()
     setIsOn(!m_isOn);
 }
 
-// ── 绘制 ─────────────────────────────────────────────────────────────────────
+// ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
 
 void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
 {
@@ -243,13 +243,13 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
         }
     }
 
-    // 绘制 track 背景
+    // Paint the track fill. zh_CN: 绘制 track 背景。
     QPainterPath trackPath;
     trackPath.addRoundedRect(track.adjusted(0.5, 0.5, -0.5, -0.5), kTrackRadius, kTrackRadius);
     p.setPen(Qt::NoPen);
     p.setBrush(trackFill);
     p.drawPath(trackPath);
-    // 绘制 track 描边
+    // Paint the track outline. zh_CN: 绘制 track 描边。
     p.setBrush(Qt::NoBrush);
     p.setPen(QPen(trackStroke, 1.0));
     p.drawPath(trackPath);
@@ -268,7 +268,7 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
     qreal knobR = qMin(knob.width(), knob.height()) / 2.0;
     p.drawRoundedRect(knob, knobR, knobR);
 
-    // ── Content 文字 (On/Off) ──
+    // ── Content text (On/Off). zh_CN: Content 文字 ──
     QString contentText = m_isOn ? m_onContent : m_offContent;
     if (!contentText.isEmpty()) {
         p.setFont(font());
@@ -281,7 +281,7 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
     }
 }
 
-// ── 鼠标交互 ─────────────────────────────────────────────────────────────────
+// ── Mouse interaction. zh_CN: 鼠标交互 ───────────────────────────────────────
 
 void ToggleSwitch::mousePressEvent(QMouseEvent* event)
 {

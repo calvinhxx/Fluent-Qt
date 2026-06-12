@@ -20,10 +20,10 @@
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
-#include "design/Animation.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::collections {
@@ -54,7 +54,7 @@ GridView::GridView(QWidget* parent)
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setMouseTracking(true);
-    setDragEnabled(false);           // 禁用 QListView 内置拖拽（自行实现）
+    setDragEnabled(false);           // Disable QListView's built-in drag; reorder is custom. zh_CN: 禁用内置拖拽（自行实现）。
     setDefaultDropAction(Qt::IgnoreAction);
 
     QListView::setSelectionMode(QAbstractItemView::SingleSelection);
@@ -71,19 +71,16 @@ GridView::GridView(QWidget* parent)
     m_headerLabel->setIndent(::Spacing::Padding::ListItemHorizontal);
 
     // --- Fluent scroll bar ---
-    m_vScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Vertical, this);
-    m_vScrollBar->setObjectName(QStringLiteral("fluentGridViewScrollBar"));
-    m_vScrollBar->hide();
-
-    auto* nativeVBar = verticalScrollBar();
-    connect(nativeVBar,  &QScrollBar::valueChanged, m_vScrollBar, &QScrollBar::setValue);
-    connect(m_vScrollBar, &QScrollBar::valueChanged, nativeVBar,  &QScrollBar::setValue);
-    connect(nativeVBar, &QScrollBar::rangeChanged, this, &GridView::syncFluentScrollBar);
+    m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(
+        Qt::Vertical, this, verticalScrollBar(),
+        QStringLiteral("fluentGridViewScrollBar"));
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged,
+            this, &GridView::syncFluentScrollBar);
 
     // --- Overscroll bounce ---
     m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(::Animation::Duration::Normal);
-    m_bounceAnim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_bounceAnim->setDuration(themeAnimation().normal);
+    m_bounceAnim->setEasingCurve(themeAnimation().decelerate);
     connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
         m_overscrollY = v.toReal();
         viewport()->update();
@@ -188,7 +185,8 @@ void GridView::setMaxColumns(int maxCols) {
 }
 
 void GridView::updateGridSize() {
-    // gridSize 包含 cell + spacing (QListView 用 gridSize 来布局 IconMode 的每格)
+    // gridSize covers cell + spacing; QListView lays out IconMode slots with it.
+    // zh_CN: gridSize 包含 cell + spacing（QListView 以此布局 IconMode 每格）。
     setGridSize(QSize(m_cellSize.width() + m_hSpacing,
                       m_cellSize.height() + m_vSpacing));
 }
@@ -228,7 +226,7 @@ void GridView::paintEvent(QPaintEvent* event) {
     const auto& c = themeColors();
     const int r = CornerRadius::Control;
 
-    // --- 1. 绘制容器背景 ---
+    // --- 1. Container background. zh_CN: 绘制容器背景。---
     {
         QPainter p(viewport());
         p.setRenderHint(QPainter::Antialiasing);
@@ -236,7 +234,7 @@ void GridView::paintEvent(QPaintEvent* event) {
         p.end();
     }
 
-    // --- 2. 空网格占位符 ---
+    // --- 2. Empty placeholder. zh_CN: 空网格占位符。---
     const bool isEmpty = !model() || model()->rowCount() == 0;
     if (isEmpty && !m_placeholderText.isEmpty()) {
         QPainter ph(viewport());
@@ -247,12 +245,13 @@ void GridView::paintEvent(QPaintEvent* event) {
         ph.end();
     }
 
-    // --- 3. 绘制网格项（QListView 默认绘制，拖拽时应用位移偏移） ---
+    // --- 3. Items via QListView's default painting; drags apply displacement. ---
+    // zh_CN: 绘制网格项（QListView 默认绘制，拖拽时应用位移偏移）。
     m_paintingWithOffsets = !m_dragOffsets.isEmpty();
     QListView::paintEvent(event);
     m_paintingWithOffsets = false;
 
-    // --- 3.1 拖拽源项半透明遮罩 ---
+    // --- 3.1 Translucent mask over the drag source. zh_CN: 拖拽源项半透明遮罩。---
     if (m_isDragging && !m_dragSourceIndices.isEmpty() && model()) {
         QPainter ghost(viewport());
         ghost.setRenderHint(QPainter::Antialiasing);
@@ -268,7 +267,7 @@ void GridView::paintEvent(QPaintEvent* event) {
         ghost.end();
     }
 
-    // --- 3.2 拖拽指示线 ---
+    // --- 3.2 Drop indicator. zh_CN: 拖拽指示线。---
     if (m_isDragging && m_dropTargetIndex >= 0 && model()) {
         m_paintingWithOffsets = !m_dragOffsets.isEmpty();
         QPainter dp(viewport());
@@ -297,7 +296,7 @@ void GridView::paintEvent(QPaintEvent* event) {
             const int yTop = targetRect.top() + 2;
             const int yBot = targetRect.bottom() - 2;
 
-            // 2px 宽的竖向 accent 色指示线 + 圆点端点
+            // A 2px vertical accent line with dot caps. zh_CN: 2px 竖向 accent 指示线 + 圆点端点。
             dp.setPen(QPen(c.accentDefault, 2.0));
             dp.drawLine(x, yTop, x, yBot);
 
@@ -311,7 +310,7 @@ void GridView::paintEvent(QPaintEvent* event) {
         dp.end();
     }
 
-    // --- 3.3 拖拽浮动图层 ---
+    // --- 3.3 Drag ghost layer. zh_CN: 拖拽浮动图层。---
     if (m_isDragging && !m_dragPixmap.isNull()) {
         QPainter fp(viewport());
         fp.setRenderHint(QPainter::Antialiasing);
@@ -343,7 +342,7 @@ void GridView::paintEvent(QPaintEvent* event) {
         cp.end();
     }
 
-    // --- 5. 容器边框 ---
+    // --- 5. Container border. zh_CN: 容器边框。---
     if (m_borderVisible) {
         QPainter bp(viewport());
         bp.setRenderHint(QPainter::Antialiasing);
@@ -560,31 +559,17 @@ void GridView::updateViewportMargins() {
 }
 
 void GridView::syncFluentScrollBar() {
-    for (auto* sb : {verticalScrollBar(), horizontalScrollBar()}) {
-        if (sb) {
-            sb->setAttribute(Qt::WA_DontShowOnScreen, true);
-            sb->hide();
-        }
-    }
-
+    ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
     if (!m_vScrollBar) return;
-
-    auto* native = verticalScrollBar();
-    m_vScrollBar->setRange(native->minimum(), native->maximum());
-    m_vScrollBar->setPageStep(native->pageStep());
-
-    const bool needScroll = native->maximum() > native->minimum();
-    m_vScrollBar->setVisible(needScroll);
-    if (!needScroll) return;
+    if (!::fluent::scrolling::mirrorNativeScrollBar(m_vScrollBar, verticalScrollBar()))
+        return;
 
     const QRect r = rect();
     const int top = (m_headerLabel && m_headerLabel->isVisible())
                         ? m_headerLabel->geometry().bottom() + 2
                         : r.top() + 2;
-    const int x = r.right() - m_vScrollBar->thickness() + 1;
-    const int h = r.bottom() - top - 2;
-    m_vScrollBar->setGeometry(x, top, m_vScrollBar->thickness(), h);
-    m_vScrollBar->raise();
+    ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top,
+                                                /*rightInset=*/0, /*bottomInset=*/2);
 }
 
 void GridView::refreshFluentScrollChrome() {
@@ -1020,8 +1005,8 @@ void GridView::updateDragDisplacement() {
         auto* anim = new QVariantAnimation(this);
         anim->setStartValue(current);
         anim->setEndValue(target);
-        anim->setDuration(::Animation::Duration::Fast);
-        anim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+        anim->setDuration(themeAnimation().fast);
+        anim->setEasingCurve(themeAnimation().decelerate);
         connect(anim, &QVariantAnimation::valueChanged, this, [this, i](const QVariant& v) {
             m_dragOffsets[i] = v.toPointF();
             viewport()->update();

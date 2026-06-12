@@ -8,13 +8,14 @@
 #include <QApplication>
 #include "compatibility/QtCompat.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayLightDismiss.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayWindow.h"
 
 namespace fluent::dialogs_flyouts {
 
-// ── 构造 / 析构 ──────────────────────────────────────────────────────────────
+// ── Construction / destruction. zh_CN: 构造 / 析构 ───────────────────────────
 
 Popup::Popup(QWidget* parent) : QWidget(parent) {
     m_originalParent = parent;
@@ -35,8 +36,11 @@ Popup::Popup(QWidget* parent) : QWidget(parent) {
     m_opacityEffect->setOpacity(0.0);
     setGraphicsEffect(m_opacityEffect);
 
-    // 必须显式 hide：若父窗口 show() 时 Popup 没被 hide 过，Qt 会自动把它显现出来
-    // （opacity=0 视觉不可见，但仍会拦截鼠标事件，导致按钮点击失效）
+    // Must hide explicitly: if the Popup was never hidden when the parent
+    // window shows, Qt would surface it automatically (opacity=0 looks
+    // invisible but still swallows mouse events, breaking button clicks).
+    // zh_CN: 必须显式 hide：父窗口 show() 时未被 hide 的 Popup 会被 Qt 自动
+    // 显现（opacity=0 视觉不可见，但仍拦截鼠标事件，导致按钮点击失效）。
     hide();
 
     onThemeUpdated();
@@ -52,7 +56,7 @@ Popup::~Popup() {
     }
 }
 
-// ── 主题 ─────────────────────────────────────────────────────────────────────
+// ── Theme. zh_CN: 主题 ───────────────────────────────────────────────────────
 
 void Popup::onThemeUpdated() {
     update();
@@ -72,7 +76,7 @@ void Popup::setPopupProgress(double p) {
     update();
 }
 
-// ── topLevelWidget 推断 ──────────────────────────────────────────────────────
+// ── topLevelWidget resolution. zh_CN: topLevelWidget 推断 ────────────────────
 
 QWidget* Popup::originalParentTopLevel() const {
     return ::fluent::overlay::resolveOwningTopLevel(m_originalParent, parentWidget());
@@ -87,12 +91,12 @@ void Popup::setPosition(QWidget* relativeTo, const QPoint& localPos) {
     m_positionSet = true;
 }
 
-// ── 位置计算（默认居中，子类可重写）──────────────────────────────────────────
+// ── Position (centered by default; subclasses may override). zh_CN: 位置计算 ──
 
 QPoint Popup::computePosition() const {
     QWidget* top = originalParentTopLevel();
     if (!top) return pos();
-    // 默认：在 topLevelWidget 中居中
+    // Default: center inside the topLevelWidget. zh_CN: 默认在 topLevelWidget 中居中。
     return QPoint((top->width() - width()) / 2,
                   (top->height() - height()) / 2);
 }
@@ -115,14 +119,15 @@ void Popup::open() {
     ensurePolished();
     if (layout()) layout()->activate();
 
-    // layout 驱动尺寸
+    // Layout drives the size. zh_CN: layout 驱动尺寸。
     if (layout()) {
         QSize hint = layout()->totalSizeHint();
         if (hint.isValid() && !hint.isEmpty())
             resize(hint);
     }
 
-    // 定位：用户通过 setPosition() 设置过则用目标位置，否则居中。
+    // Placement: honor setPosition() when provided, else center.
+    // zh_CN: 定位——setPosition() 设置过则用目标位置，否则居中。
     if (m_positionSet)
         move(::fluent::overlay::outerTopLeftForVisibleCard(m_targetPos));
     else
@@ -174,23 +179,23 @@ void Popup::setIsOpen(bool open) {
     else      this->close();
 }
 
-// ── 动画 ─────────────────────────────────────────────────────────────────────
+// ── Animation. zh_CN: 动画 ───────────────────────────────────────────────────
 
 void Popup::startEnterAnimation() {
     const auto& a = themeAnimation();
-    m_anim->setDuration(a.normal);       // 与 Dialog 一致：250ms
+    m_anim->setDuration(a.normal);       // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
     m_anim->setStartValue(m_popupProgress);
     m_anim->setEndValue(1.0);
-    m_anim->setEasingCurve(a.entrance); // 与 Dialog 一致
+    m_anim->setEasingCurve(a.entrance); // Matches Dialog. zh_CN: 与 Dialog 一致。
     m_anim->start();
 }
 
 void Popup::startExitAnimation() {
     const auto& a = themeAnimation();
-    m_anim->setDuration(a.normal);       // 与 Dialog 一致：250ms
+    m_anim->setDuration(a.normal);       // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
     m_anim->setStartValue(m_popupProgress);
     m_anim->setEndValue(0.0);
-    m_anim->setEasingCurve(a.exit);     // 与 Dialog 一致
+    m_anim->setEasingCurve(a.exit);     // Matches Dialog. zh_CN: 与 Dialog 一致。
     m_anim->start();
 }
 
@@ -288,34 +293,25 @@ void Popup::keyPressEvent(QKeyEvent* event) {
     QWidget::keyPressEvent(event);
 }
 
-// ── 绘制 ─────────────────────────────────────────────────────────────────────
+// ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
 
 void Popup::paintEvent(QPaintEvent*) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // 仅做 opacity 动画（QGraphicsOpacityEffect 统一作用于背景与子控件）。
+    // Opacity-only animation; QGraphicsOpacityEffect covers background and
+    // children together.
+    // zh_CN: 仅做 opacity 动画（QGraphicsOpacityEffect 统一作用于背景与子控件）。
 
     const QRect contentRect = ::fluent::overlay::visibleCardRect(rect());
 
-    // 阴影
-    const auto& s = themeShadow(Elevation::High);
+    // Shared layered card shadow.
+    // zh_CN: 共享的分层卡片阴影。
     const int r = themeRadius().overlay;
-    {
-        const int layers = 10;
-        for (int i = 0; i < layers; ++i) {
-            const double ratio = 1.0 - static_cast<double>(i) / layers;
-            QColor sc = s.color;
-            sc.setAlphaF(s.opacity * ratio * 0.35);
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(sc);
-            painter.drawRoundedRect(
-                contentRect.adjusted(-i, -i, i, i).translated(0, 2),
-                r + i, r + i);
-        }
-    }
+    ::fluent::overlay::paintLayeredShadow(painter, contentRect, r,
+                                          themeShadow(Elevation::High));
 
-    // 背景 + 边框
+    // Background and border. zh_CN: 背景 + 边框。
     const auto& colors = themeColors();
     painter.setBrush(colors.bgLayer);
     painter.setPen(colors.strokeDefault);

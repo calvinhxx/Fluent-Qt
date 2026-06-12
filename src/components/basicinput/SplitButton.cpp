@@ -48,11 +48,12 @@ void SplitButton::mouseReleaseEvent(QMouseEvent* event) {
         SplitPart releasePart = getPartAt(event->pos());
         
         if (releasePart == Secondary && m_pressPart == Secondary && m_menu) {
-            // 弹出菜单
+            // Pop the menu. zh_CN: 弹出菜单。
             QPoint popupPos = mapToGlobal(rect().bottomLeft());
             m_menu->exec(popupPos);
         } else if (releasePart == Primary && m_pressPart == Primary) {
-            // 主按钮点击，信号已经在 Button (QPushButton) 内部处理
+            // Primary click; the signal is already handled by Button (QPushButton).
+            // zh_CN: 主按钮点击，信号已在 Button (QPushButton) 内部处理。
         }
         
         m_pressPart = None;
@@ -71,14 +72,14 @@ void SplitButton::leaveEvent(QEvent* event) {
 SplitButton::SplitPart SplitButton::getPartAt(const QPoint& pos) const {
     if (!rect().contains(pos)) return None;
     
-    // 使用配置的下拉区域宽度
+    // Use the configured drop-down zone width. zh_CN: 使用配置的下拉区域宽度。
     if (pos.x() > width() - m_secondaryWidth) return Secondary;
     return Primary;
 }
 
 QSize SplitButton::sizeHint() const {
     QSize base = Button::sizeHint();
-    // 宽度 = 原本 Button 所需宽度 + 下拉区配置宽度
+    // Width = the base Button width plus the drop-down zone. zh_CN: 宽度 = 原 Button 所需宽度 + 下拉区宽度。
     return QSize(base.width() + m_secondaryWidth, base.height());
 }
 
@@ -95,18 +96,19 @@ void SplitButton::paintEvent(QPaintEvent*) {
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 
-    // 1. 获取尺寸参数
+    // 1. Size parameters. zh_CN: 获取尺寸参数。
     int sWidth = m_secondaryWidth;
     int sepMargin = spacing.gap.tight; 
     
-    // Chevron 字号跟随密度：Small 使用 Caption(12px), 其他使用 Body(14px)
+    // Chevron size follows density: Small uses Caption(12px), others Body(14px).
+    // zh_CN: Chevron 字号跟随密度：Small 用 Caption(12px)，其余用 Body(14px)。
     int chevronSize = (fluentSize() == Small) ? Typography::FontSize::Caption : Typography::FontSize::Body;
 
     QRectF fullRect = rect();
     QRectF primaryRect = fullRect.adjusted(0, 0, -sWidth, 0);
     QRectF secondaryRect = fullRect.adjusted(width() - sWidth, 0, 0, 0);
 
-    // 2. 确定状态颜色
+    // 2. State colors. zh_CN: 确定状态颜色。
     bool checked = isChecked();
     QColor baseBg, textColor;
     
@@ -123,12 +125,12 @@ void SplitButton::paintEvent(QPaintEvent*) {
         textColor = colors.textDisabled;
     }
 
-    // 3. 绘制整体背景
+    // 3. Paint the shared background. zh_CN: 绘制整体背景。
     painter.setPen(Qt::NoPen);
     painter.setBrush(baseBg);
     painter.drawRoundedRect(fullRect, radius.control, radius.control);
 
-    // 4. 绘制分区域高亮
+    // 4. Paint per-zone highlights. zh_CN: 绘制分区域高亮。
     if (isEnabled()) {
         auto drawHighlight = [&](const QRectF& r, SplitPart part) {
             QColor highlight;
@@ -150,19 +152,21 @@ void SplitButton::paintEvent(QPaintEvent*) {
         drawHighlight(secondaryRect, Secondary);
     }
 
-    // 5. 绘制分割线 (使用 Token 颜色)
+    // 5. Paint the divider with token colors. zh_CN: 绘制分割线（使用 Token 颜色）。
     if (isEnabled()) {
-        // 分割线颜色：Accent 风格下变淡，Standard 风格下使用标准边框色
+        // Divider: lighter on Accent, standard stroke on Standard.
+        // zh_CN: 分割线——Accent 风格下变淡，Standard 风格用标准边框色。
         QColor sepColor = (fluentStyle() == Accent || checked) ? colors.strokeDivider : colors.strokeDefault;
         painter.setPen(QPen(sepColor, 1));
         painter.drawLine(QPointF(width() - sWidth, sepMargin), 
                          QPointF(width() - sWidth, height() - sepMargin));
     }
 
-    // 6. 绘制主内容 (Text/Icon)
+    // 6. Paint the primary content (text/icon). zh_CN: 绘制主内容。
     painter.setPen(textColor);
     painter.setFont(font());
-    // 两侧独立计算下沉偏移，模拟各自的点击触感
+    // Each zone sinks independently to suggest its own press feedback.
+    // zh_CN: 两侧独立计算下沉偏移，模拟各自的点击触感。
     const double primaryOffset   = (m_pressPart == Primary)   ? 0.5 : 0.0;
     const double secondaryOffset = (m_pressPart == Secondary) ? 0.5 : 0.0;
 
@@ -175,7 +179,7 @@ void SplitButton::paintEvent(QPaintEvent*) {
     int iconWidth = hasIconFont ? iconPixelSize() : 0;
     int totalContentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && hasIconFont) ? gap : 0);
     
-    // 计算在 primaryRect 内的起始位置
+    // Starting position inside primaryRect. zh_CN: 计算在 primaryRect 内的起始位置。
     double startX = primaryRect.left() + (primaryRect.width() - totalContentWidth) / 2.0;
     
     if (hasIconFont) {
@@ -193,14 +197,14 @@ void SplitButton::paintEvent(QPaintEvent*) {
         painter.drawText(textRect, Qt::AlignCenter, txt);
     }
 
-    // 7. 绘制 Chevron (下拉箭头)，按下时同样下沉 0.5px
+    // 7. Paint the chevron; it also sinks 0.5px while pressed. zh_CN: 绘制下拉箭头，按下时同样下沉 0.5px。
     QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
     iconFont.setPixelSize(chevronSize);
     painter.setFont(iconFont);
     painter.drawText(secondaryRect.translated(0, secondaryOffset),
                      Qt::AlignCenter, Typography::Icons::ChevronDown);
 
-    // 8. 焦点框
+    // 8. Focus ring. zh_CN: 焦点框。
     if (hasFocus() && isEnabled()) {
         QColor focusColor = colors.textSecondary;
         focusColor.setAlpha(120);

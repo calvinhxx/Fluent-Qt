@@ -12,7 +12,6 @@
 #include <QtMath>
 
 #include "compatibility/QtCompat.h"
-#include "design/Animation.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/basicinput/Button.h"
@@ -255,8 +254,8 @@ TimePickerColumn::TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeFie
     setFocusPolicy(Qt::StrongFocus);
 
     m_navButtonAnimation = new QVariantAnimation(this);
-    m_navButtonAnimation->setDuration(::Animation::Duration::Fast);
-    m_navButtonAnimation->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+    m_navButtonAnimation->setDuration(themeAnimation().fast);
+    m_navButtonAnimation->setEasingCurve(themeAnimation().decelerate);
     connect(m_navButtonAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         m_navButtonOpacity = value.toReal();
         refreshProperties();

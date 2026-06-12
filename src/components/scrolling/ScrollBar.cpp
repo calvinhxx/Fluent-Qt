@@ -28,7 +28,8 @@ void ScrollBar::init() {
     setContextMenuPolicy(Qt::NoContextMenu);
     ensureAnimation();
 
-    // 任意数值变化都视为“正在滚动”，触发显示并自动隐藏
+    // Any value change counts as scrolling: show, then auto-hide.
+    // zh_CN: 任意数值变化都视为“正在滚动”，触发显示并自动隐藏。
     connect(this, &QScrollBar::valueChanged, this, [this](int) {
         showWithAutoHide();
     });
@@ -55,15 +56,16 @@ void ScrollBar::ensureAnimation() {
     if (!m_opacityAnim) {
         m_opacityAnim = new QPropertyAnimation(this, "opacity", this);
         const auto anim = themeAnimation();
-        m_opacityAnim->setDuration(anim.fast);              // 使用 Fluent 快速反馈时长
-        m_opacityAnim->setEasingCurve(anim.decelerate);     // 进入/退出都用减速曲线，贴近 WinUI
+        m_opacityAnim->setDuration(anim.fast);              // Fluent fast-feedback duration. zh_CN: 使用 Fluent 快速反馈时长。
+        m_opacityAnim->setEasingCurve(anim.decelerate);     // Decelerate both ways, matching WinUI. zh_CN: 进入/退出都用减速曲线。
         m_opacityAnim->setStartValue(0.0);
         m_opacityAnim->setEndValue(1.0);
     }
     if (!m_autoHideTimer) {
         m_autoHideTimer = new QTimer(this);
         m_autoHideTimer->setSingleShot(true);
-        // 自动隐藏延迟基于主题动画：使用 Normal 时长的约两倍
+        // Auto-hide delay derives from motion tokens: about twice Normal.
+        // zh_CN: 自动隐藏延迟基于主题动画，约为 Normal 时长两倍。
         const auto anim = themeAnimation();
         m_autoHideTimer->setInterval(anim.normal * 2);
         connect(m_autoHideTimer, &QTimer::timeout, this, [this]() {
@@ -117,8 +119,10 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     const auto colors = themeColors();
     const bool isDark = (currentTheme() == FluentElement::Dark);
 
-    // 轨道：使用轻量的 Subtle 填充，圆角为厚度的一半。
-    // 与控件外框之间只留非常小的间距（可按需再引入独立的 trackPadding）。
+    // Track: a light subtle fill rounded at half the thickness, with only a
+    // tiny gap to the widget bounds (a separate trackPadding could come later).
+    // zh_CN: 轨道——轻量 Subtle 填充，圆角为厚度一半；与外框只留极小间距
+    // （可按需再引入独立 trackPadding）。
     const int trackInset = 0;
     const QRectF trackRect = QRectF(rect()).adjusted(trackInset + 0.5,
                                                      trackInset + 0.5,
@@ -137,8 +141,11 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
         p.drawRoundedRect(trackRect, r, r);
     }
 
-    // 自行计算 Thumb 绘制几何，交互仍由 QScrollBar 处理。这样可以在极值位置
-    // 保证端部留出完整抗锯齿空间，避免圆角被 widget 边界裁掉。
+    // Thumb geometry is computed here while QScrollBar keeps the interaction,
+    // so the rounded ends keep full antialiasing room at the extremes instead
+    // of being clipped by the widget bounds.
+    // zh_CN: 自行计算 Thumb 绘制几何，交互仍由 QScrollBar 处理；极值位置端部
+    // 保留完整抗锯齿空间，避免圆角被 widget 边界裁掉。
     const QRectF thumbTrack = trackRect.adjusted(m_thumbPadding.left(),
                                                  m_thumbPadding.top(),
                                                  -m_thumbPadding.right(),
@@ -197,7 +204,7 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
 
 void ScrollBar::enterEvent(FluentEnterEvent *event) {
     m_isHovered = true;
-    // 只有在可滚动且启用时才触发显示动画
+    // Only animate in when scrollable and enabled. zh_CN: 仅在可滚动且启用时触发显示动画。
     if (isEnabled() && maximum() > minimum()) {
         showWithAutoHide();
     }
@@ -212,7 +219,7 @@ void ScrollBar::leaveEvent(QEvent *event) {
 
 void ScrollBar::mousePressEvent(QMouseEvent *event) {
     m_isPressed = true;
-    // 只有在可滚动且启用时才触发显示动画
+    // Only animate in when scrollable and enabled. zh_CN: 仅在可滚动且启用时触发显示动画。
     if (isEnabled() && maximum() > minimum()) {
         showWithAutoHide();
     }

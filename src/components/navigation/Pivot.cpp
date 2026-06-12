@@ -13,6 +13,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "design/Typography.h"
+#include "design/CornerRadius.h"
 
 namespace fluent::navigation {
 
@@ -881,7 +882,8 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
     if (record.itemIndex == m_selectedIndex && record.enabled && record.indicatorRect.isValid()) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(themeColors().accentDefault);
-        painter.drawRoundedRect(record.indicatorRect, 1.5, 1.5);
+        painter.drawRoundedRect(record.indicatorRect,
+                                ::CornerRadius::Indicator, ::CornerRadius::Indicator);
     }
     painter.restore();
 }

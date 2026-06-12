@@ -45,7 +45,7 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
-    void nextCheckState() override; // 处理三态循环
+    void nextCheckState() override; // Drives the tri-state cycle. zh_CN: 处理三态循环。
 
 private:
     bool m_threeState = false;

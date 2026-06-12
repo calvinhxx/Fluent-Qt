@@ -97,11 +97,14 @@ public:
     bool isTailVisible() const { return m_tailVisible; }
     void setTailVisible(bool visible);
 
-    /// 卡片内容区域容器。向此 widget 添加子控件（AnchorLayout 等）。
+    /// Card content host: add child widgets (AnchorLayout etc.) to it. Its
+    /// geometry follows placement/cardSize automatically.
+    /// zh_CN: 卡片内容区容器——向此 widget 添加子控件（AnchorLayout 等）；
     /// 几何随 placement / cardSize 自动更新，无需手动管理。
     QWidget* contentHost() const { return m_contentHost; }
 
-    /// 设置卡片内容区域尺寸（不含阴影和气泡箭头）。默认 360×200。
+    /// Sets the card content size, excluding shadow and tail. Defaults to 360×200.
+    /// zh_CN: 设置卡片内容区尺寸（不含阴影和气泡箭头），默认 360×200。
     void setCardSize(const QSize& size);
     QSize cardSize() const { return m_cardSizeHint; }
 

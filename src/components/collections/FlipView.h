@@ -54,14 +54,14 @@ public:
 
     void onThemeUpdated() override;
 
-    // ── 页面管理 ──
+    // ── Page management. zh_CN: 页面管理 ──
     void addPage(QWidget* page);
     void insertPage(int index, QWidget* page);
     void removePage(int index);
     QWidget* pageAt(int index) const;
     int pageCount() const;
 
-    // ── 属性 ──
+    // ── Properties. zh_CN: 属性 ──
     int currentIndex() const { return m_currentIndex; }
     void setCurrentIndex(int index);
 
@@ -82,7 +82,7 @@ public:
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
-    // ── 导航 ──
+    // ── Navigation. zh_CN: 导航 ──
     void goNext();
     void goPrevious();
 
@@ -104,13 +104,13 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
-    // ── 几何 ──
+    // ── Geometry. zh_CN: 几何 ──
     QRect contentRect() const;
     QRect prevButtonRect() const;
     QRect nextButtonRect() const;
     QRect pageIndicatorRect() const;
 
-    // ── 内部 ──
+    // ── Internals. zh_CN: 内部 ──
     void layoutPages();
     void animateSlide(int fromIndex, int toIndex);
     void drawNavButton(QPainter& p, const QRect& rect, bool isNext, bool hovered, bool pressed);
@@ -125,25 +125,25 @@ private:
     bool m_showNavButtons = true;
     bool m_showPageIndicator = true;
 
-    // 动画
+    // Animation state. zh_CN: 动画。
     qreal m_slideOffset = 0.0;
     QPropertyAnimation* m_slideAnimation = nullptr;
     int m_animatingFromIndex = -1;
 
-    // 悬停状态
+    // Hover state. zh_CN: 悬停状态。
     bool m_isHovered = false;
     bool m_prevBtnHovered = false;
     bool m_nextBtnHovered = false;
     bool m_prevBtnPressed = false;
     bool m_nextBtnPressed = false;
 
-    // 滚轮/触控板
+    // Wheel / trackpad input. zh_CN: 滚轮/触控板。
     QElapsedTimer m_wheelCooldown;
-    int m_gestureAccum = 0;         // phase-based 累积
-    bool m_gestureConsumed = false;  // phase-based 手势已消费
-    int m_pendingFlipDir = 0;       // 动画期间排队的翻页方向 (-1=prev, 0=none, 1=next)
-    int m_npAccum = 0;              // NoScrollPhase cluster 累积
-    bool m_npConsumed = false;      // NoScrollPhase 当前 cluster 已消费
+    int m_gestureAccum = 0;         // Phase-based accumulation. zh_CN: phase-based 累积。
+    bool m_gestureConsumed = false;  // Phase-based gesture consumed. zh_CN: phase-based 手势已消费。
+    int m_pendingFlipDir = 0;       // Flip queued during animation (-1=prev, 0=none, 1=next). zh_CN: 动画期间排队的翻页方向。
+    int m_npAccum = 0;              // NoScrollPhase cluster accumulation. zh_CN: NoScrollPhase cluster 累积。
+    bool m_npConsumed = false;      // Current NoScrollPhase cluster consumed. zh_CN: NoScrollPhase 当前 cluster 已消费。
 };
 
 } // namespace fluent::collections

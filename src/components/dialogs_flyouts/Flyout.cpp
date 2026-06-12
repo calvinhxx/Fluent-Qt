@@ -6,7 +6,8 @@
 namespace fluent::dialogs_flyouts {
 
 Flyout::Flyout(QWidget* parent) : Popup(parent) {
-    // WinUI Flyout 默认 light-dismiss：非 modal、不变暗
+    // WinUI flyouts default to light-dismiss: non-modal, no dimming.
+    // zh_CN: WinUI Flyout 默认 light-dismiss——非 modal、不变暗。
     setModal(false);
     setDim(false);
     setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
@@ -29,7 +30,7 @@ void Flyout::showAt(QWidget* anchor) {
     open();
 }
 
-// ── 几何辅助 ─────────────────────────────────────────────────────────────────
+// ── Geometry helpers. zh_CN: 几何辅助 ────────────────────────────────────────
 
 QRect Flyout::anchorRectInTopLevel() const {
     if (!m_anchor) return QRect();
@@ -46,7 +47,7 @@ QPoint Flyout::clampCardPos(const QPoint& cardTopLeft) const {
 
     const QSize cardSize = ::fluent::overlay::visibleCardSize(size());
 
-    const int margin = 4;  // 与窗口边缘留点呼吸空间
+    const int margin = 4;  // Breathing room from the window edge. zh_CN: 与窗口边缘留点呼吸空间。
     return ::fluent::overlay::clampCardTopLeft(cardTopLeft, cardSize, top->rect(), margin);
 }
 
@@ -67,10 +68,10 @@ Flyout::Placement Flyout::resolveAutoPlacement() const {
     return spaceBelow >= spaceAbove ? Bottom : Top;
 }
 
-// ── 位置计算 ─────────────────────────────────────────────────────────────────
+// ── Placement. zh_CN: 位置计算 ───────────────────────────────────────────────
 
 QPoint Flyout::computePosition() const {
-    // 没有 anchor → 退化到基类（居中）
+    // No anchor: fall back to the base class (centered). zh_CN: 没有 anchor → 退化到基类（居中）。
     if (!m_anchor || !m_anchor->window()) {
         return Popup::computePosition();
     }
@@ -87,7 +88,7 @@ QPoint Flyout::computePosition() const {
     const int cardW = cardSize.width();
     const int cardH = cardSize.height();
 
-    // 卡片左上角（top-level 坐标）
+    // Card top-left in top-level coordinates. zh_CN: 卡片左上角（top-level 坐标）。
     QPoint card;
     switch (p) {
         case Top:
@@ -108,7 +109,7 @@ QPoint Flyout::computePosition() const {
             break;
         case Full:
         case Auto:
-            // 已在前面处理 / 转换
+            // Already handled / converted above. zh_CN: 已在前面处理/转换。
             return Popup::computePosition();
     }
 

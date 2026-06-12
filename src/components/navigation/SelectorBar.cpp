@@ -14,6 +14,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "design/Typography.h"
+#include "design/CornerRadius.h"
 
 namespace fluent::navigation {
 
@@ -1072,7 +1073,8 @@ void SelectorBar::paintSelectedIndicator(QPainter& painter) const
     painter.save();
     painter.setPen(Qt::NoPen);
     painter.setBrush(themeColors().accentDefault);
-    painter.drawRoundedRect(m_animatedIndicatorRect, 1.5, 1.5);
+    painter.drawRoundedRect(m_animatedIndicatorRect,
+                            ::CornerRadius::Indicator, ::CornerRadius::Indicator);
     painter.restore();
 }
 

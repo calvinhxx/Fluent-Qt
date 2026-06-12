@@ -19,7 +19,7 @@ namespace fluent::textfields { class LineEdit; }
 
 namespace fluent::basicinput {
 
-// ─── ComboBox 弹层代理 ──────────────────────────────────────────────────────
+// ─── ComboBox popup delegate. zh_CN: ComboBox 弹层代理 ─────────────────────
 
 /**
  * @brief Delegate that paints ComboBox popup rows with Fluent metrics.
@@ -188,7 +188,7 @@ private:
     ComboBoxPopup* m_popup = nullptr;
 };
 
-// ─── ComboBox 弹层窗口 ──────────────────────────────────────────────────────
+// ─── ComboBox popup window. zh_CN: ComboBox 弹层窗口 ───────────────────────
 
 /**
  * @brief Flyout-backed dropdown host used internally by ComboBox.

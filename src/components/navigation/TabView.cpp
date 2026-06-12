@@ -1691,7 +1691,8 @@ void TabStrip::paintSelectedIndicator(QPainter& painter)
     painter.save();
     painter.setPen(Qt::NoPen);
     painter.setBrush(themeColors().accentDefault);
-    painter.drawRoundedRect(m_animatedIndicatorRect, 1, 1);
+    painter.drawRoundedRect(m_animatedIndicatorRect,
+                            ::CornerRadius::Indicator, ::CornerRadius::Indicator);
     painter.restore();
 }
 

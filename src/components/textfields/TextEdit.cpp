@@ -20,7 +20,7 @@
 
 namespace fluent::textfields {
 
-// ── 辅助函数 ───────────────────────────────────────────────────────────────────
+// ── Helpers. zh_CN: 辅助函数 ───────────────────────────────────────────────────
 
 static int calcTopPad(const QFont& font, int lineHeight) {
     const int fontLh = QFontMetrics(font).lineSpacing();
@@ -32,14 +32,19 @@ static int calcBotPad(const QFont& font, int lineHeight) {
     return qMax(0, lineHeight - fontLh);
 }
 
-// ── 内部编辑器 ─────────────────────────────────────────────────────────────────
+// ── Inner editor. zh_CN: 内部编辑器 ────────────────────────────────────────────
 //
-// 使用 QTextEdit（而非 QPlainTextEdit），因为 QTextDocumentLayout 原生支持
-// QTextBlockFormat 的 topMargin/bottomMargin 以及 rootFrame margin。
-// 通过以下方式实现每行文本和光标在 lineHeight 槽内垂直居中：
-//   - rootFrame topMargin = (lineHeight - fontLh) / 2       … 首行上方留白
-//   - 每个 block bottomMargin = lineHeight - fontLh         … 行间距
-//   Qt 自动处理光标定位、选区高亮、鼠标点击映射，无需自定义 paintEvent。
+// QTextEdit is used (not QPlainTextEdit) because QTextDocumentLayout natively
+// honors QTextBlockFormat top/bottom margins plus the rootFrame margin. Each
+// text line and the caret center vertically inside the lineHeight slot via:
+//   - rootFrame topMargin = (lineHeight - fontLh) / 2  … space above line one
+//   - per-block bottomMargin = lineHeight - fontLh     … line spacing
+// Qt then handles caret placement, selection, and hit testing without a
+// custom paintEvent.
+// zh_CN: 使用 QTextEdit（而非 QPlainTextEdit），因为 QTextDocumentLayout 原生
+// 支持 QTextBlockFormat 的上下边距及 rootFrame 边距。借助上述两条公式，每行
+// 文本与光标在 lineHeight 槽内垂直居中；光标定位、选区高亮、点击映射均由 Qt
+// 自动处理，无需自定义 paintEvent。
 
 class InnerTextEdit : public QTextEdit {
 public:
@@ -55,7 +60,9 @@ public:
 protected:
     void paintEvent(QPaintEvent* e) override {
         QTextEdit::paintEvent(e);
-        // Qt 原生 placeholder 不受 rootFrame topMargin 影响，自绘以实现垂直居中
+        // Qt's stock placeholder ignores the rootFrame topMargin, so paint it
+        // ourselves to keep it vertically centered.
+        // zh_CN: Qt 原生 placeholder 不受 rootFrame topMargin 影响，自绘实现垂直居中。
         if (!m_owner || !document()->isEmpty()) return;
         const QString ph = m_owner->placeholderText();
         if (ph.isEmpty()) return;
@@ -73,7 +80,7 @@ private:
     TextEdit* m_owner = nullptr;
 };
 
-// ── 构造 ────────────────────────────────────────────────────────────────────────
+// ── Construction. zh_CN: 构造 ───────────────────────────────────────────────────
 
 TextEdit::TextEdit(QWidget* parent)
     : QWidget(parent) {
@@ -89,10 +96,12 @@ TextEdit::TextEdit(QWidget* parent)
     m_editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_editor->setAutoFillBackground(false);
 
-    // 移除文档默认四周留白（由 rootFrame margin + block margin 全权控制）
+    // Remove the document's default padding; rootFrame and block margins own it.
+    // zh_CN: 移除文档默认四周留白（由 rootFrame margin + block margin 全权控制）。
     m_editor->document()->setDocumentMargin(0);
 
-    // 监听文本变化：对新 block 应用居中格式 + 更新高度
+    // On text change: apply the centering format to new blocks and update height.
+    // zh_CN: 监听文本变化：对新 block 应用居中格式并更新高度。
     connect(m_editor, &QTextEdit::textChanged, this, [this]() {
         if (!m_updatingFormat) {
             applyBlockCenterFormat();
@@ -106,7 +115,7 @@ TextEdit::TextEdit(QWidget* parent)
             this, &TextEdit::selectionChanged);
     m_editor->installEventFilter(this);
 
-    // 自定义 Fluent 滚动条
+    // Custom fluent scroll bar. zh_CN: 自定义 Fluent 滚动条。
     m_vScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Vertical, this);
     m_vScrollBar->hide();
 
@@ -120,7 +129,8 @@ TextEdit::TextEdit(QWidget* parent)
                 if (!m_vScrollBar) return;
                 m_vScrollBar->setRange(innerVBar->minimum(), innerVBar->maximum());
                 m_vScrollBar->setPageStep(innerVBar->pageStep());
-                // 滚动条可见性由 updateHeightForContent 统一管理
+                // Scroll bar visibility is owned by updateHeightForContent.
+                // zh_CN: 滚动条可见性由 updateHeightForContent 统一管理。
             });
     connect(innerVBar, &QScrollBar::valueChanged,
             this, [this](int v) {
@@ -133,12 +143,12 @@ TextEdit::TextEdit(QWidget* parent)
                     innerVBar->setValue(v);
             });
 
-    // 初始主题 + 行格式 + 高度（顺序重要）
+    // Initial theme, line format, then height (order matters). zh_CN: 初始主题 + 行格式 + 高度（顺序重要）。
     onThemeUpdated();
     updateHeightForContent();
 }
 
-// ── 文本 API ────────────────────────────────────────────────────────────────────
+// ── Text API. zh_CN: 文本 API ───────────────────────────────────────────────────
 
 void TextEdit::setPlainText(const QString& text) {
     if (m_editor) {
@@ -185,7 +195,7 @@ void TextEdit::setFocus(Qt::FocusReason reason) {
     if (m_editor) m_editor->setFocus(reason);
 }
 
-// ── 事件 ────────────────────────────────────────────────────────────────────────
+// ── Events. zh_CN: 事件 ─────────────────────────────────────────────────────────
 
 void TextEdit::paintEvent(QPaintEvent* event) {
     QPainter p(this);
@@ -284,13 +294,13 @@ bool TextEdit::eventFilter(QObject* obj, QEvent* event) {
         } else if (event->type() == QEvent::FocusOut) {
             m_isFocused = false; update();
         } else if (event->type() == QEvent::Wheel && !m_scrollEnabled) {
-            return true; // 内容未超过 maxVisibleLines 时禁止滚动
+            return true; // No scrolling while content fits within maxVisibleLines. zh_CN: 内容未超过 maxVisibleLines 时禁止滚动。
         }
     }
     return QWidget::eventFilter(obj, event);
 }
 
-// ── 属性 setter ─────────────────────────────────────────────────────────────────
+// ── Property setters. zh_CN: 属性 setter ────────────────────────────────────────
 
 void TextEdit::setContentMargins(const QMargins& margins) {
     if (m_contentMargins == margins) return;
@@ -348,7 +358,7 @@ void TextEdit::onThemeUpdated() {
     applyThemeStyle();
 }
 
-// ── 核心私有方法 ────────────────────────────────────────────────────────────────
+// ── Core internals. zh_CN: 核心私有方法 ─────────────────────────────────────────
 
 void TextEdit::applyThemeStyle() {
     if (!m_editor) return;
@@ -389,7 +399,8 @@ void TextEdit::applyThemeStyle() {
         vp->setStyleSheet("background: transparent; border: none;");
     }
 
-    // 字体变更后重算居中 margin（fontLineSpacing 可能不同）
+    // Recompute centering margins after font changes (fontLineSpacing may differ).
+    // zh_CN: 字体变更后重算居中 margin（fontLineSpacing 可能不同）。
     applyBlockCenterFormat();
 }
 
@@ -402,7 +413,8 @@ void TextEdit::applyBlockCenterFormat() {
     const int topPad = calcTopPad(f, m_lineHeight);
     const int botPad = calcBotPad(f, m_lineHeight);
 
-    // 1. rootFrame topMargin — 首行上方留白，实现垂直居中
+    // 1. rootFrame topMargin: space above line one for vertical centering.
+    // zh_CN: rootFrame topMargin — 首行上方留白，实现垂直居中。
     QTextFrameFormat rff = m_editor->document()->rootFrame()->frameFormat();
     rff.setTopMargin(topPad);
     rff.setBottomMargin(0);
@@ -410,8 +422,11 @@ void TextEdit::applyBlockCenterFormat() {
     rff.setRightMargin(0);
     m_editor->document()->rootFrame()->setFrameFormat(rff);
 
-    // 2. LineDistanceHeight — 每个视觉行高 = fontLh + botPad = lineHeight
-    //    不使用 bottomMargin，否则与 LineDistanceHeight 重叠导致行间距翻倍
+    // 2. LineDistanceHeight: each visual line = fontLh + botPad = lineHeight.
+    //    bottomMargin is avoided; combined with LineDistanceHeight it would
+    //    double the line spacing.
+    // zh_CN: LineDistanceHeight — 每个视觉行高 = fontLh + botPad = lineHeight；
+    // 不使用 bottomMargin，否则与 LineDistanceHeight 重叠导致行间距翻倍。
     QTextBlockFormat fmt;
     fmt.setLineHeight(botPad, QTextBlockFormat::LineDistanceHeight);
     fmt.setBottomMargin(0);
@@ -421,7 +436,7 @@ void TextEdit::applyBlockCenterFormat() {
     cursor.movePosition(QTextCursor::End, QTextCursor::KeepAnchor);
     cursor.mergeBlockFormat(fmt);
 
-    // 3. 左右 viewport margins
+    // 3. Left/right viewport margins. zh_CN: 左右 viewport margins。
     static_cast<InnerTextEdit*>(m_editor)->setContentViewportMargins(
         m_contentMargins.left(), 0, m_contentMargins.right(), 0);
 
@@ -431,7 +446,7 @@ void TextEdit::applyBlockCenterFormat() {
 void TextEdit::updateHeightForContent() {
     if (!m_editor) return;
 
-    // 统计所有可视行数（包括自动换行产生的行）
+    // Count all visual lines, including wrap-generated ones. zh_CN: 统计所有可视行数（包括自动换行产生的行）。
     int visualLines = 0;
     QTextBlock block = m_editor->document()->begin();
     while (block.isValid()) {
@@ -446,11 +461,13 @@ void TextEdit::updateHeightForContent() {
     // height = clampedLines × lineHeight
     setFixedHeight(clamped * m_lineHeight);
 
-    // 滚动条仅在内容实际超过 maxVisibleLines 时显示
+    // The scroll bar only appears once content exceeds maxVisibleLines.
+    // zh_CN: 滚动条仅在内容实际超过 maxVisibleLines 时显示。
     m_scrollEnabled = (visualLines > m_maxVisibleLines);
     if (m_vScrollBar)
         m_vScrollBar->setVisible(m_scrollEnabled);
-    // 无需滚动时重置内部滚动位置，避免内容偏移
+    // Reset the inner scroll position when not needed to avoid content drift.
+    // zh_CN: 无需滚动时重置内部滚动位置，避免内容偏移。
     if (!m_scrollEnabled && m_editor)
         m_editor->verticalScrollBar()->setValue(0);
 

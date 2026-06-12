@@ -20,17 +20,17 @@ static constexpr int kContentGap      = Spacing::Medium;          // 12
 static constexpr int kButtonGap       = Spacing::Gap::Normal;     // 8
 static constexpr int kMinDialogWidth  = 320;
 
-// ── 构造 ─────────────────────────────────────────────────────────────────────
+// ── Construction. zh_CN: 构造 ────────────────────────────────────────────────
 
 ContentDialog::ContentDialog(QWidget* parent) : Dialog(parent) {
-    setSmokeEnabled(true);   // 模态蒙层对话框默认开启蒙层
-    setDragEnabled(false);   // 模态蒙层对话框默认不可拖拽
+    setSmokeEnabled(true);   // Modal dialogs dim the background by default. zh_CN: 模态蒙层对话框默认开启蒙层。
+    setDragEnabled(false);   // Modal dialogs are not draggable by default. zh_CN: 模态蒙层对话框默认不可拖拽。
     setupInternalLayout();
     setMinimumWidth(kMinDialogWidth + 2 * shadowSize());
     onThemeUpdated();
 }
 
-// ── 内部布局（AnchorLayout 驱动） ────────────────────────────────────────────
+// ── Internal layout (AnchorLayout driven). zh_CN: 内部布局（AnchorLayout 驱动）──
 
 void ContentDialog::setupInternalLayout() {
     auto* anchorLayout = new AnchorLayout(this);
@@ -45,7 +45,7 @@ void ContentDialog::setupInternalLayout() {
     m_titleLabel->anchors()->right = {this, Edge::Right, -kDialogPadding};
     anchorLayout->addWidget(m_titleLabel);
 
-    // --- Button bar (底部区域，置于 contentRect 内) ---
+    // --- Button bar (bottom area inside contentRect). zh_CN: 底部按钮栏，置于 contentRect 内。---
     m_buttonBar = new QWidget(this);
     m_buttonBar->setFixedHeight(kButtonBarHeight);
     m_buttonBar->setAttribute(Qt::WA_TranslucentBackground);
@@ -56,8 +56,10 @@ void ContentDialog::setupInternalLayout() {
     barAnchors.bottom = {this, Edge::Bottom, 0};
     anchorLayout->addAnchoredWidget(m_buttonBar, barAnchors);
 
-    // 按钮栏内部 QHBoxLayout（等宽分配）
-    // barAnchors 与 contentsRect 对齐（contentsMargins 已处理 shadow 偏移）
+    // The bar's inner QHBoxLayout distributes buttons evenly; barAnchors align
+    // with contentsRect (contentsMargins already covers the shadow offset).
+    // zh_CN: 按钮栏内部 QHBoxLayout 等宽分配；barAnchors 与 contentsRect 对齐
+    // （contentsMargins 已处理 shadow 偏移）。
     const int hPad = kDialogPadding;
     const int vPad = (kButtonBarHeight - ::Spacing::ControlHeight::Standard) / 2;
     auto* btnLayout = new QHBoxLayout(m_buttonBar);
@@ -75,7 +77,7 @@ void ContentDialog::setupInternalLayout() {
     btnLayout->addWidget(m_primaryBtn,   0);
     btnLayout->addWidget(m_secondaryBtn, 0);
     btnLayout->addWidget(m_closeBtn,     0);
-    btnLayout->addStretch(1);  // 左对齐：右侧留白
+    btnLayout->addStretch(1);  // Left-aligned: spare space on the right. zh_CN: 左对齐，右侧留白。
 
     connect(m_primaryBtn, &fluent::basicinput::Button::clicked, this, [this]() {
         emit primaryButtonClicked();
@@ -93,7 +95,7 @@ void ContentDialog::setupInternalLayout() {
     updateButtonBar();
 }
 
-// ── 属性 ─────────────────────────────────────────────────────────────────────
+// ── Properties. zh_CN: 属性 ──────────────────────────────────────────────────
 
 QString ContentDialog::title() const { return m_titleLabel->text(); }
 void ContentDialog::setTitle(const QString& text) {
@@ -141,14 +143,15 @@ void ContentDialog::setContent(QWidget* widget) {
     }
 }
 
-// ── 内部刷新 ─────────────────────────────────────────────────────────────────
+// ── Internal refresh. zh_CN: 内部刷新 ────────────────────────────────────────
 
 void ContentDialog::updateButtonBar() {
     m_primaryBtn  ->setVisible(!m_primaryBtn->text().isEmpty());
     m_secondaryBtn->setVisible(!m_secondaryBtn->text().isEmpty());
     m_closeBtn    ->setVisible(!m_closeBtn->text().isEmpty());
 
-    // 重置风格，再给 defaultButton 应用 Accent
+    // Reset all styles, then give the default button the accent style.
+    // zh_CN: 重置风格，再给 defaultButton 应用 Accent。
     m_primaryBtn  ->setFluentStyle(fluent::basicinput::Button::Standard);
     m_secondaryBtn->setFluentStyle(fluent::basicinput::Button::Standard);
     m_closeBtn    ->setFluentStyle(fluent::basicinput::Button::Standard);
@@ -159,8 +162,10 @@ void ContentDialog::updateButtonBar() {
         default: break;
     }
 
-    // 注意：不能用 isVisible() 判断，因为 dialog 未 show() 前子控件 isVisible() 永返 false。
-    // 改用 text 空判断，与 setVisible 参数等价。
+    // isVisible() is unusable here: before the dialog is shown every child
+    // reports false. Test the text instead, which matches the setVisible call.
+    // zh_CN: 不能用 isVisible() 判断——dialog 未 show() 前子控件恒为 false；
+    // 改用文本空判断，与 setVisible 参数等价。
     const bool anyVisible = !m_primaryBtn->text().isEmpty()
                          || !m_secondaryBtn->text().isEmpty()
                          || !m_closeBtn->text().isEmpty();
@@ -172,8 +177,10 @@ void ContentDialog::updateContentAnchors() {
     if (!m_contentWidget) return;
 
     Anchors a;
-    // 注意：不能用 m_titleLabel->isVisible()——dialog 未 show() 前子控件
-    // isVisible() 永返 false，会导致 content 错误地锚到 dialog 顶部而非 title 下方。
+    // m_titleLabel->isVisible() is unusable before show(): it reports false and
+    // would anchor the content to the dialog top instead of below the title.
+    // zh_CN: 不能用 m_titleLabel->isVisible()——show() 前恒为 false，会让 content
+    // 错误地锚到 dialog 顶部而非 title 下方。
     const bool titleShown = !m_titleLabel->text().isEmpty();
     if (titleShown)
         a.top = {m_titleLabel, Edge::Bottom, kContentGap};
@@ -190,7 +197,7 @@ void ContentDialog::updateContentAnchors() {
         al->addAnchoredWidget(m_contentWidget, a);
 }
 
-// ── 主题 ─────────────────────────────────────────────────────────────────────
+// ── Theme. zh_CN: 主题 ───────────────────────────────────────────────────────
 
 void ContentDialog::onThemeUpdated() {
     Dialog::onThemeUpdated();
@@ -204,7 +211,7 @@ void ContentDialog::onThemeUpdated() {
     }
 }
 
-// ── 绘制（两区域：bgLayer + bgCanvas） ──────────────────────────────────────
+// ── Painting: two regions, bgLayer + bgCanvas. zh_CN: 绘制（两区域）──────────
 
 void ContentDialog::paintEvent(QPaintEvent*) {
 
@@ -222,7 +229,7 @@ void ContentDialog::paintEvent(QPaintEvent*) {
     const auto& colors = themeColors();
     const int r = themeRadius().overlay;
 
-    // 用圆角矩形做裁剪区
+    // Clip to the rounded card. zh_CN: 用圆角矩形做裁剪区。
     QPainterPath clipPath;
     clipPath.addRoundedRect(contentRect, r, r);
     painter.setClipPath(clipPath);
@@ -230,22 +237,22 @@ void ContentDialog::paintEvent(QPaintEvent*) {
     if (m_buttonBar && m_buttonBar->isVisible()) {
         const int dividerY = m_buttonBar->geometry().top();
 
-        // 内容区（bgLayer）
+        // Content area (bgLayer). zh_CN: 内容区。
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.bgLayer);
         painter.drawRect(QRect(contentRect.left(), contentRect.top(),
                                contentRect.width(), dividerY - contentRect.top()));
 
-        // 按钮区（bgCanvas）
+        // Button area (bgCanvas). zh_CN: 按钮区。
         painter.setBrush(colors.bgCanvas);
         painter.drawRect(QRect(contentRect.left(), dividerY,
                                contentRect.width(), contentRect.bottom() - dividerY + 1));
 
-        // 1px 分割线
+        // 1px divider. zh_CN: 1px 分割线。
         painter.setPen(QPen(colors.strokeDivider, 1));
         painter.drawLine(contentRect.left(), dividerY, contentRect.right(), dividerY);
     } else {
-        // 无按钮区域时，整块 bgLayer
+        // Without a button bar the whole card is bgLayer. zh_CN: 无按钮区域时整块 bgLayer。
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.bgLayer);
         painter.drawRect(contentRect);
@@ -253,7 +260,7 @@ void ContentDialog::paintEvent(QPaintEvent*) {
 
     painter.setClipping(false);
 
-    // 外边框
+    // Outer border. zh_CN: 外边框。
     painter.setBrush(Qt::NoBrush);
     painter.setPen(colors.strokeDefault);
     painter.drawRoundedRect(contentRect, r, r);

@@ -67,7 +67,7 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
 public:
     explicit TextEdit(QWidget* parent = nullptr);
 
-    // 文本相关 API
+    // Text APIs. zh_CN: 文本相关 API。
     void setPlainText(const QString& text);
     QString toPlainText() const;
     void clear();
@@ -131,8 +131,10 @@ private:
     void updateHeightForContent();
 
     /**
-     * @brief 设置 rootFrame margin + block bottomMargin 实现垂直居中，
-     *        并设置左右 viewport margins。
+     * @brief Applies rootFrame/block margins for vertical centering plus the
+     *        horizontal viewport margins.
+     * zh_CN: 设置 rootFrame margin + block bottomMargin 实现垂直居中，
+     * 并设置左右 viewport margins。
      */
     void applyBlockCenterFormat();
 

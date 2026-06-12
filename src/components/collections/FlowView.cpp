@@ -21,10 +21,10 @@
 #include <QVariantAnimation>
 
 #include "compatibility/QtCompat.h"
-#include "design/Animation.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::collections {
@@ -65,14 +65,11 @@ FlowView::FlowView(QWidget* parent)
     m_headerLabel->hide();
     m_headerLabel->setIndent(::Spacing::Padding::ListItemHorizontal);
 
-    m_vScrollBar = new ::fluent::scrolling::ScrollBar(Qt::Vertical, this);
-    m_vScrollBar->setObjectName(QStringLiteral("fluentFlowViewScrollBar"));
-    m_vScrollBar->hide();
-
-    auto* nativeVBar = verticalScrollBar();
-    connect(nativeVBar, &QScrollBar::valueChanged, m_vScrollBar, &QScrollBar::setValue);
-    connect(m_vScrollBar, &QScrollBar::valueChanged, nativeVBar, &QScrollBar::setValue);
-    connect(nativeVBar, &QScrollBar::rangeChanged, this, &FlowView::syncFluentScrollBar);
+    m_vScrollBar = ::fluent::scrolling::createOverlayScrollBar(
+        Qt::Vertical, this, verticalScrollBar(),
+        QStringLiteral("fluentFlowViewScrollBar"));
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged,
+            this, &FlowView::syncFluentScrollBar);
 
     applyThemeStyle();
     updateViewportMargins();
@@ -806,13 +803,11 @@ void FlowView::invalidateFlowLayout()
 
 void FlowView::syncFluentScrollBar()
 {
-    for (auto* bar : {verticalScrollBar(), horizontalScrollBar()}) {
-        if (bar) {
-            bar->setAttribute(Qt::WA_DontShowOnScreen, true);
-            bar->hide();
-        }
-    }
+    ::fluent::scrolling::suppressNativeScrollBars(verticalScrollBar(), horizontalScrollBar());
 
+    // FlowView owns its scroll model: derive the native range from the laid-out
+    // content height before mirroring it onto the overlay bar.
+    // zh_CN: FlowView 自管滚动模型：先按排版后的内容高度推导原生范围，再镜像到覆盖条。
     ensureLayout();
     QScrollBar* native = verticalScrollBar();
     const int maxValue = qMax(0, m_contentSize.height() - viewport()->height());
@@ -823,21 +818,14 @@ void FlowView::syncFluentScrollBar()
     if (!m_vScrollBar)
         return;
 
-    m_vScrollBar->setRange(native->minimum(), native->maximum());
-    m_vScrollBar->setPageStep(native->pageStep());
     m_vScrollBar->setValue(native->value());
-
-    const bool needScroll = native->maximum() > native->minimum();
-    m_vScrollBar->setVisible(needScroll);
-    if (!needScroll)
+    if (!::fluent::scrolling::mirrorNativeScrollBar(m_vScrollBar, native))
         return;
 
     const QRect r = rect();
     const int top = (m_headerLabel && m_headerLabel->isVisible()) ? m_headerLabel->geometry().bottom() + 2 : r.top() + 2;
-    const int x = r.right() - m_vScrollBar->thickness() + 1;
-    const int height = r.bottom() - top - 2;
-    m_vScrollBar->setGeometry(x, top, m_vScrollBar->thickness(), height);
-    m_vScrollBar->raise();
+    ::fluent::scrolling::placeVerticalScrollBar(m_vScrollBar, r, top,
+                                                /*rightInset=*/0, /*bottomInset=*/2);
 }
 
 void FlowView::ensureLayout() const
@@ -1182,8 +1170,8 @@ void FlowView::updateDragDisplacement()
         auto* anim = new QVariantAnimation(this);
         anim->setStartValue(current);
         anim->setEndValue(target);
-        anim->setDuration(::Animation::Duration::Fast);
-        anim->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
+        anim->setDuration(themeAnimation().fast);
+        anim->setEasingCurve(themeAnimation().decelerate);
         connect(anim, &QVariantAnimation::valueChanged, this, [this, row](const QVariant& value) {
             m_dragOffsets[row] = value.toPointF();
             viewport()->update();
