@@ -141,6 +141,9 @@ TEST_F(DatePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Day), QStringLiteral("day"));
     EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Year), QStringLiteral("year"));
     EXPECT_EQ(picker.focusPolicy(), Qt::StrongFocus);
+#ifdef Q_OS_MAC
+    EXPECT_FALSE(picker.testAttribute(Qt::WA_MacShowFocusRect));
+#endif
     EXPECT_FALSE(picker.sizeHint().isEmpty());
     EXPECT_NE(dynamic_cast<Button*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<QWidget*>(&picker), nullptr);
@@ -393,6 +396,9 @@ TEST_F(DatePickerTest, FlyoutColumnsUseCaretGlyphsAndNoFocusFrame)
     EXPECT_EQ(dayColumn->property("nextButtonGlyph").toString(), pickerChevronDownGlyph());
     EXPECT_EQ(dayColumn->property("textAlignment").toInt(), static_cast<int>(Qt::AlignHCenter));
     EXPECT_FALSE(dayColumn->property("focusFrameVisible").toBool());
+#ifdef Q_OS_MAC
+    EXPECT_FALSE(dayColumn->testAttribute(Qt::WA_MacShowFocusRect));
+#endif
     EXPECT_TRUE(dayColumn->property("selectedRowHasBackground").toBool());
 
     FLUENT_MAKE_ENTER_EVENT(enterEvent, dayColumn->rect().center().x(), dayColumn->rect().center().y());

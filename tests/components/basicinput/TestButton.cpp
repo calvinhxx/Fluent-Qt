@@ -158,6 +158,15 @@ TEST_F(ButtonTest, DisabledSubtleButtonKeepsTransparentSurface) {
     EXPECT_EQ(visiblePixels, 0);
 }
 
+TEST_F(ButtonTest, CustomPaintedButtonSuppressesNativeMacFocusRing) {
+    Button button;
+#ifdef Q_OS_MAC
+    EXPECT_FALSE(button.testAttribute(Qt::WA_MacShowFocusRect));
+#else
+    SUCCEED();
+#endif
+}
+
 TEST_F(ButtonTest, VisualPropertyVerification) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";

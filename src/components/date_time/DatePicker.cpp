@@ -246,6 +246,9 @@ PickerColumn::PickerColumn(DatePickerFlyout* flyout, DatePicker::DateField field
     , m_field(field)
 {
     setAttribute(Qt::WA_Hover);
+#ifdef Q_OS_MAC
+    setAttribute(Qt::WA_MacShowFocusRect, false);
+#endif
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
 

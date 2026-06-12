@@ -90,11 +90,17 @@ void drawCenteredIconGlyph(QPainter& painter,
 
 Button::Button(const QString& text, QWidget* parent) : QPushButton(text, parent) {
     setAttribute(Qt::WA_Hover);
+#ifdef Q_OS_MAC
+    setAttribute(Qt::WA_MacShowFocusRect, false);
+#endif
     setFont(themeFont("Body").toQFont()); // 默认 Body，后续可用 setFont() 覆盖
 }
 
 Button::Button(QWidget* parent) : QPushButton(parent) {
     setAttribute(Qt::WA_Hover);
+#ifdef Q_OS_MAC
+    setAttribute(Qt::WA_MacShowFocusRect, false);
+#endif
     setFont(themeFont("Body").toQFont());
 }
 

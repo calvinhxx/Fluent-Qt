@@ -134,6 +134,9 @@ TEST_F(TimePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Minute), QStringLiteral("minute"));
     EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Period), QStringLiteral("AM/PM"));
     EXPECT_EQ(picker.focusPolicy(), Qt::StrongFocus);
+#ifdef Q_OS_MAC
+    EXPECT_FALSE(picker.testAttribute(Qt::WA_MacShowFocusRect));
+#endif
     EXPECT_FALSE(picker.sizeHint().isEmpty());
     EXPECT_NE(dynamic_cast<QWidget*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<Button*>(&picker), nullptr);
@@ -375,6 +378,9 @@ TEST_F(TimePickerTest, FlyoutColumnsUseCaretGlyphsAndNoFocusFrame)
     EXPECT_EQ(minuteColumn->property("nextButtonGlyph").toString(), pickerChevronDownGlyph());
     EXPECT_EQ(minuteColumn->property("textAlignment").toInt(), static_cast<int>(Qt::AlignHCenter));
     EXPECT_FALSE(minuteColumn->property("focusFrameVisible").toBool());
+#ifdef Q_OS_MAC
+    EXPECT_FALSE(minuteColumn->testAttribute(Qt::WA_MacShowFocusRect));
+#endif
     EXPECT_TRUE(minuteColumn->property("selectedRowHasBackground").toBool());
 
     FLUENT_MAKE_ENTER_EVENT(enterEvent, minuteColumn->rect().center().x(), minuteColumn->rect().center().y());
