@@ -17,6 +17,7 @@
 #include "GalleryCompactFlyout.h"
 #include "GalleryNavigationDelegate.h"
 #include "GalleryNavigationMetrics.h"
+#include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {
 
@@ -144,6 +145,7 @@ void GalleryNavigationPane::setSettingsIconRotation(qreal rotation)
 
 void GalleryNavigationPane::onThemeUpdated()
 {
+    updateDividerPalette();
     if (m_treeView && m_treeView->viewport())
         m_treeView->viewport()->update();
 }
@@ -155,6 +157,15 @@ void GalleryNavigationPane::rebuild()
     auto* outerLayout = new QVBoxLayout(this);
     outerLayout->setContentsMargins(0, 0, 0, 0);
     outerLayout->setSpacing(0);
+
+    if (isFooterOnly()) {
+        m_footerDivider = new QWidget(this);
+        m_footerDivider->setObjectName(QStringLiteral("galleryFooterNavigationDivider"));
+        m_footerDivider->setFixedHeight(1);
+        m_footerDivider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        outerLayout->addWidget(m_footerDivider);
+        updateDividerPalette();
+    }
 
     m_treeView = new fluent::collections::TreeView(this);
     m_treeView->setObjectName(isFooterOnly()
@@ -283,6 +294,17 @@ void GalleryNavigationPane::syncCompactVisualProperties()
         m_treeView->viewport()->setProperty("galleryCompactVisualProgress", m_compactVisualProgress);
         m_treeView->viewport()->setProperty("gallerySettingsIconRotation", m_settingsIconRotation);
     }
+}
+
+void GalleryNavigationPane::updateDividerPalette()
+{
+    if (!m_footerDivider)
+        return;
+
+    const auto colors = themeColors();
+    m_footerDivider->setStyleSheet(QStringLiteral(
+                                       "#galleryFooterNavigationDivider { background: %1; }")
+                                       .arg(cssColor(colors.strokeDivider)));
 }
 
 void GalleryNavigationPane::startCompactVisualTransition(bool compact)
