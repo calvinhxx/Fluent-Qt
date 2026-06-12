@@ -226,6 +226,10 @@ QSize Button::minimumSizeHint() const {
     return sizeHint();
 }
 
+QRectF Button::contentPaintRect(const QRectF& surfaceRect) const {
+    return surfaceRect;
+}
+
 void Button::paintEvent(QPaintEvent*) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
@@ -344,8 +348,9 @@ void Button::paintEvent(QPaintEvent*) {
     
     int totalContentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && (hasIconFont || !pix.isNull())) ? gap : 0);
     
-    double startX = contentRect.left() + (contentRect.width() - totalContentWidth) / 2.0;
-    double centerY = contentRect.center().y();
+    const QRectF layoutRect = contentPaintRect(contentRect);
+    double startX = layoutRect.left() + (layoutRect.width() - totalContentWidth) / 2.0;
+    double centerY = layoutRect.center().y();
 
     painter.setPen(textColor);
     painter.setRenderHint(QPainter::TextAntialiasing); // 确保 iconfont 文字抗锯齿
@@ -353,11 +358,12 @@ void Button::paintEvent(QPaintEvent*) {
     if (m_layout == IconAfter) {
         // 文本在前，图标在后
         if (!txt.isEmpty()) {
-            painter.drawText(QRectF(startX, 0, txtWidth, height()), Qt::AlignCenter, txt);
+            painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()),
+                             Qt::AlignCenter, txt);
             startX += txtWidth + gap;
         }
         if (hasIconFont) {
-            QRectF iconRect(startX, contentRect.top(), iconWidth, contentRect.height());
+            QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
             drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily,
                                   m_iconPixelSize, iconRect, m_iconOffset);
             painter.setFont(font());
@@ -371,7 +377,7 @@ void Button::paintEvent(QPaintEvent*) {
     } else {
         // 图标在前，文本在后（或仅图标）
         if (hasIconFont) {
-            QRectF iconRect(startX, contentRect.top(), iconWidth, contentRect.height());
+            QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
             drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily,
                                   m_iconPixelSize, iconRect, m_iconOffset);
             painter.setFont(font());
@@ -385,7 +391,8 @@ void Button::paintEvent(QPaintEvent*) {
             startX += iconWidth + gap;
         }
         if (!txt.isEmpty()) {
-            painter.drawText(QRectF(startX, 0, txtWidth, height()), Qt::AlignCenter, txt);
+            painter.drawText(QRectF(startX, layoutRect.top(), txtWidth, layoutRect.height()),
+                             Qt::AlignCenter, txt);
         }
     }
 }

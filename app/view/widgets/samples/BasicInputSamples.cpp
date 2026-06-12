@@ -1,5 +1,7 @@
 #include "BasicInputSamples.h"
 
+#include <QLayout>
+#include <QPoint>
 #include <QUrl>
 
 #include "components/basicinput/Button.h"
@@ -155,21 +157,58 @@ QVector<GallerySample> dropDownButtonSamples()
 {
     return {
         makeSample(QStringLiteral("dropdown-button-basic"),
-                   QStringLiteral("DropDownButton with a menu"),
-                   QStringLiteral("Invoking the button opens a Fluent menu of commands."),
+                   QStringLiteral("DropDownButton command group"),
+                   QStringLiteral("Use drop-down buttons for commands with related choices."),
                    QStringLiteral("auto* button = new DropDownButton(\"Email\", this);\n"
+                                  "button->setFluentLayout(Button::IconBefore);\n"
+                                  "button->setIconGlyph(Typography::Icons::Mail);\n"
                                   "auto* menu = new FluentMenu(QString(), button);\n"
                                   "menu->addAction(\"Send\");\n"
                                   "menu->addAction(\"Reply\");\n"
+                                  "menu->addAction(\"Forward\");\n"
                                   "button->setMenu(menu);"),
                    [](QWidget* parent) {
-                       auto* button = new DropDownButton(QStringLiteral("Email"), parent);
-                       auto* menu = new FluentMenu(QString(), button);
-                       menu->addAction(QStringLiteral("Send"));
-                       menu->addAction(QStringLiteral("Reply"));
-                       menu->addAction(QStringLiteral("Forward"));
-                       button->setMenu(menu);
-                       return button;
+                       QWidget* group = horizontalGroup(parent, 10);
+
+                       auto* emailButton = new DropDownButton(QStringLiteral("Email"), group);
+                       emailButton->setFluentLayout(Button::IconBefore);
+                       emailButton->setIconGlyph(Typography::Icons::Mail,
+                                                 Typography::FontSize::Caption);
+                       emailButton->setMinimumWidth(132);
+                       auto* emailMenu = new FluentMenu(QString(), emailButton);
+                       emailMenu->addAction(QStringLiteral("Send"));
+                       emailMenu->addAction(QStringLiteral("Reply"));
+                       emailMenu->addAction(QStringLiteral("Forward"));
+                       emailButton->setMenu(emailMenu);
+
+                       auto* shareButton = new DropDownButton(QStringLiteral("Share"), group);
+                       shareButton->setFluentStyle(Button::Accent);
+                       shareButton->setFluentLayout(Button::IconBefore);
+                       shareButton->setIconGlyph(Typography::Icons::Share,
+                                                 Typography::FontSize::Caption);
+                       shareButton->setMinimumWidth(132);
+                       auto* shareMenu = new FluentMenu(QString(), shareButton);
+                       shareMenu->addAction(QStringLiteral("Copy link"));
+                       shareMenu->addAction(QStringLiteral("Email link"));
+                       shareMenu->addAction(QStringLiteral("More options"));
+                       shareButton->setMenu(shareMenu);
+
+                       auto* moreButton = new DropDownButton(QString(), group);
+                       moreButton->setFluentLayout(Button::IconOnly);
+                       moreButton->setIconGlyph(Typography::Icons::More,
+                                                Typography::FontSize::Caption);
+                       moreButton->setChevronOffset(QPoint(8, 0));
+                       moreButton->setFixedWidth(58);
+                       auto* moreMenu = new FluentMenu(QString(), moreButton);
+                       moreMenu->addAction(QStringLiteral("Rename"));
+                       moreMenu->addAction(QStringLiteral("Move"));
+                       moreMenu->addAction(QStringLiteral("Delete"));
+                       moreButton->setMenu(moreMenu);
+
+                       group->layout()->addWidget(emailButton);
+                       group->layout()->addWidget(shareButton);
+                       group->layout()->addWidget(moreButton);
+                       return group;
                    })
     };
 }
@@ -181,12 +220,12 @@ QVector<GallerySample> hyperlinkButtonSamples()
                    QStringLiteral("HyperlinkButton with a URL"),
                    QStringLiteral("Clicking opens the URL in the default browser."),
                    QStringLiteral("auto* link = new HyperlinkButton(\n"
-                                  "    \"WinUI Gallery on GitHub\",\n"
-                                  "    QUrl(\"https://github.com/microsoft/WinUI-Gallery\"), this);"),
+                                  "    \"calvinhxx/Fluent-QT\",\n"
+                                  "    QUrl(\"https://github.com/calvinhxx/Fluent-QT\"), this);"),
                    [](QWidget* parent) {
                        return new HyperlinkButton(
-                           QStringLiteral("WinUI Gallery on GitHub"),
-                           QUrl(QStringLiteral("https://github.com/microsoft/WinUI-Gallery")),
+                           QStringLiteral("calvinhxx/Fluent-QT"),
+                           QUrl(QStringLiteral("https://github.com/calvinhxx/Fluent-QT")),
                            parent);
                    })
     };

@@ -8,12 +8,22 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
 #include "components/textfields/Label.h"
+#include "design/Spacing.h"
 #include "design/Typography.h"
 
 using namespace fluent::basicinput;
 using namespace fluent::textfields;
 using namespace fluent::menus_toolbars;
 using namespace fluent;
+
+class InspectableDropDownButton : public DropDownButton {
+public:
+    using DropDownButton::DropDownButton;
+
+    QRectF exposedContentPaintRect(const QRectF& surfaceRect) const {
+        return contentPaintRect(surfaceRect);
+    }
+};
 
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -72,6 +82,39 @@ TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress) {
     QTRY_VERIFY_WITH_TIMEOUT(qFuzzyCompare(button.pressProgress(), 1.0), 1000);
 
     QTest::mouseRelease(&button, Qt::LeftButton, Qt::NoModifier, button.rect().center());
+}
+
+TEST_F(DropDownButtonTest, SizeHintReservesChevronAffordance) {
+    Button plain("Email");
+    DropDownButton dropdown("Email");
+
+    EXPECT_GT(dropdown.sizeHint().width(), plain.sizeHint().width());
+    EXPECT_GE(dropdown.sizeHint().width(),
+              plain.sizeHint().width() + dropdown.chevronSize() + dropdown.chevronOffset().x());
+
+    const int initialWidth = dropdown.sizeHint().width();
+    dropdown.setChevronSize(dropdown.chevronSize() + 6);
+    dropdown.setChevronOffset(dropdown.chevronOffset() + QPoint(4, 0));
+
+    EXPECT_GT(dropdown.sizeHint().width(), initialWidth);
+}
+
+TEST_F(DropDownButtonTest, ContentPaintRectExcludesChevronReserve) {
+    InspectableDropDownButton button("Email");
+    const QSize hinted = button.sizeHint();
+    const QRectF surfaceRect(0, 0, hinted.width(), hinted.height());
+    const QRectF contentRect = button.exposedContentPaintRect(surfaceRect);
+
+    const int expectedReserve = ::Spacing::Gap::Normal + button.chevronSize()
+                                + button.chevronOffset().x();
+    EXPECT_DOUBLE_EQ(contentRect.left(), surfaceRect.left());
+    EXPECT_DOUBLE_EQ(contentRect.top(), surfaceRect.top());
+    EXPECT_DOUBLE_EQ(contentRect.right(), surfaceRect.right() - expectedReserve);
+    EXPECT_DOUBLE_EQ(contentRect.bottom(), surfaceRect.bottom());
+
+    button.setChevronOffset(QPoint(4, 0));
+    const QRectF tighterContentRect = button.exposedContentPaintRect(surfaceRect);
+    EXPECT_GT(tighterContentRect.width(), contentRect.width());
 }
 
 TEST_F(DropDownButtonTest, VisualCheck) {
@@ -183,7 +226,6 @@ TEST_F(DropDownButtonTest, VisualCheck) {
                            Typography::FontFamily::SegoeFluentIcons);
     iconOnly->setChevronSize(Typography::FontSize::Caption);  // 右侧 chevron
     iconOnly->setChevronOffset(QPoint(10, 0));
-    iconOnly->setIconOffset(QPoint(-8, 0));
     iconOnly->setFixedSize(56, 32);
     iconOnly->anchors()->top = {lbl4, Edge::Bottom, 8};
     iconOnly->anchors()->left = {window, Edge::Left, 40};

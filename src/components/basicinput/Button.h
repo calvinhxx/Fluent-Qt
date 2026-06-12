@@ -179,6 +179,12 @@ protected:
     // zh_CN: 自绘完整 Fluent 按钮表面，而不是交给 QStyle 绘制。
     void paintEvent(QPaintEvent* event) override;
 
+    /**
+     * @brief Returns the rectangle used to lay out painted icon and text content.
+     * zh_CN: 返回用于布局自绘图标与文本内容的区域。
+     */
+    virtual QRectF contentPaintRect(const QRectF& surfaceRect) const;
+
     // Exposes iconfont details to specialized button subclasses.
     // zh_CN: 向特殊按钮子类暴露 iconfont 信息，便于自定义绘制。
     QString iconGlyph() const { return m_iconGlyph; }
