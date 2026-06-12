@@ -45,7 +45,6 @@ protected:
 TEST_F(ToggleSwitchTest, DefaultPropertyValues) {
     ToggleSwitch ts;
     EXPECT_FALSE(ts.isOn());
-    EXPECT_TRUE(ts.header().isEmpty());
     EXPECT_EQ(ts.onContent(), "On");
     EXPECT_EQ(ts.offContent(), "Off");
     EXPECT_EQ(ts.fontRole(), "Body");
@@ -77,24 +76,6 @@ TEST_F(ToggleSwitchTest, ToggleOffEmitsSignal) {
     ts.setIsOn(false);
     ASSERT_EQ(spy.count(), 1);
     EXPECT_FALSE(spy.first().first().toBool());
-}
-
-// ── Header 属性 ──────────────────────────────────────────────────────────────
-
-TEST_F(ToggleSwitchTest, SetHeaderEmitsSignal) {
-    ToggleSwitch ts;
-    QSignalSpy spy(&ts, &ToggleSwitch::headerChanged);
-    ts.setHeader("Toggle work");
-    ASSERT_EQ(spy.count(), 1);
-    EXPECT_EQ(ts.header(), "Toggle work");
-}
-
-TEST_F(ToggleSwitchTest, SetSameHeaderNoSignal) {
-    ToggleSwitch ts;
-    ts.setHeader("test");
-    QSignalSpy spy(&ts, &ToggleSwitch::headerChanged);
-    ts.setHeader("test");
-    EXPECT_EQ(spy.count(), 0);
 }
 
 // ── OnContent / OffContent 属性 ──────────────────────────────────────────────
@@ -158,19 +139,20 @@ TEST_F(ToggleSwitchTest, KnobPositionClamped) {
 
 // ── SizeHint ─────────────────────────────────────────────────────────────────
 
-TEST_F(ToggleSwitchTest, SizeHintWithoutHeader) {
+TEST_F(ToggleSwitchTest, SizeHintIncludesTrackAndContent) {
     ToggleSwitch ts;
     QSize hint = ts.sizeHint();
     EXPECT_GE(hint.width(), 40);  // at least track width
     EXPECT_GE(hint.height(), 20); // at least track height
 }
 
-TEST_F(ToggleSwitchTest, SizeHintWithHeader) {
+TEST_F(ToggleSwitchTest, SizeHintReflectsContentWidth) {
     ToggleSwitch ts;
-    QSize hintNoHeader = ts.sizeHint();
-    ts.setHeader("Toggle work");
-    QSize hintWithHeader = ts.sizeHint();
-    EXPECT_GT(hintWithHeader.height(), hintNoHeader.height());
+    QSize shortHint = ts.sizeHint();
+    ts.setOnContent("A much longer switch state");
+    QSize longHint = ts.sizeHint();
+    EXPECT_GT(longHint.width(), shortHint.width());
+    EXPECT_EQ(longHint.height(), shortHint.height());
 }
 
 TEST_F(ToggleSwitchTest, MinimumSizeHintIsTrack) {
@@ -239,19 +221,24 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
         stateLabel->setText(on ? "State: On" : "State: Off");
     });
 
-    // 2. 带 Header + 自定义 Content
-    auto* lbl2 = new fluent::textfields::Label("2. With header & custom content:", window);
+    // 2. 外部标题 + 自定义 Content
+    auto* lbl2 = new fluent::textfields::Label("2. External label & custom content:", window);
     lbl2->setFluentTypography("Body");
     lbl2->anchors()->top = {stateLabel, Edge::Bottom, 20};
     lbl2->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(lbl2);
 
+    auto* externalHeader = new fluent::textfields::Label("Toggle work", window);
+    externalHeader->setFluentTypography("Body");
+    externalHeader->anchors()->top = {lbl2, Edge::Bottom, 8};
+    externalHeader->anchors()->left = {window, Edge::Left, 40};
+    layout->addWidget(externalHeader);
+
     auto* ts2 = new ToggleSwitch(window);
-    ts2->setHeader("Toggle work");
     ts2->setOnContent("Working");
     ts2->setOffContent("Do work");
     ts2->setIsOn(true);
-    ts2->anchors()->top = {lbl2, Edge::Bottom, 8};
+    ts2->anchors()->top = {externalHeader, Edge::Bottom, 4};
     ts2->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(ts2);
 

@@ -13,9 +13,9 @@ namespace fluent::basicinput {
  * @brief Fluent switch for binary on/off settings.
  * zh_CN: 用于二元开关设置的 Fluent 切换控件。
  *
- * ToggleSwitch owns its track, knob, header, and state text rendering. It keeps
- * keyboard and pointer toggling explicit while exposing knob progress for animation.
- * zh_CN: ToggleSwitch 自绘轨道、滑块、标题和状态文案，并显式处理键盘/指针切换；
+ * ToggleSwitch owns its track, knob, and state text rendering. Labels and field
+ * headers should be composed by the application or a field wrapper.
+ * zh_CN: ToggleSwitch 自绘轨道、滑块和状态文案；标签与字段标题应由应用层或字段包装组件组合；
  * knobPosition 用于驱动滑块动画。
  */
 class ToggleSwitch : public QWidget, public FluentElement, public QMLPlus {
@@ -25,11 +25,6 @@ class ToggleSwitch : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 开关当前的开启/关闭状态。
      */
     Q_PROPERTY(bool isOn READ isOn WRITE setIsOn NOTIFY toggled)
-    /**
-     * @brief Optional label text displayed above the switch content.
-     * zh_CN: 显示在开关内容上方的可选标签文本。
-     */
-    Q_PROPERTY(QString header READ header WRITE setHeader NOTIFY headerChanged)
     /**
      * @brief Text shown for the on state.
      * zh_CN: 开启状态显示的文本。
@@ -59,9 +54,6 @@ public:
     bool isOn() const { return m_isOn; }
     void setIsOn(bool on);
 
-    QString header() const { return m_header; }
-    void setHeader(const QString& header);
-
     QString onContent() const { return m_onContent; }
     void setOnContent(const QString& content);
 
@@ -79,7 +71,6 @@ public:
 
 signals:
     void toggled(bool isOn);
-    void headerChanged(const QString& header);
     void onContentChanged(const QString& content);
     void offContentChanged(const QString& content);
     void fontRoleChanged();
@@ -102,7 +93,6 @@ private:
     int contentAreaX() const;
 
     bool m_isOn = false;
-    QString m_header;
     QString m_onContent = "On";
     QString m_offContent = "Off";
     QString m_fontRole = "Body";

@@ -428,20 +428,27 @@ QVector<GallerySample> toggleSwitchSamples()
 {
     return {
         makeSample(QStringLiteral("toggle-switch-basic"),
-                   QStringLiteral("ToggleSwitch with header and content"),
+                   QStringLiteral("ToggleSwitch with external label"),
                    QStringLiteral("The on/off content mirrors the switch state."),
-                   QStringLiteral("auto* toggle = new ToggleSwitch(this);\n"
-                                  "toggle->setHeader(\"Wi-Fi\");\n"
+                   QStringLiteral("auto* group = new QWidget(this);\n"
+                                  "auto* layout = new QVBoxLayout(group);\n"
+                                  "auto* label = new Label(\"Wi-Fi\", group);\n"
+                                  "auto* toggle = new ToggleSwitch(group);\n"
                                   "toggle->setOnContent(\"On\");\n"
                                   "toggle->setOffContent(\"Off\");\n"
-                                  "toggle->setIsOn(true);"),
+                                  "toggle->setIsOn(true);\n"
+                                  "layout->addWidget(label);\n"
+                                  "layout->addWidget(toggle);"),
                    [](QWidget* parent) {
-                       auto* toggle = new ToggleSwitch(parent);
-                       toggle->setHeader(QStringLiteral("Wi-Fi"));
+                       auto* group = verticalGroup(parent, 6);
+                       auto* label = makeValueLabel(group, QStringLiteral("Wi-Fi"));
+                       auto* toggle = new ToggleSwitch(group);
                        toggle->setOnContent(QStringLiteral("On"));
                        toggle->setOffContent(QStringLiteral("Off"));
                        toggle->setIsOn(true);
-                       return toggle;
+                       group->layout()->addWidget(label);
+                       group->layout()->addWidget(toggle);
+                       return group;
                    })
     };
 }
