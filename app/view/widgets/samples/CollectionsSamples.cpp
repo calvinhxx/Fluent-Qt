@@ -3,6 +3,7 @@
 #include <functional>
 
 #include <QEvent>
+#include <QItemSelectionModel>
 #include <QLinearGradient>
 #include <QMouseEvent>
 #include <QNetworkAccessManager>
@@ -32,7 +33,9 @@
 #include "components/collections/TreeView.h"
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
+#include "design/Spacing.h"
 #include "design/Typography.h"
+#include "CollectionSampleDelegates.h"
 #include "SampleBuilders.h"
 
 namespace fluent::gallery {
@@ -67,11 +70,6 @@ const QVector<QColor>& accentPalette()
     return palette;
 }
 
-enum GalleryFlowPhotoRole {
-    FlowImageRole = Qt::UserRole + 701,
-    FlowSubtitleRole
-};
-
 struct FlowPhotoInfo {
     QString title;
     QString subtitle;
@@ -82,28 +80,61 @@ struct FlowPhotoInfo {
 };
 
 /**
- * @brief Centered pastel page used by paged-container previews.
- * zh_CN: 翻页类容器预览使用的居中淡彩页面。
+ * @brief A resizable pane that paints a diagonal gradient with a centered caption.
+ * zh_CN: 可缩放的窗格，绘制对角渐变并居中显示标题。
+ *
+ * Used by SplitView / StackView so their panes read as the same colored "pictures" the
+ * FlipView gallery uses, but stretch crisply as the pane resizes (a stretched QPixmap would
+ * blur the caption).
+ * zh_CN: 供 SplitView / StackView 使用，让窗格呈现与 FlipView 一致的彩色"图片"风格，并随窗格
+ * 缩放保持清晰（直接拉伸 QPixmap 会让标题发虚）。
  */
-Label* makePastelPage(QWidget* parent, const QString& text, const QString& cssBackground)
-{
-    auto* page = new Label(text, parent);
-    page->setFluentTypography(Typography::FontRole::BodyStrong);
-    page->setAlignment(Qt::AlignCenter);
-    page->setStyleSheet(QStringLiteral("background: %1; color: #444; border-radius: 8px;")
-                            .arg(cssBackground));
-    return page;
-}
-
-QStandardItemModel* makeStringListModel(QObject* parent, const QStringList& texts)
-{
-    auto* model = new QStandardItemModel(parent);
-    for (const QString& text : texts) {
-        auto* item = new QStandardItem(text);
-        item->setEditable(false);
-        model->appendRow(item);
+class GradientPane : public QWidget {
+public:
+    GradientPane(const QString& caption, const QColor& from, const QColor& to,
+                 QWidget* parent = nullptr)
+        : QWidget(parent)
+        , m_caption(caption)
+        , m_from(from)
+        , m_to(to)
+    {
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        setMinimumSize(64, 48);
     }
-    return model;
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+
+        const QRectF surface = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+        QLinearGradient gradient(surface.topLeft(), surface.bottomRight());
+        gradient.setColorAt(0.0, m_from);
+        gradient.setColorAt(1.0, m_to);
+        QPainterPath path;
+        path.addRoundedRect(surface, 8.0, 8.0);
+        painter.fillPath(path, gradient);
+
+        QFont font;
+        font.setPixelSize(15);
+        font.setWeight(QFont::DemiBold);
+        painter.setFont(font);
+        painter.setPen(QColor(255, 255, 255, 235));
+        painter.drawText(surface, Qt::AlignCenter, m_caption);
+    }
+
+private:
+    QString m_caption;
+    QColor m_from;
+    QColor m_to;
+};
+
+GradientPane* makeGradientPane(QWidget* parent, const QString& caption,
+                               const QColor& from, const QColor& to)
+{
+    return new GradientPane(caption, from, to, parent);
 }
 
 /**
@@ -294,7 +325,7 @@ public:
         clip.addRoundedRect(card, radius, radius);
         painter->fillPath(clip, layer);
 
-        const QVariant imageData = index.data(FlowImageRole);
+        const QVariant imageData = index.data(PhotoImageRole);
         const QPixmap pixmap = imageData.canConvert<QPixmap>() ? imageData.value<QPixmap>() : QPixmap();
         if (!pixmap.isNull()) {
             painter->setClipPath(clip);
@@ -309,7 +340,7 @@ public:
             painter->fillRect(labelBar, scrim);
 
             const QString title = index.data(Qt::DisplayRole).toString();
-            const QString subtitle = index.data(FlowSubtitleRole).toString();
+            const QString subtitle = index.data(PhotoSubtitleRole).toString();
             QFont titleFont = option.font;
             titleFont.setWeight(QFont::DemiBold);
             painter->setFont(titleFont);
@@ -385,7 +416,7 @@ void loadFlowNetworkImage(QStandardItemModel* model,
         QPixmap pixmap;
         if (!pixmap.loadFromData(reply->readAll()) || pixmap.isNull())
             return;
-        modelGuard->setData(index, pixmap, FlowImageRole);
+        modelGuard->setData(index, pixmap, PhotoImageRole);
     });
 }
 
@@ -395,13 +426,13 @@ QStandardItemModel* makeFlowPhotoModel(QObject* parent, const QVector<FlowPhotoI
     for (const FlowPhotoInfo& photo : photos) {
         auto* item = new QStandardItem(photo.title);
         item->setEditable(false);
-        item->setData(photo.subtitle, FlowSubtitleRole);
+        item->setData(photo.subtitle, PhotoSubtitleRole);
         item->setData(photo.size, Qt::SizeHintRole);
         item->setData(gradientPixmap(QSize(photo.size.width() * 2, photo.size.height() * 2),
                                      photo.from,
                                      photo.to,
                                      photo.title),
-                      FlowImageRole);
+                      PhotoImageRole);
         model->appendRow(item);
     }
     return model;
@@ -603,59 +634,104 @@ QVector<GallerySample> flowViewSamples()
     };
 }
 
+// Uniform photo set shared by the GridView samples; each card is the same size so the cells
+// align to a tidy grid (GridView's job), while the FlowPhotoDelegate paints the cover image.
+// zh_CN: GridView 各示例共用的统一尺寸照片集合；每张卡片同尺寸以对齐网格（GridView 负责），
+// FlowPhotoDelegate 负责绘制封面图。
+QStandardItemModel* makeGridPhotoModel(GridView* grid, const QSize& cell)
+{
+    const QVector<FlowPhotoInfo> photos{
+        {QStringLiteral("Sunrise"), QStringLiteral("Warm"), QStringLiteral("grid-sunrise"), QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C), cell},
+        {QStringLiteral("Ocean"), QStringLiteral("Blue"), QStringLiteral("grid-ocean"), QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2), cell},
+        {QStringLiteral("Forest"), QStringLiteral("Green"), QStringLiteral("grid-forest"), QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B), cell},
+        {QStringLiteral("Dusk"), QStringLiteral("Violet"), QStringLiteral("grid-dusk"), QColor(0x6B, 0x4F, 0xA2), QColor(0xC2, 0x6F, 0xB8), cell},
+        {QStringLiteral("Desert"), QStringLiteral("Amber"), QStringLiteral("grid-desert"), QColor(0xC8, 0x6B, 0x2D), QColor(0xE8, 0xC0, 0x6E), cell},
+        {QStringLiteral("Glacier"), QStringLiteral("Ice"), QStringLiteral("grid-glacier"), QColor(0x3D, 0x8B, 0xA3), QColor(0xB3, 0xE5, 0xE8), cell},
+        {QStringLiteral("Meadow"), QStringLiteral("Spring"), QStringLiteral("grid-meadow"), QColor(0x6F, 0xA8, 0x2F), QColor(0xD4, 0xE6, 0x7A), cell},
+        {QStringLiteral("Harbor"), QStringLiteral("Teal"), QStringLiteral("grid-harbor"), QColor(0x1C, 0x6E, 0x8C), QColor(0x73, 0xC8, 0xD0), cell}};
+
+    auto* model = makeFlowPhotoModel(grid, photos);
+    auto* network = new QNetworkAccessManager(grid);
+    loadFlowNetworkImages(model, photos, network);
+    return model;
+}
+
 QVector<GallerySample> gridViewSamples()
 {
     return {
         makeSample(QStringLiteral("grid-view-basic"),
                    QStringLiteral("GridView photo grid"),
-                   QStringLiteral("Cells pair a thumbnail with a caption and align to a uniform grid."),
+                   QStringLiteral("Photo cards align to a uniform grid; a custom delegate paints the cover image and caption."),
                    QStringLiteral("auto* gridView = new GridView(this);\n"
-                                  "auto* item = new QStandardItem(\"Sunrise\");\n"
-                                  "item->setIcon(thumbnail);\n"
-                                  "model->appendRow(item);\n"
+                                  "gridView->setCellSize(QSize(150, 112));\n"
+                                  "gridView->setItemDelegate(photoDelegate);\n"
                                   "gridView->setModel(model);\n"
-                                  "gridView->setCellSize(QSize(132, 104));"),
+                                  "gridView->setSelectedIndex(0);"),
                    [](QWidget* parent) {
                        auto* gridView = new GridView(parent);
-                       gridView->setFixedSize(440, 240);
-                       gridView->setCellSize(QSize(132, 104));
+                       gridView->setFixedSize(508, 256);
+                       gridView->setCellSize(QSize(150, 112));
                        gridView->setMaxColumns(3);
-                       gridView->setIconSize(QSize(116, 64));
-                       struct Tile { QString caption; QColor from; QColor to; };
-                       const QVector<Tile> tiles{
-                           {QStringLiteral("Sunrise"), QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)},
-                           {QStringLiteral("Ocean"), QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2)},
-                           {QStringLiteral("Forest"), QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B)},
-                           {QStringLiteral("Dusk"), QColor(0x6B, 0x4F, 0xA2), QColor(0xC2, 0x6F, 0xB8)},
-                           {QStringLiteral("Desert"), QColor(0xC8, 0x6B, 0x2D), QColor(0xE8, 0xC0, 0x6E)},
-                           {QStringLiteral("Glacier"), QColor(0x3D, 0x8B, 0xA3), QColor(0xB3, 0xE5, 0xE8)}};
-                       auto* model = new QStandardItemModel(gridView);
-                       for (const Tile& tile : tiles) {
-                           auto* item = new QStandardItem(tile.caption);
-                           item->setEditable(false);
-                           item->setIcon(gradientPixmap(QSize(116, 64), tile.from, tile.to));
-                           model->appendRow(item);
-                       }
-                       gridView->setModel(model);
+                       gridView->setHorizontalSpacing(10);
+                       gridView->setVerticalSpacing(10);
+                       gridView->setItemDelegate(new GridPhotoDelegate(
+                           static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
+                       gridView->setModel(makeGridPhotoModel(gridView, QSize(150, 112)));
                        gridView->setSelectedIndex(0);
                        return gridView;
                    }),
-        makeSample(QStringLiteral("grid-view-reorder"),
-                   QStringLiteral("Drag cells to reorder"),
-                   QStringLiteral("With reordering enabled, drag a cell to rearrange the grid."),
-                   QStringLiteral("auto* gridView = new GridView(this);\n"
-                                  "gridView->setModel(model);\n"
-                                  "gridView->setCanReorderItems(true);"),
+        makeSample(QStringLiteral("grid-view-multi-select"),
+                   QStringLiteral("Multiple selection"),
+                   QStringLiteral("In Multiple mode each click toggles a cell; selected cells keep an accent border. Ctrl/Shift extend in Extended mode."),
+                   QStringLiteral("gridView->setSelectionMode(\n"
+                                  "    GridView::GridSelectionMode::Multiple);\n"
+                                  "// each click toggles that cell's selection"),
                    [](QWidget* parent) {
                        auto* gridView = new GridView(parent);
-                       gridView->setFixedSize(440, 190);
-                       gridView->setCellSize(QSize(96, 72));
-                       gridView->setMaxColumns(4);
+                       gridView->setFixedSize(508, 256);
+                       gridView->setCellSize(QSize(150, 112));
+                       gridView->setMaxColumns(3);
+                       gridView->setHorizontalSpacing(10);
+                       gridView->setVerticalSpacing(10);
+                       gridView->setSelectionMode(GridView::GridSelectionMode::Multiple);
+                       gridView->setItemDelegate(new GridPhotoDelegate(
+                           static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
+                       auto* model = makeGridPhotoModel(gridView, QSize(150, 112));
+                       gridView->setModel(model);
+                       if (auto* selection = gridView->selectionModel()) {
+                           for (int row : {0, 2, 5}) {
+                               selection->select(model->index(row, 0),
+                                                 QItemSelectionModel::Select);
+                           }
+                       }
+                       return gridView;
+                   }),
+        makeSample(QStringLiteral("grid-view-reorder"),
+                   QStringLiteral("Multi-select & drag to reorder"),
+                   QStringLiteral("Multiple selection plus reordering: tick cells via the top-right check, then drag any selected cell to move the whole group, just like the GridView UT."),
+                   QStringLiteral("gridView->setSelectionMode(\n"
+                                  "    GridView::GridSelectionMode::Multiple);\n"
+                                  "gridView->setCanReorderItems(true);\n"
+                                  "// drag a selected cell to move the selection as a group"),
+                   [](QWidget* parent) {
+                       auto* gridView = new GridView(parent);
+                       gridView->setFixedSize(508, 256);
+                       gridView->setCellSize(QSize(150, 112));
+                       gridView->setMaxColumns(3);
+                       gridView->setHorizontalSpacing(10);
+                       gridView->setVerticalSpacing(10);
+                       gridView->setSelectionMode(GridView::GridSelectionMode::Multiple);
                        gridView->setCanReorderItems(true);
-                       QStringList items;
-                       for (int i = 1; i <= 8; ++i)
-                           items.append(QStringLiteral("Item %1").arg(i));
-                       gridView->setModel(makeStringListModel(gridView, items));
+                       gridView->setItemDelegate(new GridPhotoDelegate(
+                           static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
+                       auto* model = makeGridPhotoModel(gridView, QSize(150, 112));
+                       gridView->setModel(model);
+                       if (auto* selection = gridView->selectionModel()) {
+                           for (int row : {1, 3}) {
+                               selection->select(model->index(row, 0),
+                                                 QItemSelectionModel::Select);
+                           }
+                       }
                        return gridView;
                    })
     };
@@ -678,6 +754,8 @@ QVector<GallerySample> listViewSamples()
                        listView->setFixedSize(320, 240);
                        listView->setHeaderText(QStringLiteral("Contacts"));
                        listView->setIconSize(QSize(28, 28));
+                       listView->setItemDelegate(new ListRowDelegate(
+                           static_cast<fluent::FluentElement*>(listView), listView, listView));
                        const QStringList names{
                            QStringLiteral("Kendall Collins"), QStringLiteral("Henry Ross"),
                            QStringLiteral("Nicole Wagner"), QStringLiteral("Adam Wolfe"),
@@ -695,6 +773,61 @@ QVector<GallerySample> listViewSamples()
                        listView->setSelectedIndex(0);
                        return listView;
                    }),
+        makeSample(QStringLiteral("list-view-multi-select"),
+                   QStringLiteral("Multiple selection"),
+                   QStringLiteral("In Multiple mode each click toggles a row; every selected row keeps its fill and indicator."),
+                   QStringLiteral("listView->setSelectionMode(\n"
+                                  "    ListView::ListSelectionMode::Multiple);\n"
+                                  "// each click toggles that row's selection"),
+                   [](QWidget* parent) {
+                       auto* listView = new ListView(parent);
+                       listView->setFixedSize(320, 244);
+                       listView->setHeaderText(QStringLiteral("Filters"));
+                       listView->setIconSize(QSize(24, 24));
+                       listView->setItemDelegate(new ListRowDelegate(
+                           static_cast<fluent::FluentElement*>(listView), listView, listView));
+                       listView->setSelectionMode(ListView::ListSelectionMode::Multiple);
+                       listView->setModel(makeGlyphListModel(
+                           listView,
+                           {{QStringLiteral("Unread"), Typography::Icons::Mail},
+                            {QStringLiteral("Flagged"), Typography::Icons::Flag},
+                            {QStringLiteral("Has photos"), Typography::Icons::Camera},
+                            {QStringLiteral("From contacts"), Typography::Icons::People},
+                            {QStringLiteral("Favorites"), Typography::Icons::FavoriteStar}},
+                           24));
+                       if (auto* selection = listView->selectionModel()) {
+                           for (int row : {0, 2}) {
+                               selection->select(listView->model()->index(row, 0),
+                                                 QItemSelectionModel::Select | QItemSelectionModel::Rows);
+                           }
+                       }
+                       return listView;
+                   }),
+        makeSample(QStringLiteral("list-view-horizontal"),
+                   QStringLiteral("Horizontal list"),
+                   QStringLiteral("Set the flow to LeftToRight for a horizontally scrolling strip of labelled items."),
+                   QStringLiteral("listView->setFlow(QListView::LeftToRight);\n"
+                                  "listView->setModel(model);"),
+                   [](QWidget* parent) {
+                       auto* listView = new ListView(parent);
+                       listView->setFixedSize(540, 132);
+                       listView->setHeaderText(QStringLiteral("Library"));
+                       listView->setFlow(QListView::LeftToRight);
+                       listView->setIconSize(QSize(26, 26));
+                       listView->setItemDelegate(new ListRowDelegate(
+                           static_cast<fluent::FluentElement*>(listView), listView, listView));
+                       listView->setModel(makeGlyphListModel(
+                           listView,
+                           {{QStringLiteral("Home"), Typography::Icons::Home},
+                            {QStringLiteral("Music"), Typography::Icons::Music},
+                            {QStringLiteral("Videos"), Typography::Icons::Video},
+                            {QStringLiteral("Photos"), Typography::Icons::Camera},
+                            {QStringLiteral("Calendar"), Typography::Icons::Calendar},
+                            {QStringLiteral("Settings"), Typography::Icons::Settings}},
+                           26));
+                       listView->setSelectedIndex(0);
+                       return listView;
+                   }),
         makeSample(QStringLiteral("list-view-reorder"),
                    QStringLiteral("Drag rows to reorder"),
                    QStringLiteral("With reordering enabled, drag a row to a new position in the playlist."),
@@ -706,6 +839,8 @@ QVector<GallerySample> listViewSamples()
                        listView->setFixedSize(320, 220);
                        listView->setHeaderText(QStringLiteral("Playlist"));
                        listView->setIconSize(QSize(24, 24));
+                       listView->setItemDelegate(new ListRowDelegate(
+                           static_cast<fluent::FluentElement*>(listView), listView, listView));
                        listView->setCanReorderItems(true);
                        listView->setModel(makeGlyphListModel(
                            listView,
@@ -728,16 +863,28 @@ QVector<GallerySample> splitViewSamples()
                    QStringLiteral("auto* splitView = new SplitView(this);\n"
                                   "splitView->addPane(firstPane);\n"
                                   "splitView->addPane(secondPane);\n"
-                                  "splitView->setPanePreferredSize(0, 160);"),
+                                  "splitView->addPane(thirdPane);\n"
+                                  "splitView->setPanePreferredSize(0, 150);\n"
+                                  "splitView->setPaneFill(2, true);"),
                    [](QWidget* parent) {
                        auto* splitView = new SplitView(parent);
-                       splitView->setFixedSize(420, 160);
-                       splitView->addPane(makePastelPage(splitView, QStringLiteral("Pane 1"),
-                                                         QStringLiteral("#DCE8F8")));
-                       splitView->addPane(makePastelPage(splitView, QStringLiteral("Pane 2"),
-                                                         QStringLiteral("#DFF3E3")));
-                       splitView->setPanePreferredSize(0, 160);
-                       splitView->setPaneFill(1, true);
+                       splitView->setFixedSize(460, 168);
+                       splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 1"),
+                                                           QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2)));
+                       splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 2"),
+                                                           QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B)));
+                       splitView->addPane(makeGradientPane(splitView, QStringLiteral("Pane 3"),
+                                                           QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)));
+                       // Give every pane a real minimum so dragging a handle to the limit
+                       // leaves a tidy pane instead of a sliver, and never shrinks a pane
+                       // below the gradient widget's own minimum (which would overlap).
+                       // zh_CN: 每个窗格都设定最小尺寸，拖到极限时仍保留完整窗格而非细条，
+                       // 且不会缩到渐变控件自身最小尺寸以下（否则会重叠）。
+                       for (int i = 0; i < 3; ++i)
+                           splitView->setPaneMinimumSize(i, 96);
+                       splitView->setPanePreferredSize(0, 150);
+                       splitView->setPanePreferredSize(1, 150);
+                       splitView->setPaneFill(2, true);
                        return splitView;
                    })
     };
@@ -758,8 +905,8 @@ QVector<GallerySample> stackViewSamples()
 
                        auto* stackView = new StackView(group);
                        stackView->setFixedSize(360, 150);
-                       stackView->setInitialItem(makePastelPage(stackView, QStringLiteral("Page 1"),
-                                                                QStringLiteral("#DCE8F8")));
+                       stackView->setInitialItem(makeGradientPane(stackView, QStringLiteral("Page 1"),
+                                                                  QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2)));
 
                        QWidget* buttons = horizontalGroup(group, 8);
                        auto* pushButton = new Button(QStringLiteral("Push page"), buttons);
@@ -767,15 +914,16 @@ QVector<GallerySample> stackViewSamples()
                        auto* popButton = new Button(QStringLiteral("Pop page"), buttons);
                        QObject::connect(pushButton, &Button::clicked,
                                         stackView, [stackView]() {
-                                            static const QStringList palette{
-                                                QStringLiteral("#DFF3E3"),
-                                                QStringLiteral("#FBE8DC"),
-                                                QStringLiteral("#F2E3F8")};
+                                            static const QVector<QPair<QColor, QColor>> palette{
+                                                {QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B)},
+                                                {QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C)},
+                                                {QColor(0x87, 0x64, 0xB8), QColor(0xC2, 0x6F, 0xB8)}};
                                             const int depth = stackView->depth();
-                                            stackView->push(makePastelPage(
+                                            const auto& pair = palette.at((depth - 1) % palette.size());
+                                            stackView->push(makeGradientPane(
                                                 stackView,
                                                 QStringLiteral("Page %1").arg(depth + 1),
-                                                palette.at(depth % palette.size())));
+                                                pair.first, pair.second));
                                         });
                        QObject::connect(popButton, &Button::clicked,
                                         stackView, [stackView]() { stackView->pop(); });
@@ -789,48 +937,153 @@ QVector<GallerySample> stackViewSamples()
     };
 }
 
+// Build a QStandardItem carrying a Segoe Fluent Icons glyph (drawn crisply by the
+// TreeRowDelegate via TreeIconGlyphRole) plus an optional accent color, instead of a
+// rasterized icon pixmap — matching the role-based model the TreeView UT exercises.
+// zh_CN: 构造携带 Segoe Fluent 图标字形（由 TreeRowDelegate 经 TreeIconGlyphRole 清晰绘制）
+// 及可选强调色的 QStandardItem，而非位图图标——与 TreeView UT 使用的 role 化模型一致。
+QStandardItem* makeTreeItem(const QString& text, const QString& glyph, const QColor& color)
+{
+    auto* item = new QStandardItem(text);
+    item->setEditable(false);
+    item->setData(glyph, TreeIconGlyphRole);
+    item->setData(color, TreeIconColorRole);
+    return item;
+}
+
+/**
+ * @brief Nested folder/file model shared by the basic and drag-reorder tree samples.
+ * zh_CN: 基础树与拖拽换位树示例共用的嵌套文件夹/文件模型。
+ */
+QStandardItemModel* makeFolderTreeModel(QObject* owner, const QColor& folderColor,
+                                        const QColor& fileColor)
+{
+    auto* model = new QStandardItemModel(owner);
+    auto file = [&](const QString& text) {
+        return makeTreeItem(text, Typography::Icons::Document, fileColor);
+    };
+    auto folder = [&](const QString& text) {
+        return makeTreeItem(text, Typography::Icons::Folder, folderColor);
+    };
+
+    auto* work = folder(QStringLiteral("Work documents"));
+    work->appendRow(file(QStringLiteral("Proposal.docx")));
+    work->appendRow(file(QStringLiteral("Budget.xlsx")));
+    auto* archive = folder(QStringLiteral("Archive"));
+    archive->appendRow(file(QStringLiteral("Q1-review.pdf")));
+    archive->appendRow(file(QStringLiteral("Q2-review.pdf")));
+    work->appendRow(archive);
+    model->appendRow(work);
+
+    auto* photos = folder(QStringLiteral("Photos"));
+    photos->appendRow(file(QStringLiteral("Trip.png")));
+    photos->appendRow(file(QStringLiteral("Family.png")));
+    model->appendRow(photos);
+
+    auto* music = folder(QStringLiteral("Music"));
+    music->appendRow(file(QStringLiteral("Playlist.m3u")));
+    model->appendRow(music);
+    return model;
+}
+
 QVector<GallerySample> treeViewSamples()
 {
+    const QColor folderColor(0xCA, 0x8A, 0x1A);
+    const QColor fileColor(0x52, 0x8B, 0xC4);
+    const int rowHeight = Spacing::ControlHeight::Standard + Spacing::Gap::Tight;
+
     return {
         makeSample(QStringLiteral("tree-view-basic"),
                    QStringLiteral("Folder hierarchy"),
-                   QStringLiteral("Expandable folders reveal nested documents on demand."),
+                   QStringLiteral("The essential tree: click a chevron to expand or collapse a folder, and selecting a row shows the accent indicator. A custom delegate paints the rotating chevron and per-row icon glyph."),
                    QStringLiteral("auto* tree = new TreeView(this);\n"
-                                  "auto* folder = new QStandardItem(\"Work documents\");\n"
-                                  "folder->setIcon(folderIcon);\n"
-                                  "folder->appendRow(documentItem);\n"
+                                  "tree->setItemDelegate(new TreeRowDelegate(\n"
+                                  "    themeHost, rowHeight, tree, tree));\n"
                                   "tree->setModel(model);\n"
                                   "tree->expand(model->index(0, 0));"),
-                   [](QWidget* parent) {
+                   [folderColor, fileColor, rowHeight](QWidget* parent) {
                        auto* tree = new TreeView(parent);
                        tree->setHeaderHidden(true);
-                       tree->setMinimumHeight(240);
-                       tree->setIconSize(QSize(22, 22));
+                       tree->setFixedHeight(252);
+                       tree->setItemDelegate(new TreeRowDelegate(
+                           static_cast<fluent::FluentElement*>(tree), rowHeight, tree, tree));
 
-                       const QColor folderColor(0xCA, 0x8A, 0x1A);
-                       const QColor fileColor(0x52, 0x8B, 0xC4);
-                       auto* model = new QStandardItemModel(tree);
-                       auto branch = [&](const QString& text, const QStringList& children) {
-                           auto* node = new QStandardItem(text);
-                           node->setEditable(false);
-                           node->setIcon(glyphPixmap(Typography::Icons::Folder, folderColor, 22));
-                           for (const QString& child : children) {
-                               auto* leaf = new QStandardItem(child);
-                               leaf->setEditable(false);
-                               leaf->setIcon(glyphPixmap(Typography::Icons::Document, fileColor, 22));
-                               node->appendRow(leaf);
-                           }
-                           return node;
-                       };
-                       model->appendRow(branch(QStringLiteral("Work documents"),
-                                               {QStringLiteral("Proposal.docx"),
-                                                QStringLiteral("Budget.xlsx"),
-                                                QStringLiteral("Notes.txt")}));
-                       model->appendRow(branch(QStringLiteral("Photos"),
-                                               {QStringLiteral("Trip.png"),
-                                                QStringLiteral("Family.png")}));
+                       auto* model = makeFolderTreeModel(tree, folderColor, fileColor);
                        tree->setModel(model);
                        tree->expand(model->index(0, 0));
+                       tree->setSelectedItem(model->index(0, 0));
+                       return tree;
+                   }),
+        makeSample(QStringLiteral("tree-view-checkboxes"),
+                   QStringLiteral("Checkable items"),
+                   QStringLiteral("The delegate's checkbox mode shows a tri-state box on every row: ticking a parent cascades to its children, and editing a child rolls the parent up to checked / unchecked / partial."),
+                   QStringLiteral("auto* d = new TreeRowDelegate(\n"
+                                  "    themeHost, rowHeight, tree, tree);\n"
+                                  "d->setCheckBoxVisible(true);\n"
+                                  "tree->setItemDelegate(d);\n"
+                                  "// clicks cascade down + roll the tri-state up"),
+                   [folderColor, rowHeight](QWidget* parent) {
+                       auto* tree = new TreeView(parent);
+                       tree->setHeaderHidden(true);
+                       tree->setFixedHeight(258);
+                       auto* delegate = new TreeRowDelegate(
+                           static_cast<fluent::FluentElement*>(tree), rowHeight, tree, tree);
+                       delegate->setCheckBoxVisible(true);
+                       tree->setItemDelegate(delegate);
+
+                       auto* model = new QStandardItemModel(tree);
+                       auto leaf = [](const QString& text, Qt::CheckState state,
+                                      const QString& glyph, const QColor& color) {
+                           auto* item = makeTreeItem(text, glyph, color);
+                           item->setCheckable(true);
+                           item->setCheckState(state);
+                           return item;
+                       };
+                       auto group = [&](const QString& text, Qt::CheckState state) {
+                           auto* node = makeTreeItem(text, Typography::Icons::Folder, folderColor);
+                           node->setCheckable(true);
+                           node->setCheckState(state);
+                           return node;
+                       };
+
+                       auto* sync = group(QStringLiteral("Sync these settings"), Qt::PartiallyChecked);
+                       sync->appendRow(leaf(QStringLiteral("Passwords"), Qt::Checked,
+                                            Typography::Icons::Pin, QColor(0x49, 0x82, 0x05)));
+                       sync->appendRow(leaf(QStringLiteral("Bookmarks"), Qt::Checked,
+                                            Typography::Icons::FavoriteStar, QColor(0xCA, 0x50, 0x10)));
+                       sync->appendRow(leaf(QStringLiteral("History"), Qt::Unchecked,
+                                            Typography::Icons::Calendar, QColor(0x87, 0x64, 0xB8)));
+                       model->appendRow(sync);
+
+                       auto* notify = group(QStringLiteral("Notifications"), Qt::Checked);
+                       notify->appendRow(leaf(QStringLiteral("Email"), Qt::Checked,
+                                              Typography::Icons::Mail, QColor(0x00, 0x78, 0xD4)));
+                       notify->appendRow(leaf(QStringLiteral("Messages"), Qt::Checked,
+                                              Typography::Icons::Message, QColor(0x03, 0x83, 0x87)));
+                       model->appendRow(notify);
+
+                       tree->setModel(model);
+                       tree->expandAll();
+                       return tree;
+                   }),
+        makeSample(QStringLiteral("tree-view-reorder"),
+                   QStringLiteral("Drag to reorder"),
+                   QStringLiteral("With reordering enabled, drag a row to a new spot among its siblings; the model updates and itemReordered fires with the source and destination."),
+                   QStringLiteral("tree->setCanReorderItems(true);\n"
+                                  "QObject::connect(tree, &TreeView::itemReordered,\n"
+                                  "    [](const QModelIndex& srcParent, int srcRow,\n"
+                                  "       const QModelIndex& dstParent, int dstRow) { /* ... */ });"),
+                   [folderColor, fileColor, rowHeight](QWidget* parent) {
+                       auto* tree = new TreeView(parent);
+                       tree->setHeaderHidden(true);
+                       tree->setFixedHeight(252);
+                       tree->setCanReorderItems(true);
+                       tree->setItemDelegate(new TreeRowDelegate(
+                           static_cast<fluent::FluentElement*>(tree), rowHeight, tree, tree));
+
+                       auto* model = makeFolderTreeModel(tree, folderColor, fileColor);
+                       tree->setModel(model);
+                       tree->expandAll();
                        return tree;
                    })
     };
