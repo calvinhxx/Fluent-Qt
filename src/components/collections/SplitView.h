@@ -185,6 +185,7 @@ private:
 
     int axisPosition(const QPoint& point) const;
     int axisLength(const QSize& size) const;
+    int dragStartLength(int index) const;
     int crossLength(const QSize& size) const;
     QRect makePaneRect(int origin, int length) const;
     QRect makeHandleRect(int origin) const;
