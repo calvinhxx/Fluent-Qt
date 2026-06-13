@@ -238,6 +238,8 @@ TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAft
     ASSERT_NE(homePage.data(), nullptr);
     QPointer<GalleryEntryCard> cardGuard = card;
 
+    GalleryContentPage* homeRaw = homePage.data();
+
     // Deliver a real click: this synchronously re-enters navigation and replaces the page
     // that owns `card`. Surviving to the next statement is itself the crash assertion.
     QTest::mouseClick(card, Qt::LeftButton, Qt::NoModifier, card->rect().center());
@@ -247,14 +249,23 @@ TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAft
     EXPECT_FALSE(homePage.isNull());
     EXPECT_FALSE(cardGuard.isNull());
 
-    // ...and only freed once control returns to the event loop.
+    // ...and, because pages are now cached for reuse (built once, swapped as the model drives
+    // navigation) rather than rebuilt per click, the home page is retained — not deleted —
+    // even after the event loop drains deferred deletes.
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-    EXPECT_TRUE(homePage.isNull());
-    EXPECT_TRUE(cardGuard.isNull());
+    EXPECT_FALSE(homePage.isNull());
+    EXPECT_FALSE(cardGuard.isNull());
 
     GalleryContentPage* newPage = window.currentContentPage();
     ASSERT_NE(newPage, nullptr);
     EXPECT_EQ(newPage->routeId(), targetRouteId);
+
+    // Navigating back to home reuses the cached page instance instead of constructing a new one.
+    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    ASSERT_NE(mainPane, nullptr);
+    clickNavigationRoute(mainPane, QStringLiteral("home"));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("home"));
+    EXPECT_EQ(window.currentContentPage(), homeRaw);
 }
 
 TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)

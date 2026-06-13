@@ -1,9 +1,12 @@
 #ifndef GALLERYCONTENTPRESENTER_H
 #define GALLERYCONTENTPRESENTER_H
 
+#include <QHash>
 #include <QObject>
+#include <QPointer>
 #include <QString>
 
+class QPixmap;
 class QWidget;
 
 namespace fluent::navigation {
@@ -51,10 +54,27 @@ signals:
 private:
     void connectPageNavigation(QWidget* page);
     void replaceCurrentPage(const QString& routeId, QWidget* page);
+    QWidget* cachedPage(const QString& routeId) const;
+    void stashPage(QWidget* page);
+    void startContentCrossfade(const QPixmap& snapshot);
 
     fluent::navigation::StackContentHost* m_contentHost = nullptr;
     const GalleryNavigationViewModel& m_navigationViewModel;
     QString m_currentRouteId;
+
+    // Pages are built once and reused: navigating to a visited route swaps the existing widget
+    // back in (state intact) instead of reconstructing it, which is what made nav feel janky.
+    // Off-screen pages live under m_pageStash so they stay alive and themed but hidden.
+    // zh_CN: 页面只建一次并复用：切到访问过的路由会把已有 widget 换回来（状态保留），而不是重建——
+    // 这正是导航卡顿的根因。离屏页面挂在 m_pageStash 下，保持存活与主题更新但隐藏。
+    QHash<QString, QPointer<QWidget>> m_pageCache;
+    QWidget* m_pageStash = nullptr;
+
+    // A fading snapshot of the outgoing page, layered over the freshly-swapped-in page so the
+    // content cross-dissolves. Held so rapid navigation can retire a stale overlay.
+    // zh_CN: 旧页面的淡出快照，叠在刚换入的新页之上做内容交叉淡化。保留引用，便于快速连续导航时
+    // 撤掉上一张尚未淡完的快照。
+    QPointer<QWidget> m_transitionOverlay;
 };
 
 } // namespace fluent::gallery
