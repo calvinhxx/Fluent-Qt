@@ -292,8 +292,13 @@ TEST_F(SplitViewTest, DraggingHandleUpdatesPreferredSizesAndResizingState)
     QTest::mouseRelease(&splitView, Qt::LeftButton, Qt::NoModifier, start + QPoint(40, 0));
 
     EXPECT_FALSE(splitView.resizing());
+    // Dragging the boundary +40px grows the left pane by 40 (120 -> 160). The drag is
+    // baselined on the panes' actual laid-out lengths: with a 420px view (8px handle ->
+    // 412px usable) the fill pane "right" is displayed at 412-120 = 292, so the boundary
+    // moves within the real 120+292 span and "right" ends at 412-160 = 252. (Previously the
+    // drag baselined on the stale stored preferredSize=200, which let the boundary ratchet.)
     EXPECT_EQ(splitView.panePreferredSize(left), 160);
-    EXPECT_EQ(splitView.panePreferredSize(right), 160);
+    EXPECT_EQ(splitView.panePreferredSize(right), 252);
     EXPECT_GE(resizingSpy.count(), 2);
     EXPECT_GE(sizeSpy.count(), 2);
 }
