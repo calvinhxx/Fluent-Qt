@@ -25,6 +25,7 @@
 #include "design/CornerRadius.h"
 #include "design/Elevation.h"
 #include "design/Typography.h"
+#include "utils/Log.h"
 #include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {
@@ -194,8 +195,13 @@ private:
 void showGalleryToast(QWidget* anchor, const QString& message)
 {
     QWidget* host = anchor ? anchor->window() : nullptr;
-    if (!host)
+    if (!host) {
+        LOG_WARN(QStringLiteral("GalleryToast show rejected reason=missing-host message=%1")
+                     .arg(message));
         return;
+    }
+
+    LOG_DEBUG(QStringLiteral("GalleryToast show message=%1").arg(message));
 
     // Replace any in-flight toast so repeated copies don't stack.
     // zh_CN: 替换正在显示的 toast，避免连续复制时堆叠。

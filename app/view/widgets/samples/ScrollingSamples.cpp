@@ -156,10 +156,15 @@ QVector<GallerySample> scrollViewSamples()
                    QStringLiteral("Scrollable viewport"),
                    QStringLiteral("Content larger than the viewport scrolls with Fluent scrollbars."),
                    QStringLiteral("auto* scrollView = new ScrollView(this);\n"
+                                  "scrollView->setScrollChainingEnabled(false);\n"
                                   "scrollView->setWidget(largeContent);"),
                    [](QWidget* parent) {
                        auto* scrollView = new ScrollView(parent);
                        scrollView->setFixedSize(420, 200);
+                       // Keep boundary wheel input inside the sample; chaining
+                       // would pan the gallery page mid-gesture.
+                       // zh_CN: 边缘滚轮留在示例内部；链式滚动会在手势中途带动整页平移。
+                       scrollView->setScrollChainingEnabled(false);
 
                        // A picture larger than the viewport exercises both scrollbars.
                        // zh_CN: 比视口更大的图片同时演示横向与纵向滚动条。

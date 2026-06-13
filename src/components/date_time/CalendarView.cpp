@@ -1425,8 +1425,15 @@ void CalendarView::clearContentInteractionState()
 void CalendarView::startMonthTransition(const QDate& previousMonth, const QDate& currentMonth,
                                         qreal startProgress, bool animate)
 {
-    const bool hostVisible = window() ? window()->isVisible() : isVisible();
-    if (!previousMonth.isValid() || !currentMonth.isValid() || previousMonth == currentMonth || !hostVisible) {
+    // Animate only when this view itself is on screen. Checking the top-level
+    // window is not enough: inside a same-window overlay (the date picker
+    // flyout) the host window is visible while the flyout is still hidden, so
+    // the open-time jump to the selected month would start an entrance
+    // animation — and day-cell hits are rejected while it runs.
+    // zh_CN: 仅当视图自身在屏幕上时才播放动画。只查顶层窗口不够：在同窗口
+    // overlay（日期选择器 flyout）里，宿主窗口可见而 flyout 尚未显示，打开时
+    // 跳到选中月份会触发入场动画——动画期间日期单元格的点击会被拒绝。
+    if (!previousMonth.isValid() || !currentMonth.isValid() || previousMonth == currentMonth || !isVisible()) {
         finishMonthTransition();
         return;
     }

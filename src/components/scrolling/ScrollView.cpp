@@ -138,6 +138,13 @@ void ScrollView::setZoomMode(ZoomMode mode) {
     emit zoomModeChanged();
 }
 
+void ScrollView::setScrollChainingEnabled(bool enabled) {
+    if (m_scrollChainingEnabled == enabled)
+        return;
+    m_scrollChainingEnabled = enabled;
+    emit scrollChainingEnabledChanged();
+}
+
 void ScrollView::setZoomFactor(qreal factor) {
     setZoomFactorAt(factor, effectiveZoomAnchor(m_zoomAnimationAnchor));
 }
@@ -311,6 +318,25 @@ void ScrollView::wheelEvent(QWheelEvent* event) {
     }
 
     QScrollArea::wheelEvent(event);
+
+    // With chaining disabled, a view that has scrollable range owns the wheel
+    // even at its edges: a boundary event left ignored would bubble to an
+    // enclosing scroller and pan the host page mid-gesture. A view with
+    // nothing to scroll stays transparent either way.
+    // zh_CN: 关闭链式滚动后，存在可滚动范围的视图在边缘也持有滚轮：边缘事件若
+    // 保持 ignore 会冒泡给外层滚动容器，手势中途带动宿主页面平移。本身无可滚动
+    // 内容的视图则照常透传。
+    if (!m_scrollChainingEnabled && !event->isAccepted() && hasScrollableRange())
+        event->accept();
+}
+
+bool ScrollView::hasScrollableRange() const {
+    const QScrollBar* vertical = verticalScrollBar();
+    const QScrollBar* horizontal = horizontalScrollBar();
+    return (isAxisEnabled(Axis::Vertical) && vertical
+            && vertical->maximum() > vertical->minimum())
+        || (isAxisEnabled(Axis::Horizontal) && horizontal
+            && horizontal->maximum() > horizontal->minimum());
 }
 
 void ScrollView::applyScrollPolicies() {

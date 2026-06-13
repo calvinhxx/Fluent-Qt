@@ -6,6 +6,7 @@
 #include "model/GalleryNavigationItem.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "view/widgets/GalleryEntryCard.h"
+#include "utils/Log.h"
 
 namespace fluent::gallery {
 namespace {
@@ -54,6 +55,11 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
     }
 
     addContentWidget(cardsContainer);
+
+    LOG_DEBUG(QStringLiteral("GalleryCategoryPage created routeId=%1 categoryId=%2 cards=%3")
+                  .arg(entry.routeId,
+                       includeAllCategories ? QStringLiteral("<all>") : entry.categoryId)
+                  .arg(cellIndex));
 }
 
 } // namespace fluent::gallery

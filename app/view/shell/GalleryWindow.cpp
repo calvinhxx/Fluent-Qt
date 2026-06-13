@@ -17,9 +17,9 @@
 #include "design/Typography.h"
 #include "utils/Log.h"
 #include "AppIcon.h"
-#include "view/pages/GalleryContentPage.h"
+#include "GalleryContentPresenter.h"
 #include "GalleryNavigationPane.h"
-#include "view/pages/GalleryPageFactory.h"
+#include "view/pages/GalleryContentPage.h"
 #include "view/pages/PlaceholderPage.h"
 #include "view/pages/SettingsPage.h"
 
@@ -87,9 +87,15 @@ GalleryWindow::GalleryWindow(QWidget* parent)
 
     createTitleBarContent();
     buildNavigationShell();
+    buildContentPresenter();
     showInitialRouteContent();
     LOG_INFO(QStringLiteral("GalleryWindow constructed defaultRoute=%1")
                  .arg(m_navigationViewModel.defaultRouteId()));
+}
+
+QString GalleryWindow::currentRouteId() const
+{
+    return m_contentPresenter ? m_contentPresenter->currentRouteId() : QString();
 }
 
 QStringList GalleryWindow::navigationEntryIds() const
@@ -125,7 +131,7 @@ bool GalleryWindow::selectRoute(const QString& routeId)
 
     LOG_TRACE(QStringLiteral("GalleryWindow selectRoute routeId=%1 state=show-current")
                   .arg(routeId));
-    return showRouteContent(routeId);
+    return m_contentPresenter && m_contentPresenter->presentRoute(routeId);
 }
 
 bool GalleryWindow::navigateToSearchResult(const QString& searchText)
@@ -164,101 +170,25 @@ void GalleryWindow::showInitialRouteContent()
     selectRoute(m_navigationViewModel.defaultRouteId());
 }
 
-bool GalleryWindow::showRouteContent(const QString& routeId)
-{
-    const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
-    if (!m_navigationView) {
-        LOG_WARN(QStringLiteral("GalleryWindow showRouteContent rejected routeId=%1 reason=missing-navigation-view")
-                     .arg(routeId));
-        return false;
-    }
-
-    if (!item) {
-        LOG_WARN(QStringLiteral("GalleryWindow showRouteContent rejected routeId=%1 reason=missing-route")
-                     .arg(routeId));
-        return false;
-    }
-
-    if (m_currentRouteId == routeId && m_navigationView->contentHost()->count() > 0) {
-        LOG_TRACE(QStringLiteral("GalleryWindow showRouteContent skipped routeId=%1 reason=already-current")
-                      .arg(routeId));
-        return true;
-    }
-
-    QWidget* page = createRouteContentPage(routeId, *item);
-    connectRouteContentNavigation(page);
-
-    m_currentRouteId = routeId;
-    LOG_DEBUG(QStringLiteral("GalleryWindow showRouteContent routeId=%1 pageType=%2 title=%3")
-                  .arg(routeId,
-                       QString::fromLatin1(page->metaObject()->className()),
-                       item->title));
-
-    replaceRouteContentPage(routeId, page);
-    return true;
-}
-
-QWidget* GalleryWindow::createRouteContentPage(const QString& routeId,
-                                               const GalleryNavigationItem& fallbackItem) const
-{
-    GalleryPageFactory pageFactory(m_navigationViewModel);
-    QWidget* page = pageFactory.createPage(routeId);
-    return page ? page : new PlaceholderPage(fallbackItem);
-}
-
-void GalleryWindow::connectRouteContentNavigation(QWidget* page)
-{
-    if (auto* contentPage = dynamic_cast<GalleryContentPage*>(page)) {
-        connect(contentPage, &GalleryContentPage::routeActivated,
-                this, [this](const QString& activatedRouteId) {
-                    selectRoute(activatedRouteId);
-                });
-    }
-}
-
-void GalleryWindow::replaceRouteContentPage(const QString& routeId, QWidget* page)
-{
-    auto* contentHost = m_navigationView->contentHost();
-    if (contentHost->count() == 0) {
-        contentHost->insertPage(0, page);
-        contentHost->setCurrentIndex(0, 0, false);
-        LOG_TRACE(QStringLiteral("GalleryWindow contentHost pageInserted routeId=%1")
-                      .arg(routeId));
-    } else {
-        QWidget* previousPage = contentHost->replacePage(0, page);
-        // Defer deletion: an in-page card (e.g. a Home featured card) may trigger this
-        // navigation from inside its own mouseReleaseEvent, so the previous page is still
-        // dispatching the event. Deleting it now is a use-after-free; deleteLater frees it
-        // once control returns to the event loop.
-        // zh_CN: 延迟删除：页面内卡片可能在自身 mouseReleaseEvent 中触发此次导航，旧页面仍在
-        // 派发事件，立即删除会造成 use-after-free；deleteLater 等回到事件循环后再释放。
-        if (previousPage)
-            previousPage->deleteLater();
-        contentHost->setCurrentIndex(0, 0, false);
-        LOG_TRACE(QStringLiteral("GalleryWindow contentHost pageReplaced routeId=%1")
-                      .arg(routeId));
-    }
-}
-
 GalleryContentPage* GalleryWindow::currentContentPage() const
 {
-    if (!m_navigationView)
-        return nullptr;
-    return dynamic_cast<GalleryContentPage*>(m_navigationView->contentHost()->pageWidget(0));
+    return m_contentPresenter
+        ? dynamic_cast<GalleryContentPage*>(m_contentPresenter->currentPage())
+        : nullptr;
 }
 
 PlaceholderPage* GalleryWindow::currentPlaceholderPage() const
 {
-    if (!m_navigationView)
-        return nullptr;
-    return dynamic_cast<PlaceholderPage*>(m_navigationView->contentHost()->pageWidget(0));
+    return m_contentPresenter
+        ? dynamic_cast<PlaceholderPage*>(m_contentPresenter->currentPage())
+        : nullptr;
 }
 
 SettingsPage* GalleryWindow::currentSettingsPage() const
 {
-    if (!m_navigationView)
-        return nullptr;
-    return dynamic_cast<SettingsPage*>(m_navigationView->contentHost()->pageWidget(0));
+    return m_contentPresenter
+        ? dynamic_cast<SettingsPage*>(m_contentPresenter->currentPage())
+        : nullptr;
 }
 
 void GalleryWindow::buildNavigationShell()
@@ -330,6 +260,21 @@ void GalleryWindow::buildNavigationShell()
                   .arg(m_footerNavigationPane->routeIds().size())
                   .arg(m_navigationView->expandedPaneWidth())
                   .arg(m_navigationView->compactPaneWidth()));
+}
+
+void GalleryWindow::buildContentPresenter()
+{
+    // The presenter owns the route -> page swap inside the navigation view's
+    // content host; in-page navigation flows back through routeActivated.
+    // zh_CN: presenter 负责在导航视图 content host 内完成路由 → 页面的替换；
+    // 页面内导航经 routeActivated 回流。
+    m_contentPresenter = new GalleryContentPresenter(m_navigationView->contentHost(),
+                                                     m_navigationViewModel,
+                                                     this);
+    connect(m_contentPresenter, &GalleryContentPresenter::routeActivated,
+            this, [this](const QString& routeId) {
+                selectRoute(routeId);
+            });
 }
 
 void GalleryWindow::createTitleBarContent()
@@ -488,21 +433,25 @@ void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
     LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1")
                   .arg(routeId));
     recordNavigationHistory(routeId);
-    showRouteContent(routeId);
+    if (m_contentPresenter)
+        m_contentPresenter->presentRoute(routeId);
 }
 
 void GalleryWindow::recordNavigationHistory(const QString& nextRouteId)
 {
-    if (m_isNavigatingHistory || m_currentRouteId.isEmpty() || m_currentRouteId == nextRouteId)
+    // History must capture the on-screen route before the presenter swaps it.
+    // zh_CN: 历史栈要在 presenter 换页之前记录屏幕上的路由。
+    const QString previousRouteId = currentRouteId();
+    if (m_isNavigatingHistory || previousRouteId.isEmpty() || previousRouteId == nextRouteId)
         return;
     if (!m_navigationViewModel.itemById(nextRouteId))
         return;
-    if (!m_backRouteStack.isEmpty() && m_backRouteStack.last() == m_currentRouteId)
+    if (!m_backRouteStack.isEmpty() && m_backRouteStack.last() == previousRouteId)
         return;
 
-    m_backRouteStack.append(m_currentRouteId);
+    m_backRouteStack.append(previousRouteId);
     LOG_TRACE(QStringLiteral("GalleryWindow historyPush routeId=%1 depth=%2")
-                  .arg(m_currentRouteId)
+                  .arg(previousRouteId)
                   .arg(m_backRouteStack.size()));
     updateNavigationCommands();
 }
@@ -525,11 +474,11 @@ bool GalleryWindow::navigateBack()
     m_isNavigatingHistory = true;
     if (m_navigationState.selectedRouteId() != routeId)
         m_navigationState.setSelectedRouteId(routeId);
-    else
-        showRouteContent(routeId);
+    else if (m_contentPresenter)
+        m_contentPresenter->presentRoute(routeId);
     m_isNavigatingHistory = false;
     updateNavigationCommands();
-    return m_currentRouteId == routeId;
+    return currentRouteId() == routeId;
 }
 
 void GalleryWindow::toggleNavigationDisplayMode()

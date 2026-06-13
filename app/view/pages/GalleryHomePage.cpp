@@ -15,6 +15,7 @@
 #include "view/shell/AppIcon.h"
 #include "view/support/GalleryStyleSupport.h"
 #include "view/widgets/GalleryEntryCard.h"
+#include "utils/Log.h"
 
 namespace fluent::gallery {
 namespace {
@@ -192,6 +193,8 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
         ++cellIndex;
     }
 
+    const int featuredCount = cellIndex;
+
     // Category quick links cover the rest of the catalog.
     // zh_CN: 分类捷径覆盖目录其余部分。
     bodyLayout->addSpacing(12);
@@ -222,6 +225,11 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     }
 
     addContentWidget(body);
+
+    LOG_DEBUG(QStringLiteral("GalleryHomePage created routeId=%1 featuredCards=%2 categoryCards=%3")
+                  .arg(entry.routeId)
+                  .arg(featuredCount)
+                  .arg(cellIndex));
 }
 
 void GalleryHomePage::onThemeUpdated()
