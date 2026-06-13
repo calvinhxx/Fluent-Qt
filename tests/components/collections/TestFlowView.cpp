@@ -329,6 +329,65 @@ TEST_F(FlowViewTest, WheelScrollConsumesEventWhenFlowCanScroll)
     EXPECT_GT(flow->verticalScrollBar()->value(), before);
 }
 
+TEST_F(FlowViewTest, WheelAtBoundaryIsConsumedWhenFlowCanScroll)
+{
+    auto* flow = new FlowView(window);
+    flow->setGeometry(0, 0, 260, 120);
+    flow->setContentMargins(QMargins());
+    flow->setHorizontalSpacing(8);
+    flow->setVerticalSpacing(8);
+    attachDelegate(flow);
+
+    QStringList labels;
+    QList<QSize> sizes;
+    for (int row = 0; row < 12; ++row) {
+        labels << QStringLiteral("Photo %1").arg(row + 1);
+        sizes << QSize(120, 56);
+    }
+    flow->setModel(createModel(flow, labels, sizes));
+    showOffscreen(window);
+
+    ASSERT_GT(flow->verticalScrollBar()->maximum(), 0);
+    ASSERT_EQ(flow->verticalScrollBar()->value(), flow->verticalScrollBar()->minimum());
+
+    // Scroll-up at the top edge: nothing moves, but the event must not bubble
+    // to an enclosing scroller (it would pan the host page mid-gesture).
+    // zh_CN: 顶端向上滚：内容不动，但事件不能冒泡给外层滚动容器
+    // （否则手势中途会带动宿主页面平移）。
+    const QPoint wheelPoint = flow->viewport()->rect().center();
+    FLUENT_MAKE_WHEEL_EVENT(wheel, wheelPoint.x(), wheelPoint.y(), 120, Qt::NoModifier);
+    wheel.setAccepted(false);
+    QApplication::sendEvent(flow->viewport(), &wheel);
+    processEvents();
+
+    EXPECT_TRUE(wheel.isAccepted());
+    EXPECT_EQ(flow->verticalScrollBar()->value(), flow->verticalScrollBar()->minimum());
+}
+
+TEST_F(FlowViewTest, WheelPassesThroughWhenContentFits)
+{
+    auto* flow = new FlowView(window);
+    flow->setGeometry(0, 0, 260, 200);
+    flow->setContentMargins(QMargins());
+    flow->setHorizontalSpacing(8);
+    flow->setVerticalSpacing(8);
+    attachDelegate(flow);
+    flow->setModel(createModel(flow, {"A", "B"}, {QSize(100, 40), QSize(100, 40)}));
+    showOffscreen(window);
+
+    ASSERT_EQ(flow->verticalScrollBar()->maximum(), flow->verticalScrollBar()->minimum());
+
+    // Content fits: stay transparent so an enclosing scroller takes the wheel.
+    // zh_CN: 内容未超出视口：保持透传，外层滚动容器可接管滚轮。
+    const QPoint wheelPoint = flow->viewport()->rect().center();
+    FLUENT_MAKE_WHEEL_EVENT(wheel, wheelPoint.x(), wheelPoint.y(), -120, Qt::NoModifier);
+    wheel.setAccepted(false);
+    QApplication::sendEvent(flow->viewport(), &wheel);
+    processEvents();
+
+    EXPECT_FALSE(wheel.isAccepted());
+}
+
 TEST_F(FlowViewTest, PointerSelectionKeyboardNavigationAndDisabledState)
 {
     auto* flow = new FlowView(window);

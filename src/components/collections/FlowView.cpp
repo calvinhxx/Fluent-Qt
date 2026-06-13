@@ -605,6 +605,8 @@ void FlowView::wheelEvent(QWheelEvent* event)
 
     QScrollBar* bar = verticalScrollBar();
     if (!bar || bar->maximum() <= bar->minimum()) {
+        // Content fits: stay transparent so an enclosing scroller takes the wheel.
+        // zh_CN: 内容未超出视口：保持透明，让外层滚动容器接管滚轮。
         event->ignore();
         return;
     }
@@ -615,11 +617,6 @@ void FlowView::wheelEvent(QWheelEvent* event)
         ? static_cast<qreal>(pixelDelta.y())
         : angleDelta.y() / 120.0 * bar->singleStep() * 3.0;
 
-    if (qFuzzyIsNull(scrollPx)) {
-        event->ignore();
-        return;
-    }
-
     const int previous = bar->value();
     const int target = qBound(bar->minimum(),
                               previous - qRound(scrollPx),
@@ -628,11 +625,18 @@ void FlowView::wheelEvent(QWheelEvent* event)
         bar->setValue(target);
         syncFluentScrollBar();
         viewport()->update();
-        event->accept();
-        return;
     }
 
-    event->ignore();
+    // A scrollable flow owns the wheel even at its edges and for zero-delta
+    // phase events (ScrollBegin/End): letting any of them bubble hands the
+    // gesture to an enclosing scroll view, which then pans the whole page
+    // while this view's own scrollbar is responding. The sibling collection
+    // views (ListView/GridView/TreeView) consume boundary wheels the same way.
+    // zh_CN: 可滚动的 flow 在边缘以及零增量的 phase 事件（ScrollBegin/End）上
+    // 也要持有滚轮：任何一个事件冒泡出去，手势就会交给外层滚动容器，造成本视图
+    // 滚动条还在响应的同时整页跟着平移。同族集合视图
+    // （ListView/GridView/TreeView）对边缘滚轮采用同样的消费策略。
+    event->accept();
 }
 
 QModelIndex FlowView::moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers)

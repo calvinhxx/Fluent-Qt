@@ -88,6 +88,18 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
      * zh_CN: 允许的最大缩放因子。
      */
     Q_PROPERTY(qreal maxZoomFactor READ maxZoomFactor WRITE setMaxZoomFactor NOTIFY maxZoomFactorChanged)
+    /**
+     * @brief Whether boundary wheel input chains to an enclosing scroller (WinUI
+     * ScrollViewer.IsScrollChainingEnabled).
+     * zh_CN: 滚动到边缘后滚轮输入是否继续传给外层滚动容器（对应 WinUI
+     * ScrollViewer.IsScrollChainingEnabled）。
+     *
+     * When disabled, a view with scrollable range consumes wheel events even at
+     * its edges, so a nested ScrollView never pans its host page mid-gesture.
+     * zh_CN: 关闭后，存在可滚动范围的视图在边缘也会消费滚轮事件，嵌套的
+     * ScrollView 不会在手势中途带动宿主页面平移。
+     */
+    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
 
 public:
     enum class ScrollMode {
@@ -140,6 +152,9 @@ public:
     qreal maxZoomFactor() const { return m_maxZoomFactor; }
     void setMaxZoomFactor(qreal factor);
 
+    bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
+    void setScrollChainingEnabled(bool enabled);
+
     int horizontalOffset() const;
     int verticalOffset() const;
     int scrollableWidth() const;
@@ -160,6 +175,7 @@ signals:
     void zoomFactorChanged();
     void minZoomFactorChanged();
     void maxZoomFactorChanged();
+    void scrollChainingEnabledChanged();
     void scrollPositionChanged(int horizontalOffset, int verticalOffset);
 
 protected:
@@ -195,6 +211,7 @@ private:
     qreal clampedZoomFactor(qreal factor) const;
     bool handleZoomWheel(QWheelEvent* event, QObject* source);
     bool shouldSuppressScrollWheel() const;
+    bool hasScrollableRange() const;
     bool handleNativeGesture(QEvent* event, QObject* source);
     bool handlePinchGesture(QEvent* event, QObject* source);
     QPointF mapEventPositionToViewport(QObject* source, const QPointF& position) const;
@@ -207,6 +224,7 @@ private:
     qreal m_zoomFactor = 1.0;
     qreal m_minZoomFactor = 0.1;
     qreal m_maxZoomFactor = 10.0;
+    bool m_scrollChainingEnabled = true;
 
     QPropertyAnimation* m_horizontalAnimation = nullptr;
     QPropertyAnimation* m_verticalAnimation = nullptr;

@@ -358,6 +358,38 @@ TEST_F(CalendarDatePickerTest, AdjacentMonthSelectionIsSupported)
     EXPECT_EQ(picker->visibleMonth(), QDate(2026, 6, 1));
 }
 
+TEST_F(CalendarDatePickerTest, OpeningCalendarLandsOnSelectedMonthWithoutTransition)
+{
+    CalendarDatePicker* picker = new CalendarDatePicker(window);
+    picker->setGeometry(80, 60, 180, picker->sizeHint().height());
+    // Two months back guarantees the selected month differs from the calendar's
+    // initial (current) month in any test run, year-round.
+    // zh_CN: 往前推两个月，保证任何时间运行时选中月份都与日历初始（当前）月份不同。
+    const QDate today = QDate::currentDate();
+    const QDate selected = QDate(today.year(), today.month(), 1).addMonths(-2).addDays(14);
+    picker->setDate(selected);
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    CalendarView* calendarView = calendarViewFor(popup);
+    ASSERT_NE(calendarView, nullptr);
+
+    // The flyout must land on the selected month instantly: while an entrance
+    // transition runs, day-cell hits are rejected and the first click is lost.
+    // zh_CN: flyout 必须直接停在选中月份：入场动画进行期间日期单元格命中被拒绝，
+    // 首次点击会丢失。
+    EXPECT_EQ(calendarView->property("monthTransitionDirection").toInt(), 0);
+    EXPECT_EQ(calendarView->property("monthTransitionProgress").toReal(), 1.0);
+
+    const QDate target = selected.addDays(1);
+    QTest::mouseClick(calendarView, Qt::LeftButton, Qt::NoModifier,
+                      cellCenterForDate(calendarView, target));
+    processEvents();
+
+    EXPECT_EQ(picker->date(), target);
+    EXPECT_FALSE(picker->isCalendarOpen());
+}
+
 TEST_F(CalendarDatePickerTest, OutOfRangeCellsAreDisabled)
 {
     CalendarDatePicker* picker = new CalendarDatePicker(window);

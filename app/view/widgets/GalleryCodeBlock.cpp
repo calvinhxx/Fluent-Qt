@@ -25,6 +25,7 @@
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
+#include "utils/Log.h"
 #include "view/support/GalleryCodeHighlighter.h"
 #include "view/support/GalleryStyleSupport.h"
 #include "view/support/GalleryToast.h"
@@ -233,6 +234,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
     connect(m_copyButton, &fluent::basicinput::Button::clicked, this, [this]() {
         if (QClipboard* clipboard = QApplication::clipboard()) {
             clipboard->setText(m_code);
+            LOG_DEBUG(QStringLiteral("GalleryCodeBlock copyCode chars=%1").arg(m_code.size()));
             showGalleryToast(this, QStringLiteral("Copied to clipboard"));
             // Briefly flip the icon to a checkmark for inline confirmation (matches the gif).
             // zh_CN: 短暂把图标切成对勾做就地确认（对齐 gif）。
@@ -303,6 +305,13 @@ void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
     // zh_CN: 直接量固定内层内容。裁剪容器始终可见且全程用高度约束，避免 show/hide 和释放约束带来的布局跳动。
     m_contentTargetHeight = naturalContentHeight();
     applyFraction(m_fraction);
+
+    // One anchor per toggle; the per-frame applyFraction path stays quiet.
+    // zh_CN: 每次切换打一条；逐帧的 applyFraction 路径保持静默。
+    LOG_DEBUG(QStringLiteral("GalleryCodeBlock setExpanded expanded=%1 contentHeight=%2 animated=%3")
+                  .arg(expanded)
+                  .arg(m_contentTargetHeight)
+                  .arg(animated));
 
     const double target = expanded ? 1.0 : 0.0;
     if (!animated) {

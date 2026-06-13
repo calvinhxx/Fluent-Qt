@@ -7,6 +7,7 @@
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
+#include "utils/Log.h"
 #include "view/support/GalleryStyleSupport.h"
 #include "view/widgets/GalleryIconTile.h"
 
@@ -64,8 +65,13 @@ void GalleryEntryCard::setIconGlyph(const QString& glyph)
 
 void GalleryEntryCard::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton && rect().contains(event->pos()))
+    if (event->button() == Qt::LeftButton && rect().contains(event->pos())) {
+        // Click-source anchor: distinguishes card navigation from nav-pane clicks
+        // when tracing a route change.
+        // zh_CN: 点击来源锚点：追踪路由变化时区分卡片导航与导航面板点击。
+        LOG_DEBUG(QStringLiteral("GalleryEntryCard activated routeId=%1").arg(m_targetRouteId));
         emit activated(m_targetRouteId);
+    }
     QFrame::mouseReleaseEvent(event);
 }
 

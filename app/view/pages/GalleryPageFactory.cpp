@@ -47,6 +47,8 @@ QWidget* GalleryPageFactory::createPage(const QString& routeId) const
     }
 
     // Known route without content metadata: keep the placeholder fallback for this phase.
+    LOG_DEBUG(QStringLiteral("GalleryPageFactory createPage fallback routeId=%1 reason=missing-content-entry")
+                  .arg(routeId));
     return new PlaceholderPage(*item);
 }
 

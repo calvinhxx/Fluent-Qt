@@ -272,6 +272,52 @@ TEST_F(ScrollViewTest, BidirectionalCornerIsTransparent) {
     EXPECT_TRUE(corner->testAttribute(Qt::WA_TranslucentBackground));
 }
 
+TEST_F(ScrollViewTest, ScrollChainingDisabledConsumesBoundaryWheel) {
+    ScrollView view;
+    view.resize(180, 140);
+    view.setWidget(createContent(QSize(420, 360)));
+    showAndProcess(view);
+
+    ASSERT_GT(view.scrollableHeight(), 0);
+    EXPECT_TRUE(view.isScrollChainingEnabled());
+
+    // Default (chaining on): a boundary wheel stays ignored so it can bubble
+    // to an enclosing scroller.
+    // zh_CN: 默认（链式开启）：边缘滚轮保持 ignore，可冒泡给外层滚动容器。
+    FLUENT_MAKE_WHEEL_EVENT(chained, 64, 48, 120, Qt::NoModifier);
+    chained.setAccepted(false);
+    QApplication::sendEvent(view.viewport(), &chained);
+    EXPECT_FALSE(chained.isAccepted());
+    EXPECT_EQ(view.verticalOffset(), 0);
+
+    // Chaining off: the same boundary wheel is consumed in place.
+    // zh_CN: 链式关闭：同样的边缘滚轮被就地消费。
+    view.setScrollChainingEnabled(false);
+    FLUENT_MAKE_WHEEL_EVENT(consumed, 64, 48, 120, Qt::NoModifier);
+    consumed.setAccepted(false);
+    QApplication::sendEvent(view.viewport(), &consumed);
+    EXPECT_TRUE(consumed.isAccepted());
+    EXPECT_EQ(view.verticalOffset(), 0);
+}
+
+TEST_F(ScrollViewTest, ScrollChainingDisabledKeepsFittedContentTransparent) {
+    ScrollView view;
+    view.resize(180, 140);
+    view.setWidget(createContent(QSize(100, 80)));
+    view.setScrollChainingEnabled(false);
+    showAndProcess(view);
+
+    ASSERT_EQ(view.scrollableHeight(), 0);
+    ASSERT_EQ(view.scrollableWidth(), 0);
+
+    // Nothing to scroll: the wheel passes through even with chaining off.
+    // zh_CN: 无可滚动内容：即使关闭链式滚动，滚轮也照常透传。
+    FLUENT_MAKE_WHEEL_EVENT(wheel, 64, 48, -120, Qt::NoModifier);
+    wheel.setAccepted(false);
+    QApplication::sendEvent(view.viewport(), &wheel);
+    EXPECT_FALSE(wheel.isAccepted());
+}
+
 TEST_F(ScrollViewTest, ZoomToClampsAndUpdatesContentSizeAndRange) {
     ScrollView view;
     view.resize(180, 120);

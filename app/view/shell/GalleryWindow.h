@@ -25,17 +25,32 @@ class NavigationView;
 
 namespace fluent::gallery {
 
+class GalleryContentPresenter;
 class GalleryNavigationPane;
 class GalleryContentPage;
 class GalleryNavigationItem;
 class PlaceholderPage;
 class SettingsPage;
 
+/**
+ * @brief Application shell: title bar, left navigation pane, right content area.
+ * zh_CN: 应用外壳：标题栏、左侧导航栏、右侧 content 区。
+ *
+ * Construction is three symmetric build steps (title bar, navigation shell,
+ * content presenter) plus the initial route. After that every route change —
+ * pane click, search, back, in-page card — funnels through selectRoute:
+ * zh_CN: 构造分三个对称的构建步骤（标题栏、导航壳、content 呈现器）加初始路由。
+ * 之后所有路由变化——导航点击、搜索、后退、页面内卡片——都汇入 selectRoute：
+ *
+ *   selectRoute -> GalleryNavigationState (selection)
+ *               -> handleSelectedRouteChanged -> history
+ *               -> GalleryContentPresenter::presentRoute (page swap)
+ */
 class GalleryWindow : public fluent::windowing::Window {
 public:
     explicit GalleryWindow(QWidget* parent = nullptr);
 
-    QString currentRouteId() const { return m_currentRouteId; }
+    QString currentRouteId() const;
     QStringList navigationEntryIds() const;
     QStringList visibleNavigationTitles() const;
     bool selectRoute(const QString& routeId);
@@ -55,14 +70,10 @@ public:
 private:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
-    void buildNavigationShell();
     void createTitleBarContent();
+    void buildNavigationShell();
+    void buildContentPresenter();
     void showInitialRouteContent();
-    bool showRouteContent(const QString& routeId);
-    QWidget* createRouteContentPage(const QString& routeId,
-                                    const GalleryNavigationItem& fallbackItem) const;
-    void connectRouteContentNavigation(QWidget* page);
-    void replaceRouteContentPage(const QString& routeId, QWidget* page);
     void handleSelectedRouteChanged(const QString& routeId);
     void recordNavigationHistory(const QString& nextRouteId);
     bool navigateBack();
@@ -75,12 +86,12 @@ private:
     fluent::navigation::NavigationView* m_navigationView = nullptr;
     GalleryNavigationPane* m_mainNavigationPane = nullptr;
     GalleryNavigationPane* m_footerNavigationPane = nullptr;
+    GalleryContentPresenter* m_contentPresenter = nullptr;
     fluent::basicinput::Button* m_backButton = nullptr;
     fluent::basicinput::Button* m_menuButton = nullptr;
     fluent::textfields::AutoSuggestBox* m_searchBox = nullptr;
     QTimer* m_navigationCompactReleaseTimer = nullptr;
     QStringList m_backRouteStack;
-    QString m_currentRouteId;
     bool m_isNavigatingHistory = false;
 };
 

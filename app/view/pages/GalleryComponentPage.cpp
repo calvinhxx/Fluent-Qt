@@ -5,6 +5,7 @@
 #include "view/widgets/GalleryEntryCard.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
+#include "utils/Log.h"
 
 namespace fluent::gallery {
 
@@ -22,6 +23,13 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
 
     addSectionHeader(QStringLiteral("Examples"));
     const QVector<GallerySample> samples = gallerySamplesForRoute(entry.routeId);
+    // A component page without samples is a coverage gap in the sample catalog,
+    // not a normal state — surface it loudly.
+    // zh_CN: 组件页没有任何示例说明示例目录存在覆盖缺口，不是正常状态——大声暴露出来。
+    if (samples.isEmpty()) {
+        LOG_WARN(QStringLiteral("GalleryComponentPage samples missing routeId=%1 title=%2")
+                     .arg(entry.routeId, entry.title));
+    }
     for (const GallerySample& sample : samples) {
         auto* card = new GallerySampleCard(sample, this);
         addContentWidget(card);
@@ -56,6 +64,11 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
             addContentWidget(card);
         }
     }
+
+    LOG_DEBUG(QStringLiteral("GalleryComponentPage created routeId=%1 samples=%2 related=%3")
+                  .arg(entry.routeId)
+                  .arg(samples.size())
+                  .arg(entry.relatedRouteIds.size()));
 }
 
 } // namespace fluent::gallery
