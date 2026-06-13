@@ -61,6 +61,7 @@ protected:
 private:
     void applyPalette();
     void applyHighlightedCode();
+    void ensureHighlighted();
     int naturalContentHeight() const;
     int currentContentHeight() const;
     int blockHeightForContent(int contentHeight) const;
@@ -81,6 +82,7 @@ private:
     QVariantAnimation* m_animation = nullptr;
 
     bool m_expanded = false;
+    bool m_highlighted = false;     // code is only syntax-highlighted on first expand (lazy)
     double m_fraction = 0.0;        // 0 = collapsed, 1 = expanded
     int m_contentTargetHeight = 0;  // pixel height the content animates toward
     int m_lastEmittedLayoutHeight = -1;

@@ -259,7 +259,11 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
     QFont monospace = QFontDatabase::systemFont(QFontDatabase::FixedFont);
     monospace.setPixelSize(Typography::FontSize::Caption);
     m_codeLabel->setFont(monospace);
-    applyHighlightedCode();
+    // Lazy: syntax highlighting + RichText shaping is the heaviest part of building a card and
+    // the block starts collapsed, so defer it until the first expand. Most blocks are never
+    // opened, so this keeps page navigation snappy.
+    // zh_CN: 懒加载：语法高亮 + 富文本排版是建卡最重的一步，而代码块默认折叠，所以推迟到首次展开再做。
+    // 大多数代码块从不展开，这样能让页面切换保持流畅。
 
     innerLayout->addLayout(topRow);
     innerLayout->addWidget(m_codeLabel);
@@ -297,6 +301,12 @@ void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
     if (m_expanded == expanded)
         return;
     m_expanded = expanded;
+
+    // Highlight on first reveal, before measuring — the measured content height depends on the
+    // (now populated) code label.
+    // zh_CN: 首次展开时才高亮，并且在量高之前完成——量到的内容高度依赖（已填充的）代码 label。
+    if (expanded)
+        ensureHighlighted();
 
     m_animation->stop();
     // Measure the fixed inner holder directly. Keeping the clipping container visible and
@@ -420,15 +430,26 @@ void GalleryCodeBlock::onThemeUpdated()
         m_langLabel->onThemeUpdated();
     if (m_copyButton)
         m_copyButton->onThemeUpdated();
-    // Re-color the snippet for the new theme (light/dark VSCode palette).
-    // zh_CN: 按新主题（明/暗 VSCode 配色）重新着色代码片段。
-    applyHighlightedCode();
+    // Re-color the snippet for the new theme (light/dark VSCode palette), but only if it has
+    // already been highlighted — an unopened block stays lazy and picks up the theme on expand.
+    // zh_CN: 按新主题（明/暗 VSCode 配色）重新着色——但仅当已经高亮过；未展开的块保持懒加载，
+    // 等到展开时再按当时主题着色。
+    if (m_highlighted)
+        applyHighlightedCode();
 }
 
 void GalleryCodeBlock::applyHighlightedCode()
 {
-    if (m_codeLabel)
+    if (m_codeLabel) {
         m_codeLabel->setText(highlightCppToHtml(m_code, currentTheme() == Dark));
+        m_highlighted = true;
+    }
+}
+
+void GalleryCodeBlock::ensureHighlighted()
+{
+    if (!m_highlighted)
+        applyHighlightedCode();
 }
 
 void GalleryCodeBlock::applyPalette()
