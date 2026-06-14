@@ -1,10 +1,13 @@
 #include "GalleryWindow.h"
 
+#include <algorithm>
+
 #include <QAbstractAnimation>
 #include <QEvent>
 #include <QLabel>
 #include <QPoint>
 #include <QPropertyAnimation>
+#include <QRegularExpression>
 #include <QTimer>
 
 #include "components/basicinput/Button.h"
@@ -37,6 +40,54 @@ constexpr int kTitleBarTitleHeight = 24;
 constexpr int kTitleBarSearchWidth = 360;
 constexpr int kTitleBarSearchHeight = 28;
 constexpr char kTitleBarIconJitterAnimationName[] = "galleryTitleBarIconJitterAnimation";
+
+// WinUI-Gallery parity search: split the query on whitespace and require a title
+// to contain every token (AND semantics) rather than matching the whole string as
+// one substring, so multi-word queries like "split button" still reach SplitButton.
+// zh_CN: 对齐 WinUI-Gallery 的搜索：按空白把查询拆成词元，标题需包含每个词元（AND 语义），
+// 而非把整串当作单一子串匹配，使「split button」之类的多词查询仍能命中 SplitButton。
+QStringList splitSearchTokens(const QString& query)
+{
+    return query.trimmed().split(QRegularExpression(QStringLiteral("\\s+")),
+                                 Qt::SkipEmptyParts);
+}
+
+bool titleMatchesTokens(const QString& title, const QStringList& tokens)
+{
+    for (const QString& token : tokens) {
+        if (!title.contains(token, Qt::CaseInsensitive))
+            return false;
+    }
+    return true;
+}
+
+// Filter then rank like WinUI-Gallery: titles whose start matches the raw query
+// come first, the rest follow alphabetically (case-insensitive).
+// zh_CN: 仿 WinUI-Gallery 过滤后排序：以原始查询为前缀的标题优先，其余按字母序（忽略大小写）。
+QStringList rankedSearchTitles(const QStringList& titles, const QString& query)
+{
+    const QString needle = query.trimmed();
+    const QStringList tokens = splitSearchTokens(needle);
+    if (tokens.isEmpty())
+        return titles;
+
+    QStringList matched;
+    matched.reserve(titles.size());
+    for (const QString& title : titles) {
+        if (titleMatchesTokens(title, tokens))
+            matched.append(title);
+    }
+
+    std::stable_sort(matched.begin(), matched.end(),
+                     [&needle](const QString& a, const QString& b) {
+                         const bool aPrefix = a.startsWith(needle, Qt::CaseInsensitive);
+                         const bool bPrefix = b.startsWith(needle, Qt::CaseInsensitive);
+                         if (aPrefix != bPrefix)
+                             return aPrefix;  // prefix matches rank ahead
+                         return a.compare(b, Qt::CaseInsensitive) < 0;
+                     });
+    return matched;
+}
 
 int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
 {
@@ -140,29 +191,49 @@ bool GalleryWindow::navigateToSearchResult(const QString& searchText)
     if (needle.isEmpty())
         return false;
 
-    QString exactRouteId;
-    QString partialRouteId;
+    const QStringList tokens = splitSearchTokens(needle);
+
+    // Rank candidates the same way the suggestion dropdown does so pressing Enter
+    // lands on its top result: exact title (0) > prefix (1) > any token subset (2),
+    // ties broken alphabetically (case-insensitive).
+    // zh_CN: 候选排序与建议下拉一致，使回车落到其首个结果：精确标题(0) > 前缀(1) >
+    // 任意词元子集(2)，同档按字母序（忽略大小写）。
+    QString bestRouteId;
+    QString bestTitle;
+    int bestScore = 3;
     for (const GalleryNavigationItem& item : m_navigationViewModel.items()) {
         if (item.kind == GalleryNavigationItem::Kind::SectionHeader)
             continue;
-        if (item.title.compare(needle, Qt::CaseInsensitive) == 0) {
-            exactRouteId = item.id;
-            break;
+        if (!titleMatchesTokens(item.title, tokens))
+            continue;
+
+        int score = 2;
+        if (item.title.compare(needle, Qt::CaseInsensitive) == 0)
+            score = 0;
+        else if (item.title.startsWith(needle, Qt::CaseInsensitive))
+            score = 1;
+
+        if (score < bestScore
+            || (score == bestScore && item.title.compare(bestTitle, Qt::CaseInsensitive) < 0)) {
+            bestScore = score;
+            bestRouteId = item.id;
+            bestTitle = item.title;
         }
-        if (partialRouteId.isEmpty() && item.title.contains(needle, Qt::CaseInsensitive))
-            partialRouteId = item.id;
+        if (bestScore == 0)
+            break;
     }
 
-    const QString routeId = exactRouteId.isEmpty() ? partialRouteId : exactRouteId;
-    if (routeId.isEmpty()) {
+    if (bestRouteId.isEmpty()) {
         LOG_DEBUG(QStringLiteral("GalleryWindow searchNavigate miss text=%1").arg(needle));
         return false;
     }
 
     LOG_DEBUG(QStringLiteral("GalleryWindow searchNavigate text=%1 routeId=%2 match=%3")
-                  .arg(needle, routeId,
-                       exactRouteId.isEmpty() ? QStringLiteral("partial") : QStringLiteral("exact")));
-    return selectRoute(routeId);
+                  .arg(needle, bestRouteId,
+                       bestScore == 0 ? QStringLiteral("exact")
+                                      : (bestScore == 1 ? QStringLiteral("prefix")
+                                                        : QStringLiteral("token"))));
+    return selectRoute(bestRouteId);
 }
 
 void GalleryWindow::showInitialRouteContent()
@@ -377,25 +448,15 @@ void GalleryWindow::createTitleBarContent()
     searchBox->setClearButtonSize(24);
     searchBox->setFixedSize(kTitleBarSearchWidth, kTitleBarSearchHeight);
     // AutoSuggestBox leaves filtering to the owner (WinUI semantics), so narrow
-    // the suggestion list to titles containing the typed text.
-    // zh_CN: AutoSuggestBox 把过滤交给使用方（WinUI 语义），按输入收窄建议列表。
+    // the suggestion list with token-AND matching and prefix-first ranking.
+    // zh_CN: AutoSuggestBox 把过滤交给使用方（WinUI 语义），按词元 AND 匹配并前缀优先排序。
     connect(searchBox, &fluent::textfields::AutoSuggestBox::textChangedWithReason,
             searchBox,
             [searchBox, searchTitles](const QString& text,
                                       fluent::textfields::AutoSuggestBox::TextChangeReason reason) {
                 if (reason != fluent::textfields::AutoSuggestBox::TextChangeReason::UserInput)
                     return;
-                const QString needle = text.trimmed();
-                if (needle.isEmpty()) {
-                    searchBox->setSuggestions(searchTitles);
-                    return;
-                }
-                QStringList filtered;
-                for (const QString& title : searchTitles) {
-                    if (title.contains(needle, Qt::CaseInsensitive))
-                        filtered.append(title);
-                }
-                searchBox->setSuggestions(filtered);
+                searchBox->setSuggestions(rankedSearchTitles(searchTitles, text));
             });
     connect(searchBox, &fluent::textfields::AutoSuggestBox::querySubmitted,
             this, [this](const QString& queryText, const QVariant& chosenSuggestion) {
