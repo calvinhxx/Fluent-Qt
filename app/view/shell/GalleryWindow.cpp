@@ -140,6 +140,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     buildNavigationShell();
     buildContentPresenter();
     showInitialRouteContent();
+    prewarmAllRoutes();
     LOG_INFO(QStringLiteral("GalleryWindow constructed defaultRoute=%1")
                  .arg(m_navigationViewModel.defaultRouteId()));
 }
@@ -239,6 +240,24 @@ bool GalleryWindow::navigateToSearchResult(const QString& searchText)
 void GalleryWindow::showInitialRouteContent()
 {
     selectRoute(m_navigationViewModel.defaultRouteId());
+}
+
+void GalleryWindow::prewarmAllRoutes()
+{
+    if (!m_contentPresenter)
+        return;
+
+    // Hand every nav route to the presenter so it builds them up front (one per
+    // event-loop tick) while a splash screen covers the work. After this drains, the
+    // first visit to any page is a pure show/hide with no build jank.
+    // zh_CN: 把每个导航路由交给 presenter 提前建好（每帧一个），由 splash 遮挡这段构建。
+    // 排空后，任何页面的首次访问都是纯显示/隐藏、无建页卡顿。
+    QStringList routeIds;
+    if (m_mainNavigationPane)
+        routeIds += m_mainNavigationPane->routeIds();
+    if (m_footerNavigationPane)
+        routeIds += m_footerNavigationPane->routeIds();
+    m_contentPresenter->prewarmRoutes(routeIds);
 }
 
 GalleryContentPage* GalleryWindow::currentContentPage() const
@@ -493,6 +512,12 @@ void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
 {
     LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1")
                   .arg(routeId));
+
+    // Present synchronously: with pages prewarmed and resident in the stack, a swap is a
+    // ~1ms show/hide, so there is nothing heavy to defer off this signal. navigateBack()
+    // also relies on currentRouteId() being updated by the time this returns.
+    // zh_CN: 同步换页：页面已预建并常驻栈中，换页只是 ~1ms 的显示/隐藏，没有重活需要从此信号上推迟；
+    // navigateBack() 也依赖本函数返回时 currentRouteId() 已更新。
     recordNavigationHistory(routeId);
     if (m_contentPresenter)
         m_contentPresenter->presentRoute(routeId);

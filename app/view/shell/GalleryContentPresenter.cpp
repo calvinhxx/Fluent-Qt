@@ -1,10 +1,7 @@
 #include "GalleryContentPresenter.h"
 
-#include <QAbstractAnimation>
-#include <QGraphicsOpacityEffect>
-#include <QLabel>
-#include <QPixmap>
-#include <QPropertyAnimation>
+#include <QElapsedTimer>
+#include <QTimer>
 #include <QWidget>
 
 #include "components/navigation/StackContentHost.h"
@@ -29,7 +26,9 @@ GalleryContentPresenter::GalleryContentPresenter(
 
 QWidget* GalleryContentPresenter::currentPage() const
 {
-    return m_contentHost ? m_contentHost->pageWidget(0) : nullptr;
+    if (!m_contentHost)
+        return nullptr;
+    return m_contentHost->pageWidget(m_contentHost->currentIndex());
 }
 
 bool GalleryContentPresenter::presentRoute(const QString& routeId)
@@ -53,33 +52,108 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
         return true;
     }
 
-    // Reuse a previously built page when we have one — building the page (sample cards, live
-    // previews, code blocks) is the expensive synchronous work that made navigation janky.
-    // zh_CN: 已建过的页面直接复用——建页（sample 卡片、live 预览、代码块）是同步重活，正是导航卡顿来源。
-    QWidget* page = cachedPage(routeId);
-    if (page) {
-        LOG_DEBUG(QStringLiteral("GalleryContentPresenter presentRoute reuse routeId=%1").arg(routeId));
-    } else {
-        GalleryPageFactory pageFactory(m_navigationViewModel);
-        page = pageFactory.createPage(routeId);
-        if (!page)
-            page = new PlaceholderPage(*item);
-        connectPageNavigation(page);
-        m_pageCache.insert(routeId, page);
-        LOG_DEBUG(QStringLiteral("GalleryContentPresenter presentRoute build routeId=%1 pageType=%2 title=%3")
-                      .arg(routeId,
-                           QString::fromLatin1(page->metaObject()->className()),
-                           item->title));
-    }
+    // Build the page on first visit (or reuse the prewarmed one) and switch the stack
+    // to it. With startup prewarm, the build has usually already happened, so this is a
+    // pure show/hide. zh_CN: 首次访问才建页（或复用预建好的），然后把栈切过去。有了启动预建，
+    // 建页通常已完成，这里就是纯显示/隐藏。
+    QElapsedTimer presentTimer;
+    presentTimer.start();
 
+    const bool alreadyBuilt = m_routeStackIndex.contains(routeId);
+    const int targetIndex = ensurePageBuilt(routeId);
+    if (targetIndex < 0)
+        return false;
+
+    switchToStackPage(targetIndex);
     m_currentRouteId = routeId;
-    replaceCurrentPage(routeId, page);
+    // PERF: enable with SPDLOG_LEVEL=debug to profile navigation. After prewarm,
+    // alreadyBuilt is true and totalMs is just the show/hide.
+    // zh_CN: 用 SPDLOG_LEVEL=debug 开启以分析导航。预建后 alreadyBuilt 为真，totalMs 仅为显示/隐藏。
+    LOG_DEBUG(QStringLiteral("PERF presentRoute routeId=%1 totalMs=%2 alreadyBuilt=%3")
+                 .arg(routeId)
+                 .arg(presentTimer.elapsed())
+                 .arg(alreadyBuilt ? QStringLiteral("true") : QStringLiteral("false")));
     return true;
 }
 
-QWidget* GalleryContentPresenter::cachedPage(const QString& routeId) const
+int GalleryContentPresenter::ensurePageBuilt(const QString& routeId)
 {
-    return m_pageCache.value(routeId).data();
+    const int existing = m_routeStackIndex.value(routeId, -1);
+    if (existing >= 0)
+        return existing;
+
+    const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
+    if (!item) {
+        LOG_WARN(QStringLiteral("GalleryContentPresenter ensurePageBuilt rejected routeId=%1 reason=missing-route")
+                     .arg(routeId));
+        return -1;
+    }
+
+    QElapsedTimer buildTimer;
+    buildTimer.start();
+    GalleryPageFactory pageFactory(m_navigationViewModel);
+    QWidget* page = pageFactory.createPage(routeId);
+    if (!page)
+        page = new PlaceholderPage(*item);
+    connectPageNavigation(page);
+    const int index = m_contentHost->count();
+    m_contentHost->insertPage(index, page);
+    m_routeStackIndex.insert(routeId, index);
+    LOG_DEBUG(QStringLiteral("PERF buildPage routeId=%1 buildMs=%2 pageType=%3 stackIndex=%4")
+                  .arg(routeId)
+                  .arg(buildTimer.elapsed())
+                  .arg(QString::fromLatin1(page->metaObject()->className()))
+                  .arg(index));
+    return index;
+}
+
+void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
+{
+    if (!m_contentHost) {
+        emit prewarmFinished();
+        return;
+    }
+
+    for (const QString& routeId : routeIds) {
+        if (routeId.isEmpty() || m_routeStackIndex.contains(routeId) || m_prewarmQueue.contains(routeId))
+            continue;
+        m_prewarmQueue.enqueue(routeId);
+        ++m_prewarmTotal;
+    }
+    LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarmRoutes queued=%1 total=%2")
+                  .arg(m_prewarmQueue.size())
+                  .arg(m_prewarmTotal));
+    if (m_prewarmQueue.isEmpty()) {
+        // Nothing to build (everything already prewarmed) — still notify so any splash
+        // waiting on us dismisses. zh_CN: 没有要建的（都已预建）——仍然通知，让等待的 splash 关闭。
+        emit prewarmFinished();
+        return;
+    }
+    scheduleNextPrewarm();
+}
+
+void GalleryContentPresenter::scheduleNextPrewarm()
+{
+    if (m_prewarmScheduled)
+        return;
+    m_prewarmScheduled = true;
+    // One page per event-loop tick: heavy construction yields between pages so a splash
+    // screen keeps animating instead of freezing for the whole prewarm.
+    // zh_CN: 每个事件循环一帧建一个：页面间让出控制权，让 splash 持续动画而非整段预建期间冻结。
+    QTimer::singleShot(0, this, [this]() {
+        m_prewarmScheduled = false;
+        if (m_prewarmQueue.isEmpty()) {
+            emit prewarmFinished();
+            return;
+        }
+        ensurePageBuilt(m_prewarmQueue.dequeue());
+        ++m_prewarmDone;
+        emit prewarmProgress(m_prewarmDone, m_prewarmTotal);
+        if (!m_prewarmQueue.isEmpty())
+            scheduleNextPrewarm();
+        else
+            emit prewarmFinished();
+    });
 }
 
 void GalleryContentPresenter::connectPageNavigation(QWidget* page)
@@ -90,93 +164,22 @@ void GalleryContentPresenter::connectPageNavigation(QWidget* page)
     }
 }
 
-void GalleryContentPresenter::replaceCurrentPage(const QString& routeId, QWidget* page)
+void GalleryContentPresenter::switchToStackPage(int targetIndex)
 {
-    if (m_contentHost->count() == 0) {
-        m_contentHost->insertPage(0, page);
-        m_contentHost->setCurrentIndex(0, 0, false);
-        LOG_TRACE(QStringLiteral("GalleryContentPresenter contentHost pageInserted routeId=%1")
-                      .arg(routeId));
-        return;
-    }
-
-    // Snapshot the outgoing page (still on screen, fully laid out) before swapping. We fade this
-    // flat pixmap out over the new page rather than animating the live page — a cross-dissolve
-    // that costs one grab, not a per-frame rasterization of a heavy page, so it stays smooth.
-    // zh_CN: 换页前先把旧页（仍在屏幕、已完成布局）抓成快照。之后让这张静态图在新页之上淡出，
-    // 而不是逐帧渲染重型的活动页面——只付一次 grab 成本的交叉淡化，保持流畅。
-    QWidget* outgoing = m_contentHost->pageWidget(0);
-    QPixmap snapshot;
-    if (outgoing && outgoing->isVisible() && !outgoing->size().isEmpty())
-        snapshot = outgoing->grab();
-
-    QWidget* previousPage = m_contentHost->replacePage(0, page);
-    // Keep the previous page alive for reuse instead of deleting it (rebuilding pages per
-    // navigation is the jank). replacePage already detached it from the host (parent cleared)
-    // — even though an in-page card may have triggered this from its own mouseReleaseEvent, we
-    // only reparent (never delete) the still-dispatching page, so there is no use-after-free.
-    // zh_CN: 旧页面保留复用而非删除（每次导航重建才是卡顿根因）。replacePage 已把它从 host 摘下
-    // （清空 parent）——即便是页面内卡片在自身 mouseReleaseEvent 里触发的导航，我们也只重设父级、
-    // 绝不删除仍在派发事件的页面，因此不会 use-after-free。
-    if (previousPage)
-        stashPage(previousPage);
-    m_contentHost->setCurrentIndex(0, 0, false);
-
-    if (!snapshot.isNull())
-        startContentCrossfade(snapshot);
-
-    LOG_TRACE(QStringLiteral("GalleryContentPresenter contentHost pageReplaced routeId=%1")
-                  .arg(routeId));
-}
-
-void GalleryContentPresenter::startContentCrossfade(const QPixmap& snapshot)
-{
-    // Retire any still-fading overlay so fast back-to-back navigation doesn't stack snapshots.
-    // zh_CN: 撤掉上一张还在淡出的快照，避免快速连续导航时叠加多张。
-    if (m_transitionOverlay)
-        m_transitionOverlay->deleteLater();
-
-    auto* overlay = new QLabel(m_contentHost);
-    overlay->setObjectName(QStringLiteral("galleryContentTransitionOverlay"));
-    overlay->setAttribute(Qt::WA_TransparentForMouseEvents);
-    overlay->setScaledContents(false);
-    overlay->setPixmap(snapshot);
-    overlay->setGeometry(m_contentHost->rect());
-    overlay->show();
-    overlay->raise();
-    m_transitionOverlay = overlay;
-
-    auto* opacity = new QGraphicsOpacityEffect(overlay);
-    opacity->setOpacity(1.0);
-    overlay->setGraphicsEffect(opacity);
-
-    const auto motion = m_contentHost->themeAnimation();
-    auto* fade = new QPropertyAnimation(opacity, "opacity", overlay);
-    fade->setStartValue(1.0);
-    fade->setEndValue(0.0);
-    fade->setDuration(motion.normal);
-    fade->setEasingCurve(motion.decelerate);
-    QPointer<QWidget> guard = overlay;
-    QObject::connect(fade, &QPropertyAnimation::finished, overlay, [this, guard]() {
-        if (m_transitionOverlay == guard)
-            m_transitionOverlay = nullptr;
-        if (guard)
-            guard->deleteLater();
-    });
-    fade->start(QAbstractAnimation::DeleteWhenStopped);
-}
-
-void GalleryContentPresenter::stashPage(QWidget* page)
-{
-    if (!page)
-        return;
-    if (!m_pageStash) {
-        m_pageStash = new QWidget(m_contentHost);
-        m_pageStash->setObjectName(QStringLiteral("galleryPageStash"));
-        m_pageStash->hide();
-    }
-    page->setParent(m_pageStash);
-    page->hide();
+    // A pure show/hide of an already-built, already-laid-out page: ~1ms. We deliberately
+    // do NOT cross-dissolve — that needs a full-page grab() of the outgoing page, which
+    // costs ~0.5s when leaving a heavy live-demo page (e.g. Home) and was the last source
+    // of click jank once builds moved to startup.
+    // zh_CN: 对已建好、已布局的页面做纯显示/隐藏：约 1ms。刻意不做交叉淡化——那需要 grab() 旧页整页，
+    // 离开重型 live demo 页（如 Home）时要约 0.5s，是建页移到启动后最后的点击卡顿来源。
+    const int fromIndex = m_contentHost->currentIndex();
+    QElapsedTimer switchTimer;
+    switchTimer.start();
+    m_contentHost->setCurrentIndex(targetIndex, 0, false);
+    LOG_DEBUG(QStringLiteral("PERF switchToStackPage from=%1 to=%2 switchMs=%3")
+                 .arg(fromIndex)
+                 .arg(targetIndex)
+                 .arg(switchTimer.elapsed()));
 }
 
 } // namespace fluent::gallery

@@ -1,17 +1,15 @@
 #include "GalleryCategoryPage.h"
 
-#include <QGridLayout>
-#include <QWidget>
+#include <QPixmap>
+#include <QVector>
 
+#include "model/GalleryComponentCatalog.h"
 #include "model/GalleryNavigationItem.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
-#include "view/widgets/GalleryEntryCard.h"
+#include "view/widgets/GalleryEntryGrid.h"
 #include "utils/Log.h"
 
 namespace fluent::gallery {
-namespace {
-constexpr int kCardColumns = 2;
-}
 
 GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
                                          const GalleryNavigationViewModel& navigationViewModel,
@@ -22,19 +20,16 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
 
     addSectionHeader(QStringLiteral("Components"));
 
-    auto* cardsContainer = new QWidget(this);
-    cardsContainer->setObjectName(QStringLiteral("galleryCategoryCards"));
-    auto* grid = new QGridLayout(cardsContainer);
-    grid->setContentsMargins(0, 0, 0, 0);
-    grid->setHorizontalSpacing(12);
-    grid->setVerticalSpacing(12);
-    for (int column = 0; column < kCardColumns; ++column)
-        grid->setColumnStretch(column, 1);
+    // The cards are now data-driven and painted by a single virtualized grid rather
+    // than one widget per control — this is what removes the bulk of a category page's
+    // build cost. zh_CN: 卡片改为数据驱动、由单个虚拟化网格绘制，而非每个控件一个 widget——
+    // 这正是砍掉分类页建页开销大头的关键。
+    auto* grid = new GalleryEntryGrid(this);
+    QVector<GalleryEntryGrid::Entry> entries;
 
     // An empty categoryId means "no filter": the All controls page lists everything.
     // zh_CN: categoryId 为空表示不过滤：All controls 页列出全部组件。
     const bool includeAllCategories = entry.categoryId.isEmpty();
-    int cellIndex = 0;
     for (const GalleryNavigationItem& item : navigationViewModel.items()) {
         if (item.kind != GalleryNavigationItem::Kind::ComponentRoute)
             continue;
@@ -47,19 +42,19 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
         if (const GalleryContentEntry* componentEntry = galleryContentEntry(item.id))
             description = componentEntry->description;
 
-        auto* card = new GalleryEntryCard(item.id, item.title, description, cardsContainer);
-        connect(card, &GalleryEntryCard::activated,
-                this, &GalleryContentPage::routeActivated);
-        grid->addWidget(card, cellIndex / kCardColumns, cellIndex % kCardColumns);
-        ++cellIndex;
+        entries.append({item.id, item.title, description,
+                        QPixmap(galleryControlImageResource(item.title))});
     }
 
-    addContentWidget(cardsContainer);
+    grid->setEntries(entries);
+    connect(grid, &GalleryEntryGrid::activated,
+            this, &GalleryContentPage::routeActivated);
+    addContentWidget(grid);
 
     LOG_DEBUG(QStringLiteral("GalleryCategoryPage created routeId=%1 categoryId=%2 cards=%3")
                   .arg(entry.routeId,
                        includeAllCategories ? QStringLiteral("<all>") : entry.categoryId)
-                  .arg(cellIndex));
+                  .arg(entries.size()));
 }
 
 } // namespace fluent::gallery

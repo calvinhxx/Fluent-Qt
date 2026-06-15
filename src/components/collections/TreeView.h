@@ -300,6 +300,11 @@ private:
     QRectF selectedIndicatorBaseRect(const QModelIndex& index) const;
     QRectF currentSelectedIndicatorRect() const;
     void paintSelectedIndicator(QPainter& painter) const;
+    // Minimal repaint regions for the per-frame animation ticks, so a click
+    // doesn't re-rasterize the whole viewport every frame (matters on Windows'
+    // software raster). zh_CN: 动画每帧的最小重绘区域，避免每帧整块 viewport 重绘
+    // （对 Windows 软件光栅尤为关键）。
+    QRect indicatorMotionDirtyRect() const;
     void syncCheckStatesWithSelection(const QItemSelection& selected, const QItemSelection& deselected);
     bool shouldSyncCheckStateWithSelection(const QModelIndex& index) const;
     void applyCheckStateToSubtree(const QModelIndex& index, Qt::CheckState state);
