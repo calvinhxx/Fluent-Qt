@@ -3,10 +3,10 @@
 
 #include <QHash>
 #include <QObject>
-#include <QPointer>
+#include <QQueue>
 #include <QString>
+#include <QStringList>
 
-class QPixmap;
 class QWidget;
 
 namespace fluent::navigation {
@@ -48,33 +48,56 @@ public:
      */
     bool presentRoute(const QString& routeId);
 
+    /**
+     * @brief Builds every listed route's page up front (one per event-loop tick) and
+     * parks it hidden in the content stack, so later navigation is a pure show/hide
+     * with no build cost. Meant to run behind a splash screen at startup.
+     * zh_CN: 提前建好列表里每个路由的页面（每个事件循环一帧建一个）并隐藏停放在内容栈里，
+     * 之后导航就是纯显示/隐藏、无建页开销。设计为启动时在 splash screen 背后运行。
+     *
+     * Already-built routes are skipped; safe to call repeatedly. Emits prewarmProgress
+     * per page and prewarmFinished when the queue drains.
+     * zh_CN: 已建过的路由会跳过；可重复调用。每建一个发 prewarmProgress，排空时发 prewarmFinished。
+     */
+    void prewarmRoutes(const QStringList& routeIds);
+
 signals:
     void routeActivated(const QString& routeId);
 
+    /** @brief Prewarm built `done` of `total` queued pages. */
+    void prewarmProgress(int done, int total);
+    /** @brief The prewarm queue has drained — all requested pages are built. */
+    void prewarmFinished();
+
 private:
     void connectPageNavigation(QWidget* page);
-    void replaceCurrentPage(const QString& routeId, QWidget* page);
-    QWidget* cachedPage(const QString& routeId) const;
-    void stashPage(QWidget* page);
-    void startContentCrossfade(const QPixmap& snapshot);
+    int ensurePageBuilt(const QString& routeId);
+    void scheduleNextPrewarm();
+    void switchToStackPage(int targetIndex);
 
     fluent::navigation::StackContentHost* m_contentHost = nullptr;
     const GalleryNavigationViewModel& m_navigationViewModel;
     QString m_currentRouteId;
 
-    // Pages are built once and reused: navigating to a visited route swaps the existing widget
-    // back in (state intact) instead of reconstructing it, which is what made nav feel janky.
-    // Off-screen pages live under m_pageStash so they stay alive and themed but hidden.
-    // zh_CN: 页面只建一次并复用：切到访问过的路由会把已有 widget 换回来（状态保留），而不是重建——
-    // 这正是导航卡顿的根因。离屏页面挂在 m_pageStash 下，保持存活与主题更新但隐藏。
-    QHash<QString, QPointer<QWidget>> m_pageCache;
-    QWidget* m_pageStash = nullptr;
+    // Each route's page is built once and then kept resident in the content host's
+    // stack (parented to the host, just shown/hidden). Navigating is a show/hide of an
+    // already-parented, already-laid-out widget — no reparenting, so Qt skips the full
+    // style re-polish + relayout that made even revisits cost hundreds of ms. The map
+    // remembers each route's stack index; indices are stable because pages are only
+    // ever appended, never removed.
+    // zh_CN: 每个路由的页面只建一次，之后常驻 content host 的栈里（挂在 host 上，仅显示/隐藏）。
+    // 导航变成对"已挂父级、已完成布局"的页面做显示/隐藏——不再 reparent，于是 Qt 跳过整棵子树的
+    // 样式重新 polish + 重新布局（那正是连重访都要几百毫秒的根因）。此表记住每个路由的栈索引；
+    // 页面只追加、从不移除，所以索引稳定。
+    QHash<QString, int> m_routeStackIndex;
 
-    // A fading snapshot of the outgoing page, layered over the freshly-swapped-in page so the
-    // content cross-dissolves. Held so rapid navigation can retire a stale overlay.
-    // zh_CN: 旧页面的淡出快照，叠在刚换入的新页之上做内容交叉淡化。保留引用，便于快速连续导航时
-    // 撤掉上一张尚未淡完的快照。
-    QPointer<QWidget> m_transitionOverlay;
+    // Startup prewarm queue: routes waiting to be built, drained one per event-loop
+    // tick so the splash screen stays responsive while the heavy construction runs.
+    // zh_CN: 启动预建队列：等待建页的路由，每个事件循环一帧建一个，让 splash 在重构造期间保持响应。
+    QQueue<QString> m_prewarmQueue;
+    bool m_prewarmScheduled = false;
+    int m_prewarmDone = 0;
+    int m_prewarmTotal = 0;
 };
 
 } // namespace fluent::gallery

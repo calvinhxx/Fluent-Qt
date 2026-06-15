@@ -74,6 +74,7 @@ private:
     void buildNavigationShell();
     void buildContentPresenter();
     void showInitialRouteContent();
+    void prewarmAllRoutes();
     void handleSelectedRouteChanged(const QString& routeId);
     void recordNavigationHistory(const QString& nextRouteId);
     bool navigateBack();

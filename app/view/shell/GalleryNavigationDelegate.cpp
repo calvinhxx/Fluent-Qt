@@ -2,8 +2,10 @@
 
 #include <QAbstractItemView>
 #include <QFont>
+#include <QFontMetrics>
+#include <QHash>
 #include <QPainter>
-#include <QPainterPath>
+#include <QPair>
 #include <QStyle>
 #include <QStyledItemDelegate>
 #include <QTreeView>
@@ -140,11 +142,9 @@ public:
             background = colors.subtleSecondary;
 
         if (background.alpha() > 0) {
-            QPainterPath path;
-            path.addRoundedRect(backgroundRect, radius.control, radius.control);
             painter->setPen(Qt::NoPen);
             painter->setBrush(background);
-            painter->drawPath(path);
+            painter->drawRoundedRect(backgroundRect, radius.control, radius.control);
         }
 
         // The selected indicator pill is painted by the TreeView overlay so it can
@@ -233,14 +233,31 @@ public:
             painter->setOpacity(expandedOpacity);
             painter->drawText(textRect,
                               Qt::AlignLeft | Qt::AlignVCenter,
-                              painter->fontMetrics().elidedText(text, Qt::ElideRight, qRound(textRect.width())));
+                              cachedElidedText(painter->fontMetrics(), text, qRound(textRect.width())));
             painter->restore();
         }
         painter->restore();
     }
 
 private:
+    // Eliding measures text layout, which is comparatively expensive on Windows
+    // (DirectWrite) and was being redone every animation frame for every visible
+    // row. The labels and their widths are stable, so memoise the result.
+    // zh_CN: 省略号计算要做文本排版测量，在 Windows（DirectWrite）上偏贵，且原先每帧每行都重算。
+    // 标签文本与宽度是稳定的，缓存结果即可。
+    QString cachedElidedText(const QFontMetrics& metrics, const QString& text, int width) const
+    {
+        const auto key = qMakePair(text, width);
+        const auto cached = m_elideCache.constFind(key);
+        if (cached != m_elideCache.constEnd())
+            return cached.value();
+        const QString elided = metrics.elidedText(text, Qt::ElideRight, width);
+        m_elideCache.insert(key, elided);
+        return elided;
+    }
+
     fluent::FluentElement* m_themeHost = nullptr;
+    mutable QHash<QPair<QString, int>, QString> m_elideCache;
 };
 
 } // namespace

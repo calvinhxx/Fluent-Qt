@@ -152,12 +152,12 @@ TreeView::TreeView(QWidget* parent)
     connect(m_indicatorMotionAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         setIndicatorMotionProgress(value.toReal());
         if (viewport())
-            viewport()->update();
+            viewport()->update(indicatorMotionDirtyRect());
     });
     connect(m_indicatorMotionAnim, &QVariantAnimation::finished, this, [this]() {
         setIndicatorMotionProgress(1.0);
         if (viewport())
-            viewport()->update();
+            viewport()->update(indicatorMotionDirtyRect());
     });
 
     // --- Expand / collapse reveal animation ---
@@ -170,6 +170,10 @@ TreeView::TreeView(QWidget* parent)
     m_expandRevealAnim->setDuration(kExpandRevealDuration);
     m_expandRevealAnim->setEasingCurve(themeAnimation().standard);
     connect(m_expandRevealAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant&) {
+        // Full-viewport repaint: the reveal slides rows below the subtree via a
+        // painter translate, so a partial region would tear against the rows whose
+        // untranslated rects fall outside it. zh_CN: 整块重绘——展开时子树下方的行用
+        // painter 平移绘制，局部重绘会与"未平移矩形落在区域外"的行撕裂。
         if (viewport())
             viewport()->update();
     });
@@ -1484,11 +1488,29 @@ void TreeView::paintSelectedIndicator(QPainter& painter) const {
         return;
 
     const qreal radius = rect.width() / 2.0;
-    QPainterPath path;
-    path.addRoundedRect(rect, radius, radius);
     painter.setPen(Qt::NoPen);
     painter.setBrush(themeColors().accentDefault);
-    painter.drawPath(path);
+    painter.drawRoundedRect(rect, radius, radius);
+}
+
+QRect TreeView::indicatorMotionDirtyRect() const {
+    if (!viewport())
+        return {};
+
+    // The pill only ever travels within the vertical span of the previous and
+    // current rows; repaint that full-width band instead of the whole viewport.
+    // zh_CN: 指示器药丸只在前一行与当前行之间纵向移动，重绘这条整宽窄带即可。
+    QRect band;
+    if (m_currentIndicatorIndex.isValid())
+        band = visualRect(QModelIndex(m_currentIndicatorIndex));
+    if (m_previousIndicatorIndex.isValid())
+        band = band.united(visualRect(QModelIndex(m_previousIndicatorIndex)));
+    if (band.isNull())
+        return viewport()->rect();
+
+    band.setLeft(0);
+    band.setRight(viewport()->width());
+    return band.adjusted(0, -2, 0, 2);
 }
 
 void TreeView::startBounceBack() {
