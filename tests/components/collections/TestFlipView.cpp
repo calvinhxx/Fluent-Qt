@@ -7,17 +7,24 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QEventLoop>
+#include <QResizeEvent>
+#include <QTimer>
 #include <QWheelEvent>
 #include <QPropertyAnimation>
 #include <QTest>
 #include "components/collections/FlipView.h"
 #include "components/basicinput/Button.h"
+#include "components/status_info/Shimmer.h"
 #include "components/textfields/Label.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "design/Typography.h"
 
 using namespace fluent::collections;
+
+namespace {
+constexpr int kMinimumShimmerVisibleMs = 1200;
+}
 
 // ── 测试窗口 ─────────────────────────────────────────────────────────────────
 
@@ -37,14 +44,21 @@ public:
     NetworkImagePage(const QUrl& url, const QString& label, QWidget* parent = nullptr)
         : QWidget(parent), m_label(label), m_bgColor(QColor("#e0e0e0"))
     {
-        auto* nam = new QNetworkAccessManager(this);
-        auto* reply = nam->get(QNetworkRequest(url));
-        connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-            reply->deleteLater();
-            if (reply->error() == QNetworkReply::NoError) {
-                m_pixmap.loadFromData(reply->readAll());
-            }
-            update();
+        m_shimmer = new fluent::status_info::Shimmer(this);
+        m_shimmer->setShimmerTemplate(fluent::status_info::Shimmer::ShimmerTemplate::ImageCard);
+
+        QTimer::singleShot(kMinimumShimmerVisibleMs, this, [this, url]() {
+            auto* nam = new QNetworkAccessManager(this);
+            auto* reply = nam->get(QNetworkRequest(url));
+            connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+                reply->deleteLater();
+                if (reply->error() == QNetworkReply::NoError) {
+                    m_pixmap.loadFromData(reply->readAll());
+                }
+                m_shimmer->setActive(false);
+                m_shimmer->hide();
+                update();
+            });
         });
     }
 
@@ -56,11 +70,7 @@ protected:
         QRectF r = rect();
 
         if (m_pixmap.isNull()) {
-            // 加载中 — 浅灰背景 + 提示文字
             p.fillRect(r, m_bgColor);
-            p.setPen(QColor("#888888"));
-            p.setFont(QFont("Segoe UI Variable", 12));
-            p.drawText(r, Qt::AlignCenter, "Loading...");
         } else {
             // 等比填充 (cover)
             QSizeF imgSize = m_pixmap.size();
@@ -84,10 +94,61 @@ protected:
         p.drawText(labelBar, Qt::AlignCenter, m_label);
     }
 
+    void resizeEvent(QResizeEvent* event) override
+    {
+        QWidget::resizeEvent(event);
+        const int margin = 8;
+        const int labelHeight = 36;
+        const QRect shimmerRect = rect().adjusted(margin, margin, -margin, -labelHeight - margin);
+        m_shimmer->setGeometry(shimmerRect);
+    }
+
 private:
     QPixmap m_pixmap;
     QString m_label;
     QColor m_bgColor;
+    fluent::status_info::Shimmer* m_shimmer = nullptr;
+};
+
+class LoadingImagePage : public QWidget {
+public:
+    explicit LoadingImagePage(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+        m_shimmer = new fluent::status_info::Shimmer(this);
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter p(this);
+        p.fillRect(rect(), QColor("#f8f8f8"));
+    }
+
+    void resizeEvent(QResizeEvent* event) override
+    {
+        QWidget::resizeEvent(event);
+        const int margin = 28;
+        m_shimmer->setGeometry(rect().adjusted(margin, margin, -margin, -margin));
+
+        using Element = fluent::status_info::ShimmerPainter::Element;
+        using Shape = fluent::status_info::ShimmerPainter::Shape;
+        const QRectF area = QRectF(m_shimmer->rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+        const qreal textBlockHeight = 48.0;
+        const QRectF mediaRect(area.left(),
+                               area.top(),
+                               area.width(),
+                               qMax<qreal>(40.0, area.height() - textBlockHeight - 14.0));
+        const qreal textTop = mediaRect.bottom() + 14.0;
+        m_shimmer->setElements({
+            Element(Shape::RoundedRect, mediaRect, 6.0),
+            Element(Shape::Line, QRectF(area.left(), textTop, area.width() * 0.58, 12.0)),
+            Element(Shape::Line, QRectF(area.left(), textTop + 20.0, area.width() * 0.34, 12.0)),
+        });
+    }
+
+private:
+    fluent::status_info::Shimmer* m_shimmer = nullptr;
 };
 
 // ── 简单彩色页面（用于非图片示例） ───────────────────────────────────────────
@@ -498,6 +559,7 @@ TEST_F(FlipViewTest, VisualCheck) {
 
     auto* fv1 = new FlipView(window);
     fv1->setFixedSize(480, 270);
+    fv1->addPage(new LoadingImagePage(fv1));
     fv1->addPage(new NetworkImagePage(
         QUrl("https://picsum.photos/seed/mountain/960/540"),
         "Landscape 1 — Mountain Lake", fv1));
@@ -517,7 +579,7 @@ TEST_F(FlipViewTest, VisualCheck) {
     fv1->anchors()->left = {window, Edge::Left, 30};
     layout->addWidget(fv1);
 
-    auto* indexLabel = new fluent::textfields::Label("1 / 5", window);
+    auto* indexLabel = new fluent::textfields::Label(QString("1 / %1").arg(fv1->pageCount()), window);
     indexLabel->setFluentTypography("Caption");
     indexLabel->anchors()->top = {fv1, Edge::Bottom, 6};
     indexLabel->anchors()->left = {window, Edge::Left, 30};

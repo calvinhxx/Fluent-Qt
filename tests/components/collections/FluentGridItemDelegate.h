@@ -23,7 +23,10 @@ class QStyleOptionViewItem;
 namespace gridview_test {
 
 /** 自定义 role：传入 QPixmap 用于网格项图片 */
-enum { ImageRole = Qt::UserRole + 100 };
+enum {
+    ImageRole = Qt::UserRole + 100,
+    ImageLoadingRole = Qt::UserRole + 101
+};
 
 class FluentGridItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
@@ -42,6 +45,8 @@ public:
 private:
     void drawCheckOverlay(QPainter* painter, const QRectF& cellRect,
                           bool selected, bool enabled) const;
+    bool hasLoadingRows() const;
+    qreal shimmerProgress() const;
 
     fluent::FluentElement* m_themeHost = nullptr;
     QListView* m_view = nullptr;

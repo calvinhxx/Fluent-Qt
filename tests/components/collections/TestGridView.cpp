@@ -578,18 +578,25 @@ TEST_F(GridViewTest, CellSizeAffectsColumns) {
 
 namespace {
 
+constexpr int kMinimumShimmerVisibleMs = 1200;
+
 /** 异步加载网络图片到 QStandardItem 的 ImageRole */
 void loadNetworkImage(QStandardItem* item, const QUrl& url) {
-    auto* nam = new QNetworkAccessManager(qApp);
-    auto* reply = nam->get(QNetworkRequest(url));
-    QObject::connect(reply, &QNetworkReply::finished, qApp, [item, reply, nam]() {
-        reply->deleteLater();
-        nam->deleteLater();
-        if (reply->error() == QNetworkReply::NoError) {
+    item->setData(true, gridview_test::ImageLoadingRole);
+    QTimer::singleShot(kMinimumShimmerVisibleMs, qApp, [item, url]() {
+        auto* nam = new QNetworkAccessManager(qApp);
+        auto* reply = nam->get(QNetworkRequest(url));
+        QObject::connect(reply, &QNetworkReply::finished, qApp, [item, reply, nam]() {
             QPixmap pix;
-            pix.loadFromData(reply->readAll());
-            item->setData(pix, gridview_test::ImageRole);
-        }
+            if (reply->error() == QNetworkReply::NoError)
+                pix.loadFromData(reply->readAll());
+            reply->deleteLater();
+            nam->deleteLater();
+
+            if (!pix.isNull())
+                item->setData(pix, gridview_test::ImageRole);
+            item->setData(false, gridview_test::ImageLoadingRole);
+        });
     });
 }
 
@@ -1321,6 +1328,27 @@ TEST_F(GridViewTest, VisualCheck) {
     content->setLayout(innerLayout);
     scrollArea->setWidget(content);
 
+    // ── Loading sample: keep a stable shimmer state visible for review ──
+    GridView* gvLoading = new GridView(content);
+    gvLoading->setHeaderText("Loading image placeholders");
+    gvLoading->setBorderVisible(true);
+    gvLoading->setCellSize(QSize(140, 96));
+    gvLoading->setHorizontalSpacing(6);
+    gvLoading->setVerticalSpacing(6);
+    auto* loadingModel = new QStandardItemModel(gvLoading);
+    for (int i = 0; i < 5; ++i) {
+        auto* item = new QStandardItem(QString("Loading %1").arg(i + 1));
+        item->setData(true, gridview_test::ImageLoadingRole);
+        loadingModel->appendRow(item);
+    }
+    gvLoading->setModel(loadingModel);
+    attachFluentDelegate(gvLoading);
+    gvLoading->setFixedHeight(160);
+    gvLoading->anchors()->top = {content, Edge::Top, 20};
+    gvLoading->anchors()->left = {content, Edge::Left, 20};
+    gvLoading->anchors()->right = {content, Edge::Right, -20};
+    innerLayout->addWidget(gvLoading);
+
     // ── GridView 1: 带图片的网格 (单选, 对应 WinUI GridView with Layout Customization) ──
     GridView* gv1 = new GridView(content);
     gv1->setHeaderText("GridView with Layout Customization");
@@ -1352,7 +1380,7 @@ TEST_F(GridViewTest, VisualCheck) {
     attachFluentDelegate(gv1);
     gv1->setSelectedIndex(5);
     gv1->setFixedHeight(280);
-    gv1->anchors()->top   = {content, Edge::Top,  20};
+    gv1->anchors()->top   = {gvLoading, Edge::Bottom,  16};
     gv1->anchors()->left  = {content, Edge::Left, 20};
     gv1->anchors()->right = {content, Edge::Right, -20};
     innerLayout->addWidget(gv1);
@@ -1605,10 +1633,10 @@ TEST_F(GridViewTest, VisualCheck) {
     innerLayout->addWidget(themeBtn);
 
     // content 的最小高度根据最底部控件计算
-    // gv1(280) + gv2 header+grid(16+20+8+300) + gv3(16+80) + gv4 header+grid(16+20+8+230)
+    // loading(160) + gv1(280) + gv2 header+grid(16+20+8+300) + gv3(16+80) + gv4 header+grid(16+20+8+230)
     // + header5+modeRow1+modeRow2(24+20+8+170+8+170) + header6+dragRow(24+20+8+210)
     // + themeBtn(24+32) + margins(20+20)
-    content->setMinimumHeight(20 + 280 + 16 + 20 + 8 + 300 + 16 + 80 + 16 + 20 + 8 + 230
+    content->setMinimumHeight(20 + 160 + 16 + 280 + 16 + 20 + 8 + 300 + 16 + 80 + 16 + 20 + 8 + 230
                               + 24 + 20 + 8 + 170 + 8 + 170
                               + 24 + 20 + 8 + 210
                               + 24 + 32 + 20);

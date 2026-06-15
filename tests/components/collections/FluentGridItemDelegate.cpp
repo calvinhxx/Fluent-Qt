@@ -1,21 +1,70 @@
 #include "FluentGridItemDelegate.h"
 
+#include <QAbstractItemModel>
 #include <QPainter>
 #include <QPainterPath>
 #include <QListView>
 #include <QStyle>
+#include <QDateTime>
+#include <QTimer>
 
+#include "design/Animation.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
+#include "components/status_info/Shimmer.h"
 
 namespace gridview_test {
+namespace {
+
+QVector<fluent::status_info::ShimmerPainter::Element> gridImageLoadingElements(
+    const QRectF& bounds,
+    qreal radius)
+{
+    using Element = fluent::status_info::ShimmerPainter::Element;
+    using Shape = fluent::status_info::ShimmerPainter::Shape;
+
+    const QRectF surface = bounds.adjusted(8.0, 8.0, -8.0, -8.0);
+    if (!surface.isValid() || surface.isEmpty())
+        return {};
+
+    const qreal captionHeight = qBound<qreal>(18.0, surface.height() * 0.24, 34.0);
+    const QRectF mediaRect(surface.left(),
+                           surface.top(),
+                           surface.width(),
+                           qMax<qreal>(20.0, surface.height() - captionHeight - 8.0));
+    const qreal textTop = mediaRect.bottom() + 8.0;
+    const qreal lineHeight = qMin<qreal>(10.0, qMax<qreal>(6.0, captionHeight * 0.42));
+
+    QVector<Element> elements{
+        Element(Shape::RoundedRect, mediaRect, radius),
+        Element(Shape::Line, QRectF(surface.left(), textTop, surface.width() * 0.62, lineHeight))
+    };
+    if (captionHeight >= 24.0) {
+        elements.append(Element(Shape::Line,
+                                QRectF(surface.left(),
+                                       textTop + lineHeight + 6.0,
+                                       surface.width() * 0.42,
+                                       lineHeight)));
+    }
+    return elements;
+}
+
+} // namespace
 
 FluentGridItemDelegate::FluentGridItemDelegate(fluent::FluentElement* themeHost,
                                                QListView* view,
                                                QObject* parent)
     : QStyledItemDelegate(parent), m_themeHost(themeHost), m_view(view) {
+    auto* repaintTimer = new QTimer(this);
+    repaintTimer->setInterval(16);
+    connect(repaintTimer, &QTimer::timeout, this, [this]() {
+        if (!m_view || !m_view->isVisible() || !hasLoadingRows())
+            return;
+        m_view->viewport()->update();
+    });
+    repaintTimer->start();
 }
 
 void FluentGridItemDelegate::setThemeHost(fluent::FluentElement* host) {
@@ -55,6 +104,7 @@ void FluentGridItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem
     const QVariant imgVar = index.data(ImageRole);
     const bool hasImage = imgVar.isValid() && imgVar.canConvert<QPixmap>() &&
                           !imgVar.value<QPixmap>().isNull();
+    const bool isLoadingImage = !hasImage && index.data(ImageLoadingRole).toBool();
 
     if (hasImage) {
         // ── 图片模式 ──────────────────────────────────────────────────────
@@ -127,6 +177,26 @@ void FluentGridItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem
             drawCheckOverlay(painter, bgRect, isSelected, isEnabled);
         }
 
+    } else if (isLoadingImage) {
+        auto shimmerPalette = fluent::status_info::ShimmerPainter::paletteFromTheme(colors, isEnabled);
+        fluent::status_info::ShimmerPainter::paint(
+            painter,
+            gridImageLoadingElements(bgRect, cornerR),
+            shimmerPalette,
+            shimmerProgress(),
+            true);
+
+        if (isSelected && isEnabled && colors.accentDefault.isValid()) {
+            QPainterPath borderPath;
+            borderPath.addRoundedRect(bgRect.adjusted(0.5, 0.5, -0.5, -0.5), cornerR, cornerR);
+            painter->setPen(QPen(colors.accentDefault, 2.0));
+            painter->setBrush(Qt::NoBrush);
+            painter->drawPath(borderPath);
+        }
+
+        if (isMultiSel) {
+            drawCheckOverlay(painter, bgRect, isSelected, isEnabled);
+        }
     } else {
         // ── 无图片模式：icon glyph + text 卡片 ──────────────────────────
         QColor bgColor = colors.bgLayerAlt;
@@ -238,6 +308,26 @@ QSize FluentGridItemDelegate::sizeHint(const QStyleOptionViewItem& /*option*/,
         return m_view->gridSize();
     }
     return QSize(112, 112);
+}
+
+bool FluentGridItemDelegate::hasLoadingRows() const
+{
+    if (!m_view || !m_view->model())
+        return false;
+
+    const QAbstractItemModel* model = m_view->model();
+    for (int row = 0; row < model->rowCount(); ++row) {
+        if (model->index(row, 0).data(ImageLoadingRole).toBool())
+            return true;
+    }
+    return false;
+}
+
+qreal FluentGridItemDelegate::shimmerProgress() const
+{
+    constexpr qint64 kCycleMs = Animation::Duration::VerySlow + Animation::Duration::VerySlow;
+    return static_cast<qreal>(QDateTime::currentMSecsSinceEpoch() % kCycleMs)
+        / static_cast<qreal>(kCycleMs);
 }
 
 } // namespace gridview_test
