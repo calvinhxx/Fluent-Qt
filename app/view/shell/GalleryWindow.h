@@ -1,6 +1,7 @@
 #ifndef GALLERYWINDOW_H
 #define GALLERYWINDOW_H
 
+#include <QPointer>
 #include <QStringList>
 
 #include "components/windowing/Window.h"
@@ -29,6 +30,7 @@ class GalleryContentPresenter;
 class GalleryNavigationPane;
 class GalleryContentPage;
 class GalleryNavigationItem;
+class GallerySplashScreen;
 class PlaceholderPage;
 class SettingsPage;
 
@@ -73,6 +75,8 @@ private:
     void createTitleBarContent();
     void buildNavigationShell();
     void buildContentPresenter();
+    void installSplashScreen();
+    void setTitleBarChromeVisible(bool visible, bool animated = false);
     void showInitialRouteContent();
     void prewarmAllRoutes();
     void handleSelectedRouteChanged(const QString& routeId);
@@ -94,6 +98,10 @@ private:
     QTimer* m_navigationCompactReleaseTimer = nullptr;
     QStringList m_backRouteStack;
     bool m_isNavigatingHistory = false;
+
+    // Startup splash overlay; self-deletes after its fade-out on prewarmFinished.
+    // zh_CN: 启动 splash 覆盖层；在 prewarmFinished 后淡出并自销毁。
+    QPointer<GallerySplashScreen> m_splashScreen;
 };
 
 } // namespace fluent::gallery

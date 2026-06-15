@@ -4,6 +4,7 @@
 
 #include <QAbstractAnimation>
 #include <QEvent>
+#include <QGraphicsOpacityEffect>
 #include <QLabel>
 #include <QPoint>
 #include <QPropertyAnimation>
@@ -22,6 +23,7 @@
 #include "AppIcon.h"
 #include "GalleryContentPresenter.h"
 #include "GalleryNavigationPane.h"
+#include "GallerySplashScreen.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/PlaceholderPage.h"
 #include "view/pages/SettingsPage.h"
@@ -139,6 +141,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     createTitleBarContent();
     buildNavigationShell();
     buildContentPresenter();
+    installSplashScreen();
     showInitialRouteContent();
     prewarmAllRoutes();
     LOG_INFO(QStringLiteral("GalleryWindow constructed defaultRoute=%1")
@@ -240,6 +243,85 @@ bool GalleryWindow::navigateToSearchResult(const QString& searchText)
 void GalleryWindow::showInitialRouteContent()
 {
     selectRoute(m_navigationViewModel.defaultRouteId());
+}
+
+void GalleryWindow::installSplashScreen()
+{
+    if (!m_contentPresenter)
+        return;
+
+    // While loading we show only the native window controls (min/max/close): the
+    // splash owns the screen, so the back/menu buttons, app title and search box would
+    // just be inert chrome. They come back when the splash dismisses.
+    // zh_CN: 加载期间只保留原生窗口按钮（最小化/最大化/关闭）：splash 占据画面，返回/菜单按钮、
+    // 应用标题与搜索框只是无用装饰，故隐藏；splash 关闭时再恢复。
+    setTitleBarChromeVisible(false);
+
+    // Cover the content area with the splash from the very first frame; the real title
+    // bar stays live above it. zh_CN: 从第一帧起用 splash 盖住内容区；真实标题栏仍在其上方可用。
+    m_splashScreen = new GallerySplashScreen(contentHost());
+    m_splashScreen->show();
+    m_splashScreen->raise();
+
+    connect(m_contentPresenter, &GalleryContentPresenter::prewarmProgress,
+            this, [this](int done, int total) {
+                if (m_splashScreen)
+                    m_splashScreen->setProgress(done, total);
+            });
+    connect(m_contentPresenter, &GalleryContentPresenter::prewarmFinished,
+            this, [this]() {
+                setTitleBarChromeVisible(true, /*animated*/ true);
+                if (m_splashScreen)
+                    m_splashScreen->dismiss();  // fades out, then self-deletes
+            });
+}
+
+void GalleryWindow::setTitleBarChromeVisible(bool visible, bool animated)
+{
+    // The custom title-bar widgets all share the "GalleryTitleBar." object-name prefix;
+    // the native min/max/close buttons do not, so toggling by prefix leaves them alone.
+    // zh_CN: 自定义标题栏控件都以 "GalleryTitleBar." 为对象名前缀；原生最小化/最大化/关闭按钮没有，
+    // 因此按前缀切换不会影响它们。
+    const auto* bar = titleBar();
+    if (!bar)
+        return;
+
+    const QList<QWidget*> chrome = bar->findChildren<QWidget*>();
+    const auto motion = themeAnimation();
+    for (QWidget* widget : chrome) {
+        if (!widget->objectName().startsWith(QStringLiteral("GalleryTitleBar.")))
+            continue;
+
+        if (!visible) {
+            widget->setGraphicsEffect(nullptr);
+            widget->setVisible(false);
+            continue;
+        }
+
+        widget->setVisible(true);
+        if (!animated) {
+            widget->setGraphicsEffect(nullptr);
+            continue;
+        }
+
+        // Subtle fade-in, timed to the splash's dissolve, so the chrome eases in rather
+        // than popping. The effect is dropped once the fade completes so it adds no
+        // steady-state paint cost. zh_CN: 简约淡入，与 splash 淡出同步，组件渐入而非生硬弹出；
+        // 淡入结束即移除效果，不留常态绘制开销。
+        auto* effect = new QGraphicsOpacityEffect(widget);
+        widget->setGraphicsEffect(effect);
+        auto* fade = new QPropertyAnimation(effect, "opacity", widget);
+        fade->setStartValue(0.0);
+        fade->setEndValue(1.0);
+        fade->setDuration(motion.normal);
+        fade->setEasingCurve(motion.decelerate);
+        QPointer<QWidget> guard = widget;
+        connect(fade, &QPropertyAnimation::finished, widget, [guard]() {
+            if (guard)
+                guard->setGraphicsEffect(nullptr);
+        });
+        fade->start(QAbstractAnimation::DeleteWhenStopped);
+    }
 }
 
 void GalleryWindow::prewarmAllRoutes()
