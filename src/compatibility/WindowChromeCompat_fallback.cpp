@@ -59,6 +59,16 @@ int nativeTitleBarLeadingInset(QWidget* window) {
     return 0;
 }
 
+bool platformSupportsSystemBackdrop() {
+    return false;
+}
+
+bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
+    Q_UNUSED(window);
+    Q_UNUSED(dark);
+    return false;
+}
+
 } // namespace detail
 } // namespace compatibility
 

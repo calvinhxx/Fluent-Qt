@@ -134,6 +134,18 @@ public:
     int themeBreakpoint(const QString& size = "Medium") const;
 
     /**
+     * @brief Window-chrome backdrop color for the given activation state.
+     * zh_CN: 给定激活状态下的窗口 chrome 背景色。
+     *
+     * Active windows use the canvas tint (Mica-like); inactive windows ease that
+     * toward the content layer, so the title bar and nav pane visibly dim when the
+     * window loses focus — matching the WinUI Mica active/inactive fallback.
+     * zh_CN: 激活窗口用 canvas 色调（类 Mica）；非激活窗口将其向内容层过渡，
+     * 使标题栏与导航栏在窗口失焦时明显变淡——对齐 WinUI Mica 的激活/非激活回退。
+     */
+    QColor themeBackdrop(bool active) const;
+
+    /**
      * @brief Called after the global theme changes.
      * zh_CN: 全局主题变化后调用。
      *

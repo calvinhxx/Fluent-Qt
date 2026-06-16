@@ -207,4 +207,19 @@ int FluentElement::themeBreakpoint(const QString& size) const {
     return Breakpoints::Medium;
 }
 
+QColor FluentElement::themeBackdrop(bool active) const {
+    const Colors c = themeColors();
+    if (active)
+        return c.bgCanvas;  // Standard chrome tint, consistent with the rest of the surfaces.
+    // Inactive: wash the canvas tint most of the way toward the content layer so the chrome
+    // visibly flattens/lightens when the window loses focus (cross-platform stand-in for
+    // Mica's inactive fallback — no wallpaper tint, but a clear active/inactive cue).
+    // zh_CN: 非激活：把 canvas 色调大幅推向内容层，使窗口失焦时 chrome 明显变扁/变浅
+    //（跨平台替代 Mica 非激活回退——没有壁纸着色，但有清晰的激活/非激活区分）。
+    constexpr qreal t = 0.7;
+    return QColor::fromRgbF(c.bgCanvas.redF()   + (c.bgLayer.redF()   - c.bgCanvas.redF())   * t,
+                            c.bgCanvas.greenF() + (c.bgLayer.greenF() - c.bgCanvas.greenF()) * t,
+                            c.bgCanvas.blueF()  + (c.bgLayer.blueF()  - c.bgCanvas.blueF())  * t);
+}
+
 } // namespace fluent

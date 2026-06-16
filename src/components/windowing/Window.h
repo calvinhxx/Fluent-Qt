@@ -46,6 +46,19 @@ public:
 
     void onThemeUpdated() override;
 
+    /**
+     * @brief Re-asserts the Mica system backdrop (no-op when unsupported).
+     * zh_CN: 重新施加 Mica 系统背景（不支持时为空操作）。
+     *
+     * DWM occasionally fails to composite the backdrop on the very first show — a timing race
+     * with the translucent window coming up, so it lands on a flat neutral surface until the
+     * window is next activated. Call this from a reliably-late point (e.g. once startup loading
+     * finishes) to force the backdrop on without the user switching away and back.
+     * zh_CN: DWM 偶尔在首次显示时未能合成背景——与半透明窗口启动存在时序竞争，于是停在一片扁平中性表面，
+     * 直到窗口下次被激活。从一个可靠的较晚时机调用（如启动加载完成后），即可强制背景显示，无需用户切走再切回。
+     */
+    void reapplySystemBackdrop();
+
 public slots:
     void minimizeWindow();
     void toggleMaximizeRestore();
@@ -89,6 +102,15 @@ private:
     fluent::basicinput::Button* m_maximizeButton = nullptr;
     fluent::basicinput::Button* m_closeButton = nullptr;
     compatibility::WindowChromeCompat m_chrome;
+    // True when a Windows 11 Mica backdrop is in use: the window is translucent and the
+    // chrome paints transparent so the OS-managed backdrop (incl. active/inactive) shows.
+    // zh_CN: 启用 Windows 11 Mica 背景时为真：窗口半透明、chrome 透明绘制，露出系统管理的背景
+    //（含激活/非激活）。
+    bool m_micaBackdrop = false;
+    // One-shot guard so the deferred first-show backdrop refresh (which works around DWM not
+    // compositing Mica until the next activation) runs only once.
+    // zh_CN: 一次性标记：延迟到首次显示后再刷新背景（规避 DWM 要到下次激活才合成 Mica 的问题）仅执行一次。
+    bool m_micaBackdropPrimed = false;
     bool m_fallbackDragging = false;
     QPoint m_fallbackDragOffset;
 };

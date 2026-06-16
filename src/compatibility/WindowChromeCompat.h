@@ -112,6 +112,24 @@ public:
     void applyPlatformWindowFlags();
 
     /**
+     * @brief Whether this platform/OS supports a system backdrop (Windows 11 Mica).
+     * zh_CN: 当前平台/系统是否支持系统背景（Windows 11 Mica）。
+     *
+     * Checked before show so the caller can decide on a translucent window surface.
+     * zh_CN: 在显示前检查，使调用方可据此决定是否使用半透明窗口表面。
+     */
+    bool systemBackdropSupported() const;
+
+    /**
+     * @brief Enables the Mica system backdrop for the current theme; returns success.
+     * zh_CN: 为当前主题启用 Mica 系统背景；返回是否成功。
+     *
+     * Requires a live native handle, so call it from showEvent / after winId().
+     * zh_CN: 需要有效的原生句柄，故应在 showEvent / winId() 之后调用。
+     */
+    bool applySystemBackdrop(bool dark);
+
+    /**
      * @brief Handles forwarded native events and returns true when consumed.
      * zh_CN: 处理转发来的原生事件；事件被消费时返回 true。
      */
