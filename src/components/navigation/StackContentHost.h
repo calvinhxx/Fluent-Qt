@@ -75,6 +75,19 @@ public:
     TransitionEffect transitionEffect() const { return m_transitionEffect; }
     void setTransitionEffect(TransitionEffect effect);
 
+    /**
+     * @brief Paints an opaque content surface (layer fill, optional rounded top-left corner
+     *        and border) as the host background, framing pages against the surrounding chrome.
+     * zh_CN: 以不透明内容表面（层填充 + 可选左上圆角 + 边框）作为宿主背景，把页面与周围 chrome 框开。
+     *
+     * Painting it on the host (rather than an ancestor) is what makes it survive a translucent
+     * (Mica) top-level, where ancestor paints in the host's region would be cleared. Pass an
+     * invalid/transparent fill to disable. The unpainted rounded corner reveals the backdrop.
+     * zh_CN: 由宿主自身绘制（而非祖先）才能在半透明（Mica）顶层下保留——祖先在宿主区域的绘制会被清除。
+     * 传入无效/透明填充即可关闭。未绘制的圆角处会露出背景。
+     */
+    void setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border);
+
     void onThemeUpdated() override;
 
 signals:
@@ -84,6 +97,7 @@ signals:
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 private:
     struct PageRecord {
@@ -104,6 +118,10 @@ private:
     void showOnlyStackWidget(QWidget* currentWidget);
     void normalizeCurrentIndexAfterRemoval(int removedIndex);
     QWidget* stackWidgetAt(int index) const;
+
+    QColor m_surfaceFill;        // Invalid/transparent → host stays transparent (no panel).
+    QColor m_surfaceBorder;
+    qreal m_surfaceTopLeftRadius = 0.0;
 
     QStackedLayout* m_layout = nullptr;
     QVector<PageRecord> m_pages;

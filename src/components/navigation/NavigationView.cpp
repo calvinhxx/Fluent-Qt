@@ -2,12 +2,14 @@
 
 #include <QEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPaintEvent>
 #include <QPalette>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
 #include <QShowEvent>
 
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/navigation/StackContentHost.h"
 
 namespace fluent::navigation {
@@ -78,6 +80,64 @@ QRect offsetRevealRect(const QRect& target, const QPoint& startOffset, qreal pro
                  target.width(),
                  target.height());
 }
+
+// A thin, click-through overlay drawn on top of the (opaque) content panel. It carves the
+// rounded top-left corner so the pane backdrop / Mica shows there, and strokes the frame
+// border. Painting it on top (rather than behind) is what makes it survive the opaque content
+// and the translucent window. zh_CN: 画在（不透明）内容面板之上的薄覆盖层、可点击穿透。它挖出左上
+// 圆角让窗格背景/Mica 露出，并描出框边。画在「上面」（而非后面）才能越过不透明内容与半透明窗口存活。
+class ContentFrameOverlay : public QWidget {
+public:
+    explicit ContentFrameOverlay(QWidget* parent)
+        : QWidget(parent)
+    {
+        setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        setAttribute(Qt::WA_NoSystemBackground, true);  // do not clear: keep the content beneath
+    }
+
+    void configure(qreal radius, const QColor& border)
+    {
+        if (qFuzzyCompare(m_radius + 1.0, radius + 1.0) && m_border == border)
+            return;
+        m_radius = qMax(0.0, radius);
+        m_border = border;
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        if (m_radius <= 0.0 || rect().isEmpty())
+            return;
+
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+
+        // Carve the top-left corner (outside the rounded arc) to transparent so the backdrop
+        // shows. zh_CN: 把左上角（圆弧之外）挖成透明，露出背景。
+        QPainterPath cornerCut;
+        cornerCut.moveTo(0.0, 0.0);
+        cornerCut.lineTo(m_radius, 0.0);
+        cornerCut.arcTo(QRectF(0.0, 0.0, 2.0 * m_radius, 2.0 * m_radius), 90.0, 90.0);
+        cornerCut.closeSubpath();
+        painter.setCompositionMode(QPainter::CompositionMode_Clear);
+        painter.fillPath(cornerCut, Qt::black);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+
+        if (m_border.isValid() && m_border.alpha() > 0) {
+            const QPainterPath frame = fluent::overlay::roundedCornerRectPath(
+                QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), m_radius,
+                /*TL*/ true, /*TR*/ false, /*BR*/ false, /*BL*/ false);
+            painter.setPen(QPen(m_border, 1.0));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawPath(frame);
+        }
+    }
+
+private:
+    qreal m_radius = 0.0;
+    QColor m_border;
+};
 }
 
 NavigationView::NavigationView(QWidget* parent)
@@ -278,18 +338,31 @@ void NavigationView::paintEvent(QPaintEvent*)
     const auto colors = themeColors();
     const LayoutState visual = currentVisualLayout();
 
-    QPainter painter(this);
-    painter.fillRect(rect(), colors.bgCanvas);
-    if (!visual.contentRect.isEmpty())
-        painter.fillRect(visual.contentRect, colors.bgLayer);
-    if (!visual.chromeRect.isEmpty())
-        painter.fillRect(visual.chromeRect, colors.bgCanvas);
+    // Under a real Mica backdrop the pane (chrome) stays transparent so the OS-composited
+    // backdrop shows through (it handles active/inactive + wallpaper tint). Otherwise the pane
+    // uses the solid themeBackdrop shared with the title bar.
+    // zh_CN: 有真实 Mica 背景时窗格（chrome）透明，露出系统合成背景（系统处理激活/非激活+壁纸着色）；
+    // 否则窗格用与标题栏共用的纯色 themeBackdrop。
+    const bool mica = window() && window()->property("fluentMicaBackdrop").toBool();
 
-    painter.setPen(colors.strokeDivider);
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    if (!mica) {
+        const QColor backdrop = themeBackdrop(isActiveWindow());
+        painter.fillRect(rect(), backdrop);
+        if (!visual.chromeRect.isEmpty())
+            painter.fillRect(visual.chromeRect, backdrop);
+    }
+
+    // The content surface (layer + rounded top-left frame) is painted by the content host
+    // itself (configured in applyChildGeometries) — painting it there, not here, keeps it
+    // visible under a translucent Mica top-level, where an ancestor's paint in the host's
+    // region is cleared. Top mode keeps a divider beneath the bar.
+    // zh_CN: 内容表面（层 + 左上圆角框）由内容宿主自绘（在 applyChildGeometries 配置）——画在那里而非
+    // 此处，才能在半透明 Mica 顶层下保留（祖先在宿主区域的绘制会被清除）。Top 模式在栏下保留分割线。
     if (visual.effectiveMode == DisplayMode::Top && !visual.chromeRect.isEmpty()) {
+        painter.setPen(colors.strokeDivider);
         painter.drawLine(visual.chromeRect.bottomLeft(), visual.chromeRect.bottomRight());
-    } else if (!visual.chromeRect.isEmpty() && visual.contentRect.left() > 0) {
-        painter.drawLine(visual.contentRect.topLeft(), visual.contentRect.bottomLeft());
     }
 }
 
@@ -297,6 +370,8 @@ bool NavigationView::event(QEvent* event)
 {
     if (event->type() == QEvent::LayoutRequest)
         invalidateLayout(false);
+    else if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
+        update();  // backdrop tracks window focus
     return QWidget::event(event);
 }
 
@@ -485,6 +560,21 @@ void NavigationView::updateLayout()
     next.bounds = bounds;
     next.effectiveMode = resolveDisplayMode(bounds.width() > 0 ? bounds.width() : sizeHint().width());
 
+    // Auto-managed pane open state (matches WinUI): when the adaptive layout first drops to
+    // the compact rail or the hidden minimal mode, collapse the pane so it doesn't linger as
+    // a wide overlay; when it returns to the expanded mode, open it. Otherwise an
+    // expanded-mode `paneOpen=true` would make LeftMinimal keep a 256px overlay instead of
+    // hiding. The menu button can still toggle the pane within a mode.
+    // zh_CN: 自适应窗格开合（对齐 WinUI）：自适应布局首次降到紧凑栏或隐藏的最小模式时收起窗格，避免残留为
+    // 宽浮层；回到展开模式时打开。否则展开模式遗留的 paneOpen=true 会让 LeftMinimal 仍保留 256px 浮层而非隐藏。
+    // 菜单按钮仍可在同一模式内开关窗格。
+    if (m_displayMode == DisplayMode::Auto && next.effectiveMode != m_lastEffectiveDisplayMode) {
+        if (next.effectiveMode == DisplayMode::LeftCompact || next.effectiveMode == DisplayMode::LeftMinimal)
+            m_paneOpen = false;
+        else if (next.effectiveMode == DisplayMode::Left)
+            m_paneOpen = true;
+    }
+
     if (isSideMode(next.effectiveMode))
         buildSideLayout(next, bounds);
     else
@@ -495,9 +585,25 @@ void NavigationView::updateLayout()
 
     m_layout = next;
     m_layoutDirty = false;
-    if (animateTransition)
+
+    // If a transition toward this exact target (mode + bounds) is already in flight, let it
+    // finish instead of restarting it. Restarting on every relayout — e.g. when an
+    // effectiveDisplayModeChanged handler re-lays-out the pane — pins the animation at
+    // progress 0 and leaves a half-transitioned chrome on screen. That feedback loop is why
+    // the compact icon rail never fully collapsed into LeftMinimal.
+    // zh_CN: 若已经在向这个确切目标（模式 + 边界）过渡，就让它跑完而不是重启。每次重排都重启
+    //（如 effectiveDisplayModeChanged 处理器重排窗格时）会把动画钉在进度 0、留下半过渡的 chrome。
+    // 这个反馈环正是紧凑图标栏始终收不成 LeftMinimal 的原因。
+    const bool sameTargetInFlight =
+        m_layoutTransitionKind != LayoutTransitionKind::None
+        && m_layoutAnimation && m_layoutAnimation->state() == QAbstractAnimation::Running
+        && m_layoutTransitionTo.effectiveMode == next.effectiveMode
+        && m_layoutTransitionTo.bounds == next.bounds;
+    if (sameTargetInFlight) {
+        m_layoutTransitionTo = next;  // refresh target geometry, keep the running animation
+    } else if (animateTransition) {
         startLayoutTransition(previousVisual, m_layout, kind == LayoutTransitionKind::None ? LayoutTransitionKind::Side : kind);
-    else {
+    } else {
         m_layoutTransitionKind = LayoutTransitionKind::None;
         m_layoutTransitionProgress = 1.0;
         if (m_layoutAnimation)
@@ -565,7 +671,10 @@ void NavigationView::applyChildGeometries()
 void NavigationView::applyChildGeometries(const LayoutState& state)
 {
     if (m_contentHost) {
+        // The page paints the opaque content layer itself, so the host needs no surface.
+        // zh_CN: 内容层由页面自绘不透明面板，宿主无需自绘表面。
         m_contentHost->setGeometry(state.contentRect);
+        m_contentHost->setContentSurface(QColor(), 0.0, QColor());
         m_contentHost->show();
         m_contentHost->lower();
     }
@@ -585,6 +694,24 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
     apply(m_headerChromeWidget, state.headerChromeRect);
     apply(m_mainChromeWidget, state.mainChromeRect);
     apply(m_footerChromeWidget, state.footerChromeRect);
+
+    // Content frame: a rounded top-left corner + border drawn on top of the opaque content,
+    // but only when a pane sits to its left (framed side modes). zh_CN: 内容框：在不透明内容之上
+    // 绘制左上圆角 + 边框，仅当左侧有窗格时（带框侧边模式）。
+    const bool framed = isSideMode(state.effectiveMode)
+                        && !state.contentRect.isEmpty()
+                        && state.contentRect.left() > 0;
+    if (framed) {
+        if (!m_contentFrameOverlay)
+            m_contentFrameOverlay = new ContentFrameOverlay(this);
+        m_contentFrameOverlay->setGeometry(state.contentRect);
+        static_cast<ContentFrameOverlay*>(m_contentFrameOverlay)
+            ->configure(themeRadius().overlay, themeColors().strokeCard);
+        m_contentFrameOverlay->show();
+        m_contentFrameOverlay->raise();
+    } else if (m_contentFrameOverlay) {
+        m_contentFrameOverlay->hide();
+    }
 }
 
 void NavigationView::assignChromeWidget(QPointer<QWidget>& slot, QWidget* widget)
