@@ -1,29 +1,35 @@
 #include "GalleryHomePage.h"
 
-#include <QGridLayout>
+#include <QEvent>
 #include <QLabel>
 #include <QLinearGradient>
 #include <QPainter>
+#include <QPixmap>
 #include <QRadialGradient>
 #include <QVBoxLayout>
+#include <QVector>
 #include <QWidget>
 
+#include <QPainterPath>
+
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "model/GalleryComponentCatalog.h"
 #include "model/GalleryNavigationItem.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "view/shell/AppIcon.h"
 #include "view/support/GalleryStyleSupport.h"
-#include "view/widgets/GalleryEntryCard.h"
+#include "view/widgets/GalleryEntryGrid.h"
 #include "utils/Log.h"
 
 namespace fluent::gallery {
 namespace {
 
-constexpr int kCardColumns = 3;
 constexpr int kHeroHeight = 260;
-constexpr int kHeroMarginX = 48;
-constexpr int kBodyMarginX = 48;
+constexpr int kHeroMarginX = 24;     // Text inset (was 48) — content shifts left overall.
+constexpr int kHeroBottomFade = 80;  // Bottom band that dissolves the banner into the page.
+constexpr int kBodyMarginX = 24;     // Body content inset (was 48) — matches the hero.
 constexpr int kHeroIconSize = 56;
 
 } // namespace
@@ -47,7 +53,9 @@ public:
         setFixedHeight(kHeroHeight);
 
         auto* layout = new QVBoxLayout(this);
-        layout->setContentsMargins(kHeroMarginX, 40, kHeroMarginX, 36);
+        // Bottom margin clears the dissolve band so the tagline stays crisp above it.
+        // zh_CN: 底部留白避开渐隐带，使标语在其上方保持清晰。
+        layout->setContentsMargins(kHeroMarginX, 36, kHeroMarginX, kHeroBottomFade + 4);
         layout->setSpacing(12);
         layout->addStretch(1);
 
@@ -83,14 +91,32 @@ public:
     }
 
 protected:
+    bool event(QEvent* e) override
+    {
+        if (e->type() == QEvent::WindowActivate || e->type() == QEvent::WindowDeactivate)
+            update();  // bottom dissolve tracks the window backdrop
+        return QWidget::event(e);
+    }
+
     void paintEvent(QPaintEvent*) override
     {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
         const bool dark = currentTheme() == Dark;
+        const Colors colors = themeColors();
 
-        QLinearGradient wash(rect().topLeft(), rect().bottomRight());
+        // The banner is full-bleed with only its top corners rounded; its bottom dissolves
+        // into the content layer, so the image connects to the page seamlessly (WinUI home).
+        // zh_CN: 横幅通栏铺满、仅上方两角圆角；底部淡入内容层，使图像与页面无缝衔接（WinUI 首页）。
+        const QRectF banner(0, 0, width(), height());
+        const qreal radius = themeRadius().overlay;
+        QPainterPath clip = fluent::overlay::roundedCornerRectPath(
+            banner, radius, /*TL*/ true, /*TR*/ true, /*BR*/ false, /*BL*/ false);
+        painter.save();
+        painter.setClipPath(clip);
+
+        QLinearGradient wash(banner.topLeft(), banner.bottomRight());
         if (dark) {
             wash.setColorAt(0.0, QColor(0x1B, 0x2A, 0x41));
             wash.setColorAt(0.55, QColor(0x27, 0x22, 0x44));
@@ -100,7 +126,7 @@ protected:
             wash.setColorAt(0.55, QColor(0xE4, 0xDF, 0xF6));
             wash.setColorAt(1.0, QColor(0xF4, 0xE7, 0xEA));
         }
-        painter.fillRect(rect(), wash);
+        painter.fillRect(banner, wash);
 
         // Decorative translucent circles drift off the right edge, like the
         // abstract shapes in the WinUI Gallery banner art.
@@ -108,11 +134,30 @@ protected:
         const QColor circle = dark ? QColor(255, 255, 255, 14) : QColor(255, 255, 255, 90);
         painter.setPen(Qt::NoPen);
         painter.setBrush(circle);
-        const int w = width();
-        const int h = height();
-        painter.drawEllipse(QPointF(w * 0.78, h * 0.15), h * 0.85, h * 0.85);
-        painter.drawEllipse(QPointF(w * 0.94, h * 0.9), h * 0.55, h * 0.55);
-        painter.drawEllipse(QPointF(w * 0.6, h * 1.05), h * 0.35, h * 0.35);
+        const qreal w = banner.width();
+        const qreal h = banner.height();
+        const qreal bx = banner.left();
+        const qreal by = banner.top();
+        painter.drawEllipse(QPointF(bx + w * 0.80, by + h * 0.12), h * 0.85, h * 0.85);
+        painter.drawEllipse(QPointF(bx + w * 0.95, by + h * 0.90), h * 0.55, h * 0.55);
+        painter.drawEllipse(QPointF(bx + w * 0.62, by + h * 1.05), h * 0.35, h * 0.35);
+
+        // Bottom dissolve into the content layer surface (bgLayerAlt) painted by the
+        // NavigationView behind the transparent page, so the banner transitions seamlessly
+        // into the content instead of ending on a hard seam above "Featured samples".
+        // zh_CN: 底部渐隐到 NavigationView 在透明页面之后绘制的内容层表面（bgLayerAlt），
+        // 使横幅无缝过渡到内容，而非在「Featured samples」上方留硬缝。
+        const QRectF fadeRect(banner.left(), banner.bottom() - kHeroBottomFade,
+                              banner.width(), kHeroBottomFade);
+        QColor base = colors.bgLayerAlt;
+        QColor clear = base;
+        clear.setAlpha(0);
+        QLinearGradient fade(fadeRect.topLeft(), fadeRect.bottomLeft());
+        fade.setColorAt(0.0, clear);
+        fade.setColorAt(1.0, base);
+        painter.fillRect(fadeRect, fade);
+
+        painter.restore();
     }
 
 private:
@@ -157,16 +202,15 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     bodyLayout->setContentsMargins(kBodyMarginX, 32, kBodyMarginX, 48);
     bodyLayout->setSpacing(16);
 
-    auto addCardGrid = [this, body, bodyLayout](const QString& objectName) {
-        auto* container = new QWidget(body);
-        container->setObjectName(objectName);
-        auto* grid = new QGridLayout(container);
-        grid->setContentsMargins(0, 0, 0, 0);
-        grid->setHorizontalSpacing(12);
-        grid->setVerticalSpacing(12);
-        for (int column = 0; column < kCardColumns; ++column)
-            grid->setColumnStretch(column, 1);
-        bodyLayout->addWidget(container);
+    // Each section's cards are drawn by one responsive GalleryEntryGrid (same as the
+    // category pages), so they reflow 1/2/3 columns with the window instead of clipping.
+    // zh_CN: 每个分区的卡片用一个自适应 GalleryEntryGrid 绘制（与分类页一致），随窗口在 1/2/3 列间重排而非裁切。
+    auto addEntryGrid = [this, body, bodyLayout](const QString& objectName) -> GalleryEntryGrid* {
+        auto* grid = new GalleryEntryGrid(body);
+        grid->setObjectName(objectName);
+        connect(grid, &GalleryEntryGrid::activated,
+                this, &GalleryContentPage::routeActivated);
+        bodyLayout->addWidget(grid);
         return grid;
     };
 
@@ -177,8 +221,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     featuredHeader->setObjectName(QStringLiteral("galleryHomeFeaturedHeader"));
     bodyLayout->addWidget(featuredHeader);
 
-    QGridLayout* featuredGrid = addCardGrid(QStringLiteral("galleryHomeCards"));
-    int cellIndex = 0;
+    QVector<GalleryEntryGrid::Entry> featuredEntries;
     for (const QString& routeId : entry.relatedRouteIds) {
         const GalleryNavigationItem* item = navigationViewModel.itemById(routeId);
         if (!item)
@@ -186,14 +229,10 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
         QString description;
         if (const GalleryContentEntry* componentEntry = galleryContentEntry(routeId))
             description = componentEntry->description;
-        auto* card = new GalleryEntryCard(item->id, item->title, description, body);
-        connect(card, &GalleryEntryCard::activated,
-                this, &GalleryContentPage::routeActivated);
-        featuredGrid->addWidget(card, cellIndex / kCardColumns, cellIndex % kCardColumns);
-        ++cellIndex;
+        featuredEntries.append({item->id, item->title, description,
+                                QPixmap(galleryControlImageResource(item->title)), QString()});
     }
-
-    const int featuredCount = cellIndex;
+    addEntryGrid(QStringLiteral("galleryHomeCards"))->setEntries(featuredEntries);
 
     // Category quick links cover the rest of the catalog.
     // zh_CN: 分类捷径覆盖目录其余部分。
@@ -203,33 +242,28 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     categoriesHeader->setObjectName(QStringLiteral("galleryHomeCategoriesHeader"));
     bodyLayout->addWidget(categoriesHeader);
 
-    QGridLayout* categoriesGrid = addCardGrid(QStringLiteral("galleryHomeCategoryCards"));
-    cellIndex = 0;
-    auto addCategoryCard = [&](const GalleryNavigationItem& item) {
+    QVector<GalleryEntryGrid::Entry> categoryEntries;
+    auto appendCategory = [&](const GalleryNavigationItem& item) {
         QString description;
         if (const GalleryContentEntry* categoryEntry = galleryContentEntry(item.id))
             description = categoryEntry->description;
-        auto* card = new GalleryEntryCard(item.id, item.title, description, body);
-        card->setIconGlyph(item.iconGlyph);
-        connect(card, &GalleryEntryCard::activated,
-                this, &GalleryContentPage::routeActivated);
-        categoriesGrid->addWidget(card, cellIndex / kCardColumns, cellIndex % kCardColumns);
-        ++cellIndex;
+        categoryEntries.append({item.id, item.title, description, QPixmap(), item.iconGlyph});
     };
     if (const GalleryNavigationItem* allControls =
             navigationViewModel.itemById(QStringLiteral("all-controls")))
-        addCategoryCard(*allControls);
+        appendCategory(*allControls);
     for (const GalleryNavigationItem& item : navigationViewModel.items()) {
         if (item.kind == GalleryNavigationItem::Kind::CategoryRoute)
-            addCategoryCard(item);
+            appendCategory(item);
     }
+    addEntryGrid(QStringLiteral("galleryHomeCategoryCards"))->setEntries(categoryEntries);
 
     addContentWidget(body);
 
     LOG_DEBUG(QStringLiteral("GalleryHomePage created routeId=%1 featuredCards=%2 categoryCards=%3")
                   .arg(entry.routeId)
-                  .arg(featuredCount)
-                  .arg(cellIndex));
+                  .arg(featuredEntries.size())
+                  .arg(categoryEntries.size()));
 }
 
 void GalleryHomePage::onThemeUpdated()

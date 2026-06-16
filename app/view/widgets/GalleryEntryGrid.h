@@ -37,7 +37,8 @@ public:
         QString routeId;
         QString title;
         QString description;
-        QPixmap icon;
+        QPixmap icon;       // control image; used when iconGlyph is empty
+        QString iconGlyph;  // Segoe Fluent Icons glyph drawn on a tile instead of `icon`
     };
 
     explicit GalleryEntryGrid(QWidget* parent = nullptr);
@@ -62,6 +63,7 @@ protected:
     void resizeEvent(QResizeEvent* event) override;
 
 private:
+    int columns() const;
     int rowCount() const;
     int columnWidth() const;
     QRect cardRect(int index) const;
@@ -71,6 +73,7 @@ private:
 
     QVector<Entry> m_entries;
     int m_hoveredIndex = -1;
+    int m_lastColumns = 0;
 };
 
 } // namespace fluent::gallery

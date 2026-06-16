@@ -16,13 +16,20 @@ namespace {
 // Mirrors the old GalleryEntryCard layout (QHBoxLayout 16px margins, 40px icon,
 // 16px gap, title + caption column) so the painted grid matches the previous look.
 // zh_CN: 对齐旧 GalleryEntryCard 布局，使绘制网格与原来外观一致。
-constexpr int kColumns = 2;
 constexpr int kGridSpacing = 12;
 constexpr int kCardHeight = 86;
 constexpr int kCardPadding = 16;
 constexpr int kIconSize = 40;
 constexpr int kIconTextGap = 16;
 constexpr int kTitleDescGap = 3;
+
+// The grid wraps to as many columns as fit at >= kMinCardWidth each, growing 1 -> 2 ->
+// 3 -> 4 as the window widens (WinUI-style), capped at kMaxColumns so cards never get
+// too narrow nor sprawl past four across.
+// zh_CN: 网格按每列至少 kMinCardWidth 宽排布，随窗口变宽 1→2→3→4 列（对齐 WinUI），封顶 kMaxColumns 列，
+// 既不让卡片过窄，也不超过四列。
+constexpr int kMinCardWidth = 240;
+constexpr int kMaxColumns = 4;
 
 } // namespace
 
@@ -43,9 +50,17 @@ void GalleryEntryGrid::setEntries(const QVector<Entry>& entries)
     update();
 }
 
+int GalleryEntryGrid::columns() const
+{
+    return qBound(1, (width() + kGridSpacing) / (kMinCardWidth + kGridSpacing), kMaxColumns);
+}
+
 int GalleryEntryGrid::rowCount() const
 {
-    return m_entries.isEmpty() ? 0 : (m_entries.size() + kColumns - 1) / kColumns;
+    if (m_entries.isEmpty())
+        return 0;
+    const int cols = columns();
+    return (m_entries.size() + cols - 1) / cols;
 }
 
 int GalleryEntryGrid::gridHeight() const
@@ -58,13 +73,15 @@ int GalleryEntryGrid::gridHeight() const
 
 int GalleryEntryGrid::columnWidth() const
 {
-    return qMax(0, (width() - (kColumns - 1) * kGridSpacing) / kColumns);
+    const int cols = columns();
+    return qMax(0, (width() - (cols - 1) * kGridSpacing) / cols);
 }
 
 QRect GalleryEntryGrid::cardRect(int index) const
 {
-    const int row = index / kColumns;
-    const int column = index % kColumns;
+    const int cols = columns();
+    const int row = index / cols;
+    const int column = index % cols;
     const int cardWidth = columnWidth();
     const int x = column * (cardWidth + kGridSpacing);
     const int y = row * (kCardHeight + kGridSpacing);
@@ -76,11 +93,12 @@ int GalleryEntryGrid::cardIndexAt(const QPoint& pos) const
     const int cardWidth = columnWidth();
     if (cardWidth <= 0)
         return -1;
+    const int cols = columns();
     const int column = pos.x() / (cardWidth + kGridSpacing);
     const int row = pos.y() / (kCardHeight + kGridSpacing);
-    if (column < 0 || column >= kColumns || row < 0)
+    if (column < 0 || column >= cols || row < 0)
         return -1;
-    const int index = row * kColumns + column;
+    const int index = row * cols + column;
     if (index < 0 || index >= m_entries.size())
         return -1;
     // Reject the gaps between cards so hover/click only land on a card body.
@@ -101,6 +119,14 @@ QSize GalleryEntryGrid::minimumSizeHint() const
 void GalleryEntryGrid::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
+    // A width change can change the column count, which changes the row count and thus
+    // our height — tell the layout to re-read sizeHint so the page scrolls correctly.
+    // zh_CN: 宽度变化可能改变列数，进而改变行数与高度——通知布局重新读取 sizeHint，使页面正确滚动。
+    const int cols = columns();
+    if (cols != m_lastColumns) {
+        m_lastColumns = cols;
+        updateGeometry();
+    }
     update();
 }
 
@@ -181,8 +207,20 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
         const QRect iconRect(rect.left() + kCardPadding,
                              rect.top() + kCardPadding,
                              kIconSize, kIconSize);
-        if (!entry.icon.isNull())
+        if (!entry.iconGlyph.isEmpty()) {
+            // Glyph variant (used by category cards): a tinted tile with an icon-font glyph,
+            // matching GalleryIconTile. zh_CN: 字形变体（分类卡片用）：着色圆角块 + 图标字体字形，对齐 GalleryIconTile。
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(colors.subtleSecondary);
+            painter.drawRoundedRect(iconRect, ::CornerRadius::Control, ::CornerRadius::Control);
+            QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
+            glyphFont.setPixelSize(18);
+            painter.setFont(glyphFont);
+            painter.setPen(colors.textPrimary);
+            painter.drawText(iconRect, Qt::AlignCenter, entry.iconGlyph);
+        } else if (!entry.icon.isNull()) {
             painter.drawPixmap(iconRect, entry.icon);
+        }
 
         const int textLeft = iconRect.right() + 1 + kIconTextGap;
         const int textWidth = rect.right() - kCardPadding - textLeft;
