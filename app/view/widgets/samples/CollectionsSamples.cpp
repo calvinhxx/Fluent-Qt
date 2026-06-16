@@ -744,9 +744,11 @@ QVector<GallerySample> listViewSamples()
                    QStringLiteral("ListView with avatars"),
                    QStringLiteral("Rows pair an avatar with text; selection shows the animated indicator."),
                    QStringLiteral("auto* listView = new ListView(this);\n"
-                                  "auto* item = new QStandardItem(\"Kendall Collins\");\n"
-                                  "item->setIcon(avatar);\n"
-                                  "model->appendRow(item);\n"
+                                  "for (const QString& contact : contacts) {\n"
+                                  "    auto* item = new QStandardItem(contact);\n"
+                                  "    item->setIcon(initialsAvatar(contact));\n"
+                                  "    model->appendRow(item);\n"
+                                  "}\n"
                                   "listView->setModel(model);\n"
                                   "listView->setHeaderText(\"Contacts\");"),
                    [](QWidget* parent) {
@@ -759,7 +761,10 @@ QVector<GallerySample> listViewSamples()
                        const QStringList names{
                            QStringLiteral("Kendall Collins"), QStringLiteral("Henry Ross"),
                            QStringLiteral("Nicole Wagner"), QStringLiteral("Adam Wolfe"),
-                           QStringLiteral("Stephanie Meyer")};
+                           QStringLiteral("Stephanie Meyer"), QStringLiteral("Maya Patel"),
+                           QStringLiteral("Alex Chen"), QStringLiteral("Priya Shah"),
+                           QStringLiteral("Omar Rivera"), QStringLiteral("Elena Rossi"),
+                           QStringLiteral("Jordan Lee"), QStringLiteral("Riley Brooks")};
                        auto* model = new QStandardItemModel(listView);
                        int colorIndex = 0;
                        for (const QString& name : names) {
@@ -778,6 +783,7 @@ QVector<GallerySample> listViewSamples()
                    QStringLiteral("In Multiple mode each click toggles a row; every selected row keeps its fill and indicator."),
                    QStringLiteral("listView->setSelectionMode(\n"
                                   "    ListView::ListSelectionMode::Multiple);\n"
+                                  "listView->setModel(filterModel);\n"
                                   "// each click toggles that row's selection"),
                    [](QWidget* parent) {
                        auto* listView = new ListView(parent);
@@ -793,7 +799,11 @@ QVector<GallerySample> listViewSamples()
                             {QStringLiteral("Flagged"), Typography::Icons::Flag},
                             {QStringLiteral("Has photos"), Typography::Icons::Camera},
                             {QStringLiteral("From contacts"), Typography::Icons::People},
-                            {QStringLiteral("Favorites"), Typography::Icons::FavoriteStar}},
+                            {QStringLiteral("Favorites"), Typography::Icons::FavoriteStar},
+                            {QStringLiteral("With documents"), Typography::Icons::Document},
+                            {QStringLiteral("Pinned"), Typography::Icons::Pin},
+                            {QStringLiteral("Scheduled"), Typography::Icons::Calendar},
+                            {QStringLiteral("Archived"), Typography::Icons::Folder}},
                            24));
                        if (auto* selection = listView->selectionModel()) {
                            for (int row : {0, 2}) {
@@ -832,6 +842,7 @@ QVector<GallerySample> listViewSamples()
                    QStringLiteral("Drag rows to reorder"),
                    QStringLiteral("With reordering enabled, drag a row to a new position in the playlist."),
                    QStringLiteral("auto* listView = new ListView(this);\n"
+                                  "listView->setHeaderText(\"Playlist\");\n"
                                   "listView->setModel(model);\n"
                                   "listView->setCanReorderItems(true);"),
                    [](QWidget* parent) {
@@ -847,7 +858,13 @@ QVector<GallerySample> listViewSamples()
                            {{QStringLiteral("Bloom"), Typography::Icons::Music},
                             {QStringLiteral("Northern Lights"), Typography::Icons::Music},
                             {QStringLiteral("Driftwood"), Typography::Icons::Music},
-                            {QStringLiteral("Paper Boats"), Typography::Icons::Music}},
+                            {QStringLiteral("Paper Boats"), Typography::Icons::Music},
+                            {QStringLiteral("Blue Hour"), Typography::Icons::Music},
+                            {QStringLiteral("Signal Fire"), Typography::Icons::Music},
+                            {QStringLiteral("Slow Orbit"), Typography::Icons::Music},
+                            {QStringLiteral("City Lights"), Typography::Icons::Music},
+                            {QStringLiteral("Afterglow"), Typography::Icons::Music},
+                            {QStringLiteral("Quiet Roads"), Typography::Icons::Music}},
                            24));
                        return listView;
                    })
@@ -1000,7 +1017,7 @@ QVector<GallerySample> treeViewSamples()
                                   "tree->setItemDelegate(new TreeRowDelegate(\n"
                                   "    themeHost, rowHeight, tree, tree));\n"
                                   "tree->setModel(model);\n"
-                                  "tree->expand(model->index(0, 0));"),
+                                  "tree->expandAll();"),
                    [folderColor, fileColor, rowHeight](QWidget* parent) {
                        auto* tree = new TreeView(parent);
                        tree->setHeaderHidden(true);
@@ -1010,7 +1027,7 @@ QVector<GallerySample> treeViewSamples()
 
                        auto* model = makeFolderTreeModel(tree, folderColor, fileColor);
                        tree->setModel(model);
-                       tree->expand(model->index(0, 0));
+                       tree->expandAll();
                        tree->setSelectedItem(model->index(0, 0));
                        return tree;
                    }),
@@ -1061,6 +1078,15 @@ QVector<GallerySample> treeViewSamples()
                        notify->appendRow(leaf(QStringLiteral("Messages"), Qt::Checked,
                                               Typography::Icons::Message, QColor(0x03, 0x83, 0x87)));
                        model->appendRow(notify);
+
+                       auto* privacy = group(QStringLiteral("Privacy"), Qt::Unchecked);
+                       privacy->appendRow(leaf(QStringLiteral("Location"), Qt::Unchecked,
+                                               Typography::Icons::MapPin, QColor(0xD8, 0x3B, 0x01)));
+                       privacy->appendRow(leaf(QStringLiteral("Camera"), Qt::Unchecked,
+                                               Typography::Icons::Camera, QColor(0x2D, 0x7D, 0x9A)));
+                       privacy->appendRow(leaf(QStringLiteral("Microphone"), Qt::Unchecked,
+                                               Typography::Icons::Microphone, QColor(0x5C, 0x2D, 0x91)));
+                       model->appendRow(privacy);
 
                        tree->setModel(model);
                        tree->expandAll();
