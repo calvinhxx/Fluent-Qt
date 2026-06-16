@@ -53,6 +53,23 @@ void ScrollView::init() {
     setVerticalScrollBar(new ScrollBar(Qt::Vertical, this));
     m_cornerWidget = new TransparentCornerWidget(this);
     setCornerWidget(m_cornerWidget);
+
+    // Floating overlay bar for vertical "Visible" mode: parented to the viewport, it mirrors the
+    // native (gutter-less, AlwaysOff) scrollbar's range/value and floats over the content's right
+    // edge so content stays full-width. zh_CN: 垂直“常显”模式的浮动覆盖条：父级为视口，镜像原生（无沟槽、
+    // AlwaysOff）滚动条的范围/数值，浮于内容右缘之上，使内容保持整宽。
+    m_floatingVerticalBar = new ScrollBar(Qt::Vertical, viewport());
+    m_floatingVerticalBar->hide();
+    connect(verticalScrollBar(), &QScrollBar::rangeChanged, this,
+            [this](int, int) { syncFloatingScrollBar(); });
+    connect(verticalScrollBar(), &QScrollBar::valueChanged, this, [this](int v) {
+        if (m_floatingVerticalBar && m_floatingVerticalBar->value() != v)
+            m_floatingVerticalBar->setValue(v);
+    });
+    connect(m_floatingVerticalBar, &QScrollBar::valueChanged, this, [this](int v) {
+        if (verticalScrollBar()->value() != v)
+            verticalScrollBar()->setValue(v);
+    });
 #ifndef Q_OS_MACOS
     grabGesture(Qt::PinchGesture);
 #endif
@@ -289,6 +306,9 @@ bool ScrollView::eventFilter(QObject* watched, QEvent* event) {
 }
 
 bool ScrollView::viewportEvent(QEvent* event) {
+    if (event->type() == QEvent::Resize)
+        positionFloatingScrollBar();
+
     if (event->type() == QEvent::Wheel) {
         auto* wheel = static_cast<QWheelEvent*>(event);
         if (handleZoomWheel(wheel, viewport()))
@@ -348,11 +368,21 @@ void ScrollView::applyAxisPolicy(Axis axis) {
     const ScrollBarVisibility visibility = visibilityForAxis(axis);
     const bool enabled = isAxisEnabled(axis);
 
+    // A vertical "Visible" bar becomes a WinUI-style floating overlay: the native bar reserves
+    // no gutter (AlwaysOff) so the viewport — and content like the home hero — spans the full
+    // width, and a synced translucent ScrollBar floats over the right edge and auto-hides. This
+    // removes the opaque gutter strip beside the hero and the horizontal reflow as the bar toggles.
+    // The horizontal bar keeps the classic policies. zh_CN: 垂直“常显(Visible)”改为 WinUI 风格的浮动
+    // 覆盖条：原生条不预留沟槽(AlwaysOff)，使视口（及首页 hero 等内容）铺满整宽，另用一条同步的半透明
+    // ScrollBar 浮于右缘并自动隐藏。这消除了 hero 旁的不透明沟槽条带，以及滚动条显隐时的横向重排。水平条沿用经典策略。
+    const bool verticalOverlay = axis == Axis::Vertical && enabled
+        && visibility == ScrollBarVisibility::Visible;
+
     Qt::ScrollBarPolicy policy = Qt::ScrollBarAsNeeded;
     if (!enabled || visibility == ScrollBarVisibility::Disabled || visibility == ScrollBarVisibility::Hidden) {
         policy = Qt::ScrollBarAlwaysOff;
     } else if (visibility == ScrollBarVisibility::Visible) {
-        policy = Qt::ScrollBarAlwaysOn;
+        policy = verticalOverlay ? Qt::ScrollBarAlwaysOff : Qt::ScrollBarAlwaysOn;
     }
 
     QScrollBar* scrollBar = axis == Axis::Horizontal ? horizontalScrollBar() : verticalScrollBar();
@@ -364,7 +394,38 @@ void ScrollView::applyAxisPolicy(Axis axis) {
         setHorizontalScrollBarPolicy(policy);
     } else {
         setVerticalScrollBarPolicy(policy);
+        syncFloatingScrollBar();
     }
+}
+
+void ScrollView::syncFloatingScrollBar() {
+    if (!m_floatingVerticalBar)
+        return;
+
+    QScrollBar* real = verticalScrollBar();
+    const bool overlay = isAxisEnabled(Axis::Vertical)
+        && visibilityForAxis(Axis::Vertical) == ScrollBarVisibility::Visible;
+    const bool scrollable = real->maximum() > real->minimum();
+
+    m_floatingVerticalBar->setRange(real->minimum(), real->maximum());
+    m_floatingVerticalBar->setPageStep(real->pageStep());
+    m_floatingVerticalBar->setSingleStep(real->singleStep());
+    if (m_floatingVerticalBar->value() != real->value())
+        m_floatingVerticalBar->setValue(real->value());
+
+    m_floatingVerticalBar->setVisible(overlay && scrollable);
+    positionFloatingScrollBar();
+}
+
+void ScrollView::positionFloatingScrollBar() {
+    if (!m_floatingVerticalBar || !m_floatingVerticalBar->isVisible())
+        return;
+    QWidget* area = viewport();
+    if (!area)
+        return;
+    const int thickness = m_floatingVerticalBar->thickness();
+    m_floatingVerticalBar->setGeometry(area->width() - thickness, 0, thickness, area->height());
+    m_floatingVerticalBar->raise();
 }
 
 void ScrollView::updateViewportPalette() {
