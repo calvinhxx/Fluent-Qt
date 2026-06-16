@@ -283,6 +283,20 @@ void TreeView::setCanReorderItems(bool enabled) {
     emit canReorderItemsChanged();
 }
 
+void TreeView::setScrollChainingEnabled(bool enabled) {
+    if (m_scrollChainingEnabled == enabled) return;
+    m_scrollChainingEnabled = enabled;
+    if (enabled) {
+        if (m_bounceTimer) m_bounceTimer->stop();
+        if (m_bounceAnim) m_bounceAnim->stop();
+        if (!qFuzzyIsNull(m_overscrollY)) {
+            m_overscrollY = 0.0;
+            if (viewport()) viewport()->update();
+        }
+    }
+    emit scrollChainingEnabledChanged();
+}
+
 // ── Appearance properties ────────────────────────────────────────────────────
 
 void TreeView::setFontRole(const QString& role) {
@@ -759,10 +773,20 @@ void TreeView::wheelEvent(QWheelEvent* event) {
 
     // ── 2. At boundary → enter overscroll ────────────────────────────────
     QScrollBar* sb = verticalScrollBar();
+    if (!sb || sb->maximum() <= sb->minimum()) {
+        event->ignore();
+        return;
+    }
+
     const bool atStart = sb->value() <= sb->minimum();
     const bool atEnd   = sb->value() >= sb->maximum();
 
     if ((atStart && scrollPx > 0) || (atEnd && scrollPx < 0)) {
+        if (m_scrollChainingEnabled) {
+            event->ignore();
+            return;
+        }
+
         // Don't enter overscroll from inertia or finger-lift
         if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
             event->accept();

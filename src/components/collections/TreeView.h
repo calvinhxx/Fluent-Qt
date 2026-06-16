@@ -136,6 +136,11 @@ public:
      * zh_CN: 是否启用拖拽重排。
      */
     Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY canReorderItemsChanged)
+    /**
+     * @brief Whether boundary wheel input may continue to an enclosing scroller.
+     * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
+     */
+    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
 
     explicit TreeView(QWidget* parent = nullptr);
     ~TreeView() override = default;
@@ -172,6 +177,9 @@ public:
     // --- Drag reorder ---
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
+
+    bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
+    void setScrollChainingEnabled(bool enabled);
 
     // --- Tree API ---
     void expandAll();
@@ -247,6 +255,7 @@ signals:
     void itemPressed(const QModelIndex& index);
     void itemClicked(const QModelIndex& index);
     void canReorderItemsChanged();
+    void scrollChainingEnabledChanged();
     void itemReordered(const QModelIndex& srcParent, int srcRow,
                        const QModelIndex& dstParent, int dstRow);
     void indicatorMotionProgressChanged();
@@ -335,6 +344,7 @@ private:
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     ::fluent::scrolling::ScrollBar* m_hScrollBar = nullptr;
+    bool m_scrollChainingEnabled = false;
     bool m_horizontalFluentScrollBarEnabled = true;
     bool m_viewportHovered = false;
 

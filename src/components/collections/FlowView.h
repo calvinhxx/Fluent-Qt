@@ -15,6 +15,7 @@ class QMouseEvent;
 class QPaintEvent;
 class QResizeEvent;
 class QShowEvent;
+class QTimer;
 class QWheelEvent;
 class QVariantAnimation;
 
@@ -113,6 +114,11 @@ public:
      * zh_CN: 是否启用拖拽重排。
      */
     Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY canReorderItemsChanged)
+    /**
+     * @brief Whether boundary wheel input may continue to an enclosing scroller.
+     * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
+     */
+    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
 
     explicit FlowView(QWidget* parent = nullptr);
     ~FlowView() override;
@@ -160,6 +166,9 @@ public:
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
 
+    bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
+    void setScrollChainingEnabled(bool enabled);
+
     int selectedIndex() const;
     QList<int> selectedRows() const;
     void setSelectedIndex(int index);
@@ -189,6 +198,7 @@ signals:
     void contentMarginsChanged();
     void viewportHoveredChanged();
     void canReorderItemsChanged();
+    void scrollChainingEnabledChanged();
     void itemClicked(int row);
     void itemReordered(int fromIndex, int toIndex);
 
@@ -226,6 +236,7 @@ private:
     void setViewportHovered(bool hovered);
     void invalidateFlowLayout();
     void syncFluentScrollBar();
+    void startBounceBack();
     void ensureLayout() const;
     void computeLayoutForRows(const QList<int>& rows, QHash<int, QRect>* rects, QSize* contentSize) const;
     QSize itemSizeForIndex(const QModelIndex& index) const;
@@ -271,6 +282,10 @@ private:
     QMargins m_contentMargins{8, 8, 8, 8};
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
+    bool m_scrollChainingEnabled = false;
+    qreal m_overscrollY = 0.0;
+    QVariantAnimation* m_bounceAnim = nullptr;
+    QTimer* m_bounceTimer = nullptr;
     bool m_viewportHovered = false;
     int m_hoveredRow = -1;
     int m_pressedRow = -1;

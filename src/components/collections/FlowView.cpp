@@ -5,6 +5,7 @@
 #include <limits>
 
 #include <QAbstractItemDelegate>
+#include <QAbstractAnimation>
 #include <QAbstractItemModel>
 #include <QApplication>
 #include <QItemSelectionModel>
@@ -18,6 +19,7 @@
 #include <QShowEvent>
 #include <QStandardItemModel>
 #include <QStyleOptionViewItem>
+#include <QTimer>
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
@@ -71,6 +73,19 @@ FlowView::FlowView(QWidget* parent)
         QStringLiteral("fluentFlowViewScrollBar"));
     connect(verticalScrollBar(), &QScrollBar::rangeChanged,
             this, &FlowView::syncFluentScrollBar);
+
+    m_bounceAnim = new QVariantAnimation(this);
+    m_bounceAnim->setDuration(themeAnimation().normal);
+    m_bounceAnim->setEasingCurve(themeAnimation().decelerate);
+    connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        m_overscrollY = value.toReal();
+        viewport()->update();
+    });
+
+    m_bounceTimer = new QTimer(this);
+    m_bounceTimer->setSingleShot(true);
+    m_bounceTimer->setInterval(150);
+    connect(m_bounceTimer, &QTimer::timeout, this, &FlowView::startBounceBack);
 
     applyThemeStyle();
     updateViewportMargins();
@@ -236,6 +251,25 @@ void FlowView::setCanReorderItems(bool enabled)
         resetDragReorderFeedback();
     }
     emit canReorderItemsChanged();
+}
+
+void FlowView::setScrollChainingEnabled(bool enabled)
+{
+    if (m_scrollChainingEnabled == enabled)
+        return;
+    m_scrollChainingEnabled = enabled;
+    if (enabled) {
+        if (m_bounceTimer)
+            m_bounceTimer->stop();
+        if (m_bounceAnim)
+            m_bounceAnim->stop();
+        if (!qFuzzyIsNull(m_overscrollY)) {
+            m_overscrollY = 0.0;
+            if (viewport())
+                viewport()->update();
+        }
+    }
+    emit scrollChainingEnabledChanged();
 }
 
 int FlowView::selectedIndex() const
@@ -603,7 +637,63 @@ void FlowView::wheelEvent(QWheelEvent* event)
         return;
     }
 
+    const QPoint pixelDelta = event->pixelDelta();
+    const QPoint angleDelta = event->angleDelta();
+    const auto phase = event->phase();
     QScrollBar* bar = verticalScrollBar();
+    if (pixelDelta.isNull() && angleDelta.isNull()) {
+        if (!qFuzzyIsNull(m_overscrollY) &&
+            (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd)) {
+            startBounceBack();
+            event->accept();
+            return;
+        }
+        event->ignore();
+        return;
+    }
+
+    const qreal scrollPx = !pixelDelta.isNull()
+        ? static_cast<qreal>(pixelDelta.y())
+        : angleDelta.y() / 120.0 * (bar ? bar->singleStep() : 24) * 3.0;
+
+    if (!qFuzzyIsNull(m_overscrollY)) {
+        if (m_bounceAnim && m_bounceAnim->state() == QAbstractAnimation::Running) {
+            if (phase == Qt::NoScrollPhase) {
+                event->accept();
+                return;
+            }
+            m_bounceAnim->stop();
+        }
+        if (m_bounceTimer)
+            m_bounceTimer->stop();
+
+        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
+            startBounceBack();
+            event->accept();
+            return;
+        }
+
+        constexpr qreal kMax = 100.0;
+        const qreal ratio = qMin(qAbs(m_overscrollY) / kMax, 1.0);
+        const qreal damping = (1.0 - ratio) * (1.0 - ratio);
+
+        const qreal previousOverscroll = m_overscrollY;
+        m_overscrollY += scrollPx * qMax(damping, 0.05) * 0.5;
+        m_overscrollY = qBound(-kMax, m_overscrollY, kMax);
+
+        if ((previousOverscroll > 0.0 && m_overscrollY <= 0.0) ||
+            (previousOverscroll < 0.0 && m_overscrollY >= 0.0)) {
+            m_overscrollY = 0.0;
+        }
+
+        viewport()->update();
+        if (!qFuzzyIsNull(m_overscrollY) && phase == Qt::NoScrollPhase && m_bounceTimer)
+            m_bounceTimer->start();
+
+        event->accept();
+        return;
+    }
+
     if (!bar || bar->maximum() <= bar->minimum()) {
         // Content fits: stay transparent so an enclosing scroller takes the wheel.
         // zh_CN: 内容未超出视口：保持透明，让外层滚动容器接管滚轮。
@@ -611,31 +701,50 @@ void FlowView::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    const QPoint pixelDelta = event->pixelDelta();
-    const QPoint angleDelta = event->angleDelta();
-    const qreal scrollPx = !pixelDelta.isNull()
-        ? static_cast<qreal>(pixelDelta.y())
-        : angleDelta.y() / 120.0 * bar->singleStep() * 3.0;
+    const bool atTop = bar->value() <= bar->minimum();
+    const bool atBottom = bar->value() >= bar->maximum();
+    if ((atTop && scrollPx > 0.0) || (atBottom && scrollPx < 0.0)) {
+        if (m_scrollChainingEnabled) {
+            event->ignore();
+            return;
+        }
+
+        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
+            event->accept();
+            return;
+        }
+
+        m_overscrollY = scrollPx * 0.5;
+        viewport()->update();
+
+        if (phase == Qt::NoScrollPhase && m_bounceTimer)
+            m_bounceTimer->start();
+
+        event->accept();
+        return;
+    }
 
     const int previous = bar->value();
     const int target = qBound(bar->minimum(),
                               previous - qRound(scrollPx),
                               bar->maximum());
-    if (target != previous) {
+    const bool moved = target != previous;
+    if (moved) {
         bar->setValue(target);
         syncFluentScrollBar();
         viewport()->update();
     }
 
-    // A scrollable flow owns the wheel even at its edges and for zero-delta
-    // phase events (ScrollBegin/End): letting any of them bubble hands the
-    // gesture to an enclosing scroll view, which then pans the whole page
-    // while this view's own scrollbar is responding. The sibling collection
-    // views (ListView/GridView/TreeView) consume boundary wheels the same way.
-    // zh_CN: 可滚动的 flow 在边缘以及零增量的 phase 事件（ScrollBegin/End）上
-    // 也要持有滚轮：任何一个事件冒泡出去，手势就会交给外层滚动容器，造成本视图
-    // 滚动条还在响应的同时整页跟着平移。同族集合视图
-    // （ListView/GridView/TreeView）对边缘滚轮采用同样的消费策略。
+    if (!moved && m_scrollChainingEnabled) {
+        event->ignore();
+        return;
+    }
+
+    // By default, a scrollable flow owns boundary wheel input so an enclosing
+    // page does not pan mid-gesture. scrollChainingEnabled opts back into that
+    // propagation for hosts that intentionally want chained scrolling.
+    // zh_CN: 默认情况下，可滚动的 flow 会持有边界滚轮输入，避免外层页面在手势
+    // 中途跟着平移。scrollChainingEnabled 用于显式恢复这种向外传递。
     event->accept();
 }
 
@@ -687,7 +796,18 @@ int FlowView::horizontalOffset() const
 
 int FlowView::verticalOffset() const
 {
-    return verticalScrollBar() ? verticalScrollBar()->value() : 0;
+    return verticalScrollBar() ? verticalScrollBar()->value() - qRound(m_overscrollY) : 0;
+}
+
+void FlowView::startBounceBack()
+{
+    if (qFuzzyIsNull(m_overscrollY) || !m_bounceAnim)
+        return;
+
+    m_bounceAnim->stop();
+    m_bounceAnim->setStartValue(m_overscrollY);
+    m_bounceAnim->setEndValue(0.0);
+    m_bounceAnim->start();
 }
 
 bool FlowView::isIndexHidden(const QModelIndex& index) const

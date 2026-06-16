@@ -1308,6 +1308,64 @@ TEST_F(TreeViewTest, CanReorderItemsSignalNotDuplicate) {
     EXPECT_EQ(spy.count(), 1);
 }
 
+TEST_F(TreeViewTest, ScrollChainingPropertyControlsBoundaryWheel) {
+    auto* tv = new TreeView(window);
+    tv->setGeometry(0, 0, 260, 140);
+    auto* model = new QStandardItemModel(tv);
+    for (int i = 0; i < 40; ++i)
+        model->appendRow(new QStandardItem(QStringLiteral("Item %1").arg(i)));
+    tv->setModel(model);
+    attachFluentDelegate(tv);
+    showOffscreen(window);
+    tv->doItemsLayout();
+    QTest::qWait(20);
+
+    ASSERT_GT(tv->verticalScrollBar()->maximum(), 0);
+    tv->verticalScrollBar()->setValue(tv->verticalScrollBar()->minimum());
+    EXPECT_FALSE(tv->isScrollChainingEnabled());
+
+    QSignalSpy spy(tv, &TreeView::scrollChainingEnabledChanged);
+    tv->setScrollChainingEnabled(true);
+    EXPECT_TRUE(tv->isScrollChainingEnabled());
+    EXPECT_EQ(spy.count(), 1);
+    tv->setScrollChainingEnabled(true);
+    EXPECT_EQ(spy.count(), 1);
+
+    const QPoint wheelPoint = tv->viewport()->rect().center();
+    FLUENT_MAKE_WHEEL_EVENT(chainedWheel, wheelPoint.x(), wheelPoint.y(), 120, Qt::NoModifier);
+    chainedWheel.setAccepted(false);
+    QApplication::sendEvent(tv->viewport(), &chainedWheel);
+    EXPECT_FALSE(chainedWheel.isAccepted());
+    EXPECT_EQ(tv->verticalScrollBar()->value(), tv->verticalScrollBar()->minimum());
+
+    tv->setScrollChainingEnabled(false);
+    FLUENT_MAKE_WHEEL_EVENT(containedWheel, wheelPoint.x(), wheelPoint.y(), 120, Qt::NoModifier);
+    containedWheel.setAccepted(false);
+    QApplication::sendEvent(tv->viewport(), &containedWheel);
+    EXPECT_TRUE(containedWheel.isAccepted());
+}
+
+TEST_F(TreeViewTest, WheelPassesThroughWhenContentFits) {
+    auto* tv = new TreeView(window);
+    tv->setGeometry(0, 0, 300, 220);
+    auto* model = new QStandardItemModel(tv);
+    model->appendRow(new QStandardItem(QStringLiteral("A")));
+    model->appendRow(new QStandardItem(QStringLiteral("B")));
+    tv->setModel(model);
+    attachFluentDelegate(tv);
+    showOffscreen(window);
+    tv->doItemsLayout();
+    QTest::qWait(20);
+
+    ASSERT_EQ(tv->verticalScrollBar()->maximum(), tv->verticalScrollBar()->minimum());
+
+    const QPoint wheelPoint = tv->viewport()->rect().center();
+    FLUENT_MAKE_WHEEL_EVENT(wheel, wheelPoint.x(), wheelPoint.y(), -120, Qt::NoModifier);
+    wheel.setAccepted(false);
+    QApplication::sendEvent(tv->viewport(), &wheel);
+    EXPECT_FALSE(wheel.isAccepted());
+}
+
 TEST_F(TreeViewTest, DragReorderTopLevelSiblings) {
     TreeView* tv = new TreeView(window);
     auto* model = attachSampleModel(tv);

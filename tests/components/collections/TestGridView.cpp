@@ -394,6 +394,63 @@ TEST_F(GridViewTest, SetMaxColumns) {
     EXPECT_EQ(spy.count(), 1);
 }
 
+TEST_F(GridViewTest, ScrollChainingPropertyControlsBoundaryWheel) {
+    auto* gv = new GridView(window);
+    gv->setGeometry(0, 0, 240, 120);
+    gv->setCellSize(QSize(100, 80));
+    gv->setMaxColumns(2);
+    QStringList rows;
+    for (int i = 0; i < 20; ++i)
+        rows << QStringLiteral("Item %1").arg(i);
+    attachStringListModel(gv, rows);
+    showOffscreen(window);
+    gv->doItemsLayout();
+    QTest::qWait(20);
+
+    ASSERT_GT(gv->verticalScrollBar()->maximum(), 0);
+    gv->verticalScrollBar()->setValue(gv->verticalScrollBar()->minimum());
+    EXPECT_FALSE(gv->isScrollChainingEnabled());
+
+    QSignalSpy spy(gv, &GridView::scrollChainingEnabledChanged);
+    gv->setScrollChainingEnabled(true);
+    EXPECT_TRUE(gv->isScrollChainingEnabled());
+    EXPECT_EQ(spy.count(), 1);
+    gv->setScrollChainingEnabled(true);
+    EXPECT_EQ(spy.count(), 1);
+
+    const QPoint wheelPoint = gv->viewport()->rect().center();
+    FLUENT_MAKE_WHEEL_EVENT(chainedWheel, wheelPoint.x(), wheelPoint.y(), 120, Qt::NoModifier);
+    chainedWheel.setAccepted(false);
+    QApplication::sendEvent(gv->viewport(), &chainedWheel);
+    EXPECT_FALSE(chainedWheel.isAccepted());
+    EXPECT_EQ(gv->verticalScrollBar()->value(), gv->verticalScrollBar()->minimum());
+
+    gv->setScrollChainingEnabled(false);
+    FLUENT_MAKE_WHEEL_EVENT(containedWheel, wheelPoint.x(), wheelPoint.y(), 120, Qt::NoModifier);
+    containedWheel.setAccepted(false);
+    QApplication::sendEvent(gv->viewport(), &containedWheel);
+    EXPECT_TRUE(containedWheel.isAccepted());
+}
+
+TEST_F(GridViewTest, WheelPassesThroughWhenContentFits) {
+    auto* gv = new GridView(window);
+    gv->setGeometry(0, 0, 300, 220);
+    gv->setCellSize(QSize(100, 80));
+    gv->setMaxColumns(2);
+    attachStringListModel(gv, {QStringLiteral("A"), QStringLiteral("B")});
+    showOffscreen(window);
+    gv->doItemsLayout();
+    QTest::qWait(20);
+
+    ASSERT_EQ(gv->verticalScrollBar()->maximum(), gv->verticalScrollBar()->minimum());
+
+    const QPoint wheelPoint = gv->viewport()->rect().center();
+    FLUENT_MAKE_WHEEL_EVENT(wheel, wheelPoint.x(), wheelPoint.y(), -120, Qt::NoModifier);
+    wheel.setAccepted(false);
+    QApplication::sendEvent(gv->viewport(), &wheel);
+    EXPECT_FALSE(wheel.isAccepted());
+}
+
 // ── 容器属性 ──────────────────────────────────────────────────────────────────
 
 TEST_F(GridViewTest, DefaultFontRole) {

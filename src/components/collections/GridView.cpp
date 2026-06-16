@@ -184,6 +184,20 @@ void GridView::setMaxColumns(int maxCols) {
     emit maxColumnsChanged();
 }
 
+void GridView::setScrollChainingEnabled(bool enabled) {
+    if (m_scrollChainingEnabled == enabled) return;
+    m_scrollChainingEnabled = enabled;
+    if (enabled) {
+        if (m_bounceTimer) m_bounceTimer->stop();
+        if (m_bounceAnim) m_bounceAnim->stop();
+        if (!qFuzzyIsNull(m_overscrollY)) {
+            m_overscrollY = 0.0;
+            if (viewport()) viewport()->update();
+        }
+    }
+    emit scrollChainingEnabledChanged();
+}
+
 void GridView::updateGridSize() {
     // gridSize covers cell + spacing; QListView lays out IconMode slots with it.
     // zh_CN: gridSize 包含 cell + spacing（QListView 以此布局 IconMode 每格）。
@@ -444,10 +458,20 @@ void GridView::wheelEvent(QWheelEvent* event) {
     }
 
     QScrollBar* vsb = verticalScrollBar();
+    if (!vsb || vsb->maximum() <= vsb->minimum()) {
+        event->ignore();
+        return;
+    }
+
     const bool atTop    = vsb->value() <= vsb->minimum();
     const bool atBottom = vsb->value() >= vsb->maximum();
 
     if ((atTop && scrollPx > 0) || (atBottom && scrollPx < 0)) {
+        if (m_scrollChainingEnabled) {
+            event->ignore();
+            return;
+        }
+
         // Don't enter overscroll from inertia or finger-lift
         if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
             event->accept();

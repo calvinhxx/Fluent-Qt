@@ -134,6 +134,11 @@ public:
      */
     Q_PROPERTY(bool canReorderItems READ canReorderItems WRITE setCanReorderItems NOTIFY canReorderItemsChanged)
     /**
+     * @brief Whether boundary wheel input may continue to an enclosing scroller.
+     * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
+     */
+    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    /**
      * @brief Whether section headers are enabled for grouped rows.
      * zh_CN: 是否为分组行启用 section header。
      */
@@ -190,6 +195,9 @@ public:
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
 
+    bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
+    void setScrollChainingEnabled(bool enabled);
+
     // --- Section ---
     using SectionKeyFunc = std::function<QString(int row)>;
     bool sectionEnabled() const { return m_sectionEnabled; }
@@ -245,6 +253,7 @@ signals:
     void footerTextChanged();
     void placeholderTextChanged();
     void canReorderItemsChanged();
+    void scrollChainingEnabledChanged();
     void sectionEnabledChanged();
     void selectedIndicatorProgressChanged();
     void selectedIndicatorMotionDirectionChanged();
@@ -276,12 +285,15 @@ protected:
 
 private:
     void applyThemeStyle();
+    void applyPointerSelection(const QModelIndex& index, QMouseEvent* event);
     /** 压制原生条 + 同步 range/pageStep + 定位 + 显隐 Fluent 纵向滚动条 */
     void syncFluentScrollBar();
     void syncFluentHScrollBar();
     void layoutHeader();
     void layoutFooter();
     void setViewportHovered(bool hovered);
+    void updatePressedHoverRow(int row);
+    void paintPressedHoverFeedback(QPainter& painter) const;
     void updateViewportMargins();
     void startBounceBack();
     void installSectionProxy();
@@ -333,11 +345,14 @@ private:
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     ::fluent::scrolling::ScrollBar* m_hScrollBar = nullptr;
+    bool m_scrollChainingEnabled = false;
     bool m_viewportHovered = false;
 
     // --- Drag reorder ---
     bool m_canReorderItems = false;
     bool m_isDragging = false;
+    int  m_pressedRow = -1;
+    int  m_pressedHoverRow = -1;
     int  m_dragSourceRow = -1;
     int  m_dropTargetRow = -1;      // Drop indicator position. zh_CN: 拖拽指示线位置。
     QPoint m_dragStartPos;

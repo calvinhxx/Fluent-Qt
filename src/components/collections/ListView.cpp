@@ -22,6 +22,7 @@
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
+#include "compatibility/QtCompat.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -460,6 +461,23 @@ void ListView::setCanReorderItems(bool enabled) {
     emit canReorderItemsChanged();
 }
 
+void ListView::setScrollChainingEnabled(bool enabled) {
+    if (m_scrollChainingEnabled == enabled) return;
+    m_scrollChainingEnabled = enabled;
+    if (enabled) {
+        if (m_bounceTimer) m_bounceTimer->stop();
+        if (m_bounceAnim) m_bounceAnim->stop();
+        if (!qFuzzyIsNull(m_overscrollX) || !qFuzzyIsNull(m_overscrollY)) {
+            m_overscrollX = 0.0;
+            m_overscrollY = 0.0;
+            if (viewport()) viewport()->update();
+        }
+        resetNoPhaseCluster();
+        resetNoPhaseBoundaryBounce();
+    }
+    emit scrollChainingEnabledChanged();
+}
+
 // ── Section ───────────────────────────────────────────────────────────────────
 
 void ListView::setSectionEnabled(bool enabled) {
@@ -536,6 +554,60 @@ void ListView::setSelectedIndex(int index) {
         selectionModel()->setCurrentIndex(idx,
             QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Current | QItemSelectionModel::Rows);
     }
+}
+
+void ListView::applyPointerSelection(const QModelIndex& index, QMouseEvent* event)
+{
+    if (!selectionModel() || !index.isValid())
+        return;
+
+    switch (m_selectionMode) {
+    case ListSelectionMode::None:
+        selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+        return;
+    case ListSelectionMode::Single:
+        selectionModel()->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect |
+                                                     QItemSelectionModel::Current |
+                                                     QItemSelectionModel::Rows);
+        return;
+    case ListSelectionMode::Multiple:
+        selectionModel()->select(index, QItemSelectionModel::Toggle |
+                                        QItemSelectionModel::Rows);
+        selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+        return;
+    case ListSelectionMode::Extended:
+        break;
+    }
+
+    const Qt::KeyboardModifiers modifiers = event ? event->modifiers() : Qt::NoModifier;
+    const bool toggle = modifiers.testFlag(Qt::ControlModifier) ||
+                        modifiers.testFlag(Qt::MetaModifier);
+    const bool range = modifiers.testFlag(Qt::ShiftModifier);
+
+    if (range && model()) {
+        const QModelIndex anchor = currentIndex().isValid() ? currentIndex() : index;
+        const int firstRow = qMin(anchor.row(), index.row());
+        const int lastRow = qMax(anchor.row(), index.row());
+        QItemSelection selection(model()->index(firstRow, index.column(), index.parent()),
+                                 model()->index(lastRow, index.column(), index.parent()));
+        selectionModel()->select(selection,
+                                 (toggle ? QItemSelectionModel::Select
+                                         : QItemSelectionModel::ClearAndSelect) |
+                                     QItemSelectionModel::Rows);
+        selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+        return;
+    }
+
+    if (toggle) {
+        selectionModel()->select(index, QItemSelectionModel::Toggle |
+                                        QItemSelectionModel::Rows);
+        selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+        return;
+    }
+
+    selectionModel()->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect |
+                                             QItemSelectionModel::Current |
+                                             QItemSelectionModel::Rows);
 }
 
 void ListView::setSelectedIndicatorAnimationEnabled(bool enabled) {
@@ -723,6 +795,13 @@ void ListView::paintEvent(QPaintEvent* event) {
 
     // --- 3.5 Section headers are now handled by SectionProxyDelegate ---
 
+    if (m_pressedRow >= 0 && m_pressedHoverRow >= 0) {
+        QPainter hp(viewport());
+        hp.setRenderHint(QPainter::Antialiasing);
+        paintPressedHoverFeedback(hp);
+        hp.end();
+    }
+
     // --- 3.6 Selection indicator overlay. zh_CN: 选中指示器覆盖层。---
     if (!m_isDragging) {
         QPainter ip(viewport());
@@ -867,17 +946,29 @@ bool ListView::isPointInSectionHeader(const QPoint& viewportPos) const {
 }
 
 void ListView::mousePressEvent(QMouseEvent* event) {
+    m_pressedRow = -1;
+    updatePressedHoverRow(-1);
+    m_dragSourceRow = -1;
+
     if (isPointInSectionHeader(event->pos())) {
         event->accept();
         return;  // Swallow click on section header area
     }
-    if (m_canReorderItems && event->button() == Qt::LeftButton) {
-        QModelIndex idx = indexAt(event->pos());
+
+    if (event->button() == Qt::LeftButton) {
+        const QModelIndex idx = indexAt(event->pos());
         if (idx.isValid()) {
+            m_pressedRow = idx.row();
+            updatePressedHoverRow(idx.row());
             m_dragStartPos = event->pos();
-            m_dragSourceRow = idx.row();
+            if (m_canReorderItems)
+                m_dragSourceRow = idx.row();
+            setFocus(Qt::MouseFocusReason);
+            event->accept();
+            return;
         }
     }
+
     QListView::mousePressEvent(event);
 }
 
@@ -888,6 +979,7 @@ void ListView::mouseMoveEvent(QMouseEvent* event) {
                 // Grab snapshot BEFORE setting m_isDragging to avoid capturing ghost overlay
                 m_dragPixmap = renderItemPixmap(m_dragSourceRow);
                 m_isDragging = true;
+                updatePressedHoverRow(-1);
                 if (usesMovingSelectedIndicator())
                     refreshSelectedIndicatorGeometry(true);
             }
@@ -905,6 +997,18 @@ void ListView::mouseMoveEvent(QMouseEvent* event) {
             return;
         }
     }
+
+    if (m_pressedRow >= 0 && (event->buttons() & Qt::LeftButton)) {
+        if (isPointInSectionHeader(event->pos())) {
+            updatePressedHoverRow(-1);
+        } else {
+            const QModelIndex hover = indexAt(event->pos());
+            updatePressedHoverRow(hover.isValid() ? hover.row() : -1);
+        }
+        event->accept();
+        return;
+    }
+
     QListView::mouseMoveEvent(event);
 }
 
@@ -934,6 +1038,8 @@ void ListView::mouseReleaseEvent(QMouseEvent* event) {
         }
 
         m_isDragging = false;
+        m_pressedRow = -1;
+        updatePressedHoverRow(-1);
         m_dragSourceRow = -1;
         m_dropTargetRow = -1;
         m_dragPixmap = QPixmap();
@@ -947,7 +1053,24 @@ void ListView::mouseReleaseEvent(QMouseEvent* event) {
         return;
     }
 
+    if (event->button() == Qt::LeftButton && m_pressedRow >= 0) {
+        const QModelIndex released = indexAt(event->pos());
+        const bool clickOnPressedItem =
+            released.isValid() && released.row() == m_pressedRow;
+        if (clickOnPressedItem) {
+            applyPointerSelection(released, event);
+            emit itemClicked(released.row());
+        }
+        m_pressedRow = -1;
+        updatePressedHoverRow(-1);
+        m_dragSourceRow = -1;
+        event->accept();
+        return;
+    }
+
     if (m_canReorderItems) {
+        m_pressedRow = -1;
+        updatePressedHoverRow(-1);
         m_dragSourceRow = -1;
     }
     QListView::mouseReleaseEvent(event);
@@ -960,6 +1083,8 @@ void ListView::enterEvent(FluentEnterEvent* event) {
 
 void ListView::leaveEvent(QEvent* event) {
     setViewportHovered(false);
+    if (m_pressedRow >= 0)
+        updatePressedHoverRow(-1);
     QListView::leaveEvent(event);
 }
 
@@ -1086,6 +1211,12 @@ void ListView::wheelEvent(QWheelEvent* event) {
         }
 
         QScrollBar* sb = horizontal ? horizontalScrollBar() : verticalScrollBar();
+        if (!sb || sb->maximum() <= sb->minimum()) {
+            syncFluentScrollBars();
+            event->ignore();
+            return;
+        }
+
         const int before = sb->value();
         const bool atStart = before <= sb->minimum();
         const bool atEnd   = before >= sb->maximum();
@@ -1094,6 +1225,13 @@ void ListView::wheelEvent(QWheelEvent* event) {
             (atEnd   && scrollPx < 0.0);
 
         if (boundaryTail) {
+            if (m_scrollChainingEnabled) {
+                resetNoPhaseBoundaryBounce();
+                syncFluentScrollBars();
+                event->ignore();
+                return;
+            }
+
             if (qFuzzyIsNull(overscroll))
                 startNoPhaseBoundaryBounce();
             syncFluentScrollBars();
@@ -1156,6 +1294,12 @@ void ListView::wheelEvent(QWheelEvent* event) {
 
     // ── 2. At boundary → enter overscroll ────────────────────────────────
     QScrollBar* sb = horizontal ? horizontalScrollBar() : verticalScrollBar();
+    if (!sb || sb->maximum() <= sb->minimum()) {
+        syncFluentScrollBars();
+        event->ignore();
+        return;
+    }
+
     const bool atStart = sb->value() <= sb->minimum();
     const bool atEnd   = sb->value() >= sb->maximum();
 
@@ -1164,6 +1308,12 @@ void ListView::wheelEvent(QWheelEvent* event) {
         (atEnd   && scrollPx < 0.0);
 
     if (wantsEnter) {
+        if (m_scrollChainingEnabled) {
+            syncFluentScrollBars();
+            event->ignore();
+            return;
+        }
+
         // Don't enter overscroll from inertia or finger-lift
         if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
             event->accept();
@@ -1697,6 +1847,47 @@ void ListView::setViewportHovered(bool hovered) {
         return;
     m_viewportHovered = hovered;
     emit viewportHoveredChanged();
+}
+
+void ListView::updatePressedHoverRow(int row) {
+    if (m_pressedHoverRow == row)
+        return;
+    m_pressedHoverRow = row;
+    if (viewport())
+        viewport()->update();
+}
+
+void ListView::paintPressedHoverFeedback(QPainter& painter) const {
+    if (!model() || m_pressedHoverRow < 0 || m_pressedHoverRow >= model()->rowCount())
+        return;
+
+    const QModelIndex index = model()->index(m_pressedHoverRow, 0);
+    if (!index.isValid())
+        return;
+
+    const QRect rect = visualRect(index);
+    if (rect.isEmpty() || !rect.intersects(viewport()->rect()))
+        return;
+
+    QStyleOptionViewItem option;
+    FLUENT_INIT_VIEW_ITEM_OPTION(&option);
+    option.rect = rect;
+    option.widget = viewport();
+    option.font = font();
+    option.state |= QStyle::State_MouseOver;
+    if (isEnabled()) {
+        option.state |= QStyle::State_Enabled;
+    } else {
+        option.state &= ~QStyle::State_Enabled;
+    }
+    if (hasFocus())
+        option.state |= QStyle::State_Active;
+    if (selectionModel() && selectionModel()->isSelected(index))
+        option.state |= QStyle::State_Selected;
+    if (m_pressedHoverRow == m_pressedRow)
+        option.state |= QStyle::State_Sunken;
+
+    itemDelegate()->paint(&painter, option, index);
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────

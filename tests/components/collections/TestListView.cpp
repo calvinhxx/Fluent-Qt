@@ -1,14 +1,18 @@
 #include <gtest/gtest.h>
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QHash>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMetaEnum>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QPainter>
 #include <QScrollArea>
 #include <QStandardItemModel>
+#include <QStyledItemDelegate>
+#include <QStyleOptionViewItem>
 #include <QStringListModel>
 #include "compatibility/QtCompat.h"
 #include <QtTest/QSignalSpy>
@@ -113,6 +117,43 @@ public:
             return {};
         return ListView::visualRect(model()->index(row, 0));
     }
+};
+
+class RecordingStateDelegate : public QStyledItemDelegate {
+public:
+    explicit RecordingStateDelegate(QObject* parent = nullptr)
+        : QStyledItemDelegate(parent)
+    {
+    }
+
+    QSize sizeHint(const QStyleOptionViewItem& option,
+                   const QModelIndex& index) const override
+    {
+        Q_UNUSED(option);
+        Q_UNUSED(index);
+        return QSize(180, defaultListRowHeight());
+    }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override
+    {
+        if (index.isValid())
+            m_states[index.row()] = option.state;
+        QStyledItemDelegate::paint(painter, option, index);
+    }
+
+    QStyle::State stateFor(int row) const
+    {
+        return m_states.value(row, QStyle::State());
+    }
+
+    void clearStates() const
+    {
+        m_states.clear();
+    }
+
+private:
+    mutable QHash<int, QStyle::State> m_states;
 };
 
 void showWindowAndProcess(QWidget* widget) {
@@ -367,6 +408,114 @@ TEST_F(ListViewTest, ItemClickedSignal) {
     emit lv->clicked(idx);
     EXPECT_EQ(spy.count(), 1);
     EXPECT_EQ(spy.at(0).at(0).toInt(), 0);
+}
+
+TEST_F(ListViewTest, MousePressDefersSelectionUntilRelease) {
+    window->setAttribute(Qt::WA_DontShowOnScreen, true);
+    auto* lv = new IndicatorListView(window);
+    lv->setGeometry(10, 10, 240, 160);
+    attachStringListModel(lv, {"A", "B", "C"});
+    QSignalSpy clickSpy(lv, SIGNAL(itemClicked(int)));
+    window->show();
+    QTest::qWait(50);
+
+    const QPoint point = lv->exposedVisualRect(1).center();
+    QTest::mousePress(lv->viewport(), Qt::LeftButton, Qt::NoModifier, point);
+    QApplication::processEvents();
+
+    EXPECT_EQ(lv->selectedIndex(), -1);
+    EXPECT_EQ(clickSpy.count(), 0);
+
+    QTest::mouseRelease(lv->viewport(), Qt::LeftButton, Qt::NoModifier, point);
+    QApplication::processEvents();
+
+    EXPECT_EQ(lv->selectedIndex(), 1);
+    ASSERT_EQ(clickSpy.count(), 1);
+    EXPECT_EQ(clickSpy.at(0).at(0).toInt(), 1);
+}
+
+TEST_F(ListViewTest, PressedPointerMoveUpdatesHoverVisualState) {
+    window->setAttribute(Qt::WA_DontShowOnScreen, true);
+    auto* lv = new IndicatorListView(window);
+    lv->setGeometry(10, 10, 240, 180);
+    attachStringListModel(lv, {"A", "B", "C", "D"});
+    auto* delegate = new RecordingStateDelegate(lv);
+    lv->setItemDelegate(delegate);
+    lv->setUniformItemSizes(true);
+    window->show();
+    QTest::qWait(50);
+
+    const QPoint row1 = lv->exposedVisualRect(1).center();
+    const QPoint row2 = lv->exposedVisualRect(2).center();
+
+    QTest::mousePress(lv->viewport(), Qt::LeftButton, Qt::NoModifier, row1);
+    lv->viewport()->update();
+    QApplication::processEvents();
+
+    EXPECT_TRUE(delegate->stateFor(1) & QStyle::State_MouseOver);
+    EXPECT_TRUE(delegate->stateFor(1) & QStyle::State_Sunken);
+
+    delegate->clearStates();
+    FLUENT_MAKE_MOUSE_EVENT(moveEvent, QEvent::MouseMove, lv->viewport(), row2,
+                            Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(lv->viewport(), &moveEvent);
+    lv->viewport()->update();
+    QApplication::processEvents();
+
+    EXPECT_TRUE(delegate->stateFor(2) & QStyle::State_MouseOver);
+    EXPECT_FALSE(delegate->stateFor(2) & QStyle::State_Sunken);
+
+    QTest::mouseRelease(lv->viewport(), Qt::LeftButton, Qt::NoModifier, row2);
+}
+
+TEST_F(ListViewTest, MultiplePointerSelectionTogglesRowsOnRelease) {
+    window->setAttribute(Qt::WA_DontShowOnScreen, true);
+    auto* lv = new IndicatorListView(window);
+    lv->setGeometry(10, 10, 240, 180);
+    lv->setSelectionMode(ListSelectionMode::Multiple);
+    attachStringListModel(lv, {"A", "B", "C", "D"});
+    window->show();
+    QTest::qWait(50);
+
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
+                      lv->exposedVisualRect(1).center());
+    QApplication::processEvents();
+    EXPECT_EQ(lv->selectedRows(), QList<int>({1}));
+
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
+                      lv->exposedVisualRect(3).center());
+    QApplication::processEvents();
+    EXPECT_EQ(lv->selectedRows(), QList<int>({1, 3}));
+
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
+                      lv->exposedVisualRect(1).center());
+    QApplication::processEvents();
+    EXPECT_EQ(lv->selectedRows(), QList<int>({3}));
+}
+
+TEST_F(ListViewTest, ExtendedPointerSelectionSupportsControlAndShift) {
+    window->setAttribute(Qt::WA_DontShowOnScreen, true);
+    auto* lv = new IndicatorListView(window);
+    lv->setGeometry(10, 10, 240, 220);
+    lv->setSelectionMode(ListSelectionMode::Extended);
+    attachStringListModel(lv, {"A", "B", "C", "D", "E"});
+    window->show();
+    QTest::qWait(50);
+
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
+                      lv->exposedVisualRect(1).center());
+    QApplication::processEvents();
+    EXPECT_EQ(lv->selectedRows(), QList<int>({1}));
+
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::ShiftModifier,
+                      lv->exposedVisualRect(3).center());
+    QApplication::processEvents();
+    EXPECT_EQ(lv->selectedRows(), QList<int>({1, 2, 3}));
+
+    QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::ControlModifier,
+                      lv->exposedVisualRect(2).center());
+    QApplication::processEvents();
+    EXPECT_EQ(lv->selectedRows(), QList<int>({1, 3}));
 }
 
 TEST_F(ListViewTest, FluentScrollBarExists) {
@@ -1323,6 +1472,49 @@ TEST_F(ListViewTest, MouseWheelHalfTickStillScrolls) {
 
     EXPECT_GT(lv->verticalScrollBar()->value(), before)
         << "High-resolution Windows wheel/touchpad fallback ticks should not feel inert";
+}
+
+TEST_F(ListViewTest, ScrollChainingPropertyControlsBoundaryWheel) {
+    auto* lv = makeScrollableListView(window);
+    if (lv->verticalScrollBar()->maximum() <= 0) {
+        GTEST_SKIP() << "Layout not scrollable in this environment";
+    }
+    scrollToBottom(lv);
+    const int maxValue = lv->verticalScrollBar()->maximum();
+    EXPECT_FALSE(lv->isScrollChainingEnabled());
+
+    QSignalSpy spy(lv, &ListView::scrollChainingEnabledChanged);
+    lv->setScrollChainingEnabled(true);
+    EXPECT_TRUE(lv->isScrollChainingEnabled());
+    EXPECT_EQ(spy.count(), 1);
+    lv->setScrollChainingEnabled(true);
+    EXPECT_EQ(spy.count(), 1);
+
+    QWheelEvent chainedWheel = makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
+    chainedWheel.setAccepted(false);
+    QApplication::sendEvent(lv->viewport(), &chainedWheel);
+    QTest::qWait(20);
+    EXPECT_FALSE(chainedWheel.isAccepted());
+    EXPECT_EQ(lv->verticalScrollBar()->value(), maxValue);
+
+    lv->setScrollChainingEnabled(false);
+    QWheelEvent containedWheel = makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
+    containedWheel.setAccepted(false);
+    QApplication::sendEvent(lv->viewport(), &containedWheel);
+    QTest::qWait(20);
+    EXPECT_TRUE(containedWheel.isAccepted());
+}
+
+TEST_F(ListViewTest, WheelPassesThroughWhenContentFits) {
+    auto* lv = makeScrollableListView(window, 2);
+    ASSERT_EQ(lv->verticalScrollBar()->maximum(), lv->verticalScrollBar()->minimum());
+
+    QWheelEvent wheel = makeWheelEvent(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
+    wheel.setAccepted(false);
+    QApplication::sendEvent(lv->viewport(), &wheel);
+    QTest::qWait(20);
+
+    EXPECT_FALSE(wheel.isAccepted());
 }
 
 // 5.3 Windows 触控板 cluster 高频序列 → 滚动平滑
