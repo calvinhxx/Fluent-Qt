@@ -194,6 +194,8 @@ private:
     void init();
     void applyScrollPolicies();
     void applyAxisPolicy(Axis axis);
+    void syncFloatingScrollBar();
+    void positionFloatingScrollBar();
     void updateViewportPalette();
     void updateCornerWidget();
     void stopAnimations();
@@ -230,6 +232,7 @@ private:
     QPropertyAnimation* m_verticalAnimation = nullptr;
     QPropertyAnimation* m_zoomAnimation = nullptr;
     QWidget* m_cornerWidget = nullptr;
+    ScrollBar* m_floatingVerticalBar = nullptr;  // Overlay bar for vertical "Visible" (no gutter). zh_CN: 垂直“常显”用的浮动覆盖条（不预留沟槽）。
     QPointer<QWidget> m_contentWidget;
     ScrollViewZoomAware* m_zoomAwareContent = nullptr;
     QSizeF m_unscaledContentSize;
