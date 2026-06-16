@@ -4,6 +4,7 @@
 #include <QHBoxLayout>
 #include <QPainter>
 #include <QResizeEvent>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include "TitleBar.h"
@@ -27,6 +28,18 @@ Window::Window(QWidget* parent)
 
     setAutoFillBackground(false);
     setMinimumSize(Breakpoints::MinWindowWidth, Breakpoints::MinWindowHeight);
+
+    // On Windows 11 use a real Mica system backdrop: make the window translucent (so the
+    // OS-composited backdrop shows through) and flag it so the chrome paints transparent.
+    // The DWM attribute itself is applied in showEvent once the native handle exists.
+    // Elsewhere this stays false and the solid themeBackdrop fallback is used.
+    // zh_CN: Windows 11 上启用真实 Mica 系统背景：窗口半透明（露出系统合成背景），并打标记让 chrome
+    // 透明绘制。DWM 属性在 showEvent 拿到原生句柄后应用。其它平台保持 false，走纯色回退。
+    m_micaBackdrop = m_chrome.systemBackdropSupported();
+    if (m_micaBackdrop) {
+        setAttribute(Qt::WA_TranslucentBackground, true);
+        setProperty("fluentMicaBackdrop", true);
+    }
 
     auto* rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(0, 0, 0, 0);
@@ -77,6 +90,10 @@ void Window::setContentWidget(QWidget* widget) {
 }
 
 void Window::onThemeUpdated() {
+    // Keep the DWM dark-mode bit (and thus the Mica tint) in step with the app theme.
+    // zh_CN: 让 DWM 暗色模式位（进而 Mica 着色）跟随应用主题。
+    if (m_micaBackdrop)
+        m_chrome.applySystemBackdrop(currentTheme() == Dark);
     if (m_titleBar)
         m_titleBar->onThemeUpdated();
     if (m_minimizeButton)
@@ -86,6 +103,13 @@ void Window::onThemeUpdated() {
     if (m_closeButton)
         m_closeButton->onThemeUpdated();
     update();
+}
+
+void Window::reapplySystemBackdrop() {
+    if (!m_micaBackdrop || !isVisible())
+        return;
+    updateChromeOptions();                                 // re-extend the sheet-of-glass
+    m_chrome.applySystemBackdrop(currentTheme() == Dark);  // re-assert + force a frame refresh
 }
 
 void Window::minimizeWindow() {
@@ -111,6 +135,12 @@ void Window::closeWindow() {
 }
 
 void Window::paintEvent(QPaintEvent*) {
+    // Under Mica the window is translucent: leave the backing store transparent so the DWM
+    // backdrop shows through; opaque children (content) cover it where needed.
+    // zh_CN: Mica 下窗口半透明：保持后备缓冲透明，露出 DWM 背景；不透明子控件（内容）按需遮挡。
+    if (m_micaBackdrop)
+        return;
+
     QPainter painter(this);
     const auto& colors = themeColors();
     painter.fillRect(rect(), colors.bgCanvas);
@@ -130,8 +160,28 @@ void Window::resizeEvent(QResizeEvent* event) {
 void Window::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
     m_chrome.applyPlatformWindowFlags();
+    if (m_micaBackdrop)
+        m_chrome.applySystemBackdrop(currentTheme() == Dark);
     syncTitleBarSystemInsets();
     updateChromeOptions();
+
+    // On first show DWM may not composite the Mica backdrop until the window is next
+    // (de)activated — and the window is move()d into place right after show(), before Qt's
+    // translucent composition has settled. Re-assert the backdrop + sheet-of-glass once the event
+    // loop is running (window fully realized and placed); applySystemBackdrop forces a frame
+    // refresh so Mica appears immediately, without the user switching away and back.
+    // zh_CN: 首次显示时 DWM 可能要等窗口下次激活/失活才合成 Mica；而窗口在 show() 后立刻被 move() 定位，
+    // 此时 Qt 的半透明合成尚未稳定。待事件循环启动（窗口完全就绪并定位）后，重新施加背景 + 整窗玻璃；
+    // applySystemBackdrop 会触发 frame 刷新，使 Mica 立即显示，无需切走再切回。
+    if (m_micaBackdrop && !m_micaBackdropPrimed) {
+        m_micaBackdropPrimed = true;
+        QTimer::singleShot(0, this, [this] {
+            if (!m_micaBackdrop || !isVisible())
+                return;
+            updateChromeOptions();                                 // re-extend the sheet-of-glass
+            m_chrome.applySystemBackdrop(currentTheme() == Dark);  // re-assert + force frame refresh
+        });
+    }
 }
 
 void Window::changeEvent(QEvent* event) {
@@ -242,6 +292,13 @@ void Window::syncCaptionButtons() {
     if (!m_captionButtonHost || !m_titleBar)
         return;
 
+    // Always use our own Fluent caption buttons (even under Mica): they're anchored
+    // verticalCenter + right:0 to the full-width title bar, so they sit centered and flush to the
+    // edge — unlike the DWM glass buttons, which render top-aligned at the system caption height
+    // and inset by the resize frame. The native glass buttons are suppressed in the chrome layer
+    // (no WS_CAPTION), so there's no duplication. zh_CN: 始终使用自绘 Fluent 标题栏按钮（Mica 下也是）：
+    // 它们以 verticalCenter + right:0 锚定到满宽标题栏，故垂直居中且贴右边缘——不像 DWM 玻璃按钮那样顶部
+    // 对齐于系统 caption 高度、且被缩放边框内缩。原生玻璃按钮已在 chrome 层抑制（去掉 WS_CAPTION），不会重复。
     const bool showCaptionButtons = m_chrome.usesCustomWindowChrome();
     const int buttonHeight = m_titleBar->titleBarHeight();
     const int buttonCount = 3;

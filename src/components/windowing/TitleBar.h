@@ -60,6 +60,17 @@ public:
 
     QVector<QRect> dragExclusionRects() const;
 
+    /**
+     * @brief Re-publishes the drag-exclusion (native hit-test) regions to the window.
+     * zh_CN: 重新向窗口发布拖拽排除（原生命中测试）区域。
+     *
+     * The owner calls this after moving or enabling/disabling title-bar controls
+     * without resizing the bar, so the native chrome keeps them click-through.
+     * zh_CN: 当宿主在不改变标题栏尺寸的情况下移动或启用/禁用标题栏控件后调用，
+     * 使原生 chrome 保持这些控件可点击。
+     */
+    void refreshChromeExclusions();
+
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
@@ -78,6 +89,7 @@ signals:
     void chromeGeometryChanged();
 
 protected:
+    bool event(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;

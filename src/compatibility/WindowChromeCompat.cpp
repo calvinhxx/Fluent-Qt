@@ -17,6 +17,8 @@ bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptio
 bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos);
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options);
 int nativeTitleBarLeadingInset(QWidget* window);
+bool platformSupportsSystemBackdrop();
+bool applyPlatformSystemBackdrop(QWidget* window, bool dark);
 }
 
 namespace {
@@ -64,6 +66,14 @@ void WindowChromeCompat::configure(const WindowChromeOptions& options) {
 
 void WindowChromeCompat::applyPlatformWindowFlags() {
     detail::applyPlatformWindowFlags(m_window, m_options);
+}
+
+bool WindowChromeCompat::systemBackdropSupported() const {
+    return detail::platformSupportsSystemBackdrop();
+}
+
+bool WindowChromeCompat::applySystemBackdrop(bool dark) {
+    return detail::applyPlatformSystemBackdrop(m_window, dark);
 }
 
 bool WindowChromeCompat::handleNativeEvent(const QByteArray& eventType,

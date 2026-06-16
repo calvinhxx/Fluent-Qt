@@ -109,6 +109,10 @@ QVector<QRect> TitleBar::dragExclusionRects() const {
     return rects;
 }
 
+void TitleBar::refreshChromeExclusions() {
+    emit chromeGeometryChanged();
+}
+
 QSize TitleBar::sizeHint() const {
     return QSize(320, m_titleBarHeight);
 }
@@ -121,12 +125,25 @@ void TitleBar::onThemeUpdated() {
     update();
 }
 
+bool TitleBar::event(QEvent* event) {
+    // Repaint when the window's focus changes so the backdrop tracks active/inactive,
+    // matching the nav pane. zh_CN: 窗口焦点变化时重绘，使背景跟随激活/非激活，与导航栏一致。
+    if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
+        update();
+    return QWidget::event(event);
+}
+
 void TitleBar::paintEvent(QPaintEvent*) {
+    // With a real Mica backdrop the window is translucent — paint nothing so the OS-composited
+    // backdrop (and its active/inactive tint) shows through. Otherwise fall back to a solid
+    // backdrop shared with the nav pane (no bottom divider, one continuous surface).
+    // zh_CN: 有真实 Mica 背景时窗口半透明——不绘制，露出系统合成背景（及其激活/非激活着色）；
+    // 否则回退为与导航栏共用的纯色背景（无底部分割线，一整片连续表面）。
+    if (window() && window()->property("fluentMicaBackdrop").toBool())
+        return;
+
     QPainter painter(this);
-    const auto& colors = themeColors();
-    painter.fillRect(rect(), colors.bgCanvas);
-    painter.setPen(colors.strokeDivider);
-    painter.drawLine(rect().bottomLeft(), rect().bottomRight());
+    painter.fillRect(rect(), themeBackdrop(isActiveWindow()));
 }
 
 void TitleBar::resizeEvent(QResizeEvent* event) {
@@ -205,7 +222,12 @@ void TitleBar::mouseReleaseEvent(QMouseEvent* event) {
 bool TitleBar::isDragExcludedWidget(const QWidget* widget) const {
     if (!widget || widget == this)
         return false;
-    if (!widget->isEnabled() || !widget->isVisibleTo(const_cast<TitleBar*>(this)))
+    // A disabled control is still client area (not a caption drag region) — matching WinUI,
+    // and so a control re-enabled after the hit-test was published stays clickable without a
+    // resize. Only visibility and mouse-transparency remove a control from the exclusions.
+    // zh_CN: 禁用控件仍属于客户区（而非标题拖拽区）——对齐 WinUI，并使命中测试发布后再被启用的控件
+    // 无需 resize 即可点击。仅「不可见」或「鼠标穿透」才将控件移出排除区。
+    if (!widget->isVisibleTo(const_cast<TitleBar*>(this)))
         return false;
     if (widget->testAttribute(Qt::WA_TransparentForMouseEvents))
         return false;

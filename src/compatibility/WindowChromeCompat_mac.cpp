@@ -342,6 +342,18 @@ int nativeTitleBarLeadingInset(QWidget* window) {
     return static_cast<int>(std::ceil(frame.origin.x + frame.size.width)) + kTrailingGap;
 }
 
+bool platformSupportsSystemBackdrop() {
+    // macOS uses native vibrancy, not a DWM Mica backdrop; the gallery keeps the solid
+    // themeBackdrop fallback here. zh_CN: macOS 用原生 vibrancy，而非 DWM Mica；此处保留纯色回退。
+    return false;
+}
+
+bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
+    Q_UNUSED(window);
+    Q_UNUSED(dark);
+    return false;
+}
+
 } // namespace detail
 } // namespace compatibility
 

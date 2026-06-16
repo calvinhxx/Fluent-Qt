@@ -10,6 +10,18 @@
 
 #include <QWindow>
 
+// DWM system-backdrop / dark-mode attributes (defined here so we don't depend on a
+// recent Windows SDK header). zh_CN: DWM 系统背景/暗色模式属性常量（在此自定义，避免依赖较新的 SDK 头）。
+#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
+#endif
+#ifndef DWMWA_SYSTEMBACKDROP_TYPE
+#define DWMWA_SYSTEMBACKDROP_TYPE 38
+#endif
+#ifndef DWMSBT_MAINWINDOW
+#define DWMSBT_MAINWINDOW 2  // Mica
+#endif
+
 namespace compatibility {
 namespace {
 
@@ -63,9 +75,21 @@ void ensureDwmChromeStyle(QWidget* window) {
 
     const LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
     LONG_PTR desiredStyle = style;
-    // DWM still needs caption/thick-frame styles even when Qt paints the visible chrome.
-    // zh_CN: 即使可见 chrome 由 Qt 绘制，DWM 仍需要 caption/thick-frame 样式来保留系统行为。
-    desiredStyle |= WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+    // DWM still needs thick-frame/sysmenu styles even when Qt paints the visible chrome
+    // (resize, Win11 rounded corners, taskbar/system menu). zh_CN: 即使可见 chrome 由 Qt 绘制，
+    // DWM 仍需要 thick-frame/sysmenu 样式（缩放、Win11 圆角、任务栏/系统菜单）。
+    desiredStyle |= WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+
+    // Under the Mica "sheet of glass", a WS_CAPTION would make DWM render its OWN caption
+    // buttons (min/max/close) top-aligned and frame-inset in the top-right glass — duplicating
+    // and clashing with our centered, edge-flush Fluent buttons. Drop WS_CAPTION there; the
+    // glass still carries the backdrop and WS_THICKFRAME keeps resize + rounded corners.
+    // zh_CN: Mica「玻璃」下若保留 WS_CAPTION，DWM 会在右上角玻璃区自绘顶部对齐、内缩的标题栏按钮，
+    // 与我们居中贴边的 Fluent 按钮重复冲突。此处去掉 WS_CAPTION；玻璃仍承载背景，WS_THICKFRAME 保留缩放与圆角。
+    if (window->property("fluentMicaBackdrop").toBool())
+        desiredStyle &= ~WS_CAPTION;
+    else
+        desiredStyle |= WS_CAPTION;
 
     if (desiredStyle == style)
         return;
@@ -162,8 +186,8 @@ bool handleCustomChromeClientRect(MSG* msg, FluentNativeEventResult* result) {
     return true;
 }
 
-bool handleCustomChromeMinMaxInfo(MSG* msg, FluentNativeEventResult* result) {
-    if (!msg || !result || msg->message != WM_GETMINMAXINFO)
+bool handleCustomChromeMinMaxInfo(QWidget* window, MSG* msg, FluentNativeEventResult* result) {
+    if (!window || !msg || !result || msg->message != WM_GETMINMAXINFO)
         return false;
 
     HWND hwnd = msg->hwnd;
@@ -185,6 +209,23 @@ bool handleCustomChromeMinMaxInfo(MSG* msg, FluentNativeEventResult* result) {
     minMaxInfo->ptMaxSize.x = work.right - work.left;
     minMaxInfo->ptMaxSize.y = work.bottom - work.top;
 
+    // We intercept WM_GETMINMAXINFO and return handled, which bypasses Qt's own
+    // minimum-size enforcement (Qt applies setMinimumSize through ptMinTrackSize here).
+    // Re-apply it, or the frameless window can be dragged down to almost nothing. The
+    // NCCALCSIZE handler makes the client fill the whole window, so the logical minimum
+    // (scaled to physical pixels) maps directly onto the window track size.
+    // zh_CN: 我们拦截了 WM_GETMINMAXINFO 并返回已处理，绕过了 Qt 自身经 ptMinTrackSize 施加的最小尺寸
+    // 约束（setMinimumSize 就由它生效）。在此重新施加，否则无边框窗口能被拖到几乎为零。NCCALCSIZE
+    // 让客户区铺满整窗，故逻辑最小尺寸（换算到物理像素）可直接作为窗口轨迹尺寸。
+    const QSize minimumDip = window->minimumSize();
+    if (minimumDip.width() > 0 || minimumDip.height() > 0) {
+        const qreal dpr = window->devicePixelRatioF();
+        if (minimumDip.width() > 0)
+            minMaxInfo->ptMinTrackSize.x = qRound(minimumDip.width() * dpr);
+        if (minimumDip.height() > 0)
+            minMaxInfo->ptMinTrackSize.y = qRound(minimumDip.height() * dpr);
+    }
+
     *result = 0;
     return true;
 }
@@ -192,6 +233,64 @@ bool handleCustomChromeMinMaxInfo(MSG* msg, FluentNativeEventResult* result) {
 } // namespace
 
 namespace detail {
+
+bool platformSupportsSystemBackdrop() {
+    // Mica via DWMWA_SYSTEMBACKDROP_TYPE needs Windows 11 22H2 (build 22621+). RtlGetVersion
+    // reports the true build (GetVersionEx lies without a manifest).
+    // zh_CN: DWMWA_SYSTEMBACKDROP_TYPE 的 Mica 需要 Windows 11 22H2（build 22621+）。RtlGetVersion
+    // 返回真实 build（无清单时 GetVersionEx 会谎报）。
+    using RtlGetVersionFn = LONG(WINAPI*)(OSVERSIONINFOW*);
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    auto* rtlGetVersion = ntdll
+        ? reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion"))
+        : nullptr;
+    if (!rtlGetVersion)
+        return false;
+    OSVERSIONINFOW info = {};
+    info.dwOSVersionInfoSize = sizeof(info);
+    if (rtlGetVersion(&info) != 0)
+        return false;
+    return info.dwMajorVersion > 10
+        || (info.dwMajorVersion == 10 && info.dwBuildNumber >= 22621);
+}
+
+bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
+    HWND hwnd = hwndForWindow(window);
+    if (!hwnd)
+        return false;
+    using DwmSetWindowAttributeFn = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+    auto* setAttr = resolveDwmProc<DwmSetWindowAttributeFn>("DwmSetWindowAttribute");
+    if (!setAttr)
+        return false;
+
+    // Match the DWM-managed bits (frame/caption) to the theme, then request the Mica backdrop.
+    // zh_CN: 先让 DWM 管理的部分（frame/caption）匹配主题，再请求 Mica 背景。
+    const BOOL darkMode = dark ? TRUE : FALSE;
+    setAttr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
+    const int backdropType = DWMSBT_MAINWINDOW;
+    const HRESULT hr = setAttr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
+
+    // Nudge DWM to recompute the frame so the backdrop composites right away.
+    // zh_CN: 触发 DWM 重新计算 frame。
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                 SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+
+    // On first show DWM intermittently leaves a flat default glass instead of the real,
+    // wallpaper-tinted Mica material, and only an activation round-trip paints the material in.
+    // Re-setting the same backdrop value is a no-op, and SWP_FRAMECHANGED alone is unreliable, so
+    // replicate exactly what the user's "switch to another app and back" does: send the active
+    // window an NCACTIVATE deactivate→activate pair. DwmDefWindowProc (already wired in our native
+    // event handler) services these and re-composites the backdrop, without changing real focus.
+    // zh_CN: 首屏时 DWM 会间歇性地留下一层扁平默认玻璃，而非真正带壁纸着色的 Mica 材质，只有一次激活往返才会
+    // 把材质绘入。重设相同的背景值是空操作，单靠 SWP_FRAMECHANGED 也不可靠，于是精确复现用户"切到别的 app 再切
+    // 回来"的动作：给活动窗口发一对 NCACTIVATE 失活→激活消息。DwmDefWindowProc（已接入我们的原生事件处理）会处理
+    // 它们并重新合成背景，且不改变真实焦点。
+    if (GetActiveWindow() == hwnd) {
+        SendMessageW(hwnd, WM_NCACTIVATE, FALSE, 0);
+        SendMessageW(hwnd, WM_NCACTIVATE, TRUE, 0);
+    }
+    return SUCCEEDED(hr);
+}
 
 // Forward declaration — full definition follows handlePlatformNativeEvent.
 // zh_CN: 前向声明，完整定义在 handlePlatformNativeEvent 之后。
@@ -251,7 +350,7 @@ bool handlePlatformNativeEvent(QWidget* window,
         }
     }
 
-    if (handleCustomChromeMinMaxInfo(msg, result))
+    if (handleCustomChromeMinMaxInfo(window, msg, result))
         return true;
 
     if (handleCustomChromeClientRect(msg, result))
@@ -263,6 +362,11 @@ bool handlePlatformNativeEvent(QWidget* window,
     if (msg->message != WM_NCHITTEST)
         return false;
 
+    // Our own Fluent caption buttons live in the client area (added to the title bar's drag
+    // exclusions), so classifyHitTest returns HTCLIENT over them and they receive clicks
+    // normally — no DWM button hit-testing needed (the native glass buttons are suppressed).
+    // zh_CN: 自绘 Fluent 标题栏按钮位于客户区（已加入标题栏拖拽排除区），classifyHitTest 在其上返回
+    // HTCLIENT，按钮正常收到点击——无需 DWM 按钮命中测试（原生玻璃按钮已抑制）。
     const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
     const QPoint localPos = window->mapFromGlobal(globalPos);
     // Convert the repository-level hit-test result to the native HT* code expected by Windows.
@@ -366,6 +470,19 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
     HWND hwnd = hwndForWindow(window);
     if (!hwnd)
         return;
+
+    // With the Mica backdrop the whole client area must be a "sheet of glass" so the DWM
+    // backdrop fills the window; otherwise the translucent (transparent) regions render
+    // black instead of showing Mica. zh_CN: 启用 Mica 时整个客户区要做成「玻璃」，让 DWM 背景填满
+    // 窗口；否则半透明（透明）区域会渲染成黑色而非露出 Mica。
+    if (window && window->property("fluentMicaBackdrop").toBool()) {
+        using DwmExtendFrameFn = HRESULT(WINAPI*)(HWND, const MARGINS*);
+        if (auto* extendFrame = resolveDwmProc<DwmExtendFrameFn>("DwmExtendFrameIntoClientArea")) {
+            const MARGINS sheetOfGlass = {-1, -1, -1, -1};
+            extendFrame(hwnd, &sheetOfGlass);
+        }
+        return;
+    }
 
     const int topMargin = qMax(0, options.titleBarRect.height());
     extendFrameIntoClientArea(hwnd, topMargin);
