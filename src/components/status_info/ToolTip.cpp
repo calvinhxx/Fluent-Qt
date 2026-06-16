@@ -1,5 +1,8 @@
 #include "ToolTip.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayShadow.h"
 #include "components/textfields/Label.h"
+#include "design/Elevation.h"
 #include "design/Typography.h"
 #include <QPainter>
 #include <QPropertyAnimation>
@@ -13,6 +16,11 @@ namespace {
 constexpr qreal kHiddenOpacity = 0.0;
 constexpr qreal kVisibleOpacity = 1.0;
 constexpr qreal kOpacityEpsilon = 0.001;
+
+// Transparent inset around the bubble so the layered shadow has room to spread
+// (paintLayeredShadow grows ~11px); the bubble is drawn inside this margin.
+// zh_CN: 气泡四周的透明内缩，给分层阴影留出扩散空间（约 11px），气泡绘制在该边距内部。
+constexpr int kShadowMargin = 12;
 }
 
 ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
@@ -34,19 +42,19 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     m_textBlock->setFont(f);
     m_textBlock->setAlignment(Qt::AlignCenter);
 
-    // 2. Initialize the padding. zh_CN: 初始化内边距。
-    m_margins = QMargins(themeSpacing().small, themeSpacing().xSmall, 
-                        themeSpacing().small, themeSpacing().xSmall);
+    // 2. Initialize the padding. Figma "Tooltip" spec: 8 horizontal, 5 top / 7 bottom
+    //    (the asymmetric vertical padding optically centers the caption text).
+    // zh_CN: 初始化内边距。Figma「Tooltip」规范：水平 8，上 5、下 7（不对称纵向内边距让文字视觉居中）。
+    m_margins = QMargins(8, 5, 8, 7);
 
     QVBoxLayout* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(m_margins);
     layout->addWidget(m_textBlock);
-    
     setLayout(layout);
-    
+    applyLayoutMargins();
+
     // 3. Initial colors. zh_CN: 初始颜色设置。
     const auto& c = themeColors();
-    m_bgColor = c.bgSolid; 
+    m_bgColor = c.bgLayer;  // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = c.textPrimary;
 }
@@ -63,12 +71,22 @@ QString ToolTip::text() const {
 void ToolTip::setMargins(const QMargins& margins) {
     if (m_margins != margins) {
         m_margins = margins;
-        if (layout()) {
-            layout()->setContentsMargins(m_margins);
-        }
+        applyLayoutMargins();
         adjustSize();
         emit marginsChanged();
     }
+}
+
+int ToolTip::shadowMargin() const {
+    return kShadowMargin;
+}
+
+void ToolTip::applyLayoutMargins() {
+    // The layout margins fold the shadow inset together with the content padding so the
+    // label sits inside the bubble and the bubble sits inside the transparent shadow band.
+    // zh_CN: 布局边距把阴影内缩与内容内边距合并，使标签位于气泡内、气泡位于透明阴影带内。
+    if (auto* l = layout())
+        l->setContentsMargins(m_margins + fluent::overlay::uniformShadowMargins(kShadowMargin));
 }
 
 void ToolTip::setFont(const QFont& font) {
@@ -117,7 +135,7 @@ void ToolTip::setVisible(bool visible) {
 
 void ToolTip::onThemeUpdated() {
     const auto& c = themeColors();
-    m_bgColor = c.bgSolid; 
+    m_bgColor = c.bgLayer;  // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = c.textPrimary;
     update();
@@ -128,11 +146,19 @@ void ToolTip::paintEvent(QPaintEvent*) {
     p.setRenderHint(QPainter::Antialiasing);
 
     const auto& r = themeRadius();
-    
-    // 1. Paint the background and border. zh_CN: 绘制背景和边框。
+    const QRect bubble = fluent::overlay::visibleCardRect(rect(), kShadowMargin);
+
+    // 1. Soft drop shadow, drawn with the shared overlay painter so it matches flyouts/menus;
+    //    Medium elevation keeps it subtle, as Figma's tooltip shadow is light.
+    // zh_CN: 柔和投影，复用浮层共享绘制器，与 flyout/menu 一致；用 Medium 层级保持轻盈，贴合 Figma 工具提示的浅阴影。
+    fluent::overlay::paintLayeredShadow(p, bubble, r.control, themeShadow(Elevation::Medium));
+
+    // 2. Background and border. The Figma "Tooltip" uses the 4px control radius,
+    //    not the 8px overlay radius used by dialogs/flyouts.
+    // zh_CN: 绘制背景和边框。Figma「Tooltip」用 4px 控件圆角，而非 dialog/flyout 的 8px 浮层圆角。
     p.setBrush(m_bgColor);
     p.setPen(QPen(m_borderColor, 1));
-    p.drawRoundedRect(rect().adjusted(0,0,-1,-1), r.overlay, r.overlay);
+    p.drawRoundedRect(QRectF(bubble).adjusted(0.5, 0.5, -0.5, -0.5), r.control, r.control);
 }
 
 void ToolTip::ensureOpacityAnimation() {

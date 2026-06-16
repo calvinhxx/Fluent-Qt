@@ -40,6 +40,11 @@ public:
     QMargins margins() const { return m_margins; }
     void setMargins(const QMargins& margins);
 
+    // Transparent border (px) reserved on every side for the drop shadow; callers
+    // that position the visible bubble precisely should offset by this.
+    // zh_CN: 为投影在四周预留的透明边距（像素）；需要精确定位可见气泡的调用方应据此偏移。
+    int shadowMargin() const;
+
     // Shadows QWidget::setFont so it reaches the inner label. zh_CN: 影子 QWidget::setFont 以应用到内部标签。
     void setFont(const QFont& font);
 
@@ -58,6 +63,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    void applyLayoutMargins();
     void ensureOpacityAnimation();
     void startShowAnimation();
     void startHideAnimation();
