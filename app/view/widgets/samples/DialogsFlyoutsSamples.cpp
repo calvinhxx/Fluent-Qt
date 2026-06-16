@@ -48,6 +48,7 @@ QVector<GallerySample> contentDialogSamples()
                                   "dialog->setPrimaryButtonText(\"Save\");\n"
                                   "dialog->setSecondaryButtonText(\"Don't save\");\n"
                                   "dialog->setCloseButtonText(\"Cancel\");\n"
+                                  "dialog->setDefaultButton(ContentDialog::Primary);\n"
                                   "connect(dialog, &ContentDialog::primaryButtonClicked,\n"
                                   "        this, [] { /* save */ });\n"
                                   "dialog->exec();"),
@@ -65,6 +66,7 @@ QVector<GallerySample> contentDialogSamples()
                            dialog->setPrimaryButtonText(QStringLiteral("Save"));
                            dialog->setSecondaryButtonText(QStringLiteral("Don't save"));
                            dialog->setCloseButtonText(QStringLiteral("Cancel"));
+                           dialog->setDefaultButton(ContentDialog::Primary);
                            QObject::connect(dialog, &ContentDialog::primaryButtonClicked,
                                             result, [result]() {
                                                 result->setText(QStringLiteral("Result: Save"));
@@ -94,27 +96,35 @@ QVector<GallerySample> dialogSamples()
                    QStringLiteral("Dialog hosting a small form"),
                    QStringLiteral("Dialog provides the modal surface; you own the content layout."),
                    QStringLiteral("auto* dialog = new Dialog(window());\n"
+                                  "dialog->setMinimumSize(480, 280);\n"
                                   "auto* layout = new QVBoxLayout(dialog);\n"
+                                  "layout->setContentsMargins(32, 28, 32, 28);\n"
                                   "layout->addWidget(titleLabel);\n"
                                   "layout->addWidget(nameEdit);\n"
+                                  "layout->addStretch(1);\n"
                                   "layout->addWidget(buttonRow);\n"
                                   "dialog->exec();"),
                    [](QWidget* parent) {
                        auto* button = new Button(QStringLiteral("Open dialog"), parent);
                        QObject::connect(button, &Button::clicked, button, [button]() {
                            auto* dialog = new Dialog(button->window());
+                           dialog->setMinimumSize(480, 280);
                            auto* layout = new QVBoxLayout(dialog);
+                           layout->setContentsMargins(32, 28, 32, 28);
                            layout->setSpacing(16);
 
                            auto* title = new Label(QStringLiteral("Rename project"), dialog);
                            title->setFluentTypography(Typography::FontRole::Subtitle);
                            layout->addWidget(title);
                            layout->addWidget(makeBodyLabel(
-                               dialog, QStringLiteral("Choose a new name for \"Northwind\".")));
+                               dialog,
+                               QStringLiteral("Choose a new name for \"Northwind Analytics\". "
+                                              "This updates the project display name across the workspace.")));
 
                            auto* nameEdit = new LineEdit(dialog);
-                           nameEdit->setText(QStringLiteral("Northwind"));
+                           nameEdit->setText(QStringLiteral("Northwind Analytics"));
                            layout->addWidget(nameEdit);
+                           layout->addStretch(1);
 
                            auto* buttonRow = new QHBoxLayout;
                            buttonRow->setSpacing(8);
@@ -143,20 +153,30 @@ QVector<GallerySample> flyoutSamples()
     return {
         makeSample(QStringLiteral("flyout-basic"),
                    QStringLiteral("Flyout anchored to a button"),
-                   QStringLiteral("The flyout opens above its anchor and light-dismisses on outside click."),
+                   QStringLiteral("The flyout opens beside its anchor and light-dismisses on outside click."),
                    QStringLiteral("auto* flyout = new Flyout(window());\n"
+                                  "flyout->setPlacement(Flyout::Right);\n"
+                                  "flyout->setMinimumSize(360, 220);\n"
                                   "auto* layout = new QVBoxLayout(flyout);\n"
+                                  "layout->setContentsMargins(24, 24, 24, 24);\n"
                                   "layout->addWidget(messageLabel);\n"
+                                  "layout->addStretch(1);\n"
                                   "layout->addWidget(confirmButton);\n"
                                   "flyout->showAt(anchorButton);"),
                    [](QWidget* parent) {
                        auto* button = new Button(QStringLiteral("Empty cart"), parent);
                        QObject::connect(button, &Button::clicked, button, [button]() {
                            auto* flyout = new Flyout(button->window());
+                           flyout->setPlacement(Flyout::Right);
+                           flyout->setMinimumSize(360, 220);
                            auto* layout = new QVBoxLayout(flyout);
+                           layout->setContentsMargins(24, 24, 24, 24);
                            layout->setSpacing(12);
                            layout->addWidget(makeBodyLabel(
-                               flyout, QStringLiteral("All items will be removed. Do you want to continue?")));
+                               flyout,
+                               QStringLiteral("All items in the cart will be removed immediately. "
+                                              "You can still restore them from order history later.")));
+                           layout->addStretch(1);
                            auto* confirm = new Button(QStringLiteral("Yes, empty my cart"), flyout);
                            confirm->setFluentStyle(Button::Accent);
                            QObject::connect(confirm, &Button::clicked,
@@ -178,21 +198,29 @@ QVector<GallerySample> popupSamples()
                    QStringLiteral("Popup surface"),
                    QStringLiteral("Popup floats above the window content; close it from inside or by clicking outside."),
                    QStringLiteral("auto* popup = new Popup(window());\n"
+                                  "popup->setMinimumSize(420, 240);\n"
                                   "auto* layout = new QVBoxLayout(popup);\n"
+                                  "layout->setContentsMargins(28, 28, 28, 28);\n"
                                   "layout->addWidget(contentLabel);\n"
+                                  "layout->addStretch(1);\n"
                                   "layout->addWidget(closeButton);\n"
                                   "popup->open();"),
                    [](QWidget* parent) {
                        auto* button = new Button(QStringLiteral("Open popup"), parent);
                        QObject::connect(button, &Button::clicked, button, [button]() {
                            auto* popup = new Popup(button->window());
+                           popup->setMinimumSize(420, 240);
                            auto* layout = new QVBoxLayout(popup);
+                           layout->setContentsMargins(28, 28, 28, 28);
                            layout->setSpacing(12);
                            auto* title = new Label(QStringLiteral("Popup"), popup);
                            title->setFluentTypography(Typography::FontRole::BodyStrong);
                            layout->addWidget(title);
                            layout->addWidget(makeBodyLabel(
-                               popup, QStringLiteral("A floating surface positioned over app content.")));
+                               popup,
+                               QStringLiteral("A floating surface positioned over app content. "
+                                              "Use it for transient UI that needs a little more room than a flyout.")));
+                           layout->addStretch(1);
                            auto* closeButton = new Button(QStringLiteral("Close"), popup);
                            QObject::connect(closeButton, &Button::clicked,
                                             popup, [popup]() { popup->close(); });
@@ -213,6 +241,7 @@ QVector<GallerySample> teachingTipSamples()
                    QStringLiteral("TeachingTip pointing at its target"),
                    QStringLiteral("The tip anchors to the target with a tail; close it with the X or the action button."),
                    QStringLiteral("auto* tip = new TeachingTip(window());\n"
+                                  "tip->setPreferredPlacement(TeachingTip::Right);\n"
                                   "auto* layout = new QVBoxLayout(tip->contentHost());\n"
                                   "layout->addWidget(titleRowWithCloseButton);\n"
                                   "layout->addWidget(tipLabel);\n"
@@ -223,6 +252,7 @@ QVector<GallerySample> teachingTipSamples()
                        auto* button = new Button(QStringLiteral("Show teaching tip"), parent);
                        QObject::connect(button, &Button::clicked, button, [button]() {
                            auto* tip = new TeachingTip(button->window());
+                           tip->setPreferredPlacement(TeachingTip::Right);
                            auto* layout = new QVBoxLayout(tip->contentHost());
                            layout->setSpacing(8);
 
