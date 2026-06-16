@@ -98,6 +98,10 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
      * its edges, so a nested ScrollView never pans its host page mid-gesture.
      * zh_CN: 关闭后，存在可滚动范围的视图在边缘也会消费滚轮事件，嵌套的
      * ScrollView 不会在手势中途带动宿主页面平移。
+     *
+     * The default is disabled because Gallery pages commonly host nested
+     * scrollers.
+     * zh_CN: 默认为关闭，因为 Gallery 页面中经常嵌套滚动视图。
      */
     Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
 
@@ -226,7 +230,7 @@ private:
     qreal m_zoomFactor = 1.0;
     qreal m_minZoomFactor = 0.1;
     qreal m_maxZoomFactor = 10.0;
-    bool m_scrollChainingEnabled = true;
+    bool m_scrollChainingEnabled = false;
 
     QPropertyAnimation* m_horizontalAnimation = nullptr;
     QPropertyAnimation* m_verticalAnimation = nullptr;
