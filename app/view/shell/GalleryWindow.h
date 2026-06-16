@@ -9,6 +9,7 @@
 #include "viewmodel/GalleryNavigationViewModel.h"
 
 class QEvent;
+class QLabel;
 class QTimer;
 class QWidget;
 
@@ -18,6 +19,11 @@ class Button;
 
 namespace fluent::textfields {
 class AutoSuggestBox;
+class Label;
+}
+
+namespace fluent::status_info {
+class ToolTip;
 }
 
 namespace fluent::navigation {
@@ -77,6 +83,14 @@ private:
     void buildContentPresenter();
     void installSplashScreen();
     void setTitleBarChromeVisible(bool visible, bool animated = false);
+    // Re-flows the title-bar content for the current width / nav display mode: hides the
+    // app title+icon in the minimal layout and sizes/centers the search box into the free
+    // span so it never overlaps the buttons or the native caption controls.
+    // zh_CN: 按当前宽度/导航模式重排标题栏内容：最小布局下隐藏应用标题+图标，并把搜索框尺寸/居中到
+    // 空闲区间，使其不与按钮或原生标题栏控件重叠。
+    void updateTitleBarLayout();
+    void showTitleBarToolTip(fluent::basicinput::Button* button);
+    void hideTitleBarToolTip();
     void showInitialRouteContent();
     void prewarmAllRoutes();
     void handleSelectedRouteChanged(const QString& routeId);
@@ -94,7 +108,11 @@ private:
     GalleryContentPresenter* m_contentPresenter = nullptr;
     fluent::basicinput::Button* m_backButton = nullptr;
     fluent::basicinput::Button* m_menuButton = nullptr;
+    QLabel* m_titleBarAppIcon = nullptr;
+    fluent::textfields::Label* m_titleBarTitle = nullptr;
     fluent::textfields::AutoSuggestBox* m_searchBox = nullptr;
+    fluent::status_info::ToolTip* m_titleBarToolTip = nullptr;
+    bool m_titleBarChromeVisible = true;
     QTimer* m_navigationCompactReleaseTimer = nullptr;
     QStringList m_backRouteStack;
     bool m_isNavigatingHistory = false;

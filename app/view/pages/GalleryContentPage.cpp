@@ -1,5 +1,6 @@
 #include "GalleryContentPage.h"
 
+#include <QEvent>
 #include <QFrame>
 #include <QPalette>
 #include <QVBoxLayout>
@@ -42,6 +43,14 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
     // 导致整列示例卡片横向闪缩。
     m_scrollArea->setVerticalScrollBarVisibility(
         fluent::scrolling::ScrollView::ScrollBarVisibility::Visible);
+
+    // The scroll area + its internal clip viewport are transparent so the window's Mica
+    // backdrop shows through behind the page. zh_CN: 滚动区及其内部裁剪视口透明，使窗口 Mica 背景在页面之后透出。
+    m_scrollArea->setAutoFillBackground(false);
+    if (QWidget* clipViewport = m_scrollArea->viewport()) {
+        clipViewport->setAutoFillBackground(false);
+        clipViewport->setAttribute(Qt::WA_TranslucentBackground, true);
+    }
 
     m_viewport = new QWidget(m_scrollArea);
     m_viewport->setObjectName(QStringLiteral("galleryContentViewport"));
@@ -142,16 +151,27 @@ fluent::textfields::Label* GalleryContentPage::createTrackedLabel(const QString&
     return label;
 }
 
+void GalleryContentPage::applyBackdrop()
+{
+    // The whole window is a real Mica surface, so the page is transparent and shows the OS
+    // backdrop; opaque cards/controls float on top. (A distinct opaque content layer/frame
+    // isn't feasible here: on a translucent window every content widget's unpainted area
+    // clears to Mica — which is also why card gaps already show Mica.)
+    // zh_CN: 整窗是真实 Mica 表面，故页面透明、露出系统背景；不透明卡片/控件浮于其上。（此处无法做出独立的
+    // 不透明内容层/框：半透明窗口下每个内容控件的未绘制区都会清成 Mica——这也是卡片间隙已透出 Mica 的原因。）
+    setAutoFillBackground(false);
+    QPalette pagePalette = palette();
+    pagePalette.setColor(QPalette::Window, Qt::transparent);
+    setPalette(pagePalette);
+    setStyleSheet(QStringLiteral(
+                      "#galleryContentPage, #galleryContentViewport { background: transparent; }"));
+}
+
 void GalleryContentPage::applyPalette()
 {
     const Colors colors = themeColors();
 
-    QPalette pagePalette = palette();
-    pagePalette.setColor(QPalette::Window, colors.bgCanvas);
-    setPalette(pagePalette);
-    setStyleSheet(QStringLiteral(
-                      "#galleryContentPage, #galleryContentViewport { background: %1; }")
-                      .arg(cssColor(colors.bgCanvas)));
+    applyBackdrop();
 
     if (m_titleLabel) {
         m_titleLabel->setStyleSheet(QStringLiteral("color: %1; background: transparent;")

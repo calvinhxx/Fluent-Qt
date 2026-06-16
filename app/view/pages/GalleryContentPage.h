@@ -88,6 +88,11 @@ protected:
 
 private:
     void applyPalette();
+    // Makes the page/viewport transparent so the NavigationView-painted content frame (layer
+    // + rounded top-left + border) shows through behind the page's opaque cards/controls.
+    // zh_CN: 让页面/视口透明，使 NavigationView 绘制的内容框（层 + 左上圆角 + 边框）在页面不透明卡片
+    // /控件之后显出。
+    void applyBackdrop();
 
     fluent::scrolling::ScrollView* m_scrollArea = nullptr;
     QWidget* m_viewport = nullptr;

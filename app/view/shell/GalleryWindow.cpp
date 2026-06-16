@@ -15,6 +15,7 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
+#include "components/status_info/ToolTip.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
@@ -33,14 +34,18 @@ namespace {
 
 using Edge = fluent::AnchorLayout::Edge;
 
+constexpr int kTitleBarHeight = 42;  // Taller than the 36 default; 42 reads better than WinUI's 48 on macOS.
 constexpr int kTitleBarHorizontalMargin = 8;
 constexpr int kTitleBarItemGap = 8;
 constexpr int kTitleBarButtonSize = 24;
 constexpr int kTitleBarIconSize = 18;
 constexpr int kTitleBarButtonIconSize = 12;
+constexpr int kTitleBarTitleWidth = 144;
 constexpr int kTitleBarTitleHeight = 24;
 constexpr int kTitleBarSearchWidth = 360;
+constexpr int kTitleBarSearchMinWidth = 180;
 constexpr int kTitleBarSearchHeight = 28;
+constexpr int kTitleBarToolTipGap = 4;
 constexpr char kTitleBarIconJitterAnimationName[] = "galleryTitleBarIconJitterAnimation";
 
 // WinUI-Gallery parity search: split the query on whitespace and require a title
@@ -136,7 +141,10 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     setObjectName(QStringLiteral("galleryWindow"));
     setWindowTitle(QStringLiteral("WinUI 3 Gallery"));
     setWindowIcon(appicon::icon());
-    setMinimumSize(980, 640);
+    // Allow narrow windows so the adaptive nav can collapse to its compact / minimal
+    // modes; a 980 floor would pin the layout above the 640 breakpoint.
+    // zh_CN: 允许窄窗口，让自适应导航能进入紧凑/最小模式；980 的下限会把布局钉在 640 断点之上。
+    setMinimumSize(460, 500);
 
     createTitleBarContent();
     buildNavigationShell();
@@ -271,6 +279,12 @@ void GalleryWindow::installSplashScreen()
     connect(m_contentPresenter, &GalleryContentPresenter::prewarmFinished,
             this, [this]() {
                 setTitleBarChromeVisible(true, /*animated*/ true);
+                // Startup loading is done and the window has composited many frames, so we're well
+                // past the DWM first-show race that can leave Mica un-applied (a flat neutral
+                // surface until the next activation). Force the backdrop on now, as the content
+                // surfaces from behind the splash. zh_CN: 启动加载已完成、窗口已合成多帧，已远过那个可能让
+                // Mica 未生效（停在扁平中性表面、要等下次激活）的 DWM 首屏竞争；在内容从 splash 后浮现时强制施加背景。
+                reapplySystemBackdrop();
                 if (m_splashScreen)
                     m_splashScreen->dismiss();  // fades out, then self-deletes
             });
@@ -286,6 +300,7 @@ void GalleryWindow::setTitleBarChromeVisible(bool visible, bool animated)
     if (!bar)
         return;
 
+    m_titleBarChromeVisible = visible;
     const QList<QWidget*> chrome = bar->findChildren<QWidget*>();
     const auto motion = themeAnimation();
     for (QWidget* widget : chrome) {
@@ -322,6 +337,12 @@ void GalleryWindow::setTitleBarChromeVisible(bool visible, bool animated)
         });
         fade->start(QAbstractAnimation::DeleteWhenStopped);
     }
+
+    // setVisible(true) above un-hides every chrome widget uniformly; re-apply the adaptive
+    // rules so the title/icon and search box land in their width-appropriate state.
+    // zh_CN: 上面的 setVisible(true) 会统一显示所有 chrome 控件；重新套用自适应规则，
+    // 使标题/图标与搜索框回到与宽度匹配的状态。
+    updateTitleBarLayout();
 }
 
 void GalleryWindow::prewarmAllRoutes()
@@ -367,7 +388,12 @@ void GalleryWindow::buildNavigationShell()
 {
     m_navigationView = new fluent::navigation::NavigationView(this);
     m_navigationView->setObjectName(QStringLiteral("galleryNavigationView"));
-    m_navigationView->setDisplayMode(fluent::navigation::NavigationView::DisplayMode::Left);
+    // Auto adapts the pane to the window width, like WinUI Gallery: >=1008 expanded with
+    // labels, >=640 compact icon rail, and below that fully hidden (LeftMinimal) behind the
+    // title-bar menu button.
+    // zh_CN: Auto 让窗格随窗口宽度自适应（对齐 WinUI Gallery）：>=1008 展开带标签，>=640 紧凑图标栏，
+    // 更窄则完全隐藏（LeftMinimal），收进标题栏菜单按钮后。
+    m_navigationView->setDisplayMode(fluent::navigation::NavigationView::DisplayMode::Auto);
     m_navigationView->setExpandedPaneWidth(256);
     m_navigationView->setCompactPaneWidth(48);
     m_navigationView->setAnimationEnabled(true);
@@ -405,6 +431,14 @@ void GalleryWindow::buildNavigationShell()
     connect(m_navigationView, &fluent::navigation::NavigationView::effectiveDisplayModeChanged,
             this, [this](fluent::navigation::NavigationView::DisplayMode mode) {
                 using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
+                // Title-bar content adapts with the layout (WinUI Gallery): the app title+icon
+                // only show when the pane is expanded or a compact rail; in the hidden minimal
+                // layout they are dropped so the search box keeps its room. updateTitleBarLayout()
+                // also re-flows the search box for the new leading-group width.
+                // zh_CN: 标题栏内容随布局自适应（对齐 WinUI Gallery）：应用标题+图标只在窗格展开或紧凑栏时显示；
+                // 在隐藏的最小布局里去掉它们，给搜索框让位。updateTitleBarLayout() 也会按新的前导组宽度重排搜索框。
+                updateTitleBarLayout();
+
                 if (mode != DisplayMode::Left) {
                     if (m_navigationCompactReleaseTimer)
                         m_navigationCompactReleaseTimer->stop();
@@ -456,6 +490,8 @@ void GalleryWindow::createTitleBarContent()
     if (!layout)
         return;
 
+    bar->setTitleBarHeight(kTitleBarHeight);
+
     m_backButton = new fluent::basicinput::Button(bar);
     auto* backButton = m_backButton;
     backButton->setObjectName(QStringLiteral("GalleryTitleBar.BackButton"));
@@ -492,16 +528,18 @@ void GalleryWindow::createTitleBarContent()
             });
 
     auto* appIcon = new QLabel(bar);
+    m_titleBarAppIcon = appIcon;
     appIcon->setObjectName(QStringLiteral("GalleryTitleBar.AppIcon"));
     appIcon->setAlignment(Qt::AlignCenter);
     appIcon->setFixedSize(kTitleBarIconSize, kTitleBarIconSize);
     appIcon->setPixmap(appicon::pixmap(kTitleBarIconSize, devicePixelRatioF()));
 
     auto* title = new fluent::textfields::Label(QStringLiteral("WinUI 3 Gallery"), bar);
+    m_titleBarTitle = title;
     title->setObjectName(QStringLiteral("GalleryTitleBar.Title"));
     title->setFluentTypography(Typography::FontRole::Caption);
     title->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    title->setFixedSize(144, kTitleBarTitleHeight);
+    title->setFixedSize(kTitleBarTitleWidth, kTitleBarTitleHeight);
 
     fluent::AnchorLayout::Anchors backAnchors;
     backAnchors.left = {bar, Edge::Left, titleBarLeadingOffset(bar)};
@@ -547,7 +585,10 @@ void GalleryWindow::createTitleBarContent()
     searchBox->setInputHeight(kTitleBarSearchHeight);
     searchBox->setQueryButtonSize(24);
     searchBox->setClearButtonSize(24);
-    searchBox->setFixedSize(kTitleBarSearchWidth, kTitleBarSearchHeight);
+    // Height is fixed; width is driven by updateTitleBarLayout() so the box can shrink to
+    // fit the free span between the leading group and the native caption controls.
+    // zh_CN: 高度固定，宽度由 updateTitleBarLayout() 驱动，使其能收缩以适配前导组与原生标题栏控件之间的空闲区间。
+    searchBox->setFixedHeight(kTitleBarSearchHeight);
     // AutoSuggestBox leaves filtering to the owner (WinUI semantics), so narrow
     // the suggestion list with token-AND matching and prefix-first ranking.
     // zh_CN: AutoSuggestBox 把过滤交给使用方（WinUI 语义），按词元 AND 匹配并前缀优先排序。
@@ -569,10 +610,13 @@ void GalleryWindow::createTitleBarContent()
                 navigateToSearchResult(item.toString());
             });
 
-    fluent::AnchorLayout::Anchors searchAnchors;
-    searchAnchors.horizontalCenter = {bar, Edge::HCenter, 0};
-    searchAnchors.verticalCenter = {bar, Edge::VCenter, 0};
-    layout->addAnchoredWidget(searchBox, searchAnchors);
+    // The search box is intentionally left out of the AnchorLayout: it needs a max width,
+    // centering-with-clamp, and collapse behaviour the anchor model can't express, so
+    // updateTitleBarLayout() positions it manually against the live bar width.
+    // zh_CN: 搜索框刻意不加入 AnchorLayout：它需要最大宽度、居中并夹取、以及锚点模型无法表达的收起行为，
+    // 故由 updateTitleBarLayout() 依据实时栏宽手动定位。
+    bar->installEventFilter(this);
+    updateTitleBarLayout();
 
     LOG_TRACE(QStringLiteral("GalleryWindow titleBarContent built searchWidth=%1 searchHeight=%2 buttonSize=%3")
                   .arg(kTitleBarSearchWidth)
@@ -582,12 +626,122 @@ void GalleryWindow::createTitleBarContent()
 
 bool GalleryWindow::eventFilter(QObject* watched, QEvent* event)
 {
-    if ((watched == m_backButton || watched == m_menuButton)
-        && event->type() == QEvent::MouseButtonPress) {
-        startTitleBarIconJitter(qobject_cast<fluent::basicinput::Button*>(watched));
+    if (watched == m_backButton || watched == m_menuButton) {
+        auto* button = qobject_cast<fluent::basicinput::Button*>(watched);
+        switch (event->type()) {
+        case QEvent::ToolTip:
+            // Replace Qt's native tooltip with the Fluent ToolTip (reusing Qt's hover delay);
+            // returning true suppresses the platform bubble. zh_CN: 用 Fluent ToolTip 替换原生提示
+            //（复用 Qt 的悬停延迟），返回 true 抑制平台气泡。
+            showTitleBarToolTip(button);
+            return true;
+        case QEvent::Leave:
+        case QEvent::Hide:
+            hideTitleBarToolTip();
+            break;
+        case QEvent::MouseButtonPress:
+            startTitleBarIconJitter(button);
+            hideTitleBarToolTip();
+            break;
+        default:
+            break;
+        }
+    } else if (watched == titleBar() && event->type() == QEvent::Resize) {
+        hideTitleBarToolTip();  // a width change can orphan a bubble that got no Leave event
+        updateTitleBarLayout();
     }
 
     return fluent::windowing::Window::eventFilter(watched, event);
+}
+
+void GalleryWindow::updateTitleBarLayout()
+{
+    auto* bar = titleBar();
+    if (!bar || !m_searchBox)
+        return;
+
+    using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
+    const DisplayMode mode = m_navigationView ? m_navigationView->effectiveDisplayMode()
+                                              : DisplayMode::Left;
+
+    // In the minimal (hidden-pane) layout the app title+icon give way to the search box;
+    // otherwise they show. Nothing shows while the splash owns the title bar.
+    // zh_CN: 最小（隐藏窗格）布局下，应用标题+图标让位给搜索框；其余情况显示。splash 接管标题栏期间全部隐藏。
+    const bool showTitle = m_titleBarChromeVisible && mode != DisplayMode::LeftMinimal;
+    if (m_titleBarTitle)
+        m_titleBarTitle->setVisible(showTitle);
+    if (m_titleBarAppIcon)
+        m_titleBarAppIcon->setVisible(showTitle);
+
+    // Settle the left-anchored chain (back/menu/icon/title) before we publish hit-test rects.
+    // zh_CN: 在发布命中测试区域前，先让左锚链（返回/菜单/图标/标题）落到最终几何。
+    if (auto* barLayout = bar->layout())
+        barLayout->activate();
+
+    // Left boundary = right edge of the last visible leading widget + gap, derived from the
+    // fixed metrics so it doesn't depend on layout timing.
+    // zh_CN: 左边界 = 最后一个可见前导控件的右缘 + 间隙，按固定度量推导，不依赖布局时序。
+    int leadingRight = titleBarLeadingOffset(bar)
+                       + kTitleBarButtonSize                       // back
+                       + kTitleBarItemGap + kTitleBarButtonSize;   // menu
+    if (showTitle) {
+        leadingRight += kTitleBarItemGap + kTitleBarIconSize       // app icon
+                        + kTitleBarItemGap + kTitleBarTitleWidth;  // title
+    }
+    const int leftBound = leadingRight + kTitleBarItemGap;
+    const int rightBound = bar->width() - bar->systemReservedTrailingWidth() - kTitleBarHorizontalMargin;
+    const int avail = rightBound - leftBound;
+
+    const bool showSearch = m_titleBarChromeVisible && avail >= kTitleBarSearchMinWidth;
+    m_searchBox->setVisible(showSearch);
+    if (showSearch) {
+        const int searchW = qBound(kTitleBarSearchMinWidth, avail, kTitleBarSearchWidth);
+        // Prefer centered in the whole bar (WinUI feel), but clamp into the free span so the
+        // box never crosses the leading group or the native caption controls.
+        // zh_CN: 优先在整条栏内居中（贴合 WinUI 观感），再夹取进空闲区间，使其不越过前导组或原生标题栏控件。
+        int x = (bar->width() - searchW) / 2;
+        x = qBound(leftBound, x, rightBound - searchW);
+        const int y = (bar->height() - kTitleBarSearchHeight) / 2;
+        m_searchBox->setGeometry(x, y, searchW, kTitleBarSearchHeight);
+    }
+
+    // The search box lives outside the AnchorLayout and title/icon visibility just changed —
+    // republish the native hit-test regions so every control stays click-through.
+    // zh_CN: 搜索框在 AnchorLayout 之外、标题/图标可见性刚变化——重新发布原生命中测试区域，保证各控件可点击。
+    bar->refreshChromeExclusions();
+}
+
+void GalleryWindow::showTitleBarToolTip(fluent::basicinput::Button* button)
+{
+    if (!button)
+        return;
+    const QString text = button->toolTip();
+    if (text.isEmpty())
+        return;
+
+    if (!m_titleBarToolTip) {
+        m_titleBarToolTip = new fluent::status_info::ToolTip(nullptr);
+        m_titleBarToolTip->setAnimationEnabled(true);
+    }
+    m_titleBarToolTip->setText(text);  // adjustSize() runs inside
+
+    // Center the bubble under the button. The widget carries a transparent shadow band, so
+    // offset by shadowMargin to land the visible bubble (not the band) at the gap below.
+    // zh_CN: 把气泡居中显示在按钮下方。控件带有透明阴影带，故按 shadowMargin 偏移，使可见气泡（而非阴影带）
+    // 落在按钮下方的间隙处。
+    const int shadow = m_titleBarToolTip->shadowMargin();
+    const QPoint anchor = button->mapToGlobal(QPoint(button->width() / 2, button->height()));
+    const int x = anchor.x() - m_titleBarToolTip->width() / 2;
+    const int y = anchor.y() + kTitleBarToolTipGap - shadow;
+    m_titleBarToolTip->move(x, y);
+    m_titleBarToolTip->show();
+    m_titleBarToolTip->raise();
+}
+
+void GalleryWindow::hideTitleBarToolTip()
+{
+    if (m_titleBarToolTip)
+        m_titleBarToolTip->hide();
 }
 
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
@@ -657,24 +811,20 @@ void GalleryWindow::toggleNavigationDisplayMode()
     }
 
     using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
-    const bool expandPane = m_navigationView->displayMode() == DisplayMode::LeftCompact;
-    const DisplayMode nextMode = expandPane ? DisplayMode::Left : DisplayMode::LeftCompact;
-    if (!expandPane) {
-        if (m_navigationCompactReleaseTimer)
-            m_navigationCompactReleaseTimer->stop();
-        setNavigationPanesCompact(true);
-        m_navigationView->setPaneOpen(false);
-        m_navigationView->setDisplayMode(nextMode);
-    } else {
-        if (m_navigationCompactReleaseTimer)
-            m_navigationCompactReleaseTimer->stop();
-        setNavigationPanesCompact(false);
-        m_navigationView->setDisplayMode(nextMode);
-        m_navigationView->setPaneOpen(true);
-    }
-    LOG_DEBUG(QStringLiteral("GalleryWindow navigationDisplayModeChanged mode=%1 paneOpen=%2 chromeWidth=%3")
-                  .arg(expandPane ? QStringLiteral("Left") : QStringLiteral("LeftCompact"),
-                       m_navigationView->isPaneOpen() ? QStringLiteral("true") : QStringLiteral("false"))
+    if (m_navigationCompactReleaseTimer)
+        m_navigationCompactReleaseTimer->stop();
+
+    // Keep the adaptive Auto mode and just open/close the pane. In the compact / minimal
+    // modes opening overlays the pane with full labels; closing returns it to the icon
+    // rail (or hidden). zh_CN: 保持自适应 Auto，仅开关窗格。紧凑/最小模式下打开时以全标签浮层覆盖，
+    // 关闭则回到图标栏（或隐藏）。
+    const bool open = !m_navigationView->isPaneOpen();
+    m_navigationView->setPaneOpen(open);
+    if (m_navigationView->effectiveDisplayMode() != DisplayMode::Left)
+        setNavigationPanesCompact(!open);
+    LOG_DEBUG(QStringLiteral("GalleryWindow navigationPaneToggled paneOpen=%1 effectiveMode=%2 chromeWidth=%3")
+                  .arg(open ? QStringLiteral("true") : QStringLiteral("false"))
+                  .arg(static_cast<int>(m_navigationView->effectiveDisplayMode()))
                   .arg(m_navigationView->chromeGeometry().width()));
 }
 
