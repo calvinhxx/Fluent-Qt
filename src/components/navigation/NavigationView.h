@@ -220,6 +220,9 @@ private:
     QPointer<QWidget> m_mainChromeWidget;
     QPointer<QWidget> m_footerChromeWidget;
     StackContentHost* m_contentHost = nullptr;
+    // Thin top overlay that carves the content's rounded top-left corner (revealing the pane
+    // backdrop) and strokes the frame border. zh_CN: 薄覆盖层，挖出内容左上圆角（露出窗格背景）并描边框。
+    QWidget* m_contentFrameOverlay = nullptr;
 };
 
 } // namespace fluent::navigation

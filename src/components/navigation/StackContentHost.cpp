@@ -3,10 +3,14 @@
 #include <utility>
 
 #include <QParallelAnimationGroup>
+#include <QPainter>
+#include <QPainterPath>
 #include <QPalette>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
 #include <QStackedLayout>
+
+#include "components/foundation/overlay/OverlayGeometry.h"
 
 namespace fluent::navigation {
 
@@ -23,6 +27,39 @@ StackContentHost::StackContentHost(QWidget* parent)
 StackContentHost::~StackContentHost()
 {
     discardTransitionGroup();
+}
+
+void StackContentHost::setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border)
+{
+    if (m_surfaceFill == fill && m_surfaceBorder == border
+        && qFuzzyCompare(m_surfaceTopLeftRadius + 1.0, topLeftRadius + 1.0))
+        return;
+    m_surfaceFill = fill;
+    m_surfaceBorder = border;
+    m_surfaceTopLeftRadius = qMax(0.0, topLeftRadius);
+    setAutoFillBackground(false);  // we paint the surface ourselves (or stay transparent)
+    update();
+}
+
+void StackContentHost::paintEvent(QPaintEvent*)
+{
+    if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0)
+        return;  // transparent host: nothing to paint (pages/backdrop show through)
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    const QRectF panelRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    const bool rounded = m_surfaceTopLeftRadius > 0.0;
+    const QPainterPath panel = fluent::overlay::roundedCornerRectPath(
+        panelRect, m_surfaceTopLeftRadius, /*TL*/ rounded, /*TR*/ false, /*BR*/ false, /*BL*/ false);
+
+    painter.fillPath(panel, m_surfaceFill);  // opaque layer — survives a translucent top-level
+    if (m_surfaceBorder.isValid() && m_surfaceBorder.alpha() > 0) {
+        painter.setPen(QPen(m_surfaceBorder, 1.0));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(panel);
+    }
 }
 
 QWidget* StackContentHost::pageWidget(int index) const
