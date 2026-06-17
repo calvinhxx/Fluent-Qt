@@ -30,6 +30,10 @@ namespace fluent::collections {
 
 namespace {
 
+// Pixels scrolled per wheel notch (delta 120), shared across the collection views so the
+// wheel feel matches ListView. zh_CN: 每个滚轮刻度（delta 120）滚动的像素数，与 ListView 统一手感。
+constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
+
 bool dragPointsEqual(const QPointF& lhs, const QPointF& rhs) {
     return std::abs(lhs.x() - rhs.x()) < 0.01 &&
            std::abs(lhs.y() - rhs.y()) < 0.01;
@@ -60,6 +64,10 @@ GridView::GridView(QWidget* parent)
     QListView::setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectItems);
     setEditTriggers(QAbstractItemView::NoEditTriggers);
+    // Pixel scrolling so the wheel moves a fixed pixel step per notch (matches ListView),
+    // instead of ScrollPerItem's whole-row jumps. zh_CN: 像素级滚动，使每个滚轮刻度滚动固定像素
+    //（与 ListView 一致），而非 ScrollPerItem 的整行跳动。
+    setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     connect(this, &QAbstractItemView::clicked, this, [this](const QModelIndex& idx) {
         emit itemClicked(idx.row());
@@ -196,6 +204,22 @@ void GridView::setScrollChainingEnabled(bool enabled) {
         }
     }
     emit scrollChainingEnabledChanged();
+}
+
+void GridView::setOverscrollEnabled(bool enabled) {
+    if (m_overscrollEnabled == enabled) return;
+    m_overscrollEnabled = enabled;
+    if (!enabled) {
+        // Cancel any in-flight bounce so the view settles at the boundary immediately.
+        // zh_CN: 取消进行中的回弹，使视图立即停在边界。
+        if (m_bounceTimer) m_bounceTimer->stop();
+        if (m_bounceAnim) m_bounceAnim->stop();
+        if (!qFuzzyIsNull(m_overscrollY)) {
+            m_overscrollY = 0.0;
+            if (viewport()) viewport()->update();
+        }
+    }
+    emit overscrollEnabledChanged();
 }
 
 void GridView::updateGridSize() {
@@ -415,12 +439,17 @@ void GridView::wheelEvent(QWheelEvent* event) {
 
     const qreal scrollPx = !event->pixelDelta().isNull()
                                ? static_cast<qreal>(event->pixelDelta().y())
-                               : delta / 120.0 * 20.0;
+                               : delta / 120.0 * kDiscreteWheelStepPx;
 
     if (!qFuzzyIsNull(m_overscrollY)) {
         if (m_bounceAnim->state() == QAbstractAnimation::Running) {
-            // Bounce in progress: consume stale NoScrollPhase events (RDP / mouse wheel)
-            if (phase == Qt::NoScrollPhase) {
+            // Bounce in progress. Only consume a NoScrollPhase notch that keeps pushing into
+            // the boundary; a reverse notch must interrupt the bounce and recover, otherwise
+            // the wheel feels stuck until the animation settles. zh_CN: 回弹进行中：仅吞掉继续
+            //朝边界推的滚轮；反向滚动需打断回弹并恢复，否则滚轮会卡到动画结束。
+            const bool pushingIntoBoundary = (m_overscrollY > 0.0 && scrollPx > 0.0) ||
+                                             (m_overscrollY < 0.0 && scrollPx < 0.0);
+            if (phase == Qt::NoScrollPhase && pushingIntoBoundary) {
                 event->accept();
                 return;
             }
@@ -478,6 +507,13 @@ void GridView::wheelEvent(QWheelEvent* event) {
             return;
         }
 
+        // Overscroll disabled (e.g. a navigation pane): stop cleanly at the boundary instead
+        // of bouncing. zh_CN: 关闭回弹（如导航窗格）：在边界干脆停住，不做回弹。
+        if (!m_overscrollEnabled) {
+            event->accept();
+            return;
+        }
+
         m_overscrollY = scrollPx * 0.5;
         viewport()->update();
 
@@ -488,7 +524,11 @@ void GridView::wheelEvent(QWheelEvent* event) {
         return;
     }
 
-    QListView::wheelEvent(event);
+    // Normal scroll: move a fixed pixel step (ScrollPerPixel) rather than delegating to Qt,
+    // whose per-item step jumps a whole grid row at a time. zh_CN: 常规滚动按固定像素步进
+    //（ScrollPerPixel），不再委托给 Qt 的整行跳动。
+    vsb->setValue(vsb->value() - qRound(scrollPx));
+    event->accept();
 }
 
 int GridView::verticalOffset() const {

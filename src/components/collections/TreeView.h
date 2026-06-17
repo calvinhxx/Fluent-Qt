@@ -141,6 +141,14 @@ public:
      * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
      */
     Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    /**
+     * @brief Whether the view shows an elastic overscroll/bounce at the scroll boundary.
+     * Enabled by default; disable for chrome (e.g. a navigation pane) that should stop
+     * cleanly at the edge so reversing the wheel scrolls again immediately.
+     * zh_CN: 滚动到边界时是否显示弹性回弹。默认开启；用于不希望回弹的 chrome（如导航窗格）时关闭，
+     * 使其在边界干脆停住、反向滚动立即响应。
+     */
+    Q_PROPERTY(bool overscrollEnabled READ isOverscrollEnabled WRITE setOverscrollEnabled NOTIFY overscrollEnabledChanged)
 
     explicit TreeView(QWidget* parent = nullptr);
     ~TreeView() override = default;
@@ -180,6 +188,9 @@ public:
 
     bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
     void setScrollChainingEnabled(bool enabled);
+
+    bool isOverscrollEnabled() const { return m_overscrollEnabled; }
+    void setOverscrollEnabled(bool enabled);
 
     // --- Tree API ---
     void expandAll();
@@ -256,6 +267,7 @@ signals:
     void itemClicked(const QModelIndex& index);
     void canReorderItemsChanged();
     void scrollChainingEnabledChanged();
+    void overscrollEnabledChanged();
     void itemReordered(const QModelIndex& srcParent, int srcRow,
                        const QModelIndex& dstParent, int dstRow);
     void indicatorMotionProgressChanged();
@@ -345,6 +357,7 @@ private:
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     ::fluent::scrolling::ScrollBar* m_hScrollBar = nullptr;
     bool m_scrollChainingEnabled = false;
+    bool m_overscrollEnabled = true;
     bool m_horizontalFluentScrollBarEnabled = true;
     bool m_viewportHovered = false;
 
