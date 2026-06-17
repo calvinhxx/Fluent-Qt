@@ -12,3 +12,6 @@ CMakeUserPresets.json
 
 # mac
 .DS_Store
+
+# codex
+tmp/
