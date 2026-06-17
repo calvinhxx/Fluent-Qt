@@ -207,7 +207,7 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
     EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
 }
 
-TEST_F(GalleryShellFrameworkTest, ContentPageReservesVerticalScrollbarGutter)
+TEST_F(GalleryShellFrameworkTest, ContentPageUsesFloatingVisibleVerticalScrollbar)
 {
     GalleryWindow window;
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
@@ -215,7 +215,13 @@ TEST_F(GalleryShellFrameworkTest, ContentPageReservesVerticalScrollbarGutter)
     auto* scrollView = window.findChild<ScrollView*>(QStringLiteral("galleryContentScrollArea"));
     ASSERT_NE(scrollView, nullptr);
     EXPECT_EQ(scrollView->verticalScrollBarVisibility(), ScrollView::ScrollBarVisibility::Visible);
-    EXPECT_EQ(scrollView->verticalScrollBarPolicy(), Qt::ScrollBarAlwaysOn);
+    EXPECT_EQ(scrollView->verticalScrollBarPolicy(), Qt::ScrollBarAlwaysOff);
+
+    auto* floatingBar = scrollView->viewport()->findChild<fluent::scrolling::ScrollBar*>(
+        QStringLiteral("fluentScrollViewFloatingVerticalBar"));
+    ASSERT_NE(floatingBar, nullptr);
+    EXPECT_EQ(floatingBar->orientation(), Qt::Vertical);
+    EXPECT_EQ(floatingBar->parentWidget(), scrollView->viewport());
 }
 
 TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAfterFree)
@@ -513,6 +519,7 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)
                                         QStringLiteral("info-bar"),
                                         QStringLiteral("progress-bar"),
                                         QStringLiteral("progress-ring"),
+                                        QStringLiteral("shimmer"),
                                         QStringLiteral("tooltip")}) {
         auto* childRow = flyout->findChild<QWidget*>(
             QStringLiteral("galleryCompactNavigationFlyoutRow_%1").arg(childRouteId));
@@ -757,6 +764,66 @@ TEST_F(GalleryShellFrameworkTest, MainNavigationScrollbarUsesInsetOverlay)
     EXPECT_GE(tree->rect().right() - barGeometry.right(), 4);
     EXPECT_GE(barGeometry.top() - tree->rect().top(), 4);
     EXPECT_GE(tree->rect().bottom() - barGeometry.bottom(), 4);
+}
+
+TEST_F(GalleryShellFrameworkTest, NavigationAutoScrollDoesNotRevealPaneScrollbar)
+{
+    GalleryWindow window;
+    window.resize(1180, 500);
+    window.show();
+    QApplication::processEvents();
+
+    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    ASSERT_NE(mainPane, nullptr);
+    TreeView* tree = navigationTree(mainPane);
+    ASSERT_NE(tree, nullptr);
+    tree->expandAll();
+    settleTreeAnimations();
+    tree->refreshFluentScrollChrome();
+
+    auto* scrollBar = tree->verticalFluentScrollBar();
+    ASSERT_NE(scrollBar, nullptr);
+    ASSERT_GT(tree->verticalScrollBar()->maximum(), tree->verticalScrollBar()->minimum());
+    const bool scrollBarSignalsBlocked = scrollBar->signalsBlocked();
+    scrollBar->blockSignals(true);
+    tree->verticalScrollBar()->setValue(tree->verticalScrollBar()->minimum());
+    scrollBar->blockSignals(scrollBarSignalsBlocked);
+    scrollBar->setOpacity(0.0);
+
+    const int previousOffset = tree->verticalScrollBar()->value();
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("tooltip")));
+    QApplication::processEvents();
+
+    EXPECT_GT(tree->verticalScrollBar()->value(), previousOffset);
+    EXPECT_DOUBLE_EQ(scrollBar->opacity(), 0.0);
+}
+
+TEST_F(GalleryShellFrameworkTest, CurrentContentScrollbarStaysAtRightEdgeAfterNavigationClick)
+{
+    GalleryWindow window;
+    window.resize(1180, 500);
+    window.show();
+    QApplication::processEvents();
+
+    auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
+    ASSERT_NE(mainPane, nullptr);
+    clickNavigationRoute(mainPane, QStringLiteral("combobox"));
+    QApplication::processEvents();
+
+    auto* page = window.currentContentPage();
+    ASSERT_NE(page, nullptr);
+    ASSERT_EQ(page->routeId(), QStringLiteral("combobox"));
+
+    auto* scrollView = page->findChild<ScrollView*>(QStringLiteral("galleryContentScrollArea"));
+    ASSERT_NE(scrollView, nullptr);
+    auto* floatingBar = scrollView->viewport()->findChild<fluent::scrolling::ScrollBar*>(
+        QStringLiteral("fluentScrollViewFloatingVerticalBar"));
+    ASSERT_NE(floatingBar, nullptr);
+    ASSERT_TRUE(floatingBar->isVisible());
+
+    const QRect barGeometry = floatingBar->geometry();
+    EXPECT_EQ(barGeometry.right(), scrollView->viewport()->rect().right());
+    EXPECT_EQ(barGeometry.left(), qMax(0, scrollView->viewport()->width() - floatingBar->thickness()));
 }
 
 TEST_F(GalleryShellFrameworkTest, ComponentRoutesRetainParentCategories)
