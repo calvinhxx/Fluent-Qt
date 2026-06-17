@@ -394,7 +394,7 @@ void GalleryWindow::buildNavigationShell()
     // zh_CN: Auto 让窗格随窗口宽度自适应（对齐 WinUI Gallery）：>=1008 展开带标签，>=640 紧凑图标栏，
     // 更窄则完全隐藏（LeftMinimal），收进标题栏菜单按钮后。
     m_navigationView->setDisplayMode(fluent::navigation::NavigationView::DisplayMode::Auto);
-    m_navigationView->setExpandedPaneWidth(256);
+    m_navigationView->setExpandedPaneWidth(240);  // Slightly tighter than 256 so content sits a bit closer to the menu items. zh_CN: 比 256 略紧凑，内容稍贴近菜单项。
     m_navigationView->setCompactPaneWidth(48);
     m_navigationView->setAnimationEnabled(true);
     m_navigationCompactReleaseTimer = new QTimer(this);
