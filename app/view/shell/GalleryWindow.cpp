@@ -10,6 +10,7 @@
 #include <QPropertyAnimation>
 #include <QRegularExpression>
 #include <QTimer>
+#include <QVariantAnimation>
 
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
@@ -46,7 +47,8 @@ constexpr int kTitleBarSearchWidth = 360;
 constexpr int kTitleBarSearchMinWidth = 180;
 constexpr int kTitleBarSearchHeight = 28;
 constexpr int kTitleBarToolTipGap = 4;
-constexpr char kTitleBarIconJitterAnimationName[] = "galleryTitleBarIconJitterAnimation";
+constexpr char kTitleBarButtonPressAnimationName[] = "galleryTitleBarButtonPressAnimation";
+constexpr qreal kTitleBarButtonPressScale = 0.86;  // WinUI-like press depth for icon buttons. zh_CN: 仿 WinUI 的图标按钮按下缩放深度。
 
 // WinUI-Gallery parity search: split the query on whitespace and require a title
 // to contain every token (AND semantics) rather than matching the whole string as
@@ -105,29 +107,32 @@ int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
         : kTitleBarHorizontalMargin;
 }
 
-void startTitleBarIconJitter(fluent::basicinput::Button* button)
+// WinUI-style click feedback: the glyph quickly dips to ~0.86 scale and springs back,
+// reading as a press without moving the button or disturbing the layout.
+// zh_CN: 仿 WinUI 的点击反馈：字形快速缩小到约 0.86 再弹回，呈现按下感，
+// 且不移动按钮、不影响布局。
+void startTitleBarButtonPress(fluent::basicinput::Button* button)
 {
     if (!button || !button->isEnabled())
         return;
 
-    if (auto* currentAnimation = button->findChild<QPropertyAnimation*>(QString::fromLatin1(kTitleBarIconJitterAnimationName))) {
+    if (auto* currentAnimation = button->findChild<QPropertyAnimation*>(QString::fromLatin1(kTitleBarButtonPressAnimationName))) {
         currentAnimation->stop();
         currentAnimation->deleteLater();
     }
 
-    button->setIconOffset(QPoint(0, 0));
-    auto* animation = new QPropertyAnimation(button, "iconOffset", button);
-    animation->setObjectName(QString::fromLatin1(kTitleBarIconJitterAnimationName));
+    button->setIconScale(1.0);
+    auto* animation = new QPropertyAnimation(button, "iconScale", button);
+    animation->setObjectName(QString::fromLatin1(kTitleBarButtonPressAnimationName));
     const auto motion = button->themeAnimation();
-    animation->setDuration(motion.normal);
-    animation->setEasingCurve(motion.standard);
-    animation->setStartValue(QPoint(0, 0));
-    animation->setKeyValueAt(0.35, QPoint(-1, 0));
-    animation->setKeyValueAt(0.65, QPoint(1, 0));
-    animation->setEndValue(QPoint(0, 0));
+    animation->setDuration(motion.fast);
+    animation->setEasingCurve(motion.decelerate);
+    animation->setStartValue(1.0);
+    animation->setKeyValueAt(0.4, kTitleBarButtonPressScale);
+    animation->setEndValue(1.0);
     QObject::connect(animation, &QPropertyAnimation::finished,
                      button, [button]() {
-                         button->setIconOffset(QPoint(0, 0));
+                         button->setIconScale(1.0);
                      });
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
@@ -500,11 +505,18 @@ void GalleryWindow::createTitleBarContent()
     backButton->setFluentSize(fluent::basicinput::Button::Small);
     backButton->setFont(backButton->themeFont(Typography::FontRole::Caption).toQFont());
     backButton->setIconGlyph(Typography::Icons::TitleBarBack, kTitleBarButtonIconSize);
-    backButton->setFixedSize(kTitleBarButtonSize, kTitleBarButtonSize);
+    // Height is fixed; the width is driven by the reveal animation (0 when there is no
+    // history, kTitleBarButtonSize once back navigation is available).
+    // zh_CN: 高度固定，宽度由展开动画驱动（无历史时为 0，可后退时为 kTitleBarButtonSize）。
+    backButton->setFixedHeight(kTitleBarButtonSize);
     backButton->setFocusPolicy(Qt::NoFocus);
     backButton->setToolTip(QStringLiteral("Back"));
     backButton->setEnabled(false);
     backButton->installEventFilter(this);
+    // Start faded out; the reveal animation drives contentOpacity alongside the width collapse
+    // so showing/hiding reads as a smooth slide-in rather than a hard pop. zh_CN: 初始淡出；展开动画
+    // 同时驱动 contentOpacity 与宽度收展，使显隐呈现顺滑滑入而非硬切。
+    backButton->setContentOpacity(0.0);
     connect(backButton, &fluent::basicinput::Button::clicked,
             this, [this]() {
                 navigateBack();
@@ -616,6 +628,11 @@ void GalleryWindow::createTitleBarContent()
     // zh_CN: 搜索框刻意不加入 AnchorLayout：它需要最大宽度、居中并夹取、以及锚点模型无法表达的收起行为，
     // 故由 updateTitleBarLayout() 依据实时栏宽手动定位。
     bar->installEventFilter(this);
+    // Start fully collapsed: no history at launch, so width / opacity / menu gap all read 0.
+    // updateNavigationCommands() later animates it open the first time a route pushes history.
+    // zh_CN: 启动时完全收起：尚无历史，故宽度/不透明度/菜单间隙均为 0；首次入栈历史时由
+    // updateNavigationCommands() 动画展开。
+    applyBackButtonReveal(0.0);
     updateTitleBarLayout();
 
     LOG_TRACE(QStringLiteral("GalleryWindow titleBarContent built searchWidth=%1 searchHeight=%2 buttonSize=%3")
@@ -640,7 +657,7 @@ bool GalleryWindow::eventFilter(QObject* watched, QEvent* event)
             hideTitleBarToolTip();
             break;
         case QEvent::MouseButtonPress:
-            startTitleBarIconJitter(button);
+            startTitleBarButtonPress(button);
             hideTitleBarToolTip();
             break;
         default:
@@ -679,11 +696,15 @@ void GalleryWindow::updateTitleBarLayout()
         barLayout->activate();
 
     // Left boundary = right edge of the last visible leading widget + gap, derived from the
-    // fixed metrics so it doesn't depend on layout timing.
-    // zh_CN: 左边界 = 最后一个可见前导控件的右缘 + 间隙，按固定度量推导，不依赖布局时序。
+    // fixed metrics so it doesn't depend on layout timing. The back button only occupies space
+    // proportional to its reveal progress, so the search box tracks the collapse/expand smoothly.
+    // zh_CN: 左边界 = 最后一个可见前导控件的右缘 + 间隙，按固定度量推导，不依赖布局时序。返回按钮按其展开
+    // 进度占位，故搜索框能随收展平滑跟随。
+    const int backContribution =
+        qRound(m_backButtonReveal * (kTitleBarButtonSize + kTitleBarItemGap));
     int leadingRight = titleBarLeadingOffset(bar)
-                       + kTitleBarButtonSize                       // back
-                       + kTitleBarItemGap + kTitleBarButtonSize;   // menu
+                       + backContribution                          // back + its trailing gap, animated
+                       + kTitleBarButtonSize;                      // menu
     if (showTitle) {
         leadingRight += kTitleBarItemGap + kTitleBarIconSize       // app icon
                         + kTitleBarItemGap + kTitleBarTitleWidth;  // title
@@ -846,10 +867,48 @@ void GalleryWindow::setNavigationPanesCompact(bool compact)
 
 void GalleryWindow::updateNavigationCommands()
 {
-    if (m_backButton)
-        m_backButton->setEnabled(!m_backRouteStack.isEmpty());
+    setBackButtonRevealed(!m_backRouteStack.isEmpty());
     if (m_menuButton)
         m_menuButton->setEnabled(m_navigationView != nullptr);
+}
+
+void GalleryWindow::applyBackButtonReveal(qreal reveal)
+{
+    m_backButtonReveal = reveal;
+    if (m_backButton) {
+        m_backButton->setFixedWidth(qRound(reveal * kTitleBarButtonSize));
+        m_backButton->setContentOpacity(reveal);
+    }
+    if (m_menuButton && m_menuButton->anchors())
+        m_menuButton->anchors()->left.offset = qRound(reveal * kTitleBarItemGap);
+    if (auto* barLayout = titleBar() ? titleBar()->layout() : nullptr)
+        barLayout->invalidate();
+    updateTitleBarLayout();
+}
+
+void GalleryWindow::setBackButtonRevealed(bool revealed)
+{
+    if (!m_backButton || m_backButtonRevealed == revealed)
+        return;
+    m_backButtonRevealed = revealed;
+    m_backButton->setEnabled(revealed);
+
+    const auto motion = m_backButton->themeAnimation();
+    if (!m_backButtonRevealAnimation) {
+        m_backButtonRevealAnimation = new QVariantAnimation(this);
+        m_backButtonRevealAnimation->setDuration(motion.normal);
+        connect(m_backButtonRevealAnimation, &QVariantAnimation::valueChanged, this,
+                [this](const QVariant& value) {
+                    applyBackButtonReveal(value.toReal());
+                });
+    }
+    m_backButtonRevealAnimation->stop();
+    // Ease out on the way in (decisive arrival), the standard curve on the way out.
+    // zh_CN: 入场用缓出（落点干脆），退场用标准曲线。
+    m_backButtonRevealAnimation->setEasingCurve(revealed ? motion.decelerate : motion.standard);
+    m_backButtonRevealAnimation->setStartValue(m_backButtonReveal);
+    m_backButtonRevealAnimation->setEndValue(revealed ? 1.0 : 0.0);
+    m_backButtonRevealAnimation->start();
 }
 
 } // namespace fluent::gallery
