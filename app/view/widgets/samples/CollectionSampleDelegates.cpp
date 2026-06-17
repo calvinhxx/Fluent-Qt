@@ -303,9 +303,16 @@ TreeRowDelegate::TreeRowDelegate(fluent::FluentElement* themeHost, int rowHeight
 
 QRectF TreeRowDelegate::bgRectForOption(const QStyleOptionViewItem& option) const
 {
-    const int vpWidth = m_view && m_view->viewport() ? m_view->viewport()->width()
+    // Span from this row's indented content edge to the viewport's right, so the rounded
+    // highlight tracks the item's hierarchy depth (like the accent pill) instead of bleeding
+    // a stray fill across the indentation gutter on the left.
+    // zh_CN: 从本行缩进后的内容左缘延伸到视口右缘，使圆角高亮随层级缩进（与强调指示条一致），
+    // 而非在左侧缩进留白处渗出一截多余填充。
+    const int vpRight = m_view && m_view->viewport() ? m_view->viewport()->width() - 2
                                                      : option.rect.right();
-    return QRectF(2, option.rect.top() + 2, vpWidth - 4, option.rect.height() - 4);
+    return QRectF(option.rect.left() + 2, option.rect.top() + 2,
+                  qMax<qreal>(0.0, vpRight - (option.rect.left() + 2)),
+                  option.rect.height() - 4);
 }
 
 QRectF TreeRowDelegate::checkBoxRectForOption(const QStyleOptionViewItem& option) const
