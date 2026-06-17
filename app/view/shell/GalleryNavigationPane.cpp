@@ -179,6 +179,10 @@ void GalleryNavigationPane::rebuild()
     m_treeView->setBorderVisible(false);
     m_treeView->setBackgroundVisible(false);
     m_treeView->setHorizontalFluentScrollBarEnabled(false);
+    // Navigation chrome stops cleanly at the scroll edge — an elastic bounce reads as a glitch
+    // here and would briefly trap the wheel at the boundary. zh_CN: 导航 chrome 在滚动边界干脆
+    // 停住——此处的弹性回弹会显得突兀，且会在边界处短暂卡住滚轮。
+    m_treeView->setOverscrollEnabled(false);
     m_treeView->setIndentation(0);
     m_treeView->setIndicatorMotionAnimationEnabled(true);
     m_treeView->setSelectionIndicatorVisible(true);
