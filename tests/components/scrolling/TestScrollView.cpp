@@ -272,6 +272,27 @@ TEST_F(ScrollViewTest, BidirectionalCornerIsTransparent) {
     EXPECT_TRUE(corner->testAttribute(Qt::WA_TranslucentBackground));
 }
 
+TEST_F(ScrollViewTest, FloatingVisibleVerticalBarTracksViewportRightEdgeAfterResize) {
+    ScrollView view;
+    view.resize(80, 120);
+    view.setVerticalScrollBarVisibility(ScrollView::ScrollBarVisibility::Visible);
+    view.setWidget(createContent(QSize(420, 360)));
+    showAndProcess(view);
+
+    auto* floatingBar = view.viewport()->findChild<ScrollBar*>(
+        QStringLiteral("fluentScrollViewFloatingVerticalBar"));
+    ASSERT_NE(floatingBar, nullptr);
+    ASSERT_TRUE(floatingBar->isVisible());
+    EXPECT_EQ(floatingBar->geometry().right(), view.viewport()->rect().right());
+
+    view.resize(300, 120);
+    QApplication::processEvents();
+
+    EXPECT_EQ(floatingBar->geometry().right(), view.viewport()->rect().right());
+    EXPECT_EQ(floatingBar->geometry().left(),
+              qMax(0, view.viewport()->width() - floatingBar->thickness()));
+}
+
 TEST_F(ScrollViewTest, ScrollChainingModeControlsBoundaryWheel) {
     ScrollView view;
     view.resize(180, 140);

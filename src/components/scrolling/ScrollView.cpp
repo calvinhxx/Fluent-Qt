@@ -21,6 +21,14 @@ namespace {
 
 constexpr qint64 NativeZoomPinchSuppressionMs = 350;
 
+bool shouldSyncFloatingScrollBarAfter(QEvent::Type type)
+{
+    return type == QEvent::Resize
+        || type == QEvent::Show
+        || type == QEvent::Move
+        || type == QEvent::LayoutRequest;
+}
+
 class TransparentCornerWidget : public QWidget {
 public:
     explicit TransparentCornerWidget(QWidget* parent = nullptr)
@@ -59,6 +67,7 @@ void ScrollView::init() {
     // edge so content stays full-width. zh_CN: 垂直“常显”模式的浮动覆盖条：父级为视口，镜像原生（无沟槽、
     // AlwaysOff）滚动条的范围/数值，浮于内容右缘之上，使内容保持整宽。
     m_floatingVerticalBar = new ScrollBar(Qt::Vertical, viewport());
+    m_floatingVerticalBar->setObjectName(QStringLiteral("fluentScrollViewFloatingVerticalBar"));
     m_floatingVerticalBar->hide();
     connect(verticalScrollBar(), &QScrollBar::rangeChanged, this,
             [this](int, int) { syncFloatingScrollBar(); });
@@ -114,6 +123,7 @@ void ScrollView::setWidget(QWidget* content) {
     }
     captureContentBaseSize();
     applyZoomToContent();
+    syncFloatingScrollBar();
 }
 
 void ScrollView::setHorizontalScrollMode(ScrollMode mode) {
@@ -280,10 +290,17 @@ bool ScrollView::event(QEvent* event) {
     if (event->type() == QEvent::Gesture && handlePinchGesture(event, this))
         return true;
 
-    return QScrollArea::event(event);
+    const QEvent::Type type = event->type();
+    const bool handled = QScrollArea::event(event);
+    if (shouldSyncFloatingScrollBarAfter(type))
+        syncFloatingScrollBar();
+    return handled;
 }
 
 bool ScrollView::eventFilter(QObject* watched, QEvent* event) {
+    const bool syncAfter = (watched == viewport() || (m_contentWidget && watched == m_contentWidget.data()))
+        && shouldSyncFloatingScrollBarAfter(event->type());
+
     if (watched == this || watched == viewport() || (m_contentWidget && watched == m_contentWidget.data())) {
         if (event->type() == QEvent::Wheel) {
             auto* wheel = static_cast<QWheelEvent*>(event);
@@ -302,12 +319,14 @@ bool ScrollView::eventFilter(QObject* watched, QEvent* event) {
             return true;
     }
 
-    return QScrollArea::eventFilter(watched, event);
+    const bool handled = QScrollArea::eventFilter(watched, event);
+    if (syncAfter)
+        syncFloatingScrollBar();
+    return handled;
 }
 
 bool ScrollView::viewportEvent(QEvent* event) {
-    if (event->type() == QEvent::Resize)
-        positionFloatingScrollBar();
+    const bool syncAfter = shouldSyncFloatingScrollBarAfter(event->type());
 
     if (event->type() == QEvent::Wheel) {
         auto* wheel = static_cast<QWheelEvent*>(event);
@@ -325,7 +344,10 @@ bool ScrollView::viewportEvent(QEvent* event) {
     if (event->type() == QEvent::Gesture && handlePinchGesture(event, viewport()))
         return true;
 
-    return QScrollArea::viewportEvent(event);
+    const bool handled = QScrollArea::viewportEvent(event);
+    if (syncAfter)
+        syncFloatingScrollBar();
+    return handled;
 }
 
 void ScrollView::wheelEvent(QWheelEvent* event) {
@@ -418,14 +440,20 @@ void ScrollView::syncFloatingScrollBar() {
 }
 
 void ScrollView::positionFloatingScrollBar() {
-    if (!m_floatingVerticalBar || !m_floatingVerticalBar->isVisible())
+    if (!m_floatingVerticalBar)
         return;
     QWidget* area = viewport();
     if (!area)
         return;
     const int thickness = m_floatingVerticalBar->thickness();
-    m_floatingVerticalBar->setGeometry(area->width() - thickness, 0, thickness, area->height());
-    m_floatingVerticalBar->raise();
+    const QRect target(qMax(0, area->width() - thickness),
+                       0,
+                       thickness,
+                       qMax(0, area->height()));
+    if (m_floatingVerticalBar->geometry() != target)
+        m_floatingVerticalBar->setGeometry(target);
+    if (m_floatingVerticalBar->isVisible())
+        m_floatingVerticalBar->raise();
 }
 
 void ScrollView::updateViewportPalette() {
