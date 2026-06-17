@@ -261,8 +261,20 @@ void GalleryNavigationPane::updateButtonStyles()
     }
 
     const QModelIndex visualIndex = visualSelectionIndex(index);
+    auto* verticalFluentBar = m_treeView->verticalFluentScrollBar();
+    auto* horizontalFluentBar = m_treeView->horizontalFluentScrollBar();
+    const bool verticalSignalsBlocked = verticalFluentBar && verticalFluentBar->signalsBlocked();
+    const bool horizontalSignalsBlocked = horizontalFluentBar && horizontalFluentBar->signalsBlocked();
+    if (verticalFluentBar)
+        verticalFluentBar->blockSignals(true);
+    if (horizontalFluentBar)
+        horizontalFluentBar->blockSignals(true);
     m_treeView->setSelectedItem(visualIndex);
     m_treeView->scrollTo(visualIndex, QAbstractItemView::EnsureVisible);
+    if (verticalFluentBar)
+        verticalFluentBar->blockSignals(verticalSignalsBlocked);
+    if (horizontalFluentBar)
+        horizontalFluentBar->blockSignals(horizontalSignalsBlocked);
     LOG_TRACE(QStringLiteral("GalleryNavigationPane selectionApplied tree=%1 routeId=%2")
                   .arg(m_treeView->objectName(), m_selectedRouteId));
 }
