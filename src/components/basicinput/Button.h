@@ -70,6 +70,20 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      * zh_CN: iconfont 绘制偏移量，正值表示向右/向下移动，用于精细视觉对齐。
      */
     Q_PROPERTY(QPoint iconOffset READ iconOffset WRITE setIconOffset)
+    /**
+     * @brief Uniform scale applied to the painted iconfont glyph (1.0 = no scaling).
+     * Drives WinUI-style press feedback (a brief scale-down) without touching geometry.
+     * zh_CN: 作用于自绘 iconfont 字形的等比缩放（1.0 为不缩放），用于实现 WinUI 风格的按下反馈
+     *（短暂缩小），且不改变几何布局。
+     */
+    Q_PROPERTY(qreal iconScale READ iconScale WRITE setIconScale)
+    /**
+     * @brief Painter-level opacity for the whole button surface (1.0 = fully opaque).
+     * A lightweight fade that avoids QGraphicsOpacityEffect's offscreen compositing.
+     * zh_CN: 作用于整个按钮表面的画笔级不透明度（1.0 为完全不透明）。轻量淡入淡出，
+     * 避免 QGraphicsOpacityEffect 的离屏合成。
+     */
+    Q_PROPERTY(qreal contentOpacity READ contentOpacity WRITE setContentOpacity)
 
 public:
     /**
@@ -139,6 +153,12 @@ public:
 
     QPoint iconOffset() const { return m_iconOffset; }
     void setIconOffset(const QPoint& offset);
+
+    qreal iconScale() const { return m_iconScale; }
+    void setIconScale(qreal scale);
+
+    qreal contentOpacity() const { return m_contentOpacity; }
+    void setContentOpacity(qreal opacity);
 
     void onThemeUpdated() override { update(); }
 
@@ -211,6 +231,8 @@ private:
     bool m_hasCustomCornerRadii = false;
     QMargins m_cornerRadii;
     QPoint m_iconOffset {0, 0}; // Fine-tunes iconfont centering for glyphs with uneven metrics.
+    qreal m_iconScale = 1.0;    // Press-feedback scale for the painted glyph; 1.0 = no scaling.
+    qreal m_contentOpacity = 1.0; // Painter-level fade for the whole surface; 1.0 = opaque.
     
     // Iconfont state used for crisp text rendering instead of pixmap conversion.
     // zh_CN: iconfont 状态用于直接文本绘制，避免 pixmap 转换导致模糊。

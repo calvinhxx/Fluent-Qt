@@ -66,7 +66,8 @@ void drawCenteredIconGlyph(QPainter& painter,
                            const QString& fontFamily,
                            int pixelSize,
                            const QRectF& targetRect,
-                           const QPoint& offset) {
+                           const QPoint& offset,
+                           qreal scale) {
     QFont iconFont(fontFamily);
     iconFont.setPixelSize(pixelSize);
     painter.setFont(iconFont);
@@ -83,7 +84,17 @@ void drawCenteredIconGlyph(QPainter& painter,
 
     const QPointF targetCenter = targetRect.center() + QPointF(offset.x(), offset.y());
     const QPointF pathOffset = targetCenter - inkBounds.center();
+    if (qFuzzyCompare(scale, 1.0)) {
+        painter.fillPath(glyphPath.translated(pathOffset), painter.pen().brush());
+        return;
+    }
+    // Scale the glyph about its visual center so press feedback stays put. zh_CN: 绕字形视觉中心缩放，使按下反馈不位移。
+    painter.save();
+    painter.translate(targetCenter);
+    painter.scale(scale, scale);
+    painter.translate(-targetCenter);
     painter.fillPath(glyphPath.translated(pathOffset), painter.pen().brush());
+    painter.restore();
 }
 
 } // namespace
@@ -176,6 +187,19 @@ void Button::setIconOffset(const QPoint& offset) {
     update();
 }
 
+void Button::setIconScale(qreal scale) {
+    if (qFuzzyCompare(m_iconScale, scale)) return;
+    m_iconScale = scale;
+    update();
+}
+
+void Button::setContentOpacity(qreal opacity) {
+    const qreal clamped = qBound<qreal>(0.0, opacity, 1.0);
+    if (qFuzzyCompare(m_contentOpacity, clamped)) return;
+    m_contentOpacity = clamped;
+    update();
+}
+
 void Button::setIconGlyph(const QString& glyph,
                           int pixelSize,
                           const QString& family) {
@@ -241,6 +265,9 @@ void Button::paintEvent(QPaintEvent*) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    // Fade the whole surface uniformly when requested (e.g. reveal/hide animations). zh_CN: 需要时整体淡入淡出（如显隐动画）。
+    if (m_contentOpacity < 1.0)
+        painter.setOpacity(m_contentOpacity);
 
     const auto& colors = themeColors();
     const auto& spacing = themeSpacing();
@@ -373,7 +400,7 @@ void Button::paintEvent(QPaintEvent*) {
         if (hasIconFont) {
             QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
             drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily,
-                                  m_iconPixelSize, iconRect, m_iconOffset);
+                                  m_iconPixelSize, iconRect, m_iconOffset, m_iconScale);
             painter.setFont(font());
         } else if (!pix.isNull()) {
             double dpr = pix.devicePixelRatio();
@@ -387,7 +414,7 @@ void Button::paintEvent(QPaintEvent*) {
         if (hasIconFont) {
             QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
             drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily,
-                                  m_iconPixelSize, iconRect, m_iconOffset);
+                                  m_iconPixelSize, iconRect, m_iconOffset, m_iconScale);
             painter.setFont(font());
             startX += iconWidth + gap;
         } else if (!pix.isNull()) {
