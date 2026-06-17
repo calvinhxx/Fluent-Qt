@@ -11,6 +11,7 @@
 class QEvent;
 class QLabel;
 class QTimer;
+class QVariantAnimation;
 class QWidget;
 
 namespace fluent::basicinput {
@@ -99,6 +100,14 @@ private:
     void toggleNavigationDisplayMode();
     void setNavigationPanesCompact(bool compact);
     void updateNavigationCommands();
+    // Shows/hides the title-bar back button with a smooth collapse+fade. Revealed only while
+    // there is navigation history; the menu group reflows as it expands/collapses.
+    // zh_CN: 以平滑收展+淡入淡出显示/隐藏标题栏返回按钮。仅在有导航历史时显示；展开/收起时菜单组随之回流。
+    void setBackButtonRevealed(bool revealed);
+    // Applies a single reveal progress (0=hidden, 1=shown) to the back button's width,
+    // opacity, and the menu group's leading gap. zh_CN: 把单一展开进度（0=隐藏，1=显示）应用到返回按钮
+    // 的宽度、不透明度，以及菜单组的前导间隙。
+    void applyBackButtonReveal(qreal reveal);
 
     GalleryNavigationViewModel m_navigationViewModel;
     GalleryNavigationState m_navigationState;
@@ -108,6 +117,9 @@ private:
     GalleryContentPresenter* m_contentPresenter = nullptr;
     fluent::basicinput::Button* m_backButton = nullptr;
     fluent::basicinput::Button* m_menuButton = nullptr;
+    QVariantAnimation* m_backButtonRevealAnimation = nullptr;
+    qreal m_backButtonReveal = 0.0;   // 0=hidden, 1=fully shown. zh_CN: 0=隐藏，1=完全显示。
+    bool m_backButtonRevealed = false;
     QLabel* m_titleBarAppIcon = nullptr;
     fluent::textfields::Label* m_titleBarTitle = nullptr;
     fluent::textfields::AutoSuggestBox* m_searchBox = nullptr;
