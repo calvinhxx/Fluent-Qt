@@ -137,6 +137,8 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("Shows determinate or indeterminate progress along a line.")},
         {QStringLiteral("progress-ring"),
          QStringLiteral("Shows determinate or indeterminate progress around a ring.")},
+        {QStringLiteral("shimmer"),
+         QStringLiteral("Shows a skeleton placeholder while content is loading.")},
         {QStringLiteral("tooltip"),
          QStringLiteral("A popup label that shows extra information about a control on hover.")},
         // Text fields
