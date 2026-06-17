@@ -13,6 +13,7 @@ namespace fluent::textfields {
 class Label;
 }
 
+class QEvent;
 class QResizeEvent;
 
 namespace fluent::gallery {
@@ -39,10 +40,12 @@ public:
     void onThemeUpdated() override;
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
 private:
     void applyPalette();
+    void queueAnchoredLayoutUpdate();
     void updateAnchoredLayout();
     void updateCardHeight();
     int preferredHeightForWidget(QWidget* widget, int width) const;
@@ -56,6 +59,7 @@ private:
     QWidget* m_preview = nullptr;
     QWidget* m_options = nullptr;
     GalleryCodeBlock* m_codeBlock = nullptr;
+    bool m_layoutUpdateQueued = false;
 };
 
 } // namespace fluent::gallery

@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QResizeEvent>
 #include <QSizePolicy>
+#include <QTimer>
 #include <QtGlobal>
 
 #include "components/textfields/Label.h"
@@ -51,6 +52,7 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
     m_previewSurface->setObjectName(QStringLiteral("gallerySampleCardPreview"));
     m_previewSurface->setFrameShape(QFrame::NoFrame);
     m_previewSurface->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    m_previewSurface->installEventFilter(this);
     auto* previewLayout = new QHBoxLayout(m_previewSurface);
     previewLayout->setContentsMargins(20, 20, 20, 20);
     previewLayout->setSpacing(16);
@@ -59,6 +61,7 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
         m_preview = sample.createPreview(m_previewSurface);
         if (m_preview) {
             m_preview->setObjectName(QStringLiteral("gallerySamplePreviewWidget"));
+            m_preview->installEventFilter(this);
             previewLayout->addWidget(m_preview);
         }
     }
@@ -68,6 +71,7 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
         m_options = sample.createOptions(m_previewSurface);
         if (m_options) {
             m_options->setObjectName(QStringLiteral("gallerySampleOptionsWidget"));
+            m_options->installEventFilter(this);
             previewLayout->addWidget(m_options, 0, Qt::AlignTop);
         }
     }
@@ -141,10 +145,31 @@ QSize GallerySampleCard::minimumSizeHint() const
     return QSize(kMinimumCardWidth, calculatedHeightForWidth(kMinimumCardWidth));
 }
 
+bool GallerySampleCard::eventFilter(QObject* watched, QEvent* event)
+{
+    if ((watched == m_previewSurface || watched == m_preview || watched == m_options)
+        && event->type() == QEvent::LayoutRequest) {
+        queueAnchoredLayoutUpdate();
+    }
+    return QFrame::eventFilter(watched, event);
+}
+
 void GallerySampleCard::resizeEvent(QResizeEvent* event)
 {
     QFrame::resizeEvent(event);
     updateAnchoredLayout();
+}
+
+void GallerySampleCard::queueAnchoredLayoutUpdate()
+{
+    if (m_layoutUpdateQueued)
+        return;
+
+    m_layoutUpdateQueued = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_layoutUpdateQueued = false;
+        updateAnchoredLayout();
+    });
 }
 
 void GallerySampleCard::updateAnchoredLayout()
