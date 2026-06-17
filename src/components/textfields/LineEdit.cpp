@@ -35,6 +35,8 @@ LineEdit::LineEdit(QWidget* parent)
     connect(this, &QLineEdit::textChanged, this, [this]() {
         updateClearButtonVisibility();
     });
+
+    applyThemeStyle();
 }
 
 void LineEdit::paintEvent(QPaintEvent* event) {

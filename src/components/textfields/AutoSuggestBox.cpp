@@ -7,7 +7,6 @@
 #include <QFrame>
 #include <QItemSelectionModel>
 #include <QKeyEvent>
-#include <QListView>
 #include <QMoveEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -25,6 +24,7 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/basicinput/Button.h"
+#include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 
 namespace fluent::textfields {
@@ -119,24 +119,27 @@ public:
         setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
 
         m_model = new QStringListModel(this);
-        m_listView = new QListView(this);
+        m_listView = new fluent::collections::ListView(this);
         m_listView->setObjectName("AutoSuggestBoxSuggestionList");
         m_listView->setModel(m_model);
         m_itemDelegate = new AutoSuggestItemDelegate(this, m_listView);
         m_listView->setItemDelegate(m_itemDelegate);
-        m_listView->setFrameShape(QFrame::NoFrame);
+        m_listView->setBorderVisible(false);
+        m_listView->setBackgroundVisible(false);
+        m_listView->setScrollChainingEnabled(false);
         m_listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        m_listView->setSelectionMode(QAbstractItemView::SingleSelection);
+        m_listView->setSelectionMode(fluent::collections::ListView::ListSelectionMode::Single);
         m_listView->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_listView->setMouseTracking(true);
-        m_listView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         m_listView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
         m_listView->setStyleSheet("QListView { background: transparent; border: none; outline: none; }"
                                   "QListView::item { background: transparent; }");
         m_listView->viewport()->setAutoFillBackground(false);
 
-        connect(m_listView, &QListView::clicked, this, [this](const QModelIndex& index) {
-            if (index.isValid() && m_suggestionClickedHandler) m_suggestionClickedHandler(index.row());
+        connect(m_listView, &fluent::collections::ListView::itemClicked, this, [this](int row) {
+            if (row >= 0 && row < m_model->rowCount() && m_suggestionClickedHandler) {
+                m_suggestionClickedHandler(row);
+            }
         });
     }
 
@@ -156,6 +159,7 @@ public:
         }
         if (m_listView) {
             if (m_listView->viewport()) m_listView->viewport()->update();
+            m_listView->refreshFluentScrollChrome();
         }
         if (isOpen()) showForOwner();
     }
@@ -196,6 +200,7 @@ public:
 
         resize(contentWidth + shadow * 2, listHeight + shadow * 2);
         m_listView->setGeometry(shadow, shadow + listPadY, contentWidth, listHeight - listPadY * 2);
+        m_listView->refreshFluentScrollChrome();
         setAnchor(m_owner);
 
         if (isOpen()) {
@@ -228,7 +233,7 @@ private:
     }
 
     AutoSuggestBox* m_owner = nullptr;
-    QListView* m_listView = nullptr;
+    fluent::collections::ListView* m_listView = nullptr;
     AutoSuggestItemDelegate* m_itemDelegate = nullptr;
     QStringListModel* m_model = nullptr;
     SuggestionClickedHandler m_suggestionClickedHandler;
