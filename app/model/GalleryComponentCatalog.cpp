@@ -103,6 +103,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
              {QStringLiteral("info-bar"), QStringLiteral("InfoBar"), Typography::Icons::Info},
              {QStringLiteral("progress-bar"), QStringLiteral("ProgressBar"), Typography::Icons::Refresh},
              {QStringLiteral("progress-ring"), QStringLiteral("ProgressRing"), Typography::Icons::Refresh},
+             {QStringLiteral("shimmer"), QStringLiteral("Shimmer"), Typography::Icons::Refresh},
              {QStringLiteral("tooltip"), QStringLiteral("ToolTip"), Typography::Icons::Info}
          }},
         {QStringLiteral("text-fields"),
