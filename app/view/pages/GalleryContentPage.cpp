@@ -55,7 +55,9 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
     m_viewport = new QWidget(m_scrollArea);
     m_viewport->setObjectName(QStringLiteral("galleryContentViewport"));
     m_contentLayout = new QVBoxLayout(m_viewport);
-    m_contentLayout->setContentsMargins(48, 34, 48, 48);
+    // Left/right inset matches the home page (kHeroMarginX / kBodyMarginX = 24) so content lines up
+    // across pages. zh_CN: 左右内边距与首页（kHeroMarginX / kBodyMarginX = 24）一致，使各页内容左缘对齐。
+    m_contentLayout->setContentsMargins(24, 34, 24, 48);
     m_contentLayout->setSpacing(16);
 
     m_titleLabel = new fluent::textfields::Label(m_title, m_viewport);
