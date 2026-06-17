@@ -378,7 +378,13 @@ bool NavigationView::event(QEvent* event)
 void NavigationView::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
+    // Snap (don't animate) responsive mode changes driven by this resize: during a live drag the
+    // width changes every frame, so animating would start a transition that the next frame
+    // interrupts, leaving a half-transitioned pane (the Windows jank). zh_CN: 让本次 resize 引发的
+    // 响应式模式切换直接吸附（不播放动画）：拖拽时宽度逐帧变化，动画会被下一帧打断、留下半过渡窗格（Windows 卡顿）。
+    m_inResize = true;
     invalidateLayout(false);
+    m_inResize = false;
 }
 
 void NavigationView::showEvent(QShowEvent* event)
@@ -441,6 +447,8 @@ void NavigationView::setLayoutTransitionProgress(qreal progress)
 bool NavigationView::shouldAnimateLayoutTransition(const LayoutState& from, const LayoutState& to) const
 {
     if (!m_animationEnabled || !isVisible() || !window() || !window()->isVisible())
+        return false;
+    if (m_inResize)  // responsive changes while live-resizing snap; see resizeEvent. zh_CN: live-resize 中的响应式切换直接吸附。
         return false;
     if (from.bounds.isEmpty() || to.bounds.isEmpty() || from.bounds != to.bounds)
         return false;

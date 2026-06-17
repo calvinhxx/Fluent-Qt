@@ -202,6 +202,11 @@ private:
 
     mutable LayoutState m_layout;
     mutable bool m_layoutDirty = true;
+    // True only while handling a resize: responsive mode changes then snap instead of animating,
+    // so a live drag can't kick off (and immediately interrupt) a layout transition — the source
+    // of the janky, half-transitioned nav on Windows. zh_CN: 仅在处理 resize 期间为真：此时响应式
+    // 模式切换直接吸附而非播放动画，避免拖拽中途触发又立刻打断布局过渡——Windows 上导航栏卡顿、半过渡的根因。
+    bool m_inResize = false;
     DisplayMode m_displayMode = DisplayMode::Auto;
     DisplayMode m_lastEffectiveDisplayMode = DisplayMode::Left;
     bool m_paneOpen = true;
