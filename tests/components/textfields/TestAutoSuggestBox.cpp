@@ -2,14 +2,18 @@
 
 #include <QApplication>
 #include <QListView>
+#include <QScrollBar>
 #include <QTimer>
+#include <QWheelEvent>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/scrolling/ScrollBar.h"
 #include "components/basicinput/Button.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
@@ -17,6 +21,7 @@
 using namespace fluent;
 using namespace fluent::basicinput;
 using namespace fluent::textfields;
+using fluent::collections::ListView;
 
 class AutoSuggestBoxTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -58,6 +63,19 @@ protected:
     AutoSuggestBoxTestWindow* window = nullptr;
     AnchorLayout* layout = nullptr;
 };
+
+namespace {
+
+QWheelEvent makeWheelEvent(QWidget* target, QPoint pixelDelta, QPoint angleDelta,
+                           Qt::ScrollPhase phase = Qt::NoScrollPhase)
+{
+    const QPointF pos = target->rect().center();
+    const QPointF globalPos = target->mapToGlobal(pos.toPoint());
+    return QWheelEvent(pos, globalPos, pixelDelta, angleDelta,
+                       Qt::NoButton, Qt::NoModifier, phase, false);
+}
+
+} // namespace
 
 TEST_F(AutoSuggestBoxTest, DefaultsAndButtons) {
     AutoSuggestBox box(window);
@@ -430,6 +448,43 @@ TEST_F(AutoSuggestBoxTest, MouseClickSuggestionChoosesAndSubmits) {
     EXPECT_EQ(querySpy.last().at(0).toString(), "Alpha");
     EXPECT_EQ(querySpy.last().at(1).toString(), "Alpha");
     EXPECT_FALSE(box->isSuggestionListOpen());
+}
+
+TEST_F(AutoSuggestBoxTest, SuggestionsUseFluentScrollChromeAndContainBoundaryWheel) {
+    AutoSuggestBox* box = new AutoSuggestBox(window);
+    box->setFixedWidth(260);
+    box->setSuggestions({"Apple", "Apricot", "Banana", "Blueberry", "Cherry",
+                         "Grape", "Orange", "Strawberry", "Watermelon"});
+    layout->addWidget(box);
+    showAndFocus(box);
+
+    QTest::keyClicks(box, "a");
+    QApplication::processEvents();
+    ASSERT_TRUE(box->isSuggestionListOpen());
+
+    auto* popup = window->findChild<fluent::dialogs_flyouts::Flyout*>("AutoSuggestBoxSuggestionPopup");
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<ListView*>("AutoSuggestBoxSuggestionList");
+    ASSERT_NE(listView, nullptr);
+    EXPECT_FALSE(listView->isScrollChainingEnabled());
+
+    auto* fluentBar = listView->verticalFluentScrollBar();
+    ASSERT_NE(fluentBar, nullptr);
+    listView->doItemsLayout();
+    listView->refreshFluentScrollChrome();
+    QApplication::processEvents();
+
+    ASSERT_GT(listView->verticalScrollBar()->maximum(), listView->verticalScrollBar()->minimum());
+    EXPECT_TRUE(fluentBar->isVisible());
+
+    listView->verticalScrollBar()->setValue(listView->verticalScrollBar()->maximum());
+    QWheelEvent wheel = makeWheelEvent(listView->viewport(), QPoint(0, 0), QPoint(0, -120));
+    wheel.setAccepted(false);
+    QApplication::sendEvent(listView->viewport(), &wheel);
+    QApplication::processEvents();
+
+    EXPECT_TRUE(wheel.isAccepted());
+    EXPECT_EQ(listView->verticalScrollBar()->value(), listView->verticalScrollBar()->maximum());
 }
 
 TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions) {

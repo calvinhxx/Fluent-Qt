@@ -63,6 +63,11 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 滚动前最多可见文本行数。
      */
     Q_PROPERTY(int maxVisibleLines READ maxVisibleLines WRITE setMaxVisibleLines NOTIFY layoutMetricsChanged)
+    /**
+     * @brief Whether boundary wheel input may continue to an enclosing scroller.
+     * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
+     */
+    Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
 
 public:
     explicit TextEdit(QWidget* parent = nullptr);
@@ -106,6 +111,9 @@ public:
     int maxVisibleLines() const { return m_maxVisibleLines; }
     void setMaxVisibleLines(int lines);
 
+    bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
+    void setScrollChainingEnabled(bool enabled);
+
 signals:
     void textChanged();
     void cursorPositionChanged();
@@ -115,6 +123,7 @@ signals:
     void focusedBorderWidthChanged();
     void unfocusedBorderWidthChanged();
     void layoutMetricsChanged();
+    void scrollChainingEnabledChanged();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -155,6 +164,7 @@ private:
     int      m_lineHeight           = ::Spacing::ControlHeight::Standard;
     int      m_minVisibleLines      = 1;
     int      m_maxVisibleLines      = 4;
+    bool     m_scrollChainingEnabled = false;
     QString  m_placeholderText;
 };
 

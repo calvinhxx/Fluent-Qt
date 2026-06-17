@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 #include <QApplication>
+#include <QScrollBar>
+#include <QTextEdit>
+#include <QWheelEvent>
 #include <QtTest/QSignalSpy>
 #include "QtTestEnvironment.h"
 #include "components/textfields/TextEdit.h"
@@ -40,6 +43,24 @@ protected:
     FluentTestWindow* window;
     AnchorLayout* layout;
 };
+
+namespace {
+
+QWheelEvent makeWheelEvent(QWidget* target, QPoint pixelDelta, QPoint angleDelta,
+                           Qt::ScrollPhase phase = Qt::NoScrollPhase)
+{
+    const QPointF pos = target->rect().center();
+    const QPointF globalPos = target->mapToGlobal(pos.toPoint());
+    return QWheelEvent(pos, globalPos, pixelDelta, angleDelta,
+                       Qt::NoButton, Qt::NoModifier, phase, false);
+}
+
+QTextEdit* innerTextEdit(TextEdit* edit)
+{
+    return edit ? edit->findChild<QTextEdit*>() : nullptr;
+}
+
+} // namespace
 
 TEST_F(TextEditTest, TextAndPlaceholder) {
     TextEdit* edit = new TextEdit(window);
@@ -144,6 +165,69 @@ TEST_F(TextEditTest, ReadOnly) {
     EXPECT_TRUE(edit->isReadOnly());
     edit->setReadOnly(false);
     EXPECT_FALSE(edit->isReadOnly());
+}
+
+TEST_F(TextEditTest, ScrollChainingPropertyControlsBoundaryWheel) {
+    TextEdit* edit = new TextEdit(window);
+    edit->setMinVisibleLines(3);
+    edit->setMaxVisibleLines(3);
+    edit->setPlainText("A\nB\nC\nD\nE\nF\nG\nH");
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    ASSERT_NE(inner->verticalScrollBar(), nullptr);
+    ASSERT_GT(inner->verticalScrollBar()->maximum(), inner->verticalScrollBar()->minimum());
+
+    EXPECT_FALSE(edit->isScrollChainingEnabled());
+    QSignalSpy spy(edit, &TextEdit::scrollChainingEnabledChanged);
+
+    inner->verticalScrollBar()->setValue(inner->verticalScrollBar()->maximum());
+    QWheelEvent containedWheel = makeWheelEvent(inner->viewport(), QPoint(0, 0), QPoint(0, -120));
+    containedWheel.setAccepted(false);
+    QApplication::sendEvent(inner->viewport(), &containedWheel);
+    QApplication::processEvents();
+
+    EXPECT_TRUE(containedWheel.isAccepted());
+    EXPECT_EQ(inner->verticalScrollBar()->value(), inner->verticalScrollBar()->maximum());
+
+    edit->setScrollChainingEnabled(true);
+    EXPECT_TRUE(edit->isScrollChainingEnabled());
+    EXPECT_EQ(spy.count(), 1);
+    edit->setScrollChainingEnabled(true);
+    EXPECT_EQ(spy.count(), 1);
+
+    QWheelEvent chainedWheel = makeWheelEvent(inner->viewport(), QPoint(0, 0), QPoint(0, -120));
+    chainedWheel.setAccepted(false);
+    QApplication::sendEvent(inner->viewport(), &chainedWheel);
+    QApplication::processEvents();
+
+    EXPECT_FALSE(chainedWheel.isAccepted());
+    EXPECT_EQ(inner->verticalScrollBar()->value(), inner->verticalScrollBar()->maximum());
+}
+
+TEST_F(TextEditTest, WheelPassesThroughWhenContentFits) {
+    TextEdit* edit = new TextEdit(window);
+    edit->setMinVisibleLines(3);
+    edit->setMaxVisibleLines(3);
+    edit->setPlainText("A\nB");
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    ASSERT_NE(inner->verticalScrollBar(), nullptr);
+    ASSERT_EQ(inner->verticalScrollBar()->maximum(), inner->verticalScrollBar()->minimum());
+
+    QWheelEvent wheel = makeWheelEvent(inner->viewport(), QPoint(0, 0), QPoint(0, -120));
+    wheel.setAccepted(false);
+    QApplication::sendEvent(inner->viewport(), &wheel);
+    QApplication::processEvents();
+
+    EXPECT_FALSE(wheel.isAccepted());
 }
 
 TEST_F(TextEditTest, VisualCheck) {

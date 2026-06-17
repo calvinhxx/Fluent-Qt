@@ -58,6 +58,14 @@ public:
     }
 
 protected:
+    void wheelEvent(QWheelEvent* event) override {
+        if (m_owner && handleBoundaryWheel(event))
+            return;
+        QTextEdit::wheelEvent(event);
+        if (m_owner && !m_owner->isScrollChainingEnabled() && hasScrollableRange())
+            event->accept();
+    }
+
     void paintEvent(QPaintEvent* e) override {
         QTextEdit::paintEvent(e);
         // Qt's stock placeholder ignores the rootFrame topMargin, so paint it
@@ -77,6 +85,42 @@ protected:
     }
 
 private:
+    bool hasScrollableRange() const {
+        const QScrollBar* bar = verticalScrollBar();
+        return bar && bar->maximum() > bar->minimum();
+    }
+
+    bool handleBoundaryWheel(QWheelEvent* event) {
+        if (!event)
+            return false;
+        QScrollBar* bar = verticalScrollBar();
+        if (!bar || bar->maximum() <= bar->minimum()) {
+            event->ignore();
+            return true;
+        }
+
+        const qreal scrollPx = !event->pixelDelta().isNull()
+            ? static_cast<qreal>(event->pixelDelta().y())
+            : static_cast<qreal>(event->angleDelta().y());
+        if (qFuzzyIsNull(scrollPx))
+            return false;
+
+        const bool atTop = bar->value() <= bar->minimum();
+        const bool atBottom = bar->value() >= bar->maximum();
+        const bool boundaryTail = (atTop && scrollPx > 0.0) ||
+                                  (atBottom && scrollPx < 0.0);
+        if (!boundaryTail)
+            return false;
+
+        if (m_owner->isScrollChainingEnabled()) {
+            event->ignore();
+            return true;
+        }
+
+        event->accept();
+        return true;
+    }
+
     TextEdit* m_owner = nullptr;
 };
 
@@ -293,8 +337,6 @@ bool TextEdit::eventFilter(QObject* obj, QEvent* event) {
             m_isFocused = true; update();
         } else if (event->type() == QEvent::FocusOut) {
             m_isFocused = false; update();
-        } else if (event->type() == QEvent::Wheel && !m_scrollEnabled) {
-            return true; // No scrolling while content fits within maxVisibleLines. zh_CN: 内容未超过 maxVisibleLines 时禁止滚动。
         }
     }
     return QWidget::eventFilter(obj, event);
@@ -352,6 +394,12 @@ void TextEdit::setMaxVisibleLines(int lines) {
     m_maxVisibleLines = lines;
     updateHeightForContent();
     emit layoutMetricsChanged();
+}
+
+void TextEdit::setScrollChainingEnabled(bool enabled) {
+    if (m_scrollChainingEnabled == enabled) return;
+    m_scrollChainingEnabled = enabled;
+    emit scrollChainingEnabledChanged();
 }
 
 void TextEdit::onThemeUpdated() {
