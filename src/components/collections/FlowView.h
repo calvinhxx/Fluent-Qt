@@ -119,6 +119,12 @@ public:
      * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
      */
     Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    /**
+     * @brief Whether the view shows an elastic overscroll/bounce at the scroll boundary.
+     * Enabled by default; disable for chrome that should stop cleanly at the edge.
+     * zh_CN: 滚动到边界时是否显示弹性回弹。默认开启；不希望回弹的 chrome 可关闭，使其在边界干脆停住。
+     */
+    Q_PROPERTY(bool overscrollEnabled READ isOverscrollEnabled WRITE setOverscrollEnabled NOTIFY overscrollEnabledChanged)
 
     explicit FlowView(QWidget* parent = nullptr);
     ~FlowView() override;
@@ -169,6 +175,9 @@ public:
     bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
     void setScrollChainingEnabled(bool enabled);
 
+    bool isOverscrollEnabled() const { return m_overscrollEnabled; }
+    void setOverscrollEnabled(bool enabled);
+
     int selectedIndex() const;
     QList<int> selectedRows() const;
     void setSelectedIndex(int index);
@@ -199,6 +208,7 @@ signals:
     void viewportHoveredChanged();
     void canReorderItemsChanged();
     void scrollChainingEnabledChanged();
+    void overscrollEnabledChanged();
     void itemClicked(int row);
     void itemReordered(int fromIndex, int toIndex);
 
@@ -283,6 +293,7 @@ private:
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     bool m_scrollChainingEnabled = false;
+    bool m_overscrollEnabled = true;
     qreal m_overscrollY = 0.0;
     QVariantAnimation* m_bounceAnim = nullptr;
     QTimer* m_bounceTimer = nullptr;
