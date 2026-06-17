@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <QApplication>
+#include <QEvent>
 #include <QFrame>
 #include <QFile>
 #include <QGraphicsOpacityEffect>
@@ -8,6 +9,8 @@
 #include <QLabel>
 #include <QLayout>
 #include <QMargins>
+#include <QPoint>
+#include <QSizePolicy>
 #include <QStringList>
 #include <QTest>
 #include <QWidget>
@@ -16,13 +19,14 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
+#include "components/textfields/TextEdit.h"
 #include "model/GalleryComponentCatalog.h"
 #include "model/GalleryContentCatalog.h"
 #include "view/pages/GalleryCategoryPage.h"
 #include "view/widgets/GalleryCodeBlock.h"
 #include "view/pages/GalleryComponentPage.h"
 #include "view/pages/GalleryContentPage.h"
-#include "view/widgets/GalleryEntryCard.h"
+#include "view/widgets/GalleryEntryGrid.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
 #include "view/shell/GalleryWindow.h"
@@ -33,7 +37,7 @@ using fluent::gallery::GalleryCategoryPage;
 using fluent::gallery::GalleryCodeBlock;
 using fluent::gallery::GalleryComponentPage;
 using fluent::gallery::GalleryContentPage;
-using fluent::gallery::GalleryEntryCard;
+using fluent::gallery::GalleryEntryGrid;
 using fluent::gallery::GalleryNavigationViewModel;
 using fluent::gallery::GallerySampleCard;
 using fluent::gallery::GalleryWindow;
@@ -41,6 +45,50 @@ using fluent::gallery::galleryComponentCatalog;
 using fluent::gallery::galleryControlImageResource;
 using fluent::gallery::galleryContentCatalog;
 using fluent::gallery::galleryContentEntry;
+using fluent::textfields::TextEdit;
+
+namespace {
+
+class ResizablePreview final : public QWidget {
+public:
+    explicit ResizablePreview(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+        setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    }
+
+    QSize sizeHint() const override
+    {
+        return QSize(180, m_preferredHeight);
+    }
+
+    void setPreferredHeight(int height)
+    {
+        m_preferredHeight = height;
+        updateGeometry();
+    }
+
+private:
+    int m_preferredHeight = 40;
+};
+
+QRect mappedRectInAncestor(const QWidget* widget, const QWidget* ancestor)
+{
+    return QRect(widget->mapTo(const_cast<QWidget*>(ancestor), QPoint(0, 0)), widget->size());
+}
+
+GallerySampleCard* sampleCardById(GalleryComponentPage* page, const QString& sampleId)
+{
+    if (!page)
+        return nullptr;
+    for (GallerySampleCard* card : page->sampleCards()) {
+        if (card && card->sampleId() == sampleId)
+            return card;
+    }
+    return nullptr;
+}
+
+} // namespace
 
 class GalleryContentPagesTest : public ::testing::Test {
 protected:
@@ -167,7 +215,7 @@ TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledControlImages)
     }
 }
 
-// Task 6.2: category routes build category overview pages with component cards.
+// Task 6.2: category routes build category overview pages with virtualized component grids.
 TEST_F(GalleryContentPagesTest, CategoryRoutesCreateCategoryPages)
 {
     GalleryWindow window;
@@ -190,12 +238,10 @@ TEST_F(GalleryContentPagesTest, CategoryRoutesCreateCategoryPages)
         EXPECT_TRUE(page->componentRouteIds().contains(categoryCase.seededComponentRouteId))
             << categoryCase.routeId.toStdString();
 
-        bool cardForComponent = false;
-        for (auto* card : page->findChildren<GalleryEntryCard*>()) {
-            if (card->targetRouteId() == categoryCase.seededComponentRouteId)
-                cardForComponent = true;
-        }
-        EXPECT_TRUE(cardForComponent) << categoryCase.seededComponentRouteId.toStdString();
+        auto* grid = page->findChild<GalleryEntryGrid*>();
+        ASSERT_NE(grid, nullptr) << categoryCase.routeId.toStdString();
+        EXPECT_EQ(grid->entryCount(), page->componentRouteIds().size())
+            << categoryCase.routeId.toStdString();
     }
 }
 
@@ -245,6 +291,80 @@ TEST_F(GalleryContentPagesTest, SampleCardsHostLivePreviewAndCode)
     }
 }
 
+TEST_F(GalleryContentPagesTest, SampleCardRefreshesWhenPreviewSizeHintChanges)
+{
+    ResizablePreview* preview = nullptr;
+
+    fluent::gallery::GallerySample sample;
+    sample.id = QStringLiteral("dynamic-preview");
+    sample.title = QStringLiteral("Dynamic preview");
+    sample.description = QStringLiteral("Preview content can request a taller card.");
+    sample.createPreview = [&preview](QWidget* parent) {
+        preview = new ResizablePreview(parent);
+        return preview;
+    };
+
+    GallerySampleCard card(sample);
+    card.resize(640, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+
+    auto* previewSurface = card.findChild<QWidget*>(QStringLiteral("gallerySampleCardPreview"));
+    ASSERT_NE(preview, nullptr);
+    ASSERT_NE(previewSurface, nullptr);
+    const int initialPreviewSurfaceHeight = previewSurface->height();
+    const int initialCardHeight = card.height();
+
+    preview->setPreferredHeight(120);
+    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    QApplication::processEvents();
+    QApplication::processEvents();
+
+    EXPECT_GT(previewSurface->height(), initialPreviewSurfaceHeight);
+    EXPECT_GT(card.height(), initialCardHeight);
+}
+
+TEST_F(GalleryContentPagesTest, TextEditSampleReflowsAfterVisibleLineGrowth)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("text-edit")));
+    window.show();
+    QApplication::processEvents();
+
+    auto* page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+    ASSERT_NE(page, nullptr);
+    GallerySampleCard* card = sampleCardById(page, QStringLiteral("text-edit-visible-lines"));
+    ASSERT_NE(card, nullptr);
+    ASSERT_NE(card->previewWidget(), nullptr);
+
+    auto* textEdit = card->previewWidget()->findChild<TextEdit*>();
+    ASSERT_NE(textEdit, nullptr);
+    auto* statusLabel = card->previewWidget()->findChild<fluent::textfields::Label*>(
+        QString(), Qt::FindDirectChildrenOnly);
+    if (!statusLabel || !statusLabel->text().startsWith(QStringLiteral("Lines:"))) {
+        statusLabel = nullptr;
+        for (auto* label : card->previewWidget()->findChildren<fluent::textfields::Label*>()) {
+            if (label->text().startsWith(QStringLiteral("Lines:"))) {
+                statusLabel = label;
+                break;
+            }
+        }
+    }
+    ASSERT_NE(statusLabel, nullptr);
+
+    const int initialCardHeight = card->height();
+    textEdit->setPlainText(QStringLiteral("First line\nSecond line\n\n3123"));
+    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    QApplication::processEvents();
+    QApplication::processEvents();
+
+    EXPECT_GT(card->height(), initialCardHeight);
+    const QRect editRect = mappedRectInAncestor(textEdit, card);
+    const QRect statusRect = mappedRectInAncestor(statusLabel, card);
+    EXPECT_GT(statusRect.top(), editRect.bottom());
+}
+
 // Task 6.4: TreeView and TabView samples produce live hosted preview widgets.
 TEST_F(GalleryContentPagesTest, CollectionAndNavigationSamplesHostLivePreviews)
 {
@@ -277,15 +397,21 @@ TEST_F(GalleryContentPagesTest, ContentPageAndSampleCardRefreshOnThemeChange)
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     page->onThemeUpdated();
     card->onThemeUpdated();
-    // Dark canvas (#202020) is applied to the page surface and dark layer (#2C2C2C) to the card.
-    EXPECT_TRUE(page->styleSheet().contains(QStringLiteral("32, 32, 32")));
-    EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("44, 44, 44")));
+    // The page remains transparent so NavigationView's Mica-backed content frame shows through;
+    // opaque cards still refresh to the dark layer token (#2C2C2C).
+    EXPECT_FALSE(page->autoFillBackground());
+    EXPECT_TRUE(page->styleSheet().contains(QStringLiteral("background: transparent")));
+    ASSERT_NE(page->titleLabel(), nullptr);
+    EXPECT_TRUE(page->titleLabel()->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
+    EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(44, 44, 44, 255)")));
 
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     page->onThemeUpdated();
     card->onThemeUpdated();
-    // Light canvas (#F3F3F3) returns to the page surface.
-    EXPECT_TRUE(page->styleSheet().contains(QStringLiteral("243, 243, 243")));
+    EXPECT_FALSE(page->autoFillBackground());
+    EXPECT_TRUE(page->styleSheet().contains(QStringLiteral("background: transparent")));
+    EXPECT_TRUE(page->titleLabel()->styleSheet().contains(QStringLiteral("rgba(0, 0, 0, 230)")));
+    EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
 }
 
 // The "Source code" block starts collapsed and toggles its code + copy affordance.
