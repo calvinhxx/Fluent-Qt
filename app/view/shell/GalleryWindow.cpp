@@ -695,12 +695,20 @@ void GalleryWindow::updateTitleBarLayout()
     const bool showSearch = m_titleBarChromeVisible && avail >= kTitleBarSearchMinWidth;
     m_searchBox->setVisible(showSearch);
     if (showSearch) {
-        const int searchW = qBound(kTitleBarSearchMinWidth, avail, kTitleBarSearchWidth);
-        // Prefer centered in the whole bar (WinUI feel), but clamp into the free span so the
-        // box never crosses the leading group or the native caption controls.
-        // zh_CN: 优先在整条栏内居中（贴合 WinUI 观感），再夹取进空闲区间，使其不越过前导组或原生标题栏控件。
-        int x = (bar->width() - searchW) / 2;
-        x = qBound(leftBound, x, rightBound - searchW);
+        // Keep a small gap before the caption controls so the box never butts them.
+        // zh_CN: 在窗口按钮前留一点空隙，避免搜索框顶到控件。
+        constexpr int kSearchEdgeGap = 12;
+        const int searchW = qBound(kTitleBarSearchMinWidth, avail - kSearchEdgeGap, kTitleBarSearchWidth);
+        // Center it in the whole bar (WinUI feel) while it fits between the leading and trailing
+        // groups; once the bar is narrow enough that a centered box would be pushed against the
+        // caption controls, left-align it next to the leading group instead — a centered-then-
+        // right-clamped box leaves an ugly gap on its left.
+        // zh_CN: 有空间时在整条栏内居中（贴合 WinUI 观感）；栏一旦窄到居中会被顶向右侧窗口按钮，就改为靠左、
+        // 紧挨前导组——居中后被右夹会在左侧留下难看的空隙。
+        const int centeredX = (bar->width() - searchW) / 2;
+        const int x = (centeredX >= leftBound && centeredX <= rightBound - searchW)
+            ? centeredX
+            : leftBound;
         const int y = (bar->height() - kTitleBarSearchHeight) / 2;
         m_searchBox->setGeometry(x, y, searchW, kTitleBarSearchHeight);
     }
