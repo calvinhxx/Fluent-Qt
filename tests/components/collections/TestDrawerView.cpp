@@ -277,6 +277,7 @@ TEST_F(DrawerViewTest, DefaultPropertiesAndInheritance)
     EXPECT_EQ(drawer.position(), 0.0);
     EXPECT_EQ(drawer.edge(), DrawerView::DrawerEdge::Left);
     EXPECT_GT(drawer.drawerLength(), 0);
+    EXPECT_EQ(drawer.availableMargins(), QMargins());
     EXPECT_TRUE(drawer.isModal());
     EXPECT_TRUE(drawer.isDim());
     EXPECT_TRUE(drawer.isInteractive());
@@ -303,6 +304,7 @@ TEST_F(DrawerViewTest, DuplicatePropertyValuesSuppressSignals)
     QSignalSpy interactiveSpy(&drawer, &DrawerView::interactiveChanged);
     QSignalSpy dragMarginSpy(&drawer, &DrawerView::dragMarginChanged);
     QSignalSpy radiusSpy(&drawer, &DrawerView::outerCornerRadiusChanged);
+    QSignalSpy availableMarginsSpy(&drawer, &DrawerView::availableMarginsChanged);
 
     drawer.setEdge(DrawerView::DrawerEdge::Right);
     drawer.setEdge(DrawerView::DrawerEdge::Right);
@@ -311,6 +313,12 @@ TEST_F(DrawerViewTest, DuplicatePropertyValuesSuppressSignals)
     drawer.setDrawerLength(280);
     drawer.setDrawerLength(280);
     EXPECT_EQ(lengthSpy.count(), 1);
+
+    drawer.setAvailableMargins(QMargins(1, 2, 3, 4));
+    drawer.setAvailableMargins(QMargins(1, 2, 3, 4));
+    drawer.setAvailableMargins(QMargins(-1, -2, -3, -4));
+    drawer.setAvailableMargins(QMargins());
+    EXPECT_EQ(availableMarginsSpy.count(), 2);
 
     drawer.setPosition(0.25);
     drawer.setPosition(0.25);
@@ -408,6 +416,32 @@ TEST_F(DrawerViewTest, EdgeGeometryAndPartialPosition)
     drawer.setPosition(0.5);
     EXPECT_EQ(drawer.panelGeometry(), QRect(-160, 0, 320, 600));
     EXPECT_EQ(drawer.geometry(), drawer.panelGeometry());
+}
+
+TEST_F(DrawerViewTest, AvailableMarginsInsetPanelGeometry)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    DrawerView drawer(&window);
+    drawer.setAnimationEnabled(false);
+    drawer.setModal(false);
+    drawer.setDim(false);
+    drawer.setAvailableMargins(QMargins(0, 42, 0, 0));
+    drawer.setDrawerLength(320);
+    drawer.open();
+    processEvents();
+
+    EXPECT_EQ(drawer.panelGeometry(), QRect(0, 42, 320, 558));
+
+    drawer.setEdge(DrawerView::DrawerEdge::Right);
+    EXPECT_EQ(drawer.panelGeometry(), QRect(480, 42, 320, 558));
+
+    drawer.setDrawerLength(240);
+    drawer.setEdge(DrawerView::DrawerEdge::Top);
+    EXPECT_EQ(drawer.panelGeometry(), QRect(0, 42, 800, 240));
+
+    drawer.setEdge(DrawerView::DrawerEdge::Bottom);
+    EXPECT_EQ(drawer.panelGeometry(), QRect(0, 360, 800, 240));
 }
 
 TEST_F(DrawerViewTest, DrawerLengthClampsToAvailableGeometryAndResizeRecomputes)

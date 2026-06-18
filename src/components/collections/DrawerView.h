@@ -2,6 +2,7 @@
 #define DRAWERVIEW_H
 
 #include <QFlags>
+#include <QMargins>
 #include <QPainterPath>
 #include <QPointer>
 #include <QRect>
@@ -47,6 +48,11 @@ class DrawerView : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 抽屉沿打开方向测量的长度。
      */
     Q_PROPERTY(int drawerLength READ drawerLength WRITE setDrawerLength NOTIFY drawerLengthChanged)
+    /**
+     * @brief Margins removed from the owning window before drawer placement.
+     * zh_CN: 抽屉定位前从所属窗口可用区域中移除的边距。
+     */
+    Q_PROPERTY(QMargins availableMargins READ availableMargins WRITE setAvailableMargins NOTIFY availableMarginsChanged)
     /**
      * @brief Whether the overlay blocks interaction outside itself.
      * zh_CN: 浮层是否阻止其外部交互。
@@ -122,6 +128,9 @@ public:
     int drawerLength() const { return m_drawerLength; }
     void setDrawerLength(int length);
 
+    QMargins availableMargins() const { return m_availableMargins; }
+    void setAvailableMargins(const QMargins& margins);
+
     bool isModal() const { return m_modal; }
     void setModal(bool modal);
 
@@ -162,6 +171,7 @@ signals:
     void edgeChanged(DrawerEdge edge);
     void positionChanged(qreal position);
     void drawerLengthChanged(int length);
+    void availableMarginsChanged(const QMargins& margins);
     void modalChanged(bool modal);
     void dimChanged(bool dim);
     void closePolicyChanged(ClosePolicy policy);
@@ -212,6 +222,7 @@ private:
     void startPositionAnimation(qreal endPosition, TransitionTarget target);
     void stopAnimation();
 
+    QRect availableRect() const;
     int availableAxisLength() const;
     int effectiveDrawerLength() const;
     QRect openPanelRect() const;
@@ -247,6 +258,7 @@ private:
     bool m_isClosing = false;
     qreal m_position = 0.0;
     int m_drawerLength = 320;
+    QMargins m_availableMargins;
     bool m_modal = true;
     bool m_dim = true;
     ClosePolicy m_closePolicy = ClosePolicy(CloseOnPressOutside | CloseOnEscape);
