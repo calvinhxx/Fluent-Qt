@@ -757,6 +757,53 @@ QVector<GallerySample> breadcrumbSamples()
                        group->layout()->addWidget(status);
                        return group;
                    }),
+        makeSample(QStringLiteral("breadcrumb-item-state"),
+                   QStringLiteral("BreadcrumbItem state and data"),
+                   QStringLiteral("Items can carry data and accessible names; disabled segments stay in the trail but do not activate."),
+                   QStringLiteral("QVector<BreadcrumbItem> items{\n"
+                                  "    BreadcrumbItem(\"Home\", \"home\"),\n"
+                                  "    BreadcrumbItem(\"Archive\", \"archive\", false, \"Archive folder\"),\n"
+                                  "    BreadcrumbItem(\"Reports\", \"reports\"),\n"
+                                  "    BreadcrumbItem(\"Current\", \"current\")\n"
+                                  "};\n\n"
+                                  "auto* breadcrumb = new Breadcrumb(this);\n"
+                                  "breadcrumb->setItems(items);\n"
+                                  "connect(breadcrumb, &Breadcrumb::itemActivated,\n"
+                                  "        this, [](int index, const BreadcrumbItem& item) {\n"
+                                  "            const auto routeKey = item.data.toString();\n"
+                                  "            // Disabled items remain visible but never reach this handler.\n"
+                                  "        });"),
+                   [](QWidget* parent) {
+                       auto* group = verticalGroup(parent, 8);
+                       QVector<BreadcrumbItem> items{
+                           BreadcrumbItem(QStringLiteral("Home"), QStringLiteral("home")),
+                           BreadcrumbItem(QStringLiteral("Archive"),
+                                          QStringLiteral("archive"),
+                                          false,
+                                          QStringLiteral("Archive folder")),
+                           BreadcrumbItem(QStringLiteral("Reports"), QStringLiteral("reports")),
+                           BreadcrumbItem(QStringLiteral("Current"), QStringLiteral("current"))
+                       };
+
+                       auto* breadcrumb = new Breadcrumb(group);
+                       breadcrumb->setItems(items);
+                       breadcrumb->setFixedSize(520, 20);
+
+                       auto* status = makeStatusLabel(
+                           group,
+                           QStringLiteral("Archive is disabled; activated item data appears here."));
+                       status->setFluentTypography(Typography::FontRole::Caption);
+                       QObject::connect(breadcrumb, &Breadcrumb::itemActivated,
+                                        status, [status](int index, const BreadcrumbItem& item) {
+                                            status->setText(QStringLiteral("Activated %1, data: %2, index: %3")
+                                                                .arg(item.text, item.data.toString())
+                                                                .arg(index));
+                                        });
+
+                       group->layout()->addWidget(breadcrumb);
+                       group->layout()->addWidget(status);
+                       return group;
+                   }),
         makeSample(QStringLiteral("breadcrumb-auto-truncate"),
                    QStringLiteral("autoTruncateOnItemClick"),
                    QStringLiteral("When enabled, activating an ancestor removes all items after it."),
@@ -765,12 +812,24 @@ QVector<GallerySample> breadcrumbSamples()
                                   "breadcrumb->setItems(fullPath);\n"
                                   "breadcrumb->setAutoTruncateOnItemClick(true);\n\n"
                                   "auto* resetButton = new Button(\"Reset\", this);\n"
+                                  "auto* statusLabel = new Label(\"Items: 5\", this);\n"
+                                  "connect(breadcrumb, &Breadcrumb::itemActivated,\n"
+                                  "        statusLabel, [statusLabel](int index, const BreadcrumbItem& item) {\n"
+                                  "            statusLabel->setText(QString(\"Activated %1 at index %2\")\n"
+                                  "                                     .arg(item.text)\n"
+                                  "                                     .arg(index));\n"
+                                  "        });\n"
                                   "connect(breadcrumb, &Breadcrumb::itemsChanged,\n"
-                                  "        this, [breadcrumb] {\n"
-                                  "            // After clicking an ancestor, itemCount() becomes index + 1.\n"
+                                  "        statusLabel, [breadcrumb, statusLabel] {\n"
+                                  "            statusLabel->setText(QString(\"Items: %1, current: %2\")\n"
+                                  "                                     .arg(breadcrumb->itemCount())\n"
+                                  "                                     .arg(breadcrumb->itemAt(breadcrumb->itemCount() - 1).text));\n"
                                   "        });\n"
                                   "connect(resetButton, &Button::clicked,\n"
-                                  "        breadcrumb, [breadcrumb, fullPath] { breadcrumb->setItems(fullPath); });"),
+                                  "        breadcrumb, [breadcrumb, fullPath, statusLabel] {\n"
+                                  "            breadcrumb->setItems(fullPath);\n"
+                                  "            statusLabel->setText(\"Items: 5\");\n"
+                                  "        });"),
                    [](QWidget* parent) {
                        auto* group = verticalGroup(parent, 10);
                        const QStringList fullPath{
@@ -1391,6 +1450,90 @@ QVector<GallerySample> pivotSamples()
                        group->layout()->addWidget(status);
                        return group;
                    }),
+        makeSample(QStringLiteral("pivot-item-state"),
+                   QStringLiteral("PivotItem state and metadata"),
+                   QStringLiteral("Item metadata can be updated independently from selection; disabled items stay visible until re-enabled."),
+                   QStringLiteral("auto* pivot = new Pivot(this);\n"
+                                  "pivot->addItem(PivotItem(\"Inbox\", Typography::Icons::Mail,\n"
+                                  "                         true, \"inbox\", \"Inbox view\"));\n"
+                                  "pivot->addItem(PivotItem(\"Flagged\", Typography::Icons::Flag,\n"
+                                  "                         true, \"flagged\", \"Flagged mail\"));\n"
+                                  "pivot->addItem(PivotItem(\"Locked\", Typography::Icons::Lock,\n"
+                                  "                         false, \"locked\", \"Locked view\"));\n"
+                                  "pivot->setSelectedIndex(0);\n\n"
+                                  "connect(renameButton, &Button::clicked,\n"
+                                  "        pivot, [pivot] {\n"
+                                  "            pivot->setItemHeader(1, \"Priority\");\n"
+                                  "            pivot->setItemIconGlyph(1, Typography::Icons::ImportantBadge12);\n"
+                                  "            pivot->setItemData(1, \"priority\");\n"
+                                  "        });\n"
+                                  "connect(unlockButton, &Button::clicked,\n"
+                                  "        pivot, [pivot] { pivot->setItemEnabled(2, true); });\n"
+                                  "connect(pivot, &Pivot::currentChanged,\n"
+                                  "        this, [pivot](int index) {\n"
+                                  "            const auto routeKey = pivot->itemAt(index).data.toString();\n"
+                                  "        });"),
+                   [](QWidget* parent) {
+                       auto* group = verticalGroup(parent, 8);
+                       auto* pivot = new Pivot(group);
+                       pivot->setFixedSize(540, 44);
+                       pivot->addItem(PivotItem(QStringLiteral("Inbox"),
+                                                Typography::Icons::Mail,
+                                                true,
+                                                QStringLiteral("inbox"),
+                                                QStringLiteral("Inbox view")));
+                       pivot->addItem(PivotItem(QStringLiteral("Flagged"),
+                                                Typography::Icons::Flag,
+                                                true,
+                                                QStringLiteral("flagged"),
+                                                QStringLiteral("Flagged mail")));
+                       pivot->addItem(PivotItem(QStringLiteral("Locked"),
+                                                Typography::Icons::Lock,
+                                                false,
+                                                QStringLiteral("locked"),
+                                                QStringLiteral("Locked view")));
+                       pivot->setSelectedIndex(0);
+
+                       auto* controls = horizontalGroup(group, 8);
+                       auto* renameButton = makeControlButton(controls, QStringLiteral("Rename Flagged"));
+                       auto* unlockButton = makeControlButton(controls, QStringLiteral("Unlock Locked"));
+                       controls->layout()->addWidget(renameButton);
+                       controls->layout()->addWidget(unlockButton);
+
+                       auto* status = makeStatusLabel(group, QStringLiteral("Selected Inbox, data: inbox"));
+                       status->setFluentTypography(Typography::FontRole::Caption);
+                       auto updateStatus = [pivot, status](const QString& prefix = QString()) {
+                           const int index = pivot->selectedIndex();
+                           if (index < 0)
+                               return;
+                           const PivotItem item = pivot->itemAt(index);
+                           const QString state = QStringLiteral("Selected %1, data: %2")
+                                                     .arg(item.header, item.data.toString());
+                           status->setText(prefix.isEmpty() ? state : QStringLiteral("%1; %2").arg(prefix, state));
+                       };
+
+                       QObject::connect(renameButton, &Button::clicked,
+                                        pivot, [pivot, renameButton, updateStatus]() {
+                                            pivot->setItemHeader(1, QStringLiteral("Priority"));
+                                            pivot->setItemIconGlyph(1, Typography::Icons::ImportantBadge12);
+                                            pivot->setItemData(1, QStringLiteral("priority"));
+                                            renameButton->setEnabled(false);
+                                            updateStatus(QStringLiteral("Updated item 2"));
+                                        });
+                       QObject::connect(unlockButton, &Button::clicked,
+                                        pivot, [pivot, unlockButton, updateStatus]() {
+                                            pivot->setItemEnabled(2, true);
+                                            unlockButton->setEnabled(false);
+                                            updateStatus(QStringLiteral("Locked is now enabled"));
+                                        });
+                       QObject::connect(pivot, &Pivot::currentChanged,
+                                        status, [updateStatus](int) { updateStatus(); });
+
+                       group->layout()->addWidget(pivot);
+                       group->layout()->addWidget(controls);
+                       group->layout()->addWidget(status);
+                       return group;
+                   }),
         makeSample(QStringLiteral("pivot-overflow-behavior"),
                    QStringLiteral("OverflowBehavior"),
                    QStringLiteral("ScrollButtons pages through hidden headers with arrows; MoreButton collapses hidden headers behind the ... button and emits their indexes."),
@@ -1810,6 +1953,94 @@ QVector<GallerySample> tabViewSamples()
                                                 status->setText(QStringLiteral("Selected %1").arg(tabView->tabAt(index).text));
                                         });
 
+                       container->layout()->addWidget(tabView);
+                       container->layout()->addWidget(status);
+                       return container;
+                   }),
+        makeSample(QStringLiteral("tab-view-keyboard-accelerators"),
+                   QStringLiteral("keyboardAcceleratorsEnabled"),
+                   QStringLiteral("TabView can own keyboard tab actions such as add, close, and index selection, and those accelerators can be disabled."),
+                   QStringLiteral("auto* tabs = new TabView(this);\n"
+                                  "tabs->setAddTabButtonVisible(true);\n"
+                                  "tabs->setTabsClosable(true);\n"
+                                  "tabs->setKeyboardAcceleratorsEnabled(true);\n"
+                                  "tabs->addTab(TabViewItem(\"Shortcut A\", Typography::Icons::Document));\n"
+                                  "tabs->addTab(TabViewItem(\"Shortcut B\", Typography::Icons::Document));\n"
+                                  "tabs->addTab(TabViewItem(\"Shortcut C\", Typography::Icons::Document));\n\n"
+                                  "connect(tabs, &TabView::addTabRequested,\n"
+                                  "        tabs, [tabs] {\n"
+                                  "            const int index = tabs->addTab(TabViewItem(\"Added\",\n"
+                                  "                                                     Typography::Icons::Document));\n"
+                                  "            tabs->setSelectedIndex(index);\n"
+                                  "        });\n"
+                                  "connect(tabs, &TabView::tabCloseRequested,\n"
+                                  "        tabs, [tabs](int index) { tabs->closeTab(index); });\n"
+                                  "connect(disableButton, &Button::clicked,\n"
+                                  "        tabs, [tabs] { tabs->setKeyboardAcceleratorsEnabled(false); });\n"
+                                  "connect(enableButton, &Button::clicked,\n"
+                                  "        tabs, [tabs] { tabs->setKeyboardAcceleratorsEnabled(true); });"),
+                   [](QWidget* parent) {
+                       auto* container = verticalGroup(parent, 8);
+                       auto* controls = horizontalGroup(container, 8);
+                       auto* enableButton = makeControlButton(controls, QStringLiteral("Enable"));
+                       auto* disableButton = makeControlButton(controls, QStringLiteral("Disable"));
+                       controls->layout()->addWidget(enableButton);
+                       controls->layout()->addWidget(disableButton);
+
+                       auto* tabView = new TabView(container);
+                       tabView->setFixedSize(560, 40);
+                       tabView->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+                       tabView->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
+                       tabView->setAddTabButtonVisible(true);
+                       tabView->setTabsClosable(true);
+                       tabView->setKeyboardAcceleratorsEnabled(true);
+                       tabView->addTab(TabViewItem(QStringLiteral("Shortcut A"), Typography::Icons::Document));
+                       tabView->addTab(TabViewItem(QStringLiteral("Shortcut B"), Typography::Icons::Document));
+                       tabView->addTab(TabViewItem(QStringLiteral("Shortcut C"), Typography::Icons::Document));
+                       tabView->setSelectedIndex(0);
+
+                       auto* status = makeStatusLabel(container, QStringLiteral("Accelerators enabled, tabs: 3, selected: Shortcut A"));
+                       status->setFluentTypography(Typography::FontRole::Caption);
+                       auto updateStatus = [tabView, status, enableButton, disableButton]() {
+                           const int index = tabView->selectedIndex();
+                           const QString selected = index >= 0 ? tabView->tabAt(index).text : QStringLiteral("none");
+                           const bool enabled = tabView->keyboardAcceleratorsEnabled();
+                           enableButton->setFluentStyle(enabled ? Button::Standard : Button::Accent);
+                           disableButton->setFluentStyle(enabled ? Button::Accent : Button::Standard);
+                           status->setText(QStringLiteral("Accelerators %1, tabs: %2, selected: %3")
+                                               .arg(enabled ? QStringLiteral("enabled") : QStringLiteral("disabled"))
+                                               .arg(tabView->tabCount())
+                                               .arg(selected));
+                       };
+
+                       QObject::connect(tabView, &TabView::addTabRequested,
+                                        tabView, [tabView, updateStatus]() {
+                                            static int shortcutNumber = 0;
+                                            const QString title = QStringLiteral("Added %1").arg(++shortcutNumber);
+                                            const int index = tabView->addTab(TabViewItem(title, Typography::Icons::Document));
+                                            tabView->setSelectedIndex(index);
+                                            updateStatus();
+                                        });
+                       QObject::connect(tabView, &TabView::tabCloseRequested,
+                                        tabView, [tabView, updateStatus](int index) {
+                                            tabView->closeTab(index);
+                                            updateStatus();
+                                        });
+                       QObject::connect(tabView, &TabView::currentChanged,
+                                        status, [updateStatus](int) { updateStatus(); });
+                       QObject::connect(enableButton, &Button::clicked,
+                                        tabView, [tabView, updateStatus]() {
+                                            tabView->setKeyboardAcceleratorsEnabled(true);
+                                            updateStatus();
+                                        });
+                       QObject::connect(disableButton, &Button::clicked,
+                                        tabView, [tabView, updateStatus]() {
+                                            tabView->setKeyboardAcceleratorsEnabled(false);
+                                            updateStatus();
+                                        });
+                       updateStatus();
+
+                       container->layout()->addWidget(controls);
                        container->layout()->addWidget(tabView);
                        container->layout()->addWidget(status);
                        return container;
