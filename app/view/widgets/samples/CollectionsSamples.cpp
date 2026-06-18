@@ -37,6 +37,7 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "CollectionSampleDelegates.h"
+#include "view/shell/GalleryWindowMetrics.h"
 #include "SampleBuilders.h"
 
 namespace fluent::gallery {
@@ -257,11 +258,7 @@ Label* makeStatusLabel(QWidget* parent, const QString& text)
 
 QMargins drawerTitleBarAvoidanceMargins()
 {
-#ifdef Q_OS_MAC
-    return QMargins(0, 42, 0, 0);
-#else
-    return QMargins();
-#endif
+    return metrics::Drawer::titleBarAvoidanceMargins();
 }
 
 /**

@@ -26,6 +26,7 @@
 #include "GalleryContentPresenter.h"
 #include "GalleryNavigationPane.h"
 #include "GallerySplashScreen.h"
+#include "GalleryWindowMetrics.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/PlaceholderPage.h"
 #include "view/pages/SettingsPage.h"
@@ -34,19 +35,10 @@ namespace fluent::gallery {
 namespace {
 
 using Edge = fluent::AnchorLayout::Edge;
+using AppWindowMetrics = metrics::AppWindow;
+using NavigationMetrics = metrics::Navigation;
+using TitleBarMetrics = metrics::TitleBar;
 
-constexpr int kTitleBarHeight = 42;  // Taller than the 36 default; 42 reads better than WinUI's 48 on macOS.
-constexpr int kTitleBarHorizontalMargin = 8;
-constexpr int kTitleBarItemGap = 8;
-constexpr int kTitleBarButtonSize = 24;
-constexpr int kTitleBarIconSize = 18;
-constexpr int kTitleBarButtonIconSize = 12;
-constexpr int kTitleBarTitleWidth = 144;
-constexpr int kTitleBarTitleHeight = 24;
-constexpr int kTitleBarSearchWidth = 360;
-constexpr int kTitleBarSearchMinWidth = 180;
-constexpr int kTitleBarSearchHeight = 28;
-constexpr int kTitleBarToolTipGap = 4;
 constexpr char kTitleBarButtonPressAnimationName[] = "galleryTitleBarButtonPressAnimation";
 constexpr qreal kTitleBarButtonPressScale = 0.86;  // WinUI-like press depth for icon buttons. zh_CN: 仿 WinUI 的图标按钮按下缩放深度。
 
@@ -101,10 +93,8 @@ QStringList rankedSearchTitles(const QStringList& titles, const QString& query)
 int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
 {
     if (!bar)
-        return kTitleBarHorizontalMargin;
-    return bar->systemReservedLeadingWidth() > 0
-        ? bar->systemReservedLeadingWidth() + kTitleBarHorizontalMargin
-        : kTitleBarHorizontalMargin;
+        return TitleBarMetrics::HorizontalMargin;
+    return TitleBarMetrics::leadingOffset(bar->systemReservedLeadingWidth());
 }
 
 // WinUI-style click feedback: the glyph quickly dips to ~0.86 scale and springs back,
@@ -149,7 +139,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     // Allow narrow windows so the adaptive nav can collapse to its compact / minimal
     // modes; a 980 floor would pin the layout above the 640 breakpoint.
     // zh_CN: 允许窄窗口，让自适应导航能进入紧凑/最小模式；980 的下限会把布局钉在 640 断点之上。
-    setMinimumSize(460, 500);
+    setMinimumSize(AppWindowMetrics::MinWidth, AppWindowMetrics::MinHeight);
 
     createTitleBarContent();
     buildNavigationShell();
@@ -399,8 +389,10 @@ void GalleryWindow::buildNavigationShell()
     // zh_CN: Auto 让窗格随窗口宽度自适应（对齐 WinUI Gallery）：>=1008 展开带标签，>=640 紧凑图标栏，
     // 更窄则完全隐藏（LeftMinimal），收进标题栏菜单按钮后。
     m_navigationView->setDisplayMode(fluent::navigation::NavigationView::DisplayMode::Auto);
-    m_navigationView->setExpandedPaneWidth(240);  // Slightly tighter than 256 so content sits a bit closer to the menu items. zh_CN: 比 256 略紧凑，内容稍贴近菜单项。
-    m_navigationView->setCompactPaneWidth(48);
+    m_navigationView->setCompactModeThresholdWidth(NavigationMetrics::CompactThresholdWidth);
+    m_navigationView->setExpandedModeThresholdWidth(NavigationMetrics::ExpandedThresholdWidth);
+    m_navigationView->setExpandedPaneWidth(NavigationMetrics::ExpandedPaneWidth);
+    m_navigationView->setCompactPaneWidth(NavigationMetrics::CompactPaneWidth);
     m_navigationView->setAnimationEnabled(true);
     m_navigationCompactReleaseTimer = new QTimer(this);
     m_navigationCompactReleaseTimer->setSingleShot(true);
@@ -495,7 +487,7 @@ void GalleryWindow::createTitleBarContent()
     if (!layout)
         return;
 
-    bar->setTitleBarHeight(kTitleBarHeight);
+    bar->setTitleBarHeight(TitleBarMetrics::Height);
 
     m_backButton = new fluent::basicinput::Button(bar);
     auto* backButton = m_backButton;
@@ -504,11 +496,11 @@ void GalleryWindow::createTitleBarContent()
     backButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     backButton->setFluentSize(fluent::basicinput::Button::Small);
     backButton->setFont(backButton->themeFont(Typography::FontRole::Caption).toQFont());
-    backButton->setIconGlyph(Typography::Icons::TitleBarBack, kTitleBarButtonIconSize);
+    backButton->setIconGlyph(Typography::Icons::TitleBarBack, TitleBarMetrics::ButtonIconSize);
     // Height is fixed; the width is driven by the reveal animation (0 when there is no
-    // history, kTitleBarButtonSize once back navigation is available).
-    // zh_CN: 高度固定，宽度由展开动画驱动（无历史时为 0，可后退时为 kTitleBarButtonSize）。
-    backButton->setFixedHeight(kTitleBarButtonSize);
+    // history, TitleBarMetrics::ButtonSize once back navigation is available).
+    // zh_CN: 高度固定，宽度由展开动画驱动（无历史时为 0，可后退时为 TitleBarMetrics::ButtonSize）。
+    backButton->setFixedHeight(TitleBarMetrics::ButtonSize);
     backButton->setFocusPolicy(Qt::NoFocus);
     backButton->setToolTip(QStringLiteral("Back"));
     backButton->setEnabled(false);
@@ -528,8 +520,8 @@ void GalleryWindow::createTitleBarContent()
     menuButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     menuButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     menuButton->setFluentSize(fluent::basicinput::Button::Small);
-    menuButton->setIconGlyph(Typography::Icons::GlobalNav, kTitleBarButtonIconSize);
-    menuButton->setFixedSize(kTitleBarButtonSize, kTitleBarButtonSize);
+    menuButton->setIconGlyph(Typography::Icons::GlobalNav, TitleBarMetrics::ButtonIconSize);
+    menuButton->setFixedSize(TitleBarMetrics::ButtonSize, TitleBarMetrics::ButtonSize);
     menuButton->setFocusPolicy(Qt::NoFocus);
     menuButton->setToolTip(QStringLiteral("Toggle navigation pane"));
     menuButton->setEnabled(false);
@@ -543,15 +535,15 @@ void GalleryWindow::createTitleBarContent()
     m_titleBarAppIcon = appIcon;
     appIcon->setObjectName(QStringLiteral("GalleryTitleBar.AppIcon"));
     appIcon->setAlignment(Qt::AlignCenter);
-    appIcon->setFixedSize(kTitleBarIconSize, kTitleBarIconSize);
-    appIcon->setPixmap(appicon::pixmap(kTitleBarIconSize, devicePixelRatioF()));
+    appIcon->setFixedSize(TitleBarMetrics::AppIconSize, TitleBarMetrics::AppIconSize);
+    appIcon->setPixmap(appicon::pixmap(TitleBarMetrics::AppIconSize, devicePixelRatioF()));
 
     auto* title = new fluent::textfields::Label(QStringLiteral("WinUI 3 Gallery"), bar);
     m_titleBarTitle = title;
     title->setObjectName(QStringLiteral("GalleryTitleBar.Title"));
     title->setFluentTypography(Typography::FontRole::Caption);
     title->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    title->setFixedSize(kTitleBarTitleWidth, kTitleBarTitleHeight);
+    title->setFixedSize(TitleBarMetrics::TitleWidth, TitleBarMetrics::TitleHeight);
 
     fluent::AnchorLayout::Anchors backAnchors;
     backAnchors.left = {bar, Edge::Left, titleBarLeadingOffset(bar)};
@@ -561,23 +553,23 @@ void GalleryWindow::createTitleBarContent()
     connect(bar, &fluent::windowing::TitleBar::systemReservedLeadingWidthChanged,
             backButton, [backButton, layout](int newWidth) {
                 backButton->anchors()->left.offset = newWidth > 0
-                    ? newWidth + kTitleBarHorizontalMargin
-                    : kTitleBarHorizontalMargin;
+                    ? TitleBarMetrics::leadingOffset(newWidth)
+                    : TitleBarMetrics::HorizontalMargin;
                 layout->invalidate();
             });
 
     fluent::AnchorLayout::Anchors menuAnchors;
-    menuAnchors.left = {backButton, Edge::Right, kTitleBarItemGap};
+    menuAnchors.left = {backButton, Edge::Right, TitleBarMetrics::ItemGap};
     menuAnchors.verticalCenter = {bar, Edge::VCenter, 0};
     layout->addAnchoredWidget(menuButton, menuAnchors);
 
     fluent::AnchorLayout::Anchors appIconAnchors;
-    appIconAnchors.left = {menuButton, Edge::Right, kTitleBarItemGap};
+    appIconAnchors.left = {menuButton, Edge::Right, TitleBarMetrics::ItemGap};
     appIconAnchors.verticalCenter = {bar, Edge::VCenter, 0};
     layout->addAnchoredWidget(appIcon, appIconAnchors);
 
     fluent::AnchorLayout::Anchors titleAnchors;
-    titleAnchors.left = {appIcon, Edge::Right, kTitleBarItemGap};
+    titleAnchors.left = {appIcon, Edge::Right, TitleBarMetrics::ItemGap};
     titleAnchors.verticalCenter = {bar, Edge::VCenter, 0};
     layout->addAnchoredWidget(title, titleAnchors);
 
@@ -594,13 +586,13 @@ void GalleryWindow::createTitleBarContent()
     }
     searchTitles.sort(Qt::CaseInsensitive);
     searchBox->setSuggestions(searchTitles);
-    searchBox->setInputHeight(kTitleBarSearchHeight);
-    searchBox->setQueryButtonSize(24);
-    searchBox->setClearButtonSize(24);
+    searchBox->setInputHeight(TitleBarMetrics::SearchHeight);
+    searchBox->setQueryButtonSize(TitleBarMetrics::ButtonSize);
+    searchBox->setClearButtonSize(TitleBarMetrics::ButtonSize);
     // Height is fixed; width is driven by updateTitleBarLayout() so the box can shrink to
     // fit the free span between the leading group and the native caption controls.
     // zh_CN: 高度固定，宽度由 updateTitleBarLayout() 驱动，使其能收缩以适配前导组与原生标题栏控件之间的空闲区间。
-    searchBox->setFixedHeight(kTitleBarSearchHeight);
+    searchBox->setFixedHeight(TitleBarMetrics::SearchHeight);
     // AutoSuggestBox leaves filtering to the owner (WinUI semantics), so narrow
     // the suggestion list with token-AND matching and prefix-first ranking.
     // zh_CN: AutoSuggestBox 把过滤交给使用方（WinUI 语义），按词元 AND 匹配并前缀优先排序。
@@ -636,9 +628,9 @@ void GalleryWindow::createTitleBarContent()
     updateTitleBarLayout();
 
     LOG_TRACE(QStringLiteral("GalleryWindow titleBarContent built searchWidth=%1 searchHeight=%2 buttonSize=%3")
-                  .arg(kTitleBarSearchWidth)
-                  .arg(kTitleBarSearchHeight)
-                  .arg(kTitleBarButtonSize));
+                  .arg(TitleBarMetrics::SearchMaxWidth)
+                  .arg(TitleBarMetrics::SearchHeight)
+                  .arg(TitleBarMetrics::ButtonSize));
 }
 
 bool GalleryWindow::eventFilter(QObject* watched, QEvent* event)
@@ -700,38 +692,26 @@ void GalleryWindow::updateTitleBarLayout()
     // proportional to its reveal progress, so the search box tracks the collapse/expand smoothly.
     // zh_CN: 左边界 = 最后一个可见前导控件的右缘 + 间隙，按固定度量推导，不依赖布局时序。返回按钮按其展开
     // 进度占位，故搜索框能随收展平滑跟随。
-    const int backContribution =
-        qRound(m_backButtonReveal * (kTitleBarButtonSize + kTitleBarItemGap));
-    int leadingRight = titleBarLeadingOffset(bar)
-                       + backContribution                          // back + its trailing gap, animated
-                       + kTitleBarButtonSize;                      // menu
-    if (showTitle) {
-        leadingRight += kTitleBarItemGap + kTitleBarIconSize       // app icon
-                        + kTitleBarItemGap + kTitleBarTitleWidth;  // title
-    }
-    const int leftBound = leadingRight + kTitleBarItemGap;
-    const int rightBound = bar->width() - bar->systemReservedTrailingWidth() - kTitleBarHorizontalMargin;
-    const int avail = rightBound - leftBound;
+    const int leftBound = TitleBarMetrics::searchLeftBound(bar->systemReservedLeadingWidth(),
+                                                           showTitle,
+                                                           m_backButtonReveal);
+    const int rightBound = TitleBarMetrics::searchRightBound(bar->width(),
+                                                             bar->systemReservedTrailingWidth());
+    const int avail = TitleBarMetrics::searchAvailableWidth(leftBound, rightBound);
 
-    const bool showSearch = m_titleBarChromeVisible && avail >= kTitleBarSearchMinWidth;
+    const bool showSearch = m_titleBarChromeVisible && TitleBarMetrics::canShowSearch(avail);
     m_searchBox->setVisible(showSearch);
     if (showSearch) {
-        // Keep a small gap before the caption controls so the box never butts them.
-        // zh_CN: 在窗口按钮前留一点空隙，避免搜索框顶到控件。
-        constexpr int kSearchEdgeGap = 12;
-        const int searchW = qBound(kTitleBarSearchMinWidth, avail - kSearchEdgeGap, kTitleBarSearchWidth);
+        const int searchW = TitleBarMetrics::searchWidth(avail);
         // Center it in the whole bar (WinUI feel) while it fits between the leading and trailing
         // groups; once the bar is narrow enough that a centered box would be pushed against the
         // caption controls, left-align it next to the leading group instead — a centered-then-
         // right-clamped box leaves an ugly gap on its left.
         // zh_CN: 有空间时在整条栏内居中（贴合 WinUI 观感）；栏一旦窄到居中会被顶向右侧窗口按钮，就改为靠左、
         // 紧挨前导组——居中后被右夹会在左侧留下难看的空隙。
-        const int centeredX = (bar->width() - searchW) / 2;
-        const int x = (centeredX >= leftBound && centeredX <= rightBound - searchW)
-            ? centeredX
-            : leftBound;
-        const int y = (bar->height() - kTitleBarSearchHeight) / 2;
-        m_searchBox->setGeometry(x, y, searchW, kTitleBarSearchHeight);
+        const int x = TitleBarMetrics::searchX(bar->width(), searchW, leftBound, rightBound);
+        const int y = (bar->height() - TitleBarMetrics::SearchHeight) / 2;
+        m_searchBox->setGeometry(x, y, searchW, TitleBarMetrics::SearchHeight);
     }
 
     // The search box lives outside the AnchorLayout and title/icon visibility just changed —
@@ -761,7 +741,7 @@ void GalleryWindow::showTitleBarToolTip(fluent::basicinput::Button* button)
     const int shadow = m_titleBarToolTip->shadowMargin();
     const QPoint anchor = button->mapToGlobal(QPoint(button->width() / 2, button->height()));
     const int x = anchor.x() - m_titleBarToolTip->width() / 2;
-    const int y = anchor.y() + kTitleBarToolTipGap - shadow;
+    const int y = anchor.y() + TitleBarMetrics::ToolTipGap - shadow;
     m_titleBarToolTip->move(x, y);
     m_titleBarToolTip->show();
     m_titleBarToolTip->raise();
@@ -876,11 +856,11 @@ void GalleryWindow::applyBackButtonReveal(qreal reveal)
 {
     m_backButtonReveal = reveal;
     if (m_backButton) {
-        m_backButton->setFixedWidth(qRound(reveal * kTitleBarButtonSize));
+        m_backButton->setFixedWidth(qRound(reveal * TitleBarMetrics::ButtonSize));
         m_backButton->setContentOpacity(reveal);
     }
     if (m_menuButton && m_menuButton->anchors())
-        m_menuButton->anchors()->left.offset = qRound(reveal * kTitleBarItemGap);
+        m_menuButton->anchors()->left.offset = qRound(reveal * TitleBarMetrics::ItemGap);
     if (auto* barLayout = titleBar() ? titleBar()->layout() : nullptr)
         barLayout->invalidate();
     updateTitleBarLayout();
