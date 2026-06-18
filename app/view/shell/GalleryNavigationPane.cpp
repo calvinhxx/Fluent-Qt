@@ -2,6 +2,8 @@
 
 #include <cmath>
 #include <QAbstractItemView>
+#include <QPainter>
+#include <QPaintEvent>
 #include <QPropertyAnimation>
 #include <QStandardItem>
 #include <QStandardItemModel>
@@ -20,6 +22,67 @@
 #include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {
+
+namespace {
+
+// A 1px footer separator that paints itself with CompositionMode_Source, so its semi-transparent
+// stroke REPLACES the backing store each frame instead of compositing over it. Under a translucent
+// top-level (macOS vibrancy) the backing isn't auto-cleared, so a plain translucent-background
+// QWidget would stack alpha on every repaint and darken toward black as the user interacts.
+// zh_CN: 1px 页脚分隔线，用 CompositionMode_Source 自绘，使其半透明描边每帧「替换」后备缓冲而非在其上叠加。
+// 半透明顶层（macOS vibrancy）下后备缓冲不会自动清除，普通半透明背景的 QWidget 会逐帧叠加 alpha，随交互发黑。
+class FooterDividerLine : public QWidget {
+public:
+    explicit FooterDividerLine(QWidget* parent)
+        : QWidget(parent) {
+        // Intentionally no WA_TranslucentBackground: on macOS it promotes the line to its own
+        // layer that, before the window's vibrancy composites at startup, shows the tint at full
+        // strength (a bright/white line). As a plain child it paints into the shared backing and
+        // composites over the same vibrancy as the rest of the pane.
+        // zh_CN: 故意不设 WA_TranslucentBackground：macOS 上它会把线提升为独立图层，在启动时窗口 vibrancy
+        // 合成之前，该图层会显示满强度的 tint（亮/白线）。作为普通子控件，它绘入共享后备缓冲，与窗格其余部分
+        // 叠加在同一层 vibrancy 上。
+        setAttribute(Qt::WA_TransparentForMouseEvents, true);
+    }
+
+    void setLine(const QColor& color, int inset) {
+        if (m_color == color && m_inset == inset)
+            return;
+        m_color = color;
+        m_inset = qMax(0, inset);
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter painter(this);
+        // Under a translucent top-level the backing store isn't auto-cleared on macOS, so a
+        // translucent stroke would stack alpha every repaint and darken toward black; erase first
+        // with Source (replace). On an opaque top-level Qt clears the (translucent) widget for us —
+        // and a Source fill there would write RGBA(0,0,0,0) that renders black — so use the default
+        // SourceOver over the already-cleared backing.
+        // zh_CN: 半透明顶层下 macOS 后备缓冲不会自动清除，半透明描边会逐帧叠加 alpha、最终发黑，故先用 Source
+        //（替换）擦除。不透明顶层下 Qt 会替我们清除（半透明）控件——此时 Source 会写入 RGBA(0,0,0,0) 渲染成黑，
+        // 故改用默认的 SourceOver 在已清除的后备缓冲上绘制。
+        const bool translucent = window() && window()->testAttribute(Qt::WA_TranslucentBackground);
+        if (translucent) {
+            painter.setCompositionMode(QPainter::CompositionMode_Source);
+            painter.fillRect(rect(), Qt::transparent);
+        }
+        const QRect line = rect().adjusted(m_inset, 0, -m_inset, 0);
+        if (line.width() > 0 && m_color.alpha() > 0) {
+            painter.setCompositionMode(translucent ? QPainter::CompositionMode_Source
+                                                   : QPainter::CompositionMode_SourceOver);
+            painter.fillRect(line, m_color);
+        }
+    }
+
+private:
+    QColor m_color;
+    int m_inset = 0;
+};
+
+} // namespace
 
 GalleryNavigationPane::GalleryNavigationPane(const QVector<GalleryNavigationItem>& items, QWidget* parent)
     : QWidget(parent)
@@ -159,7 +222,7 @@ void GalleryNavigationPane::rebuild()
     outerLayout->setSpacing(0);
 
     if (isFooterOnly()) {
-        m_footerDivider = new QWidget(this);
+        m_footerDivider = new FooterDividerLine(this);
         m_footerDivider->setObjectName(QStringLiteral("galleryFooterNavigationDivider"));
         m_footerDivider->setFixedHeight(1);
         m_footerDivider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -317,10 +380,21 @@ void GalleryNavigationPane::updateDividerPalette()
     if (!m_footerDivider)
         return;
 
+    // Inset the separator so it reads as a refined, centered hairline rather than a hard
+    // edge-to-edge bar — the latter looks crude against the clean Mica/vibrancy chrome (and an
+    // inset rule is the native macOS convention). The stroke is softened to ~40% alpha so it
+    // whispers the separation instead of drawing a hard gray line over the translucent pane.
+    // It's drawn by FooterDividerLine (CompositionMode_Source) so the translucent stroke doesn't
+    // accumulate/darken across repaints under the translucent backdrop.
+    // zh_CN: 让分隔线内缩，呈现精致、居中的细线，而非生硬的整宽横条（在干净的 Mica/vibrancy chrome 上更协调，
+    // 内缩也符合 macOS 原生习惯）。描边淡化到约 40% alpha，在半透明窗格上轻声示意分隔。由 FooterDividerLine
+    //（CompositionMode_Source）绘制，故半透明描边不会在半透明背景下逐帧叠加发黑。
     const auto colors = themeColors();
-    m_footerDivider->setStyleSheet(QStringLiteral(
-                                       "#galleryFooterNavigationDivider { background: %1; }")
-                                       .arg(cssColor(colors.strokeDivider)));
+    QColor divider = colors.strokeDivider;
+    divider.setAlphaF(divider.alphaF() * 0.4);
+    // m_footerDivider is always a FooterDividerLine (created in the footer-only branch) and is
+    // non-null here (guarded above). zh_CN: m_footerDivider 必为 FooterDividerLine（页脚分支创建）且此处非空。
+    static_cast<FooterDividerLine*>(m_footerDivider)->setLine(divider, 16);
 }
 
 void GalleryNavigationPane::startCompactVisualTransition(bool compact)
