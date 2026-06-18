@@ -125,6 +125,43 @@ void sendPoint(id receiver, const char* name, CGPoint value) {
     reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name), value);
 }
 
+void sendCGRect(id receiver, const char* name, CGRect value) {
+    using Send = void (*)(id, SEL, CGRect);
+    reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name), value);
+}
+
+id sendClassIdReturnsId(const char* className, const char* name, id value) {
+    Class cls = objc_getClass(className);
+    if (!cls)
+        return nil;
+
+    using Send = id (*)(Class, SEL, id);
+    return reinterpret_cast<Send>(objc_msgSend)(cls, selector(name), value);
+}
+
+id allocInitWithFrame(const char* className, CGRect frame) {
+    Class cls = objc_getClass(className);
+    if (!cls)
+        return nil;
+
+    using Alloc = id (*)(Class, SEL);
+    id object = reinterpret_cast<Alloc>(objc_msgSend)(cls, selector("alloc"));
+    if (!object)
+        return nil;
+
+    using InitFrame = id (*)(id, SEL, CGRect);
+    return reinterpret_cast<InitFrame>(objc_msgSend)(object, selector("initWithFrame:"), frame);
+}
+
+void addSubviewPositioned(id superview, id view, long place, id relativeTo) {
+    using Send = void (*)(id, SEL, id, long, id);
+    reinterpret_cast<Send>(objc_msgSend)(superview,
+                                         selector("addSubview:positioned:relativeTo:"),
+                                         view,
+                                         place,
+                                         relativeTo);
+}
+
 id nativeWindowFor(QWidget* window) {
     if (!window)
         return nil;
@@ -249,6 +286,172 @@ bool performNativeTitleBarDoubleClick(QWidget* window) {
     return true;
 }
 
+// --- Native vibrancy backdrop (the macOS analogue of Windows 11 Mica) ---------------------------
+// zh_CN: 原生 vibrancy 背景（Windows 11 Mica 的 macOS 对应物）。
+//
+// Two stacked sibling layers fill the whole window behind Qt's (translucent) content, so the title
+// bar and navigation pane share one cohesive surface that the opaque content card sits on:
+//   1. base  — an NSVisualEffectView (sidebar vibrancy) carrying the desktop's color and warmth;
+//   2. tint  — a plain layer washed with the Windows-Mica base color at ~0.42 alpha.
+// The lighter tint lets the sidebar material's wallpaper tint come through for a rich, living
+// vibrancy (the polished-native-app look), while still keeping the chrome legible and coherent with
+// the content. zh_CN: 两层叠放的兄弟视图铺满整窗、位于 Qt（半透明）内容之后，使标题栏与导航窗格成为一整片
+// 连贯表面，不透明内容卡片坐落其上：1) base —— NSVisualEffectView（sidebar vibrancy）承载桌面色彩与暖意；
+// 2) tint —— 一层以 Windows Mica 基色、约 0.42 alpha 铺成的纯色。更淡的 tint 让 sidebar 材质的壁纸着色透出，
+// 形成丰富、鲜活的 vibrancy（精致原生 app 的观感），同时保持 chrome 清晰、与内容协调。
+
+// NSView identifiers used to find-or-reuse our backdrop layers across re-applies.
+// zh_CN: NSView 标识符，用于跨多次重新施加时查找/复用我们的背景层。
+constexpr char kBackdropBaseIdentifier[] = "fluentBackdropBase";
+constexpr char kBackdropTintIdentifier[] = "fluentBackdropTint";
+
+// AppKit enum values pinned locally so this file needs no Cocoa headers.
+// zh_CN: 在本地固定 AppKit 枚举值，使本文件无需 Cocoa 头文件。
+constexpr long NSVisualEffectMaterialSidebar = 7;           // translucent source-list material
+constexpr long NSVisualEffectMaterialWindowBackground = 12; // subtle window-wide material
+constexpr long NSVisualEffectBlendingModeBehindWindow = 0;
+constexpr long NSVisualEffectStateFollowsWindowActiveState = 0;
+constexpr long NSWindowAbove = 1;
+constexpr long NSWindowBelow = -1;
+constexpr unsigned long NSViewWidthSizable = 2;
+constexpr unsigned long NSViewHeightSizable = 16;
+
+id makeNSString(const char* text) {
+    return sendClassCStringReturnsId("NSString", "stringWithUTF8String:", text);
+}
+
+bool identifierEquals(id view, const char* identifier) {
+    if (!view || !respondsTo(view, selector("identifier")))
+        return false;
+
+    id current = sendId(view, "identifier");
+    const char* text = (current && respondsTo(current, selector("UTF8String")))
+                           ? sendCString(current, "UTF8String")
+                           : nullptr;
+    return text && std::strcmp(text, identifier) == 0;
+}
+
+id findSubviewWithIdentifier(id superview, const char* identifier) {
+    if (!superview || !respondsTo(superview, selector("subviews")))
+        return nil;
+
+    id subviews = sendId(superview, "subviews");
+    if (!subviews)
+        return nil;
+
+    const unsigned long count = sendUnsignedLong(subviews, "count");
+    for (unsigned long index = 0; index < count; ++index) {
+        id view = sendUnsignedLongReturnsId(subviews, "objectAtIndex:", index);
+        if (identifierEquals(view, identifier))
+            return view;
+    }
+    return nil;
+}
+
+void applyEffectAppearance(id effectView, bool dark) {
+    if (!effectView || !respondsTo(effectView, selector("setAppearance:")))
+        return;
+
+    // Drive the material's light/dark variant from the app theme rather than the system
+    // appearance, so vibrancy matches our in-app theme toggle.
+    // zh_CN: 用应用主题（而非系统外观）驱动材质的明暗变体，使 vibrancy 跟随应用内主题切换。
+    id name = makeNSString(dark ? "NSAppearanceNameDarkAqua" : "NSAppearanceNameAqua");
+    id appearance = name ? sendClassIdReturnsId("NSAppearance", "appearanceNamed:", name) : nil;
+    if (appearance)
+        sendId(effectView, "setAppearance:", appearance);
+}
+
+// Finds, or lazily creates, one of our NSVisualEffectView backdrop layers as a sibling positioned
+// behind Qt's content view (so Qt's translucent surface composites over the vibrancy).
+// zh_CN: 查找或惰性创建我们的 NSVisualEffectView 背景层之一，作为兄弟视图置于 Qt 内容视图之后
+//（这样 Qt 的半透明表面会叠加在 vibrancy 之上）。
+id ensureBackdropView(id superview,
+                      const char* identifier,
+                      long material,
+                      long orderingPlace,
+                      id relativeTo) {
+    id existing = findSubviewWithIdentifier(superview, identifier);
+    if (existing)
+        return existing;
+
+    const CGRect bounds = sendRect(superview, "bounds");
+    id effectView = allocInitWithFrame("NSVisualEffectView", bounds);
+    if (!effectView)
+        return nil;
+
+    if (id name = makeNSString(identifier))
+        sendId(effectView, "setIdentifier:", name);
+    sendBool(effectView, "setWantsLayer:", YES);
+    sendLong(effectView, "setMaterial:", material);
+    sendLong(effectView, "setBlendingMode:", NSVisualEffectBlendingModeBehindWindow);
+    sendLong(effectView, "setState:", NSVisualEffectStateFollowsWindowActiveState);
+    addSubviewPositioned(superview, effectView, orderingPlace, relativeTo);
+    return effectView;
+}
+
+// Sets a layer-backed view's background to the Windows-Mica base color (matching the
+// Material::Mica tokens) at the given alpha — a near-opaque app-surface wash over the vibrancy.
+// zh_CN: 把图层视图的背景设为 Windows Mica 基色（对齐 Material::Mica token）并取给定 alpha——
+// 在 vibrancy 之上铺一层接近不透明的应用表面色。
+void setMicaTintColor(id view, bool dark, double alpha) {
+    if (!view || !respondsTo(view, selector("layer")))
+        return;
+
+    id layer = sendId(view, "layer");
+    if (!layer || !respondsTo(layer, selector("setBackgroundColor:")))
+        return;
+
+    const CGFloat r = (dark ? 32.0 : 243.0) / 255.0;
+    const CGFloat g = (dark ? 32.0 : 242.0) / 255.0;
+    const CGFloat b = (dark ? 32.0 : 241.0) / 255.0;
+    CGColorRef color = CGColorCreateGenericRGB(r, g, b, alpha);
+    using SetBackground = void (*)(id, SEL, CGColorRef);
+    reinterpret_cast<SetBackground>(objc_msgSend)(layer, selector("setBackgroundColor:"), color);
+    CGColorRelease(color);
+}
+
+// Finds, or lazily creates, the plain tint view layered just above the vibrancy (below Qt's
+// content). zh_CN: 查找或惰性创建紧贴 vibrancy 之上、Qt 内容之下的纯色 tint 视图。
+id ensureTintView(id superview, id base, id contentView) {
+    id existing = findSubviewWithIdentifier(superview, kBackdropTintIdentifier);
+    if (existing)
+        return existing;
+
+    const CGRect bounds = sendRect(superview, "bounds");
+    id view = allocInitWithFrame("NSView", bounds);
+    if (!view)
+        return nil;
+
+    if (id name = makeNSString(kBackdropTintIdentifier))
+        sendId(view, "setIdentifier:", name);
+    sendBool(view, "setWantsLayer:", YES);
+    addSubviewPositioned(superview, view, base ? NSWindowAbove : NSWindowBelow, base ? base : contentView);
+    return view;
+}
+
+// Resolves the NSWindow's content view and its (frame-view) superview, the host for our siblings.
+// zh_CN: 解析 NSWindow 的 content view 及其（frame view）superview，作为我们兄弟视图的宿主。
+bool resolveBackdropHost(QWidget* window, id* outContentView, id* outSuperview) {
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        return false;
+
+    id nsWindow = nativeWindowFor(window);
+    if (!nsWindow || !respondsTo(nsWindow, selector("contentView")))
+        return false;
+
+    id contentView = sendId(nsWindow, "contentView");
+    if (!contentView || !respondsTo(contentView, selector("superview")))
+        return false;
+
+    id superview = sendId(contentView, "superview");
+    if (!superview)
+        return false;
+
+    *outContentView = contentView;
+    *outSuperview = superview;
+    return true;
+}
+
 } // namespace
 
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options) {
@@ -343,15 +546,56 @@ int nativeTitleBarLeadingInset(QWidget* window) {
 }
 
 bool platformSupportsSystemBackdrop() {
-    // macOS uses native vibrancy, not a DWM Mica backdrop; the gallery keeps the solid
-    // themeBackdrop fallback here. zh_CN: macOS 用原生 vibrancy，而非 DWM Mica；此处保留纯色回退。
-    return false;
+    // macOS gets the Mica-equivalent via a native NSVisualEffectView (vibrancy). Available on
+    // every Qt 6.9-supported macOS, so just confirm the class is present.
+    // zh_CN: macOS 通过原生 NSVisualEffectView（vibrancy）获得 Mica 等价效果。在 Qt 6.9 支持的所有 macOS
+    // 上都可用，故只需确认类存在。
+    return QGuiApplication::platformName() == QStringLiteral("cocoa")
+        && objc_getClass("NSVisualEffectView") != nullptr;
 }
 
 bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
-    Q_UNUSED(window);
-    Q_UNUSED(dark);
-    return false;
+    id contentView = nil;
+    id superview = nil;
+    if (!resolveBackdropHost(window, &contentView, &superview))
+        return false;
+
+    // Base layer: a subtle, window-wide vibrancy behind everything (incl. the full-width title
+    // bar). Sits directly behind Qt's content view and tracks resizes via autoresizing. It supplies
+    // the "hint of blurred desktop" under the tint; the tint above supplies most of the color.
+    // zh_CN: 基础层：置于一切之后（含整宽标题栏）的低调全窗 vibrancy。紧贴 Qt 内容视图之后，并通过
+    // autoresizing 跟随尺寸变化。它在 tint 之下提供「少许模糊桌面」，主色由其上的 tint 提供。
+    // The native source-list ("sidebar") material picks up more of the desktop's color and warmth
+    // than the flatter windowBackground — paired with a lighter tint below, that gives the chrome a
+    // richer, more alive vibrancy (the look of polished native apps) instead of a monotone gray.
+    // zh_CN: 原生源列表（sidebar）材质比扁平的 windowBackground 吸收更多桌面色彩与暖意——配合下方更淡的 tint，
+    // 让 chrome 呈现更丰富、更鲜活的 vibrancy（精致原生 app 的观感），而非一片单调灰。
+    id base = ensureBackdropView(superview,
+                                 kBackdropBaseIdentifier,
+                                 NSVisualEffectMaterialSidebar,
+                                 NSWindowBelow,
+                                 contentView);
+    if (!base)
+        return false;
+
+    sendUnsignedLong(base, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
+    sendCGRect(base, "setFrame:", sendRect(superview, "bounds"));
+    applyEffectAppearance(base, dark);
+
+    // App-surface tint over the vibrancy: enough to keep the chrome legible and coherent with the
+    // (opaque) content, but light enough (~0.42) that the sidebar material's wallpaper color and
+    // warmth come through — a rich, living vibrancy rather than a flat tinted gray. Raise it toward
+    // 0.7 for a cleaner/flatter pane, lower it toward 0.3 for a more see-through (busier) one.
+    // zh_CN: 在 vibrancy 之上的应用表面色：足以让 chrome 清晰、与（不透明）内容协调，但又足够淡（~0.42），
+    // 使 sidebar 材质的壁纸色彩与暖意透出——丰富、鲜活的 vibrancy，而非一片扁平着色灰。调高到 0.7 更干净扁平，
+    // 调低到 0.3 更通透（也更杂）。
+    constexpr double kMicaTintAlpha = 0.42;
+    if (id tint = ensureTintView(superview, base, contentView)) {
+        sendUnsignedLong(tint, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
+        sendCGRect(tint, "setFrame:", sendRect(superview, "bounds"));
+        setMicaTintColor(tint, dark, kMicaTintAlpha);
+    }
+    return true;
 }
 
 } // namespace detail
