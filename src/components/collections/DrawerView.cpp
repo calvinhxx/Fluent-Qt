@@ -140,6 +140,22 @@ void DrawerView::setDrawerLength(int length)
     emit drawerLengthChanged(m_drawerLength);
 }
 
+void DrawerView::setAvailableMargins(const QMargins& margins)
+{
+    const QMargins normalized(qMax(0, margins.left()),
+                              qMax(0, margins.top()),
+                              qMax(0, margins.right()),
+                              qMax(0, margins.bottom()));
+    if (m_availableMargins == normalized)
+        return;
+
+    m_availableMargins = normalized;
+    updateOverlayGeometry();
+    updateClipMask();
+    updateGeometry();
+    emit availableMarginsChanged(m_availableMargins);
+}
+
 void DrawerView::setModal(bool modal)
 {
     if (m_modal == modal)
@@ -555,38 +571,47 @@ void DrawerView::stopAnimation()
     m_transitionTarget = TransitionTarget::None;
 }
 
-int DrawerView::availableAxisLength() const
+QRect DrawerView::availableRect() const
 {
     QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
-    if (!top)
-        return m_drawerLength;
-    return (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? top->height() : top->width();
+    const QRect topRect = top ? top->rect() : QRect(QPoint(0, 0), sizeHint());
+    if (topRect.isEmpty())
+        return topRect;
+
+    const int left = qBound(0, m_availableMargins.left(), topRect.width() - 1);
+    const int topInset = qBound(0, m_availableMargins.top(), topRect.height() - 1);
+    const int right = qBound(0, m_availableMargins.right(), topRect.width() - left - 1);
+    const int bottom = qBound(0, m_availableMargins.bottom(), topRect.height() - topInset - 1);
+    return topRect.adjusted(left, topInset, -right, -bottom);
+}
+
+int DrawerView::availableAxisLength() const
+{
+    const QRect area = availableRect();
+    return (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.height() : area.width();
 }
 
 int DrawerView::effectiveDrawerLength() const
 {
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
-    if (!top)
-        return m_drawerLength;
-    const int axisLength = (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? top->width() : top->height();
+    const QRect area = availableRect();
+    const int axisLength = (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? area.width() : area.height();
     return qBound(kMinimumDrawerLength, m_drawerLength, std::max(kMinimumDrawerLength, axisLength));
 }
 
 QRect DrawerView::openPanelRect() const
 {
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
-    const QRect topRect = top ? top->rect() : QRect(QPoint(0, 0), sizeHint());
+    const QRect area = availableRect();
     const int length = effectiveDrawerLength();
 
     switch (m_edge) {
     case DrawerEdge::Left:
-        return QRect(0, 0, length, topRect.height());
+        return QRect(area.left(), area.top(), length, area.height());
     case DrawerEdge::Right:
-        return QRect(topRect.width() - length, 0, length, topRect.height());
+        return QRect(area.left() + area.width() - length, area.top(), length, area.height());
     case DrawerEdge::Top:
-        return QRect(0, 0, topRect.width(), length);
+        return QRect(area.left(), area.top(), area.width(), length);
     case DrawerEdge::Bottom:
-        return QRect(0, topRect.height() - length, topRect.width(), length);
+        return QRect(area.left(), area.top() + area.height() - length, area.width(), length);
     }
     return QRect();
 }
@@ -735,19 +760,19 @@ bool DrawerView::isPointInEdgeDragArea(const QPoint& globalPos) const
         return false;
 
     const QPoint local = top->mapFromGlobal(globalPos);
-    const QRect topRect = top->rect();
-    if (!topRect.contains(local))
+    const QRect area = availableRect();
+    if (!area.contains(local))
         return false;
 
     switch (m_edge) {
     case DrawerEdge::Left:
-        return local.x() <= m_dragMargin;
+        return local.x() <= area.left() + m_dragMargin;
     case DrawerEdge::Right:
-        return local.x() >= topRect.width() - m_dragMargin;
+        return local.x() >= area.right() - m_dragMargin + 1;
     case DrawerEdge::Top:
-        return local.y() <= m_dragMargin;
+        return local.y() <= area.top() + m_dragMargin;
     case DrawerEdge::Bottom:
-        return local.y() >= topRect.height() - m_dragMargin;
+        return local.y() >= area.bottom() - m_dragMargin + 1;
     }
     return false;
 }
