@@ -8,6 +8,7 @@
 
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryWindow.h"
+#include "view/shell/GalleryWindowMetrics.h"
 #include "utils/Log.h"
 
 static void initializeFluentQtResources()
@@ -57,9 +58,8 @@ int main(int argc, char** argv)
     // availableGeometry() 里扣掉，所以纯居中会把窗口压到它下面；预留一条左边距即可让开那条
     // 带子（或任何贴左边缘的面板）。放置放在 show() 之后：自定义窗口边框会在 showEvent 中重新
     // 应用平台窗口标志、重新摆放原生窗口，否则 show 前设置的位置会被挪偏。
-    constexpr int kLeftPanelReserve = 160;  // ~Stage Manager strip width. zh_CN: 约为 Stage Manager 条宽度。
-
-    QSize initialSize(1180, 760);
+    QSize initialSize(fluent::gallery::metrics::AppWindow::InitialWidth,
+                      fluent::gallery::metrics::AppWindow::InitialHeight);
     if (QScreen* screen = QApplication::primaryScreen())
         initialSize = initialSize.boundedTo(screen->availableGeometry().size());
     window.resize(initialSize.expandedTo(window.minimumSize()));
@@ -69,7 +69,8 @@ int main(int argc, char** argv)
         const QRect available = screen->availableGeometry();
         const QRect frame = window.frameGeometry();
         const int horizontalSlack = std::max(0, available.width() - frame.width());
-        const int leftReserve = std::min(kLeftPanelReserve, horizontalSlack);
+        const int leftReserve = std::min(fluent::gallery::metrics::AppWindow::LeftPanelReserve,
+                                         horizontalSlack);
         const int x = available.x() + leftReserve + (horizontalSlack - leftReserve) / 2;
         const int y = available.y() + std::max(0, available.height() - frame.height()) / 2;
         window.move(x, y);
