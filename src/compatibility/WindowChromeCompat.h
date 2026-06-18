@@ -1,6 +1,17 @@
 #ifndef WINDOWCHROMECOMPAT_H
 #define WINDOWCHROMECOMPAT_H
 
+// Architecture: this class is a thin per-OS ROUTER, not where the logic lives. Each public method
+// forwards to a detail::xxx() function implemented per platform in WindowChromeCompat_{win,mac,
+// fallback}.cpp (the if-win / else-if-mac / else branches, selected at compile time). The title
+// bar / nav / background COLORS are NOT here — they're painted by Window/TitleBar/NavigationView,
+// keyed off the fluentMicaBackdrop window property this class sets. Full map + diagram:
+// docs/architecture/window-chrome.md.
+// zh_CN: 本类是按 OS 分发的「路由」，逻辑不在这里。每个 public 方法转发到 detail::xxx()，其函数体按平台实现于
+// WindowChromeCompat_{win,mac,fallback}.cpp（即 if-win/else-if-mac/else 三分支，编译期选一）。标题栏/导航栏/
+// 背景颜色不在这里——由 Window/TitleBar/NavigationView 依据本类设置的 fluentMicaBackdrop 属性绘制。
+// 完整对照与图示见 docs/architecture/window-chrome.md。
+
 #include <QByteArray>
 #include <QPoint>
 #include <QRect>
@@ -126,6 +137,10 @@ public:
      *
      * Requires a live native handle, so call it from showEvent / after winId().
      * zh_CN: 需要有效的原生句柄，故应在 showEvent / winId() 之后调用。
+     *
+     * On macOS this installs a native NSVisualEffectView (vibrancy) as the window backdrop —
+     * the platform analogue of Windows 11 Mica. zh_CN: macOS 上安装原生 NSVisualEffectView（vibrancy）
+     * 作为窗口背景，即 Windows 11 Mica 的平台对应物。
      */
     bool applySystemBackdrop(bool dark);
 
