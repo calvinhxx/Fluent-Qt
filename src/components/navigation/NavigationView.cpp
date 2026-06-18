@@ -352,6 +352,19 @@ void NavigationView::paintEvent(QPaintEvent*)
         painter.fillRect(rect(), backdrop);
         if (!visual.chromeRect.isEmpty())
             painter.fillRect(visual.chromeRect, backdrop);
+    } else if (!visual.chromeRect.isEmpty()
+               && window() && window()->testAttribute(Qt::WA_TranslucentBackground)) {
+        // Erase the chrome (pane) region to transparent each paint so the OS backdrop shows
+        // cleanly. Under a translucent top-level macOS doesn't auto-clear the backing, so a frame
+        // painted before the native vibrancy had composited (a startup race) would otherwise
+        // persist as a bright tint-only seam at the pane's top edge. We clear only the chrome
+        // rect, never the content-host region (it paints its own opaque surface).
+        // zh_CN: 每帧把 chrome（窗格）区域擦成透明，让系统背景干净露出。半透明顶层下 macOS 不会自动清除后备
+        // 缓冲，故在原生 vibrancy 合成前绘制的帧（启动竞态）会在窗格顶边残留一条仅含 tint 的亮缝。只清 chrome
+        // 矩形，绝不碰内容宿主区域（它自绘不透明表面）。
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(visual.chromeRect, Qt::transparent);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     }
 
     // The content surface (layer + rounded top-left frame) is painted by the content host
@@ -563,20 +576,22 @@ void NavigationView::ensureLayout() const
 void NavigationView::updateLayout()
 {
     const LayoutState previousVisual = currentVisualLayout();
+    const bool hadResolvedLayout = !m_layout.bounds.isEmpty();
     LayoutState next;
     const QRect bounds = rect();
     next.bounds = bounds;
     next.effectiveMode = resolveDisplayMode(bounds.width() > 0 ? bounds.width() : sizeHint().width());
 
-    // Auto-managed pane open state (matches WinUI): when the adaptive layout first drops to
-    // the compact rail or the hidden minimal mode, collapse the pane so it doesn't linger as
-    // a wide overlay; when it returns to the expanded mode, open it. Otherwise an
-    // expanded-mode `paneOpen=true` would make LeftMinimal keep a 256px overlay instead of
-    // hiding. The menu button can still toggle the pane within a mode.
-    // zh_CN: 自适应窗格开合（对齐 WinUI）：自适应布局首次降到紧凑栏或隐藏的最小模式时收起窗格，避免残留为
-    // 宽浮层；回到展开模式时打开。否则展开模式遗留的 paneOpen=true 会让 LeftMinimal 仍保留 256px 浮层而非隐藏。
-    // 菜单按钮仍可在同一模式内开关窗格。
-    if (m_displayMode == DisplayMode::Auto && next.effectiveMode != m_lastEffectiveDisplayMode) {
+    // Auto-managed pane open state (matches WinUI) after the control is visible: when
+    // adaptive layout drops to compact or minimal, collapse the pane; when it returns to
+    // expanded, open it. Hidden construction/layout passes must not rewrite the public
+    // paneOpen state before callers can observe or configure it.
+    // zh_CN: 控件可见后的自适应窗格开合（对齐 WinUI）：降到紧凑或最小模式时收起窗格，回到展开
+    // 模式时打开。隐藏构造/布局阶段不能在调用方观察或配置前改写公开的 paneOpen 状态。
+    if (hadResolvedLayout
+        && isVisible()
+        && m_displayMode == DisplayMode::Auto
+        && next.effectiveMode != m_lastEffectiveDisplayMode) {
         if (next.effectiveMode == DisplayMode::LeftCompact || next.effectiveMode == DisplayMode::LeftMinimal)
             m_paneOpen = false;
         else if (next.effectiveMode == DisplayMode::Left)

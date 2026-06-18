@@ -579,6 +579,18 @@ void TreeView::paintEvent(QPaintEvent* event) {
         p.setRenderHint(QPainter::Antialiasing);
         p.fillRect(viewport()->rect(), c.bgLayer);
         p.end();
+    } else if (window() && window()->testAttribute(Qt::WA_TranslucentBackground)) {
+        // Background hidden over a translucent top-level (system backdrop / macOS vibrancy): keep
+        // the viewport transparent so the backdrop shows, but erase it each paint. The backing
+        // store isn't auto-cleared there on macOS, so scrolled/expanded rows would otherwise ghost
+        // on top of stale pixels. Opaque top-levels clear normally, so that path is left untouched.
+        // zh_CN: 背景隐藏且顶层为半透明（系统背景 / macOS vibrancy）时：保持 viewport 透明以露出背景，但每次
+        // 绘制都擦除。macOS 上该情形后备缓冲不会自动清除，否则滚动/展开的行会叠在残影上重影。不透明顶层会正常
+        // 清除，保持原路径不变。
+        QPainter p(viewport());
+        p.setCompositionMode(QPainter::CompositionMode_Source);
+        p.fillRect(viewport()->rect(), Qt::transparent);
+        p.end();
     }
 
     // --- 2. Empty placeholder ---
