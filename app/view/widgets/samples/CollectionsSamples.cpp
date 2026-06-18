@@ -1847,10 +1847,23 @@ QVector<GallerySample> treeViewSamples()
                    QStringLiteral("Selecting rows at different depths updates the indicator direction and hierarchy transition."),
                    QStringLiteral("tree->setSelectionIndicatorVisible(true);\n"
                                   "tree->setIndicatorMotionAnimationEnabled(true);\n"
-                                  "tree->setSelectedItem(childIndex);\n"
-                                  "QObject::connect(tree,\n"
-                                  "    &TreeView::indicatorHierarchyTransitionChanged,\n"
-                                  "    status, updateStatus);"),
+                                  "\n"
+                                  "const QModelIndex parentIndex = model->index(0, 0);\n"
+                                  "const QModelIndex childIndex = model->index(0, 0, parentIndex);\n"
+                                  "const QModelIndex siblingIndex = model->index(1, 0);\n"
+                                  "tree->setSelectedItem(parentIndex);\n"
+                                  "\n"
+                                  "auto bindTarget = [tree](Button* button, const QModelIndex& index) {\n"
+                                  "    QObject::connect(button, &Button::clicked, tree,\n"
+                                  "                     [tree, index] { tree->setSelectedItem(index); });\n"
+                                  "};\n"
+                                  "bindTarget(parentButton, parentIndex);\n"
+                                  "bindTarget(childButton, childIndex);\n"
+                                  "bindTarget(siblingButton, siblingIndex);\n"
+                                  "\n"
+                                  "auto updateStatus = [tree, status] { /* refresh transition label */ };\n"
+                                  "QObject::connect(tree, &TreeView::indicatorHierarchyTransitionChanged,\n"
+                                  "                 status, updateStatus);"),
                    [folderColor, fileColor, rowHeight](QWidget* parent) {
                        QWidget* group = verticalGroup(parent, 10);
                        auto* tree = new TreeView(group);
@@ -1864,12 +1877,14 @@ QVector<GallerySample> treeViewSamples()
                        auto* model = makeFolderTreeModel(tree, folderColor, fileColor);
                        tree->setModel(model);
                        tree->expandAll();
-                       tree->setSelectedItem(model->index(0, 0));
+                       const QModelIndex parentIndex = model->index(0, 0);
+                       const QModelIndex childIndex = model->index(0, 0, parentIndex);
+                       const QModelIndex siblingIndex = model->index(1, 0);
+                       tree->setSelectedItem(parentIndex);
 
                        QWidget* controls = horizontalGroup(group, 8);
                        auto* parentButton = new Button(QStringLiteral("Parent"), controls);
                        auto* childButton = new Button(QStringLiteral("Child"), controls);
-                       childButton->setFluentStyle(Button::Accent);
                        auto* siblingButton = new Button(QStringLiteral("Sibling"), controls);
                        auto* status = makeStatusLabel(controls, QStringLiteral("Transition: none"));
                        controls->layout()->addWidget(parentButton);
@@ -1893,17 +1908,18 @@ QVector<GallerySample> treeViewSamples()
                        const auto updateStatus = [status, transitionText]() {
                            status->setText(QStringLiteral("Transition: %1").arg(transitionText()));
                        };
-                       QObject::connect(parentButton, &Button::clicked, tree, [tree, model]() {
-                           tree->setSelectedItem(model->index(0, 0));
+                       QObject::connect(parentButton, &Button::clicked, tree, [tree, parentIndex]() {
+                           tree->setSelectedItem(parentIndex);
                        });
-                       QObject::connect(childButton, &Button::clicked, tree, [tree, model]() {
-                           tree->setSelectedItem(model->index(0, 0, model->index(0, 0)));
+                       QObject::connect(childButton, &Button::clicked, tree, [tree, childIndex]() {
+                           tree->setSelectedItem(childIndex);
                        });
-                       QObject::connect(siblingButton, &Button::clicked, tree, [tree, model]() {
-                           tree->setSelectedItem(model->index(1, 0));
+                       QObject::connect(siblingButton, &Button::clicked, tree, [tree, siblingIndex]() {
+                           tree->setSelectedItem(siblingIndex);
                        });
                        QObject::connect(tree, &TreeView::indicatorHierarchyTransitionChanged,
                                         status, updateStatus);
+                       updateStatus();
 
                        group->layout()->addWidget(tree);
                        group->layout()->addWidget(controls);

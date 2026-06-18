@@ -372,8 +372,11 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         painter->drawPath(path);
     }
 
-    // Animated accent indicator (single-select). In checkbox mode the box is the affordance.
-    if (!m_checkBoxVisible && isSelected && isEnabled && colors.accentDefault.isValid()) {
+    // Animated accent indicator (single-select). When TreeView owns the overlay
+    // indicator, skip the delegate bar so examples do not show two indicators.
+    const bool treeOverlayIndicatorVisible = m_view && m_view->selectionIndicatorVisible();
+    if (!treeOverlayIndicatorVisible && !m_checkBoxVisible && isSelected
+        && isEnabled && colors.accentDefault.isValid()) {
         const qreal accentT = m_view ? qBound(0.0, m_view->selectedIndicatorProgress(index), 1.0) : 1.0;
         const bool activeMotion = m_view && m_view->isIndicatorMotionActiveForIndex(index);
         const auto direction = activeMotion ? m_view->indicatorMotionDirection()

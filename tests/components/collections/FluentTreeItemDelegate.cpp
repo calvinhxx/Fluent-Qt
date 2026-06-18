@@ -181,10 +181,13 @@ void FluentTreeItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem
     }
 
     // --- Accent bar for selected items ---
-    // In checkbox selection mode, the checkbox is the selection affordance.
-    if (!m_checkBoxVisible && isSelected && isEnabled && colors.accentDefault.isValid()) {
+    // In checkbox selection mode the checkbox is the selection affordance. When TreeView
+    // paints its moving overlay indicator, the delegate must not paint a second bar.
+    auto* tv = qobject_cast<fluent::collections::TreeView*>(m_view);
+    const bool treeOverlayIndicatorVisible = tv && tv->selectionIndicatorVisible();
+    if (!treeOverlayIndicatorVisible && !m_checkBoxVisible && isSelected
+        && isEnabled && colors.accentDefault.isValid()) {
         const qreal accentT = qBound(0.0, accentProgress(index), 1.0);
-        auto* tv = qobject_cast<fluent::collections::TreeView*>(m_view);
         const bool activeMotion = tv && tv->isIndicatorMotionActiveForIndex(index);
         const auto direction = activeMotion
                                    ? tv->indicatorMotionDirection()

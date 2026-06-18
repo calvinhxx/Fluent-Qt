@@ -153,6 +153,17 @@ bool hasAccentPixelInRect(QWidget* widget, const QRect& rect, const QColor& acce
     return false;
 }
 
+bool hasAccentPixelInImage(const QImage& image, const QRect& rect, const QColor& accent) {
+    const QRect bounded = rect.intersected(QRect(0, 0, image.width(), image.height()));
+    for (int y = bounded.top(); y <= bounded.bottom(); ++y) {
+        for (int x = bounded.left(); x <= bounded.right(); ++x) {
+            if (isAccentLike(QColor::fromRgba(image.pixel(x, y)), accent))
+                return true;
+        }
+    }
+    return false;
+}
+
 /**
  * 创建一个带 CheckStateRole 的可勾选树模型 (WinUI Multi-selection 模式)
  */
@@ -1743,6 +1754,43 @@ TEST_F(TreeViewTest, DelegateConsumesIndicatorMotionWithoutChangingRowMetrics) {
     EXPECT_EQ(tv->visualRect(personal), movingRect);
     EXPECT_EQ(delegate->sizeHint(option, personal), movingSizeHint);
     EXPECT_DOUBLE_EQ(tv->selectedIndicatorProgress(personal), 1.0);
+}
+
+TEST_F(TreeViewTest, DelegateSkipsAccentBarWhenTreeViewOverlayIndicatorVisible) {
+    TreeView* tv = new TreeView(window);
+    auto* model = attachSampleModel(tv);
+    auto* delegate = qobject_cast<treeview_test::FluentTreeItemDelegate*>(tv->itemDelegate());
+    ASSERT_NE(delegate, nullptr);
+    tv->setIndicatorMotionAnimationEnabled(false);
+    tv->setFixedSize(350, 400);
+    showOffscreen(window);
+
+    const QModelIndex work = model->index(0, 0);
+    tv->setSelectedItem(work);
+    processEvents();
+
+    QStyleOptionViewItem option;
+    option.rect = QRect(0, 0, 240, defaultTreeRowHeight());
+    option.state = QStyle::State_Selected | QStyle::State_Enabled;
+    option.widget = tv;
+    option.font = tv->font();
+    const QColor accent = tv->themeColors().accentDefault;
+    const QRect indicatorProbe(0, 0, 16, option.rect.height());
+
+    const auto renderDelegateRow = [&]() {
+        QImage image(option.rect.size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        delegate->paint(&painter, option, work);
+        painter.end();
+        return image;
+    };
+
+    tv->setSelectionIndicatorVisible(false);
+    EXPECT_TRUE(hasAccentPixelInImage(renderDelegateRow(), indicatorProbe, accent));
+
+    tv->setSelectionIndicatorVisible(true);
+    EXPECT_FALSE(hasAccentPixelInImage(renderDelegateRow(), indicatorProbe, accent));
 }
 
 TEST_F(TreeViewTest, DelegateSelectedIndicatorFollowsHierarchicalRowLocalPosition) {
