@@ -82,7 +82,7 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
                         QStringLiteral("Foundation"),
                         Typography::Icons::Color,
                         QColor(QStringLiteral("#F3F1FB")),
-                        QStringLiteral("foundation"),
+                        QString(),   // top-level category: no parent (not itself). zh_CN: 顶级分类，无父项（不是自己）。
                         0,
                         true));
     const struct {
