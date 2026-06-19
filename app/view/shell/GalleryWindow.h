@@ -18,6 +18,10 @@ namespace fluent::basicinput {
 class Button;
 }
 
+namespace fluent::collections {
+class DrawerView;
+}
+
 namespace fluent::textfields {
 class AutoSuggestBox;
 class Label;
@@ -77,6 +81,12 @@ public:
     SettingsPage* currentSettingsPage() const;
 
 private:
+    enum class AppWindowWidthState {
+        Expanded,
+        Compact,
+        Minimal
+    };
+
     bool eventFilter(QObject* watched, QEvent* event) override;
 
     void createTitleBarContent();
@@ -97,7 +107,11 @@ private:
     void handleSelectedRouteChanged(const QString& routeId);
     void recordNavigationHistory(const QString& nextRouteId);
     bool navigateBack();
+    AppWindowWidthState appWindowWidthState() const;
     void toggleNavigationDisplayMode();
+    void ensureNavigationDrawer();
+    void toggleNavigationDrawer();
+    void closeNavigationDrawer();
     void setNavigationPanesCompact(bool compact);
     void updateNavigationCommands();
     // Shows/hides the title-bar back button with a smooth collapse+fade. Revealed only while
@@ -114,6 +128,10 @@ private:
     fluent::navigation::NavigationView* m_navigationView = nullptr;
     GalleryNavigationPane* m_mainNavigationPane = nullptr;
     GalleryNavigationPane* m_footerNavigationPane = nullptr;
+    fluent::collections::DrawerView* m_navigationDrawer = nullptr;
+    QWidget* m_navigationDrawerContent = nullptr;
+    GalleryNavigationPane* m_drawerMainNavigationPane = nullptr;
+    GalleryNavigationPane* m_drawerFooterNavigationPane = nullptr;
     GalleryContentPresenter* m_contentPresenter = nullptr;
     fluent::basicinput::Button* m_backButton = nullptr;
     fluent::basicinput::Button* m_menuButton = nullptr;

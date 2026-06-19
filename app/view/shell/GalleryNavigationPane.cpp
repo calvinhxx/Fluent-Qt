@@ -169,6 +169,26 @@ void GalleryNavigationPane::setCompact(bool compact)
     emit compactChanged(m_compact);
 }
 
+void GalleryNavigationPane::setSurfaceVisible(bool visible)
+{
+    if (m_surfaceVisible == visible)
+        return;
+
+    m_surfaceVisible = visible;
+    setAttribute(Qt::WA_NoSystemBackground, m_surfaceVisible);
+    setAttribute(Qt::WA_TranslucentBackground, m_surfaceVisible);
+    if (m_treeView) {
+        m_treeView->setBackgroundVisible(false);
+        m_treeView->setProperty("fluentPreserveParentSurface", m_surfaceVisible);
+        if (m_treeView->viewport()) {
+            m_treeView->viewport()->setProperty("fluentPreserveParentSurface", m_surfaceVisible);
+            m_treeView->viewport()->setAttribute(Qt::WA_NoSystemBackground, m_surfaceVisible);
+            m_treeView->viewport()->update();
+        }
+    }
+    update();
+}
+
 void GalleryNavigationPane::setCompactVisualProgress(qreal progress)
 {
     const qreal normalized = qBound<qreal>(0.0, progress, 1.0);
@@ -209,8 +229,14 @@ void GalleryNavigationPane::setSettingsIconRotation(qreal rotation)
 void GalleryNavigationPane::onThemeUpdated()
 {
     updateDividerPalette();
+    update();
     if (m_treeView && m_treeView->viewport())
         m_treeView->viewport()->update();
+}
+
+void GalleryNavigationPane::paintEvent(QPaintEvent* event)
+{
+    QWidget::paintEvent(event);
 }
 
 void GalleryNavigationPane::rebuild()
@@ -241,6 +267,11 @@ void GalleryNavigationPane::rebuild()
                   .arg(isFooterOnly() ? QStringLiteral("true") : QStringLiteral("false")));
     m_treeView->setBorderVisible(false);
     m_treeView->setBackgroundVisible(false);
+    m_treeView->setProperty("fluentPreserveParentSurface", m_surfaceVisible);
+    if (m_treeView->viewport()) {
+        m_treeView->viewport()->setProperty("fluentPreserveParentSurface", m_surfaceVisible);
+        m_treeView->viewport()->setAttribute(Qt::WA_NoSystemBackground, m_surfaceVisible);
+    }
     m_treeView->setHorizontalFluentScrollBarEnabled(false);
     // Navigation chrome stops cleanly at the scroll edge — an elastic bounce reads as a glitch
     // here and would briefly trap the wheel at the boundary. zh_CN: 导航 chrome 在滚动边界干脆

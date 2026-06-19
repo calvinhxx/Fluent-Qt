@@ -434,7 +434,7 @@ int NavigationView::chromeWidthForMode(DisplayMode mode) const
 {
     switch (mode) {
     case DisplayMode::Left:
-        return m_expandedPaneWidth;
+        return m_paneOpen ? m_expandedPaneWidth : m_compactPaneWidth;
     case DisplayMode::LeftCompact:
         return m_paneOpen ? m_expandedPaneWidth : m_compactPaneWidth;
     case DisplayMode::LeftMinimal:
@@ -728,11 +728,11 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
         if (!m_contentFrameOverlay)
             m_contentFrameOverlay = new ContentFrameOverlay(this);
         m_contentFrameOverlay->setGeometry(state.contentRect);
-        // No border stroke: the 1px line down the content's left edge read as a divider/gap. Keep
-        // only the rounded top-left carve, which reveals the (same) Mica backdrop seamlessly.
-        // zh_CN: 不描边框：内容左缘的 1px 线看起来像分割线/间距。仅保留左上圆角挖切，无缝露出（同样的）Mica 背景。
+        // Match WinUI Gallery's subtle content frame without adding layout spacing.
+        QColor frame = themeColors().strokeDivider;
+        frame.setAlpha(qMin(28, frame.alpha()));
         static_cast<ContentFrameOverlay*>(m_contentFrameOverlay)
-            ->configure(themeRadius().overlay, QColor());
+            ->configure(themeRadius().overlay, frame);
         m_contentFrameOverlay->show();
         m_contentFrameOverlay->raise();
     } else if (m_contentFrameOverlay) {

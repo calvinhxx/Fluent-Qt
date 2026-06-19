@@ -14,6 +14,7 @@
 class QStandardItem;
 class QStandardItemModel;
 class QPropertyAnimation;
+class QPaintEvent;
 
 namespace fluent::collections {
 class TreeView;
@@ -41,10 +42,12 @@ public:
     bool containsRoute(const QString& routeId) const;
     QModelIndex indexForRouteId(const QString& routeId) const;
     bool isCompact() const { return m_compact; }
+    bool isSurfaceVisible() const { return m_surfaceVisible; }
     qreal compactVisualProgress() const { return m_compactVisualProgress; }
     qreal settingsIconRotation() const { return m_settingsIconRotation; }
     void setSelectedRouteId(const QString& routeId);
     void setCompact(bool compact);
+    void setSurfaceVisible(bool visible);
     void setCompactVisualProgress(qreal progress);
     void setSettingsIconRotation(qreal rotation);
     void onThemeUpdated() override;
@@ -53,6 +56,9 @@ signals:
     void routeActivated(const QString& routeId);
     void selectedRouteIdChanged(const QString& routeId);
     void compactChanged(bool compact);
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
 
 private:
     void rebuild();
@@ -85,6 +91,7 @@ private:
     qreal m_compactVisualProgress = 0.0;
     qreal m_settingsIconRotation = 0.0;
     bool m_compact = false;
+    bool m_surfaceVisible = false;
 };
 
 } // namespace fluent::gallery

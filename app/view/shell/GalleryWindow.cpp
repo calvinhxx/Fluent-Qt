@@ -6,14 +6,26 @@
 #include <QEvent>
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
+#include <QLinearGradient>
+#include <QPainter>
+#include <QPaintEvent>
+#include <QPainterPath>
 #include <QPoint>
 #include <QPropertyAnimation>
+#include <QRadialGradient>
+#include <QRegion>
 #include <QRegularExpression>
+#include <QResizeEvent>
 #include <QTimer>
 #include <QVariantAnimation>
+#include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "components/collections/DrawerView.h"
+#include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayShadow.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/status_info/ToolTip.h"
@@ -41,6 +53,7 @@ using TitleBarMetrics = metrics::TitleBar;
 
 constexpr char kTitleBarButtonPressAnimationName[] = "galleryTitleBarButtonPressAnimation";
 constexpr qreal kTitleBarButtonPressScale = 0.86;  // WinUI-like press depth for icon buttons. zh_CN: 仿 WinUI 的图标按钮按下缩放深度。
+constexpr int kNavigationDrawerShadowMargin = 8;
 
 // WinUI-Gallery parity search: split the query on whitespace and require a title
 // to contain every token (AND semantics) rather than matching the whole string as
@@ -126,6 +139,105 @@ void startTitleBarButtonPress(fluent::basicinput::Button* button)
                      });
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
+
+class NavigationDrawerContentPanel : public QWidget, public fluent::FluentElement {
+public:
+    explicit NavigationDrawerContentPanel(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+        setAutoFillBackground(false);
+        setAttribute(Qt::WA_NoSystemBackground, true);
+        setAttribute(Qt::WA_TranslucentBackground, true);
+    }
+
+protected:
+    void resizeEvent(QResizeEvent* event) override
+    {
+        QWidget::resizeEvent(event);
+        updateClipMask();
+    }
+
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(rect(), Qt::transparent);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+
+        const int shadowMargin = qMin(kNavigationDrawerShadowMargin, qMax(0, width() / 4));
+        const QRectF panelRect(0.0, 0.0,
+                               qMax(0, width() - shadowMargin) - 0.5,
+                               height() - 0.5);
+        if (panelRect.isEmpty())
+            return;
+        const QPainterPath panelPath = drawerPanelPath(panelRect);
+        const auto colors = themeColors();
+
+        auto shadow = themeShadow(Elevation::Medium);
+        shadow.color.setAlpha(currentTheme() == Dark ? 150 : 92);
+        fluent::overlay::paintLayeredShadow(painter,
+                                            panelRect.toAlignedRect().adjusted(0, 0, -2, -1),
+                                            themeRadius().overlay,
+                                            shadow,
+                                            currentTheme() == Dark ? 0.34 : 0.26);
+
+        QColor base = colors.bgLayer;
+        base.setAlpha(currentTheme() == Dark ? 240 : 226);
+        painter.fillPath(panelPath, base);
+
+        QLinearGradient wash(panelRect.topLeft(), panelRect.bottomRight());
+        wash.setColorAt(0.0, QColor(255, 255, 255, currentTheme() == Dark ? 14 : 92));
+        wash.setColorAt(0.38, QColor(246, 250, 255, currentTheme() == Dark ? 9 : 52));
+        wash.setColorAt(1.0, QColor(232, 250, 247, currentTheme() == Dark ? 8 : 42));
+        painter.fillPath(panelPath, wash);
+
+        QRadialGradient glow(QPointF(panelRect.width() * 0.18, panelRect.height() * 0.22),
+                             qMax(panelRect.width(), panelRect.height()) * 0.72);
+        glow.setColorAt(0.0, QColor(255, 255, 255, currentTheme() == Dark ? 16 : 84));
+        glow.setColorAt(1.0, QColor(255, 255, 255, 0));
+        painter.fillPath(panelPath, glow);
+
+        painter.save();
+        painter.setClipPath(panelPath);
+        QLinearGradient edgeWash(panelRect.right() - 20.0, 0.0, panelRect.right(), 0.0);
+        edgeWash.setColorAt(0.0, QColor(0, 0, 0, 0));
+        edgeWash.setColorAt(1.0, QColor(0, 0, 0, currentTheme() == Dark ? 38 : 16));
+        painter.fillRect(QRectF(panelRect.right() - 20.0, panelRect.top(), 20.0, panelRect.height()),
+                         edgeWash);
+        painter.restore();
+
+        QColor stroke = colors.strokeSurface;
+        stroke.setAlpha(currentTheme() == Dark ? 92 : 64);
+        painter.setPen(QPen(stroke, 1.0));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(panelPath);
+    }
+
+private:
+    QPainterPath drawerPanelPath(const QRectF& bounds) const
+    {
+        return fluent::overlay::roundedCornerRectPath(bounds, themeRadius().overlay,
+                                                      /*TL*/ false, /*TR*/ true,
+                                                      /*BR*/ true, /*BL*/ false);
+    }
+
+    void updateClipMask()
+    {
+        if (rect().isEmpty()) {
+            clearMask();
+            return;
+        }
+        const int shadowMargin = qMin(kNavigationDrawerShadowMargin, qMax(0, width() / 4));
+        const QRectF panelRect(0.0, 0.0,
+                               qMax(0, width() - shadowMargin),
+                               height());
+        QRegion region(drawerPanelPath(panelRect).toFillPolygon().toPolygon());
+        if (shadowMargin > 0)
+            region += QRegion(qMax(0, width() - shadowMargin), 0, shadowMargin, height());
+        setMask(region);
+    }
+};
 
 } // namespace
 
@@ -443,9 +555,10 @@ void GalleryWindow::buildNavigationShell()
                     return;
                 }
 
+                closeNavigationDrawer();
                 if (!m_navigationView->isAnimationEnabled()
                     || m_navigationView->property("layoutTransitionProgress").toDouble() >= 1.0) {
-                    setNavigationPanesCompact(false);
+                    setNavigationPanesCompact(!m_navigationView->isPaneOpen());
                     return;
                 }
 
@@ -676,11 +789,12 @@ void GalleryWindow::updateTitleBarLayout()
     // In the minimal (hidden-pane) layout the app title+icon give way to the search box;
     // otherwise they show. Nothing shows while the splash owns the title bar.
     // zh_CN: 最小（隐藏窗格）布局下，应用标题+图标让位给搜索框；其余情况显示。splash 接管标题栏期间全部隐藏。
+    const bool showAppIcon = m_titleBarChromeVisible;
     const bool showTitle = m_titleBarChromeVisible && mode != DisplayMode::LeftMinimal;
     if (m_titleBarTitle)
         m_titleBarTitle->setVisible(showTitle);
     if (m_titleBarAppIcon)
-        m_titleBarAppIcon->setVisible(showTitle);
+        m_titleBarAppIcon->setVisible(showAppIcon);
 
     // Settle the left-anchored chain (back/menu/icon/title) before we publish hit-test rects.
     // zh_CN: 在发布命中测试区域前，先让左锚链（返回/菜单/图标/标题）落到最终几何。
@@ -693,6 +807,7 @@ void GalleryWindow::updateTitleBarLayout()
     // zh_CN: 左边界 = 最后一个可见前导控件的右缘 + 间隙，按固定度量推导，不依赖布局时序。返回按钮按其展开
     // 进度占位，故搜索框能随收展平滑跟随。
     const int leftBound = TitleBarMetrics::searchLeftBound(bar->systemReservedLeadingWidth(),
+                                                           showAppIcon,
                                                            showTitle,
                                                            m_backButtonReveal);
     const int rightBound = TitleBarMetrics::searchRightBound(bar->width(),
@@ -812,6 +927,25 @@ bool GalleryWindow::navigateBack()
     return currentRouteId() == routeId;
 }
 
+GalleryWindow::AppWindowWidthState GalleryWindow::appWindowWidthState() const
+{
+    using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
+    const DisplayMode mode = m_navigationView ? m_navigationView->effectiveDisplayMode()
+                                              : DisplayMode::Left;
+    switch (mode) {
+    case DisplayMode::Left:
+        return AppWindowWidthState::Expanded;
+    case DisplayMode::LeftCompact:
+        return AppWindowWidthState::Compact;
+    case DisplayMode::LeftMinimal:
+        return AppWindowWidthState::Minimal;
+    case DisplayMode::Auto:
+    case DisplayMode::Top:
+        break;
+    }
+    return AppWindowWidthState::Expanded;
+}
+
 void GalleryWindow::toggleNavigationDisplayMode()
 {
     if (!m_navigationView) {
@@ -819,9 +953,15 @@ void GalleryWindow::toggleNavigationDisplayMode()
         return;
     }
 
-    using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
     if (m_navigationCompactReleaseTimer)
         m_navigationCompactReleaseTimer->stop();
+
+    if (appWindowWidthState() != AppWindowWidthState::Expanded) {
+        toggleNavigationDrawer();
+        return;
+    }
+
+    closeNavigationDrawer();
 
     // Keep the adaptive Auto mode and just open/close the pane. In the compact / minimal
     // modes opening overlays the pane with full labels; closing returns it to the icon
@@ -829,12 +969,101 @@ void GalleryWindow::toggleNavigationDisplayMode()
     // 关闭则回到图标栏（或隐藏）。
     const bool open = !m_navigationView->isPaneOpen();
     m_navigationView->setPaneOpen(open);
-    if (m_navigationView->effectiveDisplayMode() != DisplayMode::Left)
-        setNavigationPanesCompact(!open);
+    setNavigationPanesCompact(!open);
     LOG_DEBUG(QStringLiteral("GalleryWindow navigationPaneToggled paneOpen=%1 effectiveMode=%2 chromeWidth=%3")
                   .arg(open ? QStringLiteral("true") : QStringLiteral("false"))
                   .arg(static_cast<int>(m_navigationView->effectiveDisplayMode()))
                   .arg(m_navigationView->chromeGeometry().width()));
+}
+
+void GalleryWindow::ensureNavigationDrawer()
+{
+    if (m_navigationDrawer)
+        return;
+
+    m_navigationDrawer = new fluent::collections::DrawerView(this);
+    m_navigationDrawer->setObjectName(QStringLiteral("galleryNavigationDrawer"));
+    m_navigationDrawer->setEdge(fluent::collections::DrawerView::DrawerEdge::Left);
+    m_navigationDrawer->setDrawerLength(NavigationMetrics::ExpandedPaneWidth + kNavigationDrawerShadowMargin);
+    m_navigationDrawer->setProperty("fluentSkipSurfacePaint", true);
+    m_navigationDrawer->setDim(false);
+    m_navigationDrawer->setModal(false);
+    m_navigationDrawer->setInteractive(false);
+    m_navigationDrawer->setDragMargin(0);
+    m_navigationDrawer->setGraphicsEffect(nullptr);
+    m_navigationDrawer->setClosePolicy(fluent::collections::DrawerView::ClosePolicy(
+        fluent::collections::DrawerView::CloseOnPressOutside
+        | fluent::collections::DrawerView::CloseOnEscape));
+    m_navigationDrawer->setOuterCornerRadius(themeRadius().overlay);
+
+    m_navigationDrawerContent = new NavigationDrawerContentPanel(m_navigationDrawer);
+    m_navigationDrawerContent->setObjectName(QStringLiteral("galleryNavigationDrawerContent"));
+    auto* layout = new QVBoxLayout(m_navigationDrawerContent);
+    layout->setContentsMargins(0, 0, kNavigationDrawerShadowMargin, 0);
+    layout->setSpacing(0);
+
+    m_drawerMainNavigationPane = new GalleryNavigationPane(m_navigationViewModel.mainPaneItems(),
+                                                           m_navigationDrawerContent);
+    m_drawerMainNavigationPane->setObjectName(QStringLiteral("galleryDrawerMainNavigationPane"));
+    m_drawerFooterNavigationPane = new GalleryNavigationPane(m_navigationViewModel.footerPaneItems(),
+                                                             m_navigationDrawerContent);
+    m_drawerFooterNavigationPane->setObjectName(QStringLiteral("galleryDrawerFooterNavigationPane"));
+    m_drawerMainNavigationPane->setSurfaceVisible(true);
+    m_drawerFooterNavigationPane->setSurfaceVisible(true);
+    m_drawerMainNavigationPane->setCompact(false);
+    m_drawerFooterNavigationPane->setCompact(false);
+
+    m_drawerMainNavigationPane->bind("selectedRouteId",
+                                     &m_navigationState,
+                                     "selectedRouteId",
+                                     fluent::PropertyBinder::TwoWay);
+    m_drawerFooterNavigationPane->bind("selectedRouteId",
+                                       &m_navigationState,
+                                       "selectedRouteId",
+                                       fluent::PropertyBinder::TwoWay);
+
+    const auto closeAfterRoute = [this](const QString&) {
+        QTimer::singleShot(0, this, [this]() {
+            closeNavigationDrawer();
+        });
+    };
+    connect(m_drawerMainNavigationPane, &GalleryNavigationPane::routeActivated,
+            this, closeAfterRoute);
+    connect(m_drawerFooterNavigationPane, &GalleryNavigationPane::routeActivated,
+            this, closeAfterRoute);
+
+    layout->addWidget(m_drawerMainNavigationPane, 1);
+    layout->addWidget(m_drawerFooterNavigationPane, 0);
+    m_navigationDrawer->setContentWidget(m_navigationDrawerContent);
+}
+
+void GalleryWindow::toggleNavigationDrawer()
+{
+    ensureNavigationDrawer();
+    if (!m_navigationDrawer)
+        return;
+
+    const int titleBarHeight = titleBar() ? titleBar()->height() : TitleBarMetrics::Height;
+    m_navigationDrawer->setAvailableMargins(QMargins(0, titleBarHeight, 0, 0));
+    m_navigationDrawer->setDrawerLength((m_navigationView
+                                             ? m_navigationView->expandedPaneWidth()
+                                             : NavigationMetrics::ExpandedPaneWidth)
+                                        + kNavigationDrawerShadowMargin);
+    if (m_drawerMainNavigationPane)
+        m_drawerMainNavigationPane->setCompact(false);
+    if (m_drawerFooterNavigationPane)
+        m_drawerFooterNavigationPane->setCompact(false);
+
+    if (m_navigationDrawer->isOpen() || m_navigationDrawer->isVisible())
+        m_navigationDrawer->close();
+    else
+        m_navigationDrawer->open();
+}
+
+void GalleryWindow::closeNavigationDrawer()
+{
+    if (m_navigationDrawer && (m_navigationDrawer->isOpen() || m_navigationDrawer->isVisible()))
+        m_navigationDrawer->close();
 }
 
 void GalleryWindow::setNavigationPanesCompact(bool compact)

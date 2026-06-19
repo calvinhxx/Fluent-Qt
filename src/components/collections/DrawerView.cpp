@@ -317,6 +317,8 @@ bool DrawerView::eventFilter(QObject* watched, QEvent* event)
     }
 
     if (event->type() == QEvent::Resize && watched == m_topLevel) {
+        if (!isVisible() && !m_isOpen && !m_drag.active)
+            return false;
         updateOverlayGeometry();
         return false;
     }
@@ -387,6 +389,8 @@ void DrawerView::paintEvent(QPaintEvent*)
     painter.setCompositionMode(QPainter::CompositionMode_Source);
     painter.fillRect(panelRect, Qt::transparent);
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    if (property("fluentSkipSurfacePaint").toBool())
+        return;
 
     const auto colors = themeColors();
     const QPainterPath fillPath = outerRoundedPanelPath(QRectF(panelRect));
@@ -662,13 +666,18 @@ void DrawerView::updateClipMask()
 
 void DrawerView::updateOverlayGeometry()
 {
-    m_panelGeometry = panelRectForPosition(m_position);
-    if (parentWidget())
-        setGeometry(m_panelGeometry);
+    const QRect nextPanelGeometry = panelRectForPosition(m_position);
+    const bool panelGeometryChanged = m_panelGeometry != nextPanelGeometry;
+    if (panelGeometryChanged) {
+        m_panelGeometry = nextPanelGeometry;
+        if (parentWidget() && geometry() != m_panelGeometry)
+            setGeometry(m_panelGeometry);
+    }
+    if (!panelGeometryChanged && !m_scrim)
+        return;
     updateScrimGeometry();
     updateScrimOpacity();
     updateContentGeometry();
-    raiseOverlayStack();
 }
 
 void DrawerView::updateContentGeometry()
