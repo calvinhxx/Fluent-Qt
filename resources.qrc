@@ -4,6 +4,10 @@
         <file>res/Segoe Fluent Icons.ttf</file>
         <file>res/SegoeUI-VF.ttf</file>
         <file>app/assets/winui-gallery-app-icon.png</file>
+        <file>app/assets/home_header_tiles/GitHub-Mark.png</file>
+        <file>app/assets/home_header_tiles/Header-Toolkit.png</file>
+        <file>app/assets/home_header_tiles/Header-WinUI.png</file>
+        <file>app/assets/home_header_tiles/Header-WindowsDesign.png</file>
         <file>app/assets/control_images/Placeholder.png</file>
         <file>app/assets/control_images/basic-input/Button.png</file>
         <file>app/assets/control_images/basic-input/CheckBox.png</file>
