@@ -18,7 +18,7 @@ class QVariantAnimation;
 class QWheelEvent;
 class QTimer;
 
-namespace fluent::scrolling { class ScrollBar; }
+namespace fluent::scrolling { class ScrollBar; class OverscrollController; }
 
 namespace fluent::collections {
 
@@ -186,10 +186,10 @@ public:
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
 
-    bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
+    bool isScrollChainingEnabled() const;
     void setScrollChainingEnabled(bool enabled);
 
-    bool isOverscrollEnabled() const { return m_overscrollEnabled; }
+    bool isOverscrollEnabled() const;
     void setOverscrollEnabled(bool enabled);
 
     // --- Tree API ---
@@ -302,7 +302,6 @@ private:
     void layoutHeader();
     void setViewportHovered(bool hovered);
     void updateViewportMargins();
-    void startBounceBack();
 
     void connectIndicatorMotionModel(QAbstractItemModel* model);
     void disconnectIndicatorMotionModel();
@@ -356,15 +355,9 @@ private:
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     ::fluent::scrolling::ScrollBar* m_hScrollBar = nullptr;
-    bool m_scrollChainingEnabled = false;
-    bool m_overscrollEnabled = true;
+    ::fluent::scrolling::OverscrollController* m_overscroll = nullptr;
     bool m_horizontalFluentScrollBarEnabled = true;
     bool m_viewportHovered = false;
-
-    // --- Overscroll bounce ---
-    qreal m_overscrollY = 0.0;
-    QVariantAnimation* m_bounceAnim = nullptr;
-    QTimer* m_bounceTimer = nullptr;
 
     // --- Selected indicator motion ---
     QMetaObject::Connection m_indicatorModelAboutToResetConnection;

@@ -28,6 +28,7 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/scrolling/OverlayScrollChrome.h"
+#include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::collections {
@@ -78,18 +79,25 @@ FlowView::FlowView(QWidget* parent)
     connect(verticalScrollBar(), &QScrollBar::rangeChanged,
             this, &FlowView::syncFluentScrollBar);
 
-    m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(themeAnimation().normal);
-    m_bounceAnim->setEasingCurve(themeAnimation().decelerate);
-    connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
-        m_overscrollY = value.toReal();
+    // --- Overscroll bounce (shared controller) ---
+    fluent::scrolling::OverscrollController::Hooks hooks;
+    hooks.scrollBar = [this] { return verticalScrollBar(); };
+    hooks.normalScroll = [this](qreal scrollPx) {
+        QScrollBar* bar = verticalScrollBar();
+        const int previous = bar->value();
+        const int target = qBound(bar->minimum(), previous - qRound(scrollPx), bar->maximum());
+        if (target == previous)
+            return false;
+        bar->setValue(target);
+        syncFluentScrollBar();
         viewport()->update();
-    });
-
-    m_bounceTimer = new QTimer(this);
-    m_bounceTimer->setSingleShot(true);
-    m_bounceTimer->setInterval(150);
-    connect(m_bounceTimer, &QTimer::timeout, this, &FlowView::startBounceBack);
+        return true;
+    };
+    hooks.onOverscrollChanged = [this] { viewport()->update(); };
+    // No fallbackWheel: a flow with no overflow ignores the wheel so an enclosing scroller takes it.
+    // zh_CN: 无 fallbackWheel：内容未超出时忽略滚轮，让外层滚动容器接管。
+    m_overscroll = new fluent::scrolling::OverscrollController(
+        viewport(), kDiscreteWheelStepPx, std::move(hooks), this);
 
     applyThemeStyle();
     updateViewportMargins();
@@ -257,43 +265,23 @@ void FlowView::setCanReorderItems(bool enabled)
     emit canReorderItemsChanged();
 }
 
+bool FlowView::isScrollChainingEnabled() const { return m_overscroll->isScrollChainingEnabled(); }
+
 void FlowView::setScrollChainingEnabled(bool enabled)
 {
-    if (m_scrollChainingEnabled == enabled)
+    if (m_overscroll->isScrollChainingEnabled() == enabled)
         return;
-    m_scrollChainingEnabled = enabled;
-    if (enabled) {
-        if (m_bounceTimer)
-            m_bounceTimer->stop();
-        if (m_bounceAnim)
-            m_bounceAnim->stop();
-        if (!qFuzzyIsNull(m_overscrollY)) {
-            m_overscrollY = 0.0;
-            if (viewport())
-                viewport()->update();
-        }
-    }
+    m_overscroll->setScrollChainingEnabled(enabled);
     emit scrollChainingEnabledChanged();
 }
 
+bool FlowView::isOverscrollEnabled() const { return m_overscroll->isOverscrollEnabled(); }
+
 void FlowView::setOverscrollEnabled(bool enabled)
 {
-    if (m_overscrollEnabled == enabled)
+    if (m_overscroll->isOverscrollEnabled() == enabled)
         return;
-    m_overscrollEnabled = enabled;
-    if (!enabled) {
-        // Cancel any in-flight bounce so the view settles at the boundary immediately.
-        // zh_CN: 取消进行中的回弹，使视图立即停在边界。
-        if (m_bounceTimer)
-            m_bounceTimer->stop();
-        if (m_bounceAnim)
-            m_bounceAnim->stop();
-        if (!qFuzzyIsNull(m_overscrollY)) {
-            m_overscrollY = 0.0;
-            if (viewport())
-                viewport()->update();
-        }
-    }
+    m_overscroll->setOverscrollEnabled(enabled);
     emit overscrollEnabledChanged();
 }
 
@@ -661,129 +649,11 @@ void FlowView::wheelEvent(QWheelEvent* event)
         event->ignore();
         return;
     }
-
-    const QPoint pixelDelta = event->pixelDelta();
-    const QPoint angleDelta = event->angleDelta();
-    const auto phase = event->phase();
-    QScrollBar* bar = verticalScrollBar();
-    if (pixelDelta.isNull() && angleDelta.isNull()) {
-        if (!qFuzzyIsNull(m_overscrollY) &&
-            (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd)) {
-            startBounceBack();
-            event->accept();
-            return;
-        }
-        event->ignore();
-        return;
-    }
-
-    const qreal scrollPx = !pixelDelta.isNull()
-        ? static_cast<qreal>(pixelDelta.y())
-        : angleDelta.y() / 120.0 * kDiscreteWheelStepPx;
-
-    if (!qFuzzyIsNull(m_overscrollY)) {
-        if (m_bounceAnim && m_bounceAnim->state() == QAbstractAnimation::Running) {
-            // Bounce in progress. Only consume a NoScrollPhase notch that keeps pushing into
-            // the boundary; a reverse notch must interrupt the bounce and recover, otherwise
-            // the wheel feels stuck until the animation settles. zh_CN: 回弹进行中：仅吞掉继续
-            //朝边界推的滚轮；反向滚动需打断回弹并恢复，否则滚轮会卡到动画结束。
-            const bool pushingIntoBoundary = (m_overscrollY > 0.0 && scrollPx > 0.0) ||
-                                             (m_overscrollY < 0.0 && scrollPx < 0.0);
-            if (phase == Qt::NoScrollPhase && pushingIntoBoundary) {
-                event->accept();
-                return;
-            }
-            m_bounceAnim->stop();
-        }
-        if (m_bounceTimer)
-            m_bounceTimer->stop();
-
-        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-            startBounceBack();
-            event->accept();
-            return;
-        }
-
-        constexpr qreal kMax = 100.0;
-        const qreal ratio = qMin(qAbs(m_overscrollY) / kMax, 1.0);
-        const qreal damping = (1.0 - ratio) * (1.0 - ratio);
-
-        const qreal previousOverscroll = m_overscrollY;
-        m_overscrollY += scrollPx * qMax(damping, 0.05) * 0.5;
-        m_overscrollY = qBound(-kMax, m_overscrollY, kMax);
-
-        if ((previousOverscroll > 0.0 && m_overscrollY <= 0.0) ||
-            (previousOverscroll < 0.0 && m_overscrollY >= 0.0)) {
-            m_overscrollY = 0.0;
-        }
-
-        viewport()->update();
-        if (!qFuzzyIsNull(m_overscrollY) && phase == Qt::NoScrollPhase && m_bounceTimer)
-            m_bounceTimer->start();
-
-        event->accept();
-        return;
-    }
-
-    if (!bar || bar->maximum() <= bar->minimum()) {
-        // Content fits: stay transparent so an enclosing scroller takes the wheel.
-        // zh_CN: 内容未超出视口：保持透明，让外层滚动容器接管滚轮。
-        event->ignore();
-        return;
-    }
-
-    const bool atTop = bar->value() <= bar->minimum();
-    const bool atBottom = bar->value() >= bar->maximum();
-    if ((atTop && scrollPx > 0.0) || (atBottom && scrollPx < 0.0)) {
-        if (m_scrollChainingEnabled) {
-            event->ignore();
-            return;
-        }
-
-        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-            event->accept();
-            return;
-        }
-
-        // Overscroll disabled (e.g. a navigation pane): stop cleanly at the boundary instead
-        // of bouncing. zh_CN: 关闭回弹（如导航窗格）：在边界干脆停住，不做回弹。
-        if (!m_overscrollEnabled) {
-            event->accept();
-            return;
-        }
-
-        m_overscrollY = scrollPx * 0.5;
-        viewport()->update();
-
-        if (phase == Qt::NoScrollPhase && m_bounceTimer)
-            m_bounceTimer->start();
-
-        event->accept();
-        return;
-    }
-
-    const int previous = bar->value();
-    const int target = qBound(bar->minimum(),
-                              previous - qRound(scrollPx),
-                              bar->maximum());
-    const bool moved = target != previous;
-    if (moved) {
-        bar->setValue(target);
-        syncFluentScrollBar();
-        viewport()->update();
-    }
-
-    if (!moved && m_scrollChainingEnabled) {
-        event->ignore();
-        return;
-    }
-
-    // By default, a scrollable flow owns boundary wheel input so an enclosing
-    // page does not pan mid-gesture. scrollChainingEnabled opts back into that
-    // propagation for hosts that intentionally want chained scrolling.
-    // zh_CN: 默认情况下，可滚动的 flow 会持有边界滚轮输入，避免外层页面在手势
-    // 中途跟着平移。scrollChainingEnabled 用于显式恢复这种向外传递。
-    event->accept();
+    // The shared controller owns the overscroll/bounce state machine; a scrollable flow keeps
+    // boundary wheel input (unless scrollChainingEnabled) so an enclosing page doesn't pan.
+    // zh_CN: 共享控制器持有 overscroll/回弹状态机；可滚动的 flow 默认持有边界滚轮（除非开启链式滚动），
+    // 避免外层页面跟着平移。
+    m_overscroll->handleWheel(event);
 }
 
 QModelIndex FlowView::moveCursor(CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
@@ -834,18 +704,12 @@ int FlowView::horizontalOffset() const
 
 int FlowView::verticalOffset() const
 {
-    return verticalScrollBar() ? verticalScrollBar()->value() - qRound(m_overscrollY) : 0;
-}
-
-void FlowView::startBounceBack()
-{
-    if (qFuzzyIsNull(m_overscrollY) || !m_bounceAnim)
-        return;
-
-    m_bounceAnim->stop();
-    m_bounceAnim->setStartValue(m_overscrollY);
-    m_bounceAnim->setEndValue(0.0);
-    m_bounceAnim->start();
+    if (!verticalScrollBar())
+        return 0;
+    // m_overscroll may be null while the base view queries the offset during construction.
+    // zh_CN: 构造期间基类会查询偏移，此时 m_overscroll 可能尚未创建。
+    const qreal overscroll = m_overscroll ? m_overscroll->value() : 0.0;
+    return verticalScrollBar()->value() - qRound(overscroll);
 }
 
 bool FlowView::isIndexHidden(const QModelIndex& index) const

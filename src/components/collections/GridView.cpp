@@ -24,6 +24,7 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/scrolling/OverlayScrollChrome.h"
+#include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::collections {
@@ -85,19 +86,21 @@ GridView::GridView(QWidget* parent)
     connect(verticalScrollBar(), &QScrollBar::rangeChanged,
             this, &GridView::syncFluentScrollBar);
 
-    // --- Overscroll bounce ---
-    m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(themeAnimation().normal);
-    m_bounceAnim->setEasingCurve(themeAnimation().decelerate);
-    connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
-        m_overscrollY = v.toReal();
-        viewport()->update();
-    });
-
-    m_bounceTimer = new QTimer(this);
-    m_bounceTimer->setSingleShot(true);
-    m_bounceTimer->setInterval(150);
-    connect(m_bounceTimer, &QTimer::timeout, this, &GridView::startBounceBack);
+    // --- Overscroll bounce (shared controller) ---
+    fluent::scrolling::OverscrollController::Hooks hooks;
+    hooks.scrollBar = [this] { return verticalScrollBar(); };
+    hooks.normalScroll = [this](qreal scrollPx) {
+        // ScrollPerPixel: a fixed pixel step per notch instead of Qt's whole-row jump.
+        // zh_CN: ScrollPerPixel：每刻度固定像素步进，而非 Qt 的整行跳动。
+        QScrollBar* vsb = verticalScrollBar();
+        const int before = vsb->value();
+        vsb->setValue(before - qRound(scrollPx));
+        return vsb->value() != before;
+    };
+    hooks.onOverscrollChanged = [this] { viewport()->update(); };
+    hooks.fallbackWheel = [this](QWheelEvent* e) { QListView::wheelEvent(e); };
+    m_overscroll = new fluent::scrolling::OverscrollController(
+        viewport(), kDiscreteWheelStepPx, std::move(hooks), this);
 
     updateGridSize();
     syncFluentScrollBar();
@@ -192,33 +195,19 @@ void GridView::setMaxColumns(int maxCols) {
     emit maxColumnsChanged();
 }
 
+bool GridView::isScrollChainingEnabled() const { return m_overscroll->isScrollChainingEnabled(); }
+
 void GridView::setScrollChainingEnabled(bool enabled) {
-    if (m_scrollChainingEnabled == enabled) return;
-    m_scrollChainingEnabled = enabled;
-    if (enabled) {
-        if (m_bounceTimer) m_bounceTimer->stop();
-        if (m_bounceAnim) m_bounceAnim->stop();
-        if (!qFuzzyIsNull(m_overscrollY)) {
-            m_overscrollY = 0.0;
-            if (viewport()) viewport()->update();
-        }
-    }
+    if (m_overscroll->isScrollChainingEnabled() == enabled) return;
+    m_overscroll->setScrollChainingEnabled(enabled);
     emit scrollChainingEnabledChanged();
 }
 
+bool GridView::isOverscrollEnabled() const { return m_overscroll->isOverscrollEnabled(); }
+
 void GridView::setOverscrollEnabled(bool enabled) {
-    if (m_overscrollEnabled == enabled) return;
-    m_overscrollEnabled = enabled;
-    if (!enabled) {
-        // Cancel any in-flight bounce so the view settles at the boundary immediately.
-        // zh_CN: 取消进行中的回弹，使视图立即停在边界。
-        if (m_bounceTimer) m_bounceTimer->stop();
-        if (m_bounceAnim) m_bounceAnim->stop();
-        if (!qFuzzyIsNull(m_overscrollY)) {
-            m_overscrollY = 0.0;
-            if (viewport()) viewport()->update();
-        }
-    }
+    if (m_overscroll->isOverscrollEnabled() == enabled) return;
+    m_overscroll->setOverscrollEnabled(enabled);
     emit overscrollEnabledChanged();
 }
 
@@ -422,117 +411,14 @@ void GridView::leaveEvent(QEvent* event) {
 // ── Overscroll bounce ─────────────────────────────────────────────────────────
 
 void GridView::wheelEvent(QWheelEvent* event) {
-    const int delta = event->angleDelta().y();
-    const auto phase = event->phase();
-
-    // Zero-delta event (e.g. ScrollEnd on Windows touchpad with no residual)
-    if (delta == 0 && event->pixelDelta().isNull()) {
-        if (!qFuzzyIsNull(m_overscrollY) &&
-            (phase == Qt::ScrollEnd || phase == Qt::ScrollMomentum)) {
-            startBounceBack();
-            event->accept();
-            return;
-        }
-        QListView::wheelEvent(event);
-        return;
-    }
-
-    const qreal scrollPx = !event->pixelDelta().isNull()
-                               ? static_cast<qreal>(event->pixelDelta().y())
-                               : delta / 120.0 * kDiscreteWheelStepPx;
-
-    if (!qFuzzyIsNull(m_overscrollY)) {
-        if (m_bounceAnim->state() == QAbstractAnimation::Running) {
-            // Bounce in progress. Only consume a NoScrollPhase notch that keeps pushing into
-            // the boundary; a reverse notch must interrupt the bounce and recover, otherwise
-            // the wheel feels stuck until the animation settles. zh_CN: 回弹进行中：仅吞掉继续
-            //朝边界推的滚轮；反向滚动需打断回弹并恢复，否则滚轮会卡到动画结束。
-            const bool pushingIntoBoundary = (m_overscrollY > 0.0 && scrollPx > 0.0) ||
-                                             (m_overscrollY < 0.0 && scrollPx < 0.0);
-            if (phase == Qt::NoScrollPhase && pushingIntoBoundary) {
-                event->accept();
-                return;
-            }
-            m_bounceAnim->stop();
-        }
-        m_bounceTimer->stop();
-
-        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-            startBounceBack();
-            event->accept();
-            return;
-        }
-
-        constexpr qreal kMax = 100.0;
-        const qreal ratio = qMin(qAbs(m_overscrollY) / kMax, 1.0);
-        const qreal damping = (1.0 - ratio) * (1.0 - ratio);
-
-        const qreal prev = m_overscrollY;
-        m_overscrollY += scrollPx * qMax(damping, 0.05) * 0.5;
-        m_overscrollY = qBound(-kMax, m_overscrollY, kMax);
-
-        if ((prev > 0.0 && m_overscrollY <= 0.0) ||
-            (prev < 0.0 && m_overscrollY >= 0.0)) {
-            m_overscrollY = 0.0;
-        }
-
-        viewport()->update();
-
-        // NoScrollPhase (mouse wheel / Windows touchpad fallback) → timer bounce
-        if (!qFuzzyIsNull(m_overscrollY) && phase == Qt::NoScrollPhase)
-            m_bounceTimer->start();
-
-        event->accept();
-        return;
-    }
-
-    QScrollBar* vsb = verticalScrollBar();
-    if (!vsb || vsb->maximum() <= vsb->minimum()) {
-        event->ignore();
-        return;
-    }
-
-    const bool atTop    = vsb->value() <= vsb->minimum();
-    const bool atBottom = vsb->value() >= vsb->maximum();
-
-    if ((atTop && scrollPx > 0) || (atBottom && scrollPx < 0)) {
-        if (m_scrollChainingEnabled) {
-            event->ignore();
-            return;
-        }
-
-        // Don't enter overscroll from inertia or finger-lift
-        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-            event->accept();
-            return;
-        }
-
-        // Overscroll disabled (e.g. a navigation pane): stop cleanly at the boundary instead
-        // of bouncing. zh_CN: 关闭回弹（如导航窗格）：在边界干脆停住，不做回弹。
-        if (!m_overscrollEnabled) {
-            event->accept();
-            return;
-        }
-
-        m_overscrollY = scrollPx * 0.5;
-        viewport()->update();
-
-        if (phase == Qt::NoScrollPhase)
-            m_bounceTimer->start();
-
-        event->accept();
-        return;
-    }
-
-    // Normal scroll: move a fixed pixel step (ScrollPerPixel) rather than delegating to Qt,
-    // whose per-item step jumps a whole grid row at a time. zh_CN: 常规滚动按固定像素步进
-    //（ScrollPerPixel），不再委托给 Qt 的整行跳动。
-    vsb->setValue(vsb->value() - qRound(scrollPx));
-    event->accept();
+    m_overscroll->handleWheel(event);
 }
 
 int GridView::verticalOffset() const {
-    return QListView::verticalOffset() - qRound(m_overscrollY);
+    // m_overscroll may be null while QListView's base setup queries the offset during
+    // construction. zh_CN: 构造期间 QListView 基类会查询偏移，此时 m_overscroll 可能尚未创建。
+    const qreal overscroll = m_overscroll ? m_overscroll->value() : 0.0;
+    return QListView::verticalOffset() - qRound(overscroll);
 }
 
 QRect GridView::visualRect(const QModelIndex& index) const {
@@ -542,15 +428,6 @@ QRect GridView::visualRect(const QModelIndex& index) const {
         r.translate(qRound(off.x()), qRound(off.y()));
     }
     return r;
-}
-
-void GridView::startBounceBack() {
-    if (qFuzzyIsNull(m_overscrollY))
-        return;
-    m_bounceAnim->stop();
-    m_bounceAnim->setStartValue(m_overscrollY);
-    m_bounceAnim->setEndValue(0.0);
-    m_bounceAnim->start();
 }
 
 void GridView::setViewportHovered(bool hovered) {

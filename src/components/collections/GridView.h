@@ -15,7 +15,7 @@ class QTimer;
 class QVariantAnimation;
 class QWheelEvent;
 
-namespace fluent::scrolling { class ScrollBar; }
+namespace fluent::scrolling { class ScrollBar; class OverscrollController; }
 
 namespace fluent::collections {
 
@@ -138,10 +138,10 @@ public:
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
 
-    bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
+    bool isScrollChainingEnabled() const;
     void setScrollChainingEnabled(bool enabled);
 
-    bool isOverscrollEnabled() const { return m_overscrollEnabled; }
+    bool isOverscrollEnabled() const;
     void setOverscrollEnabled(bool enabled);
 
     // --- Grid layout ---
@@ -207,7 +207,6 @@ private:
     void setViewportHovered(bool hovered);
     void updateViewportMargins();
     void updateGridSize();
-    void startBounceBack();
     int dropIndicatorIndex(const QPoint& pos) const;
     int stabilizedDropIndicatorIndex(const QPoint& pos) const;
     qreal dropIndicatorDistance(const QPoint& pos, int slot) const;
@@ -234,8 +233,6 @@ private:
     int m_maxColumns = 0;
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
-    bool m_scrollChainingEnabled = false;
-    bool m_overscrollEnabled = true;
     bool m_viewportHovered = false;
 
     // --- Drag reorder ---
@@ -254,10 +251,8 @@ private:
     QHash<int, QVariantAnimation*> m_dragAnims;
     mutable bool m_paintingWithOffsets = false;
 
-    // --- Overscroll bounce ---
-    qreal m_overscrollY = 0.0;
-    QVariantAnimation* m_bounceAnim = nullptr;
-    QTimer* m_bounceTimer = nullptr;
+    // --- Overscroll bounce (shared state machine) ---
+    ::fluent::scrolling::OverscrollController* m_overscroll = nullptr;
 };
 
 using GridSelectionMode = GridView::GridSelectionMode;
