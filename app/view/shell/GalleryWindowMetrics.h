@@ -20,7 +20,7 @@ struct Navigation {
     static constexpr int CompactThresholdWidth = Breakpoints::Small;
     static constexpr int ExpandedThresholdWidth = Breakpoints::Medium + 1;
     static constexpr int CompactPaneWidth = Breakpoints::NavigationPaneCompactWidth;
-    static constexpr int ExpandedPaneWidth = 240;
+    static constexpr int ExpandedPaneWidth = 320;
 };
 
 struct TitleBar {
@@ -46,22 +46,26 @@ struct TitleBar {
     }
 
     static int leadingChromeRight(int systemReservedLeadingWidth,
+                                  bool showAppIcon,
                                   bool showTitle,
                                   qreal backReveal)
     {
         int right = leadingOffset(systemReservedLeadingWidth)
                     + qRound(backReveal * (ButtonSize + ItemGap))
                     + ButtonSize;
+        if (showAppIcon)
+            right += ItemGap + AppIconSize;
         if (showTitle)
-            right += ItemGap + AppIconSize + ItemGap + TitleWidth;
+            right += ItemGap + TitleWidth;
         return right;
     }
 
     static int searchLeftBound(int systemReservedLeadingWidth,
+                               bool showAppIcon,
                                bool showTitle,
                                qreal backReveal)
     {
-        return leadingChromeRight(systemReservedLeadingWidth, showTitle, backReveal) + ItemGap;
+        return leadingChromeRight(systemReservedLeadingWidth, showAppIcon, showTitle, backReveal) + ItemGap;
     }
 
     static int searchRightBound(int barWidth, int systemReservedTrailingWidth)

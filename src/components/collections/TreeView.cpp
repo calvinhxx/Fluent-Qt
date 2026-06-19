@@ -572,6 +572,9 @@ void TreeView::setHorizontalFluentScrollBarEnabled(bool enabled) {
 void TreeView::paintEvent(QPaintEvent* event) {
     const auto& c = themeColors();
     const int r = CornerRadius::Control;
+    const bool preserveParentSurface =
+        property("fluentPreserveParentSurface").toBool()
+        || (viewport() && viewport()->property("fluentPreserveParentSurface").toBool());
 
     // --- 1. Container background ---
     if (m_backgroundVisible) {
@@ -579,7 +582,8 @@ void TreeView::paintEvent(QPaintEvent* event) {
         p.setRenderHint(QPainter::Antialiasing);
         p.fillRect(viewport()->rect(), c.bgLayer);
         p.end();
-    } else if (window() && window()->testAttribute(Qt::WA_TranslucentBackground)) {
+    } else if (!preserveParentSurface
+               && window() && window()->testAttribute(Qt::WA_TranslucentBackground)) {
         // Background hidden over a translucent top-level (system backdrop / macOS vibrancy): keep
         // the viewport transparent so the backdrop shows, but erase it each paint. The backing
         // store isn't auto-cleared there on macOS, so scrolled/expanded rows would otherwise ghost
