@@ -8,6 +8,8 @@
 #include "utils/Log.h"
 #include "GalleryCategoryPage.h"
 #include "GalleryComponentPage.h"
+#include "GalleryFoundationPage.h"
+#include "GalleryFoundationTopicPage.h"
 #include "GalleryHomePage.h"
 #include "PlaceholderPage.h"
 #include "SettingsPage.h"
@@ -40,6 +42,10 @@ QWidget* GalleryPageFactory::createPage(const QString& routeId) const
             return new GalleryCategoryPage(*entry, m_navigationViewModel);
         case GalleryPageKind::Component:
             return new GalleryComponentPage(*entry, m_navigationViewModel);
+        case GalleryPageKind::Foundation:
+            return new GalleryFoundationPage(*entry, m_navigationViewModel);
+        case GalleryPageKind::FoundationTopic:
+            return new GalleryFoundationTopicPage(*entry, m_navigationViewModel);
         case GalleryPageKind::Settings:
         case GalleryPageKind::Fallback:
             break;

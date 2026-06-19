@@ -14,6 +14,19 @@ namespace {
 const QHash<QString, QString>& routeDescriptions()
 {
     static const QHash<QString, QString> descriptions{
+        // Foundation
+        {QStringLiteral("foundation"),
+         QStringLiteral("The fundamentals every Fluent Qt control is built on: the QML+ runtime, type, color, icons, and geometry.")},
+        {QStringLiteral("foundation-qmlplus"),
+         QStringLiteral("QML+ brings anchors, reactive property binding, and named states to plain QWidget controls.")},
+        {QStringLiteral("foundation-typography"),
+         QStringLiteral("The Fluent type ramp, from Caption to Display, with sizes, line heights, and weights.")},
+        {QStringLiteral("foundation-color"),
+         QStringLiteral("The theme color tokens — text, fill, stroke, background, and system colors — for light and dark.")},
+        {QStringLiteral("foundation-iconography"),
+         QStringLiteral("A reference grid of Segoe Fluent Icons glyphs used throughout the controls.")},
+        {QStringLiteral("foundation-geometry"),
+         QStringLiteral("Corner-radius and spacing tokens that give the controls their consistent rhythm.")},
         // Categories
         {QStringLiteral("all-controls"),
          QStringLiteral("Browse the full set of Fluent Qt controls in one place.")},
@@ -200,6 +213,34 @@ QVector<GalleryContentEntry> buildCatalog()
                      QStringLiteral("slider"),
                      QStringLiteral("tab-view")},
                     {}});
+
+    // Foundation landing: feature cards drill into one sub-page per design-token topic.
+    // relatedRouteIds drives the cards, in nav order.
+    // zh_CN: Foundation 落地页：特性卡片按导航顺序钻入每个设计 token 主题的子页，relatedRouteIds 驱动卡片。
+    catalog.append({GalleryPageKind::Foundation,
+                    QStringLiteral("foundation"),
+                    QStringLiteral("Foundation"),
+                    descriptionFor(QStringLiteral("foundation"), QStringLiteral("Foundation")),
+                    QString(),
+                    {QStringLiteral("foundation-qmlplus"),
+                     QStringLiteral("foundation-typography"),
+                     QStringLiteral("foundation-color"),
+                     QStringLiteral("foundation-iconography"),
+                     QStringLiteral("foundation-geometry")},
+                    {}});
+    for (const QString& topicId : {QStringLiteral("foundation-qmlplus"),
+                                   QStringLiteral("foundation-typography"),
+                                   QStringLiteral("foundation-color"),
+                                   QStringLiteral("foundation-iconography"),
+                                   QStringLiteral("foundation-geometry")}) {
+        catalog.append({GalleryPageKind::FoundationTopic,
+                        topicId,
+                        QString(),  // title comes from the nav item
+                        descriptionFor(topicId, topicId),
+                        QStringLiteral("foundation"),
+                        {QStringLiteral("foundation")},
+                        {}});
+    }
 
     // "All" lists every component; an empty categoryId means no category filter.
     // zh_CN: “All”列出全部组件；categoryId 为空表示不过滤分类。

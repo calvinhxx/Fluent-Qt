@@ -19,6 +19,8 @@ enum class GalleryPageKind {
     Home,
     Category,
     Component,
+    Foundation,       // Foundation landing page with feature cards. zh_CN: 基础落地页（特性卡片）。
+    FoundationTopic,  // One foundation topic sub-page (typography/color/...). zh_CN: 单个基础主题子页。
     Settings,
     Fallback
 };
