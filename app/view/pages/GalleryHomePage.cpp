@@ -46,13 +46,20 @@ constexpr int kHeroBottomFade = 160; // Bottom band that dissolves the banner in
 constexpr int kBodyMarginX = 24;     // Body content inset (was 48) — matches the hero.
 constexpr int kBodyMarginTop = 20;
 constexpr int kHeroIconSize = 56;
-constexpr int kHeroLinkCardWidth = 186;
-constexpr int kHeroLinkCardHeight = 144;
-constexpr int kHeroLinkCardSpacing = 18;
-constexpr int kHeroLinkCardPadding = 16;
+constexpr int kHeroLinkCardWidth = 198;
+constexpr int kHeroLinkCardHeight = 150;
+constexpr int kHeroLinkCardSpacing = 16;
+constexpr int kHeroLinkCardPadding = 18;
 constexpr int kHeroLinkIconSize = 30;
-constexpr int kHeroLinkStripTop = 192;
-constexpr int kHeroLinkStripHeight = kHeroLinkCardHeight;
+constexpr int kHeroLinkStripTop = 184;
+constexpr int kHeroLinkTopPad = 8;        // Room above each card so the hover-lifted top edge + accent border aren't clipped. zh_CN: 卡片上方预留高度，使 hover 抬起的顶边与强调色描边不被裁切。
+constexpr int kHeroLinkShadowMargin = 24; // Room below each card for the soft drop shadow + hover lift. zh_CN: 卡片下方预留高度，容纳柔和投影与 hover 抬升。
+// The delegate draws the card inset by kHeroLinkTopPad inside a cell this tall, leaving room on
+// every side, so the lifted card (and its full border) never touches a clip edge — top OR bottom.
+// zh_CN: delegate 在这么高的单元格内、以 kHeroLinkTopPad 内缩绘制卡片，四周都有余量，
+// 使抬起的卡片（及其完整描边）永远不贴裁剪边——上边或下边都不会。
+constexpr int kHeroLinkCellHeight = kHeroLinkTopPad + kHeroLinkCardHeight + kHeroLinkShadowMargin;
+constexpr int kHeroLinkStripHeight = kHeroLinkCellHeight;
 constexpr int kHeroLinkStripInsetX = kHeroMarginX - 8;
 constexpr int kHeroScrollButtonWidth = 16;
 constexpr int kHeroScrollButtonHeight = 38;
@@ -169,7 +176,7 @@ public:
 
     QSize sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const override
     {
-        return QSize(kHeroLinkCardWidth, kHeroLinkCardHeight);
+        return QSize(kHeroLinkCardWidth, kHeroLinkCellHeight);
     }
 
     void paint(QPainter* painter,
@@ -189,41 +196,69 @@ public:
         const bool hovered = option.state.testFlag(QStyle::State_MouseOver);
         const bool pressed = option.state.testFlag(QStyle::State_Sunken);
 
-        QRectF cardRect(option.rect.topLeft(), QSizeF(kHeroLinkCardWidth, kHeroLinkCardHeight));
+        const bool active = hovered || pressed;
+        const qreal radius = ::CornerRadius::Overlay;
+
+        // Hover raises the card a couple of pixels; the lift, deeper shadow and accent fringe
+        // together read as "clickable, floating above the banner" (design: translateY(-2px)).
+        // zh_CN: hover 时卡片抬起两像素；抬升 + 更深的阴影 + 强调色发丝边共同传达「可点、浮于横幅之上」。
+        // Lift the card on hover. The strip reserves kHeroLinkTopPad above (so the raised top edge
+        // and its accent border aren't clipped by the viewport) and kHeroLinkShadowMargin below.
+        // zh_CN: hover 抬升。链接条上方预留 kHeroLinkTopPad（使抬起的顶边及其强调色描边不被视口裁切），
+        // 下方预留 kHeroLinkShadowMargin。
+        const qreal lift = active ? 2.0 : 0.0;
+        QRectF cardRect(QPointF(option.rect.left(), option.rect.top() + kHeroLinkTopPad),
+                        QSizeF(kHeroLinkCardWidth, kHeroLinkCardHeight));
         cardRect.adjust(0.5, 0.5, -0.5, -0.5);
+        cardRect.translate(0, -lift);
         QPainterPath cardPath;
-        cardPath.addRoundedRect(cardRect, ::CornerRadius::Overlay, ::CornerRadius::Overlay);
+        cardPath.addRoundedRect(cardRect, radius, radius);
 
-        const auto acrylic = themeAcrylic();
-        QColor acrylicTint = acrylic.tintColor;
-        acrylicTint.setAlphaF(qBound(0.0, acrylic.tintOpacity * 0.82, 1.0));
-        painter->fillPath(cardPath, acrylicTint);
+        // Soft drop shadow — feathered concentric layers, clipped to OUTSIDE the card so it never
+        // darkens the translucent surface, and biased downward so the card rests on a gentle
+        // cushion. Light at rest, a touch deeper on hover.
+        // zh_CN: 柔和投影——羽化同心层，裁剪到卡片之外，绝不压暗半透明表面；向下偏移，使卡片落在柔垫上。
+        // 静息轻、hover 略深。
+        painter->save();
+        QPainterPath shadowClip;
+        shadowClip.addRect(QRectF(option.rect).adjusted(-40, -40, 40, 60));
+        shadowClip = shadowClip.subtracted(cardPath);
+        painter->setClipPath(shadowClip);
+        const int shadowLayers = 14;
+        const qreal reach = active ? 13.0 : 9.0;
+        const qreal dyBias = active ? 5.0 : 3.0;
+        const int peakAlpha = dark ? (active ? 13 : 9) : (active ? 6 : 4);
+        for (int i = 0; i < shadowLayers; ++i) {
+            const qreal f = (i + 1.0) / shadowLayers;        // 0 → 1 outward
+            const qreal grow = reach * f;
+            QColor s(0, 0, 0, qRound(peakAlpha * (1.0 - f)));
+            QPainterPath sp;
+            sp.addRoundedRect(cardRect.adjusted(-grow, -grow * 0.5 + dyBias, grow, grow + dyBias),
+                              radius + grow, radius + grow);
+            painter->fillPath(sp, s);
+        }
+        painter->restore();
 
-        const auto mica = themeMica();
-        QColor micaWash = mica.baseColor;
-        micaWash.setAlphaF(dark ? 0.22 : 0.08);
-        painter->fillPath(cardPath, micaWash);
+        // Acrylic-style surface: a high-opacity layer tint so the banner gradient faintly shows
+        // through (Fluent material) while the card stays clearly a lifted, readable surface. The
+        // shadow is clipped out above, so the translucency reveals the banner, not the shadow.
+        // zh_CN: 亚克力风表面：高不透明度的 layer 着色，让横幅渐变隐约透出（Fluent 材质感），同时卡片仍
+        // 清晰可读、明确抬起。投影已裁到卡外，半透明透出的是横幅而非阴影。
+        QColor surface = dark ? colors.bgLayerAlt : colors.bgLayer;
+        surface.setAlpha(dark ? 158 : 184);
+        painter->fillPath(cardPath, surface);
 
-        QLinearGradient materialSheen(cardRect.topLeft(), cardRect.bottomRight());
-        materialSheen.setColorAt(0.0, dark ? QColor(255, 255, 255, 18)
-                                           : QColor(255, 255, 255, 58));
-        materialSheen.setColorAt(0.55, QColor(255, 255, 255, dark ? 6 : 18));
-        materialSheen.setColorAt(1.0, QColor(255, 255, 255, 0));
-        painter->fillPath(cardPath, materialSheen);
-
-        QColor border = colors.strokeCard;
-        border.setAlpha(dark ? 92 : 58);
+        // Border: a barely-there hairline at rest (≈ rgba(0,0,0,0.05)) so the card reads as a
+        // shadow-defined surface, NOT an outlined box; on hover/press it becomes the accent fringe.
+        // zh_CN: 描边：静息态几乎不可见（≈ rgba(0,0,0,0.05)），让卡片靠阴影成形，而非画成带框的盒子；
+        // hover/按下时转为强调色发丝边。
+        QColor border = active ? colors.accentDefault
+                               : (dark ? QColor(255, 255, 255, 18) : QColor(0, 0, 0, 13));
+        if (active)
+            border.setAlpha(dark ? 150 : 120);
         painter->setPen(QPen(border, 1.0));
         painter->setBrush(Qt::NoBrush);
         painter->drawPath(cardPath);
-
-        if (hovered || pressed) {
-            QColor overlay = hovered ? colors.subtleSecondary : colors.subtleTertiary;
-            overlay.setAlpha(dark ? 28 : 18);
-            painter->setPen(Qt::NoPen);
-            painter->setBrush(overlay);
-            painter->drawPath(cardPath);
-        }
 
         const int contentLeft = qRound(cardRect.left()) + kHeroLinkCardPadding;
         const int contentWidth = qRound(cardRect.width()) - kHeroLinkCardPadding * 2;
@@ -250,23 +285,26 @@ public:
         const QString description = index.data(LinkDescriptionRole).toString();
 
         QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
-        glyphFont.setPixelSize(14);
-        const QRect externalRect(qRound(cardRect.right()) - kHeroLinkCardPadding,
-                                 qRound(cardRect.bottom()) - kHeroLinkCardPadding,
+        glyphFont.setPixelSize(13);
+        // External-link glyph moves to the top-right corner and turns accent on hover, reading as
+        // a standard "opens externally" affordance instead of floating alone in the bottom corner.
+        // zh_CN: 外链字形移至右上角，hover 时转强调色，作为标准“外部打开”记号，而非孤零零浮在右下角。
+        const QRect externalRect(qRound(cardRect.right()) - kHeroLinkCardPadding - 16,
+                                 qRound(cardRect.top()) + kHeroLinkCardPadding,
                                  16,
                                  16);
         drawElidedWrappedText(*painter,
                               QRect(contentLeft,
                                     textY,
                                     contentWidth,
-                                    externalRect.top() - textY - 4),
+                                    qRound(cardRect.bottom()) - kHeroLinkCardPadding - textY),
                               description,
                               descFont,
                               colors.textSecondary,
                               3);
 
         painter->setFont(glyphFont);
-        painter->setPen(colors.textSecondary);
+        painter->setPen(active ? colors.accentDefault : colors.textSecondary);
         painter->drawText(externalRect, Qt::AlignCenter, kExternalLinkGlyph);
 
         painter->restore();
@@ -286,7 +324,7 @@ public:
         setResizeMode(QListView::Adjust);
         setMovement(QListView::Static);
         setUniformItemSizes(true);
-        setGridSize(QSize(kHeroLinkCardWidth + kHeroLinkCardSpacing, kHeroLinkCardHeight));
+        setGridSize(QSize(kHeroLinkCardWidth + kHeroLinkCardSpacing, kHeroLinkCellHeight));
         setSpacing(0);
         setFixedHeight(kHeroLinkStripHeight);
         setSelectionMode(ListSelectionMode::None);
@@ -318,19 +356,19 @@ public:
             model->appendRow(item);
         };
         append(QStringLiteral("Design"),
-               QStringLiteral("Guidelines and toolkits for creating stunning WinUI experiences."),
+               QStringLiteral("Guidelines and toolkits for Fluent design."),
                QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png"));
-        append(QStringLiteral("WinUI on GitHub"),
-               QStringLiteral("Explore the WinUI Gallery source code and repository."),
+        append(QStringLiteral("WinUI Gallery"),
+               QStringLiteral("WinUI Gallery source on GitHub."),
                QStringLiteral("https://github.com/microsoft/WinUI-Gallery"),
                QStringLiteral(":/app/assets/home_header_tiles/GitHub-Mark.png"));
-        append(QStringLiteral("Fluent UI controls"),
-               QStringLiteral("Explore Fluent controls, guidance, and patterns for web apps."),
+        append(QStringLiteral("Fluent UI"),
+               QStringLiteral("Fluent controls and patterns for the web."),
                QStringLiteral("https://developer.microsoft.com/en-us/fluentui#/controls/web"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-Toolkit.png"));
-        append(QStringLiteral("Fluent Qt on GitHub"),
-               QStringLiteral("Explore the Fluent Qt source code and repository."),
+        append(QStringLiteral("Fluent Qt"),
+               QStringLiteral("Fluent Qt source on GitHub."),
                QStringLiteral("https://github.com/calvinhxx/Fluent-QT"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-WinUI.png"));
         setModel(model);
@@ -501,6 +539,10 @@ public:
         m_iconLabel->setPixmap(appicon::pixmap(kHeroIconSize, devicePixelRatioF()));
         m_iconLabel->setStyleSheet(QStringLiteral("background: transparent;"));
         layout->addWidget(m_iconLabel);
+        // The TitleLarge glyphs sit low in their line box, so the bare 12px layout spacing reads
+        // as a cramped ~8px gap under the icon — add a little breathing room above the title.
+        // zh_CN: TitleLarge 字形在行框中偏下，纯 12px 间距视觉上只剩约 8px，显得拥挤——在标题上方补一点留白。
+        layout->addSpacing(8);
 
         m_titleLabel = new fluent::textfields::Label(title, this);
         m_titleLabel->setObjectName(QStringLiteral("galleryHomeHeroTitle"));
