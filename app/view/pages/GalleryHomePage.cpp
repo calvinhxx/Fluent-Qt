@@ -3,14 +3,17 @@
 #include <QAbstractItemView>
 #include <QDesktopServices>
 #include <QEvent>
+#include <QHash>
+#include <QImage>
 #include <QLabel>
 #include <QLinearGradient>
-#include <QMouseEvent>
 #include <QPainter>
 #include <QPixmap>
-#include <QRadialGradient>
+#include <QResizeEvent>
 #include <QScrollBar>
+#include <QShowEvent>
 #include <QStandardItemModel>
+#include <QStringList>
 #include <QStyledItemDelegate>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -19,8 +22,10 @@
 
 #include <QPainterPath>
 
+#include "components/basicinput/Button.h"
 #include "components/collections/ListView.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/scrolling/ScrollBar.h"
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
@@ -35,92 +40,122 @@
 namespace fluent::gallery {
 namespace {
 
-constexpr int kHeroHeight = 392;
+constexpr int kHeroHeight = 370;
 constexpr int kHeroMarginX = 24;     // Text inset (was 48) — content shifts left overall.
-constexpr int kHeroBottomFade = 80;  // Bottom band that dissolves the banner into the page.
+constexpr int kHeroBottomFade = 160; // Bottom band that dissolves the banner into the page.
 constexpr int kBodyMarginX = 24;     // Body content inset (was 48) — matches the hero.
+constexpr int kBodyMarginTop = 20;
 constexpr int kHeroIconSize = 56;
-constexpr int kHeroLinkCardWidth = 232;
-constexpr int kHeroLinkCardHeight = 172;
-constexpr int kHeroLinkCardSpacing = 12;
-constexpr int kHeroLinkCardPadding = 24;
-constexpr int kHeroLinkStripTop = 196;
-constexpr int kHeroLinkStripHeight = kHeroLinkCardHeight + 2;
+constexpr int kHeroLinkCardWidth = 186;
+constexpr int kHeroLinkCardHeight = 144;
+constexpr int kHeroLinkCardSpacing = 18;
+constexpr int kHeroLinkCardPadding = 16;
+constexpr int kHeroLinkIconSize = 30;
+constexpr int kHeroLinkStripTop = 192;
+constexpr int kHeroLinkStripHeight = kHeroLinkCardHeight;
+constexpr int kHeroLinkStripInsetX = kHeroMarginX - 8;
+constexpr int kHeroScrollButtonWidth = 16;
+constexpr int kHeroScrollButtonHeight = 38;
+constexpr int kHeroScrollButtonMarginX = 8;
+constexpr int kHeroScrollButtonLift = 8;
 const QString kExternalLinkGlyph = QString::fromUtf16(u"\uE8A7");
-const QString kCodeGlyph = QString::fromUtf16(u"\uE943");
 
 enum HomeLinkRole {
     LinkTitleRole = Qt::UserRole + 1,
     LinkDescriptionRole,
     LinkUrlRole,
-    LinkIconRole
+    LinkImageRole
 };
 
-enum class HomeLinkIcon {
-    WinUiDesign,
-    GitHub,
-    Code,
-    FluentQt
-};
-
-void drawWindowsDesignIcon(QPainter& painter, const QRectF& rect)
+QPixmap homeLinkPixmap(const QString& resourcePath)
 {
-    const QColor blue(0, 120, 212);
-    const qreal gap = 2.0;
-    const qreal cell = (qMin(rect.width(), rect.height()) - gap) / 2.0;
-    QRectF box(rect.left(), rect.top(), cell, cell);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(0, 120, 212, 235));
-    painter.drawRect(box);
-    painter.setBrush(QColor(0, 150, 255, 235));
-    painter.drawRect(box.translated(cell + gap, 0));
-    painter.setBrush(QColor(0, 95, 184, 235));
-    painter.drawRect(box.translated(0, cell + gap));
-    painter.setBrush(QColor(0, 130, 220, 235));
-    painter.drawRect(box.translated(cell + gap, cell + gap));
+    static QHash<QString, QPixmap> cache;
+    const auto it = cache.constFind(resourcePath);
+    if (it != cache.constEnd())
+        return it.value();
+
+    QImage image(resourcePath);
+    if (resourcePath.endsWith(QStringLiteral("GitHub-Mark.png"))) {
+        image = image.convertToFormat(QImage::Format_ARGB32);
+        for (int y = 0; y < image.height(); ++y) {
+            auto* line = reinterpret_cast<QRgb*>(image.scanLine(y));
+            for (int x = 0; x < image.width(); ++x) {
+                const QRgb pixel = line[x];
+                if (qRed(pixel) > 245 && qGreen(pixel) > 245 && qBlue(pixel) > 245)
+                    line[x] = qRgba(qRed(pixel), qGreen(pixel), qBlue(pixel), 0);
+            }
+        }
+    }
+
+    const QPixmap pixmap = QPixmap::fromImage(image);
+    cache.insert(resourcePath, pixmap);
+    return pixmap;
 }
 
-void drawGitHubIcon(QPainter& painter, const QRectF& rect, bool dark)
+void drawCenteredPixmap(QPainter& painter, const QRectF& rect, const QString& resourcePath)
 {
-    const qreal side = qMin(rect.width(), rect.height());
-    const QRectF circle(rect.left(), rect.top(), side, side);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(dark ? QColor(255, 255, 255, 235) : QColor(24, 24, 24));
-    painter.drawEllipse(circle);
+    const QPixmap source = homeLinkPixmap(resourcePath);
+    if (source.isNull())
+        return;
 
-    const QColor mark = dark ? QColor(24, 24, 24) : QColor(255, 255, 255, 245);
-    painter.setBrush(mark);
-    QPainterPath head;
-    const qreal cx = circle.center().x();
-    const qreal cy = circle.center().y() + side * 0.03;
-    head.moveTo(cx - side * 0.30, cy - side * 0.04);
-    head.lineTo(cx - side * 0.36, cy - side * 0.22);
-    head.lineTo(cx - side * 0.18, cy - side * 0.15);
-    head.cubicTo(cx - side * 0.08, cy - side * 0.22,
-                 cx + side * 0.08, cy - side * 0.22,
-                 cx + side * 0.18, cy - side * 0.15);
-    head.lineTo(cx + side * 0.36, cy - side * 0.22);
-    head.lineTo(cx + side * 0.30, cy - side * 0.04);
-    head.cubicTo(cx + side * 0.33, cy + side * 0.22,
-                 cx + side * 0.18, cy + side * 0.34,
-                 cx, cy + side * 0.34);
-    head.cubicTo(cx - side * 0.18, cy + side * 0.34,
-                 cx - side * 0.33, cy + side * 0.22,
-                 cx - side * 0.30, cy - side * 0.04);
-    painter.drawPath(head);
-
-    painter.setBrush(dark ? QColor(255, 255, 255, 235) : QColor(24, 24, 24));
-    painter.drawEllipse(QPointF(cx - side * 0.12, cy + side * 0.06), side * 0.025, side * 0.035);
-    painter.drawEllipse(QPointF(cx + side * 0.12, cy + side * 0.06), side * 0.025, side * 0.035);
+    const QSize targetSize = source.size().scaled(rect.size().toSize(),
+                                                  Qt::KeepAspectRatio);
+    const QRect target(QPoint(qRound(rect.center().x() - targetSize.width() / 2.0),
+                              qRound(rect.center().y() - targetSize.height() / 2.0)),
+                       targetSize);
+    painter.drawPixmap(target, source);
 }
 
-void drawCodeIcon(QPainter& painter, const QRectF& rect, const QColor& color)
+void drawElidedWrappedText(QPainter& painter,
+                           const QRect& rect,
+                           const QString& text,
+                           const QFont& font,
+                           const QColor& color,
+                           int maxLines)
 {
-    QFont font(Typography::FontFamily::SegoeFluentIcons);
-    font.setPixelSize(28);
+    if (rect.isEmpty() || text.isEmpty() || maxLines <= 0)
+        return;
+
+    QFontMetrics metrics(font);
+    const int lineHeight = qMax(1, metrics.lineSpacing() - 1);
+    const int availableLines = qMin(maxLines, qMax(1, rect.height() / lineHeight));
+    const QStringList words = text.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    QStringList lines;
+    QString current;
+
+    for (int i = 0; i < words.size(); ++i) {
+        const QString candidate = current.isEmpty()
+            ? words.at(i)
+            : current + QLatin1Char(' ') + words.at(i);
+        if (metrics.horizontalAdvance(candidate) <= rect.width() || current.isEmpty()) {
+            current = candidate;
+            continue;
+        }
+
+        lines.append(current);
+        current = words.at(i);
+        if (lines.size() == availableLines - 1) {
+            QString tail = current;
+            for (int j = i + 1; j < words.size(); ++j)
+                tail += QLatin1Char(' ') + words.at(j);
+            lines.append(metrics.elidedText(tail, Qt::ElideRight, rect.width()));
+            current.clear();
+            break;
+        }
+    }
+
+    if (!current.isEmpty() && lines.size() < availableLines)
+        lines.append(metrics.elidedText(current, Qt::ElideRight, rect.width()));
+
+    painter.save();
     painter.setFont(font);
     painter.setPen(color);
-    painter.drawText(rect, Qt::AlignCenter, kCodeGlyph);
+    for (int i = 0; i < lines.size(); ++i) {
+        const QRect lineRect(rect.left(), rect.top() + i * lineHeight,
+                             rect.width(), lineHeight);
+        painter.drawText(lineRect, Qt::AlignLeft | Qt::AlignVCenter, lines.at(i));
+    }
+    painter.restore();
 }
 
 } // namespace
@@ -154,77 +189,84 @@ public:
         const bool hovered = option.state.testFlag(QStyle::State_MouseOver);
         const bool pressed = option.state.testFlag(QStyle::State_Sunken);
 
-        QRectF cardRect(option.rect);
+        QRectF cardRect(option.rect.topLeft(), QSizeF(kHeroLinkCardWidth, kHeroLinkCardHeight));
         cardRect.adjust(0.5, 0.5, -0.5, -0.5);
-        QColor fill = colors.bgLayer;
-        fill.setAlpha(dark ? 232 : 242);
-        if (hovered)
-            fill = colors.subtleSecondary;
-        if (pressed)
-            fill = colors.subtleTertiary;
+        QPainterPath cardPath;
+        cardPath.addRoundedRect(cardRect, ::CornerRadius::Overlay, ::CornerRadius::Overlay);
 
-        painter->setPen(QPen(colors.strokeCard, 1.0));
-        painter->setBrush(fill);
-        painter->drawRoundedRect(cardRect, ::CornerRadius::Overlay, ::CornerRadius::Overlay);
+        const auto acrylic = themeAcrylic();
+        QColor acrylicTint = acrylic.tintColor;
+        acrylicTint.setAlphaF(qBound(0.0, acrylic.tintOpacity * 0.82, 1.0));
+        painter->fillPath(cardPath, acrylicTint);
 
-        const QRectF iconRect(cardRect.left() + kHeroLinkCardPadding,
-                              cardRect.top() + kHeroLinkCardPadding,
-                              36,
-                              36);
-        const auto icon = static_cast<HomeLinkIcon>(
-            index.data(LinkIconRole).toInt());
-        switch (icon) {
-        case HomeLinkIcon::WinUiDesign:
-            drawWindowsDesignIcon(*painter, iconRect);
-            break;
-        case HomeLinkIcon::GitHub:
-            drawGitHubIcon(*painter, iconRect, dark);
-            break;
-        case HomeLinkIcon::Code:
-            drawCodeIcon(*painter, iconRect, colors.textPrimary);
-            break;
-        case HomeLinkIcon::FluentQt:
-            painter->drawPixmap(iconRect.toRect(),
-                                appicon::pixmap(qRound(iconRect.width()),
-                                                painter->device()->devicePixelRatioF()));
-            break;
+        const auto mica = themeMica();
+        QColor micaWash = mica.baseColor;
+        micaWash.setAlphaF(dark ? 0.22 : 0.08);
+        painter->fillPath(cardPath, micaWash);
+
+        QLinearGradient materialSheen(cardRect.topLeft(), cardRect.bottomRight());
+        materialSheen.setColorAt(0.0, dark ? QColor(255, 255, 255, 18)
+                                           : QColor(255, 255, 255, 58));
+        materialSheen.setColorAt(0.55, QColor(255, 255, 255, dark ? 6 : 18));
+        materialSheen.setColorAt(1.0, QColor(255, 255, 255, 0));
+        painter->fillPath(cardPath, materialSheen);
+
+        QColor border = colors.strokeCard;
+        border.setAlpha(dark ? 92 : 58);
+        painter->setPen(QPen(border, 1.0));
+        painter->setBrush(Qt::NoBrush);
+        painter->drawPath(cardPath);
+
+        if (hovered || pressed) {
+            QColor overlay = hovered ? colors.subtleSecondary : colors.subtleTertiary;
+            overlay.setAlpha(dark ? 28 : 18);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(overlay);
+            painter->drawPath(cardPath);
         }
 
-        const int textLeft = qRound(cardRect.left()) + kHeroLinkCardPadding;
-        const int textWidth = qRound(cardRect.width()) - kHeroLinkCardPadding * 2;
-        int textY = qRound(cardRect.top()) + kHeroLinkCardPadding + 36 + 16;
+        const int contentLeft = qRound(cardRect.left()) + kHeroLinkCardPadding;
+        const int contentWidth = qRound(cardRect.width()) - kHeroLinkCardPadding * 2;
+        const QRectF iconRect(contentLeft,
+                              cardRect.top() + kHeroLinkCardPadding,
+                              kHeroLinkIconSize,
+                              kHeroLinkIconSize);
+        drawCenteredPixmap(*painter, iconRect, index.data(LinkImageRole).toString());
+
+        int textY = qRound(iconRect.bottom()) + 14;
 
         QFont titleFont = themeFont(Typography::FontRole::BodyStrong).toQFont();
         QFont descFont = themeFont(Typography::FontRole::Caption).toQFont();
         QFontMetrics titleMetrics(titleFont);
-        QFontMetrics descMetrics(descFont);
 
         const QString title = index.data(LinkTitleRole).toString();
         painter->setFont(titleFont);
         painter->setPen(colors.textPrimary);
-        painter->drawText(QRect(textLeft, textY, textWidth, titleMetrics.height()),
+        painter->drawText(QRect(contentLeft, textY, contentWidth, titleMetrics.height()),
                           Qt::AlignLeft | Qt::AlignVCenter,
-                          titleMetrics.elidedText(title, Qt::ElideRight, textWidth));
+                          titleMetrics.elidedText(title, Qt::ElideRight, contentWidth));
 
         textY += titleMetrics.height() + 4;
         const QString description = index.data(LinkDescriptionRole).toString();
-        painter->setFont(descFont);
-        painter->setPen(colors.textSecondary);
-        painter->drawText(QRect(textLeft,
-                                textY,
-                                textWidth,
-                                qRound(cardRect.bottom()) - kHeroLinkCardPadding - textY),
-                          Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
-                          description);
 
         QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
         glyphFont.setPixelSize(14);
-        painter->setFont(glyphFont);
-        painter->setPen(colors.textSecondary);
         const QRect externalRect(qRound(cardRect.right()) - kHeroLinkCardPadding,
                                  qRound(cardRect.bottom()) - kHeroLinkCardPadding,
                                  16,
                                  16);
+        drawElidedWrappedText(*painter,
+                              QRect(contentLeft,
+                                    textY,
+                                    contentWidth,
+                                    externalRect.top() - textY - 4),
+                              description,
+                              descFont,
+                              colors.textSecondary,
+                              3);
+
+        painter->setFont(glyphFont);
+        painter->setPen(colors.textSecondary);
         painter->drawText(externalRect, Qt::AlignCenter, kExternalLinkGlyph);
 
         painter->restore();
@@ -244,8 +286,8 @@ public:
         setResizeMode(QListView::Adjust);
         setMovement(QListView::Static);
         setUniformItemSizes(true);
-        setGridSize(QSize(kHeroLinkCardWidth, kHeroLinkCardHeight));
-        setSpacing(kHeroLinkCardSpacing);
+        setGridSize(QSize(kHeroLinkCardWidth + kHeroLinkCardSpacing, kHeroLinkCardHeight));
+        setSpacing(0);
         setFixedHeight(kHeroLinkStripHeight);
         setSelectionMode(ListSelectionMode::None);
         setBackgroundVisible(false);
@@ -266,32 +308,56 @@ public:
         auto append = [model](const QString& title,
                               const QString& description,
                               const QString& url,
-                              HomeLinkIcon icon) {
+                              const QString& imagePath) {
             auto* item = new QStandardItem(title);
             item->setEditable(false);
             item->setData(title, LinkTitleRole);
             item->setData(description, LinkDescriptionRole);
             item->setData(QUrl(url), LinkUrlRole);
-            item->setData(static_cast<int>(icon), LinkIconRole);
+            item->setData(imagePath, LinkImageRole);
             model->appendRow(item);
         };
         append(QStringLiteral("Design"),
                QStringLiteral("Guidelines and toolkits for creating stunning WinUI experiences."),
                QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit"),
-               HomeLinkIcon::WinUiDesign);
+               QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png"));
         append(QStringLiteral("WinUI on GitHub"),
                QStringLiteral("Explore the WinUI Gallery source code and repository."),
                QStringLiteral("https://github.com/microsoft/WinUI-Gallery"),
-               HomeLinkIcon::GitHub);
+               QStringLiteral(":/app/assets/home_header_tiles/GitHub-Mark.png"));
         append(QStringLiteral("Fluent UI controls"),
-               QStringLiteral("Explore Fluent UI controls for web experiences."),
+               QStringLiteral("Explore Fluent controls, guidance, and patterns for web apps."),
                QStringLiteral("https://developer.microsoft.com/en-us/fluentui#/controls/web"),
-               HomeLinkIcon::Code);
+               QStringLiteral(":/app/assets/home_header_tiles/Header-Toolkit.png"));
         append(QStringLiteral("Fluent Qt on GitHub"),
                QStringLiteral("Explore the Fluent Qt source code and repository."),
                QStringLiteral("https://github.com/calvinhxx/Fluent-QT"),
-               HomeLinkIcon::FluentQt);
+               QStringLiteral(":/app/assets/home_header_tiles/Header-WinUI.png"));
         setModel(model);
+
+        connect(horizontalScrollBar(), &QScrollBar::rangeChanged,
+                this, [this] {
+                    hideScrollChrome();
+                    updateScrollButtonsVisibility();
+                });
+        connect(horizontalScrollBar(), &QScrollBar::valueChanged,
+                this, [this] {
+                    hideScrollChrome();
+                    updateScrollButtonsVisibility();
+                });
+
+        m_backButton = createScrollButton(Typography::Icons::FlipViewPrevH,
+                                          QStringLiteral("Scroll left"));
+        m_forwardButton = createScrollButton(Typography::Icons::FlipViewNextH,
+                                             QStringLiteral("Scroll right"));
+        connect(m_backButton, &QPushButton::clicked,
+                this, [this] { scrollByViewport(-1); });
+        connect(m_forwardButton, &QPushButton::clicked,
+                this, [this] { scrollByViewport(1); });
+
+        hideScrollChrome();
+        updateScrollButtonsGeometry();
+        updateScrollButtonsVisibility();
 
         connect(this, &fluent::collections::ListView::itemClicked,
                 this, [model](int row) {
@@ -308,6 +374,99 @@ public:
         if (viewport())
             viewport()->update();
     }
+
+protected:
+    void resizeEvent(QResizeEvent* event) override
+    {
+        fluent::collections::ListView::resizeEvent(event);
+        hideScrollChrome();
+        updateScrollButtonsGeometry();
+        updateScrollButtonsVisibility();
+    }
+
+    void showEvent(QShowEvent* event) override
+    {
+        fluent::collections::ListView::showEvent(event);
+        hideScrollChrome();
+        updateScrollButtonsGeometry();
+        updateScrollButtonsVisibility();
+    }
+
+private:
+    fluent::basicinput::Button* createScrollButton(const QString& glyph,
+                                                   const QString& tooltip)
+    {
+        auto* button = new fluent::basicinput::Button(this);
+        button->setObjectName(QStringLiteral("galleryHomeHeroScrollButton"));
+        button->setFluentStyle(fluent::basicinput::Button::Standard);
+        button->setFluentSize(fluent::basicinput::Button::Small);
+        button->setFluentLayout(fluent::basicinput::Button::IconOnly);
+        button->setIconGlyph(glyph, 12);
+        button->setContentOpacity(0.62);
+        button->setFixedSize(kHeroScrollButtonWidth, kHeroScrollButtonHeight);
+        button->setFocusPolicy(Qt::NoFocus);
+        button->setCursor(Qt::PointingHandCursor);
+        button->setToolTip(tooltip);
+        button->hide();
+        return button;
+    }
+
+    void scrollByViewport(int direction)
+    {
+        QScrollBar* bar = horizontalScrollBar();
+        const int delta = qMax(1, viewport()->width() - kHeroLinkCardWidth);
+        const int next = qBound(bar->minimum(),
+                                bar->value() + direction * delta,
+                                bar->maximum());
+        bar->setValue(next);
+        updateScrollButtonsVisibility();
+    }
+
+    void updateScrollButtonsGeometry()
+    {
+        const int y = qMax(0, (height() - kHeroScrollButtonHeight) / 2 - kHeroScrollButtonLift);
+        if (m_backButton) {
+            m_backButton->setGeometry(kHeroScrollButtonMarginX,
+                                      y,
+                                      kHeroScrollButtonWidth,
+                                      kHeroScrollButtonHeight);
+            m_backButton->raise();
+        }
+        if (m_forwardButton) {
+            m_forwardButton->setGeometry(width() - kHeroScrollButtonMarginX - kHeroScrollButtonWidth,
+                                         y,
+                                         kHeroScrollButtonWidth,
+                                         kHeroScrollButtonHeight);
+            m_forwardButton->raise();
+        }
+    }
+
+    void updateScrollButtonsVisibility()
+    {
+        const QScrollBar* bar = horizontalScrollBar();
+        const bool canScroll = bar && bar->maximum() > bar->minimum();
+        if (m_backButton)
+            m_backButton->setVisible(canScroll && bar->value() > bar->minimum());
+        if (m_forwardButton)
+            m_forwardButton->setVisible(canScroll && bar->value() < bar->maximum());
+    }
+
+    void hideScrollChrome()
+    {
+        if (auto* bar = horizontalFluentScrollBar()) {
+            bar->setAttribute(Qt::WA_DontShowOnScreen, true);
+            bar->setThickness(0);
+            bar->hide();
+        }
+        if (auto* bar = verticalFluentScrollBar()) {
+            bar->setAttribute(Qt::WA_DontShowOnScreen, true);
+            bar->setThickness(0);
+            bar->hide();
+        }
+    }
+
+    fluent::basicinput::Button* m_backButton = nullptr;
+    fluent::basicinput::Button* m_forwardButton = nullptr;
 };
 
 /**
@@ -379,8 +538,9 @@ protected:
         QWidget::resizeEvent(event);
         if (!m_linkStrip)
             return;
-        const int stripWidth = qMax(0, width() - kBodyMarginX * 2);
-        m_linkStrip->setGeometry(kBodyMarginX,
+        const int stripX = qMax(0, kHeroLinkStripInsetX);
+        const int stripWidth = qMax(0, width() - stripX - kHeroMarginX);
+        m_linkStrip->setGeometry(stripX,
                                  kHeroLinkStripTop,
                                  stripWidth,
                                  kHeroLinkStripHeight);
@@ -451,8 +611,14 @@ protected:
         QColor base = colors.bgLayerAlt;
         QColor clear = base;
         clear.setAlpha(0);
+        QColor soft = base;
+        soft.setAlpha(dark ? 34 : 42);
+        QColor medium = base;
+        medium.setAlpha(dark ? 122 : 148);
         QLinearGradient fade(fadeRect.topLeft(), fadeRect.bottomLeft());
         fade.setColorAt(0.0, clear);
+        fade.setColorAt(0.38, soft);
+        fade.setColorAt(0.72, medium);
         fade.setColorAt(1.0, base);
         painter.fillRect(fadeRect, fade);
 
@@ -499,7 +665,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     auto* body = new QWidget(this);
     body->setObjectName(QStringLiteral("galleryHomeBody"));
     auto* bodyLayout = new QVBoxLayout(body);
-    bodyLayout->setContentsMargins(kBodyMarginX, 32, kBodyMarginX, 48);
+    bodyLayout->setContentsMargins(kBodyMarginX, kBodyMarginTop, kBodyMarginX, 48);
     bodyLayout->setSpacing(16);
 
     // Each section's cards are drawn by one responsive GalleryEntryGrid (same as the
