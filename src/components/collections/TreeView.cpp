@@ -22,6 +22,7 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/scrolling/OverlayScrollChrome.h"
+#include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::collections {
@@ -138,19 +139,19 @@ TreeView::TreeView(QWidget* parent)
     connect(horizontalScrollBar(), &QScrollBar::rangeChanged,
             this, &TreeView::syncFluentHScrollBar);
 
-    // --- Overscroll bounce ---
-    m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(themeAnimation().normal);
-    m_bounceAnim->setEasingCurve(themeAnimation().decelerate);
-    connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
-        m_overscrollY = v.toReal();
-        viewport()->update();
-    });
-
-    m_bounceTimer = new QTimer(this);
-    m_bounceTimer->setSingleShot(true);
-    m_bounceTimer->setInterval(150);
-    connect(m_bounceTimer, &QTimer::timeout, this, &TreeView::startBounceBack);
+    // --- Overscroll bounce (shared controller) ---
+    fluent::scrolling::OverscrollController::Hooks hooks;
+    hooks.scrollBar = [this] { return verticalScrollBar(); };
+    hooks.normalScroll = [this](qreal scrollPx) {
+        QScrollBar* sb = verticalScrollBar();
+        const int before = sb->value();
+        sb->setValue(before - qRound(scrollPx));
+        return sb->value() != before;
+    };
+    hooks.onOverscrollChanged = [this] { viewport()->update(); };
+    hooks.fallbackWheel = [this](QWheelEvent* e) { QTreeView::wheelEvent(e); };
+    m_overscroll = new fluent::scrolling::OverscrollController(
+        viewport(), kDiscreteWheelStepPx, std::move(hooks), this);
 
     // --- Selected indicator motion ---
     m_indicatorMotionAnim = new QVariantAnimation(this);
@@ -292,33 +293,19 @@ void TreeView::setCanReorderItems(bool enabled) {
     emit canReorderItemsChanged();
 }
 
+bool TreeView::isScrollChainingEnabled() const { return m_overscroll->isScrollChainingEnabled(); }
+
 void TreeView::setScrollChainingEnabled(bool enabled) {
-    if (m_scrollChainingEnabled == enabled) return;
-    m_scrollChainingEnabled = enabled;
-    if (enabled) {
-        if (m_bounceTimer) m_bounceTimer->stop();
-        if (m_bounceAnim) m_bounceAnim->stop();
-        if (!qFuzzyIsNull(m_overscrollY)) {
-            m_overscrollY = 0.0;
-            if (viewport()) viewport()->update();
-        }
-    }
+    if (m_overscroll->isScrollChainingEnabled() == enabled) return;
+    m_overscroll->setScrollChainingEnabled(enabled);
     emit scrollChainingEnabledChanged();
 }
 
+bool TreeView::isOverscrollEnabled() const { return m_overscroll->isOverscrollEnabled(); }
+
 void TreeView::setOverscrollEnabled(bool enabled) {
-    if (m_overscrollEnabled == enabled) return;
-    m_overscrollEnabled = enabled;
-    if (!enabled) {
-        // Cancel any in-flight bounce so the view settles at the boundary immediately.
-        // zh_CN: 取消进行中的回弹，使视图立即停在边界。
-        if (m_bounceTimer) m_bounceTimer->stop();
-        if (m_bounceAnim) m_bounceAnim->stop();
-        if (!qFuzzyIsNull(m_overscrollY)) {
-            m_overscrollY = 0.0;
-            if (viewport()) viewport()->update();
-        }
-    }
+    if (m_overscroll->isOverscrollEnabled() == enabled) return;
+    m_overscroll->setOverscrollEnabled(enabled);
     emit overscrollEnabledChanged();
 }
 
@@ -751,125 +738,17 @@ void TreeView::leaveEvent(QEvent* event) {
 // ── Overscroll bounce ─────────────────────────────────────────────────────────
 
 void TreeView::wheelEvent(QWheelEvent* event) {
-    const int delta = event->angleDelta().y();
-    const auto phase = event->phase();
-
-    // Zero-delta event (e.g. ScrollEnd on Windows touchpad with no residual)
-    if (delta == 0 && event->pixelDelta().isNull()) {
-        // If overscrolled and gesture ended → bounce back
-        if (!qFuzzyIsNull(m_overscrollY) &&
-            (phase == Qt::ScrollEnd || phase == Qt::ScrollMomentum)) {
-            startBounceBack();
-            event->accept();
-            return;
-        }
-        QTreeView::wheelEvent(event);
-        return;
-    }
-
-    const qreal scrollPx = !event->pixelDelta().isNull()
-                               ? static_cast<qreal>(event->pixelDelta().y())
-                               : delta / 120.0 * kDiscreteWheelStepPx;
-
-    // ── 1. Already overscrolled ──────────────────────────────────────────
-    if (!qFuzzyIsNull(m_overscrollY)) {
-        if (m_bounceAnim->state() == QAbstractAnimation::Running) {
-            // Bounce in progress. Only consume a NoScrollPhase notch that keeps pushing into
-            // the boundary; a reverse notch must interrupt the bounce and recover, otherwise
-            // the wheel feels stuck until the animation settles. zh_CN: 回弹进行中：仅吞掉继续
-            //朝边界推的滚轮；反向滚动需打断回弹并恢复，否则滚轮会卡到动画结束。
-            const bool pushingIntoBoundary = (m_overscrollY > 0.0 && scrollPx > 0.0) ||
-                                             (m_overscrollY < 0.0 && scrollPx < 0.0);
-            if (phase == Qt::NoScrollPhase && pushingIntoBoundary) {
-                event->accept();
-                return;
-            }
-            m_bounceAnim->stop();
-        }
-        m_bounceTimer->stop();
-
-        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-            startBounceBack();
-            event->accept();
-            return;
-        }
-
-        constexpr qreal kMax = 100.0;
-        const qreal ratio = qMin(qAbs(m_overscrollY) / kMax, 1.0);
-        const qreal damping = (1.0 - ratio) * (1.0 - ratio);
-
-        const qreal prev = m_overscrollY;
-        m_overscrollY += scrollPx * qMax(damping, 0.05) * 0.5;
-        m_overscrollY = qBound(-kMax, m_overscrollY, kMax);
-
-        if ((prev > 0.0 && m_overscrollY <= 0.0) ||
-            (prev < 0.0 && m_overscrollY >= 0.0)) {
-            m_overscrollY = 0.0;
-        }
-
-        viewport()->update();
-
-        // NoScrollPhase (mouse wheel / Windows touchpad fallback) → timer bounce
-        if (!qFuzzyIsNull(m_overscrollY) && phase == Qt::NoScrollPhase)
-            m_bounceTimer->start();
-
-        event->accept();
-        return;
-    }
-
-    // ── 2. At boundary → enter overscroll ────────────────────────────────
-    QScrollBar* sb = verticalScrollBar();
-    if (!sb || sb->maximum() <= sb->minimum()) {
-        event->ignore();
-        return;
-    }
-
-    const bool atStart = sb->value() <= sb->minimum();
-    const bool atEnd   = sb->value() >= sb->maximum();
-
-    if ((atStart && scrollPx > 0) || (atEnd && scrollPx < 0)) {
-        if (m_scrollChainingEnabled) {
-            event->ignore();
-            return;
-        }
-
-        // Don't enter overscroll from inertia or finger-lift
-        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-            event->accept();
-            return;
-        }
-
-        // Overscroll disabled (e.g. a navigation pane): stop cleanly at the boundary instead
-        // of bouncing. zh_CN: 关闭回弹（如导航窗格）：在边界干脆停住，不做回弹。
-        if (!m_overscrollEnabled) {
-            event->accept();
-            return;
-        }
-
-        m_overscrollY = scrollPx * 0.5;
-        viewport()->update();
-
-        if (phase == Qt::NoScrollPhase)
-            m_bounceTimer->start();
-
-        event->accept();
-        return;
-    }
-
-    // ── 3. Normal scroll ─────────────────────────────────────────────────
-    // Move a fixed pixel step (ScrollPerPixel) rather than delegating to Qt, whose per-item
-    // step scrolls a whole row at a time. zh_CN: 按固定像素步进（ScrollPerPixel），不再委托给
-    // Qt 的整行跳动。
-    sb->setValue(sb->value() - qRound(scrollPx));
-    event->accept();
+    m_overscroll->handleWheel(event);
 }
 
 int TreeView::verticalOffset() const {
     // Keep hit-testing / visualRect consistent with the overscroll shift. (QTreeView paints
     // items from the scrollbar value rather than this offset, so the visible bounce is applied
-    // as a painter translate in drawRow.) zh_CN: 让命中测试/visualRect 与回弹位移一致；
-    // QTreeView 绘制按滚动条值而非此偏移，故可见的回弹在 drawRow 里用画笔平移实现。
-    return QTreeView::verticalOffset() - qRound(m_overscrollY);
+    // as a painter translate in drawRow.) m_overscroll may be null during base construction.
+    // zh_CN: 让命中测试/visualRect 与回弹位移一致；QTreeView 绘制按滚动条值而非此偏移，故可见的
+    // 回弹在 drawRow 里用画笔平移实现。构造期间 m_overscroll 可能尚未创建。
+    const qreal overscroll = m_overscroll ? m_overscroll->value() : 0.0;
+    return QTreeView::verticalOffset() - qRound(overscroll);
 }
 
 void TreeView::currentChanged(const QModelIndex& current, const QModelIndex& previous) {
@@ -898,7 +777,7 @@ void TreeView::drawRow(QPainter* painter, const QStyleOptionViewItem& options,
     // in paintEvent stays put, so the rows visibly bounce within it.
     // zh_CN: QTreeView 按滚动条值定位行（非 verticalOffset），故在此通过平移每一行来渲染弹性回弹；
     // paintEvent 绘制的容器背景保持不动，行在其中可见地回弹。
-    const int overscrollDy = qRound(m_overscrollY);
+    const int overscrollDy = m_overscroll ? qRound(m_overscroll->value()) : 0;
     if (overscrollDy != 0)
         painter->translate(0, overscrollDy);
     const auto restoreOverscroll = qScopeGuard([painter, overscrollDy] {
@@ -1610,15 +1489,6 @@ QRect TreeView::indicatorMotionDirtyRect() const {
     band.setLeft(0);
     band.setRight(viewport()->width());
     return band.adjusted(0, -2, 0, 2);
-}
-
-void TreeView::startBounceBack() {
-    if (qFuzzyIsNull(m_overscrollY))
-        return;
-    m_bounceAnim->stop();
-    m_bounceAnim->setStartValue(m_overscrollY);
-    m_bounceAnim->setEndValue(0.0);
-    m_bounceAnim->start();
 }
 
 void TreeView::setViewportHovered(bool hovered) {
