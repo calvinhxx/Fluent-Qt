@@ -327,6 +327,7 @@ public:
         setGridSize(QSize(kHeroLinkCardWidth + kHeroLinkCardSpacing, kHeroLinkCellHeight));
         setSpacing(0);
         setFixedHeight(kHeroLinkStripHeight);
+        setCursor(Qt::PointingHandCursor);
         setSelectionMode(ListSelectionMode::None);
         setBackgroundVisible(false);
         setBorderVisible(false);
@@ -335,6 +336,7 @@ public:
         setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         setAttribute(Qt::WA_TranslucentBackground);
         viewport()->setAttribute(Qt::WA_TranslucentBackground);
+        viewport()->setCursor(Qt::PointingHandCursor);
         setStyleSheet(QStringLiteral(
             "QListView#galleryHomeHeroLinksView { background: transparent; border: none; }"
             "QListView#galleryHomeHeroLinksView::item { background: transparent; }"));
