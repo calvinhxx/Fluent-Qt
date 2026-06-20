@@ -1,34 +1,16 @@
 #include "GalleryFoundationPage.h"
 
-#include <QHash>
+#include <QPixmap>
 #include <QVector>
 
-#include "design/Typography.h"
+#include "model/GalleryComponentCatalog.h"
+#include "model/GalleryContentCatalog.h"
 #include "model/GalleryNavigationItem.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "view/widgets/GalleryEntryGrid.h"
 #include "utils/Log.h"
 
 namespace fluent::gallery {
-namespace {
-
-/**
- * @brief Per-topic glyph for the landing cards (Segoe Fluent Icons).
- * zh_CN: 落地卡片的每个主题字形（Segoe Fluent Icons）。
- */
-QString topicGlyph(const QString& routeId)
-{
-    static const QHash<QString, QString> glyphs{
-        {QStringLiteral("foundation-qmlplus"), Typography::Icons::Link},
-        {QStringLiteral("foundation-typography"), Typography::Icons::Font},
-        {QStringLiteral("foundation-color"), Typography::Icons::Color},
-        {QStringLiteral("foundation-iconography"), Typography::Icons::Emoji},
-        {QStringLiteral("foundation-geometry"), Typography::Icons::Grid},
-    };
-    return glyphs.value(routeId, Typography::Icons::Color);
-}
-
-} // namespace
 
 GalleryFoundationPage::GalleryFoundationPage(const GalleryContentEntry& entry,
                                              const GalleryNavigationViewModel& navigationViewModel,
@@ -48,7 +30,12 @@ GalleryFoundationPage::GalleryFoundationPage(const GalleryContentEntry& entry,
         QString description;
         if (const GalleryContentEntry* topicEntry = galleryContentEntry(routeId))
             description = topicEntry->description;
-        entries.append({item->id, item->title, description, QPixmap(), topicGlyph(routeId)});
+        // Use the designed Foundation control image (indigo tile + white glyph), same as the
+        // All-controls grid — leaving iconGlyph empty so the grid draws the pixmap, not a glyph.
+        // zh_CN: 用设计好的 Foundation 控件图（靛蓝底+白色字形），与 All 控件网格一致——iconGlyph 留空，
+        // 让网格绘制该图而非字形。
+        entries.append({item->id, item->title, description,
+                        QPixmap(galleryControlImageResource(item->title)), QString()});
     }
 
     grid->setEntries(entries);
