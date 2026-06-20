@@ -27,26 +27,17 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/scrolling/OverlayScrollChrome.h"
+#include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::collections {
 
 namespace {
-// Cross-platform wheel input thresholds (see openspec listview-cross-platform-input/design.md).
-// kClusterGapMs:   gap (ms) that closes a NoPhaseDiscrete cluster — covers Mac RDP forwarding
-//                  jitter (typically 60-100ms between events for a single physical gesture).
-constexpr int   kClusterGapMs = 120;
-constexpr int   kNoPhaseBoundaryBounceDelayMs = 16;
+// Pixels scrolled per mouse-wheel notch (delta 120); the cross-platform wheel/overscroll state
+// machine now lives in fluent::scrolling::OverscrollController.
+// zh_CN: 每个滚轮刻度（delta 120）滚动的像素数；跨平台滚轮/回弹状态机现位于 OverscrollController。
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
-constexpr qreal kDiscreteBoundaryOverscrollMinPx = 12.0;
-constexpr qreal kDiscreteBoundaryOverscrollMaxPx = 48.0;
 constexpr int   kScrollBarEdgeInset = ::Spacing::XSmall / 2;
-
-int scrollSign(qreal value) {
-    if (value > 0.0) return 1;
-    if (value < 0.0) return -1;
-    return 0;
-}
 
 qreal lerp(qreal from, qreal to, qreal progress) {
     return from + (to - from) * progress;
@@ -199,29 +190,27 @@ ListView::ListView(QWidget* parent)
     connect(horizontalScrollBar(), &QScrollBar::rangeChanged,
             this, &ListView::syncFluentHScrollBar);
 
-    // --- Overscroll bounce ---
-    m_bounceAnim = new QVariantAnimation(this);
-    m_bounceAnim->setDuration(themeAnimation().normal);
-    m_bounceAnim->setEasingCurve(themeAnimation().decelerate);
-    connect(m_bounceAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
-        if (flow() == LeftToRight)
-            m_overscrollX = v.toReal();
-        else
-            m_overscrollY = v.toReal();
-        viewport()->update();
-    });
-    connect(m_bounceAnim, &QVariantAnimation::finished, this, [this]() {
-        resetNoPhaseCluster();
-        resetNoPhaseBoundaryBounce();
-    });
-
-    m_bounceTimer = new QTimer(this);
-    m_bounceTimer->setSingleShot(true);
-    m_bounceTimer->setInterval(kNoPhaseBoundaryBounceDelayMs);
-    connect(m_bounceTimer, &QTimer::timeout, this, [this]() {
-        m_noPhaseBounceArmed = false;
-        startBounceBack();
-    });
+    // --- Overscroll bounce (shared controller) ---
+    fluent::scrolling::OverscrollController::Hooks hooks;
+    hooks.isHorizontal = [this] { return flow() == LeftToRight; };
+    hooks.scrollBar = [this] {
+        return flow() == LeftToRight ? horizontalScrollBar() : verticalScrollBar();
+    };
+    hooks.normalScroll = [this](qreal scrollPx) {
+        QScrollBar* sb = flow() == LeftToRight ? horizontalScrollBar() : verticalScrollBar();
+        const int before = sb->value();
+        sb->setValue(before - qRound(scrollPx));
+        return sb->value() != before;
+    };
+    hooks.onOverscrollChanged = [this] {
+        if (viewport())
+            viewport()->update();
+        syncFluentScrollBar();
+        syncFluentHScrollBar();
+    };
+    hooks.fallbackWheel = [this](QWheelEvent* e) { QListView::wheelEvent(e); };
+    m_overscroll = new fluent::scrolling::OverscrollController(
+        viewport(), kDiscreteWheelStepPx, std::move(hooks), this);
 
     // --- Selected indicator motion ---
     m_selectedIndicatorAnimation = new QVariantAnimation(this);
@@ -246,13 +235,11 @@ ListView::ListView(QWidget* parent)
 }
 
 ListView::~ListView() {
-    // Stop bounce animation/timer before destruction so no pending tick can fire on
-    // a half-destroyed object (defensive — also helps Qt5 path stability).
-    if (m_bounceAnim) m_bounceAnim->stop();
-    if (m_bounceTimer) m_bounceTimer->stop();
+    // Stop animations before destruction so no pending tick fires on a half-destroyed object.
+    // The overscroll controller owns its own bounce anim/timer and stops them as a child.
+    // zh_CN: 析构前停止动画，避免半销毁对象上仍有回调；overscroll 控制器作为子对象自行停止其回弹动画/定时器。
     if (m_selectedIndicatorAnimation) m_selectedIndicatorAnimation->stop();
     clearMultiSelectedIndicatorState();
-    resetNoPhaseBoundaryBounce();
 }
 
 void ListView::setModel(QAbstractItemModel* model) {
@@ -307,12 +294,9 @@ ListView::Flow ListView::flow() const {
 
 void ListView::setFlow(Flow f) {
     if (QListView::flow() == f) return;
-    if (m_bounceTimer) m_bounceTimer->stop();
-    if (m_bounceAnim) m_bounceAnim->stop();
-    m_overscrollX = 0.0;
-    m_overscrollY = 0.0;
-    resetNoPhaseCluster();
-    resetNoPhaseBoundaryBounce();
+    // The scroll axis is changing; drop any active overscroll on the old axis.
+    // zh_CN: 滚动轴即将改变，清掉旧轴上的 overscroll。
+    if (m_overscroll) m_overscroll->cancel();
     QListView::setFlow(f);
     // Horizontal flow: scrollbar values must be in pixels so wheelEvent pixelDelta maps correctly.
     // Default ScrollPerItem makes scrollbar unit = item index, causing huge jumps.
@@ -461,20 +445,11 @@ void ListView::setCanReorderItems(bool enabled) {
     emit canReorderItemsChanged();
 }
 
+bool ListView::isScrollChainingEnabled() const { return m_overscroll->isScrollChainingEnabled(); }
+
 void ListView::setScrollChainingEnabled(bool enabled) {
-    if (m_scrollChainingEnabled == enabled) return;
-    m_scrollChainingEnabled = enabled;
-    if (enabled) {
-        if (m_bounceTimer) m_bounceTimer->stop();
-        if (m_bounceAnim) m_bounceAnim->stop();
-        if (!qFuzzyIsNull(m_overscrollX) || !qFuzzyIsNull(m_overscrollY)) {
-            m_overscrollX = 0.0;
-            m_overscrollY = 0.0;
-            if (viewport()) viewport()->update();
-        }
-        resetNoPhaseCluster();
-        resetNoPhaseBoundaryBounce();
-    }
+    if (m_overscroll->isScrollChainingEnabled() == enabled) return;
+    m_overscroll->setScrollChainingEnabled(enabled);
     emit scrollChainingEnabledChanged();
 }
 
@@ -1102,241 +1077,7 @@ void ListView::leaveEvent(QEvent* event) {
 // boundary bounce while consuming same-direction tails to prevent RDP flap.
 
 void ListView::wheelEvent(QWheelEvent* event) {
-    enum class WheelKind { PhaseBased, NoPhasePixel, NoPhaseDiscrete };
-    const auto phase = event->phase();
-    const bool hasPixelDelta = !event->pixelDelta().isNull();
-    const WheelKind kind = (phase != Qt::NoScrollPhase) ? WheelKind::PhaseBased
-                         : (hasPixelDelta             ? WheelKind::NoPhasePixel
-                                                      : WheelKind::NoPhaseDiscrete);
-
-    const bool horizontal = (flow() == LeftToRight);
-
-    // For horizontal flow, pick the dominant axis (not sum) to avoid double-counting on diagonal swipes.
-    // Trackpad users naturally swipe vertically, so Y is often the dominant axis even for horizontal lists.
-    const int delta = horizontal
-        ? (qAbs(event->angleDelta().y()) >= qAbs(event->angleDelta().x())
-               ? event->angleDelta().y() : event->angleDelta().x())
-        : event->angleDelta().y();
-
-    qreal& overscroll = horizontal ? m_overscrollX : m_overscrollY;
-
-    // Zero-delta event (e.g. ScrollEnd on Windows touchpad with no residual)
-    if (delta == 0 && !hasPixelDelta) {
-        if (!qFuzzyIsNull(overscroll) &&
-            (phase == Qt::ScrollEnd || phase == Qt::ScrollMomentum)) {
-            startBounceBack();
-            event->accept();
-            return;
-        }
-        QListView::wheelEvent(event);
-        return;
-    }
-
-    // pixelDelta: same dominant-axis logic; apply directly like Qt does for vertical scroll — no damping
-    const qreal scrollPx = hasPixelDelta
-        ? static_cast<qreal>(horizontal
-              ? (qAbs(event->pixelDelta().y()) >= qAbs(event->pixelDelta().x())
-                     ? event->pixelDelta().y() : event->pixelDelta().x())
-              : event->pixelDelta().y())
-        : delta / 120.0 * kDiscreteWheelStepPx;
-
-    auto syncFluentScrollBars = [this]() {
-        syncFluentScrollBar();
-        syncFluentHScrollBar();
-    };
-
-    auto startNoPhaseBoundaryBounce = [&]() {
-        const int boundaryDir = scrollSign(scrollPx);
-        if (boundaryDir == 0)
-            return;
-        if (m_noPhaseBoundaryDir == boundaryDir &&
-            (m_noPhaseBounceArmed ||
-             (m_bounceAnim && m_bounceAnim->state() == QAbstractAnimation::Running))) {
-            return;
-        }
-
-        const qreal amount = qBound(kDiscreteBoundaryOverscrollMinPx,
-                                    qAbs(scrollPx) * 0.5,
-                                    kDiscreteBoundaryOverscrollMaxPx);
-        overscroll = (scrollPx > 0.0) ? amount : -amount;
-        m_noPhaseBoundaryDir = boundaryDir;
-        m_noPhaseBounceArmed = true;
-        viewport()->update();
-        if (m_bounceTimer) {
-            if (!m_bounceTimer->isActive())
-                m_bounceTimer->start(kNoPhaseBoundaryBounceDelayMs);
-        } else {
-            m_noPhaseBounceArmed = false;
-            startBounceBack();
-        }
-    };
-
-    // ── NoPhaseDiscrete (mouse wheel / Mac RDP / Qt5) ─────────────────────
-    // Windows-style NoScrollPhase + angleDelta input must scroll content first.
-    // Only events that are already pushing beyond the current boundary are consumed as tails.
-    if (kind == WheelKind::NoPhaseDiscrete) {
-        const qint64 now = QDateTime::currentMSecsSinceEpoch();
-        const int dir = scrollSign(scrollPx);
-        const bool clusterExpired =
-            m_lastNoPhaseTs != 0 && now - m_lastNoPhaseTs > kClusterGapMs;
-        const bool directionChanged =
-            m_clusterDir != 0 && dir != 0 && m_clusterDir != dir;
-        if (m_lastNoPhaseTs == 0 || clusterExpired || directionChanged) {
-            resetNoPhaseCluster();
-            if (clusterExpired || directionChanged)
-                resetNoPhaseBoundaryBounce();
-        }
-        m_lastNoPhaseTs = now;
-        if (dir != 0)
-            m_clusterDir = dir;
-        m_clusterAccum += scrollPx;
-
-        if (!qFuzzyIsNull(overscroll)) {
-            const bool sameBoundaryDirection =
-                (overscroll > 0.0 && scrollPx > 0.0) ||
-                (overscroll < 0.0 && scrollPx < 0.0);
-            if (sameBoundaryDirection) {
-                syncFluentScrollBars();
-                event->accept();
-                return;
-            }
-
-            if (m_bounceAnim && m_bounceAnim->state() == QAbstractAnimation::Running)
-                m_bounceAnim->stop();
-            if (m_bounceTimer)
-                m_bounceTimer->stop();
-            overscroll = 0.0;
-            resetNoPhaseBoundaryBounce();
-            viewport()->update();
-        }
-
-        QScrollBar* sb = horizontal ? horizontalScrollBar() : verticalScrollBar();
-        if (!sb || sb->maximum() <= sb->minimum()) {
-            syncFluentScrollBars();
-            event->ignore();
-            return;
-        }
-
-        const int before = sb->value();
-        const bool atStart = before <= sb->minimum();
-        const bool atEnd   = before >= sb->maximum();
-        const bool boundaryTail =
-            (atStart && scrollPx > 0.0) ||
-            (atEnd   && scrollPx < 0.0);
-
-        if (boundaryTail) {
-            if (m_scrollChainingEnabled) {
-                resetNoPhaseBoundaryBounce();
-                syncFluentScrollBars();
-                event->ignore();
-                return;
-            }
-
-            if (qFuzzyIsNull(overscroll))
-                startNoPhaseBoundaryBounce();
-            syncFluentScrollBars();
-            event->accept();
-            return;
-        }
-
-        sb->setValue(before - qRound(scrollPx));
-        if (sb->value() != before) {
-            resetNoPhaseCluster();
-            resetNoPhaseBoundaryBounce();
-        }
-        syncFluentScrollBars();
-        event->accept();
-        return;
-    }
-
-    // ── 1. Already overscrolled ──────────────────────────────────────────
-    if (!qFuzzyIsNull(overscroll)) {
-        if (m_bounceAnim && m_bounceAnim->state() == QAbstractAnimation::Running) {
-            // Bounce in progress: NoPhasePixel events are stale residuals — consume them so
-            // the bounce animation completes smoothly. NoPhaseDiscrete reverse recovery is
-            // handled by the normal-scroll-first path above. Only PhaseBased (native macOS
-            // trackpad) is allowed to interrupt, matching the user's explicit finger-press intent.
-            if (kind != WheelKind::PhaseBased) {
-                event->accept();
-                return;
-            }
-            m_bounceAnim->stop();
-        }
-        if (m_bounceTimer) m_bounceTimer->stop();
-
-        // Trackpad momentum / finger-lift → bounce back immediately
-        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-            startBounceBack();
-            event->accept();
-            return;
-        }
-
-        // Rubber-band: quadratic resistance  damping = (1 - |v|/max)²
-        constexpr qreal kMax = 100.0;
-        const qreal ratio = qMin(qAbs(overscroll) / kMax, 1.0);
-        const qreal damping = (1.0 - ratio) * (1.0 - ratio);
-
-        const qreal prev = overscroll;
-        overscroll += scrollPx * qMax(damping, 0.05) * 0.5;
-        overscroll = qBound(-kMax, overscroll, kMax);
-
-        // Scrolled back past zero → snap and let normal scroll resume
-        if ((prev > 0.0 && overscroll <= 0.0) ||
-            (prev < 0.0 && overscroll >= 0.0)) {
-            overscroll = 0.0;
-        }
-
-        viewport()->update();
-
-        event->accept();
-        return;
-    }
-
-    // ── 2. At boundary → enter overscroll ────────────────────────────────
-    QScrollBar* sb = horizontal ? horizontalScrollBar() : verticalScrollBar();
-    if (!sb || sb->maximum() <= sb->minimum()) {
-        syncFluentScrollBars();
-        event->ignore();
-        return;
-    }
-
-    const bool atStart = sb->value() <= sb->minimum();
-    const bool atEnd   = sb->value() >= sb->maximum();
-
-    const bool wantsEnter =
-        (atStart && scrollPx > 0.0) ||
-        (atEnd   && scrollPx < 0.0);
-
-    if (wantsEnter) {
-        if (m_scrollChainingEnabled) {
-            syncFluentScrollBars();
-            event->ignore();
-            return;
-        }
-
-        // Don't enter overscroll from inertia or finger-lift
-        if (phase == Qt::ScrollMomentum || phase == Qt::ScrollEnd) {
-            event->accept();
-            return;
-        }
-
-        overscroll = scrollPx * 0.5;
-        viewport()->update();
-
-        event->accept();
-        return;
-    }
-
-    // ── 3. Normal scroll ─────────────────────────────────────────────────
-    if (horizontal) {
-        QScrollBar* hsb = horizontalScrollBar();
-        hsb->setValue(hsb->value() - qRound(scrollPx));
-        event->accept();
-    } else {
-        QListView::wheelEvent(event);
-        event->accept();
-    }
-    syncFluentScrollBars();
+    m_overscroll->handleWheel(event);
 }
 
 void ListView::currentChanged(const QModelIndex& current, const QModelIndex& previous) {
@@ -1363,11 +1104,16 @@ void ListView::scrollContentsBy(int dx, int dy) {
 }
 
 int ListView::verticalOffset() const {
-    return QListView::verticalOffset() - qRound(m_overscrollY);
+    // The controller tracks one overscroll value for the active scroll axis; apply it to the
+    // matching offset. m_overscroll may be null during base construction. zh_CN: 控制器只跟踪当前
+    // 滚动轴的一个 overscroll 值，按轴应用到对应偏移；构造期间 m_overscroll 可能尚未创建。
+    const qreal overscroll = (m_overscroll && flow() != LeftToRight) ? m_overscroll->value() : 0.0;
+    return QListView::verticalOffset() - qRound(overscroll);
 }
 
 int ListView::horizontalOffset() const {
-    return QListView::horizontalOffset() - qRound(m_overscrollX);
+    const qreal overscroll = (m_overscroll && flow() == LeftToRight) ? m_overscroll->value() : 0.0;
+    return QListView::horizontalOffset() - qRound(overscroll);
 }
 
 QRect ListView::visualRect(const QModelIndex& index) const {
@@ -1813,31 +1559,6 @@ void ListView::paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect
     painter.setPen(Qt::NoPen);
     painter.setBrush(accent);
     painter.drawPath(path);
-}
-
-void ListView::resetNoPhaseCluster() {
-    m_lastNoPhaseTs = 0;
-    m_clusterAccum = 0.0;
-    m_clusterDir = 0;
-}
-
-void ListView::resetNoPhaseBoundaryBounce() {
-    m_noPhaseBoundaryDir = 0;
-    m_noPhaseBounceArmed = false;
-}
-
-void ListView::startBounceBack() {
-    if (!m_bounceAnim) return;
-    const qreal val = (flow() == LeftToRight) ? m_overscrollX : m_overscrollY;
-    if (qFuzzyIsNull(val)) {
-        resetNoPhaseBoundaryBounce();
-        return;
-    }
-    resetNoPhaseCluster();
-    m_bounceAnim->stop();
-    m_bounceAnim->setStartValue(val);
-    m_bounceAnim->setEndValue(0.0);
-    m_bounceAnim->start();
 }
 
 // paintSectionHeaders() removed — section headers are now painted by SectionProxyDelegate

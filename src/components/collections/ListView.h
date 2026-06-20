@@ -23,7 +23,7 @@ class QVariantAnimation;
 class QWheelEvent;
 class QPropertyAnimation;
 
-namespace fluent::scrolling { class ScrollBar; }
+namespace fluent::scrolling { class ScrollBar; class OverscrollController; }
 
 namespace fluent::collections {
 
@@ -195,7 +195,7 @@ public:
     bool canReorderItems() const { return m_canReorderItems; }
     void setCanReorderItems(bool enabled);
 
-    bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
+    bool isScrollChainingEnabled() const;
     void setScrollChainingEnabled(bool enabled);
 
     // --- Section ---
@@ -295,15 +295,12 @@ private:
     void updatePressedHoverRow(int row);
     void paintPressedHoverFeedback(QPainter& painter) const;
     void updateViewportMargins();
-    void startBounceBack();
     void installSectionProxy();
     bool isPointInSectionHeader(const QPoint& viewportPos) const;
     int dropIndicatorRow(const QPoint& pos) const;
     void updateDragDisplacement();
     void clearDragAnimations();
     QPixmap renderItemPixmap(int row) const;
-    void resetNoPhaseCluster();
-    void resetNoPhaseBoundaryBounce();
 
     void connectSelectedIndicatorModel(QAbstractItemModel* model);
     void disconnectSelectedIndicatorModel();
@@ -345,7 +342,7 @@ private:
 
     ::fluent::scrolling::ScrollBar* m_vScrollBar = nullptr;
     ::fluent::scrolling::ScrollBar* m_hScrollBar = nullptr;
-    bool m_scrollChainingEnabled = false;
+    ::fluent::scrolling::OverscrollController* m_overscroll = nullptr;
     bool m_viewportHovered = false;
 
     // --- Drag reorder ---
@@ -367,19 +364,6 @@ private:
     SectionKeyFunc m_sectionKeyFunc;
     QAbstractItemDelegate* m_sectionProxy = nullptr;
     QAbstractItemDelegate* m_userDelegate = nullptr;
-
-    // --- Overscroll bounce ---
-    qreal m_overscrollY = 0.0;
-    qreal m_overscrollX = 0.0;
-    QVariantAnimation* m_bounceAnim = nullptr;
-    QTimer* m_bounceTimer = nullptr;
-
-    // --- Cross-platform wheel input (see openspec listview-cross-platform-input) ---
-    qint64 m_lastNoPhaseTs = 0;   // timestamp of last NoPhaseDiscrete event (ms)
-    qreal  m_clusterAccum  = 0.0; // accumulated scrollPx within current cluster
-    int    m_clusterDir    = 0;   // dominant scrollPx direction for current cluster
-    int    m_noPhaseBoundaryDir = 0; // active NoPhaseDiscrete boundary rebound direction
-    bool   m_noPhaseBounceArmed = false;
 
     // --- Selected indicator motion ---
     QMetaObject::Connection m_indicatorModelAboutToResetConnection;
