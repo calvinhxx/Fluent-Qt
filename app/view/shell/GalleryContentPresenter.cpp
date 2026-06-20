@@ -10,9 +10,26 @@
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/GalleryPageFactory.h"
 #include "view/pages/PlaceholderPage.h"
+#include "view/shell/GalleryPageSkeleton.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 
 namespace fluent::gallery {
+namespace {
+
+// Delay between showing the skeleton and building a cold page, long enough for the skeleton
+// to paint a frame first (so it actually appears) before the build briefly blocks the thread.
+// zh_CN: 显示骨架到构建冷页之间的延迟，足够骨架先绘制一帧（确保真的出现）再让构建短暂阻塞线程。
+constexpr int kSkeletonRevealMs = 80;
+
+// Time budget for splash-phase prewarm. Building pages freezes the GUI thread, so we only warm
+// while the splash hides it; once this elapses we stop and dismiss the splash, leaving the
+// un-warmed tail to lazy + shimmer. Bounds startup wait, and adapts to machine speed (Release
+// drains the whole queue well inside it). zh_CN: splash 期预热的时间预算。建页会冻结 GUI 线程，故只在
+// splash 遮挡时预热；到点即停并消除 splash，剩余尾部交给懒加载+shimmer。限定启动等待，并自适应机器速度
+//（Release 远在预算内就能排空整个队列）。
+constexpr int kPrewarmBudgetMs = 3000;
+
+} // namespace
 
 GalleryContentPresenter::GalleryContentPresenter(
     fluent::navigation::StackContentHost* contentHost,
@@ -52,28 +69,147 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
         return true;
     }
 
-    // Build the page on first visit (or reuse the prewarmed one) and switch the stack
-    // to it. With startup prewarm, the build has usually already happened, so this is a
-    // pure show/hide. zh_CN: 首次访问才建页（或复用预建好的），然后把栈切过去。有了启动预建，
-    // 建页通常已完成，这里就是纯显示/隐藏。
-    QElapsedTimer presentTimer;
-    presentTimer.start();
-
-    const bool alreadyBuilt = m_routeStackIndex.contains(routeId);
-    const int targetIndex = ensurePageBuilt(routeId);
-    if (targetIndex < 0)
-        return false;
-
-    switchToStackPage(targetIndex);
+    // Record the target route up front: a deferred lazy build re-checks this to confirm the
+    // page it built is still the one the user wants before swapping it in.
+    // zh_CN: 先记录目标路由：延迟的懒构建会复查它，确认建好的页面仍是用户想要的才换入。
     m_currentRouteId = routeId;
-    // PERF: enable with SPDLOG_LEVEL=debug to profile navigation. After prewarm,
-    // alreadyBuilt is true and totalMs is just the show/hide.
-    // zh_CN: 用 SPDLOG_LEVEL=debug 开启以分析导航。预建后 alreadyBuilt 为真，totalMs 仅为显示/隐藏。
-    LOG_DEBUG(QStringLiteral("PERF presentRoute routeId=%1 totalMs=%2 alreadyBuilt=%3")
-                 .arg(routeId)
-                 .arg(presentTimer.elapsed())
-                 .arg(alreadyBuilt ? QStringLiteral("true") : QStringLiteral("false")));
+
+    const int existing = m_routeStackIndex.value(routeId, -1);
+    if (existing >= 0) {
+        // Warm: the page is already built and resident — a pure show/hide (~1 ms).
+        // zh_CN: 已预热：页面已建好常驻——纯显示/隐藏（约 1ms）。
+        switchToStackPage(existing);
+        return true;
+    }
+
+    if (m_routeStackIndex.isEmpty()) {
+        // First / startup route, built behind the splash: build synchronously so the splash
+        // hands straight to real content with no skeleton flash.
+        // zh_CN: 首个/启动路由，在 splash 背后构建：同步建好，使 splash 直接交给真内容，无骨架闪烁。
+        const int index = ensurePageBuilt(routeId);
+        if (index < 0)
+            return false;
+        switchToStackPage(index);
+        return true;
+    }
+
+    // Cold route during normal use: show the shimmer skeleton immediately for instant
+    // feedback, then build the real page off the click (next tick) and swap it in — so the
+    // click is never blocked by the build. zh_CN: 正常使用中的冷路由：立刻显示 shimmer 骨架屏给即时
+    // 反馈，随后脱离点击（下一帧）构建真页并换入——使点击永不被建页阻塞。
+    ensureSkeleton();
+    switchToStackPage(m_skeletonIndex);
+    scheduleLazyBuild(routeId);
     return true;
+}
+
+void GalleryContentPresenter::ensureSkeleton()
+{
+    if (m_skeletonIndex >= 0)
+        return;
+    // One reusable skeleton, appended once and then only ever shown/hidden. Appending keeps
+    // every route's recorded stack index stable. zh_CN: 单个可复用骨架，只追加一次，之后仅显示/隐藏。
+    // 追加保证每个路由记录的栈索引稳定。
+    m_skeleton = new GalleryPageSkeleton;
+    m_skeletonIndex = m_contentHost->count();
+    m_contentHost->insertPage(m_skeletonIndex, m_skeleton);
+}
+
+void GalleryContentPresenter::scheduleLazyBuild(const QString& routeId)
+{
+    // Delay the build by kSkeletonRevealMs (not 0): a zero-timer would fire before the just-
+    // shown skeleton paints, so the build would block the thread first and the skeleton would
+    // never appear. Waiting a frame lets the skeleton render before the build runs.
+    // zh_CN: 用 kSkeletonRevealMs 而非 0 延迟构建：零延迟会在刚切上的骨架绘制前触发，导致构建先阻塞线程、
+    // 骨架根本不显示。等一帧让骨架先渲染，再执行构建。
+    QTimer::singleShot(kSkeletonRevealMs, this, [this, routeId]() {
+        // The user may have navigated on (or to a now-warm page) before this fired; only
+        // spend the build if this route is still the one on screen.
+        // zh_CN: 触发前用户可能已切走（或切到已预热页）；仅当该路由仍是屏幕上的目标时才花费构建。
+        if (m_currentRouteId != routeId)
+            return;
+        const int index = ensurePageBuilt(routeId);
+        if (index >= 0 && m_currentRouteId == routeId)
+            switchToStackPage(index);
+    });
+}
+
+void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
+{
+    if (!m_contentHost) {
+        emit prewarmFinished();
+        return;
+    }
+
+    for (const QString& routeId : routeIds) {
+        if (routeId.isEmpty() || m_routeStackIndex.contains(routeId) || m_prewarmQueue.contains(routeId))
+            continue;
+        m_prewarmQueue.enqueue(routeId);
+    }
+    if (m_prewarmQueue.isEmpty()) {
+        // Nothing to warm — still notify so the splash dismisses. zh_CN: 没有要预热的——仍通知，让 splash 关闭。
+        emit prewarmFinished();
+        return;
+    }
+    m_prewarmTotal = m_prewarmQueue.size();
+    m_prewarmDone = 0;
+    LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarmRoutes queued=%1 budgetMs=%2")
+                  .arg(m_prewarmTotal)
+                  .arg(kPrewarmBudgetMs));
+    emit prewarmProgress(0, 100);
+    m_prewarmBudget.start();
+    scheduleNextPrewarm();
+}
+
+void GalleryContentPresenter::scheduleNextPrewarm()
+{
+    if (m_prewarmScheduled)
+        return;
+    m_prewarmScheduled = true;
+    // One page per event-loop tick: the build freezes the thread, but yielding between pages
+    // lets the splash spinner keep animating instead of locking up for the whole prewarm.
+    // zh_CN: 每帧建一个：建页会冻结线程，但页间让出控制权，让 splash 转圈持续动画而非整段预热期间锁死。
+    QTimer::singleShot(0, this, [this]() {
+        m_prewarmScheduled = false;
+
+        // Skip anything already built (e.g. the user reached it first), then warm the next.
+        // zh_CN: 跳过已建好的（如用户先到达的），再预热下一个。
+        while (!m_prewarmQueue.isEmpty() && m_routeStackIndex.contains(m_prewarmQueue.head()))
+            m_prewarmQueue.dequeue();
+
+        if (m_prewarmQueue.isEmpty()) {
+            emit prewarmProgress(100, 100);
+            emit prewarmFinished();
+            return;
+        }
+        ensurePageBuilt(m_prewarmQueue.dequeue());
+        ++m_prewarmDone;
+        // Show whichever is further along — pages warmed, or time spent against the budget — so
+        // the caption climbs smoothly to ~100% whether the budget caps it (Debug) or the queue
+        // drains first (Release), instead of stalling at a low page fraction.
+        // zh_CN: 取「已预热页数」与「已用时间/预算」中较大者显示，使百分比平滑爬到约 100%——无论是预算封顶
+        //（Debug）还是队列先排空（Release），而不会卡在很低的页数占比上。
+        const int pagePct = m_prewarmDone * 100 / m_prewarmTotal;
+        const int timePct = static_cast<int>(m_prewarmBudget.elapsed() * 100 / kPrewarmBudgetMs);
+        emit prewarmProgress(qBound(0, qMax(pagePct, timePct), 100), 100);
+
+        if (m_prewarmQueue.isEmpty() || m_prewarmBudget.elapsed() >= kPrewarmBudgetMs) {
+            // Budget spent (or queue drained): stop warming and let the splash go. The tail
+            // builds lazily behind the shimmer skeleton on first visit. Snap the caption to 100%
+            // so it reads "ready", not stalled mid-load.
+            // zh_CN: 预算用尽（或队列排空）：停止预热并放行 splash。尾部在首次访问时于 shimmer 骨架屏背后懒构建。
+            // 把文字补到 100%，读起来是「就绪」而非加载到一半卡住。
+            LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarm stopped warmed=%1 remaining=%2 elapsedMs=%3")
+                          .arg(m_prewarmDone)
+                          .arg(m_prewarmQueue.size())
+                          .arg(m_prewarmBudget.elapsed()));
+            m_prewarmQueue.clear();
+            emit prewarmProgress(100, 100);
+            emit prewarmFinished();
+            return;
+        }
+        scheduleNextPrewarm();
+    });
 }
 
 int GalleryContentPresenter::ensurePageBuilt(const QString& routeId)
@@ -105,55 +241,6 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId)
                   .arg(QString::fromLatin1(page->metaObject()->className()))
                   .arg(index));
     return index;
-}
-
-void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
-{
-    if (!m_contentHost) {
-        emit prewarmFinished();
-        return;
-    }
-
-    for (const QString& routeId : routeIds) {
-        if (routeId.isEmpty() || m_routeStackIndex.contains(routeId) || m_prewarmQueue.contains(routeId))
-            continue;
-        m_prewarmQueue.enqueue(routeId);
-        ++m_prewarmTotal;
-    }
-    LOG_DEBUG(QStringLiteral("GalleryContentPresenter prewarmRoutes queued=%1 total=%2")
-                  .arg(m_prewarmQueue.size())
-                  .arg(m_prewarmTotal));
-    if (m_prewarmQueue.isEmpty()) {
-        // Nothing to build (everything already prewarmed) — still notify so any splash
-        // waiting on us dismisses. zh_CN: 没有要建的（都已预建）——仍然通知，让等待的 splash 关闭。
-        emit prewarmFinished();
-        return;
-    }
-    scheduleNextPrewarm();
-}
-
-void GalleryContentPresenter::scheduleNextPrewarm()
-{
-    if (m_prewarmScheduled)
-        return;
-    m_prewarmScheduled = true;
-    // One page per event-loop tick: heavy construction yields between pages so a splash
-    // screen keeps animating instead of freezing for the whole prewarm.
-    // zh_CN: 每个事件循环一帧建一个：页面间让出控制权，让 splash 持续动画而非整段预建期间冻结。
-    QTimer::singleShot(0, this, [this]() {
-        m_prewarmScheduled = false;
-        if (m_prewarmQueue.isEmpty()) {
-            emit prewarmFinished();
-            return;
-        }
-        ensurePageBuilt(m_prewarmQueue.dequeue());
-        ++m_prewarmDone;
-        emit prewarmProgress(m_prewarmDone, m_prewarmTotal);
-        if (!m_prewarmQueue.isEmpty())
-            scheduleNextPrewarm();
-        else
-            emit prewarmFinished();
-    });
 }
 
 void GalleryContentPresenter::connectPageNavigation(QWidget* page)

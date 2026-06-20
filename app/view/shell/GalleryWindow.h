@@ -77,7 +77,8 @@ private:
     void buildContentPresenter();
     void installSplashScreen();
     void showInitialRouteContent();
-    void prewarmAllRoutes();
+    void prewarmRemainingRoutes();
+    void finishStartup();
     void handleSelectedRouteChanged(const QString& routeId);
     void recordNavigationHistory(const QString& nextRouteId);
     bool navigateBack();
@@ -104,8 +105,8 @@ private:
     QStringList m_backRouteStack;
     bool m_isNavigatingHistory = false;
 
-    // Startup splash overlay; self-deletes after its fade-out on prewarmFinished.
-    // zh_CN: 启动 splash 覆盖层；在 prewarmFinished 后淡出并自销毁。
+    // Startup splash overlay; self-deletes after its fade-out once the initial route is shown.
+    // zh_CN: 启动 splash 覆盖层；首个路由上屏后淡出并自销毁。
     QPointer<GallerySplashScreen> m_splashScreen;
 };
 

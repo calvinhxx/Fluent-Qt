@@ -1,6 +1,7 @@
 #ifndef GALLERYCONTENTPRESENTER_H
 #define GALLERYCONTENTPRESENTER_H
 
+#include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
 #include <QQueue>
@@ -43,35 +44,45 @@ public:
      * @brief Shows the page for routeId, replacing the current one.
      * zh_CN: 显示 routeId 对应的页面并替换当前页面。
      *
-     * Re-presenting the route already on screen is a no-op that returns true.
-     * zh_CN: 重复呈现已在屏幕上的路由为无操作，返回 true。
+     * Re-presenting the route already on screen is a no-op that returns true. The first
+     * route (startup, behind the splash) builds synchronously so the splash hands directly
+     * to real content. Already-built routes switch instantly. A cold route during normal
+     * use shows a shimmer skeleton immediately, then builds the real page on the next
+     * event-loop tick and swaps it in — so the click never freezes on the build.
+     * zh_CN: 重复呈现已在屏幕上的路由为无操作，返回 true。首个路由（启动、splash 背后）同步构建，
+     * 使 splash 直接交给真内容。已建路由瞬时切换。正常使用中点开冷路由会立刻显示 shimmer 骨架屏，
+     * 下一个事件循环帧再建真页并换入——于是点击不会卡在建页上。
      */
     bool presentRoute(const QString& routeId);
 
     /**
-     * @brief Builds every listed route's page up front (one per event-loop tick) and
-     * parks it hidden in the content stack, so later navigation is a pure show/hide
-     * with no build cost. Meant to run behind a splash screen at startup.
-     * zh_CN: 提前建好列表里每个路由的页面（每个事件循环一帧建一个）并隐藏停放在内容栈里，
-     * 之后导航就是纯显示/隐藏、无建页开销。设计为启动时在 splash screen 背后运行。
+     * @brief Warms the listed routes' pages up front (one per event-loop tick) behind the
+     * splash, capped by a time budget, then emits prewarmFinished.
+     * zh_CN: 在 splash 背后提前预热列出的路由页面（每帧一个），受时间预算限制，随后发出 prewarmFinished。
      *
-     * Already-built routes are skipped; safe to call repeatedly. Emits prewarmProgress
-     * per page and prewarmFinished when the queue drains.
-     * zh_CN: 已建过的路由会跳过；可重复调用。每建一个发 prewarmProgress，排空时发 prewarmFinished。
+     * Building pages freezes the GUI thread, so we only ever do it while the splash hides the
+     * jank. The budget bounds how long startup waits: whatever warmed in time becomes an
+     * instant show/hide later; the un-warmed tail builds lazily behind a shimmer skeleton on
+     * first visit. We deliberately do NOT warm in the background after the splash — that would
+     * stutter the live UI. zh_CN: 建页会冻结 GUI 线程，故只在 splash 遮挡卡顿时做。预算限定启动等待时长：
+     * 及时预热到的之后瞬时显隐；没预热到的尾部在首次访问时于 shimmer 骨架屏背后懒构建。刻意不在 splash 之后做
+     * 后台预热——那会让活动中的 UI 卡顿。
      */
     void prewarmRoutes(const QStringList& routeIds);
 
 signals:
     void routeActivated(const QString& routeId);
 
-    /** @brief Prewarm built `done` of `total` queued pages. */
+    /** @brief Splash-phase prewarm warmed `done` of `total` queued pages; drives the splash caption. */
     void prewarmProgress(int done, int total);
-    /** @brief The prewarm queue has drained — all requested pages are built. */
+    /** @brief Splash-phase prewarm has finished (budget hit or queue drained); dismiss the splash. */
     void prewarmFinished();
 
 private:
     void connectPageNavigation(QWidget* page);
     int ensurePageBuilt(const QString& routeId);
+    void ensureSkeleton();
+    void scheduleLazyBuild(const QString& routeId);
     void scheduleNextPrewarm();
     void switchToStackPage(int targetIndex);
 
@@ -91,13 +102,21 @@ private:
     // 页面只追加、从不移除，所以索引稳定。
     QHash<QString, int> m_routeStackIndex;
 
-    // Startup prewarm queue: routes waiting to be built, drained one per event-loop
-    // tick so the splash screen stays responsive while the heavy construction runs.
-    // zh_CN: 启动预建队列：等待建页的路由，每个事件循环一帧建一个，让 splash 在重构造期间保持响应。
+    // A single shimmer skeleton page, parked in the stack and shown the instant a cold
+    // route is requested so navigation feels immediate while the real page builds.
+    // zh_CN: 单个 shimmer 骨架页，常驻栈里，请求冷路由时立刻显示，使导航在真页构建期间也即时响应。
+    QWidget* m_skeleton = nullptr;
+    int m_skeletonIndex = -1;
+
+    // Splash-phase prewarm: routes waiting to warm, drained one per event-loop tick behind the
+    // splash until the budget timer elapses. m_prewarmScheduled guards against double-queuing
+    // the next tick. zh_CN: splash 期预热：待预热的路由，在 splash 背后每帧建一个，直到预算计时器到点。
+    // m_prewarmScheduled 防止重复排入下一帧。
     QQueue<QString> m_prewarmQueue;
+    QElapsedTimer m_prewarmBudget;
     bool m_prewarmScheduled = false;
-    int m_prewarmDone = 0;
-    int m_prewarmTotal = 0;
+    int m_prewarmTotal = 0;   // Pages queued for splash-phase warm; denominator of the caption.
+    int m_prewarmDone = 0;    // Pages warmed so far; numerator of the caption.
 };
 
 } // namespace fluent::gallery

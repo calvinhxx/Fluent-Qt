@@ -40,6 +40,11 @@ using TitleBarMetrics = metrics::TitleBar;
 
 constexpr int kNavigationDrawerShadowMargin = 8;
 
+// Brief hold after the initial route is on screen before dismissing the splash: long enough
+// for the window to composite a few frames (so DWM applies Mica), short enough to feel instant.
+// zh_CN: 首个路由上屏后到消除 splash 之间的短暂停留：足够窗口合成几帧（使 DWM 施加 Mica），又短到感觉即时。
+constexpr int kStartupSplashHoldMs = 120;
+
 class NavigationDrawerContentPanel : public QWidget, public fluent::FluentElement {
 public:
     explicit NavigationDrawerContentPanel(QWidget* parent = nullptr)
@@ -158,7 +163,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     buildContentPresenter();
     installSplashScreen();
     showInitialRouteContent();
-    prewarmAllRoutes();
+    prewarmRemainingRoutes();
     LOG_INFO(QStringLiteral("GalleryWindow constructed defaultRoute=%1")
                  .arg(m_navigationViewModel.defaultRouteId()));
 }
@@ -279,6 +284,11 @@ void GalleryWindow::installSplashScreen()
     m_splashScreen->show();
     m_splashScreen->raise();
 
+    // Dismiss the splash as soon as the initial route (Home) is built and on screen — no
+    // Dismiss the splash once splash-phase prewarm finishes — either the time budget elapsed or
+    // the queue drained. Pages warmed in time become instant; the un-warmed tail builds lazily
+    // behind a shimmer skeleton on first visit. zh_CN: splash 期预热一结束（时间预算到点或队列排空）就消除
+    // splash。及时预热的页瞬时显示；没预热到的尾部在首次访问时于 shimmer 骨架屏背后懒构建。
     connect(m_contentPresenter, &GalleryContentPresenter::prewarmProgress,
             this, [this](int done, int total) {
                 if (m_splashScreen)
@@ -286,35 +296,42 @@ void GalleryWindow::installSplashScreen()
             });
     connect(m_contentPresenter, &GalleryContentPresenter::prewarmFinished,
             this, [this]() {
-                if (m_titleBar)
-                    m_titleBar->setChromeVisible(true, /*animated*/ true);
-                // Startup loading is done and the window has composited many frames, so we're well
-                // past the DWM first-show race that can leave Mica un-applied (a flat neutral
-                // surface until the next activation). Force the backdrop on now, as the content
-                // surfaces from behind the splash. zh_CN: 启动加载已完成、窗口已合成多帧，已远过那个可能让
-                // Mica 未生效（停在扁平中性表面、要等下次激活）的 DWM 首屏竞争；在内容从 splash 后浮现时强制施加背景。
-                reapplySystemBackdrop();
-                if (m_splashScreen)
-                    m_splashScreen->dismiss();  // fades out, then self-deletes
+                // Let the window composite a few frames before finishing, so DWM has applied
+                // Mica and reapplySystemBackdrop() reinforces it past the first-show race.
+                // zh_CN: 收尾前先让窗口合成几帧，使 DWM 施加 Mica，reapplySystemBackdrop() 再强化一遍，越过首屏竞争。
+                QTimer::singleShot(kStartupSplashHoldMs, this, [this]() { finishStartup(); });
             });
 }
 
-void GalleryWindow::prewarmAllRoutes()
+void GalleryWindow::prewarmRemainingRoutes()
 {
     if (!m_contentPresenter)
         return;
 
-    // Hand every nav route to the presenter so it builds them up front (one per
-    // event-loop tick) while a splash screen covers the work. After this drains, the
-    // first visit to any page is a pure show/hide with no build jank.
-    // zh_CN: 把每个导航路由交给 presenter 提前建好（每帧一个），由 splash 遮挡这段构建。
-    // 排空后，任何页面的首次访问都是纯显示/隐藏、无建页卡顿。
+    // Warm the nav routes (in order) behind the splash, time-budgeted by the presenter. Home is
+    // already built; common top pages warm next so their first visit is instant, and the splash
+    // hides the build jank. zh_CN: 在 splash 背后按顺序预热导航路由，由 presenter 做时间预算。Home 已建好；
+    // 靠前的常用页接着预热，使其首次访问瞬时，且 splash 遮挡建页卡顿。
     QStringList routeIds;
     if (m_mainNavigationPane)
         routeIds += m_mainNavigationPane->routeIds();
     if (m_footerNavigationPane)
         routeIds += m_footerNavigationPane->routeIds();
     m_contentPresenter->prewarmRoutes(routeIds);
+}
+
+void GalleryWindow::finishStartup()
+{
+    if (m_titleBar)
+        m_titleBar->setChromeVisible(true, /*animated*/ true);
+    // The window has composited several frames, so we're past the DWM first-show race that can
+    // leave Mica un-applied (a flat neutral surface until the next activation). Force the
+    // backdrop on now, as the content surfaces from behind the splash.
+    // zh_CN: 窗口已合成数帧，已过那个可能让 Mica 未生效（停在扁平中性表面、要等下次激活）的 DWM 首屏竞争；
+    // 在内容从 splash 后浮现时强制施加背景。
+    reapplySystemBackdrop();
+    if (m_splashScreen)
+        m_splashScreen->dismiss();  // fades out, then self-deletes
 }
 
 GalleryContentPage* GalleryWindow::currentContentPage() const
@@ -469,11 +486,12 @@ void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
     LOG_TRACE(QStringLiteral("GalleryWindow selectedRouteSignal routeId=%1")
                   .arg(routeId));
 
-    // Present synchronously: with pages prewarmed and resident in the stack, a swap is a
-    // ~1ms show/hide, so there is nothing heavy to defer off this signal. navigateBack()
-    // also relies on currentRouteId() being updated by the time this returns.
-    // zh_CN: 同步换页：页面已预建并常驻栈中，换页只是 ~1ms 的显示/隐藏，没有重活需要从此信号上推迟；
-    // navigateBack() 也依赖本函数返回时 currentRouteId() 已更新。
+    // Present synchronously: the presenter itself decides whether this is an instant swap
+    // (warm, resident page) or a shimmer-skeleton-then-lazy-build (cold page), so there is
+    // nothing heavy to defer off this signal. navigateBack() also relies on currentRouteId()
+    // being updated by the time this returns.
+    // zh_CN: 同步换页：是瞬时切换（已预热的常驻页）还是「先骨架屏再懒构建」（冷页）由 presenter 自行决定，
+    // 故没有重活需要从此信号上推迟；navigateBack() 也依赖本函数返回时 currentRouteId() 已更新。
     recordNavigationHistory(routeId);
     if (m_contentPresenter)
         m_contentPresenter->presentRoute(routeId);

@@ -19,8 +19,8 @@ class ProgressRing;
 namespace fluent::gallery {
 
 /**
- * @brief Startup splash: app logo over a loading spinner, shown while pages prewarm.
- * zh_CN: 启动 splash：app logo 配加载转圈，在页面预建期间显示。
+ * @brief Startup splash: app logo over a loading spinner with a percentage caption, shown while
+ * the early pages warm behind it. zh_CN: 启动 splash：app logo 配加载转圈与百分比文字，在前期页面于其背后预热时显示。
  *
  * Follows the Windows UI kit "Splash screen" spec (Win32 variant): a solid surface
  * with the app icon dead-centered and a 32px ProgressRing 144px below it. The widget
