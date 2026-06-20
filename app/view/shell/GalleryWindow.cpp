@@ -6,6 +6,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPainterPath>
+#include <QPixmap>
 #include <QRadialGradient>
 #include <QRegion>
 #include <QResizeEvent>
@@ -59,16 +60,55 @@ protected:
     void resizeEvent(QResizeEvent* event) override
     {
         QWidget::resizeEvent(event);
+        m_cache = QPixmap();  // size changed — re-render the cached panel on next paint
         updateClipMask();
+    }
+
+    void onThemeUpdated() override
+    {
+        m_cache = QPixmap();  // theme colors changed — re-render the cached panel
+        update();
     }
 
     void paintEvent(QPaintEvent*) override
     {
+        // The panel's shadow + fills + gradients depend only on size and theme, not on the slide
+        // animation — yet the drawer repaints the panel every frame as it slides. Render that heavy
+        // content into a pixmap once per size/theme and just blit it each frame.
+        // zh_CN: 面板的阴影+填充+渐变只取决于尺寸与主题，与滑动动画无关——但抽屉每帧滑动都会重绘面板。
+        // 把这段重内容按尺寸/主题渲染进 pixmap 一次，之后每帧只做一次位块传送。
+        if (m_cache.isNull())
+            rebuildCache();
+
         QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing);
+        // Clear the translucent backing store, then composite the cached panel over it.
+        // zh_CN: 先清掉半透明背景缓冲，再把缓存面板叠上去。
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(rect(), Qt::transparent);
+        if (m_cache.isNull())
+            return;
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        painter.drawPixmap(0, 0, m_cache);
+    }
+
+private:
+    void rebuildCache()
+    {
+        if (rect().isEmpty()) {
+            m_cache = QPixmap();
+            return;
+        }
+        const qreal dpr = devicePixelRatioF();
+        m_cache = QPixmap((QSizeF(size()) * dpr).toSize());
+        m_cache.setDevicePixelRatio(dpr);
+        m_cache.fill(Qt::transparent);
+        QPainter painter(&m_cache);
+        paintPanel(painter);
+    }
+
+    void paintPanel(QPainter& painter)
+    {
+        painter.setRenderHint(QPainter::Antialiasing);
 
         const int shadowMargin = qMin(kNavigationDrawerShadowMargin, qMax(0, width() / 4));
         const QRectF panelRect(0.0, 0.0,
@@ -119,7 +159,6 @@ protected:
         painter.drawPath(panelPath);
     }
 
-private:
     QPainterPath drawerPanelPath(const QRectF& bounds) const
     {
         return fluent::overlay::roundedCornerRectPath(bounds, themeRadius().overlay,
@@ -142,6 +181,10 @@ private:
             region += QRegion(qMax(0, width() - shadowMargin), 0, shadowMargin, height());
         setMask(region);
     }
+
+    // Cached render of the panel chrome; rebuilt only on size/theme change, blitted every frame.
+    // zh_CN: 面板装饰的缓存渲染；仅在尺寸/主题变化时重建，每帧只做位块传送。
+    QPixmap m_cache;
 };
 
 } // namespace
