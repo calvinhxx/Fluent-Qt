@@ -42,6 +42,35 @@ void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pix
     painter->drawPixmap(target, pixmap, source);
 }
 
+// Resolves the Fluent "subtle" fill for a row's interaction state (pressed > selected/hover);
+// transparent while disabled or at rest. Shared by the list and tree row delegates.
+// zh_CN: 解析行交互状态对应的 Fluent "subtle" 填充色（按下 > 选中/悬停）；禁用或静止时透明。列表与树行 delegate 共用。
+QColor subtleStateBackground(const QStyleOptionViewItem& option,
+                             const fluent::FluentElement::Colors& colors)
+{
+    if (!(option.state & QStyle::State_Enabled))
+        return Qt::transparent;
+    const bool hovered = option.state & QStyle::State_MouseOver;
+    const bool pressed = (option.state & QStyle::State_Sunken) && hovered;
+    if (pressed)
+        return colors.subtleTertiary;
+    if ((option.state & QStyle::State_Selected) || hovered)
+        return colors.subtleSecondary;
+    return Qt::transparent;
+}
+
+// Fills a rounded-rect background when the color is visible. zh_CN: 颜色可见时填充圆角矩形背景。
+void fillRoundedBackground(QPainter* painter, const QRectF& rect, const QColor& color, qreal radius)
+{
+    if (color.alpha() <= 0)
+        return;
+    QPainterPath path;
+    path.addRoundedRect(rect, radius, radius);
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(color);
+    painter->drawPath(path);
+}
+
 } // namespace
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -208,28 +237,13 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     const int cornerR = radius.control > 0 ? radius.control : CornerRadius::Control;
 
     const bool isSelected = option.state & QStyle::State_Selected;
-    const bool isHovered = option.state & QStyle::State_MouseOver;
-    const bool isPressed = (option.state & QStyle::State_Sunken) && isHovered;
     const bool isEnabled = option.state & QStyle::State_Enabled;
 
     // Background rect matches the container's indicator base rect so the accent pill,
     // painted by ListView on top, lines up with the rounded fill we draw here.
     const QRectF bgRect = QRectF(option.rect).adjusted(2.0, 1.0, -2.0, -1.0);
 
-    QColor bgColor = Qt::transparent;
-    if (isEnabled) {
-        if (isPressed)
-            bgColor = colors.subtleTertiary;
-        else if (isSelected || isHovered)
-            bgColor = colors.subtleSecondary;
-    }
-    if (bgColor.alpha() > 0) {
-        QPainterPath path;
-        path.addRoundedRect(bgRect, cornerR, cornerR);
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(bgColor);
-        painter->drawPath(path);
-    }
+    fillRoundedBackground(painter, bgRect, subtleStateBackground(option, colors), cornerR);
 
     // Left padding clears the accent indicator pill (drawn by ListView at bgRect.left()+4).
     qreal cursorX = bgRect.left() + 14.0;
@@ -351,26 +365,13 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     const QRectF bgRect = bgRectForOption(option);
 
     const bool isSelected = option.state & QStyle::State_Selected;
-    const bool isHovered = option.state & QStyle::State_MouseOver;
-    const bool isPressed = (option.state & QStyle::State_Sunken) && isHovered;
     const bool isEnabled = option.state & QStyle::State_Enabled;
 
-    QColor bgColor = Qt::transparent;
     QColor textColor = colors.textPrimary;
     if (!isEnabled)
         textColor = colors.textDisabled;
-    else if (isPressed)
-        bgColor = colors.subtleTertiary;
-    else if (isSelected || isHovered)
-        bgColor = colors.subtleSecondary;
 
-    if (bgColor.alpha() > 0) {
-        QPainterPath path;
-        path.addRoundedRect(bgRect, cornerR, cornerR);
-        painter->setPen(Qt::NoPen);
-        painter->setBrush(bgColor);
-        painter->drawPath(path);
-    }
+    fillRoundedBackground(painter, bgRect, subtleStateBackground(option, colors), cornerR);
 
     // Animated accent indicator (single-select). When TreeView owns the overlay
     // indicator, skip the delegate bar so examples do not show two indicators.
