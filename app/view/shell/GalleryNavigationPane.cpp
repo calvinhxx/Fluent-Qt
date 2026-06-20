@@ -2,6 +2,9 @@
 
 #include <cmath>
 #include <QAbstractItemView>
+#include <QEvent>
+#include <QHelpEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPropertyAnimation>
@@ -15,6 +18,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/collections/TreeView.h"
 #include "components/scrolling/ScrollBar.h"
+#include "components/status_info/ToolTip.h"
 #include "utils/Log.h"
 #include "GalleryCompactFlyout.h"
 #include "GalleryNavigationDelegate.h"
@@ -156,6 +160,7 @@ void GalleryNavigationPane::setCompact(bool compact)
         return;
 
     m_compact = compact;
+    hideCompactToolTip();
     LOG_DEBUG(QStringLiteral("GalleryNavigationPane compactChanged object=%1 compact=%2")
                   .arg(objectName(), compact ? QStringLiteral("true") : QStringLiteral("false")));
     syncCompactVisualProperties();
@@ -239,6 +244,43 @@ void GalleryNavigationPane::paintEvent(QPaintEvent* event)
     QWidget::paintEvent(event);
 }
 
+bool GalleryNavigationPane::eventFilter(QObject* watched, QEvent* event)
+{
+    if (m_treeView && watched == m_treeView->viewport()) {
+        switch (event->type()) {
+        case QEvent::ToolTip: {
+            const auto* helpEvent = static_cast<QHelpEvent*>(event);
+            const QModelIndex index = m_treeView->indexAt(helpEvent->pos());
+            if (m_compact && m_compactVisualProgress >= 0.999 && index.isValid())
+                showCompactToolTip(index);
+            else
+                hideCompactToolTip();
+            // Model rows carry tooltip text so Qt starts its usual hover timer. The Fluent
+            // bubble owns presentation in compact mode; expanded mode intentionally has none.
+            return true;
+        }
+        case QEvent::MouseMove:
+            if (m_compactToolTip && m_compactToolTip->isVisible()) {
+                const auto* mouseEvent = static_cast<QMouseEvent*>(event);
+                if (m_treeView->indexAt(mouseEvent->pos()) != m_compactToolTipIndex)
+                    hideCompactToolTip();
+            }
+            break;
+        case QEvent::Leave:
+        case QEvent::Hide:
+        case QEvent::MouseButtonPress:
+        case QEvent::Wheel:
+        case QEvent::Resize:
+            hideCompactToolTip();
+            break;
+        default:
+            break;
+        }
+    }
+
+    return QWidget::eventFilter(watched, event);
+}
+
 void GalleryNavigationPane::rebuild()
 {
     m_routeIndexes.clear();
@@ -271,6 +313,7 @@ void GalleryNavigationPane::rebuild()
     if (m_treeView->viewport()) {
         m_treeView->viewport()->setProperty("fluentPreserveParentSurface", m_surfaceVisible);
         m_treeView->viewport()->setAttribute(Qt::WA_NoSystemBackground, m_surfaceVisible);
+        m_treeView->viewport()->installEventFilter(this);
     }
     m_treeView->setHorizontalFluentScrollBarEnabled(false);
     // Navigation chrome stops cleanly at the scroll edge — an elastic bounce reads as a glitch
@@ -575,6 +618,47 @@ void GalleryNavigationPane::showCompactFlyoutForIndex(const QModelIndex& index)
                   .arg(m_model->rowCount(index)));
 }
 
+void GalleryNavigationPane::showCompactToolTip(const QModelIndex& index)
+{
+    if (!m_compact || m_compactVisualProgress < 0.999 || !m_treeView || !index.isValid())
+        return;
+
+    const auto kind = static_cast<GalleryNavigationItem::Kind>(index.data(KindRole).toInt());
+    const QString text = index.data(Qt::ToolTipRole).toString();
+    const QRect rowRect = m_treeView->visualRect(index);
+    if (kind == GalleryNavigationItem::Kind::SectionHeader || text.isEmpty()
+        || rowRect.isEmpty() || !m_treeView->viewport()->rect().intersects(rowRect)) {
+        hideCompactToolTip();
+        return;
+    }
+
+    if (!m_compactToolTip) {
+        m_compactToolTip = new fluent::status_info::ToolTip(this);
+        m_compactToolTip->setObjectName(QStringLiteral("galleryCompactNavigationToolTip"));
+        m_compactToolTip->setAnimationEnabled(true);
+    }
+    m_compactToolTip->setText(text);
+    m_compactToolTipIndex = index;
+
+    // Center the visible bubble above the compact row. ToolTip reserves a transparent shadow
+    // band, so offset that band out of the measured gap.
+    const int shadow = m_compactToolTip->shadowMargin();
+    const QPoint anchor = m_treeView->viewport()->mapToGlobal(
+        QPoint(rowRect.center().x(), rowRect.top()));
+    const int x = anchor.x() - m_compactToolTip->width() / 2;
+    const int y = anchor.y() - kCompactToolTipGap - m_compactToolTip->height() + shadow;
+    m_compactToolTip->move(x, y);
+    m_compactToolTip->show();
+    m_compactToolTip->raise();
+}
+
+void GalleryNavigationPane::hideCompactToolTip()
+{
+    m_compactToolTipIndex = QPersistentModelIndex();
+    if (m_compactToolTip)
+        m_compactToolTip->hide();
+}
+
 void GalleryNavigationPane::closeCompactFlyout(bool animated)
 {
     if (m_compactFlyout) {
@@ -606,6 +690,10 @@ QStandardItem* GalleryNavigationPane::createItem(const GalleryNavigationItem& it
     standardItem->setData(item.id, RouteIdRole);
     standardItem->setData(static_cast<int>(item.kind), KindRole);
     standardItem->setData(item.parentId, ParentRouteIdRole);
+    standardItem->setData(item.kind == GalleryNavigationItem::Kind::SectionHeader
+                              ? QString()
+                              : item.title,
+                          Qt::ToolTipRole);
     standardItem->setData(item.kind == GalleryNavigationItem::Kind::ComponentRoute ? QString() : item.iconGlyph,
                           IconGlyphRole);
     if (item.kind == GalleryNavigationItem::Kind::ComponentRoute)

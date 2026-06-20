@@ -14,6 +14,7 @@
 class QStandardItem;
 class QStandardItemModel;
 class QPropertyAnimation;
+class QEvent;
 class QPaintEvent;
 
 namespace fluent::collections {
@@ -22,6 +23,10 @@ class TreeView;
 
 namespace fluent::dialogs_flyouts {
 class Popup;
+}
+
+namespace fluent::status_info {
+class ToolTip;
 }
 
 namespace fluent::gallery {
@@ -58,6 +63,7 @@ signals:
     void compactChanged(bool compact);
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
 private:
@@ -71,6 +77,8 @@ private:
     QModelIndex visualSelectionIndex(const QModelIndex& routeIndex) const;
     void showCompactFlyoutForIndex(const QModelIndex& index);
     void closeCompactFlyout(bool animated = true);
+    void showCompactToolTip(const QModelIndex& index);
+    void hideCompactToolTip();
     bool isFooterOnly() const;
     QStandardItem* createItem(const GalleryNavigationItem& item);
     void appendNavigationItem(QStandardItemModel* model,
@@ -82,6 +90,8 @@ private:
     fluent::collections::TreeView* m_treeView = nullptr;
     QWidget* m_footerDivider = nullptr;
     fluent::dialogs_flyouts::Popup* m_compactFlyout = nullptr;
+    fluent::status_info::ToolTip* m_compactToolTip = nullptr;
+    QPersistentModelIndex m_compactToolTipIndex;
     QWidget* m_compactFlyoutPanel = nullptr;
     QWidget* m_compactFlyoutAnchor = nullptr;
     QPropertyAnimation* m_compactVisualAnimation = nullptr;

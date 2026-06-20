@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QEvent>
+#include <QHelpEvent>
 #include <QLabel>
 #include <QPixmap>
 #include <QPointer>
@@ -24,6 +25,7 @@
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
+#include "components/status_info/ToolTip.h"
 #include "components/windowing/TitleBar.h"
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
@@ -45,6 +47,7 @@ using fluent::gallery::GalleryWindow;
 using fluent::gallery::SettingsPage;
 using fluent::navigation::NavigationView;
 using fluent::scrolling::ScrollView;
+using fluent::status_info::ToolTip;
 using fluent::textfields::AutoSuggestBox;
 using fluent::windowing::TitleBar;
 namespace vg = fluent::testutils::visual_geometry;
@@ -468,6 +471,64 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationHidesHeadersAndInlineChil
     EXPECT_FALSE(tree->isExpanded(categoryIndex));
     EXPECT_FALSE(tree->visualRect(categoryIndex).isEmpty());
     EXPECT_TRUE(tree->visualRect(childIndex).isEmpty());
+}
+
+TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsFluentToolTips)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+
+    auto* mainPane = window.findChild<GalleryNavigationPane*>(
+        QStringLiteral("galleryMainNavigationPane"));
+    ASSERT_NE(mainPane, nullptr);
+    TreeView* tree = navigationTree(mainPane);
+    ASSERT_NE(tree, nullptr);
+    const QModelIndex homeIndex = mainPane->indexForRouteId(QStringLiteral("home"));
+    ASSERT_TRUE(homeIndex.isValid());
+    const QRect expandedRect = tree->visualRect(homeIndex);
+    ASSERT_FALSE(expandedRect.isEmpty());
+
+    QHelpEvent expandedHelp(QEvent::ToolTip,
+                            expandedRect.center(),
+                            tree->viewport()->mapToGlobal(expandedRect.center()));
+    QApplication::sendEvent(tree->viewport(), &expandedHelp);
+    EXPECT_EQ(mainPane->findChild<ToolTip*>(
+                  QStringLiteral("galleryCompactNavigationToolTip")),
+              nullptr);
+
+    auto* menuButton = vg::findRequiredChild<Button>(
+        window.titleBar(), QStringLiteral("GalleryTitleBar.MenuButton"));
+    ASSERT_NE(menuButton, nullptr);
+    QTest::mouseClick(menuButton, Qt::LeftButton);
+    settleNavigationViewAnimation();
+
+    const QRect compactRect = tree->visualRect(homeIndex);
+    ASSERT_FALSE(compactRect.isEmpty());
+    QHelpEvent compactHelp(QEvent::ToolTip,
+                           compactRect.center(),
+                           tree->viewport()->mapToGlobal(compactRect.center()));
+    QApplication::sendEvent(tree->viewport(), &compactHelp);
+    QApplication::processEvents();
+
+    auto* toolTip = mainPane->findChild<ToolTip*>(
+        QStringLiteral("galleryCompactNavigationToolTip"));
+    ASSERT_NE(toolTip, nullptr);
+    EXPECT_EQ(toolTip->text(), QStringLiteral("Home"));
+    EXPECT_TRUE(toolTip->isVisible());
+
+    const QRect rowGlobal(tree->viewport()->mapToGlobal(compactRect.topLeft()), compactRect.size());
+    const QRect bubbleGlobal = toolTip->geometry().adjusted(toolTip->shadowMargin(),
+                                                            toolTip->shadowMargin(),
+                                                            -toolTip->shadowMargin(),
+                                                            -toolTip->shadowMargin());
+    EXPECT_NEAR(bubbleGlobal.center().x(), rowGlobal.center().x(), 1);
+    EXPECT_EQ(rowGlobal.top() - bubbleGlobal.bottom() - 1, 4);
+
+    QEvent leaveEvent(QEvent::Leave);
+    QApplication::sendEvent(tree->viewport(), &leaveEvent);
+    QTRY_VERIFY_WITH_TIMEOUT(!toolTip->isVisible(), 1000);
 }
 
 TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)

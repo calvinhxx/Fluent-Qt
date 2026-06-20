@@ -23,6 +23,7 @@ enum GalleryNavigationRole {
 constexpr int kSectionHeight = 32;
 constexpr int kRouteHeight = 36;
 constexpr int kCompactPaneWidth = 48;
+constexpr int kCompactToolTipGap = 4;
 constexpr int kCompactFlyoutHorizontalOffset = 8;
 constexpr int kCompactFlyoutVerticalOffset = -4;
 constexpr int kCompactFlyoutEntranceOffset = 8;
