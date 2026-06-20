@@ -2,42 +2,30 @@
 
 #include <algorithm>
 
-#include <QAbstractAnimation>
-#include <QEvent>
-#include <QGraphicsOpacityEffect>
-#include <QLabel>
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPainterPath>
-#include <QPoint>
-#include <QPropertyAnimation>
 #include <QRadialGradient>
 #include <QRegion>
-#include <QRegularExpression>
 #include <QResizeEvent>
 #include <QTimer>
-#include <QVariantAnimation>
 #include <QVBoxLayout>
 
-#include "components/basicinput/Button.h"
 #include "components/collections/DrawerView.h"
 #include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
-#include "components/status_info/ToolTip.h"
-#include "components/textfields/AutoSuggestBox.h"
-#include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
-#include "design/Typography.h"
 #include "utils/Log.h"
 #include "AppIcon.h"
 #include "GalleryContentPresenter.h"
 #include "GalleryNavigationPane.h"
+#include "GallerySearchRanking.h"
 #include "GallerySplashScreen.h"
+#include "GalleryTitleBarController.h"
 #include "GalleryWindowMetrics.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/PlaceholderPage.h"
@@ -46,99 +34,11 @@
 namespace fluent::gallery {
 namespace {
 
-using Edge = fluent::AnchorLayout::Edge;
 using AppWindowMetrics = metrics::AppWindow;
 using NavigationMetrics = metrics::Navigation;
 using TitleBarMetrics = metrics::TitleBar;
 
-constexpr char kTitleBarButtonPressAnimationName[] = "galleryTitleBarButtonPressAnimation";
-constexpr qreal kTitleBarButtonPressScale = 0.86;  // WinUI-like press depth for icon buttons. zh_CN: 仿 WinUI 的图标按钮按下缩放深度。
 constexpr int kNavigationDrawerShadowMargin = 8;
-
-// WinUI-Gallery parity search: split the query on whitespace and require a title
-// to contain every token (AND semantics) rather than matching the whole string as
-// one substring, so multi-word queries like "split button" still reach SplitButton.
-// zh_CN: 对齐 WinUI-Gallery 的搜索：按空白把查询拆成词元，标题需包含每个词元（AND 语义），
-// 而非把整串当作单一子串匹配，使「split button」之类的多词查询仍能命中 SplitButton。
-QStringList splitSearchTokens(const QString& query)
-{
-    return query.trimmed().split(QRegularExpression(QStringLiteral("\\s+")),
-                                 Qt::SkipEmptyParts);
-}
-
-bool titleMatchesTokens(const QString& title, const QStringList& tokens)
-{
-    for (const QString& token : tokens) {
-        if (!title.contains(token, Qt::CaseInsensitive))
-            return false;
-    }
-    return true;
-}
-
-// Filter then rank like WinUI-Gallery: titles whose start matches the raw query
-// come first, the rest follow alphabetically (case-insensitive).
-// zh_CN: 仿 WinUI-Gallery 过滤后排序：以原始查询为前缀的标题优先，其余按字母序（忽略大小写）。
-QStringList rankedSearchTitles(const QStringList& titles, const QString& query)
-{
-    const QString needle = query.trimmed();
-    const QStringList tokens = splitSearchTokens(needle);
-    if (tokens.isEmpty())
-        return titles;
-
-    QStringList matched;
-    matched.reserve(titles.size());
-    for (const QString& title : titles) {
-        if (titleMatchesTokens(title, tokens))
-            matched.append(title);
-    }
-
-    std::stable_sort(matched.begin(), matched.end(),
-                     [&needle](const QString& a, const QString& b) {
-                         const bool aPrefix = a.startsWith(needle, Qt::CaseInsensitive);
-                         const bool bPrefix = b.startsWith(needle, Qt::CaseInsensitive);
-                         if (aPrefix != bPrefix)
-                             return aPrefix;  // prefix matches rank ahead
-                         return a.compare(b, Qt::CaseInsensitive) < 0;
-                     });
-    return matched;
-}
-
-int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
-{
-    if (!bar)
-        return TitleBarMetrics::HorizontalMargin;
-    return TitleBarMetrics::leadingOffset(bar->systemReservedLeadingWidth());
-}
-
-// WinUI-style click feedback: the glyph quickly dips to ~0.86 scale and springs back,
-// reading as a press without moving the button or disturbing the layout.
-// zh_CN: 仿 WinUI 的点击反馈：字形快速缩小到约 0.86 再弹回，呈现按下感，
-// 且不移动按钮、不影响布局。
-void startTitleBarButtonPress(fluent::basicinput::Button* button)
-{
-    if (!button || !button->isEnabled())
-        return;
-
-    if (auto* currentAnimation = button->findChild<QPropertyAnimation*>(QString::fromLatin1(kTitleBarButtonPressAnimationName))) {
-        currentAnimation->stop();
-        currentAnimation->deleteLater();
-    }
-
-    button->setIconScale(1.0);
-    auto* animation = new QPropertyAnimation(button, "iconScale", button);
-    animation->setObjectName(QString::fromLatin1(kTitleBarButtonPressAnimationName));
-    const auto motion = button->themeAnimation();
-    animation->setDuration(motion.fast);
-    animation->setEasingCurve(motion.decelerate);
-    animation->setStartValue(1.0);
-    animation->setKeyValueAt(0.4, kTitleBarButtonPressScale);
-    animation->setEndValue(1.0);
-    QObject::connect(animation, &QPropertyAnimation::finished,
-                     button, [button]() {
-                         button->setIconScale(1.0);
-                     });
-    animation->start(QAbstractAnimation::DeleteWhenStopped);
-}
 
 class NavigationDrawerContentPanel : public QWidget, public fluent::FluentElement {
 public:
@@ -310,7 +210,7 @@ bool GalleryWindow::navigateToSearchResult(const QString& searchText)
     if (needle.isEmpty())
         return false;
 
-    const QStringList tokens = splitSearchTokens(needle);
+    const QStringList tokens = search::splitTokens(needle);
 
     // Rank candidates the same way the suggestion dropdown does so pressing Enter
     // lands on its top result: exact title (0) > prefix (1) > any token subset (2),
@@ -323,7 +223,7 @@ bool GalleryWindow::navigateToSearchResult(const QString& searchText)
     for (const GalleryNavigationItem& item : m_navigationViewModel.items()) {
         if (item.kind == GalleryNavigationItem::Kind::SectionHeader)
             continue;
-        if (!titleMatchesTokens(item.title, tokens))
+        if (!search::titleMatchesTokens(item.title, tokens))
             continue;
 
         int score = 2;
@@ -370,7 +270,8 @@ void GalleryWindow::installSplashScreen()
     // just be inert chrome. They come back when the splash dismisses.
     // zh_CN: 加载期间只保留原生窗口按钮（最小化/最大化/关闭）：splash 占据画面，返回/菜单按钮、
     // 应用标题与搜索框只是无用装饰，故隐藏；splash 关闭时再恢复。
-    setTitleBarChromeVisible(false);
+    if (m_titleBar)
+        m_titleBar->setChromeVisible(false);
 
     // Cover the content area with the splash from the very first frame; the real title
     // bar stays live above it. zh_CN: 从第一帧起用 splash 盖住内容区；真实标题栏仍在其上方可用。
@@ -385,7 +286,8 @@ void GalleryWindow::installSplashScreen()
             });
     connect(m_contentPresenter, &GalleryContentPresenter::prewarmFinished,
             this, [this]() {
-                setTitleBarChromeVisible(true, /*animated*/ true);
+                if (m_titleBar)
+                    m_titleBar->setChromeVisible(true, /*animated*/ true);
                 // Startup loading is done and the window has composited many frames, so we're well
                 // past the DWM first-show race that can leave Mica un-applied (a flat neutral
                 // surface until the next activation). Force the backdrop on now, as the content
@@ -395,61 +297,6 @@ void GalleryWindow::installSplashScreen()
                 if (m_splashScreen)
                     m_splashScreen->dismiss();  // fades out, then self-deletes
             });
-}
-
-void GalleryWindow::setTitleBarChromeVisible(bool visible, bool animated)
-{
-    // The custom title-bar widgets all share the "GalleryTitleBar." object-name prefix;
-    // the native min/max/close buttons do not, so toggling by prefix leaves them alone.
-    // zh_CN: 自定义标题栏控件都以 "GalleryTitleBar." 为对象名前缀；原生最小化/最大化/关闭按钮没有，
-    // 因此按前缀切换不会影响它们。
-    const auto* bar = titleBar();
-    if (!bar)
-        return;
-
-    m_titleBarChromeVisible = visible;
-    const QList<QWidget*> chrome = bar->findChildren<QWidget*>();
-    const auto motion = themeAnimation();
-    for (QWidget* widget : chrome) {
-        if (!widget->objectName().startsWith(QStringLiteral("GalleryTitleBar.")))
-            continue;
-
-        if (!visible) {
-            widget->setGraphicsEffect(nullptr);
-            widget->setVisible(false);
-            continue;
-        }
-
-        widget->setVisible(true);
-        if (!animated) {
-            widget->setGraphicsEffect(nullptr);
-            continue;
-        }
-
-        // Subtle fade-in, timed to the splash's dissolve, so the chrome eases in rather
-        // than popping. The effect is dropped once the fade completes so it adds no
-        // steady-state paint cost. zh_CN: 简约淡入，与 splash 淡出同步，组件渐入而非生硬弹出；
-        // 淡入结束即移除效果，不留常态绘制开销。
-        auto* effect = new QGraphicsOpacityEffect(widget);
-        widget->setGraphicsEffect(effect);
-        auto* fade = new QPropertyAnimation(effect, "opacity", widget);
-        fade->setStartValue(0.0);
-        fade->setEndValue(1.0);
-        fade->setDuration(motion.normal);
-        fade->setEasingCurve(motion.decelerate);
-        QPointer<QWidget> guard = widget;
-        connect(fade, &QPropertyAnimation::finished, widget, [guard]() {
-            if (guard)
-                guard->setGraphicsEffect(nullptr);
-        });
-        fade->start(QAbstractAnimation::DeleteWhenStopped);
-    }
-
-    // setVisible(true) above un-hides every chrome widget uniformly; re-apply the adaptive
-    // rules so the title/icon and search box land in their width-appropriate state.
-    // zh_CN: 上面的 setVisible(true) 会统一显示所有 chrome 控件；重新套用自适应规则，
-    // 使标题/图标与搜索框回到与宽度匹配的状态。
-    updateTitleBarLayout();
 }
 
 void GalleryWindow::prewarmAllRoutes()
@@ -545,8 +392,9 @@ void GalleryWindow::buildNavigationShell()
                 // layout they are dropped so the search box keeps its room. updateTitleBarLayout()
                 // also re-flows the search box for the new leading-group width.
                 // zh_CN: 标题栏内容随布局自适应（对齐 WinUI Gallery）：应用标题+图标只在窗格展开或紧凑栏时显示；
-                // 在隐藏的最小布局里去掉它们，给搜索框让位。updateTitleBarLayout() 也会按新的前导组宽度重排搜索框。
-                updateTitleBarLayout();
+                // 在隐藏的最小布局里去掉它们，给搜索框让位。updateLayout() 也会按新的前导组宽度重排搜索框。
+                if (m_titleBar)
+                    m_titleBar->updateLayout();
 
                 if (mode != DisplayMode::Left) {
                     if (m_navigationCompactReleaseTimer)
@@ -595,277 +443,25 @@ void GalleryWindow::buildContentPresenter()
 
 void GalleryWindow::createTitleBarContent()
 {
-    auto* bar = titleBar();
-    auto* layout = qobject_cast<fluent::AnchorLayout*>(bar->layout());
-    if (!layout)
-        return;
-
-    bar->setTitleBarHeight(TitleBarMetrics::Height);
-
-    m_backButton = new fluent::basicinput::Button(bar);
-    auto* backButton = m_backButton;
-    backButton->setObjectName(QStringLiteral("GalleryTitleBar.BackButton"));
-    backButton->setFluentStyle(fluent::basicinput::Button::Subtle);
-    backButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
-    backButton->setFluentSize(fluent::basicinput::Button::Small);
-    backButton->setFont(backButton->themeFont(Typography::FontRole::Caption).toQFont());
-    backButton->setIconGlyph(Typography::Icons::TitleBarBack, TitleBarMetrics::ButtonIconSize);
-    // Height is fixed; the width is driven by the reveal animation (0 when there is no
-    // history, TitleBarMetrics::ButtonSize once back navigation is available).
-    // zh_CN: 高度固定，宽度由展开动画驱动（无历史时为 0，可后退时为 TitleBarMetrics::ButtonSize）。
-    backButton->setFixedHeight(TitleBarMetrics::ButtonSize);
-    backButton->setFocusPolicy(Qt::NoFocus);
-    backButton->setToolTip(QStringLiteral("Back"));
-    backButton->setEnabled(false);
-    backButton->installEventFilter(this);
-    // Start faded out; the reveal animation drives contentOpacity alongside the width collapse
-    // so showing/hiding reads as a smooth slide-in rather than a hard pop. zh_CN: 初始淡出；展开动画
-    // 同时驱动 contentOpacity 与宽度收展，使显隐呈现顺滑滑入而非硬切。
-    backButton->setContentOpacity(0.0);
-    connect(backButton, &fluent::basicinput::Button::clicked,
-            this, [this]() {
-                navigateBack();
-            });
-
-    m_menuButton = new fluent::basicinput::Button(bar);
-    auto* menuButton = m_menuButton;
-    menuButton->setObjectName(QStringLiteral("GalleryTitleBar.MenuButton"));
-    menuButton->setFluentStyle(fluent::basicinput::Button::Subtle);
-    menuButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
-    menuButton->setFluentSize(fluent::basicinput::Button::Small);
-    menuButton->setIconGlyph(Typography::Icons::GlobalNav, TitleBarMetrics::ButtonIconSize);
-    menuButton->setFixedSize(TitleBarMetrics::ButtonSize, TitleBarMetrics::ButtonSize);
-    menuButton->setFocusPolicy(Qt::NoFocus);
-    menuButton->setToolTip(QStringLiteral("Toggle navigation pane"));
-    menuButton->setEnabled(false);
-    menuButton->installEventFilter(this);
-    connect(menuButton, &fluent::basicinput::Button::clicked,
-            this, [this]() {
-                toggleNavigationDisplayMode();
-            });
-
-    auto* appIcon = new QLabel(bar);
-    m_titleBarAppIcon = appIcon;
-    appIcon->setObjectName(QStringLiteral("GalleryTitleBar.AppIcon"));
-    appIcon->setAlignment(Qt::AlignCenter);
-    appIcon->setFixedSize(TitleBarMetrics::AppIconSize, TitleBarMetrics::AppIconSize);
-    appIcon->setPixmap(appicon::pixmap(TitleBarMetrics::AppIconSize, devicePixelRatioF()));
-
-    auto* title = new fluent::textfields::Label(QStringLiteral("WinUI 3 Gallery"), bar);
-    m_titleBarTitle = title;
-    title->setObjectName(QStringLiteral("GalleryTitleBar.Title"));
-    title->setFluentTypography(Typography::FontRole::Caption);
-    title->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    title->setFixedSize(TitleBarMetrics::TitleWidth, TitleBarMetrics::TitleHeight);
-
-    fluent::AnchorLayout::Anchors backAnchors;
-    backAnchors.left = {bar, Edge::Left, titleBarLeadingOffset(bar)};
-    backAnchors.verticalCenter = {bar, Edge::VCenter, 0};
-    layout->addAnchoredWidget(backButton, backAnchors);
-
-    connect(bar, &fluent::windowing::TitleBar::systemReservedLeadingWidthChanged,
-            backButton, [backButton, layout](int newWidth) {
-                backButton->anchors()->left.offset = newWidth > 0
-                    ? TitleBarMetrics::leadingOffset(newWidth)
-                    : TitleBarMetrics::HorizontalMargin;
-                layout->invalidate();
-            });
-
-    fluent::AnchorLayout::Anchors menuAnchors;
-    menuAnchors.left = {backButton, Edge::Right, TitleBarMetrics::ItemGap};
-    menuAnchors.verticalCenter = {bar, Edge::VCenter, 0};
-    layout->addAnchoredWidget(menuButton, menuAnchors);
-
-    fluent::AnchorLayout::Anchors appIconAnchors;
-    appIconAnchors.left = {menuButton, Edge::Right, TitleBarMetrics::ItemGap};
-    appIconAnchors.verticalCenter = {bar, Edge::VCenter, 0};
-    layout->addAnchoredWidget(appIcon, appIconAnchors);
-
-    fluent::AnchorLayout::Anchors titleAnchors;
-    titleAnchors.left = {appIcon, Edge::Right, TitleBarMetrics::ItemGap};
-    titleAnchors.verticalCenter = {bar, Edge::VCenter, 0};
-    layout->addAnchoredWidget(title, titleAnchors);
-
-    auto* searchBox = new fluent::textfields::AutoSuggestBox(bar);
-    m_searchBox = searchBox;
-    searchBox->setObjectName(QStringLiteral("GalleryTitleBar.SearchBox"));
-    searchBox->setPlaceholderText(QStringLiteral("Search controls and samples..."));
-    // Suggest every navigable title so search reaches the same routes as the pane.
-    // zh_CN: 把所有可导航标题作为建议项，搜索可达范围与导航栏一致。
+    // Every navigable title feeds the search box so it reaches the same routes as the pane.
+    // zh_CN: 把所有可导航标题作为搜索建议，使搜索可达范围与导航栏一致。
     QStringList searchTitles;
     for (const GalleryNavigationItem& item : m_navigationViewModel.items()) {
         if (item.kind != GalleryNavigationItem::Kind::SectionHeader)
             searchTitles.append(item.title);
     }
     searchTitles.sort(Qt::CaseInsensitive);
-    searchBox->setSuggestions(searchTitles);
-    searchBox->setInputHeight(TitleBarMetrics::SearchHeight);
-    searchBox->setQueryButtonSize(TitleBarMetrics::ButtonSize);
-    searchBox->setClearButtonSize(TitleBarMetrics::ButtonSize);
-    // Height is fixed; width is driven by updateTitleBarLayout() so the box can shrink to
-    // fit the free span between the leading group and the native caption controls.
-    // zh_CN: 高度固定，宽度由 updateTitleBarLayout() 驱动，使其能收缩以适配前导组与原生标题栏控件之间的空闲区间。
-    searchBox->setFixedHeight(TitleBarMetrics::SearchHeight);
-    // AutoSuggestBox leaves filtering to the owner (WinUI semantics), so narrow
-    // the suggestion list with token-AND matching and prefix-first ranking.
-    // zh_CN: AutoSuggestBox 把过滤交给使用方（WinUI 语义），按词元 AND 匹配并前缀优先排序。
-    connect(searchBox, &fluent::textfields::AutoSuggestBox::textChangedWithReason,
-            searchBox,
-            [searchBox, searchTitles](const QString& text,
-                                      fluent::textfields::AutoSuggestBox::TextChangeReason reason) {
-                if (reason != fluent::textfields::AutoSuggestBox::TextChangeReason::UserInput)
-                    return;
-                searchBox->setSuggestions(rankedSearchTitles(searchTitles, text));
-            });
-    connect(searchBox, &fluent::textfields::AutoSuggestBox::querySubmitted,
-            this, [this](const QString& queryText, const QVariant& chosenSuggestion) {
-                const QString chosen = chosenSuggestion.toString();
-                navigateToSearchResult(chosen.isEmpty() ? queryText : chosen);
-            });
-    connect(searchBox, &fluent::textfields::AutoSuggestBox::suggestionChosen,
-            this, [this](const QVariant& item) {
-                navigateToSearchResult(item.toString());
-            });
-
-    // The search box is intentionally left out of the AnchorLayout: it needs a max width,
-    // centering-with-clamp, and collapse behaviour the anchor model can't express, so
-    // updateTitleBarLayout() positions it manually against the live bar width.
-    // zh_CN: 搜索框刻意不加入 AnchorLayout：它需要最大宽度、居中并夹取、以及锚点模型无法表达的收起行为，
-    // 故由 updateTitleBarLayout() 依据实时栏宽手动定位。
-    bar->installEventFilter(this);
-    // Start fully collapsed: no history at launch, so width / opacity / menu gap all read 0.
-    // updateNavigationCommands() later animates it open the first time a route pushes history.
-    // zh_CN: 启动时完全收起：尚无历史，故宽度/不透明度/菜单间隙均为 0；首次入栈历史时由
-    // updateNavigationCommands() 动画展开。
-    applyBackButtonReveal(0.0);
-    updateTitleBarLayout();
-
-    LOG_TRACE(QStringLiteral("GalleryWindow titleBarContent built searchWidth=%1 searchHeight=%2 buttonSize=%3")
-                  .arg(TitleBarMetrics::SearchMaxWidth)
-                  .arg(TitleBarMetrics::SearchHeight)
-                  .arg(TitleBarMetrics::ButtonSize));
-}
-
-bool GalleryWindow::eventFilter(QObject* watched, QEvent* event)
-{
-    if (watched == m_backButton || watched == m_menuButton) {
-        auto* button = qobject_cast<fluent::basicinput::Button*>(watched);
-        switch (event->type()) {
-        case QEvent::ToolTip:
-            // Replace Qt's native tooltip with the Fluent ToolTip (reusing Qt's hover delay);
-            // returning true suppresses the platform bubble. zh_CN: 用 Fluent ToolTip 替换原生提示
-            //（复用 Qt 的悬停延迟），返回 true 抑制平台气泡。
-            showTitleBarToolTip(button);
-            return true;
-        case QEvent::Leave:
-        case QEvent::Hide:
-            hideTitleBarToolTip();
-            break;
-        case QEvent::MouseButtonPress:
-            startTitleBarButtonPress(button);
-            hideTitleBarToolTip();
-            break;
-        default:
-            break;
-        }
-    } else if (watched == titleBar() && event->type() == QEvent::Resize) {
-        hideTitleBarToolTip();  // a width change can orphan a bubble that got no Leave event
-        updateTitleBarLayout();
-    }
-
-    return fluent::windowing::Window::eventFilter(watched, event);
-}
-
-void GalleryWindow::updateTitleBarLayout()
-{
-    auto* bar = titleBar();
-    if (!bar || !m_searchBox)
-        return;
 
     using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
-    const DisplayMode mode = m_navigationView ? m_navigationView->effectiveDisplayMode()
-                                              : DisplayMode::Left;
-
-    // In the minimal (hidden-pane) layout the app title+icon give way to the search box;
-    // otherwise they show. Nothing shows while the splash owns the title bar.
-    // zh_CN: 最小（隐藏窗格）布局下，应用标题+图标让位给搜索框；其余情况显示。splash 接管标题栏期间全部隐藏。
-    const bool showAppIcon = m_titleBarChromeVisible;
-    const bool showTitle = m_titleBarChromeVisible && mode != DisplayMode::LeftMinimal;
-    if (m_titleBarTitle)
-        m_titleBarTitle->setVisible(showTitle);
-    if (m_titleBarAppIcon)
-        m_titleBarAppIcon->setVisible(showAppIcon);
-
-    // Settle the left-anchored chain (back/menu/icon/title) before we publish hit-test rects.
-    // zh_CN: 在发布命中测试区域前，先让左锚链（返回/菜单/图标/标题）落到最终几何。
-    if (auto* barLayout = bar->layout())
-        barLayout->activate();
-
-    // Left boundary = right edge of the last visible leading widget + gap, derived from the
-    // fixed metrics so it doesn't depend on layout timing. The back button only occupies space
-    // proportional to its reveal progress, so the search box tracks the collapse/expand smoothly.
-    // zh_CN: 左边界 = 最后一个可见前导控件的右缘 + 间隙，按固定度量推导，不依赖布局时序。返回按钮按其展开
-    // 进度占位，故搜索框能随收展平滑跟随。
-    const int leftBound = TitleBarMetrics::searchLeftBound(bar->systemReservedLeadingWidth(),
-                                                           showAppIcon,
-                                                           showTitle,
-                                                           m_backButtonReveal);
-    const int rightBound = TitleBarMetrics::searchRightBound(bar->width(),
-                                                             bar->systemReservedTrailingWidth());
-    const int avail = TitleBarMetrics::searchAvailableWidth(leftBound, rightBound);
-
-    const bool showSearch = m_titleBarChromeVisible && TitleBarMetrics::canShowSearch(avail);
-    m_searchBox->setVisible(showSearch);
-    if (showSearch) {
-        const int searchW = TitleBarMetrics::searchWidth(avail);
-        // Center it in the whole bar (WinUI feel) while it fits between the leading and trailing
-        // groups; once the bar is narrow enough that a centered box would be pushed against the
-        // caption controls, left-align it next to the leading group instead — a centered-then-
-        // right-clamped box leaves an ugly gap on its left.
-        // zh_CN: 有空间时在整条栏内居中（贴合 WinUI 观感）；栏一旦窄到居中会被顶向右侧窗口按钮，就改为靠左、
-        // 紧挨前导组——居中后被右夹会在左侧留下难看的空隙。
-        const int x = TitleBarMetrics::searchX(bar->width(), searchW, leftBound, rightBound);
-        const int y = (bar->height() - TitleBarMetrics::SearchHeight) / 2;
-        m_searchBox->setGeometry(x, y, searchW, TitleBarMetrics::SearchHeight);
-    }
-
-    // The search box lives outside the AnchorLayout and title/icon visibility just changed —
-    // republish the native hit-test regions so every control stays click-through.
-    // zh_CN: 搜索框在 AnchorLayout 之外、标题/图标可见性刚变化——重新发布原生命中测试区域，保证各控件可点击。
-    bar->refreshChromeExclusions();
-}
-
-void GalleryWindow::showTitleBarToolTip(fluent::basicinput::Button* button)
-{
-    if (!button)
-        return;
-    const QString text = button->toolTip();
-    if (text.isEmpty())
-        return;
-
-    if (!m_titleBarToolTip) {
-        m_titleBarToolTip = new fluent::status_info::ToolTip(nullptr);
-        m_titleBarToolTip->setAnimationEnabled(true);
-    }
-    m_titleBarToolTip->setText(text);  // adjustSize() runs inside
-
-    // Center the bubble under the button. The widget carries a transparent shadow band, so
-    // offset by shadowMargin to land the visible bubble (not the band) at the gap below.
-    // zh_CN: 把气泡居中显示在按钮下方。控件带有透明阴影带，故按 shadowMargin 偏移，使可见气泡（而非阴影带）
-    // 落在按钮下方的间隙处。
-    const int shadow = m_titleBarToolTip->shadowMargin();
-    const QPoint anchor = button->mapToGlobal(QPoint(button->width() / 2, button->height()));
-    const int x = anchor.x() - m_titleBarToolTip->width() / 2;
-    const int y = anchor.y() + TitleBarMetrics::ToolTipGap - shadow;
-    m_titleBarToolTip->move(x, y);
-    m_titleBarToolTip->show();
-    m_titleBarToolTip->raise();
-}
-
-void GalleryWindow::hideTitleBarToolTip()
-{
-    if (m_titleBarToolTip)
-        m_titleBarToolTip->hide();
+    GalleryTitleBarController::Callbacks callbacks;
+    callbacks.onBack = [this]() { navigateBack(); };
+    callbacks.onToggleNav = [this]() { toggleNavigationDisplayMode(); };
+    callbacks.onSearch = [this](const QString& text) { navigateToSearchResult(text); };
+    callbacks.isMinimalNavLayout = [this]() {
+        return m_navigationView
+            && m_navigationView->effectiveDisplayMode() == DisplayMode::LeftMinimal;
+    };
+    m_titleBar = new GalleryTitleBarController(titleBar(), searchTitles, std::move(callbacks), this);
 }
 
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
@@ -1076,48 +672,10 @@ void GalleryWindow::setNavigationPanesCompact(bool compact)
 
 void GalleryWindow::updateNavigationCommands()
 {
-    setBackButtonRevealed(!m_backRouteStack.isEmpty());
-    if (m_menuButton)
-        m_menuButton->setEnabled(m_navigationView != nullptr);
-}
-
-void GalleryWindow::applyBackButtonReveal(qreal reveal)
-{
-    m_backButtonReveal = reveal;
-    if (m_backButton) {
-        m_backButton->setFixedWidth(qRound(reveal * TitleBarMetrics::ButtonSize));
-        m_backButton->setContentOpacity(reveal);
+    if (m_titleBar) {
+        m_titleBar->setBackAvailable(!m_backRouteStack.isEmpty());
+        m_titleBar->setMenuEnabled(m_navigationView != nullptr);
     }
-    if (m_menuButton && m_menuButton->anchors())
-        m_menuButton->anchors()->left.offset = qRound(reveal * TitleBarMetrics::ItemGap);
-    if (auto* barLayout = titleBar() ? titleBar()->layout() : nullptr)
-        barLayout->invalidate();
-    updateTitleBarLayout();
-}
-
-void GalleryWindow::setBackButtonRevealed(bool revealed)
-{
-    if (!m_backButton || m_backButtonRevealed == revealed)
-        return;
-    m_backButtonRevealed = revealed;
-    m_backButton->setEnabled(revealed);
-
-    const auto motion = m_backButton->themeAnimation();
-    if (!m_backButtonRevealAnimation) {
-        m_backButtonRevealAnimation = new QVariantAnimation(this);
-        m_backButtonRevealAnimation->setDuration(motion.normal);
-        connect(m_backButtonRevealAnimation, &QVariantAnimation::valueChanged, this,
-                [this](const QVariant& value) {
-                    applyBackButtonReveal(value.toReal());
-                });
-    }
-    m_backButtonRevealAnimation->stop();
-    // Ease out on the way in (decisive arrival), the standard curve on the way out.
-    // zh_CN: 入场用缓出（落点干脆），退场用标准曲线。
-    m_backButtonRevealAnimation->setEasingCurve(revealed ? motion.decelerate : motion.standard);
-    m_backButtonRevealAnimation->setStartValue(m_backButtonReveal);
-    m_backButtonRevealAnimation->setEndValue(revealed ? 1.0 : 0.0);
-    m_backButtonRevealAnimation->start();
 }
 
 } // namespace fluent::gallery

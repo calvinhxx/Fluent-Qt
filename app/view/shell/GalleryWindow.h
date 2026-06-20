@@ -8,27 +8,11 @@
 #include "viewmodel/GalleryNavigationState.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 
-class QEvent;
-class QLabel;
 class QTimer;
-class QVariantAnimation;
 class QWidget;
-
-namespace fluent::basicinput {
-class Button;
-}
 
 namespace fluent::collections {
 class DrawerView;
-}
-
-namespace fluent::textfields {
-class AutoSuggestBox;
-class Label;
-}
-
-namespace fluent::status_info {
-class ToolTip;
 }
 
 namespace fluent::navigation {
@@ -42,6 +26,7 @@ class GalleryNavigationPane;
 class GalleryContentPage;
 class GalleryNavigationItem;
 class GallerySplashScreen;
+class GalleryTitleBarController;
 class PlaceholderPage;
 class SettingsPage;
 
@@ -87,21 +72,10 @@ private:
         Minimal
     };
 
-    bool eventFilter(QObject* watched, QEvent* event) override;
-
     void createTitleBarContent();
     void buildNavigationShell();
     void buildContentPresenter();
     void installSplashScreen();
-    void setTitleBarChromeVisible(bool visible, bool animated = false);
-    // Re-flows the title-bar content for the current width / nav display mode: hides the
-    // app title+icon in the minimal layout and sizes/centers the search box into the free
-    // span so it never overlaps the buttons or the native caption controls.
-    // zh_CN: 按当前宽度/导航模式重排标题栏内容：最小布局下隐藏应用标题+图标，并把搜索框尺寸/居中到
-    // 空闲区间，使其不与按钮或原生标题栏控件重叠。
-    void updateTitleBarLayout();
-    void showTitleBarToolTip(fluent::basicinput::Button* button);
-    void hideTitleBarToolTip();
     void showInitialRouteContent();
     void prewarmAllRoutes();
     void handleSelectedRouteChanged(const QString& routeId);
@@ -114,14 +88,6 @@ private:
     void closeNavigationDrawer();
     void setNavigationPanesCompact(bool compact);
     void updateNavigationCommands();
-    // Shows/hides the title-bar back button with a smooth collapse+fade. Revealed only while
-    // there is navigation history; the menu group reflows as it expands/collapses.
-    // zh_CN: 以平滑收展+淡入淡出显示/隐藏标题栏返回按钮。仅在有导航历史时显示；展开/收起时菜单组随之回流。
-    void setBackButtonRevealed(bool revealed);
-    // Applies a single reveal progress (0=hidden, 1=shown) to the back button's width,
-    // opacity, and the menu group's leading gap. zh_CN: 把单一展开进度（0=隐藏，1=显示）应用到返回按钮
-    // 的宽度、不透明度，以及菜单组的前导间隙。
-    void applyBackButtonReveal(qreal reveal);
 
     GalleryNavigationViewModel m_navigationViewModel;
     GalleryNavigationState m_navigationState;
@@ -133,16 +99,7 @@ private:
     GalleryNavigationPane* m_drawerMainNavigationPane = nullptr;
     GalleryNavigationPane* m_drawerFooterNavigationPane = nullptr;
     GalleryContentPresenter* m_contentPresenter = nullptr;
-    fluent::basicinput::Button* m_backButton = nullptr;
-    fluent::basicinput::Button* m_menuButton = nullptr;
-    QVariantAnimation* m_backButtonRevealAnimation = nullptr;
-    qreal m_backButtonReveal = 0.0;   // 0=hidden, 1=fully shown. zh_CN: 0=隐藏，1=完全显示。
-    bool m_backButtonRevealed = false;
-    QLabel* m_titleBarAppIcon = nullptr;
-    fluent::textfields::Label* m_titleBarTitle = nullptr;
-    fluent::textfields::AutoSuggestBox* m_searchBox = nullptr;
-    fluent::status_info::ToolTip* m_titleBarToolTip = nullptr;
-    bool m_titleBarChromeVisible = true;
+    GalleryTitleBarController* m_titleBar = nullptr;
     QTimer* m_navigationCompactReleaseTimer = nullptr;
     QStringList m_backRouteStack;
     bool m_isNavigatingHistory = false;
