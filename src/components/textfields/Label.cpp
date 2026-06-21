@@ -41,9 +41,10 @@ void Label::setText(const QString& text) {
 }
 
 void Label::setFluentTypography(const QString& styleName) {
-    if (m_styleName == styleName) return;
+    if (m_styleName == styleName && !m_customFont) return;
     m_styleName = styleName;
-    setFont(themeFont(m_styleName).toQFont());
+    m_customFont = false;
+    applyTypographyFont();
     emit typographyChanged();
 }
 
@@ -55,20 +56,27 @@ void Label::setTextElideMode(Qt::TextElideMode mode) {
 }
 
 void Label::setFont(const QFont& font) {
+    m_customFont = true;
     QLabel::setFont(font);
     updateRenderedText();
 }
 
 void Label::onThemeUpdated() {
-    // 1. Reapply the stored style name so fonts stay consistent across theme swaps.
-    // zh_CN: 使用保存的样式名更新字体（解决切换主题后字体统一问题）。
-    setFont(themeFont(m_styleName).toQFont());
+    // Preserve caller-supplied fonts such as Segoe Fluent Icons across theme changes.
+    // zh_CN: 主题切换时保留调用方设置的字体，例如 Segoe Fluent Icons。
+    if (!m_customFont)
+        applyTypographyFont();
 
     // 2. Refresh the color. zh_CN: 更新颜色。
     const auto& c = themeColors();
     QPalette p = palette();
     p.setColor(QPalette::WindowText, c.textPrimary);
     setPalette(p);
+    updateRenderedText();
+}
+
+void Label::applyTypographyFont() {
+    QLabel::setFont(themeFont(m_styleName).toQFont());
     updateRenderedText();
 }
 

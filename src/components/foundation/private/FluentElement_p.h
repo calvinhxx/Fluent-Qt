@@ -3,6 +3,9 @@
 
 #include <QObject>
 #include <QSet>
+#include <QTimer>
+#include <QVector>
+#include <QWidget>
 #include "components/foundation/FluentElement.h"
 
 namespace fluent {
@@ -28,6 +31,9 @@ public:
     QSet<FluentElement*> elements;
 
     void notifyAll() {
+        ++notificationGeneration;
+        deferredElements.clear();
+        deferredIndex = 0;
         // Iterate over a copy: callbacks may destroy elements and invalidate iterators.
         // zh_CN: 使用副本遍历，防止回调中对象销毁导致迭代器失效。
         auto copy = elements;
@@ -37,6 +43,63 @@ public:
             }
         }
     }
+
+    void notifyVisibleThenDeferred() {
+        const int generation = ++notificationGeneration;
+        deferredElements.clear();
+        deferredIndex = 0;
+
+        const auto copy = elements;
+        QVector<FluentElement*> hiddenElements;
+        deferredElements.reserve(copy.size());
+        hiddenElements.reserve(copy.size());
+        for (auto* element : copy) {
+            if (!elements.contains(element))
+                continue;
+            auto* widget = dynamic_cast<QWidget*>(element);
+            if (widget && !widget->isVisible())
+                hiddenElements.append(element);
+            else
+                deferredElements.append(element);
+        }
+        deferredElements += hiddenElements;
+
+        if (!deferredElements.isEmpty()) {
+            QTimer::singleShot(0, this, [this, generation]() {
+                notifyDeferredBatch(generation);
+            });
+        }
+    }
+
+private:
+    void notifyDeferredBatch(int generation) {
+        if (generation != notificationGeneration)
+            return;
+
+        // A small batch keeps theme propagation below a frame budget even when the
+        // gallery has prewarmed many component pages. Visible elements are queued first.
+        // zh_CN: 小批次刷新避免预热页面较多时阻塞一整帧；可见元素优先入队。
+        constexpr int batchSize = 24;
+        const int end = qMin(deferredIndex + batchSize, deferredElements.size());
+        for (; deferredIndex < end; ++deferredIndex) {
+            auto* element = deferredElements.at(deferredIndex);
+            if (elements.contains(element))
+                element->onThemeUpdated();
+        }
+
+        if (deferredIndex < deferredElements.size()) {
+            QTimer::singleShot(1, this, [this, generation]() {
+                notifyDeferredBatch(generation);
+            });
+        } else {
+            deferredElements.clear();
+            deferredIndex = 0;
+        }
+    }
+
+    QVector<FluentElement*> deferredElements;
+    int deferredIndex = 0;
+    int notificationGeneration = 0;
 };
 
 /**

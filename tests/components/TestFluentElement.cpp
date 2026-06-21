@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <QApplication>
+#include <QTest>
 #include <QWidget>
 #include "components/foundation/FluentElement.h"
 #include "design/CornerRadius.h"
@@ -467,6 +468,22 @@ TEST_F(FluentElementTest, ThemeSwitching) {
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(component.updateCount, 2);
+}
+
+TEST_F(FluentElementTest, DeferredThemeSwitchYieldsBeforeBroadcast) {
+    auto* visibleComponent = new MockComponent(window);
+    layout->addWidget(visibleComponent);
+    window->show();
+    QApplication::processEvents();
+    MockComponent hiddenComponent;
+
+    fluent::FluentElement::setThemeDeferred(fluent::FluentElement::Dark);
+    EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(visibleComponent->updateCount, 0);
+    EXPECT_EQ(hiddenComponent.updateCount, 0);
+
+    QTRY_COMPARE_WITH_TIMEOUT(visibleComponent->updateCount, 1, 1000);
+    QTRY_COMPARE_WITH_TIMEOUT(hiddenComponent.updateCount, 1, 1000);
 }
 
 TEST_F(FluentElementTest, ColorTokenMapping) {
