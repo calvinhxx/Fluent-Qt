@@ -3,7 +3,6 @@
 #include <QAbstractAnimation>
 #include <QHBoxLayout>
 #include <QPropertyAnimation>
-#include <QTimer>
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
@@ -137,9 +136,9 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
                                          child.id == m_selectedRouteId,
                                          m_childFlyoutPanel);
         row->onActivated = [this](const QString& childRouteId) {
+            closeChildFlyout(false);
             setSelectedRouteId(childRouteId);
             emit routeActivated(childRouteId);
-            QTimer::singleShot(0, this, [this]() { closeChildFlyout(); });
         };
         layout->addWidget(row);
     }
