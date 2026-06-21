@@ -62,6 +62,7 @@ protected:
     void changeEvent(QEvent* event) override;
 
 private:
+    void applyTypographyFont();
     void updateRenderedText();
     int availableTextWidth() const;
     void ensureElideToolTip();
@@ -72,6 +73,7 @@ private:
     QString m_styleName = "Body";
     QString m_fullText;
     Qt::TextElideMode m_textElideMode = Qt::ElideNone;
+    bool m_customFont = false;
     bool m_isTextElided = false;
     fluent::status_info::ToolTip* m_elideToolTip = nullptr;
 };

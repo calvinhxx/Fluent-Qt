@@ -32,6 +32,14 @@ void FluentElement::setTheme(Theme theme) {
     }
 }
 
+void FluentElement::setThemeDeferred(Theme theme) {
+    auto* mgr = FluentThemeManager::instance();
+    if (mgr->currentTheme != theme) {
+        mgr->currentTheme = theme;
+        mgr->notifyVisibleThenDeferred();
+    }
+}
+
 
 FluentElement::Theme FluentElement::currentTheme() {
     return FluentThemeManager::instance()->currentTheme;

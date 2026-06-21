@@ -93,6 +93,19 @@ TEST_F(LabelTest, ThemeUpdatePreservesTypography) {
     EXPECT_TRUE(label->palette().color(QPalette::WindowText).isValid());
 }
 
+TEST_F(LabelTest, ThemeUpdatePreservesExplicitFont) {
+    Label* label = new Label("\uE790", window);
+    QFont iconFont(QStringLiteral("Segoe Fluent Icons"));
+    iconFont.setPixelSize(22);
+    label->setFont(iconFont);
+
+    FluentElement::setTheme(FluentElement::Dark);
+    EXPECT_EQ(label->font().family(), QStringLiteral("Segoe Fluent Icons"));
+    EXPECT_EQ(label->font().pixelSize(), 22);
+
+    FluentElement::setTheme(FluentElement::Light);
+}
+
 TEST_F(LabelTest, DefaultElideModePreservesText) {
     const QString text = "Full label text";
     Label* label = new Label(text, window);

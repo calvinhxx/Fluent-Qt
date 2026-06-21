@@ -112,6 +112,12 @@ public:
     static void setTheme(Theme theme);
 
     /**
+     * @brief Schedules a visible-first batched theme refresh without blocking the current interaction.
+     * zh_CN: 以可见元素优先的批次调度主题刷新，避免阻塞当前交互。
+     */
+    static void setThemeDeferred(Theme theme);
+
+    /**
      * @brief Returns the currently active global theme.
      * zh_CN: 返回当前生效的全局主题。
      */
