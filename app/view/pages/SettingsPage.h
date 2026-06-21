@@ -1,14 +1,22 @@
 #ifndef SETTINGSPAGE_H
 #define SETTINGSPAGE_H
 
+#include <QStringList>
 #include <QWidget>
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "model/GalleryNavigationItem.h"
 
+class QResizeEvent;
+class QVBoxLayout;
+
 namespace fluent::textfields {
 class Label;
+}
+
+namespace fluent::basicinput {
+class ComboBox;
 }
 
 namespace fluent::gallery {
@@ -22,17 +30,27 @@ public:
 
     void onThemeUpdated() override;
 
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+
 private:
     QWidget* createSettingsRow(const QString& icon,
                                const QString& title,
                                const QString& subtitle,
                                QWidget* trailing);
     QWidget* createSectionTitle(const QString& title);
-    QWidget* createChoiceButton(const QString& text);
+    fluent::basicinput::ComboBox* createChoiceBox(const QString& objectName,
+                                                   const QStringList& choices,
+                                                   int currentIndex);
     void applyPalette();
+    void updateResponsiveLayout();
 
     QString m_routeId;
+    QWidget* m_viewport = nullptr;
+    QVBoxLayout* m_contentLayout = nullptr;
     fluent::textfields::Label* m_titleLabel = nullptr;
+    fluent::basicinput::ComboBox* m_themeChoice = nullptr;
+    fluent::basicinput::ComboBox* m_navigationChoice = nullptr;
 };
 
 } // namespace fluent::gallery

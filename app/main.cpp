@@ -9,6 +9,7 @@
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/shell/GalleryWindowMetrics.h"
+#include "viewmodel/GallerySettings.h"
 #include "utils/Log.h"
 
 static void initializeFluentQtResources()
@@ -25,6 +26,7 @@ int main(int argc, char** argv)
     QApplication::setOrganizationName(QStringLiteral("Fluent-QT"));
 
     initializeFluentQtResources();
+    fluent::gallery::GallerySettings::instance();
 
     // App logging policy: persist to the platform log file by default at Info
     // level, and route Qt's own qWarning/qDebug through the same logger. The

@@ -1,18 +1,143 @@
 #include "SettingsPage.h"
 
-#include <QColor>
+#include <QComboBox>
 #include <QFrame>
-#include <QHBoxLayout>
+#include <QGridLayout>
+#include <QPainter>
 #include <QPalette>
+#include <QResizeEvent>
+#include <QSignalBlocker>
+#include <QTimer>
 #include <QVBoxLayout>
 
-#include "components/basicinput/Button.h"
+#include "components/basicinput/ComboBox.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
 #include "utils/Log.h"
+#include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
+
+namespace {
+
+constexpr int kNarrowPageWidth = 640;
+constexpr int kStackedRowWidth = 520;
+
+class SecondaryLabel final : public fluent::textfields::Label {
+public:
+    SecondaryLabel(const QString& text, QWidget* parent)
+        : Label(text, parent)
+    {
+        onThemeUpdated();
+    }
+
+    void onThemeUpdated() override
+    {
+        Label::onThemeUpdated();
+        QPalette textPalette = palette();
+        textPalette.setColor(QPalette::WindowText, themeColors().textSecondary);
+        setPalette(textPalette);
+    }
+};
+
+class SettingsRow final : public QFrame, public fluent::FluentElement {
+public:
+    SettingsRow(const QString& icon,
+                const QString& title,
+                const QString& subtitle,
+                QWidget* trailing,
+                QWidget* parent)
+        : QFrame(parent)
+        , m_trailing(trailing)
+    {
+        setObjectName(QStringLiteral("gallerySettingsRow"));
+        setFrameShape(QFrame::NoFrame);
+        setMinimumHeight(88);
+
+        m_layout = new QGridLayout(this);
+        m_layout->setContentsMargins(24, 12, 22, 12);
+        m_layout->setHorizontalSpacing(20);
+        m_layout->setVerticalSpacing(8);
+        m_layout->setColumnStretch(1, 1);
+
+        auto* iconLabel = new fluent::textfields::Label(icon, this);
+        iconLabel->setObjectName(QStringLiteral("gallerySettingsRowIcon"));
+        iconLabel->setAlignment(Qt::AlignCenter);
+        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        iconFont.setPixelSize(22);
+        iconLabel->setFont(iconFont);
+        iconLabel->setFixedSize(34, 34);
+
+        auto* textColumn = new QWidget(this);
+        auto* textLayout = new QVBoxLayout(textColumn);
+        textLayout->setContentsMargins(0, 0, 0, 0);
+        textLayout->setSpacing(2);
+
+        auto* titleLabel = new fluent::textfields::Label(title, textColumn);
+        titleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
+        auto* subtitleLabel = new SecondaryLabel(subtitle, textColumn);
+        subtitleLabel->setObjectName(QStringLiteral("gallerySettingsSubtitle"));
+        subtitleLabel->setFluentTypography(Typography::FontRole::Caption);
+
+        textLayout->addStretch(1);
+        textLayout->addWidget(titleLabel);
+        textLayout->addWidget(subtitleLabel);
+        textLayout->addStretch(1);
+
+        m_layout->addWidget(iconLabel, 0, 0, Qt::AlignVCenter);
+        m_layout->addWidget(textColumn, 0, 1);
+        updateResponsiveLayout();
+    }
+
+    void onThemeUpdated() override { update(); }
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        const auto colors = themeColors();
+        const qreal radius = themeRadius().control;
+        const QRectF cardRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+        painter.setPen(QPen(colors.strokeCard, 1.0));
+        painter.setBrush(colors.bgLayer);
+        painter.drawRoundedRect(cardRect, radius, radius);
+    }
+
+    void resizeEvent(QResizeEvent* event) override
+    {
+        QFrame::resizeEvent(event);
+        updateResponsiveLayout();
+    }
+
+private:
+    void updateResponsiveLayout()
+    {
+        const bool stacked = width() > 0 && width() < kStackedRowWidth;
+        if (m_stacked == stacked && m_trailing->parentWidget() == this)
+            return;
+
+        m_stacked = stacked;
+        m_trailing->setParent(this);
+        m_layout->removeWidget(m_trailing);
+        if (m_stacked) {
+            m_layout->addWidget(m_trailing, 1, 1, Qt::AlignRight | Qt::AlignVCenter);
+            setMinimumHeight(128);
+        } else {
+            m_layout->addWidget(m_trailing, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
+            setMinimumHeight(88);
+        }
+        m_trailing->show();
+        updateGeometry();
+    }
+
+    QGridLayout* m_layout = nullptr;
+    QWidget* m_trailing = nullptr;
+    bool m_stacked = false;
+};
+
+} // namespace
 
 SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     : QWidget(parent)
@@ -34,48 +159,70 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     scrollArea->setHorizontalScrollBarVisibility(
         fluent::scrolling::ScrollView::ScrollBarVisibility::Hidden);
 
-    auto* page = new QWidget(scrollArea);
-    page->setObjectName(QStringLiteral("gallerySettingsViewport"));
-    auto* layout = new QVBoxLayout(page);
-    layout->setContentsMargins(48, 34, 48, 48);
-    layout->setSpacing(12);
+    m_viewport = new QWidget(scrollArea);
+    m_viewport->setObjectName(QStringLiteral("gallerySettingsViewport"));
+    m_viewport->setAutoFillBackground(true);
+    m_contentLayout = new QVBoxLayout(m_viewport);
+    m_contentLayout->setContentsMargins(48, 34, 48, 48);
+    m_contentLayout->setSpacing(12);
 
-    m_titleLabel = new fluent::textfields::Label(item.title, page);
+    m_titleLabel = new fluent::textfields::Label(item.title, m_viewport);
     m_titleLabel->setObjectName(QStringLiteral("gallerySettingsTitle"));
     m_titleLabel->setFluentTypography(Typography::FontRole::Title);
-    layout->addWidget(m_titleLabel);
-    layout->addSpacing(20);
+    m_contentLayout->addWidget(m_titleLabel);
+    m_contentLayout->addSpacing(20);
 
-    layout->addWidget(createSectionTitle(QStringLiteral("Appearance & behavior")));
-    layout->addWidget(createSettingsRow(Typography::Icons::Color,
-                                        QStringLiteral("App theme"),
-                                        QStringLiteral("Select which app theme to display"),
-                                        createChoiceButton(QStringLiteral("Use system setting"))));
-    layout->addWidget(createSettingsRow(Typography::Icons::List,
-                                        QStringLiteral("Navigation style"),
-                                        QStringLiteral("Choose how the navigation pane is presented"),
-                                        createChoiceButton(QStringLiteral("Left"))));
-    layout->addWidget(createSettingsRow(Typography::Icons::Music,
-                                        QStringLiteral("Sound"),
-                                        QStringLiteral("Controls provide audible feedback"),
-                                        createChoiceButton(QStringLiteral("Off"))));
-    layout->addWidget(createSettingsRow(Typography::Icons::AllApps,
-                                        QStringLiteral("Manage samples"),
-                                        QStringLiteral("Clear your recent or favorite samples"),
-                                        createChoiceButton(QStringLiteral("Clear recents"))));
+    auto* settings = &GallerySettings::instance();
+    m_themeChoice = createChoiceBox(
+        QStringLiteral("gallerySettingsThemeChoice"),
+        {QStringLiteral("Use system setting"), QStringLiteral("Light"), QStringLiteral("Dark")},
+        static_cast<int>(settings->themeMode()));
+    m_navigationChoice = createChoiceBox(
+        QStringLiteral("gallerySettingsNavigationChoice"),
+        {QStringLiteral("Auto"),
+         QStringLiteral("Left"),
+         QStringLiteral("Left compact"),
+         QStringLiteral("Left minimal"),
+         QStringLiteral("Top")},
+        static_cast<int>(settings->navigationStyle()));
 
-    layout->addSpacing(24);
-    layout->addWidget(createSectionTitle(QStringLiteral("About")));
-    layout->addWidget(createSettingsRow(Typography::Icons::AppIconDefault,
-                                        QStringLiteral("WinUI 3 Gallery"),
-                                        QStringLiteral("© 2026 Microsoft. All rights reserved."),
-                                        createChoiceButton(QStringLiteral("2.9.3.0"))));
-    layout->addStretch(1);
+    connect(m_themeChoice, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, [settings](int index) {
+                QTimer::singleShot(0, settings, [settings, index]() {
+                    settings->setThemeMode(static_cast<GallerySettings::ThemeMode>(index));
+                });
+            });
+    connect(m_navigationChoice, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, [settings](int index) {
+                settings->setNavigationStyle(static_cast<GallerySettings::NavigationStyle>(index));
+            });
+    connect(settings, &GallerySettings::themeModeChanged, this,
+            [this](GallerySettings::ThemeMode mode) {
+                const QSignalBlocker blocker(m_themeChoice);
+                m_themeChoice->setCurrentIndex(static_cast<int>(mode));
+            });
+    connect(settings, &GallerySettings::navigationStyleChanged, this,
+            [this](GallerySettings::NavigationStyle style) {
+                const QSignalBlocker blocker(m_navigationChoice);
+                m_navigationChoice->setCurrentIndex(static_cast<int>(style));
+            });
 
-    scrollArea->setWidget(page);
+    m_contentLayout->addWidget(createSectionTitle(QStringLiteral("Appearance & behavior")));
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Color,
+                                                 QStringLiteral("App theme"),
+                                                 QStringLiteral("Select which app theme to display"),
+                                                 m_themeChoice));
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::List,
+                                                 QStringLiteral("Navigation style"),
+                                                 QStringLiteral("Choose how the navigation pane is presented"),
+                                                 m_navigationChoice));
+    m_contentLayout->addStretch(1);
+
+    scrollArea->setWidget(m_viewport);
     outerLayout->addWidget(scrollArea);
 
     applyPalette();
+    updateResponsiveLayout();
     LOG_DEBUG(QStringLiteral("SettingsPage created routeId=%1 title=%2")
                   .arg(m_routeId, item.title));
 }
@@ -85,12 +232,33 @@ void SettingsPage::onThemeUpdated()
     applyPalette();
 }
 
+void SettingsPage::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    updateResponsiveLayout();
+}
+
 void SettingsPage::applyPalette()
 {
+    const auto colors = themeColors();
     QPalette currentPalette = palette();
-    currentPalette.setColor(QPalette::Window, QColor(QStringLiteral("#FAFAFA")));
+    currentPalette.setColor(QPalette::Window, colors.bgCanvas);
+    currentPalette.setColor(QPalette::WindowText, colors.textPrimary);
     setPalette(currentPalette);
-    setStyleSheet(QStringLiteral("#gallerySettingsViewport { background: #FAFAFA; }"));
+    if (m_viewport)
+        m_viewport->setPalette(currentPalette);
+}
+
+void SettingsPage::updateResponsiveLayout()
+{
+    if (!m_contentLayout)
+        return;
+    const bool narrow = width() > 0 && width() < kNarrowPageWidth;
+    const int horizontalMargin = narrow ? 24 : 48;
+    m_contentLayout->setContentsMargins(horizontalMargin,
+                                        narrow ? 24 : 34,
+                                        horizontalMargin,
+                                        48);
 }
 
 QWidget* SettingsPage::createSectionTitle(const QString& title)
@@ -102,17 +270,18 @@ QWidget* SettingsPage::createSectionTitle(const QString& title)
     return label;
 }
 
-QWidget* SettingsPage::createChoiceButton(const QString& text)
+fluent::basicinput::ComboBox* SettingsPage::createChoiceBox(const QString& objectName,
+                                                             const QStringList& choices,
+                                                             int currentIndex)
 {
-    auto* button = new fluent::basicinput::Button(text, this);
-    button->setObjectName(QStringLiteral("gallerySettingsChoiceButton"));
-    button->setFluentStyle(fluent::basicinput::Button::Standard);
-    button->setFluentSize(fluent::basicinput::Button::StandardSize);
-    button->setFluentLayout(fluent::basicinput::Button::IconAfter);
-    button->setIconGlyph(Typography::Icons::ChevronDownMed, 12);
-    button->setMinimumWidth(136);
-    button->setFocusPolicy(Qt::NoFocus);
-    return button;
+    auto* choice = new fluent::basicinput::ComboBox(this);
+    choice->setObjectName(objectName);
+    choice->addItems(choices);
+    choice->setCurrentIndex(currentIndex);
+    choice->setMinimumWidth(140);
+    choice->setMaximumWidth(168);
+    choice->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    return choice;
 }
 
 QWidget* SettingsPage::createSettingsRow(const QString& icon,
@@ -120,45 +289,7 @@ QWidget* SettingsPage::createSettingsRow(const QString& icon,
                                          const QString& subtitle,
                                          QWidget* trailing)
 {
-    auto* row = new QFrame(this);
-    row->setObjectName(QStringLiteral("gallerySettingsRow"));
-    row->setFrameShape(QFrame::NoFrame);
-    row->setMinimumHeight(88);
-    row->setStyleSheet(QStringLiteral(
-        "#gallerySettingsRow { background: rgba(255, 255, 255, 235); border: 1px solid #E7E7E7; border-radius: 6px; }"));
-
-    auto* layout = new QHBoxLayout(row);
-    layout->setContentsMargins(24, 12, 22, 12);
-    layout->setSpacing(20);
-
-    auto* iconLabel = new fluent::textfields::Label(icon, row);
-    iconLabel->setObjectName(QStringLiteral("gallerySettingsRowIcon"));
-    iconLabel->setAlignment(Qt::AlignCenter);
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
-    iconFont.setPixelSize(22);
-    iconLabel->setFont(iconFont);
-    iconLabel->setFixedSize(34, 34);
-
-    auto* textColumn = new QWidget(row);
-    auto* textLayout = new QVBoxLayout(textColumn);
-    textLayout->setContentsMargins(0, 0, 0, 0);
-    textLayout->setSpacing(2);
-
-    auto* titleLabel = new fluent::textfields::Label(title, textColumn);
-    titleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
-    auto* subtitleLabel = new fluent::textfields::Label(subtitle, textColumn);
-    subtitleLabel->setFluentTypography(Typography::FontRole::Caption);
-    subtitleLabel->setStyleSheet(QStringLiteral("color: #646464;"));
-
-    textLayout->addStretch(1);
-    textLayout->addWidget(titleLabel);
-    textLayout->addWidget(subtitleLabel);
-    textLayout->addStretch(1);
-
-    layout->addWidget(iconLabel);
-    layout->addWidget(textColumn, 1);
-    layout->addWidget(trailing, 0, Qt::AlignVCenter);
-    return row;
+    return new SettingsRow(icon, title, subtitle, trailing, this);
 }
 
 } // namespace fluent::gallery

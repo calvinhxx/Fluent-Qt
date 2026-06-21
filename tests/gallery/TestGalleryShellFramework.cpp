@@ -2,6 +2,8 @@
 
 #include <QApplication>
 #include <QEvent>
+#include <QElapsedTimer>
+#include <QFrame>
 #include <QHelpEvent>
 #include <QLabel>
 #include <QPixmap>
@@ -15,6 +17,7 @@
 #include <QtGlobal>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/ComboBox.h"
 #include "components/collections/TreeView.h"
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
@@ -35,14 +38,17 @@
 #include "view/shell/GalleryWindow.h"
 #include "view/pages/SettingsPage.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
+#include "viewmodel/GallerySettings.h"
 
 using fluent::basicinput::Button;
+using fluent::basicinput::ComboBox;
 using fluent::collections::TreeView;
 using fluent::dialogs_flyouts::Popup;
 using fluent::gallery::GalleryContentPage;
 using fluent::gallery::GalleryEntryCard;
 using fluent::gallery::GalleryNavigationPane;
 using fluent::gallery::GalleryNavigationViewModel;
+using fluent::gallery::GallerySettings;
 using fluent::gallery::GalleryWindow;
 using fluent::gallery::SettingsPage;
 using fluent::navigation::NavigationView;
@@ -53,6 +59,27 @@ using fluent::windowing::TitleBar;
 namespace vg = fluent::testutils::visual_geometry;
 
 namespace {
+
+class GallerySettingsRestorer {
+public:
+    explicit GallerySettingsRestorer(GallerySettings& settings)
+        : m_settings(settings)
+        , m_themeMode(settings.themeMode())
+        , m_navigationStyle(settings.navigationStyle())
+    {
+    }
+
+    ~GallerySettingsRestorer()
+    {
+        m_settings.setNavigationStyle(m_navigationStyle);
+        m_settings.setThemeMode(m_themeMode);
+    }
+
+private:
+    GallerySettings& m_settings;
+    GallerySettings::ThemeMode m_themeMode;
+    GallerySettings::NavigationStyle m_navigationStyle;
+};
 
 bool containsAll(const QStringList& values, const QStringList& expectedValues)
 {
@@ -1089,4 +1116,177 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
     ASSERT_NE(window.currentSettingsPage(), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(window.currentSettingsPage()), nullptr);
     EXPECT_EQ(window.currentSettingsPage()->titleLabel()->text(), QStringLiteral("Settings"));
+}
+
+TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
+{
+    auto& settings = GallerySettings::instance();
+    GallerySettingsRestorer restore(settings);
+    settings.setThemeMode(GallerySettings::ThemeMode::Light);
+    settings.setNavigationStyle(GallerySettings::NavigationStyle::Auto);
+
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
+    QTRY_VERIFY_WITH_TIMEOUT(window.currentSettingsPage() != nullptr, 2000);
+
+    SettingsPage* page = window.currentSettingsPage();
+    ASSERT_NE(page, nullptr);
+    auto* themeChoice = page->findChild<ComboBox*>(
+        QStringLiteral("gallerySettingsThemeChoice"));
+    auto* navigationChoice = page->findChild<ComboBox*>(
+        QStringLiteral("gallerySettingsNavigationChoice"));
+    ASSERT_NE(themeChoice, nullptr);
+    ASSERT_NE(navigationChoice, nullptr);
+    EXPECT_EQ(themeChoice->count(), 3);
+    EXPECT_EQ(themeChoice->currentText(), QStringLiteral("Light"));
+    EXPECT_EQ(navigationChoice->count(), 5);
+    EXPECT_EQ(navigationChoice->currentText(), QStringLiteral("Auto"));
+    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 2);
+
+    QStringList visibleText;
+    for (auto* label : page->findChildren<fluent::textfields::Label*>())
+        visibleText.append(label->text());
+    EXPECT_FALSE(visibleText.contains(QStringLiteral("Sound")));
+    EXPECT_FALSE(visibleText.contains(QStringLiteral("Manage samples")));
+    EXPECT_FALSE(visibleText.contains(QStringLiteral("About")));
+    EXPECT_FALSE(visibleText.contains(QStringLiteral("WinUI 3 Gallery")));
+
+    const auto iconLabels = page->findChildren<fluent::textfields::Label*>(
+        QStringLiteral("gallerySettingsRowIcon"));
+    ASSERT_EQ(iconLabels.size(), 2);
+    for (auto* iconLabel : iconLabels)
+        EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::SegoeFluentIcons);
+
+    QElapsedTimer themeRequestTimer;
+    themeRequestTimer.start();
+    themeChoice->setCurrentIndex(2);
+    EXPECT_LT(themeRequestTimer.elapsed(), 100);
+    QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::Dark, 1000);
+    EXPECT_EQ(settings.themeMode(), GallerySettings::ThemeMode::Dark);
+    EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
+    for (auto* iconLabel : iconLabels)
+        EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::SegoeFluentIcons);
+    const auto darkColors = page->themeColors();
+    for (auto* label : page->findChildren<fluent::textfields::Label*>()) {
+        if (label->objectName() == QStringLiteral("gallerySettingsSubtitle"))
+            QTRY_COMPARE_WITH_TIMEOUT(label->palette().color(QPalette::WindowText),
+                                      darkColors.textSecondary,
+                                      1000);
+        else
+            QTRY_COMPARE_WITH_TIMEOUT(label->palette().color(QPalette::WindowText),
+                                      darkColors.textPrimary,
+                                      1000);
+    }
+
+    window.resize(460, 760);
+    QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(page->width() < 640, 1000);
+    for (auto* choice : {themeChoice, navigationChoice}) {
+        auto* row = qobject_cast<QFrame*>(choice->parentWidget());
+        ASSERT_NE(row, nullptr);
+        EXPECT_GE(row->height(), 120);
+        const QRect choiceInPage(choice->mapTo(page, QPoint(0, 0)), choice->size());
+        EXPECT_TRUE(page->rect().contains(choiceInPage));
+    }
+
+    window.resize(1180, 760);
+    QApplication::processEvents();
+
+    auto* navigationView = window.findChild<NavigationView*>(
+        QStringLiteral("galleryNavigationView"));
+    ASSERT_NE(navigationView, nullptr);
+    navigationChoice->setCurrentIndex(1);
+    QApplication::processEvents();
+    EXPECT_EQ(settings.navigationStyle(), GallerySettings::NavigationStyle::Left);
+    EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::Left);
+    EXPECT_TRUE(navigationView->isPaneOpen());
+
+    navigationChoice->setCurrentIndex(2);
+    QApplication::processEvents();
+    EXPECT_EQ(settings.navigationStyle(), GallerySettings::NavigationStyle::LeftCompact);
+    EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::LeftCompact);
+    EXPECT_FALSE(navigationView->isPaneOpen());
+
+    navigationChoice->setCurrentIndex(3);
+    QApplication::processEvents();
+    EXPECT_EQ(settings.navigationStyle(), GallerySettings::NavigationStyle::LeftMinimal);
+    EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::LeftMinimal);
+
+    navigationChoice->setCurrentIndex(4);
+    QApplication::processEvents();
+    EXPECT_EQ(settings.navigationStyle(), GallerySettings::NavigationStyle::Top);
+    EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::Top);
+    ASSERT_NE(navigationView->mainChromeWidget(), nullptr);
+    EXPECT_EQ(navigationView->mainChromeWidget()->objectName(),
+              QStringLiteral("galleryTopMainNavigationPane"));
+    auto* topHomeButton = navigationView->mainChromeWidget()->findChild<Button*>(
+        QStringLiteral("galleryTopNavigationButton_home"));
+    auto* topFoundationButton = navigationView->mainChromeWidget()->findChild<Button*>(
+        QStringLiteral("galleryTopNavigationButton_foundation"));
+    ASSERT_NE(topHomeButton, nullptr);
+    ASSERT_NE(topFoundationButton, nullptr);
+    EXPECT_GE(topFoundationButton->geometry().left() - topHomeButton->geometry().right() - 1, 4);
+
+    auto* topToolTip = topHomeButton->findChild<ToolTip*>(
+        QStringLiteral("FluentAttachedToolTip"), Qt::FindDirectChildrenOnly);
+    ASSERT_NE(topToolTip, nullptr);
+    QHelpEvent topHelp(QEvent::ToolTip,
+                       topHomeButton->rect().center(),
+                       topHomeButton->mapToGlobal(topHomeButton->rect().center()));
+    QApplication::sendEvent(topHomeButton, &topHelp);
+    QApplication::processEvents();
+    EXPECT_TRUE(topToolTip->isVisible());
+
+    QTest::mouseClick(topFoundationButton, Qt::LeftButton);
+    QApplication::processEvents();
+    auto* topFlyout = window.findChild<Popup*>(QStringLiteral("galleryTopNavigationFlyout"));
+    ASSERT_NE(topFlyout, nullptr);
+    ASSERT_TRUE(topFlyout->isVisible());
+    const QRect foundationButtonInWindow(topFoundationButton->mapTo(&window, QPoint(0, 0)),
+                                         topFoundationButton->size());
+    QTRY_VERIFY_WITH_TIMEOUT(
+        fluent::overlay::visibleCardRect(topFlyout->geometry()).top()
+            > foundationButtonInWindow.bottom(),
+        1000);
+
+    auto* topSettingsButton = navigationView->footerChromeWidget()->findChild<Button*>(
+        QStringLiteral("galleryTopNavigationButton_settings"));
+    ASSERT_NE(topSettingsButton, nullptr);
+    QPointer<Popup> dismissedTopFlyout(topFlyout);
+    QTest::mouseClick(topSettingsButton, Qt::LeftButton);
+    QTRY_VERIFY_WITH_TIMEOUT(!dismissedTopFlyout || !dismissedTopFlyout->isVisible(), 1000);
+    QTRY_COMPARE_WITH_TIMEOUT(window.currentRouteId(), QStringLiteral("settings"), 1000);
+    auto* topSettingsAnimation = topSettingsButton->findChild<QPropertyAnimation*>(
+        QStringLiteral("galleryTopSettingsIconRotationAnimation"), Qt::FindDirectChildrenOnly);
+    ASSERT_NE(topSettingsAnimation, nullptr);
+    EXPECT_EQ(topSettingsAnimation->state(), QAbstractAnimation::Running);
+    QTRY_COMPARE_WITH_TIMEOUT(topSettingsAnimation->state(), QAbstractAnimation::Stopped, 1000);
+    EXPECT_NEAR(topSettingsButton->iconRotation(), 0.0, 0.001);
+
+    QTest::mouseClick(topFoundationButton, Qt::LeftButton);
+    QApplication::processEvents();
+    topFlyout = window.findChild<Popup*>(QStringLiteral("galleryTopNavigationFlyout"));
+    ASSERT_NE(topFlyout, nullptr);
+    ASSERT_TRUE(topFlyout->isVisible());
+    auto* foundationChild = topFlyout->findChild<QWidget*>(
+        QStringLiteral("galleryCompactNavigationFlyoutRow_foundation-qmlplus"));
+    ASSERT_NE(foundationChild, nullptr);
+    QTest::mouseClick(foundationChild, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(window.currentRouteId(), QStringLiteral("foundation-qmlplus"), 1000);
+
+    QTest::mouseClick(topHomeButton, Qt::LeftButton);
+    QApplication::processEvents();
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("home"));
+
+    navigationChoice->setCurrentIndex(0);
+    QApplication::processEvents();
+    EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::Auto);
+    EXPECT_EQ(navigationView->effectiveDisplayMode(), NavigationView::DisplayMode::Left);
+    EXPECT_TRUE(navigationView->isPaneOpen());
+
+    themeChoice->setCurrentIndex(0);
+    QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::System, 1000);
 }

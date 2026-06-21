@@ -27,6 +27,7 @@
 #include "GallerySearchRanking.h"
 #include "GallerySplashScreen.h"
 #include "GalleryTitleBarController.h"
+#include "GalleryTopNavigationPane.h"
 #include "GalleryWindowMetrics.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/PlaceholderPage.h"
@@ -431,6 +432,14 @@ void GalleryWindow::buildNavigationShell()
     m_mainNavigationPane->setObjectName(QStringLiteral("galleryMainNavigationPane"));
     m_footerNavigationPane = new GalleryNavigationPane(m_navigationViewModel.footerPaneItems(), m_navigationView);
     m_footerNavigationPane->setObjectName(QStringLiteral("galleryFooterNavigationPane"));
+    m_topMainNavigationPane = new GalleryTopNavigationPane(m_navigationViewModel.mainPaneItems(),
+                                                           m_navigationView);
+    m_topMainNavigationPane->setObjectName(QStringLiteral("galleryTopMainNavigationPane"));
+    m_topFooterNavigationPane = new GalleryTopNavigationPane(m_navigationViewModel.footerPaneItems(),
+                                                             m_navigationView);
+    m_topFooterNavigationPane->setObjectName(QStringLiteral("galleryTopFooterNavigationPane"));
+    m_topMainNavigationPane->hide();
+    m_topFooterNavigationPane->hide();
 
     m_mainNavigationPane->bind("selectedRouteId",
                                &m_navigationState,
@@ -440,6 +449,14 @@ void GalleryWindow::buildNavigationShell()
                                  &m_navigationState,
                                  "selectedRouteId",
                                  fluent::PropertyBinder::TwoWay);
+    m_topMainNavigationPane->bind("selectedRouteId",
+                                  &m_navigationState,
+                                  "selectedRouteId",
+                                  fluent::PropertyBinder::TwoWay);
+    m_topFooterNavigationPane->bind("selectedRouteId",
+                                    &m_navigationState,
+                                    "selectedRouteId",
+                                    fluent::PropertyBinder::TwoWay);
     connect(&m_navigationState, &GalleryNavigationState::selectedRouteIdChanged,
             this, [this](const QString& routeId) {
                 handleSelectedRouteChanged(routeId);
@@ -478,6 +495,10 @@ void GalleryWindow::buildNavigationShell()
     m_navigationView->setFooterChromeWidget(m_footerNavigationPane);
     setNavigationPanesCompact(false);
     setContentWidget(m_navigationView);
+    auto& settings = GallerySettings::instance();
+    connect(&settings, &GallerySettings::navigationStyleChanged,
+            this, &GalleryWindow::applyNavigationStyle);
+    applyNavigationStyle(settings.navigationStyle());
     updateNavigationCommands();
     LOG_DEBUG(QStringLiteral("GalleryWindow navigationShell built mainRoutes=%1 footerRoutes=%2 expandedPaneWidth=%3 compactPaneWidth=%4")
                   .arg(m_mainNavigationPane->routeIds().size())
@@ -601,6 +622,69 @@ GalleryWindow::AppWindowWidthState GalleryWindow::appWindowWidthState() const
         break;
     }
     return AppWindowWidthState::Expanded;
+}
+
+void GalleryWindow::applyNavigationStyle(GallerySettings::NavigationStyle style)
+{
+    if (!m_navigationView)
+        return;
+
+    using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
+    DisplayMode mode = DisplayMode::Auto;
+    if (style == GallerySettings::NavigationStyle::Left)
+        mode = DisplayMode::Left;
+    else if (style == GallerySettings::NavigationStyle::LeftCompact)
+        mode = DisplayMode::LeftCompact;
+    else if (style == GallerySettings::NavigationStyle::LeftMinimal)
+        mode = DisplayMode::LeftMinimal;
+    else if (style == GallerySettings::NavigationStyle::Top)
+        mode = DisplayMode::Top;
+
+    if (m_navigationCompactReleaseTimer)
+        m_navigationCompactReleaseTimer->stop();
+    closeNavigationDrawer();
+    setTopNavigationChrome(mode == DisplayMode::Top);
+    m_navigationView->setDisplayMode(mode);
+    const DisplayMode effectiveMode = m_navigationView->effectiveDisplayMode();
+    const bool paneOpen = style == GallerySettings::NavigationStyle::Left
+        || (style == GallerySettings::NavigationStyle::Auto
+            && (!isVisible() || effectiveMode == DisplayMode::Left));
+    m_navigationView->setPaneOpen(paneOpen);
+    setNavigationPanesCompact(!paneOpen);
+    if (m_titleBar)
+        m_titleBar->updateLayout();
+    LOG_INFO(QStringLiteral("GalleryWindow navigationStyleApplied style=%1 effectiveMode=%2")
+                 .arg(static_cast<int>(style))
+                 .arg(static_cast<int>(effectiveMode)));
+    updateNavigationCommands();
+}
+
+void GalleryWindow::setTopNavigationChrome(bool top)
+{
+    if (!m_navigationView)
+        return;
+
+    QWidget* nextMain = top ? static_cast<QWidget*>(m_topMainNavigationPane)
+                            : static_cast<QWidget*>(m_mainNavigationPane);
+    QWidget* nextFooter = top ? static_cast<QWidget*>(m_topFooterNavigationPane)
+                              : static_cast<QWidget*>(m_footerNavigationPane);
+
+    if (m_navigationView->mainChromeWidget() != nextMain) {
+        QWidget* previous = m_navigationView->mainChromeWidget();
+        m_navigationView->setMainChromeWidget(nextMain);
+        if (previous) {
+            previous->setParent(m_navigationView);
+            previous->hide();
+        }
+    }
+    if (m_navigationView->footerChromeWidget() != nextFooter) {
+        QWidget* previous = m_navigationView->footerChromeWidget();
+        m_navigationView->setFooterChromeWidget(nextFooter);
+        if (previous) {
+            previous->setParent(m_navigationView);
+            previous->hide();
+        }
+    }
 }
 
 void GalleryWindow::toggleNavigationDisplayMode()
@@ -735,7 +819,9 @@ void GalleryWindow::updateNavigationCommands()
 {
     if (m_titleBar) {
         m_titleBar->setBackAvailable(!m_backRouteStack.isEmpty());
-        m_titleBar->setMenuEnabled(m_navigationView != nullptr);
+        m_titleBar->setMenuEnabled(m_navigationView
+                                   && m_navigationView->effectiveDisplayMode()
+                                       != fluent::navigation::NavigationView::DisplayMode::Top);
     }
 }
 

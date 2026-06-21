@@ -7,6 +7,7 @@
 #include "components/windowing/Window.h"
 #include "viewmodel/GalleryNavigationState.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
+#include "viewmodel/GallerySettings.h"
 
 class QTimer;
 class QWidget;
@@ -27,6 +28,7 @@ class GalleryContentPage;
 class GalleryNavigationItem;
 class GallerySplashScreen;
 class GalleryTitleBarController;
+class GalleryTopNavigationPane;
 class PlaceholderPage;
 class SettingsPage;
 
@@ -83,6 +85,8 @@ private:
     void recordNavigationHistory(const QString& nextRouteId);
     bool navigateBack();
     AppWindowWidthState appWindowWidthState() const;
+    void applyNavigationStyle(GallerySettings::NavigationStyle style);
+    void setTopNavigationChrome(bool top);
     void toggleNavigationDisplayMode();
     void ensureNavigationDrawer();
     void toggleNavigationDrawer();
@@ -95,6 +99,8 @@ private:
     fluent::navigation::NavigationView* m_navigationView = nullptr;
     GalleryNavigationPane* m_mainNavigationPane = nullptr;
     GalleryNavigationPane* m_footerNavigationPane = nullptr;
+    GalleryTopNavigationPane* m_topMainNavigationPane = nullptr;
+    GalleryTopNavigationPane* m_topFooterNavigationPane = nullptr;
     fluent::collections::DrawerView* m_navigationDrawer = nullptr;
     QWidget* m_navigationDrawerContent = nullptr;
     GalleryNavigationPane* m_drawerMainNavigationPane = nullptr;
