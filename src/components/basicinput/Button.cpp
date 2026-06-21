@@ -67,7 +67,8 @@ void drawCenteredIconGlyph(QPainter& painter,
                            int pixelSize,
                            const QRectF& targetRect,
                            const QPoint& offset,
-                           qreal scale) {
+                           qreal scale,
+                           qreal rotation) {
     QFont iconFont(fontFamily);
     iconFont.setPixelSize(pixelSize);
     painter.setFont(iconFont);
@@ -75,26 +76,28 @@ void drawCenteredIconGlyph(QPainter& painter,
     QPainterPath glyphPath;
     glyphPath.addText(QPointF(0, 0), iconFont, glyph);
     const QRectF inkBounds = glyphPath.boundingRect();
+    const QPointF targetCenter = targetRect.center() + QPointF(offset.x(), offset.y());
+    const bool transformed = !qFuzzyCompare(scale, 1.0) || !qFuzzyIsNull(rotation);
+    if (transformed) {
+        painter.save();
+        painter.translate(targetCenter);
+        painter.rotate(rotation);
+        painter.scale(scale, scale);
+        painter.translate(-targetCenter);
+    }
     if (inkBounds.isEmpty()) {
         painter.drawText(targetRect.translated(QPointF(offset.x(), offset.y())),
                          Qt::AlignCenter | Qt::AlignVCenter,
                          glyph);
+        if (transformed)
+            painter.restore();
         return;
     }
 
-    const QPointF targetCenter = targetRect.center() + QPointF(offset.x(), offset.y());
     const QPointF pathOffset = targetCenter - inkBounds.center();
-    if (qFuzzyCompare(scale, 1.0)) {
-        painter.fillPath(glyphPath.translated(pathOffset), painter.pen().brush());
-        return;
-    }
-    // Scale the glyph about its visual center so press feedback stays put. zh_CN: 绕字形视觉中心缩放，使按下反馈不位移。
-    painter.save();
-    painter.translate(targetCenter);
-    painter.scale(scale, scale);
-    painter.translate(-targetCenter);
     painter.fillPath(glyphPath.translated(pathOffset), painter.pen().brush());
-    painter.restore();
+    if (transformed)
+        painter.restore();
 }
 
 } // namespace
@@ -184,6 +187,12 @@ void Button::resetCornerRadii() {
 void Button::setIconOffset(const QPoint& offset) {
     if (m_iconOffset == offset) return;
     m_iconOffset = offset;
+    update();
+}
+
+void Button::setIconRotation(qreal rotation) {
+    if (qFuzzyCompare(m_iconRotation, rotation)) return;
+    m_iconRotation = rotation;
     update();
 }
 
@@ -389,6 +398,23 @@ void Button::paintEvent(QPaintEvent*) {
 
     painter.setPen(textColor);
     painter.setRenderHint(QPainter::TextAntialiasing); // Keep icon-font glyphs antialiased. zh_CN: 确保 iconfont 文字抗锯齿。
+
+    const auto drawIconPixmap = [&](qreal x, qreal y) {
+        if (pix.isNull()) return;
+        const qreal dpr = pix.devicePixelRatio();
+        const QSizeF logicalSize(pix.width() / dpr, pix.height() / dpr);
+        if (qFuzzyIsNull(m_iconRotation)) {
+            painter.drawPixmap(QPointF(x, y), pix);
+            return;
+        }
+        painter.save();
+        painter.translate(QPointF(x, y) + QPointF(logicalSize.width() / 2.0,
+                                                   logicalSize.height() / 2.0));
+        painter.rotate(m_iconRotation);
+        painter.drawPixmap(QPointF(-logicalSize.width() / 2.0,
+                                   -logicalSize.height() / 2.0), pix);
+        painter.restore();
+    };
     
     if (m_layout == IconAfter) {
         // Text first, icon after. zh_CN: 文本在前，图标在后。
@@ -400,29 +426,29 @@ void Button::paintEvent(QPaintEvent*) {
         if (hasIconFont) {
             QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
             drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily,
-                                  m_iconPixelSize, iconRect, m_iconOffset, m_iconScale);
+                                  m_iconPixelSize, iconRect, m_iconOffset, m_iconScale,
+                                  m_iconRotation);
             painter.setFont(font());
         } else if (!pix.isNull()) {
             double dpr = pix.devicePixelRatio();
             double pixH = pix.height() / dpr;
-            painter.drawPixmap(startX + m_iconOffset.x(),
-                               centerY - pixH / 2.0 + m_iconOffset.y(),
-                               pix);
+            drawIconPixmap(startX + m_iconOffset.x(),
+                           centerY - pixH / 2.0 + m_iconOffset.y());
         }
     } else {
         // Icon first, text after (or icon only). zh_CN: 图标在前，文本在后（或仅图标）。
         if (hasIconFont) {
             QRectF iconRect(startX, layoutRect.top(), iconWidth, layoutRect.height());
             drawCenteredIconGlyph(painter, m_iconGlyph, m_iconFontFamily,
-                                  m_iconPixelSize, iconRect, m_iconOffset, m_iconScale);
+                                  m_iconPixelSize, iconRect, m_iconOffset, m_iconScale,
+                                  m_iconRotation);
             painter.setFont(font());
             startX += iconWidth + gap;
         } else if (!pix.isNull()) {
             double dpr = pix.devicePixelRatio();
             double pixH = pix.height() / dpr;
-            painter.drawPixmap(startX + m_iconOffset.x(),
-                               centerY - pixH / 2.0 + m_iconOffset.y(),
-                               pix);
+            drawIconPixmap(startX + m_iconOffset.x(),
+                           centerY - pixH / 2.0 + m_iconOffset.y());
             startX += iconWidth + gap;
         }
         if (!txt.isEmpty()) {

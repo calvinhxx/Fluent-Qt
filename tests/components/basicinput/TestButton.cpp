@@ -65,6 +65,20 @@ qreal renderedDarkPixelCenterY(int iconOffsetY,
     return totalWeight > 0.0 ? weightedY / totalWeight : -1.0;
 }
 
+TEST(ButtonProperties, IconRotationIsAnimatableWithoutChangingGeometry)
+{
+    Button button;
+    button.setFixedSize(32, 32);
+    button.setFluentLayout(Button::IconOnly);
+    button.setIconGlyph(Typography::Icons::Settings, 16);
+    const QSize before = button.sizeHint();
+
+    button.setIconRotation(135.0);
+
+    EXPECT_DOUBLE_EQ(button.iconRotation(), 135.0);
+    EXPECT_EQ(button.sizeHint(), before);
+}
+
 QImage renderButtonToImage(Button& button)
 {
     button.ensurePolished();

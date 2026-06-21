@@ -71,6 +71,11 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QPoint iconOffset READ iconOffset WRITE setIconOffset)
     /**
+     * @brief Clockwise rotation applied to the painted icon in degrees.
+     * zh_CN: 应用于自绘图标的顺时针旋转角度（度）。
+     */
+    Q_PROPERTY(qreal iconRotation READ iconRotation WRITE setIconRotation)
+    /**
      * @brief Uniform scale applied to the painted iconfont glyph (1.0 = no scaling).
      * Drives WinUI-style press feedback (a brief scale-down) without touching geometry.
      * zh_CN: 作用于自绘 iconfont 字形的等比缩放（1.0 为不缩放），用于实现 WinUI 风格的按下反馈
@@ -154,6 +159,9 @@ public:
     QPoint iconOffset() const { return m_iconOffset; }
     void setIconOffset(const QPoint& offset);
 
+    qreal iconRotation() const { return m_iconRotation; }
+    void setIconRotation(qreal rotation);
+
     qreal iconScale() const { return m_iconScale; }
     void setIconScale(qreal scale);
 
@@ -231,6 +239,7 @@ private:
     bool m_hasCustomCornerRadii = false;
     QMargins m_cornerRadii;
     QPoint m_iconOffset {0, 0}; // Fine-tunes iconfont centering for glyphs with uneven metrics.
+    qreal m_iconRotation = 0.0;
     qreal m_iconScale = 1.0;    // Press-feedback scale for the painted glyph; 1.0 = no scaling.
     qreal m_contentOpacity = 1.0; // Painter-level fade for the whole surface; 1.0 = opaque.
     
