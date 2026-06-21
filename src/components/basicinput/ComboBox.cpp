@@ -23,6 +23,7 @@ namespace {
 static constexpr int kPopupShadowMargin = ::Spacing::Standard;
 static constexpr int kPopupContentInset = ::Spacing::XSmall / 2;
 static constexpr int kPopupWindowMargin = 4;
+static constexpr qreal kPopupTextOpticalOffsetY = -2.0;
 
 // Suppress QStyle's PE_PanelLineEdit native panel — ComboBox paints its own bg
 class TransparentLineEditStyle : public QProxyStyle {
@@ -104,6 +105,9 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // blue pill in ComboBox flyouts.
     const int textLeft = 16;
     QRectF textRect = bgRect.adjusted(textLeft, 0, -8, 0);
+    // Center the actual Segoe UI ink rather than its asymmetric ascent/descent line box.
+    // zh_CN: 按 Segoe UI 字形墨迹居中，而不是按上下不对称的 ascent/descent 行框居中。
+    textRect.translate(0, kPopupTextOpticalOffsetY);
     painter->setPen(textColor);
     painter->setFont(option.font);
     const QString text = index.data(Qt::DisplayRole).toString();

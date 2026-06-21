@@ -9,6 +9,7 @@
 #include <QStringListModel>
 #include <QSignalSpy>
 #include <QComboBox>
+#include <QFontMetricsF>
 #include <QImage>
 #include <QPixmap>
 #include <QtTest/QTest>
@@ -446,6 +447,32 @@ TEST_F(ComboBoxTest, PopupSelectedIndicatorPaintsSinglePill) {
     EXPECT_GT(accentWidth, 0.0);
     EXPECT_LE(accentWidth, 4.5)
         << "ComboBox popup selected indicator should be painted once, not by both ListView and the item delegate";
+}
+
+TEST_F(ComboBoxTest, PopupIndicatorAndTextShareOpticalCenterline) {
+    ComboBox* cb = new ComboBox(window);
+    cb->setGeometry(40, 40, 184, Spacing::ControlHeight::Standard);
+    cb->addItems({"Auto", "Left", "Top"});
+    cb->setCurrentIndex(0);
+
+    auto* popup = openPopupFor(cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+    listView->setSelectedIndicatorAnimationEnabled(false);
+    QApplication::processEvents();
+
+    const QModelIndex index = listView->model()->index(0, 0);
+    const QRectF rowRect = static_cast<QListView*>(listView)->visualRect(index);
+    const QRectF textRect = rowRect.adjusted(5, 3, -5, -3).translated(0, -2);
+    const QFontMetricsF metrics(listView->font());
+    const qreal baseline = textRect.top()
+        + (textRect.height() - metrics.height()) / 2.0
+        + metrics.ascent();
+    const qreal textInkCenter = baseline
+        + metrics.tightBoundingRect(index.data(Qt::DisplayRole).toString()).center().y();
+
+    EXPECT_NEAR(listView->selectedIndicatorRect().center().y(), textInkCenter, 1.0);
 }
 
 // ─── VisualCheck ─────────────────────────────────────────────────────────────
