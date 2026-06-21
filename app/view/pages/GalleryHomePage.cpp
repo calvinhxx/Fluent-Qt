@@ -26,6 +26,7 @@
 #include "components/collections/ListView.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/scrolling/ScrollBar.h"
+#include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
@@ -446,7 +447,7 @@ private:
         button->setFixedSize(kHeroScrollButtonWidth, kHeroScrollButtonHeight);
         button->setFocusPolicy(Qt::NoFocus);
         button->setCursor(Qt::PointingHandCursor);
-        button->setToolTip(tooltip);
+        fluent::status_info::ToolTip::attach(button, tooltip);
         button->hide();
         return button;
     }

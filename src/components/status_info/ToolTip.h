@@ -1,6 +1,7 @@
 #ifndef TOOLTIP_H
 #define TOOLTIP_H
 
+#include <QPointer>
 #include <QWidget>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -32,7 +33,22 @@ class ToolTip : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
 public:
+    /**
+     * @brief Preferred side of the target used by an attached tooltip.
+     * zh_CN: 附加工具提示相对于目标控件的首选方向。
+     */
+    enum Placement { Above, Below, Left, Right };
+    Q_ENUM(Placement)
+
     explicit ToolTip(QWidget* parent = nullptr);
+
+    /**
+     * @brief Attaches a Fluent tooltip to a widget and reuses an existing attachment.
+     * zh_CN: 将 Fluent 工具提示附加到控件，并复用该控件已有的附加提示。
+     */
+    static ToolTip* attach(QWidget* target,
+                           const QString& text,
+                           Placement placement = Above);
     
     void setText(const QString& text);
     QString text() const;
@@ -60,9 +76,12 @@ signals:
     void animationEnabledChanged(bool enabled);
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    void setTarget(QWidget* target, Placement placement);
+    void positionForTarget();
     void applyLayoutMargins();
     void ensureOpacityAnimation();
     void startShowAnimation();
@@ -79,6 +98,8 @@ private:
     bool m_animationEnabled = true;
     bool m_hideOnAnimationFinished = false;
     QPropertyAnimation* m_opacityAnimation = nullptr;
+    QPointer<QWidget> m_target;
+    Placement m_placement = Above;
 };
 
 } // namespace fluent::status_info

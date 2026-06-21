@@ -14,6 +14,7 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [App Visual Geometry Verification](app-visual-geometry-verification.md)
 - [Qt Component Test Conventions](qt-component-test-conventions.md)
 - [Visual Review](visual-review.md)
+- [Tooltip Usage](tooltip-usage.md)
 
 ## Related Architecture Contracts
 

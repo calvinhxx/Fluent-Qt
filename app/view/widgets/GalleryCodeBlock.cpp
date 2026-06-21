@@ -22,6 +22,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
@@ -230,7 +231,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
     m_copyButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_copyButton->setIconGlyph(Typography::Icons::Copy, Typography::FontSize::Body);
     m_copyButton->setFocusPolicy(Qt::NoFocus);
-    m_copyButton->setToolTip(QStringLiteral("Copy"));
+    fluent::status_info::ToolTip::attach(m_copyButton, QStringLiteral("Copy"));
     connect(m_copyButton, &fluent::basicinput::Button::clicked, this, [this]() {
         if (QClipboard* clipboard = QApplication::clipboard()) {
             clipboard->setText(m_code);

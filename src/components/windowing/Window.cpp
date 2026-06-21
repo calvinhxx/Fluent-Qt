@@ -11,6 +11,7 @@
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "components/basicinput/Button.h"
+#include "components/status_info/ToolTip.h"
 
 namespace fluent::windowing {
 
@@ -245,7 +246,7 @@ void Window::setupCaptionButtons() {
                                       const QString& tooltip) {
         auto* button = new fluent::basicinput::Button(m_captionButtonHost);
         button->setObjectName(objectName);
-        button->setToolTip(tooltip);
+        fluent::status_info::ToolTip::attach(button, tooltip);
         button->setFluentStyle(fluent::basicinput::Button::Subtle);
         button->setFluentLayout(fluent::basicinput::Button::IconOnly);
         button->setFluentSize(fluent::basicinput::Button::Small);
@@ -315,9 +316,10 @@ void Window::updateMaximizeButtonIcon() {
     if (!m_maximizeButton)
         return;
 
-    m_maximizeButton->setToolTip(isMaximized()
-                                     ? QStringLiteral("Restore")
-                                     : QStringLiteral("Maximize"));
+    fluent::status_info::ToolTip::attach(m_maximizeButton,
+                                         isMaximized()
+                                             ? QStringLiteral("Restore")
+                                             : QStringLiteral("Maximize"));
     m_maximizeButton->setIconGlyph(isMaximized()
                                        ? Typography::Icons::ChromeRestore
                                        : Typography::Icons::ChromeMaximize,

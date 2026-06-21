@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "components/status_info/ToolTip.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
@@ -171,7 +172,7 @@ Button* makeWindowsCaptionButton(QWidget* parent,
                                  bool critical = false)
 {
     auto* button = new Button(parent);
-    button->setToolTip(tooltip);
+    fluent::status_info::ToolTip::attach(button, tooltip);
     button->setFluentStyle(Button::Subtle);
     button->setFluentLayout(Button::IconOnly);
     button->setFluentSize(Button::Small);
