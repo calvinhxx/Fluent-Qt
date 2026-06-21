@@ -72,6 +72,7 @@ qWarning/qDebug 汇入同一日志文件：
 - [App Visual Geometry Verification](docs/development/app-visual-geometry-verification.md)
 - [Qt Component Test Conventions](docs/development/qt-component-test-conventions.md)
 - [Visual Review](docs/development/visual-review.md)
+- [Tooltip Usage](docs/development/tooltip-usage.md)
 - [Logging Workflow](docs/development/logging-workflow.md)
 - [Component API Conventions](docs/development/component-api-conventions.md)
 - [Component API Audit](docs/development/component-api-audit.md)

@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <QApplication>
+#include <QHelpEvent>
 #include <QScrollArea>
 #include <QSignalSpy>
 #include <QTest>
@@ -90,6 +91,36 @@ TEST_F(ToolTipTest, SetText) {
     QString text = "Hello ToolTip";
     tooltip.setText(text);
     EXPECT_EQ(tooltip.text(), text);
+}
+
+TEST_F(ToolTipTest, AttachedToolTipUsesFluentBubbleAboveTarget) {
+    auto* target = new Button("Target", container);
+    target->setGeometry(240, 180, 120, 36);
+    auto* tip = ToolTip::attach(target, QStringLiteral("Attached help"));
+    ASSERT_NE(tip, nullptr);
+    EXPECT_EQ(ToolTip::attach(target, QStringLiteral("Updated help")), tip);
+    EXPECT_EQ(tip->text(), QStringLiteral("Updated help"));
+
+    scrollArea->show();
+    QApplication::processEvents();
+    QHelpEvent help(QEvent::ToolTip,
+                    target->rect().center(),
+                    target->mapToGlobal(target->rect().center()));
+    QApplication::sendEvent(target, &help);
+    QApplication::processEvents();
+
+    ASSERT_TRUE(tip->isVisible());
+    const QRect bubble = tip->geometry().adjusted(tip->shadowMargin(),
+                                                   tip->shadowMargin(),
+                                                   -tip->shadowMargin(),
+                                                   -tip->shadowMargin());
+    const QRect targetGlobal(target->mapToGlobal(QPoint(0, 0)), target->size());
+    EXPECT_NEAR(bubble.center().x(), targetGlobal.center().x(), 1);
+    EXPECT_LT(bubble.bottom(), targetGlobal.top());
+
+    QEvent leave(QEvent::Leave);
+    QApplication::sendEvent(target, &leave);
+    QTRY_VERIFY_WITH_TIMEOUT(!tip->isVisible(), 1000);
 }
 
 TEST_F(ToolTipTest, StylingPropertiesRemainStable) {

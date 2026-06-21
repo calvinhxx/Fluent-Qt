@@ -101,7 +101,7 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     // ButtonSize once back navigation is available). zh_CN: 高度固定，宽度由展开动画驱动。
     backButton->setFixedHeight(TitleBarMetrics::ButtonSize);
     backButton->setFocusPolicy(Qt::NoFocus);
-    backButton->setToolTip(QStringLiteral("Back"));
+    fluent::status_info::ToolTip::attach(backButton, QStringLiteral("Back"));
     backButton->setEnabled(false);
     backButton->installEventFilter(this);
     // Start faded out; the reveal animation drives contentOpacity alongside the width collapse so
@@ -121,7 +121,8 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     menuButton->setIconGlyph(Typography::Icons::GlobalNav, TitleBarMetrics::ButtonIconSize);
     menuButton->setFixedSize(TitleBarMetrics::ButtonSize, TitleBarMetrics::ButtonSize);
     menuButton->setFocusPolicy(Qt::NoFocus);
-    menuButton->setToolTip(QStringLiteral("Toggle navigation pane"));
+    fluent::status_info::ToolTip::attach(menuButton,
+                                         QStringLiteral("Toggle navigation pane"));
     menuButton->setEnabled(false);
     menuButton->installEventFilter(this);
     connect(menuButton, &fluent::basicinput::Button::clicked, this, [this]() {

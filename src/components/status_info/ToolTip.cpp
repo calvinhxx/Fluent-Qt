@@ -4,8 +4,12 @@
 #include "components/textfields/Label.h"
 #include "design/Elevation.h"
 #include "design/Typography.h"
+#include <QEvent>
+#include <QGuiApplication>
 #include <QPainter>
+#include <QPalette>
 #include <QPropertyAnimation>
+#include <QScreen>
 #include <QVBoxLayout>
 
 namespace fluent::status_info {
@@ -21,6 +25,8 @@ constexpr qreal kOpacityEpsilon = 0.001;
 // (paintLayeredShadow grows ~11px); the bubble is drawn inside this margin.
 // zh_CN: 气泡四周的透明内缩，给分层阴影留出扩散空间（约 11px），气泡绘制在该边距内部。
 constexpr int kShadowMargin = 12;
+constexpr int kTargetGap = 4;
+constexpr char kAttachedToolTipName[] = "FluentAttachedToolTip";
 }
 
 ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
@@ -33,7 +39,6 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     // Keep the label background transparent so ToolTip::paintEvent owns it.
     // zh_CN: 确保标签背景透明，由 ToolTip 的 paintEvent 处理背景绘制。
     m_textBlock->setAttribute(Qt::WA_TranslucentBackground);
-    m_textBlock->setStyleSheet("background-color: transparent;");
     
     // 1. Text style: Caption size, regular weight by default. zh_CN: 默认使用 Caption 字号，不加粗。
     QFont f = m_textBlock->font();
@@ -59,8 +64,26 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     m_textColor = c.textPrimary;
 }
 
+ToolTip* ToolTip::attach(QWidget* target, const QString& text, Placement placement)
+{
+    if (!target)
+        return nullptr;
+
+    auto* toolTip = target->findChild<ToolTip*>(QString::fromLatin1(kAttachedToolTipName),
+                                                Qt::FindDirectChildrenOnly);
+    if (!toolTip) {
+        toolTip = new ToolTip(target);
+        toolTip->setObjectName(QString::fromLatin1(kAttachedToolTipName));
+    }
+    toolTip->setText(text);
+    toolTip->setTarget(target, placement);
+    return toolTip;
+}
+
 void ToolTip::setText(const QString& text) {
     m_textBlock->setText(text);
+    if (m_target)
+        m_target->setToolTip(text);
     adjustSize();
 }
 
@@ -138,7 +161,35 @@ void ToolTip::onThemeUpdated() {
     m_bgColor = c.bgLayer;  // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = c.textPrimary;
+    QPalette textPalette = m_textBlock->palette();
+    textPalette.setColor(QPalette::WindowText, m_textColor);
+    m_textBlock->setPalette(textPalette);
     update();
+}
+
+bool ToolTip::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched != m_target || !event)
+        return QWidget::eventFilter(watched, event);
+
+    switch (event->type()) {
+    case QEvent::ToolTip:
+        if (!text().isEmpty() && m_target && m_target->isEnabled()) {
+            positionForTarget();
+            show();
+            raise();
+        }
+        return true;
+    case QEvent::Leave:
+    case QEvent::Hide:
+    case QEvent::MouseButtonPress:
+    case QEvent::WindowDeactivate:
+        hide();
+        break;
+    default:
+        break;
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void ToolTip::paintEvent(QPaintEvent*) {
@@ -159,6 +210,80 @@ void ToolTip::paintEvent(QPaintEvent*) {
     p.setBrush(m_bgColor);
     p.setPen(QPen(m_borderColor, 1));
     p.drawRoundedRect(QRectF(bubble).adjusted(0.5, 0.5, -0.5, -0.5), r.control, r.control);
+}
+
+void ToolTip::setTarget(QWidget* target, Placement placement)
+{
+    if (m_target == target && m_placement == placement)
+        return;
+    if (m_target)
+        m_target->removeEventFilter(this);
+    m_target = target;
+    m_placement = placement;
+    if (m_target) {
+        m_target->setToolTip(text());
+        m_target->installEventFilter(this);
+    }
+}
+
+void ToolTip::positionForTarget()
+{
+    if (!m_target)
+        return;
+
+    adjustSize();
+    const QSize outerSize = sizeHint().expandedTo(size());
+    const QSize cardSize(qMax(0, outerSize.width() - 2 * kShadowMargin),
+                         qMax(0, outerSize.height() - 2 * kShadowMargin));
+    const QRect targetRect(m_target->mapToGlobal(QPoint(0, 0)), m_target->size());
+
+    auto cardTopLeft = [&](Placement placement) {
+        switch (placement) {
+        case Below:
+            return QPoint(targetRect.center().x() - cardSize.width() / 2,
+                          targetRect.bottom() + 1 + kTargetGap);
+        case Left:
+            return QPoint(targetRect.left() - kTargetGap - cardSize.width(),
+                          targetRect.center().y() - cardSize.height() / 2);
+        case Right:
+            return QPoint(targetRect.right() + 1 + kTargetGap,
+                          targetRect.center().y() - cardSize.height() / 2);
+        case Above:
+        default:
+            return QPoint(targetRect.center().x() - cardSize.width() / 2,
+                          targetRect.top() - kTargetGap - cardSize.height());
+        }
+    };
+
+    QPoint visibleTopLeft = cardTopLeft(m_placement);
+    QScreen* screen = QGuiApplication::screenAt(targetRect.center());
+    if (!screen)
+        screen = QGuiApplication::primaryScreen();
+    if (screen) {
+        const QRect available = screen->availableGeometry();
+        const QRect preferred(visibleTopLeft, cardSize);
+        if (!available.contains(preferred)) {
+            Placement fallback = m_placement;
+            if (m_placement == Above)
+                fallback = Below;
+            else if (m_placement == Below)
+                fallback = Above;
+            else if (m_placement == Left)
+                fallback = Right;
+            else
+                fallback = Left;
+            const QPoint fallbackTopLeft = cardTopLeft(fallback);
+            if (available.contains(QRect(fallbackTopLeft, cardSize)))
+                visibleTopLeft = fallbackTopLeft;
+        }
+        visibleTopLeft.setX(qBound(available.left(),
+                                   visibleTopLeft.x(),
+                                   qMax(available.left(), available.right() - cardSize.width() + 1)));
+        visibleTopLeft.setY(qBound(available.top(),
+                                   visibleTopLeft.y(),
+                                   qMax(available.top(), available.bottom() - cardSize.height() + 1)));
+    }
+    move(visibleTopLeft - QPoint(kShadowMargin, kShadowMargin));
 }
 
 void ToolTip::ensureOpacityAnimation() {
