@@ -66,6 +66,14 @@ struct WindowChromeOptions {
      * zh_CN: 可用时保留 macOS 原生 traffic-light 窗口按钮。
      */
     bool preferNativeMacControls = true;
+
+    /**
+     * @brief When false, the whole non-client area (caption + resize borders) hit-tests as Client, so
+     * the window can't be moved or resized by its chrome (used to lock the window under a modal
+     * overlay). zh_CN: 为 false 时整个非客户区(标题栏 + 缩放边框)都按 Client 命中,窗口无法被 chrome 移动或缩放
+     *(用于在模态覆盖层下锁定窗口)。
+     */
+    bool chromeInteractive = true;
 };
 
 /**

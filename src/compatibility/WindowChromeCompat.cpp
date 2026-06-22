@@ -152,6 +152,11 @@ WindowChromeCompat::HitTest WindowChromeCompat::classifyHitTest(
     if (!QRect(QPoint(0, 0), windowSize).contains(localPos))
         return HitTest::Client;
 
+    // Chrome locked (modal): no move, no resize — the whole window behaves as client.
+    // zh_CN: chrome 锁定(模态):不可移动、不可缩放——整个窗口按 client 处理。
+    if (!options.chromeInteractive)
+        return HitTest::Client;
+
     const int border = qMax(0, options.resizeBorderWidth);
     if (border > 0) {
         const bool left = localPos.x() < border;

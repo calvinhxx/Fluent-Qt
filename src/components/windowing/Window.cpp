@@ -202,6 +202,13 @@ bool Window::nativeEvent(const QByteArray& eventType,
     return m_chrome.handleNativeEvent(eventType, message, result);
 }
 
+void Window::setChromeInteractive(bool interactive) {
+    if (m_chromeInteractive == interactive)
+        return;
+    m_chromeInteractive = interactive;
+    updateChromeOptions();
+}
+
 void Window::updateChromeOptions() {
     if (!m_titleBar)
         return;
@@ -215,6 +222,7 @@ void Window::updateChromeOptions() {
         }
     }
     options.resizeBorderWidth = 8;
+    options.chromeInteractive = m_chromeInteractive;
     m_chrome.configure(options);
 }
 
@@ -334,6 +342,8 @@ int Window::captionButtonReservedWidth() const {
 }
 
 void Window::handleTitleBarDragStarted(const QPoint& globalPos) {
+    if (!m_chromeInteractive)  // modal: no dragging (covers the Qt fallback path too)
+        return;
     updateChromeOptions();
     m_fallbackDragging = false;
     if (m_chrome.beginSystemMove(globalPos))
