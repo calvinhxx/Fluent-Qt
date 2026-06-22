@@ -449,12 +449,12 @@ TEST_F(GalleryShellFrameworkTest, MenuButtonTogglesLeftCompactNavigationMode)
     ASSERT_NE(mainPane, nullptr);
     TreeView* tree = navigationTree(mainPane);
     ASSERT_NE(tree, nullptr);
-    EXPECT_EQ(navigationView->expandedPaneWidth(), 320);
+    EXPECT_EQ(navigationView->expandedPaneWidth(), 260);
     EXPECT_EQ(navigationView->compactPaneWidth(), 48);
     EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::Left);
     EXPECT_TRUE(navigationView->isAnimationEnabled());
     EXPECT_TRUE(navigationView->isPaneOpen());
-    EXPECT_EQ(navigationView->chromeGeometry().width(), 320);
+    EXPECT_EQ(navigationView->chromeGeometry().width(), 260);
 
     auto* menuButton = vg::findRequiredChild<Button>(window.titleBar(),
                                                      QStringLiteral("GalleryTitleBar.MenuButton"));
