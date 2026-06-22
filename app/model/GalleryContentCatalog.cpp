@@ -116,6 +116,8 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("A floating surface positioned over app content.")},
         {QStringLiteral("teaching-tip"),
          QStringLiteral("An anchored tip that draws attention to a feature without blocking interaction.")},
+        {QStringLiteral("coach-mark"),
+         QStringLiteral("A standalone teaching tip in its own window that points a tail at a target and glides between them.")},
         // Menus & toolbars
         {QStringLiteral("menu"),
          QStringLiteral("A list of commands shown in a transient surface.")},
