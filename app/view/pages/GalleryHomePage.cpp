@@ -9,6 +9,7 @@
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPixmap>
+#include <QRandomGenerator>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
@@ -75,43 +76,88 @@ enum HomeLinkRole {
     LinkImageRole
 };
 
-QPixmap homeLinkPixmap(const QString& resourcePath)
+// The source art is large (560–1025px) but each icon draws into a ~30px box. Downscaling that far in
+// a single drawPixmap() (bilinear) aliases into a soft, distorted blob, and ignoring the device pixel
+// ratio leaves it soft again on HiDPI. So scale ONCE, high-quality (SmoothTransformation), straight to
+// the icon's physical pixel size, tag the result with the dpr, and cache per (path, size, dpr).
+// zh_CN: 源图很大(560–1025px),但每个图标只画进约 30px 的方框。一次性 drawPixmap 缩这么多(双线性)会糊成
+// 失真的团块,且忽略设备像素比在 HiDPI 上又会发虚。故一次性高质量(SmoothTransformation)缩到图标的物理像素尺寸,
+// 给结果打上 dpr 标记,并按 (路径, 尺寸, dpr) 缓存。
+QPixmap homeLinkPixmap(const QString& resourcePath, const QSize& targetSize, qreal dpr,
+                       const QColor& tint)
 {
+    const bool isGitHub = resourcePath.endsWith(QStringLiteral("GitHub-Mark.png"));
+    const QSize physical = (QSizeF(targetSize) * dpr).toSize();
+    const QString key = QStringLiteral("%1@%2x%3#%4").arg(resourcePath)
+                            .arg(physical.width()).arg(physical.height())
+                            .arg(isGitHub && tint.isValid() ? tint.name() : QString());
     static QHash<QString, QPixmap> cache;
-    const auto it = cache.constFind(resourcePath);
+    const auto it = cache.constFind(key);
     if (it != cache.constEnd())
         return it.value();
 
     QImage image(resourcePath);
-    if (resourcePath.endsWith(QStringLiteral("GitHub-Mark.png"))) {
+    if (!image.isNull()) {
         image = image.convertToFormat(QImage::Format_ARGB32);
-        for (int y = 0; y < image.height(); ++y) {
-            auto* line = reinterpret_cast<QRgb*>(image.scanLine(y));
-            for (int x = 0; x < image.width(); ++x) {
-                const QRgb pixel = line[x];
-                if (qRed(pixel) > 245 && qGreen(pixel) > 245 && qBlue(pixel) > 245)
-                    line[x] = qRgba(qRed(pixel), qGreen(pixel), qBlue(pixel), 0);
+        // The GitHub mark ships as black-on-white. Derive alpha from luminance (black → opaque,
+        // white → transparent) and paint the silhouette in the theme text color, so it stays crisp
+        // and visible on both light and dark cards instead of vanishing as a black blob on dark.
+        // zh_CN: GitHub 标记是黑底白图。用亮度推导 alpha(黑→不透明,白→透明),并以主题文字色绘制剪影,
+        // 使其在浅色/深色卡片上都清晰可见,而非在深色卡上糊成看不见的黑块。
+        if (isGitHub) {
+            const QColor c = tint.isValid() ? tint : QColor(0, 0, 0);
+            for (int y = 0; y < image.height(); ++y) {
+                auto* line = reinterpret_cast<QRgb*>(image.scanLine(y));
+                for (int x = 0; x < image.width(); ++x) {
+                    const QRgb pixel = line[x];
+                    const int coverage = 255 - qGray(pixel);  // ink darkness → opacity
+                    line[x] = qRgba(c.red(), c.green(), c.blue(), coverage * qAlpha(pixel) / 255);
+                }
             }
         }
+        image = image.scaled(physical, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
 
-    const QPixmap pixmap = QPixmap::fromImage(image);
-    cache.insert(resourcePath, pixmap);
+    QPixmap pixmap = QPixmap::fromImage(image);
+    pixmap.setDevicePixelRatio(dpr);
+    cache.insert(key, pixmap);
     return pixmap;
 }
 
-void drawCenteredPixmap(QPainter& painter, const QRectF& rect, const QString& resourcePath)
+void drawCenteredPixmap(QPainter& painter, const QRectF& rect, const QString& resourcePath,
+                        const QColor& tint = QColor())
 {
-    const QPixmap source = homeLinkPixmap(resourcePath);
+    const qreal dpr = painter.device() ? painter.device()->devicePixelRatioF() : 1.0;
+    const QPixmap source = homeLinkPixmap(resourcePath, rect.size().toSize(), dpr, tint);
     if (source.isNull())
         return;
 
-    const QSize targetSize = source.size().scaled(rect.size().toSize(),
-                                                  Qt::KeepAspectRatio);
-    const QRect target(QPoint(qRound(rect.center().x() - targetSize.width() / 2.0),
-                              qRound(rect.center().y() - targetSize.height() / 2.0)),
-                       targetSize);
-    painter.drawPixmap(target, source);
+    // The pixmap is dpr-tagged, so its logical size = physical / dpr; centre it in the icon box.
+    const QSizeF logical = QSizeF(source.size()) / source.devicePixelRatioF();
+    const QPointF topLeft(rect.center().x() - logical.width() / 2.0,
+                          rect.center().y() - logical.height() / 2.0);
+    painter.drawPixmap(topLeft, source);
+}
+
+// A small, deterministic grayscale-noise tile, painted at very low opacity over the card to give the
+// translucent surface a frosted "acrylic" grain instead of reading as flat glass. Generated once.
+// zh_CN: 一小块确定性灰度噪声贴片,以极低不透明度铺在卡片上,让半透明表面有亚克力磨砂颗粒感,而非平板玻璃。仅生成一次。
+const QImage& acrylicNoiseTile()
+{
+    static const QImage tile = []() {
+        constexpr int n = 96;
+        QImage img(n, n, QImage::Format_ARGB32);
+        QRandomGenerator rng(0xACE71C5Eu);  // fixed seed → stable texture across repaints
+        for (int y = 0; y < n; ++y) {
+            auto* line = reinterpret_cast<QRgb*>(img.scanLine(y));
+            for (int x = 0; x < n; ++x) {
+                const int v = rng.bounded(256);
+                line[x] = qRgba(v, v, v, 255);
+            }
+        }
+        return img;
+    }();
+    return tile;
 }
 
 void drawElidedWrappedText(QPainter& painter,
@@ -240,14 +286,21 @@ public:
         }
         painter->restore();
 
-        // Acrylic-style surface: a high-opacity layer tint so the banner gradient faintly shows
-        // through (Fluent material) while the card stays clearly a lifted, readable surface. The
-        // shadow is clipped out above, so the translucency reveals the banner, not the shadow.
-        // zh_CN: 亚克力风表面：高不透明度的 layer 着色，让横幅渐变隐约透出（Fluent 材质感），同时卡片仍
-        // 清晰可读、明确抬起。投影已裁到卡外，半透明透出的是横幅而非阴影。
+        // Acrylic surface: a translucent layer tint lets the banner gradient and decorative circles
+        // show through clearly (Fluent material), and a faint grayscale-noise grain on top gives it
+        // the frosted look instead of flat glass. The shadow is clipped out above, so the
+        // translucency reveals the banner, not the shadow. Text is drawn afterwards, so it stays crisp.
+        // zh_CN: 亚克力表面：半透明 layer 着色让横幅渐变与装饰圆清晰透出（Fluent 材质感），再叠一层淡淡的灰度
+        // 噪声颗粒,呈现磨砂感而非平板玻璃。投影已裁到卡外,透出的是横幅而非阴影。文字随后绘制,保持清晰。
         QColor surface = dark ? colors.bgLayerAlt : colors.bgLayer;
-        surface.setAlpha(dark ? 158 : 184);
+        surface.setAlpha(dark ? 112 : 132);
         painter->fillPath(cardPath, surface);
+
+        painter->save();
+        painter->setClipPath(cardPath);
+        painter->setOpacity(dark ? 0.05 : 0.035);
+        painter->fillRect(cardRect, QBrush(acrylicNoiseTile()));
+        painter->restore();
 
         // Border: a barely-there hairline at rest (≈ rgba(0,0,0,0.05)) so the card reads as a
         // shadow-defined surface, NOT an outlined box; on hover/press it becomes the accent fringe.
@@ -267,7 +320,10 @@ public:
                               cardRect.top() + kHeroLinkCardPadding,
                               kHeroLinkIconSize,
                               kHeroLinkIconSize);
-        drawCenteredPixmap(*painter, iconRect, index.data(LinkImageRole).toString());
+        // The GitHub mark is recolored to the text color (theme-aware); colored logos ignore the tint.
+        // zh_CN: GitHub 标记按文字色重新着色(随主题);彩色 logo 忽略该 tint。
+        drawCenteredPixmap(*painter, iconRect, index.data(LinkImageRole).toString(),
+                           colors.textPrimary);
 
         int textY = qRound(iconRect.bottom()) + 14;
 
@@ -374,6 +430,10 @@ public:
                QStringLiteral("Fluent Qt source on GitHub."),
                QStringLiteral("https://github.com/calvinhxx/Fluent-QT"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-WinUI.png"));
+        append(QStringLiteral("Qt Quick Controls"),
+               QStringLiteral("Qt Quick Controls reference on doc.qt.io."),
+               QStringLiteral("https://doc.qt.io/qt-6/qtquickcontrols-index.html"),
+               QStringLiteral(":/app/assets/home_header_tiles/Qt-Logo.png"));
         setModel(model);
 
         connect(horizontalScrollBar(), &QScrollBar::rangeChanged,
