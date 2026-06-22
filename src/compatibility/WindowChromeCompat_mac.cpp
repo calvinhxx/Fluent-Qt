@@ -586,7 +586,14 @@ bool platformSupportsSystemBackdrop() {
         && objc_getClass("NSVisualEffectView") != nullptr;
 }
 
-bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
+bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
+                                 bool forceRecomposite) {
+    Q_UNUSED(forceRecomposite);  // macOS vibrancy re-composites itself; no manual nudge needed.
+    // Solid keeps an opaque window: no vibrancy, the app paints its own themeBackdrop.
+    // zh_CN: Solid 为不透明窗口：不挂 vibrancy，由 App 自绘 themeBackdrop。
+    if (effect == BackdropEffect::Solid)
+        return false;
+
     id contentView = nil;
     id superview = nil;
     if (!resolveBackdropHost(window, &contentView, &superview))
@@ -621,11 +628,13 @@ bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
     // zh_CN: 在 vibrancy 之上的应用表面色：足以让 chrome 清晰、与（不透明）内容协调，但又足够淡（~0.42），
     // 使 sidebar 材质的壁纸色彩与暖意透出——丰富、鲜活的 vibrancy，而非一片扁平着色灰。调高到 0.7 更干净扁平，
     // 调低到 0.3 更通透（也更杂）。
-    constexpr double kMicaTintAlpha = 0.42;
+    // Acrylic reads as more see-through than Mica, so lower the app-surface tint for it.
+    // zh_CN: Acrylic 比 Mica 更通透，故为其降低应用表面 tint。
+    const double tintAlpha = (effect == BackdropEffect::Acrylic) ? 0.30 : 0.42;
     if (id tint = ensureTintView(superview, base, contentView)) {
         sendUnsignedLong(tint, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
         sendCGRect(tint, "setFrame:", sendRect(superview, "bounds"));
-        setMicaTintColor(tint, dark, kMicaTintAlpha);
+        setMicaTintColor(tint, dark, tintAlpha);
     }
     return true;
 }

@@ -18,8 +18,14 @@
 #ifndef DWMWA_SYSTEMBACKDROP_TYPE
 #define DWMWA_SYSTEMBACKDROP_TYPE 38
 #endif
+#ifndef DWMSBT_AUTO
+#define DWMSBT_AUTO 0  // Let DWM decide (no explicit backdrop)
+#endif
 #ifndef DWMSBT_MAINWINDOW
 #define DWMSBT_MAINWINDOW 2  // Mica
+#endif
+#ifndef DWMSBT_TRANSIENTWINDOW
+#define DWMSBT_TRANSIENTWINDOW 3  // Acrylic
 #endif
 
 namespace compatibility {
@@ -80,13 +86,16 @@ void ensureDwmChromeStyle(QWidget* window) {
     // DWM 仍需要 thick-frame/sysmenu 样式（缩放、Win11 圆角、任务栏/系统菜单）。
     desiredStyle |= WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
 
-    // Under the Mica "sheet of glass", a WS_CAPTION would make DWM render its OWN caption
+    // On a translucent "sheet of glass" window, a WS_CAPTION would make DWM render its OWN caption
     // buttons (min/max/close) top-aligned and frame-inset in the top-right glass — duplicating
     // and clashing with our centered, edge-flush Fluent buttons. Drop WS_CAPTION there; the
-    // glass still carries the backdrop and WS_THICKFRAME keeps resize + rounded corners.
-    // zh_CN: Mica「玻璃」下若保留 WS_CAPTION，DWM 会在右上角玻璃区自绘顶部对齐、内缩的标题栏按钮，
-    // 与我们居中贴边的 Fluent 按钮重复冲突。此处去掉 WS_CAPTION；玻璃仍承载背景，WS_THICKFRAME 保留缩放与圆角。
-    if (window->property("fluentMicaBackdrop").toBool())
+    // glass still carries the backdrop and WS_THICKFRAME keeps resize + rounded corners. Keyed off the
+    // window's translucency (fixed for its lifetime), not the per-effect paint-hint, so it never
+    // churns when the user switches Normal/Mica/Acrylic.
+    // zh_CN: 半透明「玻璃」窗口下若保留 WS_CAPTION，DWM 会在右上角玻璃区自绘顶部对齐、内缩的标题栏按钮，与我们
+    // 居中贴边的 Fluent 按钮重复冲突。此处去掉 WS_CAPTION；玻璃仍承载背景，WS_THICKFRAME 保留缩放与圆角。以窗口
+    // 半透明性（整生命周期固定）而非每效果的绘制提示为准，故用户切换 Normal/Mica/Acrylic 时绝不抖动。
+    if (window->testAttribute(Qt::WA_TranslucentBackground))
         desiredStyle &= ~WS_CAPTION;
     else
         desiredStyle |= WS_CAPTION;
@@ -254,7 +263,8 @@ bool platformSupportsSystemBackdrop() {
         || (info.dwMajorVersion == 10 && info.dwBuildNumber >= 22621);
 }
 
-bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
+bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
+                                 bool forceRecomposite) {
     HWND hwnd = hwndForWindow(window);
     if (!hwnd)
         return false;
@@ -263,11 +273,18 @@ bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
     if (!setAttr)
         return false;
 
-    // Match the DWM-managed bits (frame/caption) to the theme, then request the Mica backdrop.
-    // zh_CN: 先让 DWM 管理的部分（frame/caption）匹配主题，再请求 Mica 背景。
+    // Match the DWM-managed bits (frame/caption) to the theme, then request the chosen backdrop.
+    // zh_CN: 先让 DWM 管理的部分（frame/caption）匹配主题，再请求所选背景。
     const BOOL darkMode = dark ? TRUE : FALSE;
     setAttr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
-    const int backdropType = DWMSBT_MAINWINDOW;
+    // Mica and Acrylic share this exact plumbing — only the DWMWA_SYSTEMBACKDROP_TYPE value differs.
+    // zh_CN: Mica 与 Acrylic 走完全相同的管线——仅 DWMWA_SYSTEMBACKDROP_TYPE 取值不同。
+    int backdropType = DWMSBT_MAINWINDOW;
+    switch (effect) {
+    case BackdropEffect::Acrylic: backdropType = DWMSBT_TRANSIENTWINDOW; break;
+    case BackdropEffect::Solid:   backdropType = DWMSBT_AUTO;            break;
+    case BackdropEffect::Mica:    backdropType = DWMSBT_MAINWINDOW;      break;
+    }
     const HRESULT hr = setAttr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
 
     // Nudge DWM to recompute the frame so the backdrop composites right away.
@@ -281,11 +298,13 @@ bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
     // replicate exactly what the user's "switch to another app and back" does: send the active
     // window an NCACTIVATE deactivate→activate pair. DwmDefWindowProc (already wired in our native
     // event handler) services these and re-composites the backdrop, without changing real focus.
+    // This is ONLY for the first-show race — it briefly flashes the caption active/inactive, so
+    // runtime theme/effect changes (which are already composited) skip it to avoid a visible flicker.
     // zh_CN: 首屏时 DWM 会间歇性地留下一层扁平默认玻璃，而非真正带壁纸着色的 Mica 材质，只有一次激活往返才会
     // 把材质绘入。重设相同的背景值是空操作，单靠 SWP_FRAMECHANGED 也不可靠，于是精确复现用户"切到别的 app 再切
-    // 回来"的动作：给活动窗口发一对 NCACTIVATE 失活→激活消息。DwmDefWindowProc（已接入我们的原生事件处理）会处理
-    // 它们并重新合成背景，且不改变真实焦点。
-    if (GetActiveWindow() == hwnd) {
+    // 回来"的动作：给活动窗口发一对 NCACTIVATE 失活→激活消息。DwmDefWindowProc（已接入）会处理它们并重新合成背景，
+    // 且不改变真实焦点。此操作仅用于首屏竞争——它会让标题栏短暂闪一下激活/非激活，故运行时切主题/效果（已合成）跳过它避免可见闪烁。
+    if (forceRecomposite && GetActiveWindow() == hwnd) {
         SendMessageW(hwnd, WM_NCACTIVATE, FALSE, 0);
         SendMessageW(hwnd, WM_NCACTIVATE, TRUE, 0);
     }
@@ -471,11 +490,12 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
     if (!hwnd)
         return;
 
-    // With the Mica backdrop the whole client area must be a "sheet of glass" so the DWM
-    // backdrop fills the window; otherwise the translucent (transparent) regions render
-    // black instead of showing Mica. zh_CN: 启用 Mica 时整个客户区要做成「玻璃」，让 DWM 背景填满
-    // 窗口；否则半透明（透明）区域会渲染成黑色而非露出 Mica。
-    if (window && window->property("fluentMicaBackdrop").toBool()) {
+    // On a translucent window the whole client area must be a "sheet of glass" so the DWM backdrop
+    // fills it; otherwise transparent regions render black. Keyed off the window's translucency (fixed
+    // for its lifetime), so it stays a sheet of glass across Normal/Mica/Acrylic — Normal just paints
+    // its surfaces opaque over it. zh_CN: 半透明窗口下整个客户区要做成「玻璃」，让 DWM 背景填满；否则透明区域会渲染成
+    // 黑色。以窗口半透明性（整生命周期固定）为准，故 Normal/Mica/Acrylic 下始终是玻璃——Normal 只是在其上自绘不透明表面。
+    if (window && window->testAttribute(Qt::WA_TranslucentBackground)) {
         using DwmExtendFrameFn = HRESULT(WINAPI*)(HWND, const MARGINS*);
         if (auto* extendFrame = resolveDwmProc<DwmExtendFrameFn>("DwmExtendFrameIntoClientArea")) {
             const MARGINS sheetOfGlass = {-1, -1, -1, -1};

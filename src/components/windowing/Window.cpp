@@ -30,17 +30,22 @@ Window::Window(QWidget* parent)
     setAutoFillBackground(false);
     setMinimumSize(Breakpoints::MinWindowWidth, Breakpoints::MinWindowHeight);
 
-    // On Windows 11 use a real Mica system backdrop: make the window translucent (so the
-    // OS-composited backdrop shows through) and flag it so the chrome paints transparent.
-    // The DWM attribute itself is applied in showEvent once the native handle exists.
-    // Elsewhere this stays false and the solid themeBackdrop fallback is used.
-    // zh_CN: Windows 11 上启用真实 Mica 系统背景：窗口半透明（露出系统合成背景），并打标记让 chrome
-    // 透明绘制。DWM 属性在 showEvent 拿到原生句柄后应用。其它平台保持 false，走纯色回退。
-    m_micaBackdrop = m_chrome.systemBackdropSupported();
-    if (m_micaBackdrop) {
+    // Window translucency is a FIXED, platform-level decision: on platforms that support a system
+    // backdrop the window is translucent for its whole lifetime, so switching effects at runtime
+    // never restyles the native surface (which would flicker + steal focus). "fluentMicaBackdrop"
+    // is the separate paint-hint: true means surfaces paint transparent to reveal the OS backdrop
+    // (Mica/Acrylic); false (Normal, or unsupported platforms) means they paint opaque themselves.
+    // The DWM/vibrancy attribute itself is applied in showEvent once the native handle exists.
+    // zh_CN: 窗口半透明性是固定的平台级决策：支持系统背景的平台上窗口整生命周期半透明，故运行时切换效果绝不重塑
+    // 原生表面（否则会闪烁 + 抢焦点）。"fluentMicaBackdrop" 是另一回事——绘制提示：true 表示表面画透明以透出系统
+    // 背景（Mica/Acrylic），false（Normal 或不支持的平台）表示表面自绘不透明。DWM/vibrancy 属性本身在 showEvent
+    // 拿到原生句柄后施加。
+    m_windowTranslucent = m_chrome.systemBackdropSupported();
+    m_micaBackdrop = m_windowTranslucent
+                     && m_backdropEffect != compatibility::BackdropEffect::Solid;
+    if (m_windowTranslucent)
         setAttribute(Qt::WA_TranslucentBackground, true);
-        setProperty("fluentMicaBackdrop", true);
-    }
+    setProperty("fluentMicaBackdrop", m_micaBackdrop);
 
     auto* rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(0, 0, 0, 0);
@@ -91,10 +96,11 @@ void Window::setContentWidget(QWidget* widget) {
 }
 
 void Window::onThemeUpdated() {
-    // Keep the DWM dark-mode bit (and thus the Mica tint) in step with the app theme.
-    // zh_CN: 让 DWM 暗色模式位（进而 Mica 着色）跟随应用主题。
-    if (m_micaBackdrop)
-        m_chrome.applySystemBackdrop(currentTheme() == Dark);
+    // Keep the DWM dark-mode bit (and thus the backdrop tint) in step with the app theme. Driven by
+    // window translucency, not the paint-hint, so the dark-mode bit also tracks in Normal mode.
+    // zh_CN: 让 DWM 暗色模式位（进而背景着色）跟随应用主题。以窗口半透明性而非绘制提示驱动，故 Normal 模式下暗色位也跟随。
+    if (m_windowTranslucent)
+        m_chrome.applySystemBackdrop(m_backdropEffect, currentTheme() == Dark);
     if (m_titleBar)
         m_titleBar->onThemeUpdated();
     if (m_minimizeButton)
@@ -107,10 +113,38 @@ void Window::onThemeUpdated() {
 }
 
 void Window::reapplySystemBackdrop() {
-    if (!m_micaBackdrop || !isVisible())
+    if (!m_windowTranslucent || !isVisible())
         return;
     updateChromeOptions();                                 // re-extend the sheet-of-glass
-    m_chrome.applySystemBackdrop(currentTheme() == Dark);  // re-assert + force a frame refresh
+    m_chrome.applySystemBackdrop(m_backdropEffect, currentTheme() == Dark,
+                                 /*forceRecomposite*/ true);  // re-assert + force a frame refresh
+}
+
+void Window::setBackdropEffect(compatibility::BackdropEffect effect) {
+    if (m_backdropEffect == effect)
+        return;
+    m_backdropEffect = effect;
+
+    // The window surface stays as it was created (see ctor): switching effects only updates the
+    // paint-hint + the requested OS backdrop type, then repaints. No WA_TranslucentBackground toggle,
+    // no native flag re-assertion — so no flicker and no focus loss. zh_CN: 窗口表面保持构造时的状态
+    //（见 ctor）：切换效果只更新绘制提示 + 请求的系统背景类型，然后重绘。不切 WA_TranslucentBackground、不重置
+    // 原生标志——故无闪烁、无焦点丢失。
+    m_micaBackdrop = m_windowTranslucent
+                     && effect != compatibility::BackdropEffect::Solid;
+    setProperty("fluentMicaBackdrop", m_micaBackdrop);
+
+    if (m_windowTranslucent && isVisible())
+        m_chrome.applySystemBackdrop(effect, currentTheme() == Dark);  // Solid maps to DWMSBT_AUTO
+
+    // Repaint chrome + content so every surface re-reads the new paint-hint (transparent<->opaque, or
+    // a different translucent material). zh_CN: 重绘 chrome 与内容，使各表面重新读取新绘制提示。
+    if (isVisible()) {
+        const QList<QWidget*> descendants = findChildren<QWidget*>();
+        for (QWidget* child : descendants)
+            child->update();
+        update();
+    }
 }
 
 void Window::minimizeWindow() {
@@ -161,8 +195,8 @@ void Window::resizeEvent(QResizeEvent* event) {
 void Window::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
     m_chrome.applyPlatformWindowFlags();
-    if (m_micaBackdrop)
-        m_chrome.applySystemBackdrop(currentTheme() == Dark);
+    if (m_windowTranslucent)
+        m_chrome.applySystemBackdrop(m_backdropEffect, currentTheme() == Dark);
     syncTitleBarSystemInsets();
     updateChromeOptions();
 
@@ -174,13 +208,14 @@ void Window::showEvent(QShowEvent* event) {
     // zh_CN: 首次显示时 DWM 可能要等窗口下次激活/失活才合成 Mica；而窗口在 show() 后立刻被 move() 定位，
     // 此时 Qt 的半透明合成尚未稳定。待事件循环启动（窗口完全就绪并定位）后，重新施加背景 + 整窗玻璃；
     // applySystemBackdrop 会触发 frame 刷新，使 Mica 立即显示，无需切走再切回。
-    if (m_micaBackdrop && !m_micaBackdropPrimed) {
+    if (m_windowTranslucent && !m_micaBackdropPrimed) {
         m_micaBackdropPrimed = true;
         QTimer::singleShot(0, this, [this] {
-            if (!m_micaBackdrop || !isVisible())
+            if (!m_windowTranslucent || !isVisible())
                 return;
             updateChromeOptions();                                 // re-extend the sheet-of-glass
-            m_chrome.applySystemBackdrop(currentTheme() == Dark);  // re-assert + force frame refresh
+            m_chrome.applySystemBackdrop(m_backdropEffect, currentTheme() == Dark,
+                                         /*forceRecomposite*/ true);  // re-assert + force frame refresh
         });
     }
 }

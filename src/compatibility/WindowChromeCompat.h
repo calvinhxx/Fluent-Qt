@@ -33,6 +33,20 @@ using FluentNativeEventResult = long;
 #endif
 
 /**
+ * @brief Window background effect requested from the OS compositor.
+ * zh_CN: 向系统合成器请求的窗口背景效果。
+ *
+ * Solid keeps an opaque window (the app paints its own themeBackdrop, incl. active/inactive).
+ * Mica and Acrylic make the window translucent and ask the platform for its system backdrop
+ * (Win11 DWM Mica/Acrylic via DWMWA_SYSTEMBACKDROP_TYPE, macOS NSVisualEffectView vibrancy);
+ * chrome then paints transparent so it shows through.
+ * zh_CN: Solid 为不透明窗口（App 自绘 themeBackdrop，含激活/非激活）。Mica/Acrylic 使窗口半透明并向平台
+ * 请求系统背景（Win11 经 DWMWA_SYSTEMBACKDROP_TYPE 的 Mica/Acrylic，macOS 的 NSVisualEffectView vibrancy），
+ * chrome 随之画透明以透出之。
+ */
+enum class BackdropEffect { Solid, Mica, Acrylic };
+
+/**
  * @brief Declarative options for platform window-chrome integration.
  * zh_CN: 平台窗口 chrome 集成使用的声明式配置。
  */
@@ -140,17 +154,18 @@ public:
     bool systemBackdropSupported() const;
 
     /**
-     * @brief Enables the Mica system backdrop for the current theme; returns success.
-     * zh_CN: 为当前主题启用 Mica 系统背景；返回是否成功。
+     * @brief Applies the requested system backdrop effect for the current theme; returns success.
+     * zh_CN: 为当前主题施加请求的系统背景效果；返回是否成功。
      *
      * Requires a live native handle, so call it from showEvent / after winId().
      * zh_CN: 需要有效的原生句柄，故应在 showEvent / winId() 之后调用。
      *
-     * On macOS this installs a native NSVisualEffectView (vibrancy) as the window backdrop —
-     * the platform analogue of Windows 11 Mica. zh_CN: macOS 上安装原生 NSVisualEffectView（vibrancy）
-     * 作为窗口背景，即 Windows 11 Mica 的平台对应物。
+     * On Windows the effect maps to a DWMWA_SYSTEMBACKDROP_TYPE value; on macOS it installs a native
+     * NSVisualEffectView (vibrancy) — the platform analogue. Solid is a no-op backdrop (the app
+     * paints its own). zh_CN: Windows 上效果映射为 DWMWA_SYSTEMBACKDROP_TYPE 值；macOS 上安装原生
+     * NSVisualEffectView（vibrancy）作为对应物。Solid 不施加系统背景（由 App 自绘）。
      */
-    bool applySystemBackdrop(bool dark);
+    bool applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite = false);
 
     /**
      * @brief Handles forwarded native events and returns true when consumed.
