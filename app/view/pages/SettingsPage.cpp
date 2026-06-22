@@ -185,6 +185,10 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
          QStringLiteral("Left minimal"),
          QStringLiteral("Top")},
         static_cast<int>(settings->navigationStyle()));
+    m_effectChoice = createChoiceBox(
+        QStringLiteral("gallerySettingsEffectChoice"),
+        {QStringLiteral("Normal"), QStringLiteral("Mica"), QStringLiteral("Acrylic")},
+        static_cast<int>(settings->windowEffect()));
 
     connect(m_themeChoice, qOverload<int>(&QComboBox::currentIndexChanged),
             this, [settings](int index) {
@@ -206,6 +210,15 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                 const QSignalBlocker blocker(m_navigationChoice);
                 m_navigationChoice->setCurrentIndex(static_cast<int>(style));
             });
+    connect(m_effectChoice, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, [settings](int index) {
+                settings->setWindowEffect(static_cast<GallerySettings::WindowEffect>(index));
+            });
+    connect(settings, &GallerySettings::windowEffectChanged, this,
+            [this](GallerySettings::WindowEffect effect) {
+                const QSignalBlocker blocker(m_effectChoice);
+                m_effectChoice->setCurrentIndex(static_cast<int>(effect));
+            });
 
     m_contentLayout->addWidget(createSectionTitle(QStringLiteral("Appearance & behavior")));
     m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Color,
@@ -216,6 +229,10 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                                                  QStringLiteral("Navigation style"),
                                                  QStringLiteral("Choose how the navigation pane is presented"),
                                                  m_navigationChoice));
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Grid,
+                                                 QStringLiteral("Window background effect"),
+                                                 QStringLiteral("Mica and Acrylic require Windows 11 or macOS"),
+                                                 m_effectChoice));
     m_contentLayout->addStretch(1);
 
     scrollArea->setWidget(m_viewport);

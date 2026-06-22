@@ -19,6 +19,7 @@ namespace {
 
 constexpr char kThemeModeKey[] = "settings/themeMode";
 constexpr char kNavigationStyleKey[] = "settings/navigationStyle";
+constexpr char kWindowEffectKey[] = "settings/windowEffect";
 constexpr char kIntroCompletedKey[] = "intro/completed";
 
 bool persistenceAvailable()
@@ -136,6 +137,21 @@ void GallerySettings::setNavigationStyle(NavigationStyle style)
                  .arg(static_cast<int>(style)));
 }
 
+void GallerySettings::setWindowEffect(WindowEffect effect)
+{
+    if (m_windowEffect == effect)
+        return;
+
+    m_windowEffect = effect;
+    if (persistenceAvailable()) {
+        configSettings().setValue(QString::fromLatin1(kWindowEffectKey),
+                                  static_cast<int>(effect));
+    }
+    emit windowEffectChanged(m_windowEffect);
+    LOG_INFO(QStringLiteral("GallerySettings windowEffectChanged effect=%1")
+                 .arg(static_cast<int>(effect)));
+}
+
 void GallerySettings::setIntroCompleted(bool completed)
 {
     if (m_introCompleted == completed)
@@ -175,8 +191,14 @@ void GallerySettings::load()
     const int navigation = qBound(0,
                                   settings.value(QString::fromLatin1(kNavigationStyleKey), 0).toInt(),
                                   4);
+    // Default 1 = Mica, matching m_windowEffect's in-class initializer (the current shipping look).
+    // zh_CN: 默认 1 = Mica，与 m_windowEffect 的类内初值一致（当前出厂观感）。
+    const int windowEffect = qBound(0,
+                                    settings.value(QString::fromLatin1(kWindowEffectKey), 1).toInt(),
+                                    2);
     m_themeMode = static_cast<ThemeMode>(theme);
     m_navigationStyle = static_cast<NavigationStyle>(navigation);
+    m_windowEffect = static_cast<WindowEffect>(windowEffect);
     m_introCompleted = settings.value(QString::fromLatin1(kIntroCompletedKey), false).toBool();
 }
 

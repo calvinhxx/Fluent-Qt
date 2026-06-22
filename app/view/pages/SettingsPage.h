@@ -51,6 +51,7 @@ private:
     fluent::textfields::Label* m_titleLabel = nullptr;
     fluent::basicinput::ComboBox* m_themeChoice = nullptr;
     fluent::basicinput::ComboBox* m_navigationChoice = nullptr;
+    fluent::basicinput::ComboBox* m_effectChoice = nullptr;
 };
 
 } // namespace fluent::gallery
