@@ -6,6 +6,7 @@
 #include <QGuiApplication>
 #include <QPalette>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QStyleHints>
 #include <QTimer>
 #include <QtGlobal>
@@ -18,11 +19,26 @@ namespace {
 
 constexpr char kThemeModeKey[] = "settings/themeMode";
 constexpr char kNavigationStyleKey[] = "settings/navigationStyle";
+constexpr char kIntroCompletedKey[] = "intro/completed";
 
 bool persistenceAvailable()
 {
     return QCoreApplication::organizationName() == QStringLiteral("Fluent-QT")
         && QCoreApplication::applicationName() == QStringLiteral("WinUI 3 Gallery");
+}
+
+// Single config file, in the same per-user app folder as the logs (AppLocalDataLocation), so all app
+// data lives under one directory: %LOCALAPPDATA%\Fluent-QT\WinUI 3 Gallery\{config.ini, logs\}.
+// zh_CN: 单一配置文件,与日志同处每用户 app 目录(AppLocalDataLocation),让所有 app 数据集中在一个目录下。
+QString configFilePath()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
+        + QStringLiteral("/config.ini");
+}
+
+QSettings configSettings()
+{
+    return QSettings(configFilePath(), QSettings::IniFormat);
 }
 
 fluent::FluentElement::Theme systemTheme()
@@ -96,8 +112,8 @@ void GallerySettings::setThemeMode(ThemeMode mode)
 
     m_themeMode = mode;
     if (persistenceAvailable()) {
-        QSettings().setValue(QString::fromLatin1(kThemeModeKey),
-                             static_cast<int>(mode));
+        configSettings().setValue(QString::fromLatin1(kThemeModeKey),
+                                  static_cast<int>(mode));
     }
     applyThemeMode();
     emit themeModeChanged(m_themeMode);
@@ -112,12 +128,22 @@ void GallerySettings::setNavigationStyle(NavigationStyle style)
 
     m_navigationStyle = style;
     if (persistenceAvailable()) {
-        QSettings().setValue(QString::fromLatin1(kNavigationStyleKey),
-                             static_cast<int>(style));
+        configSettings().setValue(QString::fromLatin1(kNavigationStyleKey),
+                                  static_cast<int>(style));
     }
     emit navigationStyleChanged(m_navigationStyle);
     LOG_INFO(QStringLiteral("GallerySettings navigationStyleChanged style=%1")
                  .arg(static_cast<int>(style)));
+}
+
+void GallerySettings::setIntroCompleted(bool completed)
+{
+    if (m_introCompleted == completed)
+        return;
+
+    m_introCompleted = completed;
+    if (persistenceAvailable())
+        configSettings().setValue(QString::fromLatin1(kIntroCompletedKey), completed);
 }
 
 bool GallerySettings::eventFilter(QObject* watched, QEvent* event)
@@ -144,13 +170,14 @@ void GallerySettings::load()
     if (!persistenceAvailable())
         return;
 
-    const QSettings settings;
+    const QSettings settings(configFilePath(), QSettings::IniFormat);
     const int theme = qBound(0, settings.value(QString::fromLatin1(kThemeModeKey), 0).toInt(), 2);
     const int navigation = qBound(0,
                                   settings.value(QString::fromLatin1(kNavigationStyleKey), 0).toInt(),
                                   4);
     m_themeMode = static_cast<ThemeMode>(theme);
     m_navigationStyle = static_cast<NavigationStyle>(navigation);
+    m_introCompleted = settings.value(QString::fromLatin1(kIntroCompletedKey), false).toBool();
 }
 
 } // namespace fluent::gallery

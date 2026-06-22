@@ -35,6 +35,10 @@ public:
     NavigationStyle navigationStyle() const { return m_navigationStyle; }
     void setNavigationStyle(NavigationStyle style);
 
+    /// First-launch intro tour seen flag. zh_CN: 首启引导是否已看过。
+    bool introCompleted() const { return m_introCompleted; }
+    void setIntroCompleted(bool completed);
+
 signals:
     void themeModeChanged(ThemeMode mode);
     void navigationStyleChanged(NavigationStyle style);
@@ -49,6 +53,7 @@ private:
 
     ThemeMode m_themeMode = ThemeMode::System;
     NavigationStyle m_navigationStyle = NavigationStyle::Auto;
+    bool m_introCompleted = false;
 };
 
 } // namespace fluent::gallery
