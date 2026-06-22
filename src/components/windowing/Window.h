@@ -59,6 +59,14 @@ public:
      */
     void reapplySystemBackdrop();
 
+    /**
+     * @brief Enables/disables user move + resize via the window chrome (caption drag and resize
+     * borders). Disable to lock the window under a modal overlay. zh_CN: 启用/禁用经窗口 chrome 的用户移动+缩放
+     *(标题栏拖动与缩放边框)。禁用可在模态覆盖层下锁定窗口。
+     */
+    void setChromeInteractive(bool interactive);
+    bool isChromeInteractive() const { return m_chromeInteractive; }
+
 public slots:
     void minimizeWindow();
     void toggleMaximizeRestore();
@@ -112,6 +120,9 @@ private:
     // zh_CN: 一次性标记：延迟到首次显示后再刷新背景（规避 DWM 要到下次激活才合成 Mica 的问题）仅执行一次。
     bool m_micaBackdropPrimed = false;
     bool m_fallbackDragging = false;
+    // When false, the chrome can't move or resize the window (modal overlays set this).
+    // zh_CN: 为 false 时 chrome 不能移动或缩放窗口(模态覆盖层会设置它)。
+    bool m_chromeInteractive = true;
     QPoint m_fallbackDragOffset;
 };
 
