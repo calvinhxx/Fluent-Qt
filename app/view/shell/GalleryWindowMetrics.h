@@ -20,7 +20,7 @@ struct Navigation {
     static constexpr int CompactThresholdWidth = Breakpoints::Small;
     static constexpr int ExpandedThresholdWidth = Breakpoints::Medium + 1;
     static constexpr int CompactPaneWidth = Breakpoints::NavigationPaneCompactWidth;
-    static constexpr int ExpandedPaneWidth = 320;
+    static constexpr int ExpandedPaneWidth = 260;
 };
 
 struct TitleBar {
