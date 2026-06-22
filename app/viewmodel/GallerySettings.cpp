@@ -20,6 +20,8 @@ namespace {
 constexpr char kThemeModeKey[] = "settings/themeMode";
 constexpr char kNavigationStyleKey[] = "settings/navigationStyle";
 constexpr char kWindowEffectKey[] = "settings/windowEffect";
+constexpr char kCloseBehaviorKey[] = "settings/closeBehavior";
+constexpr char kCloseBehaviorConfirmedKey[] = "settings/closeBehaviorConfirmed";
 constexpr char kIntroCompletedKey[] = "intro/completed";
 
 bool persistenceAvailable()
@@ -152,6 +154,37 @@ void GallerySettings::setWindowEffect(WindowEffect effect)
                  .arg(static_cast<int>(effect)));
 }
 
+void GallerySettings::setCloseBehavior(CloseBehavior behavior)
+{
+    if (m_closeBehavior == behavior)
+        return;
+
+    m_closeBehavior = behavior;
+    if (persistenceAvailable()) {
+        configSettings().setValue(QString::fromLatin1(kCloseBehaviorKey),
+                                  static_cast<int>(behavior));
+    }
+    emit closeBehaviorChanged(m_closeBehavior);
+    LOG_INFO(QStringLiteral("GallerySettings closeBehaviorChanged behavior=%1")
+                 .arg(static_cast<int>(behavior)));
+}
+
+void GallerySettings::setCloseBehaviorConfirmed(bool confirmed)
+{
+    if (m_closeBehaviorConfirmed == confirmed)
+        return;
+
+    m_closeBehaviorConfirmed = confirmed;
+    if (persistenceAvailable()) {
+        QSettings settings = configSettings();
+        settings.setValue(QString::fromLatin1(kCloseBehaviorConfirmedKey), confirmed);
+        if (confirmed) {
+            settings.setValue(QString::fromLatin1(kCloseBehaviorKey),
+                              static_cast<int>(m_closeBehavior));
+        }
+    }
+}
+
 void GallerySettings::setIntroCompleted(bool completed)
 {
     if (m_introCompleted == completed)
@@ -196,9 +229,16 @@ void GallerySettings::load()
     const int windowEffect = qBound(0,
                                     settings.value(QString::fromLatin1(kWindowEffectKey), 1).toInt(),
                                     2);
+    const int closeBehavior = qBound(
+        0,
+        settings.value(QString::fromLatin1(kCloseBehaviorKey), 1).toInt(),
+        2);
     m_themeMode = static_cast<ThemeMode>(theme);
     m_navigationStyle = static_cast<NavigationStyle>(navigation);
     m_windowEffect = static_cast<WindowEffect>(windowEffect);
+    m_closeBehavior = static_cast<CloseBehavior>(closeBehavior);
+    m_closeBehaviorConfirmed = settings.value(
+        QString::fromLatin1(kCloseBehaviorConfirmedKey), false).toBool();
     m_introCompleted = settings.value(QString::fromLatin1(kIntroCompletedKey), false).toBool();
 }
 

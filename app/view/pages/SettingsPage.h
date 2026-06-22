@@ -52,6 +52,7 @@ private:
     fluent::basicinput::ComboBox* m_themeChoice = nullptr;
     fluent::basicinput::ComboBox* m_navigationChoice = nullptr;
     fluent::basicinput::ComboBox* m_effectChoice = nullptr;
+    fluent::basicinput::ComboBox* m_closeBehaviorChoice = nullptr;
 };
 
 } // namespace fluent::gallery

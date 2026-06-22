@@ -15,6 +15,7 @@
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
 #include "utils/Log.h"
+#include "view/support/GalleryCloseBehaviorUi.h"
 #include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
@@ -79,6 +80,7 @@ public:
         auto* subtitleLabel = new SecondaryLabel(subtitle, textColumn);
         subtitleLabel->setObjectName(QStringLiteral("gallerySettingsSubtitle"));
         subtitleLabel->setFluentTypography(Typography::FontRole::Caption);
+        subtitleLabel->setWordWrap(true);
 
         textLayout->addStretch(1);
         textLayout->addWidget(titleLabel);
@@ -91,6 +93,25 @@ public:
     }
 
     void onThemeUpdated() override { update(); }
+
+    void setStacked(bool stacked)
+    {
+        if (m_stacked == stacked && m_trailing->parentWidget() == this)
+            return;
+
+        m_stacked = stacked;
+        m_trailing->setParent(this);
+        m_layout->removeWidget(m_trailing);
+        if (m_stacked) {
+            m_layout->addWidget(m_trailing, 1, 1, Qt::AlignRight | Qt::AlignVCenter);
+            setMinimumHeight(128);
+        } else {
+            m_layout->addWidget(m_trailing, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
+            setMinimumHeight(88);
+        }
+        m_trailing->show();
+        updateGeometry();
+    }
 
 protected:
     void paintEvent(QPaintEvent*) override
@@ -114,22 +135,7 @@ protected:
 private:
     void updateResponsiveLayout()
     {
-        const bool stacked = width() > 0 && width() < kStackedRowWidth;
-        if (m_stacked == stacked && m_trailing->parentWidget() == this)
-            return;
-
-        m_stacked = stacked;
-        m_trailing->setParent(this);
-        m_layout->removeWidget(m_trailing);
-        if (m_stacked) {
-            m_layout->addWidget(m_trailing, 1, 1, Qt::AlignRight | Qt::AlignVCenter);
-            setMinimumHeight(128);
-        } else {
-            m_layout->addWidget(m_trailing, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
-            setMinimumHeight(88);
-        }
-        m_trailing->show();
-        updateGeometry();
+        setStacked(width() > 0 && width() < kStackedRowWidth);
     }
 
     QGridLayout* m_layout = nullptr;
@@ -189,6 +195,10 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         QStringLiteral("gallerySettingsEffectChoice"),
         {QStringLiteral("Normal"), QStringLiteral("Mica"), QStringLiteral("Acrylic")},
         static_cast<int>(settings->windowEffect()));
+    m_closeBehaviorChoice = createChoiceBox(
+        QStringLiteral("gallerySettingsCloseBehaviorChoice"),
+        closebehaviorui::choices(),
+        static_cast<int>(settings->closeBehavior()));
 
     connect(m_themeChoice, qOverload<int>(&QComboBox::currentIndexChanged),
             this, [settings](int index) {
@@ -219,6 +229,17 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                 const QSignalBlocker blocker(m_effectChoice);
                 m_effectChoice->setCurrentIndex(static_cast<int>(effect));
             });
+    connect(m_closeBehaviorChoice, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, [settings](int index) {
+                settings->setCloseBehavior(
+                    static_cast<GallerySettings::CloseBehavior>(index));
+                settings->setCloseBehaviorConfirmed(true);
+            });
+    connect(settings, &GallerySettings::closeBehaviorChanged, this,
+            [this](GallerySettings::CloseBehavior behavior) {
+                const QSignalBlocker blocker(m_closeBehaviorChoice);
+                m_closeBehaviorChoice->setCurrentIndex(static_cast<int>(behavior));
+            });
 
     m_contentLayout->addWidget(createSectionTitle(QStringLiteral("Appearance & behavior")));
     m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Color,
@@ -233,6 +254,13 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                                                  QStringLiteral("Window background effect"),
                                                  QStringLiteral("Mica and Acrylic require Windows 11 or macOS"),
                                                  m_effectChoice));
+    m_contentLayout->addSpacing(12);
+    m_contentLayout->addWidget(createSectionTitle(QStringLiteral("App behavior")));
+    m_contentLayout->addWidget(createSettingsRow(
+        Typography::Icons::Power,
+        QStringLiteral("Close button behavior"),
+        QStringLiteral("Choose what happens when the main window is closed"),
+        m_closeBehaviorChoice));
     m_contentLayout->addStretch(1);
 
     scrollArea->setWidget(m_viewport);
@@ -276,6 +304,10 @@ void SettingsPage::updateResponsiveLayout()
                                         narrow ? 24 : 34,
                                         horizontalMargin,
                                         48);
+    for (auto* frame : findChildren<QFrame*>(QStringLiteral("gallerySettingsRow"))) {
+        if (auto* row = dynamic_cast<SettingsRow*>(frame))
+            row->setStacked(narrow || (row->width() > 0 && row->width() < kStackedRowWidth));
+    }
 }
 
 QWidget* SettingsPage::createSectionTitle(const QString& title)
