@@ -60,6 +60,19 @@ public:
     void reapplySystemBackdrop();
 
     /**
+     * @brief Sets the window background effect (Solid/Mica/Acrylic) and re-applies it live.
+     * zh_CN: 设置窗口背景效果（Solid/Mica/Acrylic）并实时重新施加。
+     *
+     * Switching to/from Solid flips the translucent window surface (toggling the attribute the chrome
+     * paints against); switching among the translucent effects (Mica/Acrylic) only changes the OS
+     * backdrop type. On platforms without backdrop support the effect collapses to Solid.
+     * zh_CN: 在 Solid 与其它之间切换会翻转半透明窗口表面（切换 chrome 据以绘制的属性）；半透明效果之间
+     *（Mica/Acrylic）仅改变系统背景类型。不支持背景的平台上效果塌为 Solid。
+     */
+    void setBackdropEffect(compatibility::BackdropEffect effect);
+    compatibility::BackdropEffect backdropEffect() const { return m_backdropEffect; }
+
+    /**
      * @brief Enables/disables user move + resize via the window chrome (caption drag and resize
      * borders). Disable to lock the window under a modal overlay. zh_CN: 启用/禁用经窗口 chrome 的用户移动+缩放
      *(标题栏拖动与缩放边框)。禁用可在模态覆盖层下锁定窗口。
@@ -110,10 +123,17 @@ private:
     fluent::basicinput::Button* m_maximizeButton = nullptr;
     fluent::basicinput::Button* m_closeButton = nullptr;
     compatibility::WindowChromeCompat m_chrome;
-    // True when a Windows 11 Mica backdrop is in use: the window is translucent and the
-    // chrome paints transparent so the OS-managed backdrop (incl. active/inactive) shows.
-    // zh_CN: 启用 Windows 11 Mica 背景时为真：窗口半透明、chrome 透明绘制，露出系统管理的背景
-    //（含激活/非激活）。
+    // The requested window background effect. Defaults to Mica; a later step lets settings choose it.
+    // zh_CN: 请求的窗口背景效果。默认 Mica；后续步骤由设置选择。
+    compatibility::BackdropEffect m_backdropEffect = compatibility::BackdropEffect::Mica;
+    // Fixed at construction: the window surface is translucent (platform supports a system backdrop).
+    // Never toggled at runtime, so effect switches don't restyle the native window.
+    // zh_CN: 构造时固定：窗口表面半透明（平台支持系统背景）。运行时绝不切换，故效果切换不会重塑原生窗口。
+    bool m_windowTranslucent = false;
+    // Paint-hint: true when surfaces should paint transparent to reveal the OS backdrop (Mica/Acrylic);
+    // false (Normal / unsupported) means they paint opaque themselves. Tracks m_backdropEffect.
+    // zh_CN: 绘制提示：true 表示表面应画透明以透出系统背景（Mica/Acrylic）；false（Normal / 不支持）表示自绘不透明。
+    // 跟随 m_backdropEffect。
     bool m_micaBackdrop = false;
     // One-shot guard so the deferred first-show backdrop refresh (which works around DWM not
     // compositing Mica until the next activation) runs only once.

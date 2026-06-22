@@ -63,9 +63,12 @@ bool platformSupportsSystemBackdrop() {
     return false;
 }
 
-bool applyPlatformSystemBackdrop(QWidget* window, bool dark) {
+bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
+                                 bool forceRecomposite) {
     Q_UNUSED(window);
+    Q_UNUSED(effect);
     Q_UNUSED(dark);
+    Q_UNUSED(forceRecomposite);
     return false;
 }
 
