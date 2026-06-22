@@ -175,6 +175,12 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     auto* searchBox = new fluent::textfields::AutoSuggestBox(bar);
     m_searchBox = searchBox;
     searchBox->setObjectName(QStringLiteral("GalleryTitleBar.SearchBox"));
+    // Click-to-focus only: keep the search box OUT of the tab/auto-focus chain so it never becomes
+    // the focus fallback when an unrelated widget (e.g. a Settings combo) loses focus during a theme
+    // or layout refresh — which made focus jump up to the search box on every settings change.
+    // Clicking it still focuses it for typing. zh_CN: 仅点击聚焦：把搜索框移出 Tab/自动聚焦链，使其不会在无关控件
+    //（如设置页下拉框）于主题/布局刷新中丢焦点时成为回退目标——这正是每次改设置焦点都跳到搜索框的原因。点击它仍可聚焦输入。
+    searchBox->setFocusPolicy(Qt::ClickFocus);
     searchBox->setPlaceholderText(QStringLiteral("Search controls and samples..."));
     searchBox->setSuggestions(searchTitles);
     searchBox->setInputHeight(TitleBarMetrics::SearchHeight);
