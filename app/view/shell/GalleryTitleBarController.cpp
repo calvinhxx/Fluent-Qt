@@ -340,6 +340,11 @@ void GalleryTitleBarController::setMenuEnabled(bool enabled)
         m_menuButton->setEnabled(enabled);
 }
 
+QWidget* GalleryTitleBarController::searchBox() const
+{
+    return m_searchBox;
+}
+
 void GalleryTitleBarController::applyBackButtonReveal(qreal reveal)
 {
     m_backReveal = reveal;
