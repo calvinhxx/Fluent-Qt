@@ -9,6 +9,7 @@
 class QEvent;
 class QLabel;
 class QVariantAnimation;
+class QWidget;
 
 namespace fluent::windowing {
 class TitleBar;
@@ -69,6 +70,10 @@ public:
 
     /// Enables/disables the navigation menu button. zh_CN: 启用/禁用导航菜单按钮。
     void setMenuEnabled(bool enabled);
+
+    /// Search box widget the first-launch intro tour anchors a coach mark to.
+    /// zh_CN: 首次启动引导用来锚定提示的搜索框控件。
+    QWidget* searchBox() const;
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;

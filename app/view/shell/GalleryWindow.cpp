@@ -20,9 +20,11 @@
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/windowing/TitleBar.h"
+#include "design/Typography.h"
 #include "utils/Log.h"
 #include "AppIcon.h"
 #include "GalleryContentPresenter.h"
+#include "GalleryIntroTour.h"
 #include "GalleryNavigationPane.h"
 #include "GallerySearchRanking.h"
 #include "GallerySplashScreen.h"
@@ -46,6 +48,11 @@ constexpr int kNavigationDrawerShadowMargin = 8;
 // for the window to composite a few frames (so DWM applies Mica), short enough to feel instant.
 // zh_CN: 首个路由上屏后到消除 splash 之间的短暂停留：足够窗口合成几帧（使 DWM 施加 Mica），又短到感觉即时。
 constexpr int kStartupSplashHoldMs = 120;
+
+// Delay from splash dismissal to the first-launch intro tour, so the chrome fade-in finishes and
+// the window is settled before the coach marks appear. zh_CN: 从 splash 消失到首启引导之间的延迟，
+// 让 chrome 淡入完成、窗口稳定后再出现操作引导。
+constexpr int kIntroTourDelayMs = 480;
 
 class NavigationDrawerContentPanel : public QWidget, public fluent::FluentElement {
 public:
@@ -376,6 +383,53 @@ void GalleryWindow::finishStartup()
     reapplySystemBackdrop();
     if (m_splashScreen)
         m_splashScreen->dismiss();  // fades out, then self-deletes
+
+    // First launch only: once the chrome has settled, run the intro tour. zh_CN: 仅首次启动：chrome 稳定后跑引导。
+    if (!GallerySettings::instance().introCompleted())
+        QTimer::singleShot(kIntroTourDelayMs, this, [this]() { maybeStartIntroTour(); });
+}
+
+void GalleryWindow::maybeStartIntroTour()
+{
+    if (m_introTour)  // already started this session
+        return;
+
+    using Tip = fluent::dialogs_flyouts::CoachMark;
+    namespace Icons = Typography::Icons;
+    QVector<GalleryIntroTour::Step> steps;
+    // Centered opener (no target/tail), then anchored coach marks. Each carries a leading glyph.
+    // zh_CN: 居中开场(无目标/尾巴),随后是锚定的操作提示;每步带一个前导字形。
+    steps.append({nullptr, Icons::Emoji,
+                  QStringLiteral("Welcome to Fluent Gallery 👋"),
+                  QStringLiteral("A live catalog of Fluent controls for Qt, with runnable samples. "
+                                 "Here's a 15-second tour of the essentials."),
+                  Tip::Auto,
+                  /*centered*/ true});
+    if (m_titleBar && m_titleBar->searchBox())
+        steps.append({m_titleBar->searchBox(), Icons::Search,
+                      QStringLiteral("Search"),
+                      QStringLiteral("Find any control or sample by name — just start typing."),
+                      Tip::Bottom});
+    if (m_mainNavigationPane)
+        steps.append({m_mainNavigationPane, Icons::AllApps,
+                      QStringLiteral("Browse by category"),
+                      QStringLiteral("Controls are grouped by category here. Expand one to explore its samples."),
+                      Tip::Right});
+    if (m_footerNavigationPane)
+        steps.append({m_footerNavigationPane, Icons::Settings,
+                      QStringLiteral("Make it yours"),
+                      QStringLiteral("Switch between light and dark theme and adjust preferences in Settings."),
+                      Tip::Right});
+
+    if (steps.isEmpty())
+        return;
+
+    m_introTour = new GalleryIntroTour(this, this);
+    m_introTour->setSteps(steps);
+    connect(m_introTour, &GalleryIntroTour::finished, this, []() {
+        GallerySettings::instance().setIntroCompleted(true);
+    });
+    m_introTour->start();
 }
 
 GalleryContentPage* GalleryWindow::currentContentPage() const

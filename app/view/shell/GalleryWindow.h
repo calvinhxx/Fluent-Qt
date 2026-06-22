@@ -25,6 +25,7 @@ namespace fluent::gallery {
 class GalleryContentPresenter;
 class GalleryNavigationPane;
 class GalleryContentPage;
+class GalleryIntroTour;
 class GalleryNavigationItem;
 class GallerySplashScreen;
 class GalleryTitleBarController;
@@ -81,6 +82,7 @@ private:
     void showInitialRouteContent();
     void prewarmRemainingRoutes();
     void finishStartup();
+    void maybeStartIntroTour();
     void handleSelectedRouteChanged(const QString& routeId);
     void recordNavigationHistory(const QString& nextRouteId);
     bool navigateBack();
@@ -107,6 +109,7 @@ private:
     GalleryNavigationPane* m_drawerFooterNavigationPane = nullptr;
     GalleryContentPresenter* m_contentPresenter = nullptr;
     GalleryTitleBarController* m_titleBar = nullptr;
+    GalleryIntroTour* m_introTour = nullptr;
     QTimer* m_navigationCompactReleaseTimer = nullptr;
     QStringList m_backRouteStack;
     bool m_isNavigatingHistory = false;
