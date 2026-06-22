@@ -38,6 +38,13 @@ public:
     };
     Q_ENUM(WindowEffect)
 
+    enum class CloseBehavior {
+        Minimize,
+        Tray,
+        Quit
+    };
+    Q_ENUM(CloseBehavior)
+
     static GallerySettings& instance();
 
     ThemeMode themeMode() const { return m_themeMode; }
@@ -49,6 +56,12 @@ public:
     WindowEffect windowEffect() const { return m_windowEffect; }
     void setWindowEffect(WindowEffect effect);
 
+    CloseBehavior closeBehavior() const { return m_closeBehavior; }
+    void setCloseBehavior(CloseBehavior behavior);
+
+    bool closeBehaviorConfirmed() const { return m_closeBehaviorConfirmed; }
+    void setCloseBehaviorConfirmed(bool confirmed);
+
     /// First-launch intro tour seen flag. zh_CN: 首启引导是否已看过。
     bool introCompleted() const { return m_introCompleted; }
     void setIntroCompleted(bool completed);
@@ -57,6 +70,7 @@ signals:
     void themeModeChanged(ThemeMode mode);
     void navigationStyleChanged(NavigationStyle style);
     void windowEffectChanged(WindowEffect effect);
+    void closeBehaviorChanged(CloseBehavior behavior);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -69,6 +83,8 @@ private:
     ThemeMode m_themeMode = ThemeMode::System;
     NavigationStyle m_navigationStyle = NavigationStyle::Auto;
     WindowEffect m_windowEffect = WindowEffect::Mica;
+    CloseBehavior m_closeBehavior = CloseBehavior::Tray;
+    bool m_closeBehaviorConfirmed = false;
     bool m_introCompleted = false;
 };
 

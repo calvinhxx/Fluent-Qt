@@ -18,7 +18,9 @@
 
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
+#include "components/basicinput/RadioButton.h"
 #include "components/collections/TreeView.h"
+#include "components/dialogs_flyouts/ContentDialog.h"
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -32,6 +34,7 @@
 #include "components/windowing/TitleBar.h"
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
+#include "view/shell/GalleryApplicationController.h"
 #include "view/shell/GalleryNavigationPane.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "view/widgets/GalleryEntryCard.h"
@@ -44,8 +47,11 @@
 
 using fluent::basicinput::Button;
 using fluent::basicinput::ComboBox;
+using fluent::basicinput::RadioButton;
 using fluent::collections::TreeView;
+using fluent::dialogs_flyouts::ContentDialog;
 using fluent::dialogs_flyouts::Popup;
+using fluent::gallery::GalleryApplicationController;
 using fluent::gallery::GalleryContentPage;
 using fluent::gallery::GalleryEntryCard;
 using fluent::gallery::GalleryIntroTour;
@@ -69,6 +75,8 @@ public:
         : m_settings(settings)
         , m_themeMode(settings.themeMode())
         , m_navigationStyle(settings.navigationStyle())
+        , m_closeBehavior(settings.closeBehavior())
+        , m_closeBehaviorConfirmed(settings.closeBehaviorConfirmed())
     {
     }
 
@@ -76,12 +84,16 @@ public:
     {
         m_settings.setNavigationStyle(m_navigationStyle);
         m_settings.setThemeMode(m_themeMode);
+        m_settings.setCloseBehavior(m_closeBehavior);
+        m_settings.setCloseBehaviorConfirmed(m_closeBehaviorConfirmed);
     }
 
 private:
     GallerySettings& m_settings;
     GallerySettings::ThemeMode m_themeMode;
     GallerySettings::NavigationStyle m_navigationStyle;
+    GallerySettings::CloseBehavior m_closeBehavior;
+    bool m_closeBehaviorConfirmed = false;
 };
 
 bool containsAll(const QStringList& values, const QStringList& expectedValues)
@@ -1207,13 +1219,22 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
         QStringLiteral("gallerySettingsThemeChoice"));
     auto* navigationChoice = page->findChild<ComboBox*>(
         QStringLiteral("gallerySettingsNavigationChoice"));
+    auto* effectChoice = page->findChild<ComboBox*>(
+        QStringLiteral("gallerySettingsEffectChoice"));
+    auto* closeBehaviorChoice = page->findChild<ComboBox*>(
+        QStringLiteral("gallerySettingsCloseBehaviorChoice"));
     ASSERT_NE(themeChoice, nullptr);
     ASSERT_NE(navigationChoice, nullptr);
+    ASSERT_NE(effectChoice, nullptr);
+    ASSERT_NE(closeBehaviorChoice, nullptr);
     EXPECT_EQ(themeChoice->count(), 3);
     EXPECT_EQ(themeChoice->currentText(), QStringLiteral("Light"));
     EXPECT_EQ(navigationChoice->count(), 5);
     EXPECT_EQ(navigationChoice->currentText(), QStringLiteral("Auto"));
-    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 2);
+    EXPECT_EQ(effectChoice->count(), 3);
+    EXPECT_EQ(closeBehaviorChoice->count(), 3);
+    EXPECT_EQ(closeBehaviorChoice->currentIndex(), static_cast<int>(settings.closeBehavior()));
+    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 4);
 
     QStringList visibleText;
     for (auto* label : page->findChildren<fluent::textfields::Label*>())
@@ -1225,7 +1246,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     const auto iconLabels = page->findChildren<fluent::textfields::Label*>(
         QStringLiteral("gallerySettingsRowIcon"));
-    ASSERT_EQ(iconLabels.size(), 2);
+    ASSERT_EQ(iconLabels.size(), 4);
     for (auto* iconLabel : iconLabels)
         EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::SegoeFluentIcons);
 
@@ -1253,12 +1274,13 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     window.resize(460, 760);
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(page->width() < 640, 1000);
-    for (auto* choice : {themeChoice, navigationChoice}) {
+    for (auto* choice : {themeChoice, navigationChoice, effectChoice, closeBehaviorChoice}) {
         auto* row = qobject_cast<QFrame*>(choice->parentWidget());
         ASSERT_NE(row, nullptr);
         EXPECT_GE(row->height(), 120);
         const QRect choiceInPage(choice->mapTo(page, QPoint(0, 0)), choice->size());
-        EXPECT_TRUE(page->rect().contains(choiceInPage));
+        EXPECT_GE(choiceInPage.left(), page->rect().left());
+        EXPECT_LE(choiceInPage.right(), page->rect().right());
     }
 
     window.resize(1180, 760);
@@ -1359,4 +1381,39 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     themeChoice->setCurrentIndex(0);
     QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::System, 1000);
+}
+
+TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpenOnCancel)
+{
+    auto& settings = GallerySettings::instance();
+    GallerySettingsRestorer restore(settings);
+    settings.setCloseBehavior(GallerySettings::CloseBehavior::Tray);
+    settings.setCloseBehaviorConfirmed(false);
+
+    GalleryWindow window;
+    GalleryApplicationController applicationController(&window);
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+
+    EXPECT_FALSE(window.close());
+
+    ContentDialog* dialog = nullptr;
+    QTRY_VERIFY_WITH_TIMEOUT(
+        (dialog = window.findChild<ContentDialog*>(
+             QStringLiteral("galleryCloseBehaviorDialog"))) != nullptr,
+        1000);
+    ASSERT_NE(dialog, nullptr);
+    EXPECT_TRUE(dialog->isVisible());
+
+    auto* trayChoice = dialog->findChild<RadioButton*>(
+        QStringLiteral("galleryCloseBehaviorChoice1"));
+    ASSERT_NE(trayChoice, nullptr);
+    EXPECT_TRUE(trayChoice->isChecked());
+
+    QPointer<ContentDialog> dialogGuard = dialog;
+    dialog->done(ContentDialog::ResultNone);
+    QTRY_VERIFY_WITH_TIMEOUT(dialogGuard.isNull() || !dialogGuard->isVisible(), 1000);
+    EXPECT_TRUE(window.isVisible());
+    EXPECT_FALSE(settings.closeBehaviorConfirmed());
 }

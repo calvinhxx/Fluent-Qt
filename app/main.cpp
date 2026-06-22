@@ -7,6 +7,7 @@
 #include <QSize>
 
 #include "view/shell/AppIcon.h"
+#include "view/shell/GalleryApplicationController.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "viewmodel/GallerySettings.h"
@@ -24,6 +25,7 @@ int main(int argc, char** argv)
     QApplication app(argc, argv);
     QApplication::setApplicationName(QStringLiteral("WinUI 3 Gallery"));
     QApplication::setOrganizationName(QStringLiteral("Fluent-QT"));
+    app.setQuitOnLastWindowClosed(false);
 
     initializeFluentQtResources();
     fluent::gallery::GallerySettings::instance();
@@ -46,6 +48,7 @@ int main(int argc, char** argv)
     app.setWindowIcon(fluent::gallery::appicon::icon());
 
     fluent::gallery::GalleryWindow window;
+    fluent::gallery::GalleryApplicationController applicationController(&window, &app);
 
     // Pick an initial size that fits the screen (shrinking on small displays, never below the
     // window's minimum), then place it centered vertically and centered horizontally within
