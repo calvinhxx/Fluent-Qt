@@ -134,23 +134,22 @@ bool TitleBar::event(QEvent* event) {
 }
 
 void TitleBar::paintEvent(QPaintEvent*) {
-    // With a real backdrop the window is translucent — erase to transparent so the OS-composited
-    // backdrop shows through. We must clear (not paint nothing): under a translucent top-level the
-    // backing store is not auto-cleared on macOS, so animating/repositioning chrome (back-button
-    // reveal, title reflow) would ghost over stale pixels. Otherwise fall back to a solid backdrop
-    // shared with the nav pane (no bottom divider, one continuous surface).
-    // zh_CN: 有真实背景时窗口半透明——擦成透明以露出系统合成背景。必须清除（而非不绘制）：半透明顶层下 macOS
-    // 后备缓冲不会自动清除，否则动画/重排的 chrome（返回按钮展开、标题重排）会叠在残影上重影。否则回退为与导航栏
-    // 共用的纯色背景（无底部分割线，一整片连续表面）。
-    if (window() && window()->property("fluentMicaBackdrop").toBool()) {
-        QPainter painter(this);
+    // chromeBackdropFill() owns the backdrop decision (shared with the nav pane). An invalid color
+    // means a real OS-composited backdrop is in play and we must erase to transparent so it shows
+    // through. We must clear (not paint nothing): under a translucent top-level the backing store is
+    // not auto-cleared on macOS, so animating/repositioning chrome (back-button reveal, title
+    // reflow) would ghost over stale pixels. A valid color is the solid fallback backdrop.
+    // zh_CN: chromeBackdropFill() 统一背景决策（与导航栏共用）。无效色表示有真实系统合成背景，须擦成透明透出之。
+    // 必须清除（而非不绘制）：半透明顶层下 macOS 后备缓冲不会自动清除，否则动画/重排的 chrome（返回按钮展开、
+    // 标题重排）会叠在残影上重影。有效色则是纯色回退背景。
+    QPainter painter(this);
+    const QColor fill = chromeBackdropFill(window(), isActiveWindow());
+    if (!fill.isValid()) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(rect(), Qt::transparent);
         return;
     }
-
-    QPainter painter(this);
-    painter.fillRect(rect(), themeBackdrop(isActiveWindow()));
+    painter.fillRect(rect(), fill);
 }
 
 void TitleBar::resizeEvent(QResizeEvent* event) {

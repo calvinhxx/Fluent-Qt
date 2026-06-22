@@ -507,6 +507,34 @@ TEST_F(FluentElementTest, ColorTokenMapping) {
     EXPECT_TRUE(darkColors.grey190.isValid());
 }
 
+TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
+    MockComponent component;
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    // No host window: solid fallback, and active/inactive visibly differ (the cross-platform
+    // stand-in for Mica's active/inactive). zh_CN: 无宿主窗口：纯色回退，且激活/非激活明显不同。
+    const QColor active = component.chromeBackdropFill(nullptr, /*active*/ true);
+    const QColor inactive = component.chromeBackdropFill(nullptr, /*active*/ false);
+    EXPECT_TRUE(active.isValid());
+    EXPECT_TRUE(inactive.isValid());
+    EXPECT_EQ(active, component.themeBackdrop(true));
+    EXPECT_EQ(inactive, component.themeBackdrop(false));
+    EXPECT_NE(active, inactive);
+
+    // A host without a system backdrop falls back identically.
+    // zh_CN: 不带系统背景的宿主，回退结果一致。
+    QWidget plainHost;
+    EXPECT_EQ(component.chromeBackdropFill(&plainHost, true), component.themeBackdrop(true));
+
+    // A host carrying a real OS-composited backdrop (Win11 Mica / macOS vibrancy) yields an invalid
+    // color regardless of focus — the caller's contract is "erase to transparent".
+    // zh_CN: 带真实系统合成背景（Win11 Mica / macOS vibrancy）的宿主，无论焦点都返回无效色——调用方据此擦透明。
+    QWidget micaHost;
+    micaHost.setProperty("fluentMicaBackdrop", true);
+    EXPECT_FALSE(component.chromeBackdropFill(&micaHost, true).isValid());
+    EXPECT_FALSE(component.chromeBackdropFill(&micaHost, false).isValid());
+}
+
 TEST_F(FluentElementTest, FontTokenMapping) {
     MockComponent component;
     

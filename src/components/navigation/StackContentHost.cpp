@@ -43,6 +43,15 @@ void StackContentHost::setContentSurface(const QColor& fill, qreal topLeftRadius
 
 void StackContentHost::paintEvent(QPaintEvent*)
 {
+    // A translucent system backdrop (Mica/Acrylic) shows through the transparent pages, so paint
+    // nothing and let it show. Without one (Normal / unsupported platforms) the pages would fall
+    // through to the uninitialized backing (black) or the desktop, so paint the opaque content-layer
+    // surface. Keyed off the same window property the chrome paints against.
+    // zh_CN: 有半透明系统背景（Mica/Acrylic）时经透明页面透出，故不绘制；没有（Normal / 不支持的平台）时页面会透到
+    // 未初始化后备缓冲（黑）或桌面，故绘制不透明内容层表面。与 chrome 绘制依据的同一窗口属性挂钩。
+    if (window() && window()->property("fluentMicaBackdrop").toBool())
+        return;
+
     if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0)
         return;  // transparent host: nothing to paint (pages/backdrop show through)
 

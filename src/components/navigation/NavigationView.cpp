@@ -343,12 +343,13 @@ void NavigationView::paintEvent(QPaintEvent*)
     // uses the solid themeBackdrop shared with the title bar.
     // zh_CN: 有真实 Mica 背景时窗格（chrome）透明，露出系统合成背景（系统处理激活/非激活+壁纸着色）；
     // 否则窗格用与标题栏共用的纯色 themeBackdrop。
-    const bool mica = window() && window()->property("fluentMicaBackdrop").toBool();
-
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    if (!mica) {
-        const QColor backdrop = themeBackdrop(isActiveWindow());
+    // chromeBackdropFill() is the single backdrop decision shared with the title bar: a valid color
+    // is the solid fallback; an invalid color means a real OS backdrop is in play (paint transparent).
+    // zh_CN: chromeBackdropFill() 是与标题栏共用的单一背景决策：有效色为纯色回退；无效色表示有真实系统背景（画透明）。
+    const QColor backdrop = chromeBackdropFill(window(), isActiveWindow());
+    if (backdrop.isValid()) {
         painter.fillRect(rect(), backdrop);
         if (!visual.chromeRect.isEmpty())
             painter.fillRect(visual.chromeRect, backdrop);
@@ -693,11 +694,23 @@ void NavigationView::applyChildGeometries()
 
 void NavigationView::applyChildGeometries(const LayoutState& state)
 {
+    // A pane to the content's left means a framed side mode: the content gets a rounded top-left
+    // corner + border. zh_CN: 内容左侧有窗格即带框侧边模式：内容获得左上圆角 + 边框。
+    const bool framed = isSideMode(state.effectiveMode)
+                        && !state.contentRect.isEmpty()
+                        && state.contentRect.left() > 0;
+
     if (m_contentHost) {
-        // The page paints the opaque content layer itself, so the host needs no surface.
-        // zh_CN: 内容层由页面自绘不透明面板，宿主无需自绘表面。
         m_contentHost->setGeometry(state.contentRect);
-        m_contentHost->setContentSurface(QColor(), 0.0, QColor());
+        // Provide the opaque content-layer surface (bgLayerAlt) the host paints when NO translucent
+        // system backdrop is active (Normal / unsupported platforms); under Mica/Acrylic the host
+        // paints nothing so the backdrop shows through the transparent pages. The host gates this on
+        // the window backdrop at paint time. zh_CN: 提供宿主在无半透明系统背景（Normal / 不支持的平台）时
+        // 绘制的不透明内容层表面（bgLayerAlt）；Mica/Acrylic 下宿主不绘制，经透明页面透出系统背景。宿主在绘制时
+        // 依据窗口背景判断。
+        m_contentHost->setContentSurface(themeColors().bgLayerAlt,
+                                         framed ? themeRadius().overlay : 0.0,
+                                         QColor());
         m_contentHost->show();
         m_contentHost->lower();
     }
@@ -718,12 +731,8 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
     apply(m_mainChromeWidget, state.mainChromeRect);
     apply(m_footerChromeWidget, state.footerChromeRect);
 
-    // Content frame: a rounded top-left corner + border drawn on top of the opaque content,
-    // but only when a pane sits to its left (framed side modes). zh_CN: 内容框：在不透明内容之上
-    // 绘制左上圆角 + 边框，仅当左侧有窗格时（带框侧边模式）。
-    const bool framed = isSideMode(state.effectiveMode)
-                        && !state.contentRect.isEmpty()
-                        && state.contentRect.left() > 0;
+    // Content frame: a rounded top-left corner + border drawn on top of the content, but only in the
+    // framed side modes. zh_CN: 内容框：内容之上绘制左上圆角 + 边框，仅带框侧边模式。
     if (framed) {
         if (!m_contentFrameOverlay)
             m_contentFrameOverlay = new ContentFrameOverlay(this);

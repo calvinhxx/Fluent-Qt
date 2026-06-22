@@ -1,5 +1,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/private/FluentElement_p.h"
+
+#include <QWidget>
 #include "design/ThemeColors.h"
 #include "design/Typography.h"
 #include "design/Spacing.h"
@@ -228,6 +230,18 @@ QColor FluentElement::themeBackdrop(bool active) const {
     return QColor::fromRgbF(c.bgCanvas.redF()   + (c.bgLayer.redF()   - c.bgCanvas.redF())   * t,
                             c.bgCanvas.greenF() + (c.bgLayer.greenF() - c.bgCanvas.greenF()) * t,
                             c.bgCanvas.blueF()  + (c.bgLayer.blueF()  - c.bgCanvas.blueF())  * t);
+}
+
+QColor FluentElement::chromeBackdropFill(const QWidget* hostWindow, bool active) const {
+    // The host window publishes "fluentMicaBackdrop" when it carries a real OS-composited backdrop
+    // (Win11 Mica / macOS vibrancy). The single read of that contract lives here, so chrome surfaces
+    // never re-derive it: when present, paint transparent (invalid color) to show it through;
+    // otherwise paint the solid themeBackdrop for the activation state.
+    // zh_CN: 宿主窗口带真实系统合成背景（Win11 Mica / macOS vibrancy）时会发布 "fluentMicaBackdrop"。该契约
+    // 的唯一读取点集中在此，chrome 表面不再各自推导：有则画透明（无效色）透出背景；否则按激活态画纯色 themeBackdrop。
+    if (hostWindow && hostWindow->property("fluentMicaBackdrop").toBool())
+        return QColor();  // invalid => caller erases to transparent
+    return themeBackdrop(active);
 }
 
 } // namespace fluent
