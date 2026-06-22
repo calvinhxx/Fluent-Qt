@@ -201,6 +201,27 @@ TEST_F(GalleryContentPagesTest, AllControlsRouteListsEveryComponent)
     EXPECT_EQ(page->componentRouteIds().size(), componentCount);
 }
 
+TEST_F(GalleryContentPagesTest, EntryGridExpandsCardsForWrappedDescriptions)
+{
+    GalleryEntryGrid grid;
+    grid.resize(480, 100);
+    grid.setEntries({{QStringLiteral("foundation-qmlplus"),
+                      QStringLiteral("QML+"),
+                      QStringLiteral("QML+ brings anchors, reactive property binding, and named states to plain QWidget controls."),
+                      QPixmap(),
+                      QString()}});
+    grid.show();
+    QApplication::processEvents();
+    const int wideHeight = grid.sizeHint().height();
+
+    grid.resize(240, 100);
+    QApplication::processEvents();
+    const int narrowHeight = grid.sizeHint().height();
+
+    EXPECT_GT(narrowHeight, 86);
+    EXPECT_GT(narrowHeight, wideHeight);
+}
+
 TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledControlImages)
 {
     const QString placeholder =

@@ -19,6 +19,7 @@
 #include <QStyledItemDelegate>
 #include <QStringList>
 #include <QUrl>
+#include <QUrlQuery>
 #include <QVBoxLayout>
 
 #include "compatibility/QtCompat.h"
@@ -36,6 +37,7 @@
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "utils/Log.h"
 #include "CollectionSampleDelegates.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "SampleBuilders.h"
@@ -76,7 +78,6 @@ const QVector<QColor>& accentPalette()
 struct FlowPhotoInfo {
     QString title;
     QString subtitle;
-    QString seed;
     QColor from;
     QColor to;
     QSize size{160, 118};
@@ -531,17 +532,56 @@ void loadFlowNetworkImage(QStandardItemModel* model,
     QNetworkRequest request(url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setTransferTimeout(10000);
+    request.setHeader(QNetworkRequest::UserAgentHeader,
+                      QStringLiteral("Fluent-QT Gallery/1.0"));
     QNetworkReply* reply = manager->get(request);
-    QObject::connect(reply, &QNetworkReply::finished, manager, [modelGuard, index, reply]() {
+    QObject::connect(reply, &QNetworkReply::finished, manager, [modelGuard, index, reply, url]() {
         reply->deleteLater();
-        if (!modelGuard || !index.isValid() || reply->error() != QNetworkReply::NoError)
+        if (!modelGuard || !index.isValid())
             return;
+        if (reply->error() != QNetworkReply::NoError) {
+            LOG_WARN(QStringLiteral("Gallery photo request failed url=%1 error=%2")
+                         .arg(url.toString(), reply->errorString()));
+            return;
+        }
 
         QPixmap pixmap;
-        if (!pixmap.loadFromData(reply->readAll()) || pixmap.isNull())
+        if (!pixmap.loadFromData(reply->readAll()) || pixmap.isNull()) {
+            LOG_WARN(QStringLiteral("Gallery photo response is not a supported image url=%1")
+                         .arg(url.toString()));
             return;
+        }
         modelGuard->setData(index, pixmap, PhotoImageRole);
     });
+}
+
+QUrl flowPhotoUrl(const FlowPhotoInfo& photo, int row)
+{
+    // Fixed image ids keep the sample deterministic while avoiding the Picsum endpoint,
+    // which is unavailable on some macOS/network configurations.
+    // zh_CN: 固定图片 id 保证示例稳定，同时避开部分 macOS/网络环境无法访问的 Picsum 端点。
+    static const QStringList imageIds{
+        QStringLiteral("photo-1500530855697-b586d89ba3ee"),
+        QStringLiteral("photo-1470770841072-f978cf4d019e"),
+        QStringLiteral("photo-1441974231531-c6227db76b6e"),
+        QStringLiteral("photo-1470252649378-9c29740c9fa8"),
+        QStringLiteral("photo-1506744038136-46273834b3fb"),
+        QStringLiteral("photo-1472214103451-9374bd1c798e"),
+        QStringLiteral("photo-1469474968028-56623f02e42e"),
+        QStringLiteral("photo-1511818966892-d7d671e672a2"),
+        QStringLiteral("photo-1497366754035-f200968a6e72")};
+    const int imageIndex = row % static_cast<int>(imageIds.size());
+    const QString imageId = imageIds.at(imageIndex);
+    QUrl url(QStringLiteral("https://images.unsplash.com/%1").arg(imageId));
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("fm"), QStringLiteral("jpg"));
+    query.addQueryItem(QStringLiteral("fit"), QStringLiteral("crop"));
+    query.addQueryItem(QStringLiteral("w"), QString::number(photo.size.width() * 2));
+    query.addQueryItem(QStringLiteral("h"), QString::number(photo.size.height() * 2));
+    query.addQueryItem(QStringLiteral("q"), QStringLiteral("82"));
+    url.setQuery(query);
+    return url;
 }
 
 QStandardItemModel* makeFlowPhotoModel(QObject* parent, const QVector<FlowPhotoInfo>& photos)
@@ -567,14 +607,7 @@ void loadFlowNetworkImages(QStandardItemModel* model,
                            QNetworkAccessManager* manager)
 {
     for (int row = 0; row < photos.size(); ++row) {
-        loadFlowNetworkImage(
-            model,
-            row,
-            QUrl(QStringLiteral("https://picsum.photos/seed/%1/%2/%3")
-                     .arg(photos.at(row).seed)
-                     .arg(photos.at(row).size.width() * 2)
-                     .arg(photos.at(row).size.height() * 2)),
-            manager);
+        loadFlowNetworkImage(model, row, flowPhotoUrl(photos.at(row), row), manager);
     }
 }
 
@@ -945,15 +978,15 @@ QVector<GallerySample> flowViewSamples()
                            static_cast<fluent::FluentElement*>(flowView), flowView));
 
                        const QVector<FlowPhotoInfo> photos{
-                           {QStringLiteral("Atrium"), QStringLiteral("architecture"), QStringLiteral("atrium-glass"), QColor(0x37, 0x8B, 0xC4), QColor(0x9A, 0xD9, 0xEA), QSize(160, 118)},
-                           {QStringLiteral("Harbor"), QStringLiteral("travel"), QStringLiteral("harbor-blue"), QColor(0x1E, 0x6F, 0xD9), QColor(0x67, 0xD0, 0xD6), QSize(160, 118)},
-                           {QStringLiteral("Canyon"), QStringLiteral("landscape"), QStringLiteral("warm-canyon"), QColor(0xC2, 0x5B, 0x2B), QColor(0xF2, 0xB8, 0x4B), QSize(160, 118)},
-                           {QStringLiteral("Studio"), QStringLiteral("workspace"), QStringLiteral("quiet-studio"), QColor(0x7A, 0x5F, 0xC9), QColor(0xD7, 0x94, 0xE6), QSize(160, 118)},
-                           {QStringLiteral("Garden"), QStringLiteral("nature"), QStringLiteral("green-garden"), QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B), QSize(160, 118)},
-                           {QStringLiteral("Dawn"), QStringLiteral("morning"), QStringLiteral("soft-dawn"), QColor(0xD9, 0x6C, 0x75), QColor(0xF2, 0xC9, 0x6B), QSize(160, 118)},
-                           {QStringLiteral("Transit"), QStringLiteral("city"), QStringLiteral("metro-lines"), QColor(0x37, 0x5B, 0xA8), QColor(0x58, 0xB7, 0xE8), QSize(160, 118)},
-                           {QStringLiteral("Market"), QStringLiteral("street"), QStringLiteral("night-market"), QColor(0x91, 0x43, 0x4A), QColor(0xE0, 0x95, 0x52), QSize(160, 118)},
-                           {QStringLiteral("Cabin"), QStringLiteral("retreat"), QStringLiteral("wood-cabin"), QColor(0x5B, 0x75, 0x35), QColor(0xCE, 0xA8, 0x5B), QSize(160, 118)}};
+                           {QStringLiteral("Atrium"), QStringLiteral("architecture"), QColor(0x37, 0x8B, 0xC4), QColor(0x9A, 0xD9, 0xEA), QSize(160, 118)},
+                           {QStringLiteral("Harbor"), QStringLiteral("travel"), QColor(0x1E, 0x6F, 0xD9), QColor(0x67, 0xD0, 0xD6), QSize(160, 118)},
+                           {QStringLiteral("Canyon"), QStringLiteral("landscape"), QColor(0xC2, 0x5B, 0x2B), QColor(0xF2, 0xB8, 0x4B), QSize(160, 118)},
+                           {QStringLiteral("Studio"), QStringLiteral("workspace"), QColor(0x7A, 0x5F, 0xC9), QColor(0xD7, 0x94, 0xE6), QSize(160, 118)},
+                           {QStringLiteral("Garden"), QStringLiteral("nature"), QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B), QSize(160, 118)},
+                           {QStringLiteral("Dawn"), QStringLiteral("morning"), QColor(0xD9, 0x6C, 0x75), QColor(0xF2, 0xC9, 0x6B), QSize(160, 118)},
+                           {QStringLiteral("Transit"), QStringLiteral("city"), QColor(0x37, 0x5B, 0xA8), QColor(0x58, 0xB7, 0xE8), QSize(160, 118)},
+                           {QStringLiteral("Market"), QStringLiteral("street"), QColor(0x91, 0x43, 0x4A), QColor(0xE0, 0x95, 0x52), QSize(160, 118)},
+                           {QStringLiteral("Cabin"), QStringLiteral("retreat"), QColor(0x5B, 0x75, 0x35), QColor(0xCE, 0xA8, 0x5B), QSize(160, 118)}};
 
                        auto* model = makeFlowPhotoModel(flowView, photos);
                        flowView->setModel(model);
@@ -983,15 +1016,15 @@ QVector<GallerySample> flowViewSamples()
                            static_cast<fluent::FluentElement*>(flowView), flowView));
 
                        const QVector<FlowPhotoInfo> photos{
-                           {QStringLiteral("Loft"), QStringLiteral("interior"), QStringLiteral("loft-interior"), QColor(0x5D, 0x7F, 0xB8), QColor(0xC9, 0xDB, 0xF2), QSize(148, 104)},
-                           {QStringLiteral("Ridge"), QStringLiteral("wide"), QStringLiteral("wide-ridge"), QColor(0x24, 0x74, 0x8F), QColor(0x8C, 0xCF, 0xA5), QSize(210, 118)},
-                           {QStringLiteral("Cafe"), QStringLiteral("street"), QStringLiteral("corner-cafe"), QColor(0xA9, 0x5B, 0x45), QColor(0xE9, 0xB8, 0x7A), QSize(132, 132)},
-                           {QStringLiteral("Mist"), QStringLiteral("forest"), QStringLiteral("mist-forest"), QColor(0x3C, 0x75, 0x52), QColor(0xAF, 0xC9, 0x8E), QSize(172, 148)},
-                           {QStringLiteral("Gallery"), QStringLiteral("exhibit"), QStringLiteral("white-gallery"), QColor(0x66, 0x6A, 0x86), QColor(0xD9, 0xD7, 0xEA), QSize(122, 104)},
-                           {QStringLiteral("Canal"), QStringLiteral("water"), QStringLiteral("city-canal"), QColor(0x2D, 0x73, 0xA3), QColor(0x9A, 0xD8, 0xE5), QSize(190, 126)},
-                           {QStringLiteral("Trail"), QStringLiteral("nature"), QStringLiteral("sun-trail"), QColor(0x70, 0x83, 0x2F), QColor(0xE2, 0xC4, 0x58), QSize(156, 116)},
-                           {QStringLiteral("Arcade"), QStringLiteral("night"), QStringLiteral("neon-arcade"), QColor(0x57, 0x3A, 0x9B), QColor(0xDC, 0x72, 0xC8), QSize(198, 140)},
-                           {QStringLiteral("Pier"), QStringLiteral("coast"), QStringLiteral("quiet-pier"), QColor(0x2F, 0x80, 0x8F), QColor(0xE0, 0xC1, 0x7E), QSize(136, 106)}};
+                           {QStringLiteral("Loft"), QStringLiteral("interior"), QColor(0x5D, 0x7F, 0xB8), QColor(0xC9, 0xDB, 0xF2), QSize(148, 104)},
+                           {QStringLiteral("Ridge"), QStringLiteral("wide"), QColor(0x24, 0x74, 0x8F), QColor(0x8C, 0xCF, 0xA5), QSize(210, 118)},
+                           {QStringLiteral("Cafe"), QStringLiteral("street"), QColor(0xA9, 0x5B, 0x45), QColor(0xE9, 0xB8, 0x7A), QSize(132, 132)},
+                           {QStringLiteral("Mist"), QStringLiteral("forest"), QColor(0x3C, 0x75, 0x52), QColor(0xAF, 0xC9, 0x8E), QSize(172, 148)},
+                           {QStringLiteral("Gallery"), QStringLiteral("exhibit"), QColor(0x66, 0x6A, 0x86), QColor(0xD9, 0xD7, 0xEA), QSize(122, 104)},
+                           {QStringLiteral("Canal"), QStringLiteral("water"), QColor(0x2D, 0x73, 0xA3), QColor(0x9A, 0xD8, 0xE5), QSize(190, 126)},
+                           {QStringLiteral("Trail"), QStringLiteral("nature"), QColor(0x70, 0x83, 0x2F), QColor(0xE2, 0xC4, 0x58), QSize(156, 116)},
+                           {QStringLiteral("Arcade"), QStringLiteral("night"), QColor(0x57, 0x3A, 0x9B), QColor(0xDC, 0x72, 0xC8), QSize(198, 140)},
+                           {QStringLiteral("Pier"), QStringLiteral("coast"), QColor(0x2F, 0x80, 0x8F), QColor(0xE0, 0xC1, 0x7E), QSize(136, 106)}};
 
                        auto* model = makeFlowPhotoModel(flowView, photos);
                        flowView->setModel(model);
@@ -1027,9 +1060,8 @@ QVector<GallerySample> flowViewSamples()
                        for (int i = 0; i < 18; ++i) {
                            const QColor from = accentPalette().at(i % accentPalette().size());
                            const QColor to = accentPalette().at((i + 2) % accentPalette().size()).lighter(135);
-                           photos.append({QStringLiteral("Tile %1").arg(i + 1),
+                          photos.append({QStringLiteral("Tile %1").arg(i + 1),
                                           QStringLiteral("scroll"),
-                                          QStringLiteral("flow-scroll-%1").arg(i),
                                           from,
                                           to,
                                           QSize(126 + (i % 3) * 12, 88 + (i % 2) * 12)});
@@ -1064,14 +1096,14 @@ QVector<GallerySample> flowViewSamples()
 QStandardItemModel* makeGridPhotoModel(GridView* grid, const QSize& cell)
 {
     const QVector<FlowPhotoInfo> photos{
-        {QStringLiteral("Sunrise"), QStringLiteral("Warm"), QStringLiteral("grid-sunrise"), QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C), cell},
-        {QStringLiteral("Ocean"), QStringLiteral("Blue"), QStringLiteral("grid-ocean"), QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2), cell},
-        {QStringLiteral("Forest"), QStringLiteral("Green"), QStringLiteral("grid-forest"), QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B), cell},
-        {QStringLiteral("Dusk"), QStringLiteral("Violet"), QStringLiteral("grid-dusk"), QColor(0x6B, 0x4F, 0xA2), QColor(0xC2, 0x6F, 0xB8), cell},
-        {QStringLiteral("Desert"), QStringLiteral("Amber"), QStringLiteral("grid-desert"), QColor(0xC8, 0x6B, 0x2D), QColor(0xE8, 0xC0, 0x6E), cell},
-        {QStringLiteral("Glacier"), QStringLiteral("Ice"), QStringLiteral("grid-glacier"), QColor(0x3D, 0x8B, 0xA3), QColor(0xB3, 0xE5, 0xE8), cell},
-        {QStringLiteral("Meadow"), QStringLiteral("Spring"), QStringLiteral("grid-meadow"), QColor(0x6F, 0xA8, 0x2F), QColor(0xD4, 0xE6, 0x7A), cell},
-        {QStringLiteral("Harbor"), QStringLiteral("Teal"), QStringLiteral("grid-harbor"), QColor(0x1C, 0x6E, 0x8C), QColor(0x73, 0xC8, 0xD0), cell}};
+        {QStringLiteral("Sunrise"), QStringLiteral("Warm"), QColor(0xF7, 0x97, 0x5B), QColor(0xF2, 0xC9, 0x4C), cell},
+        {QStringLiteral("Ocean"), QStringLiteral("Blue"), QColor(0x1E, 0x6F, 0xD9), QColor(0x6F, 0xD1, 0xF2), cell},
+        {QStringLiteral("Forest"), QStringLiteral("Green"), QColor(0x2F, 0x9E, 0x44), QColor(0xA9, 0xE3, 0x4B), cell},
+        {QStringLiteral("Dusk"), QStringLiteral("Violet"), QColor(0x6B, 0x4F, 0xA2), QColor(0xC2, 0x6F, 0xB8), cell},
+        {QStringLiteral("Desert"), QStringLiteral("Amber"), QColor(0xC8, 0x6B, 0x2D), QColor(0xE8, 0xC0, 0x6E), cell},
+        {QStringLiteral("Glacier"), QStringLiteral("Ice"), QColor(0x3D, 0x8B, 0xA3), QColor(0xB3, 0xE5, 0xE8), cell},
+        {QStringLiteral("Meadow"), QStringLiteral("Spring"), QColor(0x6F, 0xA8, 0x2F), QColor(0xD4, 0xE6, 0x7A), cell},
+        {QStringLiteral("Harbor"), QStringLiteral("Teal"), QColor(0x1C, 0x6E, 0x8C), QColor(0x73, 0xC8, 0xD0), cell}};
 
     auto* model = makeFlowPhotoModel(grid, photos);
     auto* network = new QNetworkAccessManager(grid);
@@ -1182,7 +1214,6 @@ QVector<GallerySample> gridViewSamples()
                        for (int i = 0; i < 18; ++i) {
                            photos.append({QStringLiteral("Cell %1").arg(i + 1),
                                           QStringLiteral("grid"),
-                                          QStringLiteral("grid-scroll-%1").arg(i),
                                           accentPalette().at(i % accentPalette().size()),
                                           accentPalette().at((i + 3) % accentPalette().size()).lighter(135),
                                           QSize(118, 88)});

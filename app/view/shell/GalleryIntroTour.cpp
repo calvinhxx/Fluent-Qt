@@ -77,6 +77,7 @@ void GalleryIntroTour::build()
     header->addWidget(m_title, 1);
 
     m_close = new Button(host);
+    m_close->setObjectName(QStringLiteral("GalleryIntroTour.CloseButton"));
     m_close->setFluentStyle(Button::Subtle);
     m_close->setFluentLayout(Button::IconOnly);
     m_close->setFluentSize(Button::Small);
