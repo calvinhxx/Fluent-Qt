@@ -63,7 +63,8 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
              {QStringLiteral("dialog"), QStringLiteral("Dialog"), Typography::Icons::Message},
              {QStringLiteral("flyout"), QStringLiteral("Flyout"), Typography::Icons::Message},
              {QStringLiteral("popup"), QStringLiteral("Popup"), Typography::Icons::BackToWindow},
-             {QStringLiteral("teaching-tip"), QStringLiteral("TeachingTip"), Typography::Icons::Info}
+             {QStringLiteral("teaching-tip"), QStringLiteral("TeachingTip"), Typography::Icons::Info},
+             {QStringLiteral("coach-mark"), QStringLiteral("CoachMark"), Typography::Icons::Info}
          }},
         {QStringLiteral("menus-toolbars"),
          QStringLiteral("Menus & toolbars"),

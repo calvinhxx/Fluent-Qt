@@ -3,13 +3,17 @@
 #include <QBoxLayout>
 #include <QHBoxLayout>
 #include <QPainter>
+#include <QPointer>
 #include <QSizePolicy>
 #include <QVBoxLayout>
+
+#include <memory>
 
 #include "SampleBuilders.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/CheckBox.h"
 #include "components/basicinput/ToggleSwitch.h"
+#include "components/dialogs_flyouts/CoachMark.h"
 #include "components/dialogs_flyouts/ContentDialog.h"
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/dialogs_flyouts/Flyout.h"
@@ -25,6 +29,7 @@ namespace {
 using fluent::basicinput::Button;
 using fluent::basicinput::CheckBox;
 using fluent::basicinput::ToggleSwitch;
+using fluent::dialogs_flyouts::CoachMark;
 using fluent::dialogs_flyouts::ContentDialog;
 using fluent::dialogs_flyouts::Dialog;
 using fluent::dialogs_flyouts::Flyout;
@@ -131,6 +136,22 @@ QString flyoutPlacementText(Flyout::Placement placement) {
   case Flyout::Full:
     return QStringLiteral("Full");
   case Flyout::Auto:
+  default:
+    return QStringLiteral("Auto");
+  }
+}
+
+QString coachMarkPlacementText(CoachMark::Placement placement) {
+  switch (placement) {
+  case CoachMark::Top:
+    return QStringLiteral("Top");
+  case CoachMark::Bottom:
+    return QStringLiteral("Bottom");
+  case CoachMark::Left:
+    return QStringLiteral("Left");
+  case CoachMark::Right:
+    return QStringLiteral("Right");
+  case CoachMark::Auto:
   default:
     return QStringLiteral("Auto");
   }
@@ -891,6 +912,119 @@ QVector<GallerySample> teachingTipSamples() {
           })};
 }
 
+QVector<GallerySample> coachMarkSamples() {
+  return {
+      makeSample(
+          QStringLiteral("coach-mark-targeted-glide"),
+          QStringLiteral("Targeted coach mark with glide"),
+          QStringLiteral("CoachMark lives in its own top-level window, points a "
+                         "tail at a target, and glides to a new target when "
+                         "retargeted while open."),
+          QStringLiteral(
+              "auto* coach = new CoachMark(window());\n"
+              "coach->setCardSize(QSize(320, 150));\n"
+              "coach->setPlacement(CoachMark::Bottom);\n"
+              "coach->setTarget(targetButton);  // glides if already open\n"
+              "connect(closeButton, &Button::clicked, coach, "
+              "&CoachMark::close);\n"
+              "coach->open();"),
+          [](QWidget *parent) {
+            auto *surface = sampleSurface(parent);
+            auto *row = horizontalGroup(surface, 8);
+            auto *bottom = sampleButton(row, QStringLiteral("Bottom"));
+            auto *right = sampleButton(row, QStringLiteral("Right"));
+            auto *top = sampleButton(row, QStringLiteral("Top"));
+            auto *status =
+                makeStatusLabel(surface, QStringLiteral("Coach mark: closed"));
+
+            // One shared coach mark drives all three buttons: retargeting it
+            // while open glides the same top-level window, and nothing stacks.
+            // zh_CN: 三个按钮共用一个 coach mark：打开状态下重定向会让同一个
+            // 顶层窗口滑动过去，不会堆叠。
+            auto coachRef = std::make_shared<QPointer<CoachMark>>();
+            auto titleRef = std::make_shared<QPointer<Label>>();
+
+            auto showCoach = [coachRef, titleRef,
+                              status](Button *target,
+                                      CoachMark::Placement placement) {
+              if (!*coachRef) {
+                auto *coach = new CoachMark(target->window());
+                coach->setCardSize(QSize(320, 150));
+
+                auto *host = coach->contentHost();
+                auto *layout = new QVBoxLayout(host);
+                layout->setContentsMargins(18, 14, 14, 14);
+                layout->setSpacing(8);
+
+                auto *titleRow = new QHBoxLayout;
+                titleRow->setSpacing(8);
+                auto *title =
+                    makeTitleLabel(host, QStringLiteral("Coach mark"));
+                titleRow->addWidget(title);
+                titleRow->addStretch(1);
+                auto *closeButton = new Button(QString(), host);
+                closeButton->setFluentLayout(Button::IconOnly);
+                closeButton->setFluentStyle(Button::Subtle);
+                closeButton->setIconGlyph(Typography::Icons::ChromeClose,
+                                          Typography::FontSize::Caption);
+                closeButton->setFixedSize(30, 30);
+                QObject::connect(closeButton, &Button::clicked, coach,
+                                 [coach]() { coach->close(); });
+                titleRow->addWidget(closeButton);
+                layout->addLayout(titleRow);
+
+                layout->addWidget(makeBodyLabel(
+                    host, QStringLiteral(
+                              "The tail points back at the control that opened "
+                              "this coach mark. Pick another placement to watch "
+                              "it glide.")));
+                layout->addStretch(1);
+
+                auto *gotIt = sampleButton(host, QStringLiteral("Got it"));
+                gotIt->setFluentStyle(Button::Accent);
+                QObject::connect(gotIt, &Button::clicked, coach,
+                                 [coach]() { coach->close(); });
+                layout->addWidget(gotIt, 0, Qt::AlignRight);
+
+                QObject::connect(coach, &CoachMark::closed, status, [status]() {
+                  status->setText(QStringLiteral("Coach mark: closed"));
+                });
+
+                *coachRef = coach;
+                *titleRef = title;
+              }
+
+              const QString placementText = coachMarkPlacementText(placement);
+              (*titleRef)->setText(
+                  QStringLiteral("%1 placement").arg(placementText));
+              (*coachRef)->setPlacement(placement);
+              (*coachRef)->setTarget(target);
+              (*coachRef)->open();
+              status->setText(
+                  QStringLiteral("Coach mark: %1").arg(placementText));
+            };
+
+            QObject::connect(bottom, &Button::clicked, bottom,
+                             [bottom, showCoach]() {
+                               showCoach(bottom, CoachMark::Bottom);
+                             });
+            QObject::connect(right, &Button::clicked, right,
+                             [right, showCoach]() {
+                               showCoach(right, CoachMark::Right);
+                             });
+            QObject::connect(top, &Button::clicked, top, [top, showCoach]() {
+              showCoach(top, CoachMark::Top);
+            });
+
+            boxLayout(row)->addWidget(bottom);
+            boxLayout(row)->addWidget(right);
+            boxLayout(row)->addWidget(top);
+            boxLayout(surface)->addWidget(row);
+            boxLayout(surface)->addWidget(status);
+            return surface;
+          })};
+}
+
 } // namespace
 
 QVector<GallerySample> dialogsFlyoutsSamples(const QString &routeId) {
@@ -904,6 +1038,8 @@ QVector<GallerySample> dialogsFlyoutsSamples(const QString &routeId) {
     return popupSamples();
   if (routeId == QStringLiteral("teaching-tip"))
     return teachingTipSamples();
+  if (routeId == QStringLiteral("coach-mark"))
+    return coachMarkSamples();
   return {};
 }
 
