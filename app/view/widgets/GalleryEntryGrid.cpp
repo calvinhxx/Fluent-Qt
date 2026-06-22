@@ -17,7 +17,7 @@ namespace {
 // 16px gap, title + caption column) so the painted grid matches the previous look.
 // zh_CN: 对齐旧 GalleryEntryCard 布局，使绘制网格与原来外观一致。
 constexpr int kGridSpacing = 12;
-constexpr int kCardHeight = 86;
+constexpr int kMinCardHeight = 86;
 constexpr int kCardPadding = 16;
 constexpr int kIconSize = 40;
 constexpr int kIconTextGap = 16;
@@ -46,6 +46,7 @@ void GalleryEntryGrid::setEntries(const QVector<Entry>& entries)
 {
     m_entries = entries;
     m_hoveredIndex = -1;
+    recalculateCardHeight();
     updateGeometry();
     update();
 }
@@ -68,7 +69,7 @@ int GalleryEntryGrid::gridHeight() const
     const int rows = rowCount();
     if (rows == 0)
         return 0;
-    return rows * kCardHeight + (rows - 1) * kGridSpacing;
+    return rows * m_cardHeight + (rows - 1) * kGridSpacing;
 }
 
 int GalleryEntryGrid::columnWidth() const
@@ -84,8 +85,8 @@ QRect GalleryEntryGrid::cardRect(int index) const
     const int column = index % cols;
     const int cardWidth = columnWidth();
     const int x = column * (cardWidth + kGridSpacing);
-    const int y = row * (kCardHeight + kGridSpacing);
-    return QRect(x, y, cardWidth, kCardHeight);
+    const int y = row * (m_cardHeight + kGridSpacing);
+    return QRect(x, y, cardWidth, m_cardHeight);
 }
 
 int GalleryEntryGrid::cardIndexAt(const QPoint& pos) const
@@ -95,7 +96,7 @@ int GalleryEntryGrid::cardIndexAt(const QPoint& pos) const
         return -1;
     const int cols = columns();
     const int column = pos.x() / (cardWidth + kGridSpacing);
-    const int row = pos.y() / (kCardHeight + kGridSpacing);
+    const int row = pos.y() / (m_cardHeight + kGridSpacing);
     if (column < 0 || column >= cols || row < 0)
         return -1;
     const int index = row * cols + column;
@@ -119,15 +120,45 @@ QSize GalleryEntryGrid::minimumSizeHint() const
 void GalleryEntryGrid::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
-    // A width change can change the column count, which changes the row count and thus
-    // our height — tell the layout to re-read sizeHint so the page scrolls correctly.
-    // zh_CN: 宽度变化可能改变列数，进而改变行数与高度——通知布局重新读取 sizeHint，使页面正确滚动。
     const int cols = columns();
-    if (cols != m_lastColumns) {
+    const int cardWidth = columnWidth();
+    if (cols != m_lastColumns || cardWidth != m_lastColumnWidth) {
         m_lastColumns = cols;
+        m_lastColumnWidth = cardWidth;
+        recalculateCardHeight();
+        // Width changes can alter both the row count and wrapped-text height. Tell the
+        // page layout to re-read sizeHint so the scroll extent stays correct.
+        // zh_CN: 宽度变化会同时影响行数和文本换行高度，通知页面布局重新读取 sizeHint。
         updateGeometry();
     }
     update();
+}
+
+bool GalleryEntryGrid::recalculateCardHeight()
+{
+    int requiredHeight = kMinCardHeight;
+    const int textWidth = columnWidth() - 2 * kCardPadding - kIconSize - kIconTextGap;
+    if (textWidth > 0) {
+        const QFontMetrics titleMetrics(themeFont(Typography::FontRole::BodyStrong).toQFont());
+        const QFontMetrics descMetrics(themeFont(Typography::FontRole::Caption).toQFont());
+        for (const Entry& entry : m_entries) {
+            int textHeight = titleMetrics.height();
+            if (!entry.description.isEmpty()) {
+                const QRect descriptionBounds = descMetrics.boundingRect(
+                    QRect(0, 0, textWidth, QWIDGETSIZE_MAX),
+                    Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
+                    entry.description);
+                textHeight += kTitleDescGap + descriptionBounds.height();
+            }
+            requiredHeight = qMax(requiredHeight,
+                                  2 * kCardPadding + qMax(kIconSize, textHeight));
+        }
+    }
+
+    if (requiredHeight == m_cardHeight)
+        return false;
+    m_cardHeight = requiredHeight;
+    return true;
 }
 
 void GalleryEntryGrid::leaveEvent(QEvent* event)
@@ -166,6 +197,8 @@ void GalleryEntryGrid::mouseReleaseEvent(QMouseEvent* event)
 
 void GalleryEntryGrid::onThemeUpdated()
 {
+    if (recalculateCardHeight())
+        updateGeometry();
     update();
 }
 
@@ -237,7 +270,8 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
         if (!entry.description.isEmpty()) {
             const int descY = titleY + titleMetrics.height() + kTitleDescGap;
             const int descBottom = rect.bottom() - kCardPadding;
-            const QRect descRect(textLeft, descY, textWidth, qMax(0, descBottom - descY));
+            const QRect descRect(textLeft, descY, textWidth,
+                                 qMax(0, descBottom - descY + 1));
             painter.setFont(descFont);
             painter.setPen(colors.textSecondary);
             painter.drawText(descRect,

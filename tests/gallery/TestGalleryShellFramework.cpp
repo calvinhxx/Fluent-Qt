@@ -37,6 +37,7 @@
 #include "view/widgets/GalleryEntryCard.h"
 #include "VisualGeometryTestUtils.h"
 #include "view/shell/GalleryWindow.h"
+#include "view/shell/GalleryIntroTour.h"
 #include "view/pages/SettingsPage.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
@@ -47,6 +48,7 @@ using fluent::collections::TreeView;
 using fluent::dialogs_flyouts::Popup;
 using fluent::gallery::GalleryContentPage;
 using fluent::gallery::GalleryEntryCard;
+using fluent::gallery::GalleryIntroTour;
 using fluent::gallery::GalleryNavigationPane;
 using fluent::gallery::GalleryNavigationViewModel;
 using fluent::gallery::GallerySettings;
@@ -248,6 +250,31 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
     ASSERT_NE(page->titleLabel(), nullptr);
     EXPECT_EQ(page->titleLabel()->text(), QStringLiteral("Home"));
     EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
+}
+
+TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)
+{
+    GalleryWindow window;
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+
+    GalleryIntroTour tour(&window);
+    GalleryIntroTour::Step step;
+    step.title = QStringLiteral("Welcome");
+    step.body = QStringLiteral("Intro content");
+    step.centered = true;
+    tour.setSteps({step});
+    tour.start();
+
+    EXPECT_FALSE(window.isChromeInteractive());
+    auto* closeButton = window.findChild<Button*>(
+        QStringLiteral("GalleryIntroTour.CloseButton"));
+    ASSERT_NE(closeButton, nullptr);
+    QTest::mouseClick(closeButton, Qt::LeftButton);
+    EXPECT_TRUE(window.isChromeInteractive());
+
+    window.close();
 }
 
 TEST_F(GalleryShellFrameworkTest, ContentPageUsesFloatingVisibleVerticalScrollbar)

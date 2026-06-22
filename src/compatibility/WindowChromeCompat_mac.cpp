@@ -23,6 +23,7 @@ namespace {
 // zh_CN: 将 Objective-C 消息发送限制在本文件内，避免公共 chrome 适配器依赖 Cocoa
 // zh_CN: 头文件或 Objective-C++ 编译要求。
 constexpr unsigned long NSWindowStyleMaskFullSizeContentView = 1UL << 15;
+constexpr unsigned long NSWindowStyleMaskResizable = 1UL << 3;
 constexpr long NSWindowTitleHidden = 1;
 constexpr unsigned long NSWindowCloseButton = 0;
 constexpr unsigned long NSWindowMiniaturizeButton = 1;
@@ -233,6 +234,35 @@ void syncUnifiedTitleBarGeometry(QWidget* window, const WindowChromeOptions& opt
     centerTrafficLights(nsWindow, options.titleBarRect);
 }
 
+void syncNativeChromeInteractivity(QWidget* window, const WindowChromeOptions& options) {
+    if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        return;
+
+    id nsWindow = nativeWindowFor(window);
+    if (!nsWindow || !respondsTo(nsWindow, selector("styleMask"))
+        || !respondsTo(nsWindow, selector("setStyleMask:"))) {
+        return;
+    }
+
+    const bool qtAllowsResize = window->minimumWidth() < window->maximumWidth()
+        || window->minimumHeight() < window->maximumHeight();
+    const bool resizeEnabled = options.chromeInteractive && qtAllowsResize;
+    const unsigned long styleMask = sendUnsignedLong(nsWindow, "styleMask");
+    const unsigned long updatedStyleMask = resizeEnabled
+        ? styleMask | NSWindowStyleMaskResizable
+        : styleMask & ~NSWindowStyleMaskResizable;
+    if (updatedStyleMask != styleMask)
+        sendUnsignedLong(nsWindow, "setStyleMask:", updatedStyleMask);
+
+    if (respondsTo(nsWindow, selector("standardWindowButton:"))) {
+        id zoomButton = sendUnsignedLongReturnsId(nsWindow,
+                                                   "standardWindowButton:",
+                                                   NSWindowZoomButton);
+        if (zoomButton && respondsTo(zoomButton, selector("setEnabled:")))
+            sendBool(zoomButton, "setEnabled:", resizeEnabled ? YES : NO);
+    }
+}
+
 void applyUnifiedTitleBar(QWidget* window, const WindowChromeOptions& options) {
     if (QGuiApplication::platformName() != QStringLiteral("cocoa"))
         return;
@@ -246,6 +276,7 @@ void applyUnifiedTitleBar(QWidget* window, const WindowChromeOptions& options) {
     sendLong(nsWindow, "setTitleVisibility:", NSWindowTitleHidden);
     sendBool(nsWindow, "setTitlebarAppearsTransparent:", YES);
     sendBool(nsWindow, "setMovableByWindowBackground:", NO);
+    syncNativeChromeInteractivity(window, options);
     syncUnifiedTitleBarGeometry(window, options);
 }
 
@@ -516,6 +547,7 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
     if (!window || !options.preferNativeMacControls)
         return;
 
+    syncNativeChromeInteractivity(window, options);
     syncUnifiedTitleBarGeometry(window, options);
 }
 
