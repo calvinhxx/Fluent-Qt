@@ -18,6 +18,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/TextEdit.h"
 #include "model/GalleryComponentCatalog.h"
@@ -414,7 +415,6 @@ TEST_F(GalleryContentPagesTest, ContentPageAndSampleCardRefreshOnThemeChange)
     ASSERT_GE(page->sampleCount(), 1);
     GallerySampleCard* card = page->sampleCards().first();
     ASSERT_NE(card, nullptr);
-
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     page->onThemeUpdated();
     card->onThemeUpdated();
@@ -433,6 +433,24 @@ TEST_F(GalleryContentPagesTest, ContentPageAndSampleCardRefreshOnThemeChange)
     EXPECT_TRUE(page->styleSheet().contains(QStringLiteral("background: transparent")));
     EXPECT_TRUE(page->titleLabel()->styleSheet().contains(QStringLiteral("rgba(0, 0, 0, 230)")));
     EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
+}
+
+TEST_F(GalleryContentPagesTest, ContentScrollSurfaceStaysTransparentAcrossThemeRefresh)
+{
+    GalleryContentPage page(QStringLiteral("test"), QStringLiteral("Test"));
+    auto* scrollView = page.findChild<fluent::scrolling::ScrollView*>(
+        QStringLiteral("galleryContentScrollArea"));
+    ASSERT_NE(scrollView, nullptr);
+    ASSERT_NE(scrollView->viewport(), nullptr);
+
+    EXPECT_FALSE(scrollView->viewport()->autoFillBackground());
+    EXPECT_FALSE(scrollView->viewport()->testAttribute(Qt::WA_TranslucentBackground));
+
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    QApplication::processEvents();
+
+    EXPECT_FALSE(scrollView->viewport()->autoFillBackground());
+    EXPECT_FALSE(scrollView->viewport()->testAttribute(Qt::WA_TranslucentBackground));
 }
 
 // The "Source code" block starts collapsed and toggles its code + copy affordance.

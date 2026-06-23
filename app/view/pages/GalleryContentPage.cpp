@@ -2,6 +2,7 @@
 
 #include <QEvent>
 #include <QFrame>
+#include <QPainter>
 #include <QPalette>
 #include <QVBoxLayout>
 
@@ -11,6 +12,44 @@
 #include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {
+
+namespace {
+
+class GalleryContentScrollView final : public fluent::scrolling::ScrollView {
+public:
+    explicit GalleryContentScrollView(QWidget* parent = nullptr)
+        : fluent::scrolling::ScrollView(parent)
+    {
+        applyTransparentSurface();
+    }
+
+protected:
+    void onThemeUpdated() override
+    {
+        fluent::scrolling::ScrollView::onThemeUpdated();
+        applyTransparentSurface();
+    }
+
+private:
+    void applyTransparentSurface()
+    {
+        setAutoFillBackground(false);
+        QWidget* area = viewport();
+        if (!area)
+            return;
+
+        area->setAutoFillBackground(false);
+        area->setAttribute(Qt::WA_TranslucentBackground, false);
+        area->setAttribute(Qt::WA_OpaquePaintEvent, false);
+        QPalette palette = area->palette();
+        palette.setColor(QPalette::Window, Qt::transparent);
+        palette.setColor(QPalette::Base, Qt::transparent);
+        area->setPalette(palette);
+        area->update();
+    }
+};
+
+} // namespace
 
 GalleryContentPage::GalleryContentPage(const QString& routeId,
                                        const QString& title,
@@ -29,7 +68,7 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
     outerLayout->setContentsMargins(0, 0, 0, 0);
     outerLayout->setSpacing(0);
 
-    m_scrollArea = new fluent::scrolling::ScrollView(this);
+    m_scrollArea = new GalleryContentScrollView(this);
     m_scrollArea->setObjectName(QStringLiteral("galleryContentScrollArea"));
     m_scrollArea->setWidgetResizable(true);
     m_scrollArea->setFrameShape(QFrame::NoFrame);
@@ -44,13 +83,9 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
     m_scrollArea->setVerticalScrollBarVisibility(
         fluent::scrolling::ScrollView::ScrollBarVisibility::Visible);
 
-    // The scroll area + its internal clip viewport are transparent so the window's Mica
-    // backdrop shows through behind the page. zh_CN: 滚动区及其内部裁剪视口透明，使窗口 Mica 背景在页面之后透出。
-    m_scrollArea->setAutoFillBackground(false);
-    if (QWidget* clipViewport = m_scrollArea->viewport()) {
-        clipViewport->setAutoFillBackground(false);
-        clipViewport->setAttribute(Qt::WA_TranslucentBackground, true);
-    }
+    // GalleryContentScrollView keeps its clip viewport transparent across theme refreshes without
+    // promoting it to a separate translucent child layer on macOS.
+    // zh_CN: GalleryContentScrollView 在主题刷新后仍保持裁剪视口透明，且不会在 macOS 上把它提升为独立半透明子层。
 
     m_viewport = new QWidget(m_scrollArea);
     m_viewport->setObjectName(QStringLiteral("galleryContentViewport"));
@@ -141,6 +176,25 @@ void GalleryContentPage::onThemeUpdated()
         if (tracked.label)
             tracked.label->onThemeUpdated();
     }
+    update();
+    if (m_scrollArea && m_scrollArea->viewport())
+        m_scrollArea->viewport()->update();
+    if (m_viewport)
+        m_viewport->update();
+}
+
+void GalleryContentPage::paintEvent(QPaintEvent* event)
+{
+    if (window()
+        && window()->testAttribute(Qt::WA_TranslucentBackground)
+        && window()->property("fluentMicaBackdrop").toBool()) {
+        QPainter painter(this);
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(event->rect(), Qt::transparent);
+        return;
+    }
+
+    QWidget::paintEvent(event);
 }
 
 fluent::textfields::Label* GalleryContentPage::createTrackedLabel(const QString& text,

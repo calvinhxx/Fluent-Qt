@@ -43,19 +43,22 @@ void StackContentHost::setContentSurface(const QColor& fill, qreal topLeftRadius
 
 void StackContentHost::paintEvent(QPaintEvent*)
 {
-    // A translucent system backdrop (Mica/Acrylic) shows through the transparent pages, so paint
-    // nothing and let it show. Without one (Normal / unsupported platforms) the pages would fall
-    // through to the uninitialized backing (black) or the desktop, so paint the opaque content-layer
-    // surface. Keyed off the same window property the chrome paints against.
-    // zh_CN: 有半透明系统背景（Mica/Acrylic）时经透明页面透出，故不绘制；没有（Normal / 不支持的平台）时页面会透到
-    // 未初始化后备缓冲（黑）或桌面，故绘制不透明内容层表面。与 chrome 绘制依据的同一窗口属性挂钩。
-    if (window() && window()->property("fluentMicaBackdrop").toBool())
+    QPainter painter(this);
+
+    // Transparent widgets share the top-level backing store. Replace this region on every
+    // backdrop frame so pixels from an outgoing page cannot survive a stack switch.
+    // zh_CN: 透明控件共享顶层后备缓冲；每个背景帧都替换此区域，避免切页后保留旧页面像素。
+    if (window()
+        && window()->testAttribute(Qt::WA_TranslucentBackground)
+        && window()->property("fluentMicaBackdrop").toBool()) {
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(rect(), Qt::transparent);
         return;
+    }
 
     if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0)
         return;  // transparent host: nothing to paint (pages/backdrop show through)
 
-    QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
     const QRectF panelRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
@@ -361,20 +364,30 @@ QPoint StackContentHost::transitionStartOffset(const QRect& rect, int direction)
 
 void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
 {
-    if (currentWidget)
-        m_layout->setCurrentWidget(currentWidget);
     for (const PageRecord& page : std::as_const(m_pages)) {
         QWidget* stackWidget = page.stackWidget.data();
         if (!stackWidget)
             continue;
-        if (stackWidget == currentWidget) {
-            stackWidget->setGeometry(rect());
-            stackWidget->show();
-            stackWidget->raise();
-        } else {
-            stackWidget->hide();
-        }
+        stackWidget->hide();
     }
+
+    const bool translucentBackdrop = window()
+        && window()->testAttribute(Qt::WA_TranslucentBackground)
+        && window()->property("fluentMicaBackdrop").toBool();
+    if (translucentBackdrop && isVisible()) {
+        // Clear synchronously while every page is hidden. An asynchronous update can run after
+        // the incoming transparent page starts painting, leaving outgoing pixels underneath it.
+        // zh_CN: 所有页面隐藏时同步清屏；异步 update 可能晚于新透明页面绘制，导致旧页面像素残留在下方。
+        repaint();
+    }
+
+    if (currentWidget) {
+        m_layout->setCurrentWidget(currentWidget);
+        currentWidget->setGeometry(rect());
+        currentWidget->show();
+        currentWidget->raise();
+    }
+    update();
 }
 
 void StackContentHost::normalizeCurrentIndexAfterRemoval(int removedIndex)

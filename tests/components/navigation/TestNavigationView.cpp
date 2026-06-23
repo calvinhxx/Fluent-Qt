@@ -5,6 +5,7 @@
 #include <QEvent>
 #include <QFontDatabase>
 #include <QFontMetrics>
+#include <QImage>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPalette>
@@ -409,6 +410,42 @@ private:
     }
 };
 
+class PaintTrackingStackContentHost final : public StackContentHost {
+public:
+    int paintCount() const { return m_paintCount; }
+
+protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        ++m_paintCount;
+        StackContentHost::paintEvent(event);
+    }
+
+private:
+    int m_paintCount = 0;
+};
+
+class PaintCountOnShowFilter final : public QObject {
+public:
+    explicit PaintCountOnShowFilter(PaintTrackingStackContentHost* host)
+        : m_host(host)
+    {
+    }
+
+    int paintCountAtShow = -1;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Show && m_host)
+            paintCountAtShow = m_host->paintCount();
+        return QObject::eventFilter(watched, event);
+    }
+
+private:
+    PaintTrackingStackContentHost* m_host = nullptr;
+};
+
 void showAndProcess(QWidget& widget)
 {
     widget.show();
@@ -754,6 +791,48 @@ TEST_F(NavigationViewTest, StackContentHostOwnsContentPagesAtApplicationLayer)
     EXPECT_EQ(nav.contentHost()->currentIndex(), 1);
     EXPECT_EQ(second->geometry(), QRect(QPoint(0, 0), nav.contentGeometry().size()));
     EXPECT_EQ(currentSpy.count(), 2);
+}
+
+TEST_F(NavigationViewTest, StackContentHostClearsTranslucentBackdropPixels)
+{
+    StackContentHost host;
+    host.setAttribute(Qt::WA_TranslucentBackground, true);
+    host.setProperty("fluentMicaBackdrop", true);
+    host.resize(240, 160);
+
+    QImage image(host.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(QColor(255, 0, 255, 255));
+
+    QPainter painter(&image);
+    host.render(&painter, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+    painter.end();
+
+    EXPECT_EQ(image.pixelColor(host.rect().center()).alpha(), 0)
+        << "A translucent content host must replace pixels left by the outgoing page";
+}
+
+TEST_F(NavigationViewTest, StackContentHostClearsBeforeShowingReplacementPage)
+{
+    PaintTrackingStackContentHost host;
+    host.setAttribute(Qt::WA_TranslucentBackground, true);
+    host.setProperty("fluentMicaBackdrop", true);
+    host.resize(240, 160);
+
+    auto* first = new QWidget;
+    auto* second = new QWidget;
+    PaintCountOnShowFilter showFilter(&host);
+    second->installEventFilter(&showFilter);
+    ASSERT_TRUE(host.insertPage(0, first));
+    ASSERT_TRUE(host.insertPage(1, second));
+    host.setCurrentIndex(0, 0, false);
+    showAndProcess(host);
+
+    const int paintsBeforeSwitch = host.paintCount();
+    showFilter.paintCountAtShow = -1;
+    host.setCurrentIndex(1, 0, false);
+
+    EXPECT_GT(showFilter.paintCountAtShow, paintsBeforeSwitch)
+        << "The outgoing page pixels must be cleared before the replacement becomes visible";
 }
 
 TEST_F(NavigationViewTest, StackContentHostTransitionEffectControlsIncomingOffset)

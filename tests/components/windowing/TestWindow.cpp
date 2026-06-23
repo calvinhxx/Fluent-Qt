@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QPainter>
 #include <QPointer>
 #include <QPushButton>
@@ -339,6 +340,42 @@ TEST_F(WindowTest, TopLevelShowSmoke) {
     EXPECT_TRUE(window.isVisible());
 
     window.close();
+}
+
+TEST_F(WindowTest, TranslucentBackdropClearsWindowBackingStore) {
+    Window window;
+    if (!window.testAttribute(Qt::WA_TranslucentBackground)
+        || !window.property("fluentMicaBackdrop").toBool()) {
+        GTEST_SKIP() << "System backdrop is unavailable on this Qt platform";
+    }
+
+    window.resize(320, 240);
+    QImage image(window.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(QColor(255, 0, 255, 255));
+
+    QPainter painter(&image);
+    window.render(&painter, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+    painter.end();
+
+    EXPECT_EQ(image.pixelColor(window.rect().center()).alpha(), 0)
+        << "A translucent backdrop frame must replace stale backing-store pixels";
+}
+
+TEST_F(WindowTest, BackdropSwitchKeepsPlatformTranslucencyStable) {
+    Window window;
+    const bool platformTranslucent = window.testAttribute(Qt::WA_TranslucentBackground);
+
+    window.setBackdropEffect(compatibility::BackdropEffect::Solid);
+    EXPECT_FALSE(window.property("fluentMicaBackdrop").toBool());
+    EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
+
+    window.setBackdropEffect(compatibility::BackdropEffect::Mica);
+    EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), platformTranslucent);
+    EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
+
+    window.setBackdropEffect(compatibility::BackdropEffect::Acrylic);
+    EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), platformTranslucent);
+    EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
 }
 
 TEST_F(WindowTest, WindowsCustomChromePreservesDwmCaption) {

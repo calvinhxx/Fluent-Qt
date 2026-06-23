@@ -10,6 +10,7 @@
 #include "components/foundation/QMLPlus.h"
 
 class QVBoxLayout;
+class QPaintEvent;
 
 namespace fluent::scrolling {
 class ScrollView;
@@ -54,6 +55,8 @@ signals:
     void routeActivated(const QString& routeId);
 
 protected:
+    void paintEvent(QPaintEvent* event) override;
+
     /** @brief Adds a section heading label to the content column. */
     fluent::textfields::Label* addSectionHeader(const QString& text);
     /** @brief Adds a wrapped body paragraph to the content column. */

@@ -170,13 +170,17 @@ void Window::closeWindow() {
 }
 
 void Window::paintEvent(QPaintEvent*) {
-    // Under Mica the window is translucent: leave the backing store transparent so the DWM
-    // backdrop shows through; opaque children (content) cover it where needed.
-    // zh_CN: Mica 下窗口半透明：保持后备缓冲透明，露出 DWM 背景；不透明子控件（内容）按需遮挡。
-    if (m_micaBackdrop)
-        return;
-
     QPainter painter(this);
+
+    // Transparent top-level widgets keep their backing-store pixels between frames on macOS.
+    // Replace them explicitly so page or material switches cannot retain the previous frame.
+    // zh_CN: macOS 的透明顶层控件会跨帧保留后备缓冲像素，需显式替换，避免页面或材质切换残留上一帧。
+    if (m_micaBackdrop) {
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(rect(), Qt::transparent);
+        return;
+    }
+
     const auto& colors = themeColors();
     painter.fillRect(rect(), colors.bgCanvas);
 

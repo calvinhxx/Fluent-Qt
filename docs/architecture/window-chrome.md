@@ -67,7 +67,7 @@ WindowChromeCompat 判断「本 OS 有系统背景」并安装它 -> 设置 flue
 | 分支 | 文件 | title bar / nav | 背景 |
 |---|---|---|---|
 | Windows | `_win.cpp` | 自绘 caption（去掉 `WS_CAPTION`），自定义 hit-test | DWM Mica 系统背景 |
-| macOS | `_mac.cpp` | 原生 traffic lights + full-size content + 透明 titlebar | 两层兄弟 `NSView`：`NSVisualEffectView`（sidebar vibrancy）+ Mica 基色 tint（~0.42 alpha） |
+| macOS | `_mac.cpp` | 原生 traffic lights + full-size content + 透明 titlebar | 两层兄弟 `NSView`：Mica 使用 window-background vibrancy + 较强 tint，Acrylic 使用 sidebar vibrancy + 较弱 tint |
 | 其它 | `_fallback.cpp` | 原生窗口装饰（无自绘 caption） | 纯色 `themeBackdrop` |
 
 `platformSupportsSystemBackdrop()` 决定 `fluentMicaBackdrop` 是否为真：Windows / macOS 为真（走透明 + 系统背景），其它为假（走纯色降级）。
@@ -80,4 +80,4 @@ macOS 半透明顶层（vibrancy）下，系统**不会自动清除后备缓冲*
 - **累加发黑**（半透明描边每帧叠加 alpha）、
 - **启动亮缝**（vibrancy 合成前的那一帧露出满强度 tint ≈243）。
 
-统一修法：每帧用 `QPainter::CompositionMode_Source` 擦除，**并门控在顶层确实半透明时**（`WA_TranslucentBackground` / `fluentMicaBackdrop`）——未门控的 Source 擦除会写入 `RGBA(0,0,0,0)`，在不透明窗口上渲染成黑。已应用于 `TitleBar.cpp`、`TreeView.cpp`（`!m_backgroundVisible` 时）、`NavigationView.cpp`（清 chrome rect），以及 `GalleryNavigationPane.cpp` 的页脚分隔线。另外：**小的 chrome 子控件不要单独设 `WA_TranslucentBackground`**——macOS 上会把它提升为独立图层，在 vibrancy 合成前露出满强度 tint（白线）。
+统一修法：每帧用 `QPainter::CompositionMode_Source` 擦除，**并门控在顶层确实半透明时**（`WA_TranslucentBackground` / `fluentMicaBackdrop`）——未门控的 Source 擦除会写入 `RGBA(0,0,0,0)`，在不透明窗口上渲染成黑。已应用于 `Window.cpp`、`StackContentHost.cpp`、`TitleBar.cpp`、`TreeView.cpp`（`!m_backgroundVisible` 时）、`NavigationView.cpp`（清 chrome rect）、Gallery 内容页，以及 `GalleryNavigationPane.cpp` 的页脚分隔线。页面栈切换时应在显示新透明页面前同步清除旧页面区域。另外：**子控件不要单独设 `WA_TranslucentBackground`**——macOS 上会把它提升为独立图层，容易在 vibrancy 合成期间产生白线或残影。

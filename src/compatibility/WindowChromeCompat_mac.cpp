@@ -322,14 +322,11 @@ bool performNativeTitleBarDoubleClick(QWidget* window) {
 //
 // Two stacked sibling layers fill the whole window behind Qt's (translucent) content, so the title
 // bar and navigation pane share one cohesive surface that the opaque content card sits on:
-//   1. base  — an NSVisualEffectView (sidebar vibrancy) carrying the desktop's color and warmth;
-//   2. tint  — a plain layer washed with the Windows-Mica base color at ~0.42 alpha.
-// The lighter tint lets the sidebar material's wallpaper tint come through for a rich, living
-// vibrancy (the polished-native-app look), while still keeping the chrome legible and coherent with
-// the content. zh_CN: 两层叠放的兄弟视图铺满整窗、位于 Qt（半透明）内容之后，使标题栏与导航窗格成为一整片
-// 连贯表面，不透明内容卡片坐落其上：1) base —— NSVisualEffectView（sidebar vibrancy）承载桌面色彩与暖意；
-// 2) tint —— 一层以 Windows Mica 基色、约 0.42 alpha 铺成的纯色。更淡的 tint 让 sidebar 材质的壁纸着色透出，
-// 形成丰富、鲜活的 vibrancy（精致原生 app 的观感），同时保持 chrome 清晰、与内容协调。
+//   1. base  — an effect-specific NSVisualEffectView carrying the desktop blur and color;
+//   2. tint  — a plain app-surface wash controlling how strongly that backdrop shows through.
+// Mica uses a quieter material and stronger tint; Acrylic uses a livelier material and lighter tint.
+// zh_CN: 两层兄弟视图铺满整窗、位于 Qt（半透明）内容之后：1) base 使用随效果变化的 NSVisualEffectView
+// 承载桌面模糊与色彩；2) tint 通过应用表面色控制背景透出程度。Mica 更克制且 tint 更强，Acrylic 更鲜活且 tint 更浅。
 
 // NSView identifiers used to find-or-reuse our backdrop layers across re-applies.
 // zh_CN: NSView 标识符，用于跨多次重新施加时查找/复用我们的背景层。
@@ -402,8 +399,10 @@ id ensureBackdropView(id superview,
                       long orderingPlace,
                       id relativeTo) {
     id existing = findSubviewWithIdentifier(superview, identifier);
-    if (existing)
+    if (existing) {
+        sendLong(existing, "setMaterial:", material);
         return existing;
+    }
 
     const CGRect bounds = sendRect(superview, "bounds");
     id effectView = allocInitWithFrame("NSVisualEffectView", bounds);
@@ -420,10 +419,8 @@ id ensureBackdropView(id superview,
     return effectView;
 }
 
-// Sets a layer-backed view's background to the Windows-Mica base color (matching the
-// Material::Mica tokens) at the given alpha — a near-opaque app-surface wash over the vibrancy.
-// zh_CN: 把图层视图的背景设为 Windows Mica 基色（对齐 Material::Mica token）并取给定 alpha——
-// 在 vibrancy 之上铺一层接近不透明的应用表面色。
+// Sets a layer-backed view's app-surface tint at the requested alpha.
+// zh_CN: 按指定 alpha 设置图层视图的应用表面 tint。
 void setMicaTintColor(id view, bool dark, double alpha) {
     if (!view || !respondsTo(view, selector("layer")))
         return;
@@ -599,19 +596,18 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
     if (!resolveBackdropHost(window, &contentView, &superview))
         return false;
 
-    // Base layer: a subtle, window-wide vibrancy behind everything (incl. the full-width title
-    // bar). Sits directly behind Qt's content view and tracks resizes via autoresizing. It supplies
-    // the "hint of blurred desktop" under the tint; the tint above supplies most of the color.
-    // zh_CN: 基础层：置于一切之后（含整宽标题栏）的低调全窗 vibrancy。紧贴 Qt 内容视图之后，并通过
-    // autoresizing 跟随尺寸变化。它在 tint 之下提供「少许模糊桌面」，主色由其上的 tint 提供。
-    // The native source-list ("sidebar") material picks up more of the desktop's color and warmth
-    // than the flatter windowBackground — paired with a lighter tint below, that gives the chrome a
-    // richer, more alive vibrancy (the look of polished native apps) instead of a monotone gray.
-    // zh_CN: 原生源列表（sidebar）材质比扁平的 windowBackground 吸收更多桌面色彩与暖意——配合下方更淡的 tint，
-    // 让 chrome 呈现更丰富、更鲜活的 vibrancy（精致原生 app 的观感），而非一片单调灰。
+    // Mica uses the subdued window-background material with a stronger app tint. Acrylic uses the
+    // more wallpaper-responsive sidebar material with a lighter tint, so the two choices remain
+    // visibly distinct instead of sharing the same native material.
+    // zh_CN: Mica 使用更克制的 window-background material 和更强应用 tint；Acrylic 使用更受壁纸影响的
+    // sidebar material 和更浅 tint，使两种效果不再因共用同一原生 material 而难以区分。
+    const bool acrylic = effect == BackdropEffect::Acrylic;
+    const long material = acrylic
+        ? NSVisualEffectMaterialSidebar
+        : NSVisualEffectMaterialWindowBackground;
     id base = ensureBackdropView(superview,
                                  kBackdropBaseIdentifier,
-                                 NSVisualEffectMaterialSidebar,
+                                 material,
                                  NSWindowBelow,
                                  contentView);
     if (!base)
@@ -621,16 +617,9 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
     sendCGRect(base, "setFrame:", sendRect(superview, "bounds"));
     applyEffectAppearance(base, dark);
 
-    // App-surface tint over the vibrancy: enough to keep the chrome legible and coherent with the
-    // (opaque) content, but light enough (~0.42) that the sidebar material's wallpaper color and
-    // warmth come through — a rich, living vibrancy rather than a flat tinted gray. Raise it toward
-    // 0.7 for a cleaner/flatter pane, lower it toward 0.3 for a more see-through (busier) one.
-    // zh_CN: 在 vibrancy 之上的应用表面色：足以让 chrome 清晰、与（不透明）内容协调，但又足够淡（~0.42），
-    // 使 sidebar 材质的壁纸色彩与暖意透出——丰富、鲜活的 vibrancy，而非一片扁平着色灰。调高到 0.7 更干净扁平，
-    // 调低到 0.3 更通透（也更杂）。
-    // Acrylic reads as more see-through than Mica, so lower the app-surface tint for it.
-    // zh_CN: Acrylic 比 Mica 更通透，故为其降低应用表面 tint。
-    const double tintAlpha = (effect == BackdropEffect::Acrylic) ? 0.30 : 0.42;
+    const double tintAlpha = acrylic
+        ? (dark ? 0.20 : 0.22)
+        : (dark ? 0.58 : 0.54);
     if (id tint = ensureTintView(superview, base, contentView)) {
         sendUnsignedLong(tint, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
         sendCGRect(tint, "setFrame:", sendRect(superview, "bounds"));
