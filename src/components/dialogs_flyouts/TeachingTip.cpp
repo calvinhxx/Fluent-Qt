@@ -68,13 +68,9 @@ void TeachingTip::setTarget(QWidget* targetWidget) {
     if (m_target == targetWidget) return;
 
     if (m_target) m_target->removeEventFilter(this);
-    if (m_targetTopLevel) m_targetTopLevel->removeEventFilter(this);
-
     m_target = targetWidget;
-    m_targetTopLevel = targetWidget ? targetWidget->window() : nullptr;
 
     if (m_target) m_target->installEventFilter(this);
-    if (m_targetTopLevel && m_targetTopLevel != m_target) m_targetTopLevel->installEventFilter(this);
 
     if (isOpen()) {
         updateWidgetSize();
@@ -154,20 +150,6 @@ bool TeachingTip::eventFilter(QObject* watched, QEvent* event) {
             break;
         case QEvent::Hide:
             if (isVisible() || isOpen()) closeWithReason(Programmatic);
-            break;
-        case QEvent::Move:
-        case QEvent::Resize:
-        case QEvent::Show:
-            if (isVisible() || isOpen()) move(computePosition());
-            break;
-        default:
-            break;
-        }
-    } else if (watched == m_targetTopLevel) {
-        switch (event->type()) {
-        case QEvent::Move:
-        case QEvent::Resize:
-            if (isVisible() || isOpen()) move(computePosition());
             break;
         default:
             break;

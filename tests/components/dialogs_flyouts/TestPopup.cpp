@@ -160,6 +160,29 @@ TEST_F(PopupTest, ExplicitPosition_RespectsXY) {
     p.close();
 }
 
+TEST_F(PopupTest, RelativePositionTracksMovingAncestorAndClosesWhenClipped) {
+    auto* scrollingContent = new QWidget(window);
+    scrollingContent->setGeometry(0, 0, window->width(), 1000);
+    scrollingContent->show();
+
+    auto* trigger = new QWidget(scrollingContent);
+    trigger->setGeometry(120, 280, 80, 36);
+    trigger->show();
+
+    Popup p(window);
+    p.setAnimationEnabled(false);
+    p.setPosition(trigger, QPoint(0, trigger->height() + 8));
+    p.open();
+    ASSERT_TRUE(p.isOpen());
+    const QPoint initialPosition = p.pos();
+
+    scrollingContent->move(0, -64);
+    QTRY_COMPARE_WITH_TIMEOUT(p.pos(), initialPosition - QPoint(0, 64), 1000);
+
+    scrollingContent->move(0, -500);
+    QTRY_VERIFY_WITH_TIMEOUT(!p.isOpen(), 1000);
+}
+
 TEST_F(PopupTest, DefaultPosition_CentersInParent) {
     Popup p(window);
     p.setAnimationEnabled(false);

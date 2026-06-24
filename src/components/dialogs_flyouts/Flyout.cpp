@@ -1,6 +1,5 @@
 #include "Flyout.h"
 
-#include <QApplication>
 #include "components/foundation/overlay/OverlayGeometry.h"
 
 namespace fluent::dialogs_flyouts {

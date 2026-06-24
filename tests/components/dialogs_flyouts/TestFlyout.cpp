@@ -254,6 +254,29 @@ TEST_F(FlyoutTest, TopLevelResizeRepositionsAndRaisesAboveSiblings) {
     fl.close();
 }
 
+TEST_F(FlyoutTest, TracksMovingAnchorAncestorAndClosesWhenAnchorIsClipped) {
+    auto* scrollingContent = new QWidget(window);
+    scrollingContent->setGeometry(0, 0, window->width(), 1000);
+    scrollingContent->show();
+
+    auto* btn = new Button(QStringLiteral("Anchor"), scrollingContent);
+    btn->setGeometry(350, 280, 100, 32);
+    btn->show();
+
+    Flyout fl(window);
+    fl.setAnimationEnabled(false);
+    fl.setPlacement(Flyout::Bottom);
+    fl.showAt(btn);
+    ASSERT_TRUE(fl.isOpen());
+    const QPoint initialPosition = fl.pos();
+
+    scrollingContent->move(0, -64);
+    QTRY_COMPARE_WITH_TIMEOUT(fl.pos(), initialPosition - QPoint(0, 64), 1000);
+
+    scrollingContent->move(0, -500);
+    QTRY_VERIFY_WITH_TIMEOUT(!fl.isOpen(), 1000);
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // 8. 无 anchor 退化
 // ══════════════════════════════════════════════════════════════════════════════

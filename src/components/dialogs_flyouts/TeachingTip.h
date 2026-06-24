@@ -116,6 +116,7 @@ signals:
 
 protected:
     QPoint computePosition() const override;
+    QWidget* automaticPositionAnchor() const override { return m_target.data(); }
     bool eventFilter(QObject* watched, QEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
@@ -141,7 +142,6 @@ private:
 
     QWidget* m_contentHost = nullptr;
     QPointer<QWidget> m_target;
-    QPointer<QWidget> m_targetTopLevel;
     PreferredPlacement m_preferredPlacement = Auto;
     int m_placementMargin = 4;
     bool m_lightDismissEnabled = false;

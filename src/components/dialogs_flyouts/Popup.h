@@ -90,10 +90,11 @@ public:
     /// Positions the popup's top-left in the given widget's local coordinates;
     /// with relativeTo == topLevelWidget this is window-relative. Coordinates
     /// reference the visible card corner; open() compensates the shadow margin.
+    /// While open, the popup follows relativeTo and closes when it is fully clipped.
     /// Without a call, open() centers the popup.
     /// zh_CN: 以指定 widget 的局部坐标定位 popup 左上角；relativeTo 为顶层窗口时
     /// 等价于相对顶层定位。坐标以可见卡片左上角为准，open() 自动补偿阴影 margin；
-    /// 未调用则 open() 时自动居中。
+    /// 打开期间会跟随 relativeTo；relativeTo 被完全裁剪后自动关闭。未调用则 open() 时自动居中。
     void setPosition(QWidget* relativeTo, const QPoint& localPos);
 
 public slots:
@@ -118,7 +119,16 @@ protected:
     /// zh_CN: 子类可重写 open() 时的定位策略（Flyout 会重写）。
     virtual QPoint computePosition() const;
 
+    /// Returns the widget that drives automatic placement, if any.
+    /// zh_CN: 返回驱动自动定位的锚点控件；没有锚点时返回空。
+    virtual QWidget* automaticPositionAnchor() const { return nullptr; }
+
 private:
+    QPoint resolvedPosition() const;
+    QWidget* trackedPositionAnchor() const;
+    void queuePositionSync();
+    void syncPositionToAnchor();
+
     void  startEnterAnimation();
     void  startExitAnimation();
     void  finalizeOpened();
@@ -142,6 +152,9 @@ private:
     bool m_animationEnabled = true;
     bool m_positionSet = false;
     QPoint m_targetPos;
+    QPointer<QWidget> m_positionRelativeTo;
+    QPoint m_positionLocalPos;
+    bool m_positionSyncPending = false;
 
     double m_popupProgress = 0.0;
     QPropertyAnimation* m_anim = nullptr;

@@ -131,6 +131,29 @@ TEST_F(TeachingTipTest, RightTopPlacementAlignsToTargetTop) {
     EXPECT_EQ(content.top(), anchorRect.top());
 }
 
+TEST_F(TeachingTipTest, TracksMovingTargetAncestorAndClosesWhenClipped) {
+    auto* scrollingContent = new QWidget(window);
+    scrollingContent->setGeometry(0, 0, window->width(), 1000);
+    scrollingContent->show();
+
+    auto* anchor = new Button("Anchor", scrollingContent);
+    anchor->setGeometry(360, 280, 120, 32);
+    anchor->show();
+
+    TeachingTip tip(window);
+    tip.setAnimationEnabled(false);
+    tip.setPreferredPlacement(TeachingTip::Bottom);
+    tip.showAt(anchor);
+    ASSERT_TRUE(tip.isOpen());
+    const QPoint initialPosition = tip.pos();
+
+    scrollingContent->move(0, -64);
+    QTRY_COMPARE_WITH_TIMEOUT(tip.pos(), initialPosition - QPoint(0, 64), 1000);
+
+    scrollingContent->move(0, -500);
+    QTRY_VERIFY_WITH_TIMEOUT(!tip.isOpen(), 1000);
+}
+
 TEST_F(TeachingTipTest, TargetDestroyedClosesWithSemanticReason) {
     auto* anchor = makeAnchor(QPoint(320, 240));
 
