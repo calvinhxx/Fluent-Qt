@@ -91,6 +91,23 @@ TEST_F(DialogTest, ExecWithoutAnimation) {
     EXPECT_EQ(result, QDialog::Accepted);
 }
 
+TEST_F(DialogTest, OpenPreservesExplicitApplicationModality) {
+    window->show();
+    QApplication::processEvents();
+
+    Dialog dialog(window);
+    dialog.setAnimationEnabled(false);
+    dialog.setWindowModality(Qt::ApplicationModal);
+    dialog.open();
+    QApplication::processEvents();
+
+    EXPECT_TRUE(dialog.isVisible());
+    EXPECT_EQ(dialog.windowModality(), Qt::ApplicationModal);
+
+    dialog.done(QDialog::Rejected);
+    QApplication::processEvents();
+}
+
 TEST_F(DialogTest, ThemeSwitchNoCrash) {
     Dialog dialog(window);
     dialog.setAnimationEnabled(false);

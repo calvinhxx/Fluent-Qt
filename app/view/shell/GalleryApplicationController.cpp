@@ -6,6 +6,7 @@
 #include <QCloseEvent>
 #include <QHBoxLayout>
 #include <QMenu>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPalette>
 #include <QSizePolicy>
@@ -27,26 +28,164 @@
 namespace fluent::gallery {
 namespace {
 
-class PromptIcon final : public QWidget, public FluentElement {
+constexpr int kCloseBehaviorContentWidth = 360;
+constexpr QSize kCloseBehaviorDialogSize(440, 352);
+
+class CloseBehaviorChoiceRow final : public QWidget, public FluentElement {
 public:
-    explicit PromptIcon(QWidget* parent)
+    CloseBehaviorChoiceRow(GallerySettings::CloseBehavior behavior,
+                           const QString& glyph,
+                           const QString& title,
+                           const QString& description,
+                           QWidget* parent)
         : QWidget(parent)
+        , m_glyph(glyph)
     {
-        setFixedSize(28, 28);
+        setObjectName(QStringLiteral("galleryCloseBehaviorRow%1")
+                          .arg(static_cast<int>(behavior)));
+        setAccessibleName(title);
+        setAccessibleDescription(description);
+        setCursor(Qt::PointingHandCursor);
+        setMouseTracking(true);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        setFixedHeight(52);
+
+        auto* layout = new QHBoxLayout(this);
+        layout->setContentsMargins(12, 6, 12, 6);
+        layout->setSpacing(10);
+
+        m_iconSlot = new QWidget(this);
+        m_iconSlot->setFixedSize(20, 20);
+        m_iconSlot->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+        auto* textColumn = new QWidget(this);
+        textColumn->setAttribute(Qt::WA_TransparentForMouseEvents);
+        auto* textLayout = new QVBoxLayout(textColumn);
+        textLayout->setContentsMargins(0, 0, 0, 0);
+        textLayout->setSpacing(2);
+
+        m_title = new fluent::textfields::Label(title, textColumn);
+        m_title->setFluentTypography(Typography::FontRole::BodyStrong);
+        m_description = new fluent::textfields::Label(description, textColumn);
+        m_description->setFluentTypography(Typography::FontRole::Caption);
+        m_description->setWordWrap(false);
+        textLayout->addWidget(m_title);
+        textLayout->addWidget(m_description);
+
+        m_radio = new fluent::basicinput::RadioButton(this);
+        m_radio->setObjectName(QStringLiteral("galleryCloseBehaviorChoice%1")
+                                   .arg(static_cast<int>(behavior)));
+        m_radio->setAccessibleName(title);
+        m_radio->setAccessibleDescription(description);
+        m_radio->setCursor(Qt::PointingHandCursor);
+        m_radio->setFixedSize(20, 20);
+
+        layout->addWidget(m_iconSlot, 0, Qt::AlignVCenter);
+        layout->addWidget(textColumn, 1, Qt::AlignVCenter);
+        layout->addWidget(m_radio, 0, Qt::AlignVCenter);
+
+        connect(m_radio, &QAbstractButton::toggled, this, [this]() { update(); });
+        onThemeUpdated();
     }
 
-    void onThemeUpdated() override { update(); }
+    fluent::basicinput::RadioButton* radioButton() const { return m_radio; }
+
+    void onThemeUpdated() override
+    {
+        if (m_title)
+            m_title->onThemeUpdated();
+        if (m_description) {
+            m_description->onThemeUpdated();
+            QPalette palette = m_description->palette();
+            palette.setColor(QPalette::WindowText, themeColors().textSecondary);
+            m_description->setPalette(palette);
+        }
+        if (m_radio)
+            m_radio->onThemeUpdated();
+        update();
+    }
 
 protected:
     void paintEvent(QPaintEvent*) override
     {
         QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+
+        const auto colors = themeColors();
+        const bool selected = m_radio && m_radio->isChecked();
+        const QRectF rowRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+
+        QColor fill = Qt::transparent;
+        if (selected) {
+            fill = colors.accentDefault;
+            fill.setAlpha(currentTheme() == Dark ? 28 : 16);
+        } else if (m_pressed) {
+            fill = colors.subtleTertiary;
+        } else if (m_hovered) {
+            fill = colors.subtleSecondary;
+        }
+
+        painter.setBrush(fill);
+        painter.setPen(Qt::NoPen);
+        painter.drawRoundedRect(rowRect, 6, 6);
+
+        const QRectF iconRect = QRectF(m_iconSlot->geometry()).adjusted(0.5, 0.5, -0.5, -0.5);
         QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
-        iconFont.setPixelSize(18);
+        iconFont.setPixelSize(15);
         painter.setFont(iconFont);
-        painter.setPen(themeColors().accentDefault);
-        painter.drawText(rect(), Qt::AlignCenter, Typography::Icons::Power);
+        painter.setPen(selected ? colors.textAccentPrimary : colors.textSecondary);
+        painter.drawText(iconRect, Qt::AlignCenter, m_glyph);
     }
+
+    void enterEvent(FluentEnterEvent* event) override
+    {
+        QWidget::enterEvent(event);
+        m_hovered = true;
+        update();
+    }
+
+    void leaveEvent(QEvent* event) override
+    {
+        QWidget::leaveEvent(event);
+        m_hovered = false;
+        m_pressed = false;
+        update();
+    }
+
+    void mousePressEvent(QMouseEvent* event) override
+    {
+        if (event->button() == Qt::LeftButton) {
+            m_pressed = true;
+            update();
+            event->accept();
+            return;
+        }
+        QWidget::mousePressEvent(event);
+    }
+
+    void mouseReleaseEvent(QMouseEvent* event) override
+    {
+        const bool activate = event->button() == Qt::LeftButton
+            && m_pressed && rect().contains(event->pos());
+        m_pressed = false;
+        update();
+        if (activate && m_radio) {
+            m_radio->click();
+            event->accept();
+            return;
+        }
+        QWidget::mouseReleaseEvent(event);
+    }
+
+private:
+    QString m_glyph;
+    QWidget* m_iconSlot = nullptr;
+    fluent::textfields::Label* m_title = nullptr;
+    fluent::textfields::Label* m_description = nullptr;
+    fluent::basicinput::RadioButton* m_radio = nullptr;
+    bool m_hovered = false;
+    bool m_pressed = false;
 };
 
 class CloseBehaviorPromptContent final : public QWidget, public FluentElement {
@@ -56,49 +195,34 @@ public:
         : QWidget(parent)
     {
         setObjectName(QStringLiteral("galleryCloseBehaviorPromptContent"));
-        setMinimumSize(328, 0);
+        setFixedWidth(kCloseBehaviorContentWidth);
 
         auto* root = new QVBoxLayout(this);
         root->setContentsMargins(0, 0, 0, 0);
-        root->setSpacing(10);
-
-        // Add the intro row as a sub-layout (not a wrapper QWidget): a QBoxLayout propagates a
-        // word-wrapped child's height-for-width to its parent layout, whereas a nested plain QWidget
-        // does not — so the 2-line explanation actually reserves two lines instead of overlapping the
-        // first option. zh_CN: intro 行用子布局而非包裹 QWidget 加入:QBoxLayout 会把自动换行子项的
-        // height-for-width 上传给父布局,而嵌套的普通 QWidget 不会——这样两行说明会真正占两行高,而非压到第一项上。
-        auto* introLayout = new QHBoxLayout();
-        introLayout->setContentsMargins(0, 0, 0, 0);
-        introLayout->setSpacing(8);
-        introLayout->addWidget(new PromptIcon(this), 0, Qt::AlignTop);
-
-        auto* explanation = new fluent::textfields::Label(
-            QStringLiteral("Choose what happens when you close the window. "
-                           "You can change this later in Settings. 🙂"),
-            this);
-        explanation->setObjectName(QStringLiteral("galleryCloseBehaviorPromptDescription"));
-        explanation->setFluentTypography(Typography::FontRole::Caption);
-        explanation->setWordWrap(true);
-        QSizePolicy explanationPolicy = explanation->sizePolicy();
-        explanationPolicy.setHeightForWidth(true);
-        explanation->setSizePolicy(explanationPolicy);
-        m_secondaryLabels.append(explanation);
-        introLayout->addWidget(explanation, 1);
-        root->addLayout(introLayout);
+        root->setSpacing(4);
 
         m_group = new QButtonGroup(this);
         addChoice(root,
                   GallerySettings::CloseBehavior::Minimize,
+                  Typography::Icons::ChromeMinimize,
                   QStringLiteral("Minimize window"),
-                  QStringLiteral("Keep it in the taskbar or Dock."));
+                  closebehaviorui::minimizeDescription());
         addChoice(root,
                   GallerySettings::CloseBehavior::Tray,
+                  Typography::Icons::Hide,
                   closebehaviorui::keepRunningChoice(),
                   closebehaviorui::keepRunningDescription());
         addChoice(root,
                   GallerySettings::CloseBehavior::Quit,
+                  Typography::Icons::Power,
                   QStringLiteral("Quit the app"),
-                  QStringLiteral("Exit completely."));
+                  QStringLiteral("Stop the Gallery completely."));
+
+        root->activate();
+        const int contentHeight = root->hasHeightForWidth()
+            ? root->heightForWidth(kCloseBehaviorContentWidth)
+            : root->sizeHint().height();
+        setFixedHeight(contentHeight);
 
         if (auto* selected = m_group->button(static_cast<int>(current)))
             selected->setChecked(true);
@@ -114,44 +238,26 @@ public:
 
     void onThemeUpdated() override
     {
-        const QColor secondary = themeColors().textSecondary;
-        for (auto* label : m_secondaryLabels) {
-            QPalette labelPalette = label->palette();
-            labelPalette.setColor(QPalette::WindowText, secondary);
-            label->setPalette(labelPalette);
-        }
+        for (auto* row : m_rows)
+            row->onThemeUpdated();
         update();
     }
 
 private:
     void addChoice(QVBoxLayout* root,
                    GallerySettings::CloseBehavior behavior,
+                   const QString& glyph,
                    const QString& title,
                    const QString& description)
     {
-        auto* choice = new QWidget(this);
-        auto* choiceLayout = new QVBoxLayout(choice);
-        choiceLayout->setContentsMargins(0, 0, 0, 0);
-        choiceLayout->setSpacing(2);
-
-        auto* radio = new fluent::basicinput::RadioButton(title, choice);
-        radio->setObjectName(QStringLiteral("galleryCloseBehaviorChoice%1")
-                                 .arg(static_cast<int>(behavior)));
-        radio->setAccessibleName(title);
-        m_group->addButton(radio, static_cast<int>(behavior));
-
-        auto* detail = new fluent::textfields::Label(description, choice);
-        detail->setFluentTypography(Typography::FontRole::Caption);
-        detail->setContentsMargins(28, 0, 0, 0);
-        m_secondaryLabels.append(detail);
-
-        choiceLayout->addWidget(radio);
-        choiceLayout->addWidget(detail);
-        root->addWidget(choice);
+        auto* row = new CloseBehaviorChoiceRow(behavior, glyph, title, description, this);
+        m_group->addButton(row->radioButton(), static_cast<int>(behavior));
+        m_rows.append(row);
+        root->addWidget(row);
     }
 
     QButtonGroup* m_group = nullptr;
-    QVector<fluent::textfields::Label*> m_secondaryLabels;
+    QVector<CloseBehaviorChoiceRow*> m_rows;
 };
 
 } // namespace
@@ -267,16 +373,22 @@ void GalleryApplicationController::showCloseBehaviorDialog()
     auto* dialog = new fluent::dialogs_flyouts::ContentDialog(m_window);
     dialog->setObjectName(QStringLiteral("galleryCloseBehaviorDialog"));
     dialog->setWindowTitle(QStringLiteral("Close behavior"));
-    dialog->setTitle(QStringLiteral("Close behavior"));
+    dialog->setTitle(QStringLiteral("Close the Gallery?"));
     dialog->setContent(content);
     dialog->setPrimaryButtonText(QStringLiteral("Save"));
     dialog->setCloseButtonText(QStringLiteral("Cancel"));
     dialog->setDefaultButton(fluent::dialogs_flyouts::ContentDialog::Primary);
-    dialog->resize(452, 356);
+    dialog->setWindowModality(Qt::ApplicationModal);
+    dialog->resize(kCloseBehaviorDialogSize);
+
+    const bool restoreChromeInteractive = m_window->isChromeInteractive();
+    m_window->setChromeInteractive(false);
 
     connect(dialog, &QDialog::finished, this,
-            [this, dialog, content](int result) {
+            [this, dialog, content, restoreChromeInteractive](int result) {
                 m_closePromptOpen = false;
+                if (m_window)
+                    m_window->setChromeInteractive(restoreChromeInteractive);
                 if (result == fluent::dialogs_flyouts::ContentDialog::ResultPrimary) {
                     auto& currentSettings = GallerySettings::instance();
                     currentSettings.setCloseBehavior(content->selectedBehavior());

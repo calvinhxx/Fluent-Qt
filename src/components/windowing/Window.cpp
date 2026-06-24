@@ -272,6 +272,8 @@ void Window::setChromeInteractive(bool interactive) {
     if (m_chromeInteractive == interactive)
         return;
     m_chromeInteractive = interactive;
+    if (m_captionButtonHost)
+        m_captionButtonHost->setEnabled(interactive);
     updateChromeOptions();
 }
 
@@ -433,6 +435,8 @@ void Window::handleTitleBarDragFinished() {
 void Window::handleTitleBarDoubleClicked(const QPoint& globalPos) {
     Q_UNUSED(globalPos);
     m_fallbackDragging = false;
+    if (!m_chromeInteractive)
+        return;
 
     if (m_chrome.performTitleBarDoubleClick()) {
         updateChromeOptions();
@@ -443,6 +447,8 @@ void Window::handleTitleBarDoubleClicked(const QPoint& globalPos) {
 }
 
 void Window::handleTitleBarContextMenuRequested(const QPoint& globalPos) {
+    if (!m_chromeInteractive)
+        return;
     m_chrome.showSystemMenu(globalPos);
 }
 

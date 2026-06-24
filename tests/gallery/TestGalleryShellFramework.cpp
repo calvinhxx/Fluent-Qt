@@ -280,6 +280,9 @@ TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)
     tour.start();
 
     EXPECT_FALSE(window.isChromeInteractive());
+    window.onThemeUpdated();
+    QApplication::processEvents();
+    EXPECT_FALSE(window.isChromeInteractive());
     auto* closeButton = window.findChild<Button*>(
         QStringLiteral("GalleryIntroTour.CloseButton"));
     ASSERT_NE(closeButton, nullptr);
@@ -1430,15 +1433,35 @@ TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpen
         1000);
     ASSERT_NE(dialog, nullptr);
     EXPECT_TRUE(dialog->isVisible());
+    EXPECT_EQ(dialog->windowModality(), Qt::ApplicationModal);
+    EXPECT_FALSE(window.isChromeInteractive());
 
     auto* trayChoice = dialog->findChild<RadioButton*>(
         QStringLiteral("galleryCloseBehaviorChoice1"));
     ASSERT_NE(trayChoice, nullptr);
     EXPECT_TRUE(trayChoice->isChecked());
 
+    auto* minimizeRow = dialog->findChild<QWidget*>(
+        QStringLiteral("galleryCloseBehaviorRow0"));
+    auto* quitRow = dialog->findChild<QWidget*>(
+        QStringLiteral("galleryCloseBehaviorRow2"));
+    auto* promptContent = dialog->findChild<QWidget*>(
+        QStringLiteral("galleryCloseBehaviorPromptContent"));
+    auto* minimizeChoice = dialog->findChild<RadioButton*>(
+        QStringLiteral("galleryCloseBehaviorChoice0"));
+    ASSERT_NE(minimizeRow, nullptr);
+    ASSERT_NE(quitRow, nullptr);
+    ASSERT_NE(promptContent, nullptr);
+    ASSERT_NE(minimizeChoice, nullptr);
+    EXPECT_TRUE(promptContent->rect().contains(quitRow->geometry()));
+    QTest::mouseClick(minimizeRow, Qt::LeftButton);
+    EXPECT_TRUE(minimizeChoice->isChecked());
+    EXPECT_FALSE(trayChoice->isChecked());
+
     QPointer<ContentDialog> dialogGuard = dialog;
     dialog->done(ContentDialog::ResultNone);
     QTRY_VERIFY_WITH_TIMEOUT(dialogGuard.isNull() || !dialogGuard->isVisible(), 1000);
     EXPECT_TRUE(window.isVisible());
+    EXPECT_TRUE(window.isChromeInteractive());
     EXPECT_FALSE(settings.closeBehaviorConfirmed());
 }
