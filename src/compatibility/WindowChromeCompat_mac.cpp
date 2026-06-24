@@ -254,12 +254,22 @@ void syncNativeChromeInteractivity(QWidget* window, const WindowChromeOptions& o
     if (updatedStyleMask != styleMask)
         sendUnsignedLong(nsWindow, "setStyleMask:", updatedStyleMask);
 
-    if (respondsTo(nsWindow, selector("standardWindowButton:"))) {
-        id zoomButton = sendUnsignedLongReturnsId(nsWindow,
-                                                   "standardWindowButton:",
-                                                   NSWindowZoomButton);
-        if (zoomButton && respondsTo(zoomButton, selector("setEnabled:")))
-            sendBool(zoomButton, "setEnabled:", resizeEnabled ? YES : NO);
+    if (!respondsTo(nsWindow, selector("standardWindowButton:")))
+        return;
+
+    const unsigned long buttons[] = {
+        NSWindowCloseButton,
+        NSWindowMiniaturizeButton,
+        NSWindowZoomButton
+    };
+    for (unsigned long buttonType : buttons) {
+        id button = sendUnsignedLongReturnsId(nsWindow, "standardWindowButton:", buttonType);
+        if (!button || !respondsTo(button, selector("setEnabled:")))
+            continue;
+
+        const bool enabled = options.chromeInteractive
+            && (buttonType != NSWindowZoomButton || qtAllowsResize);
+        sendBool(button, "setEnabled:", enabled ? YES : NO);
     }
 }
 

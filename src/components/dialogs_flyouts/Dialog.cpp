@@ -86,7 +86,13 @@ void Dialog::open() {
         m_animationProgress = 0.0;
         setWindowOpacity(0.0);          // The compositor never shows frame one. zh_CN: compositor 看不到第一帧。
     }
-    QDialog::open();
+    // QDialog::open() always switches the dialog to WindowModal. Preserve an explicitly requested
+    // application-modal window by using the non-blocking QWidget show path instead.
+    // zh_CN: QDialog::open() 会强制切为 WindowModal；显式请求 ApplicationModal 时改走非阻塞 show。
+    if (windowModality() == Qt::ApplicationModal)
+        QDialog::show();
+    else
+        QDialog::open();
 }
 
 int Dialog::exec() {
