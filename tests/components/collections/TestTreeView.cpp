@@ -11,6 +11,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStandardItemModel>
+#include <QStyleOptionViewItem>
 #include "compatibility/QtCompat.h"
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
@@ -597,6 +598,29 @@ TEST_F(TreeViewTest, SelectionIndicatorVisibilityAndStyleSetters) {
     EXPECT_NEAR(tv->selectedIndicatorRect(1.0).left(),
                 tv->visualRect(work).left() + 42.0,
                 0.01);
+}
+
+TEST_F(TreeViewTest, NativeRowPanelIsSuppressedForDelegateOwnedBackgrounds) {
+    TreeView tv;
+    QImage image(120, defaultTreeRowHeight(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QStyleOptionViewItem option;
+    option.initFrom(&tv);
+    option.rect = image.rect();
+    option.state |= QStyle::State_Enabled | QStyle::State_Selected
+        | QStyle::State_MouseOver;
+    option.palette.setColor(QPalette::Highlight, QColor(255, 0, 0, 255));
+
+    QPainter painter(&image);
+    tv.style()->drawPrimitive(QStyle::PE_PanelItemViewRow,
+                              &option, &painter, &tv);
+    painter.end();
+
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x)
+            EXPECT_EQ(QColor::fromRgba(image.pixel(x, y)).alpha(), 0);
+    }
 }
 
 TEST_F(TreeViewTest, SelectionIndicatorPaintsAccentPillNearLeftOfSelectedRow) {

@@ -9,6 +9,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
+#include <QProxyStyle>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
@@ -36,6 +37,22 @@ constexpr int kExpandRevealDuration = ::Animation::Duration::Fast;
 // Pixels scrolled per wheel notch (delta 120), shared with the other collection views so
 // the wheel feel matches ListView. zh_CN: 每个滚轮刻度（delta 120）滚动的像素数，与 ListView 统一手感。
 constexpr qreal kDiscreteWheelStepPx = ::Spacing::ControlHeight::Large;
+
+// QTreeView paints PE_PanelItemViewRow across the full row before invoking the item delegate.
+// Fluent delegates paint their own rounded state surface from the hierarchy-adjusted content
+// edge, so keeping the native panel leaves a separate block in the indentation gutter.
+// zh_CN: QTreeView 会先在整行绘制 PE_PanelItemViewRow，再调用 delegate。Fluent delegate 已从
+// 层级缩进后的内容边缘自绘圆角状态面；保留原生面板会在缩进槽中残留一块分离背景。
+class DelegateOwnedRowStyle final : public QProxyStyle {
+public:
+    void drawPrimitive(PrimitiveElement element, const QStyleOption* option,
+                       QPainter* painter, const QWidget* widget = nullptr) const override
+    {
+        if (element == PE_PanelItemViewRow)
+            return;
+        QProxyStyle::drawPrimitive(element, option, painter, widget);
+    }
+};
 
 bool qrealFuzzyEquals(qreal lhs, qreal rhs) {
     return qFuzzyCompare(lhs + 1.0, rhs + 1.0);
@@ -89,6 +106,10 @@ qreal indicatorTrailingProgress(qreal progress) {
 
 TreeView::TreeView(QWidget* parent)
     : QTreeView(parent) {
+
+    auto* rowStyle = new DelegateOwnedRowStyle;
+    rowStyle->setParent(this);
+    setStyle(rowStyle);
 
     m_fontRole = Typography::FontRole::Body;
 
