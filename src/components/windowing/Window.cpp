@@ -134,8 +134,17 @@ void Window::setBackdropEffect(compatibility::BackdropEffect effect) {
                      && effect != compatibility::BackdropEffect::Solid;
     setProperty("fluentMicaBackdrop", m_micaBackdrop);
 
+    // forceRecomposite: a deliberate, infrequent effect switch must composite on the spot. Acrylic
+    // (DWMSBT_TRANSIENTWINDOW) in particular often stays a flat default glass until the next
+    // (de)activation — which is exactly why the user had to switch to another app and back before it
+    // looked right. The NCACTIVATE round-trip reproduces that without changing real focus. (Theme
+    // changes still pass forceRecomposite=false, since those are already composited and frequent.)
+    // zh_CN: forceRecomposite：用户主动且不频繁的效果切换必须当场合成。Acrylic（DWMSBT_TRANSIENTWINDOW）尤其常
+    // 停在扁平默认玻璃上，要等下次激活/失活才生效——这正是用户必须切到别的 app 再切回来才正常的原因。NCACTIVATE
+    // 往返复现该动作且不改变真实焦点。（切主题仍传 forceRecomposite=false，因其已合成且频繁。）
     if (m_windowTranslucent && isVisible())
-        m_chrome.applySystemBackdrop(effect, currentTheme() == Dark);  // Solid maps to DWMSBT_AUTO
+        m_chrome.applySystemBackdrop(effect, currentTheme() == Dark,
+                                     /*forceRecomposite*/ true);  // Solid maps to DWMSBT_AUTO
 
     // Repaint chrome + content so every surface re-reads the new paint-hint (transparent<->opaque, or
     // a different translucent material). zh_CN: 重绘 chrome 与内容，使各表面重新读取新绘制提示。
@@ -182,7 +191,17 @@ void Window::paintEvent(QPaintEvent*) {
     }
 
     const auto& colors = themeColors();
-    painter.fillRect(rect(), colors.bgCanvas);
+    // Fill the deepest backdrop with the SAME themeBackdrop(active) the title bar and nav pane use,
+    // not a flat bgCanvas. Under a translucent top-level the chrome's own fill is cleared where a
+    // transparent child (the nav pane) sits, so the pane reveals this window backing — if it stayed a
+    // flat bgCanvas while the title bar washed toward bgLayer on focus loss, the title bar and nav
+    // pane would drift apart (the Normal-mode "titlebar ≠ nav" seam). Sharing one source keeps them
+    // identical in both the active and inactive states.
+    // zh_CN: 用与标题栏/导航栏完全相同的 themeBackdrop(active) 填充最底层背景，而非扁平 bgCanvas。半透明顶层下，
+    // chrome 自身的填充在透明子控件（导航窗格）所在处会被清除，故窗格透出此窗口底；若它保持扁平 bgCanvas 而标题栏
+    // 在失焦时洗向 bgLayer，标题栏与导航窗格就会分叉（Normal 模式「标题栏≠导航栏」的缝）。共用同一来源使二者在激活
+    // 与非激活态都一致。
+    painter.fillRect(rect(), themeBackdrop(isActiveWindow()));
 
     if (m_chrome.usesCustomWindowChrome()) {
         painter.setPen(colors.strokeDefault);
@@ -233,6 +252,14 @@ void Window::changeEvent(QEvent* event) {
         syncCaptionButtons();
         updateChromeOptions();
     }
+
+    // Repaint the backdrop when the window activates/deactivates so it tracks the focus wash in
+    // lock-step with the title bar and nav pane (both already repaint on WindowActivate/Deactivate).
+    // Without this the deepest backdrop kept its last-painted focus state and the chrome drifted.
+    // zh_CN: 窗口激活/失活时重绘背景，使其与标题栏、导航窗格（二者已在 WindowActivate/Deactivate 时重绘）同步跟随
+    // 焦点洗色。否则最底层背景会停在上次绘制的焦点状态，与 chrome 分叉。
+    if (event->type() == QEvent::ActivationChange)
+        update();
 }
 
 bool Window::nativeEvent(const QByteArray& eventType,

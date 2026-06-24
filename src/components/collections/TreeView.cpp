@@ -570,14 +570,19 @@ void TreeView::paintEvent(QPaintEvent* event) {
         p.fillRect(viewport()->rect(), c.bgLayer);
         p.end();
     } else if (!preserveParentSurface
-               && window() && window()->testAttribute(Qt::WA_TranslucentBackground)) {
-        // Background hidden over a translucent top-level (system backdrop / macOS vibrancy): keep
-        // the viewport transparent so the backdrop shows, but erase it each paint. The backing
-        // store isn't auto-cleared there on macOS, so scrolled/expanded rows would otherwise ghost
-        // on top of stale pixels. Opaque top-levels clear normally, so that path is left untouched.
-        // zh_CN: 背景隐藏且顶层为半透明（系统背景 / macOS vibrancy）时：保持 viewport 透明以露出背景，但每次
-        // 绘制都擦除。macOS 上该情形后备缓冲不会自动清除，否则滚动/展开的行会叠在残影上重影。不透明顶层会正常
-        // 清除，保持原路径不变。
+               && window() && window()->testAttribute(Qt::WA_TranslucentBackground)
+               && window()->property("fluentMicaBackdrop").toBool()) {
+        // Background hidden under a REAL OS backdrop (Win11 Mica/Acrylic, macOS vibrancy): keep the
+        // viewport transparent so the backdrop shows, erasing each paint (the backing store isn't
+        // auto-cleared on macOS, so scrolled/expanded rows would otherwise ghost on stale pixels).
+        // Gated on the fluentMicaBackdrop paint-hint, NOT bare WA_TranslucentBackground: on Win11 the
+        // top-level is translucent in Normal mode too, and erasing there reveals BLACK (no backdrop)
+        // instead of the opaque chrome — that was the nav-pane "titlebar ≠ nav" seam in Normal. With
+        // no real backdrop we skip the erase so the opaque chrome surface (bgCanvas) behind shows.
+        // zh_CN: 仅在「真实系统背景」(Win11 Mica/Acrylic、macOS vibrancy) 下保持 viewport 透明并每帧擦除(macOS
+        // 后备缓冲不自动清除,否则滚动/展开行会重影)。用 fluentMicaBackdrop 绘制提示判定,而非裸的半透明:Win11 上
+        // Normal 模式窗口同样半透明,此时擦成透明会露出黑色(无背景)而非不透明 chrome——这正是 Normal 下导航栏
+        // 「标题栏≠导航栏」的缝。无真实背景时跳过擦除,让背后不透明 chrome 表面(bgCanvas)透出。
         QPainter p(viewport());
         p.setCompositionMode(QPainter::CompositionMode_Source);
         p.fillRect(viewport()->rect(), Qt::transparent);

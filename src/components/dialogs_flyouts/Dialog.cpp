@@ -310,8 +310,12 @@ void Dialog::paintEvent(QPaintEvent*) {
 }
 
 void Dialog::drawShadow(QPainter& painter, const QRect& contentRect) {
+    // Medium, not High: the High dark-theme shadow is blur 8 / alpha 0.50, which — stacked on the
+    // smoke dim — reads as a heavy dark halo around the card. Medium (blur 4 / alpha 0.40) keeps the
+    // card lifted without the bruise. zh_CN: 用 Medium 而非 High：High 暗色阴影是 blur 8 / alpha 0.50,叠加蒙层
+    // 后在卡片周围形成沉重暗晕。Medium(blur 4 / alpha 0.40)保留悬浮感又不发黑。
     ::fluent::overlay::paintLayeredShadow(painter, contentRect, themeRadius().overlay,
-                                          themeShadow(Elevation::High));
+                                          themeShadow(Elevation::Medium));
 }
 
 } // namespace fluent::dialogs_flyouts

@@ -93,6 +93,27 @@ TEST_F(LabelTest, ThemeUpdatePreservesTypography) {
     EXPECT_TRUE(label->palette().color(QPalette::WindowText).isValid());
 }
 
+TEST_F(LabelTest, TextColorRoleColorsViaOwnStyleSheet) {
+    Label* label = new Label("Role text", window);
+
+    // Default role keeps the legacy palette coloring and sets no own color style sheet, so
+    // components that drive the label palette themselves (InfoBar, ToolTip, …) are untouched.
+    EXPECT_EQ(label->textColorRole(), Label::TextColorRole::Default);
+    EXPECT_FALSE(label->styleSheet().contains(QStringLiteral("color:")));
+    EXPECT_TRUE(label->palette().color(QPalette::WindowText).isValid());
+
+    // An explicit role colors through the label's OWN style sheet so an ancestor style sheet
+    // (QStyleSheetStyle) can't drop it — the fix for value labels on a styled preview surface.
+    label->setTextColorRole(Label::TextColorRole::Secondary);
+    EXPECT_EQ(label->textColorRole(), Label::TextColorRole::Secondary);
+    EXPECT_TRUE(label->styleSheet().contains(QStringLiteral("color:")));
+
+    // The role survives a theme refresh (re-applied, not lost).
+    label->onThemeUpdated();
+    EXPECT_EQ(label->textColorRole(), Label::TextColorRole::Secondary);
+    EXPECT_TRUE(label->styleSheet().contains(QStringLiteral("color:")));
+}
+
 TEST_F(LabelTest, ThemeUpdatePreservesExplicitFont) {
     Label* label = new Label("\uE790", window);
     QFont iconFont(QStringLiteral("Segoe Fluent Icons"));

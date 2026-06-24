@@ -68,15 +68,25 @@ protected:
         // zh_CN: 半透明顶层下 macOS 后备缓冲不会自动清除，半透明描边会逐帧叠加 alpha、最终发黑，故先用 Source
         //（替换）擦除。不透明顶层下 Qt 会替我们清除（半透明）控件——此时 Source 会写入 RGBA(0,0,0,0) 渲染成黑，
         // 故改用默认的 SourceOver 在已清除的后备缓冲上绘制。
-        const bool translucent = window() && window()->testAttribute(Qt::WA_TranslucentBackground);
-        if (translucent) {
+        // Erase-then-Source only under a REAL OS backdrop (Mica / macOS vibrancy), where the pane is
+        // transparent and the backing isn't auto-cleared. Gate on the `fluentMicaBackdrop` paint-hint,
+        // NOT bare `WA_TranslucentBackground`: Windows stays translucent in Normal too, so erasing there
+        // would punch the opaque pane bgCanvas back out to the wallpaper. In Normal draw the divider with
+        // the default SourceOver over the pane's opaque surface.
+        // zh_CN: 仅在「真实系统背景」（Mica / macOS vibrancy，窗格透明且后备缓冲不自动清除）下才擦除+Source。
+        // 用 fluentMicaBackdrop 绘制提示判定，而非裸的 WA_TranslucentBackground：Windows 上 Normal 也半透明，
+        // 此处擦除会把不透明窗格 bgCanvas 重新打穿成壁纸。Normal 下用默认 SourceOver 在窗格不透明表面上画分隔线。
+        const bool realBackdrop = window()
+            && window()->testAttribute(Qt::WA_TranslucentBackground)
+            && window()->property("fluentMicaBackdrop").toBool();
+        if (realBackdrop) {
             painter.setCompositionMode(QPainter::CompositionMode_Source);
             painter.fillRect(rect(), Qt::transparent);
         }
         const QRect line = rect().adjusted(m_inset, 0, -m_inset, 0);
         if (line.width() > 0 && m_color.alpha() > 0) {
-            painter.setCompositionMode(translucent ? QPainter::CompositionMode_Source
-                                                   : QPainter::CompositionMode_SourceOver);
+            painter.setCompositionMode(realBackdrop ? QPainter::CompositionMode_Source
+                                                    : QPainter::CompositionMode_SourceOver);
             painter.fillRect(line, m_color);
         }
     }
@@ -241,7 +251,39 @@ void GalleryNavigationPane::onThemeUpdated()
 
 void GalleryNavigationPane::paintEvent(QPaintEvent* event)
 {
+    // The inline pane is window chrome (no own surface), so it must follow the chrome contract like
+    // the title bar / NavigationView: paint an opaque `themeBackdrop` when there is NO real OS backdrop
+    // (Normal), stay transparent when there is one (Mica / Acrylic — reveal the backdrop). Without this
+    // the pane's non-row areas (top padding, footer) inherit a transparent palette on the always-
+    // translucent Windows top-level and leak the desktop wallpaper in Normal (the TreeView rows are
+    // already covered, but the surrounding pane was not). The drawer variant (`m_surfaceVisible`) paints
+    // its own card panel, so it stays transparent here. `chromeBackdropFill` returns an invalid color
+    // under a real backdrop (→ paint nothing) and the solid `themeBackdrop(active)` otherwise.
+    // zh_CN: 内嵌窗格是窗口 chrome（无自身表面），须像标题栏 / NavigationView 一样遵循 chrome 契约：无真实系统
+    // 背景（Normal）时画不透明 themeBackdrop，有（Mica / Acrylic）时透明露背景。否则在「始终半透明」顶层下，
+    // 窗格非行区域（顶部留白、页脚）继承透明 palette，Normal 下漏出桌面壁纸（TreeView 行已覆盖，但周围窗格未）。
+    // 抽屉变体（m_surfaceVisible）自绘卡片面板，故此处保持透明。chromeBackdropFill 在真实背景下返回无效色（→不画），
+    // 否则返回纯色 themeBackdrop(active)。
+    if (!m_surfaceVisible) {
+        const QColor fill = chromeBackdropFill(window(), window() && window()->isActiveWindow());
+        if (fill.isValid()) {
+            QPainter painter(this);
+            painter.fillRect(rect(), fill);
+        }
+    }
     QWidget::paintEvent(event);
+}
+
+bool GalleryNavigationPane::event(QEvent* event)
+{
+    // Repaint when the window's activation changes so the inline pane's themeBackdrop tracks
+    // active/inactive in lockstep with the title bar (both read isActiveWindow() via
+    // chromeBackdropFill). Without this the pane would stay at the active tint while the title bar
+    // washes toward bgLayer on focus loss. zh_CN: 窗口激活态变化时重绘，使内嵌窗格的 themeBackdrop 与标题栏
+    // 同步跟随激活/非激活（二者都经 chromeBackdropFill 读 isActiveWindow()）；否则窗格会停在激活色，而标题栏失焦时已洗向 bgLayer。
+    if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
+        update();
+    return QWidget::event(event);
 }
 
 bool GalleryNavigationPane::eventFilter(QObject* watched, QEvent* event)

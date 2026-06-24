@@ -46,6 +46,7 @@ Label* makeStatusLabel(QWidget* parent, const QString& text)
     auto* label = new Label(text, parent);
     label->setFluentTypography(Typography::FontRole::Body);
     label->setWordWrap(true);
+    label->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
     return label;
 }
 

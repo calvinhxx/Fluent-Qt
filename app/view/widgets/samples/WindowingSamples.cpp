@@ -91,6 +91,7 @@ Label* makeSampleLabel(QWidget* parent,
     auto* label = new Label(text, parent);
     label->setFluentTypography(role);
     label->setWordWrap(true);
+    label->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
     return label;
 }
 

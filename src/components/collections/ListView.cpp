@@ -43,6 +43,17 @@ qreal lerp(qreal from, qreal to, qreal progress) {
     return from + (to - from) * progress;
 }
 
+// Color a child QLabel through its OWN style sheet rather than its palette. A palette WindowText color
+// is silently dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the
+// subtree and ignores child palettes) — e.g. the gallery sample card, where the header/footer text then
+// renders near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
+// palette。任何祖先设置样式表时(安装 QStyleSheetStyle 并忽略子 palette),palette 的 WindowText 会被丢弃
+// ——如画廊示例卡,header/footer 文案在深色主题里变近黑。样式表颜色始终生效。
+QString cssRgba(const QColor& c) {
+    return QStringLiteral("rgba(%1, %2, %3, %4)")
+        .arg(c.red()).arg(c.green()).arg(c.blue()).arg(c.alpha());
+}
+
 qreal indicatorLeadingProgress(qreal progress) {
     return qBound(0.0, progress * 1.35, 1.0);
 }
@@ -105,12 +116,23 @@ public:
             const int hPad = ::Spacing::Padding::ListItemHorizontal;
             const int textH = titleFm.height();
 
-            // Fill section header area with background to clear any hover artifacts
+            // Fill the section-header area to clear any hover artifacts — but only when the container
+            // paints its own surface. With the surface hidden (e.g. the gallery flat previews, where
+            // the list sits directly on the sample panel) the viewport is transparent and the rows let
+            // the parent panel show through; a bgLayer fill would read as a darker nested block. The
+            // viewport's backing store has no alpha, so CompositionMode_Clear would write solid black —
+            // instead we paint nothing and let the section title sit on the already-composited parent
+            // panel like the rows do. zh_CN: 填充分组头区域以清除 hover 残影——但仅在容器绘制自身表面时。
+            // 表面隐藏时(如画廊扁平预览,列表直接坐在示例面板上),viewport 透明、行让父面板透出;填 bgLayer
+            // 会变成更暗的嵌套块,而 viewport backing store 无 alpha,CompositionMode_Clear 会写成纯黑——
+            // 故此时不绘制任何底色,让分组标题像普通行一样坐在已合成的父面板上。
             QRect headerArea(option.rect.left(), option.rect.top(),
                              option.rect.width(), headerH);
             painter->save();
             painter->setRenderHint(QPainter::Antialiasing);
-            painter->fillRect(headerArea, c.bgLayer);
+            if (m_listView->isBackgroundVisible()) {
+                painter->fillRect(headerArea, c.bgLayer);
+            }
 
             // Section title text
             QRect textRect(option.rect.left() + hPad, option.rect.top(),
@@ -1638,13 +1660,13 @@ void ListView::applyThemeStyle() {
         viewport()->setPalette(vpal);
     }
 
-    // Header label theme (only for internally-created labels)
+    // Header label theme (only for internally-created labels). Color via the label's own style sheet
+    // so an ancestor style sheet (e.g. the gallery sample card) can't clobber it to near-black.
     if (m_ownsHeader) {
         if (auto* lbl = qobject_cast<QLabel*>(m_header)) {
             lbl->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
-            QPalette hpal = lbl->palette();
-            hpal.setColor(QPalette::WindowText, c.textPrimary);
-            lbl->setPalette(hpal);
+            lbl->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
+                                   .arg(cssRgba(c.textPrimary)));
         }
     }
 
@@ -1652,9 +1674,8 @@ void ListView::applyThemeStyle() {
     if (m_ownsFooter) {
         if (auto* lbl = qobject_cast<QLabel*>(m_footer)) {
             lbl->setFont(themeFont(Typography::FontRole::Caption).toQFont());
-            QPalette fpal = lbl->palette();
-            fpal.setColor(QPalette::WindowText, c.textSecondary);
-            lbl->setPalette(fpal);
+            lbl->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
+                                   .arg(cssRgba(c.textSecondary)));
         }
     }
 

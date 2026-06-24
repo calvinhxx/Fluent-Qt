@@ -27,6 +27,33 @@ WindowChromeCompat 判断「本 OS 有系统背景」并安装它 -> 设置 flue
    -> 看到 false -> 绘制纯色降级背景
 ```
 
+## 绘制层级（z-order）与透明语义
+
+整窗按「背后 → 前」分三层，每层只看 `fluentMicaBackdrop` 一个布尔决定「透明露背景 vs 自绘纯色」：
+
+```
+z-0  底层背景    Window 自身
+z-1  chrome      标题栏 + 左侧导航栏（Top 模式为顶部导航条）
+z-2  内容岛      内容宿主 StackContentHost + 页面（右下，左上圆角）
+```
+
+| 层 | Normal | Mica / Acrylic |
+|---|---|---|
+| z-0 背景 | 不透明 `themeBackdrop`（=`bgCanvas`；失焦洗向 `bgLayer`） | 窗口画**透明**，DWM / 系统合成出 Mica / Acrylic |
+| z-1 chrome | 不透明 `bgCanvas` | 画**透明 → 透出 z-0** |
+| z-2 内容岛 | 不透明 `bgLayer` / `bgLayerAlt` | **仍不透明** `bgLayer`（从不露背景） |
+
+**关键非对称（最容易搞错）：**
+
+- **z-1 chrome 会透**：只有 Normal 才有自己的纯色；Mica / Acrylic 下它画透明、露出 z-0。所以 Mica 下标题栏 / 导航栏看起来与背景「统一」，本质是二者都透明、露的是同一个 z-0，而非它们自带一层统一色。
+- **z-2 内容岛永远不透**：三种模式都是实色岛，从不露背景。（Mica 下内容宿主会先 `CompositionMode_Source` 擦透明，仅为清掉切页残影，随后不透明页面盖上——肉眼始终是实色。）
+
+一句话：**chrome 跟背景走（透明 / 纯色二选一），内容岛恒为实色。**
+
+**由此推出的硬规则：** 任何「擦透明以露背景」的 `Source` 擦除，必须门控在 **`fluentMicaBackdrop`（真有系统背景）**，而**不是**裸的 `WA_TranslucentBackground`。因为 Windows 是「始终半透明」模型——Normal 模式窗口同样 `WA_TranslucentBackground=true`，若按它判定，Normal 下也会擦透明，但背后并无系统背景 → 露出**黑色**。踩坑实例：导航栏 `TreeView`（`!m_backgroundVisible`）在 Normal 把 viewport 擦成透明，渲染成 `#000000`，而标题栏自绘 `bgCanvas` 是 `#202020`，形成「标题栏 ≠ 导航栏」的缝（2026-06-23 修：门控改为 `fluentMicaBackdrop`，Normal 下不擦，让背后不透明 chrome 透出）。
+
+**同理也作用于内容岛的圆角缺口（2026-06-24）。** 真正画这个圆角的是 `ContentFrameOverlay`（[NavigationView.cpp:89](../../src/components/navigation/NavigationView.cpp)）——一个 `WA_TransparentForMouseEvents`+`WA_NoSystemBackground` 的小 overlay，在带框侧边模式被 `raise()` 叠在内容宿主**之上**（半径 8 + 极淡的 strokeDivider 描边）。它的 `paintEvent` **无条件**用 `CompositionMode_Clear` 把左上圆角缺口挖透明来「露背景」。Mica 下正确；但 Normal 下 Clear 在不透明 chrome 背板上写入 (0,0,0,0)，于是在标题栏/导航栏/内容三交界处渲染出一小块**杂色块**（dark 背板上是黑、light 背板上是近白 #FFFFFF）。修：把这段 Clear 门控在 `fluentMicaBackdrop`——Normal 不挖，缺口保留背后的不透明内容/chrome 色（bgCanvas，无缝），只留细圆角描边；Mica 照挖露背景。**教训：凡是贴着「始终半透明」后备缓冲做 `Source`/`Clear` 擦除的层都必须门控在 `fluentMicaBackdrop`；而且别想当然认为圆角是背景控件画的——这里画它的是 `raise()` 在最上层的透明 overlay。**（曾误判为 `StackContentHost` 并改了它的 `paintEvent`，纯属空操作：宿主的 paint 根本到不了屏幕，被滚动区的不透明 bgCanvas 和这个 overlay 盖住。）
+
 ## 分层结构
 
 ```
@@ -80,4 +107,4 @@ macOS 半透明顶层（vibrancy）下，系统**不会自动清除后备缓冲*
 - **累加发黑**（半透明描边每帧叠加 alpha）、
 - **启动亮缝**（vibrancy 合成前的那一帧露出满强度 tint ≈243）。
 
-统一修法：每帧用 `QPainter::CompositionMode_Source` 擦除，**并门控在顶层确实半透明时**（`WA_TranslucentBackground` / `fluentMicaBackdrop`）——未门控的 Source 擦除会写入 `RGBA(0,0,0,0)`，在不透明窗口上渲染成黑。已应用于 `Window.cpp`、`StackContentHost.cpp`、`TitleBar.cpp`、`TreeView.cpp`（`!m_backgroundVisible` 时）、`NavigationView.cpp`（清 chrome rect）、Gallery 内容页，以及 `GalleryNavigationPane.cpp` 的页脚分隔线。页面栈切换时应在显示新透明页面前同步清除旧页面区域。另外：**子控件不要单独设 `WA_TranslucentBackground`**——macOS 上会把它提升为独立图层，容易在 vibrancy 合成期间产生白线或残影。
+统一修法：每帧用 `QPainter::CompositionMode_Source` 擦除，**并门控在「真有系统背景」时**（`fluentMicaBackdrop`，见上文 z-order 硬规则）——不要只看裸的 `WA_TranslucentBackground`：Windows 始终半透明，Normal 下它也为真，按它判定会在 Normal 露黑（未门控的 Source 擦除写入 `RGBA(0,0,0,0)`，在不透明窗口上同样渲染成黑）。已应用于 `Window.cpp`、`StackContentHost.cpp`、`TitleBar.cpp`、`TreeView.cpp`（`!m_backgroundVisible` 时）、`NavigationView.cpp`（清 chrome rect）、Gallery 内容页，以及 `GalleryNavigationPane.cpp` 的页脚分隔线。页面栈切换时应在显示新透明页面前同步清除旧页面区域。另外：**子控件不要单独设 `WA_TranslucentBackground`**——macOS 上会把它提升为独立图层，容易在 vibrancy 合成期间产生白线或残影。
