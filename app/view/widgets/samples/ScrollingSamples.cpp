@@ -60,9 +60,16 @@ public:
         layout->setContentsMargins(16, 14, 16, 16);
         layout->setSpacing(12);
         layout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+        advertiseSurfaceColor();
     }
 
 protected:
+    void onThemeUpdated() override
+    {
+        advertiseSurfaceColor();
+        update();
+    }
+
     void paintEvent(QPaintEvent*) override
     {
         QPainter painter(this);
@@ -72,6 +79,20 @@ protected:
         painter.drawRoundedRect(rect().adjusted(0, 0, -1, -1),
                                 themeRadius().overlay,
                                 themeRadius().overlay);
+    }
+
+private:
+    // Publish the real (painted) background via a dynamic property so rounded children that
+    // antialias their corners against the surface — e.g. FlipView's corner mask, which walks up
+    // looking for "fluentSurfaceColor" — pick up the correct color. The app themes via paint, not
+    // a global QPalette, and a palette would not survive QStyleSheetStyle on a styled ancestor;
+    // the property is read directly and is immune to both.
+    // zh_CN: 通过动态属性公布真实（绘制用）背景色，让对角做抗锯齿的圆角子控件
+    //（如向上查找 "fluentSurfaceColor" 的 FlipView 圆角遮罩）取到正确颜色。本应用靠绘制而非全局
+    // QPalette 上主题，且 palette 在带样式表的祖先下会被 QStyleSheetStyle 重置；动态属性直接读取，二者皆免疫。
+    void advertiseSurfaceColor()
+    {
+        setProperty("fluentSurfaceColor", themeColors().bgCanvas);
     }
 };
 

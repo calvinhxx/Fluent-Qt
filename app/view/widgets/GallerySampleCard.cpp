@@ -266,6 +266,19 @@ void GallerySampleCard::applyPalette()
                                             .arg(cssColor(colors.bgLayerAlt),
                                                  cssColor(colors.strokeCard))
                                             .arg(::CornerRadius::Control));
+        // Advertise the preview surface's real background via a dynamic property (it paints via the
+        // style sheet above, so its palette stays the default light white). Rounded children that
+        // antialias their corners against this surface — e.g. FlipView's corner mask, which walks up
+        // looking for "fluentSurfaceColor" — then blend to bgLayerAlt instead of rendering white
+        // corners in dark theme. A property is used instead of palette Window because palette does
+        // NOT reliably propagate to nested group containers under this styled ancestor (QStyleSheetStyle
+        // re-polishes descendants and resets their Window) — that left the wrapped External-navigation
+        // FlipView still white; the property walk-up is immune.
+        // zh_CN: 通过动态属性公布预览表面的真实背景（它靠上面的样式表绘制，palette 会保持默认浅白）。
+        // 对角做抗锯齿的圆角子控件——如向上查找 "fluentSurfaceColor" 的 FlipView 圆角遮罩——便会混到 bgLayerAlt，
+        // 而不是在 Dark 主题下渲染白角。用属性而非 palette Window：palette 在带样式表的祖先下无法可靠传到嵌套 group 容器
+        //（QStyleSheetStyle 会重新 polish 子树并重置其 Window）——这正是被包了一层的 External-navigation FlipView 仍发白的原因；属性向上查找不受影响。
+        m_previewSurface->setProperty("fluentSurfaceColor", colors.bgLayerAlt);
     }
     // Color the text via each label's OWN style sheet, not the palette: this card sets a style sheet
     // on itself, which installs QStyleSheetStyle over the whole subtree and makes a child Label's

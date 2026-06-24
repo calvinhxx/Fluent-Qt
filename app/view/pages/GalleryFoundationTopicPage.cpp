@@ -621,6 +621,7 @@ void GalleryFoundationTopicPage::buildQmlPlus()
         auto* valueLabel = new Label(QStringLiteral("40%"), sliderRow);
         valueLabel->setFluentTypography(Typography::FontRole::BodyStrong);
         valueLabel->setMinimumWidth(48);
+        trackLabelColor(valueLabel, TextRole::Primary);
         sliderLayout->addWidget(slider, 1);
         sliderLayout->addWidget(valueLabel, 0);
         card->body()->addWidget(sliderRow);
@@ -685,6 +686,7 @@ void GalleryFoundationTopicPage::buildQmlPlus()
 
         auto* stateLabel = new Label(QStringLiteral("Idle"), card);
         stateLabel->setFluentTypography(Typography::FontRole::BodyLargeStrong);
+        trackLabelColor(stateLabel, TextRole::Primary);
         card->body()->addWidget(stateLabel);
 
         auto* stateBar = new ProgressBar(card);

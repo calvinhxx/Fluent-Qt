@@ -207,6 +207,18 @@ fluent::textfields::Label* GalleryContentPage::createTrackedLabel(const QString&
     return label;
 }
 
+void GalleryContentPage::trackLabelColor(fluent::textfields::Label* label, TextRole textRole)
+{
+    if (!label)
+        return;
+    m_trackedLabels.append({label, textRole});
+    const Colors colors = themeColors();
+    const QColor color =
+        textRole == TextRole::Primary ? colors.textPrimary : colors.textSecondary;
+    label->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
+                             .arg(cssColor(color)));
+}
+
 void GalleryContentPage::applyBackdrop()
 {
     // The whole window is a real Mica surface, so the page is transparent and shows the OS
