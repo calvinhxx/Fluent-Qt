@@ -5,7 +5,9 @@
 #include <QMouseEvent>
 #include <QPropertyAnimation>
 #include <QApplication>
+#include <QKeyEvent>
 #include <QResizeEvent>
+#include <QWheelEvent>
 #include <QtMath>
 #include <QStringListModel>
 #include <QProxyStyle>
@@ -258,6 +260,11 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event) {
 
 ComboBox::ComboBox(QWidget* parent) : QComboBox(parent) {
     setAttribute(Qt::WA_Hover);
+    // QComboBox defaults to WheelFocus, which grants focus before wheelEvent and changes the
+    // selection merely by hovering and scrolling. Fluent ComboBox accepts wheel selection only
+    // after deliberate click/tab focus. zh_CN: QComboBox 默认 WheelFocus，会在 wheelEvent 前先抢
+    // 焦点，导致仅悬停滚轮就切换选项；Fluent ComboBox 只接受点击/Tab 明确取得焦点后的滚轮输入。
+    setFocusPolicy(Qt::StrongFocus);
     setFont(themeFont(m_fontRole).toQFont());
     setFixedHeight(::Spacing::ControlHeight::Standard);
 
@@ -481,8 +488,28 @@ void ComboBox::leaveEvent(QEvent* event) {
     QComboBox::leaveEvent(event);
 }
 
+void ComboBox::wheelEvent(QWheelEvent* event) {
+    const bool ownsFocus = hasFocus() || (m_lineEdit && m_lineEdit->hasFocus());
+    if (!ownsFocus) {
+        event->ignore();
+        return;
+    }
+    QComboBox::wheelEvent(event);
+}
+
+void ComboBox::keyPressEvent(QKeyEvent* event) {
+    const bool ownsFocus = hasFocus() || (m_lineEdit && m_lineEdit->hasFocus());
+    if (!ownsFocus) {
+        event->ignore();
+        return;
+    }
+    QComboBox::keyPressEvent(event);
+}
+
 void ComboBox::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
+        if (!hasFocus())
+            setFocus(Qt::MouseFocusReason);
         if (m_ignoreNextPopupPress) {
             m_ignoreNextPopupPress = false;
             m_pressed = false;

@@ -12,6 +12,7 @@
 #include <QFontMetricsF>
 #include <QImage>
 #include <QPixmap>
+#include <QWheelEvent>
 #include <QtTest/QTest>
 
 #include "components/basicinput/ComboBox.h"
@@ -94,6 +95,14 @@ qreal accentSpanWidthInViewport(fluent::collections::ListView* listView, const Q
 
     return maxX >= minX ? (maxX - minX + 1) / dpr : 0.0;
 }
+
+void sendWheel(QWidget* target, int angleDeltaY) {
+    const QPoint local = target->rect().center();
+    QWheelEvent event(QPointF(local), QPointF(target->mapToGlobal(local)),
+                      QPoint(), QPoint(0, angleDeltaY), Qt::NoButton,
+                      Qt::NoModifier, Qt::NoScrollPhase, false);
+    QApplication::sendEvent(target, &event);
+}
 }
 
 // ─── 基础功能测试 ────────────────────────────────────────────────────────────
@@ -154,6 +163,35 @@ TEST_F(ComboBoxTest, AddItemsAndSelect) {
     cb.setCurrentIndex(2);
     EXPECT_EQ(cb.currentIndex(), 2);
     EXPECT_EQ(cb.currentText(), "Blue");
+}
+
+TEST_F(ComboBoxTest, WheelAndArrowKeysRequireFocusToChangeSelection) {
+    ComboBox cb(window);
+    EXPECT_EQ(cb.focusPolicy(), Qt::StrongFocus);
+    cb.setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb.addItems({"Alpha", "Beta", "Gamma"});
+    cb.setCurrentIndex(1);
+
+    Button other(QStringLiteral("Other"), window);
+    other.setGeometry(40, 100, 100, Spacing::ControlHeight::Standard);
+    window->show();
+    other.setFocus(Qt::OtherFocusReason);
+    QApplication::processEvents();
+    ASSERT_FALSE(cb.hasFocus());
+
+    sendWheel(&cb, -120);
+    QTest::keyClick(&cb, Qt::Key_Down);
+    EXPECT_EQ(cb.currentIndex(), 1);
+
+    cb.setFocus(Qt::OtherFocusReason);
+    QApplication::processEvents();
+    ASSERT_TRUE(cb.hasFocus());
+    QTest::keyClick(&cb, Qt::Key_Down);
+    EXPECT_EQ(cb.currentIndex(), 2);
+
+    cb.setCurrentIndex(1);
+    sendWheel(&cb, -120);
+    EXPECT_EQ(cb.currentIndex(), 2);
 }
 
 TEST_F(ComboBoxTest, SizeHintMinWidth) {
