@@ -6,6 +6,7 @@
 #include <QKeyEvent>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
+#include <QVariant>
 #include "design/Typography.h"
 
 namespace fluent::collections {
@@ -53,17 +54,29 @@ protected:
         const auto& c = m_fv->themeColors();
         qreal r = radius.control;
 
-        // Corner mask: fill the outer corners with the parent background (antialiased).
-        // zh_CN: 圆角遮罩：用父控件背景色填充外角（抗锯齿）。
+        // Corner mask: fill the outer corners with the surrounding surface color (antialiased).
+        // The app installs NO global dark QPalette (it themes via paint), so an ancestor's
+        // palette Window is Qt's default light-white in dark theme → white corners. Instead walk
+        // up to the nearest ancestor that advertises its real painted background via the
+        // "fluentSurfaceColor" dynamic property; this also skips plain layout containers (whose
+        // palette QStyleSheetStyle may reset) and lands on the actual surface the FlipView sits on.
+        // zh_CN: 圆角遮罩：用周围表面色填充外角（抗锯齿）。本应用不装全局暗色 QPalette（靠绘制上主题），
+        // 故祖先 palette Window 在 Dark 下是默认浅白 → 白角。改为向上查找最近一个通过 "fluentSurfaceColor"
+        // 动态属性公布真实绘制背景的祖先；这样也能跳过普通布局容器（其 palette 可能被 QStyleSheetStyle 重置），
+        // 落到 FlipView 真正所在的表面。
         QPainterPath outer;
         outer.addRect(QRectF(rect()));
         QPainterPath inner;
         inner.addRoundedRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), r, r);
         QColor parentBg = c.bgCanvas;
-        if (m_fv->parentWidget()) {
-            const QPalette& pp = m_fv->parentWidget()->palette();
-            if (pp.color(QPalette::Window).alpha() > 0)
-                parentBg = pp.color(QPalette::Window);
+        for (const QWidget* w = m_fv->parentWidget(); w; w = w->parentWidget()) {
+            const QVariant surfaceColor = w->property("fluentSurfaceColor");
+            if (!surfaceColor.isValid())
+                continue;
+            const QColor sc = surfaceColor.value<QColor>();
+            if (sc.isValid() && sc.alpha() > 0)
+                parentBg = sc;
+            break;
         }
         p.setPen(Qt::NoPen);
         p.fillPath(outer - inner, parentBg);
@@ -370,14 +383,22 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
 {
     const auto& c = themeColors();
 
-    // Background: an in-app acrylic approximation. zh_CN: 背景 — AcrylicInApp 近似。
+    // Background: an in-app acrylic approximation over an OPAQUE surface base.
+    // The control* tokens carry a theme-baked alpha (in dark they are translucent WHITE,
+    // meant to layer over a dark surface); forcing setAlpha(230) on them turned the button
+    // into near-solid white in dark theme. Base the fill on the theme's opaque surface tokens
+    // instead — white-ish in light, dark in dark — then keep the ~90% acrylic translucency.
+    // zh_CN: 背景 — 在不透明表面色之上做 AcrylicInApp 近似。
+    // control* token 自带主题 alpha（Dark 下是半透明白，本应叠在深色表面上）；对其强制 setAlpha(230)
+    // 会让按钮在 Dark 主题下变成近乎纯白。改以主题的不透明表面 token 作底色（Light 偏白、Dark 偏暗），
+    // 再保留约 90% 的 acrylic 半透明度。
     QColor bgColor;
     if (pressed) {
-        bgColor = c.controlTertiary;
+        bgColor = c.bgSolid;
     } else if (hovered) {
-        bgColor = c.controlSecondary;
+        bgColor = c.bgLayerAlt;
     } else {
-        bgColor = c.controlDefault;
+        bgColor = c.bgLayer;
     }
     bgColor.setAlpha(230);
 

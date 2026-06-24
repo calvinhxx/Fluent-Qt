@@ -89,6 +89,18 @@ protected:
                                                   const QString& fontRole,
                                                   TextRole textRole);
 
+    /**
+     * @brief Registers an already-created label so its color follows theme refreshes.
+     * zh_CN: 登记一个已创建的标签，使其颜色随主题刷新。
+     *
+     * For labels the page does not create itself (e.g. a value/state readout placed inside
+     * a custom row). Sets the color via the label's OWN style sheet so it survives an ancestor
+     * style sheet's QStyleSheetStyle (which otherwise clobbers a palette-based text color).
+     * zh_CN: 用于页面非自建的标签（如放在自定义行里的取值/状态读数）。通过标签自身样式表上色，
+     * 以无视祖先样式表的 QStyleSheetStyle（否则基于 palette 的文字色会被覆盖）。
+     */
+    void trackLabelColor(fluent::textfields::Label* label, TextRole textRole);
+
 private:
     void applyPalette();
     // Makes the page/viewport transparent so the NavigationView-painted content frame (layer
