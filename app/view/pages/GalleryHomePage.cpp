@@ -44,7 +44,7 @@ namespace {
 
 constexpr int kHeroHeight = 370;
 constexpr int kHeroMarginX = 24;     // Text inset (was 48) — content shifts left overall.
-constexpr int kHeroBottomFade = 160; // Bottom band that dissolves the banner into the page.
+constexpr int kHeroBottomFade = 184; // Bottom band that dissolves the banner into the page (lengthened so the seam under the card strip fully dissolves). zh_CN: 加长底部溶解带，使卡片条下方的横向硬缝彻底化开。
 constexpr int kBodyMarginX = 24;     // Body content inset (was 48) — matches the hero.
 constexpr int kBodyMarginTop = 20;
 constexpr int kHeroIconSize = 56;
@@ -587,6 +587,12 @@ public:
     {
         setObjectName(QStringLiteral("galleryHomeHero"));
         setFixedHeight(kHeroHeight);
+        // Translucent backing so the bottom dissolve can fade the banner art to fully transparent and
+        // reveal the SAME OS backdrop (Mica/Acrylic) the content area shows — no opaque seam between
+        // them. In Normal mode the opaque wash covers this completely, so it's a no-op there.
+        // zh_CN: 透明背板，使底部溶解能把横幅美术层淡到全透明，露出与内容区相同的系统背景（Mica/Acrylic），
+        // 两者之间不再有不透明硬缝。Normal 模式下不透明 wash 会完全覆盖它，等同无操作。
+        setAttribute(Qt::WA_TranslucentBackground);
 
         auto* layout = new QVBoxLayout(this);
         // The floating link ListView occupies the lower half of the hero, so keep the
@@ -665,6 +671,14 @@ protected:
 
         const bool dark = currentTheme() == Dark;
         const Colors colors = themeColors();
+        // A real OS-composited backdrop (Win11 Mica / macOS vibrancy) — the same contract the content
+        // host reads. Under it the page is transparent and the backdrop shows through, so the hero must
+        // dissolve INTO that backdrop rather than onto an opaque bgLayerAlt plate (which reads as a seam).
+        // zh_CN: 真实系统合成背景（Win11 Mica / macOS vibrancy）——与内容宿主同一契约。此时页面透明、背景透出，
+        // 故 hero 必须溶解进该背景，而非落在不透明 bgLayerAlt 板上（那会显示为硬缝）。
+        const bool realBackdrop = window()
+            && window()->testAttribute(Qt::WA_TranslucentBackground)
+            && window()->property("fluentMicaBackdrop").toBool();
 
         // The banner is full-bleed with only its top-LEFT corner rounded (matching the content
         // surface, which rounds top-left where it meets the pane and stays square on the right where
@@ -680,52 +694,112 @@ protected:
         painter.save();
         painter.setClipPath(clip);
 
+        // Many eased stops (vs the old 3) smooth the adjacent hues so the deep blue→purple range no
+        // longer shows a visible colour band across the wash. (design: silky multi-stop gradient)
+        // zh_CN: 用多个缓动色标（取代原来的 3 个）平滑相邻色相，使深蓝→紫区不再出现可见色带。
         QLinearGradient wash(banner.topLeft(), banner.bottomRight());
         if (dark) {
-            wash.setColorAt(0.0, QColor(0x1B, 0x2A, 0x41));
-            wash.setColorAt(0.55, QColor(0x27, 0x22, 0x44));
-            wash.setColorAt(1.0, QColor(0x33, 0x26, 0x3C));
+            wash.setColorAt(0.00, QColor(0x16, 0x22, 0x3A));
+            wash.setColorAt(0.22, QColor(0x1A, 0x24, 0x40));
+            wash.setColorAt(0.40, QColor(0x1F, 0x24, 0x44));
+            wash.setColorAt(0.56, QColor(0x24, 0x24, 0x47));
+            wash.setColorAt(0.70, QColor(0x29, 0x23, 0x4A));
+            wash.setColorAt(0.84, QColor(0x2F, 0x23, 0x48));
+            wash.setColorAt(1.00, QColor(0x35, 0x22, 0x40));
         } else {
-            wash.setColorAt(0.0, QColor(0xD6, 0xE7, 0xF7));
-            wash.setColorAt(0.55, QColor(0xE4, 0xDF, 0xF6));
-            wash.setColorAt(1.0, QColor(0xF4, 0xE7, 0xEA));
+            wash.setColorAt(0.00, QColor(0xD9, 0xE9, 0xF8));
+            wash.setColorAt(0.24, QColor(0xDE, 0xE5, 0xF6));
+            wash.setColorAt(0.46, QColor(0xE3, 0xE1, 0xF4));
+            wash.setColorAt(0.66, QColor(0xE9, 0xE2, 0xF0));
+            wash.setColorAt(0.84, QColor(0xEF, 0xE5, 0xEE));
+            wash.setColorAt(1.00, QColor(0xF4, 0xE8, 0xEA));
         }
         painter.fillRect(banner, wash);
 
-        // Decorative translucent circles drift off the right edge, like the
-        // abstract shapes in the WinUI Gallery banner art.
-        // zh_CN: 半透明装饰圆漂出右缘，呼应 WinUI Gallery 横幅的抽象图形。
-        const QColor circle = dark ? QColor(255, 255, 255, 14) : QColor(255, 255, 255, 90);
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(circle);
+        // Decorative blooms drift off the right edge — soft radial gradients with a fully transparent
+        // outer stop, so they glow into the wash instead of leaving the hard-edged rim the old solid
+        // circles did. zh_CN: 装饰光晕从右缘漂入——外缘全透明的径向渐变，柔和融入底色，而非旧实心圆那种生硬轮廓。
         const qreal w = banner.width();
         const qreal h = banner.height();
         const qreal bx = banner.left();
         const qreal by = banner.top();
-        painter.drawEllipse(QPointF(bx + w * 0.80, by + h * 0.12), h * 0.85, h * 0.85);
-        painter.drawEllipse(QPointF(bx + w * 0.95, by + h * 0.90), h * 0.55, h * 0.55);
-        painter.drawEllipse(QPointF(bx + w * 0.62, by + h * 1.05), h * 0.35, h * 0.35);
+        const auto bloom = [&](QPointF center, qreal radius, QColor tint) {
+            QRadialGradient g(center, radius);
+            g.setColorAt(0.0, tint);
+            QColor mid = tint;
+            mid.setAlpha(tint.alpha() / 3);
+            g.setColorAt(0.5, mid);
+            QColor edge = tint;
+            edge.setAlpha(0);
+            g.setColorAt(1.0, edge);
+            painter.fillRect(banner, g);
+        };
+        bloom({bx + w * 0.86, by - h * 0.30}, h * 1.5,
+              dark ? QColor(86, 150, 232, 82) : QColor(255, 255, 255, 210));
+        bloom({bx + w * 0.94, by + h * 1.10}, h * 1.3,
+              dark ? QColor(150, 96, 206, 76) : QColor(214, 180, 236, 128));
+        bloom({bx + w * 0.62, by + h * 1.15}, h * 1.0,
+              dark ? QColor(196, 116, 168, 46) : QColor(247, 210, 214, 102));
 
-        // Bottom dissolve into the content layer surface (bgLayerAlt) painted by the
-        // NavigationView behind the transparent page, so the banner transitions seamlessly
-        // into the content instead of ending on a hard seam above "Featured samples".
-        // zh_CN: 底部渐隐到 NavigationView 在透明页面之后绘制的内容层表面（bgLayerAlt），
-        // 使横幅无缝过渡到内容，而非在「Featured samples」上方留硬缝。
+        // Fine grain dither: 8-bit-per-channel gradients band in the deep blue→purple range; a faint
+        // overlay-blended noise (~5%) scatters the bands so the wash reads silky rather than stepped.
+        // Reuses the cached acrylic noise tile. zh_CN: 细噪点抖动：8bpc 渐变在深蓝→紫区会出现色带；
+        // 叠一层极淡(~5%)的 overlay 噪点把色带打散，使底色丝滑而非阶梯状。复用已缓存的亚克力噪声贴片。
+        painter.save();
+        painter.setOpacity(dark ? 0.05 : 0.045);
+        painter.setCompositionMode(QPainter::CompositionMode_Overlay);
+        painter.fillRect(banner, QBrush(acrylicNoiseTile()));
+        painter.restore();
+
         const QRectF fadeRect(banner.left(), banner.bottom() - kHeroBottomFade,
                               banner.width(), kHeroBottomFade);
-        QColor base = colors.bgLayerAlt;
-        QColor clear = base;
-        clear.setAlpha(0);
-        QColor soft = base;
-        soft.setAlpha(dark ? 34 : 42);
-        QColor medium = base;
-        medium.setAlpha(dark ? 122 : 148);
-        QLinearGradient fade(fadeRect.topLeft(), fadeRect.bottomLeft());
-        fade.setColorAt(0.0, clear);
-        fade.setColorAt(0.38, soft);
-        fade.setColorAt(0.72, medium);
-        fade.setColorAt(1.0, base);
-        painter.fillRect(fadeRect, fade);
+
+        if (realBackdrop) {
+            // Mica/Acrylic: the content area below is transparent and shows the OS backdrop, so fade
+            // the banner ART itself to transparent with a DestinationIn alpha mask — it melts into the
+            // SAME backdrop with no seam. A gentle hold-back alpha across the upper band also lets the
+            // backdrop tint subtly through the whole hero ("a little transparency"), while the text,
+            // icon and link cards (separate child widgets painted afterwards) stay fully crisp.
+            // zh_CN: Mica/Acrylic：下方内容区透明、透出系统背景，故用 DestinationIn alpha 蒙版把横幅美术层本身
+            // 淡到透明——它融入同一背景且无缝。上半区保留一点点透明，让背景色调透过整个 hero（“带一点透明”）；
+            // 文字、图标与链接卡片是后绘的独立子控件，保持清晰。
+            const qreal veil = dark ? 0.90 : 0.92;  // upper-band opacity → backdrop shows ~8–10% through the art
+            const qreal fadeTop = qBound(0.0,
+                1.0 - qreal(kHeroBottomFade) / qMax(1.0, banner.height()), 1.0);
+            const auto a = [](qreal o) { return QColor(0, 0, 0, qBound(0, qRound(o * 255.0), 255)); };
+            QLinearGradient mask(banner.topLeft(), banner.bottomLeft());
+            mask.setColorAt(0.0, a(veil));
+            mask.setColorAt(fadeTop, a(veil));
+            mask.setColorAt(fadeTop + (1.0 - fadeTop) * 0.30, a(veil * 0.74));
+            mask.setColorAt(fadeTop + (1.0 - fadeTop) * 0.55, a(veil * 0.46));
+            mask.setColorAt(fadeTop + (1.0 - fadeTop) * 0.78, a(veil * 0.18));
+            mask.setColorAt(1.0, a(0.0));
+            painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+            painter.fillRect(banner, mask);
+            painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        } else {
+            // Normal (opaque chrome): dissolve onto the content-layer surface (bgLayerAlt) the host
+            // paints behind the transparent page, so the banner transitions seamlessly into the page.
+            // A softer four-step curve eases the banner in so the seam under the card strip fully fades.
+            // zh_CN: Normal（不透明 chrome）：渐隐到宿主在透明页面之后绘制的内容层表面（bgLayerAlt），无缝过渡到
+            // 页面。更柔的四段曲线让横幅渐隐，卡片条下方的接缝彻底化开。
+            QColor base = colors.bgLayerAlt;
+            QColor clear = base;
+            clear.setAlpha(0);
+            QColor soft = base;
+            soft.setAlpha(dark ? 34 : 42);
+            QColor lower = base;
+            lower.setAlpha(dark ? 74 : 92);
+            QColor medium = base;
+            medium.setAlpha(dark ? 122 : 148);
+            QLinearGradient fade(fadeRect.topLeft(), fadeRect.bottomLeft());
+            fade.setColorAt(0.00, clear);
+            fade.setColorAt(0.30, soft);
+            fade.setColorAt(0.55, lower);
+            fade.setColorAt(0.78, medium);
+            fade.setColorAt(1.00, base);
+            painter.fillRect(fadeRect, fade);
+        }
 
         painter.restore();
     }

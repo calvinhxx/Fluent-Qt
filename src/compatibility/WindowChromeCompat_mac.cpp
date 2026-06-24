@@ -345,8 +345,8 @@ constexpr char kBackdropTintIdentifier[] = "fluentBackdropTint";
 
 // AppKit enum values pinned locally so this file needs no Cocoa headers.
 // zh_CN: 在本地固定 AppKit 枚举值，使本文件无需 Cocoa 头文件。
-constexpr long NSVisualEffectMaterialSidebar = 7;           // translucent source-list material
-constexpr long NSVisualEffectMaterialWindowBackground = 12; // subtle window-wide material
+constexpr long NSVisualEffectMaterialSidebar = 7;           // moderate source-list material → Mica
+constexpr long NSVisualEffectMaterialHUDWindow = 13;        // frosted-glass material → Acrylic (most see-through)
 constexpr long NSVisualEffectBlendingModeBehindWindow = 0;
 constexpr long NSVisualEffectStateFollowsWindowActiveState = 0;
 constexpr long NSWindowAbove = 1;
@@ -606,15 +606,21 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
     if (!resolveBackdropHost(window, &contentView, &superview))
         return false;
 
-    // Mica uses the subdued window-background material with a stronger app tint. Acrylic uses the
-    // more wallpaper-responsive sidebar material with a lighter tint, so the two choices remain
-    // visibly distinct instead of sharing the same native material.
-    // zh_CN: Mica 使用更克制的 window-background material 和更强应用 tint；Acrylic 使用更受壁纸影响的
-    // sidebar material 和更浅 tint，使两种效果不再因共用同一原生 material 而难以区分。
+    // Three visibly distinct surfaces (Normal/Solid already returned above as fully opaque):
+    //   • Mica    — sidebar material + a moderate app tint: a subtle, mostly-cohesive wallpaper tint.
+    //   • Acrylic — HUD-window (frosted-glass) material + a light tint: a much more see-through frost
+    //               that lets the desktop blur read clearly through the chrome.
+    // The previous mapping (window-background + 0.58 tint for Mica) sat so close to opaque that Mica
+    // was nearly indistinguishable from Normal, while Acrylic (sidebar + 0.20) read like a proper Mica.
+    // zh_CN: 三种可明显区分的表面（Normal/Solid 已在上方按全不透明返回）：
+    //   • Mica    —— sidebar material + 中等应用 tint：克制、基本统一的壁纸着色。
+    //   • Acrylic —— HUD-window（磨砂玻璃）material + 更浅 tint：更通透，桌面模糊清晰透过 chrome。
+    // 旧映射（Mica 用 window-background + 0.58 tint）过于接近不透明，使 Mica 与 Normal 几乎无法区分，
+    // 而 Acrylic（sidebar + 0.20）看起来反而才像真正的 Mica。
     const bool acrylic = effect == BackdropEffect::Acrylic;
     const long material = acrylic
-        ? NSVisualEffectMaterialSidebar
-        : NSVisualEffectMaterialWindowBackground;
+        ? NSVisualEffectMaterialHUDWindow
+        : NSVisualEffectMaterialSidebar;
     id base = ensureBackdropView(superview,
                                  kBackdropBaseIdentifier,
                                  material,
@@ -628,8 +634,8 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
     applyEffectAppearance(base, dark);
 
     const double tintAlpha = acrylic
-        ? (dark ? 0.20 : 0.22)
-        : (dark ? 0.58 : 0.54);
+        ? (dark ? 0.12 : 0.16)
+        : (dark ? 0.20 : 0.22);
     if (id tint = ensureTintView(superview, base, contentView)) {
         sendUnsignedLong(tint, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
         sendCGRect(tint, "setFrame:", sendRect(superview, "bounds"));
