@@ -75,6 +75,7 @@ private:
     void updateDividerPalette();
     void startCompactVisualTransition(bool compact);
     void startSettingsIconRotation();
+    void activateRouteIndex(const QModelIndex& index, bool pointerActivation);
     QModelIndex visualSelectionIndex(const QModelIndex& routeIndex) const;
     void showCompactFlyoutForIndex(const QModelIndex& index);
     void closeCompactFlyout(bool animated = true);

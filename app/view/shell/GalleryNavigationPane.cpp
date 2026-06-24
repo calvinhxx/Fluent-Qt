@@ -4,6 +4,7 @@
 #include <QAbstractItemView>
 #include <QEvent>
 #include <QHelpEvent>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
@@ -288,6 +289,29 @@ bool GalleryNavigationPane::event(QEvent* event)
 
 bool GalleryNavigationPane::eventFilter(QObject* watched, QEvent* event)
 {
+    if (m_treeView && watched == m_treeView && event->type() == QEvent::KeyPress) {
+        const auto* keyEvent = static_cast<QKeyEvent*>(event);
+        const Qt::KeyboardModifiers modifiers = keyEvent->modifiers()
+            & ~Qt::KeypadModifier;
+        const bool movesCurrentItem = modifiers == Qt::NoModifier
+            && (keyEvent->key() == Qt::Key_Up
+                || keyEvent->key() == Qt::Key_Down
+                || keyEvent->key() == Qt::Key_Home
+                || keyEvent->key() == Qt::Key_End
+                || keyEvent->key() == Qt::Key_PageUp
+                || keyEvent->key() == Qt::Key_PageDown);
+        if (movesCurrentItem) {
+            // The event filter runs before QTreeView updates its current index. Activate on the
+            // next event-loop turn so keyboard selection follows the same route path as a click.
+            // zh_CN: eventFilter 先于 QTreeView 更新 currentIndex，故下一轮事件循环再激活，
+            // 让键盘选择与鼠标点击进入同一路由流程。
+            QTimer::singleShot(0, this, [this]() {
+                if (m_treeView)
+                    activateRouteIndex(m_treeView->currentIndex(), false);
+            });
+        }
+    }
+
     if (m_treeView && watched == m_treeView->viewport()) {
         switch (event->type()) {
         case QEvent::ToolTip: {
@@ -383,34 +407,14 @@ void GalleryNavigationPane::rebuild()
 
     m_treeView->setModel(m_model);
     m_treeView->setItemDelegate(makeGalleryNavigationDelegate(this, m_treeView));
+    m_treeView->installEventFilter(this);
     if (!isFooterOnly())
         m_treeView->collapseAll();
     updateCompactRowVisibility();
 
     connect(m_treeView, &fluent::collections::TreeView::itemPressed,
             this, [this](const QModelIndex& index) {
-                const QString routeId = index.data(RouteIdRole).toString();
-                if (routeId.isEmpty()) {
-                    LOG_TRACE(QStringLiteral("GalleryNavigationPane itemPressed tree=%1 state=ignored reason=empty-route")
-                                  .arg(m_treeView ? m_treeView->objectName() : objectName()));
-                    return;
-                }
-                const bool hasChildren = m_model && m_model->hasChildren(index);
-                LOG_DEBUG(QStringLiteral("GalleryNavigationPane itemPressed tree=%1 routeId=%2 hasChildren=%3")
-                              .arg(m_treeView ? m_treeView->objectName() : objectName(),
-                                   routeId,
-                                   hasChildren ? QStringLiteral("true") : QStringLiteral("false")));
-                if (routeId == QStringLiteral("settings"))
-                    startSettingsIconRotation();
-                setSelectedRouteId(routeId);
-                if (m_compact && hasChildren) {
-                    showCompactFlyoutForIndex(index);
-                } else if (m_treeView && hasChildren) {
-                    m_treeView->toggleExpanded(index);
-                } else if (m_compact) {
-                    closeCompactFlyout();
-                }
-                emit routeActivated(routeId);
+                activateRouteIndex(index, true);
             });
 
     outerLayout->addWidget(m_treeView);
@@ -419,6 +423,43 @@ void GalleryNavigationPane::rebuild()
                   .arg(m_treeView->objectName())
                   .arg(m_routeIndexes.size())
                   .arg(isFooterOnly() ? QStringLiteral("true") : QStringLiteral("false")));
+}
+
+void GalleryNavigationPane::activateRouteIndex(const QModelIndex& index,
+                                               bool pointerActivation)
+{
+    const QString routeId = index.data(RouteIdRole).toString();
+    if (routeId.isEmpty()) {
+        LOG_TRACE(QStringLiteral("GalleryNavigationPane routeActivation tree=%1 state=ignored reason=empty-route")
+                      .arg(m_treeView ? m_treeView->objectName() : objectName()));
+        return;
+    }
+
+    if (!pointerActivation && routeId == m_selectedRouteId)
+        return;
+
+    const bool hasChildren = m_model && m_model->hasChildren(index);
+    LOG_DEBUG(QStringLiteral("GalleryNavigationPane routeActivation tree=%1 routeId=%2 source=%3 hasChildren=%4")
+                  .arg(m_treeView ? m_treeView->objectName() : objectName(),
+                       routeId,
+                       pointerActivation ? QStringLiteral("pointer")
+                                         : QStringLiteral("keyboard"),
+                       hasChildren ? QStringLiteral("true") : QStringLiteral("false")));
+    if (routeId == QStringLiteral("settings"))
+        startSettingsIconRotation();
+    setSelectedRouteId(routeId);
+
+    if (pointerActivation) {
+        if (m_compact && hasChildren) {
+            showCompactFlyoutForIndex(index);
+        } else if (m_treeView && hasChildren) {
+            m_treeView->toggleExpanded(index);
+        } else if (m_compact) {
+            closeCompactFlyout();
+        }
+    }
+
+    emit routeActivated(routeId);
 }
 
 void GalleryNavigationPane::updateButtonStyles()

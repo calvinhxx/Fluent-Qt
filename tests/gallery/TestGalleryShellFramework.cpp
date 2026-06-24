@@ -1199,6 +1199,31 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
     EXPECT_EQ(window.currentSettingsPage()->titleLabel()->text(), QStringLiteral("Settings"));
 }
 
+TEST_F(GalleryShellFrameworkTest, NavigationArrowKeysActivateCurrentRoute)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
+        2000);
+
+    auto* mainPane = window.findChild<GalleryNavigationPane*>(
+        QStringLiteral("galleryMainNavigationPane"));
+    ASSERT_NE(mainPane, nullptr);
+    TreeView* tree = navigationTree(mainPane);
+    ASSERT_NE(tree, nullptr);
+    ASSERT_EQ(tree->currentIndex(), mainPane->indexForRouteId(QStringLiteral("home")));
+
+    tree->setFocus(Qt::OtherFocusReason);
+    QTest::keyClick(tree, Qt::Key_Down);
+
+    QTRY_COMPARE_WITH_TIMEOUT(window.currentRouteId(), QStringLiteral("foundation"), 1000);
+    ASSERT_NE(window.currentContentPage(), nullptr);
+    EXPECT_EQ(window.currentContentPage()->title(), QStringLiteral("Foundation"));
+}
+
 TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 {
     auto& settings = GallerySettings::instance();
