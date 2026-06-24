@@ -228,6 +228,30 @@ TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget) {
 }
 
 // ── 9. Destroyed target is handled safely (QPointer auto-clears) ─────────────
+TEST_F(CoachMarkTest, TracksMovingTargetAncestorAndClosesWhenClipped) {
+    auto* scrollingContent = new QWidget(window);
+    scrollingContent->setGeometry(0, 0, window->width(), 900);
+    scrollingContent->show();
+
+    auto* target = new Button("Target", scrollingContent);
+    target->setGeometry(260, 220, 120, 32);
+    target->show();
+
+    CoachMark coach(window);
+    coach.setCardSize(QSize(240, 120));
+    coach.setPlacement(CoachMark::Bottom);
+    coach.setTarget(target);
+    coach.open();
+    QTest::qWaitForWindowExposed(&coach);
+    const QPoint initialPosition = coach.pos();
+
+    scrollingContent->move(0, -64);
+    QTRY_COMPARE_WITH_TIMEOUT(coach.pos(), initialPosition - QPoint(0, 64), 1000);
+
+    scrollingContent->move(0, -500);
+    QTRY_VERIFY_WITH_TIMEOUT(!coach.isOpen(), 1000);
+}
+
 TEST_F(CoachMarkTest, TargetDestroyedClearsPointer) {
     auto* target = makeTarget(QPoint(260, 220));
 

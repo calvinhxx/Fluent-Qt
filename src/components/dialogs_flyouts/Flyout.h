@@ -74,6 +74,7 @@ protected:
     /// zh_CN: 重写——按 anchor 几何 + Placement + 自身尺寸返回 move() 目标坐标
     /// （含 shadow margin 偏移补偿）。
     QPoint computePosition() const override;
+    QWidget* automaticPositionAnchor() const override { return m_anchor.data(); }
 
 private:
     /// Resolves the effective placement from available space in Auto mode.

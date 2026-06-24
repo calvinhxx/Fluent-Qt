@@ -1,5 +1,7 @@
 #include "components/dialogs_flyouts/CoachMark.h"
 
+#include <QApplication>
+#include <QEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
@@ -10,6 +12,7 @@
 #include <QRect>
 #include <QResizeEvent>
 #include <QScreen>
+#include <QTimer>
 
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
@@ -46,6 +49,12 @@ CoachMark::CoachMark(QWidget* owner)
     resize(m_cardSize.width() + 2 * margin, m_cardSize.height() + 2 * margin);
     m_contentHost->setGeometry(cardRect());
     onThemeUpdated();
+}
+
+CoachMark::~CoachMark()
+{
+    if (qApp)
+        qApp->removeEventFilter(this);
 }
 
 void CoachMark::onThemeUpdated()
@@ -92,6 +101,8 @@ void CoachMark::open()
     setWindowOpacity(0.0);
     show();
     raise();
+    if (qApp)
+        qApp->installEventFilter(this);
     m_fadeAnim->stop();
     m_fadeAnim->setDuration(themeAnimation().normal);
     m_fadeAnim->setEasingCurve(themeAnimation().decelerate);
@@ -107,6 +118,8 @@ void CoachMark::close()
     if (!m_open)
         return;
     m_open = false;
+    if (qApp)
+        qApp->removeEventFilter(this);
     m_moveAnim->stop();
     m_fadeAnim->stop();
     m_fadeAnim->setDuration(themeAnimation().normal);
@@ -124,6 +137,43 @@ void CoachMark::setOpen(bool open)
         this->open();
     else
         close();
+}
+
+bool CoachMark::eventFilter(QObject* watched, QEvent* event)
+{
+    if (!event || !m_open || !m_target)
+        return QWidget::eventFilter(watched, event);
+
+    if (event->type() == QEvent::Destroy && watched == m_target) {
+        close();
+        return false;
+    }
+    if (::fluent::overlay::anchorGeometryMayChange(watched, event, m_target))
+        queueTargetSync();
+    return QWidget::eventFilter(watched, event);
+}
+
+void CoachMark::queueTargetSync()
+{
+    if (m_targetSyncPending)
+        return;
+    m_targetSyncPending = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_targetSyncPending = false;
+        syncToTarget();
+    });
+}
+
+void CoachMark::syncToTarget()
+{
+    if (!m_open || !m_target)
+        return;
+    if (!::fluent::overlay::isAnchorVisibleInTopLevel(m_target)) {
+        close();
+        return;
+    }
+    reposition(/*animated*/ false);
+    raise();
 }
 
 QRect CoachMark::cardRect() const

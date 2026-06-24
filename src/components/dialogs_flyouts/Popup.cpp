@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 #include <QGraphicsOpacityEffect>
 #include <QApplication>
+#include <QTimer>
 #include "compatibility/QtCompat.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
@@ -88,6 +89,8 @@ void Popup::setPosition(QWidget* relativeTo, const QPoint& localPos) {
     if (!relativeTo) return;
     QWidget* top = relativeTo->window();
     m_targetPos = relativeTo->mapTo(top, localPos);
+    m_positionRelativeTo = relativeTo;
+    m_positionLocalPos = localPos;
     m_positionSet = true;
 }
 
@@ -99,6 +102,48 @@ QPoint Popup::computePosition() const {
     // Default: center inside the topLevelWidget. zh_CN: 默认在 topLevelWidget 中居中。
     return QPoint((top->width() - width()) / 2,
                   (top->height() - height()) / 2);
+}
+
+QPoint Popup::resolvedPosition() const {
+    if (!m_positionSet)
+        return computePosition();
+
+    QPoint cardTopLeft = m_targetPos;
+    if (m_positionRelativeTo && m_positionRelativeTo->window()) {
+        cardTopLeft = m_positionRelativeTo->mapTo(m_positionRelativeTo->window(),
+                                                  m_positionLocalPos);
+    }
+    return ::fluent::overlay::outerTopLeftForVisibleCard(cardTopLeft);
+}
+
+QWidget* Popup::trackedPositionAnchor() const {
+    if (m_positionSet)
+        return m_positionRelativeTo.data();
+    return automaticPositionAnchor();
+}
+
+void Popup::queuePositionSync() {
+    if (m_positionSyncPending)
+        return;
+    m_positionSyncPending = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_positionSyncPending = false;
+        syncPositionToAnchor();
+    });
+}
+
+void Popup::syncPositionToAnchor() {
+    if ((!m_isOpen && !isVisible()) || m_isClosing)
+        return;
+    QWidget* anchor = trackedPositionAnchor();
+    if (!anchor)
+        return;
+    if (!::fluent::overlay::isAnchorVisibleInTopLevel(anchor)) {
+        close();
+        return;
+    }
+    move(resolvedPosition());
+    ::fluent::overlay::raiseOverlayStack(m_scrim, this);
 }
 
 // ── open / close ─────────────────────────────────────────────────────────────
@@ -128,10 +173,7 @@ void Popup::open() {
 
     // Placement: honor setPosition() when provided, else center.
     // zh_CN: 定位——setPosition() 设置过则用目标位置，否则居中。
-    if (m_positionSet)
-        move(::fluent::overlay::outerTopLeftForVisibleCard(m_targetPos));
-    else
-        move(computePosition());
+    move(resolvedPosition());
 
     show();
     ::fluent::overlay::raiseOverlayStack(m_scrim, this);
@@ -255,14 +297,22 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
         if (m_scrim && m_topLevel)
             m_scrim->setGeometry(m_topLevel->rect());
         if (isVisible()) {
-            if (!m_positionSet)
-                move(computePosition());
+            move(resolvedPosition());
             ::fluent::overlay::raiseOverlayStack(m_scrim, this);
         }
         return false;
     }
 
     if (!m_isOpen && !isVisible()) return false;
+
+    QWidget* positionAnchor = trackedPositionAnchor();
+    if (event && positionAnchor && event->type() == QEvent::Destroy
+        && watched == positionAnchor) {
+        close();
+        return false;
+    }
+    if (::fluent::overlay::anchorGeometryMayChange(watched, event, positionAnchor))
+        queuePositionSync();
 
     const bool noAutoClose = m_closePolicy == ClosePolicy(NoAutoClose);
     if (::fluent::overlay::isEscapeKeyPress(event) &&

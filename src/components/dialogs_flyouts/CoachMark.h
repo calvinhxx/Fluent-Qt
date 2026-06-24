@@ -9,6 +9,7 @@
 #include "components/foundation/QMLPlus.h"
 
 class QPaintEvent;
+class QEvent;
 class QPropertyAnimation;
 class QResizeEvent;
 
@@ -59,6 +60,7 @@ public:
     Q_ENUM(Placement)
 
     explicit CoachMark(QWidget* owner = nullptr);
+    ~CoachMark() override;
 
     /**
      * @brief Container for caller content (add an AnchorLayout / QVBoxLayout etc.).
@@ -92,10 +94,13 @@ signals:
     void closed();
 
 protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
 
 private:
+    void queueTargetSync();
+    void syncToTarget();
     void reposition(bool animated);  // place the window from target + placement
     QRect cardRect() const;          // card rect inside the window (inset for shadow + tail)
 
@@ -105,6 +110,7 @@ private:
     QPointer<QWidget> m_target;
     Placement m_placement = Auto;
     bool m_open = false;
+    bool m_targetSyncPending = false;
     bool m_tailVisible = false;
     int m_tailEdge = 0;    // 0=none,1=top,2=bottom,3=left,4=right
     int m_tailCenter = 0;  // tail center along that edge (window-local)
