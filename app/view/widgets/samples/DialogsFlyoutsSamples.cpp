@@ -77,6 +77,9 @@ Label *makeBodyLabel(QWidget *parent, const QString &text) {
   auto *label = new Label(text, parent);
   label->setFluentTypography(Typography::FontRole::Body);
   label->setWordWrap(true);
+  // Color via the label's own style sheet so the styled sample preview surface can't drop it (it
+  // would otherwise render near-black in dark theme). zh_CN: 用标签自身样式表上色,避免带样式表的预览面丢色(深色下近黑)。
+  label->setTextColorRole(Label::TextColorRole::Primary);
   return label;
 }
 
@@ -89,6 +92,7 @@ Label *makeStatusLabel(QWidget *parent, const QString &text) {
 Label *makeTitleLabel(QWidget *parent, const QString &text) {
   auto *label = new Label(text, parent);
   label->setFluentTypography(Typography::FontRole::BodyStrong);
+  label->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
   return label;
 }
 

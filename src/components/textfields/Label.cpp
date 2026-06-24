@@ -11,6 +11,11 @@ namespace fluent::textfields {
 
 namespace {
 constexpr int kToolTipGap = 8;
+
+QString cssRgba(const QColor& c) {
+    return QStringLiteral("rgba(%1, %2, %3, %4)")
+        .arg(c.red()).arg(c.green()).arg(c.blue()).arg(c.alpha());
+}
 }
 
 Label::Label(const QString& text, QWidget* parent)
@@ -61,6 +66,14 @@ void Label::setFont(const QFont& font) {
     updateRenderedText();
 }
 
+void Label::setTextColorRole(TextColorRole role) {
+    if (m_textColorRole == role)
+        return;
+    m_textColorRole = role;
+    applyTextColor();
+    updateRenderedText();
+}
+
 void Label::onThemeUpdated() {
     // Preserve caller-supplied fonts such as Segoe Fluent Icons across theme changes.
     // zh_CN: 主题切换时保留调用方设置的字体，例如 Segoe Fluent Icons。
@@ -68,11 +81,41 @@ void Label::onThemeUpdated() {
         applyTypographyFont();
 
     // 2. Refresh the color. zh_CN: 更新颜色。
-    const auto& c = themeColors();
-    QPalette p = palette();
-    p.setColor(QPalette::WindowText, c.textPrimary);
-    setPalette(p);
+    applyTextColor();
     updateRenderedText();
+}
+
+QColor Label::resolveTextColor() const {
+    const auto& c = themeColors();
+    switch (m_textColorRole) {
+    case TextColorRole::Secondary: return c.textSecondary;
+    case TextColorRole::Tertiary:  return c.textTertiary;
+    case TextColorRole::Disabled:  return c.textDisabled;
+    case TextColorRole::OnAccent:  return c.textOnAccent;
+    case TextColorRole::Accent:    return c.textAccentPrimary;
+    case TextColorRole::Primary:
+    case TextColorRole::Default:
+    default:                       return c.textPrimary;
+    }
+}
+
+void Label::applyTextColor() {
+    if (m_textColorRole == TextColorRole::Default) {
+        // Legacy palette-based coloring. Correct when no ancestor has a style sheet; left untouched so
+        // components that set their own label palette (InfoBar status text, ToolTip, collection-view
+        // headers, …) keep working. zh_CN: 原有基于 palette 的上色。无祖先样式表时正确；保持不变，使自行设置标签
+        // palette 的组件（InfoBar 状态文本、ToolTip、集合视图表头等）继续工作。
+        QPalette p = palette();
+        p.setColor(QPalette::WindowText, resolveTextColor());
+        setPalette(p);
+    } else {
+        // An explicit role colors through the label's OWN style sheet, so an ancestor style sheet
+        // (which installs QStyleSheetStyle and makes Qt ignore the child palette) can't drop it. This is
+        // what value/status labels on a styled preview surface need. zh_CN: 指定角色改用标签自身样式表上色,
+        // 使祖先样式表(安装 QStyleSheetStyle、让 Qt 忽略子 palette)无法丢弃它。带样式表预览面上的取值/状态标签即需此。
+        setStyleSheet(QStringLiteral("color: %1; background: transparent;")
+                          .arg(cssRgba(resolveTextColor())));
+    }
 }
 
 void Label::applyTypographyFont() {

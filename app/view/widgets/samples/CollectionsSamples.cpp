@@ -63,6 +63,24 @@ using samples::initialsAvatar;
 using samples::makeSample;
 using samples::verticalGroup;
 
+// Collection controls (ListView/TreeView) paint their own bgLayer container surface, which is DARKER
+// than the gallery sample-card preview panel (bgLayerAlt) they sit on — reading as a sunken nested
+// "extra layer". In the gallery previews the items should sit flat on the preview panel (matching the
+// clean Button-style samples), so hide the control's own surface + border here. This only touches the
+// gallery sample instances; the controls keep their default surface everywhere else.
+// zh_CN: 集合控件(ListView/TreeView)会自绘 bgLayer 容器表面,比所在的画廊示例卡预览面板(bgLayerAlt)更暗——
+// 呈现为下陷的嵌套「多余图层」。画廊预览里条目应平铺在预览面板上(与 Button 风格的干净示例一致),故在此隐藏控件自身
+// 的表面与边框。仅作用于画廊示例实例;控件在别处仍保留默认表面。
+template <typename View>
+View* flatPreviewSurface(View* view)
+{
+    if (view) {
+        view->setBackgroundVisible(false);
+        view->setBorderVisible(false);
+    }
+    return view;
+}
+
 /**
  * @brief Fluent accent palette cycled by the decorated list/grid items.
  * zh_CN: 装饰列表/网格条目循环使用的 Fluent 强调色盘。
@@ -254,6 +272,7 @@ Label* makeStatusLabel(QWidget* parent, const QString& text)
 {
     auto* label = new Label(text, parent);
     label->setFluentTypography(Typography::FontRole::Body);
+    label->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
     return label;
 }
 
@@ -1256,7 +1275,7 @@ QVector<GallerySample> listViewSamples()
                                   "listView->setModel(model);\n"
                                   "listView->setHeaderText(\"Contacts\");"),
                    [](QWidget* parent) {
-                       auto* listView = new ListView(parent);
+                       auto* listView = flatPreviewSurface(new ListView(parent));
                        listView->setFixedSize(320, 240);
                        listView->setHeaderText(QStringLiteral("Contacts"));
                        listView->setIconSize(QSize(28, 28));
@@ -1290,7 +1309,7 @@ QVector<GallerySample> listViewSamples()
                                   "listView->setModel(filterModel);\n"
                                   "// each click toggles that row's selection"),
                    [](QWidget* parent) {
-                       auto* listView = new ListView(parent);
+                       auto* listView = flatPreviewSurface(new ListView(parent));
                        listView->setFixedSize(320, 244);
                        listView->setHeaderText(QStringLiteral("Filters"));
                        listView->setIconSize(QSize(24, 24));
@@ -1323,7 +1342,7 @@ QVector<GallerySample> listViewSamples()
                    QStringLiteral("listView->setFlow(QListView::LeftToRight);\n"
                                   "listView->setModel(model);"),
                    [](QWidget* parent) {
-                       auto* listView = new ListView(parent);
+                       auto* listView = flatPreviewSurface(new ListView(parent));
                        listView->setFixedSize(540, 132);
                        listView->setHeaderText(QStringLiteral("Library"));
                        listView->setFlow(QListView::LeftToRight);
@@ -1350,7 +1369,7 @@ QVector<GallerySample> listViewSamples()
                                   "listView->setModel(model);\n"
                                   "listView->setCanReorderItems(true);"),
                    [](QWidget* parent) {
-                       auto* listView = new ListView(parent);
+                       auto* listView = flatPreviewSurface(new ListView(parent));
                        listView->setFixedSize(320, 220);
                        listView->setHeaderText(QStringLiteral("Playlist"));
                        listView->setIconSize(QSize(24, 24));
@@ -1381,7 +1400,7 @@ QVector<GallerySample> listViewSamples()
                                   "});\n"
                                   "listView->setModel(model);"),
                    [](QWidget* parent) {
-                       auto* listView = new ListView(parent);
+                       auto* listView = flatPreviewSurface(new ListView(parent));
                        listView->setFixedSize(340, 252);
                        listView->setHeaderText(QStringLiteral("Notifications"));
                        listView->setIconSize(QSize(24, 24));
@@ -1417,7 +1436,7 @@ QVector<GallerySample> listViewSamples()
                                   "listView->setHeaderText(\"Queue\");\n"
                                   "listView->setModel(model);"),
                    [](QWidget* parent) {
-                       auto* listView = new ListView(parent);
+                       auto* listView = flatPreviewSurface(new ListView(parent));
                        listView->setFixedSize(340, 238);
                        listView->setHeaderText(QStringLiteral("Queue"));
                        listView->setFooterText(QStringLiteral("Wheel input stays in this ListView"));
@@ -1443,7 +1462,7 @@ QVector<GallerySample> listViewSamples()
                                   "listView->setPlaceholderText(\"No downloads yet\");\n"
                                   "listView->setModel(new QStandardItemModel(listView));"),
                    [](QWidget* parent) {
-                       auto* listView = new ListView(parent);
+                       auto* listView = flatPreviewSurface(new ListView(parent));
                        listView->setFixedSize(340, 178);
                        listView->setHeaderText(QStringLiteral("Downloads"));
                        listView->setFooterText(QStringLiteral("0 items"));
@@ -1780,7 +1799,7 @@ QVector<GallerySample> treeViewSamples()
                                   "tree->setModel(model);\n"
                                   "tree->expandAll();"),
                    [folderColor, fileColor, rowHeight](QWidget* parent) {
-                       auto* tree = new TreeView(parent);
+                       auto* tree = flatPreviewSurface(new TreeView(parent));
                        tree->setHeaderHidden(true);
                        tree->setFixedHeight(252);
                        tree->setItemDelegate(new TreeRowDelegate(
@@ -1801,7 +1820,7 @@ QVector<GallerySample> treeViewSamples()
                                   "tree->setItemDelegate(d);\n"
                                   "// clicks cascade down + roll the tri-state up"),
                    [folderColor, rowHeight](QWidget* parent) {
-                       auto* tree = new TreeView(parent);
+                       auto* tree = flatPreviewSurface(new TreeView(parent));
                        tree->setHeaderHidden(true);
                        tree->setFixedHeight(258);
                        auto* delegate = new TreeRowDelegate(
@@ -1861,7 +1880,7 @@ QVector<GallerySample> treeViewSamples()
                                   "    [](const QModelIndex& srcParent, int srcRow,\n"
                                   "       const QModelIndex& dstParent, int dstRow) { /* ... */ });"),
                    [folderColor, fileColor, rowHeight](QWidget* parent) {
-                       auto* tree = new TreeView(parent);
+                       auto* tree = flatPreviewSurface(new TreeView(parent));
                        tree->setHeaderHidden(true);
                        tree->setFixedHeight(252);
                        tree->setCanReorderItems(true);
@@ -1897,7 +1916,7 @@ QVector<GallerySample> treeViewSamples()
                                   "                 status, updateStatus);"),
                    [folderColor, fileColor, rowHeight](QWidget* parent) {
                        QWidget* group = verticalGroup(parent, 10);
-                       auto* tree = new TreeView(group);
+                       auto* tree = flatPreviewSurface(new TreeView(group));
                        tree->setHeaderHidden(true);
                        tree->setFixedHeight(238);
                        tree->setSelectionIndicatorVisible(true);
@@ -1964,7 +1983,7 @@ QVector<GallerySample> treeViewSamples()
                                   "tree->setModel(model);\n"
                                   "tree->expandAll();"),
                    [folderColor, fileColor, rowHeight](QWidget* parent) {
-                       auto* tree = new TreeView(parent);
+                       auto* tree = flatPreviewSurface(new TreeView(parent));
                        tree->setHeaderHidden(true);
                        tree->setFixedHeight(258);
                        tree->setScrollChainingEnabled(false);

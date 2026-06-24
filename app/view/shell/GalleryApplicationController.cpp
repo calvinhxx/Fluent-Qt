@@ -8,6 +8,7 @@
 #include <QMenu>
 #include <QPainter>
 #include <QPalette>
+#include <QSizePolicy>
 #include <QSystemTrayIcon>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -55,28 +56,35 @@ public:
         : QWidget(parent)
     {
         setObjectName(QStringLiteral("galleryCloseBehaviorPromptContent"));
-        setMinimumSize(352, 190);
+        setMinimumSize(328, 0);
 
         auto* root = new QVBoxLayout(this);
         root->setContentsMargins(0, 0, 0, 0);
-        root->setSpacing(8);
+        root->setSpacing(10);
 
-        auto* introRow = new QWidget(this);
-        auto* introLayout = new QHBoxLayout(introRow);
+        // Add the intro row as a sub-layout (not a wrapper QWidget): a QBoxLayout propagates a
+        // word-wrapped child's height-for-width to its parent layout, whereas a nested plain QWidget
+        // does not — so the 2-line explanation actually reserves two lines instead of overlapping the
+        // first option. zh_CN: intro 行用子布局而非包裹 QWidget 加入:QBoxLayout 会把自动换行子项的
+        // height-for-width 上传给父布局,而嵌套的普通 QWidget 不会——这样两行说明会真正占两行高,而非压到第一项上。
+        auto* introLayout = new QHBoxLayout();
         introLayout->setContentsMargins(0, 0, 0, 0);
         introLayout->setSpacing(8);
-        introLayout->addWidget(new PromptIcon(introRow), 0, Qt::AlignTop);
+        introLayout->addWidget(new PromptIcon(this), 0, Qt::AlignTop);
 
         auto* explanation = new fluent::textfields::Label(
             QStringLiteral("Choose what happens when you close the window. "
                            "You can change this later in Settings. 🙂"),
-            introRow);
+            this);
         explanation->setObjectName(QStringLiteral("galleryCloseBehaviorPromptDescription"));
         explanation->setFluentTypography(Typography::FontRole::Caption);
         explanation->setWordWrap(true);
+        QSizePolicy explanationPolicy = explanation->sizePolicy();
+        explanationPolicy.setHeightForWidth(true);
+        explanation->setSizePolicy(explanationPolicy);
         m_secondaryLabels.append(explanation);
         introLayout->addWidget(explanation, 1);
-        root->addWidget(introRow);
+        root->addLayout(introLayout);
 
         m_group = new QButtonGroup(this);
         addChoice(root,
@@ -124,7 +132,7 @@ private:
         auto* choice = new QWidget(this);
         auto* choiceLayout = new QVBoxLayout(choice);
         choiceLayout->setContentsMargins(0, 0, 0, 0);
-        choiceLayout->setSpacing(0);
+        choiceLayout->setSpacing(2);
 
         auto* radio = new fluent::basicinput::RadioButton(title, choice);
         radio->setObjectName(QStringLiteral("galleryCloseBehaviorChoice%1")
@@ -264,7 +272,7 @@ void GalleryApplicationController::showCloseBehaviorDialog()
     dialog->setPrimaryButtonText(QStringLiteral("Save"));
     dialog->setCloseButtonText(QStringLiteral("Cancel"));
     dialog->setDefaultButton(fluent::dialogs_flyouts::ContentDialog::Primary);
-    dialog->resize(420, 370);
+    dialog->resize(452, 356);
 
     connect(dialog, &QDialog::finished, this,
             [this, dialog, content](int result) {

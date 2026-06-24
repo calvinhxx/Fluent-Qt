@@ -113,16 +113,28 @@ protected:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
-        // Carve the top-left corner (outside the rounded arc) to transparent so the backdrop
-        // shows. zh_CN: 把左上角（圆弧之外）挖成透明，露出背景。
-        QPainterPath cornerCut;
-        cornerCut.moveTo(0.0, 0.0);
-        cornerCut.lineTo(m_radius, 0.0);
-        cornerCut.arcTo(QRectF(0.0, 0.0, 2.0 * m_radius, 2.0 * m_radius), 90.0, 90.0);
-        cornerCut.closeSubpath();
-        painter.setCompositionMode(QPainter::CompositionMode_Clear);
-        painter.fillPath(cornerCut, Qt::black);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        // Carve the top-left corner (outside the rounded arc) to transparent so the OS backdrop shows
+        // through the rounded notch — but ONLY under a real backdrop (Mica/Acrylic). On Win11 the
+        // top-level is ALWAYS translucent, so in Normal a CompositionMode_Clear here writes (0,0,0,0)
+        // onto the opaque chrome backing, rendering a stray block at the corner (black in dark, white
+        // in light) instead of the chrome color. Gate on the fluentMicaBackdrop paint-hint, never bare
+        // WA_TranslucentBackground — same rule as the TreeView / nav-pane seams.
+        // zh_CN: 把左上角（圆弧之外）挖透明，让系统背景透出圆角缺口——但仅在真实背景（Mica/Acrylic）下。Win11 顶层
+        // 始终半透明，故 Normal 下这里的 Clear 会在不透明 chrome 背板上写 (0,0,0,0)，在角上渲染出杂块（dark 黑 / light 白）
+        // 而非 chrome 色。按 fluentMicaBackdrop paint-hint 门控，绝不用裸的 WA_TranslucentBackground——与 TreeView/导航栏缝同一规则。
+        const bool realBackdrop = window()
+            && window()->testAttribute(Qt::WA_TranslucentBackground)
+            && window()->property("fluentMicaBackdrop").toBool();
+        if (realBackdrop) {
+            QPainterPath cornerCut;
+            cornerCut.moveTo(0.0, 0.0);
+            cornerCut.lineTo(m_radius, 0.0);
+            cornerCut.arcTo(QRectF(0.0, 0.0, 2.0 * m_radius, 2.0 * m_radius), 90.0, 90.0);
+            cornerCut.closeSubpath();
+            painter.setCompositionMode(QPainter::CompositionMode_Clear);
+            painter.fillPath(cornerCut, Qt::black);
+            painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        }
 
         if (m_border.isValid() && m_border.alpha() > 0) {
             const QPainterPath frame = fluent::overlay::roundedCornerRectPath(

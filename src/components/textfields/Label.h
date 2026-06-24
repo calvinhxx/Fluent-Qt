@@ -47,6 +47,24 @@ public:
 
     bool isTextElided() const { return m_isTextElided; }
 
+    /**
+     * @brief How the label resolves its text color on theme changes.
+     * zh_CN: 标签在主题切换时如何解析文本颜色。
+     *
+     * Default keeps the legacy palette-based coloring (QPalette::WindowText = textPrimary), which is
+     * correct as long as no ancestor has a style sheet. Any explicit role colors the text through the
+     * label's OWN style sheet instead, so an ancestor style sheet (which installs QStyleSheetStyle and
+     * makes Qt ignore the child palette) can't drop it — the fix for value/status labels that sit on a
+     * styled preview surface and rendered near-black in dark theme.
+     * zh_CN: Default 保持原有基于 palette 的上色(QPalette::WindowText = textPrimary),仅当没有祖先样式表时正确。
+     * 指定任一角色则改用标签自身的样式表上色,使祖先样式表(会安装 QStyleSheetStyle 并让 Qt 忽略子 palette)无法丢弃它
+     * ——修复那些坐在带样式表的预览面上、深色主题里渲染成近黑的取值/状态标签。
+     */
+    enum class TextColorRole { Default, Primary, Secondary, Tertiary, Disabled, OnAccent, Accent };
+
+    TextColorRole textColorRole() const { return m_textColorRole; }
+    void setTextColorRole(TextColorRole role);
+
     void setFont(const QFont& font);
 
     void onThemeUpdated() override;
@@ -63,6 +81,8 @@ protected:
 
 private:
     void applyTypographyFont();
+    void applyTextColor();
+    QColor resolveTextColor() const;
     void updateRenderedText();
     int availableTextWidth() const;
     void ensureElideToolTip();
@@ -72,6 +92,7 @@ private:
 
     QString m_styleName = "Body";
     QString m_fullText;
+    TextColorRole m_textColorRole = TextColorRole::Default;
     Qt::TextElideMode m_textElideMode = Qt::ElideNone;
     bool m_customFont = false;
     bool m_isTextElided = false;

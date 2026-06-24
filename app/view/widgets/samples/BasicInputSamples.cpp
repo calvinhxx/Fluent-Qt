@@ -60,6 +60,12 @@ Label* makeValueLabel(QWidget* parent, const QString& text)
 {
     auto* label = new Label(text, parent);
     label->setFluentTypography(Typography::FontRole::Body);
+    // These status/value labels sit on the sample preview surface, which carries a style sheet — so a
+    // palette-based text color is ignored and they rendered near-black in dark theme. An explicit role
+    // colors them through the label's own style sheet, surviving the ancestor style sheet and theme
+    // changes. zh_CN: 这些状态/取值标签位于带样式表的示例预览面上,palette 上色会被忽略、深色下渲染近黑;指定角色用
+    // 标签自身样式表上色,可越过祖先样式表并跟随主题切换。
+    label->setTextColorRole(Label::TextColorRole::Primary);
     return label;
 }
 
