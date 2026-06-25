@@ -10,6 +10,19 @@ namespace {
 
 constexpr int TitleBarDefaultLeadingMargin = 8;
 
+void refreshFluentDescendants(QWidget* root)
+{
+    if (!root)
+        return;
+
+    const auto widgets = root->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+    for (QWidget* widget : widgets) {
+        if (auto* fluentWidget = dynamic_cast<FluentElement*>(widget))
+            fluentWidget->onThemeUpdated();
+        refreshFluentDescendants(widget);
+    }
+}
+
 } // namespace
 
 TitleBar::TitleBar(QWidget* parent)
@@ -44,6 +57,7 @@ void TitleBar::setContentWidget(QWidget* widget) {
     if (widget) {
         widget->setParent(this);
         updateContentWidgetAnchor();
+        refreshFluentDescendants(widget);
     }
 
     emit contentWidgetChanged(widget);
@@ -122,6 +136,7 @@ QSize TitleBar::minimumSizeHint() const {
 }
 
 void TitleBar::onThemeUpdated() {
+    refreshFluentDescendants(this);
     update();
 }
 

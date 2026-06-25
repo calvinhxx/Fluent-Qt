@@ -548,7 +548,7 @@ void AnnotatedScrollBar::onThemeUpdated()
 void AnnotatedScrollBar::updateColors()
 {
     const auto colors = themeColors();
-    const bool isDark = currentTheme() == FluentElement::Dark;
+    const bool isDark = effectiveTheme() == FluentElement::Dark;
 
     m_labelColor = colors.textPrimary;
     m_caretColor = isDark ? withAlpha(QColor(Qt::white), 0.54) : withAlpha(QColor(Qt::black), 0.45);

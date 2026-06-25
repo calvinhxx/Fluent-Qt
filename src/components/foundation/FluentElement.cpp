@@ -1,6 +1,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/private/FluentElement_p.h"
 
+#include <QVariant>
 #include <QWidget>
 #include "design/ThemeColors.h"
 #include "design/Typography.h"
@@ -12,6 +13,39 @@
 #include "design/Breakpoints.h"
 
 namespace fluent {
+
+namespace {
+
+constexpr char kThemeOverrideProperty[] = "fluentThemeOverride";
+
+bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
+{
+    if (!value.isValid())
+        return false;
+
+    bool ok = false;
+    const int rawTheme = value.toInt(&ok);
+    if (ok) {
+        if (rawTheme == FluentElement::Light || rawTheme == FluentElement::Dark) {
+            theme = static_cast<FluentElement::Theme>(rawTheme);
+            return true;
+        }
+        return false;
+    }
+
+    const QString text = value.toString().trimmed();
+    if (text.compare(QStringLiteral("Light"), Qt::CaseInsensitive) == 0) {
+        theme = FluentElement::Light;
+        return true;
+    }
+    if (text.compare(QStringLiteral("Dark"), Qt::CaseInsensitive) == 0) {
+        theme = FluentElement::Dark;
+        return true;
+    }
+    return false;
+}
+
+} // namespace
 
 // --- FluentElement lifetime management. zh_CN: FluentElement 生命周期管理。---
 
@@ -45,6 +79,16 @@ void FluentElement::setThemeDeferred(Theme theme) {
 
 FluentElement::Theme FluentElement::currentTheme() {
     return FluentThemeManager::instance()->currentTheme;
+}
+
+FluentElement::Theme FluentElement::effectiveTheme() const {
+    const auto* widget = dynamic_cast<const QWidget*>(this);
+    for (const QWidget* node = widget; node; node = node->parentWidget()) {
+        Theme overriddenTheme = currentTheme();
+        if (themeFromProperty(node->property(kThemeOverrideProperty), overriddenTheme))
+            return overriddenTheme;
+    }
+    return currentTheme();
 }
 
 // --- Token accessors. zh_CN: 数据获取实现。---
@@ -97,7 +141,7 @@ FluentElement::Colors FluentElement::themeColors() const {
         c.charts = QList<QColor>(charts.begin(), charts.end());
     };
 
-    if (currentTheme() == Dark) {
+    if (effectiveTheme() == Dark) {
         using namespace ThemeColors::Dark;
         fill(Fill::AccentDefault, Fill::AccentSecondary, Fill::AccentTertiary, Fill::AccentDisabled,
              Fill::ControlDefault, Fill::ControlSecondary, Fill::ControlTertiary, Fill::ControlDisabled,
@@ -196,19 +240,19 @@ FluentElement::Animation FluentElement::themeAnimation() const {
 }
 
 Material::AcrylicToken FluentElement::themeAcrylic() const {
-    return Material::Acrylic::get(currentTheme() == Dark);
+    return Material::Acrylic::get(effectiveTheme() == Dark);
 }
 
 Material::MicaToken FluentElement::themeMica() const {
-    return Material::Mica::get(currentTheme() == Dark);
+    return Material::Mica::get(effectiveTheme() == Dark);
 }
 
 Material::SmokeToken FluentElement::themeSmoke() const {
-    return Material::Smoke::get(currentTheme() == Dark);
+    return Material::Smoke::get(effectiveTheme() == Dark);
 }
 
 Elevation::ShadowParams FluentElement::themeShadow(Elevation::Level level) const {
-    return Elevation::getShadow(level, currentTheme() == Dark);
+    return Elevation::getShadow(level, effectiveTheme() == Dark);
 }
 
 int FluentElement::themeBreakpoint(const QString& size) const {

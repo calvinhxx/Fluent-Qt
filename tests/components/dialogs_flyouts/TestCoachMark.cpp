@@ -269,6 +269,30 @@ TEST_F(CoachMarkTest, TargetDestroyedClearsPointer) {
 }
 
 // ── 10. The Placement enum is registered for the meta-object / QML ───────────
+TEST_F(CoachMarkTest, OpenInheritsThemeOverrideFromTarget) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    window->onThemeUpdated();
+
+    auto* host = new QWidget(window);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    host->setGeometry(120, 120, 260, 180);
+    host->show();
+
+    auto* target = new Button("Target", host);
+    target->setGeometry(24, 24, 120, 32);
+    target->show();
+
+    CoachMark coach(window);
+    coach.setTarget(target);
+    coach.open();
+    QTest::qWaitForWindowExposed(&coach);
+
+    EXPECT_TRUE(coach.isOpen());
+    EXPECT_EQ(coach.effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(coach.themeColors().bgLayer, QColor("#2C2C2C"));
+    coach.close();
+}
+
 TEST_F(CoachMarkTest, PlacementEnumIsRegistered) {
     const int index = CoachMark::staticMetaObject.indexOfEnumerator("Placement");
     ASSERT_GE(index, 0);

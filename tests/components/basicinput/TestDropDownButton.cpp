@@ -117,6 +117,30 @@ TEST_F(DropDownButtonTest, ContentPaintRectExcludesChevronReserve) {
     EXPECT_GT(tighterContentRect.width(), contentRect.width());
 }
 
+TEST_F(DropDownButtonTest, MenuInheritsThemeOverrideFromButtonParent) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    window->onThemeUpdated();
+
+    auto* host = new QWidget(window);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    host->setGeometry(24, 24, 240, 160);
+    host->show();
+
+    auto* button = new DropDownButton("Options", host);
+    button->setGeometry(16, 16, 120, 32);
+    button->show();
+
+    FluentMenu menu(QStringLiteral("Options"), button);
+    menu.addAction(new FluentMenuItem(QStringLiteral("Open"), &menu));
+    menu.show();
+    QApplication::processEvents();
+
+    EXPECT_EQ(button->effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(menu.effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(menu.themeColors().bgLayer, QColor("#2C2C2C"));
+    menu.hide();
+}
+
 TEST_F(DropDownButtonTest, VisualCheck) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";

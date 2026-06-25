@@ -4,9 +4,27 @@
 #include <QLayout>
 #include <QPointer>
 #include "design/Material.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 
 namespace fluent::dialogs_flyouts {
+
+namespace {
+
+void refreshFluentDescendants(QWidget* root)
+{
+    if (!root)
+        return;
+
+    const auto widgets = root->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+    for (QWidget* widget : widgets) {
+        if (auto* fluentWidget = dynamic_cast<FluentElement*>(widget))
+            fluentWidget->onThemeUpdated();
+        refreshFluentDescendants(widget);
+    }
+}
+
+} // namespace
 
 Dialog::Dialog(QWidget *parent) : QDialog(parent) {
     setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::CustomizeWindowHint | Qt::NoDropShadowWindowHint);
@@ -79,7 +97,22 @@ void Dialog::setAnimationProgress(double p) {
 
 // ── Public show entry points. zh_CN: 公开显示入口 ────────────────────────────────
 
+void Dialog::setThemeSource(QWidget* source) {
+    if (m_themeSource == source)
+        return;
+    m_themeSource = source;
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
+}
+
+bool Dialog::syncThemeOverrideFromSource() {
+    QWidget* source = m_themeSource ? m_themeSource.data() : parentWidget();
+    return ::fluent::overlay::syncInheritedThemeOverride(this, source);
+}
+
 void Dialog::open() {
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
     if (m_smokeEnabled) showSmokeOverlay();
     if (m_animationEnabled && !isVisible()) {
         m_isAnimating       = true;
@@ -96,6 +129,8 @@ void Dialog::open() {
 }
 
 int Dialog::exec() {
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
     if (m_smokeEnabled) showSmokeOverlay();
     if (m_animationEnabled && !isVisible()) {
         m_isAnimating       = true;
@@ -110,6 +145,9 @@ int Dialog::exec() {
 // ── Show events. zh_CN: 显示事件 ─────────────────────────────────────────────
 
 void Dialog::showEvent(QShowEvent *event) {
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
+
     // Smoke mode: center over the parent window. zh_CN: 蒙层模式：居中于父窗口。
     if (m_smokeEnabled && parentWidget()) {
         QPoint center = parentWidget()->mapToGlobal(parentWidget()->rect().center());
@@ -287,6 +325,7 @@ void Dialog::hideSmokeOverlay() {
 
 void Dialog::onThemeUpdated() {
     update();
+    refreshFluentDescendants(this);
     if (m_smokeOverlay) {
         const auto& smoke = themeSmoke();
         QColor c = smoke.baseColor;

@@ -117,7 +117,7 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     p.setOpacity(m_opacity);
 
     const auto colors = themeColors();
-    const bool isDark = (currentTheme() == FluentElement::Dark);
+    const bool isDark = (effectiveTheme() == FluentElement::Dark);
 
     // Track: a light subtle fill rounded at half the thickness, with only a
     // tiny gap to the widget bounds (a separate trackPadding could come later).

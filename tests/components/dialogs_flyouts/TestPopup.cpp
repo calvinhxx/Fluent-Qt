@@ -243,6 +243,53 @@ TEST_F(PopupTest, RelativePosition_MapsWidgetLocalCoordinates) {
 // 5. ClosePolicy
 // ══════════════════════════════════════════════════════════════════════════════
 
+TEST_F(PopupTest, ExplicitPositionInheritsThemeOverrideFromRelativeWidget) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    window->onThemeUpdated();
+
+    auto* host = new QWidget(window);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    host->setGeometry(80, 120, 240, 160);
+    host->show();
+
+    auto* trigger = new QWidget(host);
+    trigger->setGeometry(24, 24, 80, 32);
+    trigger->show();
+
+    Popup p(trigger);
+    p.setAnimationEnabled(false);
+    p.setPosition(trigger, QPoint(0, trigger->height() + 8));
+    p.open();
+
+    EXPECT_EQ(p.parentWidget(), window);
+    EXPECT_EQ(p.effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(p.themeColors().bgLayer, QColor("#2C2C2C"));
+    p.close();
+}
+
+TEST_F(PopupTest, ThemeSourceInheritsOverrideWithoutAnchor) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    window->onThemeUpdated();
+
+    auto* host = new QWidget(window);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Light));
+    host->setGeometry(80, 120, 240, 160);
+    host->show();
+
+    auto* trigger = new QWidget(host);
+    trigger->setGeometry(24, 24, 80, 32);
+    trigger->show();
+
+    Popup p(window);
+    p.setAnimationEnabled(false);
+    p.setThemeSource(trigger);
+    p.open();
+
+    EXPECT_EQ(p.effectiveTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(p.themeColors().bgLayer, QColor("#FFFFFF"));
+    p.close();
+}
+
 TEST_F(PopupTest, NoAutoClose_PressOutsideKeepsOpen) {
     Popup p(window);
     p.setAnimationEnabled(false);

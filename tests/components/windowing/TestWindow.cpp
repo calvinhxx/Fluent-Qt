@@ -763,6 +763,35 @@ TEST_F(WindowTest, ThemeSwitchNoCrash) {
     SUCCEED();
 }
 
+TEST_F(WindowTest, LocalThemeOverrideRefreshesTitleBarAndContent) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    Window window;
+    window.setBackdropEffect(compatibility::BackdropEffect::Solid);
+    window.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+
+    auto* titleContent = new QWidget(window.titleBar());
+    auto* titleLayout = new QHBoxLayout(titleContent);
+    titleLayout->setContentsMargins(0, 0, 0, 0);
+    auto* title = new Label("Local title", titleContent);
+    title->setFluentTypography(Typography::FontRole::Caption);
+    titleLayout->addWidget(title);
+    window.titleBar()->setContentWidget(titleContent);
+
+    auto* body = new Label("Local body");
+    body->setFluentTypography(Typography::FontRole::Body);
+    window.setContentWidget(body);
+    window.onThemeUpdated();
+
+    EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(window.effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(window.titleBar()->effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(title->effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(body->effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(title->palette().color(QPalette::WindowText), title->themeColors().textPrimary);
+    EXPECT_EQ(body->palette().color(QPalette::WindowText), body->themeColors().textPrimary);
+}
+
 TEST_F(WindowTest, ExternalTitleBarActionsCanDriveWindowSlots) {
     Window window;
     auto* content = new QWidget();

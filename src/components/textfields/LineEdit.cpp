@@ -76,7 +76,7 @@ void LineEdit::paintFrame(QPainter& painter) {
         borderColor = colors.strokeDefault;
         bottomBorderColor = colors.strokeDivider;
     } else if (m_isFocused) {
-        bgColor = (currentTheme() == Dark) ? colors.bgSolid : colors.controlDefault;
+        bgColor = (effectiveTheme() == Dark) ? colors.bgSolid : colors.controlDefault;
         borderColor = colors.strokeSecondary;
         bottomBorderColor = colors.accentDefault;
         bottomBorderWidth = m_focusedBorderWidth;

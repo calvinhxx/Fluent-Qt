@@ -20,6 +20,20 @@
 namespace fluent::dialogs_flyouts {
 
 namespace {
+
+void refreshFluentDescendants(QWidget* root)
+{
+    if (!root)
+        return;
+
+    const auto children = root->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+    for (QWidget* child : children) {
+        if (auto* fluentChild = dynamic_cast<FluentElement*>(child))
+            fluentChild->onThemeUpdated();
+        refreshFluentDescendants(child);
+    }
+}
+
 constexpr int kTailSize = 9;     // tail triangle height. zh_CN: 尾巴三角高度。
 constexpr int kTargetGap = 10;   // gap between target and card+tail. zh_CN: 目标与卡片+尾巴的间距。
 }  // namespace
@@ -60,6 +74,7 @@ CoachMark::~CoachMark()
 void CoachMark::onThemeUpdated()
 {
     update();
+    refreshFluentDescendants(this);
 }
 
 void CoachMark::setCardSize(const QSize& size)
@@ -79,6 +94,8 @@ void CoachMark::setTarget(QWidget* target)
     if (m_target == target)
         return;
     m_target = target;
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
     if (m_open)
         reposition(/*animated*/ true);
 }
@@ -97,6 +114,8 @@ void CoachMark::open()
     if (m_open)
         return;
     m_open = true;
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
     reposition(/*animated*/ false);
     setWindowOpacity(0.0);
     show();
@@ -168,6 +187,8 @@ void CoachMark::syncToTarget()
 {
     if (!m_open || !m_target)
         return;
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
     if (!::fluent::overlay::isAnchorVisibleInTopLevel(m_target)) {
         close();
         return;
@@ -179,6 +200,12 @@ void CoachMark::syncToTarget()
 QRect CoachMark::cardRect() const
 {
     return ::fluent::overlay::visibleCardRect(rect());
+}
+
+bool CoachMark::syncThemeOverrideFromSource()
+{
+    QWidget* source = m_target ? m_target.data() : m_owner;
+    return ::fluent::overlay::syncInheritedThemeOverride(this, source);
 }
 
 void CoachMark::resizeEvent(QResizeEvent* event)

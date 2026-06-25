@@ -289,7 +289,7 @@ void ProgressBar::updateThemeColors()
     m_errorColor = colors.systemCritical;
     m_disabledColor = colors.accentDisabled;
     m_railColor = colors.strokeStrong;
-    if (currentTheme() == Dark) {
+    if (effectiveTheme() == Dark) {
         m_railColor.setAlpha(qMax(m_railColor.alpha(), 138));
     } else {
         m_railColor.setAlpha(qMax(m_railColor.alpha(), 112));

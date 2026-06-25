@@ -315,6 +315,33 @@ TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle) {
     EXPECT_FALSE(popup->isVisible());
 }
 
+TEST_F(ComboBoxTest, PopupInheritsThemeOverrideFromComboBox) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    window->onThemeUpdated();
+
+    auto* host = new QWidget(window);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    host->setGeometry(24, 24, 260, 180);
+    host->show();
+
+    ComboBox* cb = new ComboBox(host);
+    cb->setGeometry(16, 16, 180, Spacing::ControlHeight::Standard);
+    cb->addItems({"Blue", "Green", "Red", "Yellow"});
+
+    auto* popup = openPopupFor(cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+
+    EXPECT_TRUE(popup->isOpen());
+    EXPECT_EQ(cb->effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(popup->effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(listView->effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(popup->themeColors().bgLayer, QColor("#2C2C2C"));
+
+    cb->hidePopup();
+}
+
 TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses) {
     ComboBox* cb = new ComboBox(window);
     cb->setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);

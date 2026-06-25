@@ -143,6 +143,28 @@ TEST_F(ToolTipTest, StylingPropertiesRemainStable) {
     EXPECT_TRUE(tooltip.windowFlags() & Qt::FramelessWindowHint);
 }
 
+TEST_F(ToolTipTest, ThemeSourceInheritsLocalOverride) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    container->onThemeUpdated();
+
+    auto* host = new QWidget(container);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Light));
+    host->setGeometry(24, 24, 220, 120);
+    host->show();
+
+    auto* target = new Button(QStringLiteral("Target"), host);
+    target->setGeometry(16, 16, 96, 32);
+    target->show();
+
+    ToolTip tooltip;
+    tooltip.setText(QStringLiteral("Local theme"));
+    tooltip.setThemeSource(target);
+
+    EXPECT_EQ(tooltip.effectiveTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(tooltip.themeColors().bgLayer, QColor("#FFFFFF"));
+    EXPECT_EQ(target->effectiveTheme(), fluent::FluentElement::Light);
+}
+
 TEST_F(ToolTipTest, AnimationEnabledDefaultAndDisabledBehavior) {
     ToolTip tooltip;
     tooltip.setText("Animation disabled");

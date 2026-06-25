@@ -8,11 +8,17 @@
 #include <QPoint>
 #include <QRect>
 #include <QSize>
+#include <QVariant>
 #include <QWidget>
 
 #include "design/Spacing.h"
 
 namespace fluent::overlay {
+
+constexpr const char* themeOverridePropertyName()
+{
+    return "fluentThemeOverride";
+}
 
 constexpr int defaultShadowMargin()
 {
@@ -118,6 +124,36 @@ inline bool isAnchorVisibleInTopLevel(QWidget* anchor)
             break;
     }
     return !visibleRect.isEmpty();
+}
+
+inline QVariant inheritedThemeOverride(const QWidget* source)
+{
+    for (const QWidget* node = source; node; node = node->parentWidget()) {
+        const QVariant value = node->property(themeOverridePropertyName());
+        if (value.isValid())
+            return value;
+    }
+    return QVariant();
+}
+
+inline bool syncInheritedThemeOverride(QWidget* target, const QWidget* source)
+{
+    if (!target)
+        return false;
+
+    const QVariant inheritedValue = inheritedThemeOverride(source);
+    const QVariant currentValue = target->property(themeOverridePropertyName());
+    if (inheritedValue.isValid()) {
+        if (currentValue == inheritedValue)
+            return false;
+        target->setProperty(themeOverridePropertyName(), inheritedValue);
+        return true;
+    }
+
+    if (!currentValue.isValid())
+        return false;
+    target->setProperty(themeOverridePropertyName(), QVariant());
+    return true;
 }
 
 inline QPoint clampCardTopLeft(const QPoint& cardTopLeft, const QSize& cardSize,

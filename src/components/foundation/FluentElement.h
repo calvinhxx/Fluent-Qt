@@ -125,6 +125,18 @@ public:
      */
     static Theme currentTheme();
 
+    /**
+     * @brief Resolves the theme used by this element, honoring an inherited QWidget override.
+     * zh_CN: 解析此元素实际使用的主题，会优先读取 QWidget 父链上的局部主题覆盖。
+     *
+     * Gallery samples can set the dynamic property `fluentThemeOverride` on a container
+     * (value: `Light`/`Dark` enum integer or string) so only that subtree renders in the
+     * requested theme while the application chrome keeps the global theme.
+     * zh_CN: Gallery 示例可在容器上设置 `fluentThemeOverride` 动态属性（值为 `Light`/`Dark`
+     * 枚举整数或字符串），从而只让该子树使用指定主题，应用外壳仍保持全局主题。
+     */
+    Theme effectiveTheme() const;
+
     // Component-facing token accessors.
     // zh_CN: 供组件侧访问的设计 token 接口。
     Colors themeColors() const;

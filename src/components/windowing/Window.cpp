@@ -20,6 +20,19 @@ namespace {
 constexpr int CaptionButtonWidth = 46;
 constexpr int CaptionButtonIconSize = 10;
 
+void refreshFluentDescendants(QWidget* root)
+{
+    if (!root)
+        return;
+
+    const auto widgets = root->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+    for (QWidget* widget : widgets) {
+        if (auto* fluentWidget = dynamic_cast<FluentElement*>(widget))
+            fluentWidget->onThemeUpdated();
+        refreshFluentDescendants(widget);
+    }
+}
+
 } // namespace
 
 Window::Window(QWidget* parent)
@@ -92,15 +105,16 @@ void Window::setContentWidget(QWidget* widget) {
     if (widget) {
         widget->setParent(m_contentHost);
         contentLayout->addWidget(widget);
+        refreshFluentDescendants(m_contentHost);
     }
 }
 
 void Window::onThemeUpdated() {
-    // Keep the DWM dark-mode bit (and thus the backdrop tint) in step with the app theme. Driven by
-    // window translucency, not the paint-hint, so the dark-mode bit also tracks in Normal mode.
-    // zh_CN: 让 DWM 暗色模式位（进而背景着色）跟随应用主题。以窗口半透明性而非绘制提示驱动，故 Normal 模式下暗色位也跟随。
+    // Keep the DWM dark-mode bit (and thus the backdrop tint) in step with this window's effective
+    // theme. Without a local override this is still the global app theme.
+    // zh_CN: 让 DWM 暗色模式位（进而背景着色）跟随该窗口的实际主题；没有局部覆盖时仍等同于全局应用主题。
     if (m_windowTranslucent)
-        m_chrome.applySystemBackdrop(m_backdropEffect, currentTheme() == Dark);
+        m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark);
     if (m_titleBar)
         m_titleBar->onThemeUpdated();
     if (m_minimizeButton)
@@ -109,6 +123,7 @@ void Window::onThemeUpdated() {
         m_maximizeButton->onThemeUpdated();
     if (m_closeButton)
         m_closeButton->onThemeUpdated();
+    refreshFluentDescendants(m_contentHost);
     update();
 }
 
@@ -116,7 +131,7 @@ void Window::reapplySystemBackdrop() {
     if (!m_windowTranslucent || !isVisible())
         return;
     updateChromeOptions();                                 // re-extend the sheet-of-glass
-    m_chrome.applySystemBackdrop(m_backdropEffect, currentTheme() == Dark,
+    m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark,
                                  /*forceRecomposite*/ true);  // re-assert + force a frame refresh
 }
 
@@ -143,7 +158,7 @@ void Window::setBackdropEffect(compatibility::BackdropEffect effect) {
     // 停在扁平默认玻璃上，要等下次激活/失活才生效——这正是用户必须切到别的 app 再切回来才正常的原因。NCACTIVATE
     // 往返复现该动作且不改变真实焦点。（切主题仍传 forceRecomposite=false，因其已合成且频繁。）
     if (m_windowTranslucent && isVisible())
-        m_chrome.applySystemBackdrop(effect, currentTheme() == Dark,
+        m_chrome.applySystemBackdrop(effect, effectiveTheme() == Dark,
                                      /*forceRecomposite*/ true);  // Solid maps to DWMSBT_AUTO
 
     // Repaint chrome + content so every surface re-reads the new paint-hint (transparent<->opaque, or
@@ -219,7 +234,7 @@ void Window::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
     m_chrome.applyPlatformWindowFlags();
     if (m_windowTranslucent)
-        m_chrome.applySystemBackdrop(m_backdropEffect, currentTheme() == Dark);
+        m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark);
     syncTitleBarSystemInsets();
     updateChromeOptions();
 
@@ -237,7 +252,7 @@ void Window::showEvent(QShowEvent* event) {
             if (!m_windowTranslucent || !isVisible())
                 return;
             updateChromeOptions();                                 // re-extend the sheet-of-glass
-            m_chrome.applySystemBackdrop(m_backdropEffect, currentTheme() == Dark,
+            m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark,
                                          /*forceRecomposite*/ true);  // re-assert + force frame refresh
         });
     }
