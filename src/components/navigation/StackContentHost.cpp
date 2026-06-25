@@ -56,10 +56,19 @@ void StackContentHost::paintEvent(QPaintEvent*)
         return;
     }
 
-    if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0)
-        return;  // transparent host: nothing to paint (pages/backdrop show through)
-
     painter.setRenderHint(QPainter::Antialiasing);
+
+    if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0) {
+        // Default content layer when no explicit surface is configured. Painted directly
+        // (not via QPalette::Window + autoFillBackground) so it survives an ancestor style
+        // sheet — QStyleSheetStyle re-polishes the subtree and drops child palettes, which
+        // is why a hosted-page box rendered with a wrong (dark) default on a styled sample card.
+        // zh_CN: 未显式配置表面时的默认内容层。直接绘制（而非 QPalette::Window + autoFill），
+        // 以在祖先样式表下仍正确——QStyleSheetStyle 会重 polish 子树并丢弃子 palette，这正是带样式表
+        // 的示例卡片上托管页盒子渲染成错误深色的原因。
+        painter.fillRect(rect(), themeColors().bgLayer);
+        return;
+    }
 
     const QRectF panelRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
     const bool rounded = m_surfaceTopLeftRadius > 0.0;
@@ -238,10 +247,11 @@ void StackContentHost::setTransitionEffect(TransitionEffect effect)
 
 void StackContentHost::onThemeUpdated()
 {
-    QPalette pal = palette();
-    pal.setColor(QPalette::Window, themeColors().bgLayer);
-    setPalette(pal);
-    setAutoFillBackground(true);
+    // The background is painted in paintEvent (QSS-proof). A QPalette::Window +
+    // autoFillBackground fill is dropped under an ancestor style sheet, so don't rely on it.
+    // zh_CN: 背景在 paintEvent 中绘制（不受样式表影响）。祖先样式表下 QPalette::Window + autoFill
+    // 会被丢弃，故不依赖它。
+    setAutoFillBackground(false);
     update();
 }
 
