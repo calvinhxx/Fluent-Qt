@@ -657,6 +657,7 @@ QVector<GallerySample> drawerViewSamples()
                        drawerLayout->setSpacing(6);
                        auto* title = new Label(QStringLiteral("Navigation"), drawerContent);
                        title->setFluentTypography(Typography::FontRole::BodyStrong);
+                       title->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                        drawerLayout->addWidget(title);
 
                        QVector<DrawerNavigationItem*> navItems;
@@ -798,6 +799,7 @@ QVector<GallerySample> drawerViewSamples()
                        panelLayout->setSpacing(10);
                        auto* title = new Label(QStringLiteral("Persistent panel"), panel);
                        title->setFluentTypography(Typography::FontRole::BodyStrong);
+                       title->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                        auto* closeButton = new Button(QStringLiteral("Close"), panel);
                        panelLayout->addWidget(title);
                        panelLayout->addStretch(1);
