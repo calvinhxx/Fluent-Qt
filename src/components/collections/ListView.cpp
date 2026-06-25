@@ -716,7 +716,25 @@ QPixmap ListView::renderItemPixmap(int row) const {
     const qreal dpr = devicePixelRatioF();
     QPixmap pix(QSize(w, h) * dpr);
     pix.setDevicePixelRatio(dpr);
-    pix.fill(themeColors().bgLayer);  // container background
+    // Fill with the real surface the list sits on, not a hardcoded bgLayer: the app installs no global
+    // dark QPalette (it themes via paint), and the list is frequently hosted on a different surface
+    // (e.g. the gallery sample card's bgLayerAlt), so a fixed bgLayer fill renders as a mismatched box
+    // behind the dragged row. Walk up to the nearest ancestor advertising its painted background via
+    // the "fluentSurfaceColor" property and fall back to bgLayer — the same approach FlipView uses for
+    // its corner mask. zh_CN: 用列表真正所在的表面色填充，而非写死 bgLayer：本应用不装全局暗色 QPalette（靠绘制上主题），
+    // 且列表常被托管在别的表面上（如画廊示例卡的 bgLayerAlt），写死 bgLayer 会在拖拽行后面显示成不匹配的色块。
+    // 向上查找通过 "fluentSurfaceColor" 公布背景的祖先并回退到 bgLayer——与 FlipView 圆角遮罩的做法一致。
+    QColor containerBg = themeColors().bgLayer;
+    for (const QWidget* anc = parentWidget(); anc; anc = anc->parentWidget()) {
+        const QVariant surfaceColor = anc->property("fluentSurfaceColor");
+        if (!surfaceColor.isValid())
+            continue;
+        const QColor sc = surfaceColor.value<QColor>();
+        if (sc.isValid() && sc.alpha() > 0)
+            containerBg = sc;
+        break;
+    }
+    pix.fill(containerBg);
 
     QPainter p(&pix);
     p.setRenderHint(QPainter::Antialiasing);
