@@ -72,6 +72,7 @@ public:
 
         auto* label = new Label(text, this);
         label->setFluentTypography(Typography::FontRole::Body);
+        label->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
         label->setTextElideMode(mode);
         label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
         label->setFixedWidth(labelWidth);
@@ -338,6 +339,7 @@ QVector<GallerySample> labelSamples()
                        for (const auto& role : roles) {
                            auto* label = new Label(role.second, surface);
                            label->setFluentTypography(role.first);
+                           label->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                            layout->addWidget(label);
                        }
                        return surface;
