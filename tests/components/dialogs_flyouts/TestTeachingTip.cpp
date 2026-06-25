@@ -154,6 +154,29 @@ TEST_F(TeachingTipTest, TracksMovingTargetAncestorAndClosesWhenClipped) {
     QTRY_VERIFY_WITH_TIMEOUT(!tip.isOpen(), 1000);
 }
 
+TEST_F(TeachingTipTest, ShowAtInheritsThemeOverrideFromTarget) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    window->onThemeUpdated();
+
+    auto* host = new QWidget(window);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    host->setGeometry(80, 120, 260, 180);
+    host->show();
+
+    auto* anchor = new Button("Anchor", host);
+    anchor->setGeometry(24, 24, 120, 32);
+    anchor->show();
+
+    TeachingTip tip(window);
+    tip.setAnimationEnabled(false);
+    tip.setPreferredPlacement(TeachingTip::Bottom);
+    tip.showAt(anchor);
+
+    EXPECT_TRUE(tip.isOpen());
+    EXPECT_EQ(tip.effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(tip.themeColors().bgLayer, QColor("#2C2C2C"));
+}
+
 TEST_F(TeachingTipTest, TargetDestroyedClosesWithSemanticReason) {
     auto* anchor = makeAnchor(QPoint(320, 240));
 

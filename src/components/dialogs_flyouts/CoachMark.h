@@ -101,6 +101,7 @@ protected:
 private:
     void queueTargetSync();
     void syncToTarget();
+    bool syncThemeOverrideFromSource();
     void reposition(bool animated);  // place the window from target + placement
     QRect cardRect() const;          // card rect inside the window (inset for shadow + tail)
 

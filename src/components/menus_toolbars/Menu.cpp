@@ -15,6 +15,7 @@
 #include <QFontMetrics>
 
 #include "design/Typography.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 
 namespace fluent::menus_toolbars {
@@ -469,6 +470,9 @@ QSize FluentMenu::sizeHint() const
 
 void FluentMenu::showEvent(QShowEvent* event) {
     QMenu::showEvent(event);
+
+    if (::fluent::overlay::syncInheritedThemeOverride(this, parentWidget()))
+        onThemeUpdated();
 
     const QSize preferredSize = sizeHint();
     const QSize targetSize = size().expandedTo(preferredSize);

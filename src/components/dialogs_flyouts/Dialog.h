@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QPropertyAnimation>
 #include <QPainter>
+#include <QPointer>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "design/Spacing.h"
@@ -93,6 +94,12 @@ public:
     void setAnimationEnabled(bool e) { m_animationEnabled = e; }
     bool isAnimationEnabled() const  { return m_animationEnabled; }
 
+    /**
+     * @brief Uses a widget as the local theme source while the dialog is shown.
+     * zh_CN: 指定对话框显示时继承局部主题的来源控件。
+     */
+    void setThemeSource(QWidget* source);
+
     double animationProgress() const { return m_animationProgress; }
     void   setAnimationProgress(double p);
 
@@ -115,6 +122,7 @@ protected:
     void drawShadow(QPainter& painter, const QRect& contentRect);
 
 private:
+    bool syncThemeOverrideFromSource();
     void showSmokeOverlay();
     void hideSmokeOverlay();
 
@@ -123,6 +131,7 @@ private:
     bool   m_smokeEnabled     = false;
     bool   m_dragEnabled       = true;
     QPoint m_dragPosition;
+    QPointer<QWidget> m_themeSource;
     SmokeOverlay* m_smokeOverlay   = nullptr;
 
     bool   m_animationEnabled  = true;

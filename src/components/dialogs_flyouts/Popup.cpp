@@ -16,6 +16,23 @@
 
 namespace fluent::dialogs_flyouts {
 
+namespace {
+
+void refreshFluentDescendants(QWidget* root)
+{
+    if (!root)
+        return;
+
+    const auto children = root->findChildren<QWidget*>(QString(), Qt::FindDirectChildrenOnly);
+    for (QWidget* child : children) {
+        if (auto* fluentChild = dynamic_cast<FluentElement*>(child))
+            fluentChild->onThemeUpdated();
+        refreshFluentDescendants(child);
+    }
+}
+
+} // namespace
+
 // ── Construction / destruction. zh_CN: 构造 / 析构 ───────────────────────────
 
 Popup::Popup(QWidget* parent) : QWidget(parent) {
@@ -61,6 +78,7 @@ Popup::~Popup() {
 
 void Popup::onThemeUpdated() {
     update();
+    refreshFluentDescendants(this);
     if (m_scrim) {
         if (auto* fe = dynamic_cast<FluentElement*>(m_scrim.data()))
             fe->onThemeUpdated();
@@ -75,6 +93,14 @@ void Popup::setPopupProgress(double p) {
     if (m_opacityEffect) m_opacityEffect->setOpacity(p);
     emit popupProgressChanged(p);
     update();
+}
+
+void Popup::setThemeSource(QWidget* source) {
+    if (m_themeSource == source)
+        return;
+    m_themeSource = source;
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
 }
 
 // ── topLevelWidget resolution. zh_CN: topLevelWidget 推断 ────────────────────
@@ -122,6 +148,28 @@ QWidget* Popup::trackedPositionAnchor() const {
     return automaticPositionAnchor();
 }
 
+QWidget* Popup::themeOverrideSource() const {
+    if (QWidget* anchor = trackedPositionAnchor())
+        return anchor;
+    if (m_themeSource)
+        return m_themeSource.data();
+    if (m_originalParent)
+        return m_originalParent.data();
+    return parentWidget();
+}
+
+bool Popup::syncThemeOverrideFromSource() {
+    const bool popupChanged = ::fluent::overlay::syncInheritedThemeOverride(
+        this, themeOverrideSource());
+
+    bool scrimChanged = false;
+    if (m_scrim) {
+        scrimChanged = ::fluent::overlay::syncInheritedThemeOverride(
+            m_scrim.data(), this);
+    }
+    return popupChanged || scrimChanged;
+}
+
 void Popup::queuePositionSync() {
     if (m_positionSyncPending)
         return;
@@ -138,6 +186,8 @@ void Popup::syncPositionToAnchor() {
     QWidget* anchor = trackedPositionAnchor();
     if (!anchor)
         return;
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
     if (!::fluent::overlay::isAnchorVisibleInTopLevel(anchor)) {
         close();
         return;
@@ -156,6 +206,8 @@ void Popup::open() {
     QWidget* top = originalParentTopLevel();
     m_topLevel = top;
     ::fluent::overlay::attachToTopLevel(this, top);
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
 
     emit aboutToShow();
 
@@ -270,6 +322,7 @@ void Popup::ensureScrim() {
         m_scrim = new ::fluent::overlay::OverlayScrim(top, QStringLiteral("PopupScrim"));
     if (auto* scrim = dynamic_cast<::fluent::overlay::OverlayScrim*>(m_scrim.data()))
         scrim->setModalAndDim(true, m_dim);
+    ::fluent::overlay::syncInheritedThemeOverride(m_scrim.data(), this);
     m_scrim->setGeometry(top->rect());
     m_scrim->show();
     ::fluent::overlay::raiseOverlayStack(m_scrim, this);

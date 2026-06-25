@@ -23,6 +23,7 @@ public:
 #include "components/basicinput/Button.h"
 #include <QFrame>
 #include <QTimer>
+#include <QVariant>
 #include <QElapsedTimer>
 #include <QScrollArea>
 #include <QGridLayout>
@@ -505,6 +506,27 @@ TEST_F(FluentElementTest, ColorTokenMapping) {
     EXPECT_EQ(darkColors.textPrimary, QColor("#FFFFFF"));
     EXPECT_NE(lightColors.bgCanvas, darkColors.bgCanvas);
     EXPECT_TRUE(darkColors.grey190.isValid());
+}
+
+TEST_F(FluentElementTest, WidgetThemeOverrideIsInheritedWithoutChangingGlobalTheme)
+{
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    QWidget host;
+    MockComponent child(&host);
+    MockComponent outside;
+
+    host.setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+
+    EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(child.effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(outside.effectiveTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(child.themeColors().bgLayer, QColor("#2C2C2C"));
+    EXPECT_EQ(outside.themeColors().bgLayer, QColor("#FFFFFF"));
+
+    host.setProperty("fluentThemeOverride", QVariant());
+    EXPECT_EQ(child.effectiveTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(child.themeColors().bgLayer, QColor("#FFFFFF"));
 }
 
 TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {

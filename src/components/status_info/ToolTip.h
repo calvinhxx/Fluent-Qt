@@ -64,6 +64,12 @@ public:
     // Shadows QWidget::setFont so it reaches the inner label. zh_CN: 影子 QWidget::setFont 以应用到内部标签。
     void setFont(const QFont& font);
 
+    /**
+     * @brief Uses a widget as the local theme source for this top-level tooltip.
+     * zh_CN: 指定顶层 ToolTip 继承局部主题的来源控件。
+     */
+    void setThemeSource(QWidget* source);
+
     bool isAnimationEnabled() const { return m_animationEnabled; }
     void setAnimationEnabled(bool enabled);
 
@@ -82,6 +88,7 @@ protected:
 private:
     void setTarget(QWidget* target, Placement placement);
     void positionForTarget();
+    bool syncThemeOverrideFromSource();
     void applyLayoutMargins();
     void ensureOpacityAnimation();
     void startShowAnimation();
@@ -99,6 +106,7 @@ private:
     bool m_hideOnAnimationFinished = false;
     QPropertyAnimation* m_opacityAnimation = nullptr;
     QPointer<QWidget> m_target;
+    QPointer<QWidget> m_themeSource;
     Placement m_placement = Above;
 };
 

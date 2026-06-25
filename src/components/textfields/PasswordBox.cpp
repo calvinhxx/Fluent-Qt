@@ -295,7 +295,7 @@ void PasswordBox::paintInputFrame(QPainter& painter) {
         borderColor = colors.strokeDefault;
         bottomColor = colors.strokeDivider;
     } else if (m_focused) {
-        bgColor = (currentTheme() == Dark) ? colors.bgSolid : colors.controlDefault;
+        bgColor = (effectiveTheme() == Dark) ? colors.bgSolid : colors.controlDefault;
         borderColor = colors.strokeSecondary;
         bottomColor = colors.accentDefault;
         bottomWidth = ::Spacing::Border::Focused;

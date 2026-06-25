@@ -125,6 +125,27 @@ TEST_F(DialogTest, ThemeSwitchNoCrash) {
 //  入场/退场动画：仅 opacity（scale 已移除以避免子控件错位）
 // ══════════════════════════════════════════════════════════════════════════════
 
+TEST_F(DialogTest, ThemeSourceInheritsLocalOverride) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    window->onThemeUpdated();
+
+    auto* host = new QWidget(window);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Light));
+    host->setGeometry(24, 24, 220, 120);
+    host->show();
+
+    auto* trigger = new Button(QStringLiteral("Open"), host);
+    trigger->setGeometry(16, 16, 96, 32);
+    trigger->show();
+
+    Dialog dialog(window);
+    dialog.setThemeSource(trigger);
+
+    EXPECT_EQ(dialog.effectiveTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(dialog.themeColors().bgLayer, QColor("#FFFFFF"));
+    EXPECT_EQ(trigger->effectiveTheme(), fluent::FluentElement::Light);
+}
+
 TEST_F(DialogTest, DialogEntranceAnimatesOpacity) {
     // 入场：progress=0 时 windowOpacity 应为 0；progress=1 时为 1
     Dialog dialog(window);

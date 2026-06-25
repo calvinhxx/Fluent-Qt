@@ -99,6 +99,29 @@ TEST_F(FlyoutTest, ShowAtSetsAnchorAndOpens) {
 // 3. Bottom Placement
 // ══════════════════════════════════════════════════════════════════════════════
 
+TEST_F(FlyoutTest, ShowAtInheritsThemeOverrideFromAnchor) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    window->onThemeUpdated();
+
+    auto* host = new QWidget(window);
+    host->setProperty("fluentThemeOverride", static_cast<int>(fluent::FluentElement::Dark));
+    host->setGeometry(80, 120, 260, 180);
+    host->show();
+
+    auto* btn = new Button("Anchor", host);
+    btn->setGeometry(24, 24, 100, 32);
+    btn->show();
+
+    Flyout fl(window);
+    fl.setAnimationEnabled(false);
+    fl.showAt(btn);
+
+    EXPECT_TRUE(fl.isOpen());
+    EXPECT_EQ(fl.effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(fl.themeColors().bgLayer, QColor("#2C2C2C"));
+    fl.close();
+}
+
 TEST_F(FlyoutTest, BottomPlacement) {
     auto* btn = makeAnchor(QPoint(350, 280));
 

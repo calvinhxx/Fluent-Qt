@@ -282,7 +282,7 @@ void ProgressRing::updateThemeColors()
     m_pausedColor = colors.systemCaution;
     m_errorColor = colors.systemCritical;
     m_disabledColor = colors.accentDisabled;
-    m_trackColor = currentTheme() == Dark ? colors.strokeSurface : colors.strokeSecondary;
+    m_trackColor = effectiveTheme() == Dark ? colors.strokeSurface : colors.strokeSecondary;
     if (m_trackColor.alpha() < 64) {
         m_trackColor.setAlpha(64);
     }

@@ -120,6 +120,14 @@ void ToolTip::setFont(const QFont& font) {
     adjustSize();
 }
 
+void ToolTip::setThemeSource(QWidget* source) {
+    if (m_themeSource == source)
+        return;
+    m_themeSource = source;
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
+}
+
 void ToolTip::setAnimationEnabled(bool enabled) {
     if (m_animationEnabled == enabled) return;
 
@@ -139,6 +147,9 @@ void ToolTip::setAnimationEnabled(bool enabled) {
 }
 
 void ToolTip::setVisible(bool visible) {
+    if (visible && syncThemeOverrideFromSource())
+        onThemeUpdated();
+
     if (!m_animationEnabled) {
         if (m_opacityAnimation) {
             m_opacityAnimation->stop();
@@ -180,6 +191,8 @@ bool ToolTip::eventFilter(QObject* watched, QEvent* event)
     switch (event->type()) {
     case QEvent::ToolTip:
         if (!text().isEmpty() && m_target && m_target->isEnabled()) {
+            if (syncThemeOverrideFromSource())
+                onThemeUpdated();
             positionForTarget();
             show();
             raise();
@@ -225,10 +238,20 @@ void ToolTip::setTarget(QWidget* target, Placement placement)
         m_target->removeEventFilter(this);
     m_target = target;
     m_placement = placement;
+    if (syncThemeOverrideFromSource())
+        onThemeUpdated();
     if (m_target) {
         m_target->setToolTip(text());
         m_target->installEventFilter(this);
     }
+}
+
+bool ToolTip::syncThemeOverrideFromSource()
+{
+    QWidget* source = m_themeSource ? m_themeSource.data()
+                    : m_target ? m_target.data()
+                    : parentWidget();
+    return ::fluent::overlay::syncInheritedThemeOverride(this, source);
 }
 
 void ToolTip::positionForTarget()

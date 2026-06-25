@@ -84,6 +84,12 @@ public:
     bool isAnimationEnabled() const { return m_animationEnabled; }
     void setAnimationEnabled(bool e) { m_animationEnabled = e; }
 
+    /**
+     * @brief Uses a widget as the local theme source when no anchor drives the popup.
+     * zh_CN: 无锚点 Popup 显示时用于继承局部主题的来源控件。
+     */
+    void setThemeSource(QWidget* source);
+
     double popupProgress() const { return m_popupProgress; }
     void   setPopupProgress(double p);
 
@@ -126,6 +132,8 @@ protected:
 private:
     QPoint resolvedPosition() const;
     QWidget* trackedPositionAnchor() const;
+    QWidget* themeOverrideSource() const;
+    bool syncThemeOverrideFromSource();
     void queuePositionSync();
     void syncPositionToAnchor();
 
@@ -145,6 +153,7 @@ private:
 
     QPointer<QWidget> m_originalParent;
     QPointer<QWidget> m_topLevel;
+    QPointer<QWidget> m_themeSource;
 
     ClosePolicy m_closePolicy = ClosePolicy(CloseOnPressOutside | CloseOnEscape);
     bool m_modal = false;
