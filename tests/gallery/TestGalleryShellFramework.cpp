@@ -18,7 +18,6 @@
 
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
-#include "components/basicinput/RadioButton.h"
 #include "components/collections/TreeView.h"
 #include "components/dialogs_flyouts/ContentDialog.h"
 #include "components/dialogs_flyouts/Popup.h"
@@ -35,6 +34,7 @@
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/shell/GalleryApplicationController.h"
+#include "view/support/GalleryCloseBehaviorPrompt.h"
 #include "view/shell/GalleryNavigationPane.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "view/widgets/GalleryEntryCard.h"
@@ -47,10 +47,10 @@
 
 using fluent::basicinput::Button;
 using fluent::basicinput::ComboBox;
-using fluent::basicinput::RadioButton;
 using fluent::collections::TreeView;
 using fluent::dialogs_flyouts::ContentDialog;
 using fluent::dialogs_flyouts::Popup;
+using fluent::gallery::CloseBehaviorPromptContent;
 using fluent::gallery::GalleryApplicationController;
 using fluent::gallery::GalleryContentPage;
 using fluent::gallery::GalleryEntryCard;
@@ -1435,28 +1435,31 @@ TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpen
     EXPECT_TRUE(dialog->isVisible());
     EXPECT_EQ(dialog->windowModality(), Qt::ApplicationModal);
     EXPECT_FALSE(window.isChromeInteractive());
+    EXPECT_LE(dialog->width(), 380);
+    EXPECT_LE(dialog->height(), 304);
 
-    auto* trayChoice = dialog->findChild<RadioButton*>(
-        QStringLiteral("galleryCloseBehaviorChoice1"));
-    ASSERT_NE(trayChoice, nullptr);
-    EXPECT_TRUE(trayChoice->isChecked());
+    // Selection lives on the row itself (no separate radio control); the prompt
+    // content exposes the chosen behavior. zh_CN: 选中态由整行承载（无独立单选控件），
+    // 弹窗内容通过 selectedBehavior() 暴露当前选择。
+    // The prompt content is a FluentElement mixin widget without Q_OBJECT, so
+    // look it up by its unique object name and cast to the known concrete type.
+    // zh_CN: 弹窗内容是不含 Q_OBJECT 的 FluentElement 混入控件，按唯一 objectName 查找后转为已知具体类型。
+    auto* promptContent = static_cast<CloseBehaviorPromptContent*>(
+        dialog->findChild<QWidget*>(QStringLiteral("galleryCloseBehaviorPromptContent")));
+    ASSERT_NE(promptContent, nullptr);
+    EXPECT_EQ(promptContent->selectedBehavior(), GallerySettings::CloseBehavior::Tray);
 
     auto* minimizeRow = dialog->findChild<QWidget*>(
         QStringLiteral("galleryCloseBehaviorRow0"));
     auto* quitRow = dialog->findChild<QWidget*>(
         QStringLiteral("galleryCloseBehaviorRow2"));
-    auto* promptContent = dialog->findChild<QWidget*>(
-        QStringLiteral("galleryCloseBehaviorPromptContent"));
-    auto* minimizeChoice = dialog->findChild<RadioButton*>(
-        QStringLiteral("galleryCloseBehaviorChoice0"));
     ASSERT_NE(minimizeRow, nullptr);
     ASSERT_NE(quitRow, nullptr);
-    ASSERT_NE(promptContent, nullptr);
-    ASSERT_NE(minimizeChoice, nullptr);
+    EXPECT_LE(minimizeRow->height(), 42);
     EXPECT_TRUE(promptContent->rect().contains(quitRow->geometry()));
+
     QTest::mouseClick(minimizeRow, Qt::LeftButton);
-    EXPECT_TRUE(minimizeChoice->isChecked());
-    EXPECT_FALSE(trayChoice->isChecked());
+    EXPECT_EQ(promptContent->selectedBehavior(), GallerySettings::CloseBehavior::Minimize);
 
     QPointer<ContentDialog> dialogGuard = dialog;
     dialog->done(ContentDialog::ResultNone);

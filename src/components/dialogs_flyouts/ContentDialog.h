@@ -77,6 +77,12 @@ public:
     QWidget* content() const;
     void setContent(QWidget* widget);
 
+    // --- Command bar ---
+    // Overrides the standard command-bar height (default 68px) for compact,
+    // bespoke prompts. Leave at the default to match the WinUI ContentDialog.
+    // zh_CN: 覆盖标准命令栏高度（默认 68px），用于紧凑的定制弹窗；保持默认即与 WinUI ContentDialog 一致。
+    void setButtonBarHeight(int px);
+
     void onThemeUpdated() override;
 
 signals:
@@ -101,6 +107,7 @@ private:
     fluent::basicinput::Button*    m_closeBtn      = nullptr;
 
     int m_defaultButton = None;
+    int m_buttonBarHeight = 68;  // Default mirrors kButtonBarHeight. zh_CN: 默认与 kButtonBarHeight 一致。
 };
 
 } // namespace fluent::dialogs_flyouts
