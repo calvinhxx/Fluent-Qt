@@ -47,7 +47,7 @@ void ContentDialog::setupInternalLayout() {
 
     // --- Button bar (bottom area inside contentRect). zh_CN: 底部按钮栏，置于 contentRect 内。---
     m_buttonBar = new QWidget(this);
-    m_buttonBar->setFixedHeight(kButtonBarHeight);
+    m_buttonBar->setFixedHeight(m_buttonBarHeight);
     m_buttonBar->setAttribute(Qt::WA_TranslucentBackground);
 
     Anchors barAnchors;
@@ -61,7 +61,7 @@ void ContentDialog::setupInternalLayout() {
     // zh_CN: 按钮栏内部 QHBoxLayout 等宽分配；barAnchors 与 contentsRect 对齐
     // （contentsMargins 已处理 shadow 偏移）。
     const int hPad = kDialogPadding;
-    const int vPad = (kButtonBarHeight - ::Spacing::ControlHeight::Standard) / 2;
+    const int vPad = (m_buttonBarHeight - ::Spacing::ControlHeight::Standard) / 2;
     auto* btnLayout = new QHBoxLayout(m_buttonBar);
     btnLayout->setContentsMargins(hPad, vPad, hPad, vPad);
     btnLayout->setSpacing(kButtonGap);
@@ -141,6 +141,19 @@ void ContentDialog::setContent(QWidget* widget) {
         updateContentAnchors();
         m_contentWidget->show();
     }
+}
+
+void ContentDialog::setButtonBarHeight(int px) {
+    if (px <= 0 || px == m_buttonBarHeight)
+        return;
+    m_buttonBarHeight = px;
+    if (m_buttonBar) {
+        m_buttonBar->setFixedHeight(px);
+        const int vPad = qMax(0, (px - ::Spacing::ControlHeight::Standard) / 2);
+        if (auto* bl = qobject_cast<QHBoxLayout*>(m_buttonBar->layout()))
+            bl->setContentsMargins(kDialogPadding, vPad, kDialogPadding, vPad);
+    }
+    updateContentAnchors();
 }
 
 // ── Internal refresh. zh_CN: 内部刷新 ────────────────────────────────────────
