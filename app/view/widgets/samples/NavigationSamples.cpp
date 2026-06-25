@@ -56,6 +56,7 @@ QWidget* makeHostPage(QWidget* parent, const QString& title, const QString& body
 
     auto* heading = new Label(title, page);
     heading->setFluentTypography(Typography::FontRole::BodyStrong);
+    heading->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
     auto* summary = makeStatusLabel(page, body);
     summary->setFluentTypography(Typography::FontRole::Caption);
 
@@ -681,6 +682,7 @@ QVector<GallerySample> breadcrumbSamples()
                        auto* standardRow = horizontalGroup(group, 10);
                        auto* standardLabel = new Label(QStringLiteral("Standard"), standardRow);
                        standardLabel->setFluentTypography(Typography::FontRole::Caption);
+                       standardLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                        standardLabel->setFixedWidth(72);
                        auto* standard = new Breadcrumb(standardRow);
                        standard->setItems(path);
@@ -692,6 +694,7 @@ QVector<GallerySample> breadcrumbSamples()
                        auto* largeRow = horizontalGroup(group, 10);
                        auto* largeLabel = new Label(QStringLiteral("Large"), largeRow);
                        largeLabel->setFluentTypography(Typography::FontRole::Caption);
+                       largeLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                        largeLabel->setFixedWidth(72);
                        auto* large = new Breadcrumb(largeRow);
                        large->setItems(path);
@@ -737,6 +740,7 @@ QVector<GallerySample> breadcrumbSamples()
                            auto* row = horizontalGroup(group, 10);
                            auto* rowLabel = new Label(label, row);
                            rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                            rowLabel->setFixedWidth(72);
                            auto* breadcrumb = new Breadcrumb(row);
                            breadcrumb->setItems(path);
@@ -1585,6 +1589,7 @@ QVector<GallerySample> pivotSamples()
                            auto* row = horizontalGroup(group, 10);
                            auto* rowLabel = new Label(label, row);
                            rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                            rowLabel->setFixedWidth(96);
 
                            auto* pivot = new Pivot(row);
@@ -1781,6 +1786,7 @@ QVector<GallerySample> selectorBarSamples()
                            auto* row = horizontalGroup(group, 10);
                            auto* rowLabel = new Label(label, row);
                            rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                            rowLabel->setFixedWidth(96);
 
                            auto* selector = new SelectorBar(row);
@@ -2074,6 +2080,7 @@ QVector<GallerySample> tabViewSamples()
                            auto* row = horizontalGroup(group, 10);
                            auto* rowLabel = new Label(label, row);
                            rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                            rowLabel->setFixedWidth(104);
 
                            auto* tabs = new TabView(row);
@@ -2121,6 +2128,7 @@ QVector<GallerySample> tabViewSamples()
                            auto* row = horizontalGroup(group, 10);
                            auto* rowLabel = new Label(label, row);
                            rowLabel->setFluentTypography(Typography::FontRole::Caption);
+                           rowLabel->setTextColorRole(Label::TextColorRole::Primary);  // QSS-proof on the styled preview surface
                            rowLabel->setFixedWidth(104);
 
                            auto* tabs = new TabView(row);
