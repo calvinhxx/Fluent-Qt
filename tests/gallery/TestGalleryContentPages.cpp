@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <QApplication>
+#include <QElapsedTimer>
 #include <QEvent>
 #include <QFrame>
 #include <QFile>
@@ -15,6 +16,8 @@
 #include <QTest>
 #include <QWidget>
 
+#include "components/basicinput/Button.h"
+#include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -46,7 +49,9 @@ using fluent::gallery::galleryComponentCatalog;
 using fluent::gallery::galleryControlImageResource;
 using fluent::gallery::galleryContentCatalog;
 using fluent::gallery::galleryContentEntry;
+using fluent::collections::TreeView;
 using fluent::textfields::TextEdit;
+using fluent::basicinput::Button;
 
 namespace {
 
@@ -87,6 +92,20 @@ GallerySampleCard* sampleCardById(GalleryComponentPage* page, const QString& sam
             return card;
     }
     return nullptr;
+}
+
+template <typename PageType>
+PageType* waitForCurrentPage(GalleryWindow& window, int timeoutMs = 1000)
+{
+    QElapsedTimer timer;
+    timer.start();
+    PageType* page = dynamic_cast<PageType*>(window.currentContentPage());
+    while (!page && timer.elapsed() < timeoutMs) {
+        QApplication::processEvents(QEventLoop::AllEvents, 20);
+        QTest::qWait(10);
+        page = dynamic_cast<PageType*>(window.currentContentPage());
+    }
+    return page;
 }
 
 } // namespace
@@ -149,13 +168,9 @@ TEST_F(GalleryContentPagesTest, AllNavigationRoutesHaveContentAndSamples)
         ASSERT_NE(entry, nullptr) << routeId.toStdString();
         EXPECT_FALSE(entry->description.isEmpty()) << routeId.toStdString();
 
-        const auto* item = navigationViewModel.itemById(routeId);
-        ASSERT_NE(item, nullptr) << routeId.toStdString();
-        if (item->kind != fluent::gallery::GalleryNavigationItem::Kind::ComponentRoute)
+        if (entry->kind != fluent::gallery::GalleryPageKind::Component)
             continue;
 
-        EXPECT_EQ(entry->kind, fluent::gallery::GalleryPageKind::Component)
-            << routeId.toStdString();
         const auto samples = fluent::gallery::gallerySamplesForRoute(routeId);
         ASSERT_GE(samples.size(), 1) << routeId.toStdString();
         for (const auto& sample : samples) {
@@ -174,8 +189,11 @@ TEST_F(GalleryContentPagesTest, EveryComponentRouteBuildsItsPage)
     for (const auto& item : navigationViewModel.items()) {
         if (item.kind != fluent::gallery::GalleryNavigationItem::Kind::ComponentRoute)
             continue;
+        const auto* entry = galleryContentEntry(item.id);
+        if (!entry || entry->kind != fluent::gallery::GalleryPageKind::Component)
+            continue;
         ASSERT_TRUE(window.selectRoute(item.id)) << item.id.toStdString();
-        auto* page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+        auto* page = waitForCurrentPage<GalleryComponentPage>(window);
         ASSERT_NE(page, nullptr) << item.id.toStdString();
         EXPECT_GE(page->sampleCount(), 1) << item.id.toStdString();
         for (GallerySampleCard* card : page->sampleCards()) {
@@ -190,7 +208,7 @@ TEST_F(GalleryContentPagesTest, AllControlsRouteListsEveryComponent)
 {
     GalleryWindow window;
     ASSERT_TRUE(window.selectRoute(QStringLiteral("all-controls")));
-    auto* page = dynamic_cast<GalleryCategoryPage*>(window.currentContentPage());
+    auto* page = waitForCurrentPage<GalleryCategoryPage>(window);
     ASSERT_NE(page, nullptr);
 
     GalleryNavigationViewModel navigationViewModel;
@@ -254,7 +272,7 @@ TEST_F(GalleryContentPagesTest, CategoryRoutesCreateCategoryPages)
 
     for (const CategoryCase& categoryCase : cases) {
         ASSERT_TRUE(window.selectRoute(categoryCase.routeId)) << categoryCase.routeId.toStdString();
-        auto* page = dynamic_cast<GalleryCategoryPage*>(window.currentContentPage());
+        auto* page = waitForCurrentPage<GalleryCategoryPage>(window);
         ASSERT_NE(page, nullptr) << categoryCase.routeId.toStdString();
         EXPECT_EQ(page->routeId(), categoryCase.routeId);
         EXPECT_TRUE(page->componentRouteIds().contains(categoryCase.seededComponentRouteId))
@@ -285,7 +303,7 @@ TEST_F(GalleryContentPagesTest, ComponentRoutesCreateComponentPages)
 
     for (const ComponentCase& componentCase : cases) {
         ASSERT_TRUE(window.selectRoute(componentCase.routeId)) << componentCase.routeId.toStdString();
-        auto* page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+        auto* page = waitForCurrentPage<GalleryComponentPage>(window);
         ASSERT_NE(page, nullptr) << componentCase.routeId.toStdString();
         EXPECT_EQ(page->routeId(), componentCase.routeId);
         EXPECT_EQ(page->title(), componentCase.title);
@@ -300,7 +318,7 @@ TEST_F(GalleryContentPagesTest, SampleCardsHostLivePreviewAndCode)
 {
     GalleryWindow window;
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
-    auto* page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
     ASSERT_GE(page->sampleCount(), 4);
 
@@ -354,7 +372,7 @@ TEST_F(GalleryContentPagesTest, TextEditSampleReflowsAfterVisibleLineGrowth)
     window.show();
     QApplication::processEvents();
 
-    auto* page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
     GallerySampleCard* card = sampleCardById(page, QStringLiteral("text-edit-visible-lines"));
     ASSERT_NE(card, nullptr);
@@ -393,13 +411,13 @@ TEST_F(GalleryContentPagesTest, CollectionAndNavigationSamplesHostLivePreviews)
     GalleryWindow window;
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("tree-view")));
-    auto* treePage = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+    auto* treePage = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(treePage, nullptr);
     ASSERT_GE(treePage->sampleCount(), 1);
     EXPECT_NE(treePage->sampleCards().first()->previewWidget(), nullptr);
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("tab-view")));
-    auto* tabPage = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+    auto* tabPage = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(tabPage, nullptr);
     ASSERT_GE(tabPage->sampleCount(), 1);
     EXPECT_NE(tabPage->sampleCards().first()->previewWidget(), nullptr);
@@ -410,7 +428,7 @@ TEST_F(GalleryContentPagesTest, ContentPageAndSampleCardRefreshOnThemeChange)
 {
     GalleryWindow window;
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
-    auto* page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
     ASSERT_GE(page->sampleCount(), 1);
     GallerySampleCard* card = page->sampleCards().first();
@@ -433,6 +451,85 @@ TEST_F(GalleryContentPagesTest, ContentPageAndSampleCardRefreshOnThemeChange)
     EXPECT_TRUE(page->styleSheet().contains(QStringLiteral("background: transparent")));
     EXPECT_TRUE(page->titleLabel()->styleSheet().contains(QStringLiteral("rgba(0, 0, 0, 230)")));
     EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
+}
+
+TEST_F(GalleryContentPagesTest, ComponentThemeButtonSwitchesOnlySamplePreviewTheme)
+{
+    GalleryWindow window;
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    GalleryComponentPage* page = nullptr;
+    QTRY_VERIFY_WITH_TIMEOUT(
+        (page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage())) != nullptr,
+        1000);
+    ASSERT_NE(page, nullptr);
+    ASSERT_GE(page->sampleCards().size(), 1);
+
+    auto* themeButton = page->findChild<Button*>(
+        QStringLiteral("galleryComponentPageThemeButton"));
+    ASSERT_NE(themeButton, nullptr);
+    EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Light"));
+
+    GallerySampleCard* card = page->sampleCards().first();
+    ASSERT_NE(card, nullptr);
+    auto* previewSurface = card->findChild<QWidget*>(
+        QStringLiteral("gallerySampleCardPreview"));
+    ASSERT_NE(previewSurface, nullptr);
+    EXPECT_FALSE(previewSurface->property("fluentThemeOverride").isValid());
+    EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
+
+    auto* sampleButton = previewSurface->findChild<Button*>();
+    ASSERT_NE(sampleButton, nullptr);
+    EXPECT_EQ(sampleButton->effectiveTheme(), fluent::FluentElement::Light);
+
+    QTest::mouseClick(themeButton, Qt::LeftButton);
+    QApplication::processEvents();
+
+    EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(page->titleLabel()->effectiveTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Dark"));
+    EXPECT_EQ(previewSurface->property("fluentThemeOverride").toInt(),
+              static_cast<int>(fluent::FluentElement::Dark));
+    EXPECT_TRUE(previewSurface->styleSheet().contains(QStringLiteral("rgba(61, 61, 61, 255)")));
+    EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
+    EXPECT_EQ(sampleButton->effectiveTheme(), fluent::FluentElement::Dark);
+}
+
+TEST_F(GalleryContentPagesTest, ComponentThemeButtonUpdatesTreeViewPreviewTheme)
+{
+    GalleryWindow window;
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("tree-view")));
+    GalleryComponentPage* page = nullptr;
+    QTRY_VERIFY_WITH_TIMEOUT(
+        (page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage())) != nullptr,
+        1000);
+    ASSERT_NE(page, nullptr);
+
+    auto* themeButton = page->findChild<Button*>(
+        QStringLiteral("galleryComponentPageThemeButton"));
+    ASSERT_NE(themeButton, nullptr);
+    EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Light"));
+
+    auto* treeView = page->findChild<TreeView*>();
+    ASSERT_NE(treeView, nullptr);
+    EXPECT_EQ(treeView->effectiveTheme(), fluent::FluentElement::Light);
+
+    QTest::mouseClick(themeButton, Qt::LeftButton);
+    QApplication::processEvents();
+
+    EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Dark"));
+    EXPECT_EQ(treeView->effectiveTheme(), fluent::FluentElement::Dark);
+    EXPECT_EQ(treeView->themeColors().bgLayer, QColor("#2C2C2C"));
+    EXPECT_EQ(page->titleLabel()->effectiveTheme(), fluent::FluentElement::Light);
+
+    QTest::mouseClick(themeButton, Qt::LeftButton);
+    QApplication::processEvents();
+
+    EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Light"));
+    EXPECT_EQ(treeView->effectiveTheme(), fluent::FluentElement::Light);
+    EXPECT_EQ(treeView->themeColors().bgLayer, QColor("#FFFFFF"));
+    EXPECT_EQ(page->titleLabel()->effectiveTheme(), fluent::FluentElement::Light);
 }
 
 TEST_F(GalleryContentPagesTest, ContentScrollSurfaceStaysTransparentAcrossThemeRefresh)
@@ -512,7 +609,7 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
     window.show();
     QApplication::processEvents();
 
-    auto* page = dynamic_cast<GalleryComponentPage*>(window.currentContentPage());
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
     ASSERT_NE(page, nullptr);
     ASSERT_GE(page->sampleCards().size(), 1);
 

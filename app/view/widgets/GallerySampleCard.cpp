@@ -6,6 +6,7 @@
 #include <QResizeEvent>
 #include <QSizePolicy>
 #include <QTimer>
+#include <QVariant>
 #include <QtGlobal>
 
 #include "components/textfields/Label.h"
@@ -24,6 +25,47 @@ constexpr int kCardBottomMargin = 18;
 constexpr int kCardSpacing = 12;
 constexpr int kDefaultCardWidth = 640;
 constexpr int kMinimumCardWidth = 280;
+constexpr char kThemeOverrideProperty[] = "fluentThemeOverride";
+
+class SamplePreviewSurface final : public QFrame, public fluent::FluentElement {
+public:
+    explicit SamplePreviewSurface(QWidget* parent = nullptr)
+        : QFrame(parent)
+    {
+        setObjectName(QStringLiteral("gallerySampleCardPreview"));
+        setFrameShape(QFrame::NoFrame);
+        setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+        onThemeUpdated();
+    }
+
+    void onThemeUpdated() override
+    {
+        const Colors colors = themeColors();
+        setStyleSheet(QStringLiteral(
+                          "#gallerySampleCardPreview { background: %1; border: 1px solid %2; border-radius: %3px; }")
+                          .arg(cssColor(colors.bgLayerAlt),
+                               cssColor(colors.strokeCard))
+                          .arg(::CornerRadius::Control));
+        setProperty("fluentSurfaceColor", colors.bgLayerAlt);
+        update();
+    }
+};
+
+void refreshFluentSubtree(QWidget* root)
+{
+    if (!root)
+        return;
+
+    if (auto* element = dynamic_cast<fluent::FluentElement*>(root))
+        element->onThemeUpdated();
+    root->update();
+
+    const auto children = root->children();
+    for (QObject* child : children) {
+        if (auto* childWidget = qobject_cast<QWidget*>(child))
+            refreshFluentSubtree(childWidget);
+    }
+}
 }
 
 GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* parent)
@@ -48,10 +90,7 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
         m_descriptionLabel->setWordWrap(true);
     }
 
-    m_previewSurface = new QFrame(this);
-    m_previewSurface->setObjectName(QStringLiteral("gallerySampleCardPreview"));
-    m_previewSurface->setFrameShape(QFrame::NoFrame);
-    m_previewSurface->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    m_previewSurface = new SamplePreviewSurface(this);
     m_previewSurface->installEventFilter(this);
     auto* previewLayout = new QHBoxLayout(m_previewSurface);
     previewLayout->setContentsMargins(20, 20, 20, 20);
@@ -131,7 +170,25 @@ void GallerySampleCard::onThemeUpdated()
         m_descriptionLabel->onThemeUpdated();
     if (m_codeBlock)
         m_codeBlock->onThemeUpdated();
-    updateAnchoredLayout();
+    refreshPreviewTheme();
+}
+
+void GallerySampleCard::setPreviewThemeOverride(fluent::FluentElement::Theme theme)
+{
+    if (!m_previewSurface)
+        return;
+
+    m_previewSurface->setProperty(kThemeOverrideProperty, static_cast<int>(theme));
+    refreshPreviewTheme();
+}
+
+void GallerySampleCard::clearPreviewThemeOverride()
+{
+    if (!m_previewSurface)
+        return;
+
+    m_previewSurface->setProperty(kThemeOverrideProperty, QVariant());
+    refreshPreviewTheme();
 }
 
 QSize GallerySampleCard::sizeHint() const
@@ -215,6 +272,12 @@ void GallerySampleCard::updateCardHeight()
     QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
 }
 
+void GallerySampleCard::refreshPreviewTheme()
+{
+    refreshFluentSubtree(m_previewSurface);
+    updateAnchoredLayout();
+}
+
 int GallerySampleCard::preferredHeightForWidget(QWidget* widget, int width) const
 {
     if (!widget)
@@ -261,24 +324,9 @@ void GallerySampleCard::applyPalette()
                            cssColor(colors.strokeCard))
                       .arg(::CornerRadius::Overlay));
     if (m_previewSurface) {
-        m_previewSurface->setStyleSheet(QStringLiteral(
-                                            "#gallerySampleCardPreview { background: %1; border: 1px solid %2; border-radius: %3px; }")
-                                            .arg(cssColor(colors.bgLayerAlt),
-                                                 cssColor(colors.strokeCard))
-                                            .arg(::CornerRadius::Control));
-        // Advertise the preview surface's real background via a dynamic property (it paints via the
-        // style sheet above, so its palette stays the default light white). Rounded children that
-        // antialias their corners against this surface — e.g. FlipView's corner mask, which walks up
-        // looking for "fluentSurfaceColor" — then blend to bgLayerAlt instead of rendering white
-        // corners in dark theme. A property is used instead of palette Window because palette does
-        // NOT reliably propagate to nested group containers under this styled ancestor (QStyleSheetStyle
-        // re-polishes descendants and resets their Window) — that left the wrapped External-navigation
-        // FlipView still white; the property walk-up is immune.
-        // zh_CN: 通过动态属性公布预览表面的真实背景（它靠上面的样式表绘制，palette 会保持默认浅白）。
-        // 对角做抗锯齿的圆角子控件——如向上查找 "fluentSurfaceColor" 的 FlipView 圆角遮罩——便会混到 bgLayerAlt，
-        // 而不是在 Dark 主题下渲染白角。用属性而非 palette Window：palette 在带样式表的祖先下无法可靠传到嵌套 group 容器
-        //（QStyleSheetStyle 会重新 polish 子树并重置其 Window）——这正是被包了一层的 External-navigation FlipView 仍发白的原因；属性向上查找不受影响。
-        m_previewSurface->setProperty("fluentSurfaceColor", colors.bgLayerAlt);
+        // The preview surface owns its theme so a sample override stays inside the live UI area.
+        if (auto* previewSurface = dynamic_cast<fluent::FluentElement*>(m_previewSurface))
+            previewSurface->onThemeUpdated();
     }
     // Color the text via each label's OWN style sheet, not the palette: this card sets a style sheet
     // on itself, which installs QStyleSheetStyle over the whole subtree and makes a child Label's

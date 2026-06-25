@@ -270,6 +270,7 @@ public:
         , m_toolTip(toolTip)
         , m_placement(placement)
     {
+        m_toolTip->setThemeSource(target);
         m_toolTip->hide();
         target->installEventFilter(this);
     }
@@ -295,6 +296,7 @@ protected:
     {
         if (watched == m_target) {
             if (event->type() == QEvent::Enter) {
+                m_toolTip->setThemeSource(m_target);
                 m_toolTip->adjustSize();
                 const QSize tipSize = m_toolTip->sizeHint();
                 const QPoint localAnchor = m_placement == ToolTipPlacement::Right

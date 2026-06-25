@@ -10,6 +10,7 @@
 #include "components/foundation/QMLPlus.h"
 
 class QVBoxLayout;
+class QHBoxLayout;
 class QPaintEvent;
 
 namespace fluent::scrolling {
@@ -65,6 +66,8 @@ protected:
     void addContentWidget(QWidget* widget);
     /** @brief Adds fixed vertical spacing to the content column. */
     void addContentSpacing(int pixels);
+    /** @brief Adds an action widget to the right side of the page title row. */
+    void addHeaderAction(QWidget* widget);
     /**
      * @brief Shows or hides the default title/subtitle header block.
      * zh_CN: 显示或隐藏默认的标题/副标题头部。
@@ -111,6 +114,8 @@ private:
 
     fluent::scrolling::ScrollView* m_scrollArea = nullptr;
     QWidget* m_viewport = nullptr;
+    QWidget* m_headerRow = nullptr;
+    QHBoxLayout* m_headerLayout = nullptr;
     QVBoxLayout* m_contentLayout = nullptr;
     fluent::textfields::Label* m_titleLabel = nullptr;
     fluent::textfields::Label* m_subtitleLabel = nullptr;

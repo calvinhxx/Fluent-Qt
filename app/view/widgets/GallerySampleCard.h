@@ -34,6 +34,11 @@ public:
     GalleryCodeBlock* codeBlock() const { return m_codeBlock; }
     fluent::textfields::Label* titleLabel() const { return m_titleLabel; }
 
+    /** @brief Forces the live preview area to render in a local theme. */
+    void setPreviewThemeOverride(fluent::FluentElement::Theme theme);
+    /** @brief Clears the local preview theme so the preview follows the app theme. */
+    void clearPreviewThemeOverride();
+
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
 
@@ -48,6 +53,7 @@ private:
     void queueAnchoredLayoutUpdate();
     void updateAnchoredLayout();
     void updateCardHeight();
+    void refreshPreviewTheme();
     int preferredHeightForWidget(QWidget* widget, int width) const;
     int calculatedHeightForWidth(int width) const;
     int contentWidthForCardWidth(int width) const;

@@ -7,6 +7,10 @@
 #include "model/GalleryContentCatalog.h"
 #include "GalleryContentPage.h"
 
+namespace fluent::basicinput {
+class Button;
+}
+
 namespace fluent::gallery {
 
 class GalleryNavigationViewModel;
@@ -28,9 +32,18 @@ public:
     int sampleCount() const { return m_sampleCards.size(); }
     QVector<GallerySampleCard*> sampleCards() const { return m_sampleCards; }
 
+    void onThemeUpdated() override;
+
 private:
+    void toggleSampleTheme();
+    void applySampleTheme();
+    void updateThemeButton();
+
     QString m_overviewText;
     QVector<GallerySampleCard*> m_sampleCards;
+    ::fluent::basicinput::Button* m_themeButton = nullptr;
+    fluent::FluentElement::Theme m_sampleTheme = fluent::FluentElement::Light;
+    bool m_sampleThemeExplicit = false;
 };
 
 } // namespace fluent::gallery

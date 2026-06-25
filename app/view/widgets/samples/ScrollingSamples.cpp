@@ -237,7 +237,7 @@ protected:
             const int row = index / 6;
             QRect tile(28 + col * 102, 76 + row * 96, 72, 64);
             QColor fill = swatches.at(index % swatches.size());
-            fill.setAlphaF(currentTheme() == fluent::FluentElement::Dark ? 0.72 : 0.88);
+            fill.setAlphaF(effectiveTheme() == fluent::FluentElement::Dark ? 0.72 : 0.88);
             painter.setBrush(fill);
             painter.setPen(Qt::NoPen);
             painter.drawRoundedRect(tile, themeRadius().control, themeRadius().control);
@@ -528,7 +528,7 @@ protected:
         int itemIndex = 0;
         for (const ColorSection& section : colorSections()) {
             QColor fill = section.color;
-            fill.setAlphaF(currentTheme() == fluent::FluentElement::Dark ? 0.72 : 0.88);
+            fill.setAlphaF(effectiveTheme() == fluent::FluentElement::Dark ? 0.72 : 0.88);
 
             for (int indexInSection = 0; indexInSection < section.count; ++indexInSection) {
                 const int row = itemIndex / itemsPerRow;
