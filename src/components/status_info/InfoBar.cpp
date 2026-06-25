@@ -25,9 +25,15 @@ constexpr int kCloseIconSize = 12;
 void setLabelColor(fluent::textfields::Label* label, const QColor& color)
 {
     if (!label) return;
-    QPalette palette = label->palette();
-    palette.setColor(QPalette::WindowText, color);
-    label->setPalette(palette);
+    // Color via the label's OWN style sheet rather than its palette: when an InfoBar sits under an
+    // ancestor style sheet — e.g. the gallery's GallerySampleCard installs QStyleSheetStyle over its
+    // whole subtree — a palette WindowText color is silently dropped, so the title/message rendered
+    // near-black in dark theme regardless of severity. A style-sheet color wins over the ancestor
+    // style sheet. zh_CN: 用标签自身样式表上色而非 palette：当 InfoBar 位于带样式表的祖先下
+    //（如画廊的 GallerySampleCard 会在整个子树安装 QStyleSheetStyle），palette 的 WindowText 会被丢弃，
+    // 导致标题/正文在深色主题里无视严重级别渲染成近黑。样式表颜色可越过祖先样式表生效。
+    label->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
+                             .arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha()));
 }
 }
 

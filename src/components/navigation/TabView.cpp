@@ -1403,9 +1403,19 @@ void TabStrip::updateHeaderWidgets()
         widgets->label->setGeometry(visualRecord.textRect);
         widgets->label->setEnabled(isSelectableIndex(record.tabIndex));
         widgets->label->setVisible(!visualRecord.textRect.isEmpty());
-        QPalette labelPalette = widgets->label->palette();
-        labelPalette.setColor(QPalette::WindowText, textColorForTab(record.tabIndex));
-        widgets->label->setPalette(labelPalette);
+        // Color the tab label through the Label's own style sheet (via a text-color role) instead of its
+        // palette: a palette WindowText color is dropped under any ancestor style sheet — the gallery
+        // sample card installs QStyleSheetStyle over its subtree and ignores child palettes, which made
+        // the tab labels render near-black in dark theme. setTextColorRole no-ops when unchanged, so this
+        // stays cheap on relayout; the role mirrors textColorForTab. zh_CN: 用 Label 自身样式表（经文本颜色
+        // 角色）上色而非 palette：祖先样式表会安装 QStyleSheetStyle 并忽略子 palette，导致标签在深色主题里变近黑；
+        // setTextColorRole 在角色未变时直接返回，故重排时开销很小；角色与 textColorForTab 一致。
+        const bool tabUsable = isEnabled() && isValidIndex(record.tabIndex)
+                               && m_items.at(record.tabIndex).enabled;
+        widgets->label->setTextColorRole(
+            !tabUsable ? textfields::Label::TextColorRole::Disabled
+            : record.tabIndex == m_selectedIndex ? textfields::Label::TextColorRole::Primary
+                                                 : textfields::Label::TextColorRole::Secondary);
         widgets->label->raise();
         setHeaderWidgetOpacity(*widgets, tabRevealOpacity(record.tabIndex));
 

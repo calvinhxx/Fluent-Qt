@@ -161,9 +161,14 @@ void ToolTip::onThemeUpdated() {
     m_bgColor = c.bgLayer;  // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = c.textPrimary;
-    QPalette textPalette = m_textBlock->palette();
-    textPalette.setColor(QPalette::WindowText, m_textColor);
-    m_textBlock->setPalette(textPalette);
+    // Color via the label's OWN style sheet rather than its palette: a ToolTip can sit under an ancestor
+    // style sheet (the gallery sample card installs QStyleSheetStyle over its subtree and ignores child
+    // palettes), which would drop a palette WindowText color and render the text near-black in dark
+    // theme. A style-sheet color always wins. zh_CN: 用标签自身样式表上色而非 palette：ToolTip 可能位于带样式表的
+    // 祖先下（画廊示例卡会安装 QStyleSheetStyle 并忽略子 palette），palette 颜色会被丢弃，深色主题里文字变近黑；样式表颜色始终生效。
+    m_textBlock->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
+                                   .arg(m_textColor.red()).arg(m_textColor.green())
+                                   .arg(m_textColor.blue()).arg(m_textColor.alpha()));
     update();
 }
 

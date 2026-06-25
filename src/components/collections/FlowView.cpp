@@ -814,9 +814,14 @@ void FlowView::applyThemeStyle()
 
     if (m_headerLabel) {
         m_headerLabel->setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
-        QPalette headerPalette = m_headerLabel->palette();
-        headerPalette.setColor(QPalette::WindowText, colors.textPrimary);
-        m_headerLabel->setPalette(headerPalette);
+        // Color via the label's OWN style sheet rather than its palette: a palette WindowText color is
+        // dropped whenever an ancestor sets a style sheet (Qt installs QStyleSheetStyle over the subtree
+        // and ignores child palettes) — e.g. the gallery sample card, where the header then renders
+        // near-black in dark theme. A style-sheet color always wins. zh_CN: 用 label 自身样式表上色而非
+        // palette：任何祖先设置样式表时会安装 QStyleSheetStyle 并忽略子 palette，header 在深色主题里变近黑；样式表颜色始终生效。
+        m_headerLabel->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
+                                         .arg(colors.textPrimary.red()).arg(colors.textPrimary.green())
+                                         .arg(colors.textPrimary.blue()).arg(colors.textPrimary.alpha()));
     }
 }
 
