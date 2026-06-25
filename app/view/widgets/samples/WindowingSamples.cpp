@@ -1,6 +1,7 @@
 #include "WindowingSamples.h"
 
 #include <QHBoxLayout>
+#include <QFont>
 #include <QPainter>
 #include <QPoint>
 #include <QPointer>
@@ -11,6 +12,7 @@
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
@@ -287,7 +289,9 @@ QWidget* makeTitleBarContent(QWidget* parent,
 
     auto* title = makeSampleLabel(content, titleText, Typography::FontRole::Caption);
     title->setMinimumWidth(96);
-    title->setStyleSheet(QStringLiteral("font-weight: 600;"));
+    QFont titleFont = title->font();
+    titleFont.setWeight(QFont::DemiBold);
+    title->setFont(titleFont);
     layout->addWidget(title, 0, Qt::AlignVCenter);
 
     if (includeSearch) {
@@ -478,21 +482,26 @@ QVector<GallerySample> windowSamples()
                        controlsLayout->addWidget(status, 0, Qt::AlignVCenter);
                        layout->addWidget(controls);
 
-                       QObject::connect(open, &Button::clicked, group, [group, status]() {
+                       QObject::connect(open, &Button::clicked, group, [group, open, status]() {
                            static QPointer<Window> demoWindow;
                            if (demoWindow) {
+                               ::fluent::overlay::syncInheritedThemeOverride(demoWindow, open);
+                               demoWindow->onThemeUpdated();
                                focusWindow(demoWindow);
                                status->setText(QStringLiteral("Focused"));
                                return;
                            }
 
                            auto* window = new Window();
+                           ::fluent::overlay::syncInheritedThemeOverride(window, open);
+                           window->onThemeUpdated();
                            demoWindow = window;
                            window->setAttribute(Qt::WA_DeleteOnClose);
                            window->setWindowTitle(QStringLiteral("Fluent content window"));
                            window->setContentWidget(makeWindowContent(
                                QStringLiteral("Hosted content"),
                                QStringLiteral("This widget is parented under Window::contentHost().")));
+                           window->onThemeUpdated();
                            QObject::connect(window, &QObject::destroyed, status, [status]() {
                                status->setText(QStringLiteral("Closed"));
                            });
@@ -530,15 +539,19 @@ QVector<GallerySample> windowSamples()
                        controlsLayout->addWidget(status, 0, Qt::AlignVCenter);
                        layout->addWidget(controls);
 
-                       QObject::connect(open, &Button::clicked, group, [group, status]() {
+                       QObject::connect(open, &Button::clicked, group, [group, open, status]() {
                            static QPointer<Window> demoWindow;
                            if (demoWindow) {
+                               ::fluent::overlay::syncInheritedThemeOverride(demoWindow, open);
+                               demoWindow->onThemeUpdated();
                                focusWindow(demoWindow);
                                status->setText(QStringLiteral("Focused"));
                                return;
                            }
 
                            auto* window = new Window();
+                           ::fluent::overlay::syncInheritedThemeOverride(window, open);
+                           window->onThemeUpdated();
                            demoWindow = window;
                            window->setAttribute(Qt::WA_DeleteOnClose);
                            window->setWindowTitle(QStringLiteral("Custom title bar"));
@@ -550,6 +563,7 @@ QVector<GallerySample> windowSamples()
                            window->setContentWidget(makeWindowContent(
                                QStringLiteral("Custom title bar"),
                                QStringLiteral("Interactive title-bar children are excluded from drag hit testing.")));
+                           window->onThemeUpdated();
                            QObject::connect(window, &QObject::destroyed, status, [status]() {
                                status->setText(QStringLiteral("Closed"));
                            });

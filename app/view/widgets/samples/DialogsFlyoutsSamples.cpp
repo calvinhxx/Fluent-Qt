@@ -103,6 +103,14 @@ Button *sampleButton(QWidget *parent, const QString &text) {
   return button;
 }
 
+template <typename DialogType>
+DialogType* themedDialog(DialogType* dialog, QWidget* source)
+{
+  if (dialog)
+    dialog->setThemeSource(source);
+  return dialog;
+}
+
 QString contentDialogResultText(int result) {
   if (result == ContentDialog::ResultPrimary)
     return QStringLiteral("Primary");
@@ -282,7 +290,7 @@ QVector<GallerySample> contentDialogSamples() {
 
             QObject::connect(
                 button, &Button::clicked, button, [button, status]() {
-                  auto *dialog = new ContentDialog(button->window());
+                  auto *dialog = themedDialog(new ContentDialog(button->window()), button);
                   dialog->setTitle(QStringLiteral("Save your work?"));
                   dialog->setContent(makeBodyLabel(
                       nullptr,
@@ -359,7 +367,7 @@ QVector<GallerySample> contentDialogSamples() {
                   boxLayout(content)->addWidget(body);
                   boxLayout(content)->addWidget(upload);
 
-                  auto *dialog = new ContentDialog(button->window());
+                  auto *dialog = themedDialog(new ContentDialog(button->window()), button);
                   dialog->setTitle(QStringLiteral("Share draft?"));
                   dialog->setContent(content);
                   dialog->setPrimaryButtonText(QStringLiteral("Share"));
@@ -420,7 +428,7 @@ QVector<GallerySample> dialogSamples() {
 
             QObject::connect(
                 button, &Button::clicked, button, [button, status]() {
-                  auto *dialog = new Dialog(button->window());
+                  auto *dialog = themedDialog(new Dialog(button->window()), button);
                   dialog->setMinimumSize(480, 280);
                   auto *layout = new QVBoxLayout(dialog);
                   layout->setContentsMargins(32, 28, 32, 28);
@@ -479,7 +487,7 @@ QVector<GallerySample> dialogSamples() {
 
             auto openDialog = [status](Button *trigger, bool animation,
                                        bool smoke) {
-              auto *dialog = new Dialog(trigger->window());
+              auto *dialog = themedDialog(new Dialog(trigger->window()), trigger);
               dialog->setSmokeEnabled(smoke);
               dialog->setAnimationEnabled(animation);
               dialog->setMinimumSize(420, 220);
@@ -679,6 +687,7 @@ QVector<GallerySample> popupSamples() {
                 button, &Button::clicked, button,
                 [button, lightDismiss, status]() {
                   auto *popup = new Popup(button->window());
+                  popup->setThemeSource(button);
                   popup->setMinimumSize(360, 186);
                   popup->setClosePolicy(
                       lightDismiss->isOn()
@@ -747,6 +756,7 @@ QVector<GallerySample> popupSamples() {
             QObject::connect(
                 button, &Button::clicked, button, [button, status]() {
                   auto *popup = new Popup(button->window());
+                  popup->setThemeSource(button);
                   popup->setModal(true);
                   popup->setDim(true);
                   popup->setClosePolicy(Popup::CloseOnEscape);

@@ -2,8 +2,10 @@
 
 #include <QEvent>
 #include <QFrame>
+#include <QHBoxLayout>
 #include <QPainter>
 #include <QPalette>
+#include <QSizePolicy>
 #include <QVBoxLayout>
 
 #include "components/scrolling/ScrollView.h"
@@ -95,12 +97,20 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
     m_contentLayout->setContentsMargins(24, 34, 24, 48);
     m_contentLayout->setSpacing(16);
 
-    m_titleLabel = new fluent::textfields::Label(m_title, m_viewport);
+    m_headerRow = new QWidget(m_viewport);
+    m_headerRow->setObjectName(QStringLiteral("galleryContentHeaderRow"));
+    m_headerLayout = new QHBoxLayout(m_headerRow);
+    m_headerLayout->setContentsMargins(0, 0, 0, 0);
+    m_headerLayout->setSpacing(8);
+
+    m_titleLabel = new fluent::textfields::Label(m_title, m_headerRow);
     m_titleLabel->setObjectName(QStringLiteral("galleryContentTitle"));
     m_titleLabel->setProperty("galleryRouteId", m_routeId);
     m_titleLabel->setFluentTypography(Typography::FontRole::Title);
     m_titleLabel->setWordWrap(true);
-    m_contentLayout->addWidget(m_titleLabel);
+    m_titleLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    m_headerLayout->addWidget(m_titleLabel, 1, Qt::AlignVCenter);
+    m_contentLayout->addWidget(m_headerRow);
 
     if (!m_subtitle.isEmpty()) {
         m_subtitleLabel =
@@ -149,10 +159,18 @@ void GalleryContentPage::addContentSpacing(int pixels)
     m_contentLayout->insertSpacing(m_contentLayout->count() - 1, pixels);
 }
 
+void GalleryContentPage::addHeaderAction(QWidget* widget)
+{
+    if (!widget || !m_headerLayout)
+        return;
+    widget->setParent(m_headerRow);
+    m_headerLayout->addWidget(widget, 0, Qt::AlignVCenter);
+}
+
 void GalleryContentPage::setPageHeaderVisible(bool visible)
 {
-    if (m_titleLabel)
-        m_titleLabel->setVisible(visible);
+    if (m_headerRow)
+        m_headerRow->setVisible(visible);
     if (m_subtitleLabel)
         m_subtitleLabel->setVisible(visible);
 }
