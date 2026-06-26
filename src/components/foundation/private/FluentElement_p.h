@@ -30,6 +30,11 @@ public:
     FluentElement::Theme currentTheme = FluentElement::Light;
     QSet<FluentElement*> elements;
 
+    // Bumped on every theme change. A widget subtree that was hidden (and thus deferred) during a change
+    // can compare its last-themed generation against this to decide whether it must refresh on show.
+    // zh_CN: 每次主题变化时自增。切换期间处于隐藏（因而被延后）的子树，可用自己上次刷新的代次与此比较，决定显示时是否需刷新。
+    int generation() const { return notificationGeneration; }
+
     void notifyAll() {
         ++notificationGeneration;
         deferredElements.clear();
@@ -50,19 +55,30 @@ public:
         deferredIndex = 0;
 
         const auto copy = elements;
-        QVector<FluentElement*> hiddenElements;
+        QVector<FluentElement*> visibleElements;
         deferredElements.reserve(copy.size());
-        hiddenElements.reserve(copy.size());
+        visibleElements.reserve(copy.size());
         for (auto* element : copy) {
             if (!elements.contains(element))
                 continue;
             auto* widget = dynamic_cast<QWidget*>(element);
             if (widget && !widget->isVisible())
-                hiddenElements.append(element);
+                deferredElements.append(element);   // off-screen → themed lazily (backstop)
             else
-                deferredElements.append(element);
+                visibleElements.append(element);    // on-screen → themed now
         }
-        deferredElements += hiddenElements;
+
+        // Theme the on-screen elements synchronously so the visible switch is ATOMIC: every update()
+        // coalesces into a single repaint instead of staggering across timer ticks. The cost is bounded
+        // by what's visible (tens of widgets), not the whole prewarmed tree (thousands). Off-screen
+        // elements are deferred and also re-themed on show (see StackContentHost), so navigating to a
+        // prewarmed page never reveals a stale theme. zh_CN: 同步刷新可见元素，使屏幕切换是原子的：所有 update()
+        // 合并为一次重绘，而非分散到多个定时器 tick。开销受可见元素数（数十个）限制，而非整棵预热树（数千个）。
+        // 隐藏元素延后刷新，并在显示时再刷新（见 StackContentHost），导航到预热页绝不会露出过期主题。
+        for (auto* element : visibleElements) {
+            if (elements.contains(element))
+                element->onThemeUpdated();
+        }
 
         if (!deferredElements.isEmpty()) {
             QTimer::singleShot(0, this, [this, generation]() {
@@ -76,10 +92,13 @@ private:
         if (generation != notificationGeneration)
             return;
 
-        // A small batch keeps theme propagation below a frame budget even when the
-        // gallery has prewarmed many component pages. Visible elements are queued first.
-        // zh_CN: 小批次刷新避免预热页面较多时阻塞一整帧；可见元素优先入队。
-        constexpr int batchSize = 24;
+        // Only off-screen elements reach here (visible ones were themed synchronously). This is an
+        // eventual-consistency net for hidden widgets not covered by an on-show refresh (e.g. collapsed
+        // nav rows); a stacked page that is navigated to is re-themed on show. Keep the batch small so a
+        // single tick stays well under a frame even though each onThemeUpdated isn't free.
+        // zh_CN: 只有屏外元素会走到这里(可见的已同步刷新)。这是对未被"显示时刷新"覆盖的隐藏控件(如折叠的导航行)
+        // 的最终一致性兜底;被导航到的分页会在显示时重刷。批次保持小,使单个 tick 远低于一帧。
+        constexpr int batchSize = 8;
         const int end = qMin(deferredIndex + batchSize, deferredElements.size());
         for (; deferredIndex < end; ++deferredIndex) {
             auto* element = deferredElements.at(deferredIndex);

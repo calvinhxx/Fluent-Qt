@@ -14,6 +14,32 @@
 
 namespace fluent::navigation {
 
+namespace {
+
+// Records the theme generation a page subtree was last refreshed for, so a page hidden during a theme
+// change can be re-themed exactly once when it is next shown. zh_CN: 记录页子树上次刷新对应的主题代次，
+// 使切换主题期间隐藏的页在下次显示时恰好重刷一次。
+constexpr char kThemedGenerationProperty[] = "fluentThemedGeneration";
+
+// Themes root and every FluentElement descendant. Used to bring a stale (off-screen during the switch)
+// page subtree up to the current theme synchronously, before it is shown — so its update()s coalesce
+// into the page's first paint. zh_CN: 刷新 root 及其所有 FluentElement 后代。用于在显示前同步把过期（切换时
+// 在屏外）的页子树更新到当前主题，使其 update() 合并进该页首次绘制。
+void refreshFluentTree(QWidget* root)
+{
+    if (!root)
+        return;
+    if (auto* element = dynamic_cast<FluentElement*>(root))
+        element->onThemeUpdated();
+    const auto children = root->findChildren<QWidget*>();
+    for (QWidget* child : children) {
+        if (auto* element = dynamic_cast<FluentElement*>(child))
+            element->onThemeUpdated();
+    }
+}
+
+} // namespace
+
 StackContentHost::StackContentHost(QWidget* parent)
     : QWidget(parent)
     , m_layout(new QStackedLayout())
@@ -283,6 +309,10 @@ StackContentHost::PageRecord StackContentHost::makePage(QWidget* widget)
     if (QWidget* stackWidget = page.stackWidget.data()) {
         stackWidget->setGeometry(rect());
         stackWidget->hide();
+        // A freshly built page already reflects the current theme, so stamp it current — the on-show
+        // staleness check then only refreshes it if the theme changes while it is hidden. zh_CN: 新建页
+        // 已是当前主题,先标记为当前——显示时的过期检查便只在该页隐藏期间主题变化时才刷新它。
+        stackWidget->setProperty(kThemedGenerationProperty, FluentElement::themeGeneration());
     }
     return page;
 }
@@ -392,6 +422,16 @@ void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
     }
 
     if (currentWidget) {
+        // If the theme changed while this page was hidden, the global manager only themed visible
+        // elements — refresh this subtree now, before it paints, so a prewarmed page never flashes a
+        // stale theme on navigation. The cost is one page's worth of widgets, only when stale.
+        // zh_CN: 若该页隐藏期间主题变了,全局管理器只刷新了可见元素——在它绘制前刷新本子树,使预热页导航时
+        // 绝不会闪过期主题。开销仅为一页的控件量,且仅在过期时发生。
+        const int generation = FluentElement::themeGeneration();
+        if (currentWidget->property(kThemedGenerationProperty).toInt() != generation) {
+            refreshFluentTree(currentWidget);
+            currentWidget->setProperty(kThemedGenerationProperty, generation);
+        }
         m_layout->setCurrentWidget(currentWidget);
         currentWidget->setGeometry(rect());
         currentWidget->show();

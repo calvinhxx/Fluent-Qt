@@ -123,7 +123,11 @@ void Window::onThemeUpdated() {
         m_maximizeButton->onThemeUpdated();
     if (m_closeButton)
         m_closeButton->onThemeUpdated();
-    refreshFluentDescendants(m_contentHost);
+    // Content descendants are themed by the global FluentThemeManager (visible ones synchronously, the
+    // rest lazily/on-show), so this no longer walks the whole content tree — that synchronous walk over
+    // every prewarmed page was the multi-hundred-ms theme-switch freeze. zh_CN: 内容子级由全局
+    // FluentThemeManager 刷新（可见的同步，其余延后/显示时刷新），故此处不再遍历整棵内容树——对每个预热页的
+    // 同步遍历正是切换主题数百毫秒卡顿的根源。
     update();
 }
 

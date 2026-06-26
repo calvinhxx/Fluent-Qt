@@ -471,7 +471,7 @@ TEST_F(FluentElementTest, ThemeSwitching) {
     EXPECT_EQ(component.updateCount, 2);
 }
 
-TEST_F(FluentElementTest, DeferredThemeSwitchYieldsBeforeBroadcast) {
+TEST_F(FluentElementTest, DeferredThemeSwitchThemesVisibleSynchronouslyThenHidden) {
     auto* visibleComponent = new MockComponent(window);
     layout->addWidget(visibleComponent);
     window->show();
@@ -480,11 +480,16 @@ TEST_F(FluentElementTest, DeferredThemeSwitchYieldsBeforeBroadcast) {
 
     fluent::FluentElement::setThemeDeferred(fluent::FluentElement::Dark);
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
-    EXPECT_EQ(visibleComponent->updateCount, 0);
+    // Visible elements are themed synchronously so the on-screen switch is atomic (one coalesced
+    // repaint); only off-screen elements are deferred. zh_CN: 可见元素同步刷新，使屏幕切换是原子的
+    //（一次合并重绘）；仅屏外元素延后。
+    EXPECT_EQ(visibleComponent->updateCount, 1);
     EXPECT_EQ(hiddenComponent.updateCount, 0);
 
-    QTRY_COMPARE_WITH_TIMEOUT(visibleComponent->updateCount, 1, 1000);
+    // The deferred hidden element catches up on a later tick, and the visible one is themed exactly once.
+    // zh_CN: 延后的隐藏元素在之后的 tick 补刷；可见元素恰好刷新一次。
     QTRY_COMPARE_WITH_TIMEOUT(hiddenComponent.updateCount, 1, 1000);
+    EXPECT_EQ(visibleComponent->updateCount, 1);
 }
 
 TEST_F(FluentElementTest, ColorTokenMapping) {

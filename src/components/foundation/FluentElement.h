@@ -126,6 +126,16 @@ public:
     static Theme currentTheme();
 
     /**
+     * @brief Monotonic counter bumped on every theme change, for staleness checks.
+     * zh_CN: 每次主题变化自增的单调计数器，用于过期判断。
+     *
+     * A subtree hidden during a theme change is themed lazily; comparing the generation it last
+     * refreshed against this lets a host (e.g. a stacked page) refresh it exactly once on show.
+     * zh_CN: 切换期间隐藏的子树会延后刷新；用它上次刷新的代次与此比较，宿主（如分页栈中的页）可在显示时恰好刷新一次。
+     */
+    static int themeGeneration();
+
+    /**
      * @brief Resolves the theme used by this element, honoring an inherited QWidget override.
      * zh_CN: 解析此元素实际使用的主题，会优先读取 QWidget 父链上的局部主题覆盖。
      *
