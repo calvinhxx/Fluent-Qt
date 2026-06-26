@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QPropertyAnimation>
 #include <QPointer>
+#include <QList>
 #include <QFlags>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -77,6 +78,25 @@ public:
 
     bool isModal() const { return m_modal; }
     void setModal(bool m) { m_modal = m; }
+
+    // When true, a CloseOnPressOutside light-dismiss SWALLOWS the dismissing press instead of letting
+    // it fall through to whatever is underneath — ComboBox-dropdown semantics (one click only closes
+    // the popup; it does not also activate the control beneath). Default false keeps the menu-style
+    // behaviour where the dismiss click still hits its target. zh_CN: 为 true 时，CloseOnPressOutside 轻关闭会
+    // 「吞掉」这次关闭点击，而非穿透到下方控件——即 ComboBox 下拉的语义（一次点击只关闭弹窗，不会顺带激活下方控件）。
+    // 默认 false，保持菜单式行为：关闭点击仍命中其目标。
+    bool lightDismissConsumesPress() const { return m_lightDismissConsumesPress; }
+    void setLightDismissConsumesPress(bool consume) { m_lightDismissConsumesPress = consume; }
+
+    // Regions exempt from the consume above: a dismissing press that lands inside one of these widgets
+    // still falls through to it, so a sibling toolbar / nav bar stays one-click reachable while the
+    // popup closes. Only meaningful together with lightDismissConsumesPress. zh_CN: 上面「吞掉」的豁免区域:
+    // 落在这些控件内的关闭点击仍会穿透给它们，使同级工具栏/导航栏在弹窗关闭的同时仍可「一次点击」直达。
+    // 仅在 lightDismissConsumesPress 为真时有意义。
+    void addLightDismissPassthrough(QWidget* widget) {
+        if (widget) m_lightDismissPassthrough.append(widget);
+    }
+    void clearLightDismissPassthrough() { m_lightDismissPassthrough.clear(); }
 
     bool isDim() const { return m_dim; }
     void setDim(bool d) { m_dim = d; }
@@ -156,6 +176,8 @@ private:
     QPointer<QWidget> m_themeSource;
 
     ClosePolicy m_closePolicy = ClosePolicy(CloseOnPressOutside | CloseOnEscape);
+    bool m_lightDismissConsumesPress = false;
+    QList<QPointer<QWidget>> m_lightDismissPassthrough;
     bool m_modal = false;
     bool m_dim   = false;
     bool m_animationEnabled = true;

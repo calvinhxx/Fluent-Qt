@@ -384,6 +384,33 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
     if (::fluent::overlay::visibleCardContains(rect(), local)) return false;
 
     close();
+    // ComboBox-dropdown semantics when requested: swallow the dismissing press so it doesn't also
+    // activate the widget beneath — EXCEPT inside a registered passthrough region (e.g. the sibling nav
+    // bar), where the press still falls through so adjacent controls stay one-click reachable.
+    // zh_CN: 按需采用 ComboBox 下拉语义：吞掉这次关闭点击，避免顺带激活下方控件——但在已登记的「穿透区域」（如同级导航栏）
+    // 内除外，那里的点击仍会穿透，使相邻控件保持「一次点击」直达。
+    if (m_lightDismissConsumesPress) {
+        // Let the press through if it lands inside a passthrough region (the sibling nav bar) so that
+        // bar stays one-click reachable while the popup dismisses. Two complementary tests: widgetAt +
+        // isAncestorOf follows the real widget hierarchy (robust on a live top-level), and a geometry
+        // contains() as a fallback for platforms where widgetAt returns null (e.g. the offscreen test
+        // plugin). zh_CN: 若按下点落在穿透区域(同级导航栏)内则放行,使该栏在弹窗关闭时仍可「一次点击」直达。两种互补判定:
+        // widgetAt + isAncestorOf 顺真实控件层级判断(在真实顶层上稳健),几何 contains() 作为后备,用于 widgetAt 返回空的
+        // 平台(如 offscreen 测试插件)。
+        QWidget* hit = QApplication::widgetAt(globalPos);
+        for (const QPointer<QWidget>& passthrough : m_lightDismissPassthrough) {
+            if (!passthrough)
+                continue;
+            const bool byHierarchy = hit
+                && (hit == passthrough.data() || passthrough->isAncestorOf(hit));
+            const bool byGeometry = passthrough->isVisible()
+                && passthrough->rect().contains(passthrough->mapFromGlobal(globalPos));
+            if (byHierarchy || byGeometry)
+                return false;
+        }
+        event->accept();
+        return true;
+    }
     return false;
 }
 
