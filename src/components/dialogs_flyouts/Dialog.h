@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QPropertyAnimation>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPointer>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -30,9 +31,18 @@ class SmokeOverlay : public QWidget {
      * zh_CN: 遮罩淡入进度，从透明过渡到目标暗化颜色。
      */
     Q_PROPERTY(double progress READ progress WRITE setProgress)
+    /**
+     * @brief Rounded cut-out kept un-dimmed to spotlight a target (window-local coords).
+     * zh_CN: 保持不压暗的圆角挖空区域，用于聚光高亮某个目标（窗口局部坐标）。
+     */
+    Q_PROPERTY(QRect spotlightRect READ spotlightRect WRITE setSpotlightRect)
 public:
     explicit SmokeOverlay(QWidget* parent) : QWidget(parent) {
         setAttribute(Qt::WA_TransparentForMouseEvents, false);
+        // Don't auto-fill an opaque background: paintEvent composites the dim over the live content
+        // beneath, and a spotlight cut-out must reveal that content un-dimmed. zh_CN: 不自动填充不透明背景：
+        // paintEvent 把压暗叠加在下方实时内容上，聚光挖空处需露出未压暗的内容。
+        setAttribute(Qt::WA_NoSystemBackground, true);
     }
     void setColor(const QColor& c) { m_color = c; update(); }
     double progress() const { return m_progress; }
@@ -41,16 +51,49 @@ public:
         m_progress = p;
         update();
     }
+
+    // Spotlight: punch a rounded hole through the dim so one target stays at full brightness. Disabled
+    // by default (empty rect) → uniform dim, so Dialog and other callers are unchanged. zh_CN: 聚光：在压暗层
+    // 上挖一个圆角洞,让某个目标保持全亮。默认关闭(空矩形)→均匀压暗,Dialog 等调用方行为不变。
+    bool spotlightEnabled() const { return m_spotEnabled; }
+    void setSpotlightEnabled(bool e) {
+        if (m_spotEnabled == e) return;
+        m_spotEnabled = e;
+        update();
+    }
+    QRect spotlightRect() const { return m_spot; }
+    void setSpotlightRect(const QRect& r) {
+        if (m_spot == r) return;
+        m_spot = r;
+        if (m_spotEnabled) update();
+    }
+    void setSpotlightRadius(int radius) {
+        if (m_spotRadius == radius) return;
+        m_spotRadius = radius;
+        if (m_spotEnabled) update();
+    }
 protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);
         QColor c = m_color;
         c.setAlpha(int(m_color.alpha() * qBound(0.0, m_progress, 1.0)));
-        p.fillRect(rect(), c);
+        if (!m_spotEnabled || m_spot.isEmpty()) {
+            p.fillRect(rect(), c);
+            return;
+        }
+        p.setRenderHint(QPainter::Antialiasing, true);
+        QPainterPath dim;
+        dim.addRect(QRectF(rect()));
+        QPainterPath hole;
+        hole.addRoundedRect(QRectF(m_spot), m_spotRadius, m_spotRadius);
+        p.fillPath(dim.subtracted(hole), c);
     }
 private:
     QColor  m_color{0, 0, 0, 102};
     double  m_progress = 0.0;
+    bool    m_spotEnabled = false;
+    QRect   m_spot;
+    int     m_spotRadius = 8;
 };
 /**
  * @brief Fluent dialog window with smoke overlay, drag support, and enter/exit animation.
