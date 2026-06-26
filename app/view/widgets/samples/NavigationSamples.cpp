@@ -591,12 +591,6 @@ QVector<NavigationDashboardPage*> populateNavigationPages(StackContentHost* host
     return pages;
 }
 
-void setNavigationPagesLeftInset(const QVector<NavigationDashboardPage*>& pages, int inset)
-{
-    for (NavigationDashboardPage* page : pages)
-        page->setContentLeftInset(inset);
-}
-
 void connectNavigationRoutes(NavigationDemoSection* headerSection,
                              NavigationDemoSection* mainSection,
                              NavigationDemoSection* footerSection,
@@ -1088,20 +1082,15 @@ QVector<GallerySample> navigationViewSamples()
 
                        populateNavigationPages(navView->contentHost());
 
-                       auto* modeStatus = makeStatusLabel(surface, QStringLiteral("Mode: Left, effective: Left, transition: SlideFromLeft"));
+                       auto* modeStatus = makeStatusLabel(surface, QStringLiteral("Display mode: Left"));
                        modeStatus->setFluentTypography(Typography::FontRole::Caption);
                        auto* routeStatus = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
                        routeStatus->setFluentTypography(Typography::FontRole::Caption);
                        connectNavigationRoutes(headerSection, mainSection, footerSection, navView->contentHost(), routeStatus);
 
                        auto updateStatus = [modeStatus, navView]() {
-                           const QString transition = navView->contentHost()->transitionEffect() == StackContentHost::TransitionEffect::SlideFromBottom
-                                                          ? QStringLiteral("SlideFromBottom")
-                                                          : QStringLiteral("SlideFromLeft");
-                           modeStatus->setText(QStringLiteral("Mode: %1, effective: %2, transition: %3")
-                                               .arg(navigationDisplayModeName(navView->displayMode()),
-                                                    navigationDisplayModeName(navView->effectiveDisplayMode()),
-                                                    transition));
+                           modeStatus->setText(QStringLiteral("Display mode: %1")
+                                               .arg(navigationDisplayModeName(navView->displayMode())));
                        };
 
                        auto setMode = [navView, headerSection, mainSection, footerSection,
@@ -1136,214 +1125,6 @@ QVector<GallerySample> navigationViewSamples()
                                         navView, [setMode]() { setMode(NavigationView::DisplayMode::LeftMinimal); });
                        QObject::connect(topButton, &Button::clicked,
                                         navView, [setMode]() { setMode(NavigationView::DisplayMode::Top); });
-
-                       surface->layout()->addWidget(controls);
-                       surface->layout()->addWidget(navView);
-                       surface->layout()->addWidget(modeStatus);
-                       surface->layout()->addWidget(routeStatus);
-                       group->layout()->addWidget(surface);
-                       return group;
-                   }),
-
-        makeSample(QStringLiteral("navigation-view-pane-metrics"),
-                   QStringLiteral("PaneOpen and metrics"),
-                   QStringLiteral("expandedPaneWidth, compactPaneWidth, topBarHeight, and paneOpen directly change the shell rectangles."),
-                   QStringLiteral("navView->setAnimationEnabled(true);\n"
-                                  "navView->setExpandedPaneWidth(180);\n"
-                                  "navView->setCompactPaneWidth(52);\n"
-                                  "navView->setTopBarHeight(52);\n"
-                                  "auto showExpanded = [&] {\n"
-                                  "    mainSection->setOrientation(Qt::Vertical);\n"
-                                  "    mainSection->setCompact(false);\n"
-                                  "    setNavigationPagesLeftInset(pages, 0);\n"
-                                  "    navView->setDisplayMode(NavigationView::DisplayMode::Left);\n"
-                                  "    navView->setPaneOpen(true);\n"
-                                  "};\n"
-                                  "auto showCompact = [&] {\n"
-                                  "    mainSection->setOrientation(Qt::Vertical);\n"
-                                  "    mainSection->setCompact(true);\n"
-                                  "    setNavigationPagesLeftInset(pages, 0);\n"
-                                  "    navView->setDisplayMode(NavigationView::DisplayMode::LeftCompact);\n"
-                                  "    navView->setPaneOpen(false);\n"
-                                  "};\n"
-                                  "auto showMinimalOverlay = [&] {\n"
-                                  "    mainSection->setOrientation(Qt::Vertical);\n"
-                                  "    mainSection->setCompact(false);\n"
-                                  "    setNavigationPagesLeftInset(pages, navView->expandedPaneWidth());\n"
-                                  "    navView->setDisplayMode(NavigationView::DisplayMode::LeftMinimal);\n"
-                                  "    navView->setPaneOpen(true);\n"
-                                  "};\n"
-                                  "auto showTop = [&] {\n"
-                                  "    mainSection->setOrientation(Qt::Horizontal);\n"
-                                  "    mainSection->setCompact(false);\n"
-                                  "    setNavigationPagesLeftInset(pages, 0);\n"
-                                  "    navView->setDisplayMode(NavigationView::DisplayMode::Top);\n"
-                                  "    navView->setPaneOpen(true);\n"
-                                  "};"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* surface = makeNavigationPreviewSurface(group);
-                       auto* controls = horizontalGroup(surface, 6);
-                       auto* expandedButton = makeControlButton(controls, QStringLiteral("Left 180"));
-                       auto* compactButton = makeControlButton(controls, QStringLiteral("Compact 52"));
-                       auto* minimalButton = makeControlButton(controls, QStringLiteral("Minimal overlay"));
-                       auto* topButton = makeControlButton(controls, QStringLiteral("Top 52"));
-                       for (Button* button : {expandedButton, compactButton, minimalButton, topButton})
-                           controls->layout()->addWidget(button);
-
-                       auto* navView = new NavigationView(surface);
-                       navView->setFixedSize(620, 320);
-                       navView->setAnimationEnabled(true);
-                       navView->setExpandedPaneWidth(180);
-                       navView->setCompactPaneWidth(52);
-                       navView->setTopBarHeight(52);
-
-                       auto* mainSection = new NavigationDemoSection({
-                           {Typography::Icons::Home, QStringLiteral("Home"), 0},
-                           {Typography::Icons::Document, QStringLiteral("Documents"), 2},
-                           {Typography::Icons::Settings, QStringLiteral("Settings"), 5},
-                       }, navView);
-                       mainSection->setSelectedIndex(0);
-                       navView->setMainChromeWidget(mainSection);
-                       const QVector<NavigationDashboardPage*> pages = populateNavigationPages(navView->contentHost());
-
-                       auto* modeStatus = makeStatusLabel(surface, QStringLiteral("expandedPaneWidth: 180, compactPaneWidth: 52, topBarHeight: 52"));
-                       modeStatus->setFluentTypography(Typography::FontRole::Caption);
-                       auto* routeStatus = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
-                       routeStatus->setFluentTypography(Typography::FontRole::Caption);
-                       connectNavigationRoutes(nullptr, mainSection, nullptr, navView->contentHost(), routeStatus);
-
-                       auto updateButtons = [expandedButton, compactButton, minimalButton, topButton](NavigationView::DisplayMode mode) {
-                           expandedButton->setFluentStyle(mode == NavigationView::DisplayMode::Left ? Button::Accent : Button::Standard);
-                           compactButton->setFluentStyle(mode == NavigationView::DisplayMode::LeftCompact ? Button::Accent : Button::Standard);
-                           minimalButton->setFluentStyle(mode == NavigationView::DisplayMode::LeftMinimal ? Button::Accent : Button::Standard);
-                           topButton->setFluentStyle(mode == NavigationView::DisplayMode::Top ? Button::Accent : Button::Standard);
-                       };
-                       auto applyMode = [navView, mainSection, pages, modeStatus, updateButtons](NavigationView::DisplayMode mode, bool paneOpen) {
-                           const bool top = mode == NavigationView::DisplayMode::Top;
-                           mainSection->setOrientation(top ? Qt::Horizontal : Qt::Vertical);
-                           mainSection->setCompact(mode == NavigationView::DisplayMode::LeftCompact && !paneOpen);
-                           setNavigationPagesLeftInset(pages,
-                                                        mode == NavigationView::DisplayMode::LeftMinimal && paneOpen
-                                                            ? navView->expandedPaneWidth()
-                                                            : 0);
-                           navView->setDisplayMode(mode);
-                           navView->setPaneOpen(paneOpen);
-                           updateButtons(mode);
-                           modeStatus->setText(QStringLiteral("Mode: %1, paneOpen: %2, expanded: 180, compact: 52, topBar: 52")
-                                               .arg(navigationDisplayModeName(navView->displayMode()),
-                                                    navView->isPaneOpen() ? QStringLiteral("true") : QStringLiteral("false")));
-                       };
-
-                       applyMode(NavigationView::DisplayMode::Left, true);
-                       QObject::connect(expandedButton, &Button::clicked,
-                                        navView, [applyMode]() { applyMode(NavigationView::DisplayMode::Left, true); });
-                       QObject::connect(compactButton, &Button::clicked,
-                                        navView, [applyMode]() { applyMode(NavigationView::DisplayMode::LeftCompact, false); });
-                       QObject::connect(minimalButton, &Button::clicked,
-                                        navView, [applyMode]() { applyMode(NavigationView::DisplayMode::LeftMinimal, true); });
-                       QObject::connect(topButton, &Button::clicked,
-                                        navView, [applyMode]() { applyMode(NavigationView::DisplayMode::Top, true); });
-
-                       surface->layout()->addWidget(controls);
-                       surface->layout()->addWidget(navView);
-                       surface->layout()->addWidget(modeStatus);
-                       surface->layout()->addWidget(routeStatus);
-                       group->layout()->addWidget(surface);
-                       return group;
-                   }),
-
-        makeSample(QStringLiteral("navigation-view-auto-responsive"),
-                   QStringLiteral("Auto responsive thresholds"),
-                   QStringLiteral("DisplayMode::Auto resolves to Left, LeftCompact, or LeftMinimal from the widget width and configured thresholds."),
-                   QStringLiteral("navView->setAnimationEnabled(true);\n"
-                                  "navView->setDisplayMode(NavigationView::DisplayMode::Auto);\n"
-                                  "navView->setExpandedPaneWidth(180);\n"
-                                  "navView->setCompactPaneWidth(52);\n"
-                                  "navView->setFixedSize(520, 300);\n"
-                                  "auto resolveAutoAsLeft = [&] {\n"
-                                  "    navView->setCompactModeThresholdWidth(260);\n"
-                                  "    navView->setExpandedModeThresholdWidth(420);\n"
-                                  "    navView->setPaneOpen(true);\n"
-                                  "};\n"
-                                  "auto resolveAutoAsCompact = [&] {\n"
-                                  "    navView->setCompactModeThresholdWidth(340);\n"
-                                  "    navView->setExpandedModeThresholdWidth(620);\n"
-                                  "    navView->setPaneOpen(false);\n"
-                                  "};\n"
-                                  "auto resolveAutoAsMinimal = [&] {\n"
-                                  "    navView->setCompactModeThresholdWidth(540);\n"
-                                  "    navView->setExpandedModeThresholdWidth(680);\n"
-                                  "    navView->setPaneOpen(false);\n"
-                                  "};\n"
-                                  "mainSection->onActivated = [host = navView->contentHost()](int pageIndex) {\n"
-                                  "    const int direction = pageIndex >= host->currentIndex() ? 1 : -1;\n"
-                                  "    host->setCurrentIndex(pageIndex, direction, true);\n"
-                                  "};"),
-                   [](QWidget* parent) {
-                       QWidget* group = verticalGroup(parent, 8);
-                       auto* surface = makeNavigationPreviewSurface(group);
-                       auto* controls = horizontalGroup(surface, 6);
-                       auto* leftAutoButton = makeControlButton(controls, QStringLiteral("Auto Left"));
-                       auto* compactAutoButton = makeControlButton(controls, QStringLiteral("Auto Compact"));
-                       auto* minimalAutoButton = makeControlButton(controls, QStringLiteral("Auto Minimal"));
-                       for (Button* button : {leftAutoButton, compactAutoButton, minimalAutoButton})
-                           controls->layout()->addWidget(button);
-
-                       auto* navView = new NavigationView(surface);
-                       navView->setAnimationEnabled(true);
-                       navView->setDisplayMode(NavigationView::DisplayMode::Auto);
-                       navView->setFixedSize(520, 300);
-                       navView->setExpandedPaneWidth(180);
-                       navView->setCompactPaneWidth(52);
-
-                       auto* mainSection = new NavigationDemoSection({
-                           {Typography::Icons::Home, QStringLiteral("Home"), 0},
-                           {Typography::Icons::Document, QStringLiteral("Documents"), 2},
-                           {Typography::Icons::Info, QStringLiteral("Help"), 4},
-                       }, navView);
-                       mainSection->setSelectedIndex(0);
-                       navView->setMainChromeWidget(mainSection);
-                       populateNavigationPages(navView->contentHost());
-
-                       auto* modeStatus = makeStatusLabel(surface, QStringLiteral("Width: 520 px, effective: Left, thresholds: 260 / 420"));
-                       modeStatus->setFluentTypography(Typography::FontRole::Caption);
-                       auto* routeStatus = makeStatusLabel(surface, QStringLiteral("Current page: Home"));
-                       routeStatus->setFluentTypography(Typography::FontRole::Caption);
-                       connectNavigationRoutes(nullptr, mainSection, nullptr, navView->contentHost(), routeStatus);
-
-                       auto updateButtons = [leftAutoButton, compactAutoButton, minimalAutoButton](NavigationView::DisplayMode mode) {
-                           leftAutoButton->setFluentStyle(mode == NavigationView::DisplayMode::Left ? Button::Accent : Button::Standard);
-                           compactAutoButton->setFluentStyle(mode == NavigationView::DisplayMode::LeftCompact ? Button::Accent : Button::Standard);
-                           minimalAutoButton->setFluentStyle(mode == NavigationView::DisplayMode::LeftMinimal ? Button::Accent : Button::Standard);
-                       };
-                       auto applyAutoThresholds = [navView, mainSection, modeStatus, updateButtons](int compactThreshold,
-                                                                                                    int expandedThreshold,
-                                                                                                    bool paneOpen) {
-                           if (expandedThreshold > navView->expandedModeThresholdWidth()) {
-                               navView->setExpandedModeThresholdWidth(expandedThreshold);
-                               navView->setCompactModeThresholdWidth(compactThreshold);
-                           } else {
-                               navView->setCompactModeThresholdWidth(compactThreshold);
-                               navView->setExpandedModeThresholdWidth(expandedThreshold);
-                           }
-                           navView->setPaneOpen(paneOpen);
-                           const auto effectiveMode = navView->effectiveDisplayMode();
-                           mainSection->setCompact(effectiveMode != NavigationView::DisplayMode::Left);
-                           modeStatus->setText(QStringLiteral("Width: 520 px, effective: %1, thresholds: %2 / %3")
-                                                   .arg(navigationDisplayModeName(effectiveMode))
-                                                   .arg(compactThreshold)
-                                                   .arg(expandedThreshold));
-                           updateButtons(effectiveMode);
-                       };
-
-                       applyAutoThresholds(260, 420, true);
-                       QObject::connect(leftAutoButton, &Button::clicked,
-                                        navView, [applyAutoThresholds]() { applyAutoThresholds(260, 420, true); });
-                       QObject::connect(compactAutoButton, &Button::clicked,
-                                        navView, [applyAutoThresholds]() { applyAutoThresholds(340, 620, false); });
-                       QObject::connect(minimalAutoButton, &Button::clicked,
-                                        navView, [applyAutoThresholds]() { applyAutoThresholds(540, 680, false); });
 
                        surface->layout()->addWidget(controls);
                        surface->layout()->addWidget(navView);
