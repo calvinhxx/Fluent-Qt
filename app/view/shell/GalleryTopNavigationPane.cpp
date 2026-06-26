@@ -119,6 +119,23 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
     m_childFlyout->setClosePolicy(fluent::dialogs_flyouts::Popup::ClosePolicy(
         fluent::dialogs_flyouts::Popup::CloseOnPressOutside
         | fluent::dialogs_flyouts::Popup::CloseOnEscape));
+    // ComboBox-dropdown dismiss: a press outside the flyout only closes it (the press is swallowed and
+    // does NOT also activate the card / nav button beneath). This also gives a natural toggle — clicking
+    // the same top button again is consumed as the dismiss, so it closes rather than reopening.
+    // zh_CN: ComboBox 下拉式关闭:点击浮窗外部只关闭浮窗（该点击被吞掉，不会顺带激活下方卡片/导航按钮）。这也带来自然的
+    // 开合切换——再次点击同一顶部按钮会被当作这次关闭吞掉，于是关闭而非重新打开。
+    m_childFlyout->setLightDismissConsumesPress(true);
+    // ...but presses on the top nav bar itself still fall through, so switching to another category
+    // (or hitting the footer's Settings) stays a single click while this flyout dismisses. Both the
+    // main and footer top panes are siblings under the NavigationView. zh_CN: ……但落在顶部导航栏本身的点击仍会
+    // 穿透,使切换到另一分类(或点击页脚的 Settings)在本浮窗关闭的同时保持一次点击。主、页脚顶部窗格都是 NavigationView 的同级子控件。
+    if (QWidget* navParent = parentWidget()) {
+        const auto topPanes = navParent->findChildren<GalleryTopNavigationPane*>();
+        for (GalleryTopNavigationPane* pane : topPanes)
+            m_childFlyout->addLightDismissPassthrough(pane);
+    } else {
+        m_childFlyout->addLightDismissPassthrough(this);
+    }
     connect(m_childFlyout, &QObject::destroyed, this, [this]() {
         m_childFlyout = nullptr;
         m_childFlyoutPanel = nullptr;

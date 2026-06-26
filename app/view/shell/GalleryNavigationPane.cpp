@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <QAbstractItemView>
+#include <QDynamicPropertyChangeEvent>
 #include <QEvent>
 #include <QHelpEvent>
 #include <QKeyEvent>
@@ -284,6 +285,17 @@ bool GalleryNavigationPane::event(QEvent* event)
     // 同步跟随激活/非激活（二者都经 chromeBackdropFill 读 isActiveWindow()）；否则窗格会停在激活色，而标题栏失焦时已洗向 bgLayer。
     if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
         update();
+    // NavigationView hints, via this dynamic property, when the pane is floating inside the overlay
+    // flyout: there the pane must drop its own chrome background (switch to the transparent "surface"
+    // mode) so the flyout's single elevated card shows through without a per-region seam; back on the
+    // inline rail it paints the normal chrome background again. zh_CN: NavigationView 通过该动态属性提示
+    // 窗格何时浮在浮层抽屉中：此时窗格须放弃自身 chrome 背景（切到透明 surface 模式），让浮层那张抬升卡片无缝透出；
+    // 回到内联栏后重新绘制正常 chrome 背景。
+    if (event->type() == QEvent::DynamicPropertyChange) {
+        const auto* propertyEvent = static_cast<QDynamicPropertyChangeEvent*>(event);
+        if (propertyEvent->propertyName() == "fluentNavPaneFloating")
+            setSurfaceVisible(property("fluentNavPaneFloating").toBool());
+    }
     return QWidget::event(event);
 }
 
@@ -450,11 +462,19 @@ void GalleryNavigationPane::activateRouteIndex(const QModelIndex& index,
     setSelectedRouteId(routeId);
 
     if (pointerActivation) {
-        if (m_compact && hasChildren) {
+        // The child popup is strictly a COMPACT-RAIL affordance: the 48px icon rail has no room to
+        // expand a category inline, so it shows the children in a flyout. In the drawer flyout the pane
+        // is floating + wide (m_surfaceVisible) and already shows text labels, so a category expands
+        // INLINE there — exactly like the inline expanded pane — instead of spawning a popup that then
+        // orphans itself as the drawer collapses. zh_CN: 子弹窗只属于「紧凑栏」：48px 图标栏没有空间内联展开分类，
+        // 故用浮窗显示子项。抽屉浮层中窗格是浮起且加宽的（m_surfaceVisible）、已显示文字标签，故分类在此「内联展开」——
+        // 与内联展开窗格一致——而非弹出一个随抽屉收起就被孤立的浮窗。
+        const bool compactRail = m_compact && !m_surfaceVisible;
+        if (compactRail && hasChildren) {
             showCompactFlyoutForIndex(index);
         } else if (m_treeView && hasChildren) {
             m_treeView->toggleExpanded(index);
-        } else if (m_compact) {
+        } else if (compactRail) {
             closeCompactFlyout();
         }
     }
@@ -636,6 +656,11 @@ void GalleryNavigationPane::showCompactFlyoutForIndex(const QModelIndex& index)
     m_compactFlyout->setClosePolicy(fluent::dialogs_flyouts::Popup::ClosePolicy(
         fluent::dialogs_flyouts::Popup::CloseOnPressOutside |
         fluent::dialogs_flyouts::Popup::CloseOnEscape));
+    // ComboBox-dropdown dismiss: an outside press only closes the flyout, it does not also activate the
+    // control beneath — except on the rail itself, so clicking another rail item stays a single click.
+    // zh_CN: ComboBox 下拉式关闭:外部点击只关闭浮窗,不会顺带激活下方控件——但在导航栏本身除外,使点击另一个导航项保持一次点击。
+    m_compactFlyout->setLightDismissConsumesPress(true);
+    m_compactFlyout->addLightDismissPassthrough(this);
 
     m_compactFlyoutPanel = new CompactFlyoutPanel(m_compactFlyout);
     m_compactFlyoutPanel->setObjectName(QStringLiteral("galleryCompactNavigationFlyoutPanel"));

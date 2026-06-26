@@ -1,6 +1,9 @@
 #include "NavigationView.h"
 
+#include <QApplication>
 #include <QEvent>
+#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
@@ -10,7 +13,9 @@
 #include <QShowEvent>
 
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayShadow.h"
 #include "components/navigation/StackContentHost.h"
+#include "design/Elevation.h"
 
 namespace fluent::navigation {
 
@@ -149,6 +154,117 @@ protected:
 private:
     qreal m_radius = 0.0;
     QColor m_border;
+};
+
+// Floating backing for the pane when it opens as a light-dismiss FLYOUT (the compact / minimal
+// modes). It paints a single rounded surface + soft shadow behind the (transparent) nav panes so
+// the opened pane reads as a card lifted over the content, and dismisses the pane on an outside
+// click. This folds the DrawerView capability into NavigationView: the SAME header/main/footer
+// pane widgets are raised on top of this backing — no duplicate "drawer" panes to keep in sync.
+// zh_CN: 窗格以轻关闭浮层（紧凑/最小模式）打开时的浮动底。它在（透明的）导航窗格之后绘制单一圆角表面+柔和阴影，
+// 使打开的窗格像浮在内容之上的卡片，并在窗格外点击时关闭。这把 DrawerView 能力收进 NavigationView：同一组
+// header/main/footer 窗格控件被叠在此底之上——无需再维护一份同步的“抽屉”窗格。
+class PaneFlyoutOverlay : public QWidget {
+public:
+    explicit PaneFlyoutOverlay(QWidget* parent)
+        : QWidget(parent)
+    {
+        // Like ContentFrameOverlay: WA_NoSystemBackground and DON'T clear our backing — the content
+        // we don't paint keeps showing the content host beneath (which already painted into the
+        // shared backing). A WA_TranslucentBackground + Source-clear would instead ERASE the content
+        // host's pixels and blank the content area. zh_CN: 与 ContentFrameOverlay 一致：WA_NoSystemBackground
+        // 且不清背景——未绘制处保留已绘制到共享后备缓冲的内容宿主。若用 WA_TranslucentBackground + Source 清除，
+        // 反而会擦掉内容宿主像素、让内容区变空白。
+        setAttribute(Qt::WA_NoSystemBackground, true);
+        // Focusable so opening the flyout parks keyboard focus here: without a focused widget Qt
+        // dispatches no KeyPress, and the Esc light-dismiss filter would never fire.
+        // zh_CN: 可获焦，使打开浮层时键盘焦点停在此处：没有获焦控件时 Qt 不会派发 KeyPress，Esc 轻关闭过滤器永远不触发。
+        setFocusPolicy(Qt::StrongFocus);
+    }
+
+    void configure(const QRect& paneRect, qreal radius, const QColor& fill,
+                   const QColor& stroke, const Elevation::ShadowParams& shadow, qreal shadowIntensity)
+    {
+        m_paneRect = paneRect;
+        m_radius = qMax(0.0, radius);
+        m_fill = fill;
+        m_stroke = stroke;
+        m_shadow = shadow;
+        m_shadowIntensity = shadowIntensity;
+        update();
+    }
+
+protected:
+    void paintEvent(QPaintEvent*) override
+    {
+        if (m_paneRect.isEmpty())
+            return;
+
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+
+        // Soft shadow grows from the pane column onto the content to its right (the left/edge sits
+        // at the window border and is naturally clipped). zh_CN: 柔和阴影从窗格列向右扩散到内容上
+        //（左/边缘贴着窗口边界，自然被裁剪）。
+        fluent::overlay::paintLayeredShadow(painter, m_paneRect.adjusted(0, 0, -1, -1), m_radius,
+                                            m_shadow, m_shadowIntensity);
+
+        // A single cohesive elevated card: an opaque bgLayer fill, a clearly visible border, and the
+        // top-right / bottom-right corners rounded (the left edge stays flush to the window border).
+        // This is the native WinUI overlay-pane look — a DISTINCT floating drawer that reads as lifted
+        // ABOVE the content / backdrop, NOT blended into it. An earlier version cleared the column to
+        // the live backdrop instead; the inline panes' sub-regions (header padding, footer gap, the
+        // TreeView viewport) then each composited their own way → visible material seams ("奇怪的图层").
+        // The inline panes drawn on top are now switched into their transparent "surface" mode
+        // (fluentNavPaneFloating), so this one card shows through them uniformly with no seam.
+        // zh_CN: 单一、整体的抬升卡片：不透明 bgLayer 填充、清晰可见的边框、右上/右下圆角（左缘贴窗口边界）。
+        // 这就是原生 WinUI 浮层窗格的样子——一张明确浮在内容/背景「之上」的抽屉卡片，而非融进背景。早先版本改为把整列清成
+        // 实时背景，结果内联窗格各子区域（头部留白、页脚间隙、TreeView 视口）各自合成 → 出现可见的材质拼缝（“奇怪的图层”）。
+        // 现在其上绘制的内联窗格被切到透明的「surface」模式（fluentNavPaneFloating），故这张卡片均匀透出、无缝。
+        const QPainterPath panel = fluent::overlay::roundedCornerRectPath(
+            QRectF(m_paneRect).adjusted(0.0, 0.0, -0.5, -0.5), m_radius,
+            /*TL*/ false, /*TR*/ true, /*BR*/ true, /*BL*/ false);
+        if (m_fill.isValid())
+            painter.fillPath(panel, m_fill);
+        if (m_stroke.isValid() && m_stroke.alpha() > 0) {
+            painter.setPen(QPen(m_stroke, 1.0));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawPath(panel);
+        }
+    }
+
+    void mousePressEvent(QMouseEvent* event) override
+    {
+        // Light dismiss: a press in the content area (right of the pane column) closes the pane.
+        // Presses inside the column (gaps between the raised header/main/footer panes) are absorbed.
+        // zh_CN: 轻关闭：在内容区（窗格列右侧）按下即关闭窗格；列内（被抬升的 header/main/footer 间隙）的按下被吸收。
+        if (event->position().x() > m_paneRect.right())
+            dismiss();
+    }
+
+    void keyPressEvent(QKeyEvent* event) override
+    {
+        // Esc light-dismiss when the flyout holds focus. zh_CN: 浮层持有焦点时 Esc 轻关闭。
+        if (event->key() == Qt::Key_Escape) {
+            dismiss();
+            return;
+        }
+        QWidget::keyPressEvent(event);
+    }
+
+private:
+    void dismiss()
+    {
+        if (auto* nav = qobject_cast<NavigationView*>(parentWidget()))
+            nav->setPaneOpen(false);
+    }
+
+    QRect m_paneRect;
+    qreal m_radius = 8.0;
+    QColor m_fill;
+    QColor m_stroke;
+    Elevation::ShadowParams m_shadow;
+    qreal m_shadowIntensity = 0.3;
 };
 }
 
@@ -399,6 +515,22 @@ bool NavigationView::event(QEvent* event)
     else if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
         update();  // backdrop tracks window focus
     return QWidget::event(event);
+}
+
+bool NavigationView::eventFilter(QObject* watched, QEvent* event)
+{
+    // Esc light-dismiss for the pane flyout. The filter is installed on the top-level window only
+    // while a flyout is showing, so Escape closes the pane regardless of which child has focus
+    // (search box, page, etc.). zh_CN: 窗格浮层的 Esc 轻关闭。该过滤器仅在浮层显示期间装在顶层窗口上，
+    // 故无论焦点在哪个子控件（搜索框、页面等），Escape 都能关闭窗格。
+    if (m_paneFlyoutEscFilterInstalled && event->type() == QEvent::KeyPress) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Escape && m_paneOpen) {
+            setPaneOpen(false);
+            return true;
+        }
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 void NavigationView::resizeEvent(QResizeEvent* event)
@@ -711,6 +843,10 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
     const bool framed = isSideMode(state.effectiveMode)
                         && !state.contentRect.isEmpty()
                         && state.contentRect.left() > 0;
+    // When the pane opens as a flyout over the content (compact / minimal), the content's rounded
+    // frame would peek out from under the floating pane — so suppress it for the flyout.
+    // zh_CN: 窗格以浮层覆盖内容（紧凑/最小）时，内容圆角框会从浮动窗格下露出——故浮层期间抑制它。
+    const bool flyout = isPaneFlyoutVisible(state);
 
     if (m_contentHost) {
         m_contentHost->setGeometry(state.contentRect);
@@ -726,6 +862,11 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
         m_contentHost->show();
         m_contentHost->lower();
     }
+
+    // Floating pane backing sits just above the content (and below the panes raised next), so the
+    // opened pane reads as a flyout over the content. zh_CN: 浮动窗格底位于内容之上（在随后抬升的窗格之下），
+    // 使打开的窗格表现为浮在内容之上的浮层。
+    updatePaneFlyout(state);
 
     const auto apply = [](QWidget* widget, const QRect& geometry) {
         if (!widget)
@@ -744,8 +885,9 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
     apply(m_footerChromeWidget, state.footerChromeRect);
 
     // Content frame: a rounded top-left corner + border drawn on top of the content, but only in the
-    // framed side modes. zh_CN: 内容框：内容之上绘制左上圆角 + 边框，仅带框侧边模式。
-    if (framed) {
+    // framed side modes — and not while a pane flyout covers it.
+    // zh_CN: 内容框：内容之上绘制左上圆角 + 边框，仅带框侧边模式——且窗格浮层覆盖时不画。
+    if (framed && !flyout) {
         if (!m_contentFrameOverlay)
             m_contentFrameOverlay = new ContentFrameOverlay(this);
         m_contentFrameOverlay->setGeometry(state.contentRect);
@@ -758,6 +900,103 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
         m_contentFrameOverlay->raise();
     } else if (m_contentFrameOverlay) {
         m_contentFrameOverlay->hide();
+    }
+}
+
+bool NavigationView::isPaneFlyoutVisible(const LayoutState& state) const
+{
+    if (state.effectiveMode != DisplayMode::LeftCompact
+        && state.effectiveMode != DisplayMode::LeftMinimal)
+        return false;
+    // The pane is a flyout once it has opened past its inline rail (compact rail width, or 0 for
+    // minimal) — true at rest when open AND throughout the slide animation.
+    // zh_CN: 窗格一旦展开超过其内联栏（紧凑栏宽，或最小模式的 0）即为浮层——静止打开时与整个滑动动画期间皆为真。
+    const int rail = state.effectiveMode == DisplayMode::LeftCompact ? m_compactPaneWidth : 0;
+    return state.chromeRect.width() > rail;
+}
+
+void NavigationView::updatePaneFlyout(const LayoutState& state)
+{
+    if (!isPaneFlyoutVisible(state)) {
+        if (m_paneFlyoutOverlay)
+            m_paneFlyoutOverlay->hide();
+        // Back to the inline rail / expanded pane: the panes paint their own chrome background again.
+        // zh_CN: 回到内联栏/展开窗格：窗格重新绘制自身 chrome 背景。
+        setChromeWidgetsFloating(false);
+        setPaneFlyoutEscFilter(false);
+        return;
+    }
+
+    if (!m_paneFlyoutOverlay)
+        m_paneFlyoutOverlay = new PaneFlyoutOverlay(this);
+    auto* overlay = static_cast<PaneFlyoutOverlay*>(m_paneFlyoutOverlay);
+    overlay->setGeometry(rect());
+
+    // The flyout is a DISTINCT elevated drawer card (native WinUI overlay-pane look): an opaque
+    // bgLayer surface, a clearly visible border, top-right / bottom-right rounded corners and a soft
+    // shadow — it reads as lifted ABOVE the content / backdrop rather than blended into it. The inline
+    // panes are switched into their transparent "surface" mode (setChromeWidgetsFloating) so this one
+    // card shows through them uniformly, with no per-region material seam.
+    // zh_CN: 浮层是一张明确的抬升抽屉卡片（原生 WinUI 浮层窗格的样子）：不透明 bgLayer 表面、清晰可见的边框、
+    // 右上/右下圆角与柔和阴影——读作浮在内容/背景「之上」，而非融入。内联窗格被切到透明的「surface」模式
+    //（setChromeWidgetsFloating），使这张卡片均匀透出、各区域无材质拼缝。
+    setChromeWidgetsFloating(true);
+    const auto colors = themeColors();
+    const bool dark = currentTheme() == Dark;
+    QColor fill = colors.bgLayer;
+    fill.setAlpha(255);
+    // A clearly visible drawer border (the user wants "一个比较明显的边框色"). The theme strokeDefault is
+    // only ~7% white in dark / ~5% black in light — too faint to read as the card edge against a same-
+    // toned content area — so use a stronger explicit hairline (~19% white / ~14% black) that still
+    // stays a tasteful 1px rule, not a harsh line. zh_CN: 一道清晰可见的抽屉边框（用户要「一个比较明显的边框色」）。
+    // 主题 strokeDefault 在暗色仅约 7% 白 / 亮色约 5% 黑——在同色调内容旁太淡、读不出卡片边缘——故用更强的显式细线
+    //（约 19% 白 / 14% 黑），仍保持得体的 1px 描边，而非生硬线条。
+    QColor stroke = dark ? QColor(255, 255, 255, 48) : QColor(0, 0, 0, 36);
+    auto shadow = themeShadow(Elevation::Medium);
+    shadow.color.setAlpha(dark ? 160 : 100);
+
+    overlay->configure(state.chromeRect, themeRadius().overlay, fill, stroke, shadow,
+                       dark ? 0.36 : 0.28);
+    overlay->show();
+    overlay->raise();
+    setPaneFlyoutEscFilter(true);
+    // Park keyboard focus on the flyout so Esc (handled in its keyPressEvent) works; without a
+    // focused widget Qt dispatches no key events. updatePaneFlyout only runs on layout changes, so
+    // this does not fight the user's focus while the flyout simply sits open.
+    // zh_CN: 把键盘焦点停在浮层上，使 Esc（在其 keyPressEvent 处理）生效；没有获焦控件时 Qt 不派发键事件。
+    // updatePaneFlyout 仅在布局变化时运行，故浮层静止打开期间不会与用户焦点相争。
+    if (!overlay->hasFocus())
+        overlay->setFocus(Qt::OtherFocusReason);
+}
+
+void NavigationView::setPaneFlyoutEscFilter(bool installed)
+{
+    if (m_paneFlyoutEscFilterInstalled == installed)
+        return;
+    // Filter on the application, not window(): an Escape KeyPress targets the focused child widget
+    // (search box / a page control), which a window-level filter never sees. zh_CN: 装在应用上而非
+    // window()：Escape 的 KeyPress 投递给获得焦点的子控件（搜索框/页面控件），窗口级过滤器看不到它。
+    if (installed)
+        qApp->installEventFilter(this);
+    else
+        qApp->removeEventFilter(this);
+    m_paneFlyoutEscFilterInstalled = installed;
+}
+
+void NavigationView::setChromeWidgetsFloating(bool floating)
+{
+    // Hint each chrome (pane) widget whether it is currently floating inside the overlay flyout. A
+    // pane that opts in (e.g. by observing the "fluentNavPaneFloating" dynamic property) drops its own
+    // chrome background so the overlay's single elevated card shows through it without a seam; in the
+    // rail / inline modes (floating == false) it paints its normal chrome background again. The hint
+    // is generic — NavigationView stays decoupled from any concrete pane type.
+    // zh_CN: 向各 chrome（窗格）控件提示当前是否浮在浮层抽屉中。选择响应的窗格（如观察 fluentNavPaneFloating
+    // 动态属性者）会放弃自身 chrome 背景，让浮层那张抬升卡片无缝透出；栏/内联模式（floating==false）下重新绘制
+    // 正常 chrome 背景。该提示是通用的——NavigationView 不与任何具体窗格类型耦合。
+    for (QWidget* widget : {m_headerChromeWidget.data(), m_mainChromeWidget.data(),
+                            m_footerChromeWidget.data()}) {
+        if (widget)
+            widget->setProperty("fluentNavPaneFloating", floating);
     }
 }
 

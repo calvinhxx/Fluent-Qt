@@ -520,15 +520,51 @@ TEST_F(GalleryShellFrameworkTest, MenuButtonTogglesLeftCompactNavigationMode)
     EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::Left);
     EXPECT_TRUE(navigationView->isPaneOpen());
     EXPECT_LT(navigationView->property("layoutTransitionProgress").toDouble(), 1.0);
-    EXPECT_FALSE(mainPane->isCompact());
-    EXPECT_FALSE(tree->property("galleryCompact").toBool());
-    EXPECT_FALSE(tree->viewport()->property("galleryCompact").toBool());
+    // Full labels are revealed only once the widen animation settles at full width (otherwise they
+    // clip mid-slide). The exact moment of that reveal is animation-timing dependent, so we assert
+    // only the settled end state — icon-only collapse is immediate (checked above), label reveal is
+    // deferred to settle. zh_CN: 完整标签仅在加宽动画稳定到全宽后才显示（否则滑动中会被裁剪）。该揭示的具体
+    // 时刻取决于动画时序，故只断言稳定后的最终状态——折叠为仅图标是立即的（上方已校验），标签揭示延迟到稳定。
     settleNavigationViewAnimation();
     EXPECT_FALSE(mainPane->isCompact());
     EXPECT_FALSE(tree->property("galleryCompact").toBool());
     EXPECT_FALSE(tree->viewport()->property("galleryCompact").toBool());
     EXPECT_EQ(navigationView->chromeGeometry().width(), navigationView->expandedPaneWidth());
     EXPECT_EQ(navigationView->contentGeometry().left(), navigationView->expandedPaneWidth());
+}
+
+TEST_F(GalleryShellFrameworkTest, AutoNavigationCollapsesWhenNarrowedAndReexpandsWhenWidened)
+{
+    GallerySettings::instance().setNavigationStyle(GallerySettings::NavigationStyle::Auto);
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+
+    auto* navigationView = window.findChild<NavigationView*>(
+        QStringLiteral("galleryNavigationView"));
+    ASSERT_NE(navigationView, nullptr);
+    using DisplayMode = NavigationView::DisplayMode;
+
+    // Wide: Auto resolves to the expanded Left rail and the pane is presented inline-open.
+    EXPECT_EQ(navigationView->effectiveDisplayMode(), DisplayMode::Left);
+    EXPECT_TRUE(navigationView->isPaneOpen());
+
+    // Narrowing past the compact threshold auto-collapses the pane — it must NOT be left open as a
+    // stray flyout over the content (the bug this guards). zh_CN: 变窄越过紧凑阈值会自动收起窗格——
+    // 不能把它作为残留浮层留在内容之上（此测试守护的 bug）。
+    window.resize(520, 760);
+    QApplication::processEvents();
+    settleNavigationViewAnimation();
+    EXPECT_NE(navigationView->effectiveDisplayMode(), DisplayMode::Left);
+    EXPECT_FALSE(navigationView->isPaneOpen());
+
+    // Widening back to the Left rail auto-expands it again, like WinUI.
+    window.resize(1180, 760);
+    QApplication::processEvents();
+    settleNavigationViewAnimation();
+    EXPECT_EQ(navigationView->effectiveDisplayMode(), DisplayMode::Left);
+    EXPECT_TRUE(navigationView->isPaneOpen());
 }
 
 TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationHidesHeadersAndInlineChildren)
@@ -1257,8 +1293,10 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     ASSERT_NE(closeBehaviorChoice, nullptr);
     EXPECT_EQ(themeChoice->count(), 3);
     EXPECT_EQ(themeChoice->currentText(), QStringLiteral("Light"));
-    EXPECT_EQ(navigationChoice->count(), 5);
-    EXPECT_EQ(navigationChoice->currentText(), QStringLiteral("Auto"));
+    // Navigation style mirrors the native WinUI Gallery: only "Left" and "Top" are offered. "Left"
+    // is the responsive Auto mode, so the Auto config above shows as "Left" (index 0).
+    EXPECT_EQ(navigationChoice->count(), 2);
+    EXPECT_EQ(navigationChoice->currentText(), QStringLiteral("Left"));
     EXPECT_EQ(effectChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->currentIndex(), static_cast<int>(settings.closeBehavior()));
@@ -1317,24 +1355,9 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     auto* navigationView = window.findChild<NavigationView*>(
         QStringLiteral("galleryNavigationView"));
     ASSERT_NE(navigationView, nullptr);
+    // Index 1 = "Top". (Index 0 = "Left" → Auto is exercised at the end of this test.) The finer
+    // Left/LeftCompact/LeftMinimal modes are no longer user-selectable — Auto resolves them by width.
     navigationChoice->setCurrentIndex(1);
-    QApplication::processEvents();
-    EXPECT_EQ(settings.navigationStyle(), GallerySettings::NavigationStyle::Left);
-    EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::Left);
-    EXPECT_TRUE(navigationView->isPaneOpen());
-
-    navigationChoice->setCurrentIndex(2);
-    QApplication::processEvents();
-    EXPECT_EQ(settings.navigationStyle(), GallerySettings::NavigationStyle::LeftCompact);
-    EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::LeftCompact);
-    EXPECT_FALSE(navigationView->isPaneOpen());
-
-    navigationChoice->setCurrentIndex(3);
-    QApplication::processEvents();
-    EXPECT_EQ(settings.navigationStyle(), GallerySettings::NavigationStyle::LeftMinimal);
-    EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::LeftMinimal);
-
-    navigationChoice->setCurrentIndex(4);
     QApplication::processEvents();
     EXPECT_EQ(settings.navigationStyle(), GallerySettings::NavigationStyle::Top);
     EXPECT_EQ(navigationView->displayMode(), NavigationView::DisplayMode::Top);
