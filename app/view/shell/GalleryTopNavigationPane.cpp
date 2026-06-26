@@ -116,10 +116,10 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
     m_childFlyout = new fluent::dialogs_flyouts::Popup(this);
     m_childFlyout->setObjectName(QStringLiteral("galleryTopNavigationFlyout"));
     m_childFlyout->setAnimationEnabled(true);
-    // Snappier dismissal: match the fast (150ms) entrance instead of the shared 250ms default, so the
-    // ComboBox-style close feels crisp rather than sluggish. zh_CN: 更利落的关闭:与 150ms 的快速入场对齐,
-    // 替代共享的 250ms 默认值,使 ComboBox 式关闭干脆而非拖沓。
-    m_childFlyout->setExitDuration(themeAnimation().fast);
+    // Dismiss instantly without an exit animation: the shared fade-out misbehaves over a native
+    // vibrancy backdrop on macOS, so the flyout just hides on close while keeping its slide-up entrance.
+    // zh_CN: 关闭时不播放退场动画,直接隐藏:共享的淡出在 macOS 原生 vibrancy 背景上表现异常;入场的上滑动画保留。
+    m_childFlyout->setExitAnimationEnabled(false);
     m_childFlyout->setClosePolicy(fluent::dialogs_flyouts::Popup::ClosePolicy(
         fluent::dialogs_flyouts::Popup::CloseOnPressOutside
         | fluent::dialogs_flyouts::Popup::CloseOnEscape));
