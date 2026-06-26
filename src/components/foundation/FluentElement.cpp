@@ -81,6 +81,10 @@ FluentElement::Theme FluentElement::currentTheme() {
     return FluentThemeManager::instance()->currentTheme;
 }
 
+int FluentElement::themeGeneration() {
+    return FluentThemeManager::instance()->generation();
+}
+
 FluentElement::Theme FluentElement::effectiveTheme() const {
     const auto* widget = dynamic_cast<const QWidget*>(this);
     for (const QWidget* node = widget; node; node = node->parentWidget()) {
