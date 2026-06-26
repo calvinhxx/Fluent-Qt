@@ -104,12 +104,13 @@ public:
     bool isAnimationEnabled() const { return m_animationEnabled; }
     void setAnimationEnabled(bool e) { m_animationEnabled = e; }
 
-    // Overrides the exit (close) animation duration in ms; -1 (default) uses the theme's normal
-    // duration (250ms, matching Dialog). Lets a caller make a specific popup's dismissal snappier than
-    // the shared default without affecting other Popup users. zh_CN: 覆盖关闭动画时长（毫秒）；-1（默认）
-    // 使用主题 normal 时长（250ms，与 Dialog 一致）。让调用方在不影响其它 Popup 使用者的前提下，使某个弹窗的关闭更利落。
-    int exitDuration() const { return m_exitDuration; }
-    void setExitDuration(int ms) { m_exitDuration = ms; }
+    // When false, close() skips the exit (fade-out) animation and hides instantly; the open/enter
+    // animation is unaffected. Lets a caller drop just the dismissal animation for a specific popup
+    // without touching the shared default — e.g. when the opacity-effect fade-out misbehaves over a
+    // native vibrancy backdrop on macOS. zh_CN: 为 false 时，close() 跳过关闭(淡出)动画，瞬间隐藏；入场动画不受影响。
+    // 让调用方只去掉某个弹窗的关闭动画而不动共享默认值——例如 macOS 原生 vibrancy 背景上淡出(opacity effect)表现异常时。
+    bool isExitAnimationEnabled() const { return m_exitAnimationEnabled; }
+    void setExitAnimationEnabled(bool e) { m_exitAnimationEnabled = e; }
 
     /**
      * @brief Uses a widget as the local theme source when no anchor drives the popup.
@@ -188,7 +189,7 @@ private:
     bool m_modal = false;
     bool m_dim   = false;
     bool m_animationEnabled = true;
-    int  m_exitDuration = -1;
+    bool m_exitAnimationEnabled = true;
     bool m_positionSet = false;
     QPoint m_targetPos;
     QPointer<QWidget> m_positionRelativeTo;
