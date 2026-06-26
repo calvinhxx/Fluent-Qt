@@ -61,15 +61,19 @@ protected:
 
 private:
     void build();
-    void applyStep(int index);  // content + card target/placement (CoachMark glides itself)
+    void applyStep(int index, bool animateSpotlight);  // content + card target/placement + dim spotlight
     void goToStep(int index);
     void syncScrimGeometry();
+    void applyStepSpotlight(int index, bool animate);   // glide / pop the dim cut-out onto the target
+    QRect spotlightRectFor(QWidget* target) const;      // target geometry in scrim-local coords + padding
     void finishTour();
 
     QWidget* m_host = nullptr;
     fluent::dialogs_flyouts::SmokeOverlay* m_scrim = nullptr;  // dim: child of the app window, alone
     fluent::dialogs_flyouts::CoachMark* m_card = nullptr;      // separate top-level card (owns fade + glide)
     QPropertyAnimation* m_dimAnim = nullptr;
+    QPropertyAnimation* m_spotAnim = nullptr;  // glides the spotlight cut-out between step targets
+    bool m_haveSpot = false;                   // a spotlight is currently shown (for glide-vs-pop)
     fluent::textfields::Label* m_glyph = nullptr;
     fluent::textfields::Label* m_title = nullptr;
     fluent::textfields::Label* m_body = nullptr;

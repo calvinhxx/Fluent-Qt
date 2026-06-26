@@ -6,7 +6,9 @@
 #include <QEvent>
 #include <QFont>
 #include <QHBoxLayout>
+#include <QMargins>
 #include <QPropertyAnimation>
+#include <QRect>
 #include <QSize>
 #include <QVBoxLayout>
 
@@ -27,6 +29,8 @@ namespace {
 constexpr int kCardWidth = 330;
 constexpr int kCardHeight = 168;
 constexpr double kDimStrength = 0.40;
+constexpr int kSpotlightPadding = 3;  // breathing room around the highlighted target
+constexpr int kSpotlightRadius = 8;   // rounded corners of the cut-out
 }  // namespace
 
 GalleryIntroTour::GalleryIntroTour(QWidget* host, QObject* parent)
@@ -126,12 +130,66 @@ void GalleryIntroTour::build()
     m_dimAnim = new QPropertyAnimation(m_scrim, "progress", this);
     m_dimAnim->setDuration(m_card->themeAnimation().normal);
     m_dimAnim->setEasingCurve(m_card->themeAnimation().decelerate);
+
+    m_scrim->setSpotlightRadius(kSpotlightRadius);
+    // The spotlight cut-out glides between targets in lock-step with the CoachMark (same normal
+    // duration + decelerate curve). zh_CN: 聚光挖空与 CoachMark 同步在目标间滑动(同样的 normal 时长 + decelerate 曲线)。
+    m_spotAnim = new QPropertyAnimation(m_scrim, "spotlightRect", this);
+    m_spotAnim->setDuration(m_card->themeAnimation().normal);
+    m_spotAnim->setEasingCurve(m_card->themeAnimation().decelerate);
+}
+
+QRect GalleryIntroTour::spotlightRectFor(QWidget* target) const
+{
+    QWidget* win = m_host ? m_host->window() : nullptr;
+    if (!win || !target)
+        return QRect();
+    const QRect inWindow(target->mapTo(win, QPoint(0, 0)), target->size());
+    return inWindow.marginsAdded(QMargins(kSpotlightPadding, kSpotlightPadding,
+                                          kSpotlightPadding, kSpotlightPadding))
+        .intersected(win->rect());
+}
+
+void GalleryIntroTour::applyStepSpotlight(int index, bool animate)
+{
+    if (!m_scrim || !m_spotAnim)
+        return;
+    m_spotAnim->stop();
+
+    const Step& step = m_steps.at(index);
+    if (step.centered || step.target.isNull()) {
+        // Centered / target-less step → uniform dim, no cut-out. zh_CN: 居中/无目标步 → 均匀压暗,无挖空。
+        m_scrim->setSpotlightEnabled(false);
+        m_haveSpot = false;
+        return;
+    }
+
+    const QRect target = spotlightRectFor(step.target.data());
+    m_scrim->setSpotlightEnabled(true);
+    if (animate && m_haveSpot) {
+        m_spotAnim->setStartValue(m_scrim->spotlightRect());
+        m_spotAnim->setEndValue(target);
+        m_spotAnim->start();
+    } else {
+        // First spotlight (coming from full dim) or a resize-follow: snap, don't glide from a stale rect.
+        // zh_CN: 首个聚光(从全压暗而来)或跟随缩放:直接定位,不从过时矩形滑入。
+        m_scrim->setSpotlightRect(target);
+    }
+    m_haveSpot = true;
 }
 
 void GalleryIntroTour::syncScrimGeometry()
 {
-    if (m_scrim && m_host && m_host->window())
+    if (m_scrim && m_host && m_host->window()) {
         m_scrim->setGeometry(m_host->window()->rect());
+        // The target moved with the window; re-anchor the cut-out without a glide. zh_CN: 目标随窗口移动,
+        // 不滑动地重新对齐挖空。
+        if (m_haveSpot && m_index >= 0 && m_index < m_steps.size()) {
+            const Step& step = m_steps.at(m_index);
+            if (!step.centered && !step.target.isNull())
+                m_scrim->setSpotlightRect(spotlightRectFor(step.target.data()));
+        }
+    }
 }
 
 void GalleryIntroTour::start()
@@ -160,12 +218,12 @@ void GalleryIntroTour::start()
     m_dimAnim->start();
 
     m_index = 0;
-    applyStep(0);
+    applyStep(0, /*animateSpotlight*/ false);
     m_card->open();  // CoachMark positions + fades itself in
     m_card->raise();
 }
 
-void GalleryIntroTour::applyStep(int index)
+void GalleryIntroTour::applyStep(int index, bool animateSpotlight)
 {
     const Step& step = m_steps.at(index);
     m_glyph->setText(step.glyph);
@@ -181,6 +239,8 @@ void GalleryIntroTour::applyStep(int index)
     // zh_CN: 打开状态下重定向时,CoachMark 自己滑动到新目标。
     m_card->setPlacement(step.placement);
     m_card->setTarget(step.centered ? nullptr : step.target.data());
+
+    applyStepSpotlight(index, animateSpotlight);
 }
 
 void GalleryIntroTour::goToStep(int index)
@@ -188,7 +248,7 @@ void GalleryIntroTour::goToStep(int index)
     if (index < 0 || index >= m_steps.size())
         return;
     m_index = index;
-    applyStep(index);
+    applyStep(index, /*animateSpotlight*/ true);
     m_card->raise();
 }
 
@@ -211,6 +271,9 @@ void GalleryIntroTour::finishTour()
                 card->deleteLater();
         }, Qt::SingleShotConnection);
     }
+
+    if (m_spotAnim)
+        m_spotAnim->stop();  // freeze the cut-out; let the whole dim fade out uniformly
 
     if (m_scrim && m_dimAnim) {
         m_dimAnim->stop();

@@ -20,6 +20,7 @@
 #include "components/basicinput/ComboBox.h"
 #include "components/collections/TreeView.h"
 #include "components/dialogs_flyouts/ContentDialog.h"
+#include "components/dialogs_flyouts/Dialog.h"  // SmokeOverlay
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -50,6 +51,7 @@ using fluent::basicinput::ComboBox;
 using fluent::collections::TreeView;
 using fluent::dialogs_flyouts::ContentDialog;
 using fluent::dialogs_flyouts::Popup;
+using fluent::dialogs_flyouts::SmokeOverlay;
 using fluent::gallery::CloseBehaviorPromptContent;
 using fluent::gallery::GalleryApplicationController;
 using fluent::gallery::GalleryContentPage;
@@ -292,6 +294,10 @@ TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)
     tour.start();
 
     EXPECT_FALSE(window.isChromeInteractive());
+    // A centered (target-less) step dims uniformly — no spotlight cut-out.
+    auto* scrim = window.findChild<SmokeOverlay*>(QStringLiteral("GalleryIntroTour.Scrim"));
+    ASSERT_NE(scrim, nullptr);
+    EXPECT_FALSE(scrim->spotlightEnabled());
     window.onThemeUpdated();
     QApplication::processEvents();
     EXPECT_FALSE(window.isChromeInteractive());
@@ -300,6 +306,39 @@ TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)
     ASSERT_NE(closeButton, nullptr);
     QTest::mouseClick(closeButton, Qt::LeftButton);
     EXPECT_TRUE(window.isChromeInteractive());
+
+    window.close();
+}
+
+TEST_F(GalleryShellFrameworkTest, IntroTourSpotlightsAnchoredTarget)
+{
+    GalleryWindow window;
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+
+    // A plain child with a known geometry stands in for a highlight target (search box, nav, etc.).
+    auto* target = new QWidget(&window);
+    target->setObjectName(QStringLiteral("introSpotlightTarget"));
+    target->setGeometry(120, 90, 240, 44);
+    target->show();
+
+    GalleryIntroTour tour(&window);
+    GalleryIntroTour::Step anchored;
+    anchored.title = QStringLiteral("Search");
+    anchored.target = target;
+    tour.setSteps({anchored});
+    tour.start();  // a single anchored step is applied immediately by start()
+
+    auto* scrim = window.findChild<SmokeOverlay*>(QStringLiteral("GalleryIntroTour.Scrim"));
+    ASSERT_NE(scrim, nullptr);
+    EXPECT_TRUE(scrim->spotlightEnabled());
+
+    // The cut-out covers the target with a little breathing room around it.
+    const QRect targetInWindow(target->mapTo(&window, QPoint(0, 0)), target->size());
+    EXPECT_TRUE(scrim->spotlightRect().contains(targetInWindow));
+    EXPECT_GT(scrim->spotlightRect().width(), targetInWindow.width());
+    EXPECT_GT(scrim->spotlightRect().height(), targetInWindow.height());
 
     window.close();
 }
