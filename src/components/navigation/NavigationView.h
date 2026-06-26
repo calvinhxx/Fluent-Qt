@@ -155,6 +155,7 @@ signals:
 
 protected:
     bool event(QEvent* event) override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
@@ -196,6 +197,20 @@ private:
     void buildTopLayout(LayoutState& state, const QRect& bounds);
     void applyChildGeometries();
     void applyChildGeometries(const LayoutState& state);
+    // True when the pane is shown as a light-dismiss flyout over the content (the compact/minimal
+    // modes with the pane opened past its rail), rather than inline-pushing the content.
+    // zh_CN: 当窗格以轻关闭浮层覆盖在内容之上（紧凑/最小模式且窗格展开超过其栏宽）而非内联推开内容时为真。
+    bool isPaneFlyoutVisible(const LayoutState& state) const;
+    // Positions/paints the floating pane backing (surface + shadow + light-dismiss) for the flyout
+    // modes, reusing the SAME pane widgets as the inline rail — the DrawerView capability folded in.
+    // zh_CN: 为浮层模式定位/绘制浮动窗格底（表面+阴影+轻关闭），复用与内联栏相同的窗格控件——即把 DrawerView 能力收进来。
+    void updatePaneFlyout(const LayoutState& state);
+    void setPaneFlyoutEscFilter(bool installed);
+    // Hints the chrome (pane) widgets to drop their own background while floating in the overlay
+    // flyout, so the overlay's single elevated card shows through them seam-free (a generic, pane-type
+    // agnostic dynamic-property hint). zh_CN: 提示 chrome（窗格）控件在浮层抽屉中浮起时放弃自身背景，让浮层
+    // 单张抬升卡片无缝透出（通用、与窗格类型无关的动态属性提示）。
+    void setChromeWidgetsFloating(bool floating);
     void assignChromeWidget(QPointer<QWidget>& slot, QWidget* widget);
     int preferredHeight(QWidget* widget, int fallback = 0) const;
     int preferredWidth(QWidget* widget, int fallback = 0) const;
@@ -228,6 +243,11 @@ private:
     // Thin top overlay that carves the content's rounded top-left corner (revealing the pane
     // backdrop) and strokes the frame border. zh_CN: 薄覆盖层，挖出内容左上圆角（露出窗格背景）并描边框。
     QWidget* m_contentFrameOverlay = nullptr;
+    // Floating backing painted behind the pane when it opens as a light-dismiss flyout
+    // (compact / minimal). One per NavigationView; reuses the inline pane widgets on top of it.
+    // zh_CN: 窗格以轻关闭浮层（紧凑/最小）打开时绘制在其后的浮动底；每个 NavigationView 一个，浮层之上复用内联窗格控件。
+    QWidget* m_paneFlyoutOverlay = nullptr;
+    bool m_paneFlyoutEscFilterInstalled = false;
 };
 
 } // namespace fluent::navigation

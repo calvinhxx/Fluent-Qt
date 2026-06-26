@@ -2,21 +2,9 @@
 
 #include <algorithm>
 
-#include <QLinearGradient>
-#include <QPainter>
-#include <QPaintEvent>
-#include <QPainterPath>
-#include <QPixmap>
-#include <QRadialGradient>
-#include <QRegion>
-#include <QResizeEvent>
 #include <QTimer>
-#include <QVBoxLayout>
 
-#include "components/collections/DrawerView.h"
 #include "components/foundation/FluentElement.h"
-#include "components/foundation/overlay/OverlayGeometry.h"
-#include "components/foundation/overlay/OverlayShadow.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/windowing/TitleBar.h"
@@ -42,8 +30,6 @@ using AppWindowMetrics = metrics::AppWindow;
 using NavigationMetrics = metrics::Navigation;
 using TitleBarMetrics = metrics::TitleBar;
 
-constexpr int kNavigationDrawerShadowMargin = 8;
-
 // Brief hold after the initial route is on screen before dismissing the splash: long enough
 // for the window to composite a few frames (so DWM applies Mica), short enough to feel instant.
 // zh_CN: 首个路由上屏后到消除 splash 之间的短暂停留：足够窗口合成几帧（使 DWM 施加 Mica），又短到感觉即时。
@@ -65,147 +51,6 @@ compatibility::BackdropEffect toBackdropEffect(GallerySettings::WindowEffect eff
     }
     return compatibility::BackdropEffect::Solid;
 }
-
-class NavigationDrawerContentPanel : public QWidget, public fluent::FluentElement {
-public:
-    explicit NavigationDrawerContentPanel(QWidget* parent = nullptr)
-        : QWidget(parent)
-    {
-        setAutoFillBackground(false);
-        setAttribute(Qt::WA_NoSystemBackground, true);
-        setAttribute(Qt::WA_TranslucentBackground, true);
-    }
-
-protected:
-    void resizeEvent(QResizeEvent* event) override
-    {
-        QWidget::resizeEvent(event);
-        m_cache = QPixmap();  // size changed — re-render the cached panel on next paint
-        updateClipMask();
-    }
-
-    void onThemeUpdated() override
-    {
-        m_cache = QPixmap();  // theme colors changed — re-render the cached panel
-        update();
-    }
-
-    void paintEvent(QPaintEvent*) override
-    {
-        // The panel's shadow + fills + gradients depend only on size and theme, not on the slide
-        // animation — yet the drawer repaints the panel every frame as it slides. Render that heavy
-        // content into a pixmap once per size/theme and just blit it each frame.
-        // zh_CN: 面板的阴影+填充+渐变只取决于尺寸与主题，与滑动动画无关——但抽屉每帧滑动都会重绘面板。
-        // 把这段重内容按尺寸/主题渲染进 pixmap 一次，之后每帧只做一次位块传送。
-        if (m_cache.isNull())
-            rebuildCache();
-
-        QPainter painter(this);
-        // Clear the translucent backing store, then composite the cached panel over it.
-        // zh_CN: 先清掉半透明背景缓冲，再把缓存面板叠上去。
-        painter.setCompositionMode(QPainter::CompositionMode_Source);
-        painter.fillRect(rect(), Qt::transparent);
-        if (m_cache.isNull())
-            return;
-        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        painter.drawPixmap(0, 0, m_cache);
-    }
-
-private:
-    void rebuildCache()
-    {
-        if (rect().isEmpty()) {
-            m_cache = QPixmap();
-            return;
-        }
-        const qreal dpr = devicePixelRatioF();
-        m_cache = QPixmap((QSizeF(size()) * dpr).toSize());
-        m_cache.setDevicePixelRatio(dpr);
-        m_cache.fill(Qt::transparent);
-        QPainter painter(&m_cache);
-        paintPanel(painter);
-    }
-
-    void paintPanel(QPainter& painter)
-    {
-        painter.setRenderHint(QPainter::Antialiasing);
-
-        const int shadowMargin = qMin(kNavigationDrawerShadowMargin, qMax(0, width() / 4));
-        const QRectF panelRect(0.0, 0.0,
-                               qMax(0, width() - shadowMargin) - 0.5,
-                               height() - 0.5);
-        if (panelRect.isEmpty())
-            return;
-        const QPainterPath panelPath = drawerPanelPath(panelRect);
-        const auto colors = themeColors();
-
-        auto shadow = themeShadow(Elevation::Medium);
-        shadow.color.setAlpha(currentTheme() == Dark ? 150 : 92);
-        fluent::overlay::paintLayeredShadow(painter,
-                                            panelRect.toAlignedRect().adjusted(0, 0, -2, -1),
-                                            themeRadius().overlay,
-                                            shadow,
-                                            currentTheme() == Dark ? 0.34 : 0.26);
-
-        QColor base = colors.bgLayer;
-        base.setAlpha(currentTheme() == Dark ? 240 : 226);
-        painter.fillPath(panelPath, base);
-
-        QLinearGradient wash(panelRect.topLeft(), panelRect.bottomRight());
-        wash.setColorAt(0.0, QColor(255, 255, 255, currentTheme() == Dark ? 14 : 92));
-        wash.setColorAt(0.38, QColor(246, 250, 255, currentTheme() == Dark ? 9 : 52));
-        wash.setColorAt(1.0, QColor(232, 250, 247, currentTheme() == Dark ? 8 : 42));
-        painter.fillPath(panelPath, wash);
-
-        QRadialGradient glow(QPointF(panelRect.width() * 0.18, panelRect.height() * 0.22),
-                             qMax(panelRect.width(), panelRect.height()) * 0.72);
-        glow.setColorAt(0.0, QColor(255, 255, 255, currentTheme() == Dark ? 16 : 84));
-        glow.setColorAt(1.0, QColor(255, 255, 255, 0));
-        painter.fillPath(panelPath, glow);
-
-        painter.save();
-        painter.setClipPath(panelPath);
-        QLinearGradient edgeWash(panelRect.right() - 20.0, 0.0, panelRect.right(), 0.0);
-        edgeWash.setColorAt(0.0, QColor(0, 0, 0, 0));
-        edgeWash.setColorAt(1.0, QColor(0, 0, 0, currentTheme() == Dark ? 38 : 16));
-        painter.fillRect(QRectF(panelRect.right() - 20.0, panelRect.top(), 20.0, panelRect.height()),
-                         edgeWash);
-        painter.restore();
-
-        QColor stroke = colors.strokeSurface;
-        stroke.setAlpha(currentTheme() == Dark ? 92 : 64);
-        painter.setPen(QPen(stroke, 1.0));
-        painter.setBrush(Qt::NoBrush);
-        painter.drawPath(panelPath);
-    }
-
-    QPainterPath drawerPanelPath(const QRectF& bounds) const
-    {
-        return fluent::overlay::roundedCornerRectPath(bounds, themeRadius().overlay,
-                                                      /*TL*/ false, /*TR*/ true,
-                                                      /*BR*/ true, /*BL*/ false);
-    }
-
-    void updateClipMask()
-    {
-        if (rect().isEmpty()) {
-            clearMask();
-            return;
-        }
-        const int shadowMargin = qMin(kNavigationDrawerShadowMargin, qMax(0, width() / 4));
-        const QRectF panelRect(0.0, 0.0,
-                               qMax(0, width() - shadowMargin),
-                               height());
-        QRegion region(drawerPanelPath(panelRect).toFillPolygon().toPolygon());
-        if (shadowMargin > 0)
-            region += QRegion(qMax(0, width() - shadowMargin), 0, shadowMargin, height());
-        setMask(region);
-    }
-
-    // Cached render of the panel chrome; rebuilt only on size/theme change, blitted every frame.
-    // zh_CN: 面板装饰的缓存渲染；仅在尺寸/主题变化时重建，每帧只做位块传送。
-    QPixmap m_cache;
-};
 
 } // namespace
 
@@ -489,14 +334,10 @@ void GalleryWindow::buildNavigationShell()
     m_navigationCompactReleaseTimer->setSingleShot(true);
     connect(m_navigationCompactReleaseTimer, &QTimer::timeout,
             this, [this]() {
-                if (!m_navigationView)
-                    return;
-
-                using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
-                if (m_navigationView->effectiveDisplayMode() == DisplayMode::Left
-                    && m_navigationView->isPaneOpen()) {
+                // The widen animation has finished: if the pane is still open (inline or flyout),
+                // reveal its full labels now. zh_CN: 加宽动画结束：若窗格仍打开（内联或浮层），此刻显示完整标签。
+                if (m_navigationView && m_navigationView->isPaneOpen())
                     setNavigationPanesCompact(false);
-                }
             });
 
     m_mainNavigationPane = new GalleryNavigationPane(m_navigationViewModel.mainPaneItems(), m_navigationView);
@@ -534,33 +375,30 @@ void GalleryWindow::buildNavigationShell()
             });
     connect(m_navigationView, &fluent::navigation::NavigationView::effectiveDisplayModeChanged,
             this, [this](fluent::navigation::NavigationView::DisplayMode mode) {
-                using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
                 // Title-bar content adapts with the layout (WinUI Gallery): the app title+icon
                 // only show when the pane is expanded or a compact rail; in the hidden minimal
-                // layout they are dropped so the search box keeps its room. updateTitleBarLayout()
-                // also re-flows the search box for the new leading-group width.
+                // layout they are dropped so the search box keeps its room. updateLayout() also
+                // re-flows the search box for the new leading-group width.
                 // zh_CN: 标题栏内容随布局自适应（对齐 WinUI Gallery）：应用标题+图标只在窗格展开或紧凑栏时显示；
                 // 在隐藏的最小布局里去掉它们，给搜索框让位。updateLayout() 也会按新的前导组宽度重排搜索框。
                 if (m_titleBar)
                     m_titleBar->updateLayout();
-
-                if (mode != DisplayMode::Left) {
-                    if (m_navigationCompactReleaseTimer)
-                        m_navigationCompactReleaseTimer->stop();
-                    setNavigationPanesCompact(true);
-                    return;
-                }
-
-                closeNavigationDrawer();
-                if (!m_navigationView->isAnimationEnabled()
-                    || m_navigationView->property("layoutTransitionProgress").toDouble() >= 1.0) {
-                    setNavigationPanesCompact(!m_navigationView->isPaneOpen());
-                    return;
-                }
-
-                if (m_navigationCompactReleaseTimer)
-                    m_navigationCompactReleaseTimer->start(qMax(1, m_navigationView->themeAnimation().normal));
+                // Auto-expand when the layout reaches the Left rail and auto-collapse otherwise, like
+                // WinUI: the inline pane is open only in Left. The signal fires only on an actual mode
+                // change, so a manual pane toggle within Left (which leaves the mode untouched) is not
+                // overridden. zh_CN: 到达 Left 栏时自动展开、否则自动收起，与 WinUI 一致：内联窗格仅在 Left 打开。
+                // 该信号仅在模式真正变化时触发，故 Left 内的手动开合（模式不变）不会被覆盖。
+                m_navigationView->setPaneOpen(
+                    mode == fluent::navigation::NavigationView::DisplayMode::Left);
+                applyNavigationPaneDensity();
             });
+    // The inline rail vs full-label density is purely a function of the pane's open state now —
+    // the same in every side mode — so drive it off paneOpenChanged (NavigationView presents the
+    // open pane inline when expanded, or as a flyout when compact / minimal).
+    // zh_CN: 内联栏 vs 完整标签的密度现在只取决于窗格开合——各侧边模式一致——故由 paneOpenChanged 驱动
+    //（NavigationView 展开时内联呈现打开的窗格，紧凑/最小时呈现为浮层）。
+    connect(m_navigationView, &fluent::navigation::NavigationView::paneOpenChanged,
+            this, [this](bool) { applyNavigationPaneDensity(); });
 
     m_navigationView->setMainChromeWidget(m_mainNavigationPane);
     m_navigationView->setFooterChromeWidget(m_footerNavigationPane);
@@ -634,6 +472,29 @@ void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)
     recordNavigationHistory(routeId);
     if (m_contentPresenter)
         m_contentPresenter->presentRoute(routeId);
+
+    // Selecting a destination from the pane while it is a light-dismiss flyout (compact / minimal)
+    // closes it, like WinUI — the inline expanded pane (wide windows) stays put. Gate on isVisible():
+    // effectiveDisplayMode() reads the live width, which during construction (before show()) is 0 and
+    // resolves to LeftMinimal — so the INITIAL selectRoute() would spuriously close the pane and leave
+    // it shut once the window opens wide. A flyout only exists on a shown window, so only dismiss then.
+    // zh_CN: 在窗格作为轻关闭浮层（紧凑/最小）时选择目标会将其关闭，与 WinUI 一致——内联展开的窗格（宽窗）保持不动。
+    // 以 isVisible() 门控：effectiveDisplayMode() 取实时宽度，构造期（show() 之前）宽度为 0、会解析成 LeftMinimal——
+    // 于是「初始 selectRoute()」会误关窗格，并在窗口随后以宽布局打开后仍保持关闭。浮层只在已显示的窗口上存在，故仅此时关闭。
+    if (m_navigationView && m_navigationView->isPaneOpen() && isVisible()) {
+        using DisplayMode = fluent::navigation::NavigationView::DisplayMode;
+        const DisplayMode mode = m_navigationView->effectiveDisplayMode();
+        // Selecting a leaf destination dismisses the flyout (WinUI). But selecting a CATEGORY only
+        // expands its children inline, so the drawer must stay open for the user to drill into them —
+        // closing it there would discard the expansion the click just performed. zh_CN: 选择叶子目标会关闭
+        // 浮层（与 WinUI 一致）。但选择「分类」只是内联展开其子项，故抽屉须保持打开以便用户继续下钻——此时关闭会丢掉这次
+        // 点击刚展开的内容。
+        const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
+        const bool isCategory = item && item->kind == GalleryNavigationItem::Kind::CategoryRoute;
+        if (!isCategory
+            && (mode == DisplayMode::LeftCompact || mode == DisplayMode::LeftMinimal))
+            m_navigationView->setPaneOpen(false);
+    }
 }
 
 void GalleryWindow::recordNavigationHistory(const QString& nextRouteId)
@@ -717,15 +578,19 @@ void GalleryWindow::applyNavigationStyle(GallerySettings::NavigationStyle style)
 
     if (m_navigationCompactReleaseTimer)
         m_navigationCompactReleaseTimer->stop();
-    closeNavigationDrawer();
     setTopNavigationChrome(mode == DisplayMode::Top);
     m_navigationView->setDisplayMode(mode);
     const DisplayMode effectiveMode = m_navigationView->effectiveDisplayMode();
-    const bool paneOpen = style == GallerySettings::NavigationStyle::Left
-        || (style == GallerySettings::NavigationStyle::Auto
-            && (!isVisible() || effectiveMode == DisplayMode::Left));
-    m_navigationView->setPaneOpen(paneOpen);
-    setNavigationPanesCompact(!paneOpen);
+    // The pane is presented inline-open only when the effective mode is the expanded Left rail; in
+    // compact/minimal it starts closed (icon rail / hidden) and opens on demand as a flyout, and Top
+    // has no side pane. This is re-synced on effectiveDisplayModeChanged so widening auto-expands and
+    // narrowing auto-collapses, like WinUI — and so it stays correct regardless of the construction
+    // vs show ordering (effectiveDisplayMode() reads 0 width before show()).
+    // zh_CN: 仅当有效模式为展开的 Left 栏时窗格内联打开；紧凑/最小下起始关闭（图标栏/隐藏）、按需以浮层打开，
+    // Top 无侧栏。此状态在 effectiveDisplayModeChanged 时重新同步，故加宽自动展开、变窄自动收起，与 WinUI 一致——
+    // 且无论「构造 vs 显示」的先后都正确（show() 之前 effectiveDisplayMode() 读到的是 0 宽度）。
+    m_navigationView->setPaneOpen(effectiveMode == DisplayMode::Left);
+    applyNavigationPaneDensity();
     if (m_titleBar)
         m_titleBar->updateLayout();
     LOG_INFO(QStringLiteral("GalleryWindow navigationStyleApplied style=%1 effectiveMode=%2")
@@ -769,117 +634,40 @@ void GalleryWindow::toggleNavigationDisplayMode()
         return;
     }
 
-    if (m_navigationCompactReleaseTimer)
-        m_navigationCompactReleaseTimer->stop();
-
-    if (appWindowWidthState() != AppWindowWidthState::Expanded) {
-        toggleNavigationDrawer();
-        return;
-    }
-
-    closeNavigationDrawer();
-
-    // Keep the adaptive Auto mode and just open/close the pane. In the compact / minimal
-    // modes opening overlays the pane with full labels; closing returns it to the icon
-    // rail (or hidden). zh_CN: 保持自适应 Auto，仅开关窗格。紧凑/最小模式下打开时以全标签浮层覆盖，
-    // 关闭则回到图标栏（或隐藏）。
-    const bool open = !m_navigationView->isPaneOpen();
-    m_navigationView->setPaneOpen(open);
-    setNavigationPanesCompact(!open);
+    // One gesture for every side mode: just flip the pane open/closed. NavigationView decides the
+    // presentation — inline push when expanded, a light-dismiss flyout (its own surface + shadow +
+    // outside/Esc dismiss) when compact / minimal — so there is no separate drawer to drive here.
+    // The icon/label density follows via applyNavigationPaneDensity() (paneOpenChanged).
+    // zh_CN: 所有侧边模式同一个手势：仅翻转窗格开合。由 NavigationView 决定呈现——展开时内联推开，
+    // 紧凑/最小时为轻关闭浮层（自带表面+阴影+外部/Esc 关闭）——故此处不再需要单独的抽屉。
+    // 图标/标签密度经 applyNavigationPaneDensity()（paneOpenChanged）跟随。
+    m_navigationView->setPaneOpen(!m_navigationView->isPaneOpen());
     LOG_DEBUG(QStringLiteral("GalleryWindow navigationPaneToggled paneOpen=%1 effectiveMode=%2 chromeWidth=%3")
-                  .arg(open ? QStringLiteral("true") : QStringLiteral("false"))
+                  .arg(m_navigationView->isPaneOpen() ? QStringLiteral("true") : QStringLiteral("false"))
                   .arg(static_cast<int>(m_navigationView->effectiveDisplayMode()))
                   .arg(m_navigationView->chromeGeometry().width()));
 }
 
-void GalleryWindow::ensureNavigationDrawer()
+void GalleryWindow::applyNavigationPaneDensity()
 {
-    if (m_navigationDrawer)
+    if (!m_navigationView)
         return;
+    if (m_navigationCompactReleaseTimer)
+        m_navigationCompactReleaseTimer->stop();
 
-    m_navigationDrawer = new fluent::collections::DrawerView(this);
-    m_navigationDrawer->setObjectName(QStringLiteral("galleryNavigationDrawer"));
-    m_navigationDrawer->setEdge(fluent::collections::DrawerView::DrawerEdge::Left);
-    m_navigationDrawer->setDrawerLength(NavigationMetrics::ExpandedPaneWidth + kNavigationDrawerShadowMargin);
-    m_navigationDrawer->setProperty("fluentSkipSurfacePaint", true);
-    m_navigationDrawer->setDim(false);
-    m_navigationDrawer->setModal(false);
-    m_navigationDrawer->setInteractive(false);
-    m_navigationDrawer->setDragMargin(0);
-    m_navigationDrawer->setGraphicsEffect(nullptr);
-    m_navigationDrawer->setClosePolicy(fluent::collections::DrawerView::ClosePolicy(
-        fluent::collections::DrawerView::CloseOnPressOutside
-        | fluent::collections::DrawerView::CloseOnEscape));
-    m_navigationDrawer->setOuterCornerRadius(themeRadius().overlay);
-
-    m_navigationDrawerContent = new NavigationDrawerContentPanel(m_navigationDrawer);
-    m_navigationDrawerContent->setObjectName(QStringLiteral("galleryNavigationDrawerContent"));
-    auto* layout = new QVBoxLayout(m_navigationDrawerContent);
-    layout->setContentsMargins(0, 0, kNavigationDrawerShadowMargin, 0);
-    layout->setSpacing(0);
-
-    m_drawerMainNavigationPane = new GalleryNavigationPane(m_navigationViewModel.mainPaneItems(),
-                                                           m_navigationDrawerContent);
-    m_drawerMainNavigationPane->setObjectName(QStringLiteral("galleryDrawerMainNavigationPane"));
-    m_drawerFooterNavigationPane = new GalleryNavigationPane(m_navigationViewModel.footerPaneItems(),
-                                                             m_navigationDrawerContent);
-    m_drawerFooterNavigationPane->setObjectName(QStringLiteral("galleryDrawerFooterNavigationPane"));
-    m_drawerMainNavigationPane->setSurfaceVisible(true);
-    m_drawerFooterNavigationPane->setSurfaceVisible(true);
-    m_drawerMainNavigationPane->setCompact(false);
-    m_drawerFooterNavigationPane->setCompact(false);
-
-    m_drawerMainNavigationPane->bind("selectedRouteId",
-                                     &m_navigationState,
-                                     "selectedRouteId",
-                                     fluent::PropertyBinder::TwoWay);
-    m_drawerFooterNavigationPane->bind("selectedRouteId",
-                                       &m_navigationState,
-                                       "selectedRouteId",
-                                       fluent::PropertyBinder::TwoWay);
-
-    const auto closeAfterRoute = [this](const QString&) {
-        QTimer::singleShot(0, this, [this]() {
-            closeNavigationDrawer();
-        });
-    };
-    connect(m_drawerMainNavigationPane, &GalleryNavigationPane::routeActivated,
-            this, closeAfterRoute);
-    connect(m_drawerFooterNavigationPane, &GalleryNavigationPane::routeActivated,
-            this, closeAfterRoute);
-
-    layout->addWidget(m_drawerMainNavigationPane, 1);
-    layout->addWidget(m_drawerFooterNavigationPane, 0);
-    m_navigationDrawer->setContentWidget(m_navigationDrawerContent);
-}
-
-void GalleryWindow::toggleNavigationDrawer()
-{
-    ensureNavigationDrawer();
-    if (!m_navigationDrawer)
+    // Collapsing or closed: drop to the icon rail immediately. zh_CN: 收起或关闭：立即变为图标栏。
+    if (!m_navigationView->isPaneOpen()) {
+        setNavigationPanesCompact(true);
         return;
-
-    const int titleBarHeight = titleBar() ? titleBar()->height() : TitleBarMetrics::Height;
-    m_navigationDrawer->setAvailableMargins(QMargins(0, titleBarHeight, 0, 0));
-    m_navigationDrawer->setDrawerLength((m_navigationView
-                                             ? m_navigationView->expandedPaneWidth()
-                                             : NavigationMetrics::ExpandedPaneWidth)
-                                        + kNavigationDrawerShadowMargin);
-    if (m_drawerMainNavigationPane)
-        m_drawerMainNavigationPane->setCompact(false);
-    if (m_drawerFooterNavigationPane)
-        m_drawerFooterNavigationPane->setCompact(false);
-
-    if (m_navigationDrawer->isOpen() || m_navigationDrawer->isVisible())
-        m_navigationDrawer->close();
+    }
+    // Opening: reveal full labels, but only once the widen animation has settled so they are not
+    // clipped mid-slide. zh_CN: 展开：显示完整标签，但仅在加宽动画稳定后，避免标签在滑动中途被裁剪。
+    const bool animating = m_navigationView->isAnimationEnabled()
+        && m_navigationView->property("layoutTransitionProgress").toDouble() < 1.0;
+    if (animating && m_navigationCompactReleaseTimer)
+        m_navigationCompactReleaseTimer->start(qMax(1, m_navigationView->themeAnimation().normal));
     else
-        m_navigationDrawer->open();
-}
-
-void GalleryWindow::closeNavigationDrawer()
-{
-    if (m_navigationDrawer && (m_navigationDrawer->isOpen() || m_navigationDrawer->isVisible()))
-        m_navigationDrawer->close();
+        setNavigationPanesCompact(false);
 }
 
 void GalleryWindow::setNavigationPanesCompact(bool compact)

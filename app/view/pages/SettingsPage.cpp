@@ -183,14 +183,18 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         QStringLiteral("gallerySettingsThemeChoice"),
         {QStringLiteral("Use system setting"), QStringLiteral("Light"), QStringLiteral("Dark")},
         static_cast<int>(settings->themeMode()));
+    // Match the native WinUI Gallery, which exposes only two navigation styles: "Left" and "Top".
+    // "Left" maps to the responsive Auto mode (expanded → compact → minimal by width, just like
+    // WinUI's PaneDisplayMode.Auto); "Top" is the horizontal bar. The richer internal enum
+    // (Left/LeftCompact/LeftMinimal) stays available for config back-compat and the responsive
+    // resolver, but is no longer surfaced as a manual choice.
+    // zh_CN: 对齐原生 WinUI Gallery，导航样式只暴露 “Left” 与 “Top” 两项。“Left” 映射到响应式 Auto
+    // （按宽度 展开→紧凑→最小，与 WinUI 的 PaneDisplayMode.Auto 一致）；“Top” 为顶部横条。内部更细的枚举
+    // （Left/LeftCompact/LeftMinimal）仍保留用于配置兼容与响应式求解，但不再作为手动选项暴露。
     m_navigationChoice = createChoiceBox(
         QStringLiteral("gallerySettingsNavigationChoice"),
-        {QStringLiteral("Auto"),
-         QStringLiteral("Left"),
-         QStringLiteral("Left compact"),
-         QStringLiteral("Left minimal"),
-         QStringLiteral("Top")},
-        static_cast<int>(settings->navigationStyle()));
+        {QStringLiteral("Left"), QStringLiteral("Top")},
+        settings->navigationStyle() == GallerySettings::NavigationStyle::Top ? 1 : 0);
     m_effectChoice = createChoiceBox(
         QStringLiteral("gallerySettingsEffectChoice"),
         {QStringLiteral("Normal"), QStringLiteral("Mica"), QStringLiteral("Acrylic")},
@@ -208,7 +212,9 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
             });
     connect(m_navigationChoice, qOverload<int>(&QComboBox::currentIndexChanged),
             this, [settings](int index) {
-                settings->setNavigationStyle(static_cast<GallerySettings::NavigationStyle>(index));
+                settings->setNavigationStyle(index == 1
+                                                 ? GallerySettings::NavigationStyle::Top
+                                                 : GallerySettings::NavigationStyle::Auto);
             });
     connect(settings, &GallerySettings::themeModeChanged, this,
             [this](GallerySettings::ThemeMode mode) {
@@ -218,7 +224,8 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     connect(settings, &GallerySettings::navigationStyleChanged, this,
             [this](GallerySettings::NavigationStyle style) {
                 const QSignalBlocker blocker(m_navigationChoice);
-                m_navigationChoice->setCurrentIndex(static_cast<int>(style));
+                m_navigationChoice->setCurrentIndex(
+                    style == GallerySettings::NavigationStyle::Top ? 1 : 0);
             });
     connect(m_effectChoice, qOverload<int>(&QComboBox::currentIndexChanged),
             this, [settings](int index) {

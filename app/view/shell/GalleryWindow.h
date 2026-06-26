@@ -12,10 +12,6 @@
 class QTimer;
 class QWidget;
 
-namespace fluent::collections {
-class DrawerView;
-}
-
 namespace fluent::navigation {
 class NavigationView;
 }
@@ -90,10 +86,12 @@ private:
     void applyNavigationStyle(GallerySettings::NavigationStyle style);
     void setTopNavigationChrome(bool top);
     void toggleNavigationDisplayMode();
-    void ensureNavigationDrawer();
-    void toggleNavigationDrawer();
-    void closeNavigationDrawer();
     void setNavigationPanesCompact(bool compact);
+    // Drives the inline panes' icon-only vs labelled density off the pane's open state: full labels
+    // only once an opened pane has settled at full width (avoids label clipping mid-slide); icons
+    // immediately when collapsing. zh_CN: 依据窗格开合驱动内联窗格的“仅图标 vs 带标签”密度：仅当展开的窗格
+    // 在全宽稳定后才显示完整标签（避免滑动中标签被裁剪）；收起时立即变为图标。
+    void applyNavigationPaneDensity();
     void updateNavigationCommands();
 
     GalleryNavigationViewModel m_navigationViewModel;
@@ -103,10 +101,6 @@ private:
     GalleryNavigationPane* m_footerNavigationPane = nullptr;
     GalleryTopNavigationPane* m_topMainNavigationPane = nullptr;
     GalleryTopNavigationPane* m_topFooterNavigationPane = nullptr;
-    fluent::collections::DrawerView* m_navigationDrawer = nullptr;
-    QWidget* m_navigationDrawerContent = nullptr;
-    GalleryNavigationPane* m_drawerMainNavigationPane = nullptr;
-    GalleryNavigationPane* m_drawerFooterNavigationPane = nullptr;
     GalleryContentPresenter* m_contentPresenter = nullptr;
     GalleryTitleBarController* m_titleBar = nullptr;
     GalleryIntroTour* m_introTour = nullptr;
