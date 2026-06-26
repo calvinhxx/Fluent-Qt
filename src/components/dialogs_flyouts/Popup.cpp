@@ -286,7 +286,7 @@ void Popup::startEnterAnimation() {
 
 void Popup::startExitAnimation() {
     const auto& a = themeAnimation();
-    m_anim->setDuration(a.normal);       // Matches Dialog: 250ms. zh_CN: 与 Dialog 一致。
+    m_anim->setDuration(m_exitDuration >= 0 ? m_exitDuration : a.normal); // Default matches Dialog: 250ms. zh_CN: 默认与 Dialog 一致。
     m_anim->setStartValue(m_popupProgress);
     m_anim->setEndValue(0.0);
     m_anim->setEasingCurve(a.exit);     // Matches Dialog. zh_CN: 与 Dialog 一致。

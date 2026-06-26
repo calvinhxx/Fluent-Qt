@@ -104,6 +104,13 @@ public:
     bool isAnimationEnabled() const { return m_animationEnabled; }
     void setAnimationEnabled(bool e) { m_animationEnabled = e; }
 
+    // Overrides the exit (close) animation duration in ms; -1 (default) uses the theme's normal
+    // duration (250ms, matching Dialog). Lets a caller make a specific popup's dismissal snappier than
+    // the shared default without affecting other Popup users. zh_CN: 覆盖关闭动画时长（毫秒）；-1（默认）
+    // 使用主题 normal 时长（250ms，与 Dialog 一致）。让调用方在不影响其它 Popup 使用者的前提下，使某个弹窗的关闭更利落。
+    int exitDuration() const { return m_exitDuration; }
+    void setExitDuration(int ms) { m_exitDuration = ms; }
+
     /**
      * @brief Uses a widget as the local theme source when no anchor drives the popup.
      * zh_CN: 无锚点 Popup 显示时用于继承局部主题的来源控件。
@@ -181,6 +188,7 @@ private:
     bool m_modal = false;
     bool m_dim   = false;
     bool m_animationEnabled = true;
+    int  m_exitDuration = -1;
     bool m_positionSet = false;
     QPoint m_targetPos;
     QPointer<QWidget> m_positionRelativeTo;
