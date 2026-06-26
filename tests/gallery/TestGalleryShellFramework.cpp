@@ -155,6 +155,18 @@ TreeView* navigationTree(GalleryNavigationPane* pane)
     return pane ? pane->findChild<TreeView*>() : nullptr;
 }
 
+Popup* visiblePopupByName(QWidget* root, const QString& objectName)
+{
+    if (!root)
+        return nullptr;
+    const auto popups = root->findChildren<Popup*>(objectName);
+    for (Popup* popup : popups) {
+        if (popup && popup->isVisible())
+            return popup;
+    }
+    return nullptr;
+}
+
 void settleTreeAnimations()
 {
     QApplication::processEvents();
@@ -1368,8 +1380,11 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
         QStringLiteral("galleryTopNavigationButton_home"));
     auto* topFoundationButton = navigationView->mainChromeWidget()->findChild<Button*>(
         QStringLiteral("galleryTopNavigationButton_foundation"));
+    auto* topDialogsButton = navigationView->mainChromeWidget()->findChild<Button*>(
+        QStringLiteral("galleryTopNavigationButton_dialogs-flyouts"));
     ASSERT_NE(topHomeButton, nullptr);
     ASSERT_NE(topFoundationButton, nullptr);
+    ASSERT_NE(topDialogsButton, nullptr);
     EXPECT_GE(topFoundationButton->geometry().left() - topHomeButton->geometry().right() - 1, 4);
 
     auto* topToolTip = topHomeButton->findChild<ToolTip*>(
@@ -1394,25 +1409,46 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
             > foundationButtonInWindow.bottom(),
         1000);
 
+    QPointer<Popup> dismissedTopFlyout(topFlyout);
+    QTest::mouseClick(topDialogsButton, Qt::LeftButton);
+    QTRY_VERIFY_WITH_TIMEOUT(!dismissedTopFlyout || !dismissedTopFlyout->isVisible(), 1000);
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("foundation"));
+    EXPECT_EQ(visiblePopupByName(&window, QStringLiteral("galleryTopNavigationFlyout")), nullptr);
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+    QTest::mouseClick(topDialogsButton, Qt::LeftButton);
+    QTRY_COMPARE_WITH_TIMEOUT(window.currentRouteId(), QStringLiteral("dialogs-flyouts"), 1000);
+    QApplication::processEvents();
+    topFlyout = visiblePopupByName(&window, QStringLiteral("galleryTopNavigationFlyout"));
+    ASSERT_NE(topFlyout, nullptr);
+
     auto* topSettingsButton = navigationView->footerChromeWidget()->findChild<Button*>(
         QStringLiteral("galleryTopNavigationButton_settings"));
     ASSERT_NE(topSettingsButton, nullptr);
-    QPointer<Popup> dismissedTopFlyout(topFlyout);
+    dismissedTopFlyout = topFlyout;
+    QTest::mouseClick(topSettingsButton, Qt::LeftButton);
+    QTRY_VERIFY_WITH_TIMEOUT(!dismissedTopFlyout || !dismissedTopFlyout->isVisible(), 1000);
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("dialogs-flyouts"));
+    EXPECT_EQ(visiblePopupByName(&window, QStringLiteral("galleryTopNavigationFlyout")), nullptr);
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    EXPECT_EQ(topSettingsButton->findChild<QPropertyAnimation*>(
+                  QStringLiteral("galleryTopSettingsIconRotationAnimation"), Qt::FindDirectChildrenOnly),
+              nullptr);
+
     QTest::mouseClick(topSettingsButton, Qt::LeftButton);
     auto* topSettingsAnimation = topSettingsButton->findChild<QPropertyAnimation*>(
         QStringLiteral("galleryTopSettingsIconRotationAnimation"), Qt::FindDirectChildrenOnly);
     ASSERT_NE(topSettingsAnimation, nullptr);
     EXPECT_EQ(topSettingsAnimation->state(), QAbstractAnimation::Running);
-    QTRY_VERIFY_WITH_TIMEOUT(!dismissedTopFlyout || !dismissedTopFlyout->isVisible(), 1000);
     QTRY_COMPARE_WITH_TIMEOUT(window.currentRouteId(), QStringLiteral("settings"), 1000);
     QTRY_COMPARE_WITH_TIMEOUT(topSettingsAnimation->state(), QAbstractAnimation::Stopped, 1000);
     EXPECT_NEAR(topSettingsButton->iconRotation(), 0.0, 0.001);
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 
     QTest::mouseClick(topFoundationButton, Qt::LeftButton);
     QApplication::processEvents();
-    topFlyout = window.findChild<Popup*>(QStringLiteral("galleryTopNavigationFlyout"));
+    topFlyout = visiblePopupByName(&window, QStringLiteral("galleryTopNavigationFlyout"));
     ASSERT_NE(topFlyout, nullptr);
-    ASSERT_TRUE(topFlyout->isVisible());
     auto* foundationChild = topFlyout->findChild<QWidget*>(
         QStringLiteral("galleryCompactNavigationFlyoutRow_foundation-qmlplus"));
     ASSERT_NE(foundationChild, nullptr);
