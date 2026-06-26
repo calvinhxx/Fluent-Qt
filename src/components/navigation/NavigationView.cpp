@@ -176,9 +176,9 @@ public:
         // 且不清背景——未绘制处保留已绘制到共享后备缓冲的内容宿主。若用 WA_TranslucentBackground + Source 清除，
         // 反而会擦掉内容宿主像素、让内容区变空白。
         setAttribute(Qt::WA_NoSystemBackground, true);
-        // Focusable so opening the flyout parks keyboard focus here: without a focused widget Qt
-        // dispatches no KeyPress, and the Esc light-dismiss filter would never fire.
-        // zh_CN: 可获焦，使打开浮层时键盘焦点停在此处：没有获焦控件时 Qt 不会派发 KeyPress，Esc 轻关闭过滤器永远不触发。
+        // Focusable as a direct-keyboard fallback, but opening the flyout does not grab focus.
+        // NavigationView installs an application-level Esc filter while the flyout is visible.
+        // zh_CN: 作为直接键盘兜底保持可聚焦，但打开浮层时不抢焦点；浮层可见期间由 NavigationView 安装应用级 Esc 过滤器。
         setFocusPolicy(Qt::StrongFocus);
     }
 
@@ -960,13 +960,10 @@ void NavigationView::updatePaneFlyout(const LayoutState& state)
     overlay->show();
     overlay->raise();
     setPaneFlyoutEscFilter(true);
-    // Park keyboard focus on the flyout so Esc (handled in its keyPressEvent) works; without a
-    // focused widget Qt dispatches no key events. updatePaneFlyout only runs on layout changes, so
-    // this does not fight the user's focus while the flyout simply sits open.
-    // zh_CN: 把键盘焦点停在浮层上，使 Esc（在其 keyPressEvent 处理）生效；没有获焦控件时 Qt 不派发键事件。
-    // updatePaneFlyout 仅在布局变化时运行，故浮层静止打开期间不会与用户焦点相争。
-    if (!overlay->hasFocus())
-        overlay->setFocus(Qt::OtherFocusReason);
+    // Esc is handled by the application-level filter while the flyout is visible. Do not grab focus
+    // here: an embedded NavigationView would ask an ancestor ScrollView to auto-scroll to the overlay.
+    // zh_CN: Esc 由浮层可见期间安装的应用级过滤器处理。这里不要抢焦点，否则内嵌的
+    // NavigationView 会触发祖先 ScrollView 自动滚到浮层位置。
 }
 
 void NavigationView::setPaneFlyoutEscFilter(bool installed)

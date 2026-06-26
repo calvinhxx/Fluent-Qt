@@ -11,6 +11,7 @@
 #include <QLayout>
 #include <QMargins>
 #include <QPoint>
+#include <QScrollBar>
 #include <QSizePolicy>
 #include <QStringList>
 #include <QTest>
@@ -90,6 +91,18 @@ GallerySampleCard* sampleCardById(GalleryComponentPage* page, const QString& sam
     for (GallerySampleCard* card : page->sampleCards()) {
         if (card && card->sampleId() == sampleId)
             return card;
+    }
+    return nullptr;
+}
+
+Button* buttonWithText(QWidget* root, const QString& text)
+{
+    if (!root)
+        return nullptr;
+    const auto buttons = root->findChildren<Button*>();
+    for (Button* button : buttons) {
+        if (button && button->text() == text)
+            return button;
     }
     return nullptr;
 }
@@ -530,6 +543,56 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonUpdatesTreeViewPreviewTheme)
     EXPECT_EQ(treeView->effectiveTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(treeView->themeColors().bgLayer, QColor("#FFFFFF"));
     EXPECT_EQ(page->titleLabel()->effectiveTheme(), fluent::FluentElement::Light);
+}
+
+TEST_F(GalleryContentPagesTest, NavigationViewDisplayModeButtonsKeepContentScrollPosition)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("navigation-view")));
+    window.show();
+    QApplication::processEvents();
+
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
+    ASSERT_NE(page, nullptr);
+    auto* scrollView = page->findChild<fluent::scrolling::ScrollView*>(
+        QStringLiteral("galleryContentScrollArea"));
+    ASSERT_NE(scrollView, nullptr);
+    ASSERT_NE(scrollView->verticalScrollBar(), nullptr);
+
+    GallerySampleCard* card = sampleCardById(
+        page, QStringLiteral("navigation-view-display-modes"));
+    ASSERT_NE(card, nullptr);
+    ASSERT_NE(card->previewWidget(), nullptr);
+
+    const int cardTop = card->mapTo(scrollView->widget(), QPoint(0, 0)).y();
+    scrollView->verticalScrollBar()->setValue(
+        qBound(scrollView->verticalScrollBar()->minimum(),
+               cardTop - 28,
+               scrollView->verticalScrollBar()->maximum()));
+    QApplication::processEvents();
+
+    const QStringList modeButtons{
+        QStringLiteral("Compact"),
+        QStringLiteral("Minimal"),
+        QStringLiteral("Top"),
+        QStringLiteral("Left")
+    };
+
+    for (const QString& buttonText : modeButtons) {
+        Button* button = buttonWithText(card->previewWidget(), buttonText);
+        ASSERT_NE(button, nullptr) << buttonText.toStdString();
+        const int before = scrollView->verticalScrollBar()->value();
+        QTest::mouseClick(button, Qt::LeftButton, Qt::NoModifier,
+                          button->rect().center());
+        QTest::qWait(360);
+        QApplication::processEvents();
+        EXPECT_LE(qAbs(scrollView->verticalScrollBar()->value() - before), 2)
+            << buttonText.toStdString();
+        EXPECT_LT(scrollView->verticalScrollBar()->value(),
+                  scrollView->verticalScrollBar()->maximum())
+            << buttonText.toStdString();
+    }
 }
 
 TEST_F(GalleryContentPagesTest, ContentScrollSurfaceStaysTransparentAcrossThemeRefresh)
