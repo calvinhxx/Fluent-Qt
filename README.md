@@ -11,6 +11,16 @@ Fluent-QT 是基于 Qt Widgets 的 Fluent / WinUI 风格组件库，支持 **Qt 
 - [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery)
 - [Fluent UI 2 Web](https://developer.microsoft.com/en-us/fluentui#/controls/web)
 
+多设计语言（Fluent / Material 3 / macOS）的样式主题规范见
+[docs/design-languages/README.md](docs/design-languages/README.md)，其中 Fluent 为基线
+（值取自本仓库 `src/design/*.h`），Material 3 与 macOS 的颜色 token、形状与组件规格均通过
+Figma MCP 从官方设计套件实证抽取，并以 Fluent 基线为差量：
+
+- [Fluent（Windows）设计参考](docs/design-languages/fluent.md)（基线，另两者为其差量）
+- [Material 3（Google）设计参考](docs/design-languages/material-3.md)
+- [macOS（Apple）设计参考](docs/design-languages/macos.md)
+- [Figma 来源与抽取方式](docs/design-languages/figma-sources.md)
+
 ## 快速开始
 
 项目使用 C++17、vcpkg manifest 依赖、GTest 和 spdlog。公共 CMake presets 默认开启测试，
