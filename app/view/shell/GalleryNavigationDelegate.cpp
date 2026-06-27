@@ -106,7 +106,7 @@ public:
         painter->setRenderHint(QPainter::Antialiasing);
         painter->setRenderHint(QPainter::TextAntialiasing);
 
-        const auto colors = m_themeHost->themeColors();
+        const auto& colors = m_themeHost->themeColorsRef();
         const auto radius = m_themeHost->themeRadius();
         const auto kind = static_cast<GalleryNavigationItem::Kind>(index.data(KindRole).toInt());
         const QString text = index.data(Qt::DisplayRole).toString();

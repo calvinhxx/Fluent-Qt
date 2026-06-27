@@ -386,9 +386,8 @@ void ProgressRing::timerEvent(QTimerEvent* event)
         return;
     }
 
-    const int cycleMs = qMax(1, themeAnimation().normal * 4);
     m_animationPhase = std::fmod(
-        m_animationPhase + kFullCircleDegrees * static_cast<qreal>(kAnimationIntervalMs) / cycleMs,
+        m_animationPhase + kFullCircleDegrees * static_cast<qreal>(kAnimationIntervalMs) / m_spinCycleMs,
         kFullCircleDegrees);
     update();
 }
@@ -446,7 +445,7 @@ QColor ProgressRing::indicatorColor() const
 
 void ProgressRing::updateThemeColors()
 {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     m_runningColor = colors.accentDefault;
     m_pausedColor = colors.systemCaution;
     m_errorColor = colors.systemCritical;
@@ -461,6 +460,9 @@ void ProgressRing::updateAnimationState()
 {
     if (shouldAnimate()) {
         if (!m_animationTimer.isActive()) {
+            // Resolve the cycle length once per spin start (out of the per-frame timerEvent path).
+            // zh_CN: 每次开始旋转时解析一次周期(移出每帧 timerEvent 路径)。
+            m_spinCycleMs = qMax(1, themeAnimation().normal * 4);
             m_animationTimer.start(kAnimationIntervalMs, this);
         }
     } else if (m_animationTimer.isActive()) {

@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QStandardPaths>
+#include <QtGlobal>
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -175,17 +176,25 @@ void applySpec(const QJsonObject& spec)
     if (spec.contains(QLatin1String("radius"))) {
         const QJsonObject r = spec.value(QLatin1String("radius")).toObject();
         const FluentElement::Radius base = reg.radius();
-        reg.setRadius(r.value(QLatin1String("none")).toInt(base.none),
-                      r.value(QLatin1String("control")).toInt(base.control),
-                      r.value(QLatin1String("overlay")).toInt(base.overlay));
+        // Clamp user-file radii to a sane range: a malformed/hostile themes/*.json could otherwise set a
+        // negative or absurd corner radius that flows into every control's drawRoundedRect. Qt would clamp
+        // it at paint time, but bounding it here keeps the stored token sane. zh_CN: 把用户文件圆角夹到合理范围:
+        // 否则畸形/恶意 themes/*.json 可设负值或离谱圆角并流入所有控件的 drawRoundedRect;在此设界使存储 token 保持合理。
+        constexpr int kMaxRadius = 64;
+        reg.setRadius(qBound(0, r.value(QLatin1String("none")).toInt(base.none), kMaxRadius),
+                      qBound(0, r.value(QLatin1String("control")).toInt(base.control), kMaxRadius),
+                      qBound(0, r.value(QLatin1String("overlay")).toInt(base.overlay), kMaxRadius));
     }
 
     if (spec.contains(QLatin1String("font"))) {
         const QJsonObject f = spec.value(QLatin1String("font")).toObject();
         if (f.contains(QLatin1String("family")))
             reg.setFontFamilyOverride(f.value(QLatin1String("family")).toString());
-        if (f.contains(QLatin1String("scale")))
-            reg.setFontScale(f.value(QLatin1String("scale")).toDouble(1.0));
+        if (f.contains(QLatin1String("scale"))) {
+            // Bound the font scale so a stray "scale": 100000 can't blow up every QFont pixel size and
+            // text-layout allocation. zh_CN: 给字号缩放设界,避免误填 "scale": 100000 撑爆所有 QFont 像素尺寸与文本布局分配。
+            reg.setFontScale(qBound(0.5, f.value(QLatin1String("scale")).toDouble(1.0), 4.0));
+        }
     }
 
     if (spec.contains(QLatin1String("light"))) {

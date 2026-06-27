@@ -158,6 +158,11 @@ private:
 
     QBasicTimer m_animationTimer;
     qreal m_animationPhase = 0.0;
+    // Indeterminate-spin cycle length (ms), cached when the timer starts so timerEvent() need not
+    // rebuild the whole Animation token (5 QEasingCurve copies) on every 16ms frame.
+    // zh_CN: 不定态旋转的周期(ms),在定时器启动时缓存,使 timerEvent() 不必每 16ms 帧重建整个 Animation token
+    //（含 5 个 QEasingCurve 拷贝)。
+    int m_spinCycleMs = 1;
 
     QColor m_runningColor;
     QColor m_pausedColor;

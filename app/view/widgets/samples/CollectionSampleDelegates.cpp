@@ -28,6 +28,17 @@ using fluent::collections::TreeView;
 
 namespace {
 
+// Shared all-invalid color set, bound by const-ref when a delegate has no theme host, so the paint
+// hot paths can read colors via themeColorsRef() without copying the ~50-QColor Colors struct per
+// item. The .isValid() guards at each use site fall back to literals for every field.
+// zh_CN: 共享的全无效色板;delegate 无主题宿主时按 const 引用绑定，使绘制热路径可经 themeColorsRef() 读色而不必每项
+// 拷贝整个 ~50 个 QColor 的 Colors 结构体。各使用点的 .isValid() 守卫会对每个字段回退到字面量。
+const fluent::FluentElement::Colors& emptyColors()
+{
+    static const fluent::FluentElement::Colors kEmpty{};
+    return kEmpty;
+}
+
 void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pixmap)
 {
     const QSizeF sourceSize = pixmap.size() / pixmap.devicePixelRatio();
@@ -146,9 +157,8 @@ void GridPhotoDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opt
     painter->setRenderHint(QPainter::SmoothPixmapTransform);
     painter->setRenderHint(QPainter::TextAntialiasing);
 
-    fluent::FluentElement::Colors colors{};
-    if (m_themeHost)
-        colors = m_themeHost->themeColors();
+    const fluent::FluentElement::Colors& colors =
+        m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
     const QColor layer = colors.bgLayerAlt.isValid() ? colors.bgLayerAlt : QColor(250, 250, 250);
     const QColor stroke = colors.strokeDefault.isValid() ? colors.strokeDefault : QColor(220, 220, 220);
     const QColor accent = colors.accentDefault.isValid() ? colors.accentDefault : QColor(0, 120, 212);
@@ -244,9 +254,8 @@ void GridPhotoDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opt
 void GridPhotoDelegate::drawCheckOverlay(QPainter* painter, const QRectF& card,
                                          bool selected, bool enabled) const
 {
-    fluent::FluentElement::Colors colors{};
-    if (m_themeHost)
-        colors = m_themeHost->themeColors();
+    const fluent::FluentElement::Colors& colors =
+        m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
     const QColor accent = colors.accentDefault.isValid() ? colors.accentDefault : QColor(0, 120, 212);
 
     constexpr qreal kSize = 22.0;
@@ -304,12 +313,11 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     painter->setRenderHint(QPainter::Antialiasing);
     painter->setRenderHint(QPainter::SmoothPixmapTransform);
 
-    fluent::FluentElement::Colors colors{};
+    const fluent::FluentElement::Colors& colors =
+        m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
     fluent::FluentElement::Radius radius{};
-    if (m_themeHost) {
-        colors = m_themeHost->themeColors();
+    if (m_themeHost)
         radius = m_themeHost->themeRadius();
-    }
     const int cornerR = radius.control > 0 ? radius.control : CornerRadius::Control;
 
     // Design language + effective theme drive the per-language selection/hover treatment.
@@ -443,12 +451,11 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
 
-    fluent::FluentElement::Colors colors{};
+    const fluent::FluentElement::Colors& colors =
+        m_themeHost ? m_themeHost->themeColorsRef() : emptyColors();
     fluent::FluentElement::Radius radius{};
-    if (m_themeHost) {
-        colors = m_themeHost->themeColors();
+    if (m_themeHost)
         radius = m_themeHost->themeRadius();
-    }
     const int cornerR = radius.control > 0 ? radius.control : 4;
     const QRectF bgRect = bgRectForOption(option);
 
