@@ -18,6 +18,7 @@
 #include <limits>
 
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/RepeatButton.h"
 #include "components/status_info/ProgressBar.h"
 #include "components/textfields/NumberBox.h"
@@ -338,6 +339,153 @@ TEST_F(ProgressBarTest, NumberBoxValueDrivesDeterminateBar) {
     EXPECT_DOUBLE_EQ(bar->value(), 1.0);
     EXPECT_EQ(bar->progressText(), "1");
     EXPECT_EQ(barValueSpy.count(), 1);
+}
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// ProgressBar gains Material 3 and macOS paint branches alongside the unchanged Fluent treatment.
+// Design language + theme are GLOBAL singletons, so this fixture restores both in TearDown. The bars
+// here are DETERMINATE (a fixed value, not indeterminate) because a headless grab() does not advance
+// the QBasicTimer animation, so only determinate states render deterministically.
+// zh_CN: ProgressBar 在原 Fluent 处理之外新增 Material 3 与 macOS 绘制分支。设计语言与主题为全局单例,
+// 故本夹具在 TearDown 中恢复二者。此处使用确定态进度条(固定值,非不确定),因为无界面的 grab() 不会推进
+// QBasicTimer 动画,只有确定态可确定性渲染。
+class ProgressBarDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a DETERMINATE ProgressBar at the requested value and grab it as an image.
+    // zh_CN: 以指定值构建确定态 ProgressBar 并抓取为图像。
+    static QImage grabBar(double value) {
+        ProgressBar bar;
+        bar.setRange(0, 100);
+        bar.setIsIndeterminate(false);
+        bar.setValue(value);
+        bar.resize(220, 12);
+        return bar.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    // How many pixels differ between two same-size images. zh_CN: 两张同尺寸图像之间存在差异的像素数量。
+    static int differingPixels(const QImage& a, const QImage& b) {
+        if (a.size() != b.size())
+            return -1;
+        int diff = 0;
+        for (int y = 0; y < a.height(); ++y)
+            for (int x = 0; x < a.width(); ++x)
+                if (a.pixel(x, y) != b.pixel(x, y))
+                    ++diff;
+        return diff;
+    }
+};
+
+TEST_F(ProgressBarDesignLanguageTest, AllLanguagesAndThemesPaintAndDifferentiate) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            const QImage empty = grabBar(0);
+            const QImage full = grabBar(100);
+
+            // 1. Both render a valid, non-empty image. zh_CN: 两者都渲染出有效、非空图像。
+            ASSERT_FALSE(empty.isNull()) << ctx << "/value0";
+            ASSERT_FALSE(full.isNull()) << ctx << "/value100";
+            EXPECT_GT(full.width(), 0) << ctx;
+            EXPECT_GT(full.height(), 0) << ctx;
+
+            // 2. A populated bar paints content (some pixel differs from the corner background).
+            //    zh_CN: 已填充的进度条绘制出内容(某像素与角落背景不同)。
+            EXPECT_TRUE(hasPaintedContent(full)) << "value100 painted nothing: " << ctx;
+
+            // 3. value 0 vs value 100 must be visibly different (active fill appears).
+            //    zh_CN: value 0 与 value 100 必须明显不同(出现活动填充)。
+            const int valueDiff = differingPixels(empty, full);
+            ASSERT_GE(valueDiff, 0) << ctx << " (size mismatch)";
+            EXPECT_GT(valueDiff, 0)
+                << "value 0 is indistinguishable from value 100: " << ctx;
+        }
+    }
+
+    // 4. Material vs Fluent must produce a visibly different image at the same value/theme — the M3
+    //    branch (rounded ~4px track + gap + stop dot) is structurally distinct from Fluent.
+    //    zh_CN: 同值/同主题下,Material 与 Fluent 必须产生明显不同的图像——M3 分支(圆角 ~4px 轨道 + 间隙 +
+    //    停止点)在结构上区别于 Fluent。
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
+    const QImage fluentBar = grabBar(60);
+
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignMaterial);
+    const QImage materialBar = grabBar(60);
+
+    const int langDiff = differingPixels(fluentBar, materialBar);
+    ASSERT_GE(langDiff, 0) << "Fluent/Material size mismatch";
+    EXPECT_GT(langDiff, 0)
+        << "Material ProgressBar is indistinguishable from Fluent at the same value/theme";
+}
+
+// Regression for the invalid-QColor trap (a default-constructed QColor is INVALID yet QColor::alpha()
+// returns 255, so a bare alpha()>0 guard + setBrush(invalidColor) paints SOLID OPAQUE BLACK). The
+// Material/macOS branches fill a real track + active surface, so a determinate bar must never render an
+// opaque near-#000 center. zh_CN: 无效 QColor 陷阱回归。Material/macOS 分支绘制真实轨道+活动表面,确定态进度条
+// 不得在中心呈现不透明近黑。
+TEST_F(ProgressBarDesignLanguageTest, MaterialAndCupertinoHaveNoOpaqueBlackTrack) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+        for (auto theme : themes) {
+            fluent::FluentElement::setTheme(theme);
+
+            // Sample the vertical center along the active fill (left third) for a determinate bar.
+            // zh_CN: 在确定态进度条的活动填充处(左侧三分之一)采样竖直中心。
+            const QImage img = grabBar(60);
+            ASSERT_FALSE(img.isNull()) << "lang=" << lang << " theme=" << theme;
+
+            const QColor c = img.pixelColor(img.width() / 6, img.height() / 2);
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "ProgressBar painted an opaque black surface: lang=" << lang << " theme=" << theme
+                << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+        }
+    }
 }
 
 TEST_F(ProgressBarTest, VisualCheck) {

@@ -191,7 +191,7 @@ private:
     QString valueText() const;
     QFont valueFont() const;
     QFont iconFont() const;
-    void drawCenteredTextPath(QPainter& painter, const QRectF& targetRect, const QFont& font, const QString& text) const;
+    void drawCenteredTextPath(QPainter& painter, const QRectF& targetRect, const QFont& font, const QString& text, const QColor& color = QColor()) const;
     QColor statusBackgroundColor() const;
     void updateThemeColors();
     void invalidateLayoutAndPaint();

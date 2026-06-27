@@ -233,11 +233,42 @@ void InfoBadge::paintEvent(QPaintEvent*)
     badgeRect = badgeRect.intersected(QRectF(rect()));
     if (!badgeRect.isValid() || badgeRect.isEmpty()) return;
 
+    // Design-language branch. DesignFluent stays byte-for-byte unchanged (uses the cached
+    // effectiveBackground/ForegroundColor exactly as before). Material 3 and macOS adopt the same
+    // fully-rounded badge that Fluent already paints (circle for the dot, pill = height/2 radius for
+    // numbered/value), but force WHITE on-color text and read RED (systemCritical) by default on macOS
+    // for the Attention status (the canonical macOS notification/dock badge is system red).
+    // zh_CN: 设计语言分支。DesignFluent 逐字节保持不变(沿用缓存的 effectiveBackground/ForegroundColor)。
+    // Material 3 与 macOS 复用 Fluent 已绘制的全圆角徽标(提示点为圆形,数值徽标为 height/2 胶囊),但强制
+    // 白色 on-color 文字,且 macOS 在 Attention 状态下默认读作红色(systemCritical,即 macOS 通知/程序坞徽标)。
+    const DesignLanguage lang = themeDesignLanguage();
+    QColor fillColor = effectiveBackgroundColor();
+    QColor textColor = effectiveForegroundColor();
+    if (lang != DesignFluent && isEnabled()) {
+        const auto& colors = themeColors();
+        // Background: honor a custom override first; otherwise the per-state semantic color, with macOS
+        // defaulting the neutral Attention state to system red. zh_CN: 背景:优先自定义覆盖;否则按状态语义
+        // 取色,macOS 在中性 Attention 状态下默认系统红。
+        if (m_customBackgroundColor.isValid()) {
+            fillColor = m_customBackgroundColor;
+        } else if (lang == DesignCupertino && m_status == InfoBadgeStatus::Attention) {
+            fillColor = colors.systemCritical;
+        } else {
+            fillColor = statusBackgroundColor();
+        }
+        // Foreground: guaranteed white on the colored fill (M3 + macOS badges are white-on-color),
+        // unless the caller set a custom text color. Init to a real color so the invalid-QColor trap
+        // (alpha()==255 on an unassigned color → opaque black) can never fire. zh_CN: 前景:彩色填充上
+        // 保证白色(M3/macOS 徽标为白底彩),除非调用方设置自定义文本色。初始化为真实颜色,避免无效 QColor
+        // 陷阱(未赋值颜色 alpha()==255 → 不透明黑)。
+        textColor = m_customTextColor.isValid() ? m_customTextColor : QColor(Qt::white);
+    }
+
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setOpacity(m_badgeOpacity);
     painter.setPen(Qt::NoPen);
-    painter.setBrush(effectiveBackgroundColor());
+    painter.setBrush(fillColor);
 
     const qreal maxInset = qMax<qreal>(0.0, qMin(badgeRect.width(), badgeRect.height()) / 2.0 - 0.5);
     const qreal backgroundInset = qMin<qreal>(m_badgeBackgroundInset, maxInset);
@@ -257,18 +288,18 @@ void InfoBadge::paintEvent(QPaintEvent*)
     const InfoBadgeDisplayMode mode = effectiveDisplayMode();
     if (mode == InfoBadgeDisplayMode::Dot) return;
 
-    painter.setPen(effectiveForegroundColor());
+    painter.setPen(textColor);
     painter.setBrush(Qt::NoBrush);
 
     if (mode == InfoBadgeDisplayMode::Icon && !m_iconGlyph.isEmpty()) {
-        drawCenteredTextPath(painter, badgeRect, iconFont(), m_iconGlyph);
+        drawCenteredTextPath(painter, badgeRect, iconFont(), m_iconGlyph, textColor);
         return;
     }
 
     if (mode == InfoBadgeDisplayMode::Value) {
         const QString text = valueText();
         if (text.isEmpty()) return;
-        drawCenteredTextPath(painter, badgeRect, valueFont(), text);
+        drawCenteredTextPath(painter, badgeRect, valueFont(), text, textColor);
     }
 }
 
@@ -299,7 +330,7 @@ QFont InfoBadge::iconFont() const
     return font;
 }
 
-void InfoBadge::drawCenteredTextPath(QPainter& painter, const QRectF& targetRect, const QFont& font, const QString& text) const
+void InfoBadge::drawCenteredTextPath(QPainter& painter, const QRectF& targetRect, const QFont& font, const QString& text, const QColor& color) const
 {
     if (text.isEmpty() || targetRect.isEmpty()) return;
 
@@ -310,7 +341,7 @@ void InfoBadge::drawCenteredTextPath(QPainter& painter, const QRectF& targetRect
 
     painter.save();
     painter.setPen(Qt::NoPen);
-    painter.setBrush(effectiveForegroundColor());
+    painter.setBrush(color.isValid() ? color : effectiveForegroundColor());
     painter.translate(
         targetRect.center().x() - textBounds.center().x() + m_contentOffset.x(),
         targetRect.center().y() - textBounds.center().y() + m_contentOffset.y());

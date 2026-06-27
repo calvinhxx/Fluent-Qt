@@ -15,6 +15,7 @@
 #include "components/status_info/ProgressRing.h"
 #include "components/textfields/NumberBox.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 
 using namespace fluent::status_info;
 using fluent::basicinput::RepeatButton;
@@ -263,6 +264,125 @@ TEST_F(ProgressRingTest, NumberBoxValueDrivesDeterminateRing) {
     EXPECT_DOUBLE_EQ(progressBox->value(), 0);
     EXPECT_EQ(ring->value(), 0);
     EXPECT_DOUBLE_EQ(ring->progressRatio(), 0.0);
+}
+
+// ─── Design-language × theme paint compatibility ────────────────────────────
+//
+// ProgressRing branches its paintEvent on the active design language: DesignFluent keeps the WinUI
+// arc, DesignMaterial draws a rounded-cap arc + track + leading stop dot, DesignCupertino draws a
+// spoke spinner (indeterminate) or a thin accent ring (determinate). Each must paint valid, non-empty
+// content under both App themes, and a determinate ring at 0% must read visibly different from one at
+// 100%. Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: ProgressRing 在 paintEvent 中按设计语言分支:DesignFluent 保持 WinUI 弧线,DesignMaterial 绘制
+// 圆头弧线+轨道+前端停止点,DesignCupertino 绘制辐条转轮(不确定)或细 accent 环(确定)。每种都必须在两
+// 种主题下绘制有效、非空内容,且确定态 0% 必须明显不同于 100%。设计语言与主题为全局单例,夹具在
+// TearDown 中恢复二者。
+class ProgressRingDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a DETERMINATE ring at the requested value, sized like a real medium ring, and grab it.
+    // zh_CN: 以指定值构建确定态环,设定与真实中号环一致的尺寸并抓取。
+    static QImage grabDeterminate(int value) {
+        ProgressRing ring;
+        ring.setIsIndeterminate(false);
+        ring.setIsActive(true);
+        ring.setBackgroundVisible(true);
+        ring.setValue(value);
+        ring.resize(48, 48);
+        return ring.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        if (img.isNull()) return false;
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    static int differingPixels(const QImage& a, const QImage& b) {
+        if (a.size() != b.size())
+            return -1;
+        int diff = 0;
+        for (int y = 0; y < a.height(); ++y)
+            for (int x = 0; x < a.width(); ++x)
+                if (a.pixel(x, y) != b.pixel(x, y))
+                    ++diff;
+        return diff;
+    }
+};
+
+TEST_F(ProgressRingDesignLanguageTest, AllLanguagesAndThemesPaintAndProgressIsVisible) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            const QImage low = grabDeterminate(0);
+            const QImage high = grabDeterminate(100);
+            const QImage mid = grabDeterminate(60);
+
+            // 1. Each grab paints a valid, non-empty image with content. zh_CN: 每次抓取都绘制有效、非空且有内容的图像。
+            ASSERT_FALSE(low.isNull()) << ctx << "/0%";
+            ASSERT_FALSE(high.isNull()) << ctx << "/100%";
+            ASSERT_FALSE(mid.isNull()) << ctx << "/60%";
+            EXPECT_GT(mid.width(), 0) << ctx;
+            EXPECT_GT(mid.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(mid)) << "60% painted nothing: " << ctx;
+            EXPECT_TRUE(hasPaintedContent(high)) << "100% painted nothing: " << ctx;
+
+            // 2. A determinate ring at 0% must read visibly different from one at 100%. zh_CN: 确定态 0% 必须明显不同于 100%。
+            const int diff = differingPixels(low, high);
+            ASSERT_GE(diff, 0) << ctx << " (size mismatch)";
+            EXPECT_GT(diff, 0)
+                << "determinate progress is indistinguishable between 0% and 100%: " << ctx;
+        }
+    }
+}
+
+// The macOS spoke spinner is a distinct code path (radial tapered lines with a fading alpha ramp)
+// from the determinate ring; verify the INDETERMINATE Cupertino ring paints content without crashing.
+// Headless timers don't advance, so it relies on the static fading frame. zh_CN: macOS 辐条转轮是与确定
+// 环不同的代码路径(放射状渐细线段+渐隐 alpha);验证不确定态 Cupertino 环绘制出内容且不崩溃。无头环境
+// 定时器不前进,故依赖静态渐隐帧。
+TEST_F(ProgressRingDesignLanguageTest, CupertinoIndeterminateSpokeSpinnerPaints) {
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignCupertino);
+
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+
+        ProgressRing ring;
+        ring.setIsIndeterminate(true);
+        ring.setIsActive(true);
+        ring.resize(48, 48);
+        const QImage img = ring.grab().toImage();
+
+        ASSERT_FALSE(img.isNull()) << "theme=" << theme;
+        EXPECT_TRUE(hasPaintedContent(img)) << "Cupertino spoke spinner painted nothing: theme=" << theme;
+    }
 }
 
 TEST_F(ProgressRingTest, VisualCheck) {

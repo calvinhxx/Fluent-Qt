@@ -18,6 +18,7 @@
 
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/status_info/InfoBadge.h"
 
@@ -347,6 +348,216 @@ TEST_F(InfoBadgeTest, IconGlyphIsVisuallyCentered) {
     const QPointF glyphCenter = QRectF(bounds).center();
     EXPECT_LE(std::abs(glyphCenter.x() - imageCenter.x()), 1.0);
     EXPECT_LE(std::abs(glyphCenter.y() - imageCenter.y()), 1.0);
+}
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// InfoBadge paints the SAME fully-rounded badge under all three design languages (the Fluent shape
+// is already circle-for-dot / pill-for-value), but Material 3 and macOS force WHITE on-color text and
+// macOS defaults the neutral Attention state to system RED. Fluent is byte-for-byte unchanged. Design
+// language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: InfoBadge 在三种设计语言下绘制相同的全圆角徽标(Fluent 形状本就是提示点圆形/数值胶囊),但
+// Material 3 与 macOS 强制白色 on-color 文字,且 macOS 在中性 Attention 状态下默认系统红。Fluent 逐字节
+// 不变。设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class InfoBadgeDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Numbered/value badge sized like a real notification count (~24x16). zh_CN: 数值徽标,尺寸接近真实通知计数(约 24x16)。
+    static QImage grabValueBadge(InfoBadge::InfoBadgeStatus status) {
+        InfoBadge badge;
+        badge.setStatus(status);
+        badge.setValue(5);
+        badge.resize(24, 16);
+        return badge.grab().toImage();
+    }
+
+    // Dot badge sized like a real beacon dot (~20x20 host so the small dot has room). zh_CN: 提示点徽标(约 20x20 容器,使小点有余量)。
+    static QImage grabDotBadge(InfoBadge::InfoBadgeStatus status) {
+        InfoBadge badge;
+        badge.setStatus(status);
+        badge.setDisplayMode(InfoBadge::InfoBadgeDisplayMode::Dot);
+        badge.setBeaconDiameter(12);
+        badge.resize(20, 20);
+        return badge.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    // Average color of all pixels whose alpha is appreciably opaque — i.e. the painted fill region.
+    // Returns whether any such pixel exists. zh_CN: 所有不透明像素(即填充区域)的平均色;返回是否存在此类像素。
+    static bool averageFilledColor(const QImage& img, QColor& outAvg, int& outCount) {
+        long long r = 0, g = 0, b = 0, n = 0;
+        for (int y = 0; y < img.height(); ++y) {
+            for (int x = 0; x < img.width(); ++x) {
+                const QColor c = img.pixelColor(x, y);
+                if (c.alpha() <= 200) continue;
+                r += c.red();
+                g += c.green();
+                b += c.blue();
+                ++n;
+            }
+        }
+        outCount = static_cast<int>(n);
+        if (n == 0) return false;
+        outAvg = QColor(static_cast<int>(r / n), static_cast<int>(g / n), static_cast<int>(b / n));
+        return true;
+    }
+};
+
+TEST_F(InfoBadgeDesignLanguageTest, AllLanguagesAndThemesPaintColoredFill) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            // Use a NON-critical, colored state (Informational) so the fill is a real accent/blue
+            // color — never legitimately near-black — letting us assert against the invalid-QColor
+            // opaque-black trap. zh_CN: 用非危险的彩色状态(Informational),填充为真实强调/蓝色,绝不会合法
+            // 接近黑色,从而可针对无效 QColor 不透明黑陷阱断言。
+            const QImage value = grabValueBadge(InfoBadge::InfoBadgeStatus::Informational);
+            const QImage dot = grabDotBadge(InfoBadge::InfoBadgeStatus::Informational);
+
+            // 1. Valid, non-empty images with painted content. zh_CN: 有效、非空且有内容的图像。
+            ASSERT_FALSE(value.isNull()) << ctx << "/value";
+            ASSERT_FALSE(dot.isNull()) << ctx << "/dot";
+            EXPECT_GT(value.width(), 0) << ctx;
+            EXPECT_GT(value.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(value)) << "value badge painted nothing: " << ctx;
+            EXPECT_TRUE(hasPaintedContent(dot)) << "dot badge painted nothing: " << ctx;
+
+            // 2. The fill region is non-empty AND is a real color (NOT opaque near-#000). The
+            // invalid-QColor trap (setBrush on an unassigned color) would paint solid black here.
+            // zh_CN: 填充区域非空且为真实颜色(非不透明近黑)。无效 QColor 陷阱会在此涂成纯黑。
+            QColor valueFill;
+            int valueFillCount = 0;
+            ASSERT_TRUE(averageFilledColor(value, valueFill, valueFillCount))
+                << "value badge has no filled pixels: " << ctx;
+            EXPECT_GT(valueFillCount, 0) << ctx;
+            const int valueLum = qRound(0.299 * valueFill.red() + 0.587 * valueFill.green()
+                                        + 0.114 * valueFill.blue());
+            EXPECT_GT(valueLum, 24)
+                << "value badge fill is opaque near-black (invalid-QColor trap?): " << ctx
+                << " rgb=(" << valueFill.red() << "," << valueFill.green() << "," << valueFill.blue() << ")";
+
+            QColor dotFill;
+            int dotFillCount = 0;
+            ASSERT_TRUE(averageFilledColor(dot, dotFill, dotFillCount))
+                << "dot badge has no filled pixels: " << ctx;
+            EXPECT_GT(dotFillCount, 0) << ctx;
+            const int dotLum = qRound(0.299 * dotFill.red() + 0.587 * dotFill.green()
+                                      + 0.114 * dotFill.blue());
+            EXPECT_GT(dotLum, 24)
+                << "dot badge fill is opaque near-black (invalid-QColor trap?): " << ctx
+                << " rgb=(" << dotFill.red() << "," << dotFill.green() << "," << dotFill.blue() << ")";
+        }
+    }
+}
+
+// macOS defaults the neutral Attention status to system RED (the canonical notification/dock badge),
+// whereas Fluent reads accent blue. Verify the macOS Attention fill is red-dominant and differs from
+// the Fluent Attention fill. zh_CN: macOS 在中性 Attention 状态默认系统红(经典通知/程序坞徽标),Fluent 读
+// 强调蓝。验证 macOS Attention 填充偏红且与 Fluent Attention 填充不同。
+TEST_F(InfoBadgeDesignLanguageTest, CupertinoAttentionReadsRed) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
+    QColor fluentFill;
+    int fluentCount = 0;
+    ASSERT_TRUE(averageFilledColor(grabDotBadge(InfoBadge::InfoBadgeStatus::Attention),
+                                   fluentFill, fluentCount));
+
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignCupertino);
+    QColor macFill;
+    int macCount = 0;
+    ASSERT_TRUE(averageFilledColor(grabDotBadge(InfoBadge::InfoBadgeStatus::Attention),
+                                   macFill, macCount));
+
+    // macOS Attention fill is red-dominant. zh_CN: macOS Attention 填充偏红。
+    EXPECT_GT(macFill.red(), macFill.blue())
+        << "macOS Attention badge should read red: rgb=(" << macFill.red() << ","
+        << macFill.green() << "," << macFill.blue() << ")";
+    EXPECT_GT(macFill.red(), macFill.green())
+        << "macOS Attention badge should read red: rgb=(" << macFill.red() << ","
+        << macFill.green() << "," << macFill.blue() << ")";
+
+    // And it must differ from the Fluent (accent blue) treatment. zh_CN: 且必须区别于 Fluent(强调蓝)。
+    EXPECT_NE(fluentFill.rgb(), macFill.rgb())
+        << "macOS Attention fill should differ from Fluent accent fill";
+}
+
+// Material 3 / macOS value badges paint WHITE on-color text. Sampling a colored Informational badge,
+// the brightest filled pixel must read near-white (the glyph), proving white-on-color text.
+// zh_CN: M3/macOS 数值徽标绘制白色 on-color 文字。对彩色 Informational 徽标采样,最亮的填充像素必近白
+//(即字形),证明彩底白字。
+TEST_F(InfoBadgeDesignLanguageTest, MaterialAndCupertinoValueTextIsWhite) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+
+    for (auto lang : langs) {
+        fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+
+        InfoBadge badge;
+        badge.setStatus(InfoBadge::InfoBadgeStatus::Informational);
+        badge.setValue(8);
+        // Generous size so the digit glyph has clearly-white interior pixels. zh_CN: 放大尺寸,使数字字形内部有明确白像素。
+        badge.setBadgeHeight(28);
+        badge.setValueHorizontalPadding(16);
+        badge.resize(badge.sizeHint());
+        const QImage img = badge.grab().toImage();
+        ASSERT_FALSE(img.isNull());
+
+        // Find the brightest opaque pixel — should be the white glyph on the colored fill.
+        // zh_CN: 找出最亮的不透明像素——应为彩底上的白色字形。
+        int maxLum = -1;
+        QColor brightest;
+        for (int y = 0; y < img.height(); ++y) {
+            for (int x = 0; x < img.width(); ++x) {
+                const QColor c = img.pixelColor(x, y);
+                if (c.alpha() <= 200) continue;
+                const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+                if (lum > maxLum) {
+                    maxLum = lum;
+                    brightest = c;
+                }
+            }
+        }
+        ASSERT_GE(maxLum, 0) << "no opaque pixels in value badge";
+        EXPECT_GT(maxLum, 200)
+            << "expected white-on-color text; brightest fill pixel rgb=(" << brightest.red()
+            << "," << brightest.green() << "," << brightest.blue() << ")";
+    }
 }
 
 TEST_F(InfoBadgeTest, VisualCheck) {

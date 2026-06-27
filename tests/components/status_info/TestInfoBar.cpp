@@ -12,6 +12,7 @@
 #include <QVBoxLayout>
 
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/HyperlinkButton.h"
 #include "components/status_info/InfoBar.h"
@@ -364,6 +365,128 @@ TEST_F(InfoBarTest, ThemeAndDisabledState) {
     ASSERT_NE(closeButton, nullptr);
     bar.setEnabled(false);
     EXPECT_FALSE(closeButton->isEnabled());
+}
+
+// ─── Design-language × theme × severity compatibility ───────────────────────
+//
+// InfoBar paints a CONTAINER (background + border) plus a severity icon. Under each design language
+// (Fluent / Material 3 / macOS) crossed with each App theme (Light / Dark) the container must paint
+// real, valid content for every severity. The Material/macOS branches DROP the Fluent filled circular
+// badge in favor of a tinted glyph over their own container shapes (M3 ≈ rounded tonal banner; macOS ≈
+// quiet bezel with hairline border). Design language + theme are GLOBAL singletons, so the fixture
+// restores both in TearDown. zh_CN: InfoBar 绘制容器(背景+边框)与严重级别图标。三种设计语言 × 两种主题
+// 下,每种严重级别都必须绘制有效内容。Material/macOS 放弃 Fluent 填充圆形徽标,改用各自容器形状上的着色字形。
+// 设计语言与主题为全局单例,夹具在 TearDown 中复位二者。
+class InfoBarDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a realistic single-line InfoBar with a title + message at a fixed size and grab it.
+    // zh_CN: 以固定尺寸构建带标题+消息的单行 InfoBar 并抓取。
+    static QImage grabBar(InfoBar::InfoBarSeverity severity) {
+        InfoBar bar;
+        bar.setSeverity(severity);
+        bar.setTitle("Title");
+        bar.setMessage("Essential app message for your users.");
+        bar.setIsOpen(true);
+        bar.resize(360, 64);
+        bar.show();
+        QApplication::processEvents();
+        return bar.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    // Sample a background pixel away from text/icon: near the right edge, vertically centered. The icon
+    // sits at the left, text fills the middle-left, the close button sits top-right, so this lands on the
+    // bare container fill. zh_CN: 采样远离文本/图标的背景像素:靠右边缘、垂直居中。图标在左,文本在中左,
+    // 关闭按钮在右上角,故此处落在纯容器填充上。
+    static QColor containerSample(const QImage& img) {
+        return img.pixelColor(img.width() - 12, img.height() / 2);
+    }
+};
+
+TEST_F(InfoBarDesignLanguageTest, AllLanguagesThemesAndSeveritiesPaintWithoutOpaqueBlackFill) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+    struct SevCase { InfoBar::InfoBarSeverity sev; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+    const SevCase severities[] = {
+        { InfoBar::Informational, "Informational" },
+        { InfoBar::Error, "Critical" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            for (const auto& sv : severities) {
+                fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+                fluent::FluentElement::setTheme(th.theme);
+
+                const QImage img = grabBar(sv.sev);
+                const std::string ctx =
+                    std::string(lang.name) + "/" + th.name + "/" + sv.name;
+
+                // 1. Valid, non-empty, painted. zh_CN: 有效、非空、已绘制。
+                ASSERT_FALSE(img.isNull()) << ctx;
+                EXPECT_GT(img.width(), 0) << ctx;
+                EXPECT_GT(img.height(), 0) << ctx;
+                EXPECT_TRUE(hasPaintedContent(img)) << "painted nothing: " << ctx;
+
+                // 2. invalid-QColor trap: no opaque near-black container fill at rest. zh_CN: 无效 QColor 陷阱:
+                //    静息下容器不得呈现不透明近黑填充。
+                const QColor c = containerSample(img);
+                const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+                const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+                EXPECT_FALSE(opaqueBlack)
+                    << "InfoBar painted an opaque black container at rest: " << ctx
+                    << " rgba=(" << c.red() << "," << c.green() << "," << c.blue()
+                    << "," << c.alpha() << ")";
+            }
+        }
+    }
+}
+
+TEST_F(InfoBarDesignLanguageTest, MaterialContainerDiffersFromFluent) {
+    // The Material 3 treatment drops the Fluent filled circular badge and uses a different container
+    // radius/fill, so the rendered surface must differ from Fluent for the same severity + theme.
+    // zh_CN: Material 3 放弃 Fluent 填充圆形徽标并使用不同容器圆角/填充,故同严重级别+主题下渲染面必与 Fluent 不同。
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
+    const QImage fluent = grabBar(InfoBar::Informational);
+
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignMaterial);
+    const QImage material = grabBar(InfoBar::Informational);
+
+    ASSERT_FALSE(fluent.isNull());
+    ASSERT_FALSE(material.isNull());
+    ASSERT_EQ(fluent.size(), material.size());
+
+    int diff = 0;
+    for (int y = 0; y < fluent.height(); ++y)
+        for (int x = 0; x < fluent.width(); ++x)
+            if (fluent.pixel(x, y) != material.pixel(x, y))
+                ++diff;
+    EXPECT_GT(diff, 0) << "Material InfoBar container is identical to Fluent";
 }
 
 TEST_F(InfoBarTest, VisualCheck) {
