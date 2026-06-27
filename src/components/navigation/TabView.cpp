@@ -1636,7 +1636,7 @@ void TabStrip::paintRow(QPainter& painter)
     const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
     painter.save();
     painter.setPen(Qt::NoPen);
-    painter.setBrush(themeColors().bgCanvas);
+    painter.setBrush(themeColorsRef().bgCanvas);
     painter.drawRect(row);
     painter.restore();
 }
@@ -1717,7 +1717,7 @@ void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
                 const int labelWidth = qMin(base.width(), qMax(currentMetrics.minTabWidth / 2, textWidth));
                 const int cx = visualRecord.tabRect.center().x();
                 const QRect indicator(cx - labelWidth / 2, base.top(), labelWidth, base.height());
-                painter.setBrush(themeColors().accentDefault);
+                painter.setBrush(themeColorsRef().accentDefault);
                 const qreal r = indicator.height() / 2.0;
                 painter.drawRoundedRect(indicator, r, r);
             }
@@ -1745,7 +1745,7 @@ void TabStrip::paintDragInsertionIndicator(QPainter& painter)
 
     painter.save();
     painter.setPen(Qt::NoPen);
-    painter.setBrush(themeColors().accentDefault);
+    painter.setBrush(themeColorsRef().accentDefault);
     painter.drawRoundedRect(indicator, kDragIndicatorWidth / 2.0, kDragIndicatorWidth / 2.0);
     painter.restore();
 }
@@ -1756,7 +1756,7 @@ void TabStrip::paintSelectedIndicator(QPainter& painter)
         return;
     painter.save();
     painter.setPen(Qt::NoPen);
-    painter.setBrush(themeColors().accentDefault);
+    painter.setBrush(themeColorsRef().accentDefault);
     painter.drawRoundedRect(m_animatedIndicatorRect,
                             ::CornerRadius::Indicator, ::CornerRadius::Indicator);
     painter.restore();
@@ -1775,7 +1775,7 @@ void TabStrip::paintButton(QPainter& painter, const QRect& rect, const QString& 
         painter.drawRoundedRect(rect, currentMetrics.cornerRadius, currentMetrics.cornerRadius);
     }
     painter.setFont(iconFont(hit.kind == HitKind::Close ? currentMetrics.closeIconPixelSize : currentMetrics.iconPixelSize));
-    painter.setPen(enabled ? themeColors().textSecondary : themeColors().textDisabled);
+    painter.setPen(enabled ? themeColorsRef().textSecondary : themeColorsRef().textDisabled);
     painter.drawText(rect, Qt::AlignCenter, glyph);
     if (!m_dragActive && m_focusVisualVisible && hasFocus() && sameHit(m_focusedHit, hit))
         paintFocus(painter, rect.adjusted(1, 1, -1, -1));
@@ -1789,9 +1789,9 @@ void TabStrip::paintFocus(QPainter& painter, const QRect& rect)
     const Metrics currentMetrics = metrics();
     painter.save();
     painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(themeColors().strokeFocusOuter, 1));
+    painter.setPen(QPen(themeColorsRef().strokeFocusOuter, 1));
     painter.drawRoundedRect(rect, currentMetrics.cornerRadius, currentMetrics.cornerRadius);
-    painter.setPen(QPen(themeColors().strokeFocusInner, 1));
+    painter.setPen(QPen(themeColorsRef().strokeFocusInner, 1));
     painter.drawRoundedRect(rect.adjusted(1, 1, -1, -1), qMax(0, currentMetrics.cornerRadius - 1), qMax(0, currentMetrics.cornerRadius - 1));
     painter.restore();
 }
@@ -1812,7 +1812,7 @@ QColor TabStrip::tabFillColor(const TabRecord& record) const
         // state-layer veil. zh_CN: M3 文档 tab 保持中性面（选中不抬升填充），选中由强调标签 + 下划条体现；
         // 悬停/按下用限制在范围内的轻量 primary state-layer 薄层。
         if (pressed || hovered) {
-            QColor stateLayer = themeColors().accentDefault;
+            QColor stateLayer = themeColorsRef().accentDefault;
             stateLayer.setAlpha(pressed ? 0x1A : 0x14);
             return stateLayer;
         }
@@ -1823,7 +1823,7 @@ QColor TabStrip::tabFillColor(const TabRecord& record) const
         // Inactive hover gets a faint theme-aware veil; otherwise neutral. zh_CN: macOS 把选中 tab 视为
         // 分段控件的激活段：强调色填充。未选中悬停为淡淡的主题感知薄层，其余中性。
         if (selected)
-            return themeColors().accentDefault;
+            return themeColorsRef().accentDefault;
         if (pressed || hovered) {
             const bool darkTheme = effectiveTheme() == Dark;
             return darkTheme ? QColor(255, 255, 255, pressed ? 0x2C : 0x1C)
@@ -1834,18 +1834,18 @@ QColor TabStrip::tabFillColor(const TabRecord& record) const
 
     // DesignFluent (default): unchanged. zh_CN: 默认 Fluent，保持不变。
     if (selected)
-        return themeColors().bgLayer;
+        return themeColorsRef().bgLayer;
     if (pressed)
-        return themeColors().subtleTertiary;
+        return themeColorsRef().subtleTertiary;
     if (hovered)
-        return themeColors().subtleSecondary;
+        return themeColorsRef().subtleSecondary;
     return Qt::transparent;
 }
 
 QColor TabStrip::textColorForTab(int index) const
 {
     if (!isEnabled() || !isValidIndex(index) || !m_items.at(index).enabled)
-        return themeColors().textDisabled;
+        return themeColorsRef().textDisabled;
 
     const bool selected = index == m_selectedIndex;
     // Brand-specific tab text/icon color, DesignFluent unchanged. Mirrors the Label role chosen in
@@ -1853,20 +1853,20 @@ QColor TabStrip::textColorForTab(int index) const
     // DesignFluent 不变。与 updateHeaderWidgets 选择的 Label 角色一致，使绘制的图标字符与标签匹配。
     const DesignLanguage lang = themeDesignLanguage();
     if (lang == DesignMaterial)
-        return selected ? themeColors().accentDefault : themeColors().textSecondary;
+        return selected ? themeColorsRef().accentDefault : themeColorsRef().textSecondary;
     if (lang == DesignCupertino)
-        return selected ? themeColors().textOnAccent : themeColors().textSecondary;
+        return selected ? themeColorsRef().textOnAccent : themeColorsRef().textSecondary;
 
     // DesignFluent (default): unchanged. zh_CN: 默认 Fluent，保持不变。
-    return selected ? themeColors().textPrimary : themeColors().textSecondary;
+    return selected ? themeColorsRef().textPrimary : themeColorsRef().textSecondary;
 }
 
 QColor TabStrip::fillForHit(const HitRecord& hit) const
 {
     if (sameHit(m_pressedHit, hit))
-        return themeColors().subtleTertiary;
+        return themeColorsRef().subtleTertiary;
     if (sameHit(m_hoveredHit, hit))
-        return themeColors().subtleSecondary;
+        return themeColorsRef().subtleSecondary;
     return Qt::transparent;
 }
 

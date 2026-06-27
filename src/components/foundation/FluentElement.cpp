@@ -112,6 +112,13 @@ FluentElement::Colors FluentElement::themeColors() const {
     return ThemeRegistry::instance().colors(effectiveTheme() == Dark);
 }
 
+const FluentElement::Colors& FluentElement::themeColorsRef() const {
+    // Same source as themeColors() but hands back the registry's own const reference instead of a
+    // by-value copy of the ~50-QColor struct — for paint hot paths that read colors per item/tab/frame.
+    // zh_CN: 数据源同 themeColors(),但返回注册表自有的 const 引用而非整个结构体的值拷贝——供按项/帧读色的绘制热路径使用。
+    return ThemeRegistry::instance().colors(effectiveTheme() == Dark);
+}
+
 FluentElement::FontStyle FluentElement::themeFont(const QString& role) const {
     Typography::FontStyle s;
     if      (role == Typography::FontRole::Caption)         s = Typography::Styles::Caption;

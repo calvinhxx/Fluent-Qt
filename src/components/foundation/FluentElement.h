@@ -176,6 +176,22 @@ public:
     // Component-facing token accessors.
     // zh_CN: 供组件侧访问的设计 token 接口。
     Colors themeColors() const;
+
+    /**
+     * @brief Non-copying access to the active color set (for hot paint paths).
+     * zh_CN: 对当前色板的零拷贝访问（用于绘制热路径）。
+     *
+     * themeColors() returns the full ~50-QColor Colors struct BY VALUE; a delegate or tab strip that
+     * calls it per item/tab/frame pays that copy (plus the QList<QColor> charts refcount) every time.
+     * This returns the ThemeRegistry's own const reference instead — identical data, no copy. The
+     * reference is owned by the registry singleton and stays valid until the next theme/registry change,
+     * so use it within a single paint() and do NOT cache it across a theme switch.
+     * zh_CN: themeColors() 按值返回整个 ~50 个 QColor 的结构体;在每项/每帧绘制里调用会反复付出该拷贝
+     *（外加 charts QList 引用计数)。此方法改为返回 ThemeRegistry 自有的 const 引用——数据相同、零拷贝。
+     * 该引用归注册表单例所有,在下次主题/注册表变化前一直有效,故应在单次 paint() 内使用,切勿跨主题切换缓存。
+     */
+    const Colors& themeColorsRef() const;
+
     FontStyle themeFont(const QString& styleName = "Body") const;
     Radius themeRadius() const;
 
