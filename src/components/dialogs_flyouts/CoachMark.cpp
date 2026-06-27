@@ -393,8 +393,27 @@ void CoachMark::paintEvent(QPaintEvent*)
     }
 
     const auto& colors = themeColors();
+    const DesignLanguage lang = themeDesignLanguage();
+    // Per design language only the OUTLINE STROKE differs — the card/tail/shadow geometry above is
+    // shared and the fill stays bgLayer everywhere. zh_CN: 按设计语言仅「外轮廓描边」不同——上方
+    // card/tail/shadow 几何全部共享，填充各语言均为 bgLayer。
+    QPen outlinePen;
+    if (lang == DesignMaterial) {
+        // Material 3 elevated surface-container: elevation is carried by the shadow alone, NO border
+        // stroke. zh_CN: Material 3 elevated surface-container:仅由阴影表达高程,无边框描边。
+        outlinePen = QPen(Qt::NoPen);
+    } else if (lang == DesignCupertino) {
+        // macOS popover: a crisp hairline edge using the stronger stroke token. zh_CN: macOS popover:
+        // 用更强的描边 token 画出清晰的发丝边缘。
+        outlinePen = QPen(colors.strokeStrong, 1);
+    } else {
+        // DesignFluent (default): unchanged WinUI outline (cosmetic QColor pen). zh_CN: 默认 Fluent,
+        // WinUI 轮廓不变（QColor 细笔）。
+        outlinePen = QPen(colors.strokeDefault);
+    }
+
     painter.setBrush(colors.bgLayer);
-    painter.setPen(colors.strokeDefault);
+    painter.setPen(outlinePen);
     painter.drawPath(path);
 }
 

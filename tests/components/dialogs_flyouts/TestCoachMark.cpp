@@ -13,9 +13,12 @@
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+
+#include <QImage>
 
 using namespace fluent::dialogs_flyouts;
 using fluent::basicinput::Button;
@@ -332,6 +335,95 @@ TEST_F(CoachMarkTest, PlacementEnumIsRegistered) {
     const QMetaEnum surfaceMeta = CoachMark::staticMetaObject.enumerator(surfaceIndex);
     EXPECT_EQ(surfaceMeta.keyToValue("TopLevelSurface"), static_cast<int>(CoachMark::TopLevelSurface));
     EXPECT_EQ(surfaceMeta.keyToValue("SameWindowSurface"), static_cast<int>(CoachMark::SameWindowSurface));
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Design-language × theme sweep — CoachMark outline per design language
+// ──────────────────────────────────────────────────────────────────────────────
+//
+// CoachMark::paintEvent now branches on the design language for the OUTLINE STROKE only (Material 3
+// → borderless QPen(Qt::NoPen), elevation via shadow; macOS → 1px strokeStrong hairline; Fluent →
+// unchanged strokeDefault). The fill stays bgLayer everywhere and the card/tail/shadow geometry is
+// shared. For every language (Fluent / Material 3 / macOS) crossed with every theme (Light / Dark)
+// the card must paint a valid, non-empty image with content and must NOT render an opaque near-black
+// surface at the card centre (the invalid-QColor trap: a default-constructed QColor is INVALID yet
+// QColor::alpha() == 255, so a bare alpha()>0 guard + setBrush(invalidColor) paints SOLID OPAQUE
+// BLACK). Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: CoachMark::paintEvent 现仅按设计语言分支绘制「外轮廓描边」(Material 3 → 无边框
+// QPen(Qt::NoPen),高度靠阴影;macOS → 1px strokeStrong 发丝边;Fluent → 不变的 strokeDefault)。填充各
+// 语言均为 bgLayer,且 card/tail/shadow 几何全部共享。三种语言(Fluent/Material 3/macOS)× 两种主题
+//(Light/Dark)下,卡片都必须绘制出有效、非空且有内容的图像,且卡片中心不得呈现不透明近黑表面(无效
+// QColor 陷阱:默认构造的 QColor 无效却返回 alpha==255,裸 alpha()>0 + setBrush(无效色) 会涂成不透明
+// 纯黑)。设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class CoachMarkDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+};
+
+// No fixture window needed: a target-less CoachMark falls back to centring and the card centre is the
+// image centre. open()+processEvents realizes the overlay so paintEvent runs; no exec().
+// zh_CN: 无需夹具窗口:无 target 的 CoachMark 回退到居中,卡片中心即图像中心。open()+processEvents 即可实现
+// 浮层并触发 paintEvent;不用 exec()。
+TEST_F(CoachMarkDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackSurface) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            CoachMark coach;
+            coach.setCardSize(QSize(300, 160));
+            coach.move(-2000, -2000);  // offscreen so it never steals focus / flashes. zh_CN: 离屏,避免抢焦点/闪烁。
+            coach.open();
+            QApplication::processEvents();
+            const QImage img = coach.grab().toImage();
+            coach.close();
+            QApplication::processEvents();
+
+            // 1. The card paints a valid, non-empty image with content. zh_CN: 卡片绘制出有效、非空且有内容的图像。
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "CoachMark painted nothing: " << ctx;
+
+            // 2. The card centre (bgLayer surface) must not be opaque near-black. zh_CN: 卡片中心(bgLayer 表面)
+            // 不得为不透明近黑。
+            const QColor c = img.pixelColor(img.width() / 2, img.height() / 2);
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "CoachMark painted an opaque black surface at the card centre: " << ctx
+                << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+        }
+    }
 }
 
 // ── VisualCheck — interactive demo of the placements + glide ─────────────────

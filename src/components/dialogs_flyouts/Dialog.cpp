@@ -349,8 +349,24 @@ void Dialog::paintEvent(QPaintEvent*) {
 
     const auto& colors = themeColors();
     const int r = themeRadius().overlay;
+    const DesignLanguage lang = themeDesignLanguage();
+
+    // Per design language only the card SURFACE fill split and the BORDER pen differ — the
+    // shadow / smoke-dim above is shared. zh_CN: 按设计语言仅「卡片表面填充」与「边框画笔」不同——
+    // 上方阴影 / 蒙层逻辑全部共享。
     painter.setBrush(colors.bgLayer);
-    painter.setPen(colors.strokeDefault);
+    if (lang == DesignMaterial) {
+        // Material 3 dialog: a single tonal surface, NO border stroke — elevation is conveyed by the
+        // shadow alone. zh_CN: Material 3 对话框:单一色调表面、无边框描边——高度仅由阴影表达。
+        painter.setPen(Qt::NoPen);
+    } else if (lang == DesignCupertino) {
+        // macOS alert/sheet: a crisp 1px hairline edge using the stronger neutral stroke. zh_CN:
+        // macOS 警告/sheet:用更强的中性描边绘制清晰的 1px 发丝边缘。
+        painter.setPen(QPen(colors.strokeStrong, 1));
+    } else {
+        // DesignFluent (default): unchanged WinUI overlay stroke. zh_CN: 默认 Fluent,WinUI 浮层描边不变。
+        painter.setPen(colors.strokeDefault);
+    }
     painter.drawRoundedRect(contentRect, r, r);
 }
 

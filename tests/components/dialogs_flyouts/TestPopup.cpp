@@ -10,9 +10,11 @@
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
+#include <QImage>
 
 using namespace fluent::dialogs_flyouts;
 using fluent::AnchorLayout;
@@ -477,6 +479,120 @@ TEST_F(PopupTest, AnimationProgress_DrivesUpdates) {
     EXPECT_DOUBLE_EQ(p.popupProgress(), 1.0);
 
     p.close();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 7.5 Design-language × theme sweep
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// Popup::paintEvent now branches on the design language (Fluent / Material 3 / macOS), and BOTH
+// Flyout and ComboBox's dropdown inherit that painter unchanged. The Fluent path is byte-for-byte
+// untouched; the M3 (borderless elevated surface) and macOS (hairline popover edge) branches only
+// activate under their language. Each (lang × theme) combination must produce a valid, painted card
+// that never falls into the invalid-QColor trap (a default-constructed QColor is INVALID yet returns
+// alpha==255, so a bare setBrush would paint SOLID OPAQUE BLACK). Design language + theme are GLOBAL
+// singletons, so the fixture restores both in TearDown.
+// zh_CN: Popup::paintEvent 现在按设计语言(Fluent/Material 3/macOS)分支,Flyout 与 ComboBox 下拉都原样继承该绘制器。
+// Fluent 路径逐字节不变;M3(无边框高架表面)与 macOS(发丝 popover 边缘)分支仅在各自语言下激活。每个(语言 × 主题)
+// 组合都必须绘制出有效卡片,且绝不落入无效 QColor 陷阱(默认构造的 QColor 无效却返回 alpha==255,裸 setBrush 会涂成
+// 不透明纯黑)。设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class PopupDesignLanguageTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        window = new FluentTestWindow();
+        window->setFixedSize(800, 600);
+        window->onThemeUpdated();
+        window->show();
+        QTest::qWaitForWindowExposed(window);
+    }
+
+    void TearDown() override {
+        delete window;
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Any non-uniform image has painted content. zh_CN: 任何非纯色图像即有绘制内容。
+    static bool hasPaintedContent(const QImage& img) {
+        if (img.isNull() || img.width() == 0 || img.height() == 0)
+            return false;
+        const QRgb first = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != first)
+                    return true;
+        return false;
+    }
+
+    // Sample the card center: it must NOT be an opaque near-black surface (the invalid-QColor trap).
+    // zh_CN: 采样卡片中心:不得为不透明近黑表面(无效 QColor 陷阱)。
+    static bool hasOpaqueBlackCenter(const QImage& img) {
+        if (img.isNull())
+            return false;
+        const QColor c = img.pixelColor(img.width() / 2, img.height() / 2);
+        const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+        return c.alpha() > 200 && lum < 16;
+    }
+
+    FluentTestWindow* window = nullptr;
+};
+
+TEST_F(PopupDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackTrap) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    using Edge = AnchorLayout::Edge;
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+            window->onThemeUpdated();
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            Popup p(window);
+            p.setAnimationEnabled(false);
+
+            // Some child content so the card has more than a bare fill. zh_CN: 加入子内容,卡片不只是裸填充。
+            auto* pl = new AnchorLayout(&p);
+            p.setLayout(pl);
+            auto* title = new Label("Information", &p);
+            title->setFluentTypography("Subtitle");
+            title->anchors()->top  = {&p, Edge::Top,  24};
+            title->anchors()->left = {&p, Edge::Left, 28};
+            pl->addWidget(title);
+
+            p.resize(260, 140);
+            p.setPosition(window, QPoint(120, 120));
+            p.open();
+            ASSERT_TRUE(p.isOpen()) << ctx;
+            processEvents();
+
+            const QImage img = p.grab().toImage();
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "popup painted nothing: " << ctx;
+            EXPECT_FALSE(hasOpaqueBlackCenter(img))
+                << "popup painted an opaque black surface (invalid-QColor trap): " << ctx;
+
+            p.close();
+            processEvents();
+        }
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
