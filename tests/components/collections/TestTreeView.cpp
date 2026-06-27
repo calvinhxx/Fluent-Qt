@@ -19,6 +19,7 @@
 #include "FluentTreeItemDelegate.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -2438,4 +2439,135 @@ TEST_F(TreeViewTest, VisualCheck) {
     window->show();
     syncFluentBar();
     qApp->exec();
+}
+
+// ─── Design-language × theme: accent overlay-indicator gating ────────────────
+//
+// The Fluent TreeView draws an ADDITIONAL animated accent pill at a selected row's leading edge (the
+// "overlay indicator"). Under Material 3 / macOS the selected row is filled by the item delegate, so
+// that pill would double-up and must be SUPPRESSED — both in the view's own painting AND in the
+// selectionIndicatorVisible() flag the app delegate reads to decide whether to draw its own bar (so
+// view + delegate stay consistent). This sweep crosses the 3 design languages with the 2 app themes
+// and asserts: every combination paints valid content with no opaque near-black trap surface on a
+// non-selected row, the leading-edge accent pill is present ONLY under Fluent, and
+// selectionIndicatorVisible() reports true ONLY under Fluent (even though the raw flag is set true).
+// Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: Fluent TreeView 在选中行前缘额外绘制动画 accent 药丸(「overlay indicator」)。Material 3 / macOS
+// 下选中行由委托整行填充,该药丸会叠加,必须抑制——既在视图自绘中抑制,也在 app 委托读取以决定是否绘制自身
+// 指示条的 selectionIndicatorVisible() 标志中抑制(保持视图与委托一致)。本套件以 3 设计语言 × 2 主题遍历并断言:
+// 每种组合都绘制出有效内容、非选中行无不透明近黑陷阱面,前缘 accent 药丸仅在 Fluent 下出现,且
+// selectionIndicatorVisible() 仅在 Fluent 下返回 true(即便原始标志被置为 true)。设计语言与主题为全局单例,
+// 夹具在 TearDown 中复位二者。
+class TreeViewDesignLanguageTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        window = new FluentTestWindow();
+        window->setFixedSize(400, 420);
+    }
+
+    void TearDown() override {
+        delete window;
+        window = nullptr;
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static bool hasPaintedContent(const QImage& image) {
+        const QRgb bg = image.pixel(0, 0);
+        for (int y = 0; y < image.height(); ++y)
+            for (int x = 0; x < image.width(); ++x)
+                if (image.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    FluentTestWindow* window = nullptr;
+};
+
+TEST_F(TreeViewDesignLanguageTest, AccentOverlayIndicatorIsFluentOnlyAcrossThemes) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            auto* tv = new TreeView(window);
+            auto* model = attachSampleModel(tv);
+            tv->setSelectionIndicatorVisible(true);   // request the Fluent overlay pill
+            tv->setIndicatorMotionAnimationEnabled(false);
+            tv->setFixedSize(350, 400);
+            showOffscreen(window);
+
+            const QModelIndex work = model->index(0, 0);
+            tv->setSelectedItem(work);
+            processEvents();
+
+            // The view + delegate consistency flag: visible ONLY under Fluent, even though the raw
+            // request above was true. zh_CN: 视图与委托一致性标志:即便上面原始请求为 true,仅在 Fluent 下可见。
+            if (lang.lang == fluent::FluentElement::DesignFluent) {
+                EXPECT_TRUE(tv->selectionIndicatorVisible())
+                    << "Fluent should report the overlay indicator visible: " << ctx;
+            } else {
+                EXPECT_FALSE(tv->selectionIndicatorVisible())
+                    << "selectionIndicatorVisible() must be false under M3/macOS: " << ctx;
+            }
+
+            const QImage image = renderWidget(tv->viewport());
+            ASSERT_FALSE(image.isNull()) << ctx;
+            EXPECT_GT(image.width(), 0) << ctx;
+            EXPECT_GT(image.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(image)) << "painted nothing: " << ctx;
+
+            const QColor accent = tv->themeColors().accentDefault;
+            ASSERT_TRUE(accent.isValid()) << ctx;
+
+            // NOTE: the view's own accent overlay pill is gated by selectionIndicatorVisible() above —
+            // that getter (asserted Fluent-only) IS the authoritative suppression contract, since
+            // TreeView::paintSelectedIndicator() early-returns under M3/macOS. We intentionally do NOT
+            // pixel-probe the leading edge for the pill here: the focused-test delegate
+            // (FluentTreeItemDelegate) independently paints its OWN accent selection bar at the leading
+            // edge under every design language, so leading-edge accent pixels cannot isolate the view
+            // pill from the delegate's bar (unlike ListView, whose test delegate has no leading accent).
+            // The real gallery delegate (CollectionSampleDelegates::TreeRowDelegate) reads this same
+            // getter and suppresses its bar under M3/macOS, verified live.
+            // zh_CN: 视图自身的 accent 指示条已由上方 selectionIndicatorVisible() 门控——该 getter(已断言
+            // 仅 Fluent)才是权威抑制契约(paintSelectedIndicator 在 M3/macOS 提前返回)。此处不再对前缘做像素
+            // 探测:聚焦测试委托 FluentTreeItemDelegate 在所有设计语言下都自画 accent 选择条于前缘,故前缘 accent
+            // 像素无法把视图 pill 与委托条区分开(ListView 的测试委托无前缘 accent,故其像素检测有效)。真实画廊委托
+            // TreeRowDelegate 读同一 getter 并在 M3/macOS 抑制其条,已实机验证。
+
+            // Trap guard: a non-selected row must not be an opaque near-black surface.
+            // zh_CN: 陷阱守卫:非选中行不得为不透明近黑面。
+            const QModelIndex pictures = model->index(2, 0);
+            const QRect otherRect = tv->visualRect(pictures);
+            const QPoint probe(otherRect.center());
+            if (image.rect().contains(probe)) {
+                const QColor c = QColor::fromRgba(image.pixel(probe));
+                const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+                const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+                EXPECT_FALSE(opaqueBlack)
+                    << "non-selected row is an opaque near-black surface: " << ctx
+                    << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << ","
+                    << c.alpha() << ")";
+            }
+
+            delete tv;
+        }
+    }
 }

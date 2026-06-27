@@ -3,6 +3,7 @@
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QHBoxLayout>
+#include <QImage>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMetaEnum>
@@ -26,6 +27,7 @@
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/Label.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -1331,6 +1333,113 @@ TEST_F(GridViewTest, DragReorderItemReorderedSignalArgs) {
         EXPECT_EQ(fromIdx, 0);
         EXPECT_GE(toIdx, 1);     // moved forward
         EXPECT_LT(toIdx, 4);
+    }
+}
+
+// ─── Design-language × theme sweep for the selected tile ────────────────────────
+//
+// GridView delegates the SELECTED-tile cue entirely to the item delegate (it sets
+// QStyle::State_Selected on the option and lets the delegate brand the fill/border); the view's own
+// paint draws no Fluent-specific accent selection overlay. GridView's accent uses are the drag-drop
+// INSERTION indicator and the multi-drag count badge — both correct in every design language — so no
+// language gate is added to the view. This suite locks in that a SELECTED tile renders valid, painted
+// content with no opaque near-black surface across Fluent / Material 3 / macOS × Light / Dark.
+// Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: GridView 把"选中瓦片"提示完全交给项代理(在 option 上置 State_Selected,由代理负责填充/边框品牌化);视图
+// 自身绘制不含 Fluent 专属的 accent 选中叠加层。GridView 的 accent 仅用于拖拽插入指示线与多拖计数徽标——两者在所有
+// 设计语言下都正确——故视图不加语言分支。本套件锁定:选中瓦片在 Fluent/Material 3/macOS × Light/Dark 下都渲染出
+// 有效、有内容且无不透明近黑表面的图像。设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class GridViewDesignLanguageTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        window = new FluentTestWindow();
+        window->setAttribute(Qt::WA_DontShowOnScreen, true);
+        window->resize(420, 320);
+        window->onThemeUpdated();
+    }
+
+    void TearDown() override {
+        delete window;
+        window = nullptr;
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        if (img.isNull())
+            return false;
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    FluentTestWindow* window = nullptr;
+};
+
+TEST_F(GridViewDesignLanguageTest, SelectedTilePaintsAcrossLanguagesAndThemes) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            auto* gv = new GridView(window);
+            gv->setGeometry(0, 0, 400, 300);
+            gv->setCellSize(QSize(112, 112));
+            attachStringListModel(gv, {"A", "B", "C", "D"});
+            window->show();
+            QTest::qWait(30);
+
+            // Select an item so the delegate marks the tile.
+            // zh_CN: 选中一项,使代理标记该瓦片。
+            gv->setSelectedIndex(1);
+            ASSERT_EQ(gv->selectedIndex(), 1) << ctx;
+            QTest::qWait(20);
+
+            const QRect tile = gv->visualRect(gv->model()->index(1, 0));
+            ASSERT_FALSE(tile.isEmpty()) << ctx;
+
+            const QImage frame = gv->viewport()->grab().toImage();
+            ASSERT_FALSE(frame.isNull()) << ctx;
+            EXPECT_GT(frame.width(), 0) << ctx;
+            EXPECT_GT(frame.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(frame)) << "selected grid painted nothing: " << ctx;
+
+            // Sample the selected tile's center: the surface must not be an opaque near-black fill
+            // (the invalid-QColor trap — a default QColor is invalid yet alpha()==255 → solid black).
+            // zh_CN: 采样选中瓦片中心:表面不得为不透明近黑填充(无效 QColor 陷阱——默认 QColor 无效却 alpha==255→纯黑)。
+            const QPoint c = tile.center();
+            if (frame.rect().contains(c)) {
+                const QColor px = frame.pixelColor(c);
+                const int lum = qRound(0.299 * px.red() + 0.587 * px.green() + 0.114 * px.blue());
+                const bool opaqueBlack = px.alpha() > 200 && lum < 16;
+                EXPECT_FALSE(opaqueBlack)
+                    << "GridView selected tile painted an opaque black surface: " << ctx
+                    << " rgba=(" << px.red() << "," << px.green() << "," << px.blue() << ","
+                    << px.alpha() << ")";
+            }
+
+            delete gv;
+        }
     }
 }
 

@@ -1563,6 +1563,11 @@ void ListView::refreshSelectedIndicatorGeometry(bool snapToTarget) {
 }
 
 void ListView::paintSelectedIndicator(QPainter& painter) const {
+    // M3/macOS carry selection via the delegate's full-row fill, not a Fluent accent pill — suppress it.
+    // zh_CN: M3/macOS 的选择由委托整行填充承载,而非 Fluent accent 指示条——在此抑制。
+    if (themeDesignLanguage() != DesignFluent)
+        return;
+
     if (!themeColors().accentDefault.isValid() || !selectionModel())
         return;
 

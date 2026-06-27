@@ -24,6 +24,7 @@
 #include "components/textfields/Label.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -2090,4 +2091,152 @@ TEST_F(ListViewTest, VisualCheck) {
     window->show();
     syncFluentBar();
     qApp->exec();
+}
+
+// ─── Design-language × theme: accent selection-indicator gating ──────────────
+//
+// The Fluent ListView draws an ADDITIONAL animated accent pill at a selected row's leading edge.
+// Under Material 3 / macOS the selected row is filled by the item delegate (a tonal/solid wash), so
+// that Fluent pill would double-up and must be SUPPRESSED. This sweep crosses the 3 design languages
+// with the 2 app themes and asserts: every combination paints valid content with no opaque near-black
+// trap surface on a non-selected row, AND the leading-edge accent pill is present ONLY under Fluent.
+// Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: Fluent ListView 在选中行前缘额外绘制动画 accent 药丸。Material 3 / macOS 下选中行由委托整行填充
+//(色调/实心),该药丸会叠加,必须抑制。本套件以 3 设计语言 × 2 主题遍历并断言:每种组合都绘制出有效内容、
+// 非选中行无不透明近黑陷阱面,且前缘 accent 药丸仅在 Fluent 下出现。设计语言与主题为全局单例,夹具在
+// TearDown 中复位二者。
+class ListViewDesignLanguageTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        window = new FluentTestWindow();
+        window->setFixedSize(500, 320);
+        window->setAttribute(Qt::WA_DontShowOnScreen, true);
+    }
+
+    void TearDown() override {
+        delete window;
+        window = nullptr;
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Is `color` close enough to `accent` (and opaque enough) to count as an accent pixel?
+    // zh_CN: color 是否足够接近 accent(且足够不透明)以计为 accent 像素?
+    static bool isAccentLike(const QColor& color, const QColor& accent) {
+        constexpr int kTolerance = 42;
+        return color.alpha() > 160
+            && qAbs(color.red() - accent.red()) <= kTolerance
+            && qAbs(color.green() - accent.green()) <= kTolerance
+            && qAbs(color.blue() - accent.blue()) <= kTolerance;
+    }
+
+    static QImage renderViewport(QWidget* viewport) {
+        QImage image(viewport->size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        viewport->render(&painter);
+        painter.end();
+        return image;
+    }
+
+    static bool hasAccentPixelInRect(const QImage& image, const QRect& rect, const QColor& accent) {
+        const QRect bounded = rect.intersected(QRect(0, 0, image.width(), image.height()));
+        for (int y = bounded.top(); y <= bounded.bottom(); ++y)
+            for (int x = bounded.left(); x <= bounded.right(); ++x)
+                if (isAccentLike(QColor::fromRgba(image.pixel(x, y)), accent))
+                    return true;
+        return false;
+    }
+
+    static bool hasPaintedContent(const QImage& image) {
+        const QRgb bg = image.pixel(0, 0);
+        for (int y = 0; y < image.height(); ++y)
+            for (int x = 0; x < image.width(); ++x)
+                if (image.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    FluentTestWindow* window = nullptr;
+};
+
+TEST_F(ListViewDesignLanguageTest, AccentSelectionPillIsFluentOnlyAcrossThemes) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            // Single-select (default) → uses the MOVING pill. Animation off so the pill snaps to target.
+            // zh_CN: 单选(默认)→ 使用移动药丸。关闭动画使药丸直接定位到目标。
+            auto* lv = createIndicatorListView(window);
+            showWindowAndProcess(window);
+
+            constexpr int kSelectedRow = 1;
+            constexpr int kOtherRow = 3;
+            lv->setSelectedIndex(kSelectedRow);
+            QApplication::processEvents();
+
+            const QImage image = renderViewport(lv->viewport());
+            ASSERT_FALSE(image.isNull()) << ctx;
+            EXPECT_GT(image.width(), 0) << ctx;
+            EXPECT_GT(image.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(image)) << "painted nothing: " << ctx;
+
+            const QColor accent = lv->themeColors().accentDefault;
+            ASSERT_TRUE(accent.isValid()) << ctx;
+
+            // The pill's geometry is computed identically regardless of design language; only PAINTING
+            // is gated. Sample a thin strip at that leading edge for accent pixels.
+            // zh_CN: 药丸几何与设计语言无关,仅绘制被门控。在该前缘采样窄带查找 accent 像素。
+            const QRectF pillRect = lv->selectedIndicatorRect();
+            ASSERT_FALSE(pillRect.isEmpty()) << ctx;
+            const QRectF selBg = itemBackgroundRect(lv, kSelectedRow);
+            const QRect leadingStrip(qMax(0, int(selBg.left()) - 1),
+                                     int(selBg.top()),
+                                     14,
+                                     int(selBg.height()));
+            const bool pillPresent = hasAccentPixelInRect(image, leadingStrip, accent);
+
+            if (lang.lang == fluent::FluentElement::DesignFluent) {
+                EXPECT_TRUE(pillPresent)
+                    << "Fluent must paint the accent selection pill at the leading edge: " << ctx;
+            } else {
+                EXPECT_FALSE(pillPresent)
+                    << "Fluent accent pill must be SUPPRESSED under M3/macOS: " << ctx;
+            }
+
+            // Trap guard: a non-selected row must not be an opaque near-black surface (invalid-QColor
+            // setBrush trap / default-light-QPalette trap). zh_CN: 陷阱守卫:非选中行不得为不透明近黑面。
+            const QRectF otherBg = itemBackgroundRect(lv, kOtherRow);
+            const QPoint probe(int(otherBg.center().x()), int(otherBg.center().y()));
+            if (image.rect().contains(probe)) {
+                const QColor c = QColor::fromRgba(image.pixel(probe));
+                const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+                const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+                EXPECT_FALSE(opaqueBlack)
+                    << "non-selected row is an opaque near-black surface: " << ctx
+                    << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << ","
+                    << c.alpha() << ")";
+            }
+
+            delete lv;
+        }
+    }
 }

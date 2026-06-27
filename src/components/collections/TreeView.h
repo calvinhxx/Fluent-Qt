@@ -235,7 +235,14 @@ public:
      * zh_CN: 设置选中指示器覆盖层使用的样式。
      */
     void setSelectionIndicatorStyle(const SelectionIndicatorStyle& style);
-    bool selectionIndicatorVisible() const { return m_selectionIndicatorVisible; }
+    /**
+     * @brief Whether the Fluent accent selection-indicator overlay is visible.
+     * Always false under Material 3 / macOS so the delegate's full-row fill carries selection
+     * instead of doubling up with a Fluent accent pill — keeps view + delegate consistent.
+     * zh_CN: Fluent accent 选中指示器覆盖层是否可见。在 Material 3 / macOS 下恒为 false,
+     * 使选择由委托整行填充承载,而非与 Fluent accent 指示条叠加——保持视图与委托一致。
+     */
+    bool selectionIndicatorVisible() const;
     void setSelectionIndicatorVisible(bool visible);
     qreal selectionIndicatorInset() const { return m_selectionIndicatorStyle.inset; }
     void setSelectionIndicatorInset(qreal inset);

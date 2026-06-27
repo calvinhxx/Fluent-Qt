@@ -382,6 +382,14 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
                               bool hovered, bool pressed)
 {
     const auto& c = themeColors();
+    const DesignLanguage lang = themeDesignLanguage();
+
+    // Theme-aware interaction veil: DARKENS light surfaces, LIGHTENS dark ones so hover/press stay
+    // visible under both App themes. Both branches return a VALID QColor with explicit alpha, so they
+    // never trip the invalid-QColor opaque-black trap. zh_CN: 主题感知交互薄层:浅色面变暗、深色面变亮,
+    // 使 hover/press 在明暗两主题下都可见。两分支都返回带显式 alpha 的有效 QColor,绝不触发无效色纯黑陷阱。
+    const bool dark = effectiveTheme() == Dark;
+    const auto veil = [dark](int a) { return dark ? QColor(255, 255, 255, a) : QColor(0, 0, 0, a); };
 
     // Background: an in-app acrylic approximation over an OPAQUE surface base.
     // The control* tokens carry a theme-baked alpha (in dark they are translucent WHITE,
@@ -411,6 +419,32 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
     // WinUI FlipViewButtonBorderThemeThickness=0: buttons have no outline.
     // zh_CN: WinUI FlipViewButtonBorderThemeThickness=0，按钮无描边。
 
+    // Per-language state layer: Material/macOS express hover/press as a NEUTRAL on-surface veil
+    // INSCRIBED in the button (no accent), layered over the same opaque surface base above — so the
+    // button stays valid in BOTH themes. Fluent keeps the WinUI surface swap only (no extra layer).
+    // zh_CN: 各设计语言的 state layer:Material/macOS 以内嵌于按钮的中性 on-surface 薄层(不带 accent)表达
+    // hover/press,叠在上面同一不透明表面底色之上——故按钮在明暗两主题下都有效。Fluent 仅保留 WinUI 换底色(无额外层)。
+    if (lang == DesignMaterial) {
+        // Material 3: neutral on-surface state layer — hover 8% (0x14) / pressed ~12% (0x1F). zh_CN: M3 中性 on-surface state layer。
+        QColor stateLayer;
+        if (pressed) stateLayer = veil(0x1F);
+        else if (hovered) stateLayer = veil(0x14);
+        if (stateLayer.isValid() && stateLayer.alpha() > 0) {
+            p.setBrush(stateLayer);
+            p.drawPath(btnPath);
+        }
+    } else if (lang == DesignCupertino) {
+        // macOS: theme-aware neutral veil, slightly stronger on press. zh_CN: macOS 主题感知中性薄层,按压略强。
+        QColor stateLayer;
+        if (pressed) stateLayer = veil(dark ? 0x30 : 0x24);
+        else if (hovered) stateLayer = veil(dark ? 0x1C : 0x16);
+        if (stateLayer.isValid() && stateLayer.alpha() > 0) {
+            p.setBrush(stateLayer);
+            p.drawPath(btnPath);
+        }
+    }
+    // DesignFluent: no extra layer — the surface swap above is the WinUI treatment, unchanged. zh_CN: Fluent:无额外层——上面的换底色即原 WinUI 处理,不变。
+
     // Arrow glyph. zh_CN: 箭头。
     QColor arrowColor = (pressed || hovered) ? c.textSecondary : c.strokeStrong;
 
@@ -435,8 +469,30 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
 void FlipView::drawPageIndicator(QPainter& p)
 {
     const auto& c = themeColors();
+    const DesignLanguage lang = themeDesignLanguage();
     QRect indRect = pageIndicatorRect();
     if (indRect.isNull()) return;
+
+    // Per-language pip colors. Material/macOS make the SELECTED pip the accent (M3 primary / iOS
+    // page-control blue) and dim the rest to a neutral on-surface; Fluent keeps the WinUI neutral
+    // pips. Every color is a VALID seeded token, never a palette() role or a bare QColor — see the
+    // dark-mode regression history. zh_CN: 各设计语言的 pip 颜色:Material/macOS 用 accent(M3 primary /
+    // iOS 页控蓝)表示选中 pip,其余以中性 on-surface 变暗;Fluent 保留 WinUI 中性 pip。所有颜色都来自
+    // 有效播种 token,绝不用 palette() 角色或裸 QColor——见暗色回归历史。
+    QColor selectedColor, unselectedColor;
+    if (lang == DesignMaterial) {
+        // Material 3: selected = accent (primary); unselected = dim neutral on-surface. zh_CN: M3:选中=accent;未选=中性 on-surface 变暗。
+        selectedColor = c.accentDefault;
+        unselectedColor = c.textTertiary;
+    } else if (lang == DesignCupertino) {
+        // macOS: selected = accent blue; unselected = dim neutral (secondary text). zh_CN: macOS:选中=accent 蓝;未选=中性变暗(次要文字)。
+        selectedColor = c.accentDefault;
+        unselectedColor = c.textSecondary;
+    } else {
+        // DesignFluent (default): unchanged WinUI neutral pips. zh_CN: 默认 Fluent:WinUI 中性 pip,不变。
+        selectedColor = c.textPrimary;
+        unselectedColor = c.textTertiary;
+    }
 
     for (int i = 0; i < m_pages.size(); ++i) {
         QRect dotRect;
@@ -447,7 +503,7 @@ void FlipView::drawPageIndicator(QPainter& p)
             int y = indRect.y() + i * (kIndicatorDotSize + kIndicatorSpacing);
             dotRect = QRect(indRect.x(), y, kIndicatorDotSize, kIndicatorDotSize);
         }
-        QColor dotColor = (i == m_currentIndex) ? c.textPrimary : c.textTertiary;
+        QColor dotColor = (i == m_currentIndex) ? selectedColor : unselectedColor;
         p.setPen(Qt::NoPen);
         p.setBrush(dotColor);
         p.drawEllipse(dotRect);

@@ -466,6 +466,16 @@ qreal TreeView::selectedIndicatorProgress(const QModelIndex& index) const {
     return 1.0;
 }
 
+bool TreeView::selectionIndicatorVisible() const {
+    // The Fluent accent pill is suppressed under M3/macOS (the delegate fills the whole row instead);
+    // report it as hidden so the delegate draws its own bar and view + delegate stay consistent.
+    // zh_CN: Fluent accent 药丸在 M3/macOS 下被抑制(改由委托整行填充);此处报告为隐藏,
+    // 使委托绘制自身指示条,从而保持视图与委托一致。
+    if (themeDesignLanguage() != DesignFluent)
+        return false;
+    return m_selectionIndicatorVisible;
+}
+
 void TreeView::setSelectionIndicatorVisible(bool visible) {
     if (m_selectionIndicatorVisible == visible)
         return;
@@ -1484,6 +1494,11 @@ QRectF TreeView::currentSelectedIndicatorRect() const {
 }
 
 void TreeView::paintSelectedIndicator(QPainter& painter) const {
+    // M3/macOS carry selection via the delegate's full-row fill, not a Fluent accent pill — suppress it.
+    // zh_CN: M3/macOS 的选择由委托整行填充承载,而非 Fluent accent 指示条——在此抑制。
+    if (themeDesignLanguage() != DesignFluent)
+        return;
+
     if (!selectionModel() || !themeColors().accentDefault.isValid())
         return;
 

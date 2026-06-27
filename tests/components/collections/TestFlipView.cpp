@@ -17,6 +17,7 @@
 #include "components/status_info/Shimmer.h"
 #include "components/textfields/Label.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/QMLPlus.h"
 #include "design/Typography.h"
 
@@ -537,6 +538,124 @@ TEST_F(FlipViewTest, NoScrollPhaseNoPendingDuringAnimation) {
         Qt::NoScrollPhase, false);
     QApplication::sendEvent(&fv, &wheel3);
     EXPECT_EQ(fv.currentIndex(), 2);
+}
+
+// ─── Design-language × theme sweep for the pips indicator + nav buttons ─────
+//
+// FlipView's overlay draws two themed elements: the bottom page-dot PIPS indicator and the prev/next
+// circular NAV BUTTONS. Material 3 / macOS recolor them (accent selected pip, neutral state-layer nav
+// hover/press) while Fluent is unchanged. Design language + theme are GLOBAL singletons, so the
+// fixture restores both in TearDown. The critical guard here is the dark-mode regression history:
+// FlipView once rendered WHITE nav buttons and WHITE corners in dark theme from default-QPalette /
+// invalid-QColor bugs — so we assert NO opaque near-black (and, paired with hasPaintedContent, a real
+// painted surface) at both a nav-button center and a pip center across every language × theme.
+// zh_CN: FlipView 覆盖层绘制两个主题化元素:底部页点 PIPS 指示器与 prev/next 圆形 NAV 按钮。Material 3 /
+// macOS 给它们重新着色(accent 选中 pip、中性 state-layer 导航 hover/press),Fluent 不变。设计语言与主题
+// 为全局单例,夹具在 TearDown 中复位二者。关键守卫是暗色回归历史:FlipView 曾因默认 QPalette / 无效 QColor
+// 在暗色下绘出白色导航按钮与白角——故对每个 语言 × 主题 在导航按钮中心与 pip 中心断言无不透明近黑(配合
+// hasPaintedContent 表示确有绘制的表面)。
+class FlipViewDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    // True if the sampled pixel is an opaque near-#000 surface — the exact dark-mode regression the
+    // valid-token rule prevents. zh_CN: 采样像素为不透明近黑表面则为真——即有效 token 规则所防止的暗色回归。
+    static bool isOpaqueBlack(const QImage& img, int x, int y) {
+        const QColor c = img.pixelColor(qBound(0, x, img.width() - 1),
+                                        qBound(0, y, img.height() - 1));
+        const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+        return c.alpha() > 200 && lum < 16;
+    }
+};
+
+TEST_F(FlipViewDesignLanguageTest, AllLanguagesAndThemesPaintPipsAndNavWithoutDarkRegression) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    // Geometry mirrors FlipView's overlay metrics (horizontal mode). Nav buttons: 16×28, 2px from the
+    // edge, vertically centered. Pips: 6px dots, bottom-centered, 12px up from the bottom.
+    // zh_CN: 几何与 FlipView 覆盖层尺寸一致(水平模式)。导航按钮 16×28,距边 2px,垂直居中;pip 6px,
+    // 底部居中,距底 12px。
+    constexpr int kW = 400, kH = 270;
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            FlipView fv;
+            fv.resize(kW, kH);
+            // Three pages with currentIndex 1 so BOTH prev and next nav buttons are visible.
+            // zh_CN: 三页且 currentIndex=1,使 prev 与 next 导航按钮都可见。
+            fv.addPage(new QWidget);
+            fv.addPage(new QWidget);
+            fv.addPage(new QWidget);
+            fv.setCurrentIndex(1);
+
+            // Nav buttons only paint while hovered; deliver an enter event to set the hover flag.
+            // zh_CN: 导航按钮仅在悬停时绘制;投递 enter 事件以置位悬停标志。
+            const QPointF center(kW / 2.0, kH / 2.0);
+            QEnterEvent enter(center, center, fv.mapToGlobal(center.toPoint()));
+            QApplication::sendEvent(&fv, &enter);
+
+            const QImage img = fv.grab().toImage();
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            // 1. The overlay grabbed a valid, non-empty image with painted content. zh_CN: 覆盖层抓取出有效、非空且有内容的图像。
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "FlipView painted nothing: " << ctx;
+
+            // 2. Nav-button centers (prev at left, next at right; both ~14px tall band centered). The
+            //    dark-mode regression guard: neither button surface may be an opaque near-black fill.
+            //    zh_CN: 导航按钮中心(prev 在左、next 在右;均居中)。暗色回归守卫:按钮表面都不得为不透明近黑填充。
+            const int navY = kH / 2;
+            const int prevCx = 2 + 16 / 2;          // left margin + half width. zh_CN: 左边距 + 半宽。
+            const int nextCx = kW - 2 - 16 / 2;     // mirror on the right. zh_CN: 右侧镜像。
+            EXPECT_FALSE(isOpaqueBlack(img, prevCx, navY))
+                << "prev nav button is opaque-black (dark-mode regression): " << ctx;
+            EXPECT_FALSE(isOpaqueBlack(img, nextCx, navY))
+                << "next nav button is opaque-black (dark-mode regression): " << ctx;
+
+            // 3. Pip center: the selected pip (index 1) sits in the bottom-centered row. Compute the
+            //    indicator strip the same way pageIndicatorRect() does, then sample the index-1 dot.
+            //    zh_CN: pip 中心:选中 pip(index 1)位于底部居中行。按 pageIndicatorRect() 的方式计算指示条,
+            //    再采样 index-1 的点。
+            constexpr int kDot = 6, kSpacing = 8, kMargin = 12;
+            const int totalW = 3 * kDot + 2 * kSpacing;
+            const int pipsLeft = kW / 2 - totalW / 2;
+            const int pipY = kH - kMargin - kDot + kDot / 2;
+            const int selPipCx = pipsLeft + 1 * (kDot + kSpacing) + kDot / 2; // selected = index 1. zh_CN: 选中=index 1。
+            EXPECT_FALSE(isOpaqueBlack(img, selPipCx, pipY))
+                << "selected pip is opaque-black (dark-mode regression): " << ctx;
+        }
+    }
 }
 
 // ── VisualCheck ──────────────────────────────────────────────────────────────
