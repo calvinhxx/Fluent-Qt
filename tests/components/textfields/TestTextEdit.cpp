@@ -9,6 +9,7 @@
 #include "components/textfields/Label.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -228,6 +229,71 @@ TEST_F(TextEditTest, WheelPassesThroughWhenContentFits) {
     QApplication::processEvents();
 
     EXPECT_FALSE(wheel.isAccepted());
+}
+
+// ── Design-language × theme compatibility ────────────────────────────────────
+//
+// TextEdit paints a per-brand frame (Fluent / Material 3 / macOS) under each App theme
+// (Light / Dark). This suite grabs the rendered control across the full {language × theme}
+// matrix to lock in that every combination paints, never crashes, and produces painted
+// content. Design language + theme are GLOBAL state, so TearDown restores the built-in
+// defaults. zh_CN: TextEdit 按品牌(Fluent / Material 3 / macOS)在明暗主题下分支绘制外框。
+// 本套件遍历 {设计语言 × 主题} 全矩阵抓取渲染结果,确保每种组合都能绘制、不崩溃且有绘制内容。
+// 设计语言与主题是全局状态,故 TearDown 恢复内置默认值。
+
+class TextEditDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so other suites start clean.
+        // zh_CN: 设计语言与主题是全局状态——重置以保证其它套件从干净状态开始。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+};
+
+TEST_F(TextEditDesignLanguageTest, AllLanguagesThemesPaint) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+            fluent::FluentElement::setTheme(theme);
+
+            TextEdit te;
+            te.setPlainText("Multi-line\nsample text");
+            te.resize(240, 80);
+
+            QImage img = te.grab().toImage();
+
+            // No crash + valid image. zh_CN: 不崩溃 + 图像有效。
+            ASSERT_FALSE(img.isNull()) << "lang=" << lang << " theme=" << theme;
+            EXPECT_GT(img.width(), 0) << "lang=" << lang << " theme=" << theme;
+            EXPECT_GT(img.height(), 0) << "lang=" << lang << " theme=" << theme;
+
+            // Frame/text must paint content: some pixel differs from the top-left background.
+            // zh_CN: 外框/文本必须绘制内容:存在与左上角背景不同的像素。
+            const QRgb bg = img.pixel(0, 0);
+            bool paintedContent = false;
+            for (int y = 0; y < img.height() && !paintedContent; ++y) {
+                for (int x = 0; x < img.width(); ++x) {
+                    if (img.pixel(x, y) != bg) {
+                        paintedContent = true;
+                        break;
+                    }
+                }
+            }
+            EXPECT_TRUE(paintedContent)
+                << "painted nothing for lang=" << lang << " theme=" << theme;
+        }
+    }
 }
 
 TEST_F(TextEditTest, VisualCheck) {

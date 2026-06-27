@@ -277,9 +277,86 @@ bool PasswordBox::canPeekReveal() const {
     return isEnabled() && !isReadOnly() && !text().isEmpty();
 }
 
+bool PasswordBox::paintBrandInputFrame(QPainter& painter) {
+    const auto lang = themeDesignLanguage();
+    if (lang == DesignFluent) return false;
+
+    const auto colors = themeColors();
+    const QRectF base = QRectF(inputRect());
+
+    if (lang == DesignMaterial) {
+        // Material 3 outlined field: transparent fill, 1dp outline thickening to 2dp accent on focus.
+        // zh_CN: M3 描边字段:透明填充,1dp 描边聚焦时加粗为 2dp accent。
+        QColor outlineColor;
+        qreal outlineWidth = 1.0;
+        if (!isEnabled()) {
+            outlineColor = colors.strokeDivider;
+        } else if (m_focused) {
+            outlineColor = colors.accentDefault;
+            outlineWidth = 2.0;
+        } else {
+            outlineColor = colors.strokeStrong;
+        }
+        const qreal inset = outlineWidth / 2.0;
+        const qreal r = themeRadius().control;
+        QPainterPath framePath;
+        framePath.addRoundedRect(base.adjusted(inset, inset, -inset, -inset), r, r);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(outlineColor, outlineWidth));
+        painter.drawPath(framePath);
+        return true;
+    }
+
+    // DesignCupertino: hairline rect + accent focus ring with a soft glow, all inset to avoid clipping.
+    // zh_CN: macOS:发丝矩形 + 内缩的强调焦点环及柔和辉光,避免裁切。
+    const qreal r = 6.0;
+
+    // Bezel fill (docs §4): restrained near-white / white@10% surface, matching LineEdit/ComboBox so
+    // the field reads as a raised control. zh_CN: bezel 填充(文档 §4):与 LineEdit/ComboBox 同款不透明 bezel。
+    {
+        const QColor fill = !isEnabled() ? colors.controlDisabled : colors.bgLayerAlt;
+        QPainterPath fillPath;
+        fillPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(fill);
+        painter.drawPath(fillPath);
+    }
+
+    if (isEnabled() && m_focused) {
+        QColor glow = colors.accentDefault;
+        glow.setAlpha(0x40);
+        QPainterPath glowPath;
+        glowPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(glow, 2.0));
+        painter.drawPath(glowPath);
+
+        QPainterPath ringPath;
+        ringPath.addRoundedRect(base.adjusted(1.5, 1.5, -1.5, -1.5),
+                                qMax<qreal>(0.0, r - 1.0), qMax<qreal>(0.0, r - 1.0));
+        painter.setPen(QPen(colors.accentDefault, 2.0));
+        painter.drawPath(ringPath);
+        return true;
+    }
+
+    QColor hairline = !isEnabled() ? colors.strokeDivider
+                                   : (m_hovered ? colors.strokeStrong : colors.strokeDefault);
+    QPainterPath hairPath;
+    hairPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(hairline, 1.0));
+    painter.drawPath(hairPath);
+    return true;
+}
+
 void PasswordBox::paintInputFrame(QPainter& painter) {
     const auto colors = themeColors();
     const QRectF frameRect = QRectF(inputRect()).adjusted(0.5, 0.5, -0.5, -0.5);
+
+    // Brand-aware frame for the input row; the reveal button is a fluent::Button that already follows the
+    // design language. DesignFluent falls through to the original path below unchanged. zh_CN: 输入行的品牌
+    // 感知边框;reveal 按钮是 fluent::Button,已跟随设计语言。DesignFluent 落到下方原路径,保持不变。
+    if (paintBrandInputFrame(painter)) return;
 
     QColor bgColor;
     QColor borderColor;

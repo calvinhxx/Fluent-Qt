@@ -266,6 +266,108 @@ void TextEdit::resizeEvent(QResizeEvent* event) {
 void TextEdit::paintFrame(QPainter& painter) {
     const auto& colors = themeColors();
     const auto& radius = themeRadius();
+
+    // Branch the border/focus treatment per design language (palette is already swapped by
+    // ThemeRegistry; this picks the SHAPE of the field). Fluent keeps its bottom accent underline;
+    // Material is an outlined rect that thickens to a 2dp accent outline on focus; Cupertino is a
+    // hairline rounded rect that gains an accent focus ring. All paths paint strictly inside rect()
+    // so no halo gets clipped. Mirrors LineEdit::paintFrame. zh_CN: 按设计语言分支边框/焦点处理
+    // (调色板已由 ThemeRegistry 替换,此处决定字段「形状」)。Fluent 保留底部强调下划线;Material 为描边
+    // 矩形,聚焦时加粗为 2dp 强调描边;Cupertino 为发丝圆角矩形,聚焦时出现强调焦点环。所有路径都严格
+    // 绘制在 rect() 内,焦点光环不会被裁切。与 LineEdit::paintFrame 一致。
+    const auto lang = themeDesignLanguage();
+
+    if (lang == DesignMaterial) {
+        // Material 3 OUTLINED text field: transparent fill inside a 1 dp `outline` (strokeStrong)
+        // rounded rect at the control radius, thickening to a 2 dp `accentDefault` outline on focus.
+        // No bottom underline here — the full outline replaces the Fluent look. zh_CN: Material 3 描边
+        // 文本框:控件圆角的 1dp outline(strokeStrong)圆角矩形包裹透明填充,聚焦时加粗为 2dp accentDefault
+        // 描边。此分支无底部下划线——完整描边取代 Fluent 样式。
+        QColor outlineColor;
+        qreal outlineWidth = 1.0;
+        if (!isEnabled()) {
+            outlineColor = colors.strokeDivider;
+        } else if (m_isFocused) {
+            outlineColor = colors.accentDefault;
+            outlineWidth = 2.0;
+        } else if (m_isHovered) {
+            outlineColor = colors.strokeStrong;
+        } else {
+            outlineColor = colors.strokeStrong;
+        }
+
+        // Inset by half the stroke so a thick (2dp) focus outline stays within the widget bounds.
+        // zh_CN: 按描边一半内缩,使加粗(2dp)焦点描边仍处于控件范围内。
+        const qreal inset = outlineWidth / 2.0;
+        QRectF outlineRect = QRectF(rect()).adjusted(inset, inset, -inset, -inset);
+        const qreal mr = radius.control;
+        QPainterPath framePath;
+        framePath.addRoundedRect(outlineRect, mr, mr);
+
+        painter.setBrush(Qt::NoBrush); // Outlined variant has no opaque fill. zh_CN: 描边变体无不透明填充。
+        painter.setPen(QPen(outlineColor, outlineWidth));
+        painter.drawPath(framePath);
+        return;
+    }
+
+    if (lang == DesignCupertino) {
+        // macOS field: a small-radius (~6) rounded rect with a 1 px hairline `strokeStrong` border at
+        // rest. On focus it gains an accent (blue) RING — a 2 px accentDefault border plus a faint
+        // outer accent glow drawn INSET so it never paints beyond rect() (which would clip).
+        // Non-focused = just the hairline. zh_CN: macOS 字段:小圆角(~6)圆角矩形,静息态 1px strokeStrong
+        // 发丝边框。聚焦时出现强调(蓝)环——2px accentDefault 边框 + 内缩绘制的淡淡外层强调辉光(绝不超出
+        // rect(),否则被裁切)。非聚焦=仅发丝。
+        const qreal cr = 6.0; // macOS regular-control radius. zh_CN: macOS 常规控件圆角。
+
+        // Bezel fill (docs §4): restrained near-white / white@10% surface — the same opaque bezel as
+        // LineEdit/ComboBox so the multi-line field reads as a raised control on any background, not a
+        // transparent hole. The editor viewport is transparent so this fill shows behind the text.
+        // zh_CN: bezel 填充(文档 §4):与 LineEdit/ComboBox 同款不透明 bezel;编辑器视口透明,填充透出于文字之后。
+        {
+            const QColor fill = !isEnabled() ? colors.controlDisabled : colors.bgLayerAlt;
+            QRectF fillRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+            QPainterPath fillPath;
+            fillPath.addRoundedRect(fillRect, cr, cr);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(fill);
+            painter.drawPath(fillPath);
+        }
+
+        if (isEnabled() && m_isFocused) {
+            // Faint outer glow ring first, inset 0.5px so its 2px stroke stays inside the widget.
+            // zh_CN: 先画淡淡外层辉光环,内缩 0.5px 使其 2px 描边留在控件内。
+            QColor glow = colors.accentDefault;
+            glow.setAlpha(0x40); // ~25% — a soft halo, not a hard line. zh_CN: 约 25%——柔和光晕而非硬线。
+            QRectF glowRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+            QPainterPath glowPath;
+            glowPath.addRoundedRect(glowRect, cr, cr);
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(glow, 2.0));
+            painter.drawPath(glowPath);
+
+            // Crisp 2px accent ring inset further so it sits inside the glow. zh_CN: 再内缩画清晰 2px 强调环,位于辉光内侧。
+            QRectF ringRect = QRectF(rect()).adjusted(1.5, 1.5, -1.5, -1.5);
+            QPainterPath ringPath;
+            ringPath.addRoundedRect(ringRect, qMax<qreal>(0.0, cr - 1.0), qMax<qreal>(0.0, cr - 1.0));
+            painter.setPen(QPen(colors.accentDefault, 2.0));
+            painter.drawPath(ringPath);
+            return;
+        }
+
+        // Rest / hover / disabled: just the 1px hairline. zh_CN: 静息/悬停/禁用:仅 1px 发丝边框。
+        QColor hairline = !isEnabled() ? colors.strokeDivider
+                                       : (m_isHovered ? colors.strokeStrong : colors.strokeDefault);
+        QRectF hairRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+        QPainterPath hairPath;
+        hairPath.addRoundedRect(hairRect, cr, cr);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(hairline, 1.0));
+        painter.drawPath(hairPath);
+        return;
+    }
+
+    // DesignFluent (default): unchanged WinUI treatment — fill + border + bottom accent underline
+    // on focus. zh_CN: 默认 Fluent:WinUI 处理不变——填充 + 边框 + 聚焦时底部强调下划线。
     QRectF bgRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
 
     QColor bgColor, borderColor, bottomBorderColor;

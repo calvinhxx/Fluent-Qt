@@ -9,6 +9,8 @@
 #include "components/textfields/Label.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 
 using namespace fluent::textfields;
 using namespace fluent::basicinput;
@@ -128,6 +130,79 @@ TEST_F(LineEditTest, ClearButtonOffsetAffectsGeometry) {
     const int expectedX = edit->width() - 20 - 12;
     const int expectedY = (edit->height() - 20) / 2 + 5;
     EXPECT_EQ(clearBtn->pos(), QPoint(expectedX, expectedY));
+}
+
+// ── Design-language × theme compatibility ────────────────────────────────────
+//
+// LineEdit paints a per-brand border/focus treatment (Fluent bottom underline / Material
+// outlined rect / macOS hairline + accent ring) under each App theme (Light / Dark). This
+// suite grabs the rest-state control across the full {language × theme} matrix to lock in
+// that every combination paints, never crashes, and produces a valid, non-empty image with
+// visible content. Focus-ring visuals need a shown+focused widget (unreliable headless), so
+// we only cover rest-state rendering here. Design language + theme are GLOBAL state, so
+// TearDown restores the built-in defaults.
+// zh_CN: LineEdit 按品牌绘制边框/焦点处理(Fluent 底部下划线 / Material 描边矩形 / macOS 发丝
+// 边框 + 强调环),并在明暗主题下分支。本套件遍历 {设计语言 × 主题} 全矩阵抓取静息态渲染结果,
+// 确保每种组合都能绘制、不崩溃,且生成有效、非空且有可见内容的图像。焦点环视觉需要已显示且聚焦的
+// 控件(无屏环境不可靠),故此处仅覆盖静息态。设计语言与主题是全局状态,故 TearDown 恢复内置默认值。
+
+class LineEditDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so other suites start clean.
+        // zh_CN: 设计语言与主题是全局状态——重置以保证其它套件从干净状态开始。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a rest-state LineEdit with text and grab it as an image. zh_CN: 构建带文本的静息态 LineEdit 并抓取为图像。
+    static QImage grabLineEdit() {
+        LineEdit le;
+        le.setText("Sample text");
+        le.resize(200, 32);
+        return le.grab().toImage();
+    }
+};
+
+TEST_F(LineEditDesignLanguageTest, AllLanguagesThemesPaint) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+            fluent::FluentElement::setTheme(theme);
+
+            QImage img = grabLineEdit();
+
+            // No crash + valid, correctly-sized image. zh_CN: 不崩溃 + 图像有效且尺寸正确。
+            ASSERT_FALSE(img.isNull()) << "lang=" << lang << " theme=" << theme;
+            EXPECT_EQ(img.width(), 200) << "lang=" << lang << " theme=" << theme;
+            EXPECT_EQ(img.height(), 32) << "lang=" << lang << " theme=" << theme;
+
+            // Painted content: some pixel differs from the top-left background pixel.
+            // zh_CN: 已绘制内容:存在与左上角背景像素不同的像素。
+            const QRgb bg = img.pixel(0, 0);
+            bool paintedContent = false;
+            for (int y = 0; y < img.height() && !paintedContent; ++y) {
+                for (int x = 0; x < img.width(); ++x) {
+                    if (img.pixel(x, y) != bg) {
+                        paintedContent = true;
+                        break;
+                    }
+                }
+            }
+            EXPECT_TRUE(paintedContent)
+                << "painted nothing for lang=" << lang << " theme=" << theme;
+        }
+    }
 }
 
 TEST_F(LineEditTest, VisualCheck) {

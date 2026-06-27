@@ -229,6 +229,7 @@ private:
     bool parseInputText(const QString& input, double* result) const;
     bool setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN);
     void paintInputFrame(QPainter& painter);
+    bool paintBrandInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
     bool hasSpinnerButtonsVisible() const;
     int inlineSpinnerWidth() const;

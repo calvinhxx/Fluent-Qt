@@ -94,6 +94,7 @@ private:
     void updateEchoMode();
     void setPeekActive(bool active);
     void paintInputFrame(QPainter& painter);
+    bool paintBrandInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
     bool canPeekReveal() const;
 
