@@ -8,6 +8,7 @@
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/dialogs_flyouts/TeachingTip.h"
 #include "components/textfields/Label.h"
@@ -277,6 +278,121 @@ TEST_F(TeachingTipTest, CloseWithReasonEmitsClosingSignal) {
 
     ASSERT_EQ(closingSpy.count(), 1);
     EXPECT_EQ(lastCloseReason(closingSpy), TeachingTip::ActionButton);
+}
+
+// ─── Design-language × theme painter sweep ──────────────────────────────────
+//
+// TeachingTip's bubble painter branches on the design language for the OUTLINE STROKE only
+// (Fluent→strokeDefault, Material 3→no border, macOS→strokeStrong hairline); the bgLayer fill,
+// tail, shadow and radius are shared. Across each language × App theme the bubble must render a
+// real, content-bearing surface — and crucially must NOT paint a solid near-black card center
+// (the invalid-QColor trap: a default-constructed QColor is INVALID yet QColor::alpha() returns
+// 255, so a bad fill brush would paint opaque #000). Design language + theme are GLOBAL singletons,
+// so the fixture restores both in TearDown.
+// zh_CN: TeachingTip 气泡绘制仅在「外轮廓描边」上按设计语言分支(Fluent→strokeDefault、Material 3→无边框、
+// macOS→strokeStrong 发丝);bgLayer 填充、tail、阴影与圆角共享。每种语言 × 主题下气泡都必须绘制出真实、
+// 有内容的表面——且关键是 card 中心不得涂成不透明近黑(无效 QColor 陷阱:默认构造的 QColor 无效却返回
+// alpha==255,坏填充画笔会涂成不透明 #000)。设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class TeachingTipDesignLanguageTest : public ::testing::Test {
+protected:
+    static void SetUpTestSuite()
+    {
+        qRegisterMetaType<fluent::dialogs_flyouts::TeachingTip::CloseReason>(
+            "fluent::dialogs_flyouts::TeachingTip::CloseReason");
+    }
+
+    void SetUp() override {
+        window = new FluentTestWindow();
+        window->setFixedSize(900, 680);
+        window->onThemeUpdated();
+        window->show();
+        QTest::qWaitForWindowExposed(window);
+    }
+
+    void TearDown() override {
+        delete window;
+        window = nullptr;
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        if (img.isNull()) return false;
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    FluentTestWindow* window = nullptr;
+};
+
+TEST_F(TeachingTipDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackCard) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lc : langs) {
+        for (const auto& tc : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lc.lang);
+            fluent::FluentElement::setTheme(tc.theme);
+            window->onThemeUpdated();
+
+            const std::string ctx = std::string(lc.name) + "/" + tc.name;
+
+            // Anchor in the window so the tip resolves a target rect and renders a visible tail.
+            // zh_CN: 在窗口内放置锚点,使提示能解析目标矩形并绘制可见 tail。
+            auto* anchor = new Button("Anchor", window);
+            anchor->setFixedSize(120, 32);
+            anchor->move(QPoint(360, 240));
+            anchor->show();
+
+            TeachingTip tip(window);
+            tip.setAnimationEnabled(false);
+            tip.setTailVisible(true);
+            tip.setCardSize({320, 160});
+            tip.setPreferredPlacement(TeachingTip::Bottom);
+            tip.showAt(anchor);
+            ASSERT_TRUE(tip.isOpen()) << ctx;
+            QApplication::processEvents();
+
+            // Grab the whole tip widget (card + tail + shadow margins). zh_CN: 抓取整个提示部件(card + tail + 阴影边距)。
+            const QImage img = tip.grab().toImage();
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "tip painted nothing: " << ctx;
+
+            // Sample the card center: it lands on the bare bgLayer fill (no glyphs). It must be a real
+            // opaque surface but NOT near-black — the invalid-QColor trap would render opaque #000 here.
+            // zh_CN: 采样 card 中心:落在纯 bgLayer 填充(无字形)。必须是真实不透明表面但不得近黑——无效
+            // QColor 陷阱会在此处涂成不透明 #000。
+            const QRect card = tip.contentHost()->geometry();
+            const QColor c = img.pixelColor(card.center());
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "TeachingTip painted an opaque near-black card surface: " << ctx
+                << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+
+            tip.close();
+            delete anchor;
+            QApplication::processEvents();
+        }
+    }
 }
 
 TEST_F(TeachingTipTest, VisualCheck) {

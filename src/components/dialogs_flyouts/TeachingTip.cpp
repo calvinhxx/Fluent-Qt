@@ -247,6 +247,26 @@ void TeachingTip::paintEvent(QPaintEvent*) {
     }
 
     const auto& colors = themeColors();
+    const DesignLanguage lang = themeDesignLanguage();
+    // Per design language only the FILL and the OUTLINE STROKE differ — the bubble/tail/shadow
+    // geometry above is shared. Fill stays bgLayer everywhere; the outline pen is what changes.
+    // zh_CN: 按设计语言仅「填充」与「外轮廓描边」不同——上方 bubble/tail/shadow 几何全部共享。
+    // 填充各语言均为 bgLayer;变化的是外轮廓画笔。
+    QPen outlinePen;
+    if (lang == DesignMaterial) {
+        // Material 3 elevated rich-tooltip / surface-container: elevation is carried by the shadow
+        // alone, with NO border stroke. zh_CN: Material 3 elevated 富提示 / surface-container:仅由阴影
+        // 表达高程,无边框描边。
+        outlinePen = QPen(Qt::NoPen);
+    } else if (lang == DesignCupertino) {
+        // macOS popover: a crisp hairline edge using the stronger stroke token. zh_CN: macOS popover:
+        // 用更强的描边 token 画出清晰的发丝边缘。
+        outlinePen = QPen(colors.strokeStrong, 1);
+    } else {
+        // DesignFluent (default): unchanged WinUI outline. zh_CN: 默认 Fluent,WinUI 轮廓不变。
+        outlinePen = QPen(colors.strokeDefault, 1);
+    }
+
     // Fill the whole bubble (card + tail) first, with no stroke.
     // zh_CN: 先填充整个 bubble（card + tail），无描边。
     painter.setBrush(colors.bgLayer);
@@ -255,7 +275,7 @@ void TeachingTip::paintEvent(QPaintEvent*) {
     // Stroke the united outline: no inner seams, so the tail base shows no line.
     // zh_CN: 对整个 bubble 外轮廓描边——united path 无内部接缝，tail 基部不出现横线。
     painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(colors.strokeDefault, 1));
+    painter.setPen(outlinePen);
     painter.drawPath(bubblePath);
 }
 

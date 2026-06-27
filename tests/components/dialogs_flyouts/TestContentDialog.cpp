@@ -3,12 +3,15 @@
 #include <QTimer>
 #include <QSignalSpy>
 #include <QVBoxLayout>
+#include <QImage>
+#include <QTest>
 #include "components/dialogs_flyouts/ContentDialog.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/CheckBox.h"
 #include "components/textfields/Label.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 
 using namespace fluent::dialogs_flyouts;
 using namespace fluent::basicinput;
@@ -317,6 +320,115 @@ TEST_F(ContentDialogTest, ButtonBarIsLeftAligned) {
 
     dialog.setAnimationEnabled(false);
     dialog.done(0);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  Design-language × theme sweep
+// ══════════════════════════════════════════════════════════════════════════════
+//
+// ContentDialog::paintEvent now branches on the design language: Fluent keeps the two-region
+// (bgLayer/bgCanvas) body + divider + strokeDefault outer border; Material 3 paints a single tonal
+// surface with NO divider and NO outer stroke (elevation via shadow); macOS keeps the two-region body
+// but draws a hairline strokeStrong edge. Every (lang × theme) combo must paint a valid card and must
+// never fall into the invalid-QColor trap (a default-constructed QColor is INVALID yet returns
+// alpha==255, so a bare setBrush would paint SOLID OPAQUE BLACK). Design language + theme are GLOBAL
+// singletons, restored in TearDown. zh_CN: ContentDialog::paintEvent 现在按设计语言分支:Fluent 保留两区域
+//(bgLayer/bgCanvas)主体 + 分割线 + strokeDefault 外边框;Material 3 绘制单一色调表面,无分割线、无外描边(高度
+// 由阴影表达);macOS 保留两区域主体但用 strokeStrong 发丝边缘。每个(语言 × 主题)组合都必须绘制有效卡片,且绝不落入
+// 无效 QColor 陷阱(默认构造的 QColor 无效却返回 alpha==255,裸 setBrush 会涂成不透明纯黑)。设计语言与主题为全局单例,
+// 在 TearDown 中恢复。
+class ContentDialogDesignLanguageTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        window = new FluentTestWindow();
+        window->setFixedSize(700, 500);
+        window->onThemeUpdated();
+        window->show();
+        QTest::qWaitForWindowExposed(window);
+    }
+
+    void TearDown() override {
+        delete window;
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        if (img.isNull() || img.width() == 0 || img.height() == 0)
+            return false;
+        const QRgb first = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != first)
+                    return true;
+        return false;
+    }
+
+    // The card center lands in the content/title region — it must not be an opaque near-black fill.
+    // zh_CN: 卡片中心落在内容/标题区——不得为不透明近黑填充。
+    static bool hasOpaqueBlackCenter(const QImage& img) {
+        if (img.isNull())
+            return false;
+        const QColor c = img.pixelColor(img.width() / 2, img.height() / 2);
+        const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+        return c.alpha() > 200 && lum < 16;
+    }
+
+    FluentTestWindow* window = nullptr;
+};
+
+TEST_F(ContentDialogDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackTrap) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+            window->onThemeUpdated();
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            ContentDialog dialog(window);
+            dialog.setAnimationEnabled(false);
+            dialog.setFixedSize(454, 232);
+            dialog.setTitle("Save your work?");
+
+            auto* body = new Label("Your changes will be lost if you don't save.");
+            body->setWordWrap(true);
+            dialog.setContent(body);
+            dialog.setPrimaryButtonText("Save");
+            dialog.setCloseButtonText("Cancel");
+            dialog.setDefaultButton(ContentDialog::Primary);
+            dialog.onThemeUpdated();
+
+            dialog.show();
+            QApplication::processEvents();
+
+            const QImage img = dialog.grab().toImage();
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "dialog painted nothing: " << ctx;
+            EXPECT_FALSE(hasOpaqueBlackCenter(img))
+                << "dialog painted an opaque black surface (invalid-QColor trap): " << ctx;
+
+            dialog.done(0);
+            QApplication::processEvents();
+        }
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
