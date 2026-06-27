@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <utility>
+
 #include <QApplication>
+#include <QImage>
 #include <QPainter>
 #include <QPalette>
 #include <QPixmap>
@@ -11,6 +15,7 @@
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/navigation/TabView.h"
@@ -780,3 +785,114 @@ TEST_F(TabViewTest, VisualCheck)
     visual->show();
     qApp->exec();
 }
+
+// Headless render coverage for the brand-specific tab treatments. Each case sets a
+// (design language, theme) pair on the global ThemeRegistry / FluentElement, builds a TabView with
+// several tabs + a selected one, grabs it to a QImage, and asserts it renders without crashing and
+// actually paints content. Globals are reset in TearDown so a brand/theme never leaks into the other
+// suites. zh_CN: 品牌专属 tab 绘制的无头渲染覆盖。每个用例设置一对(设计语言, 主题)到全局
+// ThemeRegistry / FluentElement，构建带多个 tab 及一个选中项的 TabView，将其抓取为 QImage，断言无崩溃
+// 且确有绘制内容。TearDown 中重置全局，避免品牌/主题泄漏到其它套件。
+class TabViewDesignLanguageTest
+    : public ::testing::TestWithParam<std::pair<fluent::FluentElement::DesignLanguage,
+                                                fluent::FluentElement::Theme>> {
+protected:
+    static void SetUpTestSuite()
+    {
+        qRegisterMetaType<fluent::navigation::TabViewItem>("fluent::navigation::TabViewItem");
+        qRegisterMetaType<fluent::navigation::TabView::TabWidthMode>(
+            "fluent::navigation::TabView::TabWidthMode");
+        qRegisterMetaType<fluent::navigation::TabView::CloseButtonOverlayMode>(
+            "fluent::navigation::TabView::CloseButtonOverlayMode");
+    }
+
+    void SetUp() override
+    {
+        const auto [lang, theme] = GetParam();
+        fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+        fluent::FluentElement::setTheme(theme);
+    }
+
+    void TearDown() override
+    {
+        // CRITICAL: reset globals so other suites see Fluent + Light. zh_CN: 关键：重置全局，使其它套件回到 Fluent + Light。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static TabView* makeTabView()
+    {
+        auto* tabs = new TabView();
+        tabs->addTab(TabViewItem(QStringLiteral("Home.cpp"), Typography::Icons::Document));
+        tabs->addTab(TabViewItem(QStringLiteral("Notes.md"), Typography::Icons::Edit));
+        tabs->addTab(TabViewItem(QStringLiteral("Readme"), Typography::Icons::Document));
+        tabs->setSelectedIndex(1);
+        tabs->resize(500, 200);
+        return tabs;
+    }
+
+    // True if any pixel differs from the top-left background pixel (i.e. something was painted).
+    // zh_CN: 若有任一像素不同于左上角背景像素则为真（即确有绘制）。
+    static bool hasPaintedContent(const QImage& img)
+    {
+        if (img.isNull() || img.width() < 2 || img.height() < 2)
+            return false;
+        const QRgb background = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y) {
+            for (int x = 0; x < img.width(); ++x) {
+                if (img.pixel(x, y) != background)
+                    return true;
+            }
+        }
+        return false;
+    }
+};
+
+TEST_P(TabViewDesignLanguageTest, RendersTabsWithoutCrashingAndPaintsContent)
+{
+    std::unique_ptr<TabView> tabs(makeTabView());
+
+    QImage img = tabs->grab().toImage();
+    ASSERT_FALSE(img.isNull());
+    EXPECT_EQ(img.width(), 500);
+    EXPECT_EQ(img.height(), 200);
+    EXPECT_TRUE(hasPaintedContent(img)) << "Expected the TabView to paint tab labels/indicator.";
+}
+
+TEST_P(TabViewDesignLanguageTest, ChangingSelectionRepaintsTabs)
+{
+    std::unique_ptr<TabView> tabs(makeTabView());
+
+    const QImage first = tabs->grab().toImage();
+    ASSERT_FALSE(first.isNull());
+
+    tabs->setSelectedIndex(2);
+
+    // The selection indicator ANIMATES and the header labels recolor asynchronously, so a single
+    // processEvents() can grab before anything visibly moved (this is timing, not a missing repaint —
+    // even the unchanged DesignFluent path needs the animation to advance). Pump the event loop and
+    // re-grab until the image differs (or a generous timeout), which is robust to the animation length.
+    // zh_CN: 选中指示条是动画的、表头标签异步重着色,单次 processEvents 可能在视觉变化前就抓帧(这是时序
+    // 问题,并非漏重绘——连未改动的 Fluent 路径也要等动画推进)。泵事件循环并重抓,直到图像变化或超时。
+    QImage second = tabs->grab().toImage();
+    ASSERT_FALSE(second.isNull());
+    for (int i = 0; i < 80 && first == second; ++i) {
+        QApplication::processEvents(QEventLoop::AllEvents, 10);
+        second = tabs->grab().toImage();
+    }
+
+    // Selection moved the accent text/indicator/segment, so the rendered image must change.
+    // zh_CN: 选中项移动了强调文字/指示条/段背景，渲染图像必须随之变化。
+    EXPECT_NE(first, second);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllDesignLanguagesAndThemes,
+    TabViewDesignLanguageTest,
+    ::testing::Values(
+        std::make_pair(fluent::FluentElement::DesignFluent, fluent::FluentElement::Light),
+        std::make_pair(fluent::FluentElement::DesignFluent, fluent::FluentElement::Dark),
+        std::make_pair(fluent::FluentElement::DesignMaterial, fluent::FluentElement::Light),
+        std::make_pair(fluent::FluentElement::DesignMaterial, fluent::FluentElement::Dark),
+        std::make_pair(fluent::FluentElement::DesignCupertino, fluent::FluentElement::Light),
+        std::make_pair(fluent::FluentElement::DesignCupertino, fluent::FluentElement::Dark)));

@@ -1049,8 +1049,111 @@ void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
         return;
 
     const Metrics currentMetrics = metrics();
-    const QColor textColorValue = itemTextColor(record.itemIndex);
+    const auto colors = themeColors();
+
+    // Branch the per-item treatment per brand, preserving DesignFluent EXACTLY. SelectorBar is the
+    // segmented cousin of Pivot: Fluent keeps a neutral label + the shared accent underline
+    // (paintSelectedIndicator); Material renders segmented buttons (tinted selected fill + accent
+    // label + within-bounds state-layer veil); macOS renders an accent-filled selected segment with
+    // white text plus thin dividers — the Pivot Cupertino treatment.
+    // zh_CN: 按品牌分支每个条目的绘制，DesignFluent 保持原样。SelectorBar 是 Pivot 的分段近亲：
+    // Fluent 维持中性标签 + 共享强调下划线(paintSelectedIndicator)；Material 渲染分段按钮(选中项淡
+    // 强调填充 + 强调标签 + 限定在条目内的 state-layer 薄层)；macOS 渲染强调色填充的选中段 + 白字 +
+    // 细分隔线——对应 Pivot 的 Cupertino 处理。
+    const DesignLanguage lang = themeDesignLanguage();
+    const bool isSelected = (record.itemIndex == m_selectedIndex);
+    const HitRecord hit{HitKind::Item, record.itemIndex};
+    const bool hovered = sameHit(m_hoveredHit, hit) || sameHit(m_pressedHit, hit);
+    const bool pressed = sameHit(m_pressedHit, hit);
+    const bool itemEnabled = isEnabled() && record.enabled && m_items.at(record.itemIndex).visible;
+
+    // Theme-aware interaction veil: DARKENS light surfaces, LIGHTENS dark ones, so hover stays
+    // visible under both App themes. zh_CN: 主题感知交互薄层：浅色面变暗、深色面变亮，明暗主题下都可见。
+    const bool darkTheme = effectiveTheme() == Dark;
+    const auto veil = [darkTheme](int alpha) {
+        return darkTheme ? QColor(255, 255, 255, alpha) : QColor(0, 0, 0, alpha);
+    };
+
     painter.save();
+
+    // 1. Background affordances drawn BEHIND the label (segment fill / state-layer veil), kept
+    //    strictly WITHIN the item bounds so no halo spills past the segment.
+    // zh_CN: 1. 绘制在标签下方的背景效果(段填充 / state-layer 薄层)，严格限制在条目范围内，避免溢出。
+    if (lang == DesignMaterial) {
+        // M3 segmented button: selected item gets a secondary-container-like fill — a low-alpha
+        // accent tint that reads as a soft pill behind the label. Unselected hover/press gets a
+        // subtle primary state layer. Rounded ends at themeRadius().control. zh_CN: M3 分段按钮：
+        // 选中项为类 secondary-container 的低透明强调色填充，像标签后的柔和胶囊。未选中悬停/按下为轻量
+        // primary state layer。两端圆角取 themeRadius().control。
+        const QRect segment = record.rect;
+        const qreal radius = themeRadius().control;
+        if (isSelected && itemEnabled && segment.isValid()) {
+            QColor fill = colors.accentDefault;
+            fill.setAlpha(darkTheme ? 0x3A : 0x28);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(fill);
+            painter.drawRoundedRect(segment, radius, radius);
+        } else if (itemEnabled && hovered && segment.isValid()) {
+            QColor stateLayer = colors.accentDefault;
+            stateLayer.setAlpha(pressed ? 0x1A : 0x14);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(stateLayer);
+            painter.drawRoundedRect(segment, radius, radius);
+        }
+    } else if (lang == DesignCupertino) {
+        // macOS segmented control: selected item is an accent-filled rounded segment (radius ~6);
+        // unselected items are neutral text on the container, separated by thin dividers; hover on
+        // an inactive item gets a faint theme-aware veil segment. zh_CN: macOS 分段控件：选中项为强调色
+        // 填充圆角段(圆角约 6)；未选中项是容器上的中性文字，以细分隔线分隔；悬停未选中项时为淡淡的主题感知薄层段。
+        constexpr int kSegmentRadius = 6;
+        const QRect segment = record.rect.adjusted(1, 1, -1, -1);
+        if (isSelected && itemEnabled && segment.isValid()) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(colors.accentDefault);
+            painter.drawRoundedRect(segment, kSegmentRadius, kSegmentRadius);
+        } else if (itemEnabled && hovered && segment.isValid()) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(veil(darkTheme ? 0x1C : 0x14));
+            painter.drawRoundedRect(segment, kSegmentRadius, kSegmentRadius);
+        }
+        // Thin divider on the leading edge of every non-first visible item, suppressed where it
+        // would touch the selected segment. zh_CN: 每个非首个可见项前缘的细分隔线，紧邻选中段处隐藏。
+        if (!m_visibleIndexes.isEmpty() && m_visibleIndexes.first() != record.itemIndex) {
+            const int prevPos = m_visibleIndexes.indexOf(record.itemIndex) - 1;
+            const int prevIndex = prevPos >= 0 ? m_visibleIndexes.at(prevPos) : -1;
+            const bool neighborSelected = isSelected || prevIndex == m_selectedIndex;
+            if (!neighborSelected) {
+                QColor divider = colors.strokeDivider;
+                const int top = record.rect.top() + record.rect.height() / 4;
+                const int bottom = record.rect.bottom() - record.rect.height() / 4;
+                painter.setPen(divider);
+                painter.drawLine(record.rect.left(), top, record.rect.left(), bottom);
+            }
+        }
+    }
+
+    // 2. Resolve the label/icon color per language. zh_CN: 2. 按语言确定标签/图标颜色。
+    QColor textColorValue;
+    if (!itemEnabled) {
+        textColorValue = colors.textDisabled;
+    } else if (lang == DesignMaterial) {
+        // Selected = on-secondary-container/primary (accent) text; unselected = on-surface-variant
+        // (textSecondary). zh_CN: 选中=on-secondary-container/primary(强调)文字；未选中=on-surface-variant(textSecondary)。
+        textColorValue = isSelected ? colors.accentDefault : colors.textSecondary;
+    } else if (lang == DesignCupertino) {
+        // Selected segment carries on-accent (white) text; unselected uses normal text colors
+        // (primary when hovered, secondary at rest). zh_CN: 选中段为 on-accent(白色)文字；未选中用普通文字
+        // 色(悬停 primary，静息 secondary)。
+        if (isSelected)
+            textColorValue = colors.textOnAccent;
+        else
+            textColorValue = hovered ? colors.textPrimary : colors.textSecondary;
+    } else {
+        // DesignFluent (default): unchanged neutral treatment. zh_CN: 默认 Fluent，中性处理不变。
+        textColorValue = itemTextColor(record.itemIndex);
+    }
+
+    // 3. Paint the icon and label. zh_CN: 3. 绘制图标与标签。
     if (!record.iconRect.isEmpty()) {
         painter.setFont(iconFont(currentMetrics.iconSize));
         painter.setPen(textColorValue);
@@ -1068,6 +1171,12 @@ void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
 
 void SelectorBar::paintSelectedIndicator(QPainter& painter) const
 {
+    // Material and macOS express selection through the in-item segment fill drawn by paintItem, so
+    // they SUPPRESS the shared Fluent underline entirely. DesignFluent keeps the exact accent
+    // underline (animated). zh_CN: Material 与 macOS 通过 paintItem 绘制的条目内段填充表达选中，因此
+    // 完全隐藏 Fluent 共享下划线。DesignFluent 保持原有的强调下划线(带动画)不变。
+    if (themeDesignLanguage() != DesignFluent)
+        return;
     if (m_animatedIndicatorRect.isEmpty())
         return;
     painter.save();
