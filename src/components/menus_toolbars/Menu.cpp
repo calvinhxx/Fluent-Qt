@@ -315,6 +315,16 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 
+    // Design language drives the surface stroke and per-item highlight treatment below; resolve it
+    // once up front. Fluent (default) is unchanged. zh_CN: 设计语言决定下方的表面描边与逐项高亮处理;在此
+    // 一次性解析。Fluent(默认)保持不变。
+    const DesignLanguage lang = themeDesignLanguage();
+    // Theme-aware interaction veil: a translucent overlay that DARKENS light surfaces and LIGHTENS
+    // dark ones, so a neutral on-surface state layer stays visible under both App themes. zh_CN: 主题
+    // 感知交互薄层:浅色面变暗、深色面变亮,使中性 on-surface state layer 在明暗两主题下都可见。
+    const bool dark = effectiveTheme() == Dark;
+    const auto veil = [dark](int a) { return dark ? QColor(255, 255, 255, a) : QColor(0, 0, 0, a); };
+
     // 2. Vertical extent of the items. zh_CN: 计算 items 垂直范围。
     QRect itemsRect;
     for (QAction* action : actions()) {
@@ -345,7 +355,18 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     clipPath.addRoundedRect(contentRect, r, r);
     p.setClipPath(clipPath);
 
-    p.setPen(colors.strokeCard);
+    // Card stroke: Fluent + macOS keep a hairline border (Fluent → strokeCard, macOS → a hairline
+    // strokeDefault); Material 3's surface-container panel drops the visible border and leans on the
+    // existing layered shadow for elevation. The bgLayer fill + overlay radius are shared. zh_CN: 底板
+    // 描边:Fluent + macOS 保留发丝边框(Fluent→strokeCard,macOS→发丝 strokeDefault);Material 3 的
+    // surface-container 面板去掉可见边框,改由既有多层阴影表达高程。bgLayer 填充 + overlay 圆角共用。
+    if (lang == DesignMaterial) {
+        p.setPen(Qt::NoPen);
+    } else if (lang == DesignCupertino) {
+        p.setPen(colors.strokeDefault);
+    } else {
+        p.setPen(colors.strokeCard);
+    }
     p.setBrush(colors.bgLayer);
     p.drawRoundedRect(contentRect, r, r);
 
@@ -390,22 +411,46 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
 
         bool isEnabled = action->isEnabled();
         bool isActive  = (action == activeAction());
+        const bool highlighted = isEnabled && (action->isChecked() || isActive);
 
+        // macOS highlights the active item with a SOLID accent selection bar and flips all of its
+        // text/glyphs to white; so flag it here to override primaryText/secondaryText below. zh_CN:
+        // macOS 用实心 accent 选择条高亮当前项,并将其文字/字形全部翻白;在此置位,供下方覆盖
+        // primaryText/secondaryText。
+        const bool cupertinoActiveBar = (lang == DesignCupertino) && highlighted;
+
+        // Item highlight fill. zh_CN: 逐项高亮填充。
+        //  - Fluent (default): solid subtleSecondary rounded rect. zh_CN: 实心 subtleSecondary 圆角块。
+        //  - Material 3: a NEUTRAL on-surface state layer (veil ~8%/0x14), a translucent veil over the
+        //    item rather than a fill swap, inscribed in the rounded rect (§4). zh_CN: 中性 on-surface
+        //    state layer(veil ~8%/0x14),为半透明薄层而非换填充,内切于圆角矩形(§4)。
+        //  - macOS: the classic SOLID accentDefault selection bar. zh_CN: 经典实心 accentDefault 选择条。
         QColor bg = Qt::transparent;
-        if (isEnabled) {
-            if (action->isChecked() || isActive)
-                bg = colors.subtleSecondary;
+        if (highlighted) {
+            if (lang == DesignMaterial)
+                bg = veil(0x14);              // ~8% neutral on-surface state layer
+            else if (lang == DesignCupertino)
+                bg = colors.accentDefault;    // solid blue selection bar
+            else
+                bg = colors.subtleSecondary;  // Fluent (unchanged)
         }
 
-        if (bg != Qt::transparent) {
+        // §2 invalid-QColor guard: only paint a valid, non-transparent fill. zh_CN: §2 无效 QColor 防护:
+        // 仅在色值有效且非透明时绘制填充。
+        if (bg.isValid() && bg.alpha() > 0) {
             QRectF bgRect = itemRect.adjusted(itemInset, 1, -itemInset, -1);
             p.setPen(Qt::NoPen);
             p.setBrush(bg);
             p.drawRoundedRect(bgRect, radius.control, radius.control);
         }
 
-        const QColor primaryText = isEnabled ? colors.textPrimary : colors.textDisabled;
-        const QColor secondaryText = isEnabled ? colors.textSecondary : colors.textDisabled;
+        // For the macOS active bar, label + shortcut + checkmark + chevron all read white on accent;
+        // override BOTH text roles. zh_CN: macOS 活动条上,标签 + 快捷键 + 勾选 + 箭头都在 accent 上读作白色;
+        // 故同时覆盖两个文字角色。
+        const QColor primaryText = cupertinoActiveBar ? colors.textOnAccent
+                                                      : (isEnabled ? colors.textPrimary : colors.textDisabled);
+        const QColor secondaryText = cupertinoActiveBar ? colors.textOnAccent
+                                                        : (isEnabled ? colors.textSecondary : colors.textDisabled);
 
         if (action->isCheckable() && action->isChecked()) {
             QRect checkRect(itemRect.left() + itemInset,

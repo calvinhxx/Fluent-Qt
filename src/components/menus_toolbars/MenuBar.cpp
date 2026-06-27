@@ -128,6 +128,16 @@ void FluentMenuBar::paintEvent(QPaintEvent*)
         painter.fillRect(rect(), colors.bgCanvas);
     painter.setFont(font());
 
+    // Design language drives the per-title highlight + text color below; resolve it once. Fluent
+    // (default) is unchanged. zh_CN: 设计语言决定下方逐项标题的高亮与文字色;在此一次性解析。Fluent
+    //(默认)保持不变。
+    const DesignLanguage lang = themeDesignLanguage();
+    // Theme-aware interaction veil: DARKENS light surfaces, LIGHTENS dark ones, so a neutral state
+    // layer stays visible under both App themes. zh_CN: 主题感知交互薄层:浅色面变暗、深色面变亮,使中性
+    // state layer 在明暗两主题下都可见。
+    const bool dark = effectiveTheme() == Dark;
+    const auto veil = [dark](int a) { return dark ? QColor(255, 255, 255, a) : QColor(0, 0, 0, a); };
+
     for (QAction* action : actions()) {
         if (!action || !action->isVisible())
             continue;
@@ -136,21 +146,49 @@ void FluentMenuBar::paintEvent(QPaintEvent*)
         if (itemRect.isEmpty() || !rect().intersects(itemRect))
             continue;
 
+        const bool isEnabled = action->isEnabled();
+        const bool isPressed = (action == m_pressedAction);
+        const bool isOpen    = (action == m_openAction);
+        const bool isHovered = (action == m_hoveredAction);
+
+        // Per-title highlight fill. zh_CN: 逐标题高亮填充。
+        //  - Fluent (default): subtleTertiary (pressed) / subtleSecondary (open or hovered). zh_CN:
+        //    subtleTertiary(按下)/ subtleSecondary(打开或悬停)。
+        //  - Material 3: NEUTRAL on-surface state layers — hover veil ~8% (0x14), pressed/open ~12%
+        //    (0x1F); no accent fill, text stays textPrimary. zh_CN: 中性 on-surface state layer——
+        //    hover veil ~8%(0x14),pressed/open ~12%(0x1F);无 accent 填充,文字仍为 textPrimary。
+        //  - macOS: open or pressed → SOLID accentDefault title bar (text flips to textOnAccent);
+        //    hover (not open) → neutral veil ~7% (0x12). zh_CN: macOS:打开或按下→实心 accentDefault
+        //    标题条(文字翻为 textOnAccent);悬停(未打开)→中性 veil ~7%(0x12)。
         QColor fill = Qt::transparent;
-        if (action->isEnabled()) {
-            if (action == m_pressedAction)
-                fill = colors.subtleTertiary;
-            else if (action == m_openAction || action == m_hoveredAction)
-                fill = colors.subtleSecondary;
+        bool accentActive = false;
+        if (isEnabled) {
+            if (lang == DesignMaterial) {
+                if (isPressed || isOpen) fill = veil(0x1F);
+                else if (isHovered)      fill = veil(0x14);
+            } else if (lang == DesignCupertino) {
+                if (isOpen || isPressed) { fill = colors.accentDefault; accentActive = true; }
+                else if (isHovered)      fill = veil(0x12);
+            } else {
+                if (isPressed)                    fill = colors.subtleTertiary;
+                else if (isOpen || isHovered)     fill = colors.subtleSecondary;
+            }
         }
 
-        if (fill.alpha() > 0) {
+        // §2 invalid-QColor guard: only paint a valid, non-transparent fill. zh_CN: §2 无效 QColor 防护:
+        // 仅在色值有效且非透明时绘制填充。
+        if (fill.isValid() && fill.alpha() > 0) {
             painter.setPen(Qt::NoPen);
             painter.setBrush(fill);
             painter.drawRoundedRect(itemRect, currentMetrics.cornerRadius, currentMetrics.cornerRadius);
         }
 
-        painter.setPen(action->isEnabled() ? colors.textPrimary : colors.textDisabled);
+        // Text color: macOS active title reads white on the accent bar; otherwise the usual
+        // primary/disabled. zh_CN: 文字色:macOS 活动标题在 accent 条上读作白色;否则照常 primary/disabled。
+        QColor textColor = isEnabled ? colors.textPrimary : colors.textDisabled;
+        if (accentActive)
+            textColor = colors.textOnAccent;
+        painter.setPen(textColor);
         const QRect textRect = itemRect.adjusted(currentMetrics.horizontalPadding, 0, -currentMetrics.horizontalPadding, 0);
         painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine, displayText(action));
     }

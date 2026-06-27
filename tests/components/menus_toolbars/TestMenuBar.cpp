@@ -5,6 +5,7 @@
 #include <QFontMetrics>
 #include <QImage>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPalette>
 #include <QSignalSpy>
 #include <QTest>
@@ -13,6 +14,7 @@
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/menus_toolbars/MenuBar.h"
@@ -544,6 +546,190 @@ TEST_F(MenuBarTest, FluentMenuContentPatternsExposeDeterministicGeometry)
     EXPECT_FALSE(submenu->isVisible());
     EXPECT_FALSE(compressedMenu->isVisible());
     menu->hide();
+}
+
+// ─── Design-language × theme paint coverage (Menu + MenuBar) ────────────────
+//
+// The Menu and MenuBar painters branch on FluentElement::themeDesignLanguage() to render
+// Fluent / Material 3 / macOS treatments. These suites grab each surface across all
+// 3 langs × 2 themes and assert (a) something painted and (b) NO opaque near-black surface
+// at a sampled item center — a regression guard for the invalid-QColor trap (a default
+// QColor is INVALID yet alpha()==255, so setBrush(invalidColor) paints SOLID BLACK).
+// Design language + theme are GLOBAL singletons, so each fixture restores both in TearDown.
+// Grabs run under the offscreen platform (no on-screen window). zh_CN: Menu 与 MenuBar 的绘制按
+// themeDesignLanguage() 分支渲染 Fluent / Material 3 / macOS。以下套件在全部 3 语言 × 2 主题
+// 下抓取各表面,断言(a)有绘制内容、(b)采样的项中心无不透明近黑表面——这是无效 QColor 陷阱
+//(默认 QColor 无效却返回 alpha==255,setBrush(无效色) 涂成纯黑)的回归防护。设计语言与主题为全局
+// 单例,各夹具在 TearDown 中恢复。抓取为离屏安全(grab(),不 show/exec)。
+
+namespace {
+
+// True if any pixel differs from the top-left corner pixel (i.e. the image is not uniform).
+// zh_CN: 若存在任一像素不同于左上角像素(即图像非纯色),返回 true。
+bool hasPaintedContent(const QImage& img)
+{
+    if (img.isNull())
+        return false;
+    const QRgb corner = img.pixel(0, 0);
+    for (int y = 0; y < img.height(); ++y)
+        for (int x = 0; x < img.width(); ++x)
+            if (img.pixel(x, y) != corner)
+                return true;
+    return false;
+}
+
+// An opaque near-black pixel is the fingerprint of the invalid-QColor trap (a bare alpha()>0 guard
+// + setBrush(invalidColor) → SOLID #000). zh_CN: 不透明近黑像素是无效 QColor 陷阱的特征(裸 alpha()>0
+// + setBrush(无效色)→ 纯黑 #000)。
+bool isOpaqueBlack(const QColor& c)
+{
+    const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+    return c.alpha() > 200 && lum < 16;
+}
+
+struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+const LangCase kLangs[] = {
+    { fluent::FluentElement::DesignFluent, "Fluent" },
+    { fluent::FluentElement::DesignMaterial, "Material" },
+    { fluent::FluentElement::DesignCupertino, "Cupertino" },
+};
+const ThemeCase kThemes[] = {
+    { fluent::FluentElement::Light, "Light" },
+    { fluent::FluentElement::Dark, "Dark" },
+};
+
+} // namespace
+
+class MenuDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override
+    {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+};
+
+TEST_F(MenuDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackTrap)
+{
+    for (const auto& langCase : kLangs) {
+        for (const auto& themeCase : kThemes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(langCase.lang);
+            fluent::FluentElement::setTheme(themeCase.theme);
+
+            const std::string ctx = std::string(langCase.name) + "/" + themeCase.name;
+
+            // A small but representative menu: a checkable+checked item (active selection bar),
+            // a plain item, a separator, and a submenu item. zh_CN: 一个有代表性的小菜单:可勾选且已勾选
+            // 的项(活动选择条)、普通项、分割线、子菜单项。
+            FluentMenu menu(QStringLiteral("Menu"));
+            auto* checked = new FluentMenuItem(QStringLiteral("Checked"), &menu);
+            checked->setCheckable(true);
+            checked->setChecked(true);
+            menu.addAction(checked);
+            addMenuItem(&menu, QStringLiteral("Plain"), QKeySequence(Qt::CTRL | Qt::Key_P));
+            menu.addSeparator();
+            auto* submenu = new FluentMenu(QStringLiteral("More"), &menu);
+            addMenuItem(submenu, QStringLiteral("Nested"));
+            menu.addMenu(submenu);
+
+            // Show realizes QMenu's internal action layout so actionGeometry() is populated; under the
+            // offscreen platform this pops no on-screen window (matching the sibling QMenu tests).
+            // zh_CN: show 使 QMenu 内部 action 布局生效,actionGeometry() 才有值;在 offscreen 平台下不会弹出
+            // 屏上窗口(与同文件其它 QMenu 测试一致)。
+            menu.show();
+            QApplication::processEvents();
+
+            // Mark the checked item active so the highlight branch (M3 veil / macOS accent bar) runs.
+            // zh_CN: 将已勾选项设为活动,触发高亮分支(M3 薄层 / macOS accent 条)。
+            menu.setActiveAction(checked);
+            QApplication::processEvents();
+
+            const QImage img = menu.grab().toImage();
+
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "menu painted nothing: " << ctx;
+
+            // Sample the center of the active (checked) item: must NOT be opaque near-black.
+            // zh_CN: 采样活动(已勾选)项的中心:不得为不透明近黑。
+            QRect itemRect = menu.actionGeometry(checked);
+            if (!itemRect.isEmpty() && img.rect().contains(itemRect.center())) {
+                const QColor c = img.pixelColor(itemRect.center());
+                EXPECT_FALSE(isOpaqueBlack(c))
+                    << "menu painted opaque black at active item: " << ctx
+                    << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+            }
+
+            submenu->hide();
+            menu.hide();
+        }
+    }
+}
+
+class MenuBarDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override
+    {
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+};
+
+TEST_F(MenuBarDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackTrap)
+{
+    for (const auto& langCase : kLangs) {
+        for (const auto& themeCase : kThemes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(langCase.lang);
+            fluent::FluentElement::setTheme(themeCase.theme);
+
+            const std::string ctx = std::string(langCase.name) + "/" + themeCase.name;
+
+            MenuBarSample sample = createSimpleMenuBar(nullptr);
+            sample.bar->onThemeUpdated();
+
+            // Drive the File title into the PRESSED state (the bar's hover/press state setters are
+            // private, so synthesize a real mouse-press the protected handler consumes). Pressed
+            // exercises every highlight branch — M3 pressed veil (0x1F) and the macOS accent bar —
+            // without opening a popup window. zh_CN: 将 File 标题驱动到按下态(悬停/按下状态设置器为私有,
+            // 故合成真实鼠标按下事件交由 protected 处理器消费)。按下态可触发全部高亮分支——M3 按下薄层
+            //(0x1F)与 macOS accent 条——且无需弹出窗口。
+            const QRect fileRect = sample.bar->fluentActionGeometry(sample.fileAction);
+            const QPoint pressPos = fileRect.center();
+            QMouseEvent press(QEvent::MouseButtonPress, pressPos, sample.bar->mapToGlobal(pressPos),
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(sample.bar, &press);
+            QApplication::processEvents();
+
+            const QImage img = sample.bar->grab().toImage();
+
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "menu bar painted nothing: " << ctx;
+
+            // The pressed (File) title gets the accent/state fill — its center must not be opaque black.
+            // zh_CN: 按下的(File)标题获得 accent/state 填充——其中心不得为不透明近黑。
+            if (!fileRect.isEmpty() && img.rect().contains(fileRect.center())) {
+                const QColor c = img.pixelColor(fileRect.center());
+                EXPECT_FALSE(isOpaqueBlack(c))
+                    << "menu bar painted opaque black at pressed title: " << ctx
+                    << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+            }
+
+            // Release to clear the pressed state before teardown. zh_CN: 释放以在拆解前清除按下态。
+            QMouseEvent release(QEvent::MouseButtonRelease, pressPos, sample.bar->mapToGlobal(pressPos),
+                                Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(sample.bar, &release);
+            closeMenus(sample);
+            delete sample.bar;
+            QApplication::processEvents();
+        }
+    }
 }
 
 TEST_F(MenuBarTest, VisualCheck)
