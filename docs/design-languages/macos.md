@@ -331,6 +331,23 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
   while the **view suppresses its Fluent accent pill/overlay** so the accent row is the sole cue. Image tiles
   keep the accent border + check; drag-insertion indicators stay accent.
 
+### Window chrome / TitleBar caption controls
+- macOS window controls are the **traffic lights**: three small (~12 px) circles at the **leading**
+  edge — **close `#FF5F57` (red), minimize `#FFBD2E` (yellow), zoom `#28C840` (green)**, in that
+  order. The **×/−/+ glyphs appear only on hover** over the cluster; when the window is **inactive**
+  the three dots desaturate to a uniform **gray**. This is the headline contrast with Windows, whose
+  caption buttons are a **trailing** minimize/maximize/close glyph row (close goes critical-red on hover).
+- This is a **real platform difference**, so on the actual targets it is the OS that draws it: on macOS
+  the app keeps the native traffic lights (`prefersNativeMacControls`, leading inset reserved); on Windows
+  the app self-draws the Fluent caption-button row (`usesCustomWindowChrome`, trailing reserved). The
+  `Window`/`TitleBar` chrome therefore stays **platform-correct** and is intentionally *not* forced to
+  follow a cosmetic style-theme choice.
+- The **gallery TitleBar sample** is where the difference is *showcased by design language*: it renders
+  leading traffic lights under `DesignCupertino` and the trailing Windows caption row under
+  `DesignFluent`/`DesignMaterial`, swapping live on a Style-theme change (the sample's `MacTrafficLights`
+  widget custom-paints the dots, hover glyphs and inactive gray). Mapping lives in
+  `captionStyleForDesignLanguage()` (`app/view/widgets/samples/WindowingSamples.{h,cpp}`).
+
 ---
 
 ## 5. Quick checklist for the `DesignCupertino` branch

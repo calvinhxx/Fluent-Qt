@@ -40,6 +40,7 @@
 #include "view/shell/GalleryNavigationPane.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "view/widgets/GalleryEntryCard.h"
+#include "view/widgets/samples/WindowingSamples.h"
 #include "VisualGeometryTestUtils.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/shell/GalleryIntroTour.h"
@@ -1626,4 +1627,72 @@ TEST(ThemeCatalogAccentConsistencyTest, SetUserAccentReDerivesVariantsFromFullDu
     QFile::remove(tc::userThemeFilePath(kTheme));
     ThemeRegistry::instance().resetToDefaults();
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+}
+
+// --- Windowing TitleBar caption controls follow the active design language. ----------------------
+// zh_CN: Windowing 标题栏 caption 控件跟随当前设计语言。
+//
+// The TitleBar sample renders Windows-style trailing caption buttons under Fluent/Material and
+// leading macOS traffic lights under Cupertino, switching live on a Style-theme change — the real
+// platform difference, rendered by design language rather than by the host OS.
+// zh_CN: TitleBar 示例在 Fluent/Material 下渲染 Windows 风格尾部标题栏按钮,在 Cupertino 下渲染前导 macOS
+// 红绿灯,并在样式主题切换时实时切换——真实的平台差异,按设计语言而非宿主系统渲染。
+class WindowingSamplesTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+};
+
+TEST_F(WindowingSamplesTest, CaptionStyleMapsCupertinoToTrafficLights) {
+    using fluent::gallery::captionStyleForDesignLanguage;
+    using fluent::gallery::TitleBarCaptionStyle;
+
+    EXPECT_EQ(captionStyleForDesignLanguage(fluent::FluentElement::DesignFluent),
+              TitleBarCaptionStyle::WindowsCaptionButtons);
+    EXPECT_EQ(captionStyleForDesignLanguage(fluent::FluentElement::DesignMaterial),
+              TitleBarCaptionStyle::WindowsCaptionButtons);
+    EXPECT_EQ(captionStyleForDesignLanguage(fluent::FluentElement::DesignCupertino),
+              TitleBarCaptionStyle::MacTrafficLights);
+}
+
+TEST_F(WindowingSamplesTest, TitleBarSampleReservesCaptionSpaceByDesignLanguage) {
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
+
+    const auto samples = fluent::gallery::windowingSamples(QStringLiteral("title-bar"));
+    ASSERT_FALSE(samples.isEmpty());
+    ASSERT_TRUE(static_cast<bool>(samples.first().createPreview));
+
+    QScopedPointer<QWidget> preview(samples.first().createPreview(nullptr));
+    ASSERT_FALSE(preview.isNull());
+    preview->show();
+    QApplication::processEvents();
+
+    auto* titleBar = preview->findChild<TitleBar*>();
+    ASSERT_NE(titleBar, nullptr);
+
+    // Fluent: trailing Windows caption buttons reserve the right, leading is free.
+    // zh_CN: Fluent:尾部 Windows 标题栏按钮占右侧,前导留空。
+    EXPECT_GT(titleBar->systemReservedTrailingWidth(), 0);
+    EXPECT_EQ(titleBar->systemReservedLeadingWidth(), 0);
+
+    // Switch to Cupertino: a live Style-theme change must flip the reservation to leading traffic
+    // lights. refreshTheme() re-broadcasts onThemeUpdated to the visible preview, which rebuilds.
+    // zh_CN: 切到 Cupertino:实时样式主题切换须把预留翻到前导红绿灯。refreshTheme() 向可见预览重广播 onThemeUpdated。
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignCupertino);
+    fluent::FluentElement::refreshTheme();
+    QApplication::processEvents();
+
+    EXPECT_GT(titleBar->systemReservedLeadingWidth(), 0);
+    EXPECT_EQ(titleBar->systemReservedTrailingWidth(), 0);
+
+    // And back to Fluent restores the trailing caption buttons.
+    // zh_CN: 切回 Fluent 恢复尾部标题栏按钮。
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
+    fluent::FluentElement::refreshTheme();
+    QApplication::processEvents();
+
+    EXPECT_GT(titleBar->systemReservedTrailingWidth(), 0);
+    EXPECT_EQ(titleBar->systemReservedLeadingWidth(), 0);
 }

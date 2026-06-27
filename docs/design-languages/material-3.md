@@ -424,6 +424,15 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   drag-insertion indicator (accent is correct everywhere) and drop any redundant Fluent-only selection
   overlay. Image tiles keep the accent border + check affordance.
 
+### Window chrome / TitleBar caption controls
+- M3 is a **mobile/web-first** system and does not specify desktop window caption controls; a Material
+  desktop shell (e.g. GTK/Material You on Linux) uses a conventional **trailing minimize/maximize/close**
+  row. So under `DesignMaterial` the gallery TitleBar sample reuses the same **trailing caption-button
+  row** as Fluent — each button is a `Subtle` `Button`, so it automatically paints in the **M3 idiom**
+  (state-layer hover) via the Button branch. The leading **macOS traffic lights** are `DesignCupertino`-only.
+- See [macos.md → Window chrome](macos.md#window-chrome--titlebar-caption-controls) for the full
+  platform contrast and the `captionStyleForDesignLanguage()` mapping.
+
 ---
 
 ## 6. Quick checklist for the `DesignMaterial` branch

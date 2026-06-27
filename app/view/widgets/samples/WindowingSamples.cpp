@@ -1,5 +1,6 @@
 #include "WindowingSamples.h"
 
+#include <QEnterEvent>
 #include <QHBoxLayout>
 #include <QFont>
 #include <QPainter>
@@ -12,13 +13,13 @@
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "components/foundation/FluentElement.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/Window.h"
-#include "compatibility/WindowChromeCompat.h"
 #include "design/Typography.h"
 #include "SampleBuilders.h"
 
@@ -141,33 +142,84 @@ AutoSuggestBox* makeTitleBarSearch(QWidget* parent)
     return search;
 }
 
-QWidget* makeMacTrafficLight(QWidget* parent, const QString& color)
+// macOS traffic lights, custom-painted so they read faithfully: three colored dots at the leading
+// edge (close / minimize / zoom), the ×/−/+ glyphs revealed only while the cluster is hovered, and a
+// neutral gray when the host window is inactive — matching how AppKit dims its window controls.
+// zh_CN: 自绘 macOS 红绿灯,力求传神:前导三色圆点(关闭/最小化/缩放),仅在悬停簇上时显出 ×/−/+ 字形,
+// 宿主窗口失焦时转中性灰——对齐 AppKit 对窗口控件的变暗处理。
+class MacTrafficLights : public QWidget, public fluent::FluentElement
 {
-    auto* dot = new QWidget(parent);
-    dot->setFixedSize(12, 12);
-    dot->setStyleSheet(QStringLiteral(
-                           "background-color: %1;"
-                           "border: 1px solid rgba(0, 0, 0, 36);"
-                           "border-radius: 6px;")
-                           .arg(color));
-    return dot;
-}
+public:
+    explicit MacTrafficLights(QWidget* parent = nullptr)
+        : QWidget(parent)
+    {
+        setFixedWidth(kMacTrafficLightsReservedWidth);
+        setFocusPolicy(Qt::NoFocus);
+        setAttribute(Qt::WA_Hover, true);
+    }
 
-QWidget* makeMacTrafficLights(QWidget* parent)
-{
-    auto* buttons = new QWidget(parent);
-    buttons->setAttribute(Qt::WA_TransparentForMouseEvents);
-    buttons->setFixedWidth(kMacTrafficLightsReservedWidth);
+    void onThemeUpdated() override { update(); }
 
-    auto* layout = new QHBoxLayout(buttons);
-    layout->setContentsMargins(14, 0, 0, 0);
-    layout->setSpacing(8);
-    layout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    layout->addWidget(makeMacTrafficLight(buttons, QStringLiteral("#FF5F57")));
-    layout->addWidget(makeMacTrafficLight(buttons, QStringLiteral("#FFBD2E")));
-    layout->addWidget(makeMacTrafficLight(buttons, QStringLiteral("#28C840")));
-    return buttons;
-}
+protected:
+    void enterEvent(QEnterEvent*) override
+    {
+        m_hovered = true;
+        update();
+    }
+
+    void leaveEvent(QEvent*) override
+    {
+        m_hovered = false;
+        update();
+    }
+
+    void paintEvent(QPaintEvent*) override
+    {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+
+        const QWidget* top = window();
+        const bool active = !top || top->isActiveWindow();
+
+        // close / minimize / zoom, left-to-right (the canonical macOS order). zh_CN: 关闭/最小化/缩放,自左向右。
+        static constexpr int kDotDiameter = 12;
+        static constexpr int kLeadingMargin = 14;
+        static constexpr int kSpacing = 8;
+        const qreal radius = kDotDiameter / 2.0;
+        const qreal cy = height() / 2.0;
+        const QColor colors[3] = {QColor(0xFF, 0x5F, 0x57), QColor(0xFF, 0xBD, 0x2E), QColor(0x28, 0xC8, 0x40)};
+        const QColor inactive(0xC8, 0xC8, 0xC8);
+
+        qreal cx[3];
+        for (int i = 0; i < 3; ++i)
+            cx[i] = kLeadingMargin + radius + i * (kDotDiameter + kSpacing);
+
+        painter.setPen(Qt::NoPen);
+        for (int i = 0; i < 3; ++i) {
+            painter.setBrush(active ? colors[i] : inactive);
+            painter.drawEllipse(QPointF(cx[i], cy), radius, radius);
+        }
+
+        if (m_hovered && active) {
+            QPen glyphPen(QColor(0, 0, 0, 150));
+            glyphPen.setWidthF(1.2);
+            glyphPen.setCapStyle(Qt::RoundCap);
+            painter.setPen(glyphPen);
+            const qreal g = 3.0;  // glyph half-extent. zh_CN: 字形半幅。
+            // close ×
+            painter.drawLine(QPointF(cx[0] - g, cy - g), QPointF(cx[0] + g, cy + g));
+            painter.drawLine(QPointF(cx[0] - g, cy + g), QPointF(cx[0] + g, cy - g));
+            // minimize −
+            painter.drawLine(QPointF(cx[1] - g, cy), QPointF(cx[1] + g, cy));
+            // zoom +
+            painter.drawLine(QPointF(cx[2] - g, cy), QPointF(cx[2] + g, cy));
+            painter.drawLine(QPointF(cx[2], cy - g), QPointF(cx[2], cy + g));
+        }
+    }
+
+private:
+    bool m_hovered = false;
+};
 
 Button* makeWindowsCaptionButton(QWidget* parent,
                                  const QString& glyph,
@@ -206,14 +258,20 @@ QWidget* makeWindowsCaptionButtons(QWidget* parent)
     return buttons;
 }
 
-class TitleBarPreview : public QWidget {
+// Title-bar preview that swaps its caption controls by the active DESIGN LANGUAGE (not the host OS):
+// Cupertino shows leading macOS traffic lights, Fluent/Material show trailing Windows-style caption
+// buttons. It rebuilds live on a design-language switch, so toggling Settings → Style theme reskins
+// the preview in place. zh_CN: 按当前**设计语言**(而非宿主系统)切换 caption 控件的标题栏预览:Cupertino 显前导
+// macOS 红绿灯,Fluent/Material 显尾部 Windows 风格标题栏按钮。设计语言切换时实时重建,故在 设置→样式主题 切换会
+// 原地重新换肤。
+class TitleBarPreview : public QWidget, public fluent::FluentElement {
 public:
     explicit TitleBarPreview(int width, QWidget* parent = nullptr)
         : QWidget(parent)
         , m_titleBar(new TitleBar(this))
     {
         setFixedSize(width, TitleBar::defaultTitleBarHeight());
-        configurePlatformChromeControls();
+        rebuildPlatformControls();
         connect(m_titleBar, &TitleBar::titleBarHeightChanged, this, [this](int height) {
             setFixedHeight(height);
             updateChromeGeometry();
@@ -222,6 +280,16 @@ public:
     }
 
     TitleBar* titleBar() const { return m_titleBar; }
+    TitleBarCaptionStyle captionStyle() const { return m_captionStyle; }
+
+    void onThemeUpdated() override
+    {
+        // A design-language switch re-themes visible elements; rebuild the caption controls if the
+        // language now calls for a different style. zh_CN: 设计语言切换会重刷可见元素;若新语言需要不同样式则重建。
+        if (!m_platformControls || captionStyleForDesignLanguage(themeDesignLanguage()) != m_captionStyle)
+            rebuildPlatformControls();
+        update();
+    }
 
 protected:
     void resizeEvent(QResizeEvent* event) override
@@ -231,25 +299,25 @@ protected:
     }
 
 private:
-    void configurePlatformChromeControls()
+    void rebuildPlatformControls()
     {
-        using Platform = compatibility::WindowChromeCompat::Platform;
-        switch (compatibility::WindowChromeCompat::currentPlatform()) {
-        case Platform::MacOS:
-            m_platformControls = makeMacTrafficLights(m_titleBar);
+        m_captionStyle = captionStyleForDesignLanguage(themeDesignLanguage());
+        if (m_platformControls) {
+            delete m_platformControls;
+            m_platformControls = nullptr;
+        }
+
+        if (m_captionStyle == TitleBarCaptionStyle::MacTrafficLights) {
+            m_platformControls = new MacTrafficLights(m_titleBar);
             m_titleBar->setSystemReservedLeadingWidth(kMacTrafficLightsReservedWidth);
             m_titleBar->setSystemReservedTrailingWidth(0);
-            break;
-        case Platform::Windows:
+        } else {
             m_platformControls = makeWindowsCaptionButtons(m_titleBar);
             m_titleBar->setSystemReservedLeadingWidth(0);
             m_titleBar->setSystemReservedTrailingWidth(kWindowsCaptionButtonsReservedWidth);
-            break;
-        case Platform::Other:
-            m_titleBar->setSystemReservedLeadingWidth(0);
-            m_titleBar->setSystemReservedTrailingWidth(0);
-            break;
         }
+        m_platformControls->show();
+        updateChromeGeometry();
     }
 
     void updateChromeGeometry()
@@ -258,8 +326,7 @@ private:
         if (!m_platformControls)
             return;
 
-        using Platform = compatibility::WindowChromeCompat::Platform;
-        if (compatibility::WindowChromeCompat::currentPlatform() == Platform::Windows) {
+        if (m_captionStyle == TitleBarCaptionStyle::WindowsCaptionButtons) {
             m_platformControls->setGeometry(width() - kWindowsCaptionButtonsReservedWidth,
                                             0,
                                             kWindowsCaptionButtonsReservedWidth,
@@ -275,6 +342,7 @@ private:
 
     TitleBar* m_titleBar = nullptr;
     QWidget* m_platformControls = nullptr;
+    TitleBarCaptionStyle m_captionStyle = TitleBarCaptionStyle::WindowsCaptionButtons;
 };
 
 QWidget* makeTitleBarContent(QWidget* parent,
@@ -576,6 +644,17 @@ QVector<GallerySample> windowSamples()
 }
 
 } // namespace
+
+TitleBarCaptionStyle captionStyleForDesignLanguage(fluent::FluentElement::DesignLanguage language)
+{
+    // Cupertino is the only language whose window controls are the leading traffic lights; Fluent and
+    // Material both use a trailing minimize/maximize/close row (the Button paints each in its own
+    // idiom). zh_CN: 仅 Cupertino 的窗口控件是前导红绿灯;Fluent 与 Material 都用尾部 最小化/最大化/关闭 行
+    //(Button 各自按其语言绘制)。
+    return language == fluent::FluentElement::DesignCupertino
+               ? TitleBarCaptionStyle::MacTrafficLights
+               : TitleBarCaptionStyle::WindowsCaptionButtons;
+}
 
 QVector<GallerySample> windowingSamples(const QString& routeId)
 {
