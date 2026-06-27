@@ -52,7 +52,7 @@ constexpr int kHeroLinkCardWidth = 198;
 constexpr int kHeroLinkCardHeight = 150;
 constexpr int kHeroLinkCardSpacing = 16;
 constexpr int kHeroLinkCardPadding = 18;
-constexpr int kHeroLinkIconSize = 30;
+constexpr int kHeroLinkIconSize = 32;
 constexpr int kHeroLinkStripTop = 184;
 constexpr int kHeroLinkTopPad = 8;        // Room above each card so the hover-lifted top edge + accent border aren't clipped. zh_CN: 卡片上方预留高度，使 hover 抬起的顶边与强调色描边不被裁切。
 constexpr int kHeroLinkShadowMargin = 24; // Room below each card for the soft drop shadow + hover lift. zh_CN: 卡片下方预留高度，容纳柔和投影与 hover 抬升。
@@ -76,11 +76,26 @@ enum HomeLinkRole {
     LinkImageRole
 };
 
-// The source art is large (560–1025px) but each icon draws into a ~30px box. Downscaling that far in
+QRect visibleAlphaBounds(const QImage& image)
+{
+    QRect bounds;
+    for (int y = 0; y < image.height(); ++y) {
+        const auto* line = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+        for (int x = 0; x < image.width(); ++x) {
+            if (qAlpha(line[x]) <= 8)
+                continue;
+            const QRect pixelRect(x, y, 1, 1);
+            bounds = bounds.isNull() ? pixelRect : bounds.united(pixelRect);
+        }
+    }
+    return bounds;
+}
+
+// The source art is large (256–1025px) but each icon draws into a small hero box. Downscaling that far in
 // a single drawPixmap() (bilinear) aliases into a soft, distorted blob, and ignoring the device pixel
 // ratio leaves it soft again on HiDPI. So scale ONCE, high-quality (SmoothTransformation), straight to
 // the icon's physical pixel size, tag the result with the dpr, and cache per (path, size, dpr).
-// zh_CN: 源图很大(560–1025px),但每个图标只画进约 30px 的方框。一次性 drawPixmap 缩这么多(双线性)会糊成
+// zh_CN: 源图很大(256–1025px),但每个图标只画进较小的 hero 方框。一次性 drawPixmap 缩这么多(双线性)会糊成
 // 失真的团块,且忽略设备像素比在 HiDPI 上又会发虚。故一次性高质量(SmoothTransformation)缩到图标的物理像素尺寸,
 // 给结果打上 dpr 标记,并按 (路径, 尺寸, dpr) 缓存。
 QPixmap homeLinkPixmap(const QString& resourcePath, const QSize& targetSize, qreal dpr,
@@ -115,6 +130,9 @@ QPixmap homeLinkPixmap(const QString& resourcePath, const QSize& targetSize, qre
                 }
             }
         }
+        const QRect visible = visibleAlphaBounds(image);
+        if (visible.isValid() && visible.size() != image.size())
+            image = image.copy(visible);
         image = image.scaled(physical, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     }
 
@@ -418,6 +436,14 @@ public:
                QStringLiteral("Guidelines and toolkits for Fluent design."),
                QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png"));
+        append(QStringLiteral("macOS 27 Community"),
+               QStringLiteral("Community Figma design kit for macOS 27."),
+               QStringLiteral("https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996&p=f&t=ObUJ8FERQ0lP3rIa-0"),
+               QStringLiteral(":/app/assets/home_header_tiles/Header-macOS27.png"));
+        append(QStringLiteral("Material 3 Design Kit"),
+               QStringLiteral("Community Figma kit for Material 3."),
+               QStringLiteral("https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=11-1833&p=f&t=I3de5l3oPl1YJyCT-0"),
+               QStringLiteral(":/app/assets/home_header_tiles/Header-Material3.png"));
         append(QStringLiteral("WinUI Gallery"),
                QStringLiteral("WinUI Gallery source on GitHub."),
                QStringLiteral("https://github.com/microsoft/WinUI-Gallery"),
