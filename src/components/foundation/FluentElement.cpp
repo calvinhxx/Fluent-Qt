@@ -1,5 +1,6 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/private/FluentElement_p.h"
+#include "components/foundation/ThemeRegistry.h"
 
 #include <QVariant>
 #include <QWidget>
@@ -81,6 +82,10 @@ FluentElement::Theme FluentElement::currentTheme() {
     return FluentThemeManager::instance()->currentTheme;
 }
 
+void FluentElement::refreshTheme() {
+    FluentThemeManager::instance()->notifyVisibleThenDeferred();
+}
+
 int FluentElement::themeGeneration() {
     return FluentThemeManager::instance()->generation();
 }
@@ -98,91 +103,13 @@ FluentElement::Theme FluentElement::effectiveTheme() const {
 // --- Token accessors. zh_CN: 数据获取实现。---
 
 FluentElement::Colors FluentElement::themeColors() const {
-    Colors c;
-
-    // One fill lambda keeps the Light/Dark blocks from duplicating each other.
-    // zh_CN: 用 lambda 统一填充，避免 Light/Dark 两块完全重复。
-    auto fill = [&](
-        const QColor& accentDef, const QColor& accentSec, const QColor& accentTer, const QColor& accentDis,
-        const QColor& ctrlDef, const QColor& ctrlSec, const QColor& ctrlTer, const QColor& ctrlDis,
-        const QColor& ctrlAltSec, const QColor& ctrlAltTer,
-        const QColor& subtleTrans, const QColor& subtleSec, const QColor& subtleTer,
-        const QColor& strokeDef, const QColor& strokeSec, const QColor& strokeStr,
-        const QColor& strokeCrd, const QColor& strokeDiv, const QColor& strokeSurf,
-        const QColor& strokeFocOut, const QColor& strokeFocIn,
-        const QColor& txtPri, const QColor& txtSec, const QColor& txtTer, const QColor& txtDis,
-        const QColor& txtOnAcc, const QColor& txtAccPri,
-        const QColor& bgCvs, const QColor& bgLyr, const QColor& bgLyrAlt, const QColor& bgSld,
-        const QColor& g10, const QColor& g20, const QColor& g30, const QColor& g40,
-        const QColor& g50, const QColor& g60, const QColor& g90,
-        const QColor& g130, const QColor& g160, const QColor& g190,
-        const QColor& sysCrit, const QColor& sysCritBg,
-        const QColor& sysCau, const QColor& sysCauBg,
-        const QColor& sysInfo, const QColor& sysInfoBg,
-        const QColor& sysSucc, const QColor& sysSuccBg,
-        const std::vector<QColor>& charts)
-    {
-        c.accentDefault = accentDef; c.accentSecondary = accentSec;
-        c.accentTertiary = accentTer; c.accentDisabled = accentDis;
-        c.controlDefault = ctrlDef; c.controlSecondary = ctrlSec;
-        c.controlTertiary = ctrlTer; c.controlDisabled = ctrlDis;
-        c.controlAltSecondary = ctrlAltSec; c.controlAltTertiary = ctrlAltTer;
-        c.subtleTransparent = subtleTrans; c.subtleSecondary = subtleSec; c.subtleTertiary = subtleTer;
-        c.strokeDefault = strokeDef; c.strokeSecondary = strokeSec; c.strokeStrong = strokeStr;
-        c.strokeCard = strokeCrd; c.strokeDivider = strokeDiv; c.strokeSurface = strokeSurf;
-        c.strokeFocusOuter = strokeFocOut; c.strokeFocusInner = strokeFocIn;
-        c.textPrimary = txtPri; c.textSecondary = txtSec;
-        c.textTertiary = txtTer; c.textDisabled = txtDis;
-        c.textOnAccent = txtOnAcc; c.textAccentPrimary = txtAccPri;
-        c.bgCanvas = bgCvs; c.bgLayer = bgLyr; c.bgLayerAlt = bgLyrAlt; c.bgSolid = bgSld;
-        c.grey10 = g10; c.grey20 = g20; c.grey30 = g30; c.grey40 = g40;
-        c.grey50 = g50; c.grey60 = g60; c.grey90 = g90;
-        c.grey130 = g130; c.grey160 = g160; c.grey190 = g190;
-        c.systemCritical = sysCrit; c.systemCriticalBg = sysCritBg;
-        c.systemCaution = sysCau;   c.systemCautionBg = sysCauBg;
-        c.systemInfo = sysInfo;     c.systemInfoBg = sysInfoBg;
-        c.systemSuccess = sysSucc;  c.systemSuccessBg = sysSuccBg;
-        c.charts = QList<QColor>(charts.begin(), charts.end());
-    };
-
-    if (effectiveTheme() == Dark) {
-        using namespace ThemeColors::Dark;
-        fill(Fill::AccentDefault, Fill::AccentSecondary, Fill::AccentTertiary, Fill::AccentDisabled,
-             Fill::ControlDefault, Fill::ControlSecondary, Fill::ControlTertiary, Fill::ControlDisabled,
-             Fill::ControlAltSecondary, Fill::ControlAltTertiary,
-             Fill::SubtleTransparent, Fill::SubtleSecondary, Fill::SubtleTertiary,
-             Stroke::ControlDefault, Stroke::ControlSecondary, Stroke::ControlStrong,
-             Stroke::CardDefault, Stroke::DividerDefault, Stroke::SurfaceDefault,
-             Stroke::FocusOuter, Stroke::FocusInner,
-             Text::Primary, Text::Secondary, Text::Tertiary, Text::Disabled,
-             Text::OnAccentPrimary, Text::AccentPrimary,
-             BackgroundCanvas, BackgroundLayer, BackgroundLayerAlt, BackgroundSolid,
-             Grey10, Grey20, Grey30, Grey40, Grey50, Grey60, Grey90, Grey130, Grey160, Grey190,
-             System::Critical, System::CriticalBackground,
-             System::Caution, System::CautionBackground,
-             System::Informational, System::InfoBackground,
-             System::Success, System::SuccessBackground,
-             Charts);
-    } else {
-        using namespace ThemeColors::Light;
-        fill(Fill::AccentDefault, Fill::AccentSecondary, Fill::AccentTertiary, Fill::AccentDisabled,
-             Fill::ControlDefault, Fill::ControlSecondary, Fill::ControlTertiary, Fill::ControlDisabled,
-             Fill::ControlAltSecondary, Fill::ControlAltTertiary,
-             Fill::SubtleTransparent, Fill::SubtleSecondary, Fill::SubtleTertiary,
-             Stroke::ControlDefault, Stroke::ControlSecondary, Stroke::ControlStrong,
-             Stroke::CardDefault, Stroke::DividerDefault, Stroke::SurfaceDefault,
-             Stroke::FocusOuter, Stroke::FocusInner,
-             Text::Primary, Text::Secondary, Text::Tertiary, Text::Disabled,
-             Text::OnAccentPrimary, Text::AccentPrimary,
-             BackgroundCanvas, BackgroundLayer, BackgroundLayerAlt, BackgroundSolid,
-             Grey10, Grey20, Grey30, Grey40, Grey50, Grey60, Grey90, Grey130, Grey160, Grey190,
-             System::Critical, System::CriticalBackground,
-             System::Caution, System::CautionBackground,
-             System::Informational, System::InfoBackground,
-             System::Success, System::SuccessBackground,
-             Charts);
-    }
-    return c;
+    // Colors now come from the runtime ThemeRegistry (seeded with the built-in Fluent palette, so the
+    // default result is identical to the former compile-time construction). The app layer can install a
+    // brand preset or user-file overrides without touching any control. effectiveTheme() still honors a
+    // per-subtree fluentThemeOverride. zh_CN: 颜色改由运行时 ThemeRegistry 提供(以内置 Fluent 调色板播种,
+    // 默认结果与原编译期构造完全一致)。应用层可安装品牌预设或用户文件覆盖而不动任何控件;effectiveTheme()
+    // 仍尊重子树级 fluentThemeOverride。
+    return ThemeRegistry::instance().colors(effectiveTheme() == Dark);
 }
 
 FluentElement::FontStyle FluentElement::themeFont(const QString& role) const {
@@ -197,11 +124,26 @@ FluentElement::FontStyle FluentElement::themeFont(const QString& role) const {
     else if (role == Typography::FontRole::Display)         s = Typography::Styles::Display;
     else                                                    s = Typography::Styles::Body;
 
-    return { s.family, s.styleName, s.size, s.weight, s.lineHeight };
+    // Apply the registry's optional family override + size scale so a brand preset (Roboto / SF) or a
+    // user config can restyle text without touching every control. A family override clears the Segoe
+    // optical styleName, which would not apply to a different family. Defaults (empty family, scale 1.0)
+    // reproduce the original style byte-for-byte. zh_CN: 套用注册表的可选字族覆盖与字号缩放,使品牌预设
+    //(Roboto / SF)或用户配置无需改控件即可重塑文字;覆盖字族时清空 Segoe 光学 styleName(对异族无效)。
+    // 默认(空字族、缩放 1.0)逐字节复现原样式。
+    const ThemeRegistry& registry = ThemeRegistry::instance();
+    const QString familyOverride = registry.fontFamilyOverride();
+    const qreal scale = registry.fontScale();
+    const QString family = familyOverride.isEmpty() ? s.family : familyOverride;
+    const QString styleName = familyOverride.isEmpty() ? s.styleName : QString();
+    return { family, styleName, qRound(s.size * scale), s.weight, qRound(s.lineHeight * scale) };
 }
 
 FluentElement::Radius FluentElement::themeRadius() const {
-    return { ::CornerRadius::None, ::CornerRadius::Control, ::CornerRadius::Overlay };
+    return ThemeRegistry::instance().radius();
+}
+
+FluentElement::DesignLanguage FluentElement::themeDesignLanguage() const {
+    return ThemeRegistry::instance().designLanguage();
 }
 
 FluentElement::Spacing FluentElement::themeSpacing() const {

@@ -11,6 +11,7 @@
 #include <QImage>
 #include <QPixmap>
 #include <QRegularExpression>
+#include <QStandardPaths>
 #include <QStringLiteral>
 #include <QWidget>
 
@@ -50,6 +51,14 @@ QString configuredBinaryDir()
 
 void configureOffscreenPlatformForAutomation()
 {
+    // Redirect QStandardPaths (AppLocalData/config/themes/logs) to an isolated test sandbox so the
+    // suite never reads or mutates real user data — e.g. constructing GallerySettings/ThemeCatalog
+    // would otherwise export theme JSON into per-exe AppData. Must run before any path is resolved
+    // (logging init + QApplication below both consult QStandardPaths). zh_CN: 把 QStandardPaths 重定向到
+    // 隔离的测试沙盒,使测试绝不读写真实用户数据(否则构造 GallerySettings/ThemeCatalog 会把主题 JSON 导出到
+    // 每个 exe 的 AppData)。必须在任何路径解析(下方日志初始化 + QApplication)之前调用。
+    QStandardPaths::setTestModeEnabled(true);
+
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST") && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM"))
         qputenv("QT_QPA_PLATFORM", QByteArray("offscreen"));
 

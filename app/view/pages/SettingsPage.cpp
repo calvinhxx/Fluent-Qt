@@ -3,6 +3,7 @@
 #include <QComboBox>
 #include <QFrame>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QPainter>
 #include <QPalette>
 #include <QResizeEvent>
@@ -16,6 +17,7 @@
 #include "design/Typography.h"
 #include "utils/Log.h"
 #include "view/support/GalleryCloseBehaviorUi.h"
+#include "view/widgets/AccentColorControl.h"
 #include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
@@ -183,6 +185,13 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         QStringLiteral("gallerySettingsThemeChoice"),
         {QStringLiteral("Use system setting"), QStringLiteral("Light"), QStringLiteral("Dark")},
         static_cast<int>(settings->themeMode()));
+    // Brand style theme: swaps the whole palette + corner-radius preset at runtime via ThemeRegistry.
+    // zh_CN: 品牌样式主题:经 ThemeRegistry 在运行时整体替换调色板 + 圆角预设。
+    m_styleChoice = createChoiceBox(
+        QStringLiteral("gallerySettingsStyleChoice"),
+        {QStringLiteral("Fluent (Windows)"), QStringLiteral("Material 3 (Google)"),
+         QStringLiteral("macOS")},
+        static_cast<int>(settings->styleTheme()));
     // Match the native WinUI Gallery, which exposes only two navigation styles: "Left" and "Top".
     // "Left" maps to the responsive Auto mode (expanded → compact → minimal by width, just like
     // WinUI's PaneDisplayMode.Auto); "Top" is the horizontal bar. The richer internal enum
@@ -221,6 +230,15 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                 const QSignalBlocker blocker(m_themeChoice);
                 m_themeChoice->setCurrentIndex(static_cast<int>(mode));
             });
+    connect(m_styleChoice, qOverload<int>(&QComboBox::currentIndexChanged),
+            this, [settings](int index) {
+                settings->setStyleTheme(static_cast<GallerySettings::StyleTheme>(index));
+            });
+    connect(settings, &GallerySettings::styleThemeChanged, this,
+            [this](GallerySettings::StyleTheme theme) {
+                const QSignalBlocker blocker(m_styleChoice);
+                m_styleChoice->setCurrentIndex(static_cast<int>(theme));
+            });
     connect(settings, &GallerySettings::navigationStyleChanged, this,
             [this](GallerySettings::NavigationStyle style) {
                 const QSignalBlocker blocker(m_navigationChoice);
@@ -248,11 +266,30 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                 m_closeBehaviorChoice->setCurrentIndex(static_cast<int>(behavior));
             });
 
+    // Style + accent share one row: both shape the brand palette, so they read as a single
+    // "appearance style" choice (preset selector + accent swatch) rather than two near-identical rows.
+    // zh_CN: 样式与强调色合并为一行:二者都决定品牌调色板,合成单一「外观样式」选择(预设下拉 + 强调色块),
+    // 而非两行近乎雷同的设置。
+    m_accentControl = new AccentColorControl(this);
+    auto* styleAccentTrailing = new QWidget(this);
+    styleAccentTrailing->setObjectName(QStringLiteral("gallerySettingsStyleAccentTrailing"));
+    auto* styleAccentLayout = new QHBoxLayout(styleAccentTrailing);
+    styleAccentLayout->setContentsMargins(0, 0, 0, 0);
+    styleAccentLayout->setSpacing(12);
+    styleAccentLayout->addWidget(m_styleChoice);
+    styleAccentLayout->addWidget(m_accentControl);
+
     m_contentLayout->addWidget(createSectionTitle(QStringLiteral("Appearance & behavior")));
-    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Color,
+    // App theme uses a brightness glyph so it no longer duplicates the palette icon of the style row.
+    // zh_CN: 应用主题改用「亮度」字形,不再与样式行的调色板图标重复。
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Brightness,
                                                  QStringLiteral("App theme"),
                                                  QStringLiteral("Select which app theme to display"),
                                                  m_themeChoice));
+    m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Brush,
+                                                 QStringLiteral("Style & accent color"),
+                                                 QStringLiteral("Switch the palette and shape language (Fluent, Material 3, macOS) and pick an accent"),
+                                                 styleAccentTrailing));
     m_contentLayout->addWidget(createSettingsRow(Typography::Icons::List,
                                                  QStringLiteral("Navigation style"),
                                                  QStringLiteral("Choose how the navigation pane is presented"),

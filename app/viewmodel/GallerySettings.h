@@ -1,6 +1,7 @@
 #ifndef GALLERYSETTINGS_H
 #define GALLERYSETTINGS_H
 
+#include <QColor>
 #include <QObject>
 
 class QEvent;
@@ -45,10 +46,32 @@ public:
     };
     Q_ENUM(CloseBehavior)
 
+    // Brand style theme: the palette + corner-radius preset installed into the runtime ThemeRegistry.
+    // Orthogonal to ThemeMode (each style has its own Light/Dark). zh_CN: 品牌样式主题:安装进运行时
+    // ThemeRegistry 的「调色板 + 圆角」预设。与 ThemeMode 正交(每套样式各有明/暗)。
+    enum class StyleTheme {
+        Fluent,
+        Material,
+        MacOS
+    };
+    Q_ENUM(StyleTheme)
+
     static GallerySettings& instance();
 
     ThemeMode themeMode() const { return m_themeMode; }
     void setThemeMode(ThemeMode mode);
+
+    StyleTheme styleTheme() const { return m_styleTheme; }
+    void setStyleTheme(StyleTheme theme);
+
+    // Accent color of the active style theme (the effective value for the current Light/Dark mode,
+    // i.e. preset accent unless the user customized it). Customizing persists into the style theme's
+    // themes/<key>.json override file, so it survives restarts and is orthogonal to the preset switch.
+    // zh_CN: 当前样式主题的强调色(当前明暗模式下的生效值,即未自定义时为预设强调色)。自定义会持久化进该样式主题的
+    // themes/<key>.json 覆盖文件,可跨重启保留,且与预设切换正交。
+    QColor accentColor() const;
+    void setAccentColor(const QColor& accent);
+    void resetAccentColor();
 
     NavigationStyle navigationStyle() const { return m_navigationStyle; }
     void setNavigationStyle(NavigationStyle style);
@@ -68,6 +91,8 @@ public:
 
 signals:
     void themeModeChanged(ThemeMode mode);
+    void styleThemeChanged(StyleTheme theme);
+    void accentColorChanged(QColor accent);
     void navigationStyleChanged(NavigationStyle style);
     void windowEffectChanged(WindowEffect effect);
     void closeBehaviorChanged(CloseBehavior behavior);
@@ -81,6 +106,7 @@ private:
     void load();
 
     ThemeMode m_themeMode = ThemeMode::System;
+    StyleTheme m_styleTheme = StyleTheme::Fluent;
     NavigationStyle m_navigationStyle = NavigationStyle::Auto;
     WindowEffect m_windowEffect = WindowEffect::Mica;
     CloseBehavior m_closeBehavior = CloseBehavior::Tray;

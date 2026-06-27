@@ -21,6 +21,8 @@ class ComboBox;
 
 namespace fluent::gallery {
 
+class AccentColorControl;
+
 class SettingsPage : public QWidget, public FluentElement, public QMLPlus {
 public:
     explicit SettingsPage(const GalleryNavigationItem& item, QWidget* parent = nullptr);
@@ -50,6 +52,8 @@ private:
     QVBoxLayout* m_contentLayout = nullptr;
     fluent::textfields::Label* m_titleLabel = nullptr;
     fluent::basicinput::ComboBox* m_themeChoice = nullptr;
+    fluent::basicinput::ComboBox* m_styleChoice = nullptr;
+    AccentColorControl* m_accentControl = nullptr;
     fluent::basicinput::ComboBox* m_navigationChoice = nullptr;
     fluent::basicinput::ComboBox* m_effectChoice = nullptr;
     fluent::basicinput::ComboBox* m_closeBehaviorChoice = nullptr;

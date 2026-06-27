@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QEvent>
 #include <QElapsedTimer>
+#include <QFile>
 #include <QFrame>
 #include <QHelpEvent>
 #include <QLabel>
@@ -45,6 +46,8 @@
 #include "view/pages/SettingsPage.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
+#include "viewmodel/ThemeCatalog.h"
+#include "components/foundation/ThemeRegistry.h"
 
 using fluent::basicinput::Button;
 using fluent::basicinput::ComboBox;
@@ -1337,6 +1340,8 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     ASSERT_NE(page, nullptr);
     auto* themeChoice = page->findChild<ComboBox*>(
         QStringLiteral("gallerySettingsThemeChoice"));
+    auto* styleChoice = page->findChild<ComboBox*>(
+        QStringLiteral("gallerySettingsStyleChoice"));
     auto* navigationChoice = page->findChild<ComboBox*>(
         QStringLiteral("gallerySettingsNavigationChoice"));
     auto* effectChoice = page->findChild<ComboBox*>(
@@ -1344,11 +1349,14 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     auto* closeBehaviorChoice = page->findChild<ComboBox*>(
         QStringLiteral("gallerySettingsCloseBehaviorChoice"));
     ASSERT_NE(themeChoice, nullptr);
+    ASSERT_NE(styleChoice, nullptr);
     ASSERT_NE(navigationChoice, nullptr);
     ASSERT_NE(effectChoice, nullptr);
     ASSERT_NE(closeBehaviorChoice, nullptr);
     EXPECT_EQ(themeChoice->count(), 3);
     EXPECT_EQ(themeChoice->currentText(), QStringLiteral("Light"));
+    // Style theme offers the three brand presets (Fluent / Material 3 / macOS). zh_CN: 样式主题提供三套品牌预设。
+    EXPECT_EQ(styleChoice->count(), 3);
     // Navigation style mirrors the native WinUI Gallery: only "Left" and "Top" are offered. "Left"
     // is the responsive Auto mode, so the Auto config above shows as "Left" (index 0).
     EXPECT_EQ(navigationChoice->count(), 2);
@@ -1356,7 +1364,11 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(effectChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->currentIndex(), static_cast<int>(settings.closeBehavior()));
-    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 4);
+    // Appearance & behavior (App theme / Style & accent / Navigation style / Window effect) + App
+    // behavior (Close button) = 5 rows; Style theme + Accent color share one row. zh_CN: 外观与行为 4 行
+    //(样式与强调色合并为一行)+ 应用行为 1 行 = 5 行。
+    EXPECT_NE(page->findChild<QWidget*>(QStringLiteral("gallerySettingsAccentControl")), nullptr);
+    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 5);
 
     QStringList visibleText;
     for (auto* label : page->findChildren<fluent::textfields::Label*>())
@@ -1368,7 +1380,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     const auto iconLabels = page->findChildren<fluent::textfields::Label*>(
         QStringLiteral("gallerySettingsRowIcon"));
-    ASSERT_EQ(iconLabels.size(), 4);
+    ASSERT_EQ(iconLabels.size(), 5);
     for (auto* iconLabel : iconLabels)
         EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::SegoeFluentIcons);
 
@@ -1570,4 +1582,48 @@ TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpen
     EXPECT_TRUE(window.isVisible());
     EXPECT_TRUE(window.isChromeInteractive());
     EXPECT_FALSE(settings.closeBehaviorConfirmed());
+}
+
+// Regression: picking a custom accent must keep the whole accent FAMILY consistent. A full-dump theme
+// template carries explicit accentSecondary/accentTertiary/textAccentPrimary; setUserAccent must drop
+// them so applyColorSpec re-derives them from the NEW accentDefault. The original bug left them stale
+// (a green accentDefault clashing with leftover blue variants). Relies on QStandardPaths test mode
+// (set in QtTestEnvironment) so this writes to an isolated sandbox, never the developer's real themes.
+// zh_CN: 回归——选自定义强调色后,整个强调色族必须一致。完整 dump 模板含显式 accentSecondary/Tertiary/
+// textAccentPrimary;setUserAccent 必须清除它们,让 applyColorSpec 从新 accentDefault 重新派生。原 bug 会留下
+// 陈旧变体(绿色 accentDefault 与残留蓝色变体冲突)。依赖测试模式沙盒,不会写到开发者真实 themes 目录。
+TEST(ThemeCatalogAccentConsistencyTest, SetUserAccentReDerivesVariantsFromFullDump)
+{
+    using fluent::ThemeRegistry;
+    namespace tc = fluent::gallery::ThemeCatalog;
+    constexpr auto kTheme = GallerySettings::StyleTheme::MacOS;
+
+    // Force a fresh FULL-DUMP template (explicit blue accentSecondary/textAccentPrimary) — the exact
+    // condition under which the old setUserAccent left stale variants behind.
+    QFile::remove(tc::userThemeFilePath(kTheme));
+    tc::apply(kTheme);
+
+    const QColor picked(0x4D, 0xA0, 0x4D);  // the green that originally clashed with stale blue variants
+    tc::setUserAccent(kTheme, picked);
+    tc::apply(kTheme);
+
+    for (bool dark : {false, true}) {
+        const auto colors = ThemeRegistry::instance().colors(dark);
+        // QColor::rgb() drops alpha, so a derived variant (same hue, lower alpha) compares equal to the
+        // picked accent — and unequal to the stale preset blue if the bug regressed.
+        EXPECT_EQ(colors.accentDefault.rgb(), picked.rgb()) << "dark=" << dark;
+        EXPECT_EQ(colors.accentSecondary.rgb(), picked.rgb()) << "accentSecondary stale; dark=" << dark;
+        EXPECT_EQ(colors.accentTertiary.rgb(), picked.rgb()) << "accentTertiary stale; dark=" << dark;
+        EXPECT_EQ(colors.textAccentPrimary.rgb(), picked.rgb()) << "textAccentPrimary stale; dark=" << dark;
+    }
+
+    // Reset reverts cleanly to the preset accent (no half-override left behind).
+    tc::clearUserAccent(kTheme);
+    tc::apply(kTheme);
+    EXPECT_EQ(ThemeRegistry::instance().colors(false).accentDefault.rgb(),
+              tc::presetAccent(kTheme, false).rgb());
+
+    QFile::remove(tc::userThemeFilePath(kTheme));
+    ThemeRegistry::instance().resetToDefaults();
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
 }
