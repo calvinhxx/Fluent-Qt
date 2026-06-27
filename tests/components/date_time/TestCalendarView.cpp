@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDate>
+#include <QImage>
 #include <QPalette>
 #include <QSignalSpy>
 #include <QTest>
@@ -12,6 +13,7 @@
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/date_time/CalendarView.h"
 #include "components/textfields/Label.h"
@@ -894,6 +896,169 @@ TEST_F(CalendarViewTest, ThemeUpdateRefreshesVisibleControl)
     processEvents();
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
     EXPECT_TRUE(calendarView->isVisible());
+}
+
+// ─── Design-language × theme day-indicator compatibility ────────────────────
+//
+// CalendarView's per-day selected/today/hover indicator must paint under each design language
+// (Fluent / Material 3 / macOS) crossed with each App theme (Light / Dark). Fluent is unchanged
+// from the original WinUI treatment; Material 3 fills the selected day with a `primary` circle
+// (on-primary glyph) + a `primary` outline ring for today + a circular state layer on hover;
+// macOS fills the selected day with an accent circle + white glyph + an accent ring for today.
+// Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: CalendarView 每日的选中/今天/悬停指示器必须在三种设计语言(Fluent/Material 3/macOS)× 两种主题
+//(Light/Dark)下都能绘制。Fluent 与原 WinUI 一致;Material 3 用 primary 圆(on-primary 字)填充选中、
+// primary 描边环标记今天、悬停用圆形 state layer;macOS 用 accent 圆 + 白字填充选中、accent 环标记今天。
+// 设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class CalendarViewDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override
+    {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a CalendarView pinned to a fixed visible month, optionally with a selected day in that
+    // month, sized like a realistic popup calendar, and grab it as an image. Animations/zoom
+    // transitions don't advance inside a grab, so a static selected state is what gets painted.
+    // zh_CN: 构建固定可见月份的 CalendarView(可选在该月设置选中日),设定与真实弹出日历一致的尺寸并抓取为
+    // 图像。grab 内动画/缩放过渡不会推进,故绘制的是静态选中态。
+    static QImage grabCalendar(bool withSelection)
+    {
+        CalendarView view;
+        view.resize(300, 340);
+        view.setVisibleMonth(QDate(2026, 5, 1));
+        if (withSelection)
+            view.setSelectedDate(QDate(2026, 5, 21));
+        return view.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img)
+    {
+        if (img.isNull())
+            return false;
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    static int differingPixels(const QImage& a, const QImage& b)
+    {
+        if (a.size() != b.size())
+            return -1;
+        int diff = 0;
+        for (int y = 0; y < a.height(); ++y)
+            for (int x = 0; x < a.width(); ++x)
+                if (a.pixel(x, y) != b.pixel(x, y))
+                    ++diff;
+        return diff;
+    }
+};
+
+TEST_F(CalendarViewDesignLanguageTest, AllLanguagesAndThemesPaintSelectedIndicator)
+{
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    QImage fluentSelected; // captured to prove Material differs from Fluent. zh_CN: 留存以证明 Material 与 Fluent 不同。
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const QImage plain = grabCalendar(false);
+            const QImage selected = grabCalendar(true);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            // 1. Both states paint a valid, non-empty image with content. zh_CN: 两态都绘制出有效、非空且有内容的图像。
+            ASSERT_FALSE(plain.isNull()) << ctx << "/plain";
+            ASSERT_FALSE(selected.isNull()) << ctx << "/selected";
+            EXPECT_GT(selected.width(), 0) << ctx;
+            EXPECT_GT(selected.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(plain)) << "plain calendar painted nothing: " << ctx;
+            EXPECT_TRUE(hasPaintedContent(selected)) << "selected calendar painted nothing: " << ctx;
+
+            // 2. The selected-day indicator MUST paint — a calendar WITH a selection differs from one
+            // withOUT. zh_CN: 选中日指示器必须绘制——带选中与不带选中的日历必须不同。
+            const int diff = differingPixels(plain, selected);
+            ASSERT_GE(diff, 0) << ctx << " (size mismatch)";
+            EXPECT_GT(diff, 0)
+                << "selected-day indicator did not paint (selected == plain): " << ctx;
+
+            if (lang.lang == fluent::FluentElement::DesignFluent && th.theme == fluent::FluentElement::Light)
+                fluentSelected = selected;
+
+            // 3. The Material/Cupertino branch must visibly differ from Fluent in the same theme,
+            // proving the brand branch is exercised (not a silent fall-through). zh_CN: 同主题下
+            // Material/Cupertino 分支必须与 Fluent 明显不同,证明品牌分支被走到(而非静默回退)。
+            if (lang.lang != fluent::FluentElement::DesignFluent &&
+                th.theme == fluent::FluentElement::Light && !fluentSelected.isNull()) {
+                const int brandDiff = differingPixels(fluentSelected, selected);
+                ASSERT_GE(brandDiff, 0) << ctx << " (size mismatch vs Fluent)";
+                EXPECT_GT(brandDiff, 0)
+                    << lang.name << " selected calendar is identical to Fluent (branch not exercised)";
+            }
+        }
+    }
+}
+
+// Regression for the invalid-QColor trap (a default-constructed QColor is INVALID yet
+// QColor::alpha() returns 255, so a bare alpha()>0 guard + setBrush(invalidColor) paints SOLID
+// OPAQUE BLACK). The day indicator / hover fills must never render an opaque near-#000 block on a
+// plain (non-text) background pixel under any design language or theme. zh_CN: 无效 QColor 陷阱回归
+//(默认构造的 QColor 无效却返回 alpha==255,裸 alpha()>0 + setBrush(无效色) 会涂成不透明纯黑)。
+// 日期指示器/悬停填充在任何设计语言或主题下都不得在纯背景像素上呈现不透明近黑块。
+TEST_F(CalendarViewDesignLanguageTest, NoOpaqueBlackFillAtPlainBackground)
+{
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+            fluent::FluentElement::setTheme(theme);
+
+            const QImage img = grabCalendar(true);
+            ASSERT_FALSE(img.isNull()) << "lang=" << lang << " theme=" << theme;
+
+            // Sample a plain background pixel inside the card but clear of the day grid / header text:
+            // the top-left interior just below the rounded corner. A spurious solid-black fill would
+            // bleed across the whole surface, so any near-#000 opaque sample here flags the trap.
+            // zh_CN: 采样卡片内、避开日期网格/标题文字的纯背景像素:圆角下方左上内侧。一旦出现伪纯黑填充会
+            // 漫过整个表面,故此处任何近黑不透明采样即触发陷阱告警。
+            const QColor c = img.pixelColor(6, img.height() / 2);
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "CalendarView painted an opaque black fill at a plain pixel: lang=" << lang
+                << " theme=" << theme << " rgba=(" << c.red() << "," << c.green() << ","
+                << c.blue() << "," << c.alpha() << ")";
+        }
+    }
 }
 
 TEST_F(CalendarViewTest, VisualCheck)

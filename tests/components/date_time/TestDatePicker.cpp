@@ -7,9 +7,12 @@
 #include <QSignalSpy>
 #include <QTest>
 
+#include <QImage>
+
 #include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/basicinput/Button.h"
 #include "components/date_time/DatePicker.h"
@@ -599,6 +602,127 @@ TEST_F(DatePickerTest, ThemeUpdateRefreshesVisiblePopup)
     processEvents();
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
     EXPECT_TRUE(popup->isVisible());
+}
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// DatePicker is a Button-derived control whose CLOSED FIELD surface (DatePicker::paintEvent) must
+// re-skin per design language (Fluent / Material 3 / macOS) crossed with each App theme (Light /
+// Dark). Fluent stays byte-for-byte unchanged; Material 3 adopts the Outlined field (transparent +
+// strokeStrong outline → accent when open), macOS adopts the push-button bezel (bgLayerAlt fill +
+// hairline + small radius). Design language + theme are GLOBAL singletons, so the fixture restores
+// both in TearDown. The grabbed image exercises the closed field only — PickerColumn lives in a
+// flyout whose headless animation does not advance, so its highlight is tested via the existing
+// flyout suite, not here. zh_CN: DatePicker 是 Button 派生控件,其闭合字段表面(DatePicker::paintEvent)
+// 需在三种设计语言(Fluent/Material 3/macOS)× 两种主题(Light/Dark)下换肤。Fluent 逐字节不变;Material 3
+// 采用描边字段(透明 + strokeStrong 描边 → 展开时 accent),macOS 采用按钮 bezel(bgLayerAlt 填充 + 发丝边 +
+// 小圆角)。设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。抓取的图像仅覆盖闭合字段——PickerColumn
+// 位于无头动画不推进的 flyout 中,其高亮由既有 flyout 套件覆盖,此处不测。
+class DatePickerDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override
+    {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a closed DatePicker sized like a real field and grab it as an image. This drives
+    // DatePicker::paintEvent's brand field surface. zh_CN: 以真实字段尺寸构建闭合 DatePicker 并抓取为
+    // 图像,驱动 DatePicker::paintEvent 的品牌字段表面。
+    static QImage grabField()
+    {
+        DatePicker picker;
+        picker.setSelectedDate(QDate(2026, 7, 21));
+        picker.resize(250, 36);
+        return picker.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img)
+    {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    static int differingPixels(const QImage& a, const QImage& b)
+    {
+        if (a.size() != b.size())
+            return -1;
+        int diff = 0;
+        for (int y = 0; y < a.height(); ++y)
+            for (int x = 0; x < a.width(); ++x)
+                if (a.pixel(x, y) != b.pixel(x, y))
+                    ++diff;
+        return diff;
+    }
+};
+
+TEST_F(DatePickerDesignLanguageTest, AllLanguagesAndThemesPaintFieldWithoutOpaqueBlack)
+{
+    struct LangCase {
+        fluent::FluentElement::DesignLanguage lang;
+        const char* name;
+    };
+    struct ThemeCase {
+        fluent::FluentElement::Theme theme;
+        const char* name;
+    };
+
+    const LangCase langs[] = {
+        {fluent::FluentElement::DesignFluent, "Fluent"},
+        {fluent::FluentElement::DesignMaterial, "Material"},
+        {fluent::FluentElement::DesignCupertino, "Cupertino"},
+    };
+    const ThemeCase themes[] = {
+        {fluent::FluentElement::Light, "Light"},
+        {fluent::FluentElement::Dark, "Dark"},
+    };
+
+    for (const auto& th : themes) {
+        // Capture the Fluent baseline for this theme so each brand can be compared against it.
+        // zh_CN: 为该主题先抓取 Fluent 基线,供各品牌与之比较。
+        fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
+        fluent::FluentElement::setTheme(th.theme);
+        const QImage fluentField = grabField();
+
+        for (const auto& lang : langs) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const QImage field = grabField();
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            // 1. The field paints a valid, non-empty image with content. zh_CN: 字段绘制出有效、非空且有内容的图像。
+            ASSERT_FALSE(field.isNull()) << ctx;
+            EXPECT_GT(field.width(), 0) << ctx;
+            EXPECT_GT(field.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(field)) << "field painted nothing: " << ctx;
+
+            // 2. Material re-skins the field away from the Fluent baseline. zh_CN: Material 字段相对 Fluent 基线换肤。
+            if (lang.lang == fluent::FluentElement::DesignMaterial) {
+                const int diff = differingPixels(fluentField, field);
+                ASSERT_GE(diff, 0) << ctx << " (size mismatch)";
+                EXPECT_GT(diff, 0)
+                    << "Material DatePicker field is indistinguishable from Fluent: " << ctx;
+            }
+
+            // 3. Invalid-QColor guard: no opaque near-black fill at rest. Sample a left-edge
+            // field-background pixel (clear of the segment text). alpha>200 && luminance<16 must be
+            // FALSE. zh_CN: 无效 QColor 守卫:静息下无不透明近黑填充。采样左缘字段背景像素(避开分段文字),
+            // alpha>200 且亮度<16 必须为 FALSE。
+            const QColor c = field.pixelColor(6, field.height() / 2);
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "DatePicker field painted an opaque black surface at rest: " << ctx << " rgba=("
+                << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+        }
+    }
 }
 
 TEST_F(DatePickerTest, VisualCheck)

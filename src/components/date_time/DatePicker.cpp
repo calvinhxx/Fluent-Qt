@@ -9,6 +9,7 @@
 #include <QLocale>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QResizeEvent>
 #include <QVariantAnimation>
 #include <QWheelEvent>
@@ -343,6 +344,18 @@ void PickerColumn::paintEvent(QPaintEvent*)
                        m_hoverHit.kind == HitKind::Next);
     }
 
+    // Branch the selected-row highlight (and row hover) on the active design language. The Fluent path
+    // is byte-for-byte unchanged; Material 3 uses a low-alpha accent "state-layer" pill with accent
+    // text, and macOS (Cupertino) uses a solid accent fill with on-accent text. zh_CN: 选中行高亮(及
+    // 行悬停)按当前设计语言分支:Fluent 路径逐字节不变;Material 3 用低透明度 accent「state-layer」胶囊
+    // + accent 文字;macOS(Cupertino) 用实心 accent 填充 + on-accent 文字。
+    const DesignLanguage lang = themeDesignLanguage();
+    const bool darkTheme = effectiveTheme() == Dark;
+    const auto veil = [darkTheme](int alpha) {
+        return darkTheme ? QColor(255, 255, 255, alpha) : QColor(0, 0, 0, alpha);
+    };
+    const auto withAlpha = [](QColor c, int a) { c.setAlpha(a); return c; };
+
     painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
     const int centerRow = kColumnVisibleRows / 2;
     const Qt::Alignment textAlignment = m_flyout ? m_flyout->textAlignment(m_field) : Qt::AlignLeft;
@@ -354,19 +367,53 @@ void PickerColumn::paintEvent(QPaintEvent*)
         const bool selected = offset == 0;
         const bool hovered = m_hoverHit.kind == HitKind::Row && m_hoverHit.offset == offset;
 
-        if (selected) {
+        // Per-language highlight + the text color that pairs with it. zh_CN: 各设计语言的高亮 + 与之搭配的文字色。
+        QColor highlightFill = Qt::transparent; // guard against the invalid-QColor trap below.
+        QColor selectedTextColor = colors.textOnAccent;
+        if (lang == DesignMaterial) {
+            // Material 3: the selected row is a tonal "state layer" pill — a low-alpha accent wash, not
+            // a solid block — with accent-colored text. Row hover is the on-surface state layer veil
+            // (8%), clipped to the rounded pill. zh_CN: Material 3:选中行为色调「state layer」胶囊——低透
+            // 明度 accent 淡彩而非实心块——配 accent 文字。行悬停为 on-surface state-layer 薄层(8%)。
+            if (selected) {
+                highlightFill = withAlpha(colors.accentDefault, m_columnHovered ? 0x29 : 0x1F); // ~16%/12%
+                selectedTextColor = colors.accentDefault;
+            } else if (hovered && selectable) {
+                highlightFill = veil(0x14); // 8% on-surface state layer
+            }
+        } else if (lang == DesignCupertino) {
+            // macOS: the selected row is a solid accent fill with on-accent (white) text — the quiet,
+            // saturated highlight of the native wheel picker. Row hover uses the theme-aware veil so it
+            // stays visible in both light and dark. zh_CN: macOS:选中行为实心 accent 填充 + on-accent(白)
+            // 文字——原生滚轮选择器的安静饱和高亮。行悬停用主题感知薄层,明暗两主题下都可见。
+            if (selected) {
+                highlightFill = m_columnHovered ? colors.accentSecondary : colors.accentDefault;
+                selectedTextColor = colors.textOnAccent;
+            } else if (hovered && selectable) {
+                highlightFill = veil(darkTheme ? 0x1C : 0x16);
+            }
+        } else {
+            // DesignFluent (default): unchanged WinUI treatment. zh_CN: 默认 Fluent,WinUI 处理不变。
+            if (selected) {
+                highlightFill = m_columnHovered ? colors.accentSecondary : colors.accentDefault;
+                selectedTextColor = colors.textOnAccent;
+            } else if (hovered && selectable) {
+                highlightFill = colors.subtleSecondary;
+            }
+        }
+
+        // Guard the optional fill: a default-constructed QColor is INVALID yet alpha()==255, so
+        // setBrush(invalid) paints SOLID BLACK. zh_CN: 守卫可选填充:默认构造 QColor 无效却 alpha==255,
+        // setBrush(无效色) 会涂成纯黑。
+        if (highlightFill.isValid() && highlightFill.alpha() > 0) {
             painter.setPen(Qt::NoPen);
-            painter.setBrush(m_columnHovered ? colors.accentSecondary : colors.accentDefault);
-            painter.drawRoundedRect(r, radius.control, radius.control);
-        } else if (hovered && selectable) {
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(colors.subtleSecondary);
+            painter.setBrush(highlightFill);
             painter.drawRoundedRect(r, radius.control, radius.control);
         }
 
         QColor textColor = selectable ? colors.textPrimary : colors.textDisabled;
         if (selected)
-            textColor = colors.textOnAccent;
+            textColor = selectedTextColor;
         painter.setPen(textColor);
 
         const QString text = m_flyout ? m_flyout->displayText(m_field, valueDate) : QString();
@@ -1162,17 +1209,119 @@ void DatePicker::paintEvent(QPaintEvent*)
         return;
 
     const bool active = isEnabled() && (underMouse() || isDown());
-    QColor bg = colors.controlDefault;
-    if (!isEnabled())
-        bg = colors.controlDisabled;
-    else if (isDown())
-        bg = colors.subtleTertiary;
-    else if (underMouse())
-        bg = colors.subtleSecondary;
 
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(bg);
-    painter.drawRoundedRect(QRectF(surface), radius.control, radius.control);
+    // Branch the CLOSED-FIELD surface on the active design language (same idiom as ComboBox). The
+    // segment text + dividers below are shared; only the field background/border differ per brand.
+    // "Open" (m_dropDownOpen) reads as focus for the field on every brand. Fluent stays byte-for-byte
+    // unchanged. zh_CN: 闭合字段表面按当前设计语言分支(与 ComboBox 同一套路)。下方分段文字与分隔线为共用,
+    // 仅字段背景/边框按品牌区分。"展开"(m_dropDownOpen) 对每个品牌都等同于聚焦。Fluent 路径逐字节不变。
+    const DesignLanguage lang = themeDesignLanguage();
+    const bool darkTheme = effectiveTheme() == Dark;
+    const auto veil = [darkTheme](int alpha) {
+        return darkTheme ? QColor(255, 255, 255, alpha) : QColor(0, 0, 0, alpha);
+    };
+    const bool fieldFocused = isEnabled() && m_dropDownOpen;
+    const QRectF sr(surface);
+
+    if (lang == DesignMaterial) {
+        // Material 3: outlined field. Transparent/controlDefault fill, a 1 dp `outline` (strokeStrong)
+        // at rest → 2 dp `primary` (accentDefault) when open/focused. Hover/press add a within-bounds
+        // state-layer veil. §4/§5. zh_CN: Material 3:描边字段。透明/controlDefault 填充,静息 1dp
+        // outline(strokeStrong)→ 展开/聚焦 2dp primary(accentDefault)。Hover/press 叠加界内 state-layer 薄层。
+        const qreal mR = qMax<qreal>(0.0, radius.control);
+        QColor fill = !isEnabled() ? colors.controlDisabled
+                                   : (isDown() || m_dropDownOpen ? colors.controlDefault
+                                                                 : QColor(Qt::transparent));
+
+        QPainterPath bgPath;
+        bgPath.addRoundedRect(sr.adjusted(1.0, 1.0, -1.0, -1.0), mR, mR);
+        painter.setPen(Qt::NoPen);
+        if (fill.isValid() && fill != QColor(Qt::transparent)) {
+            painter.setBrush(fill);
+            painter.drawPath(bgPath);
+        }
+
+        if (isEnabled() && !fieldFocused) {
+            QColor stateLayer = Qt::transparent;
+            if (isDown()) stateLayer = veil(0x1A);        // 10%
+            else if (underMouse()) stateLayer = veil(0x14); // 8%
+            if (stateLayer.isValid() && stateLayer.alpha() > 0) {
+                painter.save();
+                painter.setClipPath(bgPath);
+                painter.setBrush(stateLayer);
+                painter.drawPath(bgPath);
+                painter.restore();
+            }
+        }
+
+        const qreal sw = fieldFocused ? 2.0 : 1.0;
+        const QColor outline = !isEnabled() ? colors.strokeSecondary
+                                            : (fieldFocused ? colors.accentDefault : colors.strokeStrong);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(outline, sw));
+        const qreal inset = sw / 2.0;
+        painter.drawRoundedRect(sr.adjusted(inset, inset, -inset, -inset), mR, mR);
+    } else if (lang == DesignCupertino) {
+        // macOS: bezel push-button field. Subtle fill (bgLayerAlt) + 1px strokeStrong hairline + small
+        // radius (~6) + a faint 1px lower-edge drop shadow. Pressed/open darken via the theme-aware
+        // veil; open/focus gets an accent hairline. zh_CN: macOS:bezel 按钮字段。柔和填充(bgLayerAlt)+
+        // 1px strokeStrong 发丝边 + 小圆角(~6) + 底缘 1px 柔和投影。按下/展开用主题感知薄层压暗;展开/聚焦
+        // 使用强调色发丝边。
+        const qreal mR = qMax<qreal>(0.0, qMin<qreal>(radius.control, 6.0));
+        QColor fill = isEnabled() ? colors.bgLayerAlt : colors.controlDisabled;
+
+        QPainterPath bgPath;
+        bgPath.addRoundedRect(sr.adjusted(0.5, 0.5, -0.5, -0.5), mR, mR);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(fill);
+        painter.drawPath(bgPath);
+
+        if (isEnabled()) {
+            QColor stateLayer = Qt::transparent;
+            if (isDown() || m_dropDownOpen) stateLayer = veil(darkTheme ? 0x3A : 0x30);
+            else if (underMouse()) stateLayer = veil(darkTheme ? 0x1C : 0x16);
+            // Guard isValid() too: a default-constructed QColor reports alpha()==255, so a bare
+            // alpha()>0 check + setBrush(invalid) would paint SOLID BLACK over the bezel at rest.
+            // zh_CN: 必须同时判 isValid():默认构造 QColor 的 alpha() 返回 255,裸 alpha()>0 + setBrush(无效色)
+            // 会在静息把 bezel 涂成纯黑。
+            if (stateLayer.isValid() && stateLayer.alpha() > 0) {
+                painter.save();
+                painter.setClipPath(bgPath);
+                painter.setBrush(stateLayer);
+                painter.drawPath(bgPath);
+                painter.restore();
+            }
+        }
+
+        if (isEnabled() && !isDown() && !m_dropDownOpen) {
+            painter.save();
+            painter.setClipPath(bgPath);
+            painter.setBrush(Qt::NoBrush);
+            QColor shadow(0, 0, 0, darkTheme ? 0x3A : 0x1E);
+            painter.setPen(QPen(shadow, 1.0));
+            painter.drawRoundedRect(sr.adjusted(1.0, 2.0, -1.0, -1.0), mR, mR);
+            painter.restore();
+        }
+
+        const QColor hairline = !isEnabled() ? colors.strokeSecondary
+                                             : (fieldFocused ? colors.accentDefault : colors.strokeStrong);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(hairline, 1.0));
+        painter.drawRoundedRect(sr.adjusted(0.5, 0.5, -0.5, -0.5), mR, mR);
+    } else {
+        // DesignFluent (default): unchanged WinUI treatment. zh_CN: 默认 Fluent,WinUI 处理不变。
+        QColor bg = colors.controlDefault;
+        if (!isEnabled())
+            bg = colors.controlDisabled;
+        else if (isDown())
+            bg = colors.subtleTertiary;
+        else if (underMouse())
+            bg = colors.subtleSecondary;
+
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(bg);
+        painter.drawRoundedRect(QRectF(surface), radius.control, radius.control);
+    }
 
     const auto segments = fieldSegments();
     for (int i = 0; i < segments.size(); ++i) {

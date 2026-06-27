@@ -957,6 +957,19 @@ void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal y
     const QDate today = QDate::currentDate();
     const QDate start = gridStartForMonth(month, m_firstDayOfWeek);
 
+    // Per-design-language day indicator. DesignFluent is the original WinUI treatment (unchanged);
+    // DesignMaterial / DesignCupertino brand the selected / today / hover cues. The "veil" is the
+    // theme-aware translucent overlay used by Button: dark surfaces lighten, light surfaces darken, so
+    // hover stays visible under both App themes. zh_CN: 按设计语言分支绘制日期指示器。DesignFluent 保持原
+    // WinUI 行为不变;DesignMaterial / DesignCupertino 对选中/今天/悬停做品牌化。veil 是与 Button 一致的
+    // 主题感知半透明叠加(深色面变亮、浅色面变暗),使悬停在明暗两主题下都可见。
+    const DesignLanguage lang = themeDesignLanguage();
+    const bool darkTheme = effectiveTheme() == Dark;
+    const auto veil = [darkTheme](int alpha) {
+        return darkTheme ? QColor(255, 255, 255, alpha) : QColor(0, 0, 0, alpha);
+    };
+    const auto withAlpha = [](QColor c, int a) { c.setAlpha(a); return c; };
+
     painter.save();
     painter.setOpacity(opacity);
     painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
@@ -976,29 +989,91 @@ void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal y
         const bool focused = m_focusIndicatorVisible && hasFocus() && date == m_focusedDate && selectable;
         const bool current = isToday && selectable;
 
-        if (!current && !selected && (hovered || pressed || focused)) {
-            QColor bg = pressed ? colors.subtleTertiary : colors.subtleSecondary;
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(bg);
-            painter.drawEllipse(indicatorRect);
-        }
-
         QColor textColor = colors.textPrimary;
         if (!inMonth)
             textColor = colors.textTertiary;
         if (!selectable)
             textColor = colors.textDisabled;
 
-        if (current) {
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(colors.accentDefault);
-            painter.drawEllipse(indicatorRect);
-            textColor = colors.textOnAccent;
-        } else if (selected) {
-            painter.setBrush(Qt::NoBrush);
-            painter.setPen(QPen(colors.accentDefault, 1.5));
-            painter.drawEllipse(indicatorRect.adjusted(1.0, 1.0, -1.0, -1.0));
-            textColor = colors.textAccentPrimary;
+        if (lang == DesignMaterial) {
+            // Material 3 date picker: selected day = filled `primary` circle + `on-primary` glyph;
+            // today (not selected) = 1 dp `primary` outline ring with normal text; hover/press/focus =
+            // a circular state layer (on-surface veil 8/10 %, or accent veil when over the selected
+            // fill) inscribed inside the day cell. An oversized halo gets clipped by the backing store
+            // into a hard gray band, so the state-layer circle is clamped to fit the indicator.
+            // zh_CN: Material 3 日期选择:选中=填充 primary 圆 + on-primary 字;今天(未选中)=1dp primary 描
+            // 边环 + 普通文字;悬停/按下/焦点=圆形 state layer(on-surface 薄层 8/10%,覆盖在选中填充上时用
+            // accent 薄层),内切于单元格。过大的光晕会被后备存储裁出硬边灰带,故 state-layer 圆收敛于指示器内。
+            if (selected) {
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(colors.accentDefault);
+                painter.drawEllipse(indicatorRect);
+                textColor = colors.textOnAccent;
+            } else if (current) {
+                painter.setBrush(Qt::NoBrush);
+                painter.setPen(QPen(colors.accentDefault, 1.0));
+                painter.drawEllipse(indicatorRect.adjusted(0.5, 0.5, -0.5, -0.5));
+                // text stays textPrimary (normal). zh_CN: 文字保持 textPrimary(普通)。
+            }
+
+            if (hovered || pressed || focused) {
+                // State layer: accent veil when it sits over the selected fill (keeps contrast on the
+                // saturated circle), otherwise the on-surface veil. zh_CN: state layer:覆盖在选中填充上时用
+                // accent 薄层(在饱和圆上保持对比),否则用 on-surface 薄层。
+                const int alpha = pressed ? 0x1A : 0x14; // 10% / 8%
+                const QColor layer = selected ? withAlpha(colors.accentDefault, alpha) : veil(alpha);
+                if (layer.isValid() && layer.alpha() > 0) {
+                    painter.setPen(Qt::NoPen);
+                    painter.setBrush(layer);
+                    painter.drawEllipse(indicatorRect);
+                }
+            }
+        } else if (lang == DesignCupertino) {
+            // macOS graphical date picker: selected day = filled accent circle + white glyph; today =
+            // accent outline ring; hover = the quiet theme-aware veil. Small and unobtrusive.
+            // zh_CN: macOS 图形日期选择:选中=填充 accent 圆 + 白字;今天=accent 描边环;悬停=安静的主题感知薄层。
+            if (selected) {
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(colors.accentDefault);
+                painter.drawEllipse(indicatorRect);
+                textColor = QColor(Qt::white);
+            } else {
+                if (hovered || pressed || focused) {
+                    const QColor bg = veil(pressed ? (darkTheme ? 0x2C : 0x24)
+                                                   : (darkTheme ? 0x18 : 0x14));
+                    if (bg.isValid() && bg.alpha() > 0) {
+                        painter.setPen(Qt::NoPen);
+                        painter.setBrush(bg);
+                        painter.drawEllipse(indicatorRect);
+                    }
+                }
+                if (current) {
+                    painter.setBrush(Qt::NoBrush);
+                    painter.setPen(QPen(colors.accentDefault, 1.5));
+                    painter.drawEllipse(indicatorRect.adjusted(1.0, 1.0, -1.0, -1.0));
+                    textColor = colors.textAccentPrimary;
+                }
+            }
+        } else {
+            // DesignFluent (default): unchanged WinUI treatment. zh_CN: 默认 Fluent,WinUI 处理不变。
+            if (!current && !selected && (hovered || pressed || focused)) {
+                QColor bg = pressed ? colors.subtleTertiary : colors.subtleSecondary;
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(bg);
+                painter.drawEllipse(indicatorRect);
+            }
+
+            if (current) {
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(colors.accentDefault);
+                painter.drawEllipse(indicatorRect);
+                textColor = colors.textOnAccent;
+            } else if (selected) {
+                painter.setBrush(Qt::NoBrush);
+                painter.setPen(QPen(colors.accentDefault, 1.5));
+                painter.drawEllipse(indicatorRect.adjusted(1.0, 1.0, -1.0, -1.0));
+                textColor = colors.textAccentPrimary;
+            }
         }
 
         painter.setPen(textColor);

@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QCoreApplication>
+#include <QImage>
 #include <QPalette>
 #include <QSignalSpy>
 #include <QTest>
@@ -10,6 +11,7 @@
 #include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/basicinput/Button.h"
 #include "components/date_time/TimePicker.h"
@@ -470,6 +472,121 @@ TEST_F(TimePickerTest, ThemeUpdateRefreshesVisiblePopup)
     processEvents();
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
     EXPECT_TRUE(popup->isVisible());
+}
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// TimePicker's CLOSED FIELD must read as the correct per-brand surface under each design language
+// (Fluent / Material 3 / macOS) crossed with each App theme (Light / Dark): Fluent stays the WinUI
+// control surface, Material 3 switches to the Outlined field, macOS to the push-button bezel. Design
+// language + theme are GLOBAL singletons, so the fixture restores both in TearDown. The flyout's
+// spinner columns (where the per-brand SELECTED-ROW highlight lives) are internal and need an open
+// popup whose animation does not advance headlessly, so this suite exercises the closed field
+// statically via grab() — that already drives TimePicker::paintEvent's branded surface.
+// zh_CN: TimePicker 的闭合字段在三种设计语言(Fluent/Material 3/macOS)× 两种主题(Light/Dark)下都必须
+// 呈现正确的品牌表面:Fluent 保持 WinUI 控件面,Material 3 切换为描边字段,macOS 切换为按钮 bezel。设计语言
+// 与主题为全局单例,夹具在 TearDown 中恢复二者。弹层的滚轮列(品牌选中行高亮所在)为内部组件且需展开弹层
+//(其动画在无头环境下不前进),故本套件通过 grab() 静态检验闭合字段——这已驱动 TimePicker::paintEvent 的品牌表面。
+class TimePickerDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override
+    {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a TimePicker sized like a real closed field and grab it as an image. zh_CN: 以真实闭合字段尺寸构建 TimePicker 并抓取为图像。
+    static QImage grabClosedField()
+    {
+        TimePicker picker;
+        picker.setSelectedTime(QTime(9, 30));
+        picker.resize(220, 36);
+        return picker.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img)
+    {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    static int differingPixels(const QImage& a, const QImage& b)
+    {
+        if (a.size() != b.size())
+            return -1;
+        int diff = 0;
+        for (int y = 0; y < a.height(); ++y)
+            for (int x = 0; x < a.width(); ++x)
+                if (a.pixel(x, y) != b.pixel(x, y))
+                    ++diff;
+        return diff;
+    }
+};
+
+TEST_F(TimePickerDesignLanguageTest, ClosedFieldPaintsPerBrandWithoutOpaqueBlackAtRest)
+{
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    // Capture the Fluent baseline per theme so Material can be asserted DISTINCT from it. zh_CN: 按主题记录 Fluent 基线,以断言 Material 与之不同。
+    QImage fluentByTheme[2];
+
+    for (const auto& th : themes) {
+        fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
+        fluent::FluentElement::setTheme(th.theme);
+        fluentByTheme[th.theme] = grabClosedField();
+    }
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+            const QImage field = grabClosedField();
+
+            // 1. The closed field paints a valid, non-empty image with content. zh_CN: 闭合字段绘制出有效、非空且有内容的图像。
+            ASSERT_FALSE(field.isNull()) << ctx;
+            EXPECT_GT(field.width(), 0) << ctx;
+            EXPECT_GT(field.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(field)) << "closed field painted nothing: " << ctx;
+
+            // 2. No opaque near-black fill at rest (the invalid-QColor trap regression): sample a
+            // field-background pixel near the left edge, away from the segment text. zh_CN: 静息下无不透明近黑
+            // 填充(无效 QColor 陷阱回归):在左缘附近、远离分段文字处采样字段背景像素。
+            const QColor c = field.pixelColor(6, field.height() / 2);
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "TimePicker painted an opaque black field surface at rest: " << ctx
+                << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+
+            // 3. The Material field must be visibly distinct from the Fluent field (Outlined vs. control
+            // surface). zh_CN: Material 字段必须与 Fluent 字段明显不同(描边 vs 控件面)。
+            if (lang.lang == fluent::FluentElement::DesignMaterial) {
+                const int diff = differingPixels(field, fluentByTheme[th.theme]);
+                ASSERT_GE(diff, 0) << ctx << " (size mismatch)";
+                EXPECT_GT(diff, 0)
+                    << "Material closed field is indistinguishable from Fluent: " << ctx;
+            }
+        }
+    }
 }
 
 TEST_F(TimePickerTest, VisualCheck)
