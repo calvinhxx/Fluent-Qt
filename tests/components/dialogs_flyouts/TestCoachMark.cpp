@@ -82,6 +82,7 @@ TEST_F(CoachMarkTest, DefaultProperties) {
     EXPECT_FALSE(coach.isOpen());
     EXPECT_EQ(coach.target(), nullptr);
     EXPECT_EQ(coach.placement(), CoachMark::Auto);
+    EXPECT_EQ(coach.surfaceMode(), CoachMark::TopLevelSurface);
     EXPECT_EQ(coach.cardSize(), QSize(330, 168));
     EXPECT_NE(coach.contentHost(), nullptr);
 
@@ -200,6 +201,32 @@ TEST_F(CoachMarkTest, NoTargetCentersOverOwner) {
     EXPECT_NEAR(coach.geometry().center().y(), window->frameGeometry().center().y(), 2);
 }
 
+TEST_F(CoachMarkTest, SameWindowSurfaceCentersInsideOwnerAndTracksResize) {
+    window->setMinimumSize(0, 0);
+    window->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+
+    CoachMark coach(window, CoachMark::SameWindowSurface);
+    coach.setCardSize(QSize(260, 128));
+    coach.open();
+    QApplication::processEvents();
+
+    EXPECT_TRUE(coach.isOpen());
+    EXPECT_EQ(coach.surfaceMode(), CoachMark::SameWindowSurface);
+    EXPECT_EQ(coach.parentWidget(), window);
+    EXPECT_EQ(coach.windowType(), Qt::Widget);
+    EXPECT_NEAR(coach.geometry().center().x(), window->rect().center().x(), 2);
+    EXPECT_NEAR(coach.geometry().center().y(), window->rect().center().y(), 2);
+
+    window->resize(760, 560);
+    const bool recentered = QTest::qWaitFor(
+        [&]() {
+            return std::abs(coach.geometry().center().x() - window->rect().center().x()) <= 2
+                && std::abs(coach.geometry().center().y() - window->rect().center().y()) <= 2;
+        },
+        1000);
+    EXPECT_TRUE(recentered);
+}
+
 // ── 8. Retargeting while open keeps it open and glides to the new target ─────
 TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget) {
     auto* first = makeTarget(QPoint(160, 200));
@@ -299,6 +326,12 @@ TEST_F(CoachMarkTest, PlacementEnumIsRegistered) {
     const QMetaEnum meta = CoachMark::staticMetaObject.enumerator(index);
     EXPECT_EQ(meta.keyToValue("Bottom"), static_cast<int>(CoachMark::Bottom));
     EXPECT_EQ(meta.keyToValue("Right"), static_cast<int>(CoachMark::Right));
+
+    const int surfaceIndex = CoachMark::staticMetaObject.indexOfEnumerator("SurfaceMode");
+    ASSERT_GE(surfaceIndex, 0);
+    const QMetaEnum surfaceMeta = CoachMark::staticMetaObject.enumerator(surfaceIndex);
+    EXPECT_EQ(surfaceMeta.keyToValue("TopLevelSurface"), static_cast<int>(CoachMark::TopLevelSurface));
+    EXPECT_EQ(surfaceMeta.keyToValue("SameWindowSurface"), static_cast<int>(CoachMark::SameWindowSurface));
 }
 
 // ── VisualCheck — interactive demo of the placements + glide ─────────────────

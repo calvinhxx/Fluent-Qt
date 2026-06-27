@@ -298,6 +298,11 @@ TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)
     auto* scrim = window.findChild<SmokeOverlay*>(QStringLiteral("GalleryIntroTour.Scrim"));
     ASSERT_NE(scrim, nullptr);
     EXPECT_FALSE(scrim->spotlightEnabled());
+    auto* coach = window.findChild<fluent::dialogs_flyouts::CoachMark*>();
+    ASSERT_NE(coach, nullptr);
+    EXPECT_EQ(coach->surfaceMode(), fluent::dialogs_flyouts::CoachMark::SameWindowSurface);
+    EXPECT_EQ(coach->parentWidget(), &window);
+    EXPECT_EQ(coach->windowType(), Qt::Widget);
     window.onThemeUpdated();
     QApplication::processEvents();
     EXPECT_FALSE(window.isChromeInteractive());

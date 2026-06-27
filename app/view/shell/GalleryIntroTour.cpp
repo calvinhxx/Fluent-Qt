@@ -29,7 +29,7 @@ namespace {
 constexpr int kCardWidth = 330;
 constexpr int kCardHeight = 168;
 constexpr double kDimStrength = 0.40;
-constexpr int kSpotlightPadding = 3;  // breathing room around the highlighted target
+constexpr int kSpotlightPadding = 1;  // tight breathing room around the highlighted target
 constexpr int kSpotlightRadius = 8;   // rounded corners of the cut-out
 }  // namespace
 
@@ -46,9 +46,10 @@ void GalleryIntroTour::build()
 
     QWidget* win = m_host->window();
 
-    // Dim = a SmokeOverlay child of the app window. Alone in the window it composites stably (a sibling
-    // card would make it flicker), and it blocks clicks to the app. zh_CN: 压暗 = app 窗口的 SmokeOverlay
-    // 子级。单独存在时稳定合成(若有同级卡片会闪),并拦截 app 点击。
+    // Dim = a SmokeOverlay child of the app window. The CoachMark is another same-window child raised
+    // above it, so the startup tour scales with the app instead of as a separate tool window.
+    // zh_CN: 压暗 = app 窗口的 SmokeOverlay 子级。CoachMark 是另一个同窗口子级并置于其上方，
+    // 因此启动引导会随 app 一起缩放，而不是作为独立工具窗口分开合成。
     m_scrim = new SmokeOverlay(win);
     m_scrim->setObjectName(QStringLiteral("GalleryIntroTour.Scrim"));
     QColor dim(0, 0, 0);
@@ -56,7 +57,7 @@ void GalleryIntroTour::build()
     m_scrim->setColor(dim);
     m_scrim->setProgress(0.0);
 
-    m_card = new CoachMark(win);
+    m_card = new CoachMark(win, CoachMark::SameWindowSurface);
     m_card->setCardSize(QSize(kCardWidth, kCardHeight));
 
     auto* host = m_card->contentHost();
