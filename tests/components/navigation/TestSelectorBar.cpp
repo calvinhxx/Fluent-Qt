@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <utility>
+
 #include <QApplication>
+#include <QImage>
 #include <QPalette>
 #include <QSignalSpy>
 #include <QTest>
@@ -8,6 +12,7 @@
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/navigation/SelectorBar.h"
 #include "components/navigation/StackContentHost.h"
@@ -473,3 +478,94 @@ TEST_F(SelectorBarTest, VisualCheck)
     window->show();
     qApp->exec();
 }
+
+// Headless render coverage for the brand-specific item treatments. Each case sets a
+// (design language, theme) pair on the global ThemeRegistry / FluentElement, grabs the SelectorBar
+// to a QImage, and asserts it renders without crashing and actually paints content. Globals are
+// reset in TearDown so a brand/theme never leaks into the other suites.
+// zh_CN: 品牌专属条目绘制的无头渲染覆盖。每个用例设置一对(设计语言, 主题)到全局 ThemeRegistry /
+// FluentElement，将 SelectorBar 抓取为 QImage，断言无崩溃且确有绘制内容。TearDown 中重置全局，
+// 避免品牌/主题泄漏到其它套件。
+class SelectorBarDesignLanguageTest
+    : public ::testing::TestWithParam<std::pair<fluent::FluentElement::DesignLanguage,
+                                                fluent::FluentElement::Theme>> {
+protected:
+    void SetUp() override
+    {
+        const auto [lang, theme] = GetParam();
+        fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+        fluent::FluentElement::setTheme(theme);
+    }
+
+    void TearDown() override
+    {
+        // CRITICAL: reset globals so other suites see Fluent + Light. zh_CN: 关键：重置全局，使其它套件回到 Fluent + Light。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static SelectorBar* makeSelector()
+    {
+        auto* selector = new SelectorBar();
+        selector->addItem(QStringLiteral("All"));
+        selector->addItem(QStringLiteral("Unread"));
+        selector->addItem(QStringLiteral("Flagged"));
+        selector->setSelectedIndex(1);
+        selector->resize(360, 40);
+        return selector;
+    }
+
+    // True if any pixel differs from the top-left background pixel (i.e. something was painted).
+    // zh_CN: 若有任一像素不同于左上角背景像素则为真（即确有绘制）。
+    static bool hasPaintedContent(const QImage& img)
+    {
+        if (img.isNull() || img.width() < 2 || img.height() < 2)
+            return false;
+        const QRgb background = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y) {
+            for (int x = 0; x < img.width(); ++x) {
+                if (img.pixel(x, y) != background)
+                    return true;
+            }
+        }
+        return false;
+    }
+};
+
+TEST_P(SelectorBarDesignLanguageTest, RendersItemsWithoutCrashingAndPaintsContent)
+{
+    std::unique_ptr<SelectorBar> selector(makeSelector());
+
+    QImage img = selector->grab().toImage();
+    ASSERT_FALSE(img.isNull());
+    EXPECT_EQ(img.width(), 360);
+    EXPECT_EQ(img.height(), 40);
+    EXPECT_TRUE(hasPaintedContent(img)) << "Expected the SelectorBar to paint labels/segment/indicator.";
+}
+
+TEST_P(SelectorBarDesignLanguageTest, ChangingSelectionRepaintsItems)
+{
+    std::unique_ptr<SelectorBar> selector(makeSelector());
+
+    const QImage first = selector->grab().toImage();
+    ASSERT_FALSE(first.isNull());
+
+    selector->setSelectedIndex(2);
+    const QImage second = selector->grab().toImage();
+    ASSERT_FALSE(second.isNull());
+
+    // Selection moved the accent label/indicator/segment, so the rendered image must change.
+    // zh_CN: 选中项移动了强调文字/指示条/段背景，渲染图像必须随之变化。
+    EXPECT_NE(first, second);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    AllDesignLanguagesAndThemes,
+    SelectorBarDesignLanguageTest,
+    ::testing::Values(
+        std::make_pair(fluent::FluentElement::DesignFluent, fluent::FluentElement::Light),
+        std::make_pair(fluent::FluentElement::DesignFluent, fluent::FluentElement::Dark),
+        std::make_pair(fluent::FluentElement::DesignMaterial, fluent::FluentElement::Light),
+        std::make_pair(fluent::FluentElement::DesignMaterial, fluent::FluentElement::Dark),
+        std::make_pair(fluent::FluentElement::DesignCupertino, fluent::FluentElement::Light),
+        std::make_pair(fluent::FluentElement::DesignCupertino, fluent::FluentElement::Dark)));

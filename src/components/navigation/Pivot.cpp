@@ -867,9 +867,80 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
     if (record.rect.isEmpty() || !isValidIndex(record.itemIndex))
         return;
     const Metrics currentMetrics = metrics();
+    const auto colors = themeColors();
+
+    // Branch the header treatment per brand, preserving DesignFluent exactly. M3 and macOS
+    // diverge from Fluent's neutral underline: M3 recolors the active label and rounds the
+    // accent indicator, macOS turns the active item into an accent-filled segment.
+    // zh_CN: 按品牌分支表头绘制，DesignFluent 保持原样。M3 与 macOS 偏离 Fluent 的中性下划线：
+    // M3 重新着色激活标签并圆化强调指示条，macOS 把激活项变为强调色填充段。
+    const DesignLanguage lang = themeDesignLanguage();
+    const bool isSelected = (record.itemIndex == m_selectedIndex);
+    const HitRecord hit{HitKind::Header, record.itemIndex};
+    const bool hovered = sameHit(m_hoveredHit, hit) || sameHit(m_pressedHit, hit);
+    const bool itemEnabled = isEnabled() && record.enabled;
+
+    // Theme-aware interaction veil: DARKENS light surfaces, LIGHTENS dark ones, so hover stays
+    // visible under both App themes. zh_CN: 主题感知交互薄层：浅色面变暗、深色面变亮，明暗主题下都可见。
+    const bool darkTheme = effectiveTheme() == Dark;
+    const auto veil = [darkTheme](int alpha) {
+        return darkTheme ? QColor(255, 255, 255, alpha) : QColor(0, 0, 0, alpha);
+    };
 
     painter.save();
-    const QColor textColorValue = headerTextColor(record.itemIndex);
+
+    // 1. Background affordances drawn BEHIND the label (state-layer veil / segment fill).
+    // zh_CN: 1. 绘制在标签下方的背景效果（state-layer 薄层 / 段背景填充）。
+    if (lang == DesignMaterial) {
+        // M3: a subtle primary state layer behind the hovered tab, kept WITHIN the item bounds
+        // (no clipped halos). hover 8% (0x14) / pressed 10% (0x1A). zh_CN: M3：悬停标签下方的轻量
+        // primary state layer，限制在条目范围内（无溢出光晕）。hover 8%(0x14)/pressed 10%(0x1A)。
+        if (itemEnabled && hovered) {
+            QColor stateLayer = colors.accentDefault;
+            stateLayer.setAlpha(sameHit(m_pressedHit, hit) ? 0x1A : 0x14);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(stateLayer);
+            painter.drawRect(record.rect);
+        }
+    } else if (lang == DesignCupertino) {
+        // macOS: render the header as a segmented control — the selected item gets an
+        // accent-filled rounded segment behind its label (radius ~6). Hover on an inactive item
+        // gets a faint theme-aware veil segment. zh_CN: macOS：把表头渲染为分段控件——选中项标签下方为
+        // 强调色填充圆角段（圆角约 6）。悬停未选中项时为淡淡的主题感知薄层段。
+        const QRect segment = record.rect.adjusted(2, 2, -2, -2);
+        if (isSelected && record.enabled && segment.isValid()) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(colors.accentDefault);
+            painter.drawRoundedRect(segment, 6, 6);
+        } else if (itemEnabled && hovered && segment.isValid()) {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(veil(darkTheme ? 0x1C : 0x14));
+            painter.drawRoundedRect(segment, 6, 6);
+        }
+    }
+
+    // 2. Resolve the label/icon color per language. zh_CN: 2. 按语言确定标签/图标颜色。
+    QColor textColorValue;
+    if (!itemEnabled) {
+        textColorValue = colors.textDisabled;
+    } else if (lang == DesignMaterial) {
+        // Active = primary (accent) text; inactive = on-surface-variant (textSecondary).
+        // zh_CN: 激活=primary(强调)文字；未激活=on-surface-variant(textSecondary)。
+        textColorValue = isSelected ? colors.accentDefault : colors.textSecondary;
+    } else if (lang == DesignCupertino) {
+        // Selected segment carries on-accent (white) text; inactive items use the normal text
+        // colors (primary when hovered, secondary at rest). zh_CN: 选中段为 on-accent(白色)文字；
+        // 未选中项用普通文字色（悬停时 primary，静息时 secondary）。
+        if (isSelected)
+            textColorValue = colors.textOnAccent;
+        else
+            textColorValue = hovered ? colors.textPrimary : colors.textSecondary;
+    } else {
+        // DesignFluent (default): unchanged neutral treatment. zh_CN: 默认 Fluent，中性处理不变。
+        textColorValue = headerTextColor(record.itemIndex);
+    }
+
+    // 3. Paint the icon and label. zh_CN: 3. 绘制图标与标签。
     if (!record.iconRect.isEmpty()) {
         painter.setFont(iconFont(currentMetrics.iconSize));
         painter.setPen(textColorValue);
@@ -879,11 +950,25 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
     painter.setPen(textColorValue);
     painter.drawText(record.textRect, Qt::AlignVCenter | Qt::AlignLeft, m_items.at(record.itemIndex).header);
 
-    if (record.itemIndex == m_selectedIndex && record.enabled && record.indicatorRect.isValid()) {
+    // 4. Selection indicator. macOS uses the filled segment above instead of an underline.
+    // zh_CN: 4. 选中指示条。macOS 用上面的填充段代替下划线。
+    if (lang != DesignCupertino && record.itemIndex == m_selectedIndex && record.enabled && record.indicatorRect.isValid()) {
+        QRect indicator = record.indicatorRect;
+        if (lang == DesignMaterial) {
+            // M3 §5 tabs: a rounded primary bar ~3 dp tall spanning roughly the label width with
+            // small rounded ends. Tighten the indicator to hug the label rather than the padded
+            // item, and fully round the ends. zh_CN: M3 §5 tabs：圆角 primary 条，约 3dp 高，宽度约等
+            // 于标签，两端小圆角。将指示条收紧到贴合标签而非带内边距的条目，并完全圆化两端。
+            const int textWidth = QFontMetrics(itemFont()).horizontalAdvance(m_items.at(record.itemIndex).header);
+            const int labelWidth = qMin(indicator.width(), qMax(currentMetrics.minHeaderWidth / 2, textWidth));
+            const int cx = record.rect.center().x();
+            indicator = QRect(cx - labelWidth / 2, indicator.top(), labelWidth, indicator.height());
+        }
         painter.setPen(Qt::NoPen);
-        painter.setBrush(themeColors().accentDefault);
-        painter.drawRoundedRect(record.indicatorRect,
-                                ::CornerRadius::Indicator, ::CornerRadius::Indicator);
+        painter.setBrush(colors.accentDefault);
+        const qreal radius = (lang == DesignMaterial) ? (indicator.height() / 2.0)
+                                                      : ::CornerRadius::Indicator;
+        painter.drawRoundedRect(indicator, radius, radius);
     }
     painter.restore();
 }
