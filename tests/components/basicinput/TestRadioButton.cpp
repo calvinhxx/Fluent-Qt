@@ -8,6 +8,7 @@
 #include "components/basicinput/RadioButton.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -185,6 +186,84 @@ TEST_F(RadioButtonTest, ThemeUpdateDoesNotCrash) {
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     rb.onThemeUpdated();
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+}
+
+// ── Design-language × theme compatibility ────────────────────────────────────
+//
+// RadioButton paints a per-brand treatment (Fluent / Material 3 / macOS) under each
+// App theme (Light / Dark). This suite grabs the rendered control across the full
+// {language × theme × checked} matrix to lock in that every combination paints, never
+// crashes, and visibly changes when checked. Design language + theme are GLOBAL state,
+// so TearDown restores the built-in defaults.
+// zh_CN: RadioButton 按品牌(Fluent / Material 3 / macOS)在明暗主题下分支绘制。本套件
+// 遍历 {设计语言 × 主题 × 选中} 全矩阵抓取渲染结果,确保每种组合都能绘制、不崩溃,且选中后
+// 画面可见变化。设计语言与主题是全局状态,故 TearDown 恢复内置默认值。
+
+class RadioButtonDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so other suites start clean.
+        // zh_CN: 设计语言与主题是全局状态——重置以保证其它套件从干净状态开始。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Grab the control as an image and assert basic validity. zh_CN: 抓取控件为图像并校验基础有效性。
+    static QImage grabRadio(bool checked) {
+        RadioButton rb("Option");
+        rb.setChecked(checked);
+        rb.resize(rb.sizeHint().expandedTo(QSize(200, 32)));
+        return rb.grab().toImage();
+    }
+};
+
+TEST_F(RadioButtonDesignLanguageTest, AllLanguagesThemesPaintAndDiffer) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+            fluent::FluentElement::setTheme(theme);
+
+            QImage unchecked = grabRadio(false);
+            QImage checked = grabRadio(true);
+
+            // No crash + valid images. zh_CN: 不崩溃 + 图像有效。
+            ASSERT_FALSE(unchecked.isNull()) << "lang=" << lang << " theme=" << theme;
+            ASSERT_FALSE(checked.isNull()) << "lang=" << lang << " theme=" << theme;
+            EXPECT_GT(unchecked.width(), 0) << "lang=" << lang << " theme=" << theme;
+            EXPECT_GT(unchecked.height(), 0) << "lang=" << lang << " theme=" << theme;
+            EXPECT_EQ(checked.size(), unchecked.size()) << "lang=" << lang << " theme=" << theme;
+
+            // Checked must paint content: some pixel differs from the top-left background.
+            // zh_CN: 选中态必须绘制内容:存在与左上角背景不同的像素。
+            const QRgb bg = checked.pixel(0, 0);
+            bool paintedContent = false;
+            for (int y = 0; y < checked.height() && !paintedContent; ++y) {
+                for (int x = 0; x < checked.width(); ++x) {
+                    if (checked.pixel(x, y) != bg) {
+                        paintedContent = true;
+                        break;
+                    }
+                }
+            }
+            EXPECT_TRUE(paintedContent)
+                << "checked painted nothing for lang=" << lang << " theme=" << theme;
+
+            // Regression lock: checked image differs from unchecked (same lang/theme).
+            // zh_CN: 回归锁:同一语言/主题下,选中态图像与未选中态不同。
+            EXPECT_NE(checked, unchecked)
+                << "checked == unchecked for lang=" << lang << " theme=" << theme;
+        }
+    }
 }
 
 // ── VisualCheck ──────────────────────────────────────────────────────────────

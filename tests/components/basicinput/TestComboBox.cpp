@@ -21,9 +21,11 @@
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/QMLPlus.h"
 #include "design/Typography.h"
 
+using namespace fluent;
 using namespace fluent::basicinput;
 
 // ─── FluentTestWindow ────────────────────────────────────────────────────────
@@ -538,6 +540,118 @@ TEST_F(ComboBoxTest, PopupIndicatorAndTextShareOpticalCenterline) {
         + metrics.tightBoundingRect(index.data(Qt::DisplayRole).toString()).center().y();
 
     EXPECT_NEAR(listView->selectedIndicatorRect().center().y(), textInkCenter, 1.0);
+}
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// ComboBox paints a per-brand CLOSED FIELD (Fluent / Material 3 / macOS) under each App
+// theme (Light / Dark). This suite grabs the rendered control across the full
+// {language × theme} matrix to lock in that every combination paints, never crashes, and
+// actually puts ink on the surface. Design language + theme are GLOBAL state, so TearDown
+// restores the built-in defaults.
+// zh_CN: ComboBox 按品牌(Fluent / Material 3 / macOS)在明暗主题下分支绘制闭合字段。本套件
+// 遍历 {设计语言 × 主题} 全矩阵抓取渲染结果,确保每种组合都能绘制、不崩溃且确有像素落在表面上。
+// 设计语言与主题是全局状态,故 TearDown 恢复内置默认值。
+
+class ComboBoxDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so other suites start clean.
+        // zh_CN: 设计语言与主题是全局状态——重置以保证其它套件从干净状态开始。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a populated ComboBox, size it, and grab it as an image. zh_CN: 构建带选项的 ComboBox,设定尺寸并抓取为图像。
+    static QImage grabCombo() {
+        ComboBox cb;
+        cb.addItems({"Yellow", "Green", "Blue", "Red"});
+        cb.setCurrentIndex(2);
+        cb.resize(200, 36);
+        return cb.grab().toImage();
+    }
+};
+
+TEST_F(ComboBoxDesignLanguageTest, AllLanguagesThemesPaintAndPutInkOnSurface) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+            fluent::FluentElement::setTheme(theme);
+
+            QImage img = grabCombo();
+
+            // No crash + valid image of the requested size. zh_CN: 不崩溃 + 图像有效且尺寸正确。
+            ASSERT_FALSE(img.isNull()) << "lang=" << lang << " theme=" << theme;
+            EXPECT_GT(img.width(), 0) << "lang=" << lang << " theme=" << theme;
+            EXPECT_GT(img.height(), 0) << "lang=" << lang << " theme=" << theme;
+
+            // Painted content: some pixel differs from the top-left background pixel
+            // (border, text, or chevron all qualify). zh_CN: 已绘制内容:存在与左上角背景不同的像素
+            // (边框、文字或箭头均可满足)。
+            const QRgb bg = img.pixel(0, 0);
+            bool paintedContent = false;
+            for (int y = 0; y < img.height() && !paintedContent; ++y) {
+                for (int x = 0; x < img.width(); ++x) {
+                    if (img.pixel(x, y) != bg) {
+                        paintedContent = true;
+                        break;
+                    }
+                }
+            }
+            EXPECT_TRUE(paintedContent)
+                << "ComboBox painted nothing for lang=" << lang << " theme=" << theme;
+        }
+    }
+}
+
+// Regression for the "black ComboBox at rest under Material/macOS" bug: an unset `QColor stateLayer;`
+// is INVALID yet QColor::alpha() returns 255 (Qt stores invalid alpha as 0xFFFF), so a bare
+// `stateLayer.alpha() > 0` guard fired in the resting (no hover/press/popup) state-layer block and
+// `setBrush(invalidColor)` painted the whole field SOLID BLACK. The guard must also test isValid().
+// zh_CN: 「静息态 Material/macOS ComboBox 变黑」回归:未赋值的 QColor 虽无效,alpha() 却返回 255,
+// 裸 alpha()>0 在静息命中,setBrush(无效色) 把字段整片涂成不透明黑;守卫必须同时判 isValid()。
+TEST_F(ComboBoxDesignLanguageTest, RestStateHasNoOpaqueBlackField) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+            fluent::FluentElement::setTheme(theme);
+
+            // grabCombo() builds a fresh ComboBox that was never hovered/pressed/opened → REST state,
+            // exactly the condition that exposed the bug. zh_CN: grabCombo() 构建从未交互的 ComboBox=静息态。
+            QImage img = grabCombo();
+            ASSERT_FALSE(img.isNull()) << "lang=" << lang << " theme=" << theme;
+
+            const QColor c = img.pixelColor(img.width() / 2, img.height() / 2);
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            // The invalid-veil signature is an OPAQUE, near-#000 fill. Real surfaces are either
+            // transparent (M3 rest) or a light/dark-gray bezel (macOS) — never opaque pure black.
+            // zh_CN: 无效薄层特征=不透明近黑填充;真实表面要么透明(M3 静息),要么浅/深灰 bezel(macOS),绝非不透明纯黑。
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "ComboBox painted an opaque black field at rest for lang=" << lang
+                << " theme=" << theme << " rgba=(" << c.red() << "," << c.green() << ","
+                << c.blue() << "," << c.alpha() << ")";
+        }
+    }
 }
 
 // ─── VisualCheck ─────────────────────────────────────────────────────────────
