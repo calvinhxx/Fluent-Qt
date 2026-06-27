@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <QAbstractItemView>
 #include <QApplication>
 #include <QEvent>
 #include <QElapsedTimer>
@@ -15,6 +16,8 @@
 #include <QScrollBar>
 #include <QStringList>
 #include <QTest>
+#include <QUrl>
+#include <QVector>
 #include <QtGlobal>
 
 #include "components/basicinput/Button.h"
@@ -280,6 +283,44 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
     ASSERT_NE(page->titleLabel(), nullptr);
     EXPECT_EQ(page->titleLabel()->text(), QStringLiteral("Home"));
     EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
+}
+
+TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithDesignResourceCards)
+{
+    GalleryWindow window;
+
+    auto* linkStrip = window.findChild<QAbstractItemView*>(
+        QStringLiteral("galleryHomeHeroLinksView"));
+    ASSERT_NE(linkStrip, nullptr);
+    ASSERT_NE(linkStrip->model(), nullptr);
+    ASSERT_GE(linkStrip->model()->rowCount(), 3);
+
+    struct ExpectedLink {
+        QString title;
+        QUrl url;
+        QString imagePath;
+    };
+    const QVector<ExpectedLink> expectedLinks{
+        {QStringLiteral("Design"),
+         QUrl(QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit")),
+         QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png")},
+        {QStringLiteral("macOS 27 Community"),
+         QUrl(QStringLiteral("https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996&p=f&t=ObUJ8FERQ0lP3rIa-0")),
+         QStringLiteral(":/app/assets/home_header_tiles/Header-macOS27.png")},
+        {QStringLiteral("Material 3 Design Kit"),
+         QUrl(QStringLiteral("https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=11-1833&p=f&t=I3de5l3oPl1YJyCT-0")),
+         QStringLiteral(":/app/assets/home_header_tiles/Header-Material3.png")},
+    };
+    constexpr int kHomeLinkUrlRole = Qt::UserRole + 3;
+    constexpr int kHomeLinkImageRole = Qt::UserRole + 4;
+
+    for (int row = 0; row < expectedLinks.size(); ++row) {
+        const QModelIndex index = linkStrip->model()->index(row, 0);
+        ASSERT_TRUE(index.isValid()) << row;
+        EXPECT_EQ(index.data(Qt::DisplayRole).toString(), expectedLinks.at(row).title);
+        EXPECT_EQ(index.data(kHomeLinkUrlRole).toUrl(), expectedLinks.at(row).url);
+        EXPECT_EQ(index.data(kHomeLinkImageRole).toString(), expectedLinks.at(row).imagePath);
+    }
 }
 
 TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)

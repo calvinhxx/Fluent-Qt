@@ -6,6 +6,8 @@
         <file>app/assets/winui-gallery-app-icon.png</file>
         <file>app/assets/home_header_tiles/GitHub-Mark.png</file>
         <file>app/assets/home_header_tiles/Header-Toolkit.png</file>
+        <file>app/assets/home_header_tiles/Header-Material3.png</file>
+        <file>app/assets/home_header_tiles/Header-macOS27.png</file>
         <file>app/assets/home_header_tiles/Header-WinUI.png</file>
         <file>app/assets/home_header_tiles/Header-WindowsDesign.png</file>
         <file>app/assets/home_header_tiles/Qt-Logo.png</file>
