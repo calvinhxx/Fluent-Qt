@@ -690,9 +690,94 @@ bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTex
     return changed;
 }
 
+bool NumberBox::paintBrandInputFrame(QPainter& painter) {
+    const auto lang = themeDesignLanguage();
+    if (lang == DesignFluent) return false;
+
+    const auto colors = themeColors();
+    const QRectF base = QRectF(inputRect());
+    const bool hovered = m_hovered || m_spinnerHovered;
+
+    if (lang == DesignMaterial) {
+        // Material 3 outlined field: transparent fill, 1dp outline thickening to a 2dp accent outline on
+        // focus, inset by half the stroke so the thick ring stays in bounds. zh_CN: M3 描边字段:透明填充,
+        // 1dp 描边聚焦时加粗为 2dp accent 描边,按描边一半内缩以保证粗环不越界。
+        QColor outlineColor;
+        qreal outlineWidth = 1.0;
+        if (!isEnabled()) {
+            outlineColor = colors.strokeDivider;
+        } else if (m_focused) {
+            outlineColor = colors.accentDefault;
+            outlineWidth = 2.0;
+        } else {
+            outlineColor = colors.strokeStrong;
+        }
+        const qreal inset = outlineWidth / 2.0;
+        const qreal r = themeRadius().control;
+        QPainterPath framePath;
+        framePath.addRoundedRect(base.adjusted(inset, inset, -inset, -inset), r, r);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(outlineColor, outlineWidth));
+        painter.drawPath(framePath);
+        return true;
+    }
+
+    // DesignCupertino: small-radius hairline rect; accent ring + soft glow on focus, drawn inset so it
+    // never clips. zh_CN: macOS:小圆角发丝矩形;聚焦时绘制内缩的强调环 + 柔和辉光,绝不被裁切。
+    const qreal r = 6.0;
+
+    // Bezel fill (docs §4): restrained near-white / white@10% surface, the same opaque bezel as
+    // LineEdit/ComboBox so the field reads as a raised control. zh_CN: bezel 填充(文档 §4):与 LineEdit/
+    // ComboBox 同款不透明 bezel,使字段读作凸起控件。
+    {
+        const QColor fill = !isEnabled() ? colors.controlDisabled : colors.bgLayerAlt;
+        QPainterPath fillPath;
+        fillPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(fill);
+        painter.drawPath(fillPath);
+    }
+
+    if (isEnabled() && m_focused) {
+        QColor glow = colors.accentDefault;
+        glow.setAlpha(0x40);
+        QPainterPath glowPath;
+        glowPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
+        painter.setBrush(Qt::NoBrush);
+        painter.setPen(QPen(glow, 2.0));
+        painter.drawPath(glowPath);
+
+        QPainterPath ringPath;
+        ringPath.addRoundedRect(base.adjusted(1.5, 1.5, -1.5, -1.5),
+                                qMax<qreal>(0.0, r - 1.0), qMax<qreal>(0.0, r - 1.0));
+        painter.setPen(QPen(colors.accentDefault, 2.0));
+        painter.drawPath(ringPath);
+        return true;
+    }
+
+    QColor hairline = !isEnabled() ? colors.strokeDivider
+                                   : (hovered ? colors.strokeStrong : colors.strokeDefault);
+    QPainterPath hairPath;
+    hairPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(hairline, 1.0));
+    painter.drawPath(hairPath);
+    return true;
+}
+
 void NumberBox::paintInputFrame(QPainter& painter) {
     const auto colors = themeColors();
     const QRectF frameRect = QRectF(inputRect()).adjusted(0.5, 0.5, -0.5, -0.5);
+
+    // Brand-aware frame for the INPUT ROW. The spinner buttons are fluent::RepeatButton, so they pick up
+    // the design language automatically; this keeps the field shape they sit in from looking Fluent under
+    // Material/macOS. Mirrors LineEdit::paintFrame's Material/Cupertino branches but scoped to inputRect()
+    // (NumberBox suppresses LineEdit's full-rect frame so its header row stays unboxed). DesignFluent falls
+    // through to the original WinUI path below, byte-for-byte. zh_CN: 输入行的品牌感知边框。步进按钮是
+    // fluent::RepeatButton,会自动跟随设计语言;此处让它们所处的字段形状在 Material/macOS 下不再显 Fluent。
+    // 镜像 LineEdit::paintFrame 的 Material/Cupertino 分支,但限定在 inputRect()(NumberBox 抑制了 LineEdit 的
+    // 整体边框,使标题行不被框住)。DesignFluent 落到下方原 WinUI 路径,逐字节不变。
+    if (paintBrandInputFrame(painter)) return;
 
     QColor bgColor;
     QColor borderColor;

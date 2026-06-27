@@ -187,6 +187,7 @@ private:
     void setTextWithReason(const QString& value, TextChangeReason reason, bool emitWhenUnchanged = false);
 
     void paintInputFrame(QPainter& painter);
+    bool paintBrandInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
 
     QStringList m_suggestions;
