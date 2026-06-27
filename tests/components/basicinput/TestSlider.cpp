@@ -12,6 +12,9 @@
 #include "components/textfields/Label.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
+
+#include <QImage>
 
 using namespace fluent::basicinput;
 using namespace fluent::textfields;
@@ -261,5 +264,109 @@ TEST_F(SliderTest, VisualSliderGalleryLike) {
 
     scrollArea->show();
     qApp->exec();
+}
+
+// ── Design-language compatibility (headless) ─────────────────────────────────
+// Renders the Slider across every brand design language × theme and asserts it
+// paints valid, non-empty content without crashing. These names deliberately
+// avoid "VisualCheck" so they run under --gtest_filter=-*VisualCheck*.
+// zh_CN: 在每种品牌设计语言 × 主题下渲染 Slider,断言其能无崩溃地绘出有效、非空内容。
+// 命名刻意避开 "VisualCheck",以便在 --gtest_filter=-*VisualCheck* 下运行。
+
+class SliderDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so we never leak state into
+        // sibling tests. zh_CN: 设计语言与主题为全局状态——务必复位,避免污染其它测试。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Render a horizontal slider under the given lang/theme and return the grabbed image.
+    // zh_CN: 在指定语言/主题下渲染水平滑块并返回截取的图像。
+    static QImage renderSlider(fluent::FluentElement::DesignLanguage lang,
+                               fluent::FluentElement::Theme theme,
+                               int value) {
+        fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+        fluent::FluentElement::setTheme(theme);
+
+        Slider s(Qt::Horizontal);
+        s.setRange(0, 100);
+        s.setValue(value);
+        s.resize(200, 40);
+        return s.grab().toImage();
+    }
+
+    // True if any pixel differs from the top-left (background) pixel, i.e. the
+    // track/handle actually painted. zh_CN: 若有任一像素不同于左上角(背景)像素,
+    // 即说明轨道/手柄确实有绘制内容。
+    static bool hasPaintedContent(const QImage& img) {
+        if (img.isNull() || img.width() < 2 || img.height() < 2) return false;
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y) {
+            for (int x = 0; x < img.width(); ++x) {
+                if (img.pixel(x, y) != bg) return true;
+            }
+        }
+        return false;
+    }
+};
+
+TEST_F(SliderDesignLanguageTest, RendersContentForEveryLanguageAndTheme) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            QImage img = renderSlider(lang, theme, 50); // mid value. zh_CN: 中间值。
+            EXPECT_FALSE(img.isNull())
+                << "null image for lang=" << static_cast<int>(lang)
+                << " theme=" << static_cast<int>(theme);
+            EXPECT_EQ(img.width(), 200);
+            EXPECT_EQ(img.height(), 40);
+            EXPECT_TRUE(hasPaintedContent(img))
+                << "no painted content for lang=" << static_cast<int>(lang)
+                << " theme=" << static_cast<int>(theme);
+        }
+    }
+}
+
+TEST_F(SliderDesignLanguageTest, RendersAtRangeExtremesWithoutCrash) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            // Minimum value. zh_CN: 最小值。
+            QImage atMin = renderSlider(lang, theme, 0);
+            EXPECT_FALSE(atMin.isNull());
+            EXPECT_EQ(atMin.size(), QSize(200, 40));
+            EXPECT_TRUE(hasPaintedContent(atMin))
+                << "no painted content at min for lang=" << static_cast<int>(lang)
+                << " theme=" << static_cast<int>(theme);
+
+            // Maximum value. zh_CN: 最大值。
+            QImage atMax = renderSlider(lang, theme, 100);
+            EXPECT_FALSE(atMax.isNull());
+            EXPECT_EQ(atMax.size(), QSize(200, 40));
+            EXPECT_TRUE(hasPaintedContent(atMax))
+                << "no painted content at max for lang=" << static_cast<int>(lang)
+                << " theme=" << static_cast<int>(theme);
+        }
+    }
 }
 

@@ -150,17 +150,35 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
     painter.setFont(iconFont);
     const qreal pressEffect = qSin(m_pressProgress * M_PI);
 
-    // Icon color reuses Button's semantic colors with a subtle pressed tweak.
-    // zh_CN: 图标颜色复用 Button 的语义色，按压时做细微变化。
+    // Icon color reuses Button's semantic colors with a subtle pressed tweak. The chevron tint is
+    // branched per design language so the trailing arrow reads correctly on each brand's surface
+    // (Button::paintEvent already drew that surface in the matching language above). Fluent is the
+    // UNCHANGED default. zh_CN: 图标颜色复用 Button 的语义色,按压时做细微变化。下拉箭头按设计语言分支着色,
+    // 使其在各品牌表面(上方 Button::paintEvent 已按对应语言绘制)上都清晰可读。Fluent 为默认且保持不变。
     const auto& colors = themeColors();
+    // Filled surface matches Button's rule (Accent, or a checked Standard): the chevron then needs the
+    // on-accent color to stay legible; otherwise it follows the brand's neutral/secondary text.
+    // zh_CN: 填充表面与 Button 规则一致(Accent 或选中的 Standard):此时箭头需用 on-accent 色才清晰;否则随品牌的中性/次要文字色。
+    const bool filled = (fluentStyle() == Accent) || (isChecked() && fluentStyle() == Standard);
+    const DesignLanguage lang = themeDesignLanguage();
     QColor textColor;
     if (!isEnabled()) {
         textColor = colors.textDisabled;
     } else {
-        // All enabled states share the dimming animation: accent buttons use
-        // textOnAccent, standard buttons textPrimary.
-        // zh_CN: 启用态统一采用“变暗”动画——Accent 用 textOnAccent，普通按钮用 textPrimary。
-        textColor = (fluentStyle() == Accent) ? colors.textOnAccent : colors.textPrimary;
+        if (lang == DesignMaterial) {
+            // Material 3: trailing dropdown arrow in on-surface-variant (≈ textSecondary) for
+            // outlined/text styles; on-accent over the filled primary surface.
+            // zh_CN: Material 3:描边/文字样式的下拉箭头用 on-surface-variant(≈ textSecondary);填充主表面上用 on-accent。
+            textColor = filled ? colors.textOnAccent : colors.textSecondary;
+        } else if (lang == DesignCupertino) {
+            // macOS pull-down button: single chevron tinted to read on the neutral bezel (or on-accent
+            // over the filled variant). zh_CN: macOS 下拉按钮:单个箭头,在中性 bezel 上着色(填充变体用 on-accent)。
+            textColor = filled ? colors.textOnAccent : colors.textPrimary;
+        } else {
+            // DesignFluent (default): unchanged — accent buttons use textOnAccent, others textPrimary.
+            // zh_CN: 默认 Fluent,保持不变——Accent 用 textOnAccent,其它用 textPrimary。
+            textColor = (fluentStyle() == Accent) ? colors.textOnAccent : colors.textPrimary;
+        }
         if (pressEffect > 0.0) {
             // 1.0 → 0.5 for a clear pressed feel. zh_CN: 1.0 → 0.5，明显的按压感。
             qreal alphaFactor = 1.0 - 0.5 * pressEffect;

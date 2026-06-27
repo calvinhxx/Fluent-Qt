@@ -1,5 +1,6 @@
 #include "Button.h"
 
+#include <QLinearGradient>
 #include <QPainterPath>
 
 namespace fluent::basicinput {
@@ -294,44 +295,131 @@ void Button::paintEvent(QPaintEvent*) {
     painter.setFont(font());
 
     bool checked = isChecked();
+    const DesignLanguage lang = themeDesignLanguage();
+    const bool filled = (m_style == Accent || (checked && m_style == Standard));
     QColor bgColor, textColor, borderColor;
-    // borderColor is the Fluent surface stroke; keyboard focus is painted by
-    // the separate focusVisual block below.
-    
-    // Accent style, or a checked button in Standard style. zh_CN: Accent 风格，或 Checked 状态的 Standard 风格。
-    if (m_style == Accent || (checked && m_style == Standard)) {
-        bgColor = colors.accentDefault;
-        textColor = colors.textOnAccent;
-        borderColor = colors.strokeStrong;
-        if (state == Hover) bgColor = colors.accentSecondary;
-        if (state == Pressed) {
-            bgColor = colors.accentTertiary;
-            borderColor = Qt::transparent; // Border flattens while pressed. zh_CN: 按下时边框扁平化。
+    // borderColor is the surface stroke; keyboard focus is painted by the separate focusVisual block.
+    QColor stateLayer;       // DesignMaterial: translucent overlay drawn over the fill. zh_CN: M3 叠加层。
+    bool pill = false;       // DesignMaterial: stadium-shaped buttons. zh_CN: M3 胶囊形。
+    bool useGradient = false; // DesignCupertino: vertical bezel gradient. zh_CN: macOS 纵向斜面渐变。
+    bool bezelShadow = false; // DesignCupertino: faint 1px lower-edge drop shadow on the neutral bezel. zh_CN: macOS:中性 bezel 底缘 1px 柔和投影。
+    QColor gradTop, gradBottom;
+    const auto withAlpha = [](QColor c, int a) { c.setAlpha(a); return c; };
+    // Theme-aware interaction veil: a translucent overlay that DARKENS light surfaces and LIGHTENS dark
+    // ones, so hover/press stay visible under both App themes (not just one). zh_CN: 主题感知交互薄层:浅色面
+    // 变暗、深色面变亮,使 hover/press 在明暗两主题下都可见(而非只在某一种)。
+    const bool darkTheme = effectiveTheme() == Dark;
+    const auto veil = [darkTheme](int alpha) {
+        return darkTheme ? QColor(255, 255, 255, alpha) : QColor(0, 0, 0, alpha);
+    };
+
+    if (lang == DesignMaterial) {
+        // Material 3: filled buttons are stadium-shaped and stay saturated; interaction is a translucent
+        // "state layer" of the on-color over the base, not a fill swap. The on-color veil adapts per theme
+        // on its own (white over a dark accent, dark over a light one). Standard→outlined, Subtle→text.
+        // zh_CN: Material 3:填充按钮为胶囊形且保持饱和;交互用「state layer」(on 色半透明叠加)而非换填充。
+        // on 色薄层自动随主题适配(深色强调色上覆白、浅色强调色上覆深)。Standard→描边,Subtle→文字按钮。
+        pill = true;
+        if (filled) {
+            bgColor = colors.accentDefault;
+            textColor = colors.textOnAccent;
+            borderColor = Qt::transparent;
+            // §4 state layer: on-color veil at hover 8% (0x14) / pressed 10% (0x1A). zh_CN: §4 state layer:on 色薄层 hover 8%(0x14)/pressed 10%(0x1A)。
+            if (state == Hover) stateLayer = withAlpha(colors.textOnAccent, 0x14);        // 8%
+            else if (state == Pressed) stateLayer = withAlpha(colors.textOnAccent, 0x1A); // 10%
+        } else {
+            bgColor = Qt::transparent;
+            textColor = colors.accentDefault;
+            // §5: Outlined uses the 1 dp `outline` stroke (strokeStrong), not the lighter outline-variant. zh_CN: §5:描边按钮用 1dp outline 描边(strokeStrong),而非更浅的 outline-variant。
+            borderColor = (m_style == Subtle) ? QColor(Qt::transparent) : colors.strokeStrong;
+            // §4 state layer: accent (primary) veil at hover 8% (0x14) / pressed 10% (0x1A). zh_CN: §4 state layer:accent 色薄层 hover 8%(0x14)/pressed 10%(0x1A)。
+            if (state == Hover) stateLayer = withAlpha(colors.accentDefault, 0x14);        // 8%
+            else if (state == Pressed) stateLayer = withAlpha(colors.accentDefault, 0x1A); // 10%
         }
-    } else if (m_style == Subtle) {
-        bgColor = Qt::transparent;
-        textColor = (checked) ? colors.accentDefault : colors.textPrimary;
-        borderColor = Qt::transparent;
-        if (state == Hover) bgColor = colors.subtleSecondary;
-        if (state == Pressed) bgColor = colors.subtleTertiary;
-        if (checked && state == Rest) bgColor = colors.subtleSecondary; // Checked rest state keeps a subtle fill. zh_CN: 选中态默认带一点背景。
+    } else if (lang == DesignCupertino) {
+        // macOS: vertical bezel gradient + hairline border. The accent button modulates its OWN gradient
+        // (brighten on hover, darken on press — visible in both themes because it tracks the accent hue,
+        // not the surface); the neutral bezel and Subtle use the theme-aware veil. zh_CN: macOS 纵向斜面渐变
+        // + 发丝描边。Accent 调制自身渐变(hover 提亮、press 压暗,因基于强调色而非表面,明暗都可见);中性 bezel
+        // 与 Subtle 用主题感知薄层。
+        if (m_style == Subtle) {
+            bgColor = Qt::transparent;
+            textColor = checked ? colors.accentDefault : colors.textPrimary;
+            borderColor = Qt::transparent;
+            if (state == Hover) bgColor = veil(darkTheme ? 0x14 : 0x12);
+            else if (state == Pressed) bgColor = veil(darkTheme ? 0x2C : 0x24);
+        } else if (filled) {
+            useGradient = true;
+            textColor = colors.textOnAccent;
+            borderColor = colors.accentDefault.darker(128);
+            if (state == Pressed) {
+                gradTop = colors.accentDefault.darker(108);
+                gradBottom = colors.accentDefault.darker(120);
+            } else if (state == Hover) {
+                gradTop = colors.accentDefault.lighter(124);
+                gradBottom = colors.accentDefault.lighter(108);
+            } else {
+                gradTop = colors.accentDefault.lighter(113);
+                gradBottom = colors.accentDefault;
+            }
+        } else {
+            useGradient = true;
+            gradTop = colors.bgLayerAlt.lighter(106);
+            gradBottom = colors.bgLayerAlt.darker(105);
+            textColor = colors.textPrimary;
+            borderColor = colors.strokeStrong;
+            // §3/§4: the standard push button is a real "bezel" — a faint 1px drop shadow under the
+            // hairline border sells the raised look on near-white light backgrounds. zh_CN: §3/§4:标准按钮是真
+            // 正的「bezel」——发丝描边下方 1px 柔和投影,使其在近白浅色背景上读出凸起感。
+            bezelShadow = true;
+            // Veil over the neutral bezel keeps hover/press visible on both light and dark bezels.
+            // zh_CN: 中性 bezel 上叠加薄层,使 hover/press 在浅/深 bezel 上都可见。
+            if (state == Hover) stateLayer = veil(darkTheme ? 0x1C : 0x16);
+            else if (state == Pressed) stateLayer = veil(darkTheme ? 0x3A : 0x30);
+        }
     } else {
-        bgColor = colors.controlDefault;
-        textColor = colors.textPrimary;
-        borderColor = colors.strokeDefault;
-        if (state == Hover) bgColor = colors.controlSecondary;
-        if (state == Pressed) {
-            bgColor = colors.controlTertiary;
-            borderColor = colors.strokeDivider; // Pressed border fades and flattens. zh_CN: 按下时边框颜色变淡且扁平。
-            textColor = colors.textSecondary;    // Text dims slightly. zh_CN: 文字稍微变淡。
+        // DesignFluent (default): unchanged WinUI treatment. zh_CN: 默认 Fluent,WinUI 处理不变。
+        if (filled) {
+            bgColor = colors.accentDefault;
+            textColor = colors.textOnAccent;
+            borderColor = colors.strokeStrong;
+            if (state == Hover) bgColor = colors.accentSecondary;
+            if (state == Pressed) {
+                bgColor = colors.accentTertiary;
+                borderColor = Qt::transparent; // Border flattens while pressed. zh_CN: 按下时边框扁平化。
+            }
+        } else if (m_style == Subtle) {
+            bgColor = Qt::transparent;
+            textColor = (checked) ? colors.accentDefault : colors.textPrimary;
+            borderColor = Qt::transparent;
+            if (state == Hover) bgColor = colors.subtleSecondary;
+            if (state == Pressed) bgColor = colors.subtleTertiary;
+            if (checked && state == Rest) bgColor = colors.subtleSecondary; // Checked rest keeps a subtle fill. zh_CN: 选中态默认带一点背景。
+        } else {
+            bgColor = colors.controlDefault;
+            textColor = colors.textPrimary;
+            borderColor = colors.strokeDefault;
+            if (state == Hover) bgColor = colors.controlSecondary;
+            if (state == Pressed) {
+                bgColor = colors.controlTertiary;
+                borderColor = colors.strokeDivider; // Pressed border fades and flattens. zh_CN: 按下时边框颜色变淡且扁平。
+                textColor = colors.textSecondary;    // Text dims slightly. zh_CN: 文字稍微变淡。
+            }
         }
     }
 
+    // Disabled and critical-hover overrides apply across every design language. zh_CN: 禁用与危险悬停覆盖,适用于所有设计语言。
     if (state == Disabled) {
+        useGradient = false;
+        bezelShadow = false;
+        stateLayer = QColor();
         bgColor = m_style == Subtle ? Qt::transparent : colors.controlDisabled;
         textColor = colors.textDisabled;
         borderColor = m_style == Subtle ? Qt::transparent : colors.strokeDivider;
     } else if (m_criticalOnHover && (state == Hover || state == Pressed)) {
+        useGradient = false;
+        bezelShadow = false;
+        stateLayer = QColor();
         bgColor = state == Pressed ? colors.systemCritical.darker(115) : colors.systemCritical;
         textColor = colors.textOnAccent;
         borderColor = Qt::transparent;
@@ -339,20 +427,53 @@ void Button::paintEvent(QPaintEvent*) {
 
     // 3. Paint the background and border. zh_CN: 绘制背景和边框。
     QRectF contentRect = rect();
-    const QMargins radii = cornerRadii();
-    
-    // While pressed, nudge the content down 0.5px to suggest the press. zh_CN: 按下时内容下移 0.5 像素，模拟点击感。
-    if (state == Pressed && m_style != Subtle) {
+    QMargins radii = cornerRadii();
+    if (pill) {
+        // Stadium shape: radius = half the shorter side. zh_CN: 胶囊形:圆角取较短边的一半。
+        const int r = qRound(qMin(contentRect.width(), contentRect.height()) / 2.0);
+        radii = QMargins(r, r, r, r);
+    }
+
+    // Fluent nudges content down 0.5px while pressed; Material/macOS use color, not motion. zh_CN: Fluent 按下时内容下移 0.5px;M3/macOS 用颜色而非位移。
+    if (state == Pressed && m_style != Subtle && lang == DesignFluent) {
         contentRect.translate(0, 0.5);
     }
-    
+
+    const QPainterPath surfacePath = roundedRectPath(contentRect, radii);
     painter.setPen(Qt::NoPen);
-    painter.setBrush(bgColor);
-    painter.drawPath(roundedRectPath(contentRect, radii));
+    if (useGradient) {
+        QLinearGradient gradient(contentRect.topLeft(), contentRect.bottomLeft());
+        gradient.setColorAt(0.0, gradTop);
+        gradient.setColorAt(1.0, gradBottom);
+        painter.setBrush(gradient);
+    } else {
+        painter.setBrush(bgColor);
+    }
+    painter.drawPath(surfacePath);
+
+    // Material 3 state layer: a translucent on-color veil over the resting fill. zh_CN: M3 state layer:静息填充上的半透明 on 色薄层。
+    if (stateLayer.isValid() && stateLayer.alpha() > 0) {
+        painter.setBrush(stateLayer);
+        painter.drawPath(surfacePath);
+    }
+
+    // macOS bezel shadow: a faint hairline hugging the bottom inner edge, clipped to the surface so it
+    // stays inside the rounded shape (paint-only, no geometry change). It reads as a soft drop shadow that
+    // lifts the bezel off near-white backgrounds. zh_CN: macOS bezel 投影:贴底缘内侧的发丝线,裁剪在表面内(仅绘制,
+    // 不改几何)。在近白背景上读作柔和投影,使 bezel 凸起。
+    if (bezelShadow) {
+        painter.save();
+        painter.setClipPath(surfacePath);
+        painter.setBrush(Qt::NoBrush);
+        QColor shadow(0, 0, 0, darkTheme ? 0x3A : 0x1E); // softer on dark, ~12% on light. zh_CN: 深色更弱,浅色约 12%。
+        painter.setPen(QPen(shadow, 1.0));
+        painter.drawPath(roundedRectPath(contentRect.adjusted(0.5, 1.5, -0.5, -0.5), radii));
+        painter.restore();
+    }
 
     if (borderColor != Qt::transparent) {
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(borderColor, 1)); 
+        painter.setPen(QPen(borderColor, 1));
         painter.drawPath(roundedRectPath(contentRect.adjusted(0.5, 0.5, -0.5, -0.5), radii));
     }
 

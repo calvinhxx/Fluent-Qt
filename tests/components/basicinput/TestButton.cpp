@@ -13,6 +13,7 @@
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
 
@@ -497,4 +498,82 @@ TEST_F(ButtonTest, CriticalHoverAndCornerRadiiProperties) {
     button.resetCornerRadii();
     EXPECT_EQ(button.cornerRadii(), QMargins(defaultRadius, defaultRadius, defaultRadius, defaultRadius));
     EXPECT_EQ(cornerSpy.count(), 3);
+}
+
+// Design-language compatibility: every Button must paint cleanly under each design language
+// (Fluent / Material / Cupertino) crossed with each theme (Light / Dark) and each style
+// (Standard / Accent / Subtle). The design language and theme are GLOBAL singletons, so the
+// fixture restores both in TearDown to avoid leaking state into other suites.
+// zh_CN: 设计语言兼容性:每个 Button 在三种设计语言(Fluent/Material/Cupertino)× 两种主题
+//(Light/Dark)× 三种风格(Standard/Accent/Subtle)下都应能正常绘制。设计语言与主题是全局单例,
+// 因此夹具在 TearDown 中恢复二者,避免污染其它测试套件。
+class ButtonDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are global; reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+};
+
+TEST_F(ButtonDesignLanguageTest, EveryLanguageThemeStyleRendersWithoutCrashing) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+    struct StyleCase { Button::ButtonStyle style; const char* name; bool filled; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+    const StyleCase styles[] = {
+        { Button::Standard, "Standard", false },
+        { Button::Accent, "Accent", true },   // Accent is always a filled surface. zh_CN: Accent 始终为填充表面。
+        { Button::Subtle, "Subtle", false },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            for (const auto& st : styles) {
+                fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+                fluent::FluentElement::setTheme(th.theme);
+
+                Button btn("Sample");
+                btn.setFluentStyle(st.style);
+                QSize target = btn.sizeHint();
+                if (!target.isValid() || target.isEmpty())
+                    target = QSize(120, 36);
+                btn.resize(target);
+
+                const QImage img = btn.grab().toImage();
+
+                const std::string ctx = std::string(lang.name) + "/" + th.name + "/" + st.name;
+                ASSERT_FALSE(img.isNull()) << ctx;
+                EXPECT_GT(img.width(), 0) << ctx;
+                EXPECT_GT(img.height(), 0) << ctx;
+
+                // Accent is a filled button, so something must be painted beyond the background:
+                // at least one pixel should differ from the top-left corner pixel.
+                // zh_CN: Accent 为填充按钮,必有绘制内容:至少有一个像素不同于左上角背景像素。
+                if (st.filled) {
+                    const QRgb corner = img.pixel(0, 0);
+                    bool painted = false;
+                    for (int y = 0; y < img.height() && !painted; ++y) {
+                        for (int x = 0; x < img.width(); ++x) {
+                            if (img.pixel(x, y) != corner) {
+                                painted = true;
+                                break;
+                            }
+                        }
+                    }
+                    EXPECT_TRUE(painted) << "Filled Accent button painted nothing: " << ctx;
+                }
+            }
+        }
+    }
 }

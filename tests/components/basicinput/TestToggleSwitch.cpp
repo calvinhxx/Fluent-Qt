@@ -5,6 +5,7 @@
 #include "components/basicinput/Button.h"
 #include "components/textfields/Label.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/QMLPlus.h"
 #include "design/Typography.h"
 #include "design/Spacing.h"
@@ -297,4 +298,101 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
 
     window->show();
     qApp->exec();
+}
+
+// ── 设计语言兼容性 ───────────────────────────────────────────────────────────
+// Design-language compatibility: render the ToggleSwitch under every design language × theme × state and
+// assert it grabs a valid image with no crash, that ON differs from OFF, and (regression lock) that the
+// macOS (Cupertino) ON track renders BLUE — not the earlier systemSuccess green. zh_CN: 设计语言兼容性:
+// 在每种设计语言 × 主题 × 状态下渲染开关,断言能抓到有效图像、不崩溃、开/关图像不同,并(回归锁)确认
+// macOS(Cupertino)开启轨道为蓝色——而非此前的 systemSuccess 绿色。
+
+class ToggleSwitchDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — always reset so other suites are unaffected.
+        // zh_CN: 设计语言与主题是全局状态——务必复位,避免影响其它测试套件。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Grab a freshly-sized ToggleSwitch under the given on/off state. zh_CN: 在给定开/关状态下抓取已设尺寸的开关。
+    static QImage grabSwitch(bool on) {
+        ToggleSwitch sw;
+        sw.setIsOn(on);
+        QSize hint = sw.sizeHint();
+        if (!hint.isValid() || hint.width() < 80 || hint.height() < 40)
+            hint = QSize(80, 40);
+        sw.resize(hint);
+        return sw.grab().toImage();
+    }
+};
+
+TEST_F(ToggleSwitchDesignLanguageTest, AllLanguagesThemesAndStatesRenderValidImages) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+            fluent::FluentElement::setTheme(theme);
+
+            QImage off = grabSwitch(false);
+            QImage on = grabSwitch(true);
+
+            ASSERT_FALSE(off.isNull()) << "off image null for lang=" << lang << " theme=" << theme;
+            ASSERT_FALSE(on.isNull()) << "on image null for lang=" << lang << " theme=" << theme;
+            EXPECT_GT(off.width(), 0);
+            EXPECT_GT(off.height(), 0);
+            EXPECT_EQ(off.size(), on.size());
+
+            // ON must look different from OFF for the same lang/theme. zh_CN: 同语言/主题下开启图像须不同于关闭。
+            EXPECT_NE(off, on) << "on == off for lang=" << lang << " theme=" << theme;
+        }
+    }
+}
+
+// Regression lock: the macOS (Cupertino) ON switch fills its track with accent BLUE, not green. We sample a
+// point on the filled track at ~25% width, vertical center, and require the pixel be clearly blue-dominant.
+// zh_CN: 回归锁:macOS(Cupertino)开启开关用强调色蓝填充轨道,而非绿色。我们在轨道约 25% 宽、垂直居中处采样,
+// 要求该像素明显偏蓝。
+TEST_F(ToggleSwitchDesignLanguageTest, CupertinoOnTrackIsBlueNotGreen) {
+    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignCupertino);
+
+    for (auto theme : {fluent::FluentElement::Light, fluent::FluentElement::Dark}) {
+        fluent::FluentElement::setTheme(theme);
+
+        ToggleSwitch sw;
+        sw.setIsOn(true);
+        sw.resize(80, 40);
+        QImage img = sw.grab().toImage();
+        ASSERT_FALSE(img.isNull());
+
+        // The ON track is filled accent BLUE, but the white knob sits somewhere along the 40px track
+        // (its exact x depends on the async knob animation's state at grab time, which never runs in a
+        // headless grab), so a single sample can land on the white knob. Scan the track's center row and
+        // require that a clearly BLUE-dominant pixel exists — and that NO strongly green-dominant pixel
+        // does (which would betray a regression back to the old systemSuccess green).
+        // zh_CN: 开启轨道填充强调色蓝,但白色滑块会落在 40px 轨道某处(grab 时异步动画未跑,位置不定),
+        // 单点采样可能正好落在白色滑块上。故扫描轨道中心行:要求存在明显偏蓝像素,且不存在强偏绿像素
+        //(后者意味着退回旧的 systemSuccess 绿)。
+        const int rowH = qMax(20, QFontMetrics(sw.font()).height());
+        const int sampleY = rowH / 2;       // track center row. zh_CN: 轨道中心行。
+        bool foundBlue = false, foundGreen = false;
+        for (int x = 1; x < 40; ++x) {      // across the 40px track width. zh_CN: 遍历 40px 轨道宽。
+            const QColor px = img.pixelColor(x, sampleY);
+            if (px.blue() > px.green() + 30 && px.blue() > px.red() + 30) foundBlue = true;
+            if (px.green() > px.blue() + 30 && px.green() > px.red() + 30) foundGreen = true;
+        }
+        EXPECT_TRUE(foundBlue) << "Cupertino ON track has no blue-dominant pixel theme=" << theme;
+        EXPECT_FALSE(foundGreen)
+            << "Cupertino ON track has a green-dominant pixel (regressed to green?) theme=" << theme;
+    }
 }

@@ -190,6 +190,40 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     iconFont.setPixelSize(m_starSize);
     p.setFont(iconFont);
 
+    // Design-language-aware UNFILLED star tone. A star is geometrically design-neutral, so the only
+    // honest delta across languages is the placeholder/empty stroke and the hover-preview tint — not
+    // size or spacing. Fluent keeps its WinUI strokeSecondary outline; Material 3 reads the empty star
+    // as the stronger neutral on-surface "outline" (strokeStrong, the same token M3 buttons use for
+    // their 1dp outline); macOS uses a dim secondary-text neutral. The filled-star color stays the
+    // accent in every language. Guard against the invalid-QColor trap by sourcing real tokens only.
+    // zh_CN: 设计语言感知的「未填充星」色调。星形本身与设计语言无关,各语言唯一诚实的差异是占位/空心描边
+    // 与 hover 预览着色——而非尺寸或间距。Fluent 保留其 WinUI strokeSecondary 描边;Material 3 将空心星
+    // 读作更强的中性 on-surface「outline」(strokeStrong,即 M3 按钮 1dp 描边所用 token);macOS 用偏暗的
+    // 次要文本中性色。填充星色在所有语言下均保持 accent。仅取真实 token,规避无效 QColor 陷阱。
+    const DesignLanguage lang = themeDesignLanguage();
+    const bool darkTheme = effectiveTheme() == Dark;
+    // Theme-aware veil: darkens light surfaces / lightens dark ones so a hover tint stays visible in
+    // both App themes. zh_CN: 主题感知薄层:浅色面变暗、深色面变亮,使 hover 着色在明暗两主题下都可见。
+    const auto veil = [darkTheme](int a) {
+        return darkTheme ? QColor(255, 255, 255, a) : QColor(0, 0, 0, a);
+    };
+    // Alpha-composite a (semi-transparent) veil over a base color — used to tint a glyph pen, since the
+    // stars are painted as text, not fills. zh_CN: 将(半透明)veil 叠加到基色上——星形以文字绘制,故用于着色画笔。
+    const auto blend = [](QColor base, QColor over) {
+        const double oa = over.alpha() / 255.0;
+        base.setRed(qRound(base.red() * (1.0 - oa) + over.red() * oa));
+        base.setGreen(qRound(base.green() * (1.0 - oa) + over.green() * oa));
+        base.setBlue(qRound(base.blue() * (1.0 - oa) + over.blue() * oa));
+        return base;
+    };
+    // The empty/unfilled outline tone, per design language. zh_CN: 各设计语言下的空心/未填充描边色。
+    QColor emptyTone = c.strokeSecondary;                 // DesignFluent: unchanged. zh_CN: Fluent 不变。
+    if (lang == DesignMaterial) {
+        emptyTone = c.strokeStrong;                       // M3 neutral "outline". zh_CN: M3 中性 outline。
+    } else if (lang == DesignCupertino) {
+        emptyTone = c.textSecondary;                      // macOS dim neutral. zh_CN: macOS 偏暗中性。
+    }
+
     // State colors. zh_CN: 状态颜色。
     QColor filledColor, emptyColor;
     if (isDisabled) {
@@ -197,13 +231,18 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         emptyColor = c.textDisabled;
     } else if (isPlaceholder) {
         filledColor = c.accentDisabled;
-        emptyColor = c.strokeSecondary;
+        emptyColor = (lang == DesignFluent) ? c.strokeSecondary : emptyTone;
     } else if (isHoverPreview) {
-        filledColor = c.accentSecondary;
-        emptyColor = c.strokeSecondary;
+        // Hover preview. Fluent keeps its accentSecondary glyph; M3/macOS tint the accent with the
+        // theme-aware veil so the in-progress selection reads as an interactive preview, not a commit.
+        // zh_CN: Hover 预览。Fluent 保留 accentSecondary 字形;M3/macOS 用主题感知 veil 给 accent 着色,
+        // 使进行中的选择读作交互预览而非已提交。
+        filledColor = (lang == DesignFluent) ? c.accentSecondary
+                                             : blend(c.accentDefault, veil(0x33));
+        emptyColor = (lang == DesignFluent) ? c.strokeSecondary : emptyTone;
     } else {
         filledColor = c.accentDefault;
-        emptyColor = c.strokeSecondary;
+        emptyColor = (lang == DesignFluent) ? c.strokeSecondary : emptyTone;
     }
 
     // Paint star by star. zh_CN: 逐星绘制。

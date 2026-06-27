@@ -6,6 +6,7 @@
 #include "components/basicinput/CheckBox.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "design/Typography.h"
 
 using namespace fluent;
@@ -158,4 +159,94 @@ TEST_F(CheckBoxTest, VisualCheck) {
 
     window->show();
     qApp->exec();
+}
+
+// ── Design-language compatibility ─────────────────────────────────────────────
+// Renders a CheckBox under every brand design language × theme × check state and
+// asserts it paints without crashing and visibly differs from the empty state.
+// zh_CN: 在每种品牌设计语言 × 主题 × 选中态下渲染 CheckBox，断言其能正常绘制且与空态有可见差异。
+
+class CheckBoxDesignLanguageTest : public ::testing::Test {
+protected:
+    // Design language + theme are GLOBAL singletons; restore the defaults after every case so other
+    // suites in this executable are unaffected. zh_CN: 设计语言与主题是全局单例;每个用例后恢复默认值,
+    // 避免影响本可执行文件中的其它测试套件。
+    void TearDown() override {
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Grab a freshly-painted snapshot of a CheckBox in the given language/theme/state.
+    // zh_CN: 在给定语言/主题/状态下抓取 CheckBox 的即时渲染快照。
+    static QImage grabCheckBox(FluentElement::DesignLanguage lang,
+                               FluentElement::Theme theme,
+                               Qt::CheckState state) {
+        fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+        fluent::FluentElement::setTheme(theme);
+
+        CheckBox cb("Sample");
+        cb.setTristate(true);
+        cb.setCheckState(state);
+        cb.resize(cb.sizeHint().expandedTo(QSize(200, 32)));
+        return cb.grab().toImage();
+    }
+};
+
+TEST_F(CheckBoxDesignLanguageTest, RendersAcrossLanguagesThemesAndStates) {
+    const FluentElement::DesignLanguage langs[] = {
+        FluentElement::DesignFluent,
+        FluentElement::DesignMaterial,
+        FluentElement::DesignCupertino,
+    };
+    const FluentElement::Theme themes[] = {
+        FluentElement::Light,
+        FluentElement::Dark,
+    };
+    const Qt::CheckState states[] = {
+        Qt::Unchecked,
+        Qt::Checked,
+        Qt::PartiallyChecked,
+    };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            // Baseline unchecked snapshot for this lang/theme (regression-lock reference).
+            // zh_CN: 该语言/主题下的未选中基线快照(回归对照参照)。
+            const QImage unchecked = grabCheckBox(lang, theme, Qt::Unchecked);
+            ASSERT_FALSE(unchecked.isNull())
+                << "lang=" << lang << " theme=" << theme << " unchecked grab was null";
+
+            for (auto state : states) {
+                const QImage img = grabCheckBox(lang, theme, state);
+
+                // Renders without crashing, produces a valid image of the expected size.
+                // zh_CN: 正常绘制、产出有效图像且尺寸符合预期。
+                ASSERT_FALSE(img.isNull())
+                    << "lang=" << lang << " theme=" << theme << " state=" << state;
+                EXPECT_EQ(img.size(), unchecked.size())
+                    << "lang=" << lang << " theme=" << theme << " state=" << state;
+
+                if (state != Qt::Unchecked) {
+                    // Content was painted: at least one pixel differs from the top-left background.
+                    // zh_CN: 已绘制内容:至少有一个像素不同于左上角背景。
+                    const QRgb bg = img.pixel(0, 0);
+                    bool paintedSomething = false;
+                    for (int y = 0; y < img.height() && !paintedSomething; ++y) {
+                        for (int x = 0; x < img.width(); ++x) {
+                            if (img.pixel(x, y) != bg) { paintedSomething = true; break; }
+                        }
+                    }
+                    EXPECT_TRUE(paintedSomething)
+                        << "no content painted for lang=" << lang
+                        << " theme=" << theme << " state=" << state;
+
+                    // Regression lock: a checked/indeterminate box differs from the unchecked one.
+                    // zh_CN: 回归锁:选中/半选方框与未选中方框存在差异。
+                    EXPECT_NE(img, unchecked)
+                        << "state=" << state << " image matched unchecked for lang="
+                        << lang << " theme=" << theme;
+                }
+            }
+        }
+    }
 }

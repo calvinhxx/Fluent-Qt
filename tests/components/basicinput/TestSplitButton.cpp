@@ -3,9 +3,11 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QImage>
 #include "components/menus_toolbars/Menu.h"
 #include "components/basicinput/SplitButton.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "design/Typography.h"
 
 using namespace fluent;
@@ -99,6 +101,111 @@ protected:
 
     SplitButtonTestWindow* window = nullptr;
 };
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// SplitButton paints a per-brand split surface (action segment + divider + chevron segment) under
+// each App theme. The Fluent path is unchanged; Material 3 follows Button's M3 treatment for the
+// active Style and macOS paints a bezel push-button. The split GEOMETRY/hit-testing is identical
+// across languages — only the painted surface differs. This suite grabs the rendered control across
+// the full {language × theme} matrix to lock in that every combination paints, never crashes, and
+// actually puts ink on the surface. Design language + theme are GLOBAL state, so TearDown restores
+// the built-in defaults. zh_CN: SplitButton 按品牌绘制拆分表面(操作段 + 分割线 + 箭头段),Fluent 不变,
+// M3 沿用 Button 的 M3 处理,macOS 为 bezel 按钮;拆分几何/命中各语言一致,仅表面不同。本套件遍历
+// {设计语言 × 主题} 全矩阵抓取渲染结果。设计语言与主题是全局状态,故 TearDown 恢复内置默认值。
+
+class SplitButtonDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so other suites start clean.
+        // zh_CN: 设计语言与主题是全局状态——重置以保证其它套件从干净状态开始。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a SplitButton with the given style, size it, and grab it as an image.
+    // zh_CN: 构建指定风格的 SplitButton,设定尺寸并抓取为图像。
+    static QImage grabSplit(Button::ButtonStyle style) {
+        SplitButton sb("Choose");
+        sb.setFluentStyle(style);
+        sb.resize(160, 36);
+        return sb.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+};
+
+TEST_F(SplitButtonDesignLanguageTest, AllLanguagesThemesPaintAndPutInkOnSurface) {
+    const fluent::FluentElement::DesignLanguage langs[] = {
+        fluent::FluentElement::DesignFluent,
+        fluent::FluentElement::DesignMaterial,
+        fluent::FluentElement::DesignCupertino,
+    };
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+    const Button::ButtonStyle styles[] = { Button::Standard, Button::Accent };
+
+    for (auto lang : langs) {
+        for (auto theme : themes) {
+            for (auto style : styles) {
+                fluent::ThemeRegistry::instance().setDesignLanguage(lang);
+                fluent::FluentElement::setTheme(theme);
+
+                QImage img = grabSplit(style);
+
+                // No crash + valid image of the requested size. zh_CN: 不崩溃 + 图像有效且尺寸正确。
+                ASSERT_FALSE(img.isNull()) << "lang=" << lang << " theme=" << theme << " style=" << style;
+                EXPECT_GT(img.width(), 0) << "lang=" << lang << " theme=" << theme << " style=" << style;
+                EXPECT_GT(img.height(), 0) << "lang=" << lang << " theme=" << theme << " style=" << style;
+
+                // Painted content: divider, text, or chevron all qualify. zh_CN: 已绘制内容:分割线、文字或箭头均可。
+                EXPECT_TRUE(hasPaintedContent(img))
+                    << "SplitButton painted nothing for lang=" << lang << " theme=" << theme
+                    << " style=" << style;
+            }
+        }
+    }
+}
+
+// Regression for the invalid-QColor trap: a default-constructed QColor is INVALID yet
+// QColor::alpha() returns 255, so a bare `alpha() > 0` guard would fire at rest and
+// setBrush(invalidColor) paints SOLID OPAQUE BLACK. The macOS bezel must paint its real surface
+// (a light/dark-gray bgLayerAlt), never an opaque near-#000 field, when never hovered/pressed.
+// zh_CN: 无效 QColor 陷阱回归:默认构造 QColor 无效但 alpha() 返回 255,裸 alpha()>0 在静息命中,
+// setBrush(无效色) 涂成不透明纯黑。macOS bezel 静息须绘制真实表面(浅/深灰 bgLayerAlt),绝非不透明近黑。
+TEST_F(SplitButtonDesignLanguageTest, MacOsRestStateHasNoOpaqueBlackSurface) {
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto theme : themes) {
+        fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignCupertino);
+        fluent::FluentElement::setTheme(theme);
+
+        // Fresh SplitButton, never hovered/pressed → REST state, exactly the condition that exposed
+        // the bug. zh_CN: 全新 SplitButton,从未交互=静息态,正是触发 bug 的条件。
+        QImage img = grabSplit(Button::Standard);
+        ASSERT_FALSE(img.isNull()) << "theme=" << theme;
+
+        // Sample the center of the action segment (left of the divider). zh_CN: 取操作段中心(分割线左侧)。
+        const QColor c = img.pixelColor(img.width() / 4, img.height() / 2);
+        const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+        const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+        EXPECT_FALSE(opaqueBlack)
+            << "SplitButton painted an opaque black surface at rest for theme=" << theme
+            << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+    }
+}
 
 TEST_F(SplitButtonTest, VisualCheck) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {

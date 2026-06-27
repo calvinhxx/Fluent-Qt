@@ -7,6 +7,7 @@
 #include "components/basicinput/RatingControl.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "design/Typography.h"
 #include "design/Spacing.h"
 
@@ -211,6 +212,103 @@ TEST_F(RatingControlTest, DisabledState) {
     rc.setEnabled(false);
     EXPECT_FALSE(rc.isEnabled());
     EXPECT_DOUBLE_EQ(rc.value(), 3.0);
+}
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// A star is geometrically design-neutral, so RatingControl's per-language delta is purely color
+// semantics: the FILLED star is the accent in every language, while the UNFILLED tone differs
+// (Fluent strokeSecondary / Material 3 strokeStrong "outline" / macOS dim textSecondary), plus a
+// theme-aware hover-preview tint for M3/macOS. This suite sweeps 3 languages × 2 themes with a fixed
+// value (3 of 5) and asserts each render is valid, paints content, and never emits an opaque
+// near-black surface at a FILLED-star center — the invalid-QColor trap (a default-constructed QColor
+// is INVALID yet QColor::alpha()==255, so setBrush/setPen on it paints SOLID OPAQUE BLACK).
+// Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: 星形与设计语言无关,故 RatingControl 的语言差异纯为颜色语义:填充星在所有语言下均为 accent,
+// 未填充色调不同(Fluent strokeSecondary / Material 3 strokeStrong「outline」/ macOS 偏暗 textSecondary),
+// 外加 M3/macOS 的主题感知 hover 预览着色。本套件以固定值(5 中 3)遍历 3 语言 × 2 主题,断言每次渲染
+// 有效、绘制出内容,且填充星中心绝不呈现不透明近黑表面——即无效 QColor 陷阱(默认构造 QColor 无效却返回
+// alpha==255,对其 setBrush/setPen 会涂成不透明纯黑)。设计语言与主题为全局单例,夹具在 TearDown 中复位二者。
+class RatingControlDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a RatingControl with a fixed value and grab it as an image at its sizeHint.
+    // zh_CN: 以固定值构建 RatingControl,按 sizeHint 抓取为图像。
+    static QImage grabRating(double value) {
+        RatingControl rc;
+        rc.setMaxRating(5);
+        rc.setStarSize(16);
+        rc.setValue(value);
+        rc.resize(rc.sizeHint());
+        return rc.grab().toImage();
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        const QRgb bg = img.pixel(0, 0);
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (img.pixel(x, y) != bg)
+                    return true;
+        return false;
+    }
+
+    // Sample the vertical center row across the filled-star band; report whether any pixel there is an
+    // opaque near-black surface. zh_CN: 沿垂直中心行采样填充星区域;报告其中是否存在不透明近黑表面。
+    static bool hasOpaqueBlackInFilledBand(const QImage& img, int starCount) {
+        const int y = img.height() / 2;
+        // The filled stars occupy the leftmost `starCount` cells; scan generously across that band.
+        // zh_CN: 填充星占据最左 starCount 个单元;在该区域宽松扫描。
+        const int bandRight = qMin(img.width(), (img.width() * starCount) / 5 + 4);
+        for (int x = 0; x < bandRight; ++x) {
+            const QColor px = img.pixelColor(x, y);
+            const int lum = qRound(0.299 * px.red() + 0.587 * px.green() + 0.114 * px.blue());
+            if (px.alpha() > 200 && lum < 16)
+                return true;
+        }
+        return false;
+    }
+};
+
+TEST_F(RatingControlDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackStars) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const QImage img = grabRating(3.0);  // 3 of 5 stars filled. zh_CN: 5 中 3 填充。
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            // 1. Valid, non-empty image that actually painted something. zh_CN: 有效、非空且确实绘制了内容的图像。
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "RatingControl painted nothing: " << ctx;
+
+            // 2. The filled-star band must not contain an opaque near-black surface (invalid-QColor trap).
+            // zh_CN: 填充星区域不得包含不透明近黑表面(无效 QColor 陷阱)。
+            EXPECT_FALSE(hasOpaqueBlackInFilledBand(img, 3))
+                << "RatingControl filled stars rendered an opaque near-black surface: " << ctx;
+        }
+    }
 }
 
 // ── VisualCheck ──────────────────────────────────────────────────────────────

@@ -48,6 +48,11 @@ protected:
     void nextCheckState() override; // Drives the tri-state cycle. zh_CN: 处理三态循环。
 
 private:
+    // Paints the Material 3 / macOS selectable surface (outlined↔filled-tonal / bezel↔accent-fill).
+    // The Fluent path stays in Button::paintEvent untouched. zh_CN: 绘制 M3 / macOS 可选表面
+    //(描边↔填充色调 / bezel↔accent 填充);Fluent 路径仍在 Button::paintEvent 中保持不变。
+    void paintBrandSurface(QPaintEvent* event);
+
     bool m_threeState = false;
     Qt::CheckState m_checkState = Qt::Unchecked;
 };

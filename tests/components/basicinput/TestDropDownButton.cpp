@@ -1,12 +1,14 @@
 #include <gtest/gtest.h>
 #include <QApplication>
 #include <QTimer>
+#include <QImage>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include "components/menus_toolbars/Menu.h"
 #include "components/basicinput/DropDownButton.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -139,6 +141,129 @@ TEST_F(DropDownButtonTest, MenuInheritsThemeOverrideFromButtonParent) {
     EXPECT_EQ(menu.effectiveTheme(), fluent::FluentElement::Dark);
     EXPECT_EQ(menu.themeColors().bgLayer, QColor("#2C2C2C"));
     menu.hide();
+}
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// DropDownButton delegates its surface to Button::paintEvent (already brand-aware: Fluent /
+// Material 3 / macOS) and overlays a trailing chevron whose tint is branched per design language.
+// This suite grabs the rendered control across the full {language × theme × style} matrix to lock
+// in that every combination paints, never crashes, and actually puts ink on the surface. Design
+// language + theme are GLOBAL singletons, so TearDown restores the built-in defaults.
+// zh_CN: DropDownButton 把表面委托给 Button::paintEvent(已按品牌 Fluent/Material 3/macOS 绘制),
+// 再叠加一个按设计语言分支着色的尾随箭头。本套件遍历 {设计语言 × 主题 × 风格} 全矩阵抓取渲染结果,
+// 确保每种组合都能绘制、不崩溃且确有像素落在表面上。设计语言与主题是全局单例,故 TearDown 恢复内置默认值。
+
+class DropDownButtonDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so other suites start clean.
+        // zh_CN: 设计语言与主题是全局状态——重置以保证其它套件从干净状态开始。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a DropDownButton of the given style, size it ~140x36, and grab it as an image.
+    // zh_CN: 构建指定风格的 DropDownButton,设定 ~140x36 尺寸并抓取为图像。
+    static QImage grabDropDown(Button::ButtonStyle style) {
+        DropDownButton btn("Options");
+        btn.setFluentStyle(style);
+        btn.resize(140, 36);
+        return btn.grab().toImage();
+    }
+};
+
+TEST_F(DropDownButtonDesignLanguageTest, EveryLanguageThemeStyleRendersWithInkOnSurface) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+    struct StyleCase { Button::ButtonStyle style; const char* name; bool filled; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+    const StyleCase styles[] = {
+        { Button::Standard, "Standard", false },
+        { Button::Accent, "Accent", true },   // Accent is always a filled surface. zh_CN: Accent 始终为填充表面。
+        { Button::Subtle, "Subtle", false },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            for (const auto& st : styles) {
+                fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+                fluent::FluentElement::setTheme(th.theme);
+
+                const QImage img = grabDropDown(st.style);
+
+                const std::string ctx =
+                    std::string(lang.name) + "/" + th.name + "/" + st.name;
+                ASSERT_FALSE(img.isNull()) << ctx;
+                EXPECT_GT(img.width(), 0) << ctx;
+                EXPECT_GT(img.height(), 0) << ctx;
+
+                // Painted content: some pixel differs from the top-left background pixel.
+                // A DropDownButton ALWAYS paints a chevron, so even Subtle/text styles qualify;
+                // filled Accent additionally paints a fully colored surface.
+                // zh_CN: 已绘制内容:存在与左上角背景不同的像素。DropDownButton 必绘制箭头,故 Subtle/文字样式也满足;
+                // 填充 Accent 还会绘制整片着色表面。
+                const QRgb corner = img.pixel(0, 0);
+                bool painted = false;
+                for (int y = 0; y < img.height() && !painted; ++y) {
+                    for (int x = 0; x < img.width(); ++x) {
+                        if (img.pixel(x, y) != corner) {
+                            painted = true;
+                            break;
+                        }
+                    }
+                }
+                EXPECT_TRUE(painted)
+                    << "DropDownButton painted nothing (chevron expected): " << ctx;
+            }
+        }
+    }
+}
+
+// Regression mirroring ComboBox's RestStateHasNoOpaqueBlackField for the macOS branch: an unset
+// `QColor` is INVALID yet QColor::alpha() returns 255, so a bare `alpha() > 0` guard on a state-layer
+// veil fills the bezel SOLID BLACK. The macOS bezel at rest must NOT be opaque near-#000 at center.
+// zh_CN: 对应 ComboBox 的 RestStateHasNoOpaqueBlackField 回归(macOS 分支):未赋值的 QColor 虽无效,
+// alpha() 却返回 255,裸 alpha()>0 守卫会把 bezel 涂成不透明黑。静息态 macOS bezel 中心不得为不透明近黑。
+TEST_F(DropDownButtonDesignLanguageTest, MacOsRestStateHasNoOpaqueBlackField) {
+    const fluent::FluentElement::Theme themes[] = {
+        fluent::FluentElement::Light,
+        fluent::FluentElement::Dark,
+    };
+
+    for (auto theme : themes) {
+        fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignCupertino);
+        fluent::FluentElement::setTheme(theme);
+
+        // A fresh, never-interacted DropDownButton with no text is at REST — the condition that exposed
+        // the invalid-veil bug. Empty text keeps the sampled interior on the bare bezel (no glyph ink),
+        // so a near-black reading can only come from a bug-painted fill, not from centered text.
+        // zh_CN: 全新、从未交互且无文字的 DropDownButton = 静息态,正是触发无效薄层 bug 的条件。
+        // 空文字使采样的内部区域落在裸 bezel 上(无字形墨迹),近黑读数只可能来自 bug 的填充,而非居中文字。
+        DropDownButton btn;
+        btn.setFluentStyle(Button::Standard);
+        btn.resize(140, 36);
+        const QImage img = btn.grab().toImage();
+        ASSERT_FALSE(img.isNull()) << "theme=" << theme;
+
+        const QColor c = img.pixelColor(img.width() / 2, img.height() / 2);
+        const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+        // Invalid-veil signature = an OPAQUE, near-#000 fill. The macOS bezel is a light/dark gray —
+        // never opaque pure black at rest. zh_CN: 无效薄层特征=不透明近黑填充;macOS bezel 为浅/深灰,静息绝非不透明纯黑。
+        const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+        EXPECT_FALSE(opaqueBlack)
+            << "DropDownButton painted an opaque black bezel at rest for theme=" << theme
+            << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+    }
 }
 
 TEST_F(DropDownButtonTest, VisualCheck) {
