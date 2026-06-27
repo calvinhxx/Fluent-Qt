@@ -727,6 +727,29 @@ QColor PipsPager::pipColor(bool selected) const
     if (!isEnabled()) {
         return colors.textDisabled;
     }
+
+    // Theme-aware interaction veil: lightens dark surfaces, darkens light ones so the unselected
+    // dots stay legible under both App themes. zh_CN: 主题感知薄层:深色面提亮、浅色面变暗,
+    // 使未选中圆点在明暗两主题下都清晰。
+    const bool dark = effectiveTheme() == Dark;
+    const auto veil = [dark](int a) {
+        return dark ? QColor(255, 255, 255, a) : QColor(0, 0, 0, a);
+    };
+
+    const DesignLanguage lang = themeDesignLanguage();
+    if (lang == DesignMaterial) {
+        // Material 3: the selected dot is the filled primary (accent); unselected dots are a neutral
+        // on-surface tone (a ~44% veil) rather than full-strength text color. zh_CN: Material 3:选中圆点
+        // 为填充 primary(强调色);未选中圆点用中性 on-surface 薄层(约 44%)而非满强度文字色。
+        return selected ? colors.accentDefault : veil(0x70); // ~44%
+    } else if (lang == DesignCupertino) {
+        // macOS: the selected dot tracks the app accent for consistency with other Cupertino controls;
+        // unselected dots are a dim neutral (secondary text). zh_CN: macOS:选中圆点跟随应用强调色,与其他
+        // Cupertino 控件保持一致;未选中圆点用暗淡的中性色(次要文字色)。
+        return selected ? colors.accentDefault : colors.textSecondary;
+    }
+
+    // DesignFluent (default): unchanged WinUI treatment. zh_CN: 默认 Fluent,WinUI 处理不变。
     return selected ? colors.textPrimary : colors.textSecondary;
 }
 
@@ -742,9 +765,34 @@ QColor PipsPager::buttonFillColor(const HitTarget& target) const
 {
     const auto colors = themeColors();
     if (!isEnabled()) return QColor(Qt::transparent);
-    if (m_pressedTarget == target) return colors.subtleTertiary;
-    if (m_hoveredTarget == target) return colors.subtleSecondary;
-    return QColor(Qt::transparent);
+
+    const bool hovered = (m_hoveredTarget == target);
+    const bool pressed = (m_pressedTarget == target);
+    if (!hovered && !pressed) return QColor(Qt::transparent);
+
+    // Theme-aware interaction veil for the nav buttons: a neutral on-surface state layer (white on
+    // dark, dark on light) that stays inscribed in the button bounds — no accent fill, no oversized
+    // halo. zh_CN: 导航按钮的主题感知交互薄层:中性 on-surface state layer(深色上覆白、浅色上覆深),
+    // 内切于按钮范围——不用强调色填充,无外溢光晕。
+    const bool dark = effectiveTheme() == Dark;
+    const auto veil = [dark](int a) {
+        return dark ? QColor(255, 255, 255, a) : QColor(0, 0, 0, a);
+    };
+
+    const DesignLanguage lang = themeDesignLanguage();
+    if (lang == DesignMaterial) {
+        // §4 M3 state layer: hover 8% (0x14) / pressed ~12% (0x1F), neutral on-surface. zh_CN:
+        // §4 M3 state layer:hover 8%(0x14)/pressed 约 12%(0x1F),中性 on-surface。
+        return pressed ? veil(0x1F) : veil(0x14);
+    } else if (lang == DesignCupertino) {
+        // macOS: theme-aware neutral veil, a touch stronger on press. zh_CN: macOS:主题感知中性薄层,
+        // 按下时略强。
+        return pressed ? veil(dark ? 0x2C : 0x24) : veil(dark ? 0x14 : 0x12);
+    }
+
+    // DesignFluent (default): unchanged WinUI subtle fills. zh_CN: 默认 Fluent,WinUI subtle 填充不变。
+    if (pressed) return colors.subtleTertiary;
+    return colors.subtleSecondary;
 }
 
 int PipsPager::pipDiameter(int pageIndex, bool selected) const

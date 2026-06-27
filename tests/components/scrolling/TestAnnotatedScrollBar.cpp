@@ -15,6 +15,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/Slider.h"
 #include "components/scrolling/AnnotatedScrollBar.h"
@@ -467,6 +468,77 @@ TEST_F(AnnotatedScrollBarTest, RenderReflectsThemeAndDisabledState)
     bar.setEnabled(false);
     const QColor disabledColor = renderIndicator();
     EXPECT_NE(darkColor.rgba(), disabledColor.rgba());
+}
+
+// ─── Design-language × theme sweep ──────────────────────────────────────────
+//
+// AnnotatedScrollBar's position indicator pill is colors.accentDefault — accent is the correct read
+// under EVERY design language (Fluent / Material 3 / macOS), so it stays accent across the board; no
+// neutral rail is painted, so there is nothing to give the M3/macOS neutral treatment. This sweep
+// guards that the indicator still paints a visible, non-opaque-black pill in all 3 langs × 2 themes
+// (no DesignLanguage branch was added to the .cpp). Design language + theme are GLOBAL singletons, so
+// the fixture restores both in TearDown. zh_CN: AnnotatedScrollBar 的位置指示器胶囊为 colors.accentDefault
+// ——强调色在三种设计语言(Fluent/Material 3/macOS)下都是正确读法,故跨语言保持强调色;未绘制中性轨道,
+// 无需做 M3/macOS 中性处理。本扫描确保指示器在 3 语言 × 2 主题下仍绘制出可见且非不透明黑的胶囊
+//(.cpp 未新增 DesignLanguage 分支)。设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class AnnotatedScrollBarDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override
+    {
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+};
+
+TEST_F(AnnotatedScrollBarDesignLanguageTest, IndicatorPaintsAccentPillWithoutOpaqueBlack)
+{
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            AnnotatedScrollBar bar;
+            bar.resize(120, 300);
+            bar.setRange(0, 1000);
+            bar.setValue(500);
+            bar.setLabels({AnnotatedScrollBarLabel(QStringLiteral("A"), 0),
+                           AnnotatedScrollBarLabel(QStringLiteral("B"), 1000)});
+            showAndProcess(bar);
+
+            QImage image(bar.size(), QImage::Format_ARGB32);
+            image.fill(Qt::transparent);
+            bar.render(&image);
+
+            // 1. The indicator pill paints something visible at its center. zh_CN: 指示器胶囊在中心绘制出可见内容。
+            const QPoint center = bar.indicatorCenter().toPoint();
+            const QColor c = QColor::fromRgba(image.pixel(center));
+            EXPECT_GT(c.alpha(), 0) << "indicator painted nothing: " << ctx;
+
+            // 2. It must NOT be an opaque near-#000 surface (invalid-QColor trap). The accent default is
+            // a saturated hue under every preset, never near-black. zh_CN: 不得为不透明近黑表面(无效 QColor
+            // 陷阱)。各预设的 accentDefault 都是饱和色相,绝非近黑。
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "AnnotatedScrollBar painted an opaque black indicator: " << ctx << " rgba=("
+                << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+        }
+    }
 }
 
 TEST_F(AnnotatedScrollBarTest, VisualCheck)

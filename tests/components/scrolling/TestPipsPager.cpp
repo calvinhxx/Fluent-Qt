@@ -17,6 +17,7 @@
 #include <QVBoxLayout>
 
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/collections/FlipView.h"
 #include "components/scrolling/PipsPager.h"
 
@@ -556,6 +557,96 @@ TEST_F(PipsPagerTest, SelectionAnimationCanBeDisabled) {
     const QImage image = renderPager(pager);
     EXPECT_LE(paintedBounds(image, firstCell).width(), 5);
     EXPECT_GE(paintedBounds(image, secondCell).width(), 5);
+}
+
+// ─── Design-language × theme compatibility ──────────────────────────────────
+//
+// PipsPager swaps only COLORS per design language (Fluent / Material 3 / macOS) crossed with each
+// App theme (Light / Dark): the selected dot, the unselected dots, and the nav-button state layers.
+// Geometry (dot sizes, spacing, animation) is identical across languages. This sweep asserts every
+// (language × theme) combination paints a valid, non-empty image with content, and — guarding the
+// invalid-QColor trap (a default-constructed QColor is INVALID yet QColor::alpha() returns 255, so a
+// bare alpha()>0 + setBrush(invalidColor) paints SOLID OPAQUE BLACK) — that the SELECTED dot center
+// never renders as an opaque near-#000 surface (the pager has no text, so the dot center is bare fill,
+// not a glyph). Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
+// zh_CN: PipsPager 仅按设计语言(Fluent/Material 3/macOS)× 主题(Light/Dark)替换颜色:选中圆点、
+// 未选中圆点、导航按钮 state layer;几何(圆点尺寸、间距、动画)在各语言间一致。本扫描断言每个
+//(语言 × 主题)组合都绘制出有效、非空且有内容的图像,并(防范无效 QColor 陷阱——默认构造的 QColor
+// 无效却返回 alpha==255,裸 alpha()>0 + setBrush(无效色) 会涂成不透明纯黑)断言选中圆点中心绝不呈现
+// 不透明近黑表面(分页器无文本,圆点中心为纯填充而非字形)。设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class PipsPagerDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        // Design language + theme are GLOBAL — reset so later suites see defaults.
+        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (qAlpha(img.pixel(x, y)) > 0)
+                    return true;
+        return false;
+    }
+};
+
+TEST_F(PipsPagerDesignLanguageTest, AllLanguagesAndThemesPaintAndSelectedDotIsNotOpaqueBlack) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            PipsPager pager;
+            pager.setNumberOfPages(7);
+            pager.setSelectedPageIndex(3);
+            pager.setPreviousButtonVisibility(PipsPager::PipsPagerButtonVisibility::Visible);
+            pager.setNextButtonVisibility(PipsPager::PipsPagerButtonVisibility::Visible);
+            pager.setFixedSize(pager.sizeHint());
+
+            const QImage image = renderPager(pager);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+
+            // 1. The pager paints a valid, non-empty image with content. zh_CN: 分页器绘制出有效、非空且有内容的图像。
+            ASSERT_FALSE(image.isNull()) << ctx;
+            EXPECT_GT(image.width(), 0) << ctx;
+            EXPECT_GT(image.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(image)) << "painted nothing: " << ctx;
+
+            // 2. The selected dot must be painted (alpha > 0). The pager has no text, so the center
+            //    is bare dot fill. Under Fluent in Light theme the selected dot is LEGITIMATELY
+            //    textPrimary (a near-black ~90%-alpha dot on the light surface), so the opaque-black
+            //    trap guard applies only to Material/Cupertino — their selected dot is accentDefault,
+            //    which is never near-black, so an opaque near-black dot there would mean the
+            //    invalid-QColor trap fired. zh_CN: 选中圆点必须被绘制(alpha>0);分页器无文本,中心为纯圆点填充。
+            //    Fluent + Light 下选中点合法地为 textPrimary(浅色表面上 ~90% alpha 的近黑点),故无效-QColor 近黑
+            //    陷阱守卫只对 Material/Cupertino 生效——它们的选中点是 accentDefault(永不近黑),若近黑即陷阱触发。
+            const QColor c = image.pixelColor(pager.pipHitRect(3).center());
+            EXPECT_GT(c.alpha(), 0) << "selected dot not painted: " << ctx;
+            if (lang.lang != fluent::FluentElement::DesignFluent) {
+                const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+                const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+                EXPECT_FALSE(opaqueBlack)
+                    << "PipsPager painted an opaque black selected dot at rest: " << ctx
+                    << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+            }
+        }
+    }
 }
 
 TEST_F(PipsPagerTest, VisualCheck) {

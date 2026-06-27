@@ -118,6 +118,14 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
 
     const auto colors = themeColors();
     const bool isDark = (effectiveTheme() == FluentElement::Dark);
+    const DesignLanguage lang = themeDesignLanguage();
+
+    // Theme-aware neutral veil: lightens dark surfaces, darkens light ones, so a
+    // neutral thumb/track stays visible under both App themes. zh_CN: 主题感知中性薄层:
+    // 深色面变亮、浅色面变暗,使中性 thumb/track 在明暗两主题下都可见。
+    const auto veil = [isDark](int a) {
+        return isDark ? QColor(255, 255, 255, a) : QColor(0, 0, 0, a);
+    };
 
     // Track: a light subtle fill rounded at half the thickness, with only a
     // tiny gap to the widget bounds (a separate trackPadding could come later).
@@ -132,7 +140,17 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     const qreal trackMaxAlpha = isDark ? 0.18 : 0.20;
     if (trackColor.alphaF() > trackMaxAlpha)
         trackColor.setAlphaF(trackMaxAlpha);
-    if ((m_isHovered || m_isPressed) && trackColor.alpha() > 0) {
+
+    // Both Material 3 and macOS overlay scrollbars are a bare thumb with NO rail at rest —
+    // the track only appears (faintly) while actively interacting. Fluent keeps its
+    // hover/press track. zh_CN: Material 3 与 macOS 覆盖式滚动条静息时只有 thumb、无轨道,
+    // 轨道仅在交互时(淡淡地)出现;Fluent 保留 hover/press 轨道。
+    if (lang == DesignMaterial || lang == DesignCupertino) {
+        // Subtle neutral rail only while pressed (a touch lighter than Fluent's). zh_CN: 仅按下时显示淡淡中性轨道(略浅于 Fluent)。
+        trackColor = m_isPressed ? veil(isDark ? 0x12 : 0x10) : QColor(Qt::transparent);
+    }
+
+    if ((m_isHovered || m_isPressed) && trackColor.isValid() && trackColor.alpha() > 0) {
         p.setPen(Qt::NoPen);
         p.setBrush(trackColor);
         const qreal r = (orientation() == Qt::Vertical
@@ -190,6 +208,22 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
         thumbRest.setAlphaF(restMinAlpha);
     if (thumbActive.alphaF() < activeMinAlpha)
         thumbActive.setAlphaF(activeMinAlpha);
+
+    if (lang == DesignMaterial) {
+        // Material 3: the thumb is a neutral on-surface "state layer" veil — a touch lighter at
+        // rest, opaque-ish when active. No accent, no track at rest (handled above). Geometry and
+        // animation are untouched; only the COLOR changes. zh_CN: Material 3:thumb 为中性 on-surface
+        //「state layer」薄层——静息略浅、交互时更实。无强调色、静息无轨道(上方已处理)。几何与动画不变,仅换颜色。
+        thumbRest = veil(isDark ? 0x66 : 0x4D);    // ~40% dark / ~30% light. zh_CN: 深色约 40%/浅色约 30%。
+        thumbActive = veil(isDark ? 0x8A : 0x73);  // ~54% dark / ~45% light. zh_CN: 深色约 54%/浅色约 45%。
+    } else if (lang == DesignCupertino) {
+        // macOS overlay scrollbar: a translucent neutral overlay, thin + rounded, no rail at rest
+        // (handled above). Reads slightly more solid than M3 to match the macOS pill. zh_CN: macOS 覆盖式
+        // 滚动条:半透明中性叠层,细且圆,静息无轨道(上方已处理)。比 M3 略实以贴合 macOS 胶囊。
+        thumbRest = veil(isDark ? 0x66 : 0x59);    // ~40% dark / ~35% light. zh_CN: 深色约 40%/浅色约 35%。
+        thumbActive = veil(isDark ? 0x80 : 0x73);  // ~50% dark / ~45% light. zh_CN: 深色约 50%/浅色约 45%。
+    }
+    // DesignFluent: thumbRest/thumbActive unchanged. zh_CN: Fluent:thumbRest/thumbActive 不变。
 
     QColor thumbColor = thumbRest;
     if (m_isPressed || m_isHovered) {

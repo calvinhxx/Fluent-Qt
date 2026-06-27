@@ -10,8 +10,9 @@
 #include "components/scrolling/ScrollBar.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
-#include "components/basicinput/Button.h" 
+#include "components/basicinput/Button.h"
 
 using namespace fluent::scrolling;
 using namespace fluent::textfields;
@@ -98,6 +99,88 @@ TEST_F(ScrollBarTest, VerticalThumbKeepsRoundedCapsAtExtremes) {
     EXPECT_GT(pixelAlpha(bottomImage, bottomBounds.center().x(), bottomBounds.bottom()), 0);
     EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.left(), bottomBounds.bottom()), 0);
     EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.right(), bottomBounds.bottom()), 0);
+}
+
+// ─── Design-language × theme sweep ──────────────────────────────────────────
+//
+// ScrollBar is quiet chrome: the Fluent path is byte-for-byte unchanged, while Material 3 and macOS
+// only swap the THUMB color to a theme-aware neutral veil (no accent) and suppress the resting track.
+// Geometry/animation are identical across languages. Design language + theme are GLOBAL singletons,
+// so the fixture restores both in TearDown. zh_CN: ScrollBar 是安静的 chrome:Fluent 路径逐字节不变,
+// Material 3 与 macOS 仅把 THUMB 颜色换成主题感知中性薄层(无强调色)并抑制静息轨道;几何/动画跨语言一致。
+// 设计语言与主题为全局单例,夹具在 TearDown 中恢复二者。
+class ScrollBarDesignLanguageTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        fluent::ThemeRegistry::instance().resetToDefaults();
+        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    }
+
+    // Build a fully-opaque vertical scrollbar with a real scrollable range and grab its thumb.
+    // setOpacity(1.0) defeats the fade-in so the painted thumb is actually visible.
+    // zh_CN: 构建完全不透明、具备真实可滚动范围的垂直滚动条并抓取 thumb。setOpacity(1.0) 绕过淡入,使绘制的 thumb 可见。
+    static QImage grabThumb() {
+        ScrollBar bar(Qt::Vertical);
+        bar.setThickness(9);
+        bar.setFixedSize(9, 120);
+        bar.setRange(0, 100);
+        bar.setPageStep(20);
+        bar.setValue(50);
+        bar.setOpacity(1.0);
+        return renderScrollBarImage(&bar);
+    }
+
+    static bool hasPaintedContent(const QImage& img) {
+        for (int y = 0; y < img.height(); ++y)
+            for (int x = 0; x < img.width(); ++x)
+                if (QColor::fromRgba(img.pixel(x, y)).alpha() > 0)
+                    return true;
+        return false;
+    }
+};
+
+TEST_F(ScrollBarDesignLanguageTest, AllLanguagesAndThemesPaintAThumbWithoutOpaqueBlack) {
+    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
+    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
+
+    const LangCase langs[] = {
+        { fluent::FluentElement::DesignFluent, "Fluent" },
+        { fluent::FluentElement::DesignMaterial, "Material" },
+        { fluent::FluentElement::DesignCupertino, "Cupertino" },
+    };
+    const ThemeCase themes[] = {
+        { fluent::FluentElement::Light, "Light" },
+        { fluent::FluentElement::Dark, "Dark" },
+    };
+
+    for (const auto& lang : langs) {
+        for (const auto& th : themes) {
+            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
+            fluent::FluentElement::setTheme(th.theme);
+
+            const std::string ctx = std::string(lang.name) + "/" + th.name;
+            const QImage img = grabThumb();
+
+            // 1. A valid, non-empty image with a painted thumb. zh_CN: 有效、非空且绘制出 thumb 的图像。
+            ASSERT_FALSE(img.isNull()) << ctx;
+            EXPECT_GT(img.width(), 0) << ctx;
+            EXPECT_GT(img.height(), 0) << ctx;
+            EXPECT_TRUE(hasPaintedContent(img)) << "thumb painted nothing: " << ctx;
+
+            // 2. The painted thumb area must NOT be an opaque near-#000 surface (the invalid-QColor
+            // trap: a default QColor is invalid yet alpha()==255 → solid black). Sample the thumb's
+            // center; the thumb sits mid-track at value 50. zh_CN: 绘制的 thumb 区域不得为不透明近黑表面
+            //(无效 QColor 陷阱:默认 QColor 无效却 alpha==255 → 纯黑)。采样轨道中部 value=50 的 thumb 中心。
+            const QRect bounds = alphaBounds(img);
+            ASSERT_TRUE(bounds.isValid()) << ctx;
+            const QColor c = img.pixelColor(bounds.center());
+            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
+            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
+            EXPECT_FALSE(opaqueBlack)
+                << "ScrollBar painted an opaque black thumb: " << ctx << " rgba=(" << c.red() << ","
+                << c.green() << "," << c.blue() << "," << c.alpha() << ")";
+        }
+    }
 }
 
 TEST_F(ScrollBarTest, VisualPropertyVerification) {
