@@ -129,6 +129,11 @@ protected:
 private:
     QRectF barRect() const;
     QColor indicatorColor() const;
+    // Design-language paint branches. DesignFluent stays inline in paintEvent (byte-for-byte the original
+    // treatment); Material 3 and macOS dispatch to these helpers. zh_CN: 设计语言绘制分支。DesignFluent 保留在
+    // paintEvent 内（与原实现逐字节一致）；Material 3 与 macOS 分派到这些辅助函数。
+    void paintMaterial(QPainter& painter, const QRectF& bounds);
+    void paintCupertino(QPainter& painter, const QRectF& bounds);
     void updateThemeColors();
     void updateAnimationState();
     bool shouldAnimate() const;

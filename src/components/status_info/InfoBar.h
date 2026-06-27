@@ -304,6 +304,10 @@ private:
     QString severityGlyph() const;
     QFont severityIconFont() const;
     void drawSeverityGlyph(QPainter& painter, const QRectF& targetRect) const;
+    // Material/macOS: paint the severity glyph tinted with a brand color, sized to fill the icon slot
+    // (no circular badge backing). zh_CN: Material/macOS:用品牌色着色绘制严重级别字形,撑满图标槽
+    //（无圆形徽标衬底）。
+    void drawSeverityGlyphTinted(QPainter& painter, const QRectF& targetRect, const QColor& color) const;
     void initializeChildren();
     void updateChildGeometry();
     void updateLabels();

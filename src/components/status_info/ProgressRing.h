@@ -136,6 +136,12 @@ private:
     int diameterForSize() const;
     QRectF ringRect(qreal effectiveStrokeWidth) const;
     QColor indicatorColor() const;
+    // Design-language paint branches. DesignFluent is inlined in paintEvent and stays unchanged;
+    // these render the Material 3 circular indicator and the macOS spoke spinner / accent ring.
+    // zh_CN: 设计语言绘制分支。DesignFluent 内联于 paintEvent 且保持不变;
+    // 这两个绘制 Material 3 环形指示器与 macOS 辐条转轮/强调环。
+    void paintMaterial(QPainter& painter, const QRectF& arcRect, qreal effectiveStrokeWidth);
+    void paintCupertino(QPainter& painter, const QRectF& arcRect, qreal effectiveStrokeWidth);
     void updateThemeColors();
     void updateAnimationState();
     bool shouldAnimate() const;

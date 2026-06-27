@@ -188,6 +188,19 @@ void ProgressBar::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
+    // Brand style themes can re-shape the bar structurally. DesignFluent keeps the exact original
+    // treatment below; Material 3 and macOS dispatch to their own painters. zh_CN: 品牌样式主题可结构化重塑进度
+    // 条。DesignFluent 保留下方原始处理；Material 3 与 macOS 分派到各自的绘制函数。
+    const DesignLanguage lang = themeDesignLanguage();
+    if (lang == DesignMaterial) {
+        paintMaterial(painter, bounds);
+        return;
+    }
+    if (lang == DesignCupertino) {
+        paintCupertino(painter, bounds);
+        return;
+    }
+
     if (m_railVisible) {
         const QRectF railRect(bounds.left(), centerY - kRailThickness / 2.0, bounds.width(), kRailThickness);
         painter.setPen(Qt::NoPen);
@@ -220,6 +233,164 @@ void ProgressBar::paintEvent(QPaintEvent*)
     if (ratio <= 0.0) return;
 
     const qreal filledWidth = qMin(bounds.width(), qMax(effectiveTrackThickness, bounds.width() * ratio));
+    painter.drawRoundedRect(QRectF(trackBounds.left(), trackBounds.top(), filledWidth, trackBounds.height()), radius, radius);
+}
+
+void ProgressBar::paintMaterial(QPainter& painter, const QRectF& bounds)
+{
+    // Material 3 "Linear progress indicator" (expressive): a ~4 dp fully-rounded track tinted from the
+    // active color, with the active indicator in accentDefault. The signature M3 cue is determinate-only:
+    // a ~4 px gap between the active segment and the remaining track, plus a stop dot pinned at the far
+    // (trailing) end. paused→systemCaution, error→systemCritical recolor the active indicator + stop dot.
+    // zh_CN: Material 3 线性进度（表达式更新）：~4dp 全圆角轨道，轨道为活动色低透明度着色，活动指示器为
+    // accentDefault。M3 标志性提示仅在确定态：活动段与剩余轨道之间留 ~4px 间隙，并在远（尾）端固定一个停止
+    // 点。paused→systemCaution、error→systemCritical 重新着色活动指示器与停止点。
+    const auto& colors = themeColors();
+
+    // M3 track thickness is ~4 dp, fully rounded, but never thicker than what the widget allows.
+    // zh_CN: M3 轨道厚度约 4dp，全圆角，但不超过控件可容纳的高度。
+    const qreal thickness = qBound<qreal>(2.0, 4.0, qMax<qreal>(1.0, bounds.height()));
+    const qreal radius = thickness / 2.0;
+    const qreal centerY = bounds.center().y();
+    const QRectF trackBounds(bounds.left(), centerY - radius, bounds.width(), thickness);
+
+    // Active color follows the existing Fluent value semantics (disabled / error / paused / running).
+    // zh_CN: 活动色沿用现有 Fluent 值语义（禁用/错误/暂停/运行）。
+    const QColor active = indicatorColor();
+
+    // Track tint: a low-alpha wash of the active color, falling back to controlSecondary when the active
+    // color is somehow unusable. Guard against the invalid-QColor trap. zh_CN: 轨道着色：活动色低透明度淡彩，
+    // 活动色不可用时回退 controlSecondary。防范无效 QColor 陷阱。
+    QColor track = Qt::transparent;
+    if (active.isValid()) {
+        track = active;
+        track.setAlpha(effectiveTheme() == Dark ? 56 : 48);
+    }
+    if (!track.isValid() || track.alpha() == 0) {
+        track = colors.controlSecondary;
+    }
+
+    painter.setPen(Qt::NoPen);
+
+    // 1. Track. zh_CN: 轨道。
+    if (track.isValid() && track.alpha() > 0) {
+        painter.setBrush(track);
+        painter.drawRoundedRect(trackBounds, radius, radius);
+    }
+
+    // M3 dimensions: ~4 px gap before the remaining track and a stop dot of the track thickness.
+    // zh_CN: M3 尺寸：剩余轨道前 ~4px 间隙，停止点直径等于轨道厚度。
+    const qreal gap = qMin<qreal>(4.0, bounds.width() * 0.25);
+    const qreal dotDiameter = thickness;
+    const qreal dotRadius = dotDiameter / 2.0;
+
+    // 2. Stop dot pinned at the far (trailing) end of the track. zh_CN: 固定在轨道远（尾）端的停止点。
+    if (active.isValid() && active.alpha() > 0) {
+        const QPointF dotCenter(trackBounds.right() - dotRadius, centerY);
+        painter.setBrush(active);
+        painter.drawEllipse(dotCenter, dotRadius, dotRadius);
+    }
+
+    if (m_isIndeterminate) {
+        // Indeterminate: a travelling rounded segment, reusing the existing animation phase. The stop dot
+        // stays drawn (M3 keeps it). zh_CN: 不确定态：行进的圆角段，复用现有动画相位。停止点保持绘制（M3 保留）。
+        const qreal segmentWidth = qBound(thickness, bounds.width() * kIndeterminateSegmentRatio, bounds.width());
+        qreal segmentLeft = bounds.left() + (bounds.width() - segmentWidth) / 2.0;
+        if (isRunningState()) {
+            segmentLeft = bounds.left() - segmentWidth + (bounds.width() + segmentWidth) * m_animationPhase;
+        }
+        if (active.isValid() && active.alpha() > 0) {
+            painter.save();
+            painter.setClipRect(trackBounds.adjusted(0.0, -1.0, 0.0, 1.0));
+            painter.setBrush(active);
+            painter.drawRoundedRect(QRectF(segmentLeft, trackBounds.top(), segmentWidth, trackBounds.height()), radius, radius);
+            painter.restore();
+        }
+        return;
+    }
+
+    // Determinate: active segment from the left up to the ratio, leaving a ~4 px gap before the remaining
+    // track (and before the stop dot). zh_CN: 确定态：活动段从左侧延伸至比例处，在剩余轨道（及停止点）前留 ~4px 间隙。
+    const qreal ratio = qBound(0.0, progressRatio(), 1.0);
+    if (ratio <= 0.0) return;
+    if (!active.isValid() || active.alpha() == 0) return;
+
+    // The active segment must not run under the stop dot; cap it so the gap is preserved near full value.
+    // zh_CN: 活动段不得伸入停止点；做上限裁剪，使接近满值时仍保留间隙。
+    const qreal maxActiveRight = trackBounds.right() - dotDiameter - gap;
+    qreal activeRight = trackBounds.left() + bounds.width() * ratio;
+    activeRight = qMin(activeRight, maxActiveRight);
+    const qreal activeWidth = activeRight - trackBounds.left();
+    if (activeWidth <= 0.0) return;
+
+    painter.setBrush(active);
+    painter.drawRoundedRect(QRectF(trackBounds.left(), trackBounds.top(),
+                                   qMax(thickness, activeWidth), trackBounds.height()),
+                            radius, radius);
+}
+
+void ProgressBar::paintCupertino(QPainter& painter, const QRectF& bounds)
+{
+    // macOS linear progress: a thin (~6 pt) fully-rounded bar. Track = a neutral fill (controlSecondary,
+    // falling back to a low-alpha strokeStrong); active = a rounded accentDefault fill. Deliberately quiet
+    // — NO gap and NO stop dot (those are M3-only). paused→systemCaution, error→systemCritical.
+    // zh_CN: macOS 线性进度：细（~6pt）全圆角条。轨道=中性填充（controlSecondary，回退到低透明度
+    // strokeStrong）；活动=圆角 accentDefault 填充。刻意低调——无间隙、无停止点（仅 M3）。
+    // paused→systemCaution、error→systemCritical。
+    const auto& colors = themeColors();
+
+    const qreal thickness = qBound<qreal>(2.0, 6.0, qMax<qreal>(1.0, bounds.height()));
+    const qreal radius = thickness / 2.0;
+    const qreal centerY = bounds.center().y();
+    const QRectF trackBounds(bounds.left(), centerY - radius, bounds.width(), thickness);
+
+    const QColor active = indicatorColor();
+
+    // Neutral track: controlSecondary, with a low-alpha strokeStrong fallback. Guard the invalid-QColor
+    // trap so an unassigned color never paints solid black. zh_CN: 中性轨道：controlSecondary，低透明度
+    // strokeStrong 回退。防范无效 QColor 陷阱，避免未赋值色涂成纯黑。
+    QColor track = colors.controlSecondary;
+    if (!track.isValid() || track.alpha() == 0) {
+        track = colors.strokeStrong;
+        if (track.isValid()) {
+            track.setAlpha(effectiveTheme() == Dark ? 64 : 48);
+        }
+    }
+
+    painter.setPen(Qt::NoPen);
+
+    // 1. Track. zh_CN: 轨道。
+    if (track.isValid() && track.alpha() > 0) {
+        painter.setBrush(track);
+        painter.drawRoundedRect(trackBounds, radius, radius);
+    }
+
+    if (m_isIndeterminate) {
+        // Indeterminate: a travelling rounded segment (our barber-pole approximation). zh_CN: 不确定态：行进
+        // 的圆角段（理发店灯柱近似）。
+        const qreal segmentWidth = qBound(thickness, bounds.width() * kIndeterminateSegmentRatio, bounds.width());
+        qreal segmentLeft = bounds.left() + (bounds.width() - segmentWidth) / 2.0;
+        if (isRunningState()) {
+            segmentLeft = bounds.left() - segmentWidth + (bounds.width() + segmentWidth) * m_animationPhase;
+        }
+        if (active.isValid() && active.alpha() > 0) {
+            painter.save();
+            painter.setClipRect(trackBounds.adjusted(0.0, -1.0, 0.0, 1.0));
+            painter.setBrush(active);
+            painter.drawRoundedRect(QRectF(segmentLeft, trackBounds.top(), segmentWidth, trackBounds.height()), radius, radius);
+            painter.restore();
+        }
+        return;
+    }
+
+    // Determinate: a rounded active fill from the left, no gap, no stop dot. zh_CN: 确定态：从左侧起的圆角活动
+    // 填充，无间隙、无停止点。
+    const qreal ratio = qBound(0.0, progressRatio(), 1.0);
+    if (ratio <= 0.0) return;
+    if (!active.isValid() || active.alpha() == 0) return;
+
+    const qreal filledWidth = qMin(bounds.width(), qMax(thickness, bounds.width() * ratio));
+    painter.setBrush(active);
     painter.drawRoundedRect(QRectF(trackBounds.left(), trackBounds.top(), filledWidth, trackBounds.height()), radius, radius);
 }
 
