@@ -309,7 +309,12 @@ TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle) {
     EXPECT_FALSE(popup->isWindow());
     EXPECT_NE(popup->windowType(), Qt::Window);
     EXPECT_NE(popup->windowType(), Qt::Dialog);
-    EXPECT_TRUE(listView->backgroundVisible());
+    // The flyout card (Popup::paintEvent) already paints the opaque rounded surface, so the inner
+    // ListView keeps its own background OFF — a second background would add a tighter (control-radius)
+    // corner mask that pokes past the card's overlay-radius corners as white "dog-ears".
+    // zh_CN: Flyout 卡片(Popup::paintEvent)已绘制不透明圆角表面,故内部 ListView 不再画自身背景——
+    // 否则会叠加一层更紧(control 圆角)的角遮罩,超出卡片 overlay 圆角形成白色「狗耳」。
+    EXPECT_FALSE(listView->backgroundVisible());
 
     cb->hidePopup();
     QApplication::processEvents();

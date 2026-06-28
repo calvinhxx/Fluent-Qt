@@ -138,7 +138,14 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox)
     m_listView = new fluent::collections::ListView(this);
     m_listView->setObjectName("ComboBoxPopupListView");
     m_listView->setBorderVisible(false);
-    m_listView->setBackgroundVisible(true);
+    // The Flyout card (Popup::paintEvent) already paints an opaque bgLayer surface rounded at the
+    // overlay radius (8px). A second ListView background would also paint an opaque corner mask
+    // rounded at only the control radius (4px) and inset just 2px, so its filled corners poke past
+    // the card's 8px-rounded corners as white "dog-ears". Let the card be the single surface.
+    // zh_CN: Flyout 卡片(Popup::paintEvent)已绘制按 overlay 圆角(8px)的不透明 bgLayer 表面。再让 ListView
+    // 画背景会叠加一层按 control 圆角(4px)、仅内缩 2px 的不透明圆角遮罩,其填充的四角会超出卡片 8px 圆角,
+    // 形成白色「狗耳」。让卡片成为唯一表面即可。
+    m_listView->setBackgroundVisible(false);
     m_listView->setSelectionMode(fluent::collections::ListView::ListSelectionMode::Single);
     m_listView->setSpacing(0);
 
