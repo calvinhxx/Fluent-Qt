@@ -161,9 +161,20 @@ void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
     scheduleNextPrewarm();
 }
 
+void GalleryContentPresenter::setPrewarmPaused(bool paused)
+{
+    if (m_prewarmPaused == paused)
+        return;
+    m_prewarmPaused = paused;
+    // Resuming re-kicks the pump only if there is still work; a drained queue stays finished so we
+    // never re-emit prewarmFinished. zh_CN: 恢复时仅在仍有待预热项时重启泵；已排空的队列保持完成，绝不重复发 prewarmFinished。
+    if (!paused && !m_prewarmQueue.isEmpty())
+        scheduleNextPrewarm();
+}
+
 void GalleryContentPresenter::scheduleNextPrewarm()
 {
-    if (m_prewarmScheduled)
+    if (m_prewarmScheduled || m_prewarmPaused)
         return;
     m_prewarmScheduled = true;
     // One page per event-loop tick: the build freezes the thread, but yielding between pages
@@ -171,6 +182,11 @@ void GalleryContentPresenter::scheduleNextPrewarm()
     // zh_CN: 每帧建一个：建页会冻结线程，但页间让出控制权，让 splash 转圈持续动画而非整段预热期间锁死。
     QTimer::singleShot(0, this, [this]() {
         m_prewarmScheduled = false;
+        // Paused after this tick was queued (user grabbed the window): skip the build and wait —
+        // setPrewarmPaused(false) re-kicks the pump. zh_CN: 排队后才被暂停（用户抓住了窗口）：跳过本次建页等待，
+        // 由 setPrewarmPaused(false) 重启泵。
+        if (m_prewarmPaused)
+            return;
 
         // Skip anything already built (e.g. the user reached it first), then warm the next.
         // zh_CN: 跳过已建好的（如用户先到达的），再预热下一个。

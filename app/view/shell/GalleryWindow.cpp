@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include <QMoveEvent>
+#include <QResizeEvent>
 #include <QTimer>
 
 #include "components/foundation/FluentElement.h"
@@ -39,6 +41,12 @@ constexpr int kStartupSplashHoldMs = 120;
 // the window is settled before the coach marks appear. zh_CN: 从 splash 消失到首启引导之间的延迟，
 // 让 chrome 淡入完成、窗口稳定后再出现操作引导。
 constexpr int kIntroTourDelayMs = 480;
+
+// Idle gap after the last window move/resize event before splash-phase prewarm resumes. Long enough
+// to span the lulls between drag updates (so warming stays paused for the whole gesture), short enough
+// that warming picks back up promptly once the user lets go. zh_CN: 最后一次窗口移动/缩放事件后、恢复 splash 期
+// 预热前的空闲间隔。足够跨过拖动更新之间的停顿（使整个手势期间保持暂停），又短到松手后预热迅速接续。
+constexpr int kPrewarmInteractionResumeMs = 200;
 
 // Maps the user-facing window-effect setting to the window-chrome backdrop type.
 // zh_CN: 把面向用户的窗口效果设置映射到窗口 chrome 的背景类型。
@@ -231,6 +239,40 @@ void GalleryWindow::prewarmRemainingRoutes()
     if (m_footerNavigationPane)
         routeIds += m_footerNavigationPane->routeIds();
     m_contentPresenter->prewarmRoutes(routeIds);
+}
+
+void GalleryWindow::moveEvent(QMoveEvent* event)
+{
+    fluent::windowing::Window::moveEvent(event);
+    deferPrewarmDuringInteraction();
+}
+
+void GalleryWindow::resizeEvent(QResizeEvent* event)
+{
+    fluent::windowing::Window::resizeEvent(event);
+    deferPrewarmDuringInteraction();
+}
+
+void GalleryWindow::deferPrewarmDuringInteraction()
+{
+    if (!m_contentPresenter)
+        return;
+    // A top-level move/resize means the user is manipulating the window (or we just placed it at
+    // startup). Pause page warming so a synchronous build can't stutter the gesture, then (re)arm a
+    // short idle timer; continuous drag updates keep resetting it, so warming resumes only once the
+    // window has been still for kPrewarmInteractionResumeMs. zh_CN: 顶层窗口移动/缩放即用户在操作窗口（或启动时
+    // 刚摆放）。暂停建页使同步构建不卡顿手势，再（重新）启动短空闲计时器；连续拖动会不断重置它，于是窗口静止
+    // kPrewarmInteractionResumeMs 后才恢复预热。
+    m_contentPresenter->setPrewarmPaused(true);
+    if (!m_prewarmResumeTimer) {
+        m_prewarmResumeTimer = new QTimer(this);
+        m_prewarmResumeTimer->setSingleShot(true);
+        connect(m_prewarmResumeTimer, &QTimer::timeout, this, [this]() {
+            if (m_contentPresenter)
+                m_contentPresenter->setPrewarmPaused(false);
+        });
+    }
+    m_prewarmResumeTimer->start(kPrewarmInteractionResumeMs);
 }
 
 void GalleryWindow::finishStartup()

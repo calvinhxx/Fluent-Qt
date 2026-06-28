@@ -70,6 +70,19 @@ public:
      */
     void prewarmRoutes(const QStringList& routeIds);
 
+    /**
+     * @brief Pauses/resumes splash-phase page warming so it never builds during a window interaction.
+     * zh_CN: 暂停/恢复 splash 期建页，使其绝不在窗口交互期间构建。
+     *
+     * Building a page synchronously freezes the GUI thread for tens-to-hundreds of ms; if that lands
+     * mid-drag the window stutters. GalleryWindow pauses warming while the user is moving/resizing the
+     * window and resumes shortly after they stop, so dragging during the first-load splash stays smooth
+     * without abandoning the warm-ahead benefit. No-op once the queue has drained.
+     * zh_CN: 同步建页会冻结 GUI 线程几十~几百毫秒，若落在拖动中途就会卡顿。GalleryWindow 在用户移动/缩放窗口
+     * 期间暂停建页、停止片刻后恢复，使首屏 splash 期间拖拽顺滑，又不放弃预热收益。队列排空后为空操作。
+     */
+    void setPrewarmPaused(bool paused);
+
 signals:
     void routeActivated(const QString& routeId);
 
@@ -115,6 +128,8 @@ private:
     QQueue<QString> m_prewarmQueue;
     QElapsedTimer m_prewarmBudget;
     bool m_prewarmScheduled = false;
+    bool m_prewarmPaused = false;  // Set while the user moves/resizes the window; blocks page builds.
+
     int m_prewarmTotal = 0;   // Pages queued for splash-phase warm; denominator of the caption.
     int m_prewarmDone = 0;    // Pages warmed so far; numerator of the caption.
 };
