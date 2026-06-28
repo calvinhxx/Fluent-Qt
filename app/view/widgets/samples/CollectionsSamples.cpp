@@ -1939,6 +1939,16 @@ QVector<GallerySample> treeViewSamples()
                        auto* childButton = new Button(QStringLiteral("Child"), controls);
                        auto* siblingButton = new Button(QStringLiteral("Sibling"), controls);
                        auto* status = makeStatusLabel(controls, QStringLiteral("Transition: none"));
+                       // Reserve room for the LONGEST transition text up front. This label has no width
+                       // floor, so its width tracks the text, which changes length per selection
+                       // ("none" → "same level"); the label — and the left-aligned group it shares with the
+                       // tree — would then grow/shrink, visibly jumping the TreeView's width and its
+                       // translucent backdrop on every selection. zh_CN: 预留「最长过渡文案」的宽度。该标签无宽度下限,
+                       // 宽度随文本变化,而文本随选择变化("none"→"same level"),于是标签——以及它与 tree 共处的左对齐 group——
+                       // 会伸缩,使每次选择时 TreeView 宽度及其半透明背景跳动。
+                       status->setText(QStringLiteral("Transition: same level"));
+                       status->setMinimumWidth(qMax(status->minimumWidth(), status->sizeHint().width()));
+                       status->setText(QStringLiteral("Transition: none"));
                        controls->layout()->addWidget(parentButton);
                        controls->layout()->addWidget(childButton);
                        controls->layout()->addWidget(siblingButton);
