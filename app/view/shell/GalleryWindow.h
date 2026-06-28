@@ -9,6 +9,8 @@
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
 
+class QMoveEvent;
+class QResizeEvent;
 class QTimer;
 class QWidget;
 
@@ -64,6 +66,13 @@ public:
     PlaceholderPage* currentPlaceholderPage() const;
     SettingsPage* currentSettingsPage() const;
 
+protected:
+    // Pause splash-phase page warming while the user is moving/resizing the window so a synchronous
+    // build never stutters the drag; a short debounce resumes once they stop. zh_CN: 用户移动/缩放窗口期间
+    // 暂停 splash 期建页，使同步构建绝不卡顿拖拽；停止后经短防抖恢复。
+    void moveEvent(QMoveEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+
 private:
     enum class AppWindowWidthState {
         Expanded,
@@ -93,6 +102,9 @@ private:
     // 在全宽稳定后才显示完整标签（避免滑动中标签被裁剪）；收起时立即变为图标。
     void applyNavigationPaneDensity();
     void updateNavigationCommands();
+    // Pause prewarm now and (re)arm the idle timer that resumes it shortly after interaction stops.
+    // zh_CN: 立即暂停预热，并（重新）启动在交互停止片刻后恢复预热的空闲计时器。
+    void deferPrewarmDuringInteraction();
 
     GalleryNavigationViewModel m_navigationViewModel;
     GalleryNavigationState m_navigationState;
@@ -105,6 +117,7 @@ private:
     GalleryTitleBarController* m_titleBar = nullptr;
     GalleryIntroTour* m_introTour = nullptr;
     QTimer* m_navigationCompactReleaseTimer = nullptr;
+    QTimer* m_prewarmResumeTimer = nullptr;  // Idle debounce that resumes prewarm after interaction.
     QStringList m_backRouteStack;
     bool m_isNavigatingHistory = false;
 
