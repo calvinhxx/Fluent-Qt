@@ -33,3 +33,21 @@ if(WIN32)
         WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
     )
 endif()
+
+# Build a proper macOS .app bundle. A bundle carries a CFBundleIdentifier, which is what macOS
+# (LaunchServices, the Accessibility/automation layer, screen-capture filtering) keys on to identify
+# an application — a bare Mach-O executable has none, so tools that target apps by identity can't see
+# it. The bundle also lets us declare NSHighResolutionCapable for crisp Retina rendering.
+# zh_CN: 在 macOS 上打成正经的 .app 包。包带 CFBundleIdentifier，这是 macOS（LaunchServices、辅助功能/自动化层、
+# 截屏过滤）识别一个「应用」的依据——裸 Mach-O 可执行文件没有它，按应用身份定位的工具就看不到它。包里还能声明
+# NSHighResolutionCapable 以保证 Retina 清晰渲染。
+if(APPLE)
+    set_target_properties(fluent_qt_gallery PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_BUNDLE_NAME "Fluent-QT Gallery"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.fluentqt.gallery"
+        MACOSX_BUNDLE_BUNDLE_VERSION "1.0"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
+    )
+endif()
