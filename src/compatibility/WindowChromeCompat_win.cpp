@@ -378,6 +378,22 @@ bool handlePlatformNativeEvent(QWidget* window,
     if (handleDwmFrameMessage(msg, result))
         return true;
 
+    // Suppress the non-client frame repaint on focus changes. For a frameless + translucent (Mica)
+    // window, DefWindowProc otherwise redraws the default system caption/border on every WM_NCACTIVATE,
+    // which flashes a light/white edge when the user fast-switches apps (Alt-Tab away and back).
+    // DwmDefWindowProc has already serviced this message above to recomposite the backdrop; we now call
+    // DefWindowProc with lParam == -1, which Windows documents as "do not repaint the non-client area to
+    // reflect the state change," while still returning the correct activate/deactivate value so the shell
+    // and taskbar keep tracking activation. zh_CN: 抑制焦点变化时的非客户区 frame 重绘。无边框 + 半透明(Mica)窗口下,
+    // DefWindowProc 会在每个 WM_NCACTIVATE 重绘系统默认标题栏/边框，使用户快速切换 app(Alt-Tab 切走再切回)时闪现浅/白边。
+    // 上面 DwmDefWindowProc 已处理过该消息以重新合成背景；此处以 lParam == -1 调用 DefWindowProc——Windows 文档为
+    //「不重绘非客户区以反映状态变化」——同时仍返回正确的激活/失活值，使 shell 与任务栏继续跟踪激活状态。
+    if (msg->message == WM_NCACTIVATE) {
+        *result = static_cast<FluentNativeEventResult>(
+            DefWindowProcW(msg->hwnd, WM_NCACTIVATE, msg->wParam, -1));
+        return true;
+    }
+
     if (msg->message != WM_NCHITTEST)
         return false;
 
