@@ -22,3 +22,14 @@ target_link_libraries(fluent_qt_gallery
     Qt${QT_VERSION_MAJOR}::Network
 )
 target_include_directories(fluent_qt_gallery PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# Build as a GUI-subsystem app in non-Debug configs so launching the exe standalone does not pop a
+# console window. Debug keeps the console subsystem so spdlog output stays visible while developing.
+# Qt's WinMain shim comes from Qt6::EntryPoint (linked transitively via Qt Widgets), so main() is unchanged.
+# zh_CN: 非 Debug 配置链成 GUI 子系统，独立启动 exe 时不弹控制台；Debug 保留控制台以便开发时看 spdlog 日志。
+# WinMain 入口由随 Qt Widgets 传递链接的 Qt6::EntryPoint 提供，main() 无需改动。
+if(WIN32)
+    set_target_properties(fluent_qt_gallery PROPERTIES
+        WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
+    )
+endif()
