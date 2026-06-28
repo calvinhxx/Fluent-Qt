@@ -856,7 +856,7 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
         // the window backdrop at paint time. zh_CN: 提供宿主在无半透明系统背景（Normal / 不支持的平台）时
         // 绘制的不透明内容层表面（bgLayerAlt）；Mica/Acrylic 下宿主不绘制，经透明页面透出系统背景。宿主在绘制时
         // 依据窗口背景判断。
-        m_contentHost->setContentSurface(themeColors().bgLayerAlt,
+        m_contentHost->setContentSurface(themeColorsRef().bgLayerAlt,
                                          framed ? themeRadius().overlay : 0.0,
                                          QColor());
         m_contentHost->show();
@@ -941,7 +941,7 @@ void NavigationView::updatePaneFlyout(const LayoutState& state)
     // 右上/右下圆角与柔和阴影——读作浮在内容/背景「之上」，而非融入。内联窗格被切到透明的「surface」模式
     //（setChromeWidgetsFloating），使这张卡片均匀透出、各区域无材质拼缝。
     setChromeWidgetsFloating(true);
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const bool dark = currentTheme() == Dark;
     QColor fill = colors.bgLayer;
     fill.setAlpha(255);
