@@ -438,11 +438,11 @@ public:
                QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png"));
         append(QStringLiteral("macOS 27 Community"),
                QStringLiteral("Community Figma design kit for macOS 27."),
-               QStringLiteral("https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996&p=f&t=ObUJ8FERQ0lP3rIa-0"),
+               QStringLiteral("https://www.figma.com/community/file/1651309434229735362"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-macOS27.png"));
         append(QStringLiteral("Material 3 Design Kit"),
                QStringLiteral("Community Figma kit for Material 3."),
-               QStringLiteral("https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=11-1833&p=f&t=I3de5l3oPl1YJyCT-0"),
+               QStringLiteral("https://www.figma.com/community/file/1035203688168086460"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-Material3.png"));
         append(QStringLiteral("WinUI Gallery"),
                QStringLiteral("WinUI Gallery source on GitHub."),

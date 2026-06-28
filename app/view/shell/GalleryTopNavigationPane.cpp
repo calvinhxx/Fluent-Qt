@@ -127,7 +127,18 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
     // current flyout, and a second click is required to activate/open the target item.
     // zh_CN: 轻关闭会吞掉这次外部按下：点击另一个顶部导航项时先关闭当前浮窗，需要第二次点击才激活/打开目标项。
     m_childFlyout->setLightDismissConsumesPress(true);
-    connect(m_childFlyout, &QObject::destroyed, this, [this]() {
+    // Guard the destroyed handler against a STALE flyout nulling the CURRENT one. closeChildFlyout()
+    // hands the outgoing popup to deleteLater() and immediately lets a new flyout be assigned to
+    // m_childFlyout; the outgoing popup's destroyed signal then fires a turn later. Without the
+    // identity check it would clear m_childFlyout even though it now points at the freshly opened,
+    // visible flyout — leaving m_childFlyout null so the next row click's closeChildFlyout() early-returns
+    // and the flyout never collapses. zh_CN: 防止「旧浮窗」的析构把「当前浮窗」置空。closeChildFlyout() 把上一个
+    // 浮窗交给 deleteLater() 后会立刻把新浮窗赋给 m_childFlyout;旧浮窗的 destroyed 信号在下一轮才触发。若不做身份校验,
+    // 它会把已指向新（可见）浮窗的 m_childFlyout 清空——导致下次点击行时 closeChildFlyout() 提前返回,浮窗无法收起。
+    auto* createdFlyout = m_childFlyout;
+    connect(createdFlyout, &QObject::destroyed, this, [this, createdFlyout]() {
+        if (m_childFlyout != createdFlyout)
+            return;
         m_childFlyout = nullptr;
         m_childFlyoutPanel = nullptr;
     });

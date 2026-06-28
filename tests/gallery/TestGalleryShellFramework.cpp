@@ -305,10 +305,10 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithDesignResourceCards)
          QUrl(QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit")),
          QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png")},
         {QStringLiteral("macOS 27 Community"),
-         QUrl(QStringLiteral("https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996&p=f&t=ObUJ8FERQ0lP3rIa-0")),
+         QUrl(QStringLiteral("https://www.figma.com/community/file/1651309434229735362")),
          QStringLiteral(":/app/assets/home_header_tiles/Header-macOS27.png")},
         {QStringLiteral("Material 3 Design Kit"),
-         QUrl(QStringLiteral("https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=11-1833&p=f&t=I3de5l3oPl1YJyCT-0")),
+         QUrl(QStringLiteral("https://www.figma.com/community/file/1035203688168086460")),
          QStringLiteral(":/app/assets/home_header_tiles/Header-Material3.png")},
     };
     constexpr int kHomeLinkUrlRole = Qt::UserRole + 3;
@@ -1736,4 +1736,69 @@ TEST_F(WindowingSamplesTest, TitleBarSampleReservesCaptionSpaceByDesignLanguage)
 
     EXPECT_GT(titleBar->systemReservedTrailingWidth(), 0);
     EXPECT_EQ(titleBar->systemReservedLeadingWidth(), 0);
+}
+
+// Regression: a top-nav child flyout must still collapse on row click AFTER it was light-dismissed
+// and reopened. The outgoing flyout's deferred deletion used to clear m_childFlyout out from under
+// the freshly reopened flyout, so the next row click's closeChildFlyout() early-returned and the
+// flyout stayed open over the navigated page. zh_CN: 顶部子浮窗在「轻关闭后再打开」时点击行仍须收起。
+// 旧浮窗的延迟析构曾把 m_childFlyout 从刚重新打开的浮窗下清空,导致下次点击行时 closeChildFlyout() 提前返回,
+// 浮窗滞留在已导航的页面上。
+TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
+{
+    auto& settings = GallerySettings::instance();
+    const auto previousStyle = settings.navigationStyle();
+    settings.setNavigationStyle(GallerySettings::NavigationStyle::Top);
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+
+    auto* navigationView = window.findChild<NavigationView*>(QStringLiteral("galleryNavigationView"));
+    ASSERT_NE(navigationView, nullptr);
+    ASSERT_NE(navigationView->mainChromeWidget(), nullptr);
+    auto* collectionsButton = navigationView->mainChromeWidget()->findChild<Button*>(
+        QStringLiteral("galleryTopNavigationButton_collections"));
+    ASSERT_NE(collectionsButton, nullptr);
+
+    auto openCollectionsFlyout = [&]() -> Popup* {
+        QTest::mouseClick(collectionsButton, Qt::LeftButton);
+        QApplication::processEvents();
+        QTest::qWait(250);  // let the entrance settle
+        QApplication::processEvents();
+        return visiblePopupByName(&window, QStringLiteral("galleryTopNavigationFlyout"));
+    };
+
+    // 1) Open the flyout, then light-dismiss it the way an outside press does: close() leaves the
+    //    pane still tracking this popup (it is only cleared on deletion), mirroring the real path.
+    Popup* first = openCollectionsFlyout();
+    ASSERT_NE(first, nullptr);
+    first->close();
+    QApplication::processEvents();
+
+    // 2) Reopen the SAME category. This deleteLater()s the old popup and creates a new one; the old
+    //    popup's destroyed signal then fires and previously nulled the new popup's tracking pointer.
+    Popup* second = openCollectionsFlyout();
+    ASSERT_NE(second, nullptr);
+    QPointer<Popup> secondPtr(second);
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    QApplication::processEvents();
+    ASSERT_FALSE(secondPtr.isNull());
+    ASSERT_TRUE(secondPtr->isVisible());
+
+    // 3) Click a child row — the flyout must collapse and the route must change.
+    auto* row = second->findChild<QWidget*>(
+        QStringLiteral("galleryCompactNavigationFlyoutRow_tree-view"));
+    ASSERT_NE(row, nullptr);
+    QTest::mouseClick(row, Qt::LeftButton, Qt::NoModifier, row->rect().center());
+    QApplication::processEvents();
+    QTest::qWait(50);
+    QApplication::processEvents();
+
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("tree-view"));
+    EXPECT_TRUE(secondPtr.isNull() || !secondPtr->isVisible())
+        << "flyout stayed open after row click following a light-dismiss + reopen";
+
+    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    settings.setNavigationStyle(previousStyle);
 }
