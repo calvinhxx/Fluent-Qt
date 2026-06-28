@@ -344,6 +344,71 @@ TEST_F(GalleryContentPagesTest, SampleCardsHostLivePreviewAndCode)
     }
 }
 
+// Regression: the TreeView "Selection indicator motion" sample shares one left-aligned group with a
+// controls row whose status label reads "Transition: <none|inward|outward|same level>". The collections
+// makeStatusLabel sets no width floor, so without a reservation the label resizes with the text, the
+// group (and the tree filling it) resizes too, and the tree's translucent backdrop visibly jumps on every
+// selection. The fix reserves the longest transition text's width up front. zh_CN: TreeView「选择指示器动效」
+// 示例的 tree 与控制行同处一个左对齐 group,状态标签随过渡文案变宽变窄,若不预留最长文案宽度,group(及填满它的 tree)
+// 会随之伸缩,tree 半透明背景在每次选择时跳动。修复为预留最长过渡文案的宽度。
+TEST_F(GalleryContentPagesTest, TreeViewIndicatorMotionStatusLabelReservesLongestWidth)
+{
+    const auto samples = fluent::gallery::gallerySamplesForRoute(QStringLiteral("tree-view"));
+    const fluent::gallery::GallerySample* sample = nullptr;
+    for (const auto& candidate : samples) {
+        if (candidate.id == QStringLiteral("tree-view-indicator-motion")) {
+            sample = &candidate;
+            break;
+        }
+    }
+    ASSERT_NE(sample, nullptr);
+    ASSERT_TRUE(static_cast<bool>(sample->createPreview));
+
+    GallerySampleCard card(*sample);
+    card.resize(640, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+
+    // Find the "Transition: ..." status label.
+    QLabel* status = nullptr;
+    for (QLabel* label : card.findChildren<QLabel*>()) {
+        if (label->text().startsWith(QStringLiteral("Transition:"))) {
+            status = label;
+            break;
+        }
+    }
+    ASSERT_NE(status, nullptr);
+    auto* tree = card.findChild<TreeView*>();
+    ASSERT_NE(tree, nullptr);
+
+    const QStringList transitions{
+        QStringLiteral("Transition: none"), QStringLiteral("Transition: inward"),
+        QStringLiteral("Transition: outward"), QStringLiteral("Transition: same level")};
+
+    // Font-independent fix postcondition: every transition text fits within the reserved floor, so the
+    // label never grows the shared row.
+    for (const QString& text : transitions) {
+        status->setText(text);
+        EXPECT_GE(status->minimumWidth(), status->sizeHint().width())
+            << text.toStdString();
+    }
+
+    // End-to-end: cycling the status text (what a selection does) must not change the tree's width.
+    auto settledTreeWidth = [&]() {
+        QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        if (card.layout())
+            card.layout()->activate();
+        QApplication::processEvents();
+        return tree->width();
+    };
+    status->setText(transitions.first());
+    const int baselineWidth = settledTreeWidth();
+    for (const QString& text : transitions) {
+        status->setText(text);
+        EXPECT_EQ(settledTreeWidth(), baselineWidth) << text.toStdString();
+    }
+}
+
 TEST_F(GalleryContentPagesTest, SampleCardRefreshesWhenPreviewSizeHintChanges)
 {
     ResizablePreview* preview = nullptr;
