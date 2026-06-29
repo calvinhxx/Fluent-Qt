@@ -86,8 +86,24 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "Fluent-QT Gallery")
 # drag-to-install window to appear directly. The Windows NSIS branch sets it for its license page.
 # zh_CN: 这里故意不全局设 CPACK_RESOURCE_FILE_LICENSE：在 macOS DragNDrop 上它会变成挂载前的
 # 点击同意 SLA 弹窗；我们希望直接进到拖拽安装窗口。Windows NSIS 分支单独设置它用于许可页。
+# Name the artifact after the architecture it actually contains. On macOS we ship one single-arch
+# DMG per CPU (arm64 and x86_64 are packaged separately), so the suffix must follow the requested
+# CMAKE_OSX_ARCHITECTURES rather than the build host's processor — otherwise an x86_64 image
+# cross-built on Apple Silicon would be mislabelled "arm64".
+# zh_CN: 产物按其实际包含的架构命名。macOS 上 arm64 与 x86_64 分开打成各自的单架构 DMG,后缀要跟
+# CMAKE_OSX_ARCHITECTURES 走,而不是构建主机的处理器,否则在 Apple Silicon 上交叉构建出的 x86_64
+# 镜像会被错标成 "arm64"。
+set(_fluent_qt_pkg_arch "${CMAKE_SYSTEM_PROCESSOR}")
+if(APPLE AND CMAKE_OSX_ARCHITECTURES)
+    list(LENGTH CMAKE_OSX_ARCHITECTURES _fluent_qt_osx_arch_count)
+    if(_fluent_qt_osx_arch_count EQUAL 1)
+        set(_fluent_qt_pkg_arch "${CMAKE_OSX_ARCHITECTURES}")
+    else()
+        set(_fluent_qt_pkg_arch "universal")
+    endif()
+endif()
 set(CPACK_PACKAGE_FILE_NAME
-    "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+    "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${_fluent_qt_pkg_arch}")
 set(CPACK_PACKAGE_EXECUTABLES
     "fluent_qt_gallery" "Fluent-QT Gallery")
 

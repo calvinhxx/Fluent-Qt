@@ -18,22 +18,34 @@ allowed to depend on the developer machine's Qt installation.
 
 ## macOS DMG
 
+macOS ships **one single-architecture DMG per CPU** — Apple Silicon and Intel are
+packaged separately rather than as a fat universal image. Each preset pins
+`CMAKE_OSX_ARCHITECTURES` to a single slice, and the install step thins the
+(universal) Qt frameworks `macdeployqt` copies down to that slice, so every image
+carries only the code its CPU runs (roughly half the size of a universal build).
+
+Apple Silicon (arm64):
+
 ```bash
 cmake --preset vcpkg-osx-release
 cmake --build --preset vcpkg-osx-release
 cpack --preset vcpkg-osx-dmg
+# → Fluent-QT-Gallery-<version>-Darwin-arm64.dmg
 ```
 
-For Intel/Rosetta:
+Intel (x86_64, cross-builds on Apple Silicon and runs under Rosetta):
 
 ```bash
 cmake --preset vcpkg-osx-x64-release
 cmake --build --preset vcpkg-osx-x64-release
 cpack --preset vcpkg-osx-x64-dmg
+# → Fluent-QT-Gallery-<version>-Darwin-x86_64.dmg
 ```
 
-The generated DMG uses the CPack `DragNDrop` generator and contains
-`fluent_qt_gallery.app`.
+Each DMG uses the CPack `DragNDrop` generator and contains
+`Fluent-QT Gallery.app` (drag-to-install layout beside the `/Applications`
+alias). The artifact's architecture suffix follows the requested
+`CMAKE_OSX_ARCHITECTURES`, not the build host's processor.
 
 ## Windows Installer
 
