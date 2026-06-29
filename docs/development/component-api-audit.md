@@ -5,10 +5,9 @@ Change: `audit-component-api-consistency`
 
 ## Scope
 
-This audit covers public component headers under `src/components/**`, focused tests
-under `tests/components/**`, and relevant OpenSpec specs under `openspec/specs/**`.
-It records compatibility-safe fixes applied in this change and defers breaking
-or broad migrations to follow-up proposals.
+This historical audit covers public component headers under `src/components/**`
+and focused tests under `tests/components/**`. New API audits should use current
+source, tests, and development docs as the active source of truth.
 
 The reusable component API checklist lives in
 [Component API Conventions](component-api-conventions.md). This document is the

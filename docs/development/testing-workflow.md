@@ -3,7 +3,7 @@
 Use this workflow when choosing Qt/GTest/CTest validation commands, filtering
 tests by CTest labels, running or skipping VisualCheck tests, adding test
 targets with `add_qt_test_module`, or synchronizing new component directories
-with OpenSpec, README, CMake, and agent instructions.
+with README, CMake, and agent instructions.
 
 ## CTest Labels
 
@@ -99,8 +99,8 @@ FLUENT_QT_GEOMETRY_DUMP=1 ctest --preset vcpkg-osx -L '^test_gallery_shell_frame
 - Do not keep empty placeholder directories.
 - Create a new component directory only when the first component in that
   category lands.
-- When adding or removing a component directory, update the relevant OpenSpec
-  specs, README overview, tests CMake, and `.github/copilot-instructions.md`.
+- When adding or removing a component directory, update the README overview,
+  tests CMake, and `.github/copilot-instructions.md`.
 
 ## Validation Defaults
 
@@ -113,7 +113,3 @@ FLUENT_QT_GEOMETRY_DUMP=1 ctest --preset vcpkg-osx -L '^test_gallery_shell_frame
 ```bash
 ctest --preset vcpkg-osx -L '^test_<name>$' --output-on-failure
 ```
-
-- For OpenSpec-driven changes, also run the relevant `openspec validate ...
-  --strict`; telemetry errors from `edge.openspec.dev` are noise if the command
-  exits successfully.

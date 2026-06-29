@@ -5,7 +5,6 @@
 - Use [README.md](README.md) for the project overview, supported Qt versions, CMake presets, and local IDE expectations.
 - Use [docs/development/README.md](docs/development/README.md) as the index for reusable workflow rules; link to those docs instead of copying them into new agent files.
 - Use [docs/architecture/README.md](docs/architecture/README.md) for architecture contracts, especially [docs/architecture/overlay-behavior.md](docs/architecture/overlay-behavior.md) when touching popup, flyout, dropdown, drawer, or other same-window overlay behavior.
-- OpenSpec workflow files live under [openspec/](openspec/) and project skills live under [.github/skills/](.github/skills/). For OpenSpec-driven work, follow the matching proposal/apply/archive skill before editing implementation code.
 
 ## Build and Test
 
@@ -38,7 +37,7 @@ ctest --preset vcpkg-osx --output-on-failure
 - For visible UI in tests and demos, prefer existing project Fluent components over raw Qt widgets when an equivalent exists.
 - Within `namespace fluent::<category>`, spell shared mixin inheritance as `public FluentElement, public QMLPlus`; outside component namespaces, qualify them as `fluent::FluentElement` and `fluent::QMLPlus`.
 - New visible components should compose existing Fluent components before adding raw Qt widgets or duplicating paint/style code.
-- Do not keep empty placeholder directories under `src/components/`. When adding or removing a component directory, update the relevant OpenSpec specs, README overview, tests CMake, and this agent instruction file.
+- Do not keep empty placeholder directories under `src/components/`. When adding or removing a component directory, update the README overview, tests CMake, and this agent instruction file.
 
 ## Testing Conventions
 
@@ -53,4 +52,3 @@ ctest --preset vcpkg-osx --output-on-failure
 - Use the logging workflow in [docs/development/logging-workflow.md](docs/development/logging-workflow.md). Useful anchors include layout recalculation, state transitions, input handling, popup/animation lifecycle, and test setup failures.
 - Runtime logging can be controlled with `SPDLOG_LEVEL=debug|info|warn|error|critical|off` and `SPDLOG_FILE=/path/to/log`.
 - For visual or interaction changes, review token color usage, radius, 4 px spacing, typography, Light/Dark behavior, states, text fit, and animation smoothness with [docs/development/visual-review.md](docs/development/visual-review.md).
-- If an OpenSpec change is active, validate it with the relevant `openspec validate ... --strict`; telemetry errors from `edge.openspec.dev` are noise when the command exits successfully.
