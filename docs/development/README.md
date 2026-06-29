@@ -9,6 +9,7 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [Component API Audit](component-api-audit.md)
 - [Source Comment Style](comment-style.md)
 - [Logging Workflow](logging-workflow.md)
+- [Release Governance](release-governance.md)
 - [Testing Workflow](testing-workflow.md)
 - [App Sample Optimization](app-sample-optimization.md)
 - [App Visual Geometry Verification](app-visual-geometry-verification.md)

@@ -79,6 +79,7 @@ qWarning/qDebug 汇入同一日志文件：
 可复用开发规则集中在 [docs/development/README.md](docs/development/README.md):
 
 - [Testing Workflow](docs/development/testing-workflow.md)
+- [Release Governance](docs/development/release-governance.md)
 - [App Visual Geometry Verification](docs/development/app-visual-geometry-verification.md)
 - [Qt Component Test Conventions](docs/development/qt-component-test-conventions.md)
 - [Visual Review](docs/development/visual-review.md)

@@ -4,6 +4,7 @@
 
 - Use [README.md](README.md) for the project overview, supported Qt versions, CMake presets, and local IDE expectations.
 - Use [docs/development/README.md](docs/development/README.md) as the index for reusable workflow rules; link to those docs instead of copying them into new agent files.
+- Use [docs/development/release-governance.md](docs/development/release-governance.md) for lightweight branch, Angular-style Conventional Commit, version, tag, changelog, and release checklist rules.
 - Use [docs/architecture/README.md](docs/architecture/README.md) for architecture contracts, especially [docs/architecture/overlay-behavior.md](docs/architecture/overlay-behavior.md) when touching popup, flyout, dropdown, drawer, or other same-window overlay behavior.
 
 ## Build and Test
