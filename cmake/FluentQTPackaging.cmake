@@ -88,13 +88,16 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "Fluent-QT Gallery")
 # macOS DragNDrop image, and the installer license page on Windows NSIS.
 # zh_CN: CPACK_RESOURCE_FILE_LICENSE 在下方 APPLE/WIN32 分支按平台分别设置,不全局设——因为各
 # 生成器呈现方式不同:macOS DragNDrop 是挂载前的点击同意 SLA,Windows NSIS 是安装器许可页。
-# Name the artifact after the architecture it actually contains. On macOS we ship one single-arch
-# DMG per CPU (arm64 and x86_64 are packaged separately), so the suffix must follow the requested
-# CMAKE_OSX_ARCHITECTURES rather than the build host's processor — otherwise an x86_64 image
-# cross-built on Apple Silicon would be mislabelled "arm64".
-# zh_CN: 产物按其实际包含的架构命名。macOS 上 arm64 与 x86_64 分开打成各自的单架构 DMG,后缀要跟
-# CMAKE_OSX_ARCHITECTURES 走,而不是构建主机的处理器,否则在 Apple Silicon 上交叉构建出的 x86_64
-# 镜像会被错标成 "arm64"。
+# Name the artifact after the architecture it actually contains, not the build host's processor:
+#   - macOS ships one single-arch DMG per CPU (arm64 / x86_64 packaged separately), so the suffix
+#     follows the requested CMAKE_OSX_ARCHITECTURES — otherwise an x86_64 image cross-built on Apple
+#     Silicon would be mislabelled "arm64".
+#   - Windows cross-builds ARM64 via the VS generator (-A <arch>, CMAKE_VS_PLATFORM_NAME) while
+#     CMAKE_SYSTEM_PROCESSOR still reports the x64 host, so the suffix follows the VS platform name
+#     (normalized to x64 / arm64 / x86).
+# zh_CN: 产物按其实际包含的架构命名,而非构建主机处理器:macOS arm64/x86_64 分别打单架构 DMG,后缀跟
+# CMAKE_OSX_ARCHITECTURES(否则 Apple Silicon 上交叉出的 x86_64 会被错标 arm64);Windows 用 VS 生成器
+# 交叉构建 ARM64,CMAKE_SYSTEM_PROCESSOR 仍报 x64 主机,故后缀跟 VS 平台名(规范化为 x64/arm64/x86)。
 set(_fluent_qt_pkg_arch "${CMAKE_SYSTEM_PROCESSOR}")
 if(APPLE AND CMAKE_OSX_ARCHITECTURES)
     list(LENGTH CMAKE_OSX_ARCHITECTURES _fluent_qt_osx_arch_count)
@@ -102,6 +105,16 @@ if(APPLE AND CMAKE_OSX_ARCHITECTURES)
         set(_fluent_qt_pkg_arch "${CMAKE_OSX_ARCHITECTURES}")
     else()
         set(_fluent_qt_pkg_arch "universal")
+    endif()
+elseif(WIN32 AND CMAKE_VS_PLATFORM_NAME)
+    if(CMAKE_VS_PLATFORM_NAME STREQUAL "ARM64")
+        set(_fluent_qt_pkg_arch "arm64")
+    elseif(CMAKE_VS_PLATFORM_NAME STREQUAL "x64")
+        set(_fluent_qt_pkg_arch "x64")
+    elseif(CMAKE_VS_PLATFORM_NAME STREQUAL "Win32")
+        set(_fluent_qt_pkg_arch "x86")
+    else()
+        set(_fluent_qt_pkg_arch "${CMAKE_VS_PLATFORM_NAME}")
     endif()
 endif()
 set(CPACK_PACKAGE_FILE_NAME
@@ -147,6 +160,38 @@ elseif(WIN32)
     set(CPACK_NSIS_MUI_UNIICON "${_fluent_qt_gallery_ico}")
     set(CPACK_NSIS_INSTALLED_ICON_NAME
         "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe")
+    # Style the wizard like the macOS DMG instead of the raw NSIS grey look: a blue->green branded
+    # sidebar on the Welcome/Finish pages, a small header banner on the inner pages, bottom branding
+    # text, and a "run now" checkbox on the finish page. The bitmaps are 24-bit BMPs at the NSIS MUI
+    # conventional sizes (sidebar 164x314, header 150x57), generated from the shared app-icon.png.
+    # zh_CN: 把向导做得像 macOS DMG，而不是 NSIS 原生灰扑扑的样子：欢迎/完成页用蓝绿品牌侧栏，内页加小横幅，
+    # 底部品牌文字，完成页加"立即运行"勾选。位图是按 NSIS MUI 约定尺寸（侧栏 164x314、横幅 150x57）的 24 位 BMP。
+    set(_fluent_qt_welcome_bmp "${PROJECT_SOURCE_DIR}/app/assets/installer-welcome.bmp")
+    set(_fluent_qt_header_bmp "${PROJECT_SOURCE_DIR}/app/assets/installer-header.bmp")
+    set(CPACK_NSIS_MUI_WELCOMEFINISHPAGE_BITMAP "${_fluent_qt_welcome_bmp}")
+    set(CPACK_NSIS_MUI_UNWELCOMEFINISHPAGE_BITMAP "${_fluent_qt_welcome_bmp}")
+    # CPack has no dedicated header-bitmap variable; the template already emits `!define MUI_HEADERIMAGE`
+    # and inserts CPACK_NSIS_DEFINES before the page macros, so inject the bitmap define there.
+    # No quotes (CPack mangles an embedded quote in CPACK_NSIS_DEFINES into ';') and a NATIVE backslash
+    # path (NSIS's internal `File` command rejects forward slashes -> "no files found"). The path has
+    # no spaces, so the unquoted form is safe.
+    # zh_CN: CPack 没有专门的 header 位图变量；模板已 `!define MUI_HEADERIMAGE` 且在页面宏前插入
+    # CPACK_NSIS_DEFINES，故在此注入。不加引号（引号会被 CPack 弄成 ';'），且用反斜杠原生路径
+    # （NSIS 内部 File 命令不认正斜杠，会报 "no files found"）；路径无空格，未加引号也安全。
+    # CPack writes CPACK_NSIS_DEFINES verbatim, so a native path with single backslashes makes the
+    # re-read of CPackConfig.cmake choke on invalid escapes (e.g. "\w"). Double the backslashes so the
+    # config parses back to single ones, which is what NSIS's File needs.
+    # zh_CN: CPack 逐字写入 CPACK_NSIS_DEFINES，单反斜杠的原生路径会让 CPackConfig.cmake 回读时因非法转义
+    # （如 "\w"）报错。把反斜杠翻倍：配置解析回单反斜杠，正是 NSIS File 所需。
+    file(TO_NATIVE_PATH "${_fluent_qt_header_bmp}" _fluent_qt_header_bmp_native)
+    string(REPLACE "\\" "\\\\" _fluent_qt_header_bmp_native "${_fluent_qt_header_bmp_native}")
+    set(CPACK_NSIS_DEFINES "!define MUI_HEADERIMAGE_BITMAP ${_fluent_qt_header_bmp_native}")
+    set(CPACK_NSIS_BRANDING_TEXT "Fluent-QT Gallery ${PROJECT_VERSION}")
+    # Offer to launch the app straight from the finish page. Give only the exe name — the template
+    # prepends "$INSTDIR\<executables-dir>\" (here bin\), so a bin\ prefix would double it.
+    # zh_CN: 完成页提供"立即运行"。只给 exe 名——模板会自动加 "$INSTDIR\<可执行目录>\"（这里是 bin\），
+    # 带 bin\ 前缀会重复。
+    set(CPACK_NSIS_MUI_FINISHPAGE_RUN "fluent_qt_gallery.exe")
     set(CPACK_NSIS_MENU_LINKS
         "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe" "Fluent-QT Gallery")
     # Always create a desktop shortcut. CPACK_CREATE_DESKTOP_LINKS would instead add an *unchecked*

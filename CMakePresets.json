@@ -89,6 +89,30 @@
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF"
       }
+    },
+    {
+      "name": "vcpkg-windows-arm64",
+      "displayName": "vcpkg Windows ARM64 Debug",
+      "description": "Windows ARM64 cross-build from an x64 host using the Visual Studio generator. Requires the msvc2022_arm64 Qt kit installed so CMake finds ARM64 Qt instead of the host x64 Qt.",
+      "inherits": "vcpkg-windows",
+      "architecture": {
+        "value": "ARM64",
+        "strategy": "set"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "arm64-windows",
+        "CMAKE_PREFIX_PATH": "C:/Qt/6.9.3/msvc2022_arm64"
+      }
+    },
+    {
+      "name": "vcpkg-windows-arm64-release",
+      "displayName": "vcpkg Windows ARM64 Release",
+      "description": "Windows ARM64 release build used for installer packaging.",
+      "inherits": "vcpkg-windows-arm64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -120,6 +144,16 @@
     {
       "name": "vcpkg-windows-release",
       "configurePreset": "vcpkg-windows-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "vcpkg-windows-arm64",
+      "configurePreset": "vcpkg-windows-arm64",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vcpkg-windows-arm64-release",
+      "configurePreset": "vcpkg-windows-arm64-release",
       "configuration": "Release"
     }
   ],
@@ -173,6 +207,16 @@
     {
       "name": "vcpkg-windows-installer",
       "configurePreset": "vcpkg-windows-release",
+      "generators": [
+        "NSIS"
+      ],
+      "configurations": [
+        "Release"
+      ]
+    },
+    {
+      "name": "vcpkg-windows-arm64-installer",
+      "configurePreset": "vcpkg-windows-arm64-release",
       "generators": [
         "NSIS"
       ],

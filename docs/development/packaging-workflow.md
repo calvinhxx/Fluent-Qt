@@ -56,15 +56,53 @@ cpack --preset vcpkg-windows-installer
 ```
 
 The generated installer uses the CPack `NSIS` generator and installs the Gallery
-executable under the package `bin` directory.
+executable under the package `bin` directory. It always creates Start Menu and
+desktop shortcuts, and offers a "run now" checkbox on the finish page.
 
 The executable embeds the app icon and version metadata via `app/app.rc.in`
 (compiled into a `.rc` at configure time), so Explorer, the taskbar, Alt-Tab and
-the installer-created shortcuts all show the Fluent-QT Gallery icon. The NSIS
-installer and uninstaller wizards are branded with the same icon. The icon source
-of truth is `app/assets/Fluent-QT-Gallery.ico` — the Windows counterpart to the
-macOS `app/assets/Fluent-QT-Gallery.icns`. Both are derived from the shared
+the installer-created shortcuts all show the Fluent-QT Gallery icon. The icon
+source of truth is `app/assets/Fluent-QT-Gallery.ico` — the Windows counterpart to
+the macOS `app/assets/Fluent-QT-Gallery.icns`. Both are derived from the shared
 `app/assets/app-icon.png` master.
+
+### Installer branding
+
+The NSIS wizard is styled to match the polish of the macOS DMG rather than the raw
+grey NSIS look:
+
+- Installer/uninstaller window icon: `app/assets/Fluent-QT-Gallery.ico`.
+- Welcome/Finish sidebar (164×314) and inner-page header banner (150×57): a
+  blue→green branded gradient in `app/assets/installer-welcome.bmp` and
+  `app/assets/installer-header.bmp`, generated from `app-icon.png`.
+- Bottom branding text and a finish-page "run Fluent-QT Gallery" option.
+
+All branding is wired in `cmake/FluentQTPackaging.cmake`.
+
+### Architectures
+
+Windows is packaged per-architecture, mirroring the macOS arm64/x64 split. The
+artifact name carries the architecture (`...-Windows-x64.exe`,
+`...-Windows-arm64.exe`):
+
+```powershell
+# x64 (default)
+cmake --preset vcpkg-windows-release
+cmake --build --preset vcpkg-windows-release
+cpack --preset vcpkg-windows-installer
+
+# ARM64 (cross-built from an x64 host via the Visual Studio generator)
+cmake --preset vcpkg-windows-arm64-release
+cmake --build --preset vcpkg-windows-arm64-release
+cpack --preset vcpkg-windows-arm64-installer
+```
+
+The ARM64 presets require the **`msvc2022_arm64` Qt kit** installed (via the Qt
+Maintenance Tool) at `C:/Qt/<ver>/msvc2022_arm64`; the preset points
+`CMAKE_PREFIX_PATH` there so CMake finds ARM64 Qt instead of the host x64 Qt.
+
+> 32-bit x86 is intentionally not packaged: Qt 6 ships no 32-bit Windows binaries,
+> so an `x86-windows` build would require a self-compiled 32-bit Qt.
 
 ## Version Contract
 
