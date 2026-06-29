@@ -137,6 +137,14 @@ elseif(WIN32)
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_EXECUTABLES_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
+    # Brand the installer + uninstaller wizard with the app icon (the macOS DMG has its background
+    # image; this is the Windows equivalent). makensis reads these absolute source paths at package
+    # time. Add/Remove Programs and the created shortcuts pick up the icon embedded in the exe.
+    # zh_CN: 给安装器/卸载器向导加上应用图标（对应 macOS DMG 的背景图）。makensis 在打包时读取这两个绝对源路径；
+    # 控制面板"添加/删除程序"和创建的快捷方式都用 exe 里嵌入的图标。
+    set(_fluent_qt_gallery_ico "${PROJECT_SOURCE_DIR}/app/assets/Fluent-QT-Gallery.ico")
+    set(CPACK_NSIS_MUI_ICON "${_fluent_qt_gallery_ico}")
+    set(CPACK_NSIS_MUI_UNIICON "${_fluent_qt_gallery_ico}")
     set(CPACK_NSIS_INSTALLED_ICON_NAME
         "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe")
     set(CPACK_CREATE_DESKTOP_LINKS "fluent_qt_gallery")

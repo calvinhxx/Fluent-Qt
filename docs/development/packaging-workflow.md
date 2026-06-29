@@ -58,6 +58,14 @@ cpack --preset vcpkg-windows-installer
 The generated installer uses the CPack `NSIS` generator and installs the Gallery
 executable under the package `bin` directory.
 
+The executable embeds the app icon and version metadata via `app/app.rc.in`
+(compiled into a `.rc` at configure time), so Explorer, the taskbar, Alt-Tab and
+the installer-created shortcuts all show the Fluent-QT Gallery icon. The NSIS
+installer and uninstaller wizards are branded with the same icon. The icon source
+of truth is `app/assets/Fluent-QT-Gallery.ico` — the Windows counterpart to the
+macOS `app/assets/Fluent-QT-Gallery.icns`. Both are derived from the shared
+`app/assets/app-icon.png` master.
+
 ## Version Contract
 
 The root CMake `project(FluentQT VERSION X.Y.Z ...)` value is the package

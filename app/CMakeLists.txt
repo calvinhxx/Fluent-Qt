@@ -32,6 +32,27 @@ if(WIN32)
     set_target_properties(fluent_qt_gallery PROPERTIES
         WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
     )
+
+    # Embed the Explorer/taskbar/shortcut icon and version metadata into the exe. A bare Qt exe has
+    # no resource section, so Windows shows the generic application icon everywhere and Properties >
+    # Details is blank. We compile a .rc (icon + VERSIONINFO) generated from app.rc.in — the Windows
+    # counterpart to the macOS .icns/Info.plist wiring above. The .ico path is injected absolute with
+    # forward slashes so rc.exe resolves it regardless of the build directory.
+    # zh_CN: 把资源管理器/任务栏/快捷方式图标和版本信息嵌进 exe。裸 Qt exe 没有资源段，Windows 各处都显示
+    # 通用图标、属性详细信息也是空的。这里编译由 app.rc.in 生成的 .rc（图标 + VERSIONINFO），对应上面 macOS
+    # 的 .icns/Info.plist。.ico 用正斜杠绝对路径注入，rc.exe 不受构建目录影响都能找到。
+    set(FLUENT_QT_GALLERY_ICO "${CMAKE_CURRENT_SOURCE_DIR}/assets/Fluent-QT-Gallery.ico")
+    file(TO_CMAKE_PATH "${FLUENT_QT_GALLERY_ICO}" FLUENT_QT_GALLERY_ICO)
+    set(FLUENT_QT_GALLERY_RC "${CMAKE_CURRENT_BINARY_DIR}/app.rc")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/app.rc.in"
+        "${FLUENT_QT_GALLERY_RC}"
+        @ONLY)
+    # Rebuild the resource when the icon changes even though the generated .rc text is unchanged.
+    # zh_CN: 图标变了但 .rc 文本没变时，也要重编资源。
+    set_source_files_properties("${FLUENT_QT_GALLERY_RC}" PROPERTIES
+        OBJECT_DEPENDS "${FLUENT_QT_GALLERY_ICO}")
+    target_sources(fluent_qt_gallery PRIVATE "${FLUENT_QT_GALLERY_RC}")
 endif()
 
 # Build a proper macOS .app bundle. A bundle carries a CFBundleIdentifier, which is what macOS
