@@ -864,7 +864,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     setContentSpacing(0);
 
     m_heroBanner = new GalleryHomeHeroBanner(
-        QStringLiteral("WinUI 3 Gallery"), entry.description, this);
+        QStringLiteral("Fluent-QT Gallery"), entry.description, this);
     addContentWidget(m_heroBanner);
 
     auto* body = new QWidget(this);

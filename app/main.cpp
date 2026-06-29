@@ -23,7 +23,7 @@ static void initializeFluentQtResources()
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
-    QApplication::setApplicationName(QStringLiteral("WinUI 3 Gallery"));
+    QApplication::setApplicationName(QStringLiteral("Fluent-QT Gallery"));
     QApplication::setOrganizationName(QStringLiteral("Fluent-QT"));
     app.setQuitOnLastWindowClosed(false);
 
