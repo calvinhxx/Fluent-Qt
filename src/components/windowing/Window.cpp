@@ -10,6 +10,7 @@
 #include "TitleBar.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
+#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/status_info/ToolTip.h"
 
@@ -265,8 +266,7 @@ void Window::showEvent(QShowEvent* event) {
 void Window::changeEvent(QEvent* event) {
     QWidget::changeEvent(event);
 
-    if (event->type() == QEvent::WindowStateChange ||
-        event->type() == QEvent::SafeAreaMarginsChange) {
+    if (fluentIsWindowInsetChangeEvent(event)) {
         syncTitleBarSystemInsets();
         syncCaptionButtons();
         updateChromeOptions();

@@ -43,7 +43,7 @@ bool canBeginSystemOperation(QWidget* window,
     if (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Windows) {
         if (!options.useCustomWindowChrome)
             return false;
-#ifdef Q_OS_WIN
+#if defined(Q_OS_WIN) && QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
         if (!window->windowFlags().testFlag(Qt::ExpandedClientAreaHint))
             return false;
 #endif

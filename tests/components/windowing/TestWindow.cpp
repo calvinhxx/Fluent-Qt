@@ -385,8 +385,10 @@ TEST_F(WindowTest, WindowsCustomChromePreservesDwmCaption) {
     window.show();
     QApplication::processEvents();
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     EXPECT_TRUE(window.windowFlags().testFlag(Qt::ExpandedClientAreaHint));
     EXPECT_TRUE(window.windowFlags().testFlag(Qt::NoTitleBarBackgroundHint));
+#endif
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::FramelessWindowHint));
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::WindowMinimizeButtonHint));
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::WindowMaximizeButtonHint));
