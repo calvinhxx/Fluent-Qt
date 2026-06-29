@@ -147,9 +147,19 @@ elseif(WIN32)
     set(CPACK_NSIS_MUI_UNIICON "${_fluent_qt_gallery_ico}")
     set(CPACK_NSIS_INSTALLED_ICON_NAME
         "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe")
-    set(CPACK_CREATE_DESKTOP_LINKS "fluent_qt_gallery")
     set(CPACK_NSIS_MENU_LINKS
         "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe" "Fluent-QT Gallery")
+    # Always create a desktop shortcut. CPACK_CREATE_DESKTOP_LINKS would instead add an *unchecked*
+    # checkbox to the NSIS "Install Options" page (and pull in the PATH radio page even with
+    # MODIFY_PATH off), so no desktop icon appears unless the user happens to tick it. Create it
+    # directly on install and remove it on uninstall; the .lnk inherits the exe's embedded icon.
+    # zh_CN: 安装时直接创建桌面快捷方式。用 CPACK_CREATE_DESKTOP_LINKS 只会在 NSIS "Install Options"
+    # 页加一个默认未勾选的复选框（即便关了 MODIFY_PATH 也会带出 PATH 单选页），用户不勾就没有桌面图标。
+    # 这里安装时直接建、卸载时删除；.lnk 会沿用 exe 内嵌图标。
+    set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
+        "CreateShortCut '$DESKTOP\\\\Fluent-QT Gallery.lnk' '$INSTDIR\\\\${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe'")
+    set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
+        "Delete '$DESKTOP\\\\Fluent-QT Gallery.lnk'")
 endif()
 
 include(CPack)
