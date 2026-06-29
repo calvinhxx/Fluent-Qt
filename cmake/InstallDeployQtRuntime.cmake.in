@@ -16,6 +16,7 @@ if(NOT EXISTS "${_fluent_qt_deployqt}")
 endif()
 
 set(_fluent_qt_install_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+set(_fluent_qt_osx_archs "@CMAKE_OSX_ARCHITECTURES@")
 
 if(_fluent_qt_platform STREQUAL "macos")
     set(_fluent_qt_app_path
@@ -55,6 +56,30 @@ if(NOT _fluent_qt_deploy_result EQUAL 0)
 endif()
 
 if(_fluent_qt_platform STREQUAL "macos")
+    # The local Qt is a universal (x86_64 + arm64) build, so macdeployqt copies fat frameworks and
+    # plug-ins no matter which single arch our binary was compiled for. When exactly one arch was
+    # requested, lipo every Mach-O in the bundle down to it: each DMG then ships only the slice its
+    # CPU runs, roughly halving the bundle. This must run BEFORE the re-sign below, because lipo
+    # rewrites the binaries and would otherwise invalidate a fresh signature.
+    # zh_CN: 本机 Qt 是 universal,macdeployqt 无论我们的二进制为哪种架构都会拷贝胖框架/插件。
+    # 若只请求了单一架构,这里用 lipo 把 bundle 内每个 Mach-O 瘦到该架构:每个 DMG 只装其 CPU
+    # 真正会跑的切片,体积约减半。必须在下方重签名之前执行,否则 lipo 改写二进制会让新签名失效。
+    list(LENGTH _fluent_qt_osx_archs _fluent_qt_arch_count)
+    if(_fluent_qt_arch_count EQUAL 1)
+        execute_process(
+            COMMAND /bin/sh -c
+                "arch=\"$1\"; find \"$0\" -type f | while IFS= read -r f; do cur=$(/usr/bin/lipo -archs \"$f\" 2>/dev/null) || continue; case \" $cur \" in *\" $arch \"*) [ \"$cur\" = \"$arch\" ] || { /usr/bin/lipo \"$f\" -thin \"$arch\" -output \"$f.thin\" && /bin/mv \"$f.thin\" \"$f\"; } ;; esac; done"
+                "${_fluent_qt_app_path}" "${_fluent_qt_osx_archs}"
+            RESULT_VARIABLE _fluent_qt_thin_result
+            OUTPUT_VARIABLE _fluent_qt_thin_stdout
+            ERROR_VARIABLE _fluent_qt_thin_stderr)
+        if(NOT _fluent_qt_thin_result EQUAL 0)
+            message(FATAL_ERROR
+                "lipo thinning to '${_fluent_qt_osx_archs}' failed with exit code ${_fluent_qt_thin_result}\n"
+                "${_fluent_qt_thin_stdout}\n${_fluent_qt_thin_stderr}")
+        endif()
+    endif()
+
     # macdeployqt copies new frameworks/plug-ins and rewrites load commands, which invalidates the
     # linker-applied ad-hoc signature ("code has no resources but signature indicates they must be
     # present"). On Apple Silicon the kernel then refuses to launch the app ("... cannot be opened
