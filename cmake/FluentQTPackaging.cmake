@@ -8,11 +8,13 @@ if(NOT TARGET fluent_qt_gallery)
     return()
 endif()
 
-# Ship the license file inside the Windows install tree. The macOS DMG deliberately omits it:
-# a drag-to-install image should contain only the app and the Applications alias, and the license
-# is no longer attached as a mount-time SLA (see the APPLE branch below).
-# zh_CN: 仅在 Windows 安装目录里附带 license。macOS DMG 故意不放：拖拽安装镜像里只应有 app 和
-# Applications 别名，且不再以挂载时 SLA 形式弹许可（见下方 APPLE 分支）。
+# Ship the license file as a loose icon inside the Windows install tree. The macOS DMG window
+# deliberately keeps it out — a drag-to-install image should contain only the app and the
+# Applications alias — but macOS still surfaces the license as a mount-time SLA instead (see the
+# CPACK_RESOURCE_FILE_LICENSE in the APPLE branch below).
+# zh_CN: 仅在 Windows 安装目录里以散落图标形式附带 license。macOS DMG 窗口故意不放(拖拽安装镜像里
+# 只应有 app 和 Applications 别名),但 macOS 改以挂载时 SLA 形式弹出许可(见下方 APPLE 分支的
+# CPACK_RESOURCE_FILE_LICENSE)。
 if(NOT APPLE)
     install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
         DESTINATION ".")
@@ -81,11 +83,11 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "WinUI-style Qt Widgets gallery")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_CHECKSUM SHA256)
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "Fluent-QT Gallery")
-# Note: CPACK_RESOURCE_FILE_LICENSE is intentionally NOT set globally. On macOS DragNDrop it would
-# be embedded as a click-through SLA shown before the disk image mounts; we want the styled
-# drag-to-install window to appear directly. The Windows NSIS branch sets it for its license page.
-# zh_CN: 这里故意不全局设 CPACK_RESOURCE_FILE_LICENSE：在 macOS DragNDrop 上它会变成挂载前的
-# 点击同意 SLA 弹窗；我们希望直接进到拖拽安装窗口。Windows NSIS 分支单独设置它用于许可页。
+# Note: CPACK_RESOURCE_FILE_LICENSE is set per-platform in the APPLE/WIN32 branches below, not
+# globally, because each generator presents it differently — a mount-time click-through SLA on the
+# macOS DragNDrop image, and the installer license page on Windows NSIS.
+# zh_CN: CPACK_RESOURCE_FILE_LICENSE 在下方 APPLE/WIN32 分支按平台分别设置,不全局设——因为各
+# 生成器呈现方式不同:macOS DragNDrop 是挂载前的点击同意 SLA,Windows NSIS 是安装器许可页。
 # Name the artifact after the architecture it actually contains. On macOS we ship one single-arch
 # DMG per CPU (arm64 and x86_64 are packaged separately), so the suffix must follow the requested
 # CMAKE_OSX_ARCHITECTURES rather than the build host's processor — otherwise an x86_64 image
@@ -111,6 +113,16 @@ if(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
     set(CPACK_DMG_VOLUME_NAME "Fluent-QT Gallery ${PROJECT_VERSION}")
     set(CPACK_DMG_FORMAT "UDZO")
+    # Present the license as a click-through SLA shown before the disk image mounts, so the user
+    # accepts the terms before reaching the install window. DragNDrop turns an explicit
+    # CPACK_RESOURCE_FILE_LICENSE into the SLA; the license stays out of the window itself (the
+    # NOT-APPLE guard on install(FILES LICENSE) above keeps the drag-to-install layout clean).
+    # zh_CN: 把许可做成挂载前的点击同意 SLA,用户先接受条款再进入安装窗口。DragNDrop 会把显式的
+    # CPACK_RESOURCE_FILE_LICENSE 变成 SLA;许可本身不进窗口(上面 install(FILES LICENSE) 的
+    # NOT-APPLE 守卫让拖拽安装布局保持干净)。
+    set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
+    set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE ON)
+    set(CPACK_DMG_SLA_LANGUAGES "English")
     # Style the mounted DMG as a drag-to-install window. DragNDrop adds the /Applications
     # symlink; the setup AppleScript positions the .app beside it over a HiDPI background.
     # zh_CN: 把挂载后的 DMG 做成"拖入安装"窗口。DragNDrop 会自动加 /Applications 软链；
