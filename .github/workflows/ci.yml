@@ -1,0 +1,141 @@
+# 持续集成:每次推代码到 main 或开 PR 时,在多平台 × 多 Qt 版本上自动编译。
+# Continuous Integration: build across platforms and Qt versions on every push/PR.
+#
+# 覆盖的组合 / Build matrix:
+#   Windows x64  + Qt 5.15 / 6.2     (最低支持版本 / minimum supported)
+#   Windows ARM  + Qt 6.9.3          (ARM 版 Qt 仅 6.8+ 提供 / ARM Qt only ships on 6.8+)
+#   macOS  x64   + Qt 5.15 / 6.2
+#   macOS  ARM   + Qt 6.2
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 同一分支有新提交时,取消还在跑的旧任务。
+# Cancel an in-progress run when a newer commit arrives on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # 常规组合:Windows x64 与 macOS(x64 / arm64),分别用 Qt 5.15 与 6.2 编译。
+  # Straightforward cells: one Qt install + `cmake --preset` covers each.
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # 一个组合失败不连带取消其它的,这样所有结果都能看到。
+      # Don't cancel the others if one fails — we want every result.
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows x64 · Qt 5.15
+            os: windows-latest
+            preset: vcpkg-windows
+            qt_version: '5.15.2'
+            qt_arch: win64_msvc2019_64
+          - name: Windows x64 · Qt 6.2
+            os: windows-latest
+            preset: vcpkg-windows
+            qt_version: '6.2.4'
+            qt_arch: win64_msvc2019_64
+          - name: macOS x64 · Qt 5.15
+            os: macos-13          # Intel runner → 原生 x86_64 / native x86_64
+            preset: vcpkg-osx-x64
+            qt_version: '5.15.2'
+            qt_arch: clang_64
+          - name: macOS x64 · Qt 6.2
+            os: macos-13
+            preset: vcpkg-osx-x64
+            qt_version: '6.2.4'
+            qt_arch: clang_64
+          - name: macOS arm64 · Qt 6.2
+            os: macos-14          # Apple Silicon runner → 原生 arm64 / native arm64
+            preset: vcpkg-osx
+            qt_version: '6.2.4'
+            qt_arch: clang_64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt ${{ matrix.qt_version }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      # 让 preset 里的 $env{VCPKG_ROOT} 指向 runner 自带的 vcpkg。
+      # Point the presets' $env{VCPKG_ROOT} at the runner's pre-installed vcpkg.
+      - name: Set VCPKG_ROOT
+        shell: bash
+        run: echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }}
+
+      # 跑单元测试。test preset 名与上面的 preset 同名,直接复用。
+      # QT_QPA_PLATFORM=offscreen:CI 无显示器,用离屏平台跑 Qt 控件测试(VisualCheck 已自动跳过)。
+      # 已知:test_gallery_content_pages 里约 10 个用例依赖 CI 机器没装的字体,首次跑很可能在这里报红——
+      #       看到真实结果后再决定:给 CI 装字体、把这些用例改成不依赖字体、或精确排除它们。
+      # Run unit tests. The test preset shares the configure preset's name. offscreen QPA = headless.
+      # Known: ~10 cases in test_gallery_content_pages need fonts CI lacks; refine once we see real output.
+      - name: Test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: ctest --preset ${{ matrix.preset }} --output-on-failure
+
+  # Windows ARM64:从 x64 机器交叉编译。需要两套 Qt——目标 arm64 Qt + 宿主 x64 Qt(提供 moc/rcc
+  # 等主机工具,arm64 的工具在 x64 机器上跑不了)。ARM 版 Qt 仅 6.8+ 提供,故固定 6.9.3。
+  # Windows ARM64 cross-build from an x64 host: needs the target (arm64) Qt plus a host (x64) Qt
+  # whose moc/rcc etc. run on the build machine. ARM Qt only ships on 6.8+, so this is pinned to 6.9.3.
+  build-windows-arm:
+    name: Windows arm64 · Qt 6.9.3
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 1) 宿主 x64 Qt:交叉编译用它的主机工具。
+      - name: Install host Qt (x64)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Remember host Qt path
+        shell: pwsh
+        run: echo "QT_HOST_PATH=$env:QT_ROOT_DIR" >> $env:GITHUB_ENV
+
+      # 2) 目标 arm64 Qt(交叉编译包)。装完后 QT_ROOT_DIR 指向它。
+      - name: Install target Qt (arm64)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.3'
+          arch: win64_msvc2022_arm64_cross_compiled
+          cache: true
+
+      - name: Set VCPKG_ROOT
+        shell: bash
+        run: echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      # 覆盖 preset 里写死的本机 Qt 路径,改用 CI 装好的 arm64 Qt + x64 宿主工具。
+      # Override the preset's hardcoded local Qt path with the CI-installed arm64 Qt + x64 host tools.
+      - name: Configure
+        shell: pwsh
+        run: cmake --preset vcpkg-windows-arm64 -D "CMAKE_PREFIX_PATH=$env:QT_ROOT_DIR" -D "QT_HOST_PATH=$env:QT_HOST_PATH"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build --preset vcpkg-windows-arm64
+      # 不跑测试:这是交叉编译出的 arm64 程序,在 x64 的 runner 上跑不起来。
+      # No test step: these are arm64 binaries and can't run on the x64 runner.
