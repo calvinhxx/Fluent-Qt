@@ -97,3 +97,29 @@ include(GNUInstallDirs)
 install(TARGETS fluent_qt_gallery
     BUNDLE DESTINATION "."
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+# Bundle the non-Qt runtime DLLs the exe links: spdlog and its fmt dependency (dynamic in the default
+# vcpkg x64/arm64-windows triplets). windeployqt only deploys Qt and install(TARGETS) only installs
+# the exe, so without this the installed app fails to start with "fmt.dll not found" even though it
+# runs fine from the build tree (vcpkg copies these next to the exe at build time). Guarded to shared
+# imported targets, so a static-triplet build that needs no DLLs simply skips them. macOS/Linux bundle
+# their dylibs via macdeployqt / RPATH, so this is Windows-only.
+# zh_CN: 把 exe 链接的非 Qt 运行库（spdlog 及其 fmt 依赖，默认 vcpkg x64/arm64-windows 三元组下是动态库）
+# 一起装上。windeployqt 只部署 Qt、install(TARGETS) 只装 exe，否则安装后启动会报"找不到 fmt.dll"——尽管从
+# build 目录能跑（vcpkg 构建期把它们复制到了 exe 旁）。仅对共享导入目标生效，静态三元组无 DLL 时自动跳过。
+# macOS/Linux 由 macdeployqt/RPATH 处理其 dylib，故此处仅限 Windows。
+if(WIN32)
+    set(_fluent_qt_runtime_dlls "")
+    foreach(_fluent_qt_dep spdlog::spdlog fmt::fmt)
+        if(TARGET ${_fluent_qt_dep})
+            get_target_property(_fluent_qt_dep_type ${_fluent_qt_dep} TYPE)
+            if(_fluent_qt_dep_type STREQUAL "SHARED_LIBRARY")
+                list(APPEND _fluent_qt_runtime_dlls "$<TARGET_FILE:${_fluent_qt_dep}>")
+            endif()
+        endif()
+    endforeach()
+    if(_fluent_qt_runtime_dlls)
+        install(FILES ${_fluent_qt_runtime_dlls}
+            DESTINATION "${CMAKE_INSTALL_BINDIR}")
+    endif()
+endif()

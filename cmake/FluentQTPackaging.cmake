@@ -143,6 +143,16 @@ if(APPLE)
     set(CPACK_DMG_BACKGROUND_IMAGE "${PROJECT_SOURCE_DIR}/app/assets/dmg-background.tiff")
     set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${PROJECT_SOURCE_DIR}/cmake/dmg-setup.applescript")
 elseif(WIN32)
+    # Bundle the MSVC C/C++ runtime (vcruntime140.dll, msvcp140.dll, ...) app-locally so the installed
+    # app launches on a clean machine that has no VC++ redistributable installed. CMake locates these
+    # from the detected MSVC toolset, which is reliable; windeployqt's --compiler-runtime only copies
+    # them inside a Visual Studio developer environment.
+    # zh_CN: 把 MSVC C/C++ 运行库（vcruntime140.dll、msvcp140.dll 等）随应用一起装，未装 VC++ 运行库的
+    # 干净机器也能启动。CMake 从探测到的 MSVC 工具集定位它们，可靠；windeployqt 的 --compiler-runtime
+    # 只在 Visual Studio 开发者环境里才会复制。
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_INSTALL_BINDIR}")
+    include(InstallRequiredSystemLibraries)
+
     set(CPACK_GENERATOR "NSIS")
     set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
     set(CPACK_NSIS_DISPLAY_NAME "Fluent-QT Gallery")
