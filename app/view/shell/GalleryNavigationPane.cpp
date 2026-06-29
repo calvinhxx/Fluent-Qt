@@ -51,11 +51,16 @@ public:
         setAttribute(Qt::WA_TransparentForMouseEvents, true);
     }
 
-    void setLine(const QColor& color, int inset) {
-        if (m_color == color && m_inset == inset)
+    // onCard: the line is sitting on the flyout's opaque elevated card (drawer/surface mode) rather
+    // than directly on the translucent OS backdrop. That flips the erase behavior below.
+    // zh_CN: onCard 表示分隔线画在浮层那张不透明抬升卡片上（抽屉/surface 模式），而非直接画在半透明系统背景上，
+    // 这会改变下方的擦除行为。
+    void setLine(const QColor& color, int inset, bool onCard) {
+        if (m_color == color && m_inset == inset && m_onCard == onCard)
             return;
         m_color = color;
         m_inset = qMax(0, inset);
+        m_onCard = onCard;
         update();
     }
 
@@ -78,17 +83,27 @@ protected:
         // zh_CN: 仅在「真实系统背景」（Mica / macOS vibrancy，窗格透明且后备缓冲不自动清除）下才擦除+Source。
         // 用 fluentMicaBackdrop 绘制提示判定，而非裸的 WA_TranslucentBackground：Windows 上 Normal 也半透明，
         // 此处擦除会把不透明窗格 bgCanvas 重新打穿成壁纸。Normal 下用默认 SourceOver 在窗格不透明表面上画分隔线。
-        const bool realBackdrop = window()
+        // The erase is ONLY correct when the line paints directly onto the real OS backdrop — the
+        // inline pane on Mica/vibrancy, where the backing isn't auto-cleared. In the drawer flyout
+        // the line sits on the flyout's opaque elevated card (m_onCard): the window is still the
+        // translucent Mica top-level, but a Source erase here would punch a transparent strip clean
+        // through that card and reveal the content behind the flyout — the full-width seam this fix
+        // removes. On the card, composite the hairline with the default SourceOver instead.
+        // zh_CN: 仅当分隔线直接画在真实系统背景（内嵌窗格 + Mica/vibrancy，后备缓冲不自动清除）上时才该擦除。
+        // 抽屉浮层里分隔线画在浮层那张不透明卡片上（m_onCard）：此时顶层窗口仍是半透明 Mica，但在这里做 Source 擦除
+        // 会把卡片打穿成透明、露出浮层背后的内容——正是本次修复要消除的整宽缝。卡片上改用默认 SourceOver 叠加细线。
+        const bool eraseToBackdrop = !m_onCard
+            && window()
             && window()->testAttribute(Qt::WA_TranslucentBackground)
             && window()->property("fluentMicaBackdrop").toBool();
-        if (realBackdrop) {
+        if (eraseToBackdrop) {
             painter.setCompositionMode(QPainter::CompositionMode_Source);
             painter.fillRect(rect(), Qt::transparent);
         }
         const QRect line = rect().adjusted(m_inset, 0, -m_inset, 0);
         if (line.width() > 0 && m_color.alpha() > 0) {
-            painter.setCompositionMode(realBackdrop ? QPainter::CompositionMode_Source
-                                                    : QPainter::CompositionMode_SourceOver);
+            painter.setCompositionMode(eraseToBackdrop ? QPainter::CompositionMode_Source
+                                                       : QPainter::CompositionMode_SourceOver);
             painter.fillRect(line, m_color);
         }
     }
@@ -96,6 +111,7 @@ protected:
 private:
     QColor m_color;
     int m_inset = 0;
+    bool m_onCard = false;
 };
 
 } // namespace
@@ -203,6 +219,10 @@ void GalleryNavigationPane::setSurfaceVisible(bool visible)
             m_treeView->viewport()->update();
         }
     }
+    // Re-push the footer divider with the new surface state so it stops erasing through the flyout
+    // card (and resumes erasing on the inline Mica pane). zh_CN: 用新的 surface 状态重设页脚分隔线，
+    // 使其在浮层卡片上不再擦穿、回到内嵌 Mica 窗格时恢复擦除。
+    updateDividerPalette();
     update();
 }
 
@@ -571,7 +591,7 @@ void GalleryNavigationPane::updateDividerPalette()
     divider.setAlphaF(divider.alphaF() * 0.4);
     // m_footerDivider is always a FooterDividerLine (created in the footer-only branch) and is
     // non-null here (guarded above). zh_CN: m_footerDivider 必为 FooterDividerLine（页脚分支创建）且此处非空。
-    static_cast<FooterDividerLine*>(m_footerDivider)->setLine(divider, 16);
+    static_cast<FooterDividerLine*>(m_footerDivider)->setLine(divider, 16, m_surfaceVisible);
 }
 
 void GalleryNavigationPane::startCompactVisualTransition(bool compact)
