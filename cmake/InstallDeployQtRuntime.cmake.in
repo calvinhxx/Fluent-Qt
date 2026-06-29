@@ -1,0 +1,74 @@
+set(_fluent_qt_deploy_runtime "@FLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME@")
+if(NOT _fluent_qt_deploy_runtime)
+    return()
+endif()
+
+set(_fluent_qt_platform "@FLUENT_QT_PACKAGE_PLATFORM@")
+if(NOT _fluent_qt_platform MATCHES "^(macos|windows)$")
+    return()
+endif()
+
+set(_fluent_qt_deployqt "@FLUENT_QT_DEPLOYQT_EXECUTABLE@")
+if(NOT EXISTS "${_fluent_qt_deployqt}")
+    message(FATAL_ERROR
+        "Qt deployment tool was not found. Put macdeployqt/windeployqt on PATH, "
+        "or configure with -DFLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME=OFF for a non-redistributable package.")
+endif()
+
+set(_fluent_qt_install_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+
+if(_fluent_qt_platform STREQUAL "macos")
+    set(_fluent_qt_app_path
+        "${_fluent_qt_install_root}/@FLUENT_QT_GALLERY_BUNDLE_DIR@")
+    if(NOT EXISTS "${_fluent_qt_app_path}")
+        message(FATAL_ERROR "Expected app bundle not found: ${_fluent_qt_app_path}")
+    endif()
+
+    execute_process(
+        COMMAND "${_fluent_qt_deployqt}" "${_fluent_qt_app_path}" -always-overwrite
+        RESULT_VARIABLE _fluent_qt_deploy_result
+        OUTPUT_VARIABLE _fluent_qt_deploy_stdout
+        ERROR_VARIABLE _fluent_qt_deploy_stderr)
+elseif(_fluent_qt_platform STREQUAL "windows")
+    set(_fluent_qt_exe_path
+        "${_fluent_qt_install_root}/@CMAKE_INSTALL_BINDIR@/@FLUENT_QT_GALLERY_EXECUTABLE_NAME@@CMAKE_EXECUTABLE_SUFFIX@")
+    if(NOT EXISTS "${_fluent_qt_exe_path}")
+        message(FATAL_ERROR "Expected executable not found: ${_fluent_qt_exe_path}")
+    endif()
+
+    set(_fluent_qt_deploy_config --release)
+    if(CMAKE_INSTALL_CONFIG_NAME MATCHES "^[Dd]ebug$")
+        set(_fluent_qt_deploy_config --debug)
+    endif()
+
+    execute_process(
+        COMMAND "${_fluent_qt_deployqt}" "${_fluent_qt_deploy_config}" "${_fluent_qt_exe_path}"
+        RESULT_VARIABLE _fluent_qt_deploy_result
+        OUTPUT_VARIABLE _fluent_qt_deploy_stdout
+        ERROR_VARIABLE _fluent_qt_deploy_stderr)
+endif()
+
+if(NOT _fluent_qt_deploy_result EQUAL 0)
+    message(FATAL_ERROR
+        "Qt runtime deployment failed with exit code ${_fluent_qt_deploy_result}\n"
+        "${_fluent_qt_deploy_stdout}\n${_fluent_qt_deploy_stderr}")
+endif()
+
+if(_fluent_qt_platform STREQUAL "macos")
+    # macdeployqt copies new frameworks/plug-ins and rewrites load commands, which invalidates the
+    # linker-applied ad-hoc signature ("code has no resources but signature indicates they must be
+    # present"). On Apple Silicon the kernel then refuses to launch the app ("... cannot be opened
+    # because of a problem"). Re-sign the whole bundle deep + ad-hoc so the sealed resources match.
+    # zh_CN: macdeployqt 改写 bundle 会让原本由链接器打的 ad-hoc 签名失效,Apple Silicon 内核会拒绝启动。
+    # 这里对整个 bundle 做 deep ad-hoc 重签,使封装资源与签名一致,应用才能打开。
+    execute_process(
+        COMMAND /usr/bin/codesign --force --deep --sign - "${_fluent_qt_app_path}"
+        RESULT_VARIABLE _fluent_qt_sign_result
+        OUTPUT_VARIABLE _fluent_qt_sign_stdout
+        ERROR_VARIABLE _fluent_qt_sign_stderr)
+    if(NOT _fluent_qt_sign_result EQUAL 0)
+        message(FATAL_ERROR
+            "Ad-hoc codesign failed with exit code ${_fluent_qt_sign_result}\n"
+            "${_fluent_qt_sign_stdout}\n${_fluent_qt_sign_stderr}")
+    endif()
+endif()

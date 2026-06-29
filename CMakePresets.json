@@ -31,6 +31,16 @@
       }
     },
     {
+      "name": "vcpkg-osx-release",
+      "displayName": "vcpkg macOS arm64 Release",
+      "description": "Apple Silicon release build used for DMG packaging.",
+      "inherits": "vcpkg-osx",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF"
+      }
+    },
+    {
       "name": "vcpkg-osx-x64",
       "displayName": "vcpkg macOS x64 Debug",
       "description": "Intel/Rosetta macOS build using vcpkg manifest dependencies. Qt is discovered from the local Qt installation.",
@@ -42,6 +52,16 @@
       },
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-osx"
+      }
+    },
+    {
+      "name": "vcpkg-osx-x64-release",
+      "displayName": "vcpkg macOS x64 Release",
+      "description": "Intel/Rosetta release build used for DMG packaging.",
+      "inherits": "vcpkg-osx-x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF"
       }
     },
     {
@@ -57,6 +77,16 @@
       "cacheVariables": {
         "VCPKG_TARGET_TRIPLET": "x64-windows"
       }
+    },
+    {
+      "name": "vcpkg-windows-release",
+      "displayName": "vcpkg Windows x64 Release",
+      "description": "Windows x64 release build used for installer packaging.",
+      "inherits": "vcpkg-windows",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -66,14 +96,29 @@
       "configuration": "Debug"
     },
     {
+      "name": "vcpkg-osx-release",
+      "configurePreset": "vcpkg-osx-release",
+      "configuration": "Release"
+    },
+    {
       "name": "vcpkg-osx-x64",
       "configurePreset": "vcpkg-osx-x64",
       "configuration": "Debug"
     },
     {
+      "name": "vcpkg-osx-x64-release",
+      "configurePreset": "vcpkg-osx-x64-release",
+      "configuration": "Release"
+    },
+    {
       "name": "vcpkg-windows",
       "configurePreset": "vcpkg-windows",
       "configuration": "Debug"
+    },
+    {
+      "name": "vcpkg-windows-release",
+      "configurePreset": "vcpkg-windows-release",
+      "configuration": "Release"
     }
   ],
   "testPresets": [
@@ -100,6 +145,38 @@
       "output": {
         "outputOnFailure": true
       }
+    }
+  ],
+  "packagePresets": [
+    {
+      "name": "vcpkg-osx-dmg",
+      "configurePreset": "vcpkg-osx-release",
+      "generators": [
+        "DragNDrop"
+      ],
+      "configurations": [
+        "Release"
+      ]
+    },
+    {
+      "name": "vcpkg-osx-x64-dmg",
+      "configurePreset": "vcpkg-osx-x64-release",
+      "generators": [
+        "DragNDrop"
+      ],
+      "configurations": [
+        "Release"
+      ]
+    },
+    {
+      "name": "vcpkg-windows-installer",
+      "configurePreset": "vcpkg-windows-release",
+      "generators": [
+        "NSIS"
+      ],
+      "configurations": [
+        "Release"
+      ]
     }
   ]
 }

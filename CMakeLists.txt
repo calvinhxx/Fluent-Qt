@@ -7,7 +7,7 @@ if(POLICY CMP0091)
 endif()
 set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
 
-project(FluentQT VERSION 0.1 LANGUAGES CXX C)
+project(FluentQT VERSION 1.0.0 LANGUAGES CXX C)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -74,3 +74,5 @@ if(BUILD_TESTING)
 	find_package(GTest CONFIG REQUIRED)
 	add_subdirectory(tests)
 endif()
+
+include(cmake/FluentQTPackaging.cmake)
