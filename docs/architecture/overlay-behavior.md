@@ -36,4 +36,4 @@ Overlay surface、border、shadow、smoke/scrim 均使用 Fluent token 和自绘
 
 `ComboBox` dropdown 保持非模态、非 dim，并保留当前 index、editable text 和 ListView selection 行为。`DrawerView` 保留 edge drag、normalized position、content widget ownership 和现有 public `ClosePolicy` API。
 
-暂不把 `Popup::ClosePolicy` 与 `DrawerView::ClosePolicy` 合并，也不让 `DrawerView` 继承 `Popup`。这些 public API consolidation 若需要，应通过后续 OpenSpec 变更单独评估。
+暂不把 `Popup::ClosePolicy` 与 `DrawerView::ClosePolicy` 合并，也不让 `DrawerView` 继承 `Popup`。这些 public API consolidation 若需要，应通过后续独立设计与实现任务单独评估。

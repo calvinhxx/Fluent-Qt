@@ -91,6 +91,3 @@ qWarning/qDebug 汇入同一日志文件：
 架构约定见 [docs/architecture/README.md](docs/architecture/README.md)。涉及 Popup、Flyout、
 ComboBox dropdown、DrawerView 等 same-window overlay 行为时，优先看
 [Overlay Behavior Contract](docs/architecture/overlay-behavior.md)。
-
-OpenSpec artifacts 位于 [openspec/](openspec/)。OpenSpec 驱动的工作应先遵循对应的
-proposal、apply 或 archive workflow，再进入实现改动。
