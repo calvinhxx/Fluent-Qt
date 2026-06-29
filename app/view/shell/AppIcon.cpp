@@ -12,7 +12,7 @@
 namespace fluent::gallery::appicon {
 namespace {
 
-constexpr auto kIconResourcePath = ":/app/assets/winui-gallery-app-icon.png";
+constexpr auto kIconResourcePath = ":/app/assets/app-icon.png";
 
 QPixmap fallbackPixmap(int logicalSize, qreal devicePixelRatio)
 {
