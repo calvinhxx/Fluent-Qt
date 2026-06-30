@@ -19,6 +19,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/QMLPlus.h"
+#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 
 using namespace fluent::collections;
@@ -619,7 +620,7 @@ TEST_F(FlipViewDesignLanguageTest, AllLanguagesAndThemesPaintPipsAndNavWithoutDa
             // Nav buttons only paint while hovered; deliver an enter event to set the hover flag.
             // zh_CN: 导航按钮仅在悬停时绘制;投递 enter 事件以置位悬停标志。
             const QPointF center(kW / 2.0, kH / 2.0);
-            QEnterEvent enter(center, center, fv.mapToGlobal(center.toPoint()));
+            FLUENT_MAKE_ENTER_EVENT(enter, center.x(), center.y());
             QApplication::sendEvent(&fv, &enter);
 
             const QImage img = fv.grab().toImage();

@@ -213,6 +213,9 @@ public:
 
     static Platform currentPlatform();
     static bool platformPrefersCustomWindowChrome();
+    static bool expandedClientAreaHintsAvailable();
+    static bool windowHasExpandedClientAreaHint(const QWidget* window);
+    static bool windowHasNoTitleBarBackgroundHint(const QWidget* window);
     static HitTest classifyHitTest(const WindowChromeOptions& options,
                                    const QSize& windowSize,
                                    const QPoint& localPos);

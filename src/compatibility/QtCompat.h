@@ -26,18 +26,24 @@
 
 #include <QtGlobal>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QLabel>
 #include <QList>
 #include <QLayoutItem>
 #include <QMetaType>
 #include <QNativeGestureEvent>
 #include <QObject>
+#include <QPixmap>
 #include <QPoint>
 #include <QPointF>
 #include <QMouseEvent>
+#include <QSize>
+#include <QStyleHints>
 #include <QVector>
 #include <QWheelEvent>
+#include <QWidget>
 
 #include <memory>
 #include <utility>
@@ -56,6 +62,42 @@ using FluentEnterEvent = QEvent;
 #include <type_traits>
 static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value,
               "FluentEnterEvent must derive from QEvent");
+
+enum class FluentSystemColorScheme {
+    Unknown,
+    Light,
+    Dark
+};
+
+inline FluentSystemColorScheme fluentSystemColorScheme() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    if (QGuiApplication::styleHints()) {
+        const Qt::ColorScheme scheme = QGuiApplication::styleHints()->colorScheme();
+        if (scheme == Qt::ColorScheme::Dark)
+            return FluentSystemColorScheme::Dark;
+        if (scheme == Qt::ColorScheme::Light)
+            return FluentSystemColorScheme::Light;
+    }
+#endif
+    return FluentSystemColorScheme::Unknown;
+}
+
+template <typename Context, typename Functor>
+QMetaObject::Connection fluentConnectSystemColorSchemeChanged(Context* context, Functor&& functor) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    if (!QGuiApplication::styleHints())
+        return {};
+    return QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged,
+                            context,
+                            [slot = std::forward<Functor>(functor)](Qt::ColorScheme) mutable {
+                                slot();
+                            });
+#else
+    Q_UNUSED(context);
+    Q_UNUSED(functor);
+    return {};
+#endif
+}
 
 // Mouse event coordinates.
 // zh_CN: 鼠标事件坐标。
@@ -115,6 +157,42 @@ template <typename T, typename... Names>
 void fluentRegisterMetaTypeNames(const char* firstName, const char* secondName, Names... remainingNames) {
     qRegisterMetaType<T>(firstName);
     fluentRegisterMetaTypeNames<T>(secondName, remainingNames...);
+}
+
+template <typename CheckBoxType, typename Context, typename Functor>
+QMetaObject::Connection fluentConnectCheckStateChanged(CheckBoxType* checkBox,
+                                                       Context* context,
+                                                       Functor&& functor) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    return QObject::connect(checkBox, &CheckBoxType::checkStateChanged,
+                            context, std::forward<Functor>(functor));
+#else
+    return QObject::connect(checkBox, &CheckBoxType::stateChanged,
+                            context,
+                            [slot = std::forward<Functor>(functor)](int state) mutable {
+                                slot(static_cast<Qt::CheckState>(state));
+                            });
+#endif
+}
+
+inline QPixmap fluentLabelPixmapValue(const QLabel* label) {
+    if (!label)
+        return {};
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return label->pixmap(Qt::ReturnByValue);
+#else
+    const QPixmap* pixmap = label->pixmap();
+    return pixmap ? *pixmap : QPixmap();
+#endif
+}
+
+inline QSize fluentPixmapLogicalSize(const QPixmap& pixmap) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return pixmap.deviceIndependentSize().toSize();
+#else
+    return QSize(qRound(pixmap.width() / pixmap.devicePixelRatioF()),
+                 qRound(pixmap.height() / pixmap.devicePixelRatioF()));
+#endif
 }
 
 // Wheel and native gesture coordinates.
