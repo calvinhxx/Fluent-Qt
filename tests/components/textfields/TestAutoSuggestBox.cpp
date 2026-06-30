@@ -19,6 +19,7 @@
 #include "components/basicinput/Button.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
+#include "compatibility/QtCompat.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -38,10 +39,12 @@ class AutoSuggestBoxTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        qRegisterMetaType<fluent::textfields::AutoSuggestBox::TextChangeReason>(
-            "fluent::textfields::AutoSuggestBox::TextChangeReason");
-        qRegisterMetaType<fluent::textfields::AutoSuggestBox::QueryButtonPlacement>(
-            "fluent::textfields::AutoSuggestBox::QueryButtonPlacement");
+        fluentRegisterMetaTypeNames<fluent::textfields::AutoSuggestBox::TextChangeReason>(
+            "fluent::textfields::AutoSuggestBox::TextChangeReason",
+            "AutoSuggestBox::TextChangeReason");
+        fluentRegisterMetaTypeNames<fluent::textfields::AutoSuggestBox::QueryButtonPlacement>(
+            "fluent::textfields::AutoSuggestBox::QueryButtonPlacement",
+            "AutoSuggestBox::QueryButtonPlacement");
     }
 
     void SetUp() override {

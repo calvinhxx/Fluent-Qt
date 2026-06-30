@@ -30,6 +30,7 @@
 #include <QKeySequence>
 #include <QList>
 #include <QLayoutItem>
+#include <QMetaType>
 #include <QNativeGestureEvent>
 #include <QObject>
 #include <QPoint>
@@ -105,6 +106,17 @@ QMetaObject::Connection fluentConnectSingleShot(Sender* sender, Signal signal, C
 #endif
 }
 
+template <typename T>
+void fluentRegisterMetaTypeNames(const char* name) {
+    qRegisterMetaType<T>(name);
+}
+
+template <typename T, typename... Names>
+void fluentRegisterMetaTypeNames(const char* firstName, const char* secondName, Names... remainingNames) {
+    qRegisterMetaType<T>(firstName);
+    fluentRegisterMetaTypeNames<T>(secondName, remainingNames...);
+}
+
 // Wheel and native gesture coordinates.
 // zh_CN: 滚轮和原生手势事件坐标。
 // Qt 6: QWheelEvent::position() / QNativeGestureEvent::position().
@@ -117,6 +129,14 @@ inline QPointF fluentWheelPosition(const QWheelEvent* e) {
 #else
     return e->posF();
 #endif
+}
+
+constexpr bool fluentWheelEventSupportsPhase() {
+    return QT_VERSION >= QT_VERSION_CHECK(6, 0, 0);
+}
+
+inline const char* fluentWheelEventPhaseSkipReason() {
+    return "Wheel phase event construction requires Qt 6+";
 }
 
 inline QPointF fluentNativeGesturePosition(const FluentNativeGestureEvent* e) {
