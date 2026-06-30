@@ -30,6 +30,7 @@ constexpr int kContentColumns = 3;
 constexpr int kContentRows = 4;
 constexpr qreal kWheelPageThreshold = 120.0;
 constexpr int kWheelClusterGapMs = 120;
+constexpr int kNoPhasePixelCommittedTailGapMs = 220;
 
 QDate firstOfMonth(const QDate& date)
 {
@@ -41,6 +42,22 @@ QDate firstOfMonth(const QDate& date)
 QDate todayMonth()
 {
     return firstOfMonth(QDate::currentDate());
+}
+
+int wheelPageStep(qreal delta)
+{
+    if (delta > 0.0)
+        return -1;
+    if (delta < 0.0)
+        return 1;
+    return 0;
+}
+
+int committedTailGapMs(FluentWheelInputKind kind)
+{
+    return kind == FluentWheelInputKind::NoPhasePixel
+               ? kNoPhasePixelCommittedTailGapMs
+               : kWheelClusterGapMs;
 }
 
 QColor withOpacity(QColor color, qreal opacity)
@@ -615,7 +632,7 @@ void CalendarView::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    const int step = fluentWheelPageStep(delta);
+    const int step = wheelPageStep(delta);
     if (step == 0) {
         event->accept();
         return;
@@ -629,7 +646,8 @@ void CalendarView::wheelEvent(QWheelEvent* event)
         !phaseBased &&
         m_wheelGestureCommitted &&
         m_wheelGestureKind == gestureKind &&
-        elapsedSinceLast <= fluentWheelCommittedTailGapMs(kind, kWheelClusterGapMs);
+        m_wheelDir == step &&
+        elapsedSinceLast <= committedTailGapMs(kind);
     const bool freshDiscreteNotch = !transitionActive &&
                                     m_wheelGestureCommitted &&
                                     gestureKind == WheelGestureKind::NoPhaseDiscrete &&
@@ -639,12 +657,19 @@ void CalendarView::wheelEvent(QWheelEvent* event)
     const bool clusterExpired = !phaseBased && m_lastWheelTs != 0 &&
                                 elapsedSinceLast > kWheelClusterGapMs;
     const bool directionChanged = m_wheelDir != 0 && m_wheelDir != step;
+    const bool reverseCommittedTransitionTail =
+        preserveCommittedTransitionTail && directionChanged;
     if (freshDiscreteNotch ||
         m_lastWheelTs == 0 ||
         (kindChanged && !preserveCommittedTransitionTail) ||
         (clusterExpired && !preserveCommittedTransitionTail && !preserveCommittedNoPhaseTail) ||
         (directionChanged && !m_wheelGestureCommitted)) {
         resetWheelGesture();
+    }
+
+    if (reverseCommittedTransitionTail) {
+        event->accept();
+        return;
     }
 
     m_lastWheelTs = now;

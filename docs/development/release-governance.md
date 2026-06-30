@@ -151,7 +151,9 @@ Before creating a stable tag:
 1. Confirm `main` contains the intended release commits.
 2. Confirm the worktree is clean.
 3. Confirm the CMake project version matches the intended tag.
-4. Run the supported build and test matrix for the release.
+4. Run the supported CI build/test matrix for the release, normally
+   `gh workflow run CI --ref <branch-or-tag> -f matrix=full` or an equivalent
+   local host full validation.
 5. Generate or update the changelog from the previous release tag.
 6. Create an annotated tag.
 7. Build and attach release artifacts.
@@ -167,4 +169,5 @@ contract that CI, changelog, and packaging workflows should enforce.
 - `smoke` runs the same x64 package lanes without publishing and is intended for
   manual release workflow validation.
 - `full` adds macOS arm64 and Windows arm64 packages for manual supplemental
-  artifact runs.
+  artifact runs. This is a packaging artifact set, not the CI `matrix=full`
+  validation tier.

@@ -18,7 +18,7 @@ allowed to depend on the developer machine's Qt installation.
 
 ## macOS DMG
 
-macOS ships **one single-architecture DMG per CPU** ? Apple Silicon and Intel are
+macOS ships **one single-architecture DMG per CPU**: Apple Silicon and Intel are
 packaged separately rather than as a fat universal image. Each preset pins
 `CMAKE_OSX_ARCHITECTURES` to a single slice, and the install step thins the
 (universal) Qt frameworks `macdeployqt` copies down to that slice, so every image
@@ -30,7 +30,7 @@ Apple Silicon (arm64):
 cmake --preset vcpkg-osx-release
 cmake --build --preset vcpkg-osx-release
 cpack --preset vcpkg-osx-dmg
-# ? Fluent-QT-Gallery-<version>-Darwin-arm64.dmg
+# -> Fluent-QT-Gallery-<version>-Darwin-arm64.dmg
 ```
 
 Intel (x86_64, cross-builds on Apple Silicon and runs under Rosetta):
@@ -39,7 +39,7 @@ Intel (x86_64, cross-builds on Apple Silicon and runs under Rosetta):
 cmake --preset vcpkg-osx-x64-release
 cmake --build --preset vcpkg-osx-x64-release
 cpack --preset vcpkg-osx-x64-dmg
-# ? Fluent-QT-Gallery-<version>-Darwin-x86_64.dmg
+# -> Fluent-QT-Gallery-<version>-Darwin-x86_64.dmg
 ```
 
 Each DMG uses the CPack `DragNDrop` generator and contains
@@ -75,7 +75,7 @@ packaging layer without maintaining a full copied NSIS template.
 The executable embeds the app icon and version metadata via `app/app.rc.in`
 (compiled into a `.rc` at configure time), so Explorer, the taskbar, Alt-Tab and
 the installer-created shortcuts all show the Fluent-QT Gallery icon. The icon
-source of truth is `app/assets/Fluent-QT-Gallery.ico` ? the Windows counterpart to
+source of truth is `app/assets/Fluent-QT-Gallery.ico`, the Windows counterpart to
 the macOS `app/assets/Fluent-QT-Gallery.icns`. Both are derived from the shared
 `app/assets/app-icon.png` master.
 
@@ -85,8 +85,8 @@ The NSIS wizard is styled to match the polish of the macOS DMG rather than the r
 grey NSIS look:
 
 - Installer/uninstaller window icon: `app/assets/Fluent-QT-Gallery.ico`.
-- Welcome/Finish sidebar (164?314) and inner-page header banner (150?57): a
-  blue?green branded gradient in `app/assets/installer-welcome.bmp` and
+- Welcome/Finish sidebar (164x314) and inner-page header banner (150x57): a
+  blue-green branded gradient in `app/assets/installer-welcome.bmp` and
   `app/assets/installer-header.bmp`, generated from `app-icon.png`.
 - Bottom branding text and a finish-page "run Fluent-QT Gallery" option.
 
@@ -105,14 +105,16 @@ cmake --build --preset vcpkg-windows-release
 cpack --preset vcpkg-windows-installer
 
 # ARM64 (cross-built from an x64 host via the Visual Studio generator)
-cmake --preset vcpkg-windows-arm64-release
+cmake --preset vcpkg-windows-arm64-release -D "CMAKE_PREFIX_PATH=C:/Qt/6.9.3/msvc2022_arm64" -D "QT_HOST_PATH=C:/Qt/6.9.3/msvc2022_64"
 cmake --build --preset vcpkg-windows-arm64-release
 cpack --preset vcpkg-windows-arm64-installer
 ```
 
 The ARM64 presets require the **`msvc2022_arm64` Qt kit** installed (via the Qt
-Maintenance Tool) at `C:/Qt/<ver>/msvc2022_arm64`; the preset points
-`CMAKE_PREFIX_PATH` there so CMake finds ARM64 Qt instead of the host x64 Qt.
+Maintenance Tool) and a matching x64 host Qt kit. Public presets intentionally
+do not hard-code those machine paths; pass `CMAKE_PREFIX_PATH` and
+`QT_HOST_PATH` on the configure command line or put them in an ignored
+`CMakeUserPresets.json`.
 
 > 32-bit x86 is intentionally not packaged: Qt 6 ships no 32-bit Windows binaries,
 > so an `x86-windows` build would require a self-compiled 32-bit Qt.

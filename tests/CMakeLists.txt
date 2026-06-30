@@ -1,5 +1,36 @@
 include(GoogleTest)
 
+set(FLUENT_QT_CI_FAST_TARGETS
+    test_qt_compat
+    test_qt_test_environment
+)
+
+set(FLUENT_QT_MANUAL_VISUAL_TESTS
+    SegoeTest.ComprehensiveCheck
+    SliderTest.VisualSliderGalleryLike
+)
+
+set(FLUENT_QT_LOCAL_DESKTOP_TESTS
+    MenuBarTest.AccessKeysAndShortcutsRemainInvokable
+    MenuBarTest.FluentMenuContentPatternsExposeDeterministicGeometry
+    TabViewTest.PointerAddCloseSelectDisabledAndReorderBehavior
+    DrawerViewTest.TopLevelResizeKeepsOverlayStackAboveSiblings
+    FlowViewTest.DragReorderUsesVariableGeometryAndPreservesSelection
+    FlowViewTest.DragReorderWithoutModifierSelectsOnlyDraggedItem
+    GridViewTest.DragReorderSingleMode
+    GridViewTest.DragReorderBoundaryJitterKeepsStableTargetUntilRelease
+    GridViewTest.DragReorderClearThresholdCrossingChangesTarget
+    GridViewTest.DragDisplacementRepeatedStableMoveKeepsRunningAnimations
+    GridViewTest.DragReorderMultipleMode
+    GridViewTest.DragReorderSelectedItemsMoveAsGroupInMultipleMode
+    GridViewTest.DragReorderExtendedMode
+    GridViewTest.DragReorderNoneSelectionDisablesDrag
+    GridViewTest.ReorderStandardItemModelTakeRowFallback
+    WindowTest.WindowsCustomTitleBarSharesNativeCaptionRow
+    WindowTest.WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore
+    WindowTest.WindowsMaximizedCustomChromeFillsAvailableGeometry
+)
+
 set(FLUENT_QT_QT_GTEST_SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/support/QtGTestMain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/support/QtTestEnvironment.cpp
@@ -55,13 +86,34 @@ macro(add_qt_test_module module_name source_file)
 
     set(_fluent_qt_registered_tests ${${module_name}_TESTS})
     if(_fluent_qt_registered_tests)
+        set(_fluent_qt_is_ci_fast_target FALSE)
+        list(FIND FLUENT_QT_CI_FAST_TARGETS "${module_name}" _fluent_qt_ci_fast_target_index)
+        if(NOT _fluent_qt_ci_fast_target_index EQUAL -1)
+            set(_fluent_qt_is_ci_fast_target TRUE)
+        endif()
+
         set_tests_properties(${_fluent_qt_registered_tests} PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1"
         )
         foreach(_fluent_qt_test_name IN LISTS _fluent_qt_registered_tests)
             set(_fluent_qt_labels ${_test_labels})
+            set(_fluent_qt_is_manual_visual FALSE)
+            set(_fluent_qt_is_local_desktop FALSE)
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*VisualCheck[^._/:-]*($|[._/:-])")
-                list(APPEND _fluent_qt_labels visual interactive)
+                set(_fluent_qt_is_manual_visual TRUE)
+                set(_fluent_qt_is_local_desktop TRUE)
+                list(APPEND _fluent_qt_labels visual interactive manual_visual local_desktop)
+            endif()
+            list(FIND FLUENT_QT_MANUAL_VISUAL_TESTS "${_fluent_qt_test_name}" _fluent_qt_manual_visual_index)
+            if(NOT _fluent_qt_manual_visual_index EQUAL -1)
+                set(_fluent_qt_is_manual_visual TRUE)
+                set(_fluent_qt_is_local_desktop TRUE)
+                list(APPEND _fluent_qt_labels visual interactive manual_visual local_desktop)
+            endif()
+            list(FIND FLUENT_QT_LOCAL_DESKTOP_TESTS "${_fluent_qt_test_name}" _fluent_qt_local_desktop_index)
+            if(NOT _fluent_qt_local_desktop_index EQUAL -1)
+                set(_fluent_qt_is_local_desktop TRUE)
+                list(APPEND _fluent_qt_labels local_desktop)
             endif()
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*Interactive[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels interactive)
@@ -75,8 +127,16 @@ macro(add_qt_test_module module_name source_file)
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(Windows|Win32|WinUIWindows)[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels platform_windows)
             endif()
-            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])")
+            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOsRestState|DesignLanguageTest[._/:-].*MacOs)[^._/:-]*($|[._/:-])")
+                list(APPEND _fluent_qt_labels design_macos)
+            elseif(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels platform_macos)
+            endif()
+            if(NOT _fluent_qt_is_manual_visual)
+                list(APPEND _fluent_qt_labels ci_full)
+            endif()
+            if(_fluent_qt_is_ci_fast_target AND NOT _fluent_qt_is_manual_visual AND NOT _fluent_qt_is_local_desktop)
+                list(APPEND _fluent_qt_labels ci_fast)
             endif()
             list(REMOVE_DUPLICATES _fluent_qt_labels)
             set_tests_properties("${_fluent_qt_test_name}" PROPERTIES LABELS "${_fluent_qt_labels}")

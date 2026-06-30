@@ -232,20 +232,6 @@ inline qreal fluentWheelDeltaY(const QWheelEvent* e) {
     return 0.0;
 }
 
-inline int fluentWheelPageStep(qreal delta) {
-    if (delta > 0.0)
-        return -1;
-    if (delta < 0.0)
-        return 1;
-    return 0;
-}
-
-inline int fluentWheelCommittedTailGapMs(FluentWheelInputKind kind, int baseGapMs) {
-    if (kind == FluentWheelInputKind::NoPhasePixel)
-        return qMax(baseGapMs, 220);
-    return baseGapMs;
-}
-
 constexpr bool fluentWheelEventSupportsPhase() {
     return QT_VERSION >= QT_VERSION_CHECK(6, 0, 0);
 }
