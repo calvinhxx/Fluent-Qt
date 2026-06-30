@@ -26,6 +26,7 @@
 #include "components/collections/GridView.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/Label.h"
+#include "QtTestEnvironment.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -536,6 +537,10 @@ TEST_F(FlowViewTest, MultiSelectRequiresControlClickAndDragDoesNotRubberBandSele
 
 TEST_F(FlowViewTest, DragReorderUsesVariableGeometryAndPreservesSelection)
 {
+    if (tests::support::isHeadlessPlatform()) {
+        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
+                        "synthetic pointer/keyboard input or show native popups.";
+    }
     auto* flow = new FlowView(window);
     flow->setGeometry(0, 0, 360, 220);
     flow->setContentMargins(QMargins());
@@ -572,6 +577,10 @@ TEST_F(FlowViewTest, DragReorderUsesVariableGeometryAndPreservesSelection)
 
 TEST_F(FlowViewTest, DragReorderWithoutModifierSelectsOnlyDraggedItem)
 {
+    if (tests::support::isHeadlessPlatform()) {
+        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
+                        "synthetic pointer/keyboard input or show native popups.";
+    }
     auto* flow = new FlowView(window);
     flow->setGeometry(0, 0, 360, 220);
     flow->setSelectionMode(FlowSelectionMode::Extended);

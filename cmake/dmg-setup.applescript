@@ -41,6 +41,7 @@ on run argv
             open
             update without registering applications
             delay 1
+            close
         end tell
     end tell
     -- Tidy the volume so the mounted window is clean: flag the .background folder invisible and
@@ -53,4 +54,5 @@ on run argv
     set volPath to quoted form of ("/Volumes/" & volumeName)
     do shell script "/usr/bin/chflags hidden " & volPath & "/.background || true"
     do shell script "/bin/rm -rf " & volPath & "/.fseventsd " & volPath & "/.Trashes || true"
+    do shell script "/bin/sync"
 end run

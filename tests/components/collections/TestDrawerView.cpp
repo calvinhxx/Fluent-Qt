@@ -19,6 +19,7 @@
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/collections/DrawerView.h"
 #include "components/textfields/Label.h"
+#include "QtTestEnvironment.h"
 
 using fluent::basicinput::Button;
 using fluent::basicinput::ToggleSwitch;
@@ -586,6 +587,10 @@ TEST_F(DrawerViewTest, ModalDimAndClosePolicies)
 
 TEST_F(DrawerViewTest, TopLevelResizeKeepsOverlayStackAboveSiblings)
 {
+    if (tests::support::isHeadlessPlatform()) {
+        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
+                        "synthetic pointer/keyboard input or show native popups.";
+    }
     DrawerTestWindow window;
     prepareWindow(window);
     auto* sibling = new QWidget(&window);

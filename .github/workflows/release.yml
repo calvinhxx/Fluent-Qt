@@ -1,0 +1,409 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing annotated tag to release, for example v1.0.0.
+        required: true
+        type: string
+      draft:
+        description: Create the GitHub Release as a draft.
+        required: true
+        default: true
+        type: boolean
+      require_ci:
+        description: Require a successful CI run for the tagged commit.
+        required: true
+        default: true
+        type: boolean
+      package_set:
+        description: Package matrix to run.
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - full
+      publish:
+        description: Publish or update the GitHub Release after packages finish.
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Preflight
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
+      draft: ${{ steps.release.outputs.draft }}
+      require_ci: ${{ steps.release.outputs.require_ci }}
+      package_set: ${{ steps.release.outputs.package_set }}
+      package_matrix: ${{ steps.release.outputs.package_matrix }}
+      publish: ${{ steps.release.outputs.publish }}
+      tag_sha: ${{ steps.release.outputs.tag_sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release tag
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --force --tags
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "::error::Release tag must match vX.Y.Z or vX.Y.Z-rc.N: $tag"
+            exit 1
+          fi
+
+          if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::Release tag does not exist locally after fetching tags: $tag"
+            exit 1
+          fi
+
+          if ! git rev-parse -q --verify "refs/tags/$tag^{tag}" >/dev/null; then
+            echo "::error::Release tag must be annotated: $tag"
+            exit 1
+          fi
+
+          git checkout --detach "$tag"
+
+          version="${tag#v}"
+          base_version="${version%%-*}"
+          cmake_version="$(sed -nE 's/^[[:space:]]*project[[:space:]]*\([[:space:]]*FluentQT[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -n 1)"
+          if [[ -z "$cmake_version" ]]; then
+            echo "::error::Could not read project(FluentQT VERSION X.Y.Z ...) from CMakeLists.txt."
+            exit 1
+          fi
+
+          if [[ "$cmake_version" != "$base_version" ]]; then
+            echo "::error::Tag $tag resolves to version $base_version, but CMakeLists.txt declares $cmake_version."
+            exit 1
+          fi
+
+          prerelease="false"
+          if [[ "$version" == *"-rc."* ]]; then
+            prerelease="true"
+          fi
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            draft="${{ inputs.draft }}"
+            require_ci="${{ inputs.require_ci }}"
+            package_set="${{ inputs.package_set }}"
+            publish="${{ inputs.publish }}"
+          elif [[ "$prerelease" == "true" ]]; then
+            draft="true"
+            require_ci="true"
+            package_set="smoke"
+            publish="false"
+          else
+            draft="false"
+            require_ci="true"
+            package_set="full"
+            publish="true"
+          fi
+
+          if [[ "$package_set" == "smoke" ]]; then
+            package_matrix='{"include":[{"artifact":"macos-x64","os":"macos-15-intel","preset":"vcpkg-osx-x64-release","package_preset":"vcpkg-osx-x64-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"windows-x64","os":"windows-2022","preset":"vcpkg-windows-release","package_preset":"vcpkg-windows-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":true}]}'
+          elif [[ "$package_set" == "full" ]]; then
+            package_matrix='{"include":[{"artifact":"macos-arm64","os":"macos-15","preset":"vcpkg-osx-release","package_preset":"vcpkg-osx-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"macos-x64","os":"macos-15-intel","preset":"vcpkg-osx-x64-release","package_preset":"vcpkg-osx-x64-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"windows-x64","os":"windows-2022","preset":"vcpkg-windows-release","package_preset":"vcpkg-windows-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":true},{"artifact":"windows-arm64","os":"windows-2022","preset":"vcpkg-windows-arm64-release","package_preset":"vcpkg-windows-arm64-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_arm64_cross_compiled","host_qt_arch":"win64_msvc2022_64","windows_arm64_cross":true,"needs_nsis":true}]}'
+          else
+            echo "::error::package_set must be smoke or full: $package_set"
+            exit 1
+          fi
+          if [[ "$package_set" == "smoke" && "$publish" == "true" ]]; then
+            echo "::error::Smoke package validation cannot publish a GitHub Release. Use package_set=full to publish."
+            exit 1
+          fi
+
+          tag_sha="$(git rev-list -n 1 "$tag")"
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+            echo "draft=$draft"
+            echo "require_ci=$require_ci"
+            echo "package_set=$package_set"
+            echo "package_matrix=$package_matrix"
+            echo "publish=$publish"
+            echo "tag_sha=$tag_sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify CI succeeded for tag commit
+        if: ${{ steps.release.outputs.require_ci == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          successful_runs="$(
+            gh run list \
+              --repo "$GITHUB_REPOSITORY" \
+              --workflow "CI" \
+              --commit "${{ steps.release.outputs.tag_sha }}" \
+              --limit 20 \
+              --json status,conclusion \
+              --jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length'
+          )"
+
+          if [[ "$successful_runs" == "0" ]]; then
+            echo "::error::No successful CI run was found for ${{ steps.release.outputs.tag_sha }}."
+            echo "::error::Run CI on the tagged commit first, or rerun this workflow_dispatch with require_ci=false."
+            exit 1
+          fi
+
+      - name: Summarize preflight
+        shell: bash
+        run: |
+          {
+            echo "## Release preflight"
+            echo ""
+            echo "- Tag: ${{ steps.release.outputs.tag }}"
+            echo "- Version: ${{ steps.release.outputs.version }}"
+            echo "- Commit: ${{ steps.release.outputs.tag_sha }}"
+            echo "- Draft: ${{ steps.release.outputs.draft }}"
+            echo "- Prerelease: ${{ steps.release.outputs.prerelease }}"
+            echo "- Required CI: ${{ steps.release.outputs.require_ci }}"
+            echo "- Package set: ${{ steps.release.outputs.package_set }}"
+            echo "- Publish: ${{ steps.release.outputs.publish }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  package:
+    name: Package ${{ matrix.artifact }}
+    needs: preflight
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.preflight.outputs.package_matrix) }}
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-binary-cache
+          key: release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          restore-keys: |
+            release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
+
+      - name: Install NSIS
+        if: ${{ matrix.needs_nsis == true }}
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
+      - name: Install host Qt ${{ matrix.qt_version }}
+        if: ${{ matrix.windows_arm64_cross == true }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.host_qt_arch }}
+          cache: true
+
+      - name: Remember host Qt path
+        if: ${{ matrix.windows_arm64_cross == true }}
+        shell: pwsh
+        run: |
+          $qtHostPath = $env:QT_ROOT_DIR -replace '\\', '/'
+          "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
+
+      - name: Install Qt ${{ matrix.qt_version }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Set VCPKG_ROOT
+        shell: pwsh
+        run: |
+          if (-not $env:VCPKG_INSTALLATION_ROOT) {
+            throw "VCPKG_INSTALLATION_ROOT is not set on this runner."
+          }
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+
+      - name: Configure
+        if: ${{ matrix.windows_arm64_cross != true }}
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Configure Windows ARM64 cross-build
+        if: ${{ matrix.windows_arm64_cross == true }}
+        shell: pwsh
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
+          $qtHost = $env:QT_HOST_PATH -replace '\\', '/'
+          cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$qtRoot" -D "QT_HOST_PATH=$qtHost"
+
+      - name: Build
+        run: cmake --build --preset ${{ matrix.preset }} --parallel
+
+      - name: Package
+        run: cpack --preset ${{ matrix.package_preset }}
+
+      - name: Collect package artifacts
+        shell: pwsh
+        run: |
+          $source = "build/${{ matrix.preset }}"
+          $destination = "${{ runner.temp }}/release-artifacts"
+          New-Item -ItemType Directory -Force -Path $destination | Out-Null
+
+          $packages = Get-ChildItem -LiteralPath $source -File |
+            Where-Object { $_.Extension -in @(".dmg", ".exe") }
+          if (-not $packages) {
+            throw "No release package was found in $source."
+          }
+
+          foreach ($package in $packages) {
+            Copy-Item -LiteralPath $package.FullName -Destination $destination
+            $checksum = "$($package.FullName).sha256"
+            if (Test-Path -LiteralPath $checksum) {
+              Copy-Item -LiteralPath $checksum -Destination $destination
+            }
+          }
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.artifact }}
+          if-no-files-found: error
+          retention-days: 14
+          path: ${{ runner.temp }}/release-artifacts/*
+
+      - name: Upload packaging diagnostics
+        if: failure()
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-diagnostics-${{ matrix.artifact }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            build/${{ matrix.preset }}/CMakeCache.txt
+            build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
+            build/${{ matrix.preset }}/vcpkg-manifest-install.log
+            build/${{ matrix.preset }}/_CPack_Packages/**/*.log
+            build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
+
+  publish:
+    name: Publish GitHub Release
+    needs: [preflight, package]
+    if: ${{ needs.preflight.outputs.publish == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - name: Download package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-dist
+
+      - name: Generate SHA256SUMS.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -d '' packages < <(
+            find release-dist -type f \( -name '*.dmg' -o -name '*.exe' \) -print0 | sort -z
+          )
+          if [[ "${#packages[@]}" == "0" ]]; then
+            echo "::error::No release packages were downloaded."
+            exit 1
+          fi
+
+          : > release-dist/SHA256SUMS.txt
+          for package in "${packages[@]}"; do
+            checksum="$(sha256sum "$package" | awk '{print $1}')"
+            relative_path="${package#release-dist/}"
+            printf "%s  %s\n" "$checksum" "$relative_path" >> release-dist/SHA256SUMS.txt
+          done
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ needs.preflight.outputs.tag }}"
+          draft="${{ needs.preflight.outputs.draft }}"
+          prerelease="${{ needs.preflight.outputs.prerelease }}"
+
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" release-dist/* --repo "$GITHUB_REPOSITORY" --clobber
+            exit 0
+          fi
+
+          args=(
+            release create "$tag"
+            release-dist/*
+            --repo "$GITHUB_REPOSITORY"
+            --verify-tag
+            --title "Fluent-QT $tag"
+            --generate-notes
+            --fail-on-no-commits
+          )
+
+          if [[ "$draft" == "true" ]]; then
+            args+=(--draft)
+          fi
+          if [[ "$prerelease" == "true" ]]; then
+            args+=(--prerelease)
+          fi
+
+          gh "${args[@]}"
+
+      - name: Summarize release assets
+        shell: bash
+        run: |
+          {
+            echo "## Release assets"
+            echo ""
+            find release-dist -maxdepth 1 -type f -printf "- %f\n" | sort
+          } >> "$GITHUB_STEP_SUMMARY"

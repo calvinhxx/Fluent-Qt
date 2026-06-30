@@ -227,3 +227,22 @@ constexpr bool fluentCanConstructNativeGestureEvent() {
 inline const char* fluentNativeGestureEventSkipReason() {
     return "Native gesture event construction requires Qt 6.2+";
 }
+
+/**
+ * @brief Returns true when an event can change the native window safe-area insets.
+ * zh_CN: 判断事件是否可能改变原生窗口安全区域边距。
+ */
+inline bool fluentIsWindowInsetChangeEvent(const QEvent* event) {
+    if (!event)
+        return false;
+
+    if (event->type() == QEvent::WindowStateChange)
+        return true;
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    if (event->type() == QEvent::SafeAreaMarginsChange)
+        return true;
+#endif
+
+    return false;
+}
