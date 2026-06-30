@@ -142,6 +142,9 @@ TEST(QtCompat, WheelHelpersClassifyAndNormalizeNoPhaseDiscreteInput) {
 }
 
 TEST(QtCompat, WheelHelpersClassifyPhaseBasedInput) {
+    if (!fluentWheelEventSupportsPhase())
+        GTEST_SKIP() << fluentWheelEventPhaseSkipReason();
+
     FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9),
                                        QPoint(0, -30), QPoint(),
                                        Qt::NoButton, Qt::NoModifier,

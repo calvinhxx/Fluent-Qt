@@ -94,7 +94,7 @@ jobs:
                 "exclude_labels": "",
                 "ctest_timeout": 180,
                 "timeout_minutes": 20,
-                "configure_args": "",
+                "configure_args": "-DBUILD_TESTING=OFF",
                 "windows_arm64_cross": false
               }
             ]
@@ -140,7 +140,7 @@ jobs:
                 "exclude_labels": "",
                 "ctest_timeout": 180,
                 "timeout_minutes": 40,
-                "configure_args": "",
+                "configure_args": "-DBUILD_TESTING=OFF",
                 "windows_arm64_cross": false
               },
               {
@@ -197,7 +197,7 @@ jobs:
                 "exclude_labels": "",
                 "ctest_timeout": 180,
                 "timeout_minutes": 60,
-                "configure_args": "",
+                "configure_args": "-DBUILD_TESTING=OFF",
                 "windows_arm64_cross": true
               }
             ]
@@ -285,7 +285,12 @@ jobs:
         run: |
           $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
           $qtHost = $env:QT_HOST_PATH -replace '\\', '/'
-          cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$qtRoot" -D "QT_HOST_PATH=$qtHost"
+          $configureArgs = @("--preset", "${{ matrix.preset }}", "-D", "CMAKE_PREFIX_PATH=$qtRoot", "-D", "QT_HOST_PATH=$qtHost")
+          $extraArgs = "${{ matrix.configure_args }}"
+          if ($extraArgs) {
+            $configureArgs += $extraArgs -split " "
+          }
+          cmake @configureArgs
 
       - name: Build
         if: ${{ matrix.build == true }}
