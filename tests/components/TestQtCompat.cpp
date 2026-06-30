@@ -5,7 +5,11 @@
 #include <QEvent>
 #include <QFile>
 #include <QFileInfo>
+#include <QListView>
 #include <QPointF>
+#include <QStandardItem>
+#include <QStandardItemModel>
+#include <QStyledItemDelegate>
 #include <QStringList>
 #include <QtGlobal>
 #include <QWidget>
@@ -55,6 +59,21 @@ bool isAllowedQtVersionGuardFile(const QString& relativePath) {
     return allowed.contains(relativePath);
 }
 
+class FixedHeightDelegate : public QStyledItemDelegate {
+public:
+    explicit FixedHeightDelegate(int height) : m_height(height) {}
+
+    QSize sizeHint(const QStyleOptionViewItem& option,
+                   const QModelIndex& index) const override {
+        Q_UNUSED(option);
+        Q_UNUSED(index);
+        return QSize(80, m_height);
+    }
+
+private:
+    int m_height;
+};
+
 } // namespace
 
 TEST(QtCompat, FluentEnterEventDerivesFromQEvent) {
@@ -103,6 +122,28 @@ TEST(QtCompat, NativeGesturePositionHelperReturnsLocalPositionWhenConstructible)
 #else
     GTEST_SKIP() << fluentNativeGestureEventSkipReason();
 #endif
+}
+
+TEST(QtCompat, ItemViewRowHeightPrefersVisualRectHeight) {
+    QListView view;
+    QStandardItemModel model;
+    model.appendRow(new QStandardItem(QStringLiteral("row")));
+    view.setModel(&model);
+
+    const QModelIndex index = model.index(0, 0);
+    EXPECT_EQ(fluentItemViewRowHeight(&view, index, QRect(0, 0, 120, 24)), 24);
+}
+
+TEST(QtCompat, ItemViewRowHeightFallsBackToDelegateSizeHint) {
+    QListView view;
+    QStandardItemModel model;
+    model.appendRow(new QStandardItem(QStringLiteral("row")));
+    FixedHeightDelegate delegate(44);
+    view.setModel(&model);
+    view.setItemDelegate(&delegate);
+
+    const QModelIndex index = model.index(0, 0);
+    EXPECT_EQ(fluentItemViewRowHeight(&view, index, QRect(0, 0, 120, 0)), 44);
 }
 
 TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards) {

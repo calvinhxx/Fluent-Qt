@@ -25,6 +25,7 @@
  */
 
 #include <QtGlobal>
+#include <QAbstractItemView>
 #include <QEvent>
 #include <QGuiApplication>
 #include <QKeyEvent>
@@ -38,6 +39,7 @@
 #include <QPixmap>
 #include <QPoint>
 #include <QPointF>
+#include <QRect>
 #include <QMouseEvent>
 #include <QSize>
 #include <QStyleHints>
@@ -247,6 +249,37 @@ using FluentItemDataRoles = QVector<int>;
 #else
 #define FLUENT_INIT_VIEW_ITEM_OPTION(optPtr) do { *(optPtr) = viewOptions(); } while (0)
 #endif
+
+/**
+ * @brief Returns a stable item-view row height when visualRect() has no height yet.
+ * zh_CN: 当 visualRect() 暂时没有高度时，返回稳定的 item-view 行高。
+ *
+ * Some Qt/platform/offscreen combinations expose a valid item index before
+ * visualRect(index).height() is available. Fall back through the view/delegate
+ * size hints so reveal animations can still make layout decisions without
+ * scattering Qt-version checks in components.
+ * zh_CN: 某些 Qt/平台/offscreen 组合会先暴露有效索引，但 visualRect(index).height()
+ * zh_CN: 仍为 0；这里统一回退到 view/delegate 的 size hint，避免组件代码散落 Qt 版本判断。
+ */
+inline int fluentItemViewRowHeight(const QAbstractItemView* view,
+                                   const QModelIndex& index,
+                                   const QRect& visualRect) {
+    if (visualRect.height() > 0)
+        return visualRect.height();
+
+    if (!view || !index.isValid())
+        return qMax(0, visualRect.height());
+
+    const int indexHint = view->sizeHintForIndex(index).height();
+    if (indexHint > 0)
+        return indexHint;
+
+    const int rowHint = view->sizeHintForRow(index.row());
+    if (rowHint > 0)
+        return rowHint;
+
+    return qMax(0, view->fontMetrics().height());
+}
 
 // QColor::getHsvF / getRgbF / getHslF component pointer type.
 // zh_CN: QColor::getHsvF / getRgbF / getHslF 分量指针类型。

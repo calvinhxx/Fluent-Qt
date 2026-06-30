@@ -18,6 +18,7 @@
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
+#include "compatibility/QtCompat.h"
 #include "design/CornerRadius.h"
 #include "design/Animation.h"
 #include "design/Spacing.h"
@@ -1363,7 +1364,8 @@ qreal TreeView::computeSubtreeHeight(const QModelIndex& parent) const {
     qreal height = 0.0;
     QModelIndex walk = indexBelow(parent);
     while (walk.isValid() && isDescendantOf(walk, parent)) {
-        height += visualRect(walk).height();
+        const QRect rowRect = visualRect(walk);
+        height += fluentItemViewRowHeight(this, walk, rowRect);
         walk = indexBelow(walk);
     }
     return height;
