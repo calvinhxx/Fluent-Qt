@@ -31,12 +31,6 @@ constexpr int kContentRows = 4;
 constexpr qreal kWheelPageThreshold = 120.0;
 constexpr int kWheelClusterGapMs = 120;
 
-enum class WheelInputKind {
-    PhaseBased,
-    NoPhasePixel,
-    NoPhaseDiscrete
-};
-
 QDate firstOfMonth(const QDate& date)
 {
     if (!date.isValid())
@@ -92,32 +86,6 @@ int contentLevelDepth(CalendarView::CalendarContentLevel level)
     case CalendarView::CalendarContentLevel::Year:
         return 2;
     }
-    return 0;
-}
-
-WheelInputKind wheelInputKind(const QWheelEvent* event)
-{
-    if (event->phase() != Qt::NoScrollPhase)
-        return WheelInputKind::PhaseBased;
-    return event->pixelDelta().isNull() ? WheelInputKind::NoPhaseDiscrete
-                                        : WheelInputKind::NoPhasePixel;
-}
-
-qreal normalizedWheelDelta(const QWheelEvent* event)
-{
-    if (!event->pixelDelta().isNull())
-        return static_cast<qreal>(event->pixelDelta().y());
-    if (!event->angleDelta().isNull())
-        return static_cast<qreal>(event->angleDelta().y());
-    return 0.0;
-}
-
-int wheelPageStep(qreal delta)
-{
-    if (delta > 0.0)
-        return -1;
-    if (delta < 0.0)
-        return 1;
     return 0;
 }
 
@@ -614,12 +582,12 @@ void CalendarView::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    const WheelInputKind kind = wheelInputKind(event);
-    const bool phaseBased = kind == WheelInputKind::PhaseBased;
+    const FluentWheelInputKind kind = fluentWheelInputKind(event);
+    const bool phaseBased = kind == FluentWheelInputKind::PhaseBased;
     const WheelGestureKind gestureKind =
-        kind == WheelInputKind::PhaseBased
+        kind == FluentWheelInputKind::PhaseBased
             ? WheelGestureKind::PhaseBased
-            : (kind == WheelInputKind::NoPhasePixel
+            : (kind == FluentWheelInputKind::NoPhasePixel
                    ? WheelGestureKind::NoPhasePixel
                    : WheelGestureKind::NoPhaseDiscrete);
 
@@ -641,21 +609,27 @@ void CalendarView::wheelEvent(QWheelEvent* event)
         return;
     }
 
-    const qreal delta = normalizedWheelDelta(event);
+    const qreal delta = fluentWheelDeltaY(event);
     if (qFuzzyIsNull(delta)) {
         event->accept();
         return;
     }
 
-    const int step = wheelPageStep(delta);
+    const int step = fluentWheelPageStep(delta);
     if (step == 0) {
         event->accept();
         return;
     }
 
     const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    const qint64 elapsedSinceLast = m_lastWheelTs == 0 ? 0 : now - m_lastWheelTs;
     const bool transitionActive = contentTransitionActive() || monthTransitionActive();
     const bool preserveCommittedTransitionTail = transitionActive && m_wheelGestureCommitted;
+    const bool preserveCommittedNoPhaseTail =
+        !phaseBased &&
+        m_wheelGestureCommitted &&
+        m_wheelGestureKind == gestureKind &&
+        elapsedSinceLast <= fluentWheelCommittedTailGapMs(kind, kWheelClusterGapMs);
     const bool freshDiscreteNotch = !transitionActive &&
                                     m_wheelGestureCommitted &&
                                     gestureKind == WheelGestureKind::NoPhaseDiscrete &&
@@ -663,12 +637,12 @@ void CalendarView::wheelEvent(QWheelEvent* event)
     const bool kindChanged = m_wheelGestureKind != WheelGestureKind::None &&
                              m_wheelGestureKind != gestureKind;
     const bool clusterExpired = !phaseBased && m_lastWheelTs != 0 &&
-                                now - m_lastWheelTs > kWheelClusterGapMs;
+                                elapsedSinceLast > kWheelClusterGapMs;
     const bool directionChanged = m_wheelDir != 0 && m_wheelDir != step;
     if (freshDiscreteNotch ||
         m_lastWheelTs == 0 ||
         (kindChanged && !preserveCommittedTransitionTail) ||
-        (clusterExpired && !preserveCommittedTransitionTail) ||
+        (clusterExpired && !preserveCommittedTransitionTail && !preserveCommittedNoPhaseTail) ||
         (directionChanged && !m_wheelGestureCommitted)) {
         resetWheelGesture();
     }
