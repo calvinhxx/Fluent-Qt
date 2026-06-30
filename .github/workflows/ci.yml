@@ -9,7 +9,7 @@ on:
       matrix:
         description: CI matrix to run.
         required: true
-        default: full
+        default: fast
         type: choice
         options:
           - fast
@@ -39,9 +39,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          mode="full"
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            mode="fast"
+          mode="fast"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            mode="full"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             mode="${{ github.event.inputs.matrix }}"
           fi
