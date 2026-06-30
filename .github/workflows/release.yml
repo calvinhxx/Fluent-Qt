@@ -172,13 +172,13 @@ jobs:
               --workflow "CI" \
               --commit "${{ steps.release.outputs.tag_sha }}" \
               --limit 20 \
-              --json status,conclusion \
-              --jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length'
+              --json status,conclusion,displayTitle \
+              --jq '[.[] | select(.status == "completed" and .conclusion == "success" and .displayTitle == "CI full")] | length'
           )"
 
           if [[ "$successful_runs" == "0" ]]; then
-            echo "::error::No successful CI run was found for ${{ steps.release.outputs.tag_sha }}."
-            echo "::error::Run CI on the tagged commit first, or rerun this workflow_dispatch with require_ci=false."
+            echo "::error::No successful CI full run was found for ${{ steps.release.outputs.tag_sha }}."
+            echo "::error::Run CI with matrix=full on the tagged commit first, or rerun this workflow_dispatch with require_ci=false."
             exit 1
           fi
 

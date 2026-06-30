@@ -100,8 +100,7 @@
         "strategy": "set"
       },
       "cacheVariables": {
-        "VCPKG_TARGET_TRIPLET": "arm64-windows",
-        "CMAKE_PREFIX_PATH": "C:/Qt/6.9.3/msvc2022_arm64"
+        "VCPKG_TARGET_TRIPLET": "arm64-windows"
       }
     },
     {
