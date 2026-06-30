@@ -15,7 +15,6 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/navigation/StackContentHost.h"
-#include "compatibility/QtCompat.h"
 #include "design/Elevation.h"
 
 namespace fluent::navigation {
@@ -239,7 +238,7 @@ protected:
         // Light dismiss: a press in the content area (right of the pane column) closes the pane.
         // Presses inside the column (gaps between the raised header/main/footer panes) are absorbed.
         // zh_CN: 轻关闭：在内容区（窗格列右侧）按下即关闭窗格；列内（被抬升的 header/main/footer 间隙）的按下被吸收。
-        if (fluentMousePos(event).x() > m_paneRect.right())
+        if (event->position().x() > m_paneRect.right())
             dismiss();
     }
 

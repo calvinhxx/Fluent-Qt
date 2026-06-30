@@ -30,7 +30,6 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
-#include "QtTestEnvironment.h"
 
 using namespace fluent::collections;
 using namespace fluent::textfields;
@@ -860,10 +859,6 @@ TEST_F(GridViewTest, ExtendedSelectionPlainClickClearsOthers) {
 // ── Drag reorder + selection mode interaction ─────────────────────────────────
 
 TEST_F(GridViewTest, DragReorderSingleMode) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     // Single selection: drag item 0 over item 2, verify reorder + selection follows
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
@@ -910,10 +905,6 @@ TEST_F(GridViewTest, DragReorderSingleMode) {
 }
 
 TEST_F(GridViewTest, DragReorderBoundaryJitterKeepsStableTargetUntilRelease) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
@@ -959,10 +950,6 @@ TEST_F(GridViewTest, DragReorderBoundaryJitterKeepsStableTargetUntilRelease) {
 }
 
 TEST_F(GridViewTest, DragReorderClearThresholdCrossingChangesTarget) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
@@ -1000,10 +987,6 @@ TEST_F(GridViewTest, DragReorderClearThresholdCrossingChangesTarget) {
 }
 
 TEST_F(GridViewTest, DragDisplacementRepeatedStableMoveKeepsRunningAnimations) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
@@ -1033,10 +1016,6 @@ TEST_F(GridViewTest, DragDisplacementRepeatedStableMoveKeepsRunningAnimations) {
 }
 
 TEST_F(GridViewTest, DragReorderMultipleMode) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     // Multiple selection + drag: only the pressed item should reorder,
     // multi-selection state shouldn't prevent drag
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
@@ -1084,10 +1063,6 @@ TEST_F(GridViewTest, DragReorderMultipleMode) {
 }
 
 TEST_F(GridViewTest, DragReorderSelectedItemsMoveAsGroupInMultipleMode) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
@@ -1128,10 +1103,6 @@ TEST_F(GridViewTest, DragReorderSelectedItemsMoveAsGroupInMultipleMode) {
 }
 
 TEST_F(GridViewTest, DragReorderExtendedMode) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     // Extended selection + drag: drag should work even with Ctrl-selected items
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
@@ -1180,10 +1151,6 @@ TEST_F(GridViewTest, DragReorderExtendedMode) {
 }
 
 TEST_F(GridViewTest, DragReorderNoneSelectionDisablesDrag) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     // None selection mode: drag should still work if canReorderItems is true
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
@@ -1292,10 +1259,6 @@ TEST_F(GridViewTest, DragReorderPreservesSelectionInMultipleMode) {
 }
 
 TEST_F(GridViewTest, ReorderStandardItemModelTakeRowFallback) {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     // QStandardItemModel doesn't implement moveRow natively;
     // verify the takeRow/insertRow fallback works
     window->setAttribute(Qt::WA_DontShowOnScreen, true);

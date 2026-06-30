@@ -562,9 +562,6 @@ TEST_F(CalendarViewTest, NoPhasePixelGesturePagesOnce)
 
 TEST_F(CalendarViewTest, PhaseBasedTouchpadGesturePagesOnce)
 {
-    if (!fluentWheelEventSupportsPhase())
-        GTEST_SKIP() << fluentWheelEventPhaseSkipReason();
-
     auto* calendarView = new CalendarView(window);
     calendarView->setGeometry(32, 32, calendarView->sizeHint().width(), calendarView->sizeHint().height());
     calendarView->setVisibleMonth(QDate(2026, 5, 1));

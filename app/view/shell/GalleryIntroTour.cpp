@@ -16,7 +16,6 @@
 #include "components/dialogs_flyouts/Dialog.h"  // SmokeOverlay
 #include "components/textfields/Label.h"
 #include "components/windowing/Window.h"
-#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 
 namespace fluent::gallery {
@@ -268,10 +267,10 @@ void GalleryIntroTour::finishTour()
     if (m_card) {
         m_card->close();  // fades out + hides
         QPointer<CoachMark> card = m_card;
-        fluentConnectSingleShot(m_card, &CoachMark::closed, card.data(), [card]() {
+        connect(m_card, &CoachMark::closed, card, [card]() {
             if (card)
                 card->deleteLater();
-        });
+        }, Qt::SingleShotConnection);
     }
 
     if (m_spotAnim)
@@ -282,10 +281,10 @@ void GalleryIntroTour::finishTour()
         m_dimAnim->setStartValue(m_scrim->property("progress"));
         m_dimAnim->setEndValue(0.0);
         QPointer<QWidget> scrim = m_scrim;
-        fluentConnectSingleShot(m_dimAnim, &QPropertyAnimation::finished, scrim.data(), [scrim]() {
+        connect(m_dimAnim, &QPropertyAnimation::finished, scrim, [scrim]() {
             if (scrim)
                 scrim->deleteLater();
-        });
+        }, Qt::SingleShotConnection);
         m_dimAnim->start();
     }
 

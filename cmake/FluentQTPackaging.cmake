@@ -178,10 +178,8 @@ elseif(WIN32)
     # 底部品牌文字，完成页加"立即运行"勾选。位图是按 NSIS MUI 约定尺寸（侧栏 164x314、横幅 150x57）的 24 位 BMP。
     set(_fluent_qt_welcome_bmp "${PROJECT_SOURCE_DIR}/app/assets/installer-welcome.bmp")
     set(_fluent_qt_header_bmp "${PROJECT_SOURCE_DIR}/app/assets/installer-header.bmp")
-    file(TO_NATIVE_PATH "${_fluent_qt_welcome_bmp}" _fluent_qt_welcome_bmp_native)
-    string(REPLACE "\\" "\\\\" _fluent_qt_welcome_bmp_native "${_fluent_qt_welcome_bmp_native}")
-    set(CPACK_NSIS_MUI_WELCOMEFINISHPAGE_BITMAP "${_fluent_qt_welcome_bmp_native}")
-    set(CPACK_NSIS_MUI_UNWELCOMEFINISHPAGE_BITMAP "${_fluent_qt_welcome_bmp_native}")
+    set(CPACK_NSIS_MUI_WELCOMEFINISHPAGE_BITMAP "${_fluent_qt_welcome_bmp}")
+    set(CPACK_NSIS_MUI_UNWELCOMEFINISHPAGE_BITMAP "${_fluent_qt_welcome_bmp}")
     # CPack has no dedicated header-bitmap variable; the template already emits `!define MUI_HEADERIMAGE`
     # and inserts CPACK_NSIS_DEFINES before the page macros, so inject the bitmap define there.
     # No quotes (CPack mangles an embedded quote in CPACK_NSIS_DEFINES into ';') and a NATIVE backslash

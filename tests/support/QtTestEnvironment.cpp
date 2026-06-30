@@ -5,7 +5,6 @@
 #include <QApplication>
 #include <QDir>
 #include <QEvent>
-#include <QGuiApplication>
 #include <QFile>
 #include <QFileInfo>
 #include <QFontDatabase>
@@ -82,12 +81,6 @@ void initializeQtTestEnvironment()
 bool shouldSkipVisualTest()
 {
     return qEnvironmentVariableIsSet("SKIP_VISUAL_TEST");
-}
-
-bool isHeadlessPlatform()
-{
-    const QString platform = QGuiApplication::platformName();
-    return platform == QLatin1String("offscreen") || platform == QLatin1String("minimal");
 }
 
 bool isVisualSnapshotMode()

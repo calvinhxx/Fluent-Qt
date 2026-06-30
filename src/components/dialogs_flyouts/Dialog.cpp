@@ -6,7 +6,6 @@
 #include "design/Material.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
-#include "compatibility/QtCompat.h"
 
 namespace fluent::dialogs_flyouts {
 
@@ -314,13 +313,12 @@ void Dialog::hideSmokeOverlay() {
 
     // Destroy the overlay after the fade-out completes. zh_CN: 淡出完成后销毁 overlay。
     QPointer<SmokeOverlay> guard(m_smokeOverlay);
-    const auto finishSmokeFadeOut = [this, guard]() {
+    connect(m_smokeAnim, &QPropertyAnimation::finished, this, [this, guard]() {
         if (!m_smokeFadingOut) return;  // Reversed mid-flight by showSmokeOverlay. zh_CN: 中途被 showSmokeOverlay 反向。
         m_smokeFadingOut = false;
         if (guard) guard->deleteLater();
         if (m_smokeOverlay == guard.data()) m_smokeOverlay = nullptr;
-    };
-    fluentConnectSingleShot(m_smokeAnim, &QPropertyAnimation::finished, this, finishSmokeFadeOut);
+    }, Qt::SingleShotConnection);
 
     m_smokeAnim->start();
 }

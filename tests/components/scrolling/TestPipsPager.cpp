@@ -10,6 +10,7 @@
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPalette>
+#include <QPointingDevice>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QTest>

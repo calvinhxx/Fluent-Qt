@@ -3,12 +3,14 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QPalette>
 #include <QSettings>
 #include <QStandardPaths>
+#include <QStyleHints>
 #include <QTimer>
+#include <QtGlobal>
 
-#include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "utils/Log.h"
@@ -47,12 +49,15 @@ QSettings configSettings()
 
 fluent::FluentElement::Theme systemTheme()
 {
-    const FluentSystemColorScheme scheme = fluentSystemColorScheme();
-    if (scheme == FluentSystemColorScheme::Dark)
-        return fluent::FluentElement::Dark;
-    if (scheme == FluentSystemColorScheme::Light)
-        return fluent::FluentElement::Light;
-
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    if (QGuiApplication::styleHints()) {
+        const Qt::ColorScheme scheme = QGuiApplication::styleHints()->colorScheme();
+        if (scheme == Qt::ColorScheme::Dark)
+            return fluent::FluentElement::Dark;
+        if (scheme == Qt::ColorScheme::Light)
+            return fluent::FluentElement::Light;
+    }
+#endif
 #ifdef Q_OS_WIN
     const QSettings registry(
         QStringLiteral("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"),
@@ -98,10 +103,15 @@ GallerySettings::GallerySettings(QObject* parent)
             applyThemeMode();
     });
     systemThemePoll->start();
-    fluentConnectSystemColorSchemeChanged(this, [this]() {
-        if (m_themeMode == ThemeMode::System)
-            applyThemeMode();
-    });
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    if (QGuiApplication::styleHints()) {
+        connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged,
+                this, [this](Qt::ColorScheme) {
+                    if (m_themeMode == ThemeMode::System)
+                        applyThemeMode();
+                });
+    }
+#endif
     applyThemeMode();
 }
 

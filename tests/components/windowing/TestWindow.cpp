@@ -321,13 +321,13 @@ TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar) {
     EXPECT_EQ(window.titleBar()->systemReservedTrailingWidth(), 0);
 #endif
 
+#if defined(Q_OS_MAC) && QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     if (macPlatform) {
-        EXPECT_EQ(WindowChromeCompat::windowHasExpandedClientAreaHint(&window),
-                  WindowChromeCompat::expandedClientAreaHintsAvailable());
-        EXPECT_EQ(WindowChromeCompat::windowHasNoTitleBarBackgroundHint(&window),
-                  WindowChromeCompat::expandedClientAreaHintsAvailable());
+        EXPECT_TRUE(window.windowFlags().testFlag(Qt::ExpandedClientAreaHint));
+        EXPECT_TRUE(window.windowFlags().testFlag(Qt::NoTitleBarBackgroundHint));
         EXPECT_FALSE(window.testAttribute(Qt::WA_ContentsMarginsRespectsSafeArea));
     }
+#endif
 }
 
 TEST_F(WindowTest, TopLevelShowSmoke) {
@@ -385,10 +385,8 @@ TEST_F(WindowTest, WindowsCustomChromePreservesDwmCaption) {
     window.show();
     QApplication::processEvents();
 
-    EXPECT_EQ(WindowChromeCompat::windowHasExpandedClientAreaHint(&window),
-              WindowChromeCompat::expandedClientAreaHintsAvailable());
-    EXPECT_EQ(WindowChromeCompat::windowHasNoTitleBarBackgroundHint(&window),
-              WindowChromeCompat::expandedClientAreaHintsAvailable());
+    EXPECT_TRUE(window.windowFlags().testFlag(Qt::ExpandedClientAreaHint));
+    EXPECT_TRUE(window.windowFlags().testFlag(Qt::NoTitleBarBackgroundHint));
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::FramelessWindowHint));
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::WindowMinimizeButtonHint));
     EXPECT_FALSE(window.windowFlags().testFlag(Qt::WindowMaximizeButtonHint));
@@ -856,7 +854,7 @@ TEST_F(WindowTest, WindowingSourcesDoNotContainPlatformMacrosOrNativeHeaders) {
         "Q_OS_MAC",
         "_WIN32",
         "__APPLE__",
-        QStringLiteral("QT") + QStringLiteral("_VERSION") + QStringLiteral("_CHECK"),
+        "QT_VERSION_CHECK",
         "windows.h",
         "dwmapi.h",
         "Cocoa",

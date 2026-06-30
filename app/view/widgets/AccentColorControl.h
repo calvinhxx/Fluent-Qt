@@ -5,7 +5,6 @@
 #include <QWidget>
 
 #include "components/foundation/FluentElement.h"
-#include "compatibility/QtCompat.h"
 
 namespace fluent::gallery {
 
@@ -33,7 +32,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
-    void enterEvent(FluentEnterEvent* event) override;
+    void enterEvent(QEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
 
 private:
