@@ -1,6 +1,5 @@
 #include "WindowingSamples.h"
 
-#include <QEnterEvent>
 #include <QHBoxLayout>
 #include <QFont>
 #include <QPainter>
@@ -20,6 +19,7 @@
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/Window.h"
+#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "SampleBuilders.h"
 
@@ -161,7 +161,7 @@ public:
     void onThemeUpdated() override { update(); }
 
 protected:
-    void enterEvent(QEnterEvent*) override
+    void enterEvent(FluentEnterEvent*) override
     {
         m_hovered = true;
         update();

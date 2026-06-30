@@ -13,22 +13,40 @@
  * Usage:
  * - Use FluentEnterEvent in enterEvent() overrides.
  * - Use fluentMousePos() / fluentMouseGlobalPos() for mouse coordinates.
+ * - Use fluentKeySequence() for QKeyEvent shortcut matching.
+ * - Use fluentConnectSingleShot() for one-shot signal connections.
  * - Use FLUENT_INIT_VIEW_ITEM_OPTION() inside QAbstractItemView subclasses.
  * zh_CN:
  * zh_CN: - enterEvent() override 使用 FluentEnterEvent。
  * zh_CN: - 鼠标坐标统一通过 fluentMousePos() / fluentMouseGlobalPos() 读取。
+ * zh_CN: - QKeyEvent 快捷键匹配统一使用 fluentKeySequence()。
+ * zh_CN: - 一次性信号连接统一使用 fluentConnectSingleShot()。
  * zh_CN: - QAbstractItemView 子类中使用 FLUENT_INIT_VIEW_ITEM_OPTION() 初始化 option。
  */
 
 #include <QtGlobal>
 #include <QEvent>
+#include <QGuiApplication>
+#include <QKeyEvent>
+#include <QKeySequence>
+#include <QLabel>
 #include <QList>
+#include <QLayoutItem>
+#include <QMetaType>
 #include <QNativeGestureEvent>
+#include <QObject>
+#include <QPixmap>
 #include <QPoint>
 #include <QPointF>
 #include <QMouseEvent>
+#include <QSize>
+#include <QStyleHints>
 #include <QVector>
 #include <QWheelEvent>
+#include <QWidget>
+
+#include <memory>
+#include <utility>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 #include <QPointingDevice>
@@ -44,6 +62,42 @@ using FluentEnterEvent = QEvent;
 #include <type_traits>
 static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value,
               "FluentEnterEvent must derive from QEvent");
+
+enum class FluentSystemColorScheme {
+    Unknown,
+    Light,
+    Dark
+};
+
+inline FluentSystemColorScheme fluentSystemColorScheme() {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    if (QGuiApplication::styleHints()) {
+        const Qt::ColorScheme scheme = QGuiApplication::styleHints()->colorScheme();
+        if (scheme == Qt::ColorScheme::Dark)
+            return FluentSystemColorScheme::Dark;
+        if (scheme == Qt::ColorScheme::Light)
+            return FluentSystemColorScheme::Light;
+    }
+#endif
+    return FluentSystemColorScheme::Unknown;
+}
+
+template <typename Context, typename Functor>
+QMetaObject::Connection fluentConnectSystemColorSchemeChanged(Context* context, Functor&& functor) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    if (!QGuiApplication::styleHints())
+        return {};
+    return QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged,
+                            context,
+                            [slot = std::forward<Functor>(functor)](Qt::ColorScheme) mutable {
+                                slot();
+                            });
+#else
+    Q_UNUSED(context);
+    Q_UNUSED(functor);
+    return {};
+#endif
+}
 
 // Mouse event coordinates.
 // zh_CN: 鼠标事件坐标。
@@ -65,6 +119,82 @@ inline QPoint fluentMouseGlobalPos(const QMouseEvent* e) {
 #endif
 }
 
+inline QKeySequence fluentKeySequence(const QKeyEvent* e) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return QKeySequence(e->keyCombination());
+#else
+    return QKeySequence(static_cast<int>(e->modifiers()) | e->key());
+#endif
+}
+
+inline QWidget* fluentLayoutItemWidget(const QLayoutItem* item) {
+    if (!item)
+        return nullptr;
+    return const_cast<QLayoutItem*>(item)->widget();
+}
+
+template <typename Sender, typename Signal, typename Context, typename Functor>
+QMetaObject::Connection fluentConnectSingleShot(Sender* sender, Signal signal, Context* context, Functor&& functor) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return QObject::connect(sender, signal, context, std::forward<Functor>(functor), Qt::SingleShotConnection);
+#else
+    auto connection = std::make_shared<QMetaObject::Connection>();
+    *connection = QObject::connect(sender, signal, context,
+                                   [connection, slot = std::forward<Functor>(functor)]() mutable {
+                                       QObject::disconnect(*connection);
+                                       slot();
+                                   });
+    return *connection;
+#endif
+}
+
+template <typename T>
+void fluentRegisterMetaTypeNames(const char* name) {
+    qRegisterMetaType<T>(name);
+}
+
+template <typename T, typename... Names>
+void fluentRegisterMetaTypeNames(const char* firstName, const char* secondName, Names... remainingNames) {
+    qRegisterMetaType<T>(firstName);
+    fluentRegisterMetaTypeNames<T>(secondName, remainingNames...);
+}
+
+template <typename CheckBoxType, typename Context, typename Functor>
+QMetaObject::Connection fluentConnectCheckStateChanged(CheckBoxType* checkBox,
+                                                       Context* context,
+                                                       Functor&& functor) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    return QObject::connect(checkBox, &CheckBoxType::checkStateChanged,
+                            context, std::forward<Functor>(functor));
+#else
+    return QObject::connect(checkBox, &CheckBoxType::stateChanged,
+                            context,
+                            [slot = std::forward<Functor>(functor)](int state) mutable {
+                                slot(static_cast<Qt::CheckState>(state));
+                            });
+#endif
+}
+
+inline QPixmap fluentLabelPixmapValue(const QLabel* label) {
+    if (!label)
+        return {};
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return label->pixmap(Qt::ReturnByValue);
+#else
+    const QPixmap* pixmap = label->pixmap();
+    return pixmap ? *pixmap : QPixmap();
+#endif
+}
+
+inline QSize fluentPixmapLogicalSize(const QPixmap& pixmap) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return pixmap.deviceIndependentSize().toSize();
+#else
+    return QSize(qRound(pixmap.width() / pixmap.devicePixelRatioF()),
+                 qRound(pixmap.height() / pixmap.devicePixelRatioF()));
+#endif
+}
+
 // Wheel and native gesture coordinates.
 // zh_CN: 滚轮和原生手势事件坐标。
 // Qt 6: QWheelEvent::position() / QNativeGestureEvent::position().
@@ -77,6 +207,14 @@ inline QPointF fluentWheelPosition(const QWheelEvent* e) {
 #else
     return e->posF();
 #endif
+}
+
+constexpr bool fluentWheelEventSupportsPhase() {
+    return QT_VERSION >= QT_VERSION_CHECK(6, 0, 0);
+}
+
+inline const char* fluentWheelEventPhaseSkipReason() {
+    return "Wheel phase event construction requires Qt 6+";
 }
 
 inline QPointF fluentNativeGesturePosition(const FluentNativeGestureEvent* e) {
@@ -226,4 +364,23 @@ constexpr bool fluentCanConstructNativeGestureEvent() {
 
 inline const char* fluentNativeGestureEventSkipReason() {
     return "Native gesture event construction requires Qt 6.2+";
+}
+
+/**
+ * @brief Returns true when an event can change the native window safe-area insets.
+ * zh_CN: 判断事件是否可能改变原生窗口安全区域边距。
+ */
+inline bool fluentIsWindowInsetChangeEvent(const QEvent* event) {
+    if (!event)
+        return false;
+
+    if (event->type() == QEvent::WindowStateChange)
+        return true;
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    if (event->type() == QEvent::SafeAreaMarginsChange)
+        return true;
+#endif
+
+    return false;
 }

@@ -13,6 +13,7 @@
 #include "components/navigation/Breadcrumb.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/textfields/Label.h"
+#include "compatibility/QtCompat.h"
 
 using fluent::AnchorLayout;
 using fluent::basicinput::Button;
@@ -130,12 +131,16 @@ class BreadcrumbTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        qRegisterMetaType<fluent::navigation::BreadcrumbItem>("fluent::navigation::BreadcrumbItem");
+        fluentRegisterMetaTypeNames<fluent::navigation::BreadcrumbItem>(
+            "fluent::navigation::BreadcrumbItem",
+            "BreadcrumbItem");
         qRegisterMetaType<QVector<int>>("QVector<int>");
-        qRegisterMetaType<fluent::navigation::Breadcrumb::BreadcrumbSize>(
-            "fluent::navigation::Breadcrumb::BreadcrumbSize");
-        qRegisterMetaType<fluent::navigation::Breadcrumb::OverflowMode>(
-            "fluent::navigation::Breadcrumb::OverflowMode");
+        fluentRegisterMetaTypeNames<fluent::navigation::Breadcrumb::BreadcrumbSize>(
+            "fluent::navigation::Breadcrumb::BreadcrumbSize",
+            "Breadcrumb::BreadcrumbSize");
+        fluentRegisterMetaTypeNames<fluent::navigation::Breadcrumb::OverflowMode>(
+            "fluent::navigation::Breadcrumb::OverflowMode",
+            "Breadcrumb::OverflowMode");
     }
 
     void SetUp() override
