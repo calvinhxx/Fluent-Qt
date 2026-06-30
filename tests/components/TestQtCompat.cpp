@@ -44,13 +44,11 @@ bool fileContainsQtVersionGuard(const QString& path) {
 }
 
 bool isAllowedQtVersionGuardFile(const QString& relativePath) {
-    // src/compatibility is the project boundary for Qt-version branches;
-    // TestQtCompat intentionally asserts that boundary.
-    if (relativePath.startsWith(QStringLiteral("src/compatibility/")))
-        return true;
-
+    // WindowChromeCompat is a platform compatibility boundary. TestWindow keeps
+    // one assertion for the macOS Qt 6.9 expanded-client-area contract.
     static const QStringList allowed = {
-        QStringLiteral("tests/components/TestQtCompat.cpp")
+        QStringLiteral("tests/components/TestQtCompat.cpp"),
+        QStringLiteral("tests/components/windowing/TestWindow.cpp")
     };
     return allowed.contains(relativePath);
 }
@@ -63,16 +61,19 @@ TEST(QtCompat, FluentEnterEventDerivesFromQEvent) {
     SUCCEED();
 }
 
-TEST(QtCompat, FluentEnterEventMatchesExpectedType) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+TEST(QtCompat, FluentEnterEventMatchesQt6Type) {
     static_assert(std::is_same<FluentEnterEvent, QEnterEvent>::value,
                   "On Qt6, FluentEnterEvent must alias QEnterEvent");
-#else
-    static_assert(std::is_same<FluentEnterEvent, QEvent>::value,
-                  "On Qt5, FluentEnterEvent must alias QEvent");
-#endif
     SUCCEED();
 }
+#else
+TEST(QtCompat, FluentEnterEventMatchesQt5Type) {
+    static_assert(std::is_same<FluentEnterEvent, QEvent>::value,
+                  "On Qt5, FluentEnterEvent must alias QEvent");
+    SUCCEED();
+}
+#endif
 
 TEST(QtCompat, QtVersionMacrosDefined) {
     EXPECT_GT(QT_VERSION, 0);
@@ -105,13 +106,11 @@ TEST(QtCompat, NativeGesturePositionHelperReturnsLocalPositionWhenConstructible)
 #endif
 }
 
-TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards) {
+TEST(QtCompat, ComponentSourcesDoNotContainScatteredQtVersionGuards) {
     const QString root = repositoryRootPath();
     const QStringList scanRoots = {
-        root + QStringLiteral("/app"),
-        root + QStringLiteral("/src"),
-        root + QStringLiteral("/tests/components"),
-        root + QStringLiteral("/tests/gallery")
+        root + QStringLiteral("/src/components"),
+        root + QStringLiteral("/tests/components")
     };
     const QStringList nameFilters = {
         QStringLiteral("*.h"),

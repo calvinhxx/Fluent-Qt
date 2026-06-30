@@ -14,7 +14,6 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/collections/StackView.h"
 #include "components/scrolling/PipsPager.h"
-#include "compatibility/QtCompat.h"
 
 using fluent::collections::StackView;
 using fluent::scrolling::PipsPager;
@@ -104,18 +103,14 @@ class StackViewTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewItemStatus>(
-            "fluent::collections::StackView::StackViewItemStatus",
-            "StackViewItemStatus");
-        fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewTransitionOperation>(
-            "fluent::collections::StackView::StackViewTransitionOperation",
-            "StackViewTransitionOperation");
-        fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewTransitionType>(
-            "fluent::collections::StackView::StackViewTransitionType",
-            "StackViewTransitionType");
-        fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewItemOwnership>(
-            "fluent::collections::StackView::StackViewItemOwnership",
-            "StackViewItemOwnership");
+        qRegisterMetaType<fluent::collections::StackView::StackViewItemStatus>(
+            "fluent::collections::StackView::StackViewItemStatus");
+        qRegisterMetaType<fluent::collections::StackView::StackViewTransitionOperation>(
+            "fluent::collections::StackView::StackViewTransitionOperation");
+        qRegisterMetaType<fluent::collections::StackView::StackViewTransitionType>(
+            "fluent::collections::StackView::StackViewTransitionType");
+        qRegisterMetaType<fluent::collections::StackView::StackViewItemOwnership>(
+            "fluent::collections::StackView::StackViewItemOwnership");
         qRegisterMetaType<Qt::Orientation>("Qt::Orientation");
     }
 

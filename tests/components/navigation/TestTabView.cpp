@@ -21,7 +21,6 @@
 #include "components/navigation/TabView.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
-#include "QtTestEnvironment.h"
 
 using fluent::AnchorLayout;
 using fluent::basicinput::Button;
@@ -469,10 +468,6 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
 
 TEST_F(TabViewTest, PointerAddCloseSelectDisabledAndReorderBehavior)
 {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     TabView tabs(window);
     tabs.resize(760, 320);
     tabs.addTab(QStringLiteral("One"));

@@ -20,7 +20,6 @@
 #include <QVector>
 #include <QtGlobal>
 
-#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/collections/TreeView.h"
@@ -565,9 +564,17 @@ TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
     EXPECT_GE(mappedGeometry(backButton, titleBar).left(), titleBar->systemReservedLeadingWidth());
     EXPECT_TRUE(vg::containedIn(searchBox, titleBar, 0));
 
-    const QPixmap iconPixmap = fluentLabelPixmapValue(appIcon);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    const QPixmap iconPixmap = appIcon->pixmap(Qt::ReturnByValue);
     ASSERT_FALSE(iconPixmap.isNull());
-    const QSize logicalPixmapSize = fluentPixmapLogicalSize(iconPixmap);
+    const QSize logicalPixmapSize = iconPixmap.deviceIndependentSize().toSize();
+#else
+    const QPixmap* iconPixmap = appIcon->pixmap();
+    ASSERT_NE(iconPixmap, nullptr);
+    ASSERT_FALSE(iconPixmap->isNull());
+    const QSize logicalPixmapSize(qRound(iconPixmap->width() / iconPixmap->devicePixelRatioF()),
+                                  qRound(iconPixmap->height() / iconPixmap->devicePixelRatioF()));
+#endif
     EXPECT_EQ(logicalPixmapSize, QSize(18, 18));
 }
 

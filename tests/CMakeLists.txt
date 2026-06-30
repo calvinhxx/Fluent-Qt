@@ -28,6 +28,36 @@ macro(add_qt_test_module module_name source_file)
         list(APPEND _test_labels root)
     endif()
     list(REMOVE_DUPLICATES _test_labels)
+    list(JOIN _test_labels ";" _test_labels_joined)
+    set(_test_label_file "${CMAKE_CURRENT_BINARY_DIR}/${module_name}_labels.cmake")
+    file(WRITE "${_test_label_file}"
+        "if(DEFINED ${module_name}_TESTS)\n"
+        "    set(_fluent_qt_base_labels \"${_test_labels_joined}\")\n"
+        "    foreach(_fluent_qt_test_name IN LISTS ${module_name}_TESTS)\n"
+        "        set(_fluent_qt_labels \${_fluent_qt_base_labels})\n"
+        "        if(_fluent_qt_test_name MATCHES \"(^|[._/:-])[^._/:-]*VisualCheck[^._/:-]*($|[._/:-])\")\n"
+        "            list(APPEND _fluent_qt_labels visual interactive)\n"
+        "        endif()\n"
+        "        if(_fluent_qt_test_name MATCHES \"(^|[._/:-])[^._/:-]*Interactive[^._/:-]*($|[._/:-])\")\n"
+        "            list(APPEND _fluent_qt_labels interactive)\n"
+        "        endif()\n"
+        "        if(_fluent_qt_test_name MATCHES \"(^|[._/:-])[^._/:-]*(Animation|Animated|Animations)[^._/:-]*($|[._/:-])\")\n"
+        "            list(APPEND _fluent_qt_labels animation)\n"
+        "        endif()\n"
+        "        if(_fluent_qt_test_name MATCHES \"(^|[._/:-])[^._/:-]*Slow[^._/:-]*($|[._/:-])\")\n"
+        "            list(APPEND _fluent_qt_labels slow)\n"
+        "        endif()\n"
+        "        if(_fluent_qt_test_name MATCHES \"(^|[._/:-])[^._/:-]*(Windows|Win32|WinUIWindows)[^._/:-]*($|[._/:-])\")\n"
+        "            list(APPEND _fluent_qt_labels platform_windows)\n"
+        "        endif()\n"
+        "        if(_fluent_qt_test_name MATCHES \"(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])\")\n"
+        "            list(APPEND _fluent_qt_labels platform_macos)\n"
+        "        endif()\n"
+        "        list(REMOVE_DUPLICATES _fluent_qt_labels)\n"
+        "        set_tests_properties(\"\${_fluent_qt_test_name}\" PROPERTIES LABELS \"\${_fluent_qt_labels}\")\n"
+        "    endforeach()\n"
+        "endif()\n"
+    )
 
     target_link_libraries(${module_name}
         PRIVATE
@@ -47,41 +77,11 @@ macro(add_qt_test_module module_name source_file)
         FLUENT_QT_TEST_TARGET="${module_name}"
     )
     set_target_properties(${module_name} PROPERTIES LABELS "${_test_labels}")
-
-    gtest_add_tests(TARGET ${module_name}
-        SOURCES ${source_file} ${ARGN}
-        TEST_LIST ${module_name}_TESTS
-    )
-
-    set(_fluent_qt_registered_tests ${${module_name}_TESTS})
-    if(_fluent_qt_registered_tests)
-        set_tests_properties(${_fluent_qt_registered_tests} PROPERTIES
+    gtest_discover_tests(${module_name}
+        PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1"
-        )
-        foreach(_fluent_qt_test_name IN LISTS _fluent_qt_registered_tests)
-            set(_fluent_qt_labels ${_test_labels})
-            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*VisualCheck[^._/:-]*($|[._/:-])")
-                list(APPEND _fluent_qt_labels visual interactive)
-            endif()
-            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*Interactive[^._/:-]*($|[._/:-])")
-                list(APPEND _fluent_qt_labels interactive)
-            endif()
-            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(Animation|Animated|Animations)[^._/:-]*($|[._/:-])")
-                list(APPEND _fluent_qt_labels animation)
-            endif()
-            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*Slow[^._/:-]*($|[._/:-])")
-                list(APPEND _fluent_qt_labels slow)
-            endif()
-            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(Windows|Win32|WinUIWindows)[^._/:-]*($|[._/:-])")
-                list(APPEND _fluent_qt_labels platform_windows)
-            endif()
-            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])")
-                list(APPEND _fluent_qt_labels platform_macos)
-            endif()
-            list(REMOVE_DUPLICATES _fluent_qt_labels)
-            set_tests_properties("${_fluent_qt_test_name}" PROPERTIES LABELS "${_fluent_qt_labels}")
-        endforeach()
-    endif()
+    )
+    set_property(DIRECTORY APPEND PROPERTY TEST_INCLUDE_FILES "${_test_label_file}")
 endmacro()
 
 # VisualCheck 测试使用 qApp->exec() 阻塞，需手动关闭窗口。

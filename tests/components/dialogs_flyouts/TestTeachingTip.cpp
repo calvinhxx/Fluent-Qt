@@ -12,7 +12,6 @@
 #include "components/basicinput/Button.h"
 #include "components/dialogs_flyouts/TeachingTip.h"
 #include "components/textfields/Label.h"
-#include "compatibility/QtCompat.h"
 
 using namespace fluent::dialogs_flyouts;
 using fluent::AnchorLayout;
@@ -32,9 +31,8 @@ class TeachingTipTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        fluentRegisterMetaTypeNames<fluent::dialogs_flyouts::TeachingTip::CloseReason>(
-            "fluent::dialogs_flyouts::TeachingTip::CloseReason",
-            "CloseReason");
+        qRegisterMetaType<fluent::dialogs_flyouts::TeachingTip::CloseReason>(
+            "fluent::dialogs_flyouts::TeachingTip::CloseReason");
     }
 
     void SetUp() override {
@@ -299,9 +297,8 @@ class TeachingTipDesignLanguageTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        fluentRegisterMetaTypeNames<fluent::dialogs_flyouts::TeachingTip::CloseReason>(
-            "fluent::dialogs_flyouts::TeachingTip::CloseReason",
-            "CloseReason");
+        qRegisterMetaType<fluent::dialogs_flyouts::TeachingTip::CloseReason>(
+            "fluent::dialogs_flyouts::TeachingTip::CloseReason");
     }
 
     void SetUp() override {

@@ -22,7 +22,6 @@
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/textfields/Label.h"
-#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "SampleBuilders.h"
 
@@ -82,7 +81,14 @@ QString checkStateText(Qt::CheckState state)
 template <typename Func>
 void connectCheckBoxState(CheckBox* checkBox, QObject* context, Func callback)
 {
-    fluentConnectCheckStateChanged(checkBox, context, callback);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    QObject::connect(checkBox, &CheckBox::checkStateChanged, context, callback);
+#else
+    QObject::connect(checkBox, &CheckBox::stateChanged, context,
+                     [callback](int state) {
+                         callback(static_cast<Qt::CheckState>(state));
+                     });
+#endif
 }
 
 QString ratingText(double value)

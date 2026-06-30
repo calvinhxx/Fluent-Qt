@@ -159,12 +159,3 @@ Before creating a stable tag:
 
 Later automation may perform these steps, but the rules above remain the
 contract that CI, changelog, and packaging workflows should enforce.
-
-## Release Package Sets
-
-- `standard` is the default stable release package set. It publishes the
-  macOS x64 DMG and Windows x64 installer.
-- `smoke` runs the same x64 package lanes without publishing and is intended for
-  manual release workflow validation.
-- `full` adds macOS arm64 and Windows arm64 packages for manual supplemental
-  artifact runs.

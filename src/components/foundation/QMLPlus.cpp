@@ -1,6 +1,5 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
-#include "compatibility/QtCompat.h"
 #include <QWidgetItem>
 #include <QDebug>
 
@@ -15,7 +14,7 @@ QSize effectiveItemSize(const QLayoutItem* item) {
         return QSize();
 
     QSize size = item->sizeHint();
-    if (const QWidget* widget = fluentLayoutItemWidget(item)) {
+    if (const QWidget* widget = item->widget()) {
         size = size.expandedTo(widget->minimumSize());
         size = size.boundedTo(widget->maximumSize());
     }
@@ -55,7 +54,7 @@ void AnchorLayout::addAnchoredWidget(QWidget* w, const Anchors& anchors) {
     if (parentWidget() && w->parent() != parentWidget()) w->setParent(parentWidget());
     if (auto* qp = dynamic_cast<QMLPlus*>(w)) *(qp->anchors()) = anchors;
     for (Item& it : m_items) {
-        if (fluentLayoutItemWidget(it.item) == w) { it.anchors = anchors; invalidate(); return; }
+        if (it.item->widget() == w) { it.anchors = anchors; invalidate(); return; }
     }
     addItem(new QWidgetItem(w));
     m_items.last().anchors = anchors;
@@ -63,7 +62,7 @@ void AnchorLayout::addAnchoredWidget(QWidget* w, const Anchors& anchors) {
 }
 
 int AnchorLayout::getWidgetIndex(QWidget* w) const {
-    for (int i = 0; i < m_items.size(); ++i) if (fluentLayoutItemWidget(m_items[i].item) == w) return i;
+    for (int i = 0; i < m_items.size(); ++i) if (m_items[i].item->widget() == w) return i;
     return -1;
 }
 
@@ -108,7 +107,7 @@ void AnchorLayout::setGeometry(const QRect& rect) {
     if (m_firstLayout) {
         m_firstLayout = false;
         for (const Item& it : m_items) {
-            if (QWidget* w = fluentLayoutItemWidget(it.item)) {
+            if (QWidget* w = it.item->widget()) {
                 w->ensurePolished();
                 if (auto* fe = dynamic_cast<FluentElement*>(w)) {
                     fe->onThemeUpdated();
@@ -119,7 +118,7 @@ void AnchorLayout::setGeometry(const QRect& rect) {
 
     QRect parentRect = contentsRect();
     for (Item& it : m_items) {
-        if (QWidget* w = fluentLayoutItemWidget(it.item)) {
+        if (QWidget* w = it.item->widget()) {
             if (auto* qp = dynamic_cast<QMLPlus*>(w)) it.anchors = *(qp->anchors());
         }
         it.geometry = QRect(parentRect.topLeft(), effectiveItemSize(it.item));
@@ -153,7 +152,7 @@ void AnchorLayout::setGeometry(const QRect& rect) {
         }
         if (!changed) break;
     }
-    for (const Item& it : m_items) fluentLayoutItemWidget(it.item)->setGeometry(it.geometry);
+    for (const Item& it : m_items) it.item->widget()->setGeometry(it.geometry);
 }
 
 // --- PropertyBinder implementation. zh_CN: PropertyBinder 实现。---

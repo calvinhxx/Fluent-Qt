@@ -24,12 +24,6 @@ struct VisualSnapshotOptions {
 void configureOffscreenPlatformForAutomation();
 void initializeQtTestEnvironment();
 bool shouldSkipVisualTest();
-// True when running under a headless platform plugin (offscreen/minimal) that
-// cannot faithfully deliver synthetic pointer/keyboard input or show native
-// popups — e.g. CI. Tests that drive drag-reorder, menu popups, or window
-// activation should GTEST_SKIP() on these platforms so they keep running on
-// real desktops but no longer fail headless CI.
-bool isHeadlessPlatform();
 bool isVisualSnapshotMode();
 bool shouldCaptureVisualSnapshot();
 QString visualSnapshotDirectory();

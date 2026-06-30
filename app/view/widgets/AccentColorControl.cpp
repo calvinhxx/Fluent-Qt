@@ -4,6 +4,7 @@
 #include <utility>
 
 #include <QDesktopServices>
+#include <QEnterEvent>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QKeyEvent>
@@ -18,7 +19,6 @@
 #include "components/basicinput/HyperlinkButton.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/textfields/Label.h"
-#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "viewmodel/GallerySettings.h"
 #include "viewmodel/ThemeCatalog.h"
@@ -107,7 +107,7 @@ protected:
         p.drawRoundedRect(fill, kRad, kRad);
     }
 
-    void enterEvent(FluentEnterEvent*) override { m_hovered = true; update(); }
+    void enterEvent(QEnterEvent*) override { m_hovered = true; update(); }
     void leaveEvent(QEvent*) override { m_hovered = false; update(); }
 
     void mousePressEvent(QMouseEvent* event) override
@@ -218,7 +218,7 @@ void AccentColorControl::keyPressEvent(QKeyEvent* event)
         QWidget::keyPressEvent(event);
 }
 
-void AccentColorControl::enterEvent(FluentEnterEvent*)
+void AccentColorControl::enterEvent(QEnterEvent*)
 {
     m_hovered = true;
     update();

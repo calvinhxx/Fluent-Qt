@@ -43,10 +43,10 @@ bool canBeginSystemOperation(QWidget* window,
     if (WindowChromeCompat::currentPlatform() == WindowChromeCompat::Platform::Windows) {
         if (!options.useCustomWindowChrome)
             return false;
-        if (WindowChromeCompat::expandedClientAreaHintsAvailable()
-            && !WindowChromeCompat::windowHasExpandedClientAreaHint(window)) {
+#ifdef Q_OS_WIN
+        if (!window->windowFlags().testFlag(Qt::ExpandedClientAreaHint))
             return false;
-        }
+#endif
     }
 
     return true;
@@ -144,28 +144,6 @@ WindowChromeCompat::Platform WindowChromeCompat::currentPlatform() {
 
 bool WindowChromeCompat::platformPrefersCustomWindowChrome() {
     return currentPlatform() == Platform::Windows;
-}
-
-bool WindowChromeCompat::expandedClientAreaHintsAvailable() {
-    return QT_VERSION >= QT_VERSION_CHECK(6, 9, 0);
-}
-
-bool WindowChromeCompat::windowHasExpandedClientAreaHint(const QWidget* window) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-    return window && window->windowFlags().testFlag(Qt::ExpandedClientAreaHint);
-#else
-    Q_UNUSED(window);
-    return false;
-#endif
-}
-
-bool WindowChromeCompat::windowHasNoTitleBarBackgroundHint(const QWidget* window) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
-    return window && window->windowFlags().testFlag(Qt::NoTitleBarBackgroundHint);
-#else
-    Q_UNUSED(window);
-    return false;
-#endif
 }
 
 WindowChromeCompat::HitTest WindowChromeCompat::classifyHitTest(
