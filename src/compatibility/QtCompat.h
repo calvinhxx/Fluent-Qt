@@ -71,6 +71,12 @@ enum class FluentSystemColorScheme {
     Dark
 };
 
+enum class FluentWheelInputKind {
+    PhaseBased,
+    NoPhasePixel,
+    NoPhaseDiscrete
+};
+
 inline FluentSystemColorScheme fluentSystemColorScheme() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     if (QGuiApplication::styleHints()) {
@@ -209,6 +215,35 @@ inline QPointF fluentWheelPosition(const QWheelEvent* e) {
 #else
     return e->posF();
 #endif
+}
+
+inline FluentWheelInputKind fluentWheelInputKind(const QWheelEvent* e) {
+    if (e->phase() != Qt::NoScrollPhase)
+        return FluentWheelInputKind::PhaseBased;
+    return e->pixelDelta().isNull() ? FluentWheelInputKind::NoPhaseDiscrete
+                                    : FluentWheelInputKind::NoPhasePixel;
+}
+
+inline qreal fluentWheelDeltaY(const QWheelEvent* e) {
+    if (!e->pixelDelta().isNull())
+        return static_cast<qreal>(e->pixelDelta().y());
+    if (!e->angleDelta().isNull())
+        return static_cast<qreal>(e->angleDelta().y());
+    return 0.0;
+}
+
+inline int fluentWheelPageStep(qreal delta) {
+    if (delta > 0.0)
+        return -1;
+    if (delta < 0.0)
+        return 1;
+    return 0;
+}
+
+inline int fluentWheelCommittedTailGapMs(FluentWheelInputKind kind, int baseGapMs) {
+    if (kind == FluentWheelInputKind::NoPhasePixel)
+        return qMax(baseGapMs, 220);
+    return baseGapMs;
 }
 
 constexpr bool fluentWheelEventSupportsPhase() {
