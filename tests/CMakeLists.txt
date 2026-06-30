@@ -31,6 +31,15 @@ set(FLUENT_QT_LOCAL_DESKTOP_TESTS
     WindowTest.WindowsMaximizedCustomChromeFillsAvailableGeometry
 )
 
+define_property(GLOBAL PROPERTY FLUENT_QT_TEST_TARGETS
+    BRIEF_DOCS "Qt/GTest targets registered through add_qt_test_module"
+    FULL_DOCS "Qt/GTest targets registered through add_qt_test_module"
+)
+define_property(GLOBAL PROPERTY FLUENT_QT_CI_FULL_TEST_TARGETS
+    BRIEF_DOCS "Qt/GTest targets that contain at least one ci_full test"
+    FULL_DOCS "Qt/GTest targets that contain at least one ci_full test"
+)
+
 set(FLUENT_QT_QT_GTEST_SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/support/QtGTestMain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/support/QtTestEnvironment.cpp
@@ -41,6 +50,7 @@ set(FLUENT_QT_QT_GTEST_SUPPORT_SOURCES
 # 发现到的测试会带有 qt/unit/<目录>/<组件> 标签，便于用 ctest -L 分层筛选。
 macro(add_qt_test_module module_name source_file)
     add_executable(${module_name} ${source_file} ${ARGN} ${FLUENT_QT_QT_GTEST_SUPPORT_SOURCES})
+    set_property(GLOBAL APPEND PROPERTY FLUENT_QT_TEST_TARGETS ${module_name})
     get_filename_component(_test_subdir ${source_file} DIRECTORY)
     if(_test_subdir)
         set_target_properties(${module_name} PROPERTIES
@@ -91,6 +101,7 @@ macro(add_qt_test_module module_name source_file)
         if(NOT _fluent_qt_ci_fast_target_index EQUAL -1)
             set(_fluent_qt_is_ci_fast_target TRUE)
         endif()
+        set(_fluent_qt_target_has_ci_full FALSE)
 
         set_tests_properties(${_fluent_qt_registered_tests} PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1"
@@ -134,6 +145,7 @@ macro(add_qt_test_module module_name source_file)
             endif()
             if(NOT _fluent_qt_is_manual_visual)
                 list(APPEND _fluent_qt_labels ci_full)
+                set(_fluent_qt_target_has_ci_full TRUE)
             endif()
             if(_fluent_qt_is_ci_fast_target AND NOT _fluent_qt_is_manual_visual AND NOT _fluent_qt_is_local_desktop)
                 list(APPEND _fluent_qt_labels ci_fast)
@@ -141,6 +153,9 @@ macro(add_qt_test_module module_name source_file)
             list(REMOVE_DUPLICATES _fluent_qt_labels)
             set_tests_properties("${_fluent_qt_test_name}" PROPERTIES LABELS "${_fluent_qt_labels}")
         endforeach()
+        if(_fluent_qt_target_has_ci_full)
+            set_property(GLOBAL APPEND PROPERTY FLUENT_QT_CI_FULL_TEST_TARGETS ${module_name})
+        endif()
     endif()
 endmacro()
 
@@ -160,4 +175,18 @@ add_qt_test_module(test_qt_test_environment TestQtTestEnvironment.cpp)
 add_subdirectory(components)
 if(FLUENT_QT_BUILD_GALLERY)
     add_subdirectory(gallery)
+endif()
+
+get_property(FLUENT_QT_ALL_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_TEST_TARGETS)
+get_property(FLUENT_QT_CI_FULL_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_CI_FULL_TEST_TARGETS)
+if(FLUENT_QT_ALL_TEST_TARGETS)
+    add_custom_target(fluent_qt_ci_fast_tests
+        DEPENDS ${FLUENT_QT_CI_FAST_TARGETS}
+    )
+    add_custom_target(fluent_qt_ci_full_tests
+        DEPENDS ${FLUENT_QT_CI_FULL_TEST_TARGETS}
+    )
+    add_custom_target(fluent_qt_all_tests
+        DEPENDS ${FLUENT_QT_ALL_TEST_TARGETS}
+    )
 endif()
