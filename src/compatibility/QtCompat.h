@@ -13,22 +13,33 @@
  * Usage:
  * - Use FluentEnterEvent in enterEvent() overrides.
  * - Use fluentMousePos() / fluentMouseGlobalPos() for mouse coordinates.
+ * - Use fluentKeySequence() for QKeyEvent shortcut matching.
+ * - Use fluentConnectSingleShot() for one-shot signal connections.
  * - Use FLUENT_INIT_VIEW_ITEM_OPTION() inside QAbstractItemView subclasses.
  * zh_CN:
  * zh_CN: - enterEvent() override 使用 FluentEnterEvent。
  * zh_CN: - 鼠标坐标统一通过 fluentMousePos() / fluentMouseGlobalPos() 读取。
+ * zh_CN: - QKeyEvent 快捷键匹配统一使用 fluentKeySequence()。
+ * zh_CN: - 一次性信号连接统一使用 fluentConnectSingleShot()。
  * zh_CN: - QAbstractItemView 子类中使用 FLUENT_INIT_VIEW_ITEM_OPTION() 初始化 option。
  */
 
 #include <QtGlobal>
 #include <QEvent>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QList>
+#include <QLayoutItem>
 #include <QNativeGestureEvent>
+#include <QObject>
 #include <QPoint>
 #include <QPointF>
 #include <QMouseEvent>
 #include <QVector>
 #include <QWheelEvent>
+
+#include <memory>
+#include <utility>
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
 #include <QPointingDevice>
@@ -62,6 +73,35 @@ inline QPoint fluentMouseGlobalPos(const QMouseEvent* e) {
     return e->globalPosition().toPoint();
 #else
     return e->globalPos();
+#endif
+}
+
+inline QKeySequence fluentKeySequence(const QKeyEvent* e) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return QKeySequence(e->keyCombination());
+#else
+    return QKeySequence(static_cast<int>(e->modifiers()) | e->key());
+#endif
+}
+
+inline QWidget* fluentLayoutItemWidget(const QLayoutItem* item) {
+    if (!item)
+        return nullptr;
+    return const_cast<QLayoutItem*>(item)->widget();
+}
+
+template <typename Sender, typename Signal, typename Context, typename Functor>
+QMetaObject::Connection fluentConnectSingleShot(Sender* sender, Signal signal, Context* context, Functor&& functor) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return QObject::connect(sender, signal, context, std::forward<Functor>(functor), Qt::SingleShotConnection);
+#else
+    auto connection = std::make_shared<QMetaObject::Connection>();
+    *connection = QObject::connect(sender, signal, context,
+                                   [connection, slot = std::forward<Functor>(functor)]() mutable {
+                                       QObject::disconnect(*connection);
+                                       slot();
+                                   });
+    return *connection;
 #endif
 }
 

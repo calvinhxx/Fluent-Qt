@@ -17,6 +17,7 @@
 #include "design/Typography.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "compatibility/QtCompat.h"
 
 namespace fluent::menus_toolbars {
 
@@ -216,7 +217,7 @@ void FluentMenu::actionEvent(QActionEvent* event)
 void FluentMenu::keyPressEvent(QKeyEvent* event)
 {
     if (event && event->key() != Qt::Key_unknown) {
-        const QKeySequence pressed(event->keyCombination());
+        const QKeySequence pressed(fluentKeySequence(event));
         for (QAction* action : actions()) {
             if (!action || action->isSeparator() || action->menu() || !action->isEnabled() || !action->isVisible())
                 continue;
