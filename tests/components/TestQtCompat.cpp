@@ -124,6 +124,27 @@ TEST(QtCompat, NativeGesturePositionHelperReturnsLocalPositionWhenConstructible)
 #endif
 }
 
+TEST(QtCompat, WheelHelpersClassifyAndNormalizeNoPhasePixelInput) {
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(event, QPoint(8, 9), QPoint(8, 9),
+                                       QPoint(0, -60), QPoint(),
+                                       Qt::NoButton, Qt::NoModifier,
+                                       Qt::NoScrollPhase, false);
+
+    EXPECT_EQ(fluentWheelInputKind(&event), FluentWheelInputKind::NoPhasePixel);
+    EXPECT_EQ(fluentWheelDeltaY(&event), -60.0);
+    EXPECT_EQ(fluentWheelPageStep(fluentWheelDeltaY(&event)), 1);
+    EXPECT_GT(fluentWheelCommittedTailGapMs(fluentWheelInputKind(&event), 120), 120);
+}
+
+TEST(QtCompat, WheelHelpersKeepDiscreteTailGapAtBaseValue) {
+    FLUENT_MAKE_WHEEL_EVENT(event, 8, 9, -120, Qt::NoModifier);
+
+    EXPECT_EQ(fluentWheelInputKind(&event), FluentWheelInputKind::NoPhaseDiscrete);
+    EXPECT_EQ(fluentWheelDeltaY(&event), -120.0);
+    EXPECT_EQ(fluentWheelPageStep(fluentWheelDeltaY(&event)), 1);
+    EXPECT_EQ(fluentWheelCommittedTailGapMs(fluentWheelInputKind(&event), 120), 120);
+}
+
 TEST(QtCompat, ItemViewRowHeightPrefersVisualRectHeight) {
     QListView view;
     QStandardItemModel model;

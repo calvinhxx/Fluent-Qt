@@ -560,6 +560,27 @@ TEST_F(CalendarViewTest, NoPhasePixelGesturePagesOnce)
     EXPECT_EQ(visibleMonthSpy.count(), 1);
 }
 
+TEST_F(CalendarViewTest, NoPhasePixelCanPageAfterTailGap)
+{
+    auto* calendarView = new CalendarView(window);
+    calendarView->setGeometry(32, 32, calendarView->sizeHint().width(), calendarView->sizeHint().height());
+    calendarView->setVisibleMonth(QDate(2026, 5, 1));
+    showWindow(window);
+    QSignalSpy visibleMonthSpy(calendarView, &CalendarView::visibleMonthChanged);
+
+    const QPoint wheelPoint = calendarView->gridRect().center();
+    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
+    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
+    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
+
+    QTest::qWait(360);
+    processEvents();
+    EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -120), QPoint()));
+
+    EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 7, 1));
+    EXPECT_EQ(visibleMonthSpy.count(), 2);
+}
+
 TEST_F(CalendarViewTest, PhaseBasedTouchpadGesturePagesOnce)
 {
     if (!fluentWheelEventSupportsPhase())
