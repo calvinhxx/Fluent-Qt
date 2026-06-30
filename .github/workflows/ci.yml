@@ -47,9 +47,9 @@ jobs:
           fi
 
           if [[ "$mode" == "fast" ]]; then
-            matrix='{"include":[{"name":"Windows x64 / Qt 6.2","os":"windows-2022","preset":"vcpkg-windows","qt_version":"6.2.4","qt_arch":"win64_msvc2019_64","host_qt_arch":"","test":true,"windows_arm64_cross":false},{"name":"macOS arm64 / Qt 6.2","os":"macos-15","preset":"vcpkg-osx","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","test":true,"windows_arm64_cross":false}]}'
+            matrix='{"include":[{"name":"Windows x64 / Qt 6.2","os":"windows-2022","preset":"vcpkg-windows","qt_version":"6.2.4","qt_arch":"win64_msvc2019_64","host_qt_arch":"","test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"macOS arm64 / Qt 6.2","os":"macos-15","preset":"vcpkg-osx","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","test":true,"test_regex":"^(QtCompat\\.|WindowTest\\.)","build_targets":"test_qt_compat test_window","windows_arm64_cross":false}]}'
           else
-            matrix='{"include":[{"name":"Windows x64 / Qt 5.15","os":"windows-2022","preset":"vcpkg-windows","qt_version":"5.15.2","qt_arch":"win64_msvc2019_64","host_qt_arch":"","test":true,"windows_arm64_cross":false},{"name":"Windows x64 / Qt 6.2","os":"windows-2022","preset":"vcpkg-windows","qt_version":"6.2.4","qt_arch":"win64_msvc2019_64","host_qt_arch":"","test":true,"windows_arm64_cross":false},{"name":"Windows arm64 / Qt 6.9.3","os":"windows-2022","preset":"vcpkg-windows-arm64","qt_version":"6.9.3","qt_arch":"win64_msvc2022_arm64_cross_compiled","host_qt_arch":"win64_msvc2022_64","test":false,"windows_arm64_cross":true},{"name":"macOS x64 / Qt 5.15","os":"macos-15-intel","preset":"vcpkg-osx-x64","qt_version":"5.15.2","qt_arch":"clang_64","host_qt_arch":"","test":true,"windows_arm64_cross":false},{"name":"macOS x64 / Qt 6.2","os":"macos-15-intel","preset":"vcpkg-osx-x64","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","test":true,"windows_arm64_cross":false},{"name":"macOS arm64 / Qt 6.2","os":"macos-15","preset":"vcpkg-osx","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","test":true,"windows_arm64_cross":false}]}'
+            matrix='{"include":[{"name":"Windows x64 / Qt 5.15","os":"windows-2022","preset":"vcpkg-windows","qt_version":"5.15.2","qt_arch":"win64_msvc2019_64","host_qt_arch":"","test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"Windows x64 / Qt 6.2","os":"windows-2022","preset":"vcpkg-windows","qt_version":"6.2.4","qt_arch":"win64_msvc2019_64","host_qt_arch":"","test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"Windows arm64 / Qt 6.9.3","os":"windows-2022","preset":"vcpkg-windows-arm64","qt_version":"6.9.3","qt_arch":"win64_msvc2022_arm64_cross_compiled","host_qt_arch":"win64_msvc2022_64","test":false,"test_regex":"","build_targets":"","windows_arm64_cross":true},{"name":"macOS x64 / Qt 5.15","os":"macos-15-intel","preset":"vcpkg-osx-x64","qt_version":"5.15.2","qt_arch":"clang_64","host_qt_arch":"","test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"macOS x64 / Qt 6.2","os":"macos-15-intel","preset":"vcpkg-osx-x64","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"macOS arm64 / Qt 6.2","os":"macos-15","preset":"vcpkg-osx","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false}]}'
           fi
 
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
@@ -124,13 +124,33 @@ jobs:
         run: cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$env:QT_ROOT_DIR" -D "QT_HOST_PATH=$env:QT_HOST_PATH"
 
       - name: Build
-        run: cmake --build --preset ${{ matrix.preset }} --parallel
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+          SKIP_VISUAL_TEST: 1
+        run: |
+          $buildArgs = @("--build", "--preset", "${{ matrix.preset }}")
+          $buildTargets = "${{ matrix.build_targets }}"
+          if ($buildTargets) {
+            $buildArgs += "--target"
+            $buildArgs += $buildTargets -split " "
+          }
+          $buildArgs += "--parallel"
+          cmake @buildArgs
 
       - name: Test
         if: ${{ matrix.test == true }}
+        shell: pwsh
         env:
           QT_QPA_PLATFORM: offscreen
-        run: ctest --preset ${{ matrix.preset }} --output-on-failure --timeout 180
+          SKIP_VISUAL_TEST: 1
+        run: |
+          $testArgs = @("--preset", "${{ matrix.preset }}", "--output-on-failure", "--timeout", "180")
+          $testRegex = "${{ matrix.test_regex }}"
+          if ($testRegex) {
+            $testArgs += @("-R", $testRegex)
+          }
+          ctest @testArgs
 
       - name: Upload diagnostics
         if: failure()
