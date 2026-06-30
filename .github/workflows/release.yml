@@ -20,6 +20,19 @@ on:
         required: true
         default: true
         type: boolean
+      package_set:
+        description: Package matrix to run.
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - full
+      publish:
+        description: Publish or update the GitHub Release after packages finish.
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
@@ -41,6 +54,9 @@ jobs:
       prerelease: ${{ steps.release.outputs.prerelease }}
       draft: ${{ steps.release.outputs.draft }}
       require_ci: ${{ steps.release.outputs.require_ci }}
+      package_set: ${{ steps.release.outputs.package_set }}
+      package_matrix: ${{ steps.release.outputs.package_matrix }}
+      publish: ${{ steps.release.outputs.publish }}
       tag_sha: ${{ steps.release.outputs.tag_sha }}
     steps:
       - name: Checkout
@@ -58,12 +74,8 @@ jobs:
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             tag="${{ inputs.tag }}"
-            draft="${{ inputs.draft }}"
-            require_ci="${{ inputs.require_ci }}"
           else
             tag="${GITHUB_REF_NAME}"
-            draft="false"
-            require_ci="true"
           fi
 
           if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
@@ -101,6 +113,36 @@ jobs:
             prerelease="true"
           fi
 
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            draft="${{ inputs.draft }}"
+            require_ci="${{ inputs.require_ci }}"
+            package_set="${{ inputs.package_set }}"
+            publish="${{ inputs.publish }}"
+          elif [[ "$prerelease" == "true" ]]; then
+            draft="true"
+            require_ci="true"
+            package_set="smoke"
+            publish="false"
+          else
+            draft="false"
+            require_ci="true"
+            package_set="full"
+            publish="true"
+          fi
+
+          if [[ "$package_set" == "smoke" ]]; then
+            package_matrix='{"include":[{"artifact":"macos-x64","os":"macos-15-intel","preset":"vcpkg-osx-x64-release","package_preset":"vcpkg-osx-x64-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"windows-x64","os":"windows-2022","preset":"vcpkg-windows-release","package_preset":"vcpkg-windows-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":true}]}'
+          elif [[ "$package_set" == "full" ]]; then
+            package_matrix='{"include":[{"artifact":"macos-arm64","os":"macos-15","preset":"vcpkg-osx-release","package_preset":"vcpkg-osx-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"macos-x64","os":"macos-15-intel","preset":"vcpkg-osx-x64-release","package_preset":"vcpkg-osx-x64-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"windows-x64","os":"windows-2022","preset":"vcpkg-windows-release","package_preset":"vcpkg-windows-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":true},{"artifact":"windows-arm64","os":"windows-2022","preset":"vcpkg-windows-arm64-release","package_preset":"vcpkg-windows-arm64-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_arm64_cross_compiled","host_qt_arch":"win64_msvc2022_64","windows_arm64_cross":true,"needs_nsis":true}]}'
+          else
+            echo "::error::package_set must be smoke or full: $package_set"
+            exit 1
+          fi
+          if [[ "$package_set" == "smoke" && "$publish" == "true" ]]; then
+            echo "::error::Smoke package validation cannot publish a GitHub Release. Use package_set=full to publish."
+            exit 1
+          fi
+
           tag_sha="$(git rev-list -n 1 "$tag")"
 
           {
@@ -109,6 +151,9 @@ jobs:
             echo "prerelease=$prerelease"
             echo "draft=$draft"
             echo "require_ci=$require_ci"
+            echo "package_set=$package_set"
+            echo "package_matrix=$package_matrix"
+            echo "publish=$publish"
             echo "tag_sha=$tag_sha"
           } >> "$GITHUB_OUTPUT"
 
@@ -148,6 +193,8 @@ jobs:
             echo "- Draft: ${{ steps.release.outputs.draft }}"
             echo "- Prerelease: ${{ steps.release.outputs.prerelease }}"
             echo "- Required CI: ${{ steps.release.outputs.require_ci }}"
+            echo "- Package set: ${{ steps.release.outputs.package_set }}"
+            echo "- Publish: ${{ steps.release.outputs.publish }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   package:
@@ -159,44 +206,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - artifact: macos-arm64
-            os: macos-15
-            preset: vcpkg-osx-release
-            package_preset: vcpkg-osx-dmg
-            qt_version: "6.9.3"
-            qt_arch: clang_64
-            host_qt_arch: ""
-            windows_arm64_cross: false
-            needs_nsis: false
-          - artifact: macos-x64
-            os: macos-15-intel
-            preset: vcpkg-osx-x64-release
-            package_preset: vcpkg-osx-x64-dmg
-            qt_version: "6.9.3"
-            qt_arch: clang_64
-            host_qt_arch: ""
-            windows_arm64_cross: false
-            needs_nsis: false
-          - artifact: windows-x64
-            os: windows-2022
-            preset: vcpkg-windows-release
-            package_preset: vcpkg-windows-installer
-            qt_version: "6.9.3"
-            qt_arch: win64_msvc2022_64
-            host_qt_arch: ""
-            windows_arm64_cross: false
-            needs_nsis: true
-          - artifact: windows-arm64
-            os: windows-2022
-            preset: vcpkg-windows-arm64-release
-            package_preset: vcpkg-windows-arm64-installer
-            qt_version: "6.9.3"
-            qt_arch: win64_msvc2022_arm64_cross_compiled
-            host_qt_arch: win64_msvc2022_64
-            windows_arm64_cross: true
-            needs_nsis: true
+      matrix: ${{ fromJson(needs.preflight.outputs.package_matrix) }}
     env:
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
       VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
@@ -238,7 +248,8 @@ jobs:
         if: ${{ matrix.windows_arm64_cross == true }}
         shell: pwsh
         run: |
-          "QT_HOST_PATH=$env:QT_ROOT_DIR" >> $env:GITHUB_ENV
+          $qtHostPath = $env:QT_ROOT_DIR -replace '\\', '/'
+          "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
 
       - name: Install Qt ${{ matrix.qt_version }}
         uses: jurplel/install-qt-action@v4
@@ -262,7 +273,10 @@ jobs:
       - name: Configure Windows ARM64 cross-build
         if: ${{ matrix.windows_arm64_cross == true }}
         shell: pwsh
-        run: cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$env:QT_ROOT_DIR" -D "QT_HOST_PATH=$env:QT_HOST_PATH"
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
+          $qtHost = $env:QT_HOST_PATH -replace '\\', '/'
+          cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$qtRoot" -D "QT_HOST_PATH=$qtHost"
 
       - name: Build
         run: cmake --build --preset ${{ matrix.preset }} --parallel
@@ -316,6 +330,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [preflight, package]
+    if: ${{ needs.preflight.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
