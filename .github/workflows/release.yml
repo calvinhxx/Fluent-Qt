@@ -23,10 +23,11 @@ on:
       package_set:
         description: Package matrix to run.
         required: true
-        default: smoke
+        default: standard
         type: choice
         options:
           - smoke
+          - standard
           - full
       publish:
         description: Publish or update the GitHub Release after packages finish.
@@ -126,20 +127,20 @@ jobs:
           else
             draft="false"
             require_ci="true"
-            package_set="full"
+            package_set="standard"
             publish="true"
           fi
 
-          if [[ "$package_set" == "smoke" ]]; then
+          if [[ "$package_set" == "smoke" || "$package_set" == "standard" ]]; then
             package_matrix='{"include":[{"artifact":"macos-x64","os":"macos-15-intel","preset":"vcpkg-osx-x64-release","package_preset":"vcpkg-osx-x64-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"windows-x64","os":"windows-2022","preset":"vcpkg-windows-release","package_preset":"vcpkg-windows-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":true}]}'
           elif [[ "$package_set" == "full" ]]; then
             package_matrix='{"include":[{"artifact":"macos-arm64","os":"macos-15","preset":"vcpkg-osx-release","package_preset":"vcpkg-osx-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"macos-x64","os":"macos-15-intel","preset":"vcpkg-osx-x64-release","package_preset":"vcpkg-osx-x64-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"windows-x64","os":"windows-2022","preset":"vcpkg-windows-release","package_preset":"vcpkg-windows-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":true},{"artifact":"windows-arm64","os":"windows-2022","preset":"vcpkg-windows-arm64-release","package_preset":"vcpkg-windows-arm64-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_arm64_cross_compiled","host_qt_arch":"win64_msvc2022_64","windows_arm64_cross":true,"needs_nsis":true}]}'
           else
-            echo "::error::package_set must be smoke or full: $package_set"
+            echo "::error::package_set must be smoke, standard, or full: $package_set"
             exit 1
           fi
           if [[ "$package_set" == "smoke" && "$publish" == "true" ]]; then
-            echo "::error::Smoke package validation cannot publish a GitHub Release. Use package_set=full to publish."
+            echo "::error::Smoke package validation cannot publish a GitHub Release. Use package_set=standard or full to publish."
             exit 1
           fi
 
