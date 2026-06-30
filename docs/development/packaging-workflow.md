@@ -18,7 +18,7 @@ allowed to depend on the developer machine's Qt installation.
 
 ## macOS DMG
 
-macOS ships **one single-architecture DMG per CPU** — Apple Silicon and Intel are
+macOS ships **one single-architecture DMG per CPU** ? Apple Silicon and Intel are
 packaged separately rather than as a fat universal image. Each preset pins
 `CMAKE_OSX_ARCHITECTURES` to a single slice, and the install step thins the
 (universal) Qt frameworks `macdeployqt` copies down to that slice, so every image
@@ -30,7 +30,7 @@ Apple Silicon (arm64):
 cmake --preset vcpkg-osx-release
 cmake --build --preset vcpkg-osx-release
 cpack --preset vcpkg-osx-dmg
-# → Fluent-QT-Gallery-<version>-Darwin-arm64.dmg
+# ? Fluent-QT-Gallery-<version>-Darwin-arm64.dmg
 ```
 
 Intel (x86_64, cross-builds on Apple Silicon and runs under Rosetta):
@@ -39,7 +39,7 @@ Intel (x86_64, cross-builds on Apple Silicon and runs under Rosetta):
 cmake --preset vcpkg-osx-x64-release
 cmake --build --preset vcpkg-osx-x64-release
 cpack --preset vcpkg-osx-x64-dmg
-# → Fluent-QT-Gallery-<version>-Darwin-x86_64.dmg
+# ? Fluent-QT-Gallery-<version>-Darwin-x86_64.dmg
 ```
 
 Each DMG uses the CPack `DragNDrop` generator and contains
@@ -59,10 +59,23 @@ The generated installer uses the CPack `NSIS` generator and installs the Gallery
 executable under the package `bin` directory. It always creates Start Menu and
 desktop shortcuts, and offers a "run now" checkbox on the finish page.
 
+### Elevation model
+
+The Windows installer is a per-user installer. It installs by default under
+`%LOCALAPPDATA%\Programs\Fluent-QT Gallery`, writes uninstall metadata under the
+current user registry hive, and creates Start Menu/Desktop shortcuts for the
+current user. It must not require an administrator token for a normal install.
+
+CPack 4.2's bundled NSIS template is machine-wide by default, so
+`cmake/FluentQTPackaging.cmake` routes `makensis` through
+`cmake/nsis-per-user-wrapper.cmd`. The wrapper patches the generated NSIS script
+just before compilation, keeping the per-user policy centralized in the
+packaging layer without maintaining a full copied NSIS template.
+
 The executable embeds the app icon and version metadata via `app/app.rc.in`
 (compiled into a `.rc` at configure time), so Explorer, the taskbar, Alt-Tab and
 the installer-created shortcuts all show the Fluent-QT Gallery icon. The icon
-source of truth is `app/assets/Fluent-QT-Gallery.ico` — the Windows counterpart to
+source of truth is `app/assets/Fluent-QT-Gallery.ico` ? the Windows counterpart to
 the macOS `app/assets/Fluent-QT-Gallery.icns`. Both are derived from the shared
 `app/assets/app-icon.png` master.
 
@@ -72,8 +85,8 @@ The NSIS wizard is styled to match the polish of the macOS DMG rather than the r
 grey NSIS look:
 
 - Installer/uninstaller window icon: `app/assets/Fluent-QT-Gallery.ico`.
-- Welcome/Finish sidebar (164×314) and inner-page header banner (150×57): a
-  blue→green branded gradient in `app/assets/installer-welcome.bmp` and
+- Welcome/Finish sidebar (164?314) and inner-page header banner (150?57): a
+  blue?green branded gradient in `app/assets/installer-welcome.bmp` and
   `app/assets/installer-header.bmp`, generated from `app-icon.png`.
 - Bottom branding text and a finish-page "run Fluent-QT Gallery" option.
 
