@@ -53,6 +53,12 @@ ctest --preset vcpkg-osx -N -L '^platform_macos$'
   remains the full non-interactive build/test lane; macOS x64 is a Gallery build
   smoke; Windows lanes cover targeted platform, Qt 5.15 API, and ARM64
   cross-build smoke coverage.
+- CI build target selection is centralized in CMake:
+  `fluent_qt_ci_fast_tests` builds only the fast API/environment test binaries,
+  `fluent_qt_ci_full_tests` builds test binaries that contain at least one
+  non-manual `ci_full` test, and `fluent_qt_all_tests` builds every registered
+  Qt/GTest binary for local host validation. Keep workflow YAML on these
+  aggregate targets instead of duplicating long target lists there.
 - Local host full validation means configuring, building, and running all CTest
   tests for the current host preset. VisualCheck tests still auto-skip through
   `SKIP_VISUAL_TEST=1`:
