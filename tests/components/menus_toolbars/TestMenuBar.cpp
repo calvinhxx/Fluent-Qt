@@ -19,6 +19,7 @@
 #include "components/menus_toolbars/Menu.h"
 #include "components/menus_toolbars/MenuBar.h"
 #include "components/textfields/Label.h"
+#include "QtTestEnvironment.h"
 
 using fluent::AnchorLayout;
 using fluent::basicinput::Button;
@@ -409,6 +410,10 @@ TEST_F(MenuBarTest, PointerAndKeyboardInteractionsUseQtActions)
 
 TEST_F(MenuBarTest, AccessKeysAndShortcutsRemainInvokable)
 {
+    if (tests::support::isHeadlessPlatform()) {
+        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
+                        "synthetic pointer/keyboard input or show native popups.";
+    }
     MenuBarSample sample = createSimpleMenuBar(window);
     sample.bar->setParent(window);
     sample.bar->move(0, 0);
@@ -457,6 +462,10 @@ TEST_F(MenuBarTest, AccessKeysAndShortcutsRemainInvokable)
 
 TEST_F(MenuBarTest, FluentMenuContentPatternsExposeDeterministicGeometry)
 {
+    if (tests::support::isHeadlessPlatform()) {
+        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
+                        "synthetic pointer/keyboard input or show native popups.";
+    }
     auto* menu = new FluentMenu(QStringLiteral("View"), window);
     auto* output = addMenuItem(menu, QStringLiteral("Output"));
     QAction* separator = menu->addSeparator();

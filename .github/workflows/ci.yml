@@ -1,0 +1,173 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      matrix:
+        description: CI matrix to run.
+        required: true
+        default: fast
+        type: choice
+        options:
+          - fast
+          - full
+  schedule:
+    # Weekly full matrix smoke run. Times are UTC.
+    - cron: "23 18 * * 0"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      mode: ${{ steps.matrix.outputs.mode }}
+    steps:
+      - name: Select matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mode="fast"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            mode="full"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            mode="${{ github.event.inputs.matrix }}"
+          fi
+
+          if [[ "$mode" == "fast" ]]; then
+            matrix='{"include":[{"name":"Windows x64 / Qt 6.2","os":"windows-2022","preset":"vcpkg-windows","qt_version":"6.2.4","qt_arch":"win64_msvc2019_64","host_qt_arch":"","build":true,"test":true,"test_regex":"^QtCompat\\.","build_targets":"test_qt_compat","windows_arm64_cross":false},{"name":"macOS arm64 / Qt 6.2 configure","os":"macos-15","preset":"vcpkg-osx","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","build":false,"test":false,"test_regex":"","build_targets":"","windows_arm64_cross":false}]}'
+          else
+            matrix='{"include":[{"name":"Windows x64 / Qt 5.15","os":"windows-2022","preset":"vcpkg-windows","qt_version":"5.15.2","qt_arch":"win64_msvc2019_64","host_qt_arch":"","build":true,"test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"Windows x64 / Qt 6.2","os":"windows-2022","preset":"vcpkg-windows","qt_version":"6.2.4","qt_arch":"win64_msvc2019_64","host_qt_arch":"","build":true,"test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"Windows arm64 / Qt 6.9.3","os":"windows-2022","preset":"vcpkg-windows-arm64","qt_version":"6.9.3","qt_arch":"win64_msvc2022_arm64_cross_compiled","host_qt_arch":"win64_msvc2022_64","build":true,"test":false,"test_regex":"","build_targets":"","windows_arm64_cross":true},{"name":"macOS x64 / Qt 5.15","os":"macos-15-intel","preset":"vcpkg-osx-x64","qt_version":"5.15.2","qt_arch":"clang_64","host_qt_arch":"","build":true,"test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"macOS x64 / Qt 6.2","os":"macos-15-intel","preset":"vcpkg-osx-x64","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","build":true,"test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"macOS arm64 / Qt 6.2","os":"macos-15","preset":"vcpkg-osx","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","build":true,"test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false}]}'
+          fi
+
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Selected $mode matrix."
+
+  build:
+    name: ${{ matrix.name }}
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-binary-cache
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Install host Qt ${{ matrix.qt_version }}
+        if: ${{ matrix.windows_arm64_cross == true }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.host_qt_arch }}
+          cache: true
+
+      - name: Remember host Qt path
+        if: ${{ matrix.windows_arm64_cross == true }}
+        shell: pwsh
+        run: |
+          $qtHostPath = $env:QT_ROOT_DIR -replace '\\', '/'
+          "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
+
+      - name: Install Qt ${{ matrix.qt_version }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Set VCPKG_ROOT
+        shell: pwsh
+        run: |
+          if (-not $env:VCPKG_INSTALLATION_ROOT) {
+            throw "VCPKG_INSTALLATION_ROOT is not set on this runner."
+          }
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+
+      - name: Configure
+        if: ${{ matrix.windows_arm64_cross != true }}
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Configure Windows ARM64 cross-build
+        if: ${{ matrix.windows_arm64_cross == true }}
+        shell: pwsh
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
+          $qtHost = $env:QT_HOST_PATH -replace '\\', '/'
+          cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$qtRoot" -D "QT_HOST_PATH=$qtHost"
+
+      - name: Build
+        if: ${{ matrix.build == true }}
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+          SKIP_VISUAL_TEST: 1
+        run: |
+          $buildArgs = @("--build", "--preset", "${{ matrix.preset }}")
+          $buildTargets = "${{ matrix.build_targets }}"
+          if ($buildTargets) {
+            $buildArgs += "--target"
+            $buildArgs += $buildTargets -split " "
+          }
+          $buildArgs += "--parallel"
+          cmake @buildArgs
+
+      - name: Test
+        if: ${{ matrix.build == true && matrix.test == true }}
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+          SKIP_VISUAL_TEST: 1
+        run: |
+          $testArgs = @("--preset", "${{ matrix.preset }}", "--output-on-failure", "--timeout", "180")
+          $testRegex = "${{ matrix.test_regex }}"
+          if ($testRegex) {
+            $testArgs += @("-R", $testRegex)
+          }
+          ctest @testArgs
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostics-${{ matrix.preset }}-qt-${{ matrix.qt_version }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            build/${{ matrix.preset }}/CMakeCache.txt
+            build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
+            build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
+            build/${{ matrix.preset }}/Testing/Temporary/LastTestsFailed.log
+            build/${{ matrix.preset }}/vcpkg-manifest-install.log
+            build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md

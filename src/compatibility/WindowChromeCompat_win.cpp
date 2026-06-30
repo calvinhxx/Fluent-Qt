@@ -321,12 +321,14 @@ void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& option
 
     if (options.useCustomWindowChrome) {
         window->setAttribute(Qt::WA_ContentsMarginsRespectsSafeArea, false);
-        const Qt::WindowFlags desiredFlags =
-            (window->windowFlags() | Qt::Window | Qt::ExpandedClientAreaHint |
-             Qt::NoTitleBarBackgroundHint | Qt::CustomizeWindowHint)
-            & ~(Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint |
-                Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint |
-                Qt::WindowTitleHint | Qt::WindowSystemMenuHint);
+        Qt::WindowFlags desiredFlags =
+            window->windowFlags() | Qt::Window | Qt::CustomizeWindowHint;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+        desiredFlags |= Qt::ExpandedClientAreaHint | Qt::NoTitleBarBackgroundHint;
+#endif
+        desiredFlags &= ~(Qt::FramelessWindowHint | Qt::WindowMinimizeButtonHint |
+                          Qt::WindowMaximizeButtonHint | Qt::WindowCloseButtonHint |
+                          Qt::WindowTitleHint | Qt::WindowSystemMenuHint);
         if (!window->isVisible() && window->windowFlags() != desiredFlags)
             window->setWindowFlags(desiredFlags);
         ensureDwmChromeStyle(window);
