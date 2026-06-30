@@ -1,4 +1,5 @@
 name: CI
+run-name: CI ${{ github.event_name == 'schedule' && 'full' || github.event.inputs.matrix || 'fast' }}
 
 on:
   push:
@@ -7,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       matrix:
-        description: CI matrix to run.
+        description: Validation tier to run.
         required: true
         default: fast
         type: choice
@@ -15,7 +16,7 @@ on:
           - fast
           - full
   schedule:
-    # Weekly full matrix smoke run. Times are UTC.
+    # Weekly full validation matrix. Times are UTC.
     - cron: "23 18 * * 0"
 
 concurrency:
@@ -27,13 +28,13 @@ permissions:
 
 jobs:
   plan:
-    name: Plan matrix
+    name: Plan validation matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       mode: ${{ steps.matrix.outputs.mode }}
     steps:
-      - name: Select matrix
+      - name: Select validation tier
         id: matrix
         shell: bash
         run: |
@@ -46,21 +47,174 @@ jobs:
             mode="${{ github.event.inputs.matrix }}"
           fi
 
+          case "$mode" in
+            fast|full) ;;
+            *)
+              echo "::error::Unsupported validation tier: $mode"
+              exit 1
+              ;;
+          esac
+
           if [[ "$mode" == "fast" ]]; then
-            matrix='{"include":[{"name":"Windows x64 / Qt 6.2","os":"windows-2022","preset":"vcpkg-windows","qt_version":"6.2.4","qt_arch":"win64_msvc2019_64","host_qt_arch":"","build":true,"test":true,"test_regex":"^QtCompat\\.","build_targets":"test_qt_compat","windows_arm64_cross":false},{"name":"macOS arm64 / Qt 6.2 configure","os":"macos-15","preset":"vcpkg-osx","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","build":false,"test":false,"test_regex":"","build_targets":"","windows_arm64_cross":false}]}'
+            matrix="$(jq -c . <<'JSON'
+          {
+            "include": [
+              {
+                "id": "win-x64-qt62-fast",
+                "name": "Windows x64 / Qt 6.2 fast",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows",
+                "qt_version": "6.2.4",
+                "qt_arch": "win64_msvc2019_64",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "x64-windows",
+                "build": true,
+                "test": true,
+                "build_targets": "test_qt_compat test_qt_test_environment",
+                "test_labels": "^ci_fast$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 180,
+                "timeout_minutes": 30,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "mac-arm64-qt62-configure",
+                "name": "macOS arm64 / Qt 6.2 configure",
+                "os": "macos-15",
+                "preset": "vcpkg-osx",
+                "qt_version": "6.2.4",
+                "qt_arch": "clang_64",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "arm64-osx",
+                "build": false,
+                "test": false,
+                "build_targets": "",
+                "test_labels": "",
+                "exclude_labels": "",
+                "ctest_timeout": 180,
+                "timeout_minutes": 20,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              }
+            ]
+          }
+          JSON
+            )"
           else
-            matrix='{"include":[{"name":"Windows x64 / Qt 5.15","os":"windows-2022","preset":"vcpkg-windows","qt_version":"5.15.2","qt_arch":"win64_msvc2019_64","host_qt_arch":"","build":true,"test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"Windows x64 / Qt 6.2","os":"windows-2022","preset":"vcpkg-windows","qt_version":"6.2.4","qt_arch":"win64_msvc2019_64","host_qt_arch":"","build":true,"test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false},{"name":"Windows arm64 / Qt 6.9.3","os":"windows-2022","preset":"vcpkg-windows-arm64","qt_version":"6.9.3","qt_arch":"win64_msvc2022_arm64_cross_compiled","host_qt_arch":"win64_msvc2022_64","build":true,"test":false,"test_regex":"","build_targets":"","windows_arm64_cross":true},{"name":"macOS x64 / Qt 6.2 build smoke","os":"macos-15-intel","preset":"vcpkg-osx-x64","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","build":true,"test":false,"test_regex":"","build_targets":"fluent_qt_gallery","windows_arm64_cross":false},{"name":"macOS arm64 / Qt 6.2","os":"macos-15","preset":"vcpkg-osx","qt_version":"6.2.4","qt_arch":"clang_64","host_qt_arch":"","build":true,"test":true,"test_regex":"","build_targets":"","windows_arm64_cross":false}]}'
+            matrix="$(jq -c . <<'JSON'
+          {
+            "include": [
+              {
+                "id": "mac-arm64-qt62-full",
+                "name": "macOS arm64 / Qt 6.2 full tests",
+                "os": "macos-15",
+                "preset": "vcpkg-osx",
+                "qt_version": "6.2.4",
+                "qt_arch": "clang_64",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "arm64-osx",
+                "build": true,
+                "test": true,
+                "build_targets": "",
+                "test_labels": "^ci_full$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 240,
+                "timeout_minutes": 90,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "mac-x64-qt62-gallery",
+                "name": "macOS x64 / Qt 6.2 gallery smoke",
+                "os": "macos-15-intel",
+                "preset": "vcpkg-osx-x64",
+                "qt_version": "6.2.4",
+                "qt_arch": "clang_64",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "x64-osx",
+                "build": true,
+                "test": false,
+                "build_targets": "fluent_qt_gallery",
+                "test_labels": "",
+                "exclude_labels": "",
+                "ctest_timeout": 180,
+                "timeout_minutes": 40,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "win-x64-qt62-platform",
+                "name": "Windows x64 / Qt 6.2 platform targeted",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows",
+                "qt_version": "6.2.4",
+                "qt_arch": "win64_msvc2019_64",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "x64-windows",
+                "build": true,
+                "test": true,
+                "build_targets": "test_qt_compat test_qt_test_environment test_window test_list_view test_flip_view",
+                "test_labels": "^(ci_fast|platform_windows)$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 180,
+                "timeout_minutes": 45,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "win-x64-qt515-api",
+                "name": "Windows x64 / Qt 5.15 API smoke",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows",
+                "qt_version": "5.15.2",
+                "qt_arch": "win64_msvc2019_64",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "x64-windows",
+                "build": true,
+                "test": true,
+                "build_targets": "test_qt_compat test_qt_test_environment",
+                "test_labels": "^ci_fast$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 180,
+                "timeout_minutes": 30,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "win-arm64-qt693-cross",
+                "name": "Windows ARM64 / Qt 6.9.3 cross-build",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows-arm64",
+                "qt_version": "6.9.3",
+                "qt_arch": "win64_msvc2022_arm64_cross_compiled",
+                "host_qt_arch": "win64_msvc2022_64",
+                "vcpkg_triplet": "arm64-windows",
+                "build": true,
+                "test": false,
+                "build_targets": "fluent_qt_gallery",
+                "test_labels": "",
+                "exclude_labels": "",
+                "ctest_timeout": 180,
+                "timeout_minutes": 60,
+                "configure_args": "",
+                "windows_arm64_cross": true
+              }
+            ]
+          }
+          JSON
+            )"
           fi
 
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-          echo "Selected $mode matrix."
+          echo "Selected $mode validation matrix."
 
   build:
     name: ${{ matrix.name }}
     needs: plan
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
@@ -79,10 +233,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .vcpkg-binary-cache
-          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
           restore-keys: |
-            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
-            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.vcpkg_triplet }}-
             vcpkg-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Install host Qt ${{ matrix.qt_version }}
@@ -117,7 +270,14 @@ jobs:
 
       - name: Configure
         if: ${{ matrix.windows_arm64_cross != true }}
-        run: cmake --preset ${{ matrix.preset }}
+        shell: pwsh
+        run: |
+          $configureArgs = @("--preset", "${{ matrix.preset }}")
+          $extraArgs = "${{ matrix.configure_args }}"
+          if ($extraArgs) {
+            $configureArgs += $extraArgs -split " "
+          }
+          cmake @configureArgs
 
       - name: Configure Windows ARM64 cross-build
         if: ${{ matrix.windows_arm64_cross == true }}
@@ -150,10 +310,19 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           SKIP_VISUAL_TEST: 1
         run: |
-          $testArgs = @("--preset", "${{ matrix.preset }}", "--output-on-failure", "--timeout", "180")
-          $testRegex = "${{ matrix.test_regex }}"
-          if ($testRegex) {
-            $testArgs += @("-R", $testRegex)
+          $testArgs = @(
+            "--preset", "${{ matrix.preset }}",
+            "--output-on-failure",
+            "--timeout", "${{ matrix.ctest_timeout }}",
+            "--no-tests=error"
+          )
+          $testLabels = "${{ matrix.test_labels }}"
+          $excludeLabels = "${{ matrix.exclude_labels }}"
+          if ($testLabels) {
+            $testArgs += @("-L", $testLabels)
+          }
+          if ($excludeLabels) {
+            $testArgs += @("-LE", $excludeLabels)
           }
           ctest @testArgs
 
@@ -161,7 +330,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-diagnostics-${{ matrix.preset }}-qt-${{ matrix.qt_version }}
+          name: ci-${{ needs.plan.outputs.mode }}-${{ matrix.id }}-diagnostics-${{ github.run_attempt }}
           if-no-files-found: ignore
           retention-days: 7
           path: |

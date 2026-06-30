@@ -47,6 +47,8 @@ $env:VCPKG_ROOT = "D:\path\to\vcpkg"
 - `vcpkg-osx-x64-release`: macOS x64 / Rosetta Release build for DMG packaging.
 - `vcpkg-windows`: Windows x64 vcpkg build.
 - `vcpkg-windows-release`: Windows x64 Release build for installer packaging.
+- `vcpkg-windows-arm64`: Windows ARM64 cross-build from an x64 host.
+- `vcpkg-windows-arm64-release`: Windows ARM64 Release build for installer packaging.
 
 ## 打包
 
