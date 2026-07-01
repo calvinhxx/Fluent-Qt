@@ -71,6 +71,7 @@ jobs:
                 "build": true,
                 "test": true,
                 "build_targets": "fluent_qt_ci_fast_tests",
+                "build_parallel": "",
                 "test_labels": "^ci_fast$",
                 "exclude_labels": "^(manual_visual|local_desktop)$",
                 "ctest_timeout": 180,
@@ -90,6 +91,7 @@ jobs:
                 "build": false,
                 "test": false,
                 "build_targets": "",
+                "build_parallel": "",
                 "test_labels": "",
                 "exclude_labels": "",
                 "ctest_timeout": 180,
@@ -117,6 +119,7 @@ jobs:
                 "build": true,
                 "test": true,
                 "build_targets": "fluent_qt_ci_full_tests",
+                "build_parallel": "3",
                 "test_labels": "^ci_full$",
                 "exclude_labels": "^(manual_visual|local_desktop)$",
                 "ctest_timeout": 240,
@@ -136,6 +139,7 @@ jobs:
                 "build": true,
                 "test": false,
                 "build_targets": "fluent_qt_gallery",
+                "build_parallel": "",
                 "test_labels": "",
                 "exclude_labels": "",
                 "ctest_timeout": 180,
@@ -155,6 +159,7 @@ jobs:
                 "build": true,
                 "test": true,
                 "build_targets": "fluent_qt_ci_fast_tests test_window test_list_view test_flip_view",
+                "build_parallel": "",
                 "test_labels": "^(ci_fast|platform_windows)$",
                 "exclude_labels": "^(manual_visual|local_desktop)$",
                 "ctest_timeout": 180,
@@ -174,6 +179,7 @@ jobs:
                 "build": true,
                 "test": true,
                 "build_targets": "fluent_qt_ci_fast_tests",
+                "build_parallel": "",
                 "test_labels": "^ci_fast$",
                 "exclude_labels": "^(manual_visual|local_desktop)$",
                 "ctest_timeout": 180,
@@ -193,6 +199,7 @@ jobs:
                 "build": true,
                 "test": false,
                 "build_targets": "fluent_qt_gallery",
+                "build_parallel": "",
                 "test_labels": "",
                 "exclude_labels": "",
                 "ctest_timeout": 180,
@@ -305,7 +312,12 @@ jobs:
             $buildArgs += "--target"
             $buildArgs += $buildTargets -split " "
           }
-          $buildArgs += "--parallel"
+          $buildParallel = "${{ matrix.build_parallel }}"
+          if ($buildParallel) {
+            $buildArgs += @("--parallel", $buildParallel)
+          } else {
+            $buildArgs += "--parallel"
+          }
           cmake @buildArgs
 
       - name: Test

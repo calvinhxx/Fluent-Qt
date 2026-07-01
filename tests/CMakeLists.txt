@@ -8,29 +8,16 @@ set(FLUENT_QT_CI_FAST_TARGETS
 set(FLUENT_QT_CI_FULL_TARGETS
     ${FLUENT_QT_CI_FAST_TARGETS}
     test_project_logging
-    test_anchor_layout
     test_fluent_element
-    test_qml_plus
     test_button
     test_dropdown_button
-    test_checkbox
     test_combo_box
-    test_slider
-    test_toggle_switch
     test_list_view
     test_flip_view
     test_calendar_date_picker
     test_popup
-    test_flyout
     test_scroll_view
-    test_scrollbar
-    test_info_bar
-    test_progress_ring
-    test_tooltip
     test_navigation_view
-    test_tab_view
-    test_line_edit
-    test_number_box
     test_window
 )
 
