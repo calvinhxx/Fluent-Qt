@@ -127,8 +127,12 @@ Rules:
 
 ## Changelog
 
-Generate changelog entries from Conventional Commits between release tags.
-Automation should group commits as follows:
+Generate changelog entries from Conventional Commits between release tags. Public
+release notes should stay user-oriented: visible feature, fix, performance, and
+breaking-change entries are listed directly, while internal CI, build, test, and
+maintenance work is collapsed into a concise maintenance summary.
+
+Maintainer changelog review can still group commits as follows:
 
 | Commit type | Changelog section |
 | --- | --- |
@@ -148,13 +152,15 @@ Use the deterministic generator for release notes and changelog review:
 
 ```bash
 python scripts/release/generate_changelog.py --from v1.0.0 --to HEAD
+python scripts/release/generate_changelog.py --from v1.0.0 --to HEAD --audience maintainer
 python scripts/release/generate_changelog.py --tag v1.1.0 --output release-notes.md
 ```
 
 `--tag` resolves the previous release tag automatically when `--from` is not
 provided. The generator skips merge commits and `chore(release): vX.Y.Z`
-release-marker commits, keeps section order stable, and includes short commit
-SHAs for traceability.
+release-marker commits, keeps section order stable, and defaults to concise
+public notes. Use `--audience maintainer` when you need the detailed
+commit-by-commit view with short SHAs for traceability.
 
 Use `--check` before tagging when you want to fail on commits that cannot be
 classified by the Conventional Commit rules:
@@ -187,9 +193,10 @@ contract that CI, changelog, and packaging workflows should enforce.
 ## Release Package Sets
 
 - `standard` is the default stable release package set. It publishes the
-  macOS x64 DMG and Windows x64 installer.
-- `smoke` runs the same x64 package lanes without publishing and is intended for
-  manual release workflow validation.
-- `full` adds macOS arm64 and Windows arm64 packages for manual supplemental
-  artifact runs. This is a packaging artifact set, not the CI `matrix=full`
+  macOS arm64 DMG, macOS x64 DMG, Windows x64 installer, and Windows arm64
+  installer.
+- `smoke` runs only the macOS x64 and Windows x64 package lanes without
+  publishing and is intended for manual release workflow validation.
+- `full` is kept as a compatibility alias for the complete four-platform release
+  package set. This is a packaging artifact set, not the CI `matrix=full`
   validation tier.

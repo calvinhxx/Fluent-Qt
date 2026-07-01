@@ -131,14 +131,95 @@ jobs:
             publish="true"
           fi
 
-          if [[ "$package_set" == "smoke" || "$package_set" == "standard" ]]; then
-            package_matrix='{"include":[{"artifact":"macos-x64","os":"macos-15-intel","preset":"vcpkg-osx-x64-release","package_preset":"vcpkg-osx-x64-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"windows-x64","os":"windows-2022","preset":"vcpkg-windows-release","package_preset":"vcpkg-windows-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":true}]}'
-          elif [[ "$package_set" == "full" ]]; then
-            package_matrix='{"include":[{"artifact":"macos-arm64","os":"macos-15","preset":"vcpkg-osx-release","package_preset":"vcpkg-osx-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"macos-x64","os":"macos-15-intel","preset":"vcpkg-osx-x64-release","package_preset":"vcpkg-osx-x64-dmg","qt_version":"6.9.3","qt_arch":"clang_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":false},{"artifact":"windows-x64","os":"windows-2022","preset":"vcpkg-windows-release","package_preset":"vcpkg-windows-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_64","host_qt_arch":"","windows_arm64_cross":false,"needs_nsis":true},{"artifact":"windows-arm64","os":"windows-2022","preset":"vcpkg-windows-arm64-release","package_preset":"vcpkg-windows-arm64-installer","qt_version":"6.9.3","qt_arch":"win64_msvc2022_arm64_cross_compiled","host_qt_arch":"win64_msvc2022_64","windows_arm64_cross":true,"needs_nsis":true}]}'
-          else
-            echo "::error::package_set must be smoke, standard, or full: $package_set"
-            exit 1
-          fi
+          smoke_matrix="$(jq -c . <<'JSON'
+          {
+            "include": [
+              {
+                "artifact": "macos-x64",
+                "os": "macos-15-intel",
+                "preset": "vcpkg-osx-x64-release",
+                "package_preset": "vcpkg-osx-x64-dmg",
+                "qt_version": "6.9.3",
+                "qt_arch": "clang_64",
+                "host_qt_arch": "",
+                "windows_arm64_cross": false,
+                "needs_nsis": false
+              },
+              {
+                "artifact": "windows-x64",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows-release",
+                "package_preset": "vcpkg-windows-installer",
+                "qt_version": "6.9.3",
+                "qt_arch": "win64_msvc2022_64",
+                "host_qt_arch": "",
+                "windows_arm64_cross": false,
+                "needs_nsis": true
+              }
+            ]
+          }
+          JSON
+          )"
+          release_matrix="$(jq -c . <<'JSON'
+          {
+            "include": [
+              {
+                "artifact": "macos-arm64",
+                "os": "macos-15",
+                "preset": "vcpkg-osx-release",
+                "package_preset": "vcpkg-osx-dmg",
+                "qt_version": "6.9.3",
+                "qt_arch": "clang_64",
+                "host_qt_arch": "",
+                "windows_arm64_cross": false,
+                "needs_nsis": false
+              },
+              {
+                "artifact": "macos-x64",
+                "os": "macos-15-intel",
+                "preset": "vcpkg-osx-x64-release",
+                "package_preset": "vcpkg-osx-x64-dmg",
+                "qt_version": "6.9.3",
+                "qt_arch": "clang_64",
+                "host_qt_arch": "",
+                "windows_arm64_cross": false,
+                "needs_nsis": false
+              },
+              {
+                "artifact": "windows-x64",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows-release",
+                "package_preset": "vcpkg-windows-installer",
+                "qt_version": "6.9.3",
+                "qt_arch": "win64_msvc2022_64",
+                "host_qt_arch": "",
+                "windows_arm64_cross": false,
+                "needs_nsis": true
+              },
+              {
+                "artifact": "windows-arm64",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows-arm64-release",
+                "package_preset": "vcpkg-windows-arm64-installer",
+                "qt_version": "6.9.3",
+                "qt_arch": "win64_msvc2022_arm64_cross_compiled",
+                "host_qt_arch": "win64_msvc2022_64",
+                "windows_arm64_cross": true,
+                "needs_nsis": true
+              }
+            ]
+          }
+          JSON
+          )"
+
+          case "$package_set" in
+            smoke) package_matrix="$smoke_matrix" ;;
+            standard|full) package_matrix="$release_matrix" ;;
+            *)
+              echo "::error::package_set must be smoke, standard, or full: $package_set"
+              exit 1
+              ;;
+          esac
           if [[ "$package_set" == "smoke" && "$publish" == "true" ]]; then
             echo "::error::Smoke package validation cannot publish a GitHub Release. Use package_set=standard or full to publish."
             exit 1
@@ -350,6 +431,7 @@ jobs:
           set -euo pipefail
           python3 scripts/release/generate_changelog.py \
             --tag "${{ needs.preflight.outputs.tag }}" \
+            --audience public \
             --output release-notes.md
 
       - name: Download package artifacts

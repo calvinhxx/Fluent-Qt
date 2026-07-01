@@ -37,6 +37,29 @@ SECTIONS = OrderedDict(
     ]
 )
 
+PUBLIC_SECTIONS = OrderedDict(
+    [
+        ("breaking", "Breaking Changes"),
+        ("feat", "Features"),
+        ("fix", "Bug Fixes"),
+        ("perf", "Performance"),
+    ]
+)
+
+INTERNAL_KEYWORDS = (
+    "automation",
+    "build",
+    "changelog",
+    "ci",
+    "cmake",
+    "packag",
+    "release",
+    "smoke",
+    "test",
+    "validation",
+    "workflow",
+)
+
 TYPE_TO_SECTION = {
     "feat": "feat",
     "fix": "fix",
@@ -156,6 +179,66 @@ def format_entry(entry: Entry) -> str:
     return f"- {prefix}{entry.summary} (`{entry.sha[:7]}`)"
 
 
+def format_public_entry(entry: Entry) -> str:
+    prefix = f"{entry.scope}: " if entry.scope else ""
+    return f"- {prefix}{entry.summary}"
+
+
+def is_internal_entry(section_key: str, entry: Entry) -> bool:
+    if section_key in {"build_ci", "docs", "refactor", "test", "maintenance", "other"}:
+        return True
+    text = f"{entry.scope or ''} {entry.summary}".lower()
+    return any(keyword in text for keyword in INTERNAL_KEYWORDS)
+
+
+def join_words(words: list[str]) -> str:
+    if len(words) == 1:
+        return words[0]
+    if len(words) == 2:
+        return f"{words[0]} and {words[1]}"
+    return f"{', '.join(words[:-1])}, and {words[-1]}"
+
+
+def maintenance_entry(areas: set[str]) -> str:
+    ordered_areas: list[str] = []
+    if "release" in areas:
+        ordered_areas.extend(["release packaging", "CI automation"])
+    if "tests" in areas:
+        ordered_areas.append("test coverage")
+    if "docs" in areas:
+        ordered_areas.append("documentation")
+    if "internal" in areas:
+        ordered_areas.append("internal maintenance")
+    if not ordered_areas:
+        ordered_areas.append("project maintenance")
+    return f"- Improved {join_words(ordered_areas)}."
+
+
+def maintenance_area(section_key: str, entry: Entry) -> str:
+    text = f"{entry.scope or ''} {entry.summary}".lower()
+    if section_key == "test" or "test" in text:
+        return "tests"
+    if section_key == "docs":
+        return "docs"
+    if section_key == "build_ci" or any(
+        keyword in text
+        for keyword in (
+            "automation",
+            "build",
+            "changelog",
+            "ci",
+            "cmake",
+            "packag",
+            "release",
+            "smoke",
+            "validation",
+            "workflow",
+        )
+    ):
+        return "release"
+    return "internal"
+
+
 def classify(commits: list[Commit]) -> tuple[OrderedDict[str, list[Entry]], list[Commit]]:
     grouped: OrderedDict[str, list[Entry]] = OrderedDict((key, []) for key in SECTIONS)
     unknown: list[Commit] = []
@@ -193,7 +276,7 @@ def classify(commits: list[Commit]) -> tuple[OrderedDict[str, list[Entry]], list
     return grouped, unknown
 
 
-def render_notes(
+def render_maintainer_notes(
     release_name: str,
     release_date: str,
     from_ref: str | None,
@@ -219,6 +302,51 @@ def render_notes(
     return "\n".join(lines).rstrip() + "\n"
 
 
+def render_public_notes(
+    release_name: str,
+    release_date: str,
+    from_ref: str | None,
+    grouped: OrderedDict[str, list[Entry]],
+) -> str:
+    lines = [f"## {release_name} - {release_date}", ""]
+    if from_ref:
+        lines.extend([f"_Changes since `{from_ref}`._", ""])
+
+    public_grouped: OrderedDict[str, list[Entry]] = OrderedDict(
+        (key, []) for key in PUBLIC_SECTIONS
+    )
+    maintenance_areas: set[str] = set()
+
+    for section_key, entries in grouped.items():
+        for entry in entries:
+            if section_key == "breaking" or (
+                section_key in PUBLIC_SECTIONS
+                and not is_internal_entry(section_key, entry)
+            ):
+                public_grouped[section_key].append(entry)
+            else:
+                maintenance_areas.add(maintenance_area(section_key, entry))
+
+    wrote_section = False
+    for section_key, title in PUBLIC_SECTIONS.items():
+        entries = public_grouped[section_key]
+        if not entries:
+            continue
+        wrote_section = True
+        lines.extend([f"### {title}", ""])
+        lines.extend(format_public_entry(entry) for entry in entries)
+        lines.append("")
+
+    if maintenance_areas:
+        wrote_section = True
+        lines.extend(["### Maintenance", "", maintenance_entry(maintenance_areas), ""])
+
+    if not wrote_section:
+        lines.extend(["No notable changes.", ""])
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate deterministic release notes from Conventional Commits."
@@ -230,6 +358,12 @@ def parse_args() -> argparse.Namespace:
         help="Release tag. Also used as --to, and auto-detects the previous release tag when --from is omitted.",
     )
     parser.add_argument("--output", help="Write release notes to this file.")
+    parser.add_argument(
+        "--audience",
+        choices=("public", "maintainer"),
+        default="public",
+        help="Generate concise public notes or detailed maintainer notes. Defaults to public.",
+    )
     parser.add_argument(
         "--check",
         action="store_true",
@@ -252,7 +386,12 @@ def main() -> int:
     commits = read_commits(from_ref, to_ref)
     grouped, unknown = classify(commits)
     release_name = args.tag or to_ref
-    notes = render_notes(release_name, commit_date(to_ref), from_ref, grouped)
+    if args.audience == "maintainer":
+        notes = render_maintainer_notes(
+            release_name, commit_date(to_ref), from_ref, grouped
+        )
+    else:
+        notes = render_public_notes(release_name, commit_date(to_ref), from_ref, grouped)
 
     if args.output:
         pathlib.Path(args.output).write_text(notes, encoding="utf-8", newline="\n")
