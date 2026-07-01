@@ -4,11 +4,15 @@ Use this workflow when planning branches, commit messages, release tags,
 changelog generation, and release automation.
 
 This is a lightweight single-maintainer flow. The project does not use a
-long-lived `develop` branch or a permanent Git Flow release branch.
+long-lived `develop` branch. Maintenance branches such as `release/1.0.x`
+represent supported patch lines, not Git Flow release branches.
 
 ## Branches
 
 - `main` is the default branch and should stay releasable.
+- `release/1.0.x` is the long-lived branch for the `1.0.*` patch line. Use it
+  for `1.0.*` release workflow, packaging, and patch stabilization work instead
+  of creating throwaway remote `ci/*` branches.
 - Prefer short-lived topic branches for non-trivial work:
   - `feat/<topic>` for user-visible features.
   - `fix/<topic>` for bug fixes.
@@ -18,12 +22,17 @@ long-lived `develop` branch or a permanent Git Flow release branch.
 - Direct commits to `main` are acceptable for small single-maintainer changes
   after local validation, but do not leave knowingly broken code on `main`.
 - Do not create a permanent `develop` branch.
-- Create `release/vX.Y.Z` only when a release needs a short stabilization branch
-  for multiple fixes or packaging iterations.
+- Create `release/vX.Y.Z` only when a specific release needs a short
+  stabilization branch for multiple fixes or packaging iterations outside an
+  existing patch-line branch.
 - Create `hotfix/vX.Y.Z` from the latest release tag only for urgent release
   fixes, then merge or cherry-pick the fix back to `main`.
-- Delete topic, release, and hotfix branches after they are merged or no longer
-  needed.
+- Merge PRs into `main` with rebase merge to keep history linear. After a
+  patch-line PR is merged, realign the patch-line branch with `main` before
+  starting the next change.
+- Delete short-lived topic, `release/vX.Y.Z`, and hotfix branches after they are
+  merged or no longer needed. Do not delete supported patch-line branches such as
+  `release/1.0.x`.
 
 ## Commits
 
