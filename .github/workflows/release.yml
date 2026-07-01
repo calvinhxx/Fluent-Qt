@@ -338,6 +338,20 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Generate release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/release/generate_changelog.py \
+            --tag "${{ needs.preflight.outputs.tag }}" \
+            --output release-notes.md
+
       - name: Download package artifacts
         uses: actions/download-artifact@v4
         with:
@@ -377,6 +391,10 @@ jobs:
           prerelease="${{ needs.preflight.outputs.prerelease }}"
 
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Fluent-QT $tag" \
+              --notes-file release-notes.md
             gh release upload "$tag" release-dist/* --repo "$GITHUB_REPOSITORY" --clobber
             exit 0
           fi
@@ -387,7 +405,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY"
             --verify-tag
             --title "Fluent-QT $tag"
-            --generate-notes
+            --notes-file release-notes.md
             --fail-on-no-commits
           )
 

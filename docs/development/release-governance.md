@@ -144,6 +144,28 @@ Automation should group commits as follows:
 Breaking changes must be called out in a dedicated section even when the project
 is still below `1.0.0`.
 
+Use the deterministic generator for release notes and changelog review:
+
+```bash
+python scripts/release/generate_changelog.py --from v1.0.0 --to HEAD
+python scripts/release/generate_changelog.py --tag v1.1.0 --output release-notes.md
+```
+
+`--tag` resolves the previous release tag automatically when `--from` is not
+provided. The generator skips merge commits and `chore(release): vX.Y.Z`
+release-marker commits, keeps section order stable, and includes short commit
+SHAs for traceability.
+
+Use `--check` before tagging when you want to fail on commits that cannot be
+classified by the Conventional Commit rules:
+
+```bash
+python scripts/release/generate_changelog.py --from v1.0.0 --to HEAD --check
+```
+
+The GitHub Release workflow publishes notes from this generator with
+`--notes-file` instead of GitHub's default generated notes.
+
 ## Release Checklist
 
 Before creating a stable tag:
