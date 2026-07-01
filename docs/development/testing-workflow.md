@@ -17,7 +17,7 @@ with README, CMake, and agent instructions.
 - `ci_full` is the curated GitHub Actions full-validation subset. It is broad
   enough to cover core helpers, representative components, platform-sensitive
   areas, and app build smoke coverage, but it is not the exhaustive local test
-  set.
+  set. Keep this target list small enough for a cold macOS arm64 runner.
 - `local_full` is the exhaustive non-manual Qt/GTest validation set for local
   host runs.
 - `manual_visual` identifies tests that must be reviewed by running the binary
@@ -58,6 +58,8 @@ ctest --preset vcpkg-osx -N -L '^platform_macos$'
   remains the broadest CI test lane for the curated `ci_full` subset; macOS x64
   is a Gallery build smoke; Windows lanes cover targeted platform, Qt 5.15 API,
   and ARM64 cross-build smoke coverage.
+- The macOS arm64 full lane uses a limited build parallelism to avoid runner
+  memory pressure while compiling and linking multiple Qt/GTest binaries.
 - CI build target selection is centralized in CMake:
   `fluent_qt_ci_fast_tests` builds only the fast API/environment test binaries,
   `fluent_qt_ci_full_tests` builds the selected CI-full test binaries, and
