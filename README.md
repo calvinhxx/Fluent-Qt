@@ -1,30 +1,65 @@
-# Fluent-QT
+<p align="center">
+  简体中文 | <a href="README.en.md">English</a>
+</p>
 
-A gallery of WinUI-style Qt Widgets.
+<p align="center">
+  <img src="app/assets/app-icon.png" width="88" alt="Fluent-QT logo">
+</p>
 
-Fluent-QT 是基于 Qt Widgets 的 Fluent / WinUI 风格组件库，支持 **Qt 5.15+** 和
-**Qt 6.2+**。CMake 会自动发现本机 Qt，并在版本不足时停止配置。
+<h1 align="center">Fluent-QT</h1>
 
-## 参考资料
+<p align="center">
+  面向 Qt Widgets 的现代 Fluent 组件库。
+  <br>
+  用 C++17 构建原生桌面体验，覆盖组件、设计 token、主题系统与 Gallery 示例应用。
+</p>
 
-- [Win UI Kit](https://aka.ms/WinUI/3.0-figma-toolkit)
-- [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery)
-- [Fluent UI 2 Web](https://developer.microsoft.com/en-us/fluentui#/controls/web)
+<p align="center">
+  <a href="https://github.com/calvinhxx/Fluent-QT/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-QT/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-111827.svg"></a>
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-111827.svg">
+  <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
+  <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
+  <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
+</p>
 
-多设计语言（Fluent / Material 3 / macOS）的样式主题规范见
-[docs/design-languages/README.md](docs/design-languages/README.md)，其中 Fluent 为基线
-（值取自本仓库 `src/design/*.h`），Material 3 与 macOS 的颜色 token、形状与组件规格均通过
-Figma MCP 从官方设计套件实证抽取，并以 Fluent 基线为差量：
+<p align="center">
+  <img src="docs/assets/readme/hero.png" alt="Fluent-QT Gallery 预览">
+</p>
 
-- [Fluent（Windows）设计参考](docs/design-languages/fluent.md)（基线，另两者为其差量）
-- [Material 3（Google）设计参考](docs/design-languages/material-3.md)
-- [macOS（Apple）设计参考](docs/design-languages/macos.md)
-- [Figma 来源与抽取方式](docs/design-languages/figma-sources.md)
+## ✨ 项目定位
 
-## 快速开始
+Fluent-QT 为传统 Qt Widgets 应用补齐现代桌面界面能力。它不要求迁移到 QML，而是在原生 Widgets 栈上提供可复用组件、设计规范、主题基础设施和可运行的 Gallery。
 
-项目使用 C++17、vcpkg manifest 依赖、GTest 和 spdlog。公共 CMake presets 默认开启测试，
-并要求先设置 `VCPKG_ROOT`。
+| 原生 Widgets | 设计系统 | Gallery 验证 |
+|---|---|---|
+| 保持 C++/Qt Widgets 工程形态。 | 以 Fluent 为基线，兼顾 Material 3 与 macOS 风格分支。 | 用真实应用展示组件状态、主题切换和示例代码。 |
+
+## 🧭 支持范围
+
+| 平台 | 架构 | 交付 |
+|---|---|---|
+| Windows | x64 / ARM64 | Debug、Release、installer |
+| macOS | arm64 / x64 | Debug、Release、DMG |
+
+## 🧱 依赖
+
+| 类别 | 要求 |
+|---|---|
+| Language | C++17 |
+| UI runtime | Qt 5.15+ 或 Qt 6.2+ |
+| Build | CMake、vcpkg |
+| Test / logging | GTest、spdlog |
+
+## 🧩 组件能力
+
+README 只保留能力概览，完整组件索引放在 Gallery 和后续官网中展示。
+
+覆盖范围包括：基础输入、集合视图、导航、弹层、文本输入、日期时间、菜单工具栏、滚动、状态反馈与窗口系统。
+
+## 🚀 快速开始
+
+macOS:
 
 ```bash
 export VCPKG_ROOT=/path/to/vcpkg
@@ -33,26 +68,18 @@ cmake --build --preset vcpkg-osx
 ctest --preset vcpkg-osx --output-on-failure
 ```
 
-Windows PowerShell:
+Windows:
 
 ```powershell
 $env:VCPKG_ROOT = "D:\path\to\vcpkg"
+cmake --preset vcpkg-windows
+cmake --build --preset vcpkg-windows
+ctest --preset vcpkg-windows --output-on-failure
 ```
 
-可用公共 presets:
+## 📦 打包
 
-- `vcpkg-osx`: macOS arm64 vcpkg build.
-- `vcpkg-osx-release`: macOS arm64 Release build for DMG packaging.
-- `vcpkg-osx-x64`: macOS x64 / Rosetta vcpkg build.
-- `vcpkg-osx-x64-release`: macOS x64 / Rosetta Release build for DMG packaging.
-- `vcpkg-windows`: Windows x64 vcpkg build.
-- `vcpkg-windows-release`: Windows x64 Release build for installer packaging.
-- `vcpkg-windows-arm64`: Windows ARM64 cross-build from an x64 host.
-- `vcpkg-windows-arm64-release`: Windows ARM64 Release build for installer packaging.
-
-## 打包
-
-macOS DMG:
+macOS:
 
 ```bash
 cmake --preset vcpkg-osx-release
@@ -60,7 +87,7 @@ cmake --build --preset vcpkg-osx-release
 cpack --preset vcpkg-osx-dmg
 ```
 
-Windows installer:
+Windows:
 
 ```powershell
 cmake --preset vcpkg-windows-release
@@ -68,55 +95,23 @@ cmake --build --preset vcpkg-windows-release
 cpack --preset vcpkg-windows-installer
 ```
 
-打包会在安装阶段运行 Qt 自带的 `macdeployqt` 或 `windeployqt` 复制 Qt 运行时。
-如果只想生成依赖本机 Qt 环境的非分发包，可在 configure 时添加
-`-DFLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME=OFF`。
+## 📚 文档
 
-## 本机工具链
+| 开发 | 测试 | 架构 | 设计 |
+|---|---|---|---|
+| [开发工作流](docs/development/README.md) | [测试工作流](docs/development/testing-workflow.md) | [架构约定](docs/architecture/README.md) | [设计语言参考](docs/design-languages/README.md) |
+| [发布治理](docs/development/release-governance.md) | [视觉验收](docs/development/visual-review.md) | [Overlay 行为](docs/architecture/overlay-behavior.md) | [Figma 来源](docs/design-languages/figma-sources.md) |
+| [打包工作流](docs/development/packaging-workflow.md) |  |  |  |
 
-日常开发可以直接用 Qt Creator、Visual Studio 或 Xcode 打开 CMake 项目，并选择本机已有的
-Qt Kit、编译器、generator 或 SDK。
+## 🔗 引用
 
-公共 `CMakePresets.json` 不写死 Qt、Ninja、MSVC、Xcode 或其它机器路径。本机路径请通过
-IDE Kit、shell 环境，或已被 git 忽略的 `CMakeUserPresets.json` 提供。如果 Qt 不在 CMake
-默认搜索路径中，把 `CMAKE_PREFIX_PATH` 或 `Qt6_DIR` 放进本机 user preset。
+| 入口 | 用途 |
+|---|---|
+| [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows 视觉基线 |
+| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS 风格分支参考 |
+| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 风格分支参考 |
+| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 组件语义与示例体验参考 |
 
-## 项目结构
+## License
 
-- [src/components/](src/components/)：可复用 Fluent Qt 组件与 component foundation。
-- [tests/components/](tests/components/)：与组件分类对应的 GTest / VisualCheck 测试。
-- [app/](app/)：Gallery 应用层代码，按 model / view / viewmodel 组织。
-- [tests/gallery/](tests/gallery/)：Gallery 应用层测试，可使用 app-only 几何验证辅助规则。
-
-## 日志
-
-Gallery 应用默认以 Info 级别将日志持久化到平台日志目录，并把 Qt 的
-qWarning/qDebug 汇入同一日志文件：
-
-- macOS: `~/Library/Application Support/Fluent-QT/Fluent-QT Gallery/logs/`
-- Windows: `%LOCALAPPDATA%\Fluent-QT\Fluent-QT Gallery\logs\`
-
-单文件写满 5MB 轮转为编号备份，磁盘最多保留 3 个文件。组件库 `fluent_qt_lib`
-保持中立默认值（Warn、仅控制台、无文件输出），第三方独立使用时通过
-`utils::logging::InitializationOptions` 自行配置。`SPDLOG_LEVEL` 环境变量可临时
-覆盖日志级别。规则详见 [Logging Workflow](docs/development/logging-workflow.md)。
-
-## 开发文档
-
-可复用开发规则集中在 [docs/development/README.md](docs/development/README.md):
-
-- [Testing Workflow](docs/development/testing-workflow.md)
-- [Release Governance](docs/development/release-governance.md)
-- [Packaging Workflow](docs/development/packaging-workflow.md)
-- [App Visual Geometry Verification](docs/development/app-visual-geometry-verification.md)
-- [Qt Component Test Conventions](docs/development/qt-component-test-conventions.md)
-- [Visual Review](docs/development/visual-review.md)
-- [Tooltip Usage](docs/development/tooltip-usage.md)
-- [Logging Workflow](docs/development/logging-workflow.md)
-- [Component API Conventions](docs/development/component-api-conventions.md)
-- [Component API Audit](docs/development/component-api-audit.md)
-- [Source Comment Style](docs/development/comment-style.md)
-
-架构约定见 [docs/architecture/README.md](docs/architecture/README.md)。涉及 Popup、Flyout、
-ComboBox dropdown、DrawerView 等 same-window overlay 行为时，优先看
-[Overlay Behavior Contract](docs/architecture/overlay-behavior.md)。
+Fluent-QT is released under the [MIT License](LICENSE).
