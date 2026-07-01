@@ -5,6 +5,35 @@ set(FLUENT_QT_CI_FAST_TARGETS
     test_qt_test_environment
 )
 
+set(FLUENT_QT_CI_FULL_TARGETS
+    ${FLUENT_QT_CI_FAST_TARGETS}
+    test_project_logging
+    test_anchor_layout
+    test_fluent_element
+    test_qml_plus
+    test_button
+    test_dropdown_button
+    test_checkbox
+    test_combo_box
+    test_slider
+    test_toggle_switch
+    test_list_view
+    test_flip_view
+    test_calendar_date_picker
+    test_popup
+    test_flyout
+    test_scroll_view
+    test_scrollbar
+    test_info_bar
+    test_progress_ring
+    test_tooltip
+    test_navigation_view
+    test_tab_view
+    test_line_edit
+    test_number_box
+    test_window
+)
+
 set(FLUENT_QT_MANUAL_VISUAL_TESTS
     SegoeTest.ComprehensiveCheck
     SliderTest.VisualSliderGalleryLike
@@ -101,6 +130,11 @@ macro(add_qt_test_module module_name source_file)
         if(NOT _fluent_qt_ci_fast_target_index EQUAL -1)
             set(_fluent_qt_is_ci_fast_target TRUE)
         endif()
+        set(_fluent_qt_is_ci_full_target FALSE)
+        list(FIND FLUENT_QT_CI_FULL_TARGETS "${module_name}" _fluent_qt_ci_full_target_index)
+        if(NOT _fluent_qt_ci_full_target_index EQUAL -1)
+            set(_fluent_qt_is_ci_full_target TRUE)
+        endif()
         set(_fluent_qt_target_has_ci_full FALSE)
 
         set_tests_properties(${_fluent_qt_registered_tests} PROPERTIES
@@ -144,6 +178,9 @@ macro(add_qt_test_module module_name source_file)
                 list(APPEND _fluent_qt_labels platform_macos)
             endif()
             if(NOT _fluent_qt_is_manual_visual)
+                list(APPEND _fluent_qt_labels local_full)
+            endif()
+            if(_fluent_qt_is_ci_full_target AND NOT _fluent_qt_is_manual_visual AND NOT _fluent_qt_is_local_desktop)
                 list(APPEND _fluent_qt_labels ci_full)
                 set(_fluent_qt_target_has_ci_full TRUE)
             endif()

@@ -14,8 +14,12 @@ with README, CMake, and agent instructions.
   labels.
 - `ci_fast` is intentionally tiny and reserved for stable core checks used by
   the default GitHub Actions path.
-- `ci_full` is the non-interactive automated test set. It excludes explicit
-  manual visual tests, and CI also excludes tests marked `local_desktop`.
+- `ci_full` is the curated GitHub Actions full-validation subset. It is broad
+  enough to cover core helpers, representative components, platform-sensitive
+  areas, and app build smoke coverage, but it is not the exhaustive local test
+  set.
+- `local_full` is the exhaustive non-manual Qt/GTest validation set for local
+  host runs.
 - `manual_visual` identifies tests that must be reviewed by running the binary
   directly. `local_desktop` identifies tests that need a real windowing desktop
   rather than the CI offscreen platform.
@@ -32,6 +36,7 @@ ctest --preset vcpkg-osx -L '^date_time$'
 ctest --preset vcpkg-osx -L '^test_date_picker$'
 ctest --preset vcpkg-osx -N -L '^ci_fast$'
 ctest --preset vcpkg-osx -L '^ci_full$' -LE '^(manual_visual|local_desktop)$' --output-on-failure
+ctest --preset vcpkg-osx -L '^local_full$' --output-on-failure
 ctest --preset vcpkg-osx -N -L '^visual$'
 ctest --preset vcpkg-osx -N -L '^manual_visual$'
 ctest --preset vcpkg-osx -N -L '^local_desktop$'
@@ -50,29 +55,32 @@ ctest --preset vcpkg-osx -N -L '^platform_macos$'
 - GitHub Actions `matrix=fast` is the default PR/push validation tier. It builds
   a narrow Windows x64 Qt 6.2 target set and runs a macOS arm64 configure smoke.
 - GitHub Actions `matrix=full` is the scheduled/manual CI matrix. macOS arm64
-  remains the full non-interactive build/test lane; macOS x64 is a Gallery build
-  smoke; Windows lanes cover targeted platform, Qt 5.15 API, and ARM64
-  cross-build smoke coverage.
+  remains the broadest CI test lane for the curated `ci_full` subset; macOS x64
+  is a Gallery build smoke; Windows lanes cover targeted platform, Qt 5.15 API,
+  and ARM64 cross-build smoke coverage.
 - CI build target selection is centralized in CMake:
   `fluent_qt_ci_fast_tests` builds only the fast API/environment test binaries,
-  `fluent_qt_ci_full_tests` builds test binaries that contain at least one
-  non-manual `ci_full` test, and `fluent_qt_all_tests` builds every registered
-  Qt/GTest binary for local host validation. Keep workflow YAML on these
-  aggregate targets instead of duplicating long target lists there.
+  `fluent_qt_ci_full_tests` builds the selected CI-full test binaries, and
+  `fluent_qt_all_tests` builds every registered Qt/GTest binary for local host
+  validation. Keep workflow YAML on these aggregate targets instead of
+  duplicating long target lists there.
+- When adding a new `add_qt_test_module` target, decide whether it belongs in
+  `FLUENT_QT_CI_FAST_TARGETS`, `FLUENT_QT_CI_FULL_TARGETS`, or local-only
+  `fluent_qt_all_tests`.
 - Local host full validation means configuring, building, and running all CTest
-  tests for the current host preset. VisualCheck tests still auto-skip through
-  `SKIP_VISUAL_TEST=1`:
+  non-manual tests for the current host preset. VisualCheck tests stay in
+  `manual_visual`; use `-LE '^local_desktop$'` when running on a headless host:
 
 ```bash
 cmake --preset vcpkg-osx
-cmake --build --preset vcpkg-osx --parallel
-ctest --preset vcpkg-osx --output-on-failure --timeout 180
+cmake --build --preset vcpkg-osx --target fluent_qt_all_tests --parallel
+ctest --preset vcpkg-osx -L '^local_full$' --output-on-failure --timeout 180
 ```
 
 ```powershell
 cmake --preset vcpkg-windows
-cmake --build --preset vcpkg-windows --parallel
-ctest --preset vcpkg-windows --output-on-failure --timeout 180
+cmake --build --preset vcpkg-windows --target fluent_qt_all_tests --parallel
+ctest --preset vcpkg-windows -L '^local_full$' --output-on-failure --timeout 180
 ```
 
 ## VisualCheck
