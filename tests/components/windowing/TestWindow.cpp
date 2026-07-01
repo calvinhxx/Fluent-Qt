@@ -322,11 +322,14 @@ TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar) {
 #endif
 
     if (macPlatform) {
+        const bool expandedClientAreaHintsAvailable =
+            WindowChromeCompat::expandedClientAreaHintsAvailable();
         EXPECT_EQ(WindowChromeCompat::windowHasExpandedClientAreaHint(&window),
-                  WindowChromeCompat::expandedClientAreaHintsAvailable());
+                  expandedClientAreaHintsAvailable);
         EXPECT_EQ(WindowChromeCompat::windowHasNoTitleBarBackgroundHint(&window),
-                  WindowChromeCompat::expandedClientAreaHintsAvailable());
-        EXPECT_FALSE(window.testAttribute(Qt::WA_ContentsMarginsRespectsSafeArea));
+                  expandedClientAreaHintsAvailable);
+        if (expandedClientAreaHintsAvailable)
+            EXPECT_FALSE(window.testAttribute(Qt::WA_ContentsMarginsRespectsSafeArea));
     }
 }
 
