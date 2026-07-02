@@ -53,9 +53,7 @@ Fluent-QT brings modern desktop UI capabilities to traditional Qt Widgets applic
 
 ## 🧩 Component Scope
 
-This README keeps the component overview concise. The full component index belongs in the Gallery and the upcoming website.
-
-Fluent-QT covers the core surfaces of desktop applications: basic input, collections, navigation, overlays, text input, date and time, menus and toolbars, scrolling, status feedback, and windowing.
+Fluent-QT covers core desktop UI surfaces including basic input, collections, navigation, overlays, text input, date and time, menus and toolbars, scrolling, status feedback, and windowing.
 
 ## 🚀 Quick Start
 
