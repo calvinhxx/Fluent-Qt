@@ -1,5 +1,5 @@
 <p align="center">
-  简体中文 | <a href="README.en.md">English</a>
+  English | <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 <p align="center">
@@ -9,9 +9,9 @@
 <h1 align="center">Fluent-QT</h1>
 
 <p align="center">
-  面向 Qt Widgets 的现代 Fluent 组件库。
+  A modern Fluent component library for Qt Widgets.
   <br>
-  用 C++17 构建原生桌面体验，覆盖组件、设计 token、主题系统与 Gallery 示例应用。
+  Build native desktop experiences with C++17, reusable components, design tokens, themes, and a live Gallery app.
 </p>
 
 <p align="center">
@@ -24,38 +24,38 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/readme/hero.png" alt="Fluent-QT Gallery 预览">
+  <img src="docs/assets/readme/hero.png" alt="Fluent-QT Gallery preview">
 </p>
 
-## ✨ 项目定位
+## ✨ Positioning
 
-Fluent-QT 为传统 Qt Widgets 应用补齐现代桌面界面能力。它不要求迁移到 QML，而是在原生 Widgets 栈上提供可复用组件、设计规范、主题基础设施和可运行的 Gallery。
+Fluent-QT brings modern desktop UI capabilities to traditional Qt Widgets applications. It does not require moving to QML; instead, it provides reusable components, design specifications, theme infrastructure, and a runnable Gallery on top of the native Widgets stack.
 
-| 原生 Widgets | 设计系统 | Gallery 验证 |
+| Native Widgets | Design System | Gallery Validation |
 |---|---|---|
-| 保持 C++/Qt Widgets 工程形态。 | 以 Fluent 为基线，兼顾 Material 3 与 macOS 风格分支。 | 用真实应用展示组件状态、主题切换和示例代码。 |
+| Keeps the C++/Qt Widgets application model. | Uses Fluent as the baseline, with Material 3 and macOS style branches. | Demonstrates component states, theme switching, and sample code in a real app. |
 
-## 🧭 支持范围
+## 🧭 Support Matrix
 
-| 平台 | 架构 | 交付 |
+| Platform | Architecture | Delivery |
 |---|---|---|
-| Windows | x64 / ARM64 | Debug、Release、installer |
-| macOS | arm64 / x64 | Debug、Release、DMG |
+| Windows | x64 / ARM64 | Debug, Release, installer |
+| macOS | arm64 / x64 | Debug, Release, DMG |
 
-## 🧱 依赖
+## 🧱 Dependencies
 
-| 类别 | 要求 |
+| Category | Requirement |
 |---|---|
 | Language | C++17 |
-| UI runtime | Qt 5.15+ 或 Qt 6.2+ |
-| Build | CMake、vcpkg |
-| Test / logging | GTest、spdlog |
+| UI runtime | Qt 5.15+ or Qt 6.2+ |
+| Build | CMake, vcpkg |
+| Test / logging | GTest, spdlog |
 
-## 🧩 组件能力
+## 🧩 Component Scope
 
-覆盖基础输入、集合视图、导航、弹层、文本输入、日期时间、菜单工具栏、滚动、状态反馈与窗口系统等桌面应用核心界面能力。
+Fluent-QT covers core desktop UI surfaces including basic input, collections, navigation, overlays, text input, date and time, menus and toolbars, scrolling, status feedback, and windowing.
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
 macOS:
 
@@ -75,7 +75,7 @@ cmake --build --preset vcpkg-windows
 ctest --preset vcpkg-windows --output-on-failure
 ```
 
-## 📦 打包
+## 📦 Packaging
 
 macOS:
 
@@ -93,22 +93,22 @@ cmake --build --preset vcpkg-windows-release
 cpack --preset vcpkg-windows-installer
 ```
 
-## 📚 文档
+## 📚 Documentation
 
-| 开发 | 测试 | 架构 | 设计 |
+| Development | Testing | Architecture | Design |
 |---|---|---|---|
-| [开发工作流](docs/development/README.md) | [测试工作流](docs/development/testing-workflow.md) | [架构约定](docs/architecture/README.md) | [设计语言参考](docs/design-languages/README.md) |
-| [发布治理](docs/development/release-governance.md) | [视觉验收](docs/development/visual-review.md) | [Overlay 行为](docs/architecture/overlay-behavior.md) | [Figma 来源](docs/design-languages/figma-sources.md) |
-| [打包工作流](docs/development/packaging-workflow.md) |  |  |  |
+| [Development workflow](docs/development/README.md) | [Testing workflow](docs/development/testing-workflow.md) | [Architecture contracts](docs/architecture/README.md) | [Design language references](docs/design-languages/README.md) |
+| [Release governance](docs/development/release-governance.md) | [Visual review](docs/development/visual-review.md) | [Overlay behavior](docs/architecture/overlay-behavior.md) | [Figma sources](docs/design-languages/figma-sources.md) |
+| [Packaging workflow](docs/development/packaging-workflow.md) |  |  |  |
 
-## 🔗 引用
+## 🔗 References
 
-| 入口 | 用途 |
+| Entry | Purpose |
 |---|---|
-| [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows 视觉基线 |
-| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS 风格分支参考 |
-| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 风格分支参考 |
-| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 组件语义与示例体验参考 |
+| [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows visual baseline |
+| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | Reference for the macOS style branch |
+| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Reference for the Material 3 style branch |
+| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | Reference for component semantics and sample experience |
 
 ## ⭐ Star History
 
