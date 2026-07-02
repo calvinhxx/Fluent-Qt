@@ -62,6 +62,10 @@ target_link_libraries(fluent_qt_lib
 	Qt${QT_VERSION_MAJOR}::Widgets
 	spdlog::spdlog
 )
+if(APPLE)
+	find_library(COREGRAPHICS_FRAMEWORK CoreGraphics REQUIRED)
+	target_link_libraries(fluent_qt_lib PUBLIC ${COREGRAPHICS_FRAMEWORK})
+endif()
 target_include_directories(fluent_qt_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(FLUENT_QT_BUILD_GALLERY)
