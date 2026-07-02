@@ -142,6 +142,7 @@ jobs:
                 "qt_version": "6.9.3",
                 "qt_arch": "clang_64",
                 "host_qt_arch": "",
+                "asset_suffix": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": false
               },
@@ -153,6 +154,7 @@ jobs:
                 "qt_version": "6.9.3",
                 "qt_arch": "win64_msvc2022_64",
                 "host_qt_arch": "",
+                "asset_suffix": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": true
               }
@@ -171,6 +173,7 @@ jobs:
                 "qt_version": "6.9.3",
                 "qt_arch": "clang_64",
                 "host_qt_arch": "",
+                "asset_suffix": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": false
               },
@@ -182,6 +185,7 @@ jobs:
                 "qt_version": "6.9.3",
                 "qt_arch": "clang_64",
                 "host_qt_arch": "",
+                "asset_suffix": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": false
               },
@@ -193,6 +197,7 @@ jobs:
                 "qt_version": "6.9.3",
                 "qt_arch": "win64_msvc2022_64",
                 "host_qt_arch": "",
+                "asset_suffix": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": true
               },
@@ -204,7 +209,32 @@ jobs:
                 "qt_version": "6.9.3",
                 "qt_arch": "win64_msvc2022_arm64_cross_compiled",
                 "host_qt_arch": "win64_msvc2022_64",
+                "asset_suffix": "",
                 "windows_arm64_cross": true,
+                "needs_nsis": true
+              },
+              {
+                "artifact": "macos-x64-qt515",
+                "os": "macos-15-intel",
+                "preset": "vcpkg-osx-x64-release",
+                "package_preset": "vcpkg-osx-x64-dmg",
+                "qt_version": "5.15.2",
+                "qt_arch": "clang_64",
+                "host_qt_arch": "",
+                "asset_suffix": "Qt5.15",
+                "windows_arm64_cross": false,
+                "needs_nsis": false
+              },
+              {
+                "artifact": "windows-x64-qt515",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows-release",
+                "package_preset": "vcpkg-windows-installer",
+                "qt_version": "5.15.2",
+                "qt_arch": "win64_msvc2019_64",
+                "host_qt_arch": "",
+                "asset_suffix": "Qt5.15",
+                "windows_arm64_cross": false,
                 "needs_nsis": true
               }
             ]
@@ -379,12 +409,17 @@ jobs:
             throw "No release package was found in $source."
           }
 
+          $assetSuffix = "${{ matrix.asset_suffix }}"
           foreach ($package in $packages) {
-            Copy-Item -LiteralPath $package.FullName -Destination $destination
-            $checksum = "$($package.FullName).sha256"
-            if (Test-Path -LiteralPath $checksum) {
-              Copy-Item -LiteralPath $checksum -Destination $destination
+            $targetName = $package.Name
+            if ($assetSuffix) {
+              $targetName = "$($package.BaseName)-$assetSuffix$($package.Extension)"
             }
+            $targetPath = Join-Path $destination $targetName
+            Copy-Item -LiteralPath $package.FullName -Destination $targetPath
+
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $targetPath).Hash.ToLowerInvariant()
+            Set-Content -LiteralPath "$targetPath.sha256" -Value "$hash  $targetName" -Encoding ASCII
           }
 
       - name: Upload package artifact
