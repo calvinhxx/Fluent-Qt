@@ -112,6 +112,17 @@ cpack --preset vcpkg-windows-installer
 | [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Reference for the Material 3 style branch |
 | [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | Reference for component semantics and sample experience |
 
+## ⭐ Star History
+
+<p align="center">
+  <a href="https://www.star-history.com/#calvinhxx/Fluent-QT&Date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-QT&type=Date&theme=dark">
+      <img alt="Fluent-QT Star History Chart" src="https://api.star-history.com/svg?repos=calvinhxx/Fluent-QT&type=Date">
+    </picture>
+  </a>
+</p>
+
 ## License
 
 Fluent-QT is released under the [MIT License](LICENSE).
