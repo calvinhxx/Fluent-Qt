@@ -13,6 +13,7 @@
     <meta property="og:description" content="Modern Fluent UI for native Qt Widgets.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/gallery/gallery-hero-real.png">
+    <meta name="fluent-qt-cloudflare-token" content="">
     <link rel="icon" href="assets/app-icon.png">
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -35,7 +36,7 @@
             <button class="active" type="button" data-lang="zh" aria-pressed="true">中</button>
             <button type="button" data-lang="en" aria-pressed="false">EN</button>
           </div>
-          <a class="nav-action" href="https://github.com/calvinhxx/Fluent-QT">GitHub</a>
+          <a class="nav-action" href="https://github.com/calvinhxx/Fluent-QT" data-analytics-event="github_nav">GitHub</a>
         </div>
       </nav>
     </header>
@@ -58,7 +59,7 @@
               <h3 id="download-title" data-i18n="downloads.desktopTitle">桌面端</h3>
               <p data-i18n="downloads.desktopCopy">下载最新 Fluent-QT Gallery 应用。</p>
 
-              <a class="quick-download quick-download-primary" data-primary-download href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-x64.exe">
+              <a class="quick-download quick-download-primary" data-primary-download data-analytics-event="download_primary" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-x64.exe">
                 <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                 <span>
                   <strong data-primary-download-label data-i18n="downloads.primaryWindows">下载 Windows 版</strong>
@@ -66,28 +67,28 @@
               </a>
 
               <div class="download-list" aria-label="Other desktop downloads">
-                <a class="download-option" data-release-asset="macArm" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Darwin-arm64.dmg">
+                <a class="download-option" data-release-asset="macArm" data-analytics-event="download_macos_arm64" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Darwin-arm64.dmg">
                   <span class="platform-mark platform-mark-mac" aria-hidden="true"></span>
                   <span>
                     <strong data-i18n="downloads.macArm.row">macOS</strong>
                     <small>Apple Silicon</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="macIntel" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Darwin-x86_64.dmg">
+                <a class="download-option" data-release-asset="macIntel" data-analytics-event="download_macos_intel" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Darwin-x86_64.dmg">
                   <span class="platform-mark platform-mark-mac" aria-hidden="true"></span>
                   <span>
                     <strong data-i18n="downloads.macIntel.row">macOS (Intel)</strong>
                     <small>Intel</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="windowsX64" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-x64.exe">
+                <a class="download-option" data-release-asset="windowsX64" data-analytics-event="download_windows_x64" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-x64.exe">
                   <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                   <span>
                     <strong>Windows</strong>
                     <small>x64</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="windowsArm" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-arm64.exe">
+                <a class="download-option" data-release-asset="windowsArm" data-analytics-event="download_windows_arm64" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-arm64.exe">
                   <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                   <span>
                     <strong>Windows (arm64)</strong>
@@ -668,6 +669,10 @@
       const languageButtons = Array.from(document.querySelectorAll("[data-lang]"));
       const translatableNodes = Array.from(document.querySelectorAll("[data-i18n]"));
       const metaDescription = document.querySelector("meta[name='description']");
+      const cloudflareAnalyticsToken = document
+        .querySelector("meta[name='fluent-qt-cloudflare-token']")
+        ?.getAttribute("content")
+        ?.trim();
       const latestReleaseApi = "https://api.github.com/repos/calvinhxx/Fluent-QT/releases/latest";
       const releaseState = {
         architecture: "",
@@ -690,6 +695,45 @@
           primaryWindows: "Download for Windows"
         }
       };
+
+      function loadCloudflareAnalytics() {
+        if (!cloudflareAnalyticsToken) {
+          return;
+        }
+        const script = document.createElement("script");
+        script.defer = true;
+        script.src = "https://static.cloudflareinsights.com/beacon.min.js";
+        script.dataset.cfBeacon = JSON.stringify({ token: cloudflareAnalyticsToken });
+        document.head.appendChild(script);
+      }
+
+      function trackAnalyticsEvent(eventName, properties = {}) {
+        if (!eventName) {
+          return;
+        }
+        if (typeof window.plausible === "function") {
+          window.plausible(eventName, { props: properties });
+        }
+        if (window.umami && typeof window.umami.track === "function") {
+          window.umami.track(eventName, properties);
+        }
+        if (typeof window.gtag === "function") {
+          window.gtag("event", eventName, properties);
+        }
+      }
+
+      function setupAnalyticsEvents() {
+        document.querySelectorAll("[data-analytics-event]").forEach((link) => {
+          link.addEventListener("click", () => {
+            const assetKey = link.dataset.releaseAsset || (link.hasAttribute("data-primary-download") ? choosePrimaryAsset() : "");
+            trackAnalyticsEvent(link.dataset.analyticsEvent, {
+              asset: assetKey,
+              href: link.href,
+              release: releaseState.release?.tagName || readFallbackRelease().tagName
+            });
+          });
+        });
+      }
 
       function detectPlatform() {
         const userAgentPlatform = navigator.userAgentData?.platform || "";
@@ -944,6 +988,8 @@
         button.addEventListener("click", () => setLanguage(button.dataset.lang));
       });
 
+      loadCloudflareAnalytics();
+      setupAnalyticsEvents();
       releaseState.platform = detectPlatform();
       setLanguage(detectPreferredLanguage(), false);
       hydrateLatestRelease();
