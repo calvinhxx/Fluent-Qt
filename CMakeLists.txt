@@ -64,7 +64,8 @@ target_link_libraries(fluent_qt_lib
 )
 if(APPLE)
 	find_library(COREGRAPHICS_FRAMEWORK CoreGraphics REQUIRED)
-	target_link_libraries(fluent_qt_lib PUBLIC ${COREGRAPHICS_FRAMEWORK})
+	find_library(OBJC_LIBRARY objc REQUIRED)
+	target_link_libraries(fluent_qt_lib PUBLIC ${COREGRAPHICS_FRAMEWORK} ${OBJC_LIBRARY})
 endif()
 target_include_directories(fluent_qt_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
