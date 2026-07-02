@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fluent-QT - 面向 Qt Widgets 的现代 Fluent UI</title>
+    <meta
+      name="description"
+      content="Fluent-QT 是一个开源的 Fluent / WinUI 风格 Qt Widgets 组件库和 Gallery 应用。"
+    >
+    <meta name="theme-color" content="#f7f8fa">
+    <meta property="og:title" content="Fluent-QT">
+    <meta property="og:description" content="Modern Fluent UI for native Qt Widgets.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/gallery/gallery-hero-real.png">
+    <link rel="icon" href="assets/app-icon.png">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Primary navigation">
+        <a class="brand" href="#top" aria-label="Fluent-QT home">
+          <img src="assets/app-icon.png" alt="" width="32" height="32">
+          <span>Fluent-QT</span>
+        </a>
+        <div class="nav-links">
+          <a href="#why" data-i18n="nav.why">价值</a>
+          <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
+          <a href="#components" data-i18n="nav.components">组件</a>
+          <a href="#code" data-i18n="nav.code">场景</a>
+          <a href="#engineering" data-i18n="nav.engineering">工程化</a>
+        </div>
+        <div class="nav-tools">
+          <div class="language-toggle" role="group" aria-label="Language switcher">
+            <button class="active" type="button" data-lang="zh" aria-pressed="true">中</button>
+            <button type="button" data-lang="en" aria-pressed="false">EN</button>
+          </div>
+          <a class="nav-action" href="https://github.com/calvinhxx/Fluent-QT">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="section-shell hero-grid">
+          <div class="hero-copy">
+            <h1 id="hero-title" data-i18n="hero.title">Qt Widgets 的现代 Fluent UI。</h1>
+            <p class="hero-lede" data-i18n="hero.lede">
+              Fluent-QT 帮助 C++ / Qt 桌面应用更新界面语言，同时保留 QWidget 的原生性能、系统集成和成熟工程结构。
+            </p>
+          </div>
+          <aside class="download-panel" aria-labelledby="download-title">
+            <div class="desktop-download-card" aria-labelledby="download-title">
+              <div class="download-card-head">
+                <span class="download-kicker" data-i18n="downloads.latest">最新版本</span>
+                <a class="download-version-pill" data-release-link href="https://github.com/calvinhxx/Fluent-QT/releases/tag/v1.0.1">v1.0.1</a>
+              </div>
+              <h3 id="download-title" data-i18n="downloads.desktopTitle">桌面端</h3>
+              <p data-i18n="downloads.desktopCopy">下载最新 Fluent-QT Gallery 应用。</p>
+
+              <a class="quick-download quick-download-primary" data-primary-download href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-x64.exe">
+                <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
+                <span>
+                  <strong data-primary-download-label data-i18n="downloads.primaryWindows">下载 Windows 版</strong>
+                </span>
+              </a>
+
+              <div class="download-list" aria-label="Other desktop downloads">
+                <a class="download-option" data-release-asset="macArm" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Darwin-arm64.dmg">
+                  <span class="platform-mark platform-mark-mac" aria-hidden="true"></span>
+                  <span>
+                    <strong data-i18n="downloads.macArm.row">macOS</strong>
+                    <small>Apple Silicon</small>
+                  </span>
+                </a>
+                <a class="download-option" data-release-asset="macIntel" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Darwin-x86_64.dmg">
+                  <span class="platform-mark platform-mark-mac" aria-hidden="true"></span>
+                  <span>
+                    <strong data-i18n="downloads.macIntel.row">macOS (Intel)</strong>
+                    <small>Intel</small>
+                  </span>
+                </a>
+                <a class="download-option" data-release-asset="windowsX64" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-x64.exe">
+                  <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
+                  <span>
+                    <strong>Windows</strong>
+                    <small>x64</small>
+                  </span>
+                </a>
+                <a class="download-option" data-release-asset="windowsArm" href="https://github.com/calvinhxx/Fluent-QT/releases/download/v1.0.1/Fluent-QT-Gallery-1.0.1-Windows-arm64.exe">
+                  <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
+                  <span>
+                    <strong>Windows (arm64)</strong>
+                    <small>ARM64</small>
+                  </span>
+                </a>
+              </div>
+
+            </div>
+          </aside>
+          <div class="hero-support" aria-label="Project support">
+            <article>
+              <span data-i18n="hero.supportRuntimeLabel">UI 栈</span>
+              <strong>Qt Widgets</strong>
+            </article>
+            <article>
+              <span data-i18n="hero.supportQtLabel">Qt 支持</span>
+              <strong>Qt 5.15+ / Qt 6.2+</strong>
+            </article>
+            <article>
+              <span data-i18n="hero.supportPlatformLabel">平台支持</span>
+              <strong>Windows / macOS</strong>
+            </article>
+            <article>
+              <span data-i18n="hero.supportLanguageLabel">语言标准</span>
+              <strong>C++17</strong>
+            </article>
+          </div>
+        </div>
+
+        <div class="section-shell">
+          <figure class="window-frame hero-window">
+            <div class="window-bar" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <img src="assets/gallery/gallery-hero-real.png" alt="Fluent-QT Gallery showing real component pages">
+          </figure>
+        </div>
+      </section>
+
+      <section class="section-shell problem-section value-section" id="why" aria-labelledby="why-title">
+        <div class="value-intro">
+          <p class="eyebrow" data-i18n="why.eyebrow">价值定位</p>
+          <h2 id="why-title" data-i18n="why.title">不是替换 Qt，而是现代化 Qt Widgets。</h2>
+        </div>
+
+        <div class="value-board">
+          <article class="value-thesis" aria-labelledby="comparison-title">
+            <span data-i18n="comparison.title">一句话定位</span>
+            <h3 id="comparison-title" data-i18n="comparison.copy">Fluent-QT 不是新的运行时，而是给已有 Qt Widgets 产品补一套现代、统一、可复用的桌面组件层。</h3>
+            <small>QWidget-first / Fluent-style / Native desktop</small>
+          </article>
+
+          <div class="value-points">
+            <article>
+              <span>01</span>
+              <div>
+                <h3 data-i18n="problems.visual.title">保留 Qt Widgets 资产</h3>
+                <p data-i18n="problems.visual.copy">继续复用已有 C++ 代码、事件模型和窗口体系，不强制重写成熟页面。</p>
+              </div>
+            </article>
+            <article>
+              <span>02</span>
+              <div>
+                <h3 data-i18n="problems.rewrite.title">从组件层统一视觉</h3>
+                <p data-i18n="problems.rewrite.copy">把按钮、输入、导航、弹窗和状态反馈统一到可维护的 Fluent / WinUI 风格。</p>
+              </div>
+            </article>
+            <article>
+              <span>03</span>
+              <div>
+                <h3 data-i18n="problems.native.title">保留原生桌面能力</h3>
+                <p data-i18n="problems.native.copy">适合开发者工具、内部工具、AI 桌面客户端和 Overlay 控制台。</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="decision-strip">
+            <article>
+              <span data-i18n="comparison.fluent.label">适合 Fluent-QT</span>
+              <strong data-i18n="comparison.fluent.copy">已有 C++ / QWidget 项目，希望现代化 UI，但不想迁移到 QML、Electron 或 Flutter。</strong>
+            </article>
+            <article>
+              <span data-i18n="comparison.rewrite.label">适合重写方案</span>
+              <strong data-i18n="comparison.rewrite.copy">新产品、强动效、Web 团队主导，或已经准备接受新的语言、运行时和工程模型。</strong>
+            </article>
+            <article>
+              <span data-i18n="comparison.qss.label">不建议只堆 QSS</span>
+              <strong data-i18n="comparison.qss.copy">短期能修外观，但状态、暗色模式、间距和组件一致性会越来越难维护。</strong>
+            </article>
+        </div>
+      </section>
+
+      <section class="gallery-section" id="gallery" aria-labelledby="gallery-title">
+        <div class="section-shell">
+          <div class="split-heading">
+            <div>
+              <p class="eyebrow">Gallery</p>
+              <h2 id="gallery-title" data-i18n="gallery.title">用真实运行的桌面应用说话。</h2>
+            </div>
+            <p data-i18n="gallery.copy">
+              Gallery 是最强的可信证明。真实截图比重复堆功能卡片更快让开发者判断这个项目是否能用。
+            </p>
+          </div>
+
+          <div class="gallery-board">
+            <article class="gallery-primary">
+              <img src="assets/gallery/gallery-home-real.png" alt="Fluent-QT Gallery application shell">
+              <div>
+                <h3 data-i18n="gallery.primary.title">Gallery 应用外壳</h3>
+                <p data-i18n="gallery.primary.copy">真实导航、真实组件页、真实信息密度。开发者应该先看到这个可运行界面。</p>
+              </div>
+            </article>
+
+            <div class="gallery-stack">
+              <article>
+                <img src="assets/gallery/gallery-button-real.png" alt="Button states in Fluent-QT Gallery">
+                <div>
+                  <h3 data-i18n="gallery.buttons.title">按钮状态</h3>
+                  <p data-i18n="gallery.buttons.copy">样式、尺寸、图标和交互状态。</p>
+                </div>
+              </article>
+              <article>
+                <img src="assets/gallery/gallery-toggleswitch-real.png" alt="ToggleSwitch in Fluent-QT Gallery">
+                <div>
+                  <h3>ToggleSwitch</h3>
+                  <p data-i18n="gallery.toggle.copy">用于原生设置界面的二值控件。</p>
+                </div>
+              </article>
+              <article>
+                <img src="assets/gallery/gallery-slider-real.png" alt="Slider in Fluent-QT Gallery">
+                <div>
+                  <h3>Slider</h3>
+                  <p data-i18n="gallery.slider.copy">范围、数值、步进和轨道渲染。</p>
+                </div>
+              </article>
+              <article>
+                <img src="assets/gallery/gallery-collections-real.png" alt="Collections in Fluent-QT Gallery">
+                <div>
+                  <h3 data-i18n="gallery.collections.title">集合视图</h3>
+                  <p data-i18n="gallery.collections.copy">面向密集列表和集合型界面。</p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="component-section" id="components" aria-labelledby="components-title">
+        <div class="section-shell">
+          <div class="split-heading compact-heading">
+            <div>
+              <p class="eyebrow" data-i18n="components.eyebrow">组件</p>
+              <h2 id="components-title" data-i18n="components.title">像浏览一个真实工具箱一样展示组件。</h2>
+            </div>
+          </div>
+
+          <div class="component-browser">
+            <aside class="component-rail" aria-label="Component categories">
+              <a class="active" href="#components" data-i18n="componentRail.input">基础输入</a>
+              <a href="#components" data-i18n="componentRail.fields">文本控件</a>
+              <a href="#components" data-i18n="componentRail.navigation">导航</a>
+              <a href="#components" data-i18n="componentRail.dialogs">弹窗与浮层</a>
+              <a href="#components" data-i18n="componentRail.status">状态反馈</a>
+              <a href="#components" data-i18n="componentRail.collections">集合视图</a>
+            </aside>
+
+            <div class="component-grid">
+              <article>
+                <img src="assets/components/button.png" alt="Button component thumbnail">
+                <h3>Button</h3>
+                <p data-i18n="componentCards.button">命令入口</p>
+              </article>
+              <article>
+                <img src="assets/components/toggle-switch.png" alt="ToggleSwitch component thumbnail">
+                <h3>ToggleSwitch</h3>
+                <p data-i18n="componentCards.toggle">二值设置</p>
+              </article>
+              <article>
+                <img src="assets/components/slider.png" alt="Slider component thumbnail">
+                <h3>Slider</h3>
+                <p data-i18n="componentCards.slider">连续数值</p>
+              </article>
+              <article>
+                <img src="assets/components/combo-box.png" alt="ComboBox component thumbnail">
+                <h3>ComboBox</h3>
+                <p data-i18n="componentCards.combo">选项选择</p>
+              </article>
+              <article>
+                <img src="assets/components/line-edit.png" alt="LineEdit component thumbnail">
+                <h3>LineEdit</h3>
+                <p data-i18n="componentCards.lineEdit">聚焦文本输入</p>
+              </article>
+              <article>
+                <img src="assets/components/color-picker.png" alt="ColorPicker component thumbnail">
+                <h3>ColorPicker</h3>
+                <p data-i18n="componentCards.color">可视化选色</p>
+              </article>
+              <article>
+                <img src="assets/components/navigation-view.png" alt="NavigationView component thumbnail">
+                <h3>NavigationView</h3>
+                <p data-i18n="componentCards.navigation">应用外壳导航</p>
+              </article>
+              <article>
+                <img src="assets/components/tab-view.png" alt="TabView component thumbnail">
+                <h3>TabView</h3>
+                <p data-i18n="componentCards.tab">多面板工具</p>
+              </article>
+              <article>
+                <img src="assets/components/list-view.png" alt="ListView component thumbnail">
+                <h3>ListView</h3>
+                <p data-i18n="componentCards.list">密集行列表</p>
+              </article>
+              <article>
+                <img src="assets/components/tree-view.png" alt="TreeView component thumbnail">
+                <h3>TreeView</h3>
+                <p data-i18n="componentCards.tree">层级结构</p>
+              </article>
+              <article>
+                <img src="assets/components/content-dialog.png" alt="ContentDialog component thumbnail">
+                <h3>ContentDialog</h3>
+                <p data-i18n="componentCards.dialog">聚焦决策</p>
+              </article>
+              <article>
+                <img src="assets/components/info-bar.png" alt="InfoBar component thumbnail">
+                <h3>InfoBar</h3>
+                <p data-i18n="componentCards.info">内联状态提示</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-shell usecase-section" id="code" aria-labelledby="code-title">
+        <div class="split-heading compact-heading">
+          <div>
+            <p class="eyebrow" data-i18n="code.eyebrow">适合场景</p>
+            <h2 id="code-title" data-i18n="code.title">面向需要原生质感的桌面工具。</h2>
+          </div>
+        </div>
+
+        <div class="usecase-grid">
+          <article>
+            <span>01</span>
+            <h3 data-i18n="usecases.devtools.title">开发者工具</h3>
+            <p data-i18n="usecases.devtools.copy">配置面板、调试控制台、构建工具和数据检查器，需要高密度控件和稳定键鼠交互。</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3 data-i18n="usecases.ai.title">AI 桌面客户端</h3>
+            <p data-i18n="usecases.ai.copy">模型设置、会话管理、本地文件和系统能力接入，更适合轻量原生窗口承载。</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3 data-i18n="usecases.enterprise.title">企业内部工具</h3>
+            <p data-i18n="usecases.enterprise.copy">已有 Qt/C++ 资产、长期维护周期、明确桌面交付流程，适合渐进式更新界面。</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3 data-i18n="usecases.overlay.title">Overlay 控制台</h3>
+            <p data-i18n="usecases.overlay.copy">翻译、录制、游戏辅助和监控面板，需要紧凑、即时、可停靠的原生控制界面。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="engineering-section" id="engineering" aria-labelledby="engineering-title">
+        <div class="section-shell engineering-layout">
+          <div>
+            <p class="eyebrow" data-i18n="engineering.eyebrow">工程结构</p>
+            <h2 id="engineering-title" data-i18n="engineering.title">不只是给按钮换皮肤。</h2>
+            <p data-i18n="engineering.copy">
+              项目已经具备可复用组件、Gallery 应用、组件测试、文档、CMake presets、vcpkg 依赖和 Windows / macOS 打包路径。
+            </p>
+          </div>
+          <div class="engineering-list">
+            <article>
+              <span>src/components</span>
+              <strong data-i18n="engineering.components">可复用 Widget 组件库</strong>
+            </article>
+            <article>
+              <span>app</span>
+              <strong data-i18n="engineering.app">Gallery 运行时</strong>
+            </article>
+            <article>
+              <span>tests/components</span>
+              <strong data-i18n="engineering.tests">组件测试</strong>
+            </article>
+            <article>
+              <span>docs</span>
+              <strong data-i18n="engineering.docs">架构与开发文档</strong>
+            </article>
+            <article>
+              <span>packaging</span>
+              <strong data-i18n="engineering.packaging">DMG 与 Windows 安装包</strong>
+            </article>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="section-shell footer-layout">
+        <span>Fluent-QT</span>
+        <span data-i18n="footer.copy">MIT 许可。面向 Qt Widgets 的原生桌面 UI。</span>
+      </div>
+    </footer>
+
+    <script>
+      const translations = {
+        zh: {
+          "meta.title": "Fluent-QT - 面向 Qt Widgets 的现代 Fluent UI",
+          "meta.description": "Fluent-QT 是一个开源的 Fluent / WinUI 风格 Qt Widgets 组件库和 Gallery 应用。",
+          "nav.why": "价值",
+          "nav.gallery": "Gallery",
+          "nav.components": "组件",
+          "nav.code": "场景",
+          "nav.engineering": "工程化",
+          "hero.title": "Qt Widgets 的现代 Fluent UI。",
+          "hero.lede": "Fluent-QT 帮助 C++ / Qt 桌面应用更新界面语言，同时保留 QWidget 的原生性能、系统集成和成熟工程结构。",
+          "actions.github": "查看 GitHub",
+          "actions.docsShort": "文档",
+          "downloads.title": "下载 Gallery",
+          "downloads.release": "v1.0.1 Release",
+          "downloads.latest": "最新版本",
+          "downloads.releaseCopy": "Windows 与 macOS 的 Gallery 构建产物",
+          "downloads.openRelease": "打开 Release",
+          "downloads.primaryWindows": "下载 Windows 版",
+          "downloads.desktopTitle": "桌面端",
+          "downloads.desktopCopy": "下载最新 Fluent-QT Gallery 应用。",
+          "downloads.macArm.row": "macOS",
+          "downloads.macIntel.row": "macOS (Intel)",
+          "downloads.download": "下载",
+          "downloads.releaseLabel": "最新版本",
+          "downloads.windowsX64.label": "Windows",
+          "downloads.windowsArm.label": "Windows",
+          "downloads.macArm.label": "macOS",
+          "downloads.macIntel.label": "macOS",
+          "downloads.all": "全部版本",
+          "downloads.cta": "下载",
+          "hero.supportRuntimeLabel": "UI 栈",
+          "hero.supportQtLabel": "Qt 支持",
+          "hero.supportPlatformLabel": "平台支持",
+          "hero.supportLanguageLabel": "语言标准",
+          "why.eyebrow": "价值定位",
+          "why.title": "不是替换 Qt，而是现代化 Qt Widgets。",
+          "problems.visual.title": "保留 Qt Widgets 资产",
+          "problems.visual.copy": "继续复用已有 C++ 代码、事件模型和窗口体系，不强制重写成熟页面。",
+          "problems.rewrite.title": "从组件层统一视觉",
+          "problems.rewrite.copy": "把按钮、输入、导航、弹窗和状态反馈统一到可维护的 Fluent / WinUI 风格。",
+          "problems.native.title": "保留原生桌面能力",
+          "problems.native.copy": "适合开发者工具、内部工具、AI 桌面客户端和 Overlay 控制台。",
+          "comparison.title": "一句话定位",
+          "comparison.copy": "Fluent-QT 不是新的运行时，而是给已有 Qt Widgets 产品补一套现代、统一、可复用的桌面组件层。",
+          "comparison.fluent.label": "适合 Fluent-QT",
+          "comparison.fluent.copy": "已有 C++ / QWidget 项目，希望现代化 UI，但不想迁移到 QML、Electron 或 Flutter。",
+          "comparison.rewrite.label": "适合重写方案",
+          "comparison.rewrite.copy": "新产品、强动效、Web 团队主导，或已经准备接受新的语言、运行时和工程模型。",
+          "comparison.qss.label": "不建议只堆 QSS",
+          "comparison.qss.copy": "短期能修外观，但状态、暗色模式、间距和组件一致性会越来越难维护。",
+          "comparison.head.solution": "方案",
+          "comparison.head.best": "更适合",
+          "comparison.head.tradeoff": "代价或边界",
+          "comparison.head.fluent": "Fluent-QT 的位置",
+          "comparison.qss.best": "短期修补已有界面",
+          "comparison.qss.tradeoff": "样式容易分散，状态、间距、暗色模式和组件一致性难维护。",
+          "comparison.qss.fluent": "从可复用组件层统一视觉，而不是继续堆局部样式。",
+          "comparison.qml.best": "新项目、动效密集界面、触控或声明式 UI",
+          "comparison.qml.tradeoff": "成熟 QWidget 页面通常需要重写，并引入 C++ / QML 边界。",
+          "comparison.qml.fluent": "面向 QWidget-first 的现代化，不强制切换 UI 架构。",
+          "comparison.electron.best": "Web 团队、内容型桌面应用、复杂前端生态",
+          "comparison.electron.tradeoff": "Chromium 运行时更重，原生能力依赖桥接和额外进程模型。",
+          "comparison.electron.fluent": "更适合 C++ 原生工具、轻量桌面客户端和已有 Qt 工程。",
+          "comparison.tauri.best": "希望用 Web UI，同时降低 Electron 运行时体积",
+          "comparison.tauri.tradeoff": "仍需要维护 WebView 差异和 JS 到原生的通信边界。",
+          "comparison.tauri.fluent": "避免把 Qt Widgets 项目迁到 Web 技术栈。",
+          "comparison.rn.best": "React 团队，希望复用前端组件思维",
+          "comparison.rn.tradeoff": "桌面端能力和平台实现方式会随目标系统变化，不适合直接承接 Qt/C++ 存量界面。",
+          "comparison.rn.fluent": "避免把已有 Qt Widgets 产品重写到 JS / React 体系。",
+          "comparison.flutter.best": "统一自绘 UI、多端设计体系、新 Dart 项目",
+          "comparison.flutter.tradeoff": "语言、渲染栈和原生集成方式都会变化。",
+          "comparison.flutter.fluent": "保留 Qt / C++ 生态和原生 Widget 工作流。",
+          "comparison.dotnet.best": "Windows-first 企业应用和微软技术栈团队",
+          "comparison.dotnet.tradeoff": "更偏 Windows 生态，跨到 macOS 通常不是同一套 UI 工程。",
+          "comparison.dotnet.fluent": "适合仍要维持 Qt / C++ 和 macOS / Windows 交付的项目。",
+          "comparison.gtk.best": "需要传统原生 Toolkit，或已有对应生态投入",
+          "comparison.gtk.tradeoff": "不是面向 Fluent / WinUI 视觉体系的现成 Qt Widgets 组件库。",
+          "comparison.gtk.fluent": "对已有 Qt 项目来说，迁移 Toolkit 通常比组件级现代化成本更高。",
+          "comparison.imgui.best": "调试面板、编辑器工具、实时可视化和内嵌控制台",
+          "comparison.imgui.tradeoff": "Immediate-mode 很高效，但不一定适合完整产品级桌面应用外观。",
+          "comparison.imgui.fluent": "更偏产品化 Qt 桌面控件，而不是调试 UI。",
+          "gallery.title": "用真实运行的桌面应用说话。",
+          "gallery.copy": "Gallery 是最强的可信证明。真实截图比重复堆功能卡片更快让开发者判断这个项目是否能用。",
+          "gallery.primary.title": "Gallery 应用外壳",
+          "gallery.primary.copy": "真实导航、真实组件页、真实信息密度。开发者应该先看到这个可运行界面。",
+          "gallery.buttons.title": "按钮状态",
+          "gallery.buttons.copy": "样式、尺寸、图标和交互状态。",
+          "gallery.toggle.copy": "用于原生设置界面的二值控件。",
+          "gallery.slider.copy": "范围、数值、步进和轨道渲染。",
+          "gallery.collections.title": "集合视图",
+          "gallery.collections.copy": "面向密集列表和集合型界面。",
+          "components.eyebrow": "组件",
+          "components.title": "像浏览一个真实工具箱一样展示组件。",
+          "componentRail.input": "基础输入",
+          "componentRail.fields": "文本控件",
+          "componentRail.navigation": "导航",
+          "componentRail.dialogs": "弹窗与浮层",
+          "componentRail.status": "状态反馈",
+          "componentRail.collections": "集合视图",
+          "componentCards.button": "命令入口",
+          "componentCards.toggle": "二值设置",
+          "componentCards.slider": "连续数值",
+          "componentCards.combo": "选项选择",
+          "componentCards.lineEdit": "聚焦文本输入",
+          "componentCards.color": "可视化选色",
+          "componentCards.navigation": "应用外壳导航",
+          "componentCards.tab": "多面板工具",
+          "componentCards.list": "密集行列表",
+          "componentCards.tree": "层级结构",
+          "componentCards.dialog": "聚焦决策",
+          "componentCards.info": "内联状态提示",
+          "code.eyebrow": "适合场景",
+          "code.title": "面向需要原生质感的桌面工具。",
+          "usecases.devtools.title": "开发者工具",
+          "usecases.devtools.copy": "配置面板、调试控制台、构建工具和数据检查器，需要高密度控件和稳定键鼠交互。",
+          "usecases.ai.title": "AI 桌面客户端",
+          "usecases.ai.copy": "模型设置、会话管理、本地文件和系统能力接入，更适合轻量原生窗口承载。",
+          "usecases.enterprise.title": "企业内部工具",
+          "usecases.enterprise.copy": "已有 Qt/C++ 资产、长期维护周期、明确桌面交付流程，适合渐进式更新界面。",
+          "usecases.overlay.title": "Overlay 控制台",
+          "usecases.overlay.copy": "翻译、录制、游戏辅助和监控面板，需要紧凑、即时、可停靠的原生控制界面。",
+          "engineering.eyebrow": "工程结构",
+          "engineering.title": "不只是给按钮换皮肤。",
+          "engineering.copy": "项目已经具备可复用组件、Gallery 应用、组件测试、文档、CMake presets、vcpkg 依赖和 Windows / macOS 打包路径。",
+          "engineering.components": "可复用 Widget 组件库",
+          "engineering.app": "Gallery 运行时",
+          "engineering.tests": "组件测试",
+          "engineering.docs": "架构与开发文档",
+          "engineering.packaging": "DMG 与 Windows 安装包",
+          "footer.copy": "MIT 许可。面向 Qt Widgets 的原生桌面 UI。"
+        },
+        en: {
+          "meta.title": "Fluent-QT - Modern Fluent UI for Qt Widgets",
+          "meta.description": "Fluent-QT is an open-source Fluent / WinUI-style component library and Gallery for native Qt Widgets applications.",
+          "nav.why": "Why",
+          "nav.gallery": "Gallery",
+          "nav.components": "Components",
+          "nav.code": "Use cases",
+          "nav.engineering": "Engineering",
+          "hero.title": "Modern Fluent UI for Qt Widgets.",
+          "hero.lede": "Modernize C++ / Qt desktop interfaces while keeping QWidget performance, native system integration, and the engineering structure teams already rely on.",
+          "actions.github": "View on GitHub",
+          "actions.docsShort": "Docs",
+          "downloads.title": "Download Gallery",
+          "downloads.release": "v1.0.1 Release",
+          "downloads.latest": "Latest",
+          "downloads.releaseCopy": "Gallery builds for Windows and macOS",
+          "downloads.openRelease": "Open Release",
+          "downloads.primaryWindows": "Download for Windows",
+          "downloads.desktopTitle": "Desktop",
+          "downloads.desktopCopy": "Download the latest Fluent-QT Gallery app.",
+          "downloads.macArm.row": "macOS",
+          "downloads.macIntel.row": "macOS (Intel)",
+          "downloads.download": "Download",
+          "downloads.releaseLabel": "Latest release",
+          "downloads.windowsX64.label": "Windows",
+          "downloads.windowsArm.label": "Windows",
+          "downloads.macArm.label": "macOS",
+          "downloads.macIntel.label": "macOS",
+          "downloads.all": "All releases",
+          "downloads.cta": "Download",
+          "hero.supportRuntimeLabel": "UI stack",
+          "hero.supportQtLabel": "Qt support",
+          "hero.supportPlatformLabel": "Platforms",
+          "hero.supportLanguageLabel": "Language",
+          "why.eyebrow": "Positioning",
+          "why.title": "Do not replace Qt. Modernize Qt Widgets.",
+          "problems.visual.title": "Keep Qt Widgets assets",
+          "problems.visual.copy": "Reuse existing C++ code, event handling, and window structure without forcing mature screens to be rewritten.",
+          "problems.rewrite.title": "Unify visuals through components",
+          "problems.rewrite.copy": "Keep buttons, inputs, navigation, dialogs, and status surfaces in one maintainable Fluent / WinUI style.",
+          "problems.native.title": "Keep native desktop behavior",
+          "problems.native.copy": "Designed for developer tools, internal tools, AI desktop clients, and overlay control panels.",
+          "comparison.title": "One-line positioning",
+          "comparison.copy": "Fluent-QT is not a new runtime. It adds a modern, unified, reusable desktop component layer to existing Qt Widgets products.",
+          "comparison.fluent.label": "Choose Fluent-QT",
+          "comparison.fluent.copy": "Existing C++ / QWidget products that need modern UI without moving to QML, Electron, or Flutter.",
+          "comparison.rewrite.label": "Choose a rewrite",
+          "comparison.rewrite.copy": "New products, animation-heavy UI, Web-led teams, or projects ready to accept a new language, runtime, and engineering model.",
+          "comparison.qss.label": "Avoid QSS-only",
+          "comparison.qss.copy": "It can patch the look short term, but states, dark mode, spacing, and component consistency become harder to maintain.",
+          "comparison.head.solution": "Option",
+          "comparison.head.best": "Best fit",
+          "comparison.head.tradeoff": "Cost or boundary",
+          "comparison.head.fluent": "Where Fluent-QT fits",
+          "comparison.qss.best": "Short-term styling for existing screens",
+          "comparison.qss.tradeoff": "Styles spread out quickly, while states, spacing, dark mode, and component consistency become hard to maintain.",
+          "comparison.qss.fluent": "Moves visual consistency into reusable components instead of more local styling.",
+          "comparison.qml.best": "New projects, animation-heavy screens, touch UI, or declarative interfaces",
+          "comparison.qml.tradeoff": "Mature QWidget screens usually need to be rewritten and bridged across C++ / QML boundaries.",
+          "comparison.qml.fluent": "A QWidget-first modernization path without forcing a UI architecture switch.",
+          "comparison.electron.best": "Web teams, content-heavy desktop apps, and complex frontend ecosystems",
+          "comparison.electron.tradeoff": "The Chromium runtime is heavier, and native behavior depends on bridges and a different process model.",
+          "comparison.electron.fluent": "Better suited to C++ native tools, lightweight clients, and existing Qt projects.",
+          "comparison.tauri.best": "Web UI with a smaller shell than Electron",
+          "comparison.tauri.tradeoff": "Still requires managing WebView differences and the JS-to-native communication boundary.",
+          "comparison.tauri.fluent": "Avoids moving a Qt Widgets product to a Web stack.",
+          "comparison.rn.best": "React teams that want to reuse frontend component patterns",
+          "comparison.rn.tradeoff": "Desktop capabilities and platform implementations vary by target system, and it does not directly carry over existing Qt/C++ screens.",
+          "comparison.rn.fluent": "Avoids rewriting an existing Qt Widgets product into a JS / React stack.",
+          "comparison.flutter.best": "Custom-rendered UI, shared design systems, and new Dart projects",
+          "comparison.flutter.tradeoff": "Language, rendering stack, and native integration patterns all change.",
+          "comparison.flutter.fluent": "Keeps the Qt / C++ ecosystem and native Widget workflow.",
+          "comparison.dotnet.best": "Windows-first enterprise apps and Microsoft-stack teams",
+          "comparison.dotnet.tradeoff": "More Windows-oriented; macOS delivery is usually not the same UI codebase.",
+          "comparison.dotnet.fluent": "Fits teams that still need Qt / C++ with macOS and Windows delivery.",
+          "comparison.gtk.best": "Traditional native toolkit projects, or teams already invested in that ecosystem",
+          "comparison.gtk.tradeoff": "Not a ready-made Fluent / WinUI-style component library for Qt Widgets.",
+          "comparison.gtk.fluent": "For existing Qt projects, switching toolkit is usually more expensive than component-level modernization.",
+          "comparison.imgui.best": "Debug panels, editor tools, real-time visualization, and embedded control consoles",
+          "comparison.imgui.tradeoff": "Immediate-mode UI is efficient, but not always ideal for polished product-grade desktop app surfaces.",
+          "comparison.imgui.fluent": "Targets product-style Qt desktop components rather than debug UI.",
+          "gallery.title": "Lead with the running desktop app.",
+          "gallery.copy": "The Gallery should be the strongest proof point. Large screenshots create trust faster than repeated feature cards.",
+          "gallery.primary.title": "Gallery application shell",
+          "gallery.primary.copy": "Real navigation, real component pages, real density. This is the surface developers should trust first.",
+          "gallery.buttons.title": "Button states",
+          "gallery.buttons.copy": "Styles, sizes, icons, and interaction states.",
+          "gallery.toggle.copy": "Binary settings with native widget behavior.",
+          "gallery.slider.copy": "Ranges, values, steps, and track rendering.",
+          "gallery.collections.title": "Collections",
+          "gallery.collections.copy": "Dense list and collection surfaces.",
+          "components.eyebrow": "Components",
+          "components.title": "Show the catalog like a product browser.",
+          "componentRail.input": "Basic input",
+          "componentRail.fields": "Text fields",
+          "componentRail.navigation": "Navigation",
+          "componentRail.dialogs": "Dialogs & flyouts",
+          "componentRail.status": "Status",
+          "componentRail.collections": "Collections",
+          "componentCards.button": "Command surfaces",
+          "componentCards.toggle": "Binary settings",
+          "componentCards.slider": "Continuous values",
+          "componentCards.combo": "Option picking",
+          "componentCards.lineEdit": "Focused text input",
+          "componentCards.color": "Visual selection",
+          "componentCards.navigation": "App shell navigation",
+          "componentCards.tab": "Multi-panel tools",
+          "componentCards.list": "Dense rows",
+          "componentCards.tree": "Hierarchy",
+          "componentCards.dialog": "Focused decisions",
+          "componentCards.info": "Inline status",
+          "code.eyebrow": "Use cases",
+          "code.title": "For desktop tools that need a native feel.",
+          "usecases.devtools.title": "Developer tools",
+          "usecases.devtools.copy": "Settings panels, debug consoles, build tools, and data inspectors that need dense controls and reliable keyboard/mouse interaction.",
+          "usecases.ai.title": "AI desktop clients",
+          "usecases.ai.copy": "Model settings, session management, local files, and system integration fit well in lightweight native windows.",
+          "usecases.enterprise.title": "Enterprise internal tools",
+          "usecases.enterprise.copy": "Existing Qt/C++ assets, long maintenance cycles, and known desktop delivery flows benefit from gradual UI modernization.",
+          "usecases.overlay.title": "Overlay consoles",
+          "usecases.overlay.copy": "Translation, recording, game-assist, and monitoring panels need compact, immediate, dockable native controls.",
+          "engineering.eyebrow": "Engineering shape",
+          "engineering.title": "More than a skin for buttons.",
+          "engineering.copy": "The project already has reusable components, a Gallery app, component tests, docs, CMake presets, vcpkg dependencies, and Windows / macOS packaging paths.",
+          "engineering.components": "Reusable widget library",
+          "engineering.app": "Gallery runtime",
+          "engineering.tests": "Component tests",
+          "engineering.docs": "Architecture and workflow notes",
+          "engineering.packaging": "DMG and Windows installer",
+          "footer.copy": "MIT licensed. Native desktop UI for Qt Widgets."
+        }
+      };
+
+      const languageButtons = Array.from(document.querySelectorAll("[data-lang]"));
+      const translatableNodes = Array.from(document.querySelectorAll("[data-i18n]"));
+      const metaDescription = document.querySelector("meta[name='description']");
+      const latestReleaseApi = "https://api.github.com/repos/calvinhxx/Fluent-QT/releases/latest";
+      const releaseState = {
+        architecture: "",
+        language: "zh",
+        platform: "other",
+        release: null
+      };
+
+      const downloadCopy = {
+        zh: {
+          latest: "最新版本",
+          primaryMac: "下载 macOS 版",
+          primaryOther: "打开最新 Release",
+          primaryWindows: "下载 Windows 版"
+        },
+        en: {
+          latest: "Latest release",
+          primaryMac: "Download for macOS",
+          primaryOther: "Open latest Release",
+          primaryWindows: "Download for Windows"
+        }
+      };
+
+      function detectPlatform() {
+        const userAgentPlatform = navigator.userAgentData?.platform || "";
+        const source = `${userAgentPlatform} ${navigator.platform || ""} ${navigator.userAgent || ""}`.toLowerCase();
+        if (source.includes("win")) {
+          return "windows";
+        }
+        if (source.includes("mac")) {
+          return "mac";
+        }
+        return "other";
+      }
+
+      async function detectArchitecture() {
+        try {
+          if (navigator.userAgentData?.getHighEntropyValues) {
+            const values = await navigator.userAgentData.getHighEntropyValues(["architecture"]);
+            return String(values.architecture || "").toLowerCase();
+          }
+        } catch {
+          return "";
+        }
+        return "";
+      }
+
+      function mapReleaseAssets(release) {
+        const assets = {};
+        (release.assets || []).forEach((asset) => {
+          const name = asset.name || "";
+          const url = asset.browser_download_url || asset.url || "";
+          if (/Windows-x64\.exe$/i.test(name)) {
+            assets.windowsX64 = url;
+          } else if (/Windows-arm64\.exe$/i.test(name)) {
+            assets.windowsArm = url;
+          } else if (/Darwin-arm64\.dmg$/i.test(name)) {
+            assets.macArm = url;
+          } else if (/Darwin-x86_64\.dmg$/i.test(name)) {
+            assets.macIntel = url;
+          } else if (/SHA256SUMS\.txt$/i.test(name)) {
+            assets.sha256 = url;
+          }
+        });
+        return {
+          assets,
+          tagName: release.tag_name || release.tagName || "v1.0.1",
+          url: release.html_url || release.url || "https://github.com/calvinhxx/Fluent-QT/releases/tag/v1.0.1"
+        };
+      }
+
+      function readFallbackRelease() {
+        const releaseLink = document.querySelector("[data-release-link]");
+        return {
+          assets: {
+            macArm: document.querySelector("[data-release-asset='macArm']")?.href || "",
+            macIntel: document.querySelector("[data-release-asset='macIntel']")?.href || "",
+            sha256: document.querySelector("[data-release-asset='sha256']")?.href || "",
+            windowsArm: document.querySelector("[data-release-asset='windowsArm']")?.href || "",
+            windowsX64: document.querySelector("[data-release-asset='windowsX64']")?.href || ""
+          },
+          tagName: releaseLink?.textContent?.trim() || "v1.0.1",
+          url: releaseLink?.href || "https://github.com/calvinhxx/Fluent-QT/releases/tag/v1.0.1"
+        };
+      }
+
+      function isArmArchitecture() {
+        return /arm|aarch64/.test(releaseState.architecture);
+      }
+
+      function isX86Architecture() {
+        return /x86|x64|amd64/.test(releaseState.architecture);
+      }
+
+      function choosePrimaryAsset() {
+        if (releaseState.platform === "mac") {
+          return isX86Architecture() ? "macIntel" : "macArm";
+        }
+        if (releaseState.platform === "windows") {
+          return isArmArchitecture() ? "windowsArm" : "windowsX64";
+        }
+        return "release";
+      }
+
+      function chooseSecondaryAsset(primaryAsset) {
+        if (primaryAsset === "release") {
+          return "windowsX64";
+        }
+        if (primaryAsset === "macArm") {
+          return "macIntel";
+        }
+        if (primaryAsset === "macIntel") {
+          return "macArm";
+        }
+        if (primaryAsset === "windowsArm") {
+          return "windowsX64";
+        }
+        return "windowsArm";
+      }
+
+      function setPlatformMark(link, assetKey) {
+        const mark = link?.querySelector(".platform-mark");
+        if (!mark) {
+          return;
+        }
+        mark.className = "platform-mark";
+        if (assetKey === "release") {
+          mark.classList.add("platform-mark-release");
+        } else {
+          mark.classList.add(assetKey.startsWith("mac") ? "platform-mark-mac" : "platform-mark-windows");
+        }
+      }
+
+      function labelForAsset(assetKey) {
+        if (assetKey === "macArm") {
+          return "macOS";
+        }
+        if (assetKey === "macIntel") {
+          return "macOS (Intel)";
+        }
+        if (assetKey === "windowsArm") {
+          return "Windows (arm64)";
+        }
+        if (assetKey === "windowsX64") {
+          return "Windows (x64)";
+        }
+        return "Release";
+      }
+
+      function updateDownloadPresentation() {
+        const release = releaseState.release || readFallbackRelease();
+        const dictionary = downloadCopy[releaseState.language] || downloadCopy.en;
+        const primary = document.querySelector("[data-primary-download]");
+        const primaryLabel = document.querySelector("[data-primary-download-label]");
+        const secondary = document.querySelector("[data-secondary-download]");
+        const secondaryLabel = document.querySelector("[data-secondary-download-label]");
+        const releaseLink = document.querySelector("[data-release-link]");
+        const checksumLink = document.querySelector("[data-release-asset='sha256']");
+        const primaryAsset = choosePrimaryAsset();
+        const secondaryAsset = chooseSecondaryAsset(primaryAsset);
+
+        document.querySelectorAll("[data-release-asset]").forEach((link) => {
+          const assetKey = link.dataset.releaseAsset;
+          if (release.assets[assetKey]) {
+            link.href = release.assets[assetKey];
+          }
+        });
+
+        if (releaseLink) {
+          releaseLink.href = release.url;
+          releaseLink.textContent = release.tagName;
+        }
+        if (checksumLink && release.assets.sha256) {
+          checksumLink.href = release.assets.sha256;
+        }
+
+        if (primary) {
+          const primaryUrl = primaryAsset === "release" ? release.url : release.assets[primaryAsset];
+          primary.href = primaryUrl || release.url;
+          setPlatformMark(primary, primaryAsset);
+        }
+        if (primaryLabel) {
+          if (primaryAsset === "release") {
+            primaryLabel.textContent = dictionary.primaryOther;
+          } else {
+            primaryLabel.textContent = primaryAsset.startsWith("mac") ? dictionary.primaryMac : dictionary.primaryWindows;
+          }
+        }
+
+        if (secondary) {
+          secondary.href = release.assets[secondaryAsset] || release.url;
+          setPlatformMark(secondary, secondaryAsset);
+        }
+        if (secondaryLabel) {
+          secondaryLabel.textContent = labelForAsset(secondaryAsset);
+        }
+      }
+
+      async function hydrateLatestRelease() {
+        releaseState.release = readFallbackRelease();
+        updateDownloadPresentation();
+        try {
+          const response = await fetch(latestReleaseApi, {
+            cache: "no-store",
+            headers: { Accept: "application/vnd.github+json" }
+          });
+          if (!response.ok) {
+            return;
+          }
+          releaseState.release = mapReleaseAssets(await response.json());
+          updateDownloadPresentation();
+        } catch {
+          updateDownloadPresentation();
+        }
+      }
+
+      function readSavedLanguage() {
+        try {
+          return localStorage.getItem("fluent-qt-language");
+        } catch {
+          return null;
+        }
+      }
+
+      function writeSavedLanguage(language) {
+        try {
+          localStorage.setItem("fluent-qt-language", language);
+        } catch {
+          // Language switching should still work when storage is unavailable.
+        }
+      }
+
+      function detectPreferredLanguage() {
+        const savedLanguage = readSavedLanguage();
+        if (savedLanguage === "zh" || savedLanguage === "en") {
+          return savedLanguage;
+        }
+
+        const browserLanguages =
+          Array.isArray(navigator.languages) && navigator.languages.length > 0
+            ? navigator.languages
+            : [navigator.language || ""];
+        return browserLanguages.some((language) => language.toLowerCase().startsWith("zh"))
+          ? "zh"
+          : "en";
+      }
+
+      function setLanguage(language, shouldStore = true) {
+        const dictionary = translations[language] || translations.zh;
+        releaseState.language = language === "en" ? "en" : "zh";
+        document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+        document.title = dictionary["meta.title"];
+        if (metaDescription) {
+          metaDescription.setAttribute("content", dictionary["meta.description"]);
+        }
+        translatableNodes.forEach((node) => {
+          const value = dictionary[node.dataset.i18n];
+          if (value) {
+            node.textContent = value;
+          }
+        });
+        languageButtons.forEach((button) => {
+          const isActive = button.dataset.lang === language;
+          button.classList.toggle("active", isActive);
+          button.setAttribute("aria-pressed", String(isActive));
+        });
+        if (shouldStore) {
+          writeSavedLanguage(language);
+        }
+        updateDownloadPresentation();
+      }
+
+      languageButtons.forEach((button) => {
+        button.addEventListener("click", () => setLanguage(button.dataset.lang));
+      });
+
+      releaseState.platform = detectPlatform();
+      setLanguage(detectPreferredLanguage(), false);
+      hydrateLatestRelease();
+      detectArchitecture().then((architecture) => {
+        releaseState.architecture = architecture;
+        updateDownloadPresentation();
+      });
+    </script>
+  </body>
+</html>
