@@ -22,6 +22,9 @@ target_link_libraries(fluent_qt_gallery
     Qt${QT_VERSION_MAJOR}::Network
 )
 target_include_directories(fluent_qt_gallery PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(fluent_qt_gallery PRIVATE
+    FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}"
+)
 
 # Build as a GUI-subsystem app in non-Debug configs so launching the exe standalone does not pop a
 # console window. Debug keeps the console subsystem so spdlog output stays visible while developing.
