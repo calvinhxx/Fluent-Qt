@@ -1383,11 +1383,25 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
         QStringLiteral("gallerySettingsEffectChoice"));
     auto* closeBehaviorChoice = page->findChild<ComboBox*>(
         QStringLiteral("gallerySettingsCloseBehaviorChoice"));
+    auto* updateButton = page->findChild<Button*>(
+        QStringLiteral("gallerySettingsCheckUpdatesButton"));
     ASSERT_NE(themeChoice, nullptr);
     ASSERT_NE(styleChoice, nullptr);
     ASSERT_NE(navigationChoice, nullptr);
     ASSERT_NE(effectChoice, nullptr);
     ASSERT_NE(closeBehaviorChoice, nullptr);
+    ASSERT_NE(updateButton, nullptr);
+    EXPECT_EQ(updateButton->text(), QStringLiteral("Check updates"));
+    EXPECT_FALSE(page->autoFillBackground());
+    auto* settingsScroll = page->findChild<ScrollView*>(
+        QStringLiteral("gallerySettingsScrollArea"));
+    ASSERT_NE(settingsScroll, nullptr);
+    ASSERT_NE(settingsScroll->viewport(), nullptr);
+    EXPECT_FALSE(settingsScroll->viewport()->autoFillBackground());
+    auto* settingsViewport = page->findChild<QWidget*>(
+        QStringLiteral("gallerySettingsViewport"));
+    ASSERT_NE(settingsViewport, nullptr);
+    EXPECT_FALSE(settingsViewport->autoFillBackground());
     EXPECT_EQ(themeChoice->count(), 3);
     EXPECT_EQ(themeChoice->currentText(), QStringLiteral("Light"));
     // Style theme offers the three brand presets (Fluent / Material 3 / macOS). zh_CN: 样式主题提供三套品牌预设。
@@ -1399,11 +1413,10 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(effectChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->currentIndex(), static_cast<int>(settings.closeBehavior()));
-    // Appearance & behavior (App theme / Style & accent / Navigation style / Window effect) + App
-    // behavior (Close button) = 5 rows; Style theme + Accent color share one row. zh_CN: 外观与行为 4 行
-    //(样式与强调色合并为一行)+ 应用行为 1 行 = 5 行。
+    // Appearance & behavior (4 rows) + App behavior (1 row) + Updates (1 row) = 6 rows;
+    // Style theme + Accent color share one row.
     EXPECT_NE(page->findChild<QWidget*>(QStringLiteral("gallerySettingsAccentControl")), nullptr);
-    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 5);
+    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 6);
 
     QStringList visibleText;
     for (auto* label : page->findChildren<fluent::textfields::Label*>())
@@ -1415,7 +1428,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     const auto iconLabels = page->findChildren<fluent::textfields::Label*>(
         QStringLiteral("gallerySettingsRowIcon"));
-    ASSERT_EQ(iconLabels.size(), 5);
+    ASSERT_EQ(iconLabels.size(), 6);
     for (auto* iconLabel : iconLabels)
         EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::SegoeFluentIcons);
 

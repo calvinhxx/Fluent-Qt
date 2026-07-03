@@ -13,6 +13,10 @@
 #include "viewmodel/GallerySettings.h"
 #include "utils/Log.h"
 
+#ifndef FLUENT_QT_GALLERY_VERSION
+#define FLUENT_QT_GALLERY_VERSION "0.0.0"
+#endif
+
 static void initializeFluentQtResources()
 {
     Q_INIT_RESOURCE(resources);
@@ -25,6 +29,7 @@ int main(int argc, char** argv)
     QApplication app(argc, argv);
     QApplication::setApplicationName(QStringLiteral("Fluent-QT Gallery"));
     QApplication::setOrganizationName(QStringLiteral("Fluent-QT"));
+    QApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
     app.setQuitOnLastWindowClosed(false);
 
     initializeFluentQtResources();

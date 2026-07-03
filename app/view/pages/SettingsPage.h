@@ -2,11 +2,13 @@
 #define SETTINGSPAGE_H
 
 #include <QStringList>
+#include <QUrl>
 #include <QWidget>
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "model/GalleryNavigationItem.h"
+#include "viewmodel/UpdateChecker.h"
 
 class QResizeEvent;
 class QVBoxLayout;
@@ -16,6 +18,7 @@ class Label;
 }
 
 namespace fluent::basicinput {
+class Button;
 class ComboBox;
 }
 
@@ -44,6 +47,10 @@ private:
     fluent::basicinput::ComboBox* createChoiceBox(const QString& objectName,
                                                    const QStringList& choices,
                                                    int currentIndex);
+    QWidget* createUpdateCheckControl();
+    void startUpdateCheck();
+    void handleUpdateCheckFinished(const UpdateChecker::Result& result);
+    void openUpdateTarget();
     void applyPalette();
     void updateResponsiveLayout();
 
@@ -57,6 +64,10 @@ private:
     fluent::basicinput::ComboBox* m_navigationChoice = nullptr;
     fluent::basicinput::ComboBox* m_effectChoice = nullptr;
     fluent::basicinput::ComboBox* m_closeBehaviorChoice = nullptr;
+    UpdateChecker* m_updateChecker = nullptr;
+    fluent::textfields::Label* m_updateStatusLabel = nullptr;
+    fluent::basicinput::Button* m_updateButton = nullptr;
+    QUrl m_updateActionUrl;
 };
 
 } // namespace fluent::gallery
