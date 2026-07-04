@@ -1,0 +1,122 @@
+name: Qt 5.15 macOS Test Package
+
+on:
+  push:
+    branches:
+      - "codex/**"
+      - "test/**"
+  pull_request:
+    paths:
+      - ".github/workflows/package-qt515-macos-test.yml"
+      - "app/**"
+      - "cmake/**"
+      - "src/**"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "resources.qrc"
+      - "vcpkg.json"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: macOS x64 / Qt 5.15 DMG
+    runs-on: macos-15-intel
+    timeout-minutes: 120
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-binary-cache
+          key: qt515-test-package-vcpkg-${{ runner.os }}-${{ runner.arch }}-vcpkg-osx-x64-release-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          restore-keys: |
+            qt515-test-package-vcpkg-${{ runner.os }}-${{ runner.arch }}-vcpkg-osx-x64-release-
+            release-vcpkg-${{ runner.os }}-${{ runner.arch }}-vcpkg-osx-x64-release-qt-5.15.2-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-vcpkg-osx-x64-release-
+
+      - name: Install Qt 5.15.2
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "5.15.2"
+          arch: clang_64
+          cache: true
+
+      - name: Set VCPKG_ROOT
+        shell: pwsh
+        run: |
+          if (-not $env:VCPKG_INSTALLATION_ROOT) {
+            throw "VCPKG_INSTALLATION_ROOT is not set on this runner."
+          }
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+
+      - name: Configure
+        run: cmake --preset vcpkg-osx-x64-release
+
+      - name: Build
+        env:
+          QT_QPA_PLATFORM: offscreen
+          SKIP_VISUAL_TEST: 1
+        run: cmake --build --preset vcpkg-osx-x64-release --parallel
+
+      - name: Package
+        run: cpack --preset vcpkg-osx-x64-dmg
+
+      - name: Collect package artifacts
+        shell: pwsh
+        run: |
+          $source = "build/vcpkg-osx-x64-release"
+          $destination = "${{ runner.temp }}/qt515-test-package"
+          New-Item -ItemType Directory -Force -Path $destination | Out-Null
+
+          $packages = Get-ChildItem -LiteralPath $source -File -Filter "*.dmg"
+          if (-not $packages) {
+            throw "No DMG package was found in $source."
+          }
+
+          foreach ($package in $packages) {
+            $targetName = "$($package.BaseName)-Qt5.15-test$($package.Extension)"
+            $targetPath = Join-Path $destination $targetName
+            Copy-Item -LiteralPath $package.FullName -Destination $targetPath
+
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $targetPath).Hash.ToLowerInvariant()
+            Set-Content -LiteralPath "$targetPath.sha256" -Value "$hash  $targetName" -Encoding ASCII
+          }
+
+      - name: Upload Qt 5.15 test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt515-macos-x64-test-package
+          if-no-files-found: error
+          retention-days: 14
+          path: ${{ runner.temp }}/qt515-test-package/*
+
+      - name: Upload packaging diagnostics
+        if: failure()
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt515-macos-x64-test-package-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            build/vcpkg-osx-x64-release/CMakeCache.txt
+            build/vcpkg-osx-x64-release/CMakeFiles/CMakeConfigureLog.yaml
+            build/vcpkg-osx-x64-release/vcpkg-manifest-install.log
+            build/vcpkg-osx-x64-release/_CPack_Packages/**/*.log
+            build/vcpkg-osx-x64-release/vcpkg_installed/vcpkg/issue_body.md
