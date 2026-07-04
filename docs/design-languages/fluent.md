@@ -130,9 +130,10 @@ themes without a `.darker()`/`.lighter()` guess:
 - **Focus:** a two-ring focus rect — `Stroke::FocusOuter` (a near-opaque ring) over
   `Stroke::FocusInner` (the opposite polarity), drawn inset.
 
-The brand's **acrylic / mica** materials are window-level backdrops (DWM Mica on Win11 22H2+,
-solid fallback elsewhere) rather than per-control fills, so control specs here treat the surface
-as opaque; the translucency lives behind the page.
+The brand's **acrylic / mica** materials are window-level backdrops (Win11 DWM Mica/Acrylic,
+Win10 legacy Acrylic fallback, macOS vibrancy, or a solid fallback elsewhere) rather than
+per-control fills, so control specs here treat the surface as opaque; the translucency lives
+behind the page.
 
 ---
 

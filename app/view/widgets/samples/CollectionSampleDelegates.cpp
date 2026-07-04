@@ -7,9 +7,11 @@
 #include <QItemSelectionModel>
 #include <QLinearGradient>
 #include <QMouseEvent>
+#include <QPaintDevice>
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyle>
+#include <QtGlobal>
 
 #include "compatibility/QtCompat.h"
 #include "components/collections/GridView.h"
@@ -39,6 +41,41 @@ const fluent::FluentElement::Colors& emptyColors()
     return kEmpty;
 }
 
+QRectF pixmapSourceRectForDraw(const QRectF& logicalSource, const QPixmap& pixmap)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const qreal dpr = pixmap.devicePixelRatio();
+    return QRectF(logicalSource.left() * dpr,
+                  logicalSource.top() * dpr,
+                  logicalSource.width() * dpr,
+                  logicalSource.height() * dpr);
+#else
+    Q_UNUSED(pixmap);
+    return logicalSource;
+#endif
+}
+
+qreal painterDevicePixelRatio(const QPainter* painter)
+{
+    if (painter && painter->device())
+        return qMax<qreal>(1.0, painter->device()->devicePixelRatioF());
+    return 1.0;
+}
+
+QPixmap iconPixmapForExtent(const QIcon& icon, const QSize& extent, const QPainter* painter)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const qreal dpr = painterDevicePixelRatio(painter);
+    QPixmap pixmap = icon.pixmap(QSize(qMax(1, qRound(extent.width() * dpr)),
+                                      qMax(1, qRound(extent.height() * dpr))));
+    pixmap.setDevicePixelRatio(dpr);
+    return pixmap;
+#else
+    Q_UNUSED(painter);
+    return icon.pixmap(extent);
+#endif
+}
+
 void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pixmap)
 {
     const QSizeF sourceSize = pixmap.size() / pixmap.devicePixelRatio();
@@ -50,7 +87,7 @@ void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pix
     const QRectF source((sourceSize.width() - visible.width()) / 2.0,
                         (sourceSize.height() - visible.height()) / 2.0,
                         visible.width(), visible.height());
-    painter->drawPixmap(target, pixmap, source);
+    painter->drawPixmap(target, pixmap, pixmapSourceRectForDraw(source, pixmap));
 }
 
 // Fills a rounded-rect background when the color is visible. zh_CN: 颜色可见时填充圆角矩形背景。
@@ -340,10 +377,9 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     // Left padding clears the accent indicator pill (drawn by ListView at bgRect.left()+4).
     qreal cursorX = bgRect.left() + 14.0;
 
-    // Resolve the row icon. QStandardItem::setIcon stores a QIcon in DecorationRole;
-    // a QPixmap variant also converts cleanly, so the QIcon path covers both. The avatar /
-    // glyph pixmaps already carry their own (circular or rounded-tile) alpha, so draw them
-    // as-is rather than re-clipping.
+    // Resolve the row icon. Prefer a direct QPixmap so Qt5 keeps the pixmap DPR instead of asking
+    // QIcon to synthesize a low-DPI variant; the QIcon path is still kept for ordinary icon models.
+    // zh_CN: 优先使用直接的 QPixmap，让 Qt5 保留 DPR，避免 QIcon 重新合成低分辨率版本；普通图标模型仍走 QIcon。
     QSize extent = option.decorationSize;
     if (!extent.isValid() || extent.isEmpty())
         extent = m_view ? m_view->iconSize() : QSize(24, 24);
@@ -351,12 +387,12 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         extent = QSize(24, 24);
     const QVariant decoration = index.data(Qt::DecorationRole);
     QPixmap iconPixmap;
-    if (decoration.canConvert<QIcon>()) {
+    if (decoration.canConvert<QPixmap>()) {
+        iconPixmap = decoration.value<QPixmap>();
+    } else if (decoration.canConvert<QIcon>()) {
         const QIcon icon = decoration.value<QIcon>();
         if (!icon.isNull())
-            iconPixmap = icon.pixmap(extent);
-    } else if (decoration.canConvert<QPixmap>()) {
-        iconPixmap = decoration.value<QPixmap>();
+            iconPixmap = iconPixmapForExtent(icon, extent, painter);
     }
     if (!iconPixmap.isNull()) {
         const QRect iconRect(qRound(cursorX), qRound(bgRect.center().y() - extent.height() / 2.0),

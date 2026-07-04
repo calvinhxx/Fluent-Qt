@@ -36,7 +36,6 @@ public:
         setObjectName(QStringLiteral("FluentScrollViewTransparentCorner"));
         setAutoFillBackground(false);
         setAttribute(Qt::WA_NoSystemBackground);
-        setAttribute(Qt::WA_TranslucentBackground);
         setAttribute(Qt::WA_TransparentForMouseEvents);
     }
 
@@ -475,7 +474,6 @@ void ScrollView::updateCornerWidget() {
 
     m_cornerWidget->setAutoFillBackground(false);
     m_cornerWidget->setAttribute(Qt::WA_NoSystemBackground);
-    m_cornerWidget->setAttribute(Qt::WA_TranslucentBackground);
     m_cornerWidget->update();
 }
 

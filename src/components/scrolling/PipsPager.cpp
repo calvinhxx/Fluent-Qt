@@ -35,7 +35,7 @@ PipsPager::PipsPager(QWidget* parent)
     : QWidget(parent)
 {
     setAttribute(Qt::WA_Hover);
-    setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_NoSystemBackground);
     setAutoFillBackground(false);
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);

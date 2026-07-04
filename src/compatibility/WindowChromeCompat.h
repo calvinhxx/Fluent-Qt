@@ -37,12 +37,12 @@ using FluentNativeEventResult = long;
  * zh_CN: 向系统合成器请求的窗口背景效果。
  *
  * Solid keeps an opaque window (the app paints its own themeBackdrop, incl. active/inactive).
- * Mica and Acrylic make the window translucent and ask the platform for its system backdrop
- * (Win11 DWM Mica/Acrylic via DWMWA_SYSTEMBACKDROP_TYPE, macOS NSVisualEffectView vibrancy);
- * chrome then paints transparent so it shows through.
+ * Mica and Acrylic make the window translucent and ask the platform for its closest system
+ * backdrop (Win11 DWM Mica/Acrylic, Win10 legacy Acrylic fallback, macOS NSVisualEffectView
+ * vibrancy); chrome then paints transparent so it shows through.
  * zh_CN: Solid 为不透明窗口（App 自绘 themeBackdrop，含激活/非激活）。Mica/Acrylic 使窗口半透明并向平台
- * 请求系统背景（Win11 经 DWMWA_SYSTEMBACKDROP_TYPE 的 Mica/Acrylic，macOS 的 NSVisualEffectView vibrancy），
- * chrome 随之画透明以透出之。
+ * 请求最接近的系统背景（Win11 DWM Mica/Acrylic、Win10 legacy Acrylic 回退、macOS 的 NSVisualEffectView
+ * vibrancy），chrome 随之画透明以透出之。
  */
 enum class BackdropEffect { Solid, Mica, Acrylic };
 
@@ -145,8 +145,8 @@ public:
     void applyPlatformWindowFlags();
 
     /**
-     * @brief Whether this platform/OS supports a system backdrop (Windows 11 Mica).
-     * zh_CN: 当前平台/系统是否支持系统背景（Windows 11 Mica）。
+     * @brief Whether this platform/OS supports a translucent system backdrop.
+     * zh_CN: 当前平台/系统是否支持半透明系统背景。
      *
      * Checked before show so the caller can decide on a translucent window surface.
      * zh_CN: 在显示前检查，使调用方可据此决定是否使用半透明窗口表面。
@@ -160,10 +160,11 @@ public:
      * Requires a live native handle, so call it from showEvent / after winId().
      * zh_CN: 需要有效的原生句柄，故应在 showEvent / winId() 之后调用。
      *
-     * On Windows the effect maps to a DWMWA_SYSTEMBACKDROP_TYPE value; on macOS it installs a native
-     * NSVisualEffectView (vibrancy) — the platform analogue. Solid is a no-op backdrop (the app
-     * paints its own). zh_CN: Windows 上效果映射为 DWMWA_SYSTEMBACKDROP_TYPE 值；macOS 上安装原生
-     * NSVisualEffectView（vibrancy）作为对应物。Solid 不施加系统背景（由 App 自绘）。
+     * On Windows 11 the effect maps to a DWMWA_SYSTEMBACKDROP_TYPE value; Windows 10 uses legacy
+     * Acrylic blur when available; on macOS it installs a native NSVisualEffectView (vibrancy).
+     * Solid is a no-op backdrop (the app paints its own). zh_CN: Windows 11 上效果映射为
+     * DWMWA_SYSTEMBACKDROP_TYPE 值；Windows 10 可用时使用 legacy Acrylic blur；macOS 上安装原生
+     * NSVisualEffectView（vibrancy）。Solid 不施加系统背景（由 App 自绘）。
      */
     bool applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite = false);
 

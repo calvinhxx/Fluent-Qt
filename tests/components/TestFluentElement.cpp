@@ -553,9 +553,9 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
     QWidget plainHost;
     EXPECT_EQ(component.chromeBackdropFill(&plainHost, true), component.themeBackdrop(true));
 
-    // A host carrying a real OS-composited backdrop (Win11 Mica / macOS vibrancy) yields an invalid
+    // A host carrying a real OS-composited backdrop (Windows DWM/Acrylic or macOS vibrancy) yields an invalid
     // color regardless of focus — the caller's contract is "erase to transparent".
-    // zh_CN: 带真实系统合成背景（Win11 Mica / macOS vibrancy）的宿主，无论焦点都返回无效色——调用方据此擦透明。
+    // zh_CN: 带真实系统合成背景（Windows DWM/Acrylic 或 macOS vibrancy）的宿主，无论焦点都返回无效色——调用方据此擦透明。
     QWidget micaHost;
     micaHost.setProperty("fluentMicaBackdrop", true);
     EXPECT_FALSE(component.chromeBackdropFill(&micaHost, true).isValid());

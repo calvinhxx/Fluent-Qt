@@ -47,8 +47,8 @@ public:
     void onThemeUpdated() override;
 
     /**
-     * @brief Re-asserts the Mica system backdrop (no-op when unsupported).
-     * zh_CN: 重新施加 Mica 系统背景（不支持时为空操作）。
+     * @brief Re-asserts the configured system backdrop (no-op when unsupported).
+     * zh_CN: 重新施加当前配置的系统背景（不支持时为空操作）。
      *
      * DWM occasionally fails to composite the backdrop on the very first show — a timing race
      * with the translucent window coming up, so it lands on a flat neutral surface until the
@@ -63,11 +63,11 @@ public:
      * @brief Sets the window background effect (Solid/Mica/Acrylic) and re-applies it live.
      * zh_CN: 设置窗口背景效果（Solid/Mica/Acrylic）并实时重新施加。
      *
-     * Switching to/from Solid flips the translucent window surface (toggling the attribute the chrome
-     * paints against); switching among the translucent effects (Mica/Acrylic) only changes the OS
-     * backdrop type. On platforms without backdrop support the effect collapses to Solid.
-     * zh_CN: 在 Solid 与其它之间切换会翻转半透明窗口表面（切换 chrome 据以绘制的属性）；半透明效果之间
-     *（Mica/Acrylic）仅改变系统背景类型。不支持背景的平台上效果塌为 Solid。
+     * The top-level translucency decision is fixed at construction; switching effects updates the
+     * paint hint and requested OS backdrop type without restyling the native window. On platforms
+     * without backdrop support the effect collapses to Solid.
+     * zh_CN: 顶层半透明决策在构造时固定；切换效果只更新绘制提示与请求的系统背景类型，不重塑原生窗口。
+     * 不支持背景的平台上效果塌为 Solid。
      */
     void setBackdropEffect(compatibility::BackdropEffect effect);
     compatibility::BackdropEffect backdropEffect() const { return m_backdropEffect; }
