@@ -76,7 +76,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           SKIP_VISUAL_TEST: 1
-        run: cmake --build --preset vcpkg-osx-x64-release --parallel
+        run: cmake --build --preset vcpkg-osx-x64-release --target fluent_qt_gallery test_gallery_content_pages --parallel
 
       - name: Run gallery spacing tests
         env:
