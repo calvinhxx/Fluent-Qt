@@ -75,7 +75,33 @@ jobs:
         run: cmake --build --preset vcpkg-osx-x64-release --parallel
 
       - name: Package
-        run: cpack --preset vcpkg-osx-x64-dmg
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cleanup_dmg_volumes() {
+            find /Volumes -maxdepth 1 -type d -name 'Fluent-QT Gallery*' -print0 |
+              while IFS= read -r -d '' volume; do
+                echo "Detaching leftover DMG volume: ${volume}"
+                hdiutil detach "${volume}" -force || true
+              done
+          }
+
+          reset_cpack_output() {
+            rm -rf build/vcpkg-osx-x64-release/_CPack_Packages
+            find build/vcpkg-osx-x64-release -maxdepth 1 -type f -name "*.dmg" -delete
+          }
+
+          cleanup_dmg_volumes
+          if ! cpack --preset vcpkg-osx-x64-dmg; then
+            echo "CPack failed; cleaning leftover DMG volume and retrying once."
+            cleanup_dmg_volumes
+            sleep 3
+            reset_cpack_output
+            cpack --preset vcpkg-osx-x64-dmg
+          fi
+
+          cleanup_dmg_volumes
 
       - name: Collect package artifacts
         shell: pwsh
@@ -118,5 +144,5 @@ jobs:
             build/vcpkg-osx-x64-release/CMakeCache.txt
             build/vcpkg-osx-x64-release/CMakeFiles/CMakeConfigureLog.yaml
             build/vcpkg-osx-x64-release/vcpkg-manifest-install.log
-            build/vcpkg-osx-x64-release/_CPack_Packages/**/*.log
+            build/vcpkg-osx-x64-release/_CPack_Packages/Darwin/DragNDrop/CPack*.log
             build/vcpkg-osx-x64-release/vcpkg_installed/vcpkg/issue_body.md
