@@ -65,14 +65,24 @@ jobs:
           }
           "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
 
+      - name: Set package identity
+        shell: bash
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
       - name: Configure
-        run: cmake --preset vcpkg-osx-x64-release
+        run: cmake --preset vcpkg-osx-x64-release -DBUILD_TESTING=ON
 
       - name: Build
         env:
           QT_QPA_PLATFORM: offscreen
           SKIP_VISUAL_TEST: 1
         run: cmake --build --preset vcpkg-osx-x64-release --parallel
+
+      - name: Run gallery spacing tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+          SKIP_VISUAL_TEST: 1
+        run: ctest --test-dir build/vcpkg-osx-x64-release -L '^test_gallery_content_pages$' --output-on-failure
 
       - name: Package
         shell: bash
@@ -116,7 +126,7 @@ jobs:
           }
 
           foreach ($package in $packages) {
-            $targetName = "$($package.BaseName)-Qt5.15-test$($package.Extension)"
+            $targetName = "$($package.BaseName)-Qt5.15-$env:SHORT_SHA-test$($package.Extension)"
             $targetPath = Join-Path $destination $targetName
             Copy-Item -LiteralPath $package.FullName -Destination $targetPath
 
@@ -127,7 +137,7 @@ jobs:
       - name: Upload Qt 5.15 test package
         uses: actions/upload-artifact@v4
         with:
-          name: qt515-macos-x64-test-package
+          name: qt515-macos-x64-test-package-${{ env.SHORT_SHA }}
           if-no-files-found: error
           retention-days: 14
           path: ${{ runner.temp }}/qt515-test-package/*
