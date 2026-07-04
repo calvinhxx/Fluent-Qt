@@ -28,6 +28,7 @@
 #include <QAbstractItemView>
 #include <QEvent>
 #include <QGuiApplication>
+#include <QIcon>
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
@@ -40,6 +41,7 @@
 #include <QPoint>
 #include <QPointF>
 #include <QRect>
+#include <QRectF>
 #include <QMouseEvent>
 #include <QSize>
 #include <QStyleHints>
@@ -200,6 +202,35 @@ inline QSize fluentPixmapLogicalSize(const QPixmap& pixmap) {
 #else
     return QSize(qRound(pixmap.width() / pixmap.devicePixelRatioF()),
                  qRound(pixmap.height() / pixmap.devicePixelRatioF()));
+#endif
+}
+
+inline QRectF fluentPixmapSourceRectForDraw(const QRectF& logicalSource,
+                                            const QPixmap& pixmap) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const qreal dpr = pixmap.devicePixelRatioF();
+    return QRectF(logicalSource.left() * dpr,
+                  logicalSource.top() * dpr,
+                  logicalSource.width() * dpr,
+                  logicalSource.height() * dpr);
+#else
+    Q_UNUSED(pixmap);
+    return logicalSource;
+#endif
+}
+
+inline QPixmap fluentIconPixmapForLogicalExtent(const QIcon& icon,
+                                                const QSize& logicalExtent,
+                                                qreal devicePixelRatio = 1.0) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const qreal dpr = qMax<qreal>(1.0, devicePixelRatio);
+    QPixmap pixmap = icon.pixmap(QSize(qMax(1, qRound(logicalExtent.width() * dpr)),
+                                      qMax(1, qRound(logicalExtent.height() * dpr))));
+    pixmap.setDevicePixelRatio(dpr);
+    return pixmap;
+#else
+    Q_UNUSED(devicePixelRatio);
+    return icon.pixmap(logicalExtent);
 #endif
 }
 

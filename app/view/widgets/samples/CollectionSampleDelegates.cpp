@@ -41,20 +41,6 @@ const fluent::FluentElement::Colors& emptyColors()
     return kEmpty;
 }
 
-QRectF pixmapSourceRectForDraw(const QRectF& logicalSource, const QPixmap& pixmap)
-{
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const qreal dpr = pixmap.devicePixelRatio();
-    return QRectF(logicalSource.left() * dpr,
-                  logicalSource.top() * dpr,
-                  logicalSource.width() * dpr,
-                  logicalSource.height() * dpr);
-#else
-    Q_UNUSED(pixmap);
-    return logicalSource;
-#endif
-}
-
 qreal painterDevicePixelRatio(const QPainter* painter)
 {
     if (painter && painter->device())
@@ -64,16 +50,7 @@ qreal painterDevicePixelRatio(const QPainter* painter)
 
 QPixmap iconPixmapForExtent(const QIcon& icon, const QSize& extent, const QPainter* painter)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const qreal dpr = painterDevicePixelRatio(painter);
-    QPixmap pixmap = icon.pixmap(QSize(qMax(1, qRound(extent.width() * dpr)),
-                                      qMax(1, qRound(extent.height() * dpr))));
-    pixmap.setDevicePixelRatio(dpr);
-    return pixmap;
-#else
-    Q_UNUSED(painter);
-    return icon.pixmap(extent);
-#endif
+    return fluentIconPixmapForLogicalExtent(icon, extent, painterDevicePixelRatio(painter));
 }
 
 void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pixmap)
@@ -87,7 +64,7 @@ void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pix
     const QRectF source((sourceSize.width() - visible.width()) / 2.0,
                         (sourceSize.height() - visible.height()) / 2.0,
                         visible.width(), visible.height());
-    painter->drawPixmap(target, pixmap, pixmapSourceRectForDraw(source, pixmap));
+    painter->drawPixmap(target, pixmap, fluentPixmapSourceRectForDraw(source, pixmap));
 }
 
 // Fills a rounded-rect background when the color is visible. zh_CN: 颜色可见时填充圆角矩形背景。

@@ -102,20 +102,6 @@ struct FlowPhotoInfo {
     QSize size{160, 118};
 };
 
-QRectF pixmapSourceRectForDraw(const QRectF& logicalSource, const QPixmap& pixmap)
-{
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const qreal dpr = pixmap.devicePixelRatio();
-    return QRectF(logicalSource.left() * dpr,
-                  logicalSource.top() * dpr,
-                  logicalSource.width() * dpr,
-                  logicalSource.height() * dpr);
-#else
-    Q_UNUSED(pixmap);
-    return logicalSource;
-#endif
-}
-
 /**
  * @brief A resizable pane that paints a diagonal gradient with a centered caption.
  * zh_CN: 可缩放的窗格，绘制对角渐变并居中显示标题。
@@ -548,7 +534,7 @@ private:
                             (sourceSize.height() - visibleSize.height()) / 2.0,
                             visibleSize.width(),
                             visibleSize.height());
-        painter->drawPixmap(target, pixmap, pixmapSourceRectForDraw(source, pixmap));
+        painter->drawPixmap(target, pixmap, fluentPixmapSourceRectForDraw(source, pixmap));
     }
 
     fluent::FluentElement* m_themeHost = nullptr;
