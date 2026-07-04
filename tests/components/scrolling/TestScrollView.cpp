@@ -269,7 +269,7 @@ TEST_F(ScrollViewTest, BidirectionalCornerIsTransparent) {
     ASSERT_NE(corner, nullptr);
     EXPECT_FALSE(corner->autoFillBackground());
     EXPECT_TRUE(corner->testAttribute(Qt::WA_NoSystemBackground));
-    EXPECT_TRUE(corner->testAttribute(Qt::WA_TranslucentBackground));
+    EXPECT_FALSE(corner->testAttribute(Qt::WA_TranslucentBackground));
 }
 
 TEST_F(ScrollViewTest, FloatingVisibleVerticalBarTracksViewportRightEdgeAfterResize) {

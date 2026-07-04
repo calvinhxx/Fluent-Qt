@@ -22,7 +22,7 @@ ScrollBar::~ScrollBar() = default;
 
 void ScrollBar::init() {
     setAttribute(Qt::WA_Hover);
-    setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_NoSystemBackground);
     setAutoFillBackground(false);
     setMouseTracking(true);
     setContextMenuPolicy(Qt::NoContextMenu);

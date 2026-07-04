@@ -50,7 +50,7 @@ AnnotatedScrollBar::~AnnotatedScrollBar()
 void AnnotatedScrollBar::init()
 {
     setAttribute(Qt::WA_Hover);
-    setAttribute(Qt::WA_TranslucentBackground);
+    setAttribute(Qt::WA_NoSystemBackground);
     setAutoFillBackground(false);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);

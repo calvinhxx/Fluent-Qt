@@ -21,6 +21,7 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QVBoxLayout>
+#include <QtGlobal>
 
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
@@ -100,6 +101,20 @@ struct FlowPhotoInfo {
     QColor to;
     QSize size{160, 118};
 };
+
+QRectF pixmapSourceRectForDraw(const QRectF& logicalSource, const QPixmap& pixmap)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const qreal dpr = pixmap.devicePixelRatio();
+    return QRectF(logicalSource.left() * dpr,
+                  logicalSource.top() * dpr,
+                  logicalSource.width() * dpr,
+                  logicalSource.height() * dpr);
+#else
+    Q_UNUSED(pixmap);
+    return logicalSource;
+#endif
+}
 
 /**
  * @brief A resizable pane that paints a diagonal gradient with a centered caption.
@@ -294,9 +309,10 @@ QStandardItemModel* makeGlyphListModel(QObject* parent,
     for (const auto& row : rows) {
         auto* item = new QStandardItem(row.first);
         item->setEditable(false);
-        item->setIcon(glyphPixmap(row.second,
+        item->setData(glyphPixmap(row.second,
                                   accentPalette().at(colorIndex++ % accentPalette().size()),
-                                  iconSize));
+                                  iconSize),
+                      Qt::DecorationRole);
         model->appendRow(item);
     }
     return model;
@@ -532,7 +548,7 @@ private:
                             (sourceSize.height() - visibleSize.height()) / 2.0,
                             visibleSize.width(),
                             visibleSize.height());
-        painter->drawPixmap(target, pixmap, source);
+        painter->drawPixmap(target, pixmap, pixmapSourceRectForDraw(source, pixmap));
     }
 
     fluent::FluentElement* m_themeHost = nullptr;
@@ -1271,7 +1287,8 @@ QVector<GallerySample> listViewSamples()
                    QStringLiteral("auto* listView = new ListView(this);\n"
                                   "for (const QString& contact : contacts) {\n"
                                   "    auto* item = new QStandardItem(contact);\n"
-                                  "    item->setIcon(initialsAvatar(contact));\n"
+                                  "    item->setData(initialsAvatar(contact),\n"
+                                  "                  Qt::DecorationRole);\n"
                                   "    model->appendRow(item);\n"
                                   "}\n"
                                   "listView->setModel(model);\n"
@@ -1295,8 +1312,9 @@ QVector<GallerySample> listViewSamples()
                        for (const QString& name : names) {
                            auto* item = new QStandardItem(name);
                            item->setEditable(false);
-                           item->setIcon(initialsAvatar(
-                               name, accentPalette().at(colorIndex++ % accentPalette().size())));
+                           item->setData(initialsAvatar(
+                               name, accentPalette().at(colorIndex++ % accentPalette().size())),
+                                         Qt::DecorationRole);
                            model->appendRow(item);
                        }
                        listView->setModel(model);

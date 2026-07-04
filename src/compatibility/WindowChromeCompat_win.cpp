@@ -8,6 +8,7 @@
 #include <windowsx.h>
 #include <dwmapi.h>
 
+#include <QColor>
 #include <QWindow>
 
 // DWM system-backdrop / dark-mode attributes (defined here so we don't depend on a
@@ -35,6 +36,41 @@ namespace {
 // handling can keep DWM frame geometry synchronized after Qt recreates state.
 // zh_CN: 将扩展客户区的顶部 margin 存到 HWND 上，便于 Qt 重建状态后继续同步 DWM frame 几何。
 constexpr wchar_t ChromeTopMarginProperty[] = L"FluentWindowChromeTopMargin";
+
+struct WindowsVersionInfo {
+    DWORD major = 0;
+    DWORD minor = 0;
+    DWORD build = 0;
+    bool valid = false;
+};
+
+WindowsVersionInfo currentWindowsVersion() {
+    using RtlGetVersionFn = LONG(WINAPI*)(OSVERSIONINFOW*);
+    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+    auto* rtlGetVersion = ntdll
+        ? reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion"))
+        : nullptr;
+    if (!rtlGetVersion)
+        return {};
+
+    OSVERSIONINFOW info = {};
+    info.dwOSVersionInfoSize = sizeof(info);
+    if (rtlGetVersion(&info) != 0)
+        return {};
+
+    return {info.dwMajorVersion, info.dwMinorVersion, info.dwBuildNumber, true};
+}
+
+bool supportsDwmSystemBackdrop(const WindowsVersionInfo& version) {
+    return version.valid
+        && (version.major > 10 || (version.major == 10 && version.build >= 22621));
+}
+
+bool supportsLegacyAcrylicBackdrop(const WindowsVersionInfo& version) {
+    // ACCENT_ENABLE_ACRYLICBLURBEHIND is available on Windows 10 1803+ (build 17134).
+    // zh_CN: ACCENT_ENABLE_ACRYLICBLURBEHIND 可用于 Windows 10 1803+（build 17134）。
+    return version.valid && version.major == 10 && version.build >= 17134;
+}
 
 HWND hwndForWindow(QWidget* window) {
     if (!window || !window->windowHandle())
@@ -86,19 +122,12 @@ void ensureDwmChromeStyle(QWidget* window) {
     // DWM 仍需要 thick-frame/sysmenu 样式（缩放、Win11 圆角、任务栏/系统菜单）。
     desiredStyle |= WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
 
-    // On a translucent "sheet of glass" window, a WS_CAPTION would make DWM render its OWN caption
-    // buttons (min/max/close) top-aligned and frame-inset in the top-right glass — duplicating
-    // and clashing with our centered, edge-flush Fluent buttons. Drop WS_CAPTION there; the
-    // glass still carries the backdrop and WS_THICKFRAME keeps resize + rounded corners. Keyed off the
-    // window's translucency (fixed for its lifetime), not the per-effect paint-hint, so it never
-    // churns when the user switches Normal/Mica/Acrylic.
-    // zh_CN: 半透明「玻璃」窗口下若保留 WS_CAPTION，DWM 会在右上角玻璃区自绘顶部对齐、内缩的标题栏按钮，与我们
-    // 居中贴边的 Fluent 按钮重复冲突。此处去掉 WS_CAPTION；玻璃仍承载背景，WS_THICKFRAME 保留缩放与圆角。以窗口
-    // 半透明性（整生命周期固定）而非每效果的绘制提示为准，故用户切换 Normal/Mica/Acrylic 时绝不抖动。
-    if (window->testAttribute(Qt::WA_TranslucentBackground))
-        desiredStyle &= ~WS_CAPTION;
-    else
-        desiredStyle |= WS_CAPTION;
+    // Custom chrome owns the whole caption row. Keeping WS_CAPTION lets older DWM paths repaint a
+    // native non-client strip at the right/bottom edges, which shows up as black borders or ghosted
+    // glass beside overlay scroll bars. WS_THICKFRAME keeps resize behavior.
+    // zh_CN: 自绘 chrome 接管整条标题栏。保留 WS_CAPTION 会让旧 DWM 路径在右/底边重绘原生非客户区，
+    // 表现为滚动条旁的黑边或玻璃残影。WS_THICKFRAME 继续保留缩放行为。
+    desiredStyle &= ~WS_CAPTION;
 
     if (desiredStyle == style)
         return;
@@ -120,6 +149,69 @@ bool monitorInfoForWindow(HWND hwnd, MONITORINFO* monitorInfo) {
     monitorInfo->cbSize = sizeof(MONITORINFO);
     const HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
     return monitor && GetMonitorInfoW(monitor, monitorInfo);
+}
+
+DWORD accentColorToAbgr(const QColor& color) {
+    const QColor rgba = color.toRgb();
+    return (static_cast<DWORD>(rgba.alpha()) << 24)
+        | (static_cast<DWORD>(rgba.blue()) << 16)
+        | (static_cast<DWORD>(rgba.green()) << 8)
+        | static_cast<DWORD>(rgba.red());
+}
+
+QColor legacyBackdropTint(BackdropEffect effect, bool dark) {
+    if (effect == BackdropEffect::Acrylic) {
+        return dark ? QColor(0x20, 0x20, 0x20, 0xB8)
+                    : QColor(0xF3, 0xF3, 0xF3, 0xB8);
+    }
+    return dark ? QColor(0x20, 0x20, 0x20, 0xE6)
+                : QColor(0xF3, 0xF3, 0xF3, 0xE6);
+}
+
+bool applyLegacyAcrylicBackdrop(HWND hwnd, BackdropEffect effect, bool dark) {
+    if (!hwnd)
+        return false;
+
+    enum AccentState {
+        AccentDisabled = 0,
+        AccentEnableAcrylicBlurBehind = 4
+    };
+    struct AccentPolicy {
+        int accentState = AccentDisabled;
+        int accentFlags = 0;
+        DWORD gradientColor = 0;
+        int animationId = 0;
+    };
+    struct WindowCompositionAttribData {
+        int attribute = 0;
+        PVOID data = nullptr;
+        SIZE_T sizeOfData = 0;
+    };
+
+    constexpr int WcaAccentPolicy = 19;
+    using SetWindowCompositionAttributeFn = BOOL(WINAPI*)(HWND, WindowCompositionAttribData*);
+    auto* setCompositionAttribute = reinterpret_cast<SetWindowCompositionAttributeFn>(
+        GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetWindowCompositionAttribute"));
+    if (!setCompositionAttribute)
+        return false;
+
+    AccentPolicy policy;
+    if (effect != BackdropEffect::Solid) {
+        policy.accentState = AccentEnableAcrylicBlurBehind;
+        policy.gradientColor = accentColorToAbgr(legacyBackdropTint(effect, dark));
+    }
+
+    WindowCompositionAttribData data;
+    data.attribute = WcaAccentPolicy;
+    data.data = &policy;
+    data.sizeOfData = sizeof(policy);
+    const BOOL ok = setCompositionAttribute(hwnd, &data);
+    if (ok) {
+        SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE |
+                         SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+    return ok == TRUE;
 }
 
 void extendFrameIntoClientArea(HWND hwnd, int topMargin) {
@@ -244,23 +336,8 @@ bool handleCustomChromeMinMaxInfo(QWidget* window, MSG* msg, FluentNativeEventRe
 namespace detail {
 
 bool platformSupportsSystemBackdrop() {
-    // Mica via DWMWA_SYSTEMBACKDROP_TYPE needs Windows 11 22H2 (build 22621+). RtlGetVersion
-    // reports the true build (GetVersionEx lies without a manifest).
-    // zh_CN: DWMWA_SYSTEMBACKDROP_TYPE 的 Mica 需要 Windows 11 22H2（build 22621+）。RtlGetVersion
-    // 返回真实 build（无清单时 GetVersionEx 会谎报）。
-    using RtlGetVersionFn = LONG(WINAPI*)(OSVERSIONINFOW*);
-    HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-    auto* rtlGetVersion = ntdll
-        ? reinterpret_cast<RtlGetVersionFn>(GetProcAddress(ntdll, "RtlGetVersion"))
-        : nullptr;
-    if (!rtlGetVersion)
-        return false;
-    OSVERSIONINFOW info = {};
-    info.dwOSVersionInfoSize = sizeof(info);
-    if (rtlGetVersion(&info) != 0)
-        return false;
-    return info.dwMajorVersion > 10
-        || (info.dwMajorVersion == 10 && info.dwBuildNumber >= 22621);
+    const WindowsVersionInfo version = currentWindowsVersion();
+    return supportsDwmSystemBackdrop(version) || supportsLegacyAcrylicBackdrop(version);
 }
 
 bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
@@ -270,13 +347,23 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
         return false;
     using DwmSetWindowAttributeFn = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
     auto* setAttr = resolveDwmProc<DwmSetWindowAttributeFn>("DwmSetWindowAttribute");
-    if (!setAttr)
-        return false;
+    const WindowsVersionInfo version = currentWindowsVersion();
+    const bool dwmSystemBackdrop = supportsDwmSystemBackdrop(version);
+    const bool legacyAcrylicBackdrop = !dwmSystemBackdrop && supportsLegacyAcrylicBackdrop(version);
 
     // Match the DWM-managed bits (frame/caption) to the theme, then request the chosen backdrop.
     // zh_CN: 先让 DWM 管理的部分（frame/caption）匹配主题，再请求所选背景。
-    const BOOL darkMode = dark ? TRUE : FALSE;
-    setAttr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
+    if (setAttr) {
+        const BOOL darkMode = dark ? TRUE : FALSE;
+        setAttr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
+    }
+
+    if (legacyAcrylicBackdrop)
+        return applyLegacyAcrylicBackdrop(hwnd, effect, dark);
+
+    if (!dwmSystemBackdrop || !setAttr)
+        return false;
+
     // Mica and Acrylic share this exact plumbing — only the DWMWA_SYSTEMBACKDROP_TYPE value differs.
     // zh_CN: Mica 与 Acrylic 走完全相同的管线——仅 DWMWA_SYSTEMBACKDROP_TYPE 取值不同。
     int backdropType = DWMSBT_MAINWINDOW;

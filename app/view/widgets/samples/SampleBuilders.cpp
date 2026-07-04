@@ -1,10 +1,12 @@
 #include "SampleBuilders.h"
 
 #include <QFont>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
+#include <QScreen>
 #include <QStringList>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -18,10 +20,18 @@ namespace {
  * @brief Retina-aware pixmap canvas shared by the decorative painters.
  * zh_CN: 各装饰绘制器共用的高分屏感知画布。
  */
+qreal samplePixmapDevicePixelRatio()
+{
+    if (QScreen* screen = QGuiApplication::primaryScreen())
+        return qMax<qreal>(1.0, screen->devicePixelRatio());
+    return 1.0;
+}
+
 QPixmap makeCanvas(const QSize& size)
 {
-    constexpr qreal dpr = 2.0;
-    QPixmap pixmap(size * dpr);
+    const qreal dpr = samplePixmapDevicePixelRatio();
+    QPixmap pixmap(QSize(qMax(1, qRound(size.width() * dpr)),
+                         qMax(1, qRound(size.height() * dpr))));
     pixmap.setDevicePixelRatio(dpr);
     pixmap.fill(Qt::transparent);
     return pixmap;

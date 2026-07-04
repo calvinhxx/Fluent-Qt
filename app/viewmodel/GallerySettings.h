@@ -29,9 +29,9 @@ public:
     Q_ENUM(NavigationStyle)
 
     // Window background effect. Normal is an opaque surface; Mica/Acrylic request a translucent
-    // system backdrop where the platform supports one (Win11 / macOS), else they degrade to Normal.
-    // zh_CN: 窗口背景效果。Normal 为不透明表面；Mica/Acrylic 在平台支持时（Win11 / macOS）请求半透明系统
-    // 背景，否则退化为 Normal。
+    // system backdrop where the platform supports one (Win11 DWM, Win10 Acrylic fallback, macOS),
+    // else they degrade to Normal. zh_CN: 窗口背景效果。Normal 为不透明表面；Mica/Acrylic 在平台支持时
+    //（Win11 DWM、Win10 Acrylic 回退、macOS）请求半透明系统背景，否则退化为 Normal。
     enum class WindowEffect {
         Normal,
         Mica,

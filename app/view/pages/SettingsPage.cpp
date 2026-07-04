@@ -337,7 +337,7 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                                                  m_navigationChoice));
     m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Grid,
                                                  QStringLiteral("Window background effect"),
-                                                 QStringLiteral("Mica and Acrylic require Windows 11 or macOS"),
+                                                 QStringLiteral("Uses the closest supported system backdrop on this platform"),
                                                  m_effectChoice));
     m_contentLayout->addSpacing(10);
     m_contentLayout->addWidget(createSectionTitle(QStringLiteral("App behavior")));

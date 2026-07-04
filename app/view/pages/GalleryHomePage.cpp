@@ -697,10 +697,10 @@ protected:
 
         const bool dark = currentTheme() == Dark;
         const Colors colors = themeColors();
-        // A real OS-composited backdrop (Win11 Mica / macOS vibrancy) — the same contract the content
-        // host reads. Under it the page is transparent and the backdrop shows through, so the hero must
-        // dissolve INTO that backdrop rather than onto an opaque bgLayerAlt plate (which reads as a seam).
-        // zh_CN: 真实系统合成背景（Win11 Mica / macOS vibrancy）——与内容宿主同一契约。此时页面透明、背景透出，
+        // A real OS-composited backdrop (Windows DWM/Acrylic or macOS vibrancy) — the same contract
+        // the content host reads. Under it the page is transparent and the backdrop shows through, so
+        // the hero must dissolve INTO that backdrop rather than onto an opaque bgLayerAlt plate.
+        // zh_CN: 真实系统合成背景（Windows DWM/Acrylic 或 macOS vibrancy）——与内容宿主同一契约。此时页面透明、背景透出，
         // 故 hero 必须溶解进该背景，而非落在不透明 bgLayerAlt 板上（那会显示为硬缝）。
         const bool realBackdrop = window()
             && window()->testAttribute(Qt::WA_TranslucentBackground)

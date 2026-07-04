@@ -381,7 +381,7 @@ TEST_F(WindowTest, BackdropSwitchKeepsPlatformTranslucencyStable) {
     EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
 }
 
-TEST_F(WindowTest, WindowsCustomChromePreservesDwmCaption) {
+TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption) {
 #ifdef Q_OS_WIN
     Window window;
     window.resize(520, 360);
@@ -414,7 +414,7 @@ TEST_F(WindowTest, WindowsCustomChromePreservesDwmCaption) {
     ASSERT_NE(hwnd, nullptr);
 
     const LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
-    EXPECT_NE(style & WS_CAPTION, 0);
+    EXPECT_EQ(style & WS_CAPTION, 0);
     EXPECT_NE(style & WS_THICKFRAME, 0);
     EXPECT_NE(style & WS_SYSMENU, 0);
     EXPECT_NE(style & WS_MINIMIZEBOX, 0);
