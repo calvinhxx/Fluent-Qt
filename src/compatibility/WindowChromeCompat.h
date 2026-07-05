@@ -38,10 +38,11 @@ using FluentNativeEventResult = long;
  *
  * Solid keeps an opaque window (the app paints its own themeBackdrop, incl. active/inactive).
  * Mica and Acrylic make the window translucent and ask the platform for its closest system
- * backdrop (Win11 DWM Mica/Acrylic, Win10 legacy Acrylic fallback, macOS NSVisualEffectView
- * vibrancy); chrome then paints transparent so it shows through.
+ * backdrop (Win11 DWM Mica/Acrylic or macOS NSVisualEffectView vibrancy). Windows 10
+ * intentionally degrades to the opaque app-painted fallback; legacy Acrylic does not provide a
+ * reliable Qt top-level backing store.
  * zh_CN: Solid 为不透明窗口（App 自绘 themeBackdrop，含激活/非激活）。Mica/Acrylic 使窗口半透明并向平台
- * 请求最接近的系统背景（Win11 DWM Mica/Acrylic、Win10 legacy Acrylic 回退、macOS 的 NSVisualEffectView
+ * 请求最接近的系统背景（Win11 DWM Mica/Acrylic、macOS 的 NSVisualEffectView；Windows 10 退化为不透明 fallback）
  * vibrancy），chrome 随之画透明以透出之。
  */
 enum class BackdropEffect { Solid, Mica, Acrylic };
@@ -160,10 +161,10 @@ public:
      * Requires a live native handle, so call it from showEvent / after winId().
      * zh_CN: 需要有效的原生句柄，故应在 showEvent / winId() 之后调用。
      *
-     * On Windows 11 the effect maps to a DWMWA_SYSTEMBACKDROP_TYPE value; Windows 10 uses legacy
-     * Acrylic blur when available; on macOS it installs a native NSVisualEffectView (vibrancy).
+     * On Windows 11 the effect maps to a DWMWA_SYSTEMBACKDROP_TYPE value; Windows 10 uses the
+     * opaque app-painted fallback; on macOS it installs a native NSVisualEffectView (vibrancy).
      * Solid is a no-op backdrop (the app paints its own). zh_CN: Windows 11 上效果映射为
-     * DWMWA_SYSTEMBACKDROP_TYPE 值；Windows 10 可用时使用 legacy Acrylic blur；macOS 上安装原生
+     * DWMWA_SYSTEMBACKDROP_TYPE 值；Windows 10 使用不透明 fallback；macOS 上安装原生
      * NSVisualEffectView（vibrancy）。Solid 不施加系统背景（由 App 自绘）。
      */
     bool applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite = false);

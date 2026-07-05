@@ -22,7 +22,11 @@ ScrollBar::~ScrollBar() = default;
 
 void ScrollBar::init() {
     setAttribute(Qt::WA_Hover);
-    setAttribute(Qt::WA_NoSystemBackground);
+    // Keep normal Qt background propagation for the transparent resting state. Overlay scrollbars are
+    // visible even while opacity is 0; WA_NoSystemBackground can expose stale black backing-store
+    // pixels on Windows 10 instead of the parent surface behind the bar.
+    setAttribute(Qt::WA_NoSystemBackground, false);
+    setAttribute(Qt::WA_OpaquePaintEvent, false);
     setAutoFillBackground(false);
     setMouseTracking(true);
     setContextMenuPolicy(Qt::NoContextMenu);

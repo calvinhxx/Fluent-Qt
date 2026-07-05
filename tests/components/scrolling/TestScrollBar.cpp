@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <QApplication>
 #include <QImage>
+#include <QPalette>
 #include <QPixmap>
 #include <QWidget>
 #include <QTimer>
@@ -25,7 +26,20 @@ QImage renderScrollBarImage(ScrollBar* scrollBar) {
     QPixmap pixmap(scrollBar->size());
     pixmap.fill(Qt::transparent);
     scrollBar->render(&pixmap);
-    return pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
+    QImage image = pixmap.toImage().convertToFormat(QImage::Format_ARGB32);
+
+    // ScrollBar allows Qt to propagate the parent/background surface, so render() may produce an
+    // opaque uniform backing. Strip only that uniform backing so the existing thumb-geometry
+    // assertions keep inspecting the painted thumb.
+    const QColor backing = image.pixelColor(0, 0);
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            const QColor pixel = image.pixelColor(x, y);
+            if (pixel == backing)
+                image.setPixelColor(x, y, Qt::transparent);
+        }
+    }
+    return image;
 }
 
 QRect alphaBounds(const QImage& image) {
@@ -181,6 +195,36 @@ TEST_F(ScrollBarDesignLanguageTest, AllLanguagesAndThemesPaintAThumbWithoutOpaqu
                 << c.green() << "," << c.blue() << "," << c.alpha() << ")";
         }
     }
+}
+
+TEST_F(ScrollBarTest, TransparentRestingOverlayPreservesParentSurface) {
+    QWidget parent;
+    parent.resize(72, 144);
+    parent.setAutoFillBackground(true);
+
+    const QColor parentColor("#4A90E2");
+    QPalette palette = parent.palette();
+    palette.setColor(QPalette::Window, parentColor);
+    parent.setPalette(palette);
+
+    ScrollBar bar(Qt::Vertical, &parent);
+    bar.setGeometry(60, 0, 12, parent.height());
+    bar.setRange(0, 100);
+    bar.setPageStep(20);
+    bar.setOpacity(0.0);
+    bar.show();
+
+    EXPECT_FALSE(bar.testAttribute(Qt::WA_NoSystemBackground));
+    EXPECT_FALSE(bar.testAttribute(Qt::WA_OpaquePaintEvent));
+
+    QPixmap pixmap(parent.size());
+    pixmap.fill(Qt::black);
+    bar.render(&pixmap, bar.pos());
+
+    const QColor sample = pixmap.toImage().pixelColor(bar.geometry().center());
+    EXPECT_NEAR(sample.red(), parentColor.red(), 1);
+    EXPECT_NEAR(sample.green(), parentColor.green(), 1);
+    EXPECT_NEAR(sample.blue(), parentColor.blue(), 1);
 }
 
 TEST_F(ScrollBarTest, VisualPropertyVerification) {

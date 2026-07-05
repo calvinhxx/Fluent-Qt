@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <memory>
+
 #include <QApplication>
+#include <QBoxLayout>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFrame>
@@ -34,6 +38,7 @@
 #include "view/widgets/GalleryEntryGrid.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
+#include "view/widgets/samples/SampleBuilders.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/support/GalleryToast.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
@@ -79,6 +84,15 @@ private:
     int m_preferredHeight = 40;
 };
 
+int expectedButtonRowSpacing(int requested)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && (defined(Q_OS_MACOS) || defined(Q_OS_MAC))
+    return requested + 10;
+#else
+    return requested;
+#endif
+}
+
 QRect mappedRectInAncestor(const QWidget* widget, const QWidget* ancestor)
 {
     return QRect(widget->mapTo(const_cast<QWidget*>(ancestor), QPoint(0, 0)), widget->size());
@@ -105,6 +119,38 @@ Button* buttonWithText(QWidget* root, const QString& text)
             return button;
     }
     return nullptr;
+}
+
+bool findSampleById(const QString& route,
+                    const QString& sampleId,
+                    fluent::gallery::GallerySample* outSample)
+{
+    const auto samples = fluent::gallery::gallerySamplesForRoute(route);
+    for (const auto& sample : samples) {
+        if (sample.id == sampleId) {
+            if (outSample)
+                *outSample = sample;
+            return true;
+        }
+    }
+    return false;
+}
+
+QList<Button*> directButtonsLeftToRight(QWidget* root)
+{
+    QList<Button*> buttons = root ? root->findChildren<Button*>(QString(), Qt::FindDirectChildrenOnly)
+                                  : QList<Button*>();
+    std::sort(buttons.begin(), buttons.end(), [root](Button* left, Button* right) {
+        return mappedRectInAncestor(left, root).x() < mappedRectInAncestor(right, root).x();
+    });
+    return buttons;
+}
+
+int horizontalGapInAncestor(const QWidget* left, const QWidget* right, const QWidget* ancestor)
+{
+    const QRect leftRect = mappedRectInAncestor(left, ancestor);
+    const QRect rightRect = mappedRectInAncestor(right, ancestor);
+    return rightRect.x() - (leftRect.x() + leftRect.width());
 }
 
 template <typename PageType>
@@ -342,6 +388,163 @@ TEST_F(GalleryContentPagesTest, SampleCardsHostLivePreviewAndCode)
         EXPECT_FALSE(card->codeBlock()->code().isEmpty()) << card->sampleId().toStdString();
         EXPECT_NE(card->codeBlock()->copyButton(), nullptr) << card->sampleId().toStdString();
     }
+}
+
+TEST_F(GalleryContentPagesTest, HorizontalSampleGroupUsesRequestedSpacing)
+{
+    std::unique_ptr<QWidget> group(fluent::gallery::samples::horizontalGroup(nullptr, 10));
+
+    auto* first = new Button(QStringLiteral("First"), group.get());
+    auto* second = new Button(QStringLiteral("Second"), group.get());
+    auto* third = new Button(QStringLiteral("Third"), group.get());
+
+    group->layout()->addWidget(first);
+    group->layout()->addWidget(second);
+    group->layout()->addWidget(third);
+    group->resize(group->sizeHint());
+    group->layout()->setGeometry(group->rect());
+    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    QApplication::processEvents();
+
+    EXPECT_EQ(second->x() - (first->x() + first->width()), expectedButtonRowSpacing(10));
+    EXPECT_EQ(third->x() - (second->x() + second->width()), expectedButtonRowSpacing(10));
+    ASSERT_EQ(group->layout()->count(), 5);
+    ASSERT_NE(group->layout()->itemAt(1)->widget(), nullptr);
+    EXPECT_EQ(group->layout()->itemAt(1)->widget()->width(), expectedButtonRowSpacing(10));
+    ASSERT_NE(group->layout()->itemAt(3)->widget(), nullptr);
+    EXPECT_EQ(group->layout()->itemAt(3)->widget()->width(), expectedButtonRowSpacing(10));
+}
+
+TEST_F(GalleryContentPagesTest, HorizontalSampleGroupKeepsSpacingThroughQBoxLayoutApi)
+{
+    std::unique_ptr<QWidget> group(fluent::gallery::samples::horizontalGroup(nullptr, 10));
+    auto* layout = qobject_cast<QBoxLayout*>(group->layout());
+    ASSERT_NE(layout, nullptr);
+
+    auto* first = new Button(QStringLiteral("First"), group.get());
+    auto* second = new Button(QStringLiteral("Second"), group.get());
+    auto* third = new Button(QStringLiteral("Third"), group.get());
+
+    layout->addWidget(first);
+    layout->addWidget(second);
+    layout->addWidget(third);
+    layout->addStretch(1);
+    group->resize(group->sizeHint() + QSize(160, 20));
+    layout->setGeometry(group->rect());
+    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    QApplication::processEvents();
+
+    EXPECT_EQ(first->x(), 0);
+    EXPECT_EQ(second->x() - (first->x() + first->width()), expectedButtonRowSpacing(10));
+    EXPECT_EQ(third->x() - (second->x() + second->width()), expectedButtonRowSpacing(10));
+    ASSERT_EQ(layout->count(), 6);
+    ASSERT_NE(layout->itemAt(1)->widget(), nullptr);
+    EXPECT_EQ(layout->itemAt(1)->widget()->width(), expectedButtonRowSpacing(10));
+    ASSERT_NE(layout->itemAt(3)->widget(), nullptr);
+    EXPECT_EQ(layout->itemAt(3)->widget()->width(), expectedButtonRowSpacing(10));
+    ASSERT_NE(layout->itemAt(5)->spacerItem(), nullptr);
+}
+
+TEST_F(GalleryContentPagesTest, StackViewSampleButtonsUseRequestedSpacing)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("stack-view"),
+                               QStringLiteral("stack-view-basic"),
+                               &sample));
+    ASSERT_TRUE(static_cast<bool>(sample.createPreview));
+
+    GallerySampleCard card(sample);
+    card.resize(640, card.sizeHint().height());
+    card.show();
+    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    QApplication::processEvents();
+
+    Button* pushButton = buttonWithText(card.previewWidget(), QStringLiteral("Push page"));
+    Button* popButton = buttonWithText(card.previewWidget(), QStringLiteral("Pop page"));
+    ASSERT_NE(pushButton, nullptr);
+    ASSERT_NE(popButton, nullptr);
+
+    EXPECT_EQ(popButton->x() - (pushButton->x() + pushButton->width()),
+              expectedButtonRowSpacing(8));
+}
+
+TEST_F(GalleryContentPagesTest, ButtonLikeSampleRowsPreserveRequestedSpacing)
+{
+    struct SampleCase {
+        QString route;
+        QString id;
+        int buttonCount;
+        int spacing;
+    };
+
+    const QVector<SampleCase> cases = {
+        {QStringLiteral("button"), QStringLiteral("button-styles"), 3, 10},
+        {QStringLiteral("button"), QStringLiteral("button-sizes"), 3, 10},
+        {QStringLiteral("button"), QStringLiteral("button-icon-layouts"), 3, 10},
+        {QStringLiteral("button"), QStringLiteral("button-interaction-state"), 4, 10},
+        {QStringLiteral("repeat-button"), QStringLiteral("repeat-button-timing"), 2, 10},
+        {QStringLiteral("split-button"), QStringLiteral("split-button-sizes"), 3, 10},
+    };
+
+    for (const SampleCase& sampleCase : cases) {
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(sampleCase.route, sampleCase.id, &sample))
+            << sampleCase.id.toStdString();
+        ASSERT_TRUE(static_cast<bool>(sample.createPreview)) << sampleCase.id.toStdString();
+
+        GallerySampleCard card(sample);
+        card.resize(720, card.sizeHint().height());
+        card.show();
+        QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QApplication::processEvents();
+
+        QWidget* preview = card.previewWidget();
+        ASSERT_NE(preview, nullptr) << sampleCase.id.toStdString();
+
+        const QList<Button*> buttons = directButtonsLeftToRight(preview);
+        ASSERT_EQ(buttons.size(), sampleCase.buttonCount) << sampleCase.id.toStdString();
+        for (int i = 0; i + 1 < buttons.size(); ++i) {
+            EXPECT_EQ(horizontalGapInAncestor(buttons.at(i), buttons.at(i + 1), preview),
+                      expectedButtonRowSpacing(sampleCase.spacing))
+                << sampleCase.id.toStdString() << " pair " << i;
+        }
+    }
+}
+
+TEST_F(GalleryContentPagesTest, StackViewTransitionButtonsUseRequestedSpacing)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("stack-view"),
+                               QStringLiteral("stack-view-transition-type"),
+                               &sample));
+    ASSERT_TRUE(static_cast<bool>(sample.createPreview));
+
+    GallerySampleCard card(sample);
+    card.resize(640, card.sizeHint().height());
+    card.show();
+    QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    QApplication::processEvents();
+
+    QWidget* preview = card.previewWidget();
+    ASSERT_NE(preview, nullptr);
+
+    const QVector<QString> labels = {
+        QStringLiteral("ScaleFade"),
+        QStringLiteral("SlideFade"),
+        QStringLiteral("Push"),
+        QStringLiteral("Pop"),
+    };
+    QVector<Button*> buttons;
+    for (const QString& label : labels) {
+        Button* button = buttonWithText(preview, label);
+        ASSERT_NE(button, nullptr) << label.toStdString();
+        buttons.append(button);
+    }
+
+    for (int i = 0; i + 1 < buttons.size(); ++i)
+        EXPECT_EQ(horizontalGapInAncestor(buttons.at(i), buttons.at(i + 1), preview),
+                  expectedButtonRowSpacing(8))
+            << "pair " << i;
 }
 
 // Regression: the TreeView "Selection indicator motion" sample shares one left-aligned group with a

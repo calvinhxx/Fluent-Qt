@@ -131,7 +131,7 @@ themes without a `.darker()`/`.lighter()` guess:
   `Stroke::FocusInner` (the opposite polarity), drawn inset.
 
 The brand's **acrylic / mica** materials are window-level backdrops (Win11 DWM Mica/Acrylic,
-Win10 legacy Acrylic fallback, macOS vibrancy, or a solid fallback elsewhere) rather than
+macOS vibrancy, or a solid fallback elsewhere; Windows 10 uses the solid fallback) rather than
 per-control fills, so control specs here treat the surface as opaque; the translucency lives
 behind the page.
 

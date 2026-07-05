@@ -553,10 +553,27 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
     QWidget plainHost;
     EXPECT_EQ(component.chromeBackdropFill(&plainHost, true), component.themeBackdrop(true));
 
+    // Unsupported platforms still keep the requested effect as an opaque, token-based fallback.
+    QWidget paintedMicaHost;
+    paintedMicaHost.setProperty("fluentWindowBackdropEffect", 1);
+    const QColor paintedMica = component.chromeBackdropFill(&paintedMicaHost, true);
+    EXPECT_TRUE(paintedMica.isValid());
+    EXPECT_EQ(paintedMica.alpha(), 255);
+    EXPECT_NE(paintedMica, component.themeBackdrop(true));
+
+    QWidget paintedAcrylicHost;
+    paintedAcrylicHost.setProperty("fluentWindowBackdropEffect", 2);
+    const QColor paintedAcrylic = component.chromeBackdropFill(&paintedAcrylicHost, true);
+    EXPECT_TRUE(paintedAcrylic.isValid());
+    EXPECT_EQ(paintedAcrylic.alpha(), 255);
+    EXPECT_NE(paintedAcrylic, component.themeBackdrop(true));
+    EXPECT_NE(paintedAcrylic, paintedMica);
+
     // A host carrying a real OS-composited backdrop (Windows DWM/Acrylic or macOS vibrancy) yields an invalid
     // color regardless of focus — the caller's contract is "erase to transparent".
     // zh_CN: 带真实系统合成背景（Windows DWM/Acrylic 或 macOS vibrancy）的宿主，无论焦点都返回无效色——调用方据此擦透明。
     QWidget micaHost;
+    micaHost.setProperty("fluentWindowBackdropEffect", 2);
     micaHost.setProperty("fluentMicaBackdrop", true);
     EXPECT_FALSE(component.chromeBackdropFill(&micaHost, true).isValid());
     EXPECT_FALSE(component.chromeBackdropFill(&micaHost, false).isValid());

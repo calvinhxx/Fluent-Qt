@@ -59,6 +59,7 @@ Window::Window(QWidget* parent)
                      && m_backdropEffect != compatibility::BackdropEffect::Solid;
     if (m_windowTranslucent)
         setAttribute(Qt::WA_TranslucentBackground, true);
+    setProperty("fluentWindowBackdropEffect", static_cast<int>(m_backdropEffect));
     setProperty("fluentMicaBackdrop", m_micaBackdrop);
 
     auto* rootLayout = new QVBoxLayout(this);
@@ -152,6 +153,7 @@ void Window::setBackdropEffect(compatibility::BackdropEffect effect) {
     // 原生标志——故无闪烁、无焦点丢失。
     m_micaBackdrop = m_windowTranslucent
                      && effect != compatibility::BackdropEffect::Solid;
+    setProperty("fluentWindowBackdropEffect", static_cast<int>(m_backdropEffect));
     setProperty("fluentMicaBackdrop", m_micaBackdrop);
 
     // forceRecomposite: a deliberate, infrequent effect switch must composite on the spot. Acrylic
@@ -211,7 +213,7 @@ void Window::paintEvent(QPaintEvent*) {
     }
 
     const auto& colors = themeColors();
-    // Fill the deepest backdrop with the SAME themeBackdrop(active) the title bar and nav pane use,
+    // Fill the deepest backdrop with the SAME chromeBackdropFill() the title bar and nav pane use,
     // not a flat bgCanvas. Under a translucent top-level the chrome's own fill is cleared where a
     // transparent child (the nav pane) sits, so the pane reveals this window backing — if it stayed a
     // flat bgCanvas while the title bar washed toward bgLayer on focus loss, the title bar and nav
@@ -221,7 +223,8 @@ void Window::paintEvent(QPaintEvent*) {
     // chrome 自身的填充在透明子控件（导航窗格）所在处会被清除，故窗格透出此窗口底；若它保持扁平 bgCanvas 而标题栏
     // 在失焦时洗向 bgLayer，标题栏与导航窗格就会分叉（Normal 模式「标题栏≠导航栏」的缝）。共用同一来源使二者在激活
     // 与非激活态都一致。
-    painter.fillRect(rect(), themeBackdrop(isActiveWindow()));
+    const QColor backdrop = chromeBackdropFill(this, isActiveWindow());
+    painter.fillRect(rect(), backdrop.isValid() ? backdrop : themeBackdrop(isActiveWindow()));
 
     if (m_chrome.usesCustomWindowChrome()) {
         painter.setPen(colors.strokeDefault);
