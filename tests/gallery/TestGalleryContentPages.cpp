@@ -22,6 +22,7 @@
 #include <QWidget>
 
 #include "components/basicinput/Button.h"
+#include "compatibility/QtCompat.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -86,11 +87,7 @@ private:
 
 int expectedButtonRowSpacing(int requested)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && (defined(Q_OS_MACOS) || defined(Q_OS_MAC))
-    return requested + 10;
-#else
-    return requested;
-#endif
+    return fluentAdjacentButtonRowSpacing(requested);
 }
 
 QRect mappedRectInAncestor(const QWidget* widget, const QWidget* ancestor)
