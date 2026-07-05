@@ -176,6 +176,10 @@ TEST(QtCompat, ItemViewRowHeightFallsBackToDelegateSizeHint) {
     EXPECT_EQ(fluentItemViewRowHeight(&view, index, QRect(0, 0, 120, 0)), 44);
 }
 
+TEST(QtCompat, AdjacentButtonRowSpacingDoesNotShrinkRequestedSpacing) {
+    EXPECT_GE(fluentAdjacentButtonRowSpacing(8), 8);
+}
+
 TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards) {
     const QString root = repositoryRootPath();
     const QStringList scanRoots = {

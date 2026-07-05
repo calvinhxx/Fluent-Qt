@@ -143,6 +143,14 @@ inline QWidget* fluentLayoutItemWidget(const QLayoutItem* item) {
     return const_cast<QLayoutItem*>(item)->widget();
 }
 
+inline int fluentAdjacentButtonRowSpacing(int requestedSpacing) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && (defined(Q_OS_MACOS) || defined(Q_OS_MAC))
+    return requestedSpacing + 10;
+#else
+    return requestedSpacing;
+#endif
+}
+
 template <typename Sender, typename Signal, typename Context, typename Functor>
 QMetaObject::Connection fluentConnectSingleShot(Sender* sender, Signal signal, Context* context, Functor&& functor) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

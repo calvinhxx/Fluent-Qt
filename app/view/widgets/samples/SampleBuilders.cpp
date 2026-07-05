@@ -15,6 +15,7 @@
 #include <QWidget>
 
 #include "components/basicinput/Button.h"
+#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 
 namespace fluent::gallery::samples {
@@ -88,10 +89,8 @@ private:
     int spacingBetween(QLayoutItem* previous, QLayoutItem* current) const
     {
         int spacing = m_spacing;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && (defined(Q_OS_MACOS) || defined(Q_OS_MAC))
         if (isButtonLikeItem(previous) && isButtonLikeItem(current))
-            spacing += 10;
-#endif
+            spacing = fluentAdjacentButtonRowSpacing(spacing);
         return spacing;
     }
 
