@@ -369,14 +369,20 @@ TEST_F(WindowTest, BackdropSwitchKeepsPlatformTranslucencyStable) {
     const bool platformTranslucent = window.testAttribute(Qt::WA_TranslucentBackground);
 
     window.setBackdropEffect(compatibility::BackdropEffect::Solid);
+    EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
+              static_cast<int>(compatibility::BackdropEffect::Solid));
     EXPECT_FALSE(window.property("fluentMicaBackdrop").toBool());
     EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
 
     window.setBackdropEffect(compatibility::BackdropEffect::Mica);
+    EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
+              static_cast<int>(compatibility::BackdropEffect::Mica));
     EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), platformTranslucent);
     EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
 
     window.setBackdropEffect(compatibility::BackdropEffect::Acrylic);
+    EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
+              static_cast<int>(compatibility::BackdropEffect::Acrylic));
     EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), platformTranslucent);
     EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
 }

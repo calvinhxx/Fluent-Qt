@@ -2,6 +2,7 @@
 #include "components/foundation/private/FluentElement_p.h"
 #include "components/foundation/ThemeRegistry.h"
 
+#include <algorithm>
 #include <QVariant>
 #include <QWidget>
 #include "design/ThemeColors.h"
@@ -18,6 +19,29 @@ namespace fluent {
 namespace {
 
 constexpr char kThemeOverrideProperty[] = "fluentThemeOverride";
+constexpr char kWindowBackdropEffectProperty[] = "fluentWindowBackdropEffect";
+constexpr int kBackdropEffectSolid = 0;
+constexpr int kBackdropEffectMica = 1;
+constexpr int kBackdropEffectAcrylic = 2;
+
+QColor blendRgb(const QColor& from, const QColor& to, qreal amount)
+{
+    amount = std::max<qreal>(0.0, std::min<qreal>(1.0, amount));
+    return QColor::fromRgbF(from.redF() + (to.redF() - from.redF()) * amount,
+                            from.greenF() + (to.greenF() - from.greenF()) * amount,
+                            from.blueF() + (to.blueF() - from.blueF()) * amount);
+}
+
+int backdropEffectFromProperty(const QVariant& value)
+{
+    bool ok = false;
+    const int effect = value.toInt(&ok);
+    if (!ok)
+        return kBackdropEffectSolid;
+    if (effect == kBackdropEffectMica || effect == kBackdropEffectAcrylic)
+        return effect;
+    return kBackdropEffectSolid;
+}
 
 bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
 {
@@ -233,11 +257,29 @@ QColor FluentElement::chromeBackdropFill(const QWidget* hostWindow, bool active)
     // The host window publishes "fluentMicaBackdrop" when it carries a real OS-composited backdrop
     // (Windows DWM/Acrylic or macOS vibrancy). The single read of that contract lives here, so chrome
     // surfaces never re-derive it: when present, paint transparent (invalid color) to show it through;
-    // otherwise paint the solid themeBackdrop for the activation state.
+    // otherwise paint an opaque app fallback for the requested effect.
     // zh_CN: 宿主窗口带真实系统合成背景（Windows DWM/Acrylic 或 macOS vibrancy）时会发布 "fluentMicaBackdrop"。
     // 该契约的唯一读取点集中在此，chrome 表面不再各自推导：有则画透明（无效色）透出背景；否则按激活态画纯色 themeBackdrop。
     if (hostWindow && hostWindow->property("fluentMicaBackdrop").toBool())
         return QColor();  // invalid => caller erases to transparent
+
+    const int requestedEffect = hostWindow
+        ? backdropEffectFromProperty(hostWindow->property(kWindowBackdropEffectProperty))
+        : kBackdropEffectSolid;
+    const bool dark = effectiveTheme() == Dark;
+
+    if (requestedEffect == kBackdropEffectMica) {
+        const Material::MicaToken mica = Material::Mica::get(dark);
+        const QColor target = active ? themeColors().bgLayerAlt : themeColors().bgLayer;
+        return blendRgb(mica.baseColor, target, active ? 0.10 : 0.35);
+    }
+
+    if (requestedEffect == kBackdropEffectAcrylic) {
+        const Material::AcrylicToken acrylic = Material::Acrylic::get(dark);
+        const QColor target = active ? themeColors().bgLayerAlt : themeColors().bgLayer;
+        return blendRgb(acrylic.tintColor, target, active ? 0.22 : 0.45);
+    }
+
     return themeBackdrop(active);
 }
 

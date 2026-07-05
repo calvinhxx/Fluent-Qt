@@ -8,7 +8,6 @@
 #include <windowsx.h>
 #include <dwmapi.h>
 
-#include <QColor>
 #include <QWindow>
 
 // DWM system-backdrop / dark-mode attributes (defined here so we don't depend on a
@@ -64,12 +63,6 @@ WindowsVersionInfo currentWindowsVersion() {
 bool supportsDwmSystemBackdrop(const WindowsVersionInfo& version) {
     return version.valid
         && (version.major > 10 || (version.major == 10 && version.build >= 22621));
-}
-
-bool supportsLegacyAcrylicBackdrop(const WindowsVersionInfo& version) {
-    // ACCENT_ENABLE_ACRYLICBLURBEHIND is available on Windows 10 1803+ (build 17134).
-    // zh_CN: ACCENT_ENABLE_ACRYLICBLURBEHIND 可用于 Windows 10 1803+（build 17134）。
-    return version.valid && version.major == 10 && version.build >= 17134;
 }
 
 HWND hwndForWindow(QWidget* window) {
@@ -149,69 +142,6 @@ bool monitorInfoForWindow(HWND hwnd, MONITORINFO* monitorInfo) {
     monitorInfo->cbSize = sizeof(MONITORINFO);
     const HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
     return monitor && GetMonitorInfoW(monitor, monitorInfo);
-}
-
-DWORD accentColorToAbgr(const QColor& color) {
-    const QColor rgba = color.toRgb();
-    return (static_cast<DWORD>(rgba.alpha()) << 24)
-        | (static_cast<DWORD>(rgba.blue()) << 16)
-        | (static_cast<DWORD>(rgba.green()) << 8)
-        | static_cast<DWORD>(rgba.red());
-}
-
-QColor legacyBackdropTint(BackdropEffect effect, bool dark) {
-    if (effect == BackdropEffect::Acrylic) {
-        return dark ? QColor(0x20, 0x20, 0x20, 0xB8)
-                    : QColor(0xF3, 0xF3, 0xF3, 0xB8);
-    }
-    return dark ? QColor(0x20, 0x20, 0x20, 0xE6)
-                : QColor(0xF3, 0xF3, 0xF3, 0xE6);
-}
-
-bool applyLegacyAcrylicBackdrop(HWND hwnd, BackdropEffect effect, bool dark) {
-    if (!hwnd)
-        return false;
-
-    enum AccentState {
-        AccentDisabled = 0,
-        AccentEnableAcrylicBlurBehind = 4
-    };
-    struct AccentPolicy {
-        int accentState = AccentDisabled;
-        int accentFlags = 0;
-        DWORD gradientColor = 0;
-        int animationId = 0;
-    };
-    struct WindowCompositionAttribData {
-        int attribute = 0;
-        PVOID data = nullptr;
-        SIZE_T sizeOfData = 0;
-    };
-
-    constexpr int WcaAccentPolicy = 19;
-    using SetWindowCompositionAttributeFn = BOOL(WINAPI*)(HWND, WindowCompositionAttribData*);
-    auto* setCompositionAttribute = reinterpret_cast<SetWindowCompositionAttributeFn>(
-        GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetWindowCompositionAttribute"));
-    if (!setCompositionAttribute)
-        return false;
-
-    AccentPolicy policy;
-    if (effect != BackdropEffect::Solid) {
-        policy.accentState = AccentEnableAcrylicBlurBehind;
-        policy.gradientColor = accentColorToAbgr(legacyBackdropTint(effect, dark));
-    }
-
-    WindowCompositionAttribData data;
-    data.attribute = WcaAccentPolicy;
-    data.data = &policy;
-    data.sizeOfData = sizeof(policy);
-    const BOOL ok = setCompositionAttribute(hwnd, &data);
-    if (ok) {
-        SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-                     SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE |
-                         SWP_NOZORDER | SWP_NOACTIVATE);
-    }
-    return ok == TRUE;
 }
 
 void extendFrameIntoClientArea(HWND hwnd, int topMargin) {
@@ -337,7 +267,7 @@ namespace detail {
 
 bool platformSupportsSystemBackdrop() {
     const WindowsVersionInfo version = currentWindowsVersion();
-    return supportsDwmSystemBackdrop(version) || supportsLegacyAcrylicBackdrop(version);
+    return supportsDwmSystemBackdrop(version);
 }
 
 bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
@@ -349,7 +279,6 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
     auto* setAttr = resolveDwmProc<DwmSetWindowAttributeFn>("DwmSetWindowAttribute");
     const WindowsVersionInfo version = currentWindowsVersion();
     const bool dwmSystemBackdrop = supportsDwmSystemBackdrop(version);
-    const bool legacyAcrylicBackdrop = !dwmSystemBackdrop && supportsLegacyAcrylicBackdrop(version);
 
     // Match the DWM-managed bits (frame/caption) to the theme, then request the chosen backdrop.
     // zh_CN: 先让 DWM 管理的部分（frame/caption）匹配主题，再请求所选背景。
@@ -358,12 +287,12 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
         setAttr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
     }
 
-    if (legacyAcrylicBackdrop)
-        return applyLegacyAcrylicBackdrop(hwnd, effect, dark);
-
     if (!dwmSystemBackdrop || !setAttr)
         return false;
 
+    // Windows 10 legacy Acrylic is intentionally not used as a Fluent window backdrop: with Qt's
+    // backing store it can leave transparent client regions black, especially in Win10 VMs.
+    // Windows 10 therefore stays on the opaque app-painted fallback.
     // Mica and Acrylic share this exact plumbing — only the DWMWA_SYSTEMBACKDROP_TYPE value differs.
     // zh_CN: Mica 与 Acrylic 走完全相同的管线——仅 DWMWA_SYSTEMBACKDROP_TYPE 取值不同。
     int backdropType = DWMSBT_MAINWINDOW;

@@ -2,19 +2,136 @@
 
 #include <QFont>
 #include <QGuiApplication>
-#include <QHBoxLayout>
+#include <QBoxLayout>
+#include <QLayoutItem>
 #include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
 #include <QScreen>
+#include <QSizePolicy>
 #include <QStringList>
-#include <QVBoxLayout>
+#include <QtGlobal>
+#include <QVariant>
 #include <QWidget>
 
+#include "components/basicinput/Button.h"
 #include "design/Typography.h"
 
 namespace fluent::gallery::samples {
 namespace {
+
+class ExplicitSpacerBoxLayout final : public QBoxLayout {
+public:
+    ExplicitSpacerBoxLayout(Direction direction, int spacing, QWidget* parent)
+        : QBoxLayout(direction, parent)
+        , m_direction(direction)
+        , m_spacing(qMax(0, spacing))
+    {
+        setContentsMargins(0, 0, 0, 0);
+        setSpacing(0);
+    }
+
+    void addItem(QLayoutItem* item) override
+    {
+        QBoxLayout::addItem(item);
+        ensureSpacingWidgets();
+        QBoxLayout::invalidate();
+    }
+
+    void invalidate() override
+    {
+        ensureSpacingWidgets();
+        QBoxLayout::invalidate();
+    }
+
+    QSize sizeHint() const override
+    {
+        const_cast<ExplicitSpacerBoxLayout*>(this)->ensureSpacingWidgets();
+        return QBoxLayout::sizeHint();
+    }
+
+    QSize minimumSize() const override
+    {
+        const_cast<ExplicitSpacerBoxLayout*>(this)->ensureSpacingWidgets();
+        return QBoxLayout::minimumSize();
+    }
+
+    void setGeometry(const QRect& rect) override
+    {
+        ensureSpacingWidgets();
+        QBoxLayout::setGeometry(rect);
+    }
+
+private:
+    static constexpr const char* kSpacingWidgetProperty = "_fluent_sample_spacing_widget";
+
+    bool isHorizontal() const
+    {
+        return m_direction == QBoxLayout::LeftToRight || m_direction == QBoxLayout::RightToLeft;
+    }
+
+    static bool isSpacingWidget(QWidget* widget)
+    {
+        return widget && widget->property(kSpacingWidgetProperty).toBool();
+    }
+
+    static bool isContentItem(QLayoutItem* item)
+    {
+        return item && !item->spacerItem() && !isSpacingWidget(item->widget()) && !item->isEmpty();
+    }
+
+    static bool isButtonLikeItem(QLayoutItem* item)
+    {
+        return item && qobject_cast<fluent::basicinput::Button*>(item->widget());
+    }
+
+    int spacingBetween(QLayoutItem* previous, QLayoutItem* current) const
+    {
+        int spacing = m_spacing;
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && (defined(Q_OS_MACOS) || defined(Q_OS_MAC))
+        if (isButtonLikeItem(previous) && isButtonLikeItem(current))
+            spacing += 10;
+#endif
+        return spacing;
+    }
+
+    QWidget* createSpacingWidget(int spacing)
+    {
+        auto* spacer = new QWidget(parentWidget());
+        spacer->setProperty(kSpacingWidgetProperty, true);
+        spacer->setAttribute(Qt::WA_TransparentForMouseEvents);
+        spacer->setFocusPolicy(Qt::NoFocus);
+        if (isHorizontal()) {
+            spacer->setFixedWidth(spacing);
+            spacer->setMinimumHeight(0);
+            spacer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
+        } else {
+            spacer->setMinimumWidth(0);
+            spacer->setFixedHeight(spacing);
+            spacer->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+        }
+        return spacer;
+    }
+
+    void ensureSpacingWidgets()
+    {
+        if (m_insertingSpacer || m_spacing <= 0)
+            return;
+
+        m_insertingSpacer = true;
+        for (int i = 1; i < count(); ++i) {
+            if (isContentItem(itemAt(i - 1)) && isContentItem(itemAt(i))) {
+                QBoxLayout::insertWidget(i, createSpacingWidget(spacingBetween(itemAt(i - 1), itemAt(i))));
+                ++i;
+            }
+        }
+        m_insertingSpacer = false;
+    }
+
+    Direction m_direction;
+    int m_spacing = 0;
+    bool m_insertingSpacer = false;
+};
 
 /**
  * @brief Retina-aware pixmap canvas shared by the decorative painters.
@@ -57,9 +174,7 @@ GallerySample makeSample(const QString& id,
 QWidget* verticalGroup(QWidget* parent, int spacing)
 {
     auto* group = new QWidget(parent);
-    auto* layout = new QVBoxLayout(group);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(spacing);
+    auto* layout = new ExplicitSpacerBoxLayout(QBoxLayout::TopToBottom, spacing, group);
     layout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     return group;
 }
@@ -67,9 +182,7 @@ QWidget* verticalGroup(QWidget* parent, int spacing)
 QWidget* horizontalGroup(QWidget* parent, int spacing)
 {
     auto* group = new QWidget(parent);
-    auto* layout = new QHBoxLayout(group);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(spacing);
+    auto* layout = new ExplicitSpacerBoxLayout(QBoxLayout::LeftToRight, spacing, group);
     layout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     return group;
 }
