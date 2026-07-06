@@ -1,7 +1,19 @@
 # Fluent-Qt Hello World
 
-This is a minimal standalone Qt Widgets project that consumes Fluent-Qt as a
-library through `find_package`.
+This is a standalone Qt Widgets project that consumes Fluent-Qt as a library
+through `find_package`. The main window demonstrates the public initialization
+entry point, Fluent controls, typography/icon fonts, style/accent presets
+through `StyleThemeCatalog`, and runtime font scaling through `ThemeRegistry`.
+
+The style and accent API used by the sample lives in the reusable library, not
+the Gallery application layer:
+
+```cpp
+fluent::StyleThemeCatalog::apply(fluent::StyleTheme::Material);
+fluent::StyleThemeCatalog::applyAccentOverride(QColor(0, 120, 212));
+fluent::ThemeRegistry::instance().setFontScale(1.0);
+fluent::FluentElement::refreshTheme();
+```
 
 The example links the installed SDK target:
 
@@ -9,6 +21,10 @@ The example links the installed SDK target:
 find_package(FluentQt CONFIG REQUIRED)
 target_link_libraries(fluentqt_hello_world PRIVATE FluentQt::FluentQt)
 ```
+
+Call `fluent::initializeResources()` after constructing `QApplication` so the
+bundled Segoe UI Variable and Segoe Fluent Icons fonts are registered on
+platforms that do not provide them as system fonts.
 
 Build from the repository root:
 

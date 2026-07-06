@@ -1,5 +1,7 @@
 #include "QtTestEnvironment.h"
 
+#include <FluentQt/FluentQt.h>
+
 #include "components/foundation/FluentElement.h"
 
 #include <QApplication>
@@ -8,7 +10,6 @@
 #include <QGuiApplication>
 #include <QFile>
 #include <QFileInfo>
-#include <QFontDatabase>
 #include <QImage>
 #include <QPixmap>
 #include <QRegularExpression>
@@ -23,11 +24,6 @@
 #ifndef FLUENT_QT_TEST_TARGET
 #define FLUENT_QT_TEST_TARGET "unknown_test"
 #endif
-
-static void initializeFluentQtResources()
-{
-    Q_INIT_RESOURCE(resources);
-}
 
 namespace tests::support {
 
@@ -74,9 +70,7 @@ void initializeQtTestEnvironment()
 {
     QApplication::setStyle(QStringLiteral("Fusion"));
 
-    initializeFluentQtResources();
-    QFontDatabase::addApplicationFont(QStringLiteral(":/res/Segoe Fluent Icons.ttf"));
-    QFontDatabase::addApplicationFont(QStringLiteral(":/res/SegoeUI-VF.ttf"));
+    fluent::initializeResources();
 }
 
 bool shouldSkipVisualTest()
