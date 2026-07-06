@@ -36,8 +36,8 @@ consumers of `fluent_qt_lib` opt in through their own
 
 - File path: `utils::logging::defaultLogFilePath()` resolves to
   `QStandardPaths::AppLocalDataLocation` + `/logs/<app>.log`.
-  - macOS: `~/Library/Application Support/Fluent-QT/Fluent-QT Gallery/logs/`
-  - Windows: `%LOCALAPPDATA%\Fluent-QT\Fluent-QT Gallery\logs\`
+  - macOS: `~/Library/Application Support/Fluent-Qt/Fluent-Qt Gallery/logs/`
+  - Windows: `%LOCALAPPDATA%\Fluent-Qt\Fluent-Qt Gallery\logs\`
 - Rotation is size-based, not per-launch: a full file shifts into numbered
   backups (`<name>.1.log`, `<name>.2.log`, ...). Defaults are
   `maxFileSizeBytes` = 5 MiB and `maxRotatedFiles` = 2. Note the spdlog

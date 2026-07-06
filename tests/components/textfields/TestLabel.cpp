@@ -324,7 +324,7 @@ TEST_F(LabelTest, VisualCheck) {
                    rightElide);
 
     createElideRow("ElideLeft",
-                   "Build pipeline artifact Fluent-QT-macos-debug-test-label-bundle",
+                   "Build pipeline artifact Fluent-Qt-macos-debug-test-label-bundle",
                    Qt::ElideLeft,
                    240,
                    rightElide,

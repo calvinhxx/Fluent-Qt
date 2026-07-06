@@ -44,7 +44,7 @@ if(WIN32)
     # zh_CN: 把资源管理器/任务栏/快捷方式图标和版本信息嵌进 exe。裸 Qt exe 没有资源段，Windows 各处都显示
     # 通用图标、属性详细信息也是空的。这里编译由 app.rc.in 生成的 .rc（图标 + VERSIONINFO），对应上面 macOS
     # 的 .icns/Info.plist。.ico 用正斜杠绝对路径注入，rc.exe 不受构建目录影响都能找到。
-    set(FLUENT_QT_GALLERY_ICO "${CMAKE_CURRENT_SOURCE_DIR}/assets/Fluent-QT-Gallery.ico")
+    set(FLUENT_QT_GALLERY_ICO "${CMAKE_CURRENT_SOURCE_DIR}/assets/Fluent-Qt-Gallery.ico")
     file(TO_CMAKE_PATH "${FLUENT_QT_GALLERY_ICO}" FLUENT_QT_GALLERY_ICO)
     set(FLUENT_QT_GALLERY_RC "${CMAKE_CURRENT_BINARY_DIR}/app.rc")
     configure_file(
@@ -72,22 +72,22 @@ if(APPLE)
     # zh_CN: 给 Finder/Dock/DMG 一个图标。.icns 拷进 Contents/Resources，由 CFBundleIconFile
     # （经 MACOSX_BUNDLE_ICON_FILE 写入 Info.plist.in）命名；不设置则 bundle 没有图标文件，
     # LaunchServices 会回退到通用占位图标。
-    set(FLUENT_QT_GALLERY_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/assets/Fluent-QT-Gallery.icns")
+    set(FLUENT_QT_GALLERY_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/assets/Fluent-Qt-Gallery.icns")
     target_sources(fluent_qt_gallery PRIVATE "${FLUENT_QT_GALLERY_ICNS}")
     set_source_files_properties("${FLUENT_QT_GALLERY_ICNS}" PROPERTIES
         MACOSX_PACKAGE_LOCATION "Resources")
     set_target_properties(fluent_qt_gallery PROPERTIES
         MACOSX_BUNDLE TRUE
         # OUTPUT_NAME drives the on-disk bundle + executable name. The CMake target stays the
-        # snake_case fluent_qt_gallery, but the user-facing bundle becomes "Fluent-QT Gallery.app"
+        # snake_case fluent_qt_gallery, but the user-facing bundle becomes "Fluent-Qt Gallery.app"
         # (the snake_case name looked rough in the Dock / DMG). zh_CN: OUTPUT_NAME 决定磁盘上的
-        # bundle 与可执行名;CMake target 仍叫 fluent_qt_gallery,但对用户呈现为 Fluent-QT Gallery.app。
-        OUTPUT_NAME "Fluent-QT Gallery"
-        MACOSX_BUNDLE_BUNDLE_NAME "Fluent-QT Gallery"
+        # bundle 与可执行名;CMake target 仍叫 fluent_qt_gallery,但对用户呈现为 Fluent-Qt Gallery.app。
+        OUTPUT_NAME "Fluent-Qt Gallery"
+        MACOSX_BUNDLE_BUNDLE_NAME "Fluent-Qt Gallery"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.fluentqt.gallery"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
-        MACOSX_BUNDLE_ICON_FILE "Fluent-QT-Gallery"
+        MACOSX_BUNDLE_ICON_FILE "Fluent-Qt-Gallery"
         MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
         # macdeployqt copies Qt into Contents/Frameworks and rewrites the binary to @rpath/Qt*.
         # The installed binary needs this rpath or dyld reports "no LC_RPATH's found" and the app

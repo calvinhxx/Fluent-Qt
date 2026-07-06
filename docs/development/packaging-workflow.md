@@ -30,7 +30,7 @@ Apple Silicon (arm64):
 cmake --preset vcpkg-osx-release
 cmake --build --preset vcpkg-osx-release
 cpack --preset vcpkg-osx-dmg
-# -> Fluent-QT-Gallery-<version>-Darwin-arm64.dmg
+# -> Fluent-Qt-Gallery-<version>-Darwin-arm64.dmg
 ```
 
 Intel (x86_64, cross-builds on Apple Silicon and runs under Rosetta):
@@ -39,11 +39,11 @@ Intel (x86_64, cross-builds on Apple Silicon and runs under Rosetta):
 cmake --preset vcpkg-osx-x64-release
 cmake --build --preset vcpkg-osx-x64-release
 cpack --preset vcpkg-osx-x64-dmg
-# -> Fluent-QT-Gallery-<version>-Darwin-x86_64.dmg
+# -> Fluent-Qt-Gallery-<version>-Darwin-x86_64.dmg
 ```
 
 Each DMG uses the CPack `DragNDrop` generator and contains
-`Fluent-QT Gallery.app` (drag-to-install layout beside the `/Applications`
+`Fluent-Qt Gallery.app` (drag-to-install layout beside the `/Applications`
 alias). The artifact's architecture suffix follows the requested
 `CMAKE_OSX_ARCHITECTURES`, not the build host's processor.
 
@@ -62,7 +62,7 @@ desktop shortcuts, and offers a "run now" checkbox on the finish page.
 ### Elevation model
 
 The Windows installer is a per-user installer. It installs by default under
-`%LOCALAPPDATA%\Programs\Fluent-QT Gallery`, writes uninstall metadata under the
+`%LOCALAPPDATA%\Programs\Fluent-Qt Gallery`, writes uninstall metadata under the
 current user registry hive, and creates Start Menu/Desktop shortcuts for the
 current user. It must not require an administrator token for a normal install.
 
@@ -74,9 +74,9 @@ packaging layer without maintaining a full copied NSIS template.
 
 The executable embeds the app icon and version metadata via `app/app.rc.in`
 (compiled into a `.rc` at configure time), so Explorer, the taskbar, Alt-Tab and
-the installer-created shortcuts all show the Fluent-QT Gallery icon. The icon
-source of truth is `app/assets/Fluent-QT-Gallery.ico`, the Windows counterpart to
-the macOS `app/assets/Fluent-QT-Gallery.icns`. Both are derived from the shared
+the installer-created shortcuts all show the Fluent-Qt Gallery icon. The icon
+source of truth is `app/assets/Fluent-Qt-Gallery.ico`, the Windows counterpart to
+the macOS `app/assets/Fluent-Qt-Gallery.icns`. Both are derived from the shared
 `app/assets/app-icon.png` master.
 
 ### Installer branding
@@ -84,11 +84,11 @@ the macOS `app/assets/Fluent-QT-Gallery.icns`. Both are derived from the shared
 The NSIS wizard is styled to match the polish of the macOS DMG rather than the raw
 grey NSIS look:
 
-- Installer/uninstaller window icon: `app/assets/Fluent-QT-Gallery.ico`.
+- Installer/uninstaller window icon: `app/assets/Fluent-Qt-Gallery.ico`.
 - Welcome/Finish sidebar (164x314) and inner-page header banner (150x57): a
   blue-green branded gradient in `app/assets/installer-welcome.bmp` and
   `app/assets/installer-header.bmp`, generated from `app-icon.png`.
-- Bottom branding text and a finish-page "run Fluent-QT Gallery" option.
+- Bottom branding text and a finish-page "run Fluent-Qt Gallery" option.
 
 All branding is wired in `cmake/FluentQTPackaging.cmake`.
 

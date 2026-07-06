@@ -14,7 +14,7 @@
 namespace fluent::gallery {
 namespace {
 constexpr const char* kLatestReleaseApi =
-    "https://api.github.com/repos/calvinhxx/Fluent-QT/releases/latest";
+    "https://api.github.com/repos/calvinhxx/Fluent-Qt/releases/latest";
 
 bool assetNameMatchesPlatform(const QString& assetName,
                               const QString& platformKey) {
@@ -80,7 +80,7 @@ void UpdateChecker::checkForUpdates() {
 
     QNetworkRequest request{QUrl(QString::fromLatin1(kLatestReleaseApi))};
     request.setHeader(QNetworkRequest::UserAgentHeader,
-                      QStringLiteral("Fluent-QT-Gallery/%1")
+                      QStringLiteral("Fluent-Qt-Gallery/%1")
                           .arg(currentVersion()));
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,

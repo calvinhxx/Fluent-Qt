@@ -1,6 +1,6 @@
 # Tooltip Usage
 
-All hover help shown by Fluent-QT must use `fluent::status_info::ToolTip`.
+All hover help shown by Fluent-Qt must use `fluent::status_info::ToolTip`.
 Do not present hover help with `QToolTip` or direct call-site uses of
 `QWidget::setToolTip()`, because native tooltip styling, placement, animation,
 and theme behavior differ across platforms.

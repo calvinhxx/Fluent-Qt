@@ -67,7 +67,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     , m_navigationState(this)
 {
     setObjectName(QStringLiteral("galleryWindow"));
-    setWindowTitle(QStringLiteral("Fluent-QT Gallery"));
+    setWindowTitle(QStringLiteral("Fluent-Qt Gallery"));
     setWindowIcon(appicon::icon());
     // Allow narrow windows so the adaptive nav can collapse to its compact / minimal
     // modes; a 980 floor would pin the layout above the 640 breakpoint.

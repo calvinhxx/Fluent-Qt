@@ -1,4 +1,4 @@
-# Fluent-QT
+# Fluent-Qt
 
 The default README is now English. See [README.md](README.md).
 

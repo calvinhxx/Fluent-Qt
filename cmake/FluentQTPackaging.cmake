@@ -65,7 +65,7 @@ endif()
 # macOS bundle is renamed via OUTPUT_NAME (app/CMakeLists.txt); the Windows exe keeps the
 # snake_case target name. zh_CN: macOS bundle ? OUTPUT_NAME ??,Windows ????? target ??
 if(APPLE)
-    set(FLUENT_QT_GALLERY_BUNDLE_DIR "Fluent-QT Gallery.app")
+    set(FLUENT_QT_GALLERY_BUNDLE_DIR "Fluent-Qt Gallery.app")
 else()
     set(FLUENT_QT_GALLERY_BUNDLE_DIR "fluent_qt_gallery.app")
 endif()
@@ -76,13 +76,13 @@ configure_file(
     @ONLY)
 install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/InstallDeployQtRuntime.cmake")
 
-set(CPACK_PACKAGE_NAME "Fluent-QT-Gallery")
-set(CPACK_PACKAGE_VENDOR "Fluent-QT")
-set(CPACK_PACKAGE_CONTACT "Fluent-QT maintainers")
+set(CPACK_PACKAGE_NAME "Fluent-Qt-Gallery")
+set(CPACK_PACKAGE_VENDOR "Fluent-Qt")
+set(CPACK_PACKAGE_CONTACT "Fluent-Qt maintainers")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "WinUI-style Qt Widgets gallery")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_CHECKSUM SHA256)
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "Fluent-QT Gallery")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "Fluent-Qt Gallery")
 # Note: CPACK_RESOURCE_FILE_LICENSE is set per-platform in the APPLE/WIN32 branches below, not
 # globally, because each generator presents it differently ? a mount-time click-through SLA on the
 # macOS DragNDrop image, and the installer license page on Windows NSIS.
@@ -120,11 +120,11 @@ endif()
 set(CPACK_PACKAGE_FILE_NAME
     "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${_fluent_qt_pkg_arch}")
 set(CPACK_PACKAGE_EXECUTABLES
-    "fluent_qt_gallery" "Fluent-QT Gallery")
+    "fluent_qt_gallery" "Fluent-Qt Gallery")
 
 if(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
-    set(CPACK_DMG_VOLUME_NAME "Fluent-QT Gallery ${PROJECT_VERSION}")
+    set(CPACK_DMG_VOLUME_NAME "Fluent-Qt Gallery ${PROJECT_VERSION}")
     set(CPACK_DMG_FORMAT "UDZO")
     # Present the license as a click-through SLA shown before the disk image mounts, so the user
     # accepts the terms before reaching the install window. DragNDrop turns an explicit
@@ -161,8 +161,8 @@ elseif(WIN32)
         "${CMAKE_CURRENT_LIST_DIR}/nsis-per-user-wrapper.cmd")
     set(CPACK_NSIS_INSTALL_ROOT "$LOCALAPPDATA\\\\Programs")
     set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
-    set(CPACK_NSIS_DISPLAY_NAME "Fluent-QT Gallery")
-    set(CPACK_NSIS_PACKAGE_NAME "Fluent-QT Gallery")
+    set(CPACK_NSIS_DISPLAY_NAME "Fluent-Qt Gallery")
+    set(CPACK_NSIS_PACKAGE_NAME "Fluent-Qt Gallery")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_EXECUTABLES_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
@@ -171,7 +171,7 @@ elseif(WIN32)
     # time. Add/Remove Programs and the created shortcuts pick up the icon embedded in the exe.
     # zh_CN: ????/?????????????? macOS DMG ??????makensis ???????????????
     # ????"??/????"?????????? exe ???????
-    set(_fluent_qt_gallery_ico "${PROJECT_SOURCE_DIR}/app/assets/Fluent-QT-Gallery.ico")
+    set(_fluent_qt_gallery_ico "${PROJECT_SOURCE_DIR}/app/assets/Fluent-Qt-Gallery.ico")
     set(CPACK_NSIS_MUI_ICON "${_fluent_qt_gallery_ico}")
     set(CPACK_NSIS_MUI_UNIICON "${_fluent_qt_gallery_ico}")
     set(CPACK_NSIS_INSTALLED_ICON_NAME
@@ -204,14 +204,14 @@ elseif(WIN32)
     file(TO_NATIVE_PATH "${_fluent_qt_header_bmp}" _fluent_qt_header_bmp_native)
     string(REPLACE "\\" "\\\\" _fluent_qt_header_bmp_native "${_fluent_qt_header_bmp_native}")
     set(CPACK_NSIS_DEFINES "!define MUI_HEADERIMAGE_BITMAP ${_fluent_qt_header_bmp_native}")
-    set(CPACK_NSIS_BRANDING_TEXT "Fluent-QT Gallery ${PROJECT_VERSION}")
+    set(CPACK_NSIS_BRANDING_TEXT "Fluent-Qt Gallery ${PROJECT_VERSION}")
     # Offer to launch the app straight from the finish page. Give only the exe name ? the template
     # prepends "$INSTDIR\<executables-dir>\" (here bin\), so a bin\ prefix would double it.
     # zh_CN: ?????"????"??? exe ????????? "$INSTDIR\<?????>\"???? bin\??
     # ? bin\ ??????
     set(CPACK_NSIS_MUI_FINISHPAGE_RUN "fluent_qt_gallery.exe")
     set(CPACK_NSIS_MENU_LINKS
-        "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe" "Fluent-QT Gallery")
+        "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe" "Fluent-Qt Gallery")
     # Always create a desktop shortcut. CPACK_CREATE_DESKTOP_LINKS would instead add an *unchecked*
     # checkbox to the NSIS "Install Options" page (and pull in the PATH radio page even with
     # MODIFY_PATH off), so no desktop icon appears unless the user happens to tick it. Create it
@@ -220,9 +220,9 @@ elseif(WIN32)
     # ?????????????????? MODIFY_PATH ???? PATH ?????????????????
     # ???????????????.lnk ??? exe ?????
     set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-        "CreateShortCut '$DESKTOP\\\\Fluent-QT Gallery.lnk' '$INSTDIR\\\\${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe'")
+        "CreateShortCut '$DESKTOP\\\\Fluent-Qt Gallery.lnk' '$INSTDIR\\\\${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe'")
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
-        "Delete '$DESKTOP\\\\Fluent-QT Gallery.lnk'")
+        "Delete '$DESKTOP\\\\Fluent-Qt Gallery.lnk'")
 endif()
 
 include(CPack)
