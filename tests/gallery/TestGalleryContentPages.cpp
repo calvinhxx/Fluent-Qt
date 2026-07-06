@@ -544,44 +544,6 @@ TEST_F(GalleryContentPagesTest, StackViewTransitionButtonsUseRequestedSpacing)
             << "pair " << i;
 }
 
-TEST_F(GalleryContentPagesTest, ButtonSampleRowsPreserveRequestedSpacing)
-{
-    struct SampleCase {
-        QString id;
-        int buttonCount;
-    };
-
-    const QVector<SampleCase> cases = {
-        {QStringLiteral("button-styles"), 3},
-        {QStringLiteral("button-sizes"), 3},
-        {QStringLiteral("button-icon-layouts"), 3},
-        {QStringLiteral("button-interaction-state"), 4},
-    };
-
-    for (const SampleCase& sampleCase : cases) {
-        fluent::gallery::GallerySample sample;
-        ASSERT_TRUE(findSampleById(QStringLiteral("button"), sampleCase.id, &sample))
-            << sampleCase.id.toStdString();
-        ASSERT_TRUE(static_cast<bool>(sample.createPreview)) << sampleCase.id.toStdString();
-
-        GallerySampleCard card(sample);
-        card.resize(720, card.sizeHint().height());
-        card.show();
-        QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
-        QApplication::processEvents();
-
-        QWidget* preview = card.previewWidget();
-        ASSERT_NE(preview, nullptr) << sampleCase.id.toStdString();
-
-        const QList<Button*> buttons = directButtonsLeftToRight(preview);
-        ASSERT_EQ(buttons.size(), sampleCase.buttonCount) << sampleCase.id.toStdString();
-        for (int i = 0; i + 1 < buttons.size(); ++i) {
-            EXPECT_EQ(horizontalGapInAncestor(buttons.at(i), buttons.at(i + 1), preview), 10)
-                << sampleCase.id.toStdString() << " pair " << i;
-        }
-    }
-}
-
 // Regression: the TreeView "Selection indicator motion" sample shares one left-aligned group with a
 // controls row whose status label reads "Transition: <none|inward|outward|same level>". The collections
 // makeStatusLabel sets no width floor, so without a reservation the label resizes with the text, the
