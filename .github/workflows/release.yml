@@ -394,7 +394,38 @@ jobs:
         run: cmake --build --preset ${{ matrix.preset }} --parallel
 
       - name: Package
-        run: cpack --preset ${{ matrix.package_preset }}
+        shell: pwsh
+        run: |
+          $preset = "${{ matrix.package_preset }}"
+          $maxAttempts = if ($env:RUNNER_OS -eq "macOS") { 3 } else { 1 }
+          $exitCode = 0
+
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            if ($attempt -gt 1) {
+              Write-Host "Retrying package attempt $attempt of $maxAttempts..."
+            }
+
+            & cpack --preset $preset
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) {
+              exit 0
+            }
+
+            if ($attempt -ge $maxAttempts -or $env:RUNNER_OS -ne "macOS") {
+              exit $exitCode
+            }
+
+            $volumePath = "/Volumes/Fluent-Qt Gallery ${{ needs.preflight.outputs.version }}"
+            Write-Warning "cpack failed with exit code $exitCode. Forcing detach of '$volumePath' before retry."
+            & /bin/sync
+            & /usr/bin/hdiutil detach $volumePath -force
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "hdiutil detach failed or the volume was already gone."
+            }
+            Start-Sleep -Seconds (5 * $attempt)
+          }
+
+          exit $exitCode
 
       - name: Collect package artifacts
         shell: pwsh
@@ -432,7 +463,7 @@ jobs:
 
       - name: Upload packaging diagnostics
         if: failure()
-        timeout-minutes: 3
+        timeout-minutes: 10
         uses: actions/upload-artifact@v4
         with:
           name: release-diagnostics-${{ matrix.artifact }}
