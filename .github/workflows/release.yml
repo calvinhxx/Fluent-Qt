@@ -143,6 +143,7 @@ jobs:
                 "qt_arch": "clang_64",
                 "host_qt_arch": "",
                 "asset_suffix": "",
+                "build_parallel": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": false
               },
@@ -155,6 +156,7 @@ jobs:
                 "qt_arch": "win64_msvc2022_64",
                 "host_qt_arch": "",
                 "asset_suffix": "",
+                "build_parallel": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": true
               }
@@ -174,6 +176,7 @@ jobs:
                 "qt_arch": "clang_64",
                 "host_qt_arch": "",
                 "asset_suffix": "",
+                "build_parallel": "3",
                 "windows_arm64_cross": false,
                 "needs_nsis": false
               },
@@ -186,6 +189,7 @@ jobs:
                 "qt_arch": "clang_64",
                 "host_qt_arch": "",
                 "asset_suffix": "",
+                "build_parallel": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": false
               },
@@ -198,6 +202,7 @@ jobs:
                 "qt_arch": "win64_msvc2022_64",
                 "host_qt_arch": "",
                 "asset_suffix": "",
+                "build_parallel": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": true
               },
@@ -210,6 +215,7 @@ jobs:
                 "qt_arch": "win64_msvc2022_arm64_cross_compiled",
                 "host_qt_arch": "win64_msvc2022_64",
                 "asset_suffix": "",
+                "build_parallel": "",
                 "windows_arm64_cross": true,
                 "needs_nsis": true
               },
@@ -222,6 +228,7 @@ jobs:
                 "qt_arch": "clang_64",
                 "host_qt_arch": "",
                 "asset_suffix": "Qt5.15",
+                "build_parallel": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": false
               },
@@ -234,6 +241,7 @@ jobs:
                 "qt_arch": "win64_msvc2019_64",
                 "host_qt_arch": "",
                 "asset_suffix": "Qt5.15",
+                "build_parallel": "",
                 "windows_arm64_cross": false,
                 "needs_nsis": true
               }
@@ -391,7 +399,16 @@ jobs:
           cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$qtRoot" -D "QT_HOST_PATH=$qtHost"
 
       - name: Build
-        run: cmake --build --preset ${{ matrix.preset }} --parallel
+        shell: pwsh
+        run: |
+          $buildArgs = @("--build", "--preset", "${{ matrix.preset }}")
+          $buildParallel = "${{ matrix.build_parallel }}"
+          if ($buildParallel) {
+            $buildArgs += @("--parallel", $buildParallel)
+          } else {
+            $buildArgs += "--parallel"
+          }
+          cmake @buildArgs
 
       - name: Package
         shell: pwsh
