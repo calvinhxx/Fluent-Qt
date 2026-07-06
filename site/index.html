@@ -54,12 +54,12 @@
             <div class="desktop-download-card" aria-labelledby="download-title">
               <div class="download-card-head">
                 <span class="download-kicker" data-i18n="downloads.latest">最新版本</span>
-                <a class="download-version-pill" data-release-link href="https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.0.1">v1.0.1</a>
+                <a class="download-version-pill" data-release-link href="https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.2.1">v1.2.1</a>
               </div>
               <h3 id="download-title" data-i18n="downloads.desktopTitle">桌面端</h3>
               <p data-i18n="downloads.desktopCopy">从 GitHub Releases 下载打包后的 Gallery。</p>
 
-              <a class="quick-download quick-download-primary" data-primary-download data-analytics-event="download_primary" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.0.1/Fluent-Qt-Gallery-1.0.1-Windows-x64.exe">
+              <a class="quick-download quick-download-primary" data-primary-download data-analytics-event="download_primary" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Windows-x64.exe">
                 <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                 <span>
                   <strong data-primary-download-label data-i18n="downloads.primaryWindows">下载 Windows 版</strong>
@@ -67,28 +67,28 @@
               </a>
 
               <div class="download-list" aria-label="Other desktop downloads">
-                <a class="download-option" data-release-asset="macArm" data-analytics-event="download_macos_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.0.1/Fluent-Qt-Gallery-1.0.1-Darwin-arm64.dmg">
+                <a class="download-option" data-release-asset="macArm" data-analytics-event="download_macos_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Darwin-arm64.dmg">
                   <span class="platform-mark platform-mark-mac" aria-hidden="true"></span>
                   <span>
                     <strong data-i18n="downloads.macArm.row">macOS</strong>
                     <small>Apple Silicon</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="macIntel" data-analytics-event="download_macos_intel" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.0.1/Fluent-Qt-Gallery-1.0.1-Darwin-x86_64.dmg">
+                <a class="download-option" data-release-asset="macIntel" data-analytics-event="download_macos_intel" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Darwin-x86_64.dmg">
                   <span class="platform-mark platform-mark-mac" aria-hidden="true"></span>
                   <span>
                     <strong data-i18n="downloads.macIntel.row">macOS (Intel)</strong>
                     <small>Intel</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="windowsX64" data-analytics-event="download_windows_x64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.0.1/Fluent-Qt-Gallery-1.0.1-Windows-x64.exe">
+                <a class="download-option" data-release-asset="windowsX64" data-analytics-event="download_windows_x64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Windows-x64.exe">
                   <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                   <span>
                     <strong>Windows</strong>
                     <small>x64</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="windowsArm" data-analytics-event="download_windows_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.0.1/Fluent-Qt-Gallery-1.0.1-Windows-arm64.exe">
+                <a class="download-option" data-release-asset="windowsArm" data-analytics-event="download_windows_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Windows-arm64.exe">
                   <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                   <span>
                     <strong>Windows (arm64)</strong>
@@ -451,7 +451,7 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "actions.github": "查看 GitHub",
           "actions.docsShort": "文档",
           "downloads.title": "下载 Gallery",
-          "downloads.release": "v1.0.1 Release",
+          "downloads.release": "v1.2.1 Release",
           "downloads.latest": "最新版本",
           "downloads.releaseCopy": "Windows 与 macOS 的 Gallery 构建产物",
           "downloads.openRelease": "打开 Release",
@@ -587,7 +587,7 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "actions.github": "View on GitHub",
           "actions.docsShort": "Docs",
           "downloads.title": "Download Gallery",
-          "downloads.release": "v1.0.1 Release",
+          "downloads.release": "v1.2.1 Release",
           "downloads.latest": "Latest",
           "downloads.releaseCopy": "Gallery builds for Windows and macOS",
           "downloads.openRelease": "Open Release",
@@ -824,8 +824,8 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
         });
         return {
           assets,
-          tagName: release.tag_name || release.tagName || "v1.0.1",
-          url: release.html_url || release.url || "https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.0.1"
+          tagName: release.tag_name || release.tagName || "v1.2.1",
+          url: release.html_url || release.url || "https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.2.1"
         };
       }
 
@@ -839,8 +839,8 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
             windowsArm: document.querySelector("[data-release-asset='windowsArm']")?.href || "",
             windowsX64: document.querySelector("[data-release-asset='windowsX64']")?.href || ""
           },
-          tagName: releaseLink?.textContent?.trim() || "v1.0.1",
-          url: releaseLink?.href || "https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.0.1"
+          tagName: releaseLink?.textContent?.trim() || "v1.2.1",
+          url: releaseLink?.href || "https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.2.1"
         };
       }
 
