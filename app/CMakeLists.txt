@@ -11,13 +11,15 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FLUENT_QT_GALLERY_SOURCES}
 set(FLUENT_QT_GALLERY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 set(FLUENT_QT_GALLERY_SOURCES ${FLUENT_QT_GALLERY_SOURCES} PARENT_SCOPE)
 
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)
+
 add_executable(fluent_qt_gallery
     main.cpp
     ${FLUENT_QT_GALLERY_SOURCES}
 )
 target_link_libraries(fluent_qt_gallery
     PRIVATE
-    fluent_qt_lib
+    FluentQt::FluentQt
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Network
 )
@@ -98,6 +100,7 @@ endif()
 
 include(GNUInstallDirs)
 install(TARGETS fluent_qt_gallery
+    COMPONENT GalleryRuntime
     BUNDLE DESTINATION "."
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
@@ -123,6 +126,7 @@ if(WIN32)
     endforeach()
     if(_fluent_qt_runtime_dlls)
         install(FILES ${_fluent_qt_runtime_dlls}
-            DESTINATION "${CMAKE_INSTALL_BINDIR}")
+            DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            COMPONENT GalleryRuntime)
     endif()
 endif()

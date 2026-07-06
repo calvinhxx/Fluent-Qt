@@ -17,8 +17,11 @@ endif()
 # CPACK_RESOURCE_FILE_LICENSE)?
 if(NOT APPLE)
     install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
-        DESTINATION ".")
+        DESTINATION "."
+        COMPONENT GalleryRuntime)
 endif()
+
+set(CPACK_COMPONENTS_ALL GalleryRuntime)
 
 set(FLUENT_QT_PACKAGE_PLATFORM "generic")
 set(FLUENT_QT_DEPLOYQT_EXECUTABLE "")
@@ -74,7 +77,8 @@ configure_file(
     "${PROJECT_SOURCE_DIR}/cmake/InstallDeployQtRuntime.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/InstallDeployQtRuntime.cmake"
     @ONLY)
-install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/InstallDeployQtRuntime.cmake")
+install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/InstallDeployQtRuntime.cmake"
+    COMPONENT GalleryRuntime)
 
 set(CPACK_PACKAGE_NAME "Fluent-Qt-Gallery")
 set(CPACK_PACKAGE_VENDOR "Fluent-Qt")

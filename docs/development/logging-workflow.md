@@ -17,7 +17,7 @@ diagnostic log anchors belong.
 
 ## Layering Policy
 
-- `fluent_qt_lib` is meant for standalone third-party use, so the library ships
+- `FluentQt::FluentQt` is meant for standalone third-party use, so the library ships
   neutral defaults: level `Warn`, console output only, no file sink, no Qt
   message handler. The library never calls `utils::logging::initialize` on its
   own; the host application decides the policy.
@@ -31,7 +31,7 @@ diagnostic log anchors belong.
 ## App Persistence and Rotation
 
 `app/main.cpp` enables file logging with the defaults below; third-party
-consumers of `fluent_qt_lib` opt in through their own
+consumers of `FluentQt::FluentQt` opt in through their own
 `utils::logging::InitializationOptions`.
 
 - File path: `utils::logging::defaultLogFilePath()` resolves to

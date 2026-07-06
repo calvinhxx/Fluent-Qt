@@ -12,7 +12,7 @@ class QStyleOptionViewItem;
 class QMouseEvent;
 
 /**
- * 测试 / 示例用：Fluent 风格树视图行代理（业务层组装，不放入 fluent_qt_lib）。
+ * 测试 / 示例用：Fluent 风格树视图行代理（业务层组装，不放入 FluentQt core library）。
  *
  * WinUI 3 TreeView 视觉规范：
  *   - 32px 行高, 4px 圆角背景
