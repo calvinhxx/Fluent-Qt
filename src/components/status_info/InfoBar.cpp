@@ -415,7 +415,9 @@ void InfoBar::paintEvent(QPaintEvent*)
     }
 
     const bool hasBorder = border.isValid() && border != QColor(Qt::transparent) && border.alpha() > 0;
-    const QRectF frameRect = hasBorder ? rect().adjusted(0.5, 0.5, -0.5, -0.5) : QRectF(rect());
+    const QRectF frameRect = hasBorder
+        ? QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+        : QRectF(rect());
 
     painter.setPen(hasBorder ? QPen(border, 1.0) : QPen(Qt::NoPen));
     if (fill.isValid() && fill.alpha() > 0) {
