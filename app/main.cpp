@@ -1,7 +1,8 @@
 #include <algorithm>
 
+#include <FluentQt/FluentQt.h>
+
 #include <QApplication>
-#include <QFontDatabase>
 #include <QRect>
 #include <QScreen>
 #include <QSize>
@@ -17,13 +18,6 @@
 #define FLUENT_QT_GALLERY_VERSION "0.0.0"
 #endif
 
-static void initializeFluentQtResources()
-{
-    Q_INIT_RESOURCE(resources);
-    QFontDatabase::addApplicationFont(QStringLiteral(":/res/Segoe Fluent Icons.ttf"));
-    QFontDatabase::addApplicationFont(QStringLiteral(":/res/SegoeUI-VF.ttf"));
-}
-
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
@@ -32,7 +26,7 @@ int main(int argc, char** argv)
     QApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
     app.setQuitOnLastWindowClosed(false);
 
-    initializeFluentQtResources();
+    fluent::initializeResources();
     fluent::gallery::GallerySettings::instance();
 
     // App logging policy: persist to the platform log file by default at Info
