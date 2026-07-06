@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fluent-Qt - 面向 Qt Widgets 的现代 Fluent UI</title>
+    <title>Fluent-Qt - FluentQt uilib for Qt Widgets</title>
     <meta
       name="description"
-      content="Fluent-Qt 是一个开源的 Fluent / WinUI 风格 Qt Widgets 组件库和 Gallery 应用。"
+      content="基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。"
     >
-    <meta name="theme-color" content="#f7f8fa">
+    <meta name="theme-color" content="#fbfbfa">
     <meta property="og:title" content="Fluent-Qt">
-    <meta property="og:description" content="Modern Fluent UI for native Qt Widgets.">
+    <meta property="og:description" content="FluentQt uilib based on Qt Widgets, with a Gallery demo app.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/gallery/gallery-hero-real.png">
     <meta name="fluent-qt-cloudflare-token" content="faf445759813451ca2d7a0652139b292">
@@ -25,11 +25,11 @@
           <span>Fluent-Qt</span>
         </a>
         <div class="nav-links">
-          <a href="#why" data-i18n="nav.why">价值</a>
+          <a href="#why" data-i18n="nav.why">依赖</a>
           <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
-          <a href="#components" data-i18n="nav.components">组件</a>
+          <a href="#components" data-i18n="nav.components">uilib</a>
           <a href="#code" data-i18n="nav.code">集成</a>
-          <a href="#engineering" data-i18n="nav.engineering">工程化</a>
+          <a href="#engineering" data-i18n="nav.engineering">打包</a>
         </div>
         <div class="nav-tools">
           <div class="language-toggle" role="group" aria-label="Language switcher">
@@ -45,9 +45,9 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="section-shell hero-grid">
           <div class="hero-copy">
-            <h1 id="hero-title" data-i18n="hero.title">Qt Widgets 的现代 Fluent UI。</h1>
+            <h1 id="hero-title" data-i18n="hero.title">Fluent-Qt</h1>
             <p class="hero-lede" data-i18n="hero.lede">
-              Fluent-Qt 帮助 C++ / Qt 桌面应用更新界面语言，同时保留 QWidget 的原生性能、系统集成和成熟工程结构。
+              基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。
             </p>
           </div>
           <aside class="download-panel" aria-labelledby="download-title">
@@ -57,7 +57,7 @@
                 <a class="download-version-pill" data-release-link href="https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.0.1">v1.0.1</a>
               </div>
               <h3 id="download-title" data-i18n="downloads.desktopTitle">桌面端</h3>
-              <p data-i18n="downloads.desktopCopy">下载最新 Fluent-Qt Gallery 应用。</p>
+              <p data-i18n="downloads.desktopCopy">从 GitHub Releases 下载打包后的 Gallery。</p>
 
               <a class="quick-download quick-download-primary" data-primary-download data-analytics-event="download_primary" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.0.1/Fluent-Qt-Gallery-1.0.1-Windows-x64.exe">
                 <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
@@ -101,7 +101,7 @@
           </aside>
           <div class="hero-support" aria-label="Project support">
             <article>
-              <span data-i18n="hero.supportRuntimeLabel">UI 栈</span>
+              <span data-i18n="hero.supportRuntimeLabel">UI 运行时</span>
               <strong>Qt Widgets</strong>
             </article>
             <article>
@@ -109,11 +109,11 @@
               <strong>Qt 5.15+ / Qt 6.2+</strong>
             </article>
             <article>
-              <span data-i18n="hero.supportPlatformLabel">平台支持</span>
+              <span data-i18n="hero.supportPlatformLabel">平台</span>
               <strong>Windows / macOS</strong>
             </article>
             <article>
-              <span data-i18n="hero.supportLanguageLabel">语言标准</span>
+              <span data-i18n="hero.supportLanguageLabel">语言</span>
               <strong>C++17</strong>
             </article>
           </div>
@@ -133,37 +133,37 @@
 
       <section class="section-shell problem-section value-section" id="why" aria-labelledby="why-title">
         <div class="value-intro">
-          <p class="eyebrow" data-i18n="why.eyebrow">价值定位</p>
-          <h2 id="why-title" data-i18n="why.title">不是替换 Qt，而是现代化 Qt Widgets。</h2>
+          <p class="eyebrow" data-i18n="why.eyebrow">依赖</p>
+          <h2 id="why-title" data-i18n="why.title">C++17、Qt Widgets、CMake presets 和 vcpkg。</h2>
         </div>
 
         <div class="value-board">
           <article class="value-thesis" aria-labelledby="comparison-title">
-            <span data-i18n="comparison.title">一句话定位</span>
-            <h3 id="comparison-title" data-i18n="comparison.copy">Fluent-Qt 不是新的运行时，而是给已有 Qt Widgets 产品补一套现代、统一、可复用的桌面组件层。</h3>
-            <small>QWidget-first / Fluent-style / Native desktop</small>
+            <span data-i18n="comparison.title">使用顺序</span>
+            <h3 id="comparison-title" data-i18n="comparison.copy">先编译 FluentQt uilib，再集成到业务项目；Gallery 用来查看控件效果。</h3>
+            <small>C++17 / Qt 5.15+ / Qt 6.2+</small>
           </article>
 
           <div class="value-points">
             <article>
               <span>01</span>
               <div>
-                <h3 data-i18n="problems.visual.title">保留 Qt Widgets 资产</h3>
-                <p data-i18n="problems.visual.copy">继续复用已有 C++ 代码、事件模型和窗口体系，不强制重写成熟页面。</p>
+                <h3 data-i18n="problems.visual.title">UI runtime</h3>
+                <p data-i18n="problems.visual.copy">Qt Widgets，支持 Qt 5.15+ 或 Qt 6.2+。</p>
               </div>
             </article>
             <article>
               <span>02</span>
               <div>
-                <h3 data-i18n="problems.rewrite.title">从组件层统一视觉</h3>
-                <p data-i18n="problems.rewrite.copy">把按钮、输入、导航、弹窗和状态反馈统一到可维护的 Fluent / WinUI 风格。</p>
+                <h3 data-i18n="problems.rewrite.title">Build</h3>
+                <p data-i18n="problems.rewrite.copy">使用 CMake presets 和 vcpkg manifest mode。</p>
               </div>
             </article>
             <article>
               <span>03</span>
               <div>
-                <h3 data-i18n="problems.native.title">保留原生桌面能力</h3>
-                <p data-i18n="problems.native.copy">适合开发者工具、内部工具、AI 桌面客户端和 Overlay 控制台。</p>
+                <h3 data-i18n="problems.native.title">Tests</h3>
+                <p data-i18n="problems.native.copy">库依赖 spdlog，测试使用 GTest。</p>
               </div>
             </article>
           </div>
@@ -171,16 +171,16 @@
 
         <div class="decision-strip">
             <article>
-              <span data-i18n="comparison.fluent.label">适合 Fluent-Qt</span>
-              <strong data-i18n="comparison.fluent.copy">已有 C++ / QWidget 项目，希望现代化 UI，但不想迁移到 QML、Electron 或 Flutter。</strong>
+              <span data-i18n="comparison.fluent.label">uilib 编译</span>
+              <strong data-i18n="comparison.fluent.copy">关闭 Gallery 和 tests 后构建 FluentQt target。</strong>
             </article>
             <article>
-              <span data-i18n="comparison.rewrite.label">适合重写方案</span>
-              <strong data-i18n="comparison.rewrite.copy">新产品、强动效、Web 团队主导，或已经准备接受新的语言、运行时和工程模型。</strong>
+              <span data-i18n="comparison.rewrite.label">uilib 使用</span>
+              <strong data-i18n="comparison.rewrite.copy">业务项目链接 FluentQt::FluentQt。</strong>
             </article>
             <article>
-              <span data-i18n="comparison.qss.label">不建议只堆 QSS</span>
-              <strong data-i18n="comparison.qss.copy">短期能修外观，但状态、暗色模式、间距和组件一致性会越来越难维护。</strong>
+              <span data-i18n="comparison.qss.label">Gallery 打包</span>
+              <strong data-i18n="comparison.qss.copy">CPack preset 生成 DMG 和 Windows installer。</strong>
             </article>
         </div>
       </section>
@@ -190,10 +190,10 @@
           <div class="split-heading">
             <div>
               <p class="eyebrow">Gallery</p>
-              <h2 id="gallery-title" data-i18n="gallery.title">用真实运行的桌面应用说话。</h2>
+              <h2 id="gallery-title" data-i18n="gallery.title">Gallery 用来查看控件效果。</h2>
             </div>
             <p data-i18n="gallery.copy">
-              Gallery 是最强的可信证明。真实截图比重复堆功能卡片更快让开发者判断这个项目是否能用。
+              它是独立演示应用，用来浏览控件、检查状态、对照主题设置。
             </p>
           </div>
 
@@ -201,8 +201,8 @@
             <article class="gallery-primary">
               <img src="assets/gallery/gallery-home-real.png" alt="Fluent-Qt Gallery application shell">
               <div>
-                <h3 data-i18n="gallery.primary.title">Gallery 应用外壳</h3>
-                <p data-i18n="gallery.primary.copy">真实导航、真实组件页、真实信息密度。开发者应该先看到这个可运行界面。</p>
+                <h3 data-i18n="gallery.primary.title">Gallery 应用</h3>
+                <p data-i18n="gallery.primary.copy">可直接查看当前控件页面和运行状态。</p>
               </div>
             </article>
 
@@ -211,28 +211,28 @@
                 <img src="assets/gallery/gallery-button-real.png" alt="Button states in Fluent-Qt Gallery">
                 <div>
                   <h3 data-i18n="gallery.buttons.title">按钮状态</h3>
-                  <p data-i18n="gallery.buttons.copy">样式、尺寸、图标和交互状态。</p>
+                  <p data-i18n="gallery.buttons.copy">用于检查按钮样式、状态和交互。</p>
                 </div>
               </article>
               <article>
                 <img src="assets/gallery/gallery-toggleswitch-real.png" alt="ToggleSwitch in Fluent-Qt Gallery">
                 <div>
                   <h3>ToggleSwitch</h3>
-                  <p data-i18n="gallery.toggle.copy">用于原生设置界面的二值控件。</p>
+                  <p data-i18n="gallery.toggle.copy">用于检查二值设置控件。</p>
                 </div>
               </article>
               <article>
                 <img src="assets/gallery/gallery-slider-real.png" alt="Slider in Fluent-Qt Gallery">
                 <div>
                   <h3>Slider</h3>
-                  <p data-i18n="gallery.slider.copy">范围、数值、步进和轨道渲染。</p>
+                  <p data-i18n="gallery.slider.copy">用于检查范围和数值输入。</p>
                 </div>
               </article>
               <article>
                 <img src="assets/gallery/gallery-collections-real.png" alt="Collections in Fluent-Qt Gallery">
                 <div>
                   <h3 data-i18n="gallery.collections.title">集合视图</h3>
-                  <p data-i18n="gallery.collections.copy">面向密集列表和集合型界面。</p>
+                  <p data-i18n="gallery.collections.copy">用于检查列表、树和网格视图。</p>
                 </div>
               </article>
             </div>
@@ -244,8 +244,8 @@
         <div class="section-shell">
           <div class="split-heading compact-heading">
             <div>
-              <p class="eyebrow" data-i18n="components.eyebrow">组件</p>
-              <h2 id="components-title" data-i18n="components.title">像浏览一个真实工具箱一样展示组件。</h2>
+              <p class="eyebrow" data-i18n="components.eyebrow">FluentQt uilib</p>
+              <h2 id="components-title" data-i18n="components.title">业务项目链接 FluentQt::FluentQt 后使用这些控件。</h2>
             </div>
           </div>
 
@@ -328,42 +328,67 @@
       <section class="section-shell usecase-section" id="code" aria-labelledby="code-title">
         <div class="split-heading compact-heading">
           <div>
-            <p class="eyebrow" data-i18n="code.eyebrow">集成方式</p>
-            <h2 id="code-title" data-i18n="code.title">先作为 UI lib 接入，再用 Gallery 验证组件。</h2>
+            <p class="eyebrow" data-i18n="code.eyebrow">FluentQt uilib 使用</p>
+            <h2 id="code-title" data-i18n="code.title">业务项目链接 FluentQt::FluentQt。</h2>
+            <p class="section-lede" data-i18n="code.copy">
+              支持已安装 CMake 包，也支持源码子项目。最小消费示例见 examples/hello_world/。
+            </p>
           </div>
         </div>
 
-        <div class="integration-grid">
-          <article>
-            <span>01</span>
-            <h3 data-i18n="integration.package.title">安装后的 CMake 包</h3>
-            <p data-i18n="integration.package.copy">面向正式 SDK 分发，消费方只链接稳定 target。</p>
-            <pre><code>find_package(FluentQt CONFIG REQUIRED)
-target_link_libraries(my_app PRIVATE FluentQt::FluentQt)</code></pre>
-          </article>
-          <article>
-            <span>02</span>
-            <h3 data-i18n="integration.source.title">源码子项目</h3>
-            <p data-i18n="integration.source.copy">嵌入现有 Qt 工程时默认不拉起 Gallery、测试和打包。</p>
-            <pre><code>set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_ENABLE_GALLERY_PACKAGING OFF CACHE BOOL "" FORCE)
-add_subdirectory(external/Fluent-Qt)</code></pre>
-          </article>
-          <article>
-            <span>03</span>
-            <h3 data-i18n="integration.code.title">业务代码使用组件</h3>
-            <p data-i18n="integration.code.copy">组件命名空间保持按功能分组，适合渐进替换原有 QWidget。</p>
-            <pre><code>#include &lt;FluentQt/FluentQt.h&gt;
+        <div class="integration-layout">
+          <div class="integration-summary">
+            <article class="integration-callout">
+              <span data-i18n="integration.main.kicker">CMake 目标</span>
+              <h3 data-i18n="integration.main.title">核心目标是 FluentQt::FluentQt。</h3>
+              <p data-i18n="integration.main.copy">
+                应用创建 QApplication，调用 fluent::initializeResources()，然后按命名空间使用控件。
+              </p>
+            </article>
+
+            <div class="integration-choices" aria-label="Integration choices">
+              <article>
+                <span>01</span>
+                <div>
+                  <h3 data-i18n="integration.package.title">安装包方式</h3>
+                  <p data-i18n="integration.package.copy">find_package(FluentQt CONFIG REQUIRED) 后链接 FluentQt::FluentQt。</p>
+                </div>
+              </article>
+              <article>
+                <span>02</span>
+                <div>
+                  <h3 data-i18n="integration.source.title">源码子项目</h3>
+                  <p data-i18n="integration.source.copy">add_subdirectory 前可以关掉 Gallery、测试、install 和 Gallery 打包。</p>
+                </div>
+              </article>
+              <article>
+                <span>03</span>
+                <div>
+                  <h3 data-i18n="integration.gallery.title">example</h3>
+                  <p data-i18n="integration.gallery.copy">examples/hello_world/ 提供最小消费示例。</p>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <article class="integration-code-panel" aria-labelledby="integration-code-title">
+            <div class="code-panel-head">
+              <span data-i18n="integration.code.kicker">示例代码</span>
+              <h3 id="integration-code-title" data-i18n="integration.code.title">CMake + QWidget</h3>
+            </div>
+            <pre><code># CMakeLists.txt
+find_package(FluentQt CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+
+// main.cpp
+#include &lt;FluentQt/FluentQt.h&gt;
+
+fluent::initializeResources();
 
 auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
-          </article>
-          <article>
-            <span>04</span>
-            <h3 data-i18n="integration.gallery.title">Gallery 作为附加验证</h3>
-            <p data-i18n="integration.gallery.copy">Gallery 仍然是官方展示应用，但不再定义核心库的消费方式。</p>
-            <pre><code>cmake --build --preset vcpkg-osx --target fluent_qt_gallery</code></pre>
+            <p class="code-comment" data-i18n="integration.code.copy">
+              Gallery 可单独构建，用来查看控件效果。
+            </p>
           </article>
         </div>
       </section>
@@ -371,32 +396,32 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
       <section class="engineering-section" id="engineering" aria-labelledby="engineering-title">
         <div class="section-shell engineering-layout">
           <div>
-            <p class="eyebrow" data-i18n="engineering.eyebrow">工程结构</p>
-            <h2 id="engineering-title" data-i18n="engineering.title">不只是给按钮换皮肤。</h2>
+            <p class="eyebrow" data-i18n="engineering.eyebrow">Gallery 打包</p>
+            <h2 id="engineering-title" data-i18n="engineering.title">CMakePresets.json 提供 Gallery 的打包 preset。</h2>
             <p data-i18n="engineering.copy">
-              项目已经具备可复用组件、Gallery 应用、组件测试、文档、CMake presets、vcpkg 依赖和 Windows / macOS 打包路径。
+              release 构建后使用 CPack 生成 Windows installer 或 macOS DMG。
             </p>
           </div>
           <div class="engineering-list">
             <article>
-              <span>src/components</span>
-              <strong data-i18n="engineering.components">可复用 Widget 组件库</strong>
+              <span>Windows x64</span>
+              <strong data-i18n="engineering.components">vcpkg-windows-installer</strong>
             </article>
             <article>
-              <span>app</span>
-              <strong data-i18n="engineering.app">Gallery 运行时</strong>
+              <span>Windows ARM64</span>
+              <strong data-i18n="engineering.app">vcpkg-windows-arm64-installer</strong>
             </article>
             <article>
-              <span>tests/components</span>
-              <strong data-i18n="engineering.tests">组件测试</strong>
+              <span>macOS arm64</span>
+              <strong data-i18n="engineering.tests">vcpkg-osx-dmg</strong>
             </article>
             <article>
-              <span>docs</span>
-              <strong data-i18n="engineering.docs">架构与开发文档</strong>
+              <span>macOS x64</span>
+              <strong data-i18n="engineering.docs">vcpkg-osx-x64-dmg</strong>
             </article>
             <article>
-              <span>packaging</span>
-              <strong data-i18n="engineering.packaging">DMG 与 Windows 安装包</strong>
+              <span>CPack</span>
+              <strong data-i18n="engineering.packaging">DMG / Windows installer</strong>
             </article>
           </div>
         </div>
@@ -407,22 +432,22 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
     <footer class="site-footer">
       <div class="section-shell footer-layout">
         <span>Fluent-Qt</span>
-        <span data-i18n="footer.copy">MIT 许可。面向 Qt Widgets 的原生桌面 UI。</span>
+        <span data-i18n="footer.copy">MIT 许可。基于 Qt Widgets 的 FluentQt uilib。</span>
       </div>
     </footer>
 
     <script>
       const translations = {
         zh: {
-          "meta.title": "Fluent-Qt - 面向 Qt Widgets 的现代 Fluent UI",
-          "meta.description": "Fluent-Qt 是一个开源的 Fluent / WinUI 风格 Qt Widgets 组件库和 Gallery 应用。",
-          "nav.why": "价值",
+          "meta.title": "Fluent-Qt - FluentQt uilib for Qt Widgets",
+          "meta.description": "基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。",
+          "nav.why": "依赖",
           "nav.gallery": "Gallery",
-          "nav.components": "组件",
+          "nav.components": "uilib",
           "nav.code": "集成",
-          "nav.engineering": "工程化",
-          "hero.title": "Qt Widgets 的现代 Fluent UI。",
-          "hero.lede": "Fluent-Qt 帮助 C++ / Qt 桌面应用更新界面语言，同时保留 QWidget 的原生性能、系统集成和成熟工程结构。",
+          "nav.engineering": "打包",
+          "hero.title": "Fluent-Qt",
+          "hero.lede": "基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。",
           "actions.github": "查看 GitHub",
           "actions.docsShort": "文档",
           "downloads.title": "下载 Gallery",
@@ -432,7 +457,7 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "downloads.openRelease": "打开 Release",
           "downloads.primaryWindows": "下载 Windows 版",
           "downloads.desktopTitle": "桌面端",
-          "downloads.desktopCopy": "下载最新 Fluent-Qt Gallery 应用。",
+          "downloads.desktopCopy": "从 GitHub Releases 下载打包后的 Gallery。",
           "downloads.macArm.row": "macOS",
           "downloads.macIntel.row": "macOS (Intel)",
           "downloads.download": "下载",
@@ -443,117 +468,122 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "downloads.macIntel.label": "macOS",
           "downloads.all": "全部版本",
           "downloads.cta": "下载",
-          "hero.supportRuntimeLabel": "UI 栈",
+          "hero.supportRuntimeLabel": "UI 运行时",
           "hero.supportQtLabel": "Qt 支持",
-          "hero.supportPlatformLabel": "平台支持",
-          "hero.supportLanguageLabel": "语言标准",
-          "why.eyebrow": "价值定位",
-          "why.title": "不是替换 Qt，而是现代化 Qt Widgets。",
-          "problems.visual.title": "保留 Qt Widgets 资产",
-          "problems.visual.copy": "继续复用已有 C++ 代码、事件模型和窗口体系，不强制重写成熟页面。",
-          "problems.rewrite.title": "从组件层统一视觉",
-          "problems.rewrite.copy": "把按钮、输入、导航、弹窗和状态反馈统一到可维护的 Fluent / WinUI 风格。",
-          "problems.native.title": "保留原生桌面能力",
-          "problems.native.copy": "适合开发者工具、内部工具、AI 桌面客户端和 Overlay 控制台。",
-          "comparison.title": "一句话定位",
-          "comparison.copy": "Fluent-Qt 不是新的运行时，而是给已有 Qt Widgets 产品补一套现代、统一、可复用的桌面组件层。",
-          "comparison.fluent.label": "适合 Fluent-Qt",
-          "comparison.fluent.copy": "已有 C++ / QWidget 项目，希望现代化 UI，但不想迁移到 QML、Electron 或 Flutter。",
-          "comparison.rewrite.label": "适合重写方案",
-          "comparison.rewrite.copy": "新产品、强动效、Web 团队主导，或已经准备接受新的语言、运行时和工程模型。",
-          "comparison.qss.label": "不建议只堆 QSS",
-          "comparison.qss.copy": "短期能修外观，但状态、暗色模式、间距和组件一致性会越来越难维护。",
-          "comparison.head.solution": "方案",
-          "comparison.head.best": "更适合",
-          "comparison.head.tradeoff": "代价或边界",
-          "comparison.head.fluent": "Fluent-Qt 的位置",
-          "comparison.qss.best": "短期修补已有界面",
-          "comparison.qss.tradeoff": "样式容易分散，状态、间距、暗色模式和组件一致性难维护。",
-          "comparison.qss.fluent": "从可复用组件层统一视觉，而不是继续堆局部样式。",
-          "comparison.qml.best": "新项目、动效密集界面、触控或声明式 UI",
-          "comparison.qml.tradeoff": "成熟 QWidget 页面通常需要重写，并引入 C++ / QML 边界。",
-          "comparison.qml.fluent": "面向 QWidget-first 的现代化，不强制切换 UI 架构。",
-          "comparison.electron.best": "Web 团队、内容型桌面应用、复杂前端生态",
-          "comparison.electron.tradeoff": "Chromium 运行时更重，原生能力依赖桥接和额外进程模型。",
-          "comparison.electron.fluent": "更适合 C++ 原生工具、轻量桌面客户端和已有 Qt 工程。",
-          "comparison.tauri.best": "希望用 Web UI，同时降低 Electron 运行时体积",
-          "comparison.tauri.tradeoff": "仍需要维护 WebView 差异和 JS 到原生的通信边界。",
-          "comparison.tauri.fluent": "避免把 Qt Widgets 项目迁到 Web 技术栈。",
-          "comparison.rn.best": "React 团队，希望复用前端组件思维",
-          "comparison.rn.tradeoff": "桌面端能力和平台实现方式会随目标系统变化，不适合直接承接 Qt/C++ 存量界面。",
-          "comparison.rn.fluent": "避免把已有 Qt Widgets 产品重写到 JS / React 体系。",
-          "comparison.flutter.best": "统一自绘 UI、多端设计体系、新 Dart 项目",
-          "comparison.flutter.tradeoff": "语言、渲染栈和原生集成方式都会变化。",
-          "comparison.flutter.fluent": "保留 Qt / C++ 生态和原生 Widget 工作流。",
-          "comparison.dotnet.best": "Windows-first 企业应用和微软技术栈团队",
-          "comparison.dotnet.tradeoff": "更偏 Windows 生态，跨到 macOS 通常不是同一套 UI 工程。",
-          "comparison.dotnet.fluent": "适合仍要维持 Qt / C++ 和 macOS / Windows 交付的项目。",
-          "comparison.gtk.best": "需要传统原生 Toolkit，或已有对应生态投入",
-          "comparison.gtk.tradeoff": "不是面向 Fluent / WinUI 视觉体系的现成 Qt Widgets 组件库。",
-          "comparison.gtk.fluent": "对已有 Qt 项目来说，迁移 Toolkit 通常比组件级现代化成本更高。",
-          "comparison.imgui.best": "调试面板、编辑器工具、实时可视化和内嵌控制台",
-          "comparison.imgui.tradeoff": "Immediate-mode 很高效，但不一定适合完整产品级桌面应用外观。",
-          "comparison.imgui.fluent": "更偏产品化 Qt 桌面控件，而不是调试 UI。",
-          "gallery.title": "用真实运行的桌面应用说话。",
-          "gallery.copy": "Gallery 是最强的可信证明。真实截图比重复堆功能卡片更快让开发者判断这个项目是否能用。",
-          "gallery.primary.title": "Gallery 应用外壳",
-          "gallery.primary.copy": "真实导航、真实组件页、真实信息密度。开发者应该先看到这个可运行界面。",
+          "hero.supportPlatformLabel": "平台",
+          "hero.supportLanguageLabel": "语言",
+          "why.eyebrow": "依赖",
+          "why.title": "C++17、Qt Widgets、CMake presets 和 vcpkg。",
+          "problems.visual.title": "UI runtime",
+          "problems.visual.copy": "Qt Widgets，支持 Qt 5.15+ 或 Qt 6.2+。",
+          "problems.rewrite.title": "Build",
+          "problems.rewrite.copy": "使用 CMake presets 和 vcpkg manifest mode。",
+          "problems.native.title": "Tests",
+          "problems.native.copy": "库依赖 spdlog，测试使用 GTest。",
+          "comparison.title": "使用顺序",
+          "comparison.copy": "先编译 FluentQt uilib，再集成到业务项目；Gallery 用来查看控件效果。",
+          "comparison.fluent.label": "uilib 编译",
+          "comparison.fluent.copy": "关闭 Gallery 和 tests 后构建 FluentQt target。",
+          "comparison.rewrite.label": "uilib 使用",
+          "comparison.rewrite.copy": "业务项目链接 FluentQt::FluentQt。",
+          "comparison.qss.label": "Gallery 打包",
+          "comparison.qss.copy": "CPack preset 生成 DMG 和 Windows installer。",
+          "comparison.head.solution": "目录",
+          "comparison.head.best": "内容",
+          "comparison.head.tradeoff": "说明",
+          "comparison.head.fluent": "用法",
+          "comparison.qss.best": "依赖",
+          "comparison.qss.tradeoff": "C++17 / Qt Widgets / CMake presets / vcpkg。",
+          "comparison.qss.fluent": "README 中的依赖表。",
+          "comparison.qml.best": "FluentQt uilib",
+          "comparison.qml.tradeoff": "构建 FluentQt target，业务项目链接 FluentQt::FluentQt。",
+          "comparison.qml.fluent": "examples/hello_world/ 提供最小消费示例。",
+          "comparison.electron.best": "Gallery",
+          "comparison.electron.tradeoff": "独立演示应用，用来查看控件效果。",
+          "comparison.electron.fluent": "可单独构建 fluent_qt_gallery target。",
+          "comparison.tauri.best": "Gallery 打包",
+          "comparison.tauri.tradeoff": "Windows installer 和 macOS DMG 使用 CPack preset。",
+          "comparison.tauri.fluent": "发布包由 release workflow 生成。",
+          "comparison.rn.best": "docs/development",
+          "comparison.rn.tradeoff": "开发、测试、发布说明在文档目录。",
+          "comparison.rn.fluent": "README 保留文档入口。",
+          "comparison.flutter.best": ".github/workflows",
+          "comparison.flutter.tradeoff": "CI、Pages 和 Release 工作流。",
+          "comparison.flutter.fluent": "release workflow 生成发布包。",
+          "comparison.dotnet.best": "CMakePresets.json",
+          "comparison.dotnet.tradeoff": "preset 覆盖 Windows 和 macOS。",
+          "comparison.dotnet.fluent": "本地和 CI 共用 preset 名称。",
+          "comparison.gtk.best": "examples/hello_world",
+          "comparison.gtk.tradeoff": "最小消费示例。",
+          "comparison.gtk.fluent": "示例不依赖 Gallery。",
+          "comparison.imgui.best": "app/assets",
+          "comparison.imgui.tradeoff": "Gallery 截图资源。",
+          "comparison.imgui.fluent": "官网使用仓库内截图。",
+          "gallery.title": "Gallery 用来查看控件效果。",
+          "gallery.copy": "它是独立演示应用，用来浏览控件、检查状态、对照主题设置。",
+          "gallery.primary.title": "Gallery 应用",
+          "gallery.primary.copy": "可直接查看当前控件页面和运行状态。",
           "gallery.buttons.title": "按钮状态",
-          "gallery.buttons.copy": "样式、尺寸、图标和交互状态。",
-          "gallery.toggle.copy": "用于原生设置界面的二值控件。",
-          "gallery.slider.copy": "范围、数值、步进和轨道渲染。",
+          "gallery.buttons.copy": "用于检查按钮样式、状态和交互。",
+          "gallery.toggle.copy": "用于检查二值设置控件。",
+          "gallery.slider.copy": "用于检查范围和数值输入。",
           "gallery.collections.title": "集合视图",
-          "gallery.collections.copy": "面向密集列表和集合型界面。",
-          "components.eyebrow": "组件",
-          "components.title": "像浏览一个真实工具箱一样展示组件。",
+          "gallery.collections.copy": "用于检查列表、树和网格视图。",
+          "components.eyebrow": "FluentQt uilib",
+          "components.title": "业务项目链接 FluentQt::FluentQt 后使用这些控件。",
           "componentRail.input": "基础输入",
           "componentRail.fields": "文本控件",
           "componentRail.navigation": "导航",
           "componentRail.dialogs": "弹窗与浮层",
           "componentRail.status": "状态反馈",
           "componentRail.collections": "集合视图",
-          "componentCards.button": "命令入口",
-          "componentCards.toggle": "二值设置",
-          "componentCards.slider": "连续数值",
-          "componentCards.combo": "选项选择",
-          "componentCards.lineEdit": "聚焦文本输入",
-          "componentCards.color": "可视化选色",
-          "componentCards.navigation": "应用外壳导航",
-          "componentCards.tab": "多面板工具",
-          "componentCards.list": "密集行列表",
+          "componentCards.button": "按钮",
+          "componentCards.toggle": "开关",
+          "componentCards.slider": "数值",
+          "componentCards.combo": "下拉选择",
+          "componentCards.lineEdit": "文本输入",
+          "componentCards.color": "颜色选择",
+          "componentCards.navigation": "导航",
+          "componentCards.tab": "标签页",
+          "componentCards.list": "列表",
           "componentCards.tree": "层级结构",
-          "componentCards.dialog": "聚焦决策",
-          "componentCards.info": "内联状态提示",
-          "code.eyebrow": "集成方式",
-          "code.title": "先作为 UI lib 接入，再用 Gallery 验证组件。",
-          "integration.package.title": "安装后的 CMake 包",
-          "integration.package.copy": "面向正式 SDK 分发，消费方只链接稳定 target。",
+          "componentCards.dialog": "对话框",
+          "componentCards.info": "提示条",
+          "code.eyebrow": "FluentQt uilib 使用",
+          "code.title": "业务项目链接 FluentQt::FluentQt。",
+          "code.copy": "支持已安装 CMake 包，也支持源码子项目。最小消费示例见 examples/hello_world/。",
+          "integration.main.kicker": "CMake 目标",
+          "integration.main.title": "核心目标是 FluentQt::FluentQt。",
+          "integration.main.copy": "应用创建 QApplication，调用 fluent::initializeResources()，然后按命名空间使用控件。",
+          "integration.package.title": "安装包方式",
+          "integration.package.copy": "find_package(FluentQt CONFIG REQUIRED) 后链接 FluentQt::FluentQt。",
           "integration.source.title": "源码子项目",
-          "integration.source.copy": "嵌入现有 Qt 工程时默认不拉起 Gallery、测试和打包。",
-          "integration.code.title": "业务代码使用组件",
-          "integration.code.copy": "组件命名空间保持按功能分组，适合渐进替换原有 QWidget。",
-          "integration.gallery.title": "Gallery 作为附加验证",
-          "integration.gallery.copy": "Gallery 仍然是官方展示应用，但不再定义核心库的消费方式。",
-          "engineering.eyebrow": "工程结构",
-          "engineering.title": "不只是给按钮换皮肤。",
-          "engineering.copy": "项目已经具备可复用组件、Gallery 应用、组件测试、文档、CMake presets、vcpkg 依赖和 Windows / macOS 打包路径。",
-          "engineering.components": "可复用 Widget 组件库",
-          "engineering.app": "Gallery 运行时",
-          "engineering.tests": "组件测试",
-          "engineering.docs": "架构与开发文档",
-          "engineering.packaging": "DMG 与 Windows 安装包",
-          "footer.copy": "MIT 许可。面向 Qt Widgets 的原生桌面 UI。"
+          "integration.source.copy": "add_subdirectory 前可以关掉 Gallery、测试、install 和 Gallery 打包。",
+          "integration.gallery.title": "example",
+          "integration.gallery.copy": "examples/hello_world/ 提供最小消费示例。",
+          "integration.code.kicker": "示例代码",
+          "integration.code.title": "CMake + QWidget",
+          "integration.code.copy": "Gallery 可单独构建，用来查看控件效果。",
+          "engineering.eyebrow": "Gallery 打包",
+          "engineering.title": "CMakePresets.json 提供 Gallery 的打包 preset。",
+          "engineering.copy": "release 构建后使用 CPack 生成 Windows installer 或 macOS DMG。",
+          "engineering.components": "vcpkg-windows-installer",
+          "engineering.app": "vcpkg-windows-arm64-installer",
+          "engineering.tests": "vcpkg-osx-dmg",
+          "engineering.docs": "vcpkg-osx-x64-dmg",
+          "engineering.packaging": "DMG / Windows installer",
+          "footer.copy": "MIT 许可。基于 Qt Widgets 的 FluentQt uilib。"
         },
         en: {
-          "meta.title": "Fluent-Qt - Modern Fluent UI for Qt Widgets",
-          "meta.description": "Fluent-Qt is an open-source Fluent / WinUI-style component library and Gallery for native Qt Widgets applications.",
-          "nav.why": "Why",
+          "meta.title": "Fluent-Qt - FluentQt uilib for Qt Widgets",
+          "meta.description": "FluentQt uilib based on Qt Widgets, with a Gallery demo app.",
+          "nav.why": "Deps",
           "nav.gallery": "Gallery",
-          "nav.components": "Components",
+          "nav.components": "uilib",
           "nav.code": "Integrate",
-          "nav.engineering": "Engineering",
-          "hero.title": "Modern Fluent UI for Qt Widgets.",
-          "hero.lede": "Modernize C++ / Qt desktop interfaces while keeping QWidget performance, native system integration, and the engineering structure teams already rely on.",
+          "nav.engineering": "Package",
+          "hero.title": "Fluent-Qt",
+          "hero.lede": "FluentQt uilib based on Qt Widgets, with a Gallery demo app.",
           "actions.github": "View on GitHub",
           "actions.docsShort": "Docs",
           "downloads.title": "Download Gallery",
@@ -563,7 +593,7 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "downloads.openRelease": "Open Release",
           "downloads.primaryWindows": "Download for Windows",
           "downloads.desktopTitle": "Desktop",
-          "downloads.desktopCopy": "Download the latest Fluent-Qt Gallery app.",
+          "downloads.desktopCopy": "Download packaged Gallery builds from GitHub Releases.",
           "downloads.macArm.row": "macOS",
           "downloads.macIntel.row": "macOS (Intel)",
           "downloads.download": "Download",
@@ -574,106 +604,111 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "downloads.macIntel.label": "macOS",
           "downloads.all": "All releases",
           "downloads.cta": "Download",
-          "hero.supportRuntimeLabel": "UI stack",
+          "hero.supportRuntimeLabel": "UI runtime",
           "hero.supportQtLabel": "Qt support",
           "hero.supportPlatformLabel": "Platforms",
           "hero.supportLanguageLabel": "Language",
-          "why.eyebrow": "Positioning",
-          "why.title": "Do not replace Qt. Modernize Qt Widgets.",
-          "problems.visual.title": "Keep Qt Widgets assets",
-          "problems.visual.copy": "Reuse existing C++ code, event handling, and window structure without forcing mature screens to be rewritten.",
-          "problems.rewrite.title": "Unify visuals through components",
-          "problems.rewrite.copy": "Keep buttons, inputs, navigation, dialogs, and status surfaces in one maintainable Fluent / WinUI style.",
-          "problems.native.title": "Keep native desktop behavior",
-          "problems.native.copy": "Designed for developer tools, internal tools, AI desktop clients, and overlay control panels.",
-          "comparison.title": "One-line positioning",
-          "comparison.copy": "Fluent-Qt is not a new runtime. It adds a modern, unified, reusable desktop component layer to existing Qt Widgets products.",
-          "comparison.fluent.label": "Choose Fluent-Qt",
-          "comparison.fluent.copy": "Existing C++ / QWidget products that need modern UI without moving to QML, Electron, or Flutter.",
-          "comparison.rewrite.label": "Choose a rewrite",
-          "comparison.rewrite.copy": "New products, animation-heavy UI, Web-led teams, or projects ready to accept a new language, runtime, and engineering model.",
-          "comparison.qss.label": "Avoid QSS-only",
-          "comparison.qss.copy": "It can patch the look short term, but states, dark mode, spacing, and component consistency become harder to maintain.",
-          "comparison.head.solution": "Option",
-          "comparison.head.best": "Best fit",
-          "comparison.head.tradeoff": "Cost or boundary",
-          "comparison.head.fluent": "Where Fluent-Qt fits",
-          "comparison.qss.best": "Short-term styling for existing screens",
-          "comparison.qss.tradeoff": "Styles spread out quickly, while states, spacing, dark mode, and component consistency become hard to maintain.",
-          "comparison.qss.fluent": "Moves visual consistency into reusable components instead of more local styling.",
-          "comparison.qml.best": "New projects, animation-heavy screens, touch UI, or declarative interfaces",
-          "comparison.qml.tradeoff": "Mature QWidget screens usually need to be rewritten and bridged across C++ / QML boundaries.",
-          "comparison.qml.fluent": "A QWidget-first modernization path without forcing a UI architecture switch.",
-          "comparison.electron.best": "Web teams, content-heavy desktop apps, and complex frontend ecosystems",
-          "comparison.electron.tradeoff": "The Chromium runtime is heavier, and native behavior depends on bridges and a different process model.",
-          "comparison.electron.fluent": "Better suited to C++ native tools, lightweight clients, and existing Qt projects.",
-          "comparison.tauri.best": "Web UI with a smaller shell than Electron",
-          "comparison.tauri.tradeoff": "Still requires managing WebView differences and the JS-to-native communication boundary.",
-          "comparison.tauri.fluent": "Avoids moving a Qt Widgets product to a Web stack.",
-          "comparison.rn.best": "React teams that want to reuse frontend component patterns",
-          "comparison.rn.tradeoff": "Desktop capabilities and platform implementations vary by target system, and it does not directly carry over existing Qt/C++ screens.",
-          "comparison.rn.fluent": "Avoids rewriting an existing Qt Widgets product into a JS / React stack.",
-          "comparison.flutter.best": "Custom-rendered UI, shared design systems, and new Dart projects",
-          "comparison.flutter.tradeoff": "Language, rendering stack, and native integration patterns all change.",
-          "comparison.flutter.fluent": "Keeps the Qt / C++ ecosystem and native Widget workflow.",
-          "comparison.dotnet.best": "Windows-first enterprise apps and Microsoft-stack teams",
-          "comparison.dotnet.tradeoff": "More Windows-oriented; macOS delivery is usually not the same UI codebase.",
-          "comparison.dotnet.fluent": "Fits teams that still need Qt / C++ with macOS and Windows delivery.",
-          "comparison.gtk.best": "Traditional native toolkit projects, or teams already invested in that ecosystem",
-          "comparison.gtk.tradeoff": "Not a ready-made Fluent / WinUI-style component library for Qt Widgets.",
-          "comparison.gtk.fluent": "For existing Qt projects, switching toolkit is usually more expensive than component-level modernization.",
-          "comparison.imgui.best": "Debug panels, editor tools, real-time visualization, and embedded control consoles",
-          "comparison.imgui.tradeoff": "Immediate-mode UI is efficient, but not always ideal for polished product-grade desktop app surfaces.",
-          "comparison.imgui.fluent": "Targets product-style Qt desktop components rather than debug UI.",
-          "gallery.title": "Lead with the running desktop app.",
-          "gallery.copy": "The Gallery should be the strongest proof point. Large screenshots create trust faster than repeated feature cards.",
-          "gallery.primary.title": "Gallery application shell",
-          "gallery.primary.copy": "Real navigation, real component pages, real density. This is the surface developers should trust first.",
+          "why.eyebrow": "Dependencies",
+          "why.title": "C++17, Qt Widgets, CMake presets, and vcpkg.",
+          "problems.visual.title": "UI runtime",
+          "problems.visual.copy": "Qt Widgets, with Qt 5.15+ or Qt 6.2+.",
+          "problems.rewrite.title": "Build",
+          "problems.rewrite.copy": "Uses CMake presets and vcpkg manifest mode.",
+          "problems.native.title": "Tests",
+          "problems.native.copy": "The library depends on spdlog; tests use GTest.",
+          "comparison.title": "Order",
+          "comparison.copy": "Build FluentQt uilib first, integrate it into your app, then use Gallery to inspect controls.",
+          "comparison.fluent.label": "Build uilib",
+          "comparison.fluent.copy": "Build the FluentQt target with Gallery and tests disabled.",
+          "comparison.rewrite.label": "Use uilib",
+          "comparison.rewrite.copy": "Consumer apps link FluentQt::FluentQt.",
+          "comparison.qss.label": "Package Gallery",
+          "comparison.qss.copy": "CPack presets produce DMG and Windows installer packages.",
+          "comparison.head.solution": "Folder",
+          "comparison.head.best": "Content",
+          "comparison.head.tradeoff": "Notes",
+          "comparison.head.fluent": "Usage",
+          "comparison.qss.best": "Dependencies",
+          "comparison.qss.tradeoff": "C++17 / Qt Widgets / CMake presets / vcpkg.",
+          "comparison.qss.fluent": "Dependency table in README.",
+          "comparison.qml.best": "FluentQt uilib",
+          "comparison.qml.tradeoff": "Build the FluentQt target; link FluentQt::FluentQt.",
+          "comparison.qml.fluent": "examples/hello_world/ is the minimal consumer example.",
+          "comparison.electron.best": "Gallery",
+          "comparison.electron.tradeoff": "Separate demo app for inspecting controls.",
+          "comparison.electron.fluent": "Can be built as the fluent_qt_gallery target.",
+          "comparison.tauri.best": "Gallery packaging",
+          "comparison.tauri.tradeoff": "Windows installer and macOS DMG use CPack presets.",
+          "comparison.tauri.fluent": "Release packages are built by the release workflow.",
+          "comparison.rn.best": "docs/development",
+          "comparison.rn.tradeoff": "Build, test, release, and packaging notes are kept in docs.",
+          "comparison.rn.fluent": "README links to those docs.",
+          "comparison.flutter.best": ".github/workflows",
+          "comparison.flutter.tradeoff": "CI, Pages, and Release workflows live here.",
+          "comparison.flutter.fluent": "Release packages are built by the release workflow.",
+          "comparison.dotnet.best": "CMakePresets.json",
+          "comparison.dotnet.tradeoff": "Presets cover Windows and macOS.",
+          "comparison.dotnet.fluent": "Local commands and CI use the same preset names.",
+          "comparison.gtk.best": "examples/hello_world",
+          "comparison.gtk.tradeoff": "The example shows installed-library consumption.",
+          "comparison.gtk.fluent": "The example does not depend on Gallery.",
+          "comparison.imgui.best": "app/assets",
+          "comparison.imgui.tradeoff": "Gallery assets and component screenshots live here.",
+          "comparison.imgui.fluent": "The website and README use repository screenshots.",
+          "gallery.title": "Gallery is for inspecting controls.",
+          "gallery.copy": "It is a separate demo app for browsing controls, checking states, and comparing theme settings.",
+          "gallery.primary.title": "Gallery app",
+          "gallery.primary.copy": "Use it to inspect current component pages and runtime states.",
           "gallery.buttons.title": "Button states",
-          "gallery.buttons.copy": "Styles, sizes, icons, and interaction states.",
-          "gallery.toggle.copy": "Binary settings with native widget behavior.",
-          "gallery.slider.copy": "Ranges, values, steps, and track rendering.",
+          "gallery.buttons.copy": "Checks button styles, states, and interaction.",
+          "gallery.toggle.copy": "Checks binary setting controls.",
+          "gallery.slider.copy": "Checks range and value input.",
           "gallery.collections.title": "Collections",
-          "gallery.collections.copy": "Dense list and collection surfaces.",
-          "components.eyebrow": "Components",
-          "components.title": "Show the catalog like a product browser.",
+          "gallery.collections.copy": "Checks list, tree, and grid views.",
+          "components.eyebrow": "FluentQt uilib",
+          "components.title": "Consumer apps use these controls by linking FluentQt::FluentQt.",
           "componentRail.input": "Basic input",
           "componentRail.fields": "Text fields",
           "componentRail.navigation": "Navigation",
           "componentRail.dialogs": "Dialogs & flyouts",
           "componentRail.status": "Status",
           "componentRail.collections": "Collections",
-          "componentCards.button": "Command surfaces",
-          "componentCards.toggle": "Binary settings",
-          "componentCards.slider": "Continuous values",
-          "componentCards.combo": "Option picking",
-          "componentCards.lineEdit": "Focused text input",
-          "componentCards.color": "Visual selection",
-          "componentCards.navigation": "App shell navigation",
-          "componentCards.tab": "Multi-panel tools",
-          "componentCards.list": "Dense rows",
+          "componentCards.button": "Buttons",
+          "componentCards.toggle": "Switches",
+          "componentCards.slider": "Values",
+          "componentCards.combo": "Dropdowns",
+          "componentCards.lineEdit": "Text input",
+          "componentCards.color": "Color input",
+          "componentCards.navigation": "Navigation",
+          "componentCards.tab": "Tabs",
+          "componentCards.list": "Lists",
           "componentCards.tree": "Hierarchy",
-          "componentCards.dialog": "Focused decisions",
-          "componentCards.info": "Inline status",
-          "code.eyebrow": "Integration",
-          "code.title": "Use Fluent-Qt as the UI library first, then verify components in the Gallery.",
-          "integration.package.title": "Installed CMake package",
-          "integration.package.copy": "For SDK-style distribution, consumers link one stable target.",
+          "componentCards.dialog": "Dialogs",
+          "componentCards.info": "Info bars",
+          "code.eyebrow": "Use FluentQt uilib",
+          "code.title": "Consumer apps link FluentQt::FluentQt.",
+          "code.copy": "Use the installed CMake package or add the source tree as a subproject. See examples/hello_world/ for the minimal consumer example.",
+          "integration.main.kicker": "CMake target",
+          "integration.main.title": "The core target is FluentQt::FluentQt.",
+          "integration.main.copy": "Apps create QApplication, call fluent::initializeResources(), then use controls by namespace.",
+          "integration.package.title": "Installed package",
+          "integration.package.copy": "Use find_package(FluentQt CONFIG REQUIRED), then link FluentQt::FluentQt.",
           "integration.source.title": "Source subproject",
-          "integration.source.copy": "Embedding into an existing Qt app does not pull in Gallery, tests, or packaging by default.",
-          "integration.code.title": "Use components in app code",
-          "integration.code.copy": "Namespaces stay grouped by control area, so existing QWidget screens can migrate gradually.",
-          "integration.gallery.title": "Gallery as optional validation",
-          "integration.gallery.copy": "The Gallery remains the official showcase, but it no longer defines the library consumption path.",
-          "engineering.eyebrow": "Engineering shape",
-          "engineering.title": "More than a skin for buttons.",
-          "engineering.copy": "The project already has reusable components, a Gallery app, component tests, docs, CMake presets, vcpkg dependencies, and Windows / macOS packaging paths.",
-          "engineering.components": "Reusable widget library",
-          "engineering.app": "Gallery runtime",
-          "engineering.tests": "Component tests",
-          "engineering.docs": "Architecture and workflow notes",
-          "engineering.packaging": "DMG and Windows installer",
-          "footer.copy": "MIT licensed. Native desktop UI for Qt Widgets."
+          "integration.source.copy": "Before add_subdirectory, Gallery, tests, install, and Gallery packaging can be turned off.",
+          "integration.gallery.title": "example",
+          "integration.gallery.copy": "examples/hello_world/ provides the minimal consumer example.",
+          "integration.code.kicker": "Example code",
+          "integration.code.title": "CMake + QWidget",
+          "integration.code.copy": "Build Gallery separately when you need to inspect controls.",
+          "engineering.eyebrow": "Package Gallery",
+          "engineering.title": "CMakePresets.json provides Gallery packaging presets.",
+          "engineering.copy": "After a release build, CPack produces Windows installer or macOS DMG packages.",
+          "engineering.components": "vcpkg-windows-installer",
+          "engineering.app": "vcpkg-windows-arm64-installer",
+          "engineering.tests": "vcpkg-osx-dmg",
+          "engineering.docs": "vcpkg-osx-x64-dmg",
+          "engineering.packaging": "DMG / Windows installer",
+          "footer.copy": "MIT licensed. FluentQt uilib based on Qt Widgets."
         }
       };
 
