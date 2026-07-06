@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  <img src="app/assets/app-icon.png" width="88" alt="Fluent-QT logo">
+  <img src="app/assets/app-icon.png" width="88" alt="Fluent-Qt logo">
 </p>
 
-<h1 align="center">Fluent-QT</h1>
+<h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
   A modern Fluent component library for Qt Widgets.
@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/calvinhxx/Fluent-QT/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-QT/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-111827.svg"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-111827.svg">
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
@@ -24,12 +24,12 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/readme/hero.png" alt="Fluent-QT Gallery preview">
+  <img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery preview">
 </p>
 
 ## ✨ Positioning
 
-Fluent-QT brings modern desktop UI capabilities to traditional Qt Widgets applications. It does not require moving to QML; instead, it provides reusable components, design specifications, theme infrastructure, and a runnable Gallery on top of the native Widgets stack.
+Fluent-Qt brings modern desktop UI capabilities to traditional Qt Widgets applications. It does not require moving to QML; instead, it provides reusable components, design specifications, theme infrastructure, and a runnable Gallery on top of the native Widgets stack.
 
 | Native Widgets | Design System | Gallery Validation |
 |---|---|---|
@@ -53,7 +53,7 @@ Fluent-QT brings modern desktop UI capabilities to traditional Qt Widgets applic
 
 ## 🧩 Component Scope
 
-Fluent-QT covers core desktop UI surfaces including basic input, collections, navigation, overlays, text input, date and time, menus and toolbars, scrolling, status feedback, and windowing.
+Fluent-Qt covers core desktop UI surfaces including basic input, collections, navigation, overlays, text input, date and time, menus and toolbars, scrolling, status feedback, and windowing.
 
 ## 🚀 Quick Start
 
@@ -113,14 +113,14 @@ cpack --preset vcpkg-windows-installer
 ## ⭐ Star History
 
 <p align="center">
-  <a href="https://www.star-history.com/#calvinhxx/Fluent-QT&Date">
+  <a href="https://www.star-history.com/#calvinhxx/Fluent-Qt&Date">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-QT&type=Date&theme=dark">
-      <img alt="Fluent-QT Star History Chart" src="https://api.star-history.com/svg?repos=calvinhxx/Fluent-QT&type=Date">
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&type=Date&theme=dark">
+      <img alt="Fluent-Qt Star History Chart" src="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&type=Date">
     </picture>
   </a>
 </p>
 
 ## License
 
-Fluent-QT is released under the [MIT License](LICENSE).
+Fluent-Qt is released under the [MIT License](LICENSE).

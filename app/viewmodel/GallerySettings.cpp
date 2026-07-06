@@ -27,12 +27,12 @@ constexpr char kIntroCompletedKey[] = "intro/completed";
 
 bool persistenceAvailable()
 {
-    return QCoreApplication::organizationName() == QStringLiteral("Fluent-QT")
-        && QCoreApplication::applicationName() == QStringLiteral("Fluent-QT Gallery");
+    return QCoreApplication::organizationName() == QStringLiteral("Fluent-Qt")
+        && QCoreApplication::applicationName() == QStringLiteral("Fluent-Qt Gallery");
 }
 
 // Single config file, in the same per-user app folder as the logs (AppLocalDataLocation), so all app
-// data lives under one directory: %LOCALAPPDATA%\Fluent-QT\Fluent-QT Gallery\{config.ini, logs\}.
+// data lives under one directory: %LOCALAPPDATA%\Fluent-Qt\Fluent-Qt Gallery\{config.ini, logs\}.
 // zh_CN: 单一配置文件,与日志同处每用户 app 目录(AppLocalDataLocation),让所有 app 数据集中在一个目录下。
 QString configFilePath()
 {

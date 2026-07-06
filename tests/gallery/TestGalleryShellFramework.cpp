@@ -261,7 +261,7 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
     GalleryWindow window;
 
     EXPECT_EQ(window.objectName(), QStringLiteral("galleryWindow"));
-    EXPECT_EQ(window.windowTitle(), QStringLiteral("Fluent-QT Gallery"));
+    EXPECT_EQ(window.windowTitle(), QStringLiteral("Fluent-Qt Gallery"));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("home"));
     EXPECT_NE(window.findChild<QWidget*>(QStringLiteral("galleryNavigationView")), nullptr);
     auto* mainPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryMainNavigationPane"));
@@ -1424,7 +1424,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_FALSE(visibleText.contains(QStringLiteral("Sound")));
     EXPECT_FALSE(visibleText.contains(QStringLiteral("Manage samples")));
     EXPECT_FALSE(visibleText.contains(QStringLiteral("About")));
-    EXPECT_FALSE(visibleText.contains(QStringLiteral("Fluent-QT Gallery")));
+    EXPECT_FALSE(visibleText.contains(QStringLiteral("Fluent-Qt Gallery")));
 
     const auto iconLabels = page->findChildren<fluent::textfields::Label*>(
         QStringLiteral("gallerySettingsRowIcon"));

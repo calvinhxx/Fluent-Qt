@@ -27,8 +27,8 @@ static void initializeFluentQtResources()
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
-    QApplication::setApplicationName(QStringLiteral("Fluent-QT Gallery"));
-    QApplication::setOrganizationName(QStringLiteral("Fluent-QT"));
+    QApplication::setApplicationName(QStringLiteral("Fluent-Qt Gallery"));
+    QApplication::setOrganizationName(QStringLiteral("Fluent-Qt"));
     QApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
     app.setQuitOnLastWindowClosed(false);
 

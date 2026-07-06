@@ -510,7 +510,7 @@ jobs:
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$tag" \
               --repo "$GITHUB_REPOSITORY" \
-              --title "Fluent-QT $tag" \
+              --title "Fluent-Qt $tag" \
               --notes-file release-notes.md
             gh release upload "$tag" release-dist/* --repo "$GITHUB_REPOSITORY" --clobber
             exit 0
@@ -521,7 +521,7 @@ jobs:
             release-dist/*
             --repo "$GITHUB_REPOSITORY"
             --verify-tag
-            --title "Fluent-QT $tag"
+            --title "Fluent-Qt $tag"
             --notes-file release-notes.md
             --fail-on-no-commits
           )

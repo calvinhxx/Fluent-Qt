@@ -1,6 +1,6 @@
 # Design Language References
 
-Fluent-QT ships three switchable **style themes** (Settings → *Style theme*): Fluent (Windows),
+Fluent-Qt ships three switchable **style themes** (Settings → *Style theme*): Fluent (Windows),
 Material 3 (Google), and macOS. Beyond recoloring, each brand changes component **shape and
 interaction** through `FluentElement::DesignLanguage` (`DesignFluent` / `DesignMaterial` /
 `DesignCupertino`), which controls' `paintEvent`s branch on.
