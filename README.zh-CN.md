@@ -1,5 +1,5 @@
 <p align="center">
-  简体中文 | <a href="README.md">English</a>
+  <a href="README.md">English</a> | 简体中文
 </p>
 
 <p align="center">
@@ -9,9 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  面向 Qt Widgets 的现代 Fluent 组件库。
-  <br>
-  用 C++17 构建原生桌面体验，覆盖组件、设计 token、主题系统与 Gallery 示例应用。
+  基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。
 </p>
 
 <p align="center">
@@ -28,38 +26,44 @@
   <img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery 预览">
 </p>
 
-## ✨ 项目定位
-
-Fluent-Qt 为传统 Qt Widgets 应用补齐现代桌面界面能力。它不要求迁移到 QML，而是在原生 Widgets 栈上提供可复用组件、设计规范、主题基础设施和可运行的 Gallery。
-
-| 原生 Widgets | 设计系统 | Gallery 验证 |
-|---|---|---|
-| 保持 C++/Qt Widgets 工程形态。 | 以 Fluent 为基线，兼顾 Material 3 与 macOS 风格分支。 | 用真实应用展示组件状态、主题切换和示例代码。 |
-
-## 🧭 支持范围
-
-| 平台 | 架构 | 交付 |
-|---|---|---|
-| Windows | x64 / ARM64 | Debug、Release、installer |
-| macOS | arm64 / x64 | Debug、Release、DMG |
-
 ## 🧱 依赖
 
 | 类别 | 要求 |
 |---|---|
-| Language | C++17 |
-| UI runtime | Qt Widgets，Qt 5.15+ 或 Qt 6.2+ |
-| Build | CMake、vcpkg |
-| Library dependency | spdlog |
-| Tests | GTest |
+| 语言 | C++17 |
+| UI 运行时 | Qt Widgets，Qt 5.15+ 或 Qt 6.2+ |
+| 构建 | CMake presets、vcpkg manifest mode |
+| 库依赖 | spdlog |
+| 测试 | GTest |
 
-## 🧩 组件能力
+## 🛠 FluentQt uilib 编译
 
-覆盖基础输入、集合视图、导航、弹层、文本输入、日期时间、菜单工具栏、滚动、状态反馈与窗口系统等桌面应用核心界面能力。
+macOS arm64:
 
-## 🔌 作为组件库集成
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+cmake --preset vcpkg-osx -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-osx --target FluentQt
+```
 
-已安装包：
+Windows x64:
+
+```powershell
+$env:VCPKG_ROOT = "D:\path\to\vcpkg"
+cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-windows --target FluentQt
+```
+
+## 🔌 FluentQt uilib 使用
+
+最小消费示例见 [`examples/hello_world/`](examples/hello_world/)。
+
+| 集成方式 | 适用场景 |
+|---|---|
+| 已安装 CMake 包 | Fluent-Qt 已安装，或由包管理器提供。 |
+| 源码子项目 | 将 Fluent-Qt 源码放进业务仓库一起编译。 |
+
+已安装 CMake 包：
 
 ```cmake
 find_package(FluentQt CONFIG REQUIRED)
@@ -73,6 +77,7 @@ set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
 set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
 set(FLUENT_QT_ENABLE_GALLERY_PACKAGING OFF CACHE BOOL "" FORCE)
+
 add_subdirectory(external/Fluent-Qt)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
@@ -82,33 +87,38 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```cpp
 #include <FluentQt/FluentQt.h>
 
+fluent::initializeResources();
+
 auto* button = new fluent::basicinput::Button("Save", this);
 button->setFluentStyle(fluent::basicinput::Button::Accent);
 ```
 
-## 🚀 本地构建 Gallery
+## 🖼 Gallery
 
-macOS:
+Gallery 是仓库里的演示应用，用来浏览控件、检查状态、对照主题设置。
+
+配置项目后，可以单独构建 Gallery target：
 
 ```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset vcpkg-osx
-cmake --build --preset vcpkg-osx
-ctest --preset vcpkg-osx --output-on-failure
+cmake --preset vcpkg-osx -DFLUENT_QT_BUILD_GALLERY=ON
+cmake --build --preset vcpkg-osx --target fluent_qt_gallery
 ```
-
-Windows:
 
 ```powershell
-$env:VCPKG_ROOT = "D:\path\to\vcpkg"
-cmake --preset vcpkg-windows
-cmake --build --preset vcpkg-windows
-ctest --preset vcpkg-windows --output-on-failure
+cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=ON
+cmake --build --preset vcpkg-windows --target fluent_qt_gallery
 ```
 
-## 📦 打包
+## 📦 Gallery 打包
 
-macOS:
+| 平台 | 架构 | 打包 preset |
+|---|---|---|
+| Windows | x64 | `vcpkg-windows-installer` |
+| Windows | ARM64 | `vcpkg-windows-arm64-installer` |
+| macOS | arm64 | `vcpkg-osx-dmg` |
+| macOS | x64 | `vcpkg-osx-x64-dmg` |
+
+macOS arm64 DMG:
 
 ```bash
 cmake --preset vcpkg-osx-release
@@ -116,7 +126,7 @@ cmake --build --preset vcpkg-osx-release
 cpack --preset vcpkg-osx-dmg
 ```
 
-Windows:
+Windows x64 安装包：
 
 ```powershell
 cmake --preset vcpkg-windows-release
@@ -132,26 +142,27 @@ cpack --preset vcpkg-windows-installer
 | [发布治理](docs/development/release-governance.md) | [视觉验收](docs/development/visual-review.md) | [Overlay 行为](docs/architecture/overlay-behavior.md) | [Figma 来源](docs/design-languages/figma-sources.md) |
 | [打包工作流](docs/development/packaging-workflow.md) |  |  |  |
 
-## 🔗 引用
+## 🔗 参考
 
-| 入口 | 用途 |
+| 来源 | 用途 |
 |---|---|
-| [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows 视觉基线 |
-| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS 风格分支参考 |
-| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 风格分支参考 |
-| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 组件语义与示例体验参考 |
+| [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows 视觉参考 |
+| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS 风格参考 |
+| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 风格参考 |
+| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 控件行为和示例页面参考 |
 
 ## ⭐ Star History
 
 <p align="center">
   <a href="https://www.star-history.com/#calvinhxx/Fluent-Qt&Date">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&type=Date&theme=dark">
-      <img alt="Fluent-Qt Star History Chart" src="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&type=Date">
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date&amp;theme=dark">
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date">
+      <img alt="Fluent-Qt Star History Chart" src="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date">
     </picture>
   </a>
 </p>
 
 ## License
 
-Fluent-Qt is released under the [MIT License](LICENSE).
+Fluent-Qt 使用 [MIT License](LICENSE) 发布。

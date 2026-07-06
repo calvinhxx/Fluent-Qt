@@ -9,9 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  A modern Fluent component library for Qt Widgets.
-  <br>
-  Build native desktop experiences with C++17, reusable components, design tokens, themes, and a live Gallery app.
+  FluentQt uilib based on Qt Widgets, with a Gallery demo app.
 </p>
 
 <p align="center">
@@ -28,36 +26,42 @@
   <img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery preview">
 </p>
 
-## ✨ Positioning
-
-Fluent-Qt brings modern desktop UI capabilities to traditional Qt Widgets applications. It does not require moving to QML; instead, it provides reusable components, design specifications, theme infrastructure, and a runnable Gallery on top of the native Widgets stack.
-
-| Native Widgets | Design System | Gallery Validation |
-|---|---|---|
-| Keeps the C++/Qt Widgets application model. | Uses Fluent as the baseline, with Material 3 and macOS style branches. | Demonstrates component states, theme switching, and sample code in a real app. |
-
-## 🧭 Support Matrix
-
-| Platform | Architecture | Delivery |
-|---|---|---|
-| Windows | x64 / ARM64 | Debug, Release, installer |
-| macOS | arm64 / x64 | Debug, Release, DMG |
-
 ## 🧱 Dependencies
 
 | Category | Requirement |
 |---|---|
 | Language | C++17 |
 | UI runtime | Qt Widgets, Qt 5.15+ or Qt 6.2+ |
-| Build | CMake, vcpkg |
+| Build | CMake presets, vcpkg manifest mode |
 | Library dependency | spdlog |
 | Tests | GTest |
 
-## 🧩 Component Scope
+## 🛠 Build FluentQt uilib
 
-Fluent-Qt covers core desktop UI surfaces including basic input, collections, navigation, overlays, text input, date and time, menus and toolbars, scrolling, status feedback, and windowing.
+macOS arm64:
 
-## 🔌 Use As A Library
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+cmake --preset vcpkg-osx -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-osx --target FluentQt
+```
+
+Windows x64:
+
+```powershell
+$env:VCPKG_ROOT = "D:\path\to\vcpkg"
+cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-windows --target FluentQt
+```
+
+## 🔌 Use FluentQt uilib
+
+See [`examples/hello_world/`](examples/hello_world/) for a minimal consumer example.
+
+| Integration mode | When to use |
+|---|---|
+| Installed package | Fluent-Qt is installed or provided by a package manager. |
+| Source subproject | Fluent-Qt source is vendored and built with your app. |
 
 Installed package:
 
@@ -73,6 +77,7 @@ set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
 set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
 set(FLUENT_QT_ENABLE_GALLERY_PACKAGING OFF CACHE BOOL "" FORCE)
+
 add_subdirectory(external/Fluent-Qt)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
@@ -82,33 +87,38 @@ Application code:
 ```cpp
 #include <FluentQt/FluentQt.h>
 
+fluent::initializeResources();
+
 auto* button = new fluent::basicinput::Button("Save", this);
 button->setFluentStyle(fluent::basicinput::Button::Accent);
 ```
 
-## 🚀 Build The Gallery Locally
+## 🖼 Gallery
 
-macOS:
+Gallery is the demo application for this repository. It is useful for browsing the available controls, checking states, and comparing theme settings.
+
+Build the Gallery target after configuring the project:
 
 ```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset vcpkg-osx
-cmake --build --preset vcpkg-osx
-ctest --preset vcpkg-osx --output-on-failure
+cmake --preset vcpkg-osx -DFLUENT_QT_BUILD_GALLERY=ON
+cmake --build --preset vcpkg-osx --target fluent_qt_gallery
 ```
-
-Windows:
 
 ```powershell
-$env:VCPKG_ROOT = "D:\path\to\vcpkg"
-cmake --preset vcpkg-windows
-cmake --build --preset vcpkg-windows
-ctest --preset vcpkg-windows --output-on-failure
+cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=ON
+cmake --build --preset vcpkg-windows --target fluent_qt_gallery
 ```
 
-## 📦 Packaging
+## 📦 Package Gallery
 
-macOS:
+| Platform | Architecture | Packaging preset |
+|---|---|---|
+| Windows | x64 | `vcpkg-windows-installer` |
+| Windows | ARM64 | `vcpkg-windows-arm64-installer` |
+| macOS | arm64 | `vcpkg-osx-dmg` |
+| macOS | x64 | `vcpkg-osx-x64-dmg` |
+
+macOS arm64 DMG:
 
 ```bash
 cmake --preset vcpkg-osx-release
@@ -116,7 +126,7 @@ cmake --build --preset vcpkg-osx-release
 cpack --preset vcpkg-osx-dmg
 ```
 
-Windows:
+Windows x64 installer:
 
 ```powershell
 cmake --preset vcpkg-windows-release
@@ -136,18 +146,19 @@ cpack --preset vcpkg-windows-installer
 
 | Entry | Purpose |
 |---|---|
-| [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows visual baseline |
-| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | Reference for the macOS style branch |
-| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Reference for the Material 3 style branch |
-| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | Reference for component semantics and sample experience |
+| [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows visual reference |
+| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS style reference |
+| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 style reference |
+| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | Component behavior and sample page reference |
 
 ## ⭐ Star History
 
 <p align="center">
   <a href="https://www.star-history.com/#calvinhxx/Fluent-Qt&Date">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&type=Date&theme=dark">
-      <img alt="Fluent-Qt Star History Chart" src="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&type=Date">
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date&amp;theme=dark">
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date">
+      <img alt="Fluent-Qt Star History Chart" src="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date">
     </picture>
   </a>
 </p>

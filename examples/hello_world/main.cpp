@@ -3,9 +3,12 @@
 #include <QApplication>
 #include <QColor>
 #include <QComboBox>
+#include <QHBoxLayout>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QSizePolicy>
 #include <QtGlobal>
+#include <QVBoxLayout>
 #include <QWidget>
 
 namespace {
@@ -25,9 +28,59 @@ using fluent::windowing::Window;
 
 namespace StyleThemeCatalog = fluent::StyleThemeCatalog;
 
-AnchorLayout::Anchor edge(QWidget* target, AnchorLayout::Edge edge, int offset = 0)
+using Edge = AnchorLayout::Edge;
+using TextColorRole = Label::TextColorRole;
+
+constexpr int kPageMargin = 32;
+constexpr int kPanelGap = 24;
+constexpr int kPanelPadding = 24;
+constexpr int kHeaderTop = 28;
+constexpr int kHeaderHeight = 92;
+constexpr int kPanelHeight = 548;
+constexpr int kAccentPanelWidth = 472;
+constexpr int kAccentPickerSize = 420;
+
+QColor defaultAccent()
 {
-    return AnchorLayout::Anchor(target, edge, offset);
+    return QColor(0, 120, 212);
+}
+
+AnchorLayout::Anchor anchor(QWidget* target, Edge edge, int offset = 0)
+{
+    return {target, edge, offset};
+}
+
+Label* makeLabel(const QString& text, QWidget* parent, const QString& typography,
+                 TextColorRole colorRole = TextColorRole::Default, bool wordWrap = false)
+{
+    auto* label = new Label(text, parent);
+    label->setFluentTypography(typography);
+    label->setTextColorRole(colorRole);
+    label->setWordWrap(wordWrap);
+    return label;
+}
+
+QVBoxLayout* makePanelLayout(QWidget* panel)
+{
+    auto* layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(kPanelPadding, 20, kPanelPadding, kPanelPadding);
+    layout->setSpacing(12);
+    return layout;
+}
+
+QWidget* makeFieldRow(QWidget* parent, const QString& title, QWidget* control)
+{
+    auto* row = new QWidget(parent);
+    auto* layout = new QHBoxLayout(row);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(16);
+
+    auto* label = makeLabel(title, row, Typography::FontRole::BodyStrong);
+    layout->addWidget(label);
+    layout->addStretch();
+    layout->addWidget(control, 0, Qt::AlignRight);
+
+    return row;
 }
 
 class SurfacePanel : public QWidget, public FluentElement {
@@ -38,9 +91,6 @@ public:
         setAutoFillBackground(false);
     }
 
-    void setPanelSizeHint(const QSize& size) { m_sizeHint = size; }
-    QSize sizeHint() const override { return m_sizeHint; }
-
     void onThemeUpdated() override { update(); }
 
 protected:
@@ -50,15 +100,12 @@ protected:
 
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
+        const QRectF panelRect = rect().adjusted(0.5, 0.5, -0.5, -0.5);
 
-        QRectF panelRect = rect().adjusted(0.5, 0.5, -0.5, -0.5);
         painter.setPen(QPen(themeColors().strokeCard, 1));
         painter.setBrush(themeColors().bgLayer);
         painter.drawRoundedRect(panelRect, themeRadius().overlay, themeRadius().overlay);
     }
-
-private:
-    QSize m_sizeHint = QSize(360, 320);
 };
 
 class AccentSwatch : public QWidget, public FluentElement {
@@ -73,6 +120,7 @@ public:
     {
         if (m_color == color)
             return;
+
         m_color = color;
         update();
     }
@@ -86,14 +134,15 @@ protected:
 
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
-        QRectF swatchRect = rect().adjusted(0.5, 0.5, -0.5, -0.5);
+        const QRectF swatchRect = rect().adjusted(0.5, 0.5, -0.5, -0.5);
+
         painter.setPen(QPen(themeColors().strokeDefault, 1));
         painter.setBrush(m_color);
         painter.drawRoundedRect(swatchRect, themeRadius().control, themeRadius().control);
     }
 
 private:
-    QColor m_color = QColor(0, 120, 212);
+    QColor m_color = defaultAccent();
 };
 
 class ExamplePanel : public QWidget, public fluent::FluentElement, public fluent::QMLPlus {
@@ -103,7 +152,13 @@ public:
     {
         setAutoFillBackground(false);
         setMinimumSize(980, 700);
-        buildUi();
+
+        buildHeader();
+        buildAccentPanel();
+        buildThemePanel();
+        placeTopLevelWidgets();
+        connectControls();
+
         applyDesignLanguage(0);
         applyFontScale(m_fontScaleSlider->value());
         onThemeUpdated();
@@ -112,278 +167,194 @@ public:
     void onThemeUpdated() override
     {
         update();
-        if (m_colorPanel)
-            m_colorPanel->onThemeUpdated();
-        if (m_controlPanel)
-            m_controlPanel->onThemeUpdated();
-        if (m_accentSwatch)
-            m_accentSwatch->onThemeUpdated();
+        refreshPanelChrome();
     }
 
 protected:
     void paintEvent(QPaintEvent* event) override
     {
         Q_UNUSED(event);
+
         QPainter painter(this);
         painter.fillRect(rect(), themeColors().bgCanvas);
     }
 
 private:
-    void buildUi()
-    {
-        m_rootLayout = new AnchorLayout(this);
-        setLayout(m_rootLayout);
-
-        buildHeader();
-        buildColorPanel();
-        buildControlPanel();
-        wireInteractions();
-    }
-
     void buildHeader()
     {
         m_header = new QWidget(this);
-        m_header->setFixedHeight(92);
+        m_header->setFixedHeight(kHeaderHeight);
 
-        auto* headerLayout = new AnchorLayout(m_header);
-        m_header->setLayout(headerLayout);
+        auto* headerLayout = new QVBoxLayout(m_header);
+        headerLayout->setContentsMargins(0, 0, 0, 0);
+        headerLayout->setSpacing(4);
 
-        auto* title = new Label(QStringLiteral("Fluent-Qt Example"), m_header);
-        title->setFluentTypography(Typography::FontRole::Title);
+        auto* titleRow = new QWidget(m_header);
+        auto* titleLayout = new QHBoxLayout(titleRow);
+        titleLayout->setContentsMargins(0, 0, 0, 0);
+        titleLayout->setSpacing(16);
 
-        auto* subtitle = new Label(
-            QStringLiteral("Reusable resources, runtime theme tokens, icon font, and Fluent controls in one native window."),
-            m_header);
-        subtitle->setFluentTypography(Typography::FontRole::Body);
-        subtitle->setTextColorRole(Label::TextColorRole::Secondary);
+        auto* title = makeLabel(QStringLiteral("Fluent-Qt Example"), titleRow,
+                                Typography::FontRole::Title);
 
-        auto* iconButton = new Button(m_header);
+        auto* iconButton = new Button(titleRow);
         iconButton->setFluentStyle(Button::Subtle);
         iconButton->setFluentLayout(Button::IconOnly);
         iconButton->setIconGlyph(Typography::Icons::FavoriteStarFill, 18);
         iconButton->setToolTip(QStringLiteral("Iconfont glyph from Segoe Fluent Icons"));
         iconButton->setFixedSize(40, 40);
 
-        AnchorLayout::Anchors titleAnchors;
-        titleAnchors.left = edge(m_header, AnchorLayout::Edge::Left);
-        titleAnchors.top = edge(m_header, AnchorLayout::Edge::Top, 8);
-        headerLayout->addAnchoredWidget(title, titleAnchors);
+        titleLayout->addWidget(title);
+        titleLayout->addStretch();
+        titleLayout->addWidget(iconButton);
 
-        AnchorLayout::Anchors subtitleAnchors;
-        subtitleAnchors.left = edge(title, AnchorLayout::Edge::Left);
-        subtitleAnchors.right = edge(iconButton, AnchorLayout::Edge::Left, -24);
-        subtitleAnchors.top = edge(title, AnchorLayout::Edge::Bottom, 4);
-        headerLayout->addAnchoredWidget(subtitle, subtitleAnchors);
+        auto* subtitle = makeLabel(
+            QStringLiteral("Reusable resources, runtime theme tokens, icon font, and Fluent controls in one native window."),
+            m_header, Typography::FontRole::Body, TextColorRole::Secondary, true);
 
-        AnchorLayout::Anchors iconAnchors;
-        iconAnchors.right = edge(m_header, AnchorLayout::Edge::Right);
-        iconAnchors.verticalCenter = edge(m_header, AnchorLayout::Edge::VCenter);
-        headerLayout->addAnchoredWidget(iconButton, iconAnchors);
-
-        AnchorLayout::Anchors headerAnchors;
-        headerAnchors.left = edge(this, AnchorLayout::Edge::Left, 32);
-        headerAnchors.right = edge(this, AnchorLayout::Edge::Right, -32);
-        headerAnchors.top = edge(this, AnchorLayout::Edge::Top, 28);
-        m_rootLayout->addAnchoredWidget(m_header, headerAnchors);
+        headerLayout->addWidget(titleRow);
+        headerLayout->addWidget(subtitle);
+        headerLayout->addStretch();
     }
 
-    void buildColorPanel()
+    void buildAccentPanel()
     {
-        m_colorPanel = new SurfacePanel(this);
-        m_colorPanel->setPanelSizeHint(QSize(472, 548));
-        m_colorPanel->setMinimumSize(472, 548);
-        m_colorPanel->setMaximumWidth(472);
+        m_accentPanel = new SurfacePanel(this);
+        m_accentPanel->setFixedSize(kAccentPanelWidth, kPanelHeight);
 
-        auto* panelLayout = new AnchorLayout(m_colorPanel);
-        m_colorPanel->setLayout(panelLayout);
+        auto* panelLayout = makePanelLayout(m_accentPanel);
 
-        auto* title = new Label(QStringLiteral("Accent editor"), m_colorPanel);
-        title->setFluentTypography(Typography::FontRole::Subtitle);
+        auto* titleRow = new QWidget(m_accentPanel);
+        auto* titleLayout = new QHBoxLayout(titleRow);
+        titleLayout->setContentsMargins(0, 0, 0, 0);
+        titleLayout->setSpacing(16);
 
-        auto* description = new Label(QStringLiteral("Pick a color and the shared token registry updates every Fluent control."), m_colorPanel);
-        description->setFluentTypography(Typography::FontRole::Caption);
-        description->setTextColorRole(Label::TextColorRole::Secondary);
-        description->setWordWrap(true);
+        auto* titleColumn = new QWidget(titleRow);
+        auto* titleColumnLayout = new QVBoxLayout(titleColumn);
+        titleColumnLayout->setContentsMargins(0, 0, 0, 0);
+        titleColumnLayout->setSpacing(4);
 
-        m_accentSwatch = new AccentSwatch(m_colorPanel);
+        auto* title = makeLabel(QStringLiteral("Accent editor"), titleColumn,
+                                Typography::FontRole::Subtitle);
+        auto* description = makeLabel(
+            QStringLiteral("Pick a color and the shared token registry updates every Fluent control."),
+            titleColumn, Typography::FontRole::Caption, TextColorRole::Secondary, true);
 
-        m_accentPicker = new ColorPicker(m_colorPanel);
+        titleColumnLayout->addWidget(title);
+        titleColumnLayout->addWidget(description);
+
+        m_accentSwatch = new AccentSwatch(titleRow);
+
+        titleLayout->addWidget(titleColumn);
+        titleLayout->addStretch();
+        titleLayout->addWidget(m_accentSwatch, 0, Qt::AlignTop);
+
+        m_accentPicker = new ColorPicker(m_accentPanel);
         m_accentPicker->setAlphaEnabled(false);
-        m_accentPicker->setColor(QColor(0, 120, 212));
-        m_accentPicker->setFixedSize(420, 420);
+        m_accentPicker->setColor(defaultAccent());
+        m_accentPicker->setFixedSize(kAccentPickerSize, kAccentPickerSize);
 
-        AnchorLayout::Anchors titleAnchors;
-        titleAnchors.left = edge(m_colorPanel, AnchorLayout::Edge::Left, 24);
-        titleAnchors.top = edge(m_colorPanel, AnchorLayout::Edge::Top, 20);
-        panelLayout->addAnchoredWidget(title, titleAnchors);
-
-        AnchorLayout::Anchors swatchAnchors;
-        swatchAnchors.right = edge(m_colorPanel, AnchorLayout::Edge::Right, -24);
-        swatchAnchors.verticalCenter = edge(title, AnchorLayout::Edge::VCenter);
-        panelLayout->addAnchoredWidget(m_accentSwatch, swatchAnchors);
-
-        AnchorLayout::Anchors descriptionAnchors;
-        descriptionAnchors.left = edge(title, AnchorLayout::Edge::Left);
-        descriptionAnchors.right = edge(m_accentSwatch, AnchorLayout::Edge::Left, -16);
-        descriptionAnchors.top = edge(title, AnchorLayout::Edge::Bottom, 4);
-        panelLayout->addAnchoredWidget(description, descriptionAnchors);
-
-        AnchorLayout::Anchors pickerAnchors;
-        pickerAnchors.left = edge(m_colorPanel, AnchorLayout::Edge::Left, 24);
-        pickerAnchors.top = edge(m_colorPanel, AnchorLayout::Edge::Top, 74);
-        panelLayout->addAnchoredWidget(m_accentPicker, pickerAnchors);
-
-        AnchorLayout::Anchors panelAnchors;
-        panelAnchors.left = edge(this, AnchorLayout::Edge::Left, 32);
-        panelAnchors.top = edge(m_header, AnchorLayout::Edge::Bottom, 20);
-        m_rootLayout->addAnchoredWidget(m_colorPanel, panelAnchors);
+        panelLayout->addWidget(titleRow);
+        panelLayout->addSpacing(8);
+        panelLayout->addWidget(m_accentPicker, 0, Qt::AlignHCenter);
     }
 
-    void buildControlPanel()
+    void buildThemePanel()
     {
-        m_controlPanel = new SurfacePanel(this);
-        m_controlPanel->setPanelSizeHint(QSize(420, 548));
-        m_controlPanel->setMinimumSize(420, 548);
+        m_themePanel = new SurfacePanel(this);
+        m_themePanel->setMinimumSize(420, kPanelHeight);
+        m_themePanel->setFixedHeight(kPanelHeight);
 
-        auto* panelLayout = new AnchorLayout(m_controlPanel);
-        m_controlPanel->setLayout(panelLayout);
+        auto* panelLayout = makePanelLayout(m_themePanel);
 
-        auto* title = new Label(QStringLiteral("Style & accent (uilib)"), m_controlPanel);
-        title->setFluentTypography(Typography::FontRole::Subtitle);
+        auto* title = makeLabel(QStringLiteral("Style & accent from FluentQt"),
+                                m_themePanel, Typography::FontRole::Subtitle);
+        auto* description = makeLabel(
+            QStringLiteral("This example calls StyleThemeCatalog and ThemeRegistry from uilib, then the controls update from shared tokens."),
+            m_themePanel, Typography::FontRole::Caption, TextColorRole::Secondary, true);
 
-        auto* description = new Label(QStringLiteral("This standalone app calls fluent::StyleThemeCatalog and ThemeRegistry directly from FluentQt."), m_controlPanel);
-        description->setFluentTypography(Typography::FontRole::Caption);
-        description->setTextColorRole(Label::TextColorRole::Secondary);
-        description->setWordWrap(true);
-
-        m_styleCombo = new ComboBox(m_controlPanel);
+        m_styleCombo = new ComboBox(m_themePanel);
         m_styleCombo->addItems({QStringLiteral("Fluent"), QStringLiteral("Material 3"),
                                 QStringLiteral("macOS")});
         m_styleCombo->setFixedSize(176, 32);
 
-        m_darkSwitch = new ToggleSwitch(m_controlPanel);
+        m_darkSwitch = new ToggleSwitch(m_themePanel);
         m_darkSwitch->setOnContent(QStringLiteral("Dark"));
         m_darkSwitch->setOffContent(QStringLiteral("Light"));
         m_darkSwitch->setFixedWidth(116);
 
-        auto* styleLabel = new Label(QStringLiteral("Style language"), m_controlPanel);
-        styleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
+        m_primaryButton = new Button(QStringLiteral("Apply uilib accent"), m_themePanel);
+        m_primaryButton->setFluentStyle(Button::Accent);
+        m_primaryButton->setFluentLayout(Button::IconBefore);
+        m_primaryButton->setIconGlyph(Typography::Icons::CheckMark, 14);
+        m_primaryButton->setMinimumHeight(40);
+        m_primaryButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-        auto* themeLabel = new Label(QStringLiteral("App theme"), m_controlPanel);
-        themeLabel->setFluentTypography(Typography::FontRole::BodyStrong);
+        m_resetButton = new Button(QStringLiteral("Reset tokens"), m_themePanel);
+        m_resetButton->setFluentLayout(Button::IconBefore);
+        m_resetButton->setIconGlyph(Typography::Icons::Refresh, 14);
+        m_resetButton->setMinimumHeight(36);
+        m_resetButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-        auto* accentLabel = new Label(QStringLiteral("Accent action"), m_controlPanel);
-        accentLabel->setFluentTypography(Typography::FontRole::BodyStrong);
-
-        auto* primaryButton = new Button(QStringLiteral("Apply uilib accent"), m_controlPanel);
-        primaryButton->setFluentStyle(Button::Accent);
-        primaryButton->setFluentLayout(Button::IconBefore);
-        primaryButton->setIconGlyph(Typography::Icons::CheckMark, 14);
-        primaryButton->setMinimumHeight(40);
-
-        auto* resetButton = new Button(QStringLiteral("Reset tokens"), m_controlPanel);
-        resetButton->setFluentLayout(Button::IconBefore);
-        resetButton->setIconGlyph(Typography::Icons::Refresh, 14);
-        resetButton->setMinimumHeight(36);
-
-        auto* scaleLabel = new Label(QStringLiteral("Font scale"), m_controlPanel);
-        scaleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
-
-        m_fontScaleSlider = new Slider(Qt::Horizontal, m_controlPanel);
+        m_fontScaleSlider = new Slider(Qt::Horizontal, m_themePanel);
         m_fontScaleSlider->setRange(90, 120);
         m_fontScaleSlider->setValue(100);
 
-        m_status = new InfoBar(m_controlPanel);
+        m_status = new InfoBar(m_themePanel);
         m_status->setSeverity(InfoBar::Informational);
         m_status->setTitle(QStringLiteral("fluent::StyleThemeCatalog"));
         m_status->setMessage(QStringLiteral("apply(StyleTheme::Fluent)  applyAccentOverride(#0078D4)"));
         m_status->setSingleLine(false);
         m_status->setIsClosable(false);
-        m_status->setPreferredWidth(360);
         m_status->setMinimumHeight(92);
 
-        AnchorLayout::Anchors titleAnchors;
-        titleAnchors.left = edge(m_controlPanel, AnchorLayout::Edge::Left, 24);
-        titleAnchors.top = edge(m_controlPanel, AnchorLayout::Edge::Top, 20);
-        panelLayout->addAnchoredWidget(title, titleAnchors);
-
-        AnchorLayout::Anchors descriptionAnchors;
-        descriptionAnchors.left = edge(title, AnchorLayout::Edge::Left);
-        descriptionAnchors.right = edge(m_controlPanel, AnchorLayout::Edge::Right, -24);
-        descriptionAnchors.top = edge(title, AnchorLayout::Edge::Bottom, 4);
-        panelLayout->addAnchoredWidget(description, descriptionAnchors);
-
-        AnchorLayout::Anchors styleLabelAnchors;
-        styleLabelAnchors.left = edge(title, AnchorLayout::Edge::Left);
-        styleLabelAnchors.top = edge(m_controlPanel, AnchorLayout::Edge::Top, 100);
-        panelLayout->addAnchoredWidget(styleLabel, styleLabelAnchors);
-
-        AnchorLayout::Anchors styleComboAnchors;
-        styleComboAnchors.right = edge(m_controlPanel, AnchorLayout::Edge::Right, -24);
-        styleComboAnchors.verticalCenter = edge(styleLabel, AnchorLayout::Edge::VCenter);
-        panelLayout->addAnchoredWidget(m_styleCombo, styleComboAnchors);
-
-        AnchorLayout::Anchors themeLabelAnchors;
-        themeLabelAnchors.left = edge(title, AnchorLayout::Edge::Left);
-        themeLabelAnchors.top = edge(styleLabel, AnchorLayout::Edge::Bottom, 30);
-        panelLayout->addAnchoredWidget(themeLabel, themeLabelAnchors);
-
-        AnchorLayout::Anchors switchAnchors;
-        switchAnchors.right = edge(m_controlPanel, AnchorLayout::Edge::Right, -24);
-        switchAnchors.verticalCenter = edge(themeLabel, AnchorLayout::Edge::VCenter);
-        panelLayout->addAnchoredWidget(m_darkSwitch, switchAnchors);
-
-        AnchorLayout::Anchors accentLabelAnchors;
-        accentLabelAnchors.left = edge(title, AnchorLayout::Edge::Left);
-        accentLabelAnchors.top = edge(themeLabel, AnchorLayout::Edge::Bottom, 34);
-        panelLayout->addAnchoredWidget(accentLabel, accentLabelAnchors);
-
-        AnchorLayout::Anchors primaryAnchors;
-        primaryAnchors.left = edge(title, AnchorLayout::Edge::Left);
-        primaryAnchors.right = edge(m_controlPanel, AnchorLayout::Edge::Right, -24);
-        primaryAnchors.top = edge(accentLabel, AnchorLayout::Edge::Bottom, 10);
-        panelLayout->addAnchoredWidget(primaryButton, primaryAnchors);
-
-        AnchorLayout::Anchors resetAnchors;
-        resetAnchors.left = edge(primaryButton, AnchorLayout::Edge::Left);
-        resetAnchors.right = edge(primaryButton, AnchorLayout::Edge::Right);
-        resetAnchors.top = edge(primaryButton, AnchorLayout::Edge::Bottom, 10);
-        panelLayout->addAnchoredWidget(resetButton, resetAnchors);
-
-        AnchorLayout::Anchors scaleLabelAnchors;
-        scaleLabelAnchors.left = edge(primaryButton, AnchorLayout::Edge::Left);
-        scaleLabelAnchors.top = edge(resetButton, AnchorLayout::Edge::Bottom, 26);
-        panelLayout->addAnchoredWidget(scaleLabel, scaleLabelAnchors);
-
-        AnchorLayout::Anchors sliderAnchors;
-        sliderAnchors.left = edge(primaryButton, AnchorLayout::Edge::Left);
-        sliderAnchors.right = edge(primaryButton, AnchorLayout::Edge::Right);
-        sliderAnchors.top = edge(scaleLabel, AnchorLayout::Edge::Bottom, 10);
-        panelLayout->addAnchoredWidget(m_fontScaleSlider, sliderAnchors);
-
-        AnchorLayout::Anchors statusAnchors;
-        statusAnchors.left = edge(primaryButton, AnchorLayout::Edge::Left);
-        statusAnchors.right = edge(primaryButton, AnchorLayout::Edge::Right);
-        statusAnchors.bottom = edge(m_controlPanel, AnchorLayout::Edge::Bottom, -24);
-        panelLayout->addAnchoredWidget(m_status, statusAnchors);
-
-        AnchorLayout::Anchors panelAnchors;
-        panelAnchors.left = edge(m_colorPanel, AnchorLayout::Edge::Right, 24);
-        panelAnchors.right = edge(this, AnchorLayout::Edge::Right, -32);
-        panelAnchors.top = edge(m_colorPanel, AnchorLayout::Edge::Top);
-        panelAnchors.bottom = edge(m_colorPanel, AnchorLayout::Edge::Bottom);
-        m_rootLayout->addAnchoredWidget(m_controlPanel, panelAnchors);
-
-        m_primaryButton = primaryButton;
-        m_resetButton = resetButton;
+        panelLayout->addWidget(title);
+        panelLayout->addWidget(description);
+        panelLayout->addSpacing(16);
+        panelLayout->addWidget(makeFieldRow(m_themePanel, QStringLiteral("Style language"), m_styleCombo));
+        panelLayout->addWidget(makeFieldRow(m_themePanel, QStringLiteral("App theme"), m_darkSwitch));
+        panelLayout->addSpacing(10);
+        panelLayout->addWidget(makeLabel(QStringLiteral("Accent action"), m_themePanel,
+                                         Typography::FontRole::BodyStrong));
+        panelLayout->addWidget(m_primaryButton);
+        panelLayout->addWidget(m_resetButton);
+        panelLayout->addSpacing(10);
+        panelLayout->addWidget(makeLabel(QStringLiteral("Font scale"), m_themePanel,
+                                         Typography::FontRole::BodyStrong));
+        panelLayout->addWidget(m_fontScaleSlider);
+        panelLayout->addStretch();
+        panelLayout->addWidget(m_status);
     }
 
-    void wireInteractions()
+    void placeTopLevelWidgets()
+    {
+        auto* rootLayout = new AnchorLayout(this);
+        setLayout(rootLayout);
+
+        AnchorLayout::Anchors headerAnchors;
+        headerAnchors.left = anchor(this, Edge::Left, kPageMargin);
+        headerAnchors.right = anchor(this, Edge::Right, -kPageMargin);
+        headerAnchors.top = anchor(this, Edge::Top, kHeaderTop);
+        rootLayout->addAnchoredWidget(m_header, headerAnchors);
+
+        AnchorLayout::Anchors accentAnchors;
+        accentAnchors.left = anchor(this, Edge::Left, kPageMargin);
+        accentAnchors.top = anchor(m_header, Edge::Bottom, 20);
+        rootLayout->addAnchoredWidget(m_accentPanel, accentAnchors);
+
+        AnchorLayout::Anchors themeAnchors;
+        themeAnchors.left = anchor(m_accentPanel, Edge::Right, kPanelGap);
+        themeAnchors.right = anchor(this, Edge::Right, -kPageMargin);
+        themeAnchors.top = anchor(m_accentPanel, Edge::Top);
+        themeAnchors.bottom = anchor(m_accentPanel, Edge::Bottom);
+        rootLayout->addAnchoredWidget(m_themePanel, themeAnchors);
+    }
+
+    void connectControls()
     {
         QObject::connect(m_darkSwitch, &ToggleSwitch::toggled, this, [this](bool dark) {
             FluentElement::setTheme(dark ? FluentElement::Dark : FluentElement::Light);
-            m_status->setSeverity(InfoBar::Informational);
-            updateCatalogPreview(QStringLiteral("FluentElement::setTheme"));
+            showCatalogStatus(InfoBar::Informational, QStringLiteral("FluentElement::setTheme"));
         });
 
         QObject::connect(m_styleCombo, qOverload<int>(&QComboBox::currentIndexChanged),
@@ -392,56 +363,40 @@ private:
         QObject::connect(m_accentPicker, &ColorPicker::colorChanged, this, [this](const QColor& color) {
             applyAccent(color);
             m_accentSwatch->setColor(color);
-            m_status->setSeverity(InfoBar::Success);
-            updateCatalogPreview(QStringLiteral("StyleThemeCatalog::applyAccentOverride"));
+            showCatalogStatus(InfoBar::Success,
+                              QStringLiteral("StyleThemeCatalog::applyAccentOverride"));
         });
 
-        QObject::connect(m_fontScaleSlider, &Slider::valueChanged,
-                         this, [this](int value) {
-                             applyFontScale(value);
-                             m_status->setSeverity(InfoBar::Informational);
-                             updateCatalogPreview(QStringLiteral("ThemeRegistry::setFontScale"));
-                         });
+        QObject::connect(m_fontScaleSlider, &Slider::valueChanged, this, [this](int value) {
+            applyFontScale(value);
+            showCatalogStatus(InfoBar::Informational, QStringLiteral("ThemeRegistry::setFontScale"));
+        });
 
         QObject::connect(m_resetButton, &Button::clicked, this, [this]() {
             m_styleCombo->setCurrentIndex(0);
-            m_accentPicker->setColor(QColor(0, 120, 212));
+            m_accentPicker->setColor(defaultAccent());
             m_fontScaleSlider->setValue(100);
             m_darkSwitch->setIsOn(false);
             applyStyleTheme(0);
-            m_status->setSeverity(InfoBar::Informational);
-            updateCatalogPreview(QStringLiteral("Built-in Fluent tokens"));
+            showCatalogStatus(InfoBar::Informational, QStringLiteral("Built-in Fluent tokens"));
         });
 
         QObject::connect(m_primaryButton, &Button::clicked, this, [this]() {
-            m_status->setSeverity(InfoBar::Success);
-            updateCatalogPreview(QStringLiteral("Accent button uses current token"));
+            showCatalogStatus(InfoBar::Success, QStringLiteral("Accent button uses current token"));
         });
     }
 
     void applyDesignLanguage(int index)
     {
         applyStyleTheme(index);
-        m_status->setSeverity(InfoBar::Informational);
-        updateCatalogPreview(QStringLiteral("StyleThemeCatalog::apply"));
+        showCatalogStatus(InfoBar::Informational, QStringLiteral("StyleThemeCatalog::apply"));
     }
 
     void applyStyleTheme(int index)
     {
-        StyleTheme theme = StyleTheme::Fluent;
-        switch (index) {
-        case 1:
-            theme = StyleTheme::Material;
-            break;
-        case 2:
-            theme = StyleTheme::MacOS;
-            break;
-        default:
-            break;
-        }
-        m_currentStyleTheme = theme;
-        StyleThemeCatalog::apply(theme);
-        applyAccent(m_accentPicker ? m_accentPicker->color() : QColor(0, 120, 212));
+        m_currentStyleTheme = styleThemeFromIndex(index);
+        StyleThemeCatalog::apply(m_currentStyleTheme);
+        applyAccent(m_accentPicker ? m_accentPicker->color() : defaultAccent());
     }
 
     void applyAccent(const QColor& accent)
@@ -456,7 +411,28 @@ private:
         FluentElement::refreshTheme();
     }
 
-    QString currentStyleThemeSymbol() const
+    void showCatalogStatus(InfoBar::InfoBarSeverity severity, const QString& title)
+    {
+        if (!m_status)
+            return;
+
+        m_status->setSeverity(severity);
+        m_status->setTitle(title);
+        m_status->setMessage(catalogStatusText());
+    }
+
+    QString catalogStatusText() const
+    {
+        const QColor accent = m_accentPicker ? m_accentPicker->color() : defaultAccent();
+        const int fontPercent = qRound(ThemeRegistry::instance().fontScale() * 100.0);
+
+        return QStringLiteral("StyleThemeCatalog::apply(%1)\n"
+                              "applyAccentOverride(%2)  %3  font %4%")
+            .arg(styleThemeSymbol(), accent.name(QColor::HexRgb).toUpper(), designLanguageSymbol())
+            .arg(fontPercent);
+    }
+
+    QString styleThemeSymbol() const
     {
         switch (m_currentStyleTheme) {
         case StyleTheme::Material:
@@ -469,7 +445,7 @@ private:
         }
     }
 
-    QString currentDesignLanguageSymbol() const
+    QString designLanguageSymbol() const
     {
         switch (StyleThemeCatalog::designLanguageFor(m_currentStyleTheme)) {
         case FluentElement::DesignMaterial:
@@ -482,23 +458,31 @@ private:
         }
     }
 
-    void updateCatalogPreview(const QString& title)
+    static StyleTheme styleThemeFromIndex(int index)
     {
-        const QColor accent = m_accentPicker ? m_accentPicker->color() : QColor(0, 120, 212);
-        const int fontPercent = qRound(ThemeRegistry::instance().fontScale() * 100.0);
-        m_status->setTitle(title);
-        m_status->setMessage(
-            QStringLiteral("fluent::StyleThemeCatalog::apply(%1)\n"
-                           "applyAccentOverride(%2)  %3  font %4%")
-                .arg(currentStyleThemeSymbol(), accent.name(QColor::HexRgb).toUpper(),
-                     currentDesignLanguageSymbol())
-                .arg(fontPercent));
+        switch (index) {
+        case 1:
+            return StyleTheme::Material;
+        case 2:
+            return StyleTheme::MacOS;
+        default:
+            return StyleTheme::Fluent;
+        }
     }
 
-    AnchorLayout* m_rootLayout = nullptr;
+    void refreshPanelChrome()
+    {
+        if (m_accentPanel)
+            m_accentPanel->onThemeUpdated();
+        if (m_themePanel)
+            m_themePanel->onThemeUpdated();
+        if (m_accentSwatch)
+            m_accentSwatch->onThemeUpdated();
+    }
+
     QWidget* m_header = nullptr;
-    SurfacePanel* m_colorPanel = nullptr;
-    SurfacePanel* m_controlPanel = nullptr;
+    SurfacePanel* m_accentPanel = nullptr;
+    SurfacePanel* m_themePanel = nullptr;
     ComboBox* m_styleCombo = nullptr;
     ToggleSwitch* m_darkSwitch = nullptr;
     ColorPicker* m_accentPicker = nullptr;
