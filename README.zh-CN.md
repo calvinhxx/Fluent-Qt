@@ -16,6 +16,7 @@
 
 <p align="center">
   <a href="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/calvinhxx/Fluent-Qt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/calvinhxx/Fluent-Qt?style=flat&color=111827"></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-111827.svg"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-111827.svg">
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
@@ -47,15 +48,45 @@ Fluent-Qt 为传统 Qt Widgets 应用补齐现代桌面界面能力。它不要�
 | 类别 | 要求 |
 |---|---|
 | Language | C++17 |
-| UI runtime | Qt 5.15+ 或 Qt 6.2+ |
+| UI runtime | Qt Widgets，Qt 5.15+ 或 Qt 6.2+ |
 | Build | CMake、vcpkg |
-| Test / logging | GTest、spdlog |
+| Library dependency | spdlog |
+| Tests | GTest |
 
 ## 🧩 组件能力
 
 覆盖基础输入、集合视图、导航、弹层、文本输入、日期时间、菜单工具栏、滚动、状态反馈与窗口系统等桌面应用核心界面能力。
 
-## 🚀 快速开始
+## 🔌 作为组件库集成
+
+已安装包：
+
+```cmake
+find_package(FluentQt CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+源码子项目：
+
+```cmake
+set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_ENABLE_GALLERY_PACKAGING OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/Fluent-Qt)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+业务代码：
+
+```cpp
+#include <FluentQt/FluentQt.h>
+
+auto* button = new fluent::basicinput::Button("Save", this);
+button->setFluentStyle(fluent::basicinput::Button::Accent);
+```
+
+## 🚀 本地构建 Gallery
 
 macOS:
 
