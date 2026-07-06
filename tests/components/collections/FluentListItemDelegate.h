@@ -12,7 +12,7 @@ class QPainter;
 class QStyleOptionViewItem;
 
 /**
- * 测试 / 示例用：Fluent 风格列表行代理（业务层组装，不放入 fluent_qt_lib）。
+ * 测试 / 示例用：Fluent 风格列表行代理（业务层组装，不放入 FluentQt core library）。
  */
 namespace listview_test {
 

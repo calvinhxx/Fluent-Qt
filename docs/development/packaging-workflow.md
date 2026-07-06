@@ -1,7 +1,8 @@
 # Packaging Workflow
 
 Use CPack for release artifacts. The Gallery app is the packaged runtime
-surface; the reusable component library is not installed as a public SDK yet.
+surface; the reusable component library is installed through the separate
+`Development` install component and exported as `FluentQt::FluentQt`.
 
 ## Prerequisites
 
@@ -15,6 +16,11 @@ surface; the reusable component library is not installed as a public SDK yet.
 The packaging install step runs the Qt deployment tool by default. Set
 `FLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME=OFF` only for local smoke packages that are
 allowed to depend on the developer machine's Qt installation.
+
+Gallery packages intentionally include only the `GalleryRuntime` component. This
+keeps DMG/NSIS artifacts focused on the showcase application while normal
+`cmake --install` or `cmake --install --component Development` remains available
+for SDK-style library installs.
 
 ## macOS DMG
 

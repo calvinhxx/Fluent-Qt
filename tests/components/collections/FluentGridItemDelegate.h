@@ -12,7 +12,7 @@ class QPainter;
 class QStyleOptionViewItem;
 
 /**
- * 测试 / 示例用：Fluent 风格网格项代理（业务层组装，不放入 fluent_qt_lib）。
+ * 测试 / 示例用：Fluent 风格网格项代理（业务层组装，不放入 FluentQt core library）。
  *
  * 功能：
  *   - 支持图片网格卡片（通过 ImageRole 传入 QPixmap）

@@ -1,5 +1,8 @@
 include(GoogleTest)
 
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Test Network)
+find_package(GTest CONFIG REQUIRED)
+
 set(FLUENT_QT_CI_FAST_TARGETS
     test_qt_compat
     test_qt_test_environment
@@ -88,7 +91,7 @@ macro(add_qt_test_module module_name source_file)
 
     target_link_libraries(${module_name}
         PRIVATE
-        fluent_qt_lib
+        FluentQt::FluentQt
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Test
         Qt${QT_VERSION_MAJOR}::Network
