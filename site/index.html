@@ -28,7 +28,7 @@
           <a href="#why" data-i18n="nav.why">价值</a>
           <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
           <a href="#components" data-i18n="nav.components">组件</a>
-          <a href="#code" data-i18n="nav.code">场景</a>
+          <a href="#code" data-i18n="nav.code">集成</a>
           <a href="#engineering" data-i18n="nav.engineering">工程化</a>
         </div>
         <div class="nav-tools">
@@ -328,31 +328,42 @@
       <section class="section-shell usecase-section" id="code" aria-labelledby="code-title">
         <div class="split-heading compact-heading">
           <div>
-            <p class="eyebrow" data-i18n="code.eyebrow">适合场景</p>
-            <h2 id="code-title" data-i18n="code.title">面向需要原生质感的桌面工具。</h2>
+            <p class="eyebrow" data-i18n="code.eyebrow">集成方式</p>
+            <h2 id="code-title" data-i18n="code.title">先作为 UI lib 接入，再用 Gallery 验证组件。</h2>
           </div>
         </div>
 
-        <div class="usecase-grid">
+        <div class="integration-grid">
           <article>
             <span>01</span>
-            <h3 data-i18n="usecases.devtools.title">开发者工具</h3>
-            <p data-i18n="usecases.devtools.copy">配置面板、调试控制台、构建工具和数据检查器，需要高密度控件和稳定键鼠交互。</p>
+            <h3 data-i18n="integration.package.title">安装后的 CMake 包</h3>
+            <p data-i18n="integration.package.copy">面向正式 SDK 分发，消费方只链接稳定 target。</p>
+            <pre><code>find_package(FluentQt CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)</code></pre>
           </article>
           <article>
             <span>02</span>
-            <h3 data-i18n="usecases.ai.title">AI 桌面客户端</h3>
-            <p data-i18n="usecases.ai.copy">模型设置、会话管理、本地文件和系统能力接入，更适合轻量原生窗口承载。</p>
+            <h3 data-i18n="integration.source.title">源码子项目</h3>
+            <p data-i18n="integration.source.copy">嵌入现有 Qt 工程时默认不拉起 Gallery、测试和打包。</p>
+            <pre><code>set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_ENABLE_GALLERY_PACKAGING OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/Fluent-Qt)</code></pre>
           </article>
           <article>
             <span>03</span>
-            <h3 data-i18n="usecases.enterprise.title">企业内部工具</h3>
-            <p data-i18n="usecases.enterprise.copy">已有 Qt/C++ 资产、长期维护周期、明确桌面交付流程，适合渐进式更新界面。</p>
+            <h3 data-i18n="integration.code.title">业务代码使用组件</h3>
+            <p data-i18n="integration.code.copy">组件命名空间保持按功能分组，适合渐进替换原有 QWidget。</p>
+            <pre><code>#include &lt;FluentQt/FluentQt.h&gt;
+
+auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           </article>
           <article>
             <span>04</span>
-            <h3 data-i18n="usecases.overlay.title">Overlay 控制台</h3>
-            <p data-i18n="usecases.overlay.copy">翻译、录制、游戏辅助和监控面板，需要紧凑、即时、可停靠的原生控制界面。</p>
+            <h3 data-i18n="integration.gallery.title">Gallery 作为附加验证</h3>
+            <p data-i18n="integration.gallery.copy">Gallery 仍然是官方展示应用，但不再定义核心库的消费方式。</p>
+            <pre><code>cmake --build --preset vcpkg-osx --target fluent_qt_gallery</code></pre>
           </article>
         </div>
       </section>
@@ -408,7 +419,7 @@
           "nav.why": "价值",
           "nav.gallery": "Gallery",
           "nav.components": "组件",
-          "nav.code": "场景",
+          "nav.code": "集成",
           "nav.engineering": "工程化",
           "hero.title": "Qt Widgets 的现代 Fluent UI。",
           "hero.lede": "Fluent-Qt 帮助 C++ / Qt 桌面应用更新界面语言，同时保留 QWidget 的原生性能、系统集成和成熟工程结构。",
@@ -513,16 +524,16 @@
           "componentCards.tree": "层级结构",
           "componentCards.dialog": "聚焦决策",
           "componentCards.info": "内联状态提示",
-          "code.eyebrow": "适合场景",
-          "code.title": "面向需要原生质感的桌面工具。",
-          "usecases.devtools.title": "开发者工具",
-          "usecases.devtools.copy": "配置面板、调试控制台、构建工具和数据检查器，需要高密度控件和稳定键鼠交互。",
-          "usecases.ai.title": "AI 桌面客户端",
-          "usecases.ai.copy": "模型设置、会话管理、本地文件和系统能力接入，更适合轻量原生窗口承载。",
-          "usecases.enterprise.title": "企业内部工具",
-          "usecases.enterprise.copy": "已有 Qt/C++ 资产、长期维护周期、明确桌面交付流程，适合渐进式更新界面。",
-          "usecases.overlay.title": "Overlay 控制台",
-          "usecases.overlay.copy": "翻译、录制、游戏辅助和监控面板，需要紧凑、即时、可停靠的原生控制界面。",
+          "code.eyebrow": "集成方式",
+          "code.title": "先作为 UI lib 接入，再用 Gallery 验证组件。",
+          "integration.package.title": "安装后的 CMake 包",
+          "integration.package.copy": "面向正式 SDK 分发，消费方只链接稳定 target。",
+          "integration.source.title": "源码子项目",
+          "integration.source.copy": "嵌入现有 Qt 工程时默认不拉起 Gallery、测试和打包。",
+          "integration.code.title": "业务代码使用组件",
+          "integration.code.copy": "组件命名空间保持按功能分组，适合渐进替换原有 QWidget。",
+          "integration.gallery.title": "Gallery 作为附加验证",
+          "integration.gallery.copy": "Gallery 仍然是官方展示应用，但不再定义核心库的消费方式。",
           "engineering.eyebrow": "工程结构",
           "engineering.title": "不只是给按钮换皮肤。",
           "engineering.copy": "项目已经具备可复用组件、Gallery 应用、组件测试、文档、CMake presets、vcpkg 依赖和 Windows / macOS 打包路径。",
@@ -539,7 +550,7 @@
           "nav.why": "Why",
           "nav.gallery": "Gallery",
           "nav.components": "Components",
-          "nav.code": "Use cases",
+          "nav.code": "Integrate",
           "nav.engineering": "Engineering",
           "hero.title": "Modern Fluent UI for Qt Widgets.",
           "hero.lede": "Modernize C++ / Qt desktop interfaces while keeping QWidget performance, native system integration, and the engineering structure teams already rely on.",
@@ -644,16 +655,16 @@
           "componentCards.tree": "Hierarchy",
           "componentCards.dialog": "Focused decisions",
           "componentCards.info": "Inline status",
-          "code.eyebrow": "Use cases",
-          "code.title": "For desktop tools that need a native feel.",
-          "usecases.devtools.title": "Developer tools",
-          "usecases.devtools.copy": "Settings panels, debug consoles, build tools, and data inspectors that need dense controls and reliable keyboard/mouse interaction.",
-          "usecases.ai.title": "AI desktop clients",
-          "usecases.ai.copy": "Model settings, session management, local files, and system integration fit well in lightweight native windows.",
-          "usecases.enterprise.title": "Enterprise internal tools",
-          "usecases.enterprise.copy": "Existing Qt/C++ assets, long maintenance cycles, and known desktop delivery flows benefit from gradual UI modernization.",
-          "usecases.overlay.title": "Overlay consoles",
-          "usecases.overlay.copy": "Translation, recording, game-assist, and monitoring panels need compact, immediate, dockable native controls.",
+          "code.eyebrow": "Integration",
+          "code.title": "Use Fluent-Qt as the UI library first, then verify components in the Gallery.",
+          "integration.package.title": "Installed CMake package",
+          "integration.package.copy": "For SDK-style distribution, consumers link one stable target.",
+          "integration.source.title": "Source subproject",
+          "integration.source.copy": "Embedding into an existing Qt app does not pull in Gallery, tests, or packaging by default.",
+          "integration.code.title": "Use components in app code",
+          "integration.code.copy": "Namespaces stay grouped by control area, so existing QWidget screens can migrate gradually.",
+          "integration.gallery.title": "Gallery as optional validation",
+          "integration.gallery.copy": "The Gallery remains the official showcase, but it no longer defines the library consumption path.",
           "engineering.eyebrow": "Engineering shape",
           "engineering.title": "More than a skin for buttons.",
           "engineering.copy": "The project already has reusable components, a Gallery app, component tests, docs, CMake presets, vcpkg dependencies, and Windows / macOS packaging paths.",

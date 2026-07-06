@@ -819,13 +819,15 @@ section[id] {
   line-height: 1.35;
 }
 
-.usecase-grid {
+.usecase-grid,
+.integration-grid {
   display: grid;
   gap: 18px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.usecase-grid article {
+.usecase-grid article,
+.integration-grid article {
   min-height: 256px;
   padding: 28px;
   border: 1px solid var(--line);
@@ -834,7 +836,8 @@ section[id] {
   box-shadow: var(--shadow-soft);
 }
 
-.usecase-grid span {
+.usecase-grid span,
+.integration-grid span {
   display: block;
   margin-bottom: 76px;
   color: var(--accent);
@@ -842,14 +845,37 @@ section[id] {
   font-weight: 850;
 }
 
-.usecase-grid h3 {
+.usecase-grid h3,
+.integration-grid h3 {
   margin-bottom: 14px;
   font-size: 20px;
 }
 
-.usecase-grid p {
+.usecase-grid p,
+.integration-grid p {
   font-size: 15px;
   line-height: 1.58;
+}
+
+.integration-grid span {
+  margin-bottom: 34px;
+}
+
+.integration-grid article {
+  display: flex;
+  flex-direction: column;
+}
+
+.integration-grid pre {
+  overflow-x: auto;
+  margin-top: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #f6f8fb;
+  padding: 14px;
+  color: #1d2733;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .engineering-section {
@@ -962,6 +988,7 @@ section[id] {
 
   .decision-strip,
   .usecase-grid,
+  .integration-grid,
   .component-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1126,6 +1153,7 @@ section[id] {
 
   .decision-strip,
   .usecase-grid,
+  .integration-grid,
   .component-grid,
   .gallery-stack article,
   .engineering-list article {
@@ -1159,12 +1187,14 @@ section[id] {
     margin-bottom: 18px;
   }
 
-  .usecase-grid article {
+  .usecase-grid article,
+  .integration-grid article {
     min-height: 0;
     padding: 24px;
   }
 
-  .usecase-grid span {
+  .usecase-grid span,
+  .integration-grid span {
     margin-bottom: 28px;
   }
 

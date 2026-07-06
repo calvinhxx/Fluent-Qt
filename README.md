@@ -16,6 +16,7 @@
 
 <p align="center">
   <a href="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/calvinhxx/Fluent-Qt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/calvinhxx/Fluent-Qt?style=flat&color=111827"></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-111827.svg"></a>
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-111827.svg">
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
@@ -47,15 +48,45 @@ Fluent-Qt brings modern desktop UI capabilities to traditional Qt Widgets applic
 | Category | Requirement |
 |---|---|
 | Language | C++17 |
-| UI runtime | Qt 5.15+ or Qt 6.2+ |
+| UI runtime | Qt Widgets, Qt 5.15+ or Qt 6.2+ |
 | Build | CMake, vcpkg |
-| Test / logging | GTest, spdlog |
+| Library dependency | spdlog |
+| Tests | GTest |
 
 ## 🧩 Component Scope
 
 Fluent-Qt covers core desktop UI surfaces including basic input, collections, navigation, overlays, text input, date and time, menus and toolbars, scrolling, status feedback, and windowing.
 
-## 🚀 Quick Start
+## 🔌 Use As A Library
+
+Installed package:
+
+```cmake
+find_package(FluentQt CONFIG REQUIRED)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+Source subproject:
+
+```cmake
+set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
+set(FLUENT_QT_ENABLE_GALLERY_PACKAGING OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/Fluent-Qt)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+Application code:
+
+```cpp
+#include <FluentQt/FluentQt.h>
+
+auto* button = new fluent::basicinput::Button("Save", this);
+button->setFluentStyle(fluent::basicinput::Button::Accent);
+```
+
+## 🚀 Build The Gallery Locally
 
 macOS:
 
