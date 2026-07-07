@@ -154,11 +154,11 @@ cpack --preset vcpkg-windows-installer
 ## ⭐ Star History
 
 <p align="center">
-  <a href="https://www.star-history.com/#calvinhxx/Fluent-Qt&Date">
+  <a href="https://www.star-history.com/?type=date&amp;repos=calvinhxx%2FFluent-Qt">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date&amp;theme=dark">
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date">
-      <img alt="Fluent-Qt Star History Chart" src="https://api.star-history.com/svg?repos=calvinhxx/Fluent-Qt&amp;type=Date">
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=calvinhxx/Fluent-Qt&amp;type=date&amp;theme=dark&amp;legend=top-left&amp;sealed_token=5uu92EgOlUC9-xsiTo-jtgWIXlpuwyqUZv6T-OkI3i98eXHmX-twtcffxg0vsJQXdrSnhu52jkCJzQppzhC2AYUlcT3Hz4FZ-Li9V9ymhCzitOQIVPP5lZyhAdBK1BVDbLtDVH3GbLHt_AotSiZFR-MMOamnvCxTC9CiYzgQQs8vqXNFLzt2cgYSPEjk">
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=calvinhxx/Fluent-Qt&amp;type=date&amp;legend=top-left&amp;sealed_token=5uu92EgOlUC9-xsiTo-jtgWIXlpuwyqUZv6T-OkI3i98eXHmX-twtcffxg0vsJQXdrSnhu52jkCJzQppzhC2AYUlcT3Hz4FZ-Li9V9ymhCzitOQIVPP5lZyhAdBK1BVDbLtDVH3GbLHt_AotSiZFR-MMOamnvCxTC9CiYzgQQs8vqXNFLzt2cgYSPEjk">
+      <img alt="Fluent-Qt Star History Chart" src="https://api.star-history.com/chart?repos=calvinhxx/Fluent-Qt&amp;type=date&amp;legend=top-left&amp;sealed_token=5uu92EgOlUC9-xsiTo-jtgWIXlpuwyqUZv6T-OkI3i98eXHmX-twtcffxg0vsJQXdrSnhu52jkCJzQppzhC2AYUlcT3Hz4FZ-Li9V9ymhCzitOQIVPP5lZyhAdBK1BVDbLtDVH3GbLHt_AotSiZFR-MMOamnvCxTC9CiYzgQQs8vqXNFLzt2cgYSPEjk">
     </picture>
   </a>
 </p>
