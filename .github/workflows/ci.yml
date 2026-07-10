@@ -60,12 +60,36 @@ jobs:
           {
             "include": [
               {
+                "id": "linux-x64-qt62-fast",
+                "name": "Linux x64 / Qt 6.2 fast",
+                "os": "ubuntu-22.04",
+                "preset": "vcpkg-linux",
+                "qt_version": "6.2.4",
+                "qt_source": "apt",
+                "qt_arch": "",
+                "qt_archives": "",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "x64-linux",
+                "build": true,
+                "test": true,
+                "build_targets": "fluent_qt_ci_fast_tests",
+                "build_parallel": "4",
+                "test_labels": "^ci_fast$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 180,
+                "timeout_minutes": 30,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
                 "id": "win-x64-qt62-fast",
                 "name": "Windows x64 / Qt 6.2 fast",
                 "os": "windows-2022",
                 "preset": "vcpkg-windows",
                 "qt_version": "6.2.4",
+                "qt_source": "aqt",
                 "qt_arch": "win64_msvc2019_64",
+                "qt_archives": "",
                 "host_qt_arch": "",
                 "vcpkg_triplet": "x64-windows",
                 "build": true,
@@ -85,7 +109,9 @@ jobs:
                 "os": "macos-15",
                 "preset": "vcpkg-osx",
                 "qt_version": "6.2.4",
+                "qt_source": "aqt",
                 "qt_arch": "clang_64",
+                "qt_archives": "",
                 "host_qt_arch": "",
                 "vcpkg_triplet": "arm64-osx",
                 "build": false,
@@ -108,12 +134,58 @@ jobs:
           {
             "include": [
               {
+                "id": "linux-x64-qt62-full",
+                "name": "Linux x64 / Qt 6.2 full tests",
+                "os": "ubuntu-22.04",
+                "preset": "vcpkg-linux",
+                "qt_version": "6.2.4",
+                "qt_source": "apt",
+                "qt_arch": "",
+                "qt_archives": "",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "x64-linux",
+                "build": true,
+                "test": true,
+                "build_targets": "fluent_qt_ci_full_tests fluent_qt_gallery",
+                "build_parallel": "4",
+                "test_labels": "^ci_full$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 240,
+                "timeout_minutes": 45,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "linux-x64-qt515-full",
+                "name": "Linux x64 / Qt 5.15 full tests",
+                "os": "ubuntu-22.04",
+                "preset": "vcpkg-linux",
+                "qt_version": "5.15.2",
+                "qt_source": "aqt",
+                "qt_arch": "gcc_64",
+                "qt_archives": "qtbase icu",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "x64-linux",
+                "build": true,
+                "test": true,
+                "build_targets": "fluent_qt_ci_full_tests",
+                "build_parallel": "4",
+                "test_labels": "^ci_full$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 240,
+                "timeout_minutes": 45,
+                "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
                 "id": "mac-arm64-qt62-full",
                 "name": "macOS arm64 / Qt 6.2 full tests",
                 "os": "macos-15",
                 "preset": "vcpkg-osx",
                 "qt_version": "6.2.4",
+                "qt_source": "aqt",
                 "qt_arch": "clang_64",
+                "qt_archives": "",
                 "host_qt_arch": "",
                 "vcpkg_triplet": "arm64-osx",
                 "build": true,
@@ -133,7 +205,9 @@ jobs:
                 "os": "macos-15-intel",
                 "preset": "vcpkg-osx-x64",
                 "qt_version": "6.2.4",
+                "qt_source": "aqt",
                 "qt_arch": "clang_64",
+                "qt_archives": "",
                 "host_qt_arch": "",
                 "vcpkg_triplet": "x64-osx",
                 "build": true,
@@ -153,7 +227,9 @@ jobs:
                 "os": "windows-2022",
                 "preset": "vcpkg-windows",
                 "qt_version": "6.2.4",
+                "qt_source": "aqt",
                 "qt_arch": "win64_msvc2019_64",
+                "qt_archives": "",
                 "host_qt_arch": "",
                 "vcpkg_triplet": "x64-windows",
                 "build": true,
@@ -161,7 +237,7 @@ jobs:
                 "build_targets": "fluent_qt_ci_fast_tests test_window test_list_view test_flip_view",
                 "build_parallel": "",
                 "test_labels": "^(ci_fast|platform_windows)$",
-                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "exclude_labels": "^manual_visual$",
                 "ctest_timeout": 180,
                 "timeout_minutes": 45,
                 "configure_args": "",
@@ -173,7 +249,9 @@ jobs:
                 "os": "windows-2022",
                 "preset": "vcpkg-windows",
                 "qt_version": "5.15.2",
+                "qt_source": "aqt",
                 "qt_arch": "win64_msvc2019_64",
+                "qt_archives": "",
                 "host_qt_arch": "",
                 "vcpkg_triplet": "x64-windows",
                 "build": true,
@@ -193,7 +271,9 @@ jobs:
                 "os": "windows-2022",
                 "preset": "vcpkg-windows-arm64",
                 "qt_version": "6.9.3",
+                "qt_source": "aqt",
                 "qt_arch": "win64_msvc2022_arm64_cross_compiled",
+                "qt_archives": "",
                 "host_qt_arch": "win64_msvc2022_64",
                 "vcpkg_triplet": "arm64-windows",
                 "build": true,
@@ -245,8 +325,13 @@ jobs:
             vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.vcpkg_triplet }}-
             vcpkg-${{ runner.os }}-${{ runner.arch }}-
 
+      - name: Install Linux system packages
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
+
       - name: Install host Qt ${{ matrix.qt_version }}
-        if: ${{ matrix.windows_arm64_cross == true }}
+        if: ${{ matrix.qt_source == 'aqt' && matrix.windows_arm64_cross == true }}
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt_version }}
@@ -261,11 +346,32 @@ jobs:
           "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
 
       - name: Install Qt ${{ matrix.qt_version }}
+        if: ${{ matrix.qt_source == 'aqt' && matrix.qt_archives == '' }}
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt_version }}
           arch: ${{ matrix.qt_arch }}
           cache: true
+
+      - name: Install Qt ${{ matrix.qt_version }} archives
+        if: ${{ matrix.qt_source == 'aqt' && matrix.qt_archives != '' }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          archives: ${{ matrix.qt_archives }}
+          cache: true
+
+      - name: Configure Linux Qt runtime path
+        if: ${{ runner.os == 'Linux' && matrix.qt_source == 'aqt' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${QT_ROOT_DIR:-}" ]]; then
+            echo "LD_LIBRARY_PATH=${QT_ROOT_DIR}/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+            echo "QT_PLUGIN_PATH=${QT_ROOT_DIR}/plugins" >> "$GITHUB_ENV"
+            echo "QT_QPA_PLATFORM_PLUGIN_PATH=${QT_ROOT_DIR}/plugins/platforms" >> "$GITHUB_ENV"
+          fi
 
       - name: Set VCPKG_ROOT
         shell: pwsh
@@ -280,6 +386,10 @@ jobs:
         shell: pwsh
         run: |
           $configureArgs = @("--preset", "${{ matrix.preset }}")
+          if ($env:QT_ROOT_DIR) {
+            $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
+            $configureArgs += @("-D", "CMAKE_PREFIX_PATH=$qtRoot")
+          }
           $extraArgs = "${{ matrix.configure_args }}"
           if ($extraArgs) {
             $configureArgs += $extraArgs -split " "
@@ -298,6 +408,11 @@ jobs:
             $configureArgs += $extraArgs -split " "
           }
           cmake @configureArgs
+
+      - name: Validate generated Linux desktop entry
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: desktop-file-validate build/${{ matrix.preset }}/app/*.desktop
 
       - name: Build
         if: ${{ matrix.build == true }}
@@ -342,6 +457,21 @@ jobs:
             $testArgs += @("-LE", $excludeLabels)
           }
           ctest @testArgs
+
+      - name: Package Linux Gallery
+        if: ${{ matrix.id == 'linux-x64-qt62-full' }}
+        shell: bash
+        run: cpack --config build/vcpkg-linux/CPackConfig.cmake -G DEB -B build/vcpkg-linux
+
+      - name: Upload Linux Gallery package
+        if: ${{ matrix.id == 'linux-x64-qt62-full' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluent-qt-gallery-linux-x64-deb
+          path: |
+            build/vcpkg-linux/*.deb
+            build/vcpkg-linux/*.sha256
+          if-no-files-found: error
 
       - name: Upload diagnostics
         if: failure()
