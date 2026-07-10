@@ -36,6 +36,8 @@ set(FLUENT_QT_LOCAL_DESKTOP_TESTS
     DrawerViewTest.TopLevelResizeKeepsOverlayStackAboveSiblings
     FlowViewTest.DragReorderUsesVariableGeometryAndPreservesSelection
     FlowViewTest.DragReorderWithoutModifierSelectsOnlyDraggedItem
+    FlowViewTest.MultiSelectRequiresControlClickAndDragDoesNotRubberBandSelect
+    ListViewTest.SelectedIndicatorSettlesAfterDragReorder
     GridViewTest.DragReorderSingleMode
     GridViewTest.DragReorderBoundaryJitterKeepsStableTargetUntilRelease
     GridViewTest.DragReorderClearThresholdCrossingChangesTarget
@@ -44,10 +46,18 @@ set(FLUENT_QT_LOCAL_DESKTOP_TESTS
     GridViewTest.DragReorderSelectedItemsMoveAsGroupInMultipleMode
     GridViewTest.DragReorderExtendedMode
     GridViewTest.DragReorderNoneSelectionDisablesDrag
+    GridViewTest.DragReorderDisabledWhenFlagOff
+    GridViewTest.DragReorderPreservesSelectionInMultipleMode
+    GridViewTest.DragReorderItemReorderedSignalArgs
     GridViewTest.ReorderStandardItemModelTakeRowFallback
+    FlyoutTest.TopLevelResizeRepositionsAndRaisesAboveSiblings
+    AutoSuggestBoxTest.ClearButtonReceivesMouseInputWhileSuggestionsOpen
+    AutoSuggestBoxTest.OutsidePressLightDismissesSuggestions
     WindowTest.WindowsCustomTitleBarSharesNativeCaptionRow
+    WindowTest.WindowsCustomChromeSuppressesNativeCaption
     WindowTest.WindowsTitleBarDoubleClickTogglesNativeMaximizeRestore
     WindowTest.WindowsMaximizedCustomChromeFillsAvailableGeometry
+    WindowTest.TitleBarAutoSuggestClearButtonWorksWhilePopupOpen
 )
 
 define_property(GLOBAL PROPERTY FLUENT_QT_TEST_TARGETS
