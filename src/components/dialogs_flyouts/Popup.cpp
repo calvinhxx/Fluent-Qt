@@ -126,8 +126,9 @@ QPoint Popup::computePosition() const {
     QWidget* top = originalParentTopLevel();
     if (!top) return pos();
     // Default: center inside the topLevelWidget. zh_CN: 默认在 topLevelWidget 中居中。
-    return QPoint((top->width() - width()) / 2,
-                  (top->height() - height()) / 2);
+    const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
+    return QPoint(surface.left() + (surface.width() - width()) / 2,
+                  surface.top() + (surface.height() - height()) / 2);
 }
 
 QPoint Popup::resolvedPosition() const {
@@ -323,7 +324,7 @@ void Popup::ensureScrim() {
     if (auto* scrim = dynamic_cast<::fluent::overlay::OverlayScrim*>(m_scrim.data()))
         scrim->setModalAndDim(true, m_dim);
     ::fluent::overlay::syncInheritedThemeOverride(m_scrim.data(), this);
-    m_scrim->setGeometry(top->rect());
+    m_scrim->setGeometry(::fluent::overlay::overlaySurfaceRect(top));
     m_scrim->show();
     ::fluent::overlay::raiseOverlayStack(m_scrim, this);
 }
@@ -348,7 +349,7 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
 
     if (event && event->type() == QEvent::Resize && watched == m_topLevel) {
         if (m_scrim && m_topLevel)
-            m_scrim->setGeometry(m_topLevel->rect());
+            m_scrim->setGeometry(::fluent::overlay::overlaySurfaceRect(m_topLevel));
         if (isVisible()) {
             move(resolvedPosition());
             ::fluent::overlay::raiseOverlayStack(m_scrim, this);

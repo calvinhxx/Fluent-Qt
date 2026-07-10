@@ -11,6 +11,8 @@
 #include "design/Spacing.h"
 
 class QHideEvent;
+class QEvent;
+class QGraphicsOpacityEffect;
 
 namespace fluent::dialogs_flyouts {
 
@@ -32,7 +34,7 @@ class SmokeOverlay : public QWidget {
      */
     Q_PROPERTY(double progress READ progress WRITE setProgress)
     /**
-     * @brief Rounded cut-out kept un-dimmed to spotlight a target (window-local coords).
+     * @brief Rounded cut-out kept un-dimmed to spotlight a target (overlay-local coords).
      * zh_CN: 保持不压暗的圆角挖空区域，用于聚光高亮某个目标（窗口局部坐标）。
      */
     Q_PROPERTY(QRect spotlightRect READ spotlightRect WRITE setSpotlightRect)
@@ -72,21 +74,32 @@ public:
         m_spotRadius = radius;
         if (m_spotEnabled) update();
     }
+    void setSurfaceRadius(int radius) {
+        radius = qMax(0, radius);
+        if (m_surfaceRadius == radius) return;
+        m_surfaceRadius = radius;
+        update();
+    }
 protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);
         QColor c = m_color;
         c.setAlpha(int(m_color.alpha() * qBound(0.0, m_progress, 1.0)));
+        QPainterPath surface;
+        if (m_surfaceRadius > 0) {
+            p.setRenderHint(QPainter::Antialiasing, true);
+            surface.addRoundedRect(QRectF(rect()), m_surfaceRadius, m_surfaceRadius);
+        } else {
+            surface.addRect(QRectF(rect()));
+        }
         if (!m_spotEnabled || m_spot.isEmpty()) {
-            p.fillRect(rect(), c);
+            p.fillPath(surface, c);
             return;
         }
         p.setRenderHint(QPainter::Antialiasing, true);
-        QPainterPath dim;
-        dim.addRect(QRectF(rect()));
         QPainterPath hole;
         hole.addRoundedRect(QRectF(m_spot), m_spotRadius, m_spotRadius);
-        p.fillPath(dim.subtracted(hole), c);
+        p.fillPath(surface.subtracted(hole), c);
     }
 private:
     QColor  m_color{0, 0, 0, 102};
@@ -94,6 +107,7 @@ private:
     bool    m_spotEnabled = false;
     QRect   m_spot;
     int     m_spotRadius = 8;
+    int     m_surfaceRadius = 0;
 };
 /**
  * @brief Fluent dialog window with smoke overlay, drag support, and enter/exit animation.
@@ -153,10 +167,12 @@ public:
 
 protected:
     bool isAnimating() const { return m_isAnimating; }
+    bool usesSameWindowSurfaceBackend() const;
 
     void paintEvent(QPaintEvent* event) override;
     void showEvent(QShowEvent* event)   override;
     void hideEvent(QHideEvent* event)   override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
     void mousePressEvent(QMouseEvent* event)   override;
     void mouseMoveEvent(QMouseEvent* event)    override;
@@ -166,6 +182,10 @@ protected:
 
 private:
     bool syncThemeOverrideFromSource();
+    void syncNativeTransientParent();
+    void prepareSameWindowSurfaceSize();
+    void positionSameWindowSurface();
+    void setSurfaceOpacity(qreal opacity);
     void showSmokeOverlay();
     void hideSmokeOverlay();
 
@@ -184,6 +204,7 @@ private:
     int    m_closingResult     = 0;
 
     QPropertyAnimation* m_animation;
+    QGraphicsOpacityEffect* m_sameWindowOpacityEffect = nullptr;
     QPropertyAnimation* m_smokeAnim       = nullptr;  // Smoke fade animation. zh_CN: Smoke 淡入淡出动画。
     bool                m_smokeFadingOut  = false;    // Whether the smoke is fading out. zh_CN: Smoke 是否正在淡出。
     QSize               m_targetSize;

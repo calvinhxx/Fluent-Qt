@@ -3,9 +3,12 @@
 #include <QDebug>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QTest>
+#include <QWindow>
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/overlay/OverlayWindow.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include <QImage>
@@ -63,6 +66,23 @@ TEST_F(DialogTest, SmokeProperty) {
     EXPECT_TRUE(dialog.isSmokeEnabled());
 }
 
+TEST_F(DialogTest, SmokeOverlayHonorsRoundedSurface) {
+    SmokeOverlay overlay(nullptr);
+    overlay.resize(80, 80);
+    overlay.setColor(QColor(0, 0, 0, 200));
+    overlay.setProgress(1.0);
+    overlay.setSurfaceRadius(16);
+
+    QImage image(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    overlay.render(&painter);
+    painter.end();
+
+    EXPECT_EQ(image.pixelColor(0, 0).alpha(), 0);
+    EXPECT_GT(image.pixelColor(image.rect().center()).alpha(), 0);
+}
+
 TEST_F(DialogTest, DragProperty) {
     Dialog dialog(window);
     EXPECT_TRUE(dialog.isDragEnabled());
@@ -101,6 +121,64 @@ TEST_F(DialogTest, OpenPreservesExplicitApplicationModality) {
     dialog.setAnimationEnabled(false);
     dialog.setWindowModality(Qt::ApplicationModal);
     dialog.open();
+    QApplication::processEvents();
+
+    EXPECT_TRUE(dialog.isVisible());
+    EXPECT_EQ(dialog.windowModality(), Qt::ApplicationModal);
+
+    dialog.done(QDialog::Rejected);
+    QApplication::processEvents();
+}
+
+TEST_F(DialogTest, LinuxSameWindowDialogRepositionsInsideOwnerSurface) {
+#ifdef Q_OS_LINUX
+    if (!::fluent::overlay::linuxDesktopUsesSameWindowSurfaces()) {
+        GTEST_SKIP() << "same-window Dialog backend is only used on Linux desktop QPA plugins";
+    }
+
+    window->show();
+    QApplication::processEvents();
+
+    Dialog dialog(window);
+    dialog.setAnimationEnabled(false);
+    dialog.setFixedSize(300, 200);
+    dialog.move(10000, 10000);
+    dialog.open();
+    QApplication::processEvents();
+
+    const QPoint expected((window->width() - dialog.width()) / 2,
+                          (window->height() - dialog.height()) / 2);
+    EXPECT_EQ(dialog.pos(), expected);
+    EXPECT_TRUE(window->rect().contains(dialog.geometry()));
+
+    dialog.done(QDialog::Rejected);
+    QApplication::processEvents();
+#else
+    GTEST_SKIP() << "Linux same-window Dialog positioning is only asserted on Linux";
+#endif
+}
+
+TEST_F(DialogTest, SmokeDialogKeepsNativeTransientParentAndBlocksScrimClicks) {
+    window->show();
+    QApplication::processEvents();
+
+    Dialog dialog(window);
+    dialog.setSmokeEnabled(true);
+    dialog.setAnimationEnabled(false);
+    dialog.setWindowModality(Qt::ApplicationModal);
+    dialog.setFixedSize(300, 200);
+    dialog.open();
+    QApplication::processEvents();
+
+    ASSERT_NE(window->windowHandle(), nullptr);
+    ASSERT_NE(dialog.windowHandle(), nullptr);
+    EXPECT_EQ(dialog.windowHandle()->transientParent(), window->windowHandle());
+
+    auto* smoke = window->findChild<SmokeOverlay*>();
+    ASSERT_NE(smoke, nullptr);
+    ASSERT_TRUE(smoke->isVisible());
+
+    QTest::mouseClick(smoke, Qt::LeftButton, Qt::NoModifier, smoke->rect().center());
     QApplication::processEvents();
 
     EXPECT_TRUE(dialog.isVisible());

@@ -2,10 +2,21 @@
 #define OVERLAYWINDOW_H
 
 #include <QApplication>
+#include <QGuiApplication>
 #include <QPointer>
 #include <QWidget>
 
 namespace fluent::overlay {
+
+inline bool linuxDesktopUsesSameWindowSurfaces()
+{
+#if defined(Q_OS_LINUX)
+    const QString platform = QGuiApplication::platformName().toLower();
+    return platform == QStringLiteral("xcb") || platform.startsWith(QStringLiteral("wayland"));
+#else
+    return false;
+#endif
+}
 
 inline QWidget* resolveOwningTopLevel(const QPointer<QWidget>& originalParent, QWidget* currentParent)
 {
@@ -20,7 +31,7 @@ inline void attachToTopLevel(QWidget* overlay, QWidget* topLevel)
 {
     if (!overlay || !topLevel)
         return;
-    if (overlay->parentWidget() != topLevel) {
+    if (overlay->parentWidget() != topLevel || overlay->windowType() != Qt::Widget) {
         overlay->setParent(topLevel);
         overlay->setWindowFlags(Qt::Widget);
     }

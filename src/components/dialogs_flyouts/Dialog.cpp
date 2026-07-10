@@ -1,11 +1,14 @@
 #include "Dialog.h"
 #include <QPainter>
 #include <QMouseEvent>
+#include <QGraphicsOpacityEffect>
 #include <QLayout>
 #include <QPointer>
+#include <QWindow>
 #include "design/Material.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/overlay/OverlayWindow.h"
 #include "compatibility/QtCompat.h"
 
 namespace fluent::dialogs_flyouts {
@@ -28,10 +31,19 @@ void refreshFluentDescendants(QWidget* root)
 } // namespace
 
 Dialog::Dialog(QWidget *parent) : QDialog(parent) {
-    setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::CustomizeWindowHint | Qt::NoDropShadowWindowHint);
+    const Qt::WindowFlags surfaceFlags =
+        usesSameWindowSurfaceBackend()
+            ? (Qt::Widget | Qt::FramelessWindowHint | Qt::CustomizeWindowHint | Qt::NoDropShadowWindowHint)
+            : (Qt::Dialog | Qt::FramelessWindowHint | Qt::CustomizeWindowHint | Qt::NoDropShadowWindowHint);
+    setWindowFlags(surfaceFlags);
     setAttribute(Qt::WA_TranslucentBackground);
     setAutoFillBackground(false);
     setContentsMargins(m_shadowSize, m_shadowSize, m_shadowSize, m_shadowSize);
+    if (usesSameWindowSurfaceBackend()) {
+        m_sameWindowOpacityEffect = new QGraphicsOpacityEffect(this);
+        m_sameWindowOpacityEffect->setOpacity(1.0);
+        setGraphicsEffect(m_sameWindowOpacityEffect);
+    }
 
     m_animation = new QPropertyAnimation(this, "animationProgress", this);
 
@@ -51,7 +63,7 @@ Dialog::Dialog(QWidget *parent) : QDialog(parent) {
                 resize(targetSize);
             setMinimumSize(m_savedMinSize);
             setMaximumSize(m_savedMaxSize);
-            setWindowOpacity(1.0);
+            setSurfaceOpacity(1.0);
         } else {
             // Entrance finished: restore the size constraints. zh_CN: 进场完成：恢复尺寸约束。
             resize(m_targetSize);
@@ -90,7 +102,7 @@ void Dialog::setAnimationProgress(double p) {
     // zh_CN: 只做 opacity 动画。resize 会触发布局重排，子控件不等比缩放，
     // 动画期间会错位。
     if (m_isAnimating) {
-        setWindowOpacity(p);
+        setSurfaceOpacity(p);
     }
 
     update();
@@ -114,11 +126,13 @@ bool Dialog::syncThemeOverrideFromSource() {
 void Dialog::open() {
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
+    prepareSameWindowSurfaceSize();
     if (m_smokeEnabled) showSmokeOverlay();
+    syncNativeTransientParent();
     if (m_animationEnabled && !isVisible()) {
         m_isAnimating       = true;
         m_animationProgress = 0.0;
-        setWindowOpacity(0.0);          // The compositor never shows frame one. zh_CN: compositor 看不到第一帧。
+        setSurfaceOpacity(0.0);          // The compositor never shows frame one. zh_CN: compositor 看不到第一帧。
     }
     // QDialog::open() always switches the dialog to WindowModal. Preserve an explicitly requested
     // application-modal window by using the non-blocking QWidget show path instead.
@@ -127,16 +141,23 @@ void Dialog::open() {
         QDialog::show();
     else
         QDialog::open();
+    raise();
+    if (usesSameWindowSurfaceBackend())
+        setFocus(Qt::ActiveWindowFocusReason);
+    else
+        activateWindow();
 }
 
 int Dialog::exec() {
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
+    prepareSameWindowSurfaceSize();
     if (m_smokeEnabled) showSmokeOverlay();
+    syncNativeTransientParent();
     if (m_animationEnabled && !isVisible()) {
         m_isAnimating       = true;
         m_animationProgress = 0.0;
-        setWindowOpacity(0.0);
+        setSurfaceOpacity(0.0);
     }
     int result = QDialog::exec();
     hideSmokeOverlay();
@@ -148,19 +169,25 @@ int Dialog::exec() {
 void Dialog::showEvent(QShowEvent *event) {
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
+    syncNativeTransientParent();
 
     // Smoke mode: center over the parent window. zh_CN: 蒙层模式：居中于父窗口。
-    if (m_smokeEnabled && parentWidget()) {
-        QPoint center = parentWidget()->mapToGlobal(parentWidget()->rect().center());
+    if (usesSameWindowSurfaceBackend()) {
+        positionSameWindowSurface();
+    } else if (m_smokeEnabled && parentWidget()) {
+        const QRect surface = ::fluent::overlay::overlaySurfaceRect(parentWidget());
+        const QPoint center = parentWidget()->mapToGlobal(surface.center());
         move(center.x() - width() / 2, center.y() - height() / 2);
     }
-
     QDialog::showEvent(event);
+    if (m_smokeOverlay)
+        m_smokeOverlay->raise();
+    raise();
 
     if (!m_animationEnabled || !m_isAnimating) {
         m_animationProgress = 1.0;
         m_isAnimating = false;
-        setWindowOpacity(1.0);
+        setSurfaceOpacity(1.0);
         return;
     }
 
@@ -198,6 +225,113 @@ void Dialog::hideEvent(QHideEvent* event) {
     QDialog::hideEvent(event);
 }
 
+bool Dialog::eventFilter(QObject* watched, QEvent* event) {
+    if (watched == m_smokeOverlay && event) {
+        const QEvent::Type type = event->type();
+        if (type == QEvent::MouseButtonPress
+            || type == QEvent::MouseButtonDblClick
+            || type == QEvent::MouseButtonRelease) {
+            if (isVisible()) {
+                raise();
+                activateWindow();
+            }
+            event->accept();
+            return true;
+        }
+    }
+    return QDialog::eventFilter(watched, event);
+}
+
+void Dialog::syncNativeTransientParent() {
+    if (usesSameWindowSurfaceBackend())
+        return;
+
+    QWidget* owner = parentWidget() ? parentWidget()->window() : nullptr;
+    if (!owner)
+        return;
+
+    owner->winId();
+    winId();
+    QWindow* dialogWindow = windowHandle();
+    QWindow* ownerWindow = owner->windowHandle();
+    if (dialogWindow && ownerWindow && dialogWindow->transientParent() != ownerWindow)
+        dialogWindow->setTransientParent(ownerWindow);
+}
+
+bool Dialog::usesSameWindowSurfaceBackend() const {
+    return ::fluent::overlay::linuxDesktopUsesSameWindowSurfaces() && parentWidget();
+}
+
+void Dialog::prepareSameWindowSurfaceSize() {
+    if (!usesSameWindowSurfaceBackend())
+        return;
+
+    ensurePolished();
+    for (auto* child : findChildren<QWidget*>())
+        child->ensurePolished();
+    if (layout()) {
+        layout()->invalidate();
+        layout()->activate();
+    }
+
+    const int collapsedHeight = m_shadowSize * 2 + 48;
+    if (height() > collapsedHeight)
+        return;
+
+    QSize preferred = sizeHint();
+    if (!minimumSizeHint().isEmpty())
+        preferred = preferred.expandedTo(minimumSizeHint());
+    preferred = preferred.expandedTo(minimumSize());
+    if (!preferred.isValid() || preferred.isEmpty())
+        return;
+
+    QSize next(qMax(width(), preferred.width()), qMax(height(), preferred.height()));
+    next = next.expandedTo(minimumSize());
+    next = next.boundedTo(maximumSize());
+    if (next != size())
+        resize(next);
+}
+
+void Dialog::positionSameWindowSurface() {
+    QWidget* owner = parentWidget();
+    if (!owner)
+        return;
+
+    QRect surface = ::fluent::overlay::overlaySurfaceRect(owner);
+    if (surface.isEmpty())
+        surface = owner->rect();
+
+    const QRect current(pos(), size());
+    const bool defaultPlacement = pos().isNull();
+    const bool outsideSurface = !surface.contains(current);
+    QPoint next = pos();
+    if (m_smokeEnabled || defaultPlacement || outsideSurface) {
+        next = QPoint(surface.left() + (surface.width() - width()) / 2,
+                      surface.top() + (surface.height() - height()) / 2);
+    }
+
+    if (width() <= surface.width())
+        next.setX(qBound(surface.left(), next.x(), surface.right() - width() + 1));
+    else
+        next.setX(surface.left());
+    if (height() <= surface.height())
+        next.setY(qBound(surface.top(), next.y(), surface.bottom() - height() + 1));
+    else
+        next.setY(surface.top());
+
+    if (next != pos())
+        move(next);
+}
+
+void Dialog::setSurfaceOpacity(qreal opacity) {
+    const qreal clamped = qBound<qreal>(0.0, opacity, 1.0);
+    if (m_sameWindowOpacityEffect) {
+        m_sameWindowOpacityEffect->setOpacity(clamped);
+        return;
+    }
+    setWindowOpacity(clamped);
+}
+
 // ── Closing. zh_CN: 关闭 ─────────────────────────────────────────────────────
 
 void Dialog::done(int r) {
@@ -206,9 +340,9 @@ void Dialog::done(int r) {
         // at hide(); make the window fully transparent first to avoid a flash-shrink.
         // zh_CN: macOS Core Animation 会在 hide() 时对当前帧播放系统消失动画；
         // 先将窗口设为全透明，避免内容“闪缩”。
-        setWindowOpacity(0.0);
+        setSurfaceOpacity(0.0);
         QDialog::done(r);
-        setWindowOpacity(1.0);   // Restore for Dialog reuse. zh_CN: 恢复，以便复用。
+        setSurfaceOpacity(1.0);   // Restore for Dialog reuse. zh_CN: 恢复，以便复用。
         return;
     }
 
@@ -268,17 +402,25 @@ void Dialog::showSmokeOverlay() {
     // Create the overlay when missing; reuse and reverse it when it exists
     // (it may be mid fade-out).
     // zh_CN: overlay 不存在则创建；存在（可能正在淡出）则复用并反向。
+    const int surfaceRadius = qRound(::fluent::overlay::overlaySurfaceRadius(parentWidget()));
     if (!m_smokeOverlay) {
         m_smokeOverlay = new SmokeOverlay(parentWidget());
         const auto& smoke = themeSmoke();
         QColor c = smoke.baseColor;
         c.setAlphaF(smoke.opacity);
         m_smokeOverlay->setColor(c);
-        m_smokeOverlay->setGeometry(parentWidget()->rect());
+        m_smokeOverlay->setGeometry(::fluent::overlay::overlaySurfaceRect(parentWidget()));
+        m_smokeOverlay->setSurfaceRadius(surfaceRadius);
         m_smokeOverlay->setProgress(0.0);
+        m_smokeOverlay->installEventFilter(this);
         m_smokeOverlay->show();
         m_smokeOverlay->raise();
+    } else {
+        m_smokeOverlay->setGeometry(::fluent::overlay::overlaySurfaceRect(parentWidget()));
+        m_smokeOverlay->setSurfaceRadius(surfaceRadius);
+        m_smokeOverlay->raise();
     }
+    raise();
 
     // Lazily create the animation. zh_CN: 懒创建动画。
     if (!m_smokeAnim) {
@@ -342,9 +484,11 @@ void Dialog::paintEvent(QPaintEvent*) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    painter.setCompositionMode(QPainter::CompositionMode_Source);
-    painter.fillRect(rect(), Qt::transparent);
-    painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    if (!usesSameWindowSurfaceBackend()) {
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(rect(), Qt::transparent);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    }
 
     const QRect contentRect = rect().adjusted(m_shadowSize, m_shadowSize, -m_shadowSize, -m_shadowSize);
     drawShadow(painter, contentRect);

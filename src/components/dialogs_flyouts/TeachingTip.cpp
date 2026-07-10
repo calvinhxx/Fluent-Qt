@@ -9,6 +9,7 @@
 #include <QWidget>
 
 #include "compatibility/QtCompat.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "design/Spacing.h"
 
 namespace fluent::dialogs_flyouts {
@@ -319,6 +320,7 @@ TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& c
     const QRect targetRect = targetRectInTopLevel();
     QWidget* top = m_target ? m_target->window() : nullptr;
     if (targetRect.isEmpty() || !top) return Bottom;
+    const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
 
     // Only the main axis is checked for space, matching Flyout. Cross-axis
     // overflow is fixed by clampCardTopLeft and excluded from the fits test,
@@ -328,13 +330,13 @@ TeachingTip::PreferredPlacement TeachingTip::resolveAutoPlacement(const QSize& c
     const auto fits = [&](PreferredPlacement placement) {
         const QPoint p = cardTopLeftForPlacement(placement, targetRect, cardSize);
         if (isBottomPlacement(placement))
-            return p.y() + cardSize.height() <= top->height() - kWindowClampMargin;
+            return p.y() + cardSize.height() <= surface.bottom() - kWindowClampMargin;
         if (isTopPlacement(placement))
-            return p.y() >= kWindowClampMargin;
+            return p.y() >= surface.top() + kWindowClampMargin;
         if (isRightPlacement(placement))
-            return p.x() + cardSize.width() <= top->width() - kWindowClampMargin;
+            return p.x() + cardSize.width() <= surface.right() - kWindowClampMargin;
         if (isLeftPlacement(placement))
-            return p.x() >= kWindowClampMargin;
+            return p.x() >= surface.left() + kWindowClampMargin;
         return true;
     };
 
@@ -401,9 +403,10 @@ QPoint TeachingTip::clampCardTopLeft(const QPoint& cardTopLeft, const QSize& car
     QWidget* top = m_target ? m_target->window() : nullptr;
     if (!top) return cardTopLeft;
 
-    int x = qBound(kWindowClampMargin, cardTopLeft.x(), top->width()  - cardSize.width()  - kWindowClampMargin);
-    int y = qBound(kWindowClampMargin, cardTopLeft.y(), top->height() - cardSize.height() - kWindowClampMargin);
-    return QPoint(x, y);
+    return ::fluent::overlay::clampCardTopLeft(cardTopLeft,
+                                               cardSize,
+                                               ::fluent::overlay::overlaySurfaceRect(top),
+                                               kWindowClampMargin);
 }
 
 QPoint TeachingTip::widgetTopLeftForCardTopLeft(const QPoint& cardTopLeft,

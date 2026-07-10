@@ -234,8 +234,9 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const {
     const int cardH = cardSize.height();
     const QRect anchor(m_comboBox->mapTo(top, QPoint(0, 0)), m_comboBox->size());
 
-    const int spaceBelow = top->height() - (anchor.bottom() + 1);
-    const int spaceAbove = anchor.top();
+    const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
+    const int spaceBelow = surface.bottom() - anchor.bottom();
+    const int spaceAbove = anchor.top() - surface.top();
     const bool placeAbove = spaceBelow < cardH && spaceAbove > spaceBelow;
 
     QPoint cardTopLeft(anchor.left(), placeAbove
@@ -243,7 +244,8 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const {
         : anchor.bottom() + 1 + anchorOffset());
 
     if (clampToWindow()) {
-        cardTopLeft = ::fluent::overlay::clampCardTopLeft(cardTopLeft, cardSize, top->rect(), kPopupWindowMargin);
+        cardTopLeft = ::fluent::overlay::clampCardTopLeft(
+            cardTopLeft, cardSize, surface, kPopupWindowMargin);
     }
 
     return ::fluent::overlay::outerTopLeftForVisibleCard(cardTopLeft, shadow);

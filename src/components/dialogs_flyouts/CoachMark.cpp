@@ -14,9 +14,11 @@
 #include <QResizeEvent>
 #include <QScreen>
 #include <QTimer>
+#include <QWindow>
 
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/overlay/OverlayWindow.h"
 
 namespace fluent::dialogs_flyouts {
 
@@ -45,8 +47,9 @@ CoachMark::CoachMark(QWidget* owner, SurfaceMode surfaceMode)
     , m_surfaceMode(surfaceMode)
 {
     setObjectName(QStringLiteral("CoachMark"));
-    if (m_surfaceMode == TopLevelSurface) {
-        setWindowFlags(Qt::Window | Qt::FramelessWindowHint | Qt::Tool | Qt::NoDropShadowWindowHint);
+    if (!usesSameWindowSurfaceBackend()) {
+        setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
+        setAttribute(Qt::WA_ShowWithoutActivating);
     } else {
         attachToOwnerTopLevel();
         setWindowFlags(Qt::Widget);
@@ -106,8 +109,13 @@ void CoachMark::setTarget(QWidget* target)
     m_target = target;
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
-    if (m_open)
+    if (m_open) {
         reposition(/*animated*/ true);
+        syncNativeTransientParent();
+        raise();
+        if (windowHandle())
+            windowHandle()->raise();
+    }
 }
 
 void CoachMark::setPlacement(Placement placement)
@@ -115,8 +123,13 @@ void CoachMark::setPlacement(Placement placement)
     if (m_placement == placement)
         return;
     m_placement = placement;
-    if (m_open)
+    if (m_open) {
         reposition(/*animated*/ true);
+        syncNativeTransientParent();
+        raise();
+        if (windowHandle())
+            windowHandle()->raise();
+    }
 }
 
 void CoachMark::open()
@@ -128,9 +141,13 @@ void CoachMark::open()
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
     reposition(/*animated*/ false);
+    syncNativeTransientParent();
     setFadeOpacity(0.0);
     show();
+    syncNativeTransientParent();
     raise();
+    if (windowHandle())
+        windowHandle()->raise();
     if (qApp)
         qApp->installEventFilter(this);
     m_fadeAnim->stop();
@@ -208,7 +225,10 @@ void CoachMark::syncToTarget()
         return;
     }
     reposition(/*animated*/ false);
+    syncNativeTransientParent();
     raise();
+    if (windowHandle())
+        windowHandle()->raise();
 }
 
 QRect CoachMark::cardRect() const
@@ -224,7 +244,7 @@ bool CoachMark::syncThemeOverrideFromSource()
 
 void CoachMark::attachToOwnerTopLevel()
 {
-    if (m_surfaceMode != SameWindowSurface)
+    if (!usesSameWindowSurfaceBackend())
         return;
 
     QWidget* top = m_owner ? m_owner->window() : parentWidget();
@@ -234,6 +254,30 @@ void CoachMark::attachToOwnerTopLevel()
     if (parentWidget() != top)
         setParent(top);
     setWindowFlags(Qt::Widget);
+}
+
+void CoachMark::syncNativeTransientParent()
+{
+    if (usesSameWindowSurfaceBackend())
+        return;
+
+    QWidget* ownerWindow = m_owner ? m_owner->window() : (parentWidget() ? parentWidget()->window() : nullptr);
+    if (!ownerWindow)
+        return;
+
+    ownerWindow->winId();
+    winId();
+    QWindow* coachWindow = windowHandle();
+    QWindow* nativeOwner = ownerWindow->windowHandle();
+    if (coachWindow && nativeOwner && coachWindow->transientParent() != nativeOwner)
+        coachWindow->setTransientParent(nativeOwner);
+}
+
+bool CoachMark::usesSameWindowSurfaceBackend() const
+{
+    if (m_surfaceMode == SameWindowSurface)
+        return true;
+    return ::fluent::overlay::linuxDesktopUsesSameWindowSurfaces();
 }
 
 double CoachMark::fadeOpacity() const
@@ -266,8 +310,9 @@ void CoachMark::reposition(bool animated)
 
     if (!m_target) {
         m_tailVisible = false;
-        const QRect ref = (m_surfaceMode == SameWindowSurface)
-            ? (ownerWindow ? ownerWindow->rect() : QRect(QPoint(0, 0), win))
+        const QRect ref = (usesSameWindowSurfaceBackend())
+            ? (ownerWindow ? ::fluent::overlay::overlaySurfaceRect(ownerWindow)
+                           : QRect(QPoint(0, 0), win))
             : (ownerWindow ? ownerWindow->frameGeometry()
                            : (screen() ? screen()->availableGeometry() : QRect(QPoint(0, 0), win)));
         const QPoint centered(ref.center().x() - win.width() / 2, ref.center().y() - win.height() / 2);
@@ -286,7 +331,7 @@ void CoachMark::reposition(bool animated)
     }
 
     const QRect targetRef(
-        m_surfaceMode == SameWindowSurface && ownerWindow
+        usesSameWindowSurfaceBackend() && ownerWindow
             ? m_target->mapTo(ownerWindow, QPoint(0, 0))
             : m_target->mapToGlobal(QPoint(0, 0)),
         m_target->size());
@@ -319,8 +364,8 @@ void CoachMark::reposition(bool animated)
 
     // Keep the surface inside its owning coordinate space, then aim the tail relative to the final
     // position. zh_CN: 先把 surface 限制在所属坐标空间内，再按最终位置让尾巴对准目标。
-    if (m_surfaceMode == SameWindowSurface && ownerWindow) {
-        const QRect bounds = ownerWindow->rect();
+    if (usesSameWindowSurfaceBackend() && ownerWindow) {
+        const QRect bounds = ::fluent::overlay::overlaySurfaceRect(ownerWindow);
         topLeft.setX(qBound(bounds.left(), topLeft.x(), bounds.right() - win.width()));
         topLeft.setY(qBound(bounds.top(), topLeft.y(), bounds.bottom() - win.height()));
     } else if (QScreen* sc = (m_owner ? m_owner->screen() : screen())) {
