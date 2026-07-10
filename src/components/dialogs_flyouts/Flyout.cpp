@@ -47,7 +47,8 @@ QPoint Flyout::clampCardPos(const QPoint& cardTopLeft) const {
     const QSize cardSize = ::fluent::overlay::visibleCardSize(size());
 
     const int margin = 4;  // Breathing room from the window edge. zh_CN: 与窗口边缘留点呼吸空间。
-    return ::fluent::overlay::clampCardTopLeft(cardTopLeft, cardSize, top->rect(), margin);
+    return ::fluent::overlay::clampCardTopLeft(
+        cardTopLeft, cardSize, ::fluent::overlay::overlaySurfaceRect(top), margin);
 }
 
 Flyout::Placement Flyout::resolveAutoPlacement() const {
@@ -59,8 +60,9 @@ Flyout::Placement Flyout::resolveAutoPlacement() const {
     const int cardH = ::fluent::overlay::visibleCardSize(size()).height();
     const int needed = cardH + m_anchorOffset;
 
-    const int spaceBelow = top->height() - a.bottom();
-    const int spaceAbove = a.top();
+    const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
+    const int spaceBelow = surface.bottom() - a.bottom();
+    const int spaceAbove = a.top() - surface.top();
 
     if (spaceBelow >= needed)            return Bottom;
     if (spaceAbove >= needed)            return Top;
