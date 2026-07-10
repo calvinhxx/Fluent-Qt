@@ -4,6 +4,8 @@
 #include <QFont>
 #include <QString>
 
+#include "compatibility/FontCompat.h"
+
 /**
  * @brief Defines Fluent typography roles, font metrics, and icon glyph tokens.
  * zh_CN: 定义 Fluent 排版角色、字体度量和图标字符 token。
@@ -271,8 +273,7 @@ namespace Typography {
         QFont toQFont() const {
             QFont font(family, -1, weight);
             font.setPixelSize(size);
-            if (!styleName.isEmpty())
-                font.setStyleName(styleName);
+            fluentApplyFontStyleName(font, styleName);
             return font;
         }
 
