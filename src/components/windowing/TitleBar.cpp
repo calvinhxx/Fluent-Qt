@@ -2,7 +2,11 @@
 
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QResizeEvent>
+#include <QVariant>
+
+#include "components/foundation/overlay/OverlayGeometry.h"
 
 namespace fluent::windowing {
 
@@ -164,6 +168,17 @@ void TitleBar::paintEvent(QPaintEvent*) {
         painter.fillRect(rect(), Qt::transparent);
         return;
     }
+    const qreal frameRadius = ::fluent::overlay::overlaySurfaceRadius(window());
+    if (frameRadius > 0.0) {
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        QPainterPath path;
+        QRectF rounded(rect());
+        rounded.setBottom(rounded.bottom() + frameRadius);
+        path.addRoundedRect(rounded, frameRadius, frameRadius);
+        painter.fillPath(path, fill);
+        return;
+    }
+
     painter.fillRect(rect(), fill);
 }
 

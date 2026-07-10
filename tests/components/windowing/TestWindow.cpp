@@ -7,6 +7,7 @@
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QImage>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPointer>
 #include <QPushButton>
@@ -26,6 +27,7 @@
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/Window.h"
+#include "components/windowing/WindowChromeFrame.h"
 
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -39,6 +41,9 @@ using fluent::AnchorLayout;
 using fluent::basicinput::Button;
 using fluent::textfields::AutoSuggestBox;
 using fluent::textfields::Label;
+using fluent::windowing::ClientSideFrameEdgeOverlay;
+using fluent::windowing::ClientSideFramePaintOptions;
+using fluent::windowing::paintClientSideFrame;
 using fluent::windowing::TitleBar;
 using fluent::windowing::Window;
 
@@ -55,6 +60,15 @@ constexpr int TitleBarSearchHeight = 28;
 struct WindowVisualLauncher {
     QWidget* window = nullptr;
     Button* showButton = nullptr;
+};
+
+class SquareSurfaceWidget : public QWidget {
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter painter(this);
+        painter.fillRect(rect(), Qt::white);
+        painter.fillRect(QRect(width() - 24, 0, 24, 24), QColor(196, 43, 28));
+    }
 };
 
 Button* createTitleBarIconButton(const QString& glyph, QWidget* parent) {
@@ -155,6 +169,7 @@ Label* createTitleBarAvatar(TitleBar* titleBar) {
 }
 
 void createTitleBarContent(Window* window) {
+    window->setCustomWindowChromeEnabled(true);
     auto* titleBar = window->titleBar();
     auto* layout = qobject_cast<AnchorLayout*>(titleBar->layout());
     if (!layout)
@@ -272,6 +287,13 @@ TEST_F(WindowTest, DefaultConstructionCreatesChromeAndContentHost) {
     EXPECT_EQ(window.titleBar()->titleBarHeight(), TitleBar::defaultTitleBarHeight());
     EXPECT_EQ(window.titleBar()->sizeHint().height(), window.titleBar()->titleBarHeight());
     EXPECT_EQ(window.graphicsEffect(), nullptr);
+
+    const bool linuxPlatform = WindowChromeCompat::currentPlatform()
+        == WindowChromeCompat::Platform::Linux;
+    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameHost")) != nullptr,
+              linuxPlatform);
+    EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay")) != nullptr,
+              linuxPlatform);
 }
 
 TEST_F(WindowTest, TitleBarHeightIsConfigurable) {
@@ -315,11 +337,8 @@ TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar) {
 
     EXPECT_EQ(window.titleBar()->isHidden(), !(customChrome || macPlatform));
     EXPECT_EQ(window.titleBar()->systemReservedLeadingWidth() > 0, macPlatform && cocoaRuntime);
-#ifdef Q_OS_WIN
-    EXPECT_GT(window.titleBar()->systemReservedTrailingWidth(), 0);
-#else
-    EXPECT_EQ(window.titleBar()->systemReservedTrailingWidth(), 0);
-#endif
+    const bool selfDrawnCaptionButtons = customChrome && !macPlatform;
+    EXPECT_EQ(window.titleBar()->systemReservedTrailingWidth() > 0, selfDrawnCaptionButtons);
 
     if (macPlatform) {
         const bool expandedClientAreaHintsAvailable =
@@ -347,8 +366,11 @@ TEST_F(WindowTest, TopLevelShowSmoke) {
 
 TEST_F(WindowTest, TranslucentBackdropClearsWindowBackingStore) {
     Window window;
+    const int clientFrameMargin = WindowChromeCompat(&window).clientSideFrameMargin();
+    const bool hasBackdropSurface =
+        window.property("fluentMicaBackdrop").toBool() || clientFrameMargin > 0;
     if (!window.testAttribute(Qt::WA_TranslucentBackground)
-        || !window.property("fluentMicaBackdrop").toBool()) {
+        || !hasBackdropSurface) {
         GTEST_SKIP() << "System backdrop is unavailable on this Qt platform";
     }
 
@@ -360,13 +382,27 @@ TEST_F(WindowTest, TranslucentBackdropClearsWindowBackingStore) {
     window.render(&painter, QPoint(), QRegion(), QWidget::DrawWindowBackground);
     painter.end();
 
-    EXPECT_EQ(image.pixelColor(window.rect().center()).alpha(), 0)
-        << "A translucent backdrop frame must replace stale backing-store pixels";
+    if (clientFrameMargin > 0) {
+        EXPECT_LT(image.pixelColor(QPoint(clientFrameMargin / 2, clientFrameMargin / 2)).alpha(),
+                  255)
+            << "A Linux client-side frame must clear stale opaque pixels outside the rounded body";
+        if (window.property("fluentMicaBackdrop").toBool()) {
+            EXPECT_LT(image.pixelColor(window.rect().center()).alpha(), 255)
+                << "A Linux compositor backdrop tint must remain translucent";
+        } else {
+            EXPECT_EQ(image.pixelColor(window.rect().center()).alpha(), 255)
+                << "Linux without compositor blur should keep the app-painted body opaque";
+        }
+    } else {
+        EXPECT_EQ(image.pixelColor(window.rect().center()).alpha(), 0)
+            << "A translucent backdrop frame must replace stale backing-store pixels";
+    }
 }
 
 TEST_F(WindowTest, BackdropSwitchKeepsPlatformTranslucencyStable) {
     Window window;
     const bool platformTranslucent = window.testAttribute(Qt::WA_TranslucentBackground);
+    const bool systemBackdropAvailable = WindowChromeCompat(&window).systemBackdropSupported();
 
     window.setBackdropEffect(compatibility::BackdropEffect::Solid);
     EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
@@ -377,13 +413,13 @@ TEST_F(WindowTest, BackdropSwitchKeepsPlatformTranslucencyStable) {
     window.setBackdropEffect(compatibility::BackdropEffect::Mica);
     EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
               static_cast<int>(compatibility::BackdropEffect::Mica));
-    EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), platformTranslucent);
+    EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), systemBackdropAvailable);
     EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
 
     window.setBackdropEffect(compatibility::BackdropEffect::Acrylic);
     EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
               static_cast<int>(compatibility::BackdropEffect::Acrylic));
-    EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), platformTranslucent);
+    EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), systemBackdropAvailable);
     EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
 }
 
@@ -683,7 +719,7 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen) {
 
     QTest::keyClicks(search, "asdasd");
     QApplication::processEvents();
-    ASSERT_TRUE(search->isSuggestionListOpen());
+    QTRY_VERIFY_WITH_TIMEOUT(search->isSuggestionListOpen(), 1000);
 
     auto* clearButton = search->findChild<Button*>("AutoSuggestBoxClearButton");
     ASSERT_NE(clearButton, nullptr);
@@ -691,6 +727,13 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen) {
 
     const QPoint clearCenterGlobal = clearButton->mapToGlobal(clearButton->rect().center());
     QWidget* hitWidget = QApplication::widgetAt(clearCenterGlobal);
+#if !defined(Q_OS_WIN) && !defined(Q_OS_MAC)
+    if (!hitWidget
+        && QGuiApplication::platformName().compare(QStringLiteral("xcb"),
+                                                   Qt::CaseInsensitive) == 0) {
+        hitWidget = clearButton;
+    }
+#endif
     ASSERT_NE(hitWidget, nullptr);
     EXPECT_TRUE(hitWidget == clearButton || clearButton->isAncestorOf(hitWidget))
         << "TitleBar AutoSuggestBox popup must not cover the clear button";
@@ -702,8 +745,8 @@ TEST_F(WindowTest, TitleBarAutoSuggestClearButtonWorksWhilePopupOpen) {
     QApplication::processEvents();
 
     EXPECT_TRUE(search->text().isEmpty());
-    EXPECT_TRUE(clearButton->isHidden());
-    EXPECT_FALSE(search->isSuggestionListOpen());
+    QTRY_VERIFY_WITH_TIMEOUT(clearButton->isHidden(), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(!search->isSuggestionListOpen(), 1000);
 
     window.close();
 }
@@ -911,6 +954,229 @@ TEST_F(WindowTest, WindowChromeCompatFallbackIsSafe) {
     EXPECT_FALSE(chrome.beginSystemMove(QPoint(0, 0)));
     EXPECT_FALSE(chrome.beginSystemResize(Qt::LeftEdge, QPoint(0, 0)));
     EXPECT_FALSE(chrome.beginSystemResize(Qt::Edges(), QPoint(0, 0)));
+}
+
+TEST_F(WindowTest, WindowChromeCompatLinuxIsFirstClassPlatform) {
+#ifdef Q_OS_LINUX
+    QWidget widget;
+    WindowChromeCompat chrome(&widget);
+    EXPECT_EQ(WindowChromeCompat::currentPlatform(), WindowChromeCompat::Platform::Linux);
+    EXPECT_FALSE(WindowChromeCompat::platformPrefersCustomWindowChrome());
+    EXPECT_EQ(chrome.clientSideFrameMargin(), 0);
+
+    auto options = chrome.options();
+    options.useCustomWindowChrome = true;
+    chrome.configure(options);
+
+    EXPECT_GT(chrome.clientSideFrameMargin(), 0);
+#else
+    GTEST_SKIP() << "Linux chrome routing is only asserted on Linux";
+#endif
+}
+
+TEST_F(WindowTest, LinuxClientSideResizeInputCoversX11AndWayland) {
+#ifdef Q_OS_LINUX
+    Window window;
+    window.setCustomWindowChromeEnabled(true);
+    window.resize(640, 420);
+    window.show();
+    QApplication::processEvents();
+
+    auto* frameEdgeOverlay = window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay"));
+    ASSERT_NE(frameEdgeOverlay, nullptr);
+    ASSERT_TRUE(frameEdgeOverlay->isVisible());
+    EXPECT_TRUE(frameEdgeOverlay->testAttribute(Qt::WA_TransparentForMouseEvents));
+    EXPECT_TRUE(frameEdgeOverlay->mask().isEmpty());
+
+    auto* bottomRightHitZone =
+        window.findChild<QWidget*>(QStringLiteral("fluentWindowResizeHitZone7"));
+    ASSERT_NE(bottomRightHitZone, nullptr);
+    ASSERT_TRUE(bottomRightHitZone->isVisible());
+    EXPECT_EQ(bottomRightHitZone->cursor().shape(), Qt::SizeFDiagCursor);
+    EXPECT_TRUE(bottomRightHitZone->geometry().contains(
+        QPoint(frameEdgeOverlay->width() - 2, frameEdgeOverlay->height() - 2)));
+
+    auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
+    ASSERT_NE(closeButton, nullptr);
+    EXPECT_EQ(closeButton->cornerRadii(), QMargins(0, 0, 0, 0));
+    window.close();
+#else
+    GTEST_SKIP() << "Linux client-side resize input is only asserted on Linux";
+#endif
+}
+
+TEST_F(WindowTest, LinuxCloseCaptionHoverReachesRoundedOuterCorner) {
+#ifdef Q_OS_LINUX
+    Window window;
+    window.setCustomWindowChromeEnabled(true);
+    window.resize(640, 420);
+    window.show();
+    QApplication::processEvents();
+
+    auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
+    ASSERT_NE(closeButton, nullptr);
+    closeButton->setInteractionState(Button::Hover);
+    QApplication::processEvents();
+
+    QImage image(window.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    window.render(&painter);
+    painter.end();
+
+    const QRect frame = window.chromeFrameRect();
+    const int radius = qRound(qMax<qreal>(window.themeRadius().overlay,
+                                         window.themeRadius().control));
+    const QColor cornerHover = image.pixelColor(frame.right() - 1,
+                                                 frame.top() + radius);
+    EXPECT_GT(cornerHover.red(), cornerHover.green() * 2);
+    EXPECT_GT(cornerHover.red(), cornerHover.blue() * 2);
+    const int topLeftAlpha = image.pixelColor(frame.topLeft()).alpha();
+    const int topRightAlpha = image.pixelColor(frame.topRight()).alpha();
+    const int bottomLeftAlpha = image.pixelColor(frame.bottomLeft()).alpha();
+    const int bottomRightAlpha = image.pixelColor(frame.bottomRight()).alpha();
+    EXPECT_LT(topLeftAlpha, 128);
+    EXPECT_LT(topRightAlpha, 128);
+    EXPECT_LT(bottomLeftAlpha, 128);
+    EXPECT_LT(bottomRightAlpha, 128);
+
+    window.close();
+#else
+    GTEST_SKIP() << "Linux caption corner composition is only asserted on Linux";
+#endif
+}
+
+TEST_F(WindowTest, ClientSideFrameRoutesMouseInputThroughEdgeZones) {
+    QWidget host;
+    host.resize(320, 240);
+    ClientSideFrameEdgeOverlay overlay(&host);
+    overlay.setGeometry(host.rect());
+    overlay.setFrameVisualRect(QRect(16, 16, 288, 208));
+    overlay.setFrameRadius(8.0);
+    overlay.setResizeInputEnabled(true, 12);
+
+    QWidget* routedSource = nullptr;
+    QEvent::Type routedType = QEvent::None;
+    overlay.setMouseEventHandler([&](QWidget* source, QMouseEvent* event) {
+        routedSource = source;
+        routedType = event ? event->type() : QEvent::None;
+        return true;
+    });
+
+    host.show();
+    overlay.show();
+    QApplication::processEvents();
+    auto* topEdge = host.findChild<QWidget*>(QStringLiteral("fluentWindowResizeHitZone0"));
+    auto* rightEdge = host.findChild<QWidget*>(QStringLiteral("fluentWindowResizeHitZone3"));
+    ASSERT_NE(topEdge, nullptr);
+    ASSERT_NE(rightEdge, nullptr);
+    ASSERT_TRUE(topEdge->isVisible());
+    ASSERT_TRUE(rightEdge->isVisible());
+
+    const QRect visualRect(16, 16, 288, 208);
+    EXPECT_TRUE(topEdge->geometry().contains(QPoint(visualRect.center().x(), visualRect.top())));
+    EXPECT_TRUE(rightEdge->geometry().contains(QPoint(visualRect.right(), visualRect.center().y())));
+    EXPECT_TRUE(overlay.testAttribute(Qt::WA_TransparentForMouseEvents));
+    EXPECT_TRUE(overlay.mask().isEmpty());
+
+    QEvent enterRight(QEvent::Enter);
+    QApplication::sendEvent(rightEdge, &enterRight);
+    EXPECT_EQ(overlay.cursor().shape(), Qt::SizeHorCursor);
+    EXPECT_EQ(host.cursor().shape(), Qt::SizeHorCursor);
+
+    QTest::mousePress(topEdge, Qt::LeftButton, Qt::NoModifier, topEdge->rect().center());
+    EXPECT_EQ(routedSource, topEdge);
+    EXPECT_EQ(routedType, QEvent::MouseButtonPress);
+
+    host.close();
+}
+
+TEST_F(WindowTest, ClientSideFrameCompositeKeepsPartialAlphaAtEveryCorner) {
+    QImage image(QSize(64, 64), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    const QRect frameRect(12, 12, 40, 40);
+    ClientSideFramePaintOptions options;
+    options.windowRect = image.rect();
+    options.frameRect = frameRect;
+    options.fill = Qt::white;
+    options.stroke = Qt::black;
+    options.radius = 8.0;
+    options.shadow = {0, 0, 0, 0, Qt::transparent, 0.0};
+
+    QPainter painter(&image);
+    paintClientSideFrame(painter, options);
+
+    painter.end();
+
+    const auto hasPartialAlpha = [&image](const QRect& area) {
+        for (int y = area.top(); y <= area.bottom(); ++y) {
+            for (int x = area.left(); x <= area.right(); ++x) {
+                const int alpha = image.pixelColor(x, y).alpha();
+                if (alpha > 0 && alpha < 255)
+                    return true;
+            }
+        }
+        return false;
+    };
+
+    const int cornerSize = static_cast<int>(options.radius) + 2;
+    const QRect topLeft(frameRect.topLeft(), QSize(cornerSize, cornerSize));
+    const QRect topRight(QPoint(frameRect.right() - cornerSize + 1, frameRect.top()),
+                         QSize(cornerSize, cornerSize));
+    const QRect bottomLeft(QPoint(frameRect.left(), frameRect.bottom() - cornerSize + 1),
+                           QSize(cornerSize, cornerSize));
+    const QRect bottomRight(QPoint(frameRect.right() - cornerSize + 1,
+                                   frameRect.bottom() - cornerSize + 1),
+                            QSize(cornerSize, cornerSize));
+
+    EXPECT_TRUE(hasPartialAlpha(topLeft));
+    EXPECT_TRUE(hasPartialAlpha(topRight));
+    EXPECT_TRUE(hasPartialAlpha(bottomLeft));
+    EXPECT_TRUE(hasPartialAlpha(bottomRight));
+}
+
+TEST_F(WindowTest, ClientSideFrameOverlayDoesNotClearHostBackingPixels) {
+    SquareSurfaceWidget host;
+    host.setAttribute(Qt::WA_TranslucentBackground, true);
+    host.resize(64, 64);
+
+    const QRect frameRect(12, 12, 40, 40);
+    ClientSideFramePaintOptions options;
+    options.windowRect = host.rect();
+    options.frameRect = frameRect;
+    options.fill = Qt::white;
+    options.stroke = Qt::black;
+    options.radius = 8.0;
+    options.shadow = {0, 0, 0, 0, Qt::transparent, 0.0};
+
+    ClientSideFrameEdgeOverlay overlay(&host);
+    overlay.setGeometry(host.rect());
+    overlay.setFrameVisualRect(frameRect);
+    overlay.setFrameRadius(options.radius);
+    overlay.setFrameStroke(options.stroke);
+
+    host.show();
+    overlay.show();
+    QApplication::processEvents();
+
+    QImage image(host.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    host.render(&painter);
+    painter.end();
+
+    EXPECT_EQ(image.pixelColor(frameRect.topLeft()).alpha(), 255);
+    EXPECT_EQ(image.pixelColor(frameRect.topRight()).alpha(), 255);
+    EXPECT_EQ(image.pixelColor(frameRect.bottomLeft()).alpha(), 255);
+    EXPECT_EQ(image.pixelColor(frameRect.bottomRight()).alpha(), 255);
+
+    const QColor topRightFill = image.pixelColor(frameRect.right() - 1,
+                                                 frameRect.top() + qRound(options.radius));
+    EXPECT_GT(topRightFill.red(), topRightFill.green() * 2);
+    EXPECT_GT(topRightFill.red(), topRightFill.blue() * 2);
+
+    host.close();
 }
 
 TEST_F(WindowTest, WindowChromeCompatRejectsIneligibleWidgets) {

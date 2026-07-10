@@ -17,6 +17,8 @@ bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptio
 bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos);
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options);
 int nativeTitleBarLeadingInset(QWidget* window);
+int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options);
+bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options);
 bool platformSupportsSystemBackdrop();
 bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
                                  bool forceRecomposite);
@@ -112,11 +114,17 @@ bool WindowChromeCompat::showSystemMenu(const QPoint& globalPos) {
 }
 
 bool WindowChromeCompat::usesCustomWindowChrome() const {
-    return m_options.useCustomWindowChrome && currentPlatform() == Platform::Windows;
+    const Platform platform = currentPlatform();
+    return m_options.useCustomWindowChrome
+        && (platform == Platform::Windows || platform == Platform::Linux);
 }
 
 bool WindowChromeCompat::prefersNativeMacControls() const {
     return m_options.preferNativeMacControls && currentPlatform() == Platform::MacOS;
+}
+
+bool WindowChromeCompat::manualMoveResizeFallbackAllowed() const {
+    return detail::manualMoveResizeFallbackAllowed(m_window, m_options);
 }
 
 int WindowChromeCompat::nativeTitleBarLeadingInset() const {
@@ -125,6 +133,10 @@ int WindowChromeCompat::nativeTitleBarLeadingInset() const {
 
 int WindowChromeCompat::nativeTitleBarTrailingInset() const {
     return 0;
+}
+
+int WindowChromeCompat::clientSideFrameMargin() const {
+    return detail::clientSideFrameMargin(m_window, m_options);
 }
 
 WindowChromeCompat::HitTest WindowChromeCompat::hitTestLocal(const QPoint& localPos) const {
@@ -137,6 +149,8 @@ WindowChromeCompat::Platform WindowChromeCompat::currentPlatform() {
     return Platform::Windows;
 #elif defined(Q_OS_MAC)
     return Platform::MacOS;
+#elif defined(Q_OS_LINUX)
+    return Platform::Linux;
 #else
     return Platform::Other;
 #endif
