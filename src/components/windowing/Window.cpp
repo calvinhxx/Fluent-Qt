@@ -1,17 +1,23 @@
 #include "Window.h"
 
+#include <QApplication>
 #include <QEvent>
 #include <QHBoxLayout>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QRegion>
+#include <QWindow>
 
 #include "TitleBar.h"
+#include "WindowChromeFrame.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/status_info/ToolTip.h"
 
 namespace fluent::windowing {
@@ -20,6 +26,8 @@ namespace {
 
 constexpr int CaptionButtonWidth = 46;
 constexpr int CaptionButtonIconSize = 10;
+constexpr int ResizeBorderWidth = 8;
+constexpr int VisibleFrameResizeBorderWidth = ResizeBorderWidth;
 
 void refreshFluentDescendants(QWidget* root)
 {
@@ -34,51 +42,108 @@ void refreshFluentDescendants(QWidget* root)
     }
 }
 
+QPoint pointerLocalPosForWindow(QWidget* source, QWidget* window, QMouseEvent* event)
+{
+    if (!source || !window || !event)
+        return QPoint();
+    const QPoint sourcePos = fluentMousePos(event);
+    return source == window ? sourcePos : source->mapTo(window, sourcePos);
+}
+
+QRegion roundedRectRegion(const QRect& rect, int radius)
+{
+    if (rect.isEmpty() || radius <= 0)
+        return QRegion(rect);
+
+    const int diameter = qMin(radius * 2, qMin(rect.width(), rect.height()));
+    const int effectiveRadius = diameter / 2;
+    QRegion region(rect.adjusted(effectiveRadius, 0, -effectiveRadius, 0));
+    region += QRegion(rect.adjusted(0, effectiveRadius, 0, -effectiveRadius));
+    region += QRegion(QRect(rect.topLeft(), QSize(diameter, diameter)), QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()),
+                            QSize(diameter, diameter)),
+                      QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1),
+                            QSize(diameter, diameter)),
+                      QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.right() - diameter + 1,
+                                   rect.bottom() - diameter + 1),
+                            QSize(diameter, diameter)),
+                      QRegion::Ellipse);
+    return region;
+}
+
 } // namespace
 
 Window::Window(QWidget* parent)
     : QWidget(parent),
-      m_chrome(this) {
+      m_chrome(this),
+      m_resizeSession(std::make_unique<WindowResizeSession>()) {
     m_chrome.applyPlatformWindowFlags();
 
     setAutoFillBackground(false);
     setMinimumSize(Breakpoints::MinWindowWidth, Breakpoints::MinWindowHeight);
 
-    // Window translucency is a FIXED, platform-level decision: on platforms that support a system
-    // backdrop the window is translucent for its whole lifetime, so switching effects at runtime
-    // never restyles the native surface (which would flicker + steal focus). "fluentMicaBackdrop"
-    // is the separate paint-hint: true means surfaces paint transparent to reveal the OS backdrop
-    // (Mica/Acrylic); false (Normal, or unsupported platforms) means they paint opaque themselves.
-    // The DWM/vibrancy attribute itself is applied in showEvent once the native handle exists.
-    // zh_CN: 窗口半透明性是固定的平台级决策：支持系统背景的平台上窗口整生命周期半透明，故运行时切换效果绝不重塑
-    // 原生表面（否则会闪烁 + 抢焦点）。"fluentMicaBackdrop" 是另一回事——绘制提示：true 表示表面画透明以透出系统
-    // 背景（Mica/Acrylic），false（Normal 或不支持的平台）表示表面自绘不透明。DWM/vibrancy 属性本身在 showEvent
-    // 拿到原生句柄后施加。
-    m_windowTranslucent = m_chrome.systemBackdropSupported();
-    m_micaBackdrop = m_windowTranslucent
+    // Keep top-level translucency as a platform-level decision. Runtime effect
+    // changes update paint hints and requested backdrop type, not native flags.
+    // zh_CN: 顶层半透明是平台级决策；运行时切换效果只更新绘制提示和请求的系统背景类型。
+    m_systemBackdropSupported = m_chrome.systemBackdropSupported();
+    m_windowTranslucent = m_systemBackdropSupported || m_chrome.clientSideFrameMargin() > 0;
+    m_micaBackdrop = m_systemBackdropSupported
                      && m_backdropEffect != compatibility::BackdropEffect::Solid;
     if (m_windowTranslucent)
         setAttribute(Qt::WA_TranslucentBackground, true);
     setProperty("fluentWindowBackdropEffect", static_cast<int>(m_backdropEffect));
     setProperty("fluentMicaBackdrop", m_micaBackdrop);
 
-    auto* rootLayout = new QVBoxLayout(this);
-    rootLayout->setContentsMargins(0, 0, 0, 0);
-    rootLayout->setSpacing(0);
+    m_rootLayout = new QVBoxLayout(this);
+    m_rootLayout->setContentsMargins(0, 0, 0, 0);
+    m_rootLayout->setSpacing(0);
 
-    m_titleBar = new TitleBar(this);
+    // Only Linux needs an inset, rounded client-side frame host. Keeping this
+    // wrapper out of the Windows/macOS widget tree preserves their original
+    // direct paint path and avoids routing every visible update through an
+    // otherwise transparent full-window child.
+    // zh_CN: 仅 Linux 需要内缩圆角客户端窗框容器；Windows/macOS 保持原来的直接绘制路径，
+    // 避免每次可见更新都经过一个透明的全窗口子控件。
+    QWidget* chromeParent = this;
+    QVBoxLayout* chromeLayout = m_rootLayout;
+    if (compatibility::WindowChromeCompat::currentPlatform()
+        == compatibility::WindowChromeCompat::Platform::Linux) {
+        m_frameHost = new QWidget(this);
+        m_frameHost->setObjectName(QStringLiteral("fluentWindowFrameHost"));
+        m_frameHost->setAutoFillBackground(false);
+        auto* frameLayout = new QVBoxLayout(m_frameHost);
+        frameLayout->setContentsMargins(0, 0, 0, 0);
+        frameLayout->setSpacing(0);
+        m_rootLayout->addWidget(m_frameHost, 1);
+        chromeParent = m_frameHost;
+        chromeLayout = frameLayout;
+    }
+
+    m_titleBar = new TitleBar(chromeParent);
     m_titleBar->setSystemReservedLeadingWidth(m_chrome.nativeTitleBarLeadingInset());
     m_titleBar->setVisible(m_chrome.usesCustomWindowChrome() || m_chrome.prefersNativeMacControls());
-    rootLayout->addWidget(m_titleBar);
+    chromeLayout->addWidget(m_titleBar);
     setupCaptionButtons();
 
-    m_contentHost = new QWidget(this);
+    m_contentHost = new QWidget(chromeParent);
     m_contentHost->setObjectName(QStringLiteral("fluentWindowContentHost"));
     m_contentHost->setAutoFillBackground(false);
     auto* contentLayout = new QVBoxLayout(m_contentHost);
     contentLayout->setContentsMargins(0, 0, 0, 0);
     contentLayout->setSpacing(0);
-    rootLayout->addWidget(m_contentHost, 1);
+    chromeLayout->addWidget(m_contentHost, 1);
+
+    if (m_frameHost) {
+        m_frameEdgeOverlay = new ClientSideFrameEdgeOverlay(this);
+        m_frameEdgeOverlay->setObjectName(QStringLiteral("fluentWindowFrameEdgeOverlay"));
+        m_frameEdgeOverlay->setMouseEventHandler(
+            [this](QWidget* source, QMouseEvent* event) {
+                return handleResizeBorderMouseEvent(source, event);
+            });
+        m_frameEdgeOverlay->hide();
+    }
 
     connect(m_titleBar, &TitleBar::chromeGeometryChanged, this, &Window::updateChromeOptions);
     connect(m_titleBar, &TitleBar::dragStarted, this, &Window::handleTitleBarDragStarted);
@@ -89,8 +154,15 @@ Window::Window(QWidget* parent)
     connect(m_titleBar, &TitleBar::titleBarHeightChanged, this, &Window::syncCaptionButtons);
 
     onThemeUpdated();
+    syncClientSideFrameMargins();
+    syncClientSideFrameShape();
     syncTitleBarSystemInsets();
     updateChromeOptions();
+}
+
+Window::~Window() {
+    if (QWidget::mouseGrabber() == this)
+        releaseMouse();
 }
 
 void Window::setContentWidget(QWidget* widget) {
@@ -111,11 +183,39 @@ void Window::setContentWidget(QWidget* widget) {
     }
 }
 
+void Window::setCustomWindowChromeEnabled(bool enabled) {
+    compatibility::WindowChromeOptions options = m_chrome.options();
+    if (options.useCustomWindowChrome == enabled)
+        return;
+
+    options.useCustomWindowChrome = enabled;
+    m_chrome.configure(options);
+    m_chrome.applyPlatformWindowFlags();
+
+    m_systemBackdropSupported = m_chrome.systemBackdropSupported();
+    m_windowTranslucent = m_systemBackdropSupported || m_chrome.clientSideFrameMargin() > 0;
+    setAttribute(Qt::WA_TranslucentBackground, m_windowTranslucent);
+    m_micaBackdrop = m_systemBackdropSupported
+                     && m_backdropEffect != compatibility::BackdropEffect::Solid;
+    setProperty("fluentMicaBackdrop", m_micaBackdrop);
+
+    setupCaptionButtons();
+    syncClientSideResizeInput();
+    syncClientSideFrameMargins();
+    syncClientSideFrameShape();
+    syncTitleBarSystemInsets();
+    updateChromeOptions();
+    update();
+}
+
+bool Window::customWindowChromeEnabled() const {
+    return m_chrome.options().useCustomWindowChrome;
+}
+
 void Window::onThemeUpdated() {
-    // Keep the DWM dark-mode bit (and thus the backdrop tint) in step with this window's effective
-    // theme. Without a local override this is still the global app theme.
-    // zh_CN: 让 DWM 暗色模式位（进而背景着色）跟随该窗口的实际主题；没有局部覆盖时仍等同于全局应用主题。
-    if (m_windowTranslucent)
+    // Keep the native backdrop tint in step with this window's effective theme.
+    // zh_CN: 让原生背景着色跟随窗口的实际主题。
+    if (m_systemBackdropSupported)
         m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark);
     if (m_titleBar)
         m_titleBar->onThemeUpdated();
@@ -125,16 +225,15 @@ void Window::onThemeUpdated() {
         m_maximizeButton->onThemeUpdated();
     if (m_closeButton)
         m_closeButton->onThemeUpdated();
-    // Content descendants are themed by the global FluentThemeManager (visible ones synchronously, the
-    // rest lazily/on-show), so this no longer walks the whole content tree — that synchronous walk over
-    // every prewarmed page was the multi-hundred-ms theme-switch freeze. zh_CN: 内容子级由全局
-    // FluentThemeManager 刷新（可见的同步，其余延后/显示时刷新），故此处不再遍历整棵内容树——对每个预热页的
-    // 同步遍历正是切换主题数百毫秒卡顿的根源。
+    syncClientSideFrameShape();
+    // Content descendants are themed by the global FluentThemeManager; walking
+    // the whole prewarmed page tree here caused slow theme switches.
+    // zh_CN: 内容子级由全局主题管理器刷新；这里不再遍历整棵预热页面树。
     update();
 }
 
 void Window::reapplySystemBackdrop() {
-    if (!m_windowTranslucent || !isVisible())
+    if (!m_systemBackdropSupported || !isVisible())
         return;
     updateChromeOptions();                                 // re-extend the sheet-of-glass
     m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark,
@@ -146,30 +245,22 @@ void Window::setBackdropEffect(compatibility::BackdropEffect effect) {
         return;
     m_backdropEffect = effect;
 
-    // The window surface stays as it was created (see ctor): switching effects only updates the
-    // paint-hint + the requested OS backdrop type, then repaints. No WA_TranslucentBackground toggle,
-    // no native flag re-assertion — so no flicker and no focus loss. zh_CN: 窗口表面保持构造时的状态
-    //（见 ctor）：切换效果只更新绘制提示 + 请求的系统背景类型，然后重绘。不切 WA_TranslucentBackground、不重置
-    // 原生标志——故无闪烁、无焦点丢失。
-    m_micaBackdrop = m_windowTranslucent
+    // Switching effects updates paint hints and the requested OS backdrop type.
+    // Avoid toggling native window flags at runtime to prevent flicker/focus churn.
+    // zh_CN: 切换效果只更新绘制提示和请求的系统背景类型，避免运行时重置原生窗口 flag。
+    m_micaBackdrop = m_systemBackdropSupported
                      && effect != compatibility::BackdropEffect::Solid;
     setProperty("fluentWindowBackdropEffect", static_cast<int>(m_backdropEffect));
     setProperty("fluentMicaBackdrop", m_micaBackdrop);
 
-    // forceRecomposite: a deliberate, infrequent effect switch must composite on the spot. Acrylic
-    // (DWMSBT_TRANSIENTWINDOW) in particular often stays a flat default glass until the next
-    // (de)activation — which is exactly why the user had to switch to another app and back before it
-    // looked right. The NCACTIVATE round-trip reproduces that without changing real focus. (Theme
-    // changes still pass forceRecomposite=false, since those are already composited and frequent.)
-    // zh_CN: forceRecomposite：用户主动且不频繁的效果切换必须当场合成。Acrylic（DWMSBT_TRANSIENTWINDOW）尤其常
-    // 停在扁平默认玻璃上，要等下次激活/失活才生效——这正是用户必须切到别的 app 再切回来才正常的原因。NCACTIVATE
-    // 往返复现该动作且不改变真实焦点。（切主题仍传 forceRecomposite=false，因其已合成且频繁。）
-    if (m_windowTranslucent && isVisible())
+    // Deliberate effect switches should force one native recomposition.
+    // zh_CN: 用户主动切换窗口效果时强制一次原生重合成。
+    if (m_systemBackdropSupported && isVisible())
         m_chrome.applySystemBackdrop(effect, effectiveTheme() == Dark,
                                      /*forceRecomposite*/ true);  // Solid maps to DWMSBT_AUTO
 
-    // Repaint chrome + content so every surface re-reads the new paint-hint (transparent<->opaque, or
-    // a different translucent material). zh_CN: 重绘 chrome 与内容，使各表面重新读取新绘制提示。
+    // Repaint chrome + content so every surface re-reads the new paint hint.
+    // zh_CN: 重绘 chrome 和内容，使各表面重新读取绘制提示。
     if (isVisible()) {
         const QList<QWidget*> descendants = findChildren<QWidget*>();
         for (QWidget* child : descendants)
@@ -200,12 +291,37 @@ void Window::closeWindow() {
     close();
 }
 
+ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const {
+    const auto& colors = themeColors();
+    QColor fill = chromeBackdropFill(this, isActiveWindow());
+    if (!fill.isValid())
+        fill = themeBackdrop(isActiveWindow());
+
+    ClientSideFramePaintOptions options;
+    options.windowRect = rect();
+    options.frameRect = windowFrameRect();
+    options.fill = fill;
+    options.stroke = colors.strokeDefault;
+    options.radius = qMax<qreal>(themeRadius().overlay, themeRadius().control);
+    options.shadow = themeShadow(Elevation::VeryHigh);
+    options.dark = effectiveTheme() == Dark;
+    options.useTranslucentMaterial = m_micaBackdrop;
+    options.effect = m_backdropEffect;
+    return options;
+}
+
 void Window::paintEvent(QPaintEvent*) {
     QPainter painter(this);
 
+    const int frameMargin = activeClientSideFrameMargin();
+    if (frameMargin > 0) {
+        paintClientSideFrame(painter, clientSideFramePaintOptions());
+        return;
+    }
+
     // Transparent top-level widgets keep their backing-store pixels between frames on macOS.
     // Replace them explicitly so page or material switches cannot retain the previous frame.
-    // zh_CN: macOS 的透明顶层控件会跨帧保留后备缓冲像素，需显式替换，避免页面或材质切换残留上一帧。
+    // zh_CN: macOS 透明顶层控件会跨帧保留 backing-store 像素，这里显式清空。
     if (m_micaBackdrop) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(rect(), Qt::transparent);
@@ -213,16 +329,8 @@ void Window::paintEvent(QPaintEvent*) {
     }
 
     const auto& colors = themeColors();
-    // Fill the deepest backdrop with the SAME chromeBackdropFill() the title bar and nav pane use,
-    // not a flat bgCanvas. Under a translucent top-level the chrome's own fill is cleared where a
-    // transparent child (the nav pane) sits, so the pane reveals this window backing — if it stayed a
-    // flat bgCanvas while the title bar washed toward bgLayer on focus loss, the title bar and nav
-    // pane would drift apart (the Normal-mode "titlebar ≠ nav" seam). Sharing one source keeps them
-    // identical in both the active and inactive states.
-    // zh_CN: 用与标题栏/导航栏完全相同的 themeBackdrop(active) 填充最底层背景，而非扁平 bgCanvas。半透明顶层下，
-    // chrome 自身的填充在透明子控件（导航窗格）所在处会被清除，故窗格透出此窗口底；若它保持扁平 bgCanvas 而标题栏
-    // 在失焦时洗向 bgLayer，标题栏与导航窗格就会分叉（Normal 模式「标题栏≠导航栏」的缝）。共用同一来源使二者在激活
-    // 与非激活态都一致。
+    // Use the same active/inactive backdrop source as the title bar and nav pane.
+    // zh_CN: 使用与标题栏、导航栏一致的激活/非激活背景来源，避免 Normal 模式接缝。
     const QColor backdrop = chromeBackdropFill(this, isActiveWindow());
     painter.fillRect(rect(), backdrop.isValid() ? backdrop : themeBackdrop(isActiveWindow()));
 
@@ -232,8 +340,31 @@ void Window::paintEvent(QPaintEvent*) {
     }
 }
 
+void Window::mousePressEvent(QMouseEvent* event) {
+    if (handleResizeBorderMouseEvent(this, event))
+        return;
+
+    QWidget::mousePressEvent(event);
+}
+
+void Window::mouseMoveEvent(QMouseEvent* event) {
+    if (handleResizeBorderMouseEvent(this, event))
+        return;
+
+    QWidget::mouseMoveEvent(event);
+}
+
+void Window::mouseReleaseEvent(QMouseEvent* event) {
+    if (handleResizeBorderMouseEvent(this, event))
+        return;
+
+    QWidget::mouseReleaseEvent(event);
+}
+
 void Window::resizeEvent(QResizeEvent* event) {
     QWidget::resizeEvent(event);
+    syncClientSideFrameMargins();
+    syncClientSideFrameShape();
     syncTitleBarSystemInsets();
     updateChromeOptions();
 }
@@ -241,23 +372,20 @@ void Window::resizeEvent(QResizeEvent* event) {
 void Window::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
     m_chrome.applyPlatformWindowFlags();
-    if (m_windowTranslucent)
+    if (m_systemBackdropSupported)
         m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark);
+    syncClientSideFrameMargins();
+    syncClientSideFrameShape();
     syncTitleBarSystemInsets();
     updateChromeOptions();
 
-    // On first show DWM may not composite the Mica backdrop until the window is next
-    // (de)activated — and the window is move()d into place right after show(), before Qt's
-    // translucent composition has settled. Re-assert the backdrop + sheet-of-glass once the event
-    // loop is running (window fully realized and placed); applySystemBackdrop forces a frame
-    // refresh so Mica appears immediately, without the user switching away and back.
-    // zh_CN: 首次显示时 DWM 可能要等窗口下次激活/失活才合成 Mica；而窗口在 show() 后立刻被 move() 定位，
-    // 此时 Qt 的半透明合成尚未稳定。待事件循环启动（窗口完全就绪并定位）后，重新施加背景 + 整窗玻璃；
-    // applySystemBackdrop 会触发 frame 刷新，使 Mica 立即显示，无需切走再切回。
-    if (m_windowTranslucent && !m_micaBackdropPrimed) {
+    // Re-assert the system backdrop after the first event-loop turn, once the
+    // native window is realized and placed.
+    // zh_CN: 首次显示后等原生窗口完成创建和定位，再重新施加系统背景。
+    if (m_systemBackdropSupported && !m_micaBackdropPrimed) {
         m_micaBackdropPrimed = true;
         QTimer::singleShot(0, this, [this] {
-            if (!m_windowTranslucent || !isVisible())
+            if (!m_systemBackdropSupported || !isVisible())
                 return;
             updateChromeOptions();                                 // re-extend the sheet-of-glass
             m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark,
@@ -275,13 +403,17 @@ void Window::changeEvent(QEvent* event) {
         updateChromeOptions();
     }
 
-    // Repaint the backdrop when the window activates/deactivates so it tracks the focus wash in
-    // lock-step with the title bar and nav pane (both already repaint on WindowActivate/Deactivate).
-    // Without this the deepest backdrop kept its last-painted focus state and the chrome drifted.
-    // zh_CN: 窗口激活/失活时重绘背景，使其与标题栏、导航窗格（二者已在 WindowActivate/Deactivate 时重绘）同步跟随
-    // 焦点洗色。否则最底层背景会停在上次绘制的焦点状态，与 chrome 分叉。
+    // Repaint the deepest backdrop on activation changes so it stays in sync
+    // with title/nav focus tint.
+    // zh_CN: 窗口激活状态变化时重绘底层背景，使其与标题栏/导航栏焦点色同步。
     if (event->type() == QEvent::ActivationChange)
         update();
+    if (event->type() == QEvent::WindowStateChange) {
+        syncClientSideFrameMargins();
+        syncClientSideFrameShape();
+        syncTitleBarSystemInsets();
+        updateChromeOptions();
+    }
 }
 
 bool Window::nativeEvent(const QByteArray& eventType,
@@ -296,6 +428,7 @@ void Window::setChromeInteractive(bool interactive) {
     m_chromeInteractive = interactive;
     if (m_captionButtonHost)
         m_captionButtonHost->setEnabled(interactive);
+    syncClientSideResizeInput();
     updateChromeOptions();
 }
 
@@ -304,14 +437,16 @@ void Window::updateChromeOptions() {
         return;
 
     compatibility::WindowChromeOptions options = m_chrome.options();
-    options.titleBarRect = m_titleBar->isVisible() ? m_titleBar->geometry() : QRect();
+    options.titleBarRect = m_titleBar->isVisible()
+        ? QRect(m_titleBar->mapTo(this, QPoint(0, 0)), m_titleBar->size())
+        : QRect();
     options.dragExclusionRects.clear();
     if (m_titleBar->isVisible()) {
         for (const QRect& rect : m_titleBar->dragExclusionRects()) {
             options.dragExclusionRects << QRect(m_titleBar->mapTo(this, rect.topLeft()), rect.size());
         }
     }
-    options.resizeBorderWidth = 8;
+    options.resizeBorderWidth = ResizeBorderWidth;
     options.chromeInteractive = m_chromeInteractive;
     m_chrome.configure(options);
 }
@@ -327,7 +462,7 @@ void Window::syncTitleBarSystemInsets() {
 }
 
 void Window::setupCaptionButtons() {
-    if (!m_titleBar || !m_chrome.usesCustomWindowChrome())
+    if (!m_titleBar || !m_chrome.usesCustomWindowChrome() || m_captionButtonHost)
         return;
 
     m_captionButtonHost = new QWidget(m_titleBar);
@@ -364,7 +499,12 @@ void Window::setupCaptionButtons() {
                                         QStringLiteral("Close"));
     m_closeButton->setCriticalOnHover(true);
 
-    const int windowCornerRadius = themeRadius().control;
+    // Linux leaves the caption surface square and lets the top-level frame
+    // overlay clip the complete client surface once. Windows and macOS retain
+    // their established per-button corner radius.
+    // zh_CN: Linux 保持标题按钮表面为直角，由顶层窗框 overlay 对完整客户区统一裁剪；
+    // Windows/macOS 继续保留既有的按钮圆角。
+    const int windowCornerRadius = m_frameHost ? 0 : themeRadius().control;
     m_minimizeButton->setCornerRadii(QMargins(0, 0, 0, 0));
     m_maximizeButton->setCornerRadii(QMargins(0, 0, 0, 0));
     m_closeButton->setCornerRadii(QMargins(0, windowCornerRadius, 0, 0));
@@ -391,13 +531,8 @@ void Window::syncCaptionButtons() {
     if (!m_captionButtonHost || !m_titleBar)
         return;
 
-    // Always use our own Fluent caption buttons (even under Mica): they're anchored
-    // verticalCenter + right:0 to the full-width title bar, so they sit centered and flush to the
-    // edge — unlike the DWM glass buttons, which render top-aligned at the system caption height
-    // and inset by the resize frame. The native glass buttons are suppressed in the chrome layer
-    // (no WS_CAPTION), so there's no duplication. zh_CN: 始终使用自绘 Fluent 标题栏按钮（Mica 下也是）：
-    // 它们以 verticalCenter + right:0 锚定到满宽标题栏，故垂直居中且贴右边缘——不像 DWM 玻璃按钮那样顶部
-    // 对齐于系统 caption 高度、且被缩放边框内缩。原生玻璃按钮已在 chrome 层抑制（去掉 WS_CAPTION），不会重复。
+    // Fluent caption buttons are used only when this window owns custom chrome.
+    // zh_CN: 仅在窗口拥有自定义 chrome 时显示 Fluent 标题栏按钮。
     const bool showCaptionButtons = m_chrome.usesCustomWindowChrome();
     const int buttonHeight = m_titleBar->titleBarHeight();
     const int buttonCount = 3;
@@ -405,6 +540,10 @@ void Window::syncCaptionButtons() {
     for (auto* button : {m_minimizeButton, m_maximizeButton, m_closeButton}) {
         if (button)
             button->setFixedSize(CaptionButtonWidth, buttonHeight);
+    }
+    if (m_closeButton) {
+        const int windowCornerRadius = m_frameHost ? 0 : themeRadius().control;
+        m_closeButton->setCornerRadii(QMargins(0, windowCornerRadius, 0, 0));
     }
     m_captionButtonHost->setVisible(showCaptionButtons);
     updateMaximizeButtonIcon();
@@ -431,12 +570,124 @@ int Window::captionButtonReservedWidth() const {
     return m_chrome.nativeTitleBarTrailingInset();
 }
 
+int Window::activeClientSideFrameMargin() const {
+    if (isMaximized() || isFullScreen())
+        return 0;
+    return m_chrome.clientSideFrameMargin();
+}
+
+QRect Window::windowFrameRect() const {
+    return chromeFrameRect();
+}
+
+QRect Window::chromeFrameRect() const {
+    if (m_frameHost)
+        return m_frameHost->geometry();
+
+    const int margin = activeClientSideFrameMargin();
+    return rect().marginsRemoved(QMargins(margin, margin, margin, margin));
+}
+
+void Window::syncClientSideFrameMargins() {
+    if (!m_rootLayout)
+        return;
+
+    const int margin = activeClientSideFrameMargin();
+    const QMargins margins(margin, margin, margin, margin);
+    if (m_rootLayout->contentsMargins() == margins)
+        return;
+
+    m_rootLayout->setContentsMargins(margins);
+    updateGeometry();
+    syncClientSideFrameShape();
+    update();
+}
+
+void Window::syncClientSideFrameShape() {
+    const int frameMargin = activeClientSideFrameMargin();
+    const QRect surface = (frameMargin > 0 ? chromeFrameRect() : rect()).intersected(rect());
+    const QRect effectiveSurface = surface.isEmpty() ? rect() : surface;
+    const char* surfaceProperty = ::fluent::overlay::overlaySurfaceRectPropertyName();
+    if (property(surfaceProperty).toRect() != effectiveSurface)
+        setProperty(surfaceProperty, effectiveSurface);
+
+    // Windows and macOS do not own a client-side frame host. Stop here so
+    // Linux-only hit zones and rounded-frame repaints never enter their
+    // visible-window update path.
+    // zh_CN: Windows/macOS 没有客户端窗框容器；在此直接返回，使 Linux 专属遮罩、
+    // 命中区和圆角重绘完全不进入其可见窗口更新路径。
+    if (!m_frameHost) {
+        const char* radiusProperty = ::fluent::overlay::clientSideFrameRadiusPropertyName();
+        if (!qFuzzyIsNull(property(radiusProperty).toDouble()))
+            setProperty(radiusProperty, 0.0);
+        return;
+    }
+
+    const qreal radius = (frameMargin > 0 && !m_frameHost->rect().isEmpty())
+        ? qMax<qreal>(themeRadius().overlay, themeRadius().control)
+        : 0.0;
+    const char* radiusProperty = ::fluent::overlay::clientSideFrameRadiusPropertyName();
+    if (!qFuzzyCompare(property(radiusProperty).toDouble() + 1.0, radius + 1.0))
+        setProperty(radiusProperty, radius);
+    if (!qFuzzyCompare(m_frameHost->property(radiusProperty).toDouble() + 1.0, radius + 1.0))
+        m_frameHost->setProperty(radiusProperty, radius);
+    if (radius > 0.0) {
+        const QRegion frameMask = roundedRectRegion(m_frameHost->rect(), qCeil(radius));
+        if (m_frameHost->mask() != frameMask)
+            m_frameHost->setMask(frameMask);
+    } else if (!m_frameHost->mask().isEmpty()) {
+        m_frameHost->clearMask();
+    }
+    if (m_frameEdgeOverlay) {
+        m_frameEdgeOverlay->setGeometry(rect());
+        m_frameEdgeOverlay->setFrameVisualRect(chromeFrameRect());
+        m_frameEdgeOverlay->setFrameRadius(radius);
+        m_frameEdgeOverlay->setFrameStroke(themeColors().strokeDefault);
+        m_frameEdgeOverlay->setVisible(radius > 0.0);
+        const bool acceptsResizeInput = usesClientSideResizeInput()
+            && m_chromeInteractive && radius > 0.0;
+        if (acceptsResizeInput) {
+            const QRect edgeRect = m_frameEdgeOverlay->rect();
+            const int border = qMin(VisibleFrameResizeBorderWidth,
+                                    qMax(1, qMin(edgeRect.width(), edgeRect.height()) / 2));
+            m_frameEdgeOverlay->setResizeInputEnabled(true, border);
+        } else {
+            m_frameEdgeOverlay->setResizeInputEnabled(false, 1);
+        }
+        m_frameEdgeOverlay->raise();
+        m_frameEdgeOverlay->update();
+    }
+    if (m_titleBar)
+        m_titleBar->update();
+    syncCaptionButtons();
+}
+
+void Window::syncClientSideResizeInput() {
+    if (!usesClientSideResizeInput() && QWidget::mouseGrabber() == this)
+        releaseMouse();
+    syncClientSideFrameShape();
+}
+
+bool Window::usesClientSideResizeInput() const {
+    // Linux client-side chrome needs an application-owned edge surface on both
+    // Wayland and X11. The press is offered to QWindow::startSystemResize()
+    // first; only X11 falls back to manual geometry changes when the window
+    // manager declines that request.
+    // zh_CN: Linux 客户端窗框在 Wayland 和 X11 下都需要由应用提供边缘输入面。
+    // 首先调用 QWindow::startSystemResize()；仅当 X11 窗管拒绝时才回退到手动改几何。
+    return m_chrome.usesCustomWindowChrome() && m_chrome.clientSideFrameMargin() > 0;
+}
+
 void Window::handleTitleBarDragStarted(const QPoint& globalPos) {
     if (!m_chromeInteractive)  // modal: no dragging (covers the Qt fallback path too)
+        return;
+    if (isMaximized())
         return;
     updateChromeOptions();
     m_fallbackDragging = false;
     if (m_chrome.beginSystemMove(globalPos))
+        return;
+    if (!m_chrome.manualMoveResizeFallbackAllowed())
         return;
 
     m_fallbackDragging = true;
@@ -472,6 +723,120 @@ void Window::handleTitleBarContextMenuRequested(const QPoint& globalPos) {
     if (!m_chromeInteractive)
         return;
     m_chrome.showSystemMenu(globalPos);
+}
+
+Qt::Edges Window::resizeEdgesAtLocalPos(const QPoint& localPos) const {
+    Qt::Edges edges = resizeEdgesForHitTest(m_chrome.hitTestLocal(localPos));
+    if (edges != Qt::Edges() || activeClientSideFrameMargin() <= 0)
+        return edges;
+
+    const QRect outer = rect();
+    if (outer.contains(localPos)) {
+        const int outerBorder = qMax(ResizeBorderWidth, activeClientSideFrameMargin());
+        const bool left = localPos.x() < outer.left() + outerBorder;
+        const bool right = localPos.x() >= outer.right() - outerBorder + 1;
+        const bool top = localPos.y() < outer.top() + outerBorder;
+        const bool bottom = localPos.y() >= outer.bottom() - outerBorder + 1;
+
+        if (left)
+            edges |= Qt::LeftEdge;
+        if (right)
+            edges |= Qt::RightEdge;
+        if (top)
+            edges |= Qt::TopEdge;
+        if (bottom)
+            edges |= Qt::BottomEdge;
+        if (edges != Qt::Edges())
+            return edges;
+    }
+
+    const QRect frame = chromeFrameRect();
+    if (!frame.contains(localPos))
+        return Qt::Edges();
+
+    const int frameBorder = qMin(VisibleFrameResizeBorderWidth,
+                                 qMax(1, qMin(frame.width(), frame.height()) / 2));
+    const bool left = localPos.x() < frame.left() + frameBorder;
+    const bool right = localPos.x() >= frame.right() - frameBorder + 1;
+    const bool top = localPos.y() < frame.top() + frameBorder;
+    const bool bottom = localPos.y() >= frame.bottom() - frameBorder + 1;
+
+    if (left)
+        edges |= Qt::LeftEdge;
+    if (right)
+        edges |= Qt::RightEdge;
+    if (top)
+        edges |= Qt::TopEdge;
+    if (bottom)
+        edges |= Qt::BottomEdge;
+    return edges;
+}
+
+bool Window::handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event) {
+    if (!source || !event || !usesClientSideResizeInput())
+        return false;
+
+    const QEvent::Type type = event->type();
+    if (m_resizeSession->isActive()) {
+        if (type == QEvent::MouseMove) {
+            resizeFromGlobalPoint(fluentMouseGlobalPos(event));
+            event->accept();
+            return true;
+        }
+        if (type == QEvent::MouseButtonRelease && event->button() == Qt::LeftButton) {
+            m_resizeSession->finish();
+            if (QWidget::mouseGrabber() == this)
+                releaseMouse();
+            unsetCursor();
+            updateChromeOptions();
+            event->accept();
+            return true;
+        }
+    }
+
+    const bool overCaptionButton =
+        m_captionButtonHost
+        && (source == m_captionButtonHost || m_captionButtonHost->isAncestorOf(source));
+    if (overCaptionButton) {
+        return false;
+    }
+
+    if (!m_chromeInteractive || isMaximized()) {
+        return false;
+    }
+
+    const QPoint localPos = pointerLocalPosForWindow(source, this, event);
+
+    if (type == QEvent::MouseMove) {
+        return false;
+    }
+
+    if (type != QEvent::MouseButtonPress || event->button() != Qt::LeftButton)
+        return false;
+
+    updateChromeOptions();
+    const Qt::Edges edges = resizeEdgesAtLocalPos(localPos);
+    if (edges == Qt::Edges())
+        return false;
+
+    const QPoint globalPos = fluentMouseGlobalPos(event);
+    if (m_chrome.beginSystemResize(edges, globalPos)) {
+        event->accept();
+        return true;
+    }
+    if (!m_chrome.manualMoveResizeFallbackAllowed())
+        return false;
+
+    m_resizeSession->start(edges, globalPos, geometry());
+    setCursor(cursorShapeForResizeEdges(edges));
+    if (!QWidget::mouseGrabber())
+        grabMouse();
+    event->accept();
+    return true;
+}
+
+void Window::resizeFromGlobalPoint(const QPoint& globalPos) {
+    setGeometry(m_resizeSession->geometryForGlobalPoint(globalPos, minimumSize()));
 }
 
 } // namespace fluent::windowing

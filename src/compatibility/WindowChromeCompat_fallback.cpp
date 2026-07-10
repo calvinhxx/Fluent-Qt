@@ -1,6 +1,6 @@
 #include "WindowChromeCompat.h"
 
-#if !defined(Q_OS_WIN) && !defined(Q_OS_MAC)
+#if !defined(Q_OS_WIN) && !defined(Q_OS_MAC) && !defined(Q_OS_LINUX)
 
 namespace compatibility {
 namespace detail {
@@ -69,6 +69,18 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
     Q_UNUSED(effect);
     Q_UNUSED(dark);
     Q_UNUSED(forceRecomposite);
+    return false;
+}
+
+int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options) {
+    Q_UNUSED(window);
+    Q_UNUSED(options);
+    return 0;
+}
+
+bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options) {
+    Q_UNUSED(window);
+    Q_UNUSED(options);
     return false;
 }
 

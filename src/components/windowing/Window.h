@@ -1,14 +1,21 @@
 #ifndef FLUENTWINDOW_H
 #define FLUENTWINDOW_H
 
+#include <memory>
+
 #include <QPoint>
+#include <QRect>
 #include <QWidget>
 
 #include "compatibility/WindowChromeCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 
+class QMouseEvent;
+class QPaintEvent;
+class QResizeEvent;
 class QShowEvent;
+class QVBoxLayout;
 
 namespace fluent::basicinput {
 class Button;
@@ -16,15 +23,20 @@ class Button;
 
 namespace fluent::windowing {
 
+class ClientSideFrameEdgeOverlay;
+struct ClientSideFramePaintOptions;
 class TitleBar;
+class WindowResizeSession;
 
 /**
- * @brief Application shell window with custom title bar and content hosting.
- * zh_CN: 支持自定义标题栏和内容承载的应用外壳窗口。
+ * @brief Application shell window with title-bar and content hosting.
+ * zh_CN: 支持标题栏和内容承载的应用外壳窗口。
  *
- * Window provides the top-level surface for composing a TitleBar and application
- * content widget while keeping window chrome decisions in one component.
- * zh_CN: Window 提供组合 TitleBar 与应用内容控件的顶层表面，并集中管理窗口 chrome 决策。
+ * Window keeps platform chrome policy in one place. Native platform window
+ * management is preferred by default; client-side frame and resize handling are
+ * fallback/opt-in paths.
+ * zh_CN: Window 集中管理平台窗口 chrome 策略。默认优先使用系统窗口管理；
+ * 客户端边框和缩放处理仅作为回退或显式启用路径。
  */
 class Window : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -36,46 +48,55 @@ class Window : public QWidget, public FluentElement, public QMLPlus {
 
 public:
     explicit Window(QWidget* parent = nullptr);
-    ~Window() override = default;
+    ~Window() override;
 
     TitleBar* titleBar() const { return m_titleBar; }
     QWidget* contentHost() const { return m_contentHost; }
 
+    /**
+     * @brief Visible chrome/content frame in this window's local coordinates.
+     * zh_CN: 当前窗口局部坐标中的可见 chrome/内容框。
+     */
+    QRect chromeFrameRect() const;
+
     QWidget* contentWidget() const { return m_contentWidget; }
     void setContentWidget(QWidget* widget);
+
+    /**
+     * @brief Enables Fluent-managed title-bar/non-client integration.
+     * zh_CN: 启用由 Fluent 管理的标题栏/非客户区集成。
+     *
+     * This is an opt-in integration point. The platform adapter still decides
+     * whether native move/resize is available or a client-side fallback is needed.
+     * zh_CN: 这是显式启用的集成点；平台适配层仍决定使用系统移动/缩放，
+     * 还是启用客户端回退。
+     */
+    void setCustomWindowChromeEnabled(bool enabled);
+    bool customWindowChromeEnabled() const;
 
     void onThemeUpdated() override;
 
     /**
      * @brief Re-asserts the configured system backdrop (no-op when unsupported).
-     * zh_CN: 重新施加当前配置的系统背景（不支持时为空操作）。
-     *
-     * DWM occasionally fails to composite the backdrop on the very first show — a timing race
-     * with the translucent window coming up, so it lands on a flat neutral surface until the
-     * window is next activated. Call this from a reliably-late point (e.g. once startup loading
-     * finishes) to force the backdrop on without the user switching away and back.
-     * zh_CN: DWM 偶尔在首次显示时未能合成背景——与半透明窗口启动存在时序竞争，于是停在一片扁平中性表面，
-     * 直到窗口下次被激活。从一个可靠的较晚时机调用（如启动加载完成后），即可强制背景显示，无需用户切走再切回。
+     * zh_CN: 重新施加当前配置的系统背景；不支持时为空操作。
      */
     void reapplySystemBackdrop();
 
     /**
-     * @brief Sets the window background effect (Solid/Mica/Acrylic) and re-applies it live.
-     * zh_CN: 设置窗口背景效果（Solid/Mica/Acrylic）并实时重新施加。
+     * @brief Sets the window background effect and re-applies it live.
+     * zh_CN: 设置窗口背景效果并实时重新施加。
      *
-     * The top-level translucency decision is fixed at construction; switching effects updates the
-     * paint hint and requested OS backdrop type without restyling the native window. On platforms
-     * without backdrop support the effect collapses to Solid.
-     * zh_CN: 顶层半透明决策在构造时固定；切换效果只更新绘制提示与请求的系统背景类型，不重塑原生窗口。
-     * 不支持背景的平台上效果塌为 Solid。
+     * The top-level translucency decision is fixed at construction; switching
+     * effects updates paint hints and the requested OS backdrop type without
+     * restyling the native window.
+     * zh_CN: 顶层半透明策略在构造时固定；切换效果只更新绘制提示和请求的系统背景类型。
      */
     void setBackdropEffect(compatibility::BackdropEffect effect);
     compatibility::BackdropEffect backdropEffect() const { return m_backdropEffect; }
 
     /**
-     * @brief Enables/disables user move + resize via the window chrome (caption drag and resize
-     * borders). Disable to lock the window under a modal overlay. zh_CN: 启用/禁用经窗口 chrome 的用户移动+缩放
-     *(标题栏拖动与缩放边框)。禁用可在模态覆盖层下锁定窗口。
+     * @brief Enables/disables user move + resize through the window chrome.
+     * zh_CN: 启用或禁用通过窗口 chrome 进行的用户移动和缩放。
      */
     void setChromeInteractive(bool interactive);
     bool isChromeInteractive() const { return m_chromeInteractive; }
@@ -93,6 +114,9 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void changeEvent(QEvent* event) override;
@@ -114,8 +138,21 @@ private:
     void setupCaptionButtons();
     void updateMaximizeButtonIcon();
     int captionButtonReservedWidth() const;
+    int activeClientSideFrameMargin() const;
+    QRect windowFrameRect() const;
+    ClientSideFramePaintOptions clientSideFramePaintOptions() const;
+    void syncClientSideFrameMargins();
+    void syncClientSideFrameShape();
+    void syncClientSideResizeInput();
+    bool usesClientSideResizeInput() const;
+    Qt::Edges resizeEdgesAtLocalPos(const QPoint& localPos) const;
+    bool handleResizeBorderMouseEvent(QWidget* source, QMouseEvent* event);
+    void resizeFromGlobalPoint(const QPoint& globalPos);
 
     TitleBar* m_titleBar = nullptr;
+    QVBoxLayout* m_rootLayout = nullptr;
+    QWidget* m_frameHost = nullptr;
+    ClientSideFrameEdgeOverlay* m_frameEdgeOverlay = nullptr;
     QWidget* m_contentHost = nullptr;
     QWidget* m_contentWidget = nullptr;
     QWidget* m_captionButtonHost = nullptr;
@@ -123,27 +160,15 @@ private:
     fluent::basicinput::Button* m_maximizeButton = nullptr;
     fluent::basicinput::Button* m_closeButton = nullptr;
     compatibility::WindowChromeCompat m_chrome;
-    // The requested window background effect. Defaults to Mica; a later step lets settings choose it.
-    // zh_CN: 请求的窗口背景效果。默认 Mica；后续步骤由设置选择。
     compatibility::BackdropEffect m_backdropEffect = compatibility::BackdropEffect::Mica;
-    // Fixed at construction: the window surface is translucent (platform supports a system backdrop).
-    // Never toggled at runtime, so effect switches don't restyle the native window.
-    // zh_CN: 构造时固定：窗口表面半透明（平台支持系统背景）。运行时绝不切换，故效果切换不会重塑原生窗口。
     bool m_windowTranslucent = false;
-    // Paint-hint: true when surfaces should paint transparent to reveal the OS backdrop (Mica/Acrylic);
-    // false (Normal / unsupported) means they paint opaque themselves. Tracks m_backdropEffect.
-    // zh_CN: 绘制提示：true 表示表面应画透明以透出系统背景（Mica/Acrylic）；false（Normal / 不支持）表示自绘不透明。
-    // 跟随 m_backdropEffect。
+    bool m_systemBackdropSupported = false;
     bool m_micaBackdrop = false;
-    // One-shot guard so the deferred first-show backdrop refresh (which works around DWM not
-    // compositing Mica until the next activation) runs only once.
-    // zh_CN: 一次性标记：延迟到首次显示后再刷新背景（规避 DWM 要到下次激活才合成 Mica 的问题）仅执行一次。
     bool m_micaBackdropPrimed = false;
     bool m_fallbackDragging = false;
-    // When false, the chrome can't move or resize the window (modal overlays set this).
-    // zh_CN: 为 false 时 chrome 不能移动或缩放窗口(模态覆盖层会设置它)。
     bool m_chromeInteractive = true;
     QPoint m_fallbackDragOffset;
+    std::unique_ptr<WindowResizeSession> m_resizeSession;
 };
 
 } // namespace fluent::windowing

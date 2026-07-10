@@ -559,6 +559,18 @@ int nativeTitleBarLeadingInset(QWidget* window) {
     return 0;
 }
 
+int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options) {
+    Q_UNUSED(window);
+    Q_UNUSED(options);
+    return 0;
+}
+
+bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options) {
+    Q_UNUSED(window);
+    Q_UNUSED(options);
+    return false;
+}
+
 } // namespace detail
 } // namespace compatibility
 

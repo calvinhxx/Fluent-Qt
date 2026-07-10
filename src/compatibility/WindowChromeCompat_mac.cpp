@@ -584,6 +584,18 @@ int nativeTitleBarLeadingInset(QWidget* window) {
     return static_cast<int>(std::ceil(frame.origin.x + frame.size.width)) + kTrailingGap;
 }
 
+int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options) {
+    Q_UNUSED(window);
+    Q_UNUSED(options);
+    return 0;
+}
+
+bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options) {
+    Q_UNUSED(window);
+    Q_UNUSED(options);
+    return false;
+}
+
 bool platformSupportsSystemBackdrop() {
     // macOS gets the Mica-equivalent via a native NSVisualEffectView (vibrancy). Available on
     // every Qt 6.9-supported macOS, so just confirm the class is present.
