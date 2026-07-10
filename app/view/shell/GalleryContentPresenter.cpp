@@ -19,7 +19,7 @@ namespace {
 // Delay between showing the skeleton and building a cold page, long enough for the skeleton
 // to paint a frame first (so it actually appears) before the build briefly blocks the thread.
 // zh_CN: 显示骨架到构建冷页之间的延迟，足够骨架先绘制一帧（确保真的出现）再让构建短暂阻塞线程。
-constexpr int kSkeletonRevealMs = 80;
+constexpr int kSkeletonRevealMs = 32;
 
 // Time budget for splash-phase prewarm. Building pages freezes the GUI thread, so we only warm
 // while the splash hides it; once this elapses we stop and dismiss the splash, leaving the
@@ -140,6 +140,14 @@ void GalleryContentPresenter::prewarmRoutes(const QStringList& routeIds)
         emit prewarmFinished();
         return;
     }
+
+    // Prepare the reusable skeleton behind the startup splash, after Home is
+    // already current. It stays hidden (and its animation timer stays stopped)
+    // until a genuinely cold route is requested, removing Shimmer construction
+    // and first layout from the user's click path.
+    // zh_CN: Home 已成为当前页后，在启动 splash 背后预先准备可复用骨架。它保持隐藏，
+    // 动画定时器也不启动，直到真正请求冷路由；由此把 Shimmer 构造和首次布局移出点击路径。
+    ensureSkeleton();
 
     for (const QString& routeId : routeIds) {
         if (routeId.isEmpty() || m_routeStackIndex.contains(routeId) || m_prewarmQueue.contains(routeId))

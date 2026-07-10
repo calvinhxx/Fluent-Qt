@@ -7,10 +7,12 @@
 #include <QTimer>
 
 #include "components/foundation/FluentElement.h"
+#include "compatibility/WindowChromeCompat.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/windowing/TitleBar.h"
 #include "design/Typography.h"
+#include "model/GalleryContentCatalog.h"
 #include "utils/Log.h"
 #include "AppIcon.h"
 #include "GalleryContentPresenter.h"
@@ -69,6 +71,10 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     setObjectName(QStringLiteral("galleryWindow"));
     setWindowTitle(QStringLiteral("Fluent-Qt Gallery"));
     setWindowIcon(appicon::icon());
+    const auto chromePlatform = compatibility::WindowChromeCompat::currentPlatform();
+    setCustomWindowChromeEnabled(
+        chromePlatform == compatibility::WindowChromeCompat::Platform::Windows
+        || chromePlatform == compatibility::WindowChromeCompat::Platform::Linux);
     // Allow narrow windows so the adaptive nav can collapse to its compact / minimal
     // modes; a 980 floor would pin the layout above the 640 breakpoint.
     // zh_CN: 允许窄窗口，让自适应导航能进入紧凑/最小模式；980 的下限会把布局钉在 640 断点之上。
@@ -229,15 +235,29 @@ void GalleryWindow::prewarmRemainingRoutes()
     if (!m_contentPresenter)
         return;
 
-    // Warm the nav routes (in order) behind the splash, time-budgeted by the presenter. Home is
-    // already built; common top pages warm next so their first visit is instant, and the splash
-    // hides the build jank. zh_CN: 在 splash 背后按顺序预热导航路由，由 presenter 做时间预算。Home 已建好；
-    // 靠前的常用页接着预热，使其首次访问瞬时，且 splash 遮挡建页卡顿。
+    // Warm Home's directly clickable featured routes first, then the remaining
+    // navigation order. Debug builds may hit the fixed startup budget before the
+    // whole catalog is resident; prioritizing the landing-page entry points keeps
+    // Button/TabView/etc. instant without extending the splash.
+    // zh_CN: 先预热 Home 上可直接点击的精选路由，再按导航顺序补齐。Debug 构建可能在
+    // 全目录常驻前触及固定启动预算；优先落地页入口可让 Button/TabView 等保持瞬时，且不延长 splash。
     QStringList routeIds;
+    auto appendUnique = [&routeIds](const QString& routeId) {
+        if (!routeId.isEmpty() && !routeIds.contains(routeId))
+            routeIds.append(routeId);
+    };
+    if (const GalleryContentEntry* home = galleryContentEntry(
+            m_navigationViewModel.defaultRouteId())) {
+        for (const QString& routeId : home->relatedRouteIds)
+            appendUnique(routeId);
+    }
     if (m_mainNavigationPane)
-        routeIds += m_mainNavigationPane->routeIds();
-    if (m_footerNavigationPane)
-        routeIds += m_footerNavigationPane->routeIds();
+        for (const QString& routeId : m_mainNavigationPane->routeIds())
+            appendUnique(routeId);
+    if (m_footerNavigationPane) {
+        for (const QString& routeId : m_footerNavigationPane->routeIds())
+            appendUnique(routeId);
+    }
     m_contentPresenter->prewarmRoutes(routeIds);
 }
 
@@ -304,7 +324,7 @@ void GalleryWindow::maybeStartIntroTour()
     // Centered opener (no target/tail), then anchored coach marks. Each carries a leading glyph.
     // zh_CN: 居中开场(无目标/尾巴),随后是锚定的操作提示;每步带一个前导字形。
     steps.append({nullptr, Icons::Emoji,
-                  QStringLiteral("Welcome to Fluent Gallery 👋"),
+                  QStringLiteral("Welcome to Fluent Gallery"),
                   QStringLiteral("A live catalog of Fluent controls for Qt, with runnable samples. "
                                  "Here's a 15-second tour of the essentials."),
                   Tip::Auto,

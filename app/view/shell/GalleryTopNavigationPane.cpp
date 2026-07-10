@@ -173,7 +173,7 @@ void GalleryTopNavigationPane::showChildFlyout(const QString& routeId,
                        anchorTopLeft.y() + anchor->height() + kFlyoutVerticalOffset);
     cardTopLeft = fluent::overlay::clampCardTopLeft(cardTopLeft,
                                                     cardSize,
-                                                    host->rect(),
+                                                    fluent::overlay::overlaySurfaceRect(host),
                                                     kFlyoutWindowMargin);
 
     const QRect panelRect = fluent::overlay::visibleCardRect(

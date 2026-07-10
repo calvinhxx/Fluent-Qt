@@ -33,6 +33,7 @@
 #include "components/navigation/NavigationView.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/scrolling/ScrollView.h"
+#include "components/status_info/Shimmer.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
 #include "components/status_info/ToolTip.h"
@@ -42,6 +43,7 @@
 #include "view/shell/GalleryApplicationController.h"
 #include "view/support/GalleryCloseBehaviorPrompt.h"
 #include "view/shell/GalleryNavigationPane.h"
+#include "view/shell/GalleryPageSkeleton.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "view/widgets/GalleryEntryCard.h"
 #include "view/widgets/samples/WindowingSamples.h"
@@ -67,11 +69,13 @@ using fluent::gallery::GalleryEntryCard;
 using fluent::gallery::GalleryIntroTour;
 using fluent::gallery::GalleryNavigationPane;
 using fluent::gallery::GalleryNavigationViewModel;
+using fluent::gallery::GalleryPageSkeleton;
 using fluent::gallery::GallerySettings;
 using fluent::gallery::GalleryWindow;
 using fluent::gallery::SettingsPage;
 using fluent::navigation::NavigationView;
 using fluent::scrolling::ScrollView;
+using fluent::status_info::Shimmer;
 using fluent::status_info::ToolTip;
 using fluent::textfields::AutoSuggestBox;
 using fluent::windowing::TitleBar;
@@ -387,9 +391,42 @@ TEST_F(GalleryShellFrameworkTest, IntroTourSpotlightsAnchoredTarget)
 
     // The cut-out covers the target with a little breathing room around it.
     const QRect targetInWindow(target->mapTo(&window, QPoint(0, 0)), target->size());
-    EXPECT_TRUE(scrim->spotlightRect().contains(targetInWindow));
-    EXPECT_GT(scrim->spotlightRect().width(), targetInWindow.width());
-    EXPECT_GT(scrim->spotlightRect().height(), targetInWindow.height());
+    const QRect targetInScrim = targetInWindow.translated(-scrim->geometry().topLeft());
+    EXPECT_TRUE(scrim->spotlightRect().contains(targetInScrim));
+    EXPECT_GT(scrim->spotlightRect().width(), targetInScrim.width());
+    EXPECT_GT(scrim->spotlightRect().height(), targetInScrim.height());
+
+    window.close();
+}
+
+TEST_F(GalleryShellFrameworkTest, IntroTourScrimHonorsWindowSurfaceRadius)
+{
+    QWidget window;
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+    window.setProperty(::fluent::overlay::clientSideFrameRadiusPropertyName(), 18);
+
+    GalleryIntroTour tour(&window);
+    GalleryIntroTour::Step step;
+    step.title = QStringLiteral("Welcome");
+    step.body = QStringLiteral("Intro content");
+    step.centered = true;
+    tour.setSteps({step});
+    tour.start();
+
+    auto* scrim = window.findChild<SmokeOverlay*>(QStringLiteral("GalleryIntroTour.Scrim"));
+    ASSERT_NE(scrim, nullptr);
+    scrim->setProgress(1.0);
+
+    QImage image(scrim->size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    scrim->render(&painter);
+    painter.end();
+
+    EXPECT_EQ(image.pixelColor(0, 0).alpha(), 0);
+    EXPECT_GT(image.pixelColor(image.rect().center()).alpha(), 0);
 
     window.close();
 }
@@ -1154,6 +1191,48 @@ TEST_F(GalleryShellFrameworkTest, ComponentRoutesRetainParentCategories)
     EXPECT_TRUE(model.parentRouteId(QStringLiteral("settings")).isEmpty());
 }
 
+TEST_F(GalleryShellFrameworkTest, PreparesOneHiddenShimmerBeforeColdNavigation)
+{
+    GalleryWindow window;
+
+    auto* skeleton = window.findChild<GalleryPageSkeleton*>();
+    ASSERT_NE(skeleton, nullptr);
+    const QList<Shimmer*> shimmers = skeleton->findChildren<Shimmer*>();
+    ASSERT_EQ(shimmers.size(), 1);
+    EXPECT_FALSE(skeleton->isVisible());
+    EXPECT_FALSE(shimmers.constFirst()->isAnimationRunning());
+}
+
+TEST_F(GalleryShellFrameworkTest, ColdRouteSelectionKeepsPreparedSkeletonOffClickPath)
+{
+    GalleryWindow window;
+    auto* preparedSkeleton = window.findChild<GalleryPageSkeleton*>();
+    ASSERT_NE(preparedSkeleton, nullptr);
+
+    QElapsedTimer clickTimer;
+    clickTimer.start();
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("tab-view")));
+    const qint64 clickMs = clickTimer.elapsed();
+
+    EXPECT_EQ(window.findChild<GalleryPageSkeleton*>(), preparedSkeleton);
+    EXPECT_EQ(preparedSkeleton->findChildren<Shimmer*>().size(), 1);
+    EXPECT_LT(clickMs, 100)
+        << "Cold navigation should only swap in the prepared skeleton; page construction is deferred";
+}
+
+TEST_F(GalleryShellFrameworkTest, StartupPrewarmPrioritizesHomeFeaturedTabView)
+{
+    GalleryWindow window;
+    QTest::qWait(3200);
+    QApplication::processEvents();
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("tab-view")));
+    auto* page = window.currentContentPage();
+    ASSERT_NE(page, nullptr)
+        << "The Home-featured TabView route should be resident before the startup budget expires";
+    EXPECT_EQ(page->routeId(), QStringLiteral("tab-view"));
+}
+
 TEST_F(GalleryShellFrameworkTest, SelectRouteSwitchesContentPages)
 {
     GalleryWindow window;
@@ -1441,18 +1520,6 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
     for (auto* iconLabel : iconLabels)
         EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::SegoeFluentIcons);
-    const auto darkColors = page->themeColors();
-    for (auto* label : page->findChildren<fluent::textfields::Label*>()) {
-        if (label->objectName() == QStringLiteral("gallerySettingsSubtitle"))
-            QTRY_COMPARE_WITH_TIMEOUT(label->palette().color(QPalette::WindowText),
-                                      darkColors.textSecondary,
-                                      1000);
-        else
-            QTRY_COMPARE_WITH_TIMEOUT(label->palette().color(QPalette::WindowText),
-                                      darkColors.textPrimary,
-                                      1000);
-    }
-
     window.resize(460, 760);
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(page->width() < 640, 1000);
@@ -1572,6 +1639,52 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     themeChoice->setCurrentIndex(0);
     QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::System, 1000);
+}
+
+TEST_F(GalleryShellFrameworkTest, SettingsThemeSwitchKeepsLabelsReadableInDarkMode)
+{
+    auto& settings = GallerySettings::instance();
+    GallerySettingsRestorer restore(settings);
+    settings.setThemeMode(GallerySettings::ThemeMode::Light);
+
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("settings")));
+    QTRY_VERIFY_WITH_TIMEOUT(window.currentSettingsPage() != nullptr, 2000);
+
+    SettingsPage* page = window.currentSettingsPage();
+    ASSERT_NE(page, nullptr);
+    auto* themeChoice = page->findChild<ComboBox*>(
+        QStringLiteral("gallerySettingsThemeChoice"));
+    ASSERT_NE(themeChoice, nullptr);
+
+    themeChoice->setCurrentIndex(2);
+    QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::Dark, 1000);
+    QTRY_COMPARE_WITH_TIMEOUT(fluent::FluentElement::currentTheme(),
+                              fluent::FluentElement::Dark,
+                              1000);
+
+    const auto darkColors = page->themeColors();
+    const auto cssRgba = [](const QColor& color) {
+        return QStringLiteral("rgba(%1, %2, %3, %4)")
+            .arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
+    };
+    const auto labels = page->findChildren<fluent::textfields::Label*>();
+    ASSERT_FALSE(labels.isEmpty());
+    for (auto* label : labels) {
+        const QColor expected =
+            label->textColorRole() == fluent::textfields::Label::TextColorRole::Secondary
+                ? darkColors.textSecondary
+                : darkColors.textPrimary;
+        QTRY_COMPARE_WITH_TIMEOUT(label->palette().color(QPalette::WindowText),
+                                  expected,
+                                  1000);
+        QTRY_VERIFY_WITH_TIMEOUT(label->styleSheet().contains(cssRgba(expected)), 1000);
+    }
+
+    window.close();
 }
 
 TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpenOnCancel)
