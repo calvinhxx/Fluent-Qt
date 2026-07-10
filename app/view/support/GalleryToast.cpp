@@ -213,8 +213,9 @@ void showGalleryToast(QWidget* anchor, const QString& message)
     const QSize rootSize = ::fluent::overlay::outerSizeForVisibleCard(card, kShadowMargin);
     toast->resize(rootSize);
 
-    const QPoint cardTopLeft((host->width() - card.width()) / 2,
-                             kTitleBarHeight + kToastTopGap);
+    const QRect surface = ::fluent::overlay::overlaySurfaceRect(host);
+    const QPoint cardTopLeft(surface.center().x() - card.width() / 2,
+                             surface.top() + kTitleBarHeight + kToastTopGap);
     const QPoint endPos = ::fluent::overlay::outerTopLeftForVisibleCard(cardTopLeft,
                                                                         kShadowMargin);
     const QPoint startPos = endPos - QPoint(0, kSlideDistance);
