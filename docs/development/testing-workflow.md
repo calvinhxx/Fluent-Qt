@@ -44,6 +44,15 @@ ctest --preset vcpkg-osx -L '^animation$' --output-on-failure
 ctest --preset vcpkg-osx -N -L '^platform_macos$'
 ```
 
+Linux runs use the same anchored filters. The `vcpkg-linux` test preset excludes
+`local_desktop` by default; use `vcpkg-linux-local-desktop` to list tests that
+need a real X11 or Wayland desktop session:
+
+```bash
+ctest --preset vcpkg-linux -L '^ci_full$' --output-on-failure
+ctest --preset vcpkg-linux-local-desktop -N
+```
+
 - Use established tokens in new test names when a semantic label should apply:
   `VisualCheck`, `Interactive`, `Animation`/`Animated`, `Slow`, `Windows`/`Win32`,
   or `MacOS`/`MacOs`/`Darwin`/`Cocoa`.
@@ -53,11 +62,13 @@ ctest --preset vcpkg-osx -N -L '^platform_macos$'
 ## Validation Tiers
 
 - GitHub Actions `matrix=fast` is the default PR/push validation tier. It builds
-  a narrow Windows x64 Qt 6.2 target set and runs a macOS arm64 configure smoke.
+  narrow Linux x64 and Windows x64 Qt 6.2 target sets and runs a macOS arm64
+  configure smoke.
 - GitHub Actions `matrix=full` is the scheduled/manual CI matrix. macOS arm64
-  remains the broadest CI test lane for the curated `ci_full` subset; macOS x64
-  is a Gallery build smoke; Windows lanes cover targeted platform, Qt 5.15 API,
-  and ARM64 cross-build smoke coverage.
+  remains the broadest macOS test lane for the curated `ci_full` subset; Linux
+  covers Ubuntu 22.04 with distro Qt 6.2.x and official Qt 5.15.2 `gcc_64`;
+  macOS x64 is a Gallery build smoke; Windows lanes cover targeted platform,
+  Qt 5.15 API, and ARM64 cross-build smoke coverage.
 - The macOS arm64 full lane uses a limited build parallelism to avoid runner
   memory pressure while compiling and linking multiple Qt/GTest binaries.
 - CI build target selection is centralized in CMake:
@@ -85,6 +96,25 @@ cmake --build --preset vcpkg-windows --target fluent_qt_all_tests --parallel
 ctest --preset vcpkg-windows -L '^local_full$' --output-on-failure --timeout 180
 ```
 
+```bash
+cmake --preset vcpkg-linux
+cmake --build --preset vcpkg-linux --target fluent_qt_all_tests --parallel
+ctest --preset vcpkg-linux -L '^local_full$' --output-on-failure --timeout 180
+```
+
+On Linux, the `vcpkg-linux` test preset intentionally excludes `local_desktop`,
+so this command runs the headless-safe `local_full` subset. Run
+`vcpkg-linux-local-desktop -N` separately to discover tests that need a real
+desktop, after building the specific test target under review or the aggregate
+`fluent_qt_all_tests` target. Automated CTest runs inject `SKIP_VISUAL_TEST=1`;
+for real desktop behavior, run the target binary directly without
+`SKIP_VISUAL_TEST` and set `QT_QPA_PLATFORM=xcb` or `wayland` when your session
+needs an explicit platform.
+
+See [Linux Workflow](linux-workflow.md) for the desktop Linux portability target,
+Ubuntu 22.04 reference dependencies, local desktop commands, Qt 5.15.2
+official-kit validation, and optional WSL2 filesystem guidance.
+
 ## VisualCheck
 
 - Automated CTest runs inject `SKIP_VISUAL_TEST=1`; VisualCheck tests should
@@ -94,6 +124,11 @@ ctest --preset vcpkg-windows -L '^local_full$' --output-on-failure --timeout 180
 ```bash
 ./build/vcpkg-osx/tests/components/<category>/<test_target> --gtest_filter="*VisualCheck*"
 ```
+
+On Linux, use the corresponding `build/vcpkg-linux/...` binary path in an X11 or
+Wayland desktop session. WSLg is also suitable as an optional local validation
+host. Run these binaries directly so `SKIP_VISUAL_TEST` is not inherited from
+CTest.
 
 - For deterministic snapshot generation, run a migrated VisualCheck binary with
   `VISUAL_SNAPSHOT=1`:

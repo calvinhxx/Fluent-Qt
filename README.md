@@ -16,7 +16,7 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/calvinhxx/Fluent-Qt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/calvinhxx/Fluent-Qt?style=flat&color=111827"></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-111827.svg"></a>
-  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-111827.svg">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-111827.svg">
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
@@ -36,6 +36,12 @@
 | Library dependency | spdlog |
 | Tests | GTest |
 
+Linux targets general desktop environments through Qt's X11 (`xcb`) and Wayland
+platform plugins. Ubuntu 22.04 x64 with Qt 6.2.x is the CI/reference baseline,
+with official Qt 5.15.2 `gcc_64` used for Qt 5 validation. See
+[Linux Workflow](docs/development/linux-workflow.md) for portability scope,
+Qt 5/Qt 6 commands, desktop testing, and optional WSL2 development notes.
+
 ## 🛠 Build FluentQt uilib
 
 macOS arm64:
@@ -52,6 +58,14 @@ Windows x64:
 $env:VCPKG_ROOT = "D:\path\to\vcpkg"
 cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
 cmake --build --preset vcpkg-windows --target FluentQt
+```
+
+Linux x64:
+
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-linux --target FluentQt
 ```
 
 ## 🔌 Use FluentQt uilib
@@ -109,6 +123,11 @@ cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=ON
 cmake --build --preset vcpkg-windows --target fluent_qt_gallery
 ```
 
+```bash
+cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=ON
+cmake --build --preset vcpkg-linux --target fluent_qt_gallery
+```
+
 ## 📦 Package Gallery
 
 | Platform | Architecture | Packaging preset |
@@ -117,6 +136,7 @@ cmake --build --preset vcpkg-windows --target fluent_qt_gallery
 | Windows | ARM64 | `vcpkg-windows-arm64-installer` |
 | macOS | arm64 | `vcpkg-osx-dmg` |
 | macOS | x64 | `vcpkg-osx-x64-dmg` |
+| Linux | x64 (`.deb`) | `vcpkg-linux-deb` |
 
 macOS arm64 DMG:
 
@@ -134,13 +154,21 @@ cmake --build --preset vcpkg-windows-release
 cpack --preset vcpkg-windows-installer
 ```
 
+Linux x64 Debian package:
+
+```bash
+cmake --preset vcpkg-linux-release
+cmake --build --preset vcpkg-linux-release
+cpack --preset vcpkg-linux-deb
+```
+
 ## 📚 Documentation
 
 | Development | Testing | Architecture | Design |
 |---|---|---|---|
 | [Development workflow](docs/development/README.md) | [Testing workflow](docs/development/testing-workflow.md) | [Architecture contracts](docs/architecture/README.md) | [Design language references](docs/design-languages/README.md) |
 | [Release governance](docs/development/release-governance.md) | [Visual review](docs/development/visual-review.md) | [Overlay behavior](docs/architecture/overlay-behavior.md) | [Figma sources](docs/design-languages/figma-sources.md) |
-| [Packaging workflow](docs/development/packaging-workflow.md) |  |  |  |
+| [Packaging workflow](docs/development/packaging-workflow.md) | [Linux workflow](docs/development/linux-workflow.md) |  |  |
 
 ## 🔗 References
 
