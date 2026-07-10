@@ -1,16 +1,12 @@
 #ifndef WINDOWCHROMECOMPAT_H
 #define WINDOWCHROMECOMPAT_H
 
-// Architecture: this class is a thin per-OS ROUTER, not where the logic lives. Each public method
-// forwards to a detail::xxx() function implemented per platform in WindowChromeCompat_{win,mac,
-// fallback}.cpp (the if-win / else-if-mac / else branches, selected at compile time). The title
-// bar / nav / background COLORS are NOT here — they're painted by Window/TitleBar/NavigationView,
-// keyed off the fluentMicaBackdrop window property this class sets. Full map + diagram:
-// docs/architecture/window-chrome.md.
-// zh_CN: 本类是按 OS 分发的「路由」，逻辑不在这里。每个 public 方法转发到 detail::xxx()，其函数体按平台实现于
-// WindowChromeCompat_{win,mac,fallback}.cpp（即 if-win/else-if-mac/else 三分支，编译期选一）。标题栏/导航栏/
-// 背景颜色不在这里——由 Window/TitleBar/NavigationView 依据本类设置的 fluentMicaBackdrop 属性绘制。
-// 完整对照与图示见 docs/architecture/window-chrome.md。
+// Architecture: this class is a thin per-OS router. Public methods forward to
+// detail functions implemented in WindowChromeCompat_{win,mac,linux,fallback}.cpp.
+// Visual title-bar/content colors are painted by Window/TitleBar/NavigationView.
+// zh_CN: 本类是按平台分发的轻量路由。public 方法转发到各平台
+// WindowChromeCompat_{win,mac,linux,fallback}.cpp 中的 detail 实现。
+// 标题栏和内容颜色由 Window/TitleBar/NavigationView 绘制。
 
 #include <QByteArray>
 #include <QPoint>
@@ -35,15 +31,6 @@ using FluentNativeEventResult = long;
 /**
  * @brief Window background effect requested from the OS compositor.
  * zh_CN: 向系统合成器请求的窗口背景效果。
- *
- * Solid keeps an opaque window (the app paints its own themeBackdrop, incl. active/inactive).
- * Mica and Acrylic make the window translucent and ask the platform for its closest system
- * backdrop (Win11 DWM Mica/Acrylic or macOS NSVisualEffectView vibrancy). Windows 10
- * intentionally degrades to the opaque app-painted fallback; legacy Acrylic does not provide a
- * reliable Qt top-level backing store.
- * zh_CN: Solid 为不透明窗口（App 自绘 themeBackdrop，含激活/非激活）。Mica/Acrylic 使窗口半透明并向平台
- * 请求最接近的系统背景（Win11 DWM Mica/Acrylic、macOS 的 NSVisualEffectView；Windows 10 退化为不透明 fallback）
- * vibrancy），chrome 随之画透明以透出之。
  */
 enum class BackdropEffect { Solid, Mica, Acrylic };
 
@@ -71,8 +58,14 @@ struct WindowChromeOptions {
     int resizeBorderWidth = 8;
 
     /**
-     * @brief Enables custom non-client handling on platforms that support it.
-     * zh_CN: 在支持的平台启用自定义非客户区处理。
+     * @brief Enables Fluent-managed title-bar/non-client integration.
+     * zh_CN: 启用由 Fluent 管理的标题栏/非客户区集成。
+     *
+     * This does not mean "draw everything ourselves" on every platform. The
+     * platform implementation should use native window-management APIs first and
+     * expose client-side fallback only when needed.
+     * zh_CN: 这不表示所有平台都完全自绘。平台实现应优先使用系统窗口管理能力，
+     * 仅在需要时暴露客户端回退方案。
      */
     bool useCustomWindowChrome = false;
 
@@ -83,23 +76,15 @@ struct WindowChromeOptions {
     bool preferNativeMacControls = true;
 
     /**
-     * @brief When false, the whole non-client area (caption + resize borders) hit-tests as Client, so
-     * the window can't be moved or resized by its chrome (used to lock the window under a modal
-     * overlay). zh_CN: 为 false 时整个非客户区(标题栏 + 缩放边框)都按 Client 命中,窗口无法被 chrome 移动或缩放
-     *(用于在模态覆盖层下锁定窗口)。
+     * @brief Locks chrome move/resize when false, for modal overlays.
+     * zh_CN: 为 false 时锁定 chrome 移动/缩放，用于模态覆盖层。
      */
     bool chromeInteractive = true;
 };
 
 /**
- * @brief Cross-platform adapter for custom window chrome behavior.
- * zh_CN: 自定义窗口 chrome 行为的跨平台适配器。
- *
- * WindowChromeCompat keeps platform-specific title-bar flags, native hit testing,
- * system move/resize, and double-click behavior out of reusable widgets. Callers
- * provide geometry through WindowChromeOptions and forward native events when needed.
- * zh_CN: WindowChromeCompat 将平台标题栏 flag、原生命中测试、系统移动/缩放和双击行为
- * zh_CN: 从可复用控件中隔离出来。调用方通过 WindowChromeOptions 提供几何信息，并在需要时转发原生事件。
+ * @brief Cross-platform adapter for window chrome behavior.
+ * zh_CN: 窗口 chrome 行为的跨平台适配器。
  */
 class WindowChromeCompat {
 public:
@@ -110,12 +95,13 @@ public:
     enum class Platform {
         Windows,
         MacOS,
+        Linux,
         Other
     };
 
     /**
-     * @brief Logical hit-test result before it is mapped to native platform codes.
-     * zh_CN: 映射到平台原生 code 之前的逻辑命中测试结果。
+     * @brief Logical hit-test result before mapping to native platform codes.
+     * zh_CN: 映射到平台原生 code 前的逻辑命中测试结果。
      */
     enum class HitTest {
         Client,
@@ -146,26 +132,14 @@ public:
     void applyPlatformWindowFlags();
 
     /**
-     * @brief Whether this platform/OS supports a translucent system backdrop.
-     * zh_CN: 当前平台/系统是否支持半透明系统背景。
-     *
-     * Checked before show so the caller can decide on a translucent window surface.
-     * zh_CN: 在显示前检查，使调用方可据此决定是否使用半透明窗口表面。
+     * @brief Whether this platform supports a translucent system backdrop.
+     * zh_CN: 当前平台是否支持半透明系统背景。
      */
     bool systemBackdropSupported() const;
 
     /**
-     * @brief Applies the requested system backdrop effect for the current theme; returns success.
-     * zh_CN: 为当前主题施加请求的系统背景效果；返回是否成功。
-     *
-     * Requires a live native handle, so call it from showEvent / after winId().
-     * zh_CN: 需要有效的原生句柄，故应在 showEvent / winId() 之后调用。
-     *
-     * On Windows 11 the effect maps to a DWMWA_SYSTEMBACKDROP_TYPE value; Windows 10 uses the
-     * opaque app-painted fallback; on macOS it installs a native NSVisualEffectView (vibrancy).
-     * Solid is a no-op backdrop (the app paints its own). zh_CN: Windows 11 上效果映射为
-     * DWMWA_SYSTEMBACKDROP_TYPE 值；Windows 10 使用不透明 fallback；macOS 上安装原生
-     * NSVisualEffectView（vibrancy）。Solid 不施加系统背景（由 App 自绘）。
+     * @brief Applies the requested system backdrop effect; returns success.
+     * zh_CN: 施加请求的系统背景效果；返回是否成功。
      */
     bool applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite = false);
 
@@ -178,8 +152,8 @@ public:
                            FluentNativeEventResult* result);
 
     /**
-     * @brief Starts a platform system-move operation from a global cursor position.
-     * zh_CN: 从全局光标位置启动平台系统移动操作。
+     * @brief Starts a platform system-move operation.
+     * zh_CN: 启动平台系统移动操作。
      */
     bool beginSystemMove(const QPoint& globalPos);
 
@@ -196,19 +170,21 @@ public:
     bool performTitleBarDoubleClick();
 
     /**
-     * @brief Shows the platform system menu at the given global screen position.
-     * zh_CN: 在指定全局屏幕坐标处显示平台系统菜单。
+     * @brief Shows the platform system menu at the given global position.
+     * zh_CN: 在指定全局坐标处显示平台系统菜单。
      */
     bool showSystemMenu(const QPoint& globalPos);
 
     bool usesCustomWindowChrome() const;
     bool prefersNativeMacControls() const;
+    bool manualMoveResizeFallbackAllowed() const;
     int nativeTitleBarLeadingInset() const;
     int nativeTitleBarTrailingInset() const;
+    int clientSideFrameMargin() const;
     QWidget* window() const { return m_window; }
 
     /**
-     * @brief Classifies a local point against the configured title and resize regions.
+     * @brief Classifies a local point against configured title/resize regions.
      * zh_CN: 根据配置的标题栏和缩放区域对本地点进行命中分类。
      */
     HitTest hitTestLocal(const QPoint& localPos) const;
