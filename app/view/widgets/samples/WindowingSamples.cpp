@@ -583,6 +583,7 @@ QVector<GallerySample> windowSamples()
                    QStringLiteral("Use Window's built-in TitleBar to host search or actions while keeping chrome behavior."),
                    QStringLiteral("auto* window = new Window();\n"
                                   "window->setWindowTitle(\"Custom title bar\");\n"
+                                  "window->setCustomWindowChromeEnabled(true);\n"
                                   "\n"
                                   "auto* titleBarContent = new QWidget(window->titleBar());\n"
                                   "auto* layout = new QHBoxLayout(titleBarContent);\n"
@@ -623,6 +624,7 @@ QVector<GallerySample> windowSamples()
                            demoWindow = window;
                            window->setAttribute(Qt::WA_DeleteOnClose);
                            window->setWindowTitle(QStringLiteral("Custom title bar"));
+                           window->setCustomWindowChromeEnabled(true);
                            window->titleBar()->setContentWidget(makeTitleBarContent(
                                window->titleBar(),
                                QStringLiteral("Samples"),

@@ -3,6 +3,12 @@
 
 #include <QWidget>
 
+class QResizeEvent;
+
+namespace fluent::status_info {
+class Shimmer;
+}
+
 namespace fluent::gallery {
 
 /**
@@ -22,6 +28,14 @@ class GalleryPageSkeleton : public QWidget {
     Q_OBJECT
 public:
     explicit GalleryPageSkeleton(QWidget* parent = nullptr);
+
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+
+private:
+    void updateSkeletonElements();
+
+    fluent::status_info::Shimmer* m_shimmer = nullptr;
 };
 
 } // namespace fluent::gallery

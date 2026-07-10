@@ -63,7 +63,9 @@ private:
     void build();
     void applyStep(int index, bool animateSpotlight);  // content + card target/placement + dim spotlight
     void goToStep(int index);
+    QRect scrimGeometryForWindow() const;
     void syncScrimGeometry();
+    void syncScrimSurfaceRadius();
     void applyStepSpotlight(int index, bool animate);   // glide / pop the dim cut-out onto the target
     QRect spotlightRectFor(QWidget* target) const;      // target geometry in scrim-local coords + padding
     void finishTour();

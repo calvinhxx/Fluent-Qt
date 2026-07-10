@@ -709,10 +709,11 @@ void GalleryNavigationPane::showCompactFlyoutForIndex(const QModelIndex& index)
 
     const QSize contentSize = m_compactFlyoutPanel->sizeHint();
     QWidget* topLevel = m_treeView->window();
+    const QRect surface = fluent::overlay::overlaySurfaceRect(topLevel);
     const QPoint anchorTopLeft = m_compactFlyoutAnchor->mapTo(topLevel, QPoint(0, 0));
-    const int safeTop = qMax(kCompactFlyoutWindowMargin,
+    const int safeTop = qMax(surface.top() + kCompactFlyoutWindowMargin,
                              m_treeView->mapTo(topLevel, QPoint(0, 0)).y() + kCompactFlyoutWindowMargin);
-    const int safeBottom = topLevel->height() - kCompactFlyoutWindowMargin;
+    const int safeBottom = surface.bottom() + 1 - kCompactFlyoutWindowMargin;
     const int maxVisibleHeight = qMax(kRouteHeight, safeBottom - safeTop);
     const QSize cardSize(contentSize.width() + kCompactFlyoutContentMargins.left() + kCompactFlyoutContentMargins.right(),
                          qMin(contentSize.height() + kCompactFlyoutContentMargins.top() + kCompactFlyoutContentMargins.bottom(),

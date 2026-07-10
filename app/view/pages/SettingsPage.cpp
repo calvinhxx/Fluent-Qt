@@ -36,15 +36,7 @@ public:
     SecondaryLabel(const QString& text, QWidget* parent)
         : Label(text, parent)
     {
-        onThemeUpdated();
-    }
-
-    void onThemeUpdated() override
-    {
-        Label::onThemeUpdated();
-        QPalette textPalette = palette();
-        textPalette.setColor(QPalette::WindowText, themeColors().textSecondary);
-        setPalette(textPalette);
+        setTextColorRole(TextColorRole::Secondary);
     }
 };
 
@@ -104,6 +96,7 @@ public:
 
         auto* iconLabel = new fluent::textfields::Label(icon, this);
         iconLabel->setObjectName(QStringLiteral("gallerySettingsRowIcon"));
+        iconLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
         iconLabel->setAlignment(Qt::AlignCenter);
         QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
         iconFont.setPixelSize(19);
@@ -116,6 +109,7 @@ public:
         textLayout->setSpacing(1);
 
         auto* titleLabel = new fluent::textfields::Label(title, textColumn);
+        titleLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
         titleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
         auto* subtitleLabel = new SecondaryLabel(subtitle, textColumn);
         subtitleLabel->setObjectName(QStringLiteral("gallerySettingsSubtitle"));
@@ -216,6 +210,7 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
 
     m_titleLabel = new fluent::textfields::Label(item.title, m_viewport);
     m_titleLabel->setObjectName(QStringLiteral("gallerySettingsTitle"));
+    m_titleLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
     m_titleLabel->setFluentTypography(Typography::FontRole::Title);
     m_contentLayout->addWidget(m_titleLabel);
     m_contentLayout->addSpacing(16);
@@ -416,6 +411,7 @@ QWidget* SettingsPage::createSectionTitle(const QString& title)
 {
     auto* label = new fluent::textfields::Label(title, this);
     label->setObjectName(QStringLiteral("gallerySettingsSectionTitle"));
+    label->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
     label->setFluentTypography(Typography::FontRole::BodyStrong);
     label->setMinimumHeight(24);
     return label;

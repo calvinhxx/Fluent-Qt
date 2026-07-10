@@ -1,32 +1,26 @@
 #include "GalleryPageSkeleton.h"
 
+#include <QResizeEvent>
+#include <QSizePolicy>
 #include <QVBoxLayout>
 
 #include "components/status_info/Shimmer.h"
+#include "design/CornerRadius.h"
 #include "design/Spacing.h"
 
 namespace fluent::gallery {
 
 using fluent::status_info::Shimmer;
+using fluent::status_info::ShimmerPainter;
 
 namespace {
 
-// One shimmer block sized like a page element. ImageCard renders a single rounded rect that
-// re-fits the widget on resize, so blocks stay responsive to the content width. The phase
-// offset staggers each block's light sweep so the page shimmers as a gentle cascade rather
-// than in lockstep. zh_CN: 一个像页面元素的 shimmer 块。ImageCard 渲染单个圆角矩形并在 resize
-// 时重适配 widget，使块随内容宽度自适应。phase 偏移错开每块的扫光，使页面像柔和瀑布般依次微光而非整齐划一。
-Shimmer* makeBlock(QWidget* parent, int height, int maxWidth, qreal phase)
-{
-    auto* block = new Shimmer(parent);
-    block->setShimmerTemplate(Shimmer::ShimmerTemplate::ImageCard);
-    block->setFixedHeight(height);
-    if (maxWidth > 0)
-        block->setMaximumWidth(maxWidth);
-    block->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    block->setShimmerProgress(phase);
-    return block;
-}
+constexpr int kLeftMargin = 24;
+constexpr int kTopMargin = 34;
+constexpr int kRightMargin = 24;
+constexpr int kBottomMargin = 48;
+constexpr int kCardCount = 3;
+constexpr int kCardHeight = 132;
 
 } // namespace
 
@@ -34,27 +28,61 @@ GalleryPageSkeleton::GalleryPageSkeleton(QWidget* parent)
     : QWidget(parent)
 {
     auto* layout = new QVBoxLayout(this);
-    // Mirror GalleryContentPage's content margins (24, 34, 24, 48) and section spacing so the
-    // skeleton lands where the real heading/cards will, keeping the handover steady.
-    // zh_CN: 沿用 GalleryContentPage 的内容边距 (24, 34, 24, 48) 与分区间距，使骨架落在真标题/卡片
-    // 将出现的位置，让切换稳定不跳。
-    layout->setContentsMargins(24, 34, 24, 48);
-    layout->setSpacing(::Spacing::Standard);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
 
-    // Heading: a wide title bar and a narrower subtitle, left-aligned like the real header.
-    // zh_CN: 标题区：一条较宽的标题栏和一条较窄的副标题，左对齐，呼应真实头部。
-    layout->addWidget(makeBlock(this, ::Spacing::ControlHeight::Large, 320, 0.00), 0, Qt::AlignLeft);
-    layout->addWidget(makeBlock(this, ::Spacing::ControlHeight::Small, 460, 0.06), 0, Qt::AlignLeft);
-    layout->addSpacing(::Spacing::Medium);
+    // One full-page Shimmer paints every placeholder shape. The previous five
+    // child Shimmers each owned a 16 ms timer and a separate paint pass; creating
+    // them on the first cold navigation made the click path visibly hitch.
+    // zh_CN: 使用一个全页 Shimmer 绘制全部占位形状。此前五个子 Shimmer 各自持有
+    // 16ms 定时器并单独绘制，首次冷导航时创建它们会让点击路径明显卡顿。
+    m_shimmer = new Shimmer(this);
+    m_shimmer->setObjectName(QStringLiteral("galleryPageSkeletonShimmer"));
+    m_shimmer->setShimmerTemplate(Shimmer::ShimmerTemplate::Custom);
+    m_shimmer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    layout->addWidget(m_shimmer);
+    updateSkeletonElements();
+}
 
-    // A few full-width cards echoing the sample stack below the heading.
-    // zh_CN: 几张全宽卡片，呼应标题下方的示例堆叠。
-    constexpr int kCardCount = 3;
-    constexpr int kCardHeight = 132;
-    for (int i = 0; i < kCardCount; ++i)
-        layout->addWidget(makeBlock(this, kCardHeight, 0, 0.14 + 0.08 * i));
+void GalleryPageSkeleton::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    updateSkeletonElements();
+}
 
-    layout->addStretch(1);
+void GalleryPageSkeleton::updateSkeletonElements()
+{
+    if (!m_shimmer)
+        return;
+
+    QRectF content = QRectF(rect()).adjusted(kLeftMargin, kTopMargin,
+                                             -kRightMargin, -kBottomMargin);
+    if (content.isEmpty()) {
+        m_shimmer->clearElements();
+        return;
+    }
+
+    QVector<ShimmerPainter::Element> elements;
+    elements.reserve(2 + kCardCount);
+    qreal y = content.top();
+    const qreal titleWidth = qMin<qreal>(320.0, content.width());
+    const qreal subtitleWidth = qMin<qreal>(460.0, content.width());
+    elements.append({ShimmerPainter::Shape::RoundedRect,
+                     QRectF(content.left(), y, titleWidth, ::Spacing::ControlHeight::Large),
+                     CornerRadius::Control});
+    y += ::Spacing::ControlHeight::Large + ::Spacing::Standard;
+    elements.append({ShimmerPainter::Shape::RoundedRect,
+                     QRectF(content.left(), y, subtitleWidth, ::Spacing::ControlHeight::Small),
+                     CornerRadius::Control});
+    y += ::Spacing::ControlHeight::Small + ::Spacing::Medium + ::Spacing::Standard;
+
+    for (int i = 0; i < kCardCount; ++i) {
+        elements.append({ShimmerPainter::Shape::RoundedRect,
+                         QRectF(content.left(), y, content.width(), kCardHeight),
+                         CornerRadius::Control});
+        y += kCardHeight + ::Spacing::Standard;
+    }
+    m_shimmer->setElements(elements);
 }
 
 } // namespace fluent::gallery

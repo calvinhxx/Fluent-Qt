@@ -14,6 +14,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/dialogs_flyouts/Dialog.h"  // SmokeOverlay
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
 #include "components/windowing/Window.h"
 #include "compatibility/QtCompat.h"
@@ -146,10 +147,15 @@ QRect GalleryIntroTour::spotlightRectFor(QWidget* target) const
     QWidget* win = m_host ? m_host->window() : nullptr;
     if (!win || !target)
         return QRect();
+    const QRect surface = scrimGeometryForWindow();
+    if (surface.isEmpty())
+        return QRect();
+
     const QRect inWindow(target->mapTo(win, QPoint(0, 0)), target->size());
-    return inWindow.marginsAdded(QMargins(kSpotlightPadding, kSpotlightPadding,
-                                          kSpotlightPadding, kSpotlightPadding))
-        .intersected(win->rect());
+    const QRect inScrim = inWindow.translated(-surface.topLeft());
+    return inScrim.marginsAdded(QMargins(kSpotlightPadding, kSpotlightPadding,
+                                         kSpotlightPadding, kSpotlightPadding))
+        .intersected(QRect(QPoint(0, 0), surface.size()));
 }
 
 void GalleryIntroTour::applyStepSpotlight(int index, bool animate)
@@ -183,7 +189,8 @@ void GalleryIntroTour::applyStepSpotlight(int index, bool animate)
 void GalleryIntroTour::syncScrimGeometry()
 {
     if (m_scrim && m_host && m_host->window()) {
-        m_scrim->setGeometry(m_host->window()->rect());
+        m_scrim->setGeometry(scrimGeometryForWindow());
+        syncScrimSurfaceRadius();
         // The target moved with the window; re-anchor the cut-out without a glide. zh_CN: 目标随窗口移动,
         // 不滑动地重新对齐挖空。
         if (m_haveSpot && m_index >= 0 && m_index < m_steps.size()) {
@@ -192,6 +199,24 @@ void GalleryIntroTour::syncScrimGeometry()
                 m_scrim->setSpotlightRect(spotlightRectFor(step.target.data()));
         }
     }
+}
+
+QRect GalleryIntroTour::scrimGeometryForWindow() const
+{
+    QWidget* win = m_host ? m_host->window() : nullptr;
+    if (!win)
+        return QRect();
+
+    return ::fluent::overlay::overlaySurfaceRect(win);
+}
+
+void GalleryIntroTour::syncScrimSurfaceRadius()
+{
+    QWidget* win = m_host ? m_host->window() : nullptr;
+    if (!m_scrim || !win)
+        return;
+
+    m_scrim->setSurfaceRadius(qRound(::fluent::overlay::overlaySurfaceRadius(win)));
 }
 
 void GalleryIntroTour::start()
