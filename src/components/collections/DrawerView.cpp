@@ -578,7 +578,8 @@ void DrawerView::stopAnimation()
 QRect DrawerView::availableRect() const
 {
     QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
-    const QRect topRect = top ? top->rect() : QRect(QPoint(0, 0), sizeHint());
+    const QRect topRect = top ? ::fluent::overlay::overlaySurfaceRect(top)
+                              : QRect(QPoint(0, 0), sizeHint());
     if (topRect.isEmpty())
         return topRect;
 
@@ -694,7 +695,7 @@ void DrawerView::updateContentGeometry()
 void DrawerView::updateScrimGeometry()
 {
     QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
-    m_scrimGeometry = top ? top->rect() : QRect();
+    m_scrimGeometry = top ? ::fluent::overlay::overlaySurfaceRect(top) : QRect();
     if (m_scrim)
         m_scrim->setGeometry(m_scrimGeometry);
 }
@@ -727,7 +728,7 @@ void DrawerView::updateScrimState()
     if (auto* scrim = dynamic_cast<::fluent::overlay::OverlayScrim*>(m_scrim.data()))
         scrim->setModalAndDim(m_modal, m_dim);
     updateScrimOpacity();
-    m_scrim->setGeometry(top->rect());
+    m_scrim->setGeometry(::fluent::overlay::overlaySurfaceRect(top));
     m_scrim->show();
     raiseOverlayStack();
 }

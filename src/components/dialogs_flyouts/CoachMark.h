@@ -127,7 +127,9 @@ private:
     void queueTargetSync();
     void syncToTarget();
     bool syncThemeOverrideFromSource();
+    bool usesSameWindowSurfaceBackend() const;
     void attachToOwnerTopLevel();
+    void syncNativeTransientParent();
     double fadeOpacity() const;
     void setFadeOpacity(double opacity);
     void reposition(bool animated);  // place the window from target + placement

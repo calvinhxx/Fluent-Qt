@@ -20,9 +20,41 @@ constexpr const char* themeOverridePropertyName()
     return "fluentThemeOverride";
 }
 
+constexpr const char* overlaySurfaceRectPropertyName()
+{
+    return "fluentOverlaySurfaceRect";
+}
+
+constexpr const char* clientSideFrameRadiusPropertyName()
+{
+    return "fluentClientSideFrameRadius";
+}
+
 constexpr int defaultShadowMargin()
 {
     return ::Spacing::Standard;
+}
+
+inline QRect overlaySurfaceRect(const QWidget* topLevel)
+{
+    if (!topLevel)
+        return QRect();
+
+    const QVariant value = topLevel->property(overlaySurfaceRectPropertyName());
+    if (value.isValid() && value.canConvert<QRect>()) {
+        const QRect surface = value.toRect().intersected(topLevel->rect());
+        if (!surface.isEmpty())
+            return surface;
+    }
+
+    return topLevel->rect();
+}
+
+inline qreal overlaySurfaceRadius(const QWidget* topLevel)
+{
+    if (!topLevel)
+        return 0.0;
+    return qMax<qreal>(0.0, topLevel->property(clientSideFrameRadiusPropertyName()).toReal());
 }
 
 inline QMargins uniformShadowMargins(int shadowMargin = defaultShadowMargin())

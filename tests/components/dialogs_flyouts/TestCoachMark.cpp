@@ -6,6 +6,7 @@
 #include <QSignalSpy>
 #include <QTest>
 #include <QVBoxLayout>
+#include <QWindow>
 
 #include <cstdlib>
 
@@ -155,6 +156,21 @@ TEST_F(CoachMarkTest, SetOpenDelegates) {
     EXPECT_TRUE(coach.isOpen());
     coach.setOpen(false);
     EXPECT_FALSE(coach.isOpen());
+}
+
+TEST_F(CoachMarkTest, TopLevelSurfaceIsTransientToOwnerWindow) {
+    auto* target = makeTarget(QPoint(260, 220));
+
+    CoachMark coach(window);
+    coach.setTarget(target);
+    coach.open();
+    QApplication::processEvents();
+
+    ASSERT_NE(window->windowHandle(), nullptr);
+    ASSERT_NE(coach.windowHandle(), nullptr);
+    EXPECT_EQ(coach.windowHandle()->transientParent(), window->windowHandle());
+
+    coach.close();
 }
 
 // ── 5. Bottom placement: card sits below the target, horizontally centred ────
