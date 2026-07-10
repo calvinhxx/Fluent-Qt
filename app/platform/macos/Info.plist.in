@@ -22,8 +22,6 @@
     <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
     <key>CFBundleVersion</key>
     <string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
-    <!-- Render at native backing-store scale on Retina displays (raw Mach-O binaries get this
-         implicitly; a .app must opt in or AppKit upscales a 1x buffer and the UI looks blurry). -->
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>

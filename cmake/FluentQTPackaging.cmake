@@ -1,23 +1,24 @@
 include(GNUInstallDirs)
+include("${PROJECT_SOURCE_DIR}/app/GalleryMetadata.cmake")
 
 option(FLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME
     "Run macdeployqt or windeployqt while installing the packaged Gallery app"
     ON)
 
-if(NOT TARGET fluent_qt_gallery)
+if(NOT TARGET ${FLUENT_QT_GALLERY_EXECUTABLE_NAME})
     return()
 endif()
 
-# Ship the license file as a loose icon inside the Windows install tree. The macOS DMG window
-# deliberately keeps it out ? a drag-to-install image should contain only the app and the
-# Applications alias ? but macOS still surfaces the license as a mount-time SLA instead (see the
-# CPACK_RESOURCE_FILE_LICENSE in the APPLE branch below).
-# zh_CN: ?? Windows ?????????????? license?macOS DMG ??????(???????
-# ??? app ? Applications ??),? macOS ????? SLA ??????(??? APPLE ???
-# CPACK_RESOURCE_FILE_LICENSE)?
-if(NOT APPLE)
+# Ship the license in the platform-appropriate install location. The macOS DMG
+# deliberately keeps it out of the drag-to-install window and presents it as a
+# mount-time SLA instead.
+if(WIN32)
     install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
         DESTINATION "."
+        COMPONENT GalleryRuntime)
+elseif(UNIX AND NOT APPLE)
+    install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
+        DESTINATION "${CMAKE_INSTALL_DOCDIR}"
         COMPONENT GalleryRuntime)
 endif()
 
@@ -66,13 +67,12 @@ if(_fluent_qt_deployqt_executable)
 endif()
 
 # macOS bundle is renamed via OUTPUT_NAME (app/CMakeLists.txt); the Windows exe keeps the
-# snake_case target name. zh_CN: macOS bundle ? OUTPUT_NAME ??,Windows ????? target ??
+# snake_case target name.
 if(APPLE)
-    set(FLUENT_QT_GALLERY_BUNDLE_DIR "Fluent-Qt Gallery.app")
+    set(FLUENT_QT_GALLERY_BUNDLE_DIR "${FLUENT_QT_GALLERY_DISPLAY_NAME}.app")
 else()
-    set(FLUENT_QT_GALLERY_BUNDLE_DIR "fluent_qt_gallery.app")
+    set(FLUENT_QT_GALLERY_BUNDLE_DIR "${FLUENT_QT_GALLERY_EXECUTABLE_NAME}.app")
 endif()
-set(FLUENT_QT_GALLERY_EXECUTABLE_NAME "fluent_qt_gallery")
 configure_file(
     "${PROJECT_SOURCE_DIR}/cmake/InstallDeployQtRuntime.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/InstallDeployQtRuntime.cmake"
@@ -80,28 +80,23 @@ configure_file(
 install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/InstallDeployQtRuntime.cmake"
     COMPONENT GalleryRuntime)
 
-set(CPACK_PACKAGE_NAME "Fluent-Qt-Gallery")
-set(CPACK_PACKAGE_VENDOR "Fluent-Qt")
+set(CPACK_PACKAGE_NAME "${FLUENT_QT_GALLERY_PACKAGE_BASENAME}")
+set(CPACK_PACKAGE_VENDOR "${FLUENT_QT_GALLERY_ORGANIZATION_NAME}")
 set(CPACK_PACKAGE_CONTACT "Fluent-Qt maintainers")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "WinUI-style Qt Widgets gallery")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_CHECKSUM SHA256)
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "Fluent-Qt Gallery")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
 # Note: CPACK_RESOURCE_FILE_LICENSE is set per-platform in the APPLE/WIN32 branches below, not
-# globally, because each generator presents it differently ? a mount-time click-through SLA on the
+# globally, because each generator presents it differently: a mount-time click-through SLA on the
 # macOS DragNDrop image, and the installer license page on Windows NSIS.
-# zh_CN: CPACK_RESOURCE_FILE_LICENSE ??? APPLE/WIN32 ?????????,?????????
-# ?????????:macOS DragNDrop ????????? SLA,Windows NSIS ????????
 # Name the artifact after the architecture it actually contains, not the build host's processor:
 #   - macOS ships one single-arch DMG per CPU (arm64 / x86_64 packaged separately), so the suffix
-#     follows the requested CMAKE_OSX_ARCHITECTURES ? otherwise an x86_64 image cross-built on Apple
+#     follows the requested CMAKE_OSX_ARCHITECTURES; otherwise an x86_64 image cross-built on Apple
 #     Silicon would be mislabelled "arm64".
 #   - Windows cross-builds ARM64 via the VS generator (-A <arch>, CMAKE_VS_PLATFORM_NAME) while
 #     CMAKE_SYSTEM_PROCESSOR still reports the x64 host, so the suffix follows the VS platform name
 #     (normalized to x64 / arm64 / x86).
-# zh_CN: ?????????????,?????????:macOS arm64/x86_64 ?????? DMG,???
-# CMAKE_OSX_ARCHITECTURES(?? Apple Silicon ????? x86_64 ???? arm64);Windows ? VS ???
-# ???? ARM64,CMAKE_SYSTEM_PROCESSOR ?? x64 ??,???? VS ???(???? x64/arm64/x86)?
 set(_fluent_qt_pkg_arch "${CMAKE_SYSTEM_PROCESSOR}")
 if(APPLE AND CMAKE_OSX_ARCHITECTURES)
     list(LENGTH CMAKE_OSX_ARCHITECTURES _fluent_qt_osx_arch_count)
@@ -124,26 +119,21 @@ endif()
 set(CPACK_PACKAGE_FILE_NAME
     "${CPACK_PACKAGE_NAME}-${PROJECT_VERSION}-${CMAKE_SYSTEM_NAME}-${_fluent_qt_pkg_arch}")
 set(CPACK_PACKAGE_EXECUTABLES
-    "fluent_qt_gallery" "Fluent-Qt Gallery")
+    "${FLUENT_QT_GALLERY_EXECUTABLE_NAME}" "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
 
 if(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
-    set(CPACK_DMG_VOLUME_NAME "Fluent-Qt Gallery ${PROJECT_VERSION}")
+    set(CPACK_DMG_VOLUME_NAME "${FLUENT_QT_GALLERY_DISPLAY_NAME} ${PROJECT_VERSION}")
     set(CPACK_DMG_FORMAT "UDZO")
     # Present the license as a click-through SLA shown before the disk image mounts, so the user
     # accepts the terms before reaching the install window. DragNDrop turns an explicit
-    # CPACK_RESOURCE_FILE_LICENSE into the SLA; the license stays out of the window itself (the
-    # NOT-APPLE guard on install(FILES LICENSE) above keeps the drag-to-install layout clean).
-    # zh_CN: ????????????? SLA,???????????????DragNDrop ?????
-    # CPACK_RESOURCE_FILE_LICENSE ?? SLA;????????(?? install(FILES LICENSE) ?
-    # NOT-APPLE ?????????????)?
+    # CPACK_RESOURCE_FILE_LICENSE into the SLA; the platform-specific license
+    # install rules above keep the drag-to-install window clean.
     set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
     set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE ON)
     set(CPACK_DMG_SLA_LANGUAGES "English")
     # Style the mounted DMG as a drag-to-install window. DragNDrop adds the /Applications
     # symlink; the setup AppleScript positions the .app beside it over a HiDPI background.
-    # zh_CN: ????? DMG ??"????"???DragNDrop ???? /Applications ???
-    # ?? AppleScript ? HiDPI ????? .app ???????
     set(CPACK_DMG_BACKGROUND_IMAGE "${PROJECT_SOURCE_DIR}/app/assets/dmg-background.tiff")
     set(CPACK_DMG_DS_STORE_SETUP_SCRIPT "${PROJECT_SOURCE_DIR}/cmake/dmg-setup.applescript")
 elseif(WIN32)
@@ -151,9 +141,6 @@ elseif(WIN32)
     # app launches on a clean machine that has no VC++ redistributable installed. CMake locates these
     # from the detected MSVC toolset, which is reliable; windeployqt's --compiler-runtime only copies
     # them inside a Visual Studio developer environment.
-    # zh_CN: ? MSVC C/C++ ????vcruntime140.dll?msvcp140.dll ??????????? VC++ ????
-    # ?????????CMake ????? MSVC ???????????windeployqt ? --compiler-runtime
-    # ?? Visual Studio ???????????
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_INSTALL_BINDIR}")
     include(InstallRequiredSystemLibraries)
 
@@ -165,27 +152,24 @@ elseif(WIN32)
         "${CMAKE_CURRENT_LIST_DIR}/nsis-per-user-wrapper.cmd")
     set(CPACK_NSIS_INSTALL_ROOT "$LOCALAPPDATA\\\\Programs")
     set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
-    set(CPACK_NSIS_DISPLAY_NAME "Fluent-Qt Gallery")
-    set(CPACK_NSIS_PACKAGE_NAME "Fluent-Qt Gallery")
+    set(CPACK_NSIS_DISPLAY_NAME "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
+    set(CPACK_NSIS_PACKAGE_NAME "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_EXECUTABLES_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
     # Brand the installer + uninstaller wizard with the app icon (the macOS DMG has its background
     # image; this is the Windows equivalent). makensis reads these absolute source paths at package
     # time. Add/Remove Programs and the created shortcuts pick up the icon embedded in the exe.
-    # zh_CN: ????/?????????????? macOS DMG ??????makensis ???????????????
-    # ????"??/????"?????????? exe ???????
-    set(_fluent_qt_gallery_ico "${PROJECT_SOURCE_DIR}/app/assets/Fluent-Qt-Gallery.ico")
+    set(_fluent_qt_gallery_ico
+        "${PROJECT_SOURCE_DIR}/app/assets/${FLUENT_QT_GALLERY_ICON_BASENAME}.ico")
     set(CPACK_NSIS_MUI_ICON "${_fluent_qt_gallery_ico}")
     set(CPACK_NSIS_MUI_UNIICON "${_fluent_qt_gallery_ico}")
     set(CPACK_NSIS_INSTALLED_ICON_NAME
-        "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe")
+        "${CMAKE_INSTALL_BINDIR}\\\\${FLUENT_QT_GALLERY_EXECUTABLE_NAME}.exe")
     # Style the wizard like the macOS DMG instead of the raw NSIS grey look: a blue->green branded
     # sidebar on the Welcome/Finish pages, a small header banner on the inner pages, bottom branding
     # text, and a "run now" checkbox on the finish page. The bitmaps are 24-bit BMPs at the NSIS MUI
     # conventional sizes (sidebar 164x314, header 150x57), generated from the shared app-icon.png.
-    # zh_CN: ?????? macOS DMG???? NSIS ???????????/??????????????????
-    # ???????????"????"??????? NSIS MUI ??????? 164x314??? 150x57?? 24 ? BMP?
     set(_fluent_qt_welcome_bmp "${PROJECT_SOURCE_DIR}/app/assets/installer-welcome.bmp")
     set(_fluent_qt_header_bmp "${PROJECT_SOURCE_DIR}/app/assets/installer-header.bmp")
     file(TO_NATIVE_PATH "${_fluent_qt_welcome_bmp}" _fluent_qt_welcome_bmp_native)
@@ -197,36 +181,38 @@ elseif(WIN32)
     # No quotes (CPack mangles an embedded quote in CPACK_NSIS_DEFINES into ';') and a NATIVE backslash
     # path (NSIS's internal `File` command rejects forward slashes -> "no files found"). The path has
     # no spaces, so the unquoted form is safe.
-    # zh_CN: CPack ????? header ???????? `!define MUI_HEADERIMAGE` ????????
-    # CPACK_NSIS_DEFINES???????????????? CPack ?? ';'???????????
-    # ?NSIS ?? File ?????????? "no files found"????????????????
     # CPack writes CPACK_NSIS_DEFINES verbatim, so a native path with single backslashes makes the
     # re-read of CPackConfig.cmake choke on invalid escapes (e.g. "\w"). Double the backslashes so the
     # config parses back to single ones, which is what NSIS's File needs.
-    # zh_CN: CPack ???? CPACK_NSIS_DEFINES???????????? CPackConfig.cmake ????????
-    # ?? "\w"??????????????????????? NSIS File ???
     file(TO_NATIVE_PATH "${_fluent_qt_header_bmp}" _fluent_qt_header_bmp_native)
     string(REPLACE "\\" "\\\\" _fluent_qt_header_bmp_native "${_fluent_qt_header_bmp_native}")
     set(CPACK_NSIS_DEFINES "!define MUI_HEADERIMAGE_BITMAP ${_fluent_qt_header_bmp_native}")
-    set(CPACK_NSIS_BRANDING_TEXT "Fluent-Qt Gallery ${PROJECT_VERSION}")
-    # Offer to launch the app straight from the finish page. Give only the exe name ? the template
+    set(CPACK_NSIS_BRANDING_TEXT "${FLUENT_QT_GALLERY_DISPLAY_NAME} ${PROJECT_VERSION}")
+    # Offer to launch the app straight from the finish page. Give only the exe name; the template
     # prepends "$INSTDIR\<executables-dir>\" (here bin\), so a bin\ prefix would double it.
-    # zh_CN: ?????"????"??? exe ????????? "$INSTDIR\<?????>\"???? bin\??
-    # ? bin\ ??????
-    set(CPACK_NSIS_MUI_FINISHPAGE_RUN "fluent_qt_gallery.exe")
+    set(CPACK_NSIS_MUI_FINISHPAGE_RUN "${FLUENT_QT_GALLERY_EXECUTABLE_NAME}.exe")
     set(CPACK_NSIS_MENU_LINKS
-        "${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe" "Fluent-Qt Gallery")
+        "${CMAKE_INSTALL_BINDIR}\\\\${FLUENT_QT_GALLERY_EXECUTABLE_NAME}.exe"
+        "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
     # Always create a desktop shortcut. CPACK_CREATE_DESKTOP_LINKS would instead add an *unchecked*
     # checkbox to the NSIS "Install Options" page (and pull in the PATH radio page even with
     # MODIFY_PATH off), so no desktop icon appears unless the user happens to tick it. Create it
     # directly on install and remove it on uninstall; the .lnk inherits the exe's embedded icon.
-    # zh_CN: ??????????????? CPACK_CREATE_DESKTOP_LINKS ??? NSIS "Install Options"
-    # ?????????????????? MODIFY_PATH ???? PATH ?????????????????
-    # ???????????????.lnk ??? exe ?????
     set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS
-        "CreateShortCut '$DESKTOP\\\\Fluent-Qt Gallery.lnk' '$INSTDIR\\\\${CMAKE_INSTALL_BINDIR}\\\\fluent_qt_gallery.exe'")
+        "CreateShortCut '$DESKTOP\\\\${FLUENT_QT_GALLERY_DISPLAY_NAME}.lnk' '$INSTDIR\\\\${CMAKE_INSTALL_BINDIR}\\\\${FLUENT_QT_GALLERY_EXECUTABLE_NAME}.exe'")
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS
-        "Delete '$DESKTOP\\\\Fluent-Qt Gallery.lnk'")
+        "Delete '$DESKTOP\\\\${FLUENT_QT_GALLERY_DISPLAY_NAME}.lnk'")
+elseif(UNIX)
+    set(FLUENT_QT_PACKAGE_PLATFORM "linux")
+    set(CPACK_GENERATOR "DEB")
+    set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+    set(CPACK_DEBIAN_PACKAGE_NAME "${FLUENT_QT_GALLERY_LINUX_PACKAGE_NAME}")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Fluent-Qt maintainers")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "fonts-noto-color-emoji")
+    set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/calvinhxx/Fluent-Qt")
 endif()
 
 include(CPack)
