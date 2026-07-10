@@ -2,7 +2,7 @@
   "version": 6,
   "cmakeMinimumRequired": {
     "major": 3,
-    "minor": 23,
+    "minor": 25,
     "patch": 0
   },
   "configurePresets": [
@@ -61,6 +61,30 @@
       "displayName": "vcpkg macOS x64 Release",
       "description": "Intel/Rosetta release build used for DMG packaging.",
       "inherits": "vcpkg-osx-x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF"
+      }
+    },
+    {
+      "name": "vcpkg-linux",
+      "displayName": "vcpkg Linux x64 Debug",
+      "description": "Linux x64 build using vcpkg manifest dependencies. Qt is discovered from the local or system Qt installation.",
+      "inherits": "vcpkg-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
+    },
+    {
+      "name": "vcpkg-linux-release",
+      "displayName": "vcpkg Linux x64 Release",
+      "description": "Linux x64 release build using vcpkg manifest dependencies. Qt is discovered from the local or system Qt installation.",
+      "inherits": "vcpkg-linux",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "BUILD_TESTING": "OFF"
@@ -136,6 +160,16 @@
       "configuration": "Release"
     },
     {
+      "name": "vcpkg-linux",
+      "configurePreset": "vcpkg-linux",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vcpkg-linux-release",
+      "configurePreset": "vcpkg-linux-release",
+      "configuration": "Release"
+    },
+    {
       "name": "vcpkg-windows",
       "configurePreset": "vcpkg-windows",
       "configuration": "Debug"
@@ -169,6 +203,32 @@
       "name": "vcpkg-osx-x64",
       "configurePreset": "vcpkg-osx-x64",
       "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vcpkg-linux",
+      "configurePreset": "vcpkg-linux",
+      "configuration": "Debug",
+      "filter": {
+        "exclude": {
+          "label": "^local_desktop$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vcpkg-linux-local-desktop",
+      "configurePreset": "vcpkg-linux",
+      "configuration": "Debug",
+      "filter": {
+        "include": {
+          "label": "^local_desktop$"
+        }
+      },
       "output": {
         "outputOnFailure": true
       }
@@ -218,6 +278,16 @@
       "configurePreset": "vcpkg-windows-arm64-release",
       "generators": [
         "NSIS"
+      ],
+      "configurations": [
+        "Release"
+      ]
+    },
+    {
+      "name": "vcpkg-linux-deb",
+      "configurePreset": "vcpkg-linux-release",
+      "generators": [
+        "DEB"
       ],
       "configurations": [
         "Release"
