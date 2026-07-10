@@ -882,7 +882,7 @@ TEST_P(TabViewDesignLanguageTest, ChangingSelectionRepaintsTabs)
     QImage second = tabs->grab().toImage();
     ASSERT_FALSE(second.isNull());
     for (int i = 0; i < 80 && first == second; ++i) {
-        QApplication::processEvents(QEventLoop::AllEvents, 10);
+        QTest::qWait(10);
         second = tabs->grab().toImage();
     }
 

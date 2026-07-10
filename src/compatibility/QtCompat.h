@@ -28,6 +28,7 @@
 #include <QAbstractItemView>
 #include <QEvent>
 #include <QGuiApplication>
+#include <QHoverEvent>
 #include <QIcon>
 #include <QKeyEvent>
 #include <QKeySequence>
@@ -126,6 +127,23 @@ inline QPoint fluentMouseGlobalPos(const QMouseEvent* e) {
     return e->globalPosition().toPoint();
 #else
     return e->globalPos();
+#endif
+}
+
+inline QPoint fluentHoverPos(const QHoverEvent* e) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return e->position().toPoint();
+#else
+    return e->pos();
+#endif
+}
+
+inline QPoint fluentEnterPos(const FluentEnterEvent* e) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return e->position().toPoint();
+#else
+    Q_UNUSED(e);
+    return QPoint();
 #endif
 }
 
@@ -370,8 +388,8 @@ using FluentColorComponent = qreal;
 // Qt 6 removed the delta/orientation constructor used by Qt 5.
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #define FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(name, localPos, globalPos, pixelDeltaValue, angleDeltaValue, buttonsValue, modifiersValue, phaseValue, invertedValue) \
-    QWheelEvent name(QPointF(localPos), \
-                     QPointF(globalPos), \
+    QWheelEvent name(QPointF{(localPos)}, \
+                     QPointF{(globalPos)}, \
                      (pixelDeltaValue), \
                      (angleDeltaValue), \
                      (buttonsValue), \
@@ -382,8 +400,8 @@ using FluentColorComponent = qreal;
 #define FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(name, localPos, globalPos, pixelDeltaValue, angleDeltaValue, buttonsValue, modifiersValue, phaseValue, invertedValue) \
     Q_UNUSED(phaseValue); \
     Q_UNUSED(invertedValue); \
-    QWheelEvent name(QPointF(localPos), \
-                     QPointF(globalPos), \
+    QWheelEvent name(QPointF{(localPos)}, \
+                     QPointF{(globalPos)}, \
                      (pixelDeltaValue), \
                      (angleDeltaValue), \
                      (angleDeltaValue).y(), \

@@ -5,6 +5,7 @@
 #include <QFont>
 #include <QString>
 #include <QEasingCurve>
+#include "compatibility/FontCompat.h"
 #include "compatibility/QtCompat.h"
 #include "design/Elevation.h"
 #include "design/Animation.h"
@@ -90,8 +91,7 @@ public:
         QFont toQFont() const {
             QFont font(family, -1, weight);
             font.setPixelSize(size);
-            if (!styleName.isEmpty())
-                font.setStyleName(styleName);
+            fluentApplyFontStyleName(font, styleName);
             return font;
         }
     };
