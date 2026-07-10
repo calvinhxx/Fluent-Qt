@@ -12,6 +12,8 @@ surface; the reusable component library is installed through the separate
   - macOS: `macdeployqt`.
   - Windows: `windeployqt`.
 - Windows NSIS packaging requires NSIS to be installed and available to CPack.
+- Linux DEB packaging requires `dpkg-shlibdeps` (provided by `dpkg-dev`; it is
+  installed transitively by Ubuntu's `build-essential`).
 
 The packaging install step runs the Qt deployment tool by default. Set
 `FLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME=OFF` only for local smoke packages that are
@@ -21,6 +23,27 @@ Gallery packages intentionally include only the `GalleryRuntime` component. This
 keeps DMG/NSIS artifacts focused on the showcase application while normal
 `cmake --install` or `cmake --install --component Development` remains available
 for SDK-style library installs.
+
+Gallery application identity is defined once in `app/GalleryMetadata.cmake`.
+CMake applies it to the native metadata templates under `app/platform/windows`,
+`app/platform/macos`, and `app/platform/linux`; do not duplicate the application
+ID or display name in those templates.
+
+## Linux DEB
+
+```bash
+cmake --preset vcpkg-linux-release
+cmake --build --preset vcpkg-linux-release
+cpack --preset vcpkg-linux-deb
+# -> Fluent-Qt-Gallery-<version>-Linux-<architecture>.deb
+```
+
+The package installs the Gallery executable under `/usr/bin`, a freedesktop
+entry under `/usr/share/applications`, and the application icon in the hicolor
+icon theme. CPack runs `dpkg-shlibdeps` so the package declares the Qt and system
+libraries required by the binary built on the Ubuntu 22.04 baseline. The Qt
+runtime is intentionally consumed from distribution packages rather than
+duplicated inside the DEB.
 
 ## macOS DMG
 
@@ -78,7 +101,8 @@ CPack 4.2's bundled NSIS template is machine-wide by default, so
 just before compilation, keeping the per-user policy centralized in the
 packaging layer without maintaining a full copied NSIS template.
 
-The executable embeds the app icon and version metadata via `app/app.rc.in`
+The executable embeds the app icon and version metadata via
+`app/platform/windows/app.rc.in`
 (compiled into a `.rc` at configure time), so Explorer, the taskbar, Alt-Tab and
 the installer-created shortcuts all show the Fluent-Qt Gallery icon. The icon
 source of truth is `app/assets/Fluent-Qt-Gallery.ico`, the Windows counterpart to
