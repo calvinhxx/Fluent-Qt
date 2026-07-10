@@ -16,7 +16,7 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/calvinhxx/Fluent-Qt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/calvinhxx/Fluent-Qt?style=flat&color=111827"></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-111827.svg"></a>
-  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-111827.svg">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-111827.svg">
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
@@ -36,6 +36,11 @@
 | 库依赖 | spdlog |
 | 测试 | GTest |
 
+Linux 通过 Qt 的 X11（`xcb`）与 Wayland 平台插件面向通用桌面环境。
+Ubuntu 22.04 x64 + Qt 6.2.x 是 CI/参考基线，official Qt 5.15.2 `gcc_64`
+用于 Qt 5 验证。兼容范围、Qt 5/Qt 6 命令、桌面测试和可选 WSL2 开发说明见
+[Linux 工作流](docs/development/linux-workflow.md)。
+
 ## 🛠 FluentQt uilib 编译
 
 macOS arm64:
@@ -52,6 +57,14 @@ Windows x64:
 $env:VCPKG_ROOT = "D:\path\to\vcpkg"
 cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
 cmake --build --preset vcpkg-windows --target FluentQt
+```
+
+Linux x64:
+
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-linux --target FluentQt
 ```
 
 ## 🔌 FluentQt uilib 使用
@@ -109,6 +122,11 @@ cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=ON
 cmake --build --preset vcpkg-windows --target fluent_qt_gallery
 ```
 
+```bash
+cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=ON
+cmake --build --preset vcpkg-linux --target fluent_qt_gallery
+```
+
 ## 📦 Gallery 打包
 
 | 平台 | 架构 | 打包 preset |
@@ -117,6 +135,7 @@ cmake --build --preset vcpkg-windows --target fluent_qt_gallery
 | Windows | ARM64 | `vcpkg-windows-arm64-installer` |
 | macOS | arm64 | `vcpkg-osx-dmg` |
 | macOS | x64 | `vcpkg-osx-x64-dmg` |
+| Linux | x64（`.deb`） | `vcpkg-linux-deb` |
 
 macOS arm64 DMG:
 
@@ -134,13 +153,21 @@ cmake --build --preset vcpkg-windows-release
 cpack --preset vcpkg-windows-installer
 ```
 
+Linux x64 Debian 包：
+
+```bash
+cmake --preset vcpkg-linux-release
+cmake --build --preset vcpkg-linux-release
+cpack --preset vcpkg-linux-deb
+```
+
 ## 📚 文档
 
 | 开发 | 测试 | 架构 | 设计 |
 |---|---|---|---|
 | [开发工作流](docs/development/README.md) | [测试工作流](docs/development/testing-workflow.md) | [架构约定](docs/architecture/README.md) | [设计语言参考](docs/design-languages/README.md) |
 | [发布治理](docs/development/release-governance.md) | [视觉验收](docs/development/visual-review.md) | [Overlay 行为](docs/architecture/overlay-behavior.md) | [Figma 来源](docs/design-languages/figma-sources.md) |
-| [打包工作流](docs/development/packaging-workflow.md) |  |  |  |
+| [打包工作流](docs/development/packaging-workflow.md) | [Linux 工作流](docs/development/linux-workflow.md) |  |  |
 
 ## 🔗 参考
 

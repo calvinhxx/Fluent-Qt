@@ -4,8 +4,9 @@
 
 - Use [README.md](README.md) for the project overview, supported Qt versions, CMake presets, and local IDE expectations.
 - Use [docs/development/README.md](docs/development/README.md) as the index for reusable workflow rules; link to those docs instead of copying them into new agent files.
+- Use [docs/development/linux-workflow.md](docs/development/linux-workflow.md) for desktop Linux portability, supported Qt versions, CI baselines, and Linux build/test presets.
 - Use [docs/development/release-governance.md](docs/development/release-governance.md) for lightweight branch, Angular-style Conventional Commit, version, tag, changelog, and release checklist rules.
-- Use [docs/development/packaging-workflow.md](docs/development/packaging-workflow.md) for macOS DMG and Windows installer packaging commands.
+- Use [docs/development/packaging-workflow.md](docs/development/packaging-workflow.md) for macOS DMG, Windows installer, and Linux DEB packaging commands.
 - Use [docs/architecture/README.md](docs/architecture/README.md) for architecture contracts, especially [docs/architecture/overlay-behavior.md](docs/architecture/overlay-behavior.md) when touching popup, flyout, dropdown, drawer, or other same-window overlay behavior.
 
 ## Build and Test
@@ -20,8 +21,8 @@ cmake --build --preset vcpkg-osx
 ctest --preset vcpkg-osx --output-on-failure
 ```
 
-- Build focused test targets with `cmake --build --preset vcpkg-osx --target test_<name>`.
-- Prefer anchored CTest label filters, for example `ctest --preset vcpkg-osx -L '^test_<name>$' --output-on-failure`; see [docs/development/testing-workflow.md](docs/development/testing-workflow.md).
+- Build focused test targets with the current host preset, for example `cmake --build --preset vcpkg-linux --target test_<name>` on Linux or `cmake --build --preset vcpkg-osx --target test_<name>` on macOS.
+- Prefer anchored CTest label filters, for example `ctest --preset vcpkg-linux -L '^test_<name>$' --output-on-failure`; see [docs/development/testing-workflow.md](docs/development/testing-workflow.md).
 - VisualCheck tests are interactive by design. Automated CTest runs set `SKIP_VISUAL_TEST=1`; run binaries directly with `--gtest_filter="*VisualCheck*"` for manual review or `VISUAL_SNAPSHOT=1` for snapshots.
 
 ## Architecture Map
