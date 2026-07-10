@@ -1,3 +1,5 @@
+include("${CMAKE_CURRENT_SOURCE_DIR}/GalleryMetadata.cmake")
+
 file(GLOB_RECURSE FLUENT_QT_GALLERY_SOURCES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/model/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/model/*.cpp
@@ -20,108 +22,94 @@ set(FLUENT_QT_GALLERY_RESOURCES ${FLUENT_QT_GALLERY_RESOURCES} PARENT_SCOPE)
 
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)
 
-add_executable(fluent_qt_gallery
+add_executable(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     main.cpp
     ${FLUENT_QT_GALLERY_SOURCES}
     ${FLUENT_QT_GALLERY_RESOURCES}
 )
-target_link_libraries(fluent_qt_gallery
+target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     PRIVATE
     FluentQt::FluentQt
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Network
 )
-target_include_directories(fluent_qt_gallery PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(fluent_qt_gallery PRIVATE
+target_include_directories(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE
     FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}"
+    FLUENT_QT_GALLERY_APP_ID="${FLUENT_QT_GALLERY_APP_ID}"
+    FLUENT_QT_GALLERY_DISPLAY_NAME="${FLUENT_QT_GALLERY_DISPLAY_NAME}"
+    FLUENT_QT_GALLERY_ORGANIZATION_NAME="${FLUENT_QT_GALLERY_ORGANIZATION_NAME}"
 )
 
-# Build as a GUI-subsystem app in non-Debug configs so launching the exe standalone does not pop a
-# console window. Debug keeps the console subsystem so spdlog output stays visible while developing.
-# Qt's WinMain shim comes from Qt6::EntryPoint (linked transitively via Qt Widgets), so main() is unchanged.
-# zh_CN: 非 Debug 配置链成 GUI 子系统，独立启动 exe 时不弹控制台；Debug 保留控制台以便开发时看 spdlog 日志。
-# WinMain 入口由随 Qt Widgets 传递链接的 Qt6::EntryPoint 提供，main() 无需改动。
+# Windows: embed the native icon and version metadata. Non-Debug builds use the
+# GUI subsystem; Debug retains a console for development logging.
 if(WIN32)
-    set_target_properties(fluent_qt_gallery PROPERTIES
+    set_target_properties(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PROPERTIES
         WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
     )
 
-    # Embed the Explorer/taskbar/shortcut icon and version metadata into the exe. A bare Qt exe has
-    # no resource section, so Windows shows the generic application icon everywhere and Properties >
-    # Details is blank. We compile a .rc (icon + VERSIONINFO) generated from app.rc.in — the Windows
-    # counterpart to the macOS .icns/Info.plist wiring above. The .ico path is injected absolute with
-    # forward slashes so rc.exe resolves it regardless of the build directory.
-    # zh_CN: 把资源管理器/任务栏/快捷方式图标和版本信息嵌进 exe。裸 Qt exe 没有资源段，Windows 各处都显示
-    # 通用图标、属性详细信息也是空的。这里编译由 app.rc.in 生成的 .rc（图标 + VERSIONINFO），对应上面 macOS
-    # 的 .icns/Info.plist。.ico 用正斜杠绝对路径注入，rc.exe 不受构建目录影响都能找到。
-    set(FLUENT_QT_GALLERY_ICO "${CMAKE_CURRENT_SOURCE_DIR}/assets/Fluent-Qt-Gallery.ico")
+    set(FLUENT_QT_GALLERY_ICO
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/${FLUENT_QT_GALLERY_ICON_BASENAME}.ico")
     file(TO_CMAKE_PATH "${FLUENT_QT_GALLERY_ICO}" FLUENT_QT_GALLERY_ICO)
     set(FLUENT_QT_GALLERY_RC "${CMAKE_CURRENT_BINARY_DIR}/app.rc")
     configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/app.rc.in"
+        "${CMAKE_CURRENT_SOURCE_DIR}/platform/windows/app.rc.in"
         "${FLUENT_QT_GALLERY_RC}"
         @ONLY)
-    # Rebuild the resource when the icon changes even though the generated .rc text is unchanged.
-    # zh_CN: 图标变了但 .rc 文本没变时，也要重编资源。
     set_source_files_properties("${FLUENT_QT_GALLERY_RC}" PROPERTIES
         OBJECT_DEPENDS "${FLUENT_QT_GALLERY_ICO}")
-    target_sources(fluent_qt_gallery PRIVATE "${FLUENT_QT_GALLERY_RC}")
+    target_sources(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
+        PRIVATE "${FLUENT_QT_GALLERY_RC}")
 endif()
 
-# Build a proper macOS .app bundle. A bundle carries a CFBundleIdentifier, which is what macOS
-# (LaunchServices, the Accessibility/automation layer, screen-capture filtering) keys on to identify
-# an application — a bare Mach-O executable has none, so tools that target apps by identity can't see
-# it. The bundle also lets us declare NSHighResolutionCapable for crisp Retina rendering.
-# zh_CN: 在 macOS 上打成正经的 .app 包。包带 CFBundleIdentifier，这是 macOS（LaunchServices、辅助功能/自动化层、
-# 截屏过滤）识别一个「应用」的依据——裸 Mach-O 可执行文件没有它，按应用身份定位的工具就看不到它。包里还能声明
-# NSHighResolutionCapable 以保证 Retina 清晰渲染。
+# macOS: build a native application bundle using the same canonical identity.
 if(APPLE)
-    # Ship a Finder/Dock/DMG icon. The .icns is copied into Contents/Resources and named by
-    # CFBundleIconFile (set via MACOSX_BUNDLE_ICON_FILE, substituted into Info.plist.in). Without
-    # this the bundle has no icon file and LaunchServices falls back to the generic app placeholder.
-    # zh_CN: 给 Finder/Dock/DMG 一个图标。.icns 拷进 Contents/Resources，由 CFBundleIconFile
-    # （经 MACOSX_BUNDLE_ICON_FILE 写入 Info.plist.in）命名；不设置则 bundle 没有图标文件，
-    # LaunchServices 会回退到通用占位图标。
-    set(FLUENT_QT_GALLERY_ICNS "${CMAKE_CURRENT_SOURCE_DIR}/assets/Fluent-Qt-Gallery.icns")
-    target_sources(fluent_qt_gallery PRIVATE "${FLUENT_QT_GALLERY_ICNS}")
+    set(FLUENT_QT_GALLERY_ICNS
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/${FLUENT_QT_GALLERY_ICON_BASENAME}.icns")
+    target_sources(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
+        PRIVATE "${FLUENT_QT_GALLERY_ICNS}")
     set_source_files_properties("${FLUENT_QT_GALLERY_ICNS}" PROPERTIES
         MACOSX_PACKAGE_LOCATION "Resources")
-    set_target_properties(fluent_qt_gallery PROPERTIES
+    set_target_properties(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PROPERTIES
         MACOSX_BUNDLE TRUE
-        # OUTPUT_NAME drives the on-disk bundle + executable name. The CMake target stays the
-        # snake_case fluent_qt_gallery, but the user-facing bundle becomes "Fluent-Qt Gallery.app"
-        # (the snake_case name looked rough in the Dock / DMG). zh_CN: OUTPUT_NAME 决定磁盘上的
-        # bundle 与可执行名;CMake target 仍叫 fluent_qt_gallery,但对用户呈现为 Fluent-Qt Gallery.app。
-        OUTPUT_NAME "Fluent-Qt Gallery"
-        MACOSX_BUNDLE_BUNDLE_NAME "Fluent-Qt Gallery"
-        MACOSX_BUNDLE_GUI_IDENTIFIER "com.fluentqt.gallery"
+        OUTPUT_NAME "${FLUENT_QT_GALLERY_DISPLAY_NAME}"
+        MACOSX_BUNDLE_BUNDLE_NAME "${FLUENT_QT_GALLERY_DISPLAY_NAME}"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "${FLUENT_QT_GALLERY_APP_ID}"
         MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
-        MACOSX_BUNDLE_ICON_FILE "Fluent-Qt-Gallery"
-        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.in"
-        # macdeployqt copies Qt into Contents/Frameworks and rewrites the binary to @rpath/Qt*.
-        # The installed binary needs this rpath or dyld reports "no LC_RPATH's found" and the app
-        # won't launch. zh_CN: 安装后的二进制需要这条 rpath,否则 dyld 报 "no LC_RPATH's found",应用无法启动。
+        MACOSX_BUNDLE_ICON_FILE "${FLUENT_QT_GALLERY_ICON_BASENAME}"
+        MACOSX_BUNDLE_INFO_PLIST
+            "${CMAKE_CURRENT_SOURCE_DIR}/platform/macos/Info.plist.in"
         INSTALL_RPATH "@executable_path/../Frameworks"
     )
 endif()
 
 include(GNUInstallDirs)
-install(TARGETS fluent_qt_gallery
+install(TARGETS ${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     COMPONENT GalleryRuntime
     BUNDLE DESTINATION "."
     RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
-# Bundle the non-Qt runtime DLLs the exe links: spdlog and its fmt dependency (dynamic in the default
-# vcpkg x64/arm64-windows triplets). windeployqt only deploys Qt and install(TARGETS) only installs
-# the exe, so without this the installed app fails to start with "fmt.dll not found" even though it
-# runs fine from the build tree (vcpkg copies these next to the exe at build time). Guarded to shared
-# imported targets, so a static-triplet build that needs no DLLs simply skips them. macOS/Linux bundle
-# their dylibs via macdeployqt / RPATH, so this is Windows-only.
-# zh_CN: 把 exe 链接的非 Qt 运行库（spdlog 及其 fmt 依赖，默认 vcpkg x64/arm64-windows 三元组下是动态库）
-# 一起装上。windeployqt 只部署 Qt、install(TARGETS) 只装 exe，否则安装后启动会报"找不到 fmt.dll"——尽管从
-# build 目录能跑（vcpkg 构建期把它们复制到了 exe 旁）。仅对共享导入目标生效，静态三元组无 DLL 时自动跳过。
-# macOS/Linux 由 macdeployqt/RPATH 处理其 dylib，故此处仅限 Windows。
+# Linux: generate and install the freedesktop launcher from the shared identity.
+if(UNIX AND NOT APPLE)
+    set(FLUENT_QT_GALLERY_DESKTOP_FILE
+        "${CMAKE_CURRENT_BINARY_DIR}/${FLUENT_QT_GALLERY_APP_ID}.desktop")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/platform/linux/app.desktop.in"
+        "${FLUENT_QT_GALLERY_DESKTOP_FILE}"
+        @ONLY)
+    install(FILES "${FLUENT_QT_GALLERY_DESKTOP_FILE}"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
+        COMPONENT GalleryRuntime)
+    install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/app-icon.png"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/1024x1024/apps"
+        RENAME "${FLUENT_QT_GALLERY_APP_ID}.png"
+        COMPONENT GalleryRuntime)
+endif()
+
+# windeployqt installs Qt itself, but the default shared vcpkg triplet also
+# needs the linked spdlog/fmt DLLs beside the executable.
 if(WIN32)
     set(_fluent_qt_runtime_dlls "")
     foreach(_fluent_qt_dep spdlog::spdlog fmt::fmt)

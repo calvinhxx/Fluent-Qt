@@ -220,6 +220,19 @@ jobs:
                 "needs_nsis": true
               },
               {
+                "artifact": "linux-x64",
+                "os": "ubuntu-22.04",
+                "preset": "vcpkg-linux-release",
+                "package_preset": "vcpkg-linux-deb",
+                "qt_version": "6.2.4",
+                "qt_arch": "",
+                "host_qt_arch": "",
+                "asset_suffix": "",
+                "build_parallel": "4",
+                "windows_arm64_cross": false,
+                "needs_nsis": false
+              },
+              {
                 "artifact": "macos-x64-qt515",
                 "os": "macos-15-intel",
                 "preset": "vcpkg-osx-x64-release",
@@ -356,6 +369,11 @@ jobs:
         shell: pwsh
         run: choco install nsis -y --no-progress
 
+      - name: Install Linux build and packaging dependencies
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh apt
+
       - name: Install host Qt ${{ matrix.qt_version }}
         if: ${{ matrix.windows_arm64_cross == true }}
         uses: jurplel/install-qt-action@v4
@@ -372,6 +390,7 @@ jobs:
           "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
 
       - name: Install Qt ${{ matrix.qt_version }}
+        if: ${{ runner.os != 'Linux' }}
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt_version }}
@@ -397,6 +416,11 @@ jobs:
           $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
           $qtHost = $env:QT_HOST_PATH -replace '\\', '/'
           cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$qtRoot" -D "QT_HOST_PATH=$qtHost"
+
+      - name: Validate generated Linux desktop entry
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: desktop-file-validate build/${{ matrix.preset }}/app/*.desktop
 
       - name: Build
         shell: pwsh
@@ -452,7 +476,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path $destination | Out-Null
 
           $packages = Get-ChildItem -LiteralPath $source -File |
-            Where-Object { $_.Extension -in @(".dmg", ".exe") }
+            Where-Object { $_.Extension -in @(".dmg", ".exe", ".deb") }
           if (-not $packages) {
             throw "No release package was found in $source."
           }
@@ -530,7 +554,7 @@ jobs:
           set -euo pipefail
 
           mapfile -d '' packages < <(
-            find release-dist -type f \( -name '*.dmg' -o -name '*.exe' \) -print0 | sort -z
+            find release-dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.deb' \) -print0 | sort -z
           )
           if [[ "${#packages[@]}" == "0" ]]; then
             echo "::error::No release packages were downloaded."

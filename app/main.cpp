@@ -3,6 +3,7 @@
 #include <FluentQt/FluentQt.h>
 
 #include <QApplication>
+#include <QGuiApplication>
 #include <QRect>
 #include <QScreen>
 #include <QSize>
@@ -21,9 +22,12 @@
 int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
-    QApplication::setApplicationName(QStringLiteral("Fluent-Qt Gallery"));
-    QApplication::setOrganizationName(QStringLiteral("Fluent-Qt"));
+    QApplication::setApplicationName(QStringLiteral(FLUENT_QT_GALLERY_DISPLAY_NAME));
+    QApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
     QApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
+#ifdef Q_OS_LINUX
+    QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
+#endif
     app.setQuitOnLastWindowClosed(false);
 
     fluent::initializeResources();
