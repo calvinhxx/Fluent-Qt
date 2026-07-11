@@ -95,8 +95,8 @@ void AnchorLayout::setGeometry(const QRect& rect) {
     // sizeHint() is queried.
     //
     // FluentElement applies pixel-size fonts in onThemeUpdated() during
-    // construction, but the widget is not yet in a window hierarchy and on
-    // macOS variable fonts (Segoe UI Variable) may not have final metrics;
+    // construction, but the widget is not yet in a window hierarchy and some
+    // platform application-font backends may not have final metrics yet;
     // QStyle::polish() can also overwrite custom fonts. So on the first
     // setGeometry(): ensurePolished() first (style lands), then
     // onThemeUpdated() (Fluent fonts reapplied) so sizeHint() is correct.

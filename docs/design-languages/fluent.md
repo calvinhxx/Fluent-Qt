@@ -69,23 +69,26 @@ theme). Selecting Fluent in Settings is exactly `resetToDefaults()` — i.e. the
 
 ---
 
-## 2. Typography — **Segoe UI Variable** (`src/design/Typography.h`)
+## 2. Typography — **Segoe UI Variable static instances** (`src/design/Typography.h`)
 
-The family is `Segoe UI Variable`, resolved per role to an optical-size sub-family
-(`… Small` / `… Text` / `… Display`). Heading roles use **SemiBold (600)**, not Bold. Sizes and
-line heights are absolute pixels measured from the kit's typography styles.
+FluentQt registers project-specific static Small/Text/Display instances generated
+from the bundled variable font. This prevents platform font matchers or a
+same-named Windows system font from selecting a different face. Heading roles
+use **SemiBold (600)**, not Bold. Sizes and line heights are absolute pixels
+measured from the kit's typography styles. See
+[Typography Resolution](../architecture/typography-resolution.md).
 
 | Role | Optical family | Size / Line (px) | Weight |
 |---|---|---|---|
-| Caption | Segoe UI Variable Small | 12 / 16 | Regular (400) |
-| Body | Segoe UI Variable Text | **14 / 20** | Regular (400) |
-| Body Strong | Segoe UI Variable Text | 14 / 20 | **SemiBold (600)** |
-| Body Large | Segoe UI Variable Text | 18 / 24 | Regular (400) |
-| Body Large Strong | Segoe UI Variable Text | 18 / 24 | SemiBold (600) |
-| Subtitle | Segoe UI Variable Display | 20 / 28 | SemiBold (600) |
-| Title | Segoe UI Variable Display | 28 / 36 | SemiBold (600) |
-| Title Large | Segoe UI Variable Display | 40 / 52 | SemiBold (600) |
-| Display | Segoe UI Variable Display | 68 / 92 | SemiBold (600) |
+| Caption | FluentQt Segoe UI Small | 12 / 16 | Regular (400) |
+| Body | FluentQt Segoe UI Text | **14 / 20** | Regular (400) |
+| Body Strong | FluentQt Segoe UI Text | 14 / 20 | **SemiBold (600)** |
+| Body Large | FluentQt Segoe UI Text | 18 / 24 | Regular (400) |
+| Body Large Strong | FluentQt Segoe UI Text | 18 / 24 | SemiBold (600) |
+| Subtitle | FluentQt Segoe UI Display | 20 / 28 | SemiBold (600) |
+| Title | FluentQt Segoe UI Display | 28 / 36 | SemiBold (600) |
+| Title Large | FluentQt Segoe UI Display | 40 / 52 | SemiBold (600) |
+| Display | FluentQt Segoe UI Display | 68 / 92 | SemiBold (600) |
 
 Default control text is **Body (14 px Regular)** — `Button`, `CheckBox`, `RadioButton`,
 `ToggleSwitch` all construct with `themeFont("Body")`. Icon glyphs come from **Segoe Fluent

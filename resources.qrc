@@ -3,5 +3,9 @@
     <qresource prefix="/">
         <file>res/Segoe Fluent Icons.ttf</file>
         <file>res/SegoeUI-VF.ttf</file>
+        <file>res/fonts/FluentQtSegoeUISmall-Regular.ttf</file>
+        <file>res/fonts/FluentQtSegoeUIText-Regular.ttf</file>
+        <file>res/fonts/FluentQtSegoeUIText-Semibold.ttf</file>
+        <file>res/fonts/FluentQtSegoeUIDisplay-Semibold.ttf</file>
     </qresource>
 </RCC>

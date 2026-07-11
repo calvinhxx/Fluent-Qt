@@ -8,10 +8,10 @@ namespace fluent {
  * zh_CN: 注册 Fluent-Qt 内置资源与应用字体。
  *
  * Call this once after constructing QApplication in standalone applications so
- * Segoe Fluent Icons and Segoe UI Variable are available even on platforms that
- * do not ship those fonts as system fonts.
+ * Segoe Fluent Icons and FluentQt-specific static Segoe UI typography faces are
+ * available without depending on platform font matching.
  * zh_CN: 独立应用应在构造 QApplication 后调用一次，使 Segoe Fluent Icons 与
- * Segoe UI Variable 在未内置这些系统字体的平台上也可用。
+ * FluentQt 专用静态 Segoe UI 排版字体可用，且不依赖平台字体匹配。
  */
 bool initializeResources();
 

@@ -71,6 +71,7 @@ void initializeQtTestEnvironment()
     QApplication::setStyle(QStringLiteral("Fusion"));
 
     fluent::initializeResources();
+    qApp->setFont(Typography::Styles::Body.toQFont());
 }
 
 bool shouldSkipVisualTest()
