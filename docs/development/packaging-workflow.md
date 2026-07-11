@@ -149,6 +149,20 @@ do not hard-code those machine paths; pass `CMAKE_PREFIX_PATH` and
 > 32-bit x86 is intentionally not packaged: Qt 6 ships no 32-bit Windows binaries,
 > so an `x86-windows` build would require a self-compiled 32-bit Qt.
 
+## Desktop Compatibility Test Artifacts
+
+The `Desktop Compat Test Packages` GitHub Actions workflow builds installable
+artifacts from release, test, and agent branches and can also be started with
+`workflow_dispatch`. It publishes three independent, 14-day test artifacts:
+
+- Windows 10-compatible x64 installer built with Qt 6.9.3.
+- Ubuntu 22.04 x64 DEB built against the distribution Qt 5.15 baseline.
+- Ubuntu 22.04 x64 DEB built against the distribution Qt 6.2 baseline.
+
+Each lane runs its platform/package-focused tests before CPack and uploads a
+SHA-256 file beside the installer. These artifacts are for manual installation
+validation; tagged release assets continue to be produced by `release.yml`.
+
 ## Version Contract
 
 The root CMake `project(FluentQT VERSION X.Y.Z ...)` value is the package
