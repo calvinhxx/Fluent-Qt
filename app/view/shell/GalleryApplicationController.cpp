@@ -7,6 +7,7 @@
 #include <QMenu>
 #include <QSystemTrayIcon>
 #include <QTimer>
+#include <QWindow>
 
 #include "components/dialogs_flyouts/ContentDialog.h"
 #include "utils/Log.h"
@@ -16,7 +17,35 @@
 #include "view/support/GalleryCloseBehaviorUi.h"
 #include "viewmodel/GallerySettings.h"
 
+#ifdef Q_OS_WIN
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 namespace fluent::gallery {
+
+namespace {
+
+void requestForegroundActivation(QWidget* window)
+{
+    if (!window)
+        return;
+
+    window->raise();
+    window->activateWindow();
+    if (QWindow* handle = window->windowHandle())
+        handle->requestActivate();
+
+#ifdef Q_OS_WIN
+    const HWND nativeWindow = reinterpret_cast<HWND>(window->winId());
+    if (nativeWindow)
+        SetForegroundWindow(nativeWindow);
+#endif
+}
+
+} // namespace
 
 GalleryApplicationController::GalleryApplicationController(GalleryWindow* window,
                                                            QObject* parent)
@@ -201,14 +230,35 @@ void GalleryApplicationController::restoreWindow()
     if (!m_window || m_exitRequested)
         return;
 
-    if (m_restoreState.testFlag(Qt::WindowFullScreen))
-        m_window->showFullScreen();
-    else if (m_restoreState.testFlag(Qt::WindowMaximized))
-        m_window->showMaximized();
-    else
-        m_window->showNormal();
-    m_window->raise();
-    m_window->activateWindow();
+    const bool wasHidden = !m_window->isVisible();
+    const bool wasMinimized = m_window->windowState().testFlag(Qt::WindowMinimized);
+    const bool needsRestore = wasHidden || wasMinimized;
+    if (needsRestore) {
+        // A tray-hidden window uses the state captured immediately before hiding.
+        // A manually minimized window uses its current native state so an older
+        // tray restore state cannot unexpectedly maximize it.
+        // zh_CN: 托盘隐藏窗口使用隐藏前保存的状态；手动最小化窗口使用当前原生状态，
+        // 避免较早的托盘恢复状态意外把窗口最大化。
+        Qt::WindowStates targetState = wasHidden ? m_restoreState : m_window->windowState();
+        targetState &= ~Qt::WindowMinimized;
+        targetState &= ~Qt::WindowActive;
+        if (targetState.testFlag(Qt::WindowFullScreen))
+            m_window->showFullScreen();
+        else if (targetState.testFlag(Qt::WindowMaximized))
+            m_window->showMaximized();
+        else
+            m_window->showNormal();
+    }
+    requestForegroundActivation(m_window);
+    // Run once more after the restore state has reached the native window.
+    // zh_CN: 窗口恢复状态同步到原生窗口后再激活一次。
+    QTimer::singleShot(0, this, [this]() { requestForegroundActivation(m_window); });
+    QTimer::singleShot(150, this, [this]() {
+        if (m_window && !m_window->isActiveWindow()) {
+            LOG_DEBUG(QStringLiteral("GalleryApplicationController foreground activation deferred to platform attention"));
+            QApplication::alert(m_window, 3000);
+        }
+    });
 }
 
 void GalleryApplicationController::openSettings()

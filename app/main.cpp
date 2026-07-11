@@ -10,6 +10,7 @@
 
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryApplicationController.h"
+#include "view/shell/GallerySingleInstance.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "viewmodel/GallerySettings.h"
@@ -29,6 +30,19 @@ int main(int argc, char** argv)
     QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
 #endif
     app.setQuitOnLastWindowClosed(false);
+
+    fluent::gallery::GallerySingleInstance singleInstance(
+        QStringLiteral(FLUENT_QT_GALLERY_APP_ID), &app);
+    const auto instanceResult = singleInstance.start();
+    if (instanceResult
+        == fluent::gallery::GallerySingleInstance::StartResult::ExistingInstanceNotified) {
+        return 0;
+    }
+    if (instanceResult == fluent::gallery::GallerySingleInstance::StartResult::Error) {
+        LOG_CRITICAL(QStringLiteral("Gallery single-instance startup failed: %1")
+                         .arg(singleInstance.errorString()));
+        return 1;
+    }
 
     fluent::initializeResources();
     fluent::gallery::GallerySettings::instance();
@@ -52,6 +66,10 @@ int main(int argc, char** argv)
 
     fluent::gallery::GalleryWindow window;
     fluent::gallery::GalleryApplicationController applicationController(&window, &app);
+    QObject::connect(&singleInstance,
+                     &fluent::gallery::GallerySingleInstance::activationRequested,
+                     &applicationController,
+                     &fluent::gallery::GalleryApplicationController::restoreWindow);
 
     // Pick an initial size that fits the screen (shrinking on small displays, never below the
     // window's minimum), then place it centered vertically and centered horizontally within

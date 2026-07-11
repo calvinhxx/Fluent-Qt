@@ -7,6 +7,9 @@ set(FLUENT_QT_CI_FAST_TARGETS
     test_qt_compat
     test_qt_test_environment
 )
+if(FLUENT_QT_BUILD_GALLERY)
+    list(APPEND FLUENT_QT_CI_FAST_TARGETS test_gallery_single_instance)
+endif()
 
 set(FLUENT_QT_CI_FULL_TARGETS
     ${FLUENT_QT_CI_FAST_TARGETS}
