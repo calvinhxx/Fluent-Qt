@@ -50,18 +50,6 @@ constexpr int kIntroTourDelayMs = 480;
 // 预热前的空闲间隔。足够跨过拖动更新之间的停顿（使整个手势期间保持暂停），又短到松手后预热迅速接续。
 constexpr int kPrewarmInteractionResumeMs = 200;
 
-// Maps the user-facing window-effect setting to the window-chrome backdrop type.
-// zh_CN: 把面向用户的窗口效果设置映射到窗口 chrome 的背景类型。
-compatibility::BackdropEffect toBackdropEffect(GallerySettings::WindowEffect effect)
-{
-    switch (effect) {
-    case GallerySettings::WindowEffect::Mica:    return compatibility::BackdropEffect::Mica;
-    case GallerySettings::WindowEffect::Acrylic: return compatibility::BackdropEffect::Acrylic;
-    case GallerySettings::WindowEffect::Normal:  break;
-    }
-    return compatibility::BackdropEffect::Solid;
-}
-
 } // namespace
 
 GalleryWindow::GalleryWindow(QWidget* parent)
@@ -83,7 +71,7 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     // Apply the persisted window background effect before the chrome is built and shown, so the nav
     // pane / title bar paint against the right backdrop from the first frame.
     // zh_CN: 在构建并显示 chrome 之前施加持久化的窗口背景效果，使导航栏/标题栏从第一帧就按正确背景绘制。
-    setBackdropEffect(toBackdropEffect(GallerySettings::instance().windowEffect()));
+    setBackdropEffect(GallerySettings::instance().windowEffect());
 
     createTitleBarContent();
     buildNavigationShell();
@@ -469,10 +457,8 @@ void GalleryWindow::buildNavigationShell()
     auto& settings = GallerySettings::instance();
     connect(&settings, &GallerySettings::navigationStyleChanged,
             this, &GalleryWindow::applyNavigationStyle);
-    connect(&settings, &GallerySettings::windowEffectChanged, this,
-            [this](GallerySettings::WindowEffect effect) {
-                setBackdropEffect(toBackdropEffect(effect));
-            });
+    connect(&settings, &GallerySettings::windowEffectChanged,
+            this, &GalleryWindow::setBackdropEffect);
     applyNavigationStyle(settings.navigationStyle());
     updateNavigationCommands();
     LOG_DEBUG(QStringLiteral("GalleryWindow navigationShell built mainRoutes=%1 footerRoutes=%2 expandedPaneWidth=%3 compactPaneWidth=%4")

@@ -38,6 +38,7 @@
 #include "components/textfields/Label.h"
 #include "components/status_info/ToolTip.h"
 #include "components/windowing/TitleBar.h"
+#include "components/windowing/WindowBackdrop.h"
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/shell/GalleryApplicationController.h"
@@ -462,8 +463,11 @@ TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAft
         window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
         2000);
 
+    auto* featuredCards = window.findChild<QWidget*>(QStringLiteral("galleryHomeCards"));
+    ASSERT_NE(featuredCards, nullptr);
     GalleryEntryCard* card = nullptr;
-    QTRY_VERIFY_WITH_TIMEOUT((card = window.findChild<GalleryEntryCard*>()) != nullptr, 2000);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        (card = featuredCards->findChild<GalleryEntryCard*>()) != nullptr, 2000);
     const QString targetRouteId = card->targetRouteId();
     ASSERT_FALSE(targetRouteId.isEmpty());
 
@@ -1639,6 +1643,35 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     themeChoice->setCurrentIndex(0);
     QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::System, 1000);
+}
+
+TEST_F(GalleryShellFrameworkTest, PaintedMicaHeroPreservesOpaqueWindowBacking)
+{
+    GalleryWindow window;
+    auto* hero = window.findChild<QWidget*>(QStringLiteral("galleryHomeHero"));
+    ASSERT_NE(hero, nullptr);
+    ASSERT_GT(hero->width(), 2);
+    ASSERT_GT(hero->height(), 2);
+
+    fluent::windowing::BackdropState state;
+    state.requestedEffect = fluent::windowing::BackdropEffect::Mica;
+    state.effectiveEffect = fluent::windowing::BackdropEffect::Mica;
+    state.surfaceMode = fluent::windowing::BackdropSurfaceMode::PaintedOpaque;
+    state.platformApplied = true;
+    fluent::windowing::publishWindowBackdropState(&window, state);
+
+    QImage image(hero->size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(QColor(41, 53, 67, 255));
+    QPainter painter(&image);
+    hero->render(&painter);
+    painter.end();
+
+    // The hero fades to transparent artwork at the bottom-right. In a painted
+    // material window that must reveal the already-opaque Mica backing, not
+    // erase its alpha and expose the desktop.
+    // zh_CN: hero 右下角渐隐的是美术图层；在应用侧绘制材质的窗口中必须露出
+    // 已经不透明的 Mica 底层，而不能清除 alpha 后露出桌面。
+    EXPECT_EQ(qAlpha(image.pixel(image.width() - 2, image.height() - 2)), 255);
 }
 
 TEST_F(GalleryShellFrameworkTest, SettingsThemeSwitchKeepsLabelsReadableInDarkMode)

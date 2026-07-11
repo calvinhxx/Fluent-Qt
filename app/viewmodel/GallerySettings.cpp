@@ -25,6 +25,15 @@ constexpr char kCloseBehaviorKey[] = "settings/closeBehavior";
 constexpr char kCloseBehaviorConfirmedKey[] = "settings/closeBehaviorConfirmed";
 constexpr char kIntroCompletedKey[] = "intro/completed";
 
+using BackdropEffect = fluent::windowing::BackdropEffect;
+
+// The persisted setting predates the UILib backdrop API. Keep its integer wire format stable so
+// existing config.ini files continue to select Normal/Mica/Acrylic respectively.
+// zh_CN: 该持久化设置早于 UILib 背景 API；固定整数编码，确保现有 config.ini 仍分别选择 Normal/Mica/Acrylic。
+static_assert(static_cast<int>(BackdropEffect::Solid) == 0, "Solid setting must remain 0");
+static_assert(static_cast<int>(BackdropEffect::Mica) == 1, "Mica setting must remain 1");
+static_assert(static_cast<int>(BackdropEffect::Acrylic) == 2, "Acrylic setting must remain 2");
+
 bool persistenceAvailable()
 {
     return QCoreApplication::organizationName() == QStringLiteral("Fluent-Qt")
@@ -192,7 +201,7 @@ void GallerySettings::setNavigationStyle(NavigationStyle style)
                  .arg(static_cast<int>(style)));
 }
 
-void GallerySettings::setWindowEffect(WindowEffect effect)
+void GallerySettings::setWindowEffect(fluent::windowing::BackdropEffect effect)
 {
     if (m_windowEffect == effect)
         return;
@@ -290,7 +299,7 @@ void GallerySettings::load()
     m_themeMode = static_cast<ThemeMode>(theme);
     m_styleTheme = static_cast<StyleTheme>(styleTheme);
     m_navigationStyle = static_cast<NavigationStyle>(navigation);
-    m_windowEffect = static_cast<WindowEffect>(windowEffect);
+    m_windowEffect = static_cast<BackdropEffect>(windowEffect);
     m_closeBehavior = static_cast<CloseBehavior>(closeBehavior);
     m_closeBehaviorConfirmed = settings.value(
         QString::fromLatin1(kCloseBehaviorConfirmedKey), false).toBool();
