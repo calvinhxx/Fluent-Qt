@@ -76,15 +76,14 @@ public:
     void setTransitionEffect(TransitionEffect effect);
 
     /**
-     * @brief Paints an opaque content surface (layer fill, optional rounded top-left corner
-     *        and border) as the host background, framing pages against the surrounding chrome.
-     * zh_CN: 以不透明内容表面（层填充 + 可选左上圆角 + 边框）作为宿主背景，把页面与周围 chrome 框开。
+     * @brief Configures the opaque Solid-mode content surface.
+     * zh_CN: 配置 Solid 模式使用的不透明内容表面。
      *
-     * Painting it on the host (rather than an ancestor) is what makes it survive a translucent
-     * (Mica) top-level, where ancestor paints in the host's region would be cleared. Pass an
-     * invalid/transparent fill to disable. The unpainted rounded corner reveals the backdrop.
-     * zh_CN: 由宿主自身绘制（而非祖先）才能在半透明（Mica）顶层下保留——祖先在宿主区域的绘制会被清除。
-     * 传入无效/透明填充即可关闭。未绘制的圆角处会露出背景。
+     * The host paints this layer for Solid and leaves material modes transparent
+     * to the shared native or UILib-painted backdrop. Pass an invalid/transparent
+     * fill to disable the Solid layer as well.
+     * zh_CN: Solid 下宿主绘制该层；材质模式保持透明以共享原生或 UILib 软件背景。
+     * 传入无效/透明填充也可关闭 Solid 层。
      */
     void setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border);
 

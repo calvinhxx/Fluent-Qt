@@ -7,6 +7,7 @@
 #include <QVariant>
 
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/windowing/WindowBackdrop.h"
 
 namespace fluent::windowing {
 
@@ -162,6 +163,11 @@ void TitleBar::paintEvent(QPaintEvent*) {
     // 必须清除（而非不绘制）：半透明顶层下 macOS 后备缓冲不会自动清除，否则动画/重排的 chrome（返回按钮展开、
     // 标题重排）会叠在残影上重影。有效色则是纯色回退背景。
     QPainter painter(this);
+    // The top-level Window already painted the software material. Leaving this
+    // child surface untouched preserves one continuous gradient/noise field.
+    if (windowBackdropUsesPaintedMaterial(window()))
+        return;
+
     const QColor fill = chromeBackdropFill(window(), isActiveWindow());
     if (!fill.isValid()) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);

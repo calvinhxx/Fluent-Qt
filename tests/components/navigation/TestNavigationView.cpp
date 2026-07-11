@@ -20,6 +20,7 @@
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/textfields/Label.h"
+#include "components/windowing/WindowBackdrop.h"
 
 using fluent::AnchorLayout;
 using fluent::basicinput::Button;
@@ -28,6 +29,18 @@ using fluent::navigation::StackContentHost;
 using fluent::textfields::Label;
 
 namespace {
+
+void publishCompositedBackdrop(QWidget* window)
+{
+    fluent::windowing::BackdropState state;
+    state.requestedEffect = fluent::windowing::BackdropEffect::Mica;
+    state.effectiveEffect = fluent::windowing::BackdropEffect::Mica;
+    state.backend = fluent::windowing::BackdropBackend::DwmSystemBackdrop;
+    state.fidelity = fluent::windowing::BackdropFidelity::Native;
+    state.surfaceMode = fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
+    state.platformApplied = true;
+    fluent::windowing::publishWindowBackdropState(window, state);
+}
 
 class NavigationViewTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -797,7 +810,7 @@ TEST_F(NavigationViewTest, StackContentHostClearsTranslucentBackdropPixels)
 {
     StackContentHost host;
     host.setAttribute(Qt::WA_TranslucentBackground, true);
-    host.setProperty("fluentMicaBackdrop", true);
+    publishCompositedBackdrop(&host);
     host.resize(240, 160);
 
     QImage image(host.size(), QImage::Format_ARGB32_Premultiplied);
@@ -815,7 +828,7 @@ TEST_F(NavigationViewTest, StackContentHostClearsBeforeShowingReplacementPage)
 {
     PaintTrackingStackContentHost host;
     host.setAttribute(Qt::WA_TranslucentBackground, true);
-    host.setProperty("fluentMicaBackdrop", true);
+    publishCompositedBackdrop(&host);
     host.resize(240, 160);
 
     auto* first = new QWidget;

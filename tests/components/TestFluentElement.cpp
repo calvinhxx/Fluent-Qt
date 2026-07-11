@@ -3,6 +3,7 @@
 #include <QTest>
 #include <QWidget>
 #include "components/foundation/FluentElement.h"
+#include "components/windowing/WindowBackdrop.h"
 #include "design/CornerRadius.h"
 
 // 模拟一个继承自 fluent::FluentElement 的组件
@@ -577,6 +578,19 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
     micaHost.setProperty("fluentMicaBackdrop", true);
     EXPECT_FALSE(component.chromeBackdropFill(&micaHost, true).isValid());
     EXPECT_FALSE(component.chromeBackdropFill(&micaHost, false).isValid());
+
+    // A typed state is authoritative even when stale legacy properties disagree.
+    // zh_CN: 即使旧属性残留冲突值，强类型状态仍是唯一权威来源。
+    fluent::windowing::BackdropState typedPainted;
+    typedPainted.requestedEffect = fluent::windowing::BackdropEffect::Mica;
+    typedPainted.effectiveEffect = fluent::windowing::BackdropEffect::Mica;
+    typedPainted.backend = fluent::windowing::BackdropBackend::PaintedMaterial;
+    typedPainted.fidelity = fluent::windowing::BackdropFidelity::Emulated;
+    typedPainted.surfaceMode = fluent::windowing::BackdropSurfaceMode::PaintedOpaque;
+    fluent::windowing::publishWindowBackdropState(&micaHost, typedPainted);
+    const QColor authoritativePainted = component.chromeBackdropFill(&micaHost, true);
+    EXPECT_TRUE(authoritativePainted.isValid());
+    EXPECT_EQ(authoritativePainted.alpha(), 255);
 }
 
 TEST_F(FluentElementTest, FontTokenMapping) {

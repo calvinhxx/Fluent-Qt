@@ -11,6 +11,7 @@
 #include <QStackedLayout>
 
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/windowing/WindowBackdrop.h"
 
 namespace fluent::navigation {
 
@@ -76,11 +77,19 @@ void StackContentHost::paintEvent(QPaintEvent*)
     // zh_CN: 透明控件共享顶层后备缓冲；每个背景帧都替换此区域，避免切页后保留旧页面像素。
     if (window()
         && window()->testAttribute(Qt::WA_TranslucentBackground)
-        && window()->property("fluentMicaBackdrop").toBool()) {
+        && windowing::windowBackdropRequiresTransparentClear(window())) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(rect(), Qt::transparent);
         return;
     }
+
+    // In PaintedOpaque mode the top-level already owns one continuous, fully
+    // opaque material. Leave this host unfilled so transparent page gaps reveal
+    // that material just like they reveal DWM/vibrancy/compositor backdrops.
+    // zh_CN: PaintedOpaque 下由顶层绘制连续且全不透明的材质；宿主不再覆盖，
+    // 使透明页面间隙与原生合成背景保持一致。
+    if (windowing::windowBackdropUsesPaintedMaterial(window()))
+        return;
 
     painter.setRenderHint(QPainter::Antialiasing);
 
@@ -411,13 +420,13 @@ void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
         stackWidget->hide();
     }
 
-    const bool translucentBackdrop = window()
-        && window()->testAttribute(Qt::WA_TranslucentBackground)
-        && window()->property("fluentMicaBackdrop").toBool();
-    if (translucentBackdrop && isVisible()) {
-        // Clear synchronously while every page is hidden. An asynchronous update can run after
-        // the incoming transparent page starts painting, leaving outgoing pixels underneath it.
-        // zh_CN: 所有页面隐藏时同步清屏；异步 update 可能晚于新透明页面绘制，导致旧页面像素残留在下方。
+    const bool sharedMaterialBackdrop = windowing::windowHasMaterialBackdrop(window());
+    if (sharedMaterialBackdrop && isVisible()) {
+        // Restore the shared backdrop synchronously while every page is hidden.
+        // An asynchronous update can run after the incoming transparent page
+        // starts painting, leaving outgoing pixels underneath it.
+        // zh_CN: 所有页面隐藏时同步恢复共享背景；异步 update 可能晚于新透明页面绘制，
+        // 导致旧页面像素残留在下方。
         repaint();
     }
 
