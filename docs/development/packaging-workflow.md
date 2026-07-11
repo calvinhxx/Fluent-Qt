@@ -155,7 +155,7 @@ The `Desktop Compat Test Packages` GitHub Actions workflow builds installable
 artifacts from release, test, and agent branches and can also be started with
 `workflow_dispatch`. It publishes three independent, 14-day test artifacts:
 
-- Windows 10-compatible x64 installer built with Qt 6.9.3.
+- Windows 10-compatible x64 installer built with Qt 6.2.4.
 - Ubuntu 22.04 x64 DEB built against the distribution Qt 5.15 baseline.
 - Ubuntu 22.04 x64 DEB built against the distribution Qt 6.2 baseline.
 
