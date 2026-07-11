@@ -438,27 +438,6 @@ private:
     int m_paintCount = 0;
 };
 
-class PaintCountOnShowFilter final : public QObject {
-public:
-    explicit PaintCountOnShowFilter(PaintTrackingStackContentHost* host)
-        : m_host(host)
-    {
-    }
-
-    int paintCountAtShow = -1;
-
-protected:
-    bool eventFilter(QObject* watched, QEvent* event) override
-    {
-        if (event->type() == QEvent::Show && m_host)
-            paintCountAtShow = m_host->paintCount();
-        return QObject::eventFilter(watched, event);
-    }
-
-private:
-    PaintTrackingStackContentHost* m_host = nullptr;
-};
-
 void showAndProcess(QWidget& widget)
 {
     widget.show();
@@ -824,7 +803,7 @@ TEST_F(NavigationViewTest, StackContentHostClearsTranslucentBackdropPixels)
         << "A translucent content host must replace pixels left by the outgoing page";
 }
 
-TEST_F(NavigationViewTest, StackContentHostClearsBeforeShowingReplacementPage)
+TEST_F(NavigationViewTest, StackContentHostCoalescesBackdropClearAcrossRapidSwitches)
 {
     PaintTrackingStackContentHost host;
     host.setAttribute(Qt::WA_TranslucentBackground, true);
@@ -833,19 +812,24 @@ TEST_F(NavigationViewTest, StackContentHostClearsBeforeShowingReplacementPage)
 
     auto* first = new QWidget;
     auto* second = new QWidget;
-    PaintCountOnShowFilter showFilter(&host);
-    second->installEventFilter(&showFilter);
     ASSERT_TRUE(host.insertPage(0, first));
     ASSERT_TRUE(host.insertPage(1, second));
     host.setCurrentIndex(0, 0, false);
     showAndProcess(host);
 
     const int paintsBeforeSwitch = host.paintCount();
-    showFilter.paintCountAtShow = -1;
-    host.setCurrentIndex(1, 0, false);
+    for (int i = 0; i < 100; ++i)
+        host.setCurrentIndex(i % 2, 0, false);
 
-    EXPECT_GT(showFilter.paintCountAtShow, paintsBeforeSwitch)
-        << "The outgoing page pixels must be cleared before the replacement becomes visible";
+    EXPECT_EQ(host.paintCount(), paintsBeforeSwitch)
+        << "Rapid navigation must not synchronously re-enter backing-store painting";
+    EXPECT_FALSE(host.busy());
+    QApplication::processEvents();
+    EXPECT_GT(host.paintCount(), paintsBeforeSwitch)
+        << "The coalesced frame must still replace the composited backdrop";
+    EXPECT_EQ(host.currentIndex(), 1);
+    EXPECT_TRUE(second->isVisible());
+    EXPECT_FALSE(first->isVisible());
 }
 
 TEST_F(NavigationViewTest, StackContentHostTransitionEffectControlsIncomingOffset)

@@ -167,7 +167,9 @@ Several bugs established the current contract:
 - On macOS, repeatedly drawing translucent pixels without first replacing the
   backing-store content caused ghosting, cumulative darkening, and first-frame
   flashes. Transparent replacement is still needed for real vibrancy, but is now
-  gated strictly by `CompositedTransparent`.
+  gated strictly by `CompositedTransparent`. Page switches request a coalesced
+  replacement frame with `update()`; they must not synchronously re-enter Cocoa
+  painting with `repaint()` from inside a navigation input handler.
 - Treating support detection as apply success could clear over a rejected DWM,
   Cocoa, or X11 operation. Capability probing and structured apply results are
   now separate stages.

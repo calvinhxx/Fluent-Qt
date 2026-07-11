@@ -422,12 +422,15 @@ void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
 
     const bool sharedMaterialBackdrop = windowing::windowHasMaterialBackdrop(window());
     if (sharedMaterialBackdrop && isVisible()) {
-        // Restore the shared backdrop synchronously while every page is hidden.
-        // An asynchronous update can run after the incoming transparent page
-        // starts painting, leaving outgoing pixels underneath it.
-        // zh_CN: 所有页面隐藏时同步恢复共享背景；异步 update 可能晚于新透明页面绘制，
-        // 导致旧页面像素残留在下方。
-        repaint();
+        // Queue one backing-store replacement for the next paint pass. repaint()
+        // here forces Cocoa to synchronously re-enter painting from the navigation
+        // input handler; rapid route changes can then starve scroll/input delivery.
+        // update() coalesces a burst of switches, while Qt still paints the parent
+        // host before its newly shown child in the resulting frame.
+        // zh_CN: 为下一次绘制排入一次后备缓冲替换。这里调用 repaint() 会让 Cocoa
+        // 从导航输入处理器同步重入绘制；快速切页时会挤占滚动/输入事件。update()
+        // 会合并一批切换，而 Qt 在最终帧中仍先绘制父宿主，再绘制新显示的子页。
+        update();
     }
 
     if (currentWidget) {

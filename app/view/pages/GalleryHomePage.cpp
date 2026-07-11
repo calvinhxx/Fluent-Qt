@@ -708,7 +708,12 @@ protected:
         artwork.fill(Qt::transparent);
 
         QPainter painter(&artwork);
-        painter.scale(dpr, dpr);
+        // QPainter already maps logical coordinates through QImage's device pixel
+        // ratio. Scaling again makes Retina output 4x in device space: the bottom
+        // dissolve lands outside the image and the top-left radius doubles.
+        // zh_CN: QPainter 已按 QImage 的设备像素比把逻辑坐标映射到物理像素；
+        // 再次 scale 会让 Retina 输出在设备空间变成 4 倍，导致底部渐隐落到图像之外，
+        // 左上圆角也被放大。
         painter.setRenderHint(QPainter::Antialiasing);
 
         const bool dark = currentTheme() == Dark;
