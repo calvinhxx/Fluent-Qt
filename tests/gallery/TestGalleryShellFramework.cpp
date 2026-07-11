@@ -7,7 +7,9 @@
 #include <QFile>
 #include <QFrame>
 #include <QHelpEvent>
+#include <QImage>
 #include <QLabel>
+#include <QPainter>
 #include <QPixmap>
 #include <QPointer>
 #include <QPropertyAnimation>
@@ -1672,6 +1674,87 @@ TEST_F(GalleryShellFrameworkTest, PaintedMicaHeroPreservesOpaqueWindowBacking)
     // zh_CN: hero 右下角渐隐的是美术图层；在应用侧绘制材质的窗口中必须露出
     // 已经不透明的 Mica 底层，而不能清除 alpha 后露出桌面。
     EXPECT_EQ(qAlpha(image.pixel(image.width() - 2, image.height() - 2)), 255);
+}
+
+TEST_F(GalleryShellFrameworkTest, CompositedMicaHeroDissolvesAtRetinaScale)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+
+    auto* hero = window.findChild<QWidget*>(QStringLiteral("galleryHomeHero"));
+    ASSERT_NE(hero, nullptr);
+
+    fluent::windowing::BackdropState state;
+    state.requestedEffect = fluent::windowing::BackdropEffect::Mica;
+    state.effectiveEffect = fluent::windowing::BackdropEffect::Mica;
+    state.backend = fluent::windowing::BackdropBackend::MacVibrancy;
+    state.fidelity = fluent::windowing::BackdropFidelity::Native;
+    state.surfaceMode = fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
+    state.platformApplied = true;
+    fluent::windowing::publishWindowBackdropState(&window, state);
+    window.setAttribute(Qt::WA_TranslucentBackground, true);
+
+    const qreal dpr = qMax<qreal>(1.0, hero->devicePixelRatioF());
+    QImage image(qMax(1, qRound(hero->width() * dpr)),
+                 qMax(1, qRound(hero->height() * dpr)),
+                 QImage::Format_ARGB32_Premultiplied);
+    image.setDevicePixelRatio(dpr);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    hero->render(&painter);
+    painter.end();
+
+    const int centerX = image.width() / 2;
+    EXPECT_GT(image.pixelColor(centerX, qMax(0, qRound(24 * dpr))).alpha(), 180);
+    EXPECT_LT(image.pixelColor(centerX, image.height() - 2).alpha(), 16)
+        << "The hero's device-scaled artwork must reach the transparent end of its bottom dissolve";
+}
+
+TEST_F(GalleryShellFrameworkTest, RapidRouteSwitchingKeepsCurrentPageScrollable)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.currentContentPage()
+            && window.currentContentPage()->routeId() == QStringLiteral("button"),
+        2000);
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("combobox")));
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.currentContentPage()
+            && window.currentContentPage()->routeId() == QStringLiteral("combobox"),
+        2000);
+
+    for (int i = 0; i < 100; ++i) {
+        ASSERT_TRUE(window.selectRoute(i % 2 == 0
+                                          ? QStringLiteral("button")
+                                          : QStringLiteral("combobox")));
+    }
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    QApplication::processEvents();
+
+    GalleryContentPage* page = window.currentContentPage();
+    ASSERT_NE(page, nullptr);
+    ASSERT_EQ(page->routeId(), QStringLiteral("button"));
+    auto* scrollView = page->findChild<ScrollView*>(QStringLiteral("galleryContentScrollArea"));
+    ASSERT_NE(scrollView, nullptr);
+    ASSERT_NE(scrollView->viewport(), nullptr);
+    ASSERT_TRUE(scrollView->isVisible());
+    ASSERT_GT(scrollView->verticalScrollBar()->maximum(), 0);
+
+    scrollView->verticalScrollBar()->setValue(0);
+    FLUENT_MAKE_WHEEL_EVENT(wheel, 96, 96, -120, Qt::NoModifier);
+    wheel.setAccepted(false);
+    QApplication::sendEvent(scrollView->viewport(), &wheel);
+
+    EXPECT_TRUE(wheel.isAccepted());
+    EXPECT_GT(scrollView->verticalScrollBar()->value(), 0)
+        << "The current content viewport must still receive wheel input after rapid navigation";
 }
 
 TEST_F(GalleryShellFrameworkTest, SettingsThemeSwitchKeepsLabelsReadableInDarkMode)
