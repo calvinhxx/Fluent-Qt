@@ -10,6 +10,7 @@
 #include <QVBoxLayout>
 #include <QRegion>
 #include <QWindow>
+#include <QtMath>
 
 #include "TitleBar.h"
 #include "WindowChromeFrame.h"

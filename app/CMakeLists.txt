@@ -45,6 +45,7 @@ target_compile_definitions(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE
 # Windows: embed the native icon and version metadata. Non-Debug builds use the
 # GUI subsystem; Debug retains a console for development logging.
 if(WIN32)
+    target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE user32)
     set_target_properties(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PROPERTIES
         WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
     )
