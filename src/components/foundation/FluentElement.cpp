@@ -1,6 +1,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/private/FluentElement_p.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "components/windowing/WindowBackdrop.h"
 
 #include <algorithm>
 #include <QVariant>
@@ -254,18 +255,28 @@ QColor FluentElement::themeBackdrop(bool active) const {
 }
 
 QColor FluentElement::chromeBackdropFill(const QWidget* hostWindow, bool active) const {
-    // The host window publishes "fluentMicaBackdrop" when it carries a real OS-composited backdrop
-    // (Windows DWM/Acrylic or macOS vibrancy). The single read of that contract lives here, so chrome
-    // surfaces never re-derive it: when present, paint transparent (invalid color) to show it through;
-    // otherwise paint an opaque app fallback for the requested effect.
-    // zh_CN: 宿主窗口带真实系统合成背景（Windows DWM/Acrylic 或 macOS vibrancy）时会发布 "fluentMicaBackdrop"。
-    // 该契约的唯一读取点集中在此，chrome 表面不再各自推导：有则画透明（无效色）透出背景；否则按激活态画纯色 themeBackdrop。
-    if (hostWindow && hostWindow->property("fluentMicaBackdrop").toBool())
+    // The typed state is authoritative: transparent clearing is legal only after
+    // a platform backend has actually accepted the requested material. Keep the
+    // legacy boolean as a compatibility bridge for downstream hosts that have
+    // not migrated to publishWindowBackdropState() yet.
+    // zh_CN: 强类型状态是权威来源：只有平台后端实际接受请求后才允许擦透明；
+    // 旧布尔属性仅作为尚未迁移宿主的兼容桥接。
+    windowing::BackdropState typedState;
+    const bool hasTypedState = windowing::tryWindowBackdropState(hostWindow, &typedState);
+    if (hasTypedState
+        && typedState.surfaceMode == windowing::BackdropSurfaceMode::CompositedTransparent) {
         return QColor();  // invalid => caller erases to transparent
+    }
+    if (!hasTypedState
+        && hostWindow && hostWindow->property("fluentMicaBackdrop").toBool()) {
+        return QColor();  // legacy host compatibility
+    }
 
-    const int requestedEffect = hostWindow
-        ? backdropEffectFromProperty(hostWindow->property(kWindowBackdropEffectProperty))
-        : kBackdropEffectSolid;
+    const int requestedEffect = hasTypedState
+        ? static_cast<int>(typedState.requestedEffect)
+        : (hostWindow
+               ? backdropEffectFromProperty(hostWindow->property(kWindowBackdropEffectProperty))
+               : kBackdropEffectSolid);
     const bool dark = effectiveTheme() == Dark;
 
     if (requestedEffect == kBackdropEffectMica) {

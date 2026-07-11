@@ -27,6 +27,32 @@ aliases, typedefs, or forwarding namespaces. Future API audits should flag any
 active `view::...` component spelling outside archived history or explicit
 migration notes.
 
+## 2026-07-11 Windowing API addendum
+
+The window-background work adds a typed UILib contract without changing the
+historical component inventory above:
+
+- `Window::backdropEffect` is the caller-owned request and not a statement that a
+  native material was installed.
+- `Window::backdropState()` and `backdropStateChanged(...)` expose the resolved
+  requested/effective effect, backend, fidelity, surface mode, apply status, and
+  diagnostic reason.
+- `Window::backdropCapabilities()` exposes session capabilities for diagnostics
+  and UI explanation; consumers must not use it as proof that application
+  succeeded.
+- Descendant components use the typed helpers in `WindowBackdrop.h`, especially
+  `windowBackdropRequiresTransparentClear(...)`, instead of coupling to Gallery,
+  operating-system checks, or raw dynamic-property names.
+- `WindowBackdropMaterial` is reusable windowing infrastructure: it provides the
+  deterministic opaque Mica/Acrylic fallback while keeping application settings
+  and persistence outside UILib.
+
+The compatibility property `fluentMicaBackdrop` is not a new public decision API.
+It is retained for migration and means only that the resolved surface is
+`CompositedTransparent`. See
+[Window Chrome Architecture](../architecture/window-chrome.md) for the paint and
+platform contracts.
+
 ## Inventory Summary
 
 | Category | Public components audited | Focused tests | Relevant specs found |

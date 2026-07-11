@@ -12,6 +12,7 @@
 #include <functional>
 
 #include "compatibility/WindowChromeCompat.h"
+#include "components/windowing/WindowBackdropMaterial.h"
 #include "design/Elevation.h"
 
 class QEvent;
@@ -31,7 +32,9 @@ struct ClientSideFramePaintOptions {
     Elevation::ShadowParams shadow;
     bool dark = false;
     bool useTranslucentMaterial = false;
+    bool usePaintedMaterial = false;
     compatibility::BackdropEffect effect = compatibility::BackdropEffect::Solid;
+    WindowBackdropMaterialOptions material;
 };
 
 void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& options);

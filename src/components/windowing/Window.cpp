@@ -13,13 +13,16 @@
 #include <QtMath>
 
 #include "TitleBar.h"
+#include "WindowBackdropMaterial.h"
 #include "WindowChromeFrame.h"
+#include "components/windowing/private/WindowBackdrop_p.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/status_info/ToolTip.h"
+#include "utils/Log.h"
 
 namespace fluent::windowing {
 
@@ -29,6 +32,27 @@ constexpr int CaptionButtonWidth = 46;
 constexpr int CaptionButtonIconSize = 10;
 constexpr int ResizeBorderWidth = 8;
 constexpr int VisibleFrameResizeBorderWidth = ResizeBorderWidth;
+
+bool requiresAlphaSurface(const BackdropCapabilities& capabilities, int frameMargin)
+{
+    return capabilities.supportsTransparentMaterial(BackdropEffect::Mica)
+        || capabilities.supportsTransparentMaterial(BackdropEffect::Acrylic)
+        || frameMargin > 0;
+}
+
+void registerBackdropMetaTypes()
+{
+    static const bool registered = [] {
+        qRegisterMetaType<BackdropEffect>("fluent::windowing::BackdropEffect");
+        qRegisterMetaType<BackdropState>("fluent::windowing::BackdropState");
+        // Qt 5 moc may store unqualified names for namespace-local property and
+        // signal parameters; register both spellings for old-style reflection.
+        qRegisterMetaType<BackdropEffect>("BackdropEffect");
+        qRegisterMetaType<BackdropState>("BackdropState");
+        return true;
+    }();
+    Q_UNUSED(registered);
+}
 
 void refreshFluentDescendants(QWidget* root)
 {
@@ -80,6 +104,7 @@ Window::Window(QWidget* parent)
     : QWidget(parent),
       m_chrome(this),
       m_resizeSession(std::make_unique<WindowResizeSession>()) {
+    registerBackdropMetaTypes();
     m_chrome.applyPlatformWindowFlags();
 
     setAutoFillBackground(false);
@@ -88,14 +113,15 @@ Window::Window(QWidget* parent)
     // Keep top-level translucency as a platform-level decision. Runtime effect
     // changes update paint hints and requested backdrop type, not native flags.
     // zh_CN: 顶层半透明是平台级决策；运行时切换效果只更新绘制提示和请求的系统背景类型。
-    m_systemBackdropSupported = m_chrome.systemBackdropSupported();
-    m_windowTranslucent = m_systemBackdropSupported || m_chrome.clientSideFrameMargin() > 0;
-    m_micaBackdrop = m_systemBackdropSupported
-                     && m_backdropEffect != compatibility::BackdropEffect::Solid;
+    refreshBackdropCapabilities();
+    m_windowTranslucent = requiresAlphaSurface(
+        m_backdropCapabilities, m_chrome.clientSideFrameMargin());
     if (m_windowTranslucent)
         setAttribute(Qt::WA_TranslucentBackground, true);
-    setProperty("fluentWindowBackdropEffect", static_cast<int>(m_backdropEffect));
-    setProperty("fluentMicaBackdrop", m_micaBackdrop);
+    setEffectiveBackdropState(paintedFallbackState(
+        m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
+            ? QStringLiteral("platform-backdrop-pending")
+            : QStringLiteral("painted-fallback")));
 
     m_rootLayout = new QVBoxLayout(this);
     m_rootLayout->setContentsMargins(0, 0, 0, 0);
@@ -193,12 +219,16 @@ void Window::setCustomWindowChromeEnabled(bool enabled) {
     m_chrome.configure(options);
     m_chrome.applyPlatformWindowFlags();
 
-    m_systemBackdropSupported = m_chrome.systemBackdropSupported();
-    m_windowTranslucent = m_systemBackdropSupported || m_chrome.clientSideFrameMargin() > 0;
+    refreshBackdropCapabilities();
+    const bool resolvedTranslucency = requiresAlphaSurface(
+        m_backdropCapabilities, m_chrome.clientSideFrameMargin());
+    // Once an alpha-capable native surface has been requested, keep it sticky.
+    // Disabling it on a live QWidget can recreate the platform surface and
+    // produce focus churn/black edges; opaque modes simply paint every pixel.
+    // zh_CN: 顶层 alpha surface 一旦启用便保持不变；不透明模式通过完整绘制覆盖。
+    m_windowTranslucent = m_windowTranslucent || resolvedTranslucency;
     setAttribute(Qt::WA_TranslucentBackground, m_windowTranslucent);
-    m_micaBackdrop = m_systemBackdropSupported
-                     && m_backdropEffect != compatibility::BackdropEffect::Solid;
-    setProperty("fluentMicaBackdrop", m_micaBackdrop);
+    resolveBackdropState(isVisible());
 
     setupCaptionButtons();
     syncClientSideResizeInput();
@@ -213,11 +243,118 @@ bool Window::customWindowChromeEnabled() const {
     return m_chrome.options().useCustomWindowChrome;
 }
 
+void Window::refreshBackdropCapabilities()
+{
+    m_backdropCapabilities = m_chrome.backdropCapabilities();
+}
+
+BackdropState Window::paintedFallbackState(const QString& reason) const
+{
+    BackdropState state;
+    state.requestedEffect = m_backdropEffect;
+    state.effectiveEffect = m_backdropEffect;
+    state.reason = reason;
+
+    if (m_backdropEffect == BackdropEffect::Solid) {
+        state.backend = BackdropBackend::Solid;
+        state.fidelity = BackdropFidelity::Solid;
+        state.surfaceMode = BackdropSurfaceMode::SolidOpaque;
+        return state;
+    }
+
+    state.backend = BackdropBackend::PaintedMaterial;
+    state.fidelity = BackdropFidelity::Emulated;
+    state.surfaceMode = BackdropSurfaceMode::PaintedOpaque;
+    return state;
+}
+
+void Window::setEffectiveBackdropState(const BackdropState& state)
+{
+    const bool changed = m_backdropState != state;
+    m_backdropState = state;
+
+    // Keep the old dynamic properties as compatibility aliases while all new
+    // consumers use the typed state published by WindowBackdrop.
+    // zh_CN: 保留旧动态属性作为兼容别名；新消费者统一读取 WindowBackdrop 发布的类型化状态。
+    setProperty("fluentWindowBackdropEffect", static_cast<int>(state.requestedEffect));
+    setProperty("fluentMicaBackdrop",
+                state.surfaceMode == BackdropSurfaceMode::CompositedTransparent);
+    setProperty("fluentBackdropSurfaceMode", static_cast<int>(state.surfaceMode));
+    setProperty("fluentBackdropBackend", static_cast<int>(state.backend));
+    publishWindowBackdropState(this, state);
+
+    if (changed) {
+        LOG_DEBUG(QStringLiteral(
+                      "Window backdrop resolved requested=%1 effective=%2 backend=%3 "
+                      "fidelity=%4 surface=%5 platformApplied=%6 provider=%7 reason=%8")
+                      .arg(static_cast<int>(state.requestedEffect))
+                      .arg(static_cast<int>(state.effectiveEffect))
+                      .arg(static_cast<int>(state.backend))
+                      .arg(static_cast<int>(state.fidelity))
+                      .arg(static_cast<int>(state.surfaceMode))
+                      .arg(state.platformApplied)
+                      .arg(m_backdropCapabilities.provider, state.reason));
+        update();
+        const QList<QWidget*> descendants = findChildren<QWidget*>();
+        for (QWidget* child : descendants)
+            child->update();
+        emit backdropStateChanged(m_backdropState);
+    }
+}
+
+void Window::scheduleBackdropResolution()
+{
+    if (m_backdropResolutionPending)
+        return;
+    m_backdropResolutionPending = true;
+    QTimer::singleShot(0, this, [this] {
+        m_backdropResolutionPending = false;
+        refreshBackdropCapabilities();
+        updateChromeOptions();
+        resolveBackdropState(isVisible(), /*forceRecomposite*/ isVisible());
+        syncClientSideFrameShape();
+        update();
+    });
+}
+
+void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
+{
+    BackdropState next = paintedFallbackState(
+        m_backdropEffect == BackdropEffect::Solid
+            ? QStringLiteral("solid-requested")
+            : QStringLiteral("painted-fallback"));
+
+    const bool canUsePlatform = m_backdropCapabilities.supportsTransparentMaterial(
+        m_backdropEffect);
+    if (applyPlatform && (m_backdropEffect == BackdropEffect::Solid || canUsePlatform)) {
+        const BackdropApplyResult applied = m_chrome.applySystemBackdropDetailed(
+            m_backdropEffect,
+            effectiveTheme() == Dark,
+            forceRecomposite);
+        if (applied.applied) {
+            next.backend = applied.backend;
+            next.fidelity = applied.fidelity;
+            next.surfaceMode = applied.surfaceMode;
+            next.platformApplied =
+                applied.surfaceMode == BackdropSurfaceMode::CompositedTransparent;
+            next.reason = applied.reason;
+        } else if (!applied.reason.isEmpty()) {
+            next.reason = applied.reason;
+        }
+    } else if (!applyPlatform && canUsePlatform) {
+        next.reason = QStringLiteral("platform-backdrop-pending");
+    } else if (m_backdropEffect != BackdropEffect::Solid
+               && !m_backdropCapabilities.provider.isEmpty()) {
+        next.reason = QStringLiteral("%1-fallback").arg(m_backdropCapabilities.provider);
+    }
+
+    setEffectiveBackdropState(next);
+}
+
 void Window::onThemeUpdated() {
     // Keep the native backdrop tint in step with this window's effective theme.
     // zh_CN: 让原生背景着色跟随窗口的实际主题。
-    if (m_systemBackdropSupported)
-        m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark);
+    resolveBackdropState(isVisible());
     if (m_titleBar)
         m_titleBar->onThemeUpdated();
     if (m_minimizeButton)
@@ -234,14 +371,14 @@ void Window::onThemeUpdated() {
 }
 
 void Window::reapplySystemBackdrop() {
-    if (!m_systemBackdropSupported || !isVisible())
+    if (!isVisible())
         return;
+    refreshBackdropCapabilities();
     updateChromeOptions();                                 // re-extend the sheet-of-glass
-    m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark,
-                                 /*forceRecomposite*/ true);  // re-assert + force a frame refresh
+    resolveBackdropState(/*applyPlatform*/ true, /*forceRecomposite*/ true);
 }
 
-void Window::setBackdropEffect(compatibility::BackdropEffect effect) {
+void Window::setBackdropEffect(BackdropEffect effect) {
     if (m_backdropEffect == effect)
         return;
     m_backdropEffect = effect;
@@ -249,25 +386,12 @@ void Window::setBackdropEffect(compatibility::BackdropEffect effect) {
     // Switching effects updates paint hints and the requested OS backdrop type.
     // Avoid toggling native window flags at runtime to prevent flicker/focus churn.
     // zh_CN: 切换效果只更新绘制提示和请求的系统背景类型，避免运行时重置原生窗口 flag。
-    m_micaBackdrop = m_systemBackdropSupported
-                     && effect != compatibility::BackdropEffect::Solid;
-    setProperty("fluentWindowBackdropEffect", static_cast<int>(m_backdropEffect));
-    setProperty("fluentMicaBackdrop", m_micaBackdrop);
+    // Deliberate effect switches resolve the actual backend before descendants
+    // are allowed to clear the top-level backing store.
+    // zh_CN: 用户主动切换效果时先解析实际后端，再允许后代控件清除顶层后备缓冲。
+    resolveBackdropState(isVisible(), /*forceRecomposite*/ isVisible());
+    emit backdropEffectChanged(m_backdropEffect);
 
-    // Deliberate effect switches should force one native recomposition.
-    // zh_CN: 用户主动切换窗口效果时强制一次原生重合成。
-    if (m_systemBackdropSupported && isVisible())
-        m_chrome.applySystemBackdrop(effect, effectiveTheme() == Dark,
-                                     /*forceRecomposite*/ true);  // Solid maps to DWMSBT_AUTO
-
-    // Repaint chrome + content so every surface re-reads the new paint hint.
-    // zh_CN: 重绘 chrome 和内容，使各表面重新读取绘制提示。
-    if (isVisible()) {
-        const QList<QWidget*> descendants = findChildren<QWidget*>();
-        for (QWidget* child : descendants)
-            child->update();
-        update();
-    }
 }
 
 void Window::minimizeWindow() {
@@ -306,8 +430,18 @@ ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const {
     options.radius = qMax<qreal>(themeRadius().overlay, themeRadius().control);
     options.shadow = themeShadow(Elevation::VeryHigh);
     options.dark = effectiveTheme() == Dark;
-    options.useTranslucentMaterial = m_micaBackdrop;
+    options.useTranslucentMaterial =
+        m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent;
+    options.usePaintedMaterial =
+        m_backdropState.surfaceMode == BackdropSurfaceMode::PaintedOpaque;
     options.effect = m_backdropEffect;
+    options.material = WindowBackdropMaterialOptions::forTheme(
+        effectiveTheme() == Dark,
+        colors.bgCanvas,
+        colors.accentDefault);
+    options.material.effect = m_backdropEffect;
+    options.material.active = isActiveWindow();
+    options.material.devicePixelRatio = devicePixelRatioF();
     return options;
 }
 
@@ -323,9 +457,22 @@ void Window::paintEvent(QPaintEvent*) {
     // Transparent top-level widgets keep their backing-store pixels between frames on macOS.
     // Replace them explicitly so page or material switches cannot retain the previous frame.
     // zh_CN: macOS 透明顶层控件会跨帧保留 backing-store 像素，这里显式清空。
-    if (m_micaBackdrop) {
+    if (m_backdropState.surfaceMode == BackdropSurfaceMode::CompositedTransparent) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(rect(), Qt::transparent);
+        return;
+    }
+
+    if (m_backdropState.surfaceMode == BackdropSurfaceMode::PaintedOpaque) {
+        const auto& colors = themeColors();
+        WindowBackdropMaterialOptions options = WindowBackdropMaterialOptions::forTheme(
+            effectiveTheme() == Dark,
+            colors.bgCanvas,
+            colors.accentDefault);
+        options.effect = m_backdropEffect;
+        options.active = isActiveWindow();
+        options.devicePixelRatio = devicePixelRatioF();
+        WindowBackdropMaterial::paint(painter, QRectF(rect()), options);
         return;
     }
 
@@ -373,8 +520,8 @@ void Window::resizeEvent(QResizeEvent* event) {
 void Window::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
     m_chrome.applyPlatformWindowFlags();
-    if (m_systemBackdropSupported)
-        m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark);
+    refreshBackdropCapabilities();
+    resolveBackdropState(/*applyPlatform*/ true);
     syncClientSideFrameMargins();
     syncClientSideFrameShape();
     syncTitleBarSystemInsets();
@@ -383,15 +530,10 @@ void Window::showEvent(QShowEvent* event) {
     // Re-assert the system backdrop after the first event-loop turn, once the
     // native window is realized and placed.
     // zh_CN: 首次显示后等原生窗口完成创建和定位，再重新施加系统背景。
-    if (m_systemBackdropSupported && !m_micaBackdropPrimed) {
-        m_micaBackdropPrimed = true;
-        QTimer::singleShot(0, this, [this] {
-            if (!m_systemBackdropSupported || !isVisible())
-                return;
-            updateChromeOptions();                                 // re-extend the sheet-of-glass
-            m_chrome.applySystemBackdrop(m_backdropEffect, effectiveTheme() == Dark,
-                                         /*forceRecomposite*/ true);  // re-assert + force frame refresh
-        });
+    if (m_backdropCapabilities.supportsTransparentMaterial(m_backdropEffect)
+        && !m_backdropPrimed) {
+        m_backdropPrimed = true;
+        scheduleBackdropResolution();
     }
 }
 
@@ -415,6 +557,23 @@ void Window::changeEvent(QEvent* event) {
         syncTitleBarSystemInsets();
         updateChromeOptions();
     }
+}
+
+bool Window::event(QEvent* event)
+{
+    if (isWindowBackdropReevaluationEvent(event)) {
+        scheduleBackdropResolution();
+        return true;
+    }
+
+    const QEvent::Type type = event ? event->type() : QEvent::None;
+    const bool handled = QWidget::event(event);
+    bool nativeSurfaceMayHaveChanged = type == QEvent::WinIdChange
+        || type == QEvent::ScreenChangeInternal
+        || fluentIsDevicePixelRatioChangeEvent(event);
+    if (nativeSurfaceMayHaveChanged && isVisible())
+        scheduleBackdropResolution();
+    return handled;
 }
 
 bool Window::nativeEvent(const QByteArray& eventType,
