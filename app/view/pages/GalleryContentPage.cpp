@@ -203,9 +203,7 @@ void GalleryContentPage::onThemeUpdated()
 
 void GalleryContentPage::paintEvent(QPaintEvent* event)
 {
-    if (window()
-        && window()->testAttribute(Qt::WA_TranslucentBackground)
-        && window()->property("fluentMicaBackdrop").toBool()) {
+    if (usesCompositedWindowBackdrop(this)) {
         QPainter painter(this);
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(event->rect(), Qt::transparent);
@@ -239,11 +237,11 @@ void GalleryContentPage::trackLabelColor(fluent::textfields::Label* label, TextR
 
 void GalleryContentPage::applyBackdrop()
 {
-    // The whole window is a real Mica surface, so the page is transparent and shows the OS
-    // backdrop; opaque cards/controls float on top. (A distinct opaque content layer/frame
+    // The whole window supplies one native or UILib-painted material, so the page stays
+    // transparent and opaque cards/controls float on top. (A distinct opaque content layer/frame
     // isn't feasible here: on a translucent window every content widget's unpainted area
     // clears to Mica — which is also why card gaps already show Mica.)
-    // zh_CN: 整窗是真实 Mica 表面，故页面透明、露出系统背景；不透明卡片/控件浮于其上。（此处无法做出独立的
+    // zh_CN: 整窗提供统一的原生或 UILib 软件材质，故页面透明；不透明卡片/控件浮于其上。（此处无需做出独立的
     // 不透明内容层/框：半透明窗口下每个内容控件的未绘制区都会清成 Mica——这也是卡片间隙已透出 Mica 的原因。）
     setAutoFillBackground(false);
     QPalette pagePalette = palette();

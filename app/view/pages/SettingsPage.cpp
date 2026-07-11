@@ -138,7 +138,9 @@ public:
         m_layout->removeWidget(m_trailing);
         if (m_stacked) {
             m_layout->addWidget(m_trailing, 1, 1, Qt::AlignRight | Qt::AlignVCenter);
-            setMinimumHeight(108);
+            // Keep the narrow two-row layout at the documented touch/reading
+            // height regardless of platform font metrics.
+            setMinimumHeight(120);
         } else {
             m_layout->addWidget(m_trailing, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
             setMinimumHeight(74);
@@ -283,10 +285,11 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
             });
     connect(m_effectChoice, qOverload<int>(&QComboBox::currentIndexChanged),
             this, [settings](int index) {
-                settings->setWindowEffect(static_cast<GallerySettings::WindowEffect>(index));
+                settings->setWindowEffect(
+                    static_cast<fluent::windowing::BackdropEffect>(index));
             });
     connect(settings, &GallerySettings::windowEffectChanged, this,
-            [this](GallerySettings::WindowEffect effect) {
+            [this](fluent::windowing::BackdropEffect effect) {
                 const QSignalBlocker blocker(m_effectChoice);
                 m_effectChoice->setCurrentIndex(static_cast<int>(effect));
             });
@@ -332,7 +335,7 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                                                  m_navigationChoice));
     m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Grid,
                                                  QStringLiteral("Window background effect"),
-                                                 QStringLiteral("Uses the closest supported system backdrop on this platform"),
+                                                 QStringLiteral("Uses the system compositor when available, otherwise a software Fluent material"),
                                                  m_effectChoice));
     m_contentLayout->addSpacing(10);
     m_contentLayout->addWidget(createSectionTitle(QStringLiteral("App behavior")));
