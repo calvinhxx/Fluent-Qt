@@ -4,6 +4,8 @@
 #include <QColor>
 #include <QObject>
 
+#include "components/windowing/WindowBackdrop.h"
+
 class QEvent;
 
 namespace fluent::gallery {
@@ -27,17 +29,6 @@ public:
         Top
     };
     Q_ENUM(NavigationStyle)
-
-    // Window background effect. Normal is an opaque surface; Mica/Acrylic request a translucent
-    // system backdrop where the platform supports one (Win11 DWM, macOS); Windows 10 and other
-    // unsupported platforms degrade to Normal. zh_CN: 窗口背景效果。Normal 为不透明表面；Mica/Acrylic
-    // 在平台支持时（Win11 DWM、macOS）请求半透明系统背景；Windows 10 和其它不支持的平台退化为 Normal。
-    enum class WindowEffect {
-        Normal,
-        Mica,
-        Acrylic
-    };
-    Q_ENUM(WindowEffect)
 
     enum class CloseBehavior {
         Minimize,
@@ -76,8 +67,8 @@ public:
     NavigationStyle navigationStyle() const { return m_navigationStyle; }
     void setNavigationStyle(NavigationStyle style);
 
-    WindowEffect windowEffect() const { return m_windowEffect; }
-    void setWindowEffect(WindowEffect effect);
+    fluent::windowing::BackdropEffect windowEffect() const { return m_windowEffect; }
+    void setWindowEffect(fluent::windowing::BackdropEffect effect);
 
     CloseBehavior closeBehavior() const { return m_closeBehavior; }
     void setCloseBehavior(CloseBehavior behavior);
@@ -94,7 +85,7 @@ signals:
     void styleThemeChanged(StyleTheme theme);
     void accentColorChanged(QColor accent);
     void navigationStyleChanged(NavigationStyle style);
-    void windowEffectChanged(WindowEffect effect);
+    void windowEffectChanged(fluent::windowing::BackdropEffect effect);
     void closeBehaviorChanged(CloseBehavior behavior);
 
 protected:
@@ -108,7 +99,8 @@ private:
     ThemeMode m_themeMode = ThemeMode::System;
     StyleTheme m_styleTheme = StyleTheme::Fluent;
     NavigationStyle m_navigationStyle = NavigationStyle::Auto;
-    WindowEffect m_windowEffect = WindowEffect::Mica;
+    fluent::windowing::BackdropEffect m_windowEffect =
+        fluent::windowing::BackdropEffect::Mica;
     CloseBehavior m_closeBehavior = CloseBehavior::Tray;
     bool m_closeBehaviorConfirmed = false;
     bool m_introCompleted = false;

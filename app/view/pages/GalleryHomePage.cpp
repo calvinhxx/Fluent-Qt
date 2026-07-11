@@ -614,9 +614,9 @@ public:
         setObjectName(QStringLiteral("galleryHomeHero"));
         setFixedHeight(kHeroHeight);
         // Translucent backing so the bottom dissolve can fade the banner art to fully transparent and
-        // reveal the SAME OS backdrop (Mica/Acrylic) the content area shows — no opaque seam between
+        // reveal the SAME native or UILib-painted material the content area shows — no opaque seam between
         // them. In Normal mode the opaque wash covers this completely, so it's a no-op there.
-        // zh_CN: 透明背板，使底部溶解能把横幅美术层淡到全透明，露出与内容区相同的系统背景（Mica/Acrylic），
+        // zh_CN: 透明背板，使底部溶解能把横幅美术层淡到全透明，露出与内容区相同的原生或 UILib 软件材质，
         // 两者之间不再有不透明硬缝。Normal 模式下不透明 wash 会完全覆盖它，等同无操作。
         setAttribute(Qt::WA_TranslucentBackground);
 
@@ -692,19 +692,33 @@ protected:
 
     void paintEvent(QPaintEvent*) override
     {
-        QPainter painter(this);
+        // Paint the artwork into an isolated alpha layer first. Applying
+        // DestinationIn directly to a child widget's painter also clears pixels
+        // already painted by its parent in the shared backing store. That is
+        // correct for a compositor-owned transparent surface, but on Linux's
+        // PaintedOpaque Mica backend it punched a real hole through the window.
+        // zh_CN: 先在独立 alpha 图层中绘制横幅。若直接在子控件 painter 上使用
+        // DestinationIn，会连同父级已绘制的像素一起清除；这会在 Linux 的
+        // PaintedOpaque Mica 后端上把窗口真正打穿。
+        const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
+        QImage artwork(qMax(1, qRound(width() * dpr)),
+                       qMax(1, qRound(height() * dpr)),
+                       QImage::Format_ARGB32_Premultiplied);
+        artwork.setDevicePixelRatio(dpr);
+        artwork.fill(Qt::transparent);
+
+        QPainter painter(&artwork);
+        painter.scale(dpr, dpr);
         painter.setRenderHint(QPainter::Antialiasing);
 
         const bool dark = currentTheme() == Dark;
         const Colors colors = themeColors();
-        // A real OS-composited backdrop (Windows DWM/Acrylic or macOS vibrancy) — the same contract
-        // the content host reads. Under it the page is transparent and the backdrop shows through, so
-        // the hero must dissolve INTO that backdrop rather than onto an opaque bgLayerAlt plate.
-        // zh_CN: 真实系统合成背景（Windows DWM/Acrylic 或 macOS vibrancy）——与内容宿主同一契约。此时页面透明、背景透出，
-        // 故 hero 必须溶解进该背景，而非落在不透明 bgLayerAlt 板上（那会显示为硬缝）。
-        const bool realBackdrop = window()
-            && window()->testAttribute(Qt::WA_TranslucentBackground)
-            && window()->property("fluentMicaBackdrop").toBool();
+        // Native/composited and UILib-painted materials share the same visual
+        // contract here: the hero dissolves into the window material instead of
+        // ending on an opaque bgLayerAlt plate.
+        // zh_CN: 原生合成与 UILib 软件材质在此共享同一视觉契约：hero 融入窗口材质，
+        // 而不是落在不透明 bgLayerAlt 板上。
+        const bool materialBackdrop = usesWindowMaterialBackdrop(this);
 
         // The banner is full-bleed with only its top-LEFT corner rounded (matching the content
         // surface, which rounds top-left where it meets the pane and stays square on the right where
@@ -780,11 +794,11 @@ protected:
         const QRectF fadeRect(banner.left(), banner.bottom() - kHeroBottomFade,
                               banner.width(), kHeroBottomFade);
 
-        if (realBackdrop) {
-            // Mica/Acrylic: the content area below is transparent and shows the OS backdrop, so fade
-            // the banner ART itself to transparent with a DestinationIn alpha mask — it melts into the
-            // SAME backdrop with no seam. A gentle hold-back alpha across the upper band also lets the
-            // backdrop tint subtly through the whole hero ("a little transparency"), while the text,
+        if (materialBackdrop) {
+            // Mica/Acrylic: the content area below shows the native or UILib-painted window material,
+            // so fade the banner ART itself with a DestinationIn alpha mask — it melts into the SAME
+            // material with no seam. A gentle hold-back alpha across the upper band also lets the
+            // material tint subtly through the whole hero ("a little transparency"), while the text,
             // icon and link cards (separate child widgets painted afterwards) stay fully crisp.
             // zh_CN: Mica/Acrylic：下方内容区透明、透出系统背景，故用 DestinationIn alpha 蒙版把横幅美术层本身
             // 淡到透明——它融入同一背景且无缝。上半区保留一点点透明，让背景色调透过整个 hero（“带一点透明”）；
@@ -828,6 +842,17 @@ protected:
         }
 
         painter.restore();
+        painter.end();
+
+        QPainter target(this);
+        // Native/compositor material needs the alpha layer to replace this
+        // region; app-painted material must remain underneath it.
+        // zh_CN: 原生/合成器材质由 alpha 图层替换当前区域；应用侧绘制的材质
+        // 则保留在图层下方，通过 SourceOver 显露出来。
+        target.setCompositionMode(usesCompositedWindowBackdrop(this)
+                                      ? QPainter::CompositionMode_Source
+                                      : QPainter::CompositionMode_SourceOver);
+        target.drawImage(QPointF(0, 0), artwork);
     }
 
 private:
