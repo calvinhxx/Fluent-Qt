@@ -14,7 +14,8 @@
  * Windows UI Kit typography styles.
  * zh_CN: 字号和行高为从 Windows UI Kit 排版样式测得的绝对像素值。
  *
- * Segoe UI Variable optical sizes:
+ * FluentQt ships static instances of the Segoe UI Variable optical sizes so
+ * every supported Qt/platform combination resolves the same face:
  * - Small: Caption and small text.
  * - Text: Body and Body Large roles.
  * - Display: Subtitle and larger roles.
@@ -26,11 +27,11 @@ namespace Typography {
     // Font family tokens.
     // zh_CN: 字体家族 token。
     namespace FontFamily {
-        const QString SegoeUI          = "Segoe UI Variable";
-        const QString SegoeUIVariable  = "Segoe UI Variable";
-        const QString SegoeUISmall     = "Segoe UI Variable Small";    // Optical size: Small. zh_CN: 光学尺寸 Small。
-        const QString SegoeUIText      = "Segoe UI Variable Text";     // Optical size: Text. zh_CN: 光学尺寸 Text。
-        const QString SegoeUIDisplay   = "Segoe UI Variable Display";  // Optical size: Display. zh_CN: 光学尺寸 Display。
+        const QString SegoeUI          = fluent::fontcompat::SegoeTextFamily;
+        const QString SegoeUIVariable  = fluent::fontcompat::SegoeTextFamily;
+        const QString SegoeUISmall     = fluent::fontcompat::SegoeSmallFamily;   // Optical size: Small. zh_CN: 光学尺寸 Small。
+        const QString SegoeUIText      = fluent::fontcompat::SegoeTextFamily;    // Optical size: Text. zh_CN: 光学尺寸 Text。
+        const QString SegoeUIDisplay   = fluent::fontcompat::SegoeDisplayFamily; // Optical size: Display. zh_CN: 光学尺寸 Display。
         const QString SegoeFluentIcons = "Segoe Fluent Icons";
     }
 
@@ -259,9 +260,10 @@ namespace Typography {
      * @brief Complete font metrics for one Fluent typography role.
      * zh_CN: 一个 Fluent 排版角色的完整字体度量。
      *
-     * styleName maps to a Segoe UI Variable optical style and is applied through
-     * QFont::setStyleName when available.
-     * zh_CN: styleName 对应 Segoe UI Variable 光学尺寸变体，可用时通过 QFont::setStyleName 设置。
+     * styleName selects an exact static Regular/Semibold face. Optical sizing
+     * is encoded in the FluentQt-specific family itself.
+     * zh_CN: styleName 选择精确的 Regular/Semibold 静态字体；光学尺寸已编码在
+     * FluentQt 专用字族中。
      */
     struct FontStyle {
         QString family;
@@ -290,52 +292,53 @@ namespace Typography {
 
     // Predefined style instances mapped to Figma typography variables.
     // zh_CN: 与 Figma 排版变量对应的预定义样式实例。
-    // family uses the matching optical-size family; styleName remains as fallback metadata.
-    // zh_CN: family 使用对应光学尺寸子族名，styleName 保留为回退元数据。
+    // family selects the matching static optical-size family; styleName selects
+    // the exact face within that family.
+    // zh_CN: family 选择对应的静态光学尺寸字族，styleName 选择其中的精确字体。
     namespace Styles {
-        // Caption → "Segoe UI Variable Small" / Small Regular / 12px / 400 / 16px
+        // Caption → FluentQt Segoe UI Small / Regular / 12px / 400 / 16px
         const FontStyle Caption = {
-            FontFamily::SegoeUISmall, "Small Regular",
+            FontFamily::SegoeUISmall, "Regular",
             FontSize::Caption, FontWeight::Regular, LineHeight::Caption
         };
-        // Body → "Segoe UI Variable Text" / Text Regular / 14px / 400 / 20px
+        // Body → FluentQt Segoe UI Text / Regular / 14px / 400 / 20px
         const FontStyle Body = {
-            FontFamily::SegoeUIText, "Text Regular",
+            FontFamily::SegoeUIText, "Regular",
             FontSize::Body, FontWeight::Regular, LineHeight::Body
         };
-        // Body Strong → "Segoe UI Variable Text" / Text Semibold / 14px / 600 / 20px
+        // Body Strong → FluentQt Segoe UI Text / Semibold / 14px / 600 / 20px
         const FontStyle BodyStrong = {
-            FontFamily::SegoeUIText, "Text Semibold",
+            FontFamily::SegoeUIText, "Semibold",
             FontSize::BodyStrong, FontWeight::SemiBold, LineHeight::BodyStrong
         };
-        // Body Large → "Segoe UI Variable Text" / Text Regular / 18px / 400 / 24px
+        // Body Large → FluentQt Segoe UI Text / Regular / 18px / 400 / 24px
         const FontStyle BodyLarge = {
-            FontFamily::SegoeUIText, "Text Regular",
+            FontFamily::SegoeUIText, "Regular",
             FontSize::BodyLarge, FontWeight::Regular, LineHeight::BodyLarge
         };
-        // Body Large Strong → "Segoe UI Variable Text" / Text Semibold / 18px / 600 / 24px
+        // Body Large Strong → FluentQt Segoe UI Text / Semibold / 18px / 600 / 24px
         const FontStyle BodyLargeStrong = {
-            FontFamily::SegoeUIText, "Text Semibold",
+            FontFamily::SegoeUIText, "Semibold",
             FontSize::BodyLargeStrong, FontWeight::SemiBold, LineHeight::BodyLargeStrong
         };
-        // Subtitle → "Segoe UI Variable Display" / Display Semibold / 20px / 600 / 28px
+        // Subtitle → FluentQt Segoe UI Display / Semibold / 20px / 600 / 28px
         const FontStyle Subtitle = {
-            FontFamily::SegoeUIDisplay, "Display Semibold",
+            FontFamily::SegoeUIDisplay, "Semibold",
             FontSize::Subtitle, FontWeight::SemiBold, LineHeight::Subtitle
         };
-        // Title → "Segoe UI Variable Display" / Display Semibold / 28px / 600 / 36px
+        // Title → FluentQt Segoe UI Display / Semibold / 28px / 600 / 36px
         const FontStyle Title = {
-            FontFamily::SegoeUIDisplay, "Display Semibold",
+            FontFamily::SegoeUIDisplay, "Semibold",
             FontSize::Title, FontWeight::SemiBold, LineHeight::Title
         };
-        // Title Large → "Segoe UI Variable Display" / Display Semibold / 40px / 600 / 52px
+        // Title Large → FluentQt Segoe UI Display / Semibold / 40px / 600 / 52px
         const FontStyle TitleLarge = {
-            FontFamily::SegoeUIDisplay, "Display Semibold",
+            FontFamily::SegoeUIDisplay, "Semibold",
             FontSize::TitleLarge, FontWeight::SemiBold, LineHeight::TitleLarge
         };
-        // Display → "Segoe UI Variable Display" / Display Semibold / 68px / 600 / 92px
+        // Display → FluentQt Segoe UI Display / Semibold / 68px / 600 / 92px
         const FontStyle Display = {
-            FontFamily::SegoeUIDisplay, "Display Semibold",
+            FontFamily::SegoeUIDisplay, "Semibold",
             FontSize::Display, FontWeight::SemiBold, LineHeight::Display
         };
     }
