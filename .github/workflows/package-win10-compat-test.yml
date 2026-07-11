@@ -1,4 +1,4 @@
-name: Win10 Compat Test Package
+name: Desktop Compat Test Packages
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
   pull_request:
     paths:
       - ".github/workflows/package-win10-compat-test.yml"
+      - ".github/scripts/install-linux-dependencies.sh"
       - "app/**"
       - "cmake/**"
       - "src/**"
@@ -27,7 +28,7 @@ permissions:
   contents: read
 
 jobs:
-  package:
+  windows-package:
     name: Windows x64 / Qt 6.9.3 installer
     runs-on: windows-2022
     timeout-minutes: 120
@@ -148,3 +149,142 @@ jobs:
             build/vcpkg-windows-release/vcpkg-manifest-install.log
             build/vcpkg-windows-release/_CPack_Packages/win64/NSIS/NSISOutput.log
             build/vcpkg-windows-release/vcpkg_installed/vcpkg/issue_body.md
+
+  linux-package:
+    name: Linux x64 / Qt ${{ matrix.qt_label }} DEB
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - qt_label: "5.15"
+            qt_source: apt5
+            disable_qt: Qt6
+            asset_suffix: Qt5.15
+            artifact_suffix: qt515
+          - qt_label: "6.2"
+            qt_source: apt6
+            disable_qt: Qt5
+            asset_suffix: Qt6.2
+            artifact_suffix: qt62
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
+      QT_QPA_PLATFORM: offscreen
+      SKIP_VISUAL_TEST: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare vcpkg binary cache
+        shell: bash
+        run: mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-binary-cache
+          key: desktop-compat-linux-${{ matrix.artifact_suffix }}-vcpkg-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          restore-keys: |
+            desktop-compat-linux-${{ matrix.artifact_suffix }}-vcpkg-
+            vcpkg-Linux-X64-x64-linux-
+
+      - name: Install Linux Qt ${{ matrix.qt_label }} and packaging dependencies
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
+
+      - name: Set VCPKG_ROOT
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${VCPKG_INSTALLATION_ROOT:-}" ]]; then
+            echo "VCPKG_INSTALLATION_ROOT is not set on this runner." >&2
+            exit 1
+          fi
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      - name: Set package identity
+        shell: bash
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Configure Qt ${{ matrix.qt_label }} package and tests
+        shell: bash
+        run: |
+          cmake --preset vcpkg-linux-release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_DISABLE_FIND_PACKAGE_${{ matrix.disable_qt }}=TRUE
+
+      - name: Validate generated Linux desktop entry
+        shell: bash
+        run: desktop-file-validate build/vcpkg-linux-release/app/*.desktop
+
+      - name: Build package and focused tests
+        shell: bash
+        run: |
+          cmake --build --preset vcpkg-linux-release \
+            --target fluent_qt_gallery test_segoe test_line_edit test_window test_gallery_shell_framework test_gallery_content_pages \
+            --parallel 2
+
+      - name: Run Linux package compatibility tests
+        shell: bash
+        run: |
+          ctest --test-dir build/vcpkg-linux-release \
+            -R '^(SegoeTest|LineEditTest|WindowTest|GalleryShellFrameworkTest|GalleryContentPagesTest)\.' \
+            --output-on-failure \
+            --timeout 240 \
+            --no-tests=error
+
+      - name: Package DEB
+        shell: bash
+        run: |
+          rm -rf build/vcpkg-linux-release/_CPack_Packages
+          rm -f build/vcpkg-linux-release/*.deb
+          cpack --preset vcpkg-linux-deb
+
+      - name: Collect package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_dir="build/vcpkg-linux-release"
+          destination="${RUNNER_TEMP}/linux-${{ matrix.artifact_suffix }}-test-package"
+          mkdir -p "$destination"
+          shopt -s nullglob
+          packages=("$source_dir"/*.deb)
+          if (( ${#packages[@]} == 0 )); then
+            echo "No Linux DEB package was found in $source_dir." >&2
+            exit 1
+          fi
+          for package in "${packages[@]}"; do
+            filename="$(basename "$package" .deb)-${{ matrix.asset_suffix }}-${SHORT_SHA}-test.deb"
+            cp "$package" "$destination/$filename"
+            (
+              cd "$destination"
+              sha256sum "$filename" > "$filename.sha256"
+            )
+          done
+
+      - name: Upload Linux Qt ${{ matrix.qt_label }} test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64-${{ matrix.artifact_suffix }}-test-package-${{ env.SHORT_SHA }}
+          if-no-files-found: error
+          retention-days: 14
+          path: ${{ runner.temp }}/linux-${{ matrix.artifact_suffix }}-test-package/*
+
+      - name: Upload packaging diagnostics
+        if: failure()
+        timeout-minutes: 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64-${{ matrix.artifact_suffix }}-test-package-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            build/vcpkg-linux-release/CMakeCache.txt
+            build/vcpkg-linux-release/CMakeFiles/CMakeConfigureLog.yaml
+            build/vcpkg-linux-release/Testing/Temporary/LastTest.log
+            build/vcpkg-linux-release/Testing/Temporary/LastTestsFailed.log
+            build/vcpkg-linux-release/vcpkg-manifest-install.log
+            build/vcpkg-linux-release/_CPack_Packages/**/*.log
+            build/vcpkg-linux-release/vcpkg_installed/vcpkg/issue_body.md
