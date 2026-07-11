@@ -2,7 +2,7 @@
 set -euo pipefail
 
 qt_source="${1:-apt}"
-if [[ "$qt_source" != "apt" && "$qt_source" != "aqt" ]]; then
+if [[ "$qt_source" != "apt" && "$qt_source" != "apt5" && "$qt_source" != "apt6" && "$qt_source" != "aqt" ]]; then
     echo "Unsupported Qt source: $qt_source" >&2
     exit 2
 fi
@@ -30,7 +30,9 @@ packages=(
     libxkbcommon-x11-0
 )
 
-if [[ "$qt_source" == "apt" ]]; then
+if [[ "$qt_source" == "apt5" ]]; then
+    packages+=(qtbase5-dev qtbase5-dev-tools)
+elif [[ "$qt_source" == "apt" || "$qt_source" == "apt6" ]]; then
     packages+=(qt6-base-dev qt6-base-dev-tools)
 fi
 
