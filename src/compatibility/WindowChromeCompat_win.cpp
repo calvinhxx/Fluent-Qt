@@ -21,6 +21,9 @@
 #ifndef DWMSBT_AUTO
 #define DWMSBT_AUTO 0  // Let DWM decide (no explicit backdrop)
 #endif
+#ifndef DWMSBT_NONE
+#define DWMSBT_NONE 1  // Explicitly disable the system backdrop
+#endif
 #ifndef DWMSBT_MAINWINDOW
 #define DWMSBT_MAINWINDOW 2  // Mica
 #endif
@@ -265,16 +268,32 @@ bool handleCustomChromeMinMaxInfo(QWidget* window, MSG* msg, FluentNativeEventRe
 
 namespace detail {
 
-bool platformSupportsSystemBackdrop() {
-    const WindowsVersionInfo version = currentWindowsVersion();
-    return supportsDwmSystemBackdrop(version);
+BackdropCapabilities platformBackdropCapabilities() {
+    BackdropCapabilities capabilities;
+    const bool supported = supportsDwmSystemBackdrop(currentWindowsVersion());
+    capabilities.alphaSurfaceSupported = supported;
+    capabilities.nativeMica = supported;
+    capabilities.nativeAcrylic = supported;
+    capabilities.provider = supported ? QStringLiteral("dwm-system-backdrop")
+                                      : QStringLiteral("painted-material");
+    return capabilities;
 }
 
-bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
-                                 bool forceRecomposite) {
+bool platformSupportsSystemBackdrop() {
+    const BackdropCapabilities capabilities = platformBackdropCapabilities();
+    return capabilities.nativeMica || capabilities.nativeAcrylic;
+}
+
+BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
+                                                BackdropEffect effect,
+                                                bool dark,
+                                                bool forceRecomposite) {
+    BackdropApplyResult result;
     HWND hwnd = hwndForWindow(window);
-    if (!hwnd)
-        return false;
+    if (!hwnd) {
+        result.reason = QStringLiteral("native-window-unavailable");
+        return result;
+    }
     using DwmSetWindowAttributeFn = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
     auto* setAttr = resolveDwmProc<DwmSetWindowAttributeFn>("DwmSetWindowAttribute");
     const WindowsVersionInfo version = currentWindowsVersion();
@@ -287,8 +306,23 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
         setAttr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkMode, sizeof(darkMode));
     }
 
-    if (!dwmSystemBackdrop || !setAttr)
-        return false;
+    if (effect == BackdropEffect::Solid) {
+        if (dwmSystemBackdrop && setAttr) {
+            const int backdropType = DWMSBT_NONE;
+            setAttr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
+        }
+        result.applied = true;
+        result.backend = fluent::windowing::BackdropBackend::Solid;
+        result.fidelity = fluent::windowing::BackdropFidelity::Solid;
+        result.surfaceMode = fluent::windowing::BackdropSurfaceMode::SolidOpaque;
+        result.reason = QStringLiteral("solid-requested");
+        return result;
+    }
+
+    if (!dwmSystemBackdrop || !setAttr) {
+        result.reason = QStringLiteral("dwm-system-backdrop-unavailable");
+        return result;
+    }
 
     // Windows 10 legacy Acrylic is intentionally not used as a Fluent window backdrop: with Qt's
     // backing store it can leave transparent client regions black, especially in Win10 VMs.
@@ -298,10 +332,15 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
     int backdropType = DWMSBT_MAINWINDOW;
     switch (effect) {
     case BackdropEffect::Acrylic: backdropType = DWMSBT_TRANSIENTWINDOW; break;
-    case BackdropEffect::Solid:   backdropType = DWMSBT_AUTO;            break;
+    case BackdropEffect::Solid:   backdropType = DWMSBT_NONE;            break;
     case BackdropEffect::Mica:    backdropType = DWMSBT_MAINWINDOW;      break;
     }
     const HRESULT hr = setAttr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, &backdropType, sizeof(backdropType));
+    if (!SUCCEEDED(hr)) {
+        result.reason = QStringLiteral("dwm-set-window-attribute-failed-%1")
+                            .arg(static_cast<quint32>(hr), 8, 16, QLatin1Char('0'));
+        return result;
+    }
 
     // Nudge DWM to recompute the frame so the backdrop composites right away.
     // zh_CN: 触发 DWM 重新计算 frame。
@@ -324,7 +363,12 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
         SendMessageW(hwnd, WM_NCACTIVATE, FALSE, 0);
         SendMessageW(hwnd, WM_NCACTIVATE, TRUE, 0);
     }
-    return SUCCEEDED(hr);
+    result.applied = true;
+    result.backend = fluent::windowing::BackdropBackend::DwmSystemBackdrop;
+    result.fidelity = fluent::windowing::BackdropFidelity::Native;
+    result.surfaceMode = fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
+    result.reason = QStringLiteral("dwm-system-backdrop-active");
+    return result;
 }
 
 // Forward declaration — full definition follows handlePlatformNativeEvent.

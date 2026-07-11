@@ -495,3 +495,16 @@ inline bool fluentIsWindowInsetChangeEvent(const QEvent* event) {
 
     return false;
 }
+
+/**
+ * @brief Returns true when an event reports a device-pixel-ratio change.
+ * zh_CN: 判断事件是否表示设备像素比发生变化。
+ */
+inline bool fluentIsDevicePixelRatioChangeEvent(const QEvent* event) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    return event && event->type() == QEvent::DevicePixelRatioChange;
+#else
+    Q_UNUSED(event);
+    return false;
+#endif
+}

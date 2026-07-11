@@ -45,6 +45,8 @@ class Window : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 作为组件内容承载的调用方控件。
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget)
+    Q_PROPERTY(BackdropEffect backdropEffect READ backdropEffect WRITE setBackdropEffect
+                   NOTIFY backdropEffectChanged)
 
 public:
     explicit Window(QWidget* parent = nullptr);
@@ -77,8 +79,8 @@ public:
     void onThemeUpdated() override;
 
     /**
-     * @brief Re-asserts the configured system backdrop (no-op when unsupported).
-     * zh_CN: 重新施加当前配置的系统背景；不支持时为空操作。
+     * @brief Re-probes and re-applies the configured backdrop.
+     * zh_CN: 重新探测并施加当前配置的背景。
      */
     void reapplySystemBackdrop();
 
@@ -86,13 +88,25 @@ public:
      * @brief Sets the window background effect and re-applies it live.
      * zh_CN: 设置窗口背景效果并实时重新施加。
      *
-     * The top-level translucency decision is fixed at construction; switching
-     * effects updates paint hints and the requested OS backdrop type without
-     * restyling the native window.
-     * zh_CN: 顶层半透明策略在构造时固定；切换效果只更新绘制提示和请求的系统背景类型。
+     * Once top-level translucency is enabled it stays stable; switching effects
+     * updates typed paint state and the requested OS backdrop without removing
+     * that native alpha surface.
+     * zh_CN: 顶层半透明一旦启用便保持稳定；切换效果只更新强类型绘制状态和系统背景请求。
      */
-    void setBackdropEffect(compatibility::BackdropEffect effect);
-    compatibility::BackdropEffect backdropEffect() const { return m_backdropEffect; }
+    void setBackdropEffect(BackdropEffect effect);
+    BackdropEffect backdropEffect() const { return m_backdropEffect; }
+
+    /**
+     * @brief Effective backdrop state after platform capability resolution.
+     * zh_CN: 平台能力解析后的实际背景状态。
+     */
+    BackdropState backdropState() const { return m_backdropState; }
+
+    /**
+     * @brief Backdrop capabilities currently advertised by the platform session.
+     * zh_CN: 当前平台会话公布的背景能力。
+     */
+    BackdropCapabilities backdropCapabilities() const { return m_backdropCapabilities; }
 
     /**
      * @brief Enables/disables user move + resize through the window chrome.
@@ -107,12 +121,15 @@ public slots:
     void closeWindow();
 
 signals:
+    void backdropEffectChanged(BackdropEffect effect);
+    void backdropStateChanged(const BackdropState& state);
     void minimizeRequested();
     void maximizeRequested();
     void restoreRequested();
     void closeRequested();
 
 protected:
+    bool event(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
@@ -135,6 +152,11 @@ private slots:
     void handleTitleBarContextMenuRequested(const QPoint& globalPos);
 
 private:
+    void refreshBackdropCapabilities();
+    void scheduleBackdropResolution();
+    void resolveBackdropState(bool applyPlatform, bool forceRecomposite = false);
+    void setEffectiveBackdropState(const BackdropState& state);
+    BackdropState paintedFallbackState(const QString& reason) const;
     void setupCaptionButtons();
     void updateMaximizeButtonIcon();
     int captionButtonReservedWidth() const;
@@ -160,11 +182,12 @@ private:
     fluent::basicinput::Button* m_maximizeButton = nullptr;
     fluent::basicinput::Button* m_closeButton = nullptr;
     compatibility::WindowChromeCompat m_chrome;
-    compatibility::BackdropEffect m_backdropEffect = compatibility::BackdropEffect::Mica;
+    BackdropEffect m_backdropEffect = BackdropEffect::Mica;
+    BackdropCapabilities m_backdropCapabilities;
+    BackdropState m_backdropState;
     bool m_windowTranslucent = false;
-    bool m_systemBackdropSupported = false;
-    bool m_micaBackdrop = false;
-    bool m_micaBackdropPrimed = false;
+    bool m_backdropPrimed = false;
+    bool m_backdropResolutionPending = false;
     bool m_fallbackDragging = false;
     bool m_chromeInteractive = true;
     QPoint m_fallbackDragOffset;

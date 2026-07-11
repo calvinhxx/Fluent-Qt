@@ -16,6 +16,8 @@
 #include <QWidget>
 #include <QtGlobal>
 
+#include "components/windowing/WindowBackdrop.h"
+
 namespace compatibility {
 
 /**
@@ -28,11 +30,9 @@ using FluentNativeEventResult = qintptr;
 using FluentNativeEventResult = long;
 #endif
 
-/**
- * @brief Window background effect requested from the OS compositor.
- * zh_CN: 向系统合成器请求的窗口背景效果。
- */
-enum class BackdropEffect { Solid, Mica, Acrylic };
+using BackdropEffect = fluent::windowing::BackdropEffect;
+using BackdropApplyResult = fluent::windowing::BackdropApplyResult;
+using BackdropCapabilities = fluent::windowing::BackdropCapabilities;
 
 /**
  * @brief Declarative options for platform window-chrome integration.
@@ -138,10 +138,29 @@ public:
     bool systemBackdropSupported() const;
 
     /**
+     * @brief Returns per-effect platform capabilities for the current session.
+     * zh_CN: 返回当前会话逐效果的平台能力。
+     */
+    BackdropCapabilities backdropCapabilities() const;
+    /**
      * @brief Applies the requested system backdrop effect; returns success.
      * zh_CN: 施加请求的系统背景效果；返回是否成功。
+     *
+     * Kept for source compatibility. New code that needs the actual backend,
+     * fidelity, surface mode, or failure reason should use the detailed form.
+     * zh_CN: 为源码兼容保留；需要实际后端、保真度、表面模式或失败原因的新代码应使用详细接口。
      */
-    bool applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite = false);
+    bool applySystemBackdrop(BackdropEffect effect,
+                             bool dark,
+                             bool forceRecomposite = false);
+
+    /**
+     * @brief Applies a backdrop and returns the structured actual result.
+     * zh_CN: 施加背景并返回结构化的实际结果。
+     */
+    BackdropApplyResult applySystemBackdropDetailed(BackdropEffect effect,
+                                                    bool dark,
+                                                    bool forceRecomposite = false);
 
     /**
      * @brief Handles forwarded native events and returns true when consumed.

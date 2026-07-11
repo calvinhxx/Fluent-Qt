@@ -89,6 +89,8 @@ bool initializeResources();
 
 #include <components/windowing/TitleBar.h>
 #include <components/windowing/Window.h>
+#include <components/windowing/WindowBackdrop.h>
+#include <components/windowing/WindowBackdropMaterial.h>
 
 #include <design/Animation.h>
 #include <design/Breakpoints.h>

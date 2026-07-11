@@ -26,6 +26,7 @@
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
+#include "components/windowing/WindowBackdrop.h"
 
 namespace fluent::collections {
 
@@ -603,16 +604,16 @@ void TreeView::paintEvent(QPaintEvent* event) {
         p.end();
     } else if (!preserveParentSurface
                && window() && window()->testAttribute(Qt::WA_TranslucentBackground)
-               && window()->property("fluentMicaBackdrop").toBool()) {
+               && windowing::windowBackdropRequiresTransparentClear(window())) {
         // Background hidden under a REAL OS backdrop (Windows DWM/Acrylic, macOS vibrancy): keep the
         // viewport transparent so the backdrop shows, erasing each paint (the backing store isn't
         // auto-cleared on macOS, so scrolled/expanded rows would otherwise ghost on stale pixels).
-        // Gated on the fluentMicaBackdrop paint-hint, NOT bare WA_TranslucentBackground: backdrop-capable
+        // Gated on the typed CompositedTransparent mode, NOT bare WA_TranslucentBackground: backdrop-capable
         // Windows keeps the top-level translucent in Normal mode too, and erasing there reveals BLACK
         // (no backdrop) instead of the opaque chrome. With no real backdrop we skip the erase so the
         // opaque chrome surface (bgCanvas) behind shows.
         // zh_CN: 仅在「真实系统背景」(Windows DWM/Acrylic、macOS vibrancy) 下保持 viewport 透明并每帧擦除(macOS
-        // 后备缓冲不自动清除,否则滚动/展开行会重影)。用 fluentMicaBackdrop 绘制提示判定,而非裸的半透明:支持背景的
+        // 后备缓冲不自动清除,否则滚动/展开行会重影)。用强类型 CompositedTransparent 判定,而非裸的半透明:支持背景的
         // Windows 上 Normal 模式窗口同样半透明,此时擦成透明会露出黑色(无背景)而非不透明 chrome——这正是 Normal 下导航栏
         // 「标题栏≠导航栏」的缝。无真实背景时跳过擦除,让背后不透明 chrome 表面(bgCanvas)透出。
         QPainter p(viewport());

@@ -59,17 +59,34 @@ int nativeTitleBarLeadingInset(QWidget* window) {
     return 0;
 }
 
+BackdropCapabilities platformBackdropCapabilities() {
+    BackdropCapabilities capabilities;
+    capabilities.provider = QStringLiteral("painted-material");
+    return capabilities;
+}
+
 bool platformSupportsSystemBackdrop() {
     return false;
 }
 
-bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
-                                 bool forceRecomposite) {
+BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
+                                                BackdropEffect effect,
+                                                bool dark,
+                                                bool forceRecomposite) {
     Q_UNUSED(window);
-    Q_UNUSED(effect);
     Q_UNUSED(dark);
     Q_UNUSED(forceRecomposite);
-    return false;
+    BackdropApplyResult result;
+    if (effect == BackdropEffect::Solid) {
+        result.applied = true;
+        result.backend = fluent::windowing::BackdropBackend::Solid;
+        result.fidelity = fluent::windowing::BackdropFidelity::Solid;
+        result.surfaceMode = fluent::windowing::BackdropSurfaceMode::SolidOpaque;
+        result.reason = QStringLiteral("solid-requested");
+    } else {
+        result.reason = QStringLiteral("native-backdrop-unavailable");
+    }
+    return result;
 }
 
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options) {

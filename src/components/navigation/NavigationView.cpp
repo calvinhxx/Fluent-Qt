@@ -15,6 +15,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/navigation/StackContentHost.h"
+#include "components/windowing/WindowBackdrop.h"
 #include "compatibility/QtCompat.h"
 #include "design/Elevation.h"
 
@@ -119,18 +120,18 @@ protected:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
-        // Carve the top-left corner (outside the rounded arc) to transparent so the OS backdrop shows
-        // through the rounded notch — but ONLY under a real backdrop (Mica/Acrylic). On backdrop-capable
+        // Carve the top-left corner (outside the rounded arc) to transparent so the compositor backdrop shows
+        // through the rounded notch — but ONLY under a resolved CompositedTransparent surface. On backdrop-capable
         // Windows builds the top-level stays translucent, so in Normal a CompositionMode_Clear writes (0,0,0,0)
         // onto the opaque chrome backing, rendering a stray block at the corner (black in dark, white
-        // in light) instead of the chrome color. Gate on the fluentMicaBackdrop paint-hint, never bare
+        // in light) instead of the chrome color. Gate on the typed surface mode, never bare
         // WA_TranslucentBackground — same rule as the TreeView / nav-pane seams.
         // zh_CN: 把左上角（圆弧之外）挖透明，让系统背景透出圆角缺口——但仅在真实背景（Mica/Acrylic）下。支持背景的
         // Windows 构建顶层始终半透明，故 Normal 下这里的 Clear 会在不透明 chrome 背板上写 (0,0,0,0)，在角上渲染出杂块（dark 黑 / light 白）
-        // 而非 chrome 色。按 fluentMicaBackdrop paint-hint 门控，绝不用裸的 WA_TranslucentBackground——与 TreeView/导航栏缝同一规则。
+        // 而非 chrome 色。按强类型 CompositedTransparent 门控，绝不用裸的 WA_TranslucentBackground——与 TreeView/导航栏缝同一规则。
         const bool realBackdrop = window()
             && window()->testAttribute(Qt::WA_TranslucentBackground)
-            && window()->property("fluentMicaBackdrop").toBool();
+            && windowing::windowBackdropRequiresTransparentClear(window());
         if (realBackdrop) {
             QPainterPath cornerCut;
             cornerCut.moveTo(0.0, 0.0);
@@ -474,11 +475,16 @@ void NavigationView::paintEvent(QPaintEvent*)
     // 否则窗格用与标题栏共用的纯色 themeBackdrop。
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    // chromeBackdropFill() is the single backdrop decision shared with the title bar: a valid color
-    // is the solid fallback; an invalid color means a real OS backdrop is in play (paint transparent).
+    // chromeBackdropFill() is the solid/composited decision shared with the title bar; PaintedOpaque
+    // is handled separately so the one continuous root material is not covered by a flat color.
     // zh_CN: chromeBackdropFill() 是与标题栏共用的单一背景决策：有效色为纯色回退；无效色表示有真实系统背景（画透明）。
-    const QColor backdrop = chromeBackdropFill(window(), isActiveWindow());
-    if (backdrop.isValid()) {
+    const bool paintedMaterial = windowing::windowBackdropUsesPaintedMaterial(window());
+    const QColor backdrop = paintedMaterial ? QColor()
+                                             : chromeBackdropFill(window(), isActiveWindow());
+    if (paintedMaterial) {
+        // The Window owns the continuous software material; do not cover this
+        // chrome segment with a second, independently aligned fill.
+    } else if (backdrop.isValid()) {
         painter.fillRect(rect(), backdrop);
         if (!visual.chromeRect.isEmpty())
             painter.fillRect(visual.chromeRect, backdrop);
@@ -851,12 +857,11 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
 
     if (m_contentHost) {
         m_contentHost->setGeometry(state.contentRect);
-        // Provide the opaque content-layer surface (bgLayerAlt) the host paints when NO translucent
-        // system backdrop is active (Normal / unsupported platforms); under Mica/Acrylic the host
-        // paints nothing so the backdrop shows through the transparent pages. The host gates this on
-        // the window backdrop at paint time. zh_CN: 提供宿主在无半透明系统背景（Normal / 不支持的平台）时
-        // 绘制的不透明内容层表面（bgLayerAlt）；Mica/Acrylic 下宿主不绘制，经透明页面透出系统背景。宿主在绘制时
-        // 依据窗口背景判断。
+        // Provide the opaque Solid content layer. Under native/composited or
+        // UILib-painted Mica/Acrylic the host leaves transparent page gaps on the
+        // shared material; it gates this at paint time.
+        // zh_CN: 提供 Solid 使用的不透明内容层；原生合成或 UILib 软件 Mica/Acrylic 下，
+        // 宿主让透明页面间隙共享同一材质，并在绘制时按强类型状态判断。
         m_contentHost->setContentSurface(themeColorsRef().bgLayerAlt,
                                          framed ? themeRadius().overlay : 0.0,
                                          QColor());

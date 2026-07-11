@@ -19,9 +19,11 @@ void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& op
 int nativeTitleBarLeadingInset(QWidget* window);
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options);
 bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options);
-bool platformSupportsSystemBackdrop();
-bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
-                                 bool forceRecomposite);
+BackdropCapabilities platformBackdropCapabilities();
+BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
+                                                 BackdropEffect effect,
+                                                 bool dark,
+                                                 bool forceRecomposite);
 }
 
 namespace {
@@ -72,10 +74,25 @@ void WindowChromeCompat::applyPlatformWindowFlags() {
 }
 
 bool WindowChromeCompat::systemBackdropSupported() const {
-    return detail::platformSupportsSystemBackdrop();
+    const BackdropCapabilities capabilities = backdropCapabilities();
+    return capabilities.nativeMica || capabilities.nativeAcrylic
+        || capabilities.compositorBlur;
 }
 
-bool WindowChromeCompat::applySystemBackdrop(BackdropEffect effect, bool dark, bool forceRecomposite) {
+BackdropCapabilities WindowChromeCompat::backdropCapabilities() const {
+    return detail::platformBackdropCapabilities();
+}
+
+bool WindowChromeCompat::applySystemBackdrop(BackdropEffect effect,
+                                             bool dark,
+                                             bool forceRecomposite) {
+    return applySystemBackdropDetailed(effect, dark, forceRecomposite).applied;
+}
+
+BackdropApplyResult WindowChromeCompat::applySystemBackdropDetailed(
+    BackdropEffect effect,
+    bool dark,
+    bool forceRecomposite) {
     return detail::applyPlatformSystemBackdrop(m_window, effect, dark, forceRecomposite);
 }
 

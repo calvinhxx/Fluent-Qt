@@ -99,6 +99,11 @@ void sendBool(id receiver, const char* name, BOOL value) {
     reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name), value);
 }
 
+void sendVoid(id receiver, const char* name) {
+    using Send = void (*)(id, SEL);
+    reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
+}
+
 BOOL sendBool(id receiver, const char* name) {
     using Send = BOOL (*)(id, SEL);
     return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
@@ -426,6 +431,7 @@ id ensureBackdropView(id superview,
     sendLong(effectView, "setBlendingMode:", NSVisualEffectBlendingModeBehindWindow);
     sendLong(effectView, "setState:", NSVisualEffectStateFollowsWindowActiveState);
     addSubviewPositioned(superview, effectView, orderingPlace, relativeTo);
+    sendVoid(effectView, "release");
     return effectView;
 }
 
@@ -464,6 +470,7 @@ id ensureTintView(id superview, id base, id contentView) {
         sendId(view, "setIdentifier:", name);
     sendBool(view, "setWantsLayer:", YES);
     addSubviewPositioned(superview, view, base ? NSWindowAbove : NSWindowBelow, base ? base : contentView);
+    sendVoid(view, "release");
     return view;
 }
 
@@ -488,6 +495,17 @@ bool resolveBackdropHost(QWidget* window, id* outContentView, id* outSuperview) 
     *outContentView = contentView;
     *outSuperview = superview;
     return true;
+}
+
+void setBackdropViewsHidden(id superview, BOOL hidden) {
+    if (!superview)
+        return;
+    const char* identifiers[] = {kBackdropBaseIdentifier, kBackdropTintIdentifier};
+    for (const char* identifier : identifiers) {
+        id view = findSubviewWithIdentifier(superview, identifier);
+        if (view && respondsTo(view, selector("setHidden:")))
+            sendBool(view, "setHidden:", hidden);
+    }
 }
 
 } // namespace
@@ -596,27 +614,54 @@ bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions&
     return false;
 }
 
+BackdropCapabilities platformBackdropCapabilities() {
+    BackdropCapabilities capabilities;
+    const bool supported = QGuiApplication::platformName() == QStringLiteral("cocoa")
+        && objc_getClass("NSVisualEffectView") != nullptr;
+    capabilities.alphaSurfaceSupported = supported;
+    capabilities.nativeMica = supported;
+    capabilities.nativeAcrylic = supported;
+    capabilities.provider = supported ? QStringLiteral("mac-vibrancy")
+                                      : QStringLiteral("painted-material");
+    return capabilities;
+}
+
 bool platformSupportsSystemBackdrop() {
     // macOS gets the Mica-equivalent via a native NSVisualEffectView (vibrancy). Available on
     // every Qt 6.9-supported macOS, so just confirm the class is present.
     // zh_CN: macOS 通过原生 NSVisualEffectView（vibrancy）获得 Mica 等价效果。在 Qt 6.9 支持的所有 macOS
     // 上都可用，故只需确认类存在。
-    return QGuiApplication::platformName() == QStringLiteral("cocoa")
-        && objc_getClass("NSVisualEffectView") != nullptr;
+    const BackdropCapabilities capabilities = platformBackdropCapabilities();
+    return capabilities.nativeMica || capabilities.nativeAcrylic;
 }
 
-bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool dark,
-                                 bool forceRecomposite) {
+BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
+                                                BackdropEffect effect,
+                                                bool dark,
+                                                bool forceRecomposite) {
+    BackdropApplyResult result;
     Q_UNUSED(forceRecomposite);  // macOS vibrancy re-composites itself; no manual nudge needed.
     // Solid keeps an opaque window: no vibrancy, the app paints its own themeBackdrop.
     // zh_CN: Solid 为不透明窗口：不挂 vibrancy，由 App 自绘 themeBackdrop。
-    if (effect == BackdropEffect::Solid)
-        return false;
+    if (effect == BackdropEffect::Solid) {
+        id contentView = nil;
+        id superview = nil;
+        if (resolveBackdropHost(window, &contentView, &superview))
+            setBackdropViewsHidden(superview, YES);
+        result.applied = true;
+        result.backend = fluent::windowing::BackdropBackend::Solid;
+        result.fidelity = fluent::windowing::BackdropFidelity::Solid;
+        result.surfaceMode = fluent::windowing::BackdropSurfaceMode::SolidOpaque;
+        result.reason = QStringLiteral("solid-requested");
+        return result;
+    }
 
     id contentView = nil;
     id superview = nil;
-    if (!resolveBackdropHost(window, &contentView, &superview))
-        return false;
+    if (!resolveBackdropHost(window, &contentView, &superview)) {
+        result.reason = QStringLiteral("cocoa-backdrop-host-unavailable");
+        return result;
+    }
 
     // Three visibly distinct surfaces (Normal/Solid already returned above as fully opaque):
     //   • Mica    — sidebar material + a moderate app tint: a subtle, mostly-cohesive wallpaper tint.
@@ -638,8 +683,12 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
                                  material,
                                  NSWindowBelow,
                                  contentView);
-    if (!base)
-        return false;
+    if (!base) {
+        setBackdropViewsHidden(superview, YES);
+        result.reason = QStringLiteral("visual-effect-view-unavailable");
+        return result;
+    }
+    sendBool(base, "setHidden:", NO);
 
     sendUnsignedLong(base, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
     sendCGRect(base, "setFrame:", sendRect(superview, "bounds"));
@@ -649,11 +698,17 @@ bool applyPlatformSystemBackdrop(QWidget* window, BackdropEffect effect, bool da
         ? (dark ? 0.12 : 0.16)
         : (dark ? 0.20 : 0.22);
     if (id tint = ensureTintView(superview, base, contentView)) {
+        sendBool(tint, "setHidden:", NO);
         sendUnsignedLong(tint, "setAutoresizingMask:", NSViewWidthSizable | NSViewHeightSizable);
         sendCGRect(tint, "setFrame:", sendRect(superview, "bounds"));
         setMicaTintColor(tint, dark, tintAlpha);
     }
-    return true;
+    result.applied = true;
+    result.backend = fluent::windowing::BackdropBackend::MacVibrancy;
+    result.fidelity = fluent::windowing::BackdropFidelity::Native;
+    result.surfaceMode = fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
+    result.reason = QStringLiteral("mac-vibrancy-active");
+    return result;
 }
 
 } // namespace detail

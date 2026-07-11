@@ -1,140 +1,209 @@
 # Window Chrome Architecture
 
-## Linux platform contract
+## Ownership and boundary
 
-Linux is a first-class chrome backend, not the fallback path. Platform-specific
-Linux code lives in `src/compatibility/WindowChromeCompat_linux.cpp`; the generic
-fallback is now only for platforms that are not Windows, macOS, or Linux.
+The three window background choices—`Solid`, `Mica`, and `Acrylic`—are UILib
+capabilities. Gallery selects and persists a requested effect, but it does not
+decide which platform backend is usable and it does not infer transparency from
+an operating-system name.
 
-Linux has two material tiers:
+The implementation is split into three layers:
 
-- X11 + KWin/Plasma: when an active compositor advertises
-  `_KDE_NET_WM_BLUR_BEHIND_REGION`, the compat layer requests real compositor
-  blur through that window property, then `Window` paints the
-  Fluent tint and rounded client frame over that blurred surface.
-- GNOME, Wayland, and other compositors: there is no stable Qt Widgets API
-  equivalent to Win11 DWM Mica/Acrylic or macOS vibrancy, so the app keeps the
-  Fluent material model visually aligned with Windows/macOS by painting its own
-  rounded window frame, border, and layered shadow inside a transparent top-level
-  margin.
+1. `components/windowing/WindowBackdrop.*` defines the typed request, resolved
+   state, capability model, and descendant-widget query helpers.
+2. `compatibility/WindowChromeCompat*` probes and applies native compositor
+   facilities. Each platform file implements the same capability/result
+   contract.
+3. `components/windowing/WindowBackdropMaterial.*` provides the portable,
+   app-painted material used when a native/compositor backdrop is unavailable or
+   fails to apply.
 
-The Linux client-side frame margin is disabled while maximized/fullscreen, so
-maximized windows keep normal screen-edge behavior instead of leaving a shadow
-gap.
+`Window` owns resolution and publishes the effective state. Application code may
+call `Window::setBackdropEffect()` and observe `backdropStateChanged`, but should
+not read private dynamic-property strings or duplicate platform checks.
 
-Client-side resize input is enabled for both X11 and Wayland. Edge presses are
-first delegated to `QWindow::startSystemResize()`, which lets the compositor or
-window manager own the operation. X11 additionally permits a manual geometry
-fallback when the window manager rejects the system request; Wayland never uses
-manual positioning because clients are not allowed to choose global window
-geometry.
+## Typed backdrop state
 
-窗口 chrome（标题栏、导航栏、窗口背景）按操作系统采用不同的原生方案，逻辑结构就是：
+`BackdropState` deliberately separates intent from what is actually visible:
 
-```
-if (Windows)      -> 原生 DWM Mica + 自绘 caption
-else if (macOS)   -> 原生 NSVisualEffectView vibrancy + unified title bar + traffic lights
-else              -> 降级：原生窗口装饰，纯色背景
-```
+| Field | Meaning |
+| --- | --- |
+| `requestedEffect` | Caller intent: `Solid`, `Mica`, or `Acrylic`. |
+| `effectiveEffect` | Visual effect currently represented. A painted Mica/Acrylic fallback still represents the requested effect. |
+| `backend` | Producer of the visible surface: `Solid`, `PaintedMaterial`, `DwmSystemBackdrop`, `MacVibrancy`, or `LinuxCompositor`. |
+| `fidelity` | Quality tier: `Solid`, `Emulated`, `Composited`, or `Native`. |
+| `surfaceMode` | Backing-store paint contract: `SolidOpaque`, `PaintedOpaque`, or `CompositedTransparent`. |
+| `platformApplied` | Whether a native/compositor material was actually applied. |
+| `reason` | Diagnostic resolution/apply result, including fallback reasons. |
 
-但这个 `if/else` **不是运行时分支**，而是拆成了两个维度，这是阅读代码时最容易困惑的地方。
+`BackdropCapabilities` is a session probe, not a promise. It records alpha
+surface availability, native Mica/Acrylic support, compositor blur support, and
+the provider name. The authoritative transition to a transparent surface occurs
+only after `WindowChromeCompat::applySystemBackdropDetailed()` returns a successful
+`BackdropApplyResult`.
 
-## 两个维度
+This distinction prevents the old failure mode in which theoretical OS support
+was treated as successful installation and Qt cleared its backing store over no
+real system material.
 
-chrome 工作被刻意拆成两层，让可复用控件保持 platform-agnostic（不含 `#ifdef`）：
+The normal resolution flow is:
 
-1. **原生窗口集成**（window flags、resize hit-test、traffic lights、安装 Mica/vibrancy）
-   → `WindowChromeCompat` + 四个平台文件。
-2. **绘制 / 颜色**（标题栏、导航栏透明 vs 纯色、tint）
-   → 在可复用控件 `Window.cpp` / `TitleBar.cpp` / `NavigationView.cpp` 里，只看一个布尔标记 `fluentMicaBackdrop`。
+```text
+requested Solid
+  -> Solid / Solid / SolidOpaque
 
-两层之间靠这一个 window property 握手：
-
-```
-WindowChromeCompat 判断「本 OS 有系统背景」并安装它 -> 设置 fluentMicaBackdrop=true
-   -> TitleBar / NavigationView 看到 true -> 透明绘制（露出背景）
-   -> 看到 false -> 绘制纯色降级背景
-```
-
-## 绘制层级（z-order）与透明语义
-
-整窗按「背后 → 前」分三层，每层只看 `fluentMicaBackdrop` 一个布尔决定「透明露背景 vs 自绘纯色」：
-
-```
-z-0  底层背景    Window 自身
-z-1  chrome      标题栏 + 左侧导航栏（Top 模式为顶部导航条）
-z-2  内容岛      内容宿主 StackContentHost + 页面（右下，左上圆角）
+requested Mica or Acrylic
+  -> native or compositor capability advertised
+     -> apply succeeds
+        -> platform backend / Native or Composited / CompositedTransparent
+     -> apply fails
+        -> PaintedMaterial / Emulated / PaintedOpaque
+  -> no transparent-material capability
+     -> PaintedMaterial / Emulated / PaintedOpaque
 ```
 
-| 层 | Normal | Mica / Acrylic |
-|---|---|---|
-| z-0 背景 | 不透明 `themeBackdrop`（=`bgCanvas`；失焦洗向 `bgLayer`） | 窗口画**透明**，DWM / 系统合成出 Mica / Acrylic |
-| z-1 chrome | 不透明 `bgCanvas` | 画**透明 → 透出 z-0** |
-| z-2 内容岛 | 不透明 `bgLayer` / `bgLayerAlt` | **仍不透明** `bgLayer`（从不露背景） |
+Before a native window is ready, the state remains safely opaque. A later show or
+explicit reapply may promote it to `CompositedTransparent` only after a successful
+platform call. Runtime loss/failure similarly resolves back to `PaintedOpaque`.
 
-**关键非对称（最容易搞错）：**
+## Surface-mode paint contract
 
-- **z-1 chrome 会透**：只有 Normal 才有自己的纯色；Mica / Acrylic 下它画透明、露出 z-0。所以 Mica 下标题栏 / 导航栏看起来与背景「统一」，本质是二者都透明、露的是同一个 z-0，而非它们自带一层统一色。
-- **z-2 内容岛永远不透**：三种模式都是实色岛，从不露背景。（Mica 下内容宿主会先 `CompositionMode_Source` 擦透明，仅为清掉切页残影，随后不透明页面盖上——肉眼始终是实色。）
+`surfaceMode`—not the requested effect and not `WA_TranslucentBackground`—decides
+whether a widget may erase backing-store pixels.
 
-一句话：**chrome 跟背景走（透明 / 纯色二选一），内容岛恒为实色。**
+| Surface mode | Top-level behavior | Descendant chrome behavior | May use `CompositionMode_Clear` or transparent `CompositionMode_Source`? |
+| --- | --- | --- | --- |
+| `SolidOpaque` | Paint the normal opaque theme surface. | Paint/use the normal opaque chrome surface. | No. |
+| `PaintedOpaque` | Paint deterministic Mica/Acrylic material in the app. | Leave shared chrome/page-gap regions unfilled so the top-level material remains visible; never punch top-level alpha holes. | No. |
+| `CompositedTransparent` | Clear the material region so DWM, macOS, or the Linux compositor is visible. | Clear only the regions that are designed to expose that compositor surface. | Yes. |
 
-**由此推出的硬规则：** 任何「擦透明以露背景」的 `Source` 擦除，必须门控在 **`fluentMicaBackdrop`（真有系统背景）**，而**不是**裸的 `WA_TranslucentBackground`。因为支持 system backdrop 的 Windows 窗口是「始终半透明」模型——Normal 模式窗口同样 `WA_TranslucentBackground=true`，若按它判定，Normal 下也会擦透明，但背后并无系统背景 → 露出**黑色**。Windows 10 不再走这个模型，始终使用不透明 app fallback。踩坑实例：导航栏 `TreeView`（`!m_backgroundVisible`）在 Normal 把 viewport 擦成透明，渲染成 `#000000`，而标题栏自绘 `bgCanvas` 是 `#202020`，形成「标题栏 ≠ 导航栏」的缝（2026-06-23 修：门控改为 `fluentMicaBackdrop`，Normal 下不擦，让背后不透明 chrome 透出）。
+Use the typed helpers from `WindowBackdrop.h`:
 
-**同理也作用于内容岛的圆角缺口（2026-06-24）。** 真正画这个圆角的是 `ContentFrameOverlay`（[NavigationView.cpp:89](../../src/components/navigation/NavigationView.cpp)）——一个 `WA_TransparentForMouseEvents`+`WA_NoSystemBackground` 的小 overlay，在带框侧边模式被 `raise()` 叠在内容宿主**之上**（半径 8 + 极淡的 strokeDivider 描边）。它的 `paintEvent` **无条件**用 `CompositionMode_Clear` 把左上圆角缺口挖透明来「露背景」。Mica 下正确；但 Normal 下 Clear 在不透明 chrome 背板上写入 (0,0,0,0)，于是在标题栏/导航栏/内容三交界处渲染出一小块**杂色块**（dark 背板上是黑、light 背板上是近白 #FFFFFF）。修：把这段 Clear 门控在 `fluentMicaBackdrop`——Normal 不挖，缺口保留背后的不透明内容/chrome 色（bgCanvas，无缝），只留细圆角描边；Mica 照挖露背景。**教训：凡是贴着「始终半透明」后备缓冲做 `Source`/`Clear` 擦除的层都必须门控在 `fluentMicaBackdrop`；而且别想当然认为圆角是背景控件画的——这里画它的是 `raise()` 在最上层的透明 overlay。**（曾误判为 `StackContentHost` 并改了它的 `paintEvent`，纯属空操作：宿主的 paint 根本到不了屏幕，被滚动区的不透明 bgCanvas 和这个 overlay 盖住。）
+- `windowBackdropRequiresTransparentClear(widget)` for operations that really
+  erase to transparent;
+- `windowBackdropUsesPaintedMaterial(widget)` when chrome should reveal the
+  UILib-painted root material without erasing it;
+- `windowHasMaterialBackdrop(widget)` when either a painted or composited
+  Mica/Acrylic effect matters visually.
 
-## 分层结构
+The top-level may carry `WA_TranslucentBackground` for native frame/shadow
+integration even while its effective surface is opaque. Therefore that Qt
+attribute is never evidence that clearing is safe.
 
+`fluentMicaBackdrop` remains only as a compatibility alias for older consumers.
+It is now `true` exactly when `surfaceMode == CompositedTransparent`; it is not a
+Mica identity flag, a capability flag, or an apply-success substitute. New UILib
+and Gallery code must use the typed API. The published
+`fluentWindowBackdropState` dynamic property is also an implementation detail;
+prefer `Window::backdropState()` or the typed helper functions.
+
+## App-painted material
+
+`WindowBackdropMaterial` makes Mica and Acrylic useful on Win10, Wayland, Linux
+desktops without a supported blur protocol, and any native-apply failure path.
+It always establishes an opaque base before decorative layers, so the final
+surface is deterministic and cannot reveal black/undefined backing-store pixels.
+
+The renderer intentionally performs no screen capture and no CPU blur. It uses
+theme material tokens, low-frequency color fields, tint/luminosity layers, and a
+small cached deterministic grain tile. Mica is quieter and more cohesive;
+Acrylic has stronger luminosity/tint/grain separation. The output remains stable
+across frames and safe for virtual machines and remote sessions.
+
+This is a visual-semantic fallback, not a claim of desktop sampling. Its state is
+therefore `PaintedMaterial / Emulated / PaintedOpaque`, which lets diagnostics and
+applications explain the actual fidelity without changing the requested setting.
+
+## Platform matrix
+
+| Platform/session | Effect backend | Resolved state | Notes |
+| --- | --- | --- | --- |
+| Windows 11 22H2+ with successful DWM call | `DwmSystemBackdrop` | `Native / CompositedTransparent` | Uses `DWMWA_SYSTEMBACKDROP_TYPE`; Mica maps to main-window material and Acrylic to transient-window material. A first-show recomposition nudge handles the observed DWM activation race. |
+| Windows 10, older Windows 11, unavailable DWM entry point, or failed DWM call | `PaintedMaterial` | `Emulated / PaintedOpaque` | Legacy Win10 Acrylic is intentionally not used for a whole Qt Widgets window because transparent backing-store regions can render black, especially in VMs. |
+| macOS Cocoa with a successfully installed `NSVisualEffectView` | `MacVibrancy` | `Native / CompositedTransparent` | Mica and Acrylic use distinct vibrancy material/tint mappings; native traffic lights and unified title-bar behavior remain in the mac backend. |
+| macOS host/view resolution or vibrancy installation failure | `PaintedMaterial` | `Emulated / PaintedOpaque` | Apply failure is authoritative even if the class was discovered during capability probing. |
+| Linux X11 with active compositor, ARGB window, advertised `_KDE_NET_WM_BLUR_BEHIND_REGION`, and successful property update | Acrylic: `LinuxCompositor`; Mica: `PaintedMaterial` | Acrylic: `Composited / CompositedTransparent`; Mica: `Emulated / PaintedOpaque` | KWin blur-behind represents Acrylic's live background sampling. Mica deliberately keeps the stable UILib-painted material. Detection is capability-based; it is not gated only by desktop-environment environment variables. |
+| Linux Wayland, X11 without an active/supported blur compositor, missing alpha visual, or failed blur-property update | `PaintedMaterial` | `Emulated / PaintedOpaque` | Qt Widgets has no stable cross-compositor Wayland blur API, so UILib paints the full material instead of degrading to a flat color. |
+| Other platforms | `PaintedMaterial` for Mica/Acrylic | `Emulated / PaintedOpaque` | The generic compatibility backend remains free of platform-specific assumptions. |
+
+On Linux, client-side move/resize remains independent from the backdrop tier.
+Both X11 and Wayland first use `QWindow::startSystemMove()` /
+`QWindow::startSystemResize()`. X11 may use a manual geometry fallback; Wayland
+must not choose global window geometry. The client-side shadow margin is removed
+while maximized/fullscreen so the window still reaches screen edges.
+
+While KWin Acrylic blur is active, a low-frequency capability probe detects compositor
+or blur-effect shutdown even when Qt emits no window event. Loss disables the
+native hint and asks `Window` to re-resolve to `PaintedOpaque`; surface, screen,
+DPR, and window-state changes still trigger immediate validation.
+
+## Z-order and content surfaces
+
+The window is still organized as three visual layers:
+
+```text
+z-0  Window material root
+z-1  title bar and navigation chrome
+z-2  content pages and opaque cards/controls
 ```
-┌─ 可复用控件（不含 #ifdef，只看 fluentMicaBackdrop 一个标记） ─┐
-│   Window.cpp · TitleBar.cpp · NavigationView.cpp              │
-└───────────────▲──────────────────────────┬──────────────────┘
-   sets fluentMicaBackdrop                  │ 调用原生操作
-                │                           ▼
-        ┌─────────────────────────────────────────────┐
-        │  WindowChromeCompat  (路由 / façade)          │
-        │  只做转发：每个方法 -> detail::xxx(...)         │
-        │  + 平台中立 helper：classifyHitTest（几何）、    │
-        │    canBeginSystemOperation（守卫）、            │
-        │    usesCustomWindowChrome / prefersNativeMacControls（策略布尔）│
-        └───────────────────────┬─────────────────────┘
-                  编译期选一个文件（detail:: 的实现体）
-        ┌───────────────┬───────────────┬───────────────┐
-        ▼               ▼               ▼
-  _win.cpp         _mac.cpp         _linux.cpp       _fallback.cpp
-  if Windows       #ifdef Q_OS_MAC  #ifdef Q_OS_LINUX #if !win && !mac && !linux
-  DWM Mica         NSVisualEffectView   KWin blur      no-ops
-  + 自绘 caption    + unified titlebar   + CSD shadow   原生装饰
-```
 
-`WindowChromeCompat.cpp` 本身几乎没有平台逻辑——它是 switchboard：每个 public 方法都是一行转发到 `detail::xxx`，而 `detail::xxx` 的函数体分别实现在四个平台文件里。`usesCustomWindowChrome()` / `prefersNativeMacControls()` 这两个布尔，就是 `if win` / `else if mac` / `else if linux` 本身。
+- In `CompositedTransparent`, z-0/z-1 expose the native/compositor surface.
+- In `PaintedOpaque`, z-0 paints the software material and z-1 shares it without
+  replacing it with a flat fallback color.
+- Transparent page gaps share the same z-0 material in both native/composited
+  and app-painted modes. Cards, controls, dialogs, and any explicitly configured
+  content surfaces remain opaque Fluent layers above it.
 
-## 想读哪部分，就打开哪个文件
+## Historical pitfalls retained as rules
 
-| 想看的东西 | 去哪 |
-|---|---|
-| 某个 OS 的原生实现（`if/else` 四个分支） | `WindowChromeCompat_win.cpp` / `_mac.cpp` / `_linux.cpp` / `_fallback.cpp`，一个分支一个文件 |
-| 颜色 / 透明 vs 纯色绘制 | 不在 `WindowChromeCompat`——在 `Window.cpp` / `TitleBar.cpp` / `NavigationView.cpp`，都是 `if (fluentMicaBackdrop) …` |
-| 路由 + 平台中立 helper | `WindowChromeCompat.cpp`（转发、`classifyHitTest`、守卫、策略布尔） |
-| 公共接口与契约 | `WindowChromeCompat.h` |
+Several bugs established the current contract:
 
-## 各 OS 的方案
+- Clearing based on `WA_TranslucentBackground` produced black navigation/title
+  seams in Normal mode because the attribute describes the top-level window
+  setup, not the effective material.
+- An unconditional `CompositionMode_Clear` in the raised content-corner overlay
+  punched a transparent hole through an opaque surface, producing dark/light
+  artifacts where title bar, navigation, and content meet.
+- On macOS, repeatedly drawing translucent pixels without first replacing the
+  backing-store content caused ghosting, cumulative darkening, and first-frame
+  flashes. Transparent replacement is still needed for real vibrancy, but is now
+  gated strictly by `CompositedTransparent`.
+- Treating support detection as apply success could clear over a rejected DWM,
+  Cocoa, or X11 operation. Capability probing and structured apply results are
+  now separate stages.
 
-| 分支 | 文件 | title bar / nav | 背景 |
-|---|---|---|---|
-| Windows | `_win.cpp` | 自绘 caption（去掉 `WS_CAPTION`），自定义 hit-test | Win11 DWM Mica/Acrylic；Win10 不透明 app fallback |
-| macOS | `_mac.cpp` | 原生 traffic lights + full-size content + 透明 titlebar | 两层兄弟 `NSView`：Mica 使用 window-background vibrancy + 较强 tint，Acrylic 使用 sidebar vibrancy + 较弱 tint |
-| Linux | `_linux.cpp` | 自绘 caption + Qt fallback move/resize + 客户端圆角阴影框 | X11/KWin 请求真实 compositor blur；GNOME/Wayland/其它 compositor 使用自绘 Fluent tint/圆角/阴影 |
-| 其它 | `_fallback.cpp` | 原生窗口装饰（无自绘 caption） | 纯色 `themeBackdrop` |
+These lead to one hard rule: **only `CompositedTransparent` may clear pixels to
+reveal a system/compositor background. `PaintedOpaque` must remain opaque from
+the first pixel through the final frame.**
 
-`platformSupportsSystemBackdrop()` 决定 `fluentMicaBackdrop` 是否为真：Windows 11 22H2+ / macOS / 启用合成且明确公布 blur atom 的 Linux X11 KWin 为真（走透明 + 系统背景或 compositor blur），Windows 10 和其它平台为假（走纯色/自绘降级）。Win10 legacy Acrylic 不再作为 window-level backdrop 使用，因为 Qt backing store 在 Win10/VM 上会把透明客户区渲染成黑色或黑边。
+## Code map
 
-## macOS 半透明清除注意事项（踩过的坑）
+| Concern | Location |
+| --- | --- |
+| Public effect/state/capability types and widget helpers | `src/components/windowing/WindowBackdrop.h/.cpp` |
+| Opaque fallback material renderer | `src/components/windowing/WindowBackdropMaterial.h/.cpp` |
+| Resolution, publication, and root painting | `src/components/windowing/Window.h/.cpp` |
+| Platform-neutral chrome facade | `src/compatibility/WindowChromeCompat.h/.cpp` |
+| DWM backend | `src/compatibility/WindowChromeCompat_win.cpp` |
+| Cocoa vibrancy backend | `src/compatibility/WindowChromeCompat_mac.cpp` |
+| X11/KWin blur and Linux chrome behavior | `src/compatibility/WindowChromeCompat_linux.cpp` |
+| Unsupported-platform adapter | `src/compatibility/WindowChromeCompat_fallback.cpp` |
+| Shared title/navigation/content paint consumers | `src/components/windowing/TitleBar.cpp`, `src/components/navigation/NavigationView.cpp`, `src/components/navigation/StackContentHost.cpp` |
 
-macOS 半透明顶层（vibrancy）下，系统**不会自动清除后备缓冲**。任何在 mica 下透明/半透明绘制以露出背景的控件，若重绘/动画/滚动，会出现：
+## Review checklist
 
-- **重影**（不透明内容叠加）、
-- **累加发黑**（半透明描边每帧叠加 alpha）、
-- **启动亮缝**（vibrancy 合成前的那一帧露出满强度 tint ≈243）。
+When changing backdrop behavior, verify:
 
-统一修法：每帧用 `QPainter::CompositionMode_Source` 擦除，**并门控在「真有系统背景」时**（`fluentMicaBackdrop`，见上文 z-order 硬规则）——不要只看裸的 `WA_TranslucentBackground`：支持 system backdrop 的 Windows 窗口始终半透明，Normal 下它也为真，按它判定会在 Normal 露黑（未门控的 Source 擦除写入 `RGBA(0,0,0,0)`，在不透明窗口上同样渲染成黑）。已应用于 `Window.cpp`、`StackContentHost.cpp`、`TitleBar.cpp`、`TreeView.cpp`（`!m_backgroundVisible` 时）、`NavigationView.cpp`（清 chrome rect）、Gallery 内容页，以及 `GalleryNavigationPane.cpp` 的页脚分隔线。页面栈切换时应在显示新透明页面前同步清除旧页面区域。另外：**子控件不要单独设 `WA_TranslucentBackground`**——macOS 上会把它提升为独立图层，容易在 vibrancy 合成期间产生白线或残影。
+1. requested and effective state can differ in backend/fidelity without losing
+   the user's selected effect;
+2. a failed native apply resolves to `PaintedOpaque` in the same update;
+3. no Clear/transparent Source path is reachable outside
+   `CompositedTransparent`;
+4. painted Mica and Acrylic are visually distinct in Light/Dark and remain fully
+   opaque;
+5. content islands and their rounded-corner overlays do not expose black or
+   undefined pixels;
+6. runtime effect/theme changes and the Win11 first-show reapply update the typed
+   state consistently;
+7. Linux tests cover Wayland/unsupported compositor fallback as well as the X11
+   compositor capability path.

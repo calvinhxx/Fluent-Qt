@@ -27,6 +27,8 @@
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/Window.h"
+#include "components/windowing/WindowBackdrop.h"
+#include "components/windowing/WindowBackdropMaterial.h"
 #include "components/windowing/WindowChromeFrame.h"
 
 #ifdef Q_OS_WIN
@@ -46,6 +48,14 @@ using fluent::windowing::ClientSideFramePaintOptions;
 using fluent::windowing::paintClientSideFrame;
 using fluent::windowing::TitleBar;
 using fluent::windowing::Window;
+using fluent::windowing::BackdropBackend;
+using fluent::windowing::BackdropCapabilities;
+using fluent::windowing::BackdropEffect;
+using fluent::windowing::BackdropFidelity;
+using fluent::windowing::BackdropState;
+using fluent::windowing::BackdropSurfaceMode;
+using fluent::windowing::WindowBackdropMaterial;
+using fluent::windowing::WindowBackdropMaterialOptions;
 
 namespace {
 
@@ -61,6 +71,49 @@ struct WindowVisualLauncher {
     QWidget* window = nullptr;
     Button* showButton = nullptr;
 };
+
+QImage renderBackdropMaterial(BackdropEffect effect, bool dark = false) {
+    const QSize size(160, 96);
+    QImage image(size, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    WindowBackdropMaterialOptions options = WindowBackdropMaterialOptions::forTheme(
+        dark,
+        dark ? QColor(32, 32, 32) : QColor(243, 243, 243),
+        QColor(0, 120, 212));
+    options.effect = effect;
+    options.active = true;
+    options.devicePixelRatio = 1.0;
+
+    QPainter painter(&image);
+    WindowBackdropMaterial::paint(painter, QRectF(image.rect()), options);
+    painter.end();
+    return image;
+}
+
+bool imageIsFullyOpaque(const QImage& image) {
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (image.pixelColor(x, y).alpha() != 255)
+                return false;
+        }
+    }
+    return true;
+}
+
+int differingPixelCount(const QImage& first, const QImage& second) {
+    if (first.size() != second.size())
+        return -1;
+
+    int differenceCount = 0;
+    for (int y = 0; y < first.height(); ++y) {
+        for (int x = 0; x < first.width(); ++x) {
+            if (first.pixel(x, y) != second.pixel(x, y))
+                ++differenceCount;
+        }
+    }
+    return differenceCount;
+}
 
 class SquareSurfaceWidget : public QWidget {
 protected:
@@ -364,17 +417,38 @@ TEST_F(WindowTest, TopLevelShowSmoke) {
     window.close();
 }
 
-TEST_F(WindowTest, TranslucentBackdropClearsWindowBackingStore) {
+TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface) {
     Window window;
-    const int clientFrameMargin = WindowChromeCompat(&window).clientSideFrameMargin();
+#ifdef Q_OS_LINUX
+    window.setCustomWindowChromeEnabled(true);
+#endif
+    window.resize(320, 240);
+    window.show();
+    QApplication::processEvents();
+
+    const int clientFrameMargin = window.chromeFrameRect().left();
+    const BackdropState state = window.backdropState();
     const bool hasBackdropSurface =
-        window.property("fluentMicaBackdrop").toBool() || clientFrameMargin > 0;
+        state.surfaceMode == BackdropSurfaceMode::CompositedTransparent
+        || clientFrameMargin > 0;
     if (!window.testAttribute(Qt::WA_TranslucentBackground)
         || !hasBackdropSurface) {
-        GTEST_SKIP() << "System backdrop is unavailable on this Qt platform";
+        SCOPED_TRACE(QStringLiteral("provider=%1 reason=%2")
+                         .arg(window.backdropCapabilities().provider, state.reason)
+                         .toStdString());
+        QImage fallback(window.size(), QImage::Format_ARGB32_Premultiplied);
+        fallback.fill(Qt::transparent);
+        QPainter fallbackPainter(&fallback);
+        window.render(&fallbackPainter, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+        fallbackPainter.end();
+        EXPECT_EQ(state.backend, BackdropBackend::PaintedMaterial);
+        EXPECT_EQ(state.surfaceMode, BackdropSurfaceMode::PaintedOpaque);
+        EXPECT_EQ(fallback.pixelColor(window.rect().center()).alpha(), 255)
+            << "A rejected/unavailable native backdrop must render an opaque material";
+        window.close();
+        return;
     }
 
-    window.resize(320, 240);
     QImage image(window.size(), QImage::Format_ARGB32_Premultiplied);
     image.fill(QColor(255, 0, 255, 255));
 
@@ -386,7 +460,7 @@ TEST_F(WindowTest, TranslucentBackdropClearsWindowBackingStore) {
         EXPECT_LT(image.pixelColor(QPoint(clientFrameMargin / 2, clientFrameMargin / 2)).alpha(),
                   255)
             << "A Linux client-side frame must clear stale opaque pixels outside the rounded body";
-        if (window.property("fluentMicaBackdrop").toBool()) {
+        if (state.surfaceMode == BackdropSurfaceMode::CompositedTransparent) {
             EXPECT_LT(image.pixelColor(window.rect().center()).alpha(), 255)
                 << "A Linux compositor backdrop tint must remain translucent";
         } else {
@@ -397,30 +471,169 @@ TEST_F(WindowTest, TranslucentBackdropClearsWindowBackingStore) {
         EXPECT_EQ(image.pixelColor(window.rect().center()).alpha(), 0)
             << "A translucent backdrop frame must replace stale backing-store pixels";
     }
+
+    // Verify every requested material against its per-effect capability. Win11
+    // and macOS composite both; KWin blur composites Acrylic while Mica keeps
+    // its stable painted semantics; Wayland/unsupported sessions paint both.
+    const BackdropCapabilities capabilities = window.backdropCapabilities();
+    for (BackdropEffect effect : {BackdropEffect::Mica, BackdropEffect::Acrylic}) {
+        window.setBackdropEffect(effect);
+        QApplication::processEvents();
+        const BackdropState applied = window.backdropState();
+        EXPECT_EQ(applied.requestedEffect, effect);
+        EXPECT_EQ(applied.effectiveEffect, effect);
+        if (capabilities.supportsTransparentMaterial(effect)) {
+            EXPECT_EQ(applied.surfaceMode, BackdropSurfaceMode::CompositedTransparent)
+                << applied.reason.toStdString();
+            EXPECT_TRUE(applied.platformApplied) << applied.reason.toStdString();
+        } else {
+            EXPECT_EQ(applied.backend, BackdropBackend::PaintedMaterial);
+            EXPECT_EQ(applied.fidelity, BackdropFidelity::Emulated);
+            EXPECT_EQ(applied.surfaceMode, BackdropSurfaceMode::PaintedOpaque);
+            EXPECT_FALSE(applied.platformApplied);
+        }
+    }
+
+    window.close();
 }
 
-TEST_F(WindowTest, BackdropSwitchKeepsPlatformTranslucencyStable) {
+TEST_F(WindowTest, BackdropEffectSwitchesModes) {
     Window window;
     const bool platformTranslucent = window.testAttribute(Qt::WA_TranslucentBackground);
-    const bool systemBackdropAvailable = WindowChromeCompat(&window).systemBackdropSupported();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    EXPECT_TRUE(QMetaType::fromName("BackdropEffect").isValid());
+    EXPECT_TRUE(QMetaType::fromName("BackdropState").isValid());
+#else
+    EXPECT_NE(QMetaType::type("BackdropEffect"), QMetaType::UnknownType);
+    EXPECT_NE(QMetaType::type("BackdropState"), QMetaType::UnknownType);
+#endif
+    QSignalSpy effectSpy(&window, &Window::backdropEffectChanged);
+    QSignalSpy stateSpy(&window, &Window::backdropStateChanged);
+    ASSERT_TRUE(effectSpy.isValid());
+    ASSERT_TRUE(stateSpy.isValid());
 
-    window.setBackdropEffect(compatibility::BackdropEffect::Solid);
-    EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
-              static_cast<int>(compatibility::BackdropEffect::Solid));
-    EXPECT_FALSE(window.property("fluentMicaBackdrop").toBool());
-    EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
+    const auto expectState = [&](BackdropEffect effect,
+                                 BackdropSurfaceMode expectedSurfaceMode) {
+        window.setBackdropEffect(effect);
+        const BackdropState state = window.backdropState();
 
-    window.setBackdropEffect(compatibility::BackdropEffect::Mica);
-    EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
-              static_cast<int>(compatibility::BackdropEffect::Mica));
-    EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), systemBackdropAvailable);
-    EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
+        EXPECT_EQ(window.backdropEffect(), effect);
+        EXPECT_EQ(state.requestedEffect, effect);
+        EXPECT_EQ(state.effectiveEffect, effect);
+        EXPECT_EQ(state.surfaceMode, expectedSurfaceMode);
+        EXPECT_EQ(fluent::windowing::windowBackdropState(&window), state);
+        EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
+                  static_cast<int>(state.requestedEffect));
+        EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(),
+                  state.surfaceMode == BackdropSurfaceMode::CompositedTransparent);
+        EXPECT_EQ(window.property("fluentBackdropSurfaceMode").toInt(),
+                  static_cast<int>(state.surfaceMode));
+        EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
+    };
 
-    window.setBackdropEffect(compatibility::BackdropEffect::Acrylic);
-    EXPECT_EQ(window.property("fluentWindowBackdropEffect").toInt(),
-              static_cast<int>(compatibility::BackdropEffect::Acrylic));
-    EXPECT_EQ(window.property("fluentMicaBackdrop").toBool(), systemBackdropAvailable);
-    EXPECT_EQ(window.testAttribute(Qt::WA_TranslucentBackground), platformTranslucent);
+    expectState(BackdropEffect::Solid, BackdropSurfaceMode::SolidOpaque);
+    expectState(BackdropEffect::Mica, BackdropSurfaceMode::PaintedOpaque);
+    expectState(BackdropEffect::Acrylic, BackdropSurfaceMode::PaintedOpaque);
+    window.setBackdropEffect(BackdropEffect::Acrylic);  // no-op must not notify
+    EXPECT_EQ(effectSpy.count(), 3);
+    EXPECT_EQ(stateSpy.count(), 3);
+}
+
+TEST_F(WindowTest, BackdropCapabilityHelpersResolvePerEffect) {
+    BackdropCapabilities nativeMica;
+    nativeMica.alphaSurfaceSupported = true;
+    nativeMica.nativeMica = true;
+
+    EXPECT_TRUE(nativeMica.supportsNative(BackdropEffect::Solid));
+    EXPECT_TRUE(nativeMica.supportsNative(BackdropEffect::Mica));
+    EXPECT_FALSE(nativeMica.supportsNative(BackdropEffect::Acrylic));
+    EXPECT_FALSE(nativeMica.supportsTransparentMaterial(BackdropEffect::Solid));
+    EXPECT_TRUE(nativeMica.supportsTransparentMaterial(BackdropEffect::Mica));
+    EXPECT_FALSE(nativeMica.supportsTransparentMaterial(BackdropEffect::Acrylic));
+
+    BackdropCapabilities compositor;
+    compositor.alphaSurfaceSupported = true;
+    compositor.compositorBlur = true;
+
+    EXPECT_FALSE(compositor.supportsCompositor(BackdropEffect::Solid));
+    EXPECT_FALSE(compositor.supportsCompositor(BackdropEffect::Mica));
+    EXPECT_TRUE(compositor.supportsCompositor(BackdropEffect::Acrylic));
+    EXPECT_FALSE(compositor.supportsTransparentMaterial(BackdropEffect::Mica));
+    EXPECT_TRUE(compositor.supportsTransparentMaterial(BackdropEffect::Acrylic));
+
+    compositor.alphaSurfaceSupported = false;
+    EXPECT_FALSE(compositor.supportsTransparentMaterial(BackdropEffect::Mica));
+    EXPECT_FALSE(compositor.supportsTransparentMaterial(BackdropEffect::Acrylic));
+}
+
+TEST_F(WindowTest, TypedBackdropStatePublishesToDescendants) {
+    QWidget topLevel;
+    QWidget child(&topLevel);
+
+    BackdropState queried;
+    EXPECT_FALSE(fluent::windowing::tryWindowBackdropState(&child, &queried));
+
+    BackdropState state;
+    state.requestedEffect = BackdropEffect::Acrylic;
+    state.effectiveEffect = BackdropEffect::Acrylic;
+    state.backend = BackdropBackend::LinuxCompositor;
+    state.fidelity = BackdropFidelity::Composited;
+    state.surfaceMode = BackdropSurfaceMode::CompositedTransparent;
+    state.platformApplied = true;
+    state.reason = QStringLiteral("unit-test-compositor");
+    fluent::windowing::publishWindowBackdropState(&child, state);
+
+    EXPECT_TRUE(fluent::windowing::tryWindowBackdropState(&child, &queried));
+    EXPECT_EQ(queried, state);
+    EXPECT_EQ(fluent::windowing::windowBackdropState(&topLevel), state);
+    EXPECT_EQ(fluent::windowing::windowBackdropState(&child), state);
+    EXPECT_TRUE(fluent::windowing::windowBackdropRequiresTransparentClear(&child));
+    EXPECT_FALSE(fluent::windowing::windowBackdropUsesPaintedMaterial(&child));
+    EXPECT_TRUE(fluent::windowing::windowHasMaterialBackdrop(&child));
+
+    state.backend = BackdropBackend::PaintedMaterial;
+    state.fidelity = BackdropFidelity::Emulated;
+    state.surfaceMode = BackdropSurfaceMode::PaintedOpaque;
+    state.platformApplied = false;
+    state.reason = QStringLiteral("unit-test-painted");
+    fluent::windowing::publishWindowBackdropState(&topLevel, state);
+
+    EXPECT_EQ(fluent::windowing::windowBackdropState(&child), state);
+    EXPECT_FALSE(fluent::windowing::windowBackdropRequiresTransparentClear(&child));
+    EXPECT_TRUE(fluent::windowing::windowBackdropUsesPaintedMaterial(&child));
+    EXPECT_TRUE(fluent::windowing::windowHasMaterialBackdrop(&child));
+}
+
+TEST_F(WindowTest, PaintedBackdropMaterialsAreOpaqueDistinctAndDeterministic) {
+    for (bool dark : {false, true}) {
+        const QImage solid = renderBackdropMaterial(BackdropEffect::Solid, dark);
+        const QImage mica = renderBackdropMaterial(BackdropEffect::Mica, dark);
+        const QImage acrylic = renderBackdropMaterial(BackdropEffect::Acrylic, dark);
+
+        EXPECT_TRUE(imageIsFullyOpaque(solid));
+        EXPECT_TRUE(imageIsFullyOpaque(mica));
+        EXPECT_TRUE(imageIsFullyOpaque(acrylic));
+
+        EXPECT_TRUE(solid == renderBackdropMaterial(BackdropEffect::Solid, dark));
+        EXPECT_TRUE(mica == renderBackdropMaterial(BackdropEffect::Mica, dark));
+        EXPECT_TRUE(acrylic == renderBackdropMaterial(BackdropEffect::Acrylic, dark));
+
+        const int pixelCount = solid.width() * solid.height();
+        EXPECT_GT(differingPixelCount(solid, mica), pixelCount / 4);
+        EXPECT_GT(differingPixelCount(solid, acrylic), pixelCount / 4);
+        EXPECT_GT(differingPixelCount(mica, acrylic), pixelCount / 4);
+    }
+}
+
+TEST_F(WindowTest, PaintedAcrylicKeepsBroadAccentGlassField) {
+    const QImage acrylic = renderBackdropMaterial(BackdropEffect::Acrylic, false);
+    const QColor upperLeft = acrylic.pixelColor(12, 12);
+    const QColor upperRight = acrylic.pixelColor(acrylic.width() - 12, 12);
+
+    const int leftCoolChroma = upperLeft.blue() - upperLeft.red();
+    const int rightCoolChroma = upperRight.blue() - upperRight.red();
+    EXPECT_GT(rightCoolChroma, 24);
+    EXPECT_GT(rightCoolChroma, leftCoolChroma + 10);
 }
 
 TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption) {

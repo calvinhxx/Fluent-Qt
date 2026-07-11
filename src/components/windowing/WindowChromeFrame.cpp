@@ -3,6 +3,7 @@
 #include <QEvent>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QResizeEvent>
 #include <QtGlobal>
 
@@ -235,6 +236,20 @@ void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& 
                                           options.shadow,
                                           options.dark ? 0.46 : 0.34);
 
+    const QRectF body = QRectF(options.frameRect).adjusted(0.5, 0.5, -0.5, -0.5);
+    if (options.usePaintedMaterial) {
+        QPainterPath clip;
+        clip.addRoundedRect(body, options.radius, options.radius);
+        painter.save();
+        painter.setClipPath(clip);
+        WindowBackdropMaterial::paint(painter, body, options.material);
+        painter.restore();
+        painter.setPen(QPen(options.stroke, 1.0));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(clip);
+        return;
+    }
+
     QColor fill = options.fill;
     if (options.useTranslucentMaterial) {
         const int alpha = options.effect == compatibility::BackdropEffect::Acrylic
@@ -245,9 +260,7 @@ void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& 
 
     painter.setPen(QPen(options.stroke, 1.0));
     painter.setBrush(fill);
-    painter.drawRoundedRect(QRectF(options.frameRect).adjusted(0.5, 0.5, -0.5, -0.5),
-                            options.radius,
-                            options.radius);
+    painter.drawRoundedRect(body, options.radius, options.radius);
 }
 
 Qt::Edges resizeEdgesForHitTest(compatibility::WindowChromeCompat::HitTest hit) {
