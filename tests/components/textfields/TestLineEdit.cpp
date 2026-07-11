@@ -53,6 +53,24 @@ TEST_F(LineEditTest, TextAndPlaceholder) {
     EXPECT_EQ(edit->text(), "hello");
 }
 
+TEST_F(LineEditTest, PlaceholderPaletteUsesResolvedOpaqueToken) {
+    const auto previousTheme = fluent::FluentElement::currentTheme();
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    LineEdit edit(window);
+    edit.onThemeUpdated();
+    const QColor placeholder = edit.palette().color(QPalette::Active,
+                                                     QPalette::PlaceholderText);
+
+    EXPECT_EQ(placeholder.alpha(), 255);
+    EXPECT_GT(placeholder.red(), 130);
+    EXPECT_LT(placeholder.red(), 150);
+    EXPECT_EQ(placeholder.red(), placeholder.green());
+    EXPECT_EQ(placeholder.green(), placeholder.blue());
+
+    fluent::FluentElement::setTheme(previousTheme);
+}
+
 TEST_F(LineEditTest, ContentMargins) {
     LineEdit* edit = new LineEdit(window);
     QMargins margins(10, 2, 10, 2);
