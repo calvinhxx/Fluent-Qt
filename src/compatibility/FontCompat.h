@@ -7,6 +7,14 @@
 #include <QStringList>
 #include <QtGlobal>
 
+namespace fluent::fontcompat {
+
+inline const QString SegoeSmallFamily = QStringLiteral("FluentQt Segoe UI Small");
+inline const QString SegoeTextFamily = QStringLiteral("FluentQt Segoe UI Text");
+inline const QString SegoeDisplayFamily = QStringLiteral("FluentQt Segoe UI Display");
+
+} // namespace fluent::fontcompat
+
 inline QStringList fluentFontDatabaseFamilies()
 {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -19,13 +27,8 @@ inline QStringList fluentFontDatabaseFamilies()
 
 inline void fluentApplyFontStyleName(QFont& font, const QString& styleName)
 {
-#if defined(Q_OS_LINUX)
-    Q_UNUSED(font);
-    Q_UNUSED(styleName);
-#else
     if (!styleName.isEmpty())
         font.setStyleName(styleName);
-#endif
 }
 
 #endif // FLUENTFONTCOMPAT_H

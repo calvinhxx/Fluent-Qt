@@ -102,6 +102,7 @@ Application code:
 #include <FluentQt/FluentQt.h>
 
 fluent::initializeResources();
+QApplication::setFont(Typography::Styles::Body.toQFont());
 
 auto* button = new fluent::basicinput::Button("Save", this);
 button->setFluentStyle(fluent::basicinput::Button::Accent);

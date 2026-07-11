@@ -45,6 +45,7 @@ int main(int argc, char** argv)
     }
 
     fluent::initializeResources();
+    app.setFont(Typography::Styles::Body.toQFont());
     fluent::gallery::GallerySettings::instance();
 
     // App logging policy: persist to the platform log file by default at Info

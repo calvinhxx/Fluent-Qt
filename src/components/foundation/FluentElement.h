@@ -84,7 +84,7 @@ public:
 
     struct FontStyle {
         QString family;
-        QString styleName;   // Segoe UI Variable optical-size variant, e.g. "Text Regular". zh_CN: 光学尺寸变体。
+        QString styleName;   // Exact static face, e.g. "Regular" or "Semibold". zh_CN: 精确静态字体。
         int size;
         int weight;
         int lineHeight;      // Absolute line height in px, measured from Figma. zh_CN: 绝对行高，Figma 实测值。

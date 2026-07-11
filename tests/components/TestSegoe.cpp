@@ -7,6 +7,8 @@
 #include <QStyledItemDelegate>
 #include <QPainter>
 #include <QFontDatabase>
+#include <QFontInfo>
+#include <QImage>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -564,6 +566,79 @@ protected:
 
 QString SegoeTest::m_iconFamily = "";
 QString SegoeTest::m_uiFamily = "";
+
+TEST_F(SegoeTest, BundledTypographyRolesResolveExactStaticFaces) {
+    struct ExpectedRole {
+        Typography::FontStyle style;
+        QString family;
+        QString styleName;
+        int weight;
+    };
+    const QList<ExpectedRole> roles = {
+        {Typography::Styles::Caption,
+         fluent::fontcompat::SegoeSmallFamily,
+         QStringLiteral("Regular"),
+         QFont::Normal},
+        {Typography::Styles::Body,
+         fluent::fontcompat::SegoeTextFamily,
+         QStringLiteral("Regular"),
+         QFont::Normal},
+        {Typography::Styles::BodyStrong,
+         fluent::fontcompat::SegoeTextFamily,
+         QStringLiteral("Semibold"),
+         QFont::DemiBold},
+        {Typography::Styles::Title,
+         fluent::fontcompat::SegoeDisplayFamily,
+         QStringLiteral("Semibold"),
+         QFont::DemiBold},
+    };
+
+    for (const ExpectedRole& role : roles) {
+        const QFont requested = role.style.toQFont();
+        const QFontInfo resolved(requested);
+        SCOPED_TRACE(role.family.toStdString());
+        EXPECT_TRUE(resolved.exactMatch());
+        EXPECT_EQ(resolved.family(), role.family);
+        EXPECT_EQ(resolved.styleName(), role.styleName);
+        EXPECT_EQ(resolved.weight(), role.weight);
+        EXPECT_EQ(resolved.pixelSize(), role.style.size);
+    }
+}
+
+TEST_F(SegoeTest, ApplicationDefaultUsesBundledTextRegular) {
+    const QFontInfo resolved(qApp->font());
+    EXPECT_EQ(resolved.family(), fluent::fontcompat::SegoeTextFamily);
+    EXPECT_EQ(resolved.styleName(), QStringLiteral("Regular"));
+    EXPECT_EQ(resolved.weight(), static_cast<int>(QFont::Normal));
+}
+
+TEST_F(SegoeTest, RegularAndSemiboldRenderDifferentRealFaces) {
+    const auto render = [](QFont font) {
+        font.setPixelSize(40);
+        QImage image(QSize(420, 80), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        painter.setPen(Qt::black);
+        painter.setFont(font);
+        painter.drawText(QPoint(8, 56), QStringLiteral("Fluent Typography 600"));
+        return image;
+    };
+    const QImage regular = render(Typography::Styles::Body.toQFont());
+    const QImage semibold = render(Typography::Styles::BodyStrong.toQFont());
+    EXPECT_FALSE(regular == semibold);
+
+    const auto inkCount = [](const QImage& image) {
+        int count = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, y).alpha() > 0)
+                    ++count;
+            }
+        }
+        return count;
+    };
+    EXPECT_GT(inkCount(semibold), inkCount(regular));
+}
 
 TEST_F(SegoeTest, ComprehensiveCheck) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {

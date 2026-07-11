@@ -2,6 +2,7 @@
 
 #include <QFont>
 #include <QFontDatabase>
+#include <QDebug>
 #include <QResource>
 #include <QString>
 #include <QStringList>
@@ -62,7 +63,31 @@ bool loadBundledFonts()
     const int uiFontId =
         QFontDatabase::addApplicationFont(QStringLiteral(":/res/SegoeUI-VF.ttf"));
 
-#ifdef Q_OS_LINUX
+    const auto loadStaticFace = [](const QString& path, const QString& expectedFamily) {
+        const int id = QFontDatabase::addApplicationFont(path);
+        if (id < 0)
+            return false;
+        const QStringList families = QFontDatabase::applicationFontFamilies(id);
+        for (const QString& family : families) {
+            if (family.compare(expectedFamily, Qt::CaseInsensitive) == 0)
+                return true;
+        }
+        return false;
+    };
+
+    const bool smallRegularLoaded = loadStaticFace(
+        QStringLiteral(":/res/fonts/FluentQtSegoeUISmall-Regular.ttf"),
+        fluent::fontcompat::SegoeSmallFamily);
+    const bool textRegularLoaded = loadStaticFace(
+        QStringLiteral(":/res/fonts/FluentQtSegoeUIText-Regular.ttf"),
+        fluent::fontcompat::SegoeTextFamily);
+    const bool textSemiboldLoaded = loadStaticFace(
+        QStringLiteral(":/res/fonts/FluentQtSegoeUIText-Semibold.ttf"),
+        fluent::fontcompat::SegoeTextFamily);
+    const bool displaySemiboldLoaded = loadStaticFace(
+        QStringLiteral(":/res/fonts/FluentQtSegoeUIDisplay-Semibold.ttf"),
+        fluent::fontcompat::SegoeDisplayFamily);
+
     const QStringList uiFamilies = QFontDatabase::applicationFontFamilies(uiFontId);
     if (!uiFamilies.isEmpty()) {
         const QString uiFamily = uiFamilies.constFirst();
@@ -80,11 +105,22 @@ bool loadBundledFonts()
                 QFont::insertSubstitution(alias, uiFamily);
         }
     }
-#endif
+
+    // If an application-font load ever fails, resolve the FluentQt-specific
+    // family through the original variable font or the platform system family.
+    // A successfully registered family always wins before substitutions.
+    QFont::insertSubstitution(fluent::fontcompat::SegoeSmallFamily,
+                              QStringLiteral("Segoe UI Variable Small"));
+    QFont::insertSubstitution(fluent::fontcompat::SegoeTextFamily,
+                              QStringLiteral("Segoe UI Variable Text"));
+    QFont::insertSubstitution(fluent::fontcompat::SegoeDisplayFamily,
+                              QStringLiteral("Segoe UI Variable Display"));
 
     configureLinuxEmojiFontFallback();
 
-    return iconFontId >= 0 && uiFontId >= 0;
+    return iconFontId >= 0 && uiFontId >= 0
+        && smallRegularLoaded && textRegularLoaded && textSemiboldLoaded
+        && displaySemiboldLoaded;
 }
 
 } // namespace
@@ -95,7 +131,12 @@ bool initializeResources()
 {
     static const bool initialized = [] {
         initializeFluentQtResourceFile();
-        return loadBundledFonts();
+        const bool loaded = loadBundledFonts();
+        if (!loaded) {
+            qWarning("FluentQt could not register every bundled typography face; "
+                     "platform font fallback will be used.");
+        }
+        return loaded;
     }();
     return initialized;
 }

@@ -23,8 +23,9 @@ target_link_libraries(fluentqt_hello_world PRIVATE FluentQt::FluentQt)
 ```
 
 Call `fluent::initializeResources()` after constructing `QApplication` so the
-bundled Segoe UI Variable and Segoe Fluent Icons fonts are registered on
-platforms that do not provide them as system fonts.
+bundled static Segoe UI typography faces and Segoe Fluent Icons are registered.
+Set the application font to `Typography::Styles::Body.toQFont()` when raw Qt
+widgets should inherit the same Text Regular face as Fluent components.
 
 Build from the repository root:
 

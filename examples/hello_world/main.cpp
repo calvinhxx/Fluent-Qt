@@ -503,6 +503,7 @@ int main(int argc, char* argv[])
     QApplication::setOrganizationName(QStringLiteral("Fluent-Qt"));
 
     fluent::initializeResources();
+    app.setFont(Typography::Styles::Body.toQFont());
 
     Window window;
     window.setWindowTitle(QStringLiteral("Fluent-Qt Hello World"));
