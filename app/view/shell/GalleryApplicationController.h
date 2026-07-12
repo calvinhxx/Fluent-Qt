@@ -38,6 +38,10 @@ private:
     void showCloseBehaviorDialog();
     void applyConfiguredCloseBehavior();
     void captureRestoreState();
+    void showRestoredWindow(std::uint64_t generation,
+                            Qt::WindowStates targetState,
+                            bool wasHidden,
+                            bool wasMinimized);
     void completeWindowRestore(std::uint64_t generation, bool refreshNativeFrame);
 
     QPointer<GalleryWindow> m_window;
