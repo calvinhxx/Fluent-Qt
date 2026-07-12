@@ -1881,13 +1881,18 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActiva
         !window.windowState().testFlag(Qt::WindowMinimized), 1000);
     auto* captionHost = window.findChild<QWidget*>(
         QStringLiteral("fluentWindowCaptionButtonHost"));
-    ASSERT_NE(captionHost, nullptr);
-    ASSERT_NE(window.titleBar(), nullptr);
-    EXPECT_TRUE(window.titleBar()->rect().contains(captionHost->geometry()))
-        << "Restore must not leave the client caption strip outside its title bar";
+    const auto platform = compatibility::WindowChromeCompat::currentPlatform();
+    if (platform == compatibility::WindowChromeCompat::Platform::MacOS) {
+        EXPECT_EQ(captionHost, nullptr)
+            << "macOS must keep using its native traffic-light controls after restore";
+    } else {
+        ASSERT_NE(captionHost, nullptr);
+        ASSERT_NE(window.titleBar(), nullptr);
+        EXPECT_TRUE(window.titleBar()->rect().contains(captionHost->geometry()))
+            << "Restore must not leave the client caption strip outside its title bar";
+    }
 
-    if (compatibility::WindowChromeCompat::currentPlatform()
-        == compatibility::WindowChromeCompat::Platform::Linux) {
+    if (platform == compatibility::WindowChromeCompat::Platform::Linux) {
         EXPECT_TRUE(window.windowFlags().testFlag(Qt::FramelessWindowHint))
             << "Linux restore must retain client-side chrome instead of exposing a native title bar";
     }
