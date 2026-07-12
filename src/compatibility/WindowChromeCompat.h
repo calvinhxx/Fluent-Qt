@@ -194,6 +194,12 @@ public:
      */
     bool showSystemMenu(const QPoint& globalPos);
 
+    /**
+     * @brief Requests foreground activation through the platform window manager.
+     * zh_CN: 通过平台窗口管理器请求将窗口激活到前台。
+     */
+    bool requestForegroundActivation();
+
     bool usesCustomWindowChrome() const;
     bool prefersNativeMacControls() const;
     bool manualMoveResizeFallbackAllowed() const;

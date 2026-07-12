@@ -317,6 +317,30 @@ void Window::scheduleBackdropResolution()
     });
 }
 
+void Window::scheduleNativeChromeRepair()
+{
+    if (compatibility::WindowChromeCompat::currentPlatform()
+            != compatibility::WindowChromeCompat::Platform::Windows
+        || m_nativeChromeRepairPending) {
+        return;
+    }
+
+    m_nativeChromeRepairPending = true;
+    QTimer::singleShot(0, this, [this] {
+        m_nativeChromeRepairPending = false;
+        if (!isVisible())
+            return;
+
+        // Qt 5/6.2 can rewrite the Win32 style after a native handle, DPI, or
+        // window-state transition. Re-assert custom chrome after that event has
+        // fully unwound so WS_THICKFRAME and the client-area hit test remain paired.
+        // zh_CN: Qt 5/6.2 可能在原生句柄、DPI 或窗口状态切换后重写 Win32 style；
+        // 待事件结束后重新施加自定义 chrome，确保 WS_THICKFRAME 与客户区命中测试保持配对。
+        m_chrome.applyPlatformWindowFlags();
+        updateChromeOptions();
+    });
+}
+
 void Window::resolveBackdropState(bool applyPlatform, bool forceRecomposite)
 {
     BackdropState next = paintedFallbackState(
@@ -376,6 +400,21 @@ void Window::reapplySystemBackdrop() {
     refreshBackdropCapabilities();
     updateChromeOptions();                                 // re-extend the sheet-of-glass
     resolveBackdropState(/*applyPlatform*/ true, /*forceRecomposite*/ true);
+    syncClientSideFrameMargins();
+    syncClientSideFrameShape();
+    syncTitleBarSystemInsets();
+    update();
+}
+
+void Window::requestForegroundActivation()
+{
+    if (!isVisible())
+        show();
+    raise();
+    activateWindow();
+    if (QWindow* handle = windowHandle())
+        handle->requestActivate();
+    m_chrome.requestForegroundActivation();
 }
 
 void Window::setBackdropEffect(BackdropEffect effect) {
@@ -526,6 +565,7 @@ void Window::showEvent(QShowEvent* event) {
     syncClientSideFrameShape();
     syncTitleBarSystemInsets();
     updateChromeOptions();
+    scheduleNativeChromeRepair();
 
     // Re-assert the system backdrop after the first event-loop turn, once the
     // native window is realized and placed.
@@ -556,6 +596,7 @@ void Window::changeEvent(QEvent* event) {
         syncClientSideFrameShape();
         syncTitleBarSystemInsets();
         updateChromeOptions();
+        scheduleNativeChromeRepair();
     }
 }
 
@@ -571,8 +612,10 @@ bool Window::event(QEvent* event)
     bool nativeSurfaceMayHaveChanged = type == QEvent::WinIdChange
         || type == QEvent::ScreenChangeInternal
         || fluentIsDevicePixelRatioChangeEvent(event);
-    if (nativeSurfaceMayHaveChanged && isVisible())
+    if (nativeSurfaceMayHaveChanged && isVisible()) {
         scheduleBackdropResolution();
+        scheduleNativeChromeRepair();
+    }
     return handled;
 }
 
@@ -590,6 +633,8 @@ void Window::setChromeInteractive(bool interactive) {
         m_captionButtonHost->setEnabled(interactive);
     syncClientSideResizeInput();
     updateChromeOptions();
+    if (interactive)
+        scheduleNativeChromeRepair();
 }
 
 void Window::updateChromeOptions() {

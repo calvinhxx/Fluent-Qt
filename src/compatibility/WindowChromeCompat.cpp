@@ -15,6 +15,7 @@ bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos);
 bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos);
 bool performPlatformTitleBarDoubleClick(QWidget* window, const WindowChromeOptions& options);
 bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos);
+bool requestPlatformForegroundActivation(QWidget* window);
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options);
 int nativeTitleBarLeadingInset(QWidget* window);
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options);
@@ -128,6 +129,10 @@ bool WindowChromeCompat::performTitleBarDoubleClick() {
 
 bool WindowChromeCompat::showSystemMenu(const QPoint& globalPos) {
     return detail::showPlatformSystemMenu(m_window, globalPos);
+}
+
+bool WindowChromeCompat::requestForegroundActivation() {
+    return detail::requestPlatformForegroundActivation(m_window);
 }
 
 bool WindowChromeCompat::usesCustomWindowChrome() const {
