@@ -30,6 +30,18 @@ constexpr const char* clientSideFrameRadiusPropertyName()
     return "fluentClientSideFrameRadius";
 }
 
+constexpr const char* windowResizeBorderWidthPropertyName()
+{
+    return "fluentWindowResizeBorderWidth";
+}
+
+inline int windowResizeBorderWidth(const QWidget* topLevel)
+{
+    if (!topLevel)
+        return 0;
+    return qMax(0, topLevel->property(windowResizeBorderWidthPropertyName()).toInt());
+}
+
 constexpr int defaultShadowMargin()
 {
     return ::Spacing::Standard;
