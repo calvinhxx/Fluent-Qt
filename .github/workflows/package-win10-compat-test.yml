@@ -86,13 +86,13 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           SKIP_VISUAL_TEST: 1
-        run: cmake --build --preset vcpkg-windows-release --target fluent_qt_gallery test_fluent_element test_scrollbar test_scroll_view test_window test_gallery_single_instance test_gallery_shell_framework test_gallery_content_pages --parallel
+        run: cmake --build --preset vcpkg-windows-release --target fluent_qt_gallery test_fluent_element test_scrollbar test_scroll_view test_drawer_view test_window test_gallery_single_instance test_gallery_shell_framework test_gallery_content_pages --parallel
 
       - name: Run Win10 compatibility focused tests
         env:
           QT_QPA_PLATFORM: offscreen
           SKIP_VISUAL_TEST: 1
-        run: ctest --test-dir build/vcpkg-windows-release -R "^(FluentElementTest|ScrollBarTest|ScrollBarDesignLanguageTest|ScrollViewTest|WindowTest|GallerySingleInstanceTest|GalleryShellFrameworkTest|GalleryContentPagesTest)\\." --output-on-failure --timeout 240
+        run: ctest --test-dir build/vcpkg-windows-release -R "^(FluentElementTest|ScrollBarTest|ScrollBarDesignLanguageTest|ScrollViewTest|DrawerViewTest|WindowTest|GallerySingleInstanceTest|GalleryShellFrameworkTest|GalleryContentPagesTest)\\." --output-on-failure --timeout 240
 
       - name: Package
         shell: pwsh
@@ -202,14 +202,14 @@ jobs:
         shell: bash
         run: |
           cmake --build --preset vcpkg-osx-release \
-            --target fluent_qt_gallery test_window test_gallery_single_instance test_gallery_shell_framework \
+            --target fluent_qt_gallery test_drawer_view test_window test_gallery_single_instance test_gallery_shell_framework \
             --parallel 2
 
       - name: Run macOS compatibility tests
         shell: bash
         run: |
           ctest --test-dir build/vcpkg-osx-release \
-            -R '^(WindowTest|GallerySingleInstanceTest)\.|^GalleryShellFrameworkTest\.RestoreFromMinimizedRefreshesFrameBeforeActivation$' \
+            -R '^(WindowTest|GallerySingleInstanceTest)\.|^DrawerViewTest\.WindowResizeBorderTakesPriorityOverClosedEdgeDrag$|^GalleryShellFrameworkTest\.(RestoreFromMinimizedRefreshesFrameBeforeActivation|RestoreFromTrayHiddenKeepsClientSideChrome)$' \
             --output-on-failure \
             --timeout 240 \
             --no-tests=error
@@ -362,14 +362,14 @@ jobs:
         shell: bash
         run: |
           cmake --build --preset vcpkg-linux-release \
-            --target fluent_qt_gallery test_segoe test_line_edit test_window test_gallery_single_instance test_gallery_shell_framework test_gallery_content_pages \
+            --target fluent_qt_gallery test_segoe test_line_edit test_drawer_view test_window test_gallery_single_instance test_gallery_shell_framework test_gallery_content_pages \
             --parallel 2
 
       - name: Run Linux package compatibility tests
         shell: bash
         run: |
           ctest --test-dir build/vcpkg-linux-release \
-            -R '^(SegoeTest|LineEditTest|WindowTest|GallerySingleInstanceTest|GalleryShellFrameworkTest|GalleryContentPagesTest)\.' \
+            -R '^(SegoeTest|LineEditTest|DrawerViewTest|WindowTest|GallerySingleInstanceTest|GalleryShellFrameworkTest|GalleryContentPagesTest)\.' \
             --output-on-failure \
             --timeout 240 \
             --no-tests=error
