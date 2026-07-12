@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QEvent>
+#include <QGuiApplication>
 #include <QMenu>
 #include <QSystemTrayIcon>
 #include <QTimer>
@@ -18,6 +19,17 @@
 #include "viewmodel/GallerySettings.h"
 
 namespace fluent::gallery {
+
+namespace {
+
+// A zero-duration timer can run before Qt's Unix event dispatcher flushes the
+// hide/unmap request to the compositor. A short real delay lets the event loop
+// block once, flush the platform connection, and only then remap the surface.
+// zh_CN: 0ms 定时器可能早于 Qt Unix 事件分发器把 hide/unmap 刷给 compositor。
+// 使用短暂真实延迟，让事件循环至少阻塞并刷新一次平台连接后再重新映射 surface。
+constexpr int LinuxMinimizedRemapDelayMs = 100;
+
+} // namespace
 
 GalleryApplicationController::GalleryApplicationController(GalleryWindow* window,
                                                            QObject* parent)
@@ -206,6 +218,11 @@ void GalleryApplicationController::restoreWindow()
     const bool wasMinimized = m_window->windowState().testFlag(Qt::WindowMinimized);
     const bool needsRestore = wasHidden || wasMinimized;
     const std::uint64_t generation = ++m_restoreGeneration;
+    LOG_INFO(QStringLiteral("GalleryApplicationController restore requested generation=%1 hidden=%2 minimized=%3 platform=%4")
+                 .arg(static_cast<qulonglong>(generation))
+                 .arg(wasHidden)
+                 .arg(wasMinimized)
+                 .arg(QGuiApplication::platformName()));
     if (needsRestore) {
         // A tray-hidden window uses the state captured immediately before hiding.
         // A manually minimized window uses its current native state so an older
@@ -235,7 +252,11 @@ void GalleryApplicationController::restoreWindow()
             // zh_CN: 在原生表面未映射时重新声明客户端边框；Qt 5/X11 若在显示后
             // 再修改窗口标志，可能一直残留第二条系统标题栏直到下次状态切换。
             m_window->prepareForNativeRestore();
-            QTimer::singleShot(0, this,
+            const int remapDelayMs = wasMinimized ? LinuxMinimizedRemapDelayMs : 0;
+            LOG_INFO(QStringLiteral("GalleryApplicationController Linux surface unmapped generation=%1 remapDelayMs=%2")
+                         .arg(static_cast<qulonglong>(generation))
+                         .arg(remapDelayMs));
+            QTimer::singleShot(remapDelayMs, this,
                                [this, generation, targetState, wasHidden, wasMinimized]() {
                 showRestoredWindow(generation, targetState, wasHidden, wasMinimized);
             });
@@ -274,6 +295,11 @@ void GalleryApplicationController::showRestoredWindow(std::uint64_t generation,
         m_window->show();
     else
         m_window->showNormal();
+
+    LOG_INFO(QStringLiteral("GalleryApplicationController surface remapped generation=%1 visible=%2 state=%3")
+                 .arg(static_cast<qulonglong>(generation))
+                 .arg(m_window->isVisible())
+                 .arg(static_cast<int>(m_window->windowState())));
 
     // Window-state transitions are asynchronous. Refresh and request activation
     // only after the remapped surface has been submitted to the compositor; the
