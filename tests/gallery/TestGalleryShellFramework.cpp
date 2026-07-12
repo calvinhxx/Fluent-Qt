@@ -1900,6 +1900,40 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActiva
     window.close();
 }
 
+TEST_F(GalleryShellFrameworkTest, RestoreFromTrayHiddenKeepsClientSideChrome)
+{
+    GalleryWindow window;
+    GalleryApplicationController applicationController(&window);
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+
+    window.hide();
+    QTRY_VERIFY_WITH_TIMEOUT(!window.isVisible(), 1000);
+
+    applicationController.restoreWindow();
+
+    QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
+    EXPECT_FALSE(window.windowState().testFlag(Qt::WindowMinimized));
+    if (compatibility::WindowChromeCompat::currentPlatform()
+        == compatibility::WindowChromeCompat::Platform::Linux) {
+        EXPECT_TRUE(window.windowFlags().testFlag(Qt::FramelessWindowHint));
+    }
+
+    auto* captionHost = window.findChild<QWidget*>(
+        QStringLiteral("fluentWindowCaptionButtonHost"));
+    if (compatibility::WindowChromeCompat::currentPlatform()
+        == compatibility::WindowChromeCompat::Platform::MacOS) {
+        EXPECT_EQ(captionHost, nullptr);
+    } else {
+        ASSERT_NE(captionHost, nullptr);
+        ASSERT_NE(window.titleBar(), nullptr);
+        EXPECT_TRUE(window.titleBar()->rect().contains(captionHost->geometry()));
+    }
+
+    window.close();
+}
+
 // Regression: picking a custom accent must keep the whole accent FAMILY consistent. A full-dump theme
 // template carries explicit accentSecondary/accentTertiary/textAccentPrimary; setUserAccent must drop
 // them so applyColorSpec re-derives them from the NEW accentDefault. The original bug left them stale

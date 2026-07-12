@@ -3,10 +3,12 @@
 #include <FluentQt/FluentQt.h>
 
 #include <QApplication>
+#include <QEventLoop>
 #include <QGuiApplication>
 #include <QRect>
 #include <QScreen>
 #include <QSize>
+#include <QTimer>
 
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryApplicationController.h"
@@ -33,7 +35,18 @@ int main(int argc, char** argv)
 
     fluent::gallery::GallerySingleInstance singleInstance(
         QStringLiteral(FLUENT_QT_GALLERY_APP_ID), &app);
-    const auto instanceResult = singleInstance.start();
+    // Qt 5's Unix local socket backend creates QSocketNotifier objects while
+    // connecting. Run the ownership handshake from an active event loop so a
+    // secondary launch can reliably deliver its activation request on Linux.
+    // zh_CN: Qt 5 的 Unix 本地套接字后端在连接时会创建 QSocketNotifier；在已运行的
+    // 事件循环中完成单例握手，确保 Linux 二次启动能够可靠送达激活请求。
+    auto instanceResult = fluent::gallery::GallerySingleInstance::StartResult::Error;
+    QEventLoop instanceStartupLoop;
+    QTimer::singleShot(0, &instanceStartupLoop, [&]() {
+        instanceResult = singleInstance.start();
+        instanceStartupLoop.quit();
+    });
+    instanceStartupLoop.exec();
     if (instanceResult
         == fluent::gallery::GallerySingleInstance::StartResult::ExistingInstanceNotified) {
         return 0;
