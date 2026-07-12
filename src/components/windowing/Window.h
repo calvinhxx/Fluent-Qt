@@ -85,6 +85,12 @@ public:
     void reapplySystemBackdrop();
 
     /**
+     * @brief Reasserts native chrome while a hidden window is prepared for restore.
+     * zh_CN: 在隐藏窗口准备恢复显示时重新声明原生窗口边框配置。
+     */
+    void prepareForNativeRestore();
+
+    /**
      * @brief Requests foreground activation through Qt and the platform adapter.
      * zh_CN: 通过 Qt 与平台适配层请求将窗口激活到前台。
      */

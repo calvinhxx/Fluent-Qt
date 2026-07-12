@@ -15,6 +15,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/collections/DrawerView.h"
@@ -698,6 +699,39 @@ TEST_F(DrawerViewTest, InteractiveDragOpensAndClosesWithThresholds)
     sendMouse(&window, QEvent::MouseMove, QPoint(220, 140), Qt::NoButton, Qt::LeftButton);
     sendMouse(&window, QEvent::MouseButtonRelease, QPoint(220, 140), Qt::LeftButton, Qt::NoButton);
     EXPECT_FALSE(drawer.isOpen());
+}
+
+TEST_F(DrawerViewTest, WindowResizeBorderTakesPriorityOverClosedEdgeDrag)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    window.setProperty(
+        fluent::overlay::windowResizeBorderWidthPropertyName(), 8);
+
+    DrawerView drawer(&window);
+    drawer.setEdge(DrawerView::DrawerEdge::Right);
+    drawer.setAnimationEnabled(false);
+    drawer.setModal(false);
+    drawer.setDim(false);
+    drawer.setDrawerLength(320);
+
+    const int right = window.rect().right();
+    sendMouse(&window, QEvent::MouseButtonPress, QPoint(right, 140),
+              Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseMove, QPoint(right - 220, 140),
+              Qt::NoButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(right - 220, 140),
+              Qt::LeftButton, Qt::NoButton);
+    EXPECT_FALSE(drawer.isOpen());
+    EXPECT_EQ(drawer.position(), 0.0);
+
+    sendMouse(&window, QEvent::MouseButtonPress, QPoint(right - 9, 140),
+              Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseMove, QPoint(right - 220, 140),
+              Qt::NoButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(right - 220, 140),
+              Qt::LeftButton, Qt::NoButton);
+    EXPECT_TRUE(drawer.isOpen());
 }
 
 TEST_F(DrawerViewTest, ThemeRefreshAndParentDestructionAreSafe)

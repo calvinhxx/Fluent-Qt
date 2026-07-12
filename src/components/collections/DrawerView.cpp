@@ -774,15 +774,27 @@ bool DrawerView::isPointInEdgeDragArea(const QPoint& globalPos) const
     if (!area.contains(local))
         return false;
 
+    // A frameless window owns the pixels nearest its visible edge for native
+    // move/resize. Drawer gestures start immediately inside that reservation,
+    // otherwise one press can resize the window and open a drawer at once.
+    // zh_CN: 无边框窗口最靠近可见边缘的像素优先用于原生缩放；抽屉手势从该区域
+    // 内侧开始，避免一次按下同时触发窗口缩放和抽屉展开。
+    const int resizeBorder = qMin(
+        m_dragMargin, ::fluent::overlay::windowResizeBorderWidth(top));
+
     switch (m_edge) {
     case DrawerEdge::Left:
-        return local.x() <= area.left() + m_dragMargin;
+        return local.x() >= area.left() + resizeBorder
+            && local.x() < area.left() + m_dragMargin;
     case DrawerEdge::Right:
-        return local.x() >= area.right() - m_dragMargin + 1;
+        return local.x() <= area.right() - resizeBorder
+            && local.x() > area.right() - m_dragMargin;
     case DrawerEdge::Top:
-        return local.y() <= area.top() + m_dragMargin;
+        return local.y() >= area.top() + resizeBorder
+            && local.y() < area.top() + m_dragMargin;
     case DrawerEdge::Bottom:
-        return local.y() >= area.bottom() - m_dragMargin + 1;
+        return local.y() <= area.bottom() - resizeBorder
+            && local.y() > area.bottom() - m_dragMargin;
     }
     return false;
 }

@@ -406,6 +406,15 @@ void Window::reapplySystemBackdrop() {
     update();
 }
 
+void Window::prepareForNativeRestore()
+{
+    updateChromeOptions();
+    m_chrome.applyPlatformWindowFlags();
+    syncClientSideFrameMargins();
+    syncClientSideFrameShape();
+    syncTitleBarSystemInsets();
+}
+
 void Window::requestForegroundActivation()
 {
     if (!isVisible())
@@ -654,6 +663,15 @@ void Window::updateChromeOptions() {
     options.resizeBorderWidth = ResizeBorderWidth;
     options.chromeInteractive = m_chromeInteractive;
     m_chrome.configure(options);
+
+    const int reservedResizeBorder = m_chrome.usesCustomWindowChrome()
+            && m_chromeInteractive && !isMaximized() && !isFullScreen()
+        ? ResizeBorderWidth
+        : 0;
+    const char* resizeBorderProperty =
+        ::fluent::overlay::windowResizeBorderWidthPropertyName();
+    if (property(resizeBorderProperty).toInt() != reservedResizeBorder)
+        setProperty(resizeBorderProperty, reservedResizeBorder);
 }
 
 void Window::syncTitleBarSystemInsets() {
