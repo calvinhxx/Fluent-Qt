@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <QEventLoop>
 #include <QTextStream>
 #include <QTimer>
 
@@ -18,7 +19,13 @@ int main(int argc, char** argv)
 
     QTextStream output(stdout);
     GallerySingleInstance instance(arguments.at(1), &app);
-    const auto result = instance.start();
+    auto result = GallerySingleInstance::StartResult::Error;
+    QEventLoop startupLoop;
+    QTimer::singleShot(0, &startupLoop, [&]() {
+        result = instance.start();
+        startupLoop.quit();
+    });
+    startupLoop.exec();
     switch (result) {
     case GallerySingleInstance::StartResult::Primary:
         output << "PRIMARY" << Qt::endl;
