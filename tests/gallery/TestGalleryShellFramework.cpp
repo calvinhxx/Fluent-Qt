@@ -12,6 +12,8 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QPointer>
+#include <QProcess>
+#include <QProcessEnvironment>
 #include <QPropertyAnimation>
 #include <QRect>
 #include <QScrollArea>
@@ -19,6 +21,7 @@
 #include <QStringList>
 #include <QTest>
 #include <QUrl>
+#include <QUuid>
 #include <QVector>
 #include <QtGlobal>
 
@@ -45,6 +48,7 @@
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/shell/GalleryApplicationController.h"
+#include "view/shell/GallerySingleInstance.h"
 #include "view/support/GalleryCloseBehaviorPrompt.h"
 #include "view/shell/GalleryNavigationPane.h"
 #include "view/shell/GalleryPageSkeleton.h"
@@ -75,6 +79,7 @@ using fluent::gallery::GalleryNavigationPane;
 using fluent::gallery::GalleryNavigationViewModel;
 using fluent::gallery::GalleryPageSkeleton;
 using fluent::gallery::GallerySettings;
+using fluent::gallery::GallerySingleInstance;
 using fluent::gallery::GalleryWindow;
 using fluent::gallery::SettingsPage;
 using fluent::navigation::NavigationView;
@@ -1879,7 +1884,17 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActiva
     if (compatibility::WindowChromeCompat::currentPlatform()
         == compatibility::WindowChromeCompat::Platform::Linux) {
         EXPECT_FALSE(window.isVisible())
-            << "Linux restore must keep the surface unmapped until the next event-loop turn";
+            << "Linux restore must initially unmap the minimized surface";
+
+        bool observedZeroTurn = false;
+        bool visibleAfterZeroTurn = true;
+        QTimer::singleShot(0, [&]() {
+            visibleAfterZeroTurn = window.isVisible();
+            observedZeroTurn = true;
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(observedZeroTurn, 1000);
+        EXPECT_FALSE(visibleAfterZeroTurn)
+            << "The minimized surface must stay unmapped through the first event-loop turn";
     }
 
     QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
@@ -1938,6 +1953,53 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromTrayHiddenKeepsClientSideChrome)
     }
 
     window.close();
+}
+
+TEST_F(GalleryShellFrameworkTest, SecondaryInstanceRestoresMinimizedWindow)
+{
+    const QString instanceKey = QStringLiteral("com.fluentqt.gallery.restore-test.%1")
+                                    .arg(QUuid::createUuid().toString(QUuid::WithoutBraces));
+    GallerySingleInstance primary(instanceKey);
+    ASSERT_EQ(primary.start(), GallerySingleInstance::StartResult::Primary)
+        << primary.errorString().toStdString();
+
+    GalleryWindow window;
+    GalleryApplicationController applicationController(&window);
+    QObject::connect(&primary, &GallerySingleInstance::activationRequested,
+                     &applicationController, &GalleryApplicationController::restoreWindow);
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+    window.showMinimized();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.windowState().testFlag(Qt::WindowMinimized), 1000);
+
+    QProcess secondary;
+    QProcessEnvironment secondaryEnvironment = QProcessEnvironment::systemEnvironment();
+    secondaryEnvironment.insert(QStringLiteral("FLUENT_QT_SINGLE_INSTANCE_TEST_MODE"),
+                                QStringLiteral("1"));
+    secondaryEnvironment.insert(QStringLiteral("FLUENT_QT_SINGLE_INSTANCE_TEST_APP_NAME"),
+                                QCoreApplication::applicationName());
+    secondaryEnvironment.insert(QStringLiteral("FLUENT_QT_SINGLE_INSTANCE_TEST_ORGANIZATION"),
+                                QCoreApplication::organizationName());
+    secondary.setProcessEnvironment(secondaryEnvironment);
+    secondary.setProgram(QString::fromLocal8Bit(
+        FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH));
+    secondary.setArguments({instanceKey});
+    secondary.start();
+    ASSERT_TRUE(secondary.waitForStarted(2000))
+        << secondary.errorString().toStdString();
+
+    QTRY_VERIFY_WITH_TIMEOUT(secondary.state() == QProcess::NotRunning, 3000);
+    const QByteArray secondaryOutput = secondary.readAllStandardOutput();
+    EXPECT_EQ(secondary.exitStatus(), QProcess::NormalExit);
+    EXPECT_EQ(secondary.exitCode(), 0) << secondaryOutput.constData();
+    EXPECT_TRUE(secondaryOutput.contains("SECONDARY")) << secondaryOutput.constData();
+
+    QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        !window.windowState().testFlag(Qt::WindowMinimized), 1000);
+    window.hide();
 }
 
 // Regression: picking a custom accent must keep the whole accent FAMILY consistent. A full-dump theme
