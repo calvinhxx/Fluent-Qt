@@ -867,6 +867,29 @@ TEST_F(WindowTest, WindowsCloseCaptionButtonHoverUsesCriticalRed) {
 #endif
 }
 
+TEST_F(WindowTest, PrepareForNativeRestoreClearsCaptionButtonPointerState) {
+    Window window;
+    window.setCustomWindowChromeEnabled(true);
+    window.resize(640, 420);
+    window.show();
+    QApplication::processEvents();
+
+    auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
+    if (!closeButton)
+        GTEST_SKIP() << "The active platform uses native caption controls";
+
+    closeButton->setDown(true);
+    closeButton->setInteractionState(Button::Hover);
+    closeButton->setAttribute(Qt::WA_UnderMouse, true);
+    window.hide();
+
+    window.prepareForNativeRestore();
+
+    EXPECT_FALSE(closeButton->isDown());
+    EXPECT_EQ(closeButton->interactionState(), Button::Rest);
+    EXPECT_FALSE(closeButton->underMouse());
+}
+
 TEST_F(WindowTest, WindowsSelfDrawnCaptionButtonsDriveWindowSlots) {
 #ifdef Q_OS_WIN
     Window window;
