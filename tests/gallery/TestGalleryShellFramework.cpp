@@ -23,6 +23,7 @@
 #include <QtGlobal>
 
 #include "compatibility/QtCompat.h"
+#include "compatibility/WindowChromeCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/collections/TreeView.h"
@@ -1859,6 +1860,39 @@ TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpen
     EXPECT_TRUE(window.isVisible());
     EXPECT_TRUE(window.isChromeInteractive());
     EXPECT_FALSE(settings.closeBehaviorConfirmed());
+}
+
+TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActivation)
+{
+    GalleryWindow window;
+    GalleryApplicationController applicationController(&window);
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+
+    window.showMinimized();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.windowState().testFlag(Qt::WindowMinimized), 1000);
+
+    applicationController.restoreWindow();
+
+    QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        !window.windowState().testFlag(Qt::WindowMinimized), 1000);
+    auto* captionHost = window.findChild<QWidget*>(
+        QStringLiteral("fluentWindowCaptionButtonHost"));
+    ASSERT_NE(captionHost, nullptr);
+    ASSERT_NE(window.titleBar(), nullptr);
+    EXPECT_TRUE(window.titleBar()->rect().contains(captionHost->geometry()))
+        << "Restore must not leave the client caption strip outside its title bar";
+
+    if (compatibility::WindowChromeCompat::currentPlatform()
+        == compatibility::WindowChromeCompat::Platform::Linux) {
+        EXPECT_TRUE(window.windowFlags().testFlag(Qt::FramelessWindowHint))
+            << "Linux restore must retain client-side chrome instead of exposing a native title bar";
+    }
+
+    window.close();
 }
 
 // Regression: picking a custom accent must keep the whole accent FAMILY consistent. A full-dump theme

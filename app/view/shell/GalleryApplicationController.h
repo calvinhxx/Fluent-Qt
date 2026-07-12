@@ -5,6 +5,8 @@
 #include <QPointer>
 #include <Qt>
 
+#include <cstdint>
+
 class QEvent;
 class QMenu;
 class QSystemTrayIcon;
@@ -36,6 +38,7 @@ private:
     void showCloseBehaviorDialog();
     void applyConfiguredCloseBehavior();
     void captureRestoreState();
+    void completeWindowRestore(std::uint64_t generation, bool refreshNativeFrame);
 
     QPointer<GalleryWindow> m_window;
     QSystemTrayIcon* m_statusIcon = nullptr;
@@ -45,6 +48,7 @@ private:
     bool m_exitRequested = false;
     bool m_closeRequestScheduled = false;
     bool m_closePromptOpen = false;
+    std::uint64_t m_restoreGeneration = 0;
 };
 
 } // namespace fluent::gallery
