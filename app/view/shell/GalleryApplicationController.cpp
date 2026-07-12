@@ -7,8 +7,8 @@
 #include <QMenu>
 #include <QSystemTrayIcon>
 #include <QTimer>
-#include <QWindow>
 
+#include "compatibility/WindowChromeCompat.h"
 #include "components/dialogs_flyouts/ContentDialog.h"
 #include "utils/Log.h"
 #include "view/shell/AppIcon.h"
@@ -17,35 +17,7 @@
 #include "view/support/GalleryCloseBehaviorUi.h"
 #include "viewmodel/GallerySettings.h"
 
-#ifdef Q_OS_WIN
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
-
 namespace fluent::gallery {
-
-namespace {
-
-void requestForegroundActivation(QWidget* window)
-{
-    if (!window)
-        return;
-
-    window->raise();
-    window->activateWindow();
-    if (QWindow* handle = window->windowHandle())
-        handle->requestActivate();
-
-#ifdef Q_OS_WIN
-    const HWND nativeWindow = reinterpret_cast<HWND>(window->winId());
-    if (nativeWindow)
-        SetForegroundWindow(nativeWindow);
-#endif
-}
-
-} // namespace
 
 GalleryApplicationController::GalleryApplicationController(GalleryWindow* window,
                                                            QObject* parent)
@@ -233,6 +205,7 @@ void GalleryApplicationController::restoreWindow()
     const bool wasHidden = !m_window->isVisible();
     const bool wasMinimized = m_window->windowState().testFlag(Qt::WindowMinimized);
     const bool needsRestore = wasHidden || wasMinimized;
+    const std::uint64_t generation = ++m_restoreGeneration;
     if (needsRestore) {
         // A tray-hidden window uses the state captured immediately before hiding.
         // A manually minimized window uses its current native state so an older
@@ -242,6 +215,18 @@ void GalleryApplicationController::restoreWindow()
         Qt::WindowStates targetState = wasHidden ? m_restoreState : m_window->windowState();
         targetState &= ~Qt::WindowMinimized;
         targetState &= ~Qt::WindowActive;
+
+        // Qt can clear WindowMinimized while the X11/WSLg shell surface remains
+        // iconified. An explicit unmap before showNormal/showMaximized forces a
+        // fresh MapRequest and also discards stale client-side frame pixels.
+        // zh_CN: Qt 可能已清除 WindowMinimized，但 X11/WSLg shell surface 仍处于
+        // 图标化状态；显示前显式 unmap 可强制新的 MapRequest，并丢弃旧的自绘 frame 像素。
+        const bool forceLinuxRemap = wasMinimized
+            && compatibility::WindowChromeCompat::currentPlatform()
+                == compatibility::WindowChromeCompat::Platform::Linux;
+        if (forceLinuxRemap)
+            m_window->hide();
+
         if (targetState.testFlag(Qt::WindowFullScreen))
             m_window->showFullScreen();
         else if (targetState.testFlag(Qt::WindowMaximized))
@@ -249,16 +234,37 @@ void GalleryApplicationController::restoreWindow()
         else
             m_window->showNormal();
     }
-    requestForegroundActivation(m_window);
-    // Run once more after the restore state has reached the native window.
-    // zh_CN: 窗口恢复状态同步到原生窗口后再激活一次。
-    QTimer::singleShot(0, this, [this]() { requestForegroundActivation(m_window); });
-    QTimer::singleShot(150, this, [this]() {
-        if (m_window && !m_window->isActiveWindow()) {
+    if (!needsRestore)
+        completeWindowRestore(generation, /*refreshNativeFrame*/ false);
+
+    // Linux window-state transitions are asynchronous. Let the compositor/window
+    // manager finish de-minimizing before refreshing the custom frame and asking
+    // for activation; a later retry covers slower VM compositors.
+    // zh_CN: Linux 窗口状态切换是异步的；先等待 compositor/window manager 完成
+    // 去最小化，再刷新自定义 frame 并请求激活，稍后的重试用于较慢的虚拟机 compositor。
+    QTimer::singleShot(0, this, [this, generation, needsRestore]() {
+        completeWindowRestore(generation, needsRestore);
+    });
+    QTimer::singleShot(80, this, [this, generation]() {
+        completeWindowRestore(generation, /*refreshNativeFrame*/ false);
+    });
+    QTimer::singleShot(250, this, [this, generation]() {
+        if (generation == m_restoreGeneration && m_window && !m_window->isActiveWindow()) {
             LOG_DEBUG(QStringLiteral("GalleryApplicationController foreground activation deferred to platform attention"));
             QApplication::alert(m_window, 3000);
         }
     });
+}
+
+void GalleryApplicationController::completeWindowRestore(std::uint64_t generation,
+                                                         bool refreshNativeFrame)
+{
+    if (generation != m_restoreGeneration || !m_window || m_exitRequested)
+        return;
+
+    if (refreshNativeFrame)
+        m_window->reapplySystemBackdrop();
+    m_window->requestForegroundActivation();
 }
 
 void GalleryApplicationController::openSettings()
