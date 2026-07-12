@@ -408,6 +408,20 @@ void Window::reapplySystemBackdrop() {
 
 void Window::prepareForNativeRestore()
 {
+    // A compositor can hide/unmap a window without delivering matching leave or
+    // release events to its client-side caption controls. Reset those transient
+    // states before remapping so the close button cannot reopen in critical hover.
+    // zh_CN: compositor 隐藏/取消映射窗口时，可能不会向客户端标题栏按钮投递对应的
+    // leave/release 事件。重新映射前清理这些瞬态，避免关闭按钮以危险悬停色重新出现。
+    for (auto* button : {m_minimizeButton, m_maximizeButton, m_closeButton}) {
+        if (!button)
+            continue;
+        button->setDown(false);
+        button->setInteractionState(fluent::basicinput::Button::Rest);
+        button->setAttribute(Qt::WA_UnderMouse, false);
+        button->update();
+    }
+
     updateChromeOptions();
     m_chrome.applyPlatformWindowFlags();
     syncClientSideFrameMargins();
@@ -419,6 +433,20 @@ void Window::requestForegroundActivation()
 {
     if (!isVisible())
         show();
+
+    // Qt 5.15/6.2 Wayland has no supported requestActivate implementation and
+    // emits a warning for every call. Visibility is restored by the caller's
+    // unmap/remap sequence; focus remains compositor policy unless a valid XDG
+    // activation token is available.
+    // zh_CN: Qt 5.15/6.2 Wayland 不支持 requestActivate，每次调用都会输出警告。
+    // 可见性由调用方的取消映射/重新映射保证；没有有效 XDG activation token 时，
+    // 焦点仍由 compositor 决定。
+    if (QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
+                                                    Qt::CaseInsensitive)) {
+        m_chrome.requestForegroundActivation();
+        return;
+    }
+
     raise();
     activateWindow();
     if (QWindow* handle = windowHandle())
