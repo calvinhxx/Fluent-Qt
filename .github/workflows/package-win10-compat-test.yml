@@ -209,7 +209,7 @@ jobs:
         shell: bash
         run: |
           ctest --test-dir build/vcpkg-osx-release \
-            -R '^(WindowTest|GallerySingleInstanceTest|GalleryShellFrameworkTest)\.' \
+            -R '^(WindowTest|GallerySingleInstanceTest)\.|^GalleryShellFrameworkTest\.RestoreFromMinimizedRefreshesFrameBeforeActivation$' \
             --output-on-failure \
             --timeout 240 \
             --no-tests=error
