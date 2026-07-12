@@ -221,16 +221,30 @@ void GalleryApplicationController::restoreWindow()
         // fresh MapRequest and also discards stale client-side frame pixels.
         // zh_CN: Qt 可能已清除 WindowMinimized，但 X11/WSLg shell surface 仍处于
         // 图标化状态；显示前显式 unmap 可强制新的 MapRequest，并丢弃旧的自绘 frame 像素。
-        const bool forceLinuxRemap = wasMinimized
+        const bool forceLinuxRemap = needsRestore
             && compatibility::WindowChromeCompat::currentPlatform()
                 == compatibility::WindowChromeCompat::Platform::Linux;
-        if (forceLinuxRemap)
+        if (forceLinuxRemap) {
             m_window->hide();
+            // Reassert the client-side frame while the native surface is
+            // unmapped. Doing this after show can expose a second window-manager
+            // caption on Qt 5/X11 until the next state transition.
+            // zh_CN: 在原生表面未映射时重新声明客户端边框；Qt 5/X11 若在显示后
+            // 再修改窗口标志，可能一直残留第二条系统标题栏直到下次状态切换。
+            m_window->prepareForNativeRestore();
+        }
 
         if (targetState.testFlag(Qt::WindowFullScreen))
             m_window->showFullScreen();
         else if (targetState.testFlag(Qt::WindowMaximized))
             m_window->showMaximized();
+        else if (wasHidden && !wasMinimized)
+            // A tray-hidden normal window does not need a window-state
+            // transition. Qt 5/X11 showNormal() can briefly re-negotiate native
+            // decorations here and leave a detached system caption behind.
+            // zh_CN: 托盘隐藏的普通窗口无需切换窗口状态；Qt 5/X11 在此调用
+            // showNormal() 可能重新协商系统装饰并残留一条脱离窗口的标题栏。
+            m_window->show();
         else
             m_window->showNormal();
     }
