@@ -25,6 +25,7 @@ constexpr int ConnectAttemptMs = 100;
 constexpr int ConnectRetryDelayMs = 20;
 constexpr int MaximumCommandBytes = 256;
 const QByteArray ActivateCommand = QByteArrayLiteral("activate/1\n");
+const QByteArray ActivatedReply = QByteArrayLiteral("activated/1\n");
 
 QString runtimeDirectory()
 {
@@ -180,7 +181,7 @@ bool GallerySingleInstance::notifyExistingInstance(int timeoutMs)
 
     while (timer.elapsed() < deadline) {
         QLocalSocket socket;
-        socket.connectToServer(m_serverName, QIODevice::WriteOnly);
+        socket.connectToServer(m_serverName, QIODevice::ReadWrite);
         const int remaining = deadline - static_cast<int>(timer.elapsed());
         if (socket.waitForConnected(qMin(ConnectAttemptMs, qMax(1, remaining)))) {
             const qint64 written = socket.write(ActivateCommand);
@@ -189,8 +190,13 @@ bool GallerySingleInstance::notifyExistingInstance(int timeoutMs)
             const bool delivered = written == ActivateCommand.size()
                 && (socket.bytesToWrite() == 0
                     || socket.waitForBytesWritten(qMax(1, writeRemaining)));
+            const int replyRemaining = deadline - static_cast<int>(timer.elapsed());
+            const bool acknowledged = delivered
+                && (socket.bytesAvailable() > 0
+                    || socket.waitForReadyRead(qMax(1, replyRemaining)))
+                && socket.readAll().startsWith(ActivatedReply);
             socket.disconnectFromServer();
-            if (delivered)
+            if (acknowledged)
                 return true;
         }
         socket.abort();
@@ -241,8 +247,16 @@ void GallerySingleInstance::processSocket(QLocalSocket* socket)
     }
 
     socket->setProperty("galleryInstanceHandled", true);
-    if (command.left(newline).trimmed() == QByteArrayLiteral("activate/1"))
+    if (command.left(newline).trimmed() == QByteArrayLiteral("activate/1")) {
+        // Acknowledge only after the primary event loop has accepted the command.
+        // The secondary process must not report success merely because bytes reached
+        // the socket while the owner was busy or already shutting down.
+        // zh_CN: 仅在主实例事件循环接受命令后回执；不能只因字节写入 socket 就让
+        // 次实例报告成功，因为此时主实例可能正忙或已经开始退出。
+        socket->write(ActivatedReply);
+        socket->flush();
         emit activationRequested();
+    }
     socket->disconnectFromServer();
 }
 
