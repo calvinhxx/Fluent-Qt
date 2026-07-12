@@ -19,6 +19,12 @@ on:
       - "resources.qrc"
       - "vcpkg.json"
   workflow_dispatch:
+    inputs:
+      include_macos:
+        description: "Also build the optional macOS arm64 test package"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -151,6 +157,7 @@ jobs:
             build/vcpkg-windows-release/vcpkg_installed/vcpkg/issue_body.md
 
   macos-package:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_macos }}
     name: macOS arm64 / Qt 6.2.4 DMG
     runs-on: macos-15
     timeout-minutes: 120
