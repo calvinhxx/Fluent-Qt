@@ -44,6 +44,9 @@ add_qt_test_module(test_gallery_shell_framework
     ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
 )
 target_include_directories(test_gallery_shell_framework PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_compile_definitions(test_gallery_shell_framework PRIVATE
+    FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
+add_dependencies(test_gallery_shell_framework test_gallery_single_instance_probe)
 
 add_qt_test_module(test_gallery_content_pages
     TestGalleryContentPages.cpp

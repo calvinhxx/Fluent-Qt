@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <QStandardPaths>
 #include <QTextStream>
 #include <QTimer>
 
@@ -9,8 +10,18 @@ using fluent::gallery::GallerySingleInstance;
 int main(int argc, char** argv)
 {
     QCoreApplication app(argc, argv);
-    app.setApplicationName(QStringLiteral("Fluent-Qt Gallery Single Instance Probe"));
-    app.setOrganizationName(QStringLiteral("Fluent-Qt Tests"));
+    const bool mirrorTestScope = qEnvironmentVariableIntValue(
+                                     "FLUENT_QT_SINGLE_INSTANCE_TEST_MODE") == 1;
+    if (mirrorTestScope) {
+        QStandardPaths::setTestModeEnabled(true);
+        app.setApplicationName(qEnvironmentVariable(
+            "FLUENT_QT_SINGLE_INSTANCE_TEST_APP_NAME"));
+        app.setOrganizationName(qEnvironmentVariable(
+            "FLUENT_QT_SINGLE_INSTANCE_TEST_ORGANIZATION"));
+    } else {
+        app.setApplicationName(QStringLiteral("Fluent-Qt Gallery Single Instance Probe"));
+        app.setOrganizationName(QStringLiteral("Fluent-Qt Tests"));
+    }
 
     const QStringList arguments = app.arguments();
     if (arguments.size() != 2)
