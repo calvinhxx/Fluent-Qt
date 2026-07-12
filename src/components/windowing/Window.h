@@ -85,6 +85,12 @@ public:
     void reapplySystemBackdrop();
 
     /**
+     * @brief Requests foreground activation through Qt and the platform adapter.
+     * zh_CN: 通过 Qt 与平台适配层请求将窗口激活到前台。
+     */
+    void requestForegroundActivation();
+
+    /**
      * @brief Sets the window background effect and re-applies it live.
      * zh_CN: 设置窗口背景效果并实时重新施加。
      *
@@ -154,6 +160,7 @@ private slots:
 private:
     void refreshBackdropCapabilities();
     void scheduleBackdropResolution();
+    void scheduleNativeChromeRepair();
     void resolveBackdropState(bool applyPlatform, bool forceRecomposite = false);
     void setEffectiveBackdropState(const BackdropState& state);
     BackdropState paintedFallbackState(const QString& reason) const;
@@ -188,6 +195,7 @@ private:
     bool m_windowTranslucent = false;
     bool m_backdropPrimed = false;
     bool m_backdropResolutionPending = false;
+    bool m_nativeChromeRepairPending = false;
     bool m_fallbackDragging = false;
     bool m_chromeInteractive = true;
     QPoint m_fallbackDragOffset;

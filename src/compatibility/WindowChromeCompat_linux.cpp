@@ -57,6 +57,9 @@ struct X11Api {
     using XFreeFn = int (*)(void*);
     using XGetGeometryFn = int (*)(XDisplay*, XDrawable, XWindow*, int*, int*,
                                    unsigned int*, unsigned int*, unsigned int*, unsigned int*);
+    using XMapRaisedFn = int (*)(XDisplay*, XWindow);
+    using XRaiseWindowFn = int (*)(XDisplay*, XWindow);
+    using XSetInputFocusFn = int (*)(XDisplay*, XWindow, int, unsigned long);
 
     XOpenDisplayFn openDisplay = nullptr;
     XCloseDisplayFn closeDisplay = nullptr;
@@ -72,6 +75,9 @@ struct X11Api {
     XFlushFn flush = nullptr;
     XFreeFn freeData = nullptr;
     XGetGeometryFn getGeometry = nullptr;
+    XMapRaisedFn mapRaised = nullptr;
+    XRaiseWindowFn raiseWindow = nullptr;
+    XSetInputFocusFn setInputFocus = nullptr;
 
     bool load()
     {
@@ -94,10 +100,13 @@ struct X11Api {
         flush = reinterpret_cast<XFlushFn>(library.resolve("XFlush"));
         freeData = reinterpret_cast<XFreeFn>(library.resolve("XFree"));
         getGeometry = reinterpret_cast<XGetGeometryFn>(library.resolve("XGetGeometry"));
+        mapRaised = reinterpret_cast<XMapRaisedFn>(library.resolve("XMapRaised"));
+        raiseWindow = reinterpret_cast<XRaiseWindowFn>(library.resolve("XRaiseWindow"));
+        setInputFocus = reinterpret_cast<XSetInputFocusFn>(library.resolve("XSetInputFocus"));
         return openDisplay && closeDisplay && defaultScreen && screenCount && rootWindow && internAtom
             && getSelectionOwner && listProperties && getWindowProperty
             && changeProperty && deleteProperty
-            && flush && freeData && getGeometry;
+            && flush && freeData && getGeometry && mapRaised && raiseWindow && setInputFocus;
     }
 };
 
@@ -726,6 +735,41 @@ BackdropCapabilities platformBackdropCapabilities()
     capabilities.alphaSurfaceSupported = x11.compositorActive || isWaylandPlatform();
     capabilities.provider = QStringLiteral("painted-material");
     return capabilities;
+}
+
+bool requestPlatformForegroundActivation(QWidget* window)
+{
+    if (!window || !isXcbPlatform())
+        return false;
+
+    const XWindow xWindow = static_cast<XWindow>(window->winId());
+    X11Api* api = loadedX11Api();
+    if (!xWindow || !api)
+        return false;
+
+    XDisplay* display = api->openDisplay(nullptr);
+    if (!display)
+        return false;
+
+    // QWindow::requestActivate() sends the EWMH activation request first. The
+    // secondary process launch is an explicit user action, so X11 may safely
+    // finish the operation by mapping/raising the existing client and assigning
+    // input focus. This is intentionally X11-only: Wayland compositors own focus
+    // policy and may reject activation without a compositor-issued token.
+    // zh_CN: QWindow::requestActivate() 先发送 EWMH 激活请求。第二次启动属于明确的
+    // 用户操作，因此 X11 可继续映射、提升已有窗口并设置输入焦点。Wayland 的焦点策略
+    // 由 compositor 管理，没有 compositor token 时不得强制抢焦点。
+    const bool mapped = api->mapRaised(display, xWindow) != 0;
+    const bool raised = api->raiseWindow(display, xWindow) != 0;
+    constexpr int RevertToParent = 2;
+    constexpr unsigned long CurrentTime = 0;
+    const bool focused = api->setInputFocus(display,
+                                            xWindow,
+                                            RevertToParent,
+                                            CurrentTime) != 0;
+    const bool flushed = api->flush(display) != 0;
+    const bool closed = closeX11Display(api, display);
+    return mapped && raised && focused && flushed && closed;
 }
 
 bool platformSupportsSystemBackdrop()

@@ -410,6 +410,15 @@ bool handlePlatformNativeEvent(QWidget* window,
     if (!msg)
         return false;
 
+    // A native handle/state transition in Qt 5 or Qt 6.2 may restore Qt's
+    // default Win32 style after the window was shown. Repair the resize style
+    // at the point of use as a final guard; ensureDwmChromeStyle is a no-op when
+    // the expected flags are already present.
+    // zh_CN: Qt 5 或 Qt 6.2 的原生句柄/状态切换可能在显示后恢复默认 Win32 style；
+    // 在命中测试入口做最后一次自愈，正常状态下 ensureDwmChromeStyle 不产生操作。
+    if (msg->message == WM_NCHITTEST)
+        ensureDwmChromeStyle(window);
+
     if (msg->message == WM_NCDESTROY) {
         clearChromeTopMargin(msg->hwnd);
     }
@@ -558,6 +567,11 @@ bool showPlatformSystemMenu(QWidget* window, const QPoint& globalPos) {
         PostMessageW(hwnd, WM_SYSCOMMAND, static_cast<WPARAM>(cmd), 0);
 
     return true;
+}
+
+bool requestPlatformForegroundActivation(QWidget* window) {
+    HWND hwnd = hwndForWindow(window);
+    return hwnd && SetForegroundWindow(hwnd) != FALSE;
 }
 
 void syncPlatformTitleBarGeometry(QWidget* window, const WindowChromeOptions& options) {

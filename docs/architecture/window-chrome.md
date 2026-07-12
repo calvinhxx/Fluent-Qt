@@ -132,6 +132,14 @@ Both X11 and Wayland first use `QWindow::startSystemMove()` /
 must not choose global window geometry. The client-side shadow margin is removed
 while maximized/fullscreen so the window still reaches screen edges.
 
+Foreground activation is also routed through the window adapter. X11 combines
+Qt's EWMH activation request with map/raise/input-focus operations for explicit
+user-initiated actions such as a second single-instance launch. Wayland remains
+token/compositor-controlled and uses Qt's best-effort activation request. When
+restoring an iconified Linux Gallery window, the app performs a controlled
+unmap/map before refreshing the UILib frame; this handles WSLg/X11 sessions where
+Qt clears `WindowMinimized` before the outer shell surface is actually restored.
+
 While KWin Acrylic blur is active, a low-frequency capability probe detects compositor
 or blur-effect shutdown even when Qt emits no window event. Loss disables the
 native hint and asks `Window` to re-resolve to `PaintedOpaque`; surface, screen,
@@ -173,6 +181,10 @@ Several bugs established the current contract:
 - Treating support detection as apply success could clear over a rejected DWM,
   Cocoa, or X11 operation. Capability probing and structured apply results are
   now separate stages.
+- On Windows, Qt 5 and Qt 6.2 may rewrite native window styles after a handle,
+  DPI, or window-state transition. Custom chrome reasserts its Win32 style after
+  those transitions and verifies `WS_THICKFRAME` again when serving
+  `WM_NCHITTEST`, so resize cannot remain disabled until the next process start.
 
 These lead to one hard rule: **only `CompositedTransparent` may clear pixels to
 reveal a system/compositor background. `PaintedOpaque` must remain opaque from

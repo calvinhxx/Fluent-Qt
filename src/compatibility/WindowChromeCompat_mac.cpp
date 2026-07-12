@@ -626,6 +626,11 @@ BackdropCapabilities platformBackdropCapabilities() {
     return capabilities;
 }
 
+bool requestPlatformForegroundActivation(QWidget* window) {
+    Q_UNUSED(window);
+    return false;
+}
+
 bool platformSupportsSystemBackdrop() {
     // macOS gets the Mica-equivalent via a native NSVisualEffectView (vibrancy). Available on
     // every Qt 6.9-supported macOS, so just confirm the class is present.
