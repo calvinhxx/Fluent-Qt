@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QColor>
 #include <QDirIterator>
+#include <QEvent>
 #include <QFile>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -66,6 +67,17 @@ constexpr int TitleBarAppIconSize = 14;
 constexpr int TitleBarAvatarSize = 24;
 constexpr int TitleBarSearchWidth = 220;
 constexpr int TitleBarSearchHeight = 28;
+
+#ifdef Q_OS_WIN
+class NativeEventTestWindow final : public Window {
+public:
+    bool dispatchNativeMessage(MSG* message,
+                               compatibility::FluentNativeEventResult* result)
+    {
+        return nativeEvent(QByteArrayLiteral("windows_generic_MSG"), message, result);
+    }
+};
+#endif
 
 struct WindowVisualLauncher {
     QWidget* window = nullptr;
@@ -678,6 +690,83 @@ TEST_F(WindowTest, WindowsCustomChromeSuppressesNativeCaption) {
     window.close();
 #else
     GTEST_SKIP() << "Windows DWM caption style is only checked on Windows";
+#endif
+}
+
+TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle) {
+#ifdef Q_OS_WIN
+    NativeEventTestWindow window;
+    window.resize(520, 360);
+    window.show();
+    QApplication::processEvents();
+
+    const QString platformName = QGuiApplication::platformName().toLower();
+    if (platformName.contains(QStringLiteral("offscreen"))
+        || platformName.contains(QStringLiteral("minimal"))) {
+        window.close();
+        GTEST_SKIP() << "Native Win32 hit testing requires the Windows platform plugin";
+    }
+
+    ASSERT_NE(window.windowHandle(), nullptr);
+    const auto hwnd = reinterpret_cast<HWND>(window.windowHandle()->winId());
+    ASSERT_NE(hwnd, nullptr);
+
+    const LONG_PTR originalStyle = GetWindowLongPtrW(hwnd, GWL_STYLE);
+    ASSERT_NE(originalStyle & WS_THICKFRAME, 0);
+    SetWindowLongPtrW(hwnd, GWL_STYLE, originalStyle & ~WS_THICKFRAME);
+    ASSERT_EQ(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME, 0);
+
+    const QPoint globalEdge = window.mapToGlobal(QPoint(1, window.height() / 2));
+    MSG message = {};
+    message.hwnd = hwnd;
+    message.message = WM_NCHITTEST;
+    message.lParam = MAKELPARAM(globalEdge.x(), globalEdge.y());
+    compatibility::FluentNativeEventResult result = HTCLIENT;
+
+    EXPECT_TRUE(window.dispatchNativeMessage(&message, &result));
+    EXPECT_EQ(result, HTLEFT);
+    EXPECT_NE(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME, 0)
+        << "Win10/Qt 6.2 must repair a resize style lost during a native transition";
+
+    window.close();
+#else
+    GTEST_SKIP() << "Native Win32 resize-style recovery is only checked on Windows";
+#endif
+}
+
+TEST_F(WindowTest, WindowsStateTransitionRepairsLostResizeStyle) {
+#ifdef Q_OS_WIN
+    Window window;
+    window.resize(520, 360);
+    window.show();
+    QApplication::processEvents();
+
+    const QString platformName = QGuiApplication::platformName().toLower();
+    if (platformName.contains(QStringLiteral("offscreen"))
+        || platformName.contains(QStringLiteral("minimal"))) {
+        window.close();
+        GTEST_SKIP() << "Native Win32 style recovery requires the Windows platform plugin";
+    }
+
+    ASSERT_NE(window.windowHandle(), nullptr);
+    const auto hwnd = reinterpret_cast<HWND>(window.windowHandle()->winId());
+    ASSERT_NE(hwnd, nullptr);
+
+    const LONG_PTR originalStyle = GetWindowLongPtrW(hwnd, GWL_STYLE);
+    ASSERT_NE(originalStyle & WS_THICKFRAME, 0);
+    SetWindowLongPtrW(hwnd, GWL_STYLE, originalStyle & ~WS_THICKFRAME);
+    ASSERT_EQ(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME, 0);
+
+    QWindowStateChangeEvent stateChange(Qt::WindowNoState);
+    QApplication::sendEvent(&window, &stateChange);
+    QApplication::processEvents();
+
+    EXPECT_NE(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME, 0)
+        << "A completed window-state transition must re-assert the resize style";
+
+    window.close();
+#else
+    GTEST_SKIP() << "Native Win32 resize-style recovery is only checked on Windows";
 #endif
 }
 

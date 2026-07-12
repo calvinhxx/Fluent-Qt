@@ -65,6 +65,11 @@ BackdropCapabilities platformBackdropCapabilities() {
     return capabilities;
 }
 
+bool requestPlatformForegroundActivation(QWidget* window) {
+    Q_UNUSED(window);
+    return false;
+}
+
 bool platformSupportsSystemBackdrop() {
     return false;
 }
