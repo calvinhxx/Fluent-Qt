@@ -1876,6 +1876,12 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActiva
 
     applicationController.restoreWindow();
 
+    if (compatibility::WindowChromeCompat::currentPlatform()
+        == compatibility::WindowChromeCompat::Platform::Linux) {
+        EXPECT_FALSE(window.isVisible())
+            << "Linux restore must keep the surface unmapped until the next event-loop turn";
+    }
+
     QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
     QTRY_VERIFY_WITH_TIMEOUT(
         !window.windowState().testFlag(Qt::WindowMinimized), 1000);

@@ -216,11 +216,14 @@ void GalleryApplicationController::restoreWindow()
         targetState &= ~Qt::WindowMinimized;
         targetState &= ~Qt::WindowActive;
 
-        // Qt can clear WindowMinimized while the X11/WSLg shell surface remains
-        // iconified. An explicit unmap before showNormal/showMaximized forces a
-        // fresh MapRequest and also discards stale client-side frame pixels.
-        // zh_CN: Qt 可能已清除 WindowMinimized，但 X11/WSLg shell surface 仍处于
-        // 图标化状态；显示前显式 unmap 可强制新的 MapRequest，并丢弃旧的自绘 frame 像素。
+        // Linux compositors may keep an already-minimized surface iconified even
+        // after Qt has cleared WindowMinimized. Unmap it first, then remap it on
+        // the next event-loop turn so Wayland/X11 must observe two distinct state
+        // transitions. A synchronous hide()+showNormal() can be coalesced and is
+        // therefore not a restore operation.
+        // zh_CN: Linux compositor 可能在 Qt 清除 WindowMinimized 后仍保持 surface 最小化。
+        // 先取消映射，再在下一轮事件循环重新映射，确保 Wayland/X11 观察到两个独立状态切换；
+        // 同步 hide()+showNormal() 可能被合并，不能作为可靠的恢复操作。
         const bool forceLinuxRemap = needsRestore
             && compatibility::WindowChromeCompat::currentPlatform()
                 == compatibility::WindowChromeCompat::Platform::Linux;
@@ -232,41 +235,56 @@ void GalleryApplicationController::restoreWindow()
             // zh_CN: 在原生表面未映射时重新声明客户端边框；Qt 5/X11 若在显示后
             // 再修改窗口标志，可能一直残留第二条系统标题栏直到下次状态切换。
             m_window->prepareForNativeRestore();
+            QTimer::singleShot(0, this,
+                               [this, generation, targetState, wasHidden, wasMinimized]() {
+                showRestoredWindow(generation, targetState, wasHidden, wasMinimized);
+            });
+        } else {
+            showRestoredWindow(generation, targetState, wasHidden, wasMinimized);
         }
-
-        if (targetState.testFlag(Qt::WindowFullScreen))
-            m_window->showFullScreen();
-        else if (targetState.testFlag(Qt::WindowMaximized))
-            m_window->showMaximized();
-        else if (wasHidden && !wasMinimized)
-            // A tray-hidden normal window does not need a window-state
-            // transition. Qt 5/X11 showNormal() can briefly re-negotiate native
-            // decorations here and leave a detached system caption behind.
-            // zh_CN: 托盘隐藏的普通窗口无需切换窗口状态；Qt 5/X11 在此调用
-            // showNormal() 可能重新协商系统装饰并残留一条脱离窗口的标题栏。
-            m_window->show();
-        else
-            m_window->showNormal();
     }
     if (!needsRestore)
         completeWindowRestore(generation, /*refreshNativeFrame*/ false);
-
-    // Linux window-state transitions are asynchronous. Let the compositor/window
-    // manager finish de-minimizing before refreshing the custom frame and asking
-    // for activation; a later retry covers slower VM compositors.
-    // zh_CN: Linux 窗口状态切换是异步的；先等待 compositor/window manager 完成
-    // 去最小化，再刷新自定义 frame 并请求激活，稍后的重试用于较慢的虚拟机 compositor。
-    QTimer::singleShot(0, this, [this, generation, needsRestore]() {
-        completeWindowRestore(generation, needsRestore);
-    });
-    QTimer::singleShot(80, this, [this, generation]() {
-        completeWindowRestore(generation, /*refreshNativeFrame*/ false);
-    });
     QTimer::singleShot(250, this, [this, generation]() {
         if (generation == m_restoreGeneration && m_window && !m_window->isActiveWindow()) {
             LOG_DEBUG(QStringLiteral("GalleryApplicationController foreground activation deferred to platform attention"));
             QApplication::alert(m_window, 3000);
         }
+    });
+}
+
+void GalleryApplicationController::showRestoredWindow(std::uint64_t generation,
+                                                       Qt::WindowStates targetState,
+                                                       bool wasHidden,
+                                                       bool wasMinimized)
+{
+    if (generation != m_restoreGeneration || !m_window || m_exitRequested)
+        return;
+
+    if (targetState.testFlag(Qt::WindowFullScreen))
+        m_window->showFullScreen();
+    else if (targetState.testFlag(Qt::WindowMaximized))
+        m_window->showMaximized();
+    else if (wasHidden && !wasMinimized)
+        // A tray-hidden normal window does not need a window-state transition.
+        // Qt 5/X11 showNormal() can re-negotiate decorations and leave a detached
+        // system caption behind.
+        // zh_CN: 托盘隐藏的普通窗口无需切换窗口状态；Qt 5/X11 在此调用 showNormal()
+        // 可能重新协商系统装饰并残留一条脱离窗口的标题栏。
+        m_window->show();
+    else
+        m_window->showNormal();
+
+    // Window-state transitions are asynchronous. Refresh and request activation
+    // only after the remapped surface has been submitted to the compositor; the
+    // delayed retry covers slower virtual-machine compositors.
+    // zh_CN: 窗口状态切换是异步的；重新映射的 surface 提交给 compositor 后再刷新并请求激活，
+    // 延迟重试用于较慢的虚拟机 compositor。
+    QTimer::singleShot(0, this, [this, generation]() {
+        completeWindowRestore(generation, /*refreshNativeFrame*/ true);
+    });
+    QTimer::singleShot(80, this, [this, generation]() {
+        completeWindowRestore(generation, /*refreshNativeFrame*/ false);
     });
 }
 
