@@ -205,16 +205,17 @@ contract that CI, changelog, and packaging workflows should enforce.
 ## Release Package Sets
 
 - `standard` is the default stable release package set. It publishes the
-  seven supported release package lanes:
+  eight supported release package lanes:
   - Qt 6.9.3 macOS arm64 DMG.
   - Qt 6.9.3 macOS x64 DMG.
   - Qt 6.9.3 Windows x64 installer.
   - Qt 6.9.3 Windows arm64 installer.
   - Qt 6.2.4 Ubuntu 22.04 x64 DEB.
+  - Qt 6.2.4 Ubuntu 22.04 arm64 DEB.
   - Qt 5.15.2 macOS x64 compatibility DMG.
   - Qt 5.15.2 Windows x64 compatibility installer.
 - `smoke` runs only the macOS x64 and Windows x64 package lanes without
   publishing and is intended for manual release workflow validation.
-- `full` is kept as a compatibility alias for the complete seven-lane release
+- `full` is kept as a compatibility alias for the complete eight-lane release
   package set. This is a packaging artifact set, not the CI `matrix=full`
   validation tier.

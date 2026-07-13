@@ -82,6 +82,29 @@ jobs:
                 "windows_arm64_cross": false
               },
               {
+                "id": "linux-arm64-qt62-fast",
+                "name": "Linux ARM64 / Qt 6.2 fast",
+                "os": "ubuntu-22.04-arm",
+                "preset": "vcpkg-linux-arm64",
+                "qt_version": "6.2.4",
+                "qt_source": "apt",
+                "qt_arch": "",
+                "qt_archives": "",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "arm64-linux",
+                "build": true,
+                "test": true,
+                "build_targets": "fluent_qt_ci_fast_tests",
+                "build_parallel": "4",
+                "test_labels": "^ci_fast$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 180,
+                "timeout_minutes": 30,
+                "configure_args": "",
+                "native_arm64": true,
+                "windows_arm64_cross": false
+              },
+              {
                 "id": "win-x64-qt62-fast",
                 "name": "Windows x64 / Qt 6.2 fast",
                 "os": "windows-2022",
@@ -101,6 +124,30 @@ jobs:
                 "ctest_timeout": 180,
                 "timeout_minutes": 30,
                 "configure_args": "",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "win-arm64-qt693-fast",
+                "name": "Windows ARM64 / Qt 6.9.3 fast",
+                "os": "windows-11-arm",
+                "preset": "vcpkg-windows-arm64",
+                "qt_version": "6.9.3",
+                "qt_source": "aqt",
+                "qt_arch": "win64_msvc2022_arm64",
+                "qt_archives": "",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "arm64-windows",
+                "build": true,
+                "test": true,
+                "build_targets": "fluent_qt_ci_fast_tests",
+                "build_parallel": "",
+                "test_labels": "^ci_fast$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 180,
+                "timeout_minutes": 45,
+                "configure_args": "",
+                "native_arm64": true,
+                "windows_arm64_native": true,
                 "windows_arm64_cross": false
               },
               {
@@ -153,6 +200,34 @@ jobs:
                 "ctest_timeout": 240,
                 "timeout_minutes": 45,
                 "configure_args": "",
+                "package": true,
+                "package_arch": "x64",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "linux-arm64-qt62-full",
+                "name": "Linux ARM64 / Qt 6.2 full tests",
+                "os": "ubuntu-22.04-arm",
+                "preset": "vcpkg-linux-arm64",
+                "qt_version": "6.2.4",
+                "qt_source": "apt",
+                "qt_arch": "",
+                "qt_archives": "",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "arm64-linux",
+                "build": true,
+                "test": true,
+                "build_targets": "fluent_qt_ci_full_tests fluent_qt_gallery",
+                "build_parallel": "4",
+                "test_labels": "^ci_full$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 240,
+                "timeout_minutes": 45,
+                "configure_args": "",
+                "native_arm64": true,
+                "linux_xcb_smoke": true,
+                "package": true,
+                "package_arch": "arm64",
                 "windows_arm64_cross": false
               },
               {
@@ -266,10 +341,36 @@ jobs:
                 "windows_arm64_cross": false
               },
               {
-                "id": "win-arm64-qt693-cross",
-                "name": "Windows ARM64 / Qt 6.9.3 cross-build",
-                "os": "windows-2022",
+                "id": "win-arm64-qt693-native",
+                "name": "Windows ARM64 / Qt 6.9.3 native platform tests",
+                "os": "windows-11-arm",
                 "preset": "vcpkg-windows-arm64",
+                "qt_version": "6.9.3",
+                "qt_source": "aqt",
+                "qt_arch": "win64_msvc2022_arm64",
+                "qt_archives": "",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "arm64-windows",
+                "build": true,
+                "test": true,
+                "build_targets": "fluent_qt_ci_fast_tests test_window test_list_view test_flip_view fluent_qt_gallery",
+                "build_parallel": "",
+                "test_labels": "^(ci_fast|platform_windows)$",
+                "exclude_labels": "^(manual_visual|local_desktop)$",
+                "ctest_timeout": 180,
+                "timeout_minutes": 60,
+                "configure_args": "",
+                "native_arm64": true,
+                "gallery_smoke": true,
+                "qt_qpa_platform": "windows",
+                "windows_arm64_native": true,
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "win-arm64-qt693-cross",
+                "name": "Windows ARM64 / Qt 6.9.3 installer package",
+                "os": "windows-2022",
+                "preset": "vcpkg-windows-arm64-release",
                 "qt_version": "6.9.3",
                 "qt_source": "aqt",
                 "qt_arch": "win64_msvc2022_arm64_cross_compiled",
@@ -283,8 +384,10 @@ jobs:
                 "test_labels": "",
                 "exclude_labels": "",
                 "ctest_timeout": 180,
-                "timeout_minutes": 60,
-                "configure_args": "-DBUILD_TESTING=OFF",
+                "timeout_minutes": 75,
+                "configure_args": "",
+                "windows_package": true,
+                "package_preset": "vcpkg-windows-arm64-installer",
                 "windows_arm64_cross": true
               }
             ]
@@ -312,6 +415,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify native ARM64 runner
+        if: ${{ matrix.native_arm64 == true }}
+        shell: pwsh
+        run: |
+          if ("${{ runner.arch }}" -ne "ARM64") {
+            throw "Expected an ARM64 runner, got '${{ runner.arch }}'."
+          }
+
       - name: Prepare vcpkg binary cache
         shell: pwsh
         run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
@@ -330,6 +441,11 @@ jobs:
         shell: bash
         run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
 
+      - name: Install NSIS for Windows packaging
+        if: ${{ matrix.windows_package == true }}
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
       - name: Install host Qt ${{ matrix.qt_version }}
         if: ${{ matrix.qt_source == 'aqt' && matrix.windows_arm64_cross == true }}
         uses: jurplel/install-qt-action@v4
@@ -346,12 +462,22 @@ jobs:
           "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
 
       - name: Install Qt ${{ matrix.qt_version }}
-        if: ${{ matrix.qt_source == 'aqt' && matrix.qt_archives == '' }}
+        if: ${{ matrix.qt_source == 'aqt' && matrix.qt_archives == '' && matrix.windows_arm64_native != true }}
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt_version }}
           arch: ${{ matrix.qt_arch }}
           cache: true
+
+      - name: Install native Windows ARM64 Qt ${{ matrix.qt_version }}
+        if: ${{ matrix.qt_source == 'aqt' && matrix.windows_arm64_native == true }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          host: windows_arm64
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+          setup-python: false
 
       - name: Install Qt ${{ matrix.qt_version }} archives
         if: ${{ matrix.qt_source == 'aqt' && matrix.qt_archives != '' }}
@@ -418,7 +544,7 @@ jobs:
         if: ${{ matrix.build == true }}
         shell: pwsh
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: ${{ matrix.qt_qpa_platform || 'offscreen' }}
           SKIP_VISUAL_TEST: 1
         run: |
           $buildArgs = @("--build", "--preset", "${{ matrix.preset }}")
@@ -435,11 +561,59 @@ jobs:
           }
           cmake @buildArgs
 
+      - name: Smoke launch native Windows ARM64 Gallery
+        if: ${{ matrix.windows_arm64_native == true && matrix.gallery_smoke == true }}
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: windows
+          SKIP_VISUAL_TEST: 1
+        run: |
+          $gallery = Get-ChildItem -Path "build/${{ matrix.preset }}/app" -Recurse -Filter fluent_qt_gallery.exe |
+            Select-Object -First 1
+          if (-not $gallery) {
+            throw "The Windows ARM64 Gallery executable was not found."
+          }
+
+          $process = $null
+          try {
+            $process = Start-Process -FilePath $gallery.FullName -PassThru
+            Start-Sleep -Seconds 5
+            if ($process.HasExited) {
+              throw "The Windows ARM64 Gallery exited during smoke launch with code $($process.ExitCode)."
+            }
+          } finally {
+            if ($process -and -not $process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+            }
+          }
+
+      - name: Smoke launch native Linux ARM64 Gallery with X11
+        if: ${{ matrix.linux_xcb_smoke == true }}
+        shell: bash
+        env:
+          QT_QPA_PLATFORM: xcb
+          SKIP_VISUAL_TEST: 1
+        run: |
+          set -euo pipefail
+          gallery="build/${{ matrix.preset }}/app/fluent_qt_gallery"
+          if [[ ! -x "$gallery" ]]; then
+            echo "::error::The Linux ARM64 Gallery executable was not found: $gallery"
+            exit 1
+          fi
+
+          xvfb-run -a sh -c '
+            "$1" &
+            pid=$!
+            trap "kill $pid 2>/dev/null || true" EXIT
+            sleep 5
+            kill -0 "$pid"
+          ' sh "$gallery"
+
       - name: Test
         if: ${{ matrix.build == true && matrix.test == true }}
         shell: pwsh
         env:
-          QT_QPA_PLATFORM: offscreen
+          QT_QPA_PLATFORM: ${{ matrix.qt_qpa_platform || 'offscreen' }}
           SKIP_VISUAL_TEST: 1
         run: |
           $testArgs = @(
@@ -459,18 +633,33 @@ jobs:
           ctest @testArgs
 
       - name: Package Linux Gallery
-        if: ${{ matrix.id == 'linux-x64-qt62-full' }}
+        if: ${{ matrix.package == true }}
         shell: bash
-        run: cpack --config build/vcpkg-linux/CPackConfig.cmake -G DEB -B build/vcpkg-linux
+        run: cpack --config build/${{ matrix.preset }}/CPackConfig.cmake -G DEB -B build/${{ matrix.preset }}
 
       - name: Upload Linux Gallery package
-        if: ${{ matrix.id == 'linux-x64-qt62-full' }}
+        if: ${{ matrix.package == true }}
         uses: actions/upload-artifact@v4
         with:
-          name: fluent-qt-gallery-linux-x64-deb
+          name: fluent-qt-gallery-linux-${{ matrix.package_arch }}-deb
           path: |
-            build/vcpkg-linux/*.deb
-            build/vcpkg-linux/*.sha256
+            build/${{ matrix.preset }}/*.deb
+            build/${{ matrix.preset }}/*.sha256
+          if-no-files-found: error
+
+      - name: Package Windows ARM64 Gallery
+        if: ${{ matrix.windows_package == true }}
+        shell: pwsh
+        run: cpack --preset "${{ matrix.package_preset }}"
+
+      - name: Upload Windows ARM64 Gallery installer
+        if: ${{ matrix.windows_package == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluent-qt-gallery-windows-arm64-installer
+          path: |
+            build/${{ matrix.preset }}/*.exe
+            build/${{ matrix.preset }}/*.sha256
           if-no-files-found: error
 
       - name: Upload diagnostics

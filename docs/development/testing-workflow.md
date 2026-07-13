@@ -44,13 +44,15 @@ ctest --preset vcpkg-osx -L '^animation$' --output-on-failure
 ctest --preset vcpkg-osx -N -L '^platform_macos$'
 ```
 
-Linux runs use the same anchored filters. The `vcpkg-linux` test preset excludes
-`local_desktop` by default; use `vcpkg-linux-local-desktop` to list tests that
-need a real X11 or Wayland desktop session:
+Linux runs use the same anchored filters. The `vcpkg-linux` and
+`vcpkg-linux-arm64` test presets exclude `local_desktop` by default; use the
+matching `*-local-desktop` preset to list tests that need a real X11 or Wayland
+desktop session:
 
 ```bash
 ctest --preset vcpkg-linux -L '^ci_full$' --output-on-failure
 ctest --preset vcpkg-linux-local-desktop -N
+ctest --preset vcpkg-linux-arm64-local-desktop -N
 ```
 
 - Use established tokens in new test names when a semantic label should apply:
@@ -62,13 +64,17 @@ ctest --preset vcpkg-linux-local-desktop -N
 ## Validation Tiers
 
 - GitHub Actions `matrix=fast` is the default PR/push validation tier. It builds
-  narrow Linux x64 and Windows x64 Qt 6.2 target sets and runs a macOS arm64
-  configure smoke.
+  narrow Linux x64/ARM64 and Windows x64/ARM64 target sets and runs a macOS
+  arm64 configure smoke. ARM64 jobs use native hosted runners, so their tests
+  execute ARM64 binaries rather than stopping at cross-compilation.
 - GitHub Actions `matrix=full` is the scheduled/manual CI matrix. macOS arm64
   remains the broadest macOS test lane for the curated `ci_full` subset; Linux
-  covers Ubuntu 22.04 with distro Qt 6.2.x and official Qt 5.15.2 `gcc_64`;
-  macOS x64 is a Gallery build smoke; Windows lanes cover targeted platform,
-  Qt 5.15 API, and ARM64 cross-build smoke coverage.
+  covers Ubuntu 22.04 x64 and ARM64 with distro Qt 6.2.x plus official Qt
+  5.15.2 `gcc_64` on x64; macOS x64 is a Gallery build smoke; Windows lanes
+  cover targeted x64 and native ARM64 platform tests, Qt 5.15 API, and the
+  established ARM64 cross-built installer package. The full run uploads both
+  `fluent-qt-gallery-windows-arm64-installer` and
+  `fluent-qt-gallery-linux-arm64-deb` for VM review.
 - The macOS arm64 full lane uses a limited build parallelism to avoid runner
   memory pressure while compiling and linking multiple Qt/GTest binaries.
 - CI build target selection is centralized in CMake:
@@ -96,20 +102,24 @@ cmake --build --preset vcpkg-windows --target fluent_qt_all_tests --parallel
 ctest --preset vcpkg-windows -L '^local_full$' --output-on-failure --timeout 180
 ```
 
+On native Windows ARM64 with the Qt `msvc2022_arm64` kit, substitute
+`vcpkg-windows-arm64` for `vcpkg-windows`. An x64-hosted ARM64 cross-build can
+compile the same targets but cannot execute this test preset.
+
 ```bash
 cmake --preset vcpkg-linux
 cmake --build --preset vcpkg-linux --target fluent_qt_all_tests --parallel
 ctest --preset vcpkg-linux -L '^local_full$' --output-on-failure --timeout 180
 ```
 
-On Linux, the `vcpkg-linux` test preset intentionally excludes `local_desktop`,
-so this command runs the headless-safe `local_full` subset. Run
-`vcpkg-linux-local-desktop -N` separately to discover tests that need a real
-desktop, after building the specific test target under review or the aggregate
-`fluent_qt_all_tests` target. Automated CTest runs inject `SKIP_VISUAL_TEST=1`;
-for real desktop behavior, run the target binary directly without
-`SKIP_VISUAL_TEST` and set `QT_QPA_PLATFORM=xcb` or `wayland` when your session
-needs an explicit platform.
+On Linux, both architecture-specific test presets intentionally exclude
+`local_desktop`, so these commands run the headless-safe `local_full` subset.
+Run the matching `*-local-desktop -N` preset separately to discover tests that
+need a real desktop, after building the specific test target under review or
+the aggregate `fluent_qt_all_tests` target. Automated CTest runs inject
+`SKIP_VISUAL_TEST=1`; for real desktop behavior, run the target binary directly
+without `SKIP_VISUAL_TEST` and set `QT_QPA_PLATFORM=xcb` or `wayland` when your
+session needs an explicit platform.
 
 See [Linux Workflow](linux-workflow.md) for the desktop Linux portability target,
 Ubuntu 22.04 reference dependencies, local desktop commands, Qt 5.15.2
@@ -125,10 +135,10 @@ official-kit validation, and optional WSL2 filesystem guidance.
 ./build/vcpkg-osx/tests/components/<category>/<test_target> --gtest_filter="*VisualCheck*"
 ```
 
-On Linux, use the corresponding `build/vcpkg-linux/...` binary path in an X11 or
-Wayland desktop session. WSLg is also suitable as an optional local validation
-host. Run these binaries directly so `SKIP_VISUAL_TEST` is not inherited from
-CTest.
+On Linux, use the corresponding `build/vcpkg-linux/...` or
+`build/vcpkg-linux-arm64/...` binary path in an X11 or Wayland desktop session.
+WSLg is also suitable as an optional local validation host. Run these binaries
+directly so `SKIP_VISUAL_TEST` is not inherited from CTest.
 
 - For deterministic snapshot generation, run a migrated VisualCheck binary with
   `VISUAL_SNAPSHOT=1`:

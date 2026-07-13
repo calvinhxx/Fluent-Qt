@@ -46,6 +46,16 @@ bool assetNameMatchesPlatform(const QString& assetName,
                !name.contains(QStringLiteral("qt5.15"));
     }
 
+    if (platformKey == QStringLiteral("linux-arm64")) {
+        return name.contains(QStringLiteral("linux-arm64")) &&
+               name.endsWith(QStringLiteral(".deb"));
+    }
+
+    if (platformKey == QStringLiteral("linux-x64")) {
+        return name.contains(QStringLiteral("linux-x86_64")) &&
+               name.endsWith(QStringLiteral(".deb"));
+    }
+
     return false;
 }
 }  // namespace
@@ -250,6 +260,12 @@ QString UpdateChecker::platformKey() {
 #else
     return QStringLiteral("macos-x64");
 #endif
+#elif defined(Q_OS_LINUX)
+#if defined(Q_PROCESSOR_ARM_64)
+    return QStringLiteral("linux-arm64");
+#else
+    return QStringLiteral("linux-x64");
+#endif
 #else
     return QStringLiteral("release-page");
 #endif
@@ -268,6 +284,12 @@ QString UpdateChecker::platformDisplayName() {
     }
     if (key == QStringLiteral("macos-x64")) {
         return QStringLiteral("macOS Intel");
+    }
+    if (key == QStringLiteral("linux-arm64")) {
+        return QStringLiteral("Linux ARM64");
+    }
+    if (key == QStringLiteral("linux-x64")) {
+        return QStringLiteral("Linux x64");
     }
     return QStringLiteral("this platform");
 }

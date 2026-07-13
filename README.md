@@ -37,10 +37,10 @@
 | Tests | GTest |
 
 Linux targets general desktop environments through Qt's X11 (`xcb`) and Wayland
-platform plugins. Ubuntu 22.04 x64 with Qt 6.2.x is the CI/reference baseline,
-with official Qt 5.15.2 `gcc_64` used for Qt 5 validation. See
+platform plugins. Ubuntu 22.04 x64 and ARM64 with Qt 6.2.x are the CI/reference
+baselines, with official Qt 5.15.2 `gcc_64` used for x64 Qt 5 validation. See
 [Linux Workflow](docs/development/linux-workflow.md) for portability scope,
-Qt 5/Qt 6 commands, desktop testing, and optional WSL2 development notes.
+Qt 5/Qt 6 commands, desktop testing, and optional WSL2/Lima development notes.
 
 ## 🛠 Build FluentQt uilib
 
@@ -60,12 +60,28 @@ cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TES
 cmake --build --preset vcpkg-windows --target FluentQt
 ```
 
+Windows ARM64 with the native Qt `msvc2022_arm64` kit:
+
+```powershell
+$env:VCPKG_ROOT = "D:\path\to\vcpkg"
+cmake --preset vcpkg-windows-arm64 -D "CMAKE_PREFIX_PATH=C:/Qt/6.9.3/msvc2022_arm64" -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-windows-arm64 --target FluentQt
+```
+
 Linux x64:
 
 ```bash
 export VCPKG_ROOT=/path/to/vcpkg
 cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
 cmake --build --preset vcpkg-linux --target FluentQt
+```
+
+Linux ARM64:
+
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+cmake --preset vcpkg-linux-arm64 -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-linux-arm64 --target FluentQt
 ```
 
 ## 🔌 Use FluentQt uilib
@@ -138,6 +154,7 @@ cmake --build --preset vcpkg-linux --target fluent_qt_gallery
 | macOS | arm64 | `vcpkg-osx-dmg` |
 | macOS | x64 | `vcpkg-osx-x64-dmg` |
 | Linux | x64 (`.deb`) | `vcpkg-linux-deb` |
+| Linux | ARM64 (`.deb`) | `vcpkg-linux-arm64-deb` |
 
 macOS arm64 DMG:
 
@@ -161,6 +178,14 @@ Linux x64 Debian package:
 cmake --preset vcpkg-linux-release
 cmake --build --preset vcpkg-linux-release
 cpack --preset vcpkg-linux-deb
+```
+
+Linux ARM64 Debian package:
+
+```bash
+cmake --preset vcpkg-linux-arm64-release
+cmake --build --preset vcpkg-linux-arm64-release
+cpack --preset vcpkg-linux-arm64-deb
 ```
 
 ## 📚 Documentation
