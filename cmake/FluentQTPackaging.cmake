@@ -184,7 +184,21 @@ elseif(WIN32)
     # them inside a Visual Studio developer environment.
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_INSTALL_BINDIR}")
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_COMPONENT GalleryRuntime)
+    if(CMAKE_VS_PLATFORM_NAME STREQUAL "ARM64")
+        # Some Visual Studio installations expose an x64 vcruntime140_1.dll
+        # while CMake enumerates the ARM64 redistributable directory. Native
+        # ARM64 Gallery and Qt binaries do not import that x64-only helper, so
+        # register the filtered runtime list ourselves after discovery.
+        set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+    endif()
     include(InstallRequiredSystemLibraries)
+    if(CMAKE_VS_PLATFORM_NAME STREQUAL "ARM64")
+        list(FILTER CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS EXCLUDE
+            REGEX "[/\\\\]vcruntime140_1\\.dll$")
+        install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS}
+            DESTINATION "${CMAKE_INSTALL_BINDIR}"
+            COMPONENT GalleryRuntime)
+    endif()
 
     set(CPACK_GENERATOR "NSIS")
     # CPack 4.2's bundled NSIS template is machine-wide by default. Route the
