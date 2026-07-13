@@ -26,7 +26,20 @@ set(CPACK_COMPONENTS_ALL GalleryRuntime)
 
 set(FLUENT_QT_PACKAGE_PLATFORM "generic")
 set(FLUENT_QT_DEPLOYQT_EXECUTABLE "")
+set(FLUENT_QT_DEPLOY_QTPATHS_EXECUTABLE "")
 set(_fluent_qt_deploy_tool_hints "")
+
+# Qt's ARM64 cross-compiled Windows package contains target DLLs plus a
+# qtpaths.bat wrapper that runs the host qtpaths with target_qt.conf. Keep that
+# target locator separate from the host windeployqt executable; otherwise the
+# host deployment tool silently copies x64 Qt DLLs into an ARM64 package.
+set(_fluent_qt_target_qt_config_dir "${Qt${QT_VERSION_MAJOR}_DIR}")
+if(_fluent_qt_target_qt_config_dir)
+    get_filename_component(_fluent_qt_target_qt_prefix
+        "${_fluent_qt_target_qt_config_dir}/../../.."
+        ABSOLUTE)
+    set(_fluent_qt_target_qt_bin_dir "${_fluent_qt_target_qt_prefix}/bin")
+endif()
 
 if(TARGET Qt${QT_VERSION_MAJOR}::qmake)
     get_target_property(_fluent_qt_qmake_executable
@@ -61,6 +74,27 @@ elseif(WIN32)
     find_program(_fluent_qt_deployqt_executable
         NAMES windeployqt
         HINTS ${_fluent_qt_deploy_tool_hints})
+
+    if(QT_VERSION_MAJOR GREATER_EQUAL 6 AND _fluent_qt_target_qt_bin_dir)
+        foreach(_fluent_qt_qtpaths_name IN ITEMS
+            qtpaths.bat
+            qtpaths6.bat
+            qtpaths.exe
+            qtpaths6.exe)
+            if(EXISTS "${_fluent_qt_target_qt_bin_dir}/${_fluent_qt_qtpaths_name}")
+                set(FLUENT_QT_DEPLOY_QTPATHS_EXECUTABLE
+                    "${_fluent_qt_target_qt_bin_dir}/${_fluent_qt_qtpaths_name}")
+                break()
+            endif()
+        endforeach()
+    endif()
+    if(CMAKE_VS_PLATFORM_NAME STREQUAL "ARM64"
+        AND QT_VERSION_MAJOR GREATER_EQUAL 6
+        AND NOT FLUENT_QT_DEPLOY_QTPATHS_EXECUTABLE)
+        message(FATAL_ERROR
+            "Windows ARM64 packaging requires the target Qt qtpaths wrapper or executable "
+            "below '${_fluent_qt_target_qt_bin_dir}'.")
+    endif()
 endif()
 if(_fluent_qt_deployqt_executable)
     set(FLUENT_QT_DEPLOYQT_EXECUTABLE "${_fluent_qt_deployqt_executable}")
@@ -149,6 +183,7 @@ elseif(WIN32)
     # from the detected MSVC toolset, which is reliable; windeployqt's --compiler-runtime only copies
     # them inside a Visual Studio developer environment.
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${CMAKE_INSTALL_BINDIR}")
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_COMPONENT GalleryRuntime)
     include(InstallRequiredSystemLibraries)
 
     set(CPACK_GENERATOR "NSIS")
@@ -213,7 +248,16 @@ elseif(UNIX)
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
-    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "fonts-noto-color-emoji")
+    if(QT_VERSION_MAJOR EQUAL 6)
+        # dpkg-shlibdeps sees linked Qt libraries but cannot discover QPA
+        # plugins loaded dynamically by QApplication. Without this package a
+        # clean Ubuntu install aborts before main() can create a window.
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS "qt6-qpa-plugins")
+        set(CPACK_DEBIAN_PACKAGE_RECOMMENDS
+            "fonts-noto-color-emoji, qt6-wayland")
+    else()
+        set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "fonts-noto-color-emoji")
+    endif()
     set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/calvinhxx/Fluent-Qt")
 endif()
 

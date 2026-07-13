@@ -468,6 +468,21 @@ jobs:
             & cpack @packageArgs
             $exitCode = $LASTEXITCODE
             if ($exitCode -eq 0) {
+              if ("${{ matrix.artifact }}" -eq "windows-arm64") {
+                $packageOutput = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
+                $stagedGallery = Get-ChildItem `
+                  -LiteralPath (Join-Path $packageOutput "_CPack_Packages") `
+                  -Filter fluent_qt_gallery.exe -File -Recurse |
+                  Where-Object { $_.Directory.Name -eq "bin" } |
+                  Select-Object -First 1
+                if (-not $stagedGallery) {
+                  throw "The staged Windows ARM64 Gallery executable was not found."
+                }
+                & "$env:GITHUB_WORKSPACE/cmake/VerifyWindowsPeArchitecture.ps1" `
+                  -Root $stagedGallery.Directory.FullName `
+                  -ExpectedMachine Arm64 `
+                  -RequireMsvcRuntime
+              }
               exit 0
             }
 
@@ -491,6 +506,25 @@ jobs:
           }
 
           exit $exitCode
+
+      - name: Verify Linux package metadata
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(build/${{ matrix.preset }}/*.deb)
+          if (( ${#packages[@]} != 1 )); then
+            echo "::error::Expected exactly one DEB package, found ${#packages[@]}."
+            exit 1
+          fi
+
+          dpkg-deb --field "${packages[0]}" Architecture Depends Recommends
+          depends="$(dpkg-deb --field "${packages[0]}" Depends)"
+          if [[ "$depends" != *qt6-qpa-plugins* ]]; then
+            echo "::error::The DEB package does not depend on qt6-qpa-plugins."
+            exit 1
+          fi
 
       - name: Collect package artifacts
         shell: pwsh
