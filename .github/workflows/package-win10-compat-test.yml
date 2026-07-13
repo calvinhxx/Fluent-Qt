@@ -1,3 +1,5 @@
+# Keep this registered filename stable so branch revisions can be dispatched
+# before they are merged into the default branch.
 name: Desktop Compat Packages
 run-name: Desktop packages · ${{ inputs.packages }}
 
@@ -115,9 +117,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .vcpkg-binary-cache
-          key: package-preview-${{ runner.os }}-${{ runner.arch }}-${{ matrix.id }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          key: desktop-compat-${{ runner.os }}-${{ runner.arch }}-${{ matrix.id }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
           restore-keys: |
-            package-preview-${{ runner.os }}-${{ runner.arch }}-${{ matrix.id }}-
+            desktop-compat-${{ runner.os }}-${{ runner.arch }}-${{ matrix.id }}-
             release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
             vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
 
