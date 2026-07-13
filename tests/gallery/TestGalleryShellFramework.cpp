@@ -2002,6 +2002,40 @@ TEST_F(GalleryShellFrameworkTest, SecondaryInstanceRestoresMinimizedWindow)
     window.hide();
 }
 
+TEST_F(GalleryShellFrameworkTest, WaylandInactiveVisibleWindowUsesRemapFallback)
+{
+    if (!QGuiApplication::platformName().startsWith(QStringLiteral("wayland"),
+                                                     Qt::CaseInsensitive)) {
+        GTEST_SKIP() << "Qt 5 Wayland stale-window-state fallback is Wayland-specific";
+    }
+
+    GalleryWindow window;
+    GalleryApplicationController applicationController(&window);
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+
+    QWidget competingWindow;
+    if (window.isActiveWindow()) {
+        competingWindow.resize(320, 240);
+        competingWindow.show();
+        competingWindow.activateWindow();
+        QTRY_VERIFY_WITH_TIMEOUT(!window.isActiveWindow(), 1000);
+    }
+    ASSERT_TRUE(window.isVisible());
+    ASSERT_FALSE(window.windowState().testFlag(Qt::WindowMinimized));
+    ASSERT_FALSE(window.isActiveWindow());
+
+    applicationController.restoreWindow();
+
+    EXPECT_FALSE(window.isVisible())
+        << "Inactive visible Wayland windows must use the compositor-state fallback";
+    QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
+    EXPECT_FALSE(window.windowState().testFlag(Qt::WindowMinimized));
+    competingWindow.hide();
+    window.hide();
+}
+
 // Regression: picking a custom accent must keep the whole accent FAMILY consistent. A full-dump theme
 // template carries explicit accentSecondary/accentTertiary/textAccentPrimary; setUserAccent must drop
 // them so applyColorSpec re-derives them from the NEW accentDefault. The original bug left them stale
