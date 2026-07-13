@@ -85,8 +85,7 @@ if ($RequireMsvcRuntime) {
     $requiredRuntimeFiles = @(
         'msvcp140.dll',
         'msvcp140_1.dll',
-        'vcruntime140.dll',
-        'vcruntime140_1.dll'
+        'vcruntime140.dll'
     )
     $missingRuntimeFiles = @($requiredRuntimeFiles | Where-Object {
         -not (Test-Path -LiteralPath (Join-Path $resolvedRoot $_))
