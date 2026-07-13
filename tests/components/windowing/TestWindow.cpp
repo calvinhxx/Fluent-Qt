@@ -18,6 +18,7 @@
 #include <QVBoxLayout>
 #include <QWindow>
 
+#include "compatibility/QtCompat.h"
 #include "compatibility/WindowChromeCompat.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
@@ -512,13 +513,8 @@ TEST_F(WindowTest, BackdropBackingStoreMatchesResolvedSurface) {
 TEST_F(WindowTest, BackdropEffectSwitchesModes) {
     Window window;
     const bool platformTranslucent = window.testAttribute(Qt::WA_TranslucentBackground);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    EXPECT_TRUE(QMetaType::fromName("BackdropEffect").isValid());
-    EXPECT_TRUE(QMetaType::fromName("BackdropState").isValid());
-#else
-    EXPECT_NE(QMetaType::type("BackdropEffect"), QMetaType::UnknownType);
-    EXPECT_NE(QMetaType::type("BackdropState"), QMetaType::UnknownType);
-#endif
+    EXPECT_TRUE(fluentMetaTypeNameIsRegistered("BackdropEffect"));
+    EXPECT_TRUE(fluentMetaTypeNameIsRegistered("BackdropState"));
     QSignalSpy effectSpy(&window, &Window::backdropEffectChanged);
     QSignalSpy stateSpy(&window, &Window::backdropStateChanged);
     ASSERT_TRUE(effectSpy.isValid());

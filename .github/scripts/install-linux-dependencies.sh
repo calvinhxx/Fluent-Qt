@@ -28,6 +28,7 @@ packages=(
     libxcb-xinput0
     libxcb-xkb1
     libxkbcommon-x11-0
+    xvfb
 )
 
 if [[ "$qt_source" == "apt5" ]]; then

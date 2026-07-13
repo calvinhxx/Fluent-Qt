@@ -233,6 +233,19 @@ jobs:
                 "needs_nsis": false
               },
               {
+                "artifact": "linux-arm64",
+                "os": "ubuntu-22.04-arm",
+                "preset": "vcpkg-linux-arm64-release",
+                "package_preset": "vcpkg-linux-arm64-deb",
+                "qt_version": "6.2.4",
+                "qt_arch": "",
+                "host_qt_arch": "",
+                "asset_suffix": "",
+                "build_parallel": "4",
+                "windows_arm64_cross": false,
+                "needs_nsis": false
+              },
+              {
                 "artifact": "macos-x64-qt515",
                 "os": "macos-15-intel",
                 "preset": "vcpkg-osx-x64-release",

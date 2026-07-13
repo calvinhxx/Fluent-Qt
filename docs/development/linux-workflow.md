@@ -6,15 +6,19 @@ on WSL paths, environment variables, or Windows-installed resources.
 
 ## Portability Target
 
-- Runtime target: general glibc-based x64 desktop Linux with Qt's X11 (`xcb`) or
-  Wayland platform plugin and a standards-compliant window manager/compositor.
-- CI/reference distribution: Ubuntu 22.04 x64. Other distributions are expected
-  to build from source with equivalent Qt, compiler, OpenGL, fontconfig, and XKB
-  dependencies.
-- Binary package target: Debian/Ubuntu-compatible x64 systems through DEB;
-  other distributions use the CMake install/export interface.
-- Qt 6 baseline: distro packages from Ubuntu 22.04, currently Qt 6.2.x.
-- Qt 5 baseline: official Qt 5.15.2 `gcc_64`.
+- Runtime target: general glibc-based x64 and ARM64 desktop Linux with Qt's X11
+  (`xcb`) or Wayland platform plugin and a standards-compliant window
+  manager/compositor.
+- CI/reference distribution: Ubuntu 22.04 x64 and ARM64. Other distributions
+  are expected to build from source with equivalent Qt, compiler, OpenGL,
+  fontconfig, and XKB dependencies.
+- Binary package target: Debian/Ubuntu-compatible x64 and ARM64 systems through
+  per-architecture DEBs; other distributions use the CMake install/export
+  interface.
+- Qt 6 baseline: distro packages from Ubuntu 22.04, currently Qt 6.2.x, on x64
+  and ARM64.
+- Qt 5 baseline: official Qt 5.15.2 `gcc_64` on x64. The ARM64 contract starts
+  at Qt 6.2 because the official Qt 5 desktop kit is x64-only.
 - CMake presets require CMake 3.25 or newer.
 - Public presets require `VCPKG_ROOT` and intentionally do not hard-code Qt
   paths. Put machine-specific Qt paths in `CMakeUserPresets.json` or pass them
@@ -39,6 +43,24 @@ Windows tools can still open the WSL checkout through:
 This layout guidance affects development performance only. Runtime behavior and
 build configuration are the same as on a native Linux installation.
 
+## Optional Apple Silicon Lima Layout
+
+On an ARM64 Mac, Lima provides a lightweight native ARM64 Linux VM with a
+WSL2-like command-line workflow. Create an Ubuntu 22.04 instance and confirm the
+guest architecture before installing the reference packages:
+
+```bash
+limactl start --name=fluent-linux-arm --arch=aarch64 --cpus=6 --memory=8 --disk=80 template:ubuntu-22.04
+limactl shell fluent-linux-arm
+uname -m  # aarch64
+```
+
+Prefer cloning the repository and keeping the build tree in the guest's own
+Linux filesystem. The default macOS home mount is convenient for file exchange,
+but vcpkg, AUTOMOC, and CTest perform better without crossing the shared-filesystem
+boundary. Lima validates native ARM64 build and headless runtime behavior; use a
+full X11 or Wayland desktop VM for final visual review.
+
 ## Ubuntu Reference Packages
 
 Use the same dependency installer as CI so the local and hosted environments
@@ -59,11 +81,22 @@ CMake or use another supported CMake distribution before running presets.
 
 ## Qt 6 Build
 
+x64:
+
 ```bash
 export VCPKG_ROOT=/home/<user>/vcpkg
 cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=ON
 cmake --build --preset vcpkg-linux --target fluent_qt_ci_fast_tests --parallel
 ctest --preset vcpkg-linux -L '^ci_fast$' --output-on-failure
+```
+
+ARM64, on a native ARM64 Linux host such as Lima or an ARM64 VM:
+
+```bash
+export VCPKG_ROOT=/home/<user>/vcpkg
+cmake --preset vcpkg-linux-arm64 -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=ON
+cmake --build --preset vcpkg-linux-arm64 --target fluent_qt_ci_fast_tests --parallel
+ctest --preset vcpkg-linux-arm64 -L '^ci_fast$' --output-on-failure
 ```
 
 Run the broader Linux lane locally with:
@@ -73,8 +106,13 @@ cmake --build --preset vcpkg-linux --target fluent_qt_ci_full_tests --parallel
 ctest --preset vcpkg-linux -L '^ci_full$' --output-on-failure
 ```
 
-The `vcpkg-linux` test preset excludes `local_desktop` tests by default because
-they require a real desktop and window manager behavior.
+Use the same commands with `vcpkg-linux-arm64` on ARM64. The x64 and ARM64
+presets use separate build directories and vcpkg triplets (`x64-linux` and
+`arm64-linux`), so their caches cannot be mixed accidentally.
+
+The `vcpkg-linux` and `vcpkg-linux-arm64` test presets exclude `local_desktop`
+tests by default because they require a real desktop and window manager
+behavior.
 
 ## Qt 5.15.2 Build
 
@@ -116,6 +154,9 @@ cmake --build --preset vcpkg-linux --target fluent_qt_all_tests --parallel
 ctest --preset vcpkg-linux-local-desktop -N
 ```
 
+On ARM64, use `vcpkg-linux-arm64` and
+`vcpkg-linux-arm64-local-desktop` respectively.
+
 Automated CTest runs inject `SKIP_VISUAL_TEST=1`, and the Linux desktop preset
 is primarily for discovery and grouping. For real desktop behavior, run the
 target binary directly without `SKIP_VISUAL_TEST` in an X11 or Wayland desktop
@@ -131,10 +172,11 @@ VisualCheck tests remain manual and use the same direct-binary pattern with
 
 ## GitHub Actions
 
-The default fast CI matrix includes Ubuntu 22.04 / Qt 6.2.x. The full matrix adds
-Ubuntu 22.04 / Qt 6.2.x, a Linux Gallery build smoke, and Ubuntu 22.04 /
-official Qt 5.15.2 `gcc_64`.
+The default fast CI matrix runs Ubuntu 22.04 / Qt 6.2.x on both x64 and native
+ARM64 runners. The full matrix builds the curated tests, Gallery, and a DEB
+smoke package for both architectures, plus the Ubuntu 22.04 x64 / official Qt
+5.15.2 `gcc_64` compatibility lane.
 
-The standard release matrix publishes the Ubuntu 22.04 x64 Gallery as a DEB via
-the `vcpkg-linux-deb` package preset. The full CI matrix also builds the package
-as a smoke check before release; see [Packaging Workflow](packaging-workflow.md).
+The standard release matrix publishes Ubuntu 22.04 x64 and ARM64 Gallery DEBs
+through `vcpkg-linux-deb` and `vcpkg-linux-arm64-deb`. See
+[Packaging Workflow](packaging-workflow.md).

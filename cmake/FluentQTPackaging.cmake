@@ -97,6 +97,8 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
 #   - Windows cross-builds ARM64 via the VS generator (-A <arch>, CMAKE_VS_PLATFORM_NAME) while
 #     CMAKE_SYSTEM_PROCESSOR still reports the x64 host, so the suffix follows the VS platform name
 #     (normalized to x64 / arm64 / x86).
+#   - Native Linux ARM64 hosts commonly report aarch64, while Debian and the public support matrix
+#     call the architecture arm64. Normalize that spelling without renaming existing x86_64 assets.
 set(_fluent_qt_pkg_arch "${CMAKE_SYSTEM_PROCESSOR}")
 if(APPLE AND CMAKE_OSX_ARCHITECTURES)
     list(LENGTH CMAKE_OSX_ARCHITECTURES _fluent_qt_osx_arch_count)
@@ -114,6 +116,11 @@ elseif(WIN32 AND CMAKE_VS_PLATFORM_NAME)
         set(_fluent_qt_pkg_arch "x86")
     else()
         set(_fluent_qt_pkg_arch "${CMAKE_VS_PLATFORM_NAME}")
+    endif()
+elseif(UNIX AND NOT APPLE)
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _fluent_qt_linux_processor)
+    if(_fluent_qt_linux_processor MATCHES "^(aarch64|arm64)$")
+        set(_fluent_qt_pkg_arch "arm64")
     endif()
 endif()
 set(CPACK_PACKAGE_FILE_NAME
