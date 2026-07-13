@@ -461,6 +461,8 @@ jobs:
           python3 scripts/release/generate_changelog.py \
             --tag "${{ needs.preflight.outputs.tag }}" \
             --audience public \
+            --require-curated \
+            --check \
             --output release-notes.md
 
       - name: Download package artifacts

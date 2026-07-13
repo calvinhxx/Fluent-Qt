@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate deterministic release notes from Conventional Commits."""
+"""Generate maintainer changelogs and curated public release notes."""
 
 from __future__ import annotations
 
@@ -20,6 +20,10 @@ FOOTER_RE = re.compile(r"^[A-Za-z][A-Za-z-]*: .+")
 RELEASE_COMMIT_RE = re.compile(
     r"^chore(?:\([^)]*\))?: v[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?$"
 )
+RELEASE_TAG_RE = re.compile(r"^v[0-9]+\.[0-9]+\.[0-9]+(?:-rc\.[0-9]+)?$")
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+CURATED_PUBLIC_NOTES_DIR = REPO_ROOT / "docs" / "releases"
 
 SECTIONS = OrderedDict(
     [
@@ -347,9 +351,29 @@ def render_public_notes(
     return "\n".join(lines).rstrip() + "\n"
 
 
+def default_curated_public_notes(tag: str) -> pathlib.Path | None:
+    if not RELEASE_TAG_RE.fullmatch(tag):
+        return None
+    return CURATED_PUBLIC_NOTES_DIR / f"{tag}.md"
+
+
+def read_curated_public_notes(path: pathlib.Path) -> str:
+    try:
+        notes = path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise RuntimeError(
+            f"Could not read curated public notes at {path}: {error}"
+        ) from error
+
+    notes = notes.strip()
+    if not notes:
+        raise RuntimeError(f"Curated public notes are empty: {path}")
+    return notes + "\n"
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate deterministic release notes from Conventional Commits."
+        description="Generate maintainer changelogs and curated public release notes."
     )
     parser.add_argument("--from", dest="from_ref", help="Previous tag or commit.")
     parser.add_argument("--to", dest="to_ref", help="Target tag or commit. Defaults to HEAD.")
@@ -362,7 +386,23 @@ def parse_args() -> argparse.Namespace:
         "--audience",
         choices=("public", "maintainer"),
         default="public",
-        help="Generate concise public notes or detailed maintainer notes. Defaults to public.",
+        help=(
+            "Generate curated public notes when available or a detailed maintainer "
+            "changelog. Defaults to public."
+        ),
+    )
+    parser.add_argument(
+        "--public-notes",
+        metavar="PATH",
+        help=(
+            "Use this reviewed Markdown file for public notes. With --tag, "
+            "docs/releases/<tag>.md is discovered automatically."
+        ),
+    )
+    parser.add_argument(
+        "--require-curated",
+        action="store_true",
+        help="Fail instead of publishing a commit-derived public draft.",
     )
     parser.add_argument(
         "--check",
@@ -373,6 +413,14 @@ def parse_args() -> argparse.Namespace:
 
     if args.tag and args.to_ref:
         parser.error("--tag cannot be combined with --to")
+    if args.audience == "maintainer" and (
+        args.public_notes or args.require_curated
+    ):
+        parser.error(
+            "--public-notes and --require-curated only apply to --audience public"
+        )
+    if args.require_curated and not (args.public_notes or args.tag):
+        parser.error("--require-curated requires --tag or --public-notes")
     return args
 
 
@@ -391,7 +439,40 @@ def main() -> int:
             release_name, commit_date(to_ref), from_ref, grouped
         )
     else:
-        notes = render_public_notes(release_name, commit_date(to_ref), from_ref, grouped)
+        curated_path: pathlib.Path | None = None
+        if args.public_notes:
+            curated_path = pathlib.Path(args.public_notes)
+        elif args.tag:
+            candidate = default_curated_public_notes(args.tag)
+            if candidate and candidate.is_file():
+                curated_path = candidate
+
+        if curated_path:
+            try:
+                notes = read_curated_public_notes(curated_path)
+            except RuntimeError as error:
+                print(f"error: {error}", file=sys.stderr)
+                return 2
+        elif args.require_curated:
+            expected = (
+                default_curated_public_notes(args.tag) if args.tag else None
+            )
+            location = expected or pathlib.Path(args.public_notes or "<unspecified>")
+            print(
+                f"error: Curated public notes are required but were not found: {location}",
+                file=sys.stderr,
+            )
+            return 2
+        else:
+            if args.tag:
+                print(
+                    "warning: No curated public notes were found; generating a "
+                    "commit-derived draft for review.",
+                    file=sys.stderr,
+                )
+            notes = render_public_notes(
+                release_name, commit_date(to_ref), from_ref, grouped
+            )
 
     if args.output:
         pathlib.Path(args.output).write_text(notes, encoding="utf-8", newline="\n")
