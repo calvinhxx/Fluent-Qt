@@ -195,6 +195,18 @@ void fluentRegisterMetaTypeNames(const char* firstName, const char* secondName, 
     fluentRegisterMetaTypeNames<T>(secondName, remainingNames...);
 }
 
+/**
+ * @brief Returns whether a metatype name is registered on the active Qt version.
+ * zh_CN: 返回指定元类型名称是否已在当前 Qt 版本中注册。
+ */
+inline bool fluentMetaTypeNameIsRegistered(const char* name) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    return QMetaType::fromName(name).isValid();
+#else
+    return QMetaType::type(name) != QMetaType::UnknownType;
+#endif
+}
+
 template <typename CheckBoxType, typename Context, typename Functor>
 QMetaObject::Connection fluentConnectCheckStateChanged(CheckBoxType* checkBox,
                                                        Context* context,

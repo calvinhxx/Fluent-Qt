@@ -37,8 +37,9 @@
 | 测试 | GTest |
 
 Linux 通过 Qt 的 X11（`xcb`）与 Wayland 平台插件面向通用桌面环境。
-Ubuntu 22.04 x64 + Qt 6.2.x 是 CI/参考基线，official Qt 5.15.2 `gcc_64`
-用于 Qt 5 验证。兼容范围、Qt 5/Qt 6 命令、桌面测试和可选 WSL2 开发说明见
+Ubuntu 22.04 x64 与 ARM64 + Qt 6.2.x 是 CI/参考基线，official Qt 5.15.2
+`gcc_64` 用于 x64 Qt 5 验证。兼容范围、Qt 5/Qt 6 命令、桌面测试和可选
+WSL2/Lima 开发说明见
 [Linux 工作流](docs/development/linux-workflow.md)。
 
 ## 🛠 FluentQt uilib 编译
@@ -59,12 +60,28 @@ cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TES
 cmake --build --preset vcpkg-windows --target FluentQt
 ```
 
+Windows ARM64（使用原生 Qt `msvc2022_arm64` kit）：
+
+```powershell
+$env:VCPKG_ROOT = "D:\path\to\vcpkg"
+cmake --preset vcpkg-windows-arm64 -D "CMAKE_PREFIX_PATH=C:/Qt/6.9.3/msvc2022_arm64" -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-windows-arm64 --target FluentQt
+```
+
 Linux x64:
 
 ```bash
 export VCPKG_ROOT=/path/to/vcpkg
 cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
 cmake --build --preset vcpkg-linux --target FluentQt
+```
+
+Linux ARM64:
+
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+cmake --preset vcpkg-linux-arm64 -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
+cmake --build --preset vcpkg-linux-arm64 --target FluentQt
 ```
 
 ## 🔌 FluentQt uilib 使用
@@ -136,6 +153,7 @@ cmake --build --preset vcpkg-linux --target fluent_qt_gallery
 | macOS | arm64 | `vcpkg-osx-dmg` |
 | macOS | x64 | `vcpkg-osx-x64-dmg` |
 | Linux | x64（`.deb`） | `vcpkg-linux-deb` |
+| Linux | ARM64（`.deb`） | `vcpkg-linux-arm64-deb` |
 
 macOS arm64 DMG:
 
@@ -159,6 +177,14 @@ Linux x64 Debian 包：
 cmake --preset vcpkg-linux-release
 cmake --build --preset vcpkg-linux-release
 cpack --preset vcpkg-linux-deb
+```
+
+Linux ARM64 Debian 包：
+
+```bash
+cmake --preset vcpkg-linux-arm64-release
+cmake --build --preset vcpkg-linux-arm64-release
+cpack --preset vcpkg-linux-arm64-deb
 ```
 
 ## 📚 文档

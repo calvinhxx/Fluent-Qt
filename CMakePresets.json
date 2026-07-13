@@ -91,6 +91,30 @@
       }
     },
     {
+      "name": "vcpkg-linux-arm64",
+      "displayName": "vcpkg Linux ARM64 Debug",
+      "description": "Native Linux ARM64 build using vcpkg manifest dependencies. Qt is discovered from the local or system Qt installation.",
+      "inherits": "vcpkg-base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "arm64-linux"
+      }
+    },
+    {
+      "name": "vcpkg-linux-arm64-release",
+      "displayName": "vcpkg Linux ARM64 Release",
+      "description": "Native Linux ARM64 release build used for DEB packaging.",
+      "inherits": "vcpkg-linux-arm64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTING": "OFF"
+      }
+    },
+    {
       "name": "vcpkg-windows",
       "displayName": "vcpkg Windows x64 Debug",
       "description": "Windows x64 build using vcpkg manifest dependencies. Qt Creator, Visual Studio, or the shell selects the generator and compiler.",
@@ -117,7 +141,7 @@
     {
       "name": "vcpkg-windows-arm64",
       "displayName": "vcpkg Windows ARM64 Debug",
-      "description": "Windows ARM64 cross-build from an x64 host using the Visual Studio generator. Requires the msvc2022_arm64 Qt kit installed so CMake finds ARM64 Qt instead of the host x64 Qt.",
+      "description": "Windows ARM64 native or cross-build using the Visual Studio generator. Cross-build hosts also require a matching x64 host Qt kit.",
       "inherits": "vcpkg-windows",
       "architecture": {
         "value": "ARM64",
@@ -167,6 +191,16 @@
     {
       "name": "vcpkg-linux-release",
       "configurePreset": "vcpkg-linux-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "vcpkg-linux-arm64",
+      "configurePreset": "vcpkg-linux-arm64",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vcpkg-linux-arm64-release",
+      "configurePreset": "vcpkg-linux-arm64-release",
       "configuration": "Release"
     },
     {
@@ -234,8 +268,42 @@
       }
     },
     {
+      "name": "vcpkg-linux-arm64",
+      "configurePreset": "vcpkg-linux-arm64",
+      "configuration": "Debug",
+      "filter": {
+        "exclude": {
+          "label": "^local_desktop$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vcpkg-linux-arm64-local-desktop",
+      "configurePreset": "vcpkg-linux-arm64",
+      "configuration": "Debug",
+      "filter": {
+        "include": {
+          "label": "^local_desktop$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
       "name": "vcpkg-windows",
       "configurePreset": "vcpkg-windows",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vcpkg-windows-arm64",
+      "configurePreset": "vcpkg-windows-arm64",
       "configuration": "Debug",
       "output": {
         "outputOnFailure": true
@@ -286,6 +354,16 @@
     {
       "name": "vcpkg-linux-deb",
       "configurePreset": "vcpkg-linux-release",
+      "generators": [
+        "DEB"
+      ],
+      "configurations": [
+        "Release"
+      ]
+    },
+    {
+      "name": "vcpkg-linux-arm64-deb",
+      "configurePreset": "vcpkg-linux-arm64-release",
       "generators": [
         "DEB"
       ],

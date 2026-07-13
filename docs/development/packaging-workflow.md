@@ -34,11 +34,22 @@ ID or display name in those templates.
 
 ## Linux DEB
 
+Linux packages are built natively per architecture. x64:
+
 ```bash
 cmake --preset vcpkg-linux-release
 cmake --build --preset vcpkg-linux-release
 cpack --preset vcpkg-linux-deb
-# -> Fluent-Qt-Gallery-<version>-Linux-<architecture>.deb
+# -> Fluent-Qt-Gallery-<version>-Linux-x86_64.deb
+```
+
+ARM64:
+
+```bash
+cmake --preset vcpkg-linux-arm64-release
+cmake --build --preset vcpkg-linux-arm64-release
+cpack --preset vcpkg-linux-arm64-deb
+# -> Fluent-Qt-Gallery-<version>-Linux-arm64.deb
 ```
 
 The package installs the Gallery executable under `/usr/bin`, a freedesktop
@@ -46,7 +57,8 @@ entry under `/usr/share/applications`, and the application icon in the hicolor
 icon theme. CPack runs `dpkg-shlibdeps` so the package declares the Qt and system
 libraries required by the binary built on the Ubuntu 22.04 baseline. The Qt
 runtime is intentionally consumed from distribution packages rather than
-duplicated inside the DEB.
+duplicated inside the DEB. Do not use the ARM64 preset as a cross-compilation
+preset on x64; it is intended for a native ARM64 Linux host or runner.
 
 ## macOS DMG
 
@@ -143,17 +155,25 @@ cmake --preset vcpkg-windows-release
 cmake --build --preset vcpkg-windows-release
 cpack --preset vcpkg-windows-installer
 
-# ARM64 (cross-built from an x64 host via the Visual Studio generator)
+# ARM64 cross-build from an x64 host via the Visual Studio generator
 cmake --preset vcpkg-windows-arm64-release -D "CMAKE_PREFIX_PATH=C:/Qt/6.9.3/msvc2022_arm64" -D "QT_HOST_PATH=C:/Qt/6.9.3/msvc2022_64"
 cmake --build --preset vcpkg-windows-arm64-release
 cpack --preset vcpkg-windows-arm64-installer
 ```
 
-The ARM64 presets require the **`msvc2022_arm64` Qt kit** installed (via the Qt
-Maintenance Tool) and a matching x64 host Qt kit. Public presets intentionally
-do not hard-code those machine paths; pass `CMAKE_PREFIX_PATH` and
-`QT_HOST_PATH` on the configure command line or put them in an ignored
+The ARM64 presets work on native Windows ARM64 and as an x64-hosted cross-build.
+Both routes require the **`msvc2022_arm64` Qt kit**. The cross-build additionally
+requires a matching x64 host Qt kit supplied through `QT_HOST_PATH`; the native
+route does not. Public presets intentionally do not hard-code machine paths;
+pass them on the configure command line or put them in an ignored
 `CMakeUserPresets.json`.
+
+CI runs the ARM64 binaries on the native `windows-11-arm` runner before release,
+while the full CI and release workflows keep the established x64-hosted
+cross-build for the installer artifact. A full CI run uploads
+`fluent-qt-gallery-windows-arm64-installer`, which can be installed directly in
+a Windows 11 ARM VM for visual review. This separates runtime compatibility
+from deterministic packaging.
 
 > 32-bit x86 is intentionally not packaged: Qt 6 ships no 32-bit Windows binaries,
 > so an `x86-windows` build would require a self-compiled 32-bit Qt.
