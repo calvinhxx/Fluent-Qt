@@ -57,8 +57,11 @@ entry under `/usr/share/applications`, and the application icon in the hicolor
 icon theme. CPack runs `dpkg-shlibdeps` so the package declares the Qt and system
 libraries required by the binary built on the Ubuntu 22.04 baseline. The Qt
 runtime is intentionally consumed from distribution packages rather than
-duplicated inside the DEB. Do not use the ARM64 preset as a cross-compilation
-preset on x64; it is intended for a native ARM64 Linux host or runner.
+duplicated inside the DEB. Because `dpkg-shlibdeps` cannot see plugins loaded
+dynamically by `QApplication`, Qt 6 packages also declare `qt6-qpa-plugins` as
+an explicit dependency and recommend `qt6-wayland` for native Wayland sessions.
+Do not use the ARM64 preset as a cross-compilation preset on x64; it is intended
+for a native ARM64 Linux host or runner.
 
 ## macOS DMG
 
@@ -167,6 +170,13 @@ requires a matching x64 host Qt kit supplied through `QT_HOST_PATH`; the native
 route does not. Public presets intentionally do not hard-code machine paths;
 pass them on the configure command line or put them in an ignored
 `CMakeUserPresets.json`.
+
+For an x64-hosted ARM64 package, the host `windeployqt` must receive the target
+Qt kit's `qtpaths` wrapper. Otherwise it deploys x64 Qt DLLs beside the ARM64
+Gallery executable and Windows rejects the process with
+`STATUS_INVALID_IMAGE_FORMAT` (`0xc000007b`). CI verifies every packaged EXE and
+DLL is ARM64 and that the app-local ARM64 MSVC runtime is present before it
+uploads the installer.
 
 CI runs the ARM64 binaries on the native `windows-11-arm` runner before release,
 while the full CI and release workflows keep the established x64-hosted
