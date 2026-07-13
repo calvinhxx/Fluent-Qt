@@ -11,6 +11,13 @@ if(FLUENT_QT_BUILD_GALLERY)
     list(APPEND FLUENT_QT_CI_FAST_TARGETS test_gallery_single_instance)
 endif()
 
+set(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
+    ${FLUENT_QT_CI_FAST_TARGETS}
+    test_window
+    test_list_view
+    test_flip_view
+)
+
 set(FLUENT_QT_CI_FULL_TARGETS
     ${FLUENT_QT_CI_FAST_TARGETS}
     test_project_logging
@@ -225,6 +232,9 @@ if(FLUENT_QT_ALL_TEST_TARGETS)
     )
     add_custom_target(fluent_qt_ci_full_tests
         DEPENDS ${FLUENT_QT_CI_FULL_TEST_TARGETS}
+    )
+    add_custom_target(fluent_qt_ci_windows_platform_tests
+        DEPENDS ${FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS}
     )
     add_custom_target(fluent_qt_all_tests
         DEPENDS ${FLUENT_QT_ALL_TEST_TARGETS}

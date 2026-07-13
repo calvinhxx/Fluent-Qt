@@ -121,7 +121,6 @@ set(CPACK_PACKAGE_VENDOR "${FLUENT_QT_GALLERY_ORGANIZATION_NAME}")
 set(CPACK_PACKAGE_CONTACT "Fluent-Qt maintainers")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "WinUI-style Qt Widgets gallery")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(CPACK_PACKAGE_CHECKSUM SHA256)
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
 # Note: CPACK_RESOURCE_FILE_LICENSE is set per-platform in the APPLE/WIN32 branches below, not
 # globally, because each generator presents it differently: a mount-time click-through SLA on the

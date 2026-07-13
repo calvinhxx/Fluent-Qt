@@ -190,18 +190,27 @@ from deterministic packaging.
 
 ## Desktop Compatibility Test Artifacts
 
-The `Desktop Compat Test Packages` GitHub Actions workflow builds installable
-artifacts from release, test, and agent branches and can also be started with
-`workflow_dispatch`. It publishes four independent, 14-day test artifacts:
+The `Desktop Compat Packages` workflow is manual-only. Its `packages` input
+accepts one or more comma-, space-, or newline-separated package IDs, so a
+compatibility check starts only the requested runners. Use `standard` to select
+all nine release packages. The supported IDs are:
 
-- Windows 10-compatible x64 installer built with Qt 6.2.4.
-- macOS Apple Silicon DMG built with Qt 6.2.4.
-- Ubuntu 22.04 x64 DEB built against the distribution Qt 5.15 baseline.
-- Ubuntu 22.04 x64 DEB built against the distribution Qt 6.2 baseline.
+- `windows-x64-qt515`, `macos-x64-qt515`, `linux-x64-qt515`.
+- `windows-x64-qt62`, `macos-x64-qt62`, `macos-arm64-qt62`.
+- `linux-x64-qt62`, `linux-arm64-qt62`, `windows-arm64-qt693`.
 
-Each lane runs its platform/package-focused tests before CPack and uploads a
-SHA-256 file beside the installer. These artifacts are for manual installation
-validation; tagged release assets continue to be produced by `release.yml`.
+Set `run_tests=true` to build and run the `ci_fast` test set before CPack; leave
+it false for the fastest package-only path. Each selected lane uploads its
+installer as an independent 14-day artifact. These temporary artifacts do not
+duplicate per-package checksum files; a published tagged release contains one
+`SHA256SUMS.txt` covering all of its installers. Tagged release assets continue
+to be produced by `release.yml`. The Windows ARM64 package is
+cross-built on Windows x64, so its executable tests remain in the native
+Windows ARM64 `matrix=full` CI lane even when `run_tests=true`.
+
+`.github/package-matrix.json` is the source of truth shared by this workflow
+and `release.yml`. Update that catalog instead of maintaining package matrices
+inside workflow YAML.
 
 ## Version Contract
 

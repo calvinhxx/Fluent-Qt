@@ -1,0 +1,348 @@
+name: Desktop Compat Packages
+run-name: Desktop packages · ${{ inputs.packages }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "IDs separated by comma/space, e.g. windows-x64-qt62,macos-arm64-qt62; standard selects all."
+        required: true
+        default: windows-x64-qt62
+        type: string
+      run_tests:
+        description: "Build and run the ci_fast test set before packaging."
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Select packages
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.packages.outputs.matrix }}
+      count: ${{ steps.packages.outputs.count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve package IDs
+        id: packages
+        env:
+          REQUESTED_PACKAGES: ${{ inputs.packages }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          catalog=".github/package-matrix.json"
+          requested="$(
+            printf '%s' "$REQUESTED_PACKAGES" |
+              jq -Rsc 'gsub("[,\\n\\r\\t ]+"; " ") | split(" ") | map(select(length > 0)) | unique'
+          )"
+
+          if [[ "$(jq 'length' <<<"$requested")" == "0" ]]; then
+            echo "::error::Select at least one package ID."
+            exit 1
+          fi
+
+          selected="$(
+            jq -c --argjson requested "$requested" '
+              ($requested | map(select(. != "standard"))) as $explicit
+              | (if ($requested | index("standard"))
+                 then [.scenarios[] | select(.standard == true) | .id]
+                 else []
+                 end) as $standard
+              | ($standard + $explicit | unique)
+            ' "$catalog"
+          )"
+
+          unknown="$(
+            jq -c --argjson selected "$selected" '
+              [.scenarios[].id] as $known
+              | [$selected[] as $id | select(($known | index($id)) == null) | $id]
+            ' "$catalog"
+          )"
+          if [[ "$(jq 'length' <<<"$unknown")" != "0" ]]; then
+            echo "::error::Unknown package IDs: $(jq -r 'join(", ")' <<<"$unknown")"
+            echo "::error::Valid IDs: $(jq -r '[.scenarios[].id] | join(", ")' "$catalog")"
+            exit 1
+          fi
+
+          matrix="$(
+            jq -c --argjson selected "$selected" '
+              {include: [.scenarios[] | select(.id as $id | $selected | index($id))]}
+            ' "$catalog"
+          )"
+          count="$(jq '.include | length' <<<"$matrix")"
+
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Selected desktop packages"
+            echo ""
+            jq -r '.include[] | "- `\(.id)`: \(.name)"' <<<"$matrix"
+            echo ""
+            echo "Run focused tests: ${{ inputs.run_tests }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  package:
+    name: ${{ matrix.name }}
+    needs: plan
+    if: ${{ needs.plan.outputs.count != '0' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
+      QT_QPA_PLATFORM: offscreen
+      SKIP_VISUAL_TEST: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-binary-cache
+          key: package-preview-${{ runner.os }}-${{ runner.arch }}-${{ matrix.id }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          restore-keys: |
+            package-preview-${{ runner.os }}-${{ runner.arch }}-${{ matrix.id }}-
+            release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
+
+      - name: Install Linux dependencies
+        if: ${{ matrix.platform == 'linux' }}
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
+
+      - name: Install NSIS
+        if: ${{ matrix.needs_nsis == true }}
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
+      - name: Install host Qt ${{ matrix.qt_version }}
+        if: ${{ matrix.windows_arm64_cross == true }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.host_qt_arch }}
+          cache: true
+
+      - name: Remember host Qt path
+        if: ${{ matrix.windows_arm64_cross == true }}
+        shell: pwsh
+        run: |
+          $qtHostPath = $env:QT_ROOT_DIR -replace '\\', '/'
+          "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
+
+      - name: Install Qt ${{ matrix.qt_version }}
+        if: ${{ matrix.qt_source == 'aqt' }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Set build environment
+        shell: pwsh
+        run: |
+          if (-not $env:VCPKG_INSTALLATION_ROOT) {
+            throw "VCPKG_INSTALLATION_ROOT is not set on this runner."
+          }
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+          "SHORT_SHA=$($env:GITHUB_SHA.Substring(0, 7))" >> $env:GITHUB_ENV
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          $configureArgs = @("--preset", "${{ matrix.preset }}")
+          if ($env:QT_ROOT_DIR) {
+            $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
+            $configureArgs += @("-D", "CMAKE_PREFIX_PATH=$qtRoot")
+          }
+          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
+            $qtHost = $env:QT_HOST_PATH -replace '\\', '/'
+            $configureArgs += @("-D", "QT_HOST_PATH=$qtHost")
+          }
+          $disableQt = "${{ matrix.disable_qt }}"
+          if ($disableQt) {
+            $configureArgs += @("-D", "CMAKE_DISABLE_FIND_PACKAGE_$disableQt=TRUE")
+          }
+          $buildTesting = if (
+            "${{ inputs.run_tests }}" -eq "true" -and
+            "${{ matrix.windows_arm64_cross }}" -ne "true"
+          ) { "ON" } else { "OFF" }
+          $configureArgs += @("-D", "BUILD_TESTING=$buildTesting")
+          cmake @configureArgs
+
+      - name: Validate generated Linux desktop entry
+        if: ${{ matrix.platform == 'linux' }}
+        shell: bash
+        run: desktop-file-validate build/${{ matrix.preset }}/app/*.desktop
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $buildArgs = @("--build", "--preset", "${{ matrix.preset }}", "--target", "fluent_qt_gallery")
+          if (
+            "${{ inputs.run_tests }}" -eq "true" -and
+            "${{ matrix.windows_arm64_cross }}" -ne "true"
+          ) {
+            $buildArgs += "fluent_qt_ci_fast_tests"
+          }
+          $parallel = "${{ matrix.build_parallel }}"
+          if ($parallel) {
+            $buildArgs += @("--parallel", $parallel)
+          } else {
+            $buildArgs += "--parallel"
+          }
+          cmake @buildArgs
+
+      - name: Run focused tests
+        if: ${{ inputs.run_tests && matrix.windows_arm64_cross != true }}
+        shell: pwsh
+        run: |
+          ctest --test-dir "build/${{ matrix.preset }}" `
+            -L "^ci_fast$" `
+            -LE "^(manual_visual|local_desktop)$" `
+            --output-on-failure `
+            --timeout 240 `
+            --no-tests=error
+
+      - name: Report Windows ARM64 cross-build test skip
+        if: ${{ inputs.run_tests && matrix.windows_arm64_cross == true }}
+        shell: pwsh
+        run: Write-Host "::notice::Windows ARM64 tests require the native CI full lane; this x64-hosted package job only verifies the ARM64 binaries and runtime architecture."
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $buildDir = "build/${{ matrix.preset }}"
+          $packageOutput = $buildDir
+          $packageArgs = @("--preset", "${{ matrix.package_preset }}")
+          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
+            $packageOutput = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
+            $packageArgs += @("-B", $packageOutput)
+          }
+
+          $cpackDir = Join-Path $packageOutput "_CPack_Packages"
+          if (Test-Path -LiteralPath $cpackDir) {
+            Remove-Item -LiteralPath $cpackDir -Recurse -Force
+          }
+          Get-ChildItem -LiteralPath $packageOutput -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Extension -in @(".dmg", ".exe", ".deb") } |
+            Remove-Item -Force
+
+          $maxAttempts = if ($env:RUNNER_OS -eq "macOS") { 3 } else { 1 }
+          $exitCode = 0
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            & cpack @packageArgs
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) {
+              break
+            }
+            if ($attempt -lt $maxAttempts) {
+              & /bin/sync
+              Get-ChildItem -LiteralPath /Volumes -Directory -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -like "Fluent-Qt Gallery *" } |
+                ForEach-Object { & /usr/bin/hdiutil detach $_.FullName -force }
+              Start-Sleep -Seconds (5 * $attempt)
+            }
+          }
+          if ($exitCode -ne 0) {
+            exit $exitCode
+          }
+
+          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
+            $stagedGallery = Get-ChildItem `
+              -LiteralPath (Join-Path $packageOutput "_CPack_Packages") `
+              -Filter fluent_qt_gallery.exe -File -Recurse |
+              Where-Object { $_.Directory.Name -eq "bin" } |
+              Select-Object -First 1
+            if (-not $stagedGallery) {
+              throw "The staged Windows ARM64 Gallery executable was not found."
+            }
+            & "$env:GITHUB_WORKSPACE/cmake/VerifyWindowsPeArchitecture.ps1" `
+              -Root $stagedGallery.Directory.FullName `
+              -ExpectedMachine Arm64 `
+              -RequireMsvcRuntime
+          }
+
+      - name: Verify Linux package metadata
+        if: ${{ matrix.platform == 'linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(build/${{ matrix.preset }}/*.deb)
+          if (( ${#packages[@]} != 1 )); then
+            echo "::error::Expected exactly one DEB package, found ${#packages[@]}."
+            exit 1
+          fi
+
+          dpkg-deb --field "${packages[0]}" Architecture Depends Recommends
+          depends="$(dpkg-deb --field "${packages[0]}" Depends)"
+          expected="${{ matrix.linux_qt_dependency }}"
+          if [[ -n "$expected" && "$depends" != *"$expected"* ]]; then
+            echo "::error::The DEB package does not depend on $expected."
+            exit 1
+          fi
+
+      - name: Collect package artifacts
+        shell: pwsh
+        run: |
+          $source = "build/${{ matrix.preset }}"
+          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
+            $source = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
+          }
+          $destination = Join-Path $env:RUNNER_TEMP "desktop-compat-artifacts"
+          New-Item -ItemType Directory -Force -Path $destination | Out-Null
+
+          $packages = Get-ChildItem -LiteralPath $source -File |
+            Where-Object { $_.Extension -in @(".dmg", ".exe", ".deb") }
+          if (-not $packages) {
+            throw "No package was found in $source."
+          }
+
+          foreach ($package in $packages) {
+            $targetName = "$($package.BaseName)-${{ matrix.id }}-$env:SHORT_SHA-test$($package.Extension)"
+            $targetPath = Join-Path $destination $targetName
+            Copy-Item -LiteralPath $package.FullName -Destination $targetPath
+          }
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-compat-${{ matrix.id }}-${{ env.SHORT_SHA }}
+          if-no-files-found: error
+          retention-days: 14
+          path: ${{ runner.temp }}/desktop-compat-artifacts/*
+
+      - name: Upload packaging diagnostics
+        if: failure()
+        timeout-minutes: 5
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-compat-${{ matrix.id }}-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            build/${{ matrix.preset }}/CMakeCache.txt
+            build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
+            build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
+            build/${{ matrix.preset }}/Testing/Temporary/LastTestsFailed.log
+            build/${{ matrix.preset }}/vcpkg-manifest-install.log
+            build/${{ matrix.preset }}/_CPack_Packages/**/*.log
+            ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
+            build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md

@@ -25,6 +25,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   plan:
@@ -33,7 +34,49 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       mode: ${{ steps.matrix.outputs.mode }}
+      should_build: ${{ steps.changes.outputs.should_build }}
     steps:
+      - name: Detect documentation-only pull request
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          should_build=true
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            changed_files="$(
+              gh api --paginate \
+                "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
+                --jq '.[].filename'
+            )"
+            if [[ -z "$changed_files" ]]; then
+              echo "::error::The pull request did not report any changed files."
+              exit 1
+            fi
+
+            should_build=false
+            while IFS= read -r file; do
+              case "$file" in
+                *.md|docs/*|site/*|LICENSE|LICENSE.*|.github/ISSUE_TEMPLATE/*)
+                  ;;
+                *)
+                  should_build=true
+                  break
+                  ;;
+              esac
+            done <<< "$changed_files"
+          fi
+
+          echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
+          if [[ "$should_build" == "true" ]]; then
+            echo "The build matrix is required."
+          else
+            echo "Documentation-only pull request: skipping the build matrix."
+          fi
+
       - name: Select validation tier
         id: matrix
         shell: bash
@@ -82,29 +125,6 @@ jobs:
                 "windows_arm64_cross": false
               },
               {
-                "id": "linux-arm64-qt62-fast",
-                "name": "Linux ARM64 / Qt 6.2 fast",
-                "os": "ubuntu-22.04-arm",
-                "preset": "vcpkg-linux-arm64",
-                "qt_version": "6.2.4",
-                "qt_source": "apt",
-                "qt_arch": "",
-                "qt_archives": "",
-                "host_qt_arch": "",
-                "vcpkg_triplet": "arm64-linux",
-                "build": true,
-                "test": true,
-                "build_targets": "fluent_qt_ci_fast_tests",
-                "build_parallel": "4",
-                "test_labels": "^ci_fast$",
-                "exclude_labels": "^(manual_visual|local_desktop)$",
-                "ctest_timeout": 180,
-                "timeout_minutes": 30,
-                "configure_args": "",
-                "native_arm64": true,
-                "windows_arm64_cross": false
-              },
-              {
                 "id": "win-x64-qt62-fast",
                 "name": "Windows x64 / Qt 6.2 fast",
                 "os": "windows-2022",
@@ -127,32 +147,8 @@ jobs:
                 "windows_arm64_cross": false
               },
               {
-                "id": "win-arm64-qt693-fast",
-                "name": "Windows ARM64 / Qt 6.9.3 fast",
-                "os": "windows-11-arm",
-                "preset": "vcpkg-windows-arm64",
-                "qt_version": "6.9.3",
-                "qt_source": "aqt",
-                "qt_arch": "win64_msvc2022_arm64",
-                "qt_archives": "",
-                "host_qt_arch": "",
-                "vcpkg_triplet": "arm64-windows",
-                "build": true,
-                "test": true,
-                "build_targets": "fluent_qt_ci_fast_tests",
-                "build_parallel": "",
-                "test_labels": "^ci_fast$",
-                "exclude_labels": "^(manual_visual|local_desktop)$",
-                "ctest_timeout": 180,
-                "timeout_minutes": 45,
-                "configure_args": "",
-                "native_arm64": true,
-                "windows_arm64_native": true,
-                "windows_arm64_cross": false
-              },
-              {
-                "id": "mac-arm64-qt62-configure",
-                "name": "macOS arm64 / Qt 6.2 configure",
+                "id": "mac-arm64-qt62-build",
+                "name": "macOS arm64 / Qt 6.2 build",
                 "os": "macos-15",
                 "preset": "vcpkg-osx",
                 "qt_version": "6.2.4",
@@ -161,14 +157,14 @@ jobs:
                 "qt_archives": "",
                 "host_qt_arch": "",
                 "vcpkg_triplet": "arm64-osx",
-                "build": false,
+                "build": true,
                 "test": false,
-                "build_targets": "",
-                "build_parallel": "",
+                "build_targets": "FluentQt",
+                "build_parallel": "3",
                 "test_labels": "",
                 "exclude_labels": "",
                 "ctest_timeout": 180,
-                "timeout_minutes": 20,
+                "timeout_minutes": 30,
                 "configure_args": "-DBUILD_TESTING=OFF",
                 "windows_arm64_cross": false
               }
@@ -313,7 +309,7 @@ jobs:
                 "vcpkg_triplet": "x64-windows",
                 "build": true,
                 "test": true,
-                "build_targets": "fluent_qt_ci_fast_tests test_window test_list_view test_flip_view",
+                "build_targets": "fluent_qt_ci_windows_platform_tests",
                 "build_parallel": "",
                 "test_labels": "^(ci_fast|platform_windows)$",
                 "exclude_labels": "^manual_visual$",
@@ -357,7 +353,7 @@ jobs:
                 "vcpkg_triplet": "arm64-windows",
                 "build": true,
                 "test": true,
-                "build_targets": "fluent_qt_ci_fast_tests test_window test_list_view test_flip_view fluent_qt_gallery",
+                "build_targets": "fluent_qt_ci_windows_platform_tests fluent_qt_gallery",
                 "build_parallel": "",
                 "test_labels": "^(ci_fast|platform_windows)$",
                 "exclude_labels": "^(manual_visual|local_desktop)$",
@@ -407,6 +403,7 @@ jobs:
   build:
     name: ${{ matrix.name }}
     needs: plan
+    if: ${{ needs.plan.outputs.should_build == 'true' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
@@ -417,7 +414,7 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Verify native ARM64 runner
         if: ${{ matrix.native_arm64 == true }}
@@ -675,9 +672,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fluent-qt-gallery-linux-${{ matrix.package_arch }}-deb
+          retention-days: 14
           path: |
             build/${{ matrix.package_build_preset }}/*.deb
-            build/${{ matrix.package_build_preset }}/*.sha256
           if-no-files-found: error
 
       - name: Package Windows ARM64 Gallery
@@ -714,9 +711,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fluent-qt-gallery-windows-arm64-installer
+          retention-days: 14
           path: |
             ${{ runner.temp }}/fq-win-arm64/*.exe
-            ${{ runner.temp }}/fq-win-arm64/*.sha256
           if-no-files-found: error
 
       - name: Upload diagnostics
@@ -736,3 +733,51 @@ jobs:
             build/${{ matrix.package_build_preset }}/_CPack_Packages/**/*.log
             ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
+
+  ci-gate:
+    name: CI Gate
+    needs: [plan, build]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify required validation
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$PLAN_RESULT" != "success" ]]; then
+            echo "::error::CI planning finished with result: $PLAN_RESULT"
+            exit 1
+          fi
+          if [[ "$SHOULD_BUILD" == "true" && "$BUILD_RESULT" != "success" ]]; then
+            echo "::error::The required build matrix finished with result: $BUILD_RESULT"
+            exit 1
+          fi
+
+          if [[ "$SHOULD_BUILD" == "true" ]]; then
+            echo "Required CI validation passed."
+          else
+            echo "Documentation-only pull request; the build matrix was not required."
+          fi
+
+  release-ready:
+    name: Release ready
+    needs: [plan, build]
+    if: ${{ always() && needs.plan.outputs.mode == 'full' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify full matrix
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+        shell: bash
+        run: |
+          if [[ "$BUILD_RESULT" != "success" ]]; then
+            echo "::error::The full validation matrix finished with result: $BUILD_RESULT"
+            exit 1
+          fi
