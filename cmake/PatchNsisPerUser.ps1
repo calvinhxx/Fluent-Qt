@@ -4,14 +4,6 @@ param(
     [string[]] $Arguments
 )
 
-$makensisCommand = Get-Command makensis.exe -ErrorAction SilentlyContinue
-if (-not $makensisCommand) {
-    $makensisCommand = Get-Command makensis -ErrorAction SilentlyContinue
-}
-if (-not $makensisCommand) {
-    throw "makensis was not found on PATH."
-}
-
 $nsiPath = $null
 foreach ($argument in $Arguments) {
     $candidate = $argument.Trim('"')
@@ -23,33 +15,33 @@ foreach ($argument in $Arguments) {
 }
 
 if ($nsiPath) {
-    $content = [IO.File]::ReadAllText($nsiPath)
-
-    $content = $content.Replace(
-        "RequestExecutionLevel admin",
-        "RequestExecutionLevel user")
-    $content = $content -replace
-        'InstallDir "\$PROGRAMFILES(?:64|32)?\\([^"]+)"',
-        'InstallDir "$$LOCALAPPDATA\Programs\$1"'
-    $content = $content -replace
-        'StrCpy \$INSTDIR "\$DOCUMENTS\\([^"]+)"',
-        'StrCpy $$INSTDIR "$$LOCALAPPDATA\Programs\$1"'
-    $content = $content -replace
-        '\$PROGRAMFILES(?:64|32)?\\',
-        '$$LOCALAPPDATA\Programs\'
-    $content = $content.Replace(
-        'SetShellVarContext all',
-        'SetShellVarContext current')
-    $content = $content.Replace(
-        'StrCpy $SV_ALLUSERS "AllUsers"',
-        'StrCpy $SV_ALLUSERS "JustMe"')
-    $content = $content.Replace(
-        'HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\',
-        'HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\')
-
-    $utf8NoBom = [Text.UTF8Encoding]::new($false)
-    [IO.File]::WriteAllText($nsiPath, $content, $utf8NoBom)
+    & "$PSScriptRoot\PatchNsisScript.ps1" -NsiPath $nsiPath
 }
 
-& $makensisCommand.Source @Arguments
+$makensisCommand = Get-Command makensis.exe -ErrorAction SilentlyContinue
+if (-not $makensisCommand) {
+    $makensisCommand = Get-Command makensis -ErrorAction SilentlyContinue
+}
+$makensisPath = if ($makensisCommand) { $makensisCommand.Source } else { $null }
+
+# Local development may use an extracted, ignored NSIS ZIP instead of a
+# machine-wide installation. Prefer its top-level launcher so NSIS resolves
+# its Include, Plugins, and Contrib directories relative to the ZIP root.
+if (-not $makensisPath) {
+    $portableRoot = Join-Path $PSScriptRoot '..\build\nsis-toolchain'
+    if (Test-Path -LiteralPath $portableRoot) {
+        $portableCandidates = Get-ChildItem -LiteralPath $portableRoot `
+            -Directory -Filter 'nsis-*' -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending |
+            ForEach-Object { Join-Path $_.FullName 'makensis.exe' } |
+            Where-Object { Test-Path -LiteralPath $_ }
+        $makensisPath = $portableCandidates | Select-Object -First 1
+    }
+}
+
+if (-not $makensisPath) {
+    throw "makensis was not found on PATH."
+}
+
+& $makensisPath @Arguments
 exit $LASTEXITCODE

@@ -12,6 +12,9 @@ surface; the reusable component library is installed through the separate
   - macOS: `macdeployqt`.
   - Windows: `windeployqt`.
 - Windows NSIS packaging requires NSIS to be installed and available to CPack.
+  For an install-free local toolchain, extract the official ZIP under
+  `build/nsis-toolchain/nsis-<version>`; the project wrapper discovers its
+  top-level `makensis.exe` automatically. The `build` directory remains ignored.
 - Linux DEB packaging requires `dpkg-shlibdeps` (provided by `dpkg-dev`; it is
   installed transitively by Ubuntu's `build-essential`).
 
@@ -111,16 +114,22 @@ the macOS `app/assets/Fluent-Qt-Gallery.icns`. Both are derived from the shared
 
 ### Installer branding
 
-The NSIS wizard is styled to match the polish of the macOS DMG rather than the raw
-grey NSIS look:
+The NSIS wizard keeps CPack's reliable installation behavior but applies a
+project-owned Modern UI presentation layer:
 
 - Installer/uninstaller window icon: `app/assets/Fluent-Qt-Gallery.ico`.
-- Welcome/Finish sidebar (164x314) and inner-page header banner (150x57): a
-  blue-green branded gradient in `app/assets/installer-welcome.bmp` and
-  `app/assets/installer-header.bmp`, generated from `app-icon.png`.
-- Bottom branding text and a finish-page "run Fluent-Qt Gallery" option.
+- Welcome/Finish sidebar (164x314) and inner-page header banner (150x57): light
+  Fluent artwork in `app/assets/installer-welcome.bmp` and
+  `app/assets/installer-header.bmp`, generated from `app-icon.png` by
+  `cmake/GenerateNsisBranding.ps1`. Version text must not be baked into images.
+- Segoe UI typography, concise page copy, centered version branding, a GitHub
+  link, and a finish-page "launch Fluent-Qt Gallery" option.
+- The unused Install Options page and interactive Start Menu folder page are
+  skipped. Current-user Start Menu and desktop shortcuts are still created.
 
-All branding is wired in `cmake/FluentQTPackaging.cmake`.
+Branding assets are wired in `cmake/FluentQTPackaging.cmake`; the small,
+template-independent page customization is applied by
+`cmake/PatchNsisScript.ps1` immediately before `makensis` runs.
 
 ### Architectures
 
