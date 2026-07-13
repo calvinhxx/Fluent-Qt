@@ -147,14 +147,17 @@ cmake --build --preset vcpkg-linux --target fluent_qt_gallery
 
 ## 📦 Package Gallery
 
-| Platform | Architecture | Packaging preset |
-|---|---|---|
-| Windows | x64 | `vcpkg-windows-installer` |
-| Windows | ARM64 | `vcpkg-windows-arm64-installer` |
-| macOS | arm64 | `vcpkg-osx-dmg` |
-| macOS | x64 | `vcpkg-osx-x64-dmg` |
-| Linux | x64 (`.deb`) | `vcpkg-linux-deb` |
-| Linux | ARM64 (`.deb`) | `vcpkg-linux-arm64-deb` |
+| Qt | Platform | Architecture | Packaging preset |
+|---|---|---|---|
+| 5.15 | Windows | x64 | `vcpkg-windows-installer` |
+| 5.15 | macOS | x64 | `vcpkg-osx-x64-dmg` |
+| 5.15 | Linux | x64 (`.deb`) | `vcpkg-linux-deb` |
+| 6.2 | Windows | x64 | `vcpkg-windows-installer` |
+| 6.9.3 | Windows | ARM64 | `vcpkg-windows-arm64-installer` |
+| 6.2 | macOS | x64 | `vcpkg-osx-x64-dmg` |
+| 6.2 | macOS | arm64 | `vcpkg-osx-dmg` |
+| 6.2 | Linux | x64 (`.deb`) | `vcpkg-linux-deb` |
+| 6.2 | Linux | ARM64 (`.deb`) | `vcpkg-linux-arm64-deb` |
 
 macOS arm64 DMG:
 

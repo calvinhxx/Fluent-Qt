@@ -190,14 +190,17 @@ Before creating a stable tag:
 3. Confirm the CMake project version matches the intended tag.
 4. Run the supported CI build/test matrix for the release, normally
    `gh workflow run CI --ref <branch-or-tag> -f matrix=full` or an equivalent
-   local host full validation.
+   local host full validation. The GitHub Release workflow requires the tagged
+   commit to have a successful `Release ready` check produced by this full
+   matrix unless `require_ci=false` is selected manually.
    If the change touches CMake, tests, Qt compatibility, platform behavior, or
    component input/windowing behavior, include the Ubuntu 22.04 Linux validation
    covered in [Linux Workflow](linux-workflow.md).
 5. Generate or update the changelog from the previous release tag.
 6. Create an annotated tag.
 7. Build and attach release artifacts.
-8. Publish the GitHub Release notes and checksums.
+8. Publish the GitHub Release notes, installers, and one aggregate
+   `SHA256SUMS.txt`.
 
 Later automation may perform these steps, but the rules above remain the
 contract that CI, changelog, and packaging workflows should enforce.
@@ -205,17 +208,18 @@ contract that CI, changelog, and packaging workflows should enforce.
 ## Release Package Sets
 
 - `standard` is the default stable release package set. It publishes the
-  eight supported release package lanes:
-  - Qt 6.9.3 macOS arm64 DMG.
-  - Qt 6.9.3 macOS x64 DMG.
-  - Qt 6.9.3 Windows x64 installer.
+  nine supported release package lanes:
+  - Qt 5.15 Windows x64 installer.
+  - Qt 5.15 macOS x64 DMG.
+  - Qt 5.15 Ubuntu 22.04 x64 DEB.
+  - Qt 6.2 Windows x64 installer.
+  - Qt 6.2 macOS x64 DMG.
+  - Qt 6.2 macOS arm64 DMG.
+  - Qt 6.2 Ubuntu 22.04 x64 DEB.
+  - Qt 6.2 Ubuntu 22.04 arm64 DEB.
   - Qt 6.9.3 Windows arm64 installer.
-  - Qt 6.2.4 Ubuntu 22.04 x64 DEB.
-  - Qt 6.2.4 Ubuntu 22.04 arm64 DEB.
-  - Qt 5.15.2 macOS x64 compatibility DMG.
-  - Qt 5.15.2 Windows x64 compatibility installer.
 - `smoke` runs only the macOS x64 and Windows x64 package lanes without
   publishing and is intended for manual release workflow validation.
-- `full` is kept as a compatibility alias for the complete eight-lane release
-  package set. This is a packaging artifact set, not the CI `matrix=full`
-  validation tier.
+
+The package catalog lives in `.github/package-matrix.json`; `standard` and
+`smoke` are selected from that shared source of truth.

@@ -172,11 +172,11 @@ VisualCheck tests remain manual and use the same direct-binary pattern with
 
 ## GitHub Actions
 
-The default fast CI matrix runs Ubuntu 22.04 / Qt 6.2.x on both x64 and native
-ARM64 runners. The full matrix builds the curated tests, Gallery, and a DEB
-smoke package for both architectures, plus the Ubuntu 22.04 x64 / official Qt
-5.15.2 `gcc_64` compatibility lane.
+The default fast CI matrix runs Ubuntu 22.04 / Qt 6.2.x on x64. Native ARM64
+validation runs in the scheduled/manual full matrix, which builds the curated
+tests, Gallery, and a DEB smoke package for both architectures, plus the Ubuntu
+22.04 x64 / official Qt 5.15.2 `gcc_64` compatibility lane.
 
-The standard release matrix publishes Ubuntu 22.04 x64 and ARM64 Gallery DEBs
-through `vcpkg-linux-deb` and `vcpkg-linux-arm64-deb`. See
-[Packaging Workflow](packaging-workflow.md).
+The standard release matrix publishes an Ubuntu 22.04 x64 Qt 5 Gallery DEB plus
+Ubuntu 22.04 x64 and ARM64 Qt 6 Gallery DEBs through `vcpkg-linux-deb` and
+`vcpkg-linux-arm64-deb`. See [Packaging Workflow](packaging-workflow.md).

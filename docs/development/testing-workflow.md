@@ -63,10 +63,14 @@ ctest --preset vcpkg-linux-arm64-local-desktop -N
 
 ## Validation Tiers
 
-- GitHub Actions `matrix=fast` is the default PR/push validation tier. It builds
-  narrow Linux x64/ARM64 and Windows x64/ARM64 target sets and runs a macOS
-  arm64 configure smoke. ARM64 jobs use native hosted runners, so their tests
-  execute ARM64 binaries rather than stopping at cross-compilation.
+- GitHub Actions `matrix=fast` is the default PR/push validation tier. It runs
+  the narrow `ci_fast` set on Linux x64 and Windows x64, then compiles the
+  library on macOS arm64. Native Linux and Windows ARM64 execution stays in the
+  scheduled/manual full tier instead of running for every pull request.
+- Pull requests that change only Markdown, `docs/`, `site/`, license, or issue
+  template files skip the native build matrix. The stable `CI Gate` job still
+  reports success, so branch protection can require one check for every pull
+  request without spending hosted-runner time on documentation-only changes.
 - GitHub Actions `matrix=full` is the scheduled/manual CI matrix. macOS arm64
   remains the broadest macOS test lane for the curated `ci_full` subset; Linux
   covers Ubuntu 22.04 x64 and ARM64 with distro Qt 6.2.x plus official Qt
@@ -80,6 +84,7 @@ ctest --preset vcpkg-linux-arm64-local-desktop -N
 - CI build target selection is centralized in CMake:
   `fluent_qt_ci_fast_tests` builds only the fast API/environment test binaries,
   `fluent_qt_ci_full_tests` builds the selected CI-full test binaries, and
+  `fluent_qt_ci_windows_platform_tests` builds the focused Windows platform set;
   `fluent_qt_all_tests` builds every registered Qt/GTest binary for local host
   validation. Keep workflow YAML on these aggregate targets instead of
   duplicating long target lists there.

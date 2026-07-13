@@ -28,7 +28,6 @@ on:
         options:
           - smoke
           - standard
-          - full
       publish:
         description: Publish or update the GitHub Release after packages finish.
         required: true
@@ -47,7 +46,7 @@ jobs:
     name: Preflight
     runs-on: ubuntu-latest
     permissions:
-      actions: read
+      checks: read
       contents: read
     outputs:
       tag: ${{ steps.release.outputs.tag }}
@@ -61,7 +60,7 @@ jobs:
       tag_sha: ${{ steps.release.outputs.tag_sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -131,161 +130,20 @@ jobs:
             publish="true"
           fi
 
-          smoke_matrix="$(jq -c . <<'JSON'
-          {
-            "include": [
-              {
-                "artifact": "macos-x64",
-                "os": "macos-15-intel",
-                "preset": "vcpkg-osx-x64-release",
-                "package_preset": "vcpkg-osx-x64-dmg",
-                "qt_version": "6.9.3",
-                "qt_arch": "clang_64",
-                "host_qt_arch": "",
-                "asset_suffix": "",
-                "build_parallel": "",
-                "windows_arm64_cross": false,
-                "needs_nsis": false
-              },
-              {
-                "artifact": "windows-x64",
-                "os": "windows-2022",
-                "preset": "vcpkg-windows-release",
-                "package_preset": "vcpkg-windows-installer",
-                "qt_version": "6.9.3",
-                "qt_arch": "win64_msvc2022_64",
-                "host_qt_arch": "",
-                "asset_suffix": "",
-                "build_parallel": "",
-                "windows_arm64_cross": false,
-                "needs_nsis": true
-              }
-            ]
-          }
-          JSON
-          )"
-          release_matrix="$(jq -c . <<'JSON'
-          {
-            "include": [
-              {
-                "artifact": "macos-arm64",
-                "os": "macos-15",
-                "preset": "vcpkg-osx-release",
-                "package_preset": "vcpkg-osx-dmg",
-                "qt_version": "6.9.3",
-                "qt_arch": "clang_64",
-                "host_qt_arch": "",
-                "asset_suffix": "",
-                "build_parallel": "3",
-                "windows_arm64_cross": false,
-                "needs_nsis": false
-              },
-              {
-                "artifact": "macos-x64",
-                "os": "macos-15-intel",
-                "preset": "vcpkg-osx-x64-release",
-                "package_preset": "vcpkg-osx-x64-dmg",
-                "qt_version": "6.9.3",
-                "qt_arch": "clang_64",
-                "host_qt_arch": "",
-                "asset_suffix": "",
-                "build_parallel": "",
-                "windows_arm64_cross": false,
-                "needs_nsis": false
-              },
-              {
-                "artifact": "windows-x64",
-                "os": "windows-2022",
-                "preset": "vcpkg-windows-release",
-                "package_preset": "vcpkg-windows-installer",
-                "qt_version": "6.9.3",
-                "qt_arch": "win64_msvc2022_64",
-                "host_qt_arch": "",
-                "asset_suffix": "",
-                "build_parallel": "",
-                "windows_arm64_cross": false,
-                "needs_nsis": true
-              },
-              {
-                "artifact": "windows-arm64",
-                "os": "windows-2022",
-                "preset": "vcpkg-windows-arm64-release",
-                "package_preset": "vcpkg-windows-arm64-installer",
-                "qt_version": "6.9.3",
-                "qt_arch": "win64_msvc2022_arm64_cross_compiled",
-                "host_qt_arch": "win64_msvc2022_64",
-                "asset_suffix": "",
-                "build_parallel": "",
-                "windows_arm64_cross": true,
-                "needs_nsis": true
-              },
-              {
-                "artifact": "linux-x64",
-                "os": "ubuntu-22.04",
-                "preset": "vcpkg-linux-release",
-                "package_preset": "vcpkg-linux-deb",
-                "qt_version": "6.2.4",
-                "qt_arch": "",
-                "host_qt_arch": "",
-                "asset_suffix": "",
-                "build_parallel": "4",
-                "windows_arm64_cross": false,
-                "needs_nsis": false
-              },
-              {
-                "artifact": "linux-arm64",
-                "os": "ubuntu-22.04-arm",
-                "preset": "vcpkg-linux-arm64-release",
-                "package_preset": "vcpkg-linux-arm64-deb",
-                "qt_version": "6.2.4",
-                "qt_arch": "",
-                "host_qt_arch": "",
-                "asset_suffix": "",
-                "build_parallel": "4",
-                "windows_arm64_cross": false,
-                "needs_nsis": false
-              },
-              {
-                "artifact": "macos-x64-qt515",
-                "os": "macos-15-intel",
-                "preset": "vcpkg-osx-x64-release",
-                "package_preset": "vcpkg-osx-x64-dmg",
-                "qt_version": "5.15.2",
-                "qt_arch": "clang_64",
-                "host_qt_arch": "",
-                "asset_suffix": "Qt5.15",
-                "build_parallel": "",
-                "windows_arm64_cross": false,
-                "needs_nsis": false
-              },
-              {
-                "artifact": "windows-x64-qt515",
-                "os": "windows-2022",
-                "preset": "vcpkg-windows-release",
-                "package_preset": "vcpkg-windows-installer",
-                "qt_version": "5.15.2",
-                "qt_arch": "win64_msvc2019_64",
-                "host_qt_arch": "",
-                "asset_suffix": "Qt5.15",
-                "build_parallel": "",
-                "windows_arm64_cross": false,
-                "needs_nsis": true
-              }
-            ]
-          }
-          JSON
-          )"
+          package_catalog=".github/package-matrix.json"
+          smoke_matrix="$(jq -c '{include: [.scenarios[] | select(.smoke == true)]}' "$package_catalog")"
+          release_matrix="$(jq -c '{include: [.scenarios[] | select(.standard == true)]}' "$package_catalog")"
 
           case "$package_set" in
             smoke) package_matrix="$smoke_matrix" ;;
-            standard|full) package_matrix="$release_matrix" ;;
+            standard) package_matrix="$release_matrix" ;;
             *)
-              echo "::error::package_set must be smoke, standard, or full: $package_set"
+              echo "::error::package_set must be smoke or standard: $package_set"
               exit 1
               ;;
           esac
           if [[ "$package_set" == "smoke" && "$publish" == "true" ]]; then
-            echo "::error::Smoke package validation cannot publish a GitHub Release. Use package_set=standard or full to publish."
+            echo "::error::Smoke package validation cannot publish a GitHub Release. Use package_set=standard to publish."
             exit 1
           fi
 
@@ -311,18 +169,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          successful_runs="$(
-            gh run list \
-              --repo "$GITHUB_REPOSITORY" \
-              --workflow "CI" \
-              --commit "${{ steps.release.outputs.tag_sha }}" \
-              --limit 20 \
-              --json status,conclusion,displayTitle \
-              --jq '[.[] | select(.status == "completed" and .conclusion == "success" and .displayTitle == "CI full")] | length'
+          successful_checks="$(
+            gh api --paginate \
+              "repos/$GITHUB_REPOSITORY/commits/${{ steps.release.outputs.tag_sha }}/check-runs?per_page=100" \
+              --jq '[.check_runs[] | select(.name == "Release ready" and .status == "completed" and .conclusion == "success")] | length' |
+              awk '{ total += $1 } END { print total + 0 }'
           )"
 
-          if [[ "$successful_runs" == "0" ]]; then
-            echo "::error::No successful CI full run was found for ${{ steps.release.outputs.tag_sha }}."
+          if [[ "$successful_checks" == "0" ]]; then
+            echo "::error::No successful 'Release ready' CI check was found for ${{ steps.release.outputs.tag_sha }}."
             echo "::error::Run CI with matrix=full on the tagged commit first, or rerun this workflow_dispatch with require_ci=false."
             exit 1
           fi
@@ -344,7 +199,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   package:
-    name: Package ${{ matrix.artifact }}
+    name: Package ${{ matrix.id }}
     needs: preflight
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
@@ -358,7 +213,7 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.preflight.outputs.tag }}
           fetch-depth: 0
@@ -383,9 +238,9 @@ jobs:
         run: choco install nsis -y --no-progress
 
       - name: Install Linux build and packaging dependencies
-        if: ${{ runner.os == 'Linux' }}
+        if: ${{ matrix.platform == 'linux' }}
         shell: bash
-        run: bash .github/scripts/install-linux-dependencies.sh apt
+        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
 
       - name: Install host Qt ${{ matrix.qt_version }}
         if: ${{ matrix.windows_arm64_cross == true }}
@@ -403,7 +258,7 @@ jobs:
           "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
 
       - name: Install Qt ${{ matrix.qt_version }}
-        if: ${{ runner.os != 'Linux' }}
+        if: ${{ matrix.qt_source == 'aqt' }}
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ matrix.qt_version }}
@@ -419,8 +274,15 @@ jobs:
           "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
 
       - name: Configure
-        if: ${{ matrix.windows_arm64_cross != true }}
+        if: ${{ matrix.windows_arm64_cross != true && matrix.platform != 'linux' }}
         run: cmake --preset ${{ matrix.preset }}
+
+      - name: Configure Linux package
+        if: ${{ matrix.platform == 'linux' }}
+        shell: bash
+        run: |
+          cmake --preset "${{ matrix.preset }}" \
+            -DCMAKE_DISABLE_FIND_PACKAGE_${{ matrix.disable_qt }}=TRUE
 
       - name: Configure Windows ARM64 cross-build
         if: ${{ matrix.windows_arm64_cross == true }}
@@ -452,7 +314,7 @@ jobs:
         run: |
           $preset = "${{ matrix.package_preset }}"
           $packageArgs = @("--preset", $preset)
-          if ("${{ matrix.artifact }}" -eq "windows-arm64") {
+          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
             # Keep CPack's NSIS staging tree short. Qt's nested runtime paths
             # can otherwise exceed the legacy path limit used by makensis.
             $packageArgs += @("-B", (Join-Path $env:RUNNER_TEMP "fq-win-arm64"))
@@ -468,7 +330,7 @@ jobs:
             & cpack @packageArgs
             $exitCode = $LASTEXITCODE
             if ($exitCode -eq 0) {
-              if ("${{ matrix.artifact }}" -eq "windows-arm64") {
+              if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
                 $packageOutput = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
                 $stagedGallery = Get-ChildItem `
                   -LiteralPath (Join-Path $packageOutput "_CPack_Packages") `
@@ -487,7 +349,7 @@ jobs:
             }
 
             if ($attempt -ge $maxAttempts -or $env:RUNNER_OS -ne "macOS") {
-              if ("${{ matrix.artifact }}" -eq "windows-arm64") {
+              if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
                 Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP "fq-win-arm64") `
                   -Filter NSISOutput.log -Recurse -ErrorAction SilentlyContinue |
                   ForEach-Object { Get-Content -LiteralPath $_.FullName }
@@ -521,8 +383,9 @@ jobs:
 
           dpkg-deb --field "${packages[0]}" Architecture Depends Recommends
           depends="$(dpkg-deb --field "${packages[0]}" Depends)"
-          if [[ "$depends" != *qt6-qpa-plugins* ]]; then
-            echo "::error::The DEB package does not depend on qt6-qpa-plugins."
+          expected="${{ matrix.linux_qt_dependency }}"
+          if [[ -n "$expected" && "$depends" != *"$expected"* ]]; then
+            echo "::error::The DEB package does not depend on $expected."
             exit 1
           fi
 
@@ -530,7 +393,7 @@ jobs:
         shell: pwsh
         run: |
           $source = "build/${{ matrix.preset }}"
-          if ("${{ matrix.artifact }}" -eq "windows-arm64") {
+          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
             $source = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
           }
           $destination = "${{ runner.temp }}/release-artifacts"
@@ -550,15 +413,12 @@ jobs:
             }
             $targetPath = Join-Path $destination $targetName
             Copy-Item -LiteralPath $package.FullName -Destination $targetPath
-
-            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $targetPath).Hash.ToLowerInvariant()
-            Set-Content -LiteralPath "$targetPath.sha256" -Value "$hash  $targetName" -Encoding ASCII
           }
 
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.artifact }}
+          name: release-${{ matrix.id }}
           if-no-files-found: error
           retention-days: 14
           path: ${{ runner.temp }}/release-artifacts/*
@@ -568,7 +428,7 @@ jobs:
         timeout-minutes: 10
         uses: actions/upload-artifact@v4
         with:
-          name: release-diagnostics-${{ matrix.artifact }}
+          name: release-diagnostics-${{ matrix.id }}
           if-no-files-found: ignore
           retention-days: 7
           path: |
@@ -589,7 +449,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.preflight.outputs.tag }}
           fetch-depth: 0
