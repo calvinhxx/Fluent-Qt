@@ -157,6 +157,9 @@ elseif(WIN32)
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     set(CPACK_NSIS_MODIFY_PATH OFF)
     set(CPACK_NSIS_EXECUTABLES_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
+    set(CPACK_NSIS_MANIFEST_DPI_AWARE ON)
+    set(CPACK_NSIS_WELCOME_TITLE "Install ${FLUENT_QT_GALLERY_DISPLAY_NAME}")
+    set(CPACK_NSIS_FINISH_TITLE "${FLUENT_QT_GALLERY_DISPLAY_NAME} is ready")
     # Brand the installer + uninstaller wizard with the app icon (the macOS DMG has its background
     # image; this is the Windows equivalent). makensis reads these absolute source paths at package
     # time. Add/Remove Programs and the created shortcuts pick up the icon embedded in the exe.
@@ -166,28 +169,18 @@ elseif(WIN32)
     set(CPACK_NSIS_MUI_UNIICON "${_fluent_qt_gallery_ico}")
     set(CPACK_NSIS_INSTALLED_ICON_NAME
         "${CMAKE_INSTALL_BINDIR}\\\\${FLUENT_QT_GALLERY_EXECUTABLE_NAME}.exe")
-    # Style the wizard like the macOS DMG instead of the raw NSIS grey look: a blue->green branded
-    # sidebar on the Welcome/Finish pages, a small header banner on the inner pages, bottom branding
-    # text, and a "run now" checkbox on the finish page. The bitmaps are 24-bit BMPs at the NSIS MUI
-    # conventional sizes (sidebar 164x314, header 150x57), generated from the shared app-icon.png.
+    # Use light Fluent artwork instead of the stock NSIS wizard graphics. Text and versions stay in
+    # the generated script rather than being baked into these 24-bit bitmaps, so every package keeps
+    # correct and accessible copy. Generate them with cmake/GenerateNsisBranding.ps1.
     set(_fluent_qt_welcome_bmp "${PROJECT_SOURCE_DIR}/app/assets/installer-welcome.bmp")
     set(_fluent_qt_header_bmp "${PROJECT_SOURCE_DIR}/app/assets/installer-header.bmp")
     file(TO_NATIVE_PATH "${_fluent_qt_welcome_bmp}" _fluent_qt_welcome_bmp_native)
     string(REPLACE "\\" "\\\\" _fluent_qt_welcome_bmp_native "${_fluent_qt_welcome_bmp_native}")
     set(CPACK_NSIS_MUI_WELCOMEFINISHPAGE_BITMAP "${_fluent_qt_welcome_bmp_native}")
     set(CPACK_NSIS_MUI_UNWELCOMEFINISHPAGE_BITMAP "${_fluent_qt_welcome_bmp_native}")
-    # CPack has no dedicated header-bitmap variable; the template already emits `!define MUI_HEADERIMAGE`
-    # and inserts CPACK_NSIS_DEFINES before the page macros, so inject the bitmap define there.
-    # No quotes (CPack mangles an embedded quote in CPACK_NSIS_DEFINES into ';') and a NATIVE backslash
-    # path (NSIS's internal `File` command rejects forward slashes -> "no files found"). The path has
-    # no spaces, so the unquoted form is safe.
-    # CPack writes CPACK_NSIS_DEFINES verbatim, so a native path with single backslashes makes the
-    # re-read of CPackConfig.cmake choke on invalid escapes (e.g. "\w"). Double the backslashes so the
-    # config parses back to single ones, which is what NSIS's File needs.
-    file(TO_NATIVE_PATH "${_fluent_qt_header_bmp}" _fluent_qt_header_bmp_native)
-    string(REPLACE "\\" "\\\\" _fluent_qt_header_bmp_native "${_fluent_qt_header_bmp_native}")
-    set(CPACK_NSIS_DEFINES "!define MUI_HEADERIMAGE_BITMAP ${_fluent_qt_header_bmp_native}")
+    set(CPACK_NSIS_MUI_HEADERIMAGE "${_fluent_qt_header_bmp}")
     set(CPACK_NSIS_BRANDING_TEXT "${FLUENT_QT_GALLERY_DISPLAY_NAME} ${PROJECT_VERSION}")
+    set(CPACK_NSIS_BRANDING_TEXT_TRIM_POSITION "CENTER")
     # Offer to launch the app straight from the finish page. Give only the exe name; the template
     # prepends "$INSTDIR\<executables-dir>\" (here bin\), so a bin\ prefix would double it.
     set(CPACK_NSIS_MUI_FINISHPAGE_RUN "${FLUENT_QT_GALLERY_EXECUTABLE_NAME}.exe")
