@@ -202,6 +202,8 @@ jobs:
                 "configure_args": "",
                 "package": true,
                 "package_arch": "x64",
+                "package_build_preset": "vcpkg-linux-release",
+                "package_preset": "vcpkg-linux-deb",
                 "windows_arm64_cross": false
               },
               {
@@ -228,6 +230,8 @@ jobs:
                 "linux_xcb_smoke": true,
                 "package": true,
                 "package_arch": "arm64",
+                "package_build_preset": "vcpkg-linux-arm64-release",
+                "package_preset": "vcpkg-linux-arm64-deb",
                 "windows_arm64_cross": false
               },
               {
@@ -632,10 +636,20 @@ jobs:
           }
           ctest @testArgs
 
+      - name: Configure Linux Gallery package
+        if: ${{ matrix.package == true }}
+        shell: bash
+        run: cmake --preset "${{ matrix.package_build_preset }}"
+
+      - name: Build Linux Gallery package
+        if: ${{ matrix.package == true }}
+        shell: bash
+        run: cmake --build --preset "${{ matrix.package_build_preset }}" --target fluent_qt_gallery --parallel 4
+
       - name: Package Linux Gallery
         if: ${{ matrix.package == true }}
         shell: bash
-        run: cpack --config build/${{ matrix.preset }}/CPackConfig.cmake -G DEB -B build/${{ matrix.preset }}
+        run: cpack --preset "${{ matrix.package_preset }}"
 
       - name: Upload Linux Gallery package
         if: ${{ matrix.package == true }}
@@ -643,8 +657,8 @@ jobs:
         with:
           name: fluent-qt-gallery-linux-${{ matrix.package_arch }}-deb
           path: |
-            build/${{ matrix.preset }}/*.deb
-            build/${{ matrix.preset }}/*.sha256
+            build/${{ matrix.package_build_preset }}/*.deb
+            build/${{ matrix.package_build_preset }}/*.sha256
           if-no-files-found: error
 
       - name: Package Windows ARM64 Gallery
@@ -686,5 +700,7 @@ jobs:
             build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
             build/${{ matrix.preset }}/Testing/Temporary/LastTestsFailed.log
             build/${{ matrix.preset }}/vcpkg-manifest-install.log
+            build/${{ matrix.package_build_preset }}/CMakeCache.txt
+            build/${{ matrix.package_build_preset }}/_CPack_Packages/**/*.log
             ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
