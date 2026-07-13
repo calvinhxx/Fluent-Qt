@@ -136,10 +136,16 @@ Rules:
 
 ## Changelog
 
-Generate changelog entries from Conventional Commits between release tags. Public
-release notes should stay user-oriented: visible feature, fix, performance, and
-breaking-change entries are listed directly, while internal CI, build, test, and
-maintenance work is collapsed into a concise maintenance summary.
+Use Conventional Commits between release tags as the auditable maintainer
+changelog. Do not publish that commit list directly as public release notes.
+Public notes need an editorial pass that groups iterative commits into a few
+user-visible outcomes and explains why the release matters.
+
+Store reviewed public notes at `docs/releases/vX.Y.Z.md` before creating the
+tag. Start with a short release theme, then describe capabilities and fixes in
+user language. Avoid commit scopes, implementation-only terminology, repeated
+entries for the same problem, and generic maintenance summaries. Link to the
+full comparison when commit-level detail is useful.
 
 Maintainer changelog review can still group commits as follows:
 
@@ -157,19 +163,25 @@ Maintainer changelog review can still group commits as follows:
 Breaking changes must be called out in a dedicated section even when the project
 is still below `1.0.0`.
 
-Use the deterministic generator for release notes and changelog review:
+Use the generator for both reviewed public notes and maintainer changelog
+review:
 
 ```bash
 python scripts/release/generate_changelog.py --from v1.0.0 --to HEAD
 python scripts/release/generate_changelog.py --from v1.0.0 --to HEAD --audience maintainer
-python scripts/release/generate_changelog.py --tag v1.1.0 --output release-notes.md
+python scripts/release/generate_changelog.py --tag v1.1.0 --require-curated --output release-notes.md
 ```
 
 `--tag` resolves the previous release tag automatically when `--from` is not
-provided. The generator skips merge commits and `chore(release): vX.Y.Z`
-release-marker commits, keeps section order stable, and defaults to concise
-public notes. Use `--audience maintainer` when you need the detailed
-commit-by-commit view with short SHAs for traceability.
+provided. For public output, the generator automatically discovers
+`docs/releases/<tag>.md`. `--require-curated` fails when that reviewed file is
+missing, which is mandatory in the GitHub Release workflow. Without it, the
+script may produce a commit-derived draft for local review, but that draft must
+not be published unchanged.
+
+The generator skips merge commits and `chore(release): vX.Y.Z` release-marker
+commits. Use `--audience maintainer` for the detailed commit-by-commit view with
+stable section ordering and short SHAs for traceability.
 
 Use `--check` before tagging when you want to fail on commits that cannot be
 classified by the Conventional Commit rules:
@@ -196,7 +208,8 @@ Before creating a stable tag:
    If the change touches CMake, tests, Qt compatibility, platform behavior, or
    component input/windowing behavior, include the Ubuntu 22.04 Linux validation
    covered in [Linux Workflow](linux-workflow.md).
-5. Generate or update the changelog from the previous release tag.
+5. Add `docs/releases/vX.Y.Z.md`, preview it with `--require-curated`, and review
+   the maintainer changelog from the previous release tag.
 6. Create an annotated tag.
 7. Build and attach release artifacts.
 8. Publish the GitHub Release notes, installers, and one aggregate
