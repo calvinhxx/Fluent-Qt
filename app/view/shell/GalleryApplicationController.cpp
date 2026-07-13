@@ -216,12 +216,25 @@ void GalleryApplicationController::restoreWindow()
 
     const bool wasHidden = !m_window->isVisible();
     const bool wasMinimized = m_window->windowState().testFlag(Qt::WindowMinimized);
-    const bool needsRestore = wasHidden || wasMinimized;
+    const bool wasActive = m_window->isActiveWindow();
+    const bool isWayland = QGuiApplication::platformName().startsWith(
+        QStringLiteral("wayland"), Qt::CaseInsensitive);
+    // Qt 5 Wayland can leave QWidget::windowState() at WindowNoState after the
+    // compositor has minimized the surface. A secondary-launch activation for
+    // an inactive Wayland window must therefore remap even when Qt reports it as
+    // visible and not minimized.
+    // zh_CN: Qt 5 Wayland 在 compositor 最小化 surface 后，QWidget::windowState()
+    // 仍可能保持 WindowNoState。因此二次启动唤醒不活跃的 Wayland 窗口时，即使 Qt
+    // 报告窗口可见且未最小化，也必须强制重新映射。
+    const bool waylandStateFallback = isWayland && !wasActive;
+    const bool needsRestore = wasHidden || wasMinimized || waylandStateFallback;
     const std::uint64_t generation = ++m_restoreGeneration;
-    LOG_INFO(QStringLiteral("GalleryApplicationController restore requested generation=%1 hidden=%2 minimized=%3 platform=%4")
+    LOG_INFO(QStringLiteral("GalleryApplicationController restore requested generation=%1 hidden=%2 minimized=%3 active=%4 waylandFallback=%5 platform=%6")
                  .arg(static_cast<qulonglong>(generation))
                  .arg(wasHidden)
                  .arg(wasMinimized)
+                 .arg(wasActive)
+                 .arg(waylandStateFallback)
                  .arg(QGuiApplication::platformName()));
     if (needsRestore) {
         // A tray-hidden window uses the state captured immediately before hiding.
@@ -252,7 +265,9 @@ void GalleryApplicationController::restoreWindow()
             // zh_CN: 在原生表面未映射时重新声明客户端边框；Qt 5/X11 若在显示后
             // 再修改窗口标志，可能一直残留第二条系统标题栏直到下次状态切换。
             m_window->prepareForNativeRestore();
-            const int remapDelayMs = wasMinimized ? LinuxMinimizedRemapDelayMs : 0;
+            const int remapDelayMs = (wasMinimized || waylandStateFallback)
+                ? LinuxMinimizedRemapDelayMs
+                : 0;
             LOG_INFO(QStringLiteral("GalleryApplicationController Linux surface unmapped generation=%1 remapDelayMs=%2")
                          .arg(static_cast<qulonglong>(generation))
                          .arg(remapDelayMs));
