@@ -216,6 +216,7 @@ jobs:
         shell: pwsh
         run: |
           ctest --test-dir "build/${{ matrix.preset }}" `
+            -C Release `
             -L "^ci_fast$" `
             -LE "^(manual_visual|local_desktop)$" `
             --output-on-failure `
