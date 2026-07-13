@@ -14,6 +14,7 @@ if(NOT EXISTS "${_fluent_qt_deployqt}")
         "Qt deployment tool was not found. Put macdeployqt/windeployqt on PATH, "
         "or configure with -DFLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME=OFF for a non-redistributable package.")
 endif()
+set(_fluent_qt_deploy_qtpaths "@FLUENT_QT_DEPLOY_QTPATHS_EXECUTABLE@")
 
 set(_fluent_qt_install_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
 set(_fluent_qt_osx_archs "@CMAKE_OSX_ARCHITECTURES@")
@@ -37,13 +38,27 @@ elseif(_fluent_qt_platform STREQUAL "windows")
         message(FATAL_ERROR "Expected executable not found: ${_fluent_qt_exe_path}")
     endif()
 
-    set(_fluent_qt_deploy_config --release)
+    set(_fluent_qt_deploy_arguments --release --no-compiler-runtime)
     if(CMAKE_INSTALL_CONFIG_NAME MATCHES "^[Dd]ebug$")
-        set(_fluent_qt_deploy_config --debug)
+        list(REMOVE_ITEM _fluent_qt_deploy_arguments --release)
+        list(INSERT _fluent_qt_deploy_arguments 0 --debug)
     endif()
+    if(_fluent_qt_deploy_qtpaths)
+        if(NOT EXISTS "${_fluent_qt_deploy_qtpaths}")
+            message(FATAL_ERROR
+                "Target Qt path locator was not found: ${_fluent_qt_deploy_qtpaths}")
+        endif()
+        list(APPEND _fluent_qt_deploy_arguments
+            --qtpaths "${_fluent_qt_deploy_qtpaths}")
+    endif()
+    list(APPEND _fluent_qt_deploy_arguments "${_fluent_qt_exe_path}")
+
+    message(STATUS
+        "Deploying Windows Qt runtime with ${_fluent_qt_deployqt}; "
+        "target qtpaths=${_fluent_qt_deploy_qtpaths}")
 
     execute_process(
-        COMMAND "${_fluent_qt_deployqt}" "${_fluent_qt_deploy_config}" "${_fluent_qt_exe_path}"
+        COMMAND "${_fluent_qt_deployqt}" ${_fluent_qt_deploy_arguments}
         RESULT_VARIABLE _fluent_qt_deploy_result
         OUTPUT_VARIABLE _fluent_qt_deploy_stdout
         ERROR_VARIABLE _fluent_qt_deploy_stderr)
