@@ -451,6 +451,12 @@ jobs:
         shell: pwsh
         run: |
           $preset = "${{ matrix.package_preset }}"
+          $packageArgs = @("--preset", $preset)
+          if ("${{ matrix.artifact }}" -eq "windows-arm64") {
+            # Keep CPack's NSIS staging tree short. Qt's nested runtime paths
+            # can otherwise exceed the legacy path limit used by makensis.
+            $packageArgs += @("-B", (Join-Path $env:RUNNER_TEMP "fq-win-arm64"))
+          }
           $maxAttempts = if ($env:RUNNER_OS -eq "macOS") { 3 } else { 1 }
           $exitCode = 0
 
@@ -459,13 +465,18 @@ jobs:
               Write-Host "Retrying package attempt $attempt of $maxAttempts..."
             }
 
-            & cpack --preset $preset
+            & cpack @packageArgs
             $exitCode = $LASTEXITCODE
             if ($exitCode -eq 0) {
               exit 0
             }
 
             if ($attempt -ge $maxAttempts -or $env:RUNNER_OS -ne "macOS") {
+              if ("${{ matrix.artifact }}" -eq "windows-arm64") {
+                Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP "fq-win-arm64") `
+                  -Filter NSISOutput.log -Recurse -ErrorAction SilentlyContinue |
+                  ForEach-Object { Get-Content -LiteralPath $_.FullName }
+              }
               exit $exitCode
             }
 
@@ -485,6 +496,9 @@ jobs:
         shell: pwsh
         run: |
           $source = "build/${{ matrix.preset }}"
+          if ("${{ matrix.artifact }}" -eq "windows-arm64") {
+            $source = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
+          }
           $destination = "${{ runner.temp }}/release-artifacts"
           New-Item -ItemType Directory -Force -Path $destination | Out-Null
 
@@ -528,6 +542,7 @@ jobs:
             build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
             build/${{ matrix.preset }}/vcpkg-manifest-install.log
             build/${{ matrix.preset }}/_CPack_Packages/**/*.log
+            ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
 
   publish:

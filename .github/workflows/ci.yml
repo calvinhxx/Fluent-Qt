@@ -650,7 +650,18 @@ jobs:
       - name: Package Windows ARM64 Gallery
         if: ${{ matrix.windows_package == true }}
         shell: pwsh
-        run: cpack --preset "${{ matrix.package_preset }}"
+        run: |
+          # Keep CPack's NSIS staging tree short. Qt's nested runtime paths can
+          # otherwise exceed the legacy path limit used by makensis.
+          $packageOutput = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
+          & cpack --preset "${{ matrix.package_preset }}" -B $packageOutput
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) {
+            Get-ChildItem -LiteralPath $packageOutput -Filter NSISOutput.log -Recurse `
+              -ErrorAction SilentlyContinue |
+              ForEach-Object { Get-Content -LiteralPath $_.FullName }
+            exit $exitCode
+          }
 
       - name: Upload Windows ARM64 Gallery installer
         if: ${{ matrix.windows_package == true }}
@@ -658,8 +669,8 @@ jobs:
         with:
           name: fluent-qt-gallery-windows-arm64-installer
           path: |
-            build/${{ matrix.preset }}/*.exe
-            build/${{ matrix.preset }}/*.sha256
+            ${{ runner.temp }}/fq-win-arm64/*.exe
+            ${{ runner.temp }}/fq-win-arm64/*.sha256
           if-no-files-found: error
 
       - name: Upload diagnostics
@@ -675,4 +686,5 @@ jobs:
             build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
             build/${{ matrix.preset }}/Testing/Temporary/LastTestsFailed.log
             build/${{ matrix.preset }}/vcpkg-manifest-install.log
+            ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
