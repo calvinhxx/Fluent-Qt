@@ -75,7 +75,9 @@ elseif(WIN32)
         NAMES windeployqt
         HINTS ${_fluent_qt_deploy_tool_hints})
 
-    if(QT_VERSION_MAJOR GREATER_EQUAL 6 AND _fluent_qt_target_qt_bin_dir)
+    if(CMAKE_VS_PLATFORM_NAME STREQUAL "ARM64"
+        AND QT_VERSION_MAJOR GREATER_EQUAL 6
+        AND _fluent_qt_target_qt_bin_dir)
         foreach(_fluent_qt_qtpaths_name IN ITEMS
             qtpaths.bat
             qtpaths6.bat
