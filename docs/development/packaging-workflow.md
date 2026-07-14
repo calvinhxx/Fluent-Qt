@@ -11,6 +11,13 @@ surface; the reusable component library is installed through the separate
 - Ensure the Qt deployment tool from the selected Qt kit is available:
   - macOS: `macdeployqt`.
   - Windows: `windeployqt`.
+- Gallery has a Widgets-only Qt runtime contract. Windows deployment disables
+  Qt Quick import scanning, Qt translations, the software OpenGL renderer, and
+  the system D3D compiler; Qt 5 deployment also disables ANGLE. Every Windows
+  and macOS package is then checked for translation/QML directories and
+  Qt QML, Quick, or OpenGL modules. If Gallery intentionally adopts one of
+  those features later, update the deployment contract and compatibility tests
+  in the same change.
 - Windows NSIS packaging requires NSIS to be installed and available to CPack.
   For an install-free local toolchain, extract the official ZIP under
   `build/nsis-toolchain/nsis-<version>`; the project wrapper discovers its

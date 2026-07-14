@@ -15,6 +15,7 @@ if(NOT EXISTS "${_fluent_qt_deployqt}")
         "or configure with -DFLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME=OFF for a non-redistributable package.")
 endif()
 set(_fluent_qt_deploy_qtpaths "@FLUENT_QT_DEPLOY_QTPATHS_EXECUTABLE@")
+set(_fluent_qt_qt_major "@QT_VERSION_MAJOR@")
 
 set(_fluent_qt_install_root "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
 set(_fluent_qt_osx_archs "@CMAKE_OSX_ARCHITECTURES@")
@@ -38,7 +39,21 @@ elseif(_fluent_qt_platform STREQUAL "windows")
         message(FATAL_ERROR "Expected executable not found: ${_fluent_qt_exe_path}")
     endif()
 
-    set(_fluent_qt_deploy_arguments --release --no-compiler-runtime)
+    # Gallery is a Qt Widgets application. Keep deployment aligned with the
+    # features it actually uses: no QML/Qt Quick imports, Qt translations, or
+    # OpenGL fallback payloads. The project installs the MSVC runtime itself.
+    set(_fluent_qt_deploy_arguments
+        --release
+        --no-compiler-runtime
+        --no-quick-import
+        --no-translations
+        --no-system-d3d-compiler
+        --no-opengl-sw)
+    if(_fluent_qt_qt_major STREQUAL "5")
+        # Official Qt 5 Windows kits can otherwise deploy ANGLE beside a
+        # Widgets-only application even though Gallery does not use OpenGL.
+        list(APPEND _fluent_qt_deploy_arguments --no-angle)
+    endif()
     if(CMAKE_INSTALL_CONFIG_NAME MATCHES "^[Dd]ebug$")
         list(REMOVE_ITEM _fluent_qt_deploy_arguments --release)
         list(INSERT _fluent_qt_deploy_arguments 0 --debug)
@@ -69,6 +84,55 @@ if(NOT _fluent_qt_deploy_result EQUAL 0)
         "Qt runtime deployment failed with exit code ${_fluent_qt_deploy_result}\n"
         "${_fluent_qt_deploy_stdout}\n${_fluent_qt_deploy_stderr}")
 endif()
+
+# Treat the lean Widgets-only runtime as a packaging contract. The deploy tool
+# options above remove optional Windows payloads; this scan also protects
+# macOS and catches future Qt/deploy-tool changes. If Gallery later adopts one
+# of these features, packaging must be updated deliberately instead of silently
+# shipping a partial runtime.
+if(_fluent_qt_platform STREQUAL "windows")
+    get_filename_component(_fluent_qt_runtime_root "${_fluent_qt_exe_path}" DIRECTORY)
+else()
+    set(_fluent_qt_runtime_root "${_fluent_qt_app_path}")
+endif()
+
+file(GLOB_RECURSE _fluent_qt_runtime_entries
+    LIST_DIRECTORIES true
+    "${_fluent_qt_runtime_root}/*")
+set(_fluent_qt_forbidden_runtime_patterns
+    "(^|/)translations(/|$)"
+    "(^|/)qml(tooling)?(/|$)"
+    "(^|/)opengl32sw\\.dll$"
+    "(^|/)d3dcompiler_[0-9]+\\.dll$"
+    "(^|/)libegl\\.dll$"
+    "(^|/)libglesv2\\.dll$"
+    "(^|/)qt[56](qml|quick|opengl)[^/]*\\.dll$"
+    "(^|/)qt(qml|quick|opengl)[^/]*\\.framework(/|$)"
+    "(^|/)libqt[56](qml|quick|opengl)[^/]*\\.dylib$")
+foreach(_fluent_qt_runtime_entry IN LISTS _fluent_qt_runtime_entries)
+    file(RELATIVE_PATH _fluent_qt_runtime_relative
+        "${_fluent_qt_runtime_root}"
+        "${_fluent_qt_runtime_entry}")
+    string(REPLACE "\\" "/" _fluent_qt_runtime_relative
+        "${_fluent_qt_runtime_relative}")
+    string(TOLOWER "${_fluent_qt_runtime_relative}"
+        _fluent_qt_runtime_relative_lower)
+
+    foreach(_fluent_qt_forbidden_runtime_pattern
+        IN LISTS _fluent_qt_forbidden_runtime_patterns)
+        if(_fluent_qt_runtime_relative_lower MATCHES
+            "${_fluent_qt_forbidden_runtime_pattern}")
+            message(FATAL_ERROR
+                "Packaged Gallery contains '${_fluent_qt_runtime_relative}', which is "
+                "outside its Widgets-only runtime contract. Gallery currently does not "
+                "use QTranslator, QML, Qt Quick, or OpenGL. Update the deployment "
+                "contract if that feature is added intentionally.")
+        endif()
+    endforeach()
+endforeach()
+
+message(STATUS
+    "Verified lean Qt runtime: no translations, QML/Qt Quick, or OpenGL payloads")
 
 if(_fluent_qt_platform STREQUAL "macos")
     # The local Qt is a universal (x86_64 + arm64) build, so macdeployqt copies fat frameworks and
