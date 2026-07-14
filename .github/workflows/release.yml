@@ -94,6 +94,7 @@ jobs:
           fi
 
           git checkout --detach "$tag"
+          python3 .github/scripts/validate-package-matrix.py
 
           version="${tag#v}"
           base_version="${version%%-*}"
@@ -309,6 +310,11 @@ jobs:
           }
           cmake @buildArgs
 
+      - name: Smoke launch macOS Release Gallery
+        if: ${{ matrix.platform == 'macos' }}
+        shell: bash
+        run: bash .github/scripts/smoke-launch-macos-gallery.sh "build/${{ matrix.preset }}"
+
       - name: Package
         shell: pwsh
         run: |
@@ -436,6 +442,7 @@ jobs:
             build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
             build/${{ matrix.preset }}/vcpkg-manifest-install.log
             build/${{ matrix.preset }}/_CPack_Packages/**/*.log
+            ${{ runner.temp }}/fluent-qt-gallery-smoke.log
             ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
 

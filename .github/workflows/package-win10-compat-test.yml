@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       packages:
-        description: "IDs separated by comma/space, e.g. windows-x64-qt62,macos-arm64-qt62; standard selects all."
+        description: "IDs separated by comma/space, e.g. windows-x64-qt62,macos-arm64-qt693; standard selects all."
         required: true
         default: windows-x64-qt62
         type: string
@@ -30,6 +30,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Validate package catalog
+        shell: bash
+        run: python3 .github/scripts/validate-package-matrix.py
 
       - name: Resolve package IDs
         id: packages
@@ -211,6 +215,11 @@ jobs:
           }
           cmake @buildArgs
 
+      - name: Smoke launch macOS Release Gallery
+        if: ${{ matrix.platform == 'macos' }}
+        shell: bash
+        run: bash .github/scripts/smoke-launch-macos-gallery.sh "build/${{ matrix.preset }}"
+
       - name: Run focused tests
         if: ${{ inputs.run_tests && matrix.windows_arm64_cross != true }}
         shell: pwsh
@@ -347,5 +356,6 @@ jobs:
             build/${{ matrix.preset }}/Testing/Temporary/LastTestsFailed.log
             build/${{ matrix.preset }}/vcpkg-manifest-install.log
             build/${{ matrix.preset }}/_CPack_Packages/**/*.log
+            ${{ runner.temp }}/fluent-qt-gallery-smoke.log
             ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md

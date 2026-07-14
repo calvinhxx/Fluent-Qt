@@ -112,8 +112,8 @@
       "needs_nsis": true
     },
     {
-      "id": "macos-x64-qt62",
-      "name": "macOS x64 / Qt 6.2",
+      "id": "macos-x64-qt693",
+      "name": "macOS x64 / Qt 6.9.3",
       "standard": true,
       "smoke": true,
       "os": "macos-15-intel",
@@ -121,8 +121,8 @@
       "arch": "x64",
       "preset": "vcpkg-osx-x64-release",
       "package_preset": "vcpkg-osx-x64-dmg",
-      "qt_version": "6.2.4",
-      "qt_label": "Qt6.2",
+      "qt_version": "6.9.3",
+      "qt_label": "Qt6.9.3",
       "qt_source": "aqt",
       "qt_arch": "clang_64",
       "host_qt_arch": "",
@@ -134,8 +134,8 @@
       "needs_nsis": false
     },
     {
-      "id": "macos-arm64-qt62",
-      "name": "macOS ARM64 / Qt 6.2",
+      "id": "macos-arm64-qt693",
+      "name": "macOS ARM64 / Qt 6.9.3",
       "standard": true,
       "smoke": false,
       "os": "macos-15",
@@ -143,8 +143,8 @@
       "arch": "arm64",
       "preset": "vcpkg-osx-release",
       "package_preset": "vcpkg-osx-dmg",
-      "qt_version": "6.2.4",
-      "qt_label": "Qt6.2",
+      "qt_version": "6.9.3",
+      "qt_label": "Qt6.9.3",
       "qt_source": "aqt",
       "qt_arch": "clang_64",
       "host_qt_arch": "",

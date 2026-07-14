@@ -36,6 +36,13 @@ jobs:
       mode: ${{ steps.matrix.outputs.mode }}
       should_build: ${{ steps.changes.outputs.should_build }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate package catalog
+        shell: bash
+        run: python3 .github/scripts/validate-package-matrix.py
+
       - name: Detect documentation-only pull request
         id: changes
         env:
