@@ -9,30 +9,26 @@ represent supported patch lines, not Git Flow release branches.
 
 ## Branches
 
-- `main` is the default branch and should stay releasable.
-- `release/1.0.x` is the long-lived branch for the `1.0.*` patch line. Use it
-  for `1.0.*` release workflow, packaging, and patch stabilization work instead
-  of creating throwaway remote `ci/*` branches.
-- Prefer short-lived topic branches for non-trivial work:
-  - `feat/<topic>` for user-visible features.
-  - `fix/<topic>` for bug fixes.
-  - `docs/<topic>` for documentation-only updates.
-  - `ci/<topic>` for GitHub Actions or automation updates.
-  - `chore/<topic>` for repository maintenance.
-- Direct commits to `main` are acceptable for small single-maintainer changes
-  after local validation, but do not leave knowingly broken code on `main`.
-- Do not create a permanent `develop` branch.
-- Create `release/vX.Y.Z` only when a specific release needs a short
-  stabilization branch for multiple fixes or packaging iterations outside an
-  existing patch-line branch.
-- Create `hotfix/vX.Y.Z` from the latest release tag only for urgent release
-  fixes, then merge or cherry-pick the fix back to `main`.
-- Merge PRs into `main` with rebase merge to keep history linear. After a
-  patch-line PR is merged, realign the patch-line branch with `main` before
-  starting the next change.
-- Delete short-lived topic, `release/vX.Y.Z`, and hotfix branches after they are
-  merged or no longer needed. Do not delete supported patch-line branches such as
-  `release/1.0.x`.
+- `main` is the default branch and records the latest promoted stable baseline.
+  Keep it releasable, but do not use it for routine post-release development.
+- `release/<major>.<minor>.x` branches are long-lived patch lines. The highest
+  active version is the normal working branch for features, fixes, CI,
+  packaging, documentation, and other maintenance. The current working branch
+  is `release/1.3.x`.
+- Commit routine single-maintainer changes directly to the latest long-lived
+  release branch after appropriate validation. Do not create a short-lived
+  `feat/*`, `fix/*`, `docs/*`, `ci/*`, or `chore/*` branch by default. Keeping
+  the patch line linear makes tag-to-tag changelog review straightforward.
+- Use older supported release branches only for deliberate backports to those
+  patch lines. Do not mix new-line development into an older branch.
+- Cut `vX.Y.Z` tags from the matching `release/X.Y.x` branch. After publishing
+  the latest stable release, fast-forward or rebase-merge that released commit
+  into `main`; create the next long-lived minor line from the updated `main`.
+- Create a temporary branch only when explicitly needed for external review,
+  contributor work, or risky isolation. Rebase-merge it to keep history linear,
+  then delete it promptly.
+- Do not create a permanent `develop` branch, and do not delete supported
+  long-lived release branches.
 
 ## Commits
 
@@ -170,6 +166,12 @@ review:
 python scripts/release/generate_changelog.py --from v1.0.0 --to HEAD
 python scripts/release/generate_changelog.py --from v1.0.0 --to HEAD --audience maintainer
 python scripts/release/generate_changelog.py --tag v1.1.0 --require-curated --output release-notes.md
+```
+
+While developing the current patch line, review only its unreleased range:
+
+```bash
+python scripts/release/generate_changelog.py --from v1.3.0 --to release/1.3.x --audience maintainer --check
 ```
 
 `--tag` resolves the previous release tag automatically when `--from` is not
