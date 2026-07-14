@@ -1,3 +1,5 @@
+# Keep this registered filename stable so branch revisions can be dispatched
+# before they are merged into the default branch.
 name: Desktop Compat Packages
 run-name: Desktop packages · ${{ inputs.packages }}
 
