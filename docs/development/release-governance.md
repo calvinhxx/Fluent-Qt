@@ -228,13 +228,14 @@ contract that CI, changelog, and packaging workflows should enforce.
   - Qt 5.15 macOS x64 DMG.
   - Qt 5.15 Ubuntu 22.04 x64 DEB.
   - Qt 6.2 Windows x64 installer.
-  - Qt 6.2 macOS x64 DMG.
-  - Qt 6.2 macOS arm64 DMG.
   - Qt 6.2 Ubuntu 22.04 x64 DEB.
   - Qt 6.2 Ubuntu 22.04 arm64 DEB.
+  - Qt 6.9.3 macOS x64 DMG.
+  - Qt 6.9.3 macOS arm64 DMG.
   - Qt 6.9.3 Windows arm64 installer.
-- `smoke` runs only the macOS x64 and Windows x64 package lanes without
-  publishing and is intended for manual release workflow validation.
+- `smoke` runs only the Qt 6.9.3 macOS x64 and Qt 6.2 Windows x64 package
+  lanes without publishing and is intended for manual release workflow
+  validation.
 
 The package catalog lives in `.github/package-matrix.json`; `standard` and
 `smoke` are selected from that shared source of truth.

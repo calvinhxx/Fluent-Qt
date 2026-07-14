@@ -32,6 +32,21 @@ CMake applies it to the native metadata templates under `app/platform/windows`,
 `app/platform/macos`, and `app/platform/linux`; do not duplicate the application
 ID or display name in those templates.
 
+## Release Qt Policy
+
+The Qt version used to produce an installer is a packaging-toolchain choice,
+not the project's minimum supported Qt version. Current Qt 6 release packages
+use the following policy:
+
+- macOS arm64 and x64 DMGs use Qt 6.9.3.
+- Windows ARM64 uses Qt 6.9.3; Windows x64 remains on Qt 6.2.
+- Ubuntu 22.04 arm64 and x64 DEBs use the distribution Qt 6.2 packages.
+
+Keep the Qt 6.2 macOS CI lanes as source-compatibility coverage, but do not use
+that kit for the default macOS DMGs. Linux is intentionally different: the DEB
+does not bundle Qt, so building against Ubuntu 22.04's Qt keeps its declared
+runtime dependencies aligned with the target distribution.
+
 ## Linux DEB
 
 Linux packages are built natively per architecture. x64:
@@ -196,8 +211,8 @@ compatibility check starts only the requested runners. Use `standard` to select
 all nine release packages. The supported IDs are:
 
 - `windows-x64-qt515`, `macos-x64-qt515`, `linux-x64-qt515`.
-- `windows-x64-qt62`, `macos-x64-qt62`, `macos-arm64-qt62`.
-- `linux-x64-qt62`, `linux-arm64-qt62`, `windows-arm64-qt693`.
+- `windows-x64-qt62`, `linux-x64-qt62`, `linux-arm64-qt62`.
+- `macos-x64-qt693`, `macos-arm64-qt693`, `windows-arm64-qt693`.
 
 Set `run_tests=true` to build and run the `ci_fast` test set before CPack; leave
 it false for the fastest package-only path. Each selected lane uploads its
@@ -210,7 +225,12 @@ Windows ARM64 `matrix=full` CI lane even when `run_tests=true`.
 
 `.github/package-matrix.json` is the source of truth shared by this workflow
 and `release.yml`. Update that catalog instead of maintaining package matrices
-inside workflow YAML.
+inside workflow YAML. Run
+`python3 .github/scripts/validate-package-matrix.py` after editing it. Both
+packaging workflows validate the release Qt policy before selecting jobs. Every
+macOS Release lane also launches the built Gallery for ten seconds before CPack;
+an unexpected exit or incomplete startup prewarm fails the job and preserves
+its log as a packaging diagnostic.
 
 ## Version Contract
 
