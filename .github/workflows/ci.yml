@@ -37,7 +37,7 @@ jobs:
       should_build: ${{ steps.changes.outputs.should_build }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate package catalog
         shell: bash
@@ -421,7 +421,7 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Verify native ARM64 runner
         if: ${{ matrix.native_arm64 == true }}
@@ -436,7 +436,7 @@ jobs:
         run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
 
       - name: Cache vcpkg binary packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .vcpkg-binary-cache
           key: vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.vcpkg_triplet }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
@@ -676,7 +676,7 @@ jobs:
 
       - name: Upload Linux Gallery package
         if: ${{ matrix.package == true }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluent-qt-gallery-linux-${{ matrix.package_arch }}-deb
           retention-days: 14
@@ -715,7 +715,7 @@ jobs:
 
       - name: Upload Windows ARM64 Gallery installer
         if: ${{ matrix.windows_package == true }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluent-qt-gallery-windows-arm64-installer
           retention-days: 14
@@ -725,7 +725,7 @@ jobs:
 
       - name: Upload diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci-${{ needs.plan.outputs.mode }}-${{ matrix.id }}-diagnostics-${{ github.run_attempt }}
           if-no-files-found: ignore
@@ -757,7 +757,7 @@ jobs:
             qt_source: apt6
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Qt and build tools
         shell: bash

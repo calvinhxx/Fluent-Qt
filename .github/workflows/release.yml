@@ -60,7 +60,7 @@ jobs:
       tag_sha: ${{ steps.release.outputs.tag_sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -214,7 +214,7 @@ jobs:
       VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.tag }}
           fetch-depth: 0
@@ -224,7 +224,7 @@ jobs:
         run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
 
       - name: Cache vcpkg binary packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .vcpkg-binary-cache
           key: release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
@@ -422,7 +422,7 @@ jobs:
           }
 
       - name: Upload package artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.id }}
           if-no-files-found: error
@@ -432,7 +432,7 @@ jobs:
       - name: Upload packaging diagnostics
         if: failure()
         timeout-minutes: 10
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-diagnostics-${{ matrix.id }}
           if-no-files-found: ignore
@@ -454,7 +454,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.tag }}
 
@@ -468,7 +468,7 @@ jobs:
             -P cmake/CreateSourcePackage.cmake
 
       - name: Upload FluentQt library source package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-source
           if-no-files-found: error
@@ -485,7 +485,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.tag }}
           fetch-depth: 0
@@ -502,7 +502,7 @@ jobs:
             --output release-notes.md
 
       - name: Download package artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-*
           merge-multiple: true
