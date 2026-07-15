@@ -85,7 +85,7 @@ x64:
 
 ```bash
 export VCPKG_ROOT=/home/<user>/vcpkg
-cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=ON
+cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=ON -DVCPKG_MANIFEST_FEATURES=tests
 cmake --build --preset vcpkg-linux --target fluent_qt_ci_fast_tests --parallel
 ctest --preset vcpkg-linux -L '^ci_fast$' --output-on-failure
 ```
@@ -94,7 +94,7 @@ ARM64, on a native ARM64 Linux host such as Lima or an ARM64 VM:
 
 ```bash
 export VCPKG_ROOT=/home/<user>/vcpkg
-cmake --preset vcpkg-linux-arm64 -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=ON
+cmake --preset vcpkg-linux-arm64 -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=ON -DVCPKG_MANIFEST_FEATURES=tests
 cmake --build --preset vcpkg-linux-arm64 --target fluent_qt_ci_fast_tests --parallel
 ctest --preset vcpkg-linux-arm64 -L '^ci_fast$' --output-on-failure
 ```
@@ -129,6 +129,7 @@ cmake -S . -B build/vcpkg-linux-qt5 \
   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
   -DVCPKG_TARGET_TRIPLET=x64-linux \
   -DCMAKE_BUILD_TYPE=Debug \
+  -DVCPKG_MANIFEST_FEATURES=tests \
   -DBUILD_TESTING=ON \
   -DFLUENT_QT_BUILD_TESTS=ON \
   -DFLUENT_QT_BUILD_GALLERY=OFF \

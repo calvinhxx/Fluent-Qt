@@ -11,7 +11,9 @@
 
 ## Build and Test
 
-- The project is C++17 with Qt 5.15+ or Qt 6.2+, vcpkg manifest dependencies, GTest, and spdlog.
+- The project is C++17 with Qt 5.15+ or Qt 6.2+. The reusable `FluentQt`
+  library depends only on Qt Widgets; the Gallery adds spdlog/fmt and tests add
+  GTest plus the application logging support through optional vcpkg features.
 - Public CMake presets require `VCPKG_ROOT` and intentionally do not hard-code Qt, Ninja, Visual Studio, or Xcode paths. Put machine-specific paths in ignored `CMakeUserPresets.json` files.
 - Common macOS arm64 flow:
 
@@ -29,7 +31,11 @@ ctest --preset vcpkg-osx --output-on-failure
 
 - [src/design/](src/design/) contains Fluent design tokens for color, spacing, typography, radius, material, elevation, animation, and breakpoints.
 - [src/compatibility/](src/compatibility/) contains Qt and platform compatibility helpers. Use `compatibility/QtCompat.h` and `FluentEnterEvent` instead of direct `QEnterEvent` in new `enterEvent` overrides.
-- [src/utils/](src/utils/) contains shared logging and debug overlay helpers. Prefer `LOG_TRACE`, `LOG_DEBUG`, `LOG_INFO`, `LOG_WARN`, and `LOG_ERROR` from [src/utils/Log.h](src/utils/Log.h) over direct `spdlog` calls in components.
+- [src/utils/](src/utils/) contains library-side Qt logging categories and debug
+  overlay helpers. Reusable code uses `qCDebug`, `qCInfo`, and `qCWarning` with
+  a `fluentqt.*` category. Gallery and test diagnostics use the non-exported
+  facade in [support/logging/Log.h](support/logging/Log.h); never add a
+  spdlog dependency to `FluentQt` itself.
 - [src/components/foundation/](src/components/foundation/) contains shared component infrastructure such as `fluent::FluentElement`, `fluent::QMLPlus`, `fluent::AnchorLayout`, and `fluent::overlay` contracts.
 - [src/components/](src/components/) is grouped by component category; component tests mirror those categories under [tests/components/](tests/components/).
 
@@ -53,5 +59,8 @@ ctest --preset vcpkg-osx --output-on-failure
 ## Diagnostics and Review
 
 - Use the logging workflow in [docs/development/logging-workflow.md](docs/development/logging-workflow.md). Useful anchors include layout recalculation, state transitions, input handling, popup/animation lifecycle, and test setup failures.
-- Runtime logging can be controlled with `SPDLOG_LEVEL=debug|info|warn|error|critical|off` and `SPDLOG_FILE=/path/to/log`.
+- Library category logging is controlled with `QT_LOGGING_RULES`, for example
+  `QT_LOGGING_RULES="fluentqt.*=true"`. Gallery/test sink behavior is controlled
+  with `SPDLOG_LEVEL=debug|info|warn|error|critical|off` and
+  `SPDLOG_FILE=/path/to/log`.
 - For visual or interaction changes, review token color usage, radius, 4 px spacing, typography, Light/Dark behavior, states, text fit, and animation smoothness with [docs/development/visual-review.md](docs/development/visual-review.md).
