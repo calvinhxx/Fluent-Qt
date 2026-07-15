@@ -41,6 +41,10 @@ ctest --preset vcpkg-osx --output-on-failure
 
 ## Component Conventions
 
+- Treat [cmake/FluentQtInstallHeaders.cmake](cmake/FluentQtInstallHeaders.cmake)
+  as the installed-header allowlist. Public header changes must update it;
+  private implementation headers must stay out of the development package.
+- Application examples use the single `<FluentQt/FluentQt.h>` entry header.
 - Follow [docs/development/component-api-conventions.md](docs/development/component-api-conventions.md) and [docs/development/component-api-audit.md](docs/development/component-api-audit.md) when adding or changing public component APIs.
 - Public non-trivial APIs under `src/` use concise Doxygen comments with English `@brief` plus a `zh_CN:` line. Do not mechanically rewrite untouched comments; see [docs/development/comment-style.md](docs/development/comment-style.md).
 - For visible UI in tests and demos, prefer existing project Fluent components over raw Qt widgets when an equivalent exists.

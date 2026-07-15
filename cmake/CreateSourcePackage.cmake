@@ -33,6 +33,7 @@ file(COPY
     DESTINATION "${_package_root}")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtConfig.cmake.in"
+    "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtInstallHeaders.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/CreateSourcePackage.cmake"
     "${FLUENT_QT_SOURCE_DIR}/cmake/SourcePackageREADME.md"
     DESTINATION "${_package_root}/cmake")
