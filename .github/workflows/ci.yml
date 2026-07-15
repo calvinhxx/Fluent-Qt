@@ -741,9 +741,102 @@ jobs:
             ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
 
+  integration:
+    name: Library integration ${{ matrix.name }}
+    needs: plan
+    if: ${{ needs.plan.outputs.should_build == 'true' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Qt 5.15
+            qt_source: apt5
+          - name: Qt 6.2
+            qt_source: apt6
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Qt and build tools
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
+
+      - name: Configure external source-subproject integration
+        shell: bash
+        run: |
+          cmake -S .github/integration -B build/integration-source \
+            -DFLUENT_QT_SOURCE_DIR="$GITHUB_WORKSPACE" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=TRUE \
+            -DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE
+
+      - name: Build external source-subproject integration
+        shell: bash
+        run: cmake --build build/integration-source --parallel 4
+
+      - name: Install FluentQt development component
+        shell: bash
+        run: |
+          cmake --install build/integration-source \
+            --config Release \
+            --component Development \
+            --prefix "$RUNNER_TEMP/fluentqt"
+
+      - name: Verify library-only CMake package
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_dir="$RUNNER_TEMP/fluentqt/lib/cmake/FluentQt"
+          test -f "$package_dir/FluentQtConfig.cmake"
+          test -f "$package_dir/FluentQtTargets.cmake"
+          if grep -R -E 'spdlog|fmt::|GTest|FluentQtLoggingSupport|support/logging' "$package_dir"; then
+            echo "::error::Gallery or test dependencies leaked into the FluentQt package."
+            exit 1
+          fi
+
+      - name: Configure installed-package integration
+        shell: bash
+        run: |
+          cmake -S examples/hello_world -B build/integration-installed \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt" \
+            -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=TRUE \
+            -DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE
+
+      - name: Build installed-package integration
+        shell: bash
+        run: cmake --build build/integration-installed --parallel 4
+
+      - name: Verify FluentQt library source package
+        if: ${{ matrix.qt_source == 'apt6' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/source-package"
+          cmake \
+            -D "FLUENT_QT_SOURCE_DIR=$GITHUB_WORKSPACE" \
+            -D "FLUENT_QT_SOURCE_PACKAGE_DIR=$output" \
+            -D "FLUENT_QT_SOURCE_PACKAGE_VERSION=ci" \
+            -P cmake/CreateSourcePackage.cmake
+          archive="$output/FluentQt-ci-source.zip"
+          test -f "$archive"
+          if unzip -Z1 "$archive" | grep -E '/(app|tests|support)/'; then
+            echo "::error::Non-library files leaked into the FluentQt source package."
+            exit 1
+          fi
+          unzip -q "$archive" -d "$output/unpacked"
+          cmake -S .github/integration -B build/integration-source-package \
+            -DFLUENT_QT_SOURCE_DIR="$output/unpacked/FluentQt-ci-source" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=TRUE \
+            -DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE
+          cmake --build build/integration-source-package --parallel 4
+
   ci-gate:
     name: CI Gate
-    needs: [plan, build]
+    needs: [plan, build, integration]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -752,6 +845,7 @@ jobs:
         env:
           PLAN_RESULT: ${{ needs.plan.result }}
           BUILD_RESULT: ${{ needs.build.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
           SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}
         shell: bash
         run: |
@@ -765,6 +859,10 @@ jobs:
             echo "::error::The required build matrix finished with result: $BUILD_RESULT"
             exit 1
           fi
+          if [[ "$SHOULD_BUILD" == "true" && "$INTEGRATION_RESULT" != "success" ]]; then
+            echo "::error::The external integration validation finished with result: $INTEGRATION_RESULT"
+            exit 1
+          fi
 
           if [[ "$SHOULD_BUILD" == "true" ]]; then
             echo "Required CI validation passed."
@@ -774,7 +872,7 @@ jobs:
 
   release-ready:
     name: Release ready
-    needs: [plan, build]
+    needs: [plan, build, integration]
     if: ${{ always() && needs.plan.outputs.mode == 'full' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -782,9 +880,14 @@ jobs:
       - name: Verify full matrix
         env:
           BUILD_RESULT: ${{ needs.build.result }}
+          INTEGRATION_RESULT: ${{ needs.integration.result }}
         shell: bash
         run: |
           if [[ "$BUILD_RESULT" != "success" ]]; then
             echo "::error::The full validation matrix finished with result: $BUILD_RESULT"
+            exit 1
+          fi
+          if [[ "$INTEGRATION_RESULT" != "success" ]]; then
+            echo "::error::The external integration validation finished with result: $INTEGRATION_RESULT"
             exit 1
           fi
