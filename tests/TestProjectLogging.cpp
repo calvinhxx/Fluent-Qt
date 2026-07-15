@@ -1,8 +1,9 @@
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 
 #include <QByteArray>
 #include <QDir>
 #include <QFile>
+#include <QLoggingCategory>
 #include <QStandardPaths>
 #include <QString>
 #include <QStringList>
@@ -11,6 +12,8 @@
 #include <gtest/gtest.h>
 
 namespace {
+
+Q_LOGGING_CATEGORY(fluentQtBridgeTestCategory, "fluentqt.test")
 
 class EnvVarGuard {
 public:
@@ -78,13 +81,13 @@ TEST(ProjectLoggingTest, EnvironmentLevelControlsLogger)
     qunsetenv("SPDLOG_FILE");
     qputenv("SPDLOG_LEVEL", "debug");
 
-    utils::logging::shutdown();
-    utils::logging::initialize();
+    fluent::support::logging::shutdown();
+    fluent::support::logging::initialize();
 
-    EXPECT_TRUE(utils::logging::isInitialized());
-    EXPECT_EQ(utils::logging::Level::Debug, utils::logging::level());
+    EXPECT_TRUE(fluent::support::logging::isInitialized());
+    EXPECT_EQ(fluent::support::logging::Level::Debug, fluent::support::logging::level());
 
-    utils::logging::shutdown();
+    fluent::support::logging::shutdown();
 }
 
 TEST(ProjectLoggingTest, InvalidEnvironmentLevelFallsBackToDefault)
@@ -94,12 +97,12 @@ TEST(ProjectLoggingTest, InvalidEnvironmentLevelFallsBackToDefault)
     qunsetenv("SPDLOG_FILE");
     qputenv("SPDLOG_LEVEL", "not-a-level");
 
-    utils::logging::shutdown();
-    utils::logging::initialize();
+    fluent::support::logging::shutdown();
+    fluent::support::logging::initialize();
 
-    EXPECT_EQ(utils::logging::Level::Warn, utils::logging::level());
+    EXPECT_EQ(fluent::support::logging::Level::Warn, fluent::support::logging::level());
 
-    utils::logging::shutdown();
+    fluent::support::logging::shutdown();
 }
 
 TEST(ProjectLoggingTest, RepeatedInitializationDoesNotDuplicateSinks)
@@ -113,17 +116,17 @@ TEST(ProjectLoggingTest, RepeatedInitializationDoesNotDuplicateSinks)
     qputenv("SPDLOG_LEVEL", "warn");
     qputenv("SPDLOG_FILE", filePathBytes(logPath));
 
-    utils::logging::shutdown();
-    utils::logging::initialize();
-    utils::logging::initialize();
+    fluent::support::logging::shutdown();
+    fluent::support::logging::initialize();
+    fluent::support::logging::initialize();
 
     LOG_WARN("project logging idempotent smoke");
-    utils::logging::flush();
+    fluent::support::logging::flush();
 
     const QString logText = readTextFile(logPath);
     EXPECT_EQ(1, logText.count(QStringLiteral("project logging idempotent smoke")));
 
-    utils::logging::shutdown();
+    fluent::support::logging::shutdown();
 }
 
 TEST(ProjectLoggingTest, AllLevelsWriteToTerminalAndDebuggerConsole)
@@ -133,17 +136,17 @@ TEST(ProjectLoggingTest, AllLevelsWriteToTerminalAndDebuggerConsole)
     qunsetenv("SPDLOG_FILE");
     qputenv("SPDLOG_LEVEL", "trace");
 
-    utils::logging::shutdown();
-    utils::logging::initialize();
+    fluent::support::logging::shutdown();
+    fluent::support::logging::initialize();
 
-    EXPECT_EQ(utils::logging::Level::Trace, utils::logging::level());
+    EXPECT_EQ(fluent::support::logging::Level::Trace, fluent::support::logging::level());
     emitAllLevelSamples(QStringLiteral("terminal"));
 #ifdef Q_OS_WIN
     emitAllLevelSamples(QStringLiteral("vs-debug-console"));
 #endif
-    utils::logging::flush();
+    fluent::support::logging::flush();
 
-    utils::logging::shutdown();
+    fluent::support::logging::shutdown();
 }
 
 TEST(ProjectLoggingTest, AllLevelsWriteToConfiguredLogFile)
@@ -157,11 +160,11 @@ TEST(ProjectLoggingTest, AllLevelsWriteToConfiguredLogFile)
     qputenv("SPDLOG_LEVEL", "trace");
     qputenv("SPDLOG_FILE", filePathBytes(logPath));
 
-    utils::logging::shutdown();
-    utils::logging::initialize();
+    fluent::support::logging::shutdown();
+    fluent::support::logging::initialize();
 
     emitAllLevelSamples(QStringLiteral("file"));
-    utils::logging::flush();
+    fluent::support::logging::flush();
 
     const QString logText = readTextFile(logPath);
     expectContainsText(logText, QStringLiteral("[trace]"));
@@ -177,7 +180,7 @@ TEST(ProjectLoggingTest, AllLevelsWriteToConfiguredLogFile)
     expectContainsText(logText, levelSampleMessage(QStringLiteral("file"), QStringLiteral("error")));
     expectContainsText(logText, levelSampleMessage(QStringLiteral("file"), QStringLiteral("critical")));
 
-    utils::logging::shutdown();
+    fluent::support::logging::shutdown();
 }
 
 TEST(ProjectLoggingTest, RotationKeepsAtMostThreeFilesOnDisk)
@@ -189,21 +192,21 @@ TEST(ProjectLoggingTest, RotationKeepsAtMostThreeFilesOnDisk)
     QTemporaryDir dir;
     ASSERT_TRUE(dir.isValid());
 
-    utils::logging::shutdown();
-    utils::logging::InitializationOptions options;
+    fluent::support::logging::shutdown();
+    fluent::support::logging::InitializationOptions options;
     options.logFilePath = dir.filePath(QStringLiteral("rotation.log"));
     // A tiny size cap forces several rotations from a short burst of lines.
     // zh_CN: 极小的尺寸上限让一小段日志就触发多次轮转。
     options.maxFileSizeBytes = 1024;
     options.maxRotatedFiles = 2;
-    utils::logging::initialize(options);
+    fluent::support::logging::initialize(options);
 
     for (int i = 0; i < 200; ++i) {
         LOG_WARN(QStringLiteral("ProjectLoggingTest rotation filler line=%1 padding=%2")
                      .arg(i)
                      .arg(QString(80, QLatin1Char('x'))));
     }
-    utils::logging::flush();
+    fluent::support::logging::flush();
 
     const QStringList files = QDir(dir.path()).entryList(QDir::Files, QDir::Name);
     EXPECT_EQ(3, files.size()) << files.join(QStringLiteral(", ")).toStdString();
@@ -211,12 +214,12 @@ TEST(ProjectLoggingTest, RotationKeepsAtMostThreeFilesOnDisk)
     EXPECT_TRUE(files.contains(QStringLiteral("rotation.1.log")));
     EXPECT_TRUE(files.contains(QStringLiteral("rotation.2.log")));
 
-    utils::logging::shutdown();
+    fluent::support::logging::shutdown();
 }
 
 TEST(ProjectLoggingTest, DefaultLogFilePathUsesAppLocalLogsDirectory)
 {
-    const QString path = utils::logging::defaultLogFilePath();
+    const QString path = fluent::support::logging::defaultLogFilePath();
     ASSERT_FALSE(path.isEmpty());
 
     const QString expectedDir =
@@ -237,16 +240,17 @@ TEST(ProjectLoggingTest, QtWarningBridgeWritesThroughProjectLogger)
     qputenv("SPDLOG_LEVEL", "warn");
     qputenv("SPDLOG_FILE", filePathBytes(logPath));
 
-    utils::logging::shutdown();
-    utils::logging::InitializationOptions options;
+    fluent::support::logging::shutdown();
+    fluent::support::logging::InitializationOptions options;
     options.installQtMessageHandler = true;
-    utils::logging::initialize(options);
+    fluent::support::logging::initialize(options);
 
-    qWarning("project logging qt bridge smoke");
-    utils::logging::flush();
+    qCWarning(fluentQtBridgeTestCategory) << "project logging qt bridge smoke";
+    fluent::support::logging::flush();
 
     const QString logText = readTextFile(logPath);
     EXPECT_TRUE(logText.contains(QStringLiteral("project logging qt bridge smoke")));
+    EXPECT_TRUE(logText.contains(QStringLiteral("[fluentqt.test]")));
 
-    utils::logging::shutdown();
+    fluent::support::logging::shutdown();
 }

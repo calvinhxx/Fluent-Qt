@@ -7,7 +7,7 @@
 #include <QString>
 #include <QtGlobal>
 
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 
 namespace fluent::gallery::appicon {
 namespace {

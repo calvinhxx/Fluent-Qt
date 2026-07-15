@@ -7,7 +7,7 @@
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "view/support/GalleryStyleSupport.h"
 #include "view/widgets/GalleryIconTile.h"
 

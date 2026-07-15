@@ -11,7 +11,7 @@
 
 #include "compatibility/WindowChromeCompat.h"
 #include "components/dialogs_flyouts/ContentDialog.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/support/GalleryCloseBehaviorPrompt.h"

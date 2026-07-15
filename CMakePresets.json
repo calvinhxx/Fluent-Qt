@@ -13,7 +13,11 @@
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "BUILD_TESTING": "ON"
+        "BUILD_TESTING": "ON",
+        "FLUENT_QT_BUILD_EXAMPLES": "ON",
+        "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_TESTS": "ON",
+        "VCPKG_MANIFEST_FEATURES": "gallery;tests"
       }
     },
     {
@@ -38,7 +42,12 @@
       "inherits": "vcpkg-osx",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF"
+        "BUILD_TESTING": "OFF",
+        "FLUENT_QT_BUILD_EXAMPLES": "OFF",
+        "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_TESTS": "OFF",
+        "FLUENT_QT_ENABLE_GALLERY_PACKAGING": "ON",
+        "VCPKG_MANIFEST_FEATURES": "gallery"
       }
     },
     {
@@ -63,7 +72,12 @@
       "inherits": "vcpkg-osx-x64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF"
+        "BUILD_TESTING": "OFF",
+        "FLUENT_QT_BUILD_EXAMPLES": "OFF",
+        "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_TESTS": "OFF",
+        "FLUENT_QT_ENABLE_GALLERY_PACKAGING": "ON",
+        "VCPKG_MANIFEST_FEATURES": "gallery"
       }
     },
     {
@@ -87,7 +101,12 @@
       "inherits": "vcpkg-linux",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF"
+        "BUILD_TESTING": "OFF",
+        "FLUENT_QT_BUILD_EXAMPLES": "OFF",
+        "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_TESTS": "OFF",
+        "FLUENT_QT_ENABLE_GALLERY_PACKAGING": "ON",
+        "VCPKG_MANIFEST_FEATURES": "gallery"
       }
     },
     {
@@ -111,7 +130,12 @@
       "inherits": "vcpkg-linux-arm64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF"
+        "BUILD_TESTING": "OFF",
+        "FLUENT_QT_BUILD_EXAMPLES": "OFF",
+        "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_TESTS": "OFF",
+        "FLUENT_QT_ENABLE_GALLERY_PACKAGING": "ON",
+        "VCPKG_MANIFEST_FEATURES": "gallery"
       }
     },
     {
@@ -135,7 +159,12 @@
       "inherits": "vcpkg-windows",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF"
+        "BUILD_TESTING": "OFF",
+        "FLUENT_QT_BUILD_EXAMPLES": "OFF",
+        "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_TESTS": "OFF",
+        "FLUENT_QT_ENABLE_GALLERY_PACKAGING": "ON",
+        "VCPKG_MANIFEST_FEATURES": "gallery"
       }
     },
     {
@@ -158,7 +187,12 @@
       "inherits": "vcpkg-windows-arm64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BUILD_TESTING": "OFF"
+        "BUILD_TESTING": "OFF",
+        "FLUENT_QT_BUILD_EXAMPLES": "OFF",
+        "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_TESTS": "OFF",
+        "FLUENT_QT_ENABLE_GALLERY_PACKAGING": "ON",
+        "VCPKG_MANIFEST_FEATURES": "gallery"
       }
     }
   ],

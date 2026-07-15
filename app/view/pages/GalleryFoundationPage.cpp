@@ -8,7 +8,7 @@
 #include "model/GalleryNavigationItem.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "view/widgets/GalleryEntryGrid.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 
 namespace fluent::gallery {
 

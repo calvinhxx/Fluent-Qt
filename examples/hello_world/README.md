@@ -1,45 +1,28 @@
-# Fluent-Qt Hello World
+# FluentQt Hello World
 
-This is a standalone Qt Widgets project that consumes Fluent-Qt as a library
-through `find_package`. The main window demonstrates the public initialization
-entry point, Fluent controls, typography/icon fonts, style/accent presets
-through `StyleThemeCatalog`, and runtime font scaling through `ThemeRegistry`.
-
-The style and accent API used by the sample lives in the reusable library, not
-the Gallery application layer:
-
-```cpp
-fluent::StyleThemeCatalog::apply(fluent::StyleTheme::Material);
-fluent::StyleThemeCatalog::applyAccentOverride(QColor(0, 120, 212));
-fluent::ThemeRegistry::instance().setFontScale(1.0);
-fluent::FluentElement::refreshTheme();
-```
-
-The example links the installed SDK target:
+This Qt Widgets application works both as an in-tree executable example and as
+a standalone consumer of an installed FluentQt package. It shows the complete
+runtime setup: construct `QApplication`, initialize the bundled resources,
+create a FluentQt window, and add one component.
 
 ```cmake
 find_package(FluentQt CONFIG REQUIRED)
+add_executable(fluentqt_hello_world main.cpp)
 target_link_libraries(fluentqt_hello_world PRIVATE FluentQt::FluentQt)
 ```
 
-Call `fluent::initializeResources()` after constructing `QApplication` so the
-bundled static Segoe UI typography faces and Segoe Fluent Icons are registered.
-Set the application font to `Typography::Styles::Body.toQFont()` when raw Qt
-widgets should inherit the same Text Regular face as Fluent components.
+When the repository root is opened in Qt Creator or another CMake IDE, select
+the `fluentqt_hello_world` target directly. Top-level development builds include
+it by default; the release presets disable it for Gallery packaging.
 
-Build from the repository root:
+It can also be opened and built as a standalone project after installing
+FluentQt:
 
 ```bash
-cmake --install build/vcpkg-osx \
-  --prefix /tmp/fluentqt-sdk \
-  --component Development
-
 cmake -S examples/hello_world -B build/examples/hello_world \
-  -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
-  -DVCPKG_TARGET_TRIPLET=arm64-osx \
-  -DFluentQt_DIR=/tmp/fluentqt-sdk/lib/cmake/FluentQt \
-  -DCMAKE_PREFIX_PATH=$PWD/build/vcpkg-osx/vcpkg_installed/arm64-osx \
-  -DCMAKE_BUILD_TYPE=Debug
-cmake --build build/examples/hello_world
-./build/examples/hello_world/fluentqt_hello_world
+  -DFluentQt_DIR=/path/to/fluentqt/lib/cmake/FluentQt
+cmake --build build/examples/hello_world --config Release
 ```
+
+See the repository [README](../../README.md) for `add_subdirectory`,
+`FetchContent`, Qt selection, and deployment guidance.

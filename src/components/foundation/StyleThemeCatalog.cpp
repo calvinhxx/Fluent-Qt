@@ -11,7 +11,7 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
-#include "utils/Log.h"
+#include "utils/private/FluentQtLogging_p.h"
 
 namespace fluent {
 namespace {
@@ -306,7 +306,8 @@ void exportTemplateIfAbsent(StyleTheme theme)
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
         return;
     file.write(QJsonDocument(spec).toJson(QJsonDocument::Indented));
-    LOG_INFO(QStringLiteral("StyleThemeCatalog exported editable template %1").arg(path));
+    qCInfo(fluent::logging::themeCategory).noquote()
+        << QStringLiteral("StyleThemeCatalog exported editable template %1").arg(path);
 }
 
 QJsonObject readUserSpec(StyleTheme theme)
@@ -318,8 +319,9 @@ QJsonObject readUserSpec(StyleTheme theme)
     QJsonParseError error{};
     const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &error);
     if (error.error != QJsonParseError::NoError || !doc.isObject()) {
-        LOG_WARN(QStringLiteral("StyleThemeCatalog ignoring malformed theme file %1: %2")
-                     .arg(path, error.errorString()));
+        qCWarning(fluent::logging::themeCategory).noquote()
+            << QStringLiteral("StyleThemeCatalog ignoring malformed theme file %1: %2")
+                   .arg(path, error.errorString());
         return {};
     }
     return doc.object();
@@ -334,7 +336,8 @@ bool writeUserSpec(StyleTheme theme, const QJsonObject& spec)
     const QString path = themesDir() + QStringLiteral("/") + themeKeyFor(theme) + QStringLiteral(".json");
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        LOG_WARN(QStringLiteral("StyleThemeCatalog could not write theme file %1").arg(path));
+        qCWarning(fluent::logging::themeCategory).noquote()
+            << QStringLiteral("StyleThemeCatalog could not write theme file %1").arg(path);
         return false;
     }
     file.write(QJsonDocument(spec).toJson(QJsonDocument::Indented));
@@ -408,9 +411,10 @@ void apply(StyleTheme theme)
     if (!userSpec.isEmpty())
         applySpec(userSpec);
 
-    LOG_INFO(QStringLiteral("StyleThemeCatalog applied style theme key=%1 revision=%2")
-                 .arg(themeKeyFor(theme))
-                 .arg(reg.revision()));
+    qCInfo(fluent::logging::themeCategory).noquote()
+        << QStringLiteral("StyleThemeCatalog applied style theme key=%1 revision=%2")
+               .arg(themeKeyFor(theme))
+               .arg(reg.revision());
 }
 
 const char* const kDerivedAccentKeys[] = {

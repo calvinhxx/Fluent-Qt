@@ -11,7 +11,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "viewmodel/ThemeCatalog.h"
 
 namespace fluent::gallery {

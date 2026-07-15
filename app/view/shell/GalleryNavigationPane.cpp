@@ -21,7 +21,7 @@
 #include "components/collections/TreeView.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/status_info/ToolTip.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "GalleryCompactFlyout.h"
 #include "GalleryNavigationDelegate.h"
 #include "GalleryNavigationMetrics.h"

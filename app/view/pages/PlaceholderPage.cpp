@@ -7,7 +7,7 @@
 #include "components/basicinput/Button.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 
 namespace fluent::gallery {
 

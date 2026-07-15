@@ -19,7 +19,7 @@
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "view/support/GalleryCloseBehaviorUi.h"
 #include "view/widgets/AccentColorControl.h"
 #include "viewmodel/GallerySettings.h"

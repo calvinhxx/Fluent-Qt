@@ -29,7 +29,7 @@
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "view/support/GalleryToast.h"
 #include "view/widgets/GalleryCodeBlock.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 
 namespace fluent::gallery {
 namespace {

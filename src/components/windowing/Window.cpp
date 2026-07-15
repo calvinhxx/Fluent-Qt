@@ -22,7 +22,7 @@
 #include "components/basicinput/Button.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/status_info/ToolTip.h"
-#include "utils/Log.h"
+#include "utils/private/FluentQtLogging_p.h"
 
 namespace fluent::windowing {
 
@@ -284,16 +284,17 @@ void Window::setEffectiveBackdropState(const BackdropState& state)
     publishWindowBackdropState(this, state);
 
     if (changed) {
-        LOG_DEBUG(QStringLiteral(
-                      "Window backdrop resolved requested=%1 effective=%2 backend=%3 "
-                      "fidelity=%4 surface=%5 platformApplied=%6 provider=%7 reason=%8")
-                      .arg(static_cast<int>(state.requestedEffect))
-                      .arg(static_cast<int>(state.effectiveEffect))
-                      .arg(static_cast<int>(state.backend))
-                      .arg(static_cast<int>(state.fidelity))
-                      .arg(static_cast<int>(state.surfaceMode))
-                      .arg(state.platformApplied)
-                      .arg(m_backdropCapabilities.provider, state.reason));
+        qCDebug(fluent::logging::windowingCategory).noquote()
+            << QStringLiteral(
+                   "Window backdrop resolved requested=%1 effective=%2 backend=%3 "
+                   "fidelity=%4 surface=%5 platformApplied=%6 provider=%7 reason=%8")
+                   .arg(static_cast<int>(state.requestedEffect))
+                   .arg(static_cast<int>(state.effectiveEffect))
+                   .arg(static_cast<int>(state.backend))
+                   .arg(static_cast<int>(state.fidelity))
+                   .arg(static_cast<int>(state.surfaceMode))
+                   .arg(state.platformApplied)
+                   .arg(m_backdropCapabilities.provider, state.reason);
         update();
         const QList<QWidget*> descendants = findChildren<QWidget*>();
         for (QWidget* child : descendants)
