@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  FluentQt uilib based on Qt Widgets, with a Gallery demo app.
+  A cross-platform Fluent-style C++ UI component library for Qt Widgets.
 </p>
 
 <p align="center">
@@ -28,176 +28,168 @@
 
 ## 🧱 Dependencies
 
-| Category | Requirement |
+| Scope | Dependencies |
 |---|---|
-| Language | C++17 |
-| UI runtime | Qt Widgets, Qt 5.15+ or Qt 6.2+ |
-| Build | CMake presets, vcpkg manifest mode |
-| Library dependency | spdlog |
-| Tests | GTest |
+| FluentQt library | C++17, CMake 3.16+, Qt Widgets |
+| Gallery | FluentQt, Qt Network, spdlog/fmt |
+| Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
 
-Linux targets general desktop environments through Qt's X11 (`xcb`) and Wayland
-platform plugins. Ubuntu 22.04 x64 and ARM64 with Qt 6.2.x are the CI/reference
-baselines, with official Qt 5.15.2 `gcc_64` used for x64 Qt 5 validation. See
-[Linux Workflow](docs/development/linux-workflow.md) for portability scope,
-Qt 5/Qt 6 commands, desktop testing, and optional WSL2/Lima development notes.
+## 🚀 Quick Start
 
-## 🛠 Build FluentQt uilib
+### Integration
 
-macOS arm64:
-
-```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset vcpkg-osx -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-osx --target FluentQt
-```
-
-Windows x64:
-
-```powershell
-$env:VCPKG_ROOT = "D:\path\to\vcpkg"
-cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-windows --target FluentQt
-```
-
-Windows ARM64 with the native Qt `msvc2022_arm64` kit:
-
-```powershell
-$env:VCPKG_ROOT = "D:\path\to\vcpkg"
-cmake --preset vcpkg-windows-arm64 -D "CMAKE_PREFIX_PATH=C:/Qt/6.9.3/msvc2022_arm64" -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-windows-arm64 --target FluentQt
-```
-
-Linux x64:
-
-```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-linux --target FluentQt
-```
-
-Linux ARM64:
-
-```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset vcpkg-linux-arm64 -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-linux-arm64 --target FluentQt
-```
-
-## 🔌 Use FluentQt uilib
-
-See [`examples/hello_world/`](examples/hello_world/) for a minimal consumer example.
-
-| Integration mode | When to use |
+| Integration | CMake |
 |---|---|
-| Installed package | Fluent-Qt is installed or provided by a package manager. |
-| Source subproject | Fluent-Qt source is vendored and built with your app. |
+| `FetchContent` integration | `FetchContent_MakeAvailable(fluentqt)` |
+| Source integration | `add_subdirectory(Fluent-Qt)` |
+| Installed package integration | `find_package(FluentQt CONFIG REQUIRED)` |
 
-Installed package:
+#### `FetchContent` integration
 
 ```cmake
+cmake_minimum_required(VERSION 3.16)
+project(my_app LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include(FetchContent)
+FetchContent_Declare(
+    fluentqt
+    GIT_REPOSITORY https://github.com/calvinhxx/Fluent-Qt.git
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(fluentqt)
+
+add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+#### Source integration
+
+Place the Fluent-Qt source in the project's `Fluent-Qt` directory:
+
+```cmake
+cmake_minimum_required(VERSION 3.16)
+project(my_app LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_subdirectory(Fluent-Qt)
+
+add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+#### Installed package integration
+
+```cmake
+cmake_minimum_required(VERSION 3.16)
+project(my_app LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 find_package(FluentQt CONFIG REQUIRED)
+
+add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
 
-Source subproject:
+If FluentQt is outside the system search path, configure with `-DCMAKE_PREFIX_PATH=/path/to/fluentqt`.
 
-```cmake
-set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_ENABLE_GALLERY_PACKAGING OFF CACHE BOOL "" FORCE)
+### Minimal example
 
-add_subdirectory(external/Fluent-Qt)
-target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
-```
-
-Application code:
+`main.cpp`:
 
 ```cpp
 #include <FluentQt/FluentQt.h>
+#include <QApplication>
+#include <QString>
 
-fluent::initializeResources();
-QApplication::setFont(Typography::Styles::Body.toQFont());
+int main(int argc, char* argv[])
+{
+    QApplication app(argc, argv);
+    fluent::initializeResources();
 
-auto* button = new fluent::basicinput::Button("Save", this);
-button->setFluentStyle(fluent::basicinput::Button::Accent);
+    fluent::basicinput::Button button(QStringLiteral("Hello FluentQt"));
+    button.show();
+    return app.exec();
+}
+```
+
+See [`examples/hello_world`](examples/hello_world/) for the complete project, or run the `fluentqt_hello_world` target directly from an IDE.
+
+## 🛠 Build
+
+### Library
+
+```bash
+cmake -S . -B build/fluentqt \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=/path/to/Qt
+cmake --build build/fluentqt --config Release --target FluentQt --parallel
+cmake --install build/fluentqt --config Release \
+  --component Development --prefix /path/to/install
+```
+
+### Source package
+
+Create the reduced library source package for offline or source integration:
+
+```bash
+cmake --build build/fluentqt --target fluent_qt_source_package
 ```
 
 ## 🖼 Gallery
 
-Gallery is the demo application for this repository. It is useful for browsing the available controls, checking states, and comparing theme settings.
+Gallery is used to browse, demonstrate, and validate FluentQt components.
 
-Build the Gallery target after configuring the project:
+### Release packages
+
+Download the Gallery for the required platform, Qt version, and architecture from [GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest):
+
+| Platform | Qt 5 / x64 | Qt 6 / x64 | Qt 6 / ARM64 | Format |
+|---|---|---|---|---|
+| Windows | 5.15.2 | 6.2.4 | 6.9.3 | `.exe` |
+| macOS | 5.15.2 | 6.9.3 | 6.9.3 | `.dmg` |
+| Linux | 5.15 | 6.2.4 | 6.2.4 | `.deb` |
+
+### Run locally
+
+| Platform | x64 preset | ARM64 preset |
+|---|---|---|
+| Windows | `vcpkg-windows` | `vcpkg-windows-arm64` |
+| macOS | `vcpkg-osx-x64` | `vcpkg-osx` |
+| Linux | `vcpkg-linux` | `vcpkg-linux-arm64` |
+
+Replace `PRESET` with a value from the table:
 
 ```bash
-cmake --preset vcpkg-osx -DFLUENT_QT_BUILD_GALLERY=ON
-cmake --build --preset vcpkg-osx --target fluent_qt_gallery
+cmake --preset PRESET
+cmake --build --preset PRESET --target fluent_qt_gallery --parallel
 ```
 
-```powershell
-cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=ON
-cmake --build --preset vcpkg-windows --target fluent_qt_gallery
-```
+### Package locally
 
-```bash
-cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=ON
-cmake --build --preset vcpkg-linux --target fluent_qt_gallery
-```
-
-## 📦 Package Gallery
-
-| Qt | Platform | Architecture | Packaging preset |
+| Platform | x64 packaging preset | ARM64 packaging preset | Format |
 |---|---|---|---|
-| 5.15 | Windows | x64 | `vcpkg-windows-installer` |
-| 5.15 | macOS | x64 | `vcpkg-osx-x64-dmg` |
-| 5.15 | Linux | x64 (`.deb`) | `vcpkg-linux-deb` |
-| 6.2 | Windows | x64 | `vcpkg-windows-installer` |
-| 6.9.3 | Windows | ARM64 | `vcpkg-windows-arm64-installer` |
-| 6.2 | macOS | x64 | `vcpkg-osx-x64-dmg` |
-| 6.2 | macOS | arm64 | `vcpkg-osx-dmg` |
-| 6.2 | Linux | x64 (`.deb`) | `vcpkg-linux-deb` |
-| 6.2 | Linux | ARM64 (`.deb`) | `vcpkg-linux-arm64-deb` |
+| Windows | `vcpkg-windows-installer` | `vcpkg-windows-arm64-installer` | `.exe` |
+| macOS | `vcpkg-osx-x64-dmg` | `vcpkg-osx-dmg` | `.dmg` |
+| Linux | `vcpkg-linux-deb` | `vcpkg-linux-arm64-deb` | `.deb` |
 
-macOS arm64 DMG:
-
-```bash
-cmake --preset vcpkg-osx-release
-cmake --build --preset vcpkg-osx-release
-cpack --preset vcpkg-osx-dmg
-```
-
-Windows x64 installer:
-
-```powershell
-cmake --preset vcpkg-windows-release
-cmake --build --preset vcpkg-windows-release
-cpack --preset vcpkg-windows-installer
-```
-
-Linux x64 Debian package:
-
-```bash
-cmake --preset vcpkg-linux-release
-cmake --build --preset vcpkg-linux-release
-cpack --preset vcpkg-linux-deb
-```
-
-Linux ARM64 Debian package:
-
-```bash
-cmake --preset vcpkg-linux-arm64-release
-cmake --build --preset vcpkg-linux-arm64-release
-cpack --preset vcpkg-linux-arm64-deb
-```
+See the [Packaging Workflow](docs/development/packaging-workflow.md) for exact local packaging commands.
 
 ## 📚 Documentation
 
-| Development | Testing | Architecture | Design |
-|---|---|---|---|
-| [Development workflow](docs/development/README.md) | [Testing workflow](docs/development/testing-workflow.md) | [Architecture contracts](docs/architecture/README.md) | [Design language references](docs/design-languages/README.md) |
-| [Release governance](docs/development/release-governance.md) | [Visual review](docs/development/visual-review.md) | [Overlay behavior](docs/architecture/overlay-behavior.md) | [Figma sources](docs/design-languages/figma-sources.md) |
-| [Packaging workflow](docs/development/packaging-workflow.md) | [Linux workflow](docs/development/linux-workflow.md) |  |  |
+- [Development workflow](docs/development/README.md)
+- [Testing and visual review](docs/development/testing-workflow.md)
+- [Packaging workflow](docs/development/packaging-workflow.md)
+- [Release governance](docs/development/release-governance.md)
+- [Architecture contracts](docs/architecture/README.md)
+- [Design language references](docs/design-languages/README.md)
 
 ## 🔗 References
 

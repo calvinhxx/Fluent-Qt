@@ -9,7 +9,7 @@
 <h1 align="center">Fluent-Qt</h1>
 
 <p align="center">
-  基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。
+  面向 Qt Widgets 的跨平台 Fluent 风格 C++ UI 组件库。
 </p>
 
 <p align="center">
@@ -28,175 +28,168 @@
 
 ## 🧱 依赖
 
-| 类别 | 要求 |
+| 范围 | 依赖 |
 |---|---|
-| 语言 | C++17 |
-| UI 运行时 | Qt Widgets，Qt 5.15+ 或 Qt 6.2+ |
-| 构建 | CMake presets、vcpkg manifest mode |
-| 库依赖 | spdlog |
-| 测试 | GTest |
+| FluentQt 组件库 | C++17、CMake 3.16+、Qt Widgets |
+| Gallery | FluentQt、Qt Network、spdlog/fmt |
+| 测试 | FluentQt、Qt Test/Network、GTest、spdlog/fmt |
 
-Linux 通过 Qt 的 X11（`xcb`）与 Wayland 平台插件面向通用桌面环境。
-Ubuntu 22.04 x64 与 ARM64 + Qt 6.2.x 是 CI/参考基线，official Qt 5.15.2
-`gcc_64` 用于 x64 Qt 5 验证。兼容范围、Qt 5/Qt 6 命令、桌面测试和可选
-WSL2/Lima 开发说明见
-[Linux 工作流](docs/development/linux-workflow.md)。
+## 🚀 快速开始
 
-## 🛠 FluentQt uilib 编译
+### 集成方式
 
-macOS arm64:
-
-```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset vcpkg-osx -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-osx --target FluentQt
-```
-
-Windows x64:
-
-```powershell
-$env:VCPKG_ROOT = "D:\path\to\vcpkg"
-cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-windows --target FluentQt
-```
-
-Windows ARM64（使用原生 Qt `msvc2022_arm64` kit）：
-
-```powershell
-$env:VCPKG_ROOT = "D:\path\to\vcpkg"
-cmake --preset vcpkg-windows-arm64 -D "CMAKE_PREFIX_PATH=C:/Qt/6.9.3/msvc2022_arm64" -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-windows-arm64 --target FluentQt
-```
-
-Linux x64:
-
-```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-linux --target FluentQt
-```
-
-Linux ARM64:
-
-```bash
-export VCPKG_ROOT=/path/to/vcpkg
-cmake --preset vcpkg-linux-arm64 -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=OFF
-cmake --build --preset vcpkg-linux-arm64 --target FluentQt
-```
-
-## 🔌 FluentQt uilib 使用
-
-最小消费示例见 [`examples/hello_world/`](examples/hello_world/)。
-
-| 集成方式 | 适用场景 |
+| 集成方式 | CMake |
 |---|---|
-| 已安装 CMake 包 | Fluent-Qt 已安装，或由包管理器提供。 |
-| 源码子项目 | 将 Fluent-Qt 源码放进业务仓库一起编译。 |
+| `FetchContent` 集成 | `FetchContent_MakeAvailable(fluentqt)` |
+| 源码集成 | `add_subdirectory(Fluent-Qt)` |
+| 安装包集成 | `find_package(FluentQt CONFIG REQUIRED)` |
 
-已安装 CMake 包：
+#### `FetchContent` 集成
 
 ```cmake
+cmake_minimum_required(VERSION 3.16)
+project(my_app LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include(FetchContent)
+FetchContent_Declare(
+    fluentqt
+    GIT_REPOSITORY https://github.com/calvinhxx/Fluent-Qt.git
+    GIT_TAG main
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(fluentqt)
+
+add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+#### 源码集成
+
+将 Fluent-Qt 源码放入项目的 `Fluent-Qt` 目录：
+
+```cmake
+cmake_minimum_required(VERSION 3.16)
+project(my_app LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+add_subdirectory(Fluent-Qt)
+
+add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
+```
+
+#### 安装包集成
+
+```cmake
+cmake_minimum_required(VERSION 3.16)
+project(my_app LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 find_package(FluentQt CONFIG REQUIRED)
+
+add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
 
-源码子项目：
+如果 FluentQt 不在系统搜索路径中，配置时传入 `-DCMAKE_PREFIX_PATH=/path/to/fluentqt`。
 
-```cmake
-set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
-set(FLUENT_QT_ENABLE_GALLERY_PACKAGING OFF CACHE BOOL "" FORCE)
+### 最小示例
 
-add_subdirectory(external/Fluent-Qt)
-target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
-```
-
-业务代码：
+`main.cpp`：
 
 ```cpp
 #include <FluentQt/FluentQt.h>
+#include <QApplication>
+#include <QString>
 
-fluent::initializeResources();
+int main(int argc, char* argv[])
+{
+    QApplication app(argc, argv);
+    fluent::initializeResources();
 
-auto* button = new fluent::basicinput::Button("Save", this);
-button->setFluentStyle(fluent::basicinput::Button::Accent);
+    fluent::basicinput::Button button(QStringLiteral("Hello FluentQt"));
+    button.show();
+    return app.exec();
+}
+```
+
+完整工程见 [`examples/hello_world`](examples/hello_world/)，IDE 中可直接运行 `fluentqt_hello_world` target。
+
+## 🛠 构建
+
+### 组件库
+
+```bash
+cmake -S . -B build/fluentqt \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH=/path/to/Qt
+cmake --build build/fluentqt --config Release --target FluentQt --parallel
+cmake --install build/fluentqt --config Release \
+  --component Development --prefix /path/to/install
+```
+
+### 源码包
+
+生成用于离线或源码集成的精简组件库源码包：
+
+```bash
+cmake --build build/fluentqt --target fluent_qt_source_package
 ```
 
 ## 🖼 Gallery
 
-Gallery 是仓库里的演示应用，用来浏览控件、检查状态、对照主题设置。
+Gallery 用于浏览、演示和验证 FluentQt 组件。
 
-配置项目后，可以单独构建 Gallery target：
+### 发布包
+
+从 [GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest) 下载对应平台、Qt 版本和架构的 Gallery：
+
+| 平台 | Qt 5 / x64 | Qt 6 / x64 | Qt 6 / ARM64 | 格式 |
+|---|---|---|---|---|
+| Windows | 5.15.2 | 6.2.4 | 6.9.3 | `.exe` |
+| macOS | 5.15.2 | 6.9.3 | 6.9.3 | `.dmg` |
+| Linux | 5.15 | 6.2.4 | 6.2.4 | `.deb` |
+
+### 本地运行
+
+| 平台 | x64 preset | ARM64 preset |
+|---|---|---|
+| Windows | `vcpkg-windows` | `vcpkg-windows-arm64` |
+| macOS | `vcpkg-osx-x64` | `vcpkg-osx` |
+| Linux | `vcpkg-linux` | `vcpkg-linux-arm64` |
+
+将 `PRESET` 替换为表中的值：
 
 ```bash
-cmake --preset vcpkg-osx -DFLUENT_QT_BUILD_GALLERY=ON
-cmake --build --preset vcpkg-osx --target fluent_qt_gallery
+cmake --preset PRESET
+cmake --build --preset PRESET --target fluent_qt_gallery --parallel
 ```
 
-```powershell
-cmake --preset vcpkg-windows -DFLUENT_QT_BUILD_GALLERY=ON
-cmake --build --preset vcpkg-windows --target fluent_qt_gallery
-```
+### 本地打包
 
-```bash
-cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=ON
-cmake --build --preset vcpkg-linux --target fluent_qt_gallery
-```
-
-## 📦 Gallery 打包
-
-| Qt | 平台 | 架构 | 打包 preset |
+| 平台 | x64 打包 preset | ARM64 打包 preset | 格式 |
 |---|---|---|---|
-| 5.15 | Windows | x64 | `vcpkg-windows-installer` |
-| 5.15 | macOS | x64 | `vcpkg-osx-x64-dmg` |
-| 5.15 | Linux | x64（`.deb`） | `vcpkg-linux-deb` |
-| 6.2 | Windows | x64 | `vcpkg-windows-installer` |
-| 6.9.3 | Windows | ARM64 | `vcpkg-windows-arm64-installer` |
-| 6.2 | macOS | x64 | `vcpkg-osx-x64-dmg` |
-| 6.2 | macOS | arm64 | `vcpkg-osx-dmg` |
-| 6.2 | Linux | x64（`.deb`） | `vcpkg-linux-deb` |
-| 6.2 | Linux | ARM64（`.deb`） | `vcpkg-linux-arm64-deb` |
+| Windows | `vcpkg-windows-installer` | `vcpkg-windows-arm64-installer` | `.exe` |
+| macOS | `vcpkg-osx-x64-dmg` | `vcpkg-osx-dmg` | `.dmg` |
+| Linux | `vcpkg-linux-deb` | `vcpkg-linux-arm64-deb` | `.deb` |
 
-macOS arm64 DMG:
-
-```bash
-cmake --preset vcpkg-osx-release
-cmake --build --preset vcpkg-osx-release
-cpack --preset vcpkg-osx-dmg
-```
-
-Windows x64 安装包：
-
-```powershell
-cmake --preset vcpkg-windows-release
-cmake --build --preset vcpkg-windows-release
-cpack --preset vcpkg-windows-installer
-```
-
-Linux x64 Debian 包：
-
-```bash
-cmake --preset vcpkg-linux-release
-cmake --build --preset vcpkg-linux-release
-cpack --preset vcpkg-linux-deb
-```
-
-Linux ARM64 Debian 包：
-
-```bash
-cmake --preset vcpkg-linux-arm64-release
-cmake --build --preset vcpkg-linux-arm64-release
-cpack --preset vcpkg-linux-arm64-deb
-```
+具体本地打包命令见[打包工作流](docs/development/packaging-workflow.md)。
 
 ## 📚 文档
 
-| 开发 | 测试 | 架构 | 设计 |
-|---|---|---|---|
-| [开发工作流](docs/development/README.md) | [测试工作流](docs/development/testing-workflow.md) | [架构约定](docs/architecture/README.md) | [设计语言参考](docs/design-languages/README.md) |
-| [发布治理](docs/development/release-governance.md) | [视觉验收](docs/development/visual-review.md) | [Overlay 行为](docs/architecture/overlay-behavior.md) | [Figma 来源](docs/design-languages/figma-sources.md) |
-| [打包工作流](docs/development/packaging-workflow.md) | [Linux 工作流](docs/development/linux-workflow.md) |  |  |
+- [开发工作流](docs/development/README.md)
+- [测试与视觉验收](docs/development/testing-workflow.md)
+- [打包工作流](docs/development/packaging-workflow.md)
+- [发布治理](docs/development/release-governance.md)
+- [架构约定](docs/architecture/README.md)
+- [设计语言参考](docs/design-languages/README.md)
 
 ## 🔗 参考
 
@@ -205,7 +198,7 @@ cpack --preset vcpkg-linux-arm64-deb
 | [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows 视觉参考 |
 | [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS 风格参考 |
 | [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 风格参考 |
-| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 控件行为和示例页面参考 |
+| [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 组件行为和示例页面参考 |
 
 ## ⭐ Star History
 
