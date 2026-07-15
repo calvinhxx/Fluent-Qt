@@ -11,6 +11,7 @@ project(FluentQt VERSION 1.3.1 LANGUAGES CXX C)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
+include(cmake/FluentQtInstallHeaders.cmake)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -110,20 +111,7 @@ if(FLUENT_QT_INSTALL)
 		INCLUDES DESTINATION
 			"${CMAKE_INSTALL_INCLUDEDIR}"
 			"${CMAKE_INSTALL_INCLUDEDIR}/FluentQt")
-	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/FluentQt"
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-		COMPONENT Development
-		FILES_MATCHING PATTERN "*.h")
-	install(DIRECTORY
-		"${CMAKE_CURRENT_SOURCE_DIR}/src/components"
-		"${CMAKE_CURRENT_SOURCE_DIR}/src/compatibility"
-		"${CMAKE_CURRENT_SOURCE_DIR}/src/design"
-		"${CMAKE_CURRENT_SOURCE_DIR}/src/utils"
-		DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/FluentQt"
-		COMPONENT Development
-		FILES_MATCHING
-		PATTERN "*.h"
-		PATTERN "private" EXCLUDE)
+	fluent_qt_install_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
 	set(FLUENT_QT_CMAKE_PACKAGE_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/FluentQt")
 	configure_package_config_file(
