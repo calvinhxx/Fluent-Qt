@@ -10,6 +10,7 @@ struct GalleryComponentEntry {
     QString id;
     QString title;
     QString iconGlyph;
+    QString apiTypeName;
 };
 
 struct GalleryComponentCategory {
@@ -20,7 +21,25 @@ struct GalleryComponentCategory {
     QVector<GalleryComponentEntry> components;
 };
 
+/**
+ * @brief Public integration facts shown on a component documentation page.
+ * zh_CN: 组件文档页展示的公共集成信息。
+ */
+struct GalleryComponentReference {
+    QString header;
+    QString qualifiedType;
+    QString cmakeTarget;
+
+    bool isValid() const
+    {
+        return !header.isEmpty() && !qualifiedType.isEmpty() && !cmakeTarget.isEmpty();
+    }
+};
+
 const QVector<GalleryComponentCategory>& galleryComponentCatalog();
+
+/** @brief Resolves public integration facts for a component route. */
+GalleryComponentReference galleryComponentReference(const QString& routeId);
 
 /**
  * @brief Resolves the bundled control-icon resource for a control title.

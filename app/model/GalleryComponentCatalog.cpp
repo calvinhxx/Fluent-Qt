@@ -71,7 +71,8 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          QStringLiteral("menus_toolbars"),
          Typography::Icons::Save,
          {
-             {QStringLiteral("menu"), QStringLiteral("Menu"), Typography::Icons::List},
+             {QStringLiteral("menu"), QStringLiteral("Menu"), Typography::Icons::List,
+              QStringLiteral("FluentMenu")},
              {QStringLiteral("menu-bar"), QStringLiteral("MenuBar"), Typography::Icons::Save}
          }},
         {QStringLiteral("navigation"),
@@ -129,6 +130,27 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          }}
     };
     return catalog;
+}
+
+GalleryComponentReference galleryComponentReference(const QString& routeId)
+{
+    for (const GalleryComponentCategory& category : galleryComponentCatalog()) {
+        for (const GalleryComponentEntry& component : category.components) {
+            if (component.id != routeId)
+                continue;
+
+            const QString typeName = component.apiTypeName.isEmpty()
+                ? component.title
+                : component.apiTypeName;
+            return {
+                QStringLiteral("<FluentQt/FluentQt.h>"),
+                QStringLiteral("fluent::%1::%2")
+                    .arg(category.sourceDirectory, typeName),
+                QStringLiteral("FluentQt::FluentQt")
+            };
+        }
+    }
+    return {};
 }
 
 QString galleryControlImageResource(const QString& controlTitle)

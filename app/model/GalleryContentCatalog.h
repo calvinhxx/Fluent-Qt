@@ -21,8 +21,7 @@ enum class GalleryPageKind {
     Component,
     Foundation,       // Foundation landing page with feature cards. zh_CN: 基础落地页（特性卡片）。
     FoundationTopic,  // One foundation topic sub-page (typography/color/...). zh_CN: 单个基础主题子页。
-    Settings,
-    Fallback
+    Settings
 };
 
 /**
@@ -51,18 +50,17 @@ struct GallerySample {
  * zh_CN: 内容条目描述选中路由展示的内容；刻意不驱动左侧导航树结构。
  */
 struct GalleryContentEntry {
-    GalleryPageKind kind = GalleryPageKind::Fallback;
+    GalleryPageKind kind;
     QString routeId;
     QString title;
     QString description;
     QString categoryId;
     QStringList relatedRouteIds;
-    QStringList sampleIds;
 };
 
 /**
- * @brief Returns the static Gallery content catalog seeded for this phase.
- * zh_CN: 返回本阶段种子化的静态 Gallery 内容目录。
+ * @brief Returns the complete static Gallery content catalog.
+ * zh_CN: 返回完整的静态 Gallery 内容目录。
  */
 const QVector<GalleryContentEntry>& galleryContentCatalog();
 

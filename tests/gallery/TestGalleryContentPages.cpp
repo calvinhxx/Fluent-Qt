@@ -36,6 +36,7 @@
 #include "view/widgets/GalleryCodeBlock.h"
 #include "view/pages/GalleryComponentPage.h"
 #include "view/pages/GalleryContentPage.h"
+#include "view/widgets/GalleryComponentReferenceCard.h"
 #include "view/widgets/GalleryEntryGrid.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
@@ -47,12 +48,14 @@
 using fluent::gallery::GalleryCategoryPage;
 using fluent::gallery::GalleryCodeBlock;
 using fluent::gallery::GalleryComponentPage;
+using fluent::gallery::GalleryComponentReferenceCard;
 using fluent::gallery::GalleryContentPage;
 using fluent::gallery::GalleryEntryGrid;
 using fluent::gallery::GalleryNavigationViewModel;
 using fluent::gallery::GallerySampleCard;
 using fluent::gallery::GalleryWindow;
 using fluent::gallery::galleryComponentCatalog;
+using fluent::gallery::galleryComponentReference;
 using fluent::gallery::galleryControlImageResource;
 using fluent::gallery::galleryContentCatalog;
 using fluent::gallery::galleryContentEntry;
@@ -236,6 +239,24 @@ TEST_F(GalleryContentPagesTest, AllNavigationRoutesHaveContentAndSamples)
     }
 }
 
+TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface)
+{
+    for (const auto& category : galleryComponentCatalog()) {
+        for (const auto& component : category.components) {
+            const auto reference = galleryComponentReference(component.id);
+            ASSERT_TRUE(reference.isValid()) << component.id.toStdString();
+            EXPECT_EQ(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
+            EXPECT_EQ(reference.cmakeTarget, QStringLiteral("FluentQt::FluentQt"));
+            EXPECT_TRUE(reference.qualifiedType.startsWith(
+                QStringLiteral("fluent::%1::").arg(category.sourceDirectory)));
+        }
+    }
+
+    EXPECT_EQ(galleryComponentReference(QStringLiteral("menu")).qualifiedType,
+              QStringLiteral("fluent::menus_toolbars::FluentMenu"));
+    EXPECT_FALSE(galleryComponentReference(QStringLiteral("missing-route")).isValid());
+}
+
 // Every component route builds its page with live sample previews, exercising
 // each preview factory once so a broken sample fails fast here.
 TEST_F(GalleryContentPagesTest, EveryComponentRouteBuildsItsPage)
@@ -364,6 +385,8 @@ TEST_F(GalleryContentPagesTest, ComponentRoutesCreateComponentPages)
         EXPECT_EQ(page->routeId(), componentCase.routeId);
         EXPECT_EQ(page->title(), componentCase.title);
         EXPECT_FALSE(page->overviewText().isEmpty()) << componentCase.routeId.toStdString();
+        ASSERT_NE(page->referenceCard(), nullptr) << componentCase.routeId.toStdString();
+        EXPECT_TRUE(page->referenceCard()->reference().isValid());
         EXPECT_GE(page->sampleCount(), componentCase.minimumSampleCount)
             << componentCase.routeId.toStdString();
     }

@@ -5,11 +5,11 @@
 #include <QWidget>
 
 #include "components/navigation/StackContentHost.h"
+#include "model/GalleryContentCatalog.h"
 #include "model/GalleryNavigationItem.h"
 #include "support/logging/Log.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/GalleryPageFactory.h"
-#include "view/pages/PlaceholderPage.h"
 #include "view/shell/GalleryPageSkeleton.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 
@@ -59,6 +59,11 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
     if (!item) {
         LOG_WARN(QStringLiteral("GalleryContentPresenter presentRoute rejected routeId=%1 reason=missing-route")
+                     .arg(routeId));
+        return false;
+    }
+    if (routeId != QStringLiteral("settings") && !galleryContentEntry(routeId)) {
+        LOG_WARN(QStringLiteral("GalleryContentPresenter presentRoute rejected routeId=%1 reason=missing-content-entry")
                      .arg(routeId));
         return false;
     }
@@ -253,8 +258,11 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId)
     buildTimer.start();
     GalleryPageFactory pageFactory(m_navigationViewModel);
     QWidget* page = pageFactory.createPage(routeId);
-    if (!page)
-        page = new PlaceholderPage(*item);
+    if (!page) {
+        LOG_WARN(QStringLiteral("GalleryContentPresenter ensurePageBuilt rejected routeId=%1 reason=missing-page")
+                     .arg(routeId));
+        return -1;
+    }
     connectPageNavigation(page);
     const int index = m_contentHost->count();
     m_contentHost->insertPage(index, page);
