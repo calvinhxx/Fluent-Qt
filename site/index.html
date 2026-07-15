@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fluent-Qt - FluentQt uilib for Qt Widgets</title>
+    <title>Fluent-Qt - UI component library for Qt Widgets</title>
     <meta
       name="description"
-      content="基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。"
+      content="面向 Qt Widgets 的 Fluent 风格 C++ UI 组件库；Gallery 是示例应用。"
     >
     <meta name="theme-color" content="#fbfbfa">
     <meta property="og:title" content="Fluent-Qt">
-    <meta property="og:description" content="FluentQt uilib based on Qt Widgets, with a Gallery demo app.">
+    <meta property="og:description" content="A Fluent-style C++ UI component library for Qt Widgets; Gallery is its example app.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/gallery/gallery-hero-real.png">
     <meta name="fluent-qt-cloudflare-token" content="faf445759813451ca2d7a0652139b292">
@@ -27,7 +27,7 @@
         <div class="nav-links">
           <a href="#why" data-i18n="nav.why">依赖</a>
           <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
-          <a href="#components" data-i18n="nav.components">uilib</a>
+          <a href="#components" data-i18n="nav.components">组件库</a>
           <a href="#code" data-i18n="nav.code">集成</a>
           <a href="#engineering" data-i18n="nav.engineering">打包</a>
         </div>
@@ -47,19 +47,19 @@
           <div class="hero-copy">
             <h1 id="hero-title" data-i18n="hero.title">Fluent-Qt</h1>
             <p class="hero-lede" data-i18n="hero.lede">
-              基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。
+              面向 Qt Widgets 的 Fluent 风格 C++ UI 组件库；Gallery 是示例应用。
             </p>
           </div>
           <aside class="download-panel" aria-labelledby="download-title">
             <div class="desktop-download-card" aria-labelledby="download-title">
               <div class="download-card-head">
                 <span class="download-kicker" data-i18n="downloads.latest">最新版本</span>
-                <a class="download-version-pill" data-release-link href="https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.2.1">v1.2.1</a>
+                <a class="download-version-pill" data-release-link href="https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.3.0">v1.3.0</a>
               </div>
               <h3 id="download-title" data-i18n="downloads.desktopTitle">桌面端</h3>
               <p data-i18n="downloads.desktopCopy">从 GitHub Releases 下载打包后的 Gallery。</p>
 
-              <a class="quick-download quick-download-primary" data-primary-download data-analytics-event="download_primary" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Windows-x64.exe">
+              <a class="quick-download quick-download-primary" data-primary-download data-analytics-event="download_primary" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.3.0/Fluent-Qt-Gallery-1.3.0-Windows-x64.exe">
                 <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                 <span>
                   <strong data-primary-download-label data-i18n="downloads.primaryWindows">下载 Windows 版</strong>
@@ -67,32 +67,46 @@
               </a>
 
               <div class="download-list" aria-label="Other desktop downloads">
-                <a class="download-option" data-release-asset="macArm" data-analytics-event="download_macos_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Darwin-arm64.dmg">
+                <a class="download-option" data-release-asset="macArm" data-analytics-event="download_macos_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.3.0/Fluent-Qt-Gallery-1.3.0-Darwin-arm64.dmg">
                   <span class="platform-mark platform-mark-mac" aria-hidden="true"></span>
                   <span>
                     <strong data-i18n="downloads.macArm.row">macOS</strong>
                     <small>Apple Silicon</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="macIntel" data-analytics-event="download_macos_intel" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Darwin-x86_64.dmg">
+                <a class="download-option" data-release-asset="macIntel" data-analytics-event="download_macos_intel" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.3.0/Fluent-Qt-Gallery-1.3.0-Darwin-x86_64.dmg">
                   <span class="platform-mark platform-mark-mac" aria-hidden="true"></span>
                   <span>
                     <strong data-i18n="downloads.macIntel.row">macOS (Intel)</strong>
                     <small>Intel</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="windowsX64" data-analytics-event="download_windows_x64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Windows-x64.exe">
+                <a class="download-option" data-release-asset="windowsX64" data-analytics-event="download_windows_x64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.3.0/Fluent-Qt-Gallery-1.3.0-Windows-x64.exe">
                   <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                   <span>
                     <strong>Windows</strong>
                     <small>x64</small>
                   </span>
                 </a>
-                <a class="download-option" data-release-asset="windowsArm" data-analytics-event="download_windows_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.2.1/Fluent-Qt-Gallery-1.2.1-Windows-arm64.exe">
+                <a class="download-option" data-release-asset="windowsArm" data-analytics-event="download_windows_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.3.0/Fluent-Qt-Gallery-1.3.0-Windows-arm64.exe">
                   <span class="platform-mark platform-mark-windows" aria-hidden="true"></span>
                   <span>
                     <strong>Windows (arm64)</strong>
                     <small>ARM64</small>
+                  </span>
+                </a>
+                <a class="download-option" data-release-asset="linuxX64" data-analytics-event="download_linux_x64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.3.0/Fluent-Qt-Gallery-1.3.0-Linux-x86_64.deb">
+                  <span class="platform-mark platform-mark-linux" aria-hidden="true"></span>
+                  <span>
+                    <strong>Linux</strong>
+                    <small>x64 · Qt 6</small>
+                  </span>
+                </a>
+                <a class="download-option" data-release-asset="linuxArm" data-analytics-event="download_linux_arm64" href="https://github.com/calvinhxx/Fluent-Qt/releases/download/v1.3.0/Fluent-Qt-Gallery-1.3.0-Linux-arm64.deb">
+                  <span class="platform-mark platform-mark-linux" aria-hidden="true"></span>
+                  <span>
+                    <strong>Linux</strong>
+                    <small>ARM64 · Qt 6</small>
                   </span>
                 </a>
               </div>
@@ -110,7 +124,7 @@
             </article>
             <article>
               <span data-i18n="hero.supportPlatformLabel">平台</span>
-              <strong>Windows / macOS</strong>
+              <strong>Windows / macOS / Linux</strong>
             </article>
             <article>
               <span data-i18n="hero.supportLanguageLabel">语言</span>
@@ -134,13 +148,13 @@
       <section class="section-shell problem-section value-section" id="why" aria-labelledby="why-title">
         <div class="value-intro">
           <p class="eyebrow" data-i18n="why.eyebrow">依赖</p>
-          <h2 id="why-title" data-i18n="why.title">C++17、Qt Widgets、CMake presets 和 vcpkg。</h2>
+          <h2 id="why-title" data-i18n="why.title">核心组件库只需要 C++17、Qt Widgets 和 CMake。</h2>
         </div>
 
         <div class="value-board">
           <article class="value-thesis" aria-labelledby="comparison-title">
             <span data-i18n="comparison.title">使用顺序</span>
-            <h3 id="comparison-title" data-i18n="comparison.copy">先编译 FluentQt uilib，再集成到业务项目；Gallery 用来查看控件效果。</h3>
+            <h3 id="comparison-title" data-i18n="comparison.copy">将 FluentQt 组件库集成到业务项目；Gallery 用来查看控件效果。</h3>
             <small>C++17 / Qt 5.15+ / Qt 6.2+</small>
           </article>
 
@@ -156,14 +170,14 @@
               <span>02</span>
               <div>
                 <h3 data-i18n="problems.rewrite.title">Build</h3>
-                <p data-i18n="problems.rewrite.copy">使用 CMake presets 和 vcpkg manifest mode。</p>
+                <p data-i18n="problems.rewrite.copy">核心库可直接使用 CMake 和 Qt 构建；仓库 presets 与 vcpkg 用于 Gallery 和测试。</p>
               </div>
             </article>
             <article>
               <span>03</span>
               <div>
-                <h3 data-i18n="problems.native.title">Tests</h3>
-                <p data-i18n="problems.native.copy">库依赖 spdlog，测试使用 GTest。</p>
+                <h3 data-i18n="problems.native.title">可选依赖</h3>
+                <p data-i18n="problems.native.copy">Gallery 日志使用 spdlog/fmt，测试在此基础上增加 GTest。</p>
               </div>
             </article>
           </div>
@@ -171,16 +185,16 @@
 
         <div class="decision-strip">
             <article>
-              <span data-i18n="comparison.fluent.label">uilib 编译</span>
-              <strong data-i18n="comparison.fluent.copy">关闭 Gallery 和 tests 后构建 FluentQt target。</strong>
+              <span data-i18n="comparison.fluent.label">组件库编译</span>
+              <strong data-i18n="comparison.fluent.copy">默认配置直接构建 FluentQt target。</strong>
             </article>
             <article>
-              <span data-i18n="comparison.rewrite.label">uilib 使用</span>
+              <span data-i18n="comparison.rewrite.label">组件库使用</span>
               <strong data-i18n="comparison.rewrite.copy">业务项目链接 FluentQt::FluentQt。</strong>
             </article>
             <article>
               <span data-i18n="comparison.qss.label">Gallery 打包</span>
-              <strong data-i18n="comparison.qss.copy">CPack preset 生成 DMG 和 Windows installer。</strong>
+              <strong data-i18n="comparison.qss.copy">CPack presets 生成 Windows、macOS 和 Linux Gallery 包。</strong>
             </article>
         </div>
       </section>
@@ -244,7 +258,7 @@
         <div class="section-shell">
           <div class="split-heading compact-heading">
             <div>
-              <p class="eyebrow" data-i18n="components.eyebrow">FluentQt uilib</p>
+              <p class="eyebrow" data-i18n="components.eyebrow">FluentQt UI 组件库</p>
               <h2 id="components-title" data-i18n="components.title">业务项目链接 FluentQt::FluentQt 后使用这些控件。</h2>
             </div>
           </div>
@@ -328,10 +342,10 @@
       <section class="section-shell usecase-section" id="code" aria-labelledby="code-title">
         <div class="split-heading compact-heading">
           <div>
-            <p class="eyebrow" data-i18n="code.eyebrow">FluentQt uilib 使用</p>
+            <p class="eyebrow" data-i18n="code.eyebrow">使用 FluentQt 组件库</p>
             <h2 id="code-title" data-i18n="code.title">业务项目链接 FluentQt::FluentQt。</h2>
             <p class="section-lede" data-i18n="code.copy">
-              支持已安装 CMake 包，也支持源码子项目。最小消费示例见 examples/hello_world/。
+              支持已安装 CMake 包，也支持源码子项目。最小接入示例见 examples/hello_world/。
             </p>
           </div>
         </div>
@@ -350,7 +364,7 @@
               <article>
                 <span>01</span>
                 <div>
-                  <h3 data-i18n="integration.package.title">安装包方式</h3>
+                  <h3 data-i18n="integration.package.title">已安装 CMake 包</h3>
                   <p data-i18n="integration.package.copy">find_package(FluentQt CONFIG REQUIRED) 后链接 FluentQt::FluentQt。</p>
                 </div>
               </article>
@@ -358,14 +372,14 @@
                 <span>02</span>
                 <div>
                   <h3 data-i18n="integration.source.title">源码子项目</h3>
-                  <p data-i18n="integration.source.copy">add_subdirectory 前可以关掉 Gallery、测试、install 和 Gallery 打包。</p>
+                  <p data-i18n="integration.source.copy">直接 add_subdirectory；可执行示例、Gallery、测试、安装和打包在子项目模式下默认关闭。</p>
                 </div>
               </article>
               <article>
                 <span>03</span>
                 <div>
                   <h3 data-i18n="integration.gallery.title">example</h3>
-                  <p data-i18n="integration.gallery.copy">examples/hello_world/ 提供最小消费示例。</p>
+                  <p data-i18n="integration.gallery.copy">顶层 CMake 工程可直接运行 fluentqt_hello_world target。</p>
                 </div>
               </article>
             </div>
@@ -376,16 +390,24 @@
               <span data-i18n="integration.code.kicker">示例代码</span>
               <h3 id="integration-code-title" data-i18n="integration.code.title">CMake + QWidget</h3>
             </div>
-            <pre><code># CMakeLists.txt
+          <pre><code># CMakeLists.txt
 find_package(FluentQt CONFIG REQUIRED)
+add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 // main.cpp
 #include &lt;FluentQt/FluentQt.h&gt;
+#include &lt;QApplication&gt;
 
-fluent::initializeResources();
+int main(int argc, char* argv[])
+{
+    QApplication app(argc, argv);
+    fluent::initializeResources();
 
-auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
+    fluent::basicinput::Button button("Save");
+    button.show();
+    return app.exec();
+}</code></pre>
             <p class="code-comment" data-i18n="integration.code.copy">
               Gallery 可单独构建，用来查看控件效果。
             </p>
@@ -399,7 +421,7 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
             <p class="eyebrow" data-i18n="engineering.eyebrow">Gallery 打包</p>
             <h2 id="engineering-title" data-i18n="engineering.title">CMakePresets.json 提供 Gallery 的打包 preset。</h2>
             <p data-i18n="engineering.copy">
-              release 构建后使用 CPack 生成 Windows installer 或 macOS DMG。
+              release 构建后使用 CPack 生成 Windows installer、macOS DMG 或 Linux DEB。
             </p>
           </div>
           <div class="engineering-list">
@@ -421,7 +443,7 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
             </article>
             <article>
               <span>CPack</span>
-              <strong data-i18n="engineering.packaging">DMG / Windows installer</strong>
+              <strong data-i18n="engineering.packaging">DMG / Windows installer / DEB</strong>
             </article>
           </div>
         </div>
@@ -432,28 +454,28 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
     <footer class="site-footer">
       <div class="section-shell footer-layout">
         <span>Fluent-Qt</span>
-        <span data-i18n="footer.copy">MIT 许可。基于 Qt Widgets 的 FluentQt uilib。</span>
+        <span data-i18n="footer.copy">MIT 许可。面向 Qt Widgets 的 FluentQt UI 组件库。</span>
       </div>
     </footer>
 
     <script>
       const translations = {
         zh: {
-          "meta.title": "Fluent-Qt - FluentQt uilib for Qt Widgets",
-          "meta.description": "基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。",
+          "meta.title": "Fluent-Qt - 面向 Qt Widgets 的 UI 组件库",
+          "meta.description": "面向 Qt Widgets 的 Fluent 风格 C++ UI 组件库；Gallery 是示例应用。",
           "nav.why": "依赖",
           "nav.gallery": "Gallery",
-          "nav.components": "uilib",
+          "nav.components": "组件库",
           "nav.code": "集成",
           "nav.engineering": "打包",
           "hero.title": "Fluent-Qt",
-          "hero.lede": "基于 Qt Widgets 的 FluentQt uilib，附带 Gallery 演示应用。",
+          "hero.lede": "面向 Qt Widgets 的 Fluent 风格 C++ UI 组件库；Gallery 是示例应用。",
           "actions.github": "查看 GitHub",
           "actions.docsShort": "文档",
           "downloads.title": "下载 Gallery",
-          "downloads.release": "v1.2.1 Release",
+          "downloads.release": "v1.3.0 Release",
           "downloads.latest": "最新版本",
-          "downloads.releaseCopy": "Windows 与 macOS 的 Gallery 构建产物",
+          "downloads.releaseCopy": "Windows、macOS 与 Linux 的 Gallery 构建产物",
           "downloads.openRelease": "打开 Release",
           "downloads.primaryWindows": "下载 Windows 版",
           "downloads.desktopTitle": "桌面端",
@@ -473,36 +495,36 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "hero.supportPlatformLabel": "平台",
           "hero.supportLanguageLabel": "语言",
           "why.eyebrow": "依赖",
-          "why.title": "C++17、Qt Widgets、CMake presets 和 vcpkg。",
+          "why.title": "核心组件库只需要 C++17、Qt Widgets 和 CMake。",
           "problems.visual.title": "UI runtime",
           "problems.visual.copy": "Qt Widgets，支持 Qt 5.15+ 或 Qt 6.2+。",
           "problems.rewrite.title": "Build",
-          "problems.rewrite.copy": "使用 CMake presets 和 vcpkg manifest mode。",
-          "problems.native.title": "Tests",
-          "problems.native.copy": "库依赖 spdlog，测试使用 GTest。",
+          "problems.rewrite.copy": "核心库可直接使用 CMake 和 Qt 构建；仓库 presets 与 vcpkg 用于 Gallery 和测试。",
+          "problems.native.title": "可选依赖",
+          "problems.native.copy": "Gallery 日志使用 spdlog/fmt，测试在此基础上增加 GTest。",
           "comparison.title": "使用顺序",
-          "comparison.copy": "先编译 FluentQt uilib，再集成到业务项目；Gallery 用来查看控件效果。",
-          "comparison.fluent.label": "uilib 编译",
-          "comparison.fluent.copy": "关闭 Gallery 和 tests 后构建 FluentQt target。",
-          "comparison.rewrite.label": "uilib 使用",
+          "comparison.copy": "将 FluentQt 组件库集成到业务项目；Gallery 用来查看控件效果。",
+          "comparison.fluent.label": "组件库编译",
+          "comparison.fluent.copy": "默认配置直接构建 FluentQt target。",
+          "comparison.rewrite.label": "组件库使用",
           "comparison.rewrite.copy": "业务项目链接 FluentQt::FluentQt。",
           "comparison.qss.label": "Gallery 打包",
-          "comparison.qss.copy": "CPack preset 生成 DMG 和 Windows installer。",
+          "comparison.qss.copy": "CPack presets 生成 Windows、macOS 和 Linux Gallery 包。",
           "comparison.head.solution": "目录",
           "comparison.head.best": "内容",
           "comparison.head.tradeoff": "说明",
           "comparison.head.fluent": "用法",
           "comparison.qss.best": "依赖",
-          "comparison.qss.tradeoff": "C++17 / Qt Widgets / CMake presets / vcpkg。",
+          "comparison.qss.tradeoff": "C++17 / Qt Widgets / CMake。",
           "comparison.qss.fluent": "README 中的依赖表。",
-          "comparison.qml.best": "FluentQt uilib",
+          "comparison.qml.best": "FluentQt UI 组件库",
           "comparison.qml.tradeoff": "构建 FluentQt target，业务项目链接 FluentQt::FluentQt。",
-          "comparison.qml.fluent": "examples/hello_world/ 提供最小消费示例。",
+          "comparison.qml.fluent": "examples/hello_world/ 提供最小接入示例。",
           "comparison.electron.best": "Gallery",
           "comparison.electron.tradeoff": "独立演示应用，用来查看控件效果。",
           "comparison.electron.fluent": "可单独构建 fluent_qt_gallery target。",
           "comparison.tauri.best": "Gallery 打包",
-          "comparison.tauri.tradeoff": "Windows installer 和 macOS DMG 使用 CPack preset。",
+          "comparison.tauri.tradeoff": "Windows installer、macOS DMG 和 Linux DEB 使用 CPack preset。",
           "comparison.tauri.fluent": "发布包由 release workflow 生成。",
           "comparison.rn.best": "docs/development",
           "comparison.rn.tradeoff": "开发、测试、发布说明在文档目录。",
@@ -511,10 +533,10 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "comparison.flutter.tradeoff": "CI、Pages 和 Release 工作流。",
           "comparison.flutter.fluent": "release workflow 生成发布包。",
           "comparison.dotnet.best": "CMakePresets.json",
-          "comparison.dotnet.tradeoff": "preset 覆盖 Windows 和 macOS。",
+          "comparison.dotnet.tradeoff": "preset 覆盖 Windows、macOS 和 Linux。",
           "comparison.dotnet.fluent": "本地和 CI 共用 preset 名称。",
           "comparison.gtk.best": "examples/hello_world",
-          "comparison.gtk.tradeoff": "最小消费示例。",
+          "comparison.gtk.tradeoff": "最小接入示例。",
           "comparison.gtk.fluent": "示例不依赖 Gallery。",
           "comparison.imgui.best": "app/assets",
           "comparison.imgui.tradeoff": "Gallery 截图资源。",
@@ -529,7 +551,7 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "gallery.slider.copy": "用于检查范围和数值输入。",
           "gallery.collections.title": "集合视图",
           "gallery.collections.copy": "用于检查列表、树和网格视图。",
-          "components.eyebrow": "FluentQt uilib",
+          "components.eyebrow": "FluentQt UI 组件库",
           "components.title": "业务项目链接 FluentQt::FluentQt 后使用这些控件。",
           "componentRail.input": "基础输入",
           "componentRail.fields": "文本控件",
@@ -549,47 +571,47 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "componentCards.tree": "层级结构",
           "componentCards.dialog": "对话框",
           "componentCards.info": "提示条",
-          "code.eyebrow": "FluentQt uilib 使用",
+          "code.eyebrow": "使用 FluentQt 组件库",
           "code.title": "业务项目链接 FluentQt::FluentQt。",
-          "code.copy": "支持已安装 CMake 包，也支持源码子项目。最小消费示例见 examples/hello_world/。",
+          "code.copy": "支持已安装 CMake 包，也支持源码子项目。最小接入示例见 examples/hello_world/。",
           "integration.main.kicker": "CMake 目标",
           "integration.main.title": "核心目标是 FluentQt::FluentQt。",
           "integration.main.copy": "应用创建 QApplication，调用 fluent::initializeResources()，然后按命名空间使用控件。",
-          "integration.package.title": "安装包方式",
+          "integration.package.title": "已安装 CMake 包",
           "integration.package.copy": "find_package(FluentQt CONFIG REQUIRED) 后链接 FluentQt::FluentQt。",
           "integration.source.title": "源码子项目",
-          "integration.source.copy": "add_subdirectory 前可以关掉 Gallery、测试、install 和 Gallery 打包。",
+          "integration.source.copy": "直接 add_subdirectory；可执行示例、Gallery、测试、安装和打包在子项目模式下默认关闭。",
           "integration.gallery.title": "example",
-          "integration.gallery.copy": "examples/hello_world/ 提供最小消费示例。",
+          "integration.gallery.copy": "顶层 CMake 工程可直接运行 fluentqt_hello_world target。",
           "integration.code.kicker": "示例代码",
           "integration.code.title": "CMake + QWidget",
           "integration.code.copy": "Gallery 可单独构建，用来查看控件效果。",
           "engineering.eyebrow": "Gallery 打包",
           "engineering.title": "CMakePresets.json 提供 Gallery 的打包 preset。",
-          "engineering.copy": "release 构建后使用 CPack 生成 Windows installer 或 macOS DMG。",
+          "engineering.copy": "release 构建后使用 CPack 生成 Windows installer、macOS DMG 或 Linux DEB。",
           "engineering.components": "vcpkg-windows-installer",
           "engineering.app": "vcpkg-windows-arm64-installer",
           "engineering.tests": "vcpkg-osx-dmg",
           "engineering.docs": "vcpkg-osx-x64-dmg",
-          "engineering.packaging": "DMG / Windows installer",
-          "footer.copy": "MIT 许可。基于 Qt Widgets 的 FluentQt uilib。"
+          "engineering.packaging": "DMG / Windows installer / DEB",
+          "footer.copy": "MIT 许可。面向 Qt Widgets 的 FluentQt UI 组件库。"
         },
         en: {
-          "meta.title": "Fluent-Qt - FluentQt uilib for Qt Widgets",
-          "meta.description": "FluentQt uilib based on Qt Widgets, with a Gallery demo app.",
+          "meta.title": "Fluent-Qt - UI component library for Qt Widgets",
+          "meta.description": "A Fluent-style C++ UI component library for Qt Widgets; Gallery is its example app.",
           "nav.why": "Deps",
           "nav.gallery": "Gallery",
-          "nav.components": "uilib",
+          "nav.components": "Components",
           "nav.code": "Integrate",
           "nav.engineering": "Package",
           "hero.title": "Fluent-Qt",
-          "hero.lede": "FluentQt uilib based on Qt Widgets, with a Gallery demo app.",
+          "hero.lede": "A Fluent-style C++ UI component library for Qt Widgets; Gallery is its example app.",
           "actions.github": "View on GitHub",
           "actions.docsShort": "Docs",
           "downloads.title": "Download Gallery",
-          "downloads.release": "v1.2.1 Release",
+          "downloads.release": "v1.3.0 Release",
           "downloads.latest": "Latest",
-          "downloads.releaseCopy": "Gallery builds for Windows and macOS",
+          "downloads.releaseCopy": "Gallery builds for Windows, macOS, and Linux",
           "downloads.openRelease": "Open Release",
           "downloads.primaryWindows": "Download for Windows",
           "downloads.desktopTitle": "Desktop",
@@ -609,36 +631,36 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "hero.supportPlatformLabel": "Platforms",
           "hero.supportLanguageLabel": "Language",
           "why.eyebrow": "Dependencies",
-          "why.title": "C++17, Qt Widgets, CMake presets, and vcpkg.",
+          "why.title": "The core library needs only C++17, Qt Widgets, and CMake.",
           "problems.visual.title": "UI runtime",
           "problems.visual.copy": "Qt Widgets, with Qt 5.15+ or Qt 6.2+.",
           "problems.rewrite.title": "Build",
-          "problems.rewrite.copy": "Uses CMake presets and vcpkg manifest mode.",
-          "problems.native.title": "Tests",
-          "problems.native.copy": "The library depends on spdlog; tests use GTest.",
+          "problems.rewrite.copy": "Build the core library directly with CMake and Qt; repository presets and vcpkg serve Gallery and tests.",
+          "problems.native.title": "Optional dependencies",
+          "problems.native.copy": "Gallery logging uses spdlog/fmt; tests additionally use GTest.",
           "comparison.title": "Order",
-          "comparison.copy": "Build FluentQt uilib first, integrate it into your app, then use Gallery to inspect controls.",
-          "comparison.fluent.label": "Build uilib",
-          "comparison.fluent.copy": "Build the FluentQt target with Gallery and tests disabled.",
-          "comparison.rewrite.label": "Use uilib",
-          "comparison.rewrite.copy": "Consumer apps link FluentQt::FluentQt.",
+          "comparison.copy": "Integrate the FluentQt component library into your app, then use Gallery to inspect controls.",
+          "comparison.fluent.label": "Build library",
+          "comparison.fluent.copy": "The default configuration builds the FluentQt target.",
+          "comparison.rewrite.label": "Use library",
+          "comparison.rewrite.copy": "Applications link FluentQt::FluentQt.",
           "comparison.qss.label": "Package Gallery",
-          "comparison.qss.copy": "CPack presets produce DMG and Windows installer packages.",
+          "comparison.qss.copy": "CPack presets produce Windows, macOS, and Linux Gallery packages.",
           "comparison.head.solution": "Folder",
           "comparison.head.best": "Content",
           "comparison.head.tradeoff": "Notes",
           "comparison.head.fluent": "Usage",
           "comparison.qss.best": "Dependencies",
-          "comparison.qss.tradeoff": "C++17 / Qt Widgets / CMake presets / vcpkg.",
+          "comparison.qss.tradeoff": "C++17 / Qt Widgets / CMake.",
           "comparison.qss.fluent": "Dependency table in README.",
-          "comparison.qml.best": "FluentQt uilib",
+          "comparison.qml.best": "FluentQt UI component library",
           "comparison.qml.tradeoff": "Build the FluentQt target; link FluentQt::FluentQt.",
-          "comparison.qml.fluent": "examples/hello_world/ is the minimal consumer example.",
+          "comparison.qml.fluent": "examples/hello_world/ is the minimal integration example.",
           "comparison.electron.best": "Gallery",
           "comparison.electron.tradeoff": "Separate demo app for inspecting controls.",
           "comparison.electron.fluent": "Can be built as the fluent_qt_gallery target.",
           "comparison.tauri.best": "Gallery packaging",
-          "comparison.tauri.tradeoff": "Windows installer and macOS DMG use CPack presets.",
+          "comparison.tauri.tradeoff": "Windows installer, macOS DMG, and Linux DEB use CPack presets.",
           "comparison.tauri.fluent": "Release packages are built by the release workflow.",
           "comparison.rn.best": "docs/development",
           "comparison.rn.tradeoff": "Build, test, release, and packaging notes are kept in docs.",
@@ -647,10 +669,10 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "comparison.flutter.tradeoff": "CI, Pages, and Release workflows live here.",
           "comparison.flutter.fluent": "Release packages are built by the release workflow.",
           "comparison.dotnet.best": "CMakePresets.json",
-          "comparison.dotnet.tradeoff": "Presets cover Windows and macOS.",
+          "comparison.dotnet.tradeoff": "Presets cover Windows, macOS, and Linux.",
           "comparison.dotnet.fluent": "Local commands and CI use the same preset names.",
           "comparison.gtk.best": "examples/hello_world",
-          "comparison.gtk.tradeoff": "The example shows installed-library consumption.",
+          "comparison.gtk.tradeoff": "The example shows installed-library integration.",
           "comparison.gtk.fluent": "The example does not depend on Gallery.",
           "comparison.imgui.best": "app/assets",
           "comparison.imgui.tradeoff": "Gallery assets and component screenshots live here.",
@@ -665,8 +687,8 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "gallery.slider.copy": "Checks range and value input.",
           "gallery.collections.title": "Collections",
           "gallery.collections.copy": "Checks list, tree, and grid views.",
-          "components.eyebrow": "FluentQt uilib",
-          "components.title": "Consumer apps use these controls by linking FluentQt::FluentQt.",
+          "components.eyebrow": "FluentQt UI component library",
+          "components.title": "Applications use these controls by linking FluentQt::FluentQt.",
           "componentRail.input": "Basic input",
           "componentRail.fields": "Text fields",
           "componentRail.navigation": "Navigation",
@@ -685,30 +707,30 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
           "componentCards.tree": "Hierarchy",
           "componentCards.dialog": "Dialogs",
           "componentCards.info": "Info bars",
-          "code.eyebrow": "Use FluentQt uilib",
-          "code.title": "Consumer apps link FluentQt::FluentQt.",
-          "code.copy": "Use the installed CMake package or add the source tree as a subproject. See examples/hello_world/ for the minimal consumer example.",
+          "code.eyebrow": "Use FluentQt",
+          "code.title": "Applications link FluentQt::FluentQt.",
+          "code.copy": "Use the installed CMake package or add the source tree as a subproject. See examples/hello_world/ for the minimal integration example.",
           "integration.main.kicker": "CMake target",
           "integration.main.title": "The core target is FluentQt::FluentQt.",
           "integration.main.copy": "Apps create QApplication, call fluent::initializeResources(), then use controls by namespace.",
           "integration.package.title": "Installed package",
           "integration.package.copy": "Use find_package(FluentQt CONFIG REQUIRED), then link FluentQt::FluentQt.",
           "integration.source.title": "Source subproject",
-          "integration.source.copy": "Before add_subdirectory, Gallery, tests, install, and Gallery packaging can be turned off.",
+          "integration.source.copy": "Use add_subdirectory directly; executable examples, Gallery, tests, installation, and packaging default to off in subproject builds.",
           "integration.gallery.title": "example",
-          "integration.gallery.copy": "examples/hello_world/ provides the minimal consumer example.",
+          "integration.gallery.copy": "Top-level CMake projects expose the runnable fluentqt_hello_world target.",
           "integration.code.kicker": "Example code",
           "integration.code.title": "CMake + QWidget",
           "integration.code.copy": "Build Gallery separately when you need to inspect controls.",
           "engineering.eyebrow": "Package Gallery",
           "engineering.title": "CMakePresets.json provides Gallery packaging presets.",
-          "engineering.copy": "After a release build, CPack produces Windows installer or macOS DMG packages.",
+          "engineering.copy": "After a release build, CPack produces Windows installer, macOS DMG, or Linux DEB packages.",
           "engineering.components": "vcpkg-windows-installer",
           "engineering.app": "vcpkg-windows-arm64-installer",
           "engineering.tests": "vcpkg-osx-dmg",
           "engineering.docs": "vcpkg-osx-x64-dmg",
-          "engineering.packaging": "DMG / Windows installer",
-          "footer.copy": "MIT licensed. FluentQt uilib based on Qt Widgets."
+          "engineering.packaging": "DMG / Windows installer / DEB",
+          "footer.copy": "MIT licensed. FluentQt is a UI component library for Qt Widgets."
         }
       };
 
@@ -730,12 +752,14 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
       const downloadCopy = {
         zh: {
           latest: "最新版本",
+          primaryLinux: "下载 Linux 版",
           primaryMac: "下载 macOS 版",
           primaryOther: "打开最新 Release",
           primaryWindows: "下载 Windows 版"
         },
         en: {
           latest: "Latest release",
+          primaryLinux: "Download for Linux",
           primaryMac: "Download for macOS",
           primaryOther: "Open latest Release",
           primaryWindows: "Download for Windows"
@@ -790,6 +814,9 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
         if (source.includes("mac")) {
           return "mac";
         }
+        if (source.includes("linux")) {
+          return "linux";
+        }
         return "other";
       }
 
@@ -818,14 +845,18 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
             assets.macArm = url;
           } else if (/Darwin-x86_64\.dmg$/i.test(name)) {
             assets.macIntel = url;
+          } else if (/Linux-(?:x86_64|x64)\.deb$/i.test(name)) {
+            assets.linuxX64 = url;
+          } else if (/Linux-arm64\.deb$/i.test(name)) {
+            assets.linuxArm = url;
           } else if (/SHA256SUMS\.txt$/i.test(name)) {
             assets.sha256 = url;
           }
         });
         return {
           assets,
-          tagName: release.tag_name || release.tagName || "v1.2.1",
-          url: release.html_url || release.url || "https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.2.1"
+          tagName: release.tag_name || release.tagName || "v1.3.0",
+          url: release.html_url || release.url || "https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.3.0"
         };
       }
 
@@ -833,14 +864,16 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
         const releaseLink = document.querySelector("[data-release-link]");
         return {
           assets: {
+            linuxArm: document.querySelector("[data-release-asset='linuxArm']")?.href || "",
+            linuxX64: document.querySelector("[data-release-asset='linuxX64']")?.href || "",
             macArm: document.querySelector("[data-release-asset='macArm']")?.href || "",
             macIntel: document.querySelector("[data-release-asset='macIntel']")?.href || "",
             sha256: document.querySelector("[data-release-asset='sha256']")?.href || "",
             windowsArm: document.querySelector("[data-release-asset='windowsArm']")?.href || "",
             windowsX64: document.querySelector("[data-release-asset='windowsX64']")?.href || ""
           },
-          tagName: releaseLink?.textContent?.trim() || "v1.2.1",
-          url: releaseLink?.href || "https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.2.1"
+          tagName: releaseLink?.textContent?.trim() || "v1.3.0",
+          url: releaseLink?.href || "https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.3.0"
         };
       }
 
@@ -859,6 +892,9 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
         if (releaseState.platform === "windows") {
           return isArmArchitecture() ? "windowsArm" : "windowsX64";
         }
+        if (releaseState.platform === "linux") {
+          return isArmArchitecture() ? "linuxArm" : "linuxX64";
+        }
         return "release";
       }
 
@@ -875,6 +911,12 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
         if (primaryAsset === "windowsArm") {
           return "windowsX64";
         }
+        if (primaryAsset === "linuxArm") {
+          return "linuxX64";
+        }
+        if (primaryAsset === "linuxX64") {
+          return "linuxArm";
+        }
         return "windowsArm";
       }
 
@@ -886,6 +928,8 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
         mark.className = "platform-mark";
         if (assetKey === "release") {
           mark.classList.add("platform-mark-release");
+        } else if (assetKey.startsWith("linux")) {
+          mark.classList.add("platform-mark-linux");
         } else {
           mark.classList.add(assetKey.startsWith("mac") ? "platform-mark-mac" : "platform-mark-windows");
         }
@@ -903,6 +947,12 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
         }
         if (assetKey === "windowsX64") {
           return "Windows (x64)";
+        }
+        if (assetKey === "linuxArm") {
+          return "Linux (arm64)";
+        }
+        if (assetKey === "linuxX64") {
+          return "Linux (x64)";
         }
         return "Release";
       }
@@ -942,6 +992,8 @@ auto* button = new fluent::basicinput::Button("Save", this);</code></pre>
         if (primaryLabel) {
           if (primaryAsset === "release") {
             primaryLabel.textContent = dictionary.primaryOther;
+          } else if (primaryAsset.startsWith("linux")) {
+            primaryLabel.textContent = dictionary.primaryLinux;
           } else {
             primaryLabel.textContent = primaryAsset.startsWith("mac") ? dictionary.primaryMac : dictionary.primaryWindows;
           }
