@@ -25,7 +25,7 @@
 #include "design/CornerRadius.h"
 #include "design/Elevation.h"
 #include "design/Typography.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {

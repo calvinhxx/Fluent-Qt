@@ -13,7 +13,7 @@
 #include "components/windowing/TitleBar.h"
 #include "design/Typography.h"
 #include "model/GalleryContentCatalog.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "AppIcon.h"
 #include "GalleryContentPresenter.h"
 #include "GalleryIntroTour.h"

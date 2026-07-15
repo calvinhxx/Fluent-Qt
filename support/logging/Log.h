@@ -1,12 +1,12 @@
-#ifndef UTILS_LOG_H
-#define UTILS_LOG_H
+#ifndef FLUENTQT_SUPPORT_LOGGING_LOG_H
+#define FLUENTQT_SUPPORT_LOGGING_LOG_H
 
 #include <QString>
 #include <QtGlobal>
 
 #include <string>
 
-namespace utils::logging {
+namespace fluent::support::logging {
 
 /**
  * @brief Logging severity level shared by LOG_* macros and the spdlog backend.
@@ -75,24 +75,24 @@ void log(Level level, const char* file, int line, const char* function, const QS
 void log(Level level, const char* file, int line, const char* function, const std::string& message);
 void log(Level level, const char* file, int line, const char* function, const char* message);
 
-} // namespace utils::logging
+} // namespace fluent::support::logging
 
 #define LOG_TRACE(message) \
-    ::utils::logging::log(::utils::logging::Level::Trace, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Trace, __FILE__, __LINE__, Q_FUNC_INFO, (message))
 
 #define LOG_DEBUG(message) \
-    ::utils::logging::log(::utils::logging::Level::Debug, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Debug, __FILE__, __LINE__, Q_FUNC_INFO, (message))
 
 #define LOG_INFO(message) \
-    ::utils::logging::log(::utils::logging::Level::Info, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Info, __FILE__, __LINE__, Q_FUNC_INFO, (message))
 
 #define LOG_WARN(message) \
-    ::utils::logging::log(::utils::logging::Level::Warn, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Warn, __FILE__, __LINE__, Q_FUNC_INFO, (message))
 
 #define LOG_ERROR(message) \
-    ::utils::logging::log(::utils::logging::Level::Error, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Error, __FILE__, __LINE__, Q_FUNC_INFO, (message))
 
 #define LOG_CRITICAL(message) \
-    ::utils::logging::log(::utils::logging::Level::Critical, __FILE__, __LINE__, Q_FUNC_INFO, (message))
+    ::fluent::support::logging::log(::fluent::support::logging::Level::Critical, __FILE__, __LINE__, Q_FUNC_INFO, (message))
 
-#endif // UTILS_LOG_H
+#endif // FLUENTQT_SUPPORT_LOGGING_LOG_H

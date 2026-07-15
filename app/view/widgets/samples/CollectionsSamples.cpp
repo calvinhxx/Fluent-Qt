@@ -38,7 +38,7 @@
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "CollectionSampleDelegates.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "SampleBuilders.h"

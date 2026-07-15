@@ -7,7 +7,7 @@ if(POLICY CMP0091)
 endif()
 set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
 
-project(FluentQT VERSION 1.3.0 LANGUAGES CXX C)
+project(FluentQt VERSION 1.3.0 LANGUAGES CXX C)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -24,11 +24,12 @@ else()
     set(FLUENT_QT_IS_TOP_LEVEL OFF)
 endif()
 
-option(BUILD_TESTING "Enable testing and build tests" ${FLUENT_QT_IS_TOP_LEVEL})
-option(FLUENT_QT_BUILD_TESTS "Build Fluent-Qt test targets" ${FLUENT_QT_IS_TOP_LEVEL})
-option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" ${FLUENT_QT_IS_TOP_LEVEL})
+option(BUILD_TESTING "Enable testing and build tests" OFF)
+option(FLUENT_QT_BUILD_TESTS "Build Fluent-Qt test targets" OFF)
+option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" OFF)
+option(FLUENT_QT_BUILD_EXAMPLES "Build Fluent-Qt executable examples" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_INSTALL "Install Fluent-Qt library targets, headers, and CMake package files" ${FLUENT_QT_IS_TOP_LEVEL})
-option(FLUENT_QT_ENABLE_GALLERY_PACKAGING "Enable CPack packaging for the Gallery application" ${FLUENT_QT_IS_TOP_LEVEL})
+option(FLUENT_QT_ENABLE_GALLERY_PACKAGING "Enable CPack packaging for the Gallery application" OFF)
 
 if(MSVC)
 	add_definitions(-DUNICODE -D_UNICODE)
@@ -37,7 +38,6 @@ endif()
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
-find_package(spdlog CONFIG REQUIRED)
 
 # Enforce minimum supported Qt versions
 if(QT_VERSION_MAJOR EQUAL 5 AND Qt5_VERSION VERSION_LESS 5.15)
@@ -73,8 +73,6 @@ add_library(FluentQt::FluentQt ALIAS FluentQt)
 # Backward-compatible build-tree alias for existing local tests and examples.
 add_library(fluent_qt_lib ALIAS FluentQt)
 target_link_libraries(FluentQt
-	PRIVATE
-	spdlog::spdlog
 	PUBLIC
 	Qt${QT_VERSION_MAJOR}::Widgets
 )
@@ -94,6 +92,14 @@ set_target_properties(FluentQt PROPERTIES
 	EXPORT_NAME FluentQt
 	OUTPUT_NAME FluentQt
 )
+
+add_custom_target(fluent_qt_source_package
+	COMMAND ${CMAKE_COMMAND}
+		-D "FLUENT_QT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"
+		-D "FLUENT_QT_SOURCE_PACKAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/packages"
+		-D "FLUENT_QT_SOURCE_PACKAGE_VERSION=${PROJECT_VERSION}"
+		-P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CreateSourcePackage.cmake"
+	COMMENT "Create the FluentQt library source package")
 
 if(FLUENT_QT_INSTALL)
 	install(TARGETS FluentQt
@@ -137,10 +143,29 @@ if(FLUENT_QT_INSTALL)
 		"${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfigVersion.cmake"
 		DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}"
 		COMPONENT Development)
+	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+		DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt"
+		COMPONENT Development)
+endif()
+
+if(FLUENT_QT_BUILD_GALLERY OR (BUILD_TESTING AND FLUENT_QT_BUILD_TESTS))
+	find_package(spdlog CONFIG REQUIRED)
+	add_library(FluentQtLoggingSupport STATIC
+		"${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.cpp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.h")
+	target_include_directories(FluentQtLoggingSupport
+		PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+	target_link_libraries(FluentQtLoggingSupport
+		PUBLIC Qt${QT_VERSION_MAJOR}::Core
+		PRIVATE spdlog::spdlog)
 endif()
 
 if(FLUENT_QT_BUILD_GALLERY)
 	add_subdirectory(app)
+endif()
+
+if(FLUENT_QT_BUILD_EXAMPLES)
+	add_subdirectory(examples/hello_world)
 endif()
 
 # ut

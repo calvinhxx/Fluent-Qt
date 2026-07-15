@@ -1,6 +1,6 @@
 #include "GalleryNavigationState.h"
 
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 
 namespace fluent::gallery {
 

@@ -6,7 +6,7 @@
 
 #include "components/navigation/StackContentHost.h"
 #include "model/GalleryNavigationItem.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/GalleryPageFactory.h"
 #include "view/pages/PlaceholderPage.h"

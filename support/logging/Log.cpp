@@ -1,4 +1,4 @@
-#include "Log.h"
+#include "support/logging/Log.h"
 
 #include <QByteArray>
 #include <QCoreApplication>
@@ -27,58 +27,58 @@
 
 namespace {
 
-constexpr const char* kLoggerName = "spdlog";
+constexpr const char* kLoggerName = "fluentqt";
 constexpr const char* kLevelEnvVar = "SPDLOG_LEVEL";
 constexpr const char* kFileEnvVar = "SPDLOG_FILE";
 
 std::mutex g_mutex;
 std::shared_ptr<spdlog::logger> g_logger;
-utils::logging::Level g_defaultLevel = utils::logging::Level::Warn;
+fluent::support::logging::Level g_defaultLevel = fluent::support::logging::Level::Warn;
 QtMessageHandler g_previousQtHandler = nullptr;
 bool g_qtHandlerInstalled = false;
 thread_local bool g_inQtMessageHandler = false;
 
-spdlog::level::level_enum toSpdlogLevel(utils::logging::Level level)
+spdlog::level::level_enum toSpdlogLevel(fluent::support::logging::Level level)
 {
     switch (level) {
-    case utils::logging::Level::Trace:
+    case fluent::support::logging::Level::Trace:
         return spdlog::level::trace;
-    case utils::logging::Level::Debug:
+    case fluent::support::logging::Level::Debug:
         return spdlog::level::debug;
-    case utils::logging::Level::Info:
+    case fluent::support::logging::Level::Info:
         return spdlog::level::info;
-    case utils::logging::Level::Warn:
+    case fluent::support::logging::Level::Warn:
         return spdlog::level::warn;
-    case utils::logging::Level::Error:
+    case fluent::support::logging::Level::Error:
         return spdlog::level::err;
-    case utils::logging::Level::Critical:
+    case fluent::support::logging::Level::Critical:
         return spdlog::level::critical;
-    case utils::logging::Level::Off:
+    case fluent::support::logging::Level::Off:
         return spdlog::level::off;
     }
 
     return spdlog::level::warn;
 }
 
-utils::logging::Level fromSpdlogLevel(spdlog::level::level_enum level)
+fluent::support::logging::Level fromSpdlogLevel(spdlog::level::level_enum level)
 {
     switch (level) {
     case spdlog::level::trace:
-        return utils::logging::Level::Trace;
+        return fluent::support::logging::Level::Trace;
     case spdlog::level::debug:
-        return utils::logging::Level::Debug;
+        return fluent::support::logging::Level::Debug;
     case spdlog::level::info:
-        return utils::logging::Level::Info;
+        return fluent::support::logging::Level::Info;
     case spdlog::level::warn:
-        return utils::logging::Level::Warn;
+        return fluent::support::logging::Level::Warn;
     case spdlog::level::err:
-        return utils::logging::Level::Error;
+        return fluent::support::logging::Level::Error;
     case spdlog::level::critical:
-        return utils::logging::Level::Critical;
+        return fluent::support::logging::Level::Critical;
     case spdlog::level::off:
-        return utils::logging::Level::Off;
+        return fluent::support::logging::Level::Off;
     default:
-        return utils::logging::Level::Warn;
+        return fluent::support::logging::Level::Warn;
     }
 }
 
@@ -88,7 +88,7 @@ std::shared_ptr<spdlog::logger> logger()
     return g_logger;
 }
 
-std::shared_ptr<spdlog::logger> createLogger(const utils::logging::InitializationOptions& options)
+std::shared_ptr<spdlog::logger> createLogger(const fluent::support::logging::InitializationOptions& options)
 {
     std::vector<spdlog::sink_ptr> sinks;
     sinks.push_back(std::make_shared<spdlog::sinks::stderr_color_sink_mt>());
@@ -125,7 +125,7 @@ std::shared_ptr<spdlog::logger> createLogger(const utils::logging::Initializatio
 
     auto created = std::make_shared<spdlog::logger>(kLoggerName, sinks.begin(), sinks.end());
     created->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%n] [%l] [%s:%#] %v");
-    created->set_level(toSpdlogLevel(utils::logging::levelFromName(
+    created->set_level(toSpdlogLevel(fluent::support::logging::levelFromName(
         qEnvironmentVariable(kLevelEnvVar), options.defaultLevel)));
     // Flush from info up: lifecycle lines reach the file as they happen, and an
     // abnormal exit cannot lose them. Volume at info level is low enough that
@@ -145,30 +145,33 @@ void writeQtMessage(QtMsgType type, const QMessageLogContext& context, const QSt
 
     g_inQtMessageHandler = true;
 
-    utils::logging::Level level = utils::logging::Level::Debug;
+    fluent::support::logging::Level level = fluent::support::logging::Level::Debug;
     switch (type) {
     case QtDebugMsg:
-        level = utils::logging::Level::Debug;
+        level = fluent::support::logging::Level::Debug;
         break;
     case QtInfoMsg:
-        level = utils::logging::Level::Info;
+        level = fluent::support::logging::Level::Info;
         break;
     case QtWarningMsg:
-        level = utils::logging::Level::Warn;
+        level = fluent::support::logging::Level::Warn;
         break;
     case QtCriticalMsg:
-        level = utils::logging::Level::Error;
+        level = fluent::support::logging::Level::Error;
         break;
     case QtFatalMsg:
-        level = utils::logging::Level::Critical;
+        level = fluent::support::logging::Level::Critical;
         break;
     }
 
-    utils::logging::log(level,
-                        context.file ? context.file : "",
-                        context.line,
-                        context.function ? context.function : "",
-                        message);
+    const QString categorizedMessage = context.category && *context.category
+        ? QStringLiteral("[%1] %2").arg(QString::fromLatin1(context.category), message)
+        : message;
+    fluent::support::logging::log(level,
+                              context.file ? context.file : "",
+                              context.line,
+                              context.function ? context.function : "",
+                              categorizedMessage);
 
     g_inQtMessageHandler = false;
 }
@@ -183,7 +186,7 @@ void qtMessageHandler(QtMsgType type, const QMessageLogContext& context, const Q
 
 } // namespace
 
-namespace utils::logging {
+namespace fluent::support::logging {
 
 void initialize(const InitializationOptions& options)
 {
@@ -312,4 +315,4 @@ void log(Level level, const char* file, int line, const char* function, const ch
     log(level, file, line, function, QString::fromLocal8Bit(message ? message : ""));
 }
 
-} // namespace utils::logging
+} // namespace fluent::support::logging

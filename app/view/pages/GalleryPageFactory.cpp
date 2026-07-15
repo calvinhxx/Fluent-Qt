@@ -5,7 +5,7 @@
 #include "model/GalleryContentCatalog.h"
 #include "model/GalleryNavigationItem.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 #include "GalleryCategoryPage.h"
 #include "GalleryComponentPage.h"
 #include "GalleryFoundationPage.h"

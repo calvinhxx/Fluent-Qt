@@ -16,7 +16,7 @@ const QHash<QString, QString>& routeDescriptions()
     static const QHash<QString, QString> descriptions{
         // Foundation
         {QStringLiteral("foundation"),
-         QStringLiteral("The fundamentals every Fluent Qt control is built on: the QML+ runtime, type, color, icons, and geometry.")},
+         QStringLiteral("The fundamentals every FluentQt component is built on: the QML+ runtime, type, color, icons, and geometry.")},
         {QStringLiteral("foundation-qmlplus"),
          QStringLiteral("QML+ brings anchors, reactive property binding, and named states to plain QWidget controls.")},
         {QStringLiteral("foundation-typography"),
@@ -29,7 +29,7 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("Corner-radius and spacing tokens that give the controls their consistent rhythm.")},
         // Categories
         {QStringLiteral("all-controls"),
-         QStringLiteral("Browse the full set of Fluent Qt controls in one place.")},
+         QStringLiteral("Browse the full set of FluentQt components in one place.")},
         {QStringLiteral("basic-input"),
          QStringLiteral("Controls that let people trigger actions and make choices.")},
         {QStringLiteral("collections"),
@@ -183,7 +183,7 @@ QString descriptionFor(const QString& routeId, const QString& title)
     const auto it = routeDescriptions().constFind(routeId);
     if (it != routeDescriptions().constEnd())
         return it.value();
-    return QStringLiteral("A %1 control from the Fluent Qt component library.").arg(title);
+    return QStringLiteral("A %1 control from the FluentQt UI component library.").arg(title);
 }
 
 /**
@@ -203,7 +203,7 @@ QVector<GalleryContentEntry> buildCatalog()
     catalog.append({GalleryPageKind::Home,
                     QStringLiteral("home"),
                     QStringLiteral("Home"),
-                    QStringLiteral("Explore the Fluent Qt control library with live samples and copyable code."),
+                    QStringLiteral("Explore the FluentQt UI component library with live samples and copyable code."),
                     QString(),
                     {QStringLiteral("button"),
                      QStringLiteral("toggle-switch"),

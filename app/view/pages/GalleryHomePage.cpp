@@ -37,7 +37,7 @@
 #include "view/shell/AppIcon.h"
 #include "view/support/GalleryStyleSupport.h"
 #include "view/widgets/GalleryEntryGrid.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 
 namespace fluent::gallery {
 namespace {
@@ -452,8 +452,8 @@ public:
                QStringLiteral("Fluent controls and patterns for the web."),
                QStringLiteral("https://developer.microsoft.com/en-us/fluentui#/controls/web"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-Toolkit.png"));
-        append(QStringLiteral("Fluent Qt"),
-               QStringLiteral("Fluent Qt source on GitHub."),
+        append(QStringLiteral("FluentQt"),
+               QStringLiteral("FluentQt UI component library source on GitHub."),
                QStringLiteral("https://github.com/calvinhxx/Fluent-Qt"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-WinUI.png"));
         append(QStringLiteral("Qt Quick Controls"),

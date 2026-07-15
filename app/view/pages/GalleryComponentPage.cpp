@@ -8,7 +8,7 @@
 #include "view/widgets/GalleryEntryCard.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
-#include "utils/Log.h"
+#include "support/logging/Log.h"
 
 namespace fluent::gallery {
 
@@ -63,7 +63,7 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
 
     addSectionHeader(QStringLiteral("API notes"));
     addBodyText(QStringLiteral(
-        "These examples use the public %1 API from the Fluent Qt component library. "
+        "These examples use the public %1 API from the FluentQt UI component library. "
         "No Gallery-specific behavior is added to the reusable control.")
                     .arg(entry.title));
 

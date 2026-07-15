@@ -112,6 +112,7 @@ macro(add_qt_test_module module_name source_file)
     target_link_libraries(${module_name}
         PRIVATE
         FluentQt::FluentQt
+        FluentQtLoggingSupport
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Test
         Qt${QT_VERSION_MAJOR}::Network
