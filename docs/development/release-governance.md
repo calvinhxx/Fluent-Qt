@@ -99,7 +99,7 @@ Until a dedicated version file exists, the root CMake project version is the
 source of truth:
 
 ```cmake
-project(FluentQT VERSION X.Y.Z LANGUAGES CXX C)
+project(FluentQt VERSION X.Y.Z LANGUAGES CXX C)
 ```
 
 Release automation must verify that the tag version and CMake project version

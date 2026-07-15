@@ -34,6 +34,18 @@ keeps DMG/NSIS artifacts focused on the showcase application while normal
 `cmake --install` or `cmake --install --component Development` remains available
 for SDK-style library installs.
 
+Tagged releases also publish `FluentQt-<version>-source.zip`. This portable,
+library-only archive excludes Gallery, tests, and `support/logging`; create it
+locally after any normal configure with:
+
+```bash
+cmake --build <build-dir> --target fluent_qt_source_package
+```
+
+The release workflow generates the same archive directly through
+`cmake/CreateSourcePackage.cmake` and includes it in the release-wide
+`SHA256SUMS.txt`.
+
 Gallery application identity is defined once in `app/GalleryMetadata.cmake`.
 CMake applies it to the native metadata templates under `app/platform/windows`,
 `app/platform/macos`, and `app/platform/linux`; do not duplicate the application
@@ -241,6 +253,6 @@ its log as a packaging diagnostic.
 
 ## Version Contract
 
-The root CMake `project(FluentQT VERSION X.Y.Z ...)` value is the package
+The root CMake `project(FluentQt VERSION X.Y.Z ...)` value is the package
 version. Keep release tags, generated changelog entries, and CPack artifact
 names aligned with that version.

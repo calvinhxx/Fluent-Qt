@@ -1,147 +1,120 @@
 # Logging Workflow
 
-Use this workflow when adding, reviewing, or debugging project logs; choosing
-between the project logging facade and `spdlog`; setting runtime logging
-environment variables; validating Qt log bridge behavior; or deciding where
-diagnostic log anchors belong.
+Use this workflow when adding, reviewing, or debugging logs in the reusable
+library, Gallery, or tests.
 
-## Logging Entry Points
+## Layering Contract
 
-- The project uses `spdlog` behind the lightweight facade in `src/utils/Log.h`.
-- Prefer project macros such as `LOG_TRACE`, `LOG_DEBUG`, `LOG_INFO`, `LOG_WARN`,
-  and `LOG_ERROR`.
-- Do not scatter direct `spdlog::info(...)` or related calls inside components
-  unless the logging facade itself is being implemented or tested.
-- Tests share logging setup through `tests/support/QtGTestMain.cpp`; do not
-  duplicate global logging initialization in individual test files.
+- `FluentQt::FluentQt` depends only on Qt Widgets. It uses Qt logging categories
+  and must not link spdlog, install a global Qt message handler, create files, or
+  choose an application's logging policy.
+- Reusable code under `src/` uses `qCDebug`, `qCInfo`, `qCWarning`, or
+  `qCCritical` with a category named `fluentqt.<subsystem>`.
+- Categories are declared and defined in private library files. They are an
+  implementation detail, not installed public API.
+- Gallery and tests link the non-exported `FluentQtLoggingSupport` target from
+  `support/logging/`. That application-side target uses spdlog for console/file
+  sinks and bridges Qt messages into the same output in every build type.
+- Only the executable owns bridge initialization and shutdown. The library
+  never replaces the host application's Qt message handler.
 
-## Layering Policy
+Current library categories include:
 
-- `FluentQt::FluentQt` is meant for standalone third-party use, so the library ships
-  neutral defaults: level `Warn`, console output only, no file sink, no Qt
-  message handler. The library never calls `utils::logging::initialize` on its
-  own; the host application decides the policy.
-- Reusable components under `src/components/` stay silent in normal operation.
-  Use `qWarning` only for programmer errors such as contract violations or
-  invalid arguments, and never log in `paintEvent` or other per-frame paths.
-- The gallery app under `app/` owns the runtime policy: `app/main.cpp`
-  initializes logging at `Info` with file persistence and the Qt message
-  bridge, so component-layer `qWarning` output lands in the same log file.
+```text
+fluentqt.theme
+fluentqt.windowing
+```
 
-## App Persistence and Rotation
+Add a category only when a stable subsystem boundary exists. Keep normal
+operation quiet and never log from paint, animation-tick, or other per-frame
+paths.
 
-`app/main.cpp` enables file logging with the defaults below; third-party
-consumers of `FluentQt::FluentQt` opt in through their own
-`utils::logging::InitializationOptions`.
+## Choosing an Entry Point
 
-- File path: `utils::logging::defaultLogFilePath()` resolves to
-  `QStandardPaths::AppLocalDataLocation` + `/logs/<app>.log`.
-  - macOS: `~/Library/Application Support/Fluent-Qt/Fluent-Qt Gallery/logs/`
-  - Windows: `%LOCALAPPDATA%\Fluent-Qt\Fluent-Qt Gallery\logs\`
-- Rotation is size-based, not per-launch: a full file shifts into numbered
-  backups (`<name>.1.log`, `<name>.2.log`, ...). Defaults are
-  `maxFileSizeBytes` = 5 MiB and `maxRotatedFiles` = 2. Note the spdlog
-  semantics: `maxRotatedFiles` counts backups and the active file is extra, so
-  2 backups means at most 3 files on disk.
-- The logger flushes from `info` up: lifecycle lines reach the file as they
-  happen and an abnormal exit cannot lose them, while `debug`/`trace` bursts
-  stay buffered.
+In reusable library code:
+
+```cpp
+qCDebug(fluent::logging::windowingCategory)
+    << "restore" << "state=" << state;
+qCWarning(fluent::logging::themeCategory)
+    << "unknown theme" << themeId;
+```
+
+In Gallery or test code:
+
+```cpp
+#include "support/logging/Log.h"
+
+LOG_DEBUG("GalleryWindow routeChanged routeId=settings");
+LOG_WARN("GalleryPageFactory createPage reason=missing-route");
+```
+
+Do not call spdlog directly outside the logging support implementation.
+Tests share initialization through `tests/support/QtGTestMain.cpp`; individual
+tests must not install their own global handler.
 
 ## Diagnostic Anchors
 
-Add logs only when they help diagnose behavior. Good locations include:
+Useful anchors include layout recalculation, state transitions, navigation or
+selection changes, input handling, popup/animation lifecycle boundaries, test
+setup failures, and hard-to-see fallback decisions.
 
-- layout recalculation
-- state transitions
-- navigation or selection changes
-- input, wheel, drag, and gesture handling
-- popup, flyout, drawer, or animation lifecycle
-- test setup failures and hard-to-see visual states
+Keep messages stable and searchable:
 
-Keep log messages stable and searchable:
-
-- Include a stable component or subsystem name, such as `NavigationView` or
-  `StackContentHost`.
-- Include a clear event name, such as `layout`, `setCurrentIndex`,
-  `wheelInput`, or `bindFailed`.
-- Use key/value state, such as `old=0 new=2 width=960 reason=invalid-range`.
-- Avoid vague placeholders such as `here`, `xxx`, or `failed` without context.
-
-```cpp
-LOG_DEBUG("NavigationView layout mode=Top width=960");
-LOG_WARN("QMLPlus bindFailed reason=host-not-qwidget");
-```
-
-## Gallery App Anchors
-
-For the gallery app under `app/`, keep logs at workflow boundaries where a
-route or page changes hands. These anchors should make a route lifecycle
-searchable without logging every paint, delegate, or layout frame.
-
-- `GalleryNavigationViewModel` should log catalog build counts, route counts,
-  and the default route.
-- `GalleryNavigationState` should log selected-route transitions with
-  `old=<id> new=<id>`.
-- `GalleryWindow` should log `selectRoute` and `applyRoute` decisions with
-  `routeId`, rejection `reason`, and `pageType` when a page is created.
-- `GalleryNavigationPane` should log user item clicks, child-toggle intent, and
-  selection application or clearing. A missing index in the footer pane is a
-  normal trace-level condition when the selected route belongs to the main pane.
-- `GalleryPageFactory` should log rejected routes with `reason` and the
-  placeholder fallback for routes without content metadata.
-- Page objects should log page creation with the bound `routeId` and their
-  build counts (cards, samples, related links). `GalleryComponentPage` warns
-  when a component route resolves zero samples — that is a sample-catalog
-  coverage gap, not a normal state.
-- `GalleryEntryCard` should log activation clicks with the target `routeId`,
-  so a route change can be traced back to a card click versus a nav-pane
-  click.
-- `GalleryCodeBlock` should log one line per expander toggle (state, content
-  height, animated) and per copy action; the per-frame animation path stays
-  quiet.
-- `GalleryToast` should log each show and the `missing-host` rejection.
-- Keep delegate paint paths, row size hints, animation ticks, and scroll-thumb
-  painting quiet unless diagnosing a specific rendering bug.
+- name the subsystem or component;
+- name the event;
+- express state as `key=value`;
+- include a rejection or fallback reason;
+- avoid vague messages such as `here` or `failed` without context.
 
 ## Runtime Controls
 
-- Library and test runs stay conservative by default (`Warn`, console only);
-  the gallery app persists `Info` and above to the platform log file by
-  default.
-- `SPDLOG_LEVEL` overrides the effective level even when the application
-  passed an explicit default, so a verbose repro never requires a rebuild.
-  `SPDLOG_FILE` is a fallback: it applies only when no explicit
-  `logFilePath` was configured (library and test runs, not the gallery app).
-- Use `SPDLOG_LEVEL` for temporary debug verbosity:
+Qt categories are controlled by the host application or environment. Library
+debug/info categories are disabled by default; warnings remain visible.
 
 ```bash
-SPDLOG_LEVEL=debug SKIP_VISUAL_TEST=1 ./build/vcpkg-osx/tests/test_project_logging
+QT_LOGGING_RULES="fluentqt.*=true" ./my_application
+QT_LOGGING_RULES="fluentqt.windowing.debug=true" ./my_application
 ```
 
-- Supported levels are `trace`, `debug`, `info`, `warn`, `error`, `critical`,
-  and `off`.
-- Invalid levels should fall back to the default behavior without breaking the
-  run.
-- Use `SPDLOG_FILE` when a repro needs a saved log:
+Gallery and tests additionally support:
 
 ```bash
+SPDLOG_LEVEL=debug SKIP_VISUAL_TEST=1 \
+  ./build/vcpkg-osx/tests/test_project_logging
+
 SPDLOG_LEVEL=debug \
-SPDLOG_FILE=build/logs/spdlog.log \
-SKIP_VISUAL_TEST=1 ./build/vcpkg-osx/tests/components/navigation/test_navigation_view
+SPDLOG_FILE=build/logs/gallery.log \
+  ./build/vcpkg-osx/app/fluent_qt_gallery
 ```
 
-## Qt Log Bridge
+Supported spdlog levels are `trace`, `debug`, `info`, `warn`, `error`,
+`critical`, and `off`. `SPDLOG_FILE` is used when the executable did not provide
+an explicit file path.
 
-- The shared test entry initializes project logging.
-- Qt messages from `qDebug`, `qInfo`, `qWarning`, `qCritical`, and `qFatal`
-  should flow into the same logging output.
-- When testing the bridge, validate output behavior through the shared test
-  entry instead of adding per-test Qt message handlers.
+## Gallery Persistence and Rotation
+
+`app/main.cpp` enables Gallery file logging. The default path is
+`QStandardPaths::AppLocalDataLocation/logs/<app>.log`:
+
+- macOS: `~/Library/Application Support/Fluent-Qt/Fluent-Qt Gallery/logs/`
+- Windows: `%LOCALAPPDATA%\Fluent-Qt\Fluent-Qt Gallery\logs\`
+
+Rotation is size-based. Defaults are a 5 MiB active file and two numbered
+backups, for at most three files. Info and higher levels flush immediately;
+debug and trace output may remain buffered until normal shutdown.
+
+## Qt Message Bridge
+
+The Gallery and shared test entry initialize the application logging support's Qt
+message bridge. Messages from Qt and all `fluentqt.*` categories then use the
+same sinks and retain their category name. Validate bridge behavior through
+`test_project_logging`; do not duplicate the bridge in component tests.
 
 ## Scope Control
 
-- Do not add broad logging across unrelated components in a feature change.
-- Add logs near the behavior being changed or debugged, then keep only the
-  anchors that remain useful after the fix.
-- When a component already has clear state checks or test failures, prefer
-  improving the assertion message before adding noisy logs.
+- Add logs near behavior being changed and retain only diagnostically useful
+  anchors.
+- Prefer a clearer assertion when a failing test already exposes the state.
+- Do not broaden logging across unrelated components in a feature change.
+- Do not expose `support/logging/` through install rules or exported targets.
