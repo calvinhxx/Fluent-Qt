@@ -98,9 +98,9 @@ jobs:
 
           version="${tag#v}"
           base_version="${version%%-*}"
-          cmake_version="$(sed -nE 's/^[[:space:]]*project[[:space:]]*\([[:space:]]*FluentQT[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -n 1)"
+          cmake_version="$(sed -nE 's/^[[:space:]]*project[[:space:]]*\([[:space:]]*FluentQt[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -n 1)"
           if [[ -z "$cmake_version" ]]; then
-            echo "::error::Could not read project(FluentQT VERSION X.Y.Z ...) from CMakeLists.txt."
+            echo "::error::Could not read project(FluentQt VERSION X.Y.Z ...) from CMakeLists.txt."
             exit 1
           fi
 
@@ -446,9 +446,38 @@ jobs:
             ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
 
+  source-package:
+    name: Package FluentQt source
+    needs: preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.preflight.outputs.tag }}
+
+      - name: Create FluentQt library source package
+        shell: bash
+        run: |
+          cmake \
+            -D "FLUENT_QT_SOURCE_DIR=$GITHUB_WORKSPACE" \
+            -D "FLUENT_QT_SOURCE_PACKAGE_DIR=$RUNNER_TEMP/release-source" \
+            -D "FLUENT_QT_SOURCE_PACKAGE_VERSION=${{ needs.preflight.outputs.version }}" \
+            -P cmake/CreateSourcePackage.cmake
+
+      - name: Upload FluentQt library source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-source
+          if-no-files-found: error
+          retention-days: 14
+          path: ${{ runner.temp }}/release-source/*.zip
+
   publish:
     name: Publish GitHub Release
-    needs: [preflight, package]
+    needs: [preflight, package, source-package]
     if: ${{ needs.preflight.outputs.publish == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -485,7 +514,7 @@ jobs:
           set -euo pipefail
 
           mapfile -d '' packages < <(
-            find release-dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.deb' \) -print0 | sort -z
+            find release-dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.deb' -o -name '*.zip' \) -print0 | sort -z
           )
           if [[ "${#packages[@]}" == "0" ]]; then
             echo "::error::No release packages were downloaded."
