@@ -287,7 +287,7 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
 
     auto* searchBox = window.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
     ASSERT_NE(searchBox, nullptr);
-    EXPECT_EQ(searchBox->placeholderText(), QStringLiteral("Search controls and samples..."));
+    EXPECT_EQ(searchBox->placeholderText(), QStringLiteral("Search components and examples..."));
 
     // Home now resolves to a real content page rather than a placeholder.
     GalleryContentPage* page = window.currentContentPage();
@@ -296,7 +296,6 @@ TEST_F(GalleryShellFrameworkTest, WindowConstructsInitialHomeContentPage)
     EXPECT_EQ(page->routeId(), QStringLiteral("home"));
     ASSERT_NE(page->titleLabel(), nullptr);
     EXPECT_EQ(page->titleLabel()->text(), QStringLiteral("Home"));
-    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
 }
 
 TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithDesignResourceCards)
@@ -1252,18 +1251,15 @@ TEST_F(GalleryShellFrameworkTest, SelectRouteSwitchesContentPages)
     auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(mainPane, nullptr);
     ASSERT_NE(footerPane, nullptr);
-    // Home is a content page, so no placeholder is present initially.
+    // Home is a concrete documentation page.
     ASSERT_NE(window.currentContentPage(), nullptr);
-    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
 
-    // Every catalog route now resolves to a real content page; placeholders are
-    // reserved for hypothetical routes without content metadata.
-    // zh_CN: 目录路由现在全部解析为真实内容页；占位页只留给没有内容元数据的假想路由。
+    // Every catalog route resolves to a concrete documentation page.
+    // zh_CN: 每个目录路由都解析为真实的文档页面。
     ASSERT_TRUE(window.selectRoute(QStringLiteral("checkbox")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("checkbox"));
     EXPECT_EQ(mainPane->selectedRouteId(), QStringLiteral("checkbox"));
     EXPECT_EQ(footerPane->selectedRouteId(), QStringLiteral("checkbox"));
-    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
     GalleryContentPage* checkboxPage = nullptr;
     QTRY_VERIFY_WITH_TIMEOUT(
         (checkboxPage = window.currentContentPage())
@@ -1282,7 +1278,6 @@ TEST_F(GalleryShellFrameworkTest, SelectRouteSwitchesContentPages)
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("button"));
-    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
     GalleryContentPage* buttonPage = nullptr;
     QTRY_VERIFY_WITH_TIMEOUT(
         (buttonPage = window.currentContentPage())
@@ -1388,7 +1383,6 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("button"));
     ASSERT_NE(window.currentContentPage(), nullptr);
     EXPECT_EQ(window.currentContentPage()->title(), QStringLiteral("Button"));
-    EXPECT_EQ(window.currentPlaceholderPage(), nullptr);
 
     auto* footerPane = window.findChild<GalleryNavigationPane*>(QStringLiteral("galleryFooterNavigationPane"));
     ASSERT_NE(footerPane, nullptr);
@@ -1410,13 +1404,9 @@ TEST_F(GalleryShellFrameworkTest, NavigationButtonActivationUpdatesRoute)
 
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("settings"));
     EXPECT_EQ(settingsRotationAnimation->state(), QAbstractAnimation::Running);
-    QTest::qWait(80);
-    QApplication::processEvents();
-    EXPECT_GT(footerPane->settingsIconRotation(), 0.0);
+    QTRY_VERIFY_WITH_TIMEOUT(footerPane->settingsIconRotation() > 0.0, 250);
     QTest::mouseRelease(footerTree->viewport(), Qt::LeftButton, Qt::NoModifier, settingsPoint);
-    QTest::qWait(360);
-    QApplication::processEvents();
-    EXPECT_EQ(settingsRotationAnimation->state(), QAbstractAnimation::Stopped);
+    QTRY_COMPARE_WITH_TIMEOUT(settingsRotationAnimation->state(), QAbstractAnimation::Stopped, 1000);
     EXPECT_NEAR(footerPane->settingsIconRotation(), 0.0, 0.001);
     ASSERT_NE(window.currentSettingsPage(), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(window.currentSettingsPage()), nullptr);

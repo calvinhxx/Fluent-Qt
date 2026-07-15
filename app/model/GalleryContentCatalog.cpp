@@ -203,7 +203,7 @@ QVector<GalleryContentEntry> buildCatalog()
     catalog.append({GalleryPageKind::Home,
                     QStringLiteral("home"),
                     QStringLiteral("Home"),
-                    QStringLiteral("Explore the FluentQt UI component library with live samples and copyable code."),
+                    QStringLiteral("Interactive documentation for FluentQt: browse components, run live examples, and inspect focused C++ usage."),
                     QString(),
                     {QStringLiteral("button"),
                      QStringLiteral("toggle-switch"),
@@ -213,8 +213,7 @@ QVector<GalleryContentEntry> buildCatalog()
                      QStringLiteral("info-bar"),
                      QStringLiteral("tree-view"),
                      QStringLiteral("slider"),
-                     QStringLiteral("tab-view")},
-                    {}});
+                     QStringLiteral("tab-view")}});
 
     // Foundation landing: feature cards drill into one sub-page per design-token topic.
     // relatedRouteIds drives the cards, in nav order.
@@ -228,8 +227,7 @@ QVector<GalleryContentEntry> buildCatalog()
                      QStringLiteral("foundation-typography"),
                      QStringLiteral("foundation-color"),
                      QStringLiteral("foundation-iconography"),
-                     QStringLiteral("foundation-geometry")},
-                    {}});
+                     QStringLiteral("foundation-geometry")}});
     for (const QString& topicId : {QStringLiteral("foundation-qmlplus"),
                                    QStringLiteral("foundation-typography"),
                                    QStringLiteral("foundation-color"),
@@ -240,8 +238,7 @@ QVector<GalleryContentEntry> buildCatalog()
                         QString(),  // title comes from the nav item
                         descriptionFor(topicId, topicId),
                         QStringLiteral("foundation"),
-                        {QStringLiteral("foundation")},
-                        {}});
+                        {QStringLiteral("foundation")}});
     }
 
     // "All" lists every component; an empty categoryId means no category filter.
@@ -251,7 +248,6 @@ QVector<GalleryContentEntry> buildCatalog()
                     QStringLiteral("All controls"),
                     descriptionFor(QStringLiteral("all-controls"), QStringLiteral("All controls")),
                     QString(),
-                    {},
                     {}});
 
     for (const GalleryComponentCategory& category : galleryComponentCatalog()) {
@@ -260,7 +256,6 @@ QVector<GalleryContentEntry> buildCatalog()
                         category.title,
                         descriptionFor(category.id, category.title),
                         category.id,
-                        {},
                         {}});
         for (const GalleryComponentEntry& component : category.components) {
             catalog.append({GalleryPageKind::Component,
@@ -268,8 +263,7 @@ QVector<GalleryContentEntry> buildCatalog()
                             component.title,
                             descriptionFor(component.id, component.title),
                             category.id,
-                            {category.id},
-                            {}});
+                            {category.id}});
         }
     }
 

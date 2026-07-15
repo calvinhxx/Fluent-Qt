@@ -14,11 +14,12 @@ class Button;
 namespace fluent::gallery {
 
 class GalleryNavigationViewModel;
+class GalleryComponentReferenceCard;
 class GallerySampleCard;
 
 /**
- * @brief Component detail page with overview, examples, API notes, and related sections.
- * zh_CN: 组件详情页，含概览、示例、API 说明与相关内容分区。
+ * @brief Component documentation page with overview, public API reference, and live examples.
+ * zh_CN: 组件文档页，包含概览、公共 API 参考与实时示例。
  */
 class GalleryComponentPage : public GalleryContentPage {
     Q_OBJECT
@@ -31,6 +32,7 @@ public:
     QString overviewText() const { return m_overviewText; }
     int sampleCount() const { return m_sampleCards.size(); }
     QVector<GallerySampleCard*> sampleCards() const { return m_sampleCards; }
+    GalleryComponentReferenceCard* referenceCard() const { return m_referenceCard; }
 
     void onThemeUpdated() override;
 
@@ -40,6 +42,7 @@ private:
     void updateThemeButton();
 
     QString m_overviewText;
+    GalleryComponentReferenceCard* m_referenceCard = nullptr;
     QVector<GallerySampleCard*> m_sampleCards;
     ::fluent::basicinput::Button* m_themeButton = nullptr;
     fluent::FluentElement::Theme m_sampleTheme = fluent::FluentElement::Light;

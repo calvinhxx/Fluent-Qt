@@ -24,7 +24,6 @@
 #include "GalleryTopNavigationPane.h"
 #include "GalleryWindowMetrics.h"
 #include "view/pages/GalleryContentPage.h"
-#include "view/pages/PlaceholderPage.h"
 #include "view/pages/SettingsPage.h"
 
 namespace fluent::gallery {
@@ -348,13 +347,6 @@ GalleryContentPage* GalleryWindow::currentContentPage() const
 {
     return m_contentPresenter
         ? dynamic_cast<GalleryContentPage*>(m_contentPresenter->currentPage())
-        : nullptr;
-}
-
-PlaceholderPage* GalleryWindow::currentPlaceholderPage() const
-{
-    return m_contentPresenter
-        ? dynamic_cast<PlaceholderPage*>(m_contentPresenter->currentPage())
         : nullptr;
 }
 

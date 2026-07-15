@@ -3,8 +3,10 @@
 #include "components/basicinput/Button.h"
 #include "components/status_info/ToolTip.h"
 #include "design/Typography.h"
+#include "model/GalleryComponentCatalog.h"
 #include "model/GalleryNavigationItem.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
+#include "view/widgets/GalleryComponentReferenceCard.h"
 #include "view/widgets/GalleryEntryCard.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
@@ -45,7 +47,17 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     if (!m_overviewText.isEmpty())
         addBodyText(m_overviewText);
 
-    addSectionHeader(QStringLiteral("Examples"));
+    const GalleryComponentReference reference = galleryComponentReference(entry.routeId);
+    if (reference.isValid()) {
+        addSectionHeader(QStringLiteral("Use"));
+        m_referenceCard = new GalleryComponentReferenceCard(reference, this);
+        addContentWidget(m_referenceCard);
+    } else {
+        LOG_WARN(QStringLiteral("GalleryComponentPage reference missing routeId=%1 title=%2")
+                     .arg(entry.routeId, entry.title));
+    }
+
+    addSectionHeader(QStringLiteral("Live examples"));
     const QVector<GallerySample> samples = gallerySamplesForRoute(entry.routeId);
     // A component page without samples is a coverage gap in the sample catalog,
     // not a normal state — surface it loudly.
@@ -61,14 +73,8 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     }
     applySampleTheme();
 
-    addSectionHeader(QStringLiteral("API notes"));
-    addBodyText(QStringLiteral(
-        "These examples use the public %1 API from the FluentQt UI component library. "
-        "No Gallery-specific behavior is added to the reusable control.")
-                    .arg(entry.title));
-
     if (!entry.relatedRouteIds.isEmpty()) {
-        addSectionHeader(QStringLiteral("Related"));
+        addSectionHeader(QStringLiteral("Category"));
         for (const QString& relatedRouteId : entry.relatedRouteIds) {
             const GalleryNavigationItem* relatedItem = navigationViewModel.itemById(relatedRouteId);
             if (!relatedItem)
@@ -103,6 +109,8 @@ void GalleryComponentPage::onThemeUpdated()
         m_sampleTheme = currentTheme();
     if (m_themeButton)
         m_themeButton->onThemeUpdated();
+    if (m_referenceCard)
+        m_referenceCard->onThemeUpdated();
     updateThemeButton();
     applySampleTheme();
 }

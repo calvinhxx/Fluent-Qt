@@ -28,7 +28,6 @@ class GalleryNavigationItem;
 class GallerySplashScreen;
 class GalleryTitleBarController;
 class GalleryTopNavigationPane;
-class PlaceholderPage;
 class SettingsPage;
 
 /**
@@ -63,7 +62,6 @@ public:
      */
     bool navigateToSearchResult(const QString& searchText);
     GalleryContentPage* currentContentPage() const;
-    PlaceholderPage* currentPlaceholderPage() const;
     SettingsPage* currentSettingsPage() const;
 
 protected:

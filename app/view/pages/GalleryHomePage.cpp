@@ -915,10 +915,10 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
         return grid;
     };
 
-    // Featured samples mirror the curated routes from the content catalog.
-    // zh_CN: 精选示例来自内容目录的精选路由。
+    // Featured components mirror the curated routes from the content catalog.
+    // zh_CN: 精选组件来自内容目录的精选路由。
     fluent::textfields::Label* featuredHeader = createTrackedLabel(
-        QStringLiteral("Featured samples"), Typography::FontRole::Subtitle, TextRole::Primary);
+        QStringLiteral("Featured components"), Typography::FontRole::Subtitle, TextRole::Primary);
     featuredHeader->setObjectName(QStringLiteral("galleryHomeFeaturedHeader"));
     bodyLayout->addWidget(featuredHeader);
 
