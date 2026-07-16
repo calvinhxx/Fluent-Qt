@@ -20,7 +20,14 @@ namespace {
 // Delay between showing the skeleton and building a cold page, long enough for the skeleton
 // to paint a frame first (so it actually appears) before the build briefly blocks the thread.
 // zh_CN: 显示骨架到构建冷页之间的延迟，足够骨架先绘制一帧（确保真的出现）再让构建短暂阻塞线程。
+#if defined(QT_DEBUG)
+// Debug page construction is deliberately expensive. Treat the skeleton window as a short
+// debounce so rapid navigation can replace stale requests before a cold build blocks the UI.
+constexpr int kSkeletonRevealMs = 100;
+#else
+// Release only needs enough time for the skeleton to reach the backing store once.
 constexpr int kSkeletonRevealMs = 32;
+#endif
 
 // Time budget for splash-phase prewarm. Building pages freezes the GUI thread, so we only warm
 // while the splash hides it; once this elapses we stop and dismiss the splash, leaving the
