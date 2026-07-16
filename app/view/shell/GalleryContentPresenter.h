@@ -4,10 +4,12 @@
 #include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
+#include <QPointer>
 #include <QQueue>
 #include <QString>
 #include <QStringList>
 
+class QEvent;
 class QWidget;
 
 namespace fluent::navigation {
@@ -47,11 +49,11 @@ public:
      * Re-presenting the route already on screen is a no-op that returns true. The first
      * route (startup, behind the splash) builds synchronously so the splash hands directly
      * to real content. Already-built routes switch instantly. A cold route during normal
-     * use shows a shimmer skeleton immediately, then builds the real page on the next
-     * event-loop tick and swaps it in — so the click never freezes on the build.
+     * use shows a shimmer skeleton immediately, returns from the input handler, then builds
+     * the real page after the skeleton has painted one frame and swaps it in.
      * zh_CN: 重复呈现已在屏幕上的路由为无操作，返回 true。首个路由（启动、splash 背后）同步构建，
      * 使 splash 直接交给真内容。已建路由瞬时切换。正常使用中点开冷路由会立刻显示 shimmer 骨架屏，
-     * 下一个事件循环帧再建真页并换入——于是点击不会卡在建页上。
+     * 骨架绘制一帧后再建真页并换入，避免把建页成本塞进点击处理函数。
      */
     bool presentRoute(const QString& routeId);
 
@@ -86,18 +88,34 @@ public:
 signals:
     void routeActivated(const QString& routeId);
 
+    /**
+     * @brief Reports request-to-first-paint navigation timing for diagnostics and regression tests.
+     * zh_CN: 上报从导航请求到目标页首帧绘制的耗时，供诊断与回归测试使用。
+     */
+    void navigationPresented(const QString& routeId,
+                             bool cold,
+                             qint64 buildMs,
+                             qint64 switchMs,
+                             qint64 totalMs);
+
     /** @brief Splash-phase prewarm warmed `done` of `total` queued pages; drives the splash caption. */
     void prewarmProgress(int done, int total);
     /** @brief Splash-phase prewarm has finished (budget hit or queue drained); dismiss the splash. */
     void prewarmFinished();
 
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
+    void beginNavigationWatch(const QString& routeId, bool cold, quint64 requestId);
+    void watchNavigationPage(QWidget* page, qint64 buildMs);
+    void cancelNavigationWatch();
     void connectPageNavigation(QWidget* page);
-    int ensurePageBuilt(const QString& routeId);
+    int ensurePageBuilt(const QString& routeId, qint64* buildMs = nullptr);
     void ensureSkeleton();
-    void scheduleLazyBuild(const QString& routeId);
+    void scheduleLazyBuild(const QString& routeId, quint64 requestId);
     void scheduleNextPrewarm();
-    void switchToStackPage(int targetIndex);
+    qint64 switchToStackPage(int targetIndex);
 
     fluent::navigation::StackContentHost* m_contentHost = nullptr;
     const GalleryNavigationViewModel& m_navigationViewModel;
@@ -132,6 +150,15 @@ private:
 
     int m_prewarmTotal = 0;   // Pages queued for splash-phase warm; denominator of the caption.
     int m_prewarmDone = 0;    // Pages warmed so far; numerator of the caption.
+
+    quint64 m_navigationRequestId = 0;
+    quint64 m_pendingRequestId = 0;
+    QString m_pendingRouteId;
+    QPointer<QWidget> m_pendingPage;
+    QElapsedTimer m_pendingNavigationTimer;
+    qint64 m_pendingBuildMs = 0;
+    qint64 m_pendingSwitchMs = 0;
+    bool m_pendingCold = false;
 };
 
 } // namespace fluent::gallery

@@ -71,7 +71,6 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
         addContentWidget(card);
         m_sampleCards.append(card);
     }
-    applySampleTheme();
 
     if (!entry.relatedRouteIds.isEmpty()) {
         addSectionHeader(QStringLiteral("Category"));
@@ -112,7 +111,10 @@ void GalleryComponentPage::onThemeUpdated()
     if (m_referenceCard)
         m_referenceCard->onThemeUpdated();
     updateThemeButton();
-    applySampleTheme();
+    // Without a local override the previews follow the global theme manager directly.
+    // Reapplying an empty override here used to traverse and relayout every sample twice.
+    if (m_sampleThemeExplicit)
+        applySampleTheme();
 }
 
 void GalleryComponentPage::toggleSampleTheme()
@@ -145,10 +147,11 @@ void GalleryComponentPage::updateThemeButton()
         return;
     const FluentElement::Theme visibleTheme =
         m_sampleThemeExplicit ? m_sampleTheme : currentTheme();
-    m_themeButton->setProperty("gallerySampleTheme",
-                               visibleTheme == FluentElement::Dark
-                                   ? QStringLiteral("Dark")
-                                   : QStringLiteral("Light"));
+    const QString themeName = visibleTheme == FluentElement::Dark
+        ? QStringLiteral("Dark")
+        : QStringLiteral("Light");
+    if (m_themeButton->property("gallerySampleTheme").toString() != themeName)
+        m_themeButton->setProperty("gallerySampleTheme", themeName);
     m_themeButton->setIconGlyph(Typography::Icons::Sunny, kThemeButtonIconSize);
     m_themeButton->update();
 }

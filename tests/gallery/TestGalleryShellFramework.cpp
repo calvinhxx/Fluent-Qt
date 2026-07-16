@@ -18,6 +18,7 @@
 #include <QRect>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QSignalSpy>
 #include <QStringList>
 #include <QTest>
 #include <QUrl>
@@ -37,6 +38,7 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/navigation/NavigationView.h"
+#include "components/navigation/StackContentHost.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/status_info/Shimmer.h"
@@ -48,6 +50,7 @@
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/shell/GalleryApplicationController.h"
+#include "view/shell/GalleryContentPresenter.h"
 #include "view/shell/GallerySingleInstance.h"
 #include "view/support/GalleryCloseBehaviorPrompt.h"
 #include "view/shell/GalleryNavigationPane.h"
@@ -72,6 +75,7 @@ using fluent::dialogs_flyouts::Popup;
 using fluent::dialogs_flyouts::SmokeOverlay;
 using fluent::gallery::CloseBehaviorPromptContent;
 using fluent::gallery::GalleryApplicationController;
+using fluent::gallery::GalleryContentPresenter;
 using fluent::gallery::GalleryContentPage;
 using fluent::gallery::GalleryEntryCard;
 using fluent::gallery::GalleryIntroTour;
@@ -83,6 +87,7 @@ using fluent::gallery::GallerySingleInstance;
 using fluent::gallery::GalleryWindow;
 using fluent::gallery::SettingsPage;
 using fluent::navigation::NavigationView;
+using fluent::navigation::StackContentHost;
 using fluent::scrolling::ScrollView;
 using fluent::status_info::Shimmer;
 using fluent::status_info::ToolTip;
@@ -1229,6 +1234,40 @@ TEST_F(GalleryShellFrameworkTest, ColdRouteSelectionKeepsPreparedSkeletonOffClic
     EXPECT_EQ(preparedSkeleton->findChildren<Shimmer*>().size(), 1);
     EXPECT_LT(clickMs, 100)
         << "Cold navigation should only swap in the prepared skeleton; page construction is deferred";
+}
+
+TEST_F(GalleryShellFrameworkTest, NavigationTimingCoversColdAndWarmTargetFirstPaint)
+{
+    GalleryNavigationViewModel model;
+    StackContentHost host;
+    host.resize(900, 700);
+    GalleryContentPresenter presenter(&host, model);
+    QSignalSpy presentedSpy(&presenter, &GalleryContentPresenter::navigationPresented);
+
+    ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
+    host.show();
+    QTRY_VERIFY_WITH_TIMEOUT(!presentedSpy.isEmpty(), 3000);
+    presentedSpy.clear();
+
+    ASSERT_TRUE(presenter.presentRoute(QStringLiteral("password-box")));
+    QTRY_VERIFY_WITH_TIMEOUT(!presentedSpy.isEmpty(), 5000);
+    const QList<QVariant> coldTiming = presentedSpy.takeLast();
+    ASSERT_EQ(coldTiming.size(), 5);
+    EXPECT_EQ(coldTiming.at(0).toString(), QStringLiteral("password-box"));
+    EXPECT_TRUE(coldTiming.at(1).toBool());
+    EXPECT_GE(coldTiming.at(2).toLongLong(), 0);
+    EXPECT_GE(coldTiming.at(3).toLongLong(), 0);
+    EXPECT_GE(coldTiming.at(4).toLongLong(), coldTiming.at(2).toLongLong());
+
+    ASSERT_TRUE(presenter.presentRoute(QStringLiteral("home")));
+    QTRY_VERIFY_WITH_TIMEOUT(!presentedSpy.isEmpty(), 3000);
+    const QList<QVariant> warmTiming = presentedSpy.takeLast();
+    ASSERT_EQ(warmTiming.size(), 5);
+    EXPECT_EQ(warmTiming.at(0).toString(), QStringLiteral("home"));
+    EXPECT_FALSE(warmTiming.at(1).toBool());
+    EXPECT_EQ(warmTiming.at(2).toLongLong(), 0);
+    EXPECT_GE(warmTiming.at(3).toLongLong(), 0);
+    EXPECT_GE(warmTiming.at(4).toLongLong(), warmTiming.at(3).toLongLong());
 }
 
 TEST_F(GalleryShellFrameworkTest, StartupPrewarmPrioritizesHomeFeaturedTabView)

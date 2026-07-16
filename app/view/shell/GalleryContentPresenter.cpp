@@ -1,6 +1,7 @@
 #include "GalleryContentPresenter.h"
 
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QTimer>
 #include <QWidget>
 
@@ -48,6 +49,67 @@ QWidget* GalleryContentPresenter::currentPage() const
     return m_contentHost->pageWidget(m_contentHost->currentIndex());
 }
 
+bool GalleryContentPresenter::eventFilter(QObject* watched, QEvent* event)
+{
+    if (event->type() == QEvent::Paint
+        && m_pendingPage
+        && watched == m_pendingPage.data()
+        && currentPage() == m_pendingPage.data()) {
+        const QString routeId = m_pendingRouteId;
+        const bool cold = m_pendingCold;
+        const qint64 buildMs = m_pendingBuildMs;
+        const qint64 switchMs = m_pendingSwitchMs;
+        const qint64 totalMs = m_pendingNavigationTimer.isValid()
+            ? m_pendingNavigationTimer.elapsed()
+            : 0;
+        cancelNavigationWatch();
+        LOG_DEBUG(QStringLiteral(
+                      "PERF navigationPresented routeId=%1 state=%2 buildMs=%3 switchMs=%4 totalMs=%5")
+                      .arg(routeId,
+                           cold ? QStringLiteral("cold") : QStringLiteral("warm"))
+                      .arg(buildMs)
+                      .arg(switchMs)
+                      .arg(totalMs));
+        emit navigationPresented(routeId, cold, buildMs, switchMs, totalMs);
+    }
+    return QObject::eventFilter(watched, event);
+}
+
+void GalleryContentPresenter::beginNavigationWatch(const QString& routeId,
+                                                    bool cold,
+                                                    quint64 requestId)
+{
+    cancelNavigationWatch();
+    m_pendingRequestId = requestId;
+    m_pendingRouteId = routeId;
+    m_pendingCold = cold;
+    m_pendingNavigationTimer.start();
+}
+
+void GalleryContentPresenter::watchNavigationPage(QWidget* page, qint64 buildMs)
+{
+    if (!page || m_pendingRequestId != m_navigationRequestId)
+        return;
+    if (m_pendingPage && m_pendingPage != page)
+        m_pendingPage->removeEventFilter(this);
+    m_pendingPage = page;
+    m_pendingBuildMs = buildMs;
+    page->installEventFilter(this);
+}
+
+void GalleryContentPresenter::cancelNavigationWatch()
+{
+    if (m_pendingPage)
+        m_pendingPage->removeEventFilter(this);
+    m_pendingRequestId = 0;
+    m_pendingRouteId.clear();
+    m_pendingPage.clear();
+    m_pendingNavigationTimer.invalidate();
+    m_pendingBuildMs = 0;
+    m_pendingSwitchMs = 0;
+    m_pendingCold = false;
+}
+
 bool GalleryContentPresenter::presentRoute(const QString& routeId)
 {
     if (!m_contentHost) {
@@ -68,7 +130,9 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
         return false;
     }
 
-    if (m_currentRouteId == routeId && m_contentHost->count() > 0) {
+    const bool routeResident = m_routeStackIndex.contains(routeId);
+    const bool routePending = m_pendingRequestId != 0 && m_pendingRouteId == routeId;
+    if (m_currentRouteId == routeId && (routeResident || routePending)) {
         LOG_TRACE(QStringLiteral("GalleryContentPresenter presentRoute skipped routeId=%1 reason=already-current")
                       .arg(routeId));
         return true;
@@ -78,12 +142,15 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
     // page it built is still the one the user wants before swapping it in.
     // zh_CN: 先记录目标路由：延迟的懒构建会复查它，确认建好的页面仍是用户想要的才换入。
     m_currentRouteId = routeId;
+    const quint64 requestId = ++m_navigationRequestId;
 
     const int existing = m_routeStackIndex.value(routeId, -1);
     if (existing >= 0) {
         // Warm: the page is already built and resident — a pure show/hide (~1 ms).
         // zh_CN: 已预热：页面已建好常驻——纯显示/隐藏（约 1ms）。
-        switchToStackPage(existing);
+        beginNavigationWatch(routeId, false, requestId);
+        watchNavigationPage(m_contentHost->pageWidget(existing), 0);
+        m_pendingSwitchMs = switchToStackPage(existing);
         return true;
     }
 
@@ -91,20 +158,25 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
         // First / startup route, built behind the splash: build synchronously so the splash
         // hands straight to real content with no skeleton flash.
         // zh_CN: 首个/启动路由，在 splash 背后构建：同步建好，使 splash 直接交给真内容，无骨架闪烁。
-        const int index = ensurePageBuilt(routeId);
-        if (index < 0)
+        beginNavigationWatch(routeId, true, requestId);
+        qint64 buildMs = 0;
+        const int index = ensurePageBuilt(routeId, &buildMs);
+        if (index < 0) {
+            cancelNavigationWatch();
             return false;
-        switchToStackPage(index);
+        }
+        watchNavigationPage(m_contentHost->pageWidget(index), buildMs);
+        m_pendingSwitchMs = switchToStackPage(index);
         return true;
     }
 
-    // Cold route during normal use: show the shimmer skeleton immediately for instant
-    // feedback, then build the real page off the click (next tick) and swap it in — so the
-    // click is never blocked by the build. zh_CN: 正常使用中的冷路由：立刻显示 shimmer 骨架屏给即时
-    // 反馈，随后脱离点击（下一帧）构建真页并换入——使点击永不被建页阻塞。
+    // Cold route during normal use: show the shimmer skeleton immediately, return from the
+    // input handler, then build the real page after the skeleton has painted one frame.
+    // zh_CN: 正常使用中的冷路由先显示 shimmer 骨架并退出输入处理，再在骨架绘制一帧后构建真页。
+    beginNavigationWatch(routeId, true, requestId);
     ensureSkeleton();
     switchToStackPage(m_skeletonIndex);
-    scheduleLazyBuild(routeId);
+    scheduleLazyBuild(routeId, requestId);
     return true;
 }
 
@@ -120,22 +192,29 @@ void GalleryContentPresenter::ensureSkeleton()
     m_contentHost->insertPage(m_skeletonIndex, m_skeleton);
 }
 
-void GalleryContentPresenter::scheduleLazyBuild(const QString& routeId)
+void GalleryContentPresenter::scheduleLazyBuild(const QString& routeId, quint64 requestId)
 {
     // Delay the build by kSkeletonRevealMs (not 0): a zero-timer would fire before the just-
     // shown skeleton paints, so the build would block the thread first and the skeleton would
     // never appear. Waiting a frame lets the skeleton render before the build runs.
     // zh_CN: 用 kSkeletonRevealMs 而非 0 延迟构建：零延迟会在刚切上的骨架绘制前触发，导致构建先阻塞线程、
     // 骨架根本不显示。等一帧让骨架先渲染，再执行构建。
-    QTimer::singleShot(kSkeletonRevealMs, this, [this, routeId]() {
+    QTimer::singleShot(kSkeletonRevealMs, this, [this, routeId, requestId]() {
         // The user may have navigated on (or to a now-warm page) before this fired; only
         // spend the build if this route is still the one on screen.
         // zh_CN: 触发前用户可能已切走（或切到已预热页）；仅当该路由仍是屏幕上的目标时才花费构建。
-        if (m_currentRouteId != routeId)
+        if (m_currentRouteId != routeId || m_navigationRequestId != requestId)
             return;
-        const int index = ensurePageBuilt(routeId);
-        if (index >= 0 && m_currentRouteId == routeId)
-            switchToStackPage(index);
+        qint64 buildMs = 0;
+        const int index = ensurePageBuilt(routeId, &buildMs);
+        if (index >= 0
+            && m_currentRouteId == routeId
+            && m_navigationRequestId == requestId) {
+            watchNavigationPage(m_contentHost->pageWidget(index), buildMs);
+            m_pendingSwitchMs = switchToStackPage(index);
+        } else if (index < 0 && m_navigationRequestId == requestId) {
+            cancelNavigationWatch();
+        }
     });
 }
 
@@ -241,8 +320,10 @@ void GalleryContentPresenter::scheduleNextPrewarm()
     });
 }
 
-int GalleryContentPresenter::ensurePageBuilt(const QString& routeId)
+int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* buildMs)
 {
+    if (buildMs)
+        *buildMs = 0;
     const int existing = m_routeStackIndex.value(routeId, -1);
     if (existing >= 0)
         return existing;
@@ -267,9 +348,12 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId)
     const int index = m_contentHost->count();
     m_contentHost->insertPage(index, page);
     m_routeStackIndex.insert(routeId, index);
+    const qint64 elapsedBuildMs = buildTimer.elapsed();
+    if (buildMs)
+        *buildMs = elapsedBuildMs;
     LOG_DEBUG(QStringLiteral("PERF buildPage routeId=%1 buildMs=%2 pageType=%3 stackIndex=%4")
                   .arg(routeId)
-                  .arg(buildTimer.elapsed())
+                  .arg(elapsedBuildMs)
                   .arg(QString::fromLatin1(page->metaObject()->className()))
                   .arg(index));
     return index;
@@ -283,7 +367,7 @@ void GalleryContentPresenter::connectPageNavigation(QWidget* page)
     }
 }
 
-void GalleryContentPresenter::switchToStackPage(int targetIndex)
+qint64 GalleryContentPresenter::switchToStackPage(int targetIndex)
 {
     // A pure show/hide of an already-built, already-laid-out page: ~1ms. We deliberately
     // do NOT cross-dissolve — that needs a full-page grab() of the outgoing page, which
@@ -295,10 +379,12 @@ void GalleryContentPresenter::switchToStackPage(int targetIndex)
     QElapsedTimer switchTimer;
     switchTimer.start();
     m_contentHost->setCurrentIndex(targetIndex, 0, false);
+    const qint64 switchMs = switchTimer.elapsed();
     LOG_DEBUG(QStringLiteral("PERF switchToStackPage from=%1 to=%2 switchMs=%3")
                  .arg(fromIndex)
                  .arg(targetIndex)
-                 .arg(switchTimer.elapsed()));
+                 .arg(switchMs));
+    return switchMs;
 }
 
 } // namespace fluent::gallery
