@@ -4,6 +4,7 @@
 
 #include <QParallelAnimationGroup>
 #include <QPainter>
+#include <QPaintEvent>
 #include <QPainterPath>
 #include <QPalette>
 #include <QPropertyAnimation>
@@ -68,7 +69,7 @@ void StackContentHost::setContentSurface(const QColor& fill, qreal topLeftRadius
     update();
 }
 
-void StackContentHost::paintEvent(QPaintEvent*)
+void StackContentHost::paintEvent(QPaintEvent* event)
 {
     QPainter painter(this);
 
@@ -79,7 +80,7 @@ void StackContentHost::paintEvent(QPaintEvent*)
         && window()->testAttribute(Qt::WA_TranslucentBackground)
         && windowing::windowBackdropRequiresTransparentClear(window())) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
-        painter.fillRect(rect(), Qt::transparent);
+        painter.fillRect(event->rect(), Qt::transparent);
         return;
     }
 
@@ -295,10 +296,8 @@ void StackContentHost::resizeEvent(QResizeEvent* event)
     QWidget::resizeEvent(event);
     if (m_busy)
         return;
-    for (const PageRecord& page : std::as_const(m_pages)) {
-        if (QWidget* stackWidget = page.stackWidget.data())
-            stackWidget->setGeometry(rect());
-    }
+    if (QWidget* current = m_layout->currentWidget())
+        current->setGeometry(rect());
 }
 
 StackContentHost::PageRecord StackContentHost::makePage(QWidget* widget)
@@ -413,25 +412,9 @@ QPoint StackContentHost::transitionStartOffset(const QRect& rect, int direction)
 
 void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
 {
-    for (const PageRecord& page : std::as_const(m_pages)) {
-        QWidget* stackWidget = page.stackWidget.data();
-        if (!stackWidget)
-            continue;
-        stackWidget->hide();
-    }
-
-    const bool sharedMaterialBackdrop = windowing::windowHasMaterialBackdrop(window());
-    if (sharedMaterialBackdrop && isVisible()) {
-        // Queue one backing-store replacement for the next paint pass. repaint()
-        // here forces Cocoa to synchronously re-enter painting from the navigation
-        // input handler; rapid route changes can then starve scroll/input delivery.
-        // update() coalesces a burst of switches, while Qt still paints the parent
-        // host before its newly shown child in the resulting frame.
-        // zh_CN: 为下一次绘制排入一次后备缓冲替换。这里调用 repaint() 会让 Cocoa
-        // 从导航输入处理器同步重入绘制；快速切页时会挤占滚动/输入事件。update()
-        // 会合并一批切换，而 Qt 在最终帧中仍先绘制父宿主，再绘制新显示的子页。
-        update();
-    }
+    QWidget* previousWidget = m_layout->currentWidget();
+    if (!currentWidget && previousWidget)
+        previousWidget->hide();
 
     if (currentWidget) {
         // If the theme changed while this page was hidden, the global manager only themed visible
@@ -444,11 +427,19 @@ void StackContentHost::showOnlyStackWidget(QWidget* currentWidget)
             refreshFluentTree(currentWidget);
             currentWidget->setProperty(kThemedGenerationProperty, generation);
         }
-        m_layout->setCurrentWidget(currentWidget);
-        currentWidget->setGeometry(rect());
-        currentWidget->show();
+        if (previousWidget != currentWidget)
+            m_layout->setCurrentWidget(currentWidget);
+        if (currentWidget->geometry() != rect())
+            currentWidget->setGeometry(rect());
+        if (!currentWidget->isVisible())
+            currentWidget->show();
         currentWidget->raise();
     }
+    // QStackedLayout::StackOne hides the outgoing widget. Touch only the
+    // outgoing/current pair and queue one coalesced backing-store refresh, so
+    // switching remains O(1) as the resident page count grows.
+    // zh_CN: StackOne 会自动隐藏旧页；这里只处理旧页/当前页并合并一次刷新，
+    // 使常驻页面数量增加后切换仍保持 O(1)。
     update();
 }
 
