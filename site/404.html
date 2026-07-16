@@ -1,17 +1,33 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fluent-Qt - Page not found</title>
-    <meta http-equiv="refresh" content="0; url=./">
+    <title>Fluent-Qt — 页面未找到</title>
+    <meta name="theme-color" content="#e7e7e3">
+    <link rel="icon" href="assets/app-icon.png">
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("fluent-qt-theme");
+          const theme = saved === "dark" || saved === "light"
+            ? saved
+            : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.dataset.theme = theme;
+          document.querySelector("meta[name='theme-color']").content = theme === "dark" ? "#151613" : "#e7e7e3";
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body>
-    <main class="section-shell opensource-section">
-      <h1>Page not found.</h1>
-      <p class="hero-lede">Redirecting to the Fluent-Qt homepage.</p>
-      <a class="button button-primary" href="./">Go home</a>
+  <body class="error-page">
+    <main class="error-card">
+      <p class="section-index">404 / NOT FOUND</p>
+      <h1>在控件树里<br>走丢了。</h1>
+      <p>这个页面不存在，但 Fluent-Qt 项目还在原处。</p>
+      <a class="button button-primary" href="./">返回首页</a>
     </main>
   </body>
 </html>
