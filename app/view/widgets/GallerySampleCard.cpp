@@ -1,5 +1,6 @@
 #include "GallerySampleCard.h"
 
+#include <QColor>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QHBoxLayout>
@@ -41,12 +42,15 @@ public:
     void onThemeUpdated() override
     {
         const Colors colors = themeColors();
-        setStyleSheet(QStringLiteral(
-                          "#gallerySampleCardPreview { background: %1; border: 1px solid %2; border-radius: %3px; }")
-                          .arg(cssColor(colors.bgLayerAlt),
-                               cssColor(colors.strokeCard))
-                          .arg(::CornerRadius::Control));
-        setProperty("fluentSurfaceColor", colors.bgLayerAlt);
+        const QString style = QStringLiteral(
+                                  "#gallerySampleCardPreview { background: %1; border: 1px solid %2; border-radius: %3px; }")
+                                  .arg(cssColor(colors.bgLayerAlt),
+                                       cssColor(colors.strokeCard))
+                                  .arg(::CornerRadius::Control);
+        if (styleSheet() != style)
+            setStyleSheet(style);
+        if (property("fluentSurfaceColor").value<QColor>() != colors.bgLayerAlt)
+            setProperty("fluentSurfaceColor", colors.bgLayerAlt);
         update();
     }
 };
@@ -122,7 +126,7 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
         // zh_CN: expander 动画只改变卡片自身高度；跳过子项的整体重测量，
         // 让每个动画帧只走一遍布局而不是两遍。
         connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this,
-                [this]() { updateCardHeight(); });
+                [this]() { updateCardHeight(true); });
     }
 
     using Edge = AnchorLayout::Edge;
@@ -178,6 +182,9 @@ void GallerySampleCard::setPreviewThemeOverride(fluent::FluentElement::Theme the
     if (!m_previewSurface)
         return;
 
+    const QVariant currentOverride = m_previewSurface->property(kThemeOverrideProperty);
+    if (currentOverride.isValid() && currentOverride.toInt() == static_cast<int>(theme))
+        return;
     m_previewSurface->setProperty(kThemeOverrideProperty, static_cast<int>(theme));
     refreshPreviewTheme();
 }
@@ -187,6 +194,8 @@ void GallerySampleCard::clearPreviewThemeOverride()
     if (!m_previewSurface)
         return;
 
+    if (!m_previewSurface->property(kThemeOverrideProperty).isValid())
+        return;
     m_previewSurface->setProperty(kThemeOverrideProperty, QVariant());
     refreshPreviewTheme();
 }
@@ -253,23 +262,22 @@ void GallerySampleCard::updateAnchoredLayout()
     updateGeometry();
 }
 
-void GallerySampleCard::updateCardHeight()
+bool GallerySampleCard::updateCardHeight(bool flushPostedLayouts)
 {
     const int cardWidth = qMax(width(), kMinimumCardWidth);
     const int cardHeight = calculatedHeightForWidth(cardWidth);
     if (minimumHeight() == cardHeight && maximumHeight() == cardHeight)
-        return;
+        return false;
     setFixedHeight(cardHeight);
-    // The code block has already resized itself by the time this runs, but the
-    // card and the page column only follow on the queued layout pass. A frame
-    // composited in between paints the block overflowing the card while the
-    // cards below sit still — the intermittent toggle jitter. Deliver the
-    // queued layout passes now so every painted frame is geometry-consistent.
-    // zh_CN: 走到这里时代码块已先行改变了自身高度，而卡片和页面纵列要等排队的
-    // 布局事件才跟上；若系统恰好在两者之间合成一帧，就会画出代码块溢出卡片、
-    // 下方卡片纹丝不动的画面——即偶现的切换抖动。此处立刻派发排队的布局事件，
-    // 保证每一帧画面几何一致。
-    QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    // Only animated code-block height changes need the queued ancestor layouts
+    // delivered synchronously. Construction, resize, and theme refresh keep the
+    // normal coalesced pass; globally draining LayoutRequest events there made
+    // every sample amplify Windows Debug cold-page build time.
+    // zh_CN: 仅代码块高度动画需要同步派发祖先布局；构造、缩放与主题刷新沿用
+    // 合并后的普通布局流程，避免每个示例都全局清空 LayoutRequest 队列。
+    if (flushPostedLayouts)
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+    return true;
 }
 
 void GallerySampleCard::refreshPreviewTheme()
@@ -318,16 +326,13 @@ int GallerySampleCard::contentWidthForCardWidth(int width) const
 void GallerySampleCard::applyPalette()
 {
     const Colors colors = themeColors();
-    setStyleSheet(QStringLiteral(
-                      "#gallerySampleCard { background: %1; border: 1px solid %2; border-radius: %3px; }")
-                      .arg(cssColor(colors.bgLayer),
-                           cssColor(colors.strokeCard))
-                      .arg(::CornerRadius::Overlay));
-    if (m_previewSurface) {
-        // The preview surface owns its theme so a sample override stays inside the live UI area.
-        if (auto* previewSurface = dynamic_cast<fluent::FluentElement*>(m_previewSurface))
-            previewSurface->onThemeUpdated();
-    }
+    const QString cardStyle = QStringLiteral(
+                                  "#gallerySampleCard { background: %1; border: 1px solid %2; border-radius: %3px; }")
+                                  .arg(cssColor(colors.bgLayer),
+                                       cssColor(colors.strokeCard))
+                                  .arg(::CornerRadius::Overlay);
+    if (styleSheet() != cardStyle)
+        setStyleSheet(cardStyle);
     // Color the text via each label's OWN style sheet, not the palette: this card sets a style sheet
     // on itself, which installs QStyleSheetStyle over the whole subtree and makes a child Label's
     // palette-based WindowText color (Label::onThemeUpdated) be ignored — so the title/description
@@ -337,12 +342,16 @@ void GallerySampleCard::applyPalette()
     // 使子 Label 基于 palette 的 WindowText 颜色（Label::onThemeUpdated）被忽略——于是标题/描述在深色卡片上渲染成近黑。
     // 直接给标签设颜色（与 GalleryEntryCard 一致）则无视祖先样式表生效。
     if (m_titleLabel) {
-        m_titleLabel->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                                        .arg(cssColor(colors.textPrimary)));
+        const QString titleStyle = QStringLiteral("color: %1; background: transparent;")
+                                       .arg(cssColor(colors.textPrimary));
+        if (m_titleLabel->styleSheet() != titleStyle)
+            m_titleLabel->setStyleSheet(titleStyle);
     }
     if (m_descriptionLabel) {
-        m_descriptionLabel->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                                              .arg(cssColor(colors.textSecondary)));
+        const QString descriptionStyle = QStringLiteral("color: %1; background: transparent;")
+                                             .arg(cssColor(colors.textSecondary));
+        if (m_descriptionLabel->styleSheet() != descriptionStyle)
+            m_descriptionLabel->setStyleSheet(descriptionStyle);
     }
 }
 

@@ -52,7 +52,7 @@ private:
     void applyPalette();
     void queueAnchoredLayoutUpdate();
     void updateAnchoredLayout();
-    void updateCardHeight();
+    bool updateCardHeight(bool flushPostedLayouts = false);
     void refreshPreviewTheme();
     int preferredHeightForWidget(QWidget* widget, int width) const;
     int calculatedHeightForWidth(int width) const;
