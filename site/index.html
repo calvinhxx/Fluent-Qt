@@ -15,7 +15,17 @@
       content="Fluent controls for Qt Widgets, with a runnable Gallery and copyable C++ examples."
     >
     <meta property="og:type" content="website">
-    <meta property="og:image" content="assets/gallery/gallery-hero-real.png">
+    <meta property="og:image" content="assets/og.png">
+    <meta property="og:image:width" content="1731">
+    <meta property="og:image:height" content="909">
+    <meta property="og:image:alt" content="Fluent-Qt Gallery project preview">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Fluent-Qt">
+    <meta
+      name="twitter:description"
+      content="Fluent controls for Qt Widgets, with a runnable Gallery and copyable C++ examples."
+    >
+    <meta name="twitter:image" content="assets/og.png">
     <meta name="fluent-qt-cloudflare-token" content="faf445759813451ca2d7a0652139b292">
     <link rel="icon" href="assets/app-icon.png">
     <script>
@@ -94,20 +104,18 @@
 
     <main id="main-content">
       <section class="hero" id="top" aria-labelledby="hero-title">
-        <div class="page-shell hero-message">
-          <div class="hero-lockup">
-            <p class="eyebrow">
-              <span class="status-dot" aria-hidden="true"></span>
-              <span>Qt Widgets · C++17 · MIT</span>
+        <div class="page-shell hero-stage">
+          <div class="hero-message">
+            <img class="hero-app-icon" src="assets/app-icon.png" alt="" width="96" height="96">
+            <h1 id="hero-title">Fluent-Qt</h1>
+            <p class="hero-tagline" data-i18n="hero.tagline">面向 Qt Widgets 的 Fluent 控件库</p>
+            <p class="hero-techline" aria-label="C++17, Qt 5.15 or Qt 6.2 and above, MIT">
+              <strong>C++17</strong>
+              <span aria-hidden="true">·</span>
+              <span>Qt 5.15+ / 6.2+</span>
+              <span aria-hidden="true">·</span>
+              <strong>MIT</strong>
             </p>
-            <h1 id="hero-title">
-              <span data-i18n="hero.titleLine1">Qt Widgets 的</span>
-              <span data-i18n="hero.titleLine2">Fluent 控件库</span>
-            </h1>
-          </div>
-
-          <div class="hero-intro">
-            <p data-i18n="hero.lede">覆盖基础输入、导航、对话框和窗口组件</p>
             <div class="hero-actions">
               <a
                 class="button button-primary"
@@ -124,15 +132,9 @@
               </a>
             </div>
           </div>
-        </div>
 
-        <div class="page-shell hero-product">
-          <div class="visual-kicker">
-            <span>01 / LIVE PRODUCT</span>
-            <span data-release-version>Latest</span>
-          </div>
-          <figure class="product-frame">
-            <div class="product-scene">
+          <figure class="hero-product">
+            <div class="hero-window">
               <img
                 src="assets/gallery/gallery-home-real.png"
                 data-theme-src-light="assets/gallery/gallery-home-real.png"
@@ -144,10 +146,7 @@
                 fetchpriority="high"
               >
             </div>
-            <figcaption>
-              <span data-i18n="hero.visualCaption">Gallery 实际界面</span>
-              <span data-theme-label data-theme-label-light="LIGHT" data-theme-label-dark="DARK">LIGHT</span>
-            </figcaption>
+            <figcaption class="visually-hidden" data-i18n="hero.visualCaption">Gallery 实际界面</figcaption>
           </figure>
         </div>
 
