@@ -14,7 +14,7 @@ represent supported patch lines, not Git Flow release branches.
 - `release/<major>.<minor>.x` branches are long-lived patch lines. The highest
   active version is the normal working branch for features, fixes, CI,
   packaging, documentation, and other maintenance. The current working branch
-  is `release/1.3.x`.
+  is `release/1.4.x`.
 - Commit routine single-maintainer changes directly to the latest long-lived
   release branch after appropriate validation. Do not create a short-lived
   `feat/*`, `fix/*`, `docs/*`, `ci/*`, or `chore/*` branch by default. Keeping
@@ -171,7 +171,7 @@ python scripts/release/generate_changelog.py --tag v1.1.0 --require-curated --ou
 While developing the current patch line, review only its unreleased range:
 
 ```bash
-python scripts/release/generate_changelog.py --from v1.3.0 --to release/1.3.x --audience maintainer --check
+python scripts/release/generate_changelog.py --from v1.3.2 --to release/1.4.x --audience maintainer --check
 ```
 
 `--tag` resolves the previous release tag automatically when `--from` is not
