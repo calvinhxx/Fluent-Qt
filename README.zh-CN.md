@@ -212,6 +212,10 @@ cmake --build --preset PRESET --target fluent_qt_gallery --parallel
   </a>
 </p>
 
-## License
+## 许可证
 
-Fluent-Qt 使用 [MIT License](LICENSE) 发布。
+Fluent-Qt 项目自身的源代码使用 [MIT License](LICENSE) 发布。
+项目中捆绑的资源以及发布包中的运行时依赖继续适用各自的上游许可；
+具体版本、来源、对应源码提供规则和许可证位置见
+[第三方声明](THIRD_PARTY_NOTICES.md)。产品名称、徽标及外部设计参考的相关说明见
+[商标与外部引用声明](TRADEMARKS.md)。
