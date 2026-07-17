@@ -15,7 +15,6 @@ class Label;
 
 class QEvent;
 class QResizeEvent;
-
 namespace fluent::gallery {
 
 class GalleryCodeBlock;
@@ -50,9 +49,10 @@ protected:
 
 private:
     void applyPalette();
+    void updateCodeBlockTransitionLayout();
     void queueAnchoredLayoutUpdate();
     void updateAnchoredLayout();
-    bool updateCardHeight(bool flushPostedLayouts = false);
+    bool updateCardHeight();
     void refreshPreviewTheme();
     int preferredHeightForWidget(QWidget* widget, int width) const;
     int calculatedHeightForWidth(int width) const;

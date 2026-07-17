@@ -1,7 +1,6 @@
 #include "GallerySampleCard.h"
 
 #include <QColor>
-#include <QCoreApplication>
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QResizeEvent>
@@ -121,12 +120,8 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
 
     if (!sample.codeSnippet.isEmpty()) {
         m_codeBlock = new GalleryCodeBlock(sample.codeSnippet, this);
-        // Expander animation only changes the card's own height; skip the full
-        // child re-measure so each animation frame costs one layout pass, not two.
-        // zh_CN: expander 动画只改变卡片自身高度；跳过子项的整体重测量，
-        // 让每个动画帧只走一遍布局而不是两遍。
         connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this,
-                [this]() { updateCardHeight(true); });
+                [this]() { updateCodeBlockTransitionLayout(); });
     }
 
     using Edge = AnchorLayout::Edge;
@@ -262,22 +257,28 @@ void GallerySampleCard::updateAnchoredLayout()
     updateGeometry();
 }
 
-bool GallerySampleCard::updateCardHeight(bool flushPostedLayouts)
+bool GallerySampleCard::updateCardHeight()
 {
     const int cardWidth = qMax(width(), kMinimumCardWidth);
     const int cardHeight = calculatedHeightForWidth(cardWidth);
     if (minimumHeight() == cardHeight && maximumHeight() == cardHeight)
         return false;
     setFixedHeight(cardHeight);
-    // Only animated code-block height changes need the queued ancestor layouts
-    // delivered synchronously. Construction, resize, and theme refresh keep the
-    // normal coalesced pass; globally draining LayoutRequest events there made
-    // every sample amplify Windows Debug cold-page build time.
-    // zh_CN: 仅代码块高度动画需要同步派发祖先布局；构造、缩放与主题刷新沿用
-    // 合并后的普通布局流程，避免每个示例都全局清空 LayoutRequest 队列。
-    if (flushPostedLayouts)
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
     return true;
+}
+
+void GallerySampleCard::updateCodeBlockTransitionLayout()
+{
+    updateCardHeight();
+    updateGeometry();
+
+    // Finish the card's own geometry first. GalleryCodeBlock synchronizes the
+    // enclosing scroll page after every direct layoutHeightChanged slot returns,
+    // so the page observes the new card height in this same animation frame.
+    if (layout()) {
+        layout()->invalidate();
+        layout()->activate();
+    }
 }
 
 void GallerySampleCard::refreshPreviewTheme()

@@ -8,6 +8,8 @@
 #include "components/foundation/QMLPlus.h"
 
 class QResizeEvent;
+class QScrollArea;
+class QScrollBar;
 class QSize;
 class QVariantAnimation;
 
@@ -54,6 +56,8 @@ public:
 
 signals:
     void layoutHeightChanged(int height);
+    void expansionTransitionStarted(bool expanding);
+    void expansionTransitionFinished(bool expanded);
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
@@ -67,6 +71,11 @@ private:
     int blockHeightForContent(int contentHeight) const;
     void updateContentInnerGeometry();
     void applyFraction(double fraction);
+    void beginViewportTransition();
+    void finishViewportTransition();
+    void synchronizeViewportLayout();
+    void restoreViewportAnchor();
+    void clearViewportAnchor();
     double currentFraction() const { return m_fraction; }
 
     QString m_code;
@@ -86,6 +95,14 @@ private:
     double m_fraction = 0.0;        // 0 = collapsed, 1 = expanded
     int m_contentTargetHeight = 0;  // pixel height the content animates toward
     int m_lastEmittedLayoutHeight = -1;
+    bool m_viewportTransitionActive = false;
+    bool m_restoringViewportAnchor = false;
+    quint64 m_viewportTransitionGeneration = 0;
+    int m_anchorViewportY = 0;
+    QScrollArea* m_transitionScrollArea = nullptr;
+    QScrollBar* m_transitionScrollBar = nullptr;
+    QMetaObject::Connection m_scrollRangeConnection;
+    QMetaObject::Connection m_scrollValueConnection;
 };
 
 } // namespace fluent::gallery
