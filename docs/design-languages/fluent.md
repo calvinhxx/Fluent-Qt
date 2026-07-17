@@ -69,30 +69,31 @@ theme). Selecting Fluent in Settings is exactly `resetToDefaults()` — i.e. the
 
 ---
 
-## 2. Typography — **Segoe UI Variable static instances** (`src/design/Typography.h`)
+## 2. Typography — **FluentQt UI static instances** (`src/design/Typography.h`)
 
-FluentQt registers project-specific static Small/Text/Display instances generated
-from the bundled variable font. This prevents platform font matchers or a
-same-named Windows system font from selecting a different face. Heading roles
-use **SemiBold (600)**, not Bold. Sizes and line heights are absolute pixels
-measured from the kit's typography styles. See
+FluentQt registers project-specific Text/Heading/Display faces generated from
+the open-source, hinted static Inter fonts. This prevents platform font matchers
+or a same-named system font from selecting a different face, while retaining the
+TrueType hint programs needed for crisp small text. Heading roles use
+**SemiBold (600)**, not Bold. Sizes and line heights are absolute pixels measured
+from the kit's typography styles. See
 [Typography Resolution](../architecture/typography-resolution.md).
 
 | Role | Optical family | Size / Line (px) | Weight |
 |---|---|---|---|
-| Caption | FluentQt Segoe UI Small | 12 / 16 | Regular (400) |
-| Body | FluentQt Segoe UI Text | **14 / 20** | Regular (400) |
-| Body Strong | FluentQt Segoe UI Text | 14 / 20 | **SemiBold (600)** |
-| Body Large | FluentQt Segoe UI Text | 18 / 24 | Regular (400) |
-| Body Large Strong | FluentQt Segoe UI Text | 18 / 24 | SemiBold (600) |
-| Subtitle | FluentQt Segoe UI Display | 20 / 28 | SemiBold (600) |
-| Title | FluentQt Segoe UI Display | 28 / 36 | SemiBold (600) |
-| Title Large | FluentQt Segoe UI Display | 40 / 52 | SemiBold (600) |
-| Display | FluentQt Segoe UI Display | 68 / 92 | SemiBold (600) |
+| Caption | FluentQt UI Text | 12 / 16 | Regular (400) |
+| Body | FluentQt UI Text | **14 / 20** | Regular (400) |
+| Body Strong | FluentQt UI Text | 14 / 20 | **SemiBold (600)** |
+| Body Large | FluentQt UI Text | 18 / 24 | Regular (400) |
+| Body Large Strong | FluentQt UI Text | 18 / 24 | SemiBold (600) |
+| Subtitle | FluentQt UI Heading | 20 / 28 | SemiBold (600) |
+| Title | FluentQt UI Heading | 28 / 36 | SemiBold (600) |
+| Title Large | FluentQt UI Display | 40 / 52 | SemiBold (600) |
+| Display | FluentQt UI Display | 68 / 92 | SemiBold (600) |
 
 Default control text is **Body (14 px Regular)** — `Button`, `CheckBox`, `RadioButton`,
-`ToggleSwitch` all construct with `themeFont("Body")`. Icon glyphs come from **Segoe Fluent
-Icons** (the `Typography::Icons::*` table — chevrons, CheckMark ``, Hyphen ``, etc.).
+`ToggleSwitch` all construct with `themeFont("Body")`. Icon glyphs come from the bundled
+**FluentQt Icons** face (the `Typography::Icons::*` table — chevrons, CheckMark, Hyphen, etc.).
 
 ---
 
@@ -145,18 +146,18 @@ behind the page.
 These describe the resting Fluent shape and interaction — the `else`/default branch of each
 control's `paintEvent`. Every other brand branches off these.
 
-### Primitives — ![Fluent primitives](images/fluent-primitives.png)
+### Primitives
 
 The kit's Primitives sheet (List Item, Surfaces, Caret, Focus Rect, Text Box Button) defines the
 shared atoms: the rounded **surface** (4 px control / 8 px overlay), the two-ring **focus rect**,
 the **caret**, and the inline **text-box button**.
 
-### Text fields — ![Fluent text fields](images/fluent-text-fields.png)
+### Text fields
 
 TextBox is a 4 px-rounded surface with a **bottom accent underline** that thickens to the accent
 color on focus — the signature Fluent input affordance.
 
-### Basic input family — ![Fluent basic input](images/fluent-basic-input.png)
+### Basic input family
 
 Overview of the control family below.
 
@@ -182,7 +183,7 @@ Overview of the control family below.
   `controlAltTertiary`, pressed `controlTertiary`); knob = `textSecondary`.
 
 ### CheckBox (`CheckBox.cpp`, default branch)
-- **~4 px box** (`radius.control`); the inner glyph is Segoe Fluent Icons — CheckMark when
+- **~4 px box** (`radius.control`); the inner glyph is FluentQt Icons — CheckMark when
   checked, Hyphen when indeterminate — with an animated scale-in (`checkProgress`).
 - **Unchecked**: `controlDefault` fill + `strokeDefault` border (hover → `controlSecondary` +
   `strokeStrong`, pressed → `controlTertiary`).
@@ -214,7 +215,7 @@ Overview of the control family below.
 Everything above is the **default** the app boots into. Concretely:
 
 - `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark}` into `Colors`, installs
-  radius **4 / 8** and the Segoe UI Variable type scale, and sets
+  radius **4 / 8** and the FluentQt UI type scale, and sets
   `DesignLanguage = DesignFluent`.
 - `ThemeRegistry::resetToDefaults()` re-runs exactly that seed.
 - `ThemeCatalog::apply(Fluent)` is just `resetToDefaults()` + `DesignFluent` with **no

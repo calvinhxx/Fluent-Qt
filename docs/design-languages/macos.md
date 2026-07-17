@@ -68,7 +68,7 @@ Standard macOS control text is **13 pt** (`.AppleSystemUIFont`); large title 26,
 headline 13 semibold, body 13, caption 10. Numerals and control labels use Regular/Medium.
 
 > **Font:** SF Pro is the macOS system face *by spec*, but the app deliberately does **not** bundle
-> or override fonts — every brand renders in the bundled **Segoe UI Variable** (SF Pro can't be
+> or override fonts — every brand renders in the bundled **FluentQt UI** faces (SF Pro can't be
 > redistributed). On real macOS a user may set `typography.family` to the system font via their theme JSON.
 
 ---
@@ -84,7 +84,7 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
 
 ## 4. Component specs (porting targets)
 
-### Button — ![macOS buttons](images/macos-buttons.png)
+### Button
 - **Push (standard)**: light **bezel** — near-white fill in light / `white @ 10%` in dark, a
   hairline border, faint shadow, radius ≈ 6, label 13 pt. Pressed → slight darken.
 - **Prominent (default action)**: **accent (blue) fill** + white text — used for the default button.
@@ -94,7 +94,7 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
 - Our mapping: `Standard → bezel`, `Accent → prominent blue fill`, `Subtle → borderless`,
   critical → destructive red.
 
-### DropDownButton — ![macOS pop-up & pull-down buttons](images/macos-popup-buttons.png)
+### DropDownButton
 - macOS maps this to the **pull-down button**: the same restrained **bezel** as the push button —
   `bgLayerAlt` fill + **1 px hairline** + **radius 6** + a faint shadow — with a **single trailing
   chevron `⌄`** (one glyph, unlike the pop-up button's `⌃⌄` pair).
@@ -125,7 +125,7 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
 - Our mapping: `DesignCupertino` HyperlinkButton renders accent-blue link text with no bezel,
   optionally underlining on hover — the quietest of the button family.
 
-### Switch (NSSwitch) — ![macOS toggles](images/macos-toggles.png)
+### Switch (NSSwitch)
 - Pill track, white circular **knob** with a hairline ring + soft shadow.
 - **OFF**: track = neutral/tertiary gray fill.
 - **ON**: track = **accent BLUE** (`controlAccentColor`) — **not green**. (iOS `UISwitch` is
@@ -141,13 +141,13 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
 ### Radio button — (middle group of the Toggles image)
 - Circle ≈ 16. **Selected**: accent fill + white center dot. **Unselected**: control fill + hairline border.
 
-### Slider — ![macOS sliders](images/macos-sliders.png)
+### Slider
 - **Thin track** (≈ 3–4 px), active portion = **accent blue**, inactive = neutral gray/tertiary.
 - Thumb = **white circle** (≈ 16–20) with a hairline border + soft drop shadow (knob is large
   relative to the thin track — that contrast is the macOS cue).
 - Tick-mark sliders and circular dials exist but are out of scope.
 
-### Text field (LineEdit/TextBox) — ![macOS text fields](images/macos-textfields.png)
+### Text field (LineEdit/TextBox)
 - A **thin rounded rect** (radius ≈ **5–6**) with a **hairline border** and a near-white /
   `white @ 10%` fill — the same restrained bezel as the push button.
 - **Focus**: a bright **accent (blue) focus RING** (~2–3 px) wraps the field — the headline macOS
@@ -164,7 +164,7 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
   fill, and on **focus** the bright **accent (blue) ring** — only taller, with text over several rows.
 - Our mapping: TextEdit reuses the Text-field frame/focus spec verbatim; no separate visual rules.
 
-### Search Fields (AutoSuggestBox) — ![macOS search fields](images/macos-search-fields.png)
+### Search Fields (AutoSuggestBox)
 - A macOS **search field** is a **rounded field** (the same restrained bezel — hairline border,
   small radius, near-white / dark fill) with a **leading magnifier** glyph and, once typed into, a
   **trailing clear (✕)** button. Focus shows the **accent blue ring** like any text field.
@@ -174,7 +174,7 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
   search/clear glyph (AutoSuggestBox), the spin buttons (NumberBox), or the reveal toggle
   (PasswordBox) — laid over the shared bezel.
 
-### ComboBox (Pop-up / Pull-down button) — ![macOS pop-up & pull-down buttons](images/macos-popup-buttons.png)
+### ComboBox (Pop-up / Pull-down button)
 - **Closed field** is a **bezel push-button**: subtle fill + **1 px hairline** + small radius **6**
   + a faint shadow, with a **trailing chevron** — a **pop-up** button shows the up/down pair
   (`⌃⌄`), a **pull-down** button shows a single `⌄`. Pressed/open → slight darken.
@@ -183,7 +183,7 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
 - Our mapping: closed field reuses the push-button bezel (hairline + radius 6 + soft shadow) plus
   the trailing chevron; the popup uses the menu surface with a checkmark on the current value.
 
-### Tabs (Pivot) — ![macOS segmented control](images/macos-segmented.png)
+### Tabs (Pivot)
 - The macOS analog of a Pivot is a **segmented control**, **not** underline tabs: a **rounded
   container** holding equal segments separated by **thin dividers**.
 - **Selected segment**: **accent (blue) fill + white text**. Other segments are neutral (label text
@@ -192,7 +192,7 @@ headline 13 semibold, body 13, caption 10. Numerals and control labels use Regul
   hairline dividers, the active segment filled `accentDefault` with white text, the rest neutral.
   (So Cupertino reads as a segmented control rather than an underlined tab strip.)
 
-### SelectorBar (segmented selector) — ![macOS segmented control](images/macos-segmented.png)
+### SelectorBar (segmented selector)
 - macOS maps a SelectorBar directly onto the **segmented control**: a **rounded container** holding
   equal segments separated by **thin dividers**.
 - **Selected segment**: **accent (blue) fill + white text**; other segments neutral (label text on

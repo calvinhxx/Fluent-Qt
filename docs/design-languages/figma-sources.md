@@ -1,10 +1,9 @@
-# Figma Sources & How This Was Captured
+# Design Kit Sources and Verification
 
-The Material 3 and macOS references in this folder are grounded in the official Community
-design kits, read **live** through the Figma MCP server (no manual transcription of the docs).
-The Fluent reference is grounded in the app's own `src/design/*.h` headers, with the Windows UI
-kit as its measurement source. This page records the exact sources and node IDs so any value can
-be re-verified or refreshed.
+The Material 3 and macOS references in this folder were measured against the linked Community
+design kits. The Fluent reference is grounded in the app's own `src/design/*.h` headers, with the
+Windows UI kit as its original measurement source. This page records the exact sources and node
+IDs so values can be re-verified without redistributing design-kit source layers or screenshots.
 
 ## Files
 
@@ -43,7 +42,7 @@ Use the **remote Figma MCP** (authenticated; `whoami` confirms the session). Too
 
 The Fluent token values quoted in [fluent.md](fluent.md) come from `src/design/ThemeColors.h`,
 `CornerRadius.h`, and `Typography.h` (which seed `ThemeRegistry`); the pages above were the
-original measurement source and the screenshots below are the visual grounding.
+original measurement source.
 
 ### Material 3 (`sfn7GB1zXX6Lu8hfhYqhbA`)
 | Page | nodeId | Page | nodeId |
@@ -64,10 +63,8 @@ original measurement source and the screenshots below are the visual grounding.
 `M3/ref/*` token set quoted in [material-3.md](material-3.md).
 
 The **Buttons** page (`55141:14168`) is the source for the Button-family ports (Button,
-DropDownButton, ToggleButton, SplitButton/ToggleSplitButton, HyperlinkButton); its full-page
-render is archived as `images/material3-buttons-full.png` (the older `material3-buttons.png` is a
-narrower crop). The dropdown/flyout menu surface comes from the **Menu** page (`55141:14250`,
-`images/material3-menu.png`).
+DropDownButton, ToggleButton, SplitButton/ToggleSplitButton, HyperlinkButton). The
+dropdown/flyout menu surface comes from the **Menu** page (`55141:14250`).
 
 ### macOS 27 (`W0PjLoNXuQyLACYlAE3QKi`)
 | Page | nodeId | Page | nodeId |
@@ -81,23 +78,18 @@ narrower crop). The dropdown/flyout menu surface comes from the **Menu** page (`
 `get_variable_defs` on `0:765` returned the `Accents/*`, `Labels/*`, `Fills - Opaque/*` set
 quoted in [macos.md](macos.md).
 
-## Captured screenshots
+## Repository screenshot policy
 
-Archived under [`images/`](images/) (down-sampled page renders, used as visual grounding in the
-per-system docs): `fluent-{primitives,basic-input,text-fields}.png`,
-`material3-{styles,buttons,buttons-full,switch,checkbox,radio,sliders,textfields,tabs,menu,search,progress,badge,snackbar}.png`,
-`macos-{buttons,toggles,sliders,textfields,popup-buttons,segmented,search-fields}.png`.
-(`material3-buttons-full.png` is the full M3 Buttons page render, node `55141:14168`.
-`material3-{progress,badge,snackbar}.png` are the Status & info page renders — Loading & progress
-`55141:14252`, Badges `55141:14167`, Snackbar `55141:14256`. `material3-datepicker.png` is the Date &
-time pickers page `55141:14175`. `material3-{dialog,tooltip,toolbar}.png` are the Menus & flyouts batch
-renders — Dialogs `55141:14176`, Tooltips `55141:14261` (rich tooltip ⇒ TeachingTip; the small dark pill is
-the *plain* tooltip), Toolbars `58295:22726` (the state-layer idiom backing MenuBar). `material3-lists.png` is
-the Lists page `55141:14249` — the Collections batch grounding (selected item = `secondary-container` tonal
-fill, no left pill).)
+Fluent-Qt does not commit or distribute screenshots or source layers from the
+external design kits. The written specifications are independent implementation
+notes and factual measurements; the source links and node IDs above provide the
+audit trail. Project-owned Gallery screenshots may still be used to document
+Fluent-Qt itself.
 
 ## Refreshing
 
-To re-pull a value: `get_variable_defs(fileKey, nodeId)` for tokens, or
-`get_screenshot(fileKey, nodeId, maxDimension)` for a render, using the IDs above. If a page id
-drifts (the kits are updated upstream), rediscover the page list with the invalid-`nodeId` trick.
+To re-check a value, use `get_variable_defs(fileKey, nodeId)` or inspect the
+linked frame using the IDs above. A maintainer with authorized access may use a
+temporary local render for comparison, but it must not be committed or packaged.
+If a page id drifts as a kit is updated, rediscover the page list and update the
+measurement notes rather than adding a captured copy.

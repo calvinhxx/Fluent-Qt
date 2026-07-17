@@ -214,4 +214,9 @@ See the [Packaging Workflow](docs/development/packaging-workflow.md) for exact l
 
 ## License
 
-Fluent-Qt is released under the [MIT License](LICENSE).
+Fluent-Qt's own source code is released under the [MIT License](LICENSE).
+Bundled assets and packaged runtime dependencies retain their upstream terms;
+versions, provenance, source-availability rules, and license locations are
+listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Product names,
+logos, and external design references are addressed in
+[TRADEMARKS.md](TRADEMARKS.md).

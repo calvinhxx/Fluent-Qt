@@ -84,7 +84,7 @@ Confirmed from Figma variables; full scale is the standard M3 type scale.
 Button/label text uses the **Label** styles (Medium weight). Body copy uses **Body**.
 
 > **Font:** Roboto is the M3 text face *by spec*, but the app deliberately does **not** bundle or
-> override fonts — every brand renders in the bundled **Segoe UI Variable**. Treat Roboto here as
+> override fonts — every brand renders in the bundled **FluentQt UI** faces. Treat Roboto here as
 > the design reference only; a user may opt in via `typography.family` in their theme JSON if Roboto
 > is installed locally.
 
@@ -133,14 +133,14 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
 
 ## 5. Component specs (porting targets)
 
-### Button — ![M3 buttons](images/material3-buttons.png)
+### Button
 - Five types: **Elevated / Filled / Filled-tonal / Outlined / Text**.
 - Standard height **40 dp**, shape **Full pill** (`radius = h/2`), label = Label Large (Medium).
 - Our mapping: `Accent → Filled` (primary fill, on-primary text); `Standard → Outlined`
   (1 dp `outline` stroke, primary text, transparent fill); `Subtle → Text` (primary text,
   no fill/border). State layer per §4.
 
-### DropDownButton — ![M3 menu](images/material3-menu.png) · ![M3 buttons](images/material3-buttons-full.png)
+### DropDownButton
 - A standard M3 button **surface** (Filled / Outlined / Text per `Style`, exactly like Button)
   carrying a **trailing dropdown arrow** in `on-surface-variant`.
 - Click opens an **M3 menu**: a `surface-container` rounded panel at **overlay radius 12 dp**
@@ -182,7 +182,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
 - Our mapping: `DesignMaterial` HyperlinkButton renders the Text-button surface — `accentDefault`
   text, transparent rest, accent state-layer pill on hover/press.
 
-### Switch — ![M3 switch](images/material3-switch.png)
+### Switch
 - Track **52 × 32 dp**, fully rounded (`radius 16`).
 - **OFF**: track = `surface-container-highest` fill **+ 2 dp `outline` border**; thumb = **16 dp**
   diameter, colored `outline` (mid-gray). Optional ✕ icon.
@@ -190,19 +190,19 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   (white). Optional ✓ icon. The thumb **grows 16 → 24** as it travels; pressed → ~28 dp.
 - 40 dp state-layer halo behind the thumb on hover/focus/press.
 
-### Checkbox — ![M3 checkbox](images/material3-checkbox.png)
+### Checkbox
 - Box **18 × 18 dp**, corner radius **2 dp**.
 - **Unchecked**: 2 dp `on-surface-variant` outline, transparent fill.
 - **Checked / Indeterminate**: `primary` fill + `on-primary` glyph (✓ / dash).
 - 40 dp circular state-layer halo. (Error variant = same in `error` red — not needed for the gallery.)
 
-### Radio button — ![M3 radio](images/material3-radio.png)
+### Radio button
 - Outer ring **20 dp**, **2 dp** stroke.
 - **Selected**: ring + inner dot both `primary`; dot ≈ **10 dp** (50 % of inner area).
 - **Unselected**: `on-surface-variant` ring, no dot.
 - 40 dp state-layer halo.
 
-### Slider — ![M3 slider](images/material3-sliders.png)
+### Slider
 - **New M3 "expressive" slider** (the kit's current design): a **thick track** (≈16 dp at the
   medium size; scales 4 → 40 by density), active portion = `primary`, inactive = `secondary-container`.
 - The handle is a **vertical bar/pill** (≈4 dp wide, taller than the track, fully rounded),
@@ -212,7 +212,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   bar handle is the distinctive cue. A round `primary` handle is an acceptable interim if the
   bar handle is too costly, but the thick two-tone track is the minimum.
 
-### Text field (LineEdit/TextBox) — ![M3 text fields](images/material3-textfields.png)
+### Text field (LineEdit/TextBox)
 - Two variants: **Filled** and **Outlined**.
 - **Filled**: `surface-container-highest` fill, **rounded TOP corners only** (square bottom), and
   a **bottom underline** — 1 dp `on-surface-variant` at rest → **2 dp `primary` on focus**.
@@ -231,7 +231,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   **2 dp `accentDefault`** on focus — only taller, with the text wrapping over several rows.
 - Our mapping: TextEdit reuses the Text-field frame/focus spec verbatim; no separate visual rules.
 
-### Search / AutoSuggestBox — ![M3 search](images/material3-search.png)
+### Search / AutoSuggestBox
 - M3 **Search** is a **rounded "search bar"**: a filled `surface-container-*` container with a
   generous (often fully rounded) radius, a **leading search/menu icon** (`on-surface-variant`),
   and **trailing affordances** (clear ✕, mic, or an avatar). The docked/full-screen variants drop
@@ -242,7 +242,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   search/clear glyph (AutoSuggestBox), the spin buttons (NumberBox), or the reveal toggle
   (PasswordBox) — laid over the shared frame.
 
-### ComboBox — ![M3 menu](images/material3-menu.png)
+### ComboBox
 - **Closed field** reads as an **M3 Outlined text field**: rounded rect, **1 dp `outline`** →
   **2 dp `primary` on focus/open**, with a **trailing dropdown arrow** in `on-surface-variant`.
 - **Popup menu**: a `surface-container` rounded panel (overlay radius **12 dp**) with **elevation**;
@@ -251,7 +251,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   on open) plus the trailing chevron; the popup uses the overlay radius and the M3 state layer for
   item highlight rather than a fill swap.
 
-### Tabs (Pivot) — ![M3 tabs](images/material3-tabs.png)
+### Tabs (Pivot)
 - **Active tab**: `primary` text **+ a `primary` bottom indicator bar** — rounded, ~2–3 dp tall,
   spanning the label width.
 - **Inactive tab**: `on-surface-variant` text, no indicator.
@@ -261,7 +261,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   selected label, recolors active text to `accentDefault`, and uses the state-layer veil on hover —
   not a pill or fill behind the tab.
 
-### SelectorBar (segmented selector) — ![M3 tabs](images/material3-tabs.png)
+### SelectorBar (segmented selector)
 - The M3 analog of a SelectorBar is the **segmented button** group: a **rounded container** of
   equal **rounded segments**.
 - **Selected segment**: `secondary-container` / tinted-accent fill + **accent text** (often with a
@@ -280,7 +280,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
 - Our mapping: TabView reuses the Tabs spec — active text `accentDefault` over the rounded `primary`
   underline — rather than inventing a new chrome for the document tab strip.
 
-### ProgressBar (linear) — ![M3 progress](images/material3-progress.png)
+### ProgressBar (linear)
 - M3 "Linear progress indicator" (expressive update): a **~4 dp track**, **fully rounded** ends. The
   **active indicator** is `primary` (`accentDefault`); the **track** is `secondary-container` (we tint
   `accentDefault` at low alpha, falling back to `controlSecondary`). Determinate leaves a **gap (~4 dp)**
@@ -291,14 +291,14 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   `showPaused → systemCaution`, `showError → systemCritical`. (The wavy active track is out of scope — the
   **gap + stop dot** are the signature M3 cue.)
 
-### ProgressRing (circular) — ![M3 progress](images/material3-progress.png)
+### ProgressRing (circular)
 - M3 "Circular progress indicator": an **arc** in `primary` with **rounded caps**, ~4 dp stroke, on a light
   `secondary-container` track ring. Determinate adds the same **gap + stop dot** (a small `primary` dot at
   the arc's leading end); indeterminate spins the arc.
 - Our mapping: `DesignMaterial` ProgressRing strokes a light track ring plus a rounded-cap `accentDefault`
   arc with a small leading stop dot; paused/error recolor the arc, matching the Fluent value semantics.
 
-### InfoBar (M3 ≈ Snackbar / Banner) — ![M3 snackbar](images/material3-snackbar.png)
+### InfoBar (M3 ≈ Snackbar / Banner)
 - M3 has no "InfoBar"; the nearest filled status container is the **Snackbar/Banner** — a rounded
   (**Corner Medium ≈ 12**) tonal container with a leading icon + supporting text and **no heavy left accent
   strip**.
@@ -306,7 +306,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   container** filled with the severity's `systemXxxBg`, the icon (and title) tinted `systemXxx`, body text
   `textPrimary`, border suppressed (the tonal fill carries the severity).
 
-### InfoBadge — ![M3 badges](images/material3-badge.png)
+### InfoBadge
 - M3 "Badge": a **small badge** = a 6 dp **dot**; a **large badge** = a **fully rounded** pill (~16 dp tall)
   holding a white number. M3's default badge color is **error red** (`#B3261E` / on-error white), but a
   badge may carry any semantic color.
@@ -314,7 +314,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   badge's semantic color (attention → `accentDefault`, otherwise the matching `systemXxx`), value text in
   white (`textOnAccent`); the dot variant is a bare filled circle.
 
-### CalendarView / CalendarDatePicker — ![M3 date picker](images/material3-datepicker.png)
+### CalendarView / CalendarDatePicker
 - M3 date picker calendar: each day is a **circular** (~40 dp) target. **Selected day** = a filled
   `primary` (`accentDefault`) circle with `on-primary` (`textOnAccent`) text; **today** = a 1 dp `primary`
   (`accentDefault`) **outline ring** with normal text; other days plain `on-surface`. Hover/press use a
@@ -325,7 +325,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   `CalendarDatePicker` is a `Button` subclass, so its closed field inherits the M3 Outlined/Filled surface
   automatically; only the popup (CalendarView) needs the branch.
 
-### DatePicker / TimePicker (spinner pickers) — ![M3 time picker](images/material3-datepicker.png)
+### DatePicker / TimePicker (spinner pickers)
 - M3's native pickers are a **modal calendar** (date) and a **clock dial / numeric input** (time) — NOT
   WinUI's looping spinner columns — so the spinner port is a tasteful adaptation in the M3 idiom rather
   than a literal clock. M3's selection cue is a `secondary-container` / `primary` rounded highlight behind
@@ -334,7 +334,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   a rounded `accentDefault`-tinted pill with accent text, and the closed field reuses the Outlined field
   surface (1 dp outline → `accentDefault` on focus/open). Row hover uses the state layer.
 
-### Menu (FluentMenu) — ![M3 menu](images/material3-menu.png)
+### Menu (FluentMenu)
 - M3 **menu**: a `surface-container` rounded panel at **overlay radius 12 dp** carried by **elevation**
   (shadow), **not** a 1 dp border. Items take a **state layer** (on-surface veil) on hover/active —
   never a fill swap; a checked item shows a **leading checkmark**, a submenu a trailing chevron.
@@ -343,13 +343,13 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   **neutral on-surface state layer** (`veil` ≈ 8 %) inscribed in the item's rounded rect, leaving text
   `textPrimary`/`textSecondary`. Checkmark + chevron unchanged.
 
-### MenuBar (FluentMenuBar) — ![M3 toolbar](images/material3-toolbar.png)
+### MenuBar (FluentMenuBar)
 - M3 has no classic desktop menu bar; the nearest idiom is the **docked/floating toolbar** — a
   `surface-container` strip whose items react with a **state layer**, never an accent fill.
 - Our mapping: `DesignMaterial` FluentMenuBar paints each title's hover as a neutral on-surface state layer
   (`veil` ≈ 8 %) and pressed/open as a deeper veil (≈ 12 %), text stays `on-surface` — no accent fill bar.
 
-### ContentDialog — ![M3 dialog](images/material3-dialog.png)
+### ContentDialog
 - M3 **basic dialog**: a single **`surface-container-high`** rounded card (**Corner Extra Large ≈ 28 dp**)
   with a headline, supporting text, and **text buttons at the bottom-right** — **no divider** splitting a
   separate button bar, and elevation rather than a stroke. A scrim dims the content behind.
@@ -357,7 +357,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   `bgCanvas` button region, no `strokeDivider` line) and draws **no outer border** (`Qt::NoPen`), relying on
   the existing shadow for elevation. (Button widgets/layout are unchanged; only the painted background is.)
 
-### Flyout / Popup (shared card) — ![M3 menu](images/material3-menu.png)
+### Flyout / Popup (shared card)
 - M3 flyout/menu surfaces are **elevated `surface-container`** panels: rounded (overlay radius 12 dp),
   shadow-borne, **borderless**. The same panel backs the **ComboBox dropdown** (which inherits the shared
   `Popup` card) and the gallery **Flyout**.
@@ -365,20 +365,20 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   shadow but drops the visible border (`Qt::NoPen`), so every base-`Popup` consumer reads as an M3 elevated
   surface.
 
-### TeachingTip — ![M3 tooltip](images/material3-tooltip.png)
+### TeachingTip
 - M3 **rich tooltip**: a `surface-container` rounded panel with a Title (`on-surface`) + supporting text
   (`on-surface-variant`) + optional text actions, carried by **elevation** with **no border**. (M3's *plain*
   tooltip is the small dark `inverse-surface` pill — that maps to a Tooltip, not the TeachingTip callout.)
 - Our mapping: `DesignMaterial` TeachingTip keeps the `bgLayer` bubble (+ tail + shadow) but draws **no
   outline stroke** (`Qt::NoPen`), matching the M3 rich-tooltip elevation-only edge.
 
-### Dialog (base modal) — ![M3 dialog](images/material3-dialog.png)
+### Dialog (base modal)
 - `Dialog` is the base class of `ContentDialog`; it gets the same M3 **basic-dialog** treatment — a single
   `surface-container-high` tonal card, **no divider**, **borderless** (elevation via shadow), scrim behind.
 - Our mapping: `DesignMaterial` Dialog fills the card with one `bgLayer` surface and draws no outer stroke
   (`Qt::NoPen`), mirroring the ContentDialog branch.
 
-### CoachMark — ![M3 tooltip](images/material3-tooltip.png)
+### CoachMark
 - CoachMark is a callout-with-beak, the sibling of TeachingTip; M3 carries it as an **elevated
   `surface-container`** with **no border** (the rich-tooltip idiom).
 - Our mapping: `DesignMaterial` CoachMark keeps the `bgLayer` bubble + beak + shadow and drops the outline
@@ -410,7 +410,7 @@ the M3 branch must use the state layer, not a `.darker()`/`.lighter()` nudge.
   circular nav buttons take an inscribed neutral state layer. (Dark-mode fills come only from valid seeded
   tokens / veils — guarding the historical white-nav-button-in-dark regression.)
 
-### Collections — ListView / TreeView / GridView / FlowView — ![M3 lists](images/material3-lists.png)
+### Collections — ListView / TreeView / GridView / FlowView
 - M3 **list item**: leading icon/avatar + headline + supporting text; the **selected** item is a rounded
   **`secondary-container`** tonal fill with `on-secondary-container` text (NOT a left accent bar); hover/press
   add an on-surface **state layer**. M3 has no Fluent-style animated left **pill** indicator.

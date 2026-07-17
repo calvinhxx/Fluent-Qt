@@ -6,21 +6,22 @@ interaction** through `FluentElement::DesignLanguage` (`DesignFluent` / `DesignM
 `DesignCupertino`), which controls' `paintEvent`s branch on.
 
 This folder is the **canonical spec** for all three design languages — Fluent quoted from our own
-design headers (it is the reference implementation), Material 3 and macOS captured live from the
-official Figma kits — so the control work has a single, verifiable target instead of guesswork.
+design headers (it is the reference implementation), with Material 3 and macOS measured against
+the linked design kits — so the control work has a single, verifiable target instead of guesswork.
 
 ## Documents
 
 - [Fluent (Windows)](fluent.md) — the **baseline** the other two are deltas on. Real token values
-  from `src/design/*.h` (accents `#005FB8` / `#60CDFF`, radius 4 / 8, Segoe UI Variable), and the
+  from `src/design/*.h` (accents `#005FB8` / `#60CDFF`, radius 4 / 8, FluentQt UI), and the
   `DesignFluent` per-component specs. Selecting Fluent is just `resetToDefaults()`.
 - [Material 3 (Google)](material-3.md) — role colors, Roboto type scale, shape scale, **state
   layers**, and per-component specs (buttons, selection controls, sliders, text fields, tabs, and the
   Status & info family — progress, snackbar/InfoBar, badges).
 - [macOS (Apple)](macos.md) — system/accent colors, SF Pro, small-radius bezel treatment, and
   per-component specs. **Note:** the macOS switch "on" state is **accent blue, not green**.
-- [Figma Sources & How This Was Captured](figma-sources.md) — file keys, node IDs, and the MCP
-  workflow used to extract every value (so they can be re-verified or refreshed).
+- [Design Kit Sources and Verification](figma-sources.md) — file keys, node IDs,
+  and the measurement workflow. External kit screenshots and source layers are
+  intentionally not redistributed.
 
 ## How it maps to the code
 
