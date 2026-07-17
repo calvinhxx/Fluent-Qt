@@ -11,6 +11,7 @@
 #include "components/basicinput/Button.h"
 #include "components/status_info/ToolTip.h"
 #include "components/foundation/QMLPlus.h"
+#include "design/Typography.h"
 
 using namespace fluent::textfields;
 using namespace fluent::basicinput;
@@ -116,12 +117,12 @@ TEST_F(LabelTest, TextColorRoleColorsViaOwnStyleSheet) {
 
 TEST_F(LabelTest, ThemeUpdatePreservesExplicitFont) {
     Label* label = new Label("\uE790", window);
-    QFont iconFont(QStringLiteral("Segoe Fluent Icons"));
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(22);
     label->setFont(iconFont);
 
     FluentElement::setTheme(FluentElement::Dark);
-    EXPECT_EQ(label->font().family(), QStringLiteral("Segoe Fluent Icons"));
+    EXPECT_EQ(label->font().family(), Typography::FontFamily::FluentIcons);
     EXPECT_EQ(label->font().pixelSize(), 22);
 
     FluentElement::setTheme(FluentElement::Light);

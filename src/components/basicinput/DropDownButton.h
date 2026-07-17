@@ -97,7 +97,7 @@ private:
     QMenu* m_menu = nullptr;
     bool m_isOpen = false;
     QString m_chevronGlyph = Typography::Icons::ChevronDown;
-    QString m_iconFontFamily = Typography::FontFamily::SegoeFluentIcons;
+    QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
     int m_chevronSize = Typography::FontSize::Caption;
     QPoint m_chevronOffset {::Spacing::Padding::ControlHorizontal, 0}; // x: 右侧间距, y: 垂直偏移
     qreal m_pressProgress = 0.0;              // 0 = 静止, 1 = 点击/展开高亮

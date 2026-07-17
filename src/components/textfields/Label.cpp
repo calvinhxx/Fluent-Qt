@@ -75,8 +75,8 @@ void Label::setTextColorRole(TextColorRole role) {
 }
 
 void Label::onThemeUpdated() {
-    // Preserve caller-supplied fonts such as Segoe Fluent Icons across theme changes.
-    // zh_CN: 主题切换时保留调用方设置的字体，例如 Segoe Fluent Icons。
+    // Preserve caller-supplied fonts such as FluentQt Icons across theme changes.
+    // zh_CN: 主题切换时保留调用方设置的字体，例如 FluentQt Icons。
     if (!m_customFont)
         applyTypographyFont();
 

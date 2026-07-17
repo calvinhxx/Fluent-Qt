@@ -377,7 +377,7 @@ void SplitButton::paintEvent(QPaintEvent*) {
 
     // 7. Paint the chevron; it also sinks 0.5px while pressed. zh_CN: 绘制下拉箭头，按下时同样下沉 0.5px。
     painter.setPen(chevronColor);
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(chevronSize);
     painter.setFont(iconFont);
     painter.drawText(secondaryRect.translated(0, secondaryOffset),

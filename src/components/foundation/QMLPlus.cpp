@@ -102,7 +102,7 @@ void AnchorLayout::setGeometry(const QRect& rect) {
     // onThemeUpdated() (Fluent fonts reapplied) so sizeHint() is correct.
     // zh_CN: 首次布局——在查询 sizeHint() 前确保子控件字体 metrics 已解析。
     // FluentElement 构造时即调用 onThemeUpdated() 设置 pixelSize 字体，但控件
-    // 尚未入窗，macOS 上变量字体（Segoe UI Variable）metrics 可能未初始化，
+    // 尚未入窗，macOS 上应用字体 metrics 可能尚未初始化，
     // QStyle::polish() 也可能覆盖自定义字体；因此首次 setGeometry() 先
     // ensurePolished() 再 onThemeUpdated()，保证 sizeHint() 正确。
     if (m_firstLayout) {

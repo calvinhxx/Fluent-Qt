@@ -11,6 +11,7 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "design/Typography.h"
 
 class QColor;
 class QEvent;
@@ -308,7 +309,7 @@ private:
     bool m_keyboardAcceleratorsEnabled = true;
     int m_wheelScrollRemainder = 0;
     QString m_tabFontRole = QStringLiteral("Body");
-    QString m_iconFontFamily = QStringLiteral("Segoe Fluent Icons");
+    QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
     HitRecord m_hoveredHit;
     HitRecord m_pressedHit;
     HitRecord m_focusedHit;
@@ -525,7 +526,7 @@ private:
     bool m_tabReorderEnabled = false;
     bool m_keyboardAcceleratorsEnabled = true;
     QString m_tabFontRole = QStringLiteral("Body");
-    QString m_iconFontFamily = QStringLiteral("Segoe Fluent Icons");
+    QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
 };
 
 } // namespace fluent::navigation

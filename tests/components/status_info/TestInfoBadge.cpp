@@ -109,7 +109,7 @@ TEST_F(InfoBadgeTest, DefaultPropertyValues) {
     EXPECT_EQ(badge.badgeHeight(), 16);
     EXPECT_EQ(badge.valueHorizontalPadding(), 8);
     EXPECT_EQ(badge.iconGlyphSize(), 10);
-    EXPECT_EQ(badge.iconFontFamily(), Typography::FontFamily::SegoeFluentIcons);
+    EXPECT_EQ(badge.iconFontFamily(), Typography::FontFamily::FluentIcons);
     EXPECT_EQ(badge.badgeBackgroundInset(), 0);
     EXPECT_EQ(badge.contentOffset(), QPoint(0, 0));
     EXPECT_EQ(badge.sizeHint(), QSize(4, 4));
@@ -186,9 +186,9 @@ TEST_F(InfoBadgeTest, ConfigurableMetricsAffectGeometryAndRendering) {
     EXPECT_EQ(badge.sizeHint(), QSize(18, 18));
 
     QSignalSpy fontFamilySpy(&badge, &InfoBadge::iconFontFamilyChanged);
-    badge.setIconFontFamily(Typography::FontFamily::SegoeUI);
+    badge.setIconFontFamily(Typography::FontFamily::UI);
     EXPECT_EQ(fontFamilySpy.count(), 1);
-    badge.setIconFontFamily(Typography::FontFamily::SegoeUI);
+    badge.setIconFontFamily(Typography::FontFamily::UI);
     EXPECT_EQ(fontFamilySpy.count(), 1);
 
     QSignalSpy insetSpy(&badge, &InfoBadge::badgeBackgroundInsetChanged);

@@ -2,27 +2,48 @@
 
 ## Contract
 
-Fluent-Qt owns typography face resolution. Applications select semantic roles
-such as `Body`, `BodyStrong`, or `Display`; they must not depend on a platform
-font matcher to interpret Segoe UI Variable named instances differently.
+FluentQt owns typography face resolution. Applications select semantic roles
+such as `Body`, `BodyStrong`, or `Display`; they do not select a platform UI
+font by name.
 
-`fluent::initializeResources()` registers four FluentQt-specific static faces:
+`fluent::initializeResources()` registers five FluentQt-specific static faces:
 
-| Family | Style | Source variable axes | Roles |
+| Family | Style | Hinted source | Roles |
 | --- | --- | --- | --- |
-| `FluentQt Segoe UI Small` | Regular | `opsz=8`, `wght=400` | Caption |
-| `FluentQt Segoe UI Text` | Regular | `opsz=10.5`, `wght=400` | Body, Body Large |
-| `FluentQt Segoe UI Text` | Semibold | `opsz=10.5`, `wght=600` | Body Strong, Body Large Strong |
-| `FluentQt Segoe UI Display` | Semibold | `opsz=36`, `wght=600` | Subtitle, Title, Title Large, Display |
+| `FluentQt UI Text` | Regular | `Inter-Regular.ttf` | Caption, Body, Body Large |
+| `FluentQt UI Text` | Semibold | `Inter-SemiBold.ttf` | Body Strong, Body Large Strong |
+| `FluentQt UI Heading` | Semibold | `Inter-SemiBold.ttf` | Subtitle, Title |
+| `FluentQt UI Display` | Semibold | `InterDisplay-SemiBold.ttf` | Title Large, Display |
+| `FluentQt Icons` | Regular | Fluent UI System Icons Regular | `Typography::Icons` |
 
-The FluentQt prefix prevents collisions with a different Segoe UI Variable
-version installed by Windows. Static instances are used on every supported Qt
-version, including Qt 5.15 and Qt 6.2, so Windows DirectWrite, macOS CoreText,
-and Linux Fontconfig/FreeType resolve the same optical size and real weight.
+The text faces are renamed static Inter 4.1 fonts. Renaming avoids the upstream
+Reserved Font Name and prevents a same-named system installation from winning
+before the application font. The static sources retain their TrueType `cvt `,
+`fpgm`, `prep`, and `gasp` tables, which gives DirectWrite and FreeType real
+instructions when the selected platform policy uses them, instead of shipping
+an unhinted variable instance.
 
-The original `SegoeUI-VF.ttf` remains bundled for compatibility and future
-explicit variable-axis use. It is not the primary face selected by the built-in
-typography roles.
+FluentQt requests high-quality grayscale antialiasing for semantic text fonts.
+On Windows it disables DirectWrite grid fitting because vertical hinting makes
+the bundled face visibly heavier at 12-14 px; Linux retains vertical hinting
+for crisp FreeType rendering, while CoreText may apply its own platform policy.
+Small rasterization differences are still expected; family, weight, line
+height, and covered-script metrics are the portable contract.
+
+Inter covers the Latin, Greek, and Cyrillic UI text used by the Gallery. CJK,
+emoji, and other scripts not present in the bundled face continue through Qt's
+platform fallback. This avoids adding a very large pan-CJK font to every
+binary.
+
+`FluentQt Icons` retains the complete Regular catalog from Microsoft Fluent UI
+System Icons 1.1.328. `Typography::Icons::catalog()` exposes every upstream
+name, codepoint, optical design size, and glyph; `Typography::Icons::glyph()`
+performs lookup by the stable upstream name. The semantic constants used by
+controls are generated as aliases in the derivative font, without dropping an
+upstream icon whose private-use codepoint collides.
+
+Full upstream versions, hashes, licenses, and provenance are recorded in
+[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md) and `third_party/`.
 
 ## Startup behavior
 
@@ -31,32 +52,34 @@ Standalone applications call `fluent::initializeResources()` after creating
 default font to `Typography::Styles::Body`, ensuring raw Qt widgets inherit the
 same Text Regular face as Fluent components.
 
-If any bundled face cannot be registered, initialization returns `false`, emits
-one warning, and installs substitutions through the original variable/system
-family. This is a degraded fallback, not an exact typography result.
+If a bundled text face cannot be registered, initialization returns `false`,
+emits a warning in the `fluentqt.typography` category, and falls back to Qt's
+current system UI family. An icon registration failure also returns `false`,
+but no unrelated system symbol font is substituted.
 
 ## Regeneration
 
-The static assets are deterministically generated from `res/SegoeUI-VF.ttf` by:
+The committed runtime assets are deterministically generated from pinned
+sources in `third_party/`:
 
 ```bash
-python tools/fonts/generate_static_segoe.py
+python -m pip install -r tools/fonts/requirements.txt
+python tools/fonts/generate_typography_assets.py
+python tools/fonts/generate_typography_assets.py --check
 ```
 
-The script requires `fontTools`, pins both `opsz` and `wght`, rewrites family and
-PostScript names, and produces the files under `res/fonts/`. Generated output
-must remain byte-for-byte reproducible.
+The generator verifies every upstream SHA-256 hash and its exact fontTools
+version. It rewrites family and PostScript names, preserves text hint programs,
+builds the complete icon catalog plus semantic aliases, and produces the files
+under `res/fonts/` and `res/icons/`. `--check` regenerates into a temporary
+directory and compares every output byte for byte without changing the working
+tree.
 
 ## Verification
 
-`SegoeTest` asserts for each representative role that `QFontInfo` reports:
-
-- the FluentQt-specific resolved family;
-- the exact `Regular` or `Semibold` style;
-- the expected weight and pixel size;
-- `exactMatch() == true`.
-
-It also renders Regular and Semibold to images and verifies that the actual
-glyph masks differ. Minor antialiasing differences between DirectWrite,
-CoreText, and FreeType remain expected; face selection, advance metrics, optical
-size, and weight must not fall back.
+`TypographyTest` asserts that representative roles resolve to the expected
+family, exact `Regular` or `Semibold` face, weight, pixel size, grayscale
+strategy, and hinting preference. It verifies the TrueType hint tables through
+`QRawFont`, checks the complete icon catalog against representative semantic
+shortcuts, and renders Regular and Semibold to confirm that the real glyph
+masks differ.

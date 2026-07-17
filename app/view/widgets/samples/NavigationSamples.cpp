@@ -156,7 +156,7 @@ protected:
         }
 
         const int iconX = m_compact ? (width() - 20) / 2 : 22;
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont iconFont(Typography::FontFamily::FluentIcons);
         iconFont.setPixelSize(16);
         painter.setFont(iconFont);
         painter.setPen(m_selected ? colors.textPrimary : colors.textSecondary);

@@ -372,7 +372,7 @@ TEST_F(DropDownButtonTest, VisualCheck) {
     iconOnly->setFluentLayout(Button::IconOnly);  // 使用 IconOnly 布局
     iconOnly->setIconGlyph(Typography::Icons::Send,  // 左侧 iconfont（Button 的 icon）
                            Typography::FontSize::Caption,
-                           Typography::FontFamily::SegoeFluentIcons);
+                           Typography::FontFamily::FluentIcons);
     iconOnly->setChevronSize(Typography::FontSize::Caption);  // 右侧 chevron
     iconOnly->setChevronOffset(QPoint(10, 0));
     iconOnly->setFixedSize(56, 32);
@@ -393,7 +393,7 @@ TEST_F(DropDownButtonTest, VisualCheck) {
     iconWithText->setChevronOffset(QPoint(16, 0));
     iconWithText->setIconGlyph(Typography::Icons::More,
                                Typography::FontSize::Caption,
-                               Typography::FontFamily::SegoeFluentIcons);
+                               Typography::FontFamily::FluentIcons);
     iconWithText->anchors()->top = {lbl5, Edge::Bottom, 8};
     iconWithText->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(iconWithText);

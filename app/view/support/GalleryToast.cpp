@@ -81,7 +81,7 @@ public:
         m_icon->setAttribute(Qt::WA_TransparentForMouseEvents);
         m_icon->setFixedSize(kBadgeSize, kBadgeSize);
         m_icon->setAlignment(Qt::AlignCenter);
-        QFont glyph(Typography::FontFamily::SegoeFluentIcons);
+        QFont glyph(Typography::FontFamily::FluentIcons);
         glyph.setPixelSize(kBadgeGlyphPx);
         m_icon->setFont(glyph);
         m_icon->setText(Typography::Icons::Success);

@@ -700,8 +700,9 @@ TEST_F(ComboBoxTest, VisualCheck) {
         mainLayout->addWidget(label);
 
         auto* combo = new ComboBox(window);
-        combo->addItems({"Arial", "Comic Sans MS", "Courier New", "Segoe UI", "Times New Roman"});
-        combo->setCurrentIndex(3); // Segoe UI
+        combo->addItems({"Arial", "Comic Sans MS", "Courier New",
+                         Typography::FontFamily::UIText, "Times New Roman"});
+        combo->setCurrentIndex(3); // Bundled FluentQt UI face
         combo->setFixedWidth(200);
         mainLayout->addWidget(combo);
     }

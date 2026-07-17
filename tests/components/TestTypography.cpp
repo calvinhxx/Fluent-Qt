@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 #include <QApplication>
-#include <QDebug>
 #include <QWidget>
 #include <QListView>
 #include <QAbstractListModel>
@@ -8,7 +7,9 @@
 #include <QPainter>
 #include <QFontDatabase>
 #include <QFontInfo>
+#include <QFontMetrics>
 #include <QImage>
+#include <QRawFont>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -16,11 +17,13 @@
 #include <QScrollArea>
 #include <QLabel>
 #include <QFrame>
+#include <algorithm>
 #include <functional>
 #include "components/foundation/FluentElement.h"
 #include "components/basicinput/Button.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "QtTestEnvironment.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -147,7 +150,7 @@ public:
         mainLayout->setSpacing(30);
 
         // 标题
-        auto* titleLabel = new QLabel("Segoe UI Variable Typography Showcase", this);
+        auto* titleLabel = new QLabel("FluentQt Typography Showcase", this);
         QFont titleFont(m_uiFamily);
         titleFont.setPixelSize(24);
         titleFont.setBold(true);
@@ -157,6 +160,7 @@ public:
         // 滚动区域
         auto* scrollArea = new QScrollArea(this);
         scrollArea->setWidgetResizable(true);
+        scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         scrollArea->setFrameShape(QFrame::NoFrame);
         scrollArea->setStyleSheet("background: transparent; border: none;");
         
@@ -180,8 +184,8 @@ public:
             return createFontSizeSection();
         });
 
-        // 4. 原生字体 vs Segoe UI Variable
-        addSection(contentLayout, "Native Font vs Segoe UI Variable", [this]() {
+        // 4. 原生字体 vs FluentQt 内置字体
+        addSection(contentLayout, "Native Font vs FluentQt UI", [this]() {
             return createFontComparisonSection();
         });
 
@@ -249,6 +253,7 @@ private:
         for (const auto& style : styles) {
             auto* label = new Label(style.sampleText, widget);
             label->setFluentTypography(style.styleName);
+            label->setWordWrap(true);
             layout->addWidget(label);
 
             // 显示样式信息
@@ -339,7 +344,7 @@ private:
 
         QString sampleText = "The quick brown fox jumps over the lazy dog. 0123456789";
 
-        // 原生字体（macOS: .AppleSystemUIFont, Windows: Segoe UI）
+        // 当前平台的原生 UI 字体。
         auto* nativeLabel = new QLabel("Native System Font:", widget);
         QFont nativeTitleFont(m_uiFamily);
         nativeTitleFont.setPixelSize(14);
@@ -347,30 +352,26 @@ private:
         nativeLabel->setFont(nativeTitleFont);
         layout->addWidget(nativeLabel);
 
-#ifdef Q_OS_MAC
-        QFont nativeFont(".AppleSystemUIFont");
-#else
-        QFont nativeFont("Segoe UI");
-#endif
+        QFont nativeFont = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
         nativeFont.setPixelSize(16);
         auto* nativeText = new QLabel(sampleText, widget);
         nativeText->setFont(nativeFont);
         layout->addWidget(nativeText);
         layout->addSpacing(10);
 
-        // Segoe UI Variable（加载的字体）
-        auto* segoeLabel = new QLabel("Segoe UI Variable (Loaded):", widget);
-        QFont segoeTitleFont(m_uiFamily);
-        segoeTitleFont.setPixelSize(14);
-        segoeTitleFont.setBold(true);
-        segoeLabel->setFont(segoeTitleFont);
-        layout->addWidget(segoeLabel);
+        // FluentQt 打包并注册的跨平台字体。
+        auto* bundledLabel = new QLabel("FluentQt UI (Bundled):", widget);
+        QFont bundledTitleFont(m_uiFamily);
+        bundledTitleFont.setPixelSize(14);
+        bundledTitleFont.setBold(true);
+        bundledLabel->setFont(bundledTitleFont);
+        layout->addWidget(bundledLabel);
 
-        QFont segoeFont(m_uiFamily);
-        segoeFont.setPixelSize(16);
-        auto* segoeText = new QLabel(sampleText, widget);
-        segoeText->setFont(segoeFont);
-        layout->addWidget(segoeText);
+        QFont bundledFont(m_uiFamily);
+        bundledFont.setPixelSize(16);
+        auto* bundledText = new QLabel(sampleText, widget);
+        bundledText->setFont(bundledFont);
+        layout->addWidget(bundledText);
 
         return widget;
     }
@@ -380,11 +381,11 @@ private:
 // 3. 主测试窗口（Tab 组织）
 // =============================================================================
 
-class SegoeTestWindow : public QWidget, public fluent::FluentElement {
+class TypographyVisualCheckWindow : public QWidget, public fluent::FluentElement {
 public:
-    SegoeTestWindow(const QString& iconFamily, const QString& uiFamily) {
+    TypographyVisualCheckWindow(const QString& iconFamily, const QString& uiFamily) {
         setFixedSize(1200, 800);
-        setWindowTitle("Segoe Font & Icon Test Suite");
+        setWindowTitle("FluentQt Typography & Icon Test Suite");
 
         auto* mainLayout = new QVBoxLayout(this);
         mainLayout->setContentsMargins(0, 0, 0, 0);
@@ -418,6 +419,10 @@ public:
         });
 
         onThemeUpdated();
+    }
+
+    void setCurrentTab(int index) {
+        m_tabs->setCurrentIndex(index);
     }
 
     void resizeEvent(QResizeEvent* event) override {
@@ -468,55 +473,13 @@ private:
         
         layout->addWidget(m_iconView);
 
-        // 填充图标数据
+        // Fill the same complete catalog used by the Gallery browser.
+        // zh_CN: 填充与 Gallery 浏览器相同的完整图标目录。
         QVector<IconData> icons;
-        auto add = [&](const QString& g, const QString& n) { icons.append({g, n}); };
-        
-        add(Typography::Icons::GlobalNav, "GlobalNav");
-        add(Typography::Icons::ChevronDown, "ChevronDown");
-        add(Typography::Icons::ChevronUp, "ChevronUp");
-        add(Typography::Icons::ChevronLeft, "ChevronLeft");
-        add(Typography::Icons::ChevronRight, "ChevronRight");
-        add(Typography::Icons::Back, "Back");
-        add(Typography::Icons::Forward, "Forward");
-        add(Typography::Icons::Home, "Home");
-        add(Typography::Icons::FullScreen, "FullScreen");
-        add(Typography::Icons::Add, "Add");
-        add(Typography::Icons::Cancel, "Cancel");
-        add(Typography::Icons::Delete, "Delete");
-        add(Typography::Icons::Save, "Save");
-        add(Typography::Icons::Search, "Search");
-        add(Typography::Icons::Settings, "Settings");
-        add(Typography::Icons::Edit, "Edit");
-        add(Typography::Icons::Undo, "Undo");
-        add(Typography::Icons::Redo, "Redo");
-        add(Typography::Icons::Copy, "Copy");
-        add(Typography::Icons::Paste, "Paste");
-        add(Typography::Icons::FavoriteStar, "FavoriteStar");
-        add(Typography::Icons::PinFill, "PinFill");
-        add(Typography::Icons::Play, "Play");
-        add(Typography::Icons::Pause, "Pause");
-        add(Typography::Icons::Volume, "Volume");
-        add(Typography::Icons::Music, "Music");
-        add(Typography::Icons::Headphones, "Headphones");
-        add(Typography::Icons::SkipBack, "SkipBack");
-        add(Typography::Icons::SkipForward, "SkipForward");
-        add(Typography::Icons::Accounts, "Accounts");
-        add(Typography::Icons::ContactInfo, "ContactInfo");
-        add(Typography::Icons::Wifi, "Wifi");
-        add(Typography::Icons::Battery, "Battery");
-        add(Typography::Icons::Power, "Power");
-        add(Typography::Icons::Brightness, "Brightness");
-        add(Typography::Icons::History, "History");
-        add(Typography::Icons::Warning, "Warning");
-        add(Typography::Icons::ErrorIcon, "ErrorIcon");
-        add(Typography::Icons::Success, "Success");
-        add(Typography::Icons::HeartFill, "HeartFill");
-        add(Typography::Icons::Lock, "Lock");
-        add(Typography::Icons::Unlock, "Unlock");
-        add(Typography::Icons::Sunny, "Sunny");
-        add(Typography::Icons::Rain, "Rain");
-        add(Typography::Icons::Snow, "Snow");
+        const auto& catalog = Typography::Icons::catalog();
+        icons.reserve(catalog.size());
+        for (const auto& icon : catalog)
+            icons.append({icon.glyph(), icon.name});
 
         m_iconModel->setIcons(icons);
         connect(searchEdit, &QLineEdit::textChanged, m_iconModel, &IconModel::filter);
@@ -533,41 +496,9 @@ private:
 // 4. Test Fixture
 // =============================================================================
 
-class SegoeTest : public ::testing::Test {
-protected:
-    static void SetUpTestSuite() {
-        Q_INIT_RESOURCE(resources);
+class TypographyTest : public ::testing::Test {};
 
-        auto loadAndRegister = [](const QString& path, const QString& fallback) -> QString {
-            int id = QFontDatabase::addApplicationFont(path);
-            if (id != -1) {
-                QStringList families = QFontDatabase::applicationFontFamilies(id);
-                if (!families.isEmpty()) {
-                    qDebug() << "Loaded Font:" << path << "Families:" << families;
-                    return families.first();
-                }
-            }
-            return fallback;
-        };
-
-        m_iconFamily = loadAndRegister(":/res/Segoe Fluent Icons.ttf", "Segoe Fluent Icons");
-        m_uiFamily = loadAndRegister(":/res/SegoeUI-VF.ttf", "Segoe UI");
-
-        if (!m_uiFamily.isEmpty() && m_uiFamily != "Segoe UI") {
-            QFont::insertSubstitution("Segoe UI", m_uiFamily);
-            QFont::insertSubstitution("Segoe UI Semibold", m_uiFamily);
-            QFont::insertSubstitution("Segoe UI Bold", m_uiFamily);
-            qDebug() << "Font mapping: 'Segoe UI' ->" << m_uiFamily;
-        }
-    }
-    static QString m_iconFamily;
-    static QString m_uiFamily;
-};
-
-QString SegoeTest::m_iconFamily = "";
-QString SegoeTest::m_uiFamily = "";
-
-TEST_F(SegoeTest, BundledTypographyRolesResolveExactStaticFaces) {
+TEST_F(TypographyTest, BundledTypographyRolesResolveExactStaticFaces) {
     struct ExpectedRole {
         Typography::FontStyle style;
         QString family;
@@ -576,19 +507,23 @@ TEST_F(SegoeTest, BundledTypographyRolesResolveExactStaticFaces) {
     };
     const QList<ExpectedRole> roles = {
         {Typography::Styles::Caption,
-         fluent::fontcompat::SegoeSmallFamily,
+         fluent::fontcompat::UITextFamily,
          QStringLiteral("Regular"),
          QFont::Normal},
         {Typography::Styles::Body,
-         fluent::fontcompat::SegoeTextFamily,
+         fluent::fontcompat::UITextFamily,
          QStringLiteral("Regular"),
          QFont::Normal},
         {Typography::Styles::BodyStrong,
-         fluent::fontcompat::SegoeTextFamily,
+         fluent::fontcompat::UITextFamily,
          QStringLiteral("Semibold"),
          QFont::DemiBold},
         {Typography::Styles::Title,
-         fluent::fontcompat::SegoeDisplayFamily,
+         fluent::fontcompat::UIHeadingFamily,
+         QStringLiteral("Semibold"),
+         QFont::DemiBold},
+        {Typography::Styles::Display,
+         fluent::fontcompat::UIDisplayFamily,
          QStringLiteral("Semibold"),
          QFont::DemiBold},
     };
@@ -605,14 +540,86 @@ TEST_F(SegoeTest, BundledTypographyRolesResolveExactStaticFaces) {
     }
 }
 
-TEST_F(SegoeTest, ApplicationDefaultUsesBundledTextRegular) {
+TEST_F(TypographyTest, ApplicationDefaultUsesBundledTextRegular) {
     const QFontInfo resolved(qApp->font());
-    EXPECT_EQ(resolved.family(), fluent::fontcompat::SegoeTextFamily);
+    EXPECT_EQ(resolved.family(), fluent::fontcompat::UITextFamily);
     EXPECT_EQ(resolved.styleName(), QStringLiteral("Regular"));
     EXPECT_EQ(resolved.weight(), static_cast<int>(QFont::Normal));
 }
 
-TEST_F(SegoeTest, RegularAndSemiboldRenderDifferentRealFaces) {
+TEST_F(TypographyTest, BundledIconFaceContainsCompleteCatalogAndSemanticAliases) {
+    const auto& catalog = Typography::Icons::catalog();
+    ASSERT_EQ(catalog.size(), 9558);
+    EXPECT_FALSE(Typography::Icons::glyph(
+        QStringLiteral("ic_fluent_add_20_regular")).isEmpty());
+
+    const QFont font = Typography::Icons::font(24);
+    const QFontInfo resolved(font);
+    EXPECT_TRUE(resolved.exactMatch());
+    EXPECT_EQ(resolved.family(), fluent::fontcompat::IconFamily);
+
+    const QFontMetrics metrics(font);
+    const QStringList aliasedGlyphs = {
+        Typography::Icons::Paste,
+        Typography::Icons::PinFill,
+        Typography::Icons::Block,
+        Typography::Icons::Speaker,
+        Typography::Icons::Clock,
+        Typography::Icons::Desktop,
+        Typography::Icons::AsteriskBadge12,
+        Typography::Icons::CheckmarkBadge12,
+        Typography::Icons::ErrorBadge12,
+        Typography::Icons::ImportantBadge12,
+        Typography::Icons::PasswordKeyShow,
+        Typography::Icons::PasswordKeyHide,
+        Typography::Icons::Snow,
+    };
+    for (const QString& glyph : aliasedGlyphs) {
+        ASSERT_EQ(glyph.size(), 1);
+        EXPECT_TRUE(metrics.inFont(glyph.front()));
+    }
+
+    const auto supplementary = std::find_if(
+        catalog.cbegin(), catalog.cend(),
+        [](const Typography::Icons::IconInfo& icon) { return icon.codepoint > 0xFFFF; });
+    ASSERT_NE(supplementary, catalog.cend());
+    EXPECT_TRUE(metrics.inFontUcs4(supplementary->codepoint));
+}
+
+TEST_F(TypographyTest, BundledTextFacesRetainHintingTablesAndRenderingPolicy) {
+    const QList<Typography::FontStyle> roles = {
+        Typography::Styles::Caption,
+        Typography::Styles::BodyStrong,
+        Typography::Styles::Title,
+        Typography::Styles::Display,
+    };
+    const QList<QByteArray> hintTables = {
+        QByteArrayLiteral("cvt "),
+        QByteArrayLiteral("fpgm"),
+        QByteArrayLiteral("prep"),
+        QByteArrayLiteral("gasp"),
+    };
+
+    for (const Typography::FontStyle& role : roles) {
+        const QFont font = role.toQFont();
+#ifdef Q_OS_WIN
+        EXPECT_EQ(font.hintingPreference(), QFont::PreferNoHinting);
+#else
+        EXPECT_EQ(font.hintingPreference(), QFont::PreferVerticalHinting);
+#endif
+        EXPECT_NE(font.styleStrategy() & QFont::PreferQuality, 0);
+        EXPECT_NE(font.styleStrategy() & QFont::NoSubpixelAntialias, 0);
+
+        const QRawFont rawFont = QRawFont::fromFont(font);
+        ASSERT_TRUE(rawFont.isValid()) << role.family.toStdString();
+        for (const QByteArray& table : hintTables) {
+            EXPECT_FALSE(rawFont.fontTable(table.constData()).isEmpty())
+                << role.family.toStdString() << " " << table.constData();
+        }
+    }
+}
+
+TEST_F(TypographyTest, RegularAndSemiboldRenderDifferentRealFaces) {
     const auto render = [](QFont font) {
         font.setPixelSize(40);
         QImage image(QSize(420, 80), QImage::Format_ARGB32_Premultiplied);
@@ -640,14 +647,39 @@ TEST_F(SegoeTest, RegularAndSemiboldRenderDifferentRealFaces) {
     EXPECT_GT(inkCount(semibold), inkCount(regular));
 }
 
-TEST_F(SegoeTest, ComprehensiveCheck) {
+TEST_F(TypographyTest, VisualCheck) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
     }
     if (qEnvironmentVariableIsSet("QT_QPA_PLATFORM") && qEnvironmentVariable("QT_QPA_PLATFORM") == "offscreen") {
         GTEST_SKIP();
     }
-    SegoeTestWindow window(m_iconFamily, m_uiFamily);
+    TypographyVisualCheckWindow window(Typography::FontFamily::FluentIcons,
+                                       Typography::FontFamily::UIText);
     window.show();
+
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        struct SnapshotCase {
+            int tabIndex;
+            QString variant;
+            tests::support::VisualSnapshotTheme theme;
+        };
+        const QList<SnapshotCase> snapshots = {
+            {0, QStringLiteral("icons-light"), tests::support::VisualSnapshotTheme::Light},
+            {0, QStringLiteral("icons-dark"), tests::support::VisualSnapshotTheme::Dark},
+            {1, QStringLiteral("typography-light"), tests::support::VisualSnapshotTheme::Light},
+            {1, QStringLiteral("typography-dark"), tests::support::VisualSnapshotTheme::Dark},
+        };
+
+        for (const SnapshotCase& snapshot : snapshots) {
+            window.setCurrentTab(snapshot.tabIndex);
+            tests::support::VisualSnapshotOptions options;
+            options.variant = snapshot.variant;
+            options.theme = snapshot.theme;
+            ASSERT_TRUE(tests::support::captureVisualSnapshot(&window, options));
+        }
+        return;
+    }
+
     qApp->exec();
 }

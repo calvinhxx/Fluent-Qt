@@ -235,7 +235,7 @@ void FluentGridItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem
         QRectF iconRect = bgRect.adjusted(4, 4, -4, -4 - textAreaH);
 
         if (!iconGlyph.isEmpty()) {
-            QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+            QFont iconFont(Typography::FontFamily::FluentIcons);
             iconFont.setPixelSize(qMin(static_cast<int>(iconRect.width()),
                                        static_cast<int>(iconRect.height())) / 2);
             painter->setFont(iconFont);
@@ -286,7 +286,7 @@ void FluentGridItemDelegate::drawCheckOverlay(QPainter* painter, const QRectF& c
         painter->setBrush(colors.accentDefault);
         painter->drawEllipse(checkRect);
 
-        QFont checkFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont checkFont(Typography::FontFamily::FluentIcons);
         checkFont.setPixelSize(12);
         painter->setFont(checkFont);
         painter->setPen(Qt::white);

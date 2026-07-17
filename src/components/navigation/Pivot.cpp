@@ -246,7 +246,7 @@ void Pivot::setItemFontRole(const QString& role)
 
 void Pivot::setIconFontFamily(const QString& family)
 {
-    const QString normalized = normalizedString(family, Typography::FontFamily::SegoeFluentIcons);
+    const QString normalized = normalizedString(family, Typography::FontFamily::FluentIcons);
     if (m_iconFontFamily == normalized)
         return;
     m_iconFontFamily = normalized;

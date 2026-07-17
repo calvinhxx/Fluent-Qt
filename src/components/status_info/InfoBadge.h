@@ -208,7 +208,7 @@ private:
     int m_badgeHeight = 16;
     int m_valueHorizontalPadding = 8;
     int m_iconGlyphSize = 10;
-    QString m_iconFontFamily = Typography::FontFamily::SegoeFluentIcons;
+    QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
     int m_badgeBackgroundInset = 0;
     QPoint m_contentOffset {0, 0};
 

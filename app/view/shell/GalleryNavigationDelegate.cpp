@@ -161,7 +161,7 @@ public:
                 : (qobject_cast<const QTreeView*>(option.widget)
                        && qobject_cast<const QTreeView*>(option.widget)->isExpanded(index) ? 1.0 : 0.0);
             chevronRect = chevronRectForOption(option);
-            QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+            QFont iconFont(Typography::FontFamily::FluentIcons);
             iconFont.setPixelSize(9);
             painter->setFont(iconFont);
             painter->setPen(colors.textSecondary);
@@ -185,7 +185,7 @@ public:
             ? backgroundRect.left() + kTextStart
             : contentLeft;
         if (!iconGlyph.isEmpty()) {
-            QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+            QFont iconFont(Typography::FontFamily::FluentIcons);
             iconFont.setPixelSize(15);
             painter->setFont(iconFont);
             painter->setPen(selected ? colors.textPrimary : colors.textSecondary);

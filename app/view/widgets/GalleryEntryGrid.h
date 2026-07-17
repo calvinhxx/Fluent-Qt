@@ -38,7 +38,7 @@ public:
         QString title;
         QString description;
         QPixmap icon;       // control image; used when iconGlyph is empty
-        QString iconGlyph;  // Segoe Fluent Icons glyph drawn on a tile instead of `icon`
+        QString iconGlyph;  // FluentQt Icons glyph drawn on a tile instead of `icon`
     };
 
     explicit GalleryEntryGrid(QWidget* parent = nullptr);

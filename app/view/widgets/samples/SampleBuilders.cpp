@@ -198,7 +198,7 @@ QPixmap glyphPixmap(const QString& glyph, const QColor& background, int size)
     painter.setBrush(background);
     painter.drawRoundedRect(tile, size / 4.0, size / 4.0);
 
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(qRound(size * 0.55));
     painter.setFont(iconFont);
     painter.setPen(Qt::white);

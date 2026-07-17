@@ -92,6 +92,7 @@ public:
             QFont font(family, -1, weight);
             font.setPixelSize(size);
             fluentApplyFontStyleName(font, styleName);
+            fluentConfigureTextRendering(font);
             return font;
         }
     };

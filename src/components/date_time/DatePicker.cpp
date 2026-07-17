@@ -318,7 +318,7 @@ void PickerColumn::paintEvent(QPaintEvent*)
     const bool canNext = m_flyout && m_flyout->canShift(m_field, 1);
 
     if (m_navButtonOpacity > 0.01) {
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont iconFont(Typography::FontFamily::FluentIcons);
         iconFont.setPixelSize(8);
         painter.setFont(iconFont);
 

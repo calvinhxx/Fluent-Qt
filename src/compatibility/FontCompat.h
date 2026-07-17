@@ -9,9 +9,10 @@
 
 namespace fluent::fontcompat {
 
-inline const QString SegoeSmallFamily = QStringLiteral("FluentQt Segoe UI Small");
-inline const QString SegoeTextFamily = QStringLiteral("FluentQt Segoe UI Text");
-inline const QString SegoeDisplayFamily = QStringLiteral("FluentQt Segoe UI Display");
+inline const QString UITextFamily = QStringLiteral("FluentQt UI Text");
+inline const QString UIHeadingFamily = QStringLiteral("FluentQt UI Heading");
+inline const QString UIDisplayFamily = QStringLiteral("FluentQt UI Display");
+inline const QString IconFamily = QStringLiteral("FluentQt Icons");
 
 } // namespace fluent::fontcompat
 
@@ -29,6 +30,23 @@ inline void fluentApplyFontStyleName(QFont& font, const QString& styleName)
 {
     if (!styleName.isEmpty())
         font.setStyleName(styleName);
+}
+
+inline void fluentConfigureTextRendering(QFont& font)
+{
+    // DirectWrite's vertical grid fitting makes this face look noticeably
+    // heavier at navigation/body sizes than FreeType and CoreText. Preserve
+    // the outlines on Windows, while retaining light vertical hinting on the
+    // other platforms where it improves small-text clarity.
+#ifdef Q_OS_WIN
+    font.setHintingPreference(QFont::PreferNoHinting);
+#else
+    font.setHintingPreference(QFont::PreferVerticalHinting);
+#endif
+    // Use the same high-quality grayscale strategy everywhere. This avoids
+    // ClearType colour fringes and keeps screenshots/composited surfaces stable.
+    font.setStyleStrategy(QFont::StyleStrategy(
+        QFont::PreferQuality | QFont::PreferAntialias | QFont::NoSubpixelAntialias));
 }
 
 #endif // FLUENTFONTCOMPAT_H

@@ -92,7 +92,9 @@ protected:
         p.setBrush(QColor(0, 0, 0, 120));
         p.drawRect(labelBar);
         p.setPen(Qt::white);
-        p.setFont(QFont("Segoe UI Variable", 13, QFont::DemiBold));
+        QFont labelFont(Typography::FontFamily::UIText, -1, QFont::DemiBold);
+        labelFont.setPixelSize(13);
+        p.setFont(labelFont);
         p.drawText(labelBar, Qt::AlignCenter, m_label);
     }
 

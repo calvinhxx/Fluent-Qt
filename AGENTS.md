@@ -55,7 +55,7 @@ ctest --preset vcpkg-osx --output-on-failure
 ## Testing Conventions
 
 - Register component tests with `add_qt_test_module(test_<name> Test<Name>.cpp [extra sources...])`.
-- Individual test files must not duplicate shared Qt setup such as `QApplication`, `Q_INIT_RESOURCE(resources)`, app style, or Segoe font loading; that belongs to [tests/support/QtGTestMain.cpp](tests/support/QtGTestMain.cpp).
+- Individual test files must not duplicate shared Qt setup such as `QApplication`, `Q_INIT_RESOURCE(resources)`, app style, or bundled font loading; that belongs to [tests/support/QtGTestMain.cpp](tests/support/QtGTestMain.cpp).
 - Keep `SetUpTestSuite()` for component-specific metatype registration, global test data, or initialization that cannot be shared.
 - VisualCheck tests must guard on `SKIP_VISUAL_TEST`, show the window, and block with `qApp->exec()` until the window closes. Do not replace that contract with `QTest::qWait()`.
 - Use `fluent::AnchorLayout` for primary VisualCheck layouts and control panels; detailed rules are in [docs/development/qt-component-test-conventions.md](docs/development/qt-component-test-conventions.md) and [docs/development/visual-review.md](docs/development/visual-review.md).

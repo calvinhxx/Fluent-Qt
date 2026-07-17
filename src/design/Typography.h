@@ -5,6 +5,7 @@
 #include <QString>
 
 #include "compatibility/FontCompat.h"
+#include "design/IconCatalog.h"
 
 /**
  * @brief Defines Fluent typography roles, font metrics, and icon glyph tokens.
@@ -14,25 +15,24 @@
  * Windows UI Kit typography styles.
  * zh_CN: 字号和行高为从 Windows UI Kit 排版样式测得的绝对像素值。
  *
- * FluentQt ships static instances of the Segoe UI Variable optical sizes so
- * every supported Qt/platform combination resolves the same face:
- * - Small: Caption and small text.
- * - Text: Body and Body Large roles.
- * - Display: Subtitle and larger roles.
- * zh_CN: Segoe UI Variable 光学尺寸中，Small 用于 Caption，Text 用于 Body 系列，
- * zh_CN: Display 用于 Subtitle 及以上角色。
+ * FluentQt ships renamed, hinted static faces from the open-source Inter font
+ * so every supported Qt/platform combination resolves the same face:
+ * - Text: Caption and body roles.
+ * - Heading: Subtitle and Title roles.
+ * - Display: Title Large and Display roles.
+ * zh_CN: FluentQt 内置经过重命名的开源 Inter 静态实例：Text 用于说明与正文，
+ * zh_CN: Heading 用于副标题和标题，Display 用于大标题和展示文本。
  */
 namespace Typography {
 
     // Font family tokens.
     // zh_CN: 字体家族 token。
     namespace FontFamily {
-        const QString SegoeUI          = fluent::fontcompat::SegoeTextFamily;
-        const QString SegoeUIVariable  = fluent::fontcompat::SegoeTextFamily;
-        const QString SegoeUISmall     = fluent::fontcompat::SegoeSmallFamily;   // Optical size: Small. zh_CN: 光学尺寸 Small。
-        const QString SegoeUIText      = fluent::fontcompat::SegoeTextFamily;    // Optical size: Text. zh_CN: 光学尺寸 Text。
-        const QString SegoeUIDisplay   = fluent::fontcompat::SegoeDisplayFamily; // Optical size: Display. zh_CN: 光学尺寸 Display。
-        const QString SegoeFluentIcons = "Segoe Fluent Icons";
+        const QString UI          = fluent::fontcompat::UITextFamily;
+        const QString UIText      = fluent::fontcompat::UITextFamily;
+        const QString UIHeading   = fluent::fontcompat::UIHeadingFamily;
+        const QString UIDisplay   = fluent::fontcompat::UIDisplayFamily;
+        const QString FluentIcons = fluent::fontcompat::IconFamily;
     }
 
     // Font sizes in pixels, measured from Figma.
@@ -74,9 +74,11 @@ namespace Typography {
         const int Bold     = QFont::Bold;     // 700; fallback not defined by current Figma styles. zh_CN: 备用档，当前 Figma 未定义。
     }
 
-    // Icon glyphs from Segoe Fluent Icons / MDL2 Assets.
-    // zh_CN: 来自 Segoe Fluent Icons / MDL2 Assets 的图标字符。
-    // Reference: https://learn.microsoft.com/en-us/windows/apps/design/style/segoe-fluent-icons-font
+    // Semantic shortcuts rendered by the complete bundled FluentQt Icons
+    // face. Use Icons::catalog()/glyph() for the complete upstream collection.
+    // Glyph provenance is documented in THIRD_PARTY_NOTICES.md.
+    // zh_CN: 完整内置 FluentQt Icons 字体中的常用语义快捷项；完整上游集合请使用
+    // Icons::catalog()/glyph()。字形来源见 THIRD_PARTY_NOTICES.md。
     namespace Icons {
         // Navigation & Window
         const QString GlobalNav       = QString::fromUtf16(u"\uE700");
@@ -276,6 +278,7 @@ namespace Typography {
             QFont font(family, -1, weight);
             font.setPixelSize(size);
             fluentApplyFontStyleName(font, styleName);
+            fluentConfigureTextRendering(font);
             return font;
         }
 
@@ -296,49 +299,49 @@ namespace Typography {
     // the exact face within that family.
     // zh_CN: family 选择对应的静态光学尺寸字族，styleName 选择其中的精确字体。
     namespace Styles {
-        // Caption → FluentQt Segoe UI Small / Regular / 12px / 400 / 16px
+        // Caption → FluentQt UI Text / Regular / 12px / 400 / 16px
         const FontStyle Caption = {
-            FontFamily::SegoeUISmall, "Regular",
+            FontFamily::UIText, "Regular",
             FontSize::Caption, FontWeight::Regular, LineHeight::Caption
         };
-        // Body → FluentQt Segoe UI Text / Regular / 14px / 400 / 20px
+        // Body → FluentQt UI Text / Regular / 14px / 400 / 20px
         const FontStyle Body = {
-            FontFamily::SegoeUIText, "Regular",
+            FontFamily::UIText, "Regular",
             FontSize::Body, FontWeight::Regular, LineHeight::Body
         };
-        // Body Strong → FluentQt Segoe UI Text / Semibold / 14px / 600 / 20px
+        // Body Strong → FluentQt UI Text / Semibold / 14px / 600 / 20px
         const FontStyle BodyStrong = {
-            FontFamily::SegoeUIText, "Semibold",
+            FontFamily::UIText, "Semibold",
             FontSize::BodyStrong, FontWeight::SemiBold, LineHeight::BodyStrong
         };
-        // Body Large → FluentQt Segoe UI Text / Regular / 18px / 400 / 24px
+        // Body Large → FluentQt UI Text / Regular / 18px / 400 / 24px
         const FontStyle BodyLarge = {
-            FontFamily::SegoeUIText, "Regular",
+            FontFamily::UIText, "Regular",
             FontSize::BodyLarge, FontWeight::Regular, LineHeight::BodyLarge
         };
-        // Body Large Strong → FluentQt Segoe UI Text / Semibold / 18px / 600 / 24px
+        // Body Large Strong → FluentQt UI Text / Semibold / 18px / 600 / 24px
         const FontStyle BodyLargeStrong = {
-            FontFamily::SegoeUIText, "Semibold",
+            FontFamily::UIText, "Semibold",
             FontSize::BodyLargeStrong, FontWeight::SemiBold, LineHeight::BodyLargeStrong
         };
-        // Subtitle → FluentQt Segoe UI Display / Semibold / 20px / 600 / 28px
+        // Subtitle → FluentQt UI Heading / Semibold / 20px / 600 / 28px
         const FontStyle Subtitle = {
-            FontFamily::SegoeUIDisplay, "Semibold",
+            FontFamily::UIHeading, "Semibold",
             FontSize::Subtitle, FontWeight::SemiBold, LineHeight::Subtitle
         };
-        // Title → FluentQt Segoe UI Display / Semibold / 28px / 600 / 36px
+        // Title → FluentQt UI Heading / Semibold / 28px / 600 / 36px
         const FontStyle Title = {
-            FontFamily::SegoeUIDisplay, "Semibold",
+            FontFamily::UIHeading, "Semibold",
             FontSize::Title, FontWeight::SemiBold, LineHeight::Title
         };
-        // Title Large → FluentQt Segoe UI Display / Semibold / 40px / 600 / 52px
+        // Title Large → FluentQt UI Display / Semibold / 40px / 600 / 52px
         const FontStyle TitleLarge = {
-            FontFamily::SegoeUIDisplay, "Semibold",
+            FontFamily::UIDisplay, "Semibold",
             FontSize::TitleLarge, FontWeight::SemiBold, LineHeight::TitleLarge
         };
-        // Display → FluentQt Segoe UI Display / Semibold / 68px / 600 / 92px
+        // Display → FluentQt UI Display / Semibold / 68px / 600 / 92px
         const FontStyle Display = {
-            FontFamily::SegoeUIDisplay, "Semibold",
+            FontFamily::UIDisplay, "Semibold",
             FontSize::Display, FontWeight::SemiBold, LineHeight::Display
         };
     }
