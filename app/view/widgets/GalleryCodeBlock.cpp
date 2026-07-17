@@ -8,11 +8,15 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QHBoxLayout>
+#include <QLayout>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPointer>
 #include <QResizeEvent>
+#include <QScrollArea>
+#include <QScrollBar>
+#include <QSignalBlocker>
 #include <QSizePolicy>
 #include <QTimer>
 #include <QVariantAnimation>
@@ -41,6 +45,17 @@ constexpr int kHeaderHeight = 44;
 constexpr int kChevronSize = 22;
 constexpr int kChevronGlyphPixelSize = 12;
 constexpr int kCopyCheckRevertMs = 1300;
+
+QScrollArea* enclosingScrollArea(QWidget* widget)
+{
+    for (QWidget* ancestor = widget ? widget->parentWidget() : nullptr;
+         ancestor;
+         ancestor = ancestor->parentWidget()) {
+        if (auto* scrollArea = qobject_cast<QScrollArea*>(ancestor))
+            return scrollArea;
+    }
+    return nullptr;
+}
 }
 
 /**
@@ -292,6 +307,8 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
             [this](const QVariant& value) { applyFraction(value.toDouble()); });
     connect(m_animation, &QVariantAnimation::finished, this, [this]() {
         applyFraction(m_expanded ? 1.0 : 0.0);
+        emit expansionTransitionFinished(m_expanded);
+        finishViewportTransition();
     });
 
     applyPalette();
@@ -302,6 +319,8 @@ void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
     if (m_expanded == expanded)
         return;
     m_expanded = expanded;
+    beginViewportTransition();
+    emit expansionTransitionStarted(expanded);
 
     // Highlight on first reveal, before measuring — the measured content height depends on the
     // (now populated) code label.
@@ -314,7 +333,13 @@ void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
     // height-constrained for the whole lifecycle avoids the show/hide and constraint-release
     // layout jumps that made the page feel shaky.
     // zh_CN: 直接量固定内层内容。裁剪容器始终可见且全程用高度约束，避免 show/hide 和释放约束带来的布局跳动。
-    m_contentTargetHeight = naturalContentHeight();
+    // Measure on reveal, when the clipped body is still at zero height. A
+    // second measurement at the start of collapse can differ by a few pixels
+    // after rich-text shaping settles, producing an upward jump immediately
+    // before the shrinking animation. Collapse must reuse the exact height
+    // that was used to expand.
+    if (expanded || m_contentTargetHeight <= 0)
+        m_contentTargetHeight = naturalContentHeight();
     applyFraction(m_fraction);
 
     // One anchor per toggle; the per-frame applyFraction path stays quiet.
@@ -327,11 +352,11 @@ void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
     const double target = expanded ? 1.0 : 0.0;
     if (!animated) {
         applyFraction(target);
+        emit expansionTransitionFinished(m_expanded);
+        finishViewportTransition();
         return;
     }
 
-    m_animation->setStartValue(m_fraction);
-    m_animation->setEndValue(target);
     const auto motion = themeAnimation();
     // Full toggles run at the normal token, not slow: a 400ms tail makes the
     // last few pixels crawl, which reads as the page stuttering near the end.
@@ -339,8 +364,18 @@ void GalleryCodeBlock::setExpanded(bool expanded, bool animated)
     // 观感上像页面在收尾时抖动。
     const double distance = qAbs(target - m_fraction);
     const int duration = qRound(motion.fast + (motion.normal - motion.fast) * distance);
-    m_animation->setDuration(duration);
-    m_animation->setEasingCurve(motion.standard);
+    // QVariantAnimation retains currentTime from the previous completed run.
+    // Replacing its end value at that old end time emits the new target first,
+    // then start() jumps back to the new start value. Configure it silently and
+    // rewind before exposing any valueChanged notification.
+    {
+        const QSignalBlocker blocker(m_animation);
+        m_animation->setStartValue(m_fraction);
+        m_animation->setEndValue(target);
+        m_animation->setDuration(duration);
+        m_animation->setEasingCurve(motion.standard);
+        m_animation->setCurrentTime(0);
+    }
     m_animation->start();
 }
 
@@ -419,7 +454,127 @@ void GalleryCodeBlock::applyFraction(double fraction)
     if (m_lastEmittedLayoutHeight != blockHeight) {
         m_lastEmittedLayoutHeight = blockHeight;
         emit layoutHeightChanged(blockHeight);
+        // layoutHeightChanged first gives an enclosing sample card a chance to
+        // update its own fixed height. Once all direct slots return, resize the
+        // scroll content and activate its layout in this same animation frame.
+        // This prevents QScrollArea from briefly squeezing fixed-size siblings
+        // while it waits for a later LayoutRequest.
+        synchronizeViewportLayout();
     }
+}
+
+void GalleryCodeBlock::beginViewportTransition()
+{
+    ++m_viewportTransitionGeneration;
+    clearViewportAnchor();
+
+    m_transitionScrollArea = enclosingScrollArea(this);
+    m_transitionScrollBar = m_transitionScrollArea
+        ? m_transitionScrollArea->verticalScrollBar()
+        : nullptr;
+    if (!m_transitionScrollArea || !m_transitionScrollArea->viewport()
+        || !m_transitionScrollBar || !m_header) {
+        return;
+    }
+
+    m_viewportTransitionActive = true;
+    m_anchorViewportY = m_transitionScrollArea->viewport()->mapFromGlobal(
+        m_header->mapToGlobal(QPoint(0, 0))).y();
+
+    // QScrollArea may update its range after an animation callback returns.
+    // Keep the clicked header at one stable viewport coordinate until the
+    // transition and its final queued layout pass are both complete.
+    m_scrollRangeConnection = connect(
+        m_transitionScrollBar, &QScrollBar::rangeChanged, this,
+        [this]() { restoreViewportAnchor(); });
+    m_scrollValueConnection = connect(
+        m_transitionScrollBar, &QScrollBar::valueChanged, this,
+        [this]() { restoreViewportAnchor(); });
+}
+
+void GalleryCodeBlock::finishViewportTransition()
+{
+    synchronizeViewportLayout();
+    const quint64 generation = m_viewportTransitionGeneration;
+    QTimer::singleShot(0, this, [this, generation]() {
+        if (!m_viewportTransitionActive
+            || generation != m_viewportTransitionGeneration) {
+            return;
+        }
+        synchronizeViewportLayout();
+        clearViewportAnchor();
+    });
+}
+
+void GalleryCodeBlock::synchronizeViewportLayout()
+{
+    if (!m_viewportTransitionActive || !m_transitionScrollArea
+        || !m_transitionScrollArea->viewport()) {
+        return;
+    }
+
+    QWidget* scrollContent = m_transitionScrollArea->widget();
+    if (!scrollContent)
+        return;
+
+    // Containers between the code block and the page (notably a
+    // GallerySampleCard) must settle before the page asks for its new minimum.
+    for (QWidget* ancestor = parentWidget();
+         ancestor && ancestor != scrollContent;
+         ancestor = ancestor->parentWidget()) {
+        if (QLayout* ancestorLayout = ancestor->layout()) {
+            ancestorLayout->invalidate();
+            ancestorLayout->activate();
+        }
+    }
+
+    QLayout* pageLayout = scrollContent->layout();
+    if (pageLayout) {
+        pageLayout->invalidate();
+        const int contentHeight = qMax(m_transitionScrollArea->viewport()->height(),
+                                       pageLayout->minimumSize().height());
+        if (scrollContent->height() != contentHeight)
+            scrollContent->resize(scrollContent->width(), contentHeight);
+        pageLayout->activate();
+    }
+
+    restoreViewportAnchor();
+}
+
+void GalleryCodeBlock::restoreViewportAnchor()
+{
+    if (!m_viewportTransitionActive || m_restoringViewportAnchor
+        || !m_transitionScrollArea || !m_transitionScrollArea->viewport()
+        || !m_transitionScrollBar || !m_header) {
+        return;
+    }
+
+    QWidget* scrollContent = m_transitionScrollArea->widget();
+    if (!scrollContent)
+        return;
+
+    const int anchorContentY = m_header->mapTo(scrollContent, QPoint(0, 0)).y();
+    const int desiredValue = qBound(m_transitionScrollBar->minimum(),
+                                    anchorContentY - m_anchorViewportY,
+                                    m_transitionScrollBar->maximum());
+    if (m_transitionScrollBar->value() == desiredValue)
+        return;
+
+    m_restoringViewportAnchor = true;
+    m_transitionScrollBar->setValue(desiredValue);
+    m_restoringViewportAnchor = false;
+}
+
+void GalleryCodeBlock::clearViewportAnchor()
+{
+    QObject::disconnect(m_scrollRangeConnection);
+    QObject::disconnect(m_scrollValueConnection);
+    m_scrollRangeConnection = QMetaObject::Connection();
+    m_scrollValueConnection = QMetaObject::Connection();
+    m_viewportTransitionActive = false;
+    m_restoringViewportAnchor = false;
+    m_transitionScrollArea = nullptr;
+    m_transitionScrollBar = nullptr;
 }
 
 void GalleryCodeBlock::onThemeUpdated()
