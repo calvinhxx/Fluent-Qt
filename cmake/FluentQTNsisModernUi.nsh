@@ -10,7 +10,7 @@ ShowUninstDetails hide
 
 !define MUI_WELCOMEPAGE_TEXT "Explore Fluent Qt controls, themes, and platform materials in one polished Gallery. Setup will install version ${VERSION} for your Windows account; administrator access is not required."
 
-!define MUI_LICENSEPAGE_TEXT_TOP "Fluent-Qt Gallery is open source under the MIT License. Review the terms before continuing."
+!define MUI_LICENSEPAGE_TEXT_TOP "Review the Fluent-Qt MIT terms and the separate Qt/runtime notices before continuing."
 !define MUI_LICENSEPAGE_TEXT_BOTTOM "Select Accept to continue."
 !define MUI_LICENSEPAGE_BUTTON "&Accept"
 

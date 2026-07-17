@@ -34,6 +34,19 @@ keeps DMG/NSIS artifacts focused on the showcase application while normal
 `cmake --install` or `cmake --install --component Development` remains available
 for SDK-style library installs.
 
+Every Gallery package includes the project license, `THIRD_PARTY_NOTICES.md`,
+`TRADEMARKS.md`, dependency license files, and a generated
+`RUNTIME_DEPENDENCIES.txt` containing the resolved Qt, spdlog, and fmt versions.
+Windows and macOS packages dynamically deploy Qt; before publishing one, retain
+the exact Qt Base corresponding source named in that notice under maintainer
+control for at least the period promised in
+`third_party/runtime/qt/NOTICE.md`. Linux DEBs do not bundle Qt and instead
+use the distribution's Qt packages.
+
+If Gallery starts deploying a Qt module outside its current Qt Core, GUI,
+Widgets, Network, and Qt Base plug-in contract, add that module's license and
+corresponding source to the package process before release.
+
 Tagged releases also publish `FluentQt-<version>-source.zip`. This portable,
 library-only archive excludes Gallery, tests, and `support/logging`; create it
 locally after any normal configure with:
@@ -171,7 +184,7 @@ project-owned Modern UI presentation layer:
   Fluent artwork in `app/assets/installer-welcome.bmp` and
   `app/assets/installer-header.bmp`, generated from `app-icon.png` by
   `cmake/GenerateNsisBranding.ps1`. Version text must not be baked into images.
-- Segoe UI typography, concise page copy, centered version branding, a GitHub
+- Windows system UI typography, concise page copy, centered version branding, a GitHub
   link, and a finish-page "launch Fluent-Qt Gallery" option.
 - The unused Install Options page and interactive Start Menu folder page are
   skipped. Current-user Start Menu and desktop shortcuts are still created.

@@ -16,6 +16,12 @@ example disabled and build only the library. The included
 `examples/hello_world` project demonstrates both in-tree and installed-package
 integration.
 
+The project's own source is MIT licensed. Bundled assets retain the licenses
+and notices included in `THIRD_PARTY_NOTICES.md` and `third_party/`. Qt is a
+consumer-supplied dynamic dependency of this source package and is not covered
+by the FluentQt MIT license. See `TRADEMARKS.md` for name and design-reference
+disclaimers.
+
 Minimal source integration:
 
 ```cmake

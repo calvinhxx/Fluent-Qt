@@ -1,0 +1,36 @@
+FLUENT-QT GALLERY RUNTIME DEPENDENCY NOTICE
+==========================================
+
+Fluent-Qt Gallery version: @PROJECT_VERSION@
+Qt version: @FLUENT_QT_RUNTIME_QT_VERSION@
+spdlog version: @FLUENT_QT_RUNTIME_SPDLOG_VERSION@
+fmt version: @FLUENT_QT_RUNTIME_FMT_VERSION@
+
+Fluent-Qt's own source code is licensed under the MIT License. Third-party
+components are not relicensed by that license.
+
+Qt
+--
+Gallery dynamically links to Qt Core, GUI, Widgets, and Network, together with
+the Qt platform and image-format plug-ins selected by the deployment tool.
+@FLUENT_QT_RUNTIME_QT_DISTRIBUTION_STATEMENT@
+
+Open-source Qt components used by this package are provided under the GNU
+Lesser General Public License version 3 (or the GNU GPL version 3 at the
+recipient's option). Full terms are in licenses/qt/LICENSE.txt. Recipients may
+replace the dynamically linked Qt libraries, run the resulting modified build,
+and reverse engineer for the purpose of debugging those modifications. See
+licenses/qt/NOTICE.md for practical instructions and the corresponding-source
+offer.
+
+@FLUENT_QT_RUNTIME_QT_SOURCE_STATEMENT@
+
+spdlog and fmt
+--------------
+Gallery logging uses spdlog and fmt under their MIT licenses. Full terms are in
+licenses/spdlog/LICENSE.txt and licenses/fmt/LICENSE.txt. The reusable FluentQt
+library itself does not depend on either logging library.
+
+Additional bundled assets and attribution are documented in
+THIRD_PARTY_NOTICES.md. Trademark and external-design-reference disclaimers are
+in TRADEMARKS.md.

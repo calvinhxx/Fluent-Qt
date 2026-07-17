@@ -131,8 +131,19 @@ if(FLUENT_QT_INSTALL)
 		"${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfigVersion.cmake"
 		DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}"
 		COMPONENT Development)
-	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+	install(FILES
+		"${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+		"${CMAKE_CURRENT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
+		"${CMAKE_CURRENT_SOURCE_DIR}/TRADEMARKS.md"
 		DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt"
+		COMPONENT Development)
+	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/inter/LICENSE.txt"
+		DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt/third_party/inter"
+		COMPONENT Development)
+	install(FILES
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/LICENSE.txt"
+		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/NOTICE.txt"
+		DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt/third_party/fluentui-system-icons"
 		COMPONENT Development)
 endif()
 

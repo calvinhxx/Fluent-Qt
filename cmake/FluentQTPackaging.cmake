@@ -9,16 +9,94 @@ if(NOT TARGET ${FLUENT_QT_GALLERY_EXECUTABLE_NAME})
     return()
 endif()
 
+set(FLUENT_QT_RUNTIME_QT_VERSION "${Qt${QT_VERSION_MAJOR}_VERSION}")
+if(NOT FLUENT_QT_RUNTIME_QT_VERSION)
+    set(FLUENT_QT_RUNTIME_QT_VERSION "${QT_VERSION}")
+endif()
+set(FLUENT_QT_RUNTIME_SPDLOG_VERSION "${spdlog_VERSION}")
+if(NOT FLUENT_QT_RUNTIME_SPDLOG_VERSION AND DEFINED SPDLOG_VERSION)
+    set(FLUENT_QT_RUNTIME_SPDLOG_VERSION "${SPDLOG_VERSION}")
+endif()
+if(NOT FLUENT_QT_RUNTIME_SPDLOG_VERSION)
+    set(FLUENT_QT_RUNTIME_SPDLOG_VERSION "resolved by the package manager")
+endif()
+set(FLUENT_QT_RUNTIME_FMT_VERSION "${fmt_VERSION}")
+if(NOT FLUENT_QT_RUNTIME_FMT_VERSION AND DEFINED FMT_VERSION)
+    set(FLUENT_QT_RUNTIME_FMT_VERSION "${FMT_VERSION}")
+endif()
+if(NOT FLUENT_QT_RUNTIME_FMT_VERSION)
+    set(FLUENT_QT_RUNTIME_FMT_VERSION "resolved with spdlog")
+endif()
+
+set(FLUENT_QT_RUNTIME_QT_SOURCE_ARCHIVE
+    "qtbase-everywhere-src-${FLUENT_QT_RUNTIME_QT_VERSION}.tar.xz")
+if((WIN32 OR APPLE) AND FLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME)
+    set(FLUENT_QT_RUNTIME_QT_DISTRIBUTION_STATEMENT
+        "This package contains dynamically linked Qt libraries and plug-ins deployed with Gallery.")
+    set(FLUENT_QT_RUNTIME_QT_SOURCE_STATEMENT
+        "Matching Qt Base source archive: ${FLUENT_QT_RUNTIME_QT_SOURCE_ARCHIVE}\n\nBefore distributing this package, the distributor must retain that exact source under its own control. See licenses/qt/NOTICE.md for the no-charge request instructions and three-year written offer.")
+else()
+    set(FLUENT_QT_RUNTIME_QT_DISTRIBUTION_STATEMENT
+        "This package does not contain Qt binaries; Qt is supplied by the operating system or the user's Qt installation.")
+    set(FLUENT_QT_RUNTIME_QT_SOURCE_STATEMENT
+        "Because this package does not convey Qt object code, obtain the corresponding source and notices for the installed Qt runtime from its operating-system package or Qt distributor. A downstream package that bundles Qt must provide its own controlled corresponding-source copy or valid written offer.")
+endif()
+
+file(READ "${PROJECT_SOURCE_DIR}/LICENSE" FLUENT_QT_PROJECT_LICENSE_TEXT)
+set(FLUENT_QT_GALLERY_RUNTIME_NOTICE
+    "${CMAKE_CURRENT_BINARY_DIR}/RUNTIME_DEPENDENCIES.txt")
+set(FLUENT_QT_GALLERY_INSTALLER_LICENSE
+    "${CMAKE_CURRENT_BINARY_DIR}/GalleryInstallerLicense.txt")
+configure_file(
+    "${PROJECT_SOURCE_DIR}/cmake/GalleryRuntimeNotice.txt.in"
+    "${FLUENT_QT_GALLERY_RUNTIME_NOTICE}"
+    @ONLY)
+configure_file(
+    "${PROJECT_SOURCE_DIR}/cmake/GalleryInstallerLicense.txt.in"
+    "${FLUENT_QT_GALLERY_INSTALLER_LICENSE}"
+    @ONLY)
+
 # Ship the license in the platform-appropriate install location. The macOS DMG
 # deliberately keeps it out of the drag-to-install window and presents it as a
 # mount-time SLA instead.
 if(WIN32)
-    install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
+    install(FILES
+        "${PROJECT_SOURCE_DIR}/LICENSE"
+        "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
+        "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"
+        "${FLUENT_QT_GALLERY_RUNTIME_NOTICE}"
         DESTINATION "."
         COMPONENT GalleryRuntime)
+    set(_fluent_qt_gallery_license_dir "licenses")
 elseif(UNIX AND NOT APPLE)
-    install(FILES "${PROJECT_SOURCE_DIR}/LICENSE"
+    install(FILES
+        "${PROJECT_SOURCE_DIR}/LICENSE"
+        "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
+        "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"
+        "${FLUENT_QT_GALLERY_RUNTIME_NOTICE}"
         DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+        COMPONENT GalleryRuntime)
+    set(_fluent_qt_gallery_license_dir "${CMAKE_INSTALL_DOCDIR}/licenses")
+endif()
+if(DEFINED _fluent_qt_gallery_license_dir)
+    install(FILES "${PROJECT_SOURCE_DIR}/third_party/fonts/inter/LICENSE.txt"
+        DESTINATION "${_fluent_qt_gallery_license_dir}/inter"
+        COMPONENT GalleryRuntime)
+    install(FILES
+        "${PROJECT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/LICENSE.txt"
+        "${PROJECT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/NOTICE.txt"
+        DESTINATION "${_fluent_qt_gallery_license_dir}/fluentui-system-icons"
+        COMPONENT GalleryRuntime)
+    install(FILES
+        "${PROJECT_SOURCE_DIR}/third_party/runtime/qt/LICENSE.txt"
+        "${PROJECT_SOURCE_DIR}/third_party/runtime/qt/NOTICE.md"
+        DESTINATION "${_fluent_qt_gallery_license_dir}/qt"
+        COMPONENT GalleryRuntime)
+    install(FILES "${PROJECT_SOURCE_DIR}/third_party/runtime/spdlog/LICENSE.txt"
+        DESTINATION "${_fluent_qt_gallery_license_dir}/spdlog"
+        COMPONENT GalleryRuntime)
+    install(FILES "${PROJECT_SOURCE_DIR}/third_party/runtime/fmt/LICENSE.txt"
+        DESTINATION "${_fluent_qt_gallery_license_dir}/fmt"
         COMPONENT GalleryRuntime)
 endif()
 
@@ -109,6 +187,38 @@ if(APPLE)
 else()
     set(FLUENT_QT_GALLERY_BUNDLE_DIR "${FLUENT_QT_GALLERY_EXECUTABLE_NAME}.app")
 endif()
+if(APPLE)
+    set(_fluent_qt_bundle_notice_dir
+        "${FLUENT_QT_GALLERY_BUNDLE_DIR}/Contents/Resources")
+    set(_fluent_qt_bundle_license_dir
+        "${FLUENT_QT_GALLERY_BUNDLE_DIR}/Contents/Resources/licenses")
+    install(FILES
+        "${PROJECT_SOURCE_DIR}/LICENSE"
+        "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
+        "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"
+        "${FLUENT_QT_GALLERY_RUNTIME_NOTICE}"
+        DESTINATION "${_fluent_qt_bundle_notice_dir}"
+        COMPONENT GalleryRuntime)
+    install(FILES "${PROJECT_SOURCE_DIR}/third_party/fonts/inter/LICENSE.txt"
+        DESTINATION "${_fluent_qt_bundle_license_dir}/inter"
+        COMPONENT GalleryRuntime)
+    install(FILES
+        "${PROJECT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/LICENSE.txt"
+        "${PROJECT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/NOTICE.txt"
+        DESTINATION "${_fluent_qt_bundle_license_dir}/fluentui-system-icons"
+        COMPONENT GalleryRuntime)
+    install(FILES
+        "${PROJECT_SOURCE_DIR}/third_party/runtime/qt/LICENSE.txt"
+        "${PROJECT_SOURCE_DIR}/third_party/runtime/qt/NOTICE.md"
+        DESTINATION "${_fluent_qt_bundle_license_dir}/qt"
+        COMPONENT GalleryRuntime)
+    install(FILES "${PROJECT_SOURCE_DIR}/third_party/runtime/spdlog/LICENSE.txt"
+        DESTINATION "${_fluent_qt_bundle_license_dir}/spdlog"
+        COMPONENT GalleryRuntime)
+    install(FILES "${PROJECT_SOURCE_DIR}/third_party/runtime/fmt/LICENSE.txt"
+        DESTINATION "${_fluent_qt_bundle_license_dir}/fmt"
+        COMPONENT GalleryRuntime)
+endif()
 configure_file(
     "${PROJECT_SOURCE_DIR}/cmake/InstallDeployQtRuntime.cmake.in"
     "${CMAKE_CURRENT_BINARY_DIR}/InstallDeployQtRuntime.cmake"
@@ -171,7 +281,7 @@ if(APPLE)
     # accepts the terms before reaching the install window. DragNDrop turns an explicit
     # CPACK_RESOURCE_FILE_LICENSE into the SLA; the platform-specific license
     # install rules above keep the drag-to-install window clean.
-    set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
+    set(CPACK_RESOURCE_FILE_LICENSE "${FLUENT_QT_GALLERY_INSTALLER_LICENSE}")
     set(CPACK_DMG_SLA_USE_RESOURCE_FILE_LICENSE ON)
     set(CPACK_DMG_SLA_LANGUAGES "English")
     # Style the mounted DMG as a drag-to-install window. DragNDrop adds the /Applications
@@ -208,7 +318,7 @@ elseif(WIN32)
     set(CPACK_NSIS_EXECUTABLE
         "${CMAKE_CURRENT_LIST_DIR}/nsis-per-user-wrapper.cmd")
     set(CPACK_NSIS_INSTALL_ROOT "$LOCALAPPDATA\\\\Programs")
-    set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
+    set(CPACK_RESOURCE_FILE_LICENSE "${FLUENT_QT_GALLERY_INSTALLER_LICENSE}")
     set(CPACK_NSIS_DISPLAY_NAME "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
     set(CPACK_NSIS_PACKAGE_NAME "${FLUENT_QT_GALLERY_DISPLAY_NAME}")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
