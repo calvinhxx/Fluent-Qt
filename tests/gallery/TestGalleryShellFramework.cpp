@@ -878,9 +878,7 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)
     QApplication::processEvents();
 
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("info-badge"));
-    QTest::qWait(320);
-    QApplication::processEvents();
-    EXPECT_TRUE(flyoutPointer.isNull() || !flyoutPointer->isVisible());
+    QTRY_VERIFY_WITH_TIMEOUT(flyoutPointer.isNull() || !flyoutPointer->isVisible(), 1500);
 }
 
 TEST_F(GalleryShellFrameworkTest, NavigationEntriesExposeRequiredGroups)
