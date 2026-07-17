@@ -213,7 +213,9 @@ Before creating a stable tag:
 5. Add `docs/releases/vX.Y.Z.md`, preview it with `--require-curated`, and review
    the maintainer changelog from the previous release tag.
 6. Create an annotated tag.
-7. Build and attach release artifacts.
+7. Build and attach release artifacts. For Windows/macOS Gallery packages,
+   verify the installed runtime notices and retain the exact corresponding Qt
+   source required by their Qt `NOTICE.md`.
 8. Publish the GitHub Release notes, installers, and one aggregate
    `SHA256SUMS.txt`.
 

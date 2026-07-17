@@ -20,16 +20,23 @@ set(_archive "${FLUENT_QT_SOURCE_PACKAGE_DIR}/${_package_name}.zip")
 file(REMOVE_RECURSE "${_staging_root}")
 file(MAKE_DIRECTORY "${_package_root}/cmake")
 file(MAKE_DIRECTORY "${_package_root}/examples")
+file(MAKE_DIRECTORY "${_package_root}/tools")
 
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/include"
     "${FLUENT_QT_SOURCE_DIR}/src"
     "${FLUENT_QT_SOURCE_DIR}/res"
+    "${FLUENT_QT_SOURCE_DIR}/third_party"
     DESTINATION "${_package_root}")
+file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/tools/fonts"
+    DESTINATION "${_package_root}/tools")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/CMakeLists.txt"
     "${FLUENT_QT_SOURCE_DIR}/resources.qrc"
     "${FLUENT_QT_SOURCE_DIR}/LICENSE"
+    "${FLUENT_QT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
+    "${FLUENT_QT_SOURCE_DIR}/TRADEMARKS.md"
     DESTINATION "${_package_root}")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/cmake/FluentQtConfig.cmake.in"

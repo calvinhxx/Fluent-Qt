@@ -119,7 +119,7 @@ $pageHeaders = @(
     @(
         '  !insertmacro MUI_PAGE_LICENSE',
         '  !define MUI_PAGE_HEADER_TEXT "Review the license"',
-        '  !define MUI_PAGE_HEADER_SUBTEXT "MIT License terms for Fluent-Qt Gallery."'
+        '  !define MUI_PAGE_HEADER_SUBTEXT "Project MIT terms and third-party runtime notices."'
     ),
     @(
         '  !insertmacro MUI_PAGE_DIRECTORY',

@@ -1,0 +1,20 @@
+FLUENT-QT GALLERY LICENSE NOTICE
+================================
+
+Fluent-Qt's own source code is licensed under the MIT License reproduced below.
+Bundled assets and runtime dependencies retain their separate terms.
+
+This Gallery build dynamically links to Qt @FLUENT_QT_RUNTIME_QT_VERSION@.
+When this package contains Qt shared libraries or frameworks, those open-source
+Qt components are provided under GNU LGPL version 3 (or GNU GPL version 3 at
+the recipient's option). You may replace and debug modified Qt libraries. The
+installed RUNTIME_DEPENDENCIES.txt, THIRD_PARTY_NOTICES.md, and licenses
+directory provide the full terms, exact versions, corresponding-source offer,
+and relinking instructions.
+
+The installer Accept action confirms receipt of this notice. It does not waive
+or restrict rights granted by any third-party open-source license.
+
+------------------------------------------------------------------------
+
+@FLUENT_QT_PROJECT_LICENSE_TEXT@
