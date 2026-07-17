@@ -1,10 +1,13 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <functional>
 #include <memory>
 
 #include <QApplication>
+#include <QAbstractScrollArea>
 #include <QBoxLayout>
+#include <QClipboard>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFrame>
@@ -13,12 +16,14 @@
 #include <QImage>
 #include <QLabel>
 #include <QLayout>
+#include <QLineEdit>
 #include <QMargins>
 #include <QPoint>
 #include <QScrollBar>
 #include <QSizePolicy>
 #include <QStringList>
 #include <QTest>
+#include <QVector>
 #include <QWidget>
 
 #include "components/basicinput/Button.h"
@@ -27,7 +32,9 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/scrolling/PipsPager.h"
 #include "components/scrolling/ScrollView.h"
+#include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/TextEdit.h"
 #include "model/GalleryComponentCatalog.h"
@@ -36,14 +43,18 @@
 #include "view/widgets/GalleryCodeBlock.h"
 #include "view/pages/GalleryComponentPage.h"
 #include "view/pages/GalleryContentPage.h"
+#include "view/pages/GalleryFoundationTopicPage.h"
 #include "view/widgets/GalleryComponentReferenceCard.h"
 #include "view/widgets/GalleryEntryGrid.h"
+#include "view/widgets/GalleryIconBrowser.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
 #include "view/widgets/samples/SampleBuilders.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/support/GalleryToast.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
+#include "viewmodel/GallerySettings.h"
+#include "QtTestEnvironment.h"
 
 using fluent::gallery::GalleryCategoryPage;
 using fluent::gallery::GalleryCodeBlock;
@@ -51,6 +62,8 @@ using fluent::gallery::GalleryComponentPage;
 using fluent::gallery::GalleryComponentReferenceCard;
 using fluent::gallery::GalleryContentPage;
 using fluent::gallery::GalleryEntryGrid;
+using fluent::gallery::GalleryFoundationTopicPage;
+using fluent::gallery::GalleryIconBrowser;
 using fluent::gallery::GalleryNavigationViewModel;
 using fluent::gallery::GallerySampleCard;
 using fluent::gallery::GalleryWindow;
@@ -237,6 +250,240 @@ TEST_F(GalleryContentPagesTest, AllNavigationRoutesHaveContentAndSamples)
             EXPECT_FALSE(sample.codeSnippet.isEmpty()) << sample.id.toStdString();
         }
     }
+}
+
+TEST_F(GalleryContentPagesTest, FoundationTopicsExposeFullIconCatalogAndSeparateSpacing)
+{
+    GalleryWindow window;
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("foundation-iconography")));
+    auto* iconPage = waitForCurrentPage<GalleryFoundationTopicPage>(window);
+    ASSERT_NE(iconPage, nullptr);
+    auto* browser = iconPage->findChild<GalleryIconBrowser*>(
+        QStringLiteral("galleryIconBrowser"));
+    ASSERT_NE(browser, nullptr);
+    EXPECT_EQ(browser->iconCount(), 9558);
+    EXPECT_EQ(browser->visibleIconCount(), browser->iconCount());
+    auto* countLabel = browser->findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryIconCount"));
+    ASSERT_NE(countLabel, nullptr);
+    EXPECT_TRUE(countLabel->text().contains(QStringLiteral("icons")));
+    EXPECT_EQ(browser->findChild<QAbstractScrollArea*>(), nullptr);
+    auto* iconGrid = browser->findChild<QWidget*>(QStringLiteral("galleryIconGrid"));
+    ASSERT_NE(iconGrid, nullptr);
+    auto* pagination = browser->findChild<QWidget*>(
+        QStringLiteral("galleryIconPagination"));
+    auto* pageLabel = browser->findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryIconPageLabel"));
+    auto* pager = browser->findChild<fluent::scrolling::PipsPager*>(
+        QStringLiteral("galleryIconPager"));
+    auto* hoverTip = browser->findChild<fluent::status_info::ToolTip*>(
+        QStringLiteral("galleryIconHoverTip"));
+    ASSERT_NE(pagination, nullptr);
+    ASSERT_NE(pageLabel, nullptr);
+    ASSERT_NE(pager, nullptr);
+    ASSERT_NE(hoverTip, nullptr);
+    EXPECT_FALSE(pagination->isHidden());
+    EXPECT_EQ(pager->numberOfPages(), 45);
+    EXPECT_EQ(pager->selectedPageIndex(), 0);
+    EXPECT_TRUE(pageLabel->text().contains(QStringLiteral("1-216")));
+    EXPECT_TRUE(pageLabel->text().contains(QStringLiteral("Page 1 of 45")));
+
+    // The full catalog is split into bounded, dense pages so the gallery keeps
+    // one useful outer scrollbar rather than a tiny thumb or nested scroll area.
+    // zh_CN: 完整目录按紧凑页分段，页面只保留一个易用的外层滚动条。
+    iconGrid->resize(920, iconGrid->heightForWidth(920));
+    EXPECT_LT(iconGrid->height(), 700);
+    pager->setSelectedPageIndex(1);
+    QApplication::processEvents();
+    EXPECT_EQ(pager->selectedPageIndex(), 1);
+    EXPECT_TRUE(pageLabel->text().contains(QStringLiteral("217-432")));
+    EXPECT_TRUE(pageLabel->text().contains(QStringLiteral("Page 2 of 45")));
+
+    auto* search = browser->findChild<QLineEdit*>(QStringLiteral("galleryIconSearch"));
+    ASSERT_NE(search, nullptr);
+    search->setText(QStringLiteral("ruler 20"));
+    QApplication::processEvents();
+    EXPECT_GT(browser->visibleIconCount(), 0);
+    EXPECT_LT(browser->visibleIconCount(), browser->iconCount());
+    EXPECT_FALSE(browser->showingClosestMatches());
+
+    // Name typos fall back only after the deterministic search returns no
+    // rows. Structured size terms remain exact during that fallback.
+    search->setText(QStringLiteral("calendar 20"));
+    QApplication::processEvents();
+    const int exactCalendarCount = browser->visibleIconCount();
+    ASSERT_GT(exactCalendarCount, 0);
+    EXPECT_FALSE(browser->showingClosestMatches());
+
+    search->setText(QStringLiteral("calender 20"));
+    QApplication::processEvents();
+    EXPECT_EQ(browser->visibleIconCount(), exactCalendarCount);
+    EXPECT_TRUE(browser->showingClosestMatches());
+    EXPECT_TRUE(countLabel->text().startsWith(QStringLiteral("Closest matches:")));
+
+    // Common design-language aliases rank ahead of edit-distance matches, so
+    // a semantic synonym does not pull unrelated spelling-nearby icons in.
+    search->setText(QStringLiteral("delete 20"));
+    QApplication::processEvents();
+    const int exactDeleteCount = browser->visibleIconCount();
+    ASSERT_GT(exactDeleteCount, 0);
+
+    search->setText(QStringLiteral("trash 20"));
+    QApplication::processEvents();
+    EXPECT_EQ(browser->visibleIconCount(), exactDeleteCount);
+    EXPECT_TRUE(browser->showingClosestMatches());
+
+    // Very short unknown terms stay strict instead of producing noisy fuzzy
+    // result sets.
+    search->setText(QStringLiteral("qz"));
+    QApplication::processEvents();
+    EXPECT_EQ(browser->visibleIconCount(), 0);
+    EXPECT_FALSE(browser->showingClosestMatches());
+
+    search->setText(QStringLiteral("U+F109"));
+    QApplication::processEvents();
+    EXPECT_EQ(browser->visibleIconCount(), 1);
+    EXPECT_FALSE(browser->showingClosestMatches());
+
+    search->setText(QStringLiteral("ic_fluent_add_20_regular"));
+    QApplication::processEvents();
+    ASSERT_EQ(browser->visibleIconCount(), 1);
+    EXPECT_FALSE(browser->showingClosestMatches());
+    EXPECT_TRUE(pagination->isHidden());
+    EXPECT_EQ(pager->numberOfPages(), 1);
+    iconGrid->resize(600, iconGrid->heightForWidth(600));
+    EXPECT_EQ(iconGrid->height(), 44);
+
+    // Tiles paint only the glyph. The project's Fluent ToolTip supplies the
+    // complete name/codepoint/size metadata after the hover delay.
+    // zh_CN: 卡片仅绘制图标，悬停后由项目 Fluent ToolTip 展示完整元数据。
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+    FLUENT_MAKE_MOUSE_EVENT(hoverMove, QEvent::MouseMove, iconGrid, QPoint(22, 22),
+                            Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+    QApplication::sendEvent(iconGrid, &hoverMove);
+    QTest::qWait(360);
+    QApplication::processEvents();
+    EXPECT_TRUE(hoverTip->text().contains(QStringLiteral("ic_fluent_add_20_regular")));
+    EXPECT_TRUE(hoverTip->text().contains(QStringLiteral("U+")));
+    EXPECT_TRUE(hoverTip->text().contains(QStringLiteral("20 px")));
+
+    QGuiApplication::clipboard()->clear();
+    QTest::mouseClick(iconGrid, Qt::LeftButton, Qt::NoModifier, QPoint(22, 22));
+    const QString copiedLookup = QGuiApplication::clipboard()->text();
+    EXPECT_EQ(copiedLookup,
+              QStringLiteral("Typography::Icons::glyph(QStringLiteral(\"ic_fluent_add_20_regular\"))"));
+    EXPECT_NE(window.findChild<QWidget*>(QStringLiteral("galleryToast")), nullptr);
+
+    // Copy and search are one round trip: the generated C++ expression can be
+    // pasted back verbatim instead of forcing users to extract the icon name.
+    search->setText(copiedLookup);
+    QApplication::processEvents();
+    EXPECT_EQ(browser->visibleIconCount(), 1);
+    EXPECT_TRUE(pagination->isHidden());
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("foundation-spacing")));
+    auto* spacingPage = waitForCurrentPage<GalleryFoundationTopicPage>(window);
+    ASSERT_NE(spacingPage, nullptr);
+    EXPECT_EQ(spacingPage->routeId(), QStringLiteral("foundation-spacing"));
+    EXPECT_EQ(spacingPage->title(), QStringLiteral("Spacing"));
+}
+
+TEST_F(GalleryContentPagesTest, FoundationVisualCheck)
+{
+    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
+        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Foundation visual review requires a desktop platform";
+
+    auto& settings = fluent::gallery::GallerySettings::instance();
+    settings.setIntroCompleted(true);
+    const auto previousThemeMode = settings.themeMode();
+    struct ThemeModeRestore final {
+        fluent::gallery::GallerySettings& settings;
+        fluent::gallery::GallerySettings::ThemeMode mode;
+        ~ThemeModeRestore() { settings.setThemeMode(mode); }
+    } restoreThemeMode{settings, previousThemeMode};
+    GalleryWindow window;
+    // QWidget::grab cannot capture the pixels supplied by DWM Mica, so use the
+    // library's solid backdrop during deterministic snapshots.
+    // zh_CN: QWidget::grab 无法抓取 DWM Mica 提供的像素，确定性快照改用库内置纯色背景。
+    window.setBackdropEffect(fluent::windowing::BackdropEffect::Solid);
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        window.setFixedSize(QSize(1440, 900));
+        window.show();
+
+        // Let startup prewarm and the splash fade finish before the first capture.
+        // zh_CN: 首张截图前等待启动预热和 splash 淡出完成。
+        QElapsedTimer startupTimer;
+        startupTimer.start();
+        while (window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"))
+               && startupTimer.elapsed() < 7000) {
+            QApplication::processEvents(QEventLoop::AllEvents, 25);
+            QTest::qWait(20);
+        }
+        ASSERT_EQ(window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")), nullptr);
+
+        const auto waitForRoute = [&window](const QString& routeId) {
+            QElapsedTimer timer;
+            timer.start();
+            while (timer.elapsed() < 5000) {
+                auto* page = window.currentContentPage();
+                if (page && page->routeId() == routeId)
+                    return true;
+                QApplication::processEvents(QEventLoop::AllEvents, 25);
+                QTest::qWait(20);
+            }
+            return false;
+        };
+
+        struct SnapshotCase {
+            QString routeId;
+            QString variant;
+            tests::support::VisualSnapshotTheme theme;
+        };
+        const QVector<SnapshotCase> snapshots = {
+            {QStringLiteral("foundation-color"), QStringLiteral("color-light"),
+             tests::support::VisualSnapshotTheme::Light},
+            {QStringLiteral("foundation-geometry"), QStringLiteral("geometry-light"),
+             tests::support::VisualSnapshotTheme::Light},
+            {QStringLiteral("foundation-iconography"), QStringLiteral("iconography-light"),
+             tests::support::VisualSnapshotTheme::Light},
+            {QStringLiteral("foundation-spacing"), QStringLiteral("spacing-light"),
+             tests::support::VisualSnapshotTheme::Light},
+            {QStringLiteral("foundation-typography"), QStringLiteral("typography-light"),
+             tests::support::VisualSnapshotTheme::Light},
+            {QStringLiteral("foundation-iconography"), QStringLiteral("iconography-dark"),
+             tests::support::VisualSnapshotTheme::Dark},
+            {QStringLiteral("foundation-typography"), QStringLiteral("typography-dark"),
+             tests::support::VisualSnapshotTheme::Dark},
+        };
+
+        for (const SnapshotCase& snapshot : snapshots) {
+            const bool dark = snapshot.theme == tests::support::VisualSnapshotTheme::Dark;
+            settings.setThemeMode(dark
+                                      ? fluent::gallery::GallerySettings::ThemeMode::Dark
+                                      : fluent::gallery::GallerySettings::ThemeMode::Light);
+            ASSERT_TRUE(window.selectRoute(snapshot.routeId));
+            ASSERT_TRUE(waitForRoute(snapshot.routeId)) << snapshot.routeId.toStdString();
+            QTest::qWait(250);  // Let the navigation selection indicator settle.
+            QApplication::processEvents(QEventLoop::AllEvents, 25);
+            ASSERT_EQ(fluent::FluentElement::currentTheme(),
+                      dark ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+            tests::support::VisualSnapshotOptions options;
+            options.windowSize = QSize(1440, 900);
+            options.variant = snapshot.variant;
+            options.theme = snapshot.theme;
+            ASSERT_TRUE(tests::support::captureVisualSnapshot(&window, options));
+        }
+        return;
+    }
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("foundation-typography")));
+    window.show();
+    qApp->exec();
 }
 
 TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface)
@@ -952,6 +1199,112 @@ TEST_F(GalleryContentPagesTest, CodeBlockCollapsesAndExpands)
     EXPECT_TRUE(block.isExpanded());
 }
 
+TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsFoundationPageGeometryStable)
+{
+    GalleryWindow window;
+    window.resize(1200, 790);
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("foundation-geometry")));
+    window.show();
+    QApplication::processEvents();
+
+    auto* page = waitForCurrentPage<GalleryFoundationTopicPage>(window);
+    ASSERT_NE(page, nullptr);
+    auto* codeBlock = page->findChild<GalleryCodeBlock*>();
+    ASSERT_NE(codeBlock, nullptr);
+    auto* codeHeader = codeBlock->findChild<QWidget*>(
+        QStringLiteral("galleryCodeBlockHeader"));
+    ASSERT_NE(codeHeader, nullptr);
+    auto* scrollView = page->findChild<fluent::scrolling::ScrollView*>();
+    ASSERT_NE(scrollView, nullptr);
+    ASSERT_NE(scrollView->viewport(), nullptr);
+    QWidget* scrollContent = scrollView->widget();
+    ASSERT_NE(scrollContent, nullptr);
+    QLayout* pageLayout = scrollContent->layout();
+    ASSERT_NE(pageLayout, nullptr);
+
+    fluent::textfields::Label* cornerHeader = nullptr;
+    fluent::textfields::Label* strokeHeader = nullptr;
+    for (auto* label : page->findChildren<fluent::textfields::Label*>(
+             QStringLiteral("galleryContentSectionHeader"))) {
+        if (label->text() == QStringLiteral("Corner radius"))
+            cornerHeader = label;
+        else if (label->text() == QStringLiteral("Stroke widths"))
+            strokeHeader = label;
+    }
+    ASSERT_NE(cornerHeader, nullptr);
+    ASSERT_NE(strokeHeader, nullptr);
+
+    QWidget* radiusCard = nullptr;
+    for (int i = 0; i + 1 < pageLayout->count(); ++i) {
+        if (pageLayout->itemAt(i)->widget() != cornerHeader)
+            continue;
+        for (int candidate = i + 1; candidate < pageLayout->count(); ++candidate) {
+            if (QWidget* widget = pageLayout->itemAt(candidate)->widget()) {
+                radiusCard = widget;
+                break;
+            }
+        }
+        break;
+    }
+    ASSERT_NE(radiusCard, nullptr);
+
+    const QRect radiusGeometry = radiusCard->geometry();
+    const QRect strokeGeometry = strokeHeader->geometry();
+    const auto codeHeaderViewportY = [&]() {
+        return scrollView->viewport()->mapFromGlobal(
+            codeHeader->mapToGlobal(QPoint(0, 0))).y();
+    };
+    const int anchoredHeaderY = codeHeaderViewportY();
+
+    QVector<int> sampledRadiusHeights;
+    QVector<int> sampledStrokeTops;
+    QVector<int> sampledHeaderYs;
+    QVector<int> sampledContentDeficits;
+    const auto captureGeometry = [&]() {
+        sampledRadiusHeights.append(radiusCard->height());
+        sampledStrokeTops.append(strokeHeader->y());
+        sampledHeaderYs.append(codeHeaderViewportY());
+        const int requiredHeight = qMax(scrollView->viewport()->height(),
+                                        pageLayout->minimumSize().height());
+        sampledContentDeficits.append(requiredHeight - scrollContent->height());
+    };
+
+    int finishedTransitions = 0;
+    QObject::connect(codeBlock, &GalleryCodeBlock::expansionTransitionFinished, &window,
+                     [&finishedTransitions]() { ++finishedTransitions; });
+    const auto waitForTransition = [&](int expectedCount) {
+        QElapsedTimer timer;
+        timer.start();
+        while (finishedTransitions < expectedCount && timer.elapsed() < 1000) {
+            QApplication::processEvents(QEventLoop::AllEvents, 5);
+            captureGeometry();
+            QTest::qWait(2);
+        }
+        QApplication::processEvents(QEventLoop::AllEvents, 5);
+        QTest::qWait(2);
+        QApplication::processEvents(QEventLoop::AllEvents, 5);
+        captureGeometry();
+        ASSERT_EQ(finishedTransitions, expectedCount);
+    };
+
+    codeBlock->setExpanded(true);
+    waitForTransition(1);
+    codeBlock->setExpanded(false);
+    waitForTransition(2);
+
+    ASSERT_GE(sampledRadiusHeights.size(), 8);
+    for (int height : sampledRadiusHeights)
+        EXPECT_EQ(height, radiusGeometry.height());
+    for (int top : sampledStrokeTops)
+        EXPECT_EQ(top, strokeGeometry.top());
+    for (int headerY : sampledHeaderYs)
+        EXPECT_NEAR(headerY, anchoredHeaderY, 1);
+    for (int deficit : sampledContentDeficits)
+        EXPECT_LE(deficit, 0);
+    EXPECT_EQ(radiusCard->geometry(), radiusGeometry);
+    EXPECT_EQ(strokeHeader->geometry(), strokeGeometry);
+}
+
 TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
 {
     GalleryWindow window;
@@ -964,7 +1317,7 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
     ASSERT_NE(page, nullptr);
     ASSERT_GE(page->sampleCards().size(), 1);
 
-    GallerySampleCard* card = page->sampleCards().first();
+    GallerySampleCard* card = page->sampleCards().last();
     ASSERT_NE(card, nullptr);
     EXPECT_NE(qobject_cast<fluent::AnchorLayout*>(card->layout()), nullptr);
     ASSERT_NE(card->titleLabel(), nullptr);
@@ -976,28 +1329,127 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
     ASSERT_NE(content, nullptr);
     auto* contentInner = codeBlock->findChild<QWidget*>(QStringLiteral("galleryCodeBlockContentInner"));
     ASSERT_NE(contentInner, nullptr);
+    auto* header = codeBlock->findChild<QWidget*>(QStringLiteral("galleryCodeBlockHeader"));
+    ASSERT_NE(header, nullptr);
+    auto* scrollView = page->findChild<fluent::scrolling::ScrollView*>();
+    ASSERT_NE(scrollView, nullptr);
+    QScrollBar* verticalBar = scrollView->verticalScrollBar();
+    ASSERT_NE(verticalBar, nullptr);
+
+    QWidget* followingWidget = nullptr;
+    QLayout* pageLayout = card->parentWidget() ? card->parentWidget()->layout() : nullptr;
+    ASSERT_NE(pageLayout, nullptr);
+    int cardIndex = -1;
+    for (int i = 0; i < pageLayout->count(); ++i) {
+        if (pageLayout->itemAt(i)->widget() == card) {
+            cardIndex = i;
+            break;
+        }
+    }
+    ASSERT_GE(cardIndex, 0);
+    for (int i = cardIndex + 1; i < pageLayout->count(); ++i) {
+        QWidget* candidate = pageLayout->itemAt(i)->widget();
+        if (candidate && !candidate->isHidden()) {
+            followingWidget = candidate;
+            break;
+        }
+    }
+    ASSERT_NE(followingWidget, nullptr);
+
+    // Reproduce the user-visible case: the page is at its old maximum when the
+    // final source block starts growing. Its header must stay under the pointer.
+    // zh_CN: 复现页面位于旧最大滚动值时展开末尾源码块的场景，标题需保持在指针下方。
+    verticalBar->setValue(verticalBar->maximum());
+    QApplication::processEvents();
+    const int anchoredScrollValue = verticalBar->value();
+    EXPECT_GT(anchoredScrollValue, 0);
+
+    const auto headerViewportY = [&]() {
+        return scrollView->viewport()->mapFromGlobal(
+            header->mapToGlobal(QPoint(0, 0))).y();
+    };
+    const int anchoredHeaderY = headerViewportY();
+    const int followingGap = followingWidget->geometry().top()
+        - (card->geometry().bottom() + 1);
 
     const QRect titleGeometry = card->titleLabel()->geometry();
     const QRect previewGeometry = preview->geometry();
     const QRect collapsedCodeGeometry = codeBlock->geometry();
 
+    QVector<int> sampledHeaderYs;
+    QVector<int> sampledBlockHeights;
+    QVector<int> sampledCardHeights;
+    QVector<int> sampledFollowingGaps;
+    auto capturePaintableGeometry = [&]() {
+        sampledHeaderYs.append(headerViewportY());
+        sampledFollowingGaps.append(followingWidget->geometry().top()
+                                    - (card->geometry().bottom() + 1));
+    };
+    auto captureAnimationHeight = [&]() {
+        sampledBlockHeights.append(codeBlock->height());
+        sampledCardHeights.append(card->height());
+    };
+    class PaintGeometryProbe final : public QObject {
+    public:
+        std::function<void()> capture;
+
+    protected:
+        bool eventFilter(QObject* watched, QEvent* event) override
+        {
+            if (event && event->type() == QEvent::Paint && capture)
+                capture();
+            return QObject::eventFilter(watched, event);
+        }
+    } paintProbe;
+    paintProbe.capture = capturePaintableGeometry;
+    card->installEventFilter(&paintProbe);
+    followingWidget->installEventFilter(&paintProbe);
+    const auto samplesText = [](const QVector<int>& samples) {
+        QStringList values;
+        values.reserve(samples.size());
+        for (int value : samples)
+            values.append(QString::number(value));
+        return values.join(QLatin1Char(',')).toStdString();
+    };
+    QObject::connect(codeBlock, &GalleryCodeBlock::layoutHeightChanged, &window,
+                     [&captureAnimationHeight]() { captureAnimationHeight(); });
+
+    int finishedTransitions = 0;
+    QObject::connect(codeBlock, &GalleryCodeBlock::expansionTransitionFinished, &window,
+                     [&finishedTransitions]() { ++finishedTransitions; });
+    const auto waitForTransition = [&]() {
+        QElapsedTimer timer;
+        timer.start();
+        while (finishedTransitions == 0 && timer.elapsed() < 1000) {
+            QApplication::processEvents(QEventLoop::AllEvents, 5);
+            capturePaintableGeometry();
+            QTest::qWait(2);
+        }
+        QApplication::processEvents(QEventLoop::AllEvents, 5);
+        QTest::qWait(2);  // run the card's queued final anchor correction
+        QApplication::processEvents(QEventLoop::AllEvents, 5);
+        capturePaintableGeometry();
+        ASSERT_EQ(finishedTransitions, 1);
+    };
+
     codeBlock->setExpanded(true);
     const int targetContentHeight = contentInner->height();
     EXPECT_GT(targetContentHeight, 0);
-    for (int i = 0; i < 6; ++i) {
-        QTest::qWait(40);
-        QApplication::processEvents();
-        EXPECT_EQ(card->titleLabel()->geometry(), titleGeometry);
-        EXPECT_EQ(preview->geometry(), previewGeometry);
-        EXPECT_EQ(codeBlock->geometry().topLeft(), collapsedCodeGeometry.topLeft());
-        EXPECT_EQ(codeBlock->geometry().width(), collapsedCodeGeometry.width());
-        EXPECT_EQ(contentInner->geometry().topLeft(), QPoint(0, 0));
-        EXPECT_EQ(contentInner->height(), targetContentHeight);
-        EXPECT_LE(content->height(), targetContentHeight);
-    }
+    waitForTransition();
 
-    QTest::qWait(320);
-    QApplication::processEvents();
+    ASSERT_GE(sampledHeaderYs.size(), 4);
+    for (int value : sampledHeaderYs)
+        EXPECT_NEAR(value, anchoredHeaderY, 1);
+    for (int gap : sampledFollowingGaps)
+        EXPECT_EQ(gap, followingGap)
+            << "gaps=" << samplesText(sampledFollowingGaps)
+            << " blockHeights=" << samplesText(sampledBlockHeights)
+            << " cardHeights=" << samplesText(sampledCardHeights);
+    EXPECT_TRUE(std::is_sorted(sampledBlockHeights.cbegin(), sampledBlockHeights.cend()))
+        << "block heights must grow monotonically: " << samplesText(sampledBlockHeights);
+    EXPECT_TRUE(std::is_sorted(sampledCardHeights.cbegin(), sampledCardHeights.cend()))
+        << "card heights must grow monotonically: " << samplesText(sampledCardHeights);
+
     EXPECT_EQ(card->titleLabel()->geometry(), titleGeometry);
     EXPECT_EQ(preview->geometry(), previewGeometry);
     EXPECT_EQ(codeBlock->geometry().topLeft(), collapsedCodeGeometry.topLeft());
@@ -1005,6 +1457,29 @@ TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsSampleChromeStable)
     EXPECT_EQ(contentInner->geometry().topLeft(), QPoint(0, 0));
     EXPECT_EQ(contentInner->height(), targetContentHeight);
     EXPECT_GT(codeBlock->height(), collapsedCodeGeometry.height());
+    EXPECT_EQ(verticalBar->value(), anchoredScrollValue);
+
+    const int expandedBlockHeight = codeBlock->height();
+    sampledHeaderYs.clear();
+    sampledBlockHeights.clear();
+    sampledCardHeights.clear();
+    sampledFollowingGaps.clear();
+    finishedTransitions = 0;
+    codeBlock->setExpanded(false);
+    waitForTransition();
+
+    ASSERT_GE(sampledHeaderYs.size(), 4);
+    for (int value : sampledHeaderYs)
+        EXPECT_NEAR(value, anchoredHeaderY, 1);
+    for (int gap : sampledFollowingGaps)
+        EXPECT_EQ(gap, followingGap) << samplesText(sampledFollowingGaps);
+    EXPECT_TRUE(std::is_sorted(sampledBlockHeights.crbegin(), sampledBlockHeights.crend()))
+        << "block heights must shrink monotonically: " << samplesText(sampledBlockHeights);
+    EXPECT_TRUE(std::is_sorted(sampledCardHeights.crbegin(), sampledCardHeights.crend()))
+        << "card heights must shrink monotonically: " << samplesText(sampledCardHeights);
+    EXPECT_LT(codeBlock->height(), expandedBlockHeight);
+    EXPECT_EQ(codeBlock->height(), collapsedCodeGeometry.height());
+    EXPECT_EQ(verticalBar->value(), anchoredScrollValue);
 }
 
 TEST_F(GalleryContentPagesTest, GalleryToastUsesOverlayMarginAndSuccessBadge)
