@@ -16,7 +16,7 @@ const QHash<QString, QString>& routeDescriptions()
     static const QHash<QString, QString> descriptions{
         // Foundation
         {QStringLiteral("foundation"),
-         QStringLiteral("The fundamentals every FluentQt component is built on: the QML+ runtime, type, color, icons, and geometry.")},
+         QStringLiteral("The fundamentals every FluentQt component is built on: the QML+ runtime, type, color, icons, geometry, and spacing.")},
         {QStringLiteral("foundation-qmlplus"),
          QStringLiteral("QML+ brings anchors, reactive property binding, and named states to plain QWidget controls.")},
         {QStringLiteral("foundation-typography"),
@@ -24,9 +24,11 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("foundation-color"),
          QStringLiteral("The theme color tokens — text, fill, stroke, background, and system colors — for light and dark.")},
         {QStringLiteral("foundation-iconography"),
-         QStringLiteral("A reference grid of Segoe Fluent Icons glyphs used throughout the controls.")},
+         QStringLiteral("The complete searchable Fluent UI System Icons Regular catalog bundled with FluentQt.")},
         {QStringLiteral("foundation-geometry"),
-         QStringLiteral("Corner-radius and spacing tokens that give the controls their consistent rhythm.")},
+         QStringLiteral("Corner-radius and stroke-width tokens that define FluentQt control shapes.")},
+        {QStringLiteral("foundation-spacing"),
+         QStringLiteral("The 4 px spacing scale, component padding, gaps, and standard control heights.")},
         // Categories
         {QStringLiteral("all-controls"),
          QStringLiteral("Browse the full set of FluentQt components in one place.")},
@@ -227,12 +229,14 @@ QVector<GalleryContentEntry> buildCatalog()
                      QStringLiteral("foundation-typography"),
                      QStringLiteral("foundation-color"),
                      QStringLiteral("foundation-iconography"),
-                     QStringLiteral("foundation-geometry")}});
+                     QStringLiteral("foundation-geometry"),
+                     QStringLiteral("foundation-spacing")}});
     for (const QString& topicId : {QStringLiteral("foundation-qmlplus"),
                                    QStringLiteral("foundation-typography"),
                                    QStringLiteral("foundation-color"),
                                    QStringLiteral("foundation-iconography"),
-                                   QStringLiteral("foundation-geometry")}) {
+                                   QStringLiteral("foundation-geometry"),
+                                   QStringLiteral("foundation-spacing")}) {
         catalog.append({GalleryPageKind::FoundationTopic,
                         topicId,
                         QString(),  // title comes from the nav item

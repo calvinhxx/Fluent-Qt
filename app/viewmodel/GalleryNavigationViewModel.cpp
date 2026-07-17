@@ -93,7 +93,8 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
         {"foundation-typography", "Typography"},
         {"foundation-color", "Color"},
         {"foundation-iconography", "Iconography"},
-        {"foundation-geometry", "Geometry & spacing"},
+        {"foundation-geometry", "Geometry"},
+        {"foundation-spacing", "Spacing"},
     };
     for (const auto& topic : foundationTopics) {
         m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute,
