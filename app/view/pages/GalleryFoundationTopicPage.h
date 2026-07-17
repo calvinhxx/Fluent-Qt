@@ -9,8 +9,8 @@ namespace fluent::gallery {
 class GalleryNavigationViewModel;
 
 /**
- * @brief One Foundation topic sub-page (typography, color, iconography, geometry).
- * zh_CN: 单个基础主题子页（排版、颜色、图标、几何）。
+ * @brief One Foundation topic sub-page (type, color, icons, geometry, spacing).
+ * zh_CN: 单个基础主题子页（排版、颜色、图标、几何、间距）。
  *
  * The concrete topic is chosen by routeId; each topic renders live design-token
  * specimens drawn directly from the theme (themeFont / themeColors / themeRadius),
@@ -32,6 +32,7 @@ private:
     void buildColor();
     void buildIconography();
     void buildGeometry();
+    void buildSpacing();
 };
 
 } // namespace fluent::gallery

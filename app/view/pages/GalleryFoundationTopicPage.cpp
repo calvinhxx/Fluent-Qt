@@ -11,7 +11,6 @@
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QPair>
 #include <QResizeEvent>
 #include <QStringList>
 #include <QVBoxLayout>
@@ -24,11 +23,13 @@
 #include "components/status_info/ProgressBar.h"
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
+#include "design/Spacing.h"
 #include "design/Typography.h"
 #include "model/GalleryNavigationItem.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "view/support/GalleryToast.h"
 #include "view/widgets/GalleryCodeBlock.h"
+#include "view/widgets/GalleryIconBrowser.h"
 #include "support/logging/Log.h"
 
 namespace fluent::gallery {
@@ -156,8 +157,8 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// Reflowing tile grid shared by the Color and Iconography pages.
-// zh_CN: 颜色页与图标页共用的响应式重排网格。
+// Reflowing tile grid used by the Color token page.
+// zh_CN: Color token 页面使用的响应式重排网格。
 // ---------------------------------------------------------------------------
 class FoundationTileGrid : public QWidget, public fluent::FluentElement {
 public:
@@ -461,19 +462,27 @@ private:
 };
 
 // ---------------------------------------------------------------------------
-// Geometry: spacing scale as proportional bars.
-// zh_CN: 几何：间距阶梯，按比例长条。
+// Token measurements: exact logical-pixel values with proportional bars.
+// zh_CN: 尺寸 token：显示精确逻辑像素值与同比例长条。
 // ---------------------------------------------------------------------------
-class SpacingCard : public QWidget, public fluent::FluentElement {
+class TokenMeasureCard : public QWidget, public fluent::FluentElement {
 public:
-    explicit SpacingCard(QWidget* parent = nullptr)
+    struct Row {
+        QString name;
+        QString qualifiedName;
+        int value;
+        QString usage;
+    };
+
+    explicit TokenMeasureCard(const QVector<Row>& rows, QWidget* parent = nullptr)
         : QWidget(parent)
+        , m_rows(rows)
     {
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     }
 
-    QSize sizeHint() const override { return QSize(480, rowCount() * kRow + kVPad * 2); }
-    QSize minimumSizeHint() const override { return sizeHint(); }
+    QSize sizeHint() const override { return QSize(560, m_rows.size() * kRow + kVPad * 2); }
+    QSize minimumSizeHint() const override { return QSize(0, sizeHint().height()); }
     void onThemeUpdated() override { update(); }
 
 protected:
@@ -486,52 +495,60 @@ protected:
         const Colors colors = themeColors();
         paintCardSurface(painter, QRectF(rect()), colors);
 
-        const Spacing spacing = themeSpacing();
-        const QVector<QPair<QString, int>> rows = {
-            {QStringLiteral("xSmall"), spacing.xSmall},
-            {QStringLiteral("small"), spacing.small},
-            {QStringLiteral("medium"), spacing.medium},
-            {QStringLiteral("standard"), spacing.standard},
-            {QStringLiteral("large"), spacing.large},
-            {QStringLiteral("xLarge"), spacing.xLarge},
-            {QStringLiteral("xxLarge"), spacing.xxLarge},
-        };
-        const QFont bodyFont = themeFont(Typography::FontRole::Body).toQFont();
+        const QFont bodyFont = themeFont(Typography::FontRole::BodyStrong).toQFont();
         const QFont captionFont = themeFont(Typography::FontRole::Caption).toQFont();
-        const int nameCol = 96;
+        const int nameCol = qMin(230, qMax(140, width() / 3));
         const int valueCol = 56;
-        const int barLeft = kCardPadding + nameCol + valueCol;
+        const int barLeft = kCardPadding + nameCol;
+        const int usageLeft = barLeft + 112;
+        const int usageWidth = qMax(0, width() - usageLeft - kCardPadding);
 
         int y = kVPad;
-        for (const auto& r : rows) {
+        for (int index = 0; index < m_rows.size(); ++index) {
+            const Row& row = m_rows.at(index);
             painter.setFont(bodyFont);
             painter.setPen(colors.textPrimary);
-            painter.drawText(QRect(kCardPadding, y, nameCol, kRow),
-                             Qt::AlignLeft | Qt::AlignVCenter, r.first);
+            painter.drawText(QRect(kCardPadding, y + 3, nameCol - 8, 20),
+                             Qt::AlignLeft | Qt::AlignVCenter, row.name);
 
             painter.setFont(captionFont);
             painter.setPen(colors.textSecondary);
-            painter.drawText(QRect(kCardPadding + nameCol, y, valueCol, kRow),
-                             Qt::AlignLeft | Qt::AlignVCenter,
-                             QStringLiteral("%1px").arg(r.second));
+            painter.drawText(QRect(kCardPadding, y + 23, nameCol - 8, 18),
+                             Qt::AlignLeft | Qt::AlignVCenter, row.qualifiedName);
 
-            // Literal scale: the bar is exactly r.second logical pixels wide, so 4px really is
-            // a 4px sliver and 48px is 12x longer. zh_CN: 真实比例：长条宽度恰为 r.second 个逻辑像素，
+            painter.drawText(QRect(barLeft, y + 3, valueCol, 20),
+                             Qt::AlignLeft | Qt::AlignVCenter,
+                             QStringLiteral("%1 px").arg(row.value));
+
+            // Literal scale: the bar is exactly row.value logical pixels wide, so 4px really is
+            // a 4px sliver and 48px is 12x longer. zh_CN: 真实比例：长条宽度恰为 row.value 个逻辑像素，
             // 所以 4px 就是一条 4px 的细丝，48px 是它的 12 倍长。
-            const int barWidth = r.second;
-            const QRect bar(barLeft, y + (kRow - 8) / 2, barWidth, 8);
+            const QRect bar(barLeft, y + 29, qMax(1, row.value), 8);
             painter.setPen(Qt::NoPen);
             painter.setBrush(colors.accentDefault);
             painter.drawRoundedRect(bar, ::CornerRadius::Control, ::CornerRadius::Control);
 
+            if (usageWidth > 0) {
+                painter.setFont(captionFont);
+                painter.setPen(colors.textSecondary);
+                const QFontMetrics metrics(captionFont);
+                painter.drawText(QRect(usageLeft, y, usageWidth, kRow),
+                                 Qt::AlignLeft | Qt::AlignVCenter,
+                                 metrics.elidedText(row.usage, Qt::ElideRight, usageWidth));
+            }
+
             y += kRow;
+            if (index != m_rows.size() - 1) {
+                painter.setPen(QPen(colors.strokeDivider, 1.0));
+                painter.drawLine(kCardPadding, y, width() - kCardPadding, y);
+            }
         }
     }
 
 private:
-    static constexpr int kRow = 18;
+    static constexpr int kRow = 48;
     static constexpr int kVPad = 12;
-    int rowCount() const { return 7; }
+    QVector<Row> m_rows;
 };
 
 // ---------------------------------------------------------------------------
@@ -587,6 +604,8 @@ GalleryFoundationTopicPage::GalleryFoundationTopicPage(
         buildIconography();
     else if (entry.routeId == QStringLiteral("foundation-geometry"))
         buildGeometry();
+    else if (entry.routeId == QStringLiteral("foundation-spacing"))
+        buildSpacing();
 
     LOG_DEBUG(QStringLiteral("GalleryFoundationTopicPage created routeId=%1").arg(entry.routeId));
 }
@@ -794,6 +813,15 @@ void GalleryFoundationTopicPage::buildTypography()
 {
     addSectionHeader(QStringLiteral("Type ramp"));
     addContentWidget(new TypeRampCard(this));
+
+    addSectionHeader(QStringLiteral("Use semantic roles"));
+    addContentWidget(new GalleryCodeBlock(QStringLiteral(
+        "auto* title = new fluent::textfields::Label(\"Settings\", this);\n"
+        "title->setFluentTypography(Typography::FontRole::Title);\n"
+        "\n"
+        "// All roles resolve to bundled, static, hinted faces.\n"
+        "const QFont body = Typography::Styles::Body.toQFont();\n"
+        "const QFont heading = Typography::Styles::Title.toQFont();"), this));
 }
 
 void GalleryFoundationTopicPage::buildColor()
@@ -819,7 +847,14 @@ void GalleryFoundationTopicPage::buildColor()
             swatch(QStringLiteral("accentDefault"), [](const Colors& c) { return c.accentDefault; }),
             swatch(QStringLiteral("accentSecondary"), [](const Colors& c) { return c.accentSecondary; }),
             swatch(QStringLiteral("accentTertiary"), [](const Colors& c) { return c.accentTertiary; }),
+            swatch(QStringLiteral("accentDisabled"), [](const Colors& c) { return c.accentDisabled; }),
             swatch(QStringLiteral("controlDefault"), [](const Colors& c) { return c.controlDefault; }),
+            swatch(QStringLiteral("controlSecondary"), [](const Colors& c) { return c.controlSecondary; }),
+            swatch(QStringLiteral("controlTertiary"), [](const Colors& c) { return c.controlTertiary; }),
+            swatch(QStringLiteral("controlDisabled"), [](const Colors& c) { return c.controlDisabled; }),
+            swatch(QStringLiteral("controlAltSecondary"), [](const Colors& c) { return c.controlAltSecondary; }),
+            swatch(QStringLiteral("controlAltTertiary"), [](const Colors& c) { return c.controlAltTertiary; }),
+            swatch(QStringLiteral("subtleTransparent"), [](const Colors& c) { return c.subtleTransparent; }),
             swatch(QStringLiteral("subtleSecondary"), [](const Colors& c) { return c.subtleSecondary; }),
             swatch(QStringLiteral("subtleTertiary"), [](const Colors& c) { return c.subtleTertiary; }),
         }},
@@ -828,6 +863,16 @@ void GalleryFoundationTopicPage::buildColor()
             swatch(QStringLiteral("bgLayer"), [](const Colors& c) { return c.bgLayer; }),
             swatch(QStringLiteral("bgLayerAlt"), [](const Colors& c) { return c.bgLayerAlt; }),
             swatch(QStringLiteral("bgSolid"), [](const Colors& c) { return c.bgSolid; }),
+            swatch(QStringLiteral("grey10"), [](const Colors& c) { return c.grey10; }),
+            swatch(QStringLiteral("grey20"), [](const Colors& c) { return c.grey20; }),
+            swatch(QStringLiteral("grey30"), [](const Colors& c) { return c.grey30; }),
+            swatch(QStringLiteral("grey40"), [](const Colors& c) { return c.grey40; }),
+            swatch(QStringLiteral("grey50"), [](const Colors& c) { return c.grey50; }),
+            swatch(QStringLiteral("grey60"), [](const Colors& c) { return c.grey60; }),
+            swatch(QStringLiteral("grey90"), [](const Colors& c) { return c.grey90; }),
+            swatch(QStringLiteral("grey130"), [](const Colors& c) { return c.grey130; }),
+            swatch(QStringLiteral("grey160"), [](const Colors& c) { return c.grey160; }),
+            swatch(QStringLiteral("grey190"), [](const Colors& c) { return c.grey190; }),
         }},
         {QStringLiteral("Stroke"), {
             swatch(QStringLiteral("strokeDefault"), [](const Colors& c) { return c.strokeDefault; }),
@@ -836,12 +881,32 @@ void GalleryFoundationTopicPage::buildColor()
             swatch(QStringLiteral("strokeCard"), [](const Colors& c) { return c.strokeCard; }),
             swatch(QStringLiteral("strokeDivider"), [](const Colors& c) { return c.strokeDivider; }),
             swatch(QStringLiteral("strokeSurface"), [](const Colors& c) { return c.strokeSurface; }),
+            swatch(QStringLiteral("strokeFocusOuter"), [](const Colors& c) { return c.strokeFocusOuter; }),
+            swatch(QStringLiteral("strokeFocusInner"), [](const Colors& c) { return c.strokeFocusInner; }),
         }},
         {QStringLiteral("System"), {
             swatch(QStringLiteral("systemCritical"), [](const Colors& c) { return c.systemCritical; }),
+            swatch(QStringLiteral("systemCriticalBg"), [](const Colors& c) { return c.systemCriticalBg; }),
             swatch(QStringLiteral("systemCaution"), [](const Colors& c) { return c.systemCaution; }),
+            swatch(QStringLiteral("systemCautionBg"), [](const Colors& c) { return c.systemCautionBg; }),
             swatch(QStringLiteral("systemInfo"), [](const Colors& c) { return c.systemInfo; }),
+            swatch(QStringLiteral("systemInfoBg"), [](const Colors& c) { return c.systemInfoBg; }),
             swatch(QStringLiteral("systemSuccess"), [](const Colors& c) { return c.systemSuccess; }),
+            swatch(QStringLiteral("systemSuccessBg"), [](const Colors& c) { return c.systemSuccessBg; }),
+        }},
+        {QStringLiteral("Charts"), {
+            swatch(QStringLiteral("chart1"), [](const Colors& c) { return c.charts.value(0); }),
+            swatch(QStringLiteral("chart2"), [](const Colors& c) { return c.charts.value(1); }),
+            swatch(QStringLiteral("chart3"), [](const Colors& c) { return c.charts.value(2); }),
+            swatch(QStringLiteral("chart4"), [](const Colors& c) { return c.charts.value(3); }),
+            swatch(QStringLiteral("chart5"), [](const Colors& c) { return c.charts.value(4); }),
+            swatch(QStringLiteral("chart6"), [](const Colors& c) { return c.charts.value(5); }),
+            swatch(QStringLiteral("chart7"), [](const Colors& c) { return c.charts.value(6); }),
+            swatch(QStringLiteral("chart8"), [](const Colors& c) { return c.charts.value(7); }),
+            swatch(QStringLiteral("chart9"), [](const Colors& c) { return c.charts.value(8); }),
+            swatch(QStringLiteral("chart10"), [](const Colors& c) { return c.charts.value(9); }),
+            swatch(QStringLiteral("chart11"), [](const Colors& c) { return c.charts.value(10); }),
+            swatch(QStringLiteral("chart12"), [](const Colors& c) { return c.charts.value(11); }),
         }},
     };
 
@@ -855,72 +920,102 @@ void GalleryFoundationTopicPage::buildColor()
 
 void GalleryFoundationTopicPage::buildIconography()
 {
-    struct Group {
-        QString header;
-        QVector<QPair<QString, QString>> icons;  // name, glyph
-    };
-    namespace I = Typography::Icons;
-    const QVector<Group> groups = {
-        {QStringLiteral("Common"), {
-            {QStringLiteral("Home"), I::Home}, {QStringLiteral("Search"), I::Search},
-            {QStringLiteral("Settings"), I::Settings}, {QStringLiteral("Add"), I::Add},
-            {QStringLiteral("Delete"), I::Delete}, {QStringLiteral("Edit"), I::Edit},
-            {QStringLiteral("Save"), I::Save}, {QStringLiteral("Refresh"), I::Refresh},
-            {QStringLiteral("Share"), I::Share}, {QStringLiteral("Copy"), I::Copy},
-            {QStringLiteral("Cut"), I::Cut}, {QStringLiteral("Paste"), I::Paste},
-            {QStringLiteral("Filter"), I::Filter}, {QStringLiteral("More"), I::More},
-            {QStringLiteral("Back"), I::Back}, {QStringLiteral("Forward"), I::Forward},
-            {QStringLiteral("Pin"), I::Pin}, {QStringLiteral("Favorite"), I::FavoriteStar},
-        }},
-        {QStringLiteral("Media"), {
-            {QStringLiteral("Play"), I::Play}, {QStringLiteral("Pause"), I::Pause},
-            {QStringLiteral("Stop"), I::Stop}, {QStringLiteral("Volume"), I::Volume},
-            {QStringLiteral("Mute"), I::Mute}, {QStringLiteral("Microphone"), I::Microphone},
-            {QStringLiteral("Video"), I::Video}, {QStringLiteral("Camera"), I::Camera},
-            {QStringLiteral("Music"), I::Music}, {QStringLiteral("SkipBack"), I::SkipBack},
-            {QStringLiteral("SkipForward"), I::SkipForward},
-        }},
-        {QStringLiteral("Communication"), {
-            {QStringLiteral("Mail"), I::Mail}, {QStringLiteral("People"), I::People},
-            {QStringLiteral("Phone"), I::Phone}, {QStringLiteral("Message"), I::Message},
-            {QStringLiteral("Send"), I::Send}, {QStringLiteral("Contact"), I::Contact},
-            {QStringLiteral("Group"), I::Group}, {QStringLiteral("Emoji"), I::Emoji},
-            {QStringLiteral("World"), I::World},
-        }},
-        {QStringLiteral("Files & system"), {
-            {QStringLiteral("Folder"), I::Folder}, {QStringLiteral("File"), I::File},
-            {QStringLiteral("Cloud"), I::Cloud}, {QStringLiteral("Download"), I::Download},
-            {QStringLiteral("Upload"), I::Upload}, {QStringLiteral("Sync"), I::Sync},
-            {QStringLiteral("Calendar"), I::Calendar}, {QStringLiteral("Clock"), I::Clock},
-            {QStringLiteral("Wifi"), I::Wifi}, {QStringLiteral("Bluetooth"), I::Bluetooth},
-            {QStringLiteral("Battery"), I::Battery}, {QStringLiteral("Print"), I::Print},
-            {QStringLiteral("Lock"), I::Lock}, {QStringLiteral("Unlock"), I::Unlock},
-        }},
-        {QStringLiteral("Status"), {
-            {QStringLiteral("Warning"), I::Warning}, {QStringLiteral("Error"), I::ErrorIcon},
-            {QStringLiteral("Info"), I::Info}, {QStringLiteral("CheckMark"), I::CheckMark},
-            {QStringLiteral("Shield"), I::Shield}, {QStringLiteral("Heart"), I::Heart},
-            {QStringLiteral("Star"), I::Star}, {QStringLiteral("Flag"), I::Flag},
-        }},
-    };
-
-    for (const Group& group : groups) {
-        addSectionHeader(group.header);
-        QVector<FoundationTileGrid::Tile> tiles;
-        for (const auto& icon : group.icons)
-            tiles.append({icon.first, icon.second, nullptr});
-        auto* grid = new FoundationTileGrid(FoundationTileGrid::Icon, this);
-        grid->setTiles(tiles);
-        addContentWidget(grid);
-    }
+    addSectionHeader(QStringLiteral("Complete Regular catalog"));
+    addContentWidget(new GalleryIconBrowser(this));
 }
 
 void GalleryFoundationTopicPage::buildGeometry()
 {
     addSectionHeader(QStringLiteral("Corner radius"));
     addContentWidget(new RadiusCard(this));
+
+    addSectionHeader(QStringLiteral("Stroke widths"));
+    const QVector<TokenMeasureCard::Row> strokeRows = {
+        {QStringLiteral("Normal"), QStringLiteral("Spacing::Border::Normal"),
+         ::Spacing::Border::Normal, QStringLiteral("Default control and surface borders")},
+        {QStringLiteral("Focused"), QStringLiteral("Spacing::Border::Focused"),
+         ::Spacing::Border::Focused, QStringLiteral("Keyboard focus indicator")},
+    };
+    addContentWidget(new TokenMeasureCard(strokeRows, this));
+
+    addSectionHeader(QStringLiteral("Use geometry tokens"));
+    addContentWidget(new GalleryCodeBlock(QStringLiteral(
+        "painter.drawRoundedRect(controlRect,\n"
+        "                        CornerRadius::Control,\n"
+        "                        CornerRadius::Control);\n"
+        "\n"
+        "QPen focusPen(colors.strokeFocusOuter, Spacing::Border::Focused);"), this));
+}
+
+void GalleryFoundationTopicPage::buildSpacing()
+{
     addSectionHeader(QStringLiteral("Spacing scale"));
-    addContentWidget(new SpacingCard(this));
+    const QVector<TokenMeasureCard::Row> scaleRows = {
+        {QStringLiteral("XSmall"), QStringLiteral("Spacing::XSmall"), ::Spacing::XSmall,
+         QStringLiteral("Icon-to-text and compact inline gaps")},
+        {QStringLiteral("Small"), QStringLiteral("Spacing::Small"), ::Spacing::Small,
+         QStringLiteral("Related controls")},
+        {QStringLiteral("Medium"), QStringLiteral("Spacing::Medium"), ::Spacing::Medium,
+         QStringLiteral("Default control padding")},
+        {QStringLiteral("Standard"), QStringLiteral("Spacing::Standard"), ::Spacing::Standard,
+         QStringLiteral("Card content and grouped regions")},
+        {QStringLiteral("Large"), QStringLiteral("Spacing::Large"), ::Spacing::Large,
+         QStringLiteral("Sections and dialog content")},
+        {QStringLiteral("XLarge"), QStringLiteral("Spacing::XLarge"), ::Spacing::XLarge,
+         QStringLiteral("Page-level whitespace")},
+        {QStringLiteral("XXLarge"), QStringLiteral("Spacing::XXLarge"), ::Spacing::XXLarge,
+         QStringLiteral("Large page separation")},
+    };
+    addContentWidget(new TokenMeasureCard(scaleRows, this));
+
+    addSectionHeader(QStringLiteral("Component padding"));
+    const QVector<TokenMeasureCard::Row> paddingRows = {
+        {QStringLiteral("Control horizontal"), QStringLiteral("Spacing::Padding::ControlHorizontal"),
+         ::Spacing::Padding::ControlHorizontal, QStringLiteral("Generic controls")},
+        {QStringLiteral("Control vertical"), QStringLiteral("Spacing::Padding::ControlVertical"),
+         ::Spacing::Padding::ControlVertical, QStringLiteral("Generic controls")},
+        {QStringLiteral("ComboBox horizontal"), QStringLiteral("Spacing::Padding::ComboBoxHorizontal"),
+         ::Spacing::Padding::ComboBoxHorizontal, QStringLiteral("ComboBox content")},
+        {QStringLiteral("ComboBox vertical"), QStringLiteral("Spacing::Padding::ComboBoxVertical"),
+         ::Spacing::Padding::ComboBoxVertical, QStringLiteral("ComboBox content")},
+        {QStringLiteral("Text field horizontal"), QStringLiteral("Spacing::Padding::TextFieldHorizontal"),
+         ::Spacing::Padding::TextFieldHorizontal, QStringLiteral("LineEdit and text inputs")},
+        {QStringLiteral("Text field vertical"), QStringLiteral("Spacing::Padding::TextFieldVertical"),
+         ::Spacing::Padding::TextFieldVertical, QStringLiteral("LineEdit and text inputs")},
+        {QStringLiteral("List item horizontal"), QStringLiteral("Spacing::Padding::ListItemHorizontal"),
+         ::Spacing::Padding::ListItemHorizontal, QStringLiteral("Collection rows")},
+        {QStringLiteral("List item vertical"), QStringLiteral("Spacing::Padding::ListItemVertical"),
+         ::Spacing::Padding::ListItemVertical, QStringLiteral("Collection rows")},
+        {QStringLiteral("Card"), QStringLiteral("Spacing::Padding::Card"),
+         ::Spacing::Padding::Card, QStringLiteral("Card content")},
+        {QStringLiteral("Dialog"), QStringLiteral("Spacing::Padding::Dialog"),
+         ::Spacing::Padding::Dialog, QStringLiteral("Dialog content")},
+    };
+    addContentWidget(new TokenMeasureCard(paddingRows, this));
+
+    addSectionHeader(QStringLiteral("Gaps"));
+    const QVector<TokenMeasureCard::Row> gapRows = {
+        {QStringLiteral("Tight"), QStringLiteral("Spacing::Gap::Tight"), ::Spacing::Gap::Tight,
+         QStringLiteral("Icon and text")},
+        {QStringLiteral("Normal"), QStringLiteral("Spacing::Gap::Normal"), ::Spacing::Gap::Normal,
+         QStringLiteral("Controls in one group")},
+        {QStringLiteral("Loose"), QStringLiteral("Spacing::Gap::Loose"), ::Spacing::Gap::Loose,
+         QStringLiteral("Separate control groups")},
+        {QStringLiteral("Section"), QStringLiteral("Spacing::Gap::Section"), ::Spacing::Gap::Section,
+         QStringLiteral("Page sections")},
+    };
+    addContentWidget(new TokenMeasureCard(gapRows, this));
+
+    addSectionHeader(QStringLiteral("Control heights"));
+    const QVector<TokenMeasureCard::Row> heightRows = {
+        {QStringLiteral("Small"), QStringLiteral("Spacing::ControlHeight::Small"),
+         ::Spacing::ControlHeight::Small, QStringLiteral("Compact layouts")},
+        {QStringLiteral("Standard"), QStringLiteral("Spacing::ControlHeight::Standard"),
+         ::Spacing::ControlHeight::Standard, QStringLiteral("Default controls")},
+        {QStringLiteral("Large"), QStringLiteral("Spacing::ControlHeight::Large"),
+         ::Spacing::ControlHeight::Large, QStringLiteral("Spacious layouts")},
+    };
+    addContentWidget(new TokenMeasureCard(heightRows, this));
 }
 
 } // namespace fluent::gallery

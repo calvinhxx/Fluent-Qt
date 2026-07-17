@@ -6,6 +6,7 @@
 #include "model/GalleryComponentCatalog.h"
 #include "model/GalleryContentCatalog.h"
 #include "model/GalleryNavigationItem.h"
+#include "design/IconCatalog.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "view/widgets/GalleryEntryGrid.h"
 #include "support/logging/Log.h"
@@ -34,8 +35,15 @@ GalleryFoundationPage::GalleryFoundationPage(const GalleryContentEntry& entry,
         // All-controls grid — leaving iconGlyph empty so the grid draws the pixmap, not a glyph.
         // zh_CN: 用设计好的 Foundation 控件图（靛蓝底+白色字形），与 All 控件网格一致——iconGlyph 留空，
         // 让网格绘制该图而非字形。
-        entries.append({item->id, item->title, description,
-                        QPixmap(galleryControlImageResource(item->title)), QString()});
+        const bool isSpacing = item->id == QStringLiteral("foundation-spacing");
+        entries.append({item->id,
+                        item->title,
+                        description,
+                        isSpacing ? QPixmap()
+                                  : QPixmap(galleryControlImageResource(item->title)),
+                        isSpacing ? Typography::Icons::glyph(
+                                        QStringLiteral("ic_fluent_ruler_20_regular"))
+                                  : QString()});
     }
 
     grid->setEntries(entries);

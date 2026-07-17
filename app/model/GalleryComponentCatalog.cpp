@@ -159,17 +159,17 @@ QString galleryControlImageResource(const QString& controlTitle)
         QStringLiteral(":/app/assets/control_images/Placeholder.png");
 
     // Foundation topics are content routes, not entries in galleryComponentCatalog(), so the
-    // title->category lookup below can't resolve them — and their display titles ("QML+",
-    // "Geometry & spacing") aren't valid filenames anyway. Map them explicitly to clean ASCII
+    // title->category lookup below can't resolve them — and their display titles (for example
+    // "QML+") aren't necessarily valid filenames. Map them explicitly to clean ASCII
     // image names. zh_CN: foundation 主题是内容路由，不在 galleryComponentCatalog() 中，下方的
-    // 标题->分类查找解析不到它们；而且其显示标题（"QML+"、"Geometry & spacing"）也不是合法文件名。
+    // 标题->分类查找解析不到它们；而且部分显示标题（例如 "QML+"）也不是合法文件名。
     // 故在此用干净的 ASCII 图片名显式映射它们。
     static const QHash<QString, QString> foundationOverrides = {
         {QStringLiteral("QML+"),               QStringLiteral(":/app/assets/control_images/foundation/QMLPlus.png")},
         {QStringLiteral("Typography"),         QStringLiteral(":/app/assets/control_images/foundation/Typography.png")},
         {QStringLiteral("Color"),              QStringLiteral(":/app/assets/control_images/foundation/Color.png")},
         {QStringLiteral("Iconography"),        QStringLiteral(":/app/assets/control_images/foundation/Iconography.png")},
-        {QStringLiteral("Geometry & spacing"), QStringLiteral(":/app/assets/control_images/foundation/Geometry.png")},
+        {QStringLiteral("Geometry"),           QStringLiteral(":/app/assets/control_images/foundation/Geometry.png")},
     };
     const auto foundationIt = foundationOverrides.constFind(controlTitle);
     if (foundationIt != foundationOverrides.constEnd())
