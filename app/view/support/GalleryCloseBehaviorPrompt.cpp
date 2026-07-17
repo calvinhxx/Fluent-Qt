@@ -137,7 +137,7 @@ protected:
         painter.drawRoundedRect(rowRect, 6, 6);
 
         const QRectF iconRect = QRectF(m_iconSlot->geometry()).adjusted(0.5, 0.5, -0.5, -0.5);
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont iconFont(Typography::FontFamily::FluentIcons);
         iconFont.setPixelSize(13);
         painter.setFont(iconFont);
         painter.setPen(selected ? colors.textAccentPrimary : colors.textSecondary);

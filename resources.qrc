@@ -1,11 +1,11 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/">
-        <file>res/Segoe Fluent Icons.ttf</file>
-        <file>res/SegoeUI-VF.ttf</file>
-        <file>res/fonts/FluentQtSegoeUISmall-Regular.ttf</file>
-        <file>res/fonts/FluentQtSegoeUIText-Regular.ttf</file>
-        <file>res/fonts/FluentQtSegoeUIText-Semibold.ttf</file>
-        <file>res/fonts/FluentQtSegoeUIDisplay-Semibold.ttf</file>
+        <file>res/fonts/FluentQtUIText-Regular.ttf</file>
+        <file>res/fonts/FluentQtUIText-Semibold.ttf</file>
+        <file>res/fonts/FluentQtUIHeading-Semibold.ttf</file>
+        <file>res/fonts/FluentQtUIDisplay-Semibold.ttf</file>
+        <file>res/icons/FluentQtIcons.ttf</file>
+        <file>res/icons/FluentQtIcons.json</file>
     </qresource>
 </RCC>

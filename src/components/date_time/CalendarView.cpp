@@ -825,7 +825,7 @@ void CalendarView::paintNavButton(QPainter& painter, const QRect& buttonRect, co
         painter.drawRoundedRect(buttonRect.adjusted(4, 4, -4, -4), themeRadius().control, themeRadius().control);
     }
 
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(10);
     QPainterPath iconPath;
     iconPath.addText(0.0, 0.0, iconFont, glyph);

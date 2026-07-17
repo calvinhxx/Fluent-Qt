@@ -70,7 +70,7 @@ void GalleryIntroTour::build()
     auto* header = new QHBoxLayout();
     header->setSpacing(10);
     m_glyph = new Label(QString(), host);
-    QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont glyphFont(Typography::FontFamily::FluentIcons);
     glyphFont.setPixelSize(22);
     m_glyph->setFont(glyphFont);
     m_glyph->setStyleSheet(QStringLiteral("color: %1;").arg(m_card->themeColors().textAccentPrimary.name()));

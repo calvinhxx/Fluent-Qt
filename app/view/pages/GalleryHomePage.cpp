@@ -359,7 +359,7 @@ public:
         textY += titleMetrics.height() + 4;
         const QString description = index.data(LinkDescriptionRole).toString();
 
-        QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont glyphFont(Typography::FontFamily::FluentIcons);
         glyphFont.setPixelSize(13);
         // External-link glyph moves to the top-right corner and turns accent on hover, reading as
         // a standard "opens externally" affordance instead of floating alone in the bottom corner.

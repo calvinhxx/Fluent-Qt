@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "design/Typography.h"
+
 namespace fluent::scrolling {
 
 namespace {
@@ -712,7 +714,7 @@ void PipsPager::drawButton(QPainter& painter, const QRect& buttonRect, bool prev
         ? (m_orientation == Qt::Horizontal ? 0xEDD9 : 0xEDDB)
         : (m_orientation == Qt::Horizontal ? 0xEDDA : 0xEDDC);
 
-    QFont iconFont(QStringLiteral("Segoe Fluent Icons"));
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(m_navigationIconSize);
     iconFont.setHintingPreference(QFont::PreferNoHinting);
 

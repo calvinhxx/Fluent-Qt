@@ -53,7 +53,7 @@ SelectorBarItem::SelectorBarItem(const QString& itemText,
 
 SelectorBar::SelectorBar(QWidget* parent)
     : QWidget(parent)
-    , m_iconFontFamily(Typography::FontFamily::SegoeFluentIcons)
+    , m_iconFontFamily(Typography::FontFamily::FluentIcons)
     , m_indicatorAnimation(new QVariantAnimation(this))
 {
     setAttribute(Qt::WA_Hover);
@@ -334,7 +334,7 @@ void SelectorBar::setItemFontRole(const QString& role)
 
 void SelectorBar::setIconFontFamily(const QString& family)
 {
-    const QString normalized = normalizedString(family, Typography::FontFamily::SegoeFluentIcons);
+    const QString normalized = normalizedString(family, Typography::FontFamily::FluentIcons);
     if (m_iconFontFamily == normalized)
         return;
     m_iconFontFamily = normalized;

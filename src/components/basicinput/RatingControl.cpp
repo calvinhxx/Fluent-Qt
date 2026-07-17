@@ -112,7 +112,7 @@ void RatingControl::setCaptionFontRole(const QString& role)
 
 QSize RatingControl::iconCellSize() const
 {
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(m_starSize);
     QFontMetrics fm(iconFont);
     int w = fm.horizontalAdvance(Typography::Icons::FavoriteStar);
@@ -186,7 +186,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     bool isDisabled = !isEnabled();
 
     // Icon font. zh_CN: 图标字体。
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(m_starSize);
     p.setFont(iconFont);
 

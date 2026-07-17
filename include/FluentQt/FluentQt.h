@@ -8,10 +8,10 @@ namespace fluent {
  * zh_CN: 注册 Fluent-Qt 内置资源与应用字体。
  *
  * Call this once after constructing QApplication in standalone applications so
- * Segoe Fluent Icons and FluentQt-specific static Segoe UI typography faces are
- * available without depending on platform font matching.
- * zh_CN: 独立应用应在构造 QApplication 后调用一次，使 Segoe Fluent Icons 与
- * FluentQt 专用静态 Segoe UI 排版字体可用，且不依赖平台字体匹配。
+ * the bundled open-source text and icon faces are available without depending
+ * on platform font matching.
+ * zh_CN: 独立应用应在构造 QApplication 后调用一次，使内置的开源文本与图标字体
+ * 可用，且不依赖平台字体匹配。
  */
 bool initializeResources();
 
@@ -96,6 +96,7 @@ bool initializeResources();
 #include <design/Breakpoints.h>
 #include <design/CornerRadius.h>
 #include <design/Elevation.h>
+#include <design/IconCatalog.h>
 #include <design/Material.h>
 #include <design/Spacing.h>
 #include <design/ThemeColors.h>

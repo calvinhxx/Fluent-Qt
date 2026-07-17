@@ -181,15 +181,15 @@ public:
      *
      * @param glyph Icon glyph, usually from Typography::Icons.
      * @param pixelSize Icon font pixel size; defaults to the Body size.
-     * @param family Icon font family; defaults to Segoe Fluent Icons.
+     * @param family Icon font family; defaults to FluentQt Icons.
      */
     void setIconGlyph(const QString& glyph,
                       int pixelSize = Typography::FontSize::Body,
-                      const QString& family = Typography::FontFamily::SegoeFluentIcons);
+                      const QString& family = Typography::FontFamily::FluentIcons);
 
     void setIconGlyph(QChar glyph,
                       int pixelSize = Typography::FontSize::Body,
-                      const QString& family = Typography::FontFamily::SegoeFluentIcons) {
+                      const QString& family = Typography::FontFamily::FluentIcons) {
         setIconGlyph(QString(glyph), pixelSize, family);
     }
 

@@ -94,6 +94,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/design/Breakpoints.h
     src/design/CornerRadius.h
     src/design/Elevation.h
+    src/design/IconCatalog.h
     src/design/Material.h
     src/design/Spacing.h
     src/design/ThemeColors.h

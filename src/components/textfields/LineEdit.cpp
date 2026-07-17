@@ -37,7 +37,7 @@ LineEdit::LineEdit(QWidget* parent)
     m_clearButton->setFocusPolicy(Qt::NoFocus);
     m_clearButton->setIconGlyph(::Typography::Icons::Dismiss,
                                 ::Typography::FontSize::Body,
-                                ::Typography::FontFamily::SegoeFluentIcons);
+                                ::Typography::FontFamily::FluentIcons);
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     m_clearButton->hide();
 

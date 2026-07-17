@@ -458,7 +458,7 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
                             itemRect.top() + (itemRect.height() - checkColumn) / 2,
                             checkColumn,
                             checkColumn);
-            QFont iconFont(QStringLiteral("Segoe Fluent Icons"));
+            QFont iconFont(Typography::FontFamily::FluentIcons);
             iconFont.setPixelSize(12);
             p.setFont(iconFont);
             p.setPen(primaryText);
@@ -485,7 +485,7 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
 
         if (action->menu()) {
             const QRect arrowRect = itemSubmenuIndicatorGeometry(action);
-            QFont arrowFont(QStringLiteral("Segoe Fluent Icons"), -1);
+            QFont arrowFont(Typography::FontFamily::FluentIcons, -1);
             arrowFont.setPixelSize(12);
             p.setFont(arrowFont);
             p.setPen(secondaryText);

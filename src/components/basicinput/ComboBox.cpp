@@ -107,8 +107,8 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // blue pill in ComboBox flyouts.
     const int textLeft = 16;
     QRectF textRect = bgRect.adjusted(textLeft, 0, -8, 0);
-    // Center the actual Segoe UI ink rather than its asymmetric ascent/descent line box.
-    // zh_CN: 按 Segoe UI 字形墨迹居中，而不是按上下不对称的 ascent/descent 行框居中。
+    // Center the actual UI-font ink rather than its asymmetric ascent/descent line box.
+    // zh_CN: 按 UI 字体的字形墨迹居中，而不是按上下不对称的 ascent/descent 行框居中。
     textRect.translate(0, kPopupTextOpticalOffsetY);
     painter->setPen(textColor);
     painter->setFont(option.font);
@@ -796,7 +796,7 @@ void ComboBox::paintEvent(QPaintEvent*) {
     }
 
     // ── Chevron ──────────────────────────────────────────────────────────
-    // Figma: Segoe Fluent Icons 12px, color rgba(0,0,0,0.61) → textSecondary
+    // Figma: 12 px symbol, color rgba(0,0,0,0.61) → textSecondary
     QColor chevronColor = enabled ? colors.textSecondary : colors.textDisabled;
     if (m_pressProgress > 0.0 && enabled) {
         qreal alphaFactor = 1.0 - 0.5 * m_pressProgress;
@@ -831,7 +831,7 @@ void ComboBox::paintEvent(QPaintEvent*) {
         }
     }
 
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(m_chevronSize);
 
     // chevronOffset.x() = right padding, chevronOffset.y() = vertical offset

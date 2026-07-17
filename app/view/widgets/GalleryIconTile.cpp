@@ -43,9 +43,7 @@ void GalleryIconTile::paintEvent(QPaintEvent*)
         painter.setBrush(colors.subtleSecondary);
         painter.drawRoundedRect(rect(), ::CornerRadius::Control, ::CornerRadius::Control);
 
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
-        iconFont.setPixelSize(kGlyphSize);
-        painter.setFont(iconFont);
+        painter.setFont(Typography::Icons::font(kGlyphSize));
         painter.setPen(colors.textPrimary);
         painter.drawText(rect(), Qt::AlignCenter, m_iconGlyph);
         return;

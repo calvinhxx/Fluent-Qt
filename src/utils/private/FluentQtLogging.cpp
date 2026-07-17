@@ -3,6 +3,7 @@
 namespace fluent::logging {
 
 Q_LOGGING_CATEGORY(themeCategory, "fluentqt.theme", QtWarningMsg)
+Q_LOGGING_CATEGORY(typographyCategory, "fluentqt.typography", QtWarningMsg)
 Q_LOGGING_CATEGORY(windowingCategory, "fluentqt.windowing", QtWarningMsg)
 
 } // namespace fluent::logging

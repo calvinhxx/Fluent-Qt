@@ -370,9 +370,7 @@ private:
                    const Colors& colors,
                    const QFont& captionFont) const
     {
-        QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
-        glyphFont.setPixelSize(18);
-        painter.setFont(glyphFont);
+        painter.setFont(Typography::Icons::font(18));
         painter.setPen(colors.textPrimary);
         painter.drawText(QRect(cell.left(), cell.top() + 6, cell.width(), 22),
                          Qt::AlignHCenter | Qt::AlignVCenter, tile.glyph);

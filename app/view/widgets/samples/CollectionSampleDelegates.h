@@ -24,7 +24,7 @@ namespace fluent::gallery {
 enum GalleryItemRole {
     PhotoImageRole = Qt::UserRole + 701,   ///< QPixmap cover for photo cards.
     PhotoSubtitleRole = Qt::UserRole + 702, ///< Secondary caption line.
-    TreeIconGlyphRole = Qt::UserRole + 720, ///< Segoe Fluent Icons glyph string.
+    TreeIconGlyphRole = Qt::UserRole + 720, ///< FluentQt Icons glyph string.
     TreeIconColorRole = Qt::UserRole + 721  ///< Optional QColor for the glyph.
 };
 

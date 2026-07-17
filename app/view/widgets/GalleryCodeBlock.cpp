@@ -79,7 +79,7 @@ protected:
         painter.translate(width() / 2.0, height() / 2.0);
         painter.rotate(m_angle);
 
-        QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont glyphFont(Typography::FontFamily::FluentIcons);
         glyphFont.setPixelSize(kChevronGlyphPixelSize);
         painter.setFont(glyphFont);
         painter.setPen(m_color);

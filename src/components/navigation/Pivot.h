@@ -9,6 +9,7 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "design/Typography.h"
 
 class QFocusEvent;
 class QColor;
@@ -235,7 +236,7 @@ private:
     int m_focusedIndex = -1;
     OverflowBehavior m_overflowBehavior = OverflowBehavior::ScrollButtons;
     QString m_itemFontRole = QStringLiteral("Body");
-    QString m_iconFontFamily = QStringLiteral("Segoe Fluent Icons");
+    QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
     HitRecord m_hoveredHit;
     HitRecord m_pressedHit;
 };

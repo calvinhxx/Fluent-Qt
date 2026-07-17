@@ -60,7 +60,7 @@ void AnnotatedScrollBar::init()
     m_detailPopup = new fluent::status_info::ToolTip(this);
     m_detailPopup->setAnimationEnabled(false);
     m_detailPopup->setMargins(QMargins(12, 9, 12, 11));
-    QFont detailFont(Typography::FontFamily::SegoeUIText, -1, Typography::FontWeight::SemiBold);
+    QFont detailFont(Typography::FontFamily::UIText, -1, Typography::FontWeight::SemiBold);
     detailFont.setPixelSize(Typography::FontSize::BodyStrong);
     m_detailPopup->setFont(detailFont);
     m_detailPopup->hide();
@@ -824,7 +824,7 @@ QFont AnnotatedScrollBar::labelFont() const
 
 QFont AnnotatedScrollBar::iconFont(int pixelSize) const
 {
-    QFont font(Typography::FontFamily::SegoeFluentIcons);
+    QFont font(Typography::FontFamily::FluentIcons);
     font.setPixelSize(pixelSize);
     return font;
 }

@@ -61,7 +61,7 @@ synchronization, use [Testing Workflow](testing-workflow.md).
   [extra sources...])`.
 - Test binaries share Qt setup through `tests/support/QtGTestMain.cpp`; do not
   create `QApplication`, call `Q_INIT_RESOURCE(resources)`, set the app style,
-  or load Segoe fonts in individual test files.
+  or load bundled fonts in individual test files.
 - Keep `SetUpTestSuite()` only for component-specific metatype registration,
   global test data, or initialization that cannot be shared.
 - VisualCheck tests must guard on `SKIP_VISUAL_TEST`, show the test window, and

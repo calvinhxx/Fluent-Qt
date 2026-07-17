@@ -852,7 +852,7 @@ void Breadcrumb::paintIconGlyph(QPainter& painter, const QRect& rect, const QStr
 {
     if (rect.isEmpty() || glyph.isEmpty())
         return;
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(pixelSize);
     painter.save();
     painter.setFont(iconFont);

@@ -16,7 +16,7 @@ class QMouseEvent;
  *
  * WinUI 3 TreeView 视觉规范：
  *   - 32px 行高, 4px 圆角背景
- *   - 中号 Chevron 展开/折叠图标 (12px Segoe Fluent Icons)
+ *   - 中号 Chevron 展开/折叠图标 (12px FluentQt Icons)
  *   - 选中项左侧 3px×16px accent 指示条
  *   - 每级缩进 16px
  *   - 可选 CheckBox (Multi-selection 模式)
@@ -24,7 +24,7 @@ class QMouseEvent;
  */
 namespace treeview_test {
 
-/** 自定义 Role: 存放 Segoe Fluent Icons 字符串作为行前图标 */
+/** 自定义 Role: 存放 FluentQt Icons 字符串作为行前图标 */
 static constexpr int IconGlyphRole = Qt::UserRole + 100;
 
 class FluentTreeItemDelegate : public QStyledItemDelegate {

@@ -191,7 +191,7 @@ void PasswordBox::initializeRevealButton() {
     m_revealButton->setFixedSize(kButtonWidth, kButtonHeight);
     m_revealButton->setIconGlyph(Typography::Icons::View,
                                  Typography::FontSize::Body,
-                                 Typography::FontFamily::SegoeFluentIcons);
+                                 Typography::FontFamily::FluentIcons);
     m_revealButton->installEventFilter(this);
     m_buttonLayout->addWidget(m_revealButton);
 
@@ -232,7 +232,7 @@ void PasswordBox::updateRevealButtonState() {
     m_revealButton->setIconGlyph(m_peekActive ? Typography::Icons::Hide
                                               : Typography::Icons::View,
                                  Typography::FontSize::Body,
-                                 Typography::FontFamily::SegoeFluentIcons);
+                                 Typography::FontFamily::FluentIcons);
     updateRevealButtonGeometry();
 }
 

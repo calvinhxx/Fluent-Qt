@@ -35,7 +35,7 @@ set(FLUENT_QT_CI_FULL_TARGETS
 )
 
 set(FLUENT_QT_MANUAL_VISUAL_TESTS
-    SegoeTest.ComprehensiveCheck
+    TypographyTest.VisualCheck
     SliderTest.VisualSliderGalleryLike
 )
 

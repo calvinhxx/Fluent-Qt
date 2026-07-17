@@ -36,8 +36,8 @@ QWidget* verticalGroup(QWidget* parent, int spacing = 12);
 QWidget* horizontalGroup(QWidget* parent, int spacing = 12);
 
 /**
- * @brief Rounded tile with a centered Segoe Fluent Icons glyph.
- * zh_CN: 带居中 Segoe Fluent Icons 字形的圆角图块。
+ * @brief Rounded tile with a centered FluentQt Icons glyph.
+ * zh_CN: 带居中 FluentQt Icons 字形的圆角图块。
  *
  * Used as item decoration in collection previews so rows carry an icon
  * alongside their text.

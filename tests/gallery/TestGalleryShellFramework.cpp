@@ -1550,7 +1550,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
         QStringLiteral("gallerySettingsRowIcon"));
     ASSERT_EQ(iconLabels.size(), 6);
     for (auto* iconLabel : iconLabels)
-        EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::SegoeFluentIcons);
+        EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::FluentIcons);
 
     QElapsedTimer themeRequestTimer;
     themeRequestTimer.start();
@@ -1560,7 +1560,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(settings.themeMode(), GallerySettings::ThemeMode::Dark);
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
     for (auto* iconLabel : iconLabels)
-        EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::SegoeFluentIcons);
+        EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::FluentIcons);
     window.resize(460, 760);
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(page->width() < 640, 1000);

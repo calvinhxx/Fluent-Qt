@@ -98,7 +98,7 @@ public:
         iconLabel->setObjectName(QStringLiteral("gallerySettingsRowIcon"));
         iconLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
         iconLabel->setAlignment(Qt::AlignCenter);
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont iconFont(Typography::FontFamily::FluentIcons);
         iconFont.setPixelSize(19);
         iconLabel->setFont(iconFont);
         iconLabel->setFixedSize(30, 30);

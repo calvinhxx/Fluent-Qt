@@ -451,7 +451,7 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
     // FlipViewButtonScalePressed=0.875: the arrow shrinks while pressed.
     // zh_CN: FlipViewButtonScalePressed=0.875，按压时箭头缩小。
     int arrowSize = pressed ? static_cast<int>(kArrowFontSize * 0.875) : kArrowFontSize;
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(arrowSize);
     p.setFont(iconFont);
     p.setPen(arrowColor);

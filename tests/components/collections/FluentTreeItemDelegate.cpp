@@ -66,7 +66,7 @@ void FluentTreeItemDelegate::paintCheckBox(QPainter* painter, const QRectF& rect
         painter->drawPath(path);
 
         // Glyph (checkmark or hyphen)
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons, -1);
+        QFont iconFont(Typography::FontFamily::FluentIcons, -1);
         iconFont.setPixelSize(12);
         painter->setFont(iconFont);
         painter->setPen(Qt::white);
@@ -88,7 +88,7 @@ void FluentTreeItemDelegate::paintCheckBox(QPainter* painter, const QRectF& rect
 void FluentTreeItemDelegate::paintIconGlyph(QPainter* painter, const QRectF& rect,
                                             const QString& glyph,
                                             const QColor& color) const {
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons, -1);
+    QFont iconFont(Typography::FontFamily::FluentIcons, -1);
     iconFont.setPixelSize(16);
     painter->setFont(iconFont);
     painter->setPen(color);
@@ -254,7 +254,7 @@ void FluentTreeItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem
         // Rotation: 0.0 = ChevronRight (0°), 1.0 = ChevronDown (90°)
         const qreal angle = rotation * 90.0;
 
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons, -1);
+        QFont iconFont(Typography::FontFamily::FluentIcons, -1);
         iconFont.setPixelSize(12);
         painter->setFont(iconFont);
         painter->setPen(textColor);

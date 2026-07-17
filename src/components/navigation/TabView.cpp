@@ -294,7 +294,7 @@ void TabStrip::setTabFontRole(const QString& role)
 
 void TabStrip::setIconFontFamily(const QString& family)
 {
-    const QString normalized = normalizedString(family, Typography::FontFamily::SegoeFluentIcons);
+    const QString normalized = normalizedString(family, Typography::FontFamily::FluentIcons);
     if (m_iconFontFamily == normalized)
         return;
     m_iconFontFamily = normalized;
@@ -2190,7 +2190,7 @@ void TabView::setTabFontRole(const QString& role)
 
 void TabView::setIconFontFamily(const QString& family)
 {
-    const QString normalized = normalizedString(family, Typography::FontFamily::SegoeFluentIcons);
+    const QString normalized = normalizedString(family, Typography::FontFamily::FluentIcons);
     if (m_iconFontFamily == normalized)
         return;
     m_iconFontFamily = normalized;

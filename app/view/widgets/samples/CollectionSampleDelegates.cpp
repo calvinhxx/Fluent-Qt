@@ -283,7 +283,7 @@ void GridPhotoDelegate::drawCheckOverlay(QPainter* painter, const QRectF& card,
         painter->setBrush(accent);
         painter->drawEllipse(checkRect);
 
-        QFont checkFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont checkFont(Typography::FontFamily::FluentIcons);
         checkFont.setPixelSize(12);
         painter->setFont(checkFont);
         painter->setPen(Qt::white);
@@ -554,7 +554,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
             painter->setPen(Qt::NoPen);
             painter->setBrush(colors.accentDefault);
             painter->drawPath(boxPath);
-            QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
+            QFont glyphFont(Typography::FontFamily::FluentIcons);
             glyphFont.setPixelSize(12);
             painter->setFont(glyphFont);
             painter->setPen(Qt::white);
@@ -575,7 +575,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     const qreal chevronLeft = cursorX;
     if (hasChildren) {
         const qreal rotation = m_view ? m_view->chevronRotation(index) : 0.0;
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont iconFont(Typography::FontFamily::FluentIcons);
         iconFont.setPixelSize(12);
         painter->setFont(iconFont);
         painter->setPen(textColor);
@@ -600,7 +600,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         if (colorVar.canConvert<QColor>() && colorVar.value<QColor>().isValid() && isEnabled
             && !fill.textOnAccent)
             glyphColor = colorVar.value<QColor>();
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont iconFont(Typography::FontFamily::FluentIcons);
         iconFont.setPixelSize(16);
         painter->setFont(iconFont);
         painter->setPen(glyphColor);

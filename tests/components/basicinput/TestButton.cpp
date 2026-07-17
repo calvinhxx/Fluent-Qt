@@ -33,7 +33,7 @@ qreal renderedDarkPixelCenterY(int iconOffsetY,
     button.setFluentLayout(Button::IconOnly);
     button.setIconGlyph(iconGlyph,
                         iconPixelSize,
-                        Typography::FontFamily::SegoeFluentIcons);
+                        Typography::FontFamily::FluentIcons);
     button.setIconOffset(QPoint(0, iconOffsetY));
     button.setFixedSize(buttonSize);
     button.ensurePolished();
@@ -262,7 +262,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l2->setFluentLayout(Button::IconBefore);
     l2->setIconGlyph(Typography::Icons::GlobalNav,
                      Typography::FontSize::Caption,
-                     Typography::FontFamily::SegoeFluentIcons);
+                     Typography::FontFamily::FluentIcons);
     l2->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l2->anchors()->left = {l1, Edge::Right, 20};
     layout->addWidget(l2);
@@ -273,7 +273,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l3->setFixedSize(40, 40);
     l3->setIconGlyph(Typography::Icons::More,
                      Typography::FontSize::Caption,
-                     Typography::FontFamily::SegoeFluentIcons);
+                     Typography::FontFamily::FluentIcons);
     l3->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l3->anchors()->left = {l2, Edge::Right, 20};
     layout->addWidget(l3);
@@ -283,7 +283,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l4->setFluentLayout(Button::IconAfter);
     l4->setIconGlyph(Typography::Icons::ChevronRight,
                      Typography::FontSize::Caption,
-                     Typography::FontFamily::SegoeFluentIcons);
+                     Typography::FontFamily::FluentIcons);
     l4->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l4->anchors()->left = {l3, Edge::Right, 20};
     layout->addWidget(l4);
@@ -294,7 +294,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l5->setFixedSize(40, 40);
     l5->setIconGlyph(Typography::Icons::More,
                      Typography::FontSize::Caption,
-                     Typography::FontFamily::SegoeFluentIcons);
+                     Typography::FontFamily::FluentIcons);
     l5->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l5->anchors()->left = {l4, Edge::Right, 20};
     layout->addWidget(l5);

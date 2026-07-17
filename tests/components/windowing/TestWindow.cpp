@@ -162,7 +162,7 @@ QIcon createWindowAppIcon() {
     painter.setBrush(QColor("#0078D4"));
     painter.drawRoundedRect(QRectF(0.75, 0.75, TitleBarAppIconSize - 1.5, TitleBarAppIconSize - 1.5), 2.5, 2.5);
 
-    QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+    QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(8);
     painter.setFont(iconFont);
     painter.setPen(Qt::white);

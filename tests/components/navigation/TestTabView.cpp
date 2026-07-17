@@ -293,7 +293,7 @@ TEST_F(TabViewTest, PropertySignalsEmitOnlyForEffectiveChanges)
     tabs.setKeyboardAcceleratorsEnabled(false);
     tabs.setTabFontRole(QStringLiteral("Body Strong"));
     tabs.setTabFontRole(QStringLiteral("Body Strong"));
-    tabs.setIconFontFamily(QStringLiteral("Segoe Fluent Icons"));
+    tabs.setIconFontFamily(Typography::FontFamily::FluentIcons);
 
     EXPECT_EQ(widthSpy.count(), 1);
     EXPECT_EQ(closeSpy.count(), 1);

@@ -246,9 +246,7 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
             painter.setPen(Qt::NoPen);
             painter.setBrush(colors.subtleSecondary);
             painter.drawRoundedRect(iconRect, ::CornerRadius::Control, ::CornerRadius::Control);
-            QFont glyphFont(Typography::FontFamily::SegoeFluentIcons);
-            glyphFont.setPixelSize(18);
-            painter.setFont(glyphFont);
+            painter.setFont(Typography::Icons::font(18));
             painter.setPen(colors.textPrimary);
             painter.drawText(iconRect, Qt::AlignCenter, entry.iconGlyph);
         } else if (!entry.icon.isNull()) {

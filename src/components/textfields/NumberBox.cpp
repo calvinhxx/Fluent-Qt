@@ -513,7 +513,7 @@ void NumberBox::initializeSpinnerButtons() {
         button->setFluentSize(::fluent::basicinput::Button::Small);
         button->setFocusPolicy(Qt::NoFocus);
         button->setFixedSize(m_spinButtonSize);
-        button->setIconGlyph(glyph, m_spinButtonIconSize, Typography::FontFamily::SegoeFluentIcons);
+        button->setIconGlyph(glyph, m_spinButtonIconSize, Typography::FontFamily::FluentIcons);
         button->installEventFilter(this);
         button->hide();
     };
@@ -537,12 +537,12 @@ void NumberBox::updateSpinButtonIcons() {
     if (m_spinUpButton) {
         m_spinUpButton->setIconGlyph(Typography::Icons::ChevronUp,
                                      m_spinButtonIconSize,
-                                     Typography::FontFamily::SegoeFluentIcons);
+                                     Typography::FontFamily::FluentIcons);
     }
     if (m_spinDownButton) {
         m_spinDownButton->setIconGlyph(Typography::Icons::ChevronDown,
                                        m_spinButtonIconSize,
-                                       Typography::FontFamily::SegoeFluentIcons);
+                                       Typography::FontFamily::FluentIcons);
     }
 }
 

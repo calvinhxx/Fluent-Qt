@@ -271,7 +271,7 @@ void CheckBox::paintEvent(QPaintEvent*) {
     if (state != Qt::Unchecked) {
         painter.save();
         
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont iconFont(Typography::FontFamily::FluentIcons);
         // Token sizes: Body for checked, Caption for indeterminate.
         // zh_CN: 设计 Token——Checked 用 Body 字号，Indeterminate 用 Caption 字号。
         int fontSize = (state == Qt::Checked) ? Typography::FontSize::Body : Typography::FontSize::Caption;

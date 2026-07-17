@@ -560,7 +560,7 @@ QString InfoBar::severityGlyph() const
 
 QFont InfoBar::severityIconFont() const
 {
-    QFont font(Typography::FontFamily::SegoeFluentIcons);
+    QFont font(Typography::FontFamily::FluentIcons);
     font.setPixelSize(m_severityIconGlyphSize);
     return font;
 }
@@ -594,7 +594,7 @@ void InfoBar::drawSeverityGlyphTinted(QPainter& painter, const QRectF& targetRec
     // filled circle. Without that circle the tinted glyph should fill the icon slot, so scale to the slot
     // height. zh_CN: Fluent 徽标字形刻意很小（~10）因为它在填充圆内。去掉圆后,着色字形应撑满图标槽,
     // 故按槽高缩放。
-    QFont font(Typography::FontFamily::SegoeFluentIcons);
+    QFont font(Typography::FontFamily::FluentIcons);
     font.setPixelSize(qMax(1, qRound(targetRect.height())));
 
     QPainterPath glyphPath;

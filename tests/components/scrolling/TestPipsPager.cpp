@@ -19,6 +19,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/collections/FlipView.h"
 #include "components/scrolling/PipsPager.h"
+#include "design/Typography.h"
 
 using fluent::collections::FlipView;
 using fluent::scrolling::PipsPager;
@@ -64,7 +65,7 @@ protected:
         painter.drawRect(band);
 
         painter.setPen(Qt::white);
-        QFont labelFont(QStringLiteral("Segoe UI Variable"));
+        QFont labelFont(Typography::FontFamily::UIText);
         labelFont.setPixelSize(15);
         labelFont.setWeight(QFont::DemiBold);
         painter.setFont(labelFont);

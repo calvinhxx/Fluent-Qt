@@ -401,7 +401,7 @@ protected:
         painter.setBrush(m_iconColor);
         painter.drawRoundedRect(iconRect, 7.0, 7.0);
 
-        QFont iconFont(Typography::FontFamily::SegoeFluentIcons);
+        QFont iconFont(Typography::FontFamily::FluentIcons);
         iconFont.setPixelSize(15);
         painter.setFont(iconFont);
         painter.setPen(Qt::white);
@@ -1740,10 +1740,10 @@ QVector<GallerySample> stackViewSamples()
     };
 }
 
-// Build a QStandardItem carrying a Segoe Fluent Icons glyph (drawn crisply by the
+// Build a QStandardItem carrying a FluentQt Icons glyph (drawn crisply by the
 // TreeRowDelegate via TreeIconGlyphRole) plus an optional accent color, instead of a
 // rasterized icon pixmap — matching the role-based model the TreeView UT exercises.
-// zh_CN: 构造携带 Segoe Fluent 图标字形（由 TreeRowDelegate 经 TreeIconGlyphRole 清晰绘制）
+// zh_CN: 构造携带 FluentQt Icons 字形（由 TreeRowDelegate 经 TreeIconGlyphRole 清晰绘制）
 // 及可选强调色的 QStandardItem，而非位图图标——与 TreeView UT 使用的 role 化模型一致。
 QStandardItem* makeTreeItem(const QString& text, const QString& glyph, const QColor& color)
 {
