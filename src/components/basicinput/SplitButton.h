@@ -4,6 +4,8 @@
 #include "Button.h"
 #include <QMenu>
 
+class QVariantAnimation;
+
 namespace fluent::basicinput {
 
 /**
@@ -62,6 +64,11 @@ protected:
     int m_secondaryWidth = 32;
 
 private:
+    void startPressAnimation(SplitPart part);
+
+    QVariantAnimation* m_pressAnimation = nullptr;
+    SplitPart m_animatedPart = None;
+    qreal m_pressProgress = 0.0;
 };
 
 } // namespace fluent::basicinput

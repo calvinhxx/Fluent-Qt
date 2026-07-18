@@ -3,12 +3,37 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QStyleOptionButton>
+#include <QVariantAnimation>
+#include <QtMath>
 
 namespace fluent::basicinput {
 
 SplitButton::SplitButton(const QString& text, QWidget* parent)
     : Button(text, parent) {
     setMouseTracking(true);
+    m_pressAnimation = new QVariantAnimation(this);
+    connect(m_pressAnimation, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant& value) {
+                m_pressProgress = value.toReal();
+                update();
+            });
+    connect(m_pressAnimation, &QVariantAnimation::finished, this, [this]() {
+        m_pressProgress = 0.0;
+        m_animatedPart = None;
+        update();
+    });
+}
+
+void SplitButton::startPressAnimation(SplitPart part) {
+    if (!m_pressAnimation || part == None)
+        return;
+    m_animatedPart = part;
+    m_pressAnimation->stop();
+    m_pressAnimation->setDuration(themeAnimation().slow);
+    m_pressAnimation->setEasingCurve(themeAnimation().decelerate);
+    m_pressAnimation->setStartValue(0.0);
+    m_pressAnimation->setEndValue(1.0);
+    m_pressAnimation->start();
 }
 
 void SplitButton::setMenu(QMenu* menu) {
@@ -39,6 +64,7 @@ void SplitButton::mouseMoveEvent(QMouseEvent* event) {
 void SplitButton::mousePressEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
         m_pressPart = getPartAt(event->pos());
+        startPressAnimation(m_pressPart);
         update();
     }
     Button::mousePressEvent(event);
@@ -345,8 +371,12 @@ void SplitButton::paintEvent(QPaintEvent*) {
     painter.setFont(font());
     // Each zone sinks independently to suggest its own press feedback.
     // zh_CN: 两侧独立计算下沉偏移，模拟各自的点击触感。
-    const double primaryOffset   = (m_pressPart == Primary)   ? 0.5 : 0.0;
-    const double secondaryOffset = (m_pressPart == Secondary) ? 0.5 : 0.0;
+    constexpr qreal kPi = 3.14159265358979323846;
+    const qreal rebound = qSin(qBound<qreal>(0.0, m_pressProgress, 1.0) * kPi);
+    const double primaryOffset = (m_pressPart == Primary ? 0.5 : 0.0)
+        + (m_animatedPart == Primary ? rebound * 2.0 : 0.0);
+    const double secondaryOffset = (m_pressPart == Secondary ? 0.5 : 0.0)
+        + (m_animatedPart == Secondary ? rebound * 2.0 : 0.0);
 
     QString txt = (fluentLayout() == IconOnly) ? "" : text();
     bool hasIconFont = !iconGlyph().isEmpty();
@@ -376,6 +406,8 @@ void SplitButton::paintEvent(QPaintEvent*) {
     }
 
     // 7. Paint the chevron; it also sinks 0.5px while pressed. zh_CN: 绘制下拉箭头，按下时同样下沉 0.5px。
+    if (m_animatedPart == Secondary && rebound > 0.0)
+        chevronColor.setAlphaF(chevronColor.alphaF() * (1.0 - 0.25 * rebound));
     painter.setPen(chevronColor);
     QFont iconFont(Typography::FontFamily::FluentIcons);
     iconFont.setPixelSize(chevronSize);

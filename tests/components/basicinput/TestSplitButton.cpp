@@ -4,8 +4,11 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QImage>
+#include <QVariantAnimation>
+#include <QTest>
 #include "components/menus_toolbars/Menu.h"
 #include "components/basicinput/SplitButton.h"
+#include "components/basicinput/ToggleSplitButton.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "design/Typography.h"
@@ -205,6 +208,43 @@ TEST_F(SplitButtonDesignLanguageTest, MacOsRestStateHasNoOpaqueBlackSurface) {
             << "SplitButton painted an opaque black surface at rest for theme=" << theme
             << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
     }
+}
+
+TEST_F(SplitButtonTest, BothSegmentsStartPressReboundAnimation) {
+    SplitButton split(QStringLiteral("Choose"));
+    split.resize(160, 36);
+    split.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&split));
+
+    auto* animation = split.findChild<QVariantAnimation*>();
+    ASSERT_NE(animation, nullptr);
+
+    const QPoint primaryPoint(split.width() / 4, split.height() / 2);
+    QTest::mousePress(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
+    QTRY_VERIFY_WITH_TIMEOUT(animation->currentValue().toReal() > 0.0, 300);
+    QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
+
+    const QPoint secondaryPoint(split.width() - 8, split.height() / 2);
+    QTest::mousePress(&split, Qt::LeftButton, Qt::NoModifier, secondaryPoint);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
+    QTRY_VERIFY_WITH_TIMEOUT(animation->currentValue().toReal() > 0.0, 300);
+    QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, secondaryPoint);
+}
+
+TEST_F(SplitButtonTest, ToggleSplitButtonInheritsPressReboundAnimation) {
+    ToggleSplitButton split(QStringLiteral("Pin"));
+    split.resize(140, 36);
+    split.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&split));
+
+    auto* animation = split.findChild<QVariantAnimation*>();
+    ASSERT_NE(animation, nullptr);
+    const QPoint primaryPoint(split.width() / 4, split.height() / 2);
+    QTest::mousePress(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
+    EXPECT_EQ(animation->state(), QAbstractAnimation::Running);
+    QTRY_VERIFY_WITH_TIMEOUT(animation->currentValue().toReal() > 0.0, 300);
+    QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, primaryPoint);
 }
 
 TEST_F(SplitButtonTest, VisualCheck) {
