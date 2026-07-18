@@ -734,6 +734,37 @@ TEST_F(DrawerViewTest, WindowResizeBorderTakesPriorityOverClosedEdgeDrag)
     EXPECT_TRUE(drawer.isOpen());
 }
 
+TEST_F(DrawerViewTest, HiddenLogicalHostDoesNotReceiveTopLevelEdgeGestures)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+
+    QWidget page(&window);
+    page.setGeometry(window.rect());
+    page.show();
+    processEvents();
+
+    DrawerView drawer(&page);
+    drawer.setAnimationEnabled(false);
+    drawer.setModal(false);
+    drawer.setDim(false);
+    drawer.setDrawerLength(320);
+
+    page.hide();
+    processEvents();
+
+    sendMouse(&window, QEvent::MouseButtonPress, QPoint(2, 140),
+              Qt::LeftButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseMove, QPoint(220, 140),
+              Qt::NoButton, Qt::LeftButton);
+    sendMouse(&window, QEvent::MouseButtonRelease, QPoint(220, 140),
+              Qt::LeftButton, Qt::NoButton);
+
+    EXPECT_FALSE(drawer.isOpen());
+    EXPECT_FALSE(drawer.isVisible());
+    EXPECT_EQ(drawer.position(), 0.0);
+}
+
 TEST_F(DrawerViewTest, ThemeRefreshAndParentDestructionAreSafe)
 {
     auto* window = new DrawerTestWindow();

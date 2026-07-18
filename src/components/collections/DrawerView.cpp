@@ -319,12 +319,29 @@ bool DrawerView::eventFilter(QObject* watched, QEvent* event)
     if (event->type() == QEvent::Resize && watched == m_topLevel) {
         if (!isVisible() && !m_isOpen && !m_drag.active)
             return false;
+        if (!isInteractionHostVisible()) {
+            deactivateForHiddenHost();
+            return false;
+        }
         updateOverlayGeometry();
         return false;
     }
 
     if (!eventBelongsToDrawerTopLevel(watched))
         return false;
+
+    // A same-window drawer is reparented to the top-level while open, but its
+    // logical owner remains m_originalParent.  Cached Gallery pages hide that
+    // owner without destroying the DrawerView; accepting application-wide edge
+    // gestures afterwards lets an inactive sample open over unrelated pages.
+    // Treat a hidden logical host as deactivated and settle any in-flight drag.
+    // zh_CN: 同窗口抽屉打开时会挂到顶层窗口，但逻辑宿主仍是 m_originalParent。
+    // Gallery 缓存页面只会隐藏宿主而不销毁 DrawerView；若仍接收全局边缘手势，
+    // 非活动示例就会覆盖到其它页面。宿主隐藏时立即停用并收敛进行中的拖拽。
+    if (eventHidesInteractionHost(watched, event) || !isInteractionHostVisible()) {
+        deactivateForHiddenHost();
+        return false;
+    }
 
     if (event->type() == QEvent::KeyPress) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
@@ -465,6 +482,46 @@ bool DrawerView::eventBelongsToDrawerTopLevel(QObject* watched) const
     if (!top)
         return false;
     return eventTopLevel(watched) == top;
+}
+
+bool DrawerView::isInteractionHostVisible() const
+{
+    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
+    QWidget* host = m_originalParent.data();
+    if (!top || !host)
+        return false;
+    if (host == top)
+        return top->isVisible();
+    return host->isVisibleTo(top);
+}
+
+bool DrawerView::eventHidesInteractionHost(QObject* watched, QEvent* event) const
+{
+    if (!event || event->type() != QEvent::Hide || !m_originalParent)
+        return false;
+    auto* hiddenWidget = qobject_cast<QWidget*>(watched);
+    return hiddenWidget
+        && (hiddenWidget == m_originalParent
+            || hiddenWidget->isAncestorOf(m_originalParent));
+}
+
+void DrawerView::deactivateForHiddenHost()
+{
+    if (m_hostDeactivationInProgress
+        || (!isVisible() && !m_isOpen && !m_drag.active))
+        return;
+
+    // finalizeClosed() hides this widget, which itself produces another Hide
+    // event while the logical host is already hidden.  Guard that nested event
+    // so parent-window teardown cannot close the same overlay recursively.
+    // zh_CN: finalizeClosed() 会隐藏抽屉并再次产生 Hide 事件；此时逻辑宿主
+    // 已不可见。用重入保护避免父窗口销毁期间递归关闭同一覆盖层。
+    m_hostDeactivationInProgress = true;
+    stopAnimation();
+    cancelDrag();
+    m_isClosing = false;
+    finalizeClosed();
+    m_hostDeactivationInProgress = false;
 }
 
 void DrawerView::ensureApplicationEventFilter()
