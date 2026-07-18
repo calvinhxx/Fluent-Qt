@@ -24,6 +24,57 @@
 
 namespace fluent::gallery {
 
+void drawPhotoCaption(QPainter* painter, const QRectF& card,
+                      const QString& title, const QString& subtitle,
+                      const QFont& baseFont)
+{
+    if (!painter || title.isEmpty())
+        return;
+
+    QFont titleFont = baseFont;
+    titleFont.setWeight(QFont::DemiBold);
+    QFont subtitleFont = baseFont;
+    if (subtitleFont.pixelSize() > 0)
+        subtitleFont.setPixelSize(qMax(11, subtitleFont.pixelSize() - 2));
+    else if (subtitleFont.pointSizeF() > 0.0)
+        subtitleFont.setPointSizeF(qMax<qreal>(8.0, subtitleFont.pointSizeF() - 1.0));
+
+    const QFontMetricsF titleMetrics(titleFont);
+    const QFontMetricsF subtitleMetrics(subtitleFont);
+    const qreal gap = subtitle.isEmpty() ? 0.0 : 1.0;
+    const qreal textHeight = titleMetrics.height()
+        + (subtitle.isEmpty() ? 0.0 : subtitleMetrics.height() + gap);
+    const qreal barHeight = qMin(card.height(), qMax<qreal>(48.0, textHeight + 10.0));
+    const QRectF labelBar(card.left(), card.bottom() - barHeight,
+                          card.width(), barHeight);
+
+    QLinearGradient scrim(labelBar.topLeft(), labelBar.bottomLeft());
+    scrim.setColorAt(0.0, QColor(0, 0, 0, 20));
+    scrim.setColorAt(1.0, QColor(0, 0, 0, 150));
+    painter->fillRect(labelBar, scrim);
+
+    const qreal textTop = labelBar.top() + (labelBar.height() - textHeight) / 2.0;
+    const QRectF titleRect(labelBar.left() + 10.0, textTop,
+                           qMax<qreal>(0.0, labelBar.width() - 20.0),
+                           titleMetrics.height());
+    painter->setFont(titleFont);
+    painter->setPen(QColor(255, 255, 255, 240));
+    painter->drawText(titleRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
+                      titleMetrics.elidedText(title, Qt::ElideRight,
+                                              qRound(titleRect.width())));
+
+    if (!subtitle.isEmpty()) {
+        const QRectF subtitleRect(titleRect.left(), titleRect.bottom() + gap,
+                                  titleRect.width(), subtitleMetrics.height());
+        painter->setFont(subtitleFont);
+        painter->setPen(QColor(255, 255, 255, 205));
+        painter->drawText(subtitleRect,
+                          Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
+                          subtitleMetrics.elidedText(subtitle, Qt::ElideRight,
+                                                     qRound(subtitleRect.width())));
+    }
+}
+
 using fluent::collections::GridView;
 using fluent::collections::ListView;
 using fluent::collections::TreeView;
@@ -209,32 +260,7 @@ void GridPhotoDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opt
 
         const QString title = index.data(Qt::DisplayRole).toString();
         const QString subtitle = index.data(PhotoSubtitleRole).toString();
-        if (!title.isEmpty()) {
-            const QRectF labelBar(card.left(), card.bottom() - 44.0, card.width(), 44.0);
-            QLinearGradient scrim(labelBar.topLeft(), labelBar.bottomLeft());
-            scrim.setColorAt(0.0, QColor(0, 0, 0, 20));
-            scrim.setColorAt(1.0, QColor(0, 0, 0, 150));
-            painter->fillRect(labelBar, scrim);
-
-            QFont titleFont = option.font;
-            titleFont.setWeight(QFont::DemiBold);
-            painter->setFont(titleFont);
-            painter->setPen(QColor(255, 255, 255, 240));
-            painter->drawText(labelBar.adjusted(10, 4, -10, -21),
-                              Qt::AlignLeft | Qt::AlignVCenter,
-                              painter->fontMetrics().elidedText(title, Qt::ElideRight,
-                                                                 qRound(labelBar.width()) - 20));
-            if (!subtitle.isEmpty()) {
-                QFont subtitleFont = option.font;
-                subtitleFont.setPixelSize(qMax(10, subtitleFont.pixelSize() - 2));
-                painter->setFont(subtitleFont);
-                painter->setPen(QColor(255, 255, 255, 205));
-                painter->drawText(labelBar.adjusted(10, 22, -10, -4),
-                                  Qt::AlignLeft | Qt::AlignVCenter,
-                                  painter->fontMetrics().elidedText(subtitle, Qt::ElideRight,
-                                                                     qRound(labelBar.width()) - 20));
-            }
-        }
+        drawPhotoCaption(painter, card, title, subtitle, option.font);
         painter->setClipping(false);
     }
 

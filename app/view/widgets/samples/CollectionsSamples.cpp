@@ -462,8 +462,6 @@ public:
         const QColor stroke = colors.strokeDefault.isValid() ? colors.strokeDefault : QColor(220, 220, 220);
         const QColor accent = colors.accentDefault.isValid() ? colors.accentDefault : QColor(0, 120, 212);
         const QColor hover = colors.subtleSecondary.isValid() ? colors.subtleSecondary : QColor(0, 0, 0, 18);
-        const QColor textOnImage(255, 255, 255, 240);
-        const QColor subtitleOnImage(255, 255, 255, 205);
 
         const QRectF card = QRectF(option.rect).adjusted(2.0, 2.0, -2.0, -2.0);
         const int radius = CornerRadius::Control;
@@ -479,31 +477,9 @@ public:
             if (option.state & QStyle::State_MouseOver)
                 painter->fillRect(card, QColor(255, 255, 255, 24));
 
-            const QRectF labelBar(card.left(), card.bottom() - 44.0, card.width(), 44.0);
-            QLinearGradient scrim(labelBar.topLeft(), labelBar.bottomLeft());
-            scrim.setColorAt(0.0, QColor(0, 0, 0, 20));
-            scrim.setColorAt(1.0, QColor(0, 0, 0, 150));
-            painter->fillRect(labelBar, scrim);
-
             const QString title = index.data(Qt::DisplayRole).toString();
             const QString subtitle = index.data(PhotoSubtitleRole).toString();
-            QFont titleFont = option.font;
-            titleFont.setWeight(QFont::DemiBold);
-            painter->setFont(titleFont);
-            painter->setPen(textOnImage);
-            painter->drawText(labelBar.adjusted(10, 4, -10, -21),
-                              Qt::AlignLeft | Qt::AlignVCenter,
-                              painter->fontMetrics().elidedText(title, Qt::ElideRight,
-                                                                 qRound(labelBar.width()) - 20));
-
-            QFont subtitleFont = option.font;
-            subtitleFont.setPixelSize(qMax(10, subtitleFont.pixelSize() - 2));
-            painter->setFont(subtitleFont);
-            painter->setPen(subtitleOnImage);
-            painter->drawText(labelBar.adjusted(10, 22, -10, -4),
-                              Qt::AlignLeft | Qt::AlignVCenter,
-                              painter->fontMetrics().elidedText(subtitle, Qt::ElideRight,
-                                                                 qRound(labelBar.width()) - 20));
+            drawPhotoCaption(painter, card, title, subtitle, option.font);
             painter->setClipping(false);
         }
 
@@ -1906,7 +1882,7 @@ QVector<GallerySample> treeViewSamples()
                                   "\n"
                                   "const QModelIndex parentIndex = model->index(0, 0);\n"
                                   "const QModelIndex childIndex = model->index(0, 0, parentIndex);\n"
-                                  "const QModelIndex siblingIndex = model->index(1, 0);\n"
+                                  "const QModelIndex siblingIndex = model->index(1, 0, parentIndex);\n"
                                   "tree->setSelectedItem(parentIndex);\n"
                                   "\n"
                                   "auto bindTarget = [tree](Button* button, const QModelIndex& index) {\n"
@@ -1935,7 +1911,15 @@ QVector<GallerySample> treeViewSamples()
                        tree->expandAll();
                        const QModelIndex parentIndex = model->index(0, 0);
                        const QModelIndex childIndex = model->index(0, 0, parentIndex);
-                       const QModelIndex siblingIndex = model->index(1, 0);
+                       // Keep all three animation targets in the initial viewport.  The old
+                       // sibling target was the second root item (Photos), so QTreeView quite
+                       // correctly auto-scrolled to reveal it and made the indicator demo look
+                       // as if the whole control jumped.  Budget is a true sibling of Proposal
+                       // and still exercises the same-level transition without moving the view.
+                       // zh_CN: 三个动画目标均保持在初始视口内。旧 sibling 指向第二个根
+                       // 节点 Photos，QTreeView 会为显示它而自动滚动，看起来像整个控件跳动；
+                       // Budget 是 Proposal 的真实同级节点，可在不滚动的情况下演示同级过渡。
+                       const QModelIndex siblingIndex = model->index(1, 0, parentIndex);
                        tree->setSelectedItem(parentIndex);
 
                        QWidget* controls = horizontalGroup(group, 8);

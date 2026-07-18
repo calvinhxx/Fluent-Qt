@@ -273,7 +273,12 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
     m_codeLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_codeLabel->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     QFont monospace = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    monospace.setPixelSize(Typography::FontSize::Caption);
+    // Code is primary content once expanded; Caption (12 px) became visibly
+    // undersized next to the bundled 14 px UI text, especially on Windows.
+    // Keep a platform-native monospace face but use the Body optical size.
+    // zh_CN: 源码展开后属于主要内容；12px Caption 与捆绑的 14px UI 字体并排时
+    // 明显偏小（Windows 尤甚）。保留平台原生等宽字体，字号改用 Body。
+    monospace.setPixelSize(Typography::FontSize::Body);
     m_codeLabel->setFont(monospace);
     // Lazy: syntax highlighting + RichText shaping is the heaviest part of building a card and
     // the block starts collapsed, so defer it until the first expand. Most blocks are never
