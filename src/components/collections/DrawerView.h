@@ -210,6 +210,9 @@ private:
     QWidget* resolveTopLevelWidget() const;
     QWidget* eventTopLevel(QObject* watched) const;
     bool eventBelongsToDrawerTopLevel(QObject* watched) const;
+    bool isInteractionHostVisible() const;
+    bool eventHidesInteractionHost(QObject* watched, QEvent* event) const;
+    void deactivateForHiddenHost();
 
     void ensureApplicationEventFilter();
     void removeApplicationEventFilter();
@@ -275,6 +278,7 @@ private:
     TransitionTarget m_transitionTarget = TransitionTarget::None;
     bool m_applicationFilterInstalled = false;
     bool m_topLevelFilterInstalled = false;
+    bool m_hostDeactivationInProgress = false;
 
     QRect m_panelGeometry;
     QRect m_contentGeometry;
