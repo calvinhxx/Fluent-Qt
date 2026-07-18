@@ -185,6 +185,10 @@ TreeView::TreeView(QWidget* parent)
     connect(m_indicatorMotionAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
         setIndicatorMotionProgress(value.toReal());
         if (viewport())
+            // The viewport may intentionally preserve a transparent parent surface.
+            // A partial repaint then cannot reliably erase the previous overlay frame
+            // on every backing-store implementation, leaving accent-colored trails.
+            // The transition is brief, so recompose the full viewport while it runs.
             viewport()->update(indicatorMotionDirtyRect());
     });
     connect(m_indicatorMotionAnim, &QVariantAnimation::finished, this, [this]() {
@@ -1518,6 +1522,12 @@ void TreeView::paintSelectedIndicator(QPainter& painter) const {
 QRect TreeView::indicatorMotionDirtyRect() const {
     if (!viewport())
         return {};
+
+    // A partial repaint cannot reconstruct pixels exposed from the parent surface.
+    // Recompose transparent previews completely so old accent frames cannot remain.
+    // zh_CN: 局部重绘无法恢复来自父级表面的像素；透明预览需完整重组，避免残留强调色轨迹。
+    if (!m_backgroundVisible)
+        return viewport()->rect();
 
     // The pill only ever travels within the vertical span of the previous and
     // current rows; repaint that full-width band instead of the whole viewport.
