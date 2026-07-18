@@ -157,10 +157,11 @@ void RatingControl::setCaptionFontRole(const QString& role)
 
 QSize RatingControl::iconCellSize() const
 {
-    QFont iconFont(Typography::FontFamily::FluentIcons);
-    iconFont.setPixelSize(m_starSize);
+    const QFont iconFont = Typography::Icons::font(m_starSize);
     QFontMetrics fm(iconFont);
-    int w = fm.horizontalAdvance(Typography::Icons::FavoriteStar);
+    const QString starGlyph = Typography::Icons::glyphForSize(
+        Typography::Icons::FavoriteStar, m_starSize);
+    int w = fm.horizontalAdvance(starGlyph);
     int h = fm.height();
     return QSize(qMax(w, m_starSize), qMax(h, m_starSize));
 }

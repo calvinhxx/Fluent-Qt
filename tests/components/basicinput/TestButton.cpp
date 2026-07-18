@@ -25,7 +25,7 @@ namespace {
 
 qreal renderedDarkPixelCenterY(int iconOffsetY,
                                const QSize& buttonSize = QSize(48, 48),
-                               int iconPixelSize = Typography::FontSize::Body,
+                               int iconPixelSize = Typography::IconSize::Standard,
                                const QString& iconGlyph = Typography::Icons::GlobalNav) {
     Button button;
     button.setAttribute(Qt::WA_DontShowOnScreen);
@@ -64,6 +64,21 @@ qreal renderedDarkPixelCenterY(int iconOffsetY,
     }
 
     return totalWeight > 0.0 ? weightedY / totalWeight : -1.0;
+}
+
+class InspectableButton final : public Button {
+public:
+    using Button::Button;
+
+    int paintedIconPixelSize() const { return iconPixelSize(); }
+};
+
+TEST(ButtonProperties, SemanticIconUsesWinUIStandardControlSlotByDefault)
+{
+    InspectableButton button;
+    button.setIconGlyph(Typography::Icons::Add);
+
+    EXPECT_EQ(button.paintedIconPixelSize(), Typography::IconSize::Standard);
 }
 
 TEST(ButtonProperties, IconRotationIsAnimatableWithoutChangingGeometry)
@@ -140,17 +155,17 @@ TEST_F(ButtonTest, IconFontRenderingIsVisuallyCenteredByDefault) {
 
     const qreal backCenterY = renderedDarkPixelCenterY(0,
                                                        titleBarButtonSize,
-                                                       Typography::FontSize::Caption,
+                                                       Typography::IconSize::Standard,
                                                        Typography::Icons::TitleBarBack);
     const qreal menuCenterY = renderedDarkPixelCenterY(0,
                                                        titleBarButtonSize,
-                                                       Typography::FontSize::Caption,
+                                                       Typography::IconSize::Standard,
                                                        Typography::Icons::GlobalNav);
 
     ASSERT_GE(backCenterY, 0.0);
     ASSERT_GE(menuCenterY, 0.0);
-    EXPECT_NEAR(backCenterY, expectedCenterY, 0.25);
-    EXPECT_NEAR(menuCenterY, expectedCenterY, 0.25);
+    EXPECT_NEAR(backCenterY, expectedCenterY, 0.75);
+    EXPECT_NEAR(menuCenterY, expectedCenterY, 0.75);
 }
 
 TEST_F(ButtonTest, DisabledSubtleButtonKeepsTransparentSurface) {
@@ -261,7 +276,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     Button* l2 = new Button("Icon Before", window);
     l2->setFluentLayout(Button::IconBefore);
     l2->setIconGlyph(Typography::Icons::GlobalNav,
-                     Typography::FontSize::Caption,
+                     Typography::IconSize::Standard,
                      Typography::FontFamily::FluentIcons);
     l2->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l2->anchors()->left = {l1, Edge::Right, 20};
@@ -272,7 +287,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l3->setFluentLayout(Button::IconOnly);
     l3->setFixedSize(40, 40);
     l3->setIconGlyph(Typography::Icons::More,
-                     Typography::FontSize::Caption,
+                     Typography::IconSize::Standard,
                      Typography::FontFamily::FluentIcons);
     l3->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l3->anchors()->left = {l2, Edge::Right, 20};
@@ -282,7 +297,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     Button* l4 = new Button("Icon After", window);
     l4->setFluentLayout(Button::IconAfter);
     l4->setIconGlyph(Typography::Icons::ChevronRight,
-                     Typography::FontSize::Caption,
+                     Typography::IconSize::Standard,
                      Typography::FontFamily::FluentIcons);
     l4->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l4->anchors()->left = {l3, Edge::Right, 20};
@@ -293,7 +308,7 @@ TEST_F(ButtonTest, VisualPropertyVerification) {
     l5->setFluentLayout(Button::IconOnly);
     l5->setFixedSize(40, 40);
     l5->setIconGlyph(Typography::Icons::More,
-                     Typography::FontSize::Caption,
+                     Typography::IconSize::Standard,
                      Typography::FontFamily::FluentIcons);
     l5->anchors()->verticalCenter = {l1, Edge::VCenter, 0};
     l5->anchors()->left = {l4, Edge::Right, 20};

@@ -35,6 +35,18 @@ const QVector<IconInfo>& catalog();
 QString glyph(const QString& name);
 
 /**
+ * @brief Resolves a semantic or catalog glyph to its native optical-size variant.
+ * zh_CN: 将语义字形或目录字形解析为对应原生光学尺寸的变体。
+ *
+ * The input may be a Typography::Icons semantic glyph, a glyph returned by
+ * glyph(), or an upstream catalog name. If that icon family does not publish
+ * the requested size, the nearest available design is used.
+ * zh_CN: 输入可以是 Typography::Icons 语义字形、glyph() 返回的字形或上游目录名；
+ * 若该图标族没有目标尺寸，则选择最接近的原生设计。
+ */
+QString glyphForSize(const QString& glyphOrName, int designSize);
+
+/**
  * @brief Creates a platform-consistent font for painting an icon glyph.
  * zh_CN: 创建用于绘制图标字形、跨平台一致的字体。
  */

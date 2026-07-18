@@ -115,7 +115,10 @@ TEST_F(ComboBoxTest, DefaultProperties) {
     EXPECT_EQ(cb.contentPaddingH(), Spacing::Padding::ComboBoxHorizontal);
     EXPECT_EQ(cb.contentPaddingV(), Spacing::Padding::ComboBoxVertical);
     EXPECT_EQ(cb.chevronGlyph(), Typography::Icons::ChevronDownMed);
-    EXPECT_EQ(cb.chevronSize(), 12);
+    EXPECT_EQ(cb.chevronSize(), Typography::IconSize::Compact);
+    EXPECT_EQ(Typography::Icons::glyphForSize(cb.chevronGlyph(), cb.chevronSize()),
+              Typography::Icons::glyph(
+                  QStringLiteral("ic_fluent_chevron_down_12_regular")));
     EXPECT_EQ(cb.chevronOffset(), QPoint(Spacing::Padding::ComboBoxHorizontal, 0));
     EXPECT_EQ(cb.popupOffset(), Spacing::XSmall);
     EXPECT_DOUBLE_EQ(cb.pressProgress(), 0.0);
@@ -212,6 +215,21 @@ TEST_F(ComboBoxTest, SizeHintGrowsWithItems) {
     cb.addItems({"Very Long Item Text That Should Make It Wider"});
     QSize withItems = cb.sizeHint();
     EXPECT_GT(withItems.width(), emptySize.width());
+}
+
+TEST_F(ComboBoxTest, SizeHintKeepsWidestItemClearOfElisionBoundary) {
+    ComboBox cb(window);
+    const QString widest = QStringLiteral("Keep in system tray");
+    cb.addItems({QStringLiteral("Use system setting"), widest, QStringLiteral("Light")});
+    cb.resize(cb.sizeHint());
+
+    const int chevronArea = cb.chevronOffset().x() + cb.chevronSize()
+                            + ::Spacing::Gap::Tight;
+    const int availableTextWidth = cb.width() - cb.contentPaddingH() - chevronArea;
+    const QFontMetrics metrics(cb.font());
+
+    EXPECT_GE(availableTextWidth - metrics.horizontalAdvance(widest), ::Spacing::XSmall);
+    EXPECT_EQ(metrics.elidedText(widest, Qt::ElideRight, availableTextWidth), widest);
 }
 
 TEST_F(ComboBoxTest, FixedHeight) {

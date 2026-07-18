@@ -298,7 +298,7 @@ void AutoSuggestBox::setQueryIconGlyph(const QString& glyph) {
     if (m_queryIconGlyph == glyph) return;
     m_queryIconGlyph = glyph;
     if (m_queryButton) {
-        m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::FontSize::Body,
+        m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::IconSize::Standard,
                                     Typography::FontFamily::FluentIcons);
     }
     emit queryIconGlyphChanged();
@@ -558,7 +558,7 @@ void AutoSuggestBox::initializeButtons() {
     m_queryButton->setFluentSize(::fluent::basicinput::Button::Small);
     m_queryButton->setFocusPolicy(Qt::NoFocus);
     m_queryButton->setFixedSize(m_queryButtonSize, m_queryButtonSize);
-    m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::FontSize::Body,
+    m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::IconSize::Standard,
                                 Typography::FontFamily::FluentIcons);
 
     connect(m_queryButton, &::fluent::basicinput::Button::clicked, this, [this]() {
@@ -573,7 +573,7 @@ void AutoSuggestBox::initializeButtons() {
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);
     m_clearButton->setFocusPolicy(Qt::NoFocus);
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
-    m_clearButton->setIconGlyph(Typography::Icons::Cancel, Typography::FontSize::Body,
+    m_clearButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard,
                                 Typography::FontFamily::FluentIcons);
 
     connect(m_clearButton, &::fluent::basicinput::Button::clicked, this, [this]() {

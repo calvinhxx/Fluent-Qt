@@ -557,6 +557,10 @@ TEST_F(TypographyTest, BundledIconFaceContainsCompleteCatalogAndSemanticAliases)
     const QFontInfo resolved(font);
     EXPECT_TRUE(resolved.exactMatch());
     EXPECT_EQ(resolved.family(), fluent::fontcompat::IconFamily);
+    EXPECT_EQ(font.pixelSize(), Typography::IconSize::XLarge);
+    EXPECT_EQ(font.hintingPreference(), QFont::PreferVerticalHinting);
+    EXPECT_NE(font.styleStrategy() & QFont::PreferQuality, 0);
+    EXPECT_NE(font.styleStrategy() & QFont::NoSubpixelAntialias, 0);
 
     const QFontMetrics metrics(font);
     const QStringList aliasedGlyphs = {
@@ -584,6 +588,46 @@ TEST_F(TypographyTest, BundledIconFaceContainsCompleteCatalogAndSemanticAliases)
         [](const Typography::Icons::IconInfo& icon) { return icon.codepoint > 0xFFFF; });
     ASSERT_NE(supplementary, catalog.cend());
     EXPECT_TRUE(metrics.inFontUcs4(supplementary->codepoint));
+}
+
+TEST_F(TypographyTest, SemanticIconsResolveToNativeOpticalVariants) {
+    const QString add12 = Typography::Icons::glyph(
+        QStringLiteral("ic_fluent_add_12_regular"));
+    const QString add16 = Typography::Icons::glyph(
+        QStringLiteral("ic_fluent_add_16_regular"));
+    const QString add20 = Typography::Icons::glyph(
+        QStringLiteral("ic_fluent_add_20_regular"));
+    ASSERT_FALSE(add12.isEmpty());
+    ASSERT_FALSE(add16.isEmpty());
+    ASSERT_FALSE(add20.isEmpty());
+
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::Add, Typography::IconSize::Compact),
+              add12);
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::Add, Typography::IconSize::Standard),
+              add16);
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::Add, Typography::IconSize::Large),
+              add20);
+
+    // Catalog names and catalog glyph values follow the same variant path as
+    // the stable semantic aliases.
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  QStringLiteral("ic_fluent_add_20_regular"),
+                  Typography::IconSize::Standard),
+              add16);
+    EXPECT_EQ(Typography::Icons::glyphForSize(add20, Typography::IconSize::Standard),
+              add16);
+}
+
+TEST_F(TypographyTest, MissingOpticalSizeUsesNearestNativeVariant) {
+    const QString more16 = Typography::Icons::glyph(
+        QStringLiteral("ic_fluent_more_horizontal_16_regular"));
+    ASSERT_FALSE(more16.isEmpty());
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::More, Typography::IconSize::Compact),
+              more16);
 }
 
 TEST_F(TypographyTest, BundledTextFacesRetainHintingTablesAndRenderingPolicy) {

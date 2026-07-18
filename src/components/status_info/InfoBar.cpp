@@ -20,7 +20,7 @@ constexpr int kActionGap = 8;
 constexpr int kCloseContentGap = 12;
 constexpr int kMultiLineActionGap = 12;
 constexpr int kTextLineHeight = 20;
-constexpr int kCloseIconSize = 12;
+constexpr int kCloseIconSize = Typography::IconSize::Standard;
 
 void setLabelColor(fluent::textfields::Label* label, const QColor& color)
 {

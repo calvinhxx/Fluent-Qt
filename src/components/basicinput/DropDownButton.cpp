@@ -145,8 +145,15 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
     painter.setRenderHint(QPainter::TextAntialiasing);
 
     // Icon font with the size unchanged. zh_CN: 设置图标字体（字号保持不变）。
-    QFont iconFont(m_iconFontFamily);
-    iconFont.setPixelSize(m_chevronSize);
+    const bool usesFluentIcons = m_iconFontFamily == Typography::FontFamily::FluentIcons;
+    QFont iconFont = usesFluentIcons
+        ? Typography::Icons::font(m_chevronSize)
+        : QFont(m_iconFontFamily);
+    if (!usesFluentIcons)
+        iconFont.setPixelSize(m_chevronSize);
+    const QString chevronGlyph = usesFluentIcons
+        ? Typography::Icons::glyphForSize(m_chevronGlyph, m_chevronSize)
+        : m_chevronGlyph;
     painter.setFont(iconFont);
     const qreal pressEffect = qSin(m_pressProgress * M_PI);
 
@@ -199,7 +206,7 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
     qreal pressOffset = maxOffset * pressEffect; // 0→max→0
     chevronRect.translate(0,
                           static_cast<int>(pressOffset) + m_chevronOffset.y());
-    painter.drawText(chevronRect, Qt::AlignRight | Qt::AlignVCenter, m_chevronGlyph);
+    painter.drawText(chevronRect, Qt::AlignRight | Qt::AlignVCenter, chevronGlyph);
 }
 
 } // namespace fluent::basicinput

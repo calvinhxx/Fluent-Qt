@@ -310,7 +310,25 @@ def generate_icon_assets(output_dir: Path) -> list[Path]:
         encoding="utf-8",
         newline="\n",
     )
-    return [font_output, catalog_output]
+
+    # Runtime painters receive the stable semantic PUA glyphs from
+    # Typography::Icons, but Fluent UI System Icons ships separately drawn
+    # 12/16/20/24 px optical variants. Preserve the semantic-glyph-to-upstream
+    # mapping so IconCatalog can select the native variant for the requested
+    # control slot instead of scaling the manifest's 20 px source outline.
+    runtime_aliases: dict[str, str] = {}
+    for public_name, source_name in sorted(aliases.items()):
+        codepoint = public_codepoints[public_name]
+        runtime_aliases.setdefault(f"{codepoint:X}", source_name)
+
+    aliases_output = output_dir / "FluentQtIconAliases.json"
+    aliases_output.write_text(
+        json.dumps(runtime_aliases, ensure_ascii=True, separators=(",", ":"), sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return [font_output, catalog_output, aliases_output]
 
 
 def generate(output_root: Path) -> list[Path]:

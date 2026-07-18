@@ -271,11 +271,10 @@ void CheckBox::paintEvent(QPaintEvent*) {
     if (state != Qt::Unchecked) {
         painter.save();
         
-        QFont iconFont(Typography::FontFamily::FluentIcons);
-        // Token sizes: Body for checked, Caption for indeterminate.
-        // zh_CN: 设计 Token——Checked 用 Body 字号，Indeterminate 用 Caption 字号。
-        int fontSize = (state == Qt::Checked) ? Typography::FontSize::Body : Typography::FontSize::Caption;
-        iconFont.setPixelSize(fontSize);
+        // WinUI uses the native 12 px check/subtract drawing inside its 20 px box.
+        // zh_CN: WinUI 在 20 px 方框内使用原生 12 px 对勾/横线字形。
+        const int fontSize = Typography::IconSize::Compact;
+        const QFont iconFont = Typography::Icons::font(fontSize);
         painter.setFont(iconFont);
         painter.setPen(iconColor);
         
@@ -287,7 +286,9 @@ void CheckBox::paintEvent(QPaintEvent*) {
             painter.translate(-boxRect.center());
         }
         
-        QString glyph = (state == Qt::Checked) ? Typography::Icons::CheckMark : Typography::Icons::Hyphen;
+        const QString glyph = Typography::Icons::glyphForSize(
+            state == Qt::Checked ? Typography::Icons::CheckMark : Typography::Icons::Hyphen,
+            fontSize);
         painter.drawText(boxRect, Qt::AlignCenter, glyph);
         
         painter.restore();

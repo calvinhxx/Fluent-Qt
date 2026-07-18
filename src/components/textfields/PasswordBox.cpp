@@ -190,7 +190,7 @@ void PasswordBox::initializeRevealButton() {
     m_revealButton->setFocusPolicy(Qt::NoFocus);
     m_revealButton->setFixedSize(kButtonWidth, kButtonHeight);
     m_revealButton->setIconGlyph(Typography::Icons::View,
-                                 Typography::FontSize::Body,
+                                 Typography::IconSize::Standard,
                                  Typography::FontFamily::FluentIcons);
     m_revealButton->installEventFilter(this);
     m_buttonLayout->addWidget(m_revealButton);
@@ -230,8 +230,8 @@ void PasswordBox::updateRevealButtonState() {
     m_revealButton->setVisible(visible);
     m_revealButton->setEnabled(visible);
     m_revealButton->setIconGlyph(m_peekActive ? Typography::Icons::Hide
-                                              : Typography::Icons::View,
-                                 Typography::FontSize::Body,
+                                 : Typography::Icons::View,
+                                 Typography::IconSize::Standard,
                                  Typography::FontFamily::FluentIcons);
     updateRevealButtonGeometry();
 }
