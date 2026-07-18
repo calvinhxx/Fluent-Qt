@@ -1036,7 +1036,8 @@ QVector<GallerySample> flowViewSamples()
         makeSample(QStringLiteral("flow-view-scroll-bounce"),
                    QStringLiteral("Contained scrolling and bounce"),
                    QStringLiteral("FlowView consumes boundary wheel input inside nested Gallery scrollers while keeping the elastic edge feedback visible."),
-                   QStringLiteral("flowView->setScrollChainingEnabled(false);\n"
+                   QStringLiteral("auto* flowView = new FlowView(this);\n"
+                                  "flowView->setScrollChainingEnabled(false);\n"
                                   "flowView->setOverscrollEnabled(true);\n"
                                   "flowView->setDefaultItemSize(QSize(126, 88));\n"
                                   "flowView->setModel(model);"),
@@ -1191,7 +1192,8 @@ QVector<GallerySample> gridViewSamples()
         makeSample(QStringLiteral("grid-view-scroll-bounce"),
                    QStringLiteral("Scroll chaining and overscroll"),
                    QStringLiteral("A nested GridView keeps wheel input inside the control at scroll boundaries and still shows elastic bounce feedback."),
-                   QStringLiteral("gridView->setScrollChainingEnabled(false);\n"
+                   QStringLiteral("auto* gridView = new GridView(this);\n"
+                                  "gridView->setScrollChainingEnabled(false);\n"
                                   "gridView->setOverscrollEnabled(true);\n"
                                   "gridView->setCellSize(QSize(118, 88));\n"
                                   "gridView->setMaxColumns(3);\n"
@@ -1376,9 +1378,12 @@ QVector<GallerySample> listViewSamples()
         makeSample(QStringLiteral("list-view-sections"),
                    QStringLiteral("Section headers"),
                    QStringLiteral("sectionEnabled groups adjacent rows by a caller-provided key while keeping normal row selection."),
-                   QStringLiteral("listView->setSectionEnabled(true);\n"
+                   QStringLiteral("auto* listView = new ListView(this);\n"
+                                  "listView->setSectionEnabled(true);\n"
                                   "listView->setSectionKeyFunction([](int row) {\n"
-                                  "    return row < 3 ? \"Today\" : \"Earlier\";\n"
+                                  "    if (row < 3) return QStringLiteral(\"Today\");\n"
+                                  "    if (row < 6) return QStringLiteral(\"Yesterday\");\n"
+                                  "    return QStringLiteral(\"Earlier\");\n"
                                   "});\n"
                                   "listView->setModel(model);"),
                    [](QWidget* parent) {
@@ -1439,7 +1444,8 @@ QVector<GallerySample> listViewSamples()
         makeSample(QStringLiteral("list-view-placeholder"),
                    QStringLiteral("Header, footer, and placeholder"),
                    QStringLiteral("The convenience text API covers the empty state without requiring a custom model delegate."),
-                   QStringLiteral("listView->setHeaderText(\"Downloads\");\n"
+                   QStringLiteral("auto* listView = new ListView(this);\n"
+                                  "listView->setHeaderText(\"Downloads\");\n"
                                   "listView->setFooterText(\"0 items\");\n"
                                   "listView->setPlaceholderText(\"No downloads yet\");\n"
                                   "listView->setModel(new QStandardItemModel(listView));"),
@@ -1518,7 +1524,8 @@ QVector<GallerySample> splitViewSamples()
         makeSample(QStringLiteral("split-view-hidden-pane"),
                    QStringLiteral("Hidden panes do not reserve space"),
                    QStringLiteral("When a pane is hidden, SplitView removes its geometry and handle until the pane is shown again."),
-                   QStringLiteral("splitView->addPane(firstPane, {60, 120, 240, false});\n"
+                   QStringLiteral("auto* splitView = new SplitView(this);\n"
+                                  "splitView->addPane(firstPane, {60, 120, 240, false});\n"
                                   "splitView->addPane(detailsPane, {60, 150, 260, false});\n"
                                   "splitView->addPane(fillPane, {60, 180, 500, true});\n\n"
                                   "QObject::connect(toggle, &Button::clicked, [detailsPane]() {\n"
@@ -1670,7 +1677,8 @@ QVector<GallerySample> stackViewSamples()
         makeSample(QStringLiteral("stack-view-replace-pop-to-root"),
                    QStringLiteral("Replace and popToRoot"),
                    QStringLiteral("StackView can replace the current page or unwind directly back to the root page."),
-                   QStringLiteral("stackView->setTransitionAnimationEnabled(false);\n"
+                   QStringLiteral("auto* stackView = new StackView(this);\n"
+                                  "stackView->setTransitionAnimationEnabled(false);\n"
                                   "stackView->setInitialItem(rootPage);\n"
                                   "stackView->push(detailsPage);\n"
                                   "stackView->replace(replacementPage);\n"
@@ -1796,7 +1804,8 @@ QVector<GallerySample> treeViewSamples()
         makeSample(QStringLiteral("tree-view-checkboxes"),
                    QStringLiteral("Checkable items"),
                    QStringLiteral("The delegate's checkbox mode shows a tri-state box on every row: ticking a parent cascades to its children, and editing a child rolls the parent up to checked / unchecked / partial."),
-                   QStringLiteral("auto* d = new TreeRowDelegate(\n"
+                   QStringLiteral("auto* tree = new TreeView(this);\n"
+                                  "auto* d = new TreeRowDelegate(\n"
                                   "    themeHost, rowHeight, tree, tree);\n"
                                   "d->setCheckBoxVisible(true);\n"
                                   "tree->setItemDelegate(d);\n"
@@ -1978,7 +1987,8 @@ QVector<GallerySample> treeViewSamples()
         makeSample(QStringLiteral("tree-view-scroll-bounce"),
                    QStringLiteral("Contained tree scrolling"),
                    QStringLiteral("TreeView exposes the same scrollChaining and overscroll controls as the wrapped collection views."),
-                   QStringLiteral("tree->setScrollChainingEnabled(false);\n"
+                   QStringLiteral("auto* tree = new TreeView(this);\n"
+                                  "tree->setScrollChainingEnabled(false);\n"
                                   "tree->setOverscrollEnabled(true);\n"
                                   "tree->setModel(model);\n"
                                   "tree->expandAll();"),
