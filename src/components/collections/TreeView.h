@@ -327,10 +327,9 @@ private:
     QRectF selectedIndicatorBaseRect(const QModelIndex& index) const;
     QRectF currentSelectedIndicatorRect() const;
     void paintSelectedIndicator(QPainter& painter) const;
-    // Minimal repaint regions for the per-frame animation ticks, so a click
-    // doesn't re-rasterize the whole viewport every frame (matters on Windows'
-    // software raster). zh_CN: 动画每帧的最小重绘区域，避免每帧整块 viewport 重绘
-    // （对 Windows 软件光栅尤为关键）。
+    // Hidden backgrounds expose the parent surface, so their animation frames
+    // need full viewport recomposition; opaque views keep the smaller motion band.
+    // zh_CN: 隐藏背景时需要整块重组父级表面；不透明视图仍只重绘动画经过的窄带。
     QRect indicatorMotionDirtyRect() const;
     void syncCheckStatesWithSelection(const QItemSelection& selected, const QItemSelection& deselected);
     bool shouldSyncCheckStateWithSelection(const QModelIndex& index) const;

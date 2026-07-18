@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QMetaType>
 #include <QPainter>
+#include <QPaintEvent>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QStandardItemModel>
@@ -33,6 +34,31 @@ using fluent::basicinput::Button;
 using fluent::textfields::Label;
 
 namespace {
+
+class PaintRegionTreeView : public TreeView {
+public:
+    using TreeView::TreeView;
+
+    void resetAnimatedPaintObservations() {
+        observedAnimatedPaint = false;
+        observedFullViewportAnimatedPaint = false;
+    }
+
+    bool observedAnimatedPaint = false;
+    bool observedFullViewportAnimatedPaint = false;
+
+protected:
+    void paintEvent(QPaintEvent* event) override {
+        const qreal progress = indicatorMotionProgress();
+        if (progress > 0.0 && progress < 1.0) {
+            observedAnimatedPaint = true;
+            observedFullViewportAnimatedPaint =
+                observedFullViewportAnimatedPaint
+                || event->region().contains(viewport()->rect());
+        }
+        TreeView::paintEvent(event);
+    }
+};
 
 int defaultTreeRowHeight() {
     return Spacing::ControlHeight::Standard + Spacing::Gap::Tight;
@@ -556,6 +582,32 @@ TEST_F(TreeViewTest, IndicatorMotionProgressAnimatesWhenEnabled) {
     processEvents();
     EXPECT_DOUBLE_EQ(tv->indicatorMotionProgress(), 1.0);
     EXPECT_DOUBLE_EQ(tv->selectedIndicatorProgress(personal), 1.0);
+}
+
+TEST_F(TreeViewTest, IndicatorMotionRepaintsWholeTransparentViewportDuringAnimation) {
+    auto* tv = new PaintRegionTreeView(window);
+    auto* model = attachSampleModel(tv);
+    tv->setBackgroundVisible(false);
+    tv->setBorderVisible(false);
+    tv->setSelectionIndicatorVisible(true);
+    tv->setFixedSize(350, 400);
+    tv->expandAll();
+    showOffscreen(window);
+
+    const QModelIndex parent = model->index(0, 0);
+    const QModelIndex child = model->item(0)->child(0)->index();
+    tv->setSelectedItem(parent);
+    processEvents();
+
+    tv->resetAnimatedPaintObservations();
+    tv->setSelectedItem(child);
+    for (int i = 0; i < 30 && !tv->observedFullViewportAnimatedPaint; ++i) {
+        QTest::qWait(10);
+        processEvents();
+    }
+
+    EXPECT_TRUE(tv->observedAnimatedPaint);
+    EXPECT_TRUE(tv->observedFullViewportAnimatedPaint);
 }
 
 TEST_F(TreeViewTest, SelectionIndicatorVisibilityAndStyleSetters) {
