@@ -1209,17 +1209,19 @@ public:
             auto* rowLayout = static_cast<QHBoxLayout*>(row->layout());
 
             auto* label = makeStatusLabel(row, labelText);
+            label->setWordWrap(false);
             label->setMinimumWidth(label->fontMetrics().horizontalAdvance(
-                QStringLiteral("Default 7 px")));
+                QStringLiteral("Default 7 px")) + 4);
+            label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
             auto* bar = new ScrollBar(Qt::Horizontal, row);
-            bar->setFixedWidth(340);
+            bar->setMinimumWidth(240);
+            bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
             bar->setThickness(thickness);
             configureScrollBarForPreview(bar, 1000, 100, value);
 
             rowLayout->addWidget(label);
-            rowLayout->addWidget(bar);
-            rowLayout->addStretch(1);
+            rowLayout->addWidget(bar, 1);
             layout->addWidget(row);
         };
 
@@ -1246,16 +1248,18 @@ public:
             auto* rowLayout = static_cast<QHBoxLayout*>(row->layout());
 
             auto* label = makeStatusLabel(row, labelText);
+            label->setWordWrap(false);
             label->setMinimumWidth(label->fontMetrics().horizontalAdvance(
-                QStringLiteral("Opacity 0.45")));
+                QStringLiteral("Opacity 0.45")) + 4);
+            label->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
 
             auto* bar = new ScrollBar(Qt::Horizontal, row);
-            bar->setFixedWidth(340);
+            bar->setMinimumWidth(240);
+            bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
             configureScrollBarForPreview(bar, 1000, 100, 420, opacity);
 
             rowLayout->addWidget(label);
-            rowLayout->addWidget(bar);
-            rowLayout->addStretch(1);
+            rowLayout->addWidget(bar, 1);
             layout->addWidget(row);
         };
 

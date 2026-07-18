@@ -12,6 +12,7 @@
 #include <QEvent>
 #include <QFrame>
 #include <QFile>
+#include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
 #include <QImage>
 #include <QLabel>
@@ -37,6 +38,7 @@
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/TextEdit.h"
+#include "design/Typography.h"
 #include "model/GalleryComponentCatalog.h"
 #include "model/GalleryContentCatalog.h"
 #include "view/pages/GalleryCategoryPage.h"
@@ -879,6 +881,37 @@ TEST_F(GalleryContentPagesTest, TreeViewIndicatorMotionStatusLabelReservesLonges
     }
 }
 
+TEST_F(GalleryContentPagesTest, TreeViewIndicatorTargetsDoNotAutoScrollThePreview)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"),
+                               QStringLiteral("tree-view-indicator-motion"),
+                               &sample));
+
+    GallerySampleCard card(sample);
+    card.resize(640, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+
+    auto* tree = card.findChild<TreeView*>();
+    ASSERT_NE(tree, nullptr);
+    ASSERT_NE(tree->verticalScrollBar(), nullptr);
+    tree->verticalScrollBar()->setValue(tree->verticalScrollBar()->minimum());
+    QApplication::processEvents();
+    const int baseline = tree->verticalScrollBar()->value();
+
+    for (const QString& caption : {QStringLiteral("Parent"),
+                                   QStringLiteral("Child"),
+                                   QStringLiteral("Sibling")}) {
+        Button* button = buttonWithText(&card, caption);
+        ASSERT_NE(button, nullptr) << caption.toStdString();
+        button->click();
+        QApplication::processEvents();
+        EXPECT_EQ(tree->verticalScrollBar()->value(), baseline)
+            << caption.toStdString();
+    }
+}
+
 TEST_F(GalleryContentPagesTest, SampleCardRefreshesWhenPreviewSizeHintChanges)
 {
     ResizablePreview* preview = nullptr;
@@ -1197,6 +1230,16 @@ TEST_F(GalleryContentPagesTest, CodeBlockCollapsesAndExpands)
     // toggleExpanded flips the state.
     block.toggleExpanded();
     EXPECT_TRUE(block.isExpanded());
+}
+
+TEST_F(GalleryContentPagesTest, CodeBlockUsesBodySizedNativeMonospaceFont)
+{
+    GalleryCodeBlock block(QStringLiteral("auto value = compute();"));
+    auto* code = block.findChild<QLabel*>(QStringLiteral("galleryCodeBlockText"));
+    ASSERT_NE(code, nullptr);
+    EXPECT_EQ(code->font().family(),
+              QFontDatabase::systemFont(QFontDatabase::FixedFont).family());
+    EXPECT_EQ(code->font().pixelSize(), Typography::FontSize::Body);
 }
 
 TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsFoundationPageGeometryStable)

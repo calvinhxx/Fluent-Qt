@@ -12,7 +12,10 @@ class ListView;
 class TreeView;
 }
 class QPainter;
+class QFont;
 class QModelIndex;
+class QRectF;
+class QString;
 class QStyleOptionViewItem;
 
 namespace fluent::gallery {
@@ -27,6 +30,10 @@ enum GalleryItemRole {
     TreeIconGlyphRole = Qt::UserRole + 720, ///< FluentQt Icons glyph string.
     TreeIconColorRole = Qt::UserRole + 721  ///< Optional QColor for the glyph.
 };
+
+void drawPhotoCaption(QPainter* painter, const QRectF& card,
+                      const QString& title, const QString& subtitle,
+                      const QFont& baseFont);
 
 /**
  * @brief GridView photo-card delegate (mirrors gridview_test::FluentGridItemDelegate).
