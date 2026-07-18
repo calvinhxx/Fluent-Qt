@@ -266,6 +266,25 @@ TEST_F(ComboBoxTest, SetEditableCreatesLineEdit) {
     EXPECT_FALSE(lineEdit->isClearButtonEnabled());
 }
 
+TEST_F(ComboBoxTest, EditableLineEditKeepsDarkThemeTextPaletteInsideStyledHost) {
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    window->onThemeUpdated();
+
+    ComboBox cb(window);
+    cb.addItems({"10", "11", "12"});
+    cb.setEditable(true);
+    cb.setCurrentIndex(1);
+
+    auto* lineEdit = cb.findChild<fluent::textfields::LineEdit*>();
+    ASSERT_NE(lineEdit, nullptr);
+    const auto colors = lineEdit->themeColors();
+    EXPECT_EQ(lineEdit->palette().color(QPalette::Active, QPalette::Text),
+              colors.textPrimary);
+
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+    window->onThemeUpdated();
+}
+
 TEST_F(ComboBoxTest, SetEditableFalseRemovesLineEdit) {
     ComboBox cb(window);
     cb.setEditable(true);

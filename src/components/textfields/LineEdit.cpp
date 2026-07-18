@@ -353,9 +353,6 @@ void LineEdit::applyThemeStyle() {
     pal.setColor(QPalette::Disabled, QPalette::Text, c.textDisabled);
     pal.setColor(QPalette::Disabled, QPalette::PlaceholderText,
                  opaqueTextColor(c.textDisabled, c.bgLayerAlt));
-    setPalette(pal);
-    setFont(themeFont(m_fontRole).toQFont());
-
     int rightPadding = m_contentMargins.right();
     if (m_clearButtonEnabled) {
         rightPadding += m_clearButtonSize + m_clearButtonOffset.x();
@@ -379,7 +376,17 @@ void LineEdit::applyThemeStyle() {
                      .arg(m_contentMargins.bottom())
                      .arg(c.accentDefault.name(QColor::HexArgb))
                      .arg(c.textOnAccent.name(QColor::HexArgb));
+    // Applying a style sheet repolishes the widget and QStyleSheetStyle may
+    // replace palette roles with its default (black) foreground.  Install the
+    // geometry-only sheet first, then restore the semantic palette.  This is
+    // especially important when a LineEdit is hosted by a styled Gallery card
+    // or embedded transparently in ComboBox.
+    // zh_CN: 设置样式表会触发重新 polish，QStyleSheetStyle 可能用默认黑色覆盖
+    // palette 前景色。先应用只负责几何的样式表，再恢复语义调色板，保证位于带样式
+    // 表的 Gallery 卡片中或透明嵌入 ComboBox 时文字仍遵循当前主题。
     setStyleSheet(qss);
+    setPalette(pal);
+    setFont(themeFont(m_fontRole).toQFont());
 }
 
 void LineEdit::updateClearButtonVisibility() {
