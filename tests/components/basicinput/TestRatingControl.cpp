@@ -3,6 +3,9 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QImage>
+#include <QPainter>
+#include <QRegion>
 #include <QSignalSpy>
 #include "components/basicinput/RatingControl.h"
 #include "components/basicinput/Button.h"
@@ -312,6 +315,28 @@ TEST_F(RatingControlDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueB
 }
 
 // ── VisualCheck ──────────────────────────────────────────────────────────────
+
+TEST_F(RatingControlDesignLanguageTest, SelectedStarHasSolidCenterAndEmptyStarDoesNot) {
+    RatingControl rating;
+    rating.setMaxRating(2);
+    rating.setStarSize(28);
+    rating.setValue(1.0);
+    rating.resize(rating.sizeHint());
+
+    const QColor background(17, 23, 31);
+    QImage image(rating.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(background);
+    QPainter painter(&image);
+    rating.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    painter.end();
+
+    const QColor selectedCenter = image.pixelColor(image.width() / 4,
+                                                    image.height() / 2);
+    const QColor emptyCenter = image.pixelColor(image.width() * 3 / 4,
+                                                 image.height() / 2);
+    EXPECT_NE(selectedCenter, background);
+    EXPECT_EQ(emptyCenter, background);
+}
 
 TEST_F(RatingControlTest, VisualCheck) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {

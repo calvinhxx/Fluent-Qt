@@ -335,8 +335,19 @@ void ColorPicker::onThemeUpdated() {
     if (m_gEdit)   m_gEdit->onThemeUpdated();
     if (m_bEdit)   m_bEdit->onThemeUpdated();
     if (m_aEdit)   m_aEdit->onThemeUpdated();
+    if (m_valueSlider) m_valueSlider->onThemeUpdated();
+    if (m_alphaSlider) m_alphaSlider->onThemeUpdated();
+
+    // The spectrum, hue strip, and alpha preview are lightweight private
+    // painters rather than FluentElement instances, so refresh them explicitly.
+    // zh_CN: 色谱、色相条和透明度预览是轻量私有绘制控件，并非 FluentElement，
+    // 因此主题切换时显式触发重绘。
+    if (m_spectrum) m_spectrum->update();
+    if (m_hueBar) m_hueBar->update();
+    if (m_previewPane) m_previewPane->update();
 
     updateFromColor();
+    update();
 }
 
 void ColorPicker::setColor(const QColor& c) {

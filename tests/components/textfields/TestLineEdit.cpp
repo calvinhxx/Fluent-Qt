@@ -71,6 +71,27 @@ TEST_F(LineEditTest, PlaceholderPaletteUsesResolvedOpaqueToken) {
     fluent::FluentElement::setTheme(previousTheme);
 }
 
+TEST_F(LineEditTest, StyledAncestorDoesNotReplaceDarkThemeTextPalette) {
+    const auto previousTheme = fluent::FluentElement::currentTheme();
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    window->onThemeUpdated();
+
+    LineEdit edit(window);
+    edit.setText(QStringLiteral("42"));
+    edit.onThemeUpdated();
+
+    const auto colors = edit.themeColors();
+    EXPECT_EQ(edit.palette().color(QPalette::Active, QPalette::Text),
+              colors.textPrimary);
+    EXPECT_EQ(edit.palette().color(QPalette::Inactive, QPalette::Text),
+              colors.textPrimary);
+    EXPECT_EQ(edit.palette().color(QPalette::Disabled, QPalette::Text),
+              colors.textDisabled);
+
+    fluent::FluentElement::setTheme(previousTheme);
+    window->onThemeUpdated();
+}
+
 TEST_F(LineEditTest, ContentMargins) {
     LineEdit* edit = new LineEdit(window);
     QMargins margins(10, 2, 10, 2);

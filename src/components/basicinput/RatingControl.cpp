@@ -1,9 +1,54 @@
 #include "RatingControl.h"
 #include <QPainter>
+#include <QPainterPath>
 #include <QMouseEvent>
+#include <QtMath>
 #include "design/Typography.h"
 
 namespace fluent::basicinput {
+
+namespace {
+
+QPainterPath ratingStarPath(const QRectF& cell, int requestedSize)
+{
+    constexpr qreal kPi = 3.14159265358979323846;
+    const qreal diameter = qMin<qreal>(qMax(1, requestedSize),
+                                      qMin(cell.width(), cell.height()));
+    const qreal outerRadius = diameter * 0.47;
+    const qreal innerRadius = outerRadius * 0.48;
+    const QPointF center = cell.center();
+
+    QPainterPath path;
+    for (int point = 0; point < 10; ++point) {
+        const qreal radius = (point % 2 == 0) ? outerRadius : innerRadius;
+        const qreal angle = -kPi / 2.0 + point * kPi / 5.0;
+        const QPointF vertex(center.x() + qCos(angle) * radius,
+                             center.y() + qSin(angle) * radius);
+        if (point == 0)
+            path.moveTo(vertex);
+        else
+            path.lineTo(vertex);
+    }
+    path.closeSubpath();
+    return path;
+}
+
+void drawRatingStar(QPainter& painter, const QPainterPath& path,
+                    const QColor& color, bool filled, qreal outlineWidth)
+{
+    painter.save();
+    painter.setBrush(filled ? QBrush(color) : Qt::NoBrush);
+    if (filled) {
+        painter.setPen(Qt::NoPen);
+    } else {
+        QPen pen(color, outlineWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+        painter.setPen(pen);
+    }
+    painter.drawPath(path);
+    painter.restore();
+}
+
+} // namespace
 
 RatingControl::RatingControl(QWidget* parent)
     : QWidget(parent)
@@ -185,11 +230,6 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     bool isPlaceholder = (m_value < 0 && !isHoverPreview);
     bool isDisabled = !isEnabled();
 
-    // Icon font. zh_CN: 图标字体。
-    QFont iconFont(Typography::FontFamily::FluentIcons);
-    iconFont.setPixelSize(m_starSize);
-    p.setFont(iconFont);
-
     // Design-language-aware UNFILLED star tone. A star is geometrically design-neutral, so the only
     // honest delta across languages is the placeholder/empty stroke and the hover-preview tint — not
     // size or spacing. Fluent keeps its WinUI strokeSecondary outline; Material 3 reads the empty star
@@ -248,24 +288,22 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
     // Paint star by star. zh_CN: 逐星绘制。
     for (int i = 0; i < m_maxRating; ++i) {
         QRectF rect = starRect(i);
+        const QPainterPath star = ratingStarPath(rect, m_starSize);
+        const qreal outlineWidth = qMax<qreal>(1.25, m_starSize / 12.0);
         double fillFraction = qBound(0.0, displayValue - i, 1.0);
 
         if (fillFraction >= 1.0) {
-            p.setPen(filledColor);
-            p.drawText(rect, Qt::AlignCenter, Typography::Icons::FavoriteStarFill);
+            drawRatingStar(p, star, filledColor, true, outlineWidth);
         } else if (fillFraction <= 0.0) {
-            p.setPen(emptyColor);
-            p.drawText(rect, Qt::AlignCenter, Typography::Icons::FavoriteStar);
+            drawRatingStar(p, star, emptyColor, false, outlineWidth);
         } else {
             // Partial fill: paint the outline, then the solid star inside a clip.
             // zh_CN: 部分填充——先画空心，再用裁剪区域画实心。
-            p.setPen(emptyColor);
-            p.drawText(rect, Qt::AlignCenter, Typography::Icons::FavoriteStar);
+            drawRatingStar(p, star, emptyColor, false, outlineWidth);
             p.save();
             p.setClipRect(QRectF(rect.left(), rect.top(),
                                   rect.width() * fillFraction, rect.height()));
-            p.setPen(filledColor);
-            p.drawText(rect, Qt::AlignCenter, Typography::Icons::FavoriteStarFill);
+            drawRatingStar(p, star, filledColor, true, outlineWidth);
             p.restore();
         }
     }
