@@ -7,9 +7,7 @@
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
 #include <QPoint>
-#include <QPointer>
 #include <QPropertyAnimation>
-#include <QRegularExpression>
 #include <QVariantAnimation>
 
 #include "components/basicinput/Button.h"
@@ -32,6 +30,7 @@ using TitleBarMetrics = metrics::TitleBar;
 
 constexpr char kButtonPressAnimationName[] = "galleryTitleBarButtonPressAnimation";
 constexpr qreal kButtonPressScale = 0.86;  // WinUI-like press depth for icon buttons. zh_CN: 仿 WinUI 的图标按钮按下缩放深度。
+constexpr qreal kInactiveChromeOpacity = 0.55;
 
 int titleBarLeadingOffset(const fluent::windowing::TitleBar* bar)
 {
@@ -77,6 +76,7 @@ GalleryTitleBarController::GalleryTitleBarController(fluent::windowing::TitleBar
     , m_bar(bar)
     , m_callbacks(std::move(callbacks))
 {
+    m_windowActive = bar && bar->isWindowActive();
     build(searchTitles);
 }
 
@@ -214,10 +214,17 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     // centering-with-clamp, and collapse behaviour the anchor model can't express, so updateLayout()
     // positions it manually against the live bar width. zh_CN: 搜索框刻意不入 AnchorLayout，由 updateLayout() 手动定位。
     bar->installEventFilter(this);
+    connect(bar, &fluent::windowing::TitleBar::windowActiveChanged, this,
+            [this](bool active) {
+                m_windowActive = active;
+                hideToolTip();
+                applyChromeOpacity();
+            });
     // Start fully collapsed: no history at launch. setBackAvailable() animates it open later.
     // zh_CN: 启动完全收起；之后由 setBackAvailable() 动画展开。
     applyBackButtonReveal(0.0);
     updateLayout();
+    applyChromeOpacity();
 }
 
 bool GalleryTitleBarController::eventFilter(QObject* watched, QEvent* event)
@@ -301,6 +308,8 @@ void GalleryTitleBarController::setChromeVisible(bool visible, bool animated)
         return;
 
     m_chromeVisible = visible;
+    if (m_chromeRevealAnimation)
+        m_chromeRevealAnimation->stop();
     const QList<QWidget*> chrome = m_bar->findChildren<QWidget*>();
     for (QWidget* widget : chrome) {
         if (!widget->objectName().startsWith(QStringLiteral("GalleryTitleBar.")))
@@ -313,26 +322,28 @@ void GalleryTitleBarController::setChromeVisible(bool visible, bool animated)
         }
 
         widget->setVisible(true);
-        if (!animated) {
-            widget->setGraphicsEffect(nullptr);
-            continue;
-        }
+    }
 
-        // Subtle fade-in, timed to the splash's dissolve. The effect is dropped once the fade
-        // completes so it adds no steady-state paint cost. zh_CN: 简约淡入，与 splash 同步；结束即移除效果。
-        auto* effect = new QGraphicsOpacityEffect(widget);
-        widget->setGraphicsEffect(effect);
-        auto* fade = new QPropertyAnimation(effect, "opacity", widget);
-        fade->setStartValue(0.0);
-        fade->setEndValue(1.0);
-        fade->setDuration(::Animation::Duration::Normal);
-        fade->setEasingCurve(::Animation::getEasing(::Animation::EasingType::Decelerate));
-        QPointer<QWidget> guard = widget;
-        connect(fade, &QPropertyAnimation::finished, widget, [guard]() {
-            if (guard)
-                guard->setGraphicsEffect(nullptr);
-        });
-        fade->start(QAbstractAnimation::DeleteWhenStopped);
+    if (!visible) {
+        m_chromeRevealOpacity = 0.0;
+    } else if (!animated) {
+        setChromeRevealOpacity(1.0);
+    } else {
+        // One shared progress value keeps every title-bar element optically synchronized and also
+        // composes cleanly with the active/inactive opacity instead of installing competing fades.
+        // zh_CN: 统一进度值让所有标题栏元素同步淡入，并可与激活/失活透明度稳定叠加。
+        if (!m_chromeRevealAnimation) {
+            m_chromeRevealAnimation = new QVariantAnimation(this);
+            connect(m_chromeRevealAnimation, &QVariantAnimation::valueChanged, this,
+                    [this](const QVariant& value) { setChromeRevealOpacity(value.toReal()); });
+        }
+        setChromeRevealOpacity(0.0);
+        m_chromeRevealAnimation->setDuration(::Animation::Duration::Normal);
+        m_chromeRevealAnimation->setEasingCurve(
+            ::Animation::getEasing(::Animation::EasingType::Decelerate));
+        m_chromeRevealAnimation->setStartValue(0.0);
+        m_chromeRevealAnimation->setEndValue(1.0);
+        m_chromeRevealAnimation->start();
     }
 
     // setVisible(true) above un-hides chrome uniformly; re-apply the adaptive rules so the
@@ -363,6 +374,38 @@ void GalleryTitleBarController::applyBackButtonReveal(qreal reveal)
     if (auto* barLayout = m_bar ? m_bar->layout() : nullptr)
         barLayout->invalidate();
     updateLayout();
+}
+
+void GalleryTitleBarController::setChromeRevealOpacity(qreal opacity)
+{
+    m_chromeRevealOpacity = qBound<qreal>(0.0, opacity, 1.0);
+    applyChromeOpacity();
+}
+
+void GalleryTitleBarController::applyChromeOpacity()
+{
+    if (!m_bar || !m_chromeVisible)
+        return;
+
+    const qreal activationOpacity = m_windowActive ? 1.0 : kInactiveChromeOpacity;
+    const qreal opacity = m_chromeRevealOpacity * activationOpacity;
+    const QList<QWidget*> chrome = m_bar->findChildren<QWidget*>();
+    for (QWidget* widget : chrome) {
+        if (!widget->objectName().startsWith(QStringLiteral("GalleryTitleBar.")))
+            continue;
+
+        if (qFuzzyCompare(opacity, 1.0)) {
+            widget->setGraphicsEffect(nullptr);
+            continue;
+        }
+
+        auto* effect = qobject_cast<QGraphicsOpacityEffect*>(widget->graphicsEffect());
+        if (!effect) {
+            effect = new QGraphicsOpacityEffect(widget);
+            widget->setGraphicsEffect(effect);
+        }
+        effect->setOpacity(opacity);
+    }
 }
 
 void GalleryTitleBarController::setBackAvailable(bool available)

@@ -81,6 +81,8 @@ protected:
 private:
     void build(const QStringList& searchTitles);
     void applyBackButtonReveal(qreal reveal);
+    void applyChromeOpacity();
+    void setChromeRevealOpacity(qreal opacity);
     void showToolTip(fluent::basicinput::Button* button);
     void hideToolTip();
 
@@ -95,7 +97,10 @@ private:
     fluent::status_info::ToolTip* m_toolTip = nullptr;
 
     QVariantAnimation* m_backRevealAnimation = nullptr;
+    QVariantAnimation* m_chromeRevealAnimation = nullptr;
     qreal m_backReveal = 0.0;   // 0=hidden, 1=fully shown. zh_CN: 0=隐藏，1=完全显示。
+    qreal m_chromeRevealOpacity = 1.0;
+    bool m_windowActive = false;
     bool m_backRevealed = false;
     bool m_chromeVisible = true;
 };

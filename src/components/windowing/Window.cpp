@@ -29,7 +29,7 @@ namespace fluent::windowing {
 namespace {
 
 constexpr int CaptionButtonWidth = 46;
-constexpr int CaptionButtonIconSize = 10;
+constexpr int CaptionButtonIconSize = Typography::IconSize::Standard;
 constexpr int ResizeBorderWidth = 8;
 constexpr int VisibleFrameResizeBorderWidth = ResizeBorderWidth;
 
@@ -179,6 +179,7 @@ Window::Window(QWidget* parent)
     connect(m_titleBar, &TitleBar::doubleClicked, this, &Window::handleTitleBarDoubleClicked);
     connect(m_titleBar, &TitleBar::contextMenuRequested, this, &Window::handleTitleBarContextMenuRequested);
     connect(m_titleBar, &TitleBar::titleBarHeightChanged, this, &Window::syncCaptionButtons);
+    connect(m_titleBar, &TitleBar::windowActiveChanged, this, &Window::syncCaptionButtonActivation);
 
     onThemeUpdated();
     syncClientSideFrameMargins();
@@ -188,6 +189,12 @@ Window::Window(QWidget* parent)
 }
 
 Window::~Window() {
+    // QWidget may deliver WindowDeactivate to child chrome while its base destructor tears the
+    // hierarchy down. Disconnect derived-class slots before that phase so activation publishing
+    // cannot re-enter an already-destroyed Window vtable.
+    // zh_CN: QWidget 基类析构子控件树时可能向 chrome 派发 WindowDeactivate；提前断开派生类槽，避免重入已析构的 Window。
+    if (m_titleBar)
+        disconnect(m_titleBar, nullptr, this, nullptr);
     if (QWidget::mouseGrabber() == this)
         releaseMouse();
 }
@@ -777,6 +784,7 @@ void Window::setupCaptionButtons() {
     }
 
     syncCaptionButtons();
+    syncCaptionButtonActivation(m_titleBar->isWindowActive());
 }
 
 void Window::syncCaptionButtons() {
@@ -799,6 +807,18 @@ void Window::syncCaptionButtons() {
     }
     m_captionButtonHost->setVisible(showCaptionButtons);
     updateMaximizeButtonIcon();
+}
+
+void Window::syncCaptionButtonActivation(bool active) {
+    // WinUI keeps caption-button geometry unchanged and softens only its foreground when the
+    // window loses activation. Retaining the full hit target also avoids native hit-test churn.
+    // zh_CN: WinUI 在窗口失活时保持标题按钮几何不变，仅弱化前景；完整命中区域也可避免原生命中测试抖动。
+    constexpr qreal InactiveCaptionOpacity = 0.55;
+    const qreal opacity = active ? 1.0 : InactiveCaptionOpacity;
+    for (auto* button : {m_minimizeButton, m_maximizeButton, m_closeButton}) {
+        if (button)
+            button->setContentOpacity(opacity);
+    }
 }
 
 void Window::updateMaximizeButtonIcon() {

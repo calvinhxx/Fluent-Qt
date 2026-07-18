@@ -32,6 +32,7 @@ void refreshFluentDescendants(QWidget* root)
 
 TitleBar::TitleBar(QWidget* parent)
     : QWidget(parent) {
+    m_windowActive = isActiveWindow();
     setAttribute(Qt::WA_Hover);
     setAutoFillBackground(false);
     setFixedHeight(m_titleBarHeight);
@@ -146,10 +147,17 @@ void TitleBar::onThemeUpdated() {
 }
 
 bool TitleBar::event(QEvent* event) {
-    // Repaint when the window's focus changes so the backdrop tracks active/inactive,
-    // matching the nav pane. zh_CN: 窗口焦点变化时重绘，使背景跟随激活/非激活，与导航栏一致。
-    if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
+    // Publish the activation state as part of the title-bar contract. The Window caption buttons
+    // and caller-owned chrome can then dim in lockstep while layout and hit testing stay intact.
+    // zh_CN: 将激活状态作为标题栏契约发布，使窗口按钮和调用方 chrome 同步变暗，且不影响布局与命中区域。
+    if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate) {
+        const bool active = event->type() == QEvent::WindowActivate;
+        if (m_windowActive != active) {
+            m_windowActive = active;
+            emit windowActiveChanged(active);
+        }
         update();
+    }
     return QWidget::event(event);
 }
 
@@ -168,7 +176,7 @@ void TitleBar::paintEvent(QPaintEvent*) {
     if (windowBackdropUsesPaintedMaterial(window()))
         return;
 
-    const QColor fill = chromeBackdropFill(window(), isActiveWindow());
+    const QColor fill = chromeBackdropFill(window(), m_windowActive);
     if (!fill.isValid()) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(rect(), Qt::transparent);

@@ -39,6 +39,11 @@ class TitleBar : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 标题栏高度，单位为像素。
      */
     Q_PROPERTY(int titleBarHeight READ titleBarHeight WRITE setTitleBarHeight NOTIFY titleBarHeightChanged)
+    /**
+     * @brief Whether the owning top-level window is currently active.
+     * zh_CN: 所属顶层窗口当前是否处于激活状态。
+     */
+    Q_PROPERTY(bool windowActive READ isWindowActive NOTIFY windowActiveChanged)
 
 public:
     explicit TitleBar(QWidget* parent = nullptr);
@@ -57,6 +62,8 @@ public:
 
     int titleBarHeight() const { return m_titleBarHeight; }
     void setTitleBarHeight(int height);
+
+    bool isWindowActive() const { return m_windowActive; }
 
     QVector<QRect> dragExclusionRects() const;
 
@@ -81,6 +88,7 @@ signals:
     void systemReservedLeadingWidthChanged(int width);
     void systemReservedTrailingWidthChanged(int width);
     void titleBarHeightChanged(int height);
+    void windowActiveChanged(bool active);
     void dragStarted(const QPoint& globalPos);
     void dragMoved(const QPoint& globalPos);
     void dragFinished();
@@ -108,6 +116,7 @@ private:
     int m_systemReservedLeadingWidth = 0;
     int m_systemReservedTrailingWidth = 0;
     int m_titleBarHeight = kDefaultHeight;
+    bool m_windowActive = false;
     bool m_dragging = false;
 };
 

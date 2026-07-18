@@ -418,6 +418,46 @@ TEST_F(WindowTest, NativeMacModeUsesUnifiedTitleBar) {
     }
 }
 
+TEST_F(WindowTest, TitleBarPublishesWindowActivationState) {
+    TitleBar titleBar;
+    QSignalSpy activeSpy(&titleBar, &TitleBar::windowActiveChanged);
+
+    EXPECT_FALSE(titleBar.isWindowActive());
+
+    QEvent activateEvent(QEvent::WindowActivate);
+    QApplication::sendEvent(&titleBar, &activateEvent);
+    EXPECT_TRUE(titleBar.isWindowActive());
+    ASSERT_EQ(activeSpy.count(), 1);
+    EXPECT_TRUE(activeSpy.takeFirst().at(0).toBool());
+
+    QApplication::sendEvent(&titleBar, &activateEvent);
+    EXPECT_EQ(activeSpy.count(), 0) << "Repeated activation must not publish a duplicate state";
+
+    QEvent deactivateEvent(QEvent::WindowDeactivate);
+    QApplication::sendEvent(&titleBar, &deactivateEvent);
+    EXPECT_FALSE(titleBar.isWindowActive());
+    ASSERT_EQ(activeSpy.count(), 1);
+    EXPECT_FALSE(activeSpy.takeFirst().at(0).toBool());
+}
+
+TEST_F(WindowTest, ClientCaptionForegroundTracksWindowActivation) {
+    Window window;
+    auto* closeButton = window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
+    if (!closeButton)
+        GTEST_SKIP() << "The active platform uses native caption controls";
+
+    QEvent activateEvent(QEvent::WindowActivate);
+    QApplication::sendEvent(window.titleBar(), &activateEvent);
+    EXPECT_DOUBLE_EQ(closeButton->contentOpacity(), 1.0);
+
+    QEvent deactivateEvent(QEvent::WindowDeactivate);
+    QApplication::sendEvent(window.titleBar(), &deactivateEvent);
+    EXPECT_DOUBLE_EQ(closeButton->contentOpacity(), 0.55);
+
+    QApplication::sendEvent(window.titleBar(), &activateEvent);
+    EXPECT_DOUBLE_EQ(closeButton->contentOpacity(), 1.0);
+}
+
 TEST_F(WindowTest, TopLevelShowSmoke) {
     Window window;
     window.resize(520, 560);
