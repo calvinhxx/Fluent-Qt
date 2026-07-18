@@ -592,7 +592,7 @@ QStandardItemModel* makeFlowPhotoModel(QObject* parent, const QVector<FlowPhotoI
         item->setData(gradientPixmap(QSize(photo.size.width() * 2, photo.size.height() * 2),
                                      photo.from,
                                      photo.to,
-                                     photo.title),
+                                     QString{}),
                       PhotoImageRole);
         model->appendRow(item);
     }
@@ -1060,7 +1060,7 @@ QVector<GallerySample> flowViewSamples()
                            const QColor from = accentPalette().at(i % accentPalette().size());
                            const QColor to = accentPalette().at((i + 2) % accentPalette().size()).lighter(135);
                           photos.append({QStringLiteral("Tile %1").arg(i + 1),
-                                          QStringLiteral("scroll"),
+                                          QString{},
                                           from,
                                           to,
                                           QSize(126 + (i % 3) * 12, 88 + (i % 2) * 12)});
@@ -1212,7 +1212,7 @@ QVector<GallerySample> gridViewSamples()
                        QVector<FlowPhotoInfo> photos;
                        for (int i = 0; i < 18; ++i) {
                            photos.append({QStringLiteral("Cell %1").arg(i + 1),
-                                          QStringLiteral("grid"),
+                                          QString{},
                                           accentPalette().at(i % accentPalette().size()),
                                           accentPalette().at((i + 3) % accentPalette().size()).lighter(135),
                                           QSize(118, 88)});
