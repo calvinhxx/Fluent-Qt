@@ -191,16 +191,16 @@ QVector<GallerySample> buttonSamples()
                        QWidget* group = horizontalGroup(parent, 10);
                        auto* before = makeButton(group, QStringLiteral("Icon before"), Button::Standard);
                        before->setFluentLayout(Button::IconBefore);
-                       before->setIconGlyph(Typography::Icons::Add, Typography::FontSize::Caption);
+                       before->setIconGlyph(Typography::Icons::Add, Typography::IconSize::Standard);
 
                        auto* iconOnly = makeButton(group, QString(), Button::Standard);
                        iconOnly->setFluentLayout(Button::IconOnly);
-                       iconOnly->setIconGlyph(Typography::Icons::More, Typography::FontSize::Caption);
+                       iconOnly->setIconGlyph(Typography::Icons::More, Typography::IconSize::Standard);
                        iconOnly->setFixedSize(40, 40);
 
                        auto* after = makeButton(group, QStringLiteral("Next"), Button::Standard);
                        after->setFluentLayout(Button::IconAfter);
-                       after->setIconGlyph(Typography::Icons::ChevronRight, Typography::FontSize::Caption);
+                       after->setIconGlyph(Typography::Icons::ChevronRight, Typography::IconSize::Standard);
 
                        group->layout()->addWidget(before);
                        group->layout()->addWidget(iconOnly);
@@ -242,7 +242,7 @@ QVector<GallerySample> buttonSamples()
                    [](QWidget* parent) {
                        auto* button = makeButton(parent, QStringLiteral("Delete"), Button::Standard);
                        button->setFluentLayout(Button::IconBefore);
-                       button->setIconGlyph(Typography::Icons::Delete, Typography::FontSize::Caption);
+                       button->setIconGlyph(Typography::Icons::Delete, Typography::IconSize::Standard);
                        button->setCriticalOnHover(true);
                        button->setInteractionState(Button::Hover);
                        return button;
@@ -601,12 +601,12 @@ QVector<GallerySample> dropDownButtonSamples()
                        QWidget* group = horizontalGroup(parent, 10);
                        auto* iconOnly = new DropDownButton(QString(), group);
                        iconOnly->setFluentLayout(Button::IconOnly);
-                       iconOnly->setIconGlyph(Typography::Icons::Send, Typography::FontSize::Caption);
+                       iconOnly->setIconGlyph(Typography::Icons::Send, Typography::IconSize::Standard);
                        iconOnly->setChevronOffset(QPoint(10, 0));
                        iconOnly->setFixedSize(58, 34);
                        auto* iconText = new DropDownButton(QStringLiteral("More actions"), group);
                        iconText->setFluentLayout(Button::IconBefore);
-                       iconText->setIconGlyph(Typography::Icons::More, Typography::FontSize::Caption);
+                       iconText->setIconGlyph(Typography::Icons::More, Typography::IconSize::Standard);
                        iconText->setMinimumWidth(170);
                        group->layout()->addWidget(iconOnly);
                        group->layout()->addWidget(iconText);
@@ -1119,7 +1119,7 @@ QVector<GallerySample> toggleSplitButtonSamples()
                        QWidget* group = horizontalGroup(parent, 12);
                        auto* button = new ToggleSplitButton(QStringLiteral("List options"), group);
                        button->setFluentLayout(Button::IconBefore);
-                       button->setIconGlyph(Typography::Icons::List, Typography::FontSize::Caption);
+                       button->setIconGlyph(Typography::Icons::List, Typography::IconSize::Standard);
                        button->setMinimumWidth(160);
                        button->setMenu(makeMenu(button, QStringLiteral("Styles"),
                            {QStringLiteral("None"), QStringLiteral("Bulleted"), QStringLiteral("Numbered")}));
@@ -1145,7 +1145,7 @@ QVector<GallerySample> toggleSplitButtonSamples()
                    [](QWidget* parent) {
                        auto* button = new ToggleSplitButton(QString(), parent);
                        button->setFluentLayout(Button::IconOnly);
-                       button->setIconGlyph(Typography::Icons::Settings, Typography::FontSize::Caption);
+                       button->setIconGlyph(Typography::Icons::Settings, Typography::IconSize::Standard);
                        button->setFixedSize(64, 34);
                        return button;
                    })

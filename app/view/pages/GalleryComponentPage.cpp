@@ -16,7 +16,7 @@ namespace fluent::gallery {
 
 namespace {
 constexpr int kThemeButtonSize = 32;
-constexpr int kThemeButtonIconSize = 16;
+constexpr int kThemeButtonIconSize = Typography::IconSize::Standard;
 }
 
 GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,

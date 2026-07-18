@@ -94,12 +94,12 @@ public:
         m_layout->setVerticalSpacing(6);
         m_layout->setColumnStretch(1, 1);
 
-        auto* iconLabel = new fluent::textfields::Label(icon, this);
+        auto* iconLabel = new fluent::textfields::Label(
+            Typography::Icons::glyphForSize(icon, Typography::IconSize::Standard), this);
         iconLabel->setObjectName(QStringLiteral("gallerySettingsRowIcon"));
         iconLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
         iconLabel->setAlignment(Qt::AlignCenter);
-        QFont iconFont(Typography::FontFamily::FluentIcons);
-        iconFont.setPixelSize(19);
+        const QFont iconFont = Typography::Icons::font(Typography::IconSize::Standard);
         iconLabel->setFont(iconFont);
         iconLabel->setFixedSize(30, 30);
 
@@ -429,8 +429,12 @@ fluent::basicinput::ComboBox* SettingsPage::createChoiceBox(const QString& objec
     choice->addItems(choices);
     choice->setCurrentIndex(currentIndex);
     choice->setMinimumWidth(140);
-    choice->setMaximumWidth(168);
-    choice->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    // ComboBox::sizeHint() accounts for the widest option using the active
+    // platform font. Do not clamp that result: the same label can be wider on
+    // Windows or Linux than on macOS, and the responsive row already stacks
+    // trailing controls when horizontal space is genuinely constrained.
+    // zh_CN: ComboBox::sizeHint() 会按当前平台字体计算最长选项宽度；不要再用固定上限截断。
+    choice->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     return choice;
 }
 
@@ -457,7 +461,7 @@ QWidget* SettingsPage::createUpdateCheckControl()
     m_updateButton = new fluent::basicinput::Button(QStringLiteral("Check updates"), panel);
     m_updateButton->setObjectName(QStringLiteral("gallerySettingsCheckUpdatesButton"));
     m_updateButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
-    m_updateButton->setIconGlyph(Typography::Icons::Refresh, 14);
+    m_updateButton->setIconGlyph(Typography::Icons::Refresh, Typography::IconSize::Standard);
     m_updateButton->setMinimumWidth(148);
 
     connect(m_updateButton, &QPushButton::clicked, this, &SettingsPage::openUpdateTarget);
@@ -504,7 +508,7 @@ void SettingsPage::handleUpdateCheckFinished(const UpdateChecker::Result& result
                                                           : QStringLiteral("Open release"));
         m_updateButton->setIconGlyph(result.assetUrl.isValid() ? Typography::Icons::Download
                                                                : Typography::Icons::Link,
-                                     14);
+                                     Typography::IconSize::Standard);
         if (m_updateActionUrl.isValid())
             m_updateButton->setToolTip(m_updateActionUrl.toString());
         break;
@@ -514,7 +518,7 @@ void SettingsPage::handleUpdateCheckFinished(const UpdateChecker::Result& result
                                          .arg(result.currentVersion));
         m_updateButton->setFluentStyle(fluent::basicinput::Button::Standard);
         m_updateButton->setText(QStringLiteral("Check again"));
-        m_updateButton->setIconGlyph(Typography::Icons::Refresh, 14);
+        m_updateButton->setIconGlyph(Typography::Icons::Refresh, Typography::IconSize::Standard);
         break;
     case UpdateChecker::Result::Status::Error:
         m_updateActionUrl = QUrl();
@@ -522,7 +526,7 @@ void SettingsPage::handleUpdateCheckFinished(const UpdateChecker::Result& result
         m_updateButton->setToolTip(result.message);
         m_updateButton->setFluentStyle(fluent::basicinput::Button::Standard);
         m_updateButton->setText(QStringLiteral("Try again"));
-        m_updateButton->setIconGlyph(Typography::Icons::Refresh, 14);
+        m_updateButton->setIconGlyph(Typography::Icons::Refresh, Typography::IconSize::Standard);
         break;
     }
 }

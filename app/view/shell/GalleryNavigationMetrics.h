@@ -4,6 +4,8 @@
 #include <QMargins>
 #include <QtCore/qnamespace.h>
 
+#include "design/Typography.h"
+
 namespace fluent::gallery {
 
 /**
@@ -34,9 +36,11 @@ constexpr qreal kRowRightInset = 12.0;
 constexpr qreal kRowVerticalInset = 2.0;
 constexpr qreal kContentStart = 12.0;
 constexpr qreal kIconAreaWidth = 20.0;
+constexpr int kRouteIconPixelSize = Typography::IconSize::Standard;
 constexpr qreal kIconTextGap = 11.0;
 constexpr qreal kTextStart = kContentStart + kIconAreaWidth + kIconTextGap;
 constexpr qreal kChevronAreaWidth = 28.0;
+constexpr int kChevronIconPixelSize = Typography::IconSize::Standard;
 constexpr qreal kChevronRightInset = 6.0;  // Gap from the chevron to the row's right edge; tightened slightly. zh_CN: 箭头到行右缘的间距，略收紧。
 constexpr qreal kTextRightGap = 8.0;
 constexpr qreal kSelectionIndicatorWidth = 3.0;

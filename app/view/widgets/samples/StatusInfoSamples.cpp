@@ -518,7 +518,7 @@ QVector<GallerySample> infoBarSamples()
                        auto* openButton = sampleButton(controls, QStringLiteral("Show again"));
                        openButton->setFluentStyle(Button::Accent);
                        openButton->setFluentLayout(Button::IconBefore);
-                       openButton->setIconGlyph(Typography::Icons::Refresh, 14);
+                       openButton->setIconGlyph(Typography::Icons::Refresh, Typography::IconSize::Standard);
                        openButton->setEnabled(false);
                        auto* status = makeStatusPill(controls, QStringLiteral("Visible"));
                        boxLayout(controls)->addWidget(openButton, 0, Qt::AlignVCenter);

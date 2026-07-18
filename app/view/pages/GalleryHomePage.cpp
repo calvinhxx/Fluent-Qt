@@ -528,7 +528,7 @@ private:
         button->setFluentStyle(fluent::basicinput::Button::Standard);
         button->setFluentSize(fluent::basicinput::Button::Small);
         button->setFluentLayout(fluent::basicinput::Button::IconOnly);
-        button->setIconGlyph(glyph, 12);
+        button->setIconGlyph(glyph, Typography::IconSize::Standard);
         button->setContentOpacity(0.62);
         button->setFixedSize(kHeroScrollButtonWidth, kHeroScrollButtonHeight);
         button->setFocusPolicy(Qt::NoFocus);

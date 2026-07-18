@@ -5,6 +5,7 @@
 #include <QtGlobal>
 
 #include "design/Breakpoints.h"
+#include "design/Typography.h"
 
 namespace fluent::gallery::metrics {
 
@@ -28,7 +29,7 @@ struct TitleBar {
     static constexpr int HorizontalMargin = 8;
     static constexpr int ItemGap = 8;
     static constexpr int ButtonSize = 24;
-    static constexpr int ButtonIconSize = 12;
+    static constexpr int ButtonIconSize = Typography::IconSize::Standard;
     static constexpr int AppIconSize = 18;
     static constexpr int TitleWidth = 144;
     static constexpr int TitleHeight = 24;
