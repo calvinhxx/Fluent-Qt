@@ -1044,10 +1044,10 @@ QVector<GallerySample> navigationViewSamples()
                        auto* compactButton = makeControlButton(controls, QStringLiteral("Compact"));
                        auto* minimalButton = makeControlButton(controls, QStringLiteral("Minimal"));
                        auto* topButton = makeControlButton(controls, QStringLiteral("Top"));
-                       leftButton->setIconGlyph(Typography::Icons::List, 16);
-                       compactButton->setIconGlyph(Typography::Icons::GlobalNav, 16);
-                       minimalButton->setIconGlyph(Typography::Icons::GlobalNav, 16);
-                       topButton->setIconGlyph(Typography::Icons::AllApps, 16);
+                       leftButton->setIconGlyph(Typography::Icons::List, Typography::IconSize::Standard);
+                       compactButton->setIconGlyph(Typography::Icons::GlobalNav, Typography::IconSize::Standard);
+                       minimalButton->setIconGlyph(Typography::Icons::GlobalNav, Typography::IconSize::Standard);
+                       topButton->setIconGlyph(Typography::Icons::AllApps, Typography::IconSize::Standard);
                        for (Button* button : {leftButton, compactButton, minimalButton, topButton}) {
                            button->setFluentLayout(Button::IconBefore);
                            controls->layout()->addWidget(button);
@@ -1137,7 +1137,8 @@ QVector<GallerySample> navigationViewSamples()
         makeSample(QStringLiteral("navigation-view-content-host"),
                    QStringLiteral("StackContentHost page routing"),
                    QStringLiteral("Navigation rows are app-owned; item activation selects pages inserted into NavigationView::contentHost()."),
-                   QStringLiteral("StackContentHost* host = navView->contentHost();\n"
+                   QStringLiteral("auto* navView = new NavigationView(this);\n"
+                                  "StackContentHost* host = navView->contentHost();\n"
                                   "navView->setExpandedPaneWidth(180);\n"
                                   "populateNavigationPages(host);\n"
                                   "host->setTransitionEffect(StackContentHost::TransitionEffect::SlideFromLeft);\n"
