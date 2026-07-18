@@ -157,6 +157,7 @@ private slots:
     void updateChromeOptions();
     void syncTitleBarSystemInsets();
     void syncCaptionButtons();
+    void syncCaptionButtonActivation(bool active);
     void handleTitleBarDragStarted(const QPoint& globalPos);
     void handleTitleBarDragMoved(const QPoint& globalPos);
     void handleTitleBarDragFinished();

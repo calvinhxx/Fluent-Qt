@@ -53,6 +53,19 @@ It is retained for migration and means only that the resolved surface is
 [Window Chrome Architecture](../architecture/window-chrome.md) for the paint and
 platform contracts.
 
+## 2026-07-18 Title-bar activation addendum
+
+- `TitleBar::windowActive` is a read-only state with `windowActiveChanged(bool)`;
+  it mirrors `WindowActivate` / `WindowDeactivate` without changing title-bar
+  geometry, hit-test exclusions, or caller-owned content.
+- `Window` uses that state to soften client-drawn caption-button foregrounds
+  while inactive. Applications can subscribe to the same signal for their own
+  custom title content; the reusable `TitleBar` does not install opacity effects
+  on arbitrary caller widgets.
+- Repeated activation events are no-ops and do not emit duplicate state changes.
+  Focused tests cover the state signal, caption foreground response, and the
+  Gallery's no-reflow inactive treatment.
+
 ## Inventory Summary
 
 | Category | Public components audited | Focused tests | Relevant specs found |
