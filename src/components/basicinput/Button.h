@@ -180,15 +180,16 @@ public:
      * zh_CN: 设置在 paintEvent() 中直接绘制的 iconfont 图标字符。
      *
      * @param glyph Icon glyph, usually from Typography::Icons.
-     * @param pixelSize Icon font pixel size; defaults to the Body size.
+     * @param pixelSize Icon slot and native optical design size; defaults to
+     * WinUI's standard 16 px control icon.
      * @param family Icon font family; defaults to FluentQt Icons.
      */
     void setIconGlyph(const QString& glyph,
-                      int pixelSize = Typography::FontSize::Body,
+                      int pixelSize = Typography::IconSize::Standard,
                       const QString& family = Typography::FontFamily::FluentIcons);
 
     void setIconGlyph(QChar glyph,
-                      int pixelSize = Typography::FontSize::Body,
+                      int pixelSize = Typography::IconSize::Standard,
                       const QString& family = Typography::FontFamily::FluentIcons) {
         setIconGlyph(QString(glyph), pixelSize, family);
     }

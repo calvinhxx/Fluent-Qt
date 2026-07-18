@@ -26,6 +26,7 @@ static constexpr int kPopupShadowMargin = ::Spacing::Standard;
 static constexpr int kPopupContentInset = ::Spacing::XSmall / 2;
 static constexpr int kPopupWindowMargin = 4;
 static constexpr qreal kPopupTextOpticalOffsetY = -2.0;
+static constexpr int kClosedFieldTextFitClearance = ::Spacing::XSmall;
 
 // Suppress QStyle's PE_PanelLineEdit native panel — ComboBox paints its own bg
 class TransparentLineEditStyle : public QProxyStyle {
@@ -370,7 +371,11 @@ QSize ComboBox::sizeHint() const {
     }
     // chevron area: offset.x + icon size + gap
     const int chevronArea = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
-    const int w = m_contentPaddingH + maxTextW + chevronArea;
+    // QFontMetrics::horizontalAdvance() is the logical glyph advance. Leave a
+    // small clearance so integer layout/raster rounding cannot make an item
+    // that nominally fits cross the elision boundary on another platform.
+    // zh_CN: 为字形逻辑宽度预留少量余量，避免不同平台的整数布局和栅格化舍入触发省略号。
+    const int w = m_contentPaddingH + maxTextW + kClosedFieldTextFitClearance + chevronArea;
     const int h = sp.controlHeight.standard;
     return QSize(w, h);
 }
@@ -831,8 +836,9 @@ void ComboBox::paintEvent(QPaintEvent*) {
         }
     }
 
-    QFont iconFont(Typography::FontFamily::FluentIcons);
-    iconFont.setPixelSize(m_chevronSize);
+    const QFont iconFont = Typography::Icons::font(m_chevronSize);
+    const QString chevronGlyph = Typography::Icons::glyphForSize(
+        m_chevronGlyph, m_chevronSize);
 
     // chevronOffset.x() = right padding, chevronOffset.y() = vertical offset
     QRectF chevronRect = QRectF(r).adjusted(0, 0, -m_chevronOffset.x(), 0);
@@ -843,7 +849,7 @@ void ComboBox::paintEvent(QPaintEvent*) {
 
     painter.setPen(chevronColor);
     painter.setFont(iconFont);
-    painter.drawText(chevronRect, Qt::AlignRight | Qt::AlignVCenter, m_chevronGlyph);
+    painter.drawText(chevronRect, Qt::AlignRight | Qt::AlignVCenter, chevronGlyph);
 }
 
 } // namespace fluent::basicinput

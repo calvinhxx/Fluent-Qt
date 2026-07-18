@@ -611,7 +611,7 @@ DatePickerFlyoutPanel::DatePickerFlyoutPanel(DatePickerFlyout* flyout, QWidget* 
     m_confirmButton->setObjectName(QStringLiteral("DatePickerConfirmButton"));
     m_confirmButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     m_confirmButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
-    m_confirmButton->setIconGlyph(Typography::Icons::CheckMark, 16);
+    m_confirmButton->setIconGlyph(Typography::Icons::CheckMark, Typography::IconSize::Standard);
     m_confirmButton->setFixedSize(48, 32);
     m_confirmButton->setAccessibleName(QStringLiteral("Accept date"));
 
@@ -619,7 +619,7 @@ DatePickerFlyoutPanel::DatePickerFlyoutPanel(DatePickerFlyout* flyout, QWidget* 
     m_cancelButton->setObjectName(QStringLiteral("DatePickerCancelButton"));
     m_cancelButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     m_cancelButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
-    m_cancelButton->setIconGlyph(Typography::Icons::Cancel, 16);
+    m_cancelButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard);
     m_cancelButton->setFixedSize(48, 32);
     m_cancelButton->setAccessibleName(QStringLiteral("Cancel date"));
 

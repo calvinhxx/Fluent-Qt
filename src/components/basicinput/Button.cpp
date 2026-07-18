@@ -70,13 +70,24 @@ void drawCenteredIconGlyph(QPainter& painter,
                            const QPoint& offset,
                            qreal scale,
                            qreal rotation) {
-    QFont iconFont(fontFamily);
-    iconFont.setPixelSize(pixelSize);
+    const bool usesFluentIcons = fontFamily == Typography::FontFamily::FluentIcons;
+    const QString paintedGlyph = usesFluentIcons
+        ? Typography::Icons::glyphForSize(glyph, pixelSize)
+        : glyph;
+    QFont iconFont = usesFluentIcons
+        ? Typography::Icons::font(pixelSize)
+        : QFont(fontFamily);
+    if (!usesFluentIcons)
+        iconFont.setPixelSize(pixelSize);
     painter.setFont(iconFont);
 
-    QPainterPath glyphPath;
-    glyphPath.addText(QPointF(0, 0), iconFont, glyph);
-    const QRectF inkBounds = glyphPath.boundingRect();
+    // Measure the exact outline so optical centering remains independent of
+    // font ascent/descent quirks, but let Qt's text rasterizer do the actual
+    // drawing. Filling the path directly discards font hinting and makes 1 px
+    // strokes noticeably soft at common button sizes on DirectWrite.
+    QPainterPath measurementPath;
+    measurementPath.addText(QPointF(0, 0), iconFont, paintedGlyph);
+    const QRectF inkBounds = measurementPath.boundingRect();
     const QPointF targetCenter = targetRect.center() + QPointF(offset.x(), offset.y());
     const bool transformed = !qFuzzyCompare(scale, 1.0) || !qFuzzyIsNull(rotation);
     if (transformed) {
@@ -89,14 +100,21 @@ void drawCenteredIconGlyph(QPainter& painter,
     if (inkBounds.isEmpty()) {
         painter.drawText(targetRect.translated(QPointF(offset.x(), offset.y())),
                          Qt::AlignCenter | Qt::AlignVCenter,
-                         glyph);
+                         paintedGlyph);
         if (transformed)
             painter.restore();
         return;
     }
 
-    const QPointF pathOffset = targetCenter - inkBounds.center();
-    painter.fillPath(glyphPath.translated(pathOffset), painter.pen().brush());
+    QPointF baseline = targetCenter - inkBounds.center();
+    const qreal devicePixelRatio = painter.device()
+        ? painter.device()->devicePixelRatioF()
+        : 1.0;
+    if (devicePixelRatio > 0.0) {
+        baseline.setX(qRound(baseline.x() * devicePixelRatio) / devicePixelRatio);
+        baseline.setY(qRound(baseline.y() * devicePixelRatio) / devicePixelRatio);
+    }
+    painter.drawText(baseline, paintedGlyph);
     if (transformed)
         painter.restore();
 }

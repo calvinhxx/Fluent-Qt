@@ -75,6 +75,12 @@ under `res/fonts/` and `res/icons/`. `--check` regenerates into a temporary
 directory and compares every output byte for byte without changing the working
 tree.
 
+Semantic icon codepoints remain stable for source compatibility. Painters call
+`Typography::Icons::glyphForSize()` with the visual slot size so the runtime can
+select the upstream 12, 16, 20, or 24 px optical drawing recorded in
+`FluentQtIconAliases.json`. This avoids shrinking a 20 px outline into WinUI's
+12 px chevron or 16 px control slot.
+
 ## Verification
 
 `TypographyTest` asserts that representative roles resolve to the expected

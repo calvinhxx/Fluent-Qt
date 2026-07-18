@@ -129,9 +129,10 @@ void SplitButton::paintEvent(QPaintEvent*) {
     int sWidth = m_secondaryWidth;
     int sepMargin = spacing.gap.tight;
 
-    // Chevron size follows density: Small uses Caption(12px), others Body(14px).
-    // zh_CN: Chevron 字号跟随密度：Small 用 Caption(12px)，其余用 Body(14px)。
-    int chevronSize = (fluentSize() == Small) ? Typography::FontSize::Caption : Typography::FontSize::Body;
+    // WinUI keeps the chevron on its native 12 px optical drawing at both
+    // standard and compact control densities.
+    // zh_CN: WinUI 在常规与紧凑密度下都使用原生 12 px chevron 字形。
+    const int chevronSize = Typography::IconSize::Compact;
 
     QRectF fullRect = rect();
     QRectF primaryRect = fullRect.adjusted(0, 0, -sWidth, 0);
@@ -391,11 +392,18 @@ void SplitButton::paintEvent(QPaintEvent*) {
     double startX = primaryRect.left() + (primaryRect.width() - totalContentWidth) / 2.0;
 
     if (hasIconFont) {
-        QFont iconFont(iconFontFamily());
-        iconFont.setPixelSize(iconPixelSize());
+        const bool usesFluentIcons = iconFontFamily() == Typography::FontFamily::FluentIcons;
+        QFont iconFont = usesFluentIcons
+            ? Typography::Icons::font(iconPixelSize())
+            : QFont(iconFontFamily());
+        if (!usesFluentIcons)
+            iconFont.setPixelSize(iconPixelSize());
         painter.setFont(iconFont);
         QRectF iconRect(startX, primaryRect.top() + primaryOffset, iconWidth, primaryRect.height());
-        painter.drawText(iconRect, Qt::AlignCenter, iconGlyph());
+        painter.drawText(iconRect, Qt::AlignCenter,
+                         usesFluentIcons
+                             ? Typography::Icons::glyphForSize(iconGlyph(), iconPixelSize())
+                             : iconGlyph());
         painter.setFont(font());
         startX += iconWidth + gap;
     }
@@ -409,11 +417,12 @@ void SplitButton::paintEvent(QPaintEvent*) {
     if (m_animatedPart == Secondary && rebound > 0.0)
         chevronColor.setAlphaF(chevronColor.alphaF() * (1.0 - 0.25 * rebound));
     painter.setPen(chevronColor);
-    QFont iconFont(Typography::FontFamily::FluentIcons);
-    iconFont.setPixelSize(chevronSize);
+    const QFont iconFont = Typography::Icons::font(chevronSize);
     painter.setFont(iconFont);
     painter.drawText(secondaryRect.translated(0, secondaryOffset),
-                     Qt::AlignCenter, Typography::Icons::ChevronDown);
+                     Qt::AlignCenter,
+                     Typography::Icons::glyphForSize(
+                         Typography::Icons::ChevronDown, chevronSize));
 
     // 8. Focus ring. Fluent keeps its original always-on-focus inset ring (radius.control - 1). M3/macOS
     //    draw it ONLY for the keyboard focus visual (matching Button), and at the per-language surface

@@ -222,11 +222,18 @@ void ToggleButton::paintBrandSurface(QPaintEvent*) {
     painter.setRenderHint(QPainter::TextAntialiasing);
 
     if (hasGlyph) {
-        QFont iconFont(iconFontFamily());
-        iconFont.setPixelSize(iconPixelSize());
+        const bool usesFluentIcons = iconFontFamily() == Typography::FontFamily::FluentIcons;
+        QFont iconFont = usesFluentIcons
+            ? Typography::Icons::font(iconPixelSize())
+            : QFont(iconFontFamily());
+        if (!usesFluentIcons)
+            iconFont.setPixelSize(iconPixelSize());
         painter.setFont(iconFont);
         painter.drawText(QRectF(startX, contentRect.top(), glyphWidth, contentRect.height()),
-                         Qt::AlignCenter, iconGlyph());
+                         Qt::AlignCenter,
+                         usesFluentIcons
+                             ? Typography::Icons::glyphForSize(iconGlyph(), iconPixelSize())
+                             : iconGlyph());
         painter.setFont(font());
         startX += glyphWidth + (txt.isEmpty() ? 0 : gap);
     }

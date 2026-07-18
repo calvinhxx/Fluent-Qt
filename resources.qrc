@@ -7,5 +7,6 @@
         <file>res/fonts/FluentQtUIDisplay-Semibold.ttf</file>
         <file>res/icons/FluentQtIcons.ttf</file>
         <file>res/icons/FluentQtIcons.json</file>
+        <file>res/icons/FluentQtIconAliases.json</file>
     </qresource>
 </RCC>

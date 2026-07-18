@@ -170,7 +170,7 @@ private:
     int     m_contentPaddingH = ::Spacing::Padding::ComboBoxHorizontal;
     int     m_contentPaddingV = ::Spacing::Padding::ComboBoxVertical;
     QString m_chevronGlyph   = Typography::Icons::ChevronDownMed;
-    int     m_chevronSize    = 12;
+    int     m_chevronSize    = Typography::IconSize::Compact;
     QPoint  m_chevronOffset  {::Spacing::Padding::ComboBoxHorizontal, 0};
     int     m_popupOffset    = ::Spacing::XSmall; // 4px gap between combo and popup
 

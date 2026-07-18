@@ -49,6 +49,18 @@ namespace Typography {
         const int Display         = 68;  // Display Semibold 68/92
     }
 
+    // Optical design sizes used by the bundled Fluent UI System Icons face.
+    // WinUI's normal 32 px controls use a 16 px icon slot; compact indicators
+    // such as chevrons and checkmarks use the native 12 px drawing.
+    // zh_CN: 内置 Fluent UI System Icons 字形的光学设计尺寸。WinUI 的常规 32 px
+    // 控件使用 16 px 图标槽，chevron/checkmark 等紧凑指示符使用原生 12 px 字形。
+    namespace IconSize {
+        const int Compact  = 12;
+        const int Standard = 16;
+        const int Large    = 20;
+        const int XLarge   = 24;
+    }
+
     // Line heights in absolute pixels, not multipliers.
     // zh_CN: 行高为绝对像素值，不是倍率。
     namespace LineHeight {

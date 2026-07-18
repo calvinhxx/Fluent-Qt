@@ -169,7 +169,7 @@ CalendarDatePicker::CalendarDatePicker(QWidget* parent)
     setFluentStyle(fluent::basicinput::Button::Standard);
     setFluentSize(fluent::basicinput::Button::StandardSize);
     setFluentLayout(fluent::basicinput::Button::IconAfter);
-    setIconGlyph(Typography::Icons::Calendar, 13);
+    setIconGlyph(Typography::Icons::Calendar, Typography::IconSize::Standard);
     setMinimumWidth(kButtonMinWidth);
     refreshButtonText();
 
