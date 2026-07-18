@@ -55,7 +55,7 @@ GalleryTopNavigationPane::GalleryTopNavigationPane(
         button->setFluentLayout(fluent::basicinput::Button::IconOnly);
         button->setFluentSize(fluent::basicinput::Button::Small);
         button->setFluentStyle(fluent::basicinput::Button::Subtle);
-        button->setIconGlyph(item.iconGlyph, 16);
+        button->setIconGlyph(item.iconGlyph, Typography::IconSize::Standard);
         button->setFixedSize(kButtonSize, kButtonSize);
         connect(button, &fluent::basicinput::Button::clicked,
                 this, [this, button, routeId = item.id]() {

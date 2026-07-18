@@ -113,7 +113,7 @@ Button* makeCommandButton(QWidget* parent, const QString& text, const QString& g
 {
     auto* button = makeSampleButton(parent, text, Button::Accent);
     button->setFluentLayout(Button::IconBefore);
-    button->setIconGlyph(glyph, 14);
+    button->setIconGlyph(glyph, Typography::IconSize::Standard);
     return button;
 }
 
@@ -231,7 +231,7 @@ Button* makeWindowsCaptionButton(QWidget* parent,
     button->setFluentStyle(Button::Subtle);
     button->setFluentLayout(Button::IconOnly);
     button->setFluentSize(Button::Small);
-    button->setIconGlyph(glyph, 10);
+    button->setIconGlyph(glyph, Typography::IconSize::Standard);
     button->setFocusPolicy(Qt::NoFocus);
     button->setCriticalOnHover(critical);
     return button;
@@ -485,7 +485,7 @@ QVector<GallerySample> titleBarSamples()
                        auto* refresh = makeSampleButton(controls, QStringLiteral("Refresh"));
                        refresh->setFluentStyle(Button::Subtle);
                        refresh->setFluentLayout(Button::IconBefore);
-                       refresh->setIconGlyph(Typography::Icons::Refresh, 14);
+                       refresh->setIconGlyph(Typography::Icons::Refresh, Typography::IconSize::Standard);
                        controlsLayout->addWidget(compact, 0, Qt::AlignVCenter);
                        controlsLayout->addWidget(tall, 0, Qt::AlignVCenter);
                        controlsLayout->addWidget(refresh, 0, Qt::AlignVCenter);

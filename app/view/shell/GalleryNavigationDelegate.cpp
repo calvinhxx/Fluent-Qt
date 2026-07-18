@@ -161,8 +161,7 @@ public:
                 : (qobject_cast<const QTreeView*>(option.widget)
                        && qobject_cast<const QTreeView*>(option.widget)->isExpanded(index) ? 1.0 : 0.0);
             chevronRect = chevronRectForOption(option);
-            QFont iconFont(Typography::FontFamily::FluentIcons);
-            iconFont.setPixelSize(9);
+            const QFont iconFont = Typography::Icons::font(kChevronIconPixelSize);
             painter->setFont(iconFont);
             painter->setPen(colors.textSecondary);
             painter->save();
@@ -172,11 +171,15 @@ public:
             painter->translate(-chevronRect.center());
             painter->drawText(chevronRect,
                               Qt::AlignCenter,
-                              Typography::Icons::ChevronDownMed);
+                              Typography::Icons::glyphForSize(
+                                  Typography::Icons::ChevronDownMed,
+                                  kChevronIconPixelSize));
             painter->restore();
         }
 
         const QString iconGlyph = index.data(IconGlyphRole).toString();
+        const QString paintedIconGlyph = Typography::Icons::glyphForSize(
+            iconGlyph, kRouteIconPixelSize);
         const bool hasIcon = !iconGlyph.isEmpty();
         const qreal contentLeft = backgroundRect.left() + kContentStart;
         const qreal compactIconLeft = qMax<qreal>(0.0, (kCompactPaneWidth - kIconAreaWidth) / 2.0);
@@ -185,8 +188,7 @@ public:
             ? backgroundRect.left() + kTextStart
             : contentLeft;
         if (!iconGlyph.isEmpty()) {
-            QFont iconFont(Typography::FontFamily::FluentIcons);
-            iconFont.setPixelSize(15);
+            const QFont iconFont = Typography::Icons::font(kRouteIconPixelSize);
             painter->setFont(iconFont);
             painter->setPen(selected ? colors.textPrimary : colors.textSecondary);
             const QRectF iconRect(iconLeft,
@@ -203,12 +205,12 @@ public:
                 painter->translate(-iconRect.center());
                 painter->drawText(iconRect,
                                   Qt::AlignCenter,
-                                  iconGlyph);
+                                  paintedIconGlyph);
                 painter->restore();
             } else {
                 painter->drawText(iconRect,
                                   Qt::AlignCenter,
-                                  iconGlyph);
+                                  paintedIconGlyph);
             }
             textX = backgroundRect.left() + kTextStart;
         } else if (!hasIcon && kind != GalleryNavigationItem::Kind::ComponentRoute) {

@@ -88,7 +88,7 @@ void GalleryIntroTour::build()
     m_close->setFluentStyle(Button::Subtle);
     m_close->setFluentLayout(Button::IconOnly);
     m_close->setFluentSize(Button::Small);
-    m_close->setIconGlyph(Typography::Icons::Cancel, 12);
+    m_close->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard);
     m_close->setFixedSize(28, 28);
     m_close->setFocusPolicy(Qt::NoFocus);
     m_close->setToolTip(QStringLiteral("Skip tour"));

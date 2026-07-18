@@ -94,12 +94,14 @@ protected:
         painter.translate(width() / 2.0, height() / 2.0);
         painter.rotate(m_angle);
 
-        QFont glyphFont(Typography::FontFamily::FluentIcons);
-        glyphFont.setPixelSize(kChevronGlyphPixelSize);
+        const QFont glyphFont = Typography::Icons::font(kChevronGlyphPixelSize);
         painter.setFont(glyphFont);
         painter.setPen(m_color);
         const QRectF box(-width() / 2.0, -height() / 2.0, width(), height());
-        painter.drawText(box, Qt::AlignCenter, Typography::Icons::ChevronDown);
+        painter.drawText(box, Qt::AlignCenter,
+                         Typography::Icons::glyphForSize(
+                             Typography::Icons::ChevronDown,
+                             kChevronGlyphPixelSize));
     }
 
 private:
@@ -244,7 +246,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
     m_copyButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     m_copyButton->setFluentSize(fluent::basicinput::Button::Small);
     m_copyButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
-    m_copyButton->setIconGlyph(Typography::Icons::Copy, Typography::FontSize::Body);
+    m_copyButton->setIconGlyph(Typography::Icons::Copy, Typography::IconSize::Standard);
     m_copyButton->setFocusPolicy(Qt::NoFocus);
     fluent::status_info::ToolTip::attach(m_copyButton, QStringLiteral("Copy"));
     connect(m_copyButton, &fluent::basicinput::Button::clicked, this, [this]() {
@@ -254,11 +256,11 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
             showGalleryToast(this, QStringLiteral("Copied to clipboard"));
             // Briefly flip the icon to a checkmark for inline confirmation (matches the gif).
             // zh_CN: 短暂把图标切成对勾做就地确认（对齐 gif）。
-            m_copyButton->setIconGlyph(Typography::Icons::CheckMark, Typography::FontSize::Body);
+            m_copyButton->setIconGlyph(Typography::Icons::CheckMark, Typography::IconSize::Standard);
             QPointer<fluent::basicinput::Button> button = m_copyButton;
             QTimer::singleShot(kCopyCheckRevertMs, this, [button]() {
                 if (button)
-                    button->setIconGlyph(Typography::Icons::Copy, Typography::FontSize::Body);
+                    button->setIconGlyph(Typography::Icons::Copy, Typography::IconSize::Standard);
             });
         }
     });

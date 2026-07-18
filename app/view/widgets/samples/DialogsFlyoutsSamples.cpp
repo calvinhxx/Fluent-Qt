@@ -237,7 +237,7 @@ void populateTeachingTip(TeachingTip *tip, const QString &titleText,
   closeButton->setFluentLayout(Button::IconOnly);
   closeButton->setFluentStyle(Button::Subtle);
   closeButton->setIconGlyph(Typography::Icons::ChromeClose,
-                            Typography::FontSize::Caption);
+                            Typography::IconSize::Standard);
   closeButton->setFixedSize(30, 30);
   QObject::connect(closeButton, &Button::clicked, tip,
                    [tip]() { tip->closeWithReason(TeachingTip::CloseButton); });
@@ -980,7 +980,7 @@ QVector<GallerySample> coachMarkSamples() {
                 closeButton->setFluentLayout(Button::IconOnly);
                 closeButton->setFluentStyle(Button::Subtle);
                 closeButton->setIconGlyph(Typography::Icons::ChromeClose,
-                                          Typography::FontSize::Caption);
+                                          Typography::IconSize::Standard);
                 closeButton->setFixedSize(30, 30);
                 QObject::connect(closeButton, &Button::clicked, coach,
                                  [coach]() { coach->close(); });
