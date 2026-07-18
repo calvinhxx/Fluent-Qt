@@ -5,7 +5,9 @@
 #include <QEvent>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFontMetrics>
 #include <QFrame>
+#include <QGraphicsOpacityEffect>
 #include <QHelpEvent>
 #include <QImage>
 #include <QLabel>
@@ -19,6 +21,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSignalSpy>
+#include <QSizePolicy>
 #include <QStringList>
 #include <QTest>
 #include <QUrl>
@@ -54,6 +57,7 @@
 #include "view/shell/GallerySingleInstance.h"
 #include "view/support/GalleryCloseBehaviorPrompt.h"
 #include "view/shell/GalleryNavigationPane.h"
+#include "view/shell/GalleryNavigationMetrics.h"
 #include "view/shell/GalleryPageSkeleton.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "view/widgets/GalleryEntryCard.h"
@@ -519,6 +523,13 @@ TEST_F(GalleryShellFrameworkTest, ClickingHomeFeaturedCardNavigatesWithoutUseAft
 
 TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
 {
+    EXPECT_EQ(fluent::gallery::metrics::TitleBar::ButtonIconSize,
+              Typography::IconSize::Standard);
+    EXPECT_EQ(fluent::gallery::kRouteIconPixelSize,
+              Typography::IconSize::Standard);
+    EXPECT_EQ(fluent::gallery::kChevronIconPixelSize,
+              Typography::IconSize::Standard);
+
     GalleryWindow window;
     window.resize(1180, 760);
     window.show();
@@ -622,6 +633,59 @@ TEST_F(GalleryShellFrameworkTest, TitleBarContentUsesAnchorsAndCentersControls)
     ASSERT_FALSE(iconPixmap.isNull());
     const QSize logicalPixmapSize = fluentPixmapLogicalSize(iconPixmap);
     EXPECT_EQ(logicalPixmapSize, QSize(18, 18));
+}
+
+TEST_F(GalleryShellFrameworkTest, TitleBarForegroundTracksWindowActivationWithoutReflow)
+{
+    GalleryWindow window;
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")) == nullptr,
+        2000);
+
+    TitleBar* titleBar = window.titleBar();
+    ASSERT_NE(titleBar, nullptr);
+    auto* menuButton = vg::findRequiredChild<Button>(
+        titleBar, QStringLiteral("GalleryTitleBar.MenuButton"));
+    auto* appIcon = vg::findRequiredChild<QLabel>(
+        titleBar, QStringLiteral("GalleryTitleBar.AppIcon"));
+    auto* title = vg::findRequiredChild<QWidget>(
+        titleBar, QStringLiteral("GalleryTitleBar.Title"));
+    auto* searchBox = vg::findRequiredChild<AutoSuggestBox>(
+        titleBar, QStringLiteral("GalleryTitleBar.SearchBox"));
+    ASSERT_NE(menuButton, nullptr);
+    ASSERT_NE(appIcon, nullptr);
+    ASSERT_NE(title, nullptr);
+    ASSERT_NE(searchBox, nullptr);
+
+    QEvent activateEvent(QEvent::WindowActivate);
+    QApplication::sendEvent(titleBar, &activateEvent);
+    QTRY_VERIFY_WITH_TIMEOUT(menuButton->graphicsEffect() == nullptr, 500);
+
+    const QRect menuGeometry = menuButton->geometry();
+    const QRect iconGeometry = appIcon->geometry();
+    const QRect titleGeometry = title->geometry();
+    const QRect searchGeometry = searchBox->geometry();
+
+    QEvent deactivateEvent(QEvent::WindowDeactivate);
+    QApplication::sendEvent(titleBar, &deactivateEvent);
+
+    const QList<QWidget*> customChrome{menuButton, appIcon, title, searchBox};
+    for (QWidget* widget : customChrome) {
+        auto* effect = qobject_cast<QGraphicsOpacityEffect*>(widget->graphicsEffect());
+        ASSERT_NE(effect, nullptr) << widget->objectName().toStdString();
+        EXPECT_DOUBLE_EQ(effect->opacity(), 0.55) << widget->objectName().toStdString();
+    }
+    EXPECT_EQ(menuButton->geometry(), menuGeometry);
+    EXPECT_EQ(appIcon->geometry(), iconGeometry);
+    EXPECT_EQ(title->geometry(), titleGeometry);
+    EXPECT_EQ(searchBox->geometry(), searchGeometry);
+
+    QApplication::sendEvent(titleBar, &activateEvent);
+    for (QWidget* widget : customChrome)
+        EXPECT_EQ(widget->graphicsEffect(), nullptr) << widget->objectName().toStdString();
 }
 
 TEST_F(GalleryShellFrameworkTest, MenuButtonTogglesLeftCompactNavigationMode)
@@ -1471,7 +1535,7 @@ TEST_F(GalleryShellFrameworkTest, NavigationArrowKeysActivateCurrentRoute)
     QTest::keyClick(tree, Qt::Key_Down);
 
     QTRY_COMPARE_WITH_TIMEOUT(window.currentRouteId(), QStringLiteral("foundation"), 1000);
-    ASSERT_NE(window.currentContentPage(), nullptr);
+    QTRY_VERIFY_WITH_TIMEOUT(window.currentContentPage() != nullptr, 1000);
     EXPECT_EQ(window.currentContentPage()->title(), QStringLiteral("Foundation"));
 }
 
@@ -1531,6 +1595,20 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(effectChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->currentIndex(), static_cast<int>(settings.closeBehavior()));
+    for (auto* choice : {themeChoice, styleChoice, navigationChoice,
+                         effectChoice, closeBehaviorChoice}) {
+        EXPECT_EQ(choice->sizePolicy().horizontalPolicy(), QSizePolicy::Preferred);
+        EXPECT_EQ(choice->maximumWidth(), QWIDGETSIZE_MAX);
+        EXPECT_GE(choice->width(), choice->sizeHint().width());
+        const int availableTextWidth = choice->width() - choice->contentPaddingH()
+                                       - choice->chevronOffset().x()
+                                       - choice->chevronSize() - ::Spacing::Gap::Tight;
+        const QFontMetrics metrics(choice->font());
+        for (int index = 0; index < choice->count(); ++index) {
+            const QString item = choice->itemText(index);
+            EXPECT_EQ(metrics.elidedText(item, Qt::ElideRight, availableTextWidth), item);
+        }
+    }
     // Appearance & behavior (4 rows) + App behavior (1 row) + Updates (1 row) = 6 rows;
     // Style theme + Accent color share one row.
     EXPECT_NE(page->findChild<QWidget*>(QStringLiteral("gallerySettingsAccentControl")), nullptr);
