@@ -1,35 +1,70 @@
-#include <algorithm>
-
 #include <FluentQt/FluentQt.h>
 
 #include <QApplication>
 #include <QGuiApplication>
-#include <QRect>
-#include <QScreen>
-#include <QSize>
+#include <QProcess>
 
+#include "support/logging/Log.h"
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryApplicationController.h"
+#include "view/shell/GalleryApplicationLifecycle.h"
 #include "view/shell/GallerySingleInstance.h"
 #include "view/shell/GalleryWindow.h"
-#include "view/shell/GalleryWindowMetrics.h"
+#include "view/shell/GalleryWindowPlacement.h"
 #include "viewmodel/GallerySettings.h"
-#include "support/logging/Log.h"
 
 #ifndef FLUENT_QT_GALLERY_VERSION
 #define FLUENT_QT_GALLERY_VERSION "0.0.0"
 #endif
 
-int main(int argc, char** argv)
+namespace {
+
+bool launchRestartedApplication(const QString& program,
+                                const QStringList& arguments)
 {
+    QProcess process;
+    process.setProgram(program);
+    process.setArguments(arguments);
+    return process.startDetached();
+}
+
+int runGalleryApplication(int argc,
+                          char** argv,
+                          QString* restartProgram,
+                          QStringList* restartArguments)
+{
+    // The scale preference must be available before QApplication reads the
+    // platform DPI. Static application identity also makes the config path
+    // deterministic during this pre-application phase.
+    // zh_CN: 缩放偏好必须在 QApplication 读取平台 DPI 前生效；预先设置静态应用标识，
+    // 也能确保此阶段解析到稳定的配置路径。
+    QCoreApplication::setApplicationName(QStringLiteral(FLUENT_QT_GALLERY_DISPLAY_NAME));
+    QCoreApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
+    QCoreApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
+    const int startupScalePercent =
+        fluent::gallery::GallerySettings::applyStartupUiScalePreference();
+    fluent::prepareHighDpiApplication();
+
     QApplication app(argc, argv);
-    QApplication::setApplicationName(QStringLiteral(FLUENT_QT_GALLERY_DISPLAY_NAME));
-    QApplication::setOrganizationName(QStringLiteral(FLUENT_QT_GALLERY_ORGANIZATION_NAME));
-    QApplication::setApplicationVersion(QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
 #ifdef Q_OS_LINUX
     QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
 #endif
     app.setQuitOnLastWindowClosed(false);
+
+    fluent::initializeResources();
+    app.setFont(Typography::Styles::Body.toQFont());
+    auto& settings = fluent::gallery::GallerySettings::instance();
+
+    fluent::support::logging::InitializationOptions loggingOptions;
+    loggingOptions.defaultLevel = fluent::support::logging::Level::Info;
+    loggingOptions.installQtMessageHandler = true;
+    loggingOptions.logFilePath = fluent::support::logging::defaultLogFilePath();
+    fluent::support::logging::initialize(loggingOptions);
+    LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2 logFile=%3 uiScalePercent=%4")
+                 .arg(QApplication::applicationName(), QApplication::organizationName(),
+                      loggingOptions.logFilePath)
+                 .arg(startupScalePercent));
+    app.setWindowIcon(fluent::gallery::appicon::icon());
 
     fluent::gallery::GallerySingleInstance singleInstance(
         QStringLiteral(FLUENT_QT_GALLERY_APP_ID), &app);
@@ -44,74 +79,50 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    fluent::initializeResources();
-    app.setFont(Typography::Styles::Body.toQFont());
-    fluent::gallery::GallerySettings::instance();
-
-    // App logging policy: persist to the platform log file by default at Info
-    // level, and route Qt's own qWarning/qDebug through the same logger. The
-    // FluentQt QLoggingCategory messages flow through the same handler;
-    // SPDLOG_LEVEL still overrides the level for ad-hoc debugging (the explicit
-    // file path wins over SPDLOG_FILE).
-    // zh_CN: 应用日志策略：默认以 Info 级别持久化到平台日志文件，并把 Qt 自身的
-    // qWarning/qDebug 与 FluentQt 的 QLoggingCategory 消息汇入同一日志器；
-    // SPDLOG_LEVEL 仍可临时覆盖级别（显式文件路径优先于 SPDLOG_FILE）。
-    fluent::support::logging::InitializationOptions loggingOptions;
-    loggingOptions.defaultLevel = fluent::support::logging::Level::Info;
-    loggingOptions.installQtMessageHandler = true;
-    loggingOptions.logFilePath = fluent::support::logging::defaultLogFilePath();
-    fluent::support::logging::initialize(loggingOptions);
-    LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2 logFile=%3")
-                 .arg(QApplication::applicationName(), QApplication::organizationName(),
-                      loggingOptions.logFilePath));
-    app.setWindowIcon(fluent::gallery::appicon::icon());
-
     fluent::gallery::GalleryWindow window;
+    fluent::gallery::GalleryWindowPlacement placement(
+        &window, &settings, startupScalePercent);
     fluent::gallery::GalleryApplicationController applicationController(&window, &app);
     QObject::connect(&singleInstance,
                      &fluent::gallery::GallerySingleInstance::activationRequested,
                      &applicationController,
                      &fluent::gallery::GalleryApplicationController::restoreWindow);
 
-    // Pick an initial size that fits the screen (shrinking on small displays, never below the
-    // window's minimum), then place it centered vertically and centered horizontally within
-    // the area that remains after reserving a strip on the left. macOS does not subtract the
-    // Stage Manager thumbnail strip from availableGeometry(), so a plain center would tuck the
-    // window under it; reserving a left inset keeps that strip (or any left-edge panel) clear.
-    // zh_CN: 先选一个适配屏幕的初始尺寸（小屏收缩、但不小于最小尺寸），再垂直居中、并在"预留
-    // 左侧条之后剩余的区域"里水平居中。macOS 不会把 Stage Manager 的缩略图条从
-    // availableGeometry() 里扣掉，所以纯居中会把窗口压到它下面；预留一条左边距即可让开那条带子。
-    QSize initialSize(fluent::gallery::metrics::AppWindow::InitialWidth,
-                      fluent::gallery::metrics::AppWindow::InitialHeight);
-    if (QScreen* screen = QApplication::primaryScreen())
-        initialSize = initialSize.boundedTo(screen->availableGeometry().size());
-    window.resize(initialSize.expandedTo(window.minimumSize()));
+    if (placement.restore())
+        window.showMaximized();
+    else
+        window.show();
 
-    auto centerWindow = [&window]() {
-        QScreen* screen = window.screen() ? window.screen() : QApplication::primaryScreen();
-        if (!screen)
-            return;
-        const QRect available = screen->availableGeometry();
-        const QRect frame = window.frameGeometry();
-        const int horizontalSlack = std::max(0, available.width() - frame.width());
-        const int leftReserve = std::min(fluent::gallery::metrics::AppWindow::LeftPanelReserve,
-                                         horizontalSlack);
-        const int x = available.x() + leftReserve + (horizontalSlack - leftReserve) / 2;
-        const int y = available.y() + std::max(0, available.height() - frame.height()) / 2;
-        window.move(x, y);
-    };
+    const int exitCode = app.exec();
+    placement.saveNow();
+    LOG_INFO(QStringLiteral("GalleryApp event loop exited code=%1").arg(exitCode));
 
-    // Center BEFORE show() so the window first appears in place — no visible slide from the OS
-    // default (staggered top-left) position to center. On Windows the custom chrome re-applies
-    // window flags in showEvent with SWP_NOMOVE, so the pre-show position is preserved. We re-assert
-    // once more after show() as a cross-platform safety net (e.g. macOS, where the first realized
-    // frame can differ); by then it is at most a sub-pixel frame-margin nudge, not a visible jump.
-    // zh_CN: 在 show() 之前居中，使窗口首次出现即在位——不再从系统默认（左上角错位）位置滑到中央。Windows 上
-    // 自定义边框在 showEvent 里以 SWP_NOMOVE 重应用窗口标志，故 show 前的位置会被保留；show 后再居中一次作为
-    // 跨平台兜底（如 macOS 首次实现的 frame 可能不同），此时至多是亚像素级 frame 边距微调，而非可见跳动。
-    centerWindow();
-    window.show();
-    centerWindow();
+    if (exitCode == fluent::gallery::RestartExitCode) {
+        *restartProgram = QCoreApplication::applicationFilePath();
+        *restartArguments = QCoreApplication::arguments();
+        if (!restartArguments->isEmpty())
+            restartArguments->removeFirst();
+    }
+    return exitCode;
+}
 
-    return app.exec();
+} // namespace
+
+int main(int argc, char** argv)
+{
+    QString restartProgram;
+    QStringList restartArguments;
+    const int exitCode = runGalleryApplication(
+        argc, argv, &restartProgram, &restartArguments);
+
+    // runGalleryApplication has released the single-instance lock before the
+    // replacement starts, avoiding a race with the old process's teardown.
+    if (exitCode == fluent::gallery::RestartExitCode) {
+        const bool launched = launchRestartedApplication(restartProgram,
+                                                         restartArguments);
+        if (!launched)
+            LOG_CRITICAL(QStringLiteral("GalleryApp failed to launch the restarted process"));
+        return launched ? 0 : 1;
+    }
+    return exitCode;
 }

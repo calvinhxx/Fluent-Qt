@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <QObject>
+#include <QPointer>
 #include <QStringList>
 
 class QEvent;
@@ -55,6 +56,7 @@ public:
                               const QStringList& searchTitles,
                               Callbacks callbacks,
                               QObject* parent = nullptr);
+    ~GalleryTitleBarController() override;
 
     /// Reflows the leading group + search box for the current width / nav layout.
     /// zh_CN: 按当前宽度/导航布局重排前导组与搜索框。
@@ -85,16 +87,18 @@ private:
     void setChromeRevealOpacity(qreal opacity);
     void showToolTip(fluent::basicinput::Button* button);
     void hideToolTip();
+    void refreshAppIcon();
 
-    fluent::windowing::TitleBar* m_bar = nullptr;
+    QPointer<fluent::windowing::TitleBar> m_bar;
+    QPointer<QWidget> m_hostWindow;
     Callbacks m_callbacks;
 
-    fluent::basicinput::Button* m_backButton = nullptr;
-    fluent::basicinput::Button* m_menuButton = nullptr;
-    QLabel* m_appIcon = nullptr;
-    fluent::textfields::Label* m_title = nullptr;
-    fluent::textfields::AutoSuggestBox* m_searchBox = nullptr;
-    fluent::status_info::ToolTip* m_toolTip = nullptr;
+    QPointer<fluent::basicinput::Button> m_backButton;
+    QPointer<fluent::basicinput::Button> m_menuButton;
+    QPointer<QLabel> m_appIcon;
+    QPointer<fluent::textfields::Label> m_title;
+    QPointer<fluent::textfields::AutoSuggestBox> m_searchBox;
+    QPointer<fluent::status_info::ToolTip> m_toolTip;
 
     QVariantAnimation* m_backRevealAnimation = nullptr;
     QVariantAnimation* m_chromeRevealAnimation = nullptr;

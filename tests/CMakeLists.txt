@@ -20,6 +20,7 @@ set(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
 
 set(FLUENT_QT_CI_FULL_TARGETS
     ${FLUENT_QT_CI_FAST_TARGETS}
+    test_high_dpi
     test_project_logging
     test_fluent_element
     test_button
@@ -220,6 +221,23 @@ endmacro()
 # 按源码目录结构添加子目录，Qt Creator 工程树会呈现层级
 add_qt_test_module(test_project_logging TestProjectLogging.cpp)
 add_qt_test_module(test_qt_test_environment TestQtTestEnvironment.cpp)
+add_qt_test_module(test_high_dpi TestHighDpi.cpp)
+
+foreach(_fluent_qt_high_dpi_scale 2 3)
+    math(EXPR _fluent_qt_high_dpi_percent
+        "${_fluent_qt_high_dpi_scale} * 100")
+    set(_fluent_qt_high_dpi_test
+        "HighDpiScaleTest.Scale${_fluent_qt_high_dpi_percent}")
+    add_test(NAME "${_fluent_qt_high_dpi_test}"
+        COMMAND $<TARGET_FILE:test_high_dpi>
+            --gtest_filter=HighDpiTest.*)
+    set_tests_properties("${_fluent_qt_high_dpi_test}" PROPERTIES
+        ENVIRONMENT
+            "SKIP_VISUAL_TEST=1;QT_QPA_PLATFORM=offscreen;QT_FONT_DPI=96;QT_SCALE_FACTOR=${_fluent_qt_high_dpi_scale}"
+        LABELS "qt;unit;test_high_dpi;high_dpi;ci_full;local_full"
+        TIMEOUT 30)
+endforeach()
+
 add_subdirectory(components)
 if(FLUENT_QT_BUILD_GALLERY)
     add_subdirectory(gallery)

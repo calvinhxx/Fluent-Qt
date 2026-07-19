@@ -49,4 +49,14 @@ inline void fluentConfigureTextRendering(QFont& font)
         QFont::PreferQuality | QFont::PreferAntialias | QFont::NoSubpixelAntialias));
 }
 
+inline QString fluentCodepointGlyph(quint32 codepoint)
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    const char32_t value = static_cast<char32_t>(codepoint);
+#else
+    const uint value = codepoint;
+#endif
+    return QString::fromUcs4(&value, 1);
+}
+
 #endif // FLUENTFONTCOMPAT_H

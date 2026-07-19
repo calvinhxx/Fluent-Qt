@@ -101,7 +101,14 @@ qreal painterDevicePixelRatio(const QPainter* painter)
 
 QPixmap iconPixmapForExtent(const QIcon& icon, const QSize& extent, const QPainter* painter)
 {
-    return fluentIconPixmapForLogicalExtent(icon, extent, painterDevicePixelRatio(painter));
+    QWidget* targetWidget = painter && painter->device()
+        ? dynamic_cast<QWidget*>(painter->device())
+        : nullptr;
+    QWindow* targetWindow = targetWidget && targetWidget->window()
+        ? targetWidget->window()->windowHandle()
+        : nullptr;
+    return fluentIconPixmapForLogicalExtent(
+        icon, extent, painterDevicePixelRatio(painter), targetWindow);
 }
 
 void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pixmap)

@@ -511,7 +511,13 @@ void Button::paintEvent(QPaintEvent*) {
     // 4. Lay out and paint the icon and text using token gaps. zh_CN: 使用 Token 间距计算并绘制图标和文字。
     QString txt = (m_layout == IconOnly) ? "" : text();
     bool hasIconFont = !m_iconGlyph.isEmpty();
-    QPixmap pix = (m_layout == TextOnly || hasIconFont || icon().isNull()) ? QPixmap() : icon().pixmap(iconSize());
+    const qreal targetDpr = painter.device()
+        ? qMax<qreal>(1.0, painter.device()->devicePixelRatioF())
+        : qMax<qreal>(1.0, devicePixelRatioF());
+    QWindow* targetWindow = window() ? window()->windowHandle() : nullptr;
+    QPixmap pix = (m_layout == TextOnly || hasIconFont || icon().isNull())
+        ? QPixmap()
+        : fluentIconPixmapForLogicalExtent(icon(), iconSize(), targetDpr, targetWindow);
     int gap = (m_size == Small) ? spacing.gap.tight : spacing.gap.normal;
 
     QFontMetrics fm = painter.fontMetrics();

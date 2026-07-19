@@ -180,6 +180,16 @@ TEST(QtCompat, AdjacentButtonRowSpacingDoesNotShrinkRequestedSpacing) {
     EXPECT_GE(fluentAdjacentButtonRowSpacing(8), 8);
 }
 
+TEST(QtCompat, DisplayScaleChangeHelperCoversSupportedScreenEvents) {
+    EXPECT_FALSE(fluentIsDisplayScaleChangeEvent(nullptr));
+
+    QEvent resizeEvent(QEvent::Resize);
+    EXPECT_FALSE(fluentIsDisplayScaleChangeEvent(&resizeEvent));
+
+    QEvent screenChangeEvent(QEvent::ScreenChangeInternal);
+    EXPECT_TRUE(fluentIsDisplayScaleChangeEvent(&screenChangeEvent));
+}
+
 TEST(QtCompat, ProjectSourcesDoNotContainScatteredQtVersionGuards) {
     const QString root = repositoryRootPath();
     const QStringList scanRoots = {

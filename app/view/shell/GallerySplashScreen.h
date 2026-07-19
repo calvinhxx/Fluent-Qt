@@ -55,6 +55,7 @@ protected:
 
 private:
     void layoutContent();
+    void refreshLogo();
 
     fluent::status_info::ProgressRing* m_spinner = nullptr;
     QPixmap m_logo;

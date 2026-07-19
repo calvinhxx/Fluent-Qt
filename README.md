@@ -111,6 +111,7 @@ If FluentQt is outside the system search path, configure with `-DCMAKE_PREFIX_PA
 
 int main(int argc, char* argv[])
 {
+    fluent::prepareHighDpiApplication();
     QApplication app(argc, argv);
     fluent::initializeResources();
 

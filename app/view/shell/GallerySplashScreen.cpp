@@ -6,7 +6,9 @@
 #include <QPaintEvent>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
+#include <QTimer>
 
+#include "compatibility/QtCompat.h"
 #include "components/status_info/ProgressRing.h"
 #include "design/Typography.h"
 #include "view/shell/AppIcon.h"
@@ -35,7 +37,7 @@ GallerySplashScreen::GallerySplashScreen(QWidget* parent)
     // WA_OpaquePaintEvent: it makes the QGraphicsOpacityEffect used by dismiss() render
     // the widget black during the fade. zh_CN: paintEvent 里画满不透明背景，依然吞点击、遮内容；
     // 刻意不设 WA_OpaquePaintEvent——它会让 dismiss() 的 QGraphicsOpacityEffect 在淡出时把控件渲染成黑色。
-    m_logo = appicon::pixmap(kLogoSize, devicePixelRatioF());
+    refreshLogo();
 
     m_spinner = new fluent::status_info::ProgressRing(this);
     m_spinner->setObjectName(QStringLiteral("gallerySplashSpinner"));
@@ -45,6 +47,8 @@ GallerySplashScreen::GallerySplashScreen(QWidget* parent)
 
     if (parent) {
         parent->installEventFilter(this);
+        if (QWidget* hostWindow = parent->window(); hostWindow && hostWindow != parent)
+            hostWindow->installEventFilter(this);
         setGeometry(parent->rect());
     }
     raise();
@@ -95,6 +99,11 @@ bool GallerySplashScreen::eventFilter(QObject* watched, QEvent* event)
         setGeometry(parentWidget()->rect());
         raise();
     }
+    if (fluentIsDisplayScaleChangeEvent(event)) {
+        // Read the new DPR after the window has accepted the screen-change event.
+        // zh_CN: 等窗口接收屏幕变化事件后再读取新的 DPR。
+        QTimer::singleShot(0, this, [this]() { refreshLogo(); });
+    }
     return QWidget::eventFilter(watched, event);
 }
 
@@ -112,6 +121,12 @@ void GallerySplashScreen::layoutContent()
     const int centerY = height() / 2;
     m_spinner->move(centerX - kSpinnerSize / 2,
                     centerY + kSpinnerCenterOffsetBelow - kSpinnerSize / 2);
+}
+
+void GallerySplashScreen::refreshLogo()
+{
+    m_logo = appicon::pixmap(kLogoSize, devicePixelRatioF());
+    update();
 }
 
 void GallerySplashScreen::paintEvent(QPaintEvent*)

@@ -26,6 +26,7 @@
 
 #include <QtGlobal>
 #include <QAbstractItemView>
+#include <QCoreApplication>
 #include <QEvent>
 #include <QGuiApplication>
 #include <QHoverEvent>
@@ -49,6 +50,7 @@
 #include <QVector>
 #include <QWheelEvent>
 #include <QWidget>
+#include <QWindow>
 
 #include <memory>
 #include <utility>
@@ -79,6 +81,32 @@ enum class FluentWheelInputKind {
     NoPhasePixel,
     NoPhaseDiscrete
 };
+
+/**
+ * @brief Applies the supported Qt-version-specific High-DPI startup settings.
+ * zh_CN: 应用当前 Qt 版本所需的 High-DPI 启动设置。
+ */
+inline void fluentPrepareHighDpiApplicationAttributes() {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
+    QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
+        Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
+}
+
+/**
+ * @brief Reports whether device-independent High-DPI scaling is active by contract.
+ * zh_CN: 返回设备无关 High-DPI 缩放是否已按契约启用。
+ */
+inline bool fluentHighDpiScalingIsEnabled() {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    return QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling)
+        && QCoreApplication::testAttribute(Qt::AA_UseHighDpiPixmaps);
+#else
+    return true;
+#endif
+}
 
 inline FluentSystemColorScheme fluentSystemColorScheme() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
@@ -259,16 +287,27 @@ inline QRectF fluentPixmapSourceRectForDraw(const QRectF& logicalSource,
 
 inline QPixmap fluentIconPixmapForLogicalExtent(const QIcon& icon,
                                                 const QSize& logicalExtent,
-                                                qreal devicePixelRatio = 1.0) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+                                                qreal devicePixelRatio = 1.0,
+                                                QWindow* targetWindow = nullptr) {
     const qreal dpr = qMax<qreal>(1.0, devicePixelRatio);
-    QPixmap pixmap = icon.pixmap(QSize(qMax(1, qRound(logicalExtent.width() * dpr)),
-                                      qMax(1, qRound(logicalExtent.height() * dpr))));
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // Qt 5 applies the application's High-DPI factor inside QIcon::pixmap().
+    // Passing a physical extent here would therefore scale the icon twice.
+    QPixmap pixmap = targetWindow
+        ? icon.pixmap(targetWindow, logicalExtent)
+        : icon.pixmap(logicalExtent);
+    const QSize physicalExtent(qMax(1, qRound(logicalExtent.width() * dpr)),
+                               qMax(1, qRound(logicalExtent.height() * dpr)));
+    if (!pixmap.isNull() && pixmap.size() != physicalExtent) {
+        pixmap = pixmap.scaled(physicalExtent,
+                               Qt::KeepAspectRatio,
+                               Qt::SmoothTransformation);
+    }
     pixmap.setDevicePixelRatio(dpr);
     return pixmap;
 #else
-    Q_UNUSED(devicePixelRatio);
-    return icon.pixmap(logicalExtent);
+    Q_UNUSED(targetWindow);
+    return icon.pixmap(logicalExtent, dpr);
 #endif
 }
 
@@ -519,4 +558,19 @@ inline bool fluentIsDevicePixelRatioChangeEvent(const QEvent* event) {
     Q_UNUSED(event);
     return false;
 #endif
+}
+
+/**
+ * @brief Returns true when a widget should refresh display-scale-dependent caches.
+ * zh_CN: 判断控件是否应刷新依赖显示缩放比例的缓存。
+ *
+ * ScreenChangeInternal is available on the full Qt 5.15+/6.2+ support range;
+ * Qt 6.6 additionally exposes a dedicated DevicePixelRatioChange event.
+ * zh_CN: 全部支持的 Qt 5.15+/6.2+ 均可使用 ScreenChangeInternal；Qt 6.6+
+ * 还会提供独立的 DevicePixelRatioChange 事件。
+ */
+inline bool fluentIsDisplayScaleChangeEvent(const QEvent* event) {
+    return event
+        && (event->type() == QEvent::ScreenChangeInternal
+            || fluentIsDevicePixelRatioChangeEvent(event));
 }

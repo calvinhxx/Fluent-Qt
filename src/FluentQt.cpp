@@ -2,11 +2,13 @@
 
 #include <QFont>
 #include <QFontDatabase>
+#include <QCoreApplication>
 #include <QResource>
 #include <QString>
 #include <QStringList>
 
 #include "compatibility/FontCompat.h"
+#include "compatibility/QtCompat.h"
 #include "utils/private/FluentQtLogging_p.h"
 
 static void initializeFluentQtResourceFile()
@@ -122,6 +124,16 @@ bool loadBundledFonts()
 } // namespace
 
 namespace fluent {
+
+void prepareHighDpiApplication()
+{
+    if (QCoreApplication::instance()) {
+        qCWarning(logging::windowingCategory)
+            << "prepareHighDpiApplication must be called before QApplication";
+    } else {
+        fluentPrepareHighDpiApplicationAttributes();
+    }
+}
 
 bool initializeResources()
 {
