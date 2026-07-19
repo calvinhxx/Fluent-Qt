@@ -111,6 +111,7 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 int main(int argc, char* argv[])
 {
+    fluent::prepareHighDpiApplication();
     QApplication app(argc, argv);
     fluent::initializeResources();
 
