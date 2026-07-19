@@ -495,7 +495,14 @@ void GalleryWindow::createTitleBarContent()
         return m_navigationView
             && m_navigationView->effectiveDisplayMode() == DisplayMode::LeftMinimal;
     };
-    m_titleBar = new GalleryTitleBarController(titleBar(), searchTitles, std::move(callbacks), this);
+    auto* chrome = titleBar();
+    // The controller must die before the title bar's widget children. Parenting
+    // it to the chrome establishes that order and lets its destructor detach
+    // host-window event filters while both watched objects are still valid.
+    // zh_CN: 控制器必须先于标题栏的控件子对象析构。以 chrome 为父对象可建立
+    // 该顺序，并让析构函数在两个监听对象仍有效时解除宿主窗口事件过滤器。
+    m_titleBar = new GalleryTitleBarController(chrome, searchTitles,
+                                               std::move(callbacks), chrome);
 }
 
 void GalleryWindow::handleSelectedRouteChanged(const QString& routeId)

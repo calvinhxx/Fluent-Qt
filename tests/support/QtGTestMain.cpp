@@ -1,5 +1,7 @@
 #include "QtTestEnvironment.h"
 
+#include <FluentQt/FluentQt.h>
+
 #include "support/logging/Log.h"
 
 #include <QApplication>
@@ -8,6 +10,7 @@
 int main(int argc, char** argv)
 {
     tests::support::configureOffscreenPlatformForAutomation();
+    fluent::prepareHighDpiApplication();
 
     fluent::support::logging::InitializationOptions loggingOptions;
     loggingOptions.installQtMessageHandler = true;

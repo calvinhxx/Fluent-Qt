@@ -655,8 +655,7 @@ bool Window::event(QEvent* event)
     const QEvent::Type type = event ? event->type() : QEvent::None;
     const bool handled = QWidget::event(event);
     bool nativeSurfaceMayHaveChanged = type == QEvent::WinIdChange
-        || type == QEvent::ScreenChangeInternal
-        || fluentIsDevicePixelRatioChangeEvent(event);
+        || fluentIsDisplayScaleChangeEvent(event);
     if (nativeSurfaceMayHaveChanged && isVisible()) {
         scheduleBackdropResolution();
         scheduleNativeChromeRepair();

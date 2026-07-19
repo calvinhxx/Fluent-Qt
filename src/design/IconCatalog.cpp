@@ -16,16 +16,6 @@
 namespace Typography::Icons {
 namespace {
 
-QString codepointGlyph(quint32 codepoint)
-{
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    const char32_t value = static_cast<char32_t>(codepoint);
-#else
-    const uint value = codepoint;
-#endif
-    return QString::fromUcs4(&value, 1);
-}
-
 QString humanizeName(QString value)
 {
     value.replace(QLatin1Char('_'), QLatin1Char(' '));
@@ -195,7 +185,7 @@ QString sourceNameFor(const QString& glyphOrName)
 
 QString IconInfo::glyph() const
 {
-    return codepointGlyph(codepoint);
+    return fluentCodepointGlyph(codepoint);
 }
 
 const QVector<IconInfo>& catalog()

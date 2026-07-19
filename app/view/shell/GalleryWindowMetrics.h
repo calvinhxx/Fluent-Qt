@@ -14,6 +14,12 @@ struct AppWindow {
     static constexpr int MinHeight = Breakpoints::MinWindowHeight;
     static constexpr int InitialWidth = 1180;
     static constexpr int InitialHeight = 760;
+    static constexpr int InitialWidthPercent = 72;
+    static constexpr int InitialHeightPercent = 78;
+    static constexpr int InitialMinWidth = 900;
+    static constexpr int InitialMinHeight = 600;
+    static constexpr int InitialMaxWidth = 1440;
+    static constexpr int InitialMaxHeight = 900;
     static constexpr int LeftPanelReserve = 160;
 };
 

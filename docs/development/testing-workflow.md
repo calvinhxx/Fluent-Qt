@@ -55,6 +55,18 @@ ctest --preset vcpkg-linux-local-desktop -N
 ctest --preset vcpkg-linux-arm64-local-desktop -N
 ```
 
+- High-DPI smoke tests have the `high_dpi` label and run at exact 200% and
+  300% offscreen scale factors. Build `test_high_dpi` and run the anchored
+  label on any host:
+
+```bash
+cmake --build --preset vcpkg-linux --target test_high_dpi
+ctest --preset vcpkg-linux -L '^high_dpi$' --output-on-failure
+```
+
+See [High-DPI Workflow](high-dpi-workflow.md) for application integration and
+real mixed-monitor review.
+
 - Use established tokens in new test names when a semantic label should apply:
   `VisualCheck`, `Interactive`, `Animation`/`Animated`, `Slow`, `Windows`/`Win32`,
   or `MacOS`/`MacOs`/`Darwin`/`Cocoa`.

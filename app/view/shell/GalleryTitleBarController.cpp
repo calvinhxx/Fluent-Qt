@@ -8,8 +8,10 @@
 #include <QLabel>
 #include <QPoint>
 #include <QPropertyAnimation>
+#include <QTimer>
 #include <QVariantAnimation>
 
+#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/status_info/ToolTip.h"
@@ -80,9 +82,33 @@ GalleryTitleBarController::GalleryTitleBarController(fluent::windowing::TitleBar
     build(searchTitles);
 }
 
+GalleryTitleBarController::~GalleryTitleBarController()
+{
+    // The controller watches widgets owned by both the title bar and its host
+    // window. Detach before either hierarchy starts deleting popup children;
+    // otherwise teardown events can re-enter this filter after the title bar
+    // has already gone away.
+    // zh_CN: 控制器同时监听标题栏及其宿主窗口。需在任一控件树开始析构弹出层
+    // 子对象前解除过滤器，避免标题栏销毁后仍由清理事件重入本过滤器。
+    if (m_hostWindow)
+        m_hostWindow->removeEventFilter(this);
+    if (m_bar)
+        m_bar->removeEventFilter(this);
+    if (m_backButton)
+        m_backButton->removeEventFilter(this);
+    if (m_menuButton)
+        m_menuButton->removeEventFilter(this);
+
+    if (m_toolTip) {
+        m_toolTip->hide();
+        delete m_toolTip.data();
+        m_toolTip = nullptr;
+    }
+}
+
 void GalleryTitleBarController::build(const QStringList& searchTitles)
 {
-    auto* bar = m_bar;
+    auto* bar = m_bar.data();
     auto* layout = qobject_cast<fluent::AnchorLayout*>(bar->layout());
     if (!layout)
         return;
@@ -90,7 +116,7 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     bar->setTitleBarHeight(TitleBarMetrics::Height);
 
     m_backButton = new fluent::basicinput::Button(bar);
-    auto* backButton = m_backButton;
+    auto* backButton = m_backButton.data();
     backButton->setObjectName(QStringLiteral("GalleryTitleBar.BackButton"));
     backButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     backButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
@@ -113,7 +139,7 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     });
 
     m_menuButton = new fluent::basicinput::Button(bar);
-    auto* menuButton = m_menuButton;
+    auto* menuButton = m_menuButton.data();
     menuButton->setObjectName(QStringLiteral("GalleryTitleBar.MenuButton"));
     menuButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     menuButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
@@ -135,7 +161,7 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     appIcon->setObjectName(QStringLiteral("GalleryTitleBar.AppIcon"));
     appIcon->setAlignment(Qt::AlignCenter);
     appIcon->setFixedSize(TitleBarMetrics::AppIconSize, TitleBarMetrics::AppIconSize);
-    appIcon->setPixmap(appicon::pixmap(TitleBarMetrics::AppIconSize, bar->devicePixelRatioF()));
+    refreshAppIcon();
 
     auto* title = new fluent::textfields::Label(QStringLiteral("Fluent-Qt Gallery"), bar);
     m_title = title;
@@ -214,6 +240,9 @@ void GalleryTitleBarController::build(const QStringList& searchTitles)
     // centering-with-clamp, and collapse behaviour the anchor model can't express, so updateLayout()
     // positions it manually against the live bar width. zh_CN: 搜索框刻意不入 AnchorLayout，由 updateLayout() 手动定位。
     bar->installEventFilter(this);
+    m_hostWindow = bar->window();
+    if (m_hostWindow && m_hostWindow != bar)
+        m_hostWindow->installEventFilter(this);
     connect(bar, &fluent::windowing::TitleBar::windowActiveChanged, this,
             [this](bool active) {
                 m_windowActive = active;
@@ -253,12 +282,25 @@ bool GalleryTitleBarController::eventFilter(QObject* watched, QEvent* event)
         updateLayout();
     }
 
+    const bool watchesDisplay = m_bar
+        && (watched == m_bar || watched == m_bar->window());
+    if (watchesDisplay && fluentIsDisplayScaleChangeEvent(event)) {
+        hideToolTip();
+        // Event filters run before the receiver handles the event. Refresh on
+        // the next turn so QWidget::devicePixelRatioF() exposes the new screen.
+        // zh_CN: 事件过滤器早于接收者处理事件；延后一轮，确保读取到新屏幕的 DPR。
+        QTimer::singleShot(0, this, [this]() {
+            refreshAppIcon();
+            updateLayout();
+        });
+    }
+
     return QObject::eventFilter(watched, event);
 }
 
 void GalleryTitleBarController::updateLayout()
 {
-    auto* bar = m_bar;
+    auto* bar = m_bar.data();
     if (!bar || !m_searchBox)
         return;
 
@@ -359,7 +401,7 @@ void GalleryTitleBarController::setMenuEnabled(bool enabled)
 
 QWidget* GalleryTitleBarController::searchBox() const
 {
-    return m_searchBox;
+    return m_searchBox.data();
 }
 
 void GalleryTitleBarController::applyBackButtonReveal(qreal reveal)
@@ -374,6 +416,14 @@ void GalleryTitleBarController::applyBackButtonReveal(qreal reveal)
     if (auto* barLayout = m_bar ? m_bar->layout() : nullptr)
         barLayout->invalidate();
     updateLayout();
+}
+
+void GalleryTitleBarController::refreshAppIcon()
+{
+    if (!m_bar || !m_appIcon)
+        return;
+    m_appIcon->setPixmap(appicon::pixmap(TitleBarMetrics::AppIconSize,
+                                        m_bar->devicePixelRatioF()));
 }
 
 void GalleryTitleBarController::setChromeRevealOpacity(qreal opacity)

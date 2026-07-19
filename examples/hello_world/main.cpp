@@ -6,6 +6,7 @@
 
 int main(int argc, char* argv[])
 {
+    fluent::prepareHighDpiApplication();
     QApplication app(argc, argv);
     fluent::initializeResources();
     app.setFont(Typography::Styles::Body.toQFont());

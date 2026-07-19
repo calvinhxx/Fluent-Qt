@@ -13,6 +13,7 @@
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QSizePolicy>
 #include <QStandardItemModel>
 #include <QStringList>
 #include <QStyledItemDelegate>
@@ -42,7 +43,7 @@
 namespace fluent::gallery {
 namespace {
 
-constexpr int kHeroHeight = 370;
+constexpr int kHeroHeight = 390;
 constexpr int kHeroMarginX = 24;     // Text inset (was 48) — content shifts left overall.
 constexpr int kHeroBottomFade = 184; // Bottom band that dissolves the banner into the page (lengthened so the seam under the card strip fully dissolves). zh_CN: 加长底部溶解带，使卡片条下方的横向硬缝彻底化开。
 constexpr int kBodyMarginX = 24;     // Body content inset (was 48) — matches the hero.
@@ -53,7 +54,7 @@ constexpr int kHeroLinkCardHeight = 150;
 constexpr int kHeroLinkCardSpacing = 16;
 constexpr int kHeroLinkCardPadding = 18;
 constexpr int kHeroLinkIconSize = 32;
-constexpr int kHeroLinkStripTop = 184;
+constexpr int kHeroLinkStripTop = 200;
 constexpr int kHeroLinkTopPad = 8;        // Room above each card so the hover-lifted top edge + accent border aren't clipped. zh_CN: 卡片上方预留高度，使 hover 抬起的顶边与强调色描边不被裁切。
 constexpr int kHeroLinkShadowMargin = 24; // Room below each card for the soft drop shadow + hover lift. zh_CN: 卡片下方预留高度，容纳柔和投影与 hover 抬升。
 // The delegate draws the card inset by kHeroLinkTopPad inside a cell this tall, leaving room on
@@ -624,9 +625,9 @@ public:
         // The floating link ListView occupies the lower half of the hero, so keep the
         // text block in the upper band and let the card strip sit on the artwork.
         // zh_CN: 悬浮链接 ListView 占用 hero 下半区，因此文字块放在上方，卡片条压在横幅图上。
-        layout->setContentsMargins(kHeroMarginX, 36, kHeroMarginX,
+        layout->setContentsMargins(kHeroMarginX, 24, kHeroMarginX,
                                    kHeroHeight - kHeroLinkStripTop + 12);
-        layout->setSpacing(12);
+        layout->setSpacing(0);
 
         m_iconLabel = new QLabel(this);
         m_iconLabel->setObjectName(QStringLiteral("galleryHomeHeroIcon"));
@@ -634,15 +635,14 @@ public:
         m_iconLabel->setPixmap(appicon::pixmap(kHeroIconSize, devicePixelRatioF()));
         m_iconLabel->setStyleSheet(QStringLiteral("background: transparent;"));
         layout->addWidget(m_iconLabel);
-        // The TitleLarge glyphs sit low in their line box, so the bare 12px layout spacing reads
-        // as a cramped ~8px gap under the icon — add a little breathing room above the title.
-        // zh_CN: TitleLarge 字形在行框中偏下，纯 12px 间距视觉上只剩约 8px，显得拥挤——在标题上方补一点留白。
-        layout->addSpacing(8);
+        layout->addSpacing(12);
 
         m_titleLabel = new fluent::textfields::Label(title, this);
         m_titleLabel->setObjectName(QStringLiteral("galleryHomeHeroTitle"));
         m_titleLabel->setFluentTypography(Typography::FontRole::TitleLarge);
+        m_titleLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
         layout->addWidget(m_titleLabel);
+        layout->addSpacing(4);
 
         m_taglineLabel = new fluent::textfields::Label(tagline, this);
         m_taglineLabel->setObjectName(QStringLiteral("galleryHomeHeroTagline"));
@@ -899,9 +899,17 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
 
     auto* body = new QWidget(this);
     body->setObjectName(QStringLiteral("galleryHomeBody"));
+    // The page scroll layout should use the body's content height. Letting the
+    // default Preferred vertical policy grow the body distributes spare height
+    // into QLabel rows on some platform/font combinations, producing a large
+    // blank band before the first card grid.
+    // zh_CN: 页面滚动布局应使用正文的内容高度。默认 Preferred 垂直策略在部分平台/字体
+    // 组合下会把多余高度分配给 QLabel 行，导致首个卡片网格前出现大片空白。
+    body->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     auto* bodyLayout = new QVBoxLayout(body);
     bodyLayout->setContentsMargins(kBodyMarginX, kBodyMarginTop, kBodyMarginX, 48);
     bodyLayout->setSpacing(16);
+    bodyLayout->setAlignment(Qt::AlignTop);
 
     // Each section's cards are drawn by one responsive GalleryEntryGrid (same as the
     // category pages), so they reflow 1/2/3 columns with the window instead of clipping.
@@ -920,6 +928,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     fluent::textfields::Label* featuredHeader = createTrackedLabel(
         QStringLiteral("Featured components"), Typography::FontRole::Subtitle, TextRole::Primary);
     featuredHeader->setObjectName(QStringLiteral("galleryHomeFeaturedHeader"));
+    featuredHeader->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     bodyLayout->addWidget(featuredHeader);
 
     QVector<GalleryEntryGrid::Entry> featuredEntries;
@@ -941,6 +950,7 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
     fluent::textfields::Label* categoriesHeader = createTrackedLabel(
         QStringLiteral("Browse by category"), Typography::FontRole::Subtitle, TextRole::Primary);
     categoriesHeader->setObjectName(QStringLiteral("galleryHomeCategoriesHeader"));
+    categoriesHeader->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     bodyLayout->addWidget(categoriesHeader);
 
     QVector<GalleryEntryGrid::Entry> categoryEntries;

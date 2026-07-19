@@ -8,6 +8,8 @@
 #include <QStandardPaths>
 #include <QTimer>
 
+#include <array>
+
 #include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -23,7 +25,18 @@ constexpr char kNavigationStyleKey[] = "settings/navigationStyle";
 constexpr char kWindowEffectKey[] = "settings/windowEffect";
 constexpr char kCloseBehaviorKey[] = "settings/closeBehavior";
 constexpr char kCloseBehaviorConfirmedKey[] = "settings/closeBehaviorConfirmed";
+constexpr char kUiScalePercentKey[] = "settings/uiScalePercent";
+constexpr char kWindowNormalGeometryKey[] = "window/normalGeometry";
+constexpr char kWindowScreenNameKey[] = "window/screenName";
+constexpr char kWindowMaximizedKey[] = "window/maximized";
+constexpr char kWindowScalePercentKey[] = "window/scalePercent";
 constexpr char kIntroCompletedKey[] = "intro/completed";
+constexpr char kManagedScaleEnvironment[] = "FLUENT_QT_GALLERY_SCALE_MANAGED";
+constexpr char kOriginalScaleEnvironment[] = "FLUENT_QT_GALLERY_ORIGINAL_QT_SCALE_FACTOR";
+
+constexpr std::array<int, 8> kSupportedUiScalePercents{
+    100, 110, 125, 150, 175, 200, 250, 300
+};
 
 using BackdropEffect = fluent::windowing::BackdropEffect;
 
@@ -52,6 +65,16 @@ QString configFilePath()
 QSettings configSettings()
 {
     return QSettings(configFilePath(), QSettings::IniFormat);
+}
+
+QByteArray scaleFactorEnvironmentValue(int percent)
+{
+    QByteArray value = QByteArray::number(static_cast<double>(percent) / 100.0, 'f', 2);
+    while (value.endsWith('0'))
+        value.chop(1);
+    if (value.endsWith('.'))
+        value.chop(1);
+    return value;
 }
 
 fluent::FluentElement::Theme systemTheme()
@@ -88,6 +111,54 @@ GallerySettings& GallerySettings::instance()
 {
     static auto* settings = new GallerySettings(qApp);
     return *settings;
+}
+
+int GallerySettings::normalizeUiScalePercent(int percent)
+{
+    int closest = kSupportedUiScalePercents.front();
+    int closestDistance = qAbs(percent - closest);
+    for (const int candidate : kSupportedUiScalePercents) {
+        const int distance = qAbs(percent - candidate);
+        if (distance < closestDistance) {
+            closest = candidate;
+            closestDistance = distance;
+        }
+    }
+    return closest;
+}
+
+int GallerySettings::applyStartupUiScalePreference()
+{
+    int percent = 100;
+    if (persistenceAvailable()) {
+        QSettings settings(configFilePath(), QSettings::IniFormat);
+        const int persistedPercent =
+            settings.value(QString::fromLatin1(kUiScalePercentKey), 100).toInt();
+        percent = normalizeUiScalePercent(persistedPercent);
+        if (percent != persistedPercent)
+            settings.setValue(QString::fromLatin1(kUiScalePercentKey), percent);
+    }
+
+    const bool inheritedManagedScale =
+        qEnvironmentVariableIntValue(kManagedScaleEnvironment) == 1;
+    if (percent == 100) {
+        if (inheritedManagedScale) {
+            const QByteArray original = qgetenv(kOriginalScaleEnvironment);
+            if (original.isEmpty())
+                qunsetenv("QT_SCALE_FACTOR");
+            else
+                qputenv("QT_SCALE_FACTOR", original);
+            qunsetenv(kManagedScaleEnvironment);
+            qunsetenv(kOriginalScaleEnvironment);
+        }
+        return percent;
+    }
+
+    if (!inheritedManagedScale && qEnvironmentVariableIsSet("QT_SCALE_FACTOR"))
+        qputenv(kOriginalScaleEnvironment, qgetenv("QT_SCALE_FACTOR"));
+    qputenv("QT_SCALE_FACTOR", scaleFactorEnvironmentValue(percent));
+    qputenv(kManagedScaleEnvironment, QByteArrayLiteral("1"));
+    return percent;
 }
 
 GallerySettings::GallerySettings(QObject* parent)
@@ -231,6 +302,48 @@ void GallerySettings::setCloseBehavior(CloseBehavior behavior)
                  .arg(static_cast<int>(behavior)));
 }
 
+void GallerySettings::setUiScalePercent(int percent)
+{
+    percent = normalizeUiScalePercent(percent);
+    if (m_uiScalePercent == percent)
+        return;
+
+    m_uiScalePercent = percent;
+    if (persistenceAvailable()) {
+        configSettings().setValue(QString::fromLatin1(kUiScalePercentKey), percent);
+    }
+    emit uiScalePercentChanged(percent);
+    LOG_INFO(QStringLiteral("GallerySettings uiScalePercentChanged percent=%1")
+                 .arg(percent));
+}
+
+void GallerySettings::setWindowPlacement(const QRect& normalGeometry,
+                                         const QString& screenName,
+                                         bool maximized,
+                                         int scalePercent)
+{
+    scalePercent = normalizeUiScalePercent(scalePercent);
+    if (m_windowNormalGeometry == normalGeometry
+        && m_windowScreenName == screenName
+        && m_windowMaximized == maximized
+        && m_windowPlacementScalePercent == scalePercent) {
+        return;
+    }
+
+    m_windowNormalGeometry = normalGeometry;
+    m_windowScreenName = screenName;
+    m_windowMaximized = maximized;
+    m_windowPlacementScalePercent = scalePercent;
+    if (!persistenceAvailable())
+        return;
+
+    QSettings settings = configSettings();
+    settings.setValue(QString::fromLatin1(kWindowNormalGeometryKey), normalGeometry);
+    settings.setValue(QString::fromLatin1(kWindowScreenNameKey), screenName);
+    settings.setValue(QString::fromLatin1(kWindowMaximizedKey), maximized);
+    settings.setValue(QString::fromLatin1(kWindowScalePercentKey), scalePercent);
+}
+
 void GallerySettings::setCloseBehaviorConfirmed(bool confirmed)
 {
     if (m_closeBehaviorConfirmed == confirmed)
@@ -301,6 +414,16 @@ void GallerySettings::load()
     m_navigationStyle = static_cast<NavigationStyle>(navigation);
     m_windowEffect = static_cast<BackdropEffect>(windowEffect);
     m_closeBehavior = static_cast<CloseBehavior>(closeBehavior);
+    m_uiScalePercent = normalizeUiScalePercent(
+        settings.value(QString::fromLatin1(kUiScalePercentKey), 100).toInt());
+    m_windowNormalGeometry = settings.value(
+        QString::fromLatin1(kWindowNormalGeometryKey)).toRect();
+    m_windowScreenName = settings.value(
+        QString::fromLatin1(kWindowScreenNameKey)).toString();
+    m_windowMaximized = settings.value(
+        QString::fromLatin1(kWindowMaximizedKey), false).toBool();
+    m_windowPlacementScalePercent = settings.value(
+        QString::fromLatin1(kWindowScalePercentKey), 0).toInt();
     m_closeBehaviorConfirmed = settings.value(
         QString::fromLatin1(kCloseBehaviorConfirmedKey), false).toBool();
     m_introCompleted = settings.value(QString::fromLatin1(kIntroCompletedKey), false).toBool();
