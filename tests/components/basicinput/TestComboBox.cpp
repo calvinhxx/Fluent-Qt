@@ -476,6 +476,51 @@ TEST_F(ComboBoxTest, PopupFlipsAboveNearBottomEdge) {
     EXPECT_LT(card.bottom(), cb->geometry().top());
 }
 
+TEST_F(ComboBoxTest, PopupFitIncludesAnchorGapAndSurfaceMargin) {
+    window->resize(520, 600);
+    ComboBox* cb = new ComboBox(window);
+    // Six visible rows fit below by card height alone, but not once the popup
+    // gap and window margin are included. There is ample room above.
+    cb->setGeometry(40, 317, 184, Spacing::ControlHeight::Standard);
+    cb->addItems({"Follow system (100%)", "110%", "125%", "150%", "175%",
+                  "200%", "250%", "300%"});
+
+    auto* popup = openPopupFor(cb, window);
+    ASSERT_NE(popup, nullptr);
+    const QRect card = popupCardRect(popup);
+
+    EXPECT_LT(card.bottom(), cb->geometry().top());
+}
+
+TEST_F(ComboBoxTest, ScrollingPopupWidensForItsLongestLabel) {
+    window->resize(520, 600);
+    ComboBox* cb = new ComboBox(window);
+    cb->setGeometry(40, 40, 150, Spacing::ControlHeight::Standard);
+    cb->addItems({"Follow system (100%)", "110%", "125%", "150%", "175%",
+                  "200%", "250%", "300%"});
+
+    auto* popup = openPopupFor(cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>(
+        "ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+    const QModelIndex longest = listView->model()->index(0, 0);
+    const QRect row = static_cast<QListView*>(listView)->visualRect(longest);
+    ASSERT_FALSE(row.isEmpty());
+
+    int rightInset = 5;
+    if (auto* scrollBar = listView->verticalFluentScrollBar())
+        rightInset += scrollBar->thickness();
+    const int textWidth = row.adjusted(5, 3, -rightInset, -3)
+                              .adjusted(16, 0, -8, 0)
+                              .width();
+    const QString label = longest.data(Qt::DisplayRole).toString();
+    const QFontMetrics metrics(listView->font());
+
+    EXPECT_GT(popupCardRect(popup).width(), cb->width());
+    EXPECT_EQ(metrics.elidedText(label, Qt::ElideRight, textWidth), label);
+}
+
 TEST_F(ComboBoxTest, PopupClampsNearRightEdge) {
     window->resize(300, 240);
     ComboBox* cb = new ComboBox(window);

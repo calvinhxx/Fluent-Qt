@@ -5,6 +5,7 @@
 #include <QMouseEvent>
 #include <QPropertyAnimation>
 #include <QApplication>
+#include <QFontMetrics>
 #include <QKeyEvent>
 #include <QResizeEvent>
 #include <QWheelEvent>
@@ -25,6 +26,9 @@ namespace {
 static constexpr int kPopupShadowMargin = ::Spacing::Standard;
 static constexpr int kPopupContentInset = ::Spacing::XSmall / 2;
 static constexpr int kPopupWindowMargin = 4;
+static constexpr int kPopupItemOuterInset = 5;
+static constexpr int kPopupItemTextLeftInset = 16;
+static constexpr int kPopupItemTextRightInset = 8;
 static constexpr qreal kPopupTextOpticalOffsetY = -2.0;
 static constexpr int kClosedFieldTextFitClearance = ::Spacing::XSmall;
 
@@ -61,7 +65,7 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
         radius = m_themeHost->themeRadius();
     }
 
-    int itemRightInset = 5;
+    int itemRightInset = kPopupItemOuterInset;
     if (m_view && m_view->verticalScrollBar() &&
         m_view->verticalScrollBar()->maximum() > m_view->verticalScrollBar()->minimum()) {
         if (auto* listView = qobject_cast<fluent::collections::ListView*>(m_view)) {
@@ -70,7 +74,8 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
             }
         }
     }
-    QRectF bgRect = QRectF(option.rect).adjusted(5, 3, -itemRightInset, -3);
+    QRectF bgRect = QRectF(option.rect).adjusted(kPopupItemOuterInset, 3,
+                                                -itemRightInset, -3);
     const int cornerR = radius.control > 0 ? radius.control : 4;
 
     const bool isSelected = option.state & QStyle::State_Selected;
@@ -106,8 +111,8 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // ListView owns the selected indicator overlay. The delegate only paints the
     // row background and text; drawing another indicator here creates a double
     // blue pill in ComboBox flyouts.
-    const int textLeft = 16;
-    QRectF textRect = bgRect.adjusted(textLeft, 0, -8, 0);
+    QRectF textRect = bgRect.adjusted(kPopupItemTextLeftInset, 0,
+                                      -kPopupItemTextRightInset, 0);
     // Center the actual UI-font ink rather than its asymmetric ascent/descent line box.
     // zh_CN: 按 UI 字体的字形墨迹居中，而不是按上下不对称的 ascent/descent 行框居中。
     textRect.translate(0, kPopupTextOpticalOffsetY);
@@ -186,7 +191,25 @@ void ComboBox::ComboBoxPopup::showForComboBox() {
     const int rowsH     = maxVisible * itemH;
     const int sSize     = kPopupShadowMargin;
     const int cardInset = kPopupContentInset;
-    const int cardW     = qMax(m_comboBox->width(), 120);
+    int widestText = 0;
+    const QFontMetrics popupMetrics(m_listView->font());
+    for (int index = 0; index < itemCount; ++index)
+        widestText = qMax(widestText,
+                          popupMetrics.horizontalAdvance(m_comboBox->itemText(index)));
+
+    int scrollClearance = 0;
+    if (itemCount > maxVisible) {
+        scrollClearance = ::Spacing::XSmall;
+        if (auto* scrollBar = m_listView->verticalFluentScrollBar())
+            scrollClearance = qMax(scrollClearance, scrollBar->thickness());
+    }
+    const int textChrome = cardInset * 2
+        + kPopupItemOuterInset * 2
+        + kPopupItemTextLeftInset
+        + kPopupItemTextRightInset
+        + scrollClearance
+        + ::Spacing::Standard;
+    const int cardW = qMax(qMax(m_comboBox->width(), 120), widestText + textChrome);
     const int cardH     = rowsH + cardInset * 2;
     const QSize totalSize = ::fluent::overlay::outerSizeForVisibleCard(QSize(cardW, cardH), sSize);
 
@@ -238,7 +261,15 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const {
     const QRect surface = ::fluent::overlay::overlaySurfaceRect(top);
     const int spaceBelow = surface.bottom() - anchor.bottom();
     const int spaceAbove = anchor.top() - surface.top();
-    const bool placeAbove = spaceBelow < cardH && spaceAbove > spaceBelow;
+    // Include the anchor gap and the surface safety margin in the fit test. If
+    // only the card height is considered, a popup that is a few pixels too tall
+    // is first placed below and then clamped upward across its owning field.
+    // zh_CN: 适配判断必须计入锚点间距与表面安全边距；只比较卡片高度会让仅差数像素的
+    // 弹层先向下打开，再被钳制回输入框上方并与其重叠。
+    const int requiredSpace = anchorOffset() + cardH + kPopupWindowMargin;
+    const bool fitsBelow = spaceBelow >= requiredSpace;
+    const bool fitsAbove = spaceAbove >= requiredSpace;
+    const bool placeAbove = !fitsBelow && (fitsAbove || spaceAbove > spaceBelow);
 
     QPoint cardTopLeft(anchor.left(), placeAbove
         ? anchor.top() - anchorOffset() - cardH

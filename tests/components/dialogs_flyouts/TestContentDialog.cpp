@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <QApplication>
 #include <QTimer>
 #include <QSignalSpy>
@@ -287,12 +288,11 @@ TEST_F(ContentDialogTest, ButtonBarHeightIs68) {
         << "Button bar height should be 68px (was 80), got " << bar->height();
 }
 
-TEST_F(ContentDialogTest, ButtonBarIsLeftAligned) {
+TEST_F(ContentDialogTest, ButtonBarBalancesTwoVisibleActions) {
     // 按钮条应左对齐：可见按钮的最右侧位置 < 按钮条 contentsRect 右边界
     ContentDialog dialog(window);
     dialog.setFixedSize(572, 300);
     dialog.setPrimaryButtonText("Save");
-    dialog.setSecondaryButtonText("Don't Save");
     dialog.setCloseButtonText("Cancel");
 
     // 触发 layout
@@ -304,19 +304,26 @@ TEST_F(ContentDialogTest, ButtonBarIsLeftAligned) {
     QWidget* bar = findButtonBar(&dialog);
     ASSERT_NE(bar, nullptr);
 
-    auto buttons = dialog.findChildren<fluent::basicinput::Button*>();
-    int rightmost = -1;
+    QVector<fluent::basicinput::Button*> visibleButtons;
+    const auto buttons = dialog.findChildren<fluent::basicinput::Button*>();
     for (auto* btn : buttons) {
         // 检查相对于 bar 的可见性（而非屏幕可见性）；geometry 在 layout 后即有效
-        if (!btn->isVisibleTo(bar)) continue;
-        rightmost = std::max(rightmost, btn->geometry().right());
+        if (btn->isVisibleTo(bar))
+            visibleButtons.append(btn);
     }
 
-    ASSERT_GT(rightmost, -1);
-    EXPECT_LT(rightmost, bar->contentsRect().right())
-        << "Rightmost visible button should not reach button bar's right edge "
-           "(should be left-aligned with whitespace). rightmost=" << rightmost
-        << " barRight=" << bar->contentsRect().right();
+    ASSERT_EQ(visibleButtons.size(), 2);
+    std::sort(visibleButtons.begin(), visibleButtons.end(),
+              [](const auto* left, const auto* right) {
+                  return left->geometry().left() < right->geometry().left();
+              });
+
+    EXPECT_NEAR(visibleButtons.at(0)->width(), visibleButtons.at(1)->width(), 1);
+    const int leftInset = visibleButtons.first()->geometry().left();
+    const int rightInset = bar->contentsRect().right()
+        - visibleButtons.last()->geometry().right();
+    EXPECT_NEAR(leftInset, rightInset, 1)
+        << "The action row should have symmetric outer padding";
 
     dialog.setAnimationEnabled(false);
     dialog.done(0);

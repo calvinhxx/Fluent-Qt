@@ -92,11 +92,13 @@ signals:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void showEvent(QShowEvent* event) override;
 
 private:
     void setupInternalLayout();
     void updateButtonBar();
     void updateContentAnchors();
+    void ensureContentFits();
 
     fluent::textfields::Label* m_titleLabel   = nullptr;
     QWidget*                     m_contentWidget = nullptr;
