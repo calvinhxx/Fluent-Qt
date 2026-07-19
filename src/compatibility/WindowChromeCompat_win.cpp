@@ -8,6 +8,7 @@
 #include <windowsx.h>
 #include <dwmapi.h>
 
+#include <QtMath>
 #include <QWindow>
 
 // DWM system-backdrop / dark-mode attributes (defined here so we don't depend on a
