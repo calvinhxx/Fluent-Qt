@@ -68,7 +68,8 @@ constexpr int kHeroScrollButtonWidth = 16;
 constexpr int kHeroScrollButtonHeight = 38;
 constexpr int kHeroScrollButtonMarginX = 8;
 constexpr int kHeroScrollButtonLift = 8;
-const QString kExternalLinkGlyph = QString::fromUtf16(u"\uE8A7");
+const QString kExternalLinkIconName =
+    QStringLiteral("ic_fluent_open_16_regular");
 
 enum HomeLinkRole {
     LinkTitleRole = Qt::UserRole + 1,
@@ -360,8 +361,9 @@ public:
         textY += titleMetrics.height() + 4;
         const QString description = index.data(LinkDescriptionRole).toString();
 
-        QFont glyphFont(Typography::FontFamily::FluentIcons);
-        glyphFont.setPixelSize(13);
+        const QFont glyphFont = Typography::Icons::font(13);
+        const QString externalLinkGlyph =
+            Typography::Icons::glyph(kExternalLinkIconName);
         // External-link glyph moves to the top-right corner and turns accent on hover, reading as
         // a standard "opens externally" affordance instead of floating alone in the bottom corner.
         // zh_CN: 外链字形移至右上角，hover 时转强调色，作为标准“外部打开”记号，而非孤零零浮在右下角。
@@ -381,7 +383,7 @@ public:
 
         painter->setFont(glyphFont);
         painter->setPen(active ? colors.accentDefault : colors.textSecondary);
-        painter->drawText(externalRect, Qt::AlignCenter, kExternalLinkGlyph);
+        painter->drawText(externalRect, Qt::AlignCenter, externalLinkGlyph);
 
         painter->restore();
     }
@@ -393,6 +395,7 @@ public:
         : fluent::collections::ListView(parent)
     {
         setObjectName(QStringLiteral("galleryHomeHeroLinksView"));
+        setProperty("externalLinkIconName", kExternalLinkIconName);
         setAccessibleName(QStringLiteral("Home links"));
         setViewMode(QListView::IconMode);
         setFlow(QListView::LeftToRight);

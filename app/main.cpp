@@ -2,12 +2,13 @@
 
 #include <QApplication>
 #include <QGuiApplication>
-#include <QProcess>
+#include <QTimer>
 
 #include "support/logging/Log.h"
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryApplicationController.h"
 #include "view/shell/GalleryApplicationLifecycle.h"
+#include "view/shell/GalleryApplicationRelauncher.h"
 #include "view/shell/GallerySingleInstance.h"
 #include "view/shell/GalleryWindow.h"
 #include "view/shell/GalleryWindowPlacement.h"
@@ -18,15 +19,6 @@
 #endif
 
 namespace {
-
-bool launchRestartedApplication(const QString& program,
-                                const QStringList& arguments)
-{
-    QProcess process;
-    process.setProgram(program);
-    process.setArguments(arguments);
-    return process.startDetached();
-}
 
 int runGalleryApplication(int argc,
                           char** argv,
@@ -46,6 +38,8 @@ int runGalleryApplication(int argc,
     fluent::prepareHighDpiApplication();
 
     QApplication app(argc, argv);
+    const bool restartedLaunch = fluent::gallery::relaunch::isRestartedLaunch(
+        QCoreApplication::arguments());
 #ifdef Q_OS_LINUX
     QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
 #endif
@@ -60,10 +54,11 @@ int runGalleryApplication(int argc,
     loggingOptions.installQtMessageHandler = true;
     loggingOptions.logFilePath = fluent::support::logging::defaultLogFilePath();
     fluent::support::logging::initialize(loggingOptions);
-    LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2 logFile=%3 uiScalePercent=%4")
+    LOG_INFO(QStringLiteral("GalleryApp startup appName=%1 organization=%2 logFile=%3 uiScalePercent=%4 restarted=%5")
                  .arg(QApplication::applicationName(), QApplication::organizationName(),
                       loggingOptions.logFilePath)
-                 .arg(startupScalePercent));
+                 .arg(startupScalePercent)
+                 .arg(restartedLaunch));
     app.setWindowIcon(fluent::gallery::appicon::icon());
 
     fluent::gallery::GallerySingleInstance singleInstance(
@@ -92,6 +87,13 @@ int runGalleryApplication(int argc,
         window.showMaximized();
     else
         window.show();
+    if (restartedLaunch) {
+        QTimer::singleShot(0,
+                           &applicationController,
+                           [&applicationController]() {
+                               applicationController.restoreWindow();
+                           });
+    }
 
     const int exitCode = app.exec();
     placement.saveNow();
@@ -102,6 +104,8 @@ int runGalleryApplication(int argc,
         *restartArguments = QCoreApplication::arguments();
         if (!restartArguments->isEmpty())
             restartArguments->removeFirst();
+        *restartArguments = fluent::gallery::relaunch::stripRestartArguments(
+            *restartArguments);
     }
     return exitCode;
 }
@@ -118,11 +122,22 @@ int main(int argc, char** argv)
     // runGalleryApplication has released the single-instance lock before the
     // replacement starts, avoiding a race with the old process's teardown.
     if (exitCode == fluent::gallery::RestartExitCode) {
-        const bool launched = launchRestartedApplication(restartProgram,
-                                                         restartArguments);
-        if (!launched)
-            LOG_CRITICAL(QStringLiteral("GalleryApp failed to launch the restarted process"));
-        return launched ? 0 : 1;
+        const auto launch = fluent::gallery::relaunch::launchApplication(
+            restartProgram, restartArguments);
+        if (!launch.warningString.isEmpty()) {
+            LOG_WARN(QStringLiteral("GalleryApp restart fallback warning=%1")
+                         .arg(launch.warningString));
+        }
+        if (!launch.started) {
+            LOG_CRITICAL(QStringLiteral("GalleryApp failed to launch the restarted process launcher=%1 error=%2")
+                             .arg(launch.launcher, launch.errorString));
+        } else {
+            LOG_INFO(QStringLiteral("GalleryApp restart submitted launcher=%1 pid=%2")
+                         .arg(launch.launcher)
+                         .arg(launch.processId));
+        }
+        fluent::support::logging::flush();
+        return launch.started ? 0 : 1;
     }
     return exitCode;
 }

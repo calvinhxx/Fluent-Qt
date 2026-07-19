@@ -53,6 +53,7 @@
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/shell/GalleryApplicationController.h"
+#include "view/shell/GalleryApplicationRelauncher.h"
 #include "view/shell/GalleryContentPresenter.h"
 #include "view/shell/GallerySingleInstance.h"
 #include "view/shell/GalleryTitleBarController.h"
@@ -344,6 +345,14 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithDesignResourceCards)
     ASSERT_NE(linkStrip, nullptr);
     ASSERT_NE(linkStrip->model(), nullptr);
     ASSERT_GE(linkStrip->model()->rowCount(), 3);
+    const QString externalLinkIconName =
+        linkStrip->property("externalLinkIconName").toString();
+    EXPECT_EQ(externalLinkIconName,
+              QStringLiteral("ic_fluent_open_16_regular"));
+    const QString externalLinkGlyph =
+        Typography::Icons::glyph(externalLinkIconName);
+    ASSERT_FALSE(externalLinkGlyph.isEmpty());
+    EXPECT_NE(externalLinkGlyph, QString::fromUtf16(u"\uE8A7"));
 
     struct ExpectedLink {
         QString title;
@@ -1684,6 +1693,45 @@ TEST_F(GalleryShellFrameworkTest, WindowPlacementUsesLogicalScreenBounds)
                                        QRect(0, 0, 1920, 1080),
                                        QSize(460, 500)),
               QRect(349, 119, 1382, 842));
+}
+
+TEST_F(GalleryShellFrameworkTest, ApplicationRelauncherBuildsNativeMacBundleRequest)
+{
+    using namespace fluent::gallery::relaunch;
+
+    const QString executable = QStringLiteral(
+        "/Applications/Fluent-Qt Gallery.app/Contents/MacOS/Fluent-Qt Gallery");
+    const QString bundle = QStringLiteral("/Applications/Fluent-Qt Gallery.app");
+    EXPECT_EQ(detail::macApplicationBundlePath(executable), bundle);
+    EXPECT_TRUE(detail::macApplicationBundlePath(
+        QStringLiteral("/tmp/fluent_qt_gallery")).isEmpty());
+
+    QProcessEnvironment environment;
+    environment.insert(QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("1.25"));
+    environment.insert(QStringLiteral("FLUENT_QT_GALLERY_SCALE_MANAGED"),
+                       QStringLiteral("1"));
+    environment.insert(QStringLiteral("UNRELATED_VALUE"), QStringLiteral("ignored"));
+    const QStringList arguments = detail::macOpenArguments(
+        bundle,
+        {QStringLiteral("--sample")},
+        environment,
+        true);
+    EXPECT_EQ(arguments,
+              QStringList({QStringLiteral("-n"),
+                           QStringLiteral("--env"),
+                           QStringLiteral("QT_SCALE_FACTOR=1.25"),
+                           QStringLiteral("--env"),
+                           QStringLiteral("FLUENT_QT_GALLERY_SCALE_MANAGED=1"),
+                           bundle,
+                           QStringLiteral("--args"),
+                           QStringLiteral("--sample"),
+                           QString::fromLatin1(RestartArgument)}));
+    EXPECT_TRUE(isRestartedLaunch(arguments));
+    EXPECT_EQ(stripRestartArguments(
+                  {QStringLiteral("--sample"),
+                   QString::fromLatin1(RestartArgument),
+                   QString::fromLatin1(RestartArgument)}),
+              QStringList({QStringLiteral("--sample")}));
 }
 
 TEST_F(GalleryShellFrameworkTest, DisplayScaleChoicePromptsForRestart)

@@ -123,7 +123,16 @@ QT_SCALE_FACTOR=3 ./build/vcpkg-linux/app/fluent_qt_gallery
 On macOS, validate normal Retina and scaled display modes through System
 Settings. A forced `QT_SCALE_FACTOR=2` on a native 2x Retina display produces an
 effective 4x scale, so it is useful as a stress test but not as a normal 200%
-simulation.
+simulation. Do not translate macOS's "Looks like" display choices into an
+application percentage: Qt already exposes those modes in logical coordinates,
+and the Gallery preference is deliberately an additional multiplier.
+
+When applying that multiplier, the Gallery relaunches its complete `.app`
+bundle through LaunchServices instead of starting the inner Mach-O executable
+as a detached Unix process. The relaunch forwards Qt's scale-related environment
+values and explicitly requests foreground activation after the first window is
+shown. This keeps developer overrides intact while preserving native macOS app
+activation behavior.
 
 Review all of the following:
 
