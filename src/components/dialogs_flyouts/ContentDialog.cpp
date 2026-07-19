@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QHBoxLayout>
+#include <QLayout>
 
 namespace fluent::dialogs_flyouts {
 
@@ -74,10 +75,14 @@ void ContentDialog::setupInternalLayout() {
     m_secondaryBtn->setMinimumWidth(kButtonMinWidth);
     m_closeBtn    ->setMinimumWidth(kButtonMinWidth);
 
-    btnLayout->addWidget(m_primaryBtn,   0);
-    btnLayout->addWidget(m_secondaryBtn, 0);
-    btnLayout->addWidget(m_closeBtn,     0);
-    btnLayout->addStretch(1);  // Left-aligned: spare space on the right. zh_CN: 左对齐，右侧留白。
+    // WinUI action rows divide the available width between the visible
+    // actions. Hidden buttons are automatically excluded by QBoxLayout, so a
+    // two-action confirmation remains balanced without special-case code.
+    // zh_CN: WinUI 操作栏会在可见操作之间等分可用宽度；QBoxLayout 会自动排除隐藏
+    // 按钮，因此双按钮确认框无需特判也能保持均衡。
+    btnLayout->addWidget(m_primaryBtn,   1);
+    btnLayout->addWidget(m_secondaryBtn, 1);
+    btnLayout->addWidget(m_closeBtn,     1);
 
     connect(m_primaryBtn, &fluent::basicinput::Button::clicked, this, [this]() {
         emit primaryButtonClicked();
@@ -211,6 +216,47 @@ void ContentDialog::updateContentAnchors() {
 }
 
 // ── Theme. zh_CN: 主题 ───────────────────────────────────────────────────────
+
+void ContentDialog::ensureContentFits() {
+    if (!m_contentWidget)
+        return;
+
+    ensurePolished();
+    m_contentWidget->ensurePolished();
+    if (layout()) {
+        layout()->invalidate();
+        layout()->activate();
+    }
+
+    const int contentWidth = m_contentWidget->width();
+    int requiredHeight = qMax(m_contentWidget->sizeHint().height(),
+                              m_contentWidget->minimumSizeHint().height());
+    if (contentWidth > 0 && m_contentWidget->hasHeightForWidth())
+        requiredHeight = qMax(requiredHeight,
+                              m_contentWidget->heightForWidth(contentWidth));
+
+    const int missingHeight = requiredHeight - m_contentWidget->height();
+    if (missingHeight <= 0)
+        return;
+
+    // Anchored content stretches between the title and action row. Grow the
+    // surface before Dialog centers it when wrapped text or custom content
+    // needs more room than the caller reserved. This absorbs platform-font
+    // and fractional-DPI rounding without duplicating sizing in every app.
+    // zh_CN: 锚定内容会在标题与操作栏之间拉伸；若换行文本或自定义内容所需高度
+    // 超过调用方预留值，则在 Dialog 居中前扩展表面，避免平台字体或小数 DPI
+    // 取整造成文字裁剪，也无需每个应用重复计算高度。
+    resize(width(), height() + missingHeight);
+    if (layout()) {
+        layout()->invalidate();
+        layout()->activate();
+    }
+}
+
+void ContentDialog::showEvent(QShowEvent* event) {
+    ensureContentFits();
+    Dialog::showEvent(event);
+}
 
 void ContentDialog::onThemeUpdated() {
     Dialog::onThemeUpdated();
