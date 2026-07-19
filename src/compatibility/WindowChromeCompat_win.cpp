@@ -192,6 +192,39 @@ int toNativeHitTest(WindowChromeCompat::HitTest hitTest) {
     }
 }
 
+QPoint logicalClientPointForNativeScreenPoint(QWidget* window,
+                                               HWND hwnd,
+                                               const QPoint& nativeScreenPoint) {
+    if (!window || !hwnd)
+        return {};
+
+    POINT nativeClientPoint = {nativeScreenPoint.x(), nativeScreenPoint.y()};
+    RECT nativeClientRect = {};
+    if (!ScreenToClient(hwnd, &nativeClientPoint)
+        || !GetClientRect(hwnd, &nativeClientRect)) {
+        return window->mapFromGlobal(nativeScreenPoint);
+    }
+
+    const int nativeWidth = nativeClientRect.right - nativeClientRect.left;
+    const int nativeHeight = nativeClientRect.bottom - nativeClientRect.top;
+    const QSize logicalSize = window->size();
+    if (nativeWidth <= 0 || nativeHeight <= 0 || logicalSize.isEmpty())
+        return window->mapFromGlobal(nativeScreenPoint);
+
+    // WM_NCHITTEST supplies physical screen pixels, while QWidget geometry is
+    // expressed in Qt logical pixels. QT_SCALE_FACTOR can make those spaces
+    // differ even on a 100%-scaled Windows desktop. Map through the live native
+    // client extent instead of feeding physical coordinates to mapFromGlobal().
+    // zh_CN: WM_NCHITTEST 使用物理屏幕像素，而 QWidget 几何使用 Qt 逻辑像素；
+    // QT_SCALE_FACTOR 即使在系统 100% 缩放下也会让两者不同。应通过当前原生客户区
+    // 尺寸换算，不能把物理坐标直接交给 mapFromGlobal()。
+    return QPoint(
+        qFloor(static_cast<qreal>(nativeClientPoint.x) * logicalSize.width()
+               / nativeWidth),
+        qFloor(static_cast<qreal>(nativeClientPoint.y) * logicalSize.height()
+               / nativeHeight));
+}
+
 bool handleCustomChromeClientRect(MSG* msg, FluentNativeEventResult* result) {
     if (!msg || !result || msg->message != WM_NCCALCSIZE)
         return false;
@@ -431,7 +464,8 @@ bool handlePlatformNativeEvent(QWidget* window,
     // zh_CN: 上的行为一致）。由于 DwmDefWindowProc 可能先消费该消息，需在此显式处理。
     if (msg->message == WM_NCRBUTTONUP) {
         const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
-        const QPoint localPos = window->mapFromGlobal(globalPos);
+        const QPoint localPos = logicalClientPointForNativeScreenPoint(
+            window, msg->hwnd, globalPos);
         const auto hit = WindowChromeCompat::classifyHitTest(options, window->size(), localPos);
         if (hit == WindowChromeCompat::HitTest::Caption) {
             showPlatformSystemMenu(window, globalPos);
@@ -474,7 +508,8 @@ bool handlePlatformNativeEvent(QWidget* window,
     // zh_CN: 自绘 Fluent 标题栏按钮位于客户区（已加入标题栏拖拽排除区），classifyHitTest 在其上返回
     // HTCLIENT，按钮正常收到点击——无需 DWM 按钮命中测试（原生玻璃按钮已抑制）。
     const QPoint globalPos(GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam));
-    const QPoint localPos = window->mapFromGlobal(globalPos);
+    const QPoint localPos = logicalClientPointForNativeScreenPoint(
+        window, msg->hwnd, globalPos);
     // Convert the repository-level hit-test result to the native HT* code expected by Windows.
     // zh_CN: 将项目内逻辑命中结果转换为 Windows 期望的原生 HT* code。
     const auto hitTest = WindowChromeCompat::classifyHitTest(options, window->size(), localPos);

@@ -752,17 +752,30 @@ TEST_F(WindowTest, WindowsNativeHitTestRepairsLostResizeStyle) {
     SetWindowLongPtrW(hwnd, GWL_STYLE, originalStyle & ~WS_THICKFRAME);
     ASSERT_EQ(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME, 0);
 
-    const QPoint globalEdge = window.mapToGlobal(QPoint(1, window.height() / 2));
+    RECT clientRect = {};
+    ASSERT_TRUE(GetClientRect(hwnd, &clientRect));
+    POINT nativeEdge = {clientRect.left + 1,
+                        (clientRect.top + clientRect.bottom) / 2};
+    ASSERT_TRUE(ClientToScreen(hwnd, &nativeEdge));
     MSG message = {};
     message.hwnd = hwnd;
     message.message = WM_NCHITTEST;
-    message.lParam = MAKELPARAM(globalEdge.x(), globalEdge.y());
+    message.lParam = MAKELPARAM(nativeEdge.x, nativeEdge.y);
     compatibility::FluentNativeEventResult result = HTCLIENT;
 
     EXPECT_TRUE(window.dispatchNativeMessage(&message, &result));
     EXPECT_EQ(result, HTLEFT);
     EXPECT_NE(GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_THICKFRAME, 0)
         << "Win10/Qt 6.2 must repair a resize style lost during a native transition";
+
+    nativeEdge = {clientRect.right - 2,
+                  (clientRect.top + clientRect.bottom) / 2};
+    ASSERT_TRUE(ClientToScreen(hwnd, &nativeEdge));
+    message.lParam = MAKELPARAM(nativeEdge.x, nativeEdge.y);
+    result = HTCLIENT;
+    EXPECT_TRUE(window.dispatchNativeMessage(&message, &result));
+    EXPECT_EQ(result, HTRIGHT)
+        << "Physical WM_NCHITTEST coordinates must map back to Qt logical pixels";
 
     window.close();
 #else
