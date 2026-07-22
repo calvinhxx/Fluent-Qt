@@ -40,7 +40,7 @@ const translations = {
     "components.familiesLabel": "10 个控件家族",
     "components.families": "基础输入 · 集合视图 · 日期与时间 · 对话框 · 菜单 · 导航 · 滚动 · 状态信息 · 文本输入 · 窗口系统",
     "quickStart.title": "CMake 接入",
-    "quickStart.copy": "支持 FetchContent、add_subdirectory 与 find_package；应用启动时需在 QApplication 前调用 fluent::prepareHighDpiApplication()",
+    "quickStart.copy": "支持 FetchContent、add_subdirectory 与 find_package",
     "quickStart.example": "查看完整 hello_world",
     "copy.copy": "复制",
     "copy.copied": "已复制",
@@ -111,7 +111,7 @@ const translations = {
     "components.familiesLabel": "10 control families",
     "components.families": "Basic input · Collections · Date and time · Dialogs · Menus · Navigation · Scrolling · Status · Text input · Windowing",
     "quickStart.title": "CMake setup",
-    "quickStart.copy": "Supports FetchContent, add_subdirectory, and find_package; call fluent::prepareHighDpiApplication() before QApplication starts",
+    "quickStart.copy": "Supports FetchContent, add_subdirectory, and find_package",
     "quickStart.example": "Open the complete hello_world",
     "copy.copy": "Copy",
     "copy.copied": "Copied",
@@ -416,7 +416,7 @@ function applyTheme(theme, shouldStore = false) {
   const normalized = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = normalized;
   document.documentElement.style.colorScheme = normalized;
-  metaThemeColor?.setAttribute("content", normalized === "dark" ? "#151613" : "#f6f6f3");
+  metaThemeColor?.setAttribute("content", normalized === "dark" ? "#070c12" : "#eef3f7");
   updateThemeMedia(normalized);
   updateThemeToggle();
 
@@ -424,6 +424,34 @@ function applyTheme(theme, shouldStore = false) {
     followsSystemTheme = false;
     storeTheme(normalized);
   }
+}
+
+function setupReveal() {
+  const nodes = Array.from(document.querySelectorAll("[data-reveal]"));
+  if (!nodes.length) return;
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    nodes.forEach((node) => node.classList.add("is-visible"));
+    return;
+  }
+
+  nodes.forEach((node) => {
+    const delay = Number(node.dataset.revealDelay || 0);
+    if (delay > 0) node.style.setProperty("--reveal-delay", `${delay}ms`);
+  });
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    },
+    { rootMargin: "0px 0px -8% 0px", threshold: 0.12 }
+  );
+
+  nodes.forEach((node) => observer.observe(node));
 }
 
 function initializeTheme() {
@@ -559,6 +587,7 @@ function setupInteractions() {
 loadAnalytics();
 setupNavigation();
 setupInteractions();
+setupReveal();
 releaseState.platform = detectPlatform();
 setLanguage(savedLanguage() === "en" ? "en" : "zh", false);
 initializeTheme();
