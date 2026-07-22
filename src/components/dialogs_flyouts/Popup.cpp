@@ -13,6 +13,7 @@
 #include "components/foundation/overlay/OverlayLightDismiss.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayWindow.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 
 namespace fluent::dialogs_flyouts {
 
@@ -445,21 +446,23 @@ void Popup::paintEvent(QPaintEvent*) {
     // Background and border. zh_CN: 背景 + 边框。
     const auto& colors = themeColors();
     const DesignLanguage lang = themeDesignLanguage();
-    painter.setBrush(colors.bgLayer);
+    fluent::painting::RoundedSurfacePaint surface;
+    surface.fill = colors.bgLayer;
+    surface.radius = r;
     if (lang == DesignMaterial) {
         // Material 3 elevated "surface-container": elevation is conveyed by the shadow alone,
         // so the card has NO visible stroke. zh_CN: Material 3 高架 "surface-container":高度仅由阴影
         // 表达,故卡片无可见描边。
-        painter.setPen(Qt::NoPen);
+        surface.border = Qt::transparent;
     } else if (lang == DesignCupertino) {
         // macOS popover: a crisp 1px hairline edge using the stronger neutral stroke.
         // zh_CN: macOS popover:用更强的中性描边绘制清晰的 1px 发丝边缘。
-        painter.setPen(QPen(colors.strokeStrong, 1));
+        surface.border = colors.strokeStrong;
     } else {
         // DesignFluent (default): unchanged WinUI overlay stroke. zh_CN: 默认 Fluent,WinUI 浮层描边不变。
-        painter.setPen(colors.strokeDefault);
+        surface.border = colors.strokeDefault;
     }
-    painter.drawRoundedRect(contentRect, r, r);
+    fluent::painting::paintRoundedSurface(painter, QRectF(contentRect), surface);
 }
 
 } // namespace fluent::dialogs_flyouts

@@ -12,6 +12,7 @@
 #include <QStackedLayout>
 
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/windowing/WindowBackdrop.h"
 
 namespace fluent::navigation {
@@ -106,14 +107,22 @@ void StackContentHost::paintEvent(QPaintEvent* event)
         return;
     }
 
-    const QRectF panelRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    const bool hasBorder = m_surfaceBorder.isValid() && m_surfaceBorder.alpha() > 0;
+    const fluent::painting::DpiPaintMetrics metrics(painter);
+    fluent::painting::DeviceAlignedStroke stroke;
+    if (hasBorder) {
+        stroke = metrics.alignedStroke(QRectF(rect()), 1.0);
+    } else {
+        stroke.rect = metrics.alignedOuterRect(QRectF(rect()));
+    }
+    const QRectF panelRect = stroke.rect;
     const bool rounded = m_surfaceTopLeftRadius > 0.0;
     const QPainterPath panel = fluent::overlay::roundedCornerRectPath(
         panelRect, m_surfaceTopLeftRadius, /*TL*/ rounded, /*TR*/ false, /*BR*/ false, /*BL*/ false);
 
     painter.fillPath(panel, m_surfaceFill);  // opaque layer — survives a translucent top-level
-    if (m_surfaceBorder.isValid() && m_surfaceBorder.alpha() > 0) {
-        painter.setPen(QPen(m_surfaceBorder, 1.0));
+    if (hasBorder) {
+        painter.setPen(QPen(m_surfaceBorder, stroke.width));
         painter.setBrush(Qt::NoBrush);
         painter.drawPath(panel);
     }

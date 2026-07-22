@@ -55,9 +55,9 @@ ctest --preset vcpkg-linux-local-desktop -N
 ctest --preset vcpkg-linux-arm64-local-desktop -N
 ```
 
-- High-DPI smoke tests have the `high_dpi` label and run at exact 200% and
-  300% offscreen scale factors. Build `test_high_dpi` and run the anchored
-  label on any host:
+- High-DPI smoke tests have the `high_dpi` label and run at 110%, 125%, 150%,
+  175%, 200%, and 300% offscreen scale factors. Build `test_high_dpi` and run
+  the anchored label on any host:
 
 ```bash
 cmake --build --preset vcpkg-linux --target test_high_dpi

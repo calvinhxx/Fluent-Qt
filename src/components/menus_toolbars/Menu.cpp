@@ -17,6 +17,7 @@
 #include "design/Typography.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 #include "compatibility/QtCompat.h"
 
 namespace fluent::menus_toolbars {
@@ -361,15 +362,16 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     // existing layered shadow for elevation. The bgLayer fill + overlay radius are shared. zh_CN: 底板
     // 描边:Fluent + macOS 保留发丝边框(Fluent→strokeCard,macOS→发丝 strokeDefault);Material 3 的
     // surface-container 面板去掉可见边框,改由既有多层阴影表达高程。bgLayer 填充 + overlay 圆角共用。
-    if (lang == DesignMaterial) {
-        p.setPen(Qt::NoPen);
-    } else if (lang == DesignCupertino) {
-        p.setPen(colors.strokeDefault);
-    } else {
-        p.setPen(colors.strokeCard);
-    }
-    p.setBrush(colors.bgLayer);
-    p.drawRoundedRect(contentRect, r, r);
+    fluent::painting::RoundedSurfacePaint surface;
+    surface.fill = colors.bgLayer;
+    surface.radius = r;
+    if (lang == DesignMaterial)
+        surface.border = Qt::transparent;
+    else if (lang == DesignCupertino)
+        surface.border = colors.strokeDefault;
+    else
+        surface.border = colors.strokeCard;
+    fluent::painting::paintRoundedSurface(p, QRectF(contentRect), surface);
 
     // 5. Paint the menu items.
     // itemInset: shared horizontal inset for highlights and separators

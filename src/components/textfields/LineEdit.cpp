@@ -6,6 +6,7 @@
 #include <QResizeEvent>
 #include <QValidator>
 #include "components/basicinput/Button.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "design/Typography.h"
 
 namespace fluent::textfields {
@@ -28,7 +29,6 @@ LineEdit::LineEdit(QWidget* parent)
     setFrame(false);
     setAttribute(Qt::WA_Hover);
     setAutoFillBackground(false);
-    setAttribute(Qt::WA_TranslucentBackground);
 
     // Built-in fluent clear button. zh_CN: 内置 Fluent 清除按钮。
     m_clearButton = new ::fluent::basicinput::Button(this);
@@ -76,6 +76,7 @@ void LineEdit::updateClearButtonGeometry() {
 void LineEdit::paintFrame(QPainter& painter) {
     const auto& colors = themeColors();
     const auto& radius = themeRadius();
+    const fluent::painting::DpiPaintMetrics paintMetrics(painter);
 
     // Branch the border/focus treatment per design language (palette is already swapped by
     // ThemeRegistry; this picks the SHAPE of the field). Fluent keeps its bottom accent underline;
@@ -108,17 +109,17 @@ void LineEdit::paintFrame(QPainter& painter) {
 
         // Inset by half the stroke so a thick (2dp) focus outline stays within the widget bounds.
         // zh_CN: 按描边一半内缩,使加粗(2dp)焦点描边仍处于控件范围内。
-        const qreal inset = outlineWidth / 2.0;
-        QRectF outlineRect = QRectF(rect()).adjusted(inset, inset, -inset, -inset);
+        const auto outlineStroke = paintMetrics.alignedStroke(
+            QRectF(rect()), outlineWidth);
         const qreal r = radius.control;
         QPainterPath framePath;
-        framePath.addRoundedRect(outlineRect, r, r);
+        framePath.addRoundedRect(outlineStroke.rect, r, r);
 
         painter.setPen(Qt::NoPen);
         painter.setBrush(Qt::NoBrush); // Outlined variant has no opaque fill. zh_CN: 描边变体无不透明填充。
         painter.drawPath(framePath);
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(outlineColor, outlineWidth));
+        painter.setPen(QPen(outlineColor, outlineStroke.width));
         painter.drawPath(framePath);
         return;
     }
@@ -139,7 +140,8 @@ void LineEdit::paintFrame(QPainter& painter) {
         // 而非仅在卡片上才可见的透明洞。
         {
             const QColor fill = !isEnabled() ? colors.controlDisabled : colors.bgLayerAlt;
-            QRectF fillRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+            const QRectF fillRect = paintMetrics.alignedStroke(
+                QRectF(rect()), 1.0).rect;
             QPainterPath fillPath;
             fillPath.addRoundedRect(fillRect, r, r);
             painter.setPen(Qt::NoPen);
@@ -171,18 +173,20 @@ void LineEdit::paintFrame(QPainter& painter) {
         // Rest / hover / disabled: just the 1px hairline. zh_CN: 静息/悬停/禁用:仅 1px 发丝边框。
         QColor hairline = !isEnabled() ? colors.strokeDivider
                                        : (m_isHovered ? colors.strokeStrong : colors.strokeDefault);
-        QRectF hairRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+        const auto hairStroke = paintMetrics.alignedStroke(QRectF(rect()), 1.0);
+        const QRectF hairRect = hairStroke.rect;
         QPainterPath hairPath;
         hairPath.addRoundedRect(hairRect, r, r);
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(hairline, 1.0));
+        painter.setPen(QPen(hairline, hairStroke.width));
         painter.drawPath(hairPath);
         return;
     }
 
     // DesignFluent (default): unchanged WinUI treatment — fill + border + bottom accent underline
     // on focus. zh_CN: 默认 Fluent:WinUI 处理不变——填充 + 边框 + 聚焦时底部强调下划线。
-    QRectF bgRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    const auto borderStroke = paintMetrics.alignedStroke(QRectF(rect()), 1.0);
+    const QRectF bgRect = borderStroke.rect;
 
     QColor bgColor, borderColor, bottomBorderColor;
     int bottomBorderWidth = m_unfocusedBorderWidth;
@@ -216,14 +220,16 @@ void LineEdit::paintFrame(QPainter& painter) {
     painter.setBrush(bgColor);
     painter.drawPath(framePath);
     painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(borderColor, 1));
+    painter.setPen(QPen(borderColor, borderStroke.width));
     painter.drawPath(framePath);
 
     if (isEnabled() && !isReadOnly()) {
-        QPen pen(bottomBorderColor, bottomBorderWidth);
+        const auto bottomStroke = paintMetrics.alignedStroke(
+            QRectF(rect()), bottomBorderWidth);
+        QPen pen(bottomBorderColor, bottomStroke.width);
         pen.setCapStyle(Qt::RoundCap);
         painter.setPen(pen);
-        qreal bottomY = bgRect.bottom() - (bottomBorderWidth > 1 ? (bottomBorderWidth - 1) / 2.0 : 0);
+        const qreal bottomY = bottomStroke.rect.bottom();
         QPainterPath bottomPath;
         bottomPath.moveTo(bgRect.left() + r, bottomY);
         bottomPath.lineTo(bgRect.right() - r, bottomY);

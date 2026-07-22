@@ -121,6 +121,9 @@ int main(int argc, char* argv[])
 }
 ```
 
+FluentQt follows the operating system display scale through Qt. Keep application
+geometry in device-independent coordinates and do not add a second app-level multiplier.
+
 See [`examples/hello_world`](examples/hello_world/) for the complete project, or run the `fluentqt_hello_world` target directly from an IDE.
 
 ## 🛠 Build

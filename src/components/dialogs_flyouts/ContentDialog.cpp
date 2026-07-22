@@ -49,7 +49,6 @@ void ContentDialog::setupInternalLayout() {
     // --- Button bar (bottom area inside contentRect). zh_CN: 底部按钮栏，置于 contentRect 内。---
     m_buttonBar = new QWidget(this);
     m_buttonBar->setFixedHeight(m_buttonBarHeight);
-    m_buttonBar->setAttribute(Qt::WA_TranslucentBackground);
 
     Anchors barAnchors;
     barAnchors.left   = {this, Edge::Left,   0};

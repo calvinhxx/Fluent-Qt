@@ -21,11 +21,9 @@ QSize recommendedInitialSize(const QSize& availableSize);
 QRect constrainGeometry(const QRect& requested,
                         const QRect& available,
                         const QSize& minimumSize);
-QRect restoredGeometryForScale(const QRect& savedGeometry,
-                               int savedScalePercent,
-                               int startupScalePercent,
-                               const QRect& available,
-                               const QSize& minimumSize);
+QRect restoredGeometry(const QRect& savedGeometry,
+                       const QRect& available,
+                       const QSize& minimumSize);
 
 } // namespace windowplacement
 
@@ -37,7 +35,6 @@ class GalleryWindowPlacement final : public QObject {
 public:
     explicit GalleryWindowPlacement(GalleryWindow* window,
                                     GallerySettings* settings,
-                                    int startupScalePercent,
                                     QObject* parent = nullptr);
 
     bool restore();
@@ -56,7 +53,6 @@ private:
     GallerySettings* m_settings = nullptr;
     QTimer* m_saveTimer = nullptr;
     QRect m_lastNormalGeometry;
-    int m_startupScalePercent = 100;
     bool m_screenTrackingConnected = false;
     bool m_restoring = false;
 };

@@ -14,6 +14,7 @@
 
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/windowing/WindowBackdrop.h"
 #include "compatibility/QtCompat.h"
@@ -144,10 +145,13 @@ protected:
         }
 
         if (m_border.isValid() && m_border.alpha() > 0) {
+            const fluent::painting::DeviceAlignedStroke stroke =
+                fluent::painting::DpiPaintMetrics(painter).alignedStroke(
+                    QRectF(rect()), 1.0);
             const QPainterPath frame = fluent::overlay::roundedCornerRectPath(
-                QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5), m_radius,
+                stroke.rect, m_radius,
                 /*TL*/ true, /*TR*/ false, /*BR*/ false, /*BL*/ false);
-            painter.setPen(QPen(m_border, 1.0));
+            painter.setPen(QPen(m_border, stroke.width));
             painter.setBrush(Qt::NoBrush);
             painter.drawPath(frame);
         }
@@ -223,13 +227,16 @@ protected:
         // 这就是原生 WinUI 浮层窗格的样子——一张明确浮在内容/背景「之上」的抽屉卡片，而非融进背景。早先版本改为把整列清成
         // 实时背景，结果内联窗格各子区域（头部留白、页脚间隙、TreeView 视口）各自合成 → 出现可见的材质拼缝（“奇怪的图层”）。
         // 现在其上绘制的内联窗格被切到透明的「surface」模式（fluentNavPaneFloating），故这张卡片均匀透出、无缝。
+        const fluent::painting::DeviceAlignedStroke stroke =
+            fluent::painting::DpiPaintMetrics(painter).alignedStroke(
+                QRectF(m_paneRect), 1.0);
         const QPainterPath panel = fluent::overlay::roundedCornerRectPath(
-            QRectF(m_paneRect).adjusted(0.0, 0.0, -0.5, -0.5), m_radius,
+            stroke.rect, m_radius,
             /*TL*/ false, /*TR*/ true, /*BR*/ true, /*BL*/ false);
         if (m_fill.isValid())
             painter.fillPath(panel, m_fill);
         if (m_stroke.isValid() && m_stroke.alpha() > 0) {
-            painter.setPen(QPen(m_stroke, 1.0));
+            painter.setPen(QPen(m_stroke, stroke.width));
             painter.setBrush(Qt::NoBrush);
             painter.drawPath(panel);
         }

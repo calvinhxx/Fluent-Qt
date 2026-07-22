@@ -223,9 +223,14 @@ add_qt_test_module(test_project_logging TestProjectLogging.cpp)
 add_qt_test_module(test_qt_test_environment TestQtTestEnvironment.cpp)
 add_qt_test_module(test_high_dpi TestHighDpi.cpp)
 
-foreach(_fluent_qt_high_dpi_scale 2 3)
-    math(EXPR _fluent_qt_high_dpi_percent
-        "${_fluent_qt_high_dpi_scale} * 100")
+foreach(_fluent_qt_high_dpi_scale 1.1 1.25 1.5 1.75 2 3)
+    string(REPLACE "." "" _fluent_qt_high_dpi_percent
+        "${_fluent_qt_high_dpi_scale}")
+    if(_fluent_qt_high_dpi_scale MATCHES "^[0-9]+$")
+        string(APPEND _fluent_qt_high_dpi_percent "00")
+    elseif(_fluent_qt_high_dpi_percent MATCHES "^[0-9][0-9]$")
+        string(APPEND _fluent_qt_high_dpi_percent "0")
+    endif()
     set(_fluent_qt_high_dpi_test
         "HighDpiScaleTest.Scale${_fluent_qt_high_dpi_percent}")
     add_test(NAME "${_fluent_qt_high_dpi_test}"

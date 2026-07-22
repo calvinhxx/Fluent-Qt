@@ -52,7 +52,6 @@ TeachingTip::TeachingTip(QWidget* parent) : Popup(parent) {
     setDim(false);
 
     m_contentHost = new QWidget(this);
-    m_contentHost->setAttribute(Qt::WA_TranslucentBackground);
 
     connect(this, &Popup::aboutToHide, this, &TeachingTip::emitClosingReason);
     setLightDismissEnabled(m_lightDismissEnabled);
