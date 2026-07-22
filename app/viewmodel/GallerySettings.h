@@ -75,29 +75,12 @@ public:
     CloseBehavior closeBehavior() const { return m_closeBehavior; }
     void setCloseBehavior(CloseBehavior behavior);
 
-    /**
-     * @brief Returns the Gallery scale relative to the operating-system scale.
-     * zh_CN: 返回 Gallery 相对于操作系统缩放的应用缩放百分比。
-     */
-    int uiScalePercent() const { return m_uiScalePercent; }
-    void setUiScalePercent(int percent);
-
-    /**
-     * @brief Applies the persisted UI scale before QApplication is constructed.
-     * zh_CN: 在 QApplication 构造前应用已持久化的界面缩放。
-     */
-    static int applyStartupUiScalePreference();
-
-    static int normalizeUiScalePercent(int percent);
-
     QRect windowNormalGeometry() const { return m_windowNormalGeometry; }
     QString windowScreenName() const { return m_windowScreenName; }
     bool windowMaximized() const { return m_windowMaximized; }
-    int windowPlacementScalePercent() const { return m_windowPlacementScalePercent; }
     void setWindowPlacement(const QRect& normalGeometry,
                             const QString& screenName,
-                            bool maximized,
-                            int scalePercent);
+                            bool maximized);
 
     bool closeBehaviorConfirmed() const { return m_closeBehaviorConfirmed; }
     void setCloseBehaviorConfirmed(bool confirmed);
@@ -113,7 +96,6 @@ signals:
     void navigationStyleChanged(NavigationStyle style);
     void windowEffectChanged(fluent::windowing::BackdropEffect effect);
     void closeBehaviorChanged(CloseBehavior behavior);
-    void uiScalePercentChanged(int percent);
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
@@ -129,11 +111,9 @@ private:
     fluent::windowing::BackdropEffect m_windowEffect =
         fluent::windowing::BackdropEffect::Mica;
     CloseBehavior m_closeBehavior = CloseBehavior::Tray;
-    int m_uiScalePercent = 100;
     QRect m_windowNormalGeometry;
     QString m_windowScreenName;
     bool m_windowMaximized = false;
-    int m_windowPlacementScalePercent = 0;
     bool m_closeBehaviorConfirmed = false;
     bool m_introCompleted = false;
 };

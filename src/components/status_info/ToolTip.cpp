@@ -1,6 +1,7 @@
 #include "ToolTip.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 #include "components/textfields/Label.h"
 #include "design/Elevation.h"
 #include "design/Typography.h"
@@ -38,7 +39,6 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     m_textBlock = new Label(this);
     // Keep the label background transparent so ToolTip::paintEvent owns it.
     // zh_CN: 确保标签背景透明，由 ToolTip 的 paintEvent 处理背景绘制。
-    m_textBlock->setAttribute(Qt::WA_TranslucentBackground);
     
     // 1. Text style: Caption size, regular weight by default. zh_CN: 默认使用 Caption 字号，不加粗。
     QFont f = m_textBlock->font();
@@ -225,9 +225,11 @@ void ToolTip::paintEvent(QPaintEvent*) {
     // 2. Background and border. The Figma "Tooltip" uses the 4px control radius,
     //    not the 8px overlay radius used by dialogs/flyouts.
     // zh_CN: 绘制背景和边框。Figma「Tooltip」用 4px 控件圆角，而非 dialog/flyout 的 8px 浮层圆角。
-    p.setBrush(m_bgColor);
-    p.setPen(QPen(m_borderColor, 1));
-    p.drawRoundedRect(QRectF(bubble).adjusted(0.5, 0.5, -0.5, -0.5), r.control, r.control);
+    fluent::painting::RoundedSurfacePaint surface;
+    surface.fill = m_bgColor;
+    surface.border = m_borderColor;
+    surface.radius = r.control;
+    fluent::painting::paintRoundedSurface(p, QRectF(bubble), surface);
 }
 
 void ToolTip::setTarget(QWidget* target, Placement placement)

@@ -22,7 +22,6 @@ Label::Label(const QString& text, QWidget* parent)
     : QLabel(parent)
     , m_fullText(text)
 {
-    setAttribute(Qt::WA_TranslucentBackground);
     setMouseTracking(true);
     onThemeUpdated();
     updateRenderedText();

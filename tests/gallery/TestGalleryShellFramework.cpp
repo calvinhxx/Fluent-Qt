@@ -53,7 +53,6 @@
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/shell/GalleryApplicationController.h"
-#include "view/shell/GalleryApplicationRelauncher.h"
 #include "view/shell/GalleryContentPresenter.h"
 #include "view/shell/GallerySingleInstance.h"
 #include "view/shell/GalleryTitleBarController.h"
@@ -111,7 +110,6 @@ public:
         , m_themeMode(settings.themeMode())
         , m_navigationStyle(settings.navigationStyle())
         , m_closeBehavior(settings.closeBehavior())
-        , m_uiScalePercent(settings.uiScalePercent())
         , m_closeBehaviorConfirmed(settings.closeBehaviorConfirmed())
     {
     }
@@ -121,7 +119,6 @@ public:
         m_settings.setNavigationStyle(m_navigationStyle);
         m_settings.setThemeMode(m_themeMode);
         m_settings.setCloseBehavior(m_closeBehavior);
-        m_settings.setUiScalePercent(m_uiScalePercent);
         m_settings.setCloseBehaviorConfirmed(m_closeBehaviorConfirmed);
     }
 
@@ -130,7 +127,6 @@ private:
     GallerySettings::ThemeMode m_themeMode;
     GallerySettings::NavigationStyle m_navigationStyle;
     GallerySettings::CloseBehavior m_closeBehavior;
-    int m_uiScalePercent = 100;
     bool m_closeBehaviorConfirmed = false;
 };
 
@@ -1662,11 +1658,6 @@ TEST_F(GalleryShellFrameworkTest, WindowPlacementUsesLogicalScreenBounds)
     EXPECT_EQ(recommendedInitialSize(QSize(1920, 1080)), QSize(1382, 842));
     EXPECT_EQ(recommendedInitialSize(QSize(1280, 720)), QSize(922, 600));
     EXPECT_EQ(recommendedInitialSize(QSize(640, 360)), QSize(640, 360));
-    EXPECT_EQ(GallerySettings::normalizeUiScalePercent(123), 125);
-    EXPECT_EQ(GallerySettings::normalizeUiScalePercent(96), 100);
-    EXPECT_EQ(GallerySettings::normalizeUiScalePercent(85), 100);
-    EXPECT_EQ(GallerySettings::normalizeUiScalePercent(280), 300);
-
     const QRect available(0, 0, 1280, 720);
     EXPECT_EQ(constrainGeometry(QRect(-200, -100, 1600, 900),
                                 available, QSize(460, 500)),
@@ -1676,116 +1667,16 @@ TEST_F(GalleryShellFrameworkTest, WindowPlacementUsesLogicalScreenBounds)
               QRect(380, 120, 900, 600));
 
     const QRect saved(100, 80, 900, 600);
-    EXPECT_EQ(restoredGeometryForScale(saved, 125, 125,
-                                       available, QSize(460, 500)),
+    EXPECT_EQ(restoredGeometry(saved, available, QSize(460, 500)),
               saved);
-    // Geometry saved by the old process must not be interpreted at the new
-    // application multiplier. A scale change gets a deterministic centered
-    // geometry; the following run can persist it with the new scale metadata.
-    EXPECT_EQ(restoredGeometryForScale(saved, 100, 125,
-                                       available, QSize(460, 500)),
-              QRect(259, 60, 922, 600));
 
     // Qt/Wayland can report its 640x480 pre-show placeholder as
     // normalGeometry(). A value below the current usable minimum is not a
     // deliberate restore size and must recover to the recommended geometry.
-    EXPECT_EQ(restoredGeometryForScale(QRect(0, 0, 640, 480), 100, 100,
-                                       QRect(0, 0, 1920, 1080),
-                                       QSize(460, 500)),
+    EXPECT_EQ(restoredGeometry(QRect(0, 0, 640, 480),
+                               QRect(0, 0, 1920, 1080),
+                               QSize(460, 500)),
               QRect(349, 119, 1382, 842));
-}
-
-TEST_F(GalleryShellFrameworkTest, ApplicationRelauncherBuildsNativeMacBundleRequest)
-{
-    using namespace fluent::gallery::relaunch;
-
-    const QString executable = QStringLiteral(
-        "/Applications/Fluent-Qt Gallery.app/Contents/MacOS/Fluent-Qt Gallery");
-    const QString bundle = QStringLiteral("/Applications/Fluent-Qt Gallery.app");
-    EXPECT_EQ(detail::macApplicationBundlePath(executable), bundle);
-    EXPECT_TRUE(detail::macApplicationBundlePath(
-        QStringLiteral("/tmp/fluent_qt_gallery")).isEmpty());
-
-    QProcessEnvironment environment;
-    environment.insert(QStringLiteral("QT_SCALE_FACTOR"), QStringLiteral("1.25"));
-    environment.insert(QStringLiteral("FLUENT_QT_GALLERY_SCALE_MANAGED"),
-                       QStringLiteral("1"));
-    environment.insert(QStringLiteral("UNRELATED_VALUE"), QStringLiteral("ignored"));
-    const QStringList arguments = detail::macOpenArguments(
-        bundle,
-        {QStringLiteral("--sample")},
-        environment,
-        true);
-    EXPECT_EQ(arguments,
-              QStringList({QStringLiteral("-n"),
-                           QStringLiteral("--env"),
-                           QStringLiteral("QT_SCALE_FACTOR=1.25"),
-                           QStringLiteral("--env"),
-                           QStringLiteral("FLUENT_QT_GALLERY_SCALE_MANAGED=1"),
-                           bundle,
-                           QStringLiteral("--args"),
-                           QStringLiteral("--sample"),
-                           QString::fromLatin1(RestartArgument)}));
-    EXPECT_TRUE(isRestartedLaunch(arguments));
-    EXPECT_EQ(stripRestartArguments(
-                  {QStringLiteral("--sample"),
-                   QString::fromLatin1(RestartArgument),
-                   QString::fromLatin1(RestartArgument)}),
-              QStringList({QStringLiteral("--sample")}));
-}
-
-TEST_F(GalleryShellFrameworkTest, DisplayScaleChoicePromptsForRestart)
-{
-    auto& settings = GallerySettings::instance();
-    GallerySettingsRestorer restore(settings);
-    settings.setUiScalePercent(100);
-
-    QWidget host;
-    host.resize(900, 700);
-    fluent::gallery::GalleryNavigationItem item;
-    item.id = QStringLiteral("settings");
-    item.title = QStringLiteral("Settings");
-    item.kind = fluent::gallery::GalleryNavigationItem::Kind::FooterRoute;
-    auto* page = new SettingsPage(item, &host);
-    page->setGeometry(host.rect());
-    host.show();
-    page->show();
-    QApplication::processEvents();
-
-    auto* displayScaleChoice = page->findChild<ComboBox*>(
-        QStringLiteral("gallerySettingsDisplayScaleChoice"));
-    ASSERT_NE(displayScaleChoice, nullptr);
-    ASSERT_EQ(displayScaleChoice->currentText(),
-              QStringLiteral("Follow system (100%)"));
-
-    displayScaleChoice->setCurrentIndex(2); // 125%
-    QTRY_COMPARE_WITH_TIMEOUT(settings.uiScalePercent(), 125, 1000);
-    ContentDialog* scaleDialog = nullptr;
-    QTRY_VERIFY_WITH_TIMEOUT(
-        (scaleDialog = host.findChild<ContentDialog*>(
-             QStringLiteral("galleryDisplayScaleRestartDialog"))) != nullptr,
-        1000);
-    ASSERT_TRUE(scaleDialog->isVisible());
-    EXPECT_EQ(scaleDialog->windowModality(), Qt::ApplicationModal);
-    EXPECT_EQ(scaleDialog->title(), QStringLiteral("Restart to apply display scale?"));
-    EXPECT_EQ(scaleDialog->primaryButtonText(), QStringLiteral("Restart now"));
-    EXPECT_EQ(scaleDialog->closeButtonText(), QStringLiteral("Later"));
-    auto* restartMessage = scaleDialog->findChild<fluent::textfields::Label*>(
-        QStringLiteral("galleryDisplayScaleRestartMessage"));
-    ASSERT_NE(restartMessage, nullptr);
-    EXPECT_TRUE(restartMessage->wordWrap());
-    EXPECT_GE(restartMessage->height(),
-              restartMessage->heightForWidth(restartMessage->width()))
-        << "The restart message must reserve enough height for every wrapped line";
-
-    // The production path animates. A synchronous exit keeps this focused unit
-    // test independent of the window/navigation animation tests below.
-    scaleDialog->setAnimationEnabled(false);
-    QPointer<ContentDialog> dismissedDialog(scaleDialog);
-    scaleDialog->done(ContentDialog::ResultNone);
-    QTRY_VERIFY_WITH_TIMEOUT(dismissedDialog.isNull(), 1000);
-    host.close();
-    QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
 }
 
 TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
@@ -1794,7 +1685,6 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     GallerySettingsRestorer restore(settings);
     settings.setThemeMode(GallerySettings::ThemeMode::Light);
     settings.setNavigationStyle(GallerySettings::NavigationStyle::Auto);
-    settings.setUiScalePercent(100);
 
     GalleryWindow window;
     window.resize(1180, 760);
@@ -1813,8 +1703,6 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
         QStringLiteral("gallerySettingsNavigationChoice"));
     auto* effectChoice = page->findChild<ComboBox*>(
         QStringLiteral("gallerySettingsEffectChoice"));
-    auto* displayScaleChoice = page->findChild<ComboBox*>(
-        QStringLiteral("gallerySettingsDisplayScaleChoice"));
     auto* closeBehaviorChoice = page->findChild<ComboBox*>(
         QStringLiteral("gallerySettingsCloseBehaviorChoice"));
     auto* updateButton = page->findChild<Button*>(
@@ -1823,7 +1711,6 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     ASSERT_NE(styleChoice, nullptr);
     ASSERT_NE(navigationChoice, nullptr);
     ASSERT_NE(effectChoice, nullptr);
-    ASSERT_NE(displayScaleChoice, nullptr);
     ASSERT_NE(closeBehaviorChoice, nullptr);
     ASSERT_NE(updateButton, nullptr);
     EXPECT_EQ(updateButton->text(), QStringLiteral("Check updates"));
@@ -1846,12 +1733,10 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(navigationChoice->count(), 2);
     EXPECT_EQ(navigationChoice->currentText(), QStringLiteral("Left"));
     EXPECT_EQ(effectChoice->count(), 3);
-    EXPECT_EQ(displayScaleChoice->count(), 8);
-    EXPECT_EQ(displayScaleChoice->currentText(), QStringLiteral("Follow system (100%)"));
     EXPECT_EQ(closeBehaviorChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->currentIndex(), static_cast<int>(settings.closeBehavior()));
     for (auto* choice : {themeChoice, styleChoice, navigationChoice,
-                         effectChoice, displayScaleChoice, closeBehaviorChoice}) {
+                         effectChoice, closeBehaviorChoice}) {
         EXPECT_EQ(choice->sizePolicy().horizontalPolicy(), QSizePolicy::Preferred);
         EXPECT_EQ(choice->maximumWidth(), QWIDGETSIZE_MAX);
         EXPECT_GE(choice->width(), choice->sizeHint().width());
@@ -1864,10 +1749,10 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
             EXPECT_EQ(metrics.elidedText(item, Qt::ElideRight, availableTextWidth), item);
         }
     }
-    // Appearance & behavior (5 rows) + App behavior (1 row) + Updates (1 row) = 7 rows;
+    // Appearance & behavior (4 rows) + App behavior (1 row) + Updates (1 row) = 6 rows;
     // Style theme + Accent color share one row.
     EXPECT_NE(page->findChild<QWidget*>(QStringLiteral("gallerySettingsAccentControl")), nullptr);
-    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 7);
+    EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 6);
 
     QStringList visibleText;
     for (auto* label : page->findChildren<fluent::textfields::Label*>())
@@ -1879,7 +1764,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
 
     const auto iconLabels = page->findChildren<fluent::textfields::Label*>(
         QStringLiteral("gallerySettingsRowIcon"));
-    ASSERT_EQ(iconLabels.size(), 7);
+    ASSERT_EQ(iconLabels.size(), 6);
     for (auto* iconLabel : iconLabels)
         EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::FluentIcons);
 
@@ -1896,7 +1781,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(page->width() < 640, 1000);
     for (auto* choice : {themeChoice, navigationChoice, effectChoice,
-                         displayScaleChoice, closeBehaviorChoice}) {
+                         closeBehaviorChoice}) {
         auto* row = qobject_cast<QFrame*>(choice->parentWidget());
         ASSERT_NE(row, nullptr);
         EXPECT_GE(row->height(), 120);

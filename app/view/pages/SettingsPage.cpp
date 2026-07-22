@@ -1,6 +1,5 @@
 #include "SettingsPage.h"
 
-#include <QApplication>
 #include <QComboBox>
 #include <QDesktopServices>
 #include <QFrame>
@@ -8,7 +7,6 @@
 #include <QHBoxLayout>
 #include <QPainter>
 #include <QPalette>
-#include <QPointer>
 #include <QPushButton>
 #include <QResizeEvent>
 #include <QSizePolicy>
@@ -16,17 +14,13 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
-#include <array>
-
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
-#include "components/dialogs_flyouts/ContentDialog.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
 #include "support/logging/Log.h"
 #include "view/support/GalleryCloseBehaviorUi.h"
-#include "view/shell/GalleryApplicationLifecycle.h"
 #include "view/widgets/AccentColorControl.h"
 #include "viewmodel/GallerySettings.h"
 
@@ -36,48 +30,6 @@ namespace {
 
 constexpr int kNarrowPageWidth = 640;
 constexpr int kStackedRowWidth = 520;
-
-struct UiScaleChoice {
-    int percent;
-    const char* label;
-};
-
-constexpr std::array<UiScaleChoice, 8> kUiScaleChoices{{
-    {100, "Follow system (100%)"},
-    {110, "110%"},
-    {125, "125%"},
-    {150, "150%"},
-    {175, "175%"},
-    {200, "200%"},
-    {250, "250%"},
-    {300, "300%"},
-}};
-
-QStringList uiScaleChoiceLabels()
-{
-    QStringList labels;
-    labels.reserve(static_cast<int>(kUiScaleChoices.size()));
-    for (const auto& choice : kUiScaleChoices)
-        labels.append(QString::fromLatin1(choice.label));
-    return labels;
-}
-
-int uiScaleChoiceIndex(int percent)
-{
-    percent = GallerySettings::normalizeUiScalePercent(percent);
-    for (int index = 0; index < static_cast<int>(kUiScaleChoices.size()); ++index) {
-        if (kUiScaleChoices[static_cast<std::size_t>(index)].percent == percent)
-            return index;
-    }
-    return 0;
-}
-
-int uiScalePercentForChoice(int index)
-{
-    if (index < 0 || index >= static_cast<int>(kUiScaleChoices.size()))
-        return 100;
-    return kUiScaleChoices[static_cast<std::size_t>(index)].percent;
-}
 
 class SecondaryLabel final : public fluent::textfields::Label {
 public:
@@ -293,10 +245,6 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         QStringLiteral("gallerySettingsEffectChoice"),
         {QStringLiteral("Normal"), QStringLiteral("Mica"), QStringLiteral("Acrylic")},
         static_cast<int>(settings->windowEffect()));
-    m_displayScaleChoice = createChoiceBox(
-        QStringLiteral("gallerySettingsDisplayScaleChoice"),
-        uiScaleChoiceLabels(),
-        uiScaleChoiceIndex(settings->uiScalePercent()));
     m_closeBehaviorChoice = createChoiceBox(
         QStringLiteral("gallerySettingsCloseBehaviorChoice"),
         closebehaviorui::choices(),
@@ -339,19 +287,6 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
             this, [settings](int index) {
                 settings->setWindowEffect(
                     static_cast<fluent::windowing::BackdropEffect>(index));
-            });
-    connect(m_displayScaleChoice, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, [this, settings](int index) {
-                const int percent = uiScalePercentForChoice(index);
-                if (settings->uiScalePercent() == percent)
-                    return;
-                settings->setUiScalePercent(percent);
-                showDisplayScaleRestartDialog();
-            });
-    connect(settings, &GallerySettings::uiScalePercentChanged, this,
-            [this](int percent) {
-                const QSignalBlocker blocker(m_displayScaleChoice);
-                m_displayScaleChoice->setCurrentIndex(uiScaleChoiceIndex(percent));
             });
     connect(settings, &GallerySettings::windowEffectChanged, this,
             [this](fluent::windowing::BackdropEffect effect) {
@@ -402,11 +337,6 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                                                  QStringLiteral("Window background effect"),
                                                  QStringLiteral("Uses the system compositor when available, otherwise a software Fluent material"),
                                                  m_effectChoice));
-    m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::ZoomIn,
-        QStringLiteral("Display scale"),
-        QStringLiteral("Scale the Gallery relative to the operating-system setting; restart required"),
-        m_displayScaleChoice));
     m_contentLayout->addSpacing(10);
     m_contentLayout->addWidget(createSectionTitle(QStringLiteral("App behavior")));
     m_contentLayout->addWidget(createSettingsRow(
@@ -506,68 +436,6 @@ fluent::basicinput::ComboBox* SettingsPage::createChoiceBox(const QString& objec
     // zh_CN: ComboBox::sizeHint() 会按当前平台字体计算最长选项宽度；不要再用固定上限截断。
     choice->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     return choice;
-}
-
-void SettingsPage::showDisplayScaleRestartDialog()
-{
-    QWidget* host = window();
-    if (!host)
-        return;
-    if (auto* existing = host->findChild<fluent::dialogs_flyouts::ContentDialog*>(
-            QStringLiteral("galleryDisplayScaleRestartDialog"))) {
-        existing->raise();
-        return;
-    }
-
-    auto* dialog = new fluent::dialogs_flyouts::ContentDialog(host);
-    dialog->setObjectName(QStringLiteral("galleryDisplayScaleRestartDialog"));
-    dialog->setWindowTitle(QStringLiteral("Restart required"));
-    dialog->setTitle(QStringLiteral("Restart to apply display scale?"));
-    auto* message = new fluent::textfields::Label(
-        QStringLiteral("The new scale has been saved. Restart Fluent-Qt Gallery now to apply it consistently to the window, dialogs, text, and icons."),
-        dialog);
-    message->setObjectName(QStringLiteral("galleryDisplayScaleRestartMessage"));
-    message->setFluentTypography(Typography::FontRole::Body);
-    message->setWordWrap(true);
-    message->setMinimumWidth(340);
-    dialog->setContent(message);
-    dialog->setPrimaryButtonText(QStringLiteral("Restart now"));
-    dialog->setCloseButtonText(QStringLiteral("Later"));
-    dialog->setDefaultButton(fluent::dialogs_flyouts::ContentDialog::Primary);
-    dialog->setWindowModality(Qt::ApplicationModal);
-    dialog->resize(460, 250);
-    connect(dialog, &fluent::dialogs_flyouts::ContentDialog::primaryButtonClicked,
-            dialog, [dialog]() {
-                dialog->setProperty("galleryRestartRequested", true);
-            });
-    connect(dialog, &QDialog::finished, this, [dialog](int result) {
-        const bool restartRequested =
-            dialog->property("galleryRestartRequested").toBool()
-            || result == fluent::dialogs_flyouts::ContentDialog::ResultPrimary;
-        LOG_INFO(QStringLiteral("Display-scale restart dialog finished result=%1 restartRequested=%2")
-                     .arg(result)
-                     .arg(restartRequested));
-        const QPointer<fluent::dialogs_flyouts::ContentDialog> guard(dialog);
-        // ContentDialog emits finished from its exit-animation callback, which
-        // still restores reusable dialog state after the signal returns. Move
-        // destruction to the next event-loop turn, then request application
-        // exit one turn later. This gives the dialog, its animation, smoke
-        // overlay, and event filters a deterministic teardown order.
-        // zh_CN: ContentDialog 在退场动画回调中发出 finished，信号返回后仍会
-        // 恢复可复用状态。下一轮事件循环再同步销毁对话框，随后再下一轮请求
-        // 退出，使动画、遮罩层及事件过滤器按确定顺序完成清理。
-        QTimer::singleShot(0, qApp, [guard, restartRequested]() {
-            if (guard)
-                delete guard.data();
-            LOG_INFO(QStringLiteral("Display-scale restart dialog teardown completed restartRequested=%1")
-                         .arg(restartRequested));
-            if (restartRequested) {
-                QTimer::singleShot(0, qApp,
-                                   []() { requestApplicationRestart(); });
-            }
-        });
-    });
-    dialog->open();
 }
 
 QWidget* SettingsPage::createUpdateCheckControl()

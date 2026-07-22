@@ -3,6 +3,8 @@
 #include <QLinearGradient>
 #include <QPainterPath>
 
+#include "components/foundation/private/DpiPaintMetrics_p.h"
+
 namespace fluent::basicinput {
 
 namespace {
@@ -490,9 +492,11 @@ void Button::paintEvent(QPaintEvent*) {
     }
 
     if (borderColor != Qt::transparent) {
+        const auto borderStroke = fluent::painting::DpiPaintMetrics(painter).alignedStroke(
+            contentRect, 1.0);
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(borderColor, 1));
-        painter.drawPath(roundedRectPath(contentRect.adjusted(0.5, 0.5, -0.5, -0.5), radii));
+        painter.setPen(QPen(borderColor, borderStroke.width));
+        painter.drawPath(roundedRectPath(borderStroke.rect, radii));
     }
 
     if (state != Disabled && hasFocus() && m_focusVisual) {

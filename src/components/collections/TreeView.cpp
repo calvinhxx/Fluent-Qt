@@ -26,6 +26,7 @@
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/windowing/WindowBackdrop.h"
 
 namespace fluent::collections {
@@ -734,9 +735,11 @@ void TreeView::paintEvent(QPaintEvent* event) {
         QPainter bp(viewport());
         bp.setRenderHint(QPainter::Antialiasing);
 
+        const auto stroke = fluent::painting::DpiPaintMetrics(bp).alignedStroke(
+            QRectF(viewport()->rect()), 1.0);
         QPainterPath borderPath;
-        borderPath.addRoundedRect(QRectF(viewport()->rect()).adjusted(0.5, 0.5, -0.5, -0.5), r, r);
-        bp.setPen(QPen(c.strokeDefault, 1.0));
+        borderPath.addRoundedRect(stroke.rect, r, r);
+        bp.setPen(QPen(c.strokeDefault, stroke.width));
         bp.setBrush(Qt::NoBrush);
         bp.drawPath(borderPath);
         bp.end();
