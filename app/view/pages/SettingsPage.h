@@ -48,7 +48,6 @@ private:
                                                    const QStringList& choices,
                                                    int currentIndex);
     QWidget* createUpdateCheckControl();
-    void showDisplayScaleRestartDialog();
     void startUpdateCheck();
     void handleUpdateCheckFinished(const UpdateChecker::Result& result);
     void openUpdateTarget();
@@ -64,7 +63,6 @@ private:
     AccentColorControl* m_accentControl = nullptr;
     fluent::basicinput::ComboBox* m_navigationChoice = nullptr;
     fluent::basicinput::ComboBox* m_effectChoice = nullptr;
-    fluent::basicinput::ComboBox* m_displayScaleChoice = nullptr;
     fluent::basicinput::ComboBox* m_closeBehaviorChoice = nullptr;
     UpdateChecker* m_updateChecker = nullptr;
     fluent::textfields::Label* m_updateStatusLabel = nullptr;

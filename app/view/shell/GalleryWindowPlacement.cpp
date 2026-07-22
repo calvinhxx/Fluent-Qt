@@ -98,18 +98,14 @@ QRect constrainGeometry(const QRect& requested,
     return QRect(QPoint(x, y), size);
 }
 
-QRect restoredGeometryForScale(const QRect& savedGeometry,
-                               int savedScalePercent,
-                               int startupScalePercent,
-                               const QRect& available,
-                               const QSize& minimumSize)
+QRect restoredGeometry(const QRect& savedGeometry,
+                       const QRect& available,
+                       const QSize& minimumSize)
 {
     const bool savedSizeIsUsable = savedGeometry.width() >= minimumSize.width()
         && savedGeometry.height() >= minimumSize.height();
     if (savedGeometry.isValid() && !savedGeometry.isEmpty()
-        && savedSizeIsUsable
-        && savedScalePercent > 0
-        && savedScalePercent == startupScalePercent) {
+        && savedSizeIsUsable) {
         return constrainGeometry(savedGeometry, available, minimumSize);
     }
 
@@ -121,13 +117,11 @@ QRect restoredGeometryForScale(const QRect& savedGeometry,
 
 GalleryWindowPlacement::GalleryWindowPlacement(GalleryWindow* window,
                                                GallerySettings* settings,
-                                               int startupScalePercent,
                                                QObject* parent)
     : QObject(parent)
     , m_window(window)
     , m_settings(settings)
     , m_saveTimer(new QTimer(this))
-    , m_startupScalePercent(GallerySettings::normalizeUiScalePercent(startupScalePercent))
 {
     m_saveTimer->setSingleShot(true);
     m_saveTimer->setInterval(kPlacementSaveDelayMs);
@@ -156,22 +150,18 @@ bool GalleryWindowPlacement::restore()
     const QSize minimum = windowplacement::effectiveMinimumSize(available.size());
     m_window->setMinimumSize(minimum);
 
-    const QRect target = windowplacement::restoredGeometryForScale(
+    const QRect target = windowplacement::restoredGeometry(
         m_settings->windowNormalGeometry(),
-        m_settings->windowPlacementScalePercent(),
-        m_startupScalePercent,
         available,
         minimum);
 
     m_window->setGeometry(target);
     m_lastNormalGeometry = target;
     m_restoring = false;
-    LOG_INFO(QStringLiteral("GalleryWindowPlacement restored geometry=%1,%2 %3x%4 screen=%5 maximized=%6 savedScale=%7 startupScale=%8")
+    LOG_INFO(QStringLiteral("GalleryWindowPlacement restored geometry=%1,%2 %3x%4 screen=%5 maximized=%6")
                  .arg(target.x()).arg(target.y()).arg(target.width()).arg(target.height())
                  .arg(screen->name())
-                 .arg(m_settings->windowMaximized())
-                 .arg(m_settings->windowPlacementScalePercent())
-                 .arg(m_startupScalePercent));
+                 .arg(m_settings->windowMaximized()));
     return m_settings->windowMaximized();
 }
 
@@ -205,8 +195,7 @@ void GalleryWindowPlacement::saveNow()
     m_settings->setWindowPlacement(
         m_lastNormalGeometry,
         screen ? screen->name() : QString(),
-        state.testFlag(Qt::WindowMaximized),
-        m_startupScalePercent);
+        state.testFlag(Qt::WindowMaximized));
 }
 
 bool GalleryWindowPlacement::eventFilter(QObject* watched, QEvent* event)

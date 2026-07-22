@@ -1,4 +1,5 @@
 #include "InfoBar.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 
 #include <QEvent>
 #include <QFontMetrics>
@@ -414,18 +415,11 @@ void InfoBar::paintEvent(QPaintEvent*)
         border = colors.strokeStrong;
     }
 
-    const bool hasBorder = border.isValid() && border != QColor(Qt::transparent) && border.alpha() > 0;
-    const QRectF frameRect = hasBorder
-        ? QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5)
-        : QRectF(rect());
-
-    painter.setPen(hasBorder ? QPen(border, 1.0) : QPen(Qt::NoPen));
-    if (fill.isValid() && fill.alpha() > 0) {
-        painter.setBrush(fill);
-    } else {
-        painter.setBrush(Qt::NoBrush);
-    }
-    painter.drawRoundedRect(frameRect, radius, radius);
+    fluent::painting::RoundedSurfacePaint surface;
+    surface.fill = fill;
+    surface.border = border;
+    surface.radius = radius;
+    fluent::painting::paintRoundedSurface(painter, QRectF(rect()), surface);
 
     if (!m_isIconVisible) return;
 
@@ -616,13 +610,11 @@ void InfoBar::initializeChildren()
 {
     m_titleLabel = new fluent::textfields::Label(this);
     m_titleLabel->setObjectName(QStringLiteral("InfoBarTitleLabel"));
-    m_titleLabel->setAttribute(Qt::WA_TranslucentBackground);
     m_titleLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     m_titleLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
 
     m_messageLabel = new fluent::textfields::Label(this);
     m_messageLabel->setObjectName(QStringLiteral("InfoBarMessageLabel"));
-    m_messageLabel->setAttribute(Qt::WA_TranslucentBackground);
     m_messageLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     m_messageLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_messageLabel->setTextElideMode(Qt::ElideRight);

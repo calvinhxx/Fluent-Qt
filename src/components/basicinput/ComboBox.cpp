@@ -18,6 +18,7 @@
 #include "design/Animation.h"
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/LineEdit.h"
@@ -624,6 +625,7 @@ void ComboBox::paintEvent(QPaintEvent*) {
 
     const bool enabled = isEnabled();
     const QRectF r(rect());
+    const fluent::painting::DpiPaintMetrics paintMetrics(painter);
 
     // Branch the closed-field surface on the active design language. The chevron and text
     // (drawn further down) are shared; only the field background/border differ per brand.
@@ -697,10 +699,10 @@ void ComboBox::paintEvent(QPaintEvent*) {
         const qreal sw = fieldFocused ? 2.0 : 1.0;
         const QColor outline = !enabled ? colors.strokeSecondary
                                         : (fieldFocused ? colors.accentDefault : colors.strokeStrong);
+        const auto outlineStroke = paintMetrics.alignedStroke(r, sw);
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(outline, sw));
-        const qreal inset = sw / 2.0;
-        painter.drawRoundedRect(r.adjusted(inset, inset, -inset, -inset), mR, mR);
+        painter.setPen(QPen(outline, outlineStroke.width));
+        painter.drawRoundedRect(outlineStroke.rect, mR, mR);
     } else if (lang == DesignCupertino) {
         // macOS: bezel push-button look. Subtle fill + 1px strokeStrong hairline + small radius (~6)
         // + a faint 1px lower-edge drop shadow (matching the Button bezel). Pressed/open darken via the
@@ -710,8 +712,9 @@ void ComboBox::paintEvent(QPaintEvent*) {
         const qreal mR = qMax<qreal>(0.0, qMin<qreal>(radius.control, 6.0));
         QColor fill = enabled ? colors.bgLayerAlt : colors.controlDisabled;
 
+        const auto hairStroke = paintMetrics.alignedStroke(r, 1.0);
         QPainterPath bgPath;
-        bgPath.addRoundedRect(r.adjusted(0.5, 0.5, -0.5, -0.5), mR, mR);
+        bgPath.addRoundedRect(hairStroke.rect, mR, mR);
         painter.setPen(Qt::NoPen);
         painter.setBrush(fill);
         painter.drawPath(bgPath);
@@ -751,8 +754,8 @@ void ComboBox::paintEvent(QPaintEvent*) {
         const QColor hairline = !enabled ? colors.strokeSecondary
                                          : (fieldFocused ? colors.accentDefault : colors.strokeStrong);
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(hairline, 1.0));
-        painter.drawRoundedRect(r.adjusted(0.5, 0.5, -0.5, -0.5), mR, mR);
+        painter.setPen(QPen(hairline, hairStroke.width));
+        painter.drawRoundedRect(hairStroke.rect, mR, mR);
     } else {
         // DesignFluent (default): unchanged WinUI 3 treatment. zh_CN: 默认 Fluent,WinUI 3 处理不变。
         // Draw the control background with 1px inset for border
@@ -760,8 +763,9 @@ void ComboBox::paintEvent(QPaintEvent*) {
         const qreal innerR = outerR - 1;     // 3px
 
         // Fill background
+        const auto borderStroke = paintMetrics.alignedStroke(r, 1.0);
         QPainterPath bgPath;
-        bgPath.addRoundedRect(r.adjusted(0.5, 0.5, -0.5, -0.5), outerR, outerR);
+        bgPath.addRoundedRect(borderStroke.rect, outerR, outerR);
         painter.setPen(Qt::NoPen);
         painter.setBrush(outerBg);
         painter.drawPath(bgPath);
@@ -778,9 +782,9 @@ void ComboBox::paintEvent(QPaintEvent*) {
         // Bottom accent stroke when focused/open (WinUI 3 pattern)
         if (lineEditFocused && enabled) {
             // Draw normal border first
-            painter.setPen(QPen(borderColor, 1.0));
+            painter.setPen(QPen(borderColor, borderStroke.width));
             painter.setBrush(Qt::NoBrush);
-            painter.drawRoundedRect(r.adjusted(0.5, 0.5, -0.5, -0.5), outerR, outerR);
+            painter.drawRoundedRect(borderStroke.rect, outerR, outerR);
 
             // Accent bottom border (2px)
             const qreal accentH = 2.0;
@@ -793,9 +797,9 @@ void ComboBox::paintEvent(QPaintEvent*) {
             painter.drawPath(bp);
         } else {
             // Normal border
-            painter.setPen(QPen(borderColor, 1.0));
+            painter.setPen(QPen(borderColor, borderStroke.width));
             painter.setBrush(Qt::NoBrush);
-            painter.drawRoundedRect(r.adjusted(0.5, 0.5, -0.5, -0.5), outerR, outerR);
+            painter.drawRoundedRect(borderStroke.rect, outerR, outerR);
 
             // Bottom edge gradient (WinUI 3 ControlElevation): slightly darker at bottom
             if (enabled && !m_pressed) {

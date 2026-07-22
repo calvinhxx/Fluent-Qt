@@ -10,6 +10,8 @@
 #include <utility>
 
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 
 namespace fluent::windowing {
 
@@ -153,11 +155,10 @@ void ClientSideFrameEdgeOverlay::paintEvent(QPaintEvent*) {
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, true);
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(stroke, 1.0));
-    painter.drawRoundedRect(QRectF(visualRect).adjusted(0.5, 0.5, -0.5, -0.5),
-                            m_frameRadius,
-                            m_frameRadius);
+    fluent::painting::RoundedSurfacePaint surface;
+    surface.border = stroke;
+    surface.radius = m_frameRadius;
+    fluent::painting::paintRoundedSurface(painter, QRectF(visualRect), surface);
 }
 
 void ClientSideFrameEdgeOverlay::resizeEvent(QResizeEvent*) {
@@ -236,7 +237,10 @@ void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& 
                                           options.shadow,
                                           options.dark ? 0.46 : 0.34);
 
-    const QRectF body = QRectF(options.frameRect).adjusted(0.5, 0.5, -0.5, -0.5);
+    const fluent::painting::DeviceAlignedStroke frameStroke =
+        fluent::painting::DpiPaintMetrics(painter).alignedStroke(
+            QRectF(options.frameRect), 1.0);
+    const QRectF body = frameStroke.rect;
     if (options.usePaintedMaterial) {
         QPainterPath clip;
         clip.addRoundedRect(body, options.radius, options.radius);
@@ -244,7 +248,7 @@ void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& 
         painter.setClipPath(clip);
         WindowBackdropMaterial::paint(painter, body, options.material);
         painter.restore();
-        painter.setPen(QPen(options.stroke, 1.0));
+        painter.setPen(QPen(options.stroke, frameStroke.width));
         painter.setBrush(Qt::NoBrush);
         painter.drawPath(clip);
         return;
@@ -258,9 +262,11 @@ void paintClientSideFrame(QPainter& painter, const ClientSideFramePaintOptions& 
         fill.setAlpha(alpha);
     }
 
-    painter.setPen(QPen(options.stroke, 1.0));
-    painter.setBrush(fill);
-    painter.drawRoundedRect(body, options.radius, options.radius);
+    fluent::painting::RoundedSurfacePaint surface;
+    surface.fill = fill;
+    surface.border = options.stroke;
+    surface.radius = options.radius;
+    fluent::painting::paintRoundedSurface(painter, QRectF(options.frameRect), surface);
 }
 
 Qt::Edges resizeEdgesForHitTest(compatibility::WindowChromeCompat::HitTest hit) {

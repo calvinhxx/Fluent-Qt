@@ -26,6 +26,7 @@
 #include "components/basicinput/Button.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 
 namespace fluent::textfields {
 
@@ -732,6 +733,7 @@ bool AutoSuggestBox::paintBrandInputFrame(QPainter& painter) {
 
     const auto colors = themeColors();
     const QRectF base = QRectF(inputRect());
+    const fluent::painting::DpiPaintMetrics paintMetrics(painter);
 
     if (lang == DesignMaterial) {
         // Material 3 outlined field: transparent fill, 1dp outline thickening to 2dp accent on focus.
@@ -746,12 +748,12 @@ bool AutoSuggestBox::paintBrandInputFrame(QPainter& painter) {
         } else {
             outlineColor = colors.strokeStrong;
         }
-        const qreal inset = outlineWidth / 2.0;
+        const auto outlineStroke = paintMetrics.alignedStroke(base, outlineWidth);
         const qreal r = themeRadius().control;
         QPainterPath framePath;
-        framePath.addRoundedRect(base.adjusted(inset, inset, -inset, -inset), r, r);
+        framePath.addRoundedRect(outlineStroke.rect, r, r);
         painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(outlineColor, outlineWidth));
+        painter.setPen(QPen(outlineColor, outlineStroke.width));
         painter.drawPath(framePath);
         return true;
     }
@@ -764,8 +766,9 @@ bool AutoSuggestBox::paintBrandInputFrame(QPainter& painter) {
     // the field reads as a raised control. zh_CN: bezel 填充(文档 §4):与 LineEdit/ComboBox 同款不透明 bezel。
     {
         const QColor fill = !isEnabled() ? colors.controlDisabled : colors.bgLayerAlt;
+        const auto hairStroke = paintMetrics.alignedStroke(base, 1.0);
         QPainterPath fillPath;
-        fillPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
+        fillPath.addRoundedRect(hairStroke.rect, r, r);
         painter.setPen(Qt::NoPen);
         painter.setBrush(fill);
         painter.drawPath(fillPath);
@@ -790,17 +793,20 @@ bool AutoSuggestBox::paintBrandInputFrame(QPainter& painter) {
 
     QColor hairline = !isEnabled() ? colors.strokeDivider
                                    : (m_hovered ? colors.strokeStrong : colors.strokeDefault);
+    const auto hairStroke = paintMetrics.alignedStroke(base, 1.0);
     QPainterPath hairPath;
-    hairPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
+    hairPath.addRoundedRect(hairStroke.rect, r, r);
     painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(hairline, 1.0));
+    painter.setPen(QPen(hairline, hairStroke.width));
     painter.drawPath(hairPath);
     return true;
 }
 
 void AutoSuggestBox::paintInputFrame(QPainter& painter) {
     const auto colors = themeColors();
-    const QRectF frameRect = QRectF(inputRect()).adjusted(0.5, 0.5, -0.5, -0.5);
+    const fluent::painting::DpiPaintMetrics paintMetrics(painter);
+    const auto frameStroke = paintMetrics.alignedStroke(QRectF(inputRect()), 1.0);
+    const QRectF frameRect = frameStroke.rect;
 
     // Brand-aware frame for the input row; the query/clear buttons are fluent::Buttons that already follow
     // the design language, and the suggestion popup paints via FluentElement tokens. DesignFluent falls
@@ -843,14 +849,16 @@ void AutoSuggestBox::paintInputFrame(QPainter& painter) {
     painter.setBrush(bgColor);
     painter.drawPath(framePath);
     painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(borderColor, 1));
+    painter.setPen(QPen(borderColor, frameStroke.width));
     painter.drawPath(framePath);
 
     if (isEnabled() && !isReadOnly()) {
-        QPen bottomPen(bottomColor, bottomWidth);
+        const auto bottomStroke = paintMetrics.alignedStroke(
+            QRectF(inputRect()), bottomWidth);
+        QPen bottomPen(bottomColor, bottomStroke.width);
         bottomPen.setCapStyle(Qt::RoundCap);
         painter.setPen(bottomPen);
-        const qreal bottomY = frameRect.bottom() - (bottomWidth > 1 ? (bottomWidth - 1) / 2.0 : 0);
+        const qreal bottomY = bottomStroke.rect.bottom();
         QPainterPath bottomPath;
         bottomPath.moveTo(frameRect.left() + radius, bottomY);
         bottomPath.lineTo(frameRect.right() - radius, bottomY);

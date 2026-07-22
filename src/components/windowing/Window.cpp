@@ -21,6 +21,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 #include "components/status_info/ToolTip.h"
 #include "utils/private/FluentQtLogging_p.h"
 
@@ -567,8 +568,9 @@ void Window::paintEvent(QPaintEvent*) {
     painter.fillRect(rect(), backdrop.isValid() ? backdrop : themeBackdrop(isActiveWindow()));
 
     if (m_chrome.usesCustomWindowChrome()) {
-        painter.setPen(colors.strokeDefault);
-        painter.drawRect(rect().adjusted(0, 0, -1, -1));
+        fluent::painting::RoundedSurfacePaint surface;
+        surface.border = colors.strokeDefault;
+        fluent::painting::paintRoundedSurface(painter, QRectF(rect()), surface);
     }
 }
 
