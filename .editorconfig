@@ -1,0 +1,21 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+
+[*.{cpp,h,hpp,c,cc,cxx,mm,m}]
+indent_style = space
+indent_size = 4
+
+[*.{cmake,CMakeLists.txt}]
+indent_style = space
+indent_size = 2
+
+[*.{json,yml,yaml,md,html,css,js,ts}]
+indent_style = space
+indent_size = 2
+
+[*.{bat,cmd,ps1}]
+end_of_line = lf
