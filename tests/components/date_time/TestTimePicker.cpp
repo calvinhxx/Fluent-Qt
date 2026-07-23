@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QImage>
+#include <QLocale>
 #include <QPalette>
 #include <QSignalSpy>
 #include <QTest>
@@ -149,6 +150,7 @@ TEST_F(TimePickerTest, DefaultsAndInheritanceMatchComponentPattern)
 TEST_F(TimePickerTest, SelectedTimeClearAndFormattingDriveSegments)
 {
     TimePicker picker;
+    picker.setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
     QSignalSpy selectedSpy(&picker, &TimePicker::selectedTimeChanged);
     QSignalSpy timeSpy(&picker, &TimePicker::timeChanged);
 

@@ -1012,6 +1012,17 @@ void TimePicker::setClockIdentifier(ClockIdentifier identifier)
     emit clockIdentifierChanged(m_clockIdentifier);
 }
 
+void TimePicker::setLocale(const QLocale& locale)
+{
+    if (m_locale == locale)
+        return;
+    m_locale = locale;
+    if (m_flyout && m_flyout->isOpen())
+        m_flyout->showForPicker();
+    update();
+    emit localeChanged(m_locale);
+}
+
 void TimePicker::openPicker()
 {
     if (!isEnabled())
@@ -1347,7 +1358,7 @@ QString TimePicker::formatField(TimeField field, const QTime& time) const
     case TimeField::Minute:
         return QStringLiteral("%1").arg(time.minute(), 2, 10, QLatin1Char('0'));
     case TimeField::Period:
-        return isPm(time) ? QStringLiteral("PM") : QStringLiteral("AM");
+        return isPm(time) ? m_locale.pmText() : m_locale.amText();
     }
     return QString();
 }

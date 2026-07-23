@@ -127,6 +127,19 @@ public:
     void setChromeInteractive(bool interactive);
     bool isChromeInteractive() const { return m_chromeInteractive; }
 
+    /**
+     * @brief Sets caption-button tooltips; empty strings hide a tooltip.
+     * zh_CN: 设置标题栏按钮提示文案；空字符串表示不显示该提示。
+     *
+     * Defaults are empty so the library does not hard-code a language.
+     * Pass restoreTooltip for the maximize button while the window is maximized.
+     * zh_CN: 默认均为空，避免库内写死语言。最大化状态下的还原提示使用 restoreTooltip。
+     */
+    void setCaptionButtonToolTips(const QString& minimizeTooltip,
+                                  const QString& maximizeTooltip,
+                                  const QString& closeTooltip,
+                                  const QString& restoreTooltip = QString());
+
 public slots:
     void minimizeWindow();
     void toggleMaximizeRestore();
@@ -205,6 +218,10 @@ private:
     bool m_nativeChromeRepairPending = false;
     bool m_fallbackDragging = false;
     bool m_chromeInteractive = true;
+    QString m_minimizeTooltip;
+    QString m_maximizeTooltip;
+    QString m_closeTooltip;
+    QString m_restoreTooltip;
     QPoint m_fallbackDragOffset;
     std::unique_ptr<WindowResizeSession> m_resizeSession;
 };

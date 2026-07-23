@@ -683,6 +683,22 @@ void Window::setChromeInteractive(bool interactive) {
         scheduleNativeChromeRepair();
 }
 
+void Window::setCaptionButtonToolTips(const QString& minimizeTooltip,
+                                      const QString& maximizeTooltip,
+                                      const QString& closeTooltip,
+                                      const QString& restoreTooltip) {
+    m_minimizeTooltip = minimizeTooltip;
+    m_maximizeTooltip = maximizeTooltip;
+    m_closeTooltip = closeTooltip;
+    m_restoreTooltip = restoreTooltip.isEmpty() ? maximizeTooltip : restoreTooltip;
+
+    if (m_minimizeButton)
+        fluent::status_info::ToolTip::attach(m_minimizeButton, m_minimizeTooltip);
+    if (m_closeButton)
+        fluent::status_info::ToolTip::attach(m_closeButton, m_closeTooltip);
+    updateMaximizeButtonIcon();
+}
+
 void Window::updateChromeOptions() {
     if (!m_titleBar)
         return;
@@ -750,13 +766,13 @@ void Window::setupCaptionButtons() {
 
     m_minimizeButton = createCaptionButton(QStringLiteral("fluentWindowMinimizeButton"),
                                            Typography::Icons::ChromeMinimize,
-                                           QStringLiteral("Minimize"));
+                                           m_minimizeTooltip);
     m_maximizeButton = createCaptionButton(QStringLiteral("fluentWindowMaximizeButton"),
                                            Typography::Icons::ChromeMaximize,
-                                           QStringLiteral("Maximize"));
+                                           m_maximizeTooltip);
     m_closeButton = createCaptionButton(QStringLiteral("fluentWindowCloseButton"),
                                         Typography::Icons::ChromeClose,
-                                        QStringLiteral("Close"));
+                                        m_closeTooltip);
     m_closeButton->setCriticalOnHover(true);
 
     // Linux leaves the caption surface square and lets the top-level frame
@@ -827,9 +843,7 @@ void Window::updateMaximizeButtonIcon() {
         return;
 
     fluent::status_info::ToolTip::attach(m_maximizeButton,
-                                         isMaximized()
-                                             ? QStringLiteral("Restore")
-                                             : QStringLiteral("Maximize"));
+                                         isMaximized() ? m_restoreTooltip : m_maximizeTooltip);
     m_maximizeButton->setIconGlyph(isMaximized()
                                        ? Typography::Icons::ChromeRestore
                                        : Typography::Icons::ChromeMaximize,

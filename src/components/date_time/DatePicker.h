@@ -2,6 +2,7 @@
 #define DATEPICKER_H
 
 #include <QDate>
+#include <QLocale>
 #include <Qt>
 #include <QVector>
 
@@ -77,6 +78,11 @@ class DatePicker : public fluent::basicinput::Button {
      * zh_CN: picker 下拉面板是否打开。
      */
     Q_PROPERTY(bool dropDownOpen READ isDropDownOpen NOTIFY dropDownOpenChanged)
+    /**
+     * @brief Locale used for month and weekday names.
+     * zh_CN: 用于月份和星期名称的区域设置。
+     */
+    Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
 
 public:
     enum class DateField {
@@ -123,6 +129,8 @@ public:
     DayFormat dayFormat() const { return m_dayFormat; }
     YearFormat yearFormat() const { return m_yearFormat; }
 
+    QLocale locale() const { return m_locale; }
+
     Qt::Alignment fieldTextAlignment(DateField field) const;
 
     bool isDropDownOpen() const { return m_dropDownOpen; }
@@ -147,6 +155,7 @@ public slots:
     void setMonthFormat(MonthFormat format);
     void setDayFormat(DayFormat format);
     void setYearFormat(YearFormat format);
+    void setLocale(const QLocale& locale);
     void setFieldTextAlignment(DateField field, Qt::Alignment alignment);
     void openPicker();
     void closePicker();
@@ -162,6 +171,7 @@ signals:
     void monthFormatChanged(DatePicker::MonthFormat format);
     void dayFormatChanged(DatePicker::DayFormat format);
     void yearFormatChanged(DatePicker::YearFormat format);
+    void localeChanged(const QLocale& locale);
     void dropDownOpenChanged(bool open);
 
 protected:
@@ -209,6 +219,7 @@ private:
     MonthFormat m_monthFormat = MonthFormat::FullMonthName;
     DayFormat m_dayFormat = DayFormat::DayInteger;
     YearFormat m_yearFormat = YearFormat::FullYear;
+    QLocale m_locale;
     Qt::Alignment m_monthTextAlignment = Qt::AlignLeft;
     Qt::Alignment m_dayTextAlignment = Qt::AlignHCenter;
     Qt::Alignment m_yearTextAlignment = Qt::AlignHCenter;

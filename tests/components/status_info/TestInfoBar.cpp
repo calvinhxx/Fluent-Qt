@@ -81,7 +81,7 @@ TEST_F(InfoBarTest, DefaultPropertyValues) {
     InfoBar bar;
 
     EXPECT_TRUE(bar.isOpen());
-    EXPECT_EQ(bar.title(), "Title");
+    EXPECT_TRUE(bar.title().isEmpty());
     EXPECT_TRUE(bar.message().isEmpty());
     EXPECT_EQ(bar.severity(), InfoBar::Informational);
     EXPECT_TRUE(bar.isClosable());
