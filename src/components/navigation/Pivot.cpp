@@ -942,9 +942,15 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
 
     // 3. Paint the icon and label. zh_CN: 3. 绘制图标与标签。
     if (!record.iconRect.isEmpty()) {
-        painter.setFont(iconFont(currentMetrics.iconSize));
         painter.setPen(textColorValue);
-        painter.drawText(record.iconRect, Qt::AlignCenter, m_items.at(record.itemIndex).iconGlyph);
+        if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
+            Typography::Icons::paintGlyph(
+                painter, QRectF(record.iconRect), m_items.at(record.itemIndex).iconGlyph,
+                currentMetrics.iconSize, Qt::AlignCenter);
+        } else {
+            painter.setFont(iconFont(currentMetrics.iconSize));
+            painter.drawText(record.iconRect, Qt::AlignCenter, m_items.at(record.itemIndex).iconGlyph);
+        }
     }
     painter.setFont(itemFont());
     painter.setPen(textColorValue);
@@ -978,10 +984,15 @@ void Pivot::paintOverflowButton(QPainter& painter, const QRect& rect, const QStr
     if (rect.isEmpty())
         return;
     painter.save();
-    painter.setFont(iconFont(metrics().iconSize));
     const bool highlighted = sameHit(m_pressedHit, hit) || sameHit(m_hoveredHit, hit);
     painter.setPen(enabled ? (highlighted ? themeColors().textPrimary : themeColors().textSecondary) : themeColors().textDisabled);
-    painter.drawText(rect, Qt::AlignCenter, glyph);
+    if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
+        Typography::Icons::paintGlyph(
+            painter, QRectF(rect), glyph, metrics().iconSize, Qt::AlignCenter);
+    } else {
+        painter.setFont(iconFont(metrics().iconSize));
+        painter.drawText(rect, Qt::AlignCenter, glyph);
+    }
     painter.restore();
 }
 

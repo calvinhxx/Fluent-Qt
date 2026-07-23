@@ -2,6 +2,7 @@
 
 #include <QPainter>
 
+#include "compatibility/QtCompat.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
 #include "model/GalleryComponentCatalog.h"
@@ -10,7 +11,7 @@ namespace fluent::gallery {
 namespace {
 
 constexpr int kTileSize = 40;
-constexpr int kGlyphSize = 18;
+constexpr int kGlyphSize = Typography::IconSize::Large;
 
 } // namespace
 
@@ -35,7 +36,7 @@ void GalleryIconTile::paintEvent(QPaintEvent*)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    painter.setRenderHint(QPainter::TextAntialiasing);
 
     if (!m_iconGlyph.isEmpty()) {
         const Colors colors = themeColors();
@@ -45,12 +46,13 @@ void GalleryIconTile::paintEvent(QPaintEvent*)
 
         painter.setFont(Typography::Icons::font(kGlyphSize));
         painter.setPen(colors.textPrimary);
-        painter.drawText(rect(), Qt::AlignCenter, m_iconGlyph);
+        painter.drawText(rect(), Qt::AlignCenter,
+                         Typography::Icons::glyphForSize(m_iconGlyph, kGlyphSize));
         return;
     }
 
     if (!m_pixmap.isNull())
-        painter.drawPixmap(rect(), m_pixmap);
+        fluentDrawPixmapInLogicalRect(painter, rect(), m_pixmap);
 }
 
 } // namespace fluent::gallery

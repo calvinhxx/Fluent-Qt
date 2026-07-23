@@ -10,6 +10,10 @@
 #include <QJsonObject>
 #include <QRegularExpression>
 
+#include <QPainter>
+#include <QPainterPath>
+#include <QPaintDevice>
+
 #include "compatibility/FontCompat.h"
 #include "utils/private/FluentQtLogging_p.h"
 
@@ -200,6 +204,34 @@ QString glyph(const QString& name)
     return it == catalogIndex().constEnd() ? QString() : catalog().at(it.value()).glyph();
 }
 
+int snapIconPixelSize(int requestedPixelSize)
+{
+    // WinUI FontIcon crisp sizes + Fluent System Icons compact/optical set.
+    // zh_CN: WinUI FontIcon 清晰字号 + Fluent System Icons 紧凑/光学档。
+    static constexpr int kOpticalSizes[] = {
+        12, 16, 20, 24, 28, 32, 40, 48, 64
+    };
+    if (requestedPixelSize <= 0)
+        return 16;
+    // Preserve intentional micro slots (8–11) used by FlipView / PipsPager / spin.
+    // zh_CN: 保留 FlipView / PipsPager / 微调钮等有意使用的 8–11 微槽。
+    if (requestedPixelSize < 12)
+        return requestedPixelSize;
+
+    int best = kOpticalSizes[0];
+    int bestDelta = qAbs(requestedPixelSize - best);
+    for (int size : kOpticalSizes) {
+        const int delta = qAbs(requestedPixelSize - size);
+        // Prefer larger on ties so mid sizes like 18/21 do not look undersized.
+        // zh_CN: 等距时取更大档，避免 18/21 等中间值视觉偏小。
+        if (delta < bestDelta || (delta == bestDelta && size > best)) {
+            best = size;
+            bestDelta = delta;
+        }
+    }
+    return best;
+}
+
 QString glyphForSize(const QString& glyphOrName, int designSize)
 {
     QString fallback = glyphOrName;
@@ -209,13 +241,15 @@ QString glyphForSize(const QString& glyphOrName, int designSize)
     if (designSize <= 0)
         return fallback;
 
+    const int snappedSize = snapIconPixelSize(designSize);
+
     const QString sourceName = sourceNameFor(glyphOrName);
     const QRegularExpressionMatch sourceMatch = iconNamePattern().match(sourceName);
     if (!sourceMatch.hasMatch())
         return fallback;
 
     const QString family = sourceMatch.captured(1);
-    const QString exactName = family + QLatin1Char('_') + QString::number(designSize)
+    const QString exactName = family + QLatin1Char('_') + QString::number(snappedSize)
         + QStringLiteral("_regular");
     const auto exact = catalogIndex().constFind(exactName);
     if (exact != catalogIndex().constEnd())
@@ -230,9 +264,9 @@ QString glyphForSize(const QString& glyphOrName, int designSize)
     int bestSize = 0;
     for (int row : variants.value()) {
         const int candidateSize = catalog().at(row).designSize;
-        const int delta = qAbs(candidateSize - designSize);
-        const bool candidateAtOrAbove = candidateSize >= designSize;
-        const bool bestAtOrAbove = bestSize >= designSize;
+        const int delta = qAbs(candidateSize - snappedSize);
+        const bool candidateAtOrAbove = candidateSize >= snappedSize;
+        const bool bestAtOrAbove = bestSize >= snappedSize;
         if (delta < bestDelta
             || (delta == bestDelta && candidateAtOrAbove && !bestAtOrAbove)
             || (delta == bestDelta && candidateAtOrAbove == bestAtOrAbove
@@ -248,14 +282,53 @@ QString glyphForSize(const QString& glyphOrName, int designSize)
 QFont font(int pixelSize)
 {
     QFont result(fluent::fontcompat::IconFamily);
-    result.setPixelSize(pixelSize);
-    // Small icon glyphs benefit from vertical grid fitting on DirectWrite,
-    // FreeType, and CoreText. Keep grayscale antialiasing so composited
-    // surfaces and cross-platform screenshots remain stable.
-    result.setHintingPreference(QFont::PreferVerticalHinting);
-    result.setStyleStrategy(QFont::StyleStrategy(
-        QFont::PreferQuality | QFont::PreferAntialias | QFont::NoSubpixelAntialias));
+    result.setPixelSize(snapIconPixelSize(pixelSize));
+    // Match UI text: DirectWrite vertical grid fitting fattens compact Fluent
+    // System Icon strokes (12–16 px caption / chevron / badge slots). Keep
+    // vertical hinting on FreeType/CoreText where it sharpens without bloat.
+    // zh_CN: 与 UI 正文一致：DirectWrite 纵向网格拟合会把紧凑 Fluent System Icon
+    // 描边（12–16 px 标题栏/箭头/徽标槽）压粗；在 FreeType/CoreText 上保留纵向
+    // hinting，清晰且不明显发胖。
+    fluentConfigureTextRendering(result);
     return result;
+}
+
+void paintGlyph(QPainter& painter,
+                const QRectF& targetRect,
+                const QString& glyphOrName,
+                int pixelSize,
+                Qt::Alignment alignment)
+{
+    if (glyphOrName.isEmpty() || targetRect.isEmpty() || pixelSize <= 0)
+        return;
+
+    const QString paintedGlyph = glyphForSize(glyphOrName, pixelSize);
+    painter.setFont(font(pixelSize));
+
+    // Draw into a device-pixel-aligned slot with Qt's text alignment. Measuring
+    // ink via QPainterPath and placing a raw baseline often mis-centers compact
+    // chevrons (ComboBox AlignRight on a full-width rect) and softens edges on
+    // DirectWrite compared to drawText(rect, AlignCenter) used by SplitButton.
+    // zh_CN: 在设备像素对齐的槽里用 Qt 文本对齐绘制。用 QPainterPath 量墨再摆基线
+    // 容易让紧凑箭头偏心（ComboBox 整行 AlignRight），且在 DirectWrite 上比
+    // SplitButton 的 drawText(rect, AlignCenter) 更易发虚。
+    QRectF slot = targetRect;
+    const qreal dpr = painter.device() ? painter.device()->devicePixelRatioF() : 1.0;
+    if (dpr > 0.0) {
+        const qreal left = qRound(slot.left() * dpr) / dpr;
+        const qreal top = qRound(slot.top() * dpr) / dpr;
+        const qreal right = qRound(slot.right() * dpr) / dpr;
+        const qreal bottom = qRound(slot.bottom() * dpr) / dpr;
+        slot = QRectF(QPointF(left, top), QPointF(right, bottom));
+    }
+
+    Qt::Alignment flags = alignment;
+    if (!(flags & Qt::AlignHorizontal_Mask))
+        flags |= Qt::AlignHCenter;
+    if (!(flags & Qt::AlignVertical_Mask))
+        flags |= Qt::AlignVCenter;
+
+    painter.drawText(slot, flags, paintedGlyph);
 }
 
 } // namespace Typography::Icons

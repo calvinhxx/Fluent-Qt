@@ -317,10 +317,6 @@ void TimePickerColumn::paintEvent(QPaintEvent*)
     const bool canNext = m_flyout && m_flyout->canShift(m_field, 1);
 
     if (m_navButtonOpacity > 0.01) {
-        QFont iconFont(Typography::FontFamily::FluentIcons);
-        iconFont.setPixelSize(8);
-        painter.setFont(iconFont);
-
         auto paintNavButton = [&](const QRect& rect, const QString& glyph, bool enabled, bool hovered) {
             painter.save();
             painter.setOpacity(m_navButtonOpacity);
@@ -333,7 +329,8 @@ void TimePickerColumn::paintEvent(QPaintEvent*)
                 ? (hovered ? colors.textPrimary : colors.textSecondary)
                 : colors.textDisabled;
             painter.setPen(iconColor);
-            painter.drawText(rect, Qt::AlignCenter, glyph);
+            Typography::Icons::paintGlyph(
+                painter, QRectF(rect), glyph, Typography::IconSize::Compact, Qt::AlignCenter);
             painter.restore();
         };
 

@@ -825,19 +825,8 @@ void CalendarView::paintNavButton(QPainter& painter, const QRect& buttonRect, co
         painter.drawRoundedRect(buttonRect.adjusted(4, 4, -4, -4), themeRadius().control, themeRadius().control);
     }
 
-    QFont iconFont(Typography::FontFamily::FluentIcons);
-    iconFont.setPixelSize(10);
-    QPainterPath iconPath;
-    iconPath.addText(0.0, 0.0, iconFont, glyph);
-    const QRectF iconBounds = iconPath.boundingRect();
-    const QPointF iconCenter = QRectF(buttonRect).center();
-    painter.save();
-    painter.translate(iconCenter.x() - iconBounds.center().x(),
-                      iconCenter.y() - iconBounds.center().y());
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(colors.textPrimary);
-    painter.drawPath(iconPath);
-    painter.restore();
+    painter.setPen(colors.textPrimary);
+    Typography::Icons::paintGlyph(painter, QRectF(buttonRect), glyph, 10, Qt::AlignCenter);
 }
 
 void CalendarView::paintWeekdays(QPainter& painter)

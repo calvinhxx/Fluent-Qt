@@ -73,52 +73,46 @@ void drawCenteredIconGlyph(QPainter& painter,
                            qreal scale,
                            qreal rotation) {
     const bool usesFluentIcons = fontFamily == Typography::FontFamily::FluentIcons;
-    const QString paintedGlyph = usesFluentIcons
-        ? Typography::Icons::glyphForSize(glyph, pixelSize)
-        : glyph;
-    QFont iconFont = usesFluentIcons
-        ? Typography::Icons::font(pixelSize)
-        : QFont(fontFamily);
-    if (!usesFluentIcons)
-        iconFont.setPixelSize(pixelSize);
-    painter.setFont(iconFont);
-
-    // Measure the exact outline so optical centering remains independent of
-    // font ascent/descent quirks, but let Qt's text rasterizer do the actual
-    // drawing. Filling the path directly discards font hinting and makes 1 px
-    // strokes noticeably soft at common button sizes on DirectWrite.
-    QPainterPath measurementPath;
-    measurementPath.addText(QPointF(0, 0), iconFont, paintedGlyph);
-    const QRectF inkBounds = measurementPath.boundingRect();
-    const QPointF targetCenter = targetRect.center() + QPointF(offset.x(), offset.y());
+    const QRectF paintedRect = targetRect.translated(QPointF(offset.x(), offset.y()));
     const bool transformed = !qFuzzyCompare(scale, 1.0) || !qFuzzyIsNull(rotation);
-    if (transformed) {
+
+    // Fluent icons: shared paintGlyph (device-aligned drawText). Keep transform
+    // wrapping for Button press/scale animations.
+    // zh_CN: Fluent 图标走共享 paintGlyph（设备对齐 drawText）；按压缩放动画仍包一层变换。
+    if (usesFluentIcons) {
+        if (!transformed) {
+            Typography::Icons::paintGlyph(
+                painter, paintedRect, glyph, pixelSize, Qt::AlignCenter);
+            return;
+        }
+        const QPointF targetCenter = paintedRect.center();
         painter.save();
         painter.translate(targetCenter);
         painter.rotate(rotation);
         painter.scale(scale, scale);
         painter.translate(-targetCenter);
-    }
-    if (inkBounds.isEmpty()) {
-        painter.drawText(targetRect.translated(QPointF(offset.x(), offset.y())),
-                         Qt::AlignCenter | Qt::AlignVCenter,
-                         paintedGlyph);
-        if (transformed)
-            painter.restore();
+        Typography::Icons::paintGlyph(
+            painter, paintedRect, glyph, pixelSize, Qt::AlignCenter);
+        painter.restore();
         return;
     }
 
-    QPointF baseline = targetCenter - inkBounds.center();
-    const qreal devicePixelRatio = painter.device()
-        ? painter.device()->devicePixelRatioF()
-        : 1.0;
-    if (devicePixelRatio > 0.0) {
-        baseline.setX(qRound(baseline.x() * devicePixelRatio) / devicePixelRatio);
-        baseline.setY(qRound(baseline.y() * devicePixelRatio) / devicePixelRatio);
+    QFont iconFont(fontFamily);
+    iconFont.setPixelSize(pixelSize);
+    painter.setFont(iconFont);
+    if (!transformed) {
+        painter.drawText(paintedRect, Qt::AlignCenter, glyph);
+        return;
     }
-    painter.drawText(baseline, paintedGlyph);
-    if (transformed)
-        painter.restore();
+
+    const QPointF targetCenter = paintedRect.center();
+    painter.save();
+    painter.translate(targetCenter);
+    painter.rotate(rotation);
+    painter.scale(scale, scale);
+    painter.translate(-targetCenter);
+    painter.drawText(paintedRect, Qt::AlignCenter, glyph);
+    painter.restore();
 }
 
 } // namespace

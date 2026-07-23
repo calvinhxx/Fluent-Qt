@@ -554,9 +554,7 @@ QString InfoBar::severityGlyph() const
 
 QFont InfoBar::severityIconFont() const
 {
-    QFont font(Typography::FontFamily::FluentIcons);
-    font.setPixelSize(m_severityIconGlyphSize);
-    return font;
+    return Typography::Icons::font(m_severityIconGlyphSize);
 }
 
 void InfoBar::drawSeverityGlyph(QPainter& painter, const QRectF& targetRect) const
@@ -564,18 +562,17 @@ void InfoBar::drawSeverityGlyph(QPainter& painter, const QRectF& targetRect) con
     const QString glyph = severityGlyph();
     if (glyph.isEmpty() || targetRect.isEmpty()) return;
 
-    QPainterPath glyphPath;
-    glyphPath.addText(QPointF(0, 0), severityIconFont(), glyph);
-    const QRectF glyphBounds = glyphPath.boundingRect();
-    if (glyphBounds.isEmpty()) return;
-
+    // Badge12 semantic aliases historically pointed at 16 px *circle* drawings
+    // (checkmark_circle / error_circle). Those read as a second ring inside the
+    // filled Fluent badge. Resolve a compact optical variant and paint with
+    // drawText so DirectWrite hinting stays active.
+    // zh_CN: Badge12 语义别名曾指向 16 px「带圈」字形（checkmark_circle / error_circle），
+    // 画在填充徽标圆内会像第二层环。解析紧凑光学变体并用 drawText 绘制，保留 DirectWrite hinting。
     painter.save();
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(isEnabled() ? m_badgeForegroundColor : m_disabledTextColor);
-    painter.translate(
-        targetRect.center().x() - glyphBounds.center().x(),
-        targetRect.center().y() - glyphBounds.center().y());
-    painter.drawPath(glyphPath);
+    painter.setPen(isEnabled() ? m_badgeForegroundColor : m_disabledTextColor);
+    painter.setBrush(Qt::NoBrush);
+    Typography::Icons::paintGlyph(
+        painter, targetRect, glyph, m_severityIconGlyphSize, Qt::AlignCenter);
     painter.restore();
 }
 
@@ -588,21 +585,13 @@ void InfoBar::drawSeverityGlyphTinted(QPainter& painter, const QRectF& targetRec
     // filled circle. Without that circle the tinted glyph should fill the icon slot, so scale to the slot
     // height. zh_CN: Fluent 徽标字形刻意很小（~10）因为它在填充圆内。去掉圆后,着色字形应撑满图标槽,
     // 故按槽高缩放。
-    QFont font(Typography::FontFamily::FluentIcons);
-    font.setPixelSize(qMax(1, qRound(targetRect.height())));
-
-    QPainterPath glyphPath;
-    glyphPath.addText(QPointF(0, 0), font, glyph);
-    const QRectF glyphBounds = glyphPath.boundingRect();
-    if (glyphBounds.isEmpty()) return;
+    const int slotSize = qMax(1, qRound(targetRect.height()));
 
     painter.save();
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(color);
-    painter.translate(
-        targetRect.center().x() - glyphBounds.center().x(),
-        targetRect.center().y() - glyphBounds.center().y());
-    painter.drawPath(glyphPath);
+    painter.setPen(color);
+    painter.setBrush(Qt::NoBrush);
+    Typography::Icons::paintGlyph(
+        painter, targetRect, glyph, slotSize, Qt::AlignCenter);
     painter.restore();
 }
 

@@ -292,7 +292,17 @@ void InfoBadge::paintEvent(QPaintEvent*)
     painter.setBrush(Qt::NoBrush);
 
     if (mode == InfoBadgeDisplayMode::Icon && !m_iconGlyph.isEmpty()) {
-        drawCenteredTextPath(painter, badgeRect, iconFont(), m_iconGlyph, textColor);
+        if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
+            painter.setPen(textColor);
+            painter.save();
+            if (!m_contentOffset.isNull())
+                painter.translate(m_contentOffset);
+            Typography::Icons::paintGlyph(
+                painter, badgeRect, m_iconGlyph, m_iconGlyphSize, Qt::AlignCenter);
+            painter.restore();
+        } else {
+            drawCenteredTextPath(painter, badgeRect, iconFont(), m_iconGlyph, textColor);
+        }
         return;
     }
 

@@ -714,13 +714,9 @@ void PipsPager::drawButton(QPainter& painter, const QRect& buttonRect, bool prev
         ? (m_orientation == Qt::Horizontal ? 0xEDD9 : 0xEDDB)
         : (m_orientation == Qt::Horizontal ? 0xEDDA : 0xEDDC);
 
-    QFont iconFont(Typography::FontFamily::FluentIcons);
-    iconFont.setPixelSize(m_navigationIconSize);
-    iconFont.setHintingPreference(QFont::PreferNoHinting);
-
-    painter.setFont(iconFont);
     painter.setPen(caretColor(target));
-    painter.drawText(buttonRect, Qt::AlignCenter, QString(QChar(codepoint)));
+    Typography::Icons::paintGlyph(
+        painter, QRectF(buttonRect), QString(QChar(codepoint)), m_navigationIconSize, Qt::AlignCenter);
 }
 
 QColor PipsPager::pipColor(bool selected) const

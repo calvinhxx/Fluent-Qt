@@ -6,9 +6,9 @@
 #include <QPainter>
 #include <QResizeEvent>
 
+#include "compatibility/QtCompat.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
-#include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {
 namespace {
@@ -246,11 +246,13 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
             painter.setPen(Qt::NoPen);
             painter.setBrush(colors.subtleSecondary);
             painter.drawRoundedRect(iconRect, ::CornerRadius::Control, ::CornerRadius::Control);
-            painter.setFont(Typography::Icons::font(18));
+            const int glyphSize = Typography::IconSize::Large;
+            painter.setFont(Typography::Icons::font(glyphSize));
             painter.setPen(colors.textPrimary);
-            painter.drawText(iconRect, Qt::AlignCenter, entry.iconGlyph);
+            painter.drawText(iconRect, Qt::AlignCenter,
+                             Typography::Icons::glyphForSize(entry.iconGlyph, glyphSize));
         } else if (!entry.icon.isNull()) {
-            painter.drawPixmap(iconRect, entry.icon);
+            fluentDrawPixmapInLogicalRect(painter, iconRect, entry.icon);
         }
 
         const int textLeft = iconRect.right() + 1 + kIconTextGap;

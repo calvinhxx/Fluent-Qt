@@ -450,20 +450,13 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
 
     // FlipViewButtonScalePressed=0.875: the arrow shrinks while pressed.
     // zh_CN: FlipViewButtonScalePressed=0.875，按压时箭头缩小。
-    int arrowSize = pressed ? static_cast<int>(kArrowFontSize * 0.875) : kArrowFontSize;
-    QFont iconFont(Typography::FontFamily::FluentIcons);
-    iconFont.setPixelSize(arrowSize);
-    p.setFont(iconFont);
+    const int arrowSize = pressed ? static_cast<int>(kArrowFontSize * 0.875) : kArrowFontSize;
     p.setPen(arrowColor);
 
-    // Drawn with the Chevron icon font. zh_CN: 使用 Chevron iconfont。
-    QString glyph;
-    if (m_orientation == Qt::Horizontal) {
-        glyph = isNext ? Typography::Icons::ChevronRight : Typography::Icons::ChevronLeft;
-    } else {
-        glyph = isNext ? Typography::Icons::ChevronDown : Typography::Icons::ChevronUp;
-    }
-    p.drawText(btnRect, Qt::AlignCenter, glyph);
+    const QString glyph = (m_orientation == Qt::Horizontal)
+        ? (isNext ? Typography::Icons::ChevronRight : Typography::Icons::ChevronLeft)
+        : (isNext ? Typography::Icons::ChevronDown : Typography::Icons::ChevronUp);
+    Typography::Icons::paintGlyph(p, QRectF(btnRect), glyph, arrowSize, Qt::AlignCenter);
 }
 
 void FlipView::drawPageIndicator(QPainter& p)

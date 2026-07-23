@@ -837,11 +837,30 @@ void ComboBox::paintEvent(QPaintEvent*) {
 
     // ── Chevron ──────────────────────────────────────────────────────────
     // Figma: 12 px symbol, color rgba(0,0,0,0.61) → textSecondary
+    // Press fade/bounce must use sin(progress·π) like DropDownButton: the click
+    // animation ends at progress=1 while the popup stays open — a linear fade
+    // would leave the chevron at 50% alpha until the next cycle.
+    // zh_CN: 按下淡化/下沉须与 DropDownButton 一样用 sin(progress·π)：点击动画结束在
+    // progress=1 且 popup 仍打开，若线性淡化会把箭头一直留在 50% 透明度。
     QColor chevronColor = enabled ? colors.textSecondary : colors.textDisabled;
-    if (m_pressProgress > 0.0 && enabled) {
-        qreal alphaFactor = 1.0 - 0.5 * m_pressProgress;
+    const qreal pressEffect = qSin(m_pressProgress * M_PI);
+    if (pressEffect > 0.0 && enabled) {
+        const qreal alphaFactor = 1.0 - 0.5 * pressEffect;
         chevronColor.setAlphaF(chevronColor.alphaF() * alphaFactor);
     }
+
+    // Shared trailing chip slot (hover + glyph), SplitButton-style AlignCenter.
+    // zh_CN: 悬停底与字形共用尾缘芯片槽，按 SplitButton 方式 AlignCenter。
+    const qreal maxBounce = 3.0;
+    const qreal pressOffset = qRound(maxBounce * pressEffect);
+    const qreal pad = 4.0;
+    const qreal btnW = m_chevronSize + pad * 2;
+    const qreal btnH = m_chevronSize + pad * 2;
+    QRectF chevronSlot(r.right() - m_chevronOffset.x() - m_chevronSize - pad,
+                       r.center().y() - btnH / 2.0,
+                       btnW,
+                       btnH);
+    chevronSlot.translate(0, pressOffset + m_chevronOffset.y());
 
     // Editable mode: draw chevron button hover/press background
     if (m_lineEdit && enabled) {
@@ -852,39 +871,18 @@ void ComboBox::paintEvent(QPaintEvent*) {
             chevronBg = colors.subtleSecondary;
         }
         if (chevronBg.alpha() > 0) {
-            // Compact hover rect around the chevron icon with inset from edges
-            const qreal pad = 4.0;   // padding around icon
-            const qreal btnW = m_chevronSize + pad * 2;
-            const qreal btnH = m_chevronSize + pad * 2;
-            const qreal btnX = r.right() - m_chevronOffset.x() - m_chevronSize - pad;
-            const qreal btnY = r.center().y() - btnH / 2.0;
-            QRectF btnRect(btnX, btnY, btnW, btnH);
-            // Round the chevron hover chip to the control radius (was innerR in the Fluent path,
-            // now computed locally so it is independent of the per-language field branch above).
-            // zh_CN: 箭头悬停小块圆角取控件圆角(原 Fluent 路径用 innerR),此处本地计算,与上方分支解耦。
             const qreal chipR = qMax<qreal>(0.0, radius.control - 1.0);
             QPainterPath bp;
-            bp.addRoundedRect(btnRect, chipR, chipR);
+            bp.addRoundedRect(chevronSlot, chipR, chipR);
             painter.setPen(Qt::NoPen);
             painter.setBrush(chevronBg);
             painter.drawPath(bp);
         }
     }
 
-    const QFont iconFont = Typography::Icons::font(m_chevronSize);
-    const QString chevronGlyph = Typography::Icons::glyphForSize(
-        m_chevronGlyph, m_chevronSize);
-
-    // chevronOffset.x() = right padding, chevronOffset.y() = vertical offset
-    QRectF chevronRect = QRectF(r).adjusted(0, 0, -m_chevronOffset.x(), 0);
-    // Click animation: chevron bounces down like DropDownButton
-    const qreal maxBounce = 3.0;
-    qreal pressOffset = maxBounce * qSin(m_pressProgress * M_PI);
-    chevronRect.translate(0, pressOffset + m_chevronOffset.y());
-
     painter.setPen(chevronColor);
-    painter.setFont(iconFont);
-    painter.drawText(chevronRect, Qt::AlignRight | Qt::AlignVCenter, chevronGlyph);
+    Typography::Icons::paintGlyph(
+        painter, chevronSlot, m_chevronGlyph, m_chevronSize, Qt::AlignCenter);
 }
 
 } // namespace fluent::basicinput

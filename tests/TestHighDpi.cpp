@@ -92,6 +92,24 @@ TEST(HighDpiTest, IconPixmapUsesTargetPhysicalResolution)
                     qRound(logicalExtent.height() * dpr)));
 }
 
+TEST(HighDpiTest, DrawPixmapInLogicalRectUsesPainterDeviceDensity)
+{
+    QImage canvas(80, 80, QImage::Format_ARGB32_Premultiplied);
+    canvas.fill(Qt::black);
+    canvas.setDevicePixelRatio(2.0);
+
+    QPixmap source(20, 20);
+    source.fill(Qt::white);
+
+    QPainter painter(&canvas);
+    fluentDrawPixmapInLogicalRect(painter, QRect(10, 10, 20, 20), source);
+    painter.end();
+
+    // Centered 20×20 logical draw at DPR 2 covers device pixels [20,60)×[20,60).
+    EXPECT_EQ(qRed(canvas.pixel(40, 40)), 255);
+    EXPECT_EQ(qRed(canvas.pixel(4, 4)), 0);
+}
+
 TEST(HighDpiTest, WidgetGrabKeepsLogicalGeometryAndPhysicalDensity)
 {
     QWidget widget;
