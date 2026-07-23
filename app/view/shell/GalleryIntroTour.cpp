@@ -13,8 +13,8 @@
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
-#include "components/dialogs_flyouts/Dialog.h"  // SmokeOverlay
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayScrim.h"
 #include "components/textfields/Label.h"
 #include "components/windowing/Window.h"
 #include "compatibility/QtCompat.h"
@@ -24,7 +24,7 @@ namespace fluent::gallery {
 
 using fluent::basicinput::Button;
 using fluent::dialogs_flyouts::CoachMark;
-using fluent::dialogs_flyouts::SmokeOverlay;
+using fluent::overlay::OverlayScrim;
 using fluent::textfields::Label;
 
 namespace {
@@ -48,18 +48,18 @@ void GalleryIntroTour::build()
 
     QWidget* win = m_host->window();
 
-    // Dim = a SmokeOverlay child of the app window. The CoachMark is another same-window child raised
+    // Dim = an OverlayScrim child of the app window. The CoachMark is another same-window child raised
     // above it, so the startup tour scales with the app instead of as a separate tool window.
-    // zh_CN: 压暗 = app 窗口的 SmokeOverlay 子级。CoachMark 是另一个同窗口子级并置于其上方，
+    // zh_CN: 压暗 = app 窗口的 OverlayScrim 子级。CoachMark 是另一个同窗口子级并置于其上方，
     // 因此启动引导会随 app 一起缩放，而不是作为独立工具窗口分开合成。
-    m_scrim = new SmokeOverlay(win);
-    m_scrim->setObjectName(QStringLiteral("GalleryIntroTour.Scrim"));
+    m_scrim = new OverlayScrim(win, QStringLiteral("GalleryIntroTour.Scrim"));
     QColor dim(0, 0, 0);
     dim.setAlphaF(kDimStrength);
     m_scrim->setColor(dim);
+    m_scrim->setModalAndDim(true, true);
     m_scrim->setProgress(0.0);
 
-    m_card = new CoachMark(win, CoachMark::SameWindowSurface);
+    m_card = new CoachMark(win);
     m_card->setCardSize(QSize(kCardWidth, kCardHeight));
 
     auto* host = m_card->contentHost();

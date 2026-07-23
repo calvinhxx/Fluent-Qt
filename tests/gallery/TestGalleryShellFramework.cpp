@@ -35,9 +35,9 @@
 #include "components/basicinput/ComboBox.h"
 #include "components/collections/TreeView.h"
 #include "components/dialogs_flyouts/ContentDialog.h"
-#include "components/dialogs_flyouts/Dialog.h"  // SmokeOverlay
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/navigation/NavigationView.h"
@@ -78,7 +78,7 @@ using fluent::basicinput::ComboBox;
 using fluent::collections::TreeView;
 using fluent::dialogs_flyouts::ContentDialog;
 using fluent::dialogs_flyouts::Popup;
-using fluent::dialogs_flyouts::SmokeOverlay;
+using fluent::overlay::OverlayScrim;
 using fluent::gallery::CloseBehaviorPromptContent;
 using fluent::gallery::GalleryApplicationController;
 using fluent::gallery::GalleryContentPresenter;
@@ -443,7 +443,7 @@ TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)
 
     EXPECT_FALSE(window.isChromeInteractive());
     // A centered (target-less) step dims uniformly — no spotlight cut-out.
-    auto* scrim = window.findChild<SmokeOverlay*>(QStringLiteral("GalleryIntroTour.Scrim"));
+    auto* scrim = window.findChild<OverlayScrim*>(QStringLiteral("GalleryIntroTour.Scrim"));
     ASSERT_NE(scrim, nullptr);
     EXPECT_FALSE(scrim->spotlightEnabled());
     auto* coach = window.findChild<fluent::dialogs_flyouts::CoachMark*>();
@@ -483,7 +483,7 @@ TEST_F(GalleryShellFrameworkTest, IntroTourSpotlightsAnchoredTarget)
     tour.setSteps({anchored});
     tour.start();  // a single anchored step is applied immediately by start()
 
-    auto* scrim = window.findChild<SmokeOverlay*>(QStringLiteral("GalleryIntroTour.Scrim"));
+    auto* scrim = window.findChild<OverlayScrim*>(QStringLiteral("GalleryIntroTour.Scrim"));
     ASSERT_NE(scrim, nullptr);
     EXPECT_TRUE(scrim->spotlightEnabled());
 
@@ -513,7 +513,7 @@ TEST_F(GalleryShellFrameworkTest, IntroTourScrimHonorsWindowSurfaceRadius)
     tour.setSteps({step});
     tour.start();
 
-    auto* scrim = window.findChild<SmokeOverlay*>(QStringLiteral("GalleryIntroTour.Scrim"));
+    auto* scrim = window.findChild<OverlayScrim*>(QStringLiteral("GalleryIntroTour.Scrim"));
     ASSERT_NE(scrim, nullptr);
     scrim->setProgress(1.0);
 

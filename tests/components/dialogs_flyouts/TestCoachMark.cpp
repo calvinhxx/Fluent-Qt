@@ -6,7 +6,6 @@
 #include <QSignalSpy>
 #include <QTest>
 #include <QVBoxLayout>
-#include <QWindow>
 
 #include <cstdlib>
 
@@ -71,9 +70,10 @@ protected:
         return QRect(target->mapToGlobal(QPoint(0, 0)), target->size());
     }
 
-    // Visible card rect of the coach mark in global coordinates (window minus shadow margin).
+    // Visible card rect of the coach mark in global coordinates.
     QRect cardGlobalRect(CoachMark* coach) const {
-        return ::fluent::overlay::visibleCardGeometry(coach->geometry());
+        const QRect card = ::fluent::overlay::visibleCardRect(coach->rect());
+        return QRect(coach->mapToGlobal(card.topLeft()), card.size());
     }
 
     FluentTestWindow* window = nullptr;
@@ -86,7 +86,7 @@ TEST_F(CoachMarkTest, DefaultProperties) {
     EXPECT_FALSE(coach.isOpen());
     EXPECT_EQ(coach.target(), nullptr);
     EXPECT_EQ(coach.placement(), CoachMark::Auto);
-    EXPECT_EQ(coach.surfaceMode(), CoachMark::TopLevelSurface);
+    EXPECT_EQ(coach.surfaceMode(), CoachMark::SameWindowSurface);
     EXPECT_EQ(coach.cardSize(), QSize(330, 168));
     EXPECT_NE(coach.contentHost(), nullptr);
 
@@ -158,7 +158,7 @@ TEST_F(CoachMarkTest, SetOpenDelegates) {
     EXPECT_FALSE(coach.isOpen());
 }
 
-TEST_F(CoachMarkTest, TopLevelSurfaceIsTransientToOwnerWindow) {
+TEST_F(CoachMarkTest, HostsAsChildOfOwnerTopLevel) {
     auto* target = makeTarget(QPoint(260, 220));
 
     CoachMark coach(window);
@@ -166,11 +166,32 @@ TEST_F(CoachMarkTest, TopLevelSurfaceIsTransientToOwnerWindow) {
     coach.open();
     QApplication::processEvents();
 
-    ASSERT_NE(window->windowHandle(), nullptr);
-    ASSERT_NE(coach.windowHandle(), nullptr);
-    EXPECT_EQ(coach.windowHandle()->transientParent(), window->windowHandle());
+    EXPECT_EQ(coach.parentWidget(), window);
+    EXPECT_EQ(coach.windowType(), Qt::Widget);
+    EXPECT_EQ(coach.surfaceMode(), CoachMark::SameWindowSurface);
 
     coach.close();
+}
+
+TEST_F(CoachMarkTest, DoesNotPromoteOwnerContentToNative) {
+    // Same-window CoachMark must not sticky-promote overlapping owner content to WA_NativeWindow.
+    // zh_CN: 同窗口 CoachMark 不得把重叠宿主内容粘性提升为 WA_NativeWindow。
+    auto* content = new QWidget(window);
+    content->setObjectName(QStringLiteral("ownerContent"));
+    content->setGeometry(0, 0, 600, 500);
+    window->show();
+    QApplication::processEvents();
+    ASSERT_FALSE(content->testAttribute(Qt::WA_NativeWindow));
+
+    CoachMark coach(window);
+    coach.setTarget(content);
+    coach.open();
+    QApplication::processEvents();
+    coach.close();
+    QApplication::processEvents();
+
+    EXPECT_FALSE(content->testAttribute(Qt::WA_NativeWindow));
+    EXPECT_EQ(content->windowHandle(), nullptr);
 }
 
 // ── 5. Bottom placement: card sits below the target, horizontally centred ────
@@ -182,7 +203,7 @@ TEST_F(CoachMarkTest, BottomPlacementSitsBelowTarget) {
     coach.setPlacement(CoachMark::Bottom);
     coach.setTarget(target);
     coach.open();
-    QTest::qWaitForWindowExposed(&coach);
+    QTest::qWaitForWindowExposed(window);
 
     const QRect tgt = targetGlobalRect(target);
     const QRect card = cardGlobalRect(&coach);
@@ -200,7 +221,7 @@ TEST_F(CoachMarkTest, RightPlacementSitsRightOfTarget) {
     coach.setPlacement(CoachMark::Right);
     coach.setTarget(target);
     coach.open();
-    QTest::qWaitForWindowExposed(&coach);
+    QTest::qWaitForWindowExposed(window);
 
     const QRect tgt = targetGlobalRect(target);
     const QRect card = cardGlobalRect(&coach);
@@ -214,10 +235,10 @@ TEST_F(CoachMarkTest, NoTargetCentersOverOwner) {
     CoachMark coach(window);
     coach.setCardSize(QSize(300, 140));
     coach.open();
-    QTest::qWaitForWindowExposed(&coach);
+    QTest::qWaitForWindowExposed(window);
 
-    EXPECT_NEAR(coach.geometry().center().x(), window->frameGeometry().center().x(), 2);
-    EXPECT_NEAR(coach.geometry().center().y(), window->frameGeometry().center().y(), 2);
+    EXPECT_NEAR(coach.geometry().center().x(), window->rect().center().x(), 2);
+    EXPECT_NEAR(coach.geometry().center().y(), window->rect().center().y(), 2);
 }
 
 TEST_F(CoachMarkTest, SameWindowSurfaceCentersInsideOwnerAndTracksResize) {
@@ -256,7 +277,7 @@ TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget) {
     coach.setPlacement(CoachMark::Bottom);
     coach.setTarget(first);
     coach.open();
-    QTest::qWaitForWindowExposed(&coach);
+    QTest::qWaitForWindowExposed(window);
 
     coach.setTarget(second);
     EXPECT_TRUE(coach.isOpen());
@@ -288,7 +309,7 @@ TEST_F(CoachMarkTest, TracksMovingTargetAncestorAndClosesWhenClipped) {
     coach.setPlacement(CoachMark::Bottom);
     coach.setTarget(target);
     coach.open();
-    QTest::qWaitForWindowExposed(&coach);
+    QTest::qWaitForWindowExposed(window);
     const QPoint initialPosition = coach.pos();
 
     scrollingContent->move(0, -64);
@@ -331,7 +352,7 @@ TEST_F(CoachMarkTest, OpenInheritsThemeOverrideFromTarget) {
     CoachMark coach(window);
     coach.setTarget(target);
     coach.open();
-    QTest::qWaitForWindowExposed(&coach);
+    QTest::qWaitForWindowExposed(window);
 
     EXPECT_TRUE(coach.isOpen());
     EXPECT_EQ(coach.effectiveTheme(), fluent::FluentElement::Dark);
@@ -415,10 +436,17 @@ TEST_F(CoachMarkDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlack
 
             const std::string ctx = std::string(lang.name) + "/" + th.name;
 
-            CoachMark coach;
+            FluentTestWindow host;
+            host.resize(480, 320);
+            host.show();
+
+            CoachMark coach(&host);
             coach.setCardSize(QSize(300, 160));
-            coach.move(-2000, -2000);  // offscreen so it never steals focus / flashes. zh_CN: 离屏,避免抢焦点/闪烁。
             coach.open();
+            // Force full opacity: grab() respects QGraphicsOpacityEffect, and the entrance fade
+            // would otherwise yield an empty image in headless runs.
+            // zh_CN: 强制满不透明度：grab() 会遵循 QGraphicsOpacityEffect，入场淡入在无头环境下否则会抓到空图。
+            coach.setProperty("fadeOpacity", 1.0);
             QApplication::processEvents();
             const QImage img = coach.grab().toImage();
             coach.close();

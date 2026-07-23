@@ -17,49 +17,31 @@ class QResizeEvent;
 namespace fluent::dialogs_flyouts {
 
 /**
- * @brief A teaching tip surface with a tail pointing at a target.
- * zh_CN: 带指向目标尾巴的操作引导提示面。
+ * @brief Same-window teaching tip with a tail aimed at a target.
+ * zh_CN: 指向目标的同窗口操作引导提示。
  *
- * CoachMark hosts caller content via contentHost(), paints a Fluent card + shadow + a tail aimed at
- * the target, fades in/out, and glides between targets when setTarget() changes while open. The default
- * top-level surface keeps component samples independent from the owner widget; the same-window surface
- * is available for startup tours that must scale and move exactly with the application window.
- * zh_CN: CoachMark 通过 contentHost() 承载调用方内容，绘制 Fluent 卡片 + 阴影 + 指向目标的尾巴，支持淡入淡出，
- * 并在打开状态下 setTarget() 变化时在目标间滑动。默认顶层 surface 让组件示例独立于宿主控件；
- * same-window surface 用于必须与应用窗口缩放和移动完全同步的启动引导。
+ * CoachMark hosts caller content via contentHost(), paints a Fluent card + shadow + tail, fades
+ * in/out, and glides between targets while open. Like TeachingTip / Popup, it is always hosted as a
+ * child of the owning top-level window (WinUI-aligned same-window overlay).
+ * zh_CN: CoachMark 通过 contentHost() 承载调用方内容，绘制 Fluent 卡片 + 阴影 + 尾巴，支持淡入淡出，
+ * 并在打开时于目标间滑动。与 TeachingTip / Popup 一样，始终作为 owning top-level 的子控件
+ * （对齐 WinUI 的同窗口浮层）。
  */
 class CoachMark : public QWidget, public fluent::FluentElement, public fluent::QMLPlus {
     Q_OBJECT
-    /**
-     * @brief Internal fade progress used by both top-level and same-window surfaces.
-     * zh_CN: 顶层与同窗口 surface 共享的内部淡入淡出进度。
-     */
     Q_PROPERTY(double fadeOpacity READ fadeOpacity WRITE setFadeOpacity)
-    /**
-     * @brief Visible card size, excluding shadow and tail. zh_CN: 可见卡片尺寸,不含阴影和尾巴。
-     */
     Q_PROPERTY(QSize cardSize READ cardSize WRITE setCardSize)
-    /**
-     * @brief Target widget the tail points at; null centers the card with no tail.
-     * zh_CN: 尾巴指向的目标控件;为空则居中且无尾巴。
-     */
     Q_PROPERTY(QWidget* target READ target WRITE setTarget)
-    /**
-     * @brief Preferred placement of the card around the target. zh_CN: 卡片相对目标的首选位置。
-     */
     Q_PROPERTY(Placement placement READ placement WRITE setPlacement)
-    /**
-     * @brief Whether the coach mark is open (shown). zh_CN: 操作引导是否处于打开(显示)状态。
-     */
     Q_PROPERTY(bool open READ isOpen WRITE setOpen NOTIFY openChanged)
 
 public:
     /**
-     * @brief Chooses whether the coach mark is hosted as a separate tool window or inside the owner.
-     * zh_CN: 选择操作引导提示承载为独立工具窗口，还是宿主窗口内的子控件。
+     * @brief Historical surface mode; both values host the tip inside the owner top-level.
+     * zh_CN: 历史 surface 模式；两种取值都把提示承载在宿主顶层窗口内。
      */
     enum SurfaceMode {
-        TopLevelSurface,   ///< Separate tool window hosted above the owner. zh_CN: 宿主上方的独立工具窗口。
+        TopLevelSurface,   ///< Deprecated alias of SameWindowSurface. zh_CN: SameWindowSurface 的废弃别名。
         SameWindowSurface  ///< Child widget inside the owner top-level. zh_CN: 宿主顶层窗口内的子控件。
     };
     Q_ENUM(SurfaceMode)
@@ -73,25 +55,17 @@ public:
     };
     Q_ENUM(Placement)
 
-    /**
-     * @brief Creates a coach mark owned by the given widget.
-     * zh_CN: 创建由指定控件拥有的操作引导提示。
-     */
     explicit CoachMark(QWidget* owner = nullptr,
-                       SurfaceMode surfaceMode = TopLevelSurface);
+                       SurfaceMode surfaceMode = SameWindowSurface);
     ~CoachMark() override;
 
-    /**
-     * @brief Container for caller content (add an AnchorLayout / QVBoxLayout etc.).
-     * zh_CN: 调用方内容容器(向其添加 AnchorLayout / QVBoxLayout 等)。
-     */
     QWidget* contentHost() const { return m_contentHost; }
 
     /**
-     * @brief Returns the configured hosting surface mode.
-     * zh_CN: 返回当前配置的承载 surface 模式。
+     * @brief Always SameWindowSurface; retained for API compatibility.
+     * zh_CN: 始终为 SameWindowSurface；保留以兼容既有 API。
      */
-    SurfaceMode surfaceMode() const { return m_surfaceMode; }
+    SurfaceMode surfaceMode() const { return SameWindowSurface; }
 
     QSize cardSize() const { return m_cardSize; }
     void setCardSize(const QSize& size);
@@ -107,9 +81,7 @@ public:
     void onThemeUpdated() override;
 
 public slots:
-    /// Positions the card, shows it, and fades it in. zh_CN: 定位卡片、显示并淡入。
     void open();
-    /// Fades the card out and hides it. zh_CN: 淡出并隐藏卡片。
     void close();
     void setOpen(bool open);
 
@@ -127,16 +99,13 @@ private:
     void queueTargetSync();
     void syncToTarget();
     bool syncThemeOverrideFromSource();
-    bool usesSameWindowSurfaceBackend() const;
     void attachToOwnerTopLevel();
-    void syncNativeTransientParent();
     double fadeOpacity() const;
     void setFadeOpacity(double opacity);
-    void reposition(bool animated);  // place the window from target + placement
-    QRect cardRect() const;          // card rect inside the window (inset for shadow + tail)
+    void reposition(bool animated);
+    QRect cardRect() const;
 
     QWidget* m_owner = nullptr;
-    SurfaceMode m_surfaceMode = TopLevelSurface;
     QWidget* m_contentHost = nullptr;
     QSize m_cardSize{330, 168};
     QPointer<QWidget> m_target;
@@ -144,8 +113,8 @@ private:
     bool m_open = false;
     bool m_targetSyncPending = false;
     bool m_tailVisible = false;
-    int m_tailEdge = 0;    // 0=none,1=top,2=bottom,3=left,4=right
-    int m_tailCenter = 0;  // tail center along that edge (window-local)
+    int m_tailEdge = 0;
+    int m_tailCenter = 0;
     QGraphicsOpacityEffect* m_opacityEffect = nullptr;
     QPropertyAnimation* m_fadeAnim = nullptr;
     QPropertyAnimation* m_moveAnim = nullptr;

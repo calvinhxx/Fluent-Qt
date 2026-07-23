@@ -12,9 +12,7 @@
 #include <QPropertyAnimation>
 #include <QRect>
 #include <QResizeEvent>
-#include <QScreen>
 #include <QTimer>
-#include <QWindow>
 
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
@@ -37,28 +35,24 @@ void refreshFluentDescendants(QWidget* root)
     }
 }
 
-constexpr int kTailSize = 9;     // tail triangle height. zh_CN: 尾巴三角高度。
-constexpr int kTargetGap = 10;   // gap between target and card+tail. zh_CN: 目标与卡片+尾巴的间距。
-}  // namespace
+constexpr int kTailSize = 9;
+constexpr int kTargetGap = 10;
 
-CoachMark::CoachMark(QWidget* owner, SurfaceMode surfaceMode)
+} // namespace
+
+CoachMark::CoachMark(QWidget* owner, SurfaceMode /*surfaceMode*/)
     : QWidget(owner)
     , m_owner(owner)
-    , m_surfaceMode(surfaceMode)
 {
     setObjectName(QStringLiteral("CoachMark"));
-    if (!usesSameWindowSurfaceBackend()) {
-        setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::NoDropShadowWindowHint);
-        setAttribute(Qt::WA_ShowWithoutActivating);
-    } else {
-        attachToOwnerTopLevel();
-        setWindowFlags(Qt::Widget);
-        m_opacityEffect = new QGraphicsOpacityEffect(this);
-        m_opacityEffect->setOpacity(0.0);
-        setGraphicsEffect(m_opacityEffect);
-    }
+    attachToOwnerTopLevel();
+    setWindowFlags(Qt::Widget);
     setAttribute(Qt::WA_TranslucentBackground);
     setFocusPolicy(Qt::NoFocus);
+
+    m_opacityEffect = new QGraphicsOpacityEffect(this);
+    m_opacityEffect->setOpacity(0.0);
+    setGraphicsEffect(m_opacityEffect);
 
     m_contentHost = new QWidget(this);
     m_contentHost->setObjectName(QStringLiteral("CoachMarkContent"));
@@ -66,12 +60,10 @@ CoachMark::CoachMark(QWidget* owner, SurfaceMode surfaceMode)
     m_fadeAnim = new QPropertyAnimation(this, "fadeOpacity", this);
     connect(m_fadeAnim, &QPropertyAnimation::finished, this, [this]() {
         if (!m_open)
-            hide();  // hide only after a close fade-out finishes
+            hide();
     });
     m_moveAnim = new QPropertyAnimation(this, "pos", this);
 
-    // Size the window to the default card directly (setCardSize would no-op on the equal default).
-    // zh_CN: 直接按默认卡片尺寸设置窗口大小(setCardSize 对相等的默认值会空操作)。
     const int margin = ::fluent::overlay::defaultShadowMargin();
     resize(m_cardSize.width() + 2 * margin, m_cardSize.height() + 2 * margin);
     m_contentHost->setGeometry(cardRect());
@@ -97,7 +89,7 @@ void CoachMark::setCardSize(const QSize& size)
     m_cardSize = size;
     const int margin = ::fluent::overlay::defaultShadowMargin();
     resize(size.width() + 2 * margin, size.height() + 2 * margin);
-    m_contentHost->setGeometry(cardRect());  // keep host in sync even before the window is shown
+    m_contentHost->setGeometry(cardRect());
     if (m_open)
         reposition(/*animated*/ false);
 }
@@ -111,10 +103,7 @@ void CoachMark::setTarget(QWidget* target)
         onThemeUpdated();
     if (m_open) {
         reposition(/*animated*/ true);
-        syncNativeTransientParent();
         raise();
-        if (windowHandle())
-            windowHandle()->raise();
     }
 }
 
@@ -125,10 +114,7 @@ void CoachMark::setPlacement(Placement placement)
     m_placement = placement;
     if (m_open) {
         reposition(/*animated*/ true);
-        syncNativeTransientParent();
         raise();
-        if (windowHandle())
-            windowHandle()->raise();
     }
 }
 
@@ -141,13 +127,9 @@ void CoachMark::open()
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
     reposition(/*animated*/ false);
-    syncNativeTransientParent();
     setFadeOpacity(0.0);
     show();
-    syncNativeTransientParent();
     raise();
-    if (windowHandle())
-        windowHandle()->raise();
     if (qApp)
         qApp->installEventFilter(this);
     m_fadeAnim->stop();
@@ -173,7 +155,7 @@ void CoachMark::close()
     m_fadeAnim->setEasingCurve(themeAnimation().exit);
     m_fadeAnim->setStartValue(fadeOpacity());
     m_fadeAnim->setEndValue(0.0);
-    m_fadeAnim->start();  // the finished handler hides the window
+    m_fadeAnim->start();
     emit openChanged(false);
     emit closed();
 }
@@ -225,10 +207,7 @@ void CoachMark::syncToTarget()
         return;
     }
     reposition(/*animated*/ false);
-    syncNativeTransientParent();
     raise();
-    if (windowHandle())
-        windowHandle()->raise();
 }
 
 QRect CoachMark::cardRect() const
@@ -244,55 +223,21 @@ bool CoachMark::syncThemeOverrideFromSource()
 
 void CoachMark::attachToOwnerTopLevel()
 {
-    if (!usesSameWindowSurfaceBackend())
-        return;
-
     QWidget* top = m_owner ? m_owner->window() : parentWidget();
     if (!top)
         return;
-
-    if (parentWidget() != top)
-        setParent(top);
-    setWindowFlags(Qt::Widget);
-}
-
-void CoachMark::syncNativeTransientParent()
-{
-    if (usesSameWindowSurfaceBackend())
-        return;
-
-    QWidget* ownerWindow = m_owner ? m_owner->window() : (parentWidget() ? parentWidget()->window() : nullptr);
-    if (!ownerWindow)
-        return;
-
-    ownerWindow->winId();
-    winId();
-    QWindow* coachWindow = windowHandle();
-    QWindow* nativeOwner = ownerWindow->windowHandle();
-    if (coachWindow && nativeOwner && coachWindow->transientParent() != nativeOwner)
-        coachWindow->setTransientParent(nativeOwner);
-}
-
-bool CoachMark::usesSameWindowSurfaceBackend() const
-{
-    if (m_surfaceMode == SameWindowSurface)
-        return true;
-    return ::fluent::overlay::linuxDesktopUsesSameWindowSurfaces();
+    ::fluent::overlay::attachToTopLevel(this, top);
 }
 
 double CoachMark::fadeOpacity() const
 {
-    return m_opacityEffect ? m_opacityEffect->opacity() : windowOpacity();
+    return m_opacityEffect ? m_opacityEffect->opacity() : 1.0;
 }
 
 void CoachMark::setFadeOpacity(double opacity)
 {
-    const double bounded = qBound(0.0, opacity, 1.0);
-    if (m_opacityEffect) {
-        m_opacityEffect->setOpacity(bounded);
-        return;
-    }
-    setWindowOpacity(bounded);
+    if (m_opacityEffect)
+        m_opacityEffect->setOpacity(qBound(0.0, opacity, 1.0));
 }
 
 void CoachMark::resizeEvent(QResizeEvent* event)
@@ -310,12 +255,10 @@ void CoachMark::reposition(bool animated)
 
     if (!m_target) {
         m_tailVisible = false;
-        const QRect ref = (usesSameWindowSurfaceBackend())
-            ? (ownerWindow ? ::fluent::overlay::overlaySurfaceRect(ownerWindow)
-                           : QRect(QPoint(0, 0), win))
-            : (ownerWindow ? ownerWindow->frameGeometry()
-                           : (screen() ? screen()->availableGeometry() : QRect(QPoint(0, 0), win)));
-        const QPoint centered(ref.center().x() - win.width() / 2, ref.center().y() - win.height() / 2);
+        const QRect ref = ownerWindow ? ::fluent::overlay::overlaySurfaceRect(ownerWindow)
+                                      : QRect(QPoint(0, 0), win);
+        const QPoint centered(ref.center().x() - win.width() / 2,
+                              ref.center().y() - win.height() / 2);
         if (animated && isVisible()) {
             m_moveAnim->stop();
             m_moveAnim->setDuration(themeAnimation().normal);
@@ -330,48 +273,38 @@ void CoachMark::reposition(bool animated)
         return;
     }
 
-    const QRect targetRef(
-        usesSameWindowSurfaceBackend() && ownerWindow
-            ? m_target->mapTo(ownerWindow, QPoint(0, 0))
-            : m_target->mapToGlobal(QPoint(0, 0)),
-        m_target->size());
+    const QRect targetRef(m_target->mapTo(ownerWindow, QPoint(0, 0)), m_target->size());
     const Placement p = (m_placement == Auto) ? Bottom : m_placement;
 
     QPoint topLeft;
     m_tailVisible = true;
     switch (p) {
     case Right:
-        m_tailEdge = 3;  // tail on card LEFT edge, pointing left at the target
+        m_tailEdge = 3;
         topLeft = QPoint(targetRef.right() + kTargetGap + kTailSize - margin,
                          targetRef.center().y() - win.height() / 2);
         break;
     case Left:
-        m_tailEdge = 4;  // tail on card RIGHT edge
+        m_tailEdge = 4;
         topLeft = QPoint(targetRef.left() - kTargetGap - kTailSize - (win.width() - margin),
                          targetRef.center().y() - win.height() / 2);
         break;
     case Top:
-        m_tailEdge = 2;  // tail on card BOTTOM edge
+        m_tailEdge = 2;
         topLeft = QPoint(targetRef.center().x() - win.width() / 2,
                          targetRef.top() - kTargetGap - kTailSize - (win.height() - margin));
         break;
-    default:  // Bottom
-        m_tailEdge = 1;  // tail on card TOP edge, pointing up at the target
+    default:
+        m_tailEdge = 1;
         topLeft = QPoint(targetRef.center().x() - win.width() / 2,
                          targetRef.bottom() + kTargetGap + kTailSize - margin);
         break;
     }
 
-    // Keep the surface inside its owning coordinate space, then aim the tail relative to the final
-    // position. zh_CN: 先把 surface 限制在所属坐标空间内，再按最终位置让尾巴对准目标。
-    if (usesSameWindowSurfaceBackend() && ownerWindow) {
+    if (ownerWindow) {
         const QRect bounds = ::fluent::overlay::overlaySurfaceRect(ownerWindow);
         topLeft.setX(qBound(bounds.left(), topLeft.x(), bounds.right() - win.width()));
         topLeft.setY(qBound(bounds.top(), topLeft.y(), bounds.bottom() - win.height()));
-    } else if (QScreen* sc = (m_owner ? m_owner->screen() : screen())) {
-        const QRect avail = sc->availableGeometry();
-        topLeft.setX(qBound(avail.left(), topLeft.x(), avail.right() - win.width()));
-        topLeft.setY(qBound(avail.top(), topLeft.y(), avail.bottom() - win.height()));
     }
 
     const QRect card = ::fluent::overlay::visibleCardRect(QRect(QPoint(0, 0), win));
@@ -411,22 +344,22 @@ void CoachMark::paintEvent(QPaintEvent*)
     if (m_tailVisible) {
         QPolygon tail;
         switch (m_tailEdge) {
-        case 1:  // top edge, apex up
+        case 1:
             tail << QPoint(m_tailCenter - kTailSize, card.top())
                  << QPoint(m_tailCenter + kTailSize, card.top())
                  << QPoint(m_tailCenter, card.top() - kTailSize);
             break;
-        case 2:  // bottom edge, apex down
+        case 2:
             tail << QPoint(m_tailCenter - kTailSize, card.bottom())
                  << QPoint(m_tailCenter + kTailSize, card.bottom())
                  << QPoint(m_tailCenter, card.bottom() + kTailSize);
             break;
-        case 3:  // left edge, apex left
+        case 3:
             tail << QPoint(card.left(), m_tailCenter - kTailSize)
                  << QPoint(card.left(), m_tailCenter + kTailSize)
                  << QPoint(card.left() - kTailSize, m_tailCenter);
             break;
-        default:  // right edge, apex right
+        default:
             tail << QPoint(card.right(), m_tailCenter - kTailSize)
                  << QPoint(card.right(), m_tailCenter + kTailSize)
                  << QPoint(card.right() + kTailSize, m_tailCenter);
@@ -439,23 +372,13 @@ void CoachMark::paintEvent(QPaintEvent*)
 
     const auto& colors = themeColors();
     const DesignLanguage lang = themeDesignLanguage();
-    // Per design language only the OUTLINE STROKE differs — the card/tail/shadow geometry above is
-    // shared and the fill stays bgLayer everywhere. zh_CN: 按设计语言仅「外轮廓描边」不同——上方
-    // card/tail/shadow 几何全部共享，填充各语言均为 bgLayer。
     QPen outlinePen;
-    if (lang == DesignMaterial) {
-        // Material 3 elevated surface-container: elevation is carried by the shadow alone, NO border
-        // stroke. zh_CN: Material 3 elevated surface-container:仅由阴影表达高程,无边框描边。
+    if (lang == DesignMaterial)
         outlinePen = QPen(Qt::NoPen);
-    } else if (lang == DesignCupertino) {
-        // macOS popover: a crisp hairline edge using the stronger stroke token. zh_CN: macOS popover:
-        // 用更强的描边 token 画出清晰的发丝边缘。
+    else if (lang == DesignCupertino)
         outlinePen = QPen(colors.strokeStrong, 1);
-    } else {
-        // DesignFluent (default): unchanged WinUI outline (cosmetic QColor pen). zh_CN: 默认 Fluent,
-        // WinUI 轮廓不变（QColor 细笔）。
+    else
         outlinePen = QPen(colors.strokeDefault);
-    }
 
     painter.setBrush(colors.bgLayer);
     painter.setPen(outlinePen);

@@ -2,20 +2,21 @@
 #include <QApplication>
 #include <QDebug>
 #include <QTimer>
-#include <QElapsedTimer>
 #include <QTest>
-#include <QWindow>
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
-#include "components/foundation/overlay/OverlayWindow.h"
+#include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "compatibility/QtCompat.h"
+#include <QGraphicsOpacityEffect>
 #include <QImage>
 
 using namespace fluent::dialogs_flyouts;
 using namespace fluent::basicinput;
 using namespace fluent;
+using fluent::overlay::OverlayScrim;
 
 // ── FluentTestWindow ─────────────────────────────────────────────────────────
 
@@ -66,8 +67,8 @@ TEST_F(DialogTest, SmokeProperty) {
     EXPECT_TRUE(dialog.isSmokeEnabled());
 }
 
-TEST_F(DialogTest, SmokeOverlayHonorsRoundedSurface) {
-    SmokeOverlay overlay(nullptr);
+TEST_F(DialogTest, DialogSmokeUsesRoundedOverlayScrim) {
+    OverlayScrim overlay(nullptr);
     overlay.resize(80, 80);
     overlay.setColor(QColor(0, 0, 0, 200));
     overlay.setProgress(1.0);
@@ -81,6 +82,35 @@ TEST_F(DialogTest, SmokeOverlayHonorsRoundedSurface) {
 
     EXPECT_EQ(image.pixelColor(0, 0).alpha(), 0);
     EXPECT_GT(image.pixelColor(image.rect().center()).alpha(), 0);
+}
+
+TEST_F(DialogTest, DialogSmokeMatchesSharedBackingScrimContract) {
+    OverlayScrim overlay(nullptr);
+
+    // Dialog smoke must use the shared OverlayScrim contract: shared-backing SourceOver dim.
+    // Independent translucent surfaces + Source-clear erase Mica content and thicken text.
+    // zh_CN: Dialog 烟雾必须使用统一 OverlayScrim 契约：共享后备缓冲上的 SourceOver 压暗。
+    // 独立透明表面 + Source 清屏会擦掉 Mica 内容并让文字变粗。
+    EXPECT_TRUE(overlay.testAttribute(Qt::WA_NoSystemBackground));
+    EXPECT_FALSE(overlay.testAttribute(Qt::WA_TranslucentBackground));
+    EXPECT_FALSE(overlay.autoFillBackground());
+    EXPECT_EQ(overlay.graphicsEffect(), nullptr);
+
+    overlay.setProgress(0.5);
+    EXPECT_DOUBLE_EQ(overlay.progress(), 0.5);
+
+    overlay.setProgress(2.0);
+    EXPECT_DOUBLE_EQ(overlay.progress(), 1.0);
+
+    overlay.resize(20, 20);
+    overlay.setColor(QColor(0, 0, 0, 200));
+    overlay.setProgress(0.5);
+    QImage image(overlay.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    overlay.render(&painter);
+    painter.end();
+    EXPECT_NEAR(image.pixelColor(image.rect().center()).alpha(), 100, 1);
 }
 
 TEST_F(DialogTest, DragProperty) {
@@ -130,12 +160,7 @@ TEST_F(DialogTest, OpenPreservesExplicitApplicationModality) {
     QApplication::processEvents();
 }
 
-TEST_F(DialogTest, LinuxSameWindowDialogRepositionsInsideOwnerSurface) {
-#ifdef Q_OS_LINUX
-    if (!::fluent::overlay::linuxDesktopUsesSameWindowSurfaces()) {
-        GTEST_SKIP() << "same-window Dialog backend is only used on Linux desktop QPA plugins";
-    }
-
+TEST_F(DialogTest, SameWindowDialogRepositionsInsideOwnerSurface) {
     window->show();
     QApplication::processEvents();
 
@@ -146,6 +171,9 @@ TEST_F(DialogTest, LinuxSameWindowDialogRepositionsInsideOwnerSurface) {
     dialog.open();
     QApplication::processEvents();
 
+    EXPECT_EQ(dialog.parentWidget(), window);
+    EXPECT_EQ(dialog.windowType(), Qt::Widget);
+
     const QPoint expected((window->width() - dialog.width()) / 2,
                           (window->height() - dialog.height()) / 2);
     EXPECT_EQ(dialog.pos(), expected);
@@ -153,12 +181,9 @@ TEST_F(DialogTest, LinuxSameWindowDialogRepositionsInsideOwnerSurface) {
 
     dialog.done(QDialog::Rejected);
     QApplication::processEvents();
-#else
-    GTEST_SKIP() << "Linux same-window Dialog positioning is only asserted on Linux";
-#endif
 }
 
-TEST_F(DialogTest, SmokeDialogKeepsNativeTransientParentAndBlocksScrimClicks) {
+TEST_F(DialogTest, SmokeDialogBlocksScrimClicks) {
     window->show();
     QApplication::processEvents();
 
@@ -170,11 +195,10 @@ TEST_F(DialogTest, SmokeDialogKeepsNativeTransientParentAndBlocksScrimClicks) {
     dialog.open();
     QApplication::processEvents();
 
-    ASSERT_NE(window->windowHandle(), nullptr);
-    ASSERT_NE(dialog.windowHandle(), nullptr);
-    EXPECT_EQ(dialog.windowHandle()->transientParent(), window->windowHandle());
+    EXPECT_EQ(dialog.parentWidget(), window);
+    EXPECT_EQ(dialog.windowType(), Qt::Widget);
 
-    auto* smoke = window->findChild<SmokeOverlay*>();
+    auto* smoke = window->findChild<OverlayScrim*>(QStringLiteral("DialogSmokeScrim"));
     ASSERT_NE(smoke, nullptr);
     ASSERT_TRUE(smoke->isVisible());
 
@@ -184,8 +208,75 @@ TEST_F(DialogTest, SmokeDialogKeepsNativeTransientParentAndBlocksScrimClicks) {
     EXPECT_TRUE(dialog.isVisible());
     EXPECT_EQ(dialog.windowModality(), Qt::ApplicationModal);
 
+    // Trackpad/mouse wheel input must not leak through the modal smoke into a scrollable owner.
+    // zh_CN: 触控板/滚轮输入不得穿过模态 smoke 继续滚动宿主界面。
+    FLUENT_MAKE_WHEEL_EVENT(wheel, smoke->rect().center().x(), smoke->rect().center().y(),
+                            -120, Qt::NoModifier);
+    wheel.ignore();
+    QApplication::sendEvent(smoke, &wheel);
+    EXPECT_TRUE(wheel.isAccepted());
+
     dialog.done(QDialog::Rejected);
     QApplication::processEvents();
+}
+
+TEST_F(DialogTest, ClosingSmokeOverlayImmediatelyReleasesOwnerInput) {
+    window->show();
+    QApplication::processEvents();
+
+    Dialog dialog(window);
+    dialog.setSmokeEnabled(true);
+    dialog.setAnimationEnabled(false);
+    dialog.setFixedSize(300, 200);
+    dialog.open();
+    QApplication::processEvents();
+
+    QPointer<OverlayScrim> smoke = window->findChild<OverlayScrim*>(QStringLiteral("DialogSmokeScrim"));
+    ASSERT_FALSE(smoke.isNull());
+    ASSERT_TRUE(smoke->isVisible());
+    EXPECT_FALSE(smoke->testAttribute(Qt::WA_TransparentForMouseEvents));
+
+    dialog.done(QDialog::Rejected);
+
+    // The owner must not retain a visual or input surface after the dialog is closed.
+    // zh_CN: Dialog 关闭后宿主不得保留任何可见或可命中的 smoke 表面。
+    EXPECT_TRUE(smoke.isNull());
+    EXPECT_TRUE(window->findChildren<OverlayScrim*>(QStringLiteral("DialogSmokeScrim")).isEmpty());
+}
+
+TEST_F(DialogTest, ExecSmokeDialogDoesNotPromoteOwnerContentToNative) {
+    // Same-window Dialog must not sticky-promote overlapping owner content to WA_NativeWindow
+    // (the historical macOS content-area input freeze when Dialog was a native transient window).
+    // zh_CN: 同窗口 Dialog 不得把重叠宿主内容粘性提升为 WA_NativeWindow
+    //（历史问题：Dialog 曾为原生临时窗口时会导致 macOS 内容区输入卡死）。
+    auto* content = new QWidget(window);
+    content->setObjectName(QStringLiteral("ownerContent"));
+    content->setGeometry(0, 0, 600, 500);
+    auto* inner = new QWidget(content);
+    inner->setObjectName(QStringLiteral("ownerInner"));
+    inner->setGeometry(20, 20, 200, 40);
+
+    window->show();
+    QApplication::processEvents();
+    ASSERT_FALSE(content->testAttribute(Qt::WA_NativeWindow));
+    ASSERT_EQ(content->windowHandle(), nullptr);
+
+    for (int index = 0; index < 2; ++index) {
+        auto* dialog = new Dialog(window);
+        dialog->setSmokeEnabled(true);
+        dialog->setAnimationEnabled(false);
+        dialog->setFixedSize(300, 200);
+        QTimer::singleShot(30, [dialog]() { dialog->done(QDialog::Rejected); });
+        EXPECT_EQ(dialog->exec(), QDialog::Rejected);
+        delete dialog;
+        QApplication::processEvents();
+    }
+
+    EXPECT_FALSE(content->testAttribute(Qt::WA_NativeWindow))
+        << "owner content widget was promoted to a native window by the dialog";
+    EXPECT_EQ(content->windowHandle(), nullptr)
+        << "owner content widget acquired its own native window handle";
+    EXPECT_FALSE(inner->testAttribute(Qt::WA_NativeWindow));
 }
 
 TEST_F(DialogTest, ThemeSwitchNoCrash) {
@@ -227,7 +318,7 @@ TEST_F(DialogTest, ThemeSourceInheritsLocalOverride) {
 }
 
 TEST_F(DialogTest, DialogEntranceAnimatesOpacity) {
-    // 入场：progress=0 时 windowOpacity 应为 0；progress=1 时为 1
+    // 入场：progress=0 时 graphics opacity 应为 0；progress=1 时为 1
     Dialog dialog(window);
     dialog.setFixedSize(400, 300);
     const QSize target = dialog.size();
@@ -237,13 +328,18 @@ TEST_F(DialogTest, DialogEntranceAnimatesOpacity) {
     dialog.open();
     QApplication::processEvents();
 
+    auto* effect = qobject_cast<QGraphicsOpacityEffect*>(dialog.graphicsEffect());
+    ASSERT_NE(effect, nullptr);
+
     dialog.setAnimationProgress(0.0);
-    EXPECT_NEAR(dialog.windowOpacity(), 0.0, 0.01);
+    EXPECT_NEAR(effect->opacity(), 0.0, 0.01);
+    EXPECT_NEAR(dialog.animationProgress(), 0.0, 0.01);
     // 尺寸不应被动画修改
     EXPECT_EQ(dialog.size(), target);
 
     dialog.setAnimationProgress(1.0);
-    EXPECT_NEAR(dialog.windowOpacity(), 1.0, 0.01);
+    EXPECT_NEAR(effect->opacity(), 1.0, 0.01);
+    EXPECT_NEAR(dialog.animationProgress(), 1.0, 0.01);
     EXPECT_EQ(dialog.size(), target);
 
     dialog.setAnimationEnabled(false);
@@ -251,7 +347,7 @@ TEST_F(DialogTest, DialogEntranceAnimatesOpacity) {
 }
 
 TEST_F(DialogTest, DialogExitAnimatesOpacity) {
-    // 退场：progress=0 时 windowOpacity 应回到 0
+    // 退场：progress=0 时 graphics opacity 应回到 0
     Dialog dialog(window);
     dialog.setFixedSize(400, 300);
     const QSize target = dialog.size();
@@ -261,57 +357,46 @@ TEST_F(DialogTest, DialogExitAnimatesOpacity) {
     dialog.open();
     QApplication::processEvents();
 
+    auto* effect = qobject_cast<QGraphicsOpacityEffect*>(dialog.graphicsEffect());
+    ASSERT_NE(effect, nullptr);
+
     dialog.setAnimationProgress(1.0);
-    EXPECT_NEAR(dialog.windowOpacity(), 1.0, 0.01);
+    EXPECT_NEAR(effect->opacity(), 1.0, 0.01);
 
     dialog.done(0);
 
     dialog.setAnimationProgress(0.0);
-    EXPECT_NEAR(dialog.windowOpacity(), 0.0, 0.01);
+    EXPECT_NEAR(effect->opacity(), 0.0, 0.01);
+    EXPECT_NEAR(dialog.animationProgress(), 0.0, 0.01);
     // 尺寸在退场期间也保持不变
     EXPECT_EQ(dialog.size(), target);
 }
 
-TEST_F(DialogTest, SmokeOverlayFadesInOutDelayedDestroy) {
-    // 关键不变量：smoke 启用时，done() 返回后 overlay 应仍存在于 parent
-    // children 中（延迟销毁），而非立即从 children 中消失。
+TEST_F(DialogTest, SequentialExecDialogsLeaveNoSmokeSurface) {
+    // Gallery samples create a fresh ContentDialog for each action. Two sequential exec() calls
+    // must not overlap owner-child smoke surfaces after either nested event loop exits.
+    // zh_CN: Gallery 每个操作都会创建新的 ContentDialog；两个连续 exec() 在各自嵌套事件循环
+    // 退出后都不得留下相互重叠的宿主 smoke 子表面。
     window->show();
     QApplication::processEvents();
-    const int childCountBefore = window->findChildren<QWidget*>().size();
 
-    Dialog dialog(window);
-    dialog.setSmokeEnabled(true);
-    dialog.setFixedSize(300, 200);
-    dialog.setAnimationEnabled(false);  // 关闭 Dialog 主动画，仅测 smoke 行为
+    for (int index = 0; index < 2; ++index) {
+        Dialog dialog(window);
+        dialog.setSmokeEnabled(true);
+        dialog.setFixedSize(300, 200);
+        dialog.setAnimationEnabled(false);
 
-    bool overlayPresentAfterOpen = false;
-    bool overlayStillPresentAfterDone = false;
-    QTimer::singleShot(30, [&]() {
-        // Dialog 已 open，smoke overlay 应作为 window 的子节点存在
-        overlayPresentAfterOpen =
-            (window->findChildren<QWidget*>().size() > childCountBefore);
+        bool overlayPresentWhileOpen = false;
+        QTimer::singleShot(30, [&]() {
+            overlayPresentWhileOpen =
+                !window->findChildren<OverlayScrim*>(QStringLiteral("DialogSmokeScrim")).isEmpty();
+            dialog.done(QDialog::Rejected);
+        });
 
-        dialog.done(0);
-        // done() 返回后，由于 smoke 走异步淡出，overlay 应仍在 children 中
-        overlayStillPresentAfterDone =
-            (window->findChildren<QWidget*>().size() > childCountBefore);
-    });
-    dialog.exec();
-
-    EXPECT_TRUE(overlayPresentAfterOpen)
-        << "Smoke overlay should be a child of window after open()";
-    EXPECT_TRUE(overlayStillPresentAfterDone)
-        << "Smoke overlay should still exist immediately after done() (delayed destroy)";
-
-    // 等待淡出完成并让 deferred delete 处理完成（取决于 themeAnimation().fast）
-    QElapsedTimer t; t.start();
-    while (window->findChildren<QWidget*>().size() > childCountBefore && t.elapsed() < 1500) {
-        QApplication::processEvents(QEventLoop::AllEvents, 10);
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-    }
-    // 允许不一定在 1500ms 内完全清理（平台/事件循环依赖）——记录但不硬性断言
-    if (window->findChildren<QWidget*>().size() > childCountBefore) {
-        qWarning() << "Smoke overlay still present after 1500ms; deferred delete may need full app loop";
+        EXPECT_EQ(dialog.exec(), QDialog::Rejected);
+        EXPECT_TRUE(overlayPresentWhileOpen);
+        EXPECT_TRUE(window->findChildren<OverlayScrim*>(QStringLiteral("DialogSmokeScrim")).isEmpty())
+            << "Sequential dialog " << index << " left an owner smoke surface";
     }
 }
 
