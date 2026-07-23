@@ -57,6 +57,9 @@ protected:
     SplitPart getPartAt(const QPoint& pos) const;
     void updateSplitState(SplitPart hoverPart, SplitPart pressPart);
 
+    int primaryTrailingInset() const;
+    QRectF primaryContentRect(const QRectF& primaryRect) const;
+
     QMenu* m_menu = nullptr;
     SplitPart m_hoverPart = None;
     SplitPart m_pressPart = None;
