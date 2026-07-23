@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDate>
+#include <QLocale>
 #include <QPalette>
 #include <QSignalSpy>
 #include <QTest>
@@ -152,11 +153,18 @@ TEST_F(DatePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_NE(dynamic_cast<QWidget*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<fluent::FluentElement*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&picker), nullptr);
+
+    picker.setLocale(QLocale(QLocale::Chinese, QLocale::China));
+    picker.setSelectedDate(QDate(2026, 7, 21));
+    picker.setMonthFormat(DatePicker::MonthFormat::FullMonthName);
+    EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Month),
+              QLocale(QLocale::Chinese, QLocale::China).monthName(7, QLocale::LongFormat));
 }
 
 TEST_F(DatePickerTest, SelectedDateClearAndFormattingDriveSegments)
 {
     DatePicker picker;
+    picker.setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
     picker.setMonthFormat(DatePicker::MonthFormat::FullMonthName);
     picker.setDayFormat(DatePicker::DayFormat::DayIntegerWithAbbreviatedWeekday);
     picker.setYearFormat(DatePicker::YearFormat::FullYear);

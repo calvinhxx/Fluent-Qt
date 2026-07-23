@@ -316,7 +316,7 @@ private:
     void updateCloseButtonState();
 
     bool m_isOpen = true;
-    QString m_title = QStringLiteral("Title");
+    QString m_title;
     QString m_message;
     InfoBarSeverity m_severity = Informational;
     bool m_isClosable = true;

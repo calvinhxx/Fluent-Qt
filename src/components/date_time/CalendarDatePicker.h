@@ -124,7 +124,7 @@ private:
     QDate defaultVisibleMonth() const;
     void refreshButtonText();
 
-    QString m_placeholderText = QStringLiteral("Pick a date");
+    QString m_placeholderText;
     QDate m_date;
     QDate m_minDate;
     QDate m_maxDate;

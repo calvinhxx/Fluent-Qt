@@ -2,6 +2,7 @@
 #define TIMEPICKER_H
 
 #include <QTime>
+#include <QLocale>
 #include <QVector>
 #include <Qt>
 
@@ -47,6 +48,11 @@ class TimePicker : public fluent::basicinput::Button {
      * zh_CN: picker 下拉面板是否打开。
      */
     Q_PROPERTY(bool dropDownOpen READ isDropDownOpen NOTIFY dropDownOpenChanged)
+    /**
+     * @brief Locale used for AM/PM period text.
+     * zh_CN: 用于上午/下午时段文案的区域设置。
+     */
+    Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
 
 public:
     enum class TimeField {
@@ -69,6 +75,7 @@ public:
     QTime selectedTime() const { return m_selectedTime; }
     int minuteIncrement() const { return m_minuteIncrement; }
     ClockIdentifier clockIdentifier() const { return m_clockIdentifier; }
+    QLocale locale() const { return m_locale; }
     bool isDropDownOpen() const { return m_dropDownOpen; }
     bool isOpen() const { return isDropDownOpen(); }
 
@@ -85,6 +92,7 @@ public slots:
     void clearSelectedTime();
     void setMinuteIncrement(int increment);
     void setClockIdentifier(ClockIdentifier identifier);
+    void setLocale(const QLocale& locale);
     void setFieldTextAlignment(TimeField field, Qt::Alignment alignment);
     void openPicker();
     void closePicker();
@@ -94,6 +102,7 @@ signals:
     void selectedTimeChanged(const QTime& time);
     void minuteIncrementChanged(int increment);
     void clockIdentifierChanged(TimePicker::ClockIdentifier identifier);
+    void localeChanged(const QLocale& locale);
     void dropDownOpenChanged(bool open);
 
 protected:
@@ -133,6 +142,7 @@ private:
     QTime m_selectedTime;
     int m_minuteIncrement = 1;
     ClockIdentifier m_clockIdentifier = ClockIdentifier::TwelveHourClock;
+    QLocale m_locale;
     Qt::Alignment m_hourTextAlignment = Qt::AlignLeft;
     Qt::Alignment m_minuteTextAlignment = Qt::AlignHCenter;
     Qt::Alignment m_periodTextAlignment = Qt::AlignHCenter;
