@@ -45,9 +45,11 @@ int maxLabelWidth(const FluentMenu* menu, const QFontMetrics& fontMetrics)
     for (QAction* action : menu->actions()) {
         if (!action || !action->isVisible() || action->isSeparator())
             continue;
-        result = qMax(result, fontMetrics.horizontalAdvance(menuLabelText(action->text())));
+        const QString text = menuLabelText(action->text());
+        result = qMax(result, qMax(fontMetrics.horizontalAdvance(text),
+                                  fontMetrics.boundingRect(text).width()));
     }
-    return result;
+    return result > 0 ? result + 2 : 0;
 }
 
 int maxShortcutWidth(const FluentMenu* menu, const QFontMetrics& fontMetrics)
@@ -56,9 +58,15 @@ int maxShortcutWidth(const FluentMenu* menu, const QFontMetrics& fontMetrics)
     for (QAction* action : menu->actions()) {
         if (!action || !action->isVisible() || action->isSeparator())
             continue;
-        result = qMax(result, fontMetrics.horizontalAdvance(menu->shortcutTextForAction(action)));
+        const QString text = menu->shortcutTextForAction(action);
+        result = qMax(result, qMax(fontMetrics.horizontalAdvance(text),
+                                  fontMetrics.boundingRect(text).width()));
     }
-    return result;
+    // Leave ink allowance on both sides: Windows font backends can render
+    // antialiased bearings beyond both horizontalAdvance() and boundingRect().
+    // zh_CN: 两侧均预留字形墨迹空间；Windows 字体后端的抗锯齿边缘可能超出
+    // horizontalAdvance() 与 boundingRect()，不能用恰好等宽的矩形绘制。
+    return result > 0 ? result + 6 : 0;
 }
 
 bool hasSubmenuAction(const FluentMenu* menu)
@@ -70,10 +78,12 @@ bool hasSubmenuAction(const FluentMenu* menu)
     return false;
 }
 
-bool hasCheckableAction(const FluentMenu* menu)
+bool hasLeadingAction(const FluentMenu* menu)
 {
     for (QAction* action : menu->actions()) {
-        if (action && action->isVisible() && !action->isSeparator() && action->isCheckable())
+        if (!action || !action->isVisible() || action->isSeparator())
+            continue;
+        if (action->isCheckable() || !action->icon().isNull())
             return true;
     }
     return false;
@@ -170,7 +180,7 @@ void FluentMenu::setFontStyle(const QString& style) {
 
 void FluentMenu::onThemeUpdated() {
     const auto& s = themeSpacing();
-    int vPadding = s.gap.tight; // 4px
+    const int vPadding = s.gap.tight;
 
     // Sync the menu font; it feeds QMenu's internal actionGeometry heights.
     // zh_CN: 同步菜单字体（影响 QMenu 内部 actionGeometry 高度计算）。
@@ -278,11 +288,15 @@ QRect FluentMenu::itemShortcutGeometry(QAction* action) const
     if (shortcutColumn <= 0)
         return QRect();
 
-    const int trailingColumn = hasSubmenuAction(this) ? ::Spacing::ControlHeight::Small : ::Spacing::Small;
+    const auto& spacing = themeSpacing();
+    const int trailingColumn = hasSubmenuAction(this)
+        ? spacing.controlHeight.small
+        : ::Spacing::Small;
     QRect rect = actionGeometry(action);
     rect.setLeft(m_shadowSize);
     rect.setWidth(width() - 2 * m_shadowSize);
-    const int right = rect.right() - ::Spacing::Padding::ControlHorizontal - trailingColumn;
+    const int textPadding = spacing.padding.controlH;
+    const int right = rect.right() - textPadding - trailingColumn;
     return QRect(qMax(rect.left(), right - shortcutColumn + 1), rect.top(), shortcutColumn, rect.height());
 }
 
@@ -294,8 +308,10 @@ QRect FluentMenu::itemSubmenuIndicatorGeometry(QAction* action) const
     QRect rect = actionGeometry(action);
     rect.setLeft(m_shadowSize);
     rect.setWidth(width() - 2 * m_shadowSize);
-    const int side = ::Spacing::ControlHeight::Small;
-    return QRect(rect.right() - ::Spacing::Padding::ControlHorizontal - side + 1,
+    const auto& spacing = themeSpacing();
+    const int side = spacing.controlHeight.small;
+    const int textPadding = spacing.padding.controlH;
+    return QRect(rect.right() - textPadding - side + 1,
                  rect.top() + (rect.height() - side) / 2,
                  side,
                  side);
@@ -383,11 +399,16 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     const int plateLeft    = contentRect.left();
     const int plateWidth   = contentRect.width();
     const int itemInset    = spacing.gap.tight;          // 4
-    const int textPadding  = spacing.padding.controlH;   // 12
-    const int checkColumn  = hasCheckableAction(this) ? spacing.controlHeight.small : 0; // 24 only when needed
+    const int textPadding  = spacing.padding.controlH;
+    const int leadingColumn = hasLeadingAction(this)
+        ? spacing.controlHeight.small
+        : 0;
     const QFontMetrics fontMetrics(font());
     const int shortcutColumn = maxShortcutWidth(this, fontMetrics);
-    const int trailingColumn = hasSubmenuAction(this) ? ::Spacing::ControlHeight::Small : ::Spacing::Small;
+    const int trailingColumn = hasSubmenuAction(this)
+        ? spacing.controlHeight.small
+        : ::Spacing::Small;
+    const int shortcutGap = spacing.gap.section;
 
     // Set the paint font explicitly so the shadow pass cannot pollute it.
     // zh_CN: 明确设置绘制字体，防止 shadow 循环中字体被污染。
@@ -455,32 +476,51 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
         const QColor secondaryText = cupertinoActiveBar ? colors.textOnAccent
                                                         : (isEnabled ? colors.textSecondary : colors.textDisabled);
 
-        if (action->isCheckable() && action->isChecked()) {
-            QRect checkRect(itemRect.left() + itemInset,
-                            itemRect.top() + (itemRect.height() - checkColumn) / 2,
-                            checkColumn,
-                            checkColumn);
-            p.setPen(primaryText);
-            Typography::Icons::paintGlyph(
-                p, QRectF(checkRect), Typography::Icons::CheckMark,
-                Typography::IconSize::Compact, Qt::AlignCenter);
+        if (leadingColumn > 0) {
+            const QRect leadingRect(itemRect.left() + itemInset,
+                                    itemRect.top() + (itemRect.height() - leadingColumn) / 2,
+                                    leadingColumn,
+                                    leadingColumn);
+            if (action->isCheckable() && action->isChecked()) {
+                p.setPen(primaryText);
+                Typography::Icons::paintGlyph(
+                    p, QRectF(leadingRect), Typography::Icons::CheckMark,
+                    Typography::IconSize::Compact, Qt::AlignCenter);
+            } else if (!action->icon().isNull()) {
+                const QIcon::Mode mode = !isEnabled ? QIcon::Disabled
+                                                    : (isActive ? QIcon::Active : QIcon::Normal);
+                const QIcon::State state = action->isChecked() ? QIcon::On : QIcon::Off;
+                action->icon().paint(&p, leadingRect, Qt::AlignCenter, mode, state);
+            }
         }
 
         const QString shortcutText = shortcutTextForAction(action);
         const QRect shortcutRect = itemShortcutGeometry(action);
-        const int shortcutReserve = shortcutColumn > 0 ? shortcutColumn + spacing.gap.section : 0;
+        const int shortcutReserve = shortcutColumn > 0 ? shortcutColumn + shortcutGap : 0;
         const int textRight = itemRect.right() - textPadding - trailingColumn - shortcutReserve;
-        QRect textRect(itemRect.left() + textPadding + checkColumn,
-                       itemRect.top(),
-                       qMax(0, textRight - (itemRect.left() + textPadding + checkColumn) + 1),
-                       itemRect.height());
+        const int textLeft = itemRect.left() + textPadding + leadingColumn;
+        const int textBaseline = itemRect.top()
+            + (itemRect.height() - fontMetrics.height()) / 2
+            + fontMetrics.ascent();
 
         p.setPen(primaryText);
-        p.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine, menuLabelText(action->text()));
+        // Draw from a baseline instead of an exactly measured QRect. Some
+        // Windows font backends paint antialiased edge pixels outside Qt's
+        // reported text bounds; QRect-based drawText clips those pixels and
+        // can visibly remove the final "l" or the leading "C".
+        // zh_CN: 使用基线坐标绘制，不再使用恰好等宽的 QRect。部分 Windows
+        // 字体后端会将抗锯齿边缘绘制到 Qt 报告边界之外，矩形绘制会裁掉末尾
+        // “l” 或开头 “C”。
+        if (textLeft <= textRight)
+            p.drawText(QPoint(textLeft, textBaseline), menuLabelText(action->text()));
 
         if (!shortcutRect.isEmpty()) {
             p.setPen(secondaryText);
-            p.drawText(shortcutRect, Qt::AlignVCenter | Qt::AlignRight | Qt::TextSingleLine, shortcutText);
+            constexpr int shortcutInkInset = 6;
+            const int shortcutX = shortcutRect.right()
+                - shortcutInkInset
+                - fontMetrics.horizontalAdvance(shortcutText) + 1;
+            p.drawText(QPoint(shortcutX, textBaseline), shortcutText);
         }
 
         if (action->menu()) {
@@ -498,14 +538,21 @@ QSize FluentMenu::sizeHint() const
 {
     QSize base = QMenu::sizeHint();
     const QFontMetrics fontMetrics(font());
+    const auto& spacing = themeSpacing();
 
     const int shortcutTextWidth = maxShortcutWidth(this, fontMetrics);
-    const int shortcutColumn = shortcutTextWidth > 0 ? shortcutTextWidth + ::Spacing::Gap::Section : 0;
-    const int trailingColumn = hasSubmenuAction(this) ? ::Spacing::ControlHeight::Small : ::Spacing::Small;
-    const int checkColumn = hasCheckableAction(this) ? ::Spacing::ControlHeight::Small : 0;
-    const int contentWidth = ::Spacing::Gap::Tight * 2
-                           + ::Spacing::Padding::ControlHorizontal * 2
-                           + checkColumn
+    const int shortcutGap = spacing.gap.section;
+    const int shortcutColumn = shortcutTextWidth > 0 ? shortcutTextWidth + shortcutGap : 0;
+    const int trailingColumn = hasSubmenuAction(this)
+        ? spacing.controlHeight.small
+        : ::Spacing::Small;
+    const int leadingColumn = hasLeadingAction(this)
+        ? spacing.controlHeight.small
+        : 0;
+    const int textPadding = spacing.padding.controlH;
+    const int contentWidth = spacing.gap.tight * 2
+                           + textPadding * 2
+                           + leadingColumn
                            + maxLabelWidth(this, fontMetrics)
                            + shortcutColumn
                            + trailingColumn;

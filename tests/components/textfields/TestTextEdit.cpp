@@ -1,10 +1,15 @@
 #include <gtest/gtest.h>
 #include <QApplication>
+#include <QContextMenuEvent>
+#include <QMenu>
 #include <QScrollBar>
 #include <QTextEdit>
+#include <QTimer>
 #include <QWheelEvent>
 #include <QtTest/QSignalSpy>
+#include <QtTest/QTest>
 #include "QtTestEnvironment.h"
+#include "components/menus_toolbars/Menu.h"
 #include "components/textfields/TextEdit.h"
 #include "components/textfields/Label.h"
 #include "components/basicinput/Button.h"
@@ -59,6 +64,65 @@ QWheelEvent makeWheelEvent(QWidget* target, QPoint pixelDelta, QPoint angleDelta
 QTextEdit* innerTextEdit(TextEdit* edit)
 {
     return edit ? edit->findChild<QTextEdit*>() : nullptr;
+}
+
+bool actionMatchesStandardKey(const QAction* action, QKeySequence::StandardKey standardKey)
+{
+    if (!action)
+        return false;
+
+    QList<QKeySequence> shortcuts = action->shortcuts();
+    if (shortcuts.isEmpty()) {
+        const int tabIndex = action->text().indexOf(QLatin1Char('\t'));
+        if (tabIndex >= 0) {
+            const QKeySequence embedded(
+                action->text().mid(tabIndex + 1).trimmed(),
+                QKeySequence::NativeText);
+            if (!embedded.isEmpty())
+                shortcuts.append(embedded);
+        }
+    }
+
+    const QList<QKeySequence> bindings = QKeySequence::keyBindings(standardKey);
+    for (const QKeySequence& shortcut : shortcuts) {
+        for (const QKeySequence& binding : bindings) {
+            if (shortcut.matches(binding) == QKeySequence::ExactMatch)
+                return true;
+        }
+    }
+    return false;
+}
+
+bool triggerContextAction(QTextEdit* inner, QKeySequence::StandardKey standardKey)
+{
+    if (!inner)
+        return false;
+
+    bool triggered = false;
+    QTimer::singleShot(0, [&]() {
+        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(
+            QApplication::activePopupWidget());
+        if (!menu)
+            return;
+
+        for (QAction* action : menu->actions()) {
+            if (!actionMatchesStandardKey(action, standardKey))
+                continue;
+            if (action->isEnabled()) {
+                action->trigger();
+                triggered = true;
+            }
+            break;
+        }
+        if (menu->isVisible())
+            menu->close();
+    });
+
+    const QPoint localPos = inner->viewport()->rect().center();
+    const QPoint globalPos = inner->viewport()->mapToGlobal(localPos);
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
+    QApplication::sendEvent(inner->viewport(), &event);
+    return triggered;
 }
 
 } // namespace
@@ -166,6 +230,154 @@ TEST_F(TextEditTest, ReadOnly) {
     EXPECT_TRUE(edit->isReadOnly());
     edit->setReadOnly(false);
     EXPECT_FALSE(edit->isReadOnly());
+}
+
+TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
+    TextEdit* edit = new TextEdit(window);
+    edit->setPlainText(QStringLiteral("Alpha Beta"));
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+
+    bool sawFluentMenu = false;
+    bool sawCopy = false;
+    bool sawSelectAll = false;
+    bool sawCopyGlyph = false;
+    bool sawDeleteGlyph = false;
+    bool sawSelectAllGlyph = false;
+    QTimer::singleShot(0, [&]() {
+        auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(
+            QApplication::activePopupWidget());
+        sawFluentMenu = menu != nullptr;
+        if (!menu)
+            return;
+
+        EXPECT_EQ(menu->objectName(), QStringLiteral("FluentTextEdit.ContextMenu"));
+        EXPECT_EQ(menu->fontStyle(), Typography::FontRole::Caption);
+        EXPECT_EQ(menu->font().pixelSize(), 10);
+        for (QAction* action : menu->actions()) {
+            const QString text = action->text();
+            const bool isCopy = text.contains(QStringLiteral("Copy"), Qt::CaseInsensitive);
+            const bool isSelectAll = text.contains(QStringLiteral("Select"), Qt::CaseInsensitive)
+                && text.contains(QStringLiteral("All"), Qt::CaseInsensitive);
+            const bool isDelete = text.contains(QStringLiteral("Delete"), Qt::CaseInsensitive);
+            sawCopy = sawCopy || isCopy;
+            sawSelectAll = sawSelectAll || isSelectAll;
+            sawCopyGlyph = sawCopyGlyph
+                || (isCopy && !action->icon().isNull());
+            sawDeleteGlyph = sawDeleteGlyph
+                || (isDelete && !action->icon().isNull());
+            sawSelectAllGlyph = sawSelectAllGlyph
+                || (isSelectAll && !action->icon().isNull());
+        }
+        menu->close();
+    });
+
+    const QPoint localPos = inner->viewport()->rect().center();
+    const QPoint globalPos = inner->viewport()->mapToGlobal(localPos);
+    QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
+    QApplication::sendEvent(inner->viewport(), &event);
+
+    EXPECT_TRUE(event.isAccepted());
+    EXPECT_TRUE(sawFluentMenu);
+    EXPECT_TRUE(sawCopy);
+    EXPECT_TRUE(sawSelectAll);
+    EXPECT_TRUE(sawCopyGlyph);
+    EXPECT_TRUE(sawDeleteGlyph);
+    EXPECT_TRUE(sawSelectAllGlyph);
+}
+
+TEST_F(TextEditTest, UndoRedoRemainFunctionalFromKeyboardAndContextMenu) {
+    TextEdit* edit = new TextEdit(window);
+    edit->setPlainText(QStringLiteral("Alpha"));
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    inner->moveCursor(QTextCursor::End);
+    inner->insertPlainText(QStringLiteral(" Beta"));
+    const QString editedText = QStringLiteral("Alpha Beta");
+    ASSERT_EQ(inner->toPlainText(), editedText);
+
+    inner->setFocus(Qt::OtherFocusReason);
+    QTest::keySequence(inner, QKeySequence(QKeySequence::Undo));
+    EXPECT_EQ(inner->toPlainText(), QStringLiteral("Alpha"));
+    QTest::keySequence(inner, QKeySequence(QKeySequence::Redo));
+    EXPECT_EQ(inner->toPlainText(), editedText);
+
+    ASSERT_TRUE(triggerContextAction(inner, QKeySequence::Undo));
+    EXPECT_EQ(inner->toPlainText(), QStringLiteral("Alpha"));
+    ASSERT_TRUE(triggerContextAction(inner, QKeySequence::Redo));
+    EXPECT_EQ(inner->toPlainText(), editedText);
+
+    // A light/dark palette refresh must not add an invisible formatting
+    // command ahead of the user's text edit in QTextDocument's undo stack.
+    edit->onThemeUpdated();
+    QTest::keySequence(inner, QKeySequence(QKeySequence::Undo));
+    EXPECT_EQ(inner->toPlainText(), QStringLiteral("Alpha"));
+    QTest::keySequence(inner, QKeySequence(QKeySequence::Redo));
+    EXPECT_EQ(inner->toPlainText(), editedText);
+}
+
+TEST_F(TextEditTest, ContextMenuVisualCheck) {
+    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
+        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
+    }
+
+    TextEdit* edit = new TextEdit(window);
+    edit->setPlainText(QStringLiteral("Alpha Beta\nGamma Delta"));
+    edit->setMinVisibleLines(2);
+    edit->setMaxVisibleLines(2);
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    QTextCursor cursor = inner->textCursor();
+    cursor.select(QTextCursor::Document);
+    inner->setTextCursor(cursor);
+
+    const QPoint localPos = inner->viewport()->rect().center();
+    const QPoint globalPos = inner->viewport()->mapToGlobal(localPos);
+
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        bool snapshotSaved = false;
+        QString snapshotError;
+        QTimer::singleShot(0, [&]() {
+            auto* menu = qobject_cast<fluent::menus_toolbars::FluentMenu*>(
+                QApplication::activePopupWidget());
+            if (!menu) {
+                snapshotError = QStringLiteral("Fluent context menu did not become active");
+                return;
+            }
+
+            tests::support::VisualSnapshotOptions options;
+            options.windowSize = menu->size();
+            options.variant = QStringLiteral("light");
+            const auto result = tests::support::captureVisualSnapshot(menu, options);
+            snapshotSaved = result;
+            if (!result)
+                snapshotError = QString::fromUtf8(result.message());
+            menu->close();
+        });
+
+        QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
+        QApplication::sendEvent(inner->viewport(), &event);
+        ASSERT_TRUE(snapshotSaved) << snapshotError.toStdString();
+        return;
+    }
+
+    QTimer::singleShot(0, [inner, localPos, globalPos]() {
+        QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
+        QApplication::sendEvent(inner->viewport(), &event);
+    });
+    qApp->exec();
 }
 
 TEST_F(TextEditTest, ScrollChainingPropertyControlsBoundaryWheel) {
