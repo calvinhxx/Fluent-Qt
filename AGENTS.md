@@ -19,11 +19,18 @@
 
 ```bash
 cmake --preset vcpkg-osx
-cmake --build --preset vcpkg-osx
+cmake --build --preset vcpkg-osx --parallel
 ctest --preset vcpkg-osx --output-on-failure
 ```
 
-- Build focused test targets with the current host preset, for example `cmake --build --preset vcpkg-linux --target test_<name>` on Linux or `cmake --build --preset vcpkg-osx --target test_<name>` on macOS.
+- Always enable parallel compilation for project builds. Use
+  `cmake --build --preset <preset> --parallel`, including focused target builds,
+  unless a diagnosed toolchain or resource issue requires an explicit lower
+  job count.
+- Build focused test targets with the current host preset, for example
+  `cmake --build --preset vcpkg-linux --target test_<name> --parallel` on Linux
+  or `cmake --build --preset vcpkg-osx --target test_<name> --parallel` on
+  macOS.
 - Prefer anchored CTest label filters, for example `ctest --preset vcpkg-linux -L '^test_<name>$' --output-on-failure`; see [docs/development/testing-workflow.md](docs/development/testing-workflow.md).
 - VisualCheck tests are interactive by design. Automated CTest runs set `SKIP_VISUAL_TEST=1`; run binaries directly with `--gtest_filter="*VisualCheck*"` for manual review or `VISUAL_SNAPSHOT=1` for snapshots.
 
