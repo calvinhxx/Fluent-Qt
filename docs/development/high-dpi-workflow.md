@@ -144,5 +144,12 @@ its platform DPI declaration consistent with the Qt version they ship.
 Prefer font/SVG/vector painting for reusable component icons. When a raster
 asset is unavoidable, request or generate it for the target physical extent,
 set its device-pixel ratio, and invalidate the cached result after a display
-scale change. Gallery-only artwork may use `@2x`/`@3x` variants, but reusable
-FluentQt controls must not depend on Gallery assets.
+scale change. Use UILib helpers in `compatibility/QtCompat.h`:
+
+- `fluentIconPixmapForLogicalExtent` for `QIcon` → physical pixmap
+- `fluentDrawPixmapInLogicalRect` for KeepAspectRatio, DPR-aware draw
+- `fluentDrawCoverPixmapInLogicalRect` for cover-crop media tiles
+
+Gallery-only artwork may use `@2x`/`@3x` variants, but reusable FluentQt
+controls must not depend on Gallery assets, and Gallery must not reimplement
+these draw helpers locally.

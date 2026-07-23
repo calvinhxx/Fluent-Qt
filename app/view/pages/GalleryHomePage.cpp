@@ -361,9 +361,9 @@ public:
         textY += titleMetrics.height() + 4;
         const QString description = index.data(LinkDescriptionRole).toString();
 
-        const QFont glyphFont = Typography::Icons::font(13);
-        const QString externalLinkGlyph =
-            Typography::Icons::glyph(kExternalLinkIconName);
+        const QFont glyphFont = Typography::Icons::font(Typography::IconSize::Standard);
+        const QString externalLinkGlyph = Typography::Icons::glyphForSize(
+            Typography::Icons::glyph(kExternalLinkIconName), Typography::IconSize::Standard);
         // External-link glyph moves to the top-right corner and turns accent on hover, reading as
         // a standard "opens externally" affordance instead of floating alone in the bottom corner.
         // zh_CN: 外链字形移至右上角，hover 时转强调色，作为标准“外部打开”记号，而非孤零零浮在右下角。

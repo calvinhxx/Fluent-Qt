@@ -113,16 +113,9 @@ QPixmap iconPixmapForExtent(const QIcon& icon, const QSize& extent, const QPaint
 
 void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pixmap)
 {
-    const QSizeF sourceSize = pixmap.size() / pixmap.devicePixelRatio();
-    if (sourceSize.isEmpty())
+    if (!painter)
         return;
-    const qreal scale = qMax(target.width() / sourceSize.width(),
-                             target.height() / sourceSize.height());
-    const QSizeF visible(target.width() / scale, target.height() / scale);
-    const QRectF source((sourceSize.width() - visible.width()) / 2.0,
-                        (sourceSize.height() - visible.height()) / 2.0,
-                        visible.width(), visible.height());
-    painter->drawPixmap(target, pixmap, fluentPixmapSourceRectForDraw(source, pixmap));
+    fluentDrawCoverPixmapInLogicalRect(*painter, target, pixmap);
 }
 
 // Fills a rounded-rect background when the color is visible. zh_CN: 颜色可见时填充圆角矩形背景。
@@ -316,8 +309,7 @@ void GridPhotoDelegate::drawCheckOverlay(QPainter* painter, const QRectF& card,
         painter->setBrush(accent);
         painter->drawEllipse(checkRect);
 
-        QFont checkFont(Typography::FontFamily::FluentIcons);
-        checkFont.setPixelSize(12);
+        QFont checkFont = Typography::Icons::font(Typography::IconSize::Compact);
         painter->setFont(checkFont);
         painter->setPen(Qt::white);
         painter->drawText(checkRect, Qt::AlignCenter, Typography::Icons::CheckMark);
@@ -587,8 +579,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
             painter->setPen(Qt::NoPen);
             painter->setBrush(colors.accentDefault);
             painter->drawPath(boxPath);
-            QFont glyphFont(Typography::FontFamily::FluentIcons);
-            glyphFont.setPixelSize(12);
+            QFont glyphFont = Typography::Icons::font(Typography::IconSize::Compact);
             painter->setFont(glyphFont);
             painter->setPen(Qt::white);
             painter->drawText(boxRect, Qt::AlignCenter,
@@ -608,8 +599,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     const qreal chevronLeft = cursorX;
     if (hasChildren) {
         const qreal rotation = m_view ? m_view->chevronRotation(index) : 0.0;
-        QFont iconFont(Typography::FontFamily::FluentIcons);
-        iconFont.setPixelSize(12);
+        QFont iconFont = Typography::Icons::font(Typography::IconSize::Compact);
         painter->setFont(iconFont);
         painter->setPen(textColor);
         const QRectF chevronRect(chevronLeft, bgRect.top(), kChevronAreaW, bgRect.height());
@@ -633,8 +623,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         if (colorVar.canConvert<QColor>() && colorVar.value<QColor>().isValid() && isEnabled
             && !fill.textOnAccent)
             glyphColor = colorVar.value<QColor>();
-        QFont iconFont(Typography::FontFamily::FluentIcons);
-        iconFont.setPixelSize(16);
+        QFont iconFont = Typography::Icons::font(Typography::IconSize::Standard);
         painter->setFont(iconFont);
         painter->setPen(glyphColor);
         painter->drawText(QRectF(cursorX, bgRect.top(), kIconAreaW, bgRect.height()),

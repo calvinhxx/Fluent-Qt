@@ -401,8 +401,7 @@ protected:
         painter.setBrush(m_iconColor);
         painter.drawRoundedRect(iconRect, 7.0, 7.0);
 
-        QFont iconFont(Typography::FontFamily::FluentIcons);
-        iconFont.setPixelSize(15);
+        QFont iconFont = Typography::Icons::font(Typography::IconSize::Standard);
         painter.setFont(iconFont);
         painter.setPen(Qt::white);
         painter.drawText(iconRect, Qt::AlignCenter, m_glyph);
@@ -499,18 +498,9 @@ public:
 private:
     static void drawCoverPixmap(QPainter* painter, const QRectF& target, const QPixmap& pixmap)
     {
-        const QSizeF sourceSize = pixmap.size() / pixmap.devicePixelRatio();
-        if (sourceSize.isEmpty())
+        if (!painter)
             return;
-
-        const qreal scale = qMax(target.width() / sourceSize.width(),
-                                 target.height() / sourceSize.height());
-        const QSizeF visibleSize(target.width() / scale, target.height() / scale);
-        const QRectF source((sourceSize.width() - visibleSize.width()) / 2.0,
-                            (sourceSize.height() - visibleSize.height()) / 2.0,
-                            visibleSize.width(),
-                            visibleSize.height());
-        painter->drawPixmap(target, pixmap, fluentPixmapSourceRectForDraw(source, pixmap));
+        fluentDrawCoverPixmapInLogicalRect(*painter, target, pixmap);
     }
 
     fluent::FluentElement* m_themeHost = nullptr;

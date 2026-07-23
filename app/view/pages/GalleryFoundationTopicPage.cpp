@@ -371,10 +371,11 @@ private:
                    const Colors& colors,
                    const QFont& captionFont) const
     {
-        painter.setFont(Typography::Icons::font(18));
+        painter.setFont(Typography::Icons::font(Typography::IconSize::Large));
         painter.setPen(colors.textPrimary);
         painter.drawText(QRect(cell.left(), cell.top() + 6, cell.width(), 22),
-                         Qt::AlignHCenter | Qt::AlignVCenter, tile.glyph);
+                         Qt::AlignHCenter | Qt::AlignVCenter,
+                         Typography::Icons::glyphForSize(tile.glyph, Typography::IconSize::Large));
 
         const int textPad = 3;
         const QFontMetrics captionMetrics(captionFont);

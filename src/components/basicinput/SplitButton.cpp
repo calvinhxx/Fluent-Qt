@@ -393,18 +393,17 @@ void SplitButton::paintEvent(QPaintEvent*) {
 
     if (hasIconFont) {
         const bool usesFluentIcons = iconFontFamily() == Typography::FontFamily::FluentIcons;
-        QFont iconFont = usesFluentIcons
-            ? Typography::Icons::font(iconPixelSize())
-            : QFont(iconFontFamily());
-        if (!usesFluentIcons)
-            iconFont.setPixelSize(iconPixelSize());
-        painter.setFont(iconFont);
         QRectF iconRect(startX, primaryRect.top() + primaryOffset, iconWidth, primaryRect.height());
-        painter.drawText(iconRect, Qt::AlignCenter,
-                         usesFluentIcons
-                             ? Typography::Icons::glyphForSize(iconGlyph(), iconPixelSize())
-                             : iconGlyph());
-        painter.setFont(font());
+        if (usesFluentIcons) {
+            Typography::Icons::paintGlyph(
+                painter, iconRect, iconGlyph(), iconPixelSize(), Qt::AlignCenter);
+        } else {
+            QFont iconFont(iconFontFamily());
+            iconFont.setPixelSize(iconPixelSize());
+            painter.setFont(iconFont);
+            painter.drawText(iconRect, Qt::AlignCenter, iconGlyph());
+            painter.setFont(font());
+        }
         startX += iconWidth + gap;
     }
 
@@ -417,12 +416,12 @@ void SplitButton::paintEvent(QPaintEvent*) {
     if (m_animatedPart == Secondary && rebound > 0.0)
         chevronColor.setAlphaF(chevronColor.alphaF() * (1.0 - 0.25 * rebound));
     painter.setPen(chevronColor);
-    const QFont iconFont = Typography::Icons::font(chevronSize);
-    painter.setFont(iconFont);
-    painter.drawText(secondaryRect.translated(0, secondaryOffset),
-                     Qt::AlignCenter,
-                     Typography::Icons::glyphForSize(
-                         Typography::Icons::ChevronDown, chevronSize));
+    Typography::Icons::paintGlyph(
+        painter,
+        secondaryRect.translated(0, secondaryOffset),
+        Typography::Icons::ChevronDown,
+        chevronSize,
+        Qt::AlignCenter);
 
     // 8. Focus ring. Fluent keeps its original always-on-focus inset ring (radius.control - 1). M3/macOS
     //    draw it ONLY for the keyboard focus visual (matching Button), and at the per-language surface

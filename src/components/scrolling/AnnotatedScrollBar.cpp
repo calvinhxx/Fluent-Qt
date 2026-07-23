@@ -370,10 +370,11 @@ void AnnotatedScrollBar::paintEvent(QPaintEvent*)
     for (const VisibleLabel& visible : m_visibleLabels)
         painter.drawText(visible.rect, Qt::AlignRight | Qt::AlignVCenter, visible.label.text);
 
-    painter.setFont(iconFont(8));
     painter.setPen(caretColor);
-    painter.drawText(topCaretRect(), Qt::AlignCenter, Typography::Icons::FlipViewPrevV);
-    painter.drawText(bottomCaretRect(), Qt::AlignCenter, Typography::Icons::FlipViewNextV);
+    Typography::Icons::paintGlyph(
+        painter, QRectF(topCaretRect()), Typography::Icons::FlipViewPrevV, 8, Qt::AlignCenter);
+    Typography::Icons::paintGlyph(
+        painter, QRectF(bottomCaretRect()), Typography::Icons::FlipViewNextV, 8, Qt::AlignCenter);
 
     const QRectF indicator = indicatorRectForValue(m_value);
     painter.setPen(Qt::NoPen);
@@ -824,9 +825,7 @@ QFont AnnotatedScrollBar::labelFont() const
 
 QFont AnnotatedScrollBar::iconFont(int pixelSize) const
 {
-    QFont font(Typography::FontFamily::FluentIcons);
-    font.setPixelSize(pixelSize);
-    return font;
+    return Typography::Icons::font(pixelSize);
 }
 
 void AnnotatedScrollBar::applyLayoutMetricChange(bool updateSizeHints)

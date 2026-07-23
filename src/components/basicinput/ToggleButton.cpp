@@ -223,18 +223,17 @@ void ToggleButton::paintBrandSurface(QPaintEvent*) {
 
     if (hasGlyph) {
         const bool usesFluentIcons = iconFontFamily() == Typography::FontFamily::FluentIcons;
-        QFont iconFont = usesFluentIcons
-            ? Typography::Icons::font(iconPixelSize())
-            : QFont(iconFontFamily());
-        if (!usesFluentIcons)
+        QRectF iconRect(startX, contentRect.top(), glyphWidth, contentRect.height());
+        if (usesFluentIcons) {
+            Typography::Icons::paintGlyph(
+                painter, iconRect, iconGlyph(), iconPixelSize(), Qt::AlignCenter);
+        } else {
+            QFont iconFont(iconFontFamily());
             iconFont.setPixelSize(iconPixelSize());
-        painter.setFont(iconFont);
-        painter.drawText(QRectF(startX, contentRect.top(), glyphWidth, contentRect.height()),
-                         Qt::AlignCenter,
-                         usesFluentIcons
-                             ? Typography::Icons::glyphForSize(iconGlyph(), iconPixelSize())
-                             : iconGlyph());
-        painter.setFont(font());
+            painter.setFont(iconFont);
+            painter.drawText(iconRect, Qt::AlignCenter, iconGlyph());
+            painter.setFont(font());
+        }
         startX += glyphWidth + (txt.isEmpty() ? 0 : gap);
     }
     if (!txt.isEmpty()) {

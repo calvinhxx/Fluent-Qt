@@ -460,12 +460,10 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
                             itemRect.top() + (itemRect.height() - checkColumn) / 2,
                             checkColumn,
                             checkColumn);
-            QFont iconFont(Typography::FontFamily::FluentIcons);
-            iconFont.setPixelSize(12);
-            p.setFont(iconFont);
             p.setPen(primaryText);
-            p.drawText(checkRect, Qt::AlignCenter, Typography::Icons::CheckMark);
-            p.setFont(font());
+            Typography::Icons::paintGlyph(
+                p, QRectF(checkRect), Typography::Icons::CheckMark,
+                Typography::IconSize::Compact, Qt::AlignCenter);
         }
 
         const QString shortcutText = shortcutTextForAction(action);
@@ -487,12 +485,10 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
 
         if (action->menu()) {
             const QRect arrowRect = itemSubmenuIndicatorGeometry(action);
-            QFont arrowFont(Typography::FontFamily::FluentIcons, -1);
-            arrowFont.setPixelSize(12);
-            p.setFont(arrowFont);
             p.setPen(secondaryText);
-            p.drawText(arrowRect, Qt::AlignCenter, Typography::Icons::ChevronRightMed);
-            p.setFont(font());
+            Typography::Icons::paintGlyph(
+                p, QRectF(arrowRect), Typography::Icons::ChevronRightMed,
+                Typography::IconSize::Compact, Qt::AlignCenter);
         }
     }
     p.restore();
