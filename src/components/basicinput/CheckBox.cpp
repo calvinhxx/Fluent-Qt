@@ -274,10 +274,8 @@ void CheckBox::paintEvent(QPaintEvent*) {
         // WinUI uses the native 12 px check/subtract drawing inside its 20 px box.
         // zh_CN: WinUI 在 20 px 方框内使用原生 12 px 对勾/横线字形。
         const int fontSize = Typography::IconSize::Compact;
-        const QFont iconFont = Typography::Icons::font(fontSize);
-        painter.setFont(iconFont);
         painter.setPen(iconColor);
-        
+
         // Animated reveal. zh_CN: 动画效果。
         painter.setOpacity(m_checkProgress);
         if (state == Qt::Checked) {
@@ -285,11 +283,9 @@ void CheckBox::paintEvent(QPaintEvent*) {
             painter.scale(0.8 + 0.2 * m_checkProgress, 0.8 + 0.2 * m_checkProgress);
             painter.translate(-boxRect.center());
         }
-        
-        const QString glyph = Typography::Icons::glyphForSize(
-            state == Qt::Checked ? Typography::Icons::CheckMark : Typography::Icons::Hyphen,
-            fontSize);
-        painter.drawText(boxRect, Qt::AlignCenter, glyph);
+
+        const QString glyph = state == Qt::Checked ? Typography::Icons::CheckMark : Typography::Icons::Hyphen;
+        Typography::Icons::paintGlyph(painter, QRectF(boxRect), glyph, fontSize, Qt::AlignCenter);
         
         painter.restore();
     }

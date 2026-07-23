@@ -1726,10 +1726,16 @@ void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
 
     const QColor textColor = textColorForTab(record.tabIndex);
     if (!visualRecord.iconRect.isEmpty()) {
-        painter.setFont(iconFont(currentMetrics.iconPixelSize));
         painter.setPen(textColor);
         const QString glyph = item.iconGlyph.isEmpty() ? Typography::Icons::Document : item.iconGlyph;
-        painter.drawText(visualRecord.iconRect, Qt::AlignCenter, glyph);
+        if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
+            Typography::Icons::paintGlyph(
+                painter, QRectF(visualRecord.iconRect), glyph, currentMetrics.iconPixelSize,
+                Qt::AlignCenter);
+        } else {
+            painter.setFont(iconFont(currentMetrics.iconPixelSize));
+            painter.drawText(visualRecord.iconRect, Qt::AlignCenter, glyph);
+        }
     }
 
     if (!selected && !m_dragActive && m_focusVisualVisible && !sameHit(m_pressedHit, HitRecord{HitKind::Tab, record.tabIndex}) && hasFocus() && sameHit(m_focusedHit, HitRecord{HitKind::Tab, record.tabIndex}))
@@ -1774,9 +1780,14 @@ void TabStrip::paintButton(QPainter& painter, const QRect& rect, const QString& 
         painter.setBrush(fill);
         painter.drawRoundedRect(rect, currentMetrics.cornerRadius, currentMetrics.cornerRadius);
     }
-    painter.setFont(iconFont(hit.kind == HitKind::Close ? currentMetrics.closeIconPixelSize : currentMetrics.iconPixelSize));
+    const int iconPixelSize = hit.kind == HitKind::Close ? currentMetrics.closeIconPixelSize : currentMetrics.iconPixelSize;
     painter.setPen(enabled ? themeColorsRef().textSecondary : themeColorsRef().textDisabled);
-    painter.drawText(rect, Qt::AlignCenter, glyph);
+    if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
+        Typography::Icons::paintGlyph(painter, QRectF(rect), glyph, iconPixelSize, Qt::AlignCenter);
+    } else {
+        painter.setFont(iconFont(iconPixelSize));
+        painter.drawText(rect, Qt::AlignCenter, glyph);
+    }
     if (!m_dragActive && m_focusVisualVisible && hasFocus() && sameHit(m_focusedHit, hit))
         paintFocus(painter, rect.adjusted(1, 1, -1, -1));
     painter.restore();

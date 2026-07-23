@@ -151,9 +151,6 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
         : QFont(m_iconFontFamily);
     if (!usesFluentIcons)
         iconFont.setPixelSize(m_chevronSize);
-    const QString chevronGlyph = usesFluentIcons
-        ? Typography::Icons::glyphForSize(m_chevronGlyph, m_chevronSize)
-        : m_chevronGlyph;
     painter.setFont(iconFont);
     const qreal pressEffect = qSin(m_pressProgress * M_PI);
 
@@ -187,10 +184,12 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
             textColor = (fluentStyle() == Accent) ? colors.textOnAccent : colors.textPrimary;
         }
         if (pressEffect > 0.0) {
-            // 1.0 → 0.5 for a clear pressed feel. zh_CN: 1.0 → 0.5，明显的按压感。
-            qreal alphaFactor = 1.0 - 0.5 * pressEffect;
-            int alpha = static_cast<int>(255 * alphaFactor);
-            textColor.setAlpha(alpha);
+            // 1.0 → 0.5 for a clear pressed feel. Multiply existing alpha (do not
+            // force opaque 255) so secondary tokens stay consistent.
+            // zh_CN: 1.0 → 0.5，明显的按压感。乘在已有 alpha 上（不要写成不透明 255），
+            // 与次要色 token 保持一致。
+            const qreal alphaFactor = 1.0 - 0.5 * pressEffect;
+            textColor.setAlphaF(textColor.alphaF() * alphaFactor);
         }
     }
     
@@ -198,15 +197,28 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
 
     // Paint the glyph: it dips down along Y with the animation then rebounds,
     // plus the developer offset; chevronOffset.x() is the right-edge padding and
-    // chevronOffset.y() the vertical tweak.
+    // chevronOffset.y() the vertical tweak. Snap the dip to whole pixels so the
+    // compact optical chevron stays sharp while pressed.
     // zh_CN: 绘制图标——按动画进度沿 Y 轴下移后弹回，再叠加自定义偏移；
-    // chevronOffset.x() 为右缘间距，chevronOffset.y() 为垂直微调。
-    QRect chevronRect = rect().adjusted(0, 0, -m_chevronOffset.x(), 0);
-    const qreal maxOffset = 3.0; // Max 3px dip for the click animation. zh_CN: 最大下移 3 像素。
-    qreal pressOffset = maxOffset * pressEffect; // 0→max→0
-    chevronRect.translate(0,
-                          static_cast<int>(pressOffset) + m_chevronOffset.y());
-    painter.drawText(chevronRect, Qt::AlignRight | Qt::AlignVCenter, chevronGlyph);
+    // chevronOffset.x() 为右缘间距，chevronOffset.y() 为垂直微调。下沉取整像素，
+    // 避免紧凑光学箭头在按下时发虚。
+    // Dedicated chevron slot at the trailing edge (SplitButton pattern), not a
+    // full-width AlignRight band. zh_CN: 尾缘独立箭头槽（对齐 SplitButton），非整行 AlignRight。
+    const qreal maxOffset = 3.0;
+    const qreal pressOffset = qRound(maxOffset * pressEffect);
+    const QRectF bounds = QRectF(rect());
+    QRectF chevronSlot(
+        bounds.right() - m_chevronOffset.x() - m_chevronSize,
+        bounds.center().y() - m_chevronSize * 0.5,
+        m_chevronSize,
+        m_chevronSize);
+    chevronSlot.translate(0, pressOffset + m_chevronOffset.y());
+    if (usesFluentIcons) {
+        Typography::Icons::paintGlyph(
+            painter, chevronSlot, m_chevronGlyph, m_chevronSize, Qt::AlignCenter);
+    } else {
+        painter.drawText(chevronSlot, Qt::AlignCenter, m_chevronGlyph);
+    }
 }
 
 } // namespace fluent::basicinput

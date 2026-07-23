@@ -556,9 +556,11 @@ protected:
                 painter.drawRoundedRect(card, ::CornerRadius::Control,
                                         ::CornerRadius::Control);
 
-                painter.setFont(Typography::Icons::font(21));
+                painter.setFont(Typography::Icons::font(Typography::IconSize::Large));
                 painter.setPen(hovered ? colors.textAccentPrimary : colors.textPrimary);
-                painter.drawText(tile.adjusted(5, 5, -5, -5), Qt::AlignCenter, icon->glyph());
+                painter.drawText(tile.adjusted(5, 5, -5, -5), Qt::AlignCenter,
+                                 Typography::Icons::glyphForSize(
+                                     icon->glyph(), Typography::IconSize::Large));
             }
         }
     }

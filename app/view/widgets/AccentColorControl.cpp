@@ -196,8 +196,7 @@ void AccentColorControl::paintEvent(QPaintEvent*)
     p.drawPath(swatchPath);
 
     // Trailing chevron hints the swatch opens a picker. zh_CN: 尾部箭头提示色块可展开选择器。
-    QFont icon(Typography::FontFamily::FluentIcons);
-    icon.setPixelSize(11);
+    QFont icon = Typography::Icons::font(Typography::IconSize::Compact);
     p.setFont(icon);
     p.setPen(colors.textSecondary);
     p.drawText(QRectF(width() - 22.0, 0.0, 18.0, height()), Qt::AlignCenter,

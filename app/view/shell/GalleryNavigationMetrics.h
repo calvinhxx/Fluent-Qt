@@ -46,7 +46,7 @@ constexpr qreal kTextRightGap = 8.0;
 constexpr qreal kSelectionIndicatorWidth = 3.0;
 constexpr qreal kSelectionIndicatorHeight = 14.0;
 constexpr qreal kSelectionIndicatorTextGap = 8.0;
-constexpr int kRouteTextPixelSize = 13;
+constexpr int kRouteTextPixelSize = Typography::FontSize::Body;
 constexpr qreal kSettingsIconRotationDegrees = 360.0;
 
 } // namespace fluent::gallery

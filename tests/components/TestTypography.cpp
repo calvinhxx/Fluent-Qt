@@ -540,6 +540,17 @@ TEST_F(TypographyTest, BundledTypographyRolesResolveExactStaticFaces) {
     }
 }
 
+TEST_F(TypographyTest, SnapIconPixelSizePrefersCrispOpticalSlots) {
+    EXPECT_EQ(Typography::Icons::snapIconPixelSize(10), 10);
+    EXPECT_EQ(Typography::Icons::snapIconPixelSize(12), Typography::IconSize::Compact);
+    EXPECT_EQ(Typography::Icons::snapIconPixelSize(13), Typography::IconSize::Compact);
+    EXPECT_EQ(Typography::Icons::snapIconPixelSize(15), Typography::IconSize::Standard);
+    EXPECT_EQ(Typography::Icons::snapIconPixelSize(18), Typography::IconSize::Large);
+    EXPECT_EQ(Typography::Icons::snapIconPixelSize(21), Typography::IconSize::Large);
+    EXPECT_EQ(Typography::Icons::snapIconPixelSize(24), Typography::IconSize::XLarge);
+    EXPECT_EQ(Typography::Icons::font(21).pixelSize(), Typography::IconSize::Large);
+}
+
 TEST_F(TypographyTest, ApplicationDefaultUsesBundledTextRegular) {
     const QFontInfo resolved(qApp->font());
     EXPECT_EQ(resolved.family(), fluent::fontcompat::UITextFamily);
@@ -558,7 +569,11 @@ TEST_F(TypographyTest, BundledIconFaceContainsCompleteCatalogAndSemanticAliases)
     EXPECT_TRUE(resolved.exactMatch());
     EXPECT_EQ(resolved.family(), fluent::fontcompat::IconFamily);
     EXPECT_EQ(font.pixelSize(), Typography::IconSize::XLarge);
+#ifdef Q_OS_WIN
+    EXPECT_EQ(font.hintingPreference(), QFont::PreferNoHinting);
+#else
     EXPECT_EQ(font.hintingPreference(), QFont::PreferVerticalHinting);
+#endif
     EXPECT_NE(font.styleStrategy() & QFont::PreferQuality, 0);
     EXPECT_NE(font.styleStrategy() & QFont::NoSubpixelAntialias, 0);
 
@@ -628,6 +643,30 @@ TEST_F(TypographyTest, MissingOpticalSizeUsesNearestNativeVariant) {
     EXPECT_EQ(Typography::Icons::glyphForSize(
                   Typography::Icons::More, Typography::IconSize::Compact),
               more16);
+}
+
+TEST_F(TypographyTest, BadgeAndCaptionAliasesResolveToCompactInnerGlyphs) {
+    // InfoBar paints Badge12 semantics inside a filled circle — circle-family
+    // aliases would double-ring. Caption back uses the 16 px slot.
+    // zh_CN: InfoBar 在填充圆内绘制 Badge12；带圈族别名会双环。标题栏返回键用 16 px 槽。
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::CheckmarkBadge12, 10),
+              Typography::Icons::glyph(QStringLiteral("ic_fluent_checkmark_12_regular")));
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::ErrorBadge12, 10),
+              Typography::Icons::glyph(QStringLiteral("ic_fluent_dismiss_12_regular")));
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::ImportantBadge12, 10),
+              Typography::Icons::glyph(QStringLiteral("ic_fluent_important_12_regular")));
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::TitleBarBack, Typography::IconSize::Standard),
+              Typography::Icons::glyph(QStringLiteral("ic_fluent_arrow_left_16_regular")));
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::ChromeMinimize, Typography::IconSize::Standard),
+              Typography::Icons::glyph(QStringLiteral("ic_fluent_subtract_16_regular")));
+    EXPECT_EQ(Typography::Icons::glyphForSize(
+                  Typography::Icons::ChevronDownMed, Typography::IconSize::Compact),
+              Typography::Icons::glyph(QStringLiteral("ic_fluent_chevron_down_12_regular")));
 }
 
 TEST_F(TypographyTest, BundledTextFacesRetainHintingTablesAndRenderingPolicy) {
