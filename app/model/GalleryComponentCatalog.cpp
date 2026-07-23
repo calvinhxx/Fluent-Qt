@@ -171,6 +171,7 @@ QString galleryControlImageResource(const QString& controlTitle)
         {QStringLiteral("Color"),              QStringLiteral(":/app/assets/control_images/foundation/Color.png")},
         {QStringLiteral("Iconography"),        QStringLiteral(":/app/assets/control_images/foundation/Iconography.png")},
         {QStringLiteral("Geometry"),           QStringLiteral(":/app/assets/control_images/foundation/Geometry.png")},
+        {QStringLiteral("Spacing"),            QStringLiteral(":/app/assets/control_images/foundation/Spacing.png")},
     };
     const auto foundationIt = foundationOverrides.constFind(controlTitle);
     if (foundationIt != foundationOverrides.constEnd())
