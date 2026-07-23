@@ -12,6 +12,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "design/Typography.h"
+#include "design/Spacing.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -208,6 +209,42 @@ TEST_F(SplitButtonDesignLanguageTest, MacOsRestStateHasNoOpaqueBlackSurface) {
             << "SplitButton painted an opaque black surface at rest for theme=" << theme
             << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << "," << c.alpha() << ")";
     }
+}
+
+static int rightmostInkColumn(const QImage& img, QRgb bg, int xMin, int xMax)
+{
+    for (int x = xMax; x >= xMin; --x) {
+        for (int y = 0; y < img.height(); ++y) {
+            if (img.pixel(x, y) != bg)
+                return x;
+        }
+    }
+    return xMin;
+}
+
+TEST(SplitButtonLayoutTest, ListOptionsTextDoesNotCrowdDivider) {
+    ToggleSplitButton button(QStringLiteral("List options"));
+    button.setFluentLayout(Button::IconBefore);
+    button.setIconGlyph(Typography::Icons::List, Typography::IconSize::Standard);
+    button.setMinimumWidth(160);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+    button.adjustSize();
+
+    const QImage img = button.grab().toImage();
+    ASSERT_FALSE(img.isNull());
+
+    const QRgb bg = img.pixel(0, 0);
+    const int dividerX = button.width() - button.secondaryWidth();
+    const int layoutRight = dividerX - ::Spacing::Gap::Normal - 1;
+    const int textRight = rightmostInkColumn(img, bg, 0, layoutRight);
+    const int gapPx = dividerX - textRight - 1;
+
+    EXPECT_GE(gapPx, ::Spacing::Gap::Normal)
+        << "textRight=" << textRight << " dividerX=" << dividerX
+        << " width=" << button.width()
+        << " gapPx=" << gapPx;
+    EXPECT_GT(button.width(), 160);
 }
 
 TEST_F(SplitButtonTest, BothSegmentsStartPressReboundAnimation) {

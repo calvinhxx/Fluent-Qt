@@ -8,6 +8,24 @@
 
 namespace fluent::basicinput {
 
+namespace {
+
+int splitButtonTextWidth(const QFontMetrics& fm, const QString& text)
+{
+    if (text.isEmpty())
+        return 0;
+    // Ink can extend past horizontalAdvance; reserve the largest metric so sizeHint
+    // matches painted glyphs (same gap rule as DropDownButton chevron reserve).
+    // zh_CN: 墨水可能超出 horizontalAdvance;取最大度量保证 sizeHint 与绘制一致
+    // (与 DropDownButton 预留 chevron 区同理)。
+    const int advance = fm.horizontalAdvance(text);
+    const int bounds = fm.boundingRect(text).width();
+    const int tight = fm.tightBoundingRect(text).width();
+    return qMax(advance, qMax(bounds, tight));
+}
+
+} // namespace
+
 SplitButton::SplitButton(const QString& text, QWidget* parent)
     : Button(text, parent) {
     setMouseTracking(true);
@@ -104,10 +122,38 @@ SplitButton::SplitPart SplitButton::getPartAt(const QPoint& pos) const {
     return Primary;
 }
 
+int SplitButton::primaryTrailingInset() const
+{
+    const auto& spacing = themeSpacing();
+    return (fluentSize() == Small) ? spacing.gap.tight : spacing.gap.normal;
+}
+
+QRectF SplitButton::primaryContentRect(const QRectF& primaryRect) const
+{
+    const qreal inset = qMin(primaryRect.width(), static_cast<qreal>(primaryTrailingInset()));
+    return primaryRect.adjusted(0, 0, -inset, 0);
+}
+
 QSize SplitButton::sizeHint() const {
-    QSize base = Button::sizeHint();
-    // Width = the base Button width plus the drop-down zone. zh_CN: 宽度 = 原 Button 所需宽度 + 下拉区宽度。
-    return QSize(base.width() + m_secondaryWidth, base.height());
+    const auto& spacing = themeSpacing();
+    QFontMetrics fm(font());
+
+    const int hPadding = (fluentSize() == Small) ? spacing.small
+                         : (fluentSize() == Large ? spacing.standard : spacing.padding.controlH);
+    const int vPadding = (fluentSize() == Small) ? spacing.gap.tight
+                         : (fluentSize() == Large ? spacing.small : spacing.padding.controlV);
+    const int iconGap = (fluentSize() == Small) ? spacing.gap.tight : spacing.gap.normal;
+
+    const QString txt = (fluentLayout() == IconOnly) ? QString() : text();
+    const bool hasIconFont = !iconGlyph().isEmpty();
+    const int txtWidth = splitButtonTextWidth(fm, txt);
+    const int iconWidth = hasIconFont ? iconPixelSize() : 0;
+    const int contentWidth = txtWidth + iconWidth
+        + ((!txt.isEmpty() && hasIconFont) ? iconGap : 0);
+    const int primaryWidth = qMax(Button::sizeHint().width(), contentWidth + hPadding * 2);
+
+    return QSize(primaryWidth + m_secondaryWidth + primaryTrailingInset(),
+                 fm.height() + vPadding * 2);
 }
 
 QSize SplitButton::minimumSizeHint() const {
@@ -383,13 +429,19 @@ void SplitButton::paintEvent(QPaintEvent*) {
     bool hasIconFont = !iconGlyph().isEmpty();
     int gap = (fluentSize() == Small) ? spacing.gap.tight : spacing.gap.normal;
 
-    QFontMetrics fm = painter.fontMetrics();
-    int txtWidth = txt.isEmpty() ? 0 : fm.horizontalAdvance(txt);
     int iconWidth = hasIconFont ? iconPixelSize() : 0;
-    int totalContentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && hasIconFont) ? gap : 0);
 
-    // Starting position inside primaryRect. zh_CN: 计算在 primaryRect 内的起始位置。
-    double startX = primaryRect.left() + (primaryRect.width() - totalContentWidth) / 2.0;
+    // Lay out in the primary zone minus a trailing inset before the divider (DropDownButton pattern).
+    // zh_CN: 在分割线前保留尾缘间距后再布局主内容(对齐 DropDownButton 做法)。
+    const QRectF layoutRect = primaryContentRect(primaryRect);
+    const int hPadding = (fluentSize() == Small) ? spacing.small
+                         : (fluentSize() == Large ? spacing.standard : spacing.padding.controlH);
+    double startX = layoutRect.left();
+    if (fluentLayout() == IconOnly && hasIconFont) {
+        startX += (layoutRect.width() - iconWidth) / 2.0;
+    } else {
+        startX += hPadding;
+    }
 
     if (hasIconFont) {
         const bool usesFluentIcons = iconFontFamily() == Typography::FontFamily::FluentIcons;
@@ -404,12 +456,17 @@ void SplitButton::paintEvent(QPaintEvent*) {
             painter.drawText(iconRect, Qt::AlignCenter, iconGlyph());
             painter.setFont(font());
         }
-        startX += iconWidth + gap;
+        if (fluentLayout() != IconOnly)
+            startX += iconWidth + gap;
     }
 
     if (!txt.isEmpty()) {
-        QRectF textRect(startX, primaryRect.top() + primaryOffset, txtWidth, primaryRect.height());
-        painter.drawText(textRect, Qt::AlignCenter, txt);
+        const qreal textWidth = qMax<qreal>(0.0, layoutRect.right() - startX);
+        painter.save();
+        painter.setClipRect(layoutRect);
+        QRectF textRect(startX, primaryRect.top() + primaryOffset, textWidth, primaryRect.height());
+        painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, txt);
+        painter.restore();
     }
 
     // 7. Paint the chevron; it also sinks 0.5px while pressed. zh_CN: 绘制下拉箭头，按下时同样下沉 0.5px。
