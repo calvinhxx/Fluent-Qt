@@ -2113,6 +2113,36 @@ TEST_F(GalleryShellFrameworkTest, FirstClosePromptsForBehaviorAndKeepsWindowOpen
     EXPECT_FALSE(settings.closeBehaviorConfirmed());
 }
 
+TEST_F(GalleryShellFrameworkTest, ApplicationQuitAllowsWindowCloseInsteadOfTrayRedirect)
+{
+    // Repro for macOS Dock Quit / Cmd+Q: Quit must arm exit before Qt closes windows,
+    // otherwise the tray Close interceptor ignores those closes and cancels termination.
+    // zh_CN: 复现 macOS Dock Quit / Cmd+Q：退出必须在 Qt 关窗前武装，否则托盘 Close 拦截器会
+    // ignore 这些关闭并取消终止。
+    auto& settings = GallerySettings::instance();
+    GallerySettingsRestorer restore(settings);
+    settings.setCloseBehavior(GallerySettings::CloseBehavior::Tray);
+    settings.setCloseBehaviorConfirmed(true);
+
+    GalleryWindow window;
+    GalleryApplicationController applicationController(&window);
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+    ASSERT_TRUE(window.isVisible());
+
+    // Arm the same flag QEvent::Quit handling sets; avoid posting a real Quit into the shared
+    // test QApplication. zh_CN: 武装与 QEvent::Quit 处理相同的标志；避免向共享测试 QApplication
+    // 投递真实 Quit。
+    applicationController.armApplicationQuit();
+
+    EXPECT_TRUE(window.close());
+    EXPECT_FALSE(window.isVisible());
+    EXPECT_TRUE(window.findChildren<ContentDialog*>(
+                             QStringLiteral("galleryCloseBehaviorDialog"))
+                    .isEmpty());
+}
+
 TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActivation)
 {
     GalleryWindow window;
