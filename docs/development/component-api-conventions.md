@@ -106,6 +106,14 @@ APIs under `src/components/**`.
   signals.
 - Nullable `QDate`, `QTime`, or equivalent empty value semantics should be
   tested directly.
+- Visible business copy is owned by the application (`setText`, model roles,
+  placeholders). Prefer empty library defaults over hard-coded English marketing
+  strings (`InfoBar` title, `CalendarDatePicker` placeholder).
+- Culture-facing calendar/time labels (month names, weekday names, AM/PM) should
+  follow `QLocale` / an explicit `setLocale` on the control, not a forced English
+  locale inside the library.
+- Caption-button tooltips on `fluent::windowing::Window` default to empty; apps
+  that want language-specific tips call `setCaptionButtonToolTips(...)`.
 - VisualCheck tests must keep the `SKIP_VISUAL_TEST` guard, block with
   `qApp->exec()`, and use project Fluent controls for visible demo UI when
   practical.

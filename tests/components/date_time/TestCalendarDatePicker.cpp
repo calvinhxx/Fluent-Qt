@@ -116,14 +116,14 @@ TEST_F(CalendarDatePickerTest, DefaultsAndInheritanceMatchComponentPattern)
 {
     CalendarDatePicker picker;
 
-    EXPECT_EQ(picker.placeholderText(), QStringLiteral("Pick a date"));
+    EXPECT_TRUE(picker.placeholderText().isEmpty());
     EXPECT_FALSE(picker.date().isValid());
     EXPECT_FALSE(picker.minDate().isValid());
     EXPECT_FALSE(picker.maxDate().isValid());
     EXPECT_TRUE(picker.displayFormat().isEmpty());
     EXPECT_FALSE(picker.isCalendarOpen());
     EXPECT_FALSE(picker.isOpen());
-    EXPECT_EQ(picker.displayText(), QStringLiteral("Pick a date"));
+    EXPECT_TRUE(picker.displayText().isEmpty());
     EXPECT_EQ(picker.focusPolicy(), Qt::TabFocus);
     EXPECT_FALSE(picker.sizeHint().isEmpty());
     EXPECT_NE(dynamic_cast<Button*>(&picker), nullptr);
