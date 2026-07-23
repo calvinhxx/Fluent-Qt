@@ -144,15 +144,19 @@ QSize SplitButton::sizeHint() const {
                          : (fluentSize() == Large ? spacing.small : spacing.padding.controlV);
     const int iconGap = (fluentSize() == Small) ? spacing.gap.tight : spacing.gap.normal;
 
-    const QString txt = (fluentLayout() == IconOnly) ? QString() : text();
+    const bool iconOnly = fluentLayout() == IconOnly;
+    const QString txt = iconOnly ? QString() : text();
     const bool hasIconFont = !iconGlyph().isEmpty();
     const int txtWidth = splitButtonTextWidth(fm, txt);
     const int iconWidth = hasIconFont ? iconPixelSize() : 0;
     const int contentWidth = txtWidth + iconWidth
         + ((!txt.isEmpty() && hasIconFont) ? iconGap : 0);
     const int primaryWidth = qMax(Button::sizeHint().width(), contentWidth + hPadding * 2);
+    // Trailing inset is for text clearance only; icon-only already centers in the primary zone.
+    // zh_CN: 尾缘 inset 只服务于文字避让；纯图标已在主区内居中，不必再加宽。
+    const int trailing = iconOnly ? 0 : primaryTrailingInset();
 
-    return QSize(primaryWidth + m_secondaryWidth + primaryTrailingInset(),
+    return QSize(primaryWidth + m_secondaryWidth + trailing,
                  fm.height() + vPadding * 2);
 }
 
@@ -431,13 +435,17 @@ void SplitButton::paintEvent(QPaintEvent*) {
 
     int iconWidth = hasIconFont ? iconPixelSize() : 0;
 
-    // Lay out in the primary zone minus a trailing inset before the divider (DropDownButton pattern).
-    // zh_CN: 在分割线前保留尾缘间距后再布局主内容(对齐 DropDownButton 做法)。
-    const QRectF layoutRect = primaryContentRect(primaryRect);
+    // Text layouts keep a trailing inset before the divider (DropDownButton pattern). Icon-only
+    // centers in the full primary zone — applying that inset there slides the glyph left and
+    // leaves an awkward gap before the chevron.
+    // zh_CN: 带文字布局在分割线前保留尾缘间距(对齐 DropDownButton)。纯图标则在完整主区内居中——
+    // 若再套该 inset 会把字形挤向左侧，与箭头之间留下别扭空隙。
+    const bool iconOnly = fluentLayout() == IconOnly;
+    const QRectF layoutRect = iconOnly ? primaryRect : primaryContentRect(primaryRect);
     const int hPadding = (fluentSize() == Small) ? spacing.small
                          : (fluentSize() == Large ? spacing.standard : spacing.padding.controlH);
     double startX = layoutRect.left();
-    if (fluentLayout() == IconOnly && hasIconFont) {
+    if (iconOnly && hasIconFont) {
         startX += (layoutRect.width() - iconWidth) / 2.0;
     } else {
         startX += hPadding;

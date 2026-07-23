@@ -247,6 +247,37 @@ TEST(SplitButtonLayoutTest, ListOptionsTextDoesNotCrowdDivider) {
     EXPECT_GT(button.width(), 160);
 }
 
+TEST(SplitButtonLayoutTest, IconOnlyCentersGlyphInPrimaryZone) {
+    ToggleSplitButton button;
+    button.setFluentLayout(Button::IconOnly);
+    button.setIconGlyph(Typography::Icons::Settings, Typography::IconSize::Standard);
+    button.setFixedSize(64, 34);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+
+    const QImage img = button.grab().toImage();
+    ASSERT_FALSE(img.isNull());
+
+    const QRgb bg = img.pixel(0, 0);
+    const int primaryRight = button.width() - button.secondaryWidth() - 1;
+    int left = primaryRight;
+    int right = 0;
+    for (int x = 0; x <= primaryRight; ++x) {
+        for (int y = 0; y < img.height(); ++y) {
+            if (img.pixel(x, y) == bg)
+                continue;
+            left = qMin(left, x);
+            right = qMax(right, x);
+        }
+    }
+    ASSERT_LT(left, right);
+    const int inkCenter = (left + right) / 2;
+    const int primaryCenter = primaryRight / 2;
+    EXPECT_NEAR(inkCenter, primaryCenter, 2)
+        << "left=" << left << " right=" << right
+        << " inkCenter=" << inkCenter << " primaryCenter=" << primaryCenter;
+}
+
 TEST_F(SplitButtonTest, BothSegmentsStartPressReboundAnimation) {
     SplitButton split(QStringLiteral("Choose"));
     split.resize(160, 36);
