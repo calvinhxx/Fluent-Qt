@@ -584,6 +584,8 @@ QVector<GallerySample> windowSamples()
                    QStringLiteral("auto* window = new Window();\n"
                                   "window->setWindowTitle(\"Custom title bar\");\n"
                                   "window->setCustomWindowChromeEnabled(true);\n"
+                                  "window->setCaptionButtonToolTips(\"Minimize\", \"Maximize\",\n"
+                                  "                                 \"Close\", \"Restore\");\n"
                                   "\n"
                                   "auto* titleBarContent = new QWidget(window->titleBar());\n"
                                   "auto* layout = new QHBoxLayout(titleBarContent);\n"
@@ -625,6 +627,10 @@ QVector<GallerySample> windowSamples()
                            window->setAttribute(Qt::WA_DeleteOnClose);
                            window->setWindowTitle(QStringLiteral("Custom title bar"));
                            window->setCustomWindowChromeEnabled(true);
+                           window->setCaptionButtonToolTips(QStringLiteral("Minimize"),
+                                                           QStringLiteral("Maximize"),
+                                                           QStringLiteral("Close"),
+                                                           QStringLiteral("Restore"));
                            window->titleBar()->setContentWidget(makeTitleBarContent(
                                window->titleBar(),
                                QStringLiteral("Samples"),

@@ -59,9 +59,20 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     setWindowTitle(QStringLiteral("Fluent-Qt Gallery"));
     setWindowIcon(appicon::icon());
     const auto chromePlatform = compatibility::WindowChromeCompat::currentPlatform();
-    setCustomWindowChromeEnabled(
+    const bool useCustomChrome =
         chromePlatform == compatibility::WindowChromeCompat::Platform::Windows
-        || chromePlatform == compatibility::WindowChromeCompat::Platform::Linux);
+        || chromePlatform == compatibility::WindowChromeCompat::Platform::Linux;
+    setCustomWindowChromeEnabled(useCustomChrome);
+    // Self-drawn caption buttons exist only on Windows/Linux custom chrome.
+    // macOS keeps native traffic lights, so these tooltips do not apply there.
+    // zh_CN: 自绘标题按钮仅在 Windows/Linux 自定义 chrome 下存在；
+    // macOS 仍用系统红绿灯，此处提示文案不适用。
+    if (useCustomChrome) {
+        setCaptionButtonToolTips(QStringLiteral("Minimize"),
+                                 QStringLiteral("Maximize"),
+                                 QStringLiteral("Close"),
+                                 QStringLiteral("Restore"));
+    }
     // Allow narrow windows so the adaptive nav can collapse to its compact / minimal
     // modes; a 980 floor would pin the layout above the 640 breakpoint.
     // zh_CN: 允许窄窗口，让自适应导航能进入紧凑/最小模式；980 的下限会把布局钉在 640 断点之上。
