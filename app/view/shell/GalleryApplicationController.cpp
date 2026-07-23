@@ -39,10 +39,10 @@ GalleryApplicationController::GalleryApplicationController(GalleryWindow* window
     setObjectName(QStringLiteral("galleryApplicationController"));
     if (m_window)
         m_window->installEventFilter(this);
-#ifdef Q_OS_MACOS
+    // See Quit handling in eventFilter: Dock Quit / Cmd+Q must arm exit before windows close.
+    // zh_CN: 见 eventFilter 中的 Quit 处理：Dock Quit / Cmd+Q 必须在关窗前武装退出。
     if (qApp)
         qApp->installEventFilter(this);
-#endif
     setupStatusItem();
 }
 
@@ -95,6 +95,17 @@ bool GalleryApplicationController::eventFilter(QObject* watched, QEvent* event)
 {
     if (!event)
         return QObject::eventFilter(watched, event);
+
+    // macOS Dock Quit / Cmd+Q (and QCoreApplication::quit) deliver QEvent::Quit first. Qt then
+    // closes every top-level window; if any Close is ignored, Quit is cancelled and the process
+    // stays alive (especially with setQuitOnLastWindowClosed(false) for tray mode).
+    // zh_CN: macOS Dock Quit / Cmd+Q（以及 quit()）会先发 QEvent::Quit，再关闭各顶层窗口；任一
+    // Close 被 ignore 就会取消 Quit，进程继续存活（托盘模式下 setQuitOnLastWindowClosed(false)
+    // 时尤其明显）。
+    if (watched == qApp && event->type() == QEvent::Quit) {
+        armApplicationQuit();
+        return false;
+    }
 
     if (watched == m_window && event->type() == QEvent::Close && !m_exitRequested) {
         if (qApp && qApp->isSavingSession())
@@ -347,13 +358,19 @@ void GalleryApplicationController::openSettings()
         m_window->selectRoute(QStringLiteral("settings"));
 }
 
-void GalleryApplicationController::requestQuit()
+void GalleryApplicationController::armApplicationQuit()
 {
     if (m_exitRequested)
         return;
     m_exitRequested = true;
     if (m_statusIcon)
         m_statusIcon->hide();
+    LOG_INFO(QStringLiteral("GalleryApplicationController application quit armed"));
+}
+
+void GalleryApplicationController::requestQuit()
+{
+    armApplicationQuit();
     LOG_INFO(QStringLiteral("GalleryApplicationController quit requested"));
     QCoreApplication::quit();
 }

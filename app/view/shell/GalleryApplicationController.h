@@ -29,6 +29,12 @@ public:
     void openSettings();
     void requestQuit();
 
+    /**
+     * @brief Arms tray/window close to allow application termination (Dock Quit / Cmd+Q).
+     * zh_CN: 武装托盘/窗口关闭路径，允许应用真正退出（Dock Quit / Cmd+Q）。
+     */
+    void armApplicationQuit();
+
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
