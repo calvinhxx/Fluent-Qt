@@ -80,7 +80,9 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
                         QStringLiteral("foundation"),
                         QStringLiteral("Foundation"),
                         QStringLiteral("Foundation"),
-                        Typography::Icons::Color,
+                        // Grid matches other mono nav glyphs; Color looked like a palette tile.
+                        // zh_CN: Grid 与其他单色导航字形一致；原先 Color 看起来像调色板块。
+                        Typography::Icons::Grid,
                         QColor(QStringLiteral("#F3F1FB")),
                         QString(),   // top-level category: no parent (not itself). zh_CN: 顶级分类，无父项（不是自己）。
                         0,
@@ -112,7 +114,9 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
                         QStringLiteral("all-controls"),
                         QStringLiteral("All"),
                         QStringLiteral("Controls"),
-                        Typography::Icons::AllApps,
+                        // View reads as "browse the full catalog" without colliding with
+                        // Collections' Grid glyph. zh_CN: View 表示浏览完整目录，且不与 Collections 的 Grid 撞形。
+                        Typography::Icons::View,
                         QColor(QStringLiteral("#F8F8FF")),
                         QStringLiteral("controls")));
 
