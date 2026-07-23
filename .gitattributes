@@ -1,3 +1,35 @@
+# Normalize all text files to LF in the repository.
+* text=auto eol=lf
+
+# Shell / desktop entry scripts must stay LF even on Windows checkouts.
 *.sh text eol=lf
 *.desktop text eol=lf
 *.desktop.in text eol=lf
+
+# Explicit binary types (do not touch line endings).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zip binary
+*.7z binary
+*.gz binary
+*.xz binary
+*.dmg binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.a binary
+*.lib binary
+*.pdb binary
+*.qm binary
+*.rcc binary
