@@ -11,10 +11,47 @@ namespace fluent::textfields {
 
 namespace {
 constexpr int kToolTipGap = 8;
+const QString kManagedColorStyleStart =
+    QStringLiteral("/* FluentQt.Label.TextColor.Begin */");
+const QString kManagedColorStyleEnd =
+    QStringLiteral("/* FluentQt.Label.TextColor.End */");
 
 QString cssRgba(const QColor& c) {
     return QStringLiteral("rgba(%1, %2, %3, %4)")
         .arg(c.red()).arg(c.green()).arg(c.blue()).arg(c.alpha());
+}
+
+QString withoutManagedColorStyle(QString styleSheet) {
+    int start = styleSheet.indexOf(kManagedColorStyleStart);
+    while (start >= 0) {
+        int removalStart = start;
+        if (removalStart > 0
+            && styleSheet.at(removalStart - 1) == QLatin1Char('\n')) {
+            --removalStart;
+        }
+        const int end = styleSheet.indexOf(kManagedColorStyleEnd, start);
+        if (end < 0) {
+            styleSheet.truncate(removalStart);
+            break;
+        }
+        styleSheet.remove(
+            removalStart,
+            end - removalStart + kManagedColorStyleEnd.size());
+        start = styleSheet.indexOf(kManagedColorStyleStart);
+    }
+    return styleSheet;
+}
+
+QString withManagedColorStyle(const QString& styleSheet, const QColor& color) {
+    const QString callerStyle = withoutManagedColorStyle(styleSheet);
+    const QString managedStyle =
+        kManagedColorStyleStart
+        + QStringLiteral("\ncolor: %1; background: transparent;\n")
+              .arg(cssRgba(color))
+        + kManagedColorStyleEnd;
+    return callerStyle.isEmpty()
+        ? managedStyle
+        : callerStyle + QLatin1Char('\n') + managedStyle;
 }
 }
 
@@ -100,6 +137,10 @@ QColor Label::resolveTextColor() const {
 
 void Label::applyTextColor() {
     if (m_textColorRole == TextColorRole::Default) {
+        const QString callerStyle = withoutManagedColorStyle(styleSheet());
+        if (callerStyle != styleSheet())
+            QLabel::setStyleSheet(callerStyle);
+
         // Legacy palette-based coloring. Correct when no ancestor has a style sheet; left untouched so
         // components that set their own label palette (InfoBar status text, ToolTip, collection-view
         // headers, …) keep working. zh_CN: 原有基于 palette 的上色。无祖先样式表时正确；保持不变，使自行设置标签
@@ -112,8 +153,8 @@ void Label::applyTextColor() {
         // (which installs QStyleSheetStyle and makes Qt ignore the child palette) can't drop it. This is
         // what value/status labels on a styled preview surface need. zh_CN: 指定角色改用标签自身样式表上色,
         // 使祖先样式表(安装 QStyleSheetStyle、让 Qt 忽略子 palette)无法丢弃它。带样式表预览面上的取值/状态标签即需此。
-        setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                          .arg(cssRgba(resolveTextColor())));
+        QLabel::setStyleSheet(
+            withManagedColorStyle(styleSheet(), resolveTextColor()));
     }
 }
 

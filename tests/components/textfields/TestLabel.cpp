@@ -72,6 +72,24 @@ TEST_F(LabelTest, TextConstructor) {
     EXPECT_EQ(label->fluentTypography(), "Body");
 }
 
+TEST_F(LabelTest, Contract_DirectTextSetterKeepsQtAndFluentFacadesCoherent) {
+    Label* label = new Label(window);
+
+    label->setText(QStringLiteral("Direct update"));
+
+    EXPECT_EQ(label->text(), QStringLiteral("Direct update"));
+    EXPECT_EQ(static_cast<QLabel*>(label)->text(), QStringLiteral("Direct update"));
+}
+
+TEST_F(LabelTest, Contract_MetaPropertyTextWriteKeepsFullTextCoherent) {
+    Label* label = new Label(QStringLiteral("Initial"), window);
+
+    ASSERT_TRUE(label->setProperty("text", QStringLiteral("Bound update")));
+
+    EXPECT_EQ(label->text(), QStringLiteral("Bound update"));
+    EXPECT_EQ(static_cast<QLabel*>(label)->text(), QStringLiteral("Bound update"));
+}
+
 TEST_F(LabelTest, FluentTypographyChange) {
     Label* label = new Label(window);
     QSignalSpy spy(label, SIGNAL(typographyChanged()));
@@ -113,6 +131,21 @@ TEST_F(LabelTest, TextColorRoleColorsViaOwnStyleSheet) {
     label->onThemeUpdated();
     EXPECT_EQ(label->textColorRole(), Label::TextColorRole::Secondary);
     EXPECT_TRUE(label->styleSheet().contains(QStringLiteral("color:")));
+}
+
+TEST_F(LabelTest, Contract_DefaultTextColorRoleRemovesOwnedColorStyle) {
+    Label* label = new Label(QStringLiteral("Role text"), window);
+    const QString callerStyle =
+        QStringLiteral("  padding-left: 2px;\n");
+    label->setStyleSheet(callerStyle);
+    label->setTextColorRole(Label::TextColorRole::Secondary);
+    ASSERT_TRUE(label->styleSheet().contains(QStringLiteral("color:")));
+    ASSERT_TRUE(label->styleSheet().contains(QStringLiteral("padding-left: 2px;")));
+
+    label->setTextColorRole(Label::TextColorRole::Default);
+
+    EXPECT_FALSE(label->styleSheet().contains(QStringLiteral("color:")));
+    EXPECT_EQ(label->styleSheet(), callerStyle);
 }
 
 TEST_F(LabelTest, ThemeUpdatePreservesExplicitFont) {
@@ -238,6 +271,8 @@ TEST_F(LabelTest, VisualCheck) {
 
     window->setFixedSize(1240, 680);
     window->setWindowTitle("Label Gallery");
+    constexpr int kElideCaptionX = 650;
+    constexpr int kElideValueX = 790;
 
     auto createTypographyLabel = [&](const QString& text, const QString& styleName, QWidget* anchor, int margin = 20) {
         Label* l = new Label(text + " (" + styleName + ")", window);
@@ -260,7 +295,7 @@ TEST_F(LabelTest, VisualCheck) {
         captionLabel->setFluentTypography("Caption");
         captionLabel->setFixedSize(130, 28);
         captionLabel->anchors()->top = {anchor, Edge::Bottom, margin};
-        captionLabel->anchors()->left = {window, Edge::Left, 560};
+        captionLabel->anchors()->left = {window, Edge::Left, kElideCaptionX};
         layout->addWidget(captionLabel);
 
         Label* valueLabel = new Label(valueText, window);
@@ -272,7 +307,7 @@ TEST_F(LabelTest, VisualCheck) {
         valueLabel->setLineWidth(1);
         valueLabel->setFixedSize(valueWidth, 30);
         valueLabel->anchors()->top = {captionLabel, Edge::Top, 0};
-        valueLabel->anchors()->left = {window, Edge::Left, 700};
+        valueLabel->anchors()->left = {window, Edge::Left, kElideValueX};
         layout->addWidget(valueLabel);
         return valueLabel;
     };
@@ -300,13 +335,13 @@ TEST_F(LabelTest, VisualCheck) {
     Label* elideTitle = new Label("Elide + ToolTip", window);
     elideTitle->setFluentTypography("Title");
     elideTitle->anchors()->top = {window, Edge::Top, 40};
-    elideTitle->anchors()->left = {window, Edge::Left, 560};
+    elideTitle->anchors()->left = {window, Edge::Left, kElideCaptionX};
     layout->addWidget(elideTitle);
 
     Label* elideHint = new Label("Hover clipped values to see the full text.", window);
     elideHint->setFluentTypography("Caption");
     elideHint->anchors()->top = {elideTitle, Edge::Bottom, 8};
-    elideHint->anchors()->left = {window, Edge::Left, 560};
+    elideHint->anchors()->left = {window, Edge::Left, kElideCaptionX};
     layout->addWidget(elideHint);
 
     const QString releaseText =
@@ -348,7 +383,7 @@ TEST_F(LabelTest, VisualCheck) {
     Button* widthBtn = new Button("Toggle Width", window);
     widthBtn->setFixedSize(120, 32);
     widthBtn->anchors()->top = {resizeDemo, Edge::Bottom, 12};
-    widthBtn->anchors()->left = {window, Edge::Left, 700};
+    widthBtn->anchors()->left = {window, Edge::Left, kElideValueX};
     layout->addWidget(widthBtn);
 
     QObject::connect(widthBtn, &Button::clicked, [resizeDemo, widthBtn, this]() {

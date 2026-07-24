@@ -21,6 +21,11 @@ namespace fluent::textfields {
 class Label : public QLabel, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
+     * @brief Full, non-elided label text exposed through the derived meta-object.
+     * zh_CN: 通过派生类元对象暴露的完整、未省略标签文本。
+     */
+    Q_PROPERTY(QString text READ text WRITE setText)
+    /**
      * @brief Fluent typography role applied to label text.
      * zh_CN: 应用到标签文本的 Fluent 排版角色。
      */
