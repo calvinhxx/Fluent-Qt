@@ -826,7 +826,8 @@ jobs:
           for header in \
             components/foundation/private/FluentElement_p.h \
             components/windowing/private/WindowBackdrop_p.h \
-            utils/private/FluentQtLogging_p.h; do
+            utils/private/FluentQtLogging_p.h \
+            utils/private/FluentQtResources_p.h; do
             if [[ -e "$RUNNER_TEMP/fluentqt/include/FluentQt/$header" ]]; then
               echo "::error::Internal header leaked into the FluentQt package: $header"
               exit 1

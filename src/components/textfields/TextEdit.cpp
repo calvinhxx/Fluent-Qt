@@ -23,6 +23,7 @@
 #include <QResizeEvent>
 #include <QTimer>
 #include <QTextLayout>
+#include <QtMath>
 #include "components/menus_toolbars/Menu.h"
 #include "components/scrolling/ScrollBar.h"
 
@@ -132,7 +133,7 @@ public:
             ? colors.textOnAccent
             : colors.textPrimary;
 
-        auto pixmapForColor = [this, &glyph](const QColor& color) {
+        auto pixmapForColor = [this, &glyph, iconSize](const QColor& color) {
             const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
             const int physicalSize = qMax(1, qCeil(iconSize * dpr));
             QPixmap pixmap(physicalSize, physicalSize);
