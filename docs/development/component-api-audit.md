@@ -3,6 +3,16 @@
 Date: 2026-05-26
 Change: `audit-component-api-consistency`
 
+## 2026-07-24 Phase 0/1 contract addendum
+
+The current executable contract inventory, Phase 1 resolutions, deferred
+breaking decisions, and test commands are maintained in
+[Component Contract Baseline](component-contract-baseline.md). Phase 0 captured
+target behavior as tests; Phase 1 repaired and activated the confirmed
+foundation, Label, TextEdit, overlay, elevation, and resource-startup
+contracts. The broader inheritance, ownership, and facade migrations documented
+below remain deliberately deferred.
+
 ## Scope
 
 This historical audit covers public component headers under `src/components/**`

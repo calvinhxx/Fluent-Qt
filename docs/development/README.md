@@ -7,6 +7,7 @@ Agent skills may link here, but they should not duplicate the full rules.
 
 - [Component API Conventions](component-api-conventions.md)
 - [Component API Audit](component-api-audit.md)
+- [Component Contract Baseline](component-contract-baseline.md)
 - [Source Comment Style](comment-style.md)
 - [Logging Workflow](logging-workflow.md)
 - [Linux Workflow](linux-workflow.md)

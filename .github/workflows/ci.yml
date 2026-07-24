@@ -196,17 +196,41 @@ jobs:
                 "vcpkg_triplet": "x64-linux",
                 "build": true,
                 "test": true,
-                "build_targets": "fluent_qt_ci_full_tests fluent_qt_gallery",
+                "build_targets": "fluent_qt_all_tests fluent_qt_gallery",
                 "build_parallel": "4",
                 "test_labels": "^ci_full$",
                 "exclude_labels": "^(manual_visual|local_desktop)$",
                 "ctest_timeout": 240,
-                "timeout_minutes": 45,
+                "timeout_minutes": 60,
                 "configure_args": "",
                 "package": true,
                 "package_arch": "x64",
                 "package_build_preset": "vcpkg-linux-release",
                 "package_preset": "vcpkg-linux-deb",
+                "windows_arm64_cross": false
+              },
+              {
+                "id": "linux-x64-qt62-contract-sanitizers",
+                "name": "Linux x64 / Qt 6.2 contract sanitizers",
+                "os": "ubuntu-22.04",
+                "preset": "vcpkg-linux",
+                "qt_version": "6.2.4",
+                "qt_source": "apt",
+                "qt_arch": "",
+                "qt_archives": "",
+                "host_qt_arch": "",
+                "vcpkg_triplet": "x64-linux",
+                "build": true,
+                "test": true,
+                "build_targets": "fluent_qt_contract_tests",
+                "build_parallel": "4",
+                "test_labels": "^contract$",
+                "exclude_labels": "^(known_contract_gap|manual_visual|local_desktop)$",
+                "ctest_timeout": 240,
+                "timeout_minutes": 30,
+                "configure_args": "-DFLUENT_QT_ENABLE_SANITIZERS=ON",
+                "asan_options": "detect_leaks=1:halt_on_error=1",
+                "ubsan_options": "print_stacktrace=1:halt_on_error=1",
                 "windows_arm64_cross": false
               },
               {
@@ -554,6 +578,8 @@ jobs:
         env:
           QT_QPA_PLATFORM: ${{ matrix.qt_qpa_platform || 'offscreen' }}
           SKIP_VISUAL_TEST: 1
+          ASAN_OPTIONS: ${{ matrix.asan_options || '' }}
+          UBSAN_OPTIONS: ${{ matrix.ubsan_options || '' }}
         run: |
           $buildArgs = @("--build", "--preset", "${{ matrix.preset }}")
           $buildTargets = "${{ matrix.build_targets }}"
@@ -623,6 +649,8 @@ jobs:
         env:
           QT_QPA_PLATFORM: ${{ matrix.qt_qpa_platform || 'offscreen' }}
           SKIP_VISUAL_TEST: 1
+          ASAN_OPTIONS: ${{ matrix.asan_options || '' }}
+          UBSAN_OPTIONS: ${{ matrix.ubsan_options || '' }}
         run: |
           $testArgs = @(
             "--preset", "${{ matrix.preset }}",

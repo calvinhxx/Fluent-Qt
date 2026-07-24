@@ -12,6 +12,7 @@ project(FluentQt VERSION 1.4.1 LANGUAGES CXX C)
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(cmake/FluentQtInstallHeaders.cmake)
+include(cmake/FluentQtSanitizers.cmake)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -31,6 +32,7 @@ option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" OFF)
 option(FLUENT_QT_BUILD_EXAMPLES "Build Fluent-Qt executable examples" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_INSTALL "Install Fluent-Qt library targets, headers, and CMake package files" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_ENABLE_GALLERY_PACKAGING "Enable CPack packaging for the Gallery application" OFF)
+option(FLUENT_QT_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer for FluentQt tests" OFF)
 
 if(MSVC)
 	add_definitions(-DUNICODE -D_UNICODE)
@@ -73,6 +75,7 @@ add_library(FluentQt STATIC ${SRC} ${RESOURCES})
 add_library(FluentQt::FluentQt ALIAS FluentQt)
 # Backward-compatible build-tree alias for existing local tests and examples.
 add_library(fluent_qt_lib ALIAS FluentQt)
+fluent_qt_enable_sanitizers(FluentQt)
 target_link_libraries(FluentQt
 	PUBLIC
 	Qt${QT_VERSION_MAJOR}::Widgets
@@ -157,6 +160,7 @@ if(FLUENT_QT_BUILD_GALLERY OR (BUILD_TESTING AND FLUENT_QT_BUILD_TESTS))
 	target_link_libraries(FluentQtLoggingSupport
 		PUBLIC Qt${QT_VERSION_MAJOR}::Core
 		PRIVATE spdlog::spdlog)
+	fluent_qt_enable_sanitizers(FluentQtLoggingSupport)
 endif()
 
 if(FLUENT_QT_BUILD_GALLERY)
