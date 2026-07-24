@@ -18,8 +18,18 @@ set(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
     test_flip_view
 )
 
+set(FLUENT_QT_CONTRACT_TEST_TARGETS
+    test_foundation_contracts
+    test_anchor_layout
+    test_qml_plus
+    test_resource_initialization
+    test_label
+    test_text_edit
+)
+
 set(FLUENT_QT_CI_FULL_TARGETS
     ${FLUENT_QT_CI_FAST_TARGETS}
+    ${FLUENT_QT_CONTRACT_TEST_TARGETS}
     test_high_dpi
     test_project_logging
     test_fluent_element
@@ -90,6 +100,7 @@ set(FLUENT_QT_QT_GTEST_SUPPORT_SOURCES
 # 发现到的测试会带有 qt/unit/<目录>/<组件> 标签，便于用 ctest -L 分层筛选。
 macro(add_qt_test_module module_name source_file)
     add_executable(${module_name} ${source_file} ${ARGN} ${FLUENT_QT_QT_GTEST_SUPPORT_SOURCES})
+    fluent_qt_enable_sanitizers(${module_name})
     set_property(GLOBAL APPEND PROPERTY FLUENT_QT_TEST_TARGETS ${module_name})
     get_filename_component(_test_subdir ${source_file} DIRECTORY)
     if(_test_subdir)
@@ -156,6 +167,17 @@ macro(add_qt_test_module module_name source_file)
             set(_fluent_qt_labels ${_test_labels})
             set(_fluent_qt_is_manual_visual FALSE)
             set(_fluent_qt_is_local_desktop FALSE)
+            set(_fluent_qt_is_known_contract_gap FALSE)
+            if(_fluent_qt_test_name MATCHES "(^|[._/:-])Contract_")
+                list(APPEND _fluent_qt_labels contract)
+                get_test_property(
+                    "${_fluent_qt_test_name}" DISABLED
+                    _fluent_qt_contract_test_disabled)
+                if(_fluent_qt_contract_test_disabled)
+                    set(_fluent_qt_is_known_contract_gap TRUE)
+                    list(APPEND _fluent_qt_labels known_contract_gap)
+                endif()
+            endif()
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*VisualCheck[^._/:-]*($|[._/:-])")
                 set(_fluent_qt_is_manual_visual TRUE)
                 set(_fluent_qt_is_local_desktop TRUE)
@@ -189,14 +211,20 @@ macro(add_qt_test_module module_name source_file)
             elseif(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels platform_macos)
             endif()
-            if(NOT _fluent_qt_is_manual_visual)
+            if(NOT _fluent_qt_is_manual_visual AND NOT _fluent_qt_is_known_contract_gap)
                 list(APPEND _fluent_qt_labels local_full)
             endif()
-            if(_fluent_qt_is_ci_full_target AND NOT _fluent_qt_is_manual_visual AND NOT _fluent_qt_is_local_desktop)
+            if(_fluent_qt_is_ci_full_target
+               AND NOT _fluent_qt_is_manual_visual
+               AND NOT _fluent_qt_is_local_desktop
+               AND NOT _fluent_qt_is_known_contract_gap)
                 list(APPEND _fluent_qt_labels ci_full)
                 set(_fluent_qt_target_has_ci_full TRUE)
             endif()
-            if(_fluent_qt_is_ci_fast_target AND NOT _fluent_qt_is_manual_visual AND NOT _fluent_qt_is_local_desktop)
+            if(_fluent_qt_is_ci_fast_target
+               AND NOT _fluent_qt_is_manual_visual
+               AND NOT _fluent_qt_is_local_desktop
+               AND NOT _fluent_qt_is_known_contract_gap)
                 list(APPEND _fluent_qt_labels ci_fast)
             endif()
             list(REMOVE_DUPLICATES _fluent_qt_labels)
@@ -262,5 +290,8 @@ if(FLUENT_QT_ALL_TEST_TARGETS)
     )
     add_custom_target(fluent_qt_all_tests
         DEPENDS ${FLUENT_QT_ALL_TEST_TARGETS}
+    )
+    add_custom_target(fluent_qt_contract_tests
+        DEPENDS ${FLUENT_QT_CONTRACT_TEST_TARGETS}
     )
 endif()

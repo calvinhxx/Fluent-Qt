@@ -97,6 +97,7 @@ real mixed-monitor review.
   `fluent_qt_ci_fast_tests` builds only the fast API/environment test binaries,
   `fluent_qt_ci_full_tests` builds the selected CI-full test binaries, and
   `fluent_qt_ci_windows_platform_tests` builds the focused Windows platform set;
+  `fluent_qt_contract_tests` builds the focused component-contract binaries, and
   `fluent_qt_all_tests` builds every registered Qt/GTest binary for local host
   validation. Keep workflow YAML on these aggregate targets instead of
   duplicating long target lists there.
@@ -141,6 +142,37 @@ session needs an explicit platform.
 See [Linux Workflow](linux-workflow.md) for the desktop Linux portability target,
 Ubuntu 22.04 reference dependencies, local desktop commands, Qt 5.15.2
 official-kit validation, and optional WSL2 filesystem guidance.
+
+## Component Contract Baseline
+
+Tests whose names contain `Contract` receive the `contract` label. A desired
+behavior that is not yet implemented is named `DISABLED_Contract_*` and also
+receives `known_contract_gap`. Known gaps are excluded from `local_full`,
+`ci_fast`, and `ci_full`. The current Phase 1 suite has no disabled contract
+test; the naming and label remain available for future target-behavior work.
+
+```bash
+cmake --build --preset vcpkg-linux --target fluent_qt_contract_tests --parallel
+ctest --preset vcpkg-linux -L '^contract$' -LE '^known_contract_gap$' --output-on-failure
+ctest --preset vcpkg-linux -N -L '^known_contract_gap$'
+```
+
+If a future known gap is added, run it explicitly with the owning GTest binary
+and `--gtest_also_run_disabled_tests`. Run one at a time because a lifetime or
+layout gap may terminate the current process. Current accepted contracts and
+deferred decisions are in
+[Component Contract Baseline](component-contract-baseline.md).
+
+Linux also provides a focused ASan/UBSan preset:
+
+```bash
+cmake --preset vcpkg-linux-sanitized
+cmake --build --preset vcpkg-linux-sanitized --target fluent_qt_contract_tests --parallel
+ctest --preset vcpkg-linux-sanitized --output-on-failure
+```
+
+`FLUENT_QT_ENABLE_SANITIZERS` is opt-in and does not affect release or ordinary
+debug builds.
 
 ## VisualCheck
 

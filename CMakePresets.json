@@ -95,6 +95,17 @@
       }
     },
     {
+      "name": "vcpkg-linux-sanitized",
+      "displayName": "vcpkg Linux x64 Debug with ASan/UBSan",
+      "description": "Focused contract-test build with AddressSanitizer and UndefinedBehaviorSanitizer enabled.",
+      "inherits": "vcpkg-linux",
+      "cacheVariables": {
+        "FLUENT_QT_BUILD_EXAMPLES": "OFF",
+        "FLUENT_QT_BUILD_GALLERY": "OFF",
+        "FLUENT_QT_ENABLE_SANITIZERS": "ON"
+      }
+    },
+    {
       "name": "vcpkg-linux-release",
       "displayName": "vcpkg Linux x64 Release",
       "description": "Linux x64 release build using vcpkg manifest dependencies. Qt is discovered from the local or system Qt installation.",
@@ -223,6 +234,11 @@
       "configuration": "Debug"
     },
     {
+      "name": "vcpkg-linux-sanitized",
+      "configurePreset": "vcpkg-linux-sanitized",
+      "configuration": "Debug"
+    },
+    {
       "name": "vcpkg-linux-release",
       "configurePreset": "vcpkg-linux-release",
       "configuration": "Release"
@@ -282,6 +298,26 @@
       "filter": {
         "exclude": {
           "label": "^local_desktop$"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "vcpkg-linux-sanitized",
+      "configurePreset": "vcpkg-linux-sanitized",
+      "configuration": "Debug",
+      "environment": {
+        "ASAN_OPTIONS": "detect_leaks=1:halt_on_error=1",
+        "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1"
+      },
+      "filter": {
+        "include": {
+          "label": "^contract$"
+        },
+        "exclude": {
+          "label": "^(known_contract_gap|local_desktop)$"
         }
       },
       "output": {
