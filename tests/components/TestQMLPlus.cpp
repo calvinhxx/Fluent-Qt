@@ -83,6 +83,71 @@ protected:
     QMLPlusViewModel* vm;
 };
 
+TEST_F(QMLPlusTest, Contract_PropertyBindingSynchronizesOrdinaryQtProperty) {
+    QMLPlusBox box;
+
+    box.bind("windowTitle", vm, "statusText");
+    EXPECT_EQ(box.windowTitle(), QStringLiteral("System Ready"));
+
+    vm->setStatusText(QStringLiteral("Connected"));
+    EXPECT_EQ(box.windowTitle(), QStringLiteral("Connected"));
+}
+
+TEST_F(QMLPlusTest, Contract_InvalidStateDoesNotBecomeCurrentState) {
+    QMLPlusBox box;
+
+    box.setState(QStringLiteral("missing"));
+
+    EXPECT_TRUE(box.state().isEmpty());
+}
+
+TEST_F(QMLPlusTest, Contract_StateTransitionRestoresPropertiesAbsentFromNextState) {
+    QMLPlusBox box;
+    box.setMinimumWidth(10);
+    box.setMaximumWidth(1000);
+
+    QMLState expanded;
+    expanded.name = QStringLiteral("expanded");
+    expanded.changes = {
+        {&box, QByteArrayLiteral("minimumWidth"), 80}
+    };
+    box.addState(expanded);
+
+    QMLState constrained;
+    constrained.name = QStringLiteral("constrained");
+    constrained.changes = {
+        {&box, QByteArrayLiteral("maximumWidth"), 240}
+    };
+    box.addState(constrained);
+
+    box.setState(QStringLiteral("expanded"));
+    ASSERT_EQ(box.minimumWidth(), 80);
+
+    box.setState(QStringLiteral("constrained"));
+    EXPECT_EQ(box.minimumWidth(), 10);
+    EXPECT_EQ(box.maximumWidth(), 240);
+}
+
+TEST_F(QMLPlusTest, Contract_DestroyedStateTargetsAreRemovedFromDefaultStorage) {
+    QMLPlusBox box;
+    auto* target = new QObject();
+    target->setProperty("phase", QStringLiteral("idle"));
+
+    QMLState active;
+    active.name = QStringLiteral("active");
+    active.changes = {
+        {target, QByteArrayLiteral("phase"), QStringLiteral("running")}
+    };
+    box.addState(active);
+    box.setState(QStringLiteral("active"));
+    ASSERT_EQ(target->property("phase").toString(), QStringLiteral("running"));
+
+    delete target;
+    box.setState(QString());
+
+    EXPECT_TRUE(box.state().isEmpty());
+}
+
 // =============================================================================
 // 4. Test Case
 // =============================================================================

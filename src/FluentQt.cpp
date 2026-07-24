@@ -3,6 +3,7 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QCoreApplication>
+#include <QGuiApplication>
 #include <QResource>
 #include <QString>
 #include <QStringList>
@@ -10,10 +11,15 @@
 #include "compatibility/FontCompat.h"
 #include "compatibility/QtCompat.h"
 #include "utils/private/FluentQtLogging_p.h"
+#include "utils/private/FluentQtResources_p.h"
 
 static void initializeFluentQtResourceFile()
 {
-    Q_INIT_RESOURCE(resources);
+    static const bool registered = [] {
+        Q_INIT_RESOURCE(resources);
+        return true;
+    }();
+    Q_UNUSED(registered);
 }
 
 namespace {
@@ -125,6 +131,15 @@ bool loadBundledFonts()
 
 namespace fluent {
 
+namespace resources {
+
+void ensureRegistered()
+{
+    initializeFluentQtResourceFile();
+}
+
+} // namespace resources
+
 void prepareHighDpiApplication()
 {
     if (QCoreApplication::instance()) {
@@ -137,8 +152,20 @@ void prepareHighDpiApplication()
 
 bool initializeResources()
 {
+    resources::ensureRegistered();
+    if (!qobject_cast<QGuiApplication*>(QCoreApplication::instance())) {
+        qCWarning(logging::typographyCategory)
+            << "initializeResources requires a QGuiApplication instance;"
+               " bundled resources are registered, but fonts will be retried"
+               " after the application is created.";
+        return false;
+    }
+
+    // The function-local static is reached only after a GUI application exists.
+    // A premature call therefore cannot permanently cache a failed font load.
+    // zh_CN: 仅在 GUI application 已存在时才触达局部静态初始化；过早调用
+    // 不会永久缓存一次失败的字体加载结果。
     static const bool initialized = [] {
-        initializeFluentQtResourceFile();
         const bool loaded = loadBundledFonts();
         if (!loaded) {
             qCWarning(logging::typographyCategory)

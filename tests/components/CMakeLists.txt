@@ -1,7 +1,9 @@
 # components 根目录下的测试
 add_qt_test_module(test_anchor_layout TestAnchorLayout.cpp)
+add_qt_test_module(test_foundation_contracts TestFoundationContracts.cpp)
 add_qt_test_module(test_fluent_element TestFluentElement.cpp)
 add_qt_test_module(test_qml_plus TestQMLPlus.cpp)
+add_qt_test_module(test_resource_initialization TestResourceInitialization.cpp)
 add_qt_test_module(test_typography TestTypography.cpp)
 add_qt_test_module(test_qt_compat TestQtCompat.cpp)
 

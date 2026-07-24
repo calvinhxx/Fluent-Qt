@@ -301,7 +301,7 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
     AnchorLayout::Anchors contentAnchors;
     contentAnchors.left = {this, Edge::Left, 0};
     contentAnchors.right = {this, Edge::Right, 0};
-    contentAnchors.top = {m_header, Edge::Bottom, 1};
+    contentAnchors.top = {m_header, Edge::Bottom, 0};
     layout->addAnchoredWidget(m_content, contentAnchors);
 
     // Start collapsed.

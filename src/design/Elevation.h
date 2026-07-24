@@ -36,6 +36,10 @@ namespace Elevation {
         double opacity;      // Final opacity multiplier. zh_CN: 最终透明度倍率。
     };
 
+    // No elevation is shared by both themes and paints no visible shadow.
+    // zh_CN: 无阴影层级由两个主题共享，不绘制任何可见阴影。
+    const ShadowParams NoShadow = { 0, 0, 0, 0, QColor(0,0,0,0), 0.0 };
+
     // Light-theme shadows.
     // zh_CN: Light 主题阴影。
     namespace Light {
@@ -57,23 +61,28 @@ namespace Elevation {
     /**
      * @brief Returns the shadow token for a semantic level and theme.
      * zh_CN: 根据语义层级和主题返回阴影 token。
+     *
+     * None and unrecognized values resolve to the zero-shadow token.
+     * zh_CN: None 与无法识别的值都会解析为零阴影 token。
      */
     inline const ShadowParams& getShadow(Level level, bool isDark = false) {
         if (isDark) {
             switch (level) {
+                case None:    return NoShadow;
                 case Low:     return Dark::Low;
                 case Medium:  return Dark::Medium;
                 case High:    return Dark::High;
                 case VeryHigh:return Dark::VeryHigh;
-                default:      return Dark::Low;
+                default:      return NoShadow;
             }
         } else {
             switch (level) {
+                case None:    return NoShadow;
                 case Low:     return Light::Low;
                 case Medium:  return Light::Medium;
                 case High:    return Light::High;
                 case VeryHigh:return Light::VeryHigh;
-                default:      return Light::Low;
+                default:      return NoShadow;
             }
         }
     }

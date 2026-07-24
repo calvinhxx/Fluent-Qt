@@ -206,10 +206,20 @@ inline QPoint clampCardTopLeft(const QPoint& cardTopLeft, const QSize& cardSize,
     if (bounds.isEmpty())
         return cardTopLeft;
 
-    const int maxX = bounds.right() - cardSize.width() + 1 - windowMargin;
-    const int maxY = bounds.bottom() - cardSize.height() + 1 - windowMargin;
-    return QPoint(qBound(bounds.left() + windowMargin, cardTopLeft.x(), maxX),
-                  qBound(bounds.top() + windowMargin, cardTopLeft.y(), maxY));
+    const int margin = qMax(0, windowMargin);
+    const int minX = bounds.left() + margin;
+    const int minY = bounds.top() + margin;
+    const int maxX = bounds.right() - qMax(0, cardSize.width()) + 1 - margin;
+    const int maxY = bounds.bottom() - qMax(0, cardSize.height()) + 1 - margin;
+
+    // qBound requires min <= max. An oversized card has no fully contained
+    // position, so anchor it to the usable origin instead of passing inverted
+    // bounds into qBound (which asserts in debug builds).
+    // zh_CN: qBound 要求 min <= max。卡片大于可用区域时不存在完全容纳它的
+    // 位置，因此稳定锚定到可用区原点，避免把反向边界传入 qBound。
+    const int x = maxX < minX ? minX : qBound(minX, cardTopLeft.x(), maxX);
+    const int y = maxY < minY ? minY : qBound(minY, cardTopLeft.y(), maxY);
+    return QPoint(x, y);
 }
 
 inline QPainterPath roundedRectPath(const QRectF& rect, qreal radius)
