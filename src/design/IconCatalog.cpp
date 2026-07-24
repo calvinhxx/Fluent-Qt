@@ -16,6 +16,7 @@
 
 #include "compatibility/FontCompat.h"
 #include "utils/private/FluentQtLogging_p.h"
+#include "utils/private/FluentQtResources_p.h"
 
 namespace Typography::Icons {
 namespace {
@@ -44,6 +45,7 @@ const QRegularExpression& iconNamePattern()
 
 QVector<IconInfo> loadCatalog()
 {
+    fluent::resources::ensureRegistered();
     QFile file(QStringLiteral(":/res/icons/FluentQtIcons.json"));
     if (!file.open(QIODevice::ReadOnly)) {
         qCWarning(fluent::logging::typographyCategory)
@@ -131,6 +133,7 @@ const QHash<QString, QVector<int>>& catalogVariants()
 
 QHash<quint32, QString> loadAliasTargets()
 {
+    fluent::resources::ensureRegistered();
     QFile file(QStringLiteral(":/res/icons/FluentQtIconAliases.json"));
     if (!file.open(QIODevice::ReadOnly)) {
         qCWarning(fluent::logging::typographyCategory)

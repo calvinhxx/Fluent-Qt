@@ -9,6 +9,7 @@
 #include <QVector>
 #include <QPointer>
 #include <QMargins>
+#include <QMetaObject>
 #include <QMetaProperty>
 
 namespace fluent {
@@ -153,6 +154,9 @@ public:
     /**
      * @brief Applies a named state, or clears state when name is empty.
      * zh_CN: 应用具名 state；名称为空时恢复默认状态。
+     *
+     * Unknown non-empty names are ignored and leave the current state intact.
+     * zh_CN: 未注册的非空名称会被忽略，并保持当前 state 不变。
      */
     void setState(const QString& name);
     QString state() const { return m_currentState; }
@@ -173,10 +177,14 @@ protected:
     void applyState(const QString& name);
 
 private:
+    void rememberDefaultValue(QObject* target, const QByteArray& propertyName);
+    void restoreDefaultValues();
+
     AnchorLayout::Anchors* m_anchors = nullptr;
     QString m_currentState;
     QMap<QString, QMLState> m_states;
     QMap<QObject*, QMap<QByteArray, QVariant>> m_defaultValues;
+    QMap<QObject*, QMetaObject::Connection> m_defaultValueCleanupConnections;
 };
 
 } // namespace fluent

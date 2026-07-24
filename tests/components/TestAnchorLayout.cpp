@@ -3,7 +3,9 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QLabel>
+#include <QSpacerItem>
 #include <QTimer>
+#include "QtTestEnvironment.h"
 #include "components/foundation/QMLPlus.h"
 #include "utils/DebugOverlay.h"
 
@@ -26,6 +28,74 @@ protected:
     QWidget* window;
     AnchorLayout* layout;
 };
+
+TEST_F(AnchorLayoutTest, Contract_AnchorsResolveDeterministicallyWithoutVisualSession) {
+    QWidget* child = new QWidget(window);
+    child->setFixedSize(80, 40);
+
+    AnchorLayout::Anchors anchors;
+    anchors.left = {window, AnchorLayout::Edge::Left, 12};
+    anchors.top = {window, AnchorLayout::Edge::Top, 16};
+    layout->addAnchoredWidget(child, anchors);
+
+    layout->setGeometry(window->rect());
+
+    EXPECT_EQ(child->geometry(), QRect(12, 16, 80, 40));
+}
+
+TEST_F(AnchorLayoutTest, Contract_RightAndBottomEdgesUseExactVisualBoundaries) {
+    QWidget* source = new QWidget(window);
+    source->setFixedSize(80, 40);
+    AnchorLayout::Anchors sourceAnchors;
+    sourceAnchors.left = {window, AnchorLayout::Edge::Left, 12};
+    sourceAnchors.top = {window, AnchorLayout::Edge::Top, 16};
+    layout->addAnchoredWidget(source, sourceAnchors);
+
+    QWidget* adjacent = new QWidget(window);
+    adjacent->setFixedSize(30, 20);
+    AnchorLayout::Anchors adjacentAnchors;
+    adjacentAnchors.left = {source, AnchorLayout::Edge::Right, 7};
+    adjacentAnchors.top = {source, AnchorLayout::Edge::Bottom, 5};
+    layout->addAnchoredWidget(adjacent, adjacentAnchors);
+
+    QWidget* trailing = new QWidget(window);
+    trailing->setFixedSize(30, 20);
+    AnchorLayout::Anchors trailingAnchors;
+    trailingAnchors.right = {window, AnchorLayout::Edge::Right, -11};
+    trailingAnchors.bottom = {window, AnchorLayout::Edge::Bottom, -13};
+    layout->addAnchoredWidget(trailing, trailingAnchors);
+
+    layout->setGeometry(window->rect());
+
+    EXPECT_EQ(adjacent->geometry(), QRect(99, 61, 30, 20));
+    EXPECT_EQ(trailing->geometry(), QRect(559, 567, 30, 20));
+}
+
+TEST_F(AnchorLayoutTest, Contract_FillOverridesWidgetSizePolicy) {
+    QPushButton* fill = new QPushButton(window);
+    ASSERT_EQ(fill->sizePolicy().verticalPolicy(), QSizePolicy::Fixed);
+
+    AnchorLayout::Anchors anchors;
+    anchors.fill = true;
+    anchors.fillMargins = QMargins(10, 20, 30, 40);
+    layout->addAnchoredWidget(fill, anchors);
+
+    layout->setGeometry(window->rect());
+
+    EXPECT_EQ(fill->geometry(), QRect(10, 20, 560, 540));
+}
+
+TEST_F(AnchorLayoutTest, Contract_NonWidgetLayoutItemsDoNotCrashGeometryPass) {
+    auto* spacer = new QSpacerItem(
+        20, 10, QSizePolicy::Fixed, QSizePolicy::Fixed);
+    layout->addItem(spacer);
+
+    layout->setGeometry(window->rect());
+
+    ASSERT_EQ(layout->count(), 1);
+    EXPECT_NE(layout->itemAt(0), nullptr);
+    EXPECT_EQ(spacer->geometry(), QRect(0, 0, 20, 10));
+}
 
 TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
@@ -154,6 +224,11 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     EXPECT_EQ(btn6->pos(), QPoint((W - 120) / 2, H - 40 - 20));
     EXPECT_EQ(btn4->geometry(), QRect(0, 200, W - 400, H - 400));
     EXPECT_EQ(btn5->pos(), QPoint(W - 100 - 16, H - 100 - 16));
+
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window));
+        return;
+    }
 
     if (!qEnvironmentVariableIsSet("QT_QPA_PLATFORM") || qEnvironmentVariable("QT_QPA_PLATFORM") != "offscreen") {
         qApp->exec();

@@ -70,8 +70,10 @@ int AnchorLayout::getWidgetIndex(QWidget* w) const {
 int AnchorLayout::getEdgeValue(QWidget* target, Edge edge, const QRect& parentRect) const {
     if (!target || target == parentWidget()) {
         switch (edge) {
-            case Edge::Left: return parentRect.left(); case Edge::Right: return parentRect.right();
-            case Edge::Top: return parentRect.top(); case Edge::Bottom: return parentRect.bottom();
+            case Edge::Left: return parentRect.left();
+            case Edge::Right: return parentRect.x() + parentRect.width();
+            case Edge::Top: return parentRect.top();
+            case Edge::Bottom: return parentRect.y() + parentRect.height();
             case Edge::HCenter: return parentRect.center().x(); case Edge::VCenter: return parentRect.center().y();
             default: return 0;
         }
@@ -80,8 +82,10 @@ int AnchorLayout::getEdgeValue(QWidget* target, Edge edge, const QRect& parentRe
     if (idx == -1) return 0;
     const QRect& r = m_items[idx].geometry;
     switch (edge) {
-        case Edge::Left: return r.left(); case Edge::Right: return r.right();
-        case Edge::Top: return r.top(); case Edge::Bottom: return r.bottom();
+        case Edge::Left: return r.left();
+        case Edge::Right: return r.x() + r.width();
+        case Edge::Top: return r.top();
+        case Edge::Bottom: return r.y() + r.height();
         case Edge::HCenter: return r.center().x(); case Edge::VCenter: return r.center().y();
         default: return 0;
     }
@@ -135,25 +139,32 @@ void AnchorLayout::setGeometry(const QRect& rect) {
                 } else {
                     int l = getEdgeValue(it.anchors.left.target, it.anchors.left.edge, parentRect) + it.anchors.left.offset;
                     int r = getEdgeValue(it.anchors.right.target, it.anchors.right.edge, parentRect) + it.anchors.right.offset;
-                    if (it.anchors.left.edge != Edge::None && it.anchors.right.edge != Edge::None) { it.geometry.setLeft(l); it.geometry.setRight(r); }
+                    if (it.anchors.left.edge != Edge::None && it.anchors.right.edge != Edge::None) { it.geometry.setLeft(l); it.geometry.setRight(r - 1); }
                     else if (it.anchors.left.edge != Edge::None) { it.geometry.moveLeft(l); it.geometry.setWidth(s.width()); }
-                    else if (it.anchors.right.edge != Edge::None) { it.geometry.moveRight(r); it.geometry.setWidth(s.width()); }
+                    else if (it.anchors.right.edge != Edge::None) { it.geometry.moveRight(r - 1); it.geometry.setWidth(s.width()); }
                 }
                 if (it.anchors.verticalCenter.edge != Edge::None) {
                     it.geometry.moveCenter(QPoint(it.geometry.center().x(), getEdgeValue(it.anchors.verticalCenter.target, it.anchors.verticalCenter.edge, parentRect) + it.anchors.verticalCenter.offset));
                 } else {
                     int t = getEdgeValue(it.anchors.top.target, it.anchors.top.edge, parentRect) + it.anchors.top.offset;
                     int b = getEdgeValue(it.anchors.bottom.target, it.anchors.bottom.edge, parentRect) + it.anchors.bottom.offset;
-                    if (it.anchors.top.edge != Edge::None && it.anchors.bottom.edge != Edge::None) { it.geometry.setTop(t); it.geometry.setBottom(b); }
+                    if (it.anchors.top.edge != Edge::None && it.anchors.bottom.edge != Edge::None) { it.geometry.setTop(t); it.geometry.setBottom(b - 1); }
                     else if (it.anchors.top.edge != Edge::None) { it.geometry.moveTop(t); it.geometry.setHeight(s.height()); }
-                    else if (it.anchors.bottom.edge != Edge::None) { it.geometry.moveBottom(b); it.geometry.setHeight(s.height()); }
+                    else if (it.anchors.bottom.edge != Edge::None) { it.geometry.moveBottom(b - 1); it.geometry.setHeight(s.height()); }
                 }
             }
             if (it.geometry != old) changed = true;
         }
         if (!changed) break;
     }
-    for (const Item& it : m_items) fluentLayoutItemWidget(it.item)->setGeometry(it.geometry);
+    for (const Item& it : m_items) {
+        if (!it.item)
+            continue;
+        if (QWidget* widget = fluentLayoutItemWidget(it.item))
+            widget->setGeometry(it.geometry);
+        else
+            it.item->setGeometry(it.geometry);
+    }
 }
 
 // --- PropertyBinder implementation. zh_CN: PropertyBinder 实现。---
@@ -190,15 +201,28 @@ void PropertyBinder::bind(QObject* s, const char* sp, QObject* t, const char* tp
 // --- QMLPlus implementation. zh_CN: QMLPlus 实现。---
 
 QMLPlus::QMLPlus() : m_anchors(nullptr), m_currentState("") {}
-QMLPlus::~QMLPlus() { delete m_anchors; }
+
+QMLPlus::~QMLPlus() {
+    for (auto it = m_defaultValueCleanupConnections.cbegin();
+         it != m_defaultValueCleanupConnections.cend(); ++it) {
+        QObject::disconnect(it.value());
+    }
+    delete m_anchors;
+}
 
 AnchorLayout::Anchors* QMLPlus::anchors() { 
     if (!m_anchors) m_anchors = new AnchorLayout::Anchors(); 
     return m_anchors; 
 }
 
-void QMLPlus::setState(const QString& name) { 
-    if (m_currentState != name) { applyState(name); m_currentState = name; } 
+void QMLPlus::setState(const QString& name) {
+    if (m_currentState == name)
+        return;
+    if (!name.isEmpty() && !m_states.contains(name))
+        return;
+
+    applyState(name);
+    m_currentState = name;
 }
 
 void QMLPlus::addState(const QMLState& state) { 
@@ -214,19 +238,52 @@ void QMLPlus::bind(const char* tp, QObject* s, const char* sp, PropertyBinder::D
     }
 }
 
-void QMLPlus::applyState(const QString& name) {
-    if (name.isEmpty()) {
-        for (auto it = m_defaultValues.begin(); it != m_defaultValues.end(); ++it) {
-            if (!it.key()) continue;
-            for (auto pIt = it.value().begin(); pIt != it.value().end(); ++pIt) it.key()->setProperty(pIt.key().constData(), pIt.value());
-        }
+void QMLPlus::rememberDefaultValue(QObject* target, const QByteArray& propertyName) {
+    if (!target || m_defaultValues[target].contains(propertyName))
         return;
+
+    m_defaultValues[target].insert(
+        propertyName, target->property(propertyName.constData()));
+    if (m_defaultValueCleanupConnections.contains(target))
+        return;
+
+    const QMetaObject::Connection connection =
+        QObject::connect(target, &QObject::destroyed,
+                         [this, target](QObject*) {
+                             m_defaultValues.remove(target);
+                             m_defaultValueCleanupConnections.remove(target);
+                         });
+    m_defaultValueCleanupConnections.insert(target, connection);
+}
+
+void QMLPlus::restoreDefaultValues() {
+    for (auto targetIt = m_defaultValues.begin();
+         targetIt != m_defaultValues.end(); ++targetIt) {
+        QObject* target = targetIt.key();
+        if (!target)
+            continue;
+        for (auto propertyIt = targetIt.value().cbegin();
+             propertyIt != targetIt.value().cend(); ++propertyIt) {
+            target->setProperty(
+                propertyIt.key().constData(), propertyIt.value());
+        }
     }
-    if (!m_states.contains(name)) return;
-    for (const auto& c : m_states[name].changes) {
-        if (!c.target) continue;
-        if (!m_defaultValues[c.target.data()].contains(c.propertyName)) m_defaultValues[c.target.data()][c.propertyName] = c.target->property(c.propertyName.constData());
-        c.target->setProperty(c.propertyName.constData(), c.value);
+}
+
+void QMLPlus::applyState(const QString& name) {
+    restoreDefaultValues();
+    if (name.isEmpty())
+        return;
+
+    const auto stateIt = m_states.constFind(name);
+    if (stateIt == m_states.constEnd())
+        return;
+    for (const PropertyChange& change : stateIt->changes) {
+        QObject* target = change.target.data();
+        if (!target)
+            continue;
+        rememberDefaultValue(target, change.propertyName);
+        target->setProperty(change.propertyName.constData(), change.value);
     }
 }
 

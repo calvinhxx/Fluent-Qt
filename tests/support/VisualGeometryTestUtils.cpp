@@ -190,7 +190,13 @@ QString widgetSummary(const QWidget* widget)
             << " right=" << widgetSummary(right).toStdString();
     }
 
-    const int actual = right->geometry().left() - left->geometry().right();
+    // QRect::right() is inclusive. Spacing is the empty distance between the
+    // two widget bounds, so measure from the exclusive right edge.
+    // zh_CN: QRect::right() 是包含式坐标；间距表示两个控件边界之间的空白距离，
+    // 因此从左侧控件的排他右边界开始计算。
+    const int actual =
+        right->geometry().left()
+        - (left->geometry().x() + left->geometry().width());
     if (within(actual, expected, tolerance))
         return ::testing::AssertionSuccess();
 

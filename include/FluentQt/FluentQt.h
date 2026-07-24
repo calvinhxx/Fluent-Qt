@@ -25,9 +25,12 @@ void prepareHighDpiApplication();
  *
  * Call this once after constructing QApplication in standalone applications so
  * the bundled open-source text and icon faces are available without depending
- * on platform font matching.
+ * on platform font matching. A call made before QApplication registers the
+ * compiled resource collection but returns false without caching a failed font
+ * load; call it again after QApplication exists to initialize the fonts.
  * zh_CN: 独立应用应在构造 QApplication 后调用一次，使内置的开源文本与图标字体
- * 可用，且不依赖平台字体匹配。
+ * 可用，且不依赖平台字体匹配。在 QApplication 创建前调用时会先注册编译资源，
+ * 但返回 false 且不会缓存字体加载失败；QApplication 创建后应再次调用以初始化字体。
  */
 bool initializeResources();
 

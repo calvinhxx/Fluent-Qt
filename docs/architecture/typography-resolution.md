@@ -52,6 +52,14 @@ Standalone applications call `fluent::initializeResources()` after creating
 default font to `Typography::Styles::Body`, ensuring raw Qt widgets inherit the
 same Text Regular face as Fluent components.
 
+The compiled Qt resource collection is registered on demand independently of
+font loading. Resource-backed catalogs such as `Typography::Icons::catalog()`
+are therefore safe to inspect during static-library startup, before
+`QApplication` exists. Calling `initializeResources()` that early registers the
+resource collection but returns `false` without attempting to cache a font-load
+result; a later call after `QApplication` exists retries normal font
+initialization.
+
 If a bundled text face cannot be registered, initialization returns `false`,
 emits a warning in the `fluentqt.typography` category, and falls back to Qt's
 current system UI family. An icon registration failure also returns `false`,
