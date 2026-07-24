@@ -20,6 +20,8 @@
 #include <QFontMetrics>
 #include <QIcon>
 #include <QPixmap>
+#include <QResizeEvent>
+#include <QTimer>
 #include <QTextLayout>
 #include "components/menus_toolbars/Menu.h"
 #include "components/scrolling/ScrollBar.h"
@@ -328,6 +330,8 @@ TextEdit::TextEdit(QWidget* parent)
     m_editor->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_editor->setAutoFillBackground(false);
+    setFocusPolicy(m_editor->focusPolicy());
+    setFocusProxy(m_editor);
 
     // Remove the document's default padding; rootFrame and block margins own it.
     // zh_CN: 移除文档默认四周留白（由 rootFrame margin + block margin 全权控制）。
@@ -349,6 +353,11 @@ TextEdit::TextEdit(QWidget* parent)
             this, &TextEdit::cursorPositionChanged);
     connect(m_editor, &QTextEdit::selectionChanged,
             this, &TextEdit::selectionChanged);
+    connect(m_editor->document()->documentLayout(),
+            &QAbstractTextDocumentLayout::documentSizeChanged,
+            this, [this](const QSizeF&) {
+                scheduleHeightForContentUpdate();
+            });
     m_editor->installEventFilter(this);
 
     // Custom fluent scroll bar. zh_CN: 自定义 Fluent 滚动条。
@@ -388,6 +397,8 @@ TextEdit::TextEdit(QWidget* parent)
 
 void TextEdit::setPlainText(const QString& text) {
     if (m_editor) {
+        if (m_editor->toPlainText() == text)
+            return;
         m_editor->setPlainText(text);
         applyBlockCenterFormat();
         updateHeightForContent();
@@ -400,6 +411,8 @@ QString TextEdit::toPlainText() const {
 
 void TextEdit::clear() {
     if (m_editor) {
+        if (m_editor->toPlainText().isEmpty())
+            return;
         m_editor->clear();
         applyBlockCenterFormat();
         updateHeightForContent();
@@ -456,6 +469,7 @@ void TextEdit::resizeEvent(QResizeEvent* event) {
             int h = r.height() - 4;
             m_vScrollBar->setGeometry(x, y, m_vScrollBar->thickness(), h);
         }
+        scheduleHeightForContentUpdate();
     }
 }
 
@@ -681,15 +695,27 @@ void TextEdit::setLineHeight(int height) {
 }
 
 void TextEdit::setMinVisibleLines(int lines) {
-    if (lines <= 0 || m_minVisibleLines == lines) return;
+    if (lines <= 0)
+        return;
+    const bool maxChanged = m_maxVisibleLines < lines;
+    if (m_minVisibleLines == lines && !maxChanged)
+        return;
     m_minVisibleLines = lines;
+    if (maxChanged)
+        m_maxVisibleLines = lines;
     updateHeightForContent();
     emit layoutMetricsChanged();
 }
 
 void TextEdit::setMaxVisibleLines(int lines) {
-    if (lines <= 0 || m_maxVisibleLines == lines) return;
+    if (lines <= 0)
+        return;
+    const bool minChanged = m_minVisibleLines > lines;
+    if (m_maxVisibleLines == lines && !minChanged)
+        return;
     m_maxVisibleLines = lines;
+    if (minChanged)
+        m_minVisibleLines = lines;
     updateHeightForContent();
     emit layoutMetricsChanged();
 }
@@ -817,8 +843,26 @@ void TextEdit::applyBlockCenterFormat() {
     m_updatingFormat = false;
 }
 
+void TextEdit::scheduleHeightForContentUpdate() {
+    if (m_heightUpdateScheduled)
+        return;
+    m_heightUpdateScheduled = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_heightUpdateScheduled = false;
+        updateHeightForContent();
+    });
+}
+
 void TextEdit::updateHeightForContent() {
-    if (!m_editor) return;
+    if (!m_editor || m_updatingHeight)
+        return;
+    m_updatingHeight = true;
+
+    // Asking the document layout for its size flushes any pending width-driven
+    // wrap recalculation before individual QTextLayout line counts are read.
+    // zh_CN: 读取各 QTextLayout 行数前先查询文档尺寸，刷新宽度变化引起的
+    // 待处理换行布局。
+    m_editor->document()->documentLayout()->documentSize();
 
     // Count all visual lines, including wrap-generated ones. zh_CN: 统计所有可视行数（包括自动换行产生的行）。
     int visualLines = 0;
@@ -830,14 +874,18 @@ void TextEdit::updateHeightForContent() {
     }
     if (visualLines < 1) visualLines = 1;
 
-    const int clamped = qBound(m_minVisibleLines, visualLines, m_maxVisibleLines);
+    const int minimumLines = qMax(1, m_minVisibleLines);
+    const int maximumLines = qMax(minimumLines, m_maxVisibleLines);
+    const int clamped = qBound(minimumLines, visualLines, maximumLines);
 
     // height = clampedLines × lineHeight
-    setFixedHeight(clamped * m_lineHeight);
+    const int targetHeight = clamped * m_lineHeight;
+    if (minimumHeight() != targetHeight || maximumHeight() != targetHeight)
+        setFixedHeight(targetHeight);
 
     // The scroll bar only appears once content exceeds maxVisibleLines.
     // zh_CN: 滚动条仅在内容实际超过 maxVisibleLines 时显示。
-    m_scrollEnabled = (visualLines > m_maxVisibleLines);
+    m_scrollEnabled = (visualLines > maximumLines);
     if (m_vScrollBar)
         m_vScrollBar->setVisible(m_scrollEnabled);
     // Reset the inner scroll position when not needed to avoid content drift.
@@ -845,6 +893,7 @@ void TextEdit::updateHeightForContent() {
     if (!m_scrollEnabled && m_editor)
         m_editor->verticalScrollBar()->setValue(0);
 
+    m_updatingHeight = false;
     updateGeometry();
 }
 

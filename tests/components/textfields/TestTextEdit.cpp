@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <QApplication>
 #include <QContextMenuEvent>
+#include <QMetaProperty>
 #include <QMenu>
 #include <QScrollBar>
 #include <QTextEdit>
@@ -134,6 +135,84 @@ TEST_F(TextEditTest, TextAndPlaceholder) {
 
     edit->setPlainText("line1\nline2");
     EXPECT_EQ(edit->toPlainText(), "line1\nline2");
+}
+
+TEST_F(TextEditTest, Contract_LayoutPropertiesAreAvailableThroughQtMetaObject) {
+    TextEdit* edit = new TextEdit(window);
+    const QMetaObject* metaObject = edit->metaObject();
+
+    for (const char* propertyName : {
+             "lineHeight", "minVisibleLines", "maxVisibleLines"}) {
+        const int propertyIndex = metaObject->indexOfProperty(propertyName);
+        ASSERT_GE(propertyIndex, 0) << propertyName;
+        const QMetaProperty property = metaObject->property(propertyIndex);
+        EXPECT_TRUE(property.isReadable()) << propertyName;
+        EXPECT_TRUE(property.isWritable()) << propertyName;
+        EXPECT_TRUE(property.hasNotifySignal()) << propertyName;
+    }
+}
+
+TEST_F(TextEditTest, Contract_WidthReflowRecomputesVisibleLineHeight) {
+    TextEdit* edit = new TextEdit(window);
+    edit->setLineHeight(24);
+    edit->setMinVisibleLines(1);
+    edit->setMaxVisibleLines(10);
+    edit->setGeometry(0, 0, 420, 24);
+    edit->setPlainText(QString(160, QLatin1Char('W')));
+    window->show();
+    QApplication::processEvents();
+
+    const int wideHeight = edit->height();
+    edit->resize(100, wideHeight);
+    QApplication::processEvents();
+
+    EXPECT_GT(edit->height(), wideHeight);
+}
+
+TEST_F(TextEditTest, Contract_BaseWidgetFocusForwardsToInnerEditor) {
+    TextEdit* edit = new TextEdit(window);
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    QWidget* widgetFacade = edit;
+    widgetFacade->setFocus(Qt::TabFocusReason);
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    EXPECT_TRUE(inner->hasFocus());
+    EXPECT_EQ(edit->focusProxy(), inner);
+}
+
+TEST_F(TextEditTest, Contract_ReapplyingCurrentTextPreservesUndoHistory) {
+    TextEdit* edit = new TextEdit(window);
+    edit->setPlainText(QStringLiteral("Alpha"));
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+
+    inner->moveCursor(QTextCursor::End);
+    inner->insertPlainText(QStringLiteral(" Beta"));
+    ASSERT_TRUE(inner->document()->isUndoAvailable());
+
+    edit->setPlainText(edit->toPlainText());
+
+    EXPECT_TRUE(inner->document()->isUndoAvailable());
+    inner->undo();
+    EXPECT_EQ(edit->toPlainText(), QStringLiteral("Alpha"));
+}
+
+TEST_F(TextEditTest, Contract_VisibleLineBoundsRemainOrdered) {
+    TextEdit* edit = new TextEdit(window);
+
+    edit->setMinVisibleLines(8);
+    EXPECT_EQ(edit->minVisibleLines(), 8);
+    EXPECT_EQ(edit->maxVisibleLines(), 8);
+
+    edit->setMaxVisibleLines(3);
+    EXPECT_EQ(edit->minVisibleLines(), 3);
+    EXPECT_EQ(edit->maxVisibleLines(), 3);
+    EXPECT_EQ(edit->height(), 3 * edit->lineHeight());
 }
 
 TEST_F(TextEditTest, ContentMargins) {

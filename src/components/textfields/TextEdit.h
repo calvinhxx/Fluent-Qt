@@ -54,13 +54,13 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(int lineHeight READ lineHeight WRITE setLineHeight NOTIFY layoutMetricsChanged)
     /**
-     * @brief Minimum number of visible text lines.
-     * zh_CN: 最少可见文本行数。
+     * @brief Minimum visible lines; raising it above the maximum raises both.
+     * zh_CN: 最少可见文本行数；设置值高于最大值时会同步提高两者。
      */
     Q_PROPERTY(int minVisibleLines READ minVisibleLines WRITE setMinVisibleLines NOTIFY layoutMetricsChanged)
     /**
-     * @brief Maximum number of visible text lines before scrolling.
-     * zh_CN: 滚动前最多可见文本行数。
+     * @brief Maximum visible lines; lowering it below the minimum lowers both.
+     * zh_CN: 滚动前最多可见文本行数；设置值低于最小值时会同步降低两者。
      */
     Q_PROPERTY(int maxVisibleLines READ maxVisibleLines WRITE setMaxVisibleLines NOTIFY layoutMetricsChanged)
     /**
@@ -137,6 +137,7 @@ protected:
 private:
     void applyThemeStyle();
     void paintFrame(QPainter& painter);
+    void scheduleHeightForContentUpdate();
     void updateHeightForContent();
 
     /**
@@ -150,6 +151,8 @@ private:
     QTextEdit*                    m_editor      = nullptr;
     ::fluent::scrolling::ScrollBar* m_vScrollBar  = nullptr;
     bool m_updatingFormat = false;
+    bool m_updatingHeight = false;
+    bool m_heightUpdateScheduled = false;
     bool m_scrollEnabled  = false;
 
     QMargins m_contentMargins   = QMargins(::Spacing::Padding::TextFieldHorizontal,
