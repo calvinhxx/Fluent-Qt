@@ -433,8 +433,16 @@ TEST_F(FlipViewTest, MouseWheelDiscreteFlipsImmediately) {
     QApplication::sendEvent(&fv, &wheelDown);
     EXPECT_EQ(fv.currentIndex(), 1);
 
-    // 等动画结束
-    QTest::qWait(400);
+    // Wait for the actual slide transition instead of assuming that a fixed
+    // delay outlives a cold-start animation on every host.
+    // zh_CN: 等待真实滑动动画结束，而不是假设固定延时在所有冷启动环境下
+    // 都一定长于动画。
+    QPropertyAnimation* slideAnimation =
+        fv.findChild<QPropertyAnimation*>();
+    ASSERT_NE(slideAnimation, nullptr);
+    EXPECT_EQ(slideAnimation->propertyName(), QByteArrayLiteral("slideOffset"));
+    QTRY_COMPARE_WITH_TIMEOUT(
+        slideAnimation->state(), QAbstractAnimation::Stopped, 1500);
 
     // 向上滚动一格 → goPrevious
     QWheelEvent wheelUp(
