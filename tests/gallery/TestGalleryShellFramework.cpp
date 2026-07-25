@@ -2,6 +2,7 @@
 
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QDir>
 #include <QEvent>
 #include <QElapsedTimer>
 #include <QFile>
@@ -10,6 +11,8 @@
 #include <QGraphicsOpacityEffect>
 #include <QHelpEvent>
 #include <QImage>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLabel>
 #include <QPainter>
 #include <QPixmap>
@@ -2312,27 +2315,196 @@ TEST_F(GalleryShellFrameworkTest, WaylandInactiveVisibleWindowUsesRemapFallback)
     window.hide();
 }
 
-// Regression: picking a custom accent must keep the whole accent FAMILY consistent. A full-dump theme
-// template carries explicit accentSecondary/accentTertiary/textAccentPrimary; setUserAccent must drop
-// them so applyColorSpec re-derives them from the NEW accentDefault. The original bug left them stale
-// (a green accentDefault clashing with leftover blue variants). Relies on QStandardPaths test mode
-// (set in QtTestEnvironment) so this writes to an isolated sandbox, never the developer's real themes.
-// zh_CN: 回归——选自定义强调色后,整个强调色族必须一致。完整 dump 模板含显式 accentSecondary/Tertiary/
-// textAccentPrimary;setUserAccent 必须清除它们,让 applyColorSpec 从新 accentDefault 重新派生。原 bug 会留下
-// 陈旧变体(绿色 accentDefault 与残留蓝色变体冲突)。依赖测试模式沙盒,不会写到开发者真实 themes 目录。
-TEST(ThemeCatalogAccentConsistencyTest, SetUserAccentReDerivesVariantsFromFullDump)
+TEST(ThemeCatalogPersistenceTest, ApplyingPresetDoesNotCreateUserFile)
+{
+    namespace tc = fluent::gallery::ThemeCatalog;
+    constexpr auto kTheme = GallerySettings::StyleTheme::Material;
+    const QString path = tc::userThemeFilePath(kTheme);
+    QFile::remove(path);
+
+    tc::apply(kTheme);
+
+    EXPECT_FALSE(QFile::exists(path));
+    fluent::ThemeRegistry::instance().resetToDefaults();
+}
+
+TEST(ThemeCatalogPersistenceTest, ExplicitExportWritesVersionedEditableEnvelope)
+{
+    namespace tc = fluent::gallery::ThemeCatalog;
+    constexpr auto kTheme = GallerySettings::StyleTheme::MacOS;
+    const QString path = tc::userThemeFilePath(kTheme);
+    QFile::remove(path);
+
+    ASSERT_TRUE(tc::exportUserThemeTemplate(kTheme));
+    EXPECT_FALSE(tc::exportUserThemeTemplate(kTheme));
+
+    QFile file(path);
+    ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
+    ASSERT_TRUE(document.isObject());
+    const QJsonObject root = document.object();
+    EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
+    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("macos"));
+    const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
+    EXPECT_TRUE(overrides.value(QStringLiteral("radius")).isObject());
+    EXPECT_TRUE(overrides.value(QStringLiteral("light")).isObject());
+    EXPECT_TRUE(overrides.value(QStringLiteral("dark")).isObject());
+
+    QFile::remove(path);
+}
+
+TEST(ThemeCatalogPersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExplicitEdit)
+{
+    using fluent::ThemeRegistry;
+    namespace tc = fluent::gallery::ThemeCatalog;
+    constexpr auto kTheme = GallerySettings::StyleTheme::Material;
+    const QString path = tc::userThemeFilePath(kTheme);
+    QFile::remove(path);
+    QDir().mkpath(tc::themesDirectory());
+
+    QJsonObject radius;
+    radius.insert(QStringLiteral("control"), 17);
+    QJsonObject light;
+    light.insert(QStringLiteral("bgCanvas"), QStringLiteral("#123456"));
+    QJsonObject dark;
+    dark.insert(QStringLiteral("bgCanvas"), QStringLiteral("#654321"));
+    QJsonObject legacy;
+    legacy.insert(QStringLiteral("radius"), radius);
+    legacy.insert(QStringLiteral("light"), light);
+    legacy.insert(QStringLiteral("dark"), dark);
+
+    QFile legacyFile(path);
+    ASSERT_TRUE(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    const QByteArray legacyPayload = QJsonDocument(legacy).toJson();
+    ASSERT_EQ(legacyFile.write(legacyPayload), legacyPayload.size());
+    legacyFile.close();
+
+    tc::apply(kTheme);
+    EXPECT_EQ(ThemeRegistry::instance().radius().control, 17);
+    EXPECT_EQ(ThemeRegistry::instance().colors(false).bgCanvas.rgb(),
+              QColor(QStringLiteral("#123456")).rgb());
+    EXPECT_EQ(ThemeRegistry::instance().colors(true).bgCanvas.rgb(),
+              QColor(QStringLiteral("#654321")).rgb());
+
+    const QColor picked(QStringLiteral("#4DA04D"));
+    tc::setUserAccent(kTheme, picked);
+
+    QFile migratedFile(path);
+    ASSERT_TRUE(migratedFile.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QJsonObject root = QJsonDocument::fromJson(migratedFile.readAll()).object();
+    EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
+    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("material"));
+    const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
+    EXPECT_EQ(overrides.value(QStringLiteral("radius")).toObject()
+                  .value(QStringLiteral("control")).toInt(),
+              17);
+    EXPECT_EQ(overrides.value(QStringLiteral("light")).toObject()
+                  .value(QStringLiteral("bgCanvas")).toString(),
+              QStringLiteral("#123456"));
+    EXPECT_EQ(overrides.value(QStringLiteral("dark")).toObject()
+                  .value(QStringLiteral("bgCanvas")).toString(),
+              QStringLiteral("#654321"));
+    EXPECT_EQ(overrides.value(QStringLiteral("light")).toObject()
+                  .value(QStringLiteral("accentDefault")).toString(),
+              QStringLiteral("#4DA04D"));
+    EXPECT_EQ(overrides.value(QStringLiteral("dark")).toObject()
+                  .value(QStringLiteral("accentDefault")).toString(),
+              QStringLiteral("#4DA04D"));
+
+    migratedFile.close();
+    QFile::remove(path);
+    ThemeRegistry::instance().resetToDefaults();
+}
+
+TEST(ThemeCatalogPersistenceTest, UnsupportedSchemaIsIgnored)
+{
+    using fluent::ThemeRegistry;
+    namespace tc = fluent::gallery::ThemeCatalog;
+    constexpr auto kTheme = GallerySettings::StyleTheme::Material;
+    const QString path = tc::userThemeFilePath(kTheme);
+    QDir().mkpath(tc::themesDirectory());
+
+    QJsonObject light;
+    light.insert(QStringLiteral("accentDefault"), QStringLiteral("#FF0000"));
+    QJsonObject overrides;
+    overrides.insert(QStringLiteral("light"), light);
+    QJsonObject root;
+    root.insert(QStringLiteral("schemaVersion"), 999);
+    root.insert(QStringLiteral("theme"), QStringLiteral("material"));
+    root.insert(QStringLiteral("overrides"), overrides);
+    QFile file(path);
+    ASSERT_TRUE(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    const QByteArray payload = QJsonDocument(root).toJson();
+    ASSERT_EQ(file.write(payload), payload.size());
+    file.close();
+
+    tc::apply(kTheme);
+
+    EXPECT_EQ(ThemeRegistry::instance().colors(false).accentDefault.rgb(),
+              tc::presetAccent(kTheme, false).rgb());
+
+    tc::setUserAccent(kTheme, QColor(QStringLiteral("#4DA04D")));
+    QFile preservedFile(path);
+    ASSERT_TRUE(preservedFile.open(QIODevice::ReadOnly | QIODevice::Text));
+    EXPECT_EQ(preservedFile.readAll(), payload);
+    preservedFile.close();
+
+    QFile::remove(path);
+    ThemeRegistry::instance().resetToDefaults();
+}
+
+TEST(ThemeCatalogPersistenceTest, MalformedThemeIsNotOverwrittenByAccentEdit)
+{
+    namespace tc = fluent::gallery::ThemeCatalog;
+    constexpr auto kTheme = GallerySettings::StyleTheme::Fluent;
+    const QString path = tc::userThemeFilePath(kTheme);
+    QDir().mkpath(tc::themesDirectory());
+    const QByteArray malformedPayload("{ this is not valid JSON");
+
+    QFile file(path);
+    ASSERT_TRUE(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    ASSERT_EQ(file.write(malformedPayload), malformedPayload.size());
+    file.close();
+
+    tc::setUserAccent(kTheme, QColor(QStringLiteral("#4DA04D")));
+
+    QFile preservedFile(path);
+    ASSERT_TRUE(preservedFile.open(QIODevice::ReadOnly | QIODevice::Text));
+    EXPECT_EQ(preservedFile.readAll(), malformedPayload);
+    preservedFile.close();
+    QFile::remove(path);
+}
+
+// Regression: picking a custom accent must keep the whole accent family
+// consistent. The persisted override stays sparse so derived variants always
+// follow the new accent instead of retaining stale preset values.
+// zh_CN: 回归——自定义强调色覆盖保持稀疏，派生变体始终跟随新强调色，
+// 不会残留旧预设值。
+TEST(ThemeCatalogAccentConsistencyTest, SetUserAccentWritesSparseOverrideAndReDerivesVariants)
 {
     using fluent::ThemeRegistry;
     namespace tc = fluent::gallery::ThemeCatalog;
     constexpr auto kTheme = GallerySettings::StyleTheme::MacOS;
 
-    // Force a fresh FULL-DUMP template (explicit blue accentSecondary/textAccentPrimary) — the exact
-    // condition under which the old setUserAccent left stale variants behind.
     QFile::remove(tc::userThemeFilePath(kTheme));
-    tc::apply(kTheme);
 
     const QColor picked(0x4D, 0xA0, 0x4D);  // the green that originally clashed with stale blue variants
     tc::setUserAccent(kTheme, picked);
+
+    QFile file(tc::userThemeFilePath(kTheme));
+    ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+    file.close();
+    EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
+    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("macos"));
+    const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
+    for (const QString& modeName : {QStringLiteral("light"), QStringLiteral("dark")}) {
+        const QJsonObject mode = overrides.value(modeName).toObject();
+        EXPECT_EQ(mode.size(), 1);
+        EXPECT_EQ(mode.value(QStringLiteral("accentDefault")).toString(),
+                  QStringLiteral("#4DA04D"));
+    }
+
     tc::apply(kTheme);
 
     for (bool dark : {false, true}) {

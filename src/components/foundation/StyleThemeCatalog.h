@@ -42,6 +42,16 @@ QString userThemeFilePath(StyleTheme theme);
 /// Directory holding user-editable style-theme override files. zh_CN: 保存用户可编辑样式主题覆盖文件的目录。
 QString themesDirectory();
 
+/**
+ * @brief Explicitly exports a schema-versioned editable theme template.
+ * zh_CN: 显式导出带 schema 版本的可编辑主题模板。
+ *
+ * Applying a theme never writes to disk. By default this function preserves an
+ * existing override file; pass overwrite=true only when replacement is intended.
+ * zh_CN: 应用主题不会写磁盘。默认保留现有覆盖文件；仅在明确需要替换时传入 overwrite=true。
+ */
+bool exportUserThemeTemplate(StyleTheme theme, bool overwrite = false);
+
 /// Persist a custom accent into the style theme's override file. zh_CN: 将自定义强调色持久化到样式主题覆盖文件。
 void setUserAccent(StyleTheme theme, const QColor& accent);
 

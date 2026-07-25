@@ -25,7 +25,41 @@ namespace fluent {
  */
 class ThemeRegistry {
 public:
+    /**
+     * @brief Complete runtime theme state committed as one transaction.
+     * zh_CN: 作为单次事务提交的完整运行时主题状态。
+     */
+    struct Snapshot {
+        FluentElement::Colors lightColors;
+        FluentElement::Colors darkColors;
+        FluentElement::Radius radius{0, 4, 8};
+        FluentElement::DesignLanguage designLanguage = FluentElement::DesignFluent;
+        QString fontFamilyOverride;
+        qreal fontScale = 1.0;
+    };
+
     static ThemeRegistry& instance();
+
+    /**
+     * @brief Returns a copy of the currently committed theme state.
+     * zh_CN: 返回当前已提交主题状态的副本。
+     */
+    Snapshot snapshot() const;
+
+    /**
+     * @brief Returns the built-in Fluent theme state without changing the registry.
+     * zh_CN: 返回内置 Fluent 主题状态，不修改注册表。
+     */
+    static Snapshot defaultSnapshot();
+
+    /**
+     * @brief Atomically commits a complete snapshot and refreshes components once.
+     * zh_CN: 原子提交完整快照，并仅刷新组件一次。
+     *
+     * @return true when the committed state changed; false for an identical or invalid snapshot.
+     * zh_CN: 状态发生变化时返回 true；快照相同或无效时返回 false。
+     */
+    bool applySnapshot(const Snapshot& snapshot);
 
     // Token reads (called from FluentElement's accessors).
     // zh_CN: token 读取(由 FluentElement 的访问器调用)。
@@ -35,7 +69,7 @@ public:
     QString fontFamilyOverride() const { return m_fontFamily; }
     qreal fontScale() const { return m_fontScale; }
 
-    // Token installs (called from the app's theme catalog). Each bumps revision().
+    // Convenience token updates. Each changed value is committed through applySnapshot().
     // zh_CN: token 安装(由应用层主题目录调用)。每次都会自增 revision()。
     void setColors(bool dark, const FluentElement::Colors& colors);
     void setRadius(int none, int control, int overlay);
@@ -46,11 +80,14 @@ public:
     /// Restore the built-in Fluent defaults. zh_CN: 恢复内置 Fluent 默认值。
     void resetToDefaults();
 
-    /// Monotonic counter bumped whenever any installed token changes. zh_CN: 任一 token 变化即自增。
+    /// Monotonic counter bumped once per changed snapshot. zh_CN: 每次快照变化仅自增一次。
     int revision() const { return m_revision; }
 
 private:
+    struct UninitializedTag {};
+
     ThemeRegistry();
+    explicit ThemeRegistry(UninitializedTag);
     void seedDefaults();
 
     FluentElement::Colors m_light;

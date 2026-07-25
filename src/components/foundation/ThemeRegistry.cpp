@@ -4,6 +4,95 @@
 #include "design/ThemeColors.h"
 
 namespace fluent {
+namespace {
+
+using Colors = FluentElement::Colors;
+using ColorMember = QColor Colors::*;
+
+constexpr ColorMember kColorMembers[] = {
+    &Colors::accentDefault,
+    &Colors::accentSecondary,
+    &Colors::accentTertiary,
+    &Colors::accentDisabled,
+    &Colors::controlDefault,
+    &Colors::controlSecondary,
+    &Colors::controlTertiary,
+    &Colors::controlDisabled,
+    &Colors::controlAltSecondary,
+    &Colors::controlAltTertiary,
+    &Colors::subtleTransparent,
+    &Colors::subtleSecondary,
+    &Colors::subtleTertiary,
+    &Colors::strokeDefault,
+    &Colors::strokeSecondary,
+    &Colors::strokeStrong,
+    &Colors::strokeCard,
+    &Colors::strokeDivider,
+    &Colors::strokeSurface,
+    &Colors::strokeFocusOuter,
+    &Colors::strokeFocusInner,
+    &Colors::textPrimary,
+    &Colors::textSecondary,
+    &Colors::textTertiary,
+    &Colors::textDisabled,
+    &Colors::textOnAccent,
+    &Colors::textAccentPrimary,
+    &Colors::bgCanvas,
+    &Colors::bgLayer,
+    &Colors::bgLayerAlt,
+    &Colors::bgSolid,
+    &Colors::grey10,
+    &Colors::grey20,
+    &Colors::grey30,
+    &Colors::grey40,
+    &Colors::grey50,
+    &Colors::grey60,
+    &Colors::grey90,
+    &Colors::grey130,
+    &Colors::grey160,
+    &Colors::grey190,
+    &Colors::systemCritical,
+    &Colors::systemCriticalBg,
+    &Colors::systemCaution,
+    &Colors::systemCautionBg,
+    &Colors::systemInfo,
+    &Colors::systemInfoBg,
+    &Colors::systemSuccess,
+    &Colors::systemSuccessBg
+};
+
+bool colorsEqual(const Colors& lhs, const Colors& rhs)
+{
+    for (ColorMember member : kColorMembers) {
+        if (lhs.*member != rhs.*member)
+            return false;
+    }
+    return lhs.charts == rhs.charts;
+}
+
+bool snapshotsEqual(const ThemeRegistry::Snapshot& lhs,
+                    const ThemeRegistry::Snapshot& rhs)
+{
+    return colorsEqual(lhs.lightColors, rhs.lightColors)
+        && colorsEqual(lhs.darkColors, rhs.darkColors)
+        && lhs.radius.none == rhs.radius.none
+        && lhs.radius.control == rhs.radius.control
+        && lhs.radius.overlay == rhs.radius.overlay
+        && lhs.designLanguage == rhs.designLanguage
+        && lhs.fontFamilyOverride == rhs.fontFamilyOverride
+        && qFuzzyCompare(lhs.fontScale, rhs.fontScale);
+}
+
+bool snapshotIsValid(const ThemeRegistry::Snapshot& snapshot)
+{
+    return snapshot.radius.none >= 0
+        && snapshot.radius.control >= 0
+        && snapshot.radius.overlay >= 0
+        && snapshot.fontScale > 0.0
+        && qIsFinite(snapshot.fontScale);
+}
+
+} // namespace
 
 ThemeRegistry& ThemeRegistry::instance()
 {
@@ -14,6 +103,48 @@ ThemeRegistry& ThemeRegistry::instance()
 ThemeRegistry::ThemeRegistry()
 {
     seedDefaults();
+}
+
+ThemeRegistry::ThemeRegistry(UninitializedTag)
+{
+}
+
+ThemeRegistry::Snapshot ThemeRegistry::snapshot() const
+{
+    Snapshot result;
+    result.lightColors = m_light;
+    result.darkColors = m_dark;
+    result.radius = radius();
+    result.designLanguage = m_designLanguage;
+    result.fontFamilyOverride = m_fontFamily;
+    result.fontScale = m_fontScale;
+    return result;
+}
+
+ThemeRegistry::Snapshot ThemeRegistry::defaultSnapshot()
+{
+    ThemeRegistry defaults(UninitializedTag{});
+    defaults.seedDefaults();
+    return defaults.snapshot();
+}
+
+bool ThemeRegistry::applySnapshot(const Snapshot& next)
+{
+    if (!snapshotIsValid(next) || snapshotsEqual(snapshot(), next))
+        return false;
+
+    m_light = next.lightColors;
+    m_dark = next.darkColors;
+    m_radiusNone = next.radius.none;
+    m_radiusControl = next.radius.control;
+    m_radiusOverlay = next.radius.overlay;
+    m_designLanguage = next.designLanguage;
+    m_fontFamily = next.fontFamilyOverride;
+    m_fontScale = next.fontScale;
+    ++m_revision;
+
+    FluentElement::refreshTheme();
+    return true;
 }
 
 void ThemeRegistry::seedDefaults()
@@ -118,46 +249,42 @@ void ThemeRegistry::seedDefaults()
 
 void ThemeRegistry::setColors(bool dark, const FluentElement::Colors& colors)
 {
-    (dark ? m_dark : m_light) = colors;
-    ++m_revision;
+    Snapshot next = snapshot();
+    (dark ? next.darkColors : next.lightColors) = colors;
+    applySnapshot(next);
 }
 
 void ThemeRegistry::setRadius(int none, int control, int overlay)
 {
-    m_radiusNone = none;
-    m_radiusControl = control;
-    m_radiusOverlay = overlay;
-    ++m_revision;
+    Snapshot next = snapshot();
+    next.radius = {none, control, overlay};
+    applySnapshot(next);
 }
 
 void ThemeRegistry::setDesignLanguage(FluentElement::DesignLanguage language)
 {
-    if (m_designLanguage == language)
-        return;
-    m_designLanguage = language;
-    ++m_revision;
+    Snapshot next = snapshot();
+    next.designLanguage = language;
+    applySnapshot(next);
 }
 
 void ThemeRegistry::setFontFamilyOverride(const QString& family)
 {
-    if (m_fontFamily == family)
-        return;
-    m_fontFamily = family;
-    ++m_revision;
+    Snapshot next = snapshot();
+    next.fontFamilyOverride = family;
+    applySnapshot(next);
 }
 
 void ThemeRegistry::setFontScale(qreal scale)
 {
-    if (scale <= 0.0 || qFuzzyCompare(m_fontScale, scale))
-        return;
-    m_fontScale = scale;
-    ++m_revision;
+    Snapshot next = snapshot();
+    next.fontScale = scale;
+    applySnapshot(next);
 }
 
 void ThemeRegistry::resetToDefaults()
 {
-    seedDefaults();
-    ++m_revision;
+    applySnapshot(defaultSnapshot());
 }
 
 } // namespace fluent

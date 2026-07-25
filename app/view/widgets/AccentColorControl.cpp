@@ -281,11 +281,13 @@ void AccentColorControl::openFlyout()
     actions->addStretch(1);
     layout->addLayout(actions);
 
-    // Power-user escape hatch: jump to the folder of editable themes/<key>.json overrides.
-    // zh_CN: 进阶用户的逃生口:直接打开可编辑的 themes/<key>.json 覆盖文件夹。
+    // Theme application is read-only. Export a template only when the user asks
+    // to edit it, then open the containing directory.
+    // zh_CN: 应用主题本身只读；仅当用户明确要求编辑时才导出模板并打开目录。
     auto* folder = new HyperlinkButton(QStringLiteral("Open themes folder"), flyout);
     folder->setFluentSize(Button::Small);
-    connect(folder, &Button::clicked, flyout, [flyout]() {
+    connect(folder, &Button::clicked, flyout, [settings, flyout]() {
+        ThemeCatalog::exportUserThemeTemplate(settings->styleTheme());
         QDesktopServices::openUrl(QUrl::fromLocalFile(ThemeCatalog::themesDirectory()));
         flyout->close();
     });

@@ -143,12 +143,10 @@ void GallerySettings::setStyleTheme(StyleTheme theme)
         configSettings().setValue(QString::fromLatin1(kStyleThemeKey),
                                   static_cast<int>(theme));
     }
-    // Install the new palette/radius preset, then force an atomic repaint (refreshTheme re-broadcasts
-    // the current Light/Dark mode, which setThemeDeferred would skip since the mode is unchanged).
+    // ThemeRegistry commits the complete preset and schedules exactly one refresh.
     // zh_CN: 装入新的调色板/圆角预设,再强制原子重绘(refreshTheme 重广播当前明暗模式;因模式未变,
     // setThemeDeferred 会跳过)。
     ThemeCatalog::apply(theme);
-    fluent::FluentElement::refreshTheme();
     emit styleThemeChanged(m_styleTheme);
     // Switching presets changes the effective accent too, so any accent UI can resync. zh_CN: 切换预设也会
     // 改变生效强调色,便于强调色 UI 同步。
@@ -167,12 +165,10 @@ void GallerySettings::setAccentColor(const QColor& accent)
 {
     if (!accent.isValid())
         return;
-    // Persist the override into the active style theme's JSON, then re-install + repaint atomically
-    // (refreshTheme re-broadcasts the current mode, which setThemeDeferred would skip). zh_CN: 把覆盖
+    // Persist the override, then install it through one ThemeRegistry snapshot commit. zh_CN: 把覆盖
     // 持久化进当前样式主题的 JSON,再原子地重新安装并重绘(refreshTheme 重广播当前模式,setThemeDeferred 会跳过)。
     ThemeCatalog::setUserAccent(m_styleTheme, accent);
     ThemeCatalog::apply(m_styleTheme);
-    fluent::FluentElement::refreshTheme();
     emit accentColorChanged(accentColor());
     LOG_INFO(QStringLiteral("GallerySettings setAccentColor theme=%1 accent=%2")
                  .arg(static_cast<int>(m_styleTheme))
@@ -183,7 +179,6 @@ void GallerySettings::resetAccentColor()
 {
     ThemeCatalog::clearUserAccent(m_styleTheme);
     ThemeCatalog::apply(m_styleTheme);
-    fluent::FluentElement::refreshTheme();
     emit accentColorChanged(accentColor());
     LOG_INFO(QStringLiteral("GallerySettings resetAccentColor theme=%1")
                  .arg(static_cast<int>(m_styleTheme)));

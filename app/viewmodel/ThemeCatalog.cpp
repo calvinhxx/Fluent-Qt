@@ -37,6 +37,11 @@ QString themesDirectory()
     return StyleThemeCatalog::themesDirectory();
 }
 
+bool exportUserThemeTemplate(GallerySettings::StyleTheme theme, bool overwrite)
+{
+    return StyleThemeCatalog::exportUserThemeTemplate(toCoreTheme(theme), overwrite);
+}
+
 void setUserAccent(GallerySettings::StyleTheme theme, const QColor& accent)
 {
     StyleThemeCatalog::setUserAccent(toCoreTheme(theme), accent);
