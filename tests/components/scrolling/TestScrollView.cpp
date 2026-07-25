@@ -8,6 +8,7 @@
 #include <QLabel>
 #include <QPainter>
 #include <QPalette>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
 #include <QVBoxLayout>
@@ -25,6 +26,7 @@ using fluent::scrolling::ScrollBar;
 using fluent::scrolling::ScrollView;
 using fluent::scrolling::ScrollViewZoomAware;
 using fluent::textfields::Label;
+using fluent::WidgetOwnership;
 
 namespace {
 
@@ -176,6 +178,64 @@ TEST_F(ScrollViewTest, DefaultScrollBarsAreCustomAndRangesReflectContent) {
     EXPECT_NE(qobject_cast<ScrollBar*>(view.horizontalScrollBar()), nullptr);
     EXPECT_GT(view.scrollableWidth(), 0);
     EXPECT_GT(view.scrollableHeight(), 0);
+}
+
+TEST_F(ScrollViewTest, ContentOwnershipPoliciesAreExplicit)
+{
+    QWidget originalParent;
+    ScrollView view;
+
+    auto* reparented = createContent(QSize(240, 180));
+    reparented->setParent(&originalParent);
+    ASSERT_TRUE(view.setContentWidget(reparented, WidgetOwnership::Reparented));
+    EXPECT_EQ(view.contentWidget(), reparented);
+    EXPECT_EQ(view.contentOwnership(), WidgetOwnership::Reparented);
+    EXPECT_NE(reparented->parentWidget(), &originalParent);
+
+    auto* owned = createContent(QSize(260, 200));
+    ASSERT_TRUE(view.setContentWidget(owned, WidgetOwnership::Owned));
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+    EXPECT_EQ(view.contentWidget(), owned);
+    EXPECT_EQ(view.contentOwnership(), WidgetOwnership::Owned);
+
+    QPointer<QWidget> ownedGuard = owned;
+    auto* replacement = createContent(QSize(280, 220));
+    view.setWidget(replacement);
+    EXPECT_TRUE(ownedGuard.isNull());
+    EXPECT_EQ(view.contentWidget(), replacement);
+}
+
+TEST_F(ScrollViewTest, BorrowedContentDetachesAndTakeTransfersWithoutDeletion)
+{
+    ScrollView view;
+    auto* borrowed = createContent(QSize(240, 180));
+    QPointer<QWidget> guard = borrowed;
+    ASSERT_TRUE(view.setContentWidget(borrowed, WidgetOwnership::Borrowed));
+
+    QWidget* taken = view.takeContentWidget();
+    ASSERT_EQ(taken, borrowed);
+    EXPECT_FALSE(guard.isNull());
+    EXPECT_EQ(taken->parentWidget(), nullptr);
+    EXPECT_EQ(view.contentWidget(), nullptr);
+    delete taken;
+}
+
+TEST_F(ScrollViewTest, DirectQScrollAreaContentUsesOwnedContract)
+{
+    ScrollView view;
+    QScrollArea* base = &view;
+    auto* first = createContent(QSize(240, 180));
+    QPointer<QWidget> firstGuard = first;
+    base->setWidget(first);
+
+    EXPECT_EQ(view.contentWidget(), first);
+    EXPECT_EQ(view.contentOwnership(), WidgetOwnership::Owned);
+
+    auto* second = createContent(QSize(260, 200));
+    base->setWidget(second);
+    EXPECT_TRUE(firstGuard.isNull());
+    EXPECT_EQ(view.contentWidget(), second);
+    EXPECT_EQ(view.contentOwnership(), WidgetOwnership::Owned);
 }
 
 TEST_F(ScrollViewTest, HiddenScrollBarKeepsProgrammaticScrollEnabled) {
@@ -490,7 +550,7 @@ TEST_F(ScrollViewTest, VisualCheck) {
 
     auto* header = new QHBoxLayout();
     auto* title = new Label(QStringLiteral("ScrollView"), window);
-    title->setFluentTypography(QStringLiteral("Title"));
+    title->setFluentTypography(Typography::FontRole::Title);
     header->addWidget(title);
     header->addStretch();
 

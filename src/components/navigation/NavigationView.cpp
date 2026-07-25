@@ -482,12 +482,13 @@ void NavigationView::paintEvent(QPaintEvent*)
     // 否则窗格用与标题栏共用的纯色 themeBackdrop。
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    // chromeBackdropFill() is the solid/composited decision shared with the title bar; PaintedOpaque
+    // windowChromeBackdropFill() is the solid/composited decision shared with the title bar; PaintedOpaque
     // is handled separately so the one continuous root material is not covered by a flat color.
-    // zh_CN: chromeBackdropFill() 是与标题栏共用的单一背景决策：有效色为纯色回退；无效色表示有真实系统背景（画透明）。
+    // zh_CN: windowChromeBackdropFill() 是与标题栏共用的单一背景决策：有效色为纯色回退；无效色表示有真实系统背景（画透明）。
     const bool paintedMaterial = windowing::windowBackdropUsesPaintedMaterial(window());
     const QColor backdrop = paintedMaterial ? QColor()
-                                             : chromeBackdropFill(window(), isActiveWindow());
+                                             : windowing::windowChromeBackdropFill(
+                                                   *this, window(), isActiveWindow());
     if (paintedMaterial) {
         // The Window owns the continuous software material; do not cover this
         // chrome segment with a second, independently aligned fill.

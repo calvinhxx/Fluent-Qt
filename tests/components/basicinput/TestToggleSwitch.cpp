@@ -48,7 +48,7 @@ TEST_F(ToggleSwitchTest, DefaultPropertyValues) {
     EXPECT_FALSE(ts.isOn());
     EXPECT_EQ(ts.onContent(), "On");
     EXPECT_EQ(ts.offContent(), "Off");
-    EXPECT_EQ(ts.fontRole(), "Body");
+    EXPECT_EQ(ts.fontRole(), Typography::FontRole::Body);
 }
 
 // ── IsOn 属性 ────────────────────────────────────────────────────────────────
@@ -116,15 +116,15 @@ TEST_F(ToggleSwitchTest, SetSameOffContentNoSignal) {
 TEST_F(ToggleSwitchTest, SetFontRoleEmitsSignal) {
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::fontRoleChanged);
-    ts.setFontRole("Caption");
+    ts.setFontRole(Typography::FontRole::Caption);
     ASSERT_EQ(spy.count(), 1);
-    EXPECT_EQ(ts.fontRole(), "Caption");
+    EXPECT_EQ(ts.fontRole(), Typography::FontRole::Caption);
 }
 
 TEST_F(ToggleSwitchTest, SetSameFontRoleNoSignal) {
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::fontRoleChanged);
-    ts.setFontRole("Body");  // same as default
+    ts.setFontRole(Typography::FontRole::Body);  // same as default
     EXPECT_EQ(spy.count(), 0);
 }
 
@@ -203,7 +203,7 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
 
     // 1. 简单开关
     auto* lbl1 = new fluent::textfields::Label("1. Simple ToggleSwitch:", window);
-    lbl1->setFluentTypography("Body");
+    lbl1->setFluentTypography(Typography::FontRole::Body);
     lbl1->anchors()->top = {window, Edge::Top, 30};
     lbl1->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(lbl1);
@@ -214,7 +214,7 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
     layout->addWidget(ts1);
 
     auto* stateLabel = new fluent::textfields::Label("State: Off", window);
-    stateLabel->setFluentTypography("Caption");
+    stateLabel->setFluentTypography(Typography::FontRole::Caption);
     stateLabel->anchors()->top = {ts1, Edge::Bottom, 4};
     stateLabel->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(stateLabel);
@@ -224,13 +224,13 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
 
     // 2. 外部标题 + 自定义 Content
     auto* lbl2 = new fluent::textfields::Label("2. External label & custom content:", window);
-    lbl2->setFluentTypography("Body");
+    lbl2->setFluentTypography(Typography::FontRole::Body);
     lbl2->anchors()->top = {stateLabel, Edge::Bottom, 20};
     lbl2->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(lbl2);
 
     auto* externalHeader = new fluent::textfields::Label("Toggle work", window);
-    externalHeader->setFluentTypography("Body");
+    externalHeader->setFluentTypography(Typography::FontRole::Body);
     externalHeader->anchors()->top = {lbl2, Edge::Bottom, 8};
     externalHeader->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(externalHeader);
@@ -245,7 +245,7 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
 
     // 3. 默认 On
     auto* lbl3 = new fluent::textfields::Label("3. IsOn = true:", window);
-    lbl3->setFluentTypography("Body");
+    lbl3->setFluentTypography(Typography::FontRole::Body);
     lbl3->anchors()->top = {ts2, Edge::Bottom, 20};
     lbl3->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(lbl3);
@@ -258,7 +258,7 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
 
     // 4. Disabled (Off)
     auto* lbl4 = new fluent::textfields::Label("4. Disabled (Off):", window);
-    lbl4->setFluentTypography("Body");
+    lbl4->setFluentTypography(Typography::FontRole::Body);
     lbl4->anchors()->top = {ts3, Edge::Bottom, 20};
     lbl4->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(lbl4);
@@ -271,7 +271,7 @@ TEST_F(ToggleSwitchTest, VisualCheck) {
 
     // 5. Disabled (On)
     auto* lbl5 = new fluent::textfields::Label("5. Disabled (On):", window);
-    lbl5->setFluentTypography("Body");
+    lbl5->setFluentTypography(Typography::FontRole::Body);
     lbl5->anchors()->top = {ts4, Edge::Bottom, 20};
     lbl5->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(lbl5);

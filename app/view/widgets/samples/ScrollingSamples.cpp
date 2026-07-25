@@ -243,7 +243,7 @@ protected:
             painter.drawRoundedRect(tile, themeRadius().control, themeRadius().control);
         }
 
-        QFont titleFont = themeFont(QStringLiteral("BodyStrong")).toQFont();
+        QFont titleFont = themeFont(Typography::FontRole::BodyStrong).toQFont();
         titleFont.setWeight(QFont::DemiBold);
         painter.setFont(titleFont);
         painter.setPen(colors.textPrimary);
@@ -251,7 +251,7 @@ protected:
                          Qt::AlignLeft | Qt::AlignVCenter,
                          m_title);
 
-        QFont bodyFont = themeFont(QStringLiteral("Caption")).toQFont();
+        QFont bodyFont = themeFont(Typography::FontRole::Caption).toQFont();
         painter.setFont(bodyFont);
         painter.setPen(colors.textSecondary);
         painter.drawText(QRect(24, 46, m_logicalSize.width() - 48, 22),
@@ -520,7 +520,7 @@ protected:
         painter.setRenderHint(QPainter::TextAntialiasing);
         painter.fillRect(rect(), themeColors().bgLayer);
 
-        QFont labelFont = themeFont(QStringLiteral("Caption")).toQFont();
+        QFont labelFont = themeFont(Typography::FontRole::Caption).toQFont();
         labelFont.setWeight(QFont::DemiBold);
         painter.setFont(labelFont);
 

@@ -14,6 +14,10 @@ class QGraphicsOpacityEffect;
 class QPropertyAnimation;
 class QResizeEvent;
 
+namespace fluent::overlay {
+class OverlayCoordinator;
+}
+
 namespace fluent::dialogs_flyouts {
 
 /**
@@ -105,8 +109,9 @@ private:
     void reposition(bool animated);
     QRect cardRect() const;
 
-    QWidget* m_owner = nullptr;
+    QPointer<QWidget> m_owner;
     QWidget* m_contentHost = nullptr;
+    ::fluent::overlay::OverlayCoordinator* m_overlayCoordinator = nullptr;
     QSize m_cardSize{330, 168};
     QPointer<QWidget> m_target;
     Placement m_placement = Auto;

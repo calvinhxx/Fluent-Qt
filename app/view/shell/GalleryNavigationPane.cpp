@@ -21,6 +21,7 @@
 #include "components/collections/TreeView.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/status_info/ToolTip.h"
+#include "components/windowing/WindowBackdrop.h"
 #include "support/logging/Log.h"
 #include "GalleryCompactFlyout.h"
 #include "GalleryNavigationDelegate.h"
@@ -281,10 +282,11 @@ void GalleryNavigationPane::paintEvent(QPaintEvent* event)
     // zh_CN: 内嵌窗格是窗口 chrome（无自身表面），须像标题栏 / NavigationView 一样遵循 chrome 契约：无真实系统
     // 背景（Normal）时画不透明 themeBackdrop，有（Mica / Acrylic）时透明露背景。否则在「始终半透明」顶层下，
     // 窗格非行区域（顶部留白、页脚）继承透明 palette，Normal 下漏出桌面壁纸（TreeView 行已覆盖，但周围窗格未）。
-    // 抽屉变体（m_surfaceVisible）自绘卡片面板，故此处保持透明。chromeBackdropFill 在真实背景下返回无效色（→不画），
+    // 抽屉变体（m_surfaceVisible）自绘卡片面板，故此处保持透明。windowChromeBackdropFill 在真实背景下返回无效色（→不画），
     // 否则返回纯色 themeBackdrop(active)。
     if (!m_surfaceVisible && !usesPaintedWindowBackdrop(this)) {
-        const QColor fill = chromeBackdropFill(window(), window() && window()->isActiveWindow());
+        const QColor fill = windowing::windowChromeBackdropFill(
+            *this, window(), window() && window()->isActiveWindow());
         if (fill.isValid()) {
             QPainter painter(this);
             painter.fillRect(rect(), fill);
@@ -297,9 +299,9 @@ bool GalleryNavigationPane::event(QEvent* event)
 {
     // Repaint when the window's activation changes so the inline pane's themeBackdrop tracks
     // active/inactive in lockstep with the title bar (both read isActiveWindow() via
-    // chromeBackdropFill). Without this the pane would stay at the active tint while the title bar
+    // windowChromeBackdropFill). Without this the pane would stay at the active tint while the title bar
     // washes toward bgLayer on focus loss. zh_CN: 窗口激活态变化时重绘，使内嵌窗格的 themeBackdrop 与标题栏
-    // 同步跟随激活/非激活（二者都经 chromeBackdropFill 读 isActiveWindow()）；否则窗格会停在激活色，而标题栏失焦时已洗向 bgLayer。
+    // 同步跟随激活/非激活（二者都经 windowChromeBackdropFill 读 isActiveWindow()）；否则窗格会停在激活色，而标题栏失焦时已洗向 bgLayer。
     if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate)
         update();
     // NavigationView hints, via this dynamic property, when the pane is floating inside the overlay
@@ -424,7 +426,7 @@ void GalleryNavigationPane::rebuild()
     indicatorStyle.height = kSelectionIndicatorHeight;
     indicatorStyle.insetRole = IndicatorInsetRole;
     m_treeView->setSelectionIndicatorStyle(indicatorStyle);
-    m_treeView->setSelectionMode(fluent::collections::TreeView::TreeSelectionMode::Single);
+    m_treeView->setSelectionMode(fluent::collections::TreeView::SelectionMode::Single);
     m_treeView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     if (auto* scrollBar = m_treeView->verticalFluentScrollBar())
         scrollBar->setThickness(5);

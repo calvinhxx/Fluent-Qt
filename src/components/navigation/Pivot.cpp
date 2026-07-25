@@ -234,12 +234,11 @@ void Pivot::setOverflowBehavior(OverflowBehavior behavior)
     emit this->overflowBehaviorChanged(m_overflowBehavior);
 }
 
-void Pivot::setItemFontRole(const QString& role)
+void Pivot::setItemFontRole(Typography::FontRole role)
 {
-    const QString normalized = normalizedString(role, QStringLiteral("Body"));
-    if (m_itemFontRole == normalized)
+    if (m_itemFontRole == role)
         return;
-    m_itemFontRole = normalized;
+    m_itemFontRole = role;
     invalidateLayout();
     emit this->itemFontRoleChanged(m_itemFontRole);
 }

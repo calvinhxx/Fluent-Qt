@@ -129,7 +129,7 @@ protected:
 
 private:
     struct Row {
-        QString role;
+        Typography::FontRole role;
         QString name;
         int size;
         int lineHeight;

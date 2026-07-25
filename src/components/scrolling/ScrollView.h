@@ -10,6 +10,7 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/WidgetOwnership.h"
 
 class QScrollBar;
 class QWheelEvent;
@@ -104,6 +105,18 @@ class ScrollView : public QScrollArea, public FluentElement, public QMLPlus {
      * zh_CN: 默认为关闭，因为 Gallery 页面中经常嵌套滚动视图。
      */
     Q_PROPERTY(bool scrollChainingEnabled READ isScrollChainingEnabled WRITE setScrollChainingEnabled NOTIFY scrollChainingEnabledChanged)
+    /**
+     * @brief Widget displayed inside the scroll viewport.
+     * zh_CN: 显示在滚动视口中的内容控件。
+     */
+    Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget
+               NOTIFY contentWidgetChanged)
+    /**
+     * @brief Release policy for the current content widget.
+     * zh_CN: 当前内容控件的释放策略。
+     */
+    Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership
+               NOTIFY contentOwnershipChanged)
 
 public:
     enum class ScrollMode {
@@ -130,7 +143,34 @@ public:
     explicit ScrollView(QWidget* parent = nullptr);
     ~ScrollView() override;
 
+    /**
+     * @brief Installs content using QScrollArea-compatible owned semantics.
+     * zh_CN: 按照与 QScrollArea 一致的 Owned 语义安装内容控件。
+     */
     void setWidget(QWidget* widget);
+
+    /**
+     * @brief Removes and returns the current content without deleting it.
+     * zh_CN: 移除并返回当前内容控件，且不销毁该控件。
+     */
+    QWidget* takeWidget();
+
+    QWidget* contentWidget() const;
+    WidgetOwnership contentOwnership() const;
+    void setContentWidget(QWidget* widget);
+
+    /**
+     * @brief Installs content with an explicit release policy.
+     * zh_CN: 使用显式释放策略安装内容控件。
+     * @return true when the requested content contract was applied.
+     */
+    bool setContentWidget(QWidget* widget, WidgetOwnership ownership);
+
+    /**
+     * @brief Removes and returns content as a parentless caller-owned widget.
+     * zh_CN: 将内容作为无父控件、由调用方持有的 QWidget 移除并返回。
+     */
+    QWidget* takeContentWidget();
 
     ScrollMode horizontalScrollMode() const { return m_horizontalScrollMode; }
     void setHorizontalScrollMode(ScrollMode mode);
@@ -181,6 +221,8 @@ signals:
     void maxZoomFactorChanged();
     void scrollChainingEnabledChanged();
     void scrollPositionChanged(int horizontalOffset, int verticalOffset);
+    void contentWidgetChanged(QWidget* widget);
+    void contentOwnershipChanged(WidgetOwnership ownership);
 
 protected:
     bool event(QEvent* event) override;
@@ -196,6 +238,10 @@ private:
     };
 
     void init();
+    void synchronizeContentWidget(bool notify = true);
+    void observeContentWidget(QWidget* content, QWidget* originalParent,
+                              WidgetOwnership ownership, bool notify);
+    QWidget* releaseContentWidget(bool deleteOwned, bool restoreParent);
     void applyScrollPolicies();
     void applyAxisPolicy(Axis axis);
     void syncFloatingScrollBar();
@@ -237,13 +283,16 @@ private:
     QPropertyAnimation* m_zoomAnimation = nullptr;
     QWidget* m_cornerWidget = nullptr;
     ScrollBar* m_floatingVerticalBar = nullptr;  // Overlay bar for vertical "Visible" (no gutter). zh_CN: 垂直“常显”用的浮动覆盖条（不预留沟槽）。
-    QPointer<QWidget> m_contentWidget;
+    QPointer<QWidget> m_observedContentWidget;
+    QPointer<QWidget> m_originalContentParent;
+    WidgetOwnership m_contentOwnership = WidgetOwnership::Owned;
     ScrollViewZoomAware* m_zoomAwareContent = nullptr;
     QSizeF m_unscaledContentSize;
     QPointF m_zoomAnimationAnchor = QPointF(-1.0, -1.0);
     QElapsedTimer m_lastNativeZoomGestureTime;
     bool m_nativeZoomGestureActive = false;
     bool m_nativeZoomGestureHasZoomed = false;
+    bool m_contentMutationInProgress = false;
 };
 
 } // namespace fluent::scrolling

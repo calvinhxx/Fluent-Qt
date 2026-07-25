@@ -134,7 +134,7 @@ void RatingControl::setStarSize(int size)
     emit starSizeChanged(m_starSize);
 }
 
-void RatingControl::setFontRole(const QString& role)
+void RatingControl::setFontRole(Typography::FontRole role)
 {
     if (m_fontRole == role) return;
     m_fontRole = role;
@@ -144,7 +144,7 @@ void RatingControl::setFontRole(const QString& role)
     emit fontRoleChanged();
 }
 
-void RatingControl::setCaptionFontRole(const QString& role)
+void RatingControl::setCaptionFontRole(Typography::FontRole role)
 {
     if (m_captionFontRole == role) return;
     m_captionFontRole = role;

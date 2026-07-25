@@ -192,6 +192,7 @@ void ColorPicker::initUi() {
 
     // Input area: Hex plus four RGBA rows. zh_CN: 输入区——Hex + RGBA 五行。
     auto* inputsPanel = new QWidget(this);
+    inputsPanel->setObjectName(QStringLiteral("ColorPicker.InputsPanel"));
     auto* inputsLayout = new QVBoxLayout(inputsPanel);
     inputsLayout->setContentsMargins(0, 0, 0, 0);
     inputsLayout->setSpacing(spacing.gap.tight);
@@ -243,6 +244,7 @@ void ColorPicker::initUi() {
 
     // Slider area below: value (V) and alpha, after WinUI 3. zh_CN: 下方 Slider 区——明度 (V) + Alpha。
     auto* slidersPanel = new QWidget(this);
+    slidersPanel->setObjectName(QStringLiteral("ColorPicker.SlidersPanel"));
     auto* slidersLayout = new QVBoxLayout(slidersPanel);
     slidersLayout->setContentsMargins(0, 0, 0, 0);
     slidersLayout->setSpacing(spacing.gap.tight);
@@ -283,13 +285,16 @@ void ColorPicker::initUi() {
     anchorLayout->addAnchoredWidget(slidersPanel, aSliders);
 
     m_spectrum = new ColorSpectrumWidget(this, this);
+    m_spectrum->setObjectName(QStringLiteral("ColorPicker.Spectrum"));
     m_spectrum->setMinimumSize(200, 160);
     m_spectrum->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     m_hueBar = new HueBarWidget(this, this);
+    m_hueBar->setObjectName(QStringLiteral("ColorPicker.HueBar"));
     m_hueBar->setFixedWidth(24);
 
     m_previewPane = new ColorPreviewPaneWidget(this, this);
+    m_previewPane->setObjectName(QStringLiteral("ColorPicker.PreviewPane"));
 
     ::fluent::AnchorLayout::Anchors aSpectrum;
     aSpectrum.left = {this, Edge::Left, pad};
@@ -300,16 +305,14 @@ void ColorPicker::initUi() {
 
     ::fluent::AnchorLayout::Anchors aHue;
     aHue.right = {m_previewPane, Edge::Left, -gap};
-    aHue.left = {m_hueBar, Edge::Right, -24};
-    aHue.top = {m_spectrum, Edge::Top, 0};
-    aHue.bottom = {m_spectrum, Edge::Bottom, 0};
+    aHue.top = {this, Edge::Top, pad};
+    aHue.bottom = {slidersPanel, Edge::Top, -gap};
     anchorLayout->addAnchoredWidget(m_hueBar, aHue);
 
     ::fluent::AnchorLayout::Anchors aPreview;
     aPreview.right = {this, Edge::Right, -pad};
-    aPreview.left = {m_previewPane, Edge::Right, -28};
-    aPreview.top = {m_spectrum, Edge::Top, 0};
-    aPreview.bottom = {m_spectrum, Edge::Bottom, 0};
+    aPreview.top = {this, Edge::Top, pad};
+    aPreview.bottom = {slidersPanel, Edge::Top, -gap};
     anchorLayout->addAnchoredWidget(m_previewPane, aPreview);
 
     onThemeUpdated();
@@ -317,7 +320,7 @@ void ColorPicker::initUi() {
 
 void ColorPicker::onThemeUpdated() {
     const auto& colors = themeColors();
-    const auto& fs = themeFont("Body");
+    const auto& fs = themeFont(Typography::FontRole::Body);
     QFont f = fs.toQFont();
 
     // 1. Refresh theme-aware children that miss parent font changes on their own.
@@ -510,4 +513,3 @@ QColor ColorPicker::hexToColor(const QString& text, bool* ok) const {
 }
 
 } // namespace fluent::basicinput
-

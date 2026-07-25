@@ -109,23 +109,23 @@ FlowView::~FlowView()
     clearDragAnimations();
 }
 
-void FlowView::setSelectionMode(FlowSelectionMode mode)
+void FlowView::setSelectionMode(SelectionMode mode)
 {
     if (m_selectionMode == mode)
         return;
     m_selectionMode = mode;
 
     switch (mode) {
-    case FlowSelectionMode::None:
+    case SelectionMode::None:
         QAbstractItemView::setSelectionMode(QAbstractItemView::NoSelection);
         break;
-    case FlowSelectionMode::Single:
+    case SelectionMode::Single:
         QAbstractItemView::setSelectionMode(QAbstractItemView::SingleSelection);
         break;
-    case FlowSelectionMode::Multiple:
+    case SelectionMode::Multiple:
         QAbstractItemView::setSelectionMode(QAbstractItemView::MultiSelection);
         break;
-    case FlowSelectionMode::Extended:
+    case SelectionMode::Extended:
         QAbstractItemView::setSelectionMode(QAbstractItemView::ExtendedSelection);
         break;
     }
@@ -133,7 +133,7 @@ void FlowView::setSelectionMode(FlowSelectionMode mode)
     emit selectionModeChanged();
 }
 
-void FlowView::setFontRole(const QString& role)
+void FlowView::setFontRole(Typography::FontRole role)
 {
     if (m_fontRole == role)
         return;
@@ -505,7 +505,7 @@ void FlowView::mousePressEvent(QMouseEvent* event)
             if (m_canReorderItems) {
                 m_dragStartPos = fluentMousePos(event);
                 m_dragSourceIndex = index.row();
-                if ((m_selectionMode == FlowSelectionMode::Multiple || m_selectionMode == FlowSelectionMode::Extended) &&
+                if ((m_selectionMode == SelectionMode::Multiple || m_selectionMode == SelectionMode::Extended) &&
                     selectionModel() && selectionModel()->isSelected(index)) {
                     m_dragPressIntercepted = true;
                     event->accept();
@@ -743,9 +743,9 @@ void FlowView::applyPointerSelection(const QModelIndex& index, Qt::KeyboardModif
         return;
 
     selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
-    if (m_selectionMode == FlowSelectionMode::None) {
+    if (m_selectionMode == SelectionMode::None) {
         selectionModel()->clearSelection();
-    } else if ((m_selectionMode == FlowSelectionMode::Multiple || m_selectionMode == FlowSelectionMode::Extended) &&
+    } else if ((m_selectionMode == SelectionMode::Multiple || m_selectionMode == SelectionMode::Extended) &&
                (modifiers & (Qt::ControlModifier | Qt::MetaModifier))) {
         selectionModel()->select(index, QItemSelectionModel::Toggle);
     } else {

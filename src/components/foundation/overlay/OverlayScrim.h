@@ -70,6 +70,9 @@ public:
 
     void onThemeUpdated() override;
 
+signals:
+    void pressed(const QPoint& globalPos);
+
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;

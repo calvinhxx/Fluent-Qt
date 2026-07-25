@@ -282,12 +282,11 @@ void TabStrip::setKeyboardAcceleratorsEnabled(bool enabled)
     m_keyboardAcceleratorsEnabled = enabled;
 }
 
-void TabStrip::setTabFontRole(const QString& role)
+void TabStrip::setTabFontRole(Typography::FontRole role)
 {
-    const QString normalized = normalizedString(role, QStringLiteral("Body"));
-    if (m_tabFontRole == normalized)
+    if (m_tabFontRole == role)
         return;
-    m_tabFontRole = normalized;
+    m_tabFontRole = role;
     setFont(tabFont());
     invalidateLayout();
 }
@@ -2189,12 +2188,11 @@ void TabView::setKeyboardAcceleratorsEnabled(bool enabled)
     emit keyboardAcceleratorsEnabledChanged(m_keyboardAcceleratorsEnabled);
 }
 
-void TabView::setTabFontRole(const QString& role)
+void TabView::setTabFontRole(Typography::FontRole role)
 {
-    const QString normalized = normalizedString(role, QStringLiteral("Body"));
-    if (m_tabFontRole == normalized)
+    if (m_tabFontRole == role)
         return;
-    m_tabFontRole = normalized;
+    m_tabFontRole = role;
     m_tabStrip->setTabFontRole(m_tabFontRole);
     emit tabFontRoleChanged(m_tabFontRole);
 }

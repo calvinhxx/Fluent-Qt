@@ -183,6 +183,37 @@ TEST_F(DialogTest, SameWindowDialogRepositionsInsideOwnerSurface) {
     QApplication::processEvents();
 }
 
+TEST_F(DialogTest, OpenReResolvesOwnerAfterHostJoinsFinalWindow) {
+    auto* page = new QWidget;
+    auto* host = new QWidget(page);
+    host->setGeometry(0, 0, 300, 200);
+
+    {
+        Dialog dialog(host);
+        dialog.setAnimationEnabled(false);
+        dialog.setFixedSize(300, 200);
+
+        page->setParent(window);
+        page->setGeometry(180, 0, 420, 500);
+        window->show();
+        page->show();
+        host->show();
+        QApplication::processEvents();
+
+        dialog.open();
+        QApplication::processEvents();
+
+        EXPECT_EQ(dialog.parentWidget(), window);
+        EXPECT_EQ(dialog.windowType(), Qt::Widget);
+        EXPECT_EQ(dialog.pos(), QPoint(150, 150));
+
+        dialog.done(QDialog::Rejected);
+        QApplication::processEvents();
+    }
+
+    delete page;
+}
+
 TEST_F(DialogTest, SmokeDialogBlocksScrimClicks) {
     window->show();
     QApplication::processEvents();

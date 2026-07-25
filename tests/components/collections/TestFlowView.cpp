@@ -163,8 +163,8 @@ class FlowViewTest : public ::testing::Test {
 protected:
     static void SetUpTestSuite()
     {
-        qRegisterMetaType<fluent::collections::FlowView::FlowSelectionMode>(
-            "fluent::collections::FlowView::FlowSelectionMode");
+        qRegisterMetaType<fluent::collections::FlowView::SelectionMode>(
+            "fluent::collections::FlowView::SelectionMode");
     }
 
     void SetUp() override
@@ -187,7 +187,7 @@ protected:
 TEST_F(FlowViewTest, DefaultsPropertiesAndGridViewRemainSeparate)
 {
     FlowView flow;
-    EXPECT_EQ(flow.selectionMode(), FlowSelectionMode::Single);
+    EXPECT_EQ(flow.selectionMode(), SelectionMode::Single);
     EXPECT_TRUE(flow.borderVisible());
     EXPECT_TRUE(flow.isBorderVisible());
     EXPECT_EQ(flow.defaultItemSize(), QSize(120, 64));
@@ -202,7 +202,7 @@ TEST_F(FlowViewTest, DefaultsPropertiesAndGridViewRemainSeparate)
     QSignalSpy borderSpy(&flow, &FlowView::borderVisibleChanged);
     QSignalSpy headerSpy(&flow, &FlowView::headerTextChanged);
     QSignalSpy spacingSpy(&flow, &FlowView::horizontalSpacingChanged);
-    flow.setSelectionMode(FlowSelectionMode::Multiple);
+    flow.setSelectionMode(SelectionMode::Multiple);
     flow.setBorderVisible(false);
     flow.setHeaderText(QStringLiteral("Flow samples"));
     flow.setHorizontalSpacing(12);
@@ -511,7 +511,7 @@ TEST_F(FlowViewTest, MultiSelectRequiresControlClickAndDragDoesNotRubberBandSele
 {
     auto* flow = new FlowView(window);
     flow->setGeometry(0, 0, 260, 180);
-    flow->setSelectionMode(FlowSelectionMode::Extended);
+    flow->setSelectionMode(SelectionMode::Extended);
     flow->setContentMargins(QMargins());
     flow->setHorizontalSpacing(10);
     flow->setVerticalSpacing(10);
@@ -583,7 +583,7 @@ TEST_F(FlowViewTest, DragReorderWithoutModifierSelectsOnlyDraggedItem)
     }
     auto* flow = new FlowView(window);
     flow->setGeometry(0, 0, 360, 220);
-    flow->setSelectionMode(FlowSelectionMode::Extended);
+    flow->setSelectionMode(SelectionMode::Extended);
     flow->setContentMargins(QMargins());
     flow->setHorizontalSpacing(10);
     flow->setVerticalSpacing(10);
@@ -741,7 +741,7 @@ TEST_F(FlowViewTest, VisualCheck)
     window->setLayout(layout);
 
     auto* title = new Label(QStringLiteral("FlowView"), window);
-    title->setFluentTypography(QStringLiteral("Title"));
+    title->setFluentTypography(Typography::FontRole::Title);
     title->anchors()->top = {window, Edge::Top, 28};
     title->anchors()->left = {window, Edge::Left, 32};
     title->anchors()->right = {window, Edge::Right, -32};
@@ -751,7 +751,7 @@ TEST_F(FlowViewTest, VisualCheck)
     flow->setHeaderText(QStringLiteral("Variable size flow"));
     flow->setPlaceholderText(QStringLiteral("No items"));
     flow->setCanReorderItems(true);
-    flow->setSelectionMode(FlowSelectionMode::Extended);
+    flow->setSelectionMode(SelectionMode::Extended);
     flow->setContentMargins(QMargins(12, 12, 12, 12));
     flow->setHorizontalSpacing(10);
     flow->setVerticalSpacing(10);

@@ -18,6 +18,7 @@
 
 using fluent::collections::StackView;
 using fluent::scrolling::PipsPager;
+using fluent::WidgetOwnership;
 
 namespace {
 
@@ -113,9 +114,9 @@ protected:
         fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewTransitionType>(
             "fluent::collections::StackView::StackViewTransitionType",
             "StackViewTransitionType");
-        fluentRegisterMetaTypeNames<fluent::collections::StackView::StackViewItemOwnership>(
-            "fluent::collections::StackView::StackViewItemOwnership",
-            "StackViewItemOwnership");
+        fluentRegisterMetaTypeNames<fluent::WidgetOwnership>(
+            "fluent::WidgetOwnership",
+            "WidgetOwnership");
         qRegisterMetaType<Qt::Orientation>("Qt::Orientation");
     }
 
@@ -143,6 +144,7 @@ TEST_F(StackViewTest, DefaultsExposeExpectedApi)
     EXPECT_TRUE(stack.transitionAnimationEnabled());
     EXPECT_GT(stack.transitionDuration(), 0);
     EXPECT_EQ(stack.transitionType(), StackView::StackViewTransitionType::SlideFade);
+    EXPECT_EQ(stack.defaultItemOwnership(), WidgetOwnership::Owned);
     EXPECT_FALSE(stack.sizeHint().isEmpty());
     EXPECT_NE(dynamic_cast<QStackedWidget*>(&stack), nullptr);
     EXPECT_NE(dynamic_cast<fluent::FluentElement*>(&stack), nullptr);
@@ -226,13 +228,13 @@ TEST_F(StackViewTest, SetInitialItemResetsStackAndRespectsOwnership)
     QPointer<QWidget> firstPointer = first;
     auto* second = new StackPage("Second");
 
-    ASSERT_TRUE(stack.setInitialItem(first, StackView::StackViewItemOwnership::DoesNotOwnItem));
+    ASSERT_TRUE(stack.setInitialItem(first, WidgetOwnership::Borrowed));
     EXPECT_EQ(stack.depth(), 1);
     EXPECT_EQ(stack.currentItem(), first);
     EXPECT_EQ(stack.initialItem(), first);
     EXPECT_EQ(first->parent(), &stack);
 
-    ASSERT_TRUE(stack.setInitialItem(second, StackView::StackViewItemOwnership::DoesNotOwnItem));
+    ASSERT_TRUE(stack.setInitialItem(second, WidgetOwnership::Borrowed));
     processDeferredDeletes();
     ASSERT_FALSE(firstPointer.isNull());
     EXPECT_EQ(first->parent(), nullptr);
@@ -360,7 +362,7 @@ TEST_F(StackViewTest, OwnershipAndExternalDestructionAreHandled)
 
     auto* external = new StackPage("External");
     QPointer<QWidget> externalPointer = external;
-    ASSERT_TRUE(stack.push(external, StackView::StackViewItemOwnership::DoesNotOwnItem));
+    ASSERT_TRUE(stack.push(external, WidgetOwnership::Borrowed));
     ASSERT_TRUE(stack.pop());
     processDeferredDeletes();
     ASSERT_FALSE(externalPointer.isNull());
@@ -368,11 +370,28 @@ TEST_F(StackViewTest, OwnershipAndExternalDestructionAreHandled)
     delete external;
 
     auto* victim = new StackPage("Victim");
-    ASSERT_TRUE(stack.push(victim, StackView::StackViewItemOwnership::DoesNotOwnItem));
+    ASSERT_TRUE(stack.push(victim, WidgetOwnership::Borrowed));
     delete victim;
     QApplication::processEvents();
     EXPECT_EQ(stack.depth(), 1);
     EXPECT_EQ(stack.currentItem(), root);
+}
+
+TEST_F(StackViewTest, ReparentedPagesReturnToTheirOriginalParent)
+{
+    QWidget owner;
+    StackView stack;
+    stack.setTransitionAnimationEnabled(false);
+    ASSERT_TRUE(stack.push(new StackPage("Root")));
+
+    auto* page = new StackPage("Reparented", QColor("#DDEAF7"), &owner);
+    ASSERT_TRUE(stack.push(page, WidgetOwnership::Reparented));
+    EXPECT_EQ(page->parentWidget(), &stack);
+
+    ASSERT_TRUE(stack.pop());
+    processDeferredDeletes();
+    EXPECT_EQ(page->parentWidget(), &owner);
+    EXPECT_FALSE(page->isVisible());
 }
 
 TEST_F(StackViewTest, ExternalRemoveWidgetPrunesStackEntries)
@@ -383,8 +402,8 @@ TEST_F(StackViewTest, ExternalRemoveWidgetPrunesStackEntries)
     auto* middle = new StackPage("Middle");
     auto* top = new StackPage("Top");
     ASSERT_TRUE(stack.push(root));
-    ASSERT_TRUE(stack.push(middle, StackView::StackViewItemOwnership::DoesNotOwnItem));
-    ASSERT_TRUE(stack.push(top, StackView::StackViewItemOwnership::DoesNotOwnItem));
+    ASSERT_TRUE(stack.push(middle, WidgetOwnership::Borrowed));
+    ASSERT_TRUE(stack.push(top, WidgetOwnership::Borrowed));
 
     stack.removeWidget(middle);
     QApplication::processEvents();
@@ -409,6 +428,8 @@ TEST_F(StackViewTest, DirectQStackedWidgetCurrentIndexCanAdoptWidgets)
     stack.setTransitionAnimationEnabled(false);
     auto* first = new StackPage("First");
     auto* second = new StackPage("Second");
+    QPointer<QWidget> firstGuard = first;
+    QPointer<QWidget> secondGuard = second;
 
     stack.addWidget(first);
     EXPECT_EQ(stack.depth(), 1);
@@ -418,6 +439,33 @@ TEST_F(StackViewTest, DirectQStackedWidgetCurrentIndexCanAdoptWidgets)
     EXPECT_EQ(stack.depth(), 2);
     EXPECT_EQ(stack.currentItem(), second);
     EXPECT_EQ(stack.itemAt(1), second);
+
+    ASSERT_TRUE(stack.clear());
+    processDeferredDeletes();
+    ASSERT_FALSE(firstGuard.isNull());
+    ASSERT_FALSE(secondGuard.isNull());
+    EXPECT_EQ(first->parentWidget(), nullptr);
+    EXPECT_EQ(second->parentWidget(), nullptr);
+    delete first;
+    delete second;
+}
+
+TEST_F(StackViewTest, AdoptWidgetDefaultsToBorrowedOwnership)
+{
+    auto* page = new StackPage("Caller-owned");
+    QPointer<QWidget> pageGuard = page;
+
+    {
+        StackView stack;
+        stack.setTransitionAnimationEnabled(false);
+        ASSERT_TRUE(stack.adoptWidget(page));
+        EXPECT_EQ(stack.depth(), 1);
+        EXPECT_EQ(page->parentWidget(), &stack);
+    }
+
+    ASSERT_FALSE(pageGuard.isNull());
+    EXPECT_EQ(page->parentWidget(), nullptr);
+    delete page;
 }
 
 TEST_F(StackViewTest, KeyboardBackAndLayoutThemeBehavior)

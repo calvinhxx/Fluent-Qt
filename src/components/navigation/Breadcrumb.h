@@ -64,12 +64,12 @@ class Breadcrumb : public QWidget, public FluentElement, public QMLPlus {
      * @brief Typography role used by standard breadcrumb items.
      * zh_CN: 标准面包屑条目使用的排版角色。
      */
-    Q_PROPERTY(QString standardFontRole READ standardFontRole WRITE setStandardFontRole NOTIFY standardFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole standardFontRole READ standardFontRole WRITE setStandardFontRole NOTIFY standardFontRoleChanged)
     /**
      * @brief Typography role used by large breadcrumb items.
      * zh_CN: 大尺寸面包屑条目使用的排版角色。
      */
-    Q_PROPERTY(QString largeFontRole READ largeFontRole WRITE setLargeFontRole NOTIFY largeFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole largeFontRole READ largeFontRole WRITE setLargeFontRole NOTIFY largeFontRoleChanged)
 
 public:
     enum class BreadcrumbSize {
@@ -108,10 +108,10 @@ public:
     bool autoTruncateOnItemClick() const { return m_autoTruncateOnItemClick; }
     void setAutoTruncateOnItemClick(bool enabled);
 
-    QString standardFontRole() const { return m_standardFontRole; }
-    void setStandardFontRole(const QString& role);
-    QString largeFontRole() const { return m_largeFontRole; }
-    void setLargeFontRole(const QString& role);
+    Typography::FontRole standardFontRole() const { return m_standardFontRole; }
+    void setStandardFontRole(Typography::FontRole role);
+    Typography::FontRole largeFontRole() const { return m_largeFontRole; }
+    void setLargeFontRole(Typography::FontRole role);
 
     QRect itemGeometry(int itemIndex) const;
     QRect separatorGeometry(int separatorIndex) const;
@@ -131,8 +131,8 @@ signals:
     void breadcrumbSizeChanged(BreadcrumbSize size);
     void overflowModeChanged(OverflowMode mode);
     void autoTruncateOnItemClickChanged(bool enabled);
-    void standardFontRoleChanged(const QString& role);
-    void largeFontRoleChanged(const QString& role);
+    void standardFontRoleChanged(Typography::FontRole role);
+    void largeFontRoleChanged(Typography::FontRole role);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -175,7 +175,6 @@ private:
     bool isValidIndex(int index) const;
     Metrics metrics() const;
     QFont contentFont() const;
-    QString normalizedFontRole(const QString& role, const QString& fallback) const;
     void invalidateLayout(bool updateGeometryHint = true);
     void ensureLayout() const;
     void updateLayout();
@@ -210,8 +209,8 @@ private:
     int m_hoveredRecord = -1;
     int m_pressedRecord = -1;
     int m_focusedRecord = -1;
-    QString m_standardFontRole = QStringLiteral("Body");
-    QString m_largeFontRole = QStringLiteral("Title");
+    Typography::FontRole m_standardFontRole = Typography::FontRole::Body;
+    Typography::FontRole m_largeFontRole = Typography::FontRole::Title;
 };
 
 } // namespace fluent::navigation

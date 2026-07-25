@@ -9,7 +9,9 @@
 #include "compatibility/QtCompat.h"
 #include "design/Elevation.h"
 #include "design/Animation.h"
+#include "design/Breakpoints.h"
 #include "design/Material.h"
+#include "design/Typography.h"
 
 class QWidget;
 
@@ -193,7 +195,7 @@ public:
      */
     const Colors& themeColorsRef() const;
 
-    FontStyle themeFont(const QString& styleName = "Body") const;
+    FontStyle themeFont(Typography::FontRole role = Typography::FontRole::Body) const;
     Radius themeRadius() const;
 
     /**
@@ -210,7 +212,7 @@ public:
     Material::MicaToken    themeMica()    const;
     Material::SmokeToken   themeSmoke()   const;
     Elevation::ShadowParams themeShadow(Elevation::Level level) const;
-    int themeBreakpoint(const QString& size = "Medium") const;
+    int themeBreakpoint(Breakpoints::Breakpoint breakpoint = Breakpoints::Breakpoint::Medium) const;
 
     /**
      * @brief Window-chrome backdrop color for the given activation state.
@@ -223,21 +225,6 @@ public:
      * 使标题栏与导航栏在窗口失焦时明显变淡——对齐 WinUI Mica 的激活/非激活回退。
      */
     QColor themeBackdrop(bool active) const;
-
-    /**
-     * @brief The backdrop fill a chrome surface (title bar, nav pane) should paint, given its host
-     * window and activation state. zh_CN: 给定宿主窗口与激活状态，chrome 表面（标题栏、导航栏）应填充的背景色。
-     *
-     * Single source of truth for the chrome-backdrop decision that used to be duplicated across the
-     * title bar and nav-pane paints. When the host window carries a real OS-composited backdrop
-     * (Windows DWM/Acrylic or macOS vibrancy) the surface must let it show through, so this returns
-     * an **invalid QColor** — the caller's contract is "erase to transparent". Otherwise it returns
-     * the opaque app-painted fallback for the requested effect; Normal maps to themeBackdrop().
-     * zh_CN: chrome 背景决策的单一真相源（原先散落在标题栏与导航栏的绘制里）。宿主窗口带真实系统合成背景
-     *（Windows DWM/Acrylic 或 macOS vibrancy）时，表面须透出该背景，故返回**无效 QColor**——调用方据此擦成透明；
-     * 否则返回该激活状态下的纯色 themeBackdrop()（跨平台回退）。
-     */
-    QColor chromeBackdropFill(const QWidget* hostWindow, bool active) const;
 
     /**
      * @brief Called after the global theme changes.

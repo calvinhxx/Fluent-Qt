@@ -559,7 +559,7 @@ TEST_F(AnnotatedScrollBarTest, VisualCheck)
     window->setLayout(root);
 
     auto* title = new Label(QStringLiteral("AnnotatedScrollBar"), window);
-    title->setFluentTypography(QStringLiteral("Title"));
+    title->setFluentTypography(Typography::FontRole::Title);
     title->setFixedSize(360, 40);
     AnchorLayout::Anchors titleAnchors;
     titleAnchors.left = {window, Edge::Left, 24};
@@ -645,7 +645,7 @@ TEST_F(AnnotatedScrollBarTest, VisualCheck)
     root->addAnchoredWidget(linkedBar, linkedAnchors);
 
     auto* heightDescription = new Label(QStringLiteral("Changing the AnnotatedScrollBar height refreshes its Labels layout."), settingsPanel);
-    heightDescription->setFluentTypography(QStringLiteral("Body"));
+    heightDescription->setFluentTypography(Typography::FontRole::Body);
     heightDescription->setWordWrap(true);
     heightDescription->setFixedSize(360, 42);
     AnchorLayout::Anchors descriptionAnchors;
@@ -654,7 +654,7 @@ TEST_F(AnnotatedScrollBarTest, VisualCheck)
     settingsLayout->addAnchoredWidget(heightDescription, descriptionAnchors);
 
     auto* heightLabel = new Label(QStringLiteral("AnnotatedScrollBar maximum height:"), settingsPanel);
-    heightLabel->setFluentTypography(QStringLiteral("BodyStrong"));
+    heightLabel->setFluentTypography(Typography::FontRole::BodyStrong);
     heightLabel->setFixedSize(260, 24);
     AnchorLayout::Anchors heightLabelAnchors;
     heightLabelAnchors.left = {heightDescription, Edge::Left, 0};
@@ -662,7 +662,7 @@ TEST_F(AnnotatedScrollBarTest, VisualCheck)
     settingsLayout->addAnchoredWidget(heightLabel, heightLabelAnchors);
 
     auto* heightValue = new Label(QStringLiteral("460 px"), settingsPanel);
-    heightValue->setFluentTypography(QStringLiteral("Caption"));
+    heightValue->setFluentTypography(Typography::FontRole::Caption);
     heightValue->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     heightValue->setFixedSize(72, 24);
     AnchorLayout::Anchors heightValueAnchors;

@@ -11,7 +11,7 @@ CheckBox::CheckBox(const QString& text, QWidget* parent)
     setAttribute(Qt::WA_Hover);
     setCursor(Qt::ArrowCursor);
     
-    auto fs = themeFont("Body");
+    auto fs = themeFont(Typography::FontRole::Body);
     setFont(fs.toQFont());
     initAnimation();
 }

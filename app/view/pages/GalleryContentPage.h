@@ -89,7 +89,7 @@ protected:
      * zh_CN: 创建颜色随主题刷新的标签；由调用方负责布局。
      */
     fluent::textfields::Label* createTrackedLabel(const QString& text,
-                                                  const QString& fontRole,
+                                                  Typography::FontRole fontRole,
                                                   TextRole textRole);
 
     /**

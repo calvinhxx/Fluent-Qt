@@ -292,21 +292,21 @@ void TreeView::setSelectionModel(QItemSelectionModel* selectionModel) {
 
 // ── Selection mode ────────────────────────────────────────────────────────────
 
-void TreeView::setSelectionMode(TreeSelectionMode mode) {
+void TreeView::setSelectionMode(SelectionMode mode) {
     if (m_selectionMode == mode) return;
     m_selectionMode = mode;
 
     switch (mode) {
-    case TreeSelectionMode::None:
+    case SelectionMode::None:
         QTreeView::setSelectionMode(QAbstractItemView::NoSelection);
         break;
-    case TreeSelectionMode::Single:
+    case SelectionMode::Single:
         QTreeView::setSelectionMode(QAbstractItemView::SingleSelection);
         break;
-    case TreeSelectionMode::Multiple:
+    case SelectionMode::Multiple:
         QTreeView::setSelectionMode(QAbstractItemView::MultiSelection);
         break;
-    case TreeSelectionMode::Extended:
+    case SelectionMode::Extended:
         QTreeView::setSelectionMode(QAbstractItemView::ExtendedSelection);
         break;
     }
@@ -339,7 +339,7 @@ void TreeView::setOverscrollEnabled(bool enabled) {
 
 // ── Appearance properties ────────────────────────────────────────────────────
 
-void TreeView::setFontRole(const QString& role) {
+void TreeView::setFontRole(Typography::FontRole role) {
     if (m_fontRole == role) return;
     m_fontRole = role;
     applyThemeStyle();
@@ -1271,7 +1271,7 @@ void TreeView::setIndicatorHierarchyTransition(IndicatorHierarchyTransition tran
 void TreeView::syncCheckStatesWithSelection(const QItemSelection& selected, const QItemSelection& deselected) {
     if (m_syncingCheckStateWithSelection)
         return;
-    if (m_selectionMode != TreeSelectionMode::Multiple && m_selectionMode != TreeSelectionMode::Extended)
+    if (m_selectionMode != SelectionMode::Multiple && m_selectionMode != SelectionMode::Extended)
         return;
     if (!model() || !selectionModel())
         return;
@@ -1296,7 +1296,7 @@ void TreeView::syncCheckStatesWithSelection(const QItemSelection& selected, cons
 }
 
 bool TreeView::shouldSyncCheckStateWithSelection(const QModelIndex& index) const {
-    if (m_selectionMode != TreeSelectionMode::Multiple && m_selectionMode != TreeSelectionMode::Extended)
+    if (m_selectionMode != SelectionMode::Multiple && m_selectionMode != SelectionMode::Extended)
         return false;
     if (!index.isValid() || !model() || index.model() != model() || index.column() != 0)
         return false;

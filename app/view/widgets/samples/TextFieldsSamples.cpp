@@ -314,7 +314,7 @@ QVector<GallerySample> labelSamples()
         makeSample(QStringLiteral("label-typography"),
                    QStringLiteral("Typography roles"),
                    QStringLiteral("Labels map text to the Fluent type ramp and preserve the role across theme updates."),
-                   QStringLiteral("const QVector<QPair<QString, QString>> roles = {\n"
+                   QStringLiteral("const QVector<QPair<Typography::FontRole, QString>> roles = {\n"
                                   "    {Typography::FontRole::Caption, \"Caption\"},\n"
                                   "    {Typography::FontRole::Body, \"Body\"},\n"
                                   "    {Typography::FontRole::BodyStrong, \"Body strong\"},\n"
@@ -329,7 +329,7 @@ QVector<GallerySample> labelSamples()
                    [](QWidget* parent) {
                        auto* surface = textFieldSurface(parent, 8);
                        auto* layout = static_cast<QVBoxLayout*>(surface->layout());
-                       const QVector<QPair<QString, QString>> roles{
+                       const QVector<QPair<Typography::FontRole, QString>> roles{
                            {Typography::FontRole::Caption, QStringLiteral("Caption")},
                            {Typography::FontRole::Body, QStringLiteral("Body")},
                            {Typography::FontRole::BodyStrong, QStringLiteral("Body strong")},

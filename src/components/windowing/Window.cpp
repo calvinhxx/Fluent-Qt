@@ -503,7 +503,7 @@ void Window::closeWindow() {
 
 ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const {
     const auto& colors = themeColors();
-    QColor fill = chromeBackdropFill(this, isActiveWindow());
+    QColor fill = windowChromeBackdropFill(*this, this, isActiveWindow());
     if (!fill.isValid())
         fill = themeBackdrop(isActiveWindow());
 
@@ -564,7 +564,7 @@ void Window::paintEvent(QPaintEvent*) {
     const auto& colors = themeColors();
     // Use the same active/inactive backdrop source as the title bar and nav pane.
     // zh_CN: 使用与标题栏、导航栏一致的激活/非激活背景来源，避免 Normal 模式接缝。
-    const QColor backdrop = chromeBackdropFill(this, isActiveWindow());
+    const QColor backdrop = windowChromeBackdropFill(*this, this, isActiveWindow());
     painter.fillRect(rect(), backdrop.isValid() ? backdrop : themeBackdrop(isActiveWindow()));
 
     if (m_chrome.usesCustomWindowChrome()) {

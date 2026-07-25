@@ -57,12 +57,12 @@ class RatingControl : public QWidget, public FluentElement, public QMLPlus {
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
      */
-    Q_PROPERTY(QString fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
+    Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
      * @brief Fluent typography role used for the rating caption.
      * zh_CN: 评分说明文本使用的 Fluent 排版角色。
      */
-    Q_PROPERTY(QString captionFontRole READ captionFontRole WRITE setCaptionFontRole NOTIFY captionFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole captionFontRole READ captionFontRole WRITE setCaptionFontRole NOTIFY captionFontRoleChanged)
 
 public:
     explicit RatingControl(QWidget* parent = nullptr);
@@ -90,11 +90,11 @@ public:
     int starSize() const { return m_starSize; }
     void setStarSize(int size);
 
-    QString fontRole() const { return m_fontRole; }
-    void setFontRole(const QString& role);
+    Typography::FontRole fontRole() const { return m_fontRole; }
+    void setFontRole(Typography::FontRole role);
 
-    QString captionFontRole() const { return m_captionFontRole; }
-    void setCaptionFontRole(const QString& role);
+    Typography::FontRole captionFontRole() const { return m_captionFontRole; }
+    void setCaptionFontRole(Typography::FontRole role);
 
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
@@ -132,8 +132,8 @@ private:
     int m_maxRating = 5;
     int m_starSize = 16;
     int m_itemSpacing = 4;
-    QString m_fontRole = "Body";
-    QString m_captionFontRole = "Caption";
+    Typography::FontRole m_fontRole = Typography::FontRole::Body;
+    Typography::FontRole m_captionFontRole = Typography::FontRole::Caption;
 
     double m_hoverValue = -1.0;       // 悬停预览值
     bool m_isHovered = false;

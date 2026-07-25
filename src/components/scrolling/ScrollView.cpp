@@ -50,7 +50,9 @@ ScrollView::ScrollView(QWidget* parent)
     init();
 }
 
-ScrollView::~ScrollView() = default;
+ScrollView::~ScrollView() {
+    releaseContentWidget(true, true);
+}
 
 void ScrollView::init() {
     setFrameShape(QFrame::NoFrame);
@@ -107,11 +109,94 @@ void ScrollView::init() {
 }
 
 void ScrollView::setWidget(QWidget* content) {
+    setContentWidget(content, WidgetOwnership::Owned);
+}
+
+QWidget* ScrollView::takeWidget() {
+    return takeContentWidget();
+}
+
+QWidget* ScrollView::contentWidget() const {
+    const_cast<ScrollView*>(this)->synchronizeContentWidget();
+    return QScrollArea::widget();
+}
+
+WidgetOwnership ScrollView::contentOwnership() const {
+    const_cast<ScrollView*>(this)->synchronizeContentWidget();
+    return m_contentOwnership;
+}
+
+void ScrollView::setContentWidget(QWidget* content) {
+    setContentWidget(content, WidgetOwnership::Owned);
+}
+
+bool ScrollView::setContentWidget(QWidget* content, WidgetOwnership ownership) {
+    synchronizeContentWidget();
+    QWidget* current = QScrollArea::widget();
+    if (current == content) {
+        if (!content || m_contentOwnership == ownership)
+            return true;
+        m_contentOwnership = ownership;
+        emit contentOwnershipChanged(m_contentOwnership);
+        return true;
+    }
+
+    QWidget* originalParent = content ? content->parentWidget() : nullptr;
+    const WidgetOwnership previousOwnership = m_contentOwnership;
     stopZoomAnimation();
-    if (m_contentWidget)
-        m_contentWidget->removeEventFilter(this);
-    QScrollArea::setWidget(content);
-    m_contentWidget = content;
+    releaseContentWidget(true, true);
+
+    if (content) {
+        m_contentMutationInProgress = true;
+        QScrollArea::setWidget(content);
+        m_contentMutationInProgress = false;
+    }
+    observeContentWidget(content, originalParent, ownership, false);
+    emit contentWidgetChanged(content);
+    if (previousOwnership != m_contentOwnership)
+        emit contentOwnershipChanged(m_contentOwnership);
+    return true;
+}
+
+QWidget* ScrollView::takeContentWidget() {
+    synchronizeContentWidget();
+    const WidgetOwnership previousOwnership = m_contentOwnership;
+    QWidget* content = releaseContentWidget(false, false);
+    if (content) {
+        emit contentWidgetChanged(nullptr);
+        if (previousOwnership != m_contentOwnership)
+            emit contentOwnershipChanged(m_contentOwnership);
+    }
+    return content;
+}
+
+void ScrollView::synchronizeContentWidget(bool notify) {
+    if (m_contentMutationInProgress)
+        return;
+    QWidget* content = QScrollArea::widget();
+    if (content == m_observedContentWidget.data())
+        return;
+
+    // A call made explicitly through QScrollArea follows Qt's ownership
+    // contract. Treat the newly observed widget as Owned; the base class may
+    // already have destroyed the previous widget before this synchronization.
+    // zh_CN: 通过 QScrollArea 显式调用时遵循 Qt 的所有权契约。新观察到的内容
+    // 视为 Owned；在同步发生前，基类可能已经销毁旧内容。
+    observeContentWidget(content, nullptr, WidgetOwnership::Owned, notify);
+}
+
+void ScrollView::observeContentWidget(QWidget* content,
+                                      QWidget* originalParent,
+                                      WidgetOwnership ownership,
+                                      bool notify) {
+    QWidget* previous = m_observedContentWidget.data();
+    const WidgetOwnership previousOwnership = m_contentOwnership;
+    if (previous)
+        previous->removeEventFilter(this);
+
+    m_observedContentWidget = content;
+    m_originalContentParent = originalParent;
+    m_contentOwnership = ownership;
     m_zoomAwareContent = dynamic_cast<ScrollViewZoomAware*>(content);
     if (content) {
         content->installEventFilter(this);
@@ -123,6 +208,48 @@ void ScrollView::setWidget(QWidget* content) {
     captureContentBaseSize();
     applyZoomToContent();
     syncFloatingScrollBar();
+
+    if (notify && previous != content)
+        emit contentWidgetChanged(content);
+    if (notify && previousOwnership != m_contentOwnership)
+        emit contentOwnershipChanged(m_contentOwnership);
+}
+
+QWidget* ScrollView::releaseContentWidget(bool deleteOwned, bool restoreParent) {
+    synchronizeContentWidget(false);
+    QWidget* content = QScrollArea::widget();
+    if (!content) {
+        m_observedContentWidget = nullptr;
+        m_originalContentParent = nullptr;
+        m_zoomAwareContent = nullptr;
+        m_contentOwnership = WidgetOwnership::Owned;
+        m_unscaledContentSize = QSizeF();
+        return nullptr;
+    }
+
+    content->removeEventFilter(this);
+    const WidgetOwnership ownership = m_contentOwnership;
+    QWidget* originalParent = m_originalContentParent.data();
+    m_contentMutationInProgress = true;
+    QScrollArea::takeWidget();
+    m_contentMutationInProgress = false;
+    m_observedContentWidget = nullptr;
+    m_zoomAwareContent = nullptr;
+    m_unscaledContentSize = QSizeF();
+
+    m_originalContentParent = nullptr;
+    m_contentOwnership = WidgetOwnership::Owned;
+
+    content->hide();
+    if (ownership == WidgetOwnership::Owned && deleteOwned) {
+        delete content;
+        return nullptr;
+    }
+    if (restoreParent && ownership == WidgetOwnership::Reparented)
+        content->setParent(originalParent);
+    else
+        content->setParent(nullptr);
+    return content;
 }
 
 void ScrollView::setHorizontalScrollMode(ScrollMode mode) {
@@ -283,6 +410,7 @@ void ScrollView::onThemeUpdated() {
 }
 
 bool ScrollView::event(QEvent* event) {
+    synchronizeContentWidget();
     if (event->type() == QEvent::NativeGesture && handleNativeGesture(event, this))
         return true;
 
@@ -291,16 +419,22 @@ bool ScrollView::event(QEvent* event) {
 
     const QEvent::Type type = event->type();
     const bool handled = QScrollArea::event(event);
+    synchronizeContentWidget();
     if (shouldSyncFloatingScrollBarAfter(type))
         syncFloatingScrollBar();
     return handled;
 }
 
 bool ScrollView::eventFilter(QObject* watched, QEvent* event) {
-    const bool syncAfter = (watched == viewport() || (m_contentWidget && watched == m_contentWidget.data()))
+    synchronizeContentWidget();
+    const bool syncAfter = (watched == viewport()
+                            || (m_observedContentWidget
+                                && watched == m_observedContentWidget.data()))
         && shouldSyncFloatingScrollBarAfter(event->type());
 
-    if (watched == this || watched == viewport() || (m_contentWidget && watched == m_contentWidget.data())) {
+    if (watched == this || watched == viewport()
+        || (m_observedContentWidget
+            && watched == m_observedContentWidget.data())) {
         if (event->type() == QEvent::Wheel) {
             auto* wheel = static_cast<QWheelEvent*>(event);
             if (handleZoomWheel(wheel, watched))
@@ -530,7 +664,8 @@ ScrollView::ScrollBarVisibility ScrollView::visibilityForAxis(Axis axis) const {
 }
 
 void ScrollView::captureContentBaseSize() {
-    if (!m_contentWidget) {
+    QWidget* content = QScrollArea::widget();
+    if (!content) {
         m_unscaledContentSize = QSizeF();
         return;
     }
@@ -544,18 +679,19 @@ void ScrollView::captureContentBaseSize() {
         }
     }
 
-    QSize size = m_contentWidget->size();
+    QSize size = content->size();
     if (size.isEmpty())
-        size = m_contentWidget->sizeHint();
+        size = content->sizeHint();
     if (size.isEmpty())
-        size = m_contentWidget->minimumSizeHint();
+        size = content->minimumSizeHint();
 
     m_unscaledContentSize = QSizeF(std::max(1, size.width()),
                                    std::max(1, size.height()));
 }
 
 void ScrollView::applyZoomToContent() {
-    if (!m_contentWidget || m_unscaledContentSize.isEmpty())
+    QWidget* content = QScrollArea::widget();
+    if (!content || m_unscaledContentSize.isEmpty())
         return;
 
     // Resizable content is sized by QScrollArea to fill/scroll its viewport; pinning it
@@ -569,8 +705,8 @@ void ScrollView::applyZoomToContent() {
                            std::max(1, qRound(m_unscaledContentSize.height() * m_zoomFactor)));
     if (m_zoomAwareContent)
         m_zoomAwareContent->setScrollViewZoomFactor(m_zoomFactor);
-    m_contentWidget->setFixedSize(scaledSize);
-    m_contentWidget->update();
+    content->setFixedSize(scaledSize);
+    content->update();
 }
 
 void ScrollView::setZoomFactorAt(qreal factor, const QPointF& viewportAnchor) {

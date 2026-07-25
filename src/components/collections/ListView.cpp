@@ -282,21 +282,21 @@ void ListView::setSelectionModel(QItemSelectionModel* selectionModel) {
 
 // ── Selection mode ────────────────────────────────────────────────────────────
 
-void ListView::setSelectionMode(ListSelectionMode mode) {
+void ListView::setSelectionMode(SelectionMode mode) {
     if (m_selectionMode == mode) return;
     m_selectionMode = mode;
 
     switch (mode) {
-    case ListSelectionMode::None:
+    case SelectionMode::None:
         QListView::setSelectionMode(QAbstractItemView::NoSelection);
         break;
-    case ListSelectionMode::Single:
+    case SelectionMode::Single:
         QListView::setSelectionMode(QAbstractItemView::SingleSelection);
         break;
-    case ListSelectionMode::Multiple:
+    case SelectionMode::Multiple:
         QListView::setSelectionMode(QAbstractItemView::MultiSelection);
         break;
-    case ListSelectionMode::Extended:
+    case SelectionMode::Extended:
         QListView::setSelectionMode(QAbstractItemView::ExtendedSelection);
         break;
     }
@@ -334,7 +334,7 @@ void ListView::setFlow(Flow f) {
 
 // ── Appearance properties ────────────────────────────────────────────────────
 
-void ListView::setFontRole(const QString& role) {
+void ListView::setFontRole(Typography::FontRole role) {
     if (m_fontRole == role) return;
     m_fontRole = role;
     applyThemeStyle();
@@ -559,20 +559,20 @@ void ListView::applyPointerSelection(const QModelIndex& index, QMouseEvent* even
         return;
 
     switch (m_selectionMode) {
-    case ListSelectionMode::None:
+    case SelectionMode::None:
         selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
         return;
-    case ListSelectionMode::Single:
+    case SelectionMode::Single:
         selectionModel()->setCurrentIndex(index, QItemSelectionModel::ClearAndSelect |
                                                      QItemSelectionModel::Current |
                                                      QItemSelectionModel::Rows);
         return;
-    case ListSelectionMode::Multiple:
+    case SelectionMode::Multiple:
         selectionModel()->select(index, QItemSelectionModel::Toggle |
                                         QItemSelectionModel::Rows);
         selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
         return;
-    case ListSelectionMode::Extended:
+    case SelectionMode::Extended:
         break;
     }
 
@@ -1287,12 +1287,12 @@ bool ListView::isSelectedIndicatorEndpointUsable(const QModelIndex& index) const
 }
 
 bool ListView::usesMovingSelectedIndicator() const {
-    return m_selectionMode == ListSelectionMode::Single;
+    return m_selectionMode == SelectionMode::Single;
 }
 
 bool ListView::usesRevealSelectedIndicators() const {
-    return m_selectionMode == ListSelectionMode::Multiple ||
-           m_selectionMode == ListSelectionMode::Extended;
+    return m_selectionMode == SelectionMode::Multiple ||
+           m_selectionMode == SelectionMode::Extended;
 }
 
 QRectF ListView::selectedIndicatorBaseRect(const QModelIndex& index) const {

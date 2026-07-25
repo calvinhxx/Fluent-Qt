@@ -145,24 +145,22 @@ void Breadcrumb::setAutoTruncateOnItemClick(bool enabled)
     emit autoTruncateOnItemClickChanged(m_autoTruncateOnItemClick);
 }
 
-void Breadcrumb::setStandardFontRole(const QString& role)
+void Breadcrumb::setStandardFontRole(Typography::FontRole role)
 {
-    const QString normalized = normalizedFontRole(role, QStringLiteral("Body"));
-    if (m_standardFontRole == normalized)
+    if (m_standardFontRole == role)
         return;
-    m_standardFontRole = normalized;
+    m_standardFontRole = role;
     if (m_breadcrumbSize == BreadcrumbSize::Standard)
         setFont(contentFont());
     invalidateLayout();
     emit standardFontRoleChanged(m_standardFontRole);
 }
 
-void Breadcrumb::setLargeFontRole(const QString& role)
+void Breadcrumb::setLargeFontRole(Typography::FontRole role)
 {
-    const QString normalized = normalizedFontRole(role, QStringLiteral("Title"));
-    if (m_largeFontRole == normalized)
+    if (m_largeFontRole == role)
         return;
-    m_largeFontRole = normalized;
+    m_largeFontRole = role;
     if (m_breadcrumbSize == BreadcrumbSize::Large)
         setFont(contentFont());
     invalidateLayout();
@@ -428,14 +426,9 @@ Breadcrumb::Metrics Breadcrumb::metrics() const
 
 QFont Breadcrumb::contentFont() const
 {
-    const QString role = m_breadcrumbSize == BreadcrumbSize::Large ? m_largeFontRole : m_standardFontRole;
+    const Typography::FontRole role =
+        m_breadcrumbSize == BreadcrumbSize::Large ? m_largeFontRole : m_standardFontRole;
     return themeFont(role).toQFont();
-}
-
-QString Breadcrumb::normalizedFontRole(const QString& role, const QString& fallback) const
-{
-    const QString trimmed = role.trimmed();
-    return trimmed.isEmpty() ? fallback : trimmed;
 }
 
 void Breadcrumb::invalidateLayout(bool updateGeometryHint)

@@ -7,7 +7,6 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
-#include "components/foundation/overlay/OverlayScrim.h"
 #include "design/Spacing.h"
 
 class QEvent;
@@ -17,6 +16,10 @@ class QMouseEvent;
 class QPaintEvent;
 class QPainter;
 class QShowEvent;
+
+namespace fluent::overlay {
+class OverlayCoordinator;
+}
 
 namespace fluent::dialogs_flyouts {
 
@@ -100,8 +103,9 @@ private:
     bool m_smokeEnabled = false;
     bool m_dragEnabled = true;
     QPoint m_dragOffset;
+    QPointer<QWidget> m_originalParent;
     QPointer<QWidget> m_themeSource;
-    ::fluent::overlay::OverlayScrim* m_smokeOverlay = nullptr;
+    ::fluent::overlay::OverlayCoordinator* m_overlayCoordinator = nullptr;
 
     bool m_animationEnabled = true;
     bool m_isAnimating = false;

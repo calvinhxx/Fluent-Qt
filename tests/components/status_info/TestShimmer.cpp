@@ -114,7 +114,7 @@ protected:
 
 fluent::textfields::Label* makeLabel(const QString& text,
                                      QWidget* parent,
-                                     const QString& typography)
+                                     Typography::FontRole typography)
 {
     auto* label = new fluent::textfields::Label(text, parent);
     label->setFluentTypography(typography);
@@ -132,13 +132,13 @@ SampleCard* makeCard(QWidget* parent,
     card->setLayout(cardLayout);
 
     using Edge = fluent::AnchorLayout::Edge;
-    auto* title = makeLabel(titleText, card, QStringLiteral("BodyStrong"));
+    auto* title = makeLabel(titleText, card, Typography::FontRole::BodyStrong);
     title->anchors()->top = {card, Edge::Top, 18};
     title->anchors()->left = {card, Edge::Left, 18};
     title->anchors()->right = {card, Edge::Right, -18};
     cardLayout->addWidget(title);
 
-    auto* caption = makeLabel(captionText, card, QStringLiteral("Caption"));
+    auto* caption = makeLabel(captionText, card, Typography::FontRole::Caption);
     caption->anchors()->top = {title, Edge::Bottom, 6};
     caption->anchors()->left = {card, Edge::Left, 18};
     caption->anchors()->right = {card, Edge::Right, -18};
@@ -331,8 +331,8 @@ TEST_F(ShimmerTest, VisualCheck)
     auto* layout = new fluent::AnchorLayout(window);
     window->setLayout(layout);
 
-    auto* title = makeLabel(QStringLiteral("Shimmer loading states"), window, QStringLiteral("Title"));
-    title->setFluentTypography(QStringLiteral("Title"));
+    auto* title = makeLabel(QStringLiteral("Shimmer loading states"), window, Typography::FontRole::Title);
+    title->setFluentTypography(Typography::FontRole::Title);
     title->anchors()->top = {window, Edge::Top, 24};
     title->anchors()->left = {window, Edge::Left, 32};
     title->anchors()->right = {window, Edge::Right, -220};
@@ -341,7 +341,7 @@ TEST_F(ShimmerTest, VisualCheck)
     auto* description = makeLabel(
         QStringLiteral("Use Shimmer while content is loading. The painter helper can also draw skeletons inside delegates."),
         window,
-        QStringLiteral("Body"));
+        Typography::FontRole::Body);
     description->anchors()->top = {title, Edge::Bottom, 8};
     description->anchors()->left = {window, Edge::Left, 32};
     description->anchors()->right = {window, Edge::Right, -220};
@@ -438,7 +438,7 @@ TEST_F(ShimmerTest, VisualCheck)
     dashboard->anchors()->left = {dashboardCard, Edge::Left, 22};
     qobject_cast<fluent::AnchorLayout*>(dashboardCard->layout())->addWidget(dashboard);
 
-    auto* staticHint = makeLabel(QStringLiteral("Static preview"), dashboardCard, QStringLiteral("Caption"));
+    auto* staticHint = makeLabel(QStringLiteral("Static preview"), dashboardCard, Typography::FontRole::Caption);
     staticHint->anchors()->bottom = {dashboardCard, Edge::Bottom, -18};
     staticHint->anchors()->right = {dashboardCard, Edge::Right, -22};
     qobject_cast<fluent::AnchorLayout*>(dashboardCard->layout())->addWidget(staticHint);

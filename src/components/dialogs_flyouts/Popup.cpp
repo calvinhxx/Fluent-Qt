@@ -11,6 +11,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayLightDismiss.h"
+#include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayWindow.h"
 #include "components/foundation/private/SurfacePainter_p.h"
@@ -38,6 +39,17 @@ void refreshFluentDescendants(QWidget* root)
 
 Popup::Popup(QWidget* parent) : QWidget(parent) {
     m_originalParent = parent;
+    m_overlayCoordinator =
+        new ::fluent::overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator,
+            &::fluent::overlay::OverlayCoordinator::hostGeometryChanged,
+            this,
+            [this]() {
+                if ((!m_isOpen && !isVisible()) || m_isClosing)
+                    return;
+                move(resolvedPosition());
+                m_overlayCoordinator->raiseStack();
+            });
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_TranslucentBackground);
     setFocusPolicy(Qt::StrongFocus);
@@ -68,11 +80,6 @@ Popup::Popup(QWidget* parent) : QWidget(parent) {
 Popup::~Popup() {
     if (qApp)
         qApp->removeEventFilter(this);
-    if (m_scrim) {
-        m_scrim->hide();
-        delete m_scrim;
-        m_scrim = nullptr;
-    }
 }
 
 // ── Theme. zh_CN: 主题 ───────────────────────────────────────────────────────
@@ -80,8 +87,9 @@ Popup::~Popup() {
 void Popup::onThemeUpdated() {
     update();
     refreshFluentDescendants(this);
-    if (m_scrim) {
-        if (auto* fe = dynamic_cast<FluentElement*>(m_scrim.data()))
+    if (m_overlayCoordinator->scrim()) {
+        if (auto* fe =
+                dynamic_cast<FluentElement*>(m_overlayCoordinator->scrim()))
             fe->onThemeUpdated();
     }
 }
@@ -165,9 +173,9 @@ bool Popup::syncThemeOverrideFromSource() {
         this, themeOverrideSource());
 
     bool scrimChanged = false;
-    if (m_scrim) {
+    if (m_overlayCoordinator->scrim()) {
         scrimChanged = ::fluent::overlay::syncInheritedThemeOverride(
-            m_scrim.data(), this);
+            m_overlayCoordinator->scrim(), this);
     }
     return popupChanged || scrimChanged;
 }
@@ -195,7 +203,7 @@ void Popup::syncPositionToAnchor() {
         return;
     }
     move(resolvedPosition());
-    ::fluent::overlay::raiseOverlayStack(m_scrim, this);
+    m_overlayCoordinator->raiseStack();
 }
 
 // ── open / close ─────────────────────────────────────────────────────────────
@@ -206,8 +214,7 @@ void Popup::open() {
     m_isClosing = false;
 
     QWidget* top = originalParentTopLevel();
-    m_topLevel = top;
-    ::fluent::overlay::attachToTopLevel(this, top);
+    m_overlayCoordinator->attachTo(top);
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
 
@@ -230,7 +237,7 @@ void Popup::open() {
     move(resolvedPosition());
 
     show();
-    ::fluent::overlay::raiseOverlayStack(m_scrim, this);
+    m_overlayCoordinator->raiseStack();
     setFocus(Qt::PopupFocusReason);
 
     if (qApp)
@@ -317,47 +324,29 @@ void Popup::finalizeClosed() {
 
 void Popup::ensureScrim() {
     if (!m_modal) return;
-    QWidget* top = m_topLevel ? m_topLevel.data() : originalParentTopLevel();
+    QWidget* top = m_overlayCoordinator->topLevelWidget();
+    if (!top)
+        top = originalParentTopLevel();
     if (!top) return;
 
-    if (!m_scrim)
-        m_scrim = new ::fluent::overlay::OverlayScrim(top, QStringLiteral("PopupScrim"));
-    if (auto* scrim = dynamic_cast<::fluent::overlay::OverlayScrim*>(m_scrim.data()))
-        scrim->setModalAndDim(true, m_dim);
-    ::fluent::overlay::syncInheritedThemeOverride(m_scrim.data(), this);
-    m_scrim->setGeometry(::fluent::overlay::overlaySurfaceRect(top));
-    m_scrim->show();
-    ::fluent::overlay::raiseOverlayStack(m_scrim, this);
+    m_overlayCoordinator->attachTo(top);
+    auto* scrim =
+        m_overlayCoordinator->ensureScrim(QStringLiteral("PopupScrim"));
+    if (!scrim)
+        return;
+    scrim->setModalAndDim(true, m_dim);
+    ::fluent::overlay::syncInheritedThemeOverride(scrim, this);
+    scrim->show();
+    m_overlayCoordinator->raiseStack();
 }
 
 void Popup::destroyScrim() {
-    if (!m_scrim) return;
-    m_scrim->hide();
-    m_scrim->deleteLater();
-    m_scrim = nullptr;
+    m_overlayCoordinator->releaseScrim();
 }
 
 // ── Light-dismiss / Escape ──────────────────────────────────────────────────
 
 bool Popup::eventFilter(QObject* watched, QEvent* event) {
-    if (event && event->type() == QEvent::Destroy && watched == m_topLevel) {
-        if (qApp)
-            qApp->removeEventFilter(this);
-        m_topLevel = nullptr;
-        m_scrim = nullptr;
-        return false;
-    }
-
-    if (event && event->type() == QEvent::Resize && watched == m_topLevel) {
-        if (m_scrim && m_topLevel)
-            m_scrim->setGeometry(::fluent::overlay::overlaySurfaceRect(m_topLevel));
-        if (isVisible()) {
-            move(resolvedPosition());
-            ::fluent::overlay::raiseOverlayStack(m_scrim, this);
-        }
-        return false;
-    }
-
     if (!m_isOpen && !isVisible()) return false;
 
     QWidget* positionAnchor = trackedPositionAnchor();

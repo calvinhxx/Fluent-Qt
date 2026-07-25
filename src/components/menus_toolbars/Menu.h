@@ -27,13 +27,17 @@ class FluentMenuItem : public QWidgetAction, public FluentElement, public QMLPlu
      * @brief Fluent typography style used by menu text.
      * zh_CN: 菜单文本使用的 Fluent 排版样式。
      */
-    Q_PROPERTY(QString fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
+    Q_PROPERTY(Typography::FontRole fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
 public:
     explicit FluentMenuItem(const QString& text, QObject* parent = nullptr);
 
-    /** @brief 设置菜单项的字体样式，对应 themeFont() 的 style 参数，默认 "Body"。 */
-    void setFontStyle(const QString& style);
-    QString fontStyle() const { return m_fontStyle; }
+    /** @brief 设置菜单项的字体角色，默认 Typography::FontRole::Body。 */
+    /**
+     * @brief Sets the Fluent typography role used by the menu item.
+     * zh_CN: 设置菜单项使用的 Fluent 排版角色。
+     */
+    void setFontStyle(Typography::FontRole role);
+    Typography::FontRole fontStyle() const { return m_fontStyle; }
 
     void onThemeUpdated() override;
 
@@ -41,7 +45,7 @@ signals:
     void fontStyleChanged();
 
 private:
-    QString m_fontStyle = QStringLiteral("Body");
+    Typography::FontRole m_fontStyle = Typography::FontRole::Body;
 };
 
 /**
@@ -58,13 +62,17 @@ class FluentMenu : public QMenu, public FluentElement, public QMLPlus {
      * @brief Fluent typography style used by menu text.
      * zh_CN: 菜单文本使用的 Fluent 排版样式。
      */
-    Q_PROPERTY(QString fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
+    Q_PROPERTY(Typography::FontRole fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
 public:
     explicit FluentMenu(const QString& title, QWidget* parent = nullptr);
 
-    /** @brief 设置菜单的字体样式，对应 themeFont() 的 style 参数，默认 "Body"。 */
-    void setFontStyle(const QString& style);
-    QString fontStyle() const { return m_fontStyle; }
+    /** @brief 设置菜单的字体角色，默认 Typography::FontRole::Body。 */
+    /**
+     * @brief Sets the Fluent typography role used by the menu.
+     * zh_CN: 设置菜单使用的 Fluent 排版角色。
+     */
+    void setFontStyle(Typography::FontRole role);
+    Typography::FontRole fontStyle() const { return m_fontStyle; }
 
     QString shortcutTextForAction(QAction* action) const;
     QRect itemShortcutGeometry(QAction* action) const;
@@ -91,7 +99,7 @@ private:
     // Matches the drawShadow spread with a little headroom for a natural fade. zh_CN: 与 drawShadow 扩散范围一致，略留余量自然淡出。
     const int m_shadowSize = ::Spacing::Standard;
 
-    QString m_fontStyle = QStringLiteral("Body");
+    Typography::FontRole m_fontStyle = Typography::FontRole::Body;
     qreal m_revealProgress = 1.0;
 };
 

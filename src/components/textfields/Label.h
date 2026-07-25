@@ -29,7 +29,7 @@ class Label : public QLabel, public FluentElement, public QMLPlus {
      * @brief Fluent typography role applied to label text.
      * zh_CN: 应用到标签文本的 Fluent 排版角色。
      */
-    Q_PROPERTY(QString fluentTypography READ fluentTypography WRITE setFluentTypography NOTIFY typographyChanged)
+    Q_PROPERTY(Typography::FontRole fluentTypography READ fluentTypography WRITE setFluentTypography NOTIFY typographyChanged)
     /**
      * @brief Elide mode used when label text overflows.
      * zh_CN: 标签文本溢出时使用的省略模式。
@@ -44,8 +44,8 @@ public:
     QString text() const { return m_fullText; }
     void setText(const QString& text);
 
-    QString fluentTypography() const { return m_styleName; }
-    void setFluentTypography(const QString& styleName);
+    Typography::FontRole fluentTypography() const { return m_fontRole; }
+    void setFluentTypography(Typography::FontRole role);
 
     Qt::TextElideMode textElideMode() const { return m_textElideMode; }
     void setTextElideMode(Qt::TextElideMode mode);
@@ -95,7 +95,7 @@ private:
     void hideElideToolTip();
     void positionElideToolTip();
 
-    QString m_styleName = "Body";
+    Typography::FontRole m_fontRole = Typography::FontRole::Body;
     QString m_fullText;
     TextColorRole m_textColorRole = TextColorRole::Default;
     Qt::TextElideMode m_textElideMode = Qt::ElideNone;

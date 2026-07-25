@@ -97,14 +97,14 @@ QWidget* createBreadcrumbPage(const QString& title, const QString& detail, const
     page->setLayout(pageLayout);
 
     auto* heading = new Label(title, page);
-    heading->setFluentTypography(QStringLiteral("Title"));
+    heading->setFluentTypography(Typography::FontRole::Title);
     heading->anchors()->top = {page, Edge::Top, 28};
     heading->anchors()->left = {page, Edge::Left, 28};
     heading->anchors()->right = {page, Edge::Right, -28};
     addAnchored(pageLayout, heading);
 
     auto* summary = new Label(detail, page);
-    summary->setFluentTypography(QStringLiteral("Body"));
+    summary->setFluentTypography(Typography::FontRole::Body);
     summary->setTextElideMode(Qt::ElideRight);
     summary->anchors()->top = {heading, Edge::Bottom, 10};
     summary->anchors()->left = {heading, Edge::Left, 0};
@@ -235,10 +235,10 @@ TEST_F(BreadcrumbTest, PropertySignalsEmitOnlyForEffectiveChanges)
     breadcrumb.setAutoTruncateOnItemClick(true);
     breadcrumb.setAutoTruncateOnItemClick(false);
 
-    breadcrumb.setStandardFontRole(QStringLiteral("Body Strong"));
-    breadcrumb.setStandardFontRole(QStringLiteral("Body Strong"));
-    breadcrumb.setLargeFontRole(QStringLiteral("Title Large"));
-    breadcrumb.setLargeFontRole(QStringLiteral("Title Large"));
+    breadcrumb.setStandardFontRole(Typography::FontRole::BodyStrong);
+    breadcrumb.setStandardFontRole(Typography::FontRole::BodyStrong);
+    breadcrumb.setLargeFontRole(Typography::FontRole::TitleLarge);
+    breadcrumb.setLargeFontRole(Typography::FontRole::TitleLarge);
 
     EXPECT_EQ(sizeSpy.count(), 2);
     EXPECT_EQ(overflowSpy.count(), 2);
@@ -477,7 +477,7 @@ TEST_F(BreadcrumbTest, VisualCheck)
     visual->setLayout(visualLayout);
 
     auto* title = new Label(QStringLiteral("Breadcrumb"), visual);
-    title->setFluentTypography(QStringLiteral("Subtitle"));
+    title->setFluentTypography(Typography::FontRole::Subtitle);
     title->anchors()->top = {visual, Edge::Top, 24};
     title->anchors()->left = {visual, Edge::Left, 32};
     addAnchored(visualLayout, title);
@@ -510,7 +510,7 @@ TEST_F(BreadcrumbTest, VisualCheck)
     addAnchored(visualLayout, navigation);
 
     auto* status = new Label(visual);
-    status->setFluentTypography(QStringLiteral("Caption"));
+    status->setFluentTypography(Typography::FontRole::Caption);
     status->setFixedHeight(24);
     status->anchors()->top = {navigation, Edge::Bottom, 8};
     status->anchors()->left = {navigation, Edge::Left, 0};

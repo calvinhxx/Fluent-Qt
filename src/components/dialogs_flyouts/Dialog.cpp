@@ -8,6 +8,7 @@
 #include <QShowEvent>
 
 #include "compatibility/QtCompat.h"
+#include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayWindow.h"
@@ -34,8 +35,26 @@ void refreshFluentDescendants(QWidget* root)
 } // namespace
 
 Dialog::Dialog(QWidget* parent)
-    : QDialog(parent)
+    : QDialog(parent),
+      m_originalParent(parent)
 {
+    m_overlayCoordinator =
+        new ::fluent::overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator,
+            &::fluent::overlay::OverlayCoordinator::hostGeometryChanged,
+            this,
+            [this]() {
+                if (!isVisible())
+                    return;
+                positionInOwner();
+                if (auto* smoke = m_overlayCoordinator->scrim()) {
+                    smoke->setSurfaceRadius(qRound(
+                        ::fluent::overlay::overlaySurfaceRadius(
+                            m_overlayCoordinator->topLevelWidget())));
+                }
+                m_overlayCoordinator->raiseStack();
+            });
+
     // Same-window overlay contract (WinUI ContentDialog / Popup / DrawerView): stay a Qt::Widget
     // child of the owning top-level. Never host Dialog as a native top-level window.
     // zh_CN: 同窗口浮层契约（WinUI ContentDialog / Popup / DrawerView）：保持为 owning top-level 的
@@ -83,26 +102,28 @@ Dialog::~Dialog()
         m_smokeAnim->stop();
         m_smokeAnim->setTargetObject(nullptr);
     }
-    if (m_smokeOverlay) {
-        m_smokeOverlay->removeEventFilter(this);
-        m_smokeOverlay->hide();
-        delete m_smokeOverlay;
-        m_smokeOverlay = nullptr;
+    if (m_overlayCoordinator->scrim()) {
+        m_overlayCoordinator->scrim()->removeEventFilter(this);
+        m_overlayCoordinator->releaseScrim(
+            ::fluent::overlay::OverlayCoordinator::ScrimDeletion::Immediate);
     }
 }
 
 QWidget* Dialog::ownerWidget() const
 {
-    if (QWidget* parent = parentWidget())
-        return parent->window();
-    return nullptr;
+    if (QWidget* owner =
+            ::fluent::overlay::resolveOwningTopLevel(m_originalParent,
+                                                     parentWidget())) {
+        return owner;
+    }
+    return m_overlayCoordinator->topLevelWidget();
 }
 
 void Dialog::attachToOwner()
 {
-    QWidget* top = ::fluent::overlay::resolveOwningTopLevel(parentWidget(), parentWidget());
+    QWidget* top = ownerWidget();
     if (top)
-        ::fluent::overlay::attachToTopLevel(this, top);
+        m_overlayCoordinator->attachTo(top);
 }
 
 void Dialog::setAnimationProgress(double progress)
@@ -154,7 +175,7 @@ void Dialog::open()
 
     if (m_smokeEnabled)
         showSmokeOverlay();
-    ::fluent::overlay::raiseOverlayStack(m_smokeOverlay, this);
+    m_overlayCoordinator->raiseStack();
     setFocus(Qt::ActiveWindowFocusReason);
 }
 
@@ -187,7 +208,7 @@ void Dialog::showEvent(QShowEvent* event)
     attachToOwner();
     positionInOwner();
     QDialog::showEvent(event);
-    ::fluent::overlay::raiseOverlayStack(m_smokeOverlay, this);
+    m_overlayCoordinator->raiseStack();
 
     if (!m_animationEnabled || !m_isAnimating) {
         m_animationProgress = 1.0;
@@ -229,7 +250,7 @@ void Dialog::hideEvent(QHideEvent* event)
 
 bool Dialog::eventFilter(QObject* watched, QEvent* event)
 {
-    if (watched == m_smokeOverlay && event) {
+    if (watched == m_overlayCoordinator->scrim() && event) {
         switch (event->type()) {
         case QEvent::MouseButtonPress:
         case QEvent::MouseButtonDblClick:
@@ -380,44 +401,46 @@ void Dialog::showSmokeOverlay()
         return;
 
     const int surfaceRadius = qRound(::fluent::overlay::overlaySurfaceRadius(owner));
-    if (!m_smokeOverlay) {
-        m_smokeOverlay = new ::fluent::overlay::OverlayScrim(owner, QStringLiteral("DialogSmokeScrim"));
-        const auto& smoke = themeSmoke();
-        QColor color = smoke.baseColor;
-        color.setAlphaF(smoke.opacity);
-        m_smokeOverlay->setColor(color);
-        m_smokeOverlay->setModalAndDim(true, true);
-        m_smokeOverlay->setGeometry(::fluent::overlay::overlaySurfaceRect(owner));
-        m_smokeOverlay->setSurfaceRadius(surfaceRadius);
-        m_smokeOverlay->setProgress(0.0);
-        m_smokeOverlay->installEventFilter(this);
-        m_smokeOverlay->show();
+    m_overlayCoordinator->attachTo(owner);
+    const bool creating = !m_overlayCoordinator->scrim();
+    auto* smoke = m_overlayCoordinator->ensureScrim(
+        QStringLiteral("DialogSmokeScrim"));
+    if (!smoke)
+        return;
+    if (creating) {
+        const auto& smokeToken = themeSmoke();
+        QColor color = smokeToken.baseColor;
+        color.setAlphaF(smokeToken.opacity);
+        m_overlayCoordinator->scrim()->setColor(color);
+        m_overlayCoordinator->scrim()->setProgress(0.0);
+        m_overlayCoordinator->scrim()->installEventFilter(this);
     } else {
-        ::fluent::overlay::attachToTopLevel(m_smokeOverlay, owner);
-        m_smokeOverlay->setGeometry(::fluent::overlay::overlaySurfaceRect(owner));
-        m_smokeOverlay->setSurfaceRadius(surfaceRadius);
-        m_smokeOverlay->setModalAndDim(true, true);
+        ::fluent::overlay::attachToTopLevel(smoke, owner);
     }
+    smoke->setSurfaceRadius(surfaceRadius);
+    smoke->setModalAndDim(true, true);
+    smoke->show();
 
     if (!m_smokeAnim) {
         m_smokeAnim = new QPropertyAnimation(this);
         m_smokeAnim->setPropertyName("progress");
     }
     m_smokeAnim->stop();
-    m_smokeAnim->setTargetObject(m_smokeOverlay);
+    m_smokeAnim->setTargetObject(smoke);
     const auto& anim = themeAnimation();
     m_smokeAnim->setDuration(anim.normal);
-    m_smokeAnim->setStartValue(m_smokeOverlay->progress());
+    m_smokeAnim->setStartValue(smoke->progress());
     m_smokeAnim->setEndValue(1.0);
     m_smokeAnim->setEasingCurve(anim.entrance);
     m_smokeAnim->start();
 
-    ::fluent::overlay::raiseOverlayStack(m_smokeOverlay, this);
+    m_overlayCoordinator->raiseStack();
 }
 
 void Dialog::hideSmokeOverlay()
 {
-    if (!m_smokeOverlay)
+    auto* overlay = m_overlayCoordinator->scrim();
+    if (!overlay)
         return;
 
     if (m_smokeAnim) {
@@ -425,15 +448,13 @@ void Dialog::hideSmokeOverlay()
         m_smokeAnim->setTargetObject(nullptr);
     }
 
-    auto* overlay = m_smokeOverlay;
     QWidget* owner = overlay->parentWidget();
     const QRect dirtyRect = overlay->geometry();
-    m_smokeOverlay = nullptr;
 
     overlay->removeEventFilter(this);
     overlay->setModalAndDim(false, false);
-    overlay->hide();
-    delete overlay;
+    m_overlayCoordinator->releaseScrim(
+        ::fluent::overlay::OverlayCoordinator::ScrimDeletion::Immediate);
 
     if (owner)
         owner->update(dirtyRect);
@@ -443,11 +464,11 @@ void Dialog::onThemeUpdated()
 {
     update();
     refreshFluentDescendants(this);
-    if (m_smokeOverlay) {
+    if (auto* smokeOverlay = m_overlayCoordinator->scrim()) {
         const auto& smoke = themeSmoke();
         QColor color = smoke.baseColor;
         color.setAlphaF(smoke.opacity);
-        m_smokeOverlay->setColor(color);
+        smokeOverlay->setColor(color);
     }
 }
 

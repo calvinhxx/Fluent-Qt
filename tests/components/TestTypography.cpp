@@ -236,23 +236,23 @@ private:
 
         struct StyleInfo {
             QString name;
-            QString styleName;
+            Typography::FontRole role;
             QString sampleText;
         };
 
         QVector<StyleInfo> styles = {
-            {"Display", "Display", "The quick brown fox jumps over the lazy dog"},
-            {"Title Large", "TitleLarge", "The quick brown fox jumps over the lazy dog"},
-            {"Title", "Title", "The quick brown fox jumps over the lazy dog"},
-            {"Subtitle", "Subtitle", "The quick brown fox jumps over the lazy dog"},
-            {"Body Strong", "BodyStrong", "The quick brown fox jumps over the lazy dog"},
-            {"Body", "Body", "The quick brown fox jumps over the lazy dog. This is standard body text used for most content."},
-            {"Caption", "Caption", "The quick brown fox jumps over the lazy dog"}
+            {"Display", Typography::FontRole::Display, "The quick brown fox jumps over the lazy dog"},
+            {"Title Large", Typography::FontRole::TitleLarge, "The quick brown fox jumps over the lazy dog"},
+            {"Title", Typography::FontRole::Title, "The quick brown fox jumps over the lazy dog"},
+            {"Subtitle", Typography::FontRole::Subtitle, "The quick brown fox jumps over the lazy dog"},
+            {"Body Strong", Typography::FontRole::BodyStrong, "The quick brown fox jumps over the lazy dog"},
+            {"Body", Typography::FontRole::Body, "The quick brown fox jumps over the lazy dog. This is standard body text used for most content."},
+            {"Caption", Typography::FontRole::Caption, "The quick brown fox jumps over the lazy dog"}
         };
 
         for (const auto& style : styles) {
             auto* label = new Label(style.sampleText, widget);
-            label->setFluentTypography(style.styleName);
+            label->setFluentTypography(style.role);
             label->setWordWrap(true);
             layout->addWidget(label);
 

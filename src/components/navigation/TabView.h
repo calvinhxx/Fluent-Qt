@@ -132,8 +132,8 @@ public:
     bool areKeyboardAcceleratorsEnabled() const { return keyboardAcceleratorsEnabled(); }
     void setKeyboardAcceleratorsEnabled(bool enabled);
 
-    QString tabFontRole() const { return m_tabFontRole; }
-    void setTabFontRole(const QString& role);
+    Typography::FontRole tabFontRole() const { return m_tabFontRole; }
+    void setTabFontRole(Typography::FontRole role);
 
     QString iconFontFamily() const { return m_iconFontFamily; }
     void setIconFontFamily(const QString& family);
@@ -308,7 +308,7 @@ private:
     bool m_tabReorderEnabled = false;
     bool m_keyboardAcceleratorsEnabled = true;
     int m_wheelScrollRemainder = 0;
-    QString m_tabFontRole = QStringLiteral("Body");
+    Typography::FontRole m_tabFontRole = Typography::FontRole::Body;
     QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
     HitRecord m_hoveredHit;
     HitRecord m_pressedHit;
@@ -389,7 +389,7 @@ class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
      * @brief Typography role used by tab text.
      * zh_CN: 标签文本使用的排版角色。
      */
-    Q_PROPERTY(QString tabFontRole READ tabFontRole WRITE setTabFontRole NOTIFY tabFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole tabFontRole READ tabFontRole WRITE setTabFontRole NOTIFY tabFontRoleChanged)
     /**
      * @brief Icon font family used by tab glyphs.
      * zh_CN: 标签图标字符使用的图标字体族。
@@ -459,8 +459,8 @@ public:
     bool areKeyboardAcceleratorsEnabled() const { return keyboardAcceleratorsEnabled(); }
     void setKeyboardAcceleratorsEnabled(bool enabled);
 
-    QString tabFontRole() const { return m_tabFontRole; }
-    void setTabFontRole(const QString& role);
+    Typography::FontRole tabFontRole() const { return m_tabFontRole; }
+    void setTabFontRole(Typography::FontRole role);
     QString iconFontFamily() const { return m_iconFontFamily; }
     void setIconFontFamily(const QString& family);
 
@@ -485,7 +485,7 @@ signals:
     void addTabButtonVisibleChanged(bool visible);
     void tabReorderEnabledChanged(bool enabled);
     void keyboardAcceleratorsEnabledChanged(bool enabled);
-    void tabFontRoleChanged(const QString& role);
+    void tabFontRoleChanged(Typography::FontRole role);
     void iconFontFamilyChanged(const QString& family);
     void tabCloseRequested(int index);
     void addTabRequested();
@@ -525,7 +525,7 @@ private:
     bool m_addTabButtonVisible = true;
     bool m_tabReorderEnabled = false;
     bool m_keyboardAcceleratorsEnabled = true;
-    QString m_tabFontRole = QStringLiteral("Body");
+    Typography::FontRole m_tabFontRole = Typography::FontRole::Body;
     QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
 };
 

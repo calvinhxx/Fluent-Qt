@@ -61,14 +61,14 @@ QWidget* createPage(const QString& title, QWidget* parent = nullptr)
     page->setLayout(layout);
 
     auto* heading = new Label(title, page);
-    heading->setFluentTypography(QStringLiteral("BodyStrong"));
+    heading->setFluentTypography(Typography::FontRole::BodyStrong);
     heading->anchors()->top = {page, Edge::Top, 18};
     heading->anchors()->left = {page, Edge::Left, 18};
     heading->anchors()->right = {page, Edge::Right, -18};
     addAnchored(layout, heading);
 
     auto* summary = new Label(QStringLiteral("Page content hosted by StackContentHost and driven by Pivot selection."), page);
-    summary->setFluentTypography(QStringLiteral("Caption"));
+    summary->setFluentTypography(Typography::FontRole::Caption);
     summary->setTextElideMode(Qt::ElideRight);
     summary->anchors()->top = {heading, Edge::Bottom, 8};
     summary->anchors()->left = {heading, Edge::Left, 0};
@@ -153,8 +153,8 @@ TEST_F(PivotTest, PropertySignalsEmitOnlyForEffectiveChanges)
 
     pivot.setOverflowBehavior(Pivot::OverflowBehavior::MoreButton);
     pivot.setOverflowBehavior(Pivot::OverflowBehavior::MoreButton);
-    pivot.setItemFontRole(QStringLiteral("Caption"));
-    pivot.setItemFontRole(QStringLiteral("Caption"));
+    pivot.setItemFontRole(Typography::FontRole::Caption);
+    pivot.setItemFontRole(Typography::FontRole::Caption);
     pivot.setIconFontFamily(QStringLiteral("Custom Icon Font"));
     pivot.setIconFontFamily(QStringLiteral("Custom Icon Font"));
 
@@ -375,7 +375,7 @@ TEST_F(PivotTest, VisualCheck)
     window->resize(980, 700);
 
     auto* emailTitle = new Label(QStringLiteral("EMAIL"), window);
-    emailTitle->setFluentTypography(QStringLiteral("BodyStrong"));
+    emailTitle->setFluentTypography(Typography::FontRole::BodyStrong);
     emailTitle->setFixedSize(180, 24);
     emailTitle->anchors()->top = {window, Edge::Top, 18};
     emailTitle->anchors()->left = {window, Edge::Left, 30};
@@ -416,7 +416,7 @@ TEST_F(PivotTest, VisualCheck)
     addAnchored(layout, compactPivot);
 
     auto* overflowTitle = new Label(QStringLiteral("Overflow"), window);
-    overflowTitle->setFluentTypography(QStringLiteral("BodyStrong"));
+    overflowTitle->setFluentTypography(Typography::FontRole::BodyStrong);
     overflowTitle->setFixedSize(180, 24);
     overflowTitle->anchors()->top = {compactPivot, Edge::Top, 0};
     overflowTitle->anchors()->left = {compactPivot, Edge::Right, 48};

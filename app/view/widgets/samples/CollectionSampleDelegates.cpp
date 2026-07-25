@@ -241,8 +241,8 @@ void GridPhotoDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opt
     const bool isHovered = option.state & QStyle::State_MouseOver;
     const bool isEnabled = option.state & QStyle::State_Enabled;
     const bool isMultiSel = m_view
-        && (m_view->selectionMode() == GridView::GridSelectionMode::Multiple
-            || m_view->selectionMode() == GridView::GridSelectionMode::Extended);
+        && (m_view->selectionMode() == GridView::SelectionMode::Multiple
+            || m_view->selectionMode() == GridView::SelectionMode::Extended);
 
     const QRectF card = QRectF(option.rect).adjusted(2.0, 2.0, -2.0, -2.0);
     const int radius = CornerRadius::Control;

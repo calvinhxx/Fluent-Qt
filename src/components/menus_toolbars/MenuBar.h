@@ -34,7 +34,7 @@ class FluentMenuBar : public QMenuBar, public FluentElement, public QMLPlus {
      * @brief Fluent typography style used by menu text.
      * zh_CN: 菜单文本使用的 Fluent 排版样式。
      */
-    Q_PROPERTY(QString fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
+    Q_PROPERTY(Typography::FontRole fontStyle READ fontStyle WRITE setFontStyle NOTIFY fontStyleChanged)
     /**
      * @brief Whether the bar paints its canvas background.
      * zh_CN: 是否绘制菜单栏的画布背景。
@@ -47,8 +47,12 @@ class FluentMenuBar : public QMenuBar, public FluentElement, public QMLPlus {
 public:
     explicit FluentMenuBar(QWidget* parent = nullptr);
 
-    void setFontStyle(const QString& style);
-    QString fontStyle() const { return m_fontStyle; }
+    /**
+     * @brief Sets the Fluent typography role used by the menu bar.
+     * zh_CN: 设置菜单栏使用的 Fluent 排版角色。
+     */
+    void setFontStyle(Typography::FontRole role);
+    Typography::FontRole fontStyle() const { return m_fontStyle; }
 
     bool backgroundVisible() const { return m_backgroundVisible; }
     bool isBackgroundVisible() const { return backgroundVisible(); }
@@ -101,7 +105,7 @@ private:
     void openMenuForAction(QAction* action);
     void closeOpenMenu();
 
-    QString m_fontStyle = QStringLiteral("Body");
+    Typography::FontRole m_fontStyle = Typography::FontRole::Body;
     bool m_backgroundVisible = true;
     mutable QHash<QAction*, QRect> m_actionRects;
     mutable bool m_layoutDirty = true;

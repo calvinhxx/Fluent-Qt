@@ -96,9 +96,9 @@ void InfoBadge::setCustomTextColor(const QColor& color)
     emit customTextColorChanged(m_customTextColor);
 }
 
-void InfoBadge::setValueFontRole(const QString& role)
+void InfoBadge::setValueFontRole(Typography::FontRole role)
 {
-    if (role.isEmpty() || m_valueFontRole == role) return;
+    if (m_valueFontRole == role) return;
     m_valueFontRole = role;
     invalidateLayoutAndPaint();
     emit valueFontRoleChanged(m_valueFontRole);

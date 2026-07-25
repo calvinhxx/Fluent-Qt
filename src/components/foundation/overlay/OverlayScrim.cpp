@@ -6,6 +6,8 @@
 #include <QWheelEvent>
 #include <cmath>
 
+#include "compatibility/QtCompat.h"
+
 namespace fluent::overlay {
 
 OverlayScrim::OverlayScrim(QWidget* parent, const QString& objectName)
@@ -118,7 +120,12 @@ void OverlayScrim::paintEvent(QPaintEvent*)
     painter.fillPath(surface.subtracted(hole), color);
 }
 
-void OverlayScrim::mousePressEvent(QMouseEvent* event) { handlePointerEvent(event); }
+void OverlayScrim::mousePressEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton)
+        emit pressed(fluentMouseGlobalPos(event));
+    handlePointerEvent(event);
+}
 void OverlayScrim::mouseReleaseEvent(QMouseEvent* event) { handlePointerEvent(event); }
 void OverlayScrim::mouseMoveEvent(QMouseEvent* event) { handlePointerEvent(event); }
 void OverlayScrim::wheelEvent(QWheelEvent* event) { handlePointerEvent(event); }

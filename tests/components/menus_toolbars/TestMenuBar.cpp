@@ -754,7 +754,7 @@ TEST_F(MenuBarTest, VisualCheck)
     window->setLayout(layout);
 
     auto* title = new Label(QStringLiteral("MenuBar WinUI Gallery samples"), window);
-    title->setFluentTypography(QStringLiteral("Subtitle"));
+    title->setFluentTypography(Typography::FontRole::Subtitle);
     title->anchors()->top = {window, Edge::Top, 24};
     title->anchors()->left = {window, Edge::Left, 32};
     addAnchored(layout, title);
@@ -768,13 +768,13 @@ TEST_F(MenuBarTest, VisualCheck)
     addAnchored(layout, themeButton);
 
     auto* status = new Label(QStringLiteral("You clicked: (none)"), window);
-    status->setFluentTypography(QStringLiteral("Body"));
+    status->setFluentTypography(Typography::FontRole::Body);
     status->anchors()->left = {title, Edge::Left, 0};
     status->anchors()->bottom = {window, Edge::Bottom, -28};
     addAnchored(layout, status);
 
     auto* simpleLabel = new Label(QStringLiteral("Simple MenuBar"), window);
-    simpleLabel->setFluentTypography(QStringLiteral("Body Strong"));
+    simpleLabel->setFluentTypography(Typography::FontRole::BodyStrong);
     simpleLabel->anchors()->top = {title, Edge::Bottom, 28};
     simpleLabel->anchors()->left = {title, Edge::Left, 0};
     addAnchored(layout, simpleLabel);
@@ -786,7 +786,7 @@ TEST_F(MenuBarTest, VisualCheck)
     bindMenuActions(window, simple, status);
 
     auto* acceleratorLabel = new Label(QStringLiteral("MenuBar with keyboard accelerators"), window);
-    acceleratorLabel->setFluentTypography(QStringLiteral("Body Strong"));
+    acceleratorLabel->setFluentTypography(Typography::FontRole::BodyStrong);
     acceleratorLabel->anchors()->top = {simple.bar, Edge::Bottom, 42};
     acceleratorLabel->anchors()->left = {title, Edge::Left, 0};
     addAnchored(layout, acceleratorLabel);
@@ -798,7 +798,7 @@ TEST_F(MenuBarTest, VisualCheck)
     bindMenuActions(window, accelerator, status);
 
     auto* complexLabel = new Label(QStringLiteral("MenuBar with cascading submenus, separators, and radio items"), window);
-    complexLabel->setFluentTypography(QStringLiteral("Body Strong"));
+    complexLabel->setFluentTypography(Typography::FontRole::BodyStrong);
     complexLabel->anchors()->top = {accelerator.bar, Edge::Bottom, 42};
     complexLabel->anchors()->left = {title, Edge::Left, 0};
     addAnchored(layout, complexLabel);

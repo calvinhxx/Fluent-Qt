@@ -3,6 +3,7 @@
 #include <QTest>
 #include <QWidget>
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/windowing/WindowBackdrop.h"
 #include "design/CornerRadius.h"
 
@@ -177,10 +178,19 @@ private:
     void setupTypographySection() {
         QGroupBox* group = new QGroupBox("1. Typography (Typography.h)", this);
         QVBoxLayout* layout = new QVBoxLayout(group);
-        QStringList styles = {"Display", "TitleLarge", "Title", "Subtitle", "BodyStrong", "Body", "Caption"};
-        for (const QString& s : styles) {
-            QLabel* label = new QLabel(s + " - The quick brown fox jumps over the lazy dog", this);
-            m_typoLabels[s] = label;
+        const QVector<Typography::FontRole> roles = {
+            Typography::FontRole::Display,
+            Typography::FontRole::TitleLarge,
+            Typography::FontRole::Title,
+            Typography::FontRole::Subtitle,
+            Typography::FontRole::BodyStrong,
+            Typography::FontRole::Body,
+            Typography::FontRole::Caption
+        };
+        for (Typography::FontRole role : roles) {
+            const QString name = Typography::fontRoleKey(role);
+            QLabel* label = new QLabel(name + " - The quick brown fox jumps over the lazy dog", this);
+            m_typoLabels[role] = label;
             layout->addWidget(label);
         }
         m_contentLayout->addWidget(group);
@@ -391,8 +401,8 @@ private:
 
     void updateBreakpointInfo() {
         int w = width();
-        int small = themeBreakpoint("Small");
-        int medium = themeBreakpoint("Medium");
+        int small = themeBreakpoint(Breakpoints::Breakpoint::Small);
+        int medium = themeBreakpoint(Breakpoints::Breakpoint::Medium);
         
         QString name;
         QString color;
@@ -417,7 +427,7 @@ private:
     }
 
     QVBoxLayout* m_contentLayout;
-    QMap<QString, QLabel*> m_typoLabels;
+    QMap<Typography::FontRole, QLabel*> m_typoLabels;
     QMap<QString, QWidget*> m_colorBlocks;
     QMap<QString, QFrame*> m_cards;
     QFrame* m_spacingFrame;
@@ -450,6 +460,7 @@ protected:
 
     void TearDown() override {
         delete window;
+        fluent::ThemeRegistry::instance().resetToDefaults();
     }
 
     QWidget* window;
@@ -470,6 +481,58 @@ TEST_F(FluentElementTest, ThemeSwitching) {
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(component.updateCount, 2);
+}
+
+TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce) {
+    auto& registry = fluent::ThemeRegistry::instance();
+    registry.resetToDefaults();
+
+    auto* component = new MockComponent(window);
+    layout->addWidget(component);
+    window->show();
+    QApplication::processEvents();
+
+    const int initialRevision = registry.revision();
+    const int initialGeneration = fluent::FluentElement::themeGeneration();
+    const int initialUpdates = component->updateCount;
+
+    auto next = registry.snapshot();
+    next.lightColors.accentDefault = QColor(QStringLiteral("#A23BEC"));
+    next.radius.control = 9;
+    next.designLanguage = fluent::FluentElement::DesignMaterial;
+    next.fontFamilyOverride = QStringLiteral("Theme Snapshot Test");
+    next.fontScale = 1.25;
+
+    EXPECT_TRUE(registry.applySnapshot(next));
+    EXPECT_EQ(registry.revision(), initialRevision + 1);
+    EXPECT_EQ(fluent::FluentElement::themeGeneration(), initialGeneration + 1);
+    EXPECT_EQ(component->updateCount, initialUpdates + 1);
+    EXPECT_EQ(registry.colors(false).accentDefault, QColor(QStringLiteral("#A23BEC")));
+    EXPECT_EQ(registry.radius().control, 9);
+    EXPECT_EQ(registry.designLanguage(), fluent::FluentElement::DesignMaterial);
+    EXPECT_EQ(registry.fontFamilyOverride(), QStringLiteral("Theme Snapshot Test"));
+    EXPECT_DOUBLE_EQ(registry.fontScale(), 1.25);
+
+    EXPECT_FALSE(registry.applySnapshot(next));
+    EXPECT_EQ(registry.revision(), initialRevision + 1);
+    EXPECT_EQ(fluent::FluentElement::themeGeneration(), initialGeneration + 1);
+    EXPECT_EQ(component->updateCount, initialUpdates + 1);
+}
+
+TEST_F(FluentElementTest, ThemeSnapshotRejectsInvalidScaleWithoutPartialMutation) {
+    auto& registry = fluent::ThemeRegistry::instance();
+    registry.resetToDefaults();
+    const auto before = registry.snapshot();
+    const int initialRevision = registry.revision();
+
+    auto invalid = before;
+    invalid.lightColors.accentDefault = QColor(QStringLiteral("#FF0000"));
+    invalid.fontScale = 0.0;
+
+    EXPECT_FALSE(registry.applySnapshot(invalid));
+    EXPECT_EQ(registry.revision(), initialRevision);
+    EXPECT_EQ(registry.colors(false).accentDefault, before.lightColors.accentDefault);
+    EXPECT_DOUBLE_EQ(registry.fontScale(), before.fontScale);
 }
 
 TEST_F(FluentElementTest, DeferredThemeSwitchThemesVisibleSynchronouslyThenHidden) {
@@ -541,8 +604,10 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
 
     // No host window: solid fallback, and active/inactive visibly differ (the cross-platform
     // stand-in for Mica's active/inactive). zh_CN: 无宿主窗口：纯色回退，且激活/非激活明显不同。
-    const QColor active = component.chromeBackdropFill(nullptr, /*active*/ true);
-    const QColor inactive = component.chromeBackdropFill(nullptr, /*active*/ false);
+    const QColor active =
+        fluent::windowing::windowChromeBackdropFill(component, nullptr, /*active*/ true);
+    const QColor inactive =
+        fluent::windowing::windowChromeBackdropFill(component, nullptr, /*active*/ false);
     EXPECT_TRUE(active.isValid());
     EXPECT_TRUE(inactive.isValid());
     EXPECT_EQ(active, component.themeBackdrop(true));
@@ -552,19 +617,22 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
     // A host without a system backdrop falls back identically.
     // zh_CN: 不带系统背景的宿主，回退结果一致。
     QWidget plainHost;
-    EXPECT_EQ(component.chromeBackdropFill(&plainHost, true), component.themeBackdrop(true));
+    EXPECT_EQ(fluent::windowing::windowChromeBackdropFill(component, &plainHost, true),
+              component.themeBackdrop(true));
 
     // Unsupported platforms still keep the requested effect as an opaque, token-based fallback.
     QWidget paintedMicaHost;
     paintedMicaHost.setProperty("fluentWindowBackdropEffect", 1);
-    const QColor paintedMica = component.chromeBackdropFill(&paintedMicaHost, true);
+    const QColor paintedMica =
+        fluent::windowing::windowChromeBackdropFill(component, &paintedMicaHost, true);
     EXPECT_TRUE(paintedMica.isValid());
     EXPECT_EQ(paintedMica.alpha(), 255);
     EXPECT_NE(paintedMica, component.themeBackdrop(true));
 
     QWidget paintedAcrylicHost;
     paintedAcrylicHost.setProperty("fluentWindowBackdropEffect", 2);
-    const QColor paintedAcrylic = component.chromeBackdropFill(&paintedAcrylicHost, true);
+    const QColor paintedAcrylic =
+        fluent::windowing::windowChromeBackdropFill(component, &paintedAcrylicHost, true);
     EXPECT_TRUE(paintedAcrylic.isValid());
     EXPECT_EQ(paintedAcrylic.alpha(), 255);
     EXPECT_NE(paintedAcrylic, component.themeBackdrop(true));
@@ -576,8 +644,10 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
     QWidget micaHost;
     micaHost.setProperty("fluentWindowBackdropEffect", 2);
     micaHost.setProperty("fluentMicaBackdrop", true);
-    EXPECT_FALSE(component.chromeBackdropFill(&micaHost, true).isValid());
-    EXPECT_FALSE(component.chromeBackdropFill(&micaHost, false).isValid());
+    EXPECT_FALSE(
+        fluent::windowing::windowChromeBackdropFill(component, &micaHost, true).isValid());
+    EXPECT_FALSE(
+        fluent::windowing::windowChromeBackdropFill(component, &micaHost, false).isValid());
 
     // A typed state is authoritative even when stale legacy properties disagree.
     // zh_CN: 即使旧属性残留冲突值，强类型状态仍是唯一权威来源。
@@ -588,7 +658,8 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
     typedPainted.fidelity = fluent::windowing::BackdropFidelity::Emulated;
     typedPainted.surfaceMode = fluent::windowing::BackdropSurfaceMode::PaintedOpaque;
     fluent::windowing::publishWindowBackdropState(&micaHost, typedPainted);
-    const QColor authoritativePainted = component.chromeBackdropFill(&micaHost, true);
+    const QColor authoritativePainted =
+        fluent::windowing::windowChromeBackdropFill(component, &micaHost, true);
     EXPECT_TRUE(authoritativePainted.isValid());
     EXPECT_EQ(authoritativePainted.alpha(), 255);
 }
@@ -596,11 +667,11 @@ TEST_F(FluentElementTest, ChromeBackdropFillFollowsHostBackdropAndFocus) {
 TEST_F(FluentElementTest, FontTokenMapping) {
     MockComponent component;
     
-    auto bodyFont = component.themeFont("Body");
+    auto bodyFont = component.themeFont(Typography::FontRole::Body);
     EXPECT_EQ(bodyFont.size, 14);
     EXPECT_FALSE(bodyFont.family.isEmpty());
 
-    auto titleFont = component.themeFont("TitleLarge");
+    auto titleFont = component.themeFont(Typography::FontRole::TitleLarge);
     EXPECT_EQ(titleFont.size, Typography::FontSize::TitleLarge);  // 40px (Figma MCP 实测)
     EXPECT_GT(titleFont.weight, bodyFont.weight);
 }
@@ -658,9 +729,9 @@ TEST_F(FluentElementTest, MaterialAndShadow) {
 
 TEST_F(FluentElementTest, BreakpointMapping) {
     MockComponent component;
-    EXPECT_EQ(component.themeBreakpoint("Small"), 640);
-    EXPECT_EQ(component.themeBreakpoint("Medium"), 1007);
-    EXPECT_EQ(component.themeBreakpoint("Large"), 1920);
+    EXPECT_EQ(component.themeBreakpoint(Breakpoints::Breakpoint::Small), 640);
+    EXPECT_EQ(component.themeBreakpoint(Breakpoints::Breakpoint::Medium), 1007);
+    EXPECT_EQ(component.themeBreakpoint(Breakpoints::Breakpoint::Large), 1920);
 }
 
 TEST_F(FluentElementTest, VisualExample) {

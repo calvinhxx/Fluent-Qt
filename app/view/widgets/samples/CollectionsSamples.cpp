@@ -57,6 +57,7 @@ using fluent::collections::SplitViewPaneOptions;
 using fluent::collections::StackView;
 using fluent::collections::TreeView;
 using fluent::textfields::Label;
+using fluent::WidgetOwnership;
 using samples::glyphPixmap;
 using samples::gradientPixmap;
 using samples::horizontalGroup;
@@ -607,7 +608,7 @@ QVector<GallerySample> drawerViewSamples()
                    QStringLiteral("auto* drawer = new DrawerView(host);\n"
                                   "drawer->setEdge(DrawerView::DrawerEdge::Right);\n"
                                   "drawer->setDrawerLength(260);\n"
-                                  "drawer->setContentWidget(settingsPanel);\n"
+                                  "drawer->setContentWidget(settingsPanel, WidgetOwnership::Owned);\n"
                                   "drawer->open();"),
                    [](QWidget* parent) {
                        auto* host = new QWidget(parent);
@@ -650,7 +651,7 @@ QVector<GallerySample> drawerViewSamples()
                            };
                        }
                        drawerLayout->addStretch(1);
-                       drawer->setContentWidget(drawerContent);
+                       drawer->setContentWidget(drawerContent, WidgetOwnership::Owned);
 
                        auto* openButton = new Button(QStringLiteral("Open drawer"), host);
                        openButton->setFluentStyle(Button::Accent);
@@ -700,7 +701,7 @@ QVector<GallerySample> drawerViewSamples()
                                                                     QColor(0x6F, 0xD1, 0xF2),
                                                                     DrawerView::DrawerEdge::Left,
                                                                     drawer);
-                       drawer->setContentWidget(drawerContent);
+                       drawer->setContentWidget(drawerContent, WidgetOwnership::Owned);
 
                        const auto openFrom = [drawer, drawerContent, status](DrawerView::DrawerEdge edge,
                                                                              const QString& text) {
@@ -735,7 +736,7 @@ QVector<GallerySample> drawerViewSamples()
                                   "auto* panel = new QWidget;\n"
                                   "auto* panelLayout = new QVBoxLayout(panel);\n"
                                   "panelLayout->setContentsMargins(16, 18, 16, 18);\n"
-                                  "drawer->setContentWidget(panel);\n\n"
+                                  "drawer->setContentWidget(panel, WidgetOwnership::Owned);\n\n"
                                   "QObject::connect(closeButton, &Button::clicked,\n"
                                   "                 drawer, &DrawerView::close);"),
                    [](QWidget* parent) {
@@ -772,7 +773,7 @@ QVector<GallerySample> drawerViewSamples()
                        panelLayout->addWidget(title);
                        panelLayout->addStretch(1);
                        panelLayout->addWidget(closeButton);
-                       drawer->setContentWidget(panel);
+                       drawer->setContentWidget(panel, WidgetOwnership::Owned);
 
                        QObject::connect(openButton, &Button::clicked, drawer, &DrawerView::open);
                        QObject::connect(closeButton, &Button::clicked, drawer, &DrawerView::close);
@@ -816,11 +817,13 @@ QVector<GallerySample> drawerViewSamples()
                        drawer->setInteractive(true);
                        drawer->setDragMargin(36);
                        drawer->setAnimationEnabled(true);
-                       drawer->setContentWidget(new DrawerGradientPane(QStringLiteral("Drag surface"),
-                                                                       QColor(0x2F, 0x9E, 0x44),
-                                                                       QColor(0xA9, 0xE3, 0x4B),
-                                                                       DrawerView::DrawerEdge::Left,
-                                                                       drawer));
+                       drawer->setContentWidget(
+                           new DrawerGradientPane(QStringLiteral("Drag surface"),
+                                                  QColor(0x2F, 0x9E, 0x44),
+                                                  QColor(0xA9, 0xE3, 0x4B),
+                                                  DrawerView::DrawerEdge::Left,
+                                                  drawer),
+                           WidgetOwnership::Owned);
 
                        QObject::connect(openButton, &Button::clicked, drawer, &DrawerView::open);
                        QObject::connect(closeButton, &Button::clicked, drawer, &DrawerView::close);
@@ -952,11 +955,11 @@ QVector<GallerySample> flowViewSamples()
                                   "flowView->setDefaultItemSize(QSize(160, 118));\n"
                                   "flowView->setItemDelegate(photoDelegate);\n"
                                   "flowView->setModel(model);\n"
-                                  "flowView->setSelectionMode(FlowView::FlowSelectionMode::Single);"),
+                                  "flowView->setSelectionMode(FlowView::SelectionMode::Single);"),
                    [](QWidget* parent) {
                        auto* flowView = new FlowView(parent);
                        flowView->setFixedSize(540, 282);
-                       flowView->setSelectionMode(FlowView::FlowSelectionMode::Single);
+                       flowView->setSelectionMode(FlowView::SelectionMode::Single);
                        flowView->setDefaultItemSize(QSize(160, 118));
                        flowView->setMinimumItemSize(QSize(140, 100));
                        flowView->setMaximumItemSize(QSize(180, 128));
@@ -1129,7 +1132,7 @@ QVector<GallerySample> gridViewSamples()
                    QStringLiteral("Multiple selection"),
                    QStringLiteral("In Multiple mode each click toggles a cell; selected cells keep an accent border. Ctrl/Shift extend in Extended mode."),
                    QStringLiteral("gridView->setSelectionMode(\n"
-                                  "    GridView::GridSelectionMode::Multiple);\n"
+                                  "    GridView::SelectionMode::Multiple);\n"
                                   "// each click toggles that cell's selection"),
                    [](QWidget* parent) {
                        auto* gridView = new GridView(parent);
@@ -1138,7 +1141,7 @@ QVector<GallerySample> gridViewSamples()
                        gridView->setMaxColumns(3);
                        gridView->setHorizontalSpacing(10);
                        gridView->setVerticalSpacing(10);
-                       gridView->setSelectionMode(GridView::GridSelectionMode::Multiple);
+                       gridView->setSelectionMode(GridView::SelectionMode::Multiple);
                        gridView->setItemDelegate(new GridPhotoDelegate(
                            static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
                        auto* model = makeGridPhotoModel(gridView, QSize(150, 112));
@@ -1155,7 +1158,7 @@ QVector<GallerySample> gridViewSamples()
                    QStringLiteral("Multi-select & drag to reorder"),
                    QStringLiteral("Multiple selection plus reordering: tick cells via the top-right check, then drag any selected cell to move the whole group, just like the GridView UT."),
                    QStringLiteral("gridView->setSelectionMode(\n"
-                                  "    GridView::GridSelectionMode::Multiple);\n"
+                                  "    GridView::SelectionMode::Multiple);\n"
                                   "gridView->setCanReorderItems(true);\n"
                                   "// drag a selected cell to move the selection as a group"),
                    [](QWidget* parent) {
@@ -1165,7 +1168,7 @@ QVector<GallerySample> gridViewSamples()
                        gridView->setMaxColumns(3);
                        gridView->setHorizontalSpacing(10);
                        gridView->setVerticalSpacing(10);
-                       gridView->setSelectionMode(GridView::GridSelectionMode::Multiple);
+                       gridView->setSelectionMode(GridView::SelectionMode::Multiple);
                        gridView->setCanReorderItems(true);
                        gridView->setItemDelegate(new GridPhotoDelegate(
                            static_cast<fluent::FluentElement*>(gridView), gridView, gridView));
@@ -1279,7 +1282,7 @@ QVector<GallerySample> listViewSamples()
                    QStringLiteral("Multiple selection"),
                    QStringLiteral("In Multiple mode each click toggles a row; every selected row keeps its fill and indicator."),
                    QStringLiteral("listView->setSelectionMode(\n"
-                                  "    ListView::ListSelectionMode::Multiple);\n"
+                                  "    ListView::SelectionMode::Multiple);\n"
                                   "listView->setModel(filterModel);\n"
                                   "// each click toggles that row's selection"),
                    [](QWidget* parent) {
@@ -1289,7 +1292,7 @@ QVector<GallerySample> listViewSamples()
                        listView->setIconSize(QSize(24, 24));
                        listView->setItemDelegate(new ListRowDelegate(
                            static_cast<fluent::FluentElement*>(listView), listView, listView));
-                       listView->setSelectionMode(ListView::ListSelectionMode::Multiple);
+                       listView->setSelectionMode(ListView::SelectionMode::Multiple);
                        listView->setModel(makeGlyphListModel(
                            listView,
                            {{QStringLiteral("Unread"), Typography::Icons::Mail},

@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
     fluent::prepareHighDpiApplication();
     QApplication app(argc, argv);
     fluent::initializeResources();
-    app.setFont(Typography::Styles::Body.toQFont());
+    app.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());
 
     fluent::windowing::Window window;
     window.setWindowTitle(QStringLiteral("FluentQt Hello World"));

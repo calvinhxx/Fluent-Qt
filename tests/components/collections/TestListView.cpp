@@ -266,7 +266,7 @@ TEST_F(ListViewTest, ItemTextOutOfRange) {
 
 TEST_F(ListViewTest, DefaultSelectionMode) {
     ListView* lv = new ListView(window);
-    EXPECT_EQ(lv->selectionMode(), ListSelectionMode::Single);
+    EXPECT_EQ(lv->selectionMode(), SelectionMode::Single);
 }
 
 TEST_F(ListViewTest, DefaultEditTriggersDisabled) {
@@ -274,8 +274,8 @@ TEST_F(ListViewTest, DefaultEditTriggersDisabled) {
     EXPECT_EQ(lv->editTriggers(), QAbstractItemView::NoEditTriggers);
 }
 
-TEST_F(ListViewTest, ListSelectionModeRegisteredInMetaObject) {
-    QMetaEnum me = QMetaEnum::fromType<ListSelectionMode>();
+TEST_F(ListViewTest, SelectionModeRegisteredInMetaObject) {
+    QMetaEnum me = QMetaEnum::fromType<SelectionMode>();
     ASSERT_TRUE(me.isValid());
     EXPECT_STREQ(me.key(0), "None");
     EXPECT_STREQ(me.key(1), "Single");
@@ -286,25 +286,25 @@ TEST_F(ListViewTest, ListSelectionModeRegisteredInMetaObject) {
 TEST_F(ListViewTest, SelectionModeNone) {
     ListView* lv = new ListView(window);
     attachStringListModel(lv, {"A", "B", "C"});
-    lv->setSelectionMode(ListSelectionMode::None);
-    EXPECT_EQ(lv->selectionMode(), ListSelectionMode::None);
+    lv->setSelectionMode(SelectionMode::None);
+    EXPECT_EQ(lv->selectionMode(), SelectionMode::None);
 }
 
 TEST_F(ListViewTest, SelectionModeMultiple) {
     ListView* lv = new ListView(window);
     QSignalSpy spy(lv, SIGNAL(selectionModeChanged()));
-    lv->setSelectionMode(ListSelectionMode::Multiple);
-    EXPECT_EQ(lv->selectionMode(), ListSelectionMode::Multiple);
+    lv->setSelectionMode(SelectionMode::Multiple);
+    EXPECT_EQ(lv->selectionMode(), SelectionMode::Multiple);
     EXPECT_EQ(spy.count(), 1);
 
-    lv->setSelectionMode(ListSelectionMode::Multiple);
+    lv->setSelectionMode(SelectionMode::Multiple);
     EXPECT_EQ(spy.count(), 1);
 }
 
 TEST_F(ListViewTest, SelectionModeExtended) {
     ListView* lv = new ListView(window);
-    lv->setSelectionMode(ListSelectionMode::Extended);
-    EXPECT_EQ(lv->selectionMode(), ListSelectionMode::Extended);
+    lv->setSelectionMode(SelectionMode::Extended);
+    EXPECT_EQ(lv->selectionMode(), SelectionMode::Extended);
 }
 
 // ── 选中 API（依赖已 setModel）────────────────────────────────────────────────
@@ -335,7 +335,7 @@ TEST_F(ListViewTest, SelectedIndexOutOfRange) {
 TEST_F(ListViewTest, SelectedRowsSortedAscending) {
     ListView* lv = new ListView(window);
     attachStringListModel(lv, {"A", "B", "C", "D"});
-    lv->setSelectionMode(ListSelectionMode::Multiple);
+    lv->setSelectionMode(SelectionMode::Multiple);
 
     const QModelIndex i0 = lv->model()->index(0, 0);
     const QModelIndex i2 = lv->model()->index(2, 0);
@@ -473,7 +473,7 @@ TEST_F(ListViewTest, MultiplePointerSelectionTogglesRowsOnRelease) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     auto* lv = new IndicatorListView(window);
     lv->setGeometry(10, 10, 240, 180);
-    lv->setSelectionMode(ListSelectionMode::Multiple);
+    lv->setSelectionMode(SelectionMode::Multiple);
     attachStringListModel(lv, {"A", "B", "C", "D"});
     window->show();
     QTest::qWait(50);
@@ -498,7 +498,7 @@ TEST_F(ListViewTest, ExtendedPointerSelectionSupportsControlAndShift) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     auto* lv = new IndicatorListView(window);
     lv->setGeometry(10, 10, 240, 220);
-    lv->setSelectionMode(ListSelectionMode::Extended);
+    lv->setSelectionMode(SelectionMode::Extended);
     attachStringListModel(lv, {"A", "B", "C", "D", "E"});
     window->show();
     QTest::qWait(50);
@@ -727,7 +727,7 @@ TEST_F(ListViewTest, HorizontalFlowAddRemoveItems) {
 TEST_F(ListViewTest, HorizontalFlowMultipleSelection) {
     ListView* lv = new ListView(window);
     lv->setFlow(QListView::LeftToRight);
-    lv->setSelectionMode(ListSelectionMode::Multiple);
+    lv->setSelectionMode(SelectionMode::Multiple);
     attachStringListModel(lv, {"A", "B", "C", "D"});
 
     const QModelIndex i0 = lv->model()->index(0, 0);
@@ -864,17 +864,17 @@ TEST_F(ListViewTest, HorizontalFlowSelectedIndex) {
 TEST_F(ListViewTest, HorizontalFlowExtendedSelection) {
     ListView* lv = new ListView(window);
     lv->setFlow(QListView::LeftToRight);
-    lv->setSelectionMode(ListSelectionMode::Extended);
+    lv->setSelectionMode(SelectionMode::Extended);
     attachStringListModel(lv, {"A", "B", "C", "D", "E"});
-    EXPECT_EQ(lv->selectionMode(), ListSelectionMode::Extended);
+    EXPECT_EQ(lv->selectionMode(), SelectionMode::Extended);
 }
 
 TEST_F(ListViewTest, HorizontalFlowNoSelection) {
     ListView* lv = new ListView(window);
     lv->setFlow(QListView::LeftToRight);
-    lv->setSelectionMode(ListSelectionMode::None);
+    lv->setSelectionMode(SelectionMode::None);
     attachStringListModel(lv, {"A", "B", "C"});
-    EXPECT_EQ(lv->selectionMode(), ListSelectionMode::None);
+    EXPECT_EQ(lv->selectionMode(), SelectionMode::None);
 }
 
 TEST_F(ListViewTest, HorizontalFlowDelegateSizeHintHasWidth) {
@@ -1080,7 +1080,7 @@ TEST_F(ListViewTest, SelectedIndicatorTracksSelectionSources) {
 
 TEST_F(ListViewTest, MultiSelectionUsesPerItemRevealIndicators) {
     auto* lv = createIndicatorListView(window);
-    lv->setSelectionMode(ListSelectionMode::Multiple);
+    lv->setSelectionMode(SelectionMode::Multiple);
     showWindowAndProcess(window);
 
     const QModelIndex row1 = lv->model()->index(1, 0);
@@ -1111,7 +1111,7 @@ TEST_F(ListViewTest, MultiSelectionUsesPerItemRevealIndicators) {
 
 TEST_F(ListViewTest, HorizontalMultiSelectionUsesBottomRevealIndicators) {
     auto* lv = createIndicatorListView(window, QListView::LeftToRight);
-    lv->setSelectionMode(ListSelectionMode::Multiple);
+    lv->setSelectionMode(SelectionMode::Multiple);
     showWindowAndProcess(window);
 
     lv->selectionModel()->select(lv->model()->index(0, 0), QItemSelectionModel::Select | QItemSelectionModel::Rows);
@@ -1834,7 +1834,7 @@ TEST_F(ListViewTest, VisualCheck) {
     innerLayout->addWidget(header2);
 
     ListView* lv2 = new ListView(content);
-    lv2->setSelectionMode(ListSelectionMode::Multiple);
+    lv2->setSelectionMode(SelectionMode::Multiple);
     lv2->setBorderVisible(false);
     attachStringListModel(lv2, {"Item A", "Item B", "Item C", "Item D"});
     lv2->setFixedHeight(160);
@@ -1888,7 +1888,7 @@ TEST_F(ListViewTest, VisualCheck) {
 
     ListView* lv5 = new ListView(content);
     lv5->setFlow(QListView::LeftToRight);
-    lv5->setSelectionMode(ListSelectionMode::Multiple);
+    lv5->setSelectionMode(SelectionMode::Multiple);
     lv5->setBorderVisible(true);
     lv5->setWrapping(false);
     attachStringListModel(lv5, {"Red", "Orange", "Yellow", "Green", "Blue",

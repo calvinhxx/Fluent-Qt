@@ -81,12 +81,11 @@ FluentMenuBar::FluentMenuBar(QWidget* parent)
     onThemeUpdated();
 }
 
-void FluentMenuBar::setFontStyle(const QString& style)
+void FluentMenuBar::setFontStyle(Typography::FontRole role)
 {
-    const QString normalized = style.trimmed().isEmpty() ? QStringLiteral("Body") : style.trimmed();
-    if (m_fontStyle == normalized)
+    if (m_fontStyle == role)
         return;
-    m_fontStyle = normalized;
+    m_fontStyle = role;
     onThemeUpdated();
     emit fontStyleChanged();
 }

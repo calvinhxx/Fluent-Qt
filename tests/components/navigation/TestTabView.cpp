@@ -81,14 +81,14 @@ QWidget* createContent(const QString& text, QWidget* parent = nullptr)
     painter.end();
 
     auto* title = new Label(text, page);
-    title->setFluentTypography(QStringLiteral("Body Strong"));
+    title->setFluentTypography(Typography::FontRole::BodyStrong);
     title->anchors()->top = {page, Edge::Top, 20};
     title->anchors()->left = {page, Edge::Left, 20};
     title->anchors()->right = {page, Edge::Right, -240};
     addAnchored(layout, title);
 
     auto* description = new Label(QStringLiteral("ContentHost page with mixed controls and a generated preview image."), page);
-    description->setFluentTypography(QStringLiteral("Caption"));
+    description->setFluentTypography(Typography::FontRole::Caption);
     description->setTextElideMode(Qt::ElideRight);
     description->anchors()->top = {title, Edge::Bottom, 8};
     description->anchors()->left = {title, Edge::Left, 0};
@@ -118,7 +118,7 @@ QWidget* createContent(const QString& text, QWidget* parent = nullptr)
     addAnchored(layout, pin);
 
     auto* status = new Label(QStringLiteral("Ready"), page);
-    status->setFluentTypography(QStringLiteral("Caption"));
+    status->setFluentTypography(Typography::FontRole::Caption);
     status->anchors()->left = {title, Edge::Left, 0};
     status->anchors()->bottom = {page, Edge::Bottom, -16};
     addAnchored(layout, status);
@@ -291,8 +291,8 @@ TEST_F(TabViewTest, PropertySignalsEmitOnlyForEffectiveChanges)
     tabs.setTabReorderEnabled(true);
     tabs.setKeyboardAcceleratorsEnabled(false);
     tabs.setKeyboardAcceleratorsEnabled(false);
-    tabs.setTabFontRole(QStringLiteral("Body Strong"));
-    tabs.setTabFontRole(QStringLiteral("Body Strong"));
+    tabs.setTabFontRole(Typography::FontRole::BodyStrong);
+    tabs.setTabFontRole(Typography::FontRole::BodyStrong);
     tabs.setIconFontFamily(Typography::FontFamily::FluentIcons);
 
     EXPECT_EQ(widthSpy.count(), 1);
@@ -674,7 +674,7 @@ TEST_F(TabViewTest, VisualCheck)
     scrollView->setWidget(content);
 
     auto* title = new Label(QStringLiteral("TabView"), content);
-    title->setFluentTypography(QStringLiteral("Subtitle"));
+    title->setFluentTypography(Typography::FontRole::Subtitle);
     title->anchors()->top = {content, Edge::Top, 24};
     title->anchors()->left = {content, Edge::Left, 32};
     addAnchored(contentLayout, title);

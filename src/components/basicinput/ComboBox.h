@@ -3,6 +3,7 @@
 
 #include <QComboBox>
 #include <QPoint>
+#include <QPointer>
 #include <QStyledItemDelegate>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -12,6 +13,7 @@
 
 class QPropertyAnimation;
 class QKeyEvent;
+class QLineEdit;
 class QWheelEvent;
 
 namespace fluent::collections {
@@ -63,7 +65,7 @@ class ComboBox : public QComboBox, public FluentElement, public QMLPlus {
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
      */
-    Q_PROPERTY(QString fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
+    Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
      * @brief Horizontal content padding in pixels.
      * zh_CN: 内容区域水平内边距，单位为像素。
@@ -105,8 +107,8 @@ public:
     ~ComboBox() override;
 
     // --- Appearance ---
-    QString fontRole() const { return m_fontRole; }
-    void setFontRole(const QString& role);
+    Typography::FontRole fontRole() const { return m_fontRole; }
+    void setFontRole(Typography::FontRole role);
 
     int contentPaddingH() const { return m_contentPaddingH; }
     void setContentPaddingH(int px);
@@ -130,7 +132,19 @@ public:
     void setPressProgress(qreal p);
 
     // --- Editable ---
+    /**
+     * @brief Enables the native QComboBox editable contract with a Fluent editor.
+     * zh_CN: 使用 Fluent 编辑器启用原生 QComboBox 可编辑契约。
+     */
     void setEditable(bool editable);
+
+    /**
+     * @brief Replaces the QComboBox editor and synchronizes Fluent layout state.
+     * zh_CN: 替换 QComboBox 编辑器并同步 Fluent 布局状态。
+     */
+    void setLineEdit(QLineEdit* edit);
+
+    fluent::textfields::LineEdit* fluentLineEdit() const;
 
     // --- QComboBox overrides ---
     void showPopup() override;
@@ -144,6 +158,7 @@ signals:
     void chevronChanged();
 
 protected:
+    bool event(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
@@ -161,12 +176,12 @@ private:
     friend class ComboBoxPopup;
     void initAnimation();
     void onPopupHidden();
+    void synchronizeLineEdit();
     void layoutLineEdit();
     void applyLineEditStyle();
-    void validateLineEditText();
 
     // --- Configurable design tokens ---
-    QString m_fontRole       = Typography::FontRole::Body;
+    Typography::FontRole m_fontRole = Typography::FontRole::Body;
     int     m_contentPaddingH = ::Spacing::Padding::ComboBoxHorizontal;
     int     m_contentPaddingV = ::Spacing::Padding::ComboBoxVertical;
     QString m_chevronGlyph   = Typography::Icons::ChevronDownMed;
@@ -185,7 +200,8 @@ private:
     QPropertyAnimation* m_pressAnimation = nullptr;
 
     // --- Editable ---
-    fluent::textfields::LineEdit* m_lineEdit = nullptr;
+    QPointer<QLineEdit> m_observedLineEdit;
+    bool m_editorMutationInProgress = false;
 
     // --- Popup ---
     class ComboBoxPopup;

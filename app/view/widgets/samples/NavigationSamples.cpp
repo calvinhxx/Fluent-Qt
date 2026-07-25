@@ -105,7 +105,7 @@ public:
     {
         if (m_compact)
             return QSize(48, 40);
-        const QFontMetrics metrics(themeFont(QStringLiteral("Body")).toQFont());
+        const QFontMetrics metrics(themeFont(Typography::FontRole::Body).toQFont());
         return QSize(qMax(88, metrics.horizontalAdvance(m_text) + 68), 40);
     }
 
@@ -163,7 +163,8 @@ protected:
         painter.drawText(QRect(iconX, 0, 20, height()), Qt::AlignCenter, m_iconGlyph);
 
         if (!m_compact) {
-            painter.setFont(themeFont(m_selected ? QStringLiteral("BodyStrong") : QStringLiteral("Body")).toQFont());
+            painter.setFont(themeFont(m_selected ? Typography::FontRole::BodyStrong
+                                                 : Typography::FontRole::Body).toQFont());
             painter.setPen(colors.textPrimary);
             painter.drawText(QRect(52, 0, qMax(0, width() - 64), height()),
                              Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine,
@@ -387,13 +388,13 @@ protected:
         painter.fillRect(rect(), colors.bgLayer);
 
         painter.setPen(colors.textPrimary);
-        painter.setFont(themeFont(QStringLiteral("Subtitle")).toQFont());
+        painter.setFont(themeFont(Typography::FontRole::Subtitle).toQFont());
         painter.drawText(QRect(leftPad, 12, contentWidth, 28),
                          Qt::AlignLeft | Qt::AlignVCenter,
                          m_title);
 
         painter.setPen(colors.textSecondary);
-        painter.setFont(themeFont(QStringLiteral("Caption")).toQFont());
+        painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         painter.drawText(QRect(leftPad, 42, contentWidth, 30),
                          Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
                          m_subtitle);
@@ -421,12 +422,12 @@ protected:
         painter.drawRoundedRect(panel, themeRadius().overlay, themeRadius().overlay);
 
         painter.setPen(colors.textPrimary);
-        painter.setFont(themeFont(QStringLiteral("BodyStrong")).toQFont());
+        painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
         painter.drawText(panel.adjusted(16, 10, -16, -panel.height() + 34),
                          Qt::AlignLeft | Qt::AlignVCenter,
                          QStringLiteral("Recent activity"));
 
-        painter.setFont(themeFont(QStringLiteral("Caption")).toQFont());
+        painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         int y = panel.top() + 38;
         for (const QString& row : m_activityRows) {
             const QRect rowRect(panel.left() + 14, y, panel.width() - 28, 24);
@@ -468,13 +469,13 @@ private:
         painter.drawRoundedRect(QRect(rectValue.left() + 12, rectValue.top() + 12, 3, 30), 1.5, 1.5);
 
         painter.setPen(colors.textSecondary);
-        painter.setFont(themeFont(QStringLiteral("Caption")).toQFont());
+        painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         painter.drawText(rectValue.adjusted(26, 8, -12, -rectValue.height() + 30),
                          Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
                          title);
 
         painter.setPen(colors.textPrimary);
-        painter.setFont(themeFont(QStringLiteral("BodyStrong")).toQFont());
+        painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
         painter.drawText(rectValue.adjusted(26, 28, -12, -8),
                          Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine,
                          value);

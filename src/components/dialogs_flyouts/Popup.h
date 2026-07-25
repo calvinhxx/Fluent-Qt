@@ -11,6 +11,10 @@
 
 class QGraphicsOpacityEffect;
 
+namespace fluent::overlay {
+class OverlayCoordinator;
+}
+
 namespace fluent::dialogs_flyouts {
 
 /**
@@ -180,7 +184,6 @@ private:
     bool m_isClosing = false;
 
     QPointer<QWidget> m_originalParent;
-    QPointer<QWidget> m_topLevel;
     QPointer<QWidget> m_themeSource;
 
     ClosePolicy m_closePolicy = ClosePolicy(CloseOnPressOutside | CloseOnEscape);
@@ -200,7 +203,7 @@ private:
     QPropertyAnimation* m_anim = nullptr;
     QGraphicsOpacityEffect* m_opacityEffect = nullptr;
 
-    QPointer<QWidget> m_scrim;
+    ::fluent::overlay::OverlayCoordinator* m_overlayCoordinator = nullptr;
 };
 
 } // namespace fluent::dialogs_flyouts

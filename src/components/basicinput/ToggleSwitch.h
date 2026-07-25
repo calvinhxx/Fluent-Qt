@@ -39,7 +39,7 @@ class ToggleSwitch : public QWidget, public FluentElement, public QMLPlus {
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
      */
-    Q_PROPERTY(QString fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
+    Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
      * @brief Animated switch knob position, normalized from off to on.
      * zh_CN: 开关滑块位置动画值，从关闭到开启归一化。
@@ -60,8 +60,8 @@ public:
     QString offContent() const { return m_offContent; }
     void setOffContent(const QString& content);
 
-    QString fontRole() const { return m_fontRole; }
-    void setFontRole(const QString& role);
+    Typography::FontRole fontRole() const { return m_fontRole; }
+    void setFontRole(Typography::FontRole role);
 
     qreal knobPosition() const { return m_knobPosition; }
     void setKnobPosition(qreal pos);
@@ -95,7 +95,7 @@ private:
     bool m_isOn = false;
     QString m_onContent = "On";
     QString m_offContent = "Off";
-    QString m_fontRole = "Body";
+    Typography::FontRole m_fontRole = Typography::FontRole::Body;
 
     qreal m_knobPosition = 0.0;  // 0.0 = Off, 1.0 = On
     bool m_isHovered = false;

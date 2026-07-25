@@ -261,9 +261,9 @@ void InfoBar::setSeverityIconBackgroundInset(int inset)
     emit severityIconBackgroundInsetChanged(m_severityIconBackgroundInset);
 }
 
-void InfoBar::setTitleFontRole(const QString& role)
+void InfoBar::setTitleFontRole(Typography::FontRole role)
 {
-    if (role.isEmpty() || m_titleFontRole == role) return;
+    if (m_titleFontRole == role) return;
     m_titleFontRole = role;
     updateLabels();
     updateGeometry();
@@ -271,9 +271,9 @@ void InfoBar::setTitleFontRole(const QString& role)
     emit titleFontRoleChanged(m_titleFontRole);
 }
 
-void InfoBar::setMessageFontRole(const QString& role)
+void InfoBar::setMessageFontRole(Typography::FontRole role)
 {
-    if (role.isEmpty() || m_messageFontRole == role) return;
+    if (m_messageFontRole == role) return;
     m_messageFontRole = role;
     updateLabels();
     updateGeometry();

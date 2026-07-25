@@ -329,6 +329,36 @@ TEST_F(ContentDialogTest, ButtonBarBalancesTwoVisibleActions) {
     dialog.done(0);
 }
 
+TEST_F(ContentDialogTest, AutoSizedSurfaceKeepsContentBetweenTitleAndCommands) {
+    window->show();
+    QApplication::processEvents();
+
+    ContentDialog dialog(window);
+    dialog.setAnimationEnabled(false);
+    dialog.setTitle("Save your work?");
+    dialog.setPrimaryButtonText("Save");
+    dialog.setSecondaryButtonText("Don't save");
+    dialog.setCloseButtonText("Cancel");
+
+    auto* body = new Label(
+        "Your changes will be lost if you close this document.", &dialog);
+    body->setFixedHeight(52);
+    dialog.setContent(body);
+
+    dialog.open();
+    QApplication::processEvents();
+
+    QWidget* bar = findButtonBar(&dialog);
+    ASSERT_NE(bar, nullptr);
+    EXPECT_TRUE(body->isVisibleTo(&dialog));
+    EXPECT_GE(body->height(), 52);
+    EXPECT_LT(body->geometry().bottom(), bar->geometry().top());
+    EXPECT_GT(dialog.height(), 2 * dialog.shadowSize() + bar->height());
+
+    dialog.done(0);
+    QApplication::processEvents();
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  Design-language × theme sweep
 // ══════════════════════════════════════════════════════════════════════════════

@@ -30,6 +30,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/collections/FlowView.h
     src/components/collections/GridView.h
     src/components/collections/ListView.h
+    src/components/collections/SelectionMode.h
     src/components/collections/SplitView.h
     src/components/collections/StackView.h
     src/components/collections/TreeView.h
@@ -50,6 +51,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/foundation/QMLPlus.h
     src/components/foundation/StyleThemeCatalog.h
     src/components/foundation/ThemeRegistry.h
+    src/components/foundation/WidgetOwnership.h
     src/components/foundation/overlay/OverlayGeometry.h
     src/components/foundation/overlay/OverlayLightDismiss.h
     src/components/foundation/overlay/OverlayScrim.h
@@ -100,13 +102,6 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/design/ThemeColors.h
     src/design/Typography.h
 
-    # These implementation-oriented headers were already installed by FluentQt
-    # 1.x. Keep their paths available for 1.x source compatibility, but do not
-    # add new application dependencies on them.
-    src/components/scrolling/OverlayScrollChrome.h
-    src/components/scrolling/OverscrollController.h
-    src/components/windowing/WindowChromeFrame.h
-    src/utils/DebugOverlay.h
 )
 
 function(fluent_qt_install_headers source_root)

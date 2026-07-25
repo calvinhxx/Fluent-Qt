@@ -61,14 +61,14 @@ QWidget* createPage(const QString& title, const QString& body = QString(), QWidg
     page->setLayout(layout);
 
     auto* heading = new Label(title, page);
-    heading->setFluentTypography(QStringLiteral("BodyStrong"));
+    heading->setFluentTypography(Typography::FontRole::BodyStrong);
     heading->anchors()->top = {page, Edge::Top, 18};
     heading->anchors()->left = {page, Edge::Left, 18};
     heading->anchors()->right = {page, Edge::Right, -18};
     addAnchored(layout, heading);
 
     auto* summary = new Label(body.isEmpty() ? QStringLiteral("External page hosted by StackContentHost and driven by SelectorBar selection.") : body, page);
-    summary->setFluentTypography(QStringLiteral("Caption"));
+    summary->setFluentTypography(Typography::FontRole::Caption);
     summary->setTextElideMode(Qt::ElideRight);
     summary->anchors()->top = {heading, Edge::Bottom, 8};
     summary->anchors()->left = {heading, Edge::Left, 0};
@@ -161,8 +161,8 @@ TEST_F(SelectorBarTest, PropertiesAndSelectionSignalsSuppressDuplicates)
 
     selector.setOverflowBehavior(SelectorBar::OverflowBehavior::MoreButton);
     selector.setOverflowBehavior(SelectorBar::OverflowBehavior::MoreButton);
-    selector.setItemFontRole(QStringLiteral("Caption"));
-    selector.setItemFontRole(QStringLiteral("Caption"));
+    selector.setItemFontRole(Typography::FontRole::Caption);
+    selector.setItemFontRole(Typography::FontRole::Caption);
     selector.setIconFontFamily(QStringLiteral("Custom Icon Font"));
     selector.setIconFontFamily(QStringLiteral("Custom Icon Font"));
     EXPECT_EQ(overflowSpy.count(), 1);
@@ -399,7 +399,7 @@ TEST_F(SelectorBarTest, VisualCheck)
     window->resize(980, 700);
 
     auto* title = new Label(QStringLiteral("SelectorBar"), window);
-    title->setFluentTypography(QStringLiteral("BodyStrong"));
+    title->setFluentTypography(Typography::FontRole::BodyStrong);
     title->setFixedSize(180, 24);
     title->anchors()->top = {window, Edge::Top, 18};
     title->anchors()->left = {window, Edge::Left, 30};
@@ -442,7 +442,7 @@ TEST_F(SelectorBarTest, VisualCheck)
     addAnchored(layout, compact);
 
     auto* overflowTitle = new Label(QStringLiteral("Overflow"), window);
-    overflowTitle->setFluentTypography(QStringLiteral("BodyStrong"));
+    overflowTitle->setFluentTypography(Typography::FontRole::BodyStrong);
     overflowTitle->setFixedSize(180, 24);
     overflowTitle->anchors()->top = {compact, Edge::Top, 0};
     overflowTitle->anchors()->left = {compact, Edge::Right, 48};

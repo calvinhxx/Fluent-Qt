@@ -2,6 +2,7 @@
 #define TYPOGRAPHY_H
 
 #include <QFont>
+#include <QObject>
 #include <QString>
 
 #include "compatibility/FontCompat.h"
@@ -24,6 +25,7 @@
  * zh_CN: Heading 用于副标题和标题，Display 用于大标题和展示文本。
  */
 namespace Typography {
+    Q_NAMESPACE
 
     // Font family tokens.
     // zh_CN: 字体家族 token。
@@ -256,19 +258,22 @@ namespace Typography {
         const QString Snow            = QString::fromUtf16(u"\uE944");
     }
 
-    // FontRole string constants accepted by themeFont(role).
-    // zh_CN: themeFont(role) 接受的 FontRole 字符串常量。
-    namespace FontRole {
-        const QString Caption         = QStringLiteral("Caption");
-        const QString Body            = QStringLiteral("Body");
-        const QString BodyStrong      = QStringLiteral("BodyStrong");
-        const QString BodyLarge       = QStringLiteral("BodyLarge");
-        const QString BodyLargeStrong = QStringLiteral("BodyLargeStrong");
-        const QString Subtitle        = QStringLiteral("Subtitle");
-        const QString Title           = QStringLiteral("Title");
-        const QString TitleLarge      = QStringLiteral("TitleLarge");
-        const QString Display         = QStringLiteral("Display");
-    }
+    /**
+     * @brief Strongly typed Fluent typography role.
+     * zh_CN: 强类型 Fluent 排版角色。
+     */
+    enum class FontRole {
+        Caption,
+        Body,
+        BodyStrong,
+        BodyLarge,
+        BodyLargeStrong,
+        Subtitle,
+        Title,
+        TitleLarge,
+        Display
+    };
+    Q_ENUM_NS(FontRole)
 
     /**
      * @brief Complete font metrics for one Fluent typography role.
@@ -357,6 +362,46 @@ namespace Typography {
             FontSize::Display, FontWeight::SemiBold, LineHeight::Display
         };
     }
+
+    /**
+     * @brief Returns the stable serialization key for a typography role.
+     * zh_CN: 返回排版角色用于序列化的稳定 key。
+     */
+    inline QString fontRoleKey(FontRole role) {
+        switch (role) {
+        case FontRole::Caption:         return QStringLiteral("Caption");
+        case FontRole::Body:            return QStringLiteral("Body");
+        case FontRole::BodyStrong:      return QStringLiteral("BodyStrong");
+        case FontRole::BodyLarge:       return QStringLiteral("BodyLarge");
+        case FontRole::BodyLargeStrong: return QStringLiteral("BodyLargeStrong");
+        case FontRole::Subtitle:        return QStringLiteral("Subtitle");
+        case FontRole::Title:           return QStringLiteral("Title");
+        case FontRole::TitleLarge:      return QStringLiteral("TitleLarge");
+        case FontRole::Display:         return QStringLiteral("Display");
+        }
+        return QStringLiteral("Body");
+    }
+
+    /**
+     * @brief Resolves the immutable metrics for a typography role.
+     * zh_CN: 解析排版角色对应的不可变字体度量。
+     */
+    inline const FontStyle& fontStyle(FontRole role) {
+        switch (role) {
+        case FontRole::Caption:         return Styles::Caption;
+        case FontRole::BodyStrong:      return Styles::BodyStrong;
+        case FontRole::BodyLarge:       return Styles::BodyLarge;
+        case FontRole::BodyLargeStrong: return Styles::BodyLargeStrong;
+        case FontRole::Subtitle:        return Styles::Subtitle;
+        case FontRole::Title:           return Styles::Title;
+        case FontRole::TitleLarge:      return Styles::TitleLarge;
+        case FontRole::Display:         return Styles::Display;
+        case FontRole::Body:            return Styles::Body;
+        }
+        return Styles::Body;
+    }
 }
+
+Q_DECLARE_METATYPE(Typography::FontRole)
 
 #endif // TYPOGRAPHY_H

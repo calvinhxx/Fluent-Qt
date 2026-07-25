@@ -53,7 +53,7 @@ public:
         return QSize(0, m_itemHeight);
     }
 
-    void setFontRole(const QString& role) {
+    void setFontRole(Typography::FontRole role) {
         if (m_fontRole == role)
             return;
         m_fontRole = role;
@@ -101,7 +101,7 @@ public:
 
 private:
     const FluentElement* m_themeHost = nullptr;
-    QString m_fontRole = Typography::FontRole::Body;
+    Typography::FontRole m_fontRole = Typography::FontRole::Body;
     int m_itemHeight = ::Spacing::ControlHeight::Large;
 };
 
@@ -129,7 +129,7 @@ public:
         m_listView->setBackgroundVisible(false);
         m_listView->setScrollChainingEnabled(false);
         m_listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        m_listView->setSelectionMode(fluent::collections::ListView::ListSelectionMode::Single);
+        m_listView->setSelectionMode(fluent::collections::ListView::SelectionMode::Single);
         m_listView->setSelectionBehavior(QAbstractItemView::SelectRows);
         m_listView->setMouseTracking(true);
         m_listView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
@@ -152,7 +152,7 @@ public:
         m_model->setStringList(suggestions);
     }
 
-    void setSuggestionMetrics(const QString& fontRole, int itemHeight) {
+    void setSuggestionMetrics(Typography::FontRole fontRole, int itemHeight) {
         m_itemHeight = normalizedPositiveSize(itemHeight);
         if (m_itemDelegate) {
             m_itemDelegate->setFontRole(fontRole);
@@ -365,7 +365,7 @@ void AutoSuggestBox::setClearButtonSize(int size) {
     emit clearButtonSizeChanged();
 }
 
-void AutoSuggestBox::setSuggestionFontRole(const QString& role) {
+void AutoSuggestBox::setSuggestionFontRole(Typography::FontRole role) {
     if (m_suggestionFontRole == role)
         return;
 

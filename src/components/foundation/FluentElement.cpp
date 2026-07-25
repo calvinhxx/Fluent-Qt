@@ -1,9 +1,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/private/FluentElement_p.h"
 #include "components/foundation/ThemeRegistry.h"
-#include "components/windowing/WindowBackdrop.h"
 
-#include <algorithm>
 #include <QVariant>
 #include <QWidget>
 #include "design/ThemeColors.h"
@@ -20,29 +18,6 @@ namespace fluent {
 namespace {
 
 constexpr char kThemeOverrideProperty[] = "fluentThemeOverride";
-constexpr char kWindowBackdropEffectProperty[] = "fluentWindowBackdropEffect";
-constexpr int kBackdropEffectSolid = 0;
-constexpr int kBackdropEffectMica = 1;
-constexpr int kBackdropEffectAcrylic = 2;
-
-QColor blendRgb(const QColor& from, const QColor& to, qreal amount)
-{
-    amount = std::max<qreal>(0.0, std::min<qreal>(1.0, amount));
-    return QColor::fromRgbF(from.redF() + (to.redF() - from.redF()) * amount,
-                            from.greenF() + (to.greenF() - from.greenF()) * amount,
-                            from.blueF() + (to.blueF() - from.blueF()) * amount);
-}
-
-int backdropEffectFromProperty(const QVariant& value)
-{
-    bool ok = false;
-    const int effect = value.toInt(&ok);
-    if (!ok)
-        return kBackdropEffectSolid;
-    if (effect == kBackdropEffectMica || effect == kBackdropEffectAcrylic)
-        return effect;
-    return kBackdropEffectSolid;
-}
 
 bool themeFromProperty(const QVariant& value, FluentElement::Theme& theme)
 {
@@ -144,17 +119,8 @@ const FluentElement::Colors& FluentElement::themeColorsRef() const {
     return ThemeRegistry::instance().colors(effectiveTheme() == Dark);
 }
 
-FluentElement::FontStyle FluentElement::themeFont(const QString& role) const {
-    Typography::FontStyle s;
-    if      (role == Typography::FontRole::Caption)         s = Typography::Styles::Caption;
-    else if (role == Typography::FontRole::BodyStrong)      s = Typography::Styles::BodyStrong;
-    else if (role == Typography::FontRole::BodyLarge)       s = Typography::Styles::BodyLarge;
-    else if (role == Typography::FontRole::BodyLargeStrong) s = Typography::Styles::BodyLargeStrong;
-    else if (role == Typography::FontRole::Subtitle)        s = Typography::Styles::Subtitle;
-    else if (role == Typography::FontRole::Title)           s = Typography::Styles::Title;
-    else if (role == Typography::FontRole::TitleLarge)      s = Typography::Styles::TitleLarge;
-    else if (role == Typography::FontRole::Display)         s = Typography::Styles::Display;
-    else                                                    s = Typography::Styles::Body;
+FluentElement::FontStyle FluentElement::themeFont(Typography::FontRole role) const {
+    const Typography::FontStyle& s = Typography::fontStyle(role);
 
     // Apply the registry's optional family override + size scale so a brand preset (Roboto / SF) or a
     // user config can restyle text without touching every control. A family override clears the bundled
@@ -233,10 +199,8 @@ Elevation::ShadowParams FluentElement::themeShadow(Elevation::Level level) const
     return Elevation::getShadow(level, effectiveTheme() == Dark);
 }
 
-int FluentElement::themeBreakpoint(const QString& size) const {
-    if (size == "Small") return Breakpoints::Small;
-    if (size == "Large") return Breakpoints::Large;
-    return Breakpoints::Medium;
+int FluentElement::themeBreakpoint(Breakpoints::Breakpoint breakpoint) const {
+    return Breakpoints::value(breakpoint);
 }
 
 QColor FluentElement::themeBackdrop(bool active) const {
@@ -252,46 +216,6 @@ QColor FluentElement::themeBackdrop(bool active) const {
     return QColor::fromRgbF(c.bgCanvas.redF()   + (c.bgLayer.redF()   - c.bgCanvas.redF())   * t,
                             c.bgCanvas.greenF() + (c.bgLayer.greenF() - c.bgCanvas.greenF()) * t,
                             c.bgCanvas.blueF()  + (c.bgLayer.blueF()  - c.bgCanvas.blueF())  * t);
-}
-
-QColor FluentElement::chromeBackdropFill(const QWidget* hostWindow, bool active) const {
-    // The typed state is authoritative: transparent clearing is legal only after
-    // a platform backend has actually accepted the requested material. Keep the
-    // legacy boolean as a compatibility bridge for downstream hosts that have
-    // not migrated to publishWindowBackdropState() yet.
-    // zh_CN: 强类型状态是权威来源：只有平台后端实际接受请求后才允许擦透明；
-    // 旧布尔属性仅作为尚未迁移宿主的兼容桥接。
-    windowing::BackdropState typedState;
-    const bool hasTypedState = windowing::tryWindowBackdropState(hostWindow, &typedState);
-    if (hasTypedState
-        && typedState.surfaceMode == windowing::BackdropSurfaceMode::CompositedTransparent) {
-        return QColor();  // invalid => caller erases to transparent
-    }
-    if (!hasTypedState
-        && hostWindow && hostWindow->property("fluentMicaBackdrop").toBool()) {
-        return QColor();  // legacy host compatibility
-    }
-
-    const int requestedEffect = hasTypedState
-        ? static_cast<int>(typedState.requestedEffect)
-        : (hostWindow
-               ? backdropEffectFromProperty(hostWindow->property(kWindowBackdropEffectProperty))
-               : kBackdropEffectSolid);
-    const bool dark = effectiveTheme() == Dark;
-
-    if (requestedEffect == kBackdropEffectMica) {
-        const Material::MicaToken mica = Material::Mica::get(dark);
-        const QColor target = active ? themeColors().bgLayerAlt : themeColors().bgLayer;
-        return blendRgb(mica.baseColor, target, active ? 0.10 : 0.35);
-    }
-
-    if (requestedEffect == kBackdropEffectAcrylic) {
-        const Material::AcrylicToken acrylic = Material::Acrylic::get(dark);
-        const QColor target = active ? themeColors().bgLayerAlt : themeColors().bgLayer;
-        return blendRgb(acrylic.tintColor, target, active ? 0.22 : 0.45);
-    }
-
-    return themeBackdrop(active);
 }
 
 } // namespace fluent

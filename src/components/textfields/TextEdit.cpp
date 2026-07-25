@@ -664,7 +664,7 @@ void TextEdit::setContentMargins(const QMargins& margins) {
     emit contentMarginsChanged();
 }
 
-void TextEdit::setFontRole(const QString& role) {
+void TextEdit::setFontRole(Typography::FontRole role) {
     if (m_fontRole == role) return;
     m_fontRole = role;
     applyThemeStyle();

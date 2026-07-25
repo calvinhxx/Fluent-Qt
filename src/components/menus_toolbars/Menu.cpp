@@ -140,9 +140,9 @@ FluentMenuItem::FluentMenuItem(const QString& text, QObject* parent)
     setFont(themeFont(m_fontStyle).toQFont());
 }
 
-void FluentMenuItem::setFontStyle(const QString& style) {
-    if (m_fontStyle == style) return;
-    m_fontStyle = style;
+void FluentMenuItem::setFontStyle(Typography::FontRole role) {
+    if (m_fontStyle == role) return;
+    m_fontStyle = role;
     onThemeUpdated();
     emit fontStyleChanged();
 }
@@ -171,9 +171,9 @@ FluentMenu::FluentMenu(const QString& title, QWidget* parent)
     onThemeUpdated();
 }
 
-void FluentMenu::setFontStyle(const QString& style) {
-    if (m_fontStyle == style) return;
-    m_fontStyle = style;
+void FluentMenu::setFontStyle(Typography::FontRole role) {
+    if (m_fontStyle == role) return;
+    m_fontStyle = role;
     onThemeUpdated();
     emit fontStyleChanged();
 }

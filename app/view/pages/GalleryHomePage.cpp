@@ -407,7 +407,7 @@ public:
         setSpacing(0);
         setFixedHeight(kHeroLinkStripHeight);
         setCursor(Qt::PointingHandCursor);
-        setSelectionMode(ListSelectionMode::None);
+        setSelectionMode(SelectionMode::None);
         setBackgroundVisible(false);
         setBorderVisible(false);
         setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);

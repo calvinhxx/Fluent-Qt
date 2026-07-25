@@ -81,9 +81,9 @@ void Label::setText(const QString& text) {
     updateRenderedText();
 }
 
-void Label::setFluentTypography(const QString& styleName) {
-    if (m_styleName == styleName && !m_customFont) return;
-    m_styleName = styleName;
+void Label::setFluentTypography(Typography::FontRole role) {
+    if (m_fontRole == role && !m_customFont) return;
+    m_fontRole = role;
     m_customFont = false;
     applyTypographyFont();
     emit typographyChanged();
@@ -159,7 +159,7 @@ void Label::applyTextColor() {
 }
 
 void Label::applyTypographyFont() {
-    QLabel::setFont(themeFont(m_styleName).toQFont());
+    QLabel::setFont(themeFont(m_fontRole).toQFont());
     updateRenderedText();
 }
 

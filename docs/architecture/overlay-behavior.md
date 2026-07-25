@@ -6,6 +6,8 @@ owning top-level `QWidget`，保持 `Qt::Widget` 子控件语义，不创建独�
 `Qt::Tool`。这与 WinUI Gallery 的 ContentDialog / Flyout / TeachingTip（绑在当前窗口 `XamlRoot`）对齐。
 
 相关 helper 的 canonical 位置是 `src/components/foundation/overlay/`，命名空间是 `fluent::overlay`。
+`OverlayCoordinator` 是 UILib 内部协调器，集中处理 top-level 挂载、宿主 resize、scrim 生命周期与
+stacking；它不会进入安装头文件或成为应用层 API。
 
 ## Geometry
 

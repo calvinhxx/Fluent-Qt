@@ -7,6 +7,7 @@
 #include <QParallelAnimationGroup>
 #include <QPropertyAnimation>
 #include <QResizeEvent>
+#include <QSet>
 #include <QSizePolicy>
 
 namespace fluent::collections {
@@ -92,7 +93,7 @@ void StackView::setTransitionType(StackViewTransitionType type)
     emit transitionTypeChanged(m_transitionType);
 }
 
-void StackView::setDefaultItemOwnership(StackViewItemOwnership ownership)
+void StackView::setDefaultItemOwnership(WidgetOwnership ownership)
 {
     if (m_defaultOwnership == ownership)
         return;
@@ -105,7 +106,7 @@ void StackView::setInitialItem(QWidget* item)
     setInitialItem(item, m_defaultOwnership);
 }
 
-bool StackView::setInitialItem(QWidget* item, StackViewItemOwnership ownership)
+bool StackView::setInitialItem(QWidget* item, WidgetOwnership ownership)
 {
     if (m_busy)
         return false;
@@ -118,8 +119,10 @@ bool StackView::setInitialItem(QWidget* item, StackViewItemOwnership ownership)
     cleanupAll(false);
     m_stack.clear();
 
+    QWidget* originalParent = item->parentWidget();
     prepareItem(item);
-    m_stack.append(makeEntry(item, ownership, StackViewItemStatus::Active));
+    m_stack.append(makeEntry(item, originalParent, ownership,
+                             StackViewItemStatus::Active));
     m_internalStackChange = true;
     QStackedWidget::setCurrentWidget(item);
     m_internalStackChange = false;
@@ -140,7 +143,7 @@ bool StackView::push(QWidget* item)
     return push(item, m_defaultOwnership);
 }
 
-bool StackView::push(QWidget* item, StackViewItemOwnership ownership)
+bool StackView::push(QWidget* item, WidgetOwnership ownership)
 {
     if (!canStartOperation() || !item || contains(item))
         return false;
@@ -148,8 +151,10 @@ bool StackView::push(QWidget* item, StackViewItemOwnership ownership)
     QWidget* oldCurrent = currentItem();
     QWidget* oldInitial = initialItem();
     const int oldDepth = depth();
+    QWidget* originalParent = item->parentWidget();
     prepareItem(item);
-    m_stack.append(makeEntry(item, ownership, StackViewItemStatus::Inactive));
+    m_stack.append(makeEntry(item, originalParent, ownership,
+                             StackViewItemStatus::Inactive));
 
     emit itemPushed(item);
     emitDepthIfChanged(oldDepth);
@@ -163,13 +168,15 @@ bool StackView::push(QWidget* item, StackViewItemOwnership ownership)
     return true;
 }
 
-bool StackView::push(const QVector<QWidget*>& items, StackViewItemOwnership ownership)
+bool StackView::push(const QVector<QWidget*>& items, WidgetOwnership ownership)
 {
     if (!canStartOperation() || items.isEmpty())
         return false;
+    QSet<QWidget*> uniqueItems;
     for (QWidget* item : items) {
-        if (!item || contains(item))
+        if (!item || contains(item) || uniqueItems.contains(item))
             return false;
+        uniqueItems.insert(item);
     }
 
     if (items.size() == 1)
@@ -179,8 +186,10 @@ bool StackView::push(const QVector<QWidget*>& items, StackViewItemOwnership owne
     QWidget* oldInitial = initialItem();
     const int oldDepth = depth();
     for (QWidget* item : items) {
+        QWidget* originalParent = item->parentWidget();
         prepareItem(item);
-        m_stack.append(makeEntry(item, ownership, StackViewItemStatus::Inactive));
+        m_stack.append(makeEntry(item, originalParent, ownership,
+                                 StackViewItemStatus::Inactive));
         item->hide();
         emit itemPushed(item);
     }
@@ -202,12 +211,12 @@ bool StackView::replace(QWidget* item)
     return replace(item, m_defaultOwnership);
 }
 
-bool StackView::replace(QWidget* item, StackViewItemOwnership ownership)
+bool StackView::replace(QWidget* item, WidgetOwnership ownership)
 {
     return replace(depth() - 1, item, ownership);
 }
 
-bool StackView::replace(int index, QWidget* item, StackViewItemOwnership ownership)
+bool StackView::replace(int index, QWidget* item, WidgetOwnership ownership)
 {
     if (!canStartOperation() || !item || contains(item))
         return false;
@@ -220,10 +229,14 @@ bool StackView::replace(int index, QWidget* item, StackViewItemOwnership ownersh
     QWidget* oldInitial = initialItem();
     StackEntry oldEntry = m_stack.at(index);
     QWidget* oldItem = oldEntry.item.data();
+    QWidget* originalParent = item->parentWidget();
     prepareItem(item);
 
-    PendingRemoval removal{oldEntry.item, oldEntry.rawItem, oldEntry.ownership, oldEntry.destroyedConnection};
-    m_stack[index] = makeEntry(item, ownership, StackViewItemStatus::Inactive);
+    PendingRemoval removal{oldEntry.item, oldEntry.rawItem,
+                           oldEntry.originalParent, oldEntry.ownership,
+                           oldEntry.destroyedConnection};
+    m_stack[index] = makeEntry(item, originalParent, ownership,
+                               StackViewItemStatus::Inactive);
 
     emit itemReplaced(oldItem, item);
     emitInitialIfChanged(oldInitial);
@@ -252,7 +265,9 @@ bool StackView::pop()
     QWidget* oldInitial = initialItem();
     const int oldDepth = depth();
     StackEntry oldEntry = m_stack.takeLast();
-    PendingRemoval removal{oldEntry.item, oldEntry.rawItem, oldEntry.ownership, oldEntry.destroyedConnection};
+    PendingRemoval removal{oldEntry.item, oldEntry.rawItem,
+                           oldEntry.originalParent, oldEntry.ownership,
+                           oldEntry.destroyedConnection};
     QWidget* target = currentItem();
 
     if (oldCurrent)
@@ -300,7 +315,8 @@ bool StackView::popToItem(QWidget* item)
         if (removed)
             emitItemStatus(removed, StackViewItemStatus::Deactivating);
         emit itemPopped(removed);
-        removals.append({entry.item, entry.rawItem, entry.ownership, entry.destroyedConnection});
+        removals.append({entry.item, entry.rawItem, entry.originalParent,
+                         entry.ownership, entry.destroyedConnection});
     }
 
     QWidget* target = currentItem();
@@ -346,7 +362,8 @@ bool StackView::clear()
             emitItemStatus(item, StackViewItemStatus::Inactive);
             emit itemPopped(item);
         }
-        cleanupPendingRemoval({entry.item, entry.rawItem, entry.ownership, entry.destroyedConnection});
+        cleanupPendingRemoval({entry.item, entry.rawItem, entry.originalParent,
+                               entry.ownership, entry.destroyedConnection});
     }
 
     emitDepthIfChanged(oldDepth);
@@ -357,7 +374,7 @@ bool StackView::clear()
     return true;
 }
 
-bool StackView::adoptWidget(QWidget* item, StackViewItemOwnership ownership)
+bool StackView::adoptWidget(QWidget* item, WidgetOwnership ownership)
 {
     if (m_busy || !item || contains(item))
         return false;
@@ -365,9 +382,12 @@ bool StackView::adoptWidget(QWidget* item, StackViewItemOwnership ownership)
     QWidget* oldCurrent = currentItem();
     QWidget* oldInitial = initialItem();
     const int oldDepth = depth();
+    QWidget* originalParent = item->parentWidget();
     prepareItem(item);
     const bool becomesCurrent = !oldCurrent || QStackedWidget::currentWidget() == item;
-    m_stack.append(makeEntry(item, ownership, becomesCurrent ? StackViewItemStatus::Active : StackViewItemStatus::Inactive));
+    m_stack.append(makeEntry(item, originalParent, ownership,
+                             becomesCurrent ? StackViewItemStatus::Active
+                                            : StackViewItemStatus::Inactive));
     item->setVisible(becomesCurrent);
     if (becomesCurrent) {
         m_internalStackChange = true;
@@ -441,7 +461,7 @@ void StackView::setCurrentIndex(int index)
     const int oldDepth = depth();
 
     if (!contains(item)) {
-        adoptWidget(item, StackViewItemOwnership::DoesNotOwnItem);
+        adoptWidget(item, WidgetOwnership::Borrowed);
     } else {
         const int stackIndex = stackIndexOf(item);
         if (stackIndex >= 0 && stackIndex != m_stack.size() - 1) {
@@ -508,12 +528,14 @@ int StackView::stackIndexOf(QWidget* item) const
 }
 
 StackView::StackEntry StackView::makeEntry(QWidget* item,
-                                           StackViewItemOwnership ownership,
+                                           QWidget* originalParent,
+                                           WidgetOwnership ownership,
                                            StackViewItemStatus status)
 {
     StackEntry entry;
     entry.item = item;
     entry.rawItem = item;
+    entry.originalParent = originalParent;
     entry.ownership = ownership;
     entry.status = status;
     entry.destroyedConnection = connect(item, &QObject::destroyed, this, [this](QObject* object) {
@@ -752,11 +774,13 @@ void StackView::cleanupPendingRemoval(const PendingRemoval& removal, bool immedi
         m_internalStackChange = false;
     }
     item->hide();
-    if (removal.ownership == StackViewItemOwnership::OwnsItem) {
+    if (removal.ownership == WidgetOwnership::Owned) {
         if (immediateDelete)
             delete item;
         else
             item->deleteLater();
+    } else if (removal.ownership == WidgetOwnership::Reparented) {
+        item->setParent(removal.originalParent.data());
     } else {
         item->setParent(nullptr);
     }
@@ -767,7 +791,9 @@ void StackView::cleanupAll(bool immediateDelete)
     QVector<StackEntry> entries = m_stack;
     m_stack.clear();
     for (const StackEntry& entry : entries)
-        cleanupPendingRemoval({entry.item, entry.rawItem, entry.ownership, entry.destroyedConnection}, immediateDelete);
+        cleanupPendingRemoval({entry.item, entry.rawItem, entry.originalParent,
+                               entry.ownership, entry.destroyedConnection},
+                              immediateDelete);
 }
 
 void StackView::layoutStackItems()
@@ -846,7 +872,7 @@ void StackView::onCurrentChanged(int index)
     QWidget* oldInitial = initialItem();
     const int oldDepth = depth();
     if (!contains(item)) {
-        adoptWidget(item, StackViewItemOwnership::DoesNotOwnItem);
+        adoptWidget(item, WidgetOwnership::Borrowed);
         return;
     }
 

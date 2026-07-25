@@ -347,7 +347,7 @@ TEST_F(TreeViewTest, DeepNesting) {
 
 TEST_F(TreeViewTest, DefaultSelectionMode) {
     TreeView* tv = new TreeView(window);
-    EXPECT_EQ(tv->selectionMode(), TreeSelectionMode::Single);
+    EXPECT_EQ(tv->selectionMode(), SelectionMode::Single);
 }
 
 TEST_F(TreeViewTest, SelectionModeSwitch) {
@@ -356,16 +356,16 @@ TEST_F(TreeViewTest, SelectionModeSwitch) {
 
     QSignalSpy spy(tv, &TreeView::selectionModeChanged);
 
-    tv->setSelectionMode(TreeSelectionMode::Multiple);
-    EXPECT_EQ(tv->selectionMode(), TreeSelectionMode::Multiple);
+    tv->setSelectionMode(SelectionMode::Multiple);
+    EXPECT_EQ(tv->selectionMode(), SelectionMode::Multiple);
     EXPECT_EQ(spy.count(), 1);
 
-    tv->setSelectionMode(TreeSelectionMode::None);
-    EXPECT_EQ(tv->selectionMode(), TreeSelectionMode::None);
+    tv->setSelectionMode(SelectionMode::None);
+    EXPECT_EQ(tv->selectionMode(), SelectionMode::None);
     EXPECT_EQ(spy.count(), 2);
 
-    tv->setSelectionMode(TreeSelectionMode::Extended);
-    EXPECT_EQ(tv->selectionMode(), TreeSelectionMode::Extended);
+    tv->setSelectionMode(SelectionMode::Extended);
+    EXPECT_EQ(tv->selectionMode(), SelectionMode::Extended);
     EXPECT_EQ(spy.count(), 3);
 }
 
@@ -373,7 +373,7 @@ TEST_F(TreeViewTest, SelectionModeDuplicateIgnored) {
     TreeView* tv = new TreeView(window);
     QSignalSpy spy(tv, &TreeView::selectionModeChanged);
 
-    tv->setSelectionMode(TreeSelectionMode::Single);
+    tv->setSelectionMode(SelectionMode::Single);
     EXPECT_EQ(spy.count(), 0);
 }
 
@@ -2041,7 +2041,7 @@ TEST_F(TreeViewTest, CheckStateTracksMultiSelectionChanges) {
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
-    tv->setSelectionMode(TreeSelectionMode::Multiple);
+    tv->setSelectionMode(SelectionMode::Multiple);
     attachCheckableDelegate(tv);
     tv->setFixedSize(350, 400);
     tv->expandAll();
@@ -2091,7 +2091,7 @@ TEST_F(TreeViewTest, CheckBoxClickSyncsMultiSelection) {
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
-    tv->setSelectionMode(TreeSelectionMode::Multiple);
+    tv->setSelectionMode(SelectionMode::Multiple);
     attachCheckableDelegate(tv);
     tv->setFixedSize(350, 400);
     showOffscreen(window);
@@ -2115,7 +2115,7 @@ TEST_F(TreeViewTest, CheckBoxParentAndChildClicksKeepTriStateSelection) {
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
-    tv->setSelectionMode(TreeSelectionMode::Multiple);
+    tv->setSelectionMode(SelectionMode::Multiple);
     attachCheckableDelegate(tv);
     tv->setFixedSize(350, 400);
     tv->expandAll();
@@ -2168,7 +2168,7 @@ TEST_F(TreeViewTest, CheckableSelectionDoesNotPaintIndicator) {
     TreeView* tv = new TreeView(window);
     auto* model = createCheckableTreeModel(tv);
     tv->setModel(model);
-    tv->setSelectionMode(TreeSelectionMode::Multiple);
+    tv->setSelectionMode(SelectionMode::Multiple);
     attachCheckableDelegate(tv);
     tv->setIndicatorMotionAnimationEnabled(false);
     tv->setFixedSize(350, 400);
@@ -2275,7 +2275,7 @@ TEST_F(TreeViewTest, VisualCheck) {
 
     // ── TreeView 0: Selected indicator motion sample ────────────────────
     Label* motionHeader = new Label("Selected indicator motion transitions.", content);
-    motionHeader->setFluentTypography("BodyStrong");
+    motionHeader->setFluentTypography(Typography::FontRole::BodyStrong);
     motionHeader->anchors()->top = {content, Edge::Top, 20};
     motionHeader->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(motionHeader);
@@ -2371,14 +2371,14 @@ TEST_F(TreeViewTest, VisualCheck) {
 
     // ── TreeView 2: Multi-selection with CheckBox ────────────────────────
     Label* header2 = new Label("A TreeView with Multi-selection enabled.", content);
-    header2->setFluentTypography("BodyStrong");
+    header2->setFluentTypography(Typography::FontRole::BodyStrong);
     header2->anchors()->top  = {tv1, Edge::Bottom, 16};
     header2->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header2);
 
     TreeView* tv2 = new TreeView(content);
     tv2->setBorderVisible(true);
-    tv2->setSelectionMode(TreeSelectionMode::Multiple);
+    tv2->setSelectionMode(SelectionMode::Multiple);
     {
         auto* model = createCheckableTreeModel(tv2);
         tv2->setModel(model);
@@ -2399,7 +2399,7 @@ TEST_F(TreeViewTest, VisualCheck) {
 
     // ── TreeView 3: DataBinding using ItemSource ─────────────────────────
     Label* header3 = new Label("A TreeView with DataBinding Using ItemSource.", content);
-    header3->setFluentTypography("BodyStrong");
+    header3->setFluentTypography(Typography::FontRole::BodyStrong);
     header3->anchors()->top  = {tv2, Edge::Bottom, 16};
     header3->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header3);
@@ -2446,7 +2446,7 @@ TEST_F(TreeViewTest, VisualCheck) {
 
     // ── TreeView 4: ItemTemplateSelector (folder/document icons) ─────────
     Label* header4 = new Label("A TreeView with ItemTemplateSelector.", content);
-    header4->setFluentTypography("BodyStrong");
+    header4->setFluentTypography(Typography::FontRole::BodyStrong);
     header4->anchors()->top  = {tv3, Edge::Bottom, 16};
     header4->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header4);

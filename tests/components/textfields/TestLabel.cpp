@@ -61,7 +61,7 @@ protected:
 TEST_F(LabelTest, DefaultConstructor) {
     Label* label = new Label(window);
     EXPECT_EQ(label->text(), "");
-    EXPECT_EQ(label->fluentTypography(), "Body");
+    EXPECT_EQ(label->fluentTypography(), Typography::FontRole::Body);
     EXPECT_EQ(label->textElideMode(), Qt::ElideNone);
     EXPECT_NE(dynamic_cast<QLabel*>(label), nullptr);
 }
@@ -69,7 +69,7 @@ TEST_F(LabelTest, DefaultConstructor) {
 TEST_F(LabelTest, TextConstructor) {
     Label* label = new Label("Static label text", window);
     EXPECT_EQ(label->text(), "Static label text");
-    EXPECT_EQ(label->fluentTypography(), "Body");
+    EXPECT_EQ(label->fluentTypography(), Typography::FontRole::Body);
 }
 
 TEST_F(LabelTest, Contract_DirectTextSetterKeepsQtAndFluentFacadesCoherent) {
@@ -94,21 +94,21 @@ TEST_F(LabelTest, FluentTypographyChange) {
     Label* label = new Label(window);
     QSignalSpy spy(label, SIGNAL(typographyChanged()));
 
-    label->setFluentTypography("Title");
-    EXPECT_EQ(label->fluentTypography(), "Title");
+    label->setFluentTypography(Typography::FontRole::Title);
+    EXPECT_EQ(label->fluentTypography(), Typography::FontRole::Title);
     EXPECT_EQ(spy.count(), 1);
 
-    label->setFluentTypography("Title");
+    label->setFluentTypography(Typography::FontRole::Title);
     EXPECT_EQ(spy.count(), 1);
 }
 
 TEST_F(LabelTest, ThemeUpdatePreservesTypography) {
     Label* label = new Label("Theme text", window);
-    label->setFluentTypography("Caption");
+    label->setFluentTypography(Typography::FontRole::Caption);
 
     label->onThemeUpdated();
 
-    EXPECT_EQ(label->fluentTypography(), "Caption");
+    EXPECT_EQ(label->fluentTypography(), Typography::FontRole::Caption);
     EXPECT_TRUE(label->palette().color(QPalette::WindowText).isValid());
 }
 
@@ -249,7 +249,7 @@ TEST_F(LabelTest, ElideStateRecomputesWhenInputsChange) {
     EXPECT_TRUE(label->isTextElided());
     EXPECT_EQ(tip->text(), updatedLongText);
 
-    label->setFluentTypography("Title");
+    label->setFluentTypography(Typography::FontRole::Title);
     QString expected = QFontMetrics(label->font()).elidedText(
         updatedLongText, Qt::ElideRight, label->contentsRect().width());
     EXPECT_EQ(renderedLabelText(label), expected);
@@ -274,10 +274,13 @@ TEST_F(LabelTest, VisualCheck) {
     constexpr int kElideCaptionX = 650;
     constexpr int kElideValueX = 790;
 
-    auto createTypographyLabel = [&](const QString& text, const QString& styleName, QWidget* anchor, int margin = 20) {
-        Label* l = new Label(text + " (" + styleName + ")", window);
+    auto createTypographyLabel = [&](const QString& text,
+                                     Typography::FontRole role,
+                                     QWidget* anchor,
+                                     int margin = 20) {
+        Label* l = new Label(text + " (" + Typography::fontRoleKey(role) + ")", window);
         // --- 核心修复：使用属性接口，内部会自动记忆并在切换主题时持久化 ---
-        l->setFluentTypography(styleName);
+        l->setFluentTypography(role);
         
         l->anchors()->top = {anchor, Edge::Bottom, margin};
         l->anchors()->left = {window, Edge::Left, 40};
@@ -292,14 +295,14 @@ TEST_F(LabelTest, VisualCheck) {
                               QWidget* anchor,
                               int margin = 16) {
         Label* captionLabel = new Label(captionText, window);
-        captionLabel->setFluentTypography("Caption");
+        captionLabel->setFluentTypography(Typography::FontRole::Caption);
         captionLabel->setFixedSize(130, 28);
         captionLabel->anchors()->top = {anchor, Edge::Bottom, margin};
         captionLabel->anchors()->left = {window, Edge::Left, kElideCaptionX};
         layout->addWidget(captionLabel);
 
         Label* valueLabel = new Label(valueText, window);
-        valueLabel->setFluentTypography("Body");
+        valueLabel->setFluentTypography(Typography::FontRole::Body);
         valueLabel->setTextElideMode(elideMode);
         valueLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
         valueLabel->setContentsMargins(6, 0, 6, 0);
@@ -314,32 +317,32 @@ TEST_F(LabelTest, VisualCheck) {
 
     // 1. Display (最顶层锚定)
     Label* display = new Label("Fluent UI (Display)", window);
-    display->setFluentTypography("Display");
+    display->setFluentTypography(Typography::FontRole::Display);
     display->anchors()->top = {window, Edge::Top, 30};
     display->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(display);
     
     // 2. 其余阶梯
-    Label* titleLarge = createTypographyLabel("Large Title", "TitleLarge", display);
-    Label* title = createTypographyLabel("Standard Title", "Title", titleLarge);
-    Label* subtitle = createTypographyLabel("Subtitle Text", "Subtitle", title);
-    Label* bodyStrong = createTypographyLabel("Strong Body Text", "BodyStrong", subtitle);
+    Label* titleLarge = createTypographyLabel("Large Title", Typography::FontRole::TitleLarge, display);
+    Label* title = createTypographyLabel("Standard Title", Typography::FontRole::Title, titleLarge);
+    Label* subtitle = createTypographyLabel("Subtitle Text", Typography::FontRole::Subtitle, title);
+    Label* bodyStrong = createTypographyLabel("Strong Body Text", Typography::FontRole::BodyStrong, subtitle);
     
     Label* body = new Label("Standard Body Text (Default)", window);
     body->anchors()->top = {bodyStrong, Edge::Bottom, 20};
     body->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(body);
     
-    Label* caption = createTypographyLabel("Small Caption Text", "Caption", body);
+    Label* caption = createTypographyLabel("Small Caption Text", Typography::FontRole::Caption, body);
 
     Label* elideTitle = new Label("Elide + ToolTip", window);
-    elideTitle->setFluentTypography("Title");
+    elideTitle->setFluentTypography(Typography::FontRole::Title);
     elideTitle->anchors()->top = {window, Edge::Top, 40};
     elideTitle->anchors()->left = {window, Edge::Left, kElideCaptionX};
     layout->addWidget(elideTitle);
 
     Label* elideHint = new Label("Hover clipped values to see the full text.", window);
-    elideHint->setFluentTypography("Caption");
+    elideHint->setFluentTypography(Typography::FontRole::Caption);
     elideHint->anchors()->top = {elideTitle, Edge::Bottom, 8};
     elideHint->anchors()->left = {window, Edge::Left, kElideCaptionX};
     layout->addWidget(elideHint);

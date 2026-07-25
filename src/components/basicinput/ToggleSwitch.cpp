@@ -72,7 +72,7 @@ void ToggleSwitch::setOffContent(const QString& content)
     emit offContentChanged(m_offContent);
 }
 
-void ToggleSwitch::setFontRole(const QString& role)
+void ToggleSwitch::setFontRole(Typography::FontRole role)
 {
     if (m_fontRole == role) return;
     m_fontRole = role;

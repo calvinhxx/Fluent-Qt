@@ -273,7 +273,7 @@ void LineEdit::setContentMargins(const QMargins& margins) {
     emit contentMarginsChanged();
 }
 
-void LineEdit::setFontRole(const QString& role) {
+void LineEdit::setFontRole(Typography::FontRole role) {
     if (m_fontRole == role)
         return;
     m_fontRole = role;

@@ -89,7 +89,7 @@ private:
 
 Label* makeSampleLabel(QWidget* parent,
                        const QString& text,
-                       const QString& role = Typography::FontRole::Body)
+                       Typography::FontRole role = Typography::FontRole::Body)
 {
     auto* label = new Label(text, parent);
     label->setFluentTypography(role);

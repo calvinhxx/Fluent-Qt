@@ -14,6 +14,7 @@
 #include <QResizeEvent>
 #include <QTimer>
 
+#include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayWindow.h"
@@ -44,6 +45,15 @@ CoachMark::CoachMark(QWidget* owner, SurfaceMode /*surfaceMode*/)
     : QWidget(owner)
     , m_owner(owner)
 {
+    m_overlayCoordinator =
+        new ::fluent::overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator,
+            &::fluent::overlay::OverlayCoordinator::hostGeometryChanged,
+            this,
+            [this]() {
+                if (m_open)
+                    reposition(/*animated*/ false);
+            });
     setObjectName(QStringLiteral("CoachMark"));
     attachToOwnerTopLevel();
     setWindowFlags(Qt::Widget);
@@ -103,7 +113,7 @@ void CoachMark::setTarget(QWidget* target)
         onThemeUpdated();
     if (m_open) {
         reposition(/*animated*/ true);
-        raise();
+        m_overlayCoordinator->raiseStack();
     }
 }
 
@@ -114,7 +124,7 @@ void CoachMark::setPlacement(Placement placement)
     m_placement = placement;
     if (m_open) {
         reposition(/*animated*/ true);
-        raise();
+        m_overlayCoordinator->raiseStack();
     }
 }
 
@@ -129,7 +139,7 @@ void CoachMark::open()
     reposition(/*animated*/ false);
     setFadeOpacity(0.0);
     show();
-    raise();
+    m_overlayCoordinator->raiseStack();
     if (qApp)
         qApp->installEventFilter(this);
     m_fadeAnim->stop();
@@ -179,7 +189,8 @@ bool CoachMark::eventFilter(QObject* watched, QEvent* event)
     }
 
     QWidget* trackingAnchor = m_target ? m_target.data()
-                                       : (m_owner ? m_owner : parentWidget());
+                                       : (m_owner ? m_owner.data()
+                                                  : parentWidget());
     if (::fluent::overlay::anchorGeometryMayChange(watched, event, trackingAnchor))
         queueTargetSync();
     return QWidget::eventFilter(watched, event);
@@ -207,7 +218,7 @@ void CoachMark::syncToTarget()
         return;
     }
     reposition(/*animated*/ false);
-    raise();
+    m_overlayCoordinator->raiseStack();
 }
 
 QRect CoachMark::cardRect() const
@@ -217,7 +228,7 @@ QRect CoachMark::cardRect() const
 
 bool CoachMark::syncThemeOverrideFromSource()
 {
-    QWidget* source = m_target ? m_target.data() : m_owner;
+    QWidget* source = m_target ? m_target.data() : m_owner.data();
     return ::fluent::overlay::syncInheritedThemeOverride(this, source);
 }
 
@@ -226,7 +237,7 @@ void CoachMark::attachToOwnerTopLevel()
     QWidget* top = m_owner ? m_owner->window() : parentWidget();
     if (!top)
         return;
-    ::fluent::overlay::attachToTopLevel(this, top);
+    m_overlayCoordinator->attachTo(top);
 }
 
 double CoachMark::fadeOpacity() const
@@ -251,7 +262,9 @@ void CoachMark::reposition(bool animated)
 {
     const int margin = ::fluent::overlay::defaultShadowMargin();
     const QSize win = size();
-    QWidget* ownerWindow = m_owner ? m_owner->window() : parentWidget();
+    QWidget* ownerWindow = m_overlayCoordinator->topLevelWidget();
+    if (!ownerWindow)
+        ownerWindow = m_owner ? m_owner->window() : parentWidget();
 
     if (!m_target) {
         m_tailVisible = false;

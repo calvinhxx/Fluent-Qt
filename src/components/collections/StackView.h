@@ -8,6 +8,7 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/WidgetOwnership.h"
 
 class QGraphicsOpacityEffect;
 class QKeyEvent;
@@ -67,6 +68,12 @@ class StackView : public QStackedWidget, public FluentElement, public QMLPlus {
      * zh_CN: 堆栈导航使用的转场效果。
      */
     Q_PROPERTY(StackViewTransitionType transitionType READ transitionType WRITE setTransitionType NOTIFY transitionTypeChanged)
+    /**
+     * @brief Default release policy for pages added through StackView APIs.
+     * zh_CN: 通过 StackView API 添加页面时使用的默认释放策略。
+     */
+    Q_PROPERTY(fluent::WidgetOwnership defaultItemOwnership READ defaultItemOwnership
+               WRITE setDefaultItemOwnership NOTIFY defaultItemOwnershipChanged)
 
 public:
     enum class StackViewItemStatus {
@@ -93,12 +100,6 @@ public:
     };
     Q_ENUM(StackViewTransitionType)
 
-    enum class StackViewItemOwnership {
-        OwnsItem,
-        DoesNotOwnItem
-    };
-    Q_ENUM(StackViewItemOwnership)
-
     explicit StackView(QWidget* parent = nullptr);
     ~StackView() override;
 
@@ -120,19 +121,21 @@ public:
     StackViewTransitionType transitionType() const { return m_transitionType; }
     void setTransitionType(StackViewTransitionType type);
 
-    StackViewItemOwnership defaultItemOwnership() const { return m_defaultOwnership; }
-    void setDefaultItemOwnership(StackViewItemOwnership ownership);
+    WidgetOwnership defaultItemOwnership() const { return m_defaultOwnership; }
+    void setDefaultItemOwnership(WidgetOwnership ownership);
 
     void setInitialItem(QWidget* item);
-    bool setInitialItem(QWidget* item, StackViewItemOwnership ownership);
+    bool setInitialItem(QWidget* item, WidgetOwnership ownership);
 
     bool push(QWidget* item);
-    bool push(QWidget* item, StackViewItemOwnership ownership);
-    bool push(const QVector<QWidget*>& items, StackViewItemOwnership ownership = StackViewItemOwnership::OwnsItem);
+    bool push(QWidget* item, WidgetOwnership ownership);
+    bool push(const QVector<QWidget*>& items,
+              WidgetOwnership ownership = WidgetOwnership::Owned);
 
     bool replace(QWidget* item);
-    bool replace(QWidget* item, StackViewItemOwnership ownership);
-    bool replace(int index, QWidget* item, StackViewItemOwnership ownership = StackViewItemOwnership::OwnsItem);
+    bool replace(QWidget* item, WidgetOwnership ownership);
+    bool replace(int index, QWidget* item,
+                 WidgetOwnership ownership = WidgetOwnership::Owned);
 
     bool pop();
     bool pop(QWidget* item);
@@ -141,7 +144,13 @@ public:
     bool goBack();
     bool clear();
 
-    bool adoptWidget(QWidget* item, StackViewItemOwnership ownership = StackViewItemOwnership::DoesNotOwnItem);
+    /**
+     * @brief Adds a page to StackView navigation tracking without taking
+     * ownership by default.
+     * zh_CN: 将页面加入 StackView 导航跟踪，默认不接管其所有权。
+     */
+    bool adoptWidget(QWidget* item,
+                     WidgetOwnership ownership = WidgetOwnership::Borrowed);
 
     QWidget* itemAt(int index) const;
     int indexOf(QWidget* item) const;
@@ -165,7 +174,7 @@ signals:
     void transitionAnimationEnabledChanged(bool enabled);
     void transitionDurationChanged(int durationMs);
     void transitionTypeChanged(StackViewTransitionType type);
-    void defaultItemOwnershipChanged(StackViewItemOwnership ownership);
+    void defaultItemOwnershipChanged(WidgetOwnership ownership);
     void itemPushed(QWidget* item);
     void itemPopped(QWidget* item);
     void itemReplaced(QWidget* oldItem, QWidget* newItem);
@@ -181,7 +190,8 @@ private:
     struct StackEntry {
         QPointer<QWidget> item;
         QWidget* rawItem = nullptr;
-        StackViewItemOwnership ownership = StackViewItemOwnership::OwnsItem;
+        QPointer<QWidget> originalParent;
+        WidgetOwnership ownership = WidgetOwnership::Owned;
         StackViewItemStatus status = StackViewItemStatus::Inactive;
         QMetaObject::Connection destroyedConnection;
     };
@@ -189,13 +199,15 @@ private:
     struct PendingRemoval {
         QPointer<QWidget> item;
         QWidget* rawItem = nullptr;
-        StackViewItemOwnership ownership = StackViewItemOwnership::OwnsItem;
+        QPointer<QWidget> originalParent;
+        WidgetOwnership ownership = WidgetOwnership::Owned;
         QMetaObject::Connection destroyedConnection;
     };
 
     bool canStartOperation() const;
     int stackIndexOf(QWidget* item) const;
-    StackEntry makeEntry(QWidget* item, StackViewItemOwnership ownership, StackViewItemStatus status);
+    StackEntry makeEntry(QWidget* item, QWidget* originalParent,
+                         WidgetOwnership ownership, StackViewItemStatus status);
     void prepareItem(QWidget* item);
     void setItemStatus(QWidget* item, StackViewItemStatus status);
     void emitItemStatus(QWidget* item, StackViewItemStatus status);
@@ -223,7 +235,7 @@ private:
     void removeEntryAt(int index);
 
     QVector<StackEntry> m_stack;
-    StackViewItemOwnership m_defaultOwnership = StackViewItemOwnership::OwnsItem;
+    WidgetOwnership m_defaultOwnership = WidgetOwnership::Owned;
     bool m_busy = false;
     bool m_transitionAnimationEnabled = true;
     int m_transitionDuration = 250;
@@ -245,6 +257,5 @@ private:
 Q_DECLARE_METATYPE(fluent::collections::StackView::StackViewItemStatus)
 Q_DECLARE_METATYPE(fluent::collections::StackView::StackViewTransitionOperation)
 Q_DECLARE_METATYPE(fluent::collections::StackView::StackViewTransitionType)
-Q_DECLARE_METATYPE(fluent::collections::StackView::StackViewItemOwnership)
 
 #endif // STACKVIEW_H

@@ -138,12 +138,12 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief Typography role used by title text.
      * zh_CN: 标题文本使用的排版角色。
      */
-    Q_PROPERTY(QString titleFontRole READ titleFontRole WRITE setTitleFontRole NOTIFY titleFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole titleFontRole READ titleFontRole WRITE setTitleFontRole NOTIFY titleFontRoleChanged)
     /**
      * @brief Typography role used by message text.
      * zh_CN: 消息文本使用的排版角色。
      */
-    Q_PROPERTY(QString messageFontRole READ messageFontRole WRITE setMessageFontRole NOTIFY messageFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole messageFontRole READ messageFontRole WRITE setMessageFontRole NOTIFY messageFontRoleChanged)
     /**
      * @brief Icon glyph used for informational severity.
      * zh_CN: 信息级别使用的图标字符。
@@ -232,11 +232,11 @@ public:
     int severityIconBackgroundInset() const { return m_severityIconBackgroundInset; }
     void setSeverityIconBackgroundInset(int inset);
 
-    QString titleFontRole() const { return m_titleFontRole; }
-    void setTitleFontRole(const QString& role);
+    Typography::FontRole titleFontRole() const { return m_titleFontRole; }
+    void setTitleFontRole(Typography::FontRole role);
 
-    QString messageFontRole() const { return m_messageFontRole; }
-    void setMessageFontRole(const QString& role);
+    Typography::FontRole messageFontRole() const { return m_messageFontRole; }
+    void setMessageFontRole(Typography::FontRole role);
 
     QString informationalIconGlyph() const { return m_informationalIconGlyph; }
     void setInformationalIconGlyph(const QString& glyph);
@@ -276,8 +276,8 @@ signals:
     void severityIconSizeChanged(int size);
     void severityIconGlyphSizeChanged(int size);
     void severityIconBackgroundInsetChanged(int inset);
-    void titleFontRoleChanged(const QString& role);
-    void messageFontRoleChanged(const QString& role);
+    void titleFontRoleChanged(Typography::FontRole role);
+    void messageFontRoleChanged(Typography::FontRole role);
     void informationalIconGlyphChanged(const QString& glyph);
     void successIconGlyphChanged(const QString& glyph);
     void warningIconGlyphChanged(const QString& glyph);
@@ -340,8 +340,8 @@ private:
     fluent::textfields::Label* m_messageLabel = nullptr;
     fluent::basicinput::Button* m_closeButton = nullptr;
 
-    QString m_titleFontRole = Typography::FontRole::BodyStrong;
-    QString m_messageFontRole = Typography::FontRole::Body;
+    Typography::FontRole m_titleFontRole = Typography::FontRole::BodyStrong;
+    Typography::FontRole m_messageFontRole = Typography::FontRole::Body;
     QString m_informationalIconGlyph = Typography::Icons::AsteriskBadge12;
     QString m_successIconGlyph = Typography::Icons::CheckmarkBadge12;
     QString m_warningIconGlyph = Typography::Icons::ImportantBadge12;

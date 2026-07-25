@@ -318,8 +318,8 @@ bool FluentTreeItemDelegate::editorEvent(QEvent* event, QAbstractItemModel* mode
                 auto* tv = qobject_cast<fluent::collections::TreeView*>(m_view);
                 QItemSelectionModel* selection = m_view ? m_view->selectionModel() : nullptr;
                 const bool syncSelection = tv && selection
-                    && (tv->selectionMode() == fluent::collections::TreeView::TreeSelectionMode::Multiple
-                        || tv->selectionMode() == fluent::collections::TreeView::TreeSelectionMode::Extended);
+                    && (tv->selectionMode() == fluent::collections::TreeView::SelectionMode::Multiple
+                        || tv->selectionMode() == fluent::collections::TreeView::SelectionMode::Extended);
 
                 if (syncSelection) {
                     const QItemSelectionModel::SelectionFlags flags =

@@ -214,7 +214,7 @@ void GalleryContentPage::paintEvent(QPaintEvent* event)
 }
 
 fluent::textfields::Label* GalleryContentPage::createTrackedLabel(const QString& text,
-                                                                  const QString& fontRole,
+                                                                  Typography::FontRole fontRole,
                                                                   TextRole textRole)
 {
     auto* label = new fluent::textfields::Label(text, m_viewport);

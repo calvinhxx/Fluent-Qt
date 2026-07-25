@@ -56,6 +56,7 @@ bool initializeResources();
 #include <components/collections/FlowView.h>
 #include <components/collections/GridView.h>
 #include <components/collections/ListView.h>
+#include <components/collections/SelectionMode.h>
 #include <components/collections/SplitView.h>
 #include <components/collections/StackView.h>
 #include <components/collections/TreeView.h>
@@ -76,6 +77,7 @@ bool initializeResources();
 #include <components/foundation/QMLPlus.h>
 #include <components/foundation/StyleThemeCatalog.h>
 #include <components/foundation/ThemeRegistry.h>
+#include <components/foundation/WidgetOwnership.h>
 
 #include <components/menus_toolbars/Menu.h>
 #include <components/menus_toolbars/MenuBar.h>

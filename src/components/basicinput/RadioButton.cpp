@@ -10,7 +10,7 @@ RadioButton::RadioButton(const QString& text, QWidget* parent)
     setAttribute(Qt::WA_Hover);
     setCursor(Qt::ArrowCursor);
 
-    m_textFont = themeFont("Body").toQFont();
+    m_textFont = themeFont(Typography::FontRole::Body).toQFont();
     setFont(m_textFont);
     initAnimation();
 }

@@ -13,6 +13,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayScrim.h"
 #include "components/textfields/Label.h"
 #include <QImage>
 
@@ -417,6 +418,36 @@ TEST_F(PopupTest, ModalScrimBlocksBackgroundInput) {
     p.close();
 }
 
+TEST_F(PopupTest, HostResizeSynchronizesScrimAndCenteredPlacement) {
+    window->setMinimumSize(0, 0);
+    window->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+
+    Popup p(window);
+    p.setAnimationEnabled(false);
+    p.setModal(true);
+    p.setDim(true);
+    p.resize(200, 100);
+    p.open();
+
+    auto* scrim = window->findChild<fluent::overlay::OverlayScrim*>(
+        QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly);
+    ASSERT_NE(scrim, nullptr);
+    EXPECT_EQ(scrim->geometry(), fluent::overlay::overlaySurfaceRect(window));
+
+    window->resize(920, 680);
+
+    QTRY_COMPARE_WITH_TIMEOUT(
+        scrim->geometry(), fluent::overlay::overlaySurfaceRect(window), 1000);
+    QTRY_COMPARE_WITH_TIMEOUT(
+        p.pos(),
+        QPoint((window->width() - p.width()) / 2,
+               (window->height() - p.height()) / 2),
+        1000);
+    EXPECT_TRUE(scrim->isVisible());
+    EXPECT_TRUE(p.isVisible());
+    p.close();
+}
+
 TEST_F(PopupTest, NonModal_CreatesNoScrim) {
     Popup p(window);
     p.setAnimationEnabled(false);
@@ -570,7 +601,7 @@ TEST_F(PopupDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackTrap
             auto* pl = new AnchorLayout(&p);
             p.setLayout(pl);
             auto* title = new Label("Information", &p);
-            title->setFluentTypography("Subtitle");
+            title->setFluentTypography(Typography::FontRole::Subtitle);
             title->anchors()->top  = {&p, Edge::Top,  24};
             title->anchors()->left = {&p, Edge::Left, 28};
             pl->addWidget(title);
@@ -645,13 +676,13 @@ TEST_F(PopupTest, VisualCheck) {
         p->setLayout(pl);
 
         auto* title = new Label("Information", p);
-        title->setFluentTypography("Subtitle");
+        title->setFluentTypography(Typography::FontRole::Subtitle);
         title->anchors()->top  = {p, Edge::Top,  24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
 
         auto* caption = new Label("Last updated: just now", p);
-        caption->setFluentTypography("Caption");
+        caption->setFluentTypography(Typography::FontRole::Caption);
         caption->anchors()->top  = {title, Edge::Bottom, 4};
         caption->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(caption);
@@ -689,7 +720,7 @@ TEST_F(PopupTest, VisualCheck) {
         p->setLayout(pl);
 
         auto* title = new Label("Quick Actions", p);
-        title->setFluentTypography("Subtitle");
+        title->setFluentTypography(Typography::FontRole::Subtitle);
         title->anchors()->top  = {p, Edge::Top,  24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
@@ -712,7 +743,7 @@ TEST_F(PopupTest, VisualCheck) {
         pl->addWidget(actionB);
 
         auto* hint = new Label("Press Escape to dismiss", p);
-        hint->setFluentTypography("Caption");
+        hint->setFluentTypography(Typography::FontRole::Caption);
         hint->anchors()->top  = {actionA, Edge::Bottom, 12};
         hint->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(hint);
@@ -739,7 +770,7 @@ TEST_F(PopupTest, VisualCheck) {
         p->setLayout(pl);
 
         auto* title = new Label("Confirm Delete", p);
-        title->setFluentTypography("Subtitle");
+        title->setFluentTypography(Typography::FontRole::Subtitle);
         title->anchors()->top  = {p, Edge::Top,  24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
@@ -783,7 +814,7 @@ TEST_F(PopupTest, VisualCheck) {
         p->setLayout(pl);
 
         auto* title = new Label("New Messages", p);
-        title->setFluentTypography("BodyStrong");
+        title->setFluentTypography(Typography::FontRole::BodyStrong);
         title->anchors()->top  = {p, Edge::Top,  24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
@@ -796,7 +827,7 @@ TEST_F(PopupTest, VisualCheck) {
         pl->addWidget(body);
 
         auto* timestamp = new Label("2 minutes ago", p);
-        timestamp->setFluentTypography("Caption");
+        timestamp->setFluentTypography(Typography::FontRole::Caption);
         timestamp->anchors()->top  = {body, Edge::Bottom, 8};
         timestamp->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(timestamp);
@@ -827,7 +858,7 @@ TEST_F(PopupTest, VisualCheck) {
         p->setLayout(pl);
 
         auto* title = new Label("Sticky Note", p);
-        title->setFluentTypography("Subtitle");
+        title->setFluentTypography(Typography::FontRole::Subtitle);
         title->anchors()->top  = {p, Edge::Top,  24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);
@@ -867,7 +898,7 @@ TEST_F(PopupTest, VisualCheck) {
         p->setLayout(pl);
 
         auto* title = new Label("Relative Position", p);
-        title->setFluentTypography("BodyStrong");
+        title->setFluentTypography(Typography::FontRole::BodyStrong);
         title->anchors()->top  = {p, Edge::Top,  24};
         title->anchors()->left = {p, Edge::Left, 28};
         pl->addWidget(title);

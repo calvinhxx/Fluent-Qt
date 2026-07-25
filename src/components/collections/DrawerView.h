@@ -10,10 +10,15 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/WidgetOwnership.h"
 
 class QMouseEvent;
 class QPaintEvent;
 class QPropertyAnimation;
+
+namespace fluent::overlay {
+class OverlayCoordinator;
+}
 
 namespace fluent::collections {
 
@@ -89,10 +94,16 @@ class DrawerView : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
     /**
-     * @brief Caller-owned widget hosted as component content.
-     * zh_CN: 作为组件内容承载的调用方控件。
+     * @brief Widget hosted inside the drawer panel.
+     * zh_CN: 承载在抽屉面板中的内容控件。
      */
     Q_PROPERTY(QWidget* contentWidget READ contentWidget WRITE setContentWidget NOTIFY contentWidgetChanged)
+    /**
+     * @brief Release policy for the current content widget.
+     * zh_CN: 当前内容控件的释放策略。
+     */
+    Q_PROPERTY(fluent::WidgetOwnership contentOwnership READ contentOwnership
+               NOTIFY contentOwnershipChanged)
 
 public:
     enum class DrawerEdge {
@@ -153,7 +164,27 @@ public:
     void setAnimationEnabled(bool enabled);
 
     QWidget* contentWidget() const { return m_contentWidget.data(); }
+
+    /**
+     * @brief Hosts content with Borrowed release semantics.
+     * zh_CN: 使用 Borrowed 释放语义承载内容控件。
+     */
     void setContentWidget(QWidget* widget);
+
+    /**
+     * @brief Hosts content with an explicit release policy.
+     * zh_CN: 使用显式释放策略承载内容控件。
+     * @return true when the requested content contract was applied.
+     */
+    bool setContentWidget(QWidget* widget, WidgetOwnership ownership);
+
+    /**
+     * @brief Removes and returns content as a parentless caller-owned widget.
+     * zh_CN: 将内容作为无父控件、由调用方持有的 QWidget 移除并返回。
+     */
+    QWidget* takeContentWidget();
+
+    WidgetOwnership contentOwnership() const { return m_contentOwnership; }
 
     QRect panelGeometry() const { return m_panelGeometry; }
     QRect contentGeometry() const { return m_contentGeometry; }
@@ -180,6 +211,7 @@ signals:
     void outerCornerRadiusChanged(int radius);
     void animationEnabledChanged(bool enabled);
     void contentWidgetChanged(QWidget* widget);
+    void contentOwnershipChanged(WidgetOwnership ownership);
     void aboutToShow();
     void aboutToHide();
     void opened();
@@ -216,8 +248,6 @@ private:
 
     void ensureApplicationEventFilter();
     void removeApplicationEventFilter();
-    void installTopLevelEventFilter(QWidget* topLevel);
-    void removeTopLevelEventFilter();
     void ensureAttachedToTopLevel();
     void beginVisibleTransition();
     void finalizeOpened();
@@ -239,6 +269,10 @@ private:
     void updateScrimState();
     void destroyScrim();
     void raiseOverlayStack();
+    QWidget* releaseContentWidget(bool deleteOwned, bool restoreParent);
+    void observeContentWidget(QWidget* widget,
+                              QWidget* originalParent,
+                              WidgetOwnership ownership);
 
     bool isPointInsidePanel(const QPoint& globalPos) const;
     bool isPointInEdgeDragArea(const QPoint& globalPos) const;
@@ -271,13 +305,14 @@ private:
     bool m_animationEnabled = true;
 
     QPointer<QWidget> m_originalParent;
-    QPointer<QWidget> m_topLevel;
     QPointer<QWidget> m_contentWidget;
-    QPointer<QWidget> m_scrim;
+    QPointer<QWidget> m_originalContentParent;
+    WidgetOwnership m_contentOwnership = WidgetOwnership::Borrowed;
+    QMetaObject::Connection m_contentDestroyedConnection;
+    ::fluent::overlay::OverlayCoordinator* m_overlayCoordinator = nullptr;
     QPropertyAnimation* m_positionAnimation = nullptr;
     TransitionTarget m_transitionTarget = TransitionTarget::None;
     bool m_applicationFilterInstalled = false;
-    bool m_topLevelFilterInstalled = false;
     bool m_hostDeactivationInProgress = false;
 
     QRect m_panelGeometry;

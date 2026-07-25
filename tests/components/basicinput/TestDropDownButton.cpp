@@ -274,7 +274,7 @@ TEST_F(DropDownButtonTest, VisualCheck) {
     using Edge = AnchorLayout::Edge;
 
     Label* title = new Label("DropDownButton Visual Test", window);
-    title->setFont(title->themeFont("Title").toQFont());
+    title->setFont(title->themeFont(Typography::FontRole::Title).toQFont());
     title->anchors()->top = {window, Edge::Top, 30};
     title->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(title);

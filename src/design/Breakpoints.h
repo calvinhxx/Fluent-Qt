@@ -7,6 +7,16 @@
  */
 namespace Breakpoints {
 
+    /**
+     * @brief Named adaptive-layout breakpoint.
+     * zh_CN: 具名自适应布局断点。
+     */
+    enum class Breakpoint {
+        Small,
+        Medium,
+        Large
+    };
+
     // Layout breakpoints in pixels.
     // zh_CN: 布局断点，单位为像素。
     const int Small  =  640;  // 0-640: Compact phone or narrow-window layout. zh_CN: 手机或窄窗口紧凑布局。
@@ -22,6 +32,19 @@ namespace Breakpoints {
     // zh_CN: NavigationView 窗格标准宽度，单位为像素。
     const int NavigationPaneCompactWidth  =  48;
     const int NavigationPaneExpandedWidth = 320;
+
+    /**
+     * @brief Returns the logical-pixel threshold for a breakpoint.
+     * zh_CN: 返回断点对应的逻辑像素阈值。
+     */
+    constexpr int value(Breakpoint breakpoint) {
+        switch (breakpoint) {
+        case Breakpoint::Small:  return Small;
+        case Breakpoint::Large:  return Large;
+        case Breakpoint::Medium: return Medium;
+        }
+        return Medium;
+    }
 }
 
 #endif // BREAKPOINTS_H

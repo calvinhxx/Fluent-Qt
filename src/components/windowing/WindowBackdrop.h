@@ -1,10 +1,15 @@
 #ifndef FLUENTWINDOWBACKDROP_H
 #define FLUENTWINDOWBACKDROP_H
 
+#include <QColor>
 #include <QMetaType>
 #include <QString>
 
 class QWidget;
+
+namespace fluent {
+class FluentElement;
+}
 
 namespace fluent::windowing {
 
@@ -152,6 +157,19 @@ bool windowBackdropUsesPaintedMaterial(const QWidget* widget);
  * zh_CN: 实际效果是否为 Mica 或 Acrylic。
  */
 bool windowHasMaterialBackdrop(const QWidget* widget);
+
+/**
+ * @brief Resolves the fill a window-chrome surface should paint.
+ * zh_CN: 解析窗口 chrome 表面应绘制的填充色。
+ *
+ * An invalid color means that a real composited backdrop must remain visible
+ * through a transparent clear. Otherwise the returned color is the opaque
+ * software fallback for the requested effect and activation state.
+ * zh_CN: 无效颜色表示应透明擦除以露出真实合成背景；否则返回请求效果和激活状态对应的不透明软件回退色。
+ */
+QColor windowChromeBackdropFill(const FluentElement& themeHost,
+                                const QWidget* hostWindow,
+                                bool active);
 
 } // namespace fluent::windowing
 

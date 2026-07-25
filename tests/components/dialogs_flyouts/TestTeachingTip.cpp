@@ -450,13 +450,13 @@ TEST_F(TeachingTipTest, VisualCheck) {
         host->setLayout(hostLayout);
 
         auto* title = new Label("Simple tip", host);
-        title->setFluentTypography("BodyStrong");
+        title->setFluentTypography(Typography::FontRole::BodyStrong);
         title->anchors()->top  = {host, Edge::Top,  16};
         title->anchors()->left = {host, Edge::Left, 16};
         hostLayout->addWidget(title);
 
         auto* body = new Label("Content assembled in test code — no fixed schema.", host);
-        body->setFluentTypography("Body");
+        body->setFluentTypography(Typography::FontRole::Body);
         body->setWordWrap(true);
         body->anchors()->top   = {title, Edge::Bottom, 4};
         body->anchors()->left  = {host,  Edge::Left,   16};
@@ -490,14 +490,14 @@ TEST_F(TeachingTipTest, VisualCheck) {
         host->setLayout(hostLayout);
 
         auto* title = new Label("Actionable tip", host);
-        title->setFluentTypography("BodyStrong");
+        title->setFluentTypography(Typography::FontRole::BodyStrong);
         title->anchors()->top   = {host, Edge::Top,   16};
         title->anchors()->left  = {host, Edge::Left,  16};
         title->anchors()->right = {host, Edge::Right, -48};
         hostLayout->addWidget(title);
 
         auto* body = new Label("Buttons assembled by the caller via AnchorLayout.", host);
-        body->setFluentTypography("Body");
+        body->setFluentTypography(Typography::FontRole::Body);
         body->setWordWrap(true);
         body->anchors()->top   = {title, Edge::Bottom, 4};
         body->anchors()->left  = {host,  Edge::Left,   16};
@@ -545,7 +545,7 @@ TEST_F(TeachingTipTest, VisualCheck) {
         host->setLayout(hostLayout);
 
         auto* label = new Label("Top placement — tail points down.", host);
-        label->setFluentTypography("Body");
+        label->setFluentTypography(Typography::FontRole::Body);
         label->setWordWrap(true);
         label->anchors()->top   = {host, Edge::Top,   16};
         label->anchors()->left  = {host, Edge::Left,  16};
@@ -567,7 +567,7 @@ TEST_F(TeachingTipTest, VisualCheck) {
         host->setLayout(hostLayout);
 
         auto* label = new Label("RightTop: tail aligns to target's upper edge.", host);
-        label->setFluentTypography("Body");
+        label->setFluentTypography(Typography::FontRole::Body);
         label->setWordWrap(true);
         label->anchors()->top   = {host, Edge::Top,   16};
         label->anchors()->left  = {host, Edge::Left,  16};

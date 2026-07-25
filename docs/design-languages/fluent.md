@@ -92,7 +92,7 @@ from the kit's typography styles. See
 | Display | FluentQt UI Display | 68 / 92 | SemiBold (600) |
 
 Default control text is **Body (14 px Regular)** — `Button`, `CheckBox`, `RadioButton`,
-`ToggleSwitch` all construct with `themeFont("Body")`. Icon glyphs come from the bundled
+`ToggleSwitch` all construct with `themeFont(Typography::FontRole::Body)`. Icon glyphs come from the bundled
 **FluentQt Icons** face (the `Typography::Icons::*` table — chevrons, CheckMark, Hyphen, etc.).
 
 ---

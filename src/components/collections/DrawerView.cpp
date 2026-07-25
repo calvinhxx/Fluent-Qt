@@ -17,6 +17,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "design/Spacing.h"
+#include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayWindow.h"
@@ -51,6 +52,30 @@ DrawerView::DrawerView(QWidget* parent)
     : QWidget(parent),
       m_originalParent(parent)
 {
+    m_overlayCoordinator =
+        new ::fluent::overlay::OverlayCoordinator(this, this);
+    connect(m_overlayCoordinator,
+            &::fluent::overlay::OverlayCoordinator::hostGeometryChanged,
+            this,
+            [this]() {
+                if (!isVisible() && !m_isOpen && !m_drag.active)
+                    return;
+                if (!isInteractionHostVisible()) {
+                    deactivateForHiddenHost();
+                    return;
+                }
+                updateOverlayGeometry();
+            });
+    connect(m_overlayCoordinator,
+            &::fluent::overlay::OverlayCoordinator::scrimPressed,
+            this,
+            [this](const QPoint& globalPos) {
+                if (isVisible() && shouldCloseOnOutsidePress()
+                    && !isPointInsidePanel(globalPos)) {
+                    close();
+                }
+            });
+
     setAttribute(Qt::WA_NoSystemBackground);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_Hover);
@@ -75,24 +100,23 @@ DrawerView::DrawerView(QWidget* parent)
     });
 
     ensureApplicationEventFilter();
-    installTopLevelEventFilter(resolveTopLevelWidget());
+    m_overlayCoordinator->attachTo(resolveTopLevelWidget());
     onThemeUpdated();
 }
 
 DrawerView::~DrawerView()
 {
     removeApplicationEventFilter();
-    removeTopLevelEventFilter();
     stopAnimation();
     destroyScrim();
-    if (m_contentWidget)
-        m_contentWidget->setParent(nullptr);
+    releaseContentWidget(true, true);
 }
 
 void DrawerView::onThemeUpdated()
 {
     update();
-    if (auto* scrimElement = dynamic_cast<FluentElement*>(m_scrim.data()))
+    if (auto* scrimElement =
+            dynamic_cast<FluentElement*>(m_overlayCoordinator->scrim()))
         scrimElement->onThemeUpdated();
 }
 
@@ -230,27 +254,107 @@ void DrawerView::setAnimationEnabled(bool enabled)
 
 void DrawerView::setContentWidget(QWidget* widget)
 {
-    if (m_contentWidget == widget)
-        return;
+    setContentWidget(widget, WidgetOwnership::Borrowed);
+}
 
-    if (m_contentWidget) {
-        m_contentWidget->hide();
-        m_contentWidget->setParent(nullptr);
+bool DrawerView::setContentWidget(QWidget* widget, WidgetOwnership ownership)
+{
+    if (m_contentWidget == widget) {
+        if (!widget || m_contentOwnership == ownership)
+            return true;
+        m_contentOwnership = ownership;
+        emit contentOwnershipChanged(m_contentOwnership);
+        return true;
     }
 
-    m_contentWidget = widget;
-    if (m_contentWidget) {
-        m_contentWidget->setParent(this);
-        m_contentWidget->setAutoFillBackground(false);
-        m_contentWidget->setAttribute(Qt::WA_NoSystemBackground, true);
-        m_contentWidget->setAttribute(Qt::WA_TranslucentBackground, true);
-        m_contentWidget->clearMask();
-        m_contentWidget->setGeometry(m_contentGeometry);
-        m_contentWidget->setVisible(isVisible());
+    QWidget* originalParent = widget ? widget->parentWidget() : nullptr;
+    const WidgetOwnership previousOwnership = m_contentOwnership;
+    releaseContentWidget(true, true);
+
+    observeContentWidget(widget, originalParent, ownership);
+    if (widget) {
+        widget->setParent(this);
+        widget->setAutoFillBackground(false);
+        widget->setAttribute(Qt::WA_NoSystemBackground, true);
+        widget->setAttribute(Qt::WA_TranslucentBackground, true);
+        widget->clearMask();
+        widget->setGeometry(m_contentGeometry);
+        widget->setVisible(isVisible());
     }
 
     updateContentGeometry();
-    emit contentWidgetChanged(m_contentWidget.data());
+    emit contentWidgetChanged(widget);
+    if (previousOwnership != m_contentOwnership)
+        emit contentOwnershipChanged(m_contentOwnership);
+    return true;
+}
+
+QWidget* DrawerView::takeContentWidget()
+{
+    const WidgetOwnership previousOwnership = m_contentOwnership;
+    QWidget* content = releaseContentWidget(false, false);
+    if (content) {
+        updateContentGeometry();
+        emit contentWidgetChanged(nullptr);
+        if (previousOwnership != m_contentOwnership)
+            emit contentOwnershipChanged(m_contentOwnership);
+    }
+    return content;
+}
+
+QWidget* DrawerView::releaseContentWidget(bool deleteOwned, bool restoreParent)
+{
+    QWidget* content = m_contentWidget.data();
+    if (!content) {
+        QObject::disconnect(m_contentDestroyedConnection);
+        m_contentDestroyedConnection = {};
+        m_originalContentParent = nullptr;
+        m_contentOwnership = WidgetOwnership::Borrowed;
+        return nullptr;
+    }
+
+    QObject::disconnect(m_contentDestroyedConnection);
+    m_contentDestroyedConnection = {};
+    const WidgetOwnership ownership = m_contentOwnership;
+    QWidget* originalParent = m_originalContentParent.data();
+    m_contentWidget = nullptr;
+    m_originalContentParent = nullptr;
+    m_contentOwnership = WidgetOwnership::Borrowed;
+
+    content->hide();
+    if (ownership == WidgetOwnership::Owned && deleteOwned) {
+        delete content;
+        return nullptr;
+    }
+    if (restoreParent && ownership == WidgetOwnership::Reparented)
+        content->setParent(originalParent);
+    else
+        content->setParent(nullptr);
+    return content;
+}
+
+void DrawerView::observeContentWidget(QWidget* widget,
+                                      QWidget* originalParent,
+                                      WidgetOwnership ownership)
+{
+    m_contentWidget = widget;
+    m_originalContentParent = originalParent;
+    m_contentOwnership = widget ? ownership : WidgetOwnership::Borrowed;
+    if (!widget)
+        return;
+
+    m_contentDestroyedConnection =
+        connect(widget, &QObject::destroyed, this, [this]() {
+            const WidgetOwnership previousOwnership = m_contentOwnership;
+            m_contentWidget = nullptr;
+            m_originalContentParent = nullptr;
+            m_contentOwnership = WidgetOwnership::Borrowed;
+            m_contentDestroyedConnection = {};
+            updateContentGeometry();
+            emit contentWidgetChanged(nullptr);
+            if (previousOwnership != m_contentOwnership)
+                emit contentOwnershipChanged(m_contentOwnership);
+        });
 }
 
 QSize DrawerView::sizeHint() const
@@ -310,23 +414,6 @@ void DrawerView::close()
 
 bool DrawerView::eventFilter(QObject* watched, QEvent* event)
 {
-    if (event->type() == QEvent::Destroy) {
-        if (watched == m_topLevel)
-            m_topLevel = nullptr;
-        return false;
-    }
-
-    if (event->type() == QEvent::Resize && watched == m_topLevel) {
-        if (!isVisible() && !m_isOpen && !m_drag.active)
-            return false;
-        if (!isInteractionHostVisible()) {
-            deactivateForHiddenHost();
-            return false;
-        }
-        updateOverlayGeometry();
-        return false;
-    }
-
     if (!eventBelongsToDrawerTopLevel(watched))
         return false;
 
@@ -468,7 +555,12 @@ void DrawerView::mouseReleaseEvent(QMouseEvent* event)
 
 QWidget* DrawerView::resolveTopLevelWidget() const
 {
-    return ::fluent::overlay::resolveOwningTopLevel(m_originalParent, parentWidget());
+    if (QWidget* top =
+            ::fluent::overlay::resolveOwningTopLevel(m_originalParent,
+                                                     parentWidget())) {
+        return top;
+    }
+    return m_overlayCoordinator->topLevelWidget();
 }
 
 QWidget* DrawerView::eventTopLevel(QObject* watched) const
@@ -478,7 +570,7 @@ QWidget* DrawerView::eventTopLevel(QObject* watched) const
 
 bool DrawerView::eventBelongsToDrawerTopLevel(QObject* watched) const
 {
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
+    QWidget* top = resolveTopLevelWidget();
     if (!top)
         return false;
     return eventTopLevel(watched) == top;
@@ -486,7 +578,7 @@ bool DrawerView::eventBelongsToDrawerTopLevel(QObject* watched) const
 
 bool DrawerView::isInteractionHostVisible() const
 {
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
+    QWidget* top = resolveTopLevelWidget();
     QWidget* host = m_originalParent.data();
     if (!top || !host)
         return false;
@@ -540,35 +632,13 @@ void DrawerView::removeApplicationEventFilter()
     m_applicationFilterInstalled = false;
 }
 
-void DrawerView::installTopLevelEventFilter(QWidget* topLevel)
-{
-    if (!topLevel)
-        return;
-    if (m_topLevel == topLevel && m_topLevelFilterInstalled)
-        return;
-
-    removeTopLevelEventFilter();
-    m_topLevel = topLevel;
-    m_topLevel->installEventFilter(this);
-    m_topLevelFilterInstalled = true;
-}
-
-void DrawerView::removeTopLevelEventFilter()
-{
-    if (m_topLevel && m_topLevelFilterInstalled)
-        m_topLevel->removeEventFilter(this);
-    m_topLevelFilterInstalled = false;
-}
-
 void DrawerView::ensureAttachedToTopLevel()
 {
     QWidget* top = resolveTopLevelWidget();
     if (!top)
         return;
 
-    installTopLevelEventFilter(top);
-
-    ::fluent::overlay::attachToTopLevel(this, top);
+    m_overlayCoordinator->attachTo(top);
 }
 
 void DrawerView::beginVisibleTransition()
@@ -634,7 +704,7 @@ void DrawerView::stopAnimation()
 
 QRect DrawerView::availableRect() const
 {
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
+    QWidget* top = resolveTopLevelWidget();
     const QRect topRect = top ? ::fluent::overlay::overlaySurfaceRect(top)
                               : QRect(QPoint(0, 0), sizeHint());
     if (topRect.isEmpty())
@@ -731,7 +801,7 @@ void DrawerView::updateOverlayGeometry()
         if (parentWidget() && geometry() != m_panelGeometry)
             setGeometry(m_panelGeometry);
     }
-    if (!panelGeometryChanged && !m_scrim)
+    if (!panelGeometryChanged && !m_overlayCoordinator->scrim())
         return;
     updateScrimGeometry();
     updateScrimOpacity();
@@ -751,15 +821,15 @@ void DrawerView::updateContentGeometry()
 
 void DrawerView::updateScrimGeometry()
 {
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
+    QWidget* top = resolveTopLevelWidget();
     m_scrimGeometry = top ? ::fluent::overlay::overlaySurfaceRect(top) : QRect();
-    if (m_scrim)
-        m_scrim->setGeometry(m_scrimGeometry);
+    if (m_overlayCoordinator->scrim())
+        m_overlayCoordinator->scrim()->setGeometry(m_scrimGeometry);
 }
 
 void DrawerView::updateScrimOpacity()
 {
-    if (auto* scrim = dynamic_cast<::fluent::overlay::OverlayScrim*>(m_scrim.data()))
+    if (auto* scrim = m_overlayCoordinator->scrim())
         scrim->setOpacityProgress(m_position);
 }
 
@@ -768,7 +838,7 @@ void DrawerView::updateScrimState()
     if (!isVisible() && !m_isOpen && !m_drag.active)
         return;
 
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
+    QWidget* top = resolveTopLevelWidget();
     if (!top)
         return;
 
@@ -777,32 +847,25 @@ void DrawerView::updateScrimState()
         return;
     }
 
-    if (!m_scrim)
-        m_scrim = new ::fluent::overlay::OverlayScrim(top, QStringLiteral("DrawerViewScrim"));
-    if (m_scrim->parentWidget() != top)
-        m_scrim->setParent(top);
-
-    if (auto* scrim = dynamic_cast<::fluent::overlay::OverlayScrim*>(m_scrim.data()))
-        scrim->setModalAndDim(m_modal, m_dim);
+    m_overlayCoordinator->attachTo(top);
+    auto* scrim = m_overlayCoordinator->ensureScrim(
+        QStringLiteral("DrawerViewScrim"));
+    if (!scrim)
+        return;
+    scrim->setModalAndDim(m_modal, m_dim);
     updateScrimOpacity();
-    m_scrim->setGeometry(::fluent::overlay::overlaySurfaceRect(top));
-    m_scrim->show();
+    scrim->show();
     raiseOverlayStack();
 }
 
 void DrawerView::destroyScrim()
 {
-    if (!m_scrim)
-        return;
-
-    m_scrim->hide();
-    m_scrim->deleteLater();
-    m_scrim = nullptr;
+    m_overlayCoordinator->releaseScrim();
 }
 
 void DrawerView::raiseOverlayStack()
 {
-    ::fluent::overlay::raiseOverlayStack(m_scrim, this);
+    m_overlayCoordinator->raiseStack();
 }
 
 bool DrawerView::isPointInsidePanel(const QPoint& globalPos) const
@@ -822,7 +885,7 @@ bool DrawerView::isPointInEdgeDragArea(const QPoint& globalPos) const
     if (m_dragMargin <= 0)
         return false;
 
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
+    QWidget* top = resolveTopLevelWidget();
     if (!top)
         return false;
 
@@ -858,7 +921,7 @@ bool DrawerView::isPointInEdgeDragArea(const QPoint& globalPos) const
 
 int DrawerView::dragAxisValue(const QPoint& globalPos) const
 {
-    QWidget* top = m_topLevel ? m_topLevel.data() : resolveTopLevelWidget();
+    QWidget* top = resolveTopLevelWidget();
     const QPoint local = top ? top->mapFromGlobal(globalPos) : globalPos;
     return (m_edge == DrawerEdge::Left || m_edge == DrawerEdge::Right) ? local.x() : local.y();
 }

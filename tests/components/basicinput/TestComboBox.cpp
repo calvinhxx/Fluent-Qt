@@ -280,8 +280,43 @@ TEST_F(ComboBoxTest, SetEditableCreatesLineEdit) {
     // Line edit should exist and not be hidden
     auto* lineEdit = cb.findChild<fluent::textfields::LineEdit*>();
     ASSERT_NE(lineEdit, nullptr);
+    EXPECT_TRUE(cb.isEditable());
+    EXPECT_EQ(cb.lineEdit(), lineEdit);
+    EXPECT_EQ(cb.fluentLineEdit(), lineEdit);
     EXPECT_FALSE(lineEdit->isHidden());
     EXPECT_FALSE(lineEdit->isClearButtonEnabled());
+}
+
+TEST_F(ComboBoxTest, EditableModePreservesQComboBoxTextContract) {
+    ComboBox cb(window);
+    cb.addItems({"Alpha", "Beta"});
+    QSignalSpy editSpy(&cb, &QComboBox::editTextChanged);
+    cb.setEditable(true);
+
+    cb.setEditText(QStringLiteral("Caller supplied value"));
+    EXPECT_EQ(cb.currentText(), QStringLiteral("Caller supplied value"));
+    EXPECT_EQ(cb.lineEdit()->text(), QStringLiteral("Caller supplied value"));
+    EXPECT_GE(editSpy.count(), 1);
+
+    QFocusEvent focusOut(QEvent::FocusOut);
+    QApplication::sendEvent(cb.lineEdit(), &focusOut);
+    EXPECT_EQ(cb.currentText(), QStringLiteral("Caller supplied value"));
+}
+
+TEST_F(ComboBoxTest, DirectBaseEditableCallsRemainCoherent) {
+    ComboBox cb(window);
+    cb.addItems({"Alpha", "Beta"});
+    QComboBox* base = &cb;
+
+    base->setEditable(true);
+    ASSERT_TRUE(cb.isEditable());
+    ASSERT_NE(cb.lineEdit(), nullptr);
+    base->setEditText(QStringLiteral("Direct base edit"));
+    EXPECT_EQ(cb.currentText(), QStringLiteral("Direct base edit"));
+
+    base->setEditable(false);
+    EXPECT_FALSE(cb.isEditable());
+    EXPECT_EQ(cb.lineEdit(), nullptr);
 }
 
 TEST_F(ComboBoxTest, EditableLineEditKeepsDarkThemeTextPaletteInsideStyledHost) {

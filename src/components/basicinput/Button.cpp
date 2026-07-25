@@ -122,7 +122,7 @@ Button::Button(const QString& text, QWidget* parent) : QPushButton(text, parent)
 #ifdef Q_OS_MAC
     setAttribute(Qt::WA_MacShowFocusRect, false);
 #endif
-    setFont(themeFont("Body").toQFont()); // Body by default; callers may setFont() later. zh_CN: 默认 Body，后续可用 setFont() 覆盖。
+    setFont(themeFont(Typography::FontRole::Body).toQFont()); // Body by default; callers may setFont() later. zh_CN: 默认 Body，后续可用 setFont() 覆盖。
 }
 
 Button::Button(QWidget* parent) : QPushButton(parent) {
@@ -130,7 +130,7 @@ Button::Button(QWidget* parent) : QPushButton(parent) {
 #ifdef Q_OS_MAC
     setAttribute(Qt::WA_MacShowFocusRect, false);
 #endif
-    setFont(themeFont("Body").toQFont());
+    setFont(themeFont(Typography::FontRole::Body).toQFont());
 }
 
 void Button::setFluentStyle(ButtonStyle style) {

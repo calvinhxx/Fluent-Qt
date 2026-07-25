@@ -165,7 +165,7 @@ static QWidget* makeColorPage(const QColor& color, const QString& text, QWidget*
     page->setPalette(pal);
 
     auto* label = new fluent::textfields::Label(text, page);
-    label->setFluentTypography("Subtitle");
+    label->setFluentTypography(Typography::FontRole::Subtitle);
     label->setAlignment(Qt::AlignCenter);
     return page;
 }
@@ -682,7 +682,7 @@ TEST_F(FlipViewTest, VisualCheck) {
 
     // ── 1. A simple FlipView with image items ──
     auto* title1 = new fluent::textfields::Label("A simple FlipView with inline items.", window);
-    title1->setFluentTypography("Body");
+    title1->setFluentTypography(Typography::FontRole::Body);
     title1->anchors()->top = {window, Edge::Top, 24};
     title1->anchors()->left = {window, Edge::Left, 30};
     layout->addWidget(title1);
@@ -710,7 +710,7 @@ TEST_F(FlipViewTest, VisualCheck) {
     layout->addWidget(fv1);
 
     auto* indexLabel = new fluent::textfields::Label(QString("1 / %1").arg(fv1->pageCount()), window);
-    indexLabel->setFluentTypography("Caption");
+    indexLabel->setFluentTypography(Typography::FontRole::Caption);
     indexLabel->anchors()->top = {fv1, Edge::Bottom, 6};
     indexLabel->anchors()->left = {window, Edge::Left, 30};
     layout->addWidget(indexLabel);
@@ -720,7 +720,7 @@ TEST_F(FlipViewTest, VisualCheck) {
 
     // ── 2. Vertical FlipView ──
     auto* title2 = new fluent::textfields::Label("A vertical FlipView.", window);
-    title2->setFluentTypography("Body");
+    title2->setFluentTypography(Typography::FontRole::Body);
     title2->anchors()->top = {indexLabel, Edge::Bottom, 24};
     title2->anchors()->left = {window, Edge::Left, 30};
     layout->addWidget(title2);
@@ -743,7 +743,7 @@ TEST_F(FlipViewTest, VisualCheck) {
 
     // ── 3. No navigation buttons ──
     auto* title3 = new fluent::textfields::Label("No navigation buttons (swipe only).", window);
-    title3->setFluentTypography("Body");
+    title3->setFluentTypography(Typography::FontRole::Body);
     title3->anchors()->top = {title2, Edge::Bottom, 10};
     title3->anchors()->left = {fv2, Edge::Right, 30};
     layout->addWidget(title3);

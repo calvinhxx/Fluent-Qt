@@ -322,12 +322,11 @@ void SelectorBar::setOverflowBehavior(OverflowBehavior behavior)
     emit overflowBehaviorChanged(m_overflowBehavior);
 }
 
-void SelectorBar::setItemFontRole(const QString& role)
+void SelectorBar::setItemFontRole(Typography::FontRole role)
 {
-    const QString normalized = normalizedString(role, QStringLiteral("Body"));
-    if (m_itemFontRole == normalized)
+    if (m_itemFontRole == role)
         return;
-    m_itemFontRole = normalized;
+    m_itemFontRole = role;
     invalidateLayout();
     emit itemFontRoleChanged(m_itemFontRole);
 }

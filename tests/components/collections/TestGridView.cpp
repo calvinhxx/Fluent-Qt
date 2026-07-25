@@ -230,7 +230,7 @@ TEST_F(GridViewTest, ItemTextOutOfRange) {
 
 TEST_F(GridViewTest, DefaultSelectionMode) {
     GridView* gv = new GridView(window);
-    EXPECT_EQ(gv->selectionMode(), GridSelectionMode::Single);
+    EXPECT_EQ(gv->selectionMode(), SelectionMode::Single);
 }
 
 TEST_F(GridViewTest, DefaultEditTriggersDisabled) {
@@ -238,8 +238,8 @@ TEST_F(GridViewTest, DefaultEditTriggersDisabled) {
     EXPECT_EQ(gv->editTriggers(), QAbstractItemView::NoEditTriggers);
 }
 
-TEST_F(GridViewTest, GridSelectionModeRegisteredInMetaObject) {
-    QMetaEnum me = QMetaEnum::fromType<GridSelectionMode>();
+TEST_F(GridViewTest, SelectionModeRegisteredInMetaObject) {
+    QMetaEnum me = QMetaEnum::fromType<SelectionMode>();
     ASSERT_TRUE(me.isValid());
     EXPECT_STREQ(me.key(0), "None");
     EXPECT_STREQ(me.key(1), "Single");
@@ -250,26 +250,26 @@ TEST_F(GridViewTest, GridSelectionModeRegisteredInMetaObject) {
 TEST_F(GridViewTest, SelectionModeNone) {
     GridView* gv = new GridView(window);
     attachStringListModel(gv, {"A", "B", "C"});
-    gv->setSelectionMode(GridSelectionMode::None);
-    EXPECT_EQ(gv->selectionMode(), GridSelectionMode::None);
+    gv->setSelectionMode(SelectionMode::None);
+    EXPECT_EQ(gv->selectionMode(), SelectionMode::None);
 }
 
 TEST_F(GridViewTest, SelectionModeMultiple) {
     GridView* gv = new GridView(window);
     QSignalSpy spy(gv, SIGNAL(selectionModeChanged()));
-    gv->setSelectionMode(GridSelectionMode::Multiple);
-    EXPECT_EQ(gv->selectionMode(), GridSelectionMode::Multiple);
+    gv->setSelectionMode(SelectionMode::Multiple);
+    EXPECT_EQ(gv->selectionMode(), SelectionMode::Multiple);
     EXPECT_EQ(spy.count(), 1);
 
     // 重复设置不触发信号
-    gv->setSelectionMode(GridSelectionMode::Multiple);
+    gv->setSelectionMode(SelectionMode::Multiple);
     EXPECT_EQ(spy.count(), 1);
 }
 
 TEST_F(GridViewTest, SelectionModeExtended) {
     GridView* gv = new GridView(window);
-    gv->setSelectionMode(GridSelectionMode::Extended);
-    EXPECT_EQ(gv->selectionMode(), GridSelectionMode::Extended);
+    gv->setSelectionMode(SelectionMode::Extended);
+    EXPECT_EQ(gv->selectionMode(), SelectionMode::Extended);
 }
 
 // ── 选中 API ──────────────────────────────────────────────────────────────────
@@ -300,7 +300,7 @@ TEST_F(GridViewTest, SelectedIndexOutOfRange) {
 TEST_F(GridViewTest, SelectedRowsSortedAscending) {
     GridView* gv = new GridView(window);
     attachStringListModel(gv, {"A", "B", "C", "D"});
-    gv->setSelectionMode(GridSelectionMode::Multiple);
+    gv->setSelectionMode(SelectionMode::Multiple);
 
     const QModelIndex i0 = gv->model()->index(0, 0);
     const QModelIndex i2 = gv->model()->index(2, 0);
@@ -714,28 +714,28 @@ TEST_F(GridViewTest, ReorderMoveRowInModel) {
 
 TEST_F(GridViewTest, SelectionModeNoneMapsToNoSelection) {
     GridView* gv = new GridView(window);
-    gv->setSelectionMode(GridSelectionMode::None);
+    gv->setSelectionMode(SelectionMode::None);
     EXPECT_EQ(static_cast<QAbstractItemView*>(gv)->selectionMode(),
               QAbstractItemView::NoSelection);
 }
 
 TEST_F(GridViewTest, SelectionModeSingleMapsToSingleSelection) {
     GridView* gv = new GridView(window);
-    gv->setSelectionMode(GridSelectionMode::Single);
+    gv->setSelectionMode(SelectionMode::Single);
     EXPECT_EQ(static_cast<QAbstractItemView*>(gv)->selectionMode(),
               QAbstractItemView::SingleSelection);
 }
 
 TEST_F(GridViewTest, SelectionModeMultipleMapsToMultiSelection) {
     GridView* gv = new GridView(window);
-    gv->setSelectionMode(GridSelectionMode::Multiple);
+    gv->setSelectionMode(SelectionMode::Multiple);
     EXPECT_EQ(static_cast<QAbstractItemView*>(gv)->selectionMode(),
               QAbstractItemView::MultiSelection);
 }
 
 TEST_F(GridViewTest, SelectionModeExtendedMapsToExtendedSelection) {
     GridView* gv = new GridView(window);
-    gv->setSelectionMode(GridSelectionMode::Extended);
+    gv->setSelectionMode(SelectionMode::Extended);
     EXPECT_EQ(static_cast<QAbstractItemView*>(gv)->selectionMode(),
               QAbstractItemView::ExtendedSelection);
 }
@@ -747,7 +747,7 @@ TEST_F(GridViewTest, MultipleSelectionClickToggle) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Multiple);
+    gv->setSelectionMode(SelectionMode::Multiple);
     attachStringListModel(gv, {"A", "B", "C", "D"});
     window->show();
     QTest::qWait(50);
@@ -781,7 +781,7 @@ TEST_F(GridViewTest, ExtendedSelectionShiftClick) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Extended);
+    gv->setSelectionMode(SelectionMode::Extended);
     attachStringListModel(gv, {"A", "B", "C", "D", "E"});
     window->show();
     QTest::qWait(50);
@@ -808,7 +808,7 @@ TEST_F(GridViewTest, ExtendedSelectionCtrlClick) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Extended);
+    gv->setSelectionMode(SelectionMode::Extended);
     attachStringListModel(gv, {"A", "B", "C", "D"});
     window->show();
     QTest::qWait(50);
@@ -833,7 +833,7 @@ TEST_F(GridViewTest, ExtendedSelectionPlainClickClearsOthers) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Extended);
+    gv->setSelectionMode(SelectionMode::Extended);
     attachStringListModel(gv, {"A", "B", "C", "D"});
     window->show();
     QTest::qWait(50);
@@ -868,7 +868,7 @@ TEST_F(GridViewTest, DragReorderSingleMode) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Single);
+    gv->setSelectionMode(SelectionMode::Single);
     gv->setCanReorderItems(true);
 
     auto* mdl = new QStandardItemModel(gv);
@@ -1042,7 +1042,7 @@ TEST_F(GridViewTest, DragReorderMultipleMode) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Multiple);
+    gv->setSelectionMode(SelectionMode::Multiple);
     gv->setCanReorderItems(true);
 
     auto* mdl = new QStandardItemModel(gv);
@@ -1091,7 +1091,7 @@ TEST_F(GridViewTest, DragReorderSelectedItemsMoveAsGroupInMultipleMode) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Multiple);
+    gv->setSelectionMode(SelectionMode::Multiple);
     gv->setCanReorderItems(true);
 
     auto* mdl = attachStandardModel(gv, QStringList{"A", "B", "C", "D", "E", "F"});
@@ -1136,7 +1136,7 @@ TEST_F(GridViewTest, DragReorderExtendedMode) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Extended);
+    gv->setSelectionMode(SelectionMode::Extended);
     gv->setCanReorderItems(true);
 
     auto* mdl = new QStandardItemModel(gv);
@@ -1188,7 +1188,7 @@ TEST_F(GridViewTest, DragReorderNoneSelectionDisablesDrag) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::None);
+    gv->setSelectionMode(SelectionMode::None);
     gv->setCanReorderItems(true);
 
     auto* mdl = new QStandardItemModel(gv);
@@ -1258,7 +1258,7 @@ TEST_F(GridViewTest, DragReorderPreservesSelectionInMultipleMode) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     GridView* gv = new GridView(window);
     gv->setGeometry(0, 0, 600, 400);
-    gv->setSelectionMode(GridSelectionMode::Multiple);
+    gv->setSelectionMode(SelectionMode::Multiple);
     gv->setCanReorderItems(true);
 
     auto* mdl = new QStandardItemModel(gv);
@@ -1590,13 +1590,13 @@ TEST_F(GridViewTest, VisualCheck) {
 
     // ── GridView 2: 多选 + 图片 + check 浮层 (对应 WinUI Content inside of a GridView) ──
     Label* header2 = new Label("Content inside of a GridView.", content);
-    header2->setFluentTypography("BodyStrong");
+    header2->setFluentTypography(Typography::FontRole::BodyStrong);
     header2->anchors()->top  = {gv1, Edge::Bottom, 16};
     header2->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header2);
 
     GridView* gv2 = new GridView(content);
-    gv2->setSelectionMode(GridSelectionMode::Multiple);
+    gv2->setSelectionMode(SelectionMode::Multiple);
     gv2->setCellSize(QSize(160, 120));
     gv2->setHorizontalSpacing(8);
     gv2->setVerticalSpacing(8);
@@ -1641,7 +1641,7 @@ TEST_F(GridViewTest, VisualCheck) {
 
     // ── GridView 4: 拖拽重排 (对应 WinUI CanReorderItems) ──
     Label* header4 = new Label("Drag to reorder items.", content);
-    header4->setFluentTypography("BodyStrong");
+    header4->setFluentTypography(Typography::FontRole::BodyStrong);
     header4->anchors()->top  = {gv3, Edge::Bottom, 16};
     header4->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header4);
@@ -1673,7 +1673,7 @@ TEST_F(GridViewTest, VisualCheck) {
 
     // ── Section 5: Selection Mode Comparison (None / Single / Multiple / Extended) ──
     Label* header5 = new Label("Selection Mode Comparison", content);
-    header5->setFluentTypography("BodyStrong");
+    header5->setFluentTypography(Typography::FontRole::BodyStrong);
     header5->anchors()->top  = {gv4, Edge::Bottom, 24};
     header5->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header5);
@@ -1701,11 +1701,11 @@ TEST_F(GridViewTest, VisualCheck) {
 
     auto* gvNone = createModeGrid(modeRow1);
     gvNone->setHeaderText("None");
-    gvNone->setSelectionMode(GridSelectionMode::None);
+    gvNone->setSelectionMode(SelectionMode::None);
 
     auto* gvSingleDemo = createModeGrid(modeRow1);
     gvSingleDemo->setHeaderText("Single");
-    gvSingleDemo->setSelectionMode(GridSelectionMode::Single);
+    gvSingleDemo->setSelectionMode(SelectionMode::Single);
     gvSingleDemo->setSelectedIndex(2);
 
     row1Lay->addWidget(gvNone);
@@ -1727,14 +1727,14 @@ TEST_F(GridViewTest, VisualCheck) {
 
     auto* gvMultiDemo = createModeGrid(modeRow2);
     gvMultiDemo->setHeaderText("Multiple (click toggles)");
-    gvMultiDemo->setSelectionMode(GridSelectionMode::Multiple);
+    gvMultiDemo->setSelectionMode(SelectionMode::Multiple);
     gvMultiDemo->selectionModel()->select(gvMultiDemo->model()->index(0, 0), QItemSelectionModel::Select);
     gvMultiDemo->selectionModel()->select(gvMultiDemo->model()->index(2, 0), QItemSelectionModel::Select);
     gvMultiDemo->selectionModel()->select(gvMultiDemo->model()->index(5, 0), QItemSelectionModel::Select);
 
     auto* gvExtDemo = createModeGrid(modeRow2);
     gvExtDemo->setHeaderText("Extended (Ctrl/Shift+click)");
-    gvExtDemo->setSelectionMode(GridSelectionMode::Extended);
+    gvExtDemo->setSelectionMode(SelectionMode::Extended);
     gvExtDemo->selectionModel()->select(
         QItemSelection(gvExtDemo->model()->index(1, 0), gvExtDemo->model()->index(4, 0)),
         QItemSelectionModel::Select);
@@ -1752,7 +1752,7 @@ TEST_F(GridViewTest, VisualCheck) {
 
     // ── Section 6: Drag Reorder × Selection Mode ──
     Label* header6 = new Label("Drag Reorder \u00d7 Selection Mode", content);
-    header6->setFluentTypography("BodyStrong");
+    header6->setFluentTypography(Typography::FontRole::BodyStrong);
     header6->anchors()->top  = {modeRow2, Edge::Bottom, 24};
     header6->anchors()->left = {content, Edge::Left, 20};
     innerLayout->addWidget(header6);
@@ -1765,7 +1765,7 @@ TEST_F(GridViewTest, VisualCheck) {
     // Multiple + Drag
     auto* gvMultiDrag = new GridView(dragRow);
     gvMultiDrag->setHeaderText("Multiple + Drag");
-    gvMultiDrag->setSelectionMode(GridSelectionMode::Multiple);
+    gvMultiDrag->setSelectionMode(SelectionMode::Multiple);
     gvMultiDrag->setCanReorderItems(true);
     gvMultiDrag->setBorderVisible(true);
     gvMultiDrag->setCellSize(QSize(90, 70));
@@ -1792,7 +1792,7 @@ TEST_F(GridViewTest, VisualCheck) {
     // Extended + Drag
     auto* gvExtDrag = new GridView(dragRow);
     gvExtDrag->setHeaderText("Extended + Drag");
-    gvExtDrag->setSelectionMode(GridSelectionMode::Extended);
+    gvExtDrag->setSelectionMode(SelectionMode::Extended);
     gvExtDrag->setCanReorderItems(true);
     gvExtDrag->setBorderVisible(true);
     gvExtDrag->setCellSize(QSize(90, 70));

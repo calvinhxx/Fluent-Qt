@@ -9,6 +9,7 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/collections/SelectionMode.h"
 
 class QLabel;
 class QPaintEvent;
@@ -35,13 +36,7 @@ class TreeView : public QTreeView, public FluentElement, public QMLPlus {
     Q_OBJECT
 
 public:
-    enum class TreeSelectionMode {
-        None,
-        Single,
-        Multiple,
-        Extended
-    };
-    Q_ENUM(TreeSelectionMode)
+    using SelectionMode = ::fluent::collections::SelectionMode;
 
     enum class IndicatorVerticalDirection {
         None,
@@ -73,12 +68,12 @@ public:
      * @brief Selection mode used by the collection view.
      * zh_CN: 集合视图使用的选择模式。
      */
-    Q_PROPERTY(TreeSelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
+    Q_PROPERTY(SelectionMode selectionMode READ selectionMode WRITE setSelectionMode NOTIFY selectionModeChanged)
     /**
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
      */
-    Q_PROPERTY(QString fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
+    Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
      * @brief Whether the item-view viewport is currently hovered.
      * zh_CN: item-view viewport 当前是否处于悬停状态。
@@ -158,12 +153,12 @@ public:
     void setSelectionModel(QItemSelectionModel* selectionModel) override;
 
     // --- Selection ---
-    TreeSelectionMode selectionMode() const { return m_selectionMode; }
-    void setSelectionMode(TreeSelectionMode mode);
+    SelectionMode selectionMode() const { return m_selectionMode; }
+    void setSelectionMode(SelectionMode mode);
 
     // --- Appearance ---
-    QString fontRole() const { return m_fontRole; }
-    void setFontRole(const QString& role);
+    Typography::FontRole fontRole() const { return m_fontRole; }
+    void setFontRole(Typography::FontRole role);
 
     bool borderVisible() const { return m_borderVisible; }
     bool isBorderVisible() const { return borderVisible(); }
@@ -349,8 +344,8 @@ private:
     bool isDescendantOf(const QModelIndex& candidate, const QModelIndex& ancestor) const;
     QPixmap renderRowPixmap(const QModelIndex& index) const;
 
-    TreeSelectionMode m_selectionMode = TreeSelectionMode::Single;
-    QString m_fontRole;
+    SelectionMode m_selectionMode = SelectionMode::Single;
+    Typography::FontRole m_fontRole = Typography::FontRole::Body;
 
     // --- Container visuals ---
     bool m_borderVisible = true;
@@ -408,8 +403,6 @@ public:
     /** Query chevron rotation progress for delegate painting. 0=right, 1=down. */
     qreal chevronRotation(const QModelIndex& index) const;
 };
-
-using TreeSelectionMode = TreeView::TreeSelectionMode;
 
 } // namespace fluent::collections
 

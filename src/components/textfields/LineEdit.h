@@ -38,7 +38,7 @@ class LineEdit : public QLineEdit, public FluentElement, public QMLPlus {
      * @brief Fluent typography role used for text rendering.
      * zh_CN: 文本绘制使用的 Fluent 排版角色。
      */
-    Q_PROPERTY(QString fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
+    Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
      * @brief Whether the trailing clear button is enabled.
      * zh_CN: 尾部清除按钮是否启用。
@@ -78,8 +78,8 @@ public:
     QMargins contentMargins() const { return m_contentMargins; }
     void setContentMargins(const QMargins& margins);
 
-    QString fontRole() const { return m_fontRole; }
-    void setFontRole(const QString& role);
+    Typography::FontRole fontRole() const { return m_fontRole; }
+    void setFontRole(Typography::FontRole role);
 
     bool isClearButtonEnabled() const { return m_clearButtonEnabled; }
     void setClearButtonEnabled(bool enabled);
@@ -127,7 +127,7 @@ private:
                                           ::Spacing::Padding::TextFieldVertical,
                                           ::Spacing::Padding::TextFieldHorizontal,
                                           ::Spacing::Padding::TextFieldVertical);
-    QString  m_fontRole        = Typography::FontRole::Body;
+    Typography::FontRole m_fontRole = Typography::FontRole::Body;
     ::fluent::basicinput::Button* m_clearButton = nullptr;
     bool     m_clearButtonEnabled = true;
     int      m_clearButtonSize    = 22;

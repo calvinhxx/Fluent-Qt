@@ -16,6 +16,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayScrim.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/collections/DrawerView.h"
@@ -26,6 +27,7 @@ using fluent::basicinput::Button;
 using fluent::basicinput::ToggleSwitch;
 using fluent::collections::DrawerView;
 using fluent::textfields::Label;
+using fluent::WidgetOwnership;
 
 namespace {
 
@@ -55,7 +57,7 @@ public:
         auto* layout = new QVBoxLayout(this);
         layout->setContentsMargins(16, 16, 16, 16);
         auto* label = new Label(title, this);
-        label->setFluentTypography(QStringLiteral("Subtitle"));
+        label->setFluentTypography(Typography::FontRole::Subtitle);
         layout->addWidget(label);
         layout->addStretch();
         onThemeUpdated();
@@ -83,7 +85,7 @@ public:
         setLayout(layout);
 
         auto* title = new Label(QStringLiteral("Drawer actions"), this);
-        title->setFluentTypography(QStringLiteral("Subtitle"));
+        title->setFluentTypography(Typography::FontRole::Subtitle);
 
         auto* description = new Label(QStringLiteral("Adjust quick settings, then apply or reset the drawer state."), this);
         description->setWordWrap(true);
@@ -389,6 +391,42 @@ TEST_F(DrawerViewTest, AnimationDisabledOpenCloseLifecycleAndAttachment)
     EXPECT_FALSE(openChangedSpy.at(1).at(0).toBool());
 }
 
+TEST_F(DrawerViewTest, OpenReResolvesOwnerAndPreservesAvailableMarginsAfterHostJoinsFinalWindow)
+{
+    DrawerTestWindow window;
+    auto* page = new QWidget;
+    auto* host = new QWidget(page);
+    host->setGeometry(0, 0, 320, 240);
+
+    {
+        DrawerView drawer(host);
+        drawer.setModal(false);
+        drawer.setDim(false);
+        drawer.setAnimationEnabled(false);
+        drawer.setDrawerLength(200);
+        drawer.setAvailableMargins(QMargins(0, 42, 0, 0));
+
+        page->setParent(&window);
+        page->setGeometry(180, 0, 620, 600);
+        prepareWindow(window);
+        page->show();
+        host->show();
+        processEvents();
+
+        drawer.open();
+        processEvents();
+
+        EXPECT_EQ(drawer.parentWidget(), &window);
+        EXPECT_EQ(drawer.mapTo(&window, QPoint(0, 0)), QPoint(0, 42));
+        EXPECT_EQ(drawer.panelGeometry(), QRect(0, 42, 200, window.height() - 42));
+
+        drawer.close();
+        processEvents();
+    }
+
+    delete page;
+}
+
 TEST_F(DrawerViewTest, EdgeGeometryAndPartialPosition)
 {
     DrawerTestWindow window;
@@ -509,6 +547,7 @@ TEST_F(DrawerViewTest, ContentWidgetHostingReplacesAndClearsWithoutDeleting)
     drawer.setContentWidget(first);
     openWithoutAnimation(drawer);
     EXPECT_EQ(drawer.contentWidget(), first);
+    EXPECT_EQ(drawer.contentOwnership(), WidgetOwnership::Borrowed);
     EXPECT_EQ(first->parentWidget(), &drawer);
     EXPECT_TRUE(first->isVisible());
     EXPECT_EQ(first->geometry(), drawer.contentGeometry());
@@ -528,6 +567,47 @@ TEST_F(DrawerViewTest, ContentWidgetHostingReplacesAndClearsWithoutDeleting)
 
     delete first;
     delete second;
+}
+
+TEST_F(DrawerViewTest, ContentOwnershipPoliciesReleaseDeterministically)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    DrawerView drawer(&window);
+    QWidget originalParent;
+
+    auto* reparented = new ContentPane(QStringLiteral("Reparented"), &originalParent);
+    ASSERT_TRUE(drawer.setContentWidget(reparented, WidgetOwnership::Reparented));
+    EXPECT_EQ(reparented->parentWidget(), &drawer);
+    EXPECT_EQ(drawer.contentOwnership(), WidgetOwnership::Reparented);
+
+    QPointer<QWidget> owned = new ContentPane(QStringLiteral("Owned"));
+    ASSERT_TRUE(drawer.setContentWidget(owned, WidgetOwnership::Owned));
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+    ASSERT_FALSE(owned.isNull());
+    EXPECT_EQ(owned->parentWidget(), &drawer);
+    EXPECT_EQ(drawer.contentOwnership(), WidgetOwnership::Owned);
+
+    drawer.setContentWidget(nullptr);
+    EXPECT_TRUE(owned.isNull());
+    EXPECT_EQ(drawer.contentOwnership(), WidgetOwnership::Borrowed);
+}
+
+TEST_F(DrawerViewTest, TakeContentTransfersEvenOwnedWidgetToCaller)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    DrawerView drawer(&window);
+    auto* content = new ContentPane(QStringLiteral("Transferred"));
+    ASSERT_TRUE(drawer.setContentWidget(content, WidgetOwnership::Owned));
+
+    QWidget* taken = drawer.takeContentWidget();
+
+    EXPECT_EQ(taken, content);
+    EXPECT_EQ(taken->parentWidget(), nullptr);
+    EXPECT_EQ(drawer.contentWidget(), nullptr);
+    EXPECT_EQ(drawer.contentOwnership(), WidgetOwnership::Borrowed);
+    delete taken;
 }
 
 TEST_F(DrawerViewTest, ModalDimAndClosePolicies)
@@ -584,6 +664,32 @@ TEST_F(DrawerViewTest, ModalDimAndClosePolicies)
     QApplication::sendEvent(&window, &secondEscape);
     processEvents();
     EXPECT_TRUE(drawer.isOpen());
+}
+
+TEST_F(DrawerViewTest, ModalScrimLightDismissClosesOnOutsidePress)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+
+    DrawerView drawer(&window);
+    drawer.setAnimationEnabled(false);
+    drawer.setEdge(DrawerView::DrawerEdge::Right);
+    drawer.setDrawerLength(280);
+    drawer.setModal(true);
+    drawer.setDim(true);
+    drawer.open();
+    processEvents();
+
+    auto* scrim = window.findChild<QWidget*>(QStringLiteral("DrawerViewScrim"));
+    ASSERT_NE(scrim, nullptr);
+    auto* overlayScrim = qobject_cast<fluent::overlay::OverlayScrim*>(scrim);
+    ASSERT_NE(overlayScrim, nullptr);
+    QSignalSpy pressedSpy(overlayScrim, &fluent::overlay::OverlayScrim::pressed);
+    sendMouse(scrim, QEvent::MouseButtonPress, QPoint(20, 20),
+              Qt::LeftButton, Qt::LeftButton);
+
+    EXPECT_EQ(pressedSpy.count(), 1);
+    EXPECT_FALSE(drawer.isOpen());
 }
 
 TEST_F(DrawerViewTest, TopLevelResizeKeepsOverlayStackAboveSiblings)
@@ -804,7 +910,7 @@ TEST_F(DrawerViewTest, VisualCheck)
     window->setLayout(layout);
 
     auto* title = new Label(QStringLiteral("Fluent DrawerView"), window);
-    title->setFluentTypography(QStringLiteral("Title"));
+    title->setFluentTypography(Typography::FontRole::Title);
 
     auto* leftButton = new Button(QStringLiteral("Left"), window);
     leftButton->setFixedSize(76, 32);

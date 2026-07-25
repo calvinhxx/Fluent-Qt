@@ -72,7 +72,7 @@ class AutoSuggestBox : public LineEdit {
      * @brief Typography role used by suggestion rows.
      * zh_CN: 建议项行文本使用的排版角色。
      */
-    Q_PROPERTY(QString suggestionFontRole READ suggestionFontRole WRITE setSuggestionFontRole NOTIFY suggestionFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole suggestionFontRole READ suggestionFontRole WRITE setSuggestionFontRole NOTIFY suggestionFontRoleChanged)
     /**
      * @brief Height of each suggestion row.
      * zh_CN: 每个建议项行的高度。
@@ -109,7 +109,7 @@ public:
     int inputHeight() const { return m_inputHeight; }
     int queryButtonSize() const { return m_queryButtonSize; }
     int clearButtonSize() const { return m_clearButtonSize; }
-    QString suggestionFontRole() const { return m_suggestionFontRole; }
+    Typography::FontRole suggestionFontRole() const { return m_suggestionFontRole; }
     int suggestionItemHeight() const { return m_suggestionItemHeight; }
     bool isSuggestionListOpen() const;
 
@@ -120,7 +120,7 @@ public:
     void setInputHeight(int height);
     void setQueryButtonSize(int size);
     void setClearButtonSize(int size);
-    void setSuggestionFontRole(const QString& role);
+    void setSuggestionFontRole(Typography::FontRole role);
     void setSuggestionItemHeight(int height);
 
     QSize sizeHint() const override;
@@ -208,7 +208,7 @@ private:
     int m_inputHeight = kDefaultInputHeight;
     int m_queryButtonSize = 24;
     int m_clearButtonSize = 24;
-    QString m_suggestionFontRole = Typography::FontRole::Body;
+    Typography::FontRole m_suggestionFontRole = Typography::FontRole::Body;
     int m_suggestionItemHeight = kDefaultSuggestionItemHeight;
 };
 

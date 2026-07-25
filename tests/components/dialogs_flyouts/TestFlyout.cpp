@@ -441,7 +441,7 @@ TEST_F(FlyoutTest, VisualCheck) {
         auto* pl = new AnchorLayout(fl);
         fl->setLayout(pl);
         auto* title = new Label(label, fl);
-        title->setFluentTypography("BodyStrong");
+        title->setFluentTypography(Typography::FontRole::BodyStrong);
         title->anchors()->top  = {fl, Edge::Top,  20};
         title->anchors()->left = {fl, Edge::Left, 20};
         pl->addWidget(title);

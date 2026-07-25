@@ -109,21 +109,21 @@ GridView::GridView(QWidget* parent)
 
 // ── Selection mode ────────────────────────────────────────────────────────────
 
-void GridView::setSelectionMode(GridSelectionMode mode) {
+void GridView::setSelectionMode(SelectionMode mode) {
     if (m_selectionMode == mode) return;
     m_selectionMode = mode;
 
     switch (mode) {
-    case GridSelectionMode::None:
+    case SelectionMode::None:
         QListView::setSelectionMode(QAbstractItemView::NoSelection);
         break;
-    case GridSelectionMode::Single:
+    case SelectionMode::Single:
         QListView::setSelectionMode(QAbstractItemView::SingleSelection);
         break;
-    case GridSelectionMode::Multiple:
+    case SelectionMode::Multiple:
         QListView::setSelectionMode(QAbstractItemView::MultiSelection);
         break;
-    case GridSelectionMode::Extended:
+    case SelectionMode::Extended:
         QListView::setSelectionMode(QAbstractItemView::ExtendedSelection);
         break;
     }
@@ -132,7 +132,7 @@ void GridView::setSelectionMode(GridSelectionMode mode) {
 
 // ── Appearance properties ────────────────────────────────────────────────────
 
-void GridView::setFontRole(const QString& role) {
+void GridView::setFontRole(Typography::FontRole role) {
     if (m_fontRole == role) return;
     m_fontRole = role;
     applyThemeStyle();
@@ -548,8 +548,8 @@ void GridView::mousePressEvent(QMouseEvent* event) {
             // In Multiple/Extended mode, pressing on an already-selected item
             // should NOT change selection (to allow multi-drag).
             // We handle selection change on release if no drag occurred.
-            if ((m_selectionMode == GridSelectionMode::Multiple ||
-                 m_selectionMode == GridSelectionMode::Extended) &&
+            if ((m_selectionMode == SelectionMode::Multiple ||
+                 m_selectionMode == SelectionMode::Extended) &&
                 selectionModel() && selectionModel()->isSelected(idx)) {
                 // Don't pass to QListView — preserve selection for drag
                 m_dragPressIntercepted = true;
@@ -667,9 +667,9 @@ void GridView::mouseReleaseEvent(QMouseEvent* event) {
         // No drag happened — apply deferred selection only if we intercepted the press
         if (m_dragPressIntercepted && m_dragSourceIndex >= 0 && model()) {
             QModelIndex idx = model()->index(m_dragSourceIndex, 0);
-            if (m_selectionMode == GridSelectionMode::Multiple) {
+            if (m_selectionMode == SelectionMode::Multiple) {
                 selectionModel()->select(idx, QItemSelectionModel::Toggle);
-            } else if (m_selectionMode == GridSelectionMode::Extended) {
+            } else if (m_selectionMode == SelectionMode::Extended) {
                 if (event->modifiers() & Qt::ControlModifier)
                     selectionModel()->select(idx, QItemSelectionModel::Toggle);
                 else

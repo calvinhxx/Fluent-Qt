@@ -65,7 +65,7 @@ class InfoBadge : public QWidget, public FluentElement, public QMLPlus {
      * @brief Typography role used by badge value text.
      * zh_CN: 徽标数值文本使用的排版角色。
      */
-    Q_PROPERTY(QString valueFontRole READ valueFontRole WRITE setValueFontRole NOTIFY valueFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole valueFontRole READ valueFontRole WRITE setValueFontRole NOTIFY valueFontRoleChanged)
     /**
      * @brief Diameter of beacon-style badge visuals.
      * zh_CN: 提示点样式徽标的直径。
@@ -132,8 +132,8 @@ public:
     QColor customTextColor() const { return m_customTextColor; }
     void setCustomTextColor(const QColor& color);
 
-    QString valueFontRole() const { return m_valueFontRole; }
-    void setValueFontRole(const QString& role);
+    Typography::FontRole valueFontRole() const { return m_valueFontRole; }
+    void setValueFontRole(Typography::FontRole role);
 
     int beaconDiameter() const { return m_beaconDiameter; }
     void setBeaconDiameter(int diameter);
@@ -174,7 +174,7 @@ signals:
     void badgeOpacityChanged(qreal opacity);
     void customBackgroundColorChanged(const QColor& color);
     void customTextColorChanged(const QColor& color);
-    void valueFontRoleChanged(const QString& role);
+    void valueFontRoleChanged(Typography::FontRole role);
     void beaconDiameterChanged(int diameter);
     void badgeHeightChanged(int height);
     void valueHorizontalPaddingChanged(int padding);
@@ -203,7 +203,7 @@ private:
     qreal m_badgeOpacity = 1.0;
     QColor m_customBackgroundColor;
     QColor m_customTextColor;
-    QString m_valueFontRole;
+    Typography::FontRole m_valueFontRole = Typography::FontRole::Caption;
     int m_beaconDiameter = 4;
     int m_badgeHeight = 16;
     int m_valueHorizontalPadding = 8;

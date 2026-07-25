@@ -72,7 +72,7 @@ class SelectorBar : public QWidget, public FluentElement, public QMLPlus {
      * @brief Typography role used by selector items.
      * zh_CN: 选择器条目使用的排版角色。
      */
-    Q_PROPERTY(QString itemFontRole READ itemFontRole WRITE setItemFontRole NOTIFY itemFontRoleChanged)
+    Q_PROPERTY(Typography::FontRole itemFontRole READ itemFontRole WRITE setItemFontRole NOTIFY itemFontRoleChanged)
     /**
      * @brief Iconfont family used for glyph rendering.
      * zh_CN: 图标字符绘制使用的 iconfont 字体族。
@@ -116,8 +116,8 @@ public:
     OverflowBehavior overflowBehavior() const { return m_overflowBehavior; }
     void setOverflowBehavior(OverflowBehavior behavior);
 
-    QString itemFontRole() const { return m_itemFontRole; }
-    void setItemFontRole(const QString& role);
+    Typography::FontRole itemFontRole() const { return m_itemFontRole; }
+    void setItemFontRole(Typography::FontRole role);
     QString iconFontFamily() const { return m_iconFontFamily; }
     void setIconFontFamily(const QString& family);
 
@@ -142,7 +142,7 @@ signals:
     void currentChanged(int index);
     void selectionChanged(int index, const SelectorBarItem& item);
     void overflowBehaviorChanged(OverflowBehavior behavior);
-    void itemFontRoleChanged(const QString& role);
+    void itemFontRoleChanged(Typography::FontRole role);
     void iconFontFamilyChanged(const QString& family);
     void overflowActivated(const QVector<int>& hiddenIndexes);
 
@@ -250,7 +250,7 @@ private:
     int m_selectedIndex = -1;
     int m_focusedIndex = -1;
     OverflowBehavior m_overflowBehavior = OverflowBehavior::ScrollButtons;
-    QString m_itemFontRole = QStringLiteral("Body");
+    Typography::FontRole m_itemFontRole = Typography::FontRole::Body;
     QString m_iconFontFamily;
     HitRecord m_hoveredHit;
     HitRecord m_pressedHit;
