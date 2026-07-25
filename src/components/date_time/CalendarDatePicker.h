@@ -44,6 +44,11 @@ class CalendarDatePicker : public fluent::basicinput::Button {
      */
     Q_PROPERTY(QDate maxDate READ maxDate WRITE setMaxDate NOTIFY maxDateChanged)
     /**
+     * @brief Locale used for date text and calendar labels.
+     * zh_CN: 用于日期文本和日历标签的区域设置。
+     */
+    Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
+    /**
      * @brief Date display format used by the picker button.
      * zh_CN: picker 按钮使用的日期显示格式。
      */
@@ -52,7 +57,9 @@ class CalendarDatePicker : public fluent::basicinput::Button {
      * @brief First day used when laying out calendar weeks.
      * zh_CN: 日历周布局使用的一周起始日。
      */
-    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek READ firstDayOfWeek WRITE setFirstDayOfWeek NOTIFY firstDayOfWeekChanged)
+    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek READ firstDayOfWeek
+               WRITE setFirstDayOfWeek RESET resetFirstDayOfWeek
+               NOTIFY firstDayOfWeekChanged)
     /**
      * @brief Whether the calendar flyout is open.
      * zh_CN: 日历浮层是否打开。
@@ -74,12 +81,17 @@ public:
 
     QDate maxDate() const { return m_maxDate; }
     void setMaxDate(const QDate& date);
+    void setDateRange(const QDate& minDate, const QDate& maxDate);
+
+    QLocale locale() const { return QWidget::locale(); }
+    void setLocale(const QLocale& locale);
 
     QString displayFormat() const { return m_displayFormat; }
     void setDisplayFormat(const QString& format);
 
     Qt::DayOfWeek firstDayOfWeek() const { return m_firstDayOfWeek; }
     void setFirstDayOfWeek(Qt::DayOfWeek day);
+    void resetFirstDayOfWeek();
 
     bool isCalendarOpen() const { return m_calendarOpen; }
     bool isOpen() const { return isCalendarOpen(); }
@@ -103,6 +115,7 @@ signals:
     void dateChanged(const QDate& date);
     void minDateChanged(const QDate& date);
     void maxDateChanged(const QDate& date);
+    void localeChanged(const QLocale& locale);
     void displayFormatChanged(const QString& format);
     void firstDayOfWeekChanged(Qt::DayOfWeek day);
     void calendarOpenChanged(bool open);
@@ -129,7 +142,9 @@ private:
     QDate m_minDate;
     QDate m_maxDate;
     QString m_displayFormat;
-    Qt::DayOfWeek m_firstDayOfWeek = QLocale().firstDayOfWeek();
+    QLocale m_observedLocale;
+    Qt::DayOfWeek m_firstDayOfWeek = Qt::Monday;
+    bool m_firstDayFollowsLocale = true;
 
     bool m_calendarOpen = false;
 

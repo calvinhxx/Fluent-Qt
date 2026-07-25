@@ -75,7 +75,7 @@ public:
     QTime selectedTime() const { return m_selectedTime; }
     int minuteIncrement() const { return m_minuteIncrement; }
     ClockIdentifier clockIdentifier() const { return m_clockIdentifier; }
-    QLocale locale() const { return m_locale; }
+    QLocale locale() const { return QWidget::locale(); }
     bool isDropDownOpen() const { return m_dropDownOpen; }
     bool isOpen() const { return isDropDownOpen(); }
 
@@ -142,7 +142,7 @@ private:
     QTime m_selectedTime;
     int m_minuteIncrement = 1;
     ClockIdentifier m_clockIdentifier = ClockIdentifier::TwelveHourClock;
-    QLocale m_locale;
+    QLocale m_observedLocale;
     Qt::Alignment m_hourTextAlignment = Qt::AlignLeft;
     Qt::Alignment m_minuteTextAlignment = Qt::AlignHCenter;
     Qt::Alignment m_periodTextAlignment = Qt::AlignHCenter;

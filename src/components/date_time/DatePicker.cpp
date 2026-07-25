@@ -926,6 +926,7 @@ void DatePickerFlyout::updateColumns()
 DatePicker::DatePicker(QWidget* parent)
     : fluent::basicinput::Button(parent)
 {
+    m_observedLocale = QWidget::locale();
     const QDate today = QDate::currentDate();
     m_minimumDate = today.addYears(-100);
     m_maximumDate = today.addYears(100);
@@ -1090,13 +1091,9 @@ void DatePicker::setYearFormat(YearFormat format)
 
 void DatePicker::setLocale(const QLocale& locale)
 {
-    if (m_locale == locale)
+    if (QWidget::locale() == locale)
         return;
-    m_locale = locale;
-    if (m_flyout && m_flyout->isOpen())
-        m_flyout->showForPicker();
-    update();
-    emit localeChanged(m_locale);
+    QWidget::setLocale(locale);
 }
 
 Qt::Alignment DatePicker::fieldTextAlignment(DateField field) const
@@ -1363,6 +1360,15 @@ void DatePicker::keyPressEvent(QKeyEvent* event)
 void DatePicker::changeEvent(QEvent* event)
 {
     fluent::basicinput::Button::changeEvent(event);
+    if (event->type() == QEvent::LocaleChange
+        && m_observedLocale != QWidget::locale()) {
+        m_observedLocale = QWidget::locale();
+        if (m_flyout && m_flyout->isOpen())
+            m_flyout->showForPicker();
+        updateGeometry();
+        update();
+        emit localeChanged(m_observedLocale);
+    }
     if (event->type() == QEvent::EnabledChange) {
         if (!isEnabled())
             closePicker();
@@ -1484,9 +1490,9 @@ QString DatePicker::formatField(DateField field, const QDate& date) const
     case DateField::Month:
         switch (m_monthFormat) {
         case MonthFormat::FullMonthName:
-            return m_locale.monthName(date.month(), QLocale::LongFormat);
+            return locale().monthName(date.month(), QLocale::LongFormat);
         case MonthFormat::AbbreviatedMonthName:
-            return m_locale.monthName(date.month(), QLocale::ShortFormat);
+            return locale().monthName(date.month(), QLocale::ShortFormat);
         case MonthFormat::NumericMonth:
             return QString::number(date.month());
         case MonthFormat::TwoDigitMonth:
@@ -1502,7 +1508,7 @@ QString DatePicker::formatField(DateField field, const QDate& date) const
         case DayFormat::DayIntegerWithAbbreviatedWeekday:
             return QStringLiteral("%1 (%2)")
                 .arg(date.day())
-                .arg(m_locale.dayName(date.dayOfWeek(), QLocale::ShortFormat));
+                .arg(locale().dayName(date.dayOfWeek(), QLocale::ShortFormat));
         }
         break;
     case DateField::Year:

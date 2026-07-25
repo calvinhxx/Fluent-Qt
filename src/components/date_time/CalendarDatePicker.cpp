@@ -30,10 +30,11 @@ QDate todayMonth()
     return firstOfMonth(QDate::currentDate());
 }
 
-Qt::DayOfWeek normalizeDayOfWeek(Qt::DayOfWeek day)
+Qt::DayOfWeek normalizeDayOfWeek(Qt::DayOfWeek day,
+                                 Qt::DayOfWeek fallback)
 {
     if (day < Qt::Monday || day > Qt::Sunday)
-        return QLocale().firstDayOfWeek();
+        return fallback;
     return day;
 }
 
@@ -108,6 +109,7 @@ public:
             return;
 
         const QDate month = resetMonth ? m_picker->defaultVisibleMonth() : m_calendarView->visibleMonth();
+        m_calendarView->setLocale(m_picker->locale());
         m_calendarView->setDateRange(m_picker->minDate(), m_picker->maxDate());
         m_calendarView->setFirstDayOfWeek(m_picker->firstDayOfWeek());
         m_calendarView->setSelectedDate(m_picker->date());
@@ -163,6 +165,8 @@ private:
 CalendarDatePicker::CalendarDatePicker(QWidget* parent)
     : fluent::basicinput::Button(parent)
 {
+    m_observedLocale = QWidget::locale();
+    m_firstDayOfWeek = m_observedLocale.firstDayOfWeek();
     setObjectName(QStringLiteral("CalendarDatePicker"));
     setFocusPolicy(Qt::TabFocus);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
@@ -214,42 +218,43 @@ void CalendarDatePicker::setDate(const QDate& date)
 
 void CalendarDatePicker::setMinDate(const QDate& date)
 {
-    if (m_minDate == date)
-        return;
-
-    m_minDate = date;
-    bool maxAdjusted = false;
-    if (m_minDate.isValid() && m_maxDate.isValid() && m_maxDate < m_minDate) {
-        m_maxDate = m_minDate;
-        maxAdjusted = true;
-    }
-
-    enforceSelectedDateInRange();
-    if (m_popup)
-        m_popup->updateFromPicker(false);
-    emit minDateChanged(m_minDate);
-    if (maxAdjusted)
-        emit maxDateChanged(m_maxDate);
+    setDateRange(date, m_maxDate);
 }
 
 void CalendarDatePicker::setMaxDate(const QDate& date)
 {
-    if (m_maxDate == date)
+    setDateRange(m_minDate, date);
+}
+
+void CalendarDatePicker::setDateRange(const QDate& minDate,
+                                      const QDate& maxDate)
+{
+    QDate nextMin = minDate;
+    QDate nextMax = maxDate;
+    if (nextMin.isValid() && nextMax.isValid() && nextMax < nextMin)
+        nextMax = nextMin;
+
+    const bool minChanged = m_minDate != nextMin;
+    const bool maxChanged = m_maxDate != nextMax;
+    if (!minChanged && !maxChanged)
         return;
 
-    m_maxDate = date;
-    bool minAdjusted = false;
-    if (m_minDate.isValid() && m_maxDate.isValid() && m_minDate > m_maxDate) {
-        m_minDate = m_maxDate;
-        minAdjusted = true;
-    }
-
+    m_minDate = nextMin;
+    m_maxDate = nextMax;
     enforceSelectedDateInRange();
     if (m_popup)
         m_popup->updateFromPicker(false);
-    if (minAdjusted)
+    if (minChanged)
         emit minDateChanged(m_minDate);
-    emit maxDateChanged(m_maxDate);
+    if (maxChanged)
+        emit maxDateChanged(m_maxDate);
+}
+
+void CalendarDatePicker::setLocale(const QLocale& locale)
+{
+    if (QWidget::locale() == locale)
+        return;
+    QWidget::setLocale(locale);
 }
 
 void CalendarDatePicker::setDisplayFormat(const QString& format)
@@ -263,10 +268,24 @@ void CalendarDatePicker::setDisplayFormat(const QString& format)
 
 void CalendarDatePicker::setFirstDayOfWeek(Qt::DayOfWeek day)
 {
-    const Qt::DayOfWeek normalized = normalizeDayOfWeek(day);
+    const Qt::DayOfWeek normalized =
+        normalizeDayOfWeek(day, locale().firstDayOfWeek());
+    m_firstDayFollowsLocale = false;
     if (m_firstDayOfWeek == normalized)
         return;
     m_firstDayOfWeek = normalized;
+    if (m_popup)
+        m_popup->updateFromPicker(false);
+    emit firstDayOfWeekChanged(m_firstDayOfWeek);
+}
+
+void CalendarDatePicker::resetFirstDayOfWeek()
+{
+    m_firstDayFollowsLocale = true;
+    const Qt::DayOfWeek automaticDay = locale().firstDayOfWeek();
+    if (m_firstDayOfWeek == automaticDay)
+        return;
+    m_firstDayOfWeek = automaticDay;
     if (m_popup)
         m_popup->updateFromPicker(false);
     emit firstDayOfWeekChanged(m_firstDayOfWeek);
@@ -286,7 +305,7 @@ QString CalendarDatePicker::displayText() const
         return m_placeholderText;
     if (!m_displayFormat.isEmpty())
         return m_date.toString(m_displayFormat);
-    return QLocale().toString(m_date, QLocale::ShortFormat);
+    return locale().toString(m_date, QLocale::ShortFormat);
 }
 
 QDate CalendarDatePicker::visibleMonth() const
@@ -348,6 +367,22 @@ void CalendarDatePicker::clearDate()
 void CalendarDatePicker::changeEvent(QEvent* event)
 {
     fluent::basicinput::Button::changeEvent(event);
+    if (event->type() == QEvent::LocaleChange
+        && m_observedLocale != QWidget::locale()) {
+        m_observedLocale = QWidget::locale();
+        if (m_firstDayFollowsLocale) {
+            const Qt::DayOfWeek automaticDay =
+                m_observedLocale.firstDayOfWeek();
+            if (m_firstDayOfWeek != automaticDay) {
+                m_firstDayOfWeek = automaticDay;
+                emit firstDayOfWeekChanged(m_firstDayOfWeek);
+            }
+        }
+        if (m_popup)
+            m_popup->updateFromPicker(false);
+        refreshButtonText();
+        emit localeChanged(m_observedLocale);
+    }
     if (event->type() == QEvent::EnabledChange && !isEnabled())
         closeCalendar();
 }

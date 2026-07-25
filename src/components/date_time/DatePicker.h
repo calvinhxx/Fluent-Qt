@@ -129,7 +129,7 @@ public:
     DayFormat dayFormat() const { return m_dayFormat; }
     YearFormat yearFormat() const { return m_yearFormat; }
 
-    QLocale locale() const { return m_locale; }
+    QLocale locale() const { return QWidget::locale(); }
 
     Qt::Alignment fieldTextAlignment(DateField field) const;
 
@@ -219,7 +219,7 @@ private:
     MonthFormat m_monthFormat = MonthFormat::FullMonthName;
     DayFormat m_dayFormat = DayFormat::DayInteger;
     YearFormat m_yearFormat = YearFormat::FullYear;
-    QLocale m_locale;
+    QLocale m_observedLocale;
     Qt::Alignment m_monthTextAlignment = Qt::AlignLeft;
     Qt::Alignment m_dayTextAlignment = Qt::AlignHCenter;
     Qt::Alignment m_yearTextAlignment = Qt::AlignHCenter;

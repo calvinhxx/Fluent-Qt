@@ -48,10 +48,17 @@ class CalendarView : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QDate maxDate READ maxDate WRITE setMaxDate NOTIFY maxDateChanged)
     /**
+     * @brief Locale used for calendar names and the automatic first weekday.
+     * zh_CN: 用于日历名称和自动每周起始日的区域设置。
+     */
+    Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
+    /**
      * @brief First day used when laying out calendar weeks.
      * zh_CN: 日历周布局使用的一周起始日。
      */
-    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek READ firstDayOfWeek WRITE setFirstDayOfWeek NOTIFY firstDayOfWeekChanged)
+    Q_PROPERTY(Qt::DayOfWeek firstDayOfWeek READ firstDayOfWeek
+               WRITE setFirstDayOfWeek RESET resetFirstDayOfWeek
+               NOTIFY firstDayOfWeekChanged)
     /**
      * @brief Calendar content level currently displayed.
      * zh_CN: 当前显示的日历内容层级。
@@ -78,6 +85,7 @@ public:
     QDate visibleMonth() const { return m_visibleMonth; }
     QDate minDate() const { return m_minDate; }
     QDate maxDate() const { return m_maxDate; }
+    QLocale locale() const { return QWidget::locale(); }
     Qt::DayOfWeek firstDayOfWeek() const { return m_firstDayOfWeek; }
     CalendarContentLevel contentLevel() const { return m_contentLevel; }
     bool isFrameVisible() const { return m_frameVisible; }
@@ -105,7 +113,9 @@ public slots:
     void setMinDate(const QDate& date);
     void setMaxDate(const QDate& date);
     void setDateRange(const QDate& minDate, const QDate& maxDate);
+    void setLocale(const QLocale& locale);
     void setFirstDayOfWeek(Qt::DayOfWeek day);
+    void resetFirstDayOfWeek();
     void setContentLevel(CalendarContentLevel level);
     void setFrameVisible(bool visible);
 
@@ -114,6 +124,7 @@ signals:
     void visibleMonthChanged(const QDate& month);
     void minDateChanged(const QDate& date);
     void maxDateChanged(const QDate& date);
+    void localeChanged(const QLocale& locale);
     void firstDayOfWeekChanged(Qt::DayOfWeek day);
     void contentLevelChanged(CalendarContentLevel level);
     void frameVisibleChanged(bool visible);
@@ -130,6 +141,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
     void onThemeUpdated() override;
 
@@ -242,7 +254,9 @@ private:
     qreal m_contentTransitionProgress = 1.0;
     int m_contentTransitionDirection = 0;
     QVariantAnimation* m_contentTransitionAnimation = nullptr;
-    Qt::DayOfWeek m_firstDayOfWeek = QLocale().firstDayOfWeek();
+    QLocale m_observedLocale;
+    Qt::DayOfWeek m_firstDayOfWeek = Qt::Monday;
+    bool m_firstDayFollowsLocale = true;
 };
 
 } // namespace fluent::date_time

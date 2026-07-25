@@ -171,6 +171,56 @@ TEST_F(CalendarViewTest, SelectedDateSignalsAndRangeClamping)
     EXPECT_FALSE(view.selectedDate().isValid());
 }
 
+TEST_F(CalendarViewTest, DateRangeCommitsAtomically)
+{
+    CalendarView view;
+    view.setSelectedDate(QDate(2026, 5, 15));
+    QSignalSpy minSpy(&view, &CalendarView::minDateChanged);
+    QSignalSpy maxSpy(&view, &CalendarView::maxDateChanged);
+    QSignalSpy selectedSpy(&view, &CalendarView::selectedDateChanged);
+    bool observersSawCompleteRange = true;
+    QObject::connect(&view, &CalendarView::minDateChanged, &view,
+                     [&view, &observersSawCompleteRange](const QDate&) {
+                         observersSawCompleteRange =
+                             observersSawCompleteRange
+                             && view.maxDate() == QDate(2026, 5, 20);
+                     });
+
+    view.setDateRange(QDate(2026, 5, 20), QDate(2026, 5, 10));
+
+    EXPECT_EQ(view.minDate(), QDate(2026, 5, 20));
+    EXPECT_EQ(view.maxDate(), QDate(2026, 5, 20));
+    EXPECT_EQ(view.selectedDate(), QDate(2026, 5, 20));
+    EXPECT_EQ(minSpy.count(), 1);
+    EXPECT_EQ(maxSpy.count(), 1);
+    EXPECT_EQ(selectedSpy.count(), 1);
+    EXPECT_TRUE(observersSawCompleteRange);
+}
+
+TEST_F(CalendarViewTest, LocaleFollowsQWidgetAndFirstDayCanBeOverridden)
+{
+    CalendarView view;
+    QSignalSpy localeSpy(&view, &CalendarView::localeChanged);
+    const QLocale us(QLocale::English, QLocale::UnitedStates);
+    const QLocale german(QLocale::German, QLocale::Germany);
+    const QLocale firstLocale = view.locale() == us ? german : us;
+    const QLocale secondLocale = firstLocale == us ? german : us;
+
+    QWidget* base = &view;
+    base->setLocale(firstLocale);
+    EXPECT_EQ(view.locale(), firstLocale);
+    EXPECT_EQ(view.firstDayOfWeek(), firstLocale.firstDayOfWeek());
+
+    view.setFirstDayOfWeek(Qt::Thursday);
+    base->setLocale(secondLocale);
+    EXPECT_EQ(view.locale(), secondLocale);
+    EXPECT_EQ(view.firstDayOfWeek(), Qt::Thursday);
+
+    view.resetFirstDayOfWeek();
+    EXPECT_EQ(view.firstDayOfWeek(), secondLocale.firstDayOfWeek());
+    EXPECT_EQ(localeSpy.count(), 2);
+}
+
 TEST_F(CalendarViewTest, FirstDayOfWeekUpdatesGrid)
 {
     CalendarView view;
@@ -1168,7 +1218,7 @@ TEST_F(CalendarViewTest, VisualCheck)
     window->setLayout(layout);
 
     auto* title = new Label(QStringLiteral("CalendarView"), window);
-    title->setFluentTypography(QStringLiteral("Title"));
+    title->setFluentTypography(Typography::FontRole::Title);
     title->anchors()->top = {window, Edge::Top, 28};
     title->anchors()->left = {window, Edge::Left, 32};
     title->anchors()->right = {window, Edge::Right, -32};

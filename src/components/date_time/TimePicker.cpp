@@ -906,6 +906,7 @@ void TimePickerFlyout::updateColumns()
 TimePicker::TimePicker(QWidget* parent)
     : fluent::basicinput::Button(parent)
 {
+    m_observedLocale = QWidget::locale();
     m_time = normalizeTime(QTime::currentTime());
 
     setObjectName(QStringLiteral("TimePicker"));
@@ -1011,13 +1012,9 @@ void TimePicker::setClockIdentifier(ClockIdentifier identifier)
 
 void TimePicker::setLocale(const QLocale& locale)
 {
-    if (m_locale == locale)
+    if (QWidget::locale() == locale)
         return;
-    m_locale = locale;
-    if (m_flyout && m_flyout->isOpen())
-        m_flyout->showForPicker();
-    update();
-    emit localeChanged(m_locale);
+    QWidget::setLocale(locale);
 }
 
 void TimePicker::openPicker()
@@ -1282,6 +1279,15 @@ void TimePicker::keyPressEvent(QKeyEvent* event)
 void TimePicker::changeEvent(QEvent* event)
 {
     fluent::basicinput::Button::changeEvent(event);
+    if (event->type() == QEvent::LocaleChange
+        && m_observedLocale != QWidget::locale()) {
+        m_observedLocale = QWidget::locale();
+        if (m_flyout && m_flyout->isOpen())
+            m_flyout->showForPicker();
+        updateGeometry();
+        update();
+        emit localeChanged(m_observedLocale);
+    }
     if (event->type() == QEvent::EnabledChange) {
         if (!isEnabled())
             closePicker();
@@ -1355,7 +1361,7 @@ QString TimePicker::formatField(TimeField field, const QTime& time) const
     case TimeField::Minute:
         return QStringLiteral("%1").arg(time.minute(), 2, 10, QLatin1Char('0'));
     case TimeField::Period:
-        return isPm(time) ? m_locale.pmText() : m_locale.amText();
+        return isPm(time) ? locale().pmText() : locale().amText();
     }
     return QString();
 }

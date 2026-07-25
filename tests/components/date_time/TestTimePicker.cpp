@@ -180,6 +180,24 @@ TEST_F(TimePickerTest, SelectedTimeClearAndFormattingDriveSegments)
     EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Period), QStringLiteral("AM/PM"));
 }
 
+TEST_F(TimePickerTest, LocaleTracksTheInheritedQWidgetProperty)
+{
+    TimePicker picker;
+    picker.setSelectedTime(QTime(13, 5));
+    QSignalSpy localeSpy(&picker, &TimePicker::localeChanged);
+    const QLocale chinese(QLocale::Chinese, QLocale::China);
+    const QLocale us(QLocale::English, QLocale::UnitedStates);
+    const QLocale targetLocale = picker.locale() == chinese ? us : chinese;
+
+    QWidget* base = &picker;
+    base->setLocale(targetLocale);
+
+    EXPECT_EQ(picker.locale(), targetLocale);
+    EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Period),
+              targetLocale.pmText());
+    EXPECT_EQ(localeSpy.count(), 1);
+}
+
 TEST_F(TimePickerTest, TwentyFourHourModeHidesPeriodAndPreservesAbsoluteTime)
 {
     TimePicker* picker = new TimePicker(window);
@@ -602,7 +620,7 @@ TEST_F(TimePickerTest, VisualCheck)
     window->setLayout(layout);
 
     auto* title = new Label(QStringLiteral("TimePicker"), window);
-    title->setFluentTypography(QStringLiteral("Title"));
+    title->setFluentTypography(Typography::FontRole::Title);
     title->anchors()->top = {window, Edge::Top, 28};
     title->anchors()->left = {window, Edge::Left, 32};
     title->anchors()->right = {window, Edge::Right, -32};

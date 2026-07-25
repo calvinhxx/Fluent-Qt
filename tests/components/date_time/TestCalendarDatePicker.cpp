@@ -204,6 +204,39 @@ TEST_F(CalendarDatePickerTest, ConstraintsClampProgrammaticDates)
     EXPECT_GE(dateSpy.count(), 4);
 }
 
+TEST_F(CalendarDatePickerTest, RangeAndLocaleContractsAreAtomic)
+{
+    CalendarDatePicker picker;
+    picker.setDate(QDate(2026, 5, 15));
+    QSignalSpy minSpy(&picker, &CalendarDatePicker::minDateChanged);
+    QSignalSpy maxSpy(&picker, &CalendarDatePicker::maxDateChanged);
+    QSignalSpy localeSpy(&picker, &CalendarDatePicker::localeChanged);
+    bool observersSawCompleteRange = true;
+    QObject::connect(&picker, &CalendarDatePicker::minDateChanged, &picker,
+                     [&picker, &observersSawCompleteRange](const QDate&) {
+                         observersSawCompleteRange =
+                             observersSawCompleteRange
+                             && picker.maxDate() == QDate(2026, 5, 20);
+                     });
+
+    picker.setDateRange(QDate(2026, 5, 20), QDate(2026, 5, 10));
+    EXPECT_EQ(picker.minDate(), QDate(2026, 5, 20));
+    EXPECT_EQ(picker.maxDate(), QDate(2026, 5, 20));
+    EXPECT_EQ(picker.date(), QDate(2026, 5, 20));
+    EXPECT_EQ(minSpy.count(), 1);
+    EXPECT_EQ(maxSpy.count(), 1);
+    EXPECT_TRUE(observersSawCompleteRange);
+
+    const QLocale german(QLocale::German, QLocale::Germany);
+    const QLocale us(QLocale::English, QLocale::UnitedStates);
+    const QLocale targetLocale = picker.locale() == german ? us : german;
+    QWidget* base = &picker;
+    base->setLocale(targetLocale);
+    EXPECT_EQ(picker.locale(), targetLocale);
+    EXPECT_EQ(picker.firstDayOfWeek(), targetLocale.firstDayOfWeek());
+    EXPECT_EQ(localeSpy.count(), 1);
+}
+
 TEST_F(CalendarDatePickerTest, FirstDayOfWeekUpdatesMonthGrid)
 {
     CalendarDatePicker* picker = new CalendarDatePicker(window);
@@ -463,7 +496,7 @@ TEST_F(CalendarDatePickerTest, VisualCheck)
     window->setLayout(layout);
 
     auto* title = new Label(QStringLiteral("CalendarDatePicker"), window);
-    title->setFluentTypography(QStringLiteral("Title"));
+    title->setFluentTypography(Typography::FontRole::Title);
     title->anchors()->top = {window, Edge::Top, 28};
     title->anchors()->left = {window, Edge::Left, 32};
     title->anchors()->right = {window, Edge::Right, -32};

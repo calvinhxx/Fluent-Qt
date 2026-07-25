@@ -66,10 +66,11 @@ QColor withOpacity(QColor color, qreal opacity)
     return color;
 }
 
-Qt::DayOfWeek normalizeDayOfWeek(Qt::DayOfWeek day)
+Qt::DayOfWeek normalizeDayOfWeek(Qt::DayOfWeek day,
+                                 Qt::DayOfWeek fallback)
 {
     if (day < Qt::Monday || day > Qt::Sunday)
-        return QLocale().firstDayOfWeek();
+        return fallback;
     return day;
 }
 
@@ -85,9 +86,9 @@ QDate gridStartForMonth(const QDate& month, Qt::DayOfWeek firstDay)
     return first.addDays(-offset);
 }
 
-QString weekdayLabel(Qt::DayOfWeek day)
+QString weekdayLabel(const QLocale& locale, Qt::DayOfWeek day)
 {
-    QString label = QLocale().standaloneDayName(day, QLocale::ShortFormat);
+    QString label = locale.standaloneDayName(day, QLocale::ShortFormat);
     if (label.size() > 2)
         label = label.left(2);
     return label;
@@ -111,13 +112,16 @@ int contentLevelDepth(CalendarView::CalendarContentLevel level)
 CalendarView::CalendarView(QWidget* parent)
     : QWidget(parent)
 {
+    m_observedLocale = QWidget::locale();
+    m_firstDayOfWeek = m_observedLocale.firstDayOfWeek();
     setObjectName(QStringLiteral("CalendarView"));
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
     setAttribute(Qt::WA_Hover);
     setAttribute(Qt::WA_TranslucentBackground);
     setFixedSize(sizeHint());
-    m_firstDayOfWeek = normalizeDayOfWeek(m_firstDayOfWeek);
+    m_firstDayOfWeek =
+        normalizeDayOfWeek(m_firstDayOfWeek, m_observedLocale.firstDayOfWeek());
     m_visibleMonth = todayMonth();
     m_focusedDate = QDate::currentDate();
     m_monthTransitionAnimation = new QVariantAnimation(this);
@@ -330,63 +334,70 @@ void CalendarView::setVisibleMonth(const QDate& month)
 
 void CalendarView::setMinDate(const QDate& date)
 {
-    if (m_minDate == date)
-        return;
-
-    m_minDate = date;
-    bool maxAdjusted = false;
-    if (m_minDate.isValid() && m_maxDate.isValid() && m_maxDate < m_minDate) {
-        m_maxDate = m_minDate;
-        maxAdjusted = true;
-    }
-
-    enforceSelectedDateInRange();
-    setVisibleMonth(m_visibleMonth);
-    if (!isDateSelectable(m_focusedDate))
-        m_focusedDate = focusFallbackDate(false);
-    refreshProperties();
-    update();
-    emit minDateChanged(m_minDate);
-    if (maxAdjusted)
-        emit maxDateChanged(m_maxDate);
+    setDateRange(date, m_maxDate);
 }
 
 void CalendarView::setMaxDate(const QDate& date)
 {
-    if (m_maxDate == date)
+    setDateRange(m_minDate, date);
+}
+
+void CalendarView::setDateRange(const QDate& minDate, const QDate& maxDate)
+{
+    QDate nextMin = minDate;
+    QDate nextMax = maxDate;
+    if (nextMin.isValid() && nextMax.isValid() && nextMax < nextMin)
+        nextMax = nextMin;
+
+    const bool minChanged = m_minDate != nextMin;
+    const bool maxChanged = m_maxDate != nextMax;
+    if (!minChanged && !maxChanged)
         return;
 
-    m_maxDate = date;
-    bool minAdjusted = false;
-    if (m_minDate.isValid() && m_maxDate.isValid() && m_minDate > m_maxDate) {
-        m_minDate = m_maxDate;
-        minAdjusted = true;
-    }
-
+    m_minDate = nextMin;
+    m_maxDate = nextMax;
     enforceSelectedDateInRange();
     setVisibleMonth(m_visibleMonth);
     if (!isDateSelectable(m_focusedDate))
         m_focusedDate = focusFallbackDate(false);
     refreshProperties();
     update();
-    if (minAdjusted)
+    if (minChanged)
         emit minDateChanged(m_minDate);
-    emit maxDateChanged(m_maxDate);
+    if (maxChanged)
+        emit maxDateChanged(m_maxDate);
 }
 
-void CalendarView::setDateRange(const QDate& minDate, const QDate& maxDate)
+void CalendarView::setLocale(const QLocale& locale)
 {
-    setMinDate(minDate);
-    setMaxDate(maxDate);
+    if (QWidget::locale() == locale)
+        return;
+    QWidget::setLocale(locale);
 }
 
 void CalendarView::setFirstDayOfWeek(Qt::DayOfWeek day)
 {
-    const Qt::DayOfWeek normalized = normalizeDayOfWeek(day);
+    const Qt::DayOfWeek normalized =
+        normalizeDayOfWeek(day, locale().firstDayOfWeek());
+    m_firstDayFollowsLocale = false;
     if (m_firstDayOfWeek == normalized)
         return;
 
     m_firstDayOfWeek = normalized;
+    if (!dateInGrid(m_focusedDate))
+        m_focusedDate = focusFallbackDate(false);
+    refreshProperties();
+    update();
+    emit firstDayOfWeekChanged(m_firstDayOfWeek);
+}
+
+void CalendarView::resetFirstDayOfWeek()
+{
+    m_firstDayFollowsLocale = true;
+    const Qt::DayOfWeek automaticDay = locale().firstDayOfWeek();
+    if (m_firstDayOfWeek == automaticDay)
+        return;
+    m_firstDayOfWeek = automaticDay;
     if (!dateInGrid(m_focusedDate))
         m_focusedDate = focusFallbackDate(false);
     refreshProperties();
@@ -758,6 +769,31 @@ void CalendarView::focusOutEvent(QFocusEvent* event)
     QWidget::focusOutEvent(event);
 }
 
+void CalendarView::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() != QEvent::LocaleChange
+        || m_observedLocale == QWidget::locale()) {
+        return;
+    }
+
+    m_observedLocale = QWidget::locale();
+    if (m_firstDayFollowsLocale) {
+        const Qt::DayOfWeek automaticDay =
+            m_observedLocale.firstDayOfWeek();
+        if (m_firstDayOfWeek != automaticDay) {
+            m_firstDayOfWeek = automaticDay;
+            emit firstDayOfWeekChanged(m_firstDayOfWeek);
+        }
+    }
+    if (!dateInGrid(m_focusedDate))
+        m_focusedDate = focusFallbackDate(false);
+    refreshProperties();
+    updateGeometry();
+    update();
+    emit localeChanged(m_observedLocale);
+}
+
 void CalendarView::onThemeUpdated()
 {
     update();
@@ -838,7 +874,9 @@ void CalendarView::paintWeekdays(QPainter& painter)
     for (int c = 0; c < 7; ++c) {
         const int day = ((static_cast<int>(m_firstDayOfWeek) - 1 + c) % 7) + 1;
         const QRect rect = cellRect(0, c).translated(0, y - gridRect().top());
-        painter.drawText(rect, Qt::AlignCenter, weekdayLabel(static_cast<Qt::DayOfWeek>(day)));
+        painter.drawText(rect, Qt::AlignCenter,
+                         weekdayLabel(locale(),
+                                      static_cast<Qt::DayOfWeek>(day)));
     }
 }
 
@@ -1093,7 +1131,9 @@ void CalendarView::paintMonthContent(QPainter& painter, const QDate& visibleMont
 
         paintContentCellChrome(painter, cell, current, selected, hovered, pressed);
         painter.setPen(selectable ? contentCellTextColor(current, selected) : themeColors().textDisabled);
-        painter.drawText(cell, Qt::AlignCenter, QLocale().standaloneMonthName(month, QLocale::ShortFormat));
+        painter.drawText(cell, Qt::AlignCenter,
+                         locale().standaloneMonthName(
+                             month, QLocale::ShortFormat));
     }
     painter.restore();
 }
@@ -1180,7 +1220,8 @@ QString CalendarView::titleTextForLevel(CalendarContentLevel level, const QDate&
     switch (level) {
     case CalendarContentLevel::Day: {
         const DayPageKey key = dayPageKey(visibleMonth);
-        return QLocale().standaloneMonthName(key.month, QLocale::LongFormat)
+        return locale().standaloneMonthName(key.month,
+                                             QLocale::LongFormat)
                + QStringLiteral(" %1").arg(key.year);
     }
     case CalendarContentLevel::Month: {
@@ -1601,14 +1642,7 @@ void CalendarView::activateDate(const QDate& date)
 
 void CalendarView::refreshProperties()
 {
-    setProperty("visibleMonth", m_visibleMonth);
     setProperty("focusedDate", m_focusedDate);
-    setProperty("selectedDate", m_selectedDate);
-    setProperty("minDate", m_minDate);
-    setProperty("maxDate", m_maxDate);
-    setProperty("firstDayOfWeek", QVariant::fromValue(m_firstDayOfWeek));
-    setProperty("contentLevel", QVariant::fromValue(m_contentLevel));
-    setProperty("frameVisible", m_frameVisible);
     setProperty("focusIndicatorVisible", m_focusIndicatorVisible);
     setProperty("titleText", titleTextForLevel(m_contentLevel, m_visibleMonth));
     setProperty("titleButtonRect", titleButtonRect());
