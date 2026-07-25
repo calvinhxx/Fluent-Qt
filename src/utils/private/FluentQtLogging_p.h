@@ -8,6 +8,7 @@ namespace fluent::logging {
 Q_DECLARE_LOGGING_CATEGORY(themeCategory)
 Q_DECLARE_LOGGING_CATEGORY(typographyCategory)
 Q_DECLARE_LOGGING_CATEGORY(windowingCategory)
+Q_DECLARE_LOGGING_CATEGORY(layoutCategory)
 
 } // namespace fluent::logging
 

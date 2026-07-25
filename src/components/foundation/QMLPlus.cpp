@@ -1,8 +1,15 @@
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
 #include "compatibility/QtCompat.h"
+#include "utils/private/FluentQtLogging_p.h"
+
+#include <QSet>
+#include <QStringList>
 #include <QWidgetItem>
-#include <QDebug>
+
+#include <algorithm>
+#include <functional>
+#include <set>
 
 namespace fluent {
 
@@ -10,16 +17,24 @@ namespace fluent {
 
 namespace {
 
-QSize effectiveItemSize(const QLayoutItem* item) {
+QSize normalizedSize(QSize size)
+{
+    size.setWidth(qMax(0, size.width()));
+    size.setHeight(qMax(0, size.height()));
+    return size;
+}
+
+QSize effectiveItemSize(const QLayoutItem* item, bool minimum)
+{
     if (!item)
         return QSize();
 
-    QSize size = item->sizeHint();
+    QSize size = minimum ? item->minimumSize() : item->sizeHint();
     if (const QWidget* widget = fluentLayoutItemWidget(item)) {
         size = size.expandedTo(widget->minimumSize());
         size = size.boundedTo(widget->maximumSize());
     }
-    return size;
+    return normalizedSize(size);
 }
 
 } // namespace
@@ -33,7 +48,12 @@ AnchorLayout::~AnchorLayout() {
 }
 
 void AnchorLayout::addItem(QLayoutItem* item) {
-    Item it; it.item = item; m_items.append(it); invalidate();
+    if (!item)
+        return;
+    Item it;
+    it.item = item;
+    m_items.append(it);
+    invalidate();
 }
 
 int AnchorLayout::count() const { return m_items.size(); }
@@ -44,11 +64,20 @@ QLayoutItem* AnchorLayout::itemAt(int index) const {
 
 QLayoutItem* AnchorLayout::takeAt(int index) {
     if (index < 0 || index >= m_items.size()) return nullptr;
-    return m_items.takeAt(index).item;
+    QLayoutItem* item = m_items.takeAt(index).item;
+    invalidate();
+    return item;
 }
 
-QSize AnchorLayout::sizeHint() const { return QSize(400, 300); }
-QSize AnchorLayout::minimumSize() const { return QSize(0, 0); }
+QSize AnchorLayout::sizeHint() const
+{
+    return measuredSize(false).expandedTo(minimumSize());
+}
+
+QSize AnchorLayout::minimumSize() const
+{
+    return measuredSize(true);
+}
 
 void AnchorLayout::addAnchoredWidget(QWidget* w, const Anchors& anchors) {
     if (!w) return;
@@ -62,33 +91,459 @@ void AnchorLayout::addAnchoredWidget(QWidget* w, const Anchors& anchors) {
     invalidate();
 }
 
-int AnchorLayout::getWidgetIndex(QWidget* w) const {
-    for (int i = 0; i < m_items.size(); ++i) if (fluentLayoutItemWidget(m_items[i].item) == w) return i;
+int AnchorLayout::getWidgetIndex(QWidget* widget) const {
+    for (int i = 0; i < m_items.size(); ++i) {
+        if (fluentLayoutItemWidget(m_items[i].item) == widget)
+            return i;
+    }
     return -1;
 }
 
-int AnchorLayout::getEdgeValue(QWidget* target, Edge edge, const QRect& parentRect) const {
-    if (!target || target == parentWidget()) {
-        switch (edge) {
-            case Edge::Left: return parentRect.left();
-            case Edge::Right: return parentRect.x() + parentRect.width();
-            case Edge::Top: return parentRect.top();
-            case Edge::Bottom: return parentRect.y() + parentRect.height();
-            case Edge::HCenter: return parentRect.center().x(); case Edge::VCenter: return parentRect.center().y();
-            default: return 0;
+AnchorLayout::Anchors AnchorLayout::currentAnchors(const Item& item) const
+{
+    if (QWidget* widget = fluentLayoutItemWidget(item.item)) {
+        if (auto* qmlPlus = dynamic_cast<QMLPlus*>(widget))
+            return *qmlPlus->anchors();
+    }
+    return item.anchors;
+}
+
+QVector<QRect> AnchorLayout::resolveGeometries(const QRect& parentRect,
+                                               bool minimum,
+                                               bool reportCycles) const
+{
+    const int itemCount = m_items.size();
+    QVector<QRect> geometries(itemCount);
+    QVector<QSize> naturalSizes(itemCount);
+    QVector<Anchors> anchors(itemCount);
+    QVector<QVector<int>> dependencies(itemCount);
+
+    Anchor Anchors::* const anchorMembers[] = {
+        &Anchors::left,
+        &Anchors::right,
+        &Anchors::top,
+        &Anchors::bottom,
+        &Anchors::horizontalCenter,
+        &Anchors::verticalCenter,
+    };
+
+    for (int i = 0; i < itemCount; ++i) {
+        naturalSizes[i] = effectiveItemSize(m_items[i].item, minimum);
+        geometries[i] = QRect(parentRect.topLeft(), naturalSizes[i]);
+        anchors[i] = currentAnchors(m_items[i]);
+        if (anchors[i].fill)
+            continue;
+
+        for (Anchor Anchors::* member : anchorMembers) {
+            const Anchor& anchor = anchors[i].*member;
+            if (anchor.edge == Edge::None || anchor.target.isNull())
+                continue;
+            const int targetIndex = getWidgetIndex(anchor.target.data());
+            if (targetIndex >= 0 && !dependencies[i].contains(targetIndex))
+                dependencies[i].append(targetIndex);
+        }
+        std::sort(dependencies[i].begin(), dependencies[i].end());
+    }
+
+    // Tarjan's algorithm identifies only the actual strongly connected
+    // components. Descendants of a cycle remain resolvable after the cyclic
+    // edges are ignored.
+    QVector<int> discoveryIndex(itemCount, -1);
+    QVector<int> lowLink(itemCount, -1);
+    QVector<int> stack;
+    QVector<bool> onStack(itemCount, false);
+    QVector<QVector<int>> components;
+    int nextIndex = 0;
+    std::function<void(int)> visit = [&](int itemIndex) {
+        discoveryIndex[itemIndex] = nextIndex;
+        lowLink[itemIndex] = nextIndex;
+        ++nextIndex;
+        stack.append(itemIndex);
+        onStack[itemIndex] = true;
+
+        for (int dependency : dependencies[itemIndex]) {
+            if (discoveryIndex[dependency] < 0) {
+                visit(dependency);
+                lowLink[itemIndex] =
+                    qMin(lowLink[itemIndex], lowLink[dependency]);
+            } else if (onStack[dependency]) {
+                lowLink[itemIndex] =
+                    qMin(lowLink[itemIndex], discoveryIndex[dependency]);
+            }
+        }
+
+        if (lowLink[itemIndex] != discoveryIndex[itemIndex])
+            return;
+
+        QVector<int> component;
+        while (!stack.isEmpty()) {
+            const int member = stack.takeLast();
+            onStack[member] = false;
+            component.append(member);
+            if (member == itemIndex)
+                break;
+        }
+        std::sort(component.begin(), component.end());
+        components.append(component);
+    };
+
+    for (int i = 0; i < itemCount; ++i) {
+        if (discoveryIndex[i] < 0)
+            visit(i);
+    }
+
+    QVector<int> componentForItem(itemCount, -1);
+    QVector<bool> cyclicComponent(components.size(), false);
+    QVector<QVector<int>> cycleGroups;
+    for (int componentIndex = 0;
+         componentIndex < components.size();
+         ++componentIndex) {
+        const QVector<int>& component = components[componentIndex];
+        for (int itemIndex : component)
+            componentForItem[itemIndex] = componentIndex;
+
+        const bool selfCycle =
+            component.size() == 1
+            && dependencies[component.constFirst()].contains(
+                component.constFirst());
+        cyclicComponent[componentIndex] =
+            component.size() > 1 || selfCycle;
+        if (cyclicComponent[componentIndex])
+            cycleGroups.append(component);
+    }
+    std::sort(cycleGroups.begin(), cycleGroups.end(),
+              [](const QVector<int>& lhs, const QVector<int>& rhs) {
+                  return lhs.constFirst() < rhs.constFirst();
+              });
+
+    QStringList diagnosticGroups;
+    for (const QVector<int>& group : cycleGroups) {
+        QStringList members;
+        for (int itemIndex : group) {
+            const QWidget* widget =
+                fluentLayoutItemWidget(m_items[itemIndex].item);
+            QString name = widget ? widget->objectName() : QString();
+            if (name.isEmpty() && widget)
+                name = QString::fromLatin1(widget->metaObject()->className());
+            if (name.isEmpty())
+                name = QStringLiteral("layout-item");
+            members.append(QStringLiteral("%1:%2").arg(itemIndex).arg(name));
+        }
+        diagnosticGroups.append(
+            QStringLiteral("[%1]").arg(members.join(QStringLiteral(", "))));
+    }
+    const QString cycleDiagnostic =
+        diagnosticGroups.join(QStringLiteral(" "));
+    if (reportCycles) {
+        if (cycleDiagnostic.isEmpty()) {
+            m_lastCycleDiagnostic.clear();
+        } else if (cycleDiagnostic != m_lastCycleDiagnostic) {
+            m_lastCycleDiagnostic = cycleDiagnostic;
+            const QWidget* layoutParent = parentWidget();
+            QString parentName =
+                layoutParent ? layoutParent->objectName() : QString();
+            if (parentName.isEmpty() && layoutParent)
+                parentName =
+                    QString::fromLatin1(layoutParent->metaObject()->className());
+            if (parentName.isEmpty())
+                parentName = QStringLiteral("no-parent");
+            qCWarning(logging::layoutCategory).noquote()
+                << "AnchorLayout on" << parentName
+                << "ignored cyclic sibling anchors:"
+                << cycleDiagnostic;
         }
     }
-    int idx = getWidgetIndex(target);
-    if (idx == -1) return 0;
-    const QRect& r = m_items[idx].geometry;
-    switch (edge) {
-        case Edge::Left: return r.left();
-        case Edge::Right: return r.x() + r.width();
-        case Edge::Top: return r.top();
-        case Edge::Bottom: return r.y() + r.height();
-        case Edge::HCenter: return r.center().x(); case Edge::VCenter: return r.center().y();
-        default: return 0;
+
+    auto isIgnoredCycleEdge = [&](int itemIndex, int targetIndex) {
+        if (targetIndex < 0)
+            return false;
+        const int componentIndex = componentForItem[itemIndex];
+        return componentIndex >= 0
+               && componentIndex == componentForItem[targetIndex]
+               && cyclicComponent[componentIndex];
+    };
+
+    QVector<QVector<int>> dependents(itemCount);
+    QVector<int> inDegree(itemCount, 0);
+    for (int itemIndex = 0; itemIndex < itemCount; ++itemIndex) {
+        for (int dependency : dependencies[itemIndex]) {
+            if (isIgnoredCycleEdge(itemIndex, dependency))
+                continue;
+            dependents[dependency].append(itemIndex);
+            ++inDegree[itemIndex];
+        }
     }
+
+    std::set<int> ready;
+    for (int i = 0; i < itemCount; ++i) {
+        if (inDegree[i] == 0)
+            ready.insert(i);
+    }
+    QVector<int> resolutionOrder;
+    resolutionOrder.reserve(itemCount);
+    while (!ready.empty()) {
+        const int itemIndex = *ready.begin();
+        ready.erase(ready.begin());
+        resolutionOrder.append(itemIndex);
+        for (int dependent : dependents[itemIndex]) {
+            --inDegree[dependent];
+            if (inDegree[dependent] == 0)
+                ready.insert(dependent);
+        }
+    }
+    // The SCC reduction above should always produce a DAG. Keep a stable
+    // fallback so malformed future constraint types cannot reintroduce drift.
+    for (int i = 0; i < itemCount; ++i) {
+        if (!resolutionOrder.contains(i))
+            resolutionOrder.append(i);
+    }
+
+    auto targetRect = [&](int itemIndex,
+                          const Anchor& anchor,
+                          QRect* result) -> bool {
+        if (!result || anchor.edge == Edge::None || anchor.target.isNull())
+            return false;
+
+        QWidget* target = anchor.target.data();
+        if (target == parentWidget()) {
+            *result = parentRect;
+            return true;
+        }
+
+        const int targetIndex = getWidgetIndex(target);
+        if (targetIndex >= 0) {
+            if (isIgnoredCycleEdge(itemIndex, targetIndex))
+                return false;
+            *result = geometries[targetIndex];
+            return true;
+        }
+
+        QWidget* layoutParent = parentWidget();
+        if (!layoutParent)
+            return false;
+        if (target->parentWidget() == layoutParent) {
+            *result = target->geometry();
+            return true;
+        }
+        if (target->window() != layoutParent->window())
+            return false;
+        *result = QRect(target->mapTo(layoutParent, QPoint(0, 0)),
+                        target->size());
+        return true;
+    };
+
+    auto edgeValue = [&](int itemIndex,
+                         const Anchor& anchor,
+                         int* value) -> bool {
+        QRect rectangle;
+        if (!value || !targetRect(itemIndex, anchor, &rectangle))
+            return false;
+        switch (anchor.edge) {
+        case Edge::Left:
+            *value = rectangle.x();
+            return true;
+        case Edge::Right:
+            *value = rectangle.x() + rectangle.width();
+            return true;
+        case Edge::Top:
+            *value = rectangle.y();
+            return true;
+        case Edge::Bottom:
+            *value = rectangle.y() + rectangle.height();
+            return true;
+        case Edge::HCenter:
+            *value = rectangle.x() + rectangle.width() / 2;
+            return true;
+        case Edge::VCenter:
+            *value = rectangle.y() + rectangle.height() / 2;
+            return true;
+        case Edge::None:
+            break;
+        }
+        return false;
+    };
+
+    for (int itemIndex : resolutionOrder) {
+        const QSize naturalSize = naturalSizes[itemIndex];
+        const Anchors& itemAnchors = anchors[itemIndex];
+        QRect geometry(parentRect.topLeft(), naturalSize);
+
+        if (itemAnchors.fill) {
+            const QMargins margins = itemAnchors.fillMargins;
+            geometry = QRect(parentRect.x() + margins.left(),
+                             parentRect.y() + margins.top(),
+                             qMax(0, parentRect.width()
+                                         - margins.left()
+                                         - margins.right()),
+                             qMax(0, parentRect.height()
+                                         - margins.top()
+                                         - margins.bottom()));
+            geometries[itemIndex] = geometry;
+            continue;
+        }
+
+        int center = 0;
+        if (edgeValue(itemIndex, itemAnchors.horizontalCenter, &center)) {
+            geometry.moveLeft(center
+                              + itemAnchors.horizontalCenter.offset
+                              - naturalSize.width() / 2);
+        } else {
+            int left = 0;
+            int right = 0;
+            const bool hasLeft =
+                edgeValue(itemIndex, itemAnchors.left, &left);
+            const bool hasRight =
+                edgeValue(itemIndex, itemAnchors.right, &right);
+            if (hasLeft)
+                left += itemAnchors.left.offset;
+            if (hasRight)
+                right += itemAnchors.right.offset;
+
+            if (hasLeft && hasRight) {
+                geometry.setX(left);
+                geometry.setWidth(qMax(0, right - left));
+            } else if (hasLeft) {
+                geometry.moveLeft(left);
+            } else if (hasRight) {
+                geometry.moveLeft(right - naturalSize.width());
+            }
+        }
+
+        if (edgeValue(itemIndex, itemAnchors.verticalCenter, &center)) {
+            geometry.moveTop(center
+                             + itemAnchors.verticalCenter.offset
+                             - naturalSize.height() / 2);
+        } else {
+            int top = 0;
+            int bottom = 0;
+            const bool hasTop =
+                edgeValue(itemIndex, itemAnchors.top, &top);
+            const bool hasBottom =
+                edgeValue(itemIndex, itemAnchors.bottom, &bottom);
+            if (hasTop)
+                top += itemAnchors.top.offset;
+            if (hasBottom)
+                bottom += itemAnchors.bottom.offset;
+
+            if (hasTop && hasBottom) {
+                geometry.setY(top);
+                geometry.setHeight(qMax(0, bottom - top));
+            } else if (hasTop) {
+                geometry.moveTop(top);
+            } else if (hasBottom) {
+                geometry.moveTop(bottom - naturalSize.height());
+            }
+        }
+
+        geometries[itemIndex] = geometry;
+    }
+    return geometries;
+}
+
+QSize AnchorLayout::measuredSize(bool minimum) const
+{
+    int leftMargin = 0;
+    int topMargin = 0;
+    int rightMargin = 0;
+    int bottomMargin = 0;
+    getContentsMargins(&leftMargin, &topMargin, &rightMargin, &bottomMargin);
+
+    if (m_items.isEmpty()) {
+        return QSize(leftMargin + rightMargin, topMargin + bottomMargin);
+    }
+
+    QVector<QSize> naturalSizes;
+    naturalSizes.reserve(m_items.size());
+    QSize candidate;
+    for (const Item& item : m_items) {
+        const QSize naturalSize = effectiveItemSize(item.item, minimum);
+        naturalSizes.append(naturalSize);
+        candidate = candidate.expandedTo(naturalSize);
+    }
+
+    // Probe a comfortably large parent once to distinguish constraints that
+    // can be satisfied by growing the layout from constant outward offsets
+    // that can never move inside the parent.
+    // zh_CN: 先以足够大的父区域探测一次，用于区分“扩大布局即可满足”的约束
+    // 与无论如何扩大都仍位于父区域之外的固定偏移。
+    constexpr int kProbeExtent = 1 << 20;
+    const QRect probeRect(0, 0, kProbeExtent, kProbeExtent);
+    const QVector<QRect> probeGeometries =
+        resolveGeometries(probeRect, minimum, false);
+
+    struct MeasurableBounds {
+        bool naturalWidth = false;
+        bool naturalHeight = false;
+        bool left = false;
+        bool top = false;
+        bool right = false;
+        bool bottom = false;
+    };
+    QVector<MeasurableBounds> measurable(m_items.size());
+    for (int i = 0; i < m_items.size(); ++i) {
+        const QRect& geometry = probeGeometries[i];
+        const QSize& naturalSize = naturalSizes[i];
+        measurable[i] = {
+            geometry.width() >= naturalSize.width(),
+            geometry.height() >= naturalSize.height(),
+            geometry.left() >= probeRect.left(),
+            geometry.top() >= probeRect.top(),
+            geometry.x() + geometry.width()
+                <= probeRect.x() + probeRect.width(),
+            geometry.y() + geometry.height()
+                <= probeRect.y() + probeRect.height(),
+        };
+    }
+
+    // Grow to the smallest discrete parent rectangle that preserves every
+    // satisfiable natural size and boundary. Re-resolving the complete anchor
+    // graph on each pass also handles chains that connect a leading item to a
+    // trailing item, such as ContentDialog's title/content/action stack.
+    // zh_CN: 逐轮扩展到能保留所有可满足自然尺寸与边界的最小整数父区域；每轮
+    // 重新求解完整锚点图，也可覆盖从顶部元素连接到底部元素的约束链。
+    constexpr int kMaximumPasses = 64;
+    for (int pass = 0; pass < kMaximumPasses; ++pass) {
+        const QRect candidateRect(QPoint(0, 0), candidate);
+        const QVector<QRect> geometries =
+            resolveGeometries(candidateRect, minimum, false);
+        int growWidth = 0;
+        int growHeight = 0;
+
+        for (int i = 0; i < m_items.size(); ++i) {
+            const QRect& geometry = geometries[i];
+            const QSize& naturalSize = naturalSizes[i];
+            const MeasurableBounds& bounds = measurable[i];
+            if (bounds.naturalWidth)
+                growWidth =
+                    qMax(growWidth, naturalSize.width() - geometry.width());
+            if (bounds.naturalHeight)
+                growHeight =
+                    qMax(growHeight, naturalSize.height() - geometry.height());
+            if (bounds.left)
+                growWidth = qMax(growWidth, -geometry.x());
+            if (bounds.top)
+                growHeight = qMax(growHeight, -geometry.y());
+            if (bounds.right) {
+                growWidth =
+                    qMax(growWidth,
+                         geometry.x() + geometry.width() - candidate.width());
+            }
+            if (bounds.bottom) {
+                growHeight =
+                    qMax(growHeight,
+                         geometry.y() + geometry.height()
+                             - candidate.height());
+            }
+        }
+
+        if (growWidth <= 0 && growHeight <= 0)
+            break;
+        candidate.rwidth() += qMax(0, growWidth);
+        candidate.rheight() += qMax(0, growHeight);
+    }
+
+    return QSize(candidate.width() + leftMargin + rightMargin,
+                 candidate.height() + topMargin + bottomMargin);
 }
 
 void AnchorLayout::setGeometry(const QRect& rect) {
@@ -121,43 +576,12 @@ void AnchorLayout::setGeometry(const QRect& rect) {
         }
     }
 
-    QRect parentRect = contentsRect();
-    for (Item& it : m_items) {
-        if (QWidget* w = fluentLayoutItemWidget(it.item)) {
-            if (auto* qp = dynamic_cast<QMLPlus*>(w)) it.anchors = *(qp->anchors());
-        }
-        it.geometry = QRect(parentRect.topLeft(), effectiveItemSize(it.item));
-    }
-    for (int pass = 0; pass < 5; ++pass) {
-        bool changed = false;
-        for (Item& it : m_items) {
-            QRect old = it.geometry; QSize s = effectiveItemSize(it.item);
-            if (it.anchors.fill) { it.geometry = parentRect.marginsRemoved(it.anchors.fillMargins); }
-            else {
-                if (it.anchors.horizontalCenter.edge != Edge::None) {
-                    it.geometry.moveCenter(QPoint(getEdgeValue(it.anchors.horizontalCenter.target, it.anchors.horizontalCenter.edge, parentRect) + it.anchors.horizontalCenter.offset, it.geometry.center().y()));
-                } else {
-                    int l = getEdgeValue(it.anchors.left.target, it.anchors.left.edge, parentRect) + it.anchors.left.offset;
-                    int r = getEdgeValue(it.anchors.right.target, it.anchors.right.edge, parentRect) + it.anchors.right.offset;
-                    if (it.anchors.left.edge != Edge::None && it.anchors.right.edge != Edge::None) { it.geometry.setLeft(l); it.geometry.setRight(r - 1); }
-                    else if (it.anchors.left.edge != Edge::None) { it.geometry.moveLeft(l); it.geometry.setWidth(s.width()); }
-                    else if (it.anchors.right.edge != Edge::None) { it.geometry.moveRight(r - 1); it.geometry.setWidth(s.width()); }
-                }
-                if (it.anchors.verticalCenter.edge != Edge::None) {
-                    it.geometry.moveCenter(QPoint(it.geometry.center().x(), getEdgeValue(it.anchors.verticalCenter.target, it.anchors.verticalCenter.edge, parentRect) + it.anchors.verticalCenter.offset));
-                } else {
-                    int t = getEdgeValue(it.anchors.top.target, it.anchors.top.edge, parentRect) + it.anchors.top.offset;
-                    int b = getEdgeValue(it.anchors.bottom.target, it.anchors.bottom.edge, parentRect) + it.anchors.bottom.offset;
-                    if (it.anchors.top.edge != Edge::None && it.anchors.bottom.edge != Edge::None) { it.geometry.setTop(t); it.geometry.setBottom(b - 1); }
-                    else if (it.anchors.top.edge != Edge::None) { it.geometry.moveTop(t); it.geometry.setHeight(s.height()); }
-                    else if (it.anchors.bottom.edge != Edge::None) { it.geometry.moveBottom(b - 1); it.geometry.setHeight(s.height()); }
-                }
-            }
-            if (it.geometry != old) changed = true;
-        }
-        if (!changed) break;
-    }
-    for (const Item& it : m_items) {
+    const QVector<QRect> geometries =
+        resolveGeometries(contentsRect(), false, true);
+    for (int i = 0; i < m_items.size(); ++i) {
+        Item& it = m_items[i];
+        it.anchors = currentAnchors(it);
+        it.geometry = geometries[i];
         if (!it.item)
             continue;
         if (QWidget* widget = fluentLayoutItemWidget(it.item))

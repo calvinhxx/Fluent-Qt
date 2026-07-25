@@ -38,7 +38,7 @@ public:
      * zh_CN: 描述一个边缘到目标控件边缘的锚定关系。
      */
     struct Anchor {
-        QWidget* target = nullptr;
+        QPointer<QWidget> target;
         Edge edge = Edge::None;
         int offset = 0;
         Anchor() = default;
@@ -76,9 +76,15 @@ private:
         QRect geometry;
     };
     QVector<Item> m_items;
-    bool m_firstLayout = true; ///< 首次 setGeometry 标志，用于延迟 theme 初始化
-    int getWidgetIndex(QWidget* w) const;
-    int getEdgeValue(QWidget* target, Edge edge, const QRect& parentRect) const;
+    bool m_firstLayout = true;
+    mutable QString m_lastCycleDiagnostic;
+
+    int getWidgetIndex(QWidget* widget) const;
+    Anchors currentAnchors(const Item& item) const;
+    QVector<QRect> resolveGeometries(const QRect& parentRect,
+                                     bool minimum,
+                                     bool reportCycles) const;
+    QSize measuredSize(bool minimum) const;
 };
 
 /**

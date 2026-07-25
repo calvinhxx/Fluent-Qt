@@ -97,6 +97,127 @@ TEST_F(AnchorLayoutTest, Contract_NonWidgetLayoutItemsDoNotCrashGeometryPass) {
     EXPECT_EQ(spacer->geometry(), QRect(0, 0, 20, 10));
 }
 
+TEST_F(AnchorLayoutTest, Contract_SizeHintsComeFromAnchoredItemChain) {
+    QWidget* source = new QWidget(window);
+    source->setFixedSize(80, 40);
+    AnchorLayout::Anchors sourceAnchors;
+    sourceAnchors.left = {window, AnchorLayout::Edge::Left, 12};
+    sourceAnchors.top = {window, AnchorLayout::Edge::Top, 16};
+    layout->addAnchoredWidget(source, sourceAnchors);
+
+    QWidget* adjacent = new QWidget(window);
+    adjacent->setFixedSize(30, 20);
+    AnchorLayout::Anchors adjacentAnchors;
+    adjacentAnchors.left = {source, AnchorLayout::Edge::Right, 7};
+    adjacentAnchors.top = {source, AnchorLayout::Edge::Bottom, 5};
+    layout->addAnchoredWidget(adjacent, adjacentAnchors);
+
+    EXPECT_EQ(layout->sizeHint(), QSize(129, 81));
+    EXPECT_EQ(layout->minimumSize(), QSize(129, 81));
+}
+
+TEST_F(AnchorLayoutTest, Contract_SizeHintPreservesNaturalSizeBetweenOpposingAnchors) {
+    QWidget* header = new QWidget(window);
+    header->setFixedSize(80, 20);
+    AnchorLayout::Anchors headerAnchors;
+    headerAnchors.top = {window, AnchorLayout::Edge::Top, 10};
+    layout->addAnchoredWidget(header, headerAnchors);
+
+    QWidget* footer = new QWidget(window);
+    footer->setFixedSize(80, 30);
+    AnchorLayout::Anchors footerAnchors;
+    footerAnchors.bottom = {window, AnchorLayout::Edge::Bottom, -10};
+    layout->addAnchoredWidget(footer, footerAnchors);
+
+    QWidget* content = new QWidget(window);
+    content->setFixedSize(80, 40);
+    AnchorLayout::Anchors contentAnchors;
+    contentAnchors.top = {header, AnchorLayout::Edge::Bottom, 5};
+    contentAnchors.bottom = {footer, AnchorLayout::Edge::Top, -7};
+    layout->addAnchoredWidget(content, contentAnchors);
+
+    EXPECT_EQ(layout->sizeHint(), QSize(80, 122));
+    EXPECT_EQ(layout->minimumSize(), QSize(80, 122));
+
+    layout->setGeometry(QRect(0, 0, 80, 122));
+    EXPECT_EQ(content->geometry(), QRect(0, 35, 80, 40));
+}
+
+TEST_F(AnchorLayoutTest, Contract_LongReverseOrderDependencyChainResolvesOnce) {
+    constexpr int itemCount = 8;
+    QVector<QWidget*> widgets;
+    widgets.reserve(itemCount);
+    for (int i = 0; i < itemCount; ++i) {
+        QWidget* widget = new QWidget(window);
+        widget->setObjectName(QStringLiteral("Chain%1").arg(i));
+        widget->setFixedSize(20, 10);
+        widgets.append(widget);
+    }
+
+    for (int i = itemCount - 1; i >= 0; --i) {
+        AnchorLayout::Anchors anchors;
+        anchors.left =
+            i == 0
+                ? AnchorLayout::Anchor(window, AnchorLayout::Edge::Left, 10)
+                : AnchorLayout::Anchor(widgets[i - 1],
+                                       AnchorLayout::Edge::Right,
+                                       3);
+        anchors.top = {window, AnchorLayout::Edge::Top, 5};
+        layout->addAnchoredWidget(widgets[i], anchors);
+    }
+
+    layout->setGeometry(window->rect());
+
+    for (int i = 0; i < itemCount; ++i)
+        EXPECT_EQ(widgets[i]->geometry(), QRect(10 + i * 23, 5, 20, 10));
+    EXPECT_EQ(layout->sizeHint(), QSize(191, 15));
+}
+
+TEST_F(AnchorLayoutTest, Contract_CyclicSiblingAnchorsUseStableFallback) {
+    QWidget* first = new QWidget(window);
+    first->setObjectName(QStringLiteral("CycleA"));
+    first->setFixedSize(30, 20);
+    QWidget* second = new QWidget(window);
+    second->setObjectName(QStringLiteral("CycleB"));
+    second->setFixedSize(40, 20);
+
+    AnchorLayout::Anchors firstAnchors;
+    firstAnchors.left = {second, AnchorLayout::Edge::Right, 5};
+    firstAnchors.top = {window, AnchorLayout::Edge::Top, 10};
+    AnchorLayout::Anchors secondAnchors;
+    secondAnchors.left = {first, AnchorLayout::Edge::Right, 7};
+    secondAnchors.top = {window, AnchorLayout::Edge::Top, 40};
+    layout->addAnchoredWidget(first, firstAnchors);
+    layout->addAnchoredWidget(second, secondAnchors);
+
+    layout->setGeometry(window->rect());
+    const QRect firstGeometry = first->geometry();
+    const QRect secondGeometry = second->geometry();
+    EXPECT_EQ(firstGeometry, QRect(0, 10, 30, 20));
+    EXPECT_EQ(secondGeometry, QRect(0, 40, 40, 20));
+
+    layout->setGeometry(QRect(0, 0, 720, 480));
+    EXPECT_EQ(first->geometry(), firstGeometry);
+    EXPECT_EQ(second->geometry(), secondGeometry);
+}
+
+TEST_F(AnchorLayoutTest, Contract_DestroyedAnchorTargetIsSafelyIgnored) {
+    QWidget* unmanagedTarget = new QWidget(window);
+    unmanagedTarget->setGeometry(100, 80, 40, 30);
+    QWidget* child = new QWidget(window);
+    child->setFixedSize(50, 20);
+
+    AnchorLayout::Anchors anchors;
+    anchors.left = {unmanagedTarget, AnchorLayout::Edge::Right, 6};
+    anchors.top = {window, AnchorLayout::Edge::Top, 12};
+    layout->addAnchoredWidget(child, anchors);
+    delete unmanagedTarget;
+
+    layout->setGeometry(window->rect());
+
+    EXPECT_EQ(child->geometry(), QRect(0, 12, 50, 20));
+}
+
 TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
         GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
