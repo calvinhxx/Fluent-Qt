@@ -89,16 +89,16 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 |---|---|---|
 | Foundation | FluentElement, QMLPlus, AnchorLayout, ThemeRegistry, StyleThemeCatalog, overlay helpers | Phase 1 state/lifetime/non-widget layout/oversized overlay defects resolved; size hints, cycle diagnostics, theme transactions, and persistence remain Phase 2 |
 | Basic input | Button, CheckBox, ColorPicker, ComboBox, DropDownButton, HyperlinkButton, RadioButton, RatingControl, RepeatButton, Slider, SplitButton, ToggleButton, ToggleSplitButton, ToggleSwitch | Base-class coherence, keyboard, RTL, and accessibility are Phase 2/3 decisions |
-| Collections | DrawerView, FlipView, FlowView, GridView, ListView, SplitView, StackView, TreeView | Ownership/model/reorder contracts are Phase 2; large-model benchmarks are Phase 4 |
+| Collections | DrawerView, FlipView, FlowView, GridView, ListView, SplitView, StackView, TreeView | Phase 4 keeps FlowView large-model painting and hit testing viewport-bounded and uses one shared drag-displacement animation |
 | Date and time | CalendarDatePicker, CalendarView, DatePicker, TimePicker | Locale ownership and atomic range updates are Phase 2/3 |
 | Dialogs and flyouts | CoachMark, ContentDialog, Dialog, Flyout, Popup, TeachingTip | Overlay lifecycle/property semantics are Phase 2 |
 | Menus and toolbars | FluentMenu, FluentMenuItem, MenuBar | Shared text-editing menu and direct menu contracts remain Phase 2 |
 | Navigation | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | Page ownership, global event filters, RTL, and accessibility are Phase 2/3 |
 | Scrolling | AnnotatedScrollBar, PipsPager, ScrollBar, ScrollView | Empty-selection policy is intentionally unchanged; inherited API coherence is Phase 2 |
-| Status and info | InfoBadge, InfoBar, ProgressBar, ProgressRing, Shimmer, ToolTip | Accessible values/copy, timer strategy, and facade coherence are Phase 2/3/4 |
+| Status and info | InfoBadge, InfoBar, ProgressBar, ProgressRing, Shimmer, ToolTip | Phase 4 removes per-frame ProgressBar animation-token reconstruction while preserving its timer lifecycle |
 | Text fields | AutoSuggestBox, Label, LineEdit, NumberBox, PasswordBox, TextEdit | Phase 1 Label/TextEdit coherence, focus, sizing, and no-op defects resolved; broader editing-facade and inheritance decisions remain Phase 2 |
 | Windowing | TitleBar, Window, backdrop contracts | Content ownership, caption accessibility, and platform surface lifecycle are Phase 2/3 |
-| Design | Animation, Breakpoints, CornerRadius, Elevation, IconCatalog, Material, Spacing, ThemeColors, Typography | Phase 1 zero-elevation semantics resolved; painter/DPI and header-cost work remains Phase 4 |
+| Design | Animation, Breakpoints, CornerRadius, Elevation, IconCatalog, Material, Spacing, ThemeColors, Typography | Phase 4 centralizes dynamic token storage, avoids color snapshots in paint hot paths, and applies DPI-aligned FlowView strokes |
 
 ## Decisions Deliberately Deferred
 
