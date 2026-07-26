@@ -487,8 +487,11 @@ QDate CalendarDatePicker::defaultVisibleMonth() const
 
 void CalendarDatePicker::refreshButtonText()
 {
-    setText(displayText());
-    setAccessibleName(displayText());
+    const QString text = displayText();
+    setText(text);
+    if (accessibleName().isEmpty() || accessibleName() == m_autoAccessibleName)
+        setAccessibleName(text);
+    m_autoAccessibleName = text;
     updateGeometry();
     update();
 }

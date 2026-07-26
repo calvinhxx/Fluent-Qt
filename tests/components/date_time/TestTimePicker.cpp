@@ -133,9 +133,11 @@ TEST_F(TimePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_EQ(picker.clockIdentifier(), TimePicker::ClockIdentifier::TwelveHourClock);
     EXPECT_FALSE(picker.isDropDownOpen());
     EXPECT_FALSE(picker.isOpen());
-    EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Hour), QStringLiteral("hour"));
-    EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Minute), QStringLiteral("minute"));
-    EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Period), QStringLiteral("AM/PM"));
+    EXPECT_TRUE(picker.fieldDisplayText(TimePicker::TimeField::Hour).isEmpty());
+    EXPECT_TRUE(picker.fieldDisplayText(TimePicker::TimeField::Minute).isEmpty());
+    EXPECT_TRUE(picker.fieldDisplayText(TimePicker::TimeField::Period).isEmpty());
+    EXPECT_TRUE(picker.confirmButtonAccessibleName().isEmpty());
+    EXPECT_TRUE(picker.cancelButtonAccessibleName().isEmpty());
     EXPECT_EQ(picker.focusPolicy(), Qt::StrongFocus);
 #ifdef Q_OS_MAC
     EXPECT_FALSE(picker.testAttribute(Qt::WA_MacShowFocusRect));
@@ -150,6 +152,9 @@ TEST_F(TimePickerTest, DefaultsAndInheritanceMatchComponentPattern)
 TEST_F(TimePickerTest, SelectedTimeClearAndFormattingDriveSegments)
 {
     TimePicker picker;
+    picker.setPlaceholderText(TimePicker::TimeField::Hour, QStringLiteral("hour"));
+    picker.setPlaceholderText(TimePicker::TimeField::Minute, QStringLiteral("minute"));
+    picker.setPlaceholderText(TimePicker::TimeField::Period, QStringLiteral("AM/PM"));
     picker.setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
     QSignalSpy selectedSpy(&picker, &TimePicker::selectedTimeChanged);
     QSignalSpy timeSpy(&picker, &TimePicker::timeChanged);
@@ -178,6 +183,40 @@ TEST_F(TimePickerTest, SelectedTimeClearAndFormattingDriveSegments)
     EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Hour), QStringLiteral("hour"));
     EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Minute), QStringLiteral("minute"));
     EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Period), QStringLiteral("AM/PM"));
+}
+
+TEST_F(TimePickerTest, ApplicationOwnedTextUpdatesEntryAndFlyoutActions)
+{
+    TimePicker* picker = new TimePicker(window);
+    picker->setGeometry(40, 40, 360, picker->sizeHint().height());
+    QSignalSpy placeholderSpy(picker, &TimePicker::placeholderTextChanged);
+    QSignalSpy confirmSpy(picker, &TimePicker::confirmButtonAccessibleNameChanged);
+    QSignalSpy cancelSpy(picker, &TimePicker::cancelButtonAccessibleNameChanged);
+
+    picker->setPlaceholderText(TimePicker::TimeField::Hour, QStringLiteral("hour"));
+    picker->setPlaceholderText(TimePicker::TimeField::Minute, QStringLiteral("minute"));
+    picker->setPlaceholderText(TimePicker::TimeField::Period, QStringLiteral("AM/PM"));
+    picker->setConfirmButtonAccessibleName(QStringLiteral("Apply time"));
+    picker->setCancelButtonAccessibleName(QStringLiteral("Dismiss time picker"));
+
+    EXPECT_EQ(placeholderSpy.count(), 3);
+    EXPECT_EQ(confirmSpy.count(), 1);
+    EXPECT_EQ(cancelSpy.count(), 1);
+    EXPECT_EQ(picker->fieldDisplayText(TimePicker::TimeField::Hour),
+              QStringLiteral("hour"));
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    ASSERT_NE(buttonFor(popup, QStringLiteral("TimePickerConfirmButton")), nullptr);
+    ASSERT_NE(buttonFor(popup, QStringLiteral("TimePickerCancelButton")), nullptr);
+    EXPECT_EQ(buttonFor(popup, QStringLiteral("TimePickerConfirmButton"))->accessibleName(),
+              QStringLiteral("Apply time"));
+    EXPECT_EQ(buttonFor(popup, QStringLiteral("TimePickerCancelButton"))->accessibleName(),
+              QStringLiteral("Dismiss time picker"));
+
+    picker->setCancelButtonAccessibleName(QStringLiteral("Cancel time"));
+    EXPECT_EQ(buttonFor(popup, QStringLiteral("TimePickerCancelButton"))->accessibleName(),
+              QStringLiteral("Cancel time"));
 }
 
 TEST_F(TimePickerTest, LocaleTracksTheInheritedQWidgetProperty)
@@ -633,6 +672,9 @@ TEST_F(TimePickerTest, VisualCheck)
     layout->addWidget(simpleLabel);
 
     auto* simple = new TimePicker(window);
+    simple->setPlaceholderText(TimePicker::TimeField::Hour, QStringLiteral("hour"));
+    simple->setPlaceholderText(TimePicker::TimeField::Minute, QStringLiteral("minute"));
+    simple->setPlaceholderText(TimePicker::TimeField::Period, QStringLiteral("AM/PM"));
     simple->anchors()->top = {simpleLabel, Edge::Bottom, 6};
     simple->anchors()->left = {simpleLabel, Edge::Left, 0};
     layout->addWidget(simple);

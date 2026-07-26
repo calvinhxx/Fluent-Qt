@@ -198,6 +198,7 @@ public:
     void shiftField(TimePicker::TimeField field, int offset);
     void commit();
     void cancel();
+    void refreshActionAccessibility();
 
     void onThemeUpdated() override;
 
@@ -225,6 +226,7 @@ public:
     void refreshFromFlyout();
     void refreshTheme();
     void updateColumns();
+    void refreshActionAccessibility();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -609,7 +611,6 @@ TimePickerFlyoutPanel::TimePickerFlyoutPanel(TimePickerFlyout* flyout, QWidget* 
     m_confirmButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_confirmButton->setIconGlyph(Typography::Icons::CheckMark, Typography::IconSize::Standard);
     m_confirmButton->setFixedSize(48, 32);
-    m_confirmButton->setAccessibleName(QStringLiteral("Accept time"));
 
     m_cancelButton = new fluent::basicinput::Button(this);
     m_cancelButton->setObjectName(QStringLiteral("TimePickerCancelButton"));
@@ -617,7 +618,7 @@ TimePickerFlyoutPanel::TimePickerFlyoutPanel(TimePickerFlyout* flyout, QWidget* 
     m_cancelButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_cancelButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard);
     m_cancelButton->setFixedSize(48, 32);
-    m_cancelButton->setAccessibleName(QStringLiteral("Cancel time"));
+    refreshActionAccessibility();
 
     connect(m_confirmButton, &fluent::basicinput::Button::clicked, this, [this] {
         if (m_flyout)
@@ -686,6 +687,17 @@ void TimePickerFlyoutPanel::updateColumns()
     if (m_periodColumn)
         m_periodColumn->update();
     update();
+}
+
+void TimePickerFlyoutPanel::refreshActionAccessibility()
+{
+    TimePicker* owner = m_flyout ? m_flyout->owner() : nullptr;
+    if (m_confirmButton)
+        m_confirmButton->setAccessibleName(
+            owner ? owner->confirmButtonAccessibleName() : QString());
+    if (m_cancelButton)
+        m_cancelButton->setAccessibleName(
+            owner ? owner->cancelButtonAccessibleName() : QString());
 }
 
 void TimePickerFlyoutPanel::refreshTheme()
@@ -874,6 +886,12 @@ void TimePickerFlyout::cancel()
     close();
 }
 
+void TimePickerFlyout::refreshActionAccessibility()
+{
+    if (m_panel)
+        m_panel->refreshActionAccessibility();
+}
+
 void TimePickerFlyout::onThemeUpdated()
 {
     fluent::dialogs_flyouts::Flyout::onThemeUpdated();
@@ -1017,6 +1035,49 @@ void TimePicker::setLocale(const QLocale& locale)
     QWidget::setLocale(locale);
 }
 
+void TimePicker::setPlaceholderText(TimeField field, const QString& text)
+{
+    QString* target = nullptr;
+    switch (field) {
+    case TimeField::Hour:
+        target = &m_hourPlaceholderText;
+        break;
+    case TimeField::Minute:
+        target = &m_minutePlaceholderText;
+        break;
+    case TimeField::Period:
+        target = &m_periodPlaceholderText;
+        break;
+    }
+    if (!target || *target == text)
+        return;
+
+    *target = text;
+    updateGeometry();
+    update();
+    emit placeholderTextChanged(field, text);
+}
+
+void TimePicker::setConfirmButtonAccessibleName(const QString& name)
+{
+    if (m_confirmButtonAccessibleName == name)
+        return;
+    m_confirmButtonAccessibleName = name;
+    if (m_flyout)
+        m_flyout->refreshActionAccessibility();
+    emit confirmButtonAccessibleNameChanged(m_confirmButtonAccessibleName);
+}
+
+void TimePicker::setCancelButtonAccessibleName(const QString& name)
+{
+    if (m_cancelButtonAccessibleName == name)
+        return;
+    m_cancelButtonAccessibleName = name;
+    if (m_flyout)
+        m_flyout->refreshActionAccessibility();
+    emit cancelButtonAccessibleNameChanged(m_cancelButtonAccessibleName);
+}
+
 void TimePicker::openPicker()
 {
     if (!isEnabled())
@@ -1049,11 +1110,11 @@ QString TimePicker::placeholderText(TimeField field) const
 {
     switch (field) {
     case TimeField::Hour:
-        return QStringLiteral("hour");
+        return m_hourPlaceholderText;
     case TimeField::Minute:
-        return QStringLiteral("minute");
+        return m_minutePlaceholderText;
     case TimeField::Period:
-        return QStringLiteral("AM/PM");
+        return m_periodPlaceholderText;
     }
     return QString();
 }

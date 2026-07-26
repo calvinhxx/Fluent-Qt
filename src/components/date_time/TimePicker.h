@@ -53,6 +53,16 @@ class TimePicker : public fluent::basicinput::Button {
      * zh_CN: 用于上午/下午时段文案的区域设置。
      */
     Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
+    /**
+     * @brief Accessible name supplied by the application for the confirm button.
+     * zh_CN: 由应用为确认按钮提供的无障碍名称。
+     */
+    Q_PROPERTY(QString confirmButtonAccessibleName READ confirmButtonAccessibleName WRITE setConfirmButtonAccessibleName NOTIFY confirmButtonAccessibleNameChanged)
+    /**
+     * @brief Accessible name supplied by the application for the cancel button.
+     * zh_CN: 由应用为取消按钮提供的无障碍名称。
+     */
+    Q_PROPERTY(QString cancelButtonAccessibleName READ cancelButtonAccessibleName WRITE setCancelButtonAccessibleName NOTIFY cancelButtonAccessibleNameChanged)
 
 public:
     enum class TimeField {
@@ -81,6 +91,8 @@ public:
 
     QString fieldDisplayText(TimeField field) const;
     QString placeholderText(TimeField field) const;
+    QString confirmButtonAccessibleName() const { return m_confirmButtonAccessibleName; }
+    QString cancelButtonAccessibleName() const { return m_cancelButtonAccessibleName; }
     Qt::Alignment fieldTextAlignment(TimeField field) const;
 
     QSize sizeHint() const override;
@@ -93,6 +105,13 @@ public slots:
     void setMinuteIncrement(int increment);
     void setClockIdentifier(ClockIdentifier identifier);
     void setLocale(const QLocale& locale);
+    /**
+     * @brief Sets application-owned placeholder text for one time field.
+     * zh_CN: 为一个时间字段设置由应用拥有的占位文本。
+     */
+    void setPlaceholderText(TimeField field, const QString& text);
+    void setConfirmButtonAccessibleName(const QString& name);
+    void setCancelButtonAccessibleName(const QString& name);
     void setFieldTextAlignment(TimeField field, Qt::Alignment alignment);
     void openPicker();
     void closePicker();
@@ -103,6 +122,9 @@ signals:
     void minuteIncrementChanged(int increment);
     void clockIdentifierChanged(TimePicker::ClockIdentifier identifier);
     void localeChanged(const QLocale& locale);
+    void placeholderTextChanged(TimePicker::TimeField field, const QString& text);
+    void confirmButtonAccessibleNameChanged(const QString& name);
+    void cancelButtonAccessibleNameChanged(const QString& name);
     void dropDownOpenChanged(bool open);
 
 protected:
@@ -143,6 +165,11 @@ private:
     int m_minuteIncrement = 1;
     ClockIdentifier m_clockIdentifier = ClockIdentifier::TwelveHourClock;
     QLocale m_observedLocale;
+    QString m_hourPlaceholderText;
+    QString m_minutePlaceholderText;
+    QString m_periodPlaceholderText;
+    QString m_confirmButtonAccessibleName;
+    QString m_cancelButtonAccessibleName;
     Qt::Alignment m_hourTextAlignment = Qt::AlignLeft;
     Qt::Alignment m_minuteTextAlignment = Qt::AlignHCenter;
     Qt::Alignment m_periodTextAlignment = Qt::AlignHCenter;

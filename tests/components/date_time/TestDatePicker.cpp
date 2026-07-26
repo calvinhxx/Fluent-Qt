@@ -141,9 +141,11 @@ TEST_F(DatePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_TRUE(picker.yearVisible());
     EXPECT_FALSE(picker.isDropDownOpen());
     EXPECT_FALSE(picker.isOpen());
-    EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Month), QStringLiteral("month"));
-    EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Day), QStringLiteral("day"));
-    EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Year), QStringLiteral("year"));
+    EXPECT_TRUE(picker.fieldDisplayText(DatePicker::DateField::Month).isEmpty());
+    EXPECT_TRUE(picker.fieldDisplayText(DatePicker::DateField::Day).isEmpty());
+    EXPECT_TRUE(picker.fieldDisplayText(DatePicker::DateField::Year).isEmpty());
+    EXPECT_TRUE(picker.confirmButtonAccessibleName().isEmpty());
+    EXPECT_TRUE(picker.cancelButtonAccessibleName().isEmpty());
     EXPECT_EQ(picker.focusPolicy(), Qt::StrongFocus);
 #ifdef Q_OS_MAC
     EXPECT_FALSE(picker.testAttribute(Qt::WA_MacShowFocusRect));
@@ -164,6 +166,9 @@ TEST_F(DatePickerTest, DefaultsAndInheritanceMatchComponentPattern)
 TEST_F(DatePickerTest, SelectedDateClearAndFormattingDriveSegments)
 {
     DatePicker picker;
+    picker.setPlaceholderText(DatePicker::DateField::Month, QStringLiteral("month"));
+    picker.setPlaceholderText(DatePicker::DateField::Day, QStringLiteral("day"));
+    picker.setPlaceholderText(DatePicker::DateField::Year, QStringLiteral("year"));
     picker.setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
     picker.setMonthFormat(DatePicker::MonthFormat::FullMonthName);
     picker.setDayFormat(DatePicker::DayFormat::DayIntegerWithAbbreviatedWeekday);
@@ -200,6 +205,40 @@ TEST_F(DatePickerTest, SelectedDateClearAndFormattingDriveSegments)
 
     picker.clearSelectedDate();
     EXPECT_EQ(selectedSpy.count(), 2);
+}
+
+TEST_F(DatePickerTest, ApplicationOwnedTextUpdatesEntryAndFlyoutActions)
+{
+    DatePicker* picker = new DatePicker(window);
+    picker->setGeometry(40, 40, 360, picker->sizeHint().height());
+    QSignalSpy placeholderSpy(picker, &DatePicker::placeholderTextChanged);
+    QSignalSpy confirmSpy(picker, &DatePicker::confirmButtonAccessibleNameChanged);
+    QSignalSpy cancelSpy(picker, &DatePicker::cancelButtonAccessibleNameChanged);
+
+    picker->setPlaceholderText(DatePicker::DateField::Month, QStringLiteral("month"));
+    picker->setPlaceholderText(DatePicker::DateField::Day, QStringLiteral("day"));
+    picker->setPlaceholderText(DatePicker::DateField::Year, QStringLiteral("year"));
+    picker->setConfirmButtonAccessibleName(QStringLiteral("Apply date"));
+    picker->setCancelButtonAccessibleName(QStringLiteral("Dismiss date picker"));
+
+    EXPECT_EQ(placeholderSpy.count(), 3);
+    EXPECT_EQ(confirmSpy.count(), 1);
+    EXPECT_EQ(cancelSpy.count(), 1);
+    EXPECT_EQ(picker->fieldDisplayText(DatePicker::DateField::Month),
+              QStringLiteral("month"));
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    ASSERT_NE(buttonFor(popup, QStringLiteral("DatePickerConfirmButton")), nullptr);
+    ASSERT_NE(buttonFor(popup, QStringLiteral("DatePickerCancelButton")), nullptr);
+    EXPECT_EQ(buttonFor(popup, QStringLiteral("DatePickerConfirmButton"))->accessibleName(),
+              QStringLiteral("Apply date"));
+    EXPECT_EQ(buttonFor(popup, QStringLiteral("DatePickerCancelButton"))->accessibleName(),
+              QStringLiteral("Dismiss date picker"));
+
+    picker->setConfirmButtonAccessibleName(QStringLiteral("Save date"));
+    EXPECT_EQ(buttonFor(popup, QStringLiteral("DatePickerConfirmButton"))->accessibleName(),
+              QStringLiteral("Save date"));
 }
 
 TEST_F(DatePickerTest, LocaleTracksTheInheritedQWidgetProperty)
@@ -776,6 +815,9 @@ TEST_F(DatePickerTest, VisualCheck)
     layout->addWidget(simpleLabel);
 
     auto* simple = new DatePicker(window);
+    simple->setPlaceholderText(DatePicker::DateField::Month, QStringLiteral("month"));
+    simple->setPlaceholderText(DatePicker::DateField::Day, QStringLiteral("day"));
+    simple->setPlaceholderText(DatePicker::DateField::Year, QStringLiteral("year"));
     simple->anchors()->top = {simpleLabel, Edge::Bottom, 6};
     simple->anchors()->left = {simpleLabel, Edge::Left, 0};
     layout->addWidget(simple);

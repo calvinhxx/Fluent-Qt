@@ -59,9 +59,24 @@ QVector<GallerySample> datePickerSamples()
                    QStringLiteral("Spinning-field date picker"),
                    QStringLiteral("Clicking opens looping day, month, and year columns."),
                    QStringLiteral("auto* picker = new DatePicker(this);\n"
+                                  "picker->setPlaceholderText(DatePicker::DateField::Month, \"month\");\n"
+                                  "picker->setPlaceholderText(DatePicker::DateField::Day, \"day\");\n"
+                                  "picker->setPlaceholderText(DatePicker::DateField::Year, \"year\");\n"
+                                  "picker->setConfirmButtonAccessibleName(\"Accept date\");\n"
+                                  "picker->setCancelButtonAccessibleName(\"Cancel date\");\n"
                                   "picker->setDate(QDate::currentDate());"),
                    [](QWidget* parent) {
                        auto* picker = new DatePicker(parent);
+                       picker->setPlaceholderText(DatePicker::DateField::Month,
+                                                  QStringLiteral("month"));
+                       picker->setPlaceholderText(DatePicker::DateField::Day,
+                                                  QStringLiteral("day"));
+                       picker->setPlaceholderText(DatePicker::DateField::Year,
+                                                  QStringLiteral("year"));
+                       picker->setConfirmButtonAccessibleName(
+                           QStringLiteral("Accept date"));
+                       picker->setCancelButtonAccessibleName(
+                           QStringLiteral("Cancel date"));
                        picker->setDate(QDate::currentDate());
                        return picker;
                    })
@@ -75,10 +90,25 @@ QVector<GallerySample> timePickerSamples()
                    QStringLiteral("Spinning-field time picker"),
                    QStringLiteral("Clicking opens looping hour and minute columns."),
                    QStringLiteral("auto* picker = new TimePicker(this);\n"
+                                  "picker->setPlaceholderText(TimePicker::TimeField::Hour, \"hour\");\n"
+                                  "picker->setPlaceholderText(TimePicker::TimeField::Minute, \"minute\");\n"
+                                  "picker->setPlaceholderText(TimePicker::TimeField::Period, \"AM/PM\");\n"
+                                  "picker->setConfirmButtonAccessibleName(\"Accept time\");\n"
+                                  "picker->setCancelButtonAccessibleName(\"Cancel time\");\n"
                                   "picker->setTime(QTime(9, 30));\n"
                                   "picker->setMinuteIncrement(5);"),
                    [](QWidget* parent) {
                        auto* picker = new TimePicker(parent);
+                       picker->setPlaceholderText(TimePicker::TimeField::Hour,
+                                                  QStringLiteral("hour"));
+                       picker->setPlaceholderText(TimePicker::TimeField::Minute,
+                                                  QStringLiteral("minute"));
+                       picker->setPlaceholderText(TimePicker::TimeField::Period,
+                                                  QStringLiteral("AM/PM"));
+                       picker->setConfirmButtonAccessibleName(
+                           QStringLiteral("Accept time"));
+                       picker->setCancelButtonAccessibleName(
+                           QStringLiteral("Cancel time"));
                        picker->setTime(QTime(9, 30));
                        picker->setMinuteIncrement(5);
                        return picker;

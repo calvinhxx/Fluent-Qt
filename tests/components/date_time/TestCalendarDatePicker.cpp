@@ -158,6 +158,22 @@ TEST_F(CalendarDatePickerTest, PlaceholderAndFormatDriveDisplayText)
     EXPECT_EQ(formatSpy.count(), 1);
 }
 
+TEST_F(CalendarDatePickerTest, ApplicationAccessibleNameOverrideIsPreserved)
+{
+    CalendarDatePicker picker;
+    picker.setPlaceholderText(QStringLiteral("Choose a date"));
+    EXPECT_EQ(picker.accessibleName(), QStringLiteral("Choose a date"));
+
+    picker.setDisplayFormat(QStringLiteral("yyyy-MM-dd"));
+    picker.setDate(QDate(2026, 5, 21));
+    EXPECT_EQ(picker.accessibleName(), QStringLiteral("2026-05-21"));
+
+    picker.setAccessibleName(QStringLiteral("Invoice due date"));
+    picker.clearDate();
+    picker.setDate(QDate(2026, 6, 2));
+    EXPECT_EQ(picker.accessibleName(), QStringLiteral("Invoice due date"));
+}
+
 TEST_F(CalendarDatePickerTest, DateSetClearAndDuplicateSignals)
 {
     CalendarDatePicker picker;

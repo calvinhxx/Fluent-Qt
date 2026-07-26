@@ -83,6 +83,16 @@ class DatePicker : public fluent::basicinput::Button {
      * zh_CN: 用于月份和星期名称的区域设置。
      */
     Q_PROPERTY(QLocale locale READ locale WRITE setLocale NOTIFY localeChanged)
+    /**
+     * @brief Accessible name supplied by the application for the confirm button.
+     * zh_CN: 由应用为确认按钮提供的无障碍名称。
+     */
+    Q_PROPERTY(QString confirmButtonAccessibleName READ confirmButtonAccessibleName WRITE setConfirmButtonAccessibleName NOTIFY confirmButtonAccessibleNameChanged)
+    /**
+     * @brief Accessible name supplied by the application for the cancel button.
+     * zh_CN: 由应用为取消按钮提供的无障碍名称。
+     */
+    Q_PROPERTY(QString cancelButtonAccessibleName READ cancelButtonAccessibleName WRITE setCancelButtonAccessibleName NOTIFY cancelButtonAccessibleNameChanged)
 
 public:
     enum class DateField {
@@ -138,6 +148,8 @@ public:
 
     QString fieldDisplayText(DateField field) const;
     QString placeholderText(DateField field) const;
+    QString confirmButtonAccessibleName() const { return m_confirmButtonAccessibleName; }
+    QString cancelButtonAccessibleName() const { return m_cancelButtonAccessibleName; }
 
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
@@ -156,6 +168,13 @@ public slots:
     void setDayFormat(DayFormat format);
     void setYearFormat(YearFormat format);
     void setLocale(const QLocale& locale);
+    /**
+     * @brief Sets application-owned placeholder text for one date field.
+     * zh_CN: 为一个日期字段设置由应用拥有的占位文本。
+     */
+    void setPlaceholderText(DateField field, const QString& text);
+    void setConfirmButtonAccessibleName(const QString& name);
+    void setCancelButtonAccessibleName(const QString& name);
     void setFieldTextAlignment(DateField field, Qt::Alignment alignment);
     void openPicker();
     void closePicker();
@@ -172,6 +191,9 @@ signals:
     void dayFormatChanged(DatePicker::DayFormat format);
     void yearFormatChanged(DatePicker::YearFormat format);
     void localeChanged(const QLocale& locale);
+    void placeholderTextChanged(DatePicker::DateField field, const QString& text);
+    void confirmButtonAccessibleNameChanged(const QString& name);
+    void cancelButtonAccessibleNameChanged(const QString& name);
     void dropDownOpenChanged(bool open);
 
 protected:
@@ -220,6 +242,11 @@ private:
     DayFormat m_dayFormat = DayFormat::DayInteger;
     YearFormat m_yearFormat = YearFormat::FullYear;
     QLocale m_observedLocale;
+    QString m_monthPlaceholderText;
+    QString m_dayPlaceholderText;
+    QString m_yearPlaceholderText;
+    QString m_confirmButtonAccessibleName;
+    QString m_cancelButtonAccessibleName;
     Qt::Alignment m_monthTextAlignment = Qt::AlignLeft;
     Qt::Alignment m_dayTextAlignment = Qt::AlignHCenter;
     Qt::Alignment m_yearTextAlignment = Qt::AlignHCenter;

@@ -190,6 +190,7 @@ public:
     void shiftField(DatePicker::DateField field, int offset);
     void commit();
     void cancel();
+    void refreshActionAccessibility();
 
     void onThemeUpdated() override;
 
@@ -217,6 +218,7 @@ public:
     void refreshFromFlyout();
     void refreshTheme();
     void updateColumns();
+    void refreshActionAccessibility();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -604,7 +606,6 @@ DatePickerFlyoutPanel::DatePickerFlyoutPanel(DatePickerFlyout* flyout, QWidget* 
     m_confirmButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_confirmButton->setIconGlyph(Typography::Icons::CheckMark, Typography::IconSize::Standard);
     m_confirmButton->setFixedSize(48, 32);
-    m_confirmButton->setAccessibleName(QStringLiteral("Accept date"));
 
     m_cancelButton = new fluent::basicinput::Button(this);
     m_cancelButton->setObjectName(QStringLiteral("DatePickerCancelButton"));
@@ -612,7 +613,7 @@ DatePickerFlyoutPanel::DatePickerFlyoutPanel(DatePickerFlyout* flyout, QWidget* 
     m_cancelButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_cancelButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard);
     m_cancelButton->setFixedSize(48, 32);
-    m_cancelButton->setAccessibleName(QStringLiteral("Cancel date"));
+    refreshActionAccessibility();
 
     connect(m_confirmButton, &fluent::basicinput::Button::clicked, this, [this] {
         if (m_flyout)
@@ -681,6 +682,17 @@ void DatePickerFlyoutPanel::updateColumns()
     if (m_yearColumn)
         m_yearColumn->update();
     update();
+}
+
+void DatePickerFlyoutPanel::refreshActionAccessibility()
+{
+    DatePicker* owner = m_flyout ? m_flyout->owner() : nullptr;
+    if (m_confirmButton)
+        m_confirmButton->setAccessibleName(
+            owner ? owner->confirmButtonAccessibleName() : QString());
+    if (m_cancelButton)
+        m_cancelButton->setAccessibleName(
+            owner ? owner->cancelButtonAccessibleName() : QString());
 }
 
 void DatePickerFlyoutPanel::refreshTheme()
@@ -894,6 +906,12 @@ void DatePickerFlyout::cancel()
     close();
 }
 
+void DatePickerFlyout::refreshActionAccessibility()
+{
+    if (m_panel)
+        m_panel->refreshActionAccessibility();
+}
+
 void DatePickerFlyout::onThemeUpdated()
 {
     fluent::dialogs_flyouts::Flyout::onThemeUpdated();
@@ -1096,6 +1114,49 @@ void DatePicker::setLocale(const QLocale& locale)
     QWidget::setLocale(locale);
 }
 
+void DatePicker::setPlaceholderText(DateField field, const QString& text)
+{
+    QString* target = nullptr;
+    switch (field) {
+    case DateField::Month:
+        target = &m_monthPlaceholderText;
+        break;
+    case DateField::Day:
+        target = &m_dayPlaceholderText;
+        break;
+    case DateField::Year:
+        target = &m_yearPlaceholderText;
+        break;
+    }
+    if (!target || *target == text)
+        return;
+
+    *target = text;
+    updateGeometry();
+    update();
+    emit placeholderTextChanged(field, text);
+}
+
+void DatePicker::setConfirmButtonAccessibleName(const QString& name)
+{
+    if (m_confirmButtonAccessibleName == name)
+        return;
+    m_confirmButtonAccessibleName = name;
+    if (m_flyout)
+        m_flyout->refreshActionAccessibility();
+    emit confirmButtonAccessibleNameChanged(m_confirmButtonAccessibleName);
+}
+
+void DatePicker::setCancelButtonAccessibleName(const QString& name)
+{
+    if (m_cancelButtonAccessibleName == name)
+        return;
+    m_cancelButtonAccessibleName = name;
+    if (m_flyout)
+        m_flyout->refreshActionAccessibility();
+    emit cancelButtonAccessibleNameChanged(m_cancelButtonAccessibleName);
+}
+
 Qt::Alignment DatePicker::fieldTextAlignment(DateField field) const
 {
     switch (field) {
@@ -1168,11 +1229,11 @@ QString DatePicker::placeholderText(DateField field) const
 {
     switch (field) {
     case DateField::Month:
-        return QStringLiteral("month");
+        return m_monthPlaceholderText;
     case DateField::Day:
-        return QStringLiteral("day");
+        return m_dayPlaceholderText;
     case DateField::Year:
-        return QStringLiteral("year");
+        return m_yearPlaceholderText;
     }
     return QString();
 }

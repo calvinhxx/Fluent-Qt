@@ -142,6 +142,7 @@ private:
     QDate m_minDate;
     QDate m_maxDate;
     QString m_displayFormat;
+    QString m_autoAccessibleName;
     QLocale m_observedLocale;
     Qt::DayOfWeek m_firstDayOfWeek = Qt::Monday;
     bool m_firstDayFollowsLocale = true;
