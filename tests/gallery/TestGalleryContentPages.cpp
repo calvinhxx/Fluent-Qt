@@ -20,6 +20,7 @@
 #include <QLineEdit>
 #include <QMargins>
 #include <QPoint>
+#include <QPixmap>
 #include <QScrollBar>
 #include <QSizePolicy>
 #include <QStringList>
@@ -166,6 +167,43 @@ int horizontalGapInAncestor(const QWidget* left, const QWidget* right, const QWi
     const QRect leftRect = mappedRectInAncestor(left, ancestor);
     const QRect rightRect = mappedRectInAncestor(right, ancestor);
     return rightRect.x() - (leftRect.x() + leftRect.width());
+}
+
+bool isContainedIn(const QWidget* child, const QWidget* parent, int tolerance = 0)
+{
+    if (!child || !parent)
+        return false;
+    const QRect bounds = parent->rect().adjusted(
+        -tolerance, -tolerance, tolerance, tolerance);
+    return bounds.contains(mappedRectInAncestor(child, parent));
+}
+
+fluent::FluentElement* firstFluentElement(QWidget* root)
+{
+    if (!root)
+        return nullptr;
+    if (auto* element = dynamic_cast<fluent::FluentElement*>(root))
+        return element;
+    for (QWidget* widget : root->findChildren<QWidget*>()) {
+        if (auto* element = dynamic_cast<fluent::FluentElement*>(widget))
+            return element;
+    }
+    return nullptr;
+}
+
+QWidget* firstFocusableWidget(QWidget* root)
+{
+    if (!root)
+        return nullptr;
+    QList<QWidget*> candidates{root};
+    candidates.append(root->findChildren<QWidget*>());
+    for (QWidget* candidate : candidates) {
+        if (candidate && candidate->isEnabled() && candidate->isVisibleTo(root)
+            && candidate->focusPolicy() != Qt::NoFocus) {
+            return candidate;
+        }
+    }
+    return nullptr;
 }
 
 template <typename PageType>
@@ -490,16 +528,22 @@ TEST_F(GalleryContentPagesTest, FoundationVisualCheck)
 
 TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface)
 {
+    QStringList referencedHeaders;
     for (const auto& category : galleryComponentCatalog()) {
         for (const auto& component : category.components) {
             const auto reference = galleryComponentReference(component.id);
             ASSERT_TRUE(reference.isValid()) << component.id.toStdString();
-            EXPECT_EQ(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
+            EXPECT_TRUE(reference.header.startsWith(QStringLiteral("<FluentQt/")));
+            EXPECT_TRUE(reference.header.endsWith(QStringLiteral(".h>")));
+            EXPECT_NE(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
             EXPECT_EQ(reference.cmakeTarget, QStringLiteral("FluentQt::FluentQt"));
             EXPECT_TRUE(reference.qualifiedType.startsWith(
                 QStringLiteral("fluent::%1::").arg(category.sourceDirectory)));
+            referencedHeaders.append(reference.header);
         }
     }
+    referencedHeaders.removeDuplicates();
+    EXPECT_EQ(referencedHeaders.size(), galleryComponentCatalog().size());
 
     EXPECT_EQ(galleryComponentReference(QStringLiteral("menu")).qualifiedType,
               QStringLiteral("fluent::menus_toolbars::FluentMenu"));
@@ -527,6 +571,220 @@ TEST_F(GalleryContentPagesTest, EveryComponentRouteBuildsItsPage)
                 << item.id.toStdString() << " " << card->sampleId().toStdString();
         }
     }
+}
+
+TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixCoversEveryComponentRoute)
+{
+    auto& settings = fluent::gallery::GallerySettings::instance();
+    settings.setIntroCompleted(true);
+
+    GalleryWindow window;
+    window.setBackdropEffect(fluent::windowing::BackdropEffect::Solid);
+    window.resize(1180, 760);
+    window.show();
+    QApplication::processEvents();
+
+    int reviewedRoutes = 0;
+    int focusableRoutes = 0;
+    for (const auto& category : galleryComponentCatalog()) {
+        for (const auto& component : category.components) {
+            SCOPED_TRACE(QStringLiteral("route=%1").arg(component.id).toStdString());
+            ASSERT_TRUE(window.selectRoute(component.id));
+            auto* page = waitForCurrentPage<GalleryComponentPage>(window);
+            ASSERT_NE(page, nullptr);
+            ASSERT_FALSE(page->sampleCards().isEmpty());
+
+            for (GallerySampleCard* card : page->sampleCards()) {
+                ASSERT_NE(card, nullptr);
+                ASSERT_NE(card->previewWidget(), nullptr)
+                    << card->sampleId().toStdString();
+                card->setPreviewThemeOverride(fluent::FluentElement::Dark);
+                card->previewWidget()->setLayoutDirection(Qt::RightToLeft);
+                card->previewWidget()->setEnabled(false);
+            }
+            QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            QApplication::processEvents();
+
+            for (GallerySampleCard* card : page->sampleCards()) {
+                QWidget* preview = card->previewWidget();
+                auto* surface = card->findChild<QWidget*>(
+                    QStringLiteral("gallerySampleCardPreview"));
+                ASSERT_NE(surface, nullptr) << card->sampleId().toStdString();
+                EXPECT_EQ(preview->layoutDirection(), Qt::RightToLeft)
+                    << card->sampleId().toStdString();
+                EXPECT_FALSE(preview->isEnabled())
+                    << card->sampleId().toStdString();
+                EXPECT_TRUE(isContainedIn(preview, surface, 1))
+                    << card->sampleId().toStdString();
+                EXPECT_TRUE(isContainedIn(surface, card, 1))
+                    << card->sampleId().toStdString();
+
+                if (auto* element = firstFluentElement(preview))
+                    EXPECT_EQ(element->effectiveTheme(), fluent::FluentElement::Dark)
+                        << card->sampleId().toStdString();
+            }
+
+            GallerySampleCard* representative = page->sampleCards().first();
+            const QPixmap darkRtlDisabled = representative->grab();
+            ASSERT_FALSE(darkRtlDisabled.isNull());
+            EXPECT_EQ(fluentPixmapLogicalSize(darkRtlDisabled),
+                      representative->size());
+
+            QWidget* focusTarget = nullptr;
+            for (GallerySampleCard* card : page->sampleCards()) {
+                card->clearPreviewThemeOverride();
+                card->previewWidget()->setLayoutDirection(Qt::LeftToRight);
+                card->previewWidget()->setEnabled(true);
+                if (!focusTarget)
+                    focusTarget = firstFocusableWidget(card->previewWidget());
+            }
+            QApplication::processEvents();
+            if (focusTarget) {
+                ++focusableRoutes;
+                focusTarget->setFocus(Qt::TabFocusReason);
+                QApplication::processEvents();
+                QWidget* focused = QApplication::focusWidget();
+                EXPECT_TRUE(focused == focusTarget
+                            || (focused && focusTarget->isAncestorOf(focused))
+                            || (focused && focused->isAncestorOf(focusTarget)));
+            }
+            ++reviewedRoutes;
+        }
+    }
+
+    EXPECT_GT(reviewedRoutes, 50);
+    EXPECT_GT(focusableRoutes, 30);
+}
+
+TEST_F(GalleryContentPagesTest, GalleryAcceptanceMatrixHonorsProcessScale)
+{
+    auto& settings = fluent::gallery::GallerySettings::instance();
+    settings.setIntroCompleted(true);
+
+    GalleryWindow window;
+    window.setBackdropEffect(fluent::windowing::BackdropEffect::Solid);
+    window.resize(1180, 760);
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    window.show();
+    QApplication::processEvents();
+
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
+    ASSERT_NE(page, nullptr);
+    GallerySampleCard* card = sampleCardById(
+        page, QStringLiteral("button-interaction-state"));
+    ASSERT_NE(card, nullptr);
+    ASSERT_NE(card->previewWidget(), nullptr);
+
+    card->setPreviewThemeOverride(fluent::FluentElement::Dark);
+    card->previewWidget()->setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+
+    const QPixmap capture = window.grab();
+    ASSERT_FALSE(capture.isNull());
+    EXPECT_EQ(fluentPixmapLogicalSize(capture), window.size());
+    bool hasRequestedScale = false;
+    const qreal requestedScale =
+        qEnvironmentVariable("QT_SCALE_FACTOR").toDouble(&hasRequestedScale);
+    if (hasRequestedScale)
+        EXPECT_NEAR(capture.devicePixelRatioF(), requestedScale, 0.01);
+    else
+        EXPECT_GE(capture.devicePixelRatioF(), 1.0);
+
+    auto* surface = card->findChild<QWidget*>(
+        QStringLiteral("gallerySampleCardPreview"));
+    ASSERT_NE(surface, nullptr);
+    EXPECT_TRUE(isContainedIn(card->previewWidget(), surface, 1));
+    EXPECT_TRUE(isContainedIn(surface, card, 1));
+}
+
+TEST_F(GalleryContentPagesTest, TreeViewRtlCheckBoxHitTargetUsesLeadingEdge)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"),
+                               QStringLiteral("tree-view-checkboxes"),
+                               &sample));
+    GallerySampleCard card(sample);
+    card.resize(760, card.sizeHint().height());
+    card.previewWidget()->setLayoutDirection(Qt::RightToLeft);
+    card.show();
+    QApplication::processEvents();
+
+    auto* tree = qobject_cast<TreeView*>(card.previewWidget());
+    if (!tree)
+        tree = card.previewWidget()->findChild<TreeView*>();
+    ASSERT_NE(tree, nullptr);
+    ASSERT_NE(tree->model(), nullptr);
+
+    const QModelIndex root = tree->model()->index(0, 0);
+    ASSERT_TRUE(root.isValid());
+    EXPECT_EQ(root.data(Qt::CheckStateRole).toInt(), int(Qt::PartiallyChecked));
+
+    const QRect rowRect = tree->visualRect(root);
+    ASSERT_FALSE(rowRect.isEmpty());
+    constexpr int cursorStart = 12;
+    constexpr int checkBoxHalfWidth = 11;
+    const QPoint rtlCheckBoxCenter(
+        rowRect.x() + rowRect.width() - cursorStart - checkBoxHalfWidth,
+        rowRect.center().y());
+    QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier,
+                      rtlCheckBoxCenter);
+    QApplication::processEvents();
+
+    EXPECT_EQ(root.data(Qt::CheckStateRole).toInt(), int(Qt::Checked));
+}
+
+TEST_F(GalleryContentPagesTest, ComponentStateMatrixVisualCheck)
+{
+    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
+        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Component state review requires a desktop platform";
+
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        fluent::gallery::GallerySample buttonSample;
+        ASSERT_TRUE(findSampleById(QStringLiteral("button"),
+                                   QStringLiteral("button-interaction-state"),
+                                   &buttonSample));
+        GallerySampleCard buttonCard(buttonSample);
+        buttonCard.resize(760, buttonCard.sizeHint().height());
+        QApplication::processEvents();
+
+        tests::support::VisualSnapshotOptions options;
+        options.windowSize = buttonCard.size();
+        options.variant = QStringLiteral("button-states-light-ltr");
+        options.theme = tests::support::VisualSnapshotTheme::Light;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(&buttonCard, options));
+
+        buttonCard.previewWidget()->setLayoutDirection(Qt::RightToLeft);
+        options.variant = QStringLiteral("button-states-dark-rtl");
+        options.theme = tests::support::VisualSnapshotTheme::Dark;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(&buttonCard, options));
+
+        buttonCard.previewWidget()->setEnabled(false);
+        options.variant = QStringLiteral("button-states-dark-rtl-disabled");
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(&buttonCard, options));
+
+        fluent::gallery::GallerySample treeSample;
+        ASSERT_TRUE(findSampleById(QStringLiteral("tree-view"),
+                                   QStringLiteral("tree-view-basic"),
+                                   &treeSample));
+        GallerySampleCard treeCard(treeSample);
+        treeCard.resize(760, treeCard.sizeHint().height());
+        treeCard.previewWidget()->setLayoutDirection(Qt::RightToLeft);
+        QApplication::processEvents();
+        options.windowSize = treeCard.size();
+        options.variant = QStringLiteral("tree-view-dark-rtl");
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(&treeCard, options));
+        return;
+    }
+
+    auto& settings = fluent::gallery::GallerySettings::instance();
+    settings.setIntroCompleted(true);
+    GalleryWindow window;
+    window.setBackdropEffect(fluent::windowing::BackdropEffect::Solid);
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    window.show();
+    qApp->exec();
 }
 
 // The All controls route lists every component as a clickable card.
@@ -750,7 +1008,7 @@ TEST_F(GalleryContentPagesTest, ButtonLikeSampleRowsPreserveRequestedSpacing)
         {QStringLiteral("button"), QStringLiteral("button-styles"), 3, 10},
         {QStringLiteral("button"), QStringLiteral("button-sizes"), 3, 10},
         {QStringLiteral("button"), QStringLiteral("button-icon-layouts"), 3, 10},
-        {QStringLiteral("button"), QStringLiteral("button-interaction-state"), 4, 10},
+        {QStringLiteral("button"), QStringLiteral("button-interaction-state"), 5, 10},
         {QStringLiteral("repeat-button"), QStringLiteral("repeat-button-timing"), 2, 10},
         {QStringLiteral("split-button"), QStringLiteral("split-button-sizes"), 3, 10},
     };

@@ -100,6 +100,18 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 | Windowing | TitleBar, Window, backdrop contracts | Content ownership, caption accessibility, and platform surface lifecycle are Phase 2/3 |
 | Design | Animation, Breakpoints, CornerRadius, Elevation, IconCatalog, Material, Spacing, ThemeColors, Typography | Phase 4 centralizes dynamic token storage, avoids color snapshots in paint hot paths, and applies DPI-aligned FlowView strokes |
 
+## Phase 5 and 6 Guardrails
+
+| Area | Accepted behavior | Evidence |
+|---|---|---|
+| External consumption | Source subproject, local `FetchContent`, and installed-package consumers compile the same public API | `.github/integration` CI fixture |
+| Public headers | The umbrella entry remains available; category entries provide a smaller supported include surface | `CategoryHeaderProbe.cpp` |
+| Release metadata | CMake, vcpkg, English/Chinese README, and website release tags cannot drift silently | `validate-project-metadata.py` |
+| Gallery boundary | Gallery code cannot include private UILib implementation headers | `validate-gallery-boundary.py` |
+| Component routes | Every component route renders live public-API samples under Dark/RTL/disabled review states without escaping its card | `GalleryAcceptanceMatrixCoversEveryComponentRoute` |
+| Gallery DPI | Representative Gallery composition preserves logical geometry and physical DPR at 125%, 200%, and 300% | `GalleryAcceptanceScaleTest.*` |
+| Visual review | Button pointer/focus/disabled states and TreeView RTL receive deterministic Light/Dark snapshots | `ComponentStateMatrixVisualCheck` |
+
 ## Decisions Deliberately Deferred
 
 These are not locked as 1.4.x behavior by Phase 0:

@@ -209,11 +209,14 @@ QVector<GallerySample> buttonSamples()
                    }),
         makeSample(QStringLiteral("button-interaction-state"),
                    QStringLiteral("Interaction state preview"),
-                   QStringLiteral("Forced interaction states make hover, pressed, and disabled visuals easy to compare."),
-                   QStringLiteral("auto* hover = new Button(\"Hover\", this);\n"
+                   QStringLiteral("Forced pointer, keyboard-focus, and disabled states are shown side by side for review."),
+                   QStringLiteral("auto* rest = new Button(\"Rest\", this);\n\n"
+                                  "auto* hover = new Button(\"Hover\", this);\n"
                                   "hover->setInteractionState(Button::Hover);\n\n"
                                   "auto* pressed = new Button(\"Pressed\", this);\n"
                                   "pressed->setInteractionState(Button::Pressed);\n\n"
+                                  "auto* focused = new Button(\"Focus\", this);\n"
+                                  "focused->setFocusVisual(true);\n\n"
                                   "auto* disabled = new Button(\"Disabled\", this);\n"
                                   "disabled->setInteractionState(Button::Disabled);"),
                    [](QWidget* parent) {
@@ -223,11 +226,14 @@ QVector<GallerySample> buttonSamples()
                        hover->setInteractionState(Button::Hover);
                        auto* pressed = makeButton(group, QStringLiteral("Pressed"), Button::Standard);
                        pressed->setInteractionState(Button::Pressed);
+                       auto* focused = makeButton(group, QStringLiteral("Focus"), Button::Standard);
+                       focused->setFocusVisual(true);
                        auto* disabled = makeButton(group, QStringLiteral("Disabled"), Button::Standard);
                        disabled->setInteractionState(Button::Disabled);
                        group->layout()->addWidget(rest);
                        group->layout()->addWidget(hover);
                        group->layout()->addWidget(pressed);
+                       group->layout()->addWidget(focused);
                        group->layout()->addWidget(disabled);
                        return group;
                    }),

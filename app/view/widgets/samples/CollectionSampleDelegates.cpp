@@ -441,6 +441,23 @@ constexpr qreal kCheckBoxAreaW = 22.0;
 constexpr qreal kIconAreaW = 22.0;
 constexpr qreal kGap = 4.0;
 constexpr qreal kCursorStart = 12.0;
+
+qreal treeRowLeadingEdge(const QStyleOptionViewItem& option)
+{
+    return option.direction == Qt::RightToLeft
+        ? qreal(option.rect.x() + option.rect.width())
+        : qreal(option.rect.x());
+}
+
+QRectF treeRowRectFromLeading(const QStyleOptionViewItem& option, qreal offset,
+                              qreal width, qreal top, qreal height)
+{
+    const qreal leading = treeRowLeadingEdge(option);
+    const qreal x = option.direction == Qt::RightToLeft
+        ? leading - offset - width
+        : leading + offset;
+    return QRectF(x, top, width, height);
+}
 }
 
 TreeRowDelegate::TreeRowDelegate(fluent::FluentElement* themeHost, int rowHeight,
@@ -451,16 +468,22 @@ TreeRowDelegate::TreeRowDelegate(fluent::FluentElement* themeHost, int rowHeight
 
 QRectF TreeRowDelegate::bgRectForOption(const QStyleOptionViewItem& option) const
 {
-    // Span from this row's indented content edge to the viewport's right, so the rounded
-    // highlight tracks the item's hierarchy depth (like the accent pill) instead of bleeding
-    // a stray fill across the indentation gutter on the left.
-    // zh_CN: 从本行缩进后的内容左缘延伸到视口右缘，使圆角高亮随层级缩进（与强调指示条一致），
-    // 而非在左侧缩进留白处渗出一截多余填充。
-    const int vpRight = m_view && m_view->viewport() ? m_view->viewport()->width() - 2
-                                                     : option.rect.right();
-    return QRectF(option.rect.left() + 2, option.rect.top() + 2,
-                  qMax<qreal>(0.0, vpRight - (option.rect.left() + 2)),
-                  option.rect.height() - 4);
+    // Span from the indented logical-leading edge to the opposite viewport edge, so the
+    // rounded highlight follows hierarchy depth in both LTR and RTL layouts.
+    // zh_CN: 从缩进后的逻辑起始边延伸到视口另一侧，使圆角高亮在 LTR 与 RTL
+    // 布局中都随层级正确缩进。
+    const qreal viewportWidth = m_view && m_view->viewport()
+        ? qreal(m_view->viewport()->width())
+        : qreal(option.rect.x() + option.rect.width());
+    const qreal top = option.rect.top() + 2.0;
+    const qreal height = option.rect.height() - 4.0;
+    if (option.direction == Qt::RightToLeft) {
+        const qreal right = qreal(option.rect.x() + option.rect.width()) - 2.0;
+        return QRectF(2.0, top, qMax<qreal>(0.0, right - 2.0), height);
+    }
+
+    const qreal left = option.rect.left() + 2.0;
+    return QRectF(left, top, qMax<qreal>(0.0, viewportWidth - 2.0 - left), height);
 }
 
 QRectF TreeRowDelegate::checkBoxRectForOption(const QStyleOptionViewItem& option) const
@@ -468,16 +491,17 @@ QRectF TreeRowDelegate::checkBoxRectForOption(const QStyleOptionViewItem& option
     if (!m_checkBoxVisible)
         return {};
     const QRectF bg = bgRectForOption(option);
-    return QRectF(qreal(option.rect.left()) + kCursorStart, bg.top(), kCheckBoxAreaW, bg.height());
+    return treeRowRectFromLeading(option, kCursorStart, kCheckBoxAreaW,
+                                  bg.top(), bg.height());
 }
 
 QRectF TreeRowDelegate::chevronRectForOption(const QStyleOptionViewItem& option) const
 {
-    qreal x = qreal(option.rect.left()) + kCursorStart;
-    if (m_checkBoxVisible)
-        x += kCheckBoxAreaW + kGap;
     const QRectF bg = bgRectForOption(option);
-    return QRectF(x, bg.top(), kChevronAreaW, bg.height());
+    const qreal offset = kCursorStart
+        + (m_checkBoxVisible ? kCheckBoxAreaW + kGap : 0.0);
+    return treeRowRectFromLeading(option, offset, kChevronAreaW,
+                                  bg.top(), bg.height());
 }
 
 void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
@@ -537,15 +561,18 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         const qreal indicatorW = 3.0;
         const qreal fullH = 16.0;
         const qreal indicatorH = fullH * (0.35 + 0.65 * accentT);
-        const qreal settledX = qreal(option.rect.left()) + 4.0;
+        const bool rtl = option.direction == Qt::RightToLeft;
+        const qreal settledX = rtl
+            ? qreal(option.rect.x() + option.rect.width()) - 4.0 - indicatorW
+            : qreal(option.rect.left()) + 4.0;
         const qreal settledY = bgRect.center().y() - fullH / 2.0;
         const qreal remaining = 1.0 - accentT;
 
         qreal indicatorX = settledX;
         if (hierarchy == TreeView::IndicatorHierarchyTransition::Inward)
-            indicatorX += remaining * 4.0;
+            indicatorX += (rtl ? -1.0 : 1.0) * remaining * 4.0;
         else if (hierarchy == TreeView::IndicatorHierarchyTransition::Outward)
-            indicatorX -= remaining * 3.0;
+            indicatorX += (rtl ? 1.0 : -1.0) * remaining * 3.0;
 
         qreal indicatorY = bgRect.center().y() - indicatorH / 2.0;
         if (direction == TreeView::IndicatorVerticalDirection::Down)
@@ -563,11 +590,18 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         painter->drawPath(indicatorPath);
     }
 
-    qreal cursorX = qreal(option.rect.left()) + kCursorStart;
+    const bool rtl = option.direction == Qt::RightToLeft;
+    qreal cursorX = treeRowLeadingEdge(option) + (rtl ? -kCursorStart : kCursorStart);
+    const auto takeLeadingRect = [&](qreal width) {
+        const qreal x = rtl ? cursorX - width : cursorX;
+        const QRectF rect(x, bgRect.top(), width, bgRect.height());
+        cursorX += (rtl ? -1.0 : 1.0) * (width + kGap);
+        return rect;
+    };
 
     // Tri-state checkbox (multi-select).
     if (m_checkBoxVisible) {
-        const QRectF cbArea(cursorX, bgRect.top(), kCheckBoxAreaW, bgRect.height());
+        const QRectF cbArea = takeLeadingRect(kCheckBoxAreaW);
         const QVariant checkData = index.data(Qt::CheckStateRole);
         const auto state = checkData.isValid() ? static_cast<Qt::CheckState>(checkData.toInt())
                                                : Qt::Unchecked;
@@ -590,27 +624,26 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
             painter->setBrush(Qt::NoBrush);
             painter->drawPath(boxPath);
         }
-        cursorX += kCheckBoxAreaW + kGap;
     }
 
     // Rotating chevron for parents.
     const QAbstractItemModel* m = index.model();
     const bool hasChildren = m && m->hasChildren(index);
-    const qreal chevronLeft = cursorX;
+    const QRectF chevronRect = takeLeadingRect(kChevronAreaW);
     if (hasChildren) {
         const qreal rotation = m_view ? m_view->chevronRotation(index) : 0.0;
         QFont iconFont = Typography::Icons::font(Typography::IconSize::Compact);
         painter->setFont(iconFont);
         painter->setPen(textColor);
-        const QRectF chevronRect(chevronLeft, bgRect.top(), kChevronAreaW, bgRect.height());
         painter->save();
         painter->translate(chevronRect.center());
-        painter->rotate(rotation * 90.0);
+        painter->rotate((rtl ? -1.0 : 1.0) * rotation * 90.0);
         painter->translate(-chevronRect.center());
-        painter->drawText(chevronRect, Qt::AlignCenter, Typography::Icons::ChevronRightMed);
+        painter->drawText(chevronRect, Qt::AlignCenter,
+                          rtl ? Typography::Icons::ChevronLeftMed
+                              : Typography::Icons::ChevronRightMed);
         painter->restore();
     }
-    cursorX = chevronLeft + kChevronAreaW + kGap;
 
     // Per-row icon glyph.
     const QString glyph = index.data(TreeIconGlyphRole).toString();
@@ -626,18 +659,23 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
         QFont iconFont = Typography::Icons::font(Typography::IconSize::Standard);
         painter->setFont(iconFont);
         painter->setPen(glyphColor);
-        painter->drawText(QRectF(cursorX, bgRect.top(), kIconAreaW, bgRect.height()),
-                          Qt::AlignCenter, glyph);
-        cursorX += kIconAreaW + kGap;
+        painter->drawText(takeLeadingRect(kIconAreaW), Qt::AlignCenter, glyph);
     }
 
     // Text.
-    const QRectF textRect(cursorX, bgRect.top(), bgRect.right() - cursorX - 8.0, bgRect.height());
+    const QRectF textRect = rtl
+        ? QRectF(bgRect.left() + 8.0, bgRect.top(),
+                 qMax<qreal>(0.0, cursorX - bgRect.left() - 8.0), bgRect.height())
+        : QRectF(cursorX, bgRect.top(),
+                 qMax<qreal>(0.0, bgRect.right() - cursorX - 8.0), bgRect.height());
     painter->setPen(textColor);
     painter->setFont(option.font);
     const QString text = index.data(Qt::DisplayRole).toString();
-    painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter,
-                      painter->fontMetrics().elidedText(text, Qt::ElideRight, int(textRect.width())));
+    painter->drawText(textRect,
+                      (rtl ? Qt::AlignRight : Qt::AlignLeft) | Qt::AlignVCenter,
+                      painter->fontMetrics().elidedText(
+                          text, rtl ? Qt::ElideLeft : Qt::ElideRight,
+                          int(textRect.width())));
 
     painter->restore();
 }

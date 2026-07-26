@@ -56,6 +56,31 @@ Build a small matrix from the component tests before designing cards:
 Do not blindly create one card per test. Group closely related behavior when the
 UI reads as one concept, but do not mix unrelated concepts in a single card.
 
+## Acceptance Environments
+
+Gallery examples are also the app-level acceptance input for reusable controls.
+Every component route must build from public UILib APIs and survive these common
+preview environments without clipping or app-owned behavior fixes:
+
+| Environment | Evidence |
+| --- | --- |
+| Light and Dark | The component-page preview override plus semantic theme assertions |
+| LTR and RTL | The same live preview tree with its layout direction changed |
+| Enabled and disabled | The same preview tree with inherited enabled state changed |
+| Keyboard focus | A focusable live control receives tab focus when the component supports input |
+| Fractional/high DPI | The Gallery acceptance test runs in separate 125%, 200%, and 300% Qt processes |
+| Hover and pressed | A focused component sample or component test renders the real interaction state |
+
+Not every state applies to every component: a `Label`, for example, has no
+pressed state. Marking an unsupported state as if the Gallery implemented it is
+worse than leaving it out. High-contrast or reduced-motion behavior must first
+exist as a UILib contract; the Gallery must not simulate it with application-only
+style sheets or event filters.
+
+The Gallery boundary check rejects private UILib headers under `app/`. If an
+example needs a private implementation detail to look correct, fix the component
+and its focused tests instead.
+
 ## Card Contract
 
 Each `GallerySample` card should satisfy all of these requirements:
@@ -138,6 +163,12 @@ ctest --preset vcpkg-osx -L '^test_<component>$' --output-on-failure
 If the component has important visual behavior that is not covered by automated
 tests, use the VisualCheck binary or Gallery app for manual review. VisualCheck
 tests are interactive by design and may be skipped in automated CTest runs.
+
+For the cross-component acceptance matrix:
+
+```bash
+ctest --preset vcpkg-linux -L '^gallery_acceptance$' --output-on-failure
+```
 
 ## Final Report
 
