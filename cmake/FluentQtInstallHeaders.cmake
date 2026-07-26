@@ -4,7 +4,19 @@
 # src/. Paths are relative to the FluentQt source root.
 
 set(FLUENT_QT_INSTALL_HEADERS
+    include/FluentQt/BasicInput.h
+    include/FluentQt/Collections.h
+    include/FluentQt/DateTime.h
+    include/FluentQt/Design.h
+    include/FluentQt/DialogsFlyouts.h
     include/FluentQt/FluentQt.h
+    include/FluentQt/Foundation.h
+    include/FluentQt/MenusToolbars.h
+    include/FluentQt/Navigation.h
+    include/FluentQt/Scrolling.h
+    include/FluentQt/StatusInfo.h
+    include/FluentQt/TextFields.h
+    include/FluentQt/Windowing.h
 
     src/compatibility/FontCompat.h
     src/compatibility/QtCompat.h

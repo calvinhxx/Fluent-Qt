@@ -135,6 +135,19 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
 
 GalleryComponentReference galleryComponentReference(const QString& routeId)
 {
+    static const QHash<QString, QString> categoryHeaders = {
+        {QStringLiteral("basicinput"), QStringLiteral("<FluentQt/BasicInput.h>")},
+        {QStringLiteral("collections"), QStringLiteral("<FluentQt/Collections.h>")},
+        {QStringLiteral("date_time"), QStringLiteral("<FluentQt/DateTime.h>")},
+        {QStringLiteral("dialogs_flyouts"), QStringLiteral("<FluentQt/DialogsFlyouts.h>")},
+        {QStringLiteral("menus_toolbars"), QStringLiteral("<FluentQt/MenusToolbars.h>")},
+        {QStringLiteral("navigation"), QStringLiteral("<FluentQt/Navigation.h>")},
+        {QStringLiteral("scrolling"), QStringLiteral("<FluentQt/Scrolling.h>")},
+        {QStringLiteral("status_info"), QStringLiteral("<FluentQt/StatusInfo.h>")},
+        {QStringLiteral("textfields"), QStringLiteral("<FluentQt/TextFields.h>")},
+        {QStringLiteral("windowing"), QStringLiteral("<FluentQt/Windowing.h>")},
+    };
+
     for (const GalleryComponentCategory& category : galleryComponentCatalog()) {
         for (const GalleryComponentEntry& component : category.components) {
             if (component.id != routeId)
@@ -144,7 +157,8 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
                 ? component.title
                 : component.apiTypeName;
             return {
-                QStringLiteral("<FluentQt/FluentQt.h>"),
+                categoryHeaders.value(category.sourceDirectory,
+                                      QStringLiteral("<FluentQt/FluentQt.h>")),
                 QStringLiteral("fluent::%1::%2")
                     .arg(category.sourceDirectory, typeName),
                 QStringLiteral("FluentQt::FluentQt")

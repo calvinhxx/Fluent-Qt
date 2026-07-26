@@ -57,7 +57,7 @@ include(FetchContent)
 FetchContent_Declare(
     fluentqt
     GIT_REPOSITORY https://github.com/calvinhxx/Fluent-Qt.git
-    GIT_TAG main
+    GIT_TAG v1.4.2
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(fluentqt)
@@ -125,6 +125,11 @@ FluentQt follows the operating system display scale through Qt. Keep application
 geometry in device-independent coordinates and do not add a second app-level multiplier.
 
 See [`examples/hello_world`](examples/hello_world/) for the complete project, or run the `fluentqt_hello_world` target directly from an IDE.
+
+`<FluentQt/FluentQt.h>` remains the convenient complete entry point. Larger
+projects can reduce include cost with category entries such as
+`<FluentQt/BasicInput.h>`, `<FluentQt/Collections.h>`, or
+`<FluentQt/TextFields.h>`.
 
 ## 🛠 Build
 

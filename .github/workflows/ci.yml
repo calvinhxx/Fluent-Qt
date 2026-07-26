@@ -41,7 +41,10 @@ jobs:
 
       - name: Validate package catalog
         shell: bash
-        run: python3 .github/scripts/validate-package-matrix.py
+        run: |
+          python3 .github/scripts/validate-package-matrix.py
+          python3 .github/scripts/validate-project-metadata.py
+          python3 .github/scripts/validate-gallery-boundary.py
 
       - name: Detect documentation-only pull request
         id: changes
@@ -804,6 +807,20 @@ jobs:
         shell: bash
         run: cmake --build build/integration-source --parallel 4
 
+      - name: Configure FetchContent integration
+        shell: bash
+        run: |
+          cmake -S .github/integration -B build/integration-fetchcontent \
+            -DFLUENT_QT_INTEGRATION_MODE=FETCHCONTENT \
+            -DFLUENT_QT_SOURCE_DIR="$GITHUB_WORKSPACE" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=TRUE \
+            -DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE
+
+      - name: Build FetchContent integration
+        shell: bash
+        run: cmake --build build/integration-fetchcontent --parallel 4
+
       - name: Install FluentQt development component
         shell: bash
         run: |
@@ -837,7 +854,8 @@ jobs:
       - name: Configure installed-package integration
         shell: bash
         run: |
-          cmake -S examples/hello_world -B build/integration-installed \
+          cmake -S .github/integration -B build/integration-installed \
+            -DFLUENT_QT_INTEGRATION_MODE=INSTALLED \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/fluentqt" \
             -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=TRUE \
