@@ -27,6 +27,7 @@
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
@@ -397,7 +398,7 @@ void FlowView::paintEvent(QPaintEvent* event)
     Q_UNUSED(event);
     ensureLayout();
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const int radius = CornerRadius::Control;
 
     QPainter painter(viewport());
@@ -414,21 +415,28 @@ void FlowView::paintEvent(QPaintEvent* event)
     const QRect visibleContent(QPoint(0, verticalOffset()), viewport()->size());
     if (itemDelegate() && model()) {
         m_paintingWithOffsets = !m_dragOffsets.isEmpty();
-        for (int row = 0; row < m_itemRects.size(); ++row) {
-            if (!m_itemRects.at(row).intersects(visibleContent))
-                continue;
-            if (m_isDragging && m_dragSourceIndices.contains(row))
-                continue;
-            const QModelIndex index = indexForRow(row);
-            const QRect rect = visualRect(index);
-            QStyleOptionViewItem option = optionForIndex(index, rect);
-            itemDelegate()->paint(&painter, option, index);
+        const int firstBand = firstLayoutBandIntersectingY(visibleContent.top());
+        for (int bandIndex = firstBand; bandIndex < m_layoutBands.size(); ++bandIndex) {
+            const LayoutBand& band = m_layoutBands.at(bandIndex);
+            if (band.top > visibleContent.bottom())
+                break;
+            for (int row = band.firstRow; row < band.pastLastRow; ++row) {
+                if (!m_itemRects.at(row).intersects(visibleContent))
+                    continue;
+                if (m_isDragging && m_dragSourceIndices.contains(row))
+                    continue;
+                const QModelIndex index = indexForRow(row);
+                const QRect rect = visualRect(index);
+                QStyleOptionViewItem option = optionForIndex(index, rect);
+                itemDelegate()->paint(&painter, option, index);
+            }
         }
         m_paintingWithOffsets = false;
     }
 
     if (m_isDragging && m_dropTargetIndex >= 0) {
-        const QRect indicatorRect = contentToViewport(dropIndicatorRectForSlot(m_dropTargetIndex));
+        const QRect indicatorRect = contentToViewport(
+            dropIndicatorRectForSlot(m_dropTargetIndex));
         if (!indicatorRect.isEmpty()) {
             const int x = indicatorRect.left();
             const int yTop = indicatorRect.top();
@@ -452,9 +460,11 @@ void FlowView::paintEvent(QPaintEvent* event)
     }
 
     if (m_borderVisible) {
+        const auto stroke = fluent::painting::DpiPaintMetrics(painter).alignedStroke(
+            QRectF(viewport()->rect()), 1.0);
         QPainterPath borderPath;
-        borderPath.addRoundedRect(QRectF(viewport()->rect()).adjusted(0.5, 0.5, -0.5, -0.5), radius, radius);
-        painter.setPen(QPen(colors.strokeDefault, 1.0));
+        borderPath.addRoundedRect(stroke.rect, radius, radius);
+        painter.setPen(QPen(colors.strokeDefault, stroke.width));
         painter.setBrush(Qt::NoBrush);
         painter.drawPath(borderPath);
     }
@@ -550,6 +560,7 @@ void FlowView::mouseMoveEvent(QMouseEvent* event)
             m_dragSourceIndices.erase(std::unique(m_dragSourceIndices.begin(), m_dragSourceIndices.end()), m_dragSourceIndices.end());
             m_dropTargetIndex = -1;
             clearDragAnimations();
+            rebuildDropIndicatorRects();
             m_dragPixmap = renderDragPixmap();
         }
 
@@ -793,7 +804,7 @@ void FlowView::onThemeUpdated()
 
 void FlowView::applyThemeStyle()
 {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
 
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);
@@ -868,6 +879,8 @@ void FlowView::setViewportHovered(bool hovered)
 void FlowView::invalidateFlowLayout()
 {
     m_layoutDirty = true;
+    m_layoutBands.clear();
+    m_dropIndicatorRects.clear();
     syncFluentScrollBar();
     viewport()->update();
 }
@@ -904,20 +917,66 @@ void FlowView::ensureLayout() const
     if (!m_layoutDirty)
         return;
 
-    QList<int> rows;
-    rows.reserve(modelRowCount());
-    for (int row = 0; row < modelRowCount(); ++row)
-        rows.append(row);
+    const int count = modelRowCount();
+    const int left = m_contentMargins.left();
+    const int top = m_contentMargins.top();
+    const int availableWidth = qMax(
+        1, viewport()->width() - m_contentMargins.left() - m_contentMargins.right());
 
-    QHash<int, QRect> rects;
-    QSize contentSize;
-    computeLayoutForRows(rows, &rects, &contentSize);
+    m_itemRects.resize(count);
+    m_layoutBands.clear();
+    m_layoutBands.reserve(count);
 
-    m_itemRects.resize(modelRowCount());
-    for (int row = 0; row < modelRowCount(); ++row)
-        m_itemRects[row] = rects.value(row);
-    m_contentSize = contentSize;
+    int x = left;
+    int y = top;
+    int rowHeight = 0;
+    int maxRight = left;
+    int bandFirstRow = 0;
+
+    for (int row = 0; row < count; ++row) {
+        const QSize size = itemSizeForIndex(indexForRow(row));
+        if (x != left && x + size.width() > left + availableWidth) {
+            m_layoutBands.append(
+                LayoutBand{bandFirstRow, row, y, y + rowHeight - 1});
+            x = left;
+            y += rowHeight + m_vSpacing;
+            rowHeight = 0;
+            bandFirstRow = row;
+        }
+
+        const QRect rect(x, y, size.width(), size.height());
+        m_itemRects[row] = rect;
+        x += size.width() + m_hSpacing;
+        rowHeight = qMax(rowHeight, size.height());
+        maxRight = qMax(maxRight, rect.right() + 1);
+    }
+
+    if (count > 0)
+        m_layoutBands.append(
+            LayoutBand{bandFirstRow, count, y, y + rowHeight - 1});
+
+    const int totalHeight = count == 0
+        ? m_contentMargins.top() + m_contentMargins.bottom()
+        : y + rowHeight + m_contentMargins.bottom();
+    const int totalWidth = qMax(viewport()->width(), maxRight + m_contentMargins.right());
+    m_contentSize = QSize(totalWidth, qMax(totalHeight, viewport()->height()));
     m_layoutDirty = false;
+}
+
+int FlowView::firstLayoutBandIntersectingY(int contentY) const
+{
+    ensureLayout();
+
+    int first = 0;
+    int pastLast = m_layoutBands.size();
+    while (first < pastLast) {
+        const int middle = first + (pastLast - first) / 2;
+        if (m_layoutBands.at(middle).bottom < contentY)
+            first = middle + 1;
+        else
+            pastLast = middle;
+    }
+    return first;
 }
 
 void FlowView::computeLayoutForRows(const QList<int>& rows, QHash<int, QRect>* rects, QSize* contentSize) const
@@ -1039,21 +1098,32 @@ QModelIndex FlowView::nearestVerticalIndex(int currentRow, int direction) const
 
     const QRect current = m_itemRects.at(currentRow);
     const QPoint currentCenter = current.center();
+    const int currentBandIndex = firstLayoutBandIntersectingY(currentCenter.y());
     int bestRow = currentRow;
     qreal bestScore = std::numeric_limits<qreal>::max();
 
-    for (int row = 0; row < m_itemRects.size(); ++row) {
-        if (row == currentRow)
-            continue;
-        const QPoint center = m_itemRects.at(row).center();
-        const int dy = center.y() - currentCenter.y();
-        if ((direction < 0 && dy >= 0) || (direction > 0 && dy <= 0))
-            continue;
-        const int dx = center.x() - currentCenter.x();
-        const qreal score = std::abs(dy) * 4.0 + std::abs(dx);
-        if (score < bestScore) {
-            bestScore = score;
-            bestRow = row;
+    for (int bandIndex = currentBandIndex + (direction < 0 ? -1 : 1);
+         bandIndex >= 0 && bandIndex < m_layoutBands.size();
+         bandIndex += direction < 0 ? -1 : 1) {
+        const LayoutBand& band = m_layoutBands.at(bandIndex);
+        const int minimumDy = direction < 0
+            ? qMax(0, currentCenter.y() - band.bottom)
+            : qMax(0, band.top - currentCenter.y());
+        if (minimumDy * 4.0 > bestScore)
+            break;
+
+        for (int row = band.firstRow; row < band.pastLastRow; ++row) {
+            const QPoint center = m_itemRects.at(row).center();
+            const int dy = center.y() - currentCenter.y();
+            if ((direction < 0 && dy >= 0) || (direction > 0 && dy <= 0))
+                continue;
+            const int dx = center.x() - currentCenter.x();
+            const qreal score = std::abs(dy) * 4.0 + std::abs(dx);
+            if (score < bestScore || (qFuzzyCompare(score + 1.0, bestScore + 1.0)
+                                      && row < bestRow)) {
+                bestScore = score;
+                bestRow = row;
+            }
         }
     }
 
@@ -1083,28 +1153,105 @@ int FlowView::rowAt(const QPoint& point) const
 {
     ensureLayout();
     const QPoint contentPoint = viewportToContent(point);
-    for (int row = 0; row < m_itemRects.size(); ++row) {
+    const int bandIndex = firstLayoutBandIntersectingY(contentPoint.y());
+    if (bandIndex >= m_layoutBands.size())
+        return -1;
+
+    const LayoutBand& band = m_layoutBands.at(bandIndex);
+    if (contentPoint.y() < band.top || contentPoint.y() > band.bottom)
+        return -1;
+
+    for (int row = band.firstRow; row < band.pastLastRow; ++row) {
         if (m_itemRects.at(row).contains(contentPoint))
             return row;
     }
     return -1;
 }
 
-int FlowView::dropIndicatorIndex(const QPoint& point) const
+void FlowView::rebuildDropIndicatorRects() const
 {
     ensureLayout();
-    if (!model())
-        return 0;
+    m_dropIndicatorRects.clear();
+    if (!model() || m_dragSourceIndices.isEmpty())
+        return;
 
     const QSet<int> sourceRows(m_dragSourceIndices.begin(), m_dragSourceIndices.end());
+    QList<int> remaining;
+    remaining.reserve(qMax(0, modelRowCount() - sourceRows.size()));
+    for (int row = 0; row < modelRowCount(); ++row) {
+        if (!sourceRows.contains(row))
+            remaining.append(row);
+    }
+
+    const int sourceRow = m_dragSourceIndices.first();
+    if (sourceRow < 0 || sourceRow >= m_itemRects.size())
+        return;
+
+    const QSize sourceSize = m_itemRects.at(sourceRow).size();
+    const int left = m_contentMargins.left();
+    const int top = m_contentMargins.top();
+    const int availableWidth = qMax(
+        1, viewport()->width() - m_contentMargins.left() - m_contentMargins.right());
+
+    int x = left;
+    int y = top;
+    int rowHeight = 0;
+    QRect previousRect;
+    m_dropIndicatorRects.reserve(remaining.size() + 1);
+
+    for (int slot = 0; slot <= remaining.size(); ++slot) {
+        int sourceX = x;
+        int sourceY = y;
+        if (sourceX != left && sourceX + sourceSize.width() > left + availableWidth) {
+            sourceX = left;
+            sourceY += rowHeight + m_vSpacing;
+        }
+
+        const QRect sourceRect(sourceX, sourceY, sourceSize.width(), sourceSize.height());
+        int indicatorX = sourceRect.left();
+        const bool sameRow = previousRect.isValid()
+            && previousRect.bottom() >= sourceRect.top()
+            && previousRect.top() <= sourceRect.bottom()
+            && previousRect.right() < sourceRect.left();
+        if (sameRow)
+            indicatorX -= qMax(2, m_hSpacing / 2);
+        m_dropIndicatorRects.append(
+            QRect(indicatorX, sourceRect.top() + 2, 2,
+                  qMax(1, sourceRect.height() - 4)));
+
+        if (slot == remaining.size())
+            break;
+
+        const int modelRow = remaining.at(slot);
+        const QSize size = m_itemRects.at(modelRow).size();
+        if (x != left && x + size.width() > left + availableWidth) {
+            x = left;
+            y += rowHeight + m_vSpacing;
+            rowHeight = 0;
+        }
+        previousRect = QRect(x, y, size.width(), size.height());
+        x += size.width() + m_hSpacing;
+        rowHeight = qMax(rowHeight, size.height());
+    }
+}
+
+int FlowView::dropIndicatorIndex(const QPoint& point) const
+{
+    if (m_dropIndicatorRects.isEmpty())
+        rebuildDropIndicatorRects();
+    if (m_dropIndicatorRects.isEmpty())
+        return 0;
+
+    const QPoint contentPoint = viewportToContent(point);
     int bestSlot = 0;
     qreal bestDistance = std::numeric_limits<qreal>::max();
-    const int remainingCount = qMax(0, modelRowCount() - sourceRows.size());
-
-    for (int slot = 0; slot <= remainingCount; ++slot) {
-        const qreal distance = dropIndicatorDistance(point, slot);
-        if (!std::isfinite(distance))
-            continue;
+    for (int slot = 0; slot < m_dropIndicatorRects.size(); ++slot) {
+        const QRect indicatorRect = m_dropIndicatorRects.at(slot);
+        const int clampedY = qBound(
+            indicatorRect.top(), contentPoint.y(), indicatorRect.bottom());
+        const qreal distance = std::hypot(
+            contentPoint.x() - indicatorRect.left(),
+            contentPoint.y() - clampedY);
         if (distance < bestDistance) {
             bestDistance = distance;
             bestSlot = slot;
@@ -1115,41 +1262,11 @@ int FlowView::dropIndicatorIndex(const QPoint& point) const
 
 QRect FlowView::dropIndicatorRectForSlot(int slot) const
 {
-    ensureLayout();
-    if (!model() || m_dragSourceIndices.isEmpty())
+    if (m_dropIndicatorRects.isEmpty())
+        rebuildDropIndicatorRects();
+    if (slot < 0 || slot >= m_dropIndicatorRects.size())
         return QRect();
-
-    QSet<int> sourceRows(m_dragSourceIndices.begin(), m_dragSourceIndices.end());
-    QList<int> remaining;
-    for (int row = 0; row < modelRowCount(); ++row) {
-        if (!sourceRows.contains(row))
-            remaining.append(row);
-    }
-
-    const int insertAt = qBound(0, slot, remaining.size());
-    QList<int> order = remaining;
-    for (int i = 0; i < m_dragSourceIndices.size(); ++i)
-        order.insert(insertAt + i, m_dragSourceIndices.at(i));
-
-    QHash<int, QRect> finalRects;
-    QSize ignoredSize;
-    computeLayoutForRows(order, &finalRects, &ignoredSize);
-
-    const int sourceRow = m_dragSourceIndices.contains(m_dragSourceIndex) ? m_dragSourceIndex : m_dragSourceIndices.first();
-    const QRect sourceRect = finalRects.value(sourceRow);
-    if (sourceRect.isEmpty())
-        return QRect();
-
-    int x = sourceRect.left();
-    if (insertAt > 0 && insertAt - 1 < order.size()) {
-        const QRect previousRect = finalRects.value(order.at(insertAt - 1));
-        const bool sameRow = previousRect.isValid() && previousRect.bottom() >= sourceRect.top() &&
-                             previousRect.top() <= sourceRect.bottom() && previousRect.right() < sourceRect.left();
-        if (sameRow)
-            x = sourceRect.left() - qMax(2, m_hSpacing / 2);
-    }
-
-    return QRect(x, sourceRect.top() + 2, 2, qMax(1, sourceRect.height() - 4));
+    return m_dropIndicatorRects.at(slot);
 }
 
 qreal FlowView::dropIndicatorDistance(const QPoint& point, int slot) const
@@ -1211,72 +1328,86 @@ void FlowView::updateDragDisplacement()
     QSize ignoredSize;
     computeLayoutForRows(order, &finalRects, &ignoredSize);
 
+    QHash<int, QPointF> nextTargets;
+    nextTargets.reserve(modelRowCount());
     for (int row = 0; row < modelRowCount(); ++row) {
+        if (sourceRows.contains(row))
+            continue;
+
         QPointF target(0.0, 0.0);
-        if (!sourceRows.contains(row) && finalRects.contains(row)) {
+        if (finalRects.contains(row)) {
             const QPoint delta = finalRects.value(row).topLeft() - m_itemRects.value(row).topLeft();
             target = QPointF(delta);
         }
-
-        QVariantAnimation* oldAnim = m_dragAnims.value(row, nullptr);
-        QPointF current = m_dragOffsets.value(row, QPointF(0.0, 0.0));
-        if (oldAnim && oldAnim->currentValue().canConvert<QPointF>())
-            current = oldAnim->currentValue().toPointF();
-
-        if (oldAnim && m_dragTargetOffsets.contains(row) && pointsEqual(m_dragTargetOffsets.value(row), target))
-            continue;
-
-        if (oldAnim) {
-            oldAnim->stop();
-            oldAnim->deleteLater();
-            m_dragAnims.remove(row);
-        }
-
-        m_dragTargetOffsets[row] = target;
-        if (pointsEqual(current, target)) {
-            m_dragOffsets[row] = target;
-            continue;
-        }
-
-        auto* anim = new QVariantAnimation(this);
-        anim->setStartValue(current);
-        anim->setEndValue(target);
-        anim->setDuration(themeAnimation().fast);
-        anim->setEasingCurve(themeAnimation().decelerate);
-        connect(anim, &QVariantAnimation::valueChanged, this, [this, row](const QVariant& value) {
-            m_dragOffsets[row] = value.toPointF();
-            viewport()->update();
-        });
-        connect(anim, &QVariantAnimation::finished, this, [this, row, target]() {
-            m_dragOffsets[row] = target;
-            if (auto* stored = m_dragAnims.value(row, nullptr)) {
-                m_dragAnims.remove(row);
-                stored->deleteLater();
-            }
-            viewport()->update();
-        });
-        m_dragAnims[row] = anim;
-        anim->start();
+        if (!pointsEqual(target, QPointF()) || m_dragOffsets.contains(row))
+            nextTargets.insert(row, target);
     }
+
+    if (m_dragAnimation) {
+        m_dragAnimation->stop();
+        m_dragAnimation->deleteLater();
+        m_dragAnimation = nullptr;
+    }
+
+    m_dragStartOffsets.clear();
+    m_dragTargetOffsets = nextTargets;
+    bool needsAnimation = false;
+    for (auto it = m_dragTargetOffsets.cbegin(); it != m_dragTargetOffsets.cend(); ++it) {
+        const QPointF start = m_dragOffsets.value(it.key(), QPointF());
+        m_dragStartOffsets.insert(it.key(), start);
+        needsAnimation = needsAnimation || !pointsEqual(start, it.value());
+    }
+
+    if (!needsAnimation) {
+        m_dragOffsets = m_dragTargetOffsets;
+        viewport()->update();
+        return;
+    }
+
+    const auto animationTokens = themeAnimation();
+    auto* animation = new QVariantAnimation(this);
+    animation->setObjectName(QStringLiteral("_q_fluentFlowDragDisplacementAnimation"));
+    m_dragAnimation = animation;
+    animation->setStartValue(0.0);
+    animation->setEndValue(1.0);
+    animation->setDuration(animationTokens.fast);
+    animation->setEasingCurve(animationTokens.decelerate);
+    connect(animation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
+        const qreal progress = value.toReal();
+        for (auto it = m_dragTargetOffsets.cbegin(); it != m_dragTargetOffsets.cend(); ++it) {
+            const QPointF start = m_dragStartOffsets.value(it.key(), QPointF());
+            m_dragOffsets[it.key()] = start + (it.value() - start) * progress;
+        }
+        viewport()->update();
+    });
+    connect(animation, &QVariantAnimation::finished, this, [this, animation]() {
+        if (m_dragAnimation != animation)
+            return;
+        m_dragOffsets = m_dragTargetOffsets;
+        m_dragAnimation = nullptr;
+        animation->deleteLater();
+        viewport()->update();
+    });
+    animation->start();
 }
 
 void FlowView::resetDragReorderFeedback()
 {
     m_dropTargetIndex = -1;
+    m_dropIndicatorRects.clear();
     m_dragPixmap = QPixmap();
     clearDragAnimations();
 }
 
 void FlowView::clearDragAnimations()
 {
-    for (QVariantAnimation* anim : m_dragAnims) {
-        if (!anim)
-            continue;
-        anim->stop();
-        anim->deleteLater();
+    if (m_dragAnimation) {
+        m_dragAnimation->stop();
+        m_dragAnimation->deleteLater();
+        m_dragAnimation = nullptr;
     }
-    m_dragAnims.clear();
     m_dragOffsets.clear();
+    m_dragStartOffsets.clear();
     m_dragTargetOffsets.clear();
 }
 
@@ -1332,7 +1463,7 @@ QPixmap FlowView::renderDragPixmap() const
     }
 
     painter.setOpacity(1.0);
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     constexpr int badgeSize = 20;
     const QRect badgeRect(compositeSize.width() - badgeSize - 2, 2, badgeSize, badgeSize);
     painter.setBrush(colors.accentDefault);

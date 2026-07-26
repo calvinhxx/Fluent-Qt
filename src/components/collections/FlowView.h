@@ -234,6 +234,13 @@ protected:
     void onThemeUpdated() override;
 
 private:
+    struct LayoutBand {
+        int firstRow = 0;
+        int pastLastRow = 0;
+        int top = 0;
+        int bottom = 0;
+    };
+
     void applyThemeStyle();
     void layoutHeader();
     void updateViewportMargins();
@@ -256,7 +263,9 @@ private:
     void clearModelConnections();
     void connectModelSignals(QAbstractItemModel* model);
 
+    int firstLayoutBandIntersectingY(int contentY) const;
     int rowAt(const QPoint& point) const;
+    void rebuildDropIndicatorRects() const;
     int dropIndicatorIndex(const QPoint& point) const;
     QRect dropIndicatorRectForSlot(int slot) const;
     qreal dropIndicatorDistance(const QPoint& point, int slot) const;
@@ -293,6 +302,7 @@ private:
 
     mutable bool m_layoutDirty = true;
     mutable QVector<QRect> m_itemRects;
+    mutable QVector<LayoutBand> m_layoutBands;
     mutable QSize m_contentSize;
 
     QList<QMetaObject::Connection> m_modelConnections;
@@ -306,9 +316,11 @@ private:
     int m_dragSourceIndex = -1;
     QList<int> m_dragSourceIndices;
     int m_dropTargetIndex = -1;
+    mutable QVector<QRect> m_dropIndicatorRects;
     QHash<int, QPointF> m_dragOffsets;
+    QHash<int, QPointF> m_dragStartOffsets;
     QHash<int, QPointF> m_dragTargetOffsets;
-    QHash<int, QVariantAnimation*> m_dragAnims;
+    QVariantAnimation* m_dragAnimation = nullptr;
     mutable bool m_paintingWithOffsets = false;
 };
 

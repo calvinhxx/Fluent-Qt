@@ -112,6 +112,50 @@ public:
     int exposedVerticalOffset() const { return verticalOffset(); }
 };
 
+class LargeFlowModel final : public QAbstractListModel {
+public:
+    explicit LargeFlowModel(int rowCount, QObject* parent = nullptr)
+        : QAbstractListModel(parent)
+        , m_rowCount(rowCount)
+    {
+    }
+
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : m_rowCount;
+    }
+
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override
+    {
+        if (!index.isValid() || index.row() < 0 || index.row() >= m_rowCount)
+            return {};
+        if (role == Qt::DisplayRole)
+            return QString::number(index.row());
+        if (role == Qt::SizeHintRole)
+            return QSize(96, 36);
+        return {};
+    }
+
+private:
+    int m_rowCount = 0;
+};
+
+class CountingFlowDelegate final : public QStyledItemDelegate {
+public:
+    using QStyledItemDelegate::QStyledItemDelegate;
+
+    void paint(QPainter*, const QStyleOptionViewItem&, const QModelIndex&) const override
+    {
+        ++m_paintCount;
+    }
+
+    void resetPaintCount() const { m_paintCount = 0; }
+    int paintCount() const { return m_paintCount; }
+
+private:
+    mutable int m_paintCount = 0;
+};
+
 void processEvents()
 {
     QApplication::processEvents();
@@ -125,6 +169,14 @@ void showOffscreen(QWidget* widget)
     widget->show();
     QTest::qWait(50);
     processEvents();
+}
+
+void sendMouseEvent(QWidget* target, QEvent::Type type, const QPoint& position,
+                    Qt::MouseButton button, Qt::MouseButtons buttons,
+                    Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+{
+    FLUENT_MAKE_MOUSE_EVENT(event, type, target, position, button, buttons, modifiers);
+    QApplication::sendEvent(target, &event);
 }
 
 QStandardItemModel* createModel(QObject* parent, const QStringList& labels, const QList<QSize>& roleSizes = {},
@@ -507,6 +559,43 @@ TEST_F(FlowViewTest, PointerSelectionKeyboardNavigationAndDisabledState)
     EXPECT_EQ(clickSpy.count(), 0);
 }
 
+TEST_F(FlowViewTest, LargeModelPaintAndHitTestingStayViewportBounded)
+{
+    constexpr int kRowCount = 20000;
+
+    auto* flow = new FlowView(window);
+    flow->setGeometry(0, 0, 360, 220);
+    flow->setContentMargins(QMargins());
+    flow->setHorizontalSpacing(8);
+    flow->setVerticalSpacing(8);
+
+    auto* model = new LargeFlowModel(kRowCount, flow);
+    auto* delegate = new CountingFlowDelegate(flow);
+    flow->setItemDelegate(delegate);
+    flow->setModel(model);
+    showOffscreen(window);
+
+    const QModelIndex last = model->index(kRowCount - 1, 0);
+    flow->scrollTo(last, QAbstractItemView::PositionAtBottom);
+    processEvents();
+
+    const QRect lastRect = flow->visualRect(last);
+    ASSERT_TRUE(lastRect.isValid());
+    ASSERT_TRUE(flow->viewport()->rect().intersects(lastRect));
+    EXPECT_EQ(flow->indexAt(lastRect.center()), last);
+
+    delegate->resetPaintCount();
+    QImage image(flow->viewport()->size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    flow->viewport()->render(&painter);
+    painter.end();
+
+    EXPECT_GT(delegate->paintCount(), 0);
+    EXPECT_LT(delegate->paintCount(), 100)
+        << "A viewport repaint must delegate only visible large-model rows";
+}
+
 TEST_F(FlowViewTest, MultiSelectRequiresControlClickAndDragDoesNotRubberBandSelect)
 {
     auto* flow = new FlowView(window);
@@ -537,10 +626,6 @@ TEST_F(FlowViewTest, MultiSelectRequiresControlClickAndDragDoesNotRubberBandSele
 
 TEST_F(FlowViewTest, DragReorderUsesVariableGeometryAndPreservesSelection)
 {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     auto* flow = new FlowView(window);
     flow->setGeometry(0, 0, 360, 220);
     flow->setContentMargins(QMargins());
@@ -562,10 +647,18 @@ TEST_F(FlowViewTest, DragReorderUsesVariableGeometryAndPreservesSelection)
     const QPoint dragStart = start + QPoint(QApplication::startDragDistance() + 4, 0);
     const QPoint dropPoint(targetRect.right() + 18, targetRect.center().y());
 
-    QTest::mousePress(flow->viewport(), Qt::LeftButton, Qt::NoModifier, start);
-    QTest::mouseMove(flow->viewport(), dragStart);
-    QTest::mouseMove(flow->viewport(), dropPoint);
-    QTest::mouseRelease(flow->viewport(), Qt::LeftButton, Qt::NoModifier, dropPoint);
+    sendMouseEvent(flow->viewport(), QEvent::MouseButtonPress, start, Qt::LeftButton,
+                   Qt::LeftButton);
+    sendMouseEvent(flow->viewport(), QEvent::MouseMove, dragStart, Qt::NoButton,
+                   Qt::LeftButton);
+    sendMouseEvent(flow->viewport(), QEvent::MouseMove, dropPoint, Qt::NoButton,
+                   Qt::LeftButton);
+    EXPECT_LE(flow->findChildren<QVariantAnimation*>(
+                       QStringLiteral("_q_fluentFlowDragDisplacementAnimation"))
+                  .size(),
+              1);
+    sendMouseEvent(flow->viewport(), QEvent::MouseButtonRelease, dropPoint, Qt::LeftButton,
+                   Qt::NoButton);
     processEvents();
 
     ASSERT_EQ(reorderSpy.count(), 1);
@@ -577,10 +670,6 @@ TEST_F(FlowViewTest, DragReorderUsesVariableGeometryAndPreservesSelection)
 
 TEST_F(FlowViewTest, DragReorderWithoutModifierSelectsOnlyDraggedItem)
 {
-    if (tests::support::isHeadlessPlatform()) {
-        GTEST_SKIP() << "Requires a real windowing platform; offscreen cannot deliver "
-                        "synthetic pointer/keyboard input or show native popups.";
-    }
     auto* flow = new FlowView(window);
     flow->setGeometry(0, 0, 360, 220);
     flow->setSelectionMode(SelectionMode::Extended);
@@ -605,10 +694,14 @@ TEST_F(FlowViewTest, DragReorderWithoutModifierSelectsOnlyDraggedItem)
     const QPoint dragStart = start + QPoint(QApplication::startDragDistance() + 4, 0);
     const QPoint dropPoint(targetRect.right() + 18, targetRect.center().y());
 
-    QTest::mousePress(flow->viewport(), Qt::LeftButton, Qt::NoModifier, start);
-    QTest::mouseMove(flow->viewport(), dragStart);
-    QTest::mouseMove(flow->viewport(), dropPoint);
-    QTest::mouseRelease(flow->viewport(), Qt::LeftButton, Qt::NoModifier, dropPoint);
+    sendMouseEvent(flow->viewport(), QEvent::MouseButtonPress, start, Qt::LeftButton,
+                   Qt::LeftButton);
+    sendMouseEvent(flow->viewport(), QEvent::MouseMove, dragStart, Qt::NoButton,
+                   Qt::LeftButton);
+    sendMouseEvent(flow->viewport(), QEvent::MouseMove, dropPoint, Qt::NoButton,
+                   Qt::LeftButton);
+    sendMouseEvent(flow->viewport(), QEvent::MouseButtonRelease, dropPoint, Qt::LeftButton,
+                   Qt::NoButton);
     processEvents();
 
     const QList<int> selectedRows = flow->selectedRows();
@@ -809,5 +902,10 @@ TEST_F(FlowViewTest, VisualCheck)
 
     window->onThemeUpdated();
     window->show();
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window));
+        return;
+    }
+
     qApp->exec();
 }
