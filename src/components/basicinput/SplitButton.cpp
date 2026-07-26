@@ -179,7 +179,7 @@ void SplitButton::paintEvent(QPaintEvent*) {
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 

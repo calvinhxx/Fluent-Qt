@@ -480,7 +480,7 @@ void Dialog::paintEvent(QPaintEvent*)
     const QRect contentRect = rect().adjusted(m_shadowSize, m_shadowSize, -m_shadowSize, -m_shadowSize);
     drawShadow(painter, contentRect);
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const DesignLanguage lang = themeDesignLanguage();
 
     fluent::painting::RoundedSurfacePaint surface;

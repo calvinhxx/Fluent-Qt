@@ -250,7 +250,7 @@ void GridView::setSelectedIndex(int index) {
 // ── Paint ─────────────────────────────────────────────────────────────────────
 
 void GridView::paintEvent(QPaintEvent* event) {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
 
     // --- 1. Container background. zh_CN: 绘制容器背景。---
@@ -444,7 +444,7 @@ void GridView::onThemeUpdated() {
 }
 
 void GridView::applyThemeStyle() {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
 
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);
@@ -762,7 +762,7 @@ QPixmap GridView::renderDragPixmap() const {
 
     // Draw count badge at top-right
     p.setOpacity(1.0);
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     const int badgeSize = 20;
     const int badgeX = compositeW - badgeSize - 2;
     const int badgeY = 2;

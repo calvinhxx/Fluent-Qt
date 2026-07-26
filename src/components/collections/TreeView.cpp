@@ -595,7 +595,7 @@ void TreeView::setHorizontalFluentScrollBarEnabled(bool enabled) {
 // ── Paint ─────────────────────────────────────────────────────────────────────
 
 void TreeView::paintEvent(QPaintEvent* event) {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
     const bool preserveParentSurface =
         property("fluentPreserveParentSurface").toBool()
@@ -1509,7 +1509,7 @@ void TreeView::paintSelectedIndicator(QPainter& painter) const {
     if (themeDesignLanguage() != DesignFluent)
         return;
 
-    if (!selectionModel() || !themeColors().accentDefault.isValid())
+    if (!selectionModel() || !themeColorsRef().accentDefault.isValid())
         return;
 
     const QRectF rect = currentSelectedIndicatorRect();
@@ -1518,7 +1518,7 @@ void TreeView::paintSelectedIndicator(QPainter& painter) const {
 
     const qreal radius = rect.width() / 2.0;
     painter.setPen(Qt::NoPen);
-    painter.setBrush(themeColors().accentDefault);
+    painter.setBrush(themeColorsRef().accentDefault);
     painter.drawRoundedRect(rect, radius, radius);
 }
 
@@ -1562,7 +1562,7 @@ void TreeView::onThemeUpdated() {
 }
 
 void TreeView::applyThemeStyle() {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
 
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);

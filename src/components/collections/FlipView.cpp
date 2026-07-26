@@ -51,7 +51,7 @@ protected:
         p.setRenderHint(QPainter::Antialiasing);
 
         auto radius = m_fv->themeRadius();
-        const auto& c = m_fv->themeColors();
+        const auto& c = m_fv->themeColorsRef();
         qreal r = radius.control;
 
         // Corner mask: fill the outer corners with the surrounding surface color (antialiased).
@@ -365,7 +365,7 @@ void FlipView::paintEvent(QPaintEvent*)
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
 
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     auto radius = themeRadius();
 
     // ── Background. zh_CN: 背景 ──
@@ -381,7 +381,7 @@ void FlipView::paintEvent(QPaintEvent*)
 void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
                               bool hovered, bool pressed)
 {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     const DesignLanguage lang = themeDesignLanguage();
 
     // Theme-aware interaction veil: DARKENS light surfaces, LIGHTENS dark ones so hover/press stay
@@ -461,7 +461,7 @@ void FlipView::drawNavButton(QPainter& p, const QRect& btnRect, bool isNext,
 
 void FlipView::drawPageIndicator(QPainter& p)
 {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     const DesignLanguage lang = themeDesignLanguage();
     QRect indRect = pageIndicatorRect();
     if (indRect.isNull()) return;

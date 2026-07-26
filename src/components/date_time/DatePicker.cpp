@@ -302,7 +302,7 @@ void PickerColumn::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto radius = themeRadius();
 
     // macOS child widgets lack per-pixel alpha compositing; fill the background
@@ -707,7 +707,7 @@ void DatePickerFlyoutPanel::paintEvent(QPaintEvent*)
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
 
     painter.setPen(colors.strokeDivider);
     int x = kPopupCardInset;
@@ -1262,7 +1262,7 @@ void DatePicker::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto radius = themeRadius();
     const QRect surface = fieldSurfaceRect();
     if (surface.isEmpty())

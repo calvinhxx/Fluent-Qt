@@ -453,7 +453,7 @@ void SplitView::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     for (int index = 0; index < m_handleRects.size(); ++index) {
         const QRect handleRect = m_handleRects.at(index);
         QColor color = colors.strokeDivider;

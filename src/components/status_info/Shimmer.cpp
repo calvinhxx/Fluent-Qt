@@ -398,7 +398,7 @@ void Shimmer::updateTemplateElements()
 
 void Shimmer::updateThemePalette()
 {
-    m_palette = ShimmerPainter::paletteFromTheme(themeColors(), isEnabled());
+    m_palette = ShimmerPainter::paletteFromTheme(themeColorsRef(), isEnabled());
 }
 
 void Shimmer::updateAnimationState()

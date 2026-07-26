@@ -58,7 +58,7 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     applyLayoutMargins();
 
     // 3. Initial colors. zh_CN: 初始颜色设置。
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     m_bgColor = c.bgLayer;  // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = c.textPrimary;
@@ -168,7 +168,7 @@ void ToolTip::setVisible(bool visible) {
 }
 
 void ToolTip::onThemeUpdated() {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     m_bgColor = c.bgLayer;  // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
     m_borderColor = c.strokeDivider;
     m_textColor = c.textPrimary;

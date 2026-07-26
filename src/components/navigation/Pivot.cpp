@@ -894,7 +894,7 @@ void Pivot::scrollOverflow(int direction)
 
 void Pivot::paintBackground(QPainter& painter) const
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     painter.fillRect(rect(), colors.bgLayer);
     painter.fillRect(QRect(0, 0, width(), m_headerRowRect.bottom() + 1), colors.bgLayer);
 }
@@ -904,7 +904,7 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
     if (record.rect.isEmpty() || !isValidIndex(record.itemIndex))
         return;
     const Metrics currentMetrics = metrics();
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
 
     // Branch the header treatment per brand, preserving DesignFluent exactly. M3 and macOS
     // diverge from Fluent's neutral underline: M3 recolors the active label and rounds the
@@ -1025,7 +1025,9 @@ void Pivot::paintOverflowButton(QPainter& painter, const QRect& rect, const QStr
         return;
     painter.save();
     const bool highlighted = sameHit(m_pressedHit, hit) || sameHit(m_hoveredHit, hit);
-    painter.setPen(enabled ? (highlighted ? themeColors().textPrimary : themeColors().textSecondary) : themeColors().textDisabled);
+    const auto& colors = themeColorsRef();
+    painter.setPen(enabled ? (highlighted ? colors.textPrimary : colors.textSecondary)
+                           : colors.textDisabled);
     if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
         Typography::Icons::paintGlyph(
             painter, QRectF(rect), glyph, metrics().iconSize, Qt::AlignCenter);
@@ -1039,11 +1041,11 @@ void Pivot::paintOverflowButton(QPainter& painter, const QRect& rect, const QStr
 QColor Pivot::headerTextColor(int index) const
 {
     if (!isEnabled() || !isValidIndex(index) || !m_items.at(index).enabled)
-        return themeColors().textDisabled;
+        return themeColorsRef().textDisabled;
     const HitRecord hit{HitKind::Header, index};
     if (index == m_selectedIndex || sameHit(m_pressedHit, hit) || sameHit(m_hoveredHit, hit))
-        return themeColors().textPrimary;
-    return themeColors().textSecondary;
+        return themeColorsRef().textPrimary;
+    return themeColorsRef().textSecondary;
 }
 
 } // namespace fluent::navigation

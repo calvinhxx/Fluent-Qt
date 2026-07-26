@@ -204,7 +204,7 @@ int FluentElement::themeBreakpoint(Breakpoints::Breakpoint breakpoint) const {
 }
 
 QColor FluentElement::themeBackdrop(bool active) const {
-    const Colors c = themeColors();
+    const Colors& c = themeColorsRef();
     if (active)
         return c.bgCanvas;  // Standard chrome tint, consistent with the rest of the surfaces.
     // Inactive: wash the canvas tint most of the way toward the content layer so the chrome

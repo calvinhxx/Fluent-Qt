@@ -80,7 +80,7 @@ void ToggleButton::paintBrandSurface(QPaintEvent*) {
         painter.setOpacity(contentOpacity());
     painter.setFont(font());
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const DesignLanguage lang = themeDesignLanguage();
     const bool checked = isChecked();
 
@@ -256,7 +256,7 @@ void ToggleButton::paintEvent(QPaintEvent* event) {
 
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
-        const auto& colors = themeColors();
+        const auto& colors = themeColorsRef();
 
         // A small bottom bar marks the indeterminate state. zh_CN: 底部小横条表示中间态。
         int barHeight = 2;

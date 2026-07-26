@@ -122,7 +122,7 @@ void Label::onThemeUpdated() {
 }
 
 QColor Label::resolveTextColor() const {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     switch (m_textColorRole) {
     case TextColorRole::Secondary: return c.textSecondary;
     case TextColorRole::Tertiary:  return c.textTertiary;

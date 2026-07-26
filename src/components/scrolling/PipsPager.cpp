@@ -737,7 +737,7 @@ void PipsPager::drawButton(QPainter& painter, const QRect& buttonRect, bool prev
 
 QColor PipsPager::pipColor(bool selected) const
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     if (!isEnabled()) {
         return colors.textDisabled;
     }
@@ -769,7 +769,7 @@ QColor PipsPager::pipColor(bool selected) const
 
 QColor PipsPager::caretColor(const HitTarget& target) const
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     if (!isEnabled()) return colors.textDisabled;
     if (m_pressedTarget == target || m_hoveredTarget == target) return colors.textPrimary;
     return colors.textSecondary;
@@ -777,7 +777,7 @@ QColor PipsPager::caretColor(const HitTarget& target) const
 
 QColor PipsPager::buttonFillColor(const HitTarget& target) const
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     if (!isEnabled()) return QColor(Qt::transparent);
 
     const bool hovered = (m_hoveredTarget == target);

@@ -191,7 +191,7 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
     p.setRenderHint(QPainter::Antialiasing);
     p.setRenderHint(QPainter::TextAntialiasing);
 
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     bool enabled = isEnabled();
 
     // Resolve the active design language and theme polarity, mirroring Button::paintEvent.

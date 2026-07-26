@@ -245,7 +245,7 @@ void ComboBox::ComboBoxPopup::showForComboBox() {
 void ComboBox::ComboBoxPopup::onThemeUpdated() {
     Flyout::onThemeUpdated();
     QPalette pal = palette();
-    pal.setColor(QPalette::Window, themeColors().bgLayer);
+    pal.setColor(QPalette::Window, themeColorsRef().bgLayer);
     setPalette(pal);
 
     if (m_comboBox) {
@@ -678,7 +678,7 @@ void ComboBox::paintEvent(QPaintEvent*) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& radius = themeRadius();
 
     const bool enabled = isEnabled();

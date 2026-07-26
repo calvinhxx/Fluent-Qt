@@ -70,7 +70,7 @@ public:
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing);
 
-        const auto colors = m_themeHost->themeColors();
+        const auto& colors = m_themeHost->themeColorsRef();
         const bool selected = option.state & QStyle::State_Selected;
         const bool hovered = option.state & QStyle::State_MouseOver;
         const bool enabled = option.state & QStyle::State_Enabled;
@@ -731,7 +731,7 @@ bool AutoSuggestBox::paintBrandInputFrame(QPainter& painter) {
     const auto lang = themeDesignLanguage();
     if (lang == DesignFluent) return false;
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const QRectF base = QRectF(inputRect());
     const fluent::painting::DpiPaintMetrics paintMetrics(painter);
 
@@ -803,7 +803,7 @@ bool AutoSuggestBox::paintBrandInputFrame(QPainter& painter) {
 }
 
 void AutoSuggestBox::paintInputFrame(QPainter& painter) {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const fluent::painting::DpiPaintMetrics paintMetrics(painter);
     const auto frameStroke = paintMetrics.alignedStroke(QRectF(inputRect()), 1.0);
     const QRectF frameRect = frameStroke.rect;
@@ -867,7 +867,7 @@ void AutoSuggestBox::paintInputFrame(QPainter& painter) {
 }
 
 void AutoSuggestBox::paintHeader(QPainter& painter) {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     painter.setPen(colors.textPrimary);
     painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
     const QRect headerRect(0, 0, width(), kHeaderHeight);

@@ -547,7 +547,7 @@ void AnnotatedScrollBar::onThemeUpdated()
 
 void AnnotatedScrollBar::updateColors()
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const bool isDark = effectiveTheme() == FluentElement::Dark;
 
     m_labelColor = colors.textPrimary;

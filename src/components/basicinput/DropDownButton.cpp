@@ -159,7 +159,7 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
     // (Button::paintEvent already drew that surface in the matching language above). Fluent is the
     // UNCHANGED default. zh_CN: 图标颜色复用 Button 的语义色,按压时做细微变化。下拉箭头按设计语言分支着色,
     // 使其在各品牌表面(上方 Button::paintEvent 已按对应语言绘制)上都清晰可读。Fluent 为默认且保持不变。
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     // Filled surface matches Button's rule (Accent, or a checked Standard): the chevron then needs the
     // on-accent color to stay legible; otherwise it follows the brand's neutral/secondary text.
     // zh_CN: 填充表面与 Button 规则一致(Accent 或选中的 Standard):此时箭头需用 on-accent 色才清晰;否则随品牌的中性/次要文字色。

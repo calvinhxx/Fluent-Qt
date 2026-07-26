@@ -121,7 +121,7 @@ void FluentMenuBar::paintEvent(QPaintEvent*)
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const Metrics currentMetrics = metrics();
     if (m_backgroundVisible)
         painter.fillRect(rect(), colors.bgCanvas);

@@ -22,12 +22,19 @@
 #include "components/foundation/FluentElement.h"
 #include "components/basicinput/Button.h"
 #include "components/textfields/Label.h"
+#include "design/ThemeColors.h"
 #include "design/Typography.h"
 #include "QtTestEnvironment.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
 using namespace fluent::textfields;
+
+const QString* typographyProbeUiFamilyAddress();
+const QString* typographyProbeBackIconAddress();
+const Typography::FontStyle* typographyProbeBodyStyleAddress();
+const QColor* themeColorProbeLightAccentAddress();
+const std::vector<QColor>* themeColorProbeDarkChartsAddress();
 
 // =============================================================================
 // 1. IconFont 测试部分（保留原有功能）
@@ -497,6 +504,15 @@ private:
 // =============================================================================
 
 class TypographyTest : public ::testing::Test {};
+
+TEST_F(TypographyTest, DynamicTokensHaveOneLinkedDefinition) {
+    EXPECT_EQ(typographyProbeUiFamilyAddress(), &Typography::FontFamily::UI);
+    EXPECT_EQ(typographyProbeBackIconAddress(), &Typography::Icons::Back);
+    EXPECT_EQ(typographyProbeBodyStyleAddress(), &Typography::Styles::Body);
+    EXPECT_EQ(themeColorProbeLightAccentAddress(),
+              &ThemeColors::Light::Fill::AccentDefault);
+    EXPECT_EQ(themeColorProbeDarkChartsAddress(), &ThemeColors::Dark::Charts);
+}
 
 TEST_F(TypographyTest, BundledTypographyRolesResolveExactStaticFaces) {
     struct ExpectedRole {

@@ -280,7 +280,7 @@ void ContentDialog::paintEvent(QPaintEvent*) {
     const QRect contentRect = rect().adjusted(s, s, -s, -s);
     drawShadow(painter, contentRect);
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const int r = themeRadius().overlay;
     const DesignLanguage lang = themeDesignLanguage();
 

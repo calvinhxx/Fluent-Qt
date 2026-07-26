@@ -110,7 +110,7 @@ public:
         const int headerH = isStart ? sectionHeaderHeight() : 0;
 
         if (isStart) {
-            const auto& c = m_listView->themeColors();
+            const auto& c = m_listView->themeColorsRef();
             const QFont titleFont = m_listView->themeFont(Typography::FontRole::Title).toQFont();
             const QFontMetrics titleFm(titleFont);
             const int hPad = ::Spacing::Padding::ListItemHorizontal;
@@ -724,7 +724,7 @@ QPixmap ListView::renderItemPixmap(int row) const {
     // its corner mask. zh_CN: 用列表真正所在的表面色填充，而非写死 bgLayer：本应用不装全局暗色 QPalette（靠绘制上主题），
     // 且列表常被托管在别的表面上（如画廊示例卡的 bgLayerAlt），写死 bgLayer 会在拖拽行后面显示成不匹配的色块。
     // 向上查找通过 "fluentSurfaceColor" 公布背景的祖先并回退到 bgLayer——与 FlipView 圆角遮罩的做法一致。
-    QColor containerBg = themeColors().bgLayer;
+    QColor containerBg = themeColorsRef().bgLayer;
     for (const QWidget* anc = parentWidget(); anc; anc = anc->parentWidget()) {
         const QVariant surfaceColor = anc->property("fluentSurfaceColor");
         if (!surfaceColor.isValid())
@@ -778,7 +778,7 @@ int ListView::dropIndicatorRow(const QPoint& pos) const {
 // ── Paint ─────────────────────────────────────────────────────────────────────
 
 void ListView::paintEvent(QPaintEvent* event) {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
 
     // --- 1. Container background. zh_CN: 绘制容器背景。---
@@ -839,7 +839,7 @@ void ListView::paintEvent(QPaintEvent* event) {
             y = lastRect.bottom() + 1;
         }
 
-        const auto& clr = themeColors();
+        const auto& clr = themeColorsRef();
         dp.setPen(QPen(clr.accentDefault, 2.0));
         dp.drawLine(::Spacing::Padding::ListItemHorizontal, y,
                     viewport()->width() - ::Spacing::Padding::ListItemHorizontal, y);
@@ -1568,7 +1568,7 @@ void ListView::paintSelectedIndicator(QPainter& painter) const {
     if (themeDesignLanguage() != DesignFluent)
         return;
 
-    if (!themeColors().accentDefault.isValid() || !selectionModel())
+    if (!themeColorsRef().accentDefault.isValid() || !selectionModel())
         return;
 
     if (usesMovingSelectedIndicator()) {
@@ -1590,7 +1590,7 @@ void ListView::paintSelectedIndicator(QPainter& painter) const {
 }
 
 void ListView::paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect, qreal opacity) const {
-    if (indicatorRect.isEmpty() || !themeColors().accentDefault.isValid())
+    if (indicatorRect.isEmpty() || !themeColorsRef().accentDefault.isValid())
         return;
 
     const bool horizontalIndicator = flow() == LeftToRight;
@@ -1599,7 +1599,7 @@ void ListView::paintIndicatorRect(QPainter& painter, const QRectF& indicatorRect
                              : indicatorRect.width() / 2.0;
     QPainterPath path;
     path.addRoundedRect(indicatorRect, radius, radius);
-    QColor accent = themeColors().accentDefault;
+    QColor accent = themeColorsRef().accentDefault;
     accent.setAlphaF(accent.alphaF() * qBound(0.0, opacity, 1.0));
     painter.setPen(Qt::NoPen);
     painter.setBrush(accent);
@@ -1663,7 +1663,7 @@ void ListView::onThemeUpdated() {
 }
 
 void ListView::applyThemeStyle() {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
 
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);

@@ -226,7 +226,7 @@ void ProgressRing::paintMaterial(QPainter& painter, const QRectF& arcRect, qreal
     // Determinate adds a small leading stop dot with a gap from the arc. Paused/error recolor the arc.
     // zh_CN: Material 3「环形进度指示器」:accentDefault 圆头弧线绘制在浅色二级容器轨道环(accent 低透明度,
     // 回退 controlSecondary)之上。确定态在弧线前端加一个带间隙的停止点;暂停/错误重新着色弧线。
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
 
     QColor activeColor = indicatorColor();
     if (m_status == ProgressRingStatus::Paused) activeColor = colors.systemCaution;
@@ -296,7 +296,7 @@ void ProgressRing::paintCupertino(QPainter& painter, const QRectF& arcRect, qrea
     // recolor the active stroke. zh_CN: macOS 环形进度。不确定态:标志性辐条转轮——短的渐细圆头线段呈放射状
     // 排列,沿圆周不透明度渐隐(前导辐条接近全透明度,尾随辐条很淡)。确定态:淡中性轨道上的细 accent 环。
     // 暂停/错误重新着色活动描边。
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const QPointF center = arcRect.center();
     const qreal outerRadius = arcRect.width() / 2.0;
 

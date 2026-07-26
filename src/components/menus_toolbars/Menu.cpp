@@ -329,7 +329,7 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     p.fillRect(rect(), Qt::transparent);
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 

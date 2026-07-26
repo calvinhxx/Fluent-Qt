@@ -594,7 +594,7 @@ void ScrollView::updateViewportPalette() {
     if (!area)
         return;
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     QPalette pal = area->palette();
     pal.setColor(QPalette::Window, colors.bgCanvas);
     pal.setColor(QPalette::Base, colors.bgCanvas);

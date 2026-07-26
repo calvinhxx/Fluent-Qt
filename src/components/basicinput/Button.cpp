@@ -293,7 +293,7 @@ void Button::paintEvent(QPaintEvent*) {
     if (m_contentOpacity < 1.0)
         painter.setOpacity(m_contentOpacity);
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& spacing = themeSpacing();
 
     // 1. Resolve the interaction state. zh_CN: 确定交互状态。

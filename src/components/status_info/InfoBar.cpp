@@ -383,7 +383,7 @@ void InfoBar::paintEvent(QPaintEvent*)
     }
 
     // ─── Material 3 / macOS shared resolution ──────────────────────────────────
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     // Guard every optional fill against the invalid-QColor trap: a default-constructed QColor is INVALID
     // yet alpha()==255, so setBrush(invalidColor) paints SOLID OPAQUE BLACK. Severity tonal backgrounds
     // come from the seeded tables and are valid, but we still verify before painting. zh_CN: 用 isValid()
@@ -528,7 +528,7 @@ int InfoBar::multiLineContentHeight() const
 
 QColor InfoBar::severityBackgroundColor() const
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     switch (m_severity) {
         case Success: return colors.systemSuccessBg;
         case Warning: return colors.systemCautionBg;
@@ -540,7 +540,7 @@ QColor InfoBar::severityBackgroundColor() const
 
 QColor InfoBar::severityColor() const
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     switch (m_severity) {
         case Success: return colors.systemSuccess;
         case Warning: return colors.systemCaution;
@@ -720,7 +720,7 @@ void InfoBar::updateLabels()
 
 void InfoBar::updateThemeColors()
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     m_backgroundColor = severityBackgroundColor();
     m_strokeColor = colors.strokeCard;
     if (m_strokeColor.alpha() < 15) m_strokeColor.setAlpha(15);

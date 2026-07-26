@@ -128,7 +128,7 @@ public:
             return QIcon();
 
         constexpr int iconSize = 18;
-        const Colors colors = themeColors();
+        const Colors& colors = themeColorsRef();
         const QColor activeColor = themeDesignLanguage() == DesignCupertino
             ? colors.textOnAccent
             : colors.textPrimary;
@@ -475,7 +475,7 @@ void TextEdit::resizeEvent(QResizeEvent* event) {
 }
 
 void TextEdit::paintFrame(QPainter& painter) {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& radius = themeRadius();
 
     // Branch the border/focus treatment per design language (palette is already swapped by
@@ -736,7 +736,7 @@ void TextEdit::onThemeUpdated() {
 void TextEdit::applyThemeStyle() {
     if (!m_editor) return;
 
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     QPalette pal = palette();
     pal.setColor(QPalette::Base,             Qt::transparent);
     pal.setColor(QPalette::Window,           Qt::transparent);

@@ -437,7 +437,7 @@ void CalendarView::paintEvent(QPaintEvent*)
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
 
     const QRectF cardRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
     QPainterPath cardPath;
@@ -801,7 +801,7 @@ void CalendarView::onThemeUpdated()
 
 void CalendarView::paintHeader(QPainter& painter)
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const QRect titleRect = titleButtonRect();
     paintTitleButtonBackground(painter);
     if (contentTransitionActive()) {
@@ -819,7 +819,7 @@ void CalendarView::paintHeader(QPainter& painter)
 
 void CalendarView::paintTitleButtonBackground(QPainter& painter)
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     QColor bg = Qt::transparent;
     if (m_titlePressed)
         bg = colors.subtleTertiary;
@@ -839,7 +839,7 @@ void CalendarView::paintTitleForLevel(QPainter& painter, CalendarContentLevel le
     if (!visibleMonth.isValid())
         return;
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const QRectF titleRect = QRectF(titleButtonRect()).adjusted(12.0, yOffset, -12.0, yOffset);
     painter.setFont(themeFont(Typography::FontRole::BodyStrong).toQFont());
     painter.setPen(withOpacity(colors.textPrimary, opacity));
@@ -848,7 +848,7 @@ void CalendarView::paintTitleForLevel(QPainter& painter, CalendarContentLevel le
 
 void CalendarView::paintNavButton(QPainter& painter, const QRect& buttonRect, const QString& glyph)
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     QColor bg = Qt::transparent;
     if (m_pressedButton == buttonRect)
         bg = colors.subtleTertiary;
@@ -867,7 +867,7 @@ void CalendarView::paintNavButton(QPainter& painter, const QRect& buttonRect, co
 
 void CalendarView::paintWeekdays(QPainter& painter)
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
     painter.setPen(colors.textPrimary);
     const int y = kCalendarHeaderHeight;
@@ -979,7 +979,7 @@ void CalendarView::paintDayContent(QPainter& painter, const QDate& visibleMonth,
 
 void CalendarView::paintMonthDays(QPainter& painter, const QDate& month, qreal yOffset, qreal opacity)
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const QDate today = QDate::currentDate();
     const QDate start = gridStartForMonth(month, m_firstDayOfWeek);
 
@@ -1130,7 +1130,8 @@ void CalendarView::paintMonthContent(QPainter& painter, const QDate& visibleMont
         const bool current = selectable && today.year() == visibleMonth.year() && today.month() == month;
 
         paintContentCellChrome(painter, cell, current, selected, hovered, pressed);
-        painter.setPen(selectable ? contentCellTextColor(current, selected) : themeColors().textDisabled);
+        painter.setPen(selectable ? contentCellTextColor(current, selected)
+                                  : themeColorsRef().textDisabled);
         painter.drawText(cell, Qt::AlignCenter,
                          locale().standaloneMonthName(
                              month, QLocale::ShortFormat));
@@ -1159,7 +1160,8 @@ void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth
         const bool current = selectable && today.year() == year;
 
         paintContentCellChrome(painter, cell, current, selected, hovered, pressed);
-        painter.setPen(selectable ? contentCellTextColor(current, selected) : themeColors().textDisabled);
+        painter.setPen(selectable ? contentCellTextColor(current, selected)
+                                  : themeColorsRef().textDisabled);
         painter.drawText(cell, Qt::AlignCenter, QString::number(year));
     }
     painter.restore();
@@ -1168,7 +1170,7 @@ void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth
 void CalendarView::paintContentCellChrome(QPainter& painter, const QRectF& cell, bool current,
                                           bool selected, bool hovered, bool pressed)
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const int radius = themeRadius().control;
 
     if (current) {
@@ -1188,7 +1190,7 @@ void CalendarView::paintContentCellChrome(QPainter& painter, const QRectF& cell,
 
 QColor CalendarView::contentCellTextColor(bool current, bool selected) const
 {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     if (current)
         return colors.textOnAccent;
     if (selected)

@@ -319,7 +319,7 @@ void ColorPicker::initUi() {
 }
 
 void ColorPicker::onThemeUpdated() {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& fs = themeFont(Typography::FontRole::Body);
     QFont f = fs.toQFont();
 

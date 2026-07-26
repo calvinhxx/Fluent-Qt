@@ -433,7 +433,7 @@ void Popup::paintEvent(QPaintEvent*) {
                                           themeShadow(Elevation::High));
 
     // Background and border. zh_CN: 背景 + 边框。
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const DesignLanguage lang = themeDesignLanguage();
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;

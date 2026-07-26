@@ -245,7 +245,7 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
 {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
 
     // Resolve the displayed value. zh_CN: 确定要显示的值。
     bool isHoverPreview = m_isHovered && !m_isReadOnly && m_hoverValue > 0;

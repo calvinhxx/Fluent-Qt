@@ -495,7 +495,7 @@ void DrawerView::paintEvent(QPaintEvent*)
     if (property("fluentSkipSurfacePaint").toBool())
         return;
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const QPainterPath fillPath = outerRoundedPanelPath(QRectF(panelRect));
     const QRectF strokeRect = QRectF(panelRect).adjusted(0.5, 0.5, -0.5, -0.5);
     const QPainterPath strokePath = outerRoundedPanelPath(strokeRect);

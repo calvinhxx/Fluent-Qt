@@ -244,7 +244,7 @@ void InfoBadge::paintEvent(QPaintEvent*)
     QColor fillColor = effectiveBackgroundColor();
     QColor textColor = effectiveForegroundColor();
     if (lang != DesignFluent && isEnabled()) {
-        const auto& colors = themeColors();
+        const auto& colors = themeColorsRef();
         // Background: honor a custom override first; otherwise the per-state semantic color, with macOS
         // defaulting the neutral Attention state to system red. zh_CN: 背景:优先自定义覆盖;否则按状态语义
         // 取色,macOS 在中性 Attention 状态下默认系统红。
@@ -360,7 +360,7 @@ void InfoBadge::drawCenteredTextPath(QPainter& painter, const QRectF& targetRect
 
 QColor InfoBadge::statusBackgroundColor() const
 {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     switch (m_status) {
         case InfoBadgeStatus::Informational:
             return colors.systemInfo;
@@ -378,7 +378,7 @@ QColor InfoBadge::statusBackgroundColor() const
 
 void InfoBadge::updateThemeColors()
 {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     m_backgroundColor = m_customBackgroundColor.isValid()
         ? m_customBackgroundColor
         : statusBackgroundColor();

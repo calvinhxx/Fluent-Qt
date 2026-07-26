@@ -846,9 +846,10 @@ void Breadcrumb::paintIconRecord(QPainter& painter, const DisplayRecord& record,
         return;
 
     const bool interactive = record.type == RecordType::Overflow;
-    QColor iconColor = isEnabled() ? themeColors().textSecondary : themeColors().textDisabled;
+    QColor iconColor = isEnabled() ? themeColorsRef().textSecondary
+                                   : themeColorsRef().textDisabled;
     if (interactive && (m_hoveredRecord == recordIndex || m_pressedRecord == recordIndex))
-        iconColor = themeColors().textPrimary;
+        iconColor = themeColorsRef().textPrimary;
     const QString glyph = record.type == RecordType::Overflow
         ? Typography::Icons::More
         : (layoutDirection() == Qt::RightToLeft
@@ -865,10 +866,10 @@ void Breadcrumb::paintIconRecord(QPainter& painter, const DisplayRecord& record,
 QColor Breadcrumb::textColorForRecord(const DisplayRecord& record, int recordIndex) const
 {
     if (!isEnabled() || !isValidIndex(record.itemIndex) || !m_items.at(record.itemIndex).enabled)
-        return themeColors().textDisabled;
+        return themeColorsRef().textDisabled;
     if (m_hoveredRecord == recordIndex || m_pressedRecord == recordIndex)
-        return themeColors().textSecondary;
-    return themeColors().textPrimary;
+        return themeColorsRef().textSecondary;
+    return themeColorsRef().textPrimary;
 }
 
 void Breadcrumb::paintIconGlyph(QPainter& painter, const QRect& rect, const QString& glyph, const QColor& color, int pixelSize, int lineHeight)

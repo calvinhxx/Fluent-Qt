@@ -74,7 +74,7 @@ void LineEdit::updateClearButtonGeometry() {
 }
 
 void LineEdit::paintFrame(QPainter& painter) {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& radius = themeRadius();
     const fluent::painting::DpiPaintMetrics paintMetrics(painter);
 
@@ -340,7 +340,7 @@ void LineEdit::onThemeUpdated() {
 }
 
 void LineEdit::applyThemeStyle() {
-    const auto& c = themeColors();
+    const auto& c = themeColorsRef();
     QPalette pal = palette();
     pal.setColor(QPalette::Base, Qt::transparent);
     pal.setColor(QPalette::Window, Qt::transparent);

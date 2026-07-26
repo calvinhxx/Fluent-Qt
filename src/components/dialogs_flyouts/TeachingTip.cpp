@@ -246,7 +246,7 @@ void TeachingTip::paintEvent(QPaintEvent*) {
         painter.drawPath(bubblePath.translated(0, 2 + layer / 2));
     }
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const DesignLanguage lang = themeDesignLanguage();
     // Per design language only the FILL and the OUTLINE STROKE differ — the bubble/tail/shadow
     // geometry above is shared. Fill stays bgLayer everywhere; the outline pen is what changes.

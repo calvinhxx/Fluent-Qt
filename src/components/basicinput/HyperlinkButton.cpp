@@ -62,7 +62,7 @@ void HyperlinkButton::paintEvent(QPaintEvent* event) {
     painter.setRenderHint(QPainter::SmoothPixmapTransform);
     painter.setRenderHint(QPainter::TextAntialiasing);
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& radius = themeRadius();
     const auto& spacing = themeSpacing();
     const DesignLanguage lang = themeDesignLanguage();

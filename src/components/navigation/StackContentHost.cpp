@@ -103,7 +103,7 @@ void StackContentHost::paintEvent(QPaintEvent* event)
         // zh_CN: 未显式配置表面时的默认内容层。直接绘制（而非 QPalette::Window + autoFill），
         // 以在祖先样式表下仍正确——QStyleSheetStyle 会重 polish 子树并丢弃子 palette，这正是带样式表
         // 的示例卡片上托管页盒子渲染成错误深色的原因。
-        painter.fillRect(rect(), themeColors().bgLayer);
+        painter.fillRect(rect(), themeColorsRef().bgLayer);
         return;
     }
 

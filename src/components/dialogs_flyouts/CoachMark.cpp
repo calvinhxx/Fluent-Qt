@@ -383,7 +383,7 @@ void CoachMark::paintEvent(QPaintEvent*)
         path = path.united(tailPath);
     }
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const DesignLanguage lang = themeDesignLanguage();
     QPen outlinePen;
     if (lang == DesignMaterial)

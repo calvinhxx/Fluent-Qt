@@ -252,7 +252,7 @@ int Slider::pixelPosToRangeValue(int pos) const {
 }
 
 void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt) {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& radius = themeRadius();
 
     // Brand design language + theme-aware interaction veil, mirroring Button::paintEvent.
@@ -456,7 +456,7 @@ void Slider::drawHorizontal(QPainter& p, const QStyleOptionSlider& opt) {
 }
 
 void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt) {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     const auto& radius = themeRadius();
 
     // Brand design language + theme-aware interaction veil (see drawHorizontal). zh_CN: 品牌设计语言
@@ -611,4 +611,3 @@ void Slider::drawVertical(QPainter& p, const QStyleOptionSlider& opt) {
 }
 
 } // namespace fluent::basicinput
-

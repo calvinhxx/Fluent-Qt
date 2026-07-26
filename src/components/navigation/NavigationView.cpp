@@ -471,7 +471,7 @@ void NavigationView::onThemeUpdated()
 void NavigationView::paintEvent(QPaintEvent*)
 {
     ensureLayout();
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const LayoutState visual = currentVisualLayout();
 
     // Under a real Mica backdrop the pane (chrome) stays transparent so the OS-composited
@@ -905,7 +905,7 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
             m_contentFrameOverlay = new ContentFrameOverlay(this);
         m_contentFrameOverlay->setGeometry(state.contentRect);
         // Match WinUI Gallery's subtle content frame without adding layout spacing.
-        QColor frame = themeColors().strokeDivider;
+        QColor frame = themeColorsRef().strokeDivider;
         frame.setAlpha(qMin(28, frame.alpha()));
         static_cast<ContentFrameOverlay*>(m_contentFrameOverlay)
             ->configure(themeRadius().overlay, frame);

@@ -502,7 +502,7 @@ void Window::closeWindow() {
 }
 
 ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     QColor fill = windowChromeBackdropFill(*this, this, isActiveWindow());
     if (!fill.isValid())
         fill = themeBackdrop(isActiveWindow());
@@ -549,7 +549,7 @@ void Window::paintEvent(QPaintEvent*) {
     }
 
     if (m_backdropState.surfaceMode == BackdropSurfaceMode::PaintedOpaque) {
-        const auto& colors = themeColors();
+        const auto& colors = themeColorsRef();
         WindowBackdropMaterialOptions options = WindowBackdropMaterialOptions::forTheme(
             effectiveTheme() == Dark,
             colors.bgCanvas,
@@ -561,7 +561,7 @@ void Window::paintEvent(QPaintEvent*) {
         return;
     }
 
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     // Use the same active/inactive backdrop source as the title bar and nav pane.
     // zh_CN: 使用与标题栏、导航栏一致的激活/非激活背景来源，避免 Normal 模式接缝。
     const QColor backdrop = windowChromeBackdropFill(*this, this, isActiveWindow());
@@ -952,7 +952,7 @@ void Window::syncClientSideFrameShape() {
         m_frameEdgeOverlay->setGeometry(rect());
         m_frameEdgeOverlay->setFrameVisualRect(chromeFrameRect());
         m_frameEdgeOverlay->setFrameRadius(radius);
-        m_frameEdgeOverlay->setFrameStroke(themeColors().strokeDefault);
+        m_frameEdgeOverlay->setFrameStroke(themeColorsRef().strokeDefault);
         m_frameEdgeOverlay->setVisible(radius > 0.0);
         const bool acceptsResizeInput = usesClientSideResizeInput()
             && m_chromeInteractive && radius > 0.0;

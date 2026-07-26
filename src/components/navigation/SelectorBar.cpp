@@ -1072,7 +1072,7 @@ void SelectorBar::scrollOverflow(int direction)
 
 void SelectorBar::paintBackground(QPainter& painter) const
 {
-    painter.fillRect(rect(), themeColors().bgLayer);
+    painter.fillRect(rect(), themeColorsRef().bgLayer);
 }
 
 void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
@@ -1081,7 +1081,7 @@ void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
         return;
 
     const Metrics currentMetrics = metrics();
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
 
     // Branch the per-item treatment per brand, preserving DesignFluent EXACTLY. SelectorBar is the
     // segmented cousin of Pivot: Fluent keeps a neutral label + the shared accent underline
@@ -1220,7 +1220,7 @@ void SelectorBar::paintSelectedIndicator(QPainter& painter) const
         return;
     painter.save();
     painter.setPen(Qt::NoPen);
-    painter.setBrush(themeColors().accentDefault);
+    painter.setBrush(themeColorsRef().accentDefault);
     painter.drawRoundedRect(m_animatedIndicatorRect,
                             ::CornerRadius::Indicator, ::CornerRadius::Indicator);
     painter.restore();
@@ -1232,7 +1232,9 @@ void SelectorBar::paintOverflowButton(QPainter& painter, const QRect& rect, cons
         return;
     painter.save();
     const bool highlighted = sameHit(m_pressedHit, hit) || sameHit(m_hoveredHit, hit);
-    painter.setPen(enabled ? (highlighted ? themeColors().textPrimary : themeColors().textSecondary) : themeColors().textDisabled);
+    const auto& colors = themeColorsRef();
+    painter.setPen(enabled ? (highlighted ? colors.textPrimary : colors.textSecondary)
+                           : colors.textDisabled);
     if (m_iconFontFamily == Typography::FontFamily::FluentIcons) {
         Typography::Icons::paintGlyph(
             painter, QRectF(rect), glyph, metrics().iconSize, Qt::AlignCenter);
@@ -1246,11 +1248,11 @@ void SelectorBar::paintOverflowButton(QPainter& painter, const QRect& rect, cons
 QColor SelectorBar::itemTextColor(int index) const
 {
     if (!isEnabled() || !isValidIndex(index) || !m_items.at(index).enabled)
-        return themeColors().textDisabled;
+        return themeColorsRef().textDisabled;
     const HitRecord hit{HitKind::Item, index};
     if (index == m_selectedIndex || sameHit(m_pressedHit, hit) || sameHit(m_hoveredHit, hit))
-        return themeColors().textPrimary;
-    return themeColors().textSecondary;
+        return themeColorsRef().textPrimary;
+    return themeColorsRef().textSecondary;
 }
 
 } // namespace fluent::navigation

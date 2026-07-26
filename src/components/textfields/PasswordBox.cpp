@@ -281,7 +281,7 @@ bool PasswordBox::paintBrandInputFrame(QPainter& painter) {
     const auto lang = themeDesignLanguage();
     if (lang == DesignFluent) return false;
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const QRectF base = QRectF(inputRect());
 
     if (lang == DesignMaterial) {
@@ -350,7 +350,7 @@ bool PasswordBox::paintBrandInputFrame(QPainter& painter) {
 }
 
 void PasswordBox::paintInputFrame(QPainter& painter) {
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const QRectF frameRect = QRectF(inputRect()).adjusted(0.5, 0.5, -0.5, -0.5);
 
     // Brand-aware frame for the input row; the reveal button is a fluent::Button that already follows the
@@ -415,7 +415,8 @@ void PasswordBox::paintInputFrame(QPainter& painter) {
 void PasswordBox::paintHeader(QPainter& painter) {
     if (m_header.isEmpty()) return;
     painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
-    painter.setPen(isEnabled() ? themeColors().textPrimary : themeColors().textDisabled);
+    const auto& colors = themeColorsRef();
+    painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
     const QRect headerRect(0, 0, width(), kHeaderHeight);
     painter.drawText(headerRect, Qt::AlignLeft | Qt::AlignVCenter,
                      painter.fontMetrics().elidedText(m_header, Qt::ElideRight, headerRect.width()));

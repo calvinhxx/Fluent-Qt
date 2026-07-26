@@ -120,7 +120,7 @@ void ScrollBar::paintEvent(QPaintEvent *event) {
     p.setRenderHint(QPainter::Antialiasing);
     p.setOpacity(m_opacity);
 
-    const auto colors = themeColors();
+    const auto& colors = themeColorsRef();
     const bool isDark = (effectiveTheme() == FluentElement::Dark);
     const DesignLanguage lang = themeDesignLanguage();
 
