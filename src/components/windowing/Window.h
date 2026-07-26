@@ -139,6 +139,17 @@ public:
                                   const QString& maximizeTooltip,
                                   const QString& closeTooltip,
                                   const QString& restoreTooltip = QString());
+    /**
+     * @brief Sets application-owned accessible names for the caption buttons.
+     * zh_CN: 设置由应用拥有的标题栏按钮无障碍名称。
+     *
+     * Defaults remain empty; this API does not translate or synthesize labels.
+     * zh_CN: 默认保持为空；该接口不会翻译或生成标签。
+     */
+    void setCaptionButtonAccessibleNames(const QString& minimizeName,
+                                         const QString& maximizeName,
+                                         const QString& closeName,
+                                         const QString& restoreName = QString());
 
 public slots:
     void minimizeWindow();
@@ -222,6 +233,10 @@ private:
     QString m_maximizeTooltip;
     QString m_closeTooltip;
     QString m_restoreTooltip;
+    QString m_minimizeAccessibleName;
+    QString m_maximizeAccessibleName;
+    QString m_closeAccessibleName;
+    QString m_restoreAccessibleName;
     QPoint m_fallbackDragOffset;
     std::unique_ptr<WindowResizeSession> m_resizeSession;
 };

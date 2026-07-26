@@ -362,6 +362,32 @@ TEST_F(WindowTest, DefaultConstructionCreatesChromeAndContentHost) {
               linuxPlatform);
 }
 
+TEST_F(WindowTest, ApplicationSuppliesCaptionButtonAccessibleNames) {
+    Window window;
+    auto* minimizeButton =
+        window.findChild<Button*>(QStringLiteral("fluentWindowMinimizeButton"));
+    auto* maximizeButton =
+        window.findChild<Button*>(QStringLiteral("fluentWindowMaximizeButton"));
+    auto* closeButton =
+        window.findChild<Button*>(QStringLiteral("fluentWindowCloseButton"));
+
+    if (!minimizeButton || !maximizeButton || !closeButton)
+        GTEST_SKIP() << "The current platform uses native caption buttons";
+
+    EXPECT_TRUE(minimizeButton->accessibleName().isEmpty());
+    EXPECT_TRUE(maximizeButton->accessibleName().isEmpty());
+    EXPECT_TRUE(closeButton->accessibleName().isEmpty());
+
+    window.setCaptionButtonAccessibleNames(
+        QStringLiteral("Minimize window"),
+        QStringLiteral("Maximize window"),
+        QStringLiteral("Close window"),
+        QStringLiteral("Restore window"));
+    EXPECT_EQ(minimizeButton->accessibleName(), QStringLiteral("Minimize window"));
+    EXPECT_EQ(maximizeButton->accessibleName(), QStringLiteral("Maximize window"));
+    EXPECT_EQ(closeButton->accessibleName(), QStringLiteral("Close window"));
+}
+
 TEST_F(WindowTest, TitleBarHeightIsConfigurable) {
     TitleBar titleBar;
     QSignalSpy heightSpy(&titleBar, &TitleBar::titleBarHeightChanged);

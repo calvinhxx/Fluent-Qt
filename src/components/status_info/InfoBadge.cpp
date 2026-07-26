@@ -31,7 +31,6 @@ InfoBadge::InfoBadge(QWidget* parent)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    setAccessibleName(QStringLiteral("InfoBadge"));
     updateThemeColors();
 }
 

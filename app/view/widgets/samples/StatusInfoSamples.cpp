@@ -210,6 +210,7 @@ InfoBar* makeInfoBar(QWidget* parent,
                      bool singleLine = true)
 {
     auto* bar = new InfoBar(parent);
+    bar->setCloseButtonAccessibleName(QStringLiteral("Dismiss notification"));
     bar->setPreferredWidth(520);
     bar->setSeverity(severity);
     bar->setTitle(title);

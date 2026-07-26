@@ -105,6 +105,11 @@ class InfoBar : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(int closeButtonSize READ closeButtonSize WRITE setCloseButtonSize NOTIFY closeButtonSizeChanged)
     /**
+     * @brief Accessible name supplied by the application for the icon-only close button.
+     * zh_CN: 由应用为纯图标关闭按钮提供的无障碍名称。
+     */
+    Q_PROPERTY(QString closeButtonAccessibleName READ closeButtonAccessibleName WRITE setCloseButtonAccessibleName NOTIFY closeButtonAccessibleNameChanged)
+    /**
      * @brief Spacing between icon and text content.
      * zh_CN: 图标与文本内容之间的间距。
      */
@@ -214,6 +219,9 @@ public:
     int closeButtonSize() const { return m_closeButtonSize; }
     void setCloseButtonSize(int size);
 
+    QString closeButtonAccessibleName() const { return m_closeButtonAccessibleName; }
+    void setCloseButtonAccessibleName(const QString& name);
+
     int iconTextSpacing() const { return m_iconTextSpacing; }
     void setIconTextSpacing(int spacing);
 
@@ -270,6 +278,7 @@ signals:
     void actionWidgetChanged(QWidget* widget);
     void contentMarginsChanged(const QMargins& margins);
     void closeButtonSizeChanged(int size);
+    void closeButtonAccessibleNameChanged(const QString& name);
     void iconTextSpacingChanged(int spacing);
     void titleMessageSpacingChanged(int spacing);
     void cornerRadiusChanged(int radius);
@@ -328,6 +337,7 @@ private:
     int m_multiLineActionMinHeight = 158;
     QMargins m_contentMargins = QMargins(15, 13, 15, 15);
     int m_closeButtonSize = 32;
+    QString m_closeButtonAccessibleName;
     int m_iconTextSpacing = 13;
     int m_titleMessageSpacing = 12;
     int m_cornerRadius = 3;

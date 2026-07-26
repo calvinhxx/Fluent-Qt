@@ -55,7 +55,6 @@ void AnnotatedScrollBar::init()
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
-    setAccessibleName(QStringLiteral("AnnotatedScrollBar"));
 
     m_detailPopup = new fluent::status_info::ToolTip(this);
     m_detailPopup->setAnimationEnabled(false);

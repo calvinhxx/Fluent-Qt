@@ -286,7 +286,6 @@ NavigationView::NavigationView(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
     setMinimumSize(minimumSizeHint());
     m_contentHost->setTransitionAnimationEnabled(true);
-    setAccessibleName(QStringLiteral("NavigationView"));
 
     connect(m_layoutAnimation, &QPropertyAnimation::finished, this, [this]() {
         finishLayoutTransition();

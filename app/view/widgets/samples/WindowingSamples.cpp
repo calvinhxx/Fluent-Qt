@@ -586,6 +586,8 @@ QVector<GallerySample> windowSamples()
                                   "window->setCustomWindowChromeEnabled(true);\n"
                                   "window->setCaptionButtonToolTips(\"Minimize\", \"Maximize\",\n"
                                   "                                 \"Close\", \"Restore\");\n"
+                                  "window->setCaptionButtonAccessibleNames(\"Minimize\", \"Maximize\",\n"
+                                  "                                        \"Close\", \"Restore\");\n"
                                   "\n"
                                   "auto* titleBarContent = new QWidget(window->titleBar());\n"
                                   "auto* layout = new QHBoxLayout(titleBarContent);\n"
@@ -631,6 +633,10 @@ QVector<GallerySample> windowSamples()
                                                            QStringLiteral("Maximize"),
                                                            QStringLiteral("Close"),
                                                            QStringLiteral("Restore"));
+                           window->setCaptionButtonAccessibleNames(QStringLiteral("Minimize"),
+                                                                  QStringLiteral("Maximize"),
+                                                                  QStringLiteral("Close"),
+                                                                  QStringLiteral("Restore"));
                            window->titleBar()->setContentWidget(makeTitleBarContent(
                                window->titleBar(),
                                QStringLiteral("Samples"),

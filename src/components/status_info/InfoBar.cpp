@@ -43,7 +43,6 @@ InfoBar::InfoBar(QWidget* parent)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
-    setAccessibleName(QStringLiteral("InfoBar"));
     initializeChildren();
     updateThemeColors();
     updateLabels();
@@ -203,6 +202,16 @@ void InfoBar::setCloseButtonSize(int size)
     updateGeometry();
     updateChildGeometry();
     emit closeButtonSizeChanged(m_closeButtonSize);
+}
+
+void InfoBar::setCloseButtonAccessibleName(const QString& name)
+{
+    if (m_closeButtonAccessibleName == name)
+        return;
+    m_closeButtonAccessibleName = name;
+    if (m_closeButton)
+        m_closeButton->setAccessibleName(m_closeButtonAccessibleName);
+    emit closeButtonAccessibleNameChanged(m_closeButtonAccessibleName);
 }
 
 void InfoBar::setIconTextSpacing(int spacing)
@@ -615,7 +624,7 @@ void InfoBar::initializeChildren()
     m_closeButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_closeButton->setIconGlyph(Typography::Icons::ChromeClose, kCloseIconSize);
     m_closeButton->setFixedSize(m_closeButtonSize, m_closeButtonSize);
-    m_closeButton->setAccessibleName(QStringLiteral("Close InfoBar"));
+    m_closeButton->setAccessibleName(m_closeButtonAccessibleName);
     connect(m_closeButton, &QPushButton::clicked, this, [this]() {
         if (!m_isClosable || !isEnabled()) return;
         setIsOpen(false);

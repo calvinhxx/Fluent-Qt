@@ -89,6 +89,7 @@ TEST_F(InfoBarTest, DefaultPropertyValues) {
     EXPECT_TRUE(bar.singleLine());
     EXPECT_EQ(bar.preferredWidth(), 600);
     EXPECT_EQ(bar.actionWidget(), nullptr);
+    EXPECT_TRUE(bar.closeButtonAccessibleName().isEmpty());
     EXPECT_EQ(bar.severityIconGlyphSize(), 10);
     EXPECT_EQ(bar.severityIconBackgroundInset(), 1);
     EXPECT_EQ(bar.informationalIconGlyph(), Typography::Icons::AsteriskBadge12);
@@ -101,6 +102,7 @@ TEST_F(InfoBarTest, DefaultPropertyValues) {
     auto* closeButton = bar.findChild<Button*>("InfoBarCloseButton");
     ASSERT_NE(closeButton, nullptr);
     EXPECT_FALSE(closeButton->isHidden());
+    EXPECT_TRUE(closeButton->accessibleName().isEmpty());
 }
 
 TEST_F(InfoBarTest, PropertySignalsAndSameValueNoSignal) {
@@ -156,6 +158,15 @@ TEST_F(InfoBarTest, PropertySignalsAndSameValueNoSignal) {
     bar.setActionWidget(action);
     bar.setActionWidget(action);
     EXPECT_EQ(actionSpy.count(), 1);
+
+    auto* closeButton = bar.findChild<Button*>("InfoBarCloseButton");
+    ASSERT_NE(closeButton, nullptr);
+    QSignalSpy closeNameSpy(&bar, &InfoBar::closeButtonAccessibleNameChanged);
+    bar.setCloseButtonAccessibleName(QStringLiteral("Dismiss notification"));
+    bar.setCloseButtonAccessibleName(QStringLiteral("Dismiss notification"));
+    EXPECT_EQ(closeNameSpy.count(), 1);
+    EXPECT_EQ(closeButton->accessibleName(),
+              QStringLiteral("Dismiss notification"));
 }
 
 TEST_F(InfoBarTest, ConfigurableLayoutAndIconProperties) {

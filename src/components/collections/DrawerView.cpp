@@ -86,7 +86,6 @@ DrawerView::DrawerView(QWidget* parent)
     // produces real alpha=0 at rounded corners, even on macOS child widgets.
     setGraphicsEffect(new DrawerAlphaEffect(this));
     setFocusPolicy(Qt::StrongFocus);
-    setAccessibleName(QStringLiteral("DrawerView"));
     resize(sizeHint());
     hide();
 

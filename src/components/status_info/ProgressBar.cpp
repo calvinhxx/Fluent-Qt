@@ -39,7 +39,6 @@ ProgressBar::ProgressBar(QWidget* parent)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    setAccessibleName(QStringLiteral("ProgressBar"));
     updateThemeColors();
 }
 

@@ -699,6 +699,22 @@ void Window::setCaptionButtonToolTips(const QString& minimizeTooltip,
     updateMaximizeButtonIcon();
 }
 
+void Window::setCaptionButtonAccessibleNames(const QString& minimizeName,
+                                             const QString& maximizeName,
+                                             const QString& closeName,
+                                             const QString& restoreName) {
+    m_minimizeAccessibleName = minimizeName;
+    m_maximizeAccessibleName = maximizeName;
+    m_closeAccessibleName = closeName;
+    m_restoreAccessibleName = restoreName;
+
+    if (m_minimizeButton)
+        m_minimizeButton->setAccessibleName(m_minimizeAccessibleName);
+    if (m_closeButton)
+        m_closeButton->setAccessibleName(m_closeAccessibleName);
+    updateMaximizeButtonIcon();
+}
+
 void Window::updateChromeOptions() {
     if (!m_titleBar)
         return;
@@ -752,10 +768,12 @@ void Window::setupCaptionButtons() {
 
     auto createCaptionButton = [this](const QString& objectName,
                                       const QString& glyph,
-                                      const QString& tooltip) {
+                                      const QString& tooltip,
+                                      const QString& accessibleName) {
         auto* button = new fluent::basicinput::Button(m_captionButtonHost);
         button->setObjectName(objectName);
         fluent::status_info::ToolTip::attach(button, tooltip);
+        button->setAccessibleName(accessibleName);
         button->setFluentStyle(fluent::basicinput::Button::Subtle);
         button->setFluentLayout(fluent::basicinput::Button::IconOnly);
         button->setFluentSize(fluent::basicinput::Button::Small);
@@ -766,13 +784,16 @@ void Window::setupCaptionButtons() {
 
     m_minimizeButton = createCaptionButton(QStringLiteral("fluentWindowMinimizeButton"),
                                            Typography::Icons::ChromeMinimize,
-                                           m_minimizeTooltip);
+                                           m_minimizeTooltip,
+                                           m_minimizeAccessibleName);
     m_maximizeButton = createCaptionButton(QStringLiteral("fluentWindowMaximizeButton"),
                                            Typography::Icons::ChromeMaximize,
-                                           m_maximizeTooltip);
+                                           m_maximizeTooltip,
+                                           m_maximizeAccessibleName);
     m_closeButton = createCaptionButton(QStringLiteral("fluentWindowCloseButton"),
                                         Typography::Icons::ChromeClose,
-                                        m_closeTooltip);
+                                        m_closeTooltip,
+                                        m_closeAccessibleName);
     m_closeButton->setCriticalOnHover(true);
 
     // Linux leaves the caption surface square and lets the top-level frame
@@ -844,6 +865,8 @@ void Window::updateMaximizeButtonIcon() {
 
     fluent::status_info::ToolTip::attach(m_maximizeButton,
                                          isMaximized() ? m_restoreTooltip : m_maximizeTooltip);
+    m_maximizeButton->setAccessibleName(
+        isMaximized() ? m_restoreAccessibleName : m_maximizeAccessibleName);
     m_maximizeButton->setIconGlyph(isMaximized()
                                        ? Typography::Icons::ChromeRestore
                                        : Typography::Icons::ChromeMaximize,

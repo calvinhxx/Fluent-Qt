@@ -216,7 +216,6 @@ Shimmer::Shimmer(QWidget* parent)
 {
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-    setAccessibleName(QStringLiteral("Shimmer"));
     updateThemePalette();
     updateTemplateElements();
 }

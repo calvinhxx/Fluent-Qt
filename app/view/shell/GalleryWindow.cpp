@@ -72,6 +72,10 @@ GalleryWindow::GalleryWindow(QWidget* parent)
                                  QStringLiteral("Maximize"),
                                  QStringLiteral("Close"),
                                  QStringLiteral("Restore"));
+        setCaptionButtonAccessibleNames(QStringLiteral("Minimize"),
+                                        QStringLiteral("Maximize"),
+                                        QStringLiteral("Close"),
+                                        QStringLiteral("Restore"));
     }
     // Allow narrow windows so the adaptive nav can collapse to its compact / minimal
     // modes; a 980 floor would pin the layout above the 640 breakpoint.

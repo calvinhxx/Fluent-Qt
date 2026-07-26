@@ -501,7 +501,7 @@ TEST_F(NavigationViewTest, DefaultsAndPropertiesMatchShellContainer)
     EXPECT_EQ(nav.topBarHeight(), 48);
     EXPECT_TRUE(nav.isAnimationEnabled());
     EXPECT_NE(nav.contentHost(), nullptr);
-    EXPECT_EQ(nav.accessibleName(), QStringLiteral("NavigationView"));
+    EXPECT_TRUE(nav.accessibleName().isEmpty());
     EXPECT_FALSE(nav.sizeHint().isEmpty());
     EXPECT_FALSE(nav.minimumSizeHint().isEmpty());
     EXPECT_NE(dynamic_cast<QWidget*>(&nav), nullptr);
