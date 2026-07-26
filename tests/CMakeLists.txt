@@ -44,6 +44,9 @@ set(FLUENT_QT_CI_FULL_TARGETS
     test_navigation_view
     test_window
 )
+if(FLUENT_QT_BUILD_GALLERY)
+    list(APPEND FLUENT_QT_CI_FULL_TARGETS test_gallery_content_pages)
+endif()
 
 set(FLUENT_QT_MANUAL_VISUAL_TESTS
     TypographyTest.VisualCheck
@@ -100,6 +103,7 @@ set(FLUENT_QT_QT_GTEST_SUPPORT_SOURCES
 # 发现到的测试会带有 qt/unit/<目录>/<组件> 标签，便于用 ctest -L 分层筛选。
 macro(add_qt_test_module module_name source_file)
     add_executable(${module_name} ${source_file} ${ARGN} ${FLUENT_QT_QT_GTEST_SUPPORT_SOURCES})
+    fluent_qt_configure_cpp_target(${module_name})
     fluent_qt_enable_sanitizers(${module_name})
     set_property(GLOBAL APPEND PROPERTY FLUENT_QT_TEST_TARGETS ${module_name})
     get_filename_component(_test_subdir ${source_file} DIRECTORY)

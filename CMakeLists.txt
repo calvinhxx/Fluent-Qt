@@ -13,12 +13,7 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 include(cmake/FluentQtInstallHeaders.cmake)
 include(cmake/FluentQtSanitizers.cmake)
-
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+include(cmake/FluentQtTargetOptions.cmake)
 
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     set(FLUENT_QT_IS_TOP_LEVEL ON)
@@ -33,11 +28,7 @@ option(FLUENT_QT_BUILD_EXAMPLES "Build Fluent-Qt executable examples" ${FLUENT_Q
 option(FLUENT_QT_INSTALL "Install Fluent-Qt library targets, headers, and CMake package files" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_ENABLE_GALLERY_PACKAGING "Enable CPack packaging for the Gallery application" OFF)
 option(FLUENT_QT_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer for FluentQt tests" OFF)
-
-if(MSVC)
-	add_definitions(-DUNICODE -D_UNICODE)
-	add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-endif()
+option(FLUENT_QT_ENABLE_WARNINGS "Enable strict compiler warnings for the FluentQt library" ${FLUENT_QT_IS_TOP_LEVEL})
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
@@ -51,23 +42,13 @@ if(QT_VERSION_MAJOR EQUAL 6 AND Qt6_VERSION VERSION_LESS 6.2)
 endif()
 message(STATUS "Building with Qt ${QT_VERSION_MAJOR} (${Qt${QT_VERSION_MAJOR}_VERSION})")
 
-# MSVC CRT 必须与所链接的 Qt 二进制保持一致：
-#   - Qt5 官方 Windows 预编译包使用动态 CRT (/MD, /MDd)，否则会出现
-#     `__acrt_first_block == header` 等跨 CRT heap 断言/崩溃。
-#   - Qt6 官方包同样用 /MD；保持 /MD 最安全，避免 CRT 不匹配。
-# 如需 /MT 静态运行时，必须使用同样以 /MT 编译的 Qt 二进制（自行重编）。
-if(MSVC)
-	# 合法值：MultiThreadedDLL (Release/MD) | MultiThreadedDebugDLL (Debug/MDd)
-	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-endif()
-
-# find files recurse
+# Keep CONFIGURE_DEPENDS here: the source tree is the canonical implementation
+# inventory, while cmake/FluentQtInstallHeaders.cmake remains the explicit public
+# header allowlist. Sorting keeps IDE and generated build files deterministic.
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
-foreach(v ${SRC})
-	message(STATUS ${v})
-endforeach()
+list(SORT SRC)
 set(RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src FILES ${SRC})
 
@@ -75,6 +56,8 @@ add_library(FluentQt STATIC ${SRC} ${RESOURCES})
 add_library(FluentQt::FluentQt ALIAS FluentQt)
 # Backward-compatible build-tree alias for existing local tests and examples.
 add_library(fluent_qt_lib ALIAS FluentQt)
+fluent_qt_configure_cpp_target(FluentQt)
+fluent_qt_enable_project_warnings(FluentQt)
 fluent_qt_enable_sanitizers(FluentQt)
 target_link_libraries(FluentQt
 	PUBLIC
@@ -155,6 +138,7 @@ if(FLUENT_QT_BUILD_GALLERY OR (BUILD_TESTING AND FLUENT_QT_BUILD_TESTS))
 	add_library(FluentQtLoggingSupport STATIC
 		"${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.cpp"
 		"${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.h")
+	fluent_qt_configure_cpp_target(FluentQtLoggingSupport)
 	target_include_directories(FluentQtLoggingSupport
 		PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(FluentQtLoggingSupport

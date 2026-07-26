@@ -27,6 +27,7 @@ add_executable(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     ${FLUENT_QT_GALLERY_SOURCES}
     ${FLUENT_QT_GALLERY_RESOURCES}
 )
+fluent_qt_configure_cpp_target(${FLUENT_QT_GALLERY_EXECUTABLE_NAME})
 target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     PRIVATE
     FluentQt::FluentQt
