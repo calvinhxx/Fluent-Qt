@@ -22,6 +22,7 @@
 #include "components/basicinput/RepeatButton.h"
 #include "components/status_info/ProgressBar.h"
 #include "components/textfields/NumberBox.h"
+#include "QtTestEnvironment.h"
 
 using namespace fluent::status_info;
 using fluent::basicinput::RepeatButton;
@@ -280,6 +281,23 @@ TEST_F(ProgressBarTest, AnimationLifecycle) {
     EXPECT_TRUE(bar.isAnimationRunning());
 
     bar.setIsIndeterminate(false);
+    EXPECT_FALSE(bar.isAnimationRunning());
+}
+
+TEST_F(ProgressBarTest, ThemeRefreshPreservesIndeterminateAnimationLifecycle) {
+    ProgressBar bar;
+    bar.setIsIndeterminate(true);
+    bar.show();
+    QApplication::processEvents();
+    ASSERT_TRUE(bar.isAnimationRunning());
+
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    bar.onThemeUpdated();
+    QApplication::processEvents();
+    EXPECT_TRUE(bar.isAnimationRunning());
+
+    bar.hide();
+    QApplication::processEvents();
     EXPECT_FALSE(bar.isAnimationRunning());
 }
 
@@ -628,5 +646,10 @@ TEST_F(ProgressBarTest, VisualCheck) {
     addExample(1, 2, "Disabled", false, false, false, 68, 220, true, false);
 
     window->show();
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window));
+        return;
+    }
+
     qApp->exec();
 }

@@ -40,6 +40,7 @@ ProgressBar::ProgressBar(QWidget* parent)
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     updateThemeColors();
+    m_animationCycleMs = qMax(1, themeAnimation().normal * 4);
 }
 
 ProgressBar::~ProgressBar()
@@ -173,6 +174,7 @@ QSize ProgressBar::minimumSizeHint() const
 void ProgressBar::onThemeUpdated()
 {
     updateThemeColors();
+    m_animationCycleMs = qMax(1, themeAnimation().normal * 4);
     update();
 }
 
@@ -244,7 +246,7 @@ void ProgressBar::paintMaterial(QPainter& painter, const QRectF& bounds)
     // zh_CN: Material 3 线性进度（表达式更新）：~4dp 全圆角轨道，轨道为活动色低透明度着色，活动指示器为
     // accentDefault。M3 标志性提示仅在确定态：活动段与剩余轨道之间留 ~4px 间隙，并在远（尾）端固定一个停止
     // 点。paused→systemCaution、error→systemCritical 重新着色活动指示器与停止点。
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
 
     // M3 track thickness is ~4 dp, fully rounded, but never thicker than what the widget allows.
     // zh_CN: M3 轨道厚度约 4dp，全圆角，但不超过控件可容纳的高度。
@@ -336,7 +338,7 @@ void ProgressBar::paintCupertino(QPainter& painter, const QRectF& bounds)
     // zh_CN: macOS 线性进度：细（~6pt）全圆角条。轨道=中性填充（controlSecondary，回退到低透明度
     // strokeStrong）；活动=圆角 accentDefault 填充。刻意低调——无间隙、无停止点（仅 M3）。
     // paused→systemCaution、error→systemCritical。
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
 
     const qreal thickness = qBound<qreal>(2.0, 6.0, qMax<qreal>(1.0, bounds.height()));
     const qreal radius = thickness / 2.0;
@@ -405,9 +407,9 @@ void ProgressBar::timerEvent(QTimerEvent* event)
         return;
     }
 
-    const int cycleMs = qMax(1, themeAnimation().normal * 4);
     m_animationPhase = std::fmod(
-        m_animationPhase + static_cast<qreal>(kAnimationIntervalMs) / cycleMs,
+        m_animationPhase
+            + static_cast<qreal>(kAnimationIntervalMs) / m_animationCycleMs,
         1.0);
     update();
 }
@@ -453,7 +455,7 @@ QColor ProgressBar::indicatorColor() const
 
 void ProgressBar::updateThemeColors()
 {
-    const auto& colors = themeColors();
+    const auto& colors = themeColorsRef();
     m_runningColor = colors.accentDefault;
     m_pausedColor = colors.systemCaution;
     m_errorColor = colors.systemCritical;
@@ -470,6 +472,7 @@ void ProgressBar::updateAnimationState()
 {
     if (shouldAnimate()) {
         if (!m_animationTimer.isActive()) {
+            m_animationCycleMs = qMax(1, themeAnimation().normal * 4);
             m_animationTimer.start(kAnimationIntervalMs, this);
         }
     } else if (m_animationTimer.isActive()) {

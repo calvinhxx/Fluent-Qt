@@ -152,6 +152,7 @@ private:
 
     QBasicTimer m_animationTimer;
     qreal m_animationPhase = 0.0;
+    int m_animationCycleMs = 1;
 
     QColor m_runningColor;
     QColor m_pausedColor;
