@@ -315,9 +315,8 @@ TEST_F(SelectorBarTest, PointerKeyboardThemeAndAccessibilityBehaveAsSelector)
     QTRY_COMPARE(selector->property("animatedIndicatorRect").toRect(), activityIndicator);
     EXPECT_EQ(activationSpy.count(), 1);
     EXPECT_EQ(selectionSpy.count(), 1);
-    EXPECT_TRUE(selector->accessibleName().contains(QStringLiteral("SelectorBar")));
-    EXPECT_TRUE(selector->accessibleDescription().contains(QStringLiteral("Activity timeline")));
-    EXPECT_TRUE(selector->accessibleDescription().contains(QStringLiteral("Visible item count: 3")));
+    EXPECT_TRUE(selector->accessibleName().isEmpty());
+    EXPECT_EQ(selector->accessibleDescription(), QStringLiteral("Activity timeline"));
 
     QTest::mouseClick(selector, Qt::LeftButton, Qt::NoModifier, selector->itemGeometry(2).center());
     QApplication::processEvents();
@@ -335,13 +334,26 @@ TEST_F(SelectorBarTest, PointerKeyboardThemeAndAccessibilityBehaveAsSelector)
     QTest::keyClick(selector, Qt::Key_Enter);
     EXPECT_EQ(selector->selectedIndex(), 1);
 
+    selector->setSelectedIndex(0);
+    selector->setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+    EXPECT_GT(selector->itemGeometry(0).center().x(),
+              selector->itemGeometry(1).center().x());
+    QTest::keyClick(selector, Qt::Key_Left);
+    QTest::keyClick(selector, Qt::Key_Space);
+    EXPECT_EQ(selector->selectedIndex(), 1);
+
+    selector->setAccessibleDescription(QStringLiteral("Primary section"));
+    selector->setSelectedIndex(0);
+    EXPECT_EQ(selector->accessibleDescription(), QStringLiteral("Primary section"));
+
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     selector->onThemeUpdated();
-    EXPECT_EQ(selector->selectedIndex(), 1);
-    EXPECT_TRUE(selector->itemAt(1).selected);
+    EXPECT_EQ(selector->selectedIndex(), 0);
+    EXPECT_TRUE(selector->itemAt(0).selected);
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     selector->onThemeUpdated();
-    EXPECT_EQ(selector->selectedIndex(), 1);
+    EXPECT_EQ(selector->selectedIndex(), 0);
 }
 
 TEST_F(SelectorBarTest, SelectionCanDriveExternalStackContentHostAndState)

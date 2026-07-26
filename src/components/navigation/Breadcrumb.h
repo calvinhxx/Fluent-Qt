@@ -135,6 +135,7 @@ signals:
     void largeFontRoleChanged(Typography::FontRole role);
 
 protected:
+    void changeEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
@@ -209,6 +210,7 @@ private:
     int m_hoveredRecord = -1;
     int m_pressedRecord = -1;
     int m_focusedRecord = -1;
+    QString m_autoAccessibleName;
     Typography::FontRole m_standardFontRole = Typography::FontRole::Body;
     Typography::FontRole m_largeFontRole = Typography::FontRole::Title;
 };

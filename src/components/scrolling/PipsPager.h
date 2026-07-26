@@ -274,6 +274,7 @@ private:
     bool m_controlHovered = false;
     HitTarget m_hoveredTarget;
     HitTarget m_pressedTarget;
+    QString m_autoAccessibleDescription;
 };
 
 } // namespace fluent::scrolling

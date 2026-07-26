@@ -10,6 +10,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QResizeEvent>
+#include <QStyle>
 #include <QVariantAnimation>
 
 #include "compatibility/QtCompat.h"
@@ -423,9 +424,23 @@ void SelectorBar::paintEvent(QPaintEvent*)
     const bool canBack = !m_overflowBackRect.isEmpty() && !m_visibleIndexes.isEmpty() && m_visibleIndexes.first() != allVisibleItemIndexes().value(0, -1);
     const QVector<int> candidates = allVisibleItemIndexes();
     const bool canForward = !m_overflowForwardRect.isEmpty() && !m_visibleIndexes.isEmpty() && !candidates.isEmpty() && m_visibleIndexes.last() != candidates.last();
-    paintOverflowButton(painter, m_overflowBackRect, Typography::Icons::ChevronLeftMed, HitRecord{HitKind::OverflowBack, -1}, canBack);
-    paintOverflowButton(painter, m_overflowForwardRect, Typography::Icons::ChevronRightMed, HitRecord{HitKind::OverflowForward, -1}, canForward);
+    const bool rightToLeft = layoutDirection() == Qt::RightToLeft;
+    paintOverflowButton(painter, m_overflowBackRect,
+                        rightToLeft ? Typography::Icons::ChevronRightMed
+                                    : Typography::Icons::ChevronLeftMed,
+                        HitRecord{HitKind::OverflowBack, -1}, canBack);
+    paintOverflowButton(painter, m_overflowForwardRect,
+                        rightToLeft ? Typography::Icons::ChevronLeftMed
+                                    : Typography::Icons::ChevronRightMed,
+                        HitRecord{HitKind::OverflowForward, -1}, canForward);
     paintOverflowButton(painter, m_overflowMoreRect, Typography::Icons::More, HitRecord{HitKind::OverflowMore, -1}, !m_hiddenIndexes.isEmpty());
+}
+
+void SelectorBar::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event && event->type() == QEvent::LayoutDirectionChange)
+        invalidateLayout(false);
 }
 
 void SelectorBar::resizeEvent(QResizeEvent* event)
@@ -503,11 +518,15 @@ void SelectorBar::keyPressEvent(QKeyEvent* event)
 
     switch (event->key()) {
     case Qt::Key_Left:
-        focusItem(nextSelectableIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex, -1));
+        focusItem(nextSelectableIndex(
+            m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
+            layoutDirection() == Qt::RightToLeft ? 1 : -1));
         event->accept();
         return;
     case Qt::Key_Right:
-        focusItem(nextSelectableIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex, 1));
+        focusItem(nextSelectableIndex(
+            m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
+            layoutDirection() == Qt::RightToLeft ? -1 : 1));
         event->accept();
         return;
     case Qt::Key_Home:
@@ -713,6 +732,22 @@ void SelectorBar::updateLayout()
                                    currentMetrics.itemVisualHeight);
     }
 
+    if (layoutDirection() == Qt::RightToLeft) {
+        const auto mirrorRect = [this, &bounds](QRect& rect) {
+            if (!rect.isEmpty())
+                rect = QStyle::visualRect(layoutDirection(), bounds, rect);
+        };
+        for (ItemRecord& record : m_itemRecords) {
+            mirrorRect(record.rect);
+            mirrorRect(record.iconRect);
+            mirrorRect(record.textRect);
+            mirrorRect(record.indicatorRect);
+        }
+        mirrorRect(m_overflowBackRect);
+        mirrorRect(m_overflowForwardRect);
+        mirrorRect(m_overflowMoreRect);
+    }
+
     m_layoutDirty = false;
     if (m_indicatorAnimation->state() != QAbstractAnimation::Running)
         setAnimatedIndicatorRect(indicatorRectForItem(m_selectedIndex));
@@ -870,14 +905,12 @@ void SelectorBar::updateAccessibleText()
 {
     const QString selectedText = isValidIndex(m_selectedIndex)
         ? (m_items.at(m_selectedIndex).accessibleName.isEmpty() ? m_items.at(m_selectedIndex).text : m_items.at(m_selectedIndex).accessibleName)
-        : QStringLiteral("None");
-    int visibleCount = 0;
-    for (const SelectorBarItem& item : std::as_const(m_items)) {
-        if (item.visible)
-            ++visibleCount;
+        : QString();
+    if (accessibleDescription().isEmpty()
+        || accessibleDescription() == m_autoAccessibleDescription) {
+        setAccessibleDescription(selectedText);
     }
-    setAccessibleName(QStringLiteral("SelectorBar"));
-    setAccessibleDescription(QStringLiteral("Selected item: %1. Visible item count: %2").arg(selectedText).arg(visibleCount));
+    m_autoAccessibleDescription = selectedText;
 }
 
 QRect SelectorBar::indicatorRectForItem(int index) const
@@ -1168,7 +1201,8 @@ void SelectorBar::paintItem(QPainter& painter, const ItemRecord& record) const
     painter.setFont(itemFont());
     painter.setPen(textColorValue);
     painter.drawText(record.textRect,
-                     Qt::AlignVCenter | Qt::AlignLeft,
+                     QStyle::visualAlignment(layoutDirection(),
+                                             Qt::AlignVCenter | Qt::AlignLeft),
                      m_items.at(record.itemIndex).text);
 
     painter.restore();

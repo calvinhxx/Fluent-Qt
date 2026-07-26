@@ -171,6 +171,7 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
+    void changeEvent(QEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
@@ -527,6 +528,7 @@ private:
     bool m_keyboardAcceleratorsEnabled = true;
     Typography::FontRole m_tabFontRole = Typography::FontRole::Body;
     QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
+    QString m_autoAccessibleDescription;
 };
 
 } // namespace fluent::navigation

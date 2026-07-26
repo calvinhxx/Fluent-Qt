@@ -140,6 +140,7 @@ signals:
     void overflowActivated(const QVector<int>& hiddenIndexes);
 
 protected:
+    void changeEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
@@ -239,6 +240,7 @@ private:
     QString m_iconFontFamily = Typography::FontFamily::FluentIcons;
     HitRecord m_hoveredHit;
     HitRecord m_pressedHit;
+    QString m_autoAccessibleDescription;
 };
 
 } // namespace fluent::navigation

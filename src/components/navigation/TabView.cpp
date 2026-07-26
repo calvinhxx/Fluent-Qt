@@ -16,6 +16,7 @@
 #include <QPropertyAnimation>
 #include <QResizeEvent>
 #include <QScrollBar>
+#include <QStyle>
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
@@ -618,14 +619,22 @@ void TabStrip::keyPressEvent(QKeyEvent* event)
     switch (event->key()) {
     case Qt::Key_Left:
         m_focusVisualVisible = true;
-        m_focusedHit = HitRecord{HitKind::Tab, nextEnabledIndex(m_focusedHit.tabIndex >= 0 ? m_focusedHit.tabIndex : m_selectedIndex, -1)};
+        m_focusedHit = HitRecord{
+            HitKind::Tab,
+            nextEnabledIndex(
+                m_focusedHit.tabIndex >= 0 ? m_focusedHit.tabIndex : m_selectedIndex,
+                layoutDirection() == Qt::RightToLeft ? 1 : -1)};
         ensureSelectedTabVisible();
         invalidateLayout();
         event->accept();
         return;
     case Qt::Key_Right:
         m_focusVisualVisible = true;
-        m_focusedHit = HitRecord{HitKind::Tab, nextEnabledIndex(m_focusedHit.tabIndex >= 0 ? m_focusedHit.tabIndex : m_selectedIndex, 1)};
+        m_focusedHit = HitRecord{
+            HitKind::Tab,
+            nextEnabledIndex(
+                m_focusedHit.tabIndex >= 0 ? m_focusedHit.tabIndex : m_selectedIndex,
+                layoutDirection() == Qt::RightToLeft ? -1 : 1)};
         ensureSelectedTabVisible();
         invalidateLayout();
         event->accept();
@@ -673,6 +682,15 @@ void TabStrip::focusOutEvent(QFocusEvent* event)
     m_focusVisualVisible = false;
     clearPressedHit();
     update();
+}
+
+void TabStrip::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::LayoutDirectionChange) {
+        clearDragState();
+        invalidateLayout();
+    }
 }
 
 bool TabStrip::eventFilter(QObject* watched, QEvent* event)
@@ -869,6 +887,22 @@ void TabStrip::updateLayout()
     if (m_addButtonVisible)
         m_addButtonRect = QRect(rowRect.right() - currentMetrics.buttonWidth + 1, rowRect.top() + (rowRect.height() - currentMetrics.tabHeight) / 2, currentMetrics.buttonWidth, currentMetrics.tabHeight);
 
+    if (layoutDirection() == Qt::RightToLeft) {
+        const auto mirrorRect = [&rowRect](QRect& target) {
+            if (!target.isEmpty())
+                target = QStyle::visualRect(Qt::RightToLeft, rowRect, target);
+        };
+        for (TabRecord& record : m_tabRecords) {
+            mirrorRect(record.tabRect);
+            mirrorRect(record.iconRect);
+            mirrorRect(record.textRect);
+            mirrorRect(record.closeRect);
+        }
+        mirrorRect(m_overflowBackRect);
+        mirrorRect(m_overflowForwardRect);
+        mirrorRect(m_addButtonRect);
+    }
+
     if (m_indicatorAnimation->state() != QAbstractAnimation::Running)
         m_animatedIndicatorRect = indicatorRectForTab(m_selectedIndex);
     m_layoutDirty = false;
@@ -887,7 +921,10 @@ int TabStrip::dropTargetIndexForPosition(const QPoint& position) const
         if (record.tabIndex == dragStart)
             continue;
         lastCandidate = record.tabIndex;
-        if (position.x() < record.tabRect.center().x()) {
+        const bool beforeCenter = layoutDirection() == Qt::RightToLeft
+            ? position.x() > record.tabRect.center().x()
+            : position.x() < record.tabRect.center().x();
+        if (beforeCenter) {
             const int target = dragStart >= 0 && dragStart < record.tabIndex ? record.tabIndex - 1 : record.tabIndex;
             return qBound(0, target, qMax(0, m_items.size() - 1));
         }
@@ -937,10 +974,11 @@ int TabStrip::targetDragOffsetForRecord(const TabRecord& record, int targetIndex
         return 0;
 
     const int draggedWidth = dragged->tabRect.width();
+    const int visualDirection = layoutDirection() == Qt::RightToLeft ? -1 : 1;
     if (startPosition < targetPosition && recordPosition > startPosition && recordPosition <= targetPosition)
-        return -draggedWidth;
+        return -draggedWidth * visualDirection;
     if (targetPosition < startPosition && recordPosition >= targetPosition && recordPosition < startPosition)
-        return draggedWidth;
+        return draggedWidth * visualDirection;
     return 0;
 }
 
@@ -1060,7 +1098,10 @@ QRect TabStrip::dragInsertionIndicatorRect() const
 
     const Metrics currentMetrics = metrics();
     const TabRecord visualTarget = visualRecordForRecord(*targetRecord);
-    const int x = startPosition < targetPosition ? visualTarget.tabRect.right() + 1 : targetRecord->tabRect.left();
+    const bool movingForward = startPosition < targetPosition;
+    const int x = layoutDirection() == Qt::RightToLeft
+        ? (movingForward ? visualTarget.tabRect.left() : targetRecord->tabRect.right() + 1)
+        : (movingForward ? visualTarget.tabRect.right() + 1 : targetRecord->tabRect.left());
     const int height = qMax(12, currentMetrics.tabHeight - 10);
     const int y = targetRecord->tabRect.top() + (targetRecord->tabRect.height() - height) / 2;
     return QRect(x - kDragIndicatorWidth / 2, y, kDragIndicatorWidth, height);
@@ -1379,7 +1420,6 @@ void TabStrip::updateHeaderWidgets()
             created.label = new textfields::Label(this);
             created.label->setAttribute(Qt::WA_TransparentForMouseEvents);
             created.label->setFocusPolicy(Qt::NoFocus);
-            created.label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
             created.label->setContentsMargins(0, 0, 0, 0);
             created.label->setTextElideMode(Qt::ElideRight);
             created.labelOpacity = new QGraphicsOpacityEffect(created.label);
@@ -1397,6 +1437,9 @@ void TabStrip::updateHeaderWidgets()
             widgets = &m_headerWidgets.last();
         }
 
+        widgets->label->setAlignment(
+            QStyle::visualAlignment(layoutDirection(),
+                                    Qt::AlignLeft | Qt::AlignVCenter));
         widgets->label->setText(m_items.value(record.tabIndex).text);
         widgets->label->setFluentTypography(m_tabFontRole);
         widgets->label->setGeometry(visualRecord.textRect);
@@ -1445,8 +1488,14 @@ void TabStrip::updateHeaderWidgets()
 
     const bool hasBack = !m_overflowBackRect.isEmpty() && m_overflowScrollBar && m_overflowScrollBar->value() > m_overflowScrollBar->minimum();
     const bool hasForward = !m_overflowForwardRect.isEmpty() && m_overflowScrollBar && m_overflowScrollBar->value() < m_overflowScrollBar->maximum();
-    updateIconButton(m_overflowBackButton, m_overflowBackRect, Typography::Icons::ChevronLeftMed, currentMetrics.iconPixelSize, isEnabled() && hasBack);
-    updateIconButton(m_overflowForwardButton, m_overflowForwardRect, Typography::Icons::ChevronRightMed, currentMetrics.iconPixelSize, isEnabled() && hasForward);
+    const QString backGlyph = layoutDirection() == Qt::RightToLeft
+        ? Typography::Icons::ChevronRightMed
+        : Typography::Icons::ChevronLeftMed;
+    const QString forwardGlyph = layoutDirection() == Qt::RightToLeft
+        ? Typography::Icons::ChevronLeftMed
+        : Typography::Icons::ChevronRightMed;
+    updateIconButton(m_overflowBackButton, m_overflowBackRect, backGlyph, currentMetrics.iconPixelSize, isEnabled() && hasBack);
+    updateIconButton(m_overflowForwardButton, m_overflowForwardRect, forwardGlyph, currentMetrics.iconPixelSize, isEnabled() && hasForward);
     updateIconButton(m_addButton, m_addButtonRect, Typography::Icons::Add, currentMetrics.iconPixelSize, isEnabled() && m_addButtonVisible);
 }
 
@@ -2452,9 +2501,12 @@ void TabView::updateAccessibleText()
 {
     const QString selectedName = isValidIndex(m_selectedIndex)
         ? (m_items.at(m_selectedIndex).accessibleName.isEmpty() ? m_items.at(m_selectedIndex).text : m_items.at(m_selectedIndex).accessibleName)
-        : QStringLiteral("None");
-    setAccessibleName(QStringLiteral("TabView"));
-    setAccessibleDescription(QStringLiteral("Selected tab: %1. Tab count: %2").arg(selectedName).arg(m_items.size()));
+        : QString();
+    if (accessibleDescription().isEmpty()
+        || accessibleDescription() == m_autoAccessibleDescription) {
+        setAccessibleDescription(selectedName);
+    }
+    m_autoAccessibleDescription = selectedName;
 }
 
 } // namespace fluent::navigation

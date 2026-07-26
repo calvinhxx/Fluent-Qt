@@ -209,8 +209,8 @@ TEST_F(PipsPagerTest, DefaultPropertyValues) {
     EXPECT_TRUE(pager.hasNextPage());
     EXPECT_EQ(pager.sizeHint(), QSize(60, 12));
     EXPECT_EQ(pager.minimumSizeHint(), QSize(60, 12));
-    EXPECT_EQ(pager.accessibleName(), QStringLiteral("PipsPager"));
-    EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("Page 1 of 5 selected"));
+    EXPECT_TRUE(pager.accessibleName().isEmpty());
+    EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("1 / 5"));
 }
 
 TEST_F(PipsPagerTest, PropertySignalsSkipDuplicateValues) {
@@ -296,7 +296,7 @@ TEST_F(PipsPagerTest, PageCountClampsSelectionAndZeroPagesDisableNavigation) {
     pager.setNumberOfPages(3);
     EXPECT_EQ(pager.numberOfPages(), 3);
     EXPECT_EQ(pager.selectedPageIndex(), 2);
-    EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("Page 3 of 3 selected"));
+    EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("3 / 3"));
 
     pager.setNumberOfPages(0);
     EXPECT_EQ(pager.numberOfPages(), 0);
@@ -305,7 +305,7 @@ TEST_F(PipsPagerTest, PageCountClampsSelectionAndZeroPagesDisableNavigation) {
     EXPECT_FALSE(pager.hasPreviousPage());
     EXPECT_FALSE(pager.hasNextPage());
     EXPECT_TRUE(pager.pipHitRect(0).isNull());
-    EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("No pages selected"));
+    EXPECT_TRUE(pager.accessibleDescription().isEmpty());
 
     pager.setNumberOfPages(-12);
     EXPECT_EQ(pager.numberOfPages(), 0);
@@ -433,12 +433,33 @@ TEST_F(PipsPagerTest, KeyboardNavigationMatchesOrientationAndDoesNotWrap) {
     simulateKeyClick(&pager, Qt::Key_Right);
     EXPECT_EQ(pager.selectedPageIndex(), 4);
 
+    pager.setOrientation(Qt::Horizontal);
+    pager.setLayoutDirection(Qt::RightToLeft);
+    pager.setSelectedPageIndex(2);
+    pager.setFixedSize(pager.sizeHint());
+    EXPECT_GT(pager.pipHitRect(0).center().x(),
+              pager.pipHitRect(1).center().x());
+    simulateKeyClick(&pager, Qt::Key_Left);
+    EXPECT_EQ(pager.selectedPageIndex(), 3);
+    simulateKeyClick(&pager, Qt::Key_Right);
+    EXPECT_EQ(pager.selectedPageIndex(), 2);
+
+    pager.setSelectedPageIndex(4);
     pager.setOrientation(Qt::Vertical);
     pager.setFixedSize(pager.sizeHint());
     simulateKeyClick(&pager, Qt::Key_Up);
     EXPECT_EQ(pager.selectedPageIndex(), 3);
     simulateKeyClick(&pager, Qt::Key_Down);
     EXPECT_EQ(pager.selectedPageIndex(), 4);
+}
+
+TEST_F(PipsPagerTest, ApplicationAccessibilityOverrideIsPreserved) {
+    PipsPager pager;
+    pager.setNumberOfPages(5);
+    pager.setAccessibleDescription(QStringLiteral("Onboarding step"));
+    pager.setSelectedPageIndex(3);
+    pager.setNumberOfPages(7);
+    EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("Onboarding step"));
 }
 
 TEST_F(PipsPagerTest, DisabledStateBlocksPointerAndKeyboardInput) {

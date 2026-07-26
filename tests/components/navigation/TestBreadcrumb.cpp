@@ -377,6 +377,16 @@ TEST_F(BreadcrumbTest, KeyboardActivationSkipsDisabledItems)
     QTest::keyClick(&breadcrumb, Qt::Key_Return);
     ASSERT_EQ(activateSpy.count(), 1);
     EXPECT_EQ(activateSpy.takeFirst().at(0).toInt(), 0);
+
+    breadcrumb.setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+    EXPECT_GT(breadcrumb.itemGeometry(0).center().x(),
+              breadcrumb.itemGeometry(2).center().x());
+    QTest::keyClick(&breadcrumb, Qt::Key_Home);
+    QTest::keyClick(&breadcrumb, Qt::Key_Left);
+    QTest::keyClick(&breadcrumb, Qt::Key_Space);
+    ASSERT_EQ(activateSpy.count(), 1);
+    EXPECT_EQ(activateSpy.takeFirst().at(0).toInt(), 2);
 }
 
 TEST_F(BreadcrumbTest, DisabledItemsAndDisabledControlBlockActivation)
@@ -410,8 +420,8 @@ TEST_F(BreadcrumbTest, ThemeRefreshAndAccessibilityTextStayStable)
     breadcrumb.resize(420, 20);
     showAndProcess(breadcrumb);
 
-    EXPECT_TRUE(breadcrumb.accessibleName().contains(QStringLiteral("Home > Documents")));
-    EXPECT_TRUE(breadcrumb.accessibleDescription().contains(QStringLiteral("Documents")));
+    EXPECT_EQ(breadcrumb.accessibleName(), QStringLiteral("Home > Documents"));
+    EXPECT_TRUE(breadcrumb.accessibleDescription().isEmpty());
     const QSize lightHint = breadcrumb.sizeHint();
 
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
@@ -422,7 +432,11 @@ TEST_F(BreadcrumbTest, ThemeRefreshAndAccessibilityTextStayStable)
     EXPECT_FALSE(breadcrumb.itemGeometry(1).isEmpty());
     EXPECT_FALSE(lightHint.isEmpty());
     EXPECT_FALSE(breadcrumb.sizeHint().isEmpty());
-    EXPECT_TRUE(breadcrumb.accessibleDescription().contains(QStringLiteral("Documents")));
+    EXPECT_EQ(breadcrumb.accessibleName(), QStringLiteral("Home > Documents"));
+
+    breadcrumb.setAccessibleName(QStringLiteral("Project location"));
+    breadcrumb.appendItem(QStringLiteral("Drafts"));
+    EXPECT_EQ(breadcrumb.accessibleName(), QStringLiteral("Project location"));
 }
 
 TEST_F(BreadcrumbTest, BreadcrumbActivationCanDriveStackContentHostPages)

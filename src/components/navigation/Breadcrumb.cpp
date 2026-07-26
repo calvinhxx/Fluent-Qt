@@ -9,6 +9,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QResizeEvent>
+#include <QStyle>
 
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
@@ -262,6 +263,13 @@ void Breadcrumb::paintEvent(QPaintEvent*)
     }
 }
 
+void Breadcrumb::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event && event->type() == QEvent::LayoutDirectionChange)
+        invalidateLayout(false);
+}
+
 void Breadcrumb::resizeEvent(QResizeEvent* event)
 {
     QWidget::resizeEvent(event);
@@ -343,12 +351,16 @@ void Breadcrumb::keyPressEvent(QKeyEvent* event)
 
     switch (event->key()) {
     case Qt::Key_Left:
-        m_focusedRecord = nextInteractiveRecord(m_focusedRecord, -1);
+        m_focusedRecord = nextInteractiveRecord(
+            m_focusedRecord,
+            layoutDirection() == Qt::RightToLeft ? 1 : -1);
         update();
         event->accept();
         return;
     case Qt::Key_Right:
-        m_focusedRecord = nextInteractiveRecord(m_focusedRecord, 1);
+        m_focusedRecord = nextInteractiveRecord(
+            m_focusedRecord,
+            layoutDirection() == Qt::RightToLeft ? -1 : 1);
         update();
         event->accept();
         return;
@@ -651,6 +663,20 @@ void Breadcrumb::buildRecords(const QVector<int>& visibleItems, bool hasOverflow
         }
         x += assignedWidths.at(index);
     }
+
+    if (layoutDirection() == Qt::RightToLeft) {
+        for (DisplayRecord& record : m_records) {
+            if (!record.rect.isEmpty()) {
+                record.rect = QStyle::visualRect(layoutDirection(), content,
+                                                 record.rect);
+            }
+            if (!record.contentRect.isEmpty()) {
+                record.contentRect =
+                    QStyle::visualRect(layoutDirection(), content,
+                                       record.contentRect);
+            }
+        }
+    }
 }
 
 void Breadcrumb::clampFocusedRecord()
@@ -787,12 +813,9 @@ void Breadcrumb::updateAccessibleText()
     for (const BreadcrumbItem& item : m_items)
         names.append(item.accessibleName.isEmpty() ? item.text : item.accessibleName);
     const QString path = names.join(QStringLiteral(" > "));
-    setAccessibleName(path.isEmpty() ? QStringLiteral("Breadcrumb") : path);
-    if (names.isEmpty()) {
-        setAccessibleDescription(QStringLiteral("Breadcrumb path is empty"));
-    } else {
-        setAccessibleDescription(QStringLiteral("Current location: %1").arg(names.last()));
-    }
+    if (accessibleName().isEmpty() || accessibleName() == m_autoAccessibleName)
+        setAccessibleName(path);
+    m_autoAccessibleName = path;
 }
 
 void Breadcrumb::paintItem(QPainter& painter, const DisplayRecord& record, int recordIndex)
@@ -809,7 +832,10 @@ void Breadcrumb::paintItem(QPainter& painter, const DisplayRecord& record, int r
     const QString displayedText = record.contentRect.width() >= textWidth
         ? text
         : fontMetrics.elidedText(text, Qt::ElideRight, qMax(0, record.contentRect.width()));
-    painter.drawText(record.contentRect, Qt::AlignVCenter | Qt::AlignLeft, displayedText);
+    painter.drawText(record.contentRect,
+                     QStyle::visualAlignment(layoutDirection(),
+                                             Qt::AlignVCenter | Qt::AlignLeft),
+                     displayedText);
 
     painter.restore();
 }
@@ -823,7 +849,11 @@ void Breadcrumb::paintIconRecord(QPainter& painter, const DisplayRecord& record,
     QColor iconColor = isEnabled() ? themeColors().textSecondary : themeColors().textDisabled;
     if (interactive && (m_hoveredRecord == recordIndex || m_pressedRecord == recordIndex))
         iconColor = themeColors().textPrimary;
-    const QString glyph = record.type == RecordType::Overflow ? Typography::Icons::More : Typography::Icons::ChevronRightMed;
+    const QString glyph = record.type == RecordType::Overflow
+        ? Typography::Icons::More
+        : (layoutDirection() == Qt::RightToLeft
+               ? Typography::Icons::ChevronLeftMed
+               : Typography::Icons::ChevronRightMed);
     const Metrics currentMetrics = metrics();
     const int pixelSize = record.type == RecordType::Overflow ? currentMetrics.overflowPixelSize : currentMetrics.chevronPixelSize;
 

@@ -147,6 +147,7 @@ signals:
     void overflowActivated(const QVector<int>& hiddenIndexes);
 
 protected:
+    void changeEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
@@ -256,6 +257,7 @@ private:
     HitRecord m_pressedHit;
     QRect m_animatedIndicatorRect;
     QVariantAnimation* m_indicatorAnimation = nullptr;
+    QString m_autoAccessibleDescription;
 };
 
 } // namespace fluent::navigation

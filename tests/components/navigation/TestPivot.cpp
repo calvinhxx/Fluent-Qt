@@ -245,6 +245,15 @@ TEST_F(PivotTest, SelectionPointerKeyboardAndDisabledBehavior)
     QTest::keyClick(pivot, Qt::Key_Space);
     EXPECT_EQ(pivot->selectedIndex(), 2);
 
+    pivot->setSelectedIndex(1);
+    pivot->setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+    EXPECT_GT(pivot->itemHeaderGeometry(0).center().x(),
+              pivot->itemHeaderGeometry(1).center().x());
+    QTest::keyClick(pivot, Qt::Key_Left);
+    QTest::keyClick(pivot, Qt::Key_Space);
+    EXPECT_EQ(pivot->selectedIndex(), 2);
+
     EXPECT_TRUE(pivot->setItemEnabled(2, false));
     EXPECT_NE(pivot->selectedIndex(), 2);
 }
@@ -353,16 +362,19 @@ TEST_F(PivotTest, ThemeAndAccessibilityPreserveSelectionAndPageState)
     pivot.setItemAccessibleName(1, QStringLiteral("Urgent messages"));
     pivot.setSelectedIndex(1);
 
-    EXPECT_TRUE(pivot.accessibleName().contains(QStringLiteral("Pivot")));
-    EXPECT_TRUE(pivot.accessibleDescription().contains(QStringLiteral("Urgent messages")));
-    EXPECT_TRUE(pivot.accessibleDescription().contains(QStringLiteral("Item count: 2")));
+    EXPECT_TRUE(pivot.accessibleName().isEmpty());
+    EXPECT_EQ(pivot.accessibleDescription(), QStringLiteral("Urgent messages"));
+
+    pivot.setAccessibleDescription(QStringLiteral("Mailbox category"));
+    pivot.setSelectedIndex(0);
+    EXPECT_EQ(pivot.accessibleDescription(), QStringLiteral("Mailbox category"));
 
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     pivot.onThemeUpdated();
-    EXPECT_EQ(pivot.selectedIndex(), 1);
+    EXPECT_EQ(pivot.selectedIndex(), 0);
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     pivot.onThemeUpdated();
-    EXPECT_EQ(pivot.selectedIndex(), 1);
+    EXPECT_EQ(pivot.selectedIndex(), 0);
 }
 
 TEST_F(PivotTest, VisualCheck)

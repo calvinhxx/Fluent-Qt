@@ -584,6 +584,16 @@ TEST_F(TabViewTest, KeyboardAcceleratorsFocusAndThemeAccessibilityStayStable)
     QTest::keyClick(&tabs, Qt::Key_8, Qt::ControlModifier);
     EXPECT_EQ(tabs.selectedIndex(), 2);
 
+    tabs.setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+    EXPECT_GT(tabs.tabGeometry(0).center().x(),
+              tabs.tabGeometry(1).center().x());
+    QTest::keyClick(&tabs, Qt::Key_Home);
+    QTest::keyClick(&tabs, Qt::Key_Return);
+    QTest::keyClick(&tabs, Qt::Key_Left);
+    QTest::keyClick(&tabs, Qt::Key_Space);
+    EXPECT_EQ(tabs.selectedIndex(), 1);
+
     TabView shortcutTabs(window);
     shortcutTabs.resize(760, 40);
     shortcutTabs.addTab(TabViewItem(QStringLiteral("Shortcut A"), Typography::Icons::Document));
@@ -628,15 +638,19 @@ TEST_F(TabViewTest, KeyboardAcceleratorsFocusAndThemeAccessibilityStayStable)
     EXPECT_EQ(closeSpy.count(), closeCountBeforeDisabled);
 
     tabs.setSelectedIndex(1);
-    EXPECT_TRUE(tabs.accessibleDescription().contains(QStringLiteral("Selected tab: Two")));
+    EXPECT_TRUE(tabs.accessibleName().isEmpty());
+    EXPECT_EQ(tabs.accessibleDescription(), QStringLiteral("Two"));
+    tabs.setAccessibleDescription(QStringLiteral("Workspace document"));
+    tabs.setSelectedIndex(2);
+    EXPECT_EQ(tabs.accessibleDescription(), QStringLiteral("Workspace document"));
     const QVector<TabViewItem> before = tabs.tabs();
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     tabs.onThemeUpdated();
     QApplication::processEvents();
     EXPECT_EQ(tabs.tabCount(), before.size());
-    EXPECT_EQ(tabs.selectedIndex(), 1);
-    EXPECT_EQ(tabs.tabAt(1).text, before.at(1).text);
-    EXPECT_FALSE(tabs.tabGeometry(1).isEmpty());
+    EXPECT_EQ(tabs.selectedIndex(), 2);
+    EXPECT_EQ(tabs.tabAt(2).text, before.at(2).text);
+    EXPECT_FALSE(tabs.tabGeometry(2).isEmpty());
 }
 
 TEST_F(TabViewTest, VisualCheck)

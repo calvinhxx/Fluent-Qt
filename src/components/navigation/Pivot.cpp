@@ -10,6 +10,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QResizeEvent>
+#include <QStyle>
 
 #include "compatibility/QtCompat.h"
 #include "design/Typography.h"
@@ -332,9 +333,23 @@ void Pivot::paintEvent(QPaintEvent*)
 
     const bool canBack = m_firstVisibleIndex > 0;
     const bool canForward = !m_visibleIndexes.isEmpty() && m_visibleIndexes.last() < m_items.size() - 1;
-    paintOverflowButton(painter, m_overflowBackRect, Typography::Icons::ChevronLeftMed, HitRecord{HitKind::OverflowBack, -1}, canBack);
-    paintOverflowButton(painter, m_overflowForwardRect, Typography::Icons::ChevronRightMed, HitRecord{HitKind::OverflowForward, -1}, canForward);
+    const bool rightToLeft = layoutDirection() == Qt::RightToLeft;
+    paintOverflowButton(painter, m_overflowBackRect,
+                        rightToLeft ? Typography::Icons::ChevronRightMed
+                                    : Typography::Icons::ChevronLeftMed,
+                        HitRecord{HitKind::OverflowBack, -1}, canBack);
+    paintOverflowButton(painter, m_overflowForwardRect,
+                        rightToLeft ? Typography::Icons::ChevronLeftMed
+                                    : Typography::Icons::ChevronRightMed,
+                        HitRecord{HitKind::OverflowForward, -1}, canForward);
     paintOverflowButton(painter, m_overflowMoreRect, Typography::Icons::More, HitRecord{HitKind::OverflowMore, -1}, !m_hiddenIndexes.isEmpty());
+}
+
+void Pivot::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event && event->type() == QEvent::LayoutDirectionChange)
+        invalidateLayout(false);
 }
 
 void Pivot::resizeEvent(QResizeEvent* event)
@@ -423,11 +438,15 @@ void Pivot::keyPressEvent(QKeyEvent* event)
 
     switch (event->key()) {
     case Qt::Key_Left:
-        focusItem(nextEnabledIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex, -1));
+        focusItem(nextEnabledIndex(
+            m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
+            layoutDirection() == Qt::RightToLeft ? 1 : -1));
         event->accept();
         return;
     case Qt::Key_Right:
-        focusItem(nextEnabledIndex(m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex, 1));
+        focusItem(nextEnabledIndex(
+            m_focusedIndex >= 0 ? m_focusedIndex : m_selectedIndex,
+            layoutDirection() == Qt::RightToLeft ? -1 : 1));
         event->accept();
         return;
     case Qt::Key_Home:
@@ -599,6 +618,22 @@ void Pivot::updateLayout()
                                    currentMetrics.headerVisualHeight);
     }
 
+    if (layoutDirection() == Qt::RightToLeft) {
+        const auto mirrorRect = [this, &bounds](QRect& rect) {
+            if (!rect.isEmpty())
+                rect = QStyle::visualRect(layoutDirection(), bounds, rect);
+        };
+        for (HeaderRecord& record : m_headerRecords) {
+            mirrorRect(record.rect);
+            mirrorRect(record.iconRect);
+            mirrorRect(record.textRect);
+            mirrorRect(record.indicatorRect);
+        }
+        mirrorRect(m_overflowBackRect);
+        mirrorRect(m_overflowForwardRect);
+        mirrorRect(m_overflowMoreRect);
+    }
+
     m_layoutDirty = false;
 }
 
@@ -729,9 +764,12 @@ void Pivot::updateAccessibleText()
 {
     const QString selectedText = isValidIndex(m_selectedIndex)
         ? (m_items.at(m_selectedIndex).accessibleName.isEmpty() ? m_items.at(m_selectedIndex).header : m_items.at(m_selectedIndex).accessibleName)
-        : QStringLiteral("None");
-    setAccessibleName(QStringLiteral("Pivot"));
-    setAccessibleDescription(QStringLiteral("Selected item: %1. Item count: %2").arg(selectedText).arg(m_items.size()));
+        : QString();
+    if (accessibleDescription().isEmpty()
+        || accessibleDescription() == m_autoAccessibleDescription) {
+        setAccessibleDescription(selectedText);
+    }
+    m_autoAccessibleDescription = selectedText;
 }
 
 const Pivot::HeaderRecord* Pivot::recordForItem(int index) const
@@ -953,7 +991,10 @@ void Pivot::paintHeader(QPainter& painter, const HeaderRecord& record) const
     }
     painter.setFont(itemFont());
     painter.setPen(textColorValue);
-    painter.drawText(record.textRect, Qt::AlignVCenter | Qt::AlignLeft, m_items.at(record.itemIndex).header);
+    painter.drawText(record.textRect,
+                     QStyle::visualAlignment(layoutDirection(),
+                                             Qt::AlignVCenter | Qt::AlignLeft),
+                     m_items.at(record.itemIndex).header);
 
     // 4. Selection indicator. macOS uses the filled segment above instead of an underline.
     // zh_CN: 4. 选中指示条。macOS 用上面的填充段代替下划线。
