@@ -1159,6 +1159,8 @@ QVector<GallerySample> toggleSwitchSamples()
                    QStringLiteral("ToggleSwitch state"),
                    QStringLiteral("The toggled signal mirrors the on/off state into surrounding UI."),
                    QStringLiteral("auto* toggle = new ToggleSwitch(this);\n"
+                                  "toggle->setOnContent(\"On\");\n"
+                                  "toggle->setOffContent(\"Off\");\n"
                                   "auto* status = new Label(\"State: Off\", this);\n"
                                   "connect(toggle, &ToggleSwitch::toggled,\n"
                                   "        status, [status](bool on) {\n"
@@ -1167,6 +1169,8 @@ QVector<GallerySample> toggleSwitchSamples()
                    [](QWidget* parent) {
                        QWidget* group = verticalGroup(parent, 8);
                        auto* toggle = new ToggleSwitch(group);
+                       toggle->setOnContent(QStringLiteral("On"));
+                       toggle->setOffContent(QStringLiteral("Off"));
                        auto* status = makeValueLabel(group, QStringLiteral("State: Off"));
                        setStableStatusWidth(status, QStringLiteral("State: Off"));
                        QObject::connect(toggle, &ToggleSwitch::toggled,
@@ -1202,15 +1206,19 @@ QVector<GallerySample> toggleSwitchSamples()
                    QStringLiteral("Disabled ToggleSwitch"),
                    QStringLiteral("Disabled switches preserve both off and on visuals while blocking interaction."),
                    QStringLiteral("auto* off = new ToggleSwitch(this);\n"
+                                  "off->setOffContent(\"Off\");\n"
                                   "off->setEnabled(false);\n\n"
                                   "auto* on = new ToggleSwitch(this);\n"
+                                  "on->setOnContent(\"On\");\n"
                                   "on->setIsOn(true);\n"
                                   "on->setEnabled(false);"),
                    [](QWidget* parent) {
                        QWidget* group = horizontalGroup(parent, 24);
                        auto* off = new ToggleSwitch(group);
+                       off->setOffContent(QStringLiteral("Off"));
                        off->setEnabled(false);
                        auto* on = new ToggleSwitch(group);
+                       on->setOnContent(QStringLiteral("On"));
                        on->setIsOn(true);
                        on->setEnabled(false);
                        group->layout()->addWidget(off);

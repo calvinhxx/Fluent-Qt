@@ -1,6 +1,10 @@
 #include "RadioButton.h"
+#include <QFocusEvent>
+#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPropertyAnimation>
+#include <QStyle>
 #include "design/Typography.h"
 
 namespace fluent::basicinput {
@@ -122,7 +126,10 @@ void RadioButton::paintEvent(QPaintEvent*) {
     const auto withAlpha = [](QColor c, int a) { c.setAlpha(a); return c; };
 
     // ── 1. Outer ring. zh_CN: 外圈 ───────────────────────────────
-    QRectF circleRect(0, 0, m_circleSize, m_circleSize);
+    const QRect logicalCircleRect(0, (height() - m_circleSize) / 2,
+                                  m_circleSize, m_circleSize);
+    const QRectF circleRect =
+        QStyle::visualRect(layoutDirection(), rect(), logicalCircleRect);
 
     // checkProgress drives check/uncheck; dotScale drives hover scaling. Shared by all languages.
     // zh_CN: checkProgress 驱动选中/取消动画,dotScale 驱动 hover 缩放。各设计语言共用。
@@ -270,8 +277,24 @@ void RadioButton::paintEvent(QPaintEvent*) {
     if (!text().isEmpty()) {
         painter.setFont(m_textFont);
         painter.setPen(enabled ? colors.textPrimary : colors.textDisabled);
-        QRectF textRect = rect().adjusted(m_circleSize + m_textGap, 0, 0, 0);
-        painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, text());
+        const QRect logicalTextRect =
+            rect().adjusted(m_circleSize + m_textGap, 0, 0, 0);
+        const QRect textRect =
+            QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
+        painter.drawText(textRect,
+                         QStyle::visualAlignment(layoutDirection(),
+                                                 Qt::AlignVCenter | Qt::AlignLeft),
+                         text());
+    }
+
+    if (enabled && hasFocus() && m_keyboardFocusVisible) {
+        QColor focusColor = colors.textSecondary;
+        focusColor.setAlpha(120);
+        painter.setPen(QPen(focusColor, 1.0));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1),
+                                themeRadius().control,
+                                themeRadius().control);
     }
 }
 
@@ -293,6 +316,38 @@ void RadioButton::leaveEvent(QEvent* event) {
         m_dotScaleAnimation->setEndValue(1.0);
         m_dotScaleAnimation->start();
     }
+}
+
+void RadioButton::focusInEvent(QFocusEvent* event)
+{
+    QRadioButton::focusInEvent(event);
+    if (event->reason() == Qt::MouseFocusReason)
+        m_keyboardFocusVisible = false;
+    else if (event->reason() == Qt::TabFocusReason
+             || event->reason() == Qt::BacktabFocusReason
+             || event->reason() == Qt::ShortcutFocusReason)
+        m_keyboardFocusVisible = true;
+    update();
+}
+
+void RadioButton::focusOutEvent(QFocusEvent* event)
+{
+    QRadioButton::focusOutEvent(event);
+    update();
+}
+
+void RadioButton::keyPressEvent(QKeyEvent* event)
+{
+    m_keyboardFocusVisible = true;
+    update();
+    QRadioButton::keyPressEvent(event);
+}
+
+void RadioButton::mousePressEvent(QMouseEvent* event)
+{
+    m_keyboardFocusVisible = false;
+    update();
+    QRadioButton::mousePressEvent(event);
 }
 
 } // namespace fluent::basicinput

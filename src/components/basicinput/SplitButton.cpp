@@ -2,6 +2,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QStyle>
 #include <QStyleOptionButton>
 #include <QVariantAnimation>
 #include <QtMath>
@@ -95,6 +96,8 @@ void SplitButton::mouseReleaseEvent(QMouseEvent* event) {
         if (releasePart == Secondary && m_pressPart == Secondary && m_menu) {
             // Pop the menu. zh_CN: 弹出菜单。
             QPoint popupPos = mapToGlobal(rect().bottomLeft());
+            if (layoutDirection() == Qt::RightToLeft)
+                popupPos.rx() -= m_menu->sizeHint().width() - width();
             m_menu->exec(popupPos);
         } else if (releasePart == Primary && m_pressPart == Primary) {
             // Primary click; the signal is already handled by Button (QPushButton).
@@ -118,7 +121,12 @@ SplitButton::SplitPart SplitButton::getPartAt(const QPoint& pos) const {
     if (!rect().contains(pos)) return None;
 
     // Use the configured drop-down zone width. zh_CN: 使用配置的下拉区域宽度。
-    if (pos.x() > width() - m_secondaryWidth) return Secondary;
+    const QRect logicalSecondary(width() - m_secondaryWidth, 0,
+                                 m_secondaryWidth, height());
+    const QRect secondary =
+        QStyle::visualRect(layoutDirection(), rect(), logicalSecondary);
+    if (secondary.contains(pos))
+        return Secondary;
     return Primary;
 }
 
@@ -131,7 +139,9 @@ int SplitButton::primaryTrailingInset() const
 QRectF SplitButton::primaryContentRect(const QRectF& primaryRect) const
 {
     const qreal inset = qMin(primaryRect.width(), static_cast<qreal>(primaryTrailingInset()));
-    return primaryRect.adjusted(0, 0, -inset, 0);
+    return layoutDirection() == Qt::RightToLeft
+        ? primaryRect.adjusted(inset, 0, 0, 0)
+        : primaryRect.adjusted(0, 0, -inset, 0);
 }
 
 QSize SplitButton::sizeHint() const {
@@ -185,8 +195,15 @@ void SplitButton::paintEvent(QPaintEvent*) {
     const int chevronSize = Typography::IconSize::Compact;
 
     QRectF fullRect = rect();
-    QRectF primaryRect = fullRect.adjusted(0, 0, -sWidth, 0);
-    QRectF secondaryRect = fullRect.adjusted(width() - sWidth, 0, 0, 0);
+    const QRect logicalPrimaryRect(0, 0, width() - sWidth, height());
+    const QRect logicalSecondaryRect(width() - sWidth, 0, sWidth, height());
+    const QRectF primaryRect =
+        QStyle::visualRect(layoutDirection(), rect(), logicalPrimaryRect);
+    const QRectF secondaryRect =
+        QStyle::visualRect(layoutDirection(), rect(), logicalSecondaryRect);
+    const qreal dividerX = layoutDirection() == Qt::RightToLeft
+        ? sWidth
+        : width() - sWidth;
 
     const bool checked = isChecked();
     const bool accentLike = (fluentStyle() == Accent || checked);
@@ -294,8 +311,8 @@ void SplitButton::paintEvent(QPaintEvent*) {
                                               colors.textOnAccent.blue(), 0x3D)  // ~24% on the filled pill
                                      : colors.strokeStrong;
             painter.setPen(QPen(sepColor, 1));
-            painter.drawLine(QPointF(width() - sWidth, sepMargin),
-                             QPointF(width() - sWidth, height() - sepMargin));
+            painter.drawLine(QPointF(dividerX, sepMargin),
+                             QPointF(dividerX, height() - sepMargin));
         }
     } else if (lang == DesignCupertino) {
         // macOS: bezel push-button — fill bgLayerAlt + 1px hairline + small radius (~6) + a faint bottom
@@ -356,8 +373,8 @@ void SplitButton::paintEvent(QPaintEvent*) {
         // 1px hairline divider between the two segments. zh_CN: 两段之间 1px 发丝分割线。
         if (isEnabled()) {
             painter.setPen(QPen(colors.strokeStrong, 1));
-            painter.drawLine(QPointF(width() - sWidth, sepMargin),
-                             QPointF(width() - sWidth, height() - sepMargin));
+            painter.drawLine(QPointF(dividerX, sepMargin),
+                             QPointF(dividerX, height() - sepMargin));
         }
     } else {
         // DesignFluent (default): UNCHANGED WinUI treatment. zh_CN: 默认 Fluent,WinUI 处理不变。
@@ -412,8 +429,8 @@ void SplitButton::paintEvent(QPaintEvent*) {
             // zh_CN: 分割线——Accent 风格下变淡，Standard 风格用标准边框色。
             QColor sepColor = (fluentStyle() == Accent || checked) ? colors.strokeDivider : colors.strokeDefault;
             painter.setPen(QPen(sepColor, 1));
-            painter.drawLine(QPointF(width() - sWidth, sepMargin),
-                             QPointF(width() - sWidth, height() - sepMargin));
+            painter.drawLine(QPointF(dividerX, sepMargin),
+                             QPointF(dividerX, height() - sepMargin));
         }
     }
 
@@ -444,16 +461,21 @@ void SplitButton::paintEvent(QPaintEvent*) {
     const QRectF layoutRect = iconOnly ? primaryRect : primaryContentRect(primaryRect);
     const int hPadding = (fluentSize() == Small) ? spacing.small
                          : (fluentSize() == Large ? spacing.standard : spacing.padding.controlH);
-    double startX = layoutRect.left();
+    const bool rightToLeft = layoutDirection() == Qt::RightToLeft;
+    double cursorX = rightToLeft ? layoutRect.right() : layoutRect.left();
     if (iconOnly && hasIconFont) {
-        startX += (layoutRect.width() - iconWidth) / 2.0;
+        cursorX = layoutRect.left() + (layoutRect.width() - iconWidth) / 2.0;
     } else {
-        startX += hPadding;
+        cursorX += rightToLeft ? -hPadding : hPadding;
     }
 
     if (hasIconFont) {
         const bool usesFluentIcons = iconFontFamily() == Typography::FontFamily::FluentIcons;
-        QRectF iconRect(startX, primaryRect.top() + primaryOffset, iconWidth, primaryRect.height());
+        const qreal iconX = (!iconOnly && rightToLeft)
+            ? cursorX - iconWidth
+            : cursorX;
+        QRectF iconRect(iconX, primaryRect.top() + primaryOffset,
+                        iconWidth, primaryRect.height());
         if (usesFluentIcons) {
             Typography::Icons::paintGlyph(
                 painter, iconRect, iconGlyph(), iconPixelSize(), Qt::AlignCenter);
@@ -464,16 +486,29 @@ void SplitButton::paintEvent(QPaintEvent*) {
             painter.drawText(iconRect, Qt::AlignCenter, iconGlyph());
             painter.setFont(font());
         }
-        if (fluentLayout() != IconOnly)
-            startX += iconWidth + gap;
+        if (fluentLayout() != IconOnly) {
+            cursorX += rightToLeft
+                ? -(iconWidth + gap)
+                : iconWidth + gap;
+        }
     }
 
     if (!txt.isEmpty()) {
-        const qreal textWidth = qMax<qreal>(0.0, layoutRect.right() - startX);
+        const QRectF textRect = rightToLeft
+            ? QRectF(layoutRect.left(),
+                     primaryRect.top() + primaryOffset,
+                     qMax<qreal>(0.0, cursorX - layoutRect.left()),
+                     primaryRect.height())
+            : QRectF(cursorX,
+                     primaryRect.top() + primaryOffset,
+                     qMax<qreal>(0.0, layoutRect.right() - cursorX),
+                     primaryRect.height());
         painter.save();
         painter.setClipRect(layoutRect);
-        QRectF textRect(startX, primaryRect.top() + primaryOffset, textWidth, primaryRect.height());
-        painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, txt);
+        painter.drawText(textRect,
+                         QStyle::visualAlignment(layoutDirection(),
+                                                 Qt::AlignLeft | Qt::AlignVCenter),
+                         txt);
         painter.restore();
     }
 

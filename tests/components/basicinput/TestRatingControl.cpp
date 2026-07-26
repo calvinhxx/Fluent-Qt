@@ -7,6 +7,7 @@
 #include <QPainter>
 #include <QRegion>
 #include <QSignalSpy>
+#include <QTest>
 #include "components/basicinput/RatingControl.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
@@ -56,6 +57,7 @@ TEST_F(RatingControlTest, DefaultPropertyValues) {
     EXPECT_FALSE(rc.isReadOnly());
     EXPECT_EQ(rc.maxRating(), 5);
     EXPECT_EQ(rc.starSize(), 16);
+    EXPECT_EQ(rc.focusPolicy(), Qt::StrongFocus);
 }
 
 // ── Value 属性 ───────────────────────────────────────────────────────────────
@@ -154,6 +156,55 @@ TEST_F(RatingControlTest, ReadOnlyCursorIsArrow) {
     RatingControl rc;
     rc.setIsReadOnly(true);
     EXPECT_EQ(rc.cursor().shape(), Qt::ArrowCursor);
+}
+
+TEST_F(RatingControlTest, KeyboardNavigationSupportsHalfStepsBoundsAndRtl) {
+    RatingControl rc;
+    rc.resize(rc.sizeHint());
+    rc.show();
+    QApplication::processEvents();
+    rc.setFocus();
+    rc.setValue(2.0);
+
+    QTest::keyClick(&rc, Qt::Key_Right);
+    EXPECT_DOUBLE_EQ(rc.value(), 2.5);
+    QTest::keyClick(&rc, Qt::Key_Left);
+    EXPECT_DOUBLE_EQ(rc.value(), 2.0);
+    QTest::keyClick(&rc, Qt::Key_Up);
+    EXPECT_DOUBLE_EQ(rc.value(), 2.5);
+    QTest::keyClick(&rc, Qt::Key_Down);
+    EXPECT_DOUBLE_EQ(rc.value(), 2.0);
+    QTest::keyClick(&rc, Qt::Key_End);
+    EXPECT_DOUBLE_EQ(rc.value(), 5.0);
+    QTest::keyClick(&rc, Qt::Key_Home);
+    EXPECT_DOUBLE_EQ(rc.value(), -1.0);
+
+    rc.setIsClearEnabled(false);
+    QTest::keyClick(&rc, Qt::Key_Home);
+    EXPECT_DOUBLE_EQ(rc.value(), 0.5);
+
+    rc.setLayoutDirection(Qt::RightToLeft);
+    rc.setValue(2.0);
+    QTest::keyClick(&rc, Qt::Key_Right);
+    EXPECT_DOUBLE_EQ(rc.value(), 1.5);
+    QTest::keyClick(&rc, Qt::Key_Left);
+    EXPECT_DOUBLE_EQ(rc.value(), 2.0);
+
+    rc.setIsReadOnly(true);
+    QTest::keyClick(&rc, Qt::Key_Left);
+    EXPECT_DOUBLE_EQ(rc.value(), 2.0);
+}
+
+TEST_F(RatingControlTest, MouseActivationTakesFocus) {
+    RatingControl rc(window);
+    rc.setGeometry(20, 20, rc.sizeHint().width(), rc.sizeHint().height());
+    window->show();
+    rc.show();
+    QApplication::processEvents();
+
+    QTest::mouseClick(&rc, Qt::LeftButton, Qt::NoModifier, rc.rect().center());
+
+    EXPECT_TRUE(rc.hasFocus());
 }
 
 // ── MaxRating 属性 ───────────────────────────────────────────────────────────

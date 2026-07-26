@@ -237,6 +237,25 @@ TEST_F(ComboBoxTest, FixedHeight) {
     EXPECT_EQ(cb.height(), Spacing::ControlHeight::Standard);
 }
 
+TEST_F(ComboBoxTest, EditableFieldGeometryMirrorsInRightToLeftLayouts) {
+    ComboBox cb(window);
+    cb.setEditable(true);
+    cb.resize(220, Spacing::ControlHeight::Standard);
+    window->show();
+    cb.show();
+    QApplication::processEvents();
+    ASSERT_NE(cb.lineEdit(), nullptr);
+    const QRect leftToRight = cb.lineEdit()->geometry();
+
+    cb.setLayoutDirection(Qt::RightToLeft);
+    QApplication::processEvents();
+    const QRect rightToLeft = cb.lineEdit()->geometry();
+
+    EXPECT_EQ(leftToRight.size(), rightToLeft.size());
+    EXPECT_LT(leftToRight.center().x(), rightToLeft.center().x());
+    EXPECT_EQ(leftToRight.left() + rightToLeft.right(), cb.width() - 1);
+}
+
 TEST_F(ComboBoxTest, DisabledState) {
     ComboBox cb(window);
     cb.addItems({"Item1", "Item2"});

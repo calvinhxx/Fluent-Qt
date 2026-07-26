@@ -6,6 +6,7 @@
 #include "components/foundation/QMLPlus.h"
 
 class QPropertyAnimation;
+class QFocusEvent;
 
 namespace fluent::basicinput {
 
@@ -82,10 +83,13 @@ protected:
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
 
 private:
     void toggle();
     void animateKnob(bool toOn);
+    void updateAccessibleText();
     QRectF trackRect() const;
     QRectF knobRect() const;
     int trackWidth() const { return 40; }
@@ -93,15 +97,17 @@ private:
     int contentAreaX() const;
 
     bool m_isOn = false;
-    QString m_onContent = "On";
-    QString m_offContent = "Off";
+    QString m_onContent;
+    QString m_offContent;
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
 
     qreal m_knobPosition = 0.0;  // 0.0 = Off, 1.0 = On
     bool m_isHovered = false;
     bool m_isPressed = false;
+    bool m_keyboardFocusVisible = false;
 
     QPropertyAnimation* m_knobAnimation = nullptr;
+    QString m_autoAccessibleDescription;
 };
 
 } // namespace fluent::basicinput

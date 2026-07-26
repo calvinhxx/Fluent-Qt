@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <QApplication>
 #include <QSignalSpy>
+#include <QTest>
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/basicinput/Button.h"
 #include "components/textfields/Label.h"
@@ -46,8 +47,9 @@ protected:
 TEST_F(ToggleSwitchTest, DefaultPropertyValues) {
     ToggleSwitch ts;
     EXPECT_FALSE(ts.isOn());
-    EXPECT_EQ(ts.onContent(), "On");
-    EXPECT_EQ(ts.offContent(), "Off");
+    EXPECT_TRUE(ts.onContent().isEmpty());
+    EXPECT_TRUE(ts.offContent().isEmpty());
+    EXPECT_TRUE(ts.accessibleDescription().isEmpty());
     EXPECT_EQ(ts.fontRole(), Typography::FontRole::Body);
 }
 
@@ -100,15 +102,30 @@ TEST_F(ToggleSwitchTest, SetOffContentEmitsSignal) {
 TEST_F(ToggleSwitchTest, SetSameOnContentNoSignal) {
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::onContentChanged);
-    ts.setOnContent("On");  // same as default
+    ts.setOnContent(QString());
     EXPECT_EQ(spy.count(), 0);
 }
 
 TEST_F(ToggleSwitchTest, SetSameOffContentNoSignal) {
     ToggleSwitch ts;
     QSignalSpy spy(&ts, &ToggleSwitch::offContentChanged);
-    ts.setOffContent("Off");  // same as default
+    ts.setOffContent(QString());
     EXPECT_EQ(spy.count(), 0);
+}
+
+TEST_F(ToggleSwitchTest, ApplicationTextDrivesAccessibilityWithoutOverwritingOverrides) {
+    ToggleSwitch ts;
+    ts.setOnContent(QStringLiteral("Connected"));
+    ts.setOffContent(QStringLiteral("Disconnected"));
+    EXPECT_EQ(ts.accessibleDescription(), QStringLiteral("Disconnected"));
+
+    ts.setIsOn(true);
+    EXPECT_EQ(ts.accessibleDescription(), QStringLiteral("Connected"));
+
+    ts.setAccessibleDescription(QStringLiteral("Wi-Fi state"));
+    ts.setIsOn(false);
+    ts.setOffContent(QStringLiteral("Offline"));
+    EXPECT_EQ(ts.accessibleDescription(), QStringLiteral("Wi-Fi state"));
 }
 
 // ── FontRole 属性 ────────────────────────────────────────────────────────────
@@ -182,6 +199,19 @@ TEST_F(ToggleSwitchTest, DisabledDoesNotToggle) {
     // (toggle() checks isEnabled() internally)
     EXPECT_FALSE(ts.isOn());
     EXPECT_EQ(spy.count(), 0);
+}
+
+TEST_F(ToggleSwitchTest, MouseActivationTakesFocusAndToggles) {
+    ToggleSwitch ts(window);
+    ts.setGeometry(20, 20, ts.sizeHint().width(), ts.sizeHint().height());
+    window->show();
+    ts.show();
+    QApplication::processEvents();
+
+    QTest::mouseClick(&ts, Qt::LeftButton, Qt::NoModifier, ts.rect().center());
+
+    EXPECT_TRUE(ts.hasFocus());
+    EXPECT_TRUE(ts.isOn());
 }
 
 // ── 初始 Knob 位置 ──────────────────────────────────────────────────────────

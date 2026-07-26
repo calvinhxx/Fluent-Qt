@@ -7,6 +7,9 @@
 #include "components/foundation/QMLPlus.h"
 
 class QPropertyAnimation;
+class QFocusEvent;
+class QKeyEvent;
+class QMouseEvent;
 
 namespace fluent::basicinput {
 
@@ -81,6 +84,10 @@ protected:
     void nextCheckState() override;
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
 
 private:
     void initAnimation();
@@ -92,6 +99,7 @@ private:
     QFont m_textFont;
     QPropertyAnimation* m_checkAnimation = nullptr;
     QPropertyAnimation* m_dotScaleAnimation = nullptr;
+    bool m_keyboardFocusVisible = false;
 };
 
 } // namespace fluent::basicinput

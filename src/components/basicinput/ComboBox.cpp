@@ -13,6 +13,7 @@
 #include <QStringListModel>
 #include <QProxyStyle>
 #include <QScrollBar>
+#include <QStyle>
 
 #include "design/CornerRadius.h"
 #include "design/Animation.h"
@@ -75,8 +76,10 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
             }
         }
     }
-    QRectF bgRect = QRectF(option.rect).adjusted(kPopupItemOuterInset, 3,
-                                                -itemRightInset, -3);
+    const QRect logicalBgRect =
+        option.rect.adjusted(kPopupItemOuterInset, 3, -itemRightInset, -3);
+    const QRectF bgRect =
+        QStyle::visualRect(option.direction, option.rect, logicalBgRect);
     const int cornerR = radius.control > 0 ? radius.control : 4;
 
     const bool isSelected = option.state & QStyle::State_Selected;
@@ -112,15 +115,20 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // ListView owns the selected indicator overlay. The delegate only paints the
     // row background and text; drawing another indicator here creates a double
     // blue pill in ComboBox flyouts.
-    QRectF textRect = bgRect.adjusted(kPopupItemTextLeftInset, 0,
-                                      -kPopupItemTextRightInset, 0);
+    const QRect logicalTextRect =
+        logicalBgRect.adjusted(kPopupItemTextLeftInset, 0,
+                               -kPopupItemTextRightInset, 0);
+    QRectF textRect =
+        QStyle::visualRect(option.direction, option.rect, logicalTextRect);
     // Center the actual UI-font ink rather than its asymmetric ascent/descent line box.
     // zh_CN: 按 UI 字体的字形墨迹居中，而不是按上下不对称的 ascent/descent 行框居中。
     textRect.translate(0, kPopupTextOpticalOffsetY);
     painter->setPen(textColor);
     painter->setFont(option.font);
     const QString text = index.data(Qt::DisplayRole).toString();
-    painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter,
+    painter->drawText(textRect,
+                      QStyle::visualAlignment(option.direction,
+                                              Qt::AlignLeft | Qt::AlignVCenter),
                       painter->fontMetrics().elidedText(text, Qt::ElideRight, int(textRect.width())));
 
     painter->restore();
@@ -492,8 +500,11 @@ void ComboBox::layoutLineEdit() {
         return;
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
     const int gap = ::Spacing::Gap::Tight;
-    QRect textRect = rect().adjusted(m_contentPaddingH, m_contentPaddingV,
-                                     -(chevronAreaW + gap), -m_contentPaddingV);
+    const QRect logicalTextRect =
+        rect().adjusted(m_contentPaddingH, m_contentPaddingV,
+                        -(chevronAreaW + gap), -m_contentPaddingV);
+    const QRect textRect =
+        QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
     editor->setGeometry(textRect);
 }
 
@@ -513,6 +524,10 @@ void ComboBox::applyLineEditStyle() {
 bool ComboBox::event(QEvent* event) {
     const bool handled = QComboBox::event(event);
     synchronizeLineEdit();
+    if (event && event->type() == QEvent::LayoutDirectionChange) {
+        layoutLineEdit();
+        update();
+    }
     return handled;
 }
 
@@ -632,7 +647,11 @@ void ComboBox::mouseMoveEvent(QMouseEvent* event) {
     synchronizeLineEdit();
     if (m_observedLineEdit) {
         const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
-        bool over = event->pos().x() >= width() - chevronAreaW;
+        const QRect logicalChevronRect(width() - chevronAreaW, 0,
+                                       chevronAreaW, height());
+        const QRect chevronRect =
+            QStyle::visualRect(layoutDirection(), rect(), logicalChevronRect);
+        const bool over = chevronRect.contains(event->pos());
         if (over != m_chevronHovered) {
             m_chevronHovered = over;
             update();
@@ -862,8 +881,11 @@ void ComboBox::paintEvent(QPaintEvent*) {
 
     // Chevron area calculation
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
-    QRectF textRect = r.adjusted(m_contentPaddingH, m_contentPaddingV,
-                                 -(chevronAreaW), -m_contentPaddingV);
+    const QRect logicalTextRect =
+        rect().adjusted(m_contentPaddingH, m_contentPaddingV,
+                        -chevronAreaW, -m_contentPaddingV);
+    QRectF textRect =
+        QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
     // Figma: pb-[2px] on text wrapper
     textRect.adjust(0, 0, 0, -2);
 
@@ -872,7 +894,9 @@ void ComboBox::paintEvent(QPaintEvent*) {
         painter.setPen(textColor);
         painter.setFont(font());
         const QString text = currentText();
-        painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter,
+        painter.drawText(textRect,
+                         QStyle::visualAlignment(layoutDirection(),
+                                                 Qt::AlignLeft | Qt::AlignVCenter),
                          fontMetrics().elidedText(text, Qt::ElideRight, int(textRect.width())));
     }
 
@@ -897,10 +921,13 @@ void ComboBox::paintEvent(QPaintEvent*) {
     const qreal pad = 4.0;
     const qreal btnW = m_chevronSize + pad * 2;
     const qreal btnH = m_chevronSize + pad * 2;
-    QRectF chevronSlot(r.right() - m_chevronOffset.x() - m_chevronSize - pad,
-                       r.center().y() - btnH / 2.0,
-                       btnW,
-                       btnH);
+    const QRect logicalChevronSlot(
+        qRound(r.right() - m_chevronOffset.x() - m_chevronSize - pad),
+        qRound(r.center().y() - btnH / 2.0),
+        qRound(btnW),
+        qRound(btnH));
+    QRectF chevronSlot =
+        QStyle::visualRect(layoutDirection(), rect(), logicalChevronSlot);
     chevronSlot.translate(0, pressOffset + m_chevronOffset.y());
 
     // Editable mode: draw chevron button hover/press background

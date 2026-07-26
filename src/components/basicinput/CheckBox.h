@@ -6,6 +6,9 @@
 #include "components/foundation/QMLPlus.h"
 
 class QPropertyAnimation;
+class QFocusEvent;
+class QKeyEvent;
+class QMouseEvent;
 
 namespace fluent::basicinput {
 
@@ -80,6 +83,10 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void nextCheckState() override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
 
 private:
     void initAnimation();
@@ -90,6 +97,7 @@ private:
     int m_textGap = 8; // Defaults to 8px. zh_CN: 默认 8px。
     bool m_hoverBackgroundEnabled = false; // Hover fill off by default. zh_CN: 默认不启用 hover 背景。
     QPropertyAnimation* m_checkAnimation = nullptr;
+    bool m_keyboardFocusVisible = false;
 };
 
 } // namespace fluent::basicinput

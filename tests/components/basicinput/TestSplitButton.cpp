@@ -106,6 +106,24 @@ protected:
     SplitButtonTestWindow* window = nullptr;
 };
 
+class TestableSplitButton : public SplitButton {
+public:
+    using SplitButton::SplitButton;
+    using SplitButton::getPartAt;
+};
+
+TEST_F(SplitButtonTest, SecondaryHitTargetMirrorsInRightToLeftLayouts) {
+    TestableSplitButton button(QStringLiteral("Choose"));
+    button.resize(160, 32);
+
+    EXPECT_EQ(button.getPartAt(QPoint(4, 16)), SplitButton::Primary);
+    EXPECT_EQ(button.getPartAt(QPoint(156, 16)), SplitButton::Secondary);
+
+    button.setLayoutDirection(Qt::RightToLeft);
+    EXPECT_EQ(button.getPartAt(QPoint(4, 16)), SplitButton::Secondary);
+    EXPECT_EQ(button.getPartAt(QPoint(156, 16)), SplitButton::Primary);
+}
+
 // ─── Design-language × theme compatibility ──────────────────────────────────
 //
 // SplitButton paints a per-brand split surface (action segment + divider + chevron segment) under

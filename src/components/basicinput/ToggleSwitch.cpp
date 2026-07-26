@@ -1,9 +1,11 @@
 #include "ToggleSwitch.h"
+#include <QFocusEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QMouseEvent>
 #include <QKeyEvent>
 #include <QPropertyAnimation>
+#include <QStyle>
 #include "design/Typography.h"
 #include "design/Spacing.h"
 
@@ -34,6 +36,7 @@ ToggleSwitch::ToggleSwitch(QWidget* parent)
     m_knobAnimation = new QPropertyAnimation(this, "knobPosition");
     m_knobAnimation->setDuration(themeAnimation().fast);
     m_knobAnimation->setEasingCurve(themeAnimation().decelerate);
+    updateAccessibleText();
 }
 
 void ToggleSwitch::onThemeUpdated()
@@ -50,6 +53,7 @@ void ToggleSwitch::setIsOn(bool on)
     if (m_isOn == on) return;
     m_isOn = on;
     animateKnob(on);
+    updateAccessibleText();
     update();
     emit toggled(m_isOn);
 }
@@ -58,6 +62,7 @@ void ToggleSwitch::setOnContent(const QString& content)
 {
     if (m_onContent == content) return;
     m_onContent = content;
+    updateAccessibleText();
     updateGeometry();
     update();
     emit onContentChanged(m_onContent);
@@ -67,6 +72,7 @@ void ToggleSwitch::setOffContent(const QString& content)
 {
     if (m_offContent == content) return;
     m_offContent = content;
+    updateAccessibleText();
     updateGeometry();
     update();
     emit offContentChanged(m_offContent);
@@ -103,7 +109,8 @@ QRectF ToggleSwitch::trackRect() const
     // Center vertically in the control row. zh_CN: 垂直居中到控件行。
     int rowH = qMax(kTrackH, QFontMetrics(font()).height());
     int trackY = (rowH - kTrackH) / 2;
-    return QRectF(0, trackY, kTrackW, kTrackH);
+    return QStyle::visualRect(layoutDirection(), rect(),
+                              QRect(0, trackY, kTrackW, kTrackH));
 }
 
 QRectF ToggleSwitch::knobRect() const
@@ -126,7 +133,10 @@ QRectF ToggleSwitch::knobRect() const
     // knob X travel: from left to right inside track
     qreal offX = track.left() + (kTrackH - knobW) / 2.0;
     qreal onX = track.right() - (kTrackH - knobW) / 2.0 - knobW;
-    qreal x = offX + (onX - offX) * m_knobPosition;
+    const qreal visualPosition = layoutDirection() == Qt::RightToLeft
+        ? 1.0 - m_knobPosition
+        : m_knobPosition;
+    qreal x = offX + (onX - offX) * visualPosition;
 
     return QRectF(x, cy - knobH / 2.0, knobW, knobH);
 }
@@ -161,6 +171,16 @@ void ToggleSwitch::toggle()
 {
     if (!isEnabled()) return;
     setIsOn(!m_isOn);
+}
+
+void ToggleSwitch::updateAccessibleText()
+{
+    const QString description = m_isOn ? m_onContent : m_offContent;
+    if (accessibleDescription().isEmpty()
+        || accessibleDescription() == m_autoAccessibleDescription) {
+        setAccessibleDescription(description);
+    }
+    m_autoAccessibleDescription = description;
 }
 
 // ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
@@ -238,7 +258,10 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
         // Travel so the larger on-thumb still clears the track edge. zh_CN: 滑动行程,使更大的开启滑块仍贴边不溢出。
         qreal cxOff = track.left() + kTrackRadius;
         qreal cxOn = track.right() - kTrackRadius;
-        qreal cx = cxOff + (cxOn - cxOff) * m_knobPosition;
+        const qreal visualPosition = layoutDirection() == Qt::RightToLeft
+            ? 1.0 - m_knobPosition
+            : m_knobPosition;
+        qreal cx = cxOff + (cxOn - cxOff) * visualPosition;
 
         // M3 selection-control state layer: a circular halo behind the thumb on hover/press — NOT a fill swap.
         // Colored primary (accentDefault) when on, on-surface veil when off (material-3.md §4). 8% hover / 10%
@@ -309,7 +332,10 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
         qreal cy = track.center().y();
         qreal cxOff = track.left() + 2.0 + knobR;
         qreal cxOn = track.right() - 2.0 - knobR;
-        qreal cx = cxOff + (cxOn - cxOff) * m_knobPosition;
+        const qreal visualPosition = layoutDirection() == Qt::RightToLeft
+            ? 1.0 - m_knobPosition
+            : m_knobPosition;
+        qreal cx = cxOff + (cxOn - cxOff) * visualPosition;
         // Soft 1px drop shadow under the knob (offset down) — the macOS "bezel" cue. zh_CN: 滑块下方柔和 1px 投影
         // (向下偏移)——macOS「斜面」线索。
         if (knobShadow != QColor(Qt::transparent)) {
@@ -398,8 +424,22 @@ void ToggleSwitch::paintEvent(QPaintEvent* /*event*/)
         int textX = contentAreaX();
         int textY = static_cast<int>(track.top());
         int textH = static_cast<int>(track.height());
-        QRect textRect(textX, textY, width() - textX, textH);
-        p.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, contentText);
+        const QRect logicalTextRect(textX, textY, width() - textX, textH);
+        const QRect textRect =
+            QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
+        p.drawText(textRect,
+                   QStyle::visualAlignment(layoutDirection(),
+                                           Qt::AlignVCenter | Qt::AlignLeft),
+                   contentText);
+    }
+
+    if (enabled && hasFocus() && m_keyboardFocusVisible) {
+        QColor focusColor = c.textSecondary;
+        focusColor.setAlpha(120);
+        p.setPen(QPen(focusColor, 1.0));
+        p.setBrush(Qt::NoBrush);
+        p.drawRoundedRect(track.adjusted(1.5, 1.5, -1.5, -1.5),
+                          kTrackRadius - 1.0, kTrackRadius - 1.0);
     }
 }
 
@@ -409,6 +449,9 @@ void ToggleSwitch::mousePressEvent(QMouseEvent* event)
 {
     if (!isEnabled()) { QWidget::mousePressEvent(event); return; }
     if (event->button() == Qt::LeftButton) {
+        if (!hasFocus())
+            setFocus(Qt::MouseFocusReason);
+        m_keyboardFocusVisible = false;
         m_isPressed = true;
         update();
     }
@@ -447,11 +490,31 @@ void ToggleSwitch::leaveEvent(QEvent* event)
 
 void ToggleSwitch::keyPressEvent(QKeyEvent* event)
 {
+    m_keyboardFocusVisible = true;
+    update();
     if (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return) {
         toggle();
         return;
     }
     QWidget::keyPressEvent(event);
+}
+
+void ToggleSwitch::focusInEvent(QFocusEvent* event)
+{
+    QWidget::focusInEvent(event);
+    if (event->reason() == Qt::MouseFocusReason)
+        m_keyboardFocusVisible = false;
+    else if (event->reason() == Qt::TabFocusReason
+             || event->reason() == Qt::BacktabFocusReason
+             || event->reason() == Qt::ShortcutFocusReason)
+        m_keyboardFocusVisible = true;
+    update();
+}
+
+void ToggleSwitch::focusOutEvent(QFocusEvent* event)
+{
+    QWidget::focusOutEvent(event);
+    update();
 }
 
 } // namespace fluent::basicinput

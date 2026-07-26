@@ -1,7 +1,10 @@
 #include "RatingControl.h"
+#include <QFocusEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QKeyEvent>
 #include <QMouseEvent>
+#include <QStyle>
 #include <QtMath>
 #include "design/Typography.h"
 
@@ -54,8 +57,12 @@ RatingControl::RatingControl(QWidget* parent)
     : QWidget(parent)
 {
     setAttribute(Qt::WA_Hover);
+#ifdef Q_OS_MAC
+    setAttribute(Qt::WA_MacShowFocusRect, false);
+#endif
     setMouseTracking(true);
     setCursor(Qt::PointingHandCursor);
+    setFocusPolicy(Qt::StrongFocus);
 
     auto fs = themeFont(m_fontRole);
     setFont(fs.toQFont());
@@ -169,8 +176,9 @@ QSize RatingControl::iconCellSize() const
 QRectF RatingControl::starRect(int index) const
 {
     QSize cell = iconCellSize();
-    double x = index * (cell.width() + m_itemSpacing);
-    return QRectF(x, 0, cell.width(), cell.height());
+    const int x = index * (cell.width() + m_itemSpacing);
+    const QRect logicalRect(x, 0, cell.width(), cell.height());
+    return QStyle::visualRect(layoutDirection(), rect(), logicalRect);
 }
 
 int RatingControl::starsAreaWidth() const
@@ -207,12 +215,28 @@ double RatingControl::ratingFromPosition(int x) const
         QRectF r = starRect(i);
         if (x >= r.left() && x <= r.right()) {
             double midX = r.center().x();
-            return (x < midX) ? (i + 0.5) : (i + 1.0);
+            const bool firstHalf = layoutDirection() == Qt::RightToLeft
+                ? x > midX
+                : x < midX;
+            return firstHalf ? (i + 0.5) : (i + 1.0);
         }
     }
-    if (x > starRect(m_maxRating - 1).right())
+    const QRectF maximumStar = starRect(m_maxRating - 1);
+    if ((layoutDirection() == Qt::LeftToRight && x > maximumStar.right())
+        || (layoutDirection() == Qt::RightToLeft && x < maximumStar.left())) {
         return m_maxRating;
+    }
     return 0;
+}
+
+double RatingControl::keyboardStepTarget(int direction) const
+{
+    constexpr double kStep = 0.5;
+    const double current = m_value >= 0.0 ? m_value : 0.0;
+    const double candidate = current + direction * kStep;
+    if (candidate <= 0.0)
+        return m_isClearEnabled ? -1.0 : kStep;
+    return qMin(candidate, static_cast<double>(m_maxRating));
 }
 
 // ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
@@ -302,8 +326,11 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
             // zh_CN: 部分填充——先画空心，再用裁剪区域画实心。
             drawRatingStar(p, star, emptyColor, false, outlineWidth);
             p.save();
-            p.setClipRect(QRectF(rect.left(), rect.top(),
-                                  rect.width() * fillFraction, rect.height()));
+            const qreal fillWidth = rect.width() * fillFraction;
+            const qreal fillX = layoutDirection() == Qt::RightToLeft
+                ? rect.right() - fillWidth
+                : rect.left();
+            p.setClipRect(QRectF(fillX, rect.top(), fillWidth, rect.height()));
             drawRatingStar(p, star, filledColor, true, outlineWidth);
             p.restore();
         }
@@ -314,9 +341,26 @@ void RatingControl::paintEvent(QPaintEvent* /*event*/)
         QFont captionFont = themeFont(m_captionFontRole).toQFont();
         p.setFont(captionFont);
         p.setPen(isDisabled ? c.textDisabled : c.textSecondary);
-        int captionX = starsAreaWidth() + m_itemSpacing * 2;
-        QRect captionRect(captionX, 0, width() - captionX, height());
-        p.drawText(captionRect, Qt::AlignVCenter | Qt::AlignLeft, m_caption);
+        const int captionX = starsAreaWidth() + m_itemSpacing * 2;
+        const QRect logicalCaptionRect(captionX, 0, width() - captionX, height());
+        const QRect captionRect =
+            QStyle::visualRect(layoutDirection(), rect(), logicalCaptionRect);
+        p.drawText(captionRect,
+                   QStyle::visualAlignment(layoutDirection(),
+                                           Qt::AlignVCenter | Qt::AlignLeft),
+                   m_caption);
+    }
+
+    if (!isDisabled && hasFocus() && m_keyboardFocusVisible) {
+        QColor focusColor = c.textSecondary;
+        focusColor.setAlpha(120);
+        const QRect logicalFocusRect(0, 0, starsAreaWidth(), height());
+        const QRect focusRect =
+            QStyle::visualRect(layoutDirection(), rect(), logicalFocusRect)
+                .adjusted(1, 1, -1, -1);
+        p.setPen(QPen(focusColor, 1.0));
+        p.setBrush(Qt::NoBrush);
+        p.drawRoundedRect(focusRect, themeRadius().control, themeRadius().control);
     }
 }
 
@@ -350,8 +394,12 @@ void RatingControl::mouseMoveEvent(QMouseEvent* event)
 
 void RatingControl::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton && !m_isReadOnly) {
-        m_isPressed = true;
+    if (event->button() == Qt::LeftButton && isEnabled()) {
+        if (!hasFocus())
+            setFocus(Qt::MouseFocusReason);
+        m_keyboardFocusVisible = false;
+        if (!m_isReadOnly)
+            m_isPressed = true;
     }
     QWidget::mousePressEvent(event);
 }
@@ -370,6 +418,65 @@ void RatingControl::mouseReleaseEvent(QMouseEvent* event)
         }
     }
     QWidget::mouseReleaseEvent(event);
+}
+
+void RatingControl::keyPressEvent(QKeyEvent* event)
+{
+    if (!isEnabled() || m_isReadOnly) {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
+    m_keyboardFocusVisible = true;
+    update();
+
+    int direction = 0;
+    switch (event->key()) {
+    case Qt::Key_Left:
+        direction = layoutDirection() == Qt::RightToLeft ? 1 : -1;
+        break;
+    case Qt::Key_Right:
+        direction = layoutDirection() == Qt::RightToLeft ? -1 : 1;
+        break;
+    case Qt::Key_Down:
+        direction = -1;
+        break;
+    case Qt::Key_Up:
+        direction = 1;
+        break;
+    case Qt::Key_Home:
+        setValue(m_isClearEnabled ? -1.0 : 0.5);
+        event->accept();
+        return;
+    case Qt::Key_End:
+        setValue(m_maxRating);
+        event->accept();
+        return;
+    default:
+        QWidget::keyPressEvent(event);
+        return;
+    }
+
+    setValue(keyboardStepTarget(direction));
+    event->accept();
+}
+
+void RatingControl::focusInEvent(QFocusEvent* event)
+{
+    QWidget::focusInEvent(event);
+    if (event->reason() == Qt::MouseFocusReason)
+        m_keyboardFocusVisible = false;
+    else if (event->reason() == Qt::TabFocusReason
+             || event->reason() == Qt::BacktabFocusReason
+             || event->reason() == Qt::ShortcutFocusReason)
+        m_keyboardFocusVisible = true;
+    update();
+}
+
+void RatingControl::focusOutEvent(QFocusEvent* event)
+{
+    QWidget::focusOutEvent(event);
+    update();
 }
 
 } // namespace fluent::basicinput

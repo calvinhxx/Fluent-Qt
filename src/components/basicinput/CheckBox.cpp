@@ -1,6 +1,10 @@
 #include "CheckBox.h"
+#include <QFocusEvent>
+#include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPropertyAnimation>
+#include <QStyle>
 #include "design/Typography.h"
 #include "design/CornerRadius.h"
 
@@ -130,7 +134,9 @@ void CheckBox::paintEvent(QPaintEvent*) {
 
     // 2. Paint the checkbox box. zh_CN: 绘制复选框方框。
     int boxY = (height() - m_boxSize) / 2;
-    QRectF boxRect(m_boxMargin, boxY, m_boxSize, m_boxSize);
+    const QRect logicalBoxRect(m_boxMargin, boxY, m_boxSize, m_boxSize);
+    const QRectF boxRect =
+        QStyle::visualRect(layoutDirection(), rect(), logicalBoxRect);
 
     const bool darkTheme = effectiveTheme() == fluent::FluentElement::Dark;
     // Theme-aware veil: darkens light surfaces, lightens dark ones — keeps hover/press visible in BOTH
@@ -297,9 +303,57 @@ void CheckBox::paintEvent(QPaintEvent*) {
         
         // Text starts after the left margin, box, and text gap.
         // zh_CN: 文本起始位置 = 左侧边距 + 方框 + 文字间距。
-        QRectF textRect = rect().adjusted(m_boxMargin + m_boxSize + m_textGap, 0, -m_boxMargin, 0);
-        painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, text());
+        const QRect logicalTextRect =
+            rect().adjusted(m_boxMargin + m_boxSize + m_textGap,
+                            0, -m_boxMargin, 0);
+        const QRect textRect =
+            QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
+        painter.drawText(textRect,
+                         QStyle::visualAlignment(layoutDirection(),
+                                                 Qt::AlignVCenter | Qt::AlignLeft),
+                         text());
     }
+
+    if (enabled && hasFocus() && m_keyboardFocusVisible) {
+        QColor focusColor = colors.textSecondary;
+        focusColor.setAlpha(120);
+        painter.setPen(QPen(focusColor, 1.0));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRoundedRect(rect().adjusted(1, 1, -1, -1),
+                                radius.control, radius.control);
+    }
+}
+
+void CheckBox::focusInEvent(QFocusEvent* event)
+{
+    QCheckBox::focusInEvent(event);
+    if (event->reason() == Qt::MouseFocusReason)
+        m_keyboardFocusVisible = false;
+    else if (event->reason() == Qt::TabFocusReason
+             || event->reason() == Qt::BacktabFocusReason
+             || event->reason() == Qt::ShortcutFocusReason)
+        m_keyboardFocusVisible = true;
+    update();
+}
+
+void CheckBox::focusOutEvent(QFocusEvent* event)
+{
+    QCheckBox::focusOutEvent(event);
+    update();
+}
+
+void CheckBox::keyPressEvent(QKeyEvent* event)
+{
+    m_keyboardFocusVisible = true;
+    update();
+    QCheckBox::keyPressEvent(event);
+}
+
+void CheckBox::mousePressEvent(QMouseEvent* event)
+{
+    m_keyboardFocusVisible = false;
+    update();
+    QCheckBox::mousePressEvent(event);
 }
 
 } // namespace fluent::basicinput

@@ -5,6 +5,9 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 
+class QKeyEvent;
+class QFocusEvent;
+
 namespace fluent::basicinput {
 
 /**
@@ -115,10 +118,14 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
 
 private:
+    double keyboardStepTarget(int direction) const;
     double ratingFromPosition(int x) const;
     QRectF starRect(int index) const;
     int starsAreaWidth() const;
@@ -138,6 +145,7 @@ private:
     double m_hoverValue = -1.0;       // 悬停预览值
     bool m_isHovered = false;
     bool m_isPressed = false;
+    bool m_keyboardFocusVisible = false;
 };
 
 } // namespace fluent::basicinput
