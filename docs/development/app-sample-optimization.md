@@ -8,6 +8,24 @@ component capability: the preview UI must demonstrate the same behavior that the
 snippet shows, and the snippet must contain the meaningful properties, signals,
 slots, and setup used by the preview.
 
+## Hard Rule: Snippet ↔ Preview Alignment
+
+Gallery sample cards must keep the **Source code** snippet semantically aligned
+with the live preview above it.
+
+- Every visible control, label text, severity, placement, and non-default
+  property in the preview must appear in the snippet (or an equivalently named
+  variable that performs the same call).
+- Every property assignment, signal connection, and ownership choice shown in
+  the snippet must be visible or exercised by the preview.
+- Do not leave illustrative stubs such as undeclared `options` / `status`
+  variables, fewer buttons than the preview shows, or a single divider when the
+  preview renders two.
+- When the preview grows or shrinks, update the snippet in the same change.
+
+This rule applies to new component samples and to later sample edits. Reviewers
+should reject cards where the code block and UI tell different stories.
+
 ## Entry Prompts
 
 Single component:
