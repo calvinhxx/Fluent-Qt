@@ -40,6 +40,7 @@
 #include "components/dialogs_flyouts/ContentDialog.h"
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/FontIcon.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -1040,6 +1041,7 @@ TEST_F(GalleryShellFrameworkTest, LeftCompactNavigationShowsChildrenInFlyout)
                                         QStringLiteral("progress-bar"),
                                         QStringLiteral("progress-ring"),
                                         QStringLiteral("shimmer"),
+                                        QStringLiteral("toast"),
                                         QStringLiteral("tooltip")}) {
         auto* childRow = flyout->findChild<QWidget*>(
             QStringLiteral("galleryCompactNavigationFlyoutRow_%1").arg(childRouteId));
@@ -1073,6 +1075,7 @@ TEST_F(GalleryShellFrameworkTest, NavigationEntriesExposeRequiredGroups)
         QStringLiteral("Collections"),
         QStringLiteral("Date & time"),
         QStringLiteral("Dialogs & flyouts"),
+        QStringLiteral("Layout"),
         QStringLiteral("Menus & toolbars"),
         QStringLiteral("Navigation"),
         QStringLiteral("Scrolling"),
@@ -1091,6 +1094,7 @@ TEST_F(GalleryShellFrameworkTest, NavigationEntriesExposeRequiredGroups)
         QStringLiteral("collections"),
         QStringLiteral("date-time"),
         QStringLiteral("dialogs-flyouts"),
+        QStringLiteral("layout"),
         QStringLiteral("menus-toolbars"),
         QStringLiteral("navigation"),
         QStringLiteral("scrolling"),
@@ -1517,13 +1521,19 @@ TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
     // Category titles navigate too; unknown text changes nothing.
     EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("Date & time")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("date-time"));
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("FontIcon")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("font-icon"));
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("Toast")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("toast"));
     EXPECT_FALSE(window.navigateToSearchResult(QStringLiteral("no-such-control")));
-    EXPECT_EQ(window.currentRouteId(), QStringLiteral("date-time"));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("toast"));
 
     // The title-bar search box suggests every navigable route title.
     auto* searchBox = window.findChild<AutoSuggestBox*>(QStringLiteral("GalleryTitleBar.SearchBox"));
     ASSERT_NE(searchBox, nullptr);
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("CheckBox")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Card")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("FontIcon")));
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Scrolling")));
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Settings")));
 
@@ -1765,11 +1775,13 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_FALSE(visibleText.contains(QStringLiteral("About")));
     EXPECT_FALSE(visibleText.contains(QStringLiteral("Fluent-Qt Gallery")));
 
-    const auto iconLabels = page->findChildren<fluent::textfields::Label*>(
+    const auto iconViews = page->findChildren<fluent::FontIcon*>(
         QStringLiteral("gallerySettingsRowIcon"));
-    ASSERT_EQ(iconLabels.size(), 6);
-    for (auto* iconLabel : iconLabels)
-        EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::FluentIcons);
+    ASSERT_EQ(iconViews.size(), 6);
+    for (auto* iconView : iconViews) {
+        EXPECT_FALSE(iconView->glyph().isEmpty());
+        EXPECT_EQ(iconView->iconSize(), Typography::IconSize::Standard);
+    }
 
     QElapsedTimer themeRequestTimer;
     themeRequestTimer.start();
@@ -1778,8 +1790,8 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     QTRY_COMPARE_WITH_TIMEOUT(settings.themeMode(), GallerySettings::ThemeMode::Dark, 1000);
     EXPECT_EQ(settings.themeMode(), GallerySettings::ThemeMode::Dark);
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
-    for (auto* iconLabel : iconLabels)
-        EXPECT_EQ(iconLabel->font().family(), Typography::FontFamily::FluentIcons);
+    for (auto* iconView : iconViews)
+        EXPECT_FALSE(iconView->glyph().isEmpty());
     window.resize(460, 760);
     QApplication::processEvents();
     QTRY_VERIFY_WITH_TIMEOUT(page->width() < 640, 1000);

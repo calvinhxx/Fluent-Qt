@@ -42,8 +42,12 @@ GalleryCategoryPage::GalleryCategoryPage(const GalleryContentEntry& entry,
         if (const GalleryContentEntry* componentEntry = galleryContentEntry(item.id))
             description = componentEntry->description;
 
-        entries.append({item.id, item.title, description,
-                        QPixmap(galleryControlImageResource(item.title))});
+        const QPixmap icon(galleryControlImageResource(item.title));
+        entries.append({item.id,
+                        item.title,
+                        description,
+                        icon,
+                        icon.isNull() ? item.iconGlyph : QString()});
     }
 
     grid->setEntries(entries);

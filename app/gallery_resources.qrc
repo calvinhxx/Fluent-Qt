@@ -43,11 +43,15 @@
         <file>assets/control_images/dialogs-flyouts/Popup.png</file>
         <file>assets/control_images/dialogs-flyouts/TeachingTip.png</file>
         <file>assets/control_images/foundation/Color.png</file>
+        <file>assets/control_images/foundation/FontIcon.png</file>
         <file>assets/control_images/foundation/Geometry.png</file>
         <file>assets/control_images/foundation/Iconography.png</file>
         <file>assets/control_images/foundation/QMLPlus.png</file>
         <file>assets/control_images/foundation/Spacing.png</file>
         <file>assets/control_images/foundation/Typography.png</file>
+        <file>assets/control_images/layout/Card.png</file>
+        <file>assets/control_images/layout/Divider.png</file>
+        <file>assets/control_images/layout/Expander.png</file>
         <file>assets/control_images/menus-toolbars/Menu.png</file>
         <file>assets/control_images/menus-toolbars/MenuBar.png</file>
         <file>assets/control_images/navigation/Breadcrumb.png</file>
@@ -64,6 +68,7 @@
         <file>assets/control_images/status-info/ProgressBar.png</file>
         <file>assets/control_images/status-info/ProgressRing.png</file>
         <file>assets/control_images/status-info/Shimmer.png</file>
+        <file>assets/control_images/status-info/Toast.png</file>
         <file>assets/control_images/status-info/ToolTip.png</file>
         <file>assets/control_images/text-fields/AutoSuggestBox.png</file>
         <file>assets/control_images/text-fields/Label.png</file>

@@ -4,6 +4,8 @@
 #include "samples/CollectionsSamples.h"
 #include "samples/DateTimeSamples.h"
 #include "samples/DialogsFlyoutsSamples.h"
+#include "samples/FoundationSamples.h"
+#include "samples/LayoutSamples.h"
 #include "samples/MenusToolbarsSamples.h"
 #include "samples/NavigationSamples.h"
 #include "samples/ScrollingSamples.h"
@@ -24,6 +26,8 @@ QVector<GallerySample> gallerySamplesForRoute(const QString& routeId)
         &collectionsSamples,
         &dateTimeSamples,
         &dialogsFlyoutsSamples,
+        &foundationSamples,
+        &layoutSamples,
         &menusToolbarsSamples,
         &navigationSamples,
         &scrollingSamples,

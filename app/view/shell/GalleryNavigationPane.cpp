@@ -19,6 +19,7 @@
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/collections/TreeView.h"
+#include "components/layout/Divider.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/status_info/ToolTip.h"
 #include "components/windowing/WindowBackdrop.h"
@@ -29,90 +30,6 @@
 #include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {
-
-namespace {
-
-// A 1px footer separator that paints itself with CompositionMode_Source, so its semi-transparent
-// stroke REPLACES the backing store each frame instead of compositing over it. Under a translucent
-// top-level (macOS vibrancy) the backing isn't auto-cleared, so a plain translucent-background
-// QWidget would stack alpha on every repaint and darken toward black as the user interacts.
-// zh_CN: 1px 页脚分隔线，用 CompositionMode_Source 自绘，使其半透明描边每帧「替换」后备缓冲而非在其上叠加。
-// 半透明顶层（macOS vibrancy）下后备缓冲不会自动清除，普通半透明背景的 QWidget 会逐帧叠加 alpha，随交互发黑。
-class FooterDividerLine : public QWidget {
-public:
-    explicit FooterDividerLine(QWidget* parent)
-        : QWidget(parent) {
-        // Intentionally no WA_TranslucentBackground: on macOS it promotes the line to its own
-        // layer that, before the window's vibrancy composites at startup, shows the tint at full
-        // strength (a bright/white line). As a plain child it paints into the shared backing and
-        // composites over the same vibrancy as the rest of the pane.
-        // zh_CN: 故意不设 WA_TranslucentBackground：macOS 上它会把线提升为独立图层，在启动时窗口 vibrancy
-        // 合成之前，该图层会显示满强度的 tint（亮/白线）。作为普通子控件，它绘入共享后备缓冲，与窗格其余部分
-        // 叠加在同一层 vibrancy 上。
-        setAttribute(Qt::WA_TransparentForMouseEvents, true);
-    }
-
-    // onCard: the line is sitting on the flyout's opaque elevated card (drawer/surface mode) rather
-    // than directly on the translucent OS backdrop. That flips the erase behavior below.
-    // zh_CN: onCard 表示分隔线画在浮层那张不透明抬升卡片上（抽屉/surface 模式），而非直接画在半透明系统背景上，
-    // 这会改变下方的擦除行为。
-    void setLine(const QColor& color, int inset, bool onCard) {
-        if (m_color == color && m_inset == inset && m_onCard == onCard)
-            return;
-        m_color = color;
-        m_inset = qMax(0, inset);
-        m_onCard = onCard;
-        update();
-    }
-
-protected:
-    void paintEvent(QPaintEvent*) override {
-        QPainter painter(this);
-        // Under a translucent top-level the backing store isn't auto-cleared on macOS, so a
-        // translucent stroke would stack alpha every repaint and darken toward black; erase first
-        // with Source (replace). On an opaque top-level Qt clears the (translucent) widget for us —
-        // and a Source fill there would write RGBA(0,0,0,0) that renders black — so use the default
-        // SourceOver over the already-cleared backing.
-        // zh_CN: 半透明顶层下 macOS 后备缓冲不会自动清除，半透明描边会逐帧叠加 alpha、最终发黑，故先用 Source
-        //（替换）擦除。不透明顶层下 Qt 会替我们清除（半透明）控件——此时 Source 会写入 RGBA(0,0,0,0) 渲染成黑，
-        // 故改用默认的 SourceOver 在已清除的后备缓冲上绘制。
-        // Erase-then-Source only under a composited transparent backdrop, where the pane is transparent
-        // and the backing isn't auto-cleared. Gate on the UILib backdrop state, NOT bare
-        // `WA_TranslucentBackground`: Windows stays translucent in Normal too, so erasing there would
-        // punch the opaque pane bgCanvas back out to the wallpaper. In Normal draw the divider with the
-        // default SourceOver over the pane's opaque surface.
-        // zh_CN: 仅在「真实系统背景」（Mica / macOS vibrancy，窗格透明且后备缓冲不自动清除）下才擦除+Source。
-        // 用 UILib 背景状态判定，而非裸的 WA_TranslucentBackground：Windows 上 Normal 也半透明，
-        // 此处擦除会把不透明窗格 bgCanvas 重新打穿成壁纸。Normal 下用默认 SourceOver 在窗格不透明表面上画分隔线。
-        // The erase is ONLY correct when the line paints directly onto the real OS backdrop — the
-        // inline pane on Mica/vibrancy, where the backing isn't auto-cleared. In the drawer flyout
-        // the line sits on the flyout's opaque elevated card (m_onCard): the window is still the
-        // translucent Mica top-level, but a Source erase here would punch a transparent strip clean
-        // through that card and reveal the content behind the flyout — the full-width seam this fix
-        // removes. On the card, composite the hairline with the default SourceOver instead.
-        // zh_CN: 仅当分隔线直接画在真实系统背景（内嵌窗格 + Mica/vibrancy，后备缓冲不自动清除）上时才该擦除。
-        // 抽屉浮层里分隔线画在浮层那张不透明卡片上（m_onCard）：此时顶层窗口仍是半透明 Mica，但在这里做 Source 擦除
-        // 会把卡片打穿成透明、露出浮层背后的内容——正是本次修复要消除的整宽缝。卡片上改用默认 SourceOver 叠加细线。
-        const bool eraseToBackdrop = !m_onCard && usesCompositedWindowBackdrop(this);
-        if (eraseToBackdrop) {
-            painter.setCompositionMode(QPainter::CompositionMode_Source);
-            painter.fillRect(rect(), Qt::transparent);
-        }
-        const QRect line = rect().adjusted(m_inset, 0, -m_inset, 0);
-        if (line.width() > 0 && m_color.alpha() > 0) {
-            painter.setCompositionMode(eraseToBackdrop ? QPainter::CompositionMode_Source
-                                                       : QPainter::CompositionMode_SourceOver);
-            painter.fillRect(line, m_color);
-        }
-    }
-
-private:
-    QColor m_color;
-    int m_inset = 0;
-    bool m_onCard = false;
-};
-
-} // namespace
 
 GalleryNavigationPane::GalleryNavigationPane(const QVector<GalleryNavigationItem>& items, QWidget* parent)
     : QWidget(parent)
@@ -387,7 +304,9 @@ void GalleryNavigationPane::rebuild()
     outerLayout->setSpacing(0);
 
     if (isFooterOnly()) {
-        m_footerDivider = new FooterDividerLine(this);
+        m_footerDivider = new fluent::layout::Divider(this);
+        m_footerDivider->setLeadingInset(16);
+        m_footerDivider->setTrailingInset(16);
         m_footerDivider->setObjectName(QStringLiteral("galleryFooterNavigationDivider"));
         m_footerDivider->setFixedHeight(1);
         m_footerDivider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -580,17 +499,14 @@ void GalleryNavigationPane::updateDividerPalette()
     // edge-to-edge bar — the latter looks crude against the clean Mica/vibrancy chrome (and an
     // inset rule is the native macOS convention). The stroke is softened to ~40% alpha so it
     // whispers the separation instead of drawing a hard gray line over the translucent pane.
-    // It's drawn by FooterDividerLine (CompositionMode_Source) so the translucent stroke doesn't
-    // accumulate/darken across repaints under the translucent backdrop.
+    // Divider owns the backing-store composition detail so the Gallery only supplies appearance.
     // zh_CN: 让分隔线内缩，呈现精致、居中的细线，而非生硬的整宽横条（在干净的 Mica/vibrancy chrome 上更协调，
-    // 内缩也符合 macOS 原生习惯）。描边淡化到约 40% alpha，在半透明窗格上轻声示意分隔。由 FooterDividerLine
-    //（CompositionMode_Source）绘制，故半透明描边不会在半透明背景下逐帧叠加发黑。
+    // 内缩也符合 macOS 原生习惯）。描边淡化到约 40% alpha，在半透明窗格上轻声示意分隔。
+    // 后备缓冲的合成细节由 Divider 负责，Gallery 只提供外观参数。
     const auto colors = themeColors();
     QColor divider = colors.strokeDivider;
     divider.setAlphaF(divider.alphaF() * 0.4);
-    // m_footerDivider is always a FooterDividerLine (created in the footer-only branch) and is
-    // non-null here (guarded above). zh_CN: m_footerDivider 必为 FooterDividerLine（页脚分支创建）且此处非空。
-    static_cast<FooterDividerLine*>(m_footerDivider)->setLine(divider, 16, m_surfaceVisible);
+    m_footerDivider->setColor(divider);
 }
 
 void GalleryNavigationPane::startCompactVisualTransition(bool compact)

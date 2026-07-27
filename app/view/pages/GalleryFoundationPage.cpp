@@ -30,15 +30,16 @@ GalleryFoundationPage::GalleryFoundationPage(const GalleryContentEntry& entry,
         QString description;
         if (const GalleryContentEntry* topicEntry = galleryContentEntry(routeId))
             description = topicEntry->description;
-        // Use the designed Foundation topic image (indigo tile + white glyph), same as the
-        // All-controls grid — leaving iconGlyph empty so the grid draws the pixmap, not a glyph.
-        // zh_CN: 用设计好的 Foundation 主题图（靛蓝底+白色字形），与 All 控件网格一致——iconGlyph 留空，
-        // 让网格绘制该图而非字形。
+        // Prefer designed topic artwork; component routes without dedicated artwork
+        // use their catalog glyph instead of borrowing an unrelated image.
+        // zh_CN: 优先使用主题专属图片；没有专属图片的组件路由改用目录字形，
+        // 不再借用其他组件的图片。
+        const QPixmap icon(galleryControlImageResource(item->title));
         entries.append({item->id,
                         item->title,
                         description,
-                        QPixmap(galleryControlImageResource(item->title)),
-                        QString()});
+                        icon,
+                        icon.isNull() ? item->iconGlyph : QString()});
     }
 
     grid->setEntries(entries);
