@@ -126,11 +126,6 @@ geometry in device-independent coordinates and do not add a second app-level mul
 
 See [`examples/hello_world`](examples/hello_world/) for the complete project, or run the `fluentqt_hello_world` target directly from an IDE.
 
-`<FluentQt/FluentQt.h>` remains the convenient complete entry point. Larger
-projects can reduce include cost with category entries such as
-`<FluentQt/BasicInput.h>`, `<FluentQt/Collections.h>`, or
-`<FluentQt/TextFields.h>`.
-
 ## 🛠 Build
 
 ### Library

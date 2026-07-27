@@ -4,6 +4,8 @@
 
 - Use [README.md](README.md) for the project overview, supported Qt versions, CMake presets, and local IDE expectations.
 - Use [docs/development/README.md](docs/development/README.md) as the index for reusable workflow rules; link to those docs instead of copying them into new agent files.
+- Use [docs/development/gallery-control-images.md](docs/development/gallery-control-images.md) when adding or regenerating Gallery component-card icons under `app/assets/control_images/` (transparent canvas, category color families, qrc registration).
+- Use [docs/development/app-sample-optimization.md](docs/development/app-sample-optimization.md) when adding or editing Gallery live examples: Source code snippets must stay semantically aligned with the preview UI.
 - Use [docs/development/linux-workflow.md](docs/development/linux-workflow.md) for desktop Linux portability, supported Qt versions, CI baselines, and Linux build/test presets.
 - Use [docs/development/release-governance.md](docs/development/release-governance.md) for lightweight branch, Angular-style Conventional Commit, version, tag, changelog, and release checklist rules.
 - Use [docs/development/packaging-workflow.md](docs/development/packaging-workflow.md) for macOS DMG, Windows installer, and Linux DEB packaging commands.
@@ -44,6 +46,7 @@ ctest --preset vcpkg-osx --output-on-failure
   facade in [support/logging/Log.h](support/logging/Log.h); never add a
   spdlog dependency to `FluentQt` itself.
 - [src/components/foundation/](src/components/foundation/) contains shared component infrastructure such as `fluent::FluentElement`, `fluent::QMLPlus`, `fluent::AnchorLayout`, and `fluent::overlay` contracts.
+- [src/components/layout/](src/components/layout/) contains reusable composition surfaces such as `fluent::layout::Card`, `fluent::layout::Divider`, and `fluent::layout::Expander`.
 - [src/components/](src/components/) is grouped by component category; component tests mirror those categories under [tests/components/](tests/components/).
 
 ## Component Conventions

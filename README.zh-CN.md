@@ -126,10 +126,6 @@ FluentQt 通过 Qt 跟随操作系统的显示缩放。应用应使用设备无�
 
 完整工程见 [`examples/hello_world`](examples/hello_world/)，IDE 中可直接运行 `fluentqt_hello_world` target。
 
-`<FluentQt/FluentQt.h>` 仍是方便的完整入口。较大工程可改用
-`<FluentQt/BasicInput.h>`、`<FluentQt/Collections.h>`、
-`<FluentQt/TextFields.h>` 等分类入口，减少不必要的头文件解析。
-
 ## 🛠 构建
 
 ### 组件库
