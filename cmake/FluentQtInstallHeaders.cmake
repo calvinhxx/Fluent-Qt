@@ -11,6 +11,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     include/FluentQt/DialogsFlyouts.h
     include/FluentQt/FluentQt.h
     include/FluentQt/Foundation.h
+    include/FluentQt/Layout.h
     include/FluentQt/MenusToolbars.h
     include/FluentQt/Navigation.h
     include/FluentQt/Scrolling.h
@@ -60,6 +61,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/dialogs_flyouts/TeachingTip.h
 
     src/components/foundation/FluentElement.h
+    src/components/foundation/FontIcon.h
     src/components/foundation/QMLPlus.h
     src/components/foundation/StyleThemeCatalog.h
     src/components/foundation/ThemeRegistry.h
@@ -69,6 +71,10 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/foundation/overlay/OverlayScrim.h
     src/components/foundation/overlay/OverlayShadow.h
     src/components/foundation/overlay/OverlayWindow.h
+
+    src/components/layout/Card.h
+    src/components/layout/Divider.h
+    src/components/layout/Expander.h
 
     src/components/menus_toolbars/Menu.h
     src/components/menus_toolbars/MenuBar.h
@@ -90,6 +96,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/status_info/ProgressBar.h
     src/components/status_info/ProgressRing.h
     src/components/status_info/Shimmer.h
+    src/components/status_info/Toast.h
     src/components/status_info/ToolTip.h
 
     src/components/textfields/AutoSuggestBox.h

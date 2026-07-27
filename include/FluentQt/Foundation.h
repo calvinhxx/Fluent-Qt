@@ -1,6 +1,7 @@
 #ifndef FLUENTQT_FOUNDATION_H
 #define FLUENTQT_FOUNDATION_H
 
+#include <components/foundation/FontIcon.h>
 #include <components/foundation/FluentElement.h>
 #include <components/foundation/QMLPlus.h>
 #include <components/foundation/StyleThemeCatalog.h>
