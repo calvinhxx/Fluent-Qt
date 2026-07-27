@@ -5,7 +5,6 @@
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
-#include <QPainter>
 #include <QPalette>
 #include <QPushButton>
 #include <QResizeEvent>
@@ -16,6 +15,8 @@
 
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
+#include "components/foundation/FontIcon.h"
+#include "components/layout/Card.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
@@ -74,18 +75,17 @@ private:
     }
 };
 
-class SettingsRow final : public QFrame, public fluent::FluentElement {
+class SettingsRow final : public fluent::layout::Card {
 public:
     SettingsRow(const QString& icon,
                 const QString& title,
                 const QString& subtitle,
                 QWidget* trailing,
                 QWidget* parent)
-        : QFrame(parent)
+        : Card(parent)
         , m_trailing(trailing)
     {
         setObjectName(QStringLiteral("gallerySettingsRow"));
-        setFrameShape(QFrame::NoFrame);
         setMinimumHeight(74);
 
         m_layout = new QGridLayout(this);
@@ -94,14 +94,10 @@ public:
         m_layout->setVerticalSpacing(6);
         m_layout->setColumnStretch(1, 1);
 
-        auto* iconLabel = new fluent::textfields::Label(
-            Typography::Icons::glyphForSize(icon, Typography::IconSize::Standard), this);
-        iconLabel->setObjectName(QStringLiteral("gallerySettingsRowIcon"));
-        iconLabel->setTextColorRole(fluent::textfields::Label::TextColorRole::Primary);
-        iconLabel->setAlignment(Qt::AlignCenter);
-        const QFont iconFont = Typography::Icons::font(Typography::IconSize::Standard);
-        iconLabel->setFont(iconFont);
-        iconLabel->setFixedSize(30, 30);
+        auto* iconView = new fluent::FontIcon(icon, this);
+        iconView->setObjectName(QStringLiteral("gallerySettingsRowIcon"));
+        iconView->setIconSize(Typography::IconSize::Standard);
+        iconView->setFixedSize(30, 30);
 
         auto* textColumn = new QWidget(this);
         auto* textLayout = new QVBoxLayout(textColumn);
@@ -121,12 +117,10 @@ public:
         textLayout->addWidget(subtitleLabel);
         textLayout->addStretch(1);
 
-        m_layout->addWidget(iconLabel, 0, 0, Qt::AlignVCenter);
+        m_layout->addWidget(iconView, 0, 0, Qt::AlignVCenter);
         m_layout->addWidget(textColumn, 0, 1);
         updateResponsiveLayout();
     }
-
-    void onThemeUpdated() override { update(); }
 
     void setStacked(bool stacked)
     {
@@ -150,21 +144,9 @@ public:
     }
 
 protected:
-    void paintEvent(QPaintEvent*) override
-    {
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing);
-        const auto colors = themeColors();
-        const qreal radius = themeRadius().control;
-        const QRectF cardRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
-        painter.setPen(QPen(colors.strokeCard, 1.0));
-        painter.setBrush(colors.bgLayer);
-        painter.drawRoundedRect(cardRect, radius, radius);
-    }
-
     void resizeEvent(QResizeEvent* event) override
     {
-        QFrame::resizeEvent(event);
+        Card::resizeEvent(event);
         updateResponsiveLayout();
     }
 

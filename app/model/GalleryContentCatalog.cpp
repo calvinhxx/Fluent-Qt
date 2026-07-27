@@ -25,6 +25,8 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("The theme color tokens — text, fill, stroke, background, and system colors — for light and dark.")},
         {QStringLiteral("foundation-iconography"),
          QStringLiteral("The complete searchable Fluent UI System Icons Regular catalog bundled with FluentQt.")},
+        {QStringLiteral("font-icon"),
+         QStringLiteral("A theme-aware widget that renders bundled Fluent icon glyphs at optical sizes.")},
         {QStringLiteral("foundation-geometry"),
          QStringLiteral("Corner-radius and stroke-width tokens that define FluentQt control shapes.")},
         {QStringLiteral("foundation-spacing"),
@@ -40,6 +42,8 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("Controls for picking and displaying dates, times, and calendars.")},
         {QStringLiteral("dialogs-flyouts"),
          QStringLiteral("Transient surfaces that show messages or request input without leaving the page.")},
+        {QStringLiteral("layout"),
+         QStringLiteral("Surfaces and separators that group, divide, and progressively reveal content.")},
         {QStringLiteral("menus-toolbars"),
          QStringLiteral("Surfaces that organize commands and actions for quick invocation.")},
         {QStringLiteral("navigation"),
@@ -120,6 +124,13 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("An anchored tip that draws attention to a feature without blocking interaction.")},
         {QStringLiteral("coach-mark"),
          QStringLiteral("A standalone teaching tip in its own window that points a tail at a target and glides between them.")},
+        // Layout
+        {QStringLiteral("card"),
+         QStringLiteral("A rounded, token-backed surface for grouping related content.")},
+        {QStringLiteral("divider"),
+         QStringLiteral("A DPI-aligned horizontal or vertical separator with optional insets.")},
+        {QStringLiteral("expander"),
+         QStringLiteral("A disclosure surface that reveals caller-supplied content with an optional animation.")},
         // Menus & toolbars
         {QStringLiteral("menu"),
          QStringLiteral("A list of commands shown in a transient surface.")},
@@ -156,6 +167,8 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("Shows determinate or indeterminate progress around a ring.")},
         {QStringLiteral("shimmer"),
          QStringLiteral("Shows a skeleton placeholder while content is loading.")},
+        {QStringLiteral("toast"),
+         QStringLiteral("Shows a brief same-window notification without interrupting the current task.")},
         {QStringLiteral("tooltip"),
          QStringLiteral("A popup label that shows extra information about a control on hover.")},
         // Text fields
@@ -229,6 +242,7 @@ QVector<GalleryContentEntry> buildCatalog()
                      QStringLiteral("foundation-typography"),
                      QStringLiteral("foundation-color"),
                      QStringLiteral("foundation-iconography"),
+                     QStringLiteral("font-icon"),
                      QStringLiteral("foundation-geometry"),
                      QStringLiteral("foundation-spacing")}});
     for (const QString& topicId : {QStringLiteral("foundation-qmlplus"),
@@ -255,12 +269,14 @@ QVector<GalleryContentEntry> buildCatalog()
                     {}});
 
     for (const GalleryComponentCategory& category : galleryComponentCatalog()) {
-        catalog.append({GalleryPageKind::Category,
-                        category.id,
-                        category.title,
-                        descriptionFor(category.id, category.title),
-                        category.id,
-                        {}});
+        if (category.id != QStringLiteral("foundation")) {
+            catalog.append({GalleryPageKind::Category,
+                            category.id,
+                            category.title,
+                            descriptionFor(category.id, category.title),
+                            category.id,
+                            {}});
+        }
         for (const GalleryComponentEntry& component : category.components) {
             catalog.append({GalleryPageKind::Component,
                             component.id,

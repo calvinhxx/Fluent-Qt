@@ -66,6 +66,15 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
              {QStringLiteral("teaching-tip"), QStringLiteral("TeachingTip"), Typography::Icons::Info},
              {QStringLiteral("coach-mark"), QStringLiteral("CoachMark"), Typography::Icons::Info}
          }},
+        {QStringLiteral("layout"),
+         QStringLiteral("Layout"),
+         QStringLiteral("layout"),
+         Typography::Icons::AlignLeft,
+         {
+             {QStringLiteral("card"), QStringLiteral("Card"), Typography::Icons::BackToWindow},
+             {QStringLiteral("divider"), QStringLiteral("Divider"), Typography::Icons::Hyphen},
+             {QStringLiteral("expander"), QStringLiteral("Expander"), Typography::Icons::ChevronDown}
+         }},
         {QStringLiteral("menus-toolbars"),
          QStringLiteral("Menus & toolbars"),
          QStringLiteral("menus_toolbars"),
@@ -107,6 +116,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
              {QStringLiteral("progress-bar"), QStringLiteral("ProgressBar"), Typography::Icons::Refresh},
              {QStringLiteral("progress-ring"), QStringLiteral("ProgressRing"), Typography::Icons::Refresh},
              {QStringLiteral("shimmer"), QStringLiteral("Shimmer"), Typography::Icons::Refresh},
+             {QStringLiteral("toast"), QStringLiteral("Toast"), Typography::Icons::Message},
              {QStringLiteral("tooltip"), QStringLiteral("ToolTip"), Typography::Icons::Info}
          }},
         {QStringLiteral("text-fields"),
@@ -128,6 +138,20 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          {
              {QStringLiteral("title-bar"), QStringLiteral("TitleBar"), Typography::Icons::BackToWindow},
              {QStringLiteral("window"), QStringLiteral("Window"), Typography::Icons::FullScreen}
+         }},
+        // FontIcon is a visible foundation primitive. It shares the existing
+        // Foundation navigation branch rather than creating a duplicate
+        // "Foundation" category under Controls.
+        {QStringLiteral("foundation"),
+         QStringLiteral("Foundation"),
+         QStringLiteral("foundation"),
+         Typography::Icons::Font,
+         {
+             {QStringLiteral("font-icon"),
+              QStringLiteral("FontIcon"),
+              Typography::Icons::Font,
+              QString(),
+              QStringLiteral("fluent")}
          }}
     };
     return catalog;
@@ -140,6 +164,8 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
         {QStringLiteral("collections"), QStringLiteral("<FluentQt/Collections.h>")},
         {QStringLiteral("date_time"), QStringLiteral("<FluentQt/DateTime.h>")},
         {QStringLiteral("dialogs_flyouts"), QStringLiteral("<FluentQt/DialogsFlyouts.h>")},
+        {QStringLiteral("foundation"), QStringLiteral("<FluentQt/Foundation.h>")},
+        {QStringLiteral("layout"), QStringLiteral("<FluentQt/Layout.h>")},
         {QStringLiteral("menus_toolbars"), QStringLiteral("<FluentQt/MenusToolbars.h>")},
         {QStringLiteral("navigation"), QStringLiteral("<FluentQt/Navigation.h>")},
         {QStringLiteral("scrolling"), QStringLiteral("<FluentQt/Scrolling.h>")},
@@ -156,11 +182,13 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
             const QString typeName = component.apiTypeName.isEmpty()
                 ? component.title
                 : component.apiTypeName;
+            const QString apiNamespace = component.apiNamespace.isEmpty()
+                ? QStringLiteral("fluent::%1").arg(category.sourceDirectory)
+                : component.apiNamespace;
             return {
                 categoryHeaders.value(category.sourceDirectory,
                                       QStringLiteral("<FluentQt/FluentQt.h>")),
-                QStringLiteral("fluent::%1::%2")
-                    .arg(category.sourceDirectory, typeName),
+                QStringLiteral("%1::%2").arg(apiNamespace, typeName),
                 QStringLiteral("FluentQt::FluentQt")
             };
         }
@@ -204,11 +232,11 @@ QString galleryControlImageResource(const QString& controlTitle)
 
     const auto it = titleToCategory.constFind(controlTitle);
     if (it == titleToCategory.constEnd())
-        return placeholder;
+        return QString();
 
     const QString candidate = QStringLiteral(":/app/assets/control_images/%1/%2.png")
                                   .arg(it.value(), controlTitle);
-    return QFile::exists(candidate) ? candidate : placeholder;
+    return QFile::exists(candidate) ? candidate : QString();
 }
 
 } // namespace fluent::gallery

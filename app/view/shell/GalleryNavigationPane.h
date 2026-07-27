@@ -25,6 +25,10 @@ namespace fluent::dialogs_flyouts {
 class Popup;
 }
 
+namespace fluent::layout {
+class Divider;
+}
+
 namespace fluent::status_info {
 class ToolTip;
 }
@@ -90,7 +94,7 @@ private:
     QVector<GalleryNavigationItem> m_items;
     QStandardItemModel* m_model = nullptr;
     fluent::collections::TreeView* m_treeView = nullptr;
-    QWidget* m_footerDivider = nullptr;
+    fluent::layout::Divider* m_footerDivider = nullptr;
     fluent::dialogs_flyouts::Popup* m_compactFlyout = nullptr;
     fluent::status_info::ToolTip* m_compactToolTip = nullptr;
     QPersistentModelIndex m_compactToolTipIndex;

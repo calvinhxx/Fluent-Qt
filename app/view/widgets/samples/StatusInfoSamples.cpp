@@ -19,6 +19,7 @@
 #include "components/status_info/ProgressBar.h"
 #include "components/status_info/ProgressRing.h"
 #include "components/status_info/Shimmer.h"
+#include "components/status_info/Toast.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/NumberBox.h"
@@ -36,6 +37,7 @@ using fluent::status_info::ProgressBar;
 using fluent::status_info::ProgressRing;
 using fluent::status_info::Shimmer;
 using fluent::status_info::ShimmerPainter;
+using fluent::status_info::Toast;
 using fluent::status_info::ToolTip;
 using fluent::textfields::Label;
 using fluent::textfields::NumberBox;
@@ -922,6 +924,216 @@ QVector<GallerySample> shimmerSamples()
     };
 }
 
+QVector<GallerySample> toastSamples()
+{
+    return {
+        makeSample(
+            QStringLiteral("toast-severity"),
+            QStringLiteral("Severity"),
+            QStringLiteral("Use a short-lived same-window toast to acknowledge an action without blocking the current task."),
+            QStringLiteral("auto* toast = new Toast(this);\n"
+                           "toast->setDuration(2200);\n"
+                           "\n"
+                           "auto* infoButton = new Button(\"Info\", this);\n"
+                           "auto* successButton = new Button(\"Success\", this);\n"
+                           "auto* warningButton = new Button(\"Warning\", this);\n"
+                           "auto* errorButton = new Button(\"Error\", this);\n"
+                           "\n"
+                           "connect(infoButton, &Button::clicked, this, [=]() {\n"
+                           "    toast->setMessage(\"Draft saved locally\");\n"
+                           "    toast->setSeverity(Toast::Informational);\n"
+                           "    toast->present(infoButton);\n"
+                           "});\n"
+                           "connect(successButton, &Button::clicked, this, [=]() {\n"
+                           "    toast->setMessage(\"Changes published\");\n"
+                           "    toast->setSeverity(Toast::Success);\n"
+                           "    toast->present(successButton);\n"
+                           "});\n"
+                           "connect(warningButton, &Button::clicked, this, [=]() {\n"
+                           "    toast->setMessage(\"Connection is unstable\");\n"
+                           "    toast->setSeverity(Toast::Warning);\n"
+                           "    toast->present(warningButton);\n"
+                           "});\n"
+                           "connect(errorButton, &Button::clicked, this, [=]() {\n"
+                           "    toast->setMessage(\"Upload could not finish\");\n"
+                           "    toast->setSeverity(Toast::Error);\n"
+                           "    toast->present(errorButton);\n"
+                           "});"),
+            [](QWidget* parent) {
+                QWidget* surface = sampleSurface(parent);
+                auto* toast = new Toast(surface);
+                toast->setObjectName(
+                    QStringLiteral("galleryToastSeveritySample"));
+                toast->setDuration(2200);
+                QObject::connect(
+                    surface, &QObject::destroyed,
+                    toast, &QObject::deleteLater);
+                QWidget* row = horizontalGroup(surface, 8);
+                struct SeverityAction {
+                    QString title;
+                    QString message;
+                    Toast::Severity severity;
+                };
+                const SeverityAction actions[] = {
+                    {QStringLiteral("Info"),
+                     QStringLiteral("Draft saved locally"),
+                     Toast::Informational},
+                    {QStringLiteral("Success"),
+                     QStringLiteral("Changes published"),
+                     Toast::Success},
+                    {QStringLiteral("Warning"),
+                     QStringLiteral("Connection is unstable"),
+                     Toast::Warning},
+                    {QStringLiteral("Error"),
+                     QStringLiteral("Upload could not finish"),
+                     Toast::Error},
+                };
+                for (const SeverityAction& action : actions) {
+                    auto* button = sampleButton(row, action.title);
+                    QObject::connect(
+                        button,
+                        &Button::clicked,
+                        button,
+                        [button, toast, action]() {
+                            toast->setMessage(action.message);
+                            toast->setSeverity(action.severity);
+                            toast->present(button);
+                        });
+                    boxLayout(row)->addWidget(button);
+                }
+                boxLayout(surface)->addWidget(row);
+                boxLayout(surface)->addWidget(makeStatusLabel(
+                    surface,
+                    QStringLiteral(
+                        "The same toast instance updates for each severity.")));
+                return surface;
+            }),
+        makeSample(
+            QStringLiteral("toast-title-placement"),
+            QStringLiteral("Title and placement"),
+            QStringLiteral("Add a concise title when the message needs context, and anchor the toast to any top or bottom edge."),
+            QStringLiteral("auto* toast = new Toast(this);\n"
+                           "toast->setTitle(\"Sync complete\");\n"
+                           "toast->setMessage(\"12 files are now available offline.\");\n"
+                           "toast->setSeverity(Toast::Success);\n"
+                           "toast->setDuration(2600);\n"
+                           "\n"
+                           "auto* topEnd = new Button(\"Top end\", this);\n"
+                           "auto* bottomStart = new Button(\"Bottom start\", this);\n"
+                           "\n"
+                           "connect(topEnd, &Button::clicked, this, [=]() {\n"
+                           "    toast->setPlacement(Toast::TopEnd);\n"
+                           "    toast->present(topEnd);\n"
+                           "});\n"
+                           "connect(bottomStart, &Button::clicked, this, [=]() {\n"
+                           "    toast->setPlacement(Toast::BottomStart);\n"
+                           "    toast->present(bottomStart);\n"
+                           "});"),
+            [](QWidget* parent) {
+                QWidget* surface = sampleSurface(parent);
+                QWidget* row = horizontalGroup(surface, 8);
+                auto* toast = new Toast(surface);
+                toast->setObjectName(
+                    QStringLiteral("galleryToastPlacementSample"));
+                toast->setTitle(
+                    QStringLiteral("Sync complete"));
+                toast->setMessage(
+                    QStringLiteral(
+                        "12 files are now available offline."));
+                toast->setSeverity(Toast::Success);
+                toast->setDuration(2600);
+                QObject::connect(
+                    surface, &QObject::destroyed,
+                    toast, &QObject::deleteLater);
+
+                struct PlacementAction {
+                    QString title;
+                    Toast::Placement placement;
+                };
+                const PlacementAction actions[] = {
+                    {QStringLiteral("Top start"), Toast::TopStart},
+                    {QStringLiteral("Top"), Toast::Top},
+                    {QStringLiteral("Top end"), Toast::TopEnd},
+                    {QStringLiteral("Bottom start"), Toast::BottomStart},
+                    {QStringLiteral("Bottom"), Toast::Bottom},
+                    {QStringLiteral("Bottom end"), Toast::BottomEnd},
+                };
+                for (const PlacementAction& action : actions) {
+                    auto* button = sampleButton(row, action.title);
+                    QObject::connect(
+                        button,
+                        &Button::clicked,
+                        button,
+                        [button, toast, action]() {
+                            toast->setPlacement(action.placement);
+                            toast->present(button);
+                        });
+                    boxLayout(row)->addWidget(button);
+                }
+                boxLayout(surface)->addWidget(row);
+                return surface;
+            }),
+        makeSample(
+            QStringLiteral("toast-stacking"),
+            QStringLiteral("Stacking"),
+            QStringLiteral("Managed toasts stack per placement up to Toast::maximumVisible(), shifting away from the chosen edge in show order."),
+            QStringLiteral("Toast::setMaximumVisible(3);\n"
+                           "\n"
+                           "Toast::showToast(this, \"Draft saved\", Toast::Informational);\n"
+                           "Toast::showToast(this, \"Upload finished\", Toast::Success);\n"
+                           "Toast::showToast(\n"
+                           "    this,\n"
+                           "    \"Connection is unstable\",\n"
+                           "    Toast::Warning,\n"
+                           "    2200,\n"
+                           "    Toast::TopEnd);"),
+            [](QWidget* parent) {
+                QWidget* surface = sampleSurface(parent);
+                QWidget* row = horizontalGroup(surface, 8);
+                auto* stackTop = sampleButton(
+                    row, QStringLiteral("Stack at top"));
+                auto* stackEnd = sampleButton(
+                    row, QStringLiteral("Stack at top end"));
+                QObject::connect(
+                    stackTop,
+                    &Button::clicked,
+                    stackTop,
+                    [stackTop]() {
+                        static int counter = 0;
+                        ++counter;
+                        Toast::showToast(
+                            stackTop,
+                            QStringLiteral("Top notice %1")
+                                .arg(counter),
+                            Toast::Informational);
+                    });
+                QObject::connect(
+                    stackEnd,
+                    &Button::clicked,
+                    stackEnd,
+                    [stackEnd]() {
+                        static int counter = 0;
+                        ++counter;
+                        Toast::showToast(
+                            stackEnd,
+                            QStringLiteral("Corner notice %1")
+                                .arg(counter),
+                            Toast::Warning,
+                            2200,
+                            Toast::TopEnd);
+                    });
+                boxLayout(row)->addWidget(stackTop);
+                boxLayout(row)->addWidget(stackEnd);
+                boxLayout(surface)->addWidget(row);
+                boxLayout(surface)->addWidget(makeStatusLabel(
+                    surface,
+                    QStringLiteral(
+                        "Default maximumVisible is 3; older toasts dismiss first.")));
+                return surface;
+            })
+    };
+}
+
 QVector<GallerySample> toolTipSamples()
 {
     return {
@@ -1007,6 +1219,8 @@ QVector<GallerySample> statusInfoSamples(const QString& routeId)
         return progressRingSamples();
     if (routeId == QStringLiteral("shimmer"))
         return shimmerSamples();
+    if (routeId == QStringLiteral("toast"))
+        return toastSamples();
     if (routeId == QStringLiteral("tooltip"))
         return toolTipSamples();
     return {};

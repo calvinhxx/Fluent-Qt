@@ -32,11 +32,16 @@
 #include "compatibility/QtCompat.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/FontIcon.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/layout/Card.h"
+#include "components/layout/Divider.h"
+#include "components/layout/Expander.h"
 #include "components/scrolling/PipsPager.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/status_info/ToolTip.h"
+#include "components/status_info/Toast.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/TextEdit.h"
 #include "design/Typography.h"
@@ -265,6 +270,20 @@ TEST_F(GalleryContentPagesTest, ContentCatalogSeededRoutesMatchNavigation)
         EXPECT_NE(navigationViewModel.itemById(entry.routeId), nullptr)
             << entry.routeId.toStdString();
     }
+}
+
+TEST_F(GalleryContentPagesTest, FoundationLandingOrderMatchesNavigation)
+{
+    GalleryNavigationViewModel navigationViewModel;
+    QStringList navigationRouteIds;
+    for (const auto& item : navigationViewModel.items()) {
+        if (item.parentId == QStringLiteral("foundation"))
+            navigationRouteIds.append(item.id);
+    }
+
+    const auto* foundationEntry = galleryContentEntry(QStringLiteral("foundation"));
+    ASSERT_NE(foundationEntry, nullptr);
+    EXPECT_EQ(navigationRouteIds, foundationEntry->relatedRouteIds);
 }
 
 // Full coverage: every navigation route except Settings has a content entry, and
@@ -537,8 +556,11 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
             EXPECT_TRUE(reference.header.endsWith(QStringLiteral(".h>")));
             EXPECT_NE(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
             EXPECT_EQ(reference.cmakeTarget, QStringLiteral("FluentQt::FluentQt"));
+            const QString expectedNamespace = component.apiNamespace.isEmpty()
+                ? QStringLiteral("fluent::%1").arg(category.sourceDirectory)
+                : component.apiNamespace;
             EXPECT_TRUE(reference.qualifiedType.startsWith(
-                QStringLiteral("fluent::%1::").arg(category.sourceDirectory)));
+                expectedNamespace + QStringLiteral("::")));
             referencedHeaders.append(reference.header);
         }
     }
@@ -547,6 +569,8 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
 
     EXPECT_EQ(galleryComponentReference(QStringLiteral("menu")).qualifiedType,
               QStringLiteral("fluent::menus_toolbars::FluentMenu"));
+    EXPECT_EQ(galleryComponentReference(QStringLiteral("font-icon")).qualifiedType,
+              QStringLiteral("fluent::FontIcon"));
     EXPECT_FALSE(galleryComponentReference(QStringLiteral("missing-route")).isValid());
 }
 
@@ -825,7 +849,7 @@ TEST_F(GalleryContentPagesTest, EntryGridExpandsCardsForWrappedDescriptions)
     EXPECT_GT(narrowHeight, wideHeight);
 }
 
-TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledControlImages)
+TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledImagesOrCatalogGlyphs)
 {
     const QString placeholder =
         QStringLiteral(":/app/assets/control_images/Placeholder.png");
@@ -833,6 +857,11 @@ TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledControlImages)
     for (const auto& category : galleryComponentCatalog()) {
         for (const auto& component : category.components) {
             const QString resource = galleryControlImageResource(component.title);
+            if (resource.isEmpty()) {
+                EXPECT_FALSE(component.iconGlyph.isEmpty())
+                    << component.title.toStdString();
+                continue;
+            }
             EXPECT_NE(resource, placeholder) << component.title.toStdString();
             EXPECT_TRUE(QFile::exists(resource)) << resource.toStdString();
         }
@@ -881,6 +910,11 @@ TEST_F(GalleryContentPagesTest, ComponentRoutesCreateComponentPages)
     };
     const QVector<ComponentCase> cases{
         {QStringLiteral("button"), QStringLiteral("Button"), 4},
+        {QStringLiteral("card"), QStringLiteral("Card"), 2},
+        {QStringLiteral("divider"), QStringLiteral("Divider"), 2},
+        {QStringLiteral("expander"), QStringLiteral("Expander"), 2},
+        {QStringLiteral("font-icon"), QStringLiteral("FontIcon"), 2},
+        {QStringLiteral("toast"), QStringLiteral("Toast"), 3},
         {QStringLiteral("tree-view"), QStringLiteral("TreeView"), 1},
         {QStringLiteral("tab-view"), QStringLiteral("TabView"), 1}
     };
@@ -897,6 +931,48 @@ TEST_F(GalleryContentPagesTest, ComponentRoutesCreateComponentPages)
         EXPECT_GE(page->sampleCount(), componentCase.minimumSampleCount)
             << componentCase.routeId.toStdString();
     }
+}
+
+TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
+{
+    struct SampleCase {
+        QString routeId;
+        QString sampleId;
+    };
+    const QVector<SampleCase> cases{
+        {QStringLiteral("card"), QStringLiteral("card-surface-appearances")},
+        {QStringLiteral("divider"), QStringLiteral("divider-vertical-orientation")},
+        {QStringLiteral("expander"), QStringLiteral("expander-state-signal")},
+        {QStringLiteral("font-icon"), QStringLiteral("font-icon-optical-sizes")},
+        {QStringLiteral("toast"), QStringLiteral("toast-severity")},
+    };
+
+    for (const SampleCase& sampleCase : cases) {
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(
+            sampleCase.routeId, sampleCase.sampleId, &sample))
+            << sampleCase.routeId.toStdString();
+        ASSERT_TRUE(static_cast<bool>(sample.createPreview));
+        std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+        ASSERT_NE(preview, nullptr);
+        EXPECT_FALSE(sample.codeSnippet.isEmpty());
+    }
+
+    fluent::gallery::GallerySample expanderSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("expander"),
+        QStringLiteral("expander-state-signal"),
+        &expanderSample));
+    std::unique_ptr<QWidget> expanderPreview(
+        expanderSample.createPreview(nullptr));
+    auto* expander =
+        expanderPreview->findChild<fluent::layout::Expander*>();
+    auto* stateLabel = expanderPreview->findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryExpanderStateLabel"));
+    ASSERT_NE(expander, nullptr);
+    ASSERT_NE(stateLabel, nullptr);
+    expander->setExpandedAnimated(true, false);
+    EXPECT_EQ(stateLabel->text(), QStringLiteral("Expanded"));
 }
 
 // Task 6.4: sample cards host a live preview widget and expose code snippets where defined.
@@ -1377,7 +1453,12 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonSwitchesOnlySamplePreviewThe
     auto* previewSurface = card->findChild<QWidget*>(
         QStringLiteral("gallerySampleCardPreview"));
     ASSERT_NE(previewSurface, nullptr);
+    auto* previewCard =
+        dynamic_cast<fluent::layout::Card*>(previewSurface);
+    ASSERT_NE(previewCard, nullptr);
     EXPECT_FALSE(previewSurface->property("fluentThemeOverride").isValid());
+    EXPECT_EQ(previewSurface->property("fluentSurfaceColor").value<QColor>(),
+              previewCard->themeColorsRef().bgLayerAlt);
     EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
 
     auto* sampleButton = previewSurface->findChild<Button*>();
@@ -1392,7 +1473,8 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonSwitchesOnlySamplePreviewThe
     EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Dark"));
     EXPECT_EQ(previewSurface->property("fluentThemeOverride").toInt(),
               static_cast<int>(fluent::FluentElement::Dark));
-    EXPECT_TRUE(previewSurface->styleSheet().contains(QStringLiteral("rgba(61, 61, 61, 255)")));
+    EXPECT_EQ(previewSurface->property("fluentSurfaceColor").value<QColor>(),
+              previewCard->themeColorsRef().bgLayerAlt);
     EXPECT_TRUE(card->styleSheet().contains(QStringLiteral("rgba(255, 255, 255, 255)")));
     EXPECT_EQ(sampleButton->effectiveTheme(), fluent::FluentElement::Dark);
 }
@@ -1513,9 +1595,12 @@ TEST_F(GalleryContentPagesTest, CodeBlockCollapsesAndExpands)
 
     auto* header = block.findChild<QWidget*>(QStringLiteral("galleryCodeBlockHeader"));
     auto* content = block.findChild<QWidget*>(QStringLiteral("galleryCodeBlockContent"));
+    auto* divider = block.findChild<fluent::layout::Divider*>(
+        QStringLiteral("fluentExpanderDivider"));
     auto* copyButton = block.findChild<QWidget*>(QStringLiteral("galleryCodeBlockCopyButton"));
     ASSERT_NE(header, nullptr);
     ASSERT_NE(content, nullptr);
+    ASSERT_NE(divider, nullptr);
     ASSERT_NE(copyButton, nullptr);
     // Copy now lives inside the collapsible content (top-right of the code area), so it is
     // revealed/clipped together with the code rather than fading independently.
@@ -1538,7 +1623,10 @@ TEST_F(GalleryContentPagesTest, CodeBlockCollapsesAndExpands)
     EXPECT_GT(content->height(), 0);
     EXPECT_EQ(content->minimumHeight(), content->maximumHeight());
     EXPECT_EQ(header->geometry(), collapsedHeaderGeometry);
-    EXPECT_EQ(content->y(), header->geometry().bottom() + 1);
+    EXPECT_TRUE(divider->isVisible());
+    EXPECT_EQ(divider->geometry().top(), header->geometry().bottom() + 1);
+    EXPECT_EQ(content->y(), divider->geometry().bottom() + 1);
+    EXPECT_EQ(content->geometry().bottom(), block.rect().bottom());
 
     // Collapsing clips the code again without removing the content widget from the layout.
     block.setExpanded(false, /*animated=*/false);
@@ -1869,10 +1957,18 @@ TEST_F(GalleryContentPagesTest, GalleryToastUsesOverlayMarginAndSuccessBadge)
     EXPECT_EQ(toast->size(),
               fluent::overlay::outerSizeForVisibleCard(card->sizeHint()));
 
-    auto* icon = toast->findChild<QLabel*>(QStringLiteral("galleryToastIcon"));
+    auto* icon = toast->findChild<fluent::FontIcon*>(
+        QStringLiteral("galleryToastIcon"));
     ASSERT_NE(icon, nullptr);
-    EXPECT_EQ(icon->size(), QSize(26, 26));
-    EXPECT_TRUE(icon->styleSheet().contains(QStringLiteral("background")));
+    EXPECT_EQ(icon->size(), QSize(Typography::IconSize::Standard,
+                                  Typography::IconSize::Standard));
+    EXPECT_EQ(icon->glyph(), Typography::Icons::Success);
+
+    auto* reusableToast =
+        qobject_cast<fluent::status_info::Toast*>(toast);
+    ASSERT_NE(reusableToast, nullptr);
+    EXPECT_EQ(reusableToast->severity(),
+              fluent::status_info::Toast::Success);
 
     auto* opacity = qobject_cast<QGraphicsOpacityEffect*>(toast->graphicsEffect());
     ASSERT_NE(opacity, nullptr);

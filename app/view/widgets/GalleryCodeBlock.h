@@ -1,17 +1,9 @@
 #ifndef GALLERYCODEBLOCK_H
 #define GALLERYCODEBLOCK_H
 
-#include <QFrame>
 #include <QString>
 
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
-
-class QResizeEvent;
-class QScrollArea;
-class QScrollBar;
-class QSize;
-class QVariantAnimation;
+#include "components/layout/Expander.h"
 
 namespace fluent::basicinput {
 class Button;
@@ -23,20 +15,11 @@ class Label;
 
 namespace fluent::gallery {
 
-class CodeBlockHeader;   // defined in GalleryCodeBlock.cpp
-class CodeBlockChevron;  // defined in GalleryCodeBlock.cpp
-
 /**
- * @brief Collapsible "Source code" surface: an animated expander hiding a code snippet.
- * zh_CN: 可折叠的"Source code"表面：用动画展开/收起隐藏代码片段的容器。
- *
- * The header (rotating chevron + caption) toggles a height-animated reveal of the code;
- * the copy-to-clipboard affordance appears while expanded. Collapsed by default, mirroring
- * the WinUI Gallery source-code expander.
- * zh_CN: 头部（旋转箭头 + 标题）切换代码的高度动画展开；展开时显示复制到剪贴板入口。
- * 默认折叠，对齐 WinUI Gallery 的源码 expander。
+ * @brief Gallery source-code presentation built on the reusable Expander.
+ * zh_CN: 基于通用 Expander 组合的 Gallery 源码展示控件。
  */
-class GalleryCodeBlock : public QFrame, public fluent::FluentElement, public fluent::QMLPlus {
+class GalleryCodeBlock : public fluent::layout::Expander {
     Q_OBJECT
 
 public:
@@ -45,64 +28,23 @@ public:
     QString code() const { return m_code; }
     fluent::basicinput::Button* copyButton() const { return m_copyButton; }
 
-    bool isExpanded() const { return m_expanded; }
     void setExpanded(bool expanded, bool animated = true);
-    void toggleExpanded() { setExpanded(!m_expanded); }
-
-    QSize sizeHint() const override;
-    QSize minimumSizeHint() const override;
+    void toggleExpanded() { setExpanded(!isExpanded()); }
 
     void onThemeUpdated() override;
-
-signals:
-    void layoutHeightChanged(int height);
-    void expansionTransitionStarted(bool expanding);
-    void expansionTransitionFinished(bool expanded);
-
-protected:
-    void resizeEvent(QResizeEvent* event) override;
 
 private:
     void applyPalette();
     void applyHighlightedCode();
     void ensureHighlighted();
-    int naturalContentHeight() const;
-    int currentContentHeight() const;
-    int blockHeightForContent(int contentHeight) const;
-    void updateContentInnerGeometry();
-    void applyFraction(double fraction);
-    void beginViewportTransition();
-    void finishViewportTransition();
-    void synchronizeViewportLayout();
-    void restoreViewportAnchor();
-    void clearViewportAnchor();
-    double currentFraction() const { return m_fraction; }
 
     QString m_code;
-    CodeBlockHeader* m_header = nullptr;
-    CodeBlockChevron* m_chevron = nullptr;
-    fluent::textfields::Label* m_captionLabel = nullptr;
-    QWidget* m_content = nullptr;
     QWidget* m_contentInner = nullptr;
     fluent::textfields::Label* m_langLabel = nullptr;
     QWidget* m_langUnderline = nullptr;
     fluent::textfields::Label* m_codeLabel = nullptr;
     fluent::basicinput::Button* m_copyButton = nullptr;
-    QVariantAnimation* m_animation = nullptr;
-
-    bool m_expanded = false;
-    bool m_highlighted = false;     // code is only syntax-highlighted on first expand (lazy)
-    double m_fraction = 0.0;        // 0 = collapsed, 1 = expanded
-    int m_contentTargetHeight = 0;  // pixel height the content animates toward
-    int m_lastEmittedLayoutHeight = -1;
-    bool m_viewportTransitionActive = false;
-    bool m_restoringViewportAnchor = false;
-    quint64 m_viewportTransitionGeneration = 0;
-    int m_anchorViewportY = 0;
-    QScrollArea* m_transitionScrollArea = nullptr;
-    QScrollBar* m_transitionScrollBar = nullptr;
-    QMetaObject::Connection m_scrollRangeConnection;
-    QMetaObject::Connection m_scrollValueConnection;
+    bool m_highlighted = false;
 };
 
 } // namespace fluent::gallery
