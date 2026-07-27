@@ -942,8 +942,12 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
         QString description;
         if (const GalleryContentEntry* componentEntry = galleryContentEntry(routeId))
             description = componentEntry->description;
-        featuredEntries.append({item->id, item->title, description,
-                                QPixmap(galleryControlImageResource(item->title)), QString()});
+        const QPixmap icon(galleryControlImageResource(item->title));
+        featuredEntries.append({item->id,
+                                item->title,
+                                description,
+                                icon,
+                                icon.isNull() ? item->iconGlyph : QString()});
     }
     addEntryGrid(QStringLiteral("galleryHomeCards"))->setEntries(featuredEntries);
 

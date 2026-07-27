@@ -10,6 +10,7 @@
 #include <QtGlobal>
 
 #include "components/textfields/Label.h"
+#include "components/layout/Card.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
 #include "GalleryCodeBlock.h"
@@ -27,30 +28,14 @@ constexpr int kDefaultCardWidth = 640;
 constexpr int kMinimumCardWidth = 280;
 constexpr char kThemeOverrideProperty[] = "fluentThemeOverride";
 
-class SamplePreviewSurface final : public QFrame, public fluent::FluentElement {
+class SamplePreviewSurface final : public fluent::layout::Card {
 public:
     explicit SamplePreviewSurface(QWidget* parent = nullptr)
-        : QFrame(parent)
+        : Card(parent)
     {
         setObjectName(QStringLiteral("gallerySampleCardPreview"));
-        setFrameShape(QFrame::NoFrame);
+        setAppearance(Card::LayerAlt);
         setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
-        onThemeUpdated();
-    }
-
-    void onThemeUpdated() override
-    {
-        const Colors colors = themeColors();
-        const QString style = QStringLiteral(
-                                  "#gallerySampleCardPreview { background: %1; border: 1px solid %2; border-radius: %3px; }")
-                                  .arg(cssColor(colors.bgLayerAlt),
-                                       cssColor(colors.strokeCard))
-                                  .arg(::CornerRadius::Control);
-        if (styleSheet() != style)
-            setStyleSheet(style);
-        if (property("fluentSurfaceColor").value<QColor>() != colors.bgLayerAlt)
-            setProperty("fluentSurfaceColor", colors.bgLayerAlt);
-        update();
     }
 };
 

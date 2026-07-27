@@ -98,6 +98,7 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
         {"foundation-geometry", "Geometry"},
         {"foundation-spacing", "Spacing"},
     };
+    int foundationComponentInsertIndex = -1;
     for (const auto& topic : foundationTopics) {
         m_items.append(node(GalleryNavigationItem::Kind::ComponentRoute,
                             QString::fromLatin1(topic.id),
@@ -107,6 +108,30 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
                             QColor(QStringLiteral("#F7F6FD")),
                             QStringLiteral("foundation"),
                             1));
+        if (QString::fromLatin1(topic.id) == QStringLiteral("foundation-iconography"))
+            foundationComponentInsertIndex = m_items.size();
+    }
+    if (foundationComponentInsertIndex < 0)
+        foundationComponentInsertIndex = m_items.size();
+    for (const GalleryComponentCategory& category : galleryComponentCatalog()) {
+        if (category.id != QStringLiteral("foundation"))
+            continue;
+        for (int componentIndex = 0;
+             componentIndex < category.components.size();
+             ++componentIndex) {
+            const GalleryComponentEntry& component =
+                category.components.at(componentIndex);
+            m_items.insert(foundationComponentInsertIndex++, node(
+                GalleryNavigationItem::Kind::ComponentRoute,
+                component.id,
+                component.title,
+                category.title,
+                component.iconGlyph,
+                componentColor(0, componentIndex + 1),
+                QStringLiteral("foundation"),
+                1));
+        }
+        break;
     }
 
     m_items.append(section(QStringLiteral("Controls")));
@@ -123,6 +148,8 @@ GalleryNavigationViewModel::GalleryNavigationViewModel()
     const QVector<GalleryComponentCategory>& catalog = galleryComponentCatalog();
     for (int categoryIndex = 0; categoryIndex < catalog.size(); ++categoryIndex) {
         const GalleryComponentCategory& category = catalog.at(categoryIndex);
+        if (category.id == QStringLiteral("foundation"))
+            continue;
         m_items.append(node(GalleryNavigationItem::Kind::CategoryRoute,
                             category.id,
                             category.title,
