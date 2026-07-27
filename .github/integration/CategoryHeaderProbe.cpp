@@ -4,6 +4,7 @@
 #include <FluentQt/Design.h>
 #include <FluentQt/DialogsFlyouts.h>
 #include <FluentQt/Foundation.h>
+#include <FluentQt/Layout.h>
 #include <FluentQt/MenusToolbars.h>
 #include <FluentQt/Navigation.h>
 #include <FluentQt/Scrolling.h>
@@ -21,11 +22,21 @@ static_assert(std::is_base_of<QWidget, fluent::date_time::CalendarView>::value,
               "DateTime.h must expose the date/time widgets");
 static_assert(std::is_base_of<QWidget, fluent::dialogs_flyouts::Popup>::value,
               "DialogsFlyouts.h must expose the overlay widgets");
+static_assert(std::is_base_of<QWidget, fluent::FontIcon>::value,
+              "Foundation.h must expose the foundation widgets");
+static_assert(std::is_base_of<QWidget, fluent::layout::Card>::value,
+              "Layout.h must expose the layout widgets");
+static_assert(std::is_base_of<QWidget, fluent::layout::Divider>::value,
+              "Layout.h must expose the layout widgets");
+static_assert(std::is_base_of<QWidget, fluent::layout::Expander>::value,
+              "Layout.h must expose the layout widgets");
 static_assert(std::is_base_of<QWidget, fluent::navigation::NavigationView>::value,
               "Navigation.h must expose the navigation widgets");
 static_assert(std::is_base_of<QWidget, fluent::scrolling::ScrollView>::value,
               "Scrolling.h must expose the scrolling widgets");
 static_assert(std::is_base_of<QWidget, fluent::status_info::InfoBar>::value,
+              "StatusInfo.h must expose the status widgets");
+static_assert(std::is_base_of<QWidget, fluent::status_info::Toast>::value,
               "StatusInfo.h must expose the status widgets");
 static_assert(std::is_base_of<QWidget, fluent::textfields::TextEdit>::value,
               "TextFields.h must expose the text-field widgets");

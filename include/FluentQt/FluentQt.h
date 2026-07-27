@@ -42,6 +42,7 @@ bool initializeResources();
 #include <FluentQt/Design.h>
 #include <FluentQt/DialogsFlyouts.h>
 #include <FluentQt/Foundation.h>
+#include <FluentQt/Layout.h>
 #include <FluentQt/MenusToolbars.h>
 #include <FluentQt/Navigation.h>
 #include <FluentQt/Scrolling.h>
