@@ -85,6 +85,9 @@ Popup::~Popup() {
 // ── Theme. zh_CN: 主题 ───────────────────────────────────────────────────────
 
 void Popup::onThemeUpdated() {
+    const QColor surfaceColor = themeColorsRef().bgLayer;
+    if (property("fluentSurfaceColor").value<QColor>() != surfaceColor)
+        setProperty("fluentSurfaceColor", surfaceColor);
     update();
     refreshFluentDescendants(this);
     if (m_overlayCoordinator->scrim()) {
