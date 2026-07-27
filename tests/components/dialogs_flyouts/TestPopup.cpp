@@ -80,6 +80,10 @@ TEST_F(PopupTest, DefaultProperties) {
     // 默认尺寸 320+32 × 160+32
     EXPECT_EQ(p.width(), 352);
     EXPECT_EQ(p.height(), 192);
+    const QColor publishedSurface =
+        p.property("fluentSurfaceColor").value<QColor>();
+    EXPECT_TRUE(publishedSurface.isValid());
+    EXPECT_EQ(publishedSurface, p.themeColorsRef().bgLayer);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
