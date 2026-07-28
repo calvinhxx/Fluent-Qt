@@ -16,6 +16,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          Typography::Icons::CheckMark,
          {
              {QStringLiteral("button"), QStringLiteral("Button"), Typography::Icons::Add},
+             {QStringLiteral("compound-button"), QStringLiteral("CompoundButton"), Typography::Icons::Add},
              {QStringLiteral("checkbox"), QStringLiteral("CheckBox"), Typography::Icons::CheckMark},
              {QStringLiteral("color-picker"), QStringLiteral("ColorPicker"), Typography::Icons::Color},
              {QStringLiteral("combobox"), QStringLiteral("ComboBox"), Typography::Icons::ChevronDown},
@@ -71,6 +72,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          QStringLiteral("layout"),
          Typography::Icons::AlignLeft,
          {
+             {QStringLiteral("accordion"), QStringLiteral("Accordion"), Typography::Icons::ChevronDown},
              {QStringLiteral("card"), QStringLiteral("Card"), Typography::Icons::BackToWindow},
              {QStringLiteral("divider"), QStringLiteral("Divider"), Typography::Icons::Hyphen},
              {QStringLiteral("expander"), QStringLiteral("Expander"), Typography::Icons::ChevronDown}
@@ -111,6 +113,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          QStringLiteral("status_info"),
          Typography::Icons::Info,
          {
+             {QStringLiteral("avatar"), QStringLiteral("Avatar"), Typography::Icons::Contact},
              {QStringLiteral("info-badge"), QStringLiteral("InfoBadge"), Typography::Icons::Info},
              {QStringLiteral("info-bar"), QStringLiteral("InfoBar"), Typography::Icons::Info},
              {QStringLiteral("progress-bar"), QStringLiteral("ProgressBar"), Typography::Icons::Refresh},

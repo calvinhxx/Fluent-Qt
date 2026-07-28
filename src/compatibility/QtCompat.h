@@ -274,16 +274,15 @@ inline QSize fluentPixmapLogicalSize(const QPixmap& pixmap) {
 
 inline QRectF fluentPixmapSourceRectForDraw(const QRectF& logicalSource,
                                             const QPixmap& pixmap) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    const qreal dpr = pixmap.devicePixelRatioF();
+    // QPainter::drawPixmap source rectangles are in pixmap pixel coordinates on
+    // both Qt 5 and Qt 6, including when devicePixelRatio != 1.
+    // zh_CN: Qt 5/6 的 drawPixmap 源矩形都使用 pixmap 像素坐标，即使
+    // devicePixelRatio != 1 也如此。
+    const qreal dpr = qMax<qreal>(1.0, pixmap.devicePixelRatioF());
     return QRectF(logicalSource.left() * dpr,
                   logicalSource.top() * dpr,
                   logicalSource.width() * dpr,
                   logicalSource.height() * dpr);
-#else
-    Q_UNUSED(pixmap);
-    return logicalSource;
-#endif
 }
 
 inline QPixmap fluentIconPixmapForLogicalExtent(const QIcon& icon,
@@ -376,7 +375,9 @@ inline void fluentDrawCoverPixmapInLogicalRect(QPainter& painter,
     if (logicalRect.isEmpty() || source.isNull())
         return;
 
-    const QSizeF sourceSize = QSizeF(source.size()) / qMax<qreal>(1.0e-6, source.devicePixelRatioF());
+    const qreal sourceDpr =
+        qMax<qreal>(1.0e-6, source.devicePixelRatioF());
+    const QSizeF sourceSize = QSizeF(source.size()) / sourceDpr;
     if (sourceSize.isEmpty())
         return;
 
