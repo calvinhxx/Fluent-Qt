@@ -548,6 +548,9 @@ jobs:
             exit 0
           fi
 
+          # Stable releases are tagged from a release branch before that branch
+          # is merged into main, so --fail-on-no-commits would inspect the
+          # still-old default branch and reject a valid release.
           args=(
             release create "$tag"
             release-dist/*
@@ -555,7 +558,6 @@ jobs:
             --verify-tag
             --title "Fluent-Qt $tag"
             --notes-file release-notes.md
-            --fail-on-no-commits
           )
 
           if [[ "$draft" == "true" ]]; then
