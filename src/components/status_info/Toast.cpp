@@ -374,7 +374,8 @@ Toast* Toast::showToast(
     const QString& message,
     Severity severity,
     int durationMs,
-    Placement placement)
+    Placement placement,
+    const QMargins& margins)
 {
     QWidget* host = anchor ? anchor->window() : nullptr;
     if (!host)
@@ -387,6 +388,7 @@ Toast* Toast::showToast(
     toast->setSeverity(severity);
     toast->setDuration(durationMs);
     toast->setPlacement(placement);
+    toast->setPlacementMargins(margins);
     if (!toast->present(anchor)) {
         delete toast;
         return nullptr;

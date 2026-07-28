@@ -1523,6 +1523,12 @@ TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("date-time"));
     EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("FontIcon")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("font-icon"));
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("Accordion")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("accordion"));
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("Avatar")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("avatar"));
+    EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("CompoundButton")));
+    EXPECT_EQ(window.currentRouteId(), QStringLiteral("compound-button"));
     EXPECT_TRUE(window.navigateToSearchResult(QStringLiteral("Toast")));
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("toast"));
     EXPECT_FALSE(window.navigateToSearchResult(QStringLiteral("no-such-control")));
@@ -1533,6 +1539,9 @@ TEST_F(GalleryShellFrameworkTest, SearchBoxNavigatesToMatchingRoute)
     ASSERT_NE(searchBox, nullptr);
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("CheckBox")));
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Card")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Accordion")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Avatar")));
+    EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("CompoundButton")));
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("FontIcon")));
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Scrolling")));
     EXPECT_TRUE(searchBox->suggestions().contains(QStringLiteral("Settings")));

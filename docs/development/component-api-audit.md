@@ -27,13 +27,37 @@ application-independent contract:
   and explicit `WidgetOwnership`; the Gallery code block now adds only
   syntax-highlighting and copy behavior.
 - `fluent::status_info::Toast` is a same-window overlay with caller-owned text,
-  severity, placement, duration, and managed replacement. Gallery keeps only
-  its title-bar offset and copy-success policy.
+  severity, placement, duration, and managed stacking up to `maximumVisible()`.
+  Gallery keeps only its title-bar offset and copy-success policy.
 
 Application-specific route models, search behavior, clipboard text, logging,
 and Gallery object names remain outside UILib. Focused component tests cover
 setter no-ops, ownership, expansion geometry, backdrop composition, overlay
-placement, resize tracking, severity icons, and managed-toast replacement.
+placement, resize tracking, severity icons, and managed-toast stacking.
+
+## 2026-07-27 composed component addendum
+
+The Fluent UI Web Components review contributed component contracts rather than
+web implementation details:
+
+- `fluent::layout::Accordion` composes public `Expander` items, adds
+  single/multiple expansion coordination plus WAI-style Up/Down/Home/End header
+  focus, and keeps item lifetime explicit through `WidgetOwnership`.
+- `fluent::status_info::Avatar` owns identity rendering only: caller-provided
+  name/initials/image, token sizes and shape, DPR-aware image cropping, and a
+  presence dot composed from `InfoBadge`. It does not load network images or
+  invent localized status text.
+- `fluent::basicinput::CompoundButton` derives from `Button`, retaining one
+  click/focus/keyboard target while adding a measured and elided secondary line.
+
+All three are exported through category headers and the installed-header
+allowlist, have focused contract tests, and have dedicated Gallery routes with
+live samples. Their follow-up review also registers public enum signal types for
+Qt 5, preserves fractional-DPR cover geometry and Unicode grapheme initials,
+and keeps CompoundButton's text-plus-parent construction aligned with Button.
+`Field` remains deferred because editor ownership, validation state,
+helper/error composition, and accessibility relationships need a separate
+contract rather than a thin visual wrapper.
 
 ## Scope
 
@@ -103,15 +127,15 @@ platform contracts.
 | Category | Public components audited | Focused tests | Relevant specs found |
 | --- | --- | --- | --- |
 | `foundation` | FontIcon, FluentElement, QMLPlus, StyleThemeCatalog, ThemeRegistry, WidgetOwnership | FontIcon focused visual contract present; infrastructure is covered by its owning contract suites | foundation contracts |
-| `layout` | Card, Divider, Expander | Present for listed components | layout surface contracts |
-| `basicinput` | Button, CheckBox, RadioButton, Slider, ComboBox, ColorPicker, ToggleSwitch, ToggleButton, SplitButton, ToggleSplitButton, DropDownButton, HyperlinkButton, RepeatButton, RatingControl | Present for listed components | combobox-dropdown-flyout |
+| `layout` | Accordion, Card, Divider, Expander | Present for listed components | layout surface contracts |
+| `basicinput` | Button, CompoundButton, CheckBox, RadioButton, Slider, ComboBox, ColorPicker, ToggleSwitch, ToggleButton, SplitButton, ToggleSplitButton, DropDownButton, HyperlinkButton, RepeatButton, RatingControl | Present for listed components | combobox-dropdown-flyout |
 | `collections` | ListView, GridView, FlowView, TreeView, FlipView, SplitView, StackView, DrawerView | Present for listed components | flow-view, gridview-drag-reorder, listview-wheel-input, listview-indicator-motion, tree-view, flipview-wheel-input, split-view, stack-view, drawer-view |
 | `date_time` | CalendarView, CalendarDatePicker, DatePicker, TimePicker | Present for listed components | calendar-date-picker, calendar-view-pager, date-picker, time-picker |
 | `dialogs_flyouts` | Dialog, ContentDialog, Popup, Flyout, TeachingTip | Present for listed components | dialog-winui3-polish, popup-overlay, flyout, teaching-tip |
 | `menus_toolbars` | FluentMenu, FluentMenuItem, MenuBar | MenuBar focused test present; menu classes are currently exercised through MenuBar and DropDownButton tests | menu-bar |
 | `navigation` | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | Present for listed public components except StackContentHost as standalone host | breadcrumb, navigation-view, pivot, selector-bar, tab-view |
 | `scrolling` | ScrollBar, ScrollView, AnnotatedScrollBar, PipsPager | Present for listed components | scroll-view, annotated-scrollbar, pips-pager |
-| `status_info` | ToolTip, InfoBar, InfoBadge, ProgressBar, ProgressRing, Shimmer, Toast | Present for listed components | tooltip-animation, info-bar, info-badge, progress-bar, progress-ring |
+| `status_info` | Avatar, ToolTip, InfoBar, InfoBadge, ProgressBar, ProgressRing, Shimmer, Toast | Present for listed components | tooltip-animation, info-bar, info-badge, progress-bar, progress-ring |
 | `textfields` | Label, LineEdit, TextEdit, AutoSuggestBox, PasswordBox, NumberBox | Present for listed components | label, auto-suggest-box, password-box, number-box |
 | `windowing` | Window, TitleBar | Window focused test present | fluent-window, window-platform-compatibility |
 

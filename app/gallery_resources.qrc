@@ -14,6 +14,7 @@
         <file>assets/control_images/basic-input/CheckBox.png</file>
         <file>assets/control_images/basic-input/ColorPicker.png</file>
         <file>assets/control_images/basic-input/ComboBox.png</file>
+        <file>assets/control_images/basic-input/CompoundButton.png</file>
         <file>assets/control_images/basic-input/DropDownButton.png</file>
         <file>assets/control_images/basic-input/HyperlinkButton.png</file>
         <file>assets/control_images/basic-input/RadioButton.png</file>
@@ -49,6 +50,7 @@
         <file>assets/control_images/foundation/QMLPlus.png</file>
         <file>assets/control_images/foundation/Spacing.png</file>
         <file>assets/control_images/foundation/Typography.png</file>
+        <file>assets/control_images/layout/Accordion.png</file>
         <file>assets/control_images/layout/Card.png</file>
         <file>assets/control_images/layout/Divider.png</file>
         <file>assets/control_images/layout/Expander.png</file>
@@ -63,6 +65,7 @@
         <file>assets/control_images/scrolling/PipsPager.png</file>
         <file>assets/control_images/scrolling/ScrollBar.png</file>
         <file>assets/control_images/scrolling/ScrollView.png</file>
+        <file>assets/control_images/status-info/Avatar.png</file>
         <file>assets/control_images/status-info/InfoBadge.png</file>
         <file>assets/control_images/status-info/InfoBar.png</file>
         <file>assets/control_images/status-info/ProgressBar.png</file>

@@ -28,5 +28,11 @@ int main(int argc, char* argv[])
     calendar.resetFirstDayOfWeek();
 
     fluent::basicinput::Button button(QStringLiteral("FluentQt external integration"));
+    fluent::basicinput::CompoundButton compoundButton(
+        QStringLiteral("Install update"), &button);
+    compoundButton.setSecondaryText(
+        QStringLiteral("Downloads and restarts the application"));
+    fluent::layout::Accordion accordion;
+    fluent::status_info::Avatar avatar(QStringLiteral("Ada Lovelace"));
     return 0;
 }

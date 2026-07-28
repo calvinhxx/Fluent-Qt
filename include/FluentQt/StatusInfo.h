@@ -1,6 +1,7 @@
 #ifndef FLUENTQT_STATUSINFO_H
 #define FLUENTQT_STATUSINFO_H
 
+#include <components/status_info/Avatar.h>
 #include <components/status_info/InfoBadge.h>
 #include <components/status_info/InfoBar.h>
 #include <components/status_info/ProgressBar.h>

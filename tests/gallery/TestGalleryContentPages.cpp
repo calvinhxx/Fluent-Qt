@@ -29,17 +29,20 @@
 #include <QWidget>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/CompoundButton.h"
 #include "compatibility/QtCompat.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/layout/Accordion.h"
 #include "components/layout/Card.h"
 #include "components/layout/Divider.h"
 #include "components/layout/Expander.h"
 #include "components/scrolling/PipsPager.h"
 #include "components/scrolling/ScrollView.h"
+#include "components/status_info/Avatar.h"
 #include "components/status_info/ToolTip.h"
 #include "components/status_info/Toast.h"
 #include "components/textfields/Label.h"
@@ -910,10 +913,13 @@ TEST_F(GalleryContentPagesTest, ComponentRoutesCreateComponentPages)
     };
     const QVector<ComponentCase> cases{
         {QStringLiteral("button"), QStringLiteral("Button"), 4},
+        {QStringLiteral("compound-button"), QStringLiteral("CompoundButton"), 2},
+        {QStringLiteral("accordion"), QStringLiteral("Accordion"), 2},
         {QStringLiteral("card"), QStringLiteral("Card"), 2},
         {QStringLiteral("divider"), QStringLiteral("Divider"), 2},
         {QStringLiteral("expander"), QStringLiteral("Expander"), 2},
         {QStringLiteral("font-icon"), QStringLiteral("FontIcon"), 2},
+        {QStringLiteral("avatar"), QStringLiteral("Avatar"), 2},
         {QStringLiteral("toast"), QStringLiteral("Toast"), 3},
         {QStringLiteral("tree-view"), QStringLiteral("TreeView"), 1},
         {QStringLiteral("tab-view"), QStringLiteral("TabView"), 1}
@@ -940,7 +946,10 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
         QString sampleId;
     };
     const QVector<SampleCase> cases{
+        {QStringLiteral("accordion"), QStringLiteral("accordion-single-expansion")},
+        {QStringLiteral("avatar"), QStringLiteral("avatar-image-presence")},
         {QStringLiteral("card"), QStringLiteral("card-surface-appearances")},
+        {QStringLiteral("compound-button"), QStringLiteral("compound-button-content")},
         {QStringLiteral("divider"), QStringLiteral("divider-vertical-orientation")},
         {QStringLiteral("expander"), QStringLiteral("expander-state-signal")},
         {QStringLiteral("font-icon"), QStringLiteral("font-icon-optical-sizes")},
@@ -973,6 +982,46 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
     ASSERT_NE(stateLabel, nullptr);
     expander->setExpandedAnimated(true, false);
     EXPECT_EQ(stateLabel->text(), QStringLiteral("Expanded"));
+
+    fluent::gallery::GallerySample accordionSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("accordion"),
+        QStringLiteral("accordion-single-expansion"),
+        &accordionSample));
+    std::unique_ptr<QWidget> accordionPreview(
+        accordionSample.createPreview(nullptr));
+    auto* accordion =
+        accordionPreview->findChild<fluent::layout::Accordion*>();
+    ASSERT_NE(accordion, nullptr);
+    ASSERT_EQ(accordion->count(), 3);
+    accordion->itemAt(1)->setExpandedAnimated(true, false);
+    EXPECT_FALSE(accordion->itemAt(0)->isExpanded());
+    EXPECT_TRUE(accordion->itemAt(1)->isExpanded());
+
+    fluent::gallery::GallerySample avatarSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("avatar"),
+        QStringLiteral("avatar-image-presence"),
+        &avatarSample));
+    std::unique_ptr<QWidget> avatarPreview(
+        avatarSample.createPreview(nullptr));
+    auto* avatar =
+        avatarPreview->findChild<fluent::status_info::Avatar*>();
+    ASSERT_NE(avatar, nullptr);
+    EXPECT_NE(avatar->presence(),
+              fluent::status_info::Avatar::PresenceStatus::None);
+
+    fluent::gallery::GallerySample compoundSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("compound-button"),
+        QStringLiteral("compound-button-content"),
+        &compoundSample));
+    std::unique_ptr<QWidget> compoundPreview(
+        compoundSample.createPreview(nullptr));
+    auto* compoundButton =
+        compoundPreview->findChild<fluent::basicinput::CompoundButton*>();
+    ASSERT_NE(compoundButton, nullptr);
+    EXPECT_FALSE(compoundButton->secondaryText().isEmpty());
 }
 
 // Task 6.4: sample cards host a live preview widget and expose code snippets where defined.
@@ -1283,13 +1332,18 @@ TEST_F(GalleryContentPagesTest, EverySampleCodeBlockUsesCppAndNamesItsPreviewCom
                             return object && object->inherits(qualifiedType.constData());
                         });
                 }
-                // Dialog/flyout/tooltip samples create their transient surface only after the
-                // trigger is invoked; Window samples intentionally render an embedded chrome
-                // simulation instead of nesting a top-level window. All other routes must carry
-                // their public component in the initial live preview tree.
-                // zh_CN: 对话框/浮层/提示在触发后才创建；Window 示例使用嵌入式 chrome 模拟。
+                // Dialog/flyout/tooltip samples create their transient surface
+                // only after the trigger is invoked; the managed Toast stacking
+                // sample does the same through Toast::showToast(). Window samples
+                // intentionally render an embedded chrome simulation instead of
+                // nesting a top-level window. All other routes must carry their
+                // public component in the initial live preview tree.
+                // zh_CN: 对话框、浮层、提示以及托管 Toast 堆叠示例会在触发后创建瞬态表面；
+                // Window 示例使用嵌入式 chrome 模拟，避免嵌套顶层窗口。
                 const bool deferredPreview = category.id == QStringLiteral("dialogs-flyouts")
                     || component.id == QStringLiteral("tooltip")
+                    || (component.id == QStringLiteral("toast")
+                        && sample.id == QStringLiteral("toast-stacking"))
                     || component.id == QStringLiteral("window");
                 if (!deferredPreview) {
                     EXPECT_TRUE(previewContainsType)
@@ -1969,6 +2023,8 @@ TEST_F(GalleryContentPagesTest, GalleryToastUsesOverlayMarginAndSuccessBadge)
     ASSERT_NE(reusableToast, nullptr);
     EXPECT_EQ(reusableToast->severity(),
               fluent::status_info::Toast::Success);
+    EXPECT_EQ(reusableToast->placementMargins(),
+              QMargins(16, 36 + 14, 16, 16));
 
     auto* opacity = qobject_cast<QGraphicsOpacityEffect*>(toast->graphicsEffect());
     ASSERT_NE(opacity, nullptr);

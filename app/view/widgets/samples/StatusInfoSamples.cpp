@@ -14,6 +14,7 @@
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
+#include "components/status_info/Avatar.h"
 #include "components/status_info/InfoBadge.h"
 #include "components/status_info/InfoBar.h"
 #include "components/status_info/ProgressBar.h"
@@ -31,6 +32,7 @@ namespace fluent::gallery {
 namespace {
 
 using fluent::basicinput::Button;
+using fluent::status_info::Avatar;
 using fluent::status_info::InfoBadge;
 using fluent::status_info::InfoBar;
 using fluent::status_info::ProgressBar;
@@ -259,6 +261,124 @@ QWidget* progressRingColumn(QWidget* parent,
                             ProgressRing* ring)
 {
     return labeledColumn(parent, labelText, ring);
+}
+
+QVector<GallerySample> avatarSamples()
+{
+    return {
+        makeSample(
+            QStringLiteral("avatar-initials-sizes"),
+            QStringLiteral("Initials and sizes"),
+            QStringLiteral("Avatar generates a compact initials fallback from the caller-provided name and offers four token-aligned sizes."),
+            QStringLiteral("auto* small = new Avatar(\"Ada Lovelace\", this);\n"
+                           "small->setAvatarSize(Avatar::AvatarSize::Small);\n"
+                           "\n"
+                           "auto* medium = new Avatar(\"Grace Hopper\", this);\n"
+                           "medium->setAvatarSize(Avatar::AvatarSize::Medium);\n"
+                           "\n"
+                           "auto* large = new Avatar(\"Lin Chen\", this);\n"
+                           "large->setAvatarSize(Avatar::AvatarSize::Large);\n"
+                           "\n"
+                           "auto* extraLarge = new Avatar(\"Sam Rivera\", this);\n"
+                           "extraLarge->setAvatarSize(\n"
+                           "    Avatar::AvatarSize::ExtraLarge);"),
+            [](QWidget* parent) {
+                QWidget* surface = sampleSurface(parent);
+                QWidget* row = horizontalGroup(surface, 20);
+
+                struct AvatarCase {
+                    QString name;
+                    QString caption;
+                    Avatar::AvatarSize size;
+                };
+                const AvatarCase cases[] = {
+                    {QStringLiteral("Ada Lovelace"),
+                     QStringLiteral("Small"),
+                     Avatar::AvatarSize::Small},
+                    {QStringLiteral("Grace Hopper"),
+                     QStringLiteral("Medium"),
+                     Avatar::AvatarSize::Medium},
+                    {QStringLiteral("Lin Chen"),
+                     QStringLiteral("Large"),
+                     Avatar::AvatarSize::Large},
+                    {QStringLiteral("Sam Rivera"),
+                     QStringLiteral("Extra large"),
+                     Avatar::AvatarSize::ExtraLarge},
+                };
+                for (const AvatarCase& avatarCase : cases) {
+                    auto* avatar = new Avatar(avatarCase.name, row);
+                    avatar->setAvatarSize(avatarCase.size);
+                    boxLayout(row)->addWidget(labeledColumn(
+                        row, avatarCase.caption, avatar));
+                }
+                boxLayout(surface)->addWidget(row, 0, Qt::AlignLeft);
+                return surface;
+            }),
+        makeSample(
+            QStringLiteral("avatar-image-presence"),
+            QStringLiteral("Image, shape, and presence"),
+            QStringLiteral("A high-DPI pixmap replaces initials, while the composed InfoBadge communicates presence without adding text."),
+            QStringLiteral("auto* profile = new Avatar(\"Product account\", this);\n"
+                           "profile->setAvatarSize(\n"
+                           "    Avatar::AvatarSize::ExtraLarge);\n"
+                           "profile->setImage(QPixmap(\":/app/assets/app-icon.png\"));\n"
+                           "profile->setPresence(\n"
+                           "    Avatar::PresenceStatus::Available);\n"
+                           "\n"
+                           "auto* away = new Avatar(\"Alex Morgan\", this);\n"
+                           "away->setAvatarSize(Avatar::AvatarSize::Large);\n"
+                           "away->setShape(Avatar::AvatarShape::Square);\n"
+                           "away->setPresence(Avatar::PresenceStatus::Away);\n"
+                           "\n"
+                           "auto* busy = new Avatar(\"Jordan Lee\", this);\n"
+                           "busy->setAvatarSize(Avatar::AvatarSize::Large);\n"
+                           "busy->setPresence(Avatar::PresenceStatus::Busy);\n"
+                           "\n"
+                           "auto* offline = new Avatar(\"Taylor Reed\", this);\n"
+                           "offline->setAvatarSize(Avatar::AvatarSize::Large);\n"
+                           "offline->setPresence(\n"
+                           "    Avatar::PresenceStatus::Offline);"),
+            [](QWidget* parent) {
+                QWidget* surface = sampleSurface(parent);
+                QWidget* row = horizontalGroup(surface, 20);
+
+                auto* profile = new Avatar(
+                    QStringLiteral("Product account"), row);
+                profile->setAvatarSize(
+                    Avatar::AvatarSize::ExtraLarge);
+                profile->setImage(
+                    QPixmap(QStringLiteral(":/app/assets/app-icon.png")));
+                profile->setPresence(
+                    Avatar::PresenceStatus::Available);
+                boxLayout(row)->addWidget(labeledColumn(
+                    row, QStringLiteral("Available"), profile));
+
+                auto* away = new Avatar(
+                    QStringLiteral("Alex Morgan"), row);
+                away->setAvatarSize(Avatar::AvatarSize::Large);
+                away->setShape(Avatar::AvatarShape::Square);
+                away->setPresence(Avatar::PresenceStatus::Away);
+                boxLayout(row)->addWidget(labeledColumn(
+                    row, QStringLiteral("Away"), away));
+
+                auto* busy = new Avatar(
+                    QStringLiteral("Jordan Lee"), row);
+                busy->setAvatarSize(Avatar::AvatarSize::Large);
+                busy->setPresence(Avatar::PresenceStatus::Busy);
+                boxLayout(row)->addWidget(labeledColumn(
+                    row, QStringLiteral("Busy"), busy));
+
+                auto* offline = new Avatar(
+                    QStringLiteral("Taylor Reed"), row);
+                offline->setAvatarSize(Avatar::AvatarSize::Large);
+                offline->setPresence(Avatar::PresenceStatus::Offline);
+                boxLayout(row)->addWidget(labeledColumn(
+                    row, QStringLiteral("Offline"), offline));
+
+                boxLayout(surface)->addWidget(row, 0, Qt::AlignLeft);
+                return surface;
+            })
+    };
 }
 
 enum class ToolTipPlacement { Above, Right };
@@ -1209,6 +1329,8 @@ QVector<GallerySample> toolTipSamples()
 
 QVector<GallerySample> statusInfoSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("avatar"))
+        return avatarSamples();
     if (routeId == QStringLiteral("info-badge"))
         return infoBadgeSamples();
     if (routeId == QStringLiteral("info-bar"))
