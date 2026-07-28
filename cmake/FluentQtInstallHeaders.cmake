@@ -27,6 +27,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/basicinput/CheckBox.h
     src/components/basicinput/ColorPicker.h
     src/components/basicinput/ComboBox.h
+    src/components/basicinput/CompoundButton.h
     src/components/basicinput/DropDownButton.h
     src/components/basicinput/HyperlinkButton.h
     src/components/basicinput/RadioButton.h
@@ -72,6 +73,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/foundation/overlay/OverlayShadow.h
     src/components/foundation/overlay/OverlayWindow.h
 
+    src/components/layout/Accordion.h
     src/components/layout/Card.h
     src/components/layout/Divider.h
     src/components/layout/Expander.h
@@ -91,6 +93,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/scrolling/ScrollBar.h
     src/components/scrolling/ScrollView.h
 
+    src/components/status_info/Avatar.h
     src/components/status_info/InfoBadge.h
     src/components/status_info/InfoBar.h
     src/components/status_info/ProgressBar.h

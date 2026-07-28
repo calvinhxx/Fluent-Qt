@@ -5,6 +5,7 @@
 #include <components/basicinput/CheckBox.h>
 #include <components/basicinput/ColorPicker.h>
 #include <components/basicinput/ComboBox.h>
+#include <components/basicinput/CompoundButton.h>
 #include <components/basicinput/DropDownButton.h>
 #include <components/basicinput/HyperlinkButton.h>
 #include <components/basicinput/RadioButton.h>

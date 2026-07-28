@@ -114,6 +114,12 @@ public:
     /**
      * @brief Maximum managed toasts kept visible per host and placement.
      * zh_CN: 同一宿主、同一锚点下同时可见的托管 Toast 上限。
+     *
+     * Intended as process-wide startup configuration. Changing the value does
+     * not dismiss already-open toasts; it only affects subsequent `showToast`
+     * stacking and eviction.
+     * zh_CN: 作为进程级启动配置使用。修改该值不会关闭已打开的 Toast，只影响之后
+     * `showToast` 的堆叠与淘汰。
      */
     static int maximumVisible();
     static void setMaximumVisible(int count);
@@ -143,7 +149,8 @@ public:
         const QString& message,
         Severity severity = Informational,
         int durationMs = 2200,
-        Placement placement = Top);
+        Placement placement = Top,
+        const QMargins& margins = QMargins(16, 16, 16, 16));
 
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;

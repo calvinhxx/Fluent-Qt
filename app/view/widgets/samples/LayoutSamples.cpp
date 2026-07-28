@@ -5,6 +5,7 @@
 #include <QVBoxLayout>
 
 #include "components/foundation/WidgetOwnership.h"
+#include "components/layout/Accordion.h"
 #include "components/layout/Card.h"
 #include "components/layout/Divider.h"
 #include "components/layout/Expander.h"
@@ -15,6 +16,7 @@
 namespace fluent::gallery {
 namespace {
 
+using fluent::layout::Accordion;
 using fluent::layout::Card;
 using fluent::layout::Divider;
 using fluent::layout::Expander;
@@ -78,6 +80,17 @@ QWidget* expanderBody(const QString& detail)
         Typography::FontRole::BodyStrong));
     layout->addWidget(sampleLabel(body, detail));
     return body;
+}
+
+Expander* accordionItem(QWidget* parent,
+                        const QString& title,
+                        const QString& detail)
+{
+    auto* item = new Expander(parent);
+    item->setHeaderText(title);
+    item->setContentWidget(
+        expanderBody(detail), WidgetOwnership::Owned);
+    return item;
 }
 
 QVector<GallerySample> cardSamples()
@@ -350,10 +363,152 @@ QVector<GallerySample> expanderSamples()
     };
 }
 
+QVector<GallerySample> accordionSamples()
+{
+    return {
+        makeSample(
+            QStringLiteral("accordion-single-expansion"),
+            QStringLiteral("Single expansion"),
+            QStringLiteral("Single mode closes the previous section when another header is opened."),
+            QStringLiteral("auto* accordion = new Accordion(this);\n"
+                           "accordion->setExpansionMode(\n"
+                           "    Accordion::ExpansionMode::Single);\n"
+                           "accordion->setFixedWidth(520);\n"
+                           "\n"
+                           "auto makeSection = [](const QString& title,\n"
+                           "                     const QString& detail) {\n"
+                           "    auto* item = new Expander;\n"
+                           "    item->setHeaderText(title);\n"
+                           "    auto* body = new QWidget;\n"
+                           "    auto* bodyLayout = new QVBoxLayout(body);\n"
+                           "    bodyLayout->setContentsMargins(16, 12, 16, 14);\n"
+                           "    bodyLayout->addWidget(\n"
+                           "        new Label(\"Additional details\", body));\n"
+                           "    bodyLayout->addWidget(new Label(detail, body));\n"
+                           "    item->setContentWidget(\n"
+                           "        body, WidgetOwnership::Owned);\n"
+                           "    return item;\n"
+                           "};\n"
+                           "\n"
+                           "accordion->addItem(\n"
+                           "    makeSection(\"Account\",\n"
+                           "        \"Profile, sign-in, and recovery options.\"),\n"
+                           "    WidgetOwnership::Owned);\n"
+                           "accordion->addItem(\n"
+                           "    makeSection(\"Notifications\",\n"
+                           "        \"Choose which activity can interrupt you.\"),\n"
+                           "    WidgetOwnership::Owned);\n"
+                           "accordion->addItem(\n"
+                           "    makeSection(\"Privacy\",\n"
+                           "        \"Review diagnostics and personalization settings.\"),\n"
+                           "    WidgetOwnership::Owned);\n"
+                           "accordion->itemAt(0)->setExpandedAnimated(true, false);"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent);
+                auto* accordion = new Accordion(group);
+                accordion->setObjectName(
+                    QStringLiteral("galleryAccordionSingle"));
+                accordion->setFixedWidth(520);
+                accordion->addItem(
+                    accordionItem(
+                        accordion,
+                        QStringLiteral("Account"),
+                        QStringLiteral(
+                            "Profile, sign-in, and recovery options.")),
+                    WidgetOwnership::Owned);
+                accordion->addItem(
+                    accordionItem(
+                        accordion,
+                        QStringLiteral("Notifications"),
+                        QStringLiteral(
+                            "Choose which activity can interrupt you.")),
+                    WidgetOwnership::Owned);
+                accordion->addItem(
+                    accordionItem(
+                        accordion,
+                        QStringLiteral("Privacy"),
+                        QStringLiteral(
+                            "Review diagnostics and personalization settings.")),
+                    WidgetOwnership::Owned);
+                accordion->itemAt(0)->setExpandedAnimated(true, false);
+                boxLayout(group)->addWidget(accordion);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("accordion-multiple-expansion"),
+            QStringLiteral("Multiple expansion and keyboard navigation"),
+            QStringLiteral("Multiple mode keeps independent sections open; Up, Down, Home, and End move focus between headers."),
+            QStringLiteral("auto* accordion = new Accordion(this);\n"
+                           "accordion->setExpansionMode(\n"
+                           "    Accordion::ExpansionMode::Multiple);\n"
+                           "accordion->setFixedWidth(520);\n"
+                           "\n"
+                           "auto* networkItem = new Expander;\n"
+                           "networkItem->setHeaderText(\"Network\");\n"
+                           "auto* networkBody = new QWidget;\n"
+                           "auto* networkLayout = new QVBoxLayout(networkBody);\n"
+                           "networkLayout->setContentsMargins(16, 12, 16, 14);\n"
+                           "networkLayout->addWidget(\n"
+                           "    new Label(\"Additional details\", networkBody));\n"
+                           "networkLayout->addWidget(new Label(\n"
+                           "    \"Wi-Fi and Ethernet are connected.\",\n"
+                           "    networkBody));\n"
+                           "networkItem->setContentWidget(\n"
+                           "    networkBody, WidgetOwnership::Owned);\n"
+                           "\n"
+                           "auto* proxyItem = new Expander;\n"
+                           "proxyItem->setHeaderText(\"Proxy\");\n"
+                           "auto* proxyBody = new QWidget;\n"
+                           "auto* proxyLayout = new QVBoxLayout(proxyBody);\n"
+                           "proxyLayout->setContentsMargins(16, 12, 16, 14);\n"
+                           "proxyLayout->addWidget(\n"
+                           "    new Label(\"Additional details\", proxyBody));\n"
+                           "proxyLayout->addWidget(new Label(\n"
+                           "    \"Use system proxy settings.\", proxyBody));\n"
+                           "proxyItem->setContentWidget(\n"
+                           "    proxyBody, WidgetOwnership::Owned);\n"
+                           "\n"
+                           "accordion->addItem(\n"
+                           "    networkItem, WidgetOwnership::Owned);\n"
+                           "accordion->addItem(\n"
+                           "    proxyItem, WidgetOwnership::Owned);\n"
+                           "networkItem->setExpandedAnimated(true, false);\n"
+                           "proxyItem->setExpandedAnimated(true, false);"),
+            [](QWidget* parent) {
+                QWidget* group = verticalGroup(parent, 8);
+                auto* accordion = new Accordion(group);
+                accordion->setObjectName(
+                    QStringLiteral("galleryAccordionMultiple"));
+                accordion->setFixedWidth(520);
+                accordion->setExpansionMode(
+                    Accordion::ExpansionMode::Multiple);
+
+                auto* network = accordionItem(
+                    accordion,
+                    QStringLiteral("Network"),
+                    QStringLiteral(
+                        "Wi-Fi and Ethernet are connected."));
+                auto* proxy = accordionItem(
+                    accordion,
+                    QStringLiteral("Proxy"),
+                    QStringLiteral(
+                        "Use system proxy settings."));
+                accordion->addItem(network, WidgetOwnership::Owned);
+                accordion->addItem(proxy, WidgetOwnership::Owned);
+                network->setExpandedAnimated(true, false);
+                proxy->setExpandedAnimated(true, false);
+                boxLayout(group)->addWidget(accordion);
+                return group;
+            })
+    };
+}
+
 } // namespace
 
 QVector<GallerySample> layoutSamples(const QString& routeId)
 {
+    if (routeId == QStringLiteral("accordion"))
+        return accordionSamples();
     if (routeId == QStringLiteral("card"))
         return cardSamples();
     if (routeId == QStringLiteral("divider"))

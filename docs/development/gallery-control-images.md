@@ -44,6 +44,7 @@ high-contrast (usually white) on that family:
 | Category id | Shared family |
 | --- | --- |
 | `foundation` | purple / indigo |
+| `basic-input` | blue |
 | `status-info` | teal / cyan |
 | `layout` | coral / terracotta |
 | `scrolling` | yellow / amber |

@@ -10,6 +10,7 @@
 #include "components/basicinput/CheckBox.h"
 #include "components/basicinput/ColorPicker.h"
 #include "components/basicinput/ComboBox.h"
+#include "components/basicinput/CompoundButton.h"
 #include "components/basicinput/DropDownButton.h"
 #include "components/basicinput/HyperlinkButton.h"
 #include "components/basicinput/RadioButton.h"
@@ -33,6 +34,7 @@ using fluent::basicinput::Button;
 using fluent::basicinput::CheckBox;
 using fluent::basicinput::ColorPicker;
 using fluent::basicinput::ComboBox;
+using fluent::basicinput::CompoundButton;
 using fluent::basicinput::DropDownButton;
 using fluent::basicinput::HyperlinkButton;
 using fluent::basicinput::RadioButton;
@@ -253,6 +255,89 @@ QVector<GallerySample> buttonSamples()
                        button->setInteractionState(Button::Hover);
                        return button;
                    })
+    };
+}
+
+QVector<GallerySample> compoundButtonSamples()
+{
+    return {
+        makeSample(
+            QStringLiteral("compound-button-content"),
+            QStringLiteral("Primary and secondary content"),
+            QStringLiteral("A secondary line adds context without creating another interactive target."),
+            QStringLiteral("auto* standard = new CompoundButton(\n"
+                           "    \"Install update\",\n"
+                           "    \"Download and restart the app\",\n"
+                           "    this);\n"
+                           "standard->setFixedWidth(220);\n"
+                           "\n"
+                           "auto* accent = new CompoundButton(\n"
+                           "    \"Start trial\",\n"
+                           "    \"No payment method required\",\n"
+                           "    this);\n"
+                           "accent->setFluentStyle(Button::Accent);\n"
+                           "accent->setFixedWidth(220);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 12);
+                auto* standard = new CompoundButton(
+                    QStringLiteral("Install update"),
+                    QStringLiteral("Download and restart the app"),
+                    group);
+                standard->setFixedWidth(220);
+                auto* accent = new CompoundButton(
+                    QStringLiteral("Start trial"),
+                    QStringLiteral("No payment method required"),
+                    group);
+                accent->setFluentStyle(Button::Accent);
+                accent->setFixedWidth(220);
+                group->layout()->addWidget(standard);
+                group->layout()->addWidget(accent);
+                return group;
+            }),
+        makeSample(
+            QStringLiteral("compound-button-icon"),
+            QStringLiteral("Icon and interaction state"),
+            QStringLiteral("CompoundButton inherits Button icon layout, focus, disabled, and pointer-state behavior."),
+            QStringLiteral("auto* share = new CompoundButton(\n"
+                           "    \"Share project\",\n"
+                           "    \"Invite people with a link\",\n"
+                           "    this);\n"
+                           "share->setFluentLayout(Button::IconBefore);\n"
+                           "share->setIconGlyph(\n"
+                           "    Typography::Icons::Share,\n"
+                           "    Typography::IconSize::Standard);\n"
+                           "share->setFocusVisual(true);\n"
+                           "share->setFixedWidth(240);\n"
+                           "\n"
+                           "auto* disabled = new CompoundButton(\n"
+                           "    \"Publish\",\n"
+                           "    \"Resolve validation errors first\",\n"
+                           "    this);\n"
+                           "disabled->setEnabled(false);\n"
+                           "disabled->setFixedWidth(240);"),
+            [](QWidget* parent) {
+                QWidget* group = horizontalGroup(parent, 12);
+                auto* share = new CompoundButton(
+                    QStringLiteral("Share project"),
+                    QStringLiteral("Invite people with a link"),
+                    group);
+                share->setFluentLayout(Button::IconBefore);
+                share->setIconGlyph(
+                    Typography::Icons::Share,
+                    Typography::IconSize::Standard);
+                share->setFocusVisual(true);
+                share->setFixedWidth(240);
+
+                auto* disabled = new CompoundButton(
+                    QStringLiteral("Publish"),
+                    QStringLiteral("Resolve validation errors first"),
+                    group);
+                disabled->setEnabled(false);
+                disabled->setFixedWidth(240);
+                group->layout()->addWidget(share);
+                group->layout()->addWidget(disabled);
+                return group;
+            })
     };
 }
 
@@ -1240,6 +1325,8 @@ QVector<GallerySample> basicInputSamples(const QString& routeId)
 {
     if (routeId == QStringLiteral("button"))
         return buttonSamples();
+    if (routeId == QStringLiteral("compound-button"))
+        return compoundButtonSamples();
     if (routeId == QStringLiteral("checkbox"))
         return checkBoxSamples();
     if (routeId == QStringLiteral("color-picker"))

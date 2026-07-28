@@ -59,6 +59,8 @@ const QHash<QString, QString>& routeDescriptions()
         // Basic input
         {QStringLiteral("button"),
          QStringLiteral("A control that responds to user input and raises a click event.")},
+        {QStringLiteral("compound-button"),
+         QStringLiteral("A button with primary text and a second line that explains the action.")},
         {QStringLiteral("checkbox"),
          QStringLiteral("Lets people select or clear an option, with an optional indeterminate state.")},
         {QStringLiteral("color-picker"),
@@ -125,6 +127,8 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("coach-mark"),
          QStringLiteral("A standalone teaching tip in its own window that points a tail at a target and glides between them.")},
         // Layout
+        {QStringLiteral("accordion"),
+         QStringLiteral("Coordinates a vertical group of expandable sections with single or multiple expansion.")},
         {QStringLiteral("card"),
          QStringLiteral("A rounded, token-backed surface for grouping related content.")},
         {QStringLiteral("divider"),
@@ -157,6 +161,8 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("scroll-view"),
          QStringLiteral("A scrollable viewport with Fluent scrollbars and optional zoom.")},
         // Status & info
+        {QStringLiteral("avatar"),
+         QStringLiteral("Represents a person or identity with an image, initials fallback, shape, size, and presence.")},
         {QStringLiteral("info-badge"),
          QStringLiteral("A small badge that shows counts, icons, or attention dots.")},
         {QStringLiteral("info-bar"),
