@@ -23,6 +23,14 @@ set(FLUENT_QT_CONTRACT_TEST_TARGETS
     test_anchor_layout
     test_qml_plus
     test_resource_initialization
+    test_font_icon
+    test_compound_button
+    test_accordion
+    test_card
+    test_divider
+    test_expander
+    test_avatar
+    test_toast
     test_label
     test_text_edit
 )
