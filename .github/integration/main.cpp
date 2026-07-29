@@ -1,6 +1,7 @@
 #include <FluentQt/FluentQt.h>
 
 #include <QApplication>
+#include <QAction>
 #include <QLocale>
 
 // Compile/link fixture for external add_subdirectory consumers.
@@ -28,6 +29,11 @@ int main(int argc, char* argv[])
     calendar.resetFirstDayOfWeek();
 
     fluent::basicinput::Button button(QStringLiteral("FluentQt external integration"));
+    fluent::menus_toolbars::CommandBar commandBar;
+    QAction command(QStringLiteral("External command"));
+    commandBar.addPrimaryAction(&command);
+    fluent::menus_toolbars::CommandBarFlyout commandFlyout(&button);
+    commandFlyout.addSecondaryAction(&command);
     fluent::basicinput::CompoundButton compoundButton(
         QStringLiteral("Install update"), &button);
     compoundButton.setSecondaryText(

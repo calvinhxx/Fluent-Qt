@@ -34,6 +34,13 @@ static_assert(std::is_base_of<QWidget, fluent::layout::Divider>::value,
               "Layout.h must expose the layout widgets");
 static_assert(std::is_base_of<QWidget, fluent::layout::Expander>::value,
               "Layout.h must expose the layout widgets");
+static_assert(std::is_base_of<QWidget, fluent::menus_toolbars::CommandBar>::value,
+              "MenusToolbars.h must expose CommandBar");
+static_assert(
+    std::is_base_of<
+        fluent::dialogs_flyouts::Flyout,
+        fluent::menus_toolbars::CommandBarFlyout>::value,
+    "MenusToolbars.h must expose CommandBarFlyout");
 static_assert(std::is_base_of<QWidget, fluent::navigation::NavigationView>::value,
               "Navigation.h must expose the navigation widgets");
 static_assert(std::is_base_of<QWidget, fluent::scrolling::ScrollView>::value,
@@ -46,5 +53,10 @@ static_assert(std::is_base_of<QWidget, fluent::status_info::Toast>::value,
               "StatusInfo.h must expose the status widgets");
 static_assert(std::is_base_of<QWidget, fluent::textfields::TextEdit>::value,
               "TextFields.h must expose the text-field widgets");
+static_assert(
+    std::is_base_of<
+        QObject,
+        fluent::textfields::EditingCommandRouter>::value,
+    "TextFields.h must expose EditingCommandRouter");
 static_assert(std::is_base_of<QWidget, fluent::windowing::Window>::value,
               "Windowing.h must expose the window widgets");
