@@ -1,5 +1,6 @@
 #include "PasswordBox.h"
 
+#include <QContextMenuEvent>
 #include <QEvent>
 #include <QFocusEvent>
 #include <QMouseEvent>
@@ -120,6 +121,12 @@ void PasswordBox::leaveEvent(QEvent* event) {
     m_hovered = false;
     LineEdit::leaveEvent(event);
     update();
+}
+
+void PasswordBox::contextMenuEvent(QContextMenuEvent* event) {
+    if (m_revealMode != PasswordRevealMode::Visible)
+        setPeekActive(false);
+    LineEdit::contextMenuEvent(event);
 }
 
 void PasswordBox::mousePressEvent(QMouseEvent* event) {

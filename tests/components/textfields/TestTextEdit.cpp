@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <QApplication>
 #include <QContextMenuEvent>
+#include <QImage>
 #include <QMetaProperty>
 #include <QMenu>
 #include <QScrollBar>
@@ -11,6 +12,7 @@
 #include <QtTest/QTest>
 #include "QtTestEnvironment.h"
 #include "components/menus_toolbars/Menu.h"
+#include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/textfields/TextEdit.h"
 #include "components/textfields/Label.h"
 #include "components/basicinput/Button.h"
@@ -336,8 +338,19 @@ TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
 
         EXPECT_EQ(menu->objectName(), QStringLiteral("FluentTextEdit.ContextMenu"));
         EXPECT_EQ(menu->fontStyle(), Typography::FontRole::Caption);
-        EXPECT_EQ(menu->font().pixelSize(), 10);
+        EXPECT_EQ(
+            menu->font().pixelSize(),
+            Typography::FontSize::Caption);
+        EXPECT_FALSE(
+            menu->property(
+                    "_fluentqt_menuQuietSeparators")
+                .toBool());
         for (QAction* action : menu->actions()) {
+            if (!action->isSeparator()) {
+                EXPECT_LT(
+                    menu->actionGeometry(action).height(),
+                    ::Spacing::ControlHeight::Standard);
+            }
             const QString text = action->text();
             const bool isCopy = text.contains(QStringLiteral("Copy"), Qt::CaseInsensitive);
             const bool isSelectAll = text.contains(QStringLiteral("Select"), Qt::CaseInsensitive)
@@ -351,6 +364,17 @@ TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
                 || (isDelete && !action->icon().isNull());
             sawSelectAllGlyph = sawSelectAllGlyph
                 || (isSelectAll && !action->icon().isNull());
+            if (!action->icon().isNull()) {
+                const QSize iconSize =
+                    action->icon().actualSize(QSize(64, 64));
+                EXPECT_GT(iconSize.width(), 0);
+                EXPECT_LE(
+                    iconSize.width(),
+                    Typography::IconSize::Standard);
+                EXPECT_LE(
+                    iconSize.height(),
+                    Typography::IconSize::Standard);
+            }
         }
         menu->close();
     });
@@ -367,6 +391,108 @@ TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
     EXPECT_TRUE(sawCopyGlyph);
     EXPECT_TRUE(sawDeleteGlyph);
     EXPECT_TRUE(sawSelectAllGlyph);
+}
+
+TEST_F(
+    TextEditTest,
+    StandardEditingActionsReceiveIconsAndShortcutTextWithoutPlatformMetadata)
+{
+    window->show();
+    QApplication::processEvents();
+
+    auto* standardMenu = new QMenu(window);
+    standardMenu->addAction(QStringLiteral("Undo"));
+    auto* disabledRedo =
+        standardMenu->addAction(QStringLiteral("Redo"));
+    disabledRedo->setEnabled(false);
+    standardMenu->addSeparator();
+    standardMenu->addAction(QStringLiteral("Cut"));
+    standardMenu->addAction(QStringLiteral("Copy"));
+    auto* disabledPaste =
+        standardMenu->addAction(QStringLiteral("Paste"));
+    disabledPaste->setEnabled(false);
+    standardMenu->addAction(QStringLiteral("Delete"));
+    standardMenu->addSeparator();
+    standardMenu->addAction(QStringLiteral("Select All"));
+
+    bool sawFluentMenu = false;
+    int editingActionCount = 0;
+    int iconCount = 0;
+    int paintedIconCount = 0;
+    int enabledActionCount = 0;
+    int enabledShortcutCount = 0;
+    int disabledActionCount = 0;
+    int disabledShortcutCount = 0;
+    QTimer::singleShot(0, [&]() {
+        QWidget* popup = QApplication::activePopupWidget();
+        auto* menu =
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
+                popup);
+        sawFluentMenu = menu != nullptr;
+        if (menu) {
+            for (QAction* action : menu->actions()) {
+                if (action->isSeparator())
+                    continue;
+                ++editingActionCount;
+                const QString shortcutText =
+                    menu->shortcutTextForAction(action);
+                EXPECT_FALSE(shortcutText.isEmpty());
+                EXPECT_FALSE(
+                    menu->itemShortcutGeometry(action).isEmpty());
+                if (action->isEnabled()) {
+                    ++enabledActionCount;
+                    if (!shortcutText.isEmpty())
+                        ++enabledShortcutCount;
+                } else {
+                    ++disabledActionCount;
+                    if (!shortcutText.isEmpty())
+                        ++disabledShortcutCount;
+                }
+                if (!action->icon().isNull()) {
+                    ++iconCount;
+                    const QImage image =
+                        action->icon()
+                            .pixmap(QSize(16, 16))
+                            .toImage();
+                    bool hasVisiblePixel = false;
+                    for (int y = 0;
+                         y < image.height()
+                         && !hasVisiblePixel;
+                         ++y) {
+                        for (int x = 0;
+                             x < image.width();
+                             ++x) {
+                            if (image.pixelColor(x, y).alpha() > 0) {
+                                hasVisiblePixel = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasVisiblePixel)
+                        ++paintedIconCount;
+                }
+            }
+        }
+        if (popup)
+            popup->close();
+    });
+
+    EXPECT_TRUE(
+        fluent::menus_toolbars::detail::
+            execTextEditingContextMenu(
+                window,
+                standardMenu,
+                window->mapToGlobal(QPoint(40, 40)),
+                QStringLiteral(
+                    "FluentTextEdit.PlatformFallbackMenu")));
+    EXPECT_TRUE(sawFluentMenu);
+    EXPECT_EQ(editingActionCount, 7);
+    EXPECT_EQ(iconCount, editingActionCount);
+    EXPECT_EQ(paintedIconCount, editingActionCount);
+    EXPECT_EQ(enabledActionCount, 5);
+    EXPECT_EQ(enabledShortcutCount, enabledActionCount);
+    EXPECT_EQ(disabledActionCount, 2);
+    EXPECT_EQ(disabledShortcutCount, disabledActionCount);
 }
 
 TEST_F(TextEditTest, UndoRedoRemainFunctionalFromKeyboardAndContextMenu) {
