@@ -184,10 +184,13 @@ protected:
 
 private:
     void rememberDefaultValue(QObject* target, const QByteArray& propertyName);
-    void restoreDefaultValues();
+    bool restoreDefaultValues();
 
     AnchorLayout::Anchors* m_anchors = nullptr;
     QString m_currentState;
+    QString m_pendingState;
+    bool m_stateChangeInProgress = false;
+    bool m_hasPendingState = false;
     QMap<QString, QMLState> m_states;
     QMap<QObject*, QMap<QByteArray, QVariant>> m_defaultValues;
     QMap<QObject*, QMetaObject::Connection> m_defaultValueCleanupConnections;

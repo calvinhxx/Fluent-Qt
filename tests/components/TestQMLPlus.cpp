@@ -59,6 +59,25 @@ public:
     }
 };
 
+class QMLPlusStateTarget : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(int value READ value WRITE setValue NOTIFY valueChanged)
+public:
+    int value() const { return m_value; }
+    void setValue(int value) {
+        if (m_value == value)
+            return;
+        m_value = value;
+        emit valueChanged(value);
+    }
+
+signals:
+    void valueChanged(int value);
+
+private:
+    int m_value = 0;
+};
+
 // =============================================================================
 // 3. Test Fixture
 // =============================================================================
@@ -145,6 +164,57 @@ TEST_F(QMLPlusTest, Contract_DestroyedStateTargetsAreRemovedFromDefaultStorage) 
     delete target;
     box.setState(QString());
 
+    EXPECT_TRUE(box.state().isEmpty());
+}
+
+TEST_F(QMLPlusTest, Contract_ReentrantStateChangeUsesLatestRequestedState) {
+    QMLPlusBox box;
+    QMLPlusStateTarget target;
+
+    QMLState first;
+    first.name = QStringLiteral("first");
+    first.changes = {{&target, QByteArrayLiteral("value"), 1}};
+    box.addState(first);
+
+    QMLState second;
+    second.name = QStringLiteral("second");
+    second.changes = {{&target, QByteArrayLiteral("value"), 2}};
+    box.addState(second);
+
+    int callbackCount = 0;
+    QObject::connect(&target, &QMLPlusStateTarget::valueChanged, &target, [&](int value) {
+        ++callbackCount;
+        if (value == 1)
+            box.setState(QStringLiteral("second"));
+    });
+
+    box.setState(QStringLiteral("first"));
+
+    EXPECT_EQ(box.state(), QStringLiteral("second"));
+    EXPECT_EQ(target.value(), 2);
+    EXPECT_LE(callbackCount, 3);
+}
+
+TEST_F(QMLPlusTest, Contract_StateTargetCanDeleteItselfDuringDefaultRestore) {
+    QMLPlusBox box;
+    auto* target = new QMLPlusStateTarget;
+    QPointer<QMLPlusStateTarget> targetGuard(target);
+
+    QMLState active;
+    active.name = QStringLiteral("active");
+    active.changes = {{target, QByteArrayLiteral("value"), 1}};
+    box.addState(active);
+    box.setState(QStringLiteral("active"));
+    ASSERT_EQ(target->value(), 1);
+
+    QObject::connect(target, &QMLPlusStateTarget::valueChanged, target, [target](int value) {
+        if (value == 0)
+            delete target;
+    });
+
+    box.setState(QString());
+
+    EXPECT_TRUE(targetGuard.isNull());
     EXPECT_TRUE(box.state().isEmpty());
 }
 
