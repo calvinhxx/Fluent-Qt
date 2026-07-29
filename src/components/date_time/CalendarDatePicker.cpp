@@ -188,10 +188,17 @@ CalendarDatePicker::CalendarDatePicker(QWidget* parent)
 CalendarDatePicker::~CalendarDatePicker()
 {
     if (m_popup) {
-        m_popup->close();
-        delete m_popup;
+        m_calendarOpen = false;
+        CalendarDatePickerPopup* popup = m_popup.data();
         m_popup = nullptr;
+        popup->close();
+        delete popup;
     }
+}
+
+bool CalendarDatePicker::isCalendarOpen() const
+{
+    return m_calendarOpen && !m_popup.isNull();
 }
 
 void CalendarDatePicker::setPlaceholderText(const QString& text)
@@ -451,6 +458,10 @@ void CalendarDatePicker::ensurePopup()
         return;
 
     m_popup = new CalendarDatePickerPopup(this);
+    connect(m_popup, &QObject::destroyed, this, [this]() {
+        m_popup = nullptr;
+        handlePopupOpenChanged(false);
+    });
     connect(m_popup, &fluent::dialogs_flyouts::Popup::isOpenChanged,
             this, &CalendarDatePicker::handlePopupOpenChanged);
     connect(m_popup, &fluent::dialogs_flyouts::Popup::closed, this, [this]() {

@@ -314,6 +314,7 @@ private:
     TransitionTarget m_transitionTarget = TransitionTarget::None;
     bool m_applicationFilterInstalled = false;
     bool m_hostDeactivationInProgress = false;
+    bool m_openInProgress = false;
 
     QRect m_panelGeometry;
     QRect m_contentGeometry;

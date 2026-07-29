@@ -3,6 +3,7 @@
 
 #include <QDate>
 #include <QLocale>
+#include <QPointer>
 #include <QString>
 
 #include "components/basicinput/Button.h"
@@ -93,7 +94,7 @@ public:
     void setFirstDayOfWeek(Qt::DayOfWeek day);
     void resetFirstDayOfWeek();
 
-    bool isCalendarOpen() const { return m_calendarOpen; }
+    bool isCalendarOpen() const;
     bool isOpen() const { return isCalendarOpen(); }
     void setCalendarOpen(bool open);
 
@@ -149,7 +150,7 @@ private:
 
     bool m_calendarOpen = false;
 
-    CalendarDatePickerPopup* m_popup = nullptr;
+    QPointer<CalendarDatePickerPopup> m_popup;
 };
 
 } // namespace fluent::date_time

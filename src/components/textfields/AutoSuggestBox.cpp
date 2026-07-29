@@ -250,18 +250,7 @@ AutoSuggestBox::AutoSuggestBox(QWidget* parent)
     setFixedHeight(totalPreferredHeight());
 
     initializeButtons();
-
-    m_suggestionPopup = new SuggestionListPopup(this);
-    updateSuggestionMetrics();
-    m_suggestionPopup->setSuggestionClickedHandler([this](int row) {
-        chooseSuggestion(row);
-    });
-    connect(m_suggestionPopup, &fluent::dialogs_flyouts::Popup::opened, this, [this]() {
-        emit suggestionListOpenChanged(true);
-    });
-    connect(m_suggestionPopup, &fluent::dialogs_flyouts::Popup::closed, this, [this]() {
-        emit suggestionListOpenChanged(false);
-    });
+    ensureSuggestionPopup();
 
     connect(this, &QLineEdit::textEdited, this, [this](const QString& editedText) {
         m_nextChangeReason = TextChangeReason::UserInput;
@@ -275,7 +264,7 @@ AutoSuggestBox::AutoSuggestBox(QWidget* parent)
 }
 
 AutoSuggestBox::~AutoSuggestBox() {
-    delete m_suggestionPopup;
+    delete m_suggestionPopup.data();
     m_suggestionPopup = nullptr;
 }
 
@@ -469,8 +458,10 @@ void AutoSuggestBox::keyPressEvent(QKeyEvent* event) {
         if (isSuggestionListOpen() && m_suggestionPopup->currentRow() >= 0) {
             chooseSuggestion(m_suggestionPopup->currentRow());
         } else {
+            QPointer<AutoSuggestBox> guard(this);
             closeSuggestionList();
-            emit querySubmitted(text(), QVariant{});
+            if (guard)
+                emit guard->querySubmitted(guard->text(), QVariant{});
         }
         event->accept();
         return;
@@ -563,8 +554,10 @@ void AutoSuggestBox::initializeButtons() {
                                 Typography::FontFamily::FluentIcons);
 
     connect(m_queryButton, &::fluent::basicinput::Button::clicked, this, [this]() {
+        QPointer<AutoSuggestBox> guard(this);
         closeSuggestionList();
-        emit querySubmitted(text(), QVariant{});
+        if (guard)
+            emit guard->querySubmitted(guard->text(), QVariant{});
     });
 
     m_clearButton = new ::fluent::basicinput::Button(this);
@@ -578,9 +571,13 @@ void AutoSuggestBox::initializeButtons() {
                                 Typography::FontFamily::FluentIcons);
 
     connect(m_clearButton, &::fluent::basicinput::Button::clicked, this, [this]() {
+        QPointer<AutoSuggestBox> guard(this);
         setTextWithReason(QString(), TextChangeReason::UserInput);
-        closeSuggestionList();
-        setFocus();
+        if (!guard)
+            return;
+        guard->closeSuggestionList();
+        if (guard)
+            guard->setFocus();
     });
 
     updateButtonGeometry();
@@ -662,6 +659,24 @@ void AutoSuggestBox::updateSuggestionMetrics() {
     }
 }
 
+void AutoSuggestBox::ensureSuggestionPopup() {
+    if (m_suggestionPopup)
+        return;
+
+    auto* popup = new SuggestionListPopup(this);
+    m_suggestionPopup = popup;
+    updateSuggestionMetrics();
+    popup->setSuggestionClickedHandler([this](int row) {
+        chooseSuggestion(row);
+    });
+    connect(popup, &fluent::dialogs_flyouts::Popup::opened, this, [this]() {
+        emit suggestionListOpenChanged(true);
+    });
+    connect(popup, &fluent::dialogs_flyouts::Popup::closed, this, [this]() {
+        emit suggestionListOpenChanged(false);
+    });
+}
+
 void AutoSuggestBox::handleTextChanged(const QString& changedText) {
     const TextChangeReason reason = m_nextChangeReason;
     m_nextChangeReason = TextChangeReason::ProgrammaticChange;
@@ -670,7 +685,10 @@ void AutoSuggestBox::handleTextChanged(const QString& changedText) {
 
     updateButtonState();
     updateTextMargins();
+    QPointer<AutoSuggestBox> guard(this);
     emit textChangedWithReason(changedText, reason);
+    if (!guard)
+        return;
 
     if (reason == TextChangeReason::UserInput) {
         if (changedText.isEmpty() || m_suggestions.isEmpty()) closeSuggestionList();
@@ -679,7 +697,11 @@ void AutoSuggestBox::handleTextChanged(const QString& changedText) {
 }
 
 void AutoSuggestBox::openSuggestionList() {
-    if (!m_suggestionPopup || m_suggestions.isEmpty()) return;
+    if (m_suggestions.isEmpty())
+        return;
+    ensureSuggestionPopup();
+    if (!m_suggestionPopup)
+        return;
     m_suggestionPopup->setSuggestions(m_suggestions);
     m_suggestionPopup->showForOwner();
 }
@@ -693,8 +715,11 @@ void AutoSuggestBox::previewSuggestion(int row) {
     if (row < 0 || row >= m_suggestions.count()) return;
     setPopupCurrentRow(row);
     const QVariant item(m_suggestions.at(row));
+    const QString value = m_suggestions.at(row);
+    QPointer<AutoSuggestBox> guard(this);
     emit suggestionChosen(item);
-    setTextWithReason(m_suggestions.at(row), TextChangeReason::ProgrammaticChange);
+    if (guard)
+        guard->setTextWithReason(value, TextChangeReason::ProgrammaticChange);
 }
 
 void AutoSuggestBox::chooseSuggestion(int row) {
@@ -702,9 +727,16 @@ void AutoSuggestBox::chooseSuggestion(int row) {
     setPopupCurrentRow(row);
     const QString value = m_suggestions.at(row);
     const QVariant item(value);
+    QPointer<AutoSuggestBox> guard(this);
     setTextWithReason(value, TextChangeReason::SuggestionChosen, true);
+    if (!guard)
+        return;
     emit suggestionChosen(item);
-    closeSuggestionList();
+    if (!guard)
+        return;
+    guard->closeSuggestionList();
+    if (!guard)
+        return;
     emit querySubmitted(value, item);
 }
 

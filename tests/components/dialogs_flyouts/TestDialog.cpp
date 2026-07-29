@@ -12,6 +12,7 @@
 #include "compatibility/QtCompat.h"
 #include <QGraphicsOpacityEffect>
 #include <QImage>
+#include <QPointer>
 
 using namespace fluent::dialogs_flyouts;
 using namespace fluent::basicinput;
@@ -141,6 +142,20 @@ TEST_F(DialogTest, ExecWithoutAnimation) {
     QTimer::singleShot(50, [&]() { dialog.done(QDialog::Accepted); });
     int result = dialog.exec();
     EXPECT_EQ(result, QDialog::Accepted);
+}
+
+TEST_F(DialogTest, FinishedHandlerCanSynchronouslyDeleteDialogWithoutAnimation) {
+    auto* dialog = new Dialog(window);
+    dialog->setAnimationEnabled(false);
+    QPointer<Dialog> guard(dialog);
+    QObject::connect(dialog, &QDialog::finished, window, [dialog] {
+        delete dialog;
+    });
+
+    dialog->show();
+    dialog->done(QDialog::Accepted);
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 TEST_F(DialogTest, OpenPreservesExplicitApplicationModality) {

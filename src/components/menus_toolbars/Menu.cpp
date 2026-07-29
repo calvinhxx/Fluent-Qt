@@ -7,6 +7,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPointer>
 #include <QShowEvent>
 #include <QTimer>
 #include <QVariantAnimation>
@@ -249,19 +250,27 @@ void FluentMenu::keyPressEvent(QKeyEvent* event)
 
 void FluentMenu::mousePressEvent(QMouseEvent* event)
 {
+    QPointer<FluentMenu> guard(this);
     QMenu::mousePressEvent(event);
-    normalizePopupLayering();
-    QTimer::singleShot(0, this, [this]() {
-        normalizePopupLayering();
+    if (!guard)
+        return;
+    guard->normalizePopupLayering();
+    QTimer::singleShot(0, guard, [guard]() {
+        if (guard)
+            guard->normalizePopupLayering();
     });
 }
 
 void FluentMenu::mouseReleaseEvent(QMouseEvent* event)
 {
+    QPointer<FluentMenu> guard(this);
     QMenu::mouseReleaseEvent(event);
-    normalizePopupLayering();
-    QTimer::singleShot(0, this, [this]() {
-        normalizePopupLayering();
+    if (!guard)
+        return;
+    guard->normalizePopupLayering();
+    QTimer::singleShot(0, guard, [guard]() {
+        if (guard)
+            guard->normalizePopupLayering();
     });
 }
 

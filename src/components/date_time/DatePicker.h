@@ -3,6 +3,7 @@
 
 #include <QDate>
 #include <QLocale>
+#include <QPointer>
 #include <Qt>
 #include <QVector>
 
@@ -226,7 +227,7 @@ private:
     void applyPendingDate(const QDate& date);
     void handleFlyoutClosed();
 
-    DatePickerFlyout* m_flyout = nullptr;
+    QPointer<DatePickerFlyout> m_flyout;
 
     QDate m_date;
     QDate m_selectedDate;

@@ -431,7 +431,10 @@ void TeachingTip::markPendingCloseReason(CloseReason reason) {
 
 void TeachingTip::emitClosingReason() {
     const CloseReason reason = m_closeReasonExplicit ? m_pendingCloseReason : Programmatic;
+    QPointer<TeachingTip> guard(this);
     emit closing(reason);
+    if (!guard)
+        return;
     m_pendingCloseReason = Programmatic;
     m_closeReasonExplicit = false;
 }

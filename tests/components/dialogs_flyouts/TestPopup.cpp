@@ -141,6 +141,48 @@ TEST_F(PopupTest, ReentrantOpenDuringAboutToShowIsIgnored) {
     p.close();
 }
 
+TEST_F(PopupTest, AboutToShowHandlerCanSynchronouslyDeletePopup) {
+    auto* popup = new Popup(window);
+    popup->setAnimationEnabled(false);
+    QPointer<Popup> guard(popup);
+    QObject::connect(popup, &Popup::aboutToShow, window, [popup] {
+        delete popup;
+    });
+
+    popup->open();
+
+    EXPECT_TRUE(guard.isNull());
+}
+
+TEST_F(PopupTest, OpenStateHandlerCanSynchronouslyDeletePopup) {
+    auto* popup = new Popup(window);
+    popup->setAnimationEnabled(false);
+    QPointer<Popup> guard(popup);
+    QObject::connect(popup, &Popup::isOpenChanged, window, [popup](bool open) {
+        if (open)
+            delete popup;
+    });
+
+    popup->open();
+
+    EXPECT_TRUE(guard.isNull());
+}
+
+TEST_F(PopupTest, ProgressHandlerCanSynchronouslyDeletePopup) {
+    auto* popup = new Popup(window);
+    popup->setAnimationEnabled(false);
+    QPointer<Popup> guard(popup);
+    QObject::connect(
+        popup, &Popup::popupProgressChanged, window,
+        [popup](double) {
+            delete popup;
+        });
+
+    popup->open();
+
+    EXPECT_TRUE(guard.isNull());
+}
+
 TEST_F(PopupTest, SetIsOpen_DelegatesToOpenClose) {
     Popup p(window);
     p.setAnimationEnabled(false);
