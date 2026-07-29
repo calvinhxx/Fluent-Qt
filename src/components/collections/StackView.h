@@ -204,6 +204,21 @@ private:
         QMetaObject::Connection destroyedConnection;
     };
 
+    class OperationGuard {
+    public:
+        explicit OperationGuard(StackView* owner);
+        ~OperationGuard();
+
+        OperationGuard(const OperationGuard&) = delete;
+        OperationGuard& operator=(const OperationGuard&) = delete;
+
+        void release();
+
+    private:
+        QPointer<StackView> m_owner;
+        bool m_ownsOperation = false;
+    };
+
     bool canStartOperation() const;
     int stackIndexOf(QWidget* item) const;
     StackEntry makeEntry(QWidget* item, QWidget* originalParent,
@@ -237,6 +252,8 @@ private:
     QVector<StackEntry> m_stack;
     WidgetOwnership m_defaultOwnership = WidgetOwnership::Owned;
     bool m_busy = false;
+    bool m_operationInProgress = false;
+    bool m_finishingTransition = false;
     bool m_transitionAnimationEnabled = true;
     int m_transitionDuration = 250;
     StackViewTransitionType m_transitionType = StackViewTransitionType::SlideFade;

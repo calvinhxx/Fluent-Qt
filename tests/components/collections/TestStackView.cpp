@@ -345,6 +345,188 @@ TEST_F(StackViewTest, BusyRejectsConcurrentStackOperations)
     delete rejected;
 }
 
+TEST_F(StackViewTest, Contract_TransitionStartedSeesBusyAndRejectsReentrantPush)
+{
+    StackView stack;
+    stack.setTransitionAnimationEnabled(false);
+    ASSERT_TRUE(stack.push(new StackPage("First")));
+
+    auto* rejected = new StackPage("Rejected");
+    bool busyDuringSignal = false;
+    bool reentrantPushResult = true;
+    QObject::connect(
+        &stack, &StackView::transitionStarted, &stack,
+        [&](StackView::StackViewTransitionOperation operation, QWidget*, QWidget*) {
+                if (operation != StackView::StackViewTransitionOperation::Push)
+                    return;
+                busyDuringSignal = stack.busy();
+                reentrantPushResult = stack.push(rejected);
+        });
+
+    ASSERT_TRUE(stack.push(new StackPage("Second")));
+
+    EXPECT_TRUE(busyDuringSignal);
+    EXPECT_FALSE(reentrantPushResult);
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.depth(), 2);
+    EXPECT_EQ(rejected->parent(), nullptr);
+    delete rejected;
+}
+
+TEST_F(StackViewTest, Contract_ItemPushedHandlerCanSynchronouslyDeletePushedPage)
+{
+    StackView stack;
+    stack.setTransitionAnimationEnabled(false);
+    auto* root = new StackPage("Root");
+    ASSERT_TRUE(stack.push(root));
+
+    auto* victim = new StackPage("Victim");
+    QPointer<QWidget> victimGuard = victim;
+    QObject::connect(
+        &stack, &StackView::itemPushed, &stack,
+        [victim](QWidget* item) {
+            if (item == victim)
+                delete item;
+        });
+
+    EXPECT_TRUE(stack.push(victim));
+    EXPECT_TRUE(victimGuard.isNull());
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.depth(), 1);
+    EXPECT_EQ(stack.currentItem(), root);
+    EXPECT_EQ(stack.itemStatus(root), StackView::StackViewItemStatus::Active);
+}
+
+TEST_F(StackViewTest, Contract_ItemPushedRejectsReentrantNavigationBeforeTransitionStarts)
+{
+    StackView stack;
+    stack.setTransitionAnimationEnabled(false);
+    ASSERT_TRUE(stack.push(new StackPage("Root")));
+
+    auto* second = new StackPage("Second");
+    auto* rejected = new StackPage("Rejected");
+    bool reentrantPushResult = true;
+    QObject::connect(
+        &stack, &StackView::itemPushed, &stack,
+        [&](QWidget* item) {
+            if (item == second)
+                reentrantPushResult = stack.push(rejected);
+        });
+
+    ASSERT_TRUE(stack.push(second));
+    EXPECT_FALSE(reentrantPushResult);
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.depth(), 2);
+    EXPECT_EQ(stack.currentItem(), second);
+    EXPECT_EQ(rejected->parent(), nullptr);
+    delete rejected;
+}
+
+TEST_F(StackViewTest, Contract_MultiPushRecoversWhenHandlerDeletesPreviousCurrentPage)
+{
+    StackView stack;
+    stack.setTransitionAnimationEnabled(false);
+    auto* root = new StackPage("Root");
+    QPointer<QWidget> rootGuard = root;
+    ASSERT_TRUE(stack.push(root));
+
+    auto* first = new StackPage("First");
+    auto* second = new StackPage("Second");
+    QObject::connect(
+        &stack, &StackView::itemPushed, &stack,
+        [root, first](QWidget* item) {
+            if (item == first)
+                delete root;
+        });
+
+    EXPECT_TRUE(stack.push(QVector<QWidget*>{first, second}));
+    EXPECT_TRUE(rootGuard.isNull());
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.depth(), 2);
+    EXPECT_EQ(stack.currentItem(), second);
+    EXPECT_EQ(stack.itemStatus(first), StackView::StackViewItemStatus::Inactive);
+    EXPECT_EQ(stack.itemStatus(second), StackView::StackViewItemStatus::Active);
+}
+
+TEST_F(StackViewTest, Contract_TransitionStartedHandlerCanSynchronouslyDeleteTargetPage)
+{
+    StackView stack;
+    stack.setTransitionAnimationEnabled(false);
+    auto* root = new StackPage("Root");
+    ASSERT_TRUE(stack.push(root));
+
+    auto* victim = new StackPage("Victim");
+    QPointer<QWidget> victimGuard = victim;
+    QObject::connect(
+        &stack, &StackView::transitionStarted, &stack,
+        [victim](StackView::StackViewTransitionOperation operation, QWidget*, QWidget* toItem) {
+            if (operation == StackView::StackViewTransitionOperation::Push
+                && toItem == victim) {
+                delete toItem;
+            }
+        });
+
+    EXPECT_TRUE(stack.push(victim));
+    EXPECT_TRUE(victimGuard.isNull());
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.depth(), 1);
+    EXPECT_EQ(stack.currentItem(), root);
+    EXPECT_EQ(stack.itemStatus(root), StackView::StackViewItemStatus::Active);
+}
+
+TEST_F(StackViewTest, Contract_ItemReplacedHandlerCanSynchronouslyDeleteReplacement)
+{
+    StackView stack;
+    stack.setTransitionAnimationEnabled(false);
+    auto* root = new StackPage("Root");
+    QPointer<QWidget> rootGuard = root;
+    ASSERT_TRUE(stack.push(root));
+
+    auto* replacement = new StackPage("Replacement");
+    QPointer<QWidget> replacementGuard = replacement;
+    QObject::connect(
+        &stack, &StackView::itemReplaced, &stack,
+        [replacement](QWidget*, QWidget* newItem) {
+            if (newItem == replacement)
+                delete newItem;
+        });
+
+    EXPECT_TRUE(stack.replace(replacement));
+    EXPECT_TRUE(replacementGuard.isNull());
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.depth(), 0);
+    EXPECT_EQ(stack.currentItem(), nullptr);
+    processDeferredDeletes();
+    EXPECT_TRUE(rootGuard.isNull());
+}
+
+TEST_F(StackViewTest, Contract_ItemPoppedHandlerCanSynchronouslyDeleteRevealedPage)
+{
+    StackView stack;
+    stack.setTransitionAnimationEnabled(false);
+    auto* root = new StackPage("Root");
+    auto* top = new StackPage("Top");
+    QPointer<QWidget> rootGuard = root;
+    QPointer<QWidget> topGuard = top;
+    ASSERT_TRUE(stack.push(root));
+    ASSERT_TRUE(stack.push(top));
+
+    QObject::connect(
+        &stack, &StackView::itemPopped, &stack,
+        [root, top](QWidget* item) {
+            if (item == top)
+                delete root;
+        });
+
+    EXPECT_TRUE(stack.pop());
+    EXPECT_TRUE(rootGuard.isNull());
+    EXPECT_FALSE(stack.busy());
+    EXPECT_EQ(stack.depth(), 0);
+    EXPECT_EQ(stack.currentItem(), nullptr);
+    processDeferredDeletes();
+    EXPECT_TRUE(topGuard.isNull());
+}
+
 TEST_F(StackViewTest, OwnershipAndExternalDestructionAreHandled)
 {
     StackView stack;
