@@ -6,6 +6,7 @@
 #include <QMouseEvent>
 #include <QGraphicsOpacityEffect>
 #include <QApplication>
+#include <QScopedValueRollback>
 #include <QTimer>
 #include "compatibility/QtCompat.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -216,7 +217,9 @@ void Popup::syncPositionToAnchor() {
 // ── open / close ─────────────────────────────────────────────────────────────
 
 void Popup::open() {
-    if (m_isOpen && !m_isClosing) return;
+    if (m_openInProgress || (m_isOpen && !m_isClosing)) return;
+    QScopedValueRollback<bool> openGuard(m_openInProgress, true);
+
     m_anim->stop();
     m_isClosing = false;
 
