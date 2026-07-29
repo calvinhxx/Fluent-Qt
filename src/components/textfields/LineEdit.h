@@ -13,6 +13,7 @@
 class QPainter;
 class QPaintEvent;
 class QResizeEvent;
+class QContextMenuEvent;
 
 namespace fluent::basicinput { class Button; }
 
@@ -112,6 +113,7 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;

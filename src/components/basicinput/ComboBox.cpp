@@ -5,6 +5,7 @@
 #include <QMouseEvent>
 #include <QPropertyAnimation>
 #include <QApplication>
+#include <QContextMenuEvent>
 #include <QFontMetrics>
 #include <QKeyEvent>
 #include <QResizeEvent>
@@ -21,6 +22,7 @@
 #include "components/collections/ListView.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/LineEdit.h"
 
@@ -436,7 +438,12 @@ void ComboBox::setEditable(bool editable) {
         style->setParent(editor);
         editor->setStyle(style);
         editor->setFocusPolicy(Qt::ClickFocus);
+        const Qt::ContextMenuPolicy contextMenuPolicy =
+            editor->contextMenuPolicy();
         QComboBox::setLineEdit(editor);
+        // QComboBox forces its editor to NoContextMenu. Restore the editor's
+        // policy so the Fluent LineEdit keeps its standard editing surface.
+        editor->setContextMenuPolicy(contextMenuPolicy);
         m_editorMutationInProgress = false;
         synchronizeLineEdit();
         setMouseTracking(true);
@@ -465,10 +472,15 @@ void ComboBox::setEditable(bool editable) {
 void ComboBox::setLineEdit(QLineEdit* edit) {
     if (!edit)
         return;
+    const Qt::ContextMenuPolicy contextMenuPolicy =
+        edit->contextMenuPolicy();
     m_editorMutationInProgress = true;
     if (!QComboBox::isEditable())
         QComboBox::setEditable(true);
     QComboBox::setLineEdit(edit);
+    // Preserve caller intent across QComboBox's internal NoContextMenu
+    // assignment. Only DefaultContextMenu is adapted by eventFilter below.
+    edit->setContextMenuPolicy(contextMenuPolicy);
     m_editorMutationInProgress = false;
     synchronizeLineEdit();
     applyLineEditStyle();
@@ -667,6 +679,31 @@ bool ComboBox::eventFilter(QObject* watched, QEvent* event) {
             update();
         } else if (event->type() == QEvent::FocusOut) {
             update();
+        } else if (
+            event->type() == QEvent::ContextMenu
+            && !qobject_cast<fluent::textfields::LineEdit*>(
+                m_observedLineEdit.data())
+            && m_observedLineEdit->contextMenuPolicy()
+                == Qt::DefaultContextMenu) {
+            auto* contextEvent =
+                static_cast<QContextMenuEvent*>(event);
+            if (fluent::menus_toolbars::detail::
+                    execTextEditingContextMenu(
+                        m_observedLineEdit.data(),
+                        m_observedLineEdit
+                            ->createStandardContextMenu(),
+                        contextEvent->globalPos(),
+                        QStringLiteral(
+                            "FluentComboBox.LineEdit.ContextMenu"))) {
+                contextEvent->accept();
+                return true;
+            }
+
+            // Leave an unavailable shared menu unhandled so the original
+            // editor can continue through its native context-menu path.
+            // zh_CN: 共享菜单不可用时不吞掉事件，让原始 editor
+            // 继续执行其原生右键菜单路径。
+            contextEvent->ignore();
         }
     }
     return QComboBox::eventFilter(watched, event);

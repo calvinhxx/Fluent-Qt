@@ -1,8 +1,14 @@
 #include <gtest/gtest.h>
+#include <QAction>
 #include <QApplication>
+#include <QContextMenuEvent>
 #include <QIntValidator>
+#include <QMenu>
+#include <QTimer>
 #include <QtTest/QSignalSpy>
+#include <QtTest/QTest>
 #include "QtTestEnvironment.h"
+#include "components/menus_toolbars/Menu.h"
 #include "components/textfields/LineEdit.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -43,6 +49,74 @@ protected:
     FluentTestWindow* window;
     AnchorLayout* layout;
 };
+
+namespace {
+
+bool actionMatchesStandardKey(const QAction* action,
+                              QKeySequence::StandardKey standardKey)
+{
+    if (!action)
+        return false;
+
+    QList<QKeySequence> shortcuts = action->shortcuts();
+    if (shortcuts.isEmpty()) {
+        const int tabIndex = action->text().indexOf(QLatin1Char('\t'));
+        if (tabIndex >= 0) {
+            const QKeySequence embedded(
+                action->text().mid(tabIndex + 1).trimmed(),
+                QKeySequence::NativeText);
+            if (!embedded.isEmpty())
+                shortcuts.append(embedded);
+        }
+    }
+
+    const QList<QKeySequence> bindings =
+        QKeySequence::keyBindings(standardKey);
+    for (const QKeySequence& shortcut : shortcuts) {
+        for (const QKeySequence& binding : bindings) {
+            if (shortcut.matches(binding) == QKeySequence::ExactMatch)
+                return true;
+        }
+    }
+    return false;
+}
+
+bool triggerContextAction(LineEdit* edit,
+                          QKeySequence::StandardKey standardKey)
+{
+    if (!edit)
+        return false;
+
+    bool triggered = false;
+    QTimer::singleShot(0, [&]() {
+        auto* menu =
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
+                QApplication::activePopupWidget());
+        if (!menu)
+            return;
+
+        for (QAction* action : menu->actions()) {
+            if (!actionMatchesStandardKey(action, standardKey))
+                continue;
+            if (action->isEnabled()) {
+                action->trigger();
+                triggered = true;
+            }
+            break;
+        }
+        if (menu->isVisible())
+            menu->close();
+    });
+
+    const QPoint localPos = edit->rect().center();
+    const QPoint globalPos = edit->mapToGlobal(localPos);
+    QContextMenuEvent event(
+        QContextMenuEvent::Mouse, localPos, globalPos);
+    QApplication::sendEvent(edit, &event);
+    return triggered;
+}
+
+} // namespace
 
 TEST_F(LineEditTest, TextAndPlaceholder) {
     LineEdit* edit = new LineEdit(window);
@@ -113,6 +187,117 @@ TEST_F(LineEditTest, Validator) {
     auto* validator = new QIntValidator(0, 100, edit);
     edit->setValidator(validator);
     EXPECT_EQ(edit->validator(), validator);
+}
+
+TEST_F(LineEditTest, Contract_StandardEditingActionsUseFluentContextMenu)
+{
+    auto* edit = new LineEdit(window);
+    edit->setText(QStringLiteral("Alpha Beta"));
+    edit->selectAll();
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    bool sawFluentMenu = false;
+    bool sawCopy = false;
+    bool sawSelectAll = false;
+    bool sawCopyGlyph = false;
+    bool sawDeleteGlyph = false;
+    bool sawSelectAllGlyph = false;
+    QTimer::singleShot(0, [&]() {
+        auto* menu =
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
+                QApplication::activePopupWidget());
+        sawFluentMenu = menu != nullptr;
+        if (!menu)
+            return;
+
+        EXPECT_EQ(
+            menu->objectName(),
+            QStringLiteral("FluentLineEdit.ContextMenu"));
+        EXPECT_EQ(menu->fontStyle(), Typography::FontRole::Caption);
+        EXPECT_EQ(
+            menu->font().pixelSize(),
+            Typography::FontSize::Caption);
+        EXPECT_FALSE(
+            menu->property(
+                    "_fluentqt_menuQuietSeparators")
+                .toBool());
+        for (QAction* action : menu->actions()) {
+            if (!action->isSeparator()) {
+                EXPECT_LT(
+                    menu->actionGeometry(action).height(),
+                    ::Spacing::ControlHeight::Standard);
+            }
+            const bool isCopy =
+                actionMatchesStandardKey(action, QKeySequence::Copy);
+            const bool isSelectAll =
+                actionMatchesStandardKey(action, QKeySequence::SelectAll);
+            const bool isDelete =
+                action->text().contains(
+                    QStringLiteral("Delete"), Qt::CaseInsensitive);
+            sawCopy = sawCopy || isCopy;
+            sawSelectAll = sawSelectAll || isSelectAll;
+            sawCopyGlyph =
+                sawCopyGlyph || (isCopy && !action->icon().isNull());
+            sawDeleteGlyph =
+                sawDeleteGlyph || (isDelete && !action->icon().isNull());
+            sawSelectAllGlyph =
+                sawSelectAllGlyph
+                || (isSelectAll && !action->icon().isNull());
+            if (!action->icon().isNull()) {
+                const QSize iconSize =
+                    action->icon().actualSize(QSize(64, 64));
+                EXPECT_GT(iconSize.width(), 0);
+                EXPECT_LE(
+                    iconSize.width(),
+                    Typography::IconSize::Standard);
+                EXPECT_LE(
+                    iconSize.height(),
+                    Typography::IconSize::Standard);
+            }
+        }
+        menu->close();
+    });
+
+    const QPoint localPos = edit->rect().center();
+    const QPoint globalPos = edit->mapToGlobal(localPos);
+    QContextMenuEvent event(
+        QContextMenuEvent::Mouse, localPos, globalPos);
+    QApplication::sendEvent(edit, &event);
+
+    EXPECT_TRUE(event.isAccepted());
+    EXPECT_TRUE(sawFluentMenu);
+    EXPECT_TRUE(sawCopy);
+    EXPECT_TRUE(sawSelectAll);
+    EXPECT_TRUE(sawCopyGlyph);
+    EXPECT_TRUE(sawDeleteGlyph);
+    EXPECT_TRUE(sawSelectAllGlyph);
+}
+
+TEST_F(LineEditTest, Contract_UndoRedoRemainFunctionalFromContextMenu)
+{
+    auto* edit = new LineEdit(window);
+    edit->setText(QStringLiteral("Alpha"));
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    edit->setCursorPosition(edit->text().size());
+    edit->insert(QStringLiteral(" Beta"));
+    const QString editedText = QStringLiteral("Alpha Beta");
+    ASSERT_EQ(edit->text(), editedText);
+
+    edit->setFocus(Qt::OtherFocusReason);
+    QTest::keySequence(edit, QKeySequence(QKeySequence::Undo));
+    EXPECT_EQ(edit->text(), QStringLiteral("Alpha"));
+    QTest::keySequence(edit, QKeySequence(QKeySequence::Redo));
+    EXPECT_EQ(edit->text(), editedText);
+
+    ASSERT_TRUE(triggerContextAction(edit, QKeySequence::Undo));
+    EXPECT_EQ(edit->text(), QStringLiteral("Alpha"));
+    ASSERT_TRUE(triggerContextAction(edit, QKeySequence::Redo));
+    EXPECT_EQ(edit->text(), editedText);
 }
 
 TEST_F(LineEditTest, FluentPropertiesDefaultsAndSetters) {
@@ -195,10 +380,12 @@ protected:
     }
 
     // Build a rest-state LineEdit with text and grab it as an image. zh_CN: 构建带文本的静息态 LineEdit 并抓取为图像。
-    static QImage grabLineEdit() {
+    static QImage grabLineEdit(QSize* logicalSize) {
         LineEdit le;
         le.setText("Sample text");
         le.resize(200, 32);
+        if (logicalSize)
+            *logicalSize = le.size();
         return le.grab().toImage();
     }
 };
@@ -219,12 +406,19 @@ TEST_F(LineEditDesignLanguageTest, AllLanguagesThemesPaint) {
             fluent::ThemeRegistry::instance().setDesignLanguage(lang);
             fluent::FluentElement::setTheme(theme);
 
-            QImage img = grabLineEdit();
+            QSize logicalSize;
+            QImage img = grabLineEdit(&logicalSize);
 
             // No crash + valid, correctly-sized image. zh_CN: 不崩溃 + 图像有效且尺寸正确。
             ASSERT_FALSE(img.isNull()) << "lang=" << lang << " theme=" << theme;
-            EXPECT_EQ(img.width(), 200) << "lang=" << lang << " theme=" << theme;
-            EXPECT_EQ(img.height(), 32) << "lang=" << lang << " theme=" << theme;
+            EXPECT_EQ(
+                img.width(),
+                qRound(logicalSize.width() * img.devicePixelRatio()))
+                << "lang=" << lang << " theme=" << theme;
+            EXPECT_EQ(
+                img.height(),
+                qRound(logicalSize.height() * img.devicePixelRatio()))
+                << "lang=" << lang << " theme=" << theme;
 
             // Painted content: some pixel differs from the top-left background pixel.
             // zh_CN: 已绘制内容:存在与左上角背景像素不同的像素。
