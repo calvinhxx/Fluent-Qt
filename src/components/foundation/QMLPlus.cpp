@@ -645,8 +645,47 @@ void QMLPlus::setState(const QString& name) {
     if (!name.isEmpty() && !m_states.contains(name))
         return;
 
-    applyState(name);
-    m_currentState = name;
+    if (m_stateChangeInProgress) {
+        m_pendingState = name;
+        m_hasPendingState = true;
+        return;
+    }
+
+    QObject* host = dynamic_cast<QObject*>(this);
+    const QPointer<QObject> hostGuard(host);
+    const int maximumTransitions = qMax(8, m_states.size() * 2 + 2);
+    int transitionCount = 0;
+    QString requestedState = name;
+
+    m_stateChangeInProgress = true;
+    m_hasPendingState = false;
+    while (m_currentState != requestedState) {
+        // Publish the destination before applying properties so same-state
+        // callbacks cannot recursively enter the transition.
+        m_currentState = requestedState;
+        applyState(requestedState);
+        if (host && !hostGuard)
+            return;
+        ++transitionCount;
+
+        if (!m_hasPendingState)
+            break;
+
+        requestedState = m_pendingState;
+        m_hasPendingState = false;
+        if ((!requestedState.isEmpty() && !m_states.contains(requestedState))
+            || requestedState == m_currentState) {
+            break;
+        }
+        if (transitionCount >= maximumTransitions) {
+            qCWarning(logging::layoutCategory)
+                << "QMLPlus stopped a cyclic reentrant state transition at"
+                << m_currentState;
+            break;
+        }
+    }
+    m_stateChangeInProgress = false;
+    m_hasPendingState = false;
 }
 
 void QMLPlus::addState(const QMLState& state) { 
@@ -680,34 +719,59 @@ void QMLPlus::rememberDefaultValue(QObject* target, const QByteArray& propertyNa
     m_defaultValueCleanupConnections.insert(target, connection);
 }
 
-void QMLPlus::restoreDefaultValues() {
-    for (auto targetIt = m_defaultValues.begin();
-         targetIt != m_defaultValues.end(); ++targetIt) {
-        QObject* target = targetIt.key();
+bool QMLPlus::restoreDefaultValues() {
+    struct RestoreEntry {
+        QPointer<QObject> target;
+        QMap<QByteArray, QVariant> values;
+    };
+
+    QVector<RestoreEntry> entries;
+    entries.reserve(m_defaultValues.size());
+    for (auto targetIt = m_defaultValues.cbegin();
+         targetIt != m_defaultValues.cend(); ++targetIt) {
+        entries.push_back({targetIt.key(), targetIt.value()});
+    }
+
+    QObject* host = dynamic_cast<QObject*>(this);
+    const QPointer<QObject> hostGuard(host);
+    for (const RestoreEntry& entry : std::as_const(entries)) {
+        QObject* target = entry.target.data();
         if (!target)
             continue;
-        for (auto propertyIt = targetIt.value().cbegin();
-             propertyIt != targetIt.value().cend(); ++propertyIt) {
-            target->setProperty(
-                propertyIt.key().constData(), propertyIt.value());
+        for (auto propertyIt = entry.values.cbegin();
+             propertyIt != entry.values.cend(); ++propertyIt) {
+            target->setProperty(propertyIt.key().constData(), propertyIt.value());
+            if (host && !hostGuard)
+                return false;
+            if (!entry.target)
+                break;
         }
     }
+    return true;
 }
 
 void QMLPlus::applyState(const QString& name) {
-    restoreDefaultValues();
-    if (name.isEmpty())
+    QMLState state;
+    if (!name.isEmpty()) {
+        const auto stateIt = m_states.constFind(name);
+        if (stateIt == m_states.constEnd())
+            return;
+        state = stateIt.value();
+    }
+
+    if (!restoreDefaultValues() || name.isEmpty())
         return;
 
-    const auto stateIt = m_states.constFind(name);
-    if (stateIt == m_states.constEnd())
-        return;
-    for (const PropertyChange& change : stateIt->changes) {
+    QObject* host = dynamic_cast<QObject*>(this);
+    const QPointer<QObject> hostGuard(host);
+    for (const PropertyChange& change : std::as_const(state.changes)) {
         QObject* target = change.target.data();
         if (!target)
             continue;
         rememberDefaultValue(target, change.propertyName);
         target->setProperty(change.propertyName.constData(), change.value);
+        if (host && !hostGuard)
+            return;
     }
 }
 
