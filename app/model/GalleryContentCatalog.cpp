@@ -140,6 +140,10 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("A list of commands shown in a transient surface.")},
         {QStringLiteral("menu-bar"),
          QStringLiteral("A horizontal bar of top-level menus, each hosting commands.")},
+        {QStringLiteral("command-bar"),
+         QStringLiteral("Organizes borrowed QAction commands into primary and secondary sections, with priority-aware dynamic overflow, label modes, separators, checkable state, and composite keyboard navigation.")},
+        {QStringLiteral("command-bar-flyout"),
+         QStringLiteral("Presents borrowed QActions as a contextual primary row and secondary menu, with focus-preserving Transient or keyboard-focused Standard modes, anchor or point placement, and optional always-expanded behavior.")},
         // Navigation
         {QStringLiteral("breadcrumb"),
          QStringLiteral("Shows the trail to the current location and lets people go back up the hierarchy.")},
