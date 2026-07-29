@@ -4,9 +4,11 @@
 #include <QPaintEvent>
 #include <QFocusEvent>
 #include <QResizeEvent>
+#include <QContextMenuEvent>
 #include <QValidator>
 #include "components/basicinput/Button.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "design/Typography.h"
 
 namespace fluent::textfields {
@@ -63,6 +65,23 @@ void LineEdit::paintEvent(QPaintEvent* event) {
 void LineEdit::resizeEvent(QResizeEvent* event) {
     QLineEdit::resizeEvent(event);
     updateClearButtonGeometry();
+}
+
+void LineEdit::contextMenuEvent(QContextMenuEvent* event)
+{
+    if (!event)
+        return;
+
+    auto* standardMenu = createStandardContextMenu();
+    if (!::fluent::menus_toolbars::detail::execTextEditingContextMenu(
+            this,
+            standardMenu,
+            event->globalPos(),
+            QStringLiteral("FluentLineEdit.ContextMenu"))) {
+        event->ignore();
+        return;
+    }
+    event->accept();
 }
 
 void LineEdit::updateClearButtonGeometry() {

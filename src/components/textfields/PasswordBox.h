@@ -3,6 +3,7 @@
 
 #include "LineEdit.h"
 
+class QContextMenuEvent;
 class QFocusEvent;
 class QMouseEvent;
 class QPaintEvent;
@@ -76,6 +77,7 @@ protected:
     void focusOutEvent(QFocusEvent* event) override;
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void changeEvent(QEvent* event) override;

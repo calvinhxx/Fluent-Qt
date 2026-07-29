@@ -9,22 +9,18 @@
 #include <QTextFrame>
 #include <QTextFrameFormat>
 #include <QAbstractTextDocumentLayout>
-#include <QAction>
 #include <QContextMenuEvent>
-#include <QMenu>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
 #include <QFocusEvent>
 #include <QEvent>
 #include <QFontMetrics>
-#include <QIcon>
-#include <QPixmap>
 #include <QResizeEvent>
 #include <QTimer>
 #include <QTextLayout>
 #include <QtMath>
-#include "components/menus_toolbars/Menu.h"
+#include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
 
 namespace fluent::textfields {
@@ -44,116 +40,6 @@ static int calcBotPad(const QFont& font, int lineHeight) {
 static bool formatMetricEquals(qreal lhs, qreal rhs) {
     return qAbs(lhs - rhs) < 0.01;
 }
-
-static bool matchesStandardShortcut(const QAction* action, QKeySequence::StandardKey standardKey) {
-    if (!action)
-        return false;
-
-    QKeySequence shortcut = action->shortcut();
-    if (shortcut.isEmpty()) {
-        const QString text = action->text();
-        const int tabIndex = text.indexOf(QLatin1Char('\t'));
-        if (tabIndex >= 0)
-            shortcut = QKeySequence(text.mid(tabIndex + 1).trimmed(), QKeySequence::NativeText);
-    }
-
-    if (shortcut.isEmpty())
-        return false;
-
-    const QList<QKeySequence> bindings = QKeySequence::keyBindings(standardKey);
-    for (const QKeySequence& binding : bindings) {
-        if (shortcut.matches(binding) == QKeySequence::ExactMatch)
-            return true;
-    }
-    return false;
-}
-
-static QString standardEditingActionGlyph(const QAction* action) {
-    if (matchesStandardShortcut(action, QKeySequence::Undo))
-        return Typography::Icons::Undo;
-    if (matchesStandardShortcut(action, QKeySequence::Redo))
-        return Typography::Icons::Redo;
-    if (matchesStandardShortcut(action, QKeySequence::Cut))
-        return Typography::Icons::Cut;
-    if (matchesStandardShortcut(action, QKeySequence::Copy))
-        return Typography::Icons::Copy;
-    if (matchesStandardShortcut(action, QKeySequence::Paste))
-        return Typography::Icons::Paste;
-    if (matchesStandardShortcut(action, QKeySequence::Delete))
-        return Typography::Icons::Delete;
-    if (matchesStandardShortcut(action, QKeySequence::SelectAll))
-        return Typography::Icons::SelectAll;
-    if (action && action->icon().name().contains(QStringLiteral("delete"), Qt::CaseInsensitive))
-        return Typography::Icons::Delete;
-    return QString();
-}
-
-class TextEditingContextMenu final : public fluent::menus_toolbars::FluentMenu {
-public:
-    explicit TextEditingContextMenu(QWidget* parent)
-        : FluentMenu(QString(), parent) {
-        setObjectName(QStringLiteral("FluentTextEdit.ContextMenu"));
-        setFontStyle(Typography::FontRole::Caption);
-    }
-
-    void onThemeUpdated() override {
-        FluentMenu::onThemeUpdated();
-
-        // Text editing commands intentionally use denser typography than
-        // application menus. Keep this policy private to TextEdit.
-        // zh_CN: 文本编辑命令刻意使用比应用菜单更紧凑的排版；该策略仅属于
-        // TextEdit，不下沉到 FluentMenu 公共 API。
-        QFont menuFont = themeFont(Typography::FontRole::Caption).toQFont();
-        menuFont.setPixelSize(10);
-        setFont(menuFont);
-
-        const auto spacing = themeSpacing();
-        const int shadow = ::Spacing::Standard;
-        const int verticalInset = qMax(1, spacing.gap.tight / 2);
-        setContentsMargins(shadow, shadow + verticalInset,
-                           shadow, shadow + verticalInset);
-        setStyleSheet(QStringLiteral(
-            "QMenu { background-color: transparent; border: 0px; padding: 0px; }"
-            "QMenu::item { background-color: transparent; padding: %1px 0px; margin: 0px; }"
-            "QMenu::separator { height: %2px; }")
-            .arg(qMax(1, spacing.padding.listItemV / 2))
-            .arg(spacing.gap.normal));
-        setMinimumWidth(sizeHint().width());
-        updateGeometry();
-        update();
-    }
-
-    QIcon editingIcon(const QString& glyph) const {
-        if (glyph.isEmpty())
-            return QIcon();
-
-        constexpr int iconSize = 18;
-        const Colors& colors = themeColorsRef();
-        const QColor activeColor = themeDesignLanguage() == DesignCupertino
-            ? colors.textOnAccent
-            : colors.textPrimary;
-
-        auto pixmapForColor = [this, &glyph, iconSize](const QColor& color) {
-            const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
-            const int physicalSize = qMax(1, qCeil(iconSize * dpr));
-            QPixmap pixmap(physicalSize, physicalSize);
-            pixmap.setDevicePixelRatio(dpr);
-            pixmap.fill(Qt::transparent);
-            QPainter painter(&pixmap);
-            painter.setPen(color);
-            Typography::Icons::paintGlyph(
-                painter, QRectF(0, 0, iconSize, iconSize),
-                glyph, iconSize, Qt::AlignCenter);
-            return pixmap;
-        };
-
-        QIcon icon;
-        icon.addPixmap(pixmapForColor(colors.textPrimary), QIcon::Normal);
-        icon.addPixmap(pixmapForColor(activeColor), QIcon::Active);
-        icon.addPixmap(pixmapForColor(colors.textDisabled), QIcon::Disabled);
-        return icon;
-    }
-};
 
 // ── Inner editor. zh_CN: 内部编辑器 ────────────────────────────────────────────
 //
@@ -192,61 +78,15 @@ protected:
         // zh_CN: 保留 QTextEdit 标准编辑动作及其启用状态，但改由 FluentMenu
         // 承载，避免原生 QMenu 继承编辑器透明的 Base/Window 调色板；Win10
         // 与 Win11 对该透明调色板的回退绘制并不一致。
-        QMenu* standardMenu = createStandardContextMenu(event->pos());
-        if (!standardMenu) {
+        auto* standardMenu = createStandardContextMenu(event->pos());
+        if (!::fluent::menus_toolbars::detail::execTextEditingContextMenu(
+                this,
+                standardMenu,
+                event->globalPos(),
+                QStringLiteral("FluentTextEdit.ContextMenu"))) {
             event->ignore();
             return;
         }
-
-        TextEditingContextMenu menu(this);
-        const QList<QAction*> standardActions = standardMenu->actions();
-        bool pasteActionSeen = false;
-        for (QAction* sourceAction : standardActions) {
-            if (sourceAction->isSeparator()) {
-                menu.addSeparator();
-                pasteActionSeen = false;
-                continue;
-            }
-
-            // Keep Qt's standard action owned by its original menu. Some Qt
-            // versions dispatch Undo/Redo through that menu's action chain;
-            // moving the QAction to FluentMenu silently breaks the command.
-            // The visible proxy preserves metadata and forwards activation
-            // while the native menu remains alive for the duration of exec().
-            // zh_CN: 保留 Qt 标准动作及其原菜单所有权。部分 Qt 版本通过原菜单
-            // 的动作链分发 Undo/Redo；移动 QAction 会让命令静默失效。可见代理
-            // 复制元数据并转发触发，原菜单在 exec() 期间持续存活。
-            auto* action = new QAction(sourceAction->icon(), sourceAction->text(), &menu);
-            action->setEnabled(sourceAction->isEnabled());
-            action->setCheckable(sourceAction->isCheckable());
-            action->setChecked(sourceAction->isChecked());
-            action->setShortcuts(sourceAction->shortcuts());
-            action->setShortcutContext(sourceAction->shortcutContext());
-            action->setData(sourceAction->data());
-            action->setStatusTip(sourceAction->statusTip());
-            action->setToolTip(sourceAction->toolTip());
-            QObject::connect(action, &QAction::triggered, sourceAction,
-                             [sourceAction]() { sourceAction->trigger(); });
-
-            QString iconGlyph = standardEditingActionGlyph(sourceAction);
-            if (iconGlyph.isEmpty() && pasteActionSeen) {
-                // Some Qt platform styles omit both the Delete shortcut and
-                // the themed icon name. In QTextEdit's standard edit group,
-                // Delete is the action immediately following Paste.
-                // zh_CN: 部分 Qt 平台样式同时省略 Delete 快捷键和主题图标名；
-                // QTextEdit 标准编辑动作组中，Delete 固定位于 Paste 之后。
-                iconGlyph = Typography::Icons::Delete;
-                pasteActionSeen = false;
-            } else if (iconGlyph == Typography::Icons::Paste) {
-                pasteActionSeen = true;
-            }
-            if (!iconGlyph.isEmpty())
-                action->setIcon(menu.editingIcon(iconGlyph));
-            menu.addAction(action);
-        }
-
-        menu.exec(event->globalPos());
-        delete standardMenu;
         event->accept();
     }
 
