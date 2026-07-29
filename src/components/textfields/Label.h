@@ -7,6 +7,7 @@
 #include "components/foundation/QMLPlus.h"
 
 namespace fluent::status_info { class ToolTip; }
+class QContextMenuEvent;
 
 namespace fluent::textfields {
 
@@ -83,6 +84,7 @@ protected:
     void enterEvent(FluentEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void changeEvent(QEvent* event) override;
+    void contextMenuEvent(QContextMenuEvent* event) override;
 
 private:
     void applyTypographyFont();

@@ -1,10 +1,14 @@
 #include <gtest/gtest.h>
 
+#include <QAction>
 #include <QApplication>
+#include <QContextMenuEvent>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QKeySequence>
+#include <QTimer>
 #include "components/textfields/LineEdit.h"
 #include <QStringListModel>
 #include <QSignalSpy>
@@ -19,6 +23,7 @@
 #include "components/basicinput/Button.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
+#include "components/menus_toolbars/Menu.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -304,6 +309,77 @@ TEST_F(ComboBoxTest, SetEditableCreatesLineEdit) {
     EXPECT_EQ(cb.fluentLineEdit(), lineEdit);
     EXPECT_FALSE(lineEdit->isHidden());
     EXPECT_FALSE(lineEdit->isClearButtonEnabled());
+    EXPECT_EQ(
+        lineEdit->contextMenuPolicy(),
+        Qt::DefaultContextMenu);
+}
+
+TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
+{
+    ComboBox cb(window);
+    cb.addItems({"Alpha", "Beta"});
+    auto* editor = new QLineEdit;
+    cb.setLineEdit(editor);
+    ASSERT_EQ(cb.lineEdit(), editor);
+    ASSERT_EQ(cb.fluentLineEdit(), nullptr);
+    ASSERT_EQ(
+        editor->contextMenuPolicy(),
+        Qt::DefaultContextMenu);
+    editor->setText(QStringLiteral("Caller supplied value"));
+    editor->selectAll();
+    cb.setGeometry(20, 20, 220, 32);
+    window->show();
+    QApplication::processEvents();
+
+    bool sawFluentMenu = false;
+    QTimer::singleShot(0, [&]() {
+        auto* menu =
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
+                QApplication::activePopupWidget());
+        sawFluentMenu = menu != nullptr;
+        if (!menu) {
+            QWidget* popup = QApplication::activePopupWidget();
+            ADD_FAILURE()
+                << "Expected FluentMenu, active popup is "
+                << (popup
+                        ? popup->metaObject()->className()
+                        : "<none>");
+            return;
+        }
+
+        EXPECT_EQ(
+            menu->objectName(),
+            QStringLiteral(
+                "FluentComboBox.LineEdit.ContextMenu"));
+        EXPECT_EQ(
+            menu->font().pixelSize(),
+            Typography::FontSize::Caption);
+        for (QAction* action : menu->actions()) {
+            if (!action || action->isSeparator()
+                || action->icon().isNull()) {
+                continue;
+            }
+            const QSize iconSize =
+                action->icon().actualSize(QSize(64, 64));
+            EXPECT_LE(
+                iconSize.width(),
+                Typography::IconSize::Standard);
+            EXPECT_LE(
+                iconSize.height(),
+                Typography::IconSize::Standard);
+        }
+        menu->close();
+    });
+
+    const QPoint localPosition = editor->rect().center();
+    QContextMenuEvent event(
+        QContextMenuEvent::Mouse,
+        localPosition,
+        editor->mapToGlobal(localPosition));
+    QApplication::sendEvent(editor, &event);
+
+    EXPECT_TRUE(event.isAccepted());
+    EXPECT_TRUE(sawFluentMenu);
 }
 
 TEST_F(ComboBoxTest, EditableModePreservesQComboBoxTextContract) {

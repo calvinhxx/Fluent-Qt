@@ -1,16 +1,23 @@
 #include <gtest/gtest.h>
+#include <QAction>
 #include <QApplication>
+#include <QClipboard>
+#include <QContextMenuEvent>
 #include <QFontMetrics>
 #include <QFrame>
+#include <QKeySequence>
+#include <QTimer>
 #include <QTest>
 #include <QVBoxLayout>
 #include <QtTest/QSignalSpy>
 #include "QtTestEnvironment.h"
 #include "compatibility/QtCompat.h"
+#include "components/menus_toolbars/Menu.h"
 #include "components/textfields/Label.h"
 #include "components/basicinput/Button.h"
 #include "components/status_info/ToolTip.h"
 #include "components/foundation/QMLPlus.h"
+#include "design/Spacing.h"
 #include "design/Typography.h"
 
 using namespace fluent::textfields;
@@ -70,6 +77,86 @@ TEST_F(LabelTest, TextConstructor) {
     Label* label = new Label("Static label text", window);
     EXPECT_EQ(label->text(), "Static label text");
     EXPECT_EQ(label->fluentTypography(), Typography::FontRole::Body);
+}
+
+TEST_F(LabelTest, SelectableTextUsesSharedFluentContextMenu)
+{
+    Label* label = new Label(
+        QStringLiteral("Alpha Beta"), window);
+    label->setTextInteractionFlags(
+        Qt::TextSelectableByMouse
+        | Qt::TextSelectableByKeyboard);
+    label->setGeometry(20, 20, 180, 28);
+    label->setSelection(0, 5);
+    window->show();
+    QApplication::processEvents();
+
+    bool sawFluentMenu = false;
+    bool sawCopy = false;
+    bool sawSelectAll = false;
+    QTimer::singleShot(0, [&]() {
+        auto* menu =
+            qobject_cast<fluent::menus_toolbars::FluentMenu*>(
+                QApplication::activePopupWidget());
+        sawFluentMenu = menu != nullptr;
+        if (!menu)
+            return;
+
+        EXPECT_EQ(
+            menu->objectName(),
+            QStringLiteral("FluentLabel.ContextMenu"));
+        EXPECT_EQ(
+            menu->font().pixelSize(),
+            Typography::FontSize::Caption);
+        for (QAction* action : menu->actions()) {
+            ASSERT_NE(action, nullptr);
+            if (action->isSeparator())
+                continue;
+
+            EXPECT_LT(
+                menu->actionGeometry(action).height(),
+                ::Spacing::ControlHeight::Standard);
+            ASSERT_FALSE(action->icon().isNull());
+            const QSize iconSize =
+                action->icon().actualSize(QSize(64, 64));
+            EXPECT_LE(
+                iconSize.width(),
+                Typography::IconSize::Standard);
+            EXPECT_LE(
+                iconSize.height(),
+                Typography::IconSize::Standard);
+
+            if (action->shortcut().matches(
+                    QKeySequence(QKeySequence::Copy))
+                == QKeySequence::ExactMatch) {
+                sawCopy = true;
+                EXPECT_TRUE(action->isEnabled());
+                action->trigger();
+            } else if (action->shortcut().matches(
+                           QKeySequence(QKeySequence::SelectAll))
+                       == QKeySequence::ExactMatch) {
+                sawSelectAll = true;
+                EXPECT_TRUE(action->isEnabled());
+            }
+        }
+        menu->close();
+    });
+
+    const QPoint localPosition = label->rect().center();
+    QContextMenuEvent event(
+        QContextMenuEvent::Mouse,
+        localPosition,
+        label->mapToGlobal(localPosition));
+    QApplication::sendEvent(label, &event);
+
+    EXPECT_TRUE(event.isAccepted());
+    EXPECT_TRUE(sawFluentMenu);
+    EXPECT_TRUE(sawCopy);
+    EXPECT_TRUE(sawSelectAll);
+    ASSERT_NE(QApplication::clipboard(), nullptr);
+    EXPECT_EQ(
+        QApplication::clipboard()->text(),
+        QStringLiteral("Alpha"));
 }
 
 TEST_F(LabelTest, Contract_DirectTextSetterKeepsQtAndFluentFacadesCoherent) {

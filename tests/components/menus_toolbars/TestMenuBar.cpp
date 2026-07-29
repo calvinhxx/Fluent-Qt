@@ -7,8 +7,10 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPalette>
+#include <QPixmap>
 #include <QSignalSpy>
 #include <QTest>
+#include <QVariantAnimation>
 
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -352,6 +354,82 @@ TEST_F(MenuBarTest, BackgroundVisiblePropertyTogglesAndNotifies)
     EXPECT_EQ(spy.count(), 2);
 }
 
+TEST_F(MenuBarTest, CommandIconsPaintInsideStandardWinUiSlot)
+{
+    FluentMenu menu(QString(), window);
+    QPixmap iconPixmap(
+        Typography::IconSize::Standard,
+        Typography::IconSize::Standard);
+    const QColor markerColor(255, 0, 255);
+    iconPixmap.fill(markerColor);
+    QAction* action = menu.addAction(
+        QIcon(iconPixmap), QStringLiteral("Copy"));
+    menu.resize(menu.sizeHint());
+
+    QImage rendered(
+        menu.size(), QImage::Format_ARGB32_Premultiplied);
+    rendered.fill(Qt::transparent);
+    menu.render(&rendered);
+
+    QRect markerBounds;
+    bool foundMarker = false;
+    for (int y = 0; y < rendered.height(); ++y) {
+        for (int x = 0; x < rendered.width(); ++x) {
+            const QColor pixel = rendered.pixelColor(x, y);
+            if (pixel.red() < 250
+                || pixel.green() > 5
+                || pixel.blue() < 250
+                || pixel.alpha() < 250) {
+                continue;
+            }
+            const QRect pixelRect(x, y, 1, 1);
+            markerBounds = foundMarker
+                ? markerBounds.united(pixelRect)
+                : pixelRect;
+            foundMarker = true;
+        }
+    }
+
+    ASSERT_TRUE(foundMarker);
+    EXPECT_EQ(
+        markerBounds.size(),
+        QSize(
+            Typography::IconSize::Standard,
+            Typography::IconSize::Standard));
+    EXPECT_TRUE(
+        menu.actionGeometry(action).contains(
+            markerBounds.center()));
+}
+
+TEST_F(
+    MenuBarTest,
+    EntranceAnimationUsesPaintOpacityInsteadOfNativeWindowOpacity)
+{
+    FluentMenu menu(QStringLiteral("Editing"), window);
+    menu.addAction(QStringLiteral("Copy"));
+
+    EXPECT_EQ(menu.graphicsEffect(), nullptr);
+    EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
+
+    menu.popup(
+        window->mapToGlobal(QPoint(24, 24)));
+    QApplication::processEvents();
+
+    EXPECT_TRUE(menu.isVisible());
+    EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        menu.findChild<QVariantAnimation*>(
+            QStringLiteral(
+                "fluentMenuEntranceAnimation"),
+            Qt::FindDirectChildrenOnly)
+            == nullptr,
+        1000);
+    EXPECT_EQ(menu.graphicsEffect(), nullptr);
+    EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
+
+    menu.close();
+}
+
 TEST_F(MenuBarTest, PointerAndKeyboardInteractionsUseQtActions)
 {
     MenuBarSample sample = createSimpleMenuBar(window, true);
@@ -651,6 +729,16 @@ TEST_F(MenuDesignLanguageTest, AllLanguagesAndThemesPaintWithoutOpaqueBlackTrap)
             // 屏上窗口(与同文件其它 QMenu 测试一致)。
             menu.show();
             QApplication::processEvents();
+            // Wait for the custom-paint entrance timeline to reach its stable
+            // state before grabbing the rendered menu.
+            // zh_CN: 等待自绘入场时间线到达稳定状态后再抓取菜单。
+            QTRY_VERIFY_WITH_TIMEOUT(
+                menu.findChild<QVariantAnimation*>(
+                    QStringLiteral(
+                        "fluentMenuEntranceAnimation"),
+                    Qt::FindDirectChildrenOnly)
+                    == nullptr,
+                1000);
 
             // Mark the checked item active so the highlight branch (M3 veil / macOS accent bar) runs.
             // zh_CN: 将已勾选项设为活动,触发高亮分支(M3 薄层 / macOS accent 条)。

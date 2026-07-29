@@ -8,7 +8,6 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QShowEvent>
-#include <QPropertyAnimation>
 #include <QTimer>
 #include <QVariantAnimation>
 #include <QEasingCurve>
@@ -23,6 +22,9 @@
 namespace fluent::menus_toolbars {
 
 namespace {
+constexpr char kEntranceAnimationName[] =
+    "fluentMenuEntranceAnimation";
+
 QString menuLabelText(const QString& text)
 {
     const int tabIndex = text.indexOf(QLatin1Char('\t'));
@@ -328,6 +330,14 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     p.setCompositionMode(QPainter::CompositionMode_Source);
     p.fillRect(rect(), Qt::transparent);
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
+    // Fade only this custom paint pass. Applying QGraphicsOpacityEffect to a
+    // native QMenu popup can leave a Wayland QMenu::exec() surface invisible
+    // while its modal event loop continues to block user input.
+    // zh_CN: 仅对当前自绘过程应用透明度；在原生 QMenu popup 上安装
+    // QGraphicsOpacityEffect 可能使 Wayland 的 QMenu::exec() 表面不可见，
+    // 但模态事件循环仍继续阻塞输入。
+    p.setOpacity(
+        qBound<qreal>(0.0, m_revealProgress, 1.0));
 
     const auto& colors = themeColorsRef();
     const auto& spacing = themeSpacing();
@@ -490,7 +500,20 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
                 const QIcon::Mode mode = !isEnabled ? QIcon::Disabled
                                                     : (isActive ? QIcon::Active : QIcon::Normal);
                 const QIcon::State state = action->isChecked() ? QIcon::On : QIcon::Off;
-                action->icon().paint(&p, leadingRect, Qt::AlignCenter, mode, state);
+                // The leading column is 24 px for alignment, but WinUI menu
+                // command icons use a 16 px optical slot. Painting into the
+                // whole column lets QIcon upscale a 16 px source to 24 px,
+                // making editing glyphs visually dominate their labels.
+                const int iconSide = qMin(
+                    Typography::IconSize::Standard,
+                    qMin(leadingRect.width(), leadingRect.height()));
+                const QRect iconRect(
+                    leadingRect.center().x() - iconSide / 2,
+                    leadingRect.center().y() - iconSide / 2,
+                    iconSide,
+                    iconSide);
+                action->icon().paint(
+                    &p, iconRect, Qt::AlignCenter, mode, state);
             }
         }
 
@@ -589,32 +612,42 @@ void FluentMenu::showEvent(QShowEvent* event) {
         normalizePopupLayering();
     });
 
-    // Initial state: fully transparent with reveal progress at zero.
-    // zh_CN: 初始状态：完全透明，揭示进度归零。
+    if (auto* previousAnimation =
+            findChild<QVariantAnimation*>(
+                QString::fromLatin1(kEntranceAnimationName),
+                Qt::FindDirectChildrenOnly)) {
+        previousAnimation->stop();
+        delete previousAnimation;
+    }
+
+    // Initial state: custom paint is transparent with reveal progress at zero.
+    // Native window opacity and graphics effects deliberately remain untouched.
+    // zh_CN: 初始状态：自绘内容透明且揭示进度归零；不修改原生窗口透明度，
+    // 也不在顶层菜单安装 graphics effect。
     m_revealProgress = 0.0;
-    setWindowOpacity(0.0);
 
-    // Height reveal animation, expanding downward to match the WinUI 3
-    // PopupThemeTransition.
-    // zh_CN: 高度揭示动画（从顶部向下展开，匹配 WinUI 3 PopupThemeTransition）。
-    auto* revealAnim = new QVariantAnimation(this);
-    revealAnim->setStartValue(0.0);
-    revealAnim->setEndValue(1.0);
-    revealAnim->setDuration(themeAnimation().fast);
-    revealAnim->setEasingCurve(themeAnimation().decelerate);
-    connect(revealAnim, &QVariantAnimation::valueChanged, this, [this](const QVariant& v) {
-        m_revealProgress = v.toReal();
-        update();
-    });
-    revealAnim->start(QAbstractAnimation::DeleteWhenStopped);
-
-    // Opacity fade-in animation. zh_CN: 透明度淡入动画。
-    auto* opacityAnim = new QPropertyAnimation(this, "windowOpacity");
-    opacityAnim->setDuration(themeAnimation().fast);
-    opacityAnim->setStartValue(0.0);
-    opacityAnim->setEndValue(1.0);
-    opacityAnim->setEasingCurve(themeAnimation().decelerate);
-    opacityAnim->start(QAbstractAnimation::DeleteWhenStopped);
+    // One timeline drives both the height reveal and paint opacity, keeping
+    // the WinUI PopupThemeTransition without native-window opacity calls.
+    // zh_CN: 用同一时间线驱动高度揭示与自绘透明度，在保留 WinUI
+    // PopupThemeTransition 的同时避开原生窗口透明度接口。
+    auto* entranceAnimation = new QVariantAnimation(this);
+    entranceAnimation->setObjectName(
+        QString::fromLatin1(kEntranceAnimationName));
+    entranceAnimation->setStartValue(0.0);
+    entranceAnimation->setEndValue(1.0);
+    entranceAnimation->setDuration(themeAnimation().fast);
+    entranceAnimation->setEasingCurve(themeAnimation().decelerate);
+    connect(
+        entranceAnimation,
+        &QVariantAnimation::valueChanged,
+        this,
+        [this](const QVariant& value) {
+            const qreal progress = value.toReal();
+            m_revealProgress = progress;
+            update();
+        });
+    entranceAnimation->start(
+        QAbstractAnimation::DeleteWhenStopped);
 }
 
 void FluentMenu::normalizePopupLayering()

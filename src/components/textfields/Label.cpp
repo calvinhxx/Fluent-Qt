@@ -1,10 +1,19 @@
 #include "Label.h"
 
+#include <QAction>
+#include <QApplication>
+#include <QClipboard>
+#include <QContextMenuEvent>
+#include <QCoreApplication>
 #include <QFontMetrics>
 #include <QGuiApplication>
+#include <QKeySequence>
+#include <QMenu>
 #include <QResizeEvent>
 #include <QScreen>
+#include <QTextDocument>
 
+#include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/status_info/ToolTip.h"
 
 namespace fluent::textfields {
@@ -52,6 +61,24 @@ QString withManagedColorStyle(const QString& styleSheet, const QColor& color) {
     return callerStyle.isEmpty()
         ? managedStyle
         : callerStyle + QLatin1Char('\n') + managedStyle;
+}
+
+QString selectableText(const QLabel* label)
+{
+    if (!label)
+        return QString();
+
+    const QString renderedText = label->text();
+    const bool richText =
+        label->textFormat() == Qt::RichText
+        || (label->textFormat() == Qt::AutoText
+            && Qt::mightBeRichText(renderedText));
+    if (!richText)
+        return renderedText;
+
+    QTextDocument document;
+    document.setHtml(renderedText);
+    return document.toPlainText();
 }
 }
 
@@ -183,6 +210,56 @@ void Label::changeEvent(QEvent* event) {
     if (event->type() == QEvent::FontChange || event->type() == QEvent::StyleChange) {
         updateRenderedText();
     }
+}
+
+void Label::contextMenuEvent(QContextMenuEvent* event)
+{
+    if (!event)
+        return;
+
+    const Qt::TextInteractionFlags selectableFlags =
+        Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard;
+    if (!(textInteractionFlags() & selectableFlags)) {
+        QLabel::contextMenuEvent(event);
+        return;
+    }
+
+    auto* standardMenu = new QMenu(this);
+    auto* copyAction = standardMenu->addAction(
+        QCoreApplication::translate("QLineEdit", "&Copy"));
+    copyAction->setShortcuts(
+        QKeySequence::keyBindings(QKeySequence::Copy));
+    copyAction->setEnabled(hasSelectedText());
+    connect(copyAction, &QAction::triggered, this, [this]() {
+        if (!hasSelectedText())
+            return;
+
+        QString selection = selectedText();
+        selection.replace(
+            QChar::ParagraphSeparator, QLatin1Char('\n'));
+        selection.replace(
+            QChar::LineSeparator, QLatin1Char('\n'));
+        if (QClipboard* clipboard = QApplication::clipboard())
+            clipboard->setText(selection);
+    });
+
+    auto* selectAllAction = standardMenu->addAction(
+        QCoreApplication::translate("QLineEdit", "Select All"));
+    selectAllAction->setShortcuts(
+        QKeySequence::keyBindings(QKeySequence::SelectAll));
+    const QString renderedText = selectableText(this);
+    selectAllAction->setEnabled(!renderedText.isEmpty());
+    connect(selectAllAction, &QAction::triggered, this,
+            [this, renderedText]() {
+        setSelection(0, renderedText.size());
+    });
+
+    fluent::menus_toolbars::detail::execTextEditingContextMenu(
+        this,
+        standardMenu,
+        event->globalPos(),
+        QStringLiteral("FluentLabel.ContextMenu"));
+    event->accept();
 }
 
 void Label::updateRenderedText() {
