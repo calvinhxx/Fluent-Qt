@@ -940,10 +940,11 @@ TimePicker::TimePicker(QWidget* parent)
 TimePicker::~TimePicker()
 {
     if (m_flyout) {
-        m_flyout->setAnimationEnabled(false);
-        m_flyout->close();
-        delete m_flyout;
+        TimePickerFlyout* flyout = m_flyout.data();
         m_flyout = nullptr;
+        flyout->setAnimationEnabled(false);
+        flyout->close();
+        delete flyout;
     }
 }
 
@@ -1083,12 +1084,20 @@ void TimePicker::openPicker()
     if (!isEnabled())
         return;
 
-    if (!m_flyout)
+    QPointer<TimePicker> guard(this);
+    if (!m_flyout) {
+        setDropDownOpen(false);
+        if (!guard)
+            return;
         m_flyout = new TimePickerFlyout(this);
+    }
 
     m_flyout->showForPicker();
-    setDropDownOpen(true);
-    update();
+    if (!guard)
+        return;
+    guard->setDropDownOpen(true);
+    if (guard)
+        guard->update();
 }
 
 void TimePicker::closePicker()
@@ -1497,8 +1506,10 @@ void TimePicker::setDropDownOpen(bool open)
     if (m_dropDownOpen == open)
         return;
     m_dropDownOpen = open;
+    QPointer<TimePicker> guard(this);
     emit dropDownOpenChanged(m_dropDownOpen);
-    update();
+    if (guard)
+        guard->update();
 }
 
 void TimePicker::applyPendingTime(const QTime& time)

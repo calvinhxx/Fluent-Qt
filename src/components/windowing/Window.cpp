@@ -5,6 +5,7 @@
 #include <QHBoxLayout>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QTimer>
 #include <QVBoxLayout>
@@ -480,25 +481,36 @@ void Window::setBackdropEffect(BackdropEffect effect) {
 }
 
 void Window::minimizeWindow() {
+    QPointer<Window> guard(this);
     emit minimizeRequested();
-    showMinimized();
+    if (guard)
+        guard->showMinimized();
 }
 
 void Window::toggleMaximizeRestore() {
+    QPointer<Window> guard(this);
     if (isMaximized()) {
         emit restoreRequested();
-        showNormal();
+        if (!guard)
+            return;
+        guard->showNormal();
     } else {
         emit maximizeRequested();
-        showMaximized();
+        if (!guard)
+            return;
+        guard->showMaximized();
     }
-    updateMaximizeButtonIcon();
-    updateChromeOptions();
+    if (!guard)
+        return;
+    guard->updateMaximizeButtonIcon();
+    guard->updateChromeOptions();
 }
 
 void Window::closeWindow() {
+    QPointer<Window> guard(this);
     emit closeRequested();
-    close();
+    if (guard)
+        guard->close();
 }
 
 ClientSideFramePaintOptions Window::clientSideFramePaintOptions() const {

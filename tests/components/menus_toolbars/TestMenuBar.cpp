@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QPalette>
 #include <QPixmap>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
 #include <QVariantAnimation>
@@ -428,6 +429,23 @@ TEST_F(
     EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
 
     menu.close();
+}
+
+TEST_F(MenuBarTest, TriggeredHandlerCanSynchronouslyDeleteMenu)
+{
+    auto* menu = new FluentMenu(QStringLiteral("Actions"), window);
+    QAction* action = menu->addAction(QStringLiteral("Delete menu"));
+    QPointer<FluentMenu> guard(menu);
+    QObject::connect(action, &QAction::triggered, window, [menu] {
+        delete menu;
+    });
+
+    menu->popup(window->mapToGlobal(QPoint(24, 24)));
+    QApplication::processEvents();
+    const QPoint actionCenter = menu->actionGeometry(action).center();
+    QTest::mouseClick(menu, Qt::LeftButton, Qt::NoModifier, actionCenter);
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 TEST_F(MenuBarTest, PointerAndKeyboardInteractionsUseQtActions)

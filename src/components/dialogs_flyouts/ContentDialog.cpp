@@ -8,6 +8,7 @@
 #include <QPainterPath>
 #include <QHBoxLayout>
 #include <QLayout>
+#include <QPointer>
 
 namespace fluent::dialogs_flyouts {
 
@@ -84,16 +85,22 @@ void ContentDialog::setupInternalLayout() {
     btnLayout->addWidget(m_closeBtn,     1);
 
     connect(m_primaryBtn, &fluent::basicinput::Button::clicked, this, [this]() {
+        QPointer<ContentDialog> guard(this);
         emit primaryButtonClicked();
-        done(ResultPrimary);
+        if (guard)
+            guard->done(ResultPrimary);
     });
     connect(m_secondaryBtn, &fluent::basicinput::Button::clicked, this, [this]() {
+        QPointer<ContentDialog> guard(this);
         emit secondaryButtonClicked();
-        done(ResultSecondary);
+        if (guard)
+            guard->done(ResultSecondary);
     });
     connect(m_closeBtn, &fluent::basicinput::Button::clicked, this, [this]() {
+        QPointer<ContentDialog> guard(this);
         emit closeButtonClicked();
-        done(ResultNone);
+        if (guard)
+            guard->done(ResultNone);
     });
 
     updateButtonBar();

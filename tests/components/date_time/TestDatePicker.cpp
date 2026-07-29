@@ -5,6 +5,7 @@
 #include <QDate>
 #include <QLocale>
 #include <QPalette>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
 
@@ -331,6 +332,22 @@ TEST_F(DatePickerTest, EntryOpensWithMouseAndKeyboardAndDisabledStateBlocksOpen)
     picker->openPicker();
     processEvents();
     EXPECT_FALSE(picker->isDropDownOpen());
+}
+
+TEST_F(DatePickerTest, OpenStateHandlerCanSynchronouslyDeletePicker)
+{
+    auto* picker = new DatePicker(window);
+    QPointer<DatePicker> guard(picker);
+    QObject::connect(
+        picker, &DatePicker::dropDownOpenChanged, qApp,
+        [picker](bool open) {
+            if (open)
+                delete picker;
+        });
+
+    picker->openPicker();
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 TEST_F(DatePickerTest, FlyoutCommitCancelEscapeAndLightDismiss)
