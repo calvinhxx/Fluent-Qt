@@ -290,10 +290,14 @@ TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions) {
     showAndFocus(box);
 
     QSignalSpy openSpy(box, &AutoSuggestBox::suggestionListOpenChanged);
+    QSignalSpy focusSpy(qApp, &QApplication::focusChanged);
     QTest::keyClicks(box, "a");
     QApplication::processEvents();
 
     EXPECT_TRUE(box->isSuggestionListOpen());
+    EXPECT_EQ(QApplication::focusWidget(), box);
+    EXPECT_EQ(focusSpy.count(), 0)
+        << "Opening suggestions must not interrupt IME composition with a focus transfer";
     ASSERT_GE(openSpy.count(), 1);
     EXPECT_TRUE(openSpy.first().at(0).toBool());
 
