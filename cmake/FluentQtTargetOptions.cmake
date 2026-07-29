@@ -12,7 +12,9 @@ function(fluent_qt_configure_cpp_target target)
 
     if(MSVC)
         target_compile_definitions("${target}" PRIVATE UNICODE _UNICODE)
-        target_compile_options("${target}" PRIVATE /utf-8)
+        # Parallel MSBuild invocations can make multiple cl.exe processes write
+        # the same target PDB. Serialize those writes to avoid C1041 failures.
+        target_compile_options("${target}" PRIVATE /utf-8 /FS)
         set_target_properties("${target}" PROPERTIES
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     endif()
