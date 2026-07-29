@@ -18,6 +18,10 @@ namespace fluent::navigation {
 class NavigationView;
 }
 
+namespace fluent::textfields {
+class EditingCommandRouter;
+}
+
 namespace fluent::gallery {
 
 class GalleryContentPresenter;
@@ -111,6 +115,8 @@ private:
     GalleryNavigationPane* m_footerNavigationPane = nullptr;
     GalleryTopNavigationPane* m_topMainNavigationPane = nullptr;
     GalleryTopNavigationPane* m_topFooterNavigationPane = nullptr;
+    fluent::textfields::EditingCommandRouter*
+        m_editingCommandRouter = nullptr;
     GalleryContentPresenter* m_contentPresenter = nullptr;
     GalleryTitleBarController* m_titleBar = nullptr;
     GalleryIntroTour* m_introTour = nullptr;

@@ -85,7 +85,10 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
              {QStringLiteral("menu"), QStringLiteral("Menu"), Typography::Icons::List,
               QStringLiteral("FluentMenu")},
              {QStringLiteral("menu-bar"), QStringLiteral("MenuBar"), Typography::Icons::Save,
-              QStringLiteral("FluentMenuBar")}
+              QStringLiteral("FluentMenuBar")},
+             {QStringLiteral("command-bar"), QStringLiteral("CommandBar"), Typography::Icons::More},
+             {QStringLiteral("command-bar-flyout"), QStringLiteral("CommandBarFlyout"),
+              Typography::Icons::ChevronDown}
          }},
         {QStringLiteral("navigation"),
          QStringLiteral("Navigation"),
