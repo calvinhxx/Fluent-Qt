@@ -29,6 +29,7 @@ set(FLUENT_QT_CONTRACT_TEST_TARGETS
     test_card
     test_divider
     test_expander
+    test_stack_view
     test_avatar
     test_toast
     test_editing_command_router
