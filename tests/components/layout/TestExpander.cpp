@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <QApplication>
 #include <QPointer>
 #include <QSignalSpy>
 #include <QVBoxLayout>
@@ -51,6 +52,21 @@ TEST(ExpanderTest, Contract_DefaultsAndHeaderText)
     ASSERT_NE(headerText, nullptr);
     EXPECT_EQ(headerText->textColorRole(),
               fluent::textfields::Label::TextColorRole::Primary);
+}
+
+TEST(ExpanderTest, Contract_ExpandedHandlerCanSynchronouslyDeleteExpander)
+{
+    auto* expander = new Expander;
+    QPointer<Expander> guard(expander);
+    QObject::connect(
+        expander, &Expander::expandedChanged, qApp,
+        [expander](bool) {
+            delete expander;
+        });
+
+    expander->setExpandedAnimated(true, false);
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 TEST(ExpanderTest, Contract_ExpandedStateAndSignals)

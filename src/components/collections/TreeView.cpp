@@ -9,6 +9,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QProxyStyle>
 #include <QResizeEvent>
 #include <QScrollBar>
@@ -945,8 +946,11 @@ void TreeView::mouseReleaseEvent(QMouseEvent* event) {
                         expand(dropParent);
                         QModelIndex newIdx = sim->indexFromItem(row.first());
                         setCurrentIndex(newIdx);
+                        QPointer<TreeView> guard(this);
                         emit itemReordered(srcParentIdx, srcRow,
                                            dropParent, targetItem->rowCount() - 1);
+                        if (!guard)
+                            return;
                     }
                 } else if (m_dropMode == DropMode::Between) {
                     QStandardItem* dstParentItem = m_dropTargetParent.isValid()
@@ -962,8 +966,11 @@ void TreeView::mouseReleaseEvent(QMouseEvent* event) {
                         dstParentItem->insertRow(dstRow, row);
                         QModelIndex newIdx = sim->indexFromItem(row.first());
                         setCurrentIndex(newIdx);
+                        QPointer<TreeView> guard(this);
                         emit itemReordered(srcParentIdx, srcRow,
                                            QModelIndex(m_dropTargetParent), dstRow);
+                        if (!guard)
+                            return;
                     }
                 }
             }

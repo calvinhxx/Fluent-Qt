@@ -9,6 +9,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QStyle>
 #include <QVariantAnimation>
@@ -1053,8 +1054,10 @@ void SelectorBar::activateItem(int index)
 {
     if (!isSelectableIndex(index) || m_selectedIndex == index)
         return;
+    QPointer<SelectorBar> guard(this);
     emit itemActivated(index, m_items.at(index));
-    setSelectedIndexInternal(index, true);
+    if (guard)
+        guard->setSelectedIndexInternal(index, true);
 }
 
 void SelectorBar::scrollOverflow(int direction)
