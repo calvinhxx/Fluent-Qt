@@ -3,6 +3,7 @@
 #include <QAction>
 #include <QActionEvent>
 #include <QMenu>
+#include <QPointer>
 #include <QTimer>
 #include <QWidget>
 #include <QWidgetAction>
@@ -263,7 +264,10 @@ void CommandActionModel::handleActionEvent(QActionEvent* event)
 
         sectionActions(pending.section).removeAt(pending.index);
         disconnectAction(action);
+        QPointer<CommandActionModel> guard(this);
         emit structureChanged();
+        if (!guard)
+            return;
         QTimer::singleShot(
             0,
             this,

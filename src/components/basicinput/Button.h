@@ -227,8 +227,8 @@ protected:
 
     void enterEvent(FluentEnterEvent* event) override { QPushButton::enterEvent(event); update(); }
     void leaveEvent(QEvent* event) override { QPushButton::leaveEvent(event); update(); }
-    void mousePressEvent(QMouseEvent* event) override { QPushButton::mousePressEvent(event); update(); }
-    void mouseReleaseEvent(QMouseEvent* event) override { QPushButton::mouseReleaseEvent(event); update(); }
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
     ButtonStyle m_style = Standard;

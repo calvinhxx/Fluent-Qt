@@ -87,9 +87,13 @@ Expander::Expander(QWidget* parent)
                 applyFraction(value.toReal());
             });
     connect(m_animation, &QVariantAnimation::finished, this, [this]() {
+        QPointer<Expander> guard(this);
         applyFraction(m_expanded ? 1.0 : 0.0);
+        if (!guard)
+            return;
         emit expansionTransitionFinished(m_expanded);
-        finishViewportTransition();
+        if (guard)
+            guard->finishViewportTransition();
     });
 
     updateChildGeometry();
@@ -148,8 +152,13 @@ bool Expander::setContentWidget(QWidget* widget, WidgetOwnership ownership)
     }
 
     m_contentTargetHeight = m_expanded ? naturalContentHeight() : 0;
+    QPointer<Expander> guard(this);
     applyFraction(m_expanded ? 1.0 : 0.0);
-    emit contentWidgetChanged(widget);
+    if (!guard)
+        return true;
+    emit contentWidgetChanged(m_contentWidget.data());
+    if (!guard)
+        return true;
     if (previousOwnership != m_contentOwnership)
         emit contentOwnershipChanged(m_contentOwnership);
     return true;
@@ -170,8 +179,13 @@ QWidget* Expander::takeContentWidget()
     content->hide();
     content->setParent(nullptr);
     m_contentTargetHeight = 0;
+    QPointer<Expander> guard(this);
     applyFraction(0.0);
+    if (!guard)
+        return content;
     emit contentWidgetChanged(nullptr);
+    if (!guard)
+        return content;
     if (previousOwnership != m_contentOwnership)
         emit contentOwnershipChanged(m_contentOwnership);
     return content;
@@ -189,19 +203,29 @@ void Expander::setExpandedAnimated(bool expanded, bool animated)
 
     m_expanded = expanded;
     beginViewportTransition();
+    QPointer<Expander> guard(this);
     emit expandedChanged(m_expanded);
+    if (!guard)
+        return;
     emit expansionTransitionStarted(m_expanded);
+    if (!guard)
+        return;
 
     m_animation->stop();
     if (expanded || m_contentTargetHeight <= 0)
         m_contentTargetHeight = naturalContentHeight();
     applyFraction(m_fraction);
+    if (!guard)
+        return;
 
     const qreal target = expanded ? 1.0 : 0.0;
     if (!animated) {
         applyFraction(target);
+        if (!guard)
+            return;
         emit expansionTransitionFinished(m_expanded);
-        finishViewportTransition();
+        if (guard)
+            guard->finishViewportTransition();
         return;
     }
 
@@ -268,7 +292,10 @@ void Expander::resizeEvent(QResizeEvent* event)
     if (event && event->oldSize().width() != event->size().width()
         && m_contentWidget) {
         m_contentTargetHeight = naturalContentHeight();
+        QPointer<Expander> guard(this);
         applyFraction(m_fraction);
+        if (!guard)
+            return;
     }
     updateChildGeometry();
 }
@@ -337,8 +364,8 @@ void Expander::applyFraction(qreal fraction)
         m_chevron->setRotation(180.0 * m_fraction);
     if (m_lastEmittedLayoutHeight != totalHeight) {
         m_lastEmittedLayoutHeight = totalHeight;
-        emit layoutHeightChanged(totalHeight);
         synchronizeViewportLayout();
+        emit layoutHeightChanged(totalHeight);
     }
 }
 
@@ -380,8 +407,13 @@ void Expander::handleContentDestroyed()
     const WidgetOwnership previousOwnership = m_contentOwnership;
     m_contentOwnership = WidgetOwnership::Borrowed;
     m_contentTargetHeight = 0;
+    QPointer<Expander> guard(this);
     applyFraction(0.0);
+    if (!guard)
+        return;
     emit contentWidgetChanged(nullptr);
+    if (!guard)
+        return;
     if (previousOwnership != m_contentOwnership)
         emit contentOwnershipChanged(m_contentOwnership);
 }

@@ -826,7 +826,10 @@ private:
             << "active=" << hasTarget()
             << "target="
             << (target ? target->metaObject()->className() : "none");
+        QPointer<EditingCommandRouter> guard(q);
         emit q->activeTargetChanged(hasTarget());
+        if (!guard)
+            return;
         refreshCapabilities();
     }
 
@@ -845,7 +848,10 @@ private:
                 target = nullptr;
                 passwordTarget = nullptr;
                 disconnectTarget();
+                QPointer<EditingCommandRouter> guard(q);
                 emit q->activeTargetChanged(false);
+                if (!guard)
+                    return;
                 refreshCapabilities();
             }));
 
