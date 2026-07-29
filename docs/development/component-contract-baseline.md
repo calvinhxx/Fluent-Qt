@@ -15,6 +15,12 @@ Future known-gap tests may still use `DISABLED_Contract_*` while their desired
 behavior is under implementation. Phase 1 leaves no disabled contract test in
 the current suite.
 
+The Phase 0/1 resolution sections remain the historical `release/1.4.x`
+baseline. The **Full UILib Review Matrix** and later guardrails are a living
+post-baseline inventory and may point to current work. Cross-component editing
+and notification work is tracked in the
+[System Capability Roadmap](system-capability-roadmap.md).
+
 ## Test Labels
 
 - `contract`: active component acceptance tests.
@@ -93,11 +99,11 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 | Collections | DrawerView, FlipView, FlowView, GridView, ListView, SplitView, StackView, TreeView | Phase 4 keeps FlowView large-model painting and hit testing viewport-bounded and uses one shared drag-displacement animation |
 | Date and time | CalendarDatePicker, CalendarView, DatePicker, TimePicker | Locale ownership and atomic range updates are Phase 2/3 |
 | Dialogs and flyouts | CoachMark, ContentDialog, Dialog, Flyout, Popup, TeachingTip | Overlay lifecycle/property semantics are Phase 2 |
-| Menus and toolbars | FluentMenu, FluentMenuItem, MenuBar | Shared text-editing menu and direct menu contracts remain Phase 2 |
+| Menus and toolbars | CommandBar, CommandBarFlyout, FluentMenu, FluentMenuItem, MenuBar | Capability Phase 1 completes the shared private text-editing context menu; Capability Phase 2 supplies stable EditingCommandRouter actions; Capability Phase 3 completes public command surfaces, private responsive presenters, same-window overflow/flyout behavior, accessibility, design-language rendering, and router reuse |
 | Navigation | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | Page ownership, global event filters, RTL, and accessibility are Phase 2/3 |
 | Scrolling | AnnotatedScrollBar, PipsPager, ScrollBar, ScrollView | Empty-selection policy is intentionally unchanged; inherited API coherence is Phase 2 |
-| Status and info | Avatar, InfoBadge, InfoBar, ProgressBar, ProgressRing, Shimmer, ToolTip, Toast | Avatar adds caller-owned identity/image content and composes InfoBadge for presence; Phase 4 removes per-frame ProgressBar animation-token reconstruction while preserving its timer lifecycle; Toast provides a same-window, caller-text-owned transient notification |
-| Text fields | AutoSuggestBox, Label, LineEdit, NumberBox, PasswordBox, TextEdit | Phase 1 Label/TextEdit coherence, focus, sizing, and no-op defects resolved; broader editing-facade and inheritance decisions remain Phase 2 |
+| Status and info | Avatar, InfoBadge, InfoBar, ProgressBar, ProgressRing, Shimmer, ToolTip, Toast | Avatar adds caller-owned identity/image content and composes InfoBadge for presence; Phase 4 removes per-frame ProgressBar animation-token reconstruction while preserving its timer lifecycle; Toast provides same-window managed stacking per host/placement up to `maximumVisible()` |
+| Text fields | AutoSuggestBox, EditingCommandRouter, Label, LineEdit, NumberBox, PasswordBox, TextEdit | Historical Phase 1 resolves Label/TextEdit coherence, focus, sizing, and no-op defects; Capability Phase 1 privately shares the Fluent editing menu, and Capability Phase 2 adds window-scoped semantic editing actions |
 | Windowing | TitleBar, Window, backdrop contracts | Content ownership, caption accessibility, and platform surface lifecycle are Phase 2/3 |
 | Design | Animation, Breakpoints, CornerRadius, Elevation, IconCatalog, Material, Spacing, ThemeColors, Typography | Phase 4 centralizes dynamic token storage, avoids color snapshots in paint hot paths, and applies DPI-aligned FlowView strokes |
 
