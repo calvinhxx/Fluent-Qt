@@ -31,6 +31,9 @@ set(FLUENT_QT_CONTRACT_TEST_TARGETS
     test_expander
     test_avatar
     test_toast
+    test_editing_command_router
+    test_command_bar
+    test_command_bar_flyout
     test_label
     test_text_edit
 )
