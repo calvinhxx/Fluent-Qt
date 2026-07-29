@@ -22,6 +22,8 @@ Current library categories include:
 
 ```text
 fluentqt.theme
+fluentqt.editing
+fluentqt.commandbar
 fluentqt.windowing
 ```
 
