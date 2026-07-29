@@ -35,6 +35,11 @@ public:
     QWidget* overlayWidget() const { return m_overlay.data(); }
     QWidget* topLevelWidget() const { return m_topLevel.data(); }
     OverlayScrim* scrim() const { return m_scrim.data(); }
+    bool focusOnOpenEnabled() const { return m_focusOnOpenEnabled; }
+    void setFocusOnOpenEnabled(bool enabled)
+    {
+        m_focusOnOpenEnabled = enabled;
+    }
 
     void attachTo(QWidget* topLevel);
     void detach();
@@ -57,6 +62,7 @@ private:
     QPointer<QWidget> m_overlay;
     QPointer<QWidget> m_topLevel;
     QPointer<OverlayScrim> m_scrim;
+    bool m_focusOnOpenEnabled = true;
 };
 
 } // namespace fluent::overlay

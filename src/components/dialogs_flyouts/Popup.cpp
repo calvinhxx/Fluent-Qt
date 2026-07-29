@@ -115,6 +115,10 @@ void Popup::setThemeSource(QWidget* source) {
         onThemeUpdated();
 }
 
+void Popup::setFocusOnOpenEnabled(bool enabled) {
+    m_overlayCoordinator->setFocusOnOpenEnabled(enabled);
+}
+
 // ── topLevelWidget resolution. zh_CN: topLevelWidget 推断 ────────────────────
 
 QWidget* Popup::originalParentTopLevel() const {
@@ -241,7 +245,8 @@ void Popup::open() {
 
     show();
     m_overlayCoordinator->raiseStack();
-    setFocus(Qt::PopupFocusReason);
+    if (m_overlayCoordinator->focusOnOpenEnabled())
+        setFocus(Qt::PopupFocusReason);
 
     if (qApp)
         qApp->installEventFilter(this);

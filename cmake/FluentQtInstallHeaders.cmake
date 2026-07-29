@@ -78,6 +78,8 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/layout/Divider.h
     src/components/layout/Expander.h
 
+    src/components/menus_toolbars/CommandBar.h
+    src/components/menus_toolbars/CommandBarFlyout.h
     src/components/menus_toolbars/Menu.h
     src/components/menus_toolbars/MenuBar.h
 
@@ -103,6 +105,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/status_info/ToolTip.h
 
     src/components/textfields/AutoSuggestBox.h
+    src/components/textfields/EditingCommandRouter.h
     src/components/textfields/Label.h
     src/components/textfields/LineEdit.h
     src/components/textfields/NumberBox.h
