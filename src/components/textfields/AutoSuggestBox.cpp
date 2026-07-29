@@ -118,6 +118,7 @@ public:
         setModal(false);
         setDim(false);
         setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
+        setFocusOnOpenEnabled(false);
 
         m_model = new QStringListModel(this);
         m_listView = new fluent::collections::ListView(this);
@@ -211,7 +212,6 @@ public:
             showAt(m_owner);
         }
         updateOwnerPassthroughMask();
-        m_owner->setFocus(Qt::OtherFocusReason);
     }
 
     void onThemeUpdated() override {

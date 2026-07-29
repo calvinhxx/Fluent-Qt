@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <QApplication>
+#include <QGraphicsOpacityEffect>
 #include <QHelpEvent>
 #include <QScrollArea>
 #include <QSignalSpy>
@@ -15,6 +16,16 @@ using namespace fluent::status_info;
 using namespace fluent::basicinput;
 using namespace fluent::textfields;
 using namespace fluent;
+
+namespace {
+
+QGraphicsOpacityEffect* opacityEffectFor(ToolTip& tooltip)
+{
+    return qobject_cast<QGraphicsOpacityEffect*>(
+        tooltip.graphicsEffect());
+}
+
+} // namespace
 
 // Window tailored for ToolTip testing
 class ToolTipTestWindow : public QWidget, public fluent::FluentElement {
@@ -84,6 +95,10 @@ TEST_F(ToolTipTest, InitialState) {
     EXPECT_TRUE(tooltip.text().isEmpty());
     EXPECT_TRUE(tooltip.windowFlags() & Qt::ToolTip);
     EXPECT_TRUE(tooltip.windowFlags() & Qt::FramelessWindowHint);
+    ASSERT_NE(opacityEffectFor(tooltip), nullptr);
+    EXPECT_DOUBLE_EQ(tooltip.windowOpacity(), 1.0);
+    EXPECT_DOUBLE_EQ(
+        opacityEffectFor(tooltip)->opacity(), 0.0);
 }
 
 TEST_F(ToolTipTest, SetText) {
@@ -179,12 +194,17 @@ TEST_F(ToolTipTest, AnimationEnabledDefaultAndDisabledBehavior) {
     tooltip.show();
     QApplication::processEvents();
     EXPECT_TRUE(tooltip.isVisible());
-    EXPECT_NEAR(tooltip.windowOpacity(), 1.0, 0.001);
+    ASSERT_NE(opacityEffectFor(tooltip), nullptr);
+    EXPECT_NEAR(
+        opacityEffectFor(tooltip)->opacity(), 1.0, 0.001);
+    EXPECT_DOUBLE_EQ(tooltip.windowOpacity(), 1.0);
 
     tooltip.hide();
     QApplication::processEvents();
     EXPECT_FALSE(tooltip.isVisible());
-    EXPECT_NEAR(tooltip.windowOpacity(), 0.0, 0.001);
+    EXPECT_NEAR(
+        opacityEffectFor(tooltip)->opacity(), 0.0, 0.001);
+    EXPECT_DOUBLE_EQ(tooltip.windowOpacity(), 1.0);
 }
 
 TEST_F(ToolTipTest, AnimatedHideKeepsVisibleUntilFadeOutCompletes) {
@@ -195,7 +215,9 @@ TEST_F(ToolTipTest, AnimatedHideKeepsVisibleUntilFadeOutCompletes) {
     tooltip.show();
     QApplication::processEvents();
     ASSERT_TRUE(tooltip.isVisible());
-    EXPECT_NEAR(tooltip.windowOpacity(), 1.0, 0.001);
+    ASSERT_NE(opacityEffectFor(tooltip), nullptr);
+    EXPECT_NEAR(
+        opacityEffectFor(tooltip)->opacity(), 1.0, 0.001);
 
     tooltip.setAnimationEnabled(true);
     tooltip.hide();
@@ -203,7 +225,9 @@ TEST_F(ToolTipTest, AnimatedHideKeepsVisibleUntilFadeOutCompletes) {
 
     EXPECT_TRUE(tooltip.isVisible());
     QTRY_VERIFY_WITH_TIMEOUT(!tooltip.isVisible(), 1000);
-    EXPECT_NEAR(tooltip.windowOpacity(), 0.0, 0.001);
+    EXPECT_NEAR(
+        opacityEffectFor(tooltip)->opacity(), 0.0, 0.001);
+    EXPECT_DOUBLE_EQ(tooltip.windowOpacity(), 1.0);
 }
 
 TEST_F(ToolTipTest, HideDuringEntryReversesCleanly) {
@@ -213,14 +237,19 @@ TEST_F(ToolTipTest, HideDuringEntryReversesCleanly) {
     tooltip.show();
     QApplication::processEvents();
     ASSERT_TRUE(tooltip.isVisible());
-    QTRY_VERIFY_WITH_TIMEOUT(tooltip.windowOpacity() > 0.0, 1000);
+    ASSERT_NE(opacityEffectFor(tooltip), nullptr);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        opacityEffectFor(tooltip)->opacity() > 0.0,
+        1000);
 
     tooltip.hide();
     QApplication::processEvents();
 
     EXPECT_TRUE(tooltip.isVisible());
     QTRY_VERIFY_WITH_TIMEOUT(!tooltip.isVisible(), 1000);
-    EXPECT_NEAR(tooltip.windowOpacity(), 0.0, 0.001);
+    EXPECT_NEAR(
+        opacityEffectFor(tooltip)->opacity(), 0.0, 0.001);
+    EXPECT_DOUBLE_EQ(tooltip.windowOpacity(), 1.0);
 }
 
 TEST_F(ToolTipTest, VisualGallery) {
