@@ -46,7 +46,7 @@ void GalleryEntryGrid::setEntries(const QVector<Entry>& entries)
 {
     m_entries = entries;
     m_hoveredIndex = -1;
-    recalculateCardHeight();
+    recalculateRowLayout();
     updateGeometry();
     update();
 }
@@ -69,7 +69,13 @@ int GalleryEntryGrid::gridHeight() const
     const int rows = rowCount();
     if (rows == 0)
         return 0;
-    return rows * m_cardHeight + (rows - 1) * kGridSpacing;
+    if (m_rowHeights.size() == rows
+        && m_rowTops.size() == rows) {
+        return m_rowTops.constLast()
+            + m_rowHeights.constLast();
+    }
+    return rows * kMinCardHeight
+        + (rows - 1) * kGridSpacing;
 }
 
 int GalleryEntryGrid::columnWidth() const
@@ -85,8 +91,13 @@ QRect GalleryEntryGrid::cardRect(int index) const
     const int column = index % cols;
     const int cardWidth = columnWidth();
     const int x = column * (cardWidth + kGridSpacing);
-    const int y = row * (m_cardHeight + kGridSpacing);
-    return QRect(x, y, cardWidth, m_cardHeight);
+    const int y = row < m_rowTops.size()
+        ? m_rowTops.at(row)
+        : row * (kMinCardHeight + kGridSpacing);
+    const int height = row < m_rowHeights.size()
+        ? m_rowHeights.at(row)
+        : kMinCardHeight;
+    return QRect(x, y, cardWidth, height);
 }
 
 int GalleryEntryGrid::cardIndexAt(const QPoint& pos) const
@@ -96,9 +107,24 @@ int GalleryEntryGrid::cardIndexAt(const QPoint& pos) const
         return -1;
     const int cols = columns();
     const int column = pos.x() / (cardWidth + kGridSpacing);
-    const int row = pos.y() / (m_cardHeight + kGridSpacing);
-    if (column < 0 || column >= cols || row < 0)
+    if (column < 0 || column >= cols || pos.y() < 0)
         return -1;
+
+    int row = -1;
+    for (int candidate = 0;
+         candidate < m_rowHeights.size();
+         ++candidate) {
+        const int top = m_rowTops.at(candidate);
+        if (pos.y() < top)
+            break;
+        if (pos.y() < top + m_rowHeights.at(candidate)) {
+            row = candidate;
+            break;
+        }
+    }
+    if (row < 0)
+        return -1;
+
     const int index = row * cols + column;
     if (index < 0 || index >= m_entries.size())
         return -1;
@@ -125,7 +151,7 @@ void GalleryEntryGrid::resizeEvent(QResizeEvent* event)
     if (cols != m_lastColumns || cardWidth != m_lastColumnWidth) {
         m_lastColumns = cols;
         m_lastColumnWidth = cardWidth;
-        recalculateCardHeight();
+        recalculateRowLayout();
         // Width changes can alter both the row count and wrapped-text height. Tell the
         // page layout to re-read sizeHint so the scroll extent stays correct.
         // zh_CN: 宽度变化会同时影响行数和文本换行高度，通知页面布局重新读取 sizeHint。
@@ -134,14 +160,18 @@ void GalleryEntryGrid::resizeEvent(QResizeEvent* event)
     update();
 }
 
-bool GalleryEntryGrid::recalculateCardHeight()
+bool GalleryEntryGrid::recalculateRowLayout()
 {
-    int requiredHeight = kMinCardHeight;
+    const int rows = rowCount();
+    QVector<int> rowHeights(
+        rows, kMinCardHeight);
     const int textWidth = columnWidth() - 2 * kCardPadding - kIconSize - kIconTextGap;
     if (textWidth > 0) {
         const QFontMetrics titleMetrics(themeFont(Typography::FontRole::BodyStrong).toQFont());
         const QFontMetrics descMetrics(themeFont(Typography::FontRole::Caption).toQFont());
-        for (const Entry& entry : m_entries) {
+        const int cols = columns();
+        for (int index = 0; index < m_entries.size(); ++index) {
+            const Entry& entry = m_entries.at(index);
             int textHeight = titleMetrics.height();
             if (!entry.description.isEmpty()) {
                 const QRect descriptionBounds = descMetrics.boundingRect(
@@ -150,14 +180,28 @@ bool GalleryEntryGrid::recalculateCardHeight()
                     entry.description);
                 textHeight += kTitleDescGap + descriptionBounds.height();
             }
-            requiredHeight = qMax(requiredHeight,
-                                  2 * kCardPadding + qMax(kIconSize, textHeight));
+            const int row = index / cols;
+            rowHeights[row] = qMax(
+                rowHeights.at(row),
+                2 * kCardPadding
+                    + qMax(kIconSize, textHeight));
         }
     }
 
-    if (requiredHeight == m_cardHeight)
+    QVector<int> rowTops;
+    rowTops.reserve(rows);
+    int nextTop = 0;
+    for (int height : rowHeights) {
+        rowTops.append(nextTop);
+        nextTop += height + kGridSpacing;
+    }
+
+    if (rowHeights == m_rowHeights
+        && rowTops == m_rowTops) {
         return false;
-    m_cardHeight = requiredHeight;
+    }
+    m_rowHeights = rowHeights;
+    m_rowTops = rowTops;
     return true;
 }
 
@@ -197,7 +241,7 @@ void GalleryEntryGrid::mouseReleaseEvent(QMouseEvent* event)
 
 void GalleryEntryGrid::onThemeUpdated()
 {
-    if (recalculateCardHeight())
+    if (recalculateRowLayout())
         updateGeometry();
     update();
 }

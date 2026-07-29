@@ -4,10 +4,12 @@
 #include <functional>
 #include <memory>
 
+#include <QAction>
 #include <QApplication>
 #include <QAbstractScrollArea>
 #include <QBoxLayout>
 #include <QClipboard>
+#include <QContextMenuEvent>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFrame>
@@ -15,6 +17,7 @@
 #include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
 #include <QImage>
+#include <QKeySequence>
 #include <QLabel>
 #include <QLayout>
 #include <QLineEdit>
@@ -25,10 +28,12 @@
 #include <QSizePolicy>
 #include <QStringList>
 #include <QTest>
+#include <QTimer>
 #include <QVector>
 #include <QWidget>
 
 #include "components/basicinput/Button.h"
+#include "components/basicinput/ComboBox.h"
 #include "components/basicinput/CompoundButton.h"
 #include "compatibility/QtCompat.h"
 #include "components/collections/TreeView.h"
@@ -40,13 +45,19 @@
 #include "components/layout/Card.h"
 #include "components/layout/Divider.h"
 #include "components/layout/Expander.h"
+#include "components/menus_toolbars/CommandBar.h"
+#include "components/menus_toolbars/CommandBarFlyout.h"
+#include "components/menus_toolbars/Menu.h"
 #include "components/scrolling/PipsPager.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/status_info/Avatar.h"
 #include "components/status_info/ToolTip.h"
 #include "components/status_info/Toast.h"
+#include "components/textfields/EditingCommandRouter.h"
 #include "components/textfields/Label.h"
+#include "components/textfields/LineEdit.h"
 #include "components/textfields/TextEdit.h"
+#include "design/Spacing.h"
 #include "design/Typography.h"
 #include "model/GalleryComponentCatalog.h"
 #include "model/GalleryContentCatalog.h"
@@ -84,8 +95,14 @@ using fluent::gallery::galleryControlImageResource;
 using fluent::gallery::galleryContentCatalog;
 using fluent::gallery::galleryContentEntry;
 using fluent::collections::TreeView;
+using fluent::menus_toolbars::CommandBar;
+using fluent::menus_toolbars::CommandBarFlyout;
+using fluent::menus_toolbars::FluentMenu;
+using fluent::textfields::EditingCommandRouter;
+using fluent::textfields::LineEdit;
 using fluent::textfields::TextEdit;
 using fluent::basicinput::Button;
+using fluent::basicinput::ComboBox;
 
 namespace {
 
@@ -155,6 +172,25 @@ bool findSampleById(const QString& route,
             if (outSample)
                 *outSample = sample;
             return true;
+        }
+    }
+    return false;
+}
+
+bool actionUsesStandardKey(
+    const QAction* action,
+    QKeySequence::StandardKey key)
+{
+    if (!action)
+        return false;
+    const QList<QKeySequence> bindings =
+        QKeySequence::keyBindings(key);
+    for (const QKeySequence& shortcut : action->shortcuts()) {
+        for (const QKeySequence& binding : bindings) {
+            if (shortcut.matches(binding)
+                == QKeySequence::ExactMatch) {
+                return true;
+            }
         }
     }
     return false;
@@ -852,6 +888,49 @@ TEST_F(GalleryContentPagesTest, EntryGridExpandsCardsForWrappedDescriptions)
     EXPECT_GT(narrowHeight, wideHeight);
 }
 
+TEST_F(GalleryContentPagesTest,
+       EntryGridExpandsOnlyRowsThatNeedWrappedDescriptions)
+{
+    const GalleryEntryGrid::Entry wrappedEntry{
+        QStringLiteral("wrapped"),
+        QStringLiteral("Wrapped"),
+        QStringLiteral(
+            "A deliberately long description that wraps across several "
+            "lines in one card without stretching every later row in the "
+            "catalog grid."),
+        QPixmap(),
+        QString()};
+    const GalleryEntryGrid::Entry compactEntry{
+        QStringLiteral("compact"),
+        QStringLiteral("Compact"),
+        QString(),
+        QPixmap(),
+        QString()};
+
+    GalleryEntryGrid wrappedRow;
+    wrappedRow.resize(1000, 100);
+    wrappedRow.setEntries({wrappedEntry});
+    const int wrappedRowHeight =
+        wrappedRow.sizeHint().height();
+    ASSERT_GT(wrappedRowHeight, 86);
+
+    GalleryEntryGrid mixedRows;
+    mixedRows.resize(1000, 100);
+    mixedRows.setEntries(
+        {wrappedEntry,
+         compactEntry,
+         compactEntry,
+         compactEntry,
+         compactEntry});
+
+    EXPECT_EQ(
+        mixedRows.sizeHint().height(),
+        wrappedRowHeight + 12 + 86);
+    EXPECT_LT(
+        mixedRows.sizeHint().height(),
+        wrappedRowHeight * 2 + 12);
+}
+
 TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledImagesOrCatalogGlyphs)
 {
     const QString placeholder =
@@ -1022,6 +1101,75 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
         compoundPreview->findChild<fluent::basicinput::CompoundButton*>();
     ASSERT_NE(compoundButton, nullptr);
     EXPECT_FALSE(compoundButton->secondaryText().isEmpty());
+}
+
+TEST_F(
+    GalleryContentPagesTest,
+    EditableComboBoxSampleMakesCustomValueContractVisible)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("combobox"),
+        QStringLiteral("combobox-editable"),
+        &sample));
+    EXPECT_TRUE(
+        sample.description.contains(
+            QStringLiteral("Type any value")));
+    for (const QString& sourceFragment :
+         {QStringLiteral("setEditable(true)"),
+          QStringLiteral(
+              "setInsertPolicy(QComboBox::NoInsert)"),
+          QStringLiteral("QComboBox::editTextChanged"),
+          QStringLiteral("findText("),
+          QStringLiteral("Suggested"),
+          QStringLiteral("Custom")}) {
+        EXPECT_TRUE(
+            sample.codeSnippet.contains(sourceFragment))
+            << sourceFragment.toStdString();
+    }
+
+    std::unique_ptr<QWidget> preview(
+        sample.createPreview(nullptr));
+    ASSERT_NE(preview, nullptr);
+    auto* comboBox = preview->findChild<ComboBox*>(
+        QStringLiteral("galleryEditableComboBox"));
+    auto* status =
+        preview->findChild<fluent::textfields::Label*>(
+            QStringLiteral(
+                "galleryEditableComboBoxStatus"));
+    ASSERT_NE(comboBox, nullptr);
+    ASSERT_NE(status, nullptr);
+    EXPECT_TRUE(comboBox->isEditable());
+    EXPECT_EQ(comboBox->width(), 200);
+    EXPECT_EQ(status->width(), 200);
+    EXPECT_EQ(
+        comboBox->insertPolicy(),
+        QComboBox::NoInsert);
+    EXPECT_EQ(
+        status->text(),
+        QStringLiteral("Suggested value: 12"));
+
+    const int originalCount = comboBox->count();
+    comboBox->setEditText(
+        QStringLiteral("13.5"));
+    EXPECT_EQ(
+        comboBox->currentText(),
+        QStringLiteral("13.5"));
+    EXPECT_EQ(comboBox->count(), originalCount);
+    EXPECT_EQ(
+        comboBox->findText(
+            QStringLiteral("13.5"),
+            Qt::MatchFixedString
+                | Qt::MatchCaseSensitive),
+        -1);
+    EXPECT_EQ(
+        status->text(),
+        QStringLiteral("Custom value: 13.5"));
+
+    comboBox->setEditText(QStringLiteral("14"));
+    EXPECT_EQ(
+        status->text(),
+        QStringLiteral("Suggested value: 14"));
 }
 
 // Task 6.4: sample cards host a live preview widget and expose code snippets where defined.
@@ -1197,6 +1345,475 @@ TEST_F(GalleryContentPagesTest, StackViewTransitionButtonsUseRequestedSpacing)
         EXPECT_EQ(horizontalGapInAncestor(buttons.at(i), buttons.at(i + 1), preview),
                   expectedButtonRowSpacing(8))
             << "pair " << i;
+}
+
+TEST_F(GalleryContentPagesTest, EditingCommandSampleReusesRouterActions)
+{
+    using Command = EditingCommandRouter::Command;
+
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("line-edit"),
+                               QStringLiteral("line-edit-editing-commands"),
+                               &sample));
+    ASSERT_TRUE(static_cast<bool>(sample.createPreview));
+
+    GallerySampleCard card(sample);
+    card.resize(640, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+
+    auto* router = card.findChild<EditingCommandRouter*>();
+    auto* menu = card.findChild<FluentMenu*>();
+    auto* lineEdit = card.findChild<LineEdit*>();
+    auto* textEdit = card.findChild<TextEdit*>();
+    ASSERT_NE(router, nullptr);
+    ASSERT_NE(menu, nullptr);
+    ASSERT_NE(lineEdit, nullptr);
+    ASSERT_NE(textEdit, nullptr);
+
+    for (QAction* action : router->actions()) {
+        ASSERT_NE(action, nullptr);
+        EXPECT_TRUE(menu->actions().contains(action));
+    }
+
+    lineEdit->selectAll();
+    lineEdit->setFocus(Qt::OtherFocusReason);
+    QApplication::processEvents();
+    EXPECT_TRUE(router->hasActiveTarget());
+    EXPECT_TRUE(router->canExecute(Command::Copy));
+
+    textEdit->setFocus(Qt::OtherFocusReason);
+    QApplication::processEvents();
+    EXPECT_TRUE(router->hasActiveTarget());
+    EXPECT_EQ(router->scopeWindow(), card.window());
+}
+
+TEST_F(GalleryContentPagesTest,
+       EditingCommandSamplesShareOneRouterPerGalleryWindow)
+{
+    fluent::gallery::GallerySample menuSample;
+    fluent::gallery::GallerySample barSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("line-edit"),
+        QStringLiteral("line-edit-editing-commands"),
+        &menuSample));
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("command-bar"),
+        QStringLiteral("command-bar-editing-router"),
+        &barSample));
+
+    QWidget host;
+    auto* menuCard =
+        new GallerySampleCard(menuSample, &host);
+    auto* barCard =
+        new GallerySampleCard(barSample, &host);
+
+    const auto routers =
+        host.findChildren<EditingCommandRouter*>(
+            QStringLiteral("Gallery.WindowEditingCommandRouter"),
+            Qt::FindDirectChildrenOnly);
+    ASSERT_EQ(routers.size(), 1);
+    auto* bar =
+        barCard->findChild<CommandBar*>(
+            QStringLiteral(
+                "Gallery.CommandBar.EditingRouter"));
+    auto* menu = menuCard->findChild<FluentMenu*>();
+    ASSERT_NE(bar, nullptr);
+    ASSERT_NE(menu, nullptr);
+    for (QAction* action : routers.first()->actions()) {
+        EXPECT_TRUE(
+            bar->primaryActions().contains(action)
+            || bar->secondaryActions().contains(action));
+        EXPECT_TRUE(menu->actions().contains(action));
+    }
+}
+
+TEST_F(GalleryContentPagesTest,
+       ParentedPrewarmSampleUsesGalleryWindowRouter)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("command-bar"),
+        QStringLiteral("command-bar-editing-router"),
+        &sample));
+
+    GalleryWindow window;
+    auto* router =
+        window.findChild<EditingCommandRouter*>(
+            QStringLiteral(
+                "Gallery.WindowEditingCommandRouter"),
+            Qt::FindDirectChildrenOnly);
+    ASSERT_NE(router, nullptr);
+
+    GallerySampleCard prewarmedCard(sample, &window);
+    auto* bar =
+        prewarmedCard.findChild<CommandBar*>(
+            QStringLiteral(
+                "Gallery.CommandBar.EditingRouter"));
+    ASSERT_NE(bar, nullptr);
+    EXPECT_EQ(
+        prewarmedCard.findChild<EditingCommandRouter*>(),
+        nullptr);
+    for (QAction* action : router->actions()) {
+        EXPECT_TRUE(
+            bar->primaryActions().contains(action)
+            || bar->secondaryActions().contains(action));
+    }
+}
+
+TEST_F(GalleryContentPagesTest,
+       CommandBarRoutesExposePublicSamplesAndBundledArtwork)
+{
+    const auto barReference =
+        galleryComponentReference(QStringLiteral("command-bar"));
+    const auto flyoutReference =
+        galleryComponentReference(
+            QStringLiteral("command-bar-flyout"));
+    ASSERT_TRUE(barReference.isValid());
+    ASSERT_TRUE(flyoutReference.isValid());
+    EXPECT_EQ(
+        barReference.qualifiedType,
+        QStringLiteral(
+            "fluent::menus_toolbars::CommandBar"));
+    EXPECT_EQ(
+        flyoutReference.qualifiedType,
+        QStringLiteral(
+            "fluent::menus_toolbars::CommandBarFlyout"));
+
+    for (const QString& title :
+         {QStringLiteral("CommandBar"),
+          QStringLiteral("CommandBarFlyout")}) {
+        const QString resource =
+            galleryControlImageResource(title);
+        ASSERT_FALSE(resource.isEmpty());
+        ASSERT_TRUE(QFile::exists(resource));
+        const QImage image(resource);
+        ASSERT_FALSE(image.isNull());
+        EXPECT_EQ(image.size(), QSize(72, 72));
+        EXPECT_TRUE(image.hasAlphaChannel());
+        EXPECT_EQ(image.pixelColor(0, 0).alpha(), 0);
+    }
+
+    fluent::gallery::GallerySample responsive;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("command-bar"),
+        QStringLiteral(
+            "command-bar-responsive-overflow"),
+        &responsive));
+    EXPECT_TRUE(
+        responsive.codeSnippet.contains(
+            QStringLiteral("QAction::HighPriority")));
+    EXPECT_TRUE(
+        responsive.codeSnippet.contains(
+            QStringLiteral(":/icons/add.svg")));
+    for (const QString& sourceFragment :
+         {QStringLiteral("new CommandBar(barHost)"),
+          QStringLiteral("barHost->setFixedWidth(536)"),
+          QStringLiteral("setBackgroundVisible(false)"),
+          QStringLiteral(":/icons/settings.svg"),
+          QStringLiteral(":/icons/help.svg")}) {
+        EXPECT_TRUE(
+            responsive.codeSnippet.contains(sourceFragment))
+            << sourceFragment.toStdString();
+    }
+    GallerySampleCard responsiveCard(responsive);
+    responsiveCard.resize(720, responsiveCard.sizeHint().height());
+    responsiveCard.show();
+    QApplication::processEvents();
+    auto* bar = responsiveCard.findChild<CommandBar*>(
+        QStringLiteral("Gallery.CommandBar.Responsive"));
+    Button* compact =
+        buttonWithText(
+            &responsiveCard, QStringLiteral("Compact view"));
+    Button* labels =
+        buttonWithText(
+            &responsiveCard, QStringLiteral("Labels: Right"));
+    Button* background =
+        buttonWithText(
+            &responsiveCard, QStringLiteral("Show background"));
+    ASSERT_NE(bar, nullptr);
+    ASSERT_NE(compact, nullptr);
+    ASSERT_NE(labels, nullptr);
+    ASSERT_NE(background, nullptr);
+    QStringList primaryTexts;
+    for (QAction* action : bar->primaryActions()) {
+        if (action && !action->isSeparator()) {
+            EXPECT_FALSE(action->icon().isNull());
+            primaryTexts.append(action->text());
+        }
+    }
+    EXPECT_EQ(
+        primaryTexts,
+        (QStringList{
+            QStringLiteral("Add"),
+            QStringLiteral("Edit"),
+            QStringLiteral("Share"),
+            QStringLiteral("Sync"),
+            QStringLiteral("Pin")}));
+    QStringList secondaryTexts;
+    for (QAction* action : bar->secondaryActions()) {
+        ASSERT_NE(action, nullptr);
+        secondaryTexts.append(action->text());
+    }
+    EXPECT_EQ(
+        secondaryTexts,
+        (QStringList{
+            QStringLiteral("Settings"),
+            QStringLiteral("Help")}));
+    compact->click();
+    QApplication::processEvents();
+    EXPECT_FALSE(bar->overflowedPrimaryActions().isEmpty());
+    labels->click();
+    EXPECT_EQ(
+        bar->labelPosition(),
+        CommandBar::LabelPosition::Collapsed);
+    background->click();
+    EXPECT_TRUE(bar->backgroundVisible());
+
+    fluent::gallery::GallerySample integration;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("command-bar"),
+        QStringLiteral("command-bar-editing-router"),
+        &integration));
+    EXPECT_TRUE(
+        integration.codeSnippet.contains(
+            QStringLiteral("EditingCommandRouter")));
+    for (const QString& sourceFragment :
+         {QStringLiteral(
+              "CommandBar::LabelPosition::Right"),
+          QStringLiteral(
+              "router->action(command)"),
+          QStringLiteral(":/icons/undo.svg"),
+          QStringLiteral(":/icons/redo.svg"),
+          QStringLiteral(":/icons/cut.svg"),
+          QStringLiteral(":/icons/copy.svg"),
+          QStringLiteral(":/icons/paste.svg"),
+          QStringLiteral(":/icons/delete.svg"),
+          QStringLiteral(":/icons/select-all.svg"),
+          QStringLiteral(
+              "QTimer::singleShot(0, editor")}) {
+        EXPECT_TRUE(
+            integration.codeSnippet.contains(sourceFragment))
+            << sourceFragment.toStdString();
+    }
+    GallerySampleCard integrationCard(integration);
+    integrationCard.resize(
+        720, integrationCard.sizeHint().height());
+    integrationCard.show();
+    QApplication::processEvents();
+    auto* router =
+        integrationCard.findChild<EditingCommandRouter*>();
+    auto* integrationBar =
+        integrationCard.findChild<CommandBar*>(
+            QStringLiteral(
+                "Gallery.CommandBar.EditingRouter"));
+    auto* editor =
+        integrationCard.findChild<LineEdit*>(
+            QStringLiteral(
+                "Gallery.CommandBar.EditingTarget"));
+    Button* selectText =
+        buttonWithText(
+            &integrationCard, QStringLiteral("Select text"));
+    Button* clearSelection =
+        buttonWithText(
+            &integrationCard, QStringLiteral("Clear selection"));
+    Button* readOnly =
+        buttonWithText(
+            &integrationCard, QStringLiteral("Read-only: Off"));
+    ASSERT_NE(router, nullptr);
+    ASSERT_NE(integrationBar, nullptr);
+    ASSERT_NE(editor, nullptr);
+    ASSERT_NE(selectText, nullptr);
+    ASSERT_NE(clearSelection, nullptr);
+    ASSERT_NE(readOnly, nullptr);
+    EXPECT_EQ(
+        integrationBar->labelPosition(),
+        CommandBar::LabelPosition::Right);
+    EXPECT_NE(
+        buttonWithText(
+            &integrationCard, QStringLiteral("Undo")),
+        nullptr);
+    EXPECT_NE(
+        buttonWithText(
+            &integrationCard, QStringLiteral("Redo")),
+        nullptr);
+    EXPECT_FALSE(integrationBar->backgroundVisible());
+    for (QAction* action : router->actions()) {
+        EXPECT_TRUE(
+            integrationBar->primaryActions().contains(action)
+            || integrationBar->secondaryActions().contains(action));
+        EXPECT_FALSE(action->icon().isNull());
+    }
+    QTest::mouseClick(selectText, Qt::LeftButton);
+    QTRY_VERIFY(router->canExecute(
+        EditingCommandRouter::Command::Cut));
+    EXPECT_TRUE(router->canExecute(
+        EditingCommandRouter::Command::Copy));
+    QTest::mouseClick(readOnly, Qt::LeftButton);
+    QTRY_VERIFY(editor->isReadOnly());
+    EXPECT_FALSE(router->canExecute(
+        EditingCommandRouter::Command::Cut));
+    EXPECT_TRUE(router->canExecute(
+        EditingCommandRouter::Command::Copy));
+    QTest::mouseClick(clearSelection, Qt::LeftButton);
+    QTRY_VERIFY(!router->canExecute(
+        EditingCommandRouter::Command::Copy));
+
+    fluent::gallery::GallerySample modes;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("command-bar-flyout"),
+        QStringLiteral(
+            "command-bar-flyout-show-modes"),
+        &modes));
+    EXPECT_TRUE(
+        modes.codeSnippet.contains(
+            QStringLiteral(
+                "CommandBarFlyout::ShowMode::Transient")));
+    for (const QString& sourceFragment :
+         {QStringLiteral(":/icons/share.svg"),
+          QStringLiteral(":/icons/save.svg"),
+          QStringLiteral(":/icons/delete.svg"),
+          QStringLiteral(":/icons/resize.svg"),
+          QStringLiteral(":/icons/move.svg"),
+          QStringLiteral("QAbstractButton::clicked"),
+          QStringLiteral(
+              "Qt::CustomContextMenu"),
+          QStringLiteral(
+              "QWidget::customContextMenuRequested"),
+          QStringLiteral(
+              "CommandBarFlyout::ShowMode::Standard")}) {
+        EXPECT_TRUE(modes.codeSnippet.contains(sourceFragment))
+            << sourceFragment.toStdString();
+    }
+    GallerySampleCard flyoutCard(modes);
+    flyoutCard.resize(720, flyoutCard.sizeHint().height());
+    flyoutCard.show();
+    QApplication::processEvents();
+    auto* flyout =
+        flyoutCard.findChild<CommandBarFlyout*>(
+            QStringLiteral("Gallery.CommandBarFlyout"));
+    QWidget* tile = flyoutCard.findChild<QWidget*>(
+        QStringLiteral(
+            "Gallery.CommandBarFlyout.ContextTile"));
+    ASSERT_NE(flyout, nullptr);
+    ASSERT_NE(tile, nullptr);
+    EXPECT_EQ(flyout->primaryActions().size(), 3);
+    EXPECT_EQ(flyout->secondaryActions().size(), 2);
+    QStringList flyoutPrimaryTexts;
+    for (QAction* action : flyout->primaryActions()) {
+        ASSERT_NE(action, nullptr);
+        flyoutPrimaryTexts.append(action->text());
+    }
+    EXPECT_EQ(
+        flyoutPrimaryTexts,
+        (QStringList{
+            QStringLiteral("Share"),
+            QStringLiteral("Save"),
+            QStringLiteral("Delete")}));
+    QStringList flyoutSecondaryTexts;
+    for (QAction* action : flyout->secondaryActions()) {
+        ASSERT_NE(action, nullptr);
+        flyoutSecondaryTexts.append(action->text());
+    }
+    EXPECT_EQ(
+        flyoutSecondaryTexts,
+        (QStringList{
+            QStringLiteral("Resize"),
+            QStringLiteral("Move")}));
+    for (QAction* action :
+         flyout->primaryActions()
+             + flyout->secondaryActions()) {
+        ASSERT_NE(action, nullptr);
+        EXPECT_FALSE(action->icon().isNull());
+    }
+    flyout->setAnimationEnabled(false);
+    const QPoint contextPosition = tile->rect().center();
+    QContextMenuEvent contextEvent(
+        QContextMenuEvent::Mouse,
+        contextPosition,
+        tile->mapToGlobal(contextPosition));
+    QApplication::sendEvent(tile, &contextEvent);
+    QApplication::processEvents();
+    EXPECT_TRUE(flyout->isOpen());
+    EXPECT_EQ(
+        flyout->showMode(),
+        CommandBarFlyout::ShowMode::Standard);
+    EXPECT_TRUE(flyout->isExpanded());
+    flyout->close();
+    QTest::mouseClick(
+        tile,
+        Qt::LeftButton,
+        Qt::NoModifier,
+        tile->rect().center());
+    QApplication::processEvents();
+    EXPECT_TRUE(flyout->isOpen());
+    EXPECT_EQ(
+        flyout->showMode(),
+        CommandBarFlyout::ShowMode::Transient);
+    EXPECT_FALSE(flyout->isAlwaysExpanded());
+    EXPECT_FALSE(flyout->isExpanded());
+    flyout->close();
+
+    fluent::gallery::GallerySample alwaysExpandedSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("command-bar-flyout"),
+        QStringLiteral(
+            "command-bar-flyout-always-expanded"),
+        &alwaysExpandedSample));
+    for (const QString& sourceFragment :
+         {QStringLiteral("setAlwaysExpanded(true)"),
+          QStringLiteral(
+              "CommandBarFlyout::ShowMode::Transient"),
+          QStringLiteral("favoriteAction->setCheckable(true)"),
+          QStringLiteral(":/icons/link.svg"),
+          QStringLiteral(":/icons/favorite.svg"),
+          QStringLiteral(":/icons/edit.svg"),
+          QStringLiteral(":/icons/info.svg")}) {
+        EXPECT_TRUE(
+            alwaysExpandedSample.codeSnippet.contains(
+                sourceFragment))
+            << sourceFragment.toStdString();
+    }
+    GallerySampleCard alwaysExpandedCard(
+        alwaysExpandedSample);
+    alwaysExpandedCard.resize(
+        720, alwaysExpandedCard.sizeHint().height());
+    alwaysExpandedCard.show();
+    QApplication::processEvents();
+    auto* alwaysExpandedFlyout =
+        alwaysExpandedCard.findChild<CommandBarFlyout*>(
+            QStringLiteral(
+                "Gallery.CommandBarFlyout.AlwaysExpanded"));
+    Button* openActions =
+        buttonWithText(
+            &alwaysExpandedCard,
+            QStringLiteral("Open actions"));
+    Button* alwaysExpandedToggle =
+        buttonWithText(
+            &alwaysExpandedCard,
+            QStringLiteral("Always expanded: On"));
+    ASSERT_NE(alwaysExpandedFlyout, nullptr);
+    ASSERT_NE(openActions, nullptr);
+    ASSERT_NE(alwaysExpandedToggle, nullptr);
+    alwaysExpandedFlyout->setAnimationEnabled(false);
+    EXPECT_TRUE(alwaysExpandedFlyout->isAlwaysExpanded());
+    openActions->setFocus(Qt::OtherFocusReason);
+    openActions->click();
+    QApplication::processEvents();
+    EXPECT_TRUE(alwaysExpandedFlyout->isOpen());
+    EXPECT_EQ(
+        alwaysExpandedFlyout->showMode(),
+        CommandBarFlyout::ShowMode::Transient);
+    EXPECT_TRUE(alwaysExpandedFlyout->isExpanded());
+    EXPECT_EQ(QApplication::focusWidget(), openActions);
+    alwaysExpandedFlyout->close();
+    alwaysExpandedToggle->click();
+    EXPECT_FALSE(alwaysExpandedFlyout->isAlwaysExpanded());
+    openActions->click();
+    QApplication::processEvents();
+    EXPECT_TRUE(alwaysExpandedFlyout->isOpen());
+    EXPECT_FALSE(alwaysExpandedFlyout->isExpanded());
+    alwaysExpandedFlyout->close();
 }
 
 // Regression: the TreeView "Selection indicator motion" sample shares one left-aligned group with a
@@ -1500,7 +2117,24 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonSwitchesOnlySamplePreviewThe
     auto* themeButton = page->findChild<Button*>(
         QStringLiteral("galleryComponentPageThemeButton"));
     ASSERT_NE(themeButton, nullptr);
+    const QString moonGlyph = Typography::Icons::glyph(
+        QStringLiteral(
+            "ic_fluent_weather_moon_16_regular"));
+    ASSERT_FALSE(moonGlyph.isEmpty());
     EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Light"));
+    EXPECT_EQ(
+        themeButton->property(
+            "gallerySampleThemeGlyph").toString(),
+        Typography::Icons::Sunny);
+    EXPECT_TRUE(
+        themeButton->accessibleName().contains(
+            QStringLiteral("Preview theme: Light")));
+    EXPECT_TRUE(
+        themeButton->accessibleName().contains(
+            QStringLiteral("Switch to Dark")));
+    EXPECT_EQ(
+        themeButton->toolTip(),
+        themeButton->accessibleName());
 
     GallerySampleCard* card = page->sampleCards().first();
     ASSERT_NE(card, nullptr);
@@ -1525,6 +2159,19 @@ TEST_F(GalleryContentPagesTest, ComponentThemeButtonSwitchesOnlySamplePreviewThe
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(page->titleLabel()->effectiveTheme(), fluent::FluentElement::Light);
     EXPECT_EQ(themeButton->property("gallerySampleTheme").toString(), QStringLiteral("Dark"));
+    EXPECT_EQ(
+        themeButton->property(
+            "gallerySampleThemeGlyph").toString(),
+        moonGlyph);
+    EXPECT_TRUE(
+        themeButton->accessibleName().contains(
+            QStringLiteral("Preview theme: Dark")));
+    EXPECT_TRUE(
+        themeButton->accessibleName().contains(
+            QStringLiteral("Switch to Light")));
+    EXPECT_EQ(
+        themeButton->toolTip(),
+        themeButton->accessibleName());
     EXPECT_EQ(previewSurface->property("fluentThemeOverride").toInt(),
               static_cast<int>(fluent::FluentElement::Dark));
     EXPECT_EQ(previewSurface->property("fluentSurfaceColor").value<QColor>(),
@@ -1704,6 +2351,146 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesBodySizedNativeMonospaceFont)
     EXPECT_EQ(code->font().family(),
               QFontDatabase::systemFont(QFontDatabase::FixedFont).family());
     EXPECT_EQ(code->font().pixelSize(), Typography::FontSize::Body);
+}
+
+TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)
+{
+    const QString source =
+        QStringLiteral("auto value = compute();");
+    GalleryCodeBlock block(source);
+    block.setExpanded(true, /*animated=*/false);
+    block.resize(520, block.sizeHint().height());
+    block.show();
+    QApplication::processEvents();
+
+    auto* code = block.findChild<QLabel*>(
+        QStringLiteral("galleryCodeBlockText"));
+    ASSERT_NE(code, nullptr);
+    code->setSelection(0, 4);
+    ASSERT_TRUE(code->hasSelectedText());
+
+    bool sawFluentMenu = false;
+    bool sawCopy = false;
+    bool sawSelectAll = false;
+    bool sawCopyIcon = false;
+    bool sawSelectAllIcon = false;
+    QTimer::singleShot(0, [&]() {
+        auto* menu =
+            qobject_cast<FluentMenu*>(
+                QApplication::activePopupWidget());
+        sawFluentMenu = menu != nullptr;
+        if (!menu)
+            return;
+
+        EXPECT_EQ(
+            menu->objectName(),
+            QStringLiteral("FluentLabel.ContextMenu"));
+        EXPECT_EQ(
+            menu->fontStyle(),
+            Typography::FontRole::Caption);
+        EXPECT_EQ(
+            menu->font().pixelSize(),
+            Typography::FontSize::Caption);
+        for (QAction* action : menu->actions()) {
+            ASSERT_NE(action, nullptr);
+            if (!action->isSeparator()) {
+                EXPECT_LT(
+                    menu->actionGeometry(action).height(),
+                    ::Spacing::ControlHeight::Standard);
+            }
+            if (!action->icon().isNull()) {
+                const QSize iconSize =
+                    action->icon().actualSize(QSize(64, 64));
+                EXPECT_LE(
+                    iconSize.width(),
+                    Typography::IconSize::Standard);
+                EXPECT_LE(
+                    iconSize.height(),
+                    Typography::IconSize::Standard);
+            }
+            if (actionUsesStandardKey(
+                    action, QKeySequence::Copy)) {
+                sawCopy = true;
+                sawCopyIcon = !action->icon().isNull();
+                EXPECT_TRUE(action->isEnabled());
+                action->trigger();
+            } else if (actionUsesStandardKey(
+                           action, QKeySequence::SelectAll)) {
+                sawSelectAll = true;
+                sawSelectAllIcon = !action->icon().isNull();
+                EXPECT_TRUE(action->isEnabled());
+            }
+        }
+        menu->close();
+    });
+
+    const QPoint localPosition = code->rect().center();
+    QContextMenuEvent event(
+        QContextMenuEvent::Mouse,
+        localPosition,
+        code->mapToGlobal(localPosition));
+    QApplication::sendEvent(code, &event);
+
+    EXPECT_TRUE(event.isAccepted());
+    EXPECT_TRUE(sawFluentMenu);
+    EXPECT_TRUE(sawCopy);
+    EXPECT_TRUE(sawSelectAll);
+    EXPECT_TRUE(sawCopyIcon);
+    EXPECT_TRUE(sawSelectAllIcon);
+    ASSERT_NE(QApplication::clipboard(), nullptr);
+    EXPECT_EQ(
+        QApplication::clipboard()->text(),
+        QStringLiteral("auto"));
+}
+
+TEST_F(
+    GalleryContentPagesTest,
+    ComponentReferenceValuesUseSharedFluentContextMenu)
+{
+    const fluent::gallery::GalleryComponentReference reference{
+        QStringLiteral("<FluentQt/MenusToolbars.h>"),
+        QStringLiteral(
+            "fluent::menus_toolbars::CommandBar"),
+        QStringLiteral("FluentQt::FluentQt")};
+    GalleryComponentReferenceCard card(reference);
+    card.resize(620, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+
+    auto* value =
+        card.findChild<fluent::textfields::Label*>(
+            QStringLiteral(
+                "galleryComponentReferenceHeader"));
+    ASSERT_NE(value, nullptr);
+    value->setSelection(0, 9);
+    ASSERT_TRUE(value->hasSelectedText());
+
+    bool sawFluentMenu = false;
+    QTimer::singleShot(0, [&]() {
+        auto* menu = qobject_cast<FluentMenu*>(
+            QApplication::activePopupWidget());
+        sawFluentMenu = menu != nullptr;
+        if (!menu)
+            return;
+
+        EXPECT_EQ(
+            menu->objectName(),
+            QStringLiteral("FluentLabel.ContextMenu"));
+        EXPECT_EQ(
+            menu->font().pixelSize(),
+            Typography::FontSize::Caption);
+        menu->close();
+    });
+
+    const QPoint localPosition = value->rect().center();
+    QContextMenuEvent event(
+        QContextMenuEvent::Mouse,
+        localPosition,
+        value->mapToGlobal(localPosition));
+    QApplication::sendEvent(value, &event);
+
+    EXPECT_TRUE(event.isAccepted());
+    EXPECT_TRUE(sawFluentMenu);
 }
 
 TEST_F(GalleryContentPagesTest, CodeBlockExpansionKeepsFoundationPageGeometryStable)

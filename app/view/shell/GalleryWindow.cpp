@@ -10,6 +10,7 @@
 #include "compatibility/WindowChromeCompat.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
+#include "components/textfields/EditingCommandRouter.h"
 #include "components/windowing/TitleBar.h"
 #include "design/Typography.h"
 #include "model/GalleryContentCatalog.h"
@@ -25,6 +26,7 @@
 #include "GalleryWindowMetrics.h"
 #include "view/pages/GalleryContentPage.h"
 #include "view/pages/SettingsPage.h"
+#include "view/support/GalleryEditingCommands.h"
 
 namespace fluent::gallery {
 namespace {
@@ -86,6 +88,13 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     // pane / title bar paint against the right backdrop from the first frame.
     // zh_CN: 在构建并显示 chrome 之前施加持久化的窗口背景效果，使导航栏/标题栏从第一帧就按正确背景绘制。
     setBackdropEffect(GallerySettings::instance().windowEffect());
+
+    m_editingCommandRouter =
+        new fluent::textfields::EditingCommandRouter(
+            this, this);
+    m_editingCommandRouter->setObjectName(
+        QStringLiteral(
+            "Gallery.WindowEditingCommandRouter"));
 
     createTitleBarContent();
     buildNavigationShell();
