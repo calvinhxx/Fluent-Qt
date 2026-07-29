@@ -12,6 +12,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QSet>
@@ -1047,7 +1048,10 @@ void ListView::mouseReleaseEvent(QMouseEvent* event) {
                 }
                 if (moved) {
                     setCurrentIndex(model()->index(dst, 0));
+                    QPointer<ListView> guard(this);
                     emit itemReordered(src, dst);
+                    if (!guard)
+                        return;
                 }
             }
         }
@@ -1074,7 +1078,10 @@ void ListView::mouseReleaseEvent(QMouseEvent* event) {
             released.isValid() && released.row() == m_pressedRow;
         if (clickOnPressedItem) {
             applyPointerSelection(released, event);
+            QPointer<ListView> guard(this);
             emit itemClicked(released.row());
+            if (!guard)
+                return;
         }
         m_pressedRow = -1;
         updatePressedHoverRow(-1);

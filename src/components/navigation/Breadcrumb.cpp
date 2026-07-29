@@ -8,6 +8,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QStyle>
 
@@ -786,8 +787,13 @@ void Breadcrumb::activateItem(int itemIndex)
         return;
 
     const BreadcrumbItem item = m_items.at(itemIndex);
+    QPointer<Breadcrumb> guard(this);
     emit itemClicked(itemIndex);
+    if (!guard)
+        return;
     emit itemActivated(itemIndex, item);
+    if (!guard)
+        return;
     if (m_autoTruncateOnItemClick)
         truncateAfter(itemIndex);
 }

@@ -9,7 +9,9 @@
 #include <QPainter>
 #include <QMargins>
 #include <QPolygonF>
+#include <QPointer>
 #include <QSignalSpy>
+#include <QTest>
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/FluentElement.h"
@@ -139,6 +141,23 @@ protected:
     FluentTestWindow* window;
     AnchorLayout* layout;
 };
+
+TEST_F(ButtonTest, MouseClickHandlerCanSynchronouslyDeleteButtonOwner) {
+    auto* owner = new QWidget;
+    auto* button = new Button(owner);
+    button->resize(120, 36);
+    owner->resize(160, 80);
+    owner->show();
+    QPointer<Button> buttonGuard(button);
+
+    QObject::connect(button, &Button::clicked, window, [owner] {
+        delete owner;
+    });
+
+    QTest::mouseClick(button, Qt::LeftButton);
+
+    EXPECT_TRUE(buttonGuard.isNull());
+}
 
 TEST_F(ButtonTest, IconOffsetYMovesIconFontRendering) {
     const qreal baselineCenterY = renderedDarkPixelCenterY(0);
