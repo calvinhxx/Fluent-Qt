@@ -4,6 +4,7 @@
 #include "LineEdit.h"
 
 #include <QMargins>
+#include <QPointer>
 #include <QStringList>
 #include <QVariant>
 
@@ -179,6 +180,7 @@ private:
     void updateSuggestionMetrics();
     void handleTextChanged(const QString& text);
 
+    void ensureSuggestionPopup();
     void openSuggestionList();
     void closeSuggestionList();
     void previewSuggestion(int row);
@@ -198,7 +200,7 @@ private:
 
     ::fluent::basicinput::Button* m_queryButton = nullptr;
     ::fluent::basicinput::Button* m_clearButton = nullptr;
-    SuggestionListPopup* m_suggestionPopup = nullptr;
+    QPointer<SuggestionListPopup> m_suggestionPopup;
 
     TextChangeReason m_nextChangeReason = TextChangeReason::ProgrammaticChange;
     QString m_userTypedText;

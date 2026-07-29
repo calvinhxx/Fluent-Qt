@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QImage>
 #include <QListView>
+#include <QPointer>
 #include <QScrollBar>
 #include <QTimer>
 #include <QWheelEvent>
@@ -305,6 +306,48 @@ TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions) {
     QApplication::processEvents();
     EXPECT_FALSE(box->isSuggestionListOpen());
     EXPECT_FALSE(openSpy.last().at(0).toBool());
+}
+
+TEST_F(AutoSuggestBoxTest, SuggestionPopupIsRecreatedAfterOwnerMovesTopLevel) {
+    auto* firstWindow = window;
+    auto* secondWindow = new AutoSuggestBoxTestWindow;
+    secondWindow->setFixedSize(520, 360);
+    secondWindow->onThemeUpdated();
+
+    auto* host = new QWidget(firstWindow);
+    auto* box = new AutoSuggestBox(host);
+    box->setSuggestions({QStringLiteral("Alpha"), QStringLiteral("Beta")});
+    box->resize(240, box->height());
+    host->show();
+    showAndFocus(box);
+    QTest::keyClicks(box, QStringLiteral("a"));
+    QApplication::processEvents();
+    ASSERT_TRUE(box->isSuggestionListOpen());
+    QPointer<fluent::dialogs_flyouts::Flyout> firstPopup(
+        firstWindow->findChild<fluent::dialogs_flyouts::Flyout*>(
+            QStringLiteral("AutoSuggestBoxSuggestionPopup")));
+    ASSERT_FALSE(firstPopup.isNull());
+
+    host->setParent(secondWindow);
+    host->show();
+    secondWindow->show();
+    delete firstWindow;
+    window = secondWindow;
+    layout = nullptr;
+    QApplication::processEvents();
+    ASSERT_TRUE(firstPopup.isNull());
+
+    box->clear();
+    showAndFocus(box);
+    QTest::keyClicks(box, QStringLiteral("b"));
+    QApplication::processEvents();
+
+    EXPECT_TRUE(box->isSuggestionListOpen());
+    auto* recreatedPopup =
+        secondWindow->findChild<fluent::dialogs_flyouts::Flyout*>(
+            QStringLiteral("AutoSuggestBoxSuggestionPopup"));
+    ASSERT_NE(recreatedPopup, nullptr);
+    EXPECT_EQ(recreatedPopup->parentWidget(), secondWindow);
 }
 
 TEST_F(AutoSuggestBoxTest, KeyboardPreviewAndSubmitSuggestion) {

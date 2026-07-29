@@ -322,7 +322,7 @@ ComboBox::ComboBox(QWidget* parent) : QComboBox(parent) {
 }
 
 ComboBox::~ComboBox() {
-    delete m_popup;
+    delete m_popup.data();
 }
 
 void ComboBox::initAnimation() {
@@ -551,7 +551,7 @@ void ComboBox::resizeEvent(QResizeEvent* event) {
 // ── Popup ────────────────────────────────────────────────────────────────────
 
 void ComboBox::showPopup() {
-    if (m_popupVisible) return;
+    if (m_popupVisible && m_popup) return;
     m_popupVisible = true;
 
     if (!m_popup)

@@ -5,6 +5,7 @@
 #include <QSignalSpy>
 #include <QVBoxLayout>
 #include <QImage>
+#include <QPointer>
 #include <QTest>
 #include "components/dialogs_flyouts/ContentDialog.h"
 #include "components/basicinput/Button.h"
@@ -168,6 +169,26 @@ TEST_F(ContentDialogTest, PrimaryButtonSignalAndResult) {
     EXPECT_EQ(clickSpy.count(), 1);
     EXPECT_EQ(finishSpy.count(), 1);
     EXPECT_EQ(dialog.result(), ContentDialog::ResultPrimary);
+}
+
+TEST_F(ContentDialogTest, PrimarySignalCanSynchronouslyDeleteDialog) {
+    auto* dialog = new ContentDialog(window);
+    dialog->setAnimationEnabled(false);
+    dialog->setPrimaryButtonText(QStringLiteral("Delete"));
+    QPointer<ContentDialog> guard(dialog);
+    QObject::connect(dialog, &ContentDialog::primaryButtonClicked, window, [dialog] {
+        delete dialog;
+    });
+
+    const auto buttons = dialog->findChildren<fluent::basicinput::Button*>();
+    const auto primary = std::find_if(
+        buttons.cbegin(), buttons.cend(), [](const auto* button) {
+            return button->text() == QStringLiteral("Delete");
+        });
+    ASSERT_NE(primary, buttons.cend());
+    (*primary)->click();
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 TEST_F(ContentDialogTest, SecondaryButtonSignalAndResult) {

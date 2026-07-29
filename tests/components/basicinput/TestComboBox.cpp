@@ -16,6 +16,7 @@
 #include <QFontMetricsF>
 #include <QImage>
 #include <QPixmap>
+#include <QPointer>
 #include <QWheelEvent>
 #include <QtTest/QTest>
 
@@ -487,6 +488,38 @@ TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle) {
     QApplication::processEvents();
     EXPECT_FALSE(popup->isOpen());
     EXPECT_FALSE(popup->isVisible());
+}
+
+TEST_F(ComboBoxTest, PopupIsRecreatedAfterOwnerMovesToAnotherTopLevel) {
+    auto* firstWindow = window;
+    auto* secondWindow = new ComboBoxTestWindow;
+    secondWindow->resize(600, 500);
+    secondWindow->onThemeUpdated();
+
+    auto* host = new QWidget(firstWindow);
+    auto* comboBox = new ComboBox(host);
+    comboBox->addItems({QStringLiteral("One"), QStringLiteral("Two")});
+    host->show();
+    auto* firstPopup = openPopupFor(comboBox, firstWindow);
+    ASSERT_NE(firstPopup, nullptr);
+    QPointer<fluent::dialogs_flyouts::Flyout> firstPopupGuard(firstPopup);
+
+    host->setParent(secondWindow);
+    host->show();
+    secondWindow->show();
+    delete firstWindow;
+    window = secondWindow;
+    QApplication::processEvents();
+    ASSERT_TRUE(firstPopupGuard.isNull());
+
+    comboBox->showPopup();
+    QApplication::processEvents();
+    auto* recreatedPopup =
+        secondWindow->findChild<fluent::dialogs_flyouts::Flyout*>(
+            QStringLiteral("ComboBoxPopup"));
+    ASSERT_NE(recreatedPopup, nullptr);
+    EXPECT_TRUE(recreatedPopup->isVisible());
+    EXPECT_EQ(recreatedPopup->parentWidget(), secondWindow);
 }
 
 TEST_F(ComboBoxTest, PopupInheritsThemeOverrideFromComboBox) {

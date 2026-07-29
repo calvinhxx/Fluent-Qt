@@ -7,6 +7,7 @@
 #include <QPainterPath>
 #include <QPaintEvent>
 #include <QPoint>
+#include <QPointer>
 #include <QPolygon>
 #include <QPolygonF>
 #include <QPropertyAnimation>
@@ -148,7 +149,10 @@ void CoachMark::open()
     m_fadeAnim->setStartValue(0.0);
     m_fadeAnim->setEndValue(1.0);
     m_fadeAnim->start();
+    QPointer<CoachMark> guard(this);
     emit openChanged(true);
+    if (!guard || !m_open)
+        return;
     emit opened();
 }
 
@@ -166,7 +170,10 @@ void CoachMark::close()
     m_fadeAnim->setStartValue(fadeOpacity());
     m_fadeAnim->setEndValue(0.0);
     m_fadeAnim->start();
+    QPointer<CoachMark> guard(this);
     emit openChanged(false);
+    if (!guard || m_open)
+        return;
     emit closed();
 }
 

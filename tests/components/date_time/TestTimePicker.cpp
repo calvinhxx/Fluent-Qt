@@ -5,6 +5,7 @@
 #include <QImage>
 #include <QLocale>
 #include <QPalette>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
 #include <QTime>
@@ -310,6 +311,22 @@ TEST_F(TimePickerTest, EntryOpensWithMouseAndKeyboardAndDisabledStateBlocksOpen)
     picker->openPicker();
     processEvents();
     EXPECT_FALSE(picker->isDropDownOpen());
+}
+
+TEST_F(TimePickerTest, OpenStateHandlerCanSynchronouslyDeletePicker)
+{
+    auto* picker = new TimePicker(window);
+    QPointer<TimePicker> guard(picker);
+    QObject::connect(
+        picker, &TimePicker::dropDownOpenChanged, qApp,
+        [picker](bool open) {
+            if (open)
+                delete picker;
+        });
+
+    picker->openPicker();
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 TEST_F(TimePickerTest, FlyoutCommitCancelEscapeAndLightDismiss)

@@ -391,6 +391,48 @@ TEST_F(DrawerViewTest, AnimationDisabledOpenCloseLifecycleAndAttachment)
     EXPECT_FALSE(openChangedSpy.at(1).at(0).toBool());
 }
 
+TEST_F(DrawerViewTest, AboutToShowCannotRecursivelyOpenDrawer)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    DrawerView drawer(&window);
+    drawer.setModal(false);
+    drawer.setDim(false);
+    drawer.setAnimationEnabled(false);
+
+    int callbackCount = 0;
+    QObject::connect(&drawer, &DrawerView::aboutToShow, &drawer, [&] {
+        ++callbackCount;
+        drawer.open();
+    });
+
+    drawer.open();
+
+    EXPECT_EQ(callbackCount, 1);
+    EXPECT_TRUE(drawer.isOpen());
+    EXPECT_TRUE(drawer.isVisible());
+}
+
+TEST_F(DrawerViewTest, PositionHandlerCanSynchronouslyDeleteDrawer)
+{
+    DrawerTestWindow window;
+    prepareWindow(window);
+    auto* drawer = new DrawerView(&window);
+    drawer->setModal(false);
+    drawer->setDim(false);
+    drawer->setAnimationEnabled(false);
+    QPointer<DrawerView> guard(drawer);
+    QObject::connect(
+        drawer, &DrawerView::positionChanged, &window,
+        [drawer](qreal) {
+            delete drawer;
+        });
+
+    drawer->open();
+
+    EXPECT_TRUE(guard.isNull());
+}
+
 TEST_F(DrawerViewTest, OpenReResolvesOwnerAndPreservesAvailableMarginsAfterHostJoinsFinalWindow)
 {
     DrawerTestWindow window;

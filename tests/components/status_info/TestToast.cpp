@@ -122,6 +122,29 @@ TEST(ToastTest, Contract_PresentUsesTopLevelAndTracksResize)
     EXPECT_FALSE(toast.isVisible());
 }
 
+TEST(ToastTest, Contract_OpenStateHandlerCanSynchronouslyDeleteToast)
+{
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+    QWidget anchor(&host);
+    anchor.show();
+
+    auto* toast = new Toast(&anchor);
+    toast->setMessage(QStringLiteral("Saved"));
+    toast->setDuration(0);
+    toast->setAnimationEnabled(false);
+    QPointer<Toast> guard(toast);
+    QObject::connect(toast, &Toast::isOpenChanged, &host,
+                     [toast](bool open) {
+                         if (open)
+                             delete toast;
+                     });
+
+    EXPECT_FALSE(toast->present(&anchor));
+    EXPECT_TRUE(guard.isNull());
+}
+
 TEST(ToastTest, Contract_ToastDoesNotBlockPointerHitTesting)
 {
     QWidget host;

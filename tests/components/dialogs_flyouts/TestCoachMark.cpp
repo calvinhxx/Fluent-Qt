@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QGuiApplication>
 #include <QLabel>
+#include <QPointer>
 #include <QScreen>
 #include <QSignalSpy>
 #include <QTest>
@@ -146,6 +147,22 @@ TEST_F(CoachMarkTest, OpenCloseToggleStateAndEmitOnce) {
 }
 
 // ── 4. setOpen() delegates to open()/close() ─────────────────────────────────
+TEST_F(CoachMarkTest, OpenChangedHandlerCanSynchronouslyDeleteCoachMark) {
+    auto* target = makeTarget(QPoint(260, 220));
+    auto* coach = new CoachMark(window);
+    coach->setTarget(target);
+    QPointer<CoachMark> guard(coach);
+    QObject::connect(coach, &CoachMark::openChanged, window,
+                     [coach](bool open) {
+                         if (open)
+                             delete coach;
+                     });
+
+    coach->open();
+
+    EXPECT_TRUE(guard.isNull());
+}
+
 TEST_F(CoachMarkTest, SetOpenDelegates) {
     auto* target = makeTarget(QPoint(260, 220));
 
