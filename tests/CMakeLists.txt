@@ -36,6 +36,8 @@ set(FLUENT_QT_CONTRACT_TEST_TARGETS
     test_command_bar
     test_command_bar_flyout
     test_label
+    test_line_edit
+    test_password_box
     test_text_edit
 )
 
