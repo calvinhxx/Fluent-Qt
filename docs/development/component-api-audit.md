@@ -59,6 +59,100 @@ and keeps CompoundButton's text-plus-parent construction aligned with Button.
 helper/error composition, and accessibility relationships need a separate
 contract rather than a thin visual wrapper.
 
+## 2026-07-28 editing command router addendum
+
+- `fluent::textfields::EditingCommandRouter` owns one stable set of semantic
+  editing `QAction` objects per top-level window.
+- A second router for the same top-level window is hard-rejected: its stable
+  actions remain disabled, carry no shortcuts, and are not attached to the
+  window.
+- Focus routing supports `LineEdit`, `TextEdit`, and the existing LineEdit
+  subclasses without exposing TextEdit's private `QTextEdit`.
+- Raw application Qt editors remain outside the first public contract, and
+  independent top-level windows do not share action or focus state.
+- PasswordBox Hidden and Peek modes never advertise or dispatch Cut/Copy;
+  a context-menu request also ends press-and-hold Peek before presenting the
+  disabled commands. Visible mode follows ordinary LineEdit capability.
+- Callers may customize action text, icon, and shortcuts. Router-owned enabled
+  state follows focus, selection, undo history, read-only state, enabled state,
+  and clipboard content.
+
+Focused contracts cover stable action lifetime, native shortcuts, command
+execution, read-only/clipboard refresh, unsupported targets, supported-target
+switching, multiple windows, scope destruction, TextEdit private adaptation,
+PasswordBox export policy, inherited editors, and menu activation/restoration.
+
+## 2026-07-28 CommandBar Capability Phase 3 addendum
+
+- `fluent::menus_toolbars::CommandBar` and `CommandBarFlyout` use caller-owned
+  `QAction` as their only public command item and publish explicit primary and
+  secondary semantic order.
+- The pointer-based QWidget action APIs are retained as primary shorthands;
+  explicit section methods own cross-section moves and deterministic
+  reordering.
+- Actions are borrowed without reparenting or deletion. Existing QObject
+  parents retain their ordinary Qt lifetime behavior, and action destruction
+  removes stale membership safely.
+- `QWidgetAction`, nested menus, and captionless non-separator actions are
+  rejected. A registered action that temporarily loses presentability remains
+  in its semantic section for later recovery.
+- `CommandBarFlyout::ShowMode::Transient` disables Popup focus-on-open without
+  changing the default behavior of Popup or existing subclasses. Parentless
+  and cross-window invocation targets are rejected.
+- Public enum signal types are declared as metatypes for the Qt 5.15 baseline.
+  The two public headers are exported and installed; the shared action model
+  remains private.
+- Private presenters implement deterministic priority-plus-logical-tail
+  overflow, separator normalization, inline and contextual keyboard navigation,
+  focus repair/restoration, RTL visual order, scrolling, exact activation, and
+  deletion-safe action updates.
+- Private overflow and secondary-row layouts reconcile against the exposed
+  scroll viewport immediately and once more after opening. This prevents stale
+  pre-exposure viewport widths from clipping captions without changing public
+  or installed API.
+- Accessibility is supplied by private adapters, so command roles, names,
+  accelerators, checked/disabled state, and More expansion state do not expand
+  the public or installed surface.
+- EditingCommandRouter actions remain window-scoped when reused by command
+  surfaces. Presenters retain the editor target and selection, while
+  cross-window insertion is rejected.
+- Gallery routes and public-only snippets cover responsive CommandBar overflow,
+  router-action reuse, and CommandBarFlyout show modes.
+
+Focused Capability Phase 3 contracts now cover property no-ops, section order,
+insertion and move rules, Qt shorthands, supported and rejected action kinds,
+borrowed lifetime, shared actions, responsive presentation, expansion state,
+pointer/keyboard input, focus preservation and restoration, invocation
+boundaries, point/anchor retargeting, accessibility, design-language rendering,
+router integration, and Gallery exposure. Automated validation is complete on
+Windows Qt 6.9.3 and Linux Qt 5.15.2. Focused Computer Use desktop regression
+also covers the flyout VisualCheck and Gallery overflow/focus paths; the
+project owner's release-wide unified regression remains an external gate.
+
+## 2026-07-29 editing context-menu consistency addendum
+
+Text-selection and editing context menus now share the private
+`TextEditingMenu_p` presenter. The shared surface uses the Caption typography
+token, the WinUI 16 px command-icon slot, compact item padding, visible group
+dividers, and the standard Fluent menu shadow.
+
+| Entry point | Context-menu policy |
+| --- | --- |
+| `LineEdit`, `PasswordBox`, `AutoSuggestBox`, `NumberBox`, and ColorPicker editors | Shared Fluent editing menu through `LineEdit`; PasswordBox applies its export restrictions first. |
+| `TextEdit` private `QTextEdit` | Shared Fluent editing menu while retaining the Qt standard menu long enough for Undo/Redo dispatch. |
+| Selectable `Label`, including Gallery source and component-reference values | Shared read-only Fluent menu with Copy and Select All. |
+| Editable `ComboBox` with its normal Fluent editor | Inherits the `LineEdit` policy. |
+| Editable `ComboBox` with a caller-supplied plain `QLineEdit` | The ComboBox event filter adapts only `Qt::DefaultContextMenu`; caller-owned Custom, Actions, Prevent, and NoContextMenu policies remain untouched. |
+| `CommandBarFlyout` sample context surfaces | Intentionally use `CommandBarFlyout`, because they demonstrate a contextual command surface rather than text editing. |
+| `Window` title-bar system menu | Intentionally native: it is the operating-system window menu. |
+| Gallery system-tray menu | Intentionally native/platform-owned through `QSystemTrayIcon`. |
+| `ScrollBar` | Intentionally `Qt::NoContextMenu`. |
+
+The Gallery no longer carries a separate code-block menu implementation.
+Focused contracts cover `LineEdit`, `TextEdit`, selectable `Label`, a
+caller-supplied ComboBox editor, and the Gallery source block so new native-menu
+leaks are caught at the owning layer.
+
 ## Scope
 
 This historical audit covers public component headers under `src/components/**`
@@ -132,11 +226,11 @@ platform contracts.
 | `collections` | ListView, GridView, FlowView, TreeView, FlipView, SplitView, StackView, DrawerView | Present for listed components | flow-view, gridview-drag-reorder, listview-wheel-input, listview-indicator-motion, tree-view, flipview-wheel-input, split-view, stack-view, drawer-view |
 | `date_time` | CalendarView, CalendarDatePicker, DatePicker, TimePicker | Present for listed components | calendar-date-picker, calendar-view-pager, date-picker, time-picker |
 | `dialogs_flyouts` | Dialog, ContentDialog, Popup, Flyout, TeachingTip | Present for listed components | dialog-winui3-polish, popup-overlay, flyout, teaching-tip |
-| `menus_toolbars` | FluentMenu, FluentMenuItem, MenuBar | MenuBar focused test present; menu classes are currently exercised through MenuBar and DropDownButton tests | menu-bar |
+| `menus_toolbars` | CommandBar, CommandBarFlyout, FluentMenu, FluentMenuItem, MenuBar | CommandBar and CommandBarFlyout Capability Phase 3 focused tests present; menu classes are also exercised through MenuBar and DropDownButton tests | command-bar, menu-bar |
 | `navigation` | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | Present for listed public components except StackContentHost as standalone host | breadcrumb, navigation-view, pivot, selector-bar, tab-view |
 | `scrolling` | ScrollBar, ScrollView, AnnotatedScrollBar, PipsPager | Present for listed components | scroll-view, annotated-scrollbar, pips-pager |
 | `status_info` | Avatar, ToolTip, InfoBar, InfoBadge, ProgressBar, ProgressRing, Shimmer, Toast | Present for listed components | tooltip-animation, info-bar, info-badge, progress-bar, progress-ring |
-| `textfields` | Label, LineEdit, TextEdit, AutoSuggestBox, PasswordBox, NumberBox | Present for listed components | label, auto-suggest-box, password-box, number-box |
+| `textfields` | Label, LineEdit, TextEdit, AutoSuggestBox, PasswordBox, NumberBox, EditingCommandRouter | Present for listed components | label, auto-suggest-box, password-box, number-box, editing-command-router |
 | `windowing` | Window, TitleBar | Window focused test present | fluent-window, window-platform-compatibility |
 
 ## Findings
