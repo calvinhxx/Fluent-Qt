@@ -9,19 +9,26 @@
 #include <QSizePolicy>
 #include <QVBoxLayout>
 
+#include "components/menus_toolbars/Menu.h"
+#include "components/menus_toolbars/MenuBar.h"
 #include "components/textfields/AutoSuggestBox.h"
+#include "components/textfields/EditingCommandRouter.h"
 #include "components/textfields/Label.h"
 #include "components/textfields/LineEdit.h"
 #include "components/textfields/NumberBox.h"
 #include "components/textfields/PasswordBox.h"
 #include "components/textfields/TextEdit.h"
 #include "design/Typography.h"
+#include "view/support/GalleryEditingCommands.h"
 #include "SampleBuilders.h"
 
 namespace fluent::gallery {
 namespace {
 
+using fluent::menus_toolbars::FluentMenu;
+using fluent::menus_toolbars::FluentMenuBar;
 using fluent::textfields::AutoSuggestBox;
+using fluent::textfields::EditingCommandRouter;
 using fluent::textfields::Label;
 using fluent::textfields::LineEdit;
 using fluent::textfields::NumberBox;
@@ -412,6 +419,104 @@ QVector<GallerySample> lineEditSamples()
                                         });
 
                        layout->addWidget(lineEdit);
+                       layout->addWidget(status);
+                       return surface;
+                   }),
+        makeSample(QStringLiteral("line-edit-editing-commands"),
+                   QStringLiteral("Window-scoped editing commands"),
+                   QStringLiteral(
+                       "One stable action set can be reused by menus and "
+                       "shortcuts while following the focused Fluent editor."),
+                   QStringLiteral("using Command = EditingCommandRouter::Command;\n"
+                                  "\n"
+                                  "auto* router = new EditingCommandRouter(this, this);\n"
+                                  "auto* menuBar = new FluentMenuBar(this);\n"
+                                  "menuBar->setBackgroundVisible(false);\n"
+                                  "menuBar->setFixedWidth(360);\n"
+                                  "\n"
+                                  "auto* editMenu = new FluentMenu(\"Edit\", menuBar);\n"
+                                  "editMenu->addAction(router->action(Command::Undo));\n"
+                                  "editMenu->addAction(router->action(Command::Redo));\n"
+                                  "editMenu->addSeparator();\n"
+                                  "editMenu->addAction(router->action(Command::Cut));\n"
+                                  "editMenu->addAction(router->action(Command::Copy));\n"
+                                  "editMenu->addAction(router->action(Command::Paste));\n"
+                                  "editMenu->addAction(router->action(Command::Delete));\n"
+                                  "editMenu->addSeparator();\n"
+                                  "editMenu->addAction(router->action(Command::SelectAll));\n"
+                                  "menuBar->addMenu(editMenu);\n"
+                                  "\n"
+                                  "auto* lineEdit = new LineEdit(this);\n"
+                                  "lineEdit->setText(\"Edit this line\");\n"
+                                  "lineEdit->setFixedWidth(360);\n"
+                                  "\n"
+                                  "auto* textEdit = new TextEdit(this);\n"
+                                  "textEdit->setPlainText(\"The same actions follow this editor.\");\n"
+                                  "textEdit->setMinVisibleLines(2);\n"
+                                  "textEdit->setMaxVisibleLines(2);\n"
+                                  "textEdit->setFixedWidth(360);\n"
+                                  "\n"
+                                  "auto* statusLabel = new Label(\"No editing target\", this);\n"
+                                  "connect(router, &EditingCommandRouter::activeTargetChanged,\n"
+                                  "        statusLabel, [statusLabel](bool active) {\n"
+                                  "            statusLabel->setText(active\n"
+                                  "                ? \"Editing target active\"\n"
+                                  "                : \"No editing target\");\n"
+                                  "        });"),
+                   [](QWidget* parent) {
+                       using Command = EditingCommandRouter::Command;
+
+                       auto* surface = textFieldSurface(parent);
+                       auto* layout = static_cast<QVBoxLayout*>(surface->layout());
+                       auto* router =
+                           galleryWindowEditingCommandRouter(surface);
+
+                       auto* menuBar = new FluentMenuBar(surface);
+                       menuBar->setBackgroundVisible(false);
+                       menuBar->setFixedWidth(360);
+
+                       auto* editMenu =
+                           new FluentMenu(QStringLiteral("Edit"), menuBar);
+                       editMenu->addAction(router->action(Command::Undo));
+                       editMenu->addAction(router->action(Command::Redo));
+                       editMenu->addSeparator();
+                       editMenu->addAction(router->action(Command::Cut));
+                       editMenu->addAction(router->action(Command::Copy));
+                       editMenu->addAction(router->action(Command::Paste));
+                       editMenu->addAction(router->action(Command::Delete));
+                       editMenu->addSeparator();
+                       editMenu->addAction(router->action(Command::SelectAll));
+                       menuBar->addMenu(editMenu);
+
+                       auto* lineEdit = new LineEdit(surface);
+                       lineEdit->setText(QStringLiteral("Edit this line"));
+                       lineEdit->setFixedWidth(360);
+
+                       auto* textEdit = new TextEdit(surface);
+                       textEdit->setPlainText(QStringLiteral(
+                           "The same actions follow this editor."));
+                       textEdit->setMinVisibleLines(2);
+                       textEdit->setMaxVisibleLines(2);
+                       textEdit->setFixedWidth(360);
+
+                       auto* status = makeStatusLabel(
+                           surface, QStringLiteral("No editing target"));
+                       QObject::connect(
+                           router,
+                           &EditingCommandRouter::activeTargetChanged,
+                           status,
+                           [status](bool active) {
+                               status->setText(
+                                   active
+                                       ? QStringLiteral(
+                                             "Editing target active")
+                                       : QStringLiteral(
+                                             "No editing target"));
+                           });
+
+                       layout->addWidget(menuBar);
+                       layout->addWidget(lineEdit);
+                       layout->addWidget(textEdit);
                        layout->addWidget(status);
                        return surface;
                    }),

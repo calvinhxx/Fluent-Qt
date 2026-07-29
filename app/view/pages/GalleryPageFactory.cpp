@@ -20,7 +20,9 @@ GalleryPageFactory::GalleryPageFactory(const GalleryNavigationViewModel& navigat
 {
 }
 
-QWidget* GalleryPageFactory::createPage(const QString& routeId) const
+QWidget* GalleryPageFactory::createPage(
+    const QString& routeId,
+    QWidget* parent) const
 {
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
     if (!item) {
@@ -31,20 +33,25 @@ QWidget* GalleryPageFactory::createPage(const QString& routeId) const
 
     // Settings is footer-owned and intentionally excluded from the content catalog.
     if (routeId == QStringLiteral("settings"))
-        return new SettingsPage(*item);
+        return new SettingsPage(*item, parent);
 
     if (const GalleryContentEntry* entry = galleryContentEntry(routeId)) {
         switch (entry->kind) {
         case GalleryPageKind::Home:
-            return new GalleryHomePage(*entry, m_navigationViewModel);
+            return new GalleryHomePage(
+                *entry, m_navigationViewModel, parent);
         case GalleryPageKind::Category:
-            return new GalleryCategoryPage(*entry, m_navigationViewModel);
+            return new GalleryCategoryPage(
+                *entry, m_navigationViewModel, parent);
         case GalleryPageKind::Component:
-            return new GalleryComponentPage(*entry, m_navigationViewModel);
+            return new GalleryComponentPage(
+                *entry, m_navigationViewModel, parent);
         case GalleryPageKind::Foundation:
-            return new GalleryFoundationPage(*entry, m_navigationViewModel);
+            return new GalleryFoundationPage(
+                *entry, m_navigationViewModel, parent);
         case GalleryPageKind::FoundationTopic:
-            return new GalleryFoundationTopicPage(*entry, m_navigationViewModel);
+            return new GalleryFoundationTopicPage(
+                *entry, m_navigationViewModel, parent);
         case GalleryPageKind::Settings:
             break;
         }

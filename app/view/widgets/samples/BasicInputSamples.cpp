@@ -565,20 +565,80 @@ QVector<GallerySample> comboBoxSamples()
                        return group;
                    }),
         makeSample(QStringLiteral("combobox-editable"),
-                   QStringLiteral("Editable ComboBox"),
-                   QStringLiteral("Editable mode lets users type a value while still offering known choices."),
-                   QStringLiteral("auto* comboBox = new ComboBox(this);\n"
+                   QStringLiteral("Custom value with suggestions"),
+                   QStringLiteral("Type any value or choose a suggested size. Custom text stays valid without being added to the suggestion list."),
+                   QStringLiteral("auto* row = new QWidget(this);\n"
+                                  "auto* layout = new QVBoxLayout(row);\n"
+                                  "layout->setContentsMargins(0, 0, 0, 0);\n"
+                                  "layout->setSpacing(8);\n\n"
+                                  "auto* comboBox = new ComboBox(row);\n"
                                   "comboBox->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\n"
                                   "comboBox->setEditable(true);\n"
-                                  "comboBox->setCurrentIndex(4);"),
+                                  "comboBox->setInsertPolicy(QComboBox::NoInsert);\n"
+                                  "comboBox->setCurrentIndex(4);\n"
+                                  "comboBox->setFixedWidth(200);\n\n"
+                                  "auto* status = new Label(row);\n"
+                                  "status->setFixedWidth(200);\n"
+                                  "status->setTextElideMode(Qt::ElideRight);\n\n"
+                                  "auto updateStatus = [comboBox, status](const QString& text) {\n"
+                                  "    const bool suggested = comboBox->findText(\n"
+                                  "        text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >= 0;\n"
+                                  "    status->setText(QStringLiteral(\"%1 value: %2\").arg(\n"
+                                  "        suggested ? QStringLiteral(\"Suggested\") : QStringLiteral(\"Custom\"),\n"
+                                  "        text.isEmpty() ? QStringLiteral(\"(empty)\") : text));\n"
+                                  "};\n"
+                                  "QObject::connect(comboBox, &QComboBox::editTextChanged,\n"
+                                  "                 status, updateStatus);\n"
+                                  "updateStatus(comboBox->currentText());\n\n"
+                                  "layout->addWidget(comboBox);\n"
+                                  "layout->addWidget(status);"),
                    [](QWidget* parent) {
-                       auto* comboBox = makeComboBox(parent,
+                       QWidget* group = verticalGroup(parent, 8);
+                       auto* comboBox = makeComboBox(group,
                            {QStringLiteral("8"), QStringLiteral("9"), QStringLiteral("10"),
                             QStringLiteral("11"), QStringLiteral("12"), QStringLiteral("14"),
                             QStringLiteral("16")},
                            4);
+                       comboBox->setObjectName(
+                           QStringLiteral("galleryEditableComboBox"));
                        comboBox->setEditable(true);
-                       return comboBox;
+                       comboBox->setInsertPolicy(QComboBox::NoInsert);
+
+                       auto* status =
+                           makeValueLabel(group, QString());
+                       status->setObjectName(
+                           QStringLiteral(
+                               "galleryEditableComboBoxStatus"));
+                       status->setFixedWidth(200);
+                       status->setTextElideMode(Qt::ElideRight);
+
+                       auto updateStatus =
+                           [comboBox, status](const QString& text) {
+                           const bool suggested =
+                               comboBox->findText(
+                                   text,
+                                   Qt::MatchFixedString
+                                       | Qt::MatchCaseSensitive)
+                               >= 0;
+                           status->setText(
+                               QStringLiteral("%1 value: %2").arg(
+                                   suggested
+                                       ? QStringLiteral("Suggested")
+                                       : QStringLiteral("Custom"),
+                                   text.isEmpty()
+                                       ? QStringLiteral("(empty)")
+                                       : text));
+                       };
+                       QObject::connect(
+                           comboBox,
+                           &QComboBox::editTextChanged,
+                           status,
+                           updateStatus);
+                       updateStatus(comboBox->currentText());
+
+                       group->layout()->addWidget(comboBox);
+                       group->layout()->addWidget(status);
+                       return group;
                    }),
         makeSample(QStringLiteral("combobox-many-items"),
                    QStringLiteral("Popup with many items"),

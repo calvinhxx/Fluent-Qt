@@ -69,14 +69,15 @@ private:
     QRect cardRect(int index) const;
     int cardIndexAt(const QPoint& pos) const;
     int gridHeight() const;
-    bool recalculateCardHeight();
+    bool recalculateRowLayout();
     void setHoveredIndex(int index);
 
     QVector<Entry> m_entries;
+    QVector<int> m_rowHeights;
+    QVector<int> m_rowTops;
     int m_hoveredIndex = -1;
     int m_lastColumns = 0;
     int m_lastColumnWidth = 0;
-    int m_cardHeight = 86;
 };
 
 } // namespace fluent::gallery

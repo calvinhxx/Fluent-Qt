@@ -345,7 +345,8 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* bui
     QElapsedTimer buildTimer;
     buildTimer.start();
     GalleryPageFactory pageFactory(m_navigationViewModel);
-    QWidget* page = pageFactory.createPage(routeId);
+    QWidget* page =
+        pageFactory.createPage(routeId, m_contentHost);
     if (!page) {
         LOG_WARN(QStringLiteral("GalleryContentPresenter ensurePageBuilt rejected routeId=%1 reason=missing-page")
                      .arg(routeId));

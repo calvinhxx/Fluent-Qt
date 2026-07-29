@@ -17,6 +17,16 @@ namespace fluent::gallery {
 namespace {
 constexpr int kThemeButtonSize = 32;
 constexpr int kThemeButtonIconSize = Typography::IconSize::Standard;
+
+QString previewThemeGlyph(FluentElement::Theme theme)
+{
+    if (theme == FluentElement::Dark) {
+        return Typography::Icons::glyph(
+            QStringLiteral(
+                "ic_fluent_weather_moon_16_regular"));
+    }
+    return Typography::Icons::Sunny;
+}
 }
 
 GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
@@ -30,14 +40,10 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
 
     m_themeButton = new fluent::basicinput::Button(this);
     m_themeButton->setObjectName(QStringLiteral("galleryComponentPageThemeButton"));
-    m_themeButton->setAccessibleName(QStringLiteral("Toggle theme"));
-    m_themeButton->setToolTip(QStringLiteral("Toggle theme"));
     m_themeButton->setFluentStyle(fluent::basicinput::Button::Standard);
     m_themeButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_themeButton->setFluentSize(fluent::basicinput::Button::StandardSize);
     m_themeButton->setFixedSize(kThemeButtonSize, kThemeButtonSize);
-    m_themeButton->setIconGlyph(Typography::Icons::Sunny, kThemeButtonIconSize);
-    fluent::status_info::ToolTip::attach(m_themeButton, QStringLiteral("Toggle theme"));
     connect(m_themeButton, &fluent::basicinput::Button::clicked,
             this, &GalleryComponentPage::toggleSampleTheme);
     addHeaderAction(m_themeButton);
@@ -152,7 +158,23 @@ void GalleryComponentPage::updateThemeButton()
         : QStringLiteral("Light");
     if (m_themeButton->property("gallerySampleTheme").toString() != themeName)
         m_themeButton->setProperty("gallerySampleTheme", themeName);
-    m_themeButton->setIconGlyph(Typography::Icons::Sunny, kThemeButtonIconSize);
+    const QString nextThemeName =
+        visibleTheme == FluentElement::Dark
+        ? QStringLiteral("Light")
+        : QStringLiteral("Dark");
+    const QString description = QStringLiteral(
+        "Preview theme: %1. Switch to %2.")
+        .arg(themeName, nextThemeName);
+    m_themeButton->setAccessibleName(description);
+    fluent::status_info::ToolTip::attach(
+        m_themeButton, description);
+    const QString iconGlyph =
+        previewThemeGlyph(visibleTheme);
+    m_themeButton->setProperty(
+        "gallerySampleThemeGlyph", iconGlyph);
+    m_themeButton->setIconGlyph(
+        iconGlyph,
+        kThemeButtonIconSize);
     m_themeButton->update();
 }
 
