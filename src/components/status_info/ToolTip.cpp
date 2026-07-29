@@ -6,6 +6,7 @@
 #include "design/Elevation.h"
 #include "design/Typography.h"
 #include <QEvent>
+#include <QGraphicsOpacityEffect>
 #include <QGuiApplication>
 #include <QPainter>
 #include <QPalette>
@@ -28,13 +29,41 @@ constexpr qreal kOpacityEpsilon = 0.001;
 constexpr int kShadowMargin = 12;
 constexpr int kTargetGap = 4;
 constexpr char kAttachedToolTipName[] = "FluentAttachedToolTip";
+
+QGraphicsOpacityEffect* opacityEffectFor(const QWidget* widget)
+{
+    return widget
+        ? qobject_cast<QGraphicsOpacityEffect*>(
+              widget->graphicsEffect())
+        : nullptr;
+}
+
+qreal visualOpacity(const QWidget* widget)
+{
+    const auto* effect = opacityEffectFor(widget);
+    return effect ? effect->opacity() : kVisibleOpacity;
+}
+
+void setVisualOpacity(QWidget* widget, qreal opacity)
+{
+    if (auto* effect = opacityEffectFor(widget))
+        effect->setOpacity(opacity);
+}
 }
 
 ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
-    setWindowOpacity(kHiddenOpacity);
+
+    // Keep the top-level tooltip window at its native opacity and fade its
+    // rendered widget tree. This works on Wayland/WSLg and headless QPA
+    // plugins that do not implement native window opacity.
+    // zh_CN: 顶层 Tooltip 窗口保持原生不透明度，改为淡入控件渲染树；
+    // 兼容不实现原生窗口透明度的 Wayland、WSLg 与无头 QPA 后端。
+    auto* opacityEffect = new QGraphicsOpacityEffect(this);
+    opacityEffect->setOpacity(kHiddenOpacity);
+    setGraphicsEffect(opacityEffect);
     
     m_textBlock = new Label(this);
     // Keep the label background transparent so ToolTip::paintEvent owns it.
@@ -139,7 +168,11 @@ void ToolTip::setAnimationEnabled(bool enabled) {
         if (m_hideOnAnimationFinished) {
             finishHideAnimation();
         } else {
-            setWindowOpacity(isVisible() ? kVisibleOpacity : kHiddenOpacity);
+            setVisualOpacity(
+                this,
+                isVisible()
+                    ? kVisibleOpacity
+                    : kHiddenOpacity);
         }
     }
 
@@ -155,7 +188,9 @@ void ToolTip::setVisible(bool visible) {
             m_opacityAnimation->stop();
         }
         m_hideOnAnimationFinished = false;
-        setWindowOpacity(visible ? kVisibleOpacity : kHiddenOpacity);
+        setVisualOpacity(
+            this,
+            visible ? kVisibleOpacity : kHiddenOpacity);
         QWidget::setVisible(visible);
         return;
     }
@@ -319,13 +354,19 @@ void ToolTip::positionForTarget()
 void ToolTip::ensureOpacityAnimation() {
     if (m_opacityAnimation) return;
 
-    m_opacityAnimation = new QPropertyAnimation(this, "windowOpacity", this);
+    auto* opacityEffect = opacityEffectFor(this);
+    if (!opacityEffect)
+        return;
+
+    m_opacityAnimation =
+        new QPropertyAnimation(
+            opacityEffect, "opacity", this);
     connect(m_opacityAnimation, &QPropertyAnimation::finished, this, [this]() {
         if (m_hideOnAnimationFinished) {
             finishHideAnimation();
             return;
         }
-        setWindowOpacity(kVisibleOpacity);
+        setVisualOpacity(this, kVisibleOpacity);
     });
 }
 
@@ -333,14 +374,19 @@ void ToolTip::startShowAnimation() {
     ensureOpacityAnimation();
 
     m_hideOnAnimationFinished = false;
+    if (!m_opacityAnimation) {
+        QWidget::setVisible(true);
+        return;
+    }
     m_opacityAnimation->stop();
 
-    const qreal startOpacity = isVisible() ? windowOpacity() : kHiddenOpacity;
-    setWindowOpacity(startOpacity);
+    const qreal startOpacity =
+        isVisible() ? visualOpacity(this) : kHiddenOpacity;
+    setVisualOpacity(this, startOpacity);
     QWidget::setVisible(true);
 
     if (startOpacity >= kVisibleOpacity - kOpacityEpsilon) {
-        setWindowOpacity(kVisibleOpacity);
+        setVisualOpacity(this, kVisibleOpacity);
         return;
     }
 
@@ -358,16 +404,20 @@ void ToolTip::startHideAnimation() {
             m_opacityAnimation->stop();
         }
         m_hideOnAnimationFinished = false;
-        setWindowOpacity(kHiddenOpacity);
+        setVisualOpacity(this, kHiddenOpacity);
         return;
     }
 
     ensureOpacityAnimation();
+    if (!m_opacityAnimation) {
+        QWidget::setVisible(false);
+        return;
+    }
 
     m_hideOnAnimationFinished = true;
     m_opacityAnimation->stop();
 
-    const qreal startOpacity = windowOpacity();
+    const qreal startOpacity = visualOpacity(this);
     if (startOpacity <= kHiddenOpacity + kOpacityEpsilon) {
         finishHideAnimation();
         return;
@@ -383,7 +433,7 @@ void ToolTip::startHideAnimation() {
 
 void ToolTip::finishHideAnimation() {
     m_hideOnAnimationFinished = false;
-    setWindowOpacity(kHiddenOpacity);
+    setVisualOpacity(this, kHiddenOpacity);
     QWidget::setVisible(false);
 }
 

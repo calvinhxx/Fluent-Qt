@@ -115,6 +115,32 @@ TEST_F(PopupTest, OpenCloseSignals_AnimationDisabled) {
     EXPECT_FALSE(p.isOpen());
 }
 
+TEST_F(PopupTest, ReentrantOpenDuringAboutToShowIsIgnored) {
+    Popup p(window);
+    p.setAnimationEnabled(false);
+
+    QSignalSpy aboutToShow(&p, &Popup::aboutToShow);
+    QSignalSpy opened(&p, &Popup::opened);
+    QSignalSpy openedChanged(&p, &Popup::isOpenChanged);
+
+    bool reentrantOpenAttempted = false;
+    QObject::connect(&p, &Popup::aboutToShow, &p, [&]() {
+        if (reentrantOpenAttempted)
+            return;
+        reentrantOpenAttempted = true;
+        p.open();
+    });
+
+    p.open();
+
+    EXPECT_TRUE(reentrantOpenAttempted);
+    EXPECT_EQ(aboutToShow.count(), 1);
+    EXPECT_EQ(opened.count(), 1);
+    EXPECT_EQ(openedChanged.count(), 1);
+    EXPECT_TRUE(p.isOpen());
+    p.close();
+}
+
 TEST_F(PopupTest, SetIsOpen_DelegatesToOpenClose) {
     Popup p(window);
     p.setAnimationEnabled(false);

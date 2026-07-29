@@ -192,6 +192,7 @@ private:
     // ── State ───────────────────────────────────────────────────────────────
     bool m_isOpen = false;
     bool m_isClosing = false;
+    bool m_openInProgress = false;
 
     QPointer<QWidget> m_originalParent;
     QPointer<QWidget> m_themeSource;
