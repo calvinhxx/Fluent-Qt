@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <QPalette>
 #include <QPixmap>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
 
@@ -217,6 +218,21 @@ TEST_F(TabViewTest, DefaultsInheritanceAndMetatypesMatchComponentPattern)
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&tabs), nullptr);
     EXPECT_GT(qMetaTypeId<TabViewItem>(), 0);
     EXPECT_GT(qMetaTypeId<TabView::TabWidthMode>(), 0);
+}
+
+TEST_F(TabViewTest, SelectionHandlerCanSynchronouslyDeleteTabView)
+{
+    auto* tabs = new TabView;
+    QPointer<TabView> guard(tabs);
+    QObject::connect(
+        tabs, &TabView::selectedIndexChanged, qApp,
+        [tabs](int) {
+            delete tabs;
+        });
+
+    tabs->addTab(QStringLiteral("Document"));
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 TEST_F(TabViewTest, ItemManagementPreservesOrderMetadataAndInvalidIndexes)

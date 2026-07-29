@@ -524,8 +524,12 @@ void TabStrip::mouseReleaseEvent(QMouseEvent* event)
     clearPressedHit();
 
     if (wasDragging) {
-        if (m_tabReorderEnabled && isValidIndex(dragStart) && isValidIndex(dragTarget) && dragStart != dragTarget)
+        QPointer<TabStrip> guard(this);
+        if (m_tabReorderEnabled && isValidIndex(dragStart) && isValidIndex(dragTarget) && dragStart != dragTarget) {
             emit tabMoveRequested(dragStart, dragTarget);
+            if (!guard)
+                return;
+        }
         clearDragState();
         m_dragStartIndex = -1;
         event->accept();
@@ -1999,8 +2003,13 @@ bool TabView::insertTab(int index, const TabViewItem& item)
     m_tabStrip->revealTab(index);
     updateAccessibleText();
     if (m_selectedIndex != previousIndex) {
+        QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
+        if (!guard)
+            return true;
         emit currentChanged(m_selectedIndex);
+        if (!guard)
+            return true;
     }
     emit tabsChanged();
     return true;
@@ -2029,8 +2038,13 @@ bool TabView::removeTab(int index)
     syncTabStrip();
     updateAccessibleText();
     if (selectionChanged) {
+        QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
+        if (!guard)
+            return true;
         emit currentChanged(m_selectedIndex);
+        if (!guard)
+            return true;
     }
     emit tabsChanged();
     return true;
@@ -2055,8 +2069,13 @@ void TabView::clearTabs()
     syncTabStrip();
     updateAccessibleText();
     if (selectionChanged) {
+        QPointer<TabView> guard(this);
         emit selectedIndexChanged(-1);
+        if (!guard)
+            return;
         emit currentChanged(-1);
+        if (!guard)
+            return;
     }
     emit tabsChanged();
 }
@@ -2080,10 +2099,17 @@ bool TabView::moveTab(int from, int to)
 
     syncTabStrip();
     updateAccessibleText();
+    QPointer<TabView> guard(this);
     emit tabMoved(from, to);
+    if (!guard)
+        return true;
     emit tabsChanged();
+    if (!guard)
+        return true;
     if (m_selectedIndex != oldSelected) {
         emit selectedIndexChanged(m_selectedIndex);
+        if (!guard)
+            return true;
         emit currentChanged(m_selectedIndex);
     }
     return true;
@@ -2139,8 +2165,13 @@ bool TabView::setTabEnabled(int index, bool enabled)
     syncTabStrip();
     updateAccessibleText();
     if (m_selectedIndex != previousIndex) {
+        QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
+        if (!guard)
+            return true;
         emit currentChanged(m_selectedIndex);
+        if (!guard)
+            return true;
     }
     emit tabsChanged();
     return true;
@@ -2177,8 +2208,10 @@ void TabView::setSelectedIndex(int index)
     syncTabStrip();
     Q_UNUSED(previousIndex)
     updateAccessibleText();
+    QPointer<TabView> guard(this);
     emit selectedIndexChanged(m_selectedIndex);
-    emit currentChanged(m_selectedIndex);
+    if (guard)
+        emit guard->currentChanged(guard->m_selectedIndex);
 }
 
 void TabView::setTabWidthMode(TabWidthMode mode)

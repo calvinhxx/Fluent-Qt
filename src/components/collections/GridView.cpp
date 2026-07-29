@@ -12,6 +12,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
@@ -649,7 +650,10 @@ void GridView::mouseReleaseEvent(QMouseEvent* event) {
                 selectionModel()->setCurrentIndex(
                     sim->index(firstInserted, 0), QItemSelectionModel::NoUpdate);
 
+                QPointer<GridView> guard(this);
                 emit itemReordered(srcs.first(), firstInserted);
+                if (!guard)
+                    return;
             }
         }
 

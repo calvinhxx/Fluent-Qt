@@ -2,6 +2,7 @@
 
 #include <QLinearGradient>
 #include <QPainterPath>
+#include <QPointer>
 
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 
@@ -116,6 +117,22 @@ void drawCenteredIconGlyph(QPainter& painter,
 }
 
 } // namespace
+
+void Button::mousePressEvent(QMouseEvent* event)
+{
+    QPointer<Button> guard(this);
+    QPushButton::mousePressEvent(event);
+    if (guard)
+        guard->update();
+}
+
+void Button::mouseReleaseEvent(QMouseEvent* event)
+{
+    QPointer<Button> guard(this);
+    QPushButton::mouseReleaseEvent(event);
+    if (guard)
+        guard->update();
+}
 
 Button::Button(const QString& text, QWidget* parent) : QPushButton(text, parent) {
     setAttribute(Qt::WA_Hover);

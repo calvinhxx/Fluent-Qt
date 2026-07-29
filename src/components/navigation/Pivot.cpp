@@ -9,6 +9,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QStyle>
 
@@ -879,8 +880,10 @@ void Pivot::activateHeader(int index)
 {
     if (!isSelectableIndex(index))
         return;
+    QPointer<Pivot> guard(this);
     emit this->itemActivated(index, m_items.at(index));
-    setSelectedIndexInternal(index, true, true);
+    if (guard)
+        guard->setSelectedIndexInternal(index, true, true);
 }
 
 void Pivot::scrollOverflow(int direction)

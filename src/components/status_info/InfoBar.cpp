@@ -6,6 +6,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QSizePolicy>
 #include <QtGlobal>
@@ -627,8 +628,10 @@ void InfoBar::initializeChildren()
     m_closeButton->setAccessibleName(m_closeButtonAccessibleName);
     connect(m_closeButton, &QPushButton::clicked, this, [this]() {
         if (!m_isClosable || !isEnabled()) return;
+        QPointer<InfoBar> guard(this);
         setIsOpen(false);
-        emit closed();
+        if (guard && !guard->isOpen())
+            emit guard->closed();
     });
 }
 

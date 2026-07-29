@@ -5,6 +5,7 @@
 #include <QImage>
 #include <QLabel>
 #include <QPalette>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
 #include <QUrl>
@@ -241,6 +242,24 @@ TEST_F(InfoBarTest, OpenCloseAndCloseButtonBehavior) {
     closeButton->click();
     EXPECT_TRUE(bar.isOpen());
     EXPECT_EQ(closedSpy.count(), 1);
+}
+
+TEST_F(InfoBarTest, OpenStateHandlerCanSynchronouslyDeleteInfoBar) {
+    auto* bar = new InfoBar(window);
+    bar->resize(bar->sizeHint());
+    bar->show();
+    auto* closeButton = bar->findChild<Button*>("InfoBarCloseButton");
+    ASSERT_NE(closeButton, nullptr);
+    QPointer<InfoBar> guard(bar);
+    QObject::connect(bar, &InfoBar::isOpenChanged, window,
+                     [bar](bool open) {
+                         if (!open)
+                             delete bar;
+                     });
+
+    closeButton->click();
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 TEST_F(InfoBarTest, TriggerButtonOpensClosedInfoBar) {

@@ -14,6 +14,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
+#include <QPointer>
 #include <QResizeEvent>
 #include <QScrollBar>
 #include <QShowEvent>
@@ -618,7 +619,10 @@ void FlowView::mouseReleaseEvent(QMouseEvent* event)
                     selectionModel()->setCurrentIndex(standardModel->index(insertAt, 0), QItemSelectionModel::NoUpdate);
                 }
 
+                QPointer<FlowView> guard(this);
                 emit itemReordered(sources.first(), insertAt);
+                if (!guard)
+                    return;
             }
         }
 
@@ -645,8 +649,12 @@ void FlowView::mouseReleaseEvent(QMouseEvent* event)
         event->accept();
     }
 
-    if (clickOnPressedItem)
+    if (clickOnPressedItem) {
+        QPointer<FlowView> guard(this);
         emit itemClicked(releasedRow);
+        if (!guard)
+            return;
+    }
 
     m_dragSourceIndex = -1;
     m_dragSourceIndices.clear();
