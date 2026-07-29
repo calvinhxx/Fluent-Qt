@@ -161,6 +161,16 @@ protected:
     /// zh_CN: 返回驱动自动定位的锚点控件；没有锚点时返回空。
     virtual QWidget* automaticPositionAnchor() const { return nullptr; }
 
+    /**
+     * @brief Controls whether open() moves keyboard focus into the popup.
+     * zh_CN: 控制 open() 是否将键盘焦点移入 Popup。
+     *
+     * The default is true. Subclasses may disable this for transient command
+     * surfaces that must preserve focus on their invocation target.
+     * zh_CN: 默认为 true。需要把焦点保留在调用目标上的瞬态命令表面可关闭此项。
+     */
+    void setFocusOnOpenEnabled(bool enabled);
+
 private:
     QPoint resolvedPosition() const;
     QWidget* trackedPositionAnchor() const;
