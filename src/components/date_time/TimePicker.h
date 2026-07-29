@@ -3,6 +3,7 @@
 
 #include <QTime>
 #include <QLocale>
+#include <QPointer>
 #include <QVector>
 #include <Qt>
 
@@ -158,7 +159,7 @@ private:
     void applyPendingTime(const QTime& time);
     void handleFlyoutClosed();
 
-    TimePickerFlyout* m_flyout = nullptr;
+    QPointer<TimePickerFlyout> m_flyout;
 
     QTime m_time;
     QTime m_selectedTime;

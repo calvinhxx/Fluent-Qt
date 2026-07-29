@@ -345,9 +345,15 @@ bool Toast::present(QWidget* anchor)
     show();
     m_overlayCoordinator->raiseStack();
     relayoutHostStack(host, m_placement);
-    if (!wasOpen)
+    QPointer<Toast> guard(this);
+    if (!wasOpen) {
         emit isOpenChanged(true);
+        if (!guard || !m_isOpen)
+            return false;
+    }
     emit presented();
+    if (!guard || !m_isOpen)
+        return false;
 
     if (m_animationEnabled)
         startAnimation(1.0);
@@ -389,10 +395,15 @@ Toast* Toast::showToast(
     toast->setDuration(durationMs);
     toast->setPlacement(placement);
     toast->setPlacementMargins(margins);
+    QPointer<Toast> toastGuard(toast);
+    QPointer<QWidget> hostGuard(host);
     if (!toast->present(anchor)) {
-        delete toast;
+        if (toastGuard)
+            delete toastGuard.data();
         return nullptr;
     }
+    if (!toastGuard || !hostGuard)
+        return nullptr;
 
     auto managed = managedOpenToastsFor(host, toast->placement());
     while (managed.size() > g_maximumVisible) {
@@ -402,10 +413,12 @@ Toast* Toast::showToast(
         oldest->m_deleteOnDismiss = true;
         oldest->m_animation->stop();
         oldest->finalizeDismiss();
+        if (!toastGuard || !hostGuard)
+            return nullptr;
         managed = managedOpenToastsFor(host, toast->placement());
     }
     relayoutHostStack(host, toast->placement());
-    return toast;
+    return toastGuard.data();
 }
 
 QSize Toast::sizeHint() const
@@ -639,18 +652,24 @@ void Toast::finalizeDismiss()
     m_animation->stop();
     m_timer->stop();
     hide();
-    QWidget* host = m_overlayCoordinator
+    QPointer<QWidget> host = m_overlayCoordinator
         ? m_overlayCoordinator->topLevelWidget()
         : parentWidget();
     const Placement placement = m_placement;
     m_overlayCoordinator->detach();
     const bool wasOpen = m_isOpen;
     m_isOpen = false;
-    if (wasOpen)
+    QPointer<Toast> guard(this);
+    if (wasOpen) {
         emit isOpenChanged(false);
+        if (!guard)
+            return;
+    }
     emit dismissed();
+    if (!guard)
+        return;
     if (host)
-        relayoutHostStack(host, placement);
+        relayoutHostStack(host.data(), placement);
     if (m_deleteOnDismiss)
         deleteLater();
 }

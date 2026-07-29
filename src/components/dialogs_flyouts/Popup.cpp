@@ -6,7 +6,7 @@
 #include <QMouseEvent>
 #include <QGraphicsOpacityEffect>
 #include <QApplication>
-#include <QScopedValueRollback>
+#include <QPointer>
 #include <QTimer>
 #include "compatibility/QtCompat.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -104,8 +104,8 @@ void Popup::setPopupProgress(double p) {
     if (qFuzzyCompare(m_popupProgress, p)) return;
     m_popupProgress = p;
     if (m_opacityEffect) m_opacityEffect->setOpacity(p);
-    emit popupProgressChanged(p);
     update();
+    emit popupProgressChanged(p);
 }
 
 void Popup::setThemeSource(QWidget* source) {
@@ -218,7 +218,8 @@ void Popup::syncPositionToAnchor() {
 
 void Popup::open() {
     if (m_openInProgress || (m_isOpen && !m_isClosing)) return;
-    QScopedValueRollback<bool> openGuard(m_openInProgress, true);
+    m_openInProgress = true;
+    QPointer<Popup> guard(this);
 
     m_anim->stop();
     m_isClosing = false;
@@ -229,6 +230,8 @@ void Popup::open() {
         onThemeUpdated();
 
     emit aboutToShow();
+    if (!guard)
+        return;
 
     ensureScrim();
 
@@ -256,14 +259,26 @@ void Popup::open() {
 
     if (!m_animationEnabled) {
         setPopupProgress(1.0);
+        if (!guard)
+            return;
         m_isOpen = true;
         emit isOpenChanged(true);
+        if (!guard)
+            return;
+        if (!m_isOpen || m_isClosing) {
+            m_openInProgress = false;
+            return;
+        }
         emit opened();
+        if (guard)
+            m_openInProgress = false;
         return;
     }
 
     m_popupProgress = 0.0;
     startEnterAnimation();
+    if (guard)
+        m_openInProgress = false;
 }
 
 void Popup::close() {
@@ -274,13 +289,20 @@ void Popup::close() {
 
     m_anim->stop();
     m_isClosing = true;
+    QPointer<Popup> guard(this);
     emit aboutToHide();
+    if (!guard)
+        return;
+    if (!m_isClosing)
+        return;
 
     if (qApp)
         qApp->removeEventFilter(this);
 
     if (!m_animationEnabled || !m_exitAnimationEnabled) {
         setPopupProgress(0.0);
+        if (!guard)
+            return;
         finalizeClosed();
         return;
     }
@@ -316,7 +338,10 @@ void Popup::startExitAnimation() {
 void Popup::finalizeOpened() {
     if (m_isOpen) return;
     m_isOpen = true;
+    QPointer<Popup> guard(this);
     emit isOpenChanged(true);
+    if (!guard || !m_isOpen || m_isClosing)
+        return;
     emit opened();
 }
 
@@ -326,7 +351,10 @@ void Popup::finalizeClosed() {
     destroyScrim();
     if (m_isOpen) {
         m_isOpen = false;
+        QPointer<Popup> guard(this);
         emit isOpenChanged(false);
+        if (!guard || isVisible())
+            return;
     }
     emit closed();
 }

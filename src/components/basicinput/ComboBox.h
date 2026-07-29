@@ -205,7 +205,7 @@ private:
 
     // --- Popup ---
     class ComboBoxPopup;
-    ComboBoxPopup* m_popup = nullptr;
+    QPointer<ComboBoxPopup> m_popup;
 };
 
 // ─── ComboBox popup window. zh_CN: ComboBox 弹层窗口 ───────────────────────

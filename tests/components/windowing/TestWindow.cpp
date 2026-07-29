@@ -342,6 +342,30 @@ class WindowTest : public ::testing::Test {
 protected:
 };
 
+TEST_F(WindowTest, RequestHandlerCanSynchronouslyDeleteWindow) {
+    auto* window = new Window;
+    QPointer<Window> guard(window);
+    QObject::connect(window, &Window::minimizeRequested, qApp, [window] {
+        delete window;
+    });
+
+    window->minimizeWindow();
+
+    EXPECT_TRUE(guard.isNull());
+}
+
+TEST_F(WindowTest, MaximizeRequestHandlerCanSynchronouslyDeleteWindow) {
+    auto* window = new Window;
+    QPointer<Window> guard(window);
+    QObject::connect(window, &Window::maximizeRequested, qApp, [window] {
+        delete window;
+    });
+
+    window->toggleMaximizeRestore();
+
+    EXPECT_TRUE(guard.isNull());
+}
+
 TEST_F(WindowTest, DefaultConstructionCreatesChromeAndContentHost) {
     Window window;
 

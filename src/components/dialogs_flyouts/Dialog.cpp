@@ -78,12 +78,15 @@ Dialog::Dialog(QWidget* parent)
             m_isAnimating = false;
             const QSize targetSize = m_targetSize;
             m_targetSize = QSize();
+            QPointer<Dialog> guard(this);
             QDialog::done(m_closingResult);
+            if (!guard)
+                return;
             if (!targetSize.isEmpty())
-                resize(targetSize);
-            setMinimumSize(m_savedMinSize);
-            setMaximumSize(m_savedMaxSize);
-            setSurfaceOpacity(1.0);
+                guard->resize(targetSize);
+            guard->setMinimumSize(guard->m_savedMinSize);
+            guard->setMaximumSize(guard->m_savedMaxSize);
+            guard->setSurfaceOpacity(1.0);
         } else {
             resize(m_targetSize);
             setMinimumSize(m_savedMinSize);
@@ -196,8 +199,10 @@ int Dialog::exec()
         setSurfaceOpacity(1.0);
     }
 
+    QPointer<Dialog> guard(this);
     const int result = QDialog::exec();
-    hideSmokeOverlay();
+    if (guard)
+        guard->hideSmokeOverlay();
     return result;
 }
 
@@ -338,8 +343,10 @@ void Dialog::done(int result)
 {
     if (!m_animationEnabled) {
         setSurfaceOpacity(0.0);
+        QPointer<Dialog> guard(this);
         QDialog::done(result);
-        setSurfaceOpacity(1.0);
+        if (guard)
+            guard->setSurfaceOpacity(1.0);
         return;
     }
 

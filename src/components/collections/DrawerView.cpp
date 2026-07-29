@@ -147,8 +147,8 @@ void DrawerView::setPosition(qreal position)
 
     m_position = normalized;
     updateOverlayGeometry();
-    emit positionChanged(m_position);
     update();
+    emit positionChanged(m_position);
 }
 
 void DrawerView::setDrawerLength(int length)
@@ -374,20 +374,32 @@ QSize DrawerView::minimumSizeHint() const
 
 void DrawerView::open()
 {
+    if (m_openInProgress)
+        return;
     if (m_isOpen && !m_isClosing && fuzzyEqual(m_position, 1.0))
         return;
 
+    m_openInProgress = true;
+    QPointer<DrawerView> guard(this);
     stopAnimation();
     m_isClosing = false;
     beginVisibleTransition();
+    if (!guard)
+        return;
 
     if (!m_animationEnabled) {
         setPosition(1.0);
+        if (!guard)
+            return;
         finalizeOpened();
+        if (guard)
+            m_openInProgress = false;
         return;
     }
 
     startPositionAnimation(1.0, TransitionTarget::Open);
+    if (guard)
+        m_openInProgress = false;
 }
 
 void DrawerView::close()
@@ -400,10 +412,17 @@ void DrawerView::close()
     stopAnimation();
     m_isClosing = true;
     cancelDrag();
+    QPointer<DrawerView> guard(this);
     emit aboutToHide();
+    if (!guard)
+        return;
+    if (!m_isClosing)
+        return;
 
     if (!m_animationEnabled) {
         setPosition(0.0);
+        if (!guard)
+            return;
         finalizeClosed();
         return;
     }
@@ -645,8 +664,12 @@ void DrawerView::beginVisibleTransition()
     ensureAttachedToTopLevel();
     updateOverlayGeometry();
 
-    if (!isVisible())
+    QPointer<DrawerView> guard(this);
+    if (!isVisible()) {
         emit aboutToShow();
+        if (!guard)
+            return;
+    }
 
     show();
     updateScrimState();
@@ -658,20 +681,28 @@ void DrawerView::beginVisibleTransition()
 
 void DrawerView::finalizeOpened()
 {
+    QPointer<DrawerView> guard(this);
     m_isClosing = false;
     setPosition(1.0);
+    if (!guard)
+        return;
     raiseOverlayStack();
     if (!m_isOpen) {
         m_isOpen = true;
         emit isOpenChanged(true);
+        if (!guard || !m_isOpen || m_isClosing)
+            return;
     }
     emit opened();
 }
 
 void DrawerView::finalizeClosed()
 {
+    QPointer<DrawerView> guard(this);
     m_isClosing = false;
     setPosition(0.0);
+    if (!guard)
+        return;
     hide();
     destroyScrim();
     if (m_contentWidget)
@@ -679,6 +710,8 @@ void DrawerView::finalizeClosed()
     if (m_isOpen) {
         m_isOpen = false;
         emit isOpenChanged(false);
+        if (!guard || m_isOpen || isVisible())
+            return;
     }
     emit closed();
 }
@@ -943,8 +976,12 @@ void DrawerView::beginDrag(const QPoint& globalPos, bool fromClosed)
         return;
 
     stopAnimation();
-    if (fromClosed)
+    QPointer<DrawerView> guard(this);
+    if (fromClosed) {
         beginVisibleTransition();
+        if (!guard)
+            return;
+    }
 
     m_drag.active = true;
     m_drag.startedFromClosed = fromClosed;

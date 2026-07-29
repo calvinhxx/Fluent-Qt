@@ -3,6 +3,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QPointer>
 #include <QWheelEvent>
 #include <cmath>
 
@@ -122,8 +123,12 @@ void OverlayScrim::paintEvent(QPaintEvent*)
 
 void OverlayScrim::mousePressEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton)
+    if (event->button() == Qt::LeftButton) {
+        QPointer<OverlayScrim> guard(this);
         emit pressed(fluentMouseGlobalPos(event));
+        if (!guard)
+            return;
+    }
     handlePointerEvent(event);
 }
 void OverlayScrim::mouseReleaseEvent(QMouseEvent* event) { handlePointerEvent(event); }
