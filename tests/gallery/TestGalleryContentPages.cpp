@@ -51,6 +51,7 @@
 #include "components/scrolling/PipsPager.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/status_info/Avatar.h"
+#include "components/status_info/InfoBadge.h"
 #include "components/status_info/ToolTip.h"
 #include "components/status_info/Toast.h"
 #include "components/textfields/EditingCommandRouter.h"
@@ -999,7 +1000,8 @@ TEST_F(GalleryContentPagesTest, ComponentRoutesCreateComponentPages)
         {QStringLiteral("expander"), QStringLiteral("Expander"), 2},
         {QStringLiteral("font-icon"), QStringLiteral("FontIcon"), 2},
         {QStringLiteral("avatar"), QStringLiteral("Avatar"), 2},
-        {QStringLiteral("toast"), QStringLiteral("Toast"), 3},
+        {QStringLiteral("info-badge"), QStringLiteral("InfoBadge"), 4},
+        {QStringLiteral("toast"), QStringLiteral("Toast"), 5},
         {QStringLiteral("tree-view"), QStringLiteral("TreeView"), 1},
         {QStringLiteral("tab-view"), QStringLiteral("TabView"), 1}
     };
@@ -1032,7 +1034,9 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
         {QStringLiteral("divider"), QStringLiteral("divider-vertical-orientation")},
         {QStringLiteral("expander"), QStringLiteral("expander-state-signal")},
         {QStringLiteral("font-icon"), QStringLiteral("font-icon-optical-sizes")},
-        {QStringLiteral("toast"), QStringLiteral("toast-severity")},
+        {QStringLiteral("info-badge"), QStringLiteral("info-badge-accessibility")},
+        {QStringLiteral("toast"), QStringLiteral("toast-action-lifecycle")},
+        {QStringLiteral("toast"), QStringLiteral("toast-update-key")},
     };
 
     for (const SampleCase& sampleCase : cases) {
@@ -1101,6 +1105,120 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
         compoundPreview->findChild<fluent::basicinput::CompoundButton*>();
     ASSERT_NE(compoundButton, nullptr);
     EXPECT_FALSE(compoundButton->secondaryText().isEmpty());
+}
+
+TEST_F(
+    GalleryContentPagesTest,
+    NotificationLifecycleSamplesMatchPreviewBehavior)
+{
+    fluent::gallery::GallerySample badgeSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("info-badge"),
+        QStringLiteral("info-badge-accessibility"),
+        &badgeSample));
+    EXPECT_TRUE(badgeSample.codeSnippet.contains(
+        QStringLiteral("setAccessibleName")));
+    EXPECT_TRUE(badgeSample.codeSnippet.contains(
+        QStringLiteral("setVisible")));
+
+    std::unique_ptr<QWidget> badgePreview(
+        badgeSample.createPreview(nullptr));
+    auto* badge =
+        badgePreview->findChild<
+            fluent::status_info::InfoBadge*>(
+            QStringLiteral(
+                "galleryInfoBadgeAccessibleValue"));
+    auto* increment =
+        badgePreview->findChild<
+            fluent::basicinput::Button*>(
+            QStringLiteral(
+                "galleryInfoBadgeAccessibleIncrement"));
+    auto* toggle =
+        badgePreview->findChild<
+            fluent::basicinput::Button*>(
+            QStringLiteral(
+                "galleryInfoBadgeAccessibleToggle"));
+    auto* badgeStatus =
+        badgePreview->findChild<
+            fluent::textfields::Label*>(
+            QStringLiteral(
+                "galleryInfoBadgeAccessibleStatus"));
+    ASSERT_NE(badge, nullptr);
+    ASSERT_NE(increment, nullptr);
+    ASSERT_NE(toggle, nullptr);
+    ASSERT_NE(badgeStatus, nullptr);
+    EXPECT_EQ(badge->value(), 3);
+    increment->click();
+    EXPECT_EQ(badge->value(), 4);
+    EXPECT_EQ(
+        badgeStatus->text(),
+        QStringLiteral("Unread value: 4"));
+    toggle->click();
+    EXPECT_TRUE(badge->isHidden());
+    EXPECT_EQ(
+        badgeStatus->text(),
+        QStringLiteral("Badge hidden"));
+
+    fluent::gallery::GallerySample updateSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("toast"),
+        QStringLiteral("toast-update-key"),
+        &updateSample));
+    EXPECT_TRUE(updateSample.codeSnippet.contains(
+        QStringLiteral("showOrUpdateToast")));
+    EXPECT_TRUE(updateSample.codeSnippet.contains(
+        QStringLiteral("\"upload\"")));
+
+    std::unique_ptr<QWidget> toastPreview(
+        updateSample.createPreview(nullptr));
+    auto* advance =
+        toastPreview->findChild<
+            fluent::basicinput::Button*>(
+            QStringLiteral("galleryToastUpdateTrigger"));
+    auto* toastStatus =
+        toastPreview->findChild<
+            fluent::textfields::Label*>(
+            QStringLiteral("galleryToastUpdateStatus"));
+    ASSERT_NE(advance, nullptr);
+    ASSERT_NE(toastStatus, nullptr);
+
+    advance->click();
+    auto* firstToast =
+        toastPreview->findChild<
+            fluent::status_info::Toast*>();
+    ASSERT_NE(firstToast, nullptr);
+    EXPECT_EQ(
+        firstToast->updateKey(),
+        QStringLiteral("upload"));
+    EXPECT_EQ(
+        firstToast->message(),
+        QStringLiteral("Uploading: 25%"));
+
+    advance->click();
+    auto* updatedToast =
+        toastPreview->findChild<
+            fluent::status_info::Toast*>();
+    EXPECT_EQ(updatedToast, firstToast);
+    EXPECT_EQ(
+        updatedToast->message(),
+        QStringLiteral("Uploading: 50%"));
+    EXPECT_EQ(
+        toastStatus->text(),
+        QStringLiteral("Progress: 50%"));
+
+    int openToastCount = 0;
+    for (auto* toast :
+         toastPreview->findChildren<
+             fluent::status_info::Toast*>()) {
+        if (toast->isOpen())
+            ++openToastCount;
+    }
+    EXPECT_EQ(openToastCount, 1);
+    updatedToast->setAnimationEnabled(false);
+    updatedToast->dismiss();
+    QCoreApplication::sendPostedEvents(
+        nullptr, QEvent::DeferredDelete);
+    QCoreApplication::processEvents();
 }
 
 TEST_F(
@@ -1950,17 +2068,19 @@ TEST_F(GalleryContentPagesTest, EverySampleCodeBlockUsesCppAndNamesItsPreviewCom
                         });
                 }
                 // Dialog/flyout/tooltip samples create their transient surface
-                // only after the trigger is invoked; the managed Toast stacking
-                // sample does the same through Toast::showToast(). Window samples
-                // intentionally render an embedded chrome simulation instead of
-                // nesting a top-level window. All other routes must carry their
-                // public component in the initial live preview tree.
+                // only after the trigger is invoked; managed Toast samples do
+                // the same through showToast() or showOrUpdateToast(). Window
+                // samples intentionally render an embedded chrome simulation
+                // instead of nesting a top-level window. All other routes must
+                // carry their public component in the initial live preview tree.
                 // zh_CN: 对话框、浮层、提示以及托管 Toast 堆叠示例会在触发后创建瞬态表面；
                 // Window 示例使用嵌入式 chrome 模拟，避免嵌套顶层窗口。
                 const bool deferredPreview = category.id == QStringLiteral("dialogs-flyouts")
                     || component.id == QStringLiteral("tooltip")
                     || (component.id == QStringLiteral("toast")
-                        && sample.id == QStringLiteral("toast-stacking"))
+                        && (sample.id == QStringLiteral("toast-stacking")
+                            || sample.id
+                                == QStringLiteral("toast-update-key")))
                     || component.id == QStringLiteral("window");
                 if (!deferredPreview) {
                     EXPECT_TRUE(previewContainsType)
