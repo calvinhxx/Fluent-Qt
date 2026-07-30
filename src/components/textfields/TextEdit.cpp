@@ -224,7 +224,7 @@ TextEdit::TextEdit(QWidget* parent)
                     m_vScrollBar->setValue(v);
             });
     connect(m_vScrollBar, &QScrollBar::valueChanged,
-            this, [this, innerVBar](int v) {
+            this, [innerVBar](int v) {
                 if (innerVBar->value() != v)
                     innerVBar->setValue(v);
             });

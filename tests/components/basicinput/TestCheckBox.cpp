@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include "compatibility/QtCompat.h"
 #include "components/basicinput/CheckBox.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
@@ -37,7 +38,7 @@ protected:
         layout->addWidget(new QLabel("1. A 2-state CheckBox:", window));
         auto* cb1 = new CheckBox("Two-state CheckBox", window);
         auto* label1 = new QLabel("Output: Unchecked", window);
-        QObject::connect(cb1, &CheckBox::stateChanged, [label1](int state) {
+        fluentConnectCheckStateChanged(cb1, label1, [label1](Qt::CheckState state) {
             label1->setText(QString("Output: %1").arg(state == Qt::Checked ? "Checked" : "Unchecked"));
         });
         layout->addWidget(cb1);
@@ -48,7 +49,7 @@ protected:
         auto* cb2 = new CheckBox("Three-state CheckBox", window);
         cb2->setTristate(true);
         auto* label2 = new QLabel("Output: Unchecked", window);
-        QObject::connect(cb2, &CheckBox::stateChanged, [label2](int state) {
+        fluentConnectCheckStateChanged(cb2, label2, [label2](Qt::CheckState state) {
             QString s = "Unchecked";
             if (state == Qt::Checked) s = "Checked";
             else if (state == Qt::PartiallyChecked) s = "Indeterminate";

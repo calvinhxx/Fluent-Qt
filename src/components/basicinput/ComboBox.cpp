@@ -262,7 +262,6 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const {
     QWidget* top = m_comboBox->window();
     const int shadow = kPopupShadowMargin;
     const QSize cardSize = ::fluent::overlay::visibleCardSize(size(), shadow);
-    const int cardW = cardSize.width();
     const int cardH = cardSize.height();
     const QRect anchor(m_comboBox->mapTo(top, QPoint(0, 0)), m_comboBox->size());
 
