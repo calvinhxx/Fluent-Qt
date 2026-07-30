@@ -1,10 +1,19 @@
 #include <gtest/gtest.h>
 
+#include <QAccessible>
+#include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QEvent>
 #include <QPointer>
 #include <QSignalSpy>
+#include <QTest>
+#include <QVector>
 
+#include <algorithm>
+
+#include "compatibility/QtCompat.h"
+#include "components/basicinput/Button.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/status_info/Toast.h"
@@ -37,6 +46,58 @@ struct ScopedMaximumVisible {
     int previous = 3;
 };
 
+#if QT_CONFIG(accessibility)
+
+struct AccessibleEventRecord {
+    QObject* object = nullptr;
+    QAccessible::Event type = QAccessible::InvalidEvent;
+    QString announcement;
+    int politeness = -1;
+};
+
+QVector<AccessibleEventRecord> g_accessibleEvents;
+
+void captureAccessibleEvent(QAccessibleEvent* event)
+{
+    if (!event)
+        return;
+
+    AccessibleEventRecord record;
+    record.object = event->object();
+    record.type = event->type();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    if (event->type() == QAccessible::Announcement) {
+        auto* announcement =
+            static_cast<QAccessibleAnnouncementEvent*>(event);
+        record.announcement = announcement->message();
+        record.politeness =
+            static_cast<int>(announcement->politeness());
+    }
+#endif
+    g_accessibleEvents.append(record);
+}
+
+struct ScopedAccessibleEventCapture {
+    ScopedAccessibleEventCapture()
+    {
+        previous = QAccessible::installUpdateHandler(
+            captureAccessibleEvent);
+        eventDeliveryActive = QAccessible::isActive();
+        g_accessibleEvents.clear();
+    }
+
+    ~ScopedAccessibleEventCapture()
+    {
+        QAccessible::installUpdateHandler(previous);
+        g_accessibleEvents.clear();
+    }
+
+    QAccessible::UpdateHandler previous = nullptr;
+    bool eventDeliveryActive = false;
+};
+
+#endif
+
 } // namespace
 
 TEST(ToastTest, Contract_DefaultsAndNoOpSetters)
@@ -49,6 +110,9 @@ TEST(ToastTest, Contract_DefaultsAndNoOpSetters)
     EXPECT_EQ(toast.placementMargins(), QMargins(16, 16, 16, 16));
     EXPECT_EQ(toast.duration(), 2200);
     EXPECT_TRUE(toast.isAnimationEnabled());
+    EXPECT_EQ(toast.action(), nullptr);
+    EXPECT_FALSE(toast.isPauseOnHoverEnabled());
+    EXPECT_TRUE(toast.updateKey().isEmpty());
     EXPECT_FALSE(toast.isOpen());
     EXPECT_GE(Toast::maximumVisible(), 1);
 
@@ -63,6 +127,75 @@ TEST(ToastTest, Contract_DefaultsAndNoOpSetters)
 
     toast.setDuration(-1);
     EXPECT_EQ(toast.duration(), 0);
+}
+
+TEST(ToastTest, Contract_PresentAnnouncesAccessibleContent)
+{
+#if !QT_CONFIG(accessibility)
+    GTEST_SKIP() << "Qt accessibility support is disabled";
+#else
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+
+    Toast toast(&host);
+    toast.setTitle(QStringLiteral("Sync complete"));
+    toast.setMessage(QStringLiteral("12 files are available"));
+    toast.setDuration(0);
+    toast.setAnimationEnabled(false);
+
+    ScopedAccessibleEventCapture capture;
+    ASSERT_TRUE(toast.present(&host));
+    EXPECT_EQ(
+        toast.accessibleName(),
+        QStringLiteral("Sync complete: 12 files are available"));
+
+    if (capture.eventDeliveryActive) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+        const auto match = std::find_if(
+            g_accessibleEvents.cbegin(),
+            g_accessibleEvents.cend(),
+            [&toast](const AccessibleEventRecord& record) {
+                return record.object == &toast
+                    && record.type == QAccessible::Announcement;
+            });
+        ASSERT_NE(match, g_accessibleEvents.cend());
+        EXPECT_EQ(
+            match->announcement,
+            QStringLiteral(
+                "Sync complete: 12 files are available"));
+        EXPECT_EQ(
+            match->politeness,
+            static_cast<int>(
+                QAccessible::AnnouncementPoliteness::Polite));
+#else
+        EXPECT_TRUE(std::any_of(
+            g_accessibleEvents.cbegin(),
+            g_accessibleEvents.cend(),
+            [&toast](const AccessibleEventRecord& record) {
+                return record.object == &toast
+                    && record.type == QAccessible::Alert;
+            }));
+#endif
+    }
+#endif
+}
+
+TEST(ToastTest, Contract_AccessibleNameTracksContentUnlessCallerOverrides)
+{
+    Toast toast;
+    toast.setMessage(QStringLiteral("Saved"));
+    EXPECT_EQ(toast.accessibleName(), QStringLiteral("Saved"));
+
+    toast.setMessage(QStringLiteral("Published"));
+    EXPECT_EQ(toast.accessibleName(), QStringLiteral("Published"));
+
+    toast.setAccessibleName(QStringLiteral("Custom announcement"));
+    toast.setTitle(QStringLiteral("Release"));
+    toast.setMessage(QStringLiteral("Ready"));
+    EXPECT_EQ(
+        toast.accessibleName(),
+        QStringLiteral("Custom announcement"));
 }
 
 TEST(ToastTest, Contract_ShortMessageDoesNotWrap)
@@ -169,6 +302,137 @@ TEST(ToastTest, Contract_ToastDoesNotBlockPointerHitTesting)
     EXPECT_EQ(host.childAt(toastCenter), &target);
 }
 
+TEST(ToastTest, Contract_ActionIsBorrowedAndReportsDismissReason)
+{
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+    QApplication::processEvents();
+
+    QAction action(QStringLiteral("&Retry"), &host);
+    Toast toast(&host);
+    toast.setMessage(QStringLiteral("Upload failed"));
+    toast.setDuration(0);
+    toast.setAnimationEnabled(false);
+
+    int actionChangedCount = 0;
+    QObject::connect(
+        &toast,
+        &Toast::actionChanged,
+        &host,
+        [&actionChangedCount](QAction*) {
+        ++actionChangedCount;
+    });
+    toast.setAction(&action);
+    EXPECT_EQ(toast.action(), &action);
+    EXPECT_EQ(action.parent(), &host);
+    EXPECT_EQ(actionChangedCount, 1);
+    EXPECT_FALSE(
+        toast.testAttribute(Qt::WA_TransparentForMouseEvents));
+
+    auto* button =
+        toast.findChild<fluent::basicinput::Button*>(
+            QStringLiteral("fluentToastAction"));
+    ASSERT_NE(button, nullptr);
+    EXPECT_EQ(button->text(), QStringLiteral("Retry"));
+    EXPECT_EQ(button->accessibleName(), QStringLiteral("Retry"));
+
+    int triggerCount = 0;
+    int reasonCount = 0;
+    Toast::DismissReason reason = Toast::Programmatic;
+    QObject::connect(
+        &action,
+        &QAction::triggered,
+        &host,
+        [&triggerCount]() {
+        ++triggerCount;
+    });
+    QObject::connect(
+        &action,
+        &QAction::triggered,
+        &toast,
+        &Toast::dismiss);
+    QObject::connect(
+        &toast,
+        &Toast::dismissedWithReason,
+        &host,
+        [&reasonCount, &reason](Toast::DismissReason value) {
+        ++reasonCount;
+        reason = value;
+    });
+
+    ASSERT_TRUE(toast.present(&host));
+    QTest::mouseClick(button, Qt::LeftButton);
+    EXPECT_EQ(triggerCount, 1);
+    EXPECT_EQ(reasonCount, 1);
+    EXPECT_EQ(reason, Toast::ActionInvoked);
+    EXPECT_FALSE(toast.isOpen());
+
+    toast.setAction(nullptr);
+    EXPECT_EQ(actionChangedCount, 2);
+    EXPECT_TRUE(
+        toast.testAttribute(Qt::WA_TransparentForMouseEvents));
+}
+
+TEST(ToastTest, Contract_HoverPausePreservesRemainingDuration)
+{
+    QWidget host;
+    host.resize(640, 480);
+    host.show();
+
+    Toast toast(&host);
+    toast.setMessage(QStringLiteral("Hover to inspect"));
+    toast.setDuration(90);
+    toast.setAnimationEnabled(false);
+    toast.setPauseOnHoverEnabled(true);
+    ASSERT_FALSE(
+        toast.testAttribute(Qt::WA_TransparentForMouseEvents));
+    ASSERT_TRUE(toast.present(&host));
+
+    QTest::qWait(20);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    FluentEnterEvent enter(
+        QPointF(4, 4),
+        QPointF(4, 4),
+        QPointF(toast.mapToGlobal(QPoint(4, 4))));
+#else
+    FluentEnterEvent enter(QEvent::Enter);
+#endif
+    QCoreApplication::sendEvent(&toast, &enter);
+    QTest::qWait(120);
+    EXPECT_TRUE(toast.isOpen());
+
+    QEvent leave(QEvent::Leave);
+    QCoreApplication::sendEvent(&toast, &leave);
+    QTRY_VERIFY_WITH_TIMEOUT(!toast.isOpen(), 500);
+}
+
+TEST(ToastTest, Contract_TimeoutReportsDismissReason)
+{
+    QWidget host;
+    host.resize(640, 480);
+
+    Toast toast(&host);
+    toast.setMessage(QStringLiteral("Saved"));
+    toast.setDuration(20);
+    toast.setAnimationEnabled(false);
+
+    Toast::DismissReason reason = Toast::Programmatic;
+    int reasonCount = 0;
+    QObject::connect(
+        &toast,
+        &Toast::dismissedWithReason,
+        &host,
+        [&reasonCount, &reason](Toast::DismissReason value) {
+        ++reasonCount;
+        reason = value;
+    });
+    ASSERT_TRUE(toast.present(&host));
+    QTRY_VERIFY_WITH_TIMEOUT(!toast.isOpen(), 500);
+    EXPECT_EQ(reasonCount, 1);
+    EXPECT_EQ(reason, Toast::TimedOut);
+}
+
 TEST(ToastTest, Contract_CornerPlacementAndNormalizedMargins)
 {
     QWidget host;
@@ -230,6 +494,18 @@ TEST(ToastTest, Contract_ManagedToastsStackUntilMaximumVisible)
         fluent::overlay::visibleCardGeometry(second->geometry());
     EXPECT_LT(firstCard.top(), secondCard.top());
 
+    int firstDismissCount = 0;
+    Toast::DismissReason firstReason = Toast::Programmatic;
+    QObject::connect(
+        first.data(),
+        &Toast::dismissedWithReason,
+        &host,
+        [&firstDismissCount, &firstReason](
+            Toast::DismissReason reason) {
+        ++firstDismissCount;
+        firstReason = reason;
+    });
+
     QPointer<Toast> third =
         Toast::showToast(
             &host, QStringLiteral("Third"), Toast::Warning, 0);
@@ -239,6 +515,8 @@ TEST(ToastTest, Contract_ManagedToastsStackUntilMaximumVisible)
     ASSERT_FALSE(third.isNull());
     EXPECT_TRUE(second->isOpen());
     EXPECT_TRUE(third->isOpen());
+    EXPECT_EQ(firstDismissCount, 1);
+    EXPECT_EQ(firstReason, Toast::Evicted);
 
     second->setAnimationEnabled(false);
     third->setAnimationEnabled(false);
@@ -247,6 +525,65 @@ TEST(ToastTest, Contract_ManagedToastsStackUntilMaximumVisible)
     flushDeferredDeletes();
     EXPECT_TRUE(second.isNull());
     EXPECT_TRUE(third.isNull());
+}
+
+TEST(ToastTest, Contract_UpdateKeyRefreshesInPlaceWithinStackScope)
+{
+    ScopedMaximumVisible scoped(2);
+    QWidget firstHost;
+    firstHost.resize(640, 480);
+    QWidget secondHost;
+    secondHost.resize(640, 480);
+
+    QPointer<Toast> first = Toast::showOrUpdateToast(
+        &firstHost,
+        QStringLiteral("sync"),
+        QStringLiteral("Uploading"),
+        Toast::Informational,
+        0,
+        Toast::TopEnd);
+    ASSERT_FALSE(first.isNull());
+    EXPECT_EQ(first->updateKey(), QStringLiteral("sync"));
+
+    QSignalSpy updatedSpy(first.data(), &Toast::updated);
+    Toast* updated = Toast::showOrUpdateToast(
+        &firstHost,
+        QStringLiteral("sync"),
+        QStringLiteral("Upload complete"),
+        Toast::Success,
+        0,
+        Toast::TopEnd);
+    ASSERT_EQ(updated, first.data());
+    EXPECT_EQ(updatedSpy.count(), 1);
+    EXPECT_EQ(first->message(), QStringLiteral("Upload complete"));
+    EXPECT_EQ(first->severity(), Toast::Success);
+
+    QPointer<Toast> otherPlacement = Toast::showOrUpdateToast(
+        &firstHost,
+        QStringLiteral("sync"),
+        QStringLiteral("Bottom status"),
+        Toast::Warning,
+        0,
+        Toast::BottomEnd);
+    QPointer<Toast> otherHost = Toast::showOrUpdateToast(
+        &secondHost,
+        QStringLiteral("sync"),
+        QStringLiteral("Other window"),
+        Toast::Informational,
+        0,
+        Toast::TopEnd);
+    ASSERT_FALSE(otherPlacement.isNull());
+    ASSERT_FALSE(otherHost.isNull());
+    EXPECT_NE(otherPlacement.data(), first.data());
+    EXPECT_NE(otherHost.data(), first.data());
+
+    first->setAnimationEnabled(false);
+    otherPlacement->setAnimationEnabled(false);
+    otherHost->setAnimationEnabled(false);
+    first->dismiss();
+    otherPlacement->dismiss();
+    otherHost->dismiss();
+    flushDeferredDeletes();
 }
 
 TEST(ToastTest, Contract_StackOffsetsFollowPlacementDirection)
