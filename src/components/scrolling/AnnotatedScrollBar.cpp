@@ -709,8 +709,8 @@ void AnnotatedScrollBar::showDetail(const QString& text, const QPoint& localAnch
         QRect available;
         if (QScreen* screen = QGuiApplication::screenAt(globalAnchor)) {
             available = screen->availableGeometry();
-        } else if (QScreen* screen = QGuiApplication::primaryScreen()) {
-            available = screen->availableGeometry();
+        } else if (QScreen* primaryScreen = QGuiApplication::primaryScreen()) {
+            available = primaryScreen->availableGeometry();
         }
 
         int x = globalAnchor.x() + kDetailGap;

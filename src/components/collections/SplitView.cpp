@@ -344,15 +344,15 @@ QRect SplitView::handleGeometry(int index) const
 
 QByteArray SplitView::saveState() const
 {
-    QByteArray data;
-    QDataStream stream(&data, QIODevice::WriteOnly);
+    QByteArray stateData;
+    QDataStream stream(&stateData, QIODevice::WriteOnly);
     stream << kStateMagic << kStateVersion;
     stream << static_cast<qint32>(m_orientation);
     stream << static_cast<qint32>(fillPaneIndex());
     stream << static_cast<qint32>(m_panes.size());
     for (const PaneRecord& pane : m_panes)
         stream << static_cast<qint32>(pane.preferredSize);
-    return data;
+    return stateData;
 }
 
 bool SplitView::restoreState(const QByteArray& state)

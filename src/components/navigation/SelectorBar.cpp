@@ -266,11 +266,11 @@ bool SelectorBar::setItemVisible(int index, bool visible)
     return true;
 }
 
-bool SelectorBar::setItemData(int index, const QVariant& data)
+bool SelectorBar::setItemData(int index, const QVariant& itemData)
 {
-    if (!isValidIndex(index) || m_items.at(index).data == data)
+    if (!isValidIndex(index) || m_items.at(index).data == itemData)
         return false;
-    m_items[index].data = data;
+    m_items[index].data = itemData;
     emit itemsChanged();
     return true;
 }
