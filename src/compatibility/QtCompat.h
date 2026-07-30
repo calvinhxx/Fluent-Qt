@@ -346,12 +346,7 @@ QMetaObject::Connection fluentConnectCheckStateChanged(CheckBoxType* checkBox,
 inline QPixmap fluentLabelPixmapValue(const QLabel* label) {
     if (!label)
         return {};
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     return label->pixmap(Qt::ReturnByValue);
-#else
-    const QPixmap* pixmap = label->pixmap();
-    return pixmap ? *pixmap : QPixmap();
-#endif
 }
 
 inline QSize fluentPixmapLogicalSize(const QPixmap& pixmap) {
@@ -484,16 +479,12 @@ inline void fluentDrawCoverPixmapInLogicalRect(QPainter& painter,
 
 // Wheel and native gesture coordinates.
 // zh_CN: 滚轮和原生手势事件坐标。
-// Qt 6: QWheelEvent::position() / QNativeGestureEvent::position().
-// Qt 5: QWheelEvent::posF() / QNativeGestureEvent::localPos().
+// Qt 5.15+/Qt 6: QWheelEvent::position().
+// Qt 6: QNativeGestureEvent::position(); Qt 5: localPos().
 using FluentNativeGestureEvent = QNativeGestureEvent;
 
 inline QPointF fluentWheelPosition(const QWheelEvent* e) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     return e->position();
-#else
-    return e->posF();
-#endif
 }
 
 inline FluentWheelInputKind fluentWheelInputKind(const QWheelEvent* e) {

@@ -11,10 +11,15 @@ function(fluent_qt_configure_cpp_target target)
         CXX_EXTENSIONS OFF)
 
     if(MSVC)
-        target_compile_definitions("${target}" PRIVATE UNICODE _UNICODE)
+        target_compile_definitions("${target}" PRIVATE
+            UNICODE
+            _UNICODE
+            # Qt 5.15 still instantiates MSVC checked-array iterators internally.
+            _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
         # Parallel MSBuild invocations can make multiple cl.exe processes write
         # the same target PDB. Serialize those writes to avoid C1041 failures.
-        target_compile_options("${target}" PRIVATE /utf-8 /FS)
+        # Qt 5 moc can also emit unused internal notify-signal probes.
+        target_compile_options("${target}" PRIVATE /utf-8 /FS /wd4505)
         set_target_properties("${target}" PROPERTIES
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     endif()

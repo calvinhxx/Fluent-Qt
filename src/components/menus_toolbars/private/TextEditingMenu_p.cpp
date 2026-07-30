@@ -243,7 +243,6 @@ public:
         if (glyph.isEmpty())
             return QIcon();
 
-        constexpr int iconSize = Typography::IconSize::Standard;
         const Colors& colors = themeColorsRef();
         const QColor activeColor =
             themeDesignLanguage() == DesignCupertino
@@ -252,6 +251,7 @@ public:
 
         auto pixmapForColor =
             [this, &glyph](const QColor& color) {
+                constexpr int iconSize = Typography::IconSize::Standard;
                 const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
                 const int physicalSize =
                     qMax(1, qCeil(iconSize * dpr));

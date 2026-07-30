@@ -748,13 +748,12 @@ void TimePickerFlyoutPanel::layoutContent()
         return;
 
     int x = kPopupCardInset;
-    const int y = kPopupCardInset;
 
     auto placeColumn = [this, &x](TimePickerColumn* column, TimePicker::TimeField field) {
         if (column->isHidden())
             return;
         const int w = m_flyout->preferredColumnWidth(field);
-        column->setGeometry(x, y, w, kColumnHeight);
+        column->setGeometry(x, kPopupCardInset, w, kColumnHeight);
         x += w + kDividerWidth;
     };
 
