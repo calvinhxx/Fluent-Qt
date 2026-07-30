@@ -27,7 +27,11 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/src"
     "${FLUENT_QT_SOURCE_DIR}/res"
     "${FLUENT_QT_SOURCE_DIR}/third_party"
-    DESTINATION "${_package_root}")
+    "${FLUENT_QT_SOURCE_DIR}/bindings"
+    DESTINATION "${_package_root}"
+    PATTERN "__pycache__" EXCLUDE
+    PATTERN "*.pyc" EXCLUDE
+    PATTERN "*.pyo" EXCLUDE)
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/fonts"
     DESTINATION "${_package_root}/tools")

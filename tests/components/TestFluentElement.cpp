@@ -674,6 +674,24 @@ TEST_F(FluentElementTest, FontTokenMapping) {
     auto titleFont = component.themeFont(Typography::FontRole::TitleLarge);
     EXPECT_EQ(titleFont.size, Typography::FontSize::TitleLarge);  // 40px (Figma MCP 实测)
     EXPECT_GT(titleFont.weight, bodyFont.weight);
+
+    auto& registry = fluent::ThemeRegistry::instance();
+    registry.setFontFamilyOverride(QStringLiteral("Theme Font Test"));
+    registry.setFontScale(1.25);
+
+    const auto resolved =
+        registry.resolvedFontStyle(Typography::FontRole::BodyStrong);
+    const auto componentFont =
+        component.themeFont(Typography::FontRole::BodyStrong);
+    EXPECT_EQ(componentFont.family, QStringLiteral("Theme Font Test"));
+    EXPECT_TRUE(componentFont.styleName.isEmpty());
+    EXPECT_EQ(componentFont.size, 18);
+    EXPECT_EQ(componentFont.lineHeight, 25);
+    EXPECT_EQ(componentFont.family, resolved.family);
+    EXPECT_EQ(componentFont.styleName, resolved.styleName);
+    EXPECT_EQ(componentFont.size, resolved.size);
+    EXPECT_EQ(componentFont.weight, resolved.weight);
+    EXPECT_EQ(componentFont.lineHeight, resolved.lineHeight);
 }
 
 TEST_F(FluentElementTest, RadiusAndSpacingMapping) {

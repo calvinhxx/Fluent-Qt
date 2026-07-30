@@ -210,6 +210,26 @@ TEST_F(ToggleButtonDesignLanguageTest, AllLanguagesThemesAndStatesPaintAndChecke
     }
 }
 
+TEST_F(ToggleButtonDesignLanguageTest, ProgrammaticPartialCheckStateIsPreserved) {
+    ToggleButton toggle("Three-state");
+    toggle.setThreeState(true);
+
+    int toggledCount = 0;
+    bool lastChecked = false;
+    QObject::connect(&toggle, &QPushButton::toggled,
+                     [&toggledCount, &lastChecked](bool checked) {
+                         ++toggledCount;
+                         lastChecked = checked;
+                     });
+
+    toggle.setCheckState(Qt::PartiallyChecked);
+
+    EXPECT_EQ(toggle.checkState(), Qt::PartiallyChecked);
+    EXPECT_TRUE(toggle.isChecked());
+    EXPECT_EQ(toggledCount, 1);
+    EXPECT_TRUE(lastChecked);
+}
+
 // Regression for the invalid-QColor trap (a default-constructed QColor is INVALID yet
 // QColor::alpha() returns 255, so a bare alpha()>0 guard + setBrush(invalidColor) paints SOLID
 // OPAQUE BLACK). The macOS branch fills a real bezel/accent surface, so neither state may render an

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<typesystem package="_fluentqt">
+    <load-typesystem name="typesystem_widgets.xml" generate="no"/>
+
+    <!-- Shiboken 6.2 incorrectly promotes Q_ENUM friend helpers from QObject
+         subclasses to namespace functions. They are Qt implementation details
+         and qualified calls to them do not compile. Reject them during API
+         extraction while keeping the declared enum types available. -->
+    <rejection class="fluent::basicinput"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::textfields"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::status_info"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+
+    <function signature="prepareHighDpiApplication()"/>
+    <function signature="initializeResources()"/>
+    <function signature="fontForRole(Typography::FontRole)"/>
+    <function signature="setTheme(fluent::binding::Theme)"/>
+    <function signature="currentTheme()"/>
+    <function signature="applyStyleTheme(fluent::StyleTheme)"/>
+    <function signature="setAccentColor(const QColor&amp;)"/>
+    <function signature="accentColor()"/>
+    <function signature="resetThemeTokens()"/>
+    <function signature="setFontScale(qreal)"/>
+    <function signature="fontScale()"/>
+    <function signature="currentDesignLanguage()"/>
+    <function signature="themeRevision()"/>
+    <function signature="bindingBuildInfo()"/>
+
+    <namespace-type name="Typography" visible="no">
+        <enum-type name="FontRole"/>
+        <modify-function signature="^.*$" remove="all"/>
+    </namespace-type>
+
+    <!-- Keep these two native namespaces visible. Shiboken 6.9 emits duplicate
+         Q_ENUM_NS wrappers when the windowing namespace is flattened. The
+         fluentqt Python package re-exports the intended flat public API. -->
+    <namespace-type name="fluent">
+        <include file-name="BindingApi.h" location="global"/>
+        <enum-type name="StyleTheme"/>
+        <namespace-type name="binding" visible="no">
+            <enum-type name="Theme"/>
+            <enum-type name="DesignLanguage"/>
+        </namespace-type>
+
+        <namespace-type name="basicinput" visible="no">
+            <object-type name="Button">
+                <enum-type name="ButtonStyle"/>
+                <enum-type name="ButtonSize"/>
+                <enum-type name="ButtonLayout"/>
+                <enum-type name="InteractionState"/>
+            </object-type>
+            <object-type name="CheckBox"/>
+            <object-type name="HyperlinkButton"/>
+            <object-type name="RadioButton"/>
+            <object-type name="RepeatButton"/>
+            <object-type name="Slider"/>
+            <object-type name="ToggleButton"/>
+            <object-type name="ToggleSwitch"/>
+        </namespace-type>
+
+        <namespace-type name="layout" visible="no">
+            <object-type name="Divider"/>
+        </namespace-type>
+
+        <namespace-type name="textfields" visible="no">
+            <object-type name="Label">
+                <enum-type name="TextColorRole"/>
+            </object-type>
+            <object-type name="LineEdit"/>
+            <object-type name="NumberBox">
+                <enum-type name="SpinButtonPlacementMode"/>
+            </object-type>
+            <object-type name="PasswordBox">
+                <enum-type name="PasswordRevealMode"/>
+            </object-type>
+        </namespace-type>
+
+        <namespace-type name="status_info" visible="no">
+            <object-type name="InfoBadge">
+                <enum-type name="InfoBadgeDisplayMode"/>
+                <enum-type name="InfoBadgeStatus"/>
+            </object-type>
+            <object-type name="ProgressBar"/>
+            <object-type name="ProgressRing">
+                <enum-type name="ProgressRingSize"/>
+                <enum-type name="ProgressRingStatus"/>
+            </object-type>
+            <object-type name="Shimmer">
+                <enum-type name="ShimmerTemplate"/>
+                <!-- Shiboken omits elements()/setElements() because
+                     ShimmerPainter::Element has no type entry. Remove the
+                     remaining mutator so only built-in templates are
+                     configurable until a Python value type is designed.
+                     The parameterless QMetaObject signal remains visible. -->
+                <modify-function signature="^clearElements\(.*$" remove="all"/>
+            </object-type>
+        </namespace-type>
+
+        <namespace-type name="windowing">
+            <enum-type name="BackdropEffect"/>
+            <enum-type name="BackdropBackend"/>
+            <enum-type name="BackdropFidelity"/>
+            <enum-type name="BackdropSurfaceMode"/>
+            <value-type name="BackdropCapabilities"/>
+            <value-type name="BackdropState"/>
+            <object-type name="Window">
+                <modify-function signature="setContentWidget(QWidget*)">
+                    <inject-code class="target" position="beginning">
+                        <insert-template name="replace_child">
+                            <replace from="$FUNCTION_GET_OLD" to="contentWidget"/>
+                            <replace from="$CHILD_TYPE" to="QWidget"/>
+                            <replace from="$PYARG" to="%PYARG_1"/>
+                            <replace from="$CPPARG" to="%1"/>
+                        </insert-template>
+                    </inject-code>
+                </modify-function>
+                <!-- Match QWidget's safe (bool, qintptr) Python contract while
+                     preserving Window::nativeEvent as the C++ fallback. -->
+                <modify-function signature="nativeEvent(const QByteArray&amp;,void*,long long*)"
+                                 access="private">
+                    <modify-argument index="3">
+                        <remove-argument/>
+                        <conversion-rule class="native">
+                            <insert-template name="return_native_eventfilter_conversion_variables"/>
+                        </conversion-rule>
+                    </modify-argument>
+                    <modify-argument index="return">
+                        <replace-type modified-type="PyObject"/>
+                        <conversion-rule class="native">
+                            <insert-template name="return_native_eventfilter_conversion"/>
+                        </conversion-rule>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+        </namespace-type>
+    </namespace-type>
+</typesystem>

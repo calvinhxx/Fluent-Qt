@@ -120,20 +120,7 @@ const FluentElement::Colors& FluentElement::themeColorsRef() const {
 }
 
 FluentElement::FontStyle FluentElement::themeFont(Typography::FontRole role) const {
-    const Typography::FontStyle& s = Typography::fontStyle(role);
-
-    // Apply the registry's optional family override + size scale so a brand preset (Roboto / SF) or a
-    // user config can restyle text without touching every control. A family override clears the bundled
-    // face styleName, which would not apply to a different family. Defaults (empty family, scale 1.0)
-    // reproduce the original style byte-for-byte. zh_CN: 套用注册表的可选字族覆盖与字号缩放,使品牌预设
-    //(Roboto / SF)或用户配置无需改控件即可重塑文字;覆盖字族时清空内置字体 styleName(对异族无效)。
-    // 默认(空字族、缩放 1.0)逐字节复现原样式。
-    const ThemeRegistry& registry = ThemeRegistry::instance();
-    const QString familyOverride = registry.fontFamilyOverride();
-    const qreal scale = registry.fontScale();
-    const QString family = familyOverride.isEmpty() ? s.family : familyOverride;
-    const QString styleName = familyOverride.isEmpty() ? s.styleName : QString();
-    return { family, styleName, qRound(s.size * scale), s.weight, qRound(s.lineHeight * scale) };
+    return ThemeRegistry::instance().resolvedFontStyle(role);
 }
 
 FluentElement::Radius FluentElement::themeRadius() const {

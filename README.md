@@ -31,6 +31,7 @@
 | Scope | Dependencies |
 |---|---|
 | FluentQt library | C++17, CMake 3.16+, Qt Widgets |
+| Optional PySide6 bindings | Python 3.10+, FluentQt, matching Qt/PySide6/Shiboken6 6.2+ |
 | Gallery | FluentQt, Qt Network, spdlog/fmt |
 | Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
 
@@ -126,6 +127,49 @@ geometry in device-independent coordinates and do not add a second app-level mul
 
 See [`examples/hello_world`](examples/hello_world/) for the complete project, or run the `fluentqt_hello_world` target directly from an IDE.
 
+### PySide6
+
+The optional Python bindings support matching Qt, PySide6, Shiboken6, and
+Shiboken6 generator versions from 6.2 onward. Qt/PySide 6.2.4 is the minimum
+CI baseline. The C++ library continues to support Qt 5.15; the Python target
+does not add PySide2 bindings.
+
+```python
+import fluentqt
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+
+fluentqt.prepare_high_dpi_application()
+app = QApplication([])
+fluentqt.initialize_resources()
+app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+
+window = fluentqt.Window()
+window.setWindowTitle("FluentQt Hello World")
+window.resize(480, 320)
+
+content = QWidget()
+layout = QVBoxLayout(content)
+layout.setContentsMargins(32, 32, 32, 32)
+button = fluentqt.Button("Hello from FluentQt", content)
+button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+layout.addStretch()
+layout.addWidget(button, 0, Qt.AlignCenter)
+layout.addStretch()
+
+window.setContentWidget(content)
+window.show()
+app.exec()
+```
+
+The current binding set includes eighteen widgets from Basic Input, Layout,
+Text Fields, Status & Info, and Windowing. It also exposes
+Light/Dark mode, Fluent/Material/macOS style presets, accent overrides,
+typography scaling, Qt properties and signals, and Python subclassing. See the
+[PySide6 binding guide](bindings/pyside6/README.md) for the exact 6.2.4 setup,
+API scope, wheel target, and clean-environment validation commands, and the
+[compatibility roadmap](bindings/pyside6/ROADMAP.md) for the remaining work.
+
 ## 🛠 Build
 
 ### Library
@@ -189,6 +233,8 @@ See the [Packaging Workflow](docs/development/packaging-workflow.md) for exact l
 ## 📚 Documentation
 
 - [Development workflow](docs/development/README.md)
+- [PySide6 binding guide](bindings/pyside6/README.md)
+- [PySide6 compatibility roadmap](bindings/pyside6/ROADMAP.md)
 - [Testing and visual review](docs/development/testing-workflow.md)
 - [Packaging workflow](docs/development/packaging-workflow.md)
 - [Release governance](docs/development/release-governance.md)

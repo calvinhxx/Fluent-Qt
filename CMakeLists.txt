@@ -25,10 +25,16 @@ option(BUILD_TESTING "Enable testing and build tests" OFF)
 option(FLUENT_QT_BUILD_TESTS "Build Fluent-Qt test targets" OFF)
 option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" OFF)
 option(FLUENT_QT_BUILD_EXAMPLES "Build Fluent-Qt executable examples" ${FLUENT_QT_IS_TOP_LEVEL})
+option(FLUENT_QT_BUILD_PYSIDE6_BINDINGS "Build the optional PySide6 bindings" OFF)
 option(FLUENT_QT_INSTALL "Install Fluent-Qt library targets, headers, and CMake package files" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_ENABLE_GALLERY_PACKAGING "Enable CPack packaging for the Gallery application" OFF)
 option(FLUENT_QT_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer for FluentQt tests" OFF)
 option(FLUENT_QT_ENABLE_WARNINGS "Enable strict compiler warnings for the FluentQt library" ${FLUENT_QT_IS_TOP_LEVEL})
+
+if(BUILD_TESTING AND
+   (FLUENT_QT_BUILD_TESTS OR FLUENT_QT_BUILD_PYSIDE6_BINDINGS))
+	enable_testing()
+endif()
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
@@ -79,6 +85,15 @@ set_target_properties(FluentQt PROPERTIES
 	EXPORT_NAME FluentQt
 	OUTPUT_NAME FluentQt
 )
+
+if(FLUENT_QT_BUILD_PYSIDE6_BINDINGS)
+	if(NOT QT_VERSION_MAJOR EQUAL 6)
+		message(FATAL_ERROR
+			"FLUENT_QT_BUILD_PYSIDE6_BINDINGS requires Qt 6.2 or newer")
+	endif()
+	set_target_properties(FluentQt PROPERTIES POSITION_INDEPENDENT_CODE ON)
+	add_subdirectory(bindings/pyside6)
+endif()
 
 add_custom_target(fluent_qt_source_package
 	COMMAND ${CMAKE_COMMAND}
@@ -157,7 +172,6 @@ endif()
 
 # ut
 if(BUILD_TESTING AND FLUENT_QT_BUILD_TESTS)
-	enable_testing()
 	add_subdirectory(tests)
 endif()
 

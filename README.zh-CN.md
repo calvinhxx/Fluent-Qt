@@ -31,6 +31,7 @@
 | 范围 | 依赖 |
 |---|---|
 | FluentQt 组件库 | C++17、CMake 3.16+、Qt Widgets |
+| 可选 PySide6 绑定 | Python 3.10+、FluentQt、版本一致的 Qt/PySide6/Shiboken6 6.2+ |
 | Gallery | FluentQt、Qt Network、spdlog/fmt |
 | 测试 | FluentQt、Qt Test/Network、GTest、spdlog/fmt |
 
@@ -126,6 +127,47 @@ FluentQt 通过 Qt 跟随操作系统的显示缩放。应用应使用设备无�
 
 完整工程见 [`examples/hello_world`](examples/hello_world/)，IDE 中可直接运行 `fluentqt_hello_world` target。
 
+### PySide6
+
+可选 Python 绑定支持 6.2 起版本一致的 Qt、PySide6、Shiboken6 和
+Shiboken6 generator；最低 CI 基线为 Qt/PySide 6.2.4。C++ 组件库仍支持
+Qt 5.15，Python target 不包含 PySide2 绑定。
+
+```python
+import fluentqt
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+
+fluentqt.prepare_high_dpi_application()
+app = QApplication([])
+fluentqt.initialize_resources()
+app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+
+window = fluentqt.Window()
+window.setWindowTitle("FluentQt Hello World")
+window.resize(480, 320)
+
+content = QWidget()
+layout = QVBoxLayout(content)
+layout.setContentsMargins(32, 32, 32, 32)
+button = fluentqt.Button("Hello from FluentQt", content)
+button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+layout.addStretch()
+layout.addWidget(button, 0, Qt.AlignCenter)
+layout.addStretch()
+
+window.setContentWidget(content)
+window.show()
+app.exec()
+```
+
+当前绑定包含 Basic Input、Layout、Text Fields、Status & Info 和 Windowing
+中的 18 个控件，并暴露 Light/Dark 模式、Fluent/Material/macOS 样式预设、
+accent 覆盖、字体缩放、Qt 属性与信号以及 Python 子类能力。准确的 6.2.4
+环境准备、API 范围、wheel target、交互验收窗口和干净环境验证命令见
+[PySide6 绑定指南](bindings/pyside6/README.md)，后续工作见
+[兼容性路线图](bindings/pyside6/ROADMAP.zh-CN.md)。
+
 ## 🛠 构建
 
 ### 组件库
@@ -189,6 +231,8 @@ cmake --build --preset PRESET --target fluent_qt_gallery --parallel
 ## 📚 文档
 
 - [开发工作流](docs/development/README.md)
+- [PySide6 绑定指南](bindings/pyside6/README.md)
+- [PySide6 兼容性路线图](bindings/pyside6/ROADMAP.zh-CN.md)
 - [测试与视觉验收](docs/development/testing-workflow.md)
 - [打包工作流](docs/development/packaging-workflow.md)
 - [发布治理](docs/development/release-governance.md)

@@ -4,6 +4,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QFontMetrics>
+#include <QScopedValueRollback>
 
 namespace fluent::basicinput {
 
@@ -29,6 +30,8 @@ ToggleButton::ToggleButton(const QString& text, QWidget* parent)
     setCheckable(true);
     // Keep m_checkState in sync via the toggled signal. zh_CN: 连接 toggled 信号同步 m_checkState。
     connect(this, &QPushButton::toggled, this, [this](bool checked) {
+        if (m_syncingCheckedState)
+            return;
         setCheckState(checked ? Qt::Checked : Qt::Unchecked);
     });
 }
@@ -51,7 +54,12 @@ Qt::CheckState ToggleButton::checkState() const {
 void ToggleButton::setCheckState(Qt::CheckState state) {
     if (m_checkState != state) {
         m_checkState = state;
-        setChecked(m_checkState != Qt::Unchecked);
+        const bool checked = m_checkState != Qt::Unchecked;
+        if (isChecked() != checked) {
+            const QScopedValueRollback<bool> syncingGuard(
+                m_syncingCheckedState, true);
+            setChecked(checked);
+        }
         update();
         emit checkStateChanged(m_checkState);
     }
