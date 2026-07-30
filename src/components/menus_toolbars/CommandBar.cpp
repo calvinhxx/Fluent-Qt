@@ -1001,6 +1001,12 @@ public:
             }
         }
 
+        if (event->type() != QEvent::FocusIn
+            && event->type() != QEvent::MouseButtonPress
+            && event->type() != QEvent::KeyPress) {
+            return QObject::eventFilter(watched, event);
+        }
+
         const int targetIndex = focusTargetIndex(watched);
         if (targetIndex < 0)
             return QObject::eventFilter(watched, event);

@@ -457,6 +457,11 @@ public:
             return QObject::eventFilter(watched, event);
         }
 
+        if (event->type() != QEvent::FocusIn
+            && event->type() != QEvent::MouseButtonPress) {
+            return QObject::eventFilter(watched, event);
+        }
+
         const int targetIndex = focusTargetIndex(watched);
         if (targetIndex < 0)
             return QObject::eventFilter(watched, event);
