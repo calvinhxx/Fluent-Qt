@@ -3,11 +3,13 @@
 #include <cmath>
 #include <functional>
 
+#include <QAction>
 #include <QBoxLayout>
 #include <QEvent>
 #include <QFont>
 #include <QHBoxLayout>
 #include <QMargins>
+#include <QMetaEnum>
 #include <QPainter>
 #include <QPoint>
 #include <QSizePolicy>
@@ -518,7 +520,7 @@ QVector<GallerySample> infoBadgeSamples()
                    QStringLiteral("Badge sizing, padding, and color overrides let a badge sit on top of another control."),
                    QStringLiteral("auto* inboxButton = new Button(\"Inbox\", this);\n"
                                   "\n"
-                                  "auto* badge = new InfoBadge(inboxButton);\n"
+                                  "auto* badge = new InfoBadge(host);\n"
                                   "badge->setDisplayMode(InfoBadge::InfoBadgeDisplayMode::Icon);\n"
                                   "badge->setIconGlyph(Typography::Icons::Mail);\n"
                                   "badge->setCustomBackgroundColor(QColor(\"#C42B1C\"));\n"
@@ -543,6 +545,101 @@ QVector<GallerySample> infoBadgeSamples()
                        badge->move(132, 8);
 
                        boxLayout(surface)->addWidget(host, 0, Qt::AlignLeft);
+                       return surface;
+                   }),
+        makeSample(QStringLiteral("info-badge-accessibility"),
+                   QStringLiteral("Accessible value and visibility"),
+                   QStringLiteral("A value badge remains a non-focusable child of its accessible parent and reports value or visibility changes without duplicating business text."),
+                   QStringLiteral("auto* inbox = new Button(\"Inbox\", this);\n"
+                                  "inbox->setAccessibleName(\"Inbox\");\n"
+                                  "\n"
+                                  "auto* badge = new InfoBadge(inbox);\n"
+                                  "badge->setDisplayMode(InfoBadge::InfoBadgeDisplayMode::Value);\n"
+                                  "badge->setAccessibleName(\"Unread messages\");\n"
+                                  "badge->setValue(3);\n"
+                                  "\n"
+                                  "auto* increment = new Button(\"Increment\", this);\n"
+                                  "auto* toggle = new Button(\"Toggle badge\", this);\n"
+                                  "auto* status = new Label(\"Unread value: 3\", this);\n"
+                                  "\n"
+                                  "connect(increment, &Button::clicked, this, [=]() {\n"
+                                  "    badge->setValue(badge->value() + 1);\n"
+                                  "    status->setText(QString(\"Unread value: %1\").arg(badge->value()));\n"
+                                  "});\n"
+                                  "connect(toggle, &Button::clicked, this, [=]() {\n"
+                                  "    const bool showBadge = badge->isHidden();\n"
+                                  "    badge->setVisible(showBadge);\n"
+                                  "    status->setText(showBadge ? \"Badge visible\" : \"Badge hidden\");\n"
+                                  "});"),
+                   [](QWidget* parent) {
+                       QWidget* surface = sampleSurface(parent);
+                       auto* inbox = new Button(
+                           QStringLiteral("Inbox"), surface);
+                       inbox->setAccessibleName(
+                           QStringLiteral("Inbox"));
+                       inbox->setFixedSize(164, 42);
+
+                       auto* badge = new InfoBadge(inbox);
+                       badge->setObjectName(
+                           QStringLiteral(
+                               "galleryInfoBadgeAccessibleValue"));
+                       badge->setDisplayMode(
+                           InfoBadge::InfoBadgeDisplayMode::Value);
+                       badge->setAccessibleName(
+                           QStringLiteral("Unread messages"));
+                       badge->setValue(3);
+                       badge->resize(badge->sizeHint());
+                       badge->move(
+                           inbox->width() - badge->width() - 6,
+                           4);
+
+                       QWidget* row = horizontalGroup(surface, 8);
+                       auto* increment = sampleButton(
+                           row, QStringLiteral("Increment"));
+                       increment->setObjectName(
+                           QStringLiteral(
+                               "galleryInfoBadgeAccessibleIncrement"));
+                       auto* toggle = sampleButton(
+                           row, QStringLiteral("Toggle badge"));
+                       toggle->setObjectName(
+                           QStringLiteral(
+                               "galleryInfoBadgeAccessibleToggle"));
+                       auto* status = makeStatusLabel(
+                           surface,
+                           QStringLiteral("Unread value: 3"));
+                       status->setObjectName(
+                           QStringLiteral(
+                               "galleryInfoBadgeAccessibleStatus"));
+
+                       QObject::connect(
+                           increment,
+                           &Button::clicked,
+                           badge,
+                           [badge, status]() {
+                           badge->setValue(badge->value() + 1);
+                           status->setText(
+                               QStringLiteral("Unread value: %1")
+                                   .arg(badge->value()));
+                       });
+                       QObject::connect(
+                           toggle,
+                           &Button::clicked,
+                           badge,
+                           [badge, status]() {
+                           const bool showBadge = badge->isHidden();
+                           badge->setVisible(showBadge);
+                           status->setText(
+                               showBadge
+                               ? QStringLiteral("Badge visible")
+                               : QStringLiteral("Badge hidden"));
+                       });
+
+                       boxLayout(row)->addWidget(increment);
+                       boxLayout(row)->addWidget(toggle);
+                       boxLayout(surface)->addWidget(
+                           inbox, 0, Qt::AlignLeft);
+                       boxLayout(surface)->addWidget(row);
+                       boxLayout(surface)->addWidget(status);
                        return surface;
                    })
     };
@@ -1249,6 +1346,165 @@ QVector<GallerySample> toastSamples()
                     surface,
                     QStringLiteral(
                         "Default maximumVisible is 3; older toasts dismiss first.")));
+                return surface;
+            }),
+        makeSample(
+            QStringLiteral("toast-action-lifecycle"),
+            QStringLiteral("Action, hover pause, and dismissal reason"),
+            QStringLiteral("An optional borrowed QAction makes the toast interactive; hover can pause its timeout, and every close path reports a stable reason."),
+            QStringLiteral("auto* retry = new QAction(\"Retry\", this);\n"
+                           "auto* toast = new Toast(this);\n"
+                           "toast->setAction(retry);\n"
+                           "toast->setPauseOnHoverEnabled(true);\n"
+                           "toast->setDuration(5000);\n"
+                           "\n"
+                           "auto* showToast = new Button(\"Show actionable toast\", this);\n"
+                           "auto* status = new Label(\"Ready\", this);\n"
+                           "connect(showToast, &Button::clicked, this, [=]() {\n"
+                           "    toast->setMessage(\"Upload failed. Retry when ready.\");\n"
+                           "    toast->setSeverity(Toast::Error);\n"
+                           "    toast->present(showToast);\n"
+                           "    status->setText(\"Toast open; hover pauses timeout\");\n"
+                           "});\n"
+                           "connect(retry, &QAction::triggered, this, [=]() {\n"
+                           "    status->setText(\"Retry requested\");\n"
+                           "});\n"
+                           "connect(toast, &Toast::dismissedWithReason, this,\n"
+                           "        [=](Toast::DismissReason reason) {\n"
+                           "    const QMetaEnum meta = QMetaEnum::fromType<Toast::DismissReason>();\n"
+                           "    status->setText(QString(\"Dismissed: %1\").arg(\n"
+                           "        QString::fromLatin1(meta.valueToKey(reason))));\n"
+                           "});"),
+            [](QWidget* parent) {
+                QWidget* surface = sampleSurface(parent);
+                auto* retry = new QAction(
+                    QStringLiteral("Retry"), surface);
+                auto* toast = new Toast(surface);
+                toast->setObjectName(
+                    QStringLiteral("galleryToastLifecycleSample"));
+                toast->setAction(retry);
+                toast->setPauseOnHoverEnabled(true);
+                toast->setDuration(5000);
+                QObject::connect(
+                    surface, &QObject::destroyed,
+                    toast, &QObject::deleteLater);
+
+                auto* showToast = sampleButton(
+                    surface,
+                    QStringLiteral("Show actionable toast"));
+                showToast->setObjectName(
+                    QStringLiteral("galleryToastLifecycleTrigger"));
+                auto* status = makeStatusLabel(
+                    surface, QStringLiteral("Ready"));
+                status->setObjectName(
+                    QStringLiteral("galleryToastLifecycleStatus"));
+
+                QObject::connect(
+                    showToast,
+                    &Button::clicked,
+                    toast,
+                    [showToast, toast, status]() {
+                    toast->setMessage(
+                        QStringLiteral(
+                            "Upload failed. Retry when ready."));
+                    toast->setSeverity(Toast::Error);
+                    toast->present(showToast);
+                    status->setText(
+                        QStringLiteral(
+                            "Toast open; hover pauses timeout"));
+                });
+                QObject::connect(
+                    retry,
+                    &QAction::triggered,
+                    status,
+                    [status]() {
+                    status->setText(
+                        QStringLiteral("Retry requested"));
+                });
+                QObject::connect(
+                    toast,
+                    &Toast::dismissedWithReason,
+                    status,
+                    [status](Toast::DismissReason reason) {
+                    const QMetaEnum meta =
+                        QMetaEnum::fromType<
+                            Toast::DismissReason>();
+                    status->setText(
+                        QStringLiteral("Dismissed: %1")
+                            .arg(QString::fromLatin1(
+                                meta.valueToKey(reason))));
+                });
+
+                boxLayout(surface)->addWidget(
+                    showToast, 0, Qt::AlignLeft);
+                boxLayout(surface)->addWidget(status);
+                return surface;
+            }),
+        makeSample(
+            QStringLiteral("toast-update-key"),
+            QStringLiteral("In-place managed updates"),
+            QStringLiteral("A non-empty update key refreshes the matching toast within one host and placement without adding another stack entry."),
+            QStringLiteral("auto* advance = new Button(\"Advance upload\", this);\n"
+                           "auto* status = new Label(\"Progress: 0%\", this);\n"
+                           "advance->setProperty(\"progress\", 0);\n"
+                           "\n"
+                           "connect(advance, &Button::clicked, this, [=]() {\n"
+                           "    const int current = advance->property(\"progress\").toInt();\n"
+                           "    const int progress = current >= 100 ? 25 : current + 25;\n"
+                           "    advance->setProperty(\"progress\", progress);\n"
+                           "    Toast::showOrUpdateToast(\n"
+                           "        advance,\n"
+                           "        \"upload\",\n"
+                           "        progress == 100\n"
+                           "            ? \"Upload complete\"\n"
+                           "            : QString(\"Uploading: %1%\").arg(progress),\n"
+                           "        progress == 100 ? Toast::Success : Toast::Informational,\n"
+                           "        5000,\n"
+                           "        Toast::TopEnd);\n"
+                           "    status->setText(QString(\"Progress: %1%\").arg(progress));\n"
+                           "});"),
+            [](QWidget* parent) {
+                QWidget* surface = sampleSurface(parent);
+                auto* advance = sampleButton(
+                    surface, QStringLiteral("Advance upload"));
+                advance->setObjectName(
+                    QStringLiteral("galleryToastUpdateTrigger"));
+                advance->setProperty("progress", 0);
+                auto* status = makeStatusLabel(
+                    surface, QStringLiteral("Progress: 0%"));
+                status->setObjectName(
+                    QStringLiteral("galleryToastUpdateStatus"));
+
+                QObject::connect(
+                    advance,
+                    &Button::clicked,
+                    advance,
+                    [advance, status]() {
+                    const int current =
+                        advance->property("progress").toInt();
+                    const int progress =
+                        current >= 100 ? 25 : current + 25;
+                    advance->setProperty("progress", progress);
+                    Toast::showOrUpdateToast(
+                        advance,
+                        QStringLiteral("upload"),
+                        progress == 100
+                            ? QStringLiteral("Upload complete")
+                            : QStringLiteral("Uploading: %1%")
+                                  .arg(progress),
+                        progress == 100
+                            ? Toast::Success
+                            : Toast::Informational,
+                        5000,
+                        Toast::TopEnd);
+                    status->setText(
+                        QStringLiteral("Progress: %1%")
+                            .arg(progress));
+                });
+
+                boxLayout(surface)->addWidget(
+                    advance, 0, Qt::AlignLeft);
+                boxLayout(surface)->addWidget(status);
                 return surface;
             })
     };
