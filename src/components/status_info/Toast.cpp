@@ -1,7 +1,6 @@
 #include "components/status_info/Toast.h"
 
 #include <QAbstractAnimation>
-#include <QAccessible>
 #include <QAction>
 #include <QFontMetrics>
 #include <QFrame>
@@ -1011,21 +1010,15 @@ void Toast::syncAccessibleName()
 
 void Toast::announceAccessibility()
 {
-#if QT_CONFIG(accessibility)
     const QString announcement = accessibleAnnouncementText();
     if (announcement.isEmpty())
         return;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    QAccessibleAnnouncementEvent event(this, announcement);
-    event.setPoliteness(
+    fluentSendAccessibleAnnouncement(
+        this,
+        announcement,
         m_severity == Error
-        ? QAccessible::AnnouncementPoliteness::Assertive
-        : QAccessible::AnnouncementPoliteness::Polite);
-#else
-    QAccessibleEvent event(this, QAccessible::Alert);
-#endif
-    QAccessible::updateAccessibility(&event);
-#endif
+        ? FluentAccessibleAnnouncementPoliteness::Assertive
+        : FluentAccessibleAnnouncementPoliteness::Polite);
 }
 
 void Toast::applyPalette()
