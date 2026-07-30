@@ -1,15 +1,19 @@
 #ifndef FLUENTQT_COMPONENTS_STATUS_INFO_TOAST_H
 #define FLUENTQT_COMPONENTS_STATUS_INFO_TOAST_H
 
+#include <QAction>
 #include <QMargins>
 #include <QMetaObject>
+#include <QPointer>
 #include <QString>
 #include <QVector>
 #include <QWidget>
 
+#include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 
+class QEvent;
 class QFrame;
 class QGraphicsOpacityEffect;
 class QPaintEvent;
@@ -22,6 +26,10 @@ class OverlayCoordinator;
 
 namespace fluent {
 class FontIcon;
+}
+
+namespace fluent::basicinput {
+class Button;
 }
 
 namespace fluent::textfields {
@@ -54,6 +62,13 @@ class Toast : public QWidget, public FluentElement, public QMLPlus {
     Q_PROPERTY(int duration READ duration WRITE setDuration NOTIFY durationChanged)
     Q_PROPERTY(bool animationEnabled READ isAnimationEnabled
                    WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
+    Q_PROPERTY(QAction* action READ action WRITE setAction
+                   NOTIFY actionChanged)
+    Q_PROPERTY(bool pauseOnHoverEnabled READ isPauseOnHoverEnabled
+                   WRITE setPauseOnHoverEnabled
+                   NOTIFY pauseOnHoverEnabledChanged)
+    Q_PROPERTY(QString updateKey READ updateKey WRITE setUpdateKey
+                   NOTIFY updateKeyChanged)
     Q_PROPERTY(bool isOpen READ isOpen NOTIFY isOpenChanged)
     Q_PROPERTY(qreal toastProgress READ toastProgress WRITE setToastProgress)
 
@@ -83,6 +98,18 @@ public:
     };
     Q_ENUM(Placement)
 
+    /**
+     * @brief Reason that ended one toast presentation lifetime.
+     * zh_CN: 结束一次 Toast 展示生命周期的原因。
+     */
+    enum DismissReason {
+        Programmatic,
+        TimedOut,
+        ActionInvoked,
+        Evicted
+    };
+    Q_ENUM(DismissReason)
+
     explicit Toast(QWidget* parent = nullptr);
     ~Toast() override;
 
@@ -106,6 +133,37 @@ public:
 
     bool isAnimationEnabled() const { return m_animationEnabled; }
     void setAnimationEnabled(bool enabled);
+
+    /**
+     * @brief Optional caller-owned action presented inside the toast.
+     * zh_CN: 在 Toast 内呈现的可选调用方所有动作。
+     *
+     * The toast borrows the action without reparenting it. Invoking the
+     * action from the toast dismisses the current presentation with
+     * `ActionInvoked`.
+     * zh_CN: Toast 仅借用该动作而不改变其父对象；从 Toast 触发动作后，本次展示将以
+     * `ActionInvoked` 原因关闭。
+     */
+    QAction* action() const { return m_action.data(); }
+    void setAction(QAction* action);
+
+    /**
+     * @brief Whether an active duration timer pauses while the toast is hovered.
+     * zh_CN: 鼠标悬停 Toast 时是否暂停正在运行的持续时间计时器。
+     *
+     * Disabled by default so a non-interactive toast keeps the existing
+     * pointer-pass-through behavior.
+     * zh_CN: 默认为关闭，使非交互 Toast 保持既有的鼠标穿透行为。
+     */
+    bool isPauseOnHoverEnabled() const { return m_pauseOnHoverEnabled; }
+    void setPauseOnHoverEnabled(bool enabled);
+
+    /**
+     * @brief Optional key used by `showOrUpdateToast()` within one managed stack.
+     * zh_CN: `showOrUpdateToast()` 在单个托管堆栈内使用的可选更新键。
+     */
+    QString updateKey() const { return m_updateKey; }
+    void setUpdateKey(const QString& key);
 
     bool isOpen() const { return m_isOpen; }
     qreal toastProgress() const { return m_progress; }
@@ -152,6 +210,27 @@ public:
         Placement placement = Top,
         const QMargins& margins = QMargins(16, 16, 16, 16));
 
+    /**
+     * @brief Shows a managed toast or updates the open toast with the same key.
+     * zh_CN: 显示托管 Toast，或原地更新同一更新键对应的已打开 Toast。
+     *
+     * Matching is scoped by top-level host, placement, and non-empty
+     * `updateKey`. An in-place update preserves stack order, resets the
+     * duration timer, emits `updated()`, and does not consume another
+     * `maximumVisible()` slot. An empty key behaves like `showToast()`.
+     * zh_CN: 匹配范围由顶层宿主、定位和非空 `updateKey` 共同确定。原地更新会保留
+     * 堆叠顺序、重置持续时间计时器并发出 `updated()`，且不额外占用
+     * `maximumVisible()` 名额；空键等同于 `showToast()`。
+     */
+    static Toast* showOrUpdateToast(
+        QWidget* anchor,
+        const QString& updateKey,
+        const QString& message,
+        Severity severity = Informational,
+        int durationMs = 2200,
+        Placement placement = Top,
+        const QMargins& margins = QMargins(16, 16, 16, 16));
+
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
     void onThemeUpdated() override;
@@ -164,11 +243,18 @@ signals:
     void placementMarginsChanged(const QMargins& margins);
     void durationChanged(int durationMs);
     void animationEnabledChanged(bool enabled);
+    void actionChanged(QAction* action);
+    void pauseOnHoverEnabledChanged(bool enabled);
+    void updateKeyChanged(const QString& key);
     void isOpenChanged(bool open);
     void presented();
+    void updated();
     void dismissed();
+    void dismissedWithReason(DismissReason reason);
 
 protected:
+    void enterEvent(FluentEnterEvent* event) override;
+    void leaveEvent(QEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
 
 private:
@@ -178,7 +264,17 @@ private:
     void updateMessageWrapping();
     void syncGeometry();
     void startAnimation(qreal endValue);
+    void requestDismiss(
+        DismissReason reason, bool immediate = false);
     void finalizeDismiss();
+    void restartDurationTimer();
+    void pauseDurationTimer();
+    void resumeDurationTimer();
+    void updatePointerInteraction();
+    void syncActionButton();
+    void syncAccessibleName();
+    void announceAccessibility();
+    QString accessibleAnnouncementText() const;
     void applyPalette();
     QString severityGlyph() const;
     QColor severityForeground() const;
@@ -198,17 +294,29 @@ private:
     bool m_animationEnabled = true;
     bool m_isOpen = false;
     bool m_deleteOnDismiss = false;
+    bool m_dismissInProgress = false;
+    bool m_actionInvocationInProgress = false;
+    bool m_pauseOnHoverEnabled = false;
+    bool m_hoverPaused = false;
+    int m_remainingDuration = 0;
     qreal m_progress = 0.0;
+    QString m_updateKey;
+    QString m_autoAccessibleName;
+    DismissReason m_pendingDismissReason = Programmatic;
 
     QFrame* m_card = nullptr;
     fluent::FontIcon* m_icon = nullptr;
     textfields::Label* m_titleLabel = nullptr;
     textfields::Label* m_messageLabel = nullptr;
+    basicinput::Button* m_actionButton = nullptr;
+    QPointer<QAction> m_action;
     QGraphicsOpacityEffect* m_opacityEffect = nullptr;
     QPropertyAnimation* m_animation = nullptr;
     QTimer* m_timer = nullptr;
     overlay::OverlayCoordinator* m_overlayCoordinator = nullptr;
     QMetaObject::Connection m_animationFinishedConnection;
+    QMetaObject::Connection m_actionChangedConnection;
+    QMetaObject::Connection m_actionDestroyedConnection;
 
     QColor m_surfaceColor;
     QColor m_borderColor;
@@ -217,5 +325,7 @@ private:
 };
 
 } // namespace fluent::status_info
+
+Q_DECLARE_METATYPE(fluent::status_info::Toast::DismissReason)
 
 #endif // FLUENTQT_COMPONENTS_STATUS_INFO_TOAST_H

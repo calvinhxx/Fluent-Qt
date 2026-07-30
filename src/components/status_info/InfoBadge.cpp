@@ -1,12 +1,17 @@
 #include "InfoBadge.h"
 
+#include <QAccessible>
+#include <QAccessibleWidget>
 #include <QEvent>
 #include <QFont>
 #include <QFontMetrics>
+#include <QHideEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
+#include <QShowEvent>
 #include <QSizePolicy>
+#include <QVariant>
 #include <QtGlobal>
 
 #include <algorithm>
@@ -23,12 +28,69 @@ bool nearlyEqual(qreal left, qreal right)
 {
     return std::abs(left - right) < kOpacityEpsilon;
 }
+
+#if QT_CONFIG(accessibility)
+
+class InfoBadgeAccessible final : public QAccessibleWidget {
+public:
+    explicit InfoBadgeAccessible(InfoBadge* badge)
+        : QAccessibleWidget(badge, QAccessible::StaticText)
+    {
+    }
+
+    QString text(QAccessible::Text type) const override
+    {
+        auto* badge = qobject_cast<InfoBadge*>(widget());
+        if (!badge)
+            return {};
+
+        if (type == QAccessible::Name) {
+            const QString explicitName = badge->accessibleName();
+            if (!explicitName.isEmpty())
+                return explicitName;
+        }
+        if ((type == QAccessible::Name
+             || type == QAccessible::Value)
+            && badge->effectiveDisplayMode()
+                == InfoBadge::InfoBadgeDisplayMode::Value
+            && badge->value() >= 0) {
+            return QString::number(badge->value());
+        }
+        return QAccessibleWidget::text(type);
+    }
+};
+
+QAccessibleInterface* infoBadgeAccessibilityFactory(
+    const QString&, QObject* object)
+{
+    auto* badge = qobject_cast<InfoBadge*>(object);
+    return badge ? new InfoBadgeAccessible(badge) : nullptr;
+}
+
+void ensureInfoBadgeAccessibilityFactory()
+{
+    static const bool installed = []() {
+        QAccessible::installFactory(
+            infoBadgeAccessibilityFactory);
+        return true;
+    }();
+    Q_UNUSED(installed)
+}
+
+#else
+
+void ensureInfoBadgeAccessibilityFactory()
+{
+}
+
+#endif
 }
 
 InfoBadge::InfoBadge(QWidget* parent)
     : QWidget(parent)
     , m_valueFontRole(Typography::FontRole::Caption)
 {
+    ensureInfoBadgeAccessibilityFactory();
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     updateThemeColors();
@@ -41,6 +103,7 @@ void InfoBadge::setValue(int value)
     m_value = normalizedValue;
     invalidateLayoutAndPaint();
     emit valueChanged(m_value);
+    notifyAccessibleValueChanged();
 }
 
 void InfoBadge::setIconGlyph(const QString& glyph)
@@ -57,6 +120,7 @@ void InfoBadge::setDisplayMode(InfoBadgeDisplayMode mode)
     m_displayMode = mode;
     invalidateLayoutAndPaint();
     emit displayModeChanged(m_displayMode);
+    notifyAccessibleValueChanged();
 }
 
 void InfoBadge::setStatus(InfoBadgeStatus status)
@@ -317,7 +381,21 @@ void InfoBadge::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
     if (event->type() == QEvent::EnabledChange) {
         update();
+    } else if (event->type() == QEvent::ParentChange) {
+        notifyAccessibleParentReordered();
     }
+}
+
+void InfoBadge::showEvent(QShowEvent* event)
+{
+    QWidget::showEvent(event);
+    notifyAccessibleParentReordered();
+}
+
+void InfoBadge::hideEvent(QHideEvent* event)
+{
+    QWidget::hideEvent(event);
+    notifyAccessibleParentReordered();
 }
 
 QString InfoBadge::valueText() const
@@ -393,6 +471,39 @@ void InfoBadge::invalidateLayoutAndPaint()
 {
     updateGeometry();
     update();
+}
+
+void InfoBadge::notifyAccessibleValueChanged()
+{
+#if QT_CONFIG(accessibility)
+    const QVariant value =
+        effectiveDisplayMode() == InfoBadgeDisplayMode::Value
+            && m_value >= 0
+        ? QVariant(m_value)
+        : QVariant();
+    QAccessibleValueChangeEvent valueEvent(this, value);
+    QAccessible::updateAccessibility(&valueEvent);
+
+    QAccessibleEvent nameEvent(this, QAccessible::NameChanged);
+    QAccessible::updateAccessibility(&nameEvent);
+
+    if (QWidget* parent = parentWidget()) {
+        QAccessibleEvent parentEvent(
+            parent, QAccessible::VisibleDataChanged);
+        QAccessible::updateAccessibility(&parentEvent);
+    }
+#endif
+}
+
+void InfoBadge::notifyAccessibleParentReordered()
+{
+#if QT_CONFIG(accessibility)
+    if (QWidget* parent = parentWidget()) {
+        QAccessibleEvent event(
+            parent, QAccessible::ObjectReorder);
+        QAccessible::updateAccessibility(&event);
+    }
+#endif
 }
 
 } // namespace fluent::status_info

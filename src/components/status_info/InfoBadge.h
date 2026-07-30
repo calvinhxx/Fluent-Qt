@@ -12,6 +12,8 @@
 
 class QPainter;
 class QRectF;
+class QHideEvent;
+class QShowEvent;
 
 namespace fluent::status_info {
 
@@ -186,6 +188,8 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
 
 private:
     QString valueText() const;
@@ -195,6 +199,8 @@ private:
     QColor statusBackgroundColor() const;
     void updateThemeColors();
     void invalidateLayoutAndPaint();
+    void notifyAccessibleValueChanged();
+    void notifyAccessibleParentReordered();
 
     int m_value = -1;
     QString m_iconGlyph;
