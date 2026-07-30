@@ -252,7 +252,8 @@ public:
         auto pixmapForColor =
             [this, &glyph](const QColor& color) {
                 constexpr int iconSize = Typography::IconSize::Standard;
-                const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
+                const qreal dpr =
+                    qMax<qreal>(1.0, devicePixelRatioF());
                 const int physicalSize =
                     qMax(1, qCeil(iconSize * dpr));
                 QPixmap pixmap(physicalSize, physicalSize);

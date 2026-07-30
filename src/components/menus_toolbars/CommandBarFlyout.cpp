@@ -1114,6 +1114,13 @@ private:
             && !alwaysExpanded;
     }
 
+    void discardDetachedActionProjection(QAction* action)
+    {
+        inlinePrimary.removeAll(action);
+        overflowedPrimary.removeAll(action);
+        normalizedSecondary.removeAll(action);
+    }
+
     void setMenuRows()
     {
         const QVector<RowSpec> next =
@@ -2187,6 +2194,8 @@ void CommandBarFlyout::actionEvent(QActionEvent* event)
 {
     dialogs_flyouts::Flyout::actionEvent(event);
     d->actions.handleActionEvent(event);
+    if (event && event->type() == QEvent::ActionRemoved)
+        d->discardDetachedActionProjection(event->action());
 }
 
 bool CommandBarFlyout::eventFilter(
