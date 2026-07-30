@@ -69,6 +69,23 @@ TEST(ExpanderTest, Contract_ExpandedHandlerCanSynchronouslyDeleteExpander)
     EXPECT_TRUE(guard.isNull());
 }
 
+TEST(ExpanderTest, Contract_LayoutHeightHandlerCanSynchronouslyDeleteExpander)
+{
+    auto* expander = new Expander;
+    expander->resize(360, 44);
+    expander->setContentWidget(makeBody(), WidgetOwnership::Owned);
+    QPointer<Expander> guard(expander);
+    QObject::connect(
+        expander, &Expander::layoutHeightChanged, qApp,
+        [expander](int) {
+            delete expander;
+        });
+
+    expander->setExpandedAnimated(true, false);
+
+    EXPECT_TRUE(guard.isNull());
+}
+
 TEST(ExpanderTest, Contract_ExpandedStateAndSignals)
 {
     Expander expander;
