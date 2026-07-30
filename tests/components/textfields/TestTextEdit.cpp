@@ -8,6 +8,7 @@
 #include <QTextEdit>
 #include <QTimer>
 #include <QWheelEvent>
+#include <QtMath>
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 #include "QtTestEnvironment.h"
@@ -367,13 +368,17 @@ TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
             if (!action->icon().isNull()) {
                 const QSize iconSize =
                     action->icon().actualSize(QSize(64, 64));
+                const int maximumBackingExtent = qCeil(
+                    Typography::IconSize::Standard
+                    * qMax<qreal>(
+                        1.0, menu->devicePixelRatioF()));
                 EXPECT_GT(iconSize.width(), 0);
                 EXPECT_LE(
                     iconSize.width(),
-                    Typography::IconSize::Standard);
+                    maximumBackingExtent);
                 EXPECT_LE(
                     iconSize.height(),
-                    Typography::IconSize::Standard);
+                    maximumBackingExtent);
             }
         }
         menu->close();

@@ -31,6 +31,7 @@
 #include <QTimer>
 #include <QVector>
 #include <QWidget>
+#include <QtMath>
 
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
@@ -2521,12 +2522,16 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)
             if (!action->icon().isNull()) {
                 const QSize iconSize =
                     action->icon().actualSize(QSize(64, 64));
+                const int maximumBackingExtent = qCeil(
+                    Typography::IconSize::Standard
+                    * qMax<qreal>(
+                        1.0, menu->devicePixelRatioF()));
                 EXPECT_LE(
                     iconSize.width(),
-                    Typography::IconSize::Standard);
+                    maximumBackingExtent);
                 EXPECT_LE(
                     iconSize.height(),
-                    Typography::IconSize::Standard);
+                    maximumBackingExtent);
             }
             if (actionUsesStandardKey(
                     action, QKeySequence::Copy)) {

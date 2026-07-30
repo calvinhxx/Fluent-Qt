@@ -469,6 +469,36 @@ TEST(CommandBarFlyoutTest,
 }
 
 TEST(CommandBarFlyoutTest,
+     Contract_DestroyedActionsAreDroppedBeforeCloseLayout)
+{
+    QWidget window;
+    window.resize(520, 260);
+    QPushButton anchor(QStringLiteral("Anchor"), &window);
+    anchor.setGeometry(20, 20, 120, 32);
+    CommandBarFlyout flyout(&window);
+    flyout.setAnimationEnabled(false);
+    auto* primary = new QAction(QStringLiteral("Primary"));
+    auto* secondary = new QAction(QStringLiteral("Secondary"));
+    ASSERT_TRUE(flyout.addPrimaryAction(primary));
+    ASSERT_TRUE(flyout.addSecondaryAction(secondary));
+
+    window.show();
+    flyout.showAt(
+        &anchor, CommandBarFlyout::ShowMode::Transient);
+    processDeferredUiWork();
+    ASSERT_TRUE(flyout.isOpen());
+
+    delete secondary;
+    delete primary;
+    EXPECT_TRUE(flyout.primaryActions().isEmpty());
+    EXPECT_TRUE(flyout.secondaryActions().isEmpty());
+
+    flyout.close();
+    QApplication::processEvents();
+    EXPECT_FALSE(flyout.isOpen());
+}
+
+TEST(CommandBarFlyoutTest,
      Contract_TransientPointerMoreKeepsMenuRowsUnfocusedUntilKeyboardInput)
 {
     FlyoutFixture sample;
