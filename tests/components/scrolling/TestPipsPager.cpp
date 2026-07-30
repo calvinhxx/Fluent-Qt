@@ -213,6 +213,13 @@ TEST_F(PipsPagerTest, DefaultPropertyValues) {
     EXPECT_EQ(pager.accessibleDescription(), QStringLiteral("1 / 5"));
 }
 
+TEST_F(PipsPagerTest, AnimationOffsetsStayOutOfThePublicMetaObject) {
+    PipsPager pager;
+
+    EXPECT_EQ(pager.metaObject()->indexOfProperty("selectedVisualOffset"), -1);
+    EXPECT_EQ(pager.metaObject()->indexOfProperty("visibleWindowOffset"), -1);
+}
+
 TEST_F(PipsPagerTest, PropertySignalsSkipDuplicateValues) {
     PipsPager pager;
 

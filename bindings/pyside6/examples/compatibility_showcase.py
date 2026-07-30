@@ -31,16 +31,27 @@ from shiboken6 import Shiboken
 from fluentqt.basicinput import (
     Button,
     CheckBox,
+    CompoundButton,
     HyperlinkButton,
     RadioButton,
+    RatingControl,
     RepeatButton,
     Slider,
     ToggleButton,
     ToggleSwitch,
 )
-from fluentqt.layout import Divider
-from fluentqt.status_info import InfoBadge, ProgressBar, ProgressRing, Shimmer
-from fluentqt.textfields import Label, LineEdit, NumberBox, PasswordBox
+from fluentqt.foundation import FontIcon
+from fluentqt.layout import Card, Divider, Expander
+from fluentqt.scrolling import PipsPager, ScrollBar
+from fluentqt.status_info import (
+    Avatar,
+    InfoBadge,
+    InfoBar,
+    ProgressBar,
+    ProgressRing,
+    Shimmer,
+)
+from fluentqt.textfields import Label, LineEdit, NumberBox, PasswordBox, TextEdit
 from fluentqt.windowing import Window
 
 
@@ -96,7 +107,7 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
     # Windows keeps a native title bar in the grabbed top-level surface. Give
     # that platform extra top-level height so the client area's bottom margin
     # matches the Linux and macOS acceptance snapshots.
-    window.resize(840, 800 if sys.platform == "win32" else 760)
+    window.resize(840, 1020 if sys.platform == "win32" else 980)
 
     content = QWidget()
     root = QVBoxLayout(content)
@@ -125,10 +136,13 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
     root.addWidget(Divider(content))
 
     toolbar = QHBoxLayout()
+    settings_icon = FontIcon("ic_fluent_settings_20_regular", content)
+    settings_icon.setIconSize(20)
     theme_button = Button("Theme: Light", content)
     style_button = Button("Style: Fluent", content)
     style_button.setFluentStyle(Button.ButtonStyle.Accent)
     accent_button = Button("Accent: Blue", content)
+    toolbar.addWidget(settings_icon)
     toolbar.addWidget(theme_button)
     toolbar.addWidget(style_button)
     toolbar.addWidget(accent_button)
@@ -147,15 +161,25 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
     right_layout.setSpacing(12)
 
     left_layout.addWidget(section_label("Basic input", left))
+    compound = CompoundButton(
+        "Install update",
+        "Native primary and secondary content",
+        left,
+    )
+    left_layout.addWidget(compound)
     check_box = CheckBox("Animate shimmer", left)
     radio_button = RadioButton("Recommended option", left)
     radio_button.setChecked(True)
+    rating = RatingControl(left)
+    rating.setValue(3.5)
+    rating.setCaption("3.5")
     toggle_button = ToggleButton("Pinned", left)
     toggle_switch = ToggleSwitch(left)
     toggle_switch.setOnContent("On")
     toggle_switch.setOffContent("Off")
     left_layout.addWidget(check_box)
     left_layout.addWidget(radio_button)
+    left_layout.addWidget(rating)
     left_layout.addWidget(toggle_button)
     left_layout.addWidget(toggle_switch)
 
@@ -178,6 +202,14 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
     hyperlink.setUrl(QUrl("https://github.com/calvinhxx/Fluent-Qt"))
     hyperlink.setShowUnderline(True)
     left_layout.addWidget(hyperlink)
+
+    left_layout.addWidget(section_label("Multiline text", left))
+    text_edit = TextEdit(left)
+    text_edit.setMinVisibleLines(2)
+    text_edit.setMaxVisibleLines(3)
+    text_edit.setPlaceholderText("Write a note")
+    text_edit.setPlainText("Native multiline input\nfrom the Python binding")
+    left_layout.addWidget(text_edit)
     left_layout.addStretch()
 
     vertical_divider = Divider(Qt.Vertical, content)
@@ -186,7 +218,20 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
 
     right_layout.addWidget(section_label("Text and status", right))
 
+    info_bar = InfoBar(
+        title="Bindings ready",
+        severity=InfoBar.InfoBarSeverity.Success,
+        isClosable=False,
+        parent=right,
+    )
+    info_bar.setPreferredWidth(340)
+    info_action = Button("Details")
+    info_bar.setActionWidget(info_action)
+    right_layout.addWidget(info_bar)
+
     badge_row = QHBoxLayout()
+    avatar = Avatar("Ada Lovelace", right)
+    avatar.setPresence(Avatar.PresenceStatus.Available)
     badge_label = Label("Unread messages", right)
     info_badge = InfoBadge(right)
     info_badge.setValue(7)
@@ -194,6 +239,7 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
         InfoBadge.InfoBadgeDisplayMode.Value
     )
     info_badge.setStatus(InfoBadge.InfoBadgeStatus.Attention)
+    badge_row.addWidget(avatar)
     badge_row.addWidget(badge_label)
     badge_row.addStretch()
     badge_row.addWidget(info_badge)
@@ -237,6 +283,45 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
     progress_row.addWidget(progress_bar, 1)
     progress_row.addWidget(progress_ring)
     right_layout.addLayout(progress_row)
+
+    scroll_bar = ScrollBar(Qt.Horizontal, right)
+    scroll_bar.setRange(0, 100)
+    scroll_bar.setPageStep(20)
+    scroll_bar.setValue(60)
+    scroll_bar.setOpacity(1.0)
+    right_layout.addWidget(scroll_bar)
+
+    pager = PipsPager(right)
+    pager.setNumberOfPages(7)
+    pager.setMaxVisiblePips(5)
+    pager.setSelectedPageIndex(4)
+    pager.setSelectionAnimationEnabled(False)
+    pager.setPreviousButtonVisibility(
+        PipsPager.PipsPagerButtonVisibility.Visible
+    )
+    pager.setNextButtonVisibility(
+        PipsPager.PipsPagerButtonVisibility.Visible
+    )
+    right_layout.addWidget(pager)
+
+    card = Card(right)
+    card_layout = QVBoxLayout(card)
+    card_layout.setContentsMargins(12, 10, 12, 10)
+    card_layout.addWidget(Label("Native Card surface", card))
+    right_layout.addWidget(card)
+
+    expander = Expander(right)
+    expander.setHeaderText("Hosted content")
+    expander.setAnimationEnabled(False)
+    expander_content = QWidget()
+    expander_layout = QVBoxLayout(expander_content)
+    expander_layout.setContentsMargins(12, 10, 12, 12)
+    expander_layout.addWidget(
+        Label("Owned by the Expander facade", expander_content)
+    )
+    expander.setOwnedContentWidget(expander_content)
+    expander.setExpanded(True)
+    right_layout.addWidget(expander)
     right_layout.addStretch()
 
     columns.addWidget(left, 1)
@@ -299,25 +384,40 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
     check_box.toggled.connect(shimmer.setAnimationEnabled)
     slider.valueChanged.connect(progress_bar.setValue)
     slider.valueChanged.connect(progress_ring.setValue)
+    slider.valueChanged.connect(scroll_bar.setValue)
+    slider.valueChanged.connect(
+        lambda value: pager.setSelectedPageIndex(value * 6 // 100)
+    )
 
     controls = [
         theme_button,
         style_button,
         accent_button,
+        settings_icon,
+        compound,
         check_box,
         radio_button,
+        rating,
         toggle_button,
         toggle_switch,
         slider,
         repeat_button,
         hyperlink,
+        text_edit,
         line_edit,
         password,
         number,
+        avatar,
         info_badge,
+        info_bar,
+        info_action,
         progress_bar,
         progress_ring,
+        pager,
+        scroll_bar,
         shimmer,
+        card,
+        expander,
         vertical_divider,
     ]
     invalid = [

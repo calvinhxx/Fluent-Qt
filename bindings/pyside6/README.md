@@ -91,6 +91,73 @@ PYTHONPATH=build/pyside6/python \
   .venv-pyside/bin/python bindings/pyside6/examples/controls.py
 ```
 
+Run the dedicated native CalendarView acceptance example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/calendar_view_showcase.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-calendar-view-showcase.png` to render
+the same window without leaving an interactive process running.
+
+Run the AnnotatedScrollBar label and linked-ScrollView example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/annotated_scroll_bar_showcase.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-annotated-scroll-bar-showcase.png` to
+render its initial linked state without leaving an interactive process running.
+
+Run the Accordion ownership example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/accordion_ownership.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-accordion-ownership.png` to render its
+initial owned, borrowed, and reparented item state without leaving an
+interactive process running.
+
+Run the StackView navigation and ownership example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/stack_view_navigation.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-stack-view-navigation.png` to render
+the initial native page stack without leaving an interactive process running.
+
+Run the dedicated native ColorPicker acceptance example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/color_picker_showcase.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-color-picker-showcase.png` to render the
+same window without leaving an interactive process running.
+
+Run the ScrollView ownership example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/scroll_view_ownership.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-scroll-view-ownership.png` to save its
+initial owned-content state without opening an interactive window.
+
 Run the interactive compatibility acceptance window:
 
 ```bash
@@ -101,10 +168,10 @@ PYTHONPATH=build/pyside6/python \
 
 The window prints the loaded package/native-extension paths and exact
 FluentQt/PySide6/Qt versions. Use its controls to review Light/Dark,
-Fluent/Material/macOS, accent switching, signals, values, and press-and-hold
-behavior. The `Animate shimmer` checkbox exercises the Shimmer timer, while
-the deterministic snapshot keeps it at a fixed progress. Save the same view
-for review or CI:
+Fluent/Material/macOS, accent switching, signals, values, multiline text, and
+press-and-hold behavior. The `Animate shimmer` checkbox exercises the Shimmer
+timer, while the deterministic snapshot keeps it at a fixed progress. Save the
+same view for review or CI:
 
 ```bash
 PYTHONPATH=build/pyside6/python \
@@ -114,11 +181,15 @@ QT_QPA_PLATFORM=offscreen \
   --snapshot build/pyside6/pyside6-compatibility-showcase.png
 ```
 
-The current binding phase exports `Button`, `CheckBox`, `HyperlinkButton`,
-`RadioButton`, `RepeatButton`, `Slider`, `ToggleButton`, `ToggleSwitch`,
-`Divider`, `Label`, `LineEdit`, `NumberBox`, `PasswordBox`, `ProgressBar`,
-`ProgressRing`, `InfoBadge`, `Shimmer`, and `Window`, together with their enums
-and backdrop value types. It also supports Light/Dark mode,
+The current binding phase exports `Accordion`, `AnnotatedScrollBar`,
+`AnnotatedScrollBarLabel`, `Avatar`, `Button`, `CalendarView`, `CheckBox`,
+`ColorPicker`, `CompoundButton`, `HyperlinkButton`, `RadioButton`,
+`RatingControl`, `RepeatButton`, `Slider`, `ToggleButton`, `ToggleSwitch`,
+`Card`, `Divider`, `Expander`, `FontIcon`, `Label`, `LineEdit`, `NumberBox`,
+`PasswordBox`, `TextEdit`, `ProgressBar`, `ProgressRing`, `InfoBadge`,
+`InfoBar`, `Shimmer`, `PipsPager`, `ScrollBar`, `ScrollView`, `StackView`, and
+`Window`,
+together with their enums and value types. It also supports Light/Dark mode,
 Fluent/Material/macOS style presets, in-memory accent overrides, typography
 scaling, Qt properties and signals, Python subclassing, and explicit Window
 child-parent tracking.
@@ -127,6 +198,8 @@ child-parent tracking.
 from PySide6.QtGui import QColor
 import fluentqt
 
+settings_icon = fluentqt.FontIcon("ic_fluent_settings_20_regular")
+settings_icon.setIconSize(20)
 fluentqt.set_theme(fluentqt.Theme.Dark)
 fluentqt.apply_style_theme(fluentqt.StyleTheme.Material)
 fluentqt.set_accent_color(QColor("#7f52ff"))
@@ -151,6 +224,65 @@ or `setState()`; use Qt layouts, Python signal handlers, and QObject properties.
 progress. Its `Custom` template value is reserved for now:
 `ShimmerPainter::Element` collections and their getter/mutator API remain C++
 only until a stable Python value-type contract is designed.
+`AnnotatedScrollBarLabel` is a mutable, unhashable Python value type with
+`text`, `offset`, and `detailText` fields. The category module normalizes value
+equality across Shiboken versions. Static detail text, label filtering,
+signals, and two-way `ScrollView` synchronization use the native implementation.
+`connectToScrollView()` is borrowed: it neither reparents nor keeps the view
+alive, and `connectedScrollView()` becomes `None` when that view is destroyed.
+The C++ `std::function<QString(int)>` detail provider is deliberately absent
+until a synchronous Python-callable adapter can preserve the same semantics on
+Shiboken 6.2+; use each label's `detailText` in the current API.
+The public `ScrollView` facade exposes separate, statically verifiable
+ownership methods. `setContentWidget()`/`setWidget()` and
+`setOwnedContentWidget()` delete content with the host;
+`setBorrowedContentWidget()` detaches content when it leaves the host; and
+`setReparentedContentWidget()` restores the QWidget parent present at adoption.
+`takeContentWidget()`/`takeWidget()` always return a parentless child to Python.
+Changing the mode of the currently hosted object requires taking and
+reinstalling it first. The runtime ownership overload remains private.
+
+Normal Python garbage collection and Qt parent destruction form the supported
+host-lifecycle contract. `Shiboken.ownedByPython()` while a widget is hosted is
+an implementation detail that differs across Shiboken releases, and repeated
+`Shiboken.delete(host)` is not used as a compatibility requirement: PySide6
+6.2.4 on Windows can fail while reclaiming even a plain `QScrollArea` wrapper
+that way. Tests instead verify wrapper identity, validity, parent restoration,
+and natural host collection; explicit take still verifies ownership returned
+to Python.
+`Expander` uses the same audited facade, except its C++-compatible
+`setContentWidget()` default is Borrowed. Its explicit Owned, Borrowed, and
+Reparented methods and `takeContentWidget()` follow the same lifecycle rules.
+The internal header button is deliberately not part of the Python API.
+`Accordion` composes those native `Expander` instances. `addItem()` and
+`insertItem()` retain the C++ Borrowed default; fixed `add*Item()` and
+`insert*Item()` variants publish Owned, Borrowed, and Reparented policies.
+The facade retains Python subclass wrappers while items are hosted, and
+`takeItem()` always returns a parentless Python-owned item. Runtime-dependent
+ownership overloads remain private.
+`StackView` keeps native push/pop/replace transitions, page status signals,
+keyboard back navigation, and indexed stack queries. Plain `push()`,
+`replace()`, and `setInitialItem()` preserve the C++ Owned default; fixed
+Owned, Borrowed, and Reparented variants make every other lifetime explicit.
+The facade retains Python page subclasses and Reparented restore targets until
+the native transition finishes. Direct inherited `QStackedWidget`
+`addWidget()`/`insertWidget()`/`removeWidget()` calls are blocked because they
+bypass navigation ownership records; use the StackView navigation methods.
+The generated native `setCurrentWidget(QWidget*)` wrapper is also removed
+because Shiboken's name heuristic reparents its argument. The facade provides
+the same operation through the safe index-only native setter.
+`InfoBar` retains its action wrapper while the native widget is hosted. Replacing
+or clearing the action releases the previous widget as parentless Python-owned
+content; deleting the InfoBar deletes its currently hosted action.
+`takeActionWidget()` makes the release explicit and preserves wrapper identity.
+Normal external action destruction is validated through `deleteLater()` plus
+Qt deferred-delete delivery. Direct `Shiboken.delete()` on a still-parented
+Python subclass can fast-fail on PySide6 6.2.4/Windows and is not a supported
+lifecycle contract.
+Shiboken 6.2 silently omits `TextEdit.verticalScrollBar()` because its return
+type crosses two flattened C++ namespaces. The Python category module supplies
+the same method by locating TextEdit's existing Qt-owned Fluent `ScrollBar`;
+the method does not create, reparent, or transfer ownership of that child.
 The wheel target is validated on Linux x64 and Windows x64 with Qt 6.2.4, plus
 macOS arm64 with Qt 6.9.3. Clean-environment smoke tests verify that the loaded
 Qt, PySide6, and Shiboken6 libraries come from the installed wheel environment.

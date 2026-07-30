@@ -3,6 +3,8 @@
 
 #include <QColor>
 #include <QMargins>
+#include <QMetaObject>
+#include <QPointer>
 #include <QString>
 #include <QWidget>
 
@@ -175,7 +177,7 @@ public:
     Q_ENUM(InfoBarSeverity)
 
     explicit InfoBar(QWidget* parent = nullptr);
-    ~InfoBar() override = default;
+    ~InfoBar() override;
 
     bool isOpen() const { return m_isOpen; }
     void setIsOpen(bool open);
@@ -210,7 +212,7 @@ public:
     int multiLineActionMinHeight() const { return m_multiLineActionMinHeight; }
     void setMultiLineActionMinHeight(int height);
 
-    QWidget* actionWidget() const { return m_actionWidget; }
+    QWidget* actionWidget() const { return m_actionWidget.data(); }
     void setActionWidget(QWidget* widget);
 
     QMargins contentMargins() const { return m_contentMargins; }
@@ -345,7 +347,8 @@ private:
     int m_severityIconGlyphSize = 10;
     int m_severityIconBackgroundInset = 1;
 
-    QWidget* m_actionWidget = nullptr;
+    QPointer<QWidget> m_actionWidget;
+    QMetaObject::Connection m_actionDestroyedConnection;
     fluent::textfields::Label* m_titleLabel = nullptr;
     fluent::textfields::Label* m_messageLabel = nullptr;
     fluent::basicinput::Button* m_closeButton = nullptr;

@@ -161,9 +161,10 @@ window.show()
 app.exec()
 ```
 
-当前绑定包含 Basic Input、Layout、Text Fields、Status & Info 和 Windowing
-中的 18 个控件，并暴露 Light/Dark 模式、Fluent/Material/macOS 样式预设、
-accent 覆盖、字体缩放、Qt 属性与信号以及 Python 子类能力。准确的 6.2.4
+当前绑定包含 Basic Input、Layout、Scrolling、Text Fields、Status & Info 和
+Windowing 中的 19 个控件，并暴露 Light/Dark 模式、
+Fluent/Material/macOS 样式预设、accent 覆盖、字体缩放、Qt 属性与信号以及
+Python 子类能力。准确的 6.2.4
 环境准备、API 范围、wheel target、交互验收窗口和干净环境验证命令见
 [PySide6 绑定指南](bindings/pyside6/README.md)，后续工作见
 [兼容性路线图](bindings/pyside6/ROADMAP.zh-CN.md)。

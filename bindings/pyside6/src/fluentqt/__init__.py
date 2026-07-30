@@ -17,15 +17,21 @@ from ._fluentqt import (
 from .basicinput import (
     Button,
     CheckBox,
+    ColorPicker,
+    CompoundButton,
     HyperlinkButton,
     RadioButton,
+    RatingControl,
     RepeatButton,
     Slider,
     ToggleButton,
     ToggleSwitch,
 )
+from .collections import StackView
+from .date_time import CalendarView
 from .foundation import (
     DesignLanguage,
+    FontIcon,
     FontRole,
     StyleTheme,
     Theme,
@@ -52,9 +58,24 @@ from .foundation import (
     theme_revision,
     themeRevision,
 )
-from .layout import Divider
-from .status_info import InfoBadge, ProgressBar, ProgressRing, Shimmer
-from .textfields import Label, LineEdit, NumberBox, PasswordBox
+from .layout import Accordion, Card, Divider, Expander
+from .scrolling import (
+    AnnotatedScrollBar,
+    AnnotatedScrollBarLabel,
+    PipsPager,
+    ScrollBar,
+    ScrollView,
+    WidgetOwnership,
+)
+from .status_info import (
+    Avatar,
+    InfoBadge,
+    InfoBar,
+    ProgressBar,
+    ProgressRing,
+    Shimmer,
+)
+from .textfields import Label, LineEdit, NumberBox, PasswordBox, TextEdit
 from .windowing import (
     BackdropBackend,
     BackdropCapabilities,
@@ -82,34 +103,52 @@ def binding_build_info():
 
 
 __all__ = [
+    "Accordion",
     "BackdropBackend",
     "BackdropCapabilities",
     "BackdropEffect",
     "BackdropFidelity",
     "BackdropState",
     "BackdropSurfaceMode",
+    "AnnotatedScrollBar",
+    "AnnotatedScrollBarLabel",
+    "Avatar",
     "Button",
+    "CalendarView",
+    "Card",
     "CheckBox",
+    "ColorPicker",
+    "CompoundButton",
     "DesignLanguage",
     "Divider",
+    "Expander",
+    "FontIcon",
     "FontRole",
     "HyperlinkButton",
     "InfoBadge",
+    "InfoBar",
     "Label",
     "LineEdit",
     "NumberBox",
     "PasswordBox",
+    "TextEdit",
+    "PipsPager",
     "ProgressBar",
     "ProgressRing",
     "RadioButton",
+    "RatingControl",
     "RepeatButton",
+    "ScrollBar",
+    "ScrollView",
     "Slider",
     "Shimmer",
     "StyleTheme",
+    "StackView",
     "Theme",
     "ToggleButton",
     "ToggleSwitch",
     "Window",
+    "WidgetOwnership",
     "accent_color",
     "accentColor",
     "apply_style_theme",

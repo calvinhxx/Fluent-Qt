@@ -19,6 +19,12 @@ WHEEL_BUILDER_SPEC.loader.exec_module(WHEEL_BUILDER)
 
 
 class WheelBuilderTest(unittest.TestCase):
+    def test_scrolling_facade_is_required_in_wheel(self):
+        self.assertIn(
+            "scrolling.py",
+            WHEEL_BUILDER.REQUIRED_PACKAGE_FILES,
+        )
+
     def test_qt_62_uses_monolithic_pyside6_distribution(self):
         requirement = WHEEL_BUILDER.pyside_runtime_requirement("6.2.4")
         self.assertEqual(requirement, "PySide6 (==6.2.4)")

@@ -14,7 +14,7 @@ class QKeyEvent;
 class QMouseEvent;
 class QPaintEvent;
 class QPainter;
-class QPropertyAnimation;
+class QVariantAnimation;
 
 namespace fluent::scrolling {
 
@@ -94,17 +94,6 @@ class PipsPager : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 页码圆点选中动画时长，单位为毫秒。
      */
     Q_PROPERTY(int selectionAnimationDuration READ selectionAnimationDuration WRITE setSelectionAnimationDuration NOTIFY selectionAnimationDurationChanged)
-    /**
-     * @brief Visual offset applied to the selected pip.
-     * zh_CN: 选中页码圆点应用的视觉偏移。
-     */
-    Q_PROPERTY(qreal selectedVisualOffset READ selectedVisualOffset WRITE setSelectedVisualOffset)
-    /**
-     * @brief Offset of the visible pip window.
-     * zh_CN: 可见页码圆点窗口的偏移。
-     */
-    Q_PROPERTY(qreal visibleWindowOffset READ visibleWindowOffset WRITE setVisibleWindowOffset)
-
 public:
     enum class PipsPagerButtonVisibility {
         Collapsed,
@@ -269,8 +258,8 @@ private:
     int m_selectionAnimationDuration = 250;
     qreal m_selectedVisualOffset = 0.0;
     qreal m_visibleWindowOffset = 0.0;
-    QPropertyAnimation* m_selectedVisualOffsetAnimation = nullptr;
-    QPropertyAnimation* m_visibleWindowOffsetAnimation = nullptr;
+    QVariantAnimation* m_selectedVisualOffsetAnimation = nullptr;
+    QVariantAnimation* m_visibleWindowOffsetAnimation = nullptr;
     bool m_controlHovered = false;
     HitTarget m_hoveredTarget;
     HitTarget m_pressedTarget;

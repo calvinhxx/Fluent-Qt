@@ -6,9 +6,9 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
-#include <QPropertyAnimation>
 #include <QStyle>
 #include <QSizePolicy>
+#include <QVariantAnimation>
 #include <QtGlobal>
 #include <algorithm>
 #include <cmath>
@@ -44,12 +44,20 @@ PipsPager::PipsPager(QWidget* parent)
     setMouseTracking(true);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     m_selectionAnimationDuration = themeAnimation().normal;
-    m_selectedVisualOffsetAnimation = new QPropertyAnimation(this, "selectedVisualOffset", this);
+    m_selectedVisualOffsetAnimation = new QVariantAnimation(this);
     m_selectedVisualOffsetAnimation->setDuration(m_selectionAnimationDuration);
     m_selectedVisualOffsetAnimation->setEasingCurve(themeAnimation().decelerate);
-    m_visibleWindowOffsetAnimation = new QPropertyAnimation(this, "visibleWindowOffset", this);
+    connect(m_selectedVisualOffsetAnimation, &QVariantAnimation::valueChanged,
+            this, [this](const QVariant& value) {
+                setSelectedVisualOffset(value.toReal());
+            });
+    m_visibleWindowOffsetAnimation = new QVariantAnimation(this);
     m_visibleWindowOffsetAnimation->setDuration(m_selectionAnimationDuration);
     m_visibleWindowOffsetAnimation->setEasingCurve(themeAnimation().decelerate);
+    connect(m_visibleWindowOffsetAnimation, &QVariantAnimation::valueChanged,
+            this, [this](const QVariant& value) {
+                setVisibleWindowOffset(value.toReal());
+            });
     updateAccessibleText();
 }
 

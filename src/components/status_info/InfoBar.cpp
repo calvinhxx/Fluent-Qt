@@ -51,6 +51,13 @@ InfoBar::InfoBar(QWidget* parent)
     updateCloseButtonState();
 }
 
+InfoBar::~InfoBar()
+{
+    if (m_actionDestroyedConnection) {
+        disconnect(m_actionDestroyedConnection);
+    }
+}
+
 void InfoBar::setIsOpen(bool open)
 {
     if (m_isOpen == open) return;
@@ -166,6 +173,11 @@ void InfoBar::setActionWidget(QWidget* widget)
 {
     if (m_actionWidget == widget) return;
 
+    if (m_actionDestroyedConnection) {
+        disconnect(m_actionDestroyedConnection);
+        m_actionDestroyedConnection = {};
+    }
+
     if (m_actionWidget) {
         m_actionWidget->hide();
         m_actionWidget->setParent(nullptr);
@@ -177,6 +189,18 @@ void InfoBar::setActionWidget(QWidget* widget)
         m_actionWidget->setObjectName(m_actionWidget->objectName().isEmpty()
             ? QStringLiteral("InfoBarActionWidget")
             : m_actionWidget->objectName());
+        m_actionDestroyedConnection = connect(
+            m_actionWidget,
+            &QObject::destroyed,
+            this,
+            [this]() {
+                m_actionDestroyedConnection = {};
+                m_actionWidget = nullptr;
+                updateChildVisibility();
+                updateGeometry();
+                updateChildGeometry();
+                emit actionWidgetChanged(nullptr);
+            });
     }
 
     updateChildVisibility();
