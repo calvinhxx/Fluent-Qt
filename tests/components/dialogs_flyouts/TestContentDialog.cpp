@@ -402,7 +402,7 @@ protected:
         window->setFixedSize(700, 500);
         window->onThemeUpdated();
         window->show();
-        QTest::qWaitForWindowExposed(window);
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
 
     void TearDown() override {

@@ -68,7 +68,7 @@ protected:
     void mouseMoveEvent(QMouseEvent* e) override {
         if (e->buttons() & Qt::LeftButton) handlePos(e->pos());
     }
-    void mouseReleaseEvent(QMouseEvent* e) override {
+    void mouseReleaseEvent(QMouseEvent*) override {
         setCursor(Qt::CrossCursor);
     }
 
@@ -127,7 +127,7 @@ protected:
     void mouseMoveEvent(QMouseEvent* e) override {
         if (e->buttons() & Qt::LeftButton) handlePos(e->pos());
     }
-    void mouseReleaseEvent(QMouseEvent* e) override {
+    void mouseReleaseEvent(QMouseEvent*) override {
         setCursor(Qt::ArrowCursor);
     }
 
@@ -319,7 +319,6 @@ void ColorPicker::initUi() {
 }
 
 void ColorPicker::onThemeUpdated() {
-    const auto& colors = themeColorsRef();
     const auto& fs = themeFont(Typography::FontRole::Body);
     QFont f = fs.toQFont();
 

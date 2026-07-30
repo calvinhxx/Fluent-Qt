@@ -540,14 +540,11 @@ void Button::paintEvent(QPaintEvent*) {
     
     // Icon width: prefer the icon font, else the regular icon. zh_CN: 优先使用 iconfont，否则使用普通图标。
     int iconWidth = 0;
-    int iconHeight = 0;
     if (hasIconFont) {
         iconWidth = m_iconPixelSize;
-        iconHeight = m_iconPixelSize;
     } else if (!pix.isNull()) {
         double dpr = pix.devicePixelRatio();
         iconWidth = pix.width() / dpr;
-        iconHeight = pix.height() / dpr;
     }
     
     int totalContentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && (hasIconFont || !pix.isNull())) ? gap : 0);
