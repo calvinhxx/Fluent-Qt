@@ -73,6 +73,7 @@ private:
     void removeAssociation(QAction* action);
     void connectAction(QAction* action);
     void disconnectAction(QAction* action);
+    void queueStructureChanged();
     void handleActionChanged(QAction* action);
     void handleActionDestroyed(QAction* action);
     void warnRejected(const QAction* action, const QString& reason) const;
@@ -87,6 +88,7 @@ private:
     QList<QAction*> m_warnedSuppressedActions;
     quint64 m_pendingRemovalRevision = 0;
     int m_associationChangeDepth = 0;
+    bool m_structureChangeQueued = false;
 };
 
 } // namespace fluent::menus_toolbars::detail
