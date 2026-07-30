@@ -1,6 +1,8 @@
 #include "components/status_info/Toast.h"
 
 #include <QAbstractAnimation>
+#include <QAccessible>
+#include <QAction>
 #include <QFontMetrics>
 #include <QFrame>
 #include <QGraphicsOpacityEffect>
@@ -15,6 +17,7 @@
 #include <QVector>
 #include <algorithm>
 
+#include "components/basicinput/Button.h"
 #include "components/foundation/FontIcon.h"
 #include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -47,6 +50,31 @@ QMargins normalizedMargins(const QMargins& margins)
         qMax(0, margins.top()),
         qMax(0, margins.right()),
         qMax(0, margins.bottom()));
+}
+
+QString actionCaption(const QAction* action)
+{
+    if (!action)
+        return {};
+
+    const QString source =
+        action->iconText().isEmpty()
+        ? action->text()
+        : action->iconText();
+    QString caption;
+    caption.reserve(source.size());
+    for (int i = 0; i < source.size(); ++i) {
+        if (source.at(i) != QLatin1Char('&')) {
+            caption.append(source.at(i));
+            continue;
+        }
+        if (i + 1 < source.size()
+            && source.at(i + 1) == QLatin1Char('&')) {
+            caption.append(QLatin1Char('&'));
+            ++i;
+        }
+    }
+    return caption;
 }
 
 } // namespace
@@ -116,6 +144,12 @@ Toast::Toast(QWidget* parent)
             &overlay::OverlayCoordinator::hostDestroyed,
             this,
             [this]() {
+        m_animation->stop();
+        m_timer->stop();
+        m_dismissInProgress = false;
+        m_actionInvocationInProgress = false;
+        m_hoverPaused = false;
+        m_remainingDuration = 0;
         m_isOpen = false;
     });
 
@@ -171,6 +205,33 @@ Toast::Toast(QWidget* parent)
     textColumn->addWidget(m_messageLabel);
     row->addWidget(m_icon, 0, Qt::AlignVCenter);
     row->addLayout(textColumn, 0);
+
+    m_actionButton = new basicinput::Button(m_card);
+    m_actionButton->setObjectName(
+        QStringLiteral("fluentToastAction"));
+    m_actionButton->setFluentStyle(
+        basicinput::Button::Standard);
+    m_actionButton->setFluentSize(
+        basicinput::Button::Small);
+    m_actionButton->setFocusVisual(true);
+    m_actionButton->hide();
+    connect(m_actionButton,
+            &basicinput::Button::clicked,
+            this,
+            [this]() {
+        QPointer<QAction> actionGuard = m_action;
+        if (!actionGuard || !actionGuard->isEnabled())
+            return;
+        QPointer<Toast> toastGuard(this);
+        m_actionInvocationInProgress = true;
+        actionGuard->trigger();
+        if (!toastGuard)
+            return;
+        m_actionInvocationInProgress = false;
+        if (m_isOpen)
+            requestDismiss(ActionInvoked);
+    });
+    row->addWidget(m_actionButton, 0, Qt::AlignVCenter);
     outer->addWidget(m_card);
 
     m_opacityEffect = new QGraphicsOpacityEffect(this);
@@ -181,9 +242,13 @@ Toast::Toast(QWidget* parent)
         new QPropertyAnimation(this, "toastProgress", this);
     m_timer = new QTimer(this);
     m_timer->setSingleShot(true);
-    connect(m_timer, &QTimer::timeout, this, &Toast::dismiss);
+    connect(m_timer, &QTimer::timeout, this, [this]() {
+        requestDismiss(TimedOut);
+    });
 
     hide();
+    syncAccessibleName();
+    updatePointerInteraction();
     applyPalette();
 }
 
@@ -218,6 +283,7 @@ void Toast::setTitle(const QString& title)
     }
     updateMessageWrapping();
     syncGeometry();
+    syncAccessibleName();
     emit titleChanged(m_title);
 }
 
@@ -230,6 +296,7 @@ void Toast::setMessage(const QString& message)
     m_messageLabel->setText(m_message);
     updateMessageWrapping();
     syncGeometry();
+    syncAccessibleName();
     emit messageChanged(m_message);
 }
 
@@ -280,10 +347,8 @@ void Toast::setDuration(int durationMs)
         return;
 
     m_duration = durationMs;
-    if (m_isOpen && m_duration > 0)
-        m_timer->start(m_duration);
-    else if (m_isOpen)
-        m_timer->stop();
+    if (m_isOpen)
+        restartDurationTimer();
     emit durationChanged(m_duration);
 }
 
@@ -294,6 +359,60 @@ void Toast::setAnimationEnabled(bool enabled)
 
     m_animationEnabled = enabled;
     emit animationEnabledChanged(m_animationEnabled);
+}
+
+void Toast::setAction(QAction* action)
+{
+    if (m_action.data() == action)
+        return;
+
+    QObject::disconnect(m_actionChangedConnection);
+    QObject::disconnect(m_actionDestroyedConnection);
+    m_actionChangedConnection = QMetaObject::Connection();
+    m_actionDestroyedConnection = QMetaObject::Connection();
+    m_action = action;
+
+    if (m_action) {
+        m_actionChangedConnection = connect(
+            m_action.data(),
+            &QAction::changed,
+            this,
+            &Toast::syncActionButton);
+        m_actionDestroyedConnection = connect(
+            m_action.data(),
+            &QObject::destroyed,
+            this,
+            [this]() {
+            m_action = nullptr;
+            m_actionChangedConnection = QMetaObject::Connection();
+            m_actionDestroyedConnection = QMetaObject::Connection();
+            syncActionButton();
+            emit actionChanged(nullptr);
+        });
+    }
+
+    syncActionButton();
+    emit actionChanged(m_action.data());
+}
+
+void Toast::setPauseOnHoverEnabled(bool enabled)
+{
+    if (m_pauseOnHoverEnabled == enabled)
+        return;
+
+    m_pauseOnHoverEnabled = enabled;
+    if (!m_pauseOnHoverEnabled && m_hoverPaused)
+        resumeDurationTimer();
+    updatePointerInteraction();
+    emit pauseOnHoverEnabledChanged(m_pauseOnHoverEnabled);
+}
+
+void Toast::setUpdateKey(const QString& key)
+{
+    if (m_updateKey == key)
+        return;
+    m_updateKey = key;
+    emit updateKeyChanged(m_updateKey);
 }
 
 void Toast::setToastProgress(qreal progress)
@@ -319,6 +438,10 @@ bool Toast::present(QWidget* anchor)
     QObject::disconnect(m_animationFinishedConnection);
     m_animationFinishedConnection = QMetaObject::Connection();
     m_timer->stop();
+    m_dismissInProgress = false;
+    m_hoverPaused = false;
+    m_remainingDuration = m_duration;
+    m_pendingDismissReason = Programmatic;
 
     m_overlayCoordinator->attachTo(host);
     if (overlay::syncInheritedThemeOverride(this, anchor))
@@ -331,11 +454,7 @@ bool Toast::present(QWidget* anchor)
     m_isOpen = true;
     if (!property(kStackOrderProperty).isValid())
         setProperty(kStackOrderProperty, QVariant::fromValue(++g_stackOrder));
-    if (accessibleName().isEmpty()) {
-        setAccessibleName(
-            m_title.isEmpty() ? m_message
-                              : m_title + QStringLiteral(": ") + m_message);
-    }
+    syncAccessibleName();
 
     if (m_animationEnabled)
         setToastProgress(0.0);
@@ -354,25 +473,22 @@ bool Toast::present(QWidget* anchor)
     emit presented();
     if (!guard || !m_isOpen)
         return false;
+    announceAccessibility();
+    if (!guard || !m_isOpen)
+        return false;
 
     if (m_animationEnabled)
         startAnimation(1.0);
-    if (m_duration > 0)
-        m_timer->start(m_duration);
+    restartDurationTimer();
     return true;
 }
 
 void Toast::dismiss()
 {
-    if (!m_isOpen)
-        return;
-
-    m_timer->stop();
-    if (!m_animationEnabled) {
-        finalizeDismiss();
-        return;
-    }
-    startAnimation(0.0);
+    requestDismiss(
+        m_actionInvocationInProgress
+            ? ActionInvoked
+            : Programmatic);
 }
 
 Toast* Toast::showToast(
@@ -411,14 +527,76 @@ Toast* Toast::showToast(
         if (!oldest || oldest == toast)
             break;
         oldest->m_deleteOnDismiss = true;
-        oldest->m_animation->stop();
-        oldest->finalizeDismiss();
+        oldest->requestDismiss(Evicted, true);
         if (!toastGuard || !hostGuard)
             return nullptr;
         managed = managedOpenToastsFor(host, toast->placement());
     }
     relayoutHostStack(host, toast->placement());
     return toastGuard.data();
+}
+
+Toast* Toast::showOrUpdateToast(
+    QWidget* anchor,
+    const QString& updateKey,
+    const QString& message,
+    Severity severity,
+    int durationMs,
+    Placement placement,
+    const QMargins& margins)
+{
+    QWidget* host = anchor ? anchor->window() : nullptr;
+    if (!host)
+        return nullptr;
+    if (updateKey.isEmpty())
+        return showToast(
+            anchor,
+            message,
+            severity,
+            durationMs,
+            placement,
+            margins);
+
+    const auto managed =
+        managedOpenToastsFor(host, placement);
+    for (auto it = managed.crbegin(); it != managed.crend(); ++it) {
+        Toast* toast = *it;
+        if (!toast || toast->updateKey() != updateKey)
+            continue;
+
+        QPointer<Toast> guard(toast);
+        toast->setMessage(message);
+        if (!guard)
+            return nullptr;
+        toast->setSeverity(severity);
+        if (!guard)
+            return nullptr;
+        toast->setDuration(durationMs);
+        if (!guard)
+            return nullptr;
+        toast->setPlacementMargins(margins);
+        if (!guard)
+            return nullptr;
+
+        toast->restartDurationTimer();
+        toast->syncGeometry();
+        emit toast->updated();
+        if (!guard || !toast->m_isOpen)
+            return guard.data();
+        toast->announceAccessibility();
+        return guard.data();
+    }
+
+    QPointer<Toast> toast = showToast(
+        anchor,
+        message,
+        severity,
+        durationMs,
+        placement,
+        margins);
+    if (toast)
+        toast->setUpdateKey(updateKey);
+    return toast.data();
 }
 
 QSize Toast::sizeHint() const
@@ -442,7 +620,23 @@ void Toast::onThemeUpdated()
         m_messageLabel->onThemeUpdated();
     if (m_icon)
         m_icon->onThemeUpdated();
+    if (m_actionButton)
+        m_actionButton->onThemeUpdated();
     updateMessageWrapping();
+}
+
+void Toast::enterEvent(FluentEnterEvent* event)
+{
+    QWidget::enterEvent(event);
+    if (m_pauseOnHoverEnabled)
+        pauseDurationTimer();
+}
+
+void Toast::leaveEvent(QEvent* event)
+{
+    QWidget::leaveEvent(event);
+    if (m_pauseOnHoverEnabled)
+        resumeDurationTimer();
 }
 
 void Toast::paintEvent(QPaintEvent* event)
@@ -642,6 +836,33 @@ void Toast::startAnimation(qreal endValue)
     m_animation->start();
 }
 
+void Toast::requestDismiss(
+    DismissReason reason, bool immediate)
+{
+    if (!m_isOpen)
+        return;
+
+    if (m_dismissInProgress) {
+        if (immediate) {
+            m_animation->stop();
+            finalizeDismiss();
+        }
+        return;
+    }
+
+    m_dismissInProgress = true;
+    m_pendingDismissReason = reason;
+    m_timer->stop();
+    m_hoverPaused = false;
+    m_remainingDuration = 0;
+    if (immediate || !m_animationEnabled) {
+        m_animation->stop();
+        finalizeDismiss();
+        return;
+    }
+    startAnimation(0.0);
+}
+
 void Toast::finalizeDismiss()
 {
     if (!m_isOpen && !isVisible())
@@ -651,6 +872,9 @@ void Toast::finalizeDismiss()
     m_animationFinishedConnection = QMetaObject::Connection();
     m_animation->stop();
     m_timer->stop();
+    m_dismissInProgress = false;
+    m_hoverPaused = false;
+    m_remainingDuration = 0;
     hide();
     QPointer<QWidget> host = m_overlayCoordinator
         ? m_overlayCoordinator->topLevelWidget()
@@ -658,6 +882,8 @@ void Toast::finalizeDismiss()
     const Placement placement = m_placement;
     m_overlayCoordinator->detach();
     const bool wasOpen = m_isOpen;
+    const DismissReason reason = m_pendingDismissReason;
+    m_pendingDismissReason = Programmatic;
     m_isOpen = false;
     QPointer<Toast> guard(this);
     if (wasOpen) {
@@ -668,10 +894,138 @@ void Toast::finalizeDismiss()
     emit dismissed();
     if (!guard)
         return;
+    emit dismissedWithReason(reason);
+    if (!guard)
+        return;
     if (host)
         relayoutHostStack(host.data(), placement);
-    if (m_deleteOnDismiss)
+    if (m_deleteOnDismiss && !m_isOpen)
         deleteLater();
+}
+
+void Toast::restartDurationTimer()
+{
+    if (!m_timer)
+        return;
+
+    m_timer->stop();
+    m_remainingDuration = m_duration;
+    m_hoverPaused = false;
+    if (!m_isOpen || m_duration <= 0)
+        return;
+    if (m_pauseOnHoverEnabled && underMouse()) {
+        m_hoverPaused = true;
+        return;
+    }
+    m_timer->start(m_remainingDuration);
+}
+
+void Toast::pauseDurationTimer()
+{
+    if (!m_isOpen || !m_pauseOnHoverEnabled || m_hoverPaused)
+        return;
+
+    if (m_timer->isActive())
+        m_remainingDuration = qMax(1, m_timer->remainingTime());
+    else if (m_remainingDuration <= 0)
+        m_remainingDuration = m_duration;
+    m_timer->stop();
+    m_hoverPaused = true;
+}
+
+void Toast::resumeDurationTimer()
+{
+    if (!m_hoverPaused)
+        return;
+
+    m_hoverPaused = false;
+    if (m_isOpen && m_remainingDuration > 0)
+        m_timer->start(m_remainingDuration);
+}
+
+void Toast::updatePointerInteraction()
+{
+    const bool hasVisibleAction =
+        m_action && m_actionButton && !m_actionButton->isHidden();
+    setAttribute(
+        Qt::WA_TransparentForMouseEvents,
+        !m_pauseOnHoverEnabled && !hasVisibleAction);
+}
+
+void Toast::syncActionButton()
+{
+    if (!m_actionButton)
+        return;
+
+    QAction* action = m_action.data();
+    if (!action) {
+        m_actionButton->hide();
+        m_actionButton->setText(QString());
+        m_actionButton->setIcon(QIcon());
+        updatePointerInteraction();
+        updateMessageWrapping();
+        syncGeometry();
+        return;
+    }
+
+    const QString caption = actionCaption(action);
+    const QIcon icon = action->icon();
+    const bool presentable =
+        action->isVisible()
+        && (!caption.isEmpty() || !icon.isNull());
+    m_actionButton->setText(caption);
+    m_actionButton->setIcon(icon);
+    m_actionButton->setEnabled(action->isEnabled());
+    m_actionButton->setFluentLayout(
+        !caption.isEmpty() && !icon.isNull()
+        ? basicinput::Button::IconBefore
+        : caption.isEmpty() && !icon.isNull()
+            ? basicinput::Button::IconOnly
+            : basicinput::Button::TextOnly);
+    m_actionButton->setAccessibleName(caption);
+    m_actionButton->setVisible(presentable);
+    updatePointerInteraction();
+    updateMessageWrapping();
+    syncGeometry();
+}
+
+QString Toast::accessibleAnnouncementText() const
+{
+    if (m_title.isEmpty())
+        return m_message;
+    if (m_message.isEmpty())
+        return m_title;
+    return m_title + QStringLiteral(": ") + m_message;
+}
+
+void Toast::syncAccessibleName()
+{
+    const QString nextName = accessibleAnnouncementText();
+    const bool tracksAutomaticName =
+        accessibleName().isEmpty()
+        || accessibleName() == m_autoAccessibleName;
+    m_autoAccessibleName = nextName;
+    if (tracksAutomaticName)
+        setAccessibleName(m_autoAccessibleName);
+}
+
+void Toast::announceAccessibility()
+{
+#if QT_CONFIG(accessibility)
+    const QString announcement = accessibleAnnouncementText();
+    if (announcement.isEmpty())
+        return;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    QAccessibleAnnouncementEvent event(this, announcement);
+    event.setPoliteness(
+        m_severity == Error
+        ? QAccessible::AnnouncementPoliteness::Assertive
+        : QAccessible::AnnouncementPoliteness::Polite);
+#else
+    QAccessibleEvent event(this, QAccessible::Alert);
+#endif
+    QAccessible::updateAccessibility(&event);
+#endif
 }
 
 void Toast::applyPalette()
