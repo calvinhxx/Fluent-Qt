@@ -124,6 +124,22 @@ On native Windows ARM64 with the Qt `msvc2022_arm64` kit, substitute
 `vcpkg-windows-arm64` for `vcpkg-windows`. An x64-hosted ARM64 cross-build can
 compile the same targets but cannot execute this test preset.
 
+When running a Windows GTest binary outside Qt Creator or a configured CMake
+preset environment, validate the loader environment before starting any test
+batch:
+
+- Build one process `Path` containing the selected Qt `bin` directory and the
+  matching vcpkg Debug/Release runtime directories. Do not keep competing
+  process-level `Path` and `PATH` values.
+- Run exactly one focused binary with `--gtest_list_tests` first. Continue only
+  when that probe exits successfully.
+- Automation launchers must suppress Windows loader and fault-reporting dialogs
+  (for example with the documented Win32 process error-mode flags) so a missing
+  dependency fails in the terminal rather than blocking the desktop.
+- After the probe, execute one test binary per process and combine related
+  cases with one `--gtest_filter`. Do not launch an unverified CTest batch from
+  an inherited shell environment.
+
 ```bash
 cmake --preset vcpkg-linux
 cmake --build --preset vcpkg-linux --target fluent_qt_all_tests --parallel

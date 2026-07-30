@@ -127,7 +127,33 @@ boundaries, point/anchor retargeting, accessibility, design-language rendering,
 router integration, and Gallery exposure. Automated validation is complete on
 Windows Qt 6.9.3 and Linux Qt 5.15.2. Focused Computer Use desktop regression
 also covers the flyout VisualCheck and Gallery overflow/focus paths; the
-project owner's release-wide unified regression remains an external gate.
+final high-DPI, sanitizer teardown, and Computer Use review gate was accepted
+on 2026-07-30.
+
+## 2026-07-30 notification Capability Phase 4 addendum
+
+- `Toast` keeps unkeyed managed stacking as the default and adds optional
+  in-place refresh through a non-empty update key scoped by host and placement.
+- An optional borrowed `QAction` is presented with a Fluent button without
+  changing action ownership. Stable dismissal reasons distinguish
+  programmatic close, timeout, action activation, and managed eviction.
+- Hover pause is opt-in and preserves the remaining timeout, so the existing
+  pointer-through default remains compatible.
+- Toast accessibility follows the supported Qt baseline:
+  `QAccessibleAnnouncementEvent` on Qt 6.8 and newer, with an alert fallback on
+  earlier Qt versions. Title/message changes update the fallback accessible
+  name unless the caller set an explicit name.
+- `InfoBadge` exposes a private static-text accessibility adapter with numeric
+  value semantics in value mode. Value, display, visibility, and parent changes
+  notify the accessible hierarchy without making the badge a separate focus
+  target.
+- Borrowed-action destruction, reentrant dismissal, managed eviction, and
+  update-in-place preserve ordinary Qt ownership and deletion safety.
+
+Focused tests cover accessibility role/name/value, dismissal paths, borrowed
+action lifetime, hover pause, keyed refresh, stacking scope, and Gallery
+preview/source alignment. Windows Qt 6.9.3, Linux Qt 6.2.4, Linux Qt 5.15.2,
+ASan/UBSan teardown paths, and the final Gallery Computer Use pass are complete.
 
 ## 2026-07-29 editing context-menu consistency addendum
 
@@ -229,7 +255,7 @@ platform contracts.
 | `menus_toolbars` | CommandBar, CommandBarFlyout, FluentMenu, FluentMenuItem, MenuBar | CommandBar and CommandBarFlyout Capability Phase 3 focused tests present; menu classes are also exercised through MenuBar and DropDownButton tests | command-bar, menu-bar |
 | `navigation` | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | Present for listed public components except StackContentHost as standalone host | breadcrumb, navigation-view, pivot, selector-bar, tab-view |
 | `scrolling` | ScrollBar, ScrollView, AnnotatedScrollBar, PipsPager | Present for listed components | scroll-view, annotated-scrollbar, pips-pager |
-| `status_info` | Avatar, ToolTip, InfoBar, InfoBadge, ProgressBar, ProgressRing, Shimmer, Toast | Present for listed components | tooltip-animation, info-bar, info-badge, progress-bar, progress-ring |
+| `status_info` | Avatar, ToolTip, InfoBar, InfoBadge, ProgressBar, ProgressRing, Shimmer, Toast | Present for listed components; Capability Phase 4 adds Toast lifecycle and InfoBadge accessibility contracts | tooltip-animation, info-bar, info-badge, progress-bar, progress-ring |
 | `textfields` | Label, LineEdit, TextEdit, AutoSuggestBox, PasswordBox, NumberBox, EditingCommandRouter | Present for listed components | label, auto-suggest-box, password-box, number-box, editing-command-router |
 | `windowing` | Window, TitleBar | Window focused test present | fluent-window, window-platform-compatibility |
 
