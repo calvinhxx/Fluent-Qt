@@ -196,11 +196,11 @@ bool Pivot::setItemEnabled(int index, bool enabled)
     return true;
 }
 
-bool Pivot::setItemData(int index, const QVariant& data)
+bool Pivot::setItemData(int index, const QVariant& itemData)
 {
-    if (!isValidIndex(index) || m_items.at(index).data == data)
+    if (!isValidIndex(index) || m_items.at(index).data == itemData)
         return false;
-    m_items[index].data = data;
+    m_items[index].data = itemData;
     emit this->itemsChanged();
     return true;
 }

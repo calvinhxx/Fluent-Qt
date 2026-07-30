@@ -2176,11 +2176,11 @@ bool TabView::setTabEnabled(int index, bool enabled)
     return true;
 }
 
-bool TabView::setTabData(int index, const QVariant& data)
+bool TabView::setTabData(int index, const QVariant& tabData)
 {
-    if (!isValidIndex(index) || m_items.at(index).data == data)
+    if (!isValidIndex(index) || m_items.at(index).data == tabData)
         return false;
-    m_items[index].data = data;
+    m_items[index].data = tabData;
     emit tabsChanged();
     return true;
 }

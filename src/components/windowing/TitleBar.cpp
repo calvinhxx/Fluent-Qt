@@ -112,8 +112,8 @@ QVector<QRect> TitleBar::dragExclusionRects() const {
     if (m_systemReservedLeadingWidth > 0)
         rects << QRect(0, 0, qMin(m_systemReservedLeadingWidth, width()), height());
     if (m_systemReservedTrailingWidth > 0) {
-        const int reserved = qMin(m_systemReservedTrailingWidth, width());
-        rects << QRect(width() - reserved, 0, reserved, height());
+        const int reservedWidth = qMin(m_systemReservedTrailingWidth, width());
+        rects << QRect(width() - reservedWidth, 0, reservedWidth, height());
     }
 
     const auto widgets = findChildren<QWidget*>(QString(), Qt::FindChildrenRecursively);
