@@ -364,8 +364,10 @@ void Expander::applyFraction(qreal fraction)
         m_chevron->setRotation(180.0 * m_fraction);
     if (m_lastEmittedLayoutHeight != totalHeight) {
         m_lastEmittedLayoutHeight = totalHeight;
-        synchronizeViewportLayout();
+        QPointer<Expander> guard(this);
         emit layoutHeightChanged(totalHeight);
+        if (guard)
+            guard->synchronizeViewportLayout();
     }
 }
 
