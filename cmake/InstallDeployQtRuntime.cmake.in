@@ -1,3 +1,10 @@
+if(POLICY CMP0011)
+    cmake_policy(SET CMP0011 NEW)
+endif()
+if(POLICY CMP0009)
+    cmake_policy(SET CMP0009 NEW)
+endif()
+
 set(_fluent_qt_deploy_runtime "@FLUENT_QT_PACKAGE_DEPLOY_QT_RUNTIME@")
 if(NOT _fluent_qt_deploy_runtime)
     return()
