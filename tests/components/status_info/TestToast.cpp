@@ -52,7 +52,8 @@ struct AccessibleEventRecord {
     QObject* object = nullptr;
     QAccessible::Event type = QAccessible::InvalidEvent;
     QString announcement;
-    int politeness = -1;
+    FluentAccessibleAnnouncementPoliteness politeness =
+        FluentAccessibleAnnouncementPoliteness::Unspecified;
 };
 
 QVector<AccessibleEventRecord> g_accessibleEvents;
@@ -65,15 +66,10 @@ void captureAccessibleEvent(QAccessibleEvent* event)
     AccessibleEventRecord record;
     record.object = event->object();
     record.type = event->type();
-#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    if (event->type() == QAccessible::Announcement) {
-        auto* announcement =
-            static_cast<QAccessibleAnnouncementEvent*>(event);
-        record.announcement = announcement->message();
-        record.politeness =
-            static_cast<int>(announcement->politeness());
-    }
-#endif
+    record.announcement =
+        fluentAccessibleAnnouncementMessage(event);
+    record.politeness =
+        fluentAccessibleAnnouncementPoliteness(event);
     g_accessibleEvents.append(record);
 }
 
@@ -151,32 +147,24 @@ TEST(ToastTest, Contract_PresentAnnouncesAccessibleContent)
         QStringLiteral("Sync complete: 12 files are available"));
 
     if (capture.eventDeliveryActive) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
         const auto match = std::find_if(
             g_accessibleEvents.cbegin(),
             g_accessibleEvents.cend(),
             [&toast](const AccessibleEventRecord& record) {
                 return record.object == &toast
-                    && record.type == QAccessible::Announcement;
+                    && record.type
+                        == fluentAccessibleAnnouncementEventType();
             });
         ASSERT_NE(match, g_accessibleEvents.cend());
-        EXPECT_EQ(
-            match->announcement,
-            QStringLiteral(
-                "Sync complete: 12 files are available"));
-        EXPECT_EQ(
-            match->politeness,
-            static_cast<int>(
-                QAccessible::AnnouncementPoliteness::Polite));
-#else
-        EXPECT_TRUE(std::any_of(
-            g_accessibleEvents.cbegin(),
-            g_accessibleEvents.cend(),
-            [&toast](const AccessibleEventRecord& record) {
-                return record.object == &toast
-                    && record.type == QAccessible::Alert;
-            }));
-#endif
+        if (fluentAccessibleAnnouncementSupportsDetails()) {
+            EXPECT_EQ(
+                match->announcement,
+                QStringLiteral(
+                    "Sync complete: 12 files are available"));
+            EXPECT_EQ(
+                match->politeness,
+                FluentAccessibleAnnouncementPoliteness::Polite);
+        }
     }
 #endif
 }
@@ -390,14 +378,7 @@ TEST(ToastTest, Contract_HoverPausePreservesRemainingDuration)
     ASSERT_TRUE(toast.present(&host));
 
     QTest::qWait(20);
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-    FluentEnterEvent enter(
-        QPointF(4, 4),
-        QPointF(4, 4),
-        QPointF(toast.mapToGlobal(QPoint(4, 4))));
-#else
-    FluentEnterEvent enter(QEvent::Enter);
-#endif
+    FLUENT_MAKE_ENTER_EVENT(enter, 4, 4);
     QCoreApplication::sendEvent(&toast, &enter);
     QTest::qWait(120);
     EXPECT_TRUE(toast.isOpen());
