@@ -802,7 +802,6 @@ void CalendarView::onThemeUpdated()
 void CalendarView::paintHeader(QPainter& painter)
 {
     const auto& colors = themeColorsRef();
-    const QRect titleRect = titleButtonRect();
     paintTitleButtonBackground(painter);
     if (contentTransitionActive()) {
         paintTitleForLevel(painter, m_contentLevel, m_visibleMonth, 0.0, 1.0);

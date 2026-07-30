@@ -58,7 +58,7 @@ protected:
         window->setWindowTitle("Popup Test");
         window->onThemeUpdated();
         window->show();
-        QTest::qWaitForWindowExposed(window);
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
     void TearDown() override { delete window; }
 
@@ -543,7 +543,7 @@ TEST_F(PopupTest, ParentDestructionDeletesOwnedPopupSafely) {
     top->setFixedSize(360, 240);
     top->onThemeUpdated();
     top->show();
-    QTest::qWaitForWindowExposed(top);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(top));
 
     auto* popup = new Popup(top);
     QPointer<Popup> popupPointer = popup;
@@ -606,7 +606,7 @@ protected:
         window->setFixedSize(800, 600);
         window->onThemeUpdated();
         window->show();
-        QTest::qWaitForWindowExposed(window);
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
 
     void TearDown() override {

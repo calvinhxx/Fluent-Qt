@@ -43,7 +43,7 @@ protected:
         window->setWindowTitle("TeachingTip Test");
         window->onThemeUpdated();
         window->show();
-        QTest::qWaitForWindowExposed(window);
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
 
     void TearDown() override {
@@ -309,7 +309,7 @@ protected:
         window->setFixedSize(900, 680);
         window->onThemeUpdated();
         window->show();
-        QTest::qWaitForWindowExposed(window);
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
 
     void TearDown() override {
@@ -582,4 +582,3 @@ TEST_F(TeachingTipTest, VisualCheck) {
     qApp->exec();
     delete visual;
 }
-

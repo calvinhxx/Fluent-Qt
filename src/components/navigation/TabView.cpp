@@ -2020,7 +2020,6 @@ bool TabView::removeTab(int index)
     if (!isValidIndex(index))
         return false;
 
-    const int previousIndex = m_selectedIndex;
     m_items.removeAt(index);
 
     bool selectionChanged = false;

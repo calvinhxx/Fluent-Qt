@@ -745,7 +745,7 @@ void DatePickerFlyoutPanel::layoutContent()
     int x = kPopupCardInset;
     const int y = kPopupCardInset;
 
-    auto placeColumn = [this, &x, y](PickerColumn* column, DatePicker::DateField field) {
+    auto placeColumn = [this, &x](PickerColumn* column, DatePicker::DateField field) {
         if (column->isHidden())
             return;
         const int w = m_flyout->preferredColumnWidth(field);

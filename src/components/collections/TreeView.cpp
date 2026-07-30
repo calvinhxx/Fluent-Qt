@@ -1003,7 +1003,6 @@ QPixmap TreeView::renderRowPixmap(const QModelIndex& index) const {
     if (rect.isEmpty()) return {};
 
     // Render the row content area (respecting indentation)
-    const int contentX = rect.x();              // indentation offset
     const int contentW = rect.width();           // width after indent
     const int h = rect.height();
     const qreal dpr = devicePixelRatioF();

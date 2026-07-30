@@ -51,7 +51,7 @@ protected:
         window->setWindowTitle("CoachMark Test");
         window->onThemeUpdated();
         window->show();
-        QTest::qWaitForWindowExposed(window);
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
 
     void TearDown() override {
@@ -220,7 +220,7 @@ TEST_F(CoachMarkTest, BottomPlacementSitsBelowTarget) {
     coach.setPlacement(CoachMark::Bottom);
     coach.setTarget(target);
     coach.open();
-    QTest::qWaitForWindowExposed(window);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
 
     const QRect tgt = targetGlobalRect(target);
     const QRect card = cardGlobalRect(&coach);
@@ -238,7 +238,7 @@ TEST_F(CoachMarkTest, RightPlacementSitsRightOfTarget) {
     coach.setPlacement(CoachMark::Right);
     coach.setTarget(target);
     coach.open();
-    QTest::qWaitForWindowExposed(window);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
 
     const QRect tgt = targetGlobalRect(target);
     const QRect card = cardGlobalRect(&coach);
@@ -252,7 +252,7 @@ TEST_F(CoachMarkTest, NoTargetCentersOverOwner) {
     CoachMark coach(window);
     coach.setCardSize(QSize(300, 140));
     coach.open();
-    QTest::qWaitForWindowExposed(window);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
 
     EXPECT_NEAR(coach.geometry().center().x(), window->rect().center().x(), 2);
     EXPECT_NEAR(coach.geometry().center().y(), window->rect().center().y(), 2);
@@ -294,7 +294,7 @@ TEST_F(CoachMarkTest, RetargetWhileOpenGlidesToNewTarget) {
     coach.setPlacement(CoachMark::Bottom);
     coach.setTarget(first);
     coach.open();
-    QTest::qWaitForWindowExposed(window);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
 
     coach.setTarget(second);
     EXPECT_TRUE(coach.isOpen());
@@ -326,7 +326,7 @@ TEST_F(CoachMarkTest, TracksMovingTargetAncestorAndClosesWhenClipped) {
     coach.setPlacement(CoachMark::Bottom);
     coach.setTarget(target);
     coach.open();
-    QTest::qWaitForWindowExposed(window);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     const QPoint initialPosition = coach.pos();
 
     scrollingContent->move(0, -64);
@@ -369,7 +369,7 @@ TEST_F(CoachMarkTest, OpenInheritsThemeOverrideFromTarget) {
     CoachMark coach(window);
     coach.setTarget(target);
     coach.open();
-    QTest::qWaitForWindowExposed(window);
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
 
     EXPECT_TRUE(coach.isOpen());
     EXPECT_EQ(coach.effectiveTheme(), fluent::FluentElement::Dark);

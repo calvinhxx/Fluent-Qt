@@ -15,7 +15,6 @@ namespace fluent::dialogs_flyouts {
 using Edge    = AnchorLayout::Edge;
 using Anchors = AnchorLayout::Anchors;
 
-static constexpr int kButtonBarHeight = 68;
 static constexpr int kButtonMinWidth  = 96;
 static constexpr int kDialogPadding   = Spacing::Padding::Dialog; // 24
 static constexpr int kContentGap      = Spacing::Medium;          // 12
