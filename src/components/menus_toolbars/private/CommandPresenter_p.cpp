@@ -122,8 +122,6 @@ CommandPresenter::CommandPresenter(
                 [this]() {
                     m_action.clear();
                     setProperty("commandAction", QVariant());
-                    setEnabled(false);
-                    hide();
                 });
     }
 

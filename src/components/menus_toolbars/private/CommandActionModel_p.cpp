@@ -265,7 +265,7 @@ void CommandActionModel::handleActionEvent(QActionEvent* event)
         sectionActions(pending.section).removeAt(pending.index);
         disconnectAction(action);
         QPointer<CommandActionModel> guard(this);
-        emit structureChanged();
+        queueStructureChanged();
         if (!guard)
             return;
         QTimer::singleShot(
@@ -402,6 +402,18 @@ void CommandActionModel::disconnectAction(QAction* action)
     }
     m_presentationState.remove(action);
     m_warnedSuppressedActions.removeAll(action);
+}
+
+void CommandActionModel::queueStructureChanged()
+{
+    if (m_structureChangeQueued)
+        return;
+
+    m_structureChangeQueued = true;
+    QTimer::singleShot(0, this, [this]() {
+        m_structureChangeQueued = false;
+        emit structureChanged();
+    });
 }
 
 void CommandActionModel::handleActionChanged(QAction* action)
