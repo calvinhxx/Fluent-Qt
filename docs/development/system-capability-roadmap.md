@@ -1,7 +1,5 @@
 # System Capability Roadmap
 
-[中文版本](system-capability-roadmap.zh_CN.md) | English
-
 ## Purpose
 
 This roadmap separates reusable widget behavior from application policy and
@@ -16,9 +14,9 @@ historical UILib contract phases in
 `Capability Phase N` when referring to this document.
 
 The current component inventory already includes application-window surfaces
-such as `InfoBar`, `InfoBadge`, `Avatar`, and `Toast`. The remaining work is
-primarily cross-component command behavior and optional platform integration
-rather than another set of visually equivalent notification widgets.
+such as `InfoBar`, `InfoBadge`, `Avatar`, and `Toast`. This roadmap is limited
+to reusable cross-component command behavior and in-window notification
+lifecycle rather than another set of visually equivalent notification widgets.
 
 ## Current Status
 
@@ -26,20 +24,20 @@ rather than another set of visually equivalent notification widgets.
 |---|---|
 | 1 Shared text editing context menu | Complete on `release/1.5.x`; Qt 5.15/Qt 6 editing-menu contracts pass |
 | 2 Editing command facade and router | Complete; review gate accepted on 2026-07-28 |
-| 3 CommandBar / CommandBarFlyout | Capability Phases 3A-3D complete; automated and focused Computer Use desktop regression pass, project-owner unified release regression pending |
-| 4 Notification accessibility and lifecycle | Not started |
-| 5 Optional platform notifications and app badge | Not started; optional packaging track |
+| 3 CommandBar / CommandBarFlyout | Complete; final cross-platform and Computer Use review gate accepted on 2026-07-30 |
+| 4 Notification accessibility and lifecycle | Complete; Toast lifecycle and InfoBadge accessibility gate accepted on 2026-07-30 |
+
+All capability phases in this roadmap are complete. Further system-level work
+requires a new scoped proposal rather than extending this closed roadmap.
 
 ## Architecture Boundary
 
 | Layer | Owns | Does not own |
 |---|---|---|
-| Component library | Editing menus, command presentation, in-window notification visuals, accessibility contracts | Business unread state, routing, notification policy |
-| Application | Current editing target, notification store, foreground/background policy, localized visible text | Platform-specific notification plumbing |
-| Optional platform module | OS notification delivery, activation, permissions, taskbar/Dock badge capability | In-window Fluent rendering, push-service business logic |
+| Component library | Editing menus, command presentation, in-window notification visuals, accessibility and lifecycle contracts | Business unread state, routing, notification policy, OS delivery |
+| Application | Current editing target, notification store, foreground/background policy, localized visible text, optional platform integration | Reusable component rendering and command semantics |
 
-The core `FluentQt` target remains a cross-platform Qt Widgets library. Native
-notification SDKs must not become unconditional core dependencies. Private
+The core `FluentQt` target remains a cross-platform Qt Widgets library. Private
 implementation headers under `*/private/` stay out of
 [FluentQtInstallHeaders.cmake](../../cmake/FluentQtInstallHeaders.cmake).
 
@@ -137,8 +135,8 @@ overflow surface. Capability Phase 3C completes the contextual flyout
 presentation and interaction contract. Capability Phase 3D adds design-language
 rendering, accessibility, Gallery examples, EditingCommandRouter integration,
 and package-boundary validation. Automated work and focused Windows desktop
-review are complete; the project owner's unified release regression remains
-the final external review gate.
+review are complete; the final Capability Phase 3 review gate was accepted on
+2026-07-30.
 
 Accepted components:
 
@@ -190,7 +188,7 @@ Capability Phase 3B validation completed on 2026-07-28:
 - No public API or installed-header allowlist change was needed for 3B;
   `CommandPresenter_p` remains private.
 - Capability Phase 3C and 3D work is delivered below; focused desktop review is
-  also complete, while the owner's release-wide regression remains external.
+  also complete.
 
 Capability Phases 3C and 3D automated validation completed on 2026-07-28:
 
@@ -228,47 +226,59 @@ Capability Phases 3C and 3D automated validation completed on 2026-07-28:
   CommandBarFlyout secondary rows and CommandBar overflow rows. Immediate plus
   deferred post-open reconciliation now prevents clipped captions, and focused
   geometry contracts cover both paths.
-- High-DPI, touch, and release-wide inspection still belongs to the project
-  owner's unified regression and is not marked accepted here.
+
+Final Capability Phase 3 closure validation completed on 2026-07-30:
+
+- Linux Qt 6.2.4 passes all 79 focused CommandBar, CommandBarFlyout, Toast,
+  InfoBadge, and high-DPI tests. The high-DPI matrix covers 110%, 125%, 150%,
+  175%, 200%, and 300%, including Gallery acceptance at 125%, 200%, and 300%.
+- Linux Qt 5.15.2 passes all 62 focused Capability Phase 3/4 tests.
+- Windows Qt 6.9.3 passes all 19 CommandBar contracts and all 15 automated
+  CommandBarFlyout contracts; its guarded VisualCheck remains manual.
+- ASan/UBSan passes the borrowed-action window-teardown and both related
+  Gallery route teardown paths.
+- A final Computer Use pass verifies responsive overflow, pointer-to-keyboard
+  navigation, Escape dismissal, Transient focus preservation, Standard
+  keyboard focus, the primary/secondary divider, and Light/Dark preview
+  rendering in the Gallery.
+- Physical touch hardware was not available for this run. The existing
+  Qt-widget pointer contract remains unchanged; device-specific touch smoke is
+  a release-device check, not an open item in this component roadmap.
 
 ## Capability Phase 4: Notification Accessibility and Lifecycle
 
-Harden existing components before adding another notification visual:
+Delivered contracts:
 
-- Announce newly presented Toast content through the best supported Qt
-  accessibility event, with a Qt 5.15-compatible fallback.
-- Define how standalone `InfoBadge` value/visibility changes are exposed by an
-  accessible parent.
-- Review Toast dismissal reason, optional actions, hover pause, managed-stack
-  grouping and eviction scope (host + placement + `maximumVisible()`),
-  optional correlation/update keys, and in-place update semantics as separate
-  contracts. Stacking remains the managed default; an update key must not turn
-  delivery into a replacement-only model.
+- Newly presented Toast content emits the best supported Qt accessibility
+  announcement. Qt 6.8 and newer use `QAccessibleAnnouncementEvent`; older Qt
+  baselines use the compatible alert fallback.
+- `InfoBadge` exposes a non-focusable static-text accessible object. Value mode
+  supplies a numeric value and fallback name, while explicit accessible names
+  remain caller-owned. Value, display, visibility, and parent changes notify
+  the accessible hierarchy.
+- Toast accepts an optional borrowed `QAction` without taking ownership and
+  reports stable `Programmatic`, `TimedOut`, `ActionInvoked`, and `Evicted`
+  dismissal reasons.
+- Optional hover pause preserves the remaining timeout. The default remains
+  disabled so existing pointer-through Toast behavior does not change.
+- A non-empty update key refreshes a matching managed Toast in place within
+  one host and placement, preserves stack order, and resets its timeout.
+  Unkeyed managed Toasts continue to stack up to `maximumVisible()`.
+- Reentrant action and close paths remain deletion-safe.
 
 Application-visible text and unread-state policy remain caller-owned.
 `setMaximumVisible()` remains process-wide startup configuration that affects
-subsequent `showToast` calls only, unless a later contract explicitly changes
-that rule.
+subsequent `showToast` calls only.
 
-## Capability Phase 5: Optional Platform Notifications and App Badge
+Validation completed on 2026-07-30:
 
-This phase is a separate optional build target and requires its own platform
-and packaging proposal.
-
-Candidate services:
-
-- `SystemNotificationService`: capability and permission queries, show, update,
-  remove, activation, action activation, and failure reporting.
-- `AppBadgeService`: set count, set supported glyph, clear, and report
-  unsupported capabilities.
-
-Backend direction:
-
-- Qt `QSystemTrayIcon::showMessage()` may provide a low-fidelity fallback.
-- Windows may use the Windows App SDK for app notifications and taskbar badges.
-- macOS may use User Notifications and Dock tile badges.
-- Linux may use the freedesktop notification service; app-icon badging must be
-  capability-driven because no equivalent cross-desktop contract is assumed.
-
-Push delivery, cloud registration, notification history models, and business
-unread rules remain outside the component library.
+- Windows Qt 6.9.3 passes all 15 Toast contracts and all 13 automated
+  InfoBadge contracts; the guarded InfoBadge VisualCheck skips as intended.
+- Linux Qt 6.2.4 and Qt 5.15.2 pass the focused Capability Phase 4 tests, and
+  the related six Gallery route/semantic contracts pass on Linux and Windows.
+- Headless environments always verify accessible role, name, and value.
+  Accessibility-event delivery assertions run when the platform accessibility
+  backend is active rather than forcing a synthetic backend state.
+- Computer Use verifies the actionable Toast, timeout reason, in-place
+  25%-to-50% update with one active keyed Toast, and InfoBadge value/visibility
+  examples in the Gallery.
