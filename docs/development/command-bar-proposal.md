@@ -5,8 +5,8 @@
 - Capability track: Phase 3
 - Proposal state: Accepted on 2026-07-28
 - Implementation state: Capability Phases 3A-3D implemented; automated
-  cross-platform validation and focused Windows desktop review complete, with
-  the project owner's unified release regression still pending
+  cross-platform validation, sanitizer coverage, high-DPI validation, and the
+  final Windows desktop review complete on 2026-07-30
 - Public API impact: Installed `CommandBar` and
   `CommandBarFlyout` types, plus one protected `Popup` focus-on-open setter
 
@@ -21,8 +21,8 @@ boundary without introducing a second command model:
 
 The decisions at the end of this document were accepted before Capability
 Phase 3A began. Implementation has now proceeded through Capability Phase 3D,
-including focused desktop review through Computer Use. The project owner's
-broader unified release regression remains a separate final gate.
+including final desktop review through Computer Use. Capability Phase 3 is
+closed.
 
 ## Local Baseline
 
@@ -845,8 +845,9 @@ Normal resize, measurement, hover, and action-state changes do not log.
 - Keep manual interaction tests behind the standard `SKIP_VISUAL_TEST` guard.
   Focused Windows desktop review exercises Light/Dark, design-language changes,
   LTR/RTL, narrow geometry, Standard/Transient focus behavior, pointer, and
-  keyboard paths; high-DPI, touch, and release-wide interaction remain in the
-  project owner's unified regression.
+  keyboard paths. The final validation also covers the high-DPI matrix and
+  sanitizer teardown paths. Physical touch hardware remains an optional
+  release-device smoke rather than an open component gate.
 - Re-run source-subproject and installed-package fixtures whenever the
   category export or `Popup` protected surface changes.
 
@@ -882,9 +883,8 @@ Normal resize, measurement, hover, and action-state changes do not log.
    - Add design-language branches, accessibility adapters, Gallery samples,
      EditingCommandRouter integration, installed-package validation, and manual
      visual review.
-   - Status: implementation, automated validation, and focused Windows desktop
-     review complete; the project owner's unified release regression remains
-     pending.
+   - Status: implementation, automated validation, and final Windows desktop
+     review complete; the Capability Phase 3 gate was accepted on 2026-07-30.
    - Validation: the current Windows Qt 6.9.3 label selection discovers 98
      CommandBar/Flyout/router/overlay/menu tests, with 92 passes, 6 expected
      desktop/manual skips, and 0 failures. Linux Qt 5.15.2 passes all 17
@@ -903,10 +903,9 @@ Normal resize, measurement, hover, and action-state changes do not log.
    - Review gate: cross-platform behavior and final Capability Phase 3
      acceptance.
 
-Each slice remains independently reviewable. Capability Phase 3 implementation
-has passed automated and focused desktop review and is ready for the project
-owner's final unified release regression; that broader gate is not recorded as
-accepted here.
+Each slice remains independently reviewable. Capability Phase 3 has passed its
+cross-platform automated, sanitizer, high-DPI, and focused desktop gates and is
+accepted as complete.
 
 ## Accepted Decisions
 
