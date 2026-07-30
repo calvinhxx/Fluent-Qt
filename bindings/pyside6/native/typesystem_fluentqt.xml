@@ -8,9 +8,19 @@
          extraction while keeping the declared enum types available. -->
     <rejection class="fluent::basicinput"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::date_time"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::collections"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::textfields"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::status_info"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::scrolling"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::scrolling::AnnotatedScrollBar"
+               function-name="^setDetailLabelProvider$"/>
+    <rejection class="fluent::layout"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
 
     <function signature="prepareHighDpiApplication()"/>
@@ -39,10 +49,13 @@
     <namespace-type name="fluent">
         <include file-name="BindingApi.h" location="global"/>
         <enum-type name="StyleTheme"/>
+        <enum-type name="WidgetOwnership"/>
         <namespace-type name="binding" visible="no">
             <enum-type name="Theme"/>
             <enum-type name="DesignLanguage"/>
         </namespace-type>
+
+        <object-type name="FontIcon"/>
 
         <namespace-type name="basicinput" visible="no">
             <object-type name="Button">
@@ -52,16 +65,156 @@
                 <enum-type name="InteractionState"/>
             </object-type>
             <object-type name="CheckBox"/>
+            <object-type name="ColorPicker">
+                <!-- These public C++ helpers exist only for ColorPicker's
+                     private spectrum and slider children. Python callers use
+                     the QColor property instead of mutating partial HSV
+                     implementation state. -->
+                <modify-function signature="hue()const" remove="all"/>
+                <modify-function signature="saturation()const" remove="all"/>
+                <modify-function signature="value()const" remove="all"/>
+                <modify-function signature="setHueFromBar(qreal)"
+                                 remove="all"/>
+                <modify-function signature="setSVFromSpectrum(qreal,qreal)"
+                                 remove="all"/>
+                <modify-function signature="setValueFromSlider(int)"
+                                 remove="all"/>
+                <modify-function signature="setAlphaFromSlider(int)"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="CompoundButton"/>
             <object-type name="HyperlinkButton"/>
             <object-type name="RadioButton"/>
+            <object-type name="RatingControl"/>
             <object-type name="RepeatButton"/>
             <object-type name="Slider"/>
             <object-type name="ToggleButton"/>
             <object-type name="ToggleSwitch"/>
         </namespace-type>
 
+        <namespace-type name="date_time" visible="no">
+            <object-type name="CalendarView">
+                <enum-type name="CalendarContentLevel"/>
+            </object-type>
+        </namespace-type>
+
+        <namespace-type name="collections" visible="no">
+            <object-type name="StackView">
+                <enum-type name="StackViewItemStatus"/>
+                <enum-type name="StackViewTransitionOperation"/>
+                <enum-type name="StackViewTransitionType"/>
+                <!-- StackView ownership is selected at runtime in C++. The
+                     Python facade exposes fixed Owned, Borrowed, and
+                     Reparented entry points and retains page wrappers through
+                     navigation transitions. Remove every default-policy
+                     bypass from the native module. -->
+                <modify-function
+                    signature="defaultItemOwnership()const"
+                    remove="all"/>
+                <modify-function
+                    signature="setDefaultItemOwnership(fluent::WidgetOwnership)"
+                    remove="all"/>
+                <modify-function signature="setInitialItem(QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="setInitialItem(QWidget*,fluent::WidgetOwnership)"
+                    rename="_setInitialItemWithOwnership"/>
+                <modify-function signature="push(QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="push(QWidget*,fluent::WidgetOwnership)"
+                    rename="_pushItemWithOwnership"/>
+                <modify-function
+                    signature="push(const QVector&lt;QWidget*&gt;&amp;,fluent::WidgetOwnership)"
+                    rename="_pushItemsWithOwnership"/>
+                <modify-function signature="replace(QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="replace(QWidget*,fluent::WidgetOwnership)"
+                    rename="_replaceCurrentWithOwnership"/>
+                <modify-function
+                    signature="replace(int,QWidget*,fluent::WidgetOwnership)"
+                    rename="_replaceAtWithOwnership"/>
+                <modify-function signature="pop(QWidget*)" remove="all"/>
+                <modify-function
+                    signature="adoptWidget(QWidget*,fluent::WidgetOwnership)"
+                    remove="all"/>
+                <!-- Shiboken's setCurrentWidget name heuristic reparents the
+                     argument in its wrapper. The Python facade implements the
+                     same operation through the index-only native setter. -->
+                <modify-function signature="setCurrentWidget(QWidget*)"
+                                 remove="all"/>
+                <modify-function signature="currentItem()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="initialItem()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="itemAt(int)const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+        </namespace-type>
+
         <namespace-type name="layout" visible="no">
+            <object-type name="Accordion">
+                <enum-type name="ExpansionMode"/>
+                <!-- Runtime-dependent item ownership is published by the
+                     Python facade as fixed Owned, Borrowed, and Reparented
+                     methods. Keep the convenient borrowed overloads out of
+                     the native module so callers cannot bypass retention. -->
+                <modify-function
+                    signature="addItem(fluent::layout::Expander*)"
+                    remove="all"/>
+                <modify-function
+                    signature="addItem(fluent::layout::Expander*,fluent::WidgetOwnership)"
+                    rename="_addItemWithOwnership"/>
+                <modify-function
+                    signature="insertItem(int,fluent::layout::Expander*)"
+                    remove="all"/>
+                <modify-function
+                    signature="insertItem(int,fluent::layout::Expander*,fluent::WidgetOwnership)"
+                    rename="_insertItemWithOwnership"/>
+                <modify-function signature="itemAt(int)const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeItem(int)">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+            <object-type name="Card">
+                <enum-type name="Appearance"/>
+            </object-type>
             <object-type name="Divider"/>
+            <object-type name="Expander">
+                <modify-function
+                    signature="setContentWidget(QWidget*,fluent::WidgetOwnership)"
+                    rename="_setContentWidgetWithOwnership"/>
+                <modify-function signature="contentWidget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeContentWidget()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- The header button is internal chrome, not caller-owned
+                     content. Keep it out of the public Python surface. -->
+                <modify-function signature="headerButton()const"
+                                 remove="all"/>
+            </object-type>
         </namespace-type>
 
         <namespace-type name="textfields" visible="no">
@@ -75,12 +228,39 @@
             <object-type name="PasswordBox">
                 <enum-type name="PasswordRevealMode"/>
             </object-type>
+            <object-type name="TextEdit">
+                <!-- Shiboken 6.2 silently drops this cross-namespace pointer
+                     return while newer generators publish it. Remove the
+                     version-dependent wrapper; textfields.py supplies the
+                     same getter by locating TextEdit's Qt-owned ScrollBar. -->
+                <modify-function signature="verticalScrollBar()const"
+                                 remove="all"/>
+            </object-type>
         </namespace-type>
 
         <namespace-type name="status_info" visible="no">
+            <object-type name="Avatar">
+                <enum-type name="AvatarShape"/>
+                <enum-type name="AvatarSize"/>
+                <enum-type name="PresenceStatus"/>
+            </object-type>
             <object-type name="InfoBadge">
                 <enum-type name="InfoBadgeDisplayMode"/>
                 <enum-type name="InfoBadgeStatus"/>
+            </object-type>
+            <object-type name="InfoBar">
+                <enum-type name="InfoBarSeverity"/>
+                <!-- The Python facade owns wrapper retention. Keep the
+                     generated setter/getter free of Shiboken parent and
+                     ownership bookkeeping so Qt can apply InfoBar's
+                     host-while-installed/release-on-replace contract. -->
+                <modify-function signature="setActionWidget(QWidget*)"
+                                 rename="_setActionWidget"/>
+                <modify-function signature="actionWidget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
             </object-type>
             <object-type name="ProgressBar"/>
             <object-type name="ProgressRing">
@@ -95,6 +275,68 @@
                      configurable until a Python value type is designed.
                      The parameterless QMetaObject signal remains visible. -->
                 <modify-function signature="^clearElements\(.*$" remove="all"/>
+            </object-type>
+        </namespace-type>
+
+        <namespace-type name="scrolling" visible="no">
+            <value-type name="AnnotatedScrollBarLabel"/>
+            <object-type name="AnnotatedScrollBar">
+                <!-- std::function has no stable Python callable converter
+                     across the supported Shiboken 6.2+ range. Python callers
+                     use each label's detailText until an explicit synchronous
+                     provider adapter is available. Do not publish a partial
+                     provider surface. -->
+                <modify-function signature="clearDetailLabelProvider()"
+                                 remove="all"/>
+                <modify-function signature="hasDetailLabelProvider()const"
+                                 remove="all"/>
+                <!-- AnnotatedScrollBar observes but never owns the linked
+                     ScrollView. Suppress return-value parent/ownership
+                     heuristics so the C++ QPointer lifecycle remains intact. -->
+                <modify-function signature="connectedScrollView()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+            <object-type name="PipsPager">
+                <enum-type name="PipsPagerButtonVisibility"/>
+            </object-type>
+            <object-type name="ScrollBar"/>
+            <object-type name="ScrollView">
+                <enum-type name="ScrollMode"/>
+                <enum-type name="ScrollBarVisibility"/>
+                <enum-type name="ZoomMode"/>
+                <!-- Keep the runtime-dependent overload private by convention.
+                     The public Python facade maps it to separate Owned,
+                     Borrowed, and Reparented methods with audited lifetimes. -->
+                <modify-function
+                    signature="setContentWidget(QWidget*,fluent::WidgetOwnership)"
+                    rename="_setContentWidgetWithOwnership"/>
+                <modify-function signature="setContentWidget(QWidget*)">
+                    <!-- ScrollView owns the C++ deletion policy, while the
+                         public Python facade keeps the wrapper alive. Do not
+                         call releaseOwnership(): Shiboken 6.2/Windows can
+                         fast-fail when a custom QWidget host later destroys
+                         that released wrapper. Qt's destroyed notification
+                         invalidates the still-Python-owned wrapper instead. -->
+                </modify-function>
+                <modify-function signature="contentWidget()const">
+                    <!-- Suppress the generator's return-value parent
+                         heuristic without changing wrapper ownership. -->
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeContentWidget()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- The Python facade provides these aliases through the two
+                     ownership-audited methods above. -->
+                <modify-function signature="setWidget(QWidget*)" remove="all"/>
+                <modify-function signature="takeWidget()" remove="all"/>
             </object-type>
         </namespace-type>
 

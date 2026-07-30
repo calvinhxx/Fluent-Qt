@@ -1,9 +1,11 @@
 """Smoke-test an installed FluentQt wheel without using the source tree."""
 
+import gc
 from importlib import metadata
 import os
 from pathlib import Path
 import sys
+import weakref
 
 import fluentqt
 import fluentqt._fluentqt as native
@@ -12,7 +14,8 @@ import shiboken6
 
 fluentqt.prepare_high_dpi_application()
 
-from PySide6.QtCore import Qt, qVersion
+from PySide6.QtCore import QDate, Qt, qVersion
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication, QWidget
 from shiboken6 import Shiboken
 
@@ -201,8 +204,15 @@ def main():
         raise AssertionError("Qt build and runtime versions differ")
 
     controls = [
+        fluentqt.Accordion(),
+        fluentqt.AnnotatedScrollBar(),
+        fluentqt.Avatar("Ada Lovelace"),
         fluentqt.Button("Button"),
+        fluentqt.CalendarView(),
         fluentqt.CheckBox("CheckBox"),
+        fluentqt.ColorPicker(),
+        fluentqt.CompoundButton("Install", "Download and restart"),
+        fluentqt.FontIcon("ic_fluent_settings_20_regular"),
         fluentqt.HyperlinkButton("HyperlinkButton"),
         fluentqt.RadioButton("RadioButton"),
         fluentqt.RepeatButton("RepeatButton"),
@@ -213,14 +223,476 @@ def main():
         fluentqt.LineEdit(),
         fluentqt.NumberBox(),
         fluentqt.PasswordBox(),
+        fluentqt.TextEdit(),
         fluentqt.InfoBadge(),
+        fluentqt.InfoBar(),
         fluentqt.ProgressBar(),
         fluentqt.ProgressRing(),
+        fluentqt.RatingControl(),
         fluentqt.Shimmer(),
+        fluentqt.Card(),
         fluentqt.Divider(),
+        fluentqt.Expander(),
+        fluentqt.PipsPager(),
+        fluentqt.ScrollBar(Qt.Horizontal),
     ]
     if any(not Shiboken.isValid(control) for control in controls):
         raise AssertionError("A wheel-installed component has an invalid wrapper")
+
+    annotated = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.AnnotatedScrollBar)
+    )
+    label_type = fluentqt.AnnotatedScrollBarLabel
+    labels = [
+        label_type("Start", 0, "Start detail"),
+        label_type("Middle", 500, "Middle detail"),
+        label_type("End", 1000, "End detail"),
+    ]
+    if label_type(labels[0]) != labels[0]:
+        raise AssertionError(
+            "AnnotatedScrollBarLabel did not preserve value equality"
+        )
+    try:
+        hash(labels[0])
+    except TypeError:
+        pass
+    else:
+        raise AssertionError(
+            "Mutable AnnotatedScrollBarLabel unexpectedly remained hashable"
+        )
+    annotated.setRange(0, 1000)
+    annotated.setLabels(labels)
+    if [
+        (label.text, label.offset, label.detailText)
+        for label in annotated.labels()
+    ] != [
+        ("Start", 0, "Start detail"),
+        ("Middle", 500, "Middle detail"),
+        ("End", 1000, "End detail"),
+    ]:
+        raise AssertionError(
+            "AnnotatedScrollBar did not preserve label value types"
+        )
+    for provider_method in (
+        "setDetailLabelProvider",
+        "clearDetailLabelProvider",
+        "hasDetailLabelProvider",
+    ):
+        if hasattr(annotated, provider_method):
+            raise AssertionError(
+                "AnnotatedScrollBar exposed unsupported provider API: {0}".format(
+                    provider_method
+                )
+            )
+
+    linked_scroll_view = fluentqt.ScrollView()
+    annotated.connectToScrollView(linked_scroll_view)
+    if annotated.connectedScrollView() is not linked_scroll_view:
+        raise AssertionError(
+            "AnnotatedScrollBar did not preserve linked wrapper identity"
+        )
+    if linked_scroll_view.parent() is not None:
+        raise AssertionError(
+            "AnnotatedScrollBar reparented its borrowed ScrollView"
+        )
+    annotated.disconnectScrollView()
+    if annotated.connectedScrollView() is not None:
+        raise AssertionError(
+            "AnnotatedScrollBar did not clear its borrowed ScrollView"
+        )
+
+    calendar = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.CalendarView)
+    )
+    minimum_date = QDate(2026, 5, 10)
+    maximum_date = QDate(2026, 5, 20)
+    selected_dates = []
+    calendar.selectedDateChanged.connect(selected_dates.append)
+    calendar.setDateRange(minimum_date, maximum_date)
+    calendar.setSelectedDate(QDate(2026, 5, 1))
+    calendar.setContentLevel(
+        fluentqt.CalendarView.CalendarContentLevel.Month
+    )
+    if calendar.selectedDate() != minimum_date:
+        raise AssertionError("CalendarView did not clamp its selected QDate")
+    if selected_dates != [minimum_date]:
+        raise AssertionError("CalendarView did not emit its date signal")
+    if (
+        calendar.contentLevel()
+        != fluentqt.CalendarView.CalendarContentLevel.Month
+    ):
+        raise AssertionError("CalendarView did not preserve its content level")
+    if not calendar.isDateSelectable(maximum_date):
+        raise AssertionError("CalendarView rejected an in-range date")
+
+    compound = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.CompoundButton)
+    )
+    compound_changes = []
+    compound.secondaryTextChanged.connect(compound_changes.append)
+    compound.setSecondaryText("Restart after downloading")
+    if compound.text() != "Install":
+        raise AssertionError("CompoundButton did not preserve primary text")
+    if compound.secondaryText() != "Restart after downloading":
+        raise AssertionError("CompoundButton did not preserve secondary text")
+    if compound_changes != ["Restart after downloading"]:
+        raise AssertionError("CompoundButton did not emit its property signal")
+
+    color_picker = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.ColorPicker)
+    )
+    picker_changes = []
+    color_picker.colorChanged.connect(picker_changes.append)
+    selected_color = QColor(0, 120, 212, 180)
+    color_picker.setColor(selected_color)
+    color_picker.setAlphaEnabled(False)
+    if color_picker.color() != selected_color:
+        raise AssertionError("ColorPicker did not preserve its QColor value")
+    if color_picker.alphaEnabled():
+        raise AssertionError("ColorPicker did not disable alpha editing")
+    if picker_changes != [selected_color]:
+        raise AssertionError("ColorPicker did not emit its property signal")
+    for internal_name in (
+        "hue",
+        "saturation",
+        "value",
+        "setHueFromBar",
+        "setSVFromSpectrum",
+        "setValueFromSlider",
+        "setAlphaFromSlider",
+    ):
+        if hasattr(fluentqt.ColorPicker, internal_name):
+            raise AssertionError(
+                "ColorPicker exposed internal helper: {0}".format(
+                    internal_name
+                )
+            )
+
+    font_icon = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.FontIcon)
+    )
+    icon_size_changes = []
+    font_icon.iconSizeChanged.connect(icon_size_changes.append)
+    font_icon.setIconSize(24)
+    font_icon.setColor(QColor("#7f52ff"))
+    font_icon.setRotation(45.0)
+    if font_icon.glyph() != "ic_fluent_settings_20_regular":
+        raise AssertionError("FontIcon did not preserve its catalog name")
+    if font_icon.sizeHint().width() != 24:
+        raise AssertionError("FontIcon did not update its optical size")
+    if icon_size_changes != [24]:
+        raise AssertionError("FontIcon did not emit its property signal")
+    if font_icon.color() != QColor("#7f52ff"):
+        raise AssertionError("FontIcon did not preserve its explicit color")
+    if font_icon.rotation() != 45.0:
+        raise AssertionError("FontIcon did not preserve its rotation")
+
+    avatar = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.Avatar)
+    )
+    avatar.setPresence(fluentqt.Avatar.PresenceStatus.Available)
+    if avatar.effectiveInitials() != "AL":
+        raise AssertionError("Avatar did not preserve its initials contract")
+
+    rating = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.RatingControl)
+    )
+    rating.setValue(3.5)
+    if rating.value() != 3.5:
+        raise AssertionError("RatingControl did not preserve its value")
+
+    pager = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.PipsPager)
+    )
+    pager.setSelectionAnimationEnabled(False)
+    pager.setNumberOfPages(7)
+    pager.setMaxVisiblePips(3)
+    pager.setSelectedPageIndex(4)
+    pager.setNextButtonVisibility(
+        fluentqt.PipsPager.PipsPagerButtonVisibility.Visible
+    )
+    if pager.firstVisiblePage() != 3 or not pager.hasNextPage():
+        raise AssertionError("PipsPager did not preserve its page window")
+    for internal_name in (
+        "HitKind",
+        "selectedVisualOffset",
+        "visibleWindowOffset",
+    ):
+        if hasattr(fluentqt.PipsPager, internal_name):
+            raise AssertionError(
+                "PipsPager exposed internal API: {0}".format(
+                    internal_name
+                )
+            )
+
+    scroll_bar = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.ScrollBar)
+    )
+    scroll_bar.setThickness(11)
+    scroll_bar.setRange(0, 100)
+    scroll_bar.setValue(42)
+    if scroll_bar.thickness() != 11 or scroll_bar.value() != 42:
+        raise AssertionError("ScrollBar did not preserve its Qt properties")
+
+    text_edit = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.TextEdit)
+    )
+    text_edit.setMinVisibleLines(2)
+    text_edit.setMaxVisibleLines(3)
+    text_edit.setPlainText("First line\nSecond line")
+    text_edit.setScrollChainingEnabled(True)
+    if text_edit.toPlainText() != "First line\nSecond line":
+        raise AssertionError("TextEdit did not preserve its plain text")
+    if text_edit.minVisibleLines() != 2 or text_edit.maxVisibleLines() != 3:
+        raise AssertionError("TextEdit did not preserve visible-line bounds")
+    if not text_edit.isScrollChainingEnabled():
+        raise AssertionError("TextEdit did not preserve scroll chaining")
+    if (
+        not Shiboken.isValid(text_edit.verticalScrollBar())
+        or text_edit.verticalScrollBar().parent() is not text_edit
+    ):
+        raise AssertionError("TextEdit exposed an invalid Fluent scroll bar")
+
+    info_bar = fluentqt.InfoBar(
+        title="Bindings ready",
+        severity=fluentqt.InfoBar.InfoBarSeverity.Success,
+    )
+    info_action = fluentqt.Button("Details")
+    info_bar.setActionWidget(info_action)
+    taken_info_action = info_bar.takeActionWidget()
+    if taken_info_action is not info_action:
+        raise AssertionError("InfoBar did not preserve action identity")
+    if taken_info_action.parent() is not None:
+        raise AssertionError("InfoBar take did not detach its action")
+    if not Shiboken.ownedByPython(taken_info_action):
+        raise AssertionError("InfoBar take did not return Python ownership")
+    info_bar.setActionWidget(taken_info_action)
+    info_bar_ref = weakref.ref(info_bar)
+    del info_bar
+    gc.collect()
+    if info_bar_ref() is not None:
+        raise AssertionError("InfoBar survived Python GC")
+    if Shiboken.isValid(info_action):
+        raise AssertionError("InfoBar did not delete its hosted action")
+
+    scroll_view = fluentqt.ScrollView()
+    scroll_content = QWidget()
+    scroll_view.setContentWidget(scroll_content)
+    taken_content = scroll_view.takeContentWidget()
+    if taken_content is not scroll_content:
+        raise AssertionError("ScrollView did not preserve Python wrapper identity")
+    if not Shiboken.ownedByPython(taken_content):
+        raise AssertionError("ScrollView take did not return Python ownership")
+    scroll_view_ref = weakref.ref(scroll_view)
+    del scroll_view
+    gc.collect()
+    if scroll_view_ref() is not None:
+        raise AssertionError("Taken ScrollView host survived Python GC")
+    if not Shiboken.isValid(taken_content):
+        raise AssertionError("Taken ScrollView content did not survive its host")
+    taken_content_ref = weakref.ref(taken_content)
+    del taken_content
+    del scroll_content
+    gc.collect()
+    if taken_content_ref() is not None:
+        raise AssertionError("Taken ScrollView content survived Python GC")
+
+    owned_scroll_view = fluentqt.ScrollView()
+    owned_scroll_content = QWidget()
+    owned_scroll_view.setContentWidget(owned_scroll_content)
+    owned_scroll_view_ref = weakref.ref(owned_scroll_view)
+    del owned_scroll_view
+    gc.collect()
+    if owned_scroll_view_ref() is not None:
+        raise AssertionError("Owned ScrollView host survived Python GC")
+    if Shiboken.isValid(owned_scroll_content):
+        raise AssertionError("ScrollView did not delete its owned content")
+
+    borrowed_scroll_view = fluentqt.ScrollView()
+    borrowed_scroll_content = QWidget()
+    borrowed_scroll_view.setBorrowedContentWidget(
+        borrowed_scroll_content
+    )
+    borrowed_scroll_view_ref = weakref.ref(borrowed_scroll_view)
+    del borrowed_scroll_view
+    gc.collect()
+    if borrowed_scroll_view_ref() is not None:
+        raise AssertionError("Borrowed ScrollView host survived Python GC")
+    if not Shiboken.isValid(borrowed_scroll_content):
+        raise AssertionError("ScrollView deleted borrowed content")
+    if borrowed_scroll_content.parent() is not None:
+        raise AssertionError("Borrowed content was not detached")
+
+    original_parent = QWidget()
+    reparented_scroll_content = QWidget(original_parent)
+    reparented_scroll_view = fluentqt.ScrollView()
+    reparented_scroll_view.setReparentedContentWidget(
+        reparented_scroll_content
+    )
+    reparented_scroll_view_ref = weakref.ref(reparented_scroll_view)
+    del reparented_scroll_view
+    gc.collect()
+    if reparented_scroll_view_ref() is not None:
+        raise AssertionError("Reparented ScrollView host survived Python GC")
+    if not Shiboken.isValid(reparented_scroll_content):
+        raise AssertionError("ScrollView deleted reparented content")
+    if reparented_scroll_content.parent() is not original_parent:
+        raise AssertionError("ScrollView did not restore the original parent")
+
+    expander = fluentqt.Expander()
+    expander_content = QWidget()
+    expander.setContentWidget(expander_content)
+    taken_expander_content = expander.takeContentWidget()
+    if taken_expander_content is not expander_content:
+        raise AssertionError("Expander did not preserve wrapper identity")
+    if taken_expander_content.parent() is not None:
+        raise AssertionError("Expander take did not detach content")
+    if not Shiboken.ownedByPython(taken_expander_content):
+        raise AssertionError("Expander take did not return Python ownership")
+
+    owned_expander = fluentqt.Expander()
+    owned_expander_content = QWidget()
+    owned_expander.setOwnedContentWidget(owned_expander_content)
+    owned_expander_ref = weakref.ref(owned_expander)
+    del owned_expander
+    gc.collect()
+    if owned_expander_ref() is not None:
+        raise AssertionError("Owned Expander survived Python GC")
+    if Shiboken.isValid(owned_expander_content):
+        raise AssertionError("Expander did not delete owned content")
+
+    borrowed_expander = fluentqt.Expander()
+    borrowed_expander_content = QWidget()
+    borrowed_expander.setBorrowedContentWidget(
+        borrowed_expander_content
+    )
+    borrowed_expander_ref = weakref.ref(borrowed_expander)
+    del borrowed_expander
+    gc.collect()
+    if borrowed_expander_ref() is not None:
+        raise AssertionError("Borrowed Expander survived Python GC")
+    if not Shiboken.isValid(borrowed_expander_content):
+        raise AssertionError("Expander deleted borrowed content")
+    if borrowed_expander_content.parent() is not None:
+        raise AssertionError("Borrowed Expander content was not detached")
+
+    expander_parent = QWidget()
+    reparented_expander_content = QWidget(expander_parent)
+    reparented_expander = fluentqt.Expander()
+    reparented_expander.setReparentedContentWidget(
+        reparented_expander_content
+    )
+    reparented_expander_ref = weakref.ref(reparented_expander)
+    del reparented_expander
+    gc.collect()
+    if reparented_expander_ref() is not None:
+        raise AssertionError("Reparented Expander survived Python GC")
+    if reparented_expander_content.parent() is not expander_parent:
+        raise AssertionError("Expander did not restore the original parent")
+
+    accordion = fluentqt.Accordion()
+    borrowed_item = fluentqt.Expander()
+    owned_item = fluentqt.Expander()
+    if not accordion.addBorrowedItem(borrowed_item):
+        raise AssertionError("Accordion rejected a borrowed item")
+    if not accordion.insertOwnedItem(0, owned_item):
+        raise AssertionError("Accordion rejected an owned item")
+    if accordion.itemAt(0) is not owned_item:
+        raise AssertionError("Accordion did not preserve item identity")
+    if (
+        accordion.itemOwnershipAt(0)
+        != fluentqt.WidgetOwnership.Owned
+    ):
+        raise AssertionError("Accordion lost its owned item policy")
+    taken_item = accordion.takeItem(0)
+    if taken_item is not owned_item or taken_item.parent() is not None:
+        raise AssertionError("Accordion take did not detach its item")
+    if not Shiboken.ownedByPython(taken_item):
+        raise AssertionError("Accordion take did not return Python ownership")
+    accordion_ref = weakref.ref(accordion)
+    del accordion
+    gc.collect()
+    if accordion_ref() is not None:
+        raise AssertionError("Borrowed Accordion host survived Python GC")
+    if not Shiboken.isValid(borrowed_item):
+        raise AssertionError("Accordion deleted its borrowed item")
+    if borrowed_item.parent() is not None:
+        raise AssertionError("Accordion did not detach its borrowed item")
+
+    owned_accordion = fluentqt.Accordion()
+    deleted_item = fluentqt.Expander()
+    owned_accordion.addOwnedItem(deleted_item)
+    owned_accordion_ref = weakref.ref(owned_accordion)
+    del owned_accordion
+    gc.collect()
+    if owned_accordion_ref() is not None:
+        raise AssertionError("Owned Accordion host survived Python GC")
+    if Shiboken.isValid(deleted_item):
+        raise AssertionError("Accordion did not delete its owned item")
+
+    item_parent = QWidget()
+    reparented_item = fluentqt.Expander(item_parent)
+    reparenting_accordion = fluentqt.Accordion()
+    reparenting_accordion.addReparentedItem(reparented_item)
+    reparenting_ref = weakref.ref(reparenting_accordion)
+    del reparenting_accordion
+    gc.collect()
+    if reparenting_ref() is not None:
+        raise AssertionError("Reparenting Accordion survived Python GC")
+    if reparented_item.parent() is not item_parent:
+        raise AssertionError("Accordion did not restore the item parent")
+
+    stack_view = fluentqt.StackView()
+    stack_view.setTransitionAnimationEnabled(False)
+    borrowed_page = QWidget()
+    stack_parent = QWidget()
+    reparented_page = QWidget(stack_parent)
+    owned_page = QWidget()
+    if not stack_view.pushBorrowedItem(borrowed_page):
+        raise AssertionError("StackView rejected a borrowed page")
+    if not stack_view.pushReparentedItem(reparented_page):
+        raise AssertionError("StackView rejected a reparented page")
+    if stack_view.currentItem() is not reparented_page:
+        raise AssertionError("StackView lost current page identity")
+    if not stack_view.pop():
+        raise AssertionError("StackView could not pop a hosted page")
+    if reparented_page.parent() is not stack_parent:
+        raise AssertionError("StackView did not restore the page parent")
+    if not stack_view.pushOwnedItem(owned_page):
+        raise AssertionError("StackView rejected an owned page")
+    if stack_view.depth() != 2:
+        raise AssertionError("StackView reported an unexpected depth")
+    stack_view_ref = weakref.ref(stack_view)
+    del stack_view
+    gc.collect()
+    if stack_view_ref() is not None:
+        raise AssertionError("StackView survived Python GC")
+    if Shiboken.isValid(owned_page):
+        raise AssertionError("StackView did not delete its owned page")
+    if not Shiboken.isValid(borrowed_page):
+        raise AssertionError("StackView deleted its borrowed page")
+    if borrowed_page.parent() is not None:
+        raise AssertionError("StackView did not detach its borrowed page")
 
     previous_theme = fluentqt.current_theme()
     try:
@@ -238,7 +710,11 @@ def main():
     window = fluentqt.Window()
     child = QWidget()
     window.setContentWidget(child)
-    Shiboken.delete(window)
+    window_ref = weakref.ref(window)
+    del window
+    gc.collect()
+    if window_ref() is not None:
+        raise AssertionError("Window survived Python GC")
     if Shiboken.isValid(child):
         raise AssertionError("Window did not own its installed content widget")
 

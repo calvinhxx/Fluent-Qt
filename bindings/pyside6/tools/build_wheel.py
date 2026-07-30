@@ -24,6 +24,7 @@ REQUIRED_PACKAGE_FILES = {
     "basicinput.py",
     "foundation.py",
     "py.typed",
+    "scrolling.py",
     "status_info.py",
     "textfields.py",
     "windowing.py",

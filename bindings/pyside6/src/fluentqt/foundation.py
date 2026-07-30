@@ -19,6 +19,7 @@ from ._fluentqt import (
 StyleTheme = _native.fluent.StyleTheme
 Theme = _native.fluent.Theme
 DesignLanguage = _native.fluent.DesignLanguage
+FontIcon = _native.fluent.FontIcon
 
 
 def font_for_role(role=FontRole.Body):
@@ -78,6 +79,7 @@ def theme_revision():
 
 __all__ = [
     "DesignLanguage",
+    "FontIcon",
     "FontRole",
     "StyleTheme",
     "Theme",

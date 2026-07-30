@@ -379,6 +379,33 @@ TEST_F(InfoBarTest, ActionWidgetManagement) {
     delete link;
 }
 
+TEST_F(InfoBarTest, DestroyedActionWidgetClearsTheHostedPointer) {
+    InfoBar bar;
+    QSignalSpy actionSpy(&bar, &InfoBar::actionWidgetChanged);
+
+    auto* first = new Button("First");
+    bar.setActionWidget(first);
+    ASSERT_EQ(actionSpy.count(), 1);
+
+    auto* replacement = new Button("Replacement");
+    bar.setActionWidget(replacement);
+    ASSERT_EQ(actionSpy.count(), 2);
+
+    delete first;
+    EXPECT_EQ(bar.actionWidget(), replacement);
+    EXPECT_EQ(actionSpy.count(), 2);
+
+    delete replacement;
+    EXPECT_EQ(bar.actionWidget(), nullptr);
+    EXPECT_EQ(actionSpy.count(), 3);
+    EXPECT_EQ(actionSpy.at(2).at(0).value<QWidget*>(), nullptr);
+
+    bar.resize(bar.sizeHint());
+    bar.show();
+    QApplication::processEvents();
+    EXPECT_GT(bar.sizeHint().height(), 0);
+}
+
 TEST_F(InfoBarTest, ThemeAndDisabledState) {
     InfoBar bar;
     bar.setMessage("Theme sensitive message.");

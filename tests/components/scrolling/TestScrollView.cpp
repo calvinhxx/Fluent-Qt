@@ -220,6 +220,54 @@ TEST_F(ScrollViewTest, BorrowedContentDetachesAndTakeTransfersWithoutDeletion)
     delete taken;
 }
 
+TEST_F(ScrollViewTest, HostDestructionHonorsContentOwnershipPolicies)
+{
+    QPointer<QWidget> ownedGuard;
+    {
+        ScrollView view;
+        auto* owned = createContent(QSize(240, 180));
+        ownedGuard = owned;
+        ASSERT_TRUE(view.setContentWidget(owned, WidgetOwnership::Owned));
+    }
+    EXPECT_TRUE(ownedGuard.isNull());
+
+    auto* borrowed = createContent(QSize(240, 180));
+    QPointer<QWidget> borrowedGuard = borrowed;
+    {
+        ScrollView view;
+        ASSERT_TRUE(view.setContentWidget(borrowed, WidgetOwnership::Borrowed));
+    }
+    ASSERT_FALSE(borrowedGuard.isNull());
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    delete borrowed;
+
+    QWidget originalParent;
+    auto* reparented = createContent(QSize(240, 180));
+    reparented->setParent(&originalParent);
+    QPointer<QWidget> reparentedGuard = reparented;
+    {
+        ScrollView view;
+        ASSERT_TRUE(
+            view.setContentWidget(reparented, WidgetOwnership::Reparented));
+    }
+    ASSERT_FALSE(reparentedGuard.isNull());
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+}
+
+TEST_F(ScrollViewTest, RepeatedOwnedHostDestructionIsStable)
+{
+    for (int iteration = 0; iteration < 50; ++iteration) {
+        auto* view = new ScrollView;
+        QPointer<QWidget> content = createContent(QSize(240, 180));
+        ASSERT_TRUE(
+            view->setContentWidget(content.data(), WidgetOwnership::Owned));
+
+        delete view;
+
+        EXPECT_TRUE(content.isNull()) << "iteration " << iteration;
+    }
+}
+
 TEST_F(ScrollViewTest, DirectQScrollAreaContentUsesOwnedContract)
 {
     ScrollView view;
