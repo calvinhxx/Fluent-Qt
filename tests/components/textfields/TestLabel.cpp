@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QTest>
 #include <QVBoxLayout>
+#include <QtMath>
 #include <QtTest/QSignalSpy>
 #include "QtTestEnvironment.h"
 #include "compatibility/QtCompat.h"
@@ -119,12 +120,15 @@ TEST_F(LabelTest, SelectableTextUsesSharedFluentContextMenu)
             ASSERT_FALSE(action->icon().isNull());
             const QSize iconSize =
                 action->icon().actualSize(QSize(64, 64));
+            const int maximumBackingExtent = qCeil(
+                Typography::IconSize::Standard
+                * qMax<qreal>(1.0, menu->devicePixelRatioF()));
             EXPECT_LE(
                 iconSize.width(),
-                Typography::IconSize::Standard);
+                maximumBackingExtent);
             EXPECT_LE(
                 iconSize.height(),
-                Typography::IconSize::Standard);
+                maximumBackingExtent);
 
             if (action->shortcut().matches(
                     QKeySequence(QKeySequence::Copy))
