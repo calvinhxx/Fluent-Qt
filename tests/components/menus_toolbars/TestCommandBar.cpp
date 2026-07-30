@@ -286,6 +286,19 @@ TEST(CommandBarTest, BorrowedLifetimeAndActionDestructionAreSafe)
     EXPECT_TRUE(surfaceOwned.isNull());
 }
 
+TEST(CommandBarTest,
+     Contract_WindowTeardownDoesNotRebuildAfterBorrowedActionDestruction)
+{
+    auto* window = new QWidget;
+    auto* action =
+        new QAction(QStringLiteral("Window-owned action"), window);
+    auto* bar = new CommandBar(window);
+    ASSERT_TRUE(bar->addPrimaryAction(action));
+
+    delete window;
+    SUCCEED();
+}
+
 TEST(CommandBarTest, OneBorrowedActionCanServeMultipleCommandSurfaces)
 {
     QWidget window;
