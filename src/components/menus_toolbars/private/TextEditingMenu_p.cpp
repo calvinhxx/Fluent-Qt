@@ -251,7 +251,7 @@ public:
             : colors.textPrimary;
 
         auto pixmapForColor =
-            [this, &glyph, iconSize](const QColor& color) {
+            [this, &glyph](const QColor& color) {
                 const qreal dpr = qMax<qreal>(1.0, devicePixelRatioF());
                 const int physicalSize =
                     qMax(1, qCeil(iconSize * dpr));

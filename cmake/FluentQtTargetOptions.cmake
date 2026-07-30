@@ -29,5 +29,17 @@ function(fluent_qt_enable_project_warnings target)
         target_compile_options("${target}" PRIVATE /W4)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options("${target}" PRIVATE -Wall -Wextra -Wpedantic)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            include(CheckCXXCompilerFlag)
+            check_cxx_compiler_flag(
+                "-Wno-variadic-macro-arguments-omitted"
+                FLUENT_QT_HAS_WNO_VARIADIC_MACRO_ARGUMENTS_OMITTED)
+            if(FLUENT_QT_HAS_WNO_VARIADIC_MACRO_ARGUMENTS_OMITTED)
+                # Qt's stream-style qCWarning(category) API intentionally
+                # leaves the variadic macro tail empty in C++17.
+                target_compile_options("${target}" PRIVATE
+                    -Wno-variadic-macro-arguments-omitted)
+            endif()
+        endif()
     endif()
 endfunction()

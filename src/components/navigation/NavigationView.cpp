@@ -279,8 +279,8 @@ private:
 
 NavigationView::NavigationView(QWidget* parent)
     : QWidget(parent)
-    , m_contentHost(new StackContentHost(this))
     , m_layoutAnimation(new QPropertyAnimation(this, "layoutTransitionProgress", this))
+    , m_contentHost(new StackContentHost(this))
 {
     setAttribute(Qt::WA_Hover);
     setFocusPolicy(Qt::StrongFocus);

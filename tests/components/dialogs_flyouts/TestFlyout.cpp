@@ -38,7 +38,7 @@ protected:
         window->setWindowTitle("Flyout Test");
         window->onThemeUpdated();
         window->show();
-        QTest::qWaitForWindowExposed(window);
+        ASSERT_TRUE(QTest::qWaitForWindowExposed(window));
     }
     void TearDown() override { delete window; window = nullptr; }
 
@@ -53,7 +53,8 @@ protected:
 
     /// 等到 flyout 完成 open（含动画）
     void waitOpen(Flyout* fl) {
-        QTest::qWaitFor([&]() { return fl->isOpen(); }, 1500);
+        ASSERT_TRUE(QTest::qWaitFor(
+            [&]() { return fl->isOpen(); }, 1500));
     }
 
     FluentTestWindow* window = nullptr;
