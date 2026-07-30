@@ -1,0 +1,48 @@
+{
+  "classes": [
+    "Button",
+    "CheckBox",
+    "Divider",
+    "HyperlinkButton",
+    "InfoBadge",
+    "Label",
+    "LineEdit",
+    "NumberBox",
+    "PasswordBox",
+    "ProgressBar",
+    "ProgressRing",
+    "RadioButton",
+    "RepeatButton",
+    "Slider",
+    "Shimmer",
+    "ToggleButton",
+    "ToggleSwitch",
+    "Window"
+  ],
+  "enums": [
+    "BackdropBackend",
+    "BackdropEffect",
+    "BackdropFidelity",
+    "BackdropSurfaceMode",
+    "DesignLanguage",
+    "FontRole",
+    "StyleTheme",
+    "Theme"
+  ],
+  "functions": [
+    "accent_color",
+    "apply_style_theme",
+    "binding_build_info",
+    "current_design_language",
+    "current_theme",
+    "font_for_role",
+    "font_scale",
+    "initialize_resources",
+    "prepare_high_dpi_application",
+    "reset_theme_tokens",
+    "set_accent_color",
+    "set_font_scale",
+    "set_theme",
+    "theme_revision"
+  ]
+}

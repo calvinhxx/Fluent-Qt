@@ -4,6 +4,11 @@
 # binary files
 build/
 
+# Python
+__pycache__/
+*.py[cod]
+.venv*/
+
 # custom user files
 *.user
 CMakeUserPresets.json

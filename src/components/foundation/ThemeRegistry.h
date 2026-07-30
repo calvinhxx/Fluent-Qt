@@ -66,6 +66,13 @@ public:
     const FluentElement::Colors& colors(bool dark) const { return dark ? m_dark : m_light; }
     FluentElement::Radius radius() const { return { m_radiusNone, m_radiusControl, m_radiusOverlay }; }
     FluentElement::DesignLanguage designLanguage() const { return m_designLanguage; }
+
+    /**
+     * @brief Resolves a typography role with the active family override and scale.
+     * zh_CN: 使用当前字族覆盖与缩放解析排版角色。
+     */
+    FluentElement::FontStyle resolvedFontStyle(Typography::FontRole role) const;
+
     QString fontFamilyOverride() const { return m_fontFamily; }
     qreal fontScale() const { return m_fontScale; }
 

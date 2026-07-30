@@ -55,6 +55,7 @@ private:
 
     bool m_threeState = false;
     Qt::CheckState m_checkState = Qt::Unchecked;
+    bool m_syncingCheckedState = false;
 };
 
 } // namespace fluent::basicinput

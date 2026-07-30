@@ -128,6 +128,22 @@ ThemeRegistry::Snapshot ThemeRegistry::defaultSnapshot()
     return defaults.snapshot();
 }
 
+FluentElement::FontStyle ThemeRegistry::resolvedFontStyle(
+    Typography::FontRole role) const
+{
+    const Typography::FontStyle& base = Typography::fontStyle(role);
+    const QString family = m_fontFamily.isEmpty() ? base.family : m_fontFamily;
+    const QString styleName =
+        m_fontFamily.isEmpty() ? base.styleName : QString();
+    return {
+        family,
+        styleName,
+        qRound(base.size * m_fontScale),
+        base.weight,
+        qRound(base.lineHeight * m_fontScale)
+    };
+}
+
 bool ThemeRegistry::applySnapshot(const Snapshot& next)
 {
     if (!snapshotIsValid(next) || snapshotsEqual(snapshot(), next))
