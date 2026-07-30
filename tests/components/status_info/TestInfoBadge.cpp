@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <QAccessible>
 #include <QApplication>
 #include <QFrame>
 #include <QFont>
@@ -13,7 +14,10 @@
 #include <QSignalSpy>
 #include <QSizePolicy>
 #include <QVBoxLayout>
+#include <QVariant>
+#include <QVector>
 
+#include <algorithm>
 #include <cmath>
 
 #include "design/Typography.h"
@@ -24,6 +28,56 @@
 
 using namespace fluent::status_info;
 using fluent::basicinput::Button;
+
+namespace {
+
+#if QT_CONFIG(accessibility)
+
+struct AccessibleEventRecord {
+    QObject* object = nullptr;
+    QAccessible::Event type = QAccessible::InvalidEvent;
+    QVariant value;
+};
+
+QVector<AccessibleEventRecord> g_accessibleEvents;
+
+void captureAccessibleEvent(QAccessibleEvent* event)
+{
+    if (!event)
+        return;
+
+    AccessibleEventRecord record;
+    record.object = event->object();
+    record.type = event->type();
+    if (event->type() == QAccessible::ValueChanged) {
+        record.value =
+            static_cast<QAccessibleValueChangeEvent*>(event)->value();
+    }
+    g_accessibleEvents.append(record);
+}
+
+struct ScopedAccessibleEventCapture {
+    ScopedAccessibleEventCapture()
+    {
+        previous = QAccessible::installUpdateHandler(
+            captureAccessibleEvent);
+        eventDeliveryActive = QAccessible::isActive();
+        g_accessibleEvents.clear();
+    }
+
+    ~ScopedAccessibleEventCapture()
+    {
+        QAccessible::installUpdateHandler(previous);
+        g_accessibleEvents.clear();
+    }
+
+    QAccessible::UpdateHandler previous = nullptr;
+    bool eventDeliveryActive = false;
+};
+
+#endif
+
+} // namespace
 
 class InfoBadgeTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -113,6 +167,91 @@ TEST_F(InfoBadgeTest, DefaultPropertyValues) {
     EXPECT_EQ(badge.badgeBackgroundInset(), 0);
     EXPECT_EQ(badge.contentOffset(), QPoint(0, 0));
     EXPECT_EQ(badge.sizeHint(), QSize(4, 4));
+}
+
+TEST_F(InfoBadgeTest, AccessibleParentExposesValueAndVisibilityChanges) {
+#if !QT_CONFIG(accessibility)
+    GTEST_SKIP() << "Qt accessibility support is disabled";
+#else
+    QWidget parent;
+    parent.setAccessibleName(QStringLiteral("Inbox"));
+    parent.resize(160, 80);
+
+    InfoBadge badge(&parent);
+    badge.setGeometry(8, 8, 40, 20);
+    badge.setDisplayMode(
+        InfoBadge::InfoBadgeDisplayMode::Value);
+    badge.setValue(7);
+    parent.show();
+    badge.show();
+    QApplication::processEvents();
+
+    QAccessibleInterface* parentInterface =
+        QAccessible::queryAccessibleInterface(&parent);
+    QAccessibleInterface* badgeInterface =
+        QAccessible::queryAccessibleInterface(&badge);
+    ASSERT_NE(parentInterface, nullptr);
+    ASSERT_NE(badgeInterface, nullptr);
+    EXPECT_EQ(badgeInterface->role(), QAccessible::StaticText);
+    EXPECT_EQ(
+        badgeInterface->text(QAccessible::Name),
+        QStringLiteral("7"));
+    EXPECT_EQ(
+        badgeInterface->text(QAccessible::Value),
+        QStringLiteral("7"));
+
+    bool parentContainsBadge = false;
+    for (int i = 0; i < parentInterface->childCount(); ++i) {
+        QAccessibleInterface* child = parentInterface->child(i);
+        if (child && child->object() == &badge) {
+            parentContainsBadge = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(parentContainsBadge);
+
+    ScopedAccessibleEventCapture capture;
+    badge.setValue(8);
+    if (capture.eventDeliveryActive) {
+        EXPECT_TRUE(std::any_of(
+            g_accessibleEvents.cbegin(),
+            g_accessibleEvents.cend(),
+            [&badge](const AccessibleEventRecord& record) {
+                return record.object == &badge
+                    && record.type == QAccessible::ValueChanged
+                    && record.value.toInt() == 8;
+            }));
+        EXPECT_TRUE(std::any_of(
+            g_accessibleEvents.cbegin(),
+            g_accessibleEvents.cend(),
+            [&parent](const AccessibleEventRecord& record) {
+                return record.object == &parent
+                    && record.type
+                        == QAccessible::VisibleDataChanged;
+            }));
+    }
+
+    g_accessibleEvents.clear();
+    badge.hide();
+    if (capture.eventDeliveryActive) {
+        EXPECT_TRUE(std::any_of(
+            g_accessibleEvents.cbegin(),
+            g_accessibleEvents.cend(),
+            [&parent](const AccessibleEventRecord& record) {
+                return record.object == &parent
+                    && record.type == QAccessible::ObjectReorder;
+            }));
+    }
+
+    badge.setAccessibleName(
+        QStringLiteral("Unread notifications"));
+    EXPECT_EQ(
+        badgeInterface->text(QAccessible::Name),
+        QStringLiteral("Unread notifications"));
+    EXPECT_EQ(
+        badgeInterface->text(QAccessible::Value),
+        QStringLiteral("8"));
+#endif
 }
 
 TEST_F(InfoBadgeTest, PropertySignalsAndSameValueNoSignal) {
