@@ -1,6 +1,7 @@
 #ifndef NAVIGATIONVIEW_H
 #define NAVIGATIONVIEW_H
 
+#include <QMetaObject>
 #include <QPointer>
 #include <QRect>
 #include <QWidget>
@@ -8,6 +9,7 @@
 #include "design/Breakpoints.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/WidgetOwnership.h"
 
 class QPaintEvent;
 class QEvent;
@@ -114,12 +116,62 @@ public:
     bool isAnimationEnabled() const { return m_animationEnabled; }
     void setAnimationEnabled(bool enabled);
 
-    QWidget* headerChromeWidget() const { return m_headerChromeWidget.data(); }
+    QWidget* headerChromeWidget() const { return m_headerChrome.widget.data(); }
     void setHeaderChromeWidget(QWidget* widget);
-    QWidget* mainChromeWidget() const { return m_mainChromeWidget.data(); }
+    /**
+     * @brief Sets header chrome with an explicit release policy.
+     * zh_CN: 使用显式释放策略设置头部 chrome。
+     */
+    bool setHeaderChromeWidget(QWidget* widget, WidgetOwnership ownership);
+    /**
+     * @brief Transfers the header chrome to the caller without applying its policy.
+     * zh_CN: 不执行策略，将头部 chrome 转交给调用方。
+     */
+    QWidget* takeHeaderChromeWidget();
+    /**
+     * @brief Removes the header chrome and applies its configured policy.
+     * zh_CN: 移除头部 chrome 并执行已配置策略。
+     */
+    bool releaseHeaderChromeWidget();
+    WidgetOwnership headerChromeWidgetOwnership() const { return m_headerChrome.ownership; }
+
+    QWidget* mainChromeWidget() const { return m_mainChrome.widget.data(); }
     void setMainChromeWidget(QWidget* widget);
-    QWidget* footerChromeWidget() const { return m_footerChromeWidget.data(); }
+    /**
+     * @brief Sets main chrome with an explicit release policy.
+     * zh_CN: 使用显式释放策略设置主体 chrome。
+     */
+    bool setMainChromeWidget(QWidget* widget, WidgetOwnership ownership);
+    /**
+     * @brief Transfers the main chrome to the caller without applying its policy.
+     * zh_CN: 不执行策略，将主体 chrome 转交给调用方。
+     */
+    QWidget* takeMainChromeWidget();
+    /**
+     * @brief Removes the main chrome and applies its configured policy.
+     * zh_CN: 移除主体 chrome 并执行已配置策略。
+     */
+    bool releaseMainChromeWidget();
+    WidgetOwnership mainChromeWidgetOwnership() const { return m_mainChrome.ownership; }
+
+    QWidget* footerChromeWidget() const { return m_footerChrome.widget.data(); }
     void setFooterChromeWidget(QWidget* widget);
+    /**
+     * @brief Sets footer chrome with an explicit release policy.
+     * zh_CN: 使用显式释放策略设置底部 chrome。
+     */
+    bool setFooterChromeWidget(QWidget* widget, WidgetOwnership ownership);
+    /**
+     * @brief Transfers the footer chrome to the caller without applying its policy.
+     * zh_CN: 不执行策略，将底部 chrome 转交给调用方。
+     */
+    QWidget* takeFooterChromeWidget();
+    /**
+     * @brief Removes the footer chrome and applies its configured policy.
+     * zh_CN: 移除底部 chrome 并执行已配置策略。
+     */
+    bool releaseFooterChromeWidget();
+    WidgetOwnership footerChromeWidgetOwnership() const { return m_footerChrome.ownership; }
 
     StackContentHost* contentHost() const
     {
@@ -161,6 +213,20 @@ protected:
     void showEvent(QShowEvent* event) override;
 
 private:
+    enum class ChromeSlot {
+        Header,
+        Main,
+        Footer
+    };
+
+    struct ChromeRecord {
+        QPointer<QWidget> widget;
+        QWidget* identity = nullptr;
+        QPointer<QWidget> originalParent;
+        WidgetOwnership ownership = WidgetOwnership::Borrowed;
+        QMetaObject::Connection destroyedConnection;
+    };
+
     struct LayoutState {
         QRect bounds;
         QRect chromeRect;
@@ -211,7 +277,19 @@ private:
     // agnostic dynamic-property hint). zh_CN: 提示 chrome（窗格）控件在浮层抽屉中浮起时放弃自身背景，让浮层
     // 单张抬升卡片无缝透出（通用、与窗格类型无关的动态属性提示）。
     void setChromeWidgetsFloating(bool floating);
-    void assignChromeWidget(QPointer<QWidget>& slot, QWidget* widget);
+    bool canHostChromeWidget(ChromeSlot slot, QWidget* widget) const;
+    bool assignChromeWidget(ChromeSlot slot,
+                            QWidget* widget,
+                            WidgetOwnership ownership,
+                            bool applyPreviousOwnership);
+    QWidget* takeChromeWidget(ChromeSlot slot);
+    bool releaseChromeWidget(ChromeSlot slot);
+    void releaseChromeRecord(const ChromeRecord& record);
+    QWidget* transferChromeRecord(const ChromeRecord& record);
+    void handleChromeWidgetDestroyed(ChromeSlot slot, QWidget* widget);
+    void notifyChromeWidgetChanged(ChromeSlot slot);
+    ChromeRecord& chromeRecord(ChromeSlot slot);
+    const ChromeRecord& chromeRecord(ChromeSlot slot) const;
     int preferredHeight(QWidget* widget, int fallback = 0) const;
     int preferredWidth(QWidget* widget, int fallback = 0) const;
 
@@ -236,9 +314,9 @@ private:
     LayoutTransitionKind m_layoutTransitionKind = LayoutTransitionKind::None;
     LayoutState m_layoutTransitionFrom;
     LayoutState m_layoutTransitionTo;
-    QPointer<QWidget> m_headerChromeWidget;
-    QPointer<QWidget> m_mainChromeWidget;
-    QPointer<QWidget> m_footerChromeWidget;
+    ChromeRecord m_headerChrome;
+    ChromeRecord m_mainChrome;
+    ChromeRecord m_footerChrome;
     StackContentHost* m_contentHost = nullptr;
     // Thin top overlay that carves the content's rounded top-left corner (revealing the pane
     // backdrop) and strokes the frame border. zh_CN: 薄覆盖层，挖出内容左上圆角（露出窗格背景）并描边框。

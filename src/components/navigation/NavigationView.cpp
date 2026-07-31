@@ -292,7 +292,24 @@ NavigationView::NavigationView(QWidget* parent)
     });
 }
 
-NavigationView::~NavigationView() = default;
+NavigationView::~NavigationView()
+{
+    for (ChromeRecord* record : {&m_headerChrome, &m_mainChrome, &m_footerChrome}) {
+        QObject::disconnect(record->destroyedConnection);
+        QWidget* widget = record->widget.data();
+        if (!widget)
+            continue;
+        widget->setProperty("fluentNavPaneFloating", false);
+        if (record->ownership == WidgetOwnership::Borrowed) {
+            widget->setParent(nullptr);
+        } else if (record->ownership == WidgetOwnership::Reparented) {
+            widget->setParent(record->originalParent.data());
+        }
+    }
+    m_headerChrome = ChromeRecord();
+    m_mainChrome = ChromeRecord();
+    m_footerChrome = ChromeRecord();
+}
 
 NavigationView::DisplayMode NavigationView::effectiveDisplayMode() const
 {
@@ -380,29 +397,68 @@ void NavigationView::setAnimationEnabled(bool enabled)
 
 void NavigationView::setHeaderChromeWidget(QWidget* widget)
 {
-    if (m_headerChromeWidget == widget)
+    if (headerChromeWidget() == widget)
         return;
-    assignChromeWidget(m_headerChromeWidget, widget);
-    invalidateLayout(false);
-    emit headerChromeWidgetChanged(m_headerChromeWidget.data());
+    assignChromeWidget(ChromeSlot::Header, widget, WidgetOwnership::Owned, false);
+}
+
+bool NavigationView::setHeaderChromeWidget(QWidget* widget, WidgetOwnership ownership)
+{
+    return assignChromeWidget(ChromeSlot::Header, widget, ownership, true);
+}
+
+QWidget* NavigationView::takeHeaderChromeWidget()
+{
+    return takeChromeWidget(ChromeSlot::Header);
+}
+
+bool NavigationView::releaseHeaderChromeWidget()
+{
+    return releaseChromeWidget(ChromeSlot::Header);
 }
 
 void NavigationView::setMainChromeWidget(QWidget* widget)
 {
-    if (m_mainChromeWidget == widget)
+    if (mainChromeWidget() == widget)
         return;
-    assignChromeWidget(m_mainChromeWidget, widget);
-    invalidateLayout(false);
-    emit mainChromeWidgetChanged(m_mainChromeWidget.data());
+    assignChromeWidget(ChromeSlot::Main, widget, WidgetOwnership::Owned, false);
+}
+
+bool NavigationView::setMainChromeWidget(QWidget* widget, WidgetOwnership ownership)
+{
+    return assignChromeWidget(ChromeSlot::Main, widget, ownership, true);
+}
+
+QWidget* NavigationView::takeMainChromeWidget()
+{
+    return takeChromeWidget(ChromeSlot::Main);
+}
+
+bool NavigationView::releaseMainChromeWidget()
+{
+    return releaseChromeWidget(ChromeSlot::Main);
 }
 
 void NavigationView::setFooterChromeWidget(QWidget* widget)
 {
-    if (m_footerChromeWidget == widget)
+    if (footerChromeWidget() == widget)
         return;
-    assignChromeWidget(m_footerChromeWidget, widget);
-    invalidateLayout(false);
-    emit footerChromeWidgetChanged(m_footerChromeWidget.data());
+    assignChromeWidget(ChromeSlot::Footer, widget, WidgetOwnership::Owned, false);
+}
+
+bool NavigationView::setFooterChromeWidget(QWidget* widget, WidgetOwnership ownership)
+{
+    return assignChromeWidget(ChromeSlot::Footer, widget, ownership, true);
+}
+
+QWidget* NavigationView::takeFooterChromeWidget()
+{
+    return takeChromeWidget(ChromeSlot::Footer);
+}
+
+bool NavigationView::releaseFooterChromeWidget()
+{
+    return releaseChromeWidget(ChromeSlot::Footer);
 }
 
 QRect NavigationView::chromeGeometry() const
@@ -461,7 +517,7 @@ void NavigationView::onThemeUpdated()
 {
     if (m_contentHost)
         m_contentHost->onThemeUpdated();
-    for (QWidget* widget : {m_headerChromeWidget.data(), m_mainChromeWidget.data(), m_footerChromeWidget.data()}) {
+    for (QWidget* widget : {headerChromeWidget(), mainChromeWidget(), footerChromeWidget()}) {
         if (widget)
             widget->update();
     }
@@ -811,17 +867,17 @@ void NavigationView::buildSideLayout(LayoutState& state, const QRect& bounds)
     if (state.chromeRect.isEmpty())
         return;
 
-    const int headerHeight = qMin(preferredHeight(m_headerChromeWidget), state.chromeRect.height());
-    const int footerHeight = qMin(preferredHeight(m_footerChromeWidget), qMax(0, state.chromeRect.height() - headerHeight));
+    const int headerHeight = qMin(preferredHeight(headerChromeWidget()), state.chromeRect.height());
+    const int footerHeight = qMin(preferredHeight(footerChromeWidget()), qMax(0, state.chromeRect.height() - headerHeight));
     const int mainHeight = qMax(0, state.chromeRect.height() - headerHeight - footerHeight);
 
     int y = state.chromeRect.top();
-    if (m_headerChromeWidget)
+    if (headerChromeWidget())
         state.headerChromeRect = QRect(state.chromeRect.left(), y, state.chromeRect.width(), headerHeight);
     y += headerHeight;
-    if (m_mainChromeWidget)
+    if (mainChromeWidget())
         state.mainChromeRect = QRect(state.chromeRect.left(), y, state.chromeRect.width(), mainHeight);
-    if (m_footerChromeWidget)
+    if (footerChromeWidget())
         state.footerChromeRect = QRect(state.chromeRect.left(), state.chromeRect.bottom() + 1 - footerHeight, state.chromeRect.width(), footerHeight);
 }
 
@@ -830,18 +886,18 @@ void NavigationView::buildTopLayout(LayoutState& state, const QRect& bounds)
     state.chromeRect = QRect(bounds.left(), bounds.top(), bounds.width(), qMin(m_topBarHeight, bounds.height()));
     state.contentRect = QRect(bounds.left(), state.chromeRect.bottom() + 1, bounds.width(), qMax(0, bounds.height() - state.chromeRect.height()));
 
-    const int headerWidth = qMin(preferredWidth(m_headerChromeWidget), state.chromeRect.width());
-    const int footerWidth = qMin(preferredWidth(m_footerChromeWidget), qMax(0, state.chromeRect.width() - headerWidth));
+    const int headerWidth = qMin(preferredWidth(headerChromeWidget()), state.chromeRect.width());
+    const int footerWidth = qMin(preferredWidth(footerChromeWidget()), qMax(0, state.chromeRect.width() - headerWidth));
     const int remainingAfterFixed = qMax(0, state.chromeRect.width() - headerWidth - footerWidth);
-    const int mainWidth = qMin(preferredWidth(m_mainChromeWidget, remainingAfterFixed), remainingAfterFixed);
+    const int mainWidth = qMin(preferredWidth(mainChromeWidget(), remainingAfterFixed), remainingAfterFixed);
 
     int x = state.chromeRect.left();
-    if (m_headerChromeWidget)
+    if (headerChromeWidget())
         state.headerChromeRect = QRect(x, state.chromeRect.top(), headerWidth, state.chromeRect.height());
     x += headerWidth;
-    if (m_mainChromeWidget)
+    if (mainChromeWidget())
         state.mainChromeRect = QRect(x, state.chromeRect.top(), mainWidth, state.chromeRect.height());
-    if (m_footerChromeWidget)
+    if (footerChromeWidget())
         state.footerChromeRect = QRect(state.chromeRect.right() + 1 - footerWidth, state.chromeRect.top(), footerWidth, state.chromeRect.height());
 }
 
@@ -893,9 +949,9 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
         }
     };
 
-    apply(m_headerChromeWidget, state.headerChromeRect);
-    apply(m_mainChromeWidget, state.mainChromeRect);
-    apply(m_footerChromeWidget, state.footerChromeRect);
+    apply(headerChromeWidget(), state.headerChromeRect);
+    apply(mainChromeWidget(), state.mainChromeRect);
+    apply(footerChromeWidget(), state.footerChromeRect);
 
     // Content frame: a rounded top-left corner + border drawn on top of the content, but only in the
     // framed side modes — and not while a pane flyout covers it.
@@ -1003,25 +1059,175 @@ void NavigationView::setChromeWidgetsFloating(bool floating)
     // zh_CN: 向各 chrome（窗格）控件提示当前是否浮在浮层抽屉中。选择响应的窗格（如观察 fluentNavPaneFloating
     // 动态属性者）会放弃自身 chrome 背景，让浮层那张抬升卡片无缝透出；栏/内联模式（floating==false）下重新绘制
     // 正常 chrome 背景。该提示是通用的——NavigationView 不与任何具体窗格类型耦合。
-    for (QWidget* widget : {m_headerChromeWidget.data(), m_mainChromeWidget.data(),
-                            m_footerChromeWidget.data()}) {
+    for (QWidget* widget : {headerChromeWidget(), mainChromeWidget(), footerChromeWidget()}) {
         if (widget)
             widget->setProperty("fluentNavPaneFloating", floating);
     }
 }
 
-void NavigationView::assignChromeWidget(QPointer<QWidget>& slot, QWidget* widget)
+bool NavigationView::canHostChromeWidget(ChromeSlot slot, QWidget* widget) const
 {
-    if (slot && slot->parentWidget() == this) {
-        slot->hide();
-        slot->setParent(nullptr);
+    if (!widget)
+        return true;
+    if (widget == this || widget->isAncestorOf(this)
+        || widget == m_contentHost || widget == m_contentFrameOverlay
+        || widget == m_paneFlyoutOverlay) {
+        return false;
     }
 
-    slot = widget;
-    if (slot) {
-        slot->setParent(this);
-        slot->show();
+    for (ChromeSlot candidate : {ChromeSlot::Header, ChromeSlot::Main, ChromeSlot::Footer}) {
+        if (candidate != slot && chromeRecord(candidate).identity == widget)
+            return false;
     }
+    return true;
+}
+
+bool NavigationView::assignChromeWidget(ChromeSlot slot,
+                                        QWidget* widget,
+                                        WidgetOwnership ownership,
+                                        bool applyPreviousOwnership)
+{
+    ChromeRecord& destination = chromeRecord(slot);
+    if (destination.identity == widget) {
+        if (widget)
+            destination.ownership = ownership;
+        return true;
+    }
+    if (!canHostChromeWidget(slot, widget))
+        return false;
+
+    ChromeRecord previous = destination;
+    QObject::disconnect(previous.destroyedConnection);
+    destination = ChromeRecord();
+
+    if (widget) {
+        destination.widget = widget;
+        destination.identity = widget;
+        destination.originalParent = widget->parentWidget();
+        destination.ownership = ownership;
+        destination.destroyedConnection = connect(
+            widget,
+            &QObject::destroyed,
+            this,
+            [this, slot, widget]() { handleChromeWidgetDestroyed(slot, widget); });
+        widget->setParent(this);
+        widget->show();
+    }
+
+    if (applyPreviousOwnership)
+        releaseChromeRecord(previous);
+    else
+        transferChromeRecord(previous);
+
+    invalidateLayout(false);
+    notifyChromeWidgetChanged(slot);
+    return true;
+}
+
+QWidget* NavigationView::takeChromeWidget(ChromeSlot slot)
+{
+    ChromeRecord& source = chromeRecord(slot);
+    if (!source.identity)
+        return nullptr;
+    ChromeRecord previous = source;
+    QObject::disconnect(previous.destroyedConnection);
+    source = ChromeRecord();
+    QWidget* widget = transferChromeRecord(previous);
+    invalidateLayout(false);
+    notifyChromeWidgetChanged(slot);
+    return widget;
+}
+
+bool NavigationView::releaseChromeWidget(ChromeSlot slot)
+{
+    ChromeRecord& source = chromeRecord(slot);
+    if (!source.identity)
+        return false;
+    ChromeRecord previous = source;
+    QObject::disconnect(previous.destroyedConnection);
+    source = ChromeRecord();
+    releaseChromeRecord(previous);
+    invalidateLayout(false);
+    notifyChromeWidgetChanged(slot);
+    return true;
+}
+
+void NavigationView::releaseChromeRecord(const ChromeRecord& record)
+{
+    QWidget* widget = record.widget.data();
+    if (!widget)
+        return;
+    widget->setProperty("fluentNavPaneFloating", false);
+    widget->hide();
+    if (record.ownership == WidgetOwnership::Owned) {
+        delete widget;
+    } else if (record.ownership == WidgetOwnership::Reparented) {
+        widget->setParent(record.originalParent.data());
+    } else {
+        widget->setParent(nullptr);
+    }
+}
+
+QWidget* NavigationView::transferChromeRecord(const ChromeRecord& record)
+{
+    QWidget* widget = record.widget.data();
+    if (!widget)
+        return nullptr;
+    widget->setProperty("fluentNavPaneFloating", false);
+    widget->hide();
+    widget->setParent(nullptr);
+    return widget;
+}
+
+void NavigationView::handleChromeWidgetDestroyed(ChromeSlot slot, QWidget* widget)
+{
+    ChromeRecord& record = chromeRecord(slot);
+    if (record.identity != widget)
+        return;
+    record = ChromeRecord();
+    invalidateLayout(false);
+    notifyChromeWidgetChanged(slot);
+}
+
+void NavigationView::notifyChromeWidgetChanged(ChromeSlot slot)
+{
+    switch (slot) {
+    case ChromeSlot::Header:
+        emit headerChromeWidgetChanged(headerChromeWidget());
+        break;
+    case ChromeSlot::Main:
+        emit mainChromeWidgetChanged(mainChromeWidget());
+        break;
+    case ChromeSlot::Footer:
+        emit footerChromeWidgetChanged(footerChromeWidget());
+        break;
+    }
+}
+
+NavigationView::ChromeRecord& NavigationView::chromeRecord(ChromeSlot slot)
+{
+    switch (slot) {
+    case ChromeSlot::Header:
+        return m_headerChrome;
+    case ChromeSlot::Main:
+        return m_mainChrome;
+    case ChromeSlot::Footer:
+        return m_footerChrome;
+    }
+    return m_headerChrome;
+}
+
+const NavigationView::ChromeRecord& NavigationView::chromeRecord(ChromeSlot slot) const
+{
+    switch (slot) {
+    case ChromeSlot::Header:
+        return m_headerChrome;
+    case ChromeSlot::Main:
+        return m_mainChrome;
+    case ChromeSlot::Footer:
+        return m_footerChrome;
+    }
+    return m_headerChrome;
 }
 
 int NavigationView::preferredHeight(QWidget* widget, int fallback) const

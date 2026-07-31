@@ -1,14 +1,16 @@
 #ifndef STACKCONTENTHOST_H
 #define STACKCONTENTHOST_H
 
-#include <QPointer>
+#include <QMetaObject>
 #include <QPoint>
+#include <QPointer>
 #include <QRect>
 #include <QVector>
 #include <QWidget>
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/WidgetOwnership.h"
 
 class QParallelAnimationGroup;
 class QResizeEvent;
@@ -54,10 +56,36 @@ public:
 
     QWidget* pageWidget(int index) const;
     bool insertPage(int index, QWidget* widget);
+    /**
+     * @brief Inserts a page with an explicit release policy.
+     * zh_CN: 使用显式释放策略插入页面。
+     */
+    bool insertPage(int index, QWidget* widget, WidgetOwnership ownership);
     QWidget* replacePage(int index, QWidget* widget);
+    /**
+     * @brief Replaces a page, applying the old policy and recording the new one.
+     * zh_CN: 替换页面，执行旧页面策略并记录新页面策略。
+     */
+    bool replacePage(int index, QWidget* widget, WidgetOwnership ownership);
     QWidget* takePage(int index);
+    /**
+     * @brief Removes a page and applies its configured ownership policy.
+     * zh_CN: 移除页面并执行其已配置的所有权策略。
+     */
+    bool releasePage(int index);
     void clearPages();
+    /**
+     * @brief Clears all pages and applies each configured ownership policy.
+     * zh_CN: 清空全部页面并执行各自配置的所有权策略。
+     */
+    void releaseAllPages();
     bool movePage(int from, int to);
+    int indexOf(QWidget* widget) const;
+    /**
+     * @brief Returns the configured release policy for a hosted page.
+     * zh_CN: 返回托管页面已配置的释放策略。
+     */
+    WidgetOwnership pageOwnershipAt(int index) const;
 
     /**
      * @brief Switches the current page, optionally animating in a direction.
@@ -102,13 +130,28 @@ private:
     struct PageRecord {
         QPointer<QWidget> content;
         QPointer<QWidget> stackWidget;
+        QWidget* identity = nullptr;
+        QPointer<QWidget> originalParent;
+        WidgetOwnership ownership = WidgetOwnership::Owned;
+        QMetaObject::Connection destroyedConnection;
         bool placeholder = false;
     };
 
-    PageRecord makePage(QWidget* widget);
+    bool canHostPage(QWidget* widget) const;
+    PageRecord makePage(QWidget* widget, WidgetOwnership ownership);
+    bool replacePageImpl(int index,
+                         QWidget* widget,
+                         WidgetOwnership ownership,
+                         bool applyPreviousOwnership,
+                         QWidget** transferredPage);
+    PageRecord extractPage(int index);
     void removeStackWidget(QWidget* widget);
     void deletePlaceholder(const PageRecord& page);
-    QWidget* detachPage(const PageRecord& page);
+    QWidget* transferPage(const PageRecord& page);
+    void releasePageRecord(const PageRecord& page);
+    void clearPagesImpl(bool applyOwnership);
+    void handlePageDestroyed(QWidget* widget);
+    void finishPageRemoval(int removedIndex);
     void discardTransitionGroup();
     void setBusy(bool busy);
     void finishTransition(int targetIndex, QWidget* toWidget);

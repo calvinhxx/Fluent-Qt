@@ -336,13 +336,14 @@ private:
 };
 
 /**
- * @brief Fluent tabbed page host with closable, reorderable, and overflow-aware tabs.
- * zh_CN: 支持关闭、重排和溢出处理的 Fluent 标签页宿主。
+ * @brief Fluent tab metadata surface with close, reorder, and overflow behavior.
+ * zh_CN: 支持关闭、重排和溢出处理的 Fluent 标签元数据界面。
  *
- * TabView owns tab metadata, selected index, add-tab affordance, keyboard accelerators,
- * and page hosting while delegating tab-strip painting to TabStrip.
- * zh_CN: TabView 管理 tab 元数据、选中索引、新增入口、键盘加速键和页面承载，
- * tab 条绘制交给 TabStrip。
+ * TabView owns tab metadata, selected index, add-tab affordance, and keyboard
+ * accelerators while delegating tab-strip painting to TabStrip. Application
+ * pages remain caller-owned composition.
+ * zh_CN: TabView 管理 tab 元数据、选中索引、新增入口和键盘加速键，并将 tab 条
+ * 绘制交给 TabStrip；应用页面继续由调用方组合与管理。
  */
 class TabView : public QWidget, public FluentElement, public fluent::QMLPlus {
     Q_OBJECT

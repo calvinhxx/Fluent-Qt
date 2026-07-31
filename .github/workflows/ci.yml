@@ -890,15 +890,26 @@ jobs:
               bindings/pyside6/ROADMAP.md \
               bindings/pyside6/ROADMAP.zh-CN.md \
               bindings/pyside6/examples/accordion_ownership.py \
+              bindings/pyside6/examples/breadcrumb_navigation.py \
               bindings/pyside6/examples/compatibility_showcase.py \
+              bindings/pyside6/examples/flip_view_ownership.py \
+              bindings/pyside6/examples/flow_view_model.py \
+              bindings/pyside6/examples/grid_view_model.py \
+              bindings/pyside6/examples/list_view_model.py \
+              bindings/pyside6/examples/navigation_view_ownership.py \
+              bindings/pyside6/examples/split_view_ownership.py \
+              bindings/pyside6/examples/tree_view_model.py \
               bindings/pyside6/examples/scroll_view_ownership.py \
+              bindings/pyside6/examples/selector_pivot_navigation.py \
               bindings/pyside6/examples/stack_view_navigation.py \
+              bindings/pyside6/examples/tab_view_navigation.py \
               bindings/pyside6/native/WindowsBindingPrelude.h \
               bindings/pyside6/native/typesystem_fluentqt.xml \
               bindings/pyside6/src/fluentqt/__init__.py \
               bindings/pyside6/src/fluentqt/collections.py \
               bindings/pyside6/src/fluentqt/foundation.py \
               bindings/pyside6/src/fluentqt/layout.py \
+              bindings/pyside6/src/fluentqt/navigation.py \
               bindings/pyside6/src/fluentqt/scrolling.py \
               bindings/pyside6/src/fluentqt/status_info.py \
               bindings/pyside6/tests/test_generated_contract_verifier.py \

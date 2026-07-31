@@ -1,7 +1,5 @@
 #include "StackContentHost.h"
 
-#include <utility>
-
 #include <QParallelAnimationGroup>
 #include <QPainter>
 #include <QPaintEvent>
@@ -56,6 +54,18 @@ StackContentHost::StackContentHost(QWidget* parent)
 StackContentHost::~StackContentHost()
 {
     discardTransitionGroup();
+    for (PageRecord& page : m_pages) {
+        QObject::disconnect(page.destroyedConnection);
+        QWidget* content = page.content.data();
+        if (!content)
+            continue;
+        if (page.ownership == WidgetOwnership::Borrowed) {
+            content->setParent(nullptr);
+        } else if (page.ownership == WidgetOwnership::Reparented) {
+            content->setParent(page.originalParent.data());
+        }
+    }
+    m_pages.clear();
 }
 
 void StackContentHost::setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border)
@@ -137,10 +147,17 @@ QWidget* StackContentHost::pageWidget(int index) const
 
 bool StackContentHost::insertPage(int index, QWidget* widget)
 {
-    if (index < 0 || index > m_pages.size())
+    return insertPage(index, widget, WidgetOwnership::Owned);
+}
+
+bool StackContentHost::insertPage(int index,
+                                  QWidget* widget,
+                                  WidgetOwnership ownership)
+{
+    if (index < 0 || index > m_pages.size() || !canHostPage(widget))
         return false;
 
-    PageRecord page = makePage(widget);
+    PageRecord page = makePage(widget, ownership);
     m_pages.insert(index, page);
     m_layout->insertWidget(index, page.stackWidget);
     page.stackWidget->hide();
@@ -151,12 +168,43 @@ bool StackContentHost::insertPage(int index, QWidget* widget)
 
 QWidget* StackContentHost::replacePage(int index, QWidget* widget)
 {
-    if (index < 0 || index >= m_pages.size())
+    QWidget* transferredPage = nullptr;
+    if (!replacePageImpl(index,
+                         widget,
+                         WidgetOwnership::Owned,
+                         false,
+                         &transferredPage)) {
         return nullptr;
+    }
+    return transferredPage;
+}
 
-    QWidget* oldContent = detachPage(m_pages.at(index));
+bool StackContentHost::replacePage(int index,
+                                   QWidget* widget,
+                                   WidgetOwnership ownership)
+{
+    return replacePageImpl(index, widget, ownership, true, nullptr);
+}
 
-    PageRecord newPage = makePage(widget);
+bool StackContentHost::replacePageImpl(int index,
+                                       QWidget* widget,
+                                       WidgetOwnership ownership,
+                                       bool applyPreviousOwnership,
+                                       QWidget** transferredPage)
+{
+    if (index < 0 || index >= m_pages.size() || !canHostPage(widget))
+        return false;
+
+    if (m_transitionGroup) {
+        discardTransitionGroup();
+        setBusy(false);
+    }
+
+    PageRecord oldPage = m_pages.at(index);
+    QObject::disconnect(oldPage.destroyedConnection);
+    removeStackWidget(oldPage.stackWidget);
+
+    PageRecord newPage = makePage(widget, ownership);
     m_pages[index] = newPage;
     m_layout->insertWidget(index, newPage.stackWidget);
     if (m_currentIndex == index) {
@@ -166,7 +214,13 @@ QWidget* StackContentHost::replacePage(int index, QWidget* widget)
     } else {
         newPage.stackWidget->hide();
     }
-    return oldContent;
+
+    if (applyPreviousOwnership) {
+        releasePageRecord(oldPage);
+    } else if (transferredPage) {
+        *transferredPage = transferPage(oldPage);
+    }
+    return true;
 }
 
 QWidget* StackContentHost::takePage(int index)
@@ -174,27 +228,28 @@ QWidget* StackContentHost::takePage(int index)
     if (index < 0 || index >= m_pages.size())
         return nullptr;
 
-    QWidget* content = detachPage(m_pages.takeAt(index));
+    const PageRecord page = extractPage(index);
+    return transferPage(page);
+}
 
-    normalizeCurrentIndexAfterRemoval(index);
-    if (m_currentIndex >= 0 && m_currentIndex < m_pages.size()) {
-        if (QWidget* current = stackWidgetAt(m_currentIndex)) {
-            m_layout->setCurrentWidget(current);
-            current->show();
-        }
-    }
-    return content;
+bool StackContentHost::releasePage(int index)
+{
+    if (index < 0 || index >= m_pages.size())
+        return false;
+
+    const PageRecord page = extractPage(index);
+    releasePageRecord(page);
+    return true;
 }
 
 void StackContentHost::clearPages()
 {
-    for (const PageRecord& page : std::as_const(m_pages))
-        detachPage(page);
-    m_pages.clear();
-    const bool changed = m_currentIndex != -1;
-    m_currentIndex = -1;
-    if (changed)
-        emit currentIndexChanged(-1);
+    clearPagesImpl(false);
+}
+
+void StackContentHost::releaseAllPages()
+{
+    clearPagesImpl(true);
 }
 
 bool StackContentHost::movePage(int from, int to)
@@ -220,6 +275,24 @@ bool StackContentHost::movePage(int from, int to)
             m_layout->setCurrentWidget(current);
     }
     return true;
+}
+
+int StackContentHost::indexOf(QWidget* widget) const
+{
+    if (!widget)
+        return -1;
+    for (int index = 0; index < m_pages.size(); ++index) {
+        if (m_pages.at(index).identity == widget)
+            return index;
+    }
+    return -1;
+}
+
+WidgetOwnership StackContentHost::pageOwnershipAt(int index) const
+{
+    return index >= 0 && index < m_pages.size()
+        ? m_pages.at(index).ownership
+        : WidgetOwnership::Borrowed;
 }
 
 void StackContentHost::setCurrentIndex(int index, int direction, bool animated)
@@ -309,13 +382,29 @@ void StackContentHost::resizeEvent(QResizeEvent* event)
         current->setGeometry(rect());
 }
 
-StackContentHost::PageRecord StackContentHost::makePage(QWidget* widget)
+bool StackContentHost::canHostPage(QWidget* widget) const
+{
+    return !widget
+        || (widget != this && !widget->isAncestorOf(this) && indexOf(widget) < 0);
+}
+
+StackContentHost::PageRecord StackContentHost::makePage(
+    QWidget* widget,
+    WidgetOwnership ownership)
 {
     PageRecord page;
     if (widget) {
         page.content = widget;
         page.stackWidget = widget;
+        page.identity = widget;
+        page.originalParent = widget->parentWidget();
+        page.ownership = ownership;
         page.placeholder = false;
+        page.destroyedConnection = connect(
+            widget,
+            &QObject::destroyed,
+            this,
+            [this, widget]() { handlePageDestroyed(widget); });
         widget->setParent(this);
     } else {
         auto* placeholder = new QWidget(this);
@@ -334,6 +423,20 @@ StackContentHost::PageRecord StackContentHost::makePage(QWidget* widget)
     return page;
 }
 
+StackContentHost::PageRecord StackContentHost::extractPage(int index)
+{
+    if (m_transitionGroup) {
+        discardTransitionGroup();
+        setBusy(false);
+    }
+
+    PageRecord page = m_pages.takeAt(index);
+    QObject::disconnect(page.destroyedConnection);
+    removeStackWidget(page.stackWidget);
+    finishPageRemoval(index);
+    return page;
+}
+
 void StackContentHost::removeStackWidget(QWidget* widget)
 {
     if (!widget)
@@ -348,7 +451,7 @@ void StackContentHost::deletePlaceholder(const PageRecord& page)
         page.stackWidget->deleteLater();
 }
 
-QWidget* StackContentHost::detachPage(const PageRecord& page)
+QWidget* StackContentHost::transferPage(const PageRecord& page)
 {
     removeStackWidget(page.stackWidget);
     if (page.placeholder) {
@@ -359,6 +462,76 @@ QWidget* StackContentHost::detachPage(const PageRecord& page)
     if (content)
         content->setParent(nullptr);
     return content;
+}
+
+void StackContentHost::releasePageRecord(const PageRecord& page)
+{
+    removeStackWidget(page.stackWidget);
+    if (page.placeholder) {
+        deletePlaceholder(page);
+        return;
+    }
+
+    QWidget* content = page.content.data();
+    if (!content)
+        return;
+    if (page.ownership == WidgetOwnership::Owned) {
+        delete content;
+    } else if (page.ownership == WidgetOwnership::Reparented) {
+        content->setParent(page.originalParent.data());
+    } else {
+        content->setParent(nullptr);
+    }
+}
+
+void StackContentHost::clearPagesImpl(bool applyOwnership)
+{
+    if (m_transitionGroup) {
+        discardTransitionGroup();
+        setBusy(false);
+    }
+
+    const QVector<PageRecord> pages = m_pages;
+    m_pages.clear();
+    for (const PageRecord& page : pages) {
+        QObject::disconnect(page.destroyedConnection);
+        if (applyOwnership)
+            releasePageRecord(page);
+        else
+            transferPage(page);
+    }
+
+    const bool changed = m_currentIndex != -1;
+    m_currentIndex = -1;
+    if (changed)
+        emit currentIndexChanged(-1);
+}
+
+void StackContentHost::handlePageDestroyed(QWidget* widget)
+{
+    const int index = indexOf(widget);
+    if (index < 0)
+        return;
+
+    if (m_transitionGroup) {
+        discardTransitionGroup();
+        setBusy(false);
+    }
+    m_pages.removeAt(index);
+    finishPageRemoval(index);
+}
+
+void StackContentHost::finishPageRemoval(int removedIndex)
+{
+    normalizeCurrentIndexAfterRemoval(removedIndex);
+    if (m_currentIndex >= 0 && m_currentIndex < m_pages.size()) {
+        if (QWidget* current = stackWidgetAt(m_currentIndex)) {
+            m_layout->setCurrentWidget(current);
+            current->show();
+        }
+    } else {
+        showOnlyStackWidget(nullptr);
+    }
 }
 
 void StackContentHost::discardTransitionGroup()

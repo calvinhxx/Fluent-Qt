@@ -108,6 +108,17 @@ GridView::GridView(QWidget* parent)
     onThemeUpdated();
 }
 
+GridView::~GridView()
+{
+    clearDragAnimations();
+
+    // Keep Python-owned item-view dependencies alive until the native view has
+    // disconnected from them; see the matching FlowView teardown contract.
+    // zh_CN: 先让原生 view 与 Python 所有的依赖解除连接，再由包装器释放依赖。
+    QListView::setItemDelegate(nullptr);
+    QListView::setModel(nullptr);
+}
+
 // ── Selection mode ────────────────────────────────────────────────────────────
 
 void GridView::setSelectionMode(SelectionMode mode) {
@@ -222,13 +233,19 @@ void GridView::updateGridSize() {
 // ── Selection API ─────────────────────────────────────────────────────────────
 
 int GridView::selectedIndex() const {
-    auto idxList = selectionModel()->selectedIndexes();
+    const QItemSelectionModel* selection = selectionModel();
+    if (!selection)
+        return -1;
+    const auto idxList = selection->selectedIndexes();
     return idxList.isEmpty() ? -1 : idxList.first().row();
 }
 
 QList<int> GridView::selectedRows() const {
     QSet<int> seen;
-    for (const auto& idx : selectionModel()->selectedIndexes())
+    const QItemSelectionModel* selection = selectionModel();
+    if (!selection)
+        return {};
+    for (const auto& idx : selection->selectedIndexes())
         seen.insert(idx.row());
     QList<int> rows(seen.begin(), seen.end());
     std::sort(rows.begin(), rows.end());
@@ -238,7 +255,8 @@ QList<int> GridView::selectedRows() const {
 void GridView::setSelectedIndex(int index) {
     const QAbstractItemModel* m = model();
     if (!m || index < 0 || index >= m->rowCount()) {
-        clearSelection();
+        if (selectionModel())
+            clearSelection();
         return;
     }
     setCurrentIndex(m->index(index, 0));

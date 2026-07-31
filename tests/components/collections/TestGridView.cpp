@@ -562,6 +562,29 @@ TEST_F(GridViewTest, ViewDoesNotProvideModelByDefault) {
     EXPECT_EQ(gv->model(), nullptr);
 }
 
+TEST_F(GridViewTest, SelectionQueriesAreSafeWithoutModel) {
+    GridView* gv = new GridView(window);
+
+    EXPECT_EQ(gv->selectedIndex(), -1);
+    EXPECT_TRUE(gv->selectedRows().isEmpty());
+    gv->setSelectedIndex(0);
+    EXPECT_EQ(gv->selectedIndex(), -1);
+}
+
+TEST_F(GridViewTest, SelectionQueriesAreSafeAfterExternalModelDestruction) {
+    GridView* gv = new GridView(window);
+    auto* model = new QStringListModel({"External"});
+    gv->setModel(model);
+
+    delete model;
+
+    EXPECT_EQ(gv->model(), nullptr);
+    EXPECT_EQ(gv->selectedIndex(), -1);
+    EXPECT_TRUE(gv->selectedRows().isEmpty());
+    gv->setSelectedIndex(0);
+    EXPECT_EQ(gv->selectedIndex(), -1);
+}
+
 TEST_F(GridViewTest, IconModeAndWrapping) {
     GridView* gv = new GridView(window);
     EXPECT_EQ(gv->viewMode(), QListView::IconMode);

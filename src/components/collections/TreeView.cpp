@@ -256,6 +256,23 @@ TreeView::TreeView(QWidget* parent)
     onThemeUpdated();
 }
 
+TreeView::~TreeView()
+{
+    if (m_indicatorMotionAnim)
+        m_indicatorMotionAnim->stop();
+    if (m_expandRevealAnim)
+        m_expandRevealAnim->stop();
+    disconnectIndicatorMotionModel();
+
+    // Detach caller-owned Python model/delegate objects while Shiboken still
+    // retains their wrappers. QTreeView's base teardown can otherwise race the
+    // retained-reference cleanup on PySide6 6.2 for Windows.
+    // zh_CN: 在 Shiboken 仍保留包装器时先解除 Python model/delegate；避免
+    // PySide6 6.2 Windows 上 QTreeView 基类析构与引用清理交错。
+    QTreeView::setItemDelegate(nullptr);
+    QTreeView::setModel(nullptr);
+}
+
 QModelIndex TreeView::indexAt(const QPoint& point) const {
     if (m_animParent.isValid()
         && m_expandRevealAnim

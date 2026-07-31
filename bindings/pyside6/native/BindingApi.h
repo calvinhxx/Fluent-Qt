@@ -15,7 +15,13 @@
 #include <components/basicinput/Slider.h>
 #include <components/basicinput/ToggleButton.h>
 #include <components/basicinput/ToggleSwitch.h>
+#include <components/collections/FlipView.h>
+#include <components/collections/FlowView.h>
+#include <components/collections/GridView.h>
+#include <components/collections/ListView.h>
+#include <components/collections/SplitView.h>
 #include <components/collections/StackView.h>
+#include <components/collections/TreeView.h>
 #include <components/date_time/CalendarView.h>
 #include <components/foundation/FontIcon.h>
 #include <components/foundation/StyleThemeCatalog.h>
@@ -23,6 +29,12 @@
 #include <components/layout/Card.h>
 #include <components/layout/Divider.h>
 #include <components/layout/Expander.h>
+#include <components/navigation/Breadcrumb.h>
+#include <components/navigation/NavigationView.h>
+#include <components/navigation/Pivot.h>
+#include <components/navigation/SelectorBar.h>
+#include <components/navigation/StackContentHost.h>
+#include <components/navigation/TabView.h>
 #include <components/scrolling/AnnotatedScrollBar.h>
 #include <components/scrolling/PipsPager.h>
 #include <components/scrolling/ScrollBar.h>
@@ -54,6 +66,13 @@ enum class DesignLanguage {
     DesignCupertino
 };
 
+enum class SelectionMode {
+    None,
+    Single,
+    Multiple,
+    Extended
+};
+
 } // namespace fluent::binding
 
 void prepareHighDpiApplication();
@@ -68,6 +87,44 @@ void resetThemeTokens();
 void setFontScale(qreal scale);
 qreal fontScale();
 fluent::binding::DesignLanguage currentDesignLanguage();
+fluent::binding::SelectionMode flowViewSelectionMode(
+    const fluent::collections::FlowView* view);
+void setFlowViewSelectionMode(
+    fluent::collections::FlowView* view,
+    fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* flowViewVerticalFluentScrollBar(
+    const fluent::collections::FlowView* view);
+fluent::binding::SelectionMode gridViewSelectionMode(
+    const fluent::collections::GridView* view);
+void setGridViewSelectionMode(
+    fluent::collections::GridView* view,
+    fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* gridViewVerticalFluentScrollBar(
+    const fluent::collections::GridView* view);
+fluent::binding::SelectionMode listViewSelectionMode(
+    const fluent::collections::ListView* view);
+void setListViewSelectionMode(
+    fluent::collections::ListView* view,
+    fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* listViewVerticalFluentScrollBar(
+    const fluent::collections::ListView* view);
+fluent::scrolling::ScrollBar* listViewHorizontalFluentScrollBar(
+    const fluent::collections::ListView* view);
+fluent::binding::SelectionMode treeViewSelectionMode(
+    const fluent::collections::TreeView* view);
+void setTreeViewSelectionMode(
+    fluent::collections::TreeView* view,
+    fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* treeViewVerticalFluentScrollBar(
+    const fluent::collections::TreeView* view);
+fluent::scrolling::ScrollBar* treeViewHorizontalFluentScrollBar(
+    const fluent::collections::TreeView* view);
+void setBreadcrumbTextItems(
+    fluent::navigation::Breadcrumb* breadcrumb,
+    const QStringList& items);
+void setBreadcrumbMetadataItems(
+    fluent::navigation::Breadcrumb* breadcrumb,
+    const QVector<fluent::navigation::BreadcrumbItem>& items);
 int themeRevision();
 QVariantMap bindingBuildInfo();
 

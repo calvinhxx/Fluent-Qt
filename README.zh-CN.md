@@ -161,8 +161,9 @@ window.show()
 app.exec()
 ```
 
-当前绑定包含 Basic Input、Layout、Scrolling、Text Fields、Status & Info 和
-Windowing 中的 19 个控件，并暴露 Light/Dark 模式、
+当前绑定包含 Basic Input、Collections、Date & Time、Layout、Navigation、
+Scrolling、Text Fields、Status & Info 和 Windowing 中的 39 个控件与值类型，
+并暴露 Light/Dark 模式、
 Fluent/Material/macOS 样式预设、accent 覆盖、字体缩放、Qt 属性与信号以及
 Python 子类能力。准确的 6.2.4
 环境准备、API 范围、wheel target、交互验收窗口和干净环境验证命令见

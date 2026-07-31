@@ -263,6 +263,15 @@ ListView::~ListView() {
     // zh_CN: 析构前停止动画，避免半销毁对象上仍有回调；overscroll 控制器作为子对象自行停止其回弹动画/定时器。
     if (m_selectedIndicatorAnimation) m_selectedIndicatorAnimation->stop();
     clearMultiSelectedIndicatorState();
+
+    // Detach caller-owned Python model/delegate objects before QListView's
+    // destructor runs. This makes Shiboken's retained-reference release order
+    // independent from Qt's internal signal-disconnection order.
+    // zh_CN: 在 QListView 基类析构前解除外部 Python model/delegate，避免
+    // Shiboken 引用释放顺序与 Qt 内部断开 signal 的顺序互相依赖。
+    disconnectSelectedIndicatorModel();
+    QListView::setItemDelegate(nullptr);
+    QListView::setModel(nullptr);
 }
 
 void ListView::setModel(QAbstractItemModel* model) {

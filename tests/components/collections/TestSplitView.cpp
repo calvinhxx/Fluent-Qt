@@ -6,6 +6,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPalette>
+#include <QPointer>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QSlider>
@@ -18,6 +19,7 @@
 
 using fluent::collections::SplitView;
 using fluent::collections::SplitViewPaneOptions;
+using fluent::WidgetOwnership;
 
 namespace {
 
@@ -102,6 +104,7 @@ protected:
 TEST_F(SplitViewTest, DefaultPropertiesAndInheritance)
 {
     SplitView splitView;
+    const SplitViewPaneOptions partialOptions(24, 96);
 
     EXPECT_EQ(splitView.paneCount(), 0);
     EXPECT_EQ(splitView.orientation(), Qt::Horizontal);
@@ -110,11 +113,16 @@ TEST_F(SplitViewTest, DefaultPropertiesAndInheritance)
     EXPECT_GT(splitView.handleVisualThickness(), 0);
     EXPECT_EQ(splitView.defaultSizeHint(), QSize(560, 320));
     EXPECT_EQ(splitView.defaultMinimumSizeHint(), QSize(160, 96));
+    EXPECT_EQ(splitView.paneOwnershipAt(-1), WidgetOwnership::Borrowed);
     EXPECT_FALSE(splitView.sizeHint().isEmpty());
     EXPECT_FALSE(splitView.minimumSizeHint().isEmpty());
     EXPECT_NE(dynamic_cast<QWidget*>(&splitView), nullptr);
     EXPECT_NE(dynamic_cast<fluent::FluentElement*>(&splitView), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&splitView), nullptr);
+    EXPECT_EQ(partialOptions.minimumSize, 24);
+    EXPECT_EQ(partialOptions.preferredSize, 96);
+    EXPECT_EQ(partialOptions.maximumSize, 16777215);
+    EXPECT_FALSE(partialOptions.fill);
 }
 
 TEST_F(SplitViewTest, DefaultSizeHintsAreConfigurable)
@@ -177,6 +185,7 @@ TEST_F(SplitViewTest, PaneManagementParentsQueriesAndRemoves)
     EXPECT_EQ(splitView.paneAt(1), inserted);
     EXPECT_EQ(splitView.indexOf(second), 2);
     EXPECT_EQ(first->parentWidget(), &splitView);
+    EXPECT_EQ(splitView.paneOwnershipAt(0), WidgetOwnership::Owned);
 
     QWidget* removed = splitView.removePaneAt(1);
     EXPECT_EQ(removed, inserted);
@@ -187,6 +196,112 @@ TEST_F(SplitViewTest, PaneManagementParentsQueriesAndRemoves)
     EXPECT_GE(countSpy.count(), 4);
     delete removed;
     delete second;
+}
+
+TEST_F(SplitViewTest, ExplicitOwnershipReleaseAppliesConfiguredPolicy)
+{
+    SplitView splitView;
+
+    QPointer<QWidget> owned = new QWidget;
+    ASSERT_EQ(splitView.addPane(
+                  owned.data(),
+                  WidgetOwnership::Owned,
+                  paneOptions(40, 100, 240)),
+              0);
+    EXPECT_EQ(splitView.paneOwnershipAt(0), WidgetOwnership::Owned);
+    EXPECT_TRUE(splitView.releasePaneAt(0));
+    EXPECT_TRUE(owned.isNull());
+
+    auto* borrowed = new QWidget;
+    ASSERT_EQ(splitView.addPane(
+                  borrowed,
+                  WidgetOwnership::Borrowed,
+                  paneOptions(40, 100, 240)),
+              0);
+    EXPECT_TRUE(splitView.releasePane(borrowed));
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    delete borrowed;
+
+    QWidget originalParent;
+    auto* reparented = new QWidget(&originalParent);
+    ASSERT_EQ(splitView.addPane(
+                  reparented,
+                  WidgetOwnership::Reparented,
+                  paneOptions(40, 100, 240)),
+              0);
+    EXPECT_EQ(reparented->parentWidget(), &splitView);
+    EXPECT_TRUE(splitView.releasePaneAt(0));
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+
+    EXPECT_FALSE(splitView.releasePaneAt(-1));
+    EXPECT_FALSE(splitView.releasePaneAt(0));
+}
+
+TEST_F(SplitViewTest, HostDestructionHonorsExplicitOwnership)
+{
+    QWidget originalParent;
+    QPointer<QWidget> owned = new QWidget;
+    auto* borrowed = new QWidget;
+    auto* reparented = new QWidget(&originalParent);
+    auto* splitView = new SplitView;
+
+    ASSERT_EQ(splitView->addPane(owned.data(), WidgetOwnership::Owned), 0);
+    ASSERT_EQ(splitView->addPane(borrowed, WidgetOwnership::Borrowed), 1);
+    ASSERT_EQ(
+        splitView->addPane(reparented, WidgetOwnership::Reparented),
+        2);
+
+    delete splitView;
+
+    EXPECT_TRUE(owned.isNull());
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+    delete borrowed;
+}
+
+TEST_F(SplitViewTest, TakePaneTransfersWithoutApplyingOwnership)
+{
+    QWidget originalParent;
+    auto* pane = new QWidget(&originalParent);
+    SplitView splitView;
+    ASSERT_EQ(
+        splitView.insertPane(
+            0,
+            pane,
+            WidgetOwnership::Reparented,
+            paneOptions(40, 100, 240)),
+        0);
+
+    QWidget* taken = splitView.takePaneAt(0);
+
+    EXPECT_EQ(taken, pane);
+    EXPECT_EQ(taken->parentWidget(), nullptr);
+    EXPECT_EQ(splitView.paneCount(), 0);
+    EXPECT_EQ(splitView.takePaneAt(0), nullptr);
+    delete taken;
+}
+
+TEST_F(SplitViewTest, RejectsInvalidPanesAndTracksExternalDestruction)
+{
+    SplitView splitView;
+    auto* pane = new QWidget;
+    EXPECT_EQ(
+        splitView.addPane(nullptr, WidgetOwnership::Borrowed),
+        -1);
+    ASSERT_EQ(splitView.addPane(pane, WidgetOwnership::Borrowed), 0);
+    EXPECT_EQ(splitView.addPane(pane, WidgetOwnership::Owned), -1);
+
+    QSignalSpy countSpy(&splitView, &SplitView::paneCountChanged);
+    delete pane;
+
+    EXPECT_EQ(splitView.paneCount(), 0);
+    EXPECT_EQ(countSpy.count(), 1);
+
+    QWidget ancestor;
+    auto* nested = new SplitView(&ancestor);
+    EXPECT_EQ(
+        nested->addPane(&ancestor, WidgetOwnership::Borrowed),
+        -1);
 }
 
 TEST_F(SplitViewTest, HorizontalLayoutUsesPreferredAndFillSizes)

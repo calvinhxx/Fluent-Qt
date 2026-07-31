@@ -30,10 +30,18 @@ SplitView::SplitView(QWidget* parent)
 SplitView::~SplitView()
 {
     for (PaneRecord& pane : m_panes) {
-        if (pane.widget)
-            pane.widget->removeEventFilter(this);
         QObject::disconnect(pane.destroyedConnection);
+        QWidget* widget = pane.widget.data();
+        if (!widget)
+            continue;
+        widget->removeEventFilter(this);
+        if (pane.ownership == WidgetOwnership::Borrowed) {
+            widget->setParent(nullptr);
+        } else if (pane.ownership == WidgetOwnership::Reparented) {
+            widget->setParent(pane.originalParent.data());
+        }
     }
+    m_panes.clear();
 }
 
 void SplitView::onThemeUpdated()
@@ -43,19 +51,38 @@ void SplitView::onThemeUpdated()
 
 int SplitView::addPane(QWidget* pane, const SplitViewPaneOptions& options)
 {
-    return insertPane(m_panes.size(), pane, options);
+    return addPane(pane, WidgetOwnership::Owned, options);
+}
+
+int SplitView::addPane(QWidget* pane,
+                       WidgetOwnership ownership,
+                       const SplitViewPaneOptions& options)
+{
+    return insertPane(m_panes.size(), pane, ownership, options);
 }
 
 int SplitView::insertPane(int index, QWidget* pane, const SplitViewPaneOptions& options)
 {
-    if (!pane || indexOf(pane) >= 0)
+    return insertPane(index, pane, WidgetOwnership::Owned, options);
+}
+
+int SplitView::insertPane(int index,
+                          QWidget* pane,
+                          WidgetOwnership ownership,
+                          const SplitViewPaneOptions& options)
+{
+    if (!pane || pane == this || pane->isAncestorOf(this)
+        || indexOf(pane) >= 0) {
         return -1;
+    }
 
     index = qBound(0, index, m_panes.size());
     const int oldCount = m_panes.size();
     PaneRecord record;
     record.widget = pane;
     record.rawWidget = pane;
+    record.originalParent = pane->parentWidget();
+    record.ownership = ownership;
     const SplitViewPaneOptions normalized = normalizedOptions(options);
     record.minimumSize = normalized.minimumSize;
     record.preferredSize = normalized.preferredSize;
@@ -80,34 +107,54 @@ int SplitView::insertPane(int index, QWidget* pane, const SplitViewPaneOptions& 
 
 bool SplitView::removePane(QWidget* pane)
 {
-    return removePaneAt(indexOf(pane)) != nullptr;
+    return takePaneAt(indexOf(pane)) != nullptr;
 }
 
 QWidget* SplitView::removePaneAt(int index)
 {
+    return takePaneAt(index);
+}
+
+bool SplitView::releasePane(QWidget* pane)
+{
+    return releasePaneAt(indexOf(pane));
+}
+
+bool SplitView::releasePaneAt(int index)
+{
+    if (!isValidPaneIndex(index))
+        return false;
+
+    PaneRecord record = extractPaneRecord(index);
+    QWidget* pane = record.widget.data();
+    QPointer<QWidget> guard(pane);
+    finishPaneRemoval(index, pane);
+    pane = guard.data();
+    if (!pane)
+        return true;
+
+    if (record.ownership == WidgetOwnership::Owned) {
+        delete pane;
+    } else if (record.ownership == WidgetOwnership::Reparented) {
+        pane->setParent(record.originalParent.data());
+    } else {
+        pane->setParent(nullptr);
+    }
+    return true;
+}
+
+QWidget* SplitView::takePaneAt(int index)
+{
     if (!isValidPaneIndex(index))
         return nullptr;
 
-    const int oldCount = m_panes.size();
-    PaneRecord record = m_panes.takeAt(index);
-    QObject::disconnect(record.destroyedConnection);
-
+    PaneRecord record = extractPaneRecord(index);
     QWidget* pane = record.widget.data();
-    if (pane) {
-        pane->removeEventFilter(this);
-        pane->hide();
+    if (pane)
         pane->setParent(nullptr);
-    }
-
-    if (m_hoveredHandle >= m_handleRects.size())
-        m_hoveredHandle = -1;
-    clearDragState();
-    updateLayout();
-    emit paneRemoved(index, pane);
-    if (oldCount != m_panes.size())
-        emit paneCountChanged(m_panes.size());
-    emit fillPaneIndexChanged(fillPaneIndex());
-    return pane;
+    QPointer<QWidget> guard(pane);
+    finishPaneRemoval(index, pane);
+    return guard.data();
 }
 
 QWidget* SplitView::paneAt(int index) const
@@ -126,6 +173,13 @@ int SplitView::indexOf(QWidget* pane) const
             return index;
     }
     return -1;
+}
+
+WidgetOwnership SplitView::paneOwnershipAt(int index) const
+{
+    return isValidPaneIndex(index)
+        ? m_panes.at(index).ownership
+        : WidgetOwnership::Borrowed;
 }
 
 void SplitView::setOrientation(Qt::Orientation orientation)
@@ -805,20 +859,36 @@ void SplitView::emitPaneSizeIfChanged(int index, int oldSize)
         emit paneSizeChanged(index, size);
 }
 
+SplitView::PaneRecord SplitView::extractPaneRecord(int index)
+{
+    PaneRecord record = m_panes.takeAt(index);
+    QObject::disconnect(record.destroyedConnection);
+    if (record.widget) {
+        record.widget->removeEventFilter(this);
+        record.widget->hide();
+    }
+    return record;
+}
+
+void SplitView::finishPaneRemoval(int index, QWidget* pane)
+{
+    if (m_hoveredHandle >= m_handleRects.size())
+        m_hoveredHandle = -1;
+    clearDragState();
+    updateLayout();
+    emit paneRemoved(index, pane);
+    emit paneCountChanged(m_panes.size());
+    emit fillPaneIndexChanged(fillPaneIndex());
+}
+
 void SplitView::handlePaneDestroyed(QWidget* pane)
 {
     const int index = indexOf(pane);
     if (index < 0)
         return;
 
-    const int oldCount = m_panes.size();
     m_panes.removeAt(index);
-    clearDragState();
-    updateLayout();
-    if (oldCount != m_panes.size())
-        emit paneCountChanged(m_panes.size());
-    emit paneRemoved(index, nullptr);
-    emit fillPaneIndexChanged(fillPaneIndex());
+    finishPaneRemoval(index, nullptr);
 }
 
 bool SplitView::isValidPaneIndex(int index) const

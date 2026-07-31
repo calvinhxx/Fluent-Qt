@@ -146,7 +146,7 @@ public:
     Q_PROPERTY(bool overscrollEnabled READ isOverscrollEnabled WRITE setOverscrollEnabled NOTIFY overscrollEnabledChanged)
 
     explicit TreeView(QWidget* parent = nullptr);
-    ~TreeView() override = default;
+    ~TreeView() override;
 
     QModelIndex indexAt(const QPoint& point) const override;
     void setModel(QAbstractItemModel* model) override;

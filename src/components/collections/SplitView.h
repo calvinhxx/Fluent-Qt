@@ -7,6 +7,7 @@
 
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/WidgetOwnership.h"
 
 class QMouseEvent;
 class QPaintEvent;
@@ -19,6 +20,17 @@ struct SplitViewPaneOptions {
     int preferredSize = 160;
     int maximumSize = 16777215;
     bool fill = false;
+
+    SplitViewPaneOptions(int minimumPaneSize = 48,
+                         int preferredPaneSize = 160,
+                         int maximumPaneSize = 16777215,
+                         bool fillPane = false)
+        : minimumSize(minimumPaneSize)
+        , preferredSize(preferredPaneSize)
+        , maximumSize(maximumPaneSize)
+        , fill(fillPane)
+    {
+    }
 };
 
 /**
@@ -74,13 +86,56 @@ public:
     void onThemeUpdated() override;
 
     int addPane(QWidget* pane, const SplitViewPaneOptions& options = SplitViewPaneOptions());
+    /**
+     * @brief Appends a pane with an explicit release policy.
+     * zh_CN: 使用显式释放策略追加窗格。
+     */
+    int addPane(QWidget* pane,
+                WidgetOwnership ownership,
+                const SplitViewPaneOptions& options = SplitViewPaneOptions());
     int insertPane(int index, QWidget* pane, const SplitViewPaneOptions& options = SplitViewPaneOptions());
+    /**
+     * @brief Inserts a pane with an explicit release policy.
+     * zh_CN: 使用显式释放策略插入窗格。
+     */
+    int insertPane(int index,
+                   QWidget* pane,
+                   WidgetOwnership ownership,
+                   const SplitViewPaneOptions& options = SplitViewPaneOptions());
+    /**
+     * @brief Legacy removal that transfers the pane to the caller.
+     * zh_CN: 兼容旧行为，移除窗格并将其转交给调用方。
+     */
     bool removePane(QWidget* pane);
+    /**
+     * @brief Legacy indexed removal that transfers the pane to the caller.
+     * zh_CN: 兼容旧行为，按索引移除窗格并将其转交给调用方。
+     */
     QWidget* removePaneAt(int index);
+    /**
+     * @brief Removes a pane and applies its configured ownership policy.
+     * zh_CN: 移除窗格并执行其已配置的所有权策略。
+     */
+    bool releasePane(QWidget* pane);
+    /**
+     * @brief Removes an indexed pane and applies its ownership policy.
+     * zh_CN: 按索引移除窗格并执行其所有权策略。
+     */
+    bool releasePaneAt(int index);
+    /**
+     * @brief Removes a pane without deleting it and transfers it to the caller.
+     * zh_CN: 移除窗格但不删除，并将其转交给调用方。
+     */
+    QWidget* takePaneAt(int index);
 
     QWidget* paneAt(int index) const;
     int paneCount() const { return m_panes.size(); }
     int indexOf(QWidget* pane) const;
+    /**
+     * @brief Returns the configured release policy for a hosted pane.
+     * zh_CN: 返回托管窗格已配置的释放策略。
+     */
+    WidgetOwnership paneOwnershipAt(int index) const;
 
     Qt::Orientation orientation() const { return m_orientation; }
     void setOrientation(Qt::Orientation orientation);
@@ -160,6 +215,8 @@ private:
     struct PaneRecord {
         QPointer<QWidget> widget;
         QWidget* rawWidget = nullptr;
+        QPointer<QWidget> originalParent;
+        WidgetOwnership ownership = WidgetOwnership::Owned;
         int minimumSize = 48;
         int preferredSize = 160;
         int maximumSize = 16777215;
@@ -204,6 +261,8 @@ private:
     void setHoveredHandle(int index);
     void clearDragState();
     void emitPaneSizeIfChanged(int index, int oldSize);
+    PaneRecord extractPaneRecord(int index);
+    void finishPaneRemoval(int index, QWidget* pane);
     void handlePaneDestroyed(QWidget* pane);
     bool isValidPaneIndex(int index) const;
 

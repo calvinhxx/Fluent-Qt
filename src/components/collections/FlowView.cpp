@@ -109,6 +109,15 @@ FlowView::FlowView(QWidget* parent)
 FlowView::~FlowView()
 {
     clearDragAnimations();
+
+    // Detach caller-owned Python model/delegate objects while the generated
+    // wrapper still retains them. Qt 6.2 on Windows can otherwise tear down
+    // QAbstractItemView connections after Shiboken has started releasing the
+    // corresponding wrappers.
+    // zh_CN: 在生成包装器仍持有调用方 Python model/delegate 时主动解除关联；
+    // Qt 6.2 Windows 若等到基类析构才清理连接，可能与 Shiboken 释放包装器交错。
+    QAbstractItemView::setItemDelegate(nullptr);
+    QAbstractItemView::setModel(nullptr);
 }
 
 void FlowView::setSelectionMode(SelectionMode mode)
