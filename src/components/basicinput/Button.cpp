@@ -457,23 +457,18 @@ void Button::paintEvent(QPaintEvent*) {
     }
 
     // 3. Paint the background and border. zh_CN: 绘制背景和边框。
-    QRectF contentRect = rect();
+    const QRectF surfaceRect = rect();
     QMargins radii = cornerRadii();
     if (pill) {
         // Stadium shape: radius = half the shorter side. zh_CN: 胶囊形:圆角取较短边的一半。
-        const int r = qRound(qMin(contentRect.width(), contentRect.height()) / 2.0);
+        const int r = qRound(qMin(surfaceRect.width(), surfaceRect.height()) / 2.0);
         radii = QMargins(r, r, r, r);
     }
 
-    // Fluent nudges content down 0.5px while pressed; Material/macOS use color, not motion. zh_CN: Fluent 按下时内容下移 0.5px;M3/macOS 用颜色而非位移。
-    if (state == Pressed && m_style != Subtle && lang == DesignFluent) {
-        contentRect.translate(0, 0.5);
-    }
-
-    const QPainterPath surfacePath = roundedRectPath(contentRect, radii);
+    const QPainterPath surfacePath = roundedRectPath(surfaceRect, radii);
     painter.setPen(Qt::NoPen);
     if (useGradient) {
-        QLinearGradient gradient(contentRect.topLeft(), contentRect.bottomLeft());
+        QLinearGradient gradient(surfaceRect.topLeft(), surfaceRect.bottomLeft());
         gradient.setColorAt(0.0, gradTop);
         gradient.setColorAt(1.0, gradBottom);
         painter.setBrush(gradient);
@@ -498,13 +493,13 @@ void Button::paintEvent(QPaintEvent*) {
         painter.setBrush(Qt::NoBrush);
         QColor shadow(0, 0, 0, darkTheme ? 0x3A : 0x1E); // softer on dark, ~12% on light. zh_CN: 深色更弱,浅色约 12%。
         painter.setPen(QPen(shadow, 1.0));
-        painter.drawPath(roundedRectPath(contentRect.adjusted(0.5, 1.5, -0.5, -0.5), radii));
+        painter.drawPath(roundedRectPath(surfaceRect.adjusted(0.5, 1.5, -0.5, -0.5), radii));
         painter.restore();
     }
 
     if (borderColor != Qt::transparent) {
         const auto borderStroke = fluent::painting::DpiPaintMetrics(painter).alignedStroke(
-            contentRect, 1.0);
+            surfaceRect, 1.0);
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(borderColor, borderStroke.width));
         painter.drawPath(roundedRectPath(borderStroke.rect, radii));
@@ -520,7 +515,7 @@ void Button::paintEvent(QPaintEvent*) {
         painter.setBrush(Qt::NoBrush);
         
         // Restore the 1.5px inset. zh_CN: 恢复为 1.5 像素内缩。
-        painter.drawPath(roundedRectPath(contentRect.adjusted(1.5, 1.5, -1.5, -1.5), adjustedRadii(radii, -1)));
+        painter.drawPath(roundedRectPath(surfaceRect.adjusted(1.5, 1.5, -1.5, -1.5), adjustedRadii(radii, -1)));
     }
 
     // 4. Lay out and paint the icon and text using token gaps. zh_CN: 使用 Token 间距计算并绘制图标和文字。
@@ -549,6 +544,13 @@ void Button::paintEvent(QPaintEvent*) {
     
     int totalContentWidth = txtWidth + iconWidth + ((!txt.isEmpty() && (hasIconFont || !pix.isNull())) ? gap : 0);
     
+    QRectF contentRect = surfaceRect;
+    // Fluent nudges only the icon/text content down while pressed; moving the
+    // surface would clip its bottom border at the widget edge.
+    // zh_CN: Fluent 按下时只下移图标/文字内容；移动表面会使底边框被控件边界裁掉。
+    if (state == Pressed && m_style != Subtle && lang == DesignFluent) {
+        contentRect.translate(0, 0.5);
+    }
     const QRectF layoutRect = contentPaintRect(contentRect);
     double startX = layoutRect.left() + (layoutRect.width() - totalContentWidth) / 2.0;
     double centerY = layoutRect.center().y();

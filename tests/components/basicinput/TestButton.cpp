@@ -551,6 +551,27 @@ protected:
     }
 };
 
+TEST_F(ButtonDesignLanguageTest, FluentPressedStandardKeepsBottomBorderInsideSurface) {
+    fluent::ThemeRegistry::instance().setDesignLanguage(
+        fluent::FluentElement::DesignFluent);
+    fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+
+    Button button;
+    button.setAttribute(Qt::WA_DontShowOnScreen);
+    button.setFixedSize(96, 32);
+    button.setCornerRadii(QMargins());
+    button.setInteractionState(Button::Pressed);
+
+    const QImage image = renderButtonToImage(button);
+    ASSERT_FALSE(image.isNull());
+
+    const int centerX = image.width() / 2;
+    const QColor interior = image.pixelColor(centerX, image.height() / 2);
+    const QColor bottomBorder = image.pixelColor(centerX, image.height() - 1);
+
+    EXPECT_GT(bottomBorder.alpha(), interior.alpha());
+}
+
 TEST_F(ButtonDesignLanguageTest, EveryLanguageThemeStyleRendersWithoutCrashing) {
     struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
     struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
