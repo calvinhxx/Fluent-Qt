@@ -162,8 +162,9 @@ window.show()
 app.exec()
 ```
 
-The current binding set includes nineteen widgets from Basic Input, Layout,
-Scrolling, Text Fields, Status & Info, and Windowing. It also exposes
+The current binding set includes 47 widgets and value types from Basic Input,
+Collections, Date & Time, Layout, Navigation, Scrolling, Text Fields,
+Status & Info, and Windowing. It also exposes
 Light/Dark mode, Fluent/Material/macOS style presets, accent overrides,
 typography scaling, Qt properties and signals, and Python subclassing. See the
 [PySide6 binding guide](bindings/pyside6/README.md) for the exact 6.2.4 setup,

@@ -9,6 +9,7 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPalette>
+#include <QPointer>
 #include <QSignalSpy>
 #include <QTest>
 #include <functional>
@@ -23,6 +24,7 @@
 #include "components/windowing/WindowBackdrop.h"
 
 using fluent::AnchorLayout;
+using fluent::WidgetOwnership;
 using fluent::basicinput::Button;
 using fluent::navigation::NavigationView;
 using fluent::navigation::StackContentHost;
@@ -763,6 +765,108 @@ TEST_F(NavigationViewTest, ConfigurableMetricsAndSlotReplacementUpdateGeometry)
     EXPECT_EQ(nav.contentGeometry().top(), 56);
 }
 
+TEST_F(NavigationViewTest, NavigationChromeExplicitReleaseAppliesConfiguredOwnership)
+{
+    NavigationView nav;
+
+    QPointer<QWidget> owned = new QWidget;
+    ASSERT_TRUE(nav.setHeaderChromeWidget(owned.data(), WidgetOwnership::Owned));
+    EXPECT_EQ(nav.headerChromeWidgetOwnership(), WidgetOwnership::Owned);
+    EXPECT_TRUE(nav.releaseHeaderChromeWidget());
+    EXPECT_TRUE(owned.isNull());
+
+    auto* borrowed = new QWidget;
+    ASSERT_TRUE(nav.setMainChromeWidget(borrowed, WidgetOwnership::Borrowed));
+    EXPECT_EQ(nav.mainChromeWidgetOwnership(), WidgetOwnership::Borrowed);
+    EXPECT_TRUE(nav.releaseMainChromeWidget());
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    delete borrowed;
+
+    QWidget originalParent;
+    auto* reparented = new QWidget(&originalParent);
+    ASSERT_TRUE(nav.setFooterChromeWidget(reparented, WidgetOwnership::Reparented));
+    EXPECT_EQ(reparented->parentWidget(), &nav);
+    EXPECT_TRUE(nav.releaseFooterChromeWidget());
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+
+    EXPECT_FALSE(nav.releaseHeaderChromeWidget());
+    EXPECT_FALSE(nav.releaseMainChromeWidget());
+    EXPECT_FALSE(nav.releaseFooterChromeWidget());
+}
+
+TEST_F(NavigationViewTest, NavigationChromeReplacementAndTakeHaveStablePolicies)
+{
+    QWidget originalParent;
+    auto* original = new QWidget(&originalParent);
+    auto* replacement = new QWidget;
+    NavigationView nav;
+
+    ASSERT_TRUE(nav.setHeaderChromeWidget(original, WidgetOwnership::Reparented));
+    ASSERT_TRUE(nav.setHeaderChromeWidget(replacement, WidgetOwnership::Borrowed));
+    EXPECT_EQ(original->parentWidget(), &originalParent);
+    EXPECT_EQ(nav.headerChromeWidget(), replacement);
+    EXPECT_EQ(nav.headerChromeWidgetOwnership(), WidgetOwnership::Borrowed);
+
+    replacement->setProperty("fluentNavPaneFloating", true);
+    EXPECT_EQ(nav.takeHeaderChromeWidget(), replacement);
+    EXPECT_EQ(replacement->parentWidget(), nullptr);
+    EXPECT_FALSE(replacement->property("fluentNavPaneFloating").toBool());
+    delete replacement;
+
+    auto* legacy = new QWidget;
+    auto* legacyReplacement = new QWidget;
+    nav.setMainChromeWidget(legacy);
+    nav.setMainChromeWidget(legacyReplacement);
+    EXPECT_EQ(legacy->parentWidget(), nullptr);
+    EXPECT_EQ(nav.mainChromeWidget(), legacyReplacement);
+    delete legacy;
+    nav.setMainChromeWidget(nullptr);
+    EXPECT_EQ(legacyReplacement->parentWidget(), nullptr);
+    delete legacyReplacement;
+}
+
+TEST_F(NavigationViewTest, NavigationChromeDestructionHonorsExplicitOwnership)
+{
+    QWidget originalParent;
+    QPointer<QWidget> owned = new QWidget;
+    auto* borrowed = new QWidget;
+    auto* reparented = new QWidget(&originalParent);
+    auto* nav = new NavigationView;
+
+    ASSERT_TRUE(nav->setHeaderChromeWidget(owned.data(), WidgetOwnership::Owned));
+    ASSERT_TRUE(nav->setMainChromeWidget(borrowed, WidgetOwnership::Borrowed));
+    ASSERT_TRUE(nav->setFooterChromeWidget(reparented, WidgetOwnership::Reparented));
+
+    delete nav;
+
+    EXPECT_TRUE(owned.isNull());
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+    delete borrowed;
+}
+
+TEST_F(NavigationViewTest, NavigationChromeRejectsInvalidReuseAndTracksExternalDestruction)
+{
+    QWidget ancestor;
+    auto* nav = new NavigationView(&ancestor);
+    auto* header = new QWidget;
+    ASSERT_TRUE(nav->setHeaderChromeWidget(header, WidgetOwnership::Borrowed));
+    QSignalSpy headerSpy(nav, &NavigationView::headerChromeWidgetChanged);
+
+    EXPECT_FALSE(nav->setMainChromeWidget(header, WidgetOwnership::Borrowed));
+    EXPECT_FALSE(nav->setMainChromeWidget(nav, WidgetOwnership::Borrowed));
+    EXPECT_FALSE(nav->setMainChromeWidget(&ancestor, WidgetOwnership::Borrowed));
+    EXPECT_FALSE(nav->setMainChromeWidget(nav->contentHost(), WidgetOwnership::Borrowed));
+
+    delete header;
+
+    EXPECT_EQ(nav->headerChromeWidget(), nullptr);
+    EXPECT_EQ(nav->headerChromeWidgetOwnership(), WidgetOwnership::Borrowed);
+    EXPECT_EQ(headerSpy.count(), 1);
+
+    delete nav;
+}
+
 TEST_F(NavigationViewTest, StackContentHostOwnsContentPagesAtApplicationLayer)
 {
     NavigationView nav(window);
@@ -784,6 +888,151 @@ TEST_F(NavigationViewTest, StackContentHostOwnsContentPagesAtApplicationLayer)
     EXPECT_EQ(nav.contentHost()->currentIndex(), 1);
     EXPECT_EQ(second->geometry(), QRect(QPoint(0, 0), nav.contentGeometry().size()));
     EXPECT_EQ(currentSpy.count(), 2);
+}
+
+TEST_F(NavigationViewTest, StackContentHostExplicitReleaseAppliesConfiguredOwnership)
+{
+    StackContentHost host;
+
+    QPointer<QWidget> owned = new QWidget;
+    ASSERT_TRUE(host.insertPage(0, owned.data(), WidgetOwnership::Owned));
+    EXPECT_EQ(host.pageOwnershipAt(0), WidgetOwnership::Owned);
+    EXPECT_TRUE(host.releasePage(0));
+    EXPECT_TRUE(owned.isNull());
+
+    auto* borrowed = new QWidget;
+    ASSERT_TRUE(host.insertPage(0, borrowed, WidgetOwnership::Borrowed));
+    EXPECT_EQ(host.pageOwnershipAt(0), WidgetOwnership::Borrowed);
+    EXPECT_TRUE(host.releasePage(0));
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    delete borrowed;
+
+    QWidget originalParent;
+    auto* reparented = new QWidget(&originalParent);
+    ASSERT_TRUE(host.insertPage(0, reparented, WidgetOwnership::Reparented));
+    EXPECT_EQ(reparented->parentWidget(), &host);
+    EXPECT_TRUE(host.releasePage(0));
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+
+    EXPECT_FALSE(host.releasePage(-1));
+    EXPECT_FALSE(host.releasePage(0));
+    EXPECT_EQ(host.pageOwnershipAt(0), WidgetOwnership::Borrowed);
+}
+
+TEST_F(NavigationViewTest, StackContentHostReplacementAppliesOldOwnershipAndRecordsNewPolicy)
+{
+    QWidget originalParent;
+    auto* original = new QWidget(&originalParent);
+    auto* replacement = new QWidget;
+    StackContentHost host;
+
+    ASSERT_TRUE(host.insertPage(0, original, WidgetOwnership::Reparented));
+    ASSERT_TRUE(host.replacePage(0, replacement, WidgetOwnership::Borrowed));
+
+    EXPECT_EQ(original->parentWidget(), &originalParent);
+    EXPECT_EQ(host.pageWidget(0), replacement);
+    EXPECT_EQ(host.pageOwnershipAt(0), WidgetOwnership::Borrowed);
+    EXPECT_TRUE(host.releasePage(0));
+    EXPECT_EQ(replacement->parentWidget(), nullptr);
+    delete replacement;
+}
+
+TEST_F(NavigationViewTest, StackContentHostDestructionHonorsExplicitOwnership)
+{
+    QWidget originalParent;
+    QPointer<QWidget> owned = new QWidget;
+    auto* borrowed = new QWidget;
+    auto* reparented = new QWidget(&originalParent);
+    auto* host = new StackContentHost;
+
+    ASSERT_TRUE(host->insertPage(0, owned.data(), WidgetOwnership::Owned));
+    ASSERT_TRUE(host->insertPage(1, borrowed, WidgetOwnership::Borrowed));
+    ASSERT_TRUE(host->insertPage(2, reparented, WidgetOwnership::Reparented));
+
+    delete host;
+
+    EXPECT_TRUE(owned.isNull());
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+    delete borrowed;
+}
+
+TEST_F(NavigationViewTest, StackContentHostTransferApisPreserveLegacyBehavior)
+{
+    QWidget originalParent;
+    auto* taken = new QWidget(&originalParent);
+    StackContentHost host;
+    ASSERT_TRUE(host.insertPage(0, taken, WidgetOwnership::Reparented));
+
+    EXPECT_EQ(host.takePage(0), taken);
+    EXPECT_EQ(taken->parentWidget(), nullptr);
+    delete taken;
+
+    auto* replaced = new QWidget;
+    auto* replacement = new QWidget;
+    ASSERT_TRUE(host.insertPage(0, replaced));
+    EXPECT_EQ(host.replacePage(0, replacement), replaced);
+    EXPECT_EQ(replaced->parentWidget(), nullptr);
+    delete replaced;
+
+    host.clearPages();
+    EXPECT_EQ(replacement->parentWidget(), nullptr);
+    EXPECT_EQ(host.count(), 0);
+    delete replacement;
+}
+
+TEST_F(NavigationViewTest, StackContentHostReleaseAllAppliesPerPagePolicies)
+{
+    QWidget originalParent;
+    QPointer<QWidget> owned = new QWidget;
+    auto* borrowed = new QWidget;
+    auto* reparented = new QWidget(&originalParent);
+    StackContentHost host;
+
+    ASSERT_TRUE(host.insertPage(0, owned.data(), WidgetOwnership::Owned));
+    ASSERT_TRUE(host.insertPage(1, borrowed, WidgetOwnership::Borrowed));
+    ASSERT_TRUE(host.insertPage(2, reparented, WidgetOwnership::Reparented));
+    host.setCurrentIndex(1, 0, false);
+    QSignalSpy currentSpy(&host, &StackContentHost::currentIndexChanged);
+
+    host.releaseAllPages();
+
+    EXPECT_TRUE(owned.isNull());
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+    EXPECT_EQ(host.count(), 0);
+    EXPECT_EQ(host.currentIndex(), -1);
+    EXPECT_EQ(currentSpy.count(), 1);
+    delete borrowed;
+}
+
+TEST_F(NavigationViewTest, StackContentHostRejectsCyclesDuplicatesAndTracksExternalDestruction)
+{
+    QWidget ancestor;
+    auto* host = new StackContentHost(&ancestor);
+    auto* first = new QWidget;
+    auto* second = new QWidget;
+
+    EXPECT_FALSE(host->insertPage(0, host, WidgetOwnership::Borrowed));
+    EXPECT_FALSE(host->insertPage(0, &ancestor, WidgetOwnership::Borrowed));
+    ASSERT_TRUE(host->insertPage(0, first, WidgetOwnership::Borrowed));
+    EXPECT_FALSE(host->insertPage(1, first, WidgetOwnership::Owned));
+    ASSERT_TRUE(host->insertPage(1, second, WidgetOwnership::Borrowed));
+    host->setCurrentIndex(0, 0, false);
+    QSignalSpy currentSpy(host, &StackContentHost::currentIndexChanged);
+
+    delete first;
+
+    EXPECT_EQ(host->count(), 1);
+    EXPECT_EQ(host->pageWidget(0), second);
+    EXPECT_EQ(host->currentIndex(), 0);
+    EXPECT_EQ(currentSpy.count(), 0);
+    EXPECT_EQ(host->indexOf(second), 0);
+    EXPECT_EQ(host->indexOf(nullptr), -1);
+
+    delete host;
+    EXPECT_EQ(second->parentWidget(), nullptr);
+    delete second;
 }
 
 TEST_F(NavigationViewTest, StackContentHostClearsTranslucentBackdropPixels)

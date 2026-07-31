@@ -22,6 +22,18 @@ static_assert(
 static_assert(
     static_cast<int>(fluent::binding::DesignLanguage::DesignCupertino) ==
     static_cast<int>(fluent::FluentElement::DesignCupertino));
+static_assert(
+    static_cast<int>(fluent::binding::SelectionMode::None) ==
+    static_cast<int>(fluent::collections::SelectionMode::None));
+static_assert(
+    static_cast<int>(fluent::binding::SelectionMode::Single) ==
+    static_cast<int>(fluent::collections::SelectionMode::Single));
+static_assert(
+    static_cast<int>(fluent::binding::SelectionMode::Multiple) ==
+    static_cast<int>(fluent::collections::SelectionMode::Multiple));
+static_assert(
+    static_cast<int>(fluent::binding::SelectionMode::Extended) ==
+    static_cast<int>(fluent::collections::SelectionMode::Extended));
 
 void prepareHighDpiApplication() { fluent::prepareHighDpiApplication(); }
 
@@ -66,6 +78,106 @@ qreal fontScale() { return fluent::ThemeRegistry::instance().fontScale(); }
 fluent::binding::DesignLanguage currentDesignLanguage() {
   return static_cast<fluent::binding::DesignLanguage>(
       static_cast<int>(fluent::ThemeRegistry::instance().designLanguage()));
+}
+
+fluent::binding::SelectionMode flowViewSelectionMode(
+    const fluent::collections::FlowView* view) {
+  return static_cast<fluent::binding::SelectionMode>(
+      static_cast<int>(view->selectionMode()));
+}
+
+void setFlowViewSelectionMode(
+    fluent::collections::FlowView* view,
+    fluent::binding::SelectionMode mode) {
+  view->setSelectionMode(
+      static_cast<fluent::collections::SelectionMode>(
+          static_cast<int>(mode)));
+}
+
+fluent::scrolling::ScrollBar* flowViewVerticalFluentScrollBar(
+    const fluent::collections::FlowView* view) {
+  return view->verticalFluentScrollBar();
+}
+
+fluent::binding::SelectionMode gridViewSelectionMode(
+    const fluent::collections::GridView* view) {
+  return static_cast<fluent::binding::SelectionMode>(
+      static_cast<int>(view->selectionMode()));
+}
+
+void setGridViewSelectionMode(
+    fluent::collections::GridView* view,
+    fluent::binding::SelectionMode mode) {
+  view->setSelectionMode(
+      static_cast<fluent::collections::SelectionMode>(
+          static_cast<int>(mode)));
+}
+
+fluent::scrolling::ScrollBar* gridViewVerticalFluentScrollBar(
+    const fluent::collections::GridView* view) {
+  return view->verticalFluentScrollBar();
+}
+
+fluent::binding::SelectionMode listViewSelectionMode(
+    const fluent::collections::ListView* view) {
+  return static_cast<fluent::binding::SelectionMode>(
+      static_cast<int>(view->selectionMode()));
+}
+
+void setListViewSelectionMode(
+    fluent::collections::ListView* view,
+    fluent::binding::SelectionMode mode) {
+  view->setSelectionMode(
+      static_cast<fluent::collections::SelectionMode>(
+          static_cast<int>(mode)));
+}
+
+fluent::scrolling::ScrollBar* listViewVerticalFluentScrollBar(
+    const fluent::collections::ListView* view) {
+  return view->verticalFluentScrollBar();
+}
+
+fluent::scrolling::ScrollBar* listViewHorizontalFluentScrollBar(
+    const fluent::collections::ListView* view) {
+  return view->horizontalFluentScrollBar();
+}
+
+fluent::binding::SelectionMode treeViewSelectionMode(
+    const fluent::collections::TreeView* view) {
+  return static_cast<fluent::binding::SelectionMode>(
+      static_cast<int>(view->selectionMode()));
+}
+
+void setTreeViewSelectionMode(
+    fluent::collections::TreeView* view,
+    fluent::binding::SelectionMode mode) {
+  view->setSelectionMode(
+      static_cast<fluent::collections::SelectionMode>(
+          static_cast<int>(mode)));
+}
+
+fluent::scrolling::ScrollBar* treeViewVerticalFluentScrollBar(
+    const fluent::collections::TreeView* view) {
+  return view->verticalFluentScrollBar();
+}
+
+fluent::scrolling::ScrollBar* treeViewHorizontalFluentScrollBar(
+    const fluent::collections::TreeView* view) {
+  return view->horizontalFluentScrollBar();
+}
+
+void setBreadcrumbTextItems(
+    fluent::navigation::Breadcrumb* breadcrumb,
+    const QStringList& items) {
+  if (breadcrumb)
+    breadcrumb->setItems(items);
+}
+
+void setBreadcrumbMetadataItems(
+    fluent::navigation::Breadcrumb* breadcrumb,
+    const QVector<fluent::navigation::BreadcrumbItem>& items) {
+  if (breadcrumb)
+    breadcrumb->setItems(items);
 }
 
 int themeRevision() { return fluent::ThemeRegistry::instance().revision(); }

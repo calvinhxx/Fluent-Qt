@@ -59,6 +59,24 @@ and keeps CompoundButton's text-plus-parent construction aligned with Button.
 helper/error composition, and accessibility relationships need a separate
 contract rather than a thin visual wrapper.
 
+## 2026-08-01 SplitView ownership addendum
+
+- `fluent::collections::SplitView` keeps the legacy host-owned default for
+  `addPane()` and `insertPane()`, while new overloads record explicit
+  `WidgetOwnership` for each pane.
+- `releasePane()` and `releasePaneAt()` apply the recorded Owned, Borrowed, or
+  Reparented policy. `takePaneAt()` deliberately overrides that policy and
+  transfers a parentless pane to the caller.
+- Legacy `removePane()` and `removePaneAt()` preserve their prior transfer
+  behavior, so the new ownership contract is source-compatible.
+- The host rejects itself, its ancestors, duplicate panes, and null panes;
+  externally destroyed panes are removed from the pane table without leaving
+  stale geometry or signals.
+
+Focused contracts cover all release policies, host destruction, explicit
+transfer, original-parent restoration, invalid insertion, external
+destruction, and the existing layout/drag/state behavior.
+
 ## 2026-07-28 editing command router addendum
 
 - `fluent::textfields::EditingCommandRouter` owns one stable set of semantic
@@ -253,7 +271,7 @@ platform contracts.
 | `date_time` | CalendarView, CalendarDatePicker, DatePicker, TimePicker | Present for listed components | calendar-date-picker, calendar-view-pager, date-picker, time-picker |
 | `dialogs_flyouts` | Dialog, ContentDialog, Popup, Flyout, TeachingTip | Present for listed components | dialog-winui3-polish, popup-overlay, flyout, teaching-tip |
 | `menus_toolbars` | CommandBar, CommandBarFlyout, FluentMenu, FluentMenuItem, MenuBar | CommandBar and CommandBarFlyout Capability Phase 3 focused tests present; menu classes are also exercised through MenuBar and DropDownButton tests | command-bar, menu-bar |
-| `navigation` | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | Present for listed public components except StackContentHost as standalone host | breadcrumb, navigation-view, pivot, selector-bar, tab-view |
+| `navigation` | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | Present for listed public components; StackContentHost lifecycle cases share the NavigationView focused target | breadcrumb, navigation-view, pivot, selector-bar, tab-view |
 | `scrolling` | ScrollBar, ScrollView, AnnotatedScrollBar, PipsPager | Present for listed components | scroll-view, annotated-scrollbar, pips-pager |
 | `status_info` | Avatar, ToolTip, InfoBar, InfoBadge, ProgressBar, ProgressRing, Shimmer, Toast | Present for listed components; Capability Phase 4 adds Toast lifecycle and InfoBadge accessibility contracts | tooltip-animation, info-bar, info-badge, progress-bar, progress-ring |
 | `textfields` | Label, LineEdit, TextEdit, AutoSuggestBox, PasswordBox, NumberBox, EditingCommandRouter | Present for listed components | label, auto-suggest-box, password-box, number-box, editing-command-router |
@@ -269,7 +287,7 @@ platform contracts.
 | API-004 | Medium | Open state breadth | `src/components/basicinput/SplitButton.h`, `src/components/basicinput/ToggleSplitButton.h` | Split buttons own a menu and have primary/secondary hit zones, but they do not expose an open-state property. Adding one may require QMenu lifecycle semantics and is broader than this audit. | Deferred to follow-up recommendation `standardize-splitbutton-open-state` if callers need observable menu state. |
 | API-005 | Medium | Popup/flyout state naming | `src/components/dialogs_flyouts/Popup.h`, `src/components/dialogs_flyouts/Flyout.h`, `src/components/dialogs_flyouts/ContentDialog.h`, `src/components/dialogs_flyouts/TeachingTip.h` | Overlay components mix Qt visibility, popup open state, light-dismiss, modal, and hosted-content semantics. A cosmetic rename could hide real behavioral differences. | Deferred to follow-up recommendation `standardize-overlay-open-state-semantics`. |
 | API-006 | Low | Collection selection naming | `src/components/collections/ListView.h`, `src/components/collections/TreeView.h`, `src/components/collections/GridView.h`, `src/components/collections/FlowView.h` | Collection views intentionally differ: item-view based components use Qt model/delegate contracts, while ListView/TreeView expose component-specific enum names. | Marked intentional; document selection/current/item ownership expectations rather than force a rename. |
-| API-007 | Low | Caller-owned composition | `src/components/navigation/NavigationView.h`, `src/components/navigation/StackContentHost.h`, `src/components/navigation/TabView.h` | Navigation components act as shells/hosts and should not absorb application page choice or content ownership. | Marked intentional; keep caller-owned composition boundaries. |
+| API-007 | Low | Caller-composed navigation | `src/components/navigation/NavigationView.h`, `src/components/navigation/StackContentHost.h`, `src/components/navigation/TabView.h` | Navigation components act as shells/hosts and must leave page choice to the application while making any Qt parent-based lifetime transfer explicit. | Resolved for NavigationView/StackContentHost with compatibility-preserving Owned, Borrowed, and Reparented policies; TabView continues to leave external page hosting entirely to the caller. |
 | API-008 | Low | Header documentation | Broad `src/components/**` | Some public properties lack explanatory header comments, especially where names are inherited from WinUI concepts. | Documented project-level checklist now; individual comments can be added when touching the owning component. |
 | API-009 | Medium | Boolean getter aliases | `src/components/collections/ListView.h`, `src/components/collections/GridView.h`, `src/components/collections/FlowView.h`, `src/components/collections/TreeView.h`, `src/components/collections/FlipView.h`, `src/components/navigation/TabView.h`, `src/components/status_info/ProgressRing.h` | Several public bool getters used noun-style names such as `borderVisible()`, `backgroundVisible()`, `showNavigationButtons()`, or `addTabButtonVisible()` while nearby components already use `is*`, `are*`, or `has*` for state queries. | Applied compatible alias getters and focused tests. Existing getters remain public. |
 | API-010 | Low | Open setter alias | `src/components/basicinput/DropDownButton.h` | `DropDownButton` exposes `isOpen()` but only had `setOpen(bool)`, while other open-state components expose `setIsOpen(bool)`. | Applied compatible `setIsOpen(bool)` alias and focused test. Existing `setOpen(bool)` remains public. |
@@ -278,7 +296,7 @@ platform contracts.
 ## Intentional Deviations
 
 - `ListView`, `GridView`, `FlowView`, and `TreeView` keep separate selection/reorder APIs because their Qt bases and model/delegate responsibilities differ.
-- `NavigationView` and `StackContentHost` keep caller-owned page/content composition to preserve shell boundaries.
+- `NavigationView` and `StackContentHost` keep page choice and composition caller-controlled while recording explicit Owned, Borrowed, or Reparented release policies; `TabView` does not host application pages.
 - `Popup`, `Flyout`, `ContentDialog`, and `TeachingTip` keep specialized open and dismissal semantics until a dedicated overlay-state migration specifies common terms.
 - `CalendarDatePicker`, `DatePicker`, and `TimePicker` keep specific legacy getters while adding the common `isOpen()` alias for compatibility.
 - Existing noun-style boolean getters remain public for source compatibility while clearer aliases are added for new code.

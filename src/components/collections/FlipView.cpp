@@ -127,6 +127,26 @@ FlipView::FlipView(QWidget* parent)
     m_overlay = new FlipViewOverlay(this);
 }
 
+FlipView::~FlipView()
+{
+    m_destroying = true;
+    if (m_slideAnimation)
+        m_slideAnimation->stop();
+
+    for (PageRecord& record : m_pages) {
+        QObject::disconnect(record.destroyedConnection);
+        QWidget* page = record.page.data();
+        if (!page)
+            continue;
+        if (record.ownership == WidgetOwnership::Borrowed) {
+            page->setParent(nullptr);
+        } else if (record.ownership == WidgetOwnership::Reparented) {
+            page->setParent(record.originalParent.data());
+        }
+    }
+    m_pages.clear();
+}
+
 void FlipView::onThemeUpdated()
 {
     if (m_slideAnimation) {
@@ -140,14 +160,42 @@ void FlipView::onThemeUpdated()
 
 void FlipView::addPage(QWidget* page)
 {
-    insertPage(m_pages.size(), page);
+    addPage(page, WidgetOwnership::Owned);
+}
+
+bool FlipView::addPage(QWidget* page, WidgetOwnership ownership)
+{
+    return insertPage(m_pages.size(), page, ownership);
 }
 
 void FlipView::insertPage(int index, QWidget* page)
 {
+    insertPage(index, page, WidgetOwnership::Owned);
+}
+
+bool FlipView::insertPage(int index,
+                          QWidget* page,
+                          WidgetOwnership ownership)
+{
+    if (!page || page == this || page->isAncestorOf(this)
+        || indexOfPage(page) >= 0) {
+        return false;
+    }
+
     index = qBound(0, index, m_pages.size());
+    PageRecord record;
+    record.identity = page;
+    record.page = page;
+    record.originalParent = page->parentWidget();
+    record.ownership = ownership;
+    record.destroyedConnection = connect(
+        page,
+        &QObject::destroyed,
+        this,
+        [this, page]() { handlePageDestroyed(page); });
+
     page->setParent(this);
-    m_pages.insert(index, page);
+    m_pages.insert(index, record);
 
     if (m_currentIndex < 0) {
         m_currentIndex = 0;
@@ -158,14 +206,64 @@ void FlipView::insertPage(int index, QWidget* page)
     layoutPages();
     raiseOverlay();
     update();
+    return true;
 }
 
 void FlipView::removePage(int index)
 {
-    if (index < 0 || index >= m_pages.size()) return;
+    takePage(index);
+}
 
-    QWidget* page = m_pages.takeAt(index);
-    page->setParent(nullptr);
+bool FlipView::releasePage(int index)
+{
+    if (!isValidPageIndex(index))
+        return false;
+
+    PageRecord record = extractPageRecord(index);
+    QWidget* page = record.page.data();
+    if (!page)
+        return true;
+
+    page->hide();
+    if (record.ownership == WidgetOwnership::Owned) {
+        delete page;
+    } else if (record.ownership == WidgetOwnership::Reparented) {
+        page->setParent(record.originalParent.data());
+    } else {
+        page->setParent(nullptr);
+    }
+    return true;
+}
+
+QWidget* FlipView::takePage(int index)
+{
+    if (!isValidPageIndex(index))
+        return nullptr;
+
+    PageRecord record = extractPageRecord(index);
+    QWidget* page = record.page.data();
+    if (page) {
+        page->hide();
+        page->setParent(nullptr);
+    }
+    return page;
+}
+
+FlipView::PageRecord FlipView::extractPageRecord(int index)
+{
+    PageRecord record = m_pages.takeAt(index);
+    QObject::disconnect(record.destroyedConnection);
+    updateAfterPageRemoval(index);
+    return record;
+}
+
+void FlipView::updateAfterPageRemoval(int index)
+{
+    if (m_slideAnimation)
+        m_slideAnimation->stop();
+    m_slideOffset = 0.0;
+    m_animatingFromIndex = -1;
+    m_pendingFlipDir = 0;
 
     if (m_pages.isEmpty()) {
         m_currentIndex = -1;
@@ -176,19 +274,54 @@ void FlipView::removePage(int index)
     }
 
     layoutPages();
+    raiseOverlay();
     update();
     emit currentIndexChanged(m_currentIndex);
 }
 
+void FlipView::handlePageDestroyed(QWidget* page)
+{
+    if (m_destroying)
+        return;
+    const int index = indexOfPage(page);
+    if (!isValidPageIndex(index))
+        return;
+    extractPageRecord(index);
+}
+
 QWidget* FlipView::pageAt(int index) const
 {
-    if (index < 0 || index >= m_pages.size()) return nullptr;
-    return m_pages.at(index);
+    if (!isValidPageIndex(index))
+        return nullptr;
+    return m_pages.at(index).page.data();
 }
 
 int FlipView::pageCount() const
 {
     return m_pages.size();
+}
+
+WidgetOwnership FlipView::pageOwnershipAt(int index) const
+{
+    if (!isValidPageIndex(index))
+        return WidgetOwnership::Borrowed;
+    return m_pages.at(index).ownership;
+}
+
+int FlipView::indexOfPage(const QWidget* page) const
+{
+    if (!page)
+        return -1;
+    for (int index = 0; index < m_pages.size(); ++index) {
+        if (m_pages.at(index).identity == page)
+            return index;
+    }
+    return -1;
+}
+
+bool FlipView::isValidPageIndex(int index) const
+{
+    return index >= 0 && index < m_pages.size();
 }
 
 // ── Properties. zh_CN: 属性 ──────────────────────────────────────────────────
@@ -318,7 +451,9 @@ void FlipView::layoutPages()
 {
     QRect cr = contentRect();
     for (int i = 0; i < m_pages.size(); ++i) {
-        QWidget* page = m_pages[i];
+        QWidget* page = m_pages[i].page.data();
+        if (!page)
+            continue;
         if (i == m_currentIndex) {
             if (m_orientation == Qt::Horizontal) {
                 int offsetPx = static_cast<int>(m_slideOffset * cr.width());

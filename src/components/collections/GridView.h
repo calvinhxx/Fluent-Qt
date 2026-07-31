@@ -106,7 +106,7 @@ public:
     Q_PROPERTY(int maxColumns READ maxColumns WRITE setMaxColumns NOTIFY maxColumnsChanged)
 
     explicit GridView(QWidget* parent = nullptr);
-    ~GridView() override = default;
+    ~GridView() override;
 
     // --- Selection ---
     SelectionMode selectionMode() const { return m_selectionMode; }

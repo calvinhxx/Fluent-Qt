@@ -25,9 +25,30 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 | M1 — 核心控件 API | 已实现 | Basic Input、Text Fields、Window、主题/字体 API、ownership 和 `nativeEvent` 契约 |
 | M2 — 低风险控件覆盖 | 进行中 | 增加具备属性、信号、示例、manifest 检查和 wheel smoke 验证的叶子 QWidget 控件 |
 | M3 — 托管控件 ownership | 进行中 | 为接管或释放子控件的容器增加 Python 安全适配器和 GC 测试 |
-| M4 — 模型与导航 | 计划中 | Python model/delegate、虚函数分派、选择状态和导航生命周期 |
+| M4 — 模型与导航 | 进行中 | Python model/delegate、虚函数分派、选择状态和导航生命周期 |
 | M5 — Overlay 与原生窗口 | 计划中 | 同窗口 overlay 行为以及原生桌面窗口/backdrop 验证 |
 | M6 — 可发布 Python 分发 | 计划中 | wheel 支持矩阵、类型存根、API 兼容策略、签名和发布 |
+
+## 公共 API 覆盖台账
+
+下表是组件覆盖的事实来源。不能因为当前小批次的复选框全部完成，就把整个里程碑
+标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。当前 manifest 记录
+了 52 个必须存在的类和值类型。
+
+| 分类 | 已绑定 | 剩余边界 |
+|---|---|---|
+| Basic Input | `Button`、`CheckBox`、`ColorPicker`、`CompoundButton`、`HyperlinkButton`、`RadioButton`、`RatingControl`、`RepeatButton`、`Slider`、`ToggleButton`、`ToggleSwitch` | `ComboBox`、`DropDownButton`、`SplitButton`、`ToggleSplitButton` 随 M5 菜单/overlay 一起处理 |
+| Collections | `FlipView`、`FlowView`、`GridView`、`ListView`、`SplitView`、`StackView`、`TreeView` | `DrawerView` 等待 overlay 与页面托管契约 |
+| Date & Time | `CalendarView` | `CalendarDatePicker`、`DatePicker`、`TimePicker` 需要 popup 生命周期覆盖 |
+| Dialogs & Flyouts | — | `CoachMark`、`ContentDialog`、`Dialog`、`Flyout`、`Popup`、`TeachingTip` 属于 M5 overlay 工作 |
+| Foundation | `FontIcon`、主题/字体包级 API、ownership 枚举 | `FluentElement`、`QMLPlus`、registry 与 overlay helper 保持实现层能力，不直接作为 Python mixin 发布 |
+| Layout | `Accordion`、`Card`、`Divider`、`Expander` | 当前公开组件已覆盖完整 |
+| Menus & Toolbars | — | `CommandBar`、`CommandBarFlyout`、`Menu`、`MenuBar` 在 M5 一起处理 |
+| Navigation | `Breadcrumb`、`BreadcrumbItem`、`NavigationView`、`Pivot`、`PivotItem`、`SelectorBar`、`SelectorBarItem`、`StackContentHost`、`TabView`、`TabViewItem` | 当前公开组件已覆盖完整 |
+| Scrolling | `AnnotatedScrollBar`、`AnnotatedScrollBarLabel`、`PipsPager`、`ScrollBar`、`ScrollView` | 当前公开组件已覆盖完整 |
+| Status & Info | `Avatar`、`InfoBadge`、`InfoBar`、`ProgressBar`、`ProgressRing`、`Shimmer` | `Toast`、`ToolTip` 属于 M5 overlay 工作 |
+| Text Fields | `Label`、`LineEdit`、`NumberBox`、`PasswordBox`、`TextEdit` | `AutoSuggestBox` 需要建议 popup 与 model/callback 契约；`EditingCommandRouter` 保持辅助 API |
+| Windowing | `Window` 与 backdrop 值类型 | `TitleBar` 以及原生 Mica/Acrylic/vibrancy/compositor 行为需要 M5 桌面验证 |
 
 ## M0 — 绑定基础设施
 
@@ -269,6 +290,60 @@ wheel smoke 测试。
       与编译、全部生成代码契约、28 个绑定 CTest、Qt 运行库路径校验、可迁移
       wheel、干净环境 smoke、验收截图、源码包检查、C++ 回归 lane 和最终
       CI Gate。
+- [x] 将 `FlipView` 审计为第六个 ownership 宿主。在保留传统
+      `addPage()` 默认由宿主拥有的同时，为每个页面增加显式 Owned、Borrowed、
+      Reparented 安装/释放、`takePage()` 转移、原 parent 恢复以及 C++ 外部析构
+      清理。
+- [x] Python 仅发布语义固定的 add/insert 方法，在 facade 中保活页面子类与
+      恢复目标，并隐藏旧式转移重载及运行时 ownership 参数。生成代码检查要求
+      私有适配器不得隐式改变 Shiboken parent/reference 记账，并要求
+      `takePage()` 返回 Python ownership。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地 `FlipView` 批次验证：
+      30 项自动化原生测试通过，1 项人工 VisualCheck 按设计跳过；全部 39 个
+      绑定 CTest、119 个 Python 绑定测试和 87 个契约验证器测试通过。后续
+      item-view 析构强化将当前规模扩展到 43 个绑定 CTest 和 123 个 Python
+      绑定测试；新建干净
+      环境也通过 wheel 安装、`pip check`、已加载依赖路径检查、运行时 smoke、
+      3 项 GC 压力、源码包集成构建和可见截图审查。
+- [x] CI run `30655442887` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 `FlipView` ownership/导航批次，包括 Qt 5.15/6.2 C++
+      回归、可迁移干净 wheel、源码包集成、验收截图和最终 CI Gate。Windows
+      lane 还通过了四类 item view 各 25 轮的无 `close()` model/delegate/
+      selection GC 压力，以及此前失败位置对应的已安装 wheel 完整 smoke。
+- [x] 将 `SplitView` 审计为第七个 ownership 宿主。保留传统 add/insert
+      默认由宿主拥有以及 C++ remove 转移语义，同时增加逐 pane 显式释放策略、
+      `takePaneAt()` 转移、原 parent 恢复和外部析构清理。
+- [x] 发布固定语义的 Owned、Borrowed、Reparented add/insert 方法以及可变的
+      `SplitViewPaneOptions` 值类型。facade 在 remove 时应用已记录策略，保活
+      pane 子类与恢复目标，并隐藏运行时 ownership 参数和传统转移 remove。
+      生成代码检查要求私有适配器不得隐式修改 Shiboken parent/reference
+      记账，并要求 `takePaneAt()` 返回 Python ownership。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地 `SplitView` 批次验证：
+      16 项自动化原生测试通过，1 项人工 VisualCheck 按设计跳过；全部 47 个
+      绑定 CTest、131 个 Python 绑定测试和 92 个契约验证器测试通过。新建
+      干净环境也通过 wheel 安装、`pip check`、依赖路径检查、运行时 smoke、
+      3 项 GC 压力、源码包集成和可见截图审查。
+- [x] CI run `30673261072` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 `SplitView` ownership 批次，包括生成代码契约、全部
+      47 个绑定 CTest、可迁移干净 wheel、源码包集成、验收截图、Qt 5.15/6.2
+      C++ 回归和最终 CI Gate。
+- [x] 将 `NavigationView` 及其 C++ 所有的 `StackContentHost` 审计为第八个
+      托管控件边界。在保留传统 C++ 转移行为的同时，为页面和 header/main/footer
+      chrome 增加显式释放策略、take 操作、原 parent 恢复、重复/祖先拒绝以及外部
+      析构清理。
+- [x] 通过 `fluentqt.navigation` 发布固定语义的 Owned、Borrowed、Reparented
+      页面/chrome 方法。内部 content host 与直接构造的 `StackContentHost` 使用
+      同一套 Python facade；无需生成器侧 parent 或 keep-reference 记账即可保活
+      Python 子类与恢复目标。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地确认：24 项自动化
+      NavigationView 原生测试通过，1 项人工 VisualCheck 按设计跳过；全部 54 个
+      绑定 CTest、144 个 Python 绑定测试和 100 个契约验证器测试通过。新建干净
+      环境也通过 wheel 安装、`pip check`、已加载依赖路径检查、运行时 smoke、
+      6 项隔离 GC 压力、源码包集成和可见截图审查。
+- [x] CI run `30683749605` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 `NavigationView`/`StackContentHost` 批次，包括全部
+      54 个绑定 CTest、生成代码契约、Qt 5.15/6.2 C++ 回归、可迁移干净
+      wheel、源码包集成、验收截图和最终 CI Gate。
 
 `ScrollView` 的支持契约以普通 Python GC 和 Qt parent 析构为准。托管期间的
 `Shiboken.ownedByPython()` 标志会随 Shiboken 版本变化，不属于公共 API；
@@ -291,6 +366,17 @@ wrapper 在转场仍引用页面时继续保活，仅在原生清理完成后释
 `setCurrentWidget()` 通过只传 index 的适配路径继续公开，避免 Shiboken 根据
 指针参数名称推断新的 QObject parent。
 
+`FlipView` 的普通 `addPage()` 与 `insertPage()` 保留 C++ 的 Owned 默认语义，
+其余策略由显式方法固定。`removePage()` 应用已记录的策略，`takePage()` 始终
+返回无父、Python-owned 页面。facade 保活 Python 子类与 Reparented 恢复目标；
+页面被外部销毁时，C++ 宿主和 facade 都会移除对应记录。
+
+`SplitView` 的普通 `addPane()` 与 `insertPane()` 保留 C++ 的 Owned 默认语义。
+Python 公开固定语义的 Owned、Borrowed、Reparented 入口，
+`removePane()`/`removePaneAt()` 应用已记录策略，`takePaneAt()` 专用于无条件转移
+无父 pane。facade 保活 Python 子类与 Reparented 恢复目标；pane 被外部销毁时，
+原生层与 facade 都会清理对应记录。
+
 `InfoBar` 使用更窄的现有 C++ 契约：当前 action 随宿主销毁，但替换、清空或
 `takeActionWidget()` 会将其释放为无父、Python-owned 控件。Python facade
 负责 wrapper 保活；生成代码不得修改 Shiboken ownership、parent 或
@@ -311,14 +397,151 @@ wrapper 操作不属于兼容性要求。
 
 ## M4 — 模型与导航
 
-集合和导航组件只有在 Python model 边界设计完成后才能进入本里程碑。验证范围
-必须包括：
+本里程碑先接入公共契约中不包含 model 或页面 ownership 的导航组件；在完成
+Python 边界设计后，现已用 `ListView`、`GridView`、`TreeView` 和 `FlowView`
+推进首批依赖 model 的集合组件。
+验证范围必须包括：
 
 - `QAbstractItemModel` 和 delegate 生命周期；
 - Python 虚函数覆盖和 `super()` 分派；
 - 选择、reset、行插入/删除和 persistent index 行为；
 - 从 Python 和 C++ 两侧替换、销毁 model；
 - 键盘、焦点、RTL 和与可访问性相关的导航行为。
+
+当前批次：
+
+- [x] 审计 `TabView`：它只拥有 `TabViewItem` 元数据、选择状态和导航行为，
+      应用页面继续由调用方组合并管理。
+- [x] 通过 `fluentqt.navigation` 绑定 `TabView` 和可变 `TabViewItem`，
+      支持 QVariant 兼容的 Python 元数据与稳定值比较，同时保持内部
+      `TabStrip` 私有。
+- [x] 覆盖构造、元数据修改、属性、信号、关闭、重排、键盘快捷键、RTL、
+      Python 虚函数覆盖与 `super()`、外部 `QStackedWidget` 页面宿主、
+      API manifest、生成代码契约、wheel smoke 和可见验收示例。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地验证：9 项自动化
+      TabView 原生测试通过，2 项桌面/人工用例按设计跳过；全部 29 个绑定
+      CTest、75 个 Python 绑定测试和 49 个契约验证器测试通过。新建虚拟环境
+      也通过 wheel 安装、`pip check`、依赖路径检查、运行时 smoke、源码包
+      集成构建和可见截图审查。
+- [x] CI run `30615473570` 已完成生成代码、测试、源码包和干净 wheel
+      验证：原生 Linux/Windows Qt 6.2.4 与 macOS Qt 6.9.3 绑定 lane
+      全部通过生成、编译、契约检查、绑定测试、可迁移 wheel 构建和干净环境
+      安装；Qt 5.15、Qt 6.2 C++ 集成 lane 与最终 CI Gate 也全部通过。
+- [x] 审计 `ListView`：model、selection model 和 delegate 继续由调用方
+      所有，但安装期间必须保留对应 Python wrapper。自定义 header/footer
+      QWidget 托管以及 section 开关/同步 `std::function` 回调在具备明确
+      Python 契约前继续保持私有。
+- [x] 通过 `fluentqt.collections` 绑定 `ListView`，包括兼容 Qt 6.2 的
+      `SelectionMode` 适配器、model/selection retention、delegate wrapper
+      retention、由显式绑定适配器实现且保持原 Python 方法名的内部滚动条
+      getter，以及纯文本 header/footer 便捷 API。
+- [x] 覆盖 Python `QAbstractListModel` 的 insert/remove/reset 通知、
+      persistent index、自定义 `QItemSelectionModel`、Python delegate 与
+      view 虚函数分派、替换/析构生命周期、API manifest、生成代码契约、
+      wheel smoke 和可见验收示例。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成整个批次的本地确认：
+      101 项 ListView 原生测试通过，1 项人工 VisualCheck 按设计跳过；全部
+      30 个绑定 CTest、81 个 Python 绑定测试和 58 个契约验证器测试通过。
+      新建虚拟环境也通过 wheel 安装、`pip check`、依赖路径检查、运行时
+      smoke、源码包集成构建和可见截图审查。
+- [x] CI run `30620199453` 已确认原生 Linux/Windows Qt 6.2.4、macOS
+      Qt 6.9.3、Qt 5.15/6.2 C++ 回归、三平台可迁移干净 wheel 与最终
+      CI Gate。该轮还实际覆盖了 Shiboken 6.2 无法发现跨命名空间滚动条
+      成员 getter 的兼容分支。
+- [x] 审计 `GridView`：普通 model、selection model 和 delegate 继续由
+      调用方所有。原生拖拽重排明确只支持 `QStandardItemModel`；其他
+      `QAbstractItemModel` 仍支持展示、选择和通知，但不虚构重排能力。
+- [x] 通过 `fluentqt.collections` 绑定 `GridView`，复用稳定的 Qt 6.2
+      `SelectionMode` 转换器，并暴露原生 cell 尺寸、选择、滚动行为、
+      header/placeholder 文本、重排信号、delegate 虚函数分派和 borrowed
+      内部滚动条适配器。
+- [x] 覆盖 model insert/remove/reset 与 persistent index、调用方所有的
+      model/selection/delegate 生命周期、外部析构、Python delegate/view
+      虚函数分派、键盘/RTL/可访问性行为、API manifest、生成代码契约、
+      已安装 wheel smoke 和可见的 `QStandardItemModel` 组拖拽示例。
+- [x] 加固 Windows Shiboken 6.2 的 retained delegate 路径：Python facade
+      返回 delegate 前先验证 wrapper，并在 Python `destroyed` 回调漏触发时
+      丢弃失效引用；单元测试和已安装 wheel smoke 都强制覆盖该兼容分支。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地确认：66 项 GridView
+      原生测试中 56 项通过，10 项桌面/人工用例按设计跳过；全部 31 个绑定
+      CTest、88 个 Python 绑定测试和 61 个契约验证器测试通过。新建干净
+      虚拟环境也通过 wheel 安装、`pip check`、依赖路径检查、运行时 smoke、
+      源码包集成构建和可见截图审查。
+- [x] CI run `30623470079` 已确认原生 Linux/Windows Qt 6.2.4、macOS
+      Qt 6.9.3、Qt 5.15/6.2 C++ 回归、三平台可迁移干净 wheel、验收截图
+      与最终 CI Gate。
+- [x] 审计 `TreeView`：层级 model、selection model 和 delegate 继续由
+      调用方所有，安装期间由 facade 保活 Python wrapper。原生拖拽重排只对
+      `QStandardItemModel` 承诺支持；实现细节型 `SelectionIndicatorStyle`
+      保持私有。
+- [x] 通过 `fluentqt.collections` 绑定 `TreeView`，包括稳定的 Qt 6.2
+      `SelectionMode` 适配器、层级展开、check-state 选择、指示器可见性与
+      运动标量 API、重排信号、Python 虚函数分派和 borrowed 内部滚动条适配器。
+- [x] 覆盖层级 insert/remove/reset 通知与 persistent index、调用方所有的
+      model/selection/delegate 替换和外部析构、失效 delegate wrapper、Python
+      model/delegate/view 虚函数分派、键盘/RTL/可访问性行为、API manifest、
+      生成代码契约、已安装 wheel smoke 和可见层级示例。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地确认：93 项原生
+      TreeView 测试中 92 项通过，人工 VisualCheck 按设计跳过；全部 32 个
+      绑定 CTest、95 个 Python 绑定测试和 66 个契约验证器测试通过。新建
+      干净虚拟环境也通过 wheel 安装、`pip check`、依赖路径检查、运行时
+      smoke、源码包集成构建和可见截图审查。
+- [x] CI run `30631865586` 已确认生成代码契约、原生 Linux/Windows
+      Qt 6.2.4 行为、macOS Qt 6.9.3、Qt 5.15/6.2 C++ 回归、源码包集成、
+      三平台可迁移干净 wheel 与验收截图，以及最终 CI Gate。Windows
+      Shiboken 6.2 生命周期用例也已通过 Qt 支持的 model 延迟析构路径。
+- [x] 审计并绑定 `Breadcrumb` 与可变 `BreadcrumbItem` 元数据。Python facade
+      禁止混合序列，并将文本列表和元数据列表分派给两个独立原生适配器；这是因为
+      部分 Shiboken 版本会把值 wrapper 错选成 `QStringList`，并静默生成空文字。
+- [x] 覆盖 metadata/QVariant 往返、稳定值比较、属性、信号、插入/删除、overflow
+      geometry、激活、键盘与 Python 虚函数分派、API manifest、生成适配器契约、
+      已安装 wheel smoke，以及可见的完整路径/中间溢出示例。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成整个批次的本地确认：10 项
+      Breadcrumb 自动原生测试通过，1 项人工 VisualCheck 按设计跳过；全部 33 个
+      绑定 CTest、98 个 Python 绑定测试和 73 个契约验证器测试通过。新建虚拟
+      环境也通过 wheel 安装、`pip check`、依赖路径检查、运行时 smoke、源码包
+      集成构建和可见截图审查。
+- [x] CI run `30635505335` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 `Breadcrumb` 批次，包括生成代码契约、绑定测试、干净
+      wheel 安装、验收截图、Qt 5.15/6.2 C++ 集成、源码包集成和最终 CI Gate。
+- [x] 审计 `Pivot` 与 `SelectorBar`：两者只持有可变导航元数据、选择和溢出
+      状态，不接管应用页面、model、delegate、overlay 或调用方 QWidget。
+- [x] 通过 `fluentqt.navigation` 绑定 `Pivot`、`PivotItem`、`SelectorBar`
+      和 `SelectorBarItem`，覆盖文本/值类型双重载、可变且不可哈希的稳定值语义、
+      QVariant 兼容数据、嵌套 overflow 枚举以及根模块/分类/原生类型同一性。
+- [x] 覆盖 item 修改、去重的选择信号、激活、键盘/Python 虚函数分派、geometry
+      与 MoreButton overflow、API manifest、生成代码重载/值/QVariant 契约、
+      已安装 wheel smoke，以及连接调用方 `QStackedWidget` 的可见示例。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地确认：17 项自动化
+      Pivot/SelectorBar 原生测试通过，2 项人工 VisualCheck 按设计跳过；全部
+      34 个绑定 CTest、104 个 Python 绑定测试和 77 个契约验证器测试通过。
+      新建干净虚拟环境也通过 wheel 安装、`pip check`、已加载依赖路径检查、
+      运行时 smoke、源码包集成构建和可见截图审查。
+- [x] CI run `30641454429` 已确认原生 Linux/Windows Qt 6.2.4、macOS
+      Qt 6.9.3、Qt 5.15/6.2 C++ 回归、干净 wheel、源码包集成、验收截图
+      和最终 CI Gate。Windows lane 也通过了 retained `ListView` model 与
+      delegate 所支持的 deferred-destruction 路径。
+- [x] 审计 `FlipView`、`FlowView` 和 `SplitView`：`FlowView` 不包含托管
+      QWidget 边界，可复用调用方所有的 item-model 契约；`FlipView` 已具备
+      显式 M3 页面契约，`SplitView` 现在也具备明确的 M3 pane 释放与原 parent
+      恢复契约。
+- [x] 通过 `fluentqt.collections` 绑定 `FlowView`，包括稳定的 Qt 6.2
+      `SelectionMode` 与 borrowed 滚动条适配器、对其重写 model/delegate
+      setter 的生成 wrapper 保活，以及 facade 层失效 delegate 清理。
+- [x] 覆盖 Python 可变尺寸 role、insert/remove/reset 与 persistent index、
+      选择、geometry/hit testing、Python delegate paint/size 虚函数、view
+      虚函数分派、依赖替换和延迟析构、API manifest、生成代码契约、已安装
+      wheel smoke 和可见的自适应卡片示例。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地确认：15 项自动化
+      FlowView 原生测试通过，1 项人工 VisualCheck 按设计跳过；全部 35 个
+      绑定 CTest、111 个 Python 绑定测试和 82 个契约验证器测试通过。新建
+      干净环境也通过 wheel 安装、`pip check`、依赖路径检查、运行时 smoke、
+      源码包集成构建和验收截图审查。
+- [x] CI run `30648150576` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 `FlowView` 批次，包括生成代码契约、绑定测试、三平台
+      可迁移干净 wheel、验收截图、Qt 5.15/6.2 C++ 回归、源码包集成和最终
+      CI Gate。Windows 6.2.4 lane 还实际覆盖了确定性的 signal/view 隔离与
+      已安装 wheel FlowView 释放顺序。
 
 ## M5 — Overlay 与原生窗口
 
@@ -378,6 +601,18 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
 - **肉眼交互**：运行 `examples/compatibility_showcase.py`，切换 Light/Dark、
   Fluent/Material/macOS 和 accent，拖动 Slider、按住 RepeatButton，并检查文字、
   分隔线、进度控件和信号反馈。
+- **Model 边界**：运行 `examples/list_view_model.py`、
+  `examples/flow_view_model.py`、`examples/grid_view_model.py` 和
+  `examples/tree_view_model.py`，分别检查扁平列表通知、可变尺寸换行、网格
+  选择/重排以及层级展开/选择/重排，同时审查 Python delegate 绘制。
+- **托管页面**：运行 `examples/flip_view_ownership.py`，切换页面并分别移除三种
+  ownership 页面，再调用 `takePage()`，确认析构、脱离、原 parent 恢复与显式
+  转移行为；运行 `examples/navigation_view_ownership.py`，检查 C++ 所有的内容
+  宿主、header/main/footer chrome 策略以及 Left/Top 响应式布局。
+- **导航值类型**：运行 `examples/breadcrumb_navigation.py`，检查 Python
+  `BreadcrumbItem` 元数据、激活信号、完整路径绘制和窄宽度中间溢出行为；运行
+  `examples/selector_pivot_navigation.py`，检查调用方页面组合、元数据选择、
+  Pivot 过滤和 MoreButton overflow。
 - **可留档截图**：给验收窗口传入 `--snapshot <png>`；该模式也可在
   `QT_QPA_PLATFORM=offscreen` 下运行。
 - **安装真实性**：从新建虚拟环境安装 wheel，再运行
@@ -412,5 +647,36 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
     已通过，将 `Accordion` ownership 批次视为完成。
 12. 原生 Linux/Windows Qt 6.2.4 和 Qt 5.15 C++ CI run `30613428314`
     已通过，将 `StackView` ownership/导航批次视为完成。
-13. 只有在 model/navigation 或 overlay 边界同时设计完成后，才推进 `TabView`
-    和 `DrawerView`，避免仅为增加绑定数量而提前公开不稳定 API。
+13. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3 和 Qt 5.15 C++ CI
+    run `30615473570` 已通过，将 `TabView` 元数据/导航批次视为完成。
+14. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    三平台干净 wheel 与最终 CI Gate 已在 CI run `30620199453` 通过，
+    将 `ListView` model/delegate 批次视为完成。
+15. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    三平台干净 wheel、验收截图与最终 CI Gate 已在 CI run `30623470079`
+    通过，将 `GridView` model/delegate/reorder 批次视为完成。
+16. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    源码包集成、三平台干净 wheel、验收截图与最终 CI Gate 已在 CI run
+    `30631865586` 通过，将 `TreeView` hierarchy/model/delegate/reorder
+    批次视为完成。
+17. 在 overlay 与托管页面 ownership 边界完成设计和测试前，继续推迟
+    `DrawerView`。
+18. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、干净 wheel smoke、
+    验收截图、源码包集成与最终 CI Gate 已在 CI run `30635505335` 通过，
+    将 `Breadcrumb` 元数据/导航批次视为完成。
+19. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、干净 wheel、源码包集成、
+    验收截图、Qt 5.15/6.2 C++ 与最终 CI Gate 已在 CI run `30641454429`
+    通过，将 `SelectorBar`/`Pivot` 元数据导航批次视为完成。
+20. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、干净 wheel、源码包
+    集成、验收截图、Qt 5.15/6.2 C++ 和最终 CI Gate 已在 CI run
+    `30648150576` 全部通过，将 `FlowView` model/delegate 批次视为完成。
+21. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    三平台干净 wheel、源码包集成、验收截图与最终 CI Gate 已在 CI run
+    `30655442887` 全部通过，将 `FlipView` ownership/导航批次视为完成。
+22. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    干净 wheel、源码包集成、验收截图和最终 CI Gate 已在 CI run
+    `30673261072` 一起通过，将 `SplitView` ownership 批次视为完成。
+23. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    全部 54 个绑定 CTest、干净 wheel、源码包集成、验收截图和最终 CI Gate
+    已在 CI run `30683749605` 一起通过，将 `NavigationView`/
+    `StackContentHost` 页面与 chrome ownership 批次视为完成。

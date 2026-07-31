@@ -76,13 +76,30 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_slider_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_togglebutton_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_toggleswitch_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_flipview_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_flowview_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_gridview_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_listview_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_splitview_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_splitviewpaneoptions_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_stackview_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_treeview_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_date_time_calendarview_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_fonticon_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_accordion_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_card_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_divider_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_expander_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_breadcrumb_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_breadcrumbitem_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_navigationview_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_pivot_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_pivotitem_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_selectorbar_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_selectorbaritem_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_stackcontenthost_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_tabview_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_navigation_tabviewitem_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_scrolling_annotatedscrollbar_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_scrolling_annotatedscrollbarlabel_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_scrolling_pipspager_wrapper.cpp"
@@ -253,6 +270,7 @@ set(FLUENTQT_PYSIDE6_PYTHON_FILES
     date_time.py
     foundation.py
     layout.py
+    navigation.py
     scrolling.py
     status_info.py
     textfields.py
@@ -364,6 +382,54 @@ if(BUILD_TESTING)
         test_pyside6_accordion_reparented_gc_stress
         test_accordion_reparented_gc_stress)
     fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_flip_view_owned_gc_stress
+        test_flip_view_owned_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_flip_view_borrowed_gc_stress
+        test_flip_view_borrowed_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_flip_view_reparented_gc_stress
+        test_flip_view_reparented_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_split_view_owned_gc_stress
+        test_split_view_owned_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_split_view_borrowed_gc_stress
+        test_split_view_borrowed_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_split_view_reparented_gc_stress
+        test_split_view_reparented_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_stack_content_host_owned_gc_stress
+        test_stack_content_host_owned_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_stack_content_host_borrowed_gc_stress
+        test_stack_content_host_borrowed_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_stack_content_host_reparented_gc_stress
+        test_stack_content_host_reparented_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_navigation_view_owned_chrome_gc_stress
+        test_navigation_view_owned_chrome_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_navigation_view_borrowed_chrome_gc_stress
+        test_navigation_view_borrowed_chrome_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_navigation_view_reparented_chrome_gc_stress
+        test_navigation_view_reparented_chrome_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_flow_view_dependency_gc_stress
+        test_flow_view_dependency_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_grid_view_dependency_gc_stress
+        test_grid_view_dependency_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_tree_view_dependency_gc_stress
+        test_tree_view_dependency_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_list_view_dependency_gc_stress
+        test_list_view_dependency_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
         test_pyside6_stack_view_owned_gc_stress
         test_stack_view_owned_gc_stress)
     fluentqt_add_pyside6_isolated_lifetime_test(
@@ -462,12 +528,134 @@ if(BUILD_TESTING)
         TIMEOUT 30)
 
     add_test(
+        NAME test_pyside6_list_view_model_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/list_view_model.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-list-view-model.png")
+    set_tests_properties(test_pyside6_list_view_model_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_grid_view_model_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/grid_view_model.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-grid-view-model.png")
+    set_tests_properties(test_pyside6_grid_view_model_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_flow_view_model_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/flow_view_model.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-flow-view-model.png")
+    set_tests_properties(test_pyside6_flow_view_model_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_flip_view_ownership_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/flip_view_ownership.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-flip-view-ownership.png")
+    set_tests_properties(test_pyside6_flip_view_ownership_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_split_view_ownership_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/split_view_ownership.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-split-view-ownership.png")
+    set_tests_properties(test_pyside6_split_view_ownership_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_navigation_view_ownership_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/navigation_view_ownership.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-navigation-view-ownership.png")
+    set_tests_properties(test_pyside6_navigation_view_ownership_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_tree_view_model_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/tree_view_model.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-tree-view-model.png")
+    set_tests_properties(test_pyside6_tree_view_model_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
         NAME test_pyside6_stack_view_navigation_example
         COMMAND "${Python_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/examples/stack_view_navigation.py"
             --snapshot
             "${PROJECT_BINARY_DIR}/pyside6-stack-view-navigation.png")
     set_tests_properties(test_pyside6_stack_view_navigation_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_breadcrumb_navigation_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/breadcrumb_navigation.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-breadcrumb-navigation.png")
+    set_tests_properties(test_pyside6_breadcrumb_navigation_example PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;acceptance;ci_fast"
+        TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_selector_pivot_navigation_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/selector_pivot_navigation.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-selector-pivot-navigation.png")
+    set_tests_properties(
+        test_pyside6_selector_pivot_navigation_example
+        PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;acceptance;ci_fast"
+            TIMEOUT 30)
+
+    add_test(
+        NAME test_pyside6_tab_view_navigation_example
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/examples/tab_view_navigation.py"
+            --snapshot
+            "${PROJECT_BINARY_DIR}/pyside6-tab-view-navigation.png")
+    set_tests_properties(test_pyside6_tab_view_navigation_example PROPERTIES
         ENVIRONMENT
             "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
         LABELS "pyside;acceptance;ci_fast"

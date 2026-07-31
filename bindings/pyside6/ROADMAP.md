@@ -29,9 +29,31 @@ runtime, and CPython ABI requires its own build and validation.
 | M1 — Core widget surface | Implemented | Basic Input, Text Fields, Window, theme/font API, ownership and `nativeEvent` contracts |
 | M2 — Low-risk widget coverage | In progress | Add leaf QWidget controls with properties, signals, examples, manifest checks, and wheel smoke coverage |
 | M3 — Hosted-widget ownership | In progress | Explicit Python-safe adapters and GC tests for containers that adopt or release child widgets |
-| M4 — Models and navigation | Planned | Python models/delegates, virtual dispatch, selection, and navigation lifecycle |
+| M4 — Models and navigation | In progress | Python models/delegates, virtual dispatch, selection, and navigation lifecycle |
 | M5 — Overlays and native windows | Planned | Same-window overlay behavior and native desktop window/backdrop validation |
 | M6 — Release-grade Python distribution | Planned | Supported wheel matrix, type stubs, API compatibility policy, signing, and publication |
+
+## Public API coverage ledger
+
+This table is the source of truth for component coverage. A milestone cannot
+be marked complete merely because its current checklist is green; every public
+component below must either be bound or retain an explicit boundary decision.
+The manifest currently records 52 required classes and value types.
+
+| Category | Bound now | Remaining boundary |
+|---|---|---|
+| Basic Input | `Button`, `CheckBox`, `ColorPicker`, `CompoundButton`, `HyperlinkButton`, `RadioButton`, `RatingControl`, `RepeatButton`, `Slider`, `ToggleButton`, `ToggleSwitch` | `ComboBox`, `DropDownButton`, `SplitButton`, and `ToggleSplitButton` move with menu/overlay work in M5 |
+| Collections | `FlipView`, `FlowView`, `GridView`, `ListView`, `SplitView`, `StackView`, `TreeView` | Defer `DrawerView` to its overlay and hosted-page contract |
+| Date & Time | `CalendarView` | `CalendarDatePicker`, `DatePicker`, and `TimePicker` require popup lifecycle coverage |
+| Dialogs & Flyouts | — | `CoachMark`, `ContentDialog`, `Dialog`, `Flyout`, `Popup`, and `TeachingTip` are M5 overlay work |
+| Foundation | `FontIcon`, theme/font package API, ownership enum | `FluentElement`, `QMLPlus`, registries, and overlay helpers stay implementation-facing rather than direct Python mixins |
+| Layout | `Accordion`, `Card`, `Divider`, `Expander` | Complete for the current public component set |
+| Menus & Toolbars | — | `CommandBar`, `CommandBarFlyout`, `Menu`, and `MenuBar` move together in M5 |
+| Navigation | `Breadcrumb`, `BreadcrumbItem`, `NavigationView`, `Pivot`, `PivotItem`, `SelectorBar`, `SelectorBarItem`, `StackContentHost`, `TabView`, `TabViewItem` | Complete for the current public component set |
+| Scrolling | `AnnotatedScrollBar`, `AnnotatedScrollBarLabel`, `PipsPager`, `ScrollBar`, `ScrollView` | Complete for the current public component set |
+| Status & Info | `Avatar`, `InfoBadge`, `InfoBar`, `ProgressBar`, `ProgressRing`, `Shimmer` | `Toast` and `ToolTip` are M5 overlay work |
+| Text Fields | `Label`, `LineEdit`, `NumberBox`, `PasswordBox`, `TextEdit` | `AutoSuggestBox` requires suggestion-popup and model/callback contracts; `EditingCommandRouter` remains a helper API |
+| Windowing | `Window` and backdrop values | `TitleBar` plus native Mica/Acrylic/vibrancy/compositor behavior require M5 desktop validation |
 
 ## M0 — Binding foundation
 
@@ -323,6 +345,75 @@ Current prototype:
       contract checks, all 28 binding CTests, Qt runtime-path verification,
       relocatable wheels, clean-environment smoke, acceptance snapshots,
       source-package checks, the C++ regression lanes, and the final CI Gate.
+- [x] Audit `FlipView` as the sixth ownership host. Preserve the legacy
+      host-owned `addPage()` default while adding explicit per-page Owned,
+      Borrowed, and Reparented install/release behavior, `takePage()` transfer,
+      original-parent restoration, and external-destruction cleanup in C++.
+- [x] Publish only fixed-semantics Python add/insert methods, retain page
+      subclasses and restore targets in the facade, and keep legacy transfer
+      overloads plus the runtime ownership argument private. Generated-code
+      checks require adapters to avoid implicit Shiboken parent/reference
+      mutation and require `takePage()` to return Python ownership.
+- [x] Confirm the `FlipView` slice locally with matched macOS Qt/PySide6 6.9.3:
+      30 automated native tests passed and 1 manual VisualCheck was skipped as
+      designed; all 39 binding CTests, 119 Python binding tests, and 87 verifier
+      tests passed. Subsequent item-view teardown hardening expanded the current
+      suite to 43 binding CTests and 123 Python binding tests. A new clean
+      environment also passed wheel installation,
+      `pip check`, loaded dependency-path inspection, runtime smoke, three GC
+      stress cases, source-package integration, and visible snapshot review.
+- [x] CI run `30655442887` confirmed the `FlipView` ownership/navigation slice
+      on native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including Qt
+      5.15/6.2 C++ regressions, relocatable clean wheels, source-package
+      integration, acceptance snapshots, and the final CI Gate. The Windows
+      lane also passed 25 no-`close()` model/delegate/selection GC iterations
+      for each of the four item-view facades and the complete installed-wheel
+      smoke at the previously failing boundary.
+- [x] Audit `SplitView` as the seventh ownership host. Preserve the legacy
+      host-owned add/insert default and transfer-style C++ removal, while
+      adding explicit per-pane release policy, `takePaneAt()` transfer,
+      original-parent restoration, and external-destruction cleanup.
+- [x] Publish fixed Owned, Borrowed, and Reparented add/insert methods plus the
+      mutable `SplitViewPaneOptions` value type. The facade applies recorded
+      policies on removal, retains pane subclasses and restore targets, and
+      keeps runtime ownership arguments and legacy transfer removals private.
+      Generated-code checks require the private adapters to avoid implicit
+      Shiboken parent/reference mutation and `takePaneAt()` to return Python
+      ownership.
+- [x] Confirm the `SplitView` slice locally with matched macOS Qt/PySide6
+      6.9.3: 16 automated native tests passed and 1 manual VisualCheck was
+      skipped as designed; all 47 binding CTests, 131 Python binding tests,
+      and 92 verifier tests passed. A newly created clean environment also
+      passed wheel installation, `pip check`, dependency-path inspection,
+      runtime smoke, three GC stress cases, source-package integration, and
+      visible snapshot review.
+- [x] CI run `30673261072` confirmed the `SplitView` ownership slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated contracts,
+      all 47 binding CTests, relocatable clean wheels, source-package
+      integration, acceptance snapshots, Qt 5.15/6.2 C++ regressions, and the
+      final CI Gate.
+- [x] Audit `NavigationView` and its C++-owned `StackContentHost` as the eighth
+      hosted-widget boundary. Preserve the legacy C++ transfer behavior while
+      adding explicit page and header/main/footer chrome release policies,
+      take operations, original-parent restoration, duplicate/ancestor
+      rejection, and external-destruction cleanup.
+- [x] Publish fixed Owned, Borrowed, and Reparented page/chrome methods through
+      `fluentqt.navigation`. The internal host receives the same Python facade
+      as a directly constructed `StackContentHost`; Python subclasses and
+      restore targets remain retained without generator-side parent or
+      keep-reference bookkeeping.
+- [x] Confirm the slice locally with matched macOS Qt/PySide6 6.9.3: 24
+      automated native NavigationView tests passed and 1 manual VisualCheck
+      was skipped as designed; all 54 binding CTests, 144 Python binding tests,
+      and 100 verifier tests passed. A newly created clean environment also
+      passed wheel installation, `pip check`, loaded dependency-path
+      inspection, runtime smoke, six isolated GC stress cases, source-package
+      integration, and visible snapshot review.
+- [x] CI run `30683749605` confirmed the `NavigationView`/`StackContentHost`
+      slice on native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including all
+      54 binding CTests, generated contracts, Qt 5.15/6.2 C++ regressions,
+      relocatable clean wheels, source-package integration, acceptance
+      snapshots, and the final CI Gate.
 
 The supported `ScrollView` lifecycle uses normal Python GC and Qt parent
 destruction. Hosted `Shiboken.ownedByPython()` flags vary across Shiboken
@@ -350,6 +441,19 @@ it bypasses the navigation stack. `setCurrentWidget()` remains public through
 an index-only adapter so Shiboken cannot infer a new QObject parent from its
 pointer argument.
 
+`FlipView` keeps the C++ Owned default for plain `addPage()` and `insertPage()`.
+Explicit methods fix every other policy. `removePage()` applies the recorded
+policy, while `takePage()` always returns a parentless Python-owned page. The
+facade retains Python subclasses and Reparented restore targets, and both the
+C++ host and facade discard records when a page is destroyed externally.
+
+`SplitView` keeps the C++ Owned default for plain `addPane()` and
+`insertPane()`. Python exposes fixed Owned, Borrowed, and Reparented entry
+points, applies the recorded policy through `removePane()`/`removePaneAt()`,
+and reserves `takePaneAt()` for an unconditional parentless transfer. The
+facade retains Python subclasses and Reparented restore targets; native and
+facade records are cleared when a pane is destroyed externally.
+
 `InfoBar` uses its narrower existing C++ contract: the current action dies with
 the host, while replacement, clearing, or `takeActionWidget()` releases it as a
 parentless Python-owned widget. The Python facade retains the wrapper; generated
@@ -370,14 +474,187 @@ Before exposing each API:
 
 ## M4 — Models and navigation
 
-This milestone covers collection and navigation components only after their
-Python model boundary is designed. Validation must include:
+This milestone started with navigation components whose public contract has no
+model or hosted-page ownership boundary. It now advances through `ListView`,
+`GridView`, `TreeView`, and `FlowView` as the first model-backed collections
+after designing their Python boundaries.
+Validation must include:
 
 - `QAbstractItemModel` and delegate lifetime;
 - Python virtual overrides and `super()` dispatch;
 - selection, reset, row insertion/removal, and persistent-index behavior;
 - model replacement and destruction from both Python and C++; and
 - keyboard, focus, RTL, and accessibility-relevant navigation behavior.
+
+Current slice:
+
+- [x] Audit `TabView`: it owns only `TabViewItem` metadata, selection, and
+      navigation behavior; application pages remain caller-owned composition.
+- [x] Bind `TabView` and mutable `TabViewItem` through
+      `fluentqt.navigation`, including QVariant-compatible metadata and stable
+      value equality, while keeping the internal `TabStrip` private.
+- [x] Cover constructors, metadata mutation, properties, signals, close,
+      reorder, keyboard accelerators, RTL, Python virtual override dispatch,
+      an external `QStackedWidget` host, API manifest, generated contracts,
+      wheel smoke, and a visible acceptance example.
+- [x] Confirm the slice locally with matched macOS Qt/PySide6 6.9.3:
+      9 automated native TabView tests passed and 2 desktop/manual cases were
+      skipped as designed; all 29 binding CTests, 75 Python binding tests, and
+      49 verifier tests passed. A fresh virtual environment also passed wheel
+      installation, `pip check`, dependency-path inspection, runtime smoke,
+      source-package integration build, and visible snapshot review.
+- [x] Confirm generated code, tests, source package, and clean wheels in CI run
+      `30615473570`: native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3 binding
+      lanes passed generation, compilation, contract checks, binding tests,
+      relocatable wheel builds, and clean-environment installation; the Qt 5.15
+      and Qt 6.2 C++ integration lanes and final CI Gate also passed.
+- [x] Audit `ListView`: models, selection models, and delegates remain
+      caller-owned; the view must retain their Python wrappers while installed.
+      Custom header/footer QWidget hosting and the section toggle/synchronous
+      `std::function` callback remain private pending explicit Python
+      contracts.
+- [x] Bind `ListView` through `fluentqt.collections`, including a
+      Qt 6.2-compatible `SelectionMode` adapter, model/selection retention,
+      delegate wrapper retention, internal scrollbar getters implemented by
+      explicit binding adapters while preserving their Python method names,
+      and the text-only header/footer convenience API.
+- [x] Cover Python `QAbstractListModel` insert/remove/reset notifications,
+      persistent indexes, custom `QItemSelectionModel`, Python delegate and
+      view virtual dispatch, replacement/destruction lifetimes, API manifest,
+      generated contracts, wheel smoke, and a visible acceptance example.
+- [x] Confirm the complete slice locally with matched macOS Qt/PySide6 6.9.3:
+      101 native ListView tests passed and 1 manual VisualCheck was skipped as
+      designed; all 30 binding CTests, 81 Python binding tests, and 58 verifier
+      tests passed. A fresh virtual environment also passed wheel installation,
+      `pip check`, dependency-path inspection, runtime smoke, source-package
+      integration build, and visible snapshot review.
+- [x] CI run `30620199453` confirmed native Linux/Windows Qt 6.2.4, macOS
+      Qt 6.9.3, Qt 5.15/6.2 C++ regressions, relocatable clean wheels on all
+      three platforms, and the final CI Gate. This run also exercised the
+      compatibility path for Shiboken 6.2 not discovering the cross-namespace
+      scrollbar member getters.
+- [x] Audit `GridView`: ordinary models, selection models, and delegates remain
+      caller-owned. Native drag reordering is explicitly limited to
+      `QStandardItemModel`; other `QAbstractItemModel` implementations retain
+      display, selection, and notification support without a false reorder
+      promise.
+- [x] Bind `GridView` through `fluentqt.collections`, reusing the stable
+      Qt 6.2 `SelectionMode` converter and exposing native cell metrics,
+      selection, scroll behavior, header/placeholder text, reorder signals,
+      delegate virtual dispatch, and a borrowed internal-scrollbar adapter.
+- [x] Cover model insert/remove/reset and persistent indexes, caller-owned
+      model/selection/delegate lifetimes, external destruction, Python delegate
+      and view virtual dispatch, keyboard/RTL/accessibility behavior, API
+      manifest, generated contracts, installed-wheel smoke, and a visible
+      `QStandardItemModel` group-reorder example.
+- [x] Harden retained item delegates for Shiboken 6.2 on Windows: validate the
+      wrapper before returning it from the Python facade and discard stale
+      references even when the Python `destroyed` callback is missed. Unit and
+      installed-wheel smoke tests force this compatibility path.
+- [x] Confirm the slice locally with matched macOS Qt/PySide6 6.9.3: 56 of 66
+      native GridView tests passed and 10 desktop/manual cases were skipped as
+      designed; all 31 binding CTests, 88 Python binding tests, and 61 verifier
+      tests passed. A newly created clean virtual environment also passed wheel
+      installation, `pip check`, dependency-path inspection, runtime smoke,
+      source-package integration build, and visible snapshot review.
+- [x] CI run `30623470079` confirmed native Linux/Windows Qt 6.2.4, macOS
+      Qt 6.9.3, Qt 5.15/6.2 C++ regressions, relocatable clean wheels on all
+      three platforms, acceptance snapshots, and the final CI Gate.
+- [x] Audit `TreeView`: hierarchical models, selection models, and delegates
+      remain caller-owned and their Python wrappers are retained while
+      installed. Native drag reordering is limited to `QStandardItemModel`,
+      and the implementation-oriented `SelectionIndicatorStyle` remains
+      private.
+- [x] Bind `TreeView` through `fluentqt.collections`, including the stable
+      Qt 6.2 `SelectionMode` adapter, hierarchy expansion, check-state
+      selection, indicator visibility/motion scalar APIs, reorder signals,
+      Python virtual dispatch, and borrowed internal-scrollbar adapters.
+- [x] Cover hierarchical insert/remove/reset notifications and persistent
+      indexes, caller-owned model/selection/delegate replacement and external
+      destruction, stale delegate wrappers, Python model/delegate/view virtual
+      dispatch, keyboard/RTL/accessibility behavior, API manifest, generated
+      contracts, installed-wheel smoke, and a visible hierarchy example.
+- [x] Confirm the slice locally with matched macOS Qt/PySide6 6.9.3: 92 of 93
+      native TreeView tests passed and the manual VisualCheck was skipped as
+      designed; all 32 binding CTests, 95 Python binding tests, and 66 verifier
+      tests passed. A newly created clean virtual environment also passed wheel
+      installation, `pip check`, dependency-path inspection, runtime smoke,
+      source-package integration build, and visible snapshot review.
+- [x] CI run `30631865586` confirmed generated contracts, native
+      Linux/Windows Qt 6.2.4 behavior, macOS Qt 6.9.3, Qt 5.15/6.2 C++
+      regressions, source-package integration, relocatable clean wheels and
+      acceptance snapshots on all three platforms, and the final CI Gate.
+      The Windows Shiboken 6.2 lifecycle case also passed through Qt's
+      supported deferred model-destruction path.
+- [x] Audit and bind `Breadcrumb` plus mutable `BreadcrumbItem` metadata. The
+      Python facade rejects mixed sequences and dispatches text and metadata
+      lists through separate native adapters because some Shiboken versions
+      otherwise select `QStringList` for value wrappers and silently create
+      empty labels.
+- [x] Cover metadata/QVariant round trips, stable value equality, properties,
+      signals, insertion/removal, overflow geometry, activation, keyboard and
+      Python virtual dispatch, API manifest, generated adapter contracts,
+      installed-wheel smoke, and a visible full-path/middle-overflow example.
+- [x] Confirm the complete slice locally with matched macOS Qt/PySide6 6.9.3:
+      10 automated native Breadcrumb tests passed and 1 manual VisualCheck was
+      skipped as designed; all 33 binding CTests, 98 Python binding tests, and
+      73 verifier tests passed. A newly created virtual environment also passed
+      wheel installation, `pip check`, dependency-path inspection, runtime
+      smoke, source-package integration build, and visible snapshot review.
+- [x] CI run `30635505335` confirmed the `Breadcrumb` slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated contracts,
+      binding tests, clean wheel installation, acceptance snapshots,
+      Qt 5.15/6.2 C++ integration, source-package integration, and the final
+      CI Gate.
+- [x] Audit `Pivot` and `SelectorBar`: both own mutable navigation metadata,
+      selection, and overflow state, but neither adopts application pages,
+      models, delegates, overlays, or caller-owned widgets.
+- [x] Bind `Pivot`, `PivotItem`, `SelectorBar`, and `SelectorBarItem` through
+      `fluentqt.navigation`, including both text/value item overloads, mutable
+      unhashable value semantics, QVariant-compatible data, nested overflow
+      enums, and stable root/category/native identities.
+- [x] Cover item mutation, duplicate-suppressed selection signals, activation,
+      keyboard/Python virtual dispatch, geometry and MoreButton overflow, API
+      manifest, generated overload/value/QVariant contracts, installed-wheel
+      smoke, and a visible example connected to a caller-owned
+      `QStackedWidget`.
+- [x] Confirm the complete slice locally with matched macOS Qt/PySide6 6.9.3:
+      17 automated native Pivot/SelectorBar tests passed and 2 manual
+      VisualChecks were skipped as designed; all 34 binding CTests, 104 Python
+      binding tests, and 77 verifier tests passed. A newly created clean
+      virtual environment also passed wheel installation, `pip check`, loaded
+      dependency-path inspection, runtime smoke, source-package integration
+      build, and visible snapshot review.
+- [x] CI run `30641454429` confirmed native Linux/Windows Qt 6.2.4, macOS
+      Qt 6.9.3, Qt 5.15/6.2 C++ regressions, clean wheels, source-package
+      integration, acceptance snapshots, and the final CI Gate. The Windows
+      lane also passed the supported deferred-destruction paths for retained
+      `ListView` models and delegates.
+- [x] Audit `FlipView`, `FlowView`, and `SplitView`: `FlowView` has no hosted
+      QWidget boundary and reuses the caller-owned item-model contract;
+      `FlipView` has an explicit M3 page contract, and `SplitView` now has an
+      explicit M3 pane release and parent-restoration contract.
+- [x] Bind `FlowView` through `fluentqt.collections` with stable Qt 6.2
+      `SelectionMode` and borrowed-scrollbar adapters, generated-wrapper
+      retention for its overridden model/delegate setters, and facade-level
+      invalid delegate cleanup.
+- [x] Cover variable-size Python model roles, insert/remove/reset and
+      persistent indexes, selection, geometry/hit testing, Python delegate
+      paint/size virtuals, view virtual dispatch, dependency replacement and
+      deferred destruction, API manifest, generated contracts, installed-wheel
+      smoke, and a visible adaptive-card example.
+- [x] Confirm the slice locally with matched macOS Qt/PySide6 6.9.3: 15
+      automated native FlowView tests passed and 1 manual VisualCheck was
+      skipped as designed; all 35 binding CTests, 111 Python binding tests, and
+      82 verifier tests passed. A newly created clean environment also passed
+      wheel installation, `pip check`, dependency-path inspection, runtime
+      smoke, source-package integration, and snapshot review.
+- [x] CI run `30648150576` confirmed the `FlowView` slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, binding tests, relocatable clean wheels, acceptance snapshots,
+      Qt 5.15/6.2 C++ regressions, source-package integration, and the final
+      CI Gate. The Windows 6.2.4 lanes also exercised deterministic
+      signal/view isolation and installed-wheel FlowView teardown.
 
 ## M5 — Overlays and native windows
 
@@ -446,6 +723,21 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
   Light/Dark, Fluent/Material/macOS, and accent colors, drag the Slider, hold
   RepeatButton, and inspect text, dividers, progress controls, and signal
   feedback.
+- **Model boundary**: run `examples/list_view_model.py`,
+  `examples/flow_view_model.py`, `examples/grid_view_model.py`, and
+  `examples/tree_view_model.py`; exercise flat-list notifications,
+  variable-size wrapping, grid selection/reordering, and hierarchical
+  expansion/selection/reordering while reviewing Python delegate rendering.
+- **Hosted pages**: run `examples/flip_view_ownership.py`; navigate between
+  pages, remove each ownership mode, and use `takePage()` to verify deletion,
+  detachment, original-parent restoration, and explicit transfer. Run
+  `examples/navigation_view_ownership.py` to exercise the C++-owned content
+  host, header/main/footer chrome policies, and Left/Top responsive layouts.
+- **Navigation values**: run `examples/breadcrumb_navigation.py` to verify
+  Python `BreadcrumbItem` metadata, activation signals, full-path rendering,
+  and narrow middle-overflow behavior. Run
+  `examples/selector_pivot_navigation.py` to verify caller-owned page
+  composition, metadata selection, Pivot filtering, and MoreButton overflow.
 - **Review artifact**: pass `--snapshot <png>` to the showcase. This mode can
   also run with `QT_QPA_PLATFORM=offscreen`.
 - **Installation proof**: install the wheel into a fresh virtual environment
@@ -482,6 +774,45 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
     Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30610740405`.
 12. Treat the `StackView` ownership/navigation slice as complete after native
     Linux/Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30613428314`.
-13. Defer `TabView` and `DrawerView` until their model/navigation or overlay
-    boundaries are designed, rather than publishing unstable APIs merely to
-    increase binding coverage.
+13. Treat the `TabView` metadata/navigation slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, and Qt 5.15 C++ CI run
+    `30615473570`.
+14. Treat the `ListView` model/delegate slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels on
+    all three platforms, and the final CI Gate passed in CI run `30620199453`.
+15. Treat the `GridView` model/delegate/reorder slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels on
+    all three platforms, acceptance snapshots, and the final CI Gate passed in
+    CI run `30623470079`.
+16. Treat the `TreeView` hierarchy/model/delegate/reorder slice as complete
+    after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++,
+    source-package integration, clean wheels on all three platforms,
+    acceptance snapshots, and the final CI Gate passed in CI run
+    `30631865586`.
+17. Keep `DrawerView` deferred until its overlay and hosted-page ownership
+    boundaries are designed and tested.
+18. Treat the `Breadcrumb` metadata/navigation slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, clean-wheel smoke, acceptance
+    snapshots, source-package integration, and the final CI Gate passed in CI
+    run `30635505335`.
+19. Treat the `SelectorBar`/`Pivot` metadata-navigation slice as complete after
+    native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, clean wheels,
+    source-package integration, acceptance snapshots, Qt 5.15/6.2 C++, and the
+    final CI Gate passed in CI run `30641454429`.
+20. Treat the `FlowView` model/delegate slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, clean wheels, source-package
+    integration, acceptance snapshots, Qt 5.15/6.2 C++, and the final CI Gate
+    passed in CI run `30648150576`.
+21. Treat the `FlipView` ownership/navigation slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels,
+    source-package integration, acceptance snapshots, and the final CI Gate
+    passed in CI run `30655442887`.
+22. Treat the `SplitView` ownership slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels,
+    source-package integration, acceptance snapshots, and the final CI Gate
+    passed together in CI run `30673261072`.
+23. Treat the `NavigationView`/`StackContentHost` page-and-chrome ownership
+    slice as complete after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3,
+    Qt 5.15/6.2 C++, all 54 binding CTests, clean wheels, source-package
+    integration, acceptance snapshots, and the final CI Gate passed together
+    in CI run `30683749605`.

@@ -125,6 +125,81 @@ Pass `--snapshot build/pyside6/pyside6-accordion-ownership.png` to render its
 initial owned, borrowed, and reparented item state without leaving an
 interactive process running.
 
+Run the ListView Python model and delegate example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/list_view_model.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-list-view-model.png` to render the
+native Fluent list consuming a Python `QAbstractListModel` and
+`QStyledItemDelegate`. The interactive actions exercise insert, update,
+remove, reset, and selection notifications.
+
+Run the GridView model, delegate, selection, and reordering example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/grid_view_model.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-grid-view-model.png` to render the
+native Fluent grid consuming a PySide `QStandardItemModel` and Python
+`QStyledItemDelegate`. The interactive view supports multiple selection and
+native group drag reordering.
+
+Run the FlowView adaptive model and delegate example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/flow_view_model.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-flow-view-model.png` to render the
+native wrapping view consuming per-item `QSize` values from a Python
+`QAbstractListModel` and dispatching paint back to a Python delegate.
+
+Run the FlipView page navigation and ownership example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/flip_view_ownership.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-flip-view-ownership.png` to render the
+native carousel with Owned, Borrowed, and Reparented pages without leaving an
+interactive process running.
+
+Run the SplitView pane resizing and ownership example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/split_view_ownership.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-split-view-ownership.png` to render the
+native resizable panes with Owned, Borrowed, and Reparented policies without
+leaving an interactive process running.
+
+Run the TreeView hierarchy, delegate, selection, and reordering example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/tree_view_model.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-tree-view-model.png` to render the
+native Fluent tree consuming a hierarchical PySide `QStandardItemModel` and
+Python `QStyledItemDelegate`. The interactive view supports expansion,
+selection motion, child insertion, and file-manager-style drag reordering.
+
 Run the StackView navigation and ownership example:
 
 ```bash
@@ -135,6 +210,54 @@ PYTHONPATH=build/pyside6/python \
 
 Pass `--snapshot build/pyside6/pyside6-stack-view-navigation.png` to render
 the initial native page stack without leaving an interactive process running.
+
+Run the NavigationView responsive shell and ownership example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/navigation_view_ownership.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-navigation-view-ownership.png` to
+render the native side-navigation shell with Owned, Borrowed, and Reparented
+pages and chrome slots. The interactive example also switches between Left
+and Top display modes.
+
+Run the TabView metadata and page-composition example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/tab_view_navigation.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-tab-view-navigation.png` to render the
+native tab strip connected to a regular PySide `QStackedWidget`.
+
+Run the Breadcrumb metadata and native overflow example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/breadcrumb_navigation.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-breadcrumb-navigation.png` to render
+both the complete route and a narrow middle-overflow route. The example also
+shows QVariant-compatible Python metadata returned by activation signals.
+
+Run the SelectorBar/Pivot metadata and page-composition example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/selector_pivot_navigation.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-selector-pivot-navigation.png` to
+render a native SelectorBar connected to a caller-owned PySide page stack,
+Pivot filtering, and MoreButton overflow.
 
 Run the dedicated native ColorPicker acceptance example:
 
@@ -182,17 +305,20 @@ QT_QPA_PLATFORM=offscreen \
 ```
 
 The current binding phase exports `Accordion`, `AnnotatedScrollBar`,
-`AnnotatedScrollBarLabel`, `Avatar`, `Button`, `CalendarView`, `CheckBox`,
+`AnnotatedScrollBarLabel`, `Avatar`, `Breadcrumb`, `BreadcrumbItem`, `Button`,
+`CalendarView`, `CheckBox`,
 `ColorPicker`, `CompoundButton`, `HyperlinkButton`, `RadioButton`,
 `RatingControl`, `RepeatButton`, `Slider`, `ToggleButton`, `ToggleSwitch`,
 `Card`, `Divider`, `Expander`, `FontIcon`, `Label`, `LineEdit`, `NumberBox`,
 `PasswordBox`, `TextEdit`, `ProgressBar`, `ProgressRing`, `InfoBadge`,
-`InfoBar`, `Shimmer`, `PipsPager`, `ScrollBar`, `ScrollView`, `StackView`, and
-`Window`,
-together with their enums and value types. It also supports Light/Dark mode,
+`InfoBar`, `Shimmer`, `FlipView`, `FlowView`, `GridView`, `ListView`,
+`NavigationView`, `SplitView`, `StackContentHost`, `TreeView`, `PipsPager`,
+`Pivot`, `PivotItem`, `ScrollBar`, `ScrollView`, `SelectorBar`,
+`SelectorBarItem`, `StackView`, `TabView`, `TabViewItem`, and `Window`, together
+with their enums and value types. It also supports Light/Dark mode,
 Fluent/Material/macOS style presets, in-memory accent overrides, typography
-scaling, Qt properties and signals, Python subclassing, and explicit Window
-child-parent tracking.
+scaling, Qt properties and signals, Python subclassing, and explicit hosted
+widget ownership.
 
 ```python
 from PySide6.QtGui import QColor
@@ -218,8 +344,10 @@ across Shiboken releases; the `fluentqt` package and its category modules
 re-export the stable public Python API shown above.
 
 This phase intentionally does not publish the C++ `FluentElement` or
-`QMLPlus` mixins. Python controls therefore do not expose `anchors()`, `bind()`,
-or `setState()`; use Qt layouts, Python signal handlers, and QObject properties.
+`QMLPlus` mixins. Python controls therefore do not expose mixin `anchors()` or
+`bind()` APIs; use Qt layouts, Python signal handlers, and QObject properties.
+An inherited Qt base method with the same name, such as
+`QAbstractItemView.setState()`, keeps its Qt meaning and is not QMLPlus state.
 `Shimmer` exposes its built-in templates, active/animation state, duration, and
 progress. Its `Custom` template value is reserved for now:
 `ShimmerPainter::Element` collections and their getter/mutator API remain C++
@@ -260,6 +388,52 @@ The internal header button is deliberately not part of the Python API.
 The facade retains Python subclass wrappers while items are hosted, and
 `takeItem()` always returns a parentless Python-owned item. Runtime-dependent
 ownership overloads remain private.
+`ListView` consumes ordinary PySide `QAbstractItemModel`,
+`QItemSelectionModel`, and `QAbstractItemDelegate` objects. They remain
+caller-owned, while the facade retains their Python wrappers for as long as
+they are installed and releases them when replaced or when the view is
+collected. Python model notifications, delegate virtual methods, selection,
+reset, insertion/removal, and persistent indexes use the native C++ view.
+`SelectionMode` is published through a Qt 6.2-compatible binding adapter.
+Its C++ `None` member is spelled `SelectionMode.None_` in Python to avoid the
+Python keyword.
+Custom header/footer QWidget hosting and the section toggle/synchronous C++
+`setSectionKeyFunction(std::function<...>)` callback remain private until they
+have explicit Python ownership and callable contracts; use `headerText`,
+`footerText`, and external composition in the current API.
+`GridView` follows the same caller-owned model, selection-model, and delegate
+lifetime contract and reuses the stable `SelectionMode` adapter. Its cell size,
+spacing, column limit, header/placeholder text, selection, scroll behavior, and
+reorder signals remain native. The internal Fluent scroll bar is borrowed and
+never transferred to Python. Native drag reordering currently operates on
+`QStandardItemModel`; arbitrary `QAbstractItemModel` subclasses still support
+display, selection, insertion/removal/reset notifications, and Python virtual
+delegate dispatch but are not advertised as reorderable.
+`TreeView` extends the same caller-owned model, selection-model, delegate, and
+borrowed-scrollbar contracts to hierarchical indexes. Expansion/collapse,
+hierarchy-aware selection motion, check-state propagation, persistent indexes,
+and reorder signals stay in the native control. Native drag reordering is
+likewise limited to `QStandardItemModel`. The implementation-oriented
+`SelectionIndicatorStyle` struct remains private; Python uses the stable
+indicator visibility and scalar inset methods.
+`FlowView` applies that caller-owned model, selection-model, delegate, and
+borrowed-scrollbar contract to variable-size wrapping geometry. Python models
+may provide per-item `QSize` values through `itemSizeRole`; Python delegate
+`sizeHint()` and `paint()` virtuals are dispatched by the native view. Model
+insert/remove/reset notifications, persistent indexes, selection, hit testing,
+keyboard navigation, and scroll behavior remain native. Drag reordering is
+advertised only for `QStandardItemModel`; arbitrary Python
+`QAbstractItemModel` subclasses keep the rest of the contract without a reorder
+guarantee.
+`FlipView` preserves its C++ host-owned default for plain `addPage()` and
+`insertPage()`, while explicit Owned, Borrowed, and Reparented variants define
+every other page lifetime. `removePage()` applies the recorded policy:
+Owned pages are destroyed, Borrowed pages become parentless, and Reparented
+pages return to their original QWidget parent. `takePage()` always transfers a
+parentless Python-owned page. The facade retains Python page subclasses and
+restore targets while hosted, rejects duplicate/ancestor insertion, and
+removes its records when a page is destroyed externally. The legacy C++
+transfer-style overloads and runtime ownership argument remain private.
 `StackView` keeps native push/pop/replace transitions, page status signals,
 keyboard back navigation, and indexed stack queries. Plain `push()`,
 `replace()`, and `setInitialItem()` preserve the C++ Owned default; fixed
@@ -271,6 +445,33 @@ bypass navigation ownership records; use the StackView navigation methods.
 The generated native `setCurrentWidget(QWidget*)` wrapper is also removed
 because Shiboken's name heuristic reparents its argument. The facade provides
 the same operation through the safe index-only native setter.
+`NavigationView` exposes native responsive Left, compact, minimal, and Top
+display modes while its C++-owned `StackContentHost` provides page navigation.
+Pages use fixed Owned, Borrowed, and Reparented add/insert/replace methods;
+removal applies the recorded policy, `takePage()` transfers a parentless page
+to Python, and the facade retains Python subclasses and original-parent restore
+targets. Header, main, and footer chrome slots follow the same three explicit
+policies with fixed set, release, and take methods. Runtime ownership overloads
+and legacy transfer-style mutation remain outside the public native surface.
+`TabView` exposes native tab metadata, selection, close/reorder signals,
+keyboard accelerators, geometry queries, and RTL behavior. `TabViewItem` is a
+mutable, unhashable value type whose `data` field accepts QVariant-compatible
+Python values. TabView does not adopt application pages: compose it with a
+PySide `QStackedWidget` (or another caller-owned page host) through
+`currentChanged`, `tabMoved`, `tabCloseRequested`, and `addTabRequested`.
+The internal painting/input `TabStrip` remains private.
+`Breadcrumb` exposes native layout, middle overflow, activation, keyboard,
+RTL, geometry, and accessibility behavior. `BreadcrumbItem` is a mutable,
+unhashable value type with QVariant-compatible `data`. Python sequence dispatch
+is explicit: a sequence must contain only `str` or only `BreadcrumbItem`.
+The facade routes those forms through separate native adapters because older
+Shiboken converters can otherwise accept value wrappers as `QStringList` and
+silently replace their labels with empty strings.
+`SelectorBar` and `Pivot` expose their native item mutation, selection,
+activation, keyboard/RTL, geometry, accessibility, and overflow behavior.
+`SelectorBarItem` and `PivotItem` are mutable, unhashable metadata values with
+QVariant-compatible `data` fields. Neither control adopts application pages:
+connect its selection signal to an ordinary caller-owned PySide page host.
 `InfoBar` retains its action wrapper while the native widget is hosted. Replacing
 or clearing the action releases the previous widget as parentless Python-owned
 content; deleting the InfoBar deletes its currently hosted action.

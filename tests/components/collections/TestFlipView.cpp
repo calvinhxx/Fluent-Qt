@@ -246,6 +246,8 @@ TEST_F(FlipViewTest, RemovePageUpdatesCount) {
     fv.removePage(0);
     EXPECT_EQ(fv.pageCount(), 1);
     EXPECT_EQ(fv.pageAt(0), p2);
+    EXPECT_EQ(p1->parentWidget(), nullptr);
+    delete p1;
 }
 
 TEST_F(FlipViewTest, RemoveLastPageResetsIndex) {
@@ -255,6 +257,8 @@ TEST_F(FlipViewTest, RemoveLastPageResetsIndex) {
     fv.removePage(0);
     EXPECT_EQ(fv.pageCount(), 0);
     EXPECT_EQ(fv.currentIndex(), -1);
+    EXPECT_EQ(p1->parentWidget(), nullptr);
+    delete p1;
 }
 
 TEST_F(FlipViewTest, PageAtOutOfBoundsReturnsNull) {
@@ -262,6 +266,97 @@ TEST_F(FlipViewTest, PageAtOutOfBoundsReturnsNull) {
     EXPECT_EQ(fv.pageAt(-1), nullptr);
     EXPECT_EQ(fv.pageAt(0), nullptr);
     EXPECT_EQ(fv.pageAt(5), nullptr);
+}
+
+TEST_F(FlipViewTest, ExplicitOwnershipReleaseAppliesConfiguredPolicy) {
+    FlipView fv;
+
+    QPointer<QWidget> owned = new QWidget;
+    ASSERT_TRUE(fv.addPage(owned.data(), fluent::WidgetOwnership::Owned));
+    EXPECT_EQ(
+        fv.pageOwnershipAt(0),
+        fluent::WidgetOwnership::Owned);
+    EXPECT_TRUE(fv.releasePage(0));
+    EXPECT_TRUE(owned.isNull());
+
+    auto* borrowed = new QWidget;
+    ASSERT_TRUE(fv.addPage(
+        borrowed,
+        fluent::WidgetOwnership::Borrowed));
+    EXPECT_TRUE(fv.releasePage(0));
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    delete borrowed;
+
+    QWidget originalParent;
+    auto* reparented = new QWidget(&originalParent);
+    ASSERT_TRUE(fv.addPage(
+        reparented,
+        fluent::WidgetOwnership::Reparented));
+    EXPECT_EQ(reparented->parentWidget(), &fv);
+    EXPECT_TRUE(fv.releasePage(0));
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+
+    EXPECT_FALSE(fv.releasePage(-1));
+    EXPECT_FALSE(fv.releasePage(0));
+}
+
+TEST_F(FlipViewTest, HostDestructionHonorsExplicitOwnership) {
+    QWidget originalParent;
+    QPointer<QWidget> owned = new QWidget;
+    auto* borrowed = new QWidget;
+    auto* reparented = new QWidget(&originalParent);
+    auto* fv = new FlipView;
+
+    ASSERT_TRUE(fv->addPage(owned.data(), fluent::WidgetOwnership::Owned));
+    ASSERT_TRUE(fv->addPage(borrowed, fluent::WidgetOwnership::Borrowed));
+    ASSERT_TRUE(fv->addPage(
+        reparented,
+        fluent::WidgetOwnership::Reparented));
+
+    delete fv;
+
+    EXPECT_TRUE(owned.isNull());
+    EXPECT_EQ(borrowed->parentWidget(), nullptr);
+    EXPECT_EQ(reparented->parentWidget(), &originalParent);
+    delete borrowed;
+}
+
+TEST_F(FlipViewTest, TakePageTransfersWithoutApplyingOwnership) {
+    QWidget originalParent;
+    auto* page = new QWidget(&originalParent);
+    FlipView fv;
+    ASSERT_TRUE(fv.addPage(
+        page,
+        fluent::WidgetOwnership::Reparented));
+
+    QWidget* taken = fv.takePage(0);
+
+    EXPECT_EQ(taken, page);
+    EXPECT_EQ(taken->parentWidget(), nullptr);
+    EXPECT_EQ(fv.pageCount(), 0);
+    EXPECT_EQ(fv.takePage(0), nullptr);
+    delete taken;
+}
+
+TEST_F(FlipViewTest, RejectsInvalidPagesAndTracksExternalDestruction) {
+    FlipView fv;
+    auto* page = new QWidget;
+    EXPECT_FALSE(fv.addPage(nullptr, fluent::WidgetOwnership::Borrowed));
+    ASSERT_TRUE(fv.addPage(page, fluent::WidgetOwnership::Borrowed));
+    EXPECT_FALSE(fv.addPage(page, fluent::WidgetOwnership::Owned));
+
+    QSignalSpy currentSpy(&fv, &FlipView::currentIndexChanged);
+    delete page;
+
+    EXPECT_EQ(fv.pageCount(), 0);
+    EXPECT_EQ(fv.currentIndex(), -1);
+    EXPECT_EQ(currentSpy.count(), 1);
+
+    QWidget ancestor;
+    auto* nested = new FlipView(&ancestor);
+    EXPECT_FALSE(nested->addPage(
+        &ancestor,
+        fluent::WidgetOwnership::Borrowed));
 }
 
 // ── currentIndex ─────────────────────────────────────────────────────────────

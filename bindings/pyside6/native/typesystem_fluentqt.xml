@@ -12,6 +12,14 @@
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::collections"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::collections::FlowView"
+               function-name="^(selectionMode|setSelectionMode|verticalFluentScrollBar)$"/>
+    <rejection class="fluent::collections::GridView"
+               function-name="^(selectionMode|setSelectionMode|verticalFluentScrollBar)$"/>
+    <rejection class="fluent::collections::ListView"
+               function-name="^(selectionMode|setSelectionMode|sectionEnabled|isSectionEnabled|setSectionEnabled|setSectionKeyFunction|verticalFluentScrollBar|horizontalFluentScrollBar)$"/>
+    <rejection class="fluent::collections::TreeView"
+               function-name="^(selectionMode|setSelectionMode|selectionIndicatorStyle|setSelectionIndicatorStyle|verticalFluentScrollBar|horizontalFluentScrollBar)$"/>
     <rejection class="fluent::textfields"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::status_info"
@@ -22,6 +30,14 @@
                function-name="^setDetailLabelProvider$"/>
     <rejection class="fluent::layout"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::navigation"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <!-- QStringList is permissive enough to accept BreadcrumbItem wrappers on
+         some Shiboken versions, selecting the wrong setItems overload and
+         silently producing empty labels. The Python facade dispatches to two
+         unambiguous BindingApi functions instead. -->
+    <rejection class="fluent::navigation::Breadcrumb"
+               function-name="^setItems$"/>
 
     <function signature="prepareHighDpiApplication()"/>
     <function signature="initializeResources()"/>
@@ -35,6 +51,22 @@
     <function signature="setFontScale(qreal)"/>
     <function signature="fontScale()"/>
     <function signature="currentDesignLanguage()"/>
+    <function signature="flowViewSelectionMode(const fluent::collections::FlowView*)"/>
+    <function signature="setFlowViewSelectionMode(fluent::collections::FlowView*,fluent::binding::SelectionMode)"/>
+    <function signature="flowViewVerticalFluentScrollBar(const fluent::collections::FlowView*)"/>
+    <function signature="gridViewSelectionMode(const fluent::collections::GridView*)"/>
+    <function signature="setGridViewSelectionMode(fluent::collections::GridView*,fluent::binding::SelectionMode)"/>
+    <function signature="gridViewVerticalFluentScrollBar(const fluent::collections::GridView*)"/>
+    <function signature="listViewSelectionMode(const fluent::collections::ListView*)"/>
+    <function signature="setListViewSelectionMode(fluent::collections::ListView*,fluent::binding::SelectionMode)"/>
+    <function signature="listViewVerticalFluentScrollBar(const fluent::collections::ListView*)"/>
+    <function signature="listViewHorizontalFluentScrollBar(const fluent::collections::ListView*)"/>
+    <function signature="treeViewSelectionMode(const fluent::collections::TreeView*)"/>
+    <function signature="setTreeViewSelectionMode(fluent::collections::TreeView*,fluent::binding::SelectionMode)"/>
+    <function signature="treeViewVerticalFluentScrollBar(const fluent::collections::TreeView*)"/>
+    <function signature="treeViewHorizontalFluentScrollBar(const fluent::collections::TreeView*)"/>
+    <function signature="setBreadcrumbTextItems(fluent::navigation::Breadcrumb*,const QStringList&amp;)"/>
+    <function signature="setBreadcrumbMetadataItems(fluent::navigation::Breadcrumb*,const QVector&lt;fluent::navigation::BreadcrumbItem&gt;&amp;)"/>
     <function signature="themeRevision()"/>
     <function signature="bindingBuildInfo()"/>
 
@@ -53,6 +85,7 @@
         <namespace-type name="binding" visible="no">
             <enum-type name="Theme"/>
             <enum-type name="DesignLanguage"/>
+            <enum-type name="SelectionMode"/>
         </namespace-type>
 
         <object-type name="FontIcon"/>
@@ -99,6 +132,129 @@
         </namespace-type>
 
         <namespace-type name="collections" visible="no">
+            <object-type name="FlipView">
+                <!-- The Python facade fixes page ownership at each entry
+                     point and retains page wrappers plus original parents.
+                     Hide the legacy transfer-style overloads and the runtime
+                     ownership argument from the public native surface. -->
+                <modify-function signature="addPage(QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="addPage(QWidget*,fluent::WidgetOwnership)"
+                    rename="_addPageWithOwnership"/>
+                <modify-function signature="insertPage(int,QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="insertPage(int,QWidget*,fluent::WidgetOwnership)"
+                    rename="_insertPageWithOwnership"/>
+                <modify-function signature="removePage(int)" remove="all"/>
+                <modify-function signature="releasePage(int)"
+                                 rename="_releasePageWithOwnership"/>
+                <modify-function signature="pageAt(int)const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takePage(int)">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+            <object-type name="FlowView">
+                <!-- FlowView repeats the shared SelectionMode alias and a
+                     cross-namespace ScrollBar pointer return. Publish both
+                     through the stable BindingApi adapters used by the other
+                     collection views. Its model and delegate remain owned by
+                     the caller while their Python wrappers are retained. -->
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function
+                    signature="setItemDelegate(QAbstractItemDelegate*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+            <object-type name="GridView">
+                <!-- GridView shares the namespace SelectionMode alias with
+                     ListView. Publish the stable binding enum through the
+                     explicit BindingApi adapters instead of asking old and
+                     new Shiboken generators to infer duplicate converters. -->
+            </object-type>
+            <object-type name="ListView">
+                <enum-type name="IndicatorMotionDirection"/>
+                <!-- The shared C++ SelectionMode is also surfaced through a
+                     class using-alias and Q_PROPERTY. Shiboken 6.9 generates
+                     duplicate namespace converters for that shape, while
+                     6.2 handles it differently. Publish a stable binding enum
+                     through BindingApi and let collections.py present the
+                     normal ListView methods. -->
+                <!-- ListView overrides these QAbstractItemView entry points,
+                     so repeat PySide's caller-owned reference contracts on
+                     the generated FluentQt wrapper. -->
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function
+                    signature="setSelectionModel(QItemSelectionModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- Header/footer widgets are reparented by the current C++
+                     API but do not yet have explicit release/restore
+                     ownership operations. Publish the safe text convenience
+                     API first and keep pointer hosting out of Python. -->
+                <modify-function signature="header()const" remove="all"/>
+                <modify-function signature="setHeader(QWidget*)"
+                                 remove="all"/>
+                <modify-function signature="footer()const" remove="all"/>
+                <modify-function signature="setFooter(QWidget*)"
+                                 remove="all"/>
+            </object-type>
+            <value-type name="SplitViewPaneOptions"/>
+            <object-type name="SplitView">
+                <!-- The facade fixes pane ownership at each install entry
+                     point and retains Python pane wrappers plus restoration
+                     parents. Keep legacy transfer removals and runtime policy
+                     methods private so callers cannot bypass that contract. -->
+                <modify-function
+                    signature="addPane(QWidget*,const fluent::collections::SplitViewPaneOptions&amp;)"
+                    remove="all"/>
+                <modify-function
+                    signature="addPane(QWidget*,fluent::WidgetOwnership,const fluent::collections::SplitViewPaneOptions&amp;)"
+                    rename="_addPaneWithOwnership"/>
+                <modify-function
+                    signature="insertPane(int,QWidget*,const fluent::collections::SplitViewPaneOptions&amp;)"
+                    remove="all"/>
+                <modify-function
+                    signature="insertPane(int,QWidget*,fluent::WidgetOwnership,const fluent::collections::SplitViewPaneOptions&amp;)"
+                    rename="_insertPaneWithOwnership"/>
+                <modify-function signature="removePane(QWidget*)"
+                                 remove="all"/>
+                <modify-function signature="removePaneAt(int)"
+                                 remove="all"/>
+                <modify-function signature="releasePane(QWidget*)"
+                                 remove="all"/>
+                <modify-function signature="releasePaneAt(int)"
+                                 rename="_releasePaneAtWithOwnership"/>
+                <modify-function signature="paneAt(int)const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takePaneAt(int)">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
             <object-type name="StackView">
                 <enum-type name="StackViewItemStatus"/>
                 <enum-type name="StackViewTransitionOperation"/>
@@ -160,6 +316,27 @@
                     </modify-argument>
                 </modify-function>
             </object-type>
+            <object-type name="TreeView">
+                <enum-type name="IndicatorVerticalDirection"/>
+                <enum-type name="IndicatorHierarchyTransition"/>
+                <!-- TreeView overrides these QAbstractItemView entry points.
+                     Preserve PySide's caller-owned references without
+                     transferring C++ ownership or applying parent heuristics. -->
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function
+                    signature="setSelectionModel(QItemSelectionModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- The rejection above keeps the implementation-oriented
+                     SelectionIndicatorStyle out of Python. The stable scalar
+                     inset and visibility APIs remain available. -->
+            </object-type>
         </namespace-type>
 
         <namespace-type name="layout" visible="no">
@@ -214,6 +391,120 @@
                      content. Keep it out of the public Python surface. -->
                 <modify-function signature="headerButton()const"
                                  remove="all"/>
+            </object-type>
+        </namespace-type>
+
+        <namespace-type name="navigation" visible="no">
+            <value-type name="BreadcrumbItem"/>
+            <object-type name="Breadcrumb">
+                <enum-type name="BreadcrumbSize"/>
+                <enum-type name="OverflowMode"/>
+            </object-type>
+            <object-type name="StackContentHost">
+                <enum-type name="TransitionEffect"/>
+                <!-- Page ownership depends on a runtime enum in C++. Expose
+                     only private fixed-policy adapters to navigation.py and
+                     keep the legacy transfer-style mutations out of the
+                     native public surface. -->
+                <modify-function signature="insertPage(int,QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="insertPage(int,QWidget*,fluent::WidgetOwnership)"
+                    rename="_insertPageWithOwnership"/>
+                <modify-function signature="replacePage(int,QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="replacePage(int,QWidget*,fluent::WidgetOwnership)"
+                    rename="_replacePageWithOwnership"/>
+                <modify-function signature="releasePage(int)"
+                                 rename="_releasePageWithOwnership"/>
+                <modify-function signature="clearPages()" remove="all"/>
+                <modify-function signature="releaseAllPages()"
+                                 rename="_releaseAllPagesWithOwnership"/>
+                <modify-function signature="pageWidget(int)const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takePage(int)">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+            <object-type name="NavigationView">
+                <enum-type name="DisplayMode"/>
+                <!-- Chrome slots use the same fixed-policy Python facade as
+                     hosted pages. Internal contentHost() remains C++ owned. -->
+                <modify-function signature="setHeaderChromeWidget(QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="setHeaderChromeWidget(QWidget*,fluent::WidgetOwnership)"
+                    rename="_setHeaderChromeWidgetWithOwnership"/>
+                <modify-function signature="releaseHeaderChromeWidget()"
+                                 rename="_releaseHeaderChromeWidgetWithOwnership"/>
+                <modify-function signature="setMainChromeWidget(QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="setMainChromeWidget(QWidget*,fluent::WidgetOwnership)"
+                    rename="_setMainChromeWidgetWithOwnership"/>
+                <modify-function signature="releaseMainChromeWidget()"
+                                 rename="_releaseMainChromeWidgetWithOwnership"/>
+                <modify-function signature="setFooterChromeWidget(QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="setFooterChromeWidget(QWidget*,fluent::WidgetOwnership)"
+                    rename="_setFooterChromeWidgetWithOwnership"/>
+                <modify-function signature="releaseFooterChromeWidget()"
+                                 rename="_releaseFooterChromeWidgetWithOwnership"/>
+                <modify-function signature="headerChromeWidget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="mainChromeWidget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="footerChromeWidget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeHeaderChromeWidget()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeMainChromeWidget()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeFooterChromeWidget()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="contentHost()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+            <value-type name="PivotItem"/>
+            <object-type name="Pivot">
+                <enum-type name="OverflowBehavior"/>
+            </object-type>
+            <value-type name="SelectorBarItem"/>
+            <object-type name="SelectorBar">
+                <enum-type name="OverflowBehavior"/>
+            </object-type>
+            <value-type name="TabViewItem"/>
+            <object-type name="TabView">
+                <enum-type name="TabWidthMode"/>
+                <enum-type name="CloseButtonOverlayMode"/>
             </object-type>
         </namespace-type>
 
