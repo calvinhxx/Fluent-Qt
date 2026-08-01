@@ -196,6 +196,7 @@ private:
 
     QPointer<QWidget> m_originalParent;
     QPointer<QWidget> m_themeSource;
+    QPointer<QWidget> m_focusRestoreTarget;
 
     ClosePolicy m_closePolicy = ClosePolicy(CloseOnPressOutside | CloseOnEscape);
     bool m_lightDismissConsumesPress = false;

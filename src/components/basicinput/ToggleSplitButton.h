@@ -17,9 +17,6 @@ class ToggleSplitButton : public SplitButton {
     Q_OBJECT
 public:
     explicit ToggleSplitButton(const QString& text = "", QWidget* parent = nullptr);
-
-protected:
-    void mouseReleaseEvent(QMouseEvent* event) override;
 };
 
 } // namespace fluent::basicinput

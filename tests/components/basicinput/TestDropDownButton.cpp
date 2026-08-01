@@ -72,6 +72,47 @@ TEST_F(DropDownButtonTest, OpenSetterAliasTracksStateAndSignals) {
     EXPECT_EQ(spy.count(), 2);
 }
 
+TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) {
+    DropDownButton button(QStringLiteral("Options"));
+    auto* firstMenu = new QMenu(QStringLiteral("First"));
+    auto* secondMenu = new QMenu(QStringLiteral("Second"));
+    QSignalSpy menuSpy(&button, &DropDownButton::menuChanged);
+    QSignalSpy openSpy(&button, &DropDownButton::openChanged);
+
+    button.setMenu(firstMenu);
+    EXPECT_EQ(button.menu(), firstMenu);
+    EXPECT_EQ(menuSpy.count(), 1);
+
+    button.setMenu(firstMenu);
+    EXPECT_EQ(menuSpy.count(), 1);
+
+    button.resize(140, 36);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+    QObject::connect(firstMenu, &QMenu::aboutToShow, firstMenu, [firstMenu]() {
+        QTimer::singleShot(0, firstMenu, &QMenu::close);
+    });
+    QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier,
+                      button.rect().center());
+    EXPECT_FALSE(button.isOpen());
+    EXPECT_EQ(openSpy.count(), 2);
+
+    button.setMenu(secondMenu);
+    EXPECT_EQ(button.menu(), secondMenu);
+    EXPECT_EQ(menuSpy.count(), 2);
+
+    ASSERT_TRUE(QMetaObject::invokeMethod(firstMenu, "aboutToShow",
+                                          Qt::DirectConnection));
+    EXPECT_FALSE(button.isOpen());
+
+    delete secondMenu;
+    EXPECT_EQ(button.menu(), nullptr);
+    EXPECT_FALSE(button.isOpen());
+    EXPECT_EQ(menuSpy.count(), 3);
+
+    delete firstMenu;
+}
+
 TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress) {
     DropDownButton button("Options");
     button.resize(140, 32);

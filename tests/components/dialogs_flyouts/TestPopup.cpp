@@ -219,6 +219,47 @@ TEST_F(PopupTest, OpenReparentsToTopLevelWidget) {
     p.close();
 }
 
+TEST_F(PopupTest, CloseRestoresFocusWhenItRemainsInsidePopup) {
+    auto* trigger = new Button("Open", window);
+    trigger->setGeometry(24, 24, 100, 36);
+    trigger->show();
+    window->activateWindow();
+    trigger->setFocus(Qt::OtherFocusReason);
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), trigger, 1000);
+
+    Popup p(window);
+    p.setAnimationEnabled(false);
+    p.open();
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), &p, 1000);
+
+    p.close();
+
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), trigger, 1000);
+}
+
+TEST_F(PopupTest, CloseDoesNotStealFocusMovedOutsidePopup) {
+    auto* trigger = new Button("Open", window);
+    trigger->setGeometry(24, 24, 100, 36);
+    trigger->show();
+    auto* destination = new Button("Destination", window);
+    destination->setGeometry(160, 24, 120, 36);
+    destination->show();
+    window->activateWindow();
+    trigger->setFocus(Qt::OtherFocusReason);
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), trigger, 1000);
+
+    Popup p(window);
+    p.setAnimationEnabled(false);
+    p.open();
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), &p, 1000);
+    destination->setFocus(Qt::OtherFocusReason);
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), destination, 1000);
+
+    p.close();
+
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), destination, 1000);
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // 4. x / y 定位
 // ══════════════════════════════════════════════════════════════════════════════

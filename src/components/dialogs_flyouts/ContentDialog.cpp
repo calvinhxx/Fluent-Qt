@@ -138,8 +138,11 @@ void ContentDialog::setDefaultButton(int btn) {
     updateButtonBar();
 }
 
-QWidget* ContentDialog::content() const { return m_contentWidget; }
+QWidget* ContentDialog::content() const { return m_contentWidget.data(); }
 void ContentDialog::setContent(QWidget* widget) {
+    if (widget == m_contentWidget)
+        return;
+
     if (m_contentWidget) {
         if (auto* al = qobject_cast<AnchorLayout*>(layout()))
             al->removeWidget(m_contentWidget);
@@ -213,7 +216,7 @@ void ContentDialog::updateContentAnchors() {
     a.right  = {this, Edge::Right, -kDialogPadding};
     a.bottom = {m_buttonBar, Edge::Top, -kDialogPadding};
 
-    if (auto* qp = dynamic_cast<QMLPlus*>(m_contentWidget))
+    if (auto* qp = dynamic_cast<QMLPlus*>(m_contentWidget.data()))
         *(qp->anchors()) = a;
 
     if (auto* al = qobject_cast<AnchorLayout*>(layout()))
@@ -270,7 +273,7 @@ void ContentDialog::onThemeUpdated() {
     if (m_secondaryBtn) m_secondaryBtn->onThemeUpdated();
     if (m_closeBtn)    m_closeBtn->onThemeUpdated();
     if (m_contentWidget) {
-        if (auto* fe = dynamic_cast<FluentElement*>(m_contentWidget))
+        if (auto* fe = dynamic_cast<FluentElement*>(m_contentWidget.data()))
             fe->onThemeUpdated();
     }
 }

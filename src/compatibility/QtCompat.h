@@ -15,12 +15,14 @@
  * - Use fluentMousePos() / fluentMouseGlobalPos() for mouse coordinates.
  * - Use fluentKeySequence() for QKeyEvent shortcut matching.
  * - Use fluentConnectSingleShot() for one-shot signal connections.
+ * - Use FLUENT_QT6_ONLY_OVERRIDE for functions virtual only in Qt 6.
  * - Use FLUENT_INIT_VIEW_ITEM_OPTION() inside QAbstractItemView subclasses.
  * zh_CN:
  * zh_CN: - enterEvent() override 使用 FluentEnterEvent。
  * zh_CN: - 鼠标坐标统一通过 fluentMousePos() / fluentMouseGlobalPos() 读取。
  * zh_CN: - QKeyEvent 快捷键匹配统一使用 fluentKeySequence()。
  * zh_CN: - 一次性信号连接统一使用 fluentConnectSingleShot()。
+ * zh_CN: - 仅在 Qt 6 为 virtual 的函数使用 FLUENT_QT6_ONLY_OVERRIDE。
  * zh_CN: - QAbstractItemView 子类中使用 FLUENT_INIT_VIEW_ITEM_OPTION() 初始化 option。
  */
 
@@ -64,8 +66,10 @@
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QEnterEvent>
 using FluentEnterEvent = QEnterEvent;
+#define FLUENT_QT6_ONLY_OVERRIDE override
 #else
 using FluentEnterEvent = QEvent;
+#define FLUENT_QT6_ONLY_OVERRIDE
 #endif
 
 #include <type_traits>

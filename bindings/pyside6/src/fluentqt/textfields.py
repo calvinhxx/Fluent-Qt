@@ -3,6 +3,7 @@
 from . import _fluentqt as _native
 from ._fluentqt import FontRole
 
+AutoSuggestBox = _native.fluent.AutoSuggestBox
 Label = _native.fluent.Label
 LineEdit = _native.fluent.LineEdit
 NumberBox = _native.fluent.NumberBox
@@ -24,6 +25,7 @@ def _text_edit_vertical_scroll_bar(self):
 TextEdit.verticalScrollBar = _text_edit_vertical_scroll_bar
 
 __all__ = [
+    "AutoSuggestBox",
     "FontRole",
     "Label",
     "LineEdit",

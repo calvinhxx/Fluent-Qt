@@ -13,6 +13,8 @@
 #include <QStringListModel>
 #include <QSignalSpy>
 #include <QComboBox>
+#include <QStandardItem>
+#include <QStandardItemModel>
 #include <QFontMetricsF>
 #include <QImage>
 #include <QPixmap>
@@ -118,6 +120,7 @@ void sendWheel(QWidget* target, int angleDeltaY) {
 
 TEST_F(ComboBoxTest, DefaultProperties) {
     ComboBox cb(window);
+    EXPECT_GE(cb.metaObject()->indexOfProperty("pressProgress"), 0);
     EXPECT_EQ(cb.fontRole(), Typography::FontRole::Body);
     EXPECT_EQ(cb.contentPaddingH(), Spacing::Padding::ComboBoxHorizontal);
     EXPECT_EQ(cb.contentPaddingV(), Spacing::Padding::ComboBoxVertical);
@@ -572,6 +575,38 @@ TEST_F(ComboBoxTest, SelectingPopupItemUpdatesIndexAndCloses) {
     EXPECT_EQ(cb->currentIndex(), 2);
     EXPECT_EQ(cb->currentText(), "Gamma");
     EXPECT_FALSE(popup->isOpen());
+}
+
+TEST_F(ComboBoxTest, PopupUsesConfiguredModelColumnAndRootIndex) {
+    QStandardItemModel model;
+    auto* group = new QStandardItem(QStringLiteral("Group"));
+    group->appendRow({new QStandardItem(QStringLiteral("First key")),
+                      new QStandardItem(QStringLiteral("First label"))});
+    group->appendRow({new QStandardItem(QStringLiteral("Second key")),
+                      new QStandardItem(QStringLiteral("Second label"))});
+    model.appendRow(group);
+
+    ComboBox* cb = new ComboBox(window);
+    cb->setGeometry(40, 40, 180, Spacing::ControlHeight::Standard);
+    cb->setModel(&model);
+    cb->setRootModelIndex(group->index());
+    cb->setModelColumn(1);
+    cb->setCurrentIndex(0);
+
+    auto* popup = openPopupFor(cb, window);
+    ASSERT_NE(popup, nullptr);
+    auto* listView = popup->findChild<fluent::collections::ListView*>(
+        "ComboBoxPopupListView");
+    ASSERT_NE(listView, nullptr);
+    EXPECT_EQ(listView->rootIndex(), group->index());
+    EXPECT_EQ(listView->modelColumn(), 1);
+    EXPECT_EQ(listView->model()->index(0, 1, listView->rootIndex())
+                  .data(Qt::DisplayRole)
+                  .toString(),
+              QStringLiteral("First label"));
+    EXPECT_EQ(cb->currentText(), QStringLiteral("First label"));
+
+    cb->hidePopup();
 }
 
 TEST_F(ComboBoxTest, EditableSelectionMirrorsLineEditText) {

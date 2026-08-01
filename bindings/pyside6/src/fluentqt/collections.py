@@ -9,6 +9,7 @@ from . import _fluentqt as _native
 
 WidgetOwnership = _native.fluent.WidgetOwnership
 SelectionMode = _native.fluent.SelectionMode
+_NativeDrawerView = _native.fluent.DrawerView
 _NativeFlipView = _native.fluent.FlipView
 _NativeFlowView = _native.fluent.FlowView
 _NativeGridView = _native.fluent.GridView
@@ -44,6 +45,187 @@ def _split_view_options_ne(self, other):
 SplitViewPaneOptions.__eq__ = _split_view_options_eq
 SplitViewPaneOptions.__ne__ = _split_view_options_ne
 SplitViewPaneOptions.__hash__ = None
+
+
+_CONTENT_UNSET = object()
+
+
+class DrawerView(_NativeDrawerView):
+    """Same-window drawer with explicit content ownership methods.
+
+    ``setContentWidget()`` preserves the C++ Borrowed default. Owned content is
+    deleted when replaced or when the drawer is destroyed, Borrowed content is
+    detached, and Reparented content returns to the QWidget parent it had when
+    installed. ``takeContentWidget()`` always returns parentless content to
+    Python.
+    """
+
+    def __init__(self, *args, **kwargs):
+        content = kwargs.pop("contentWidget", _CONTENT_UNSET)
+        if "contentOwnership" in kwargs:
+            raise TypeError(
+                "DrawerView contentOwnership is not a Python constructor "
+                "option; use an explicit content ownership method"
+            )
+        super().__init__(*args, **kwargs)
+        self._fluentqt_content_record = None
+        if content is not _CONTENT_UNSET:
+            self.setContentWidget(content)
+
+    def _remember_content(self, widget, ownership, original_parent):
+        host_ref = weakref.ref(self)
+        key = id(widget)
+
+        def forget_destroyed_content(*_args):
+            host = host_ref()
+            if host is None:
+                return
+            record = host._fluentqt_content_record
+            if record is not None and id(record[0]) == key:
+                host._fluentqt_content_record = None
+
+        widget.destroyed.connect(forget_destroyed_content)
+        self._fluentqt_content_record = (
+            widget,
+            ownership,
+            original_parent,
+            forget_destroyed_content,
+        )
+
+    @staticmethod
+    def _disconnect_content_record(record):
+        if record is None:
+            return
+        try:
+            record[0].destroyed.disconnect(record[3])
+        except (RuntimeError, TypeError):
+            pass
+
+    @staticmethod
+    def _synchronize_released_parent(record):
+        if record is None or not Shiboken.isValid(record[0]):
+            return
+        widget, ownership, original_parent, _callback = record
+        target_parent = (
+            original_parent
+            if ownership == WidgetOwnership.Reparented
+            else None
+        )
+        if widget.parentWidget() is not target_parent:
+            widget.setParent(target_parent)
+
+    @staticmethod
+    def _restore_rejected_parent(widget, previous_parent, ownership):
+        if widget is None or ownership == WidgetOwnership.Reparented:
+            return
+        try:
+            widget.setParent(previous_parent)
+        except RuntimeError:
+            pass
+
+    def _set_content_widget_with_ownership(self, widget, ownership):
+        effective_ownership = (
+            WidgetOwnership.Borrowed if widget is None else ownership
+        )
+        if widget is self or (
+            widget is not None and widget.isAncestorOf(self)
+        ):
+            raise ValueError(
+                "DrawerView content cannot be the host or its ancestor"
+            )
+
+        current = super().contentWidget()
+        if widget is current:
+            if widget is None:
+                self._fluentqt_content_record = None
+                return True
+            if super().contentOwnership() != effective_ownership:
+                raise ValueError(
+                    "takeContentWidget() before changing ownership mode"
+                )
+            return True
+
+        previous_parent = widget.parentWidget() if widget is not None else None
+        original_parent = (
+            previous_parent
+            if widget is not None
+            and effective_ownership == WidgetOwnership.Reparented
+            else None
+        )
+        if (
+            widget is not None
+            and previous_parent is not None
+            and effective_ownership != WidgetOwnership.Reparented
+        ):
+            widget.setParent(None)
+
+        old_record = self._fluentqt_content_record
+        try:
+            accepted = super()._setContentWidgetWithOwnership(
+                widget,
+                effective_ownership,
+            )
+        except Exception:
+            self._restore_rejected_parent(
+                widget,
+                previous_parent,
+                effective_ownership,
+            )
+            raise
+        if not accepted:
+            self._restore_rejected_parent(
+                widget,
+                previous_parent,
+                effective_ownership,
+            )
+            return False
+
+        self._synchronize_released_parent(old_record)
+        self._disconnect_content_record(old_record)
+        self._fluentqt_content_record = None
+        if widget is not None:
+            self._remember_content(
+                widget,
+                effective_ownership,
+                original_parent,
+            )
+        return True
+
+    def setOwnedContentWidget(self, widget):
+        """Install content that is deleted when it leaves the drawer."""
+
+        return self._set_content_widget_with_ownership(
+            widget,
+            WidgetOwnership.Owned,
+        )
+
+    def setBorrowedContentWidget(self, widget):
+        """Install content that becomes parentless when released."""
+
+        return self._set_content_widget_with_ownership(
+            widget,
+            WidgetOwnership.Borrowed,
+        )
+
+    def setReparentedContentWidget(self, widget):
+        """Install content restored to its current QWidget parent."""
+
+        return self._set_content_widget_with_ownership(
+            widget,
+            WidgetOwnership.Reparented,
+        )
+
+    def setContentWidget(self, widget):
+        return self.setBorrowedContentWidget(widget)
+
+    def takeContentWidget(self):
+        record = self._fluentqt_content_record
+        widget = super().takeContentWidget()
+        if widget is not None:
+            widget.setParent(None)
+        self._disconnect_content_record(record)
+        self._fluentqt_content_record = None
+        return widget
 
 
 class FlipView(_NativeFlipView):
@@ -1107,6 +1289,7 @@ class StackView(_NativeStackView):
 
 
 __all__ = [
+    "DrawerView",
     "FlipView",
     "FlowView",
     "GridView",

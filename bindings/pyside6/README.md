@@ -36,9 +36,15 @@ cmake -S . -B build/pyside6 \
   -DFLUENT_QT_BUILD_EXAMPLES=OFF \
   -DFLUENT_QT_INSTALL=OFF \
   -DBUILD_TESTING=ON
-cmake --build build/pyside6 --target _fluentqt --parallel
+cmake --build build/pyside6 --target fluentqt_pyside6_stubs --parallel
 ctest --test-dir build/pyside6 -L '^pyside$' --output-on-failure
 ```
+
+`fluentqt_pyside6_stubs` builds the native extension and generates the package
+facade plus `_fluentqt.pyi` from Shiboken signature metadata. The committed
+`api-manifest.json` is checked against those stubs, so a missing class, enum,
+function, or required method fails before wheel creation. The generated stubs
+retain Python 3.10 syntax compatibility and are installed beside `py.typed`.
 
 For a Qt 6.9 macOS wheel, also configure with
 `-DCMAKE_OSX_DEPLOYMENT_TARGET=12.0`. Qt 6.9 supports macOS 12 and newer; this
@@ -75,7 +81,17 @@ FLUENTQT_EXPECTED_VERSION="$(
   .venv-fluentqt-wheel/bin/python \
   bindings/pyside6/tests/test_wheel_smoke.py
 .venv-fluentqt-wheel/bin/python -m pip check
+.venv-fluentqt-wheel/bin/python -m pip install mypy==2.3.0
+env -u PYTHONPATH \
+  .venv-fluentqt-wheel/bin/python -m mypy \
+  --strict \
+  --no-incremental \
+  bindings/pyside6/tests/test_typecheck_smoke.py
 ```
+
+The type-check smoke covers root and category imports, theme return types,
+native widget methods, `Window.titleBar()`, and backdrop value types using the
+installed wheel rather than the source tree.
 
 Run the example from the build tree:
 
@@ -83,6 +99,28 @@ Run the example from the build tree:
 PYTHONPATH=build/pyside6/python \
   .venv-pyside/bin/python bindings/pyside6/examples/hello_world.py
 ```
+
+Run the Window, TitleBar, and backdrop acceptance window on the host's native
+Qt platform plugin:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+QT_QPA_PLATFORM=cocoa \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/window_chrome.py \
+  --verify-native \
+  --snapshot build/pyside6/pyside6-window-chrome.png \
+  --report build/pyside6/pyside6-window-chrome.json
+```
+
+Use `QT_QPA_PLATFORM=windows` on Windows and `QT_QPA_PLATFORM=xcb` or
+`wayland` on Linux. `--verify-native` rejects `offscreen` and `minimal`, then
+checks the native handle, Qt-owned TitleBar, content lifetime, chrome geometry,
+resize propagation, and typed Solid/Mica/Acrylic state. Add
+`--require-platform-backdrop` only on a desktop where an OS/compositor material
+is expected; the normal command accepts FluentQt's deterministic painted
+fallback. Without `--verify-native`, the same example supports an offscreen
+snapshot for layout review, but that is not platform-window evidence.
 
 Run the controls, progress, and theme-switching example:
 
@@ -101,6 +139,28 @@ PYTHONPATH=build/pyside6/python \
 
 Pass `--snapshot build/pyside6/pyside6-calendar-view-showcase.png` to render
 the same window without leaving an interactive process running.
+
+Run the three native date/time picker and same-window popup example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/date_time_pickers.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-date-time-pickers.png` to render the
+three entry surfaces together with an open `CalendarDatePicker` popup.
+
+Run the native AutoSuggestBox and same-window suggestion Flyout example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/auto_suggest_box.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-auto-suggest-box.png` to render the
+search input with its keyboard-opened suggestion Flyout.
 
 Run the AnnotatedScrollBar label and linked-ScrollView example:
 
@@ -186,6 +246,121 @@ PYTHONPATH=build/pyside6/python \
 Pass `--snapshot build/pyside6/pyside6-split-view-ownership.png` to render the
 native resizable panes with Owned, Borrowed, and Reparented policies without
 leaving an interactive process running.
+
+Run the DrawerView same-window overlay and content ownership example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/drawer_view_ownership.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-drawer-view-ownership.png` to render the
+opened native drawer, dim scrim, and its Fluent content. The interactive mode
+also exercises outside-press, Escape, animation, and close-policy behavior.
+
+Run the Popup same-window overlay and QWidget dependency example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/popup_overlay.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-popup-overlay.png` to render the opened
+native Popup and dim scrim. Interactive mode verifies anchor-relative
+placement, Escape/outside dismissal, focus return, and the toolbar passthrough.
+
+Run the Flyout anchor placement and light-dismiss example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/flyout_overlay.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-flyout-overlay.png` to render a native
+Flyout using Auto placement near the bottom edge. Interactive mode exposes
+Top, Bottom, Left, Right, and Auto anchors while keeping the surface inside the
+owning Window.
+
+Run the CoachMark and TeachingTip target/lifecycle example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/guidance_overlays.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-guidance-overlays.png` to render both
+native guidance surfaces above caller-owned Python targets. Interactive mode
+demonstrates retargeting, tails, same-window placement, semantic TeachingTip
+close reasons, and Qt-owned content hosts.
+
+Run the managed Toast and attached ToolTip example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/status_overlays.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-status-overlays.png` to render the
+same-window Toasts and composite the separate native ToolTip surface into one
+deterministic acceptance image. Interactive mode demonstrates target-owned
+tooltip attachment, managed toast stacking, keyed updates, borrowed QAction
+retention, and host-window lifetime.
+
+Run the ContentDialog result and hosted-content example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/content_dialog.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-content-dialog.png` to render the
+same-window smoke scrim, hosted Python content, and three native command
+buttons. Interactive mode reports the primary, secondary, and close results.
+
+Run the ComboBox Python-model and same-window dropdown example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/combo_box_dropdown.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-combo-box-dropdown.png` to render an
+opened native dropdown backed by a Python `QAbstractListModel`, plus an
+editable ComboBox using its Fluent line editor.
+
+Run the DropDownButton, SplitButton, ToggleSplitButton, and FluentMenu example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/menu_buttons.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-menu-buttons.png` to render all three
+native menu-button variants together with an opened `FluentMenu`. The example
+also demonstrates primary/secondary command separation, toggle state, and
+caller-owned menu lifetime.
+
+Run the FluentMenuBar, CommandBar, and CommandBarFlyout example:
+
+```bash
+PYTHONPATH=build/pyside6/python \
+  .venv-pyside/bin/python \
+  bindings/pyside6/examples/command_surfaces.py
+```
+
+Pass `--snapshot build/pyside6/pyside6-command-surfaces.png` to render the
+native menu bar and inline command bar together with an opened same-window
+command flyout. The example shares caller-owned `QAction` objects between the
+two command surfaces and demonstrates that Python wrapper retention does not
+change QObject ownership.
 
 Run the TreeView hierarchy, delegate, selection, and reordering example:
 
@@ -304,18 +479,12 @@ QT_QPA_PLATFORM=offscreen \
   --snapshot build/pyside6/pyside6-compatibility-showcase.png
 ```
 
-The current binding phase exports `Accordion`, `AnnotatedScrollBar`,
-`AnnotatedScrollBarLabel`, `Avatar`, `Breadcrumb`, `BreadcrumbItem`, `Button`,
-`CalendarView`, `CheckBox`,
-`ColorPicker`, `CompoundButton`, `HyperlinkButton`, `RadioButton`,
-`RatingControl`, `RepeatButton`, `Slider`, `ToggleButton`, `ToggleSwitch`,
-`Card`, `Divider`, `Expander`, `FontIcon`, `Label`, `LineEdit`, `NumberBox`,
-`PasswordBox`, `TextEdit`, `ProgressBar`, `ProgressRing`, `InfoBadge`,
-`InfoBar`, `Shimmer`, `FlipView`, `FlowView`, `GridView`, `ListView`,
-`NavigationView`, `SplitView`, `StackContentHost`, `TreeView`, `PipsPager`,
-`Pivot`, `PivotItem`, `ScrollBar`, `ScrollView`, `SelectorBar`,
-`SelectorBarItem`, `StackView`, `TabView`, `TabViewItem`, and `Window`, together
-with their enums and value types. It also supports Light/Dark mode,
+The current binding phase exports 75 required public classes and value types
+across every component category in the
+[coverage ledger](ROADMAP.md#public-api-coverage-ledger), including `Window`,
+`TitleBar`, and the backdrop value types. `api-manifest.json` is the executable
+source of truth for exact names and required methods. The package also supports
+Light/Dark mode,
 Fluent/Material/macOS style presets, in-memory accent overrides, typography
 scaling, Qt properties and signals, Python subclassing, and explicit hosted
 widget ownership.
@@ -337,6 +506,11 @@ window, application font, content layout, and accent button.
 Importing `fluentqt` has no application-creation or theme side effects.
 `Window.nativeEvent()` follows PySide's safe two-argument override contract:
 Python returns a `(handled, result)` tuple and never receives the result pointer.
+`Window.titleBar()` returns the existing Qt-owned `TitleBar`; Python must not
+delete or reparent it. `TitleBar.setContentWidget()` adopts its content, releases
+the previous child as a parentless Python-owned widget, and destroys the current
+child with the TitleBar. Internal theme-refresh hooks stay outside the Python
+surface.
 `api-manifest.json` records the required public surface and is checked by the
 binding tests so generator upgrades cannot silently remove required APIs.
 The private native extension preserves the C++ namespace hierarchy to work
@@ -434,6 +608,75 @@ parentless Python-owned page. The facade retains Python page subclasses and
 restore targets while hosted, rejects duplicate/ancestor insertion, and
 removes its records when a page is destroyed externally. The legacy C++
 transfer-style overloads and runtime ownership argument remain private.
+`DrawerView` preserves its C++ Borrowed default for plain `setContentWidget()`
+and publishes fixed Owned, Borrowed, and Reparented content methods. The Python
+facade retains hosted subclasses and restore parents, rejects host/ancestor
+cycles, requires an explicit take before changing the current widget's policy,
+and returns parentless Python-owned content from `takeContentWidget()`. Its
+native same-window overlay, dim scrim, edge geometry, animation, outside-press,
+Escape, and `CloseFlag` policy remain implemented by the C++ component; the
+Python binding does not create a second window or emulate the overlay.
+`Popup` exposes its native open/close lifecycle, modal/dim scrim, animation,
+`CloseFlag` policy, local placement, and light-dismiss behavior. Position
+anchors, theme sources, and passthrough regions stay caller-owned; the Python
+facade retains their wrappers without changing QWidget parentage or Shiboken
+ownership, then releases them on replacement, explicit clear, external
+destruction, or Popup destruction. Closing restores focus to the invocation
+target only while focus remains inside the Popup, so a focus move made during
+the close transition is not overwritten. C++-only automatic-placement and
+focus-policy hooks remain private to overlay subclasses.
+`Flyout` adds native Top, Bottom, Left, Right, Full, and Auto placement,
+anchor offset, and window clamping on top of Popup behavior. Its anchor remains
+caller-owned; `setAnchor()` and `showAt()` retain only the Python wrapper and
+release it on replacement, clear, external destruction, or Flyout destruction.
+Public `isinstance(flyout, Popup)` and `issubclass(Flyout, Popup)` checks retain
+the native C++ inheritance relationship across the two Python facade classes.
+Destroying the active invocation anchor closes the overlay without attempting
+to restore focus to a QWidget already in destruction. C++ placement hooks stay
+private, while Python subclasses can still override ordinary QWidget events.
+`CoachMark` and `TeachingTip` expose their native same-window target placement,
+card sizing, tail rendering, open/close lifecycle, and Qt-owned content hosts.
+`TeachingTip` additionally publishes preferred placements, light-dismiss
+control, and semantic close reasons. Targets remain caller-owned: each facade
+retains only the Python wrapper and releases it on replacement, explicit clear,
+external destruction, or overlay destruction. Target/content-host getters do
+not alter QWidget parentage or Shiboken ownership. `TeachingTip` retains its
+native Popup inheritance for `isinstance`/`issubclass`, while C++ theme and
+placement hooks remain private to the implementation.
+`Dialog` exposes the native same-window `QDialog` lifecycle, smoke scrim,
+animation, modality, result, and ordinary QWidget virtual events. A local
+theme source remains caller-owned; the facade retains only its wrapper and
+releases it on clear, external destruction, or Dialog destruction.
+`ContentDialog` preserves the native Dialog inheritance relationship and adds
+title, default-command, primary/secondary/close results, signals, and hosted
+content. Installed content is parented to and destroyed with the dialog;
+replacement or `setContent(None)` detaches the previous widget, while
+`takeContent()` explicitly returns it parentless to Python. The facade retains
+Python subclass state, rejects host/ancestor cycles, and tracks external
+content destruction through Qt's `deleteLater()`/deferred-delete path. As with
+other still-parented Python subclasses, direct `Shiboken.delete(content)` can
+fast-fail inside PySide6 6.2.4 on Windows before Qt completes its destroyed
+signal chain and is not part of the supported lifecycle contract. The three
+C++ `static constexpr` result fields are published as stable Python class
+constants because Shiboken 6.9 otherwise initializes them on an invalid
+flattened namespace during module import.
+`ComboBox` preserves native item/model APIs, current-index/text signals,
+editable input, keyboard interaction, and the C++ same-window Flyout dropdown.
+Its caller-owned model wrapper is retained while installed and released on
+replacement or host collection; the explicit derived `model()` binding avoids
+the stale parent heuristic used by some Shiboken versions. A line editor passed
+to `setLineEdit()` becomes Qt-owned and is destroyed when replaced, when
+editable mode is disabled, or with the ComboBox. The popup's Fluent `ListView`
+and row delegate remain implementation details.
+Inherited `setView()`/`view()` and delegate customization fail explicitly
+because they would mutate QComboBox's unused fallback popup rather than the
+visible Fluent dropdown. Use item/model data and ComboBox signals instead.
+`AutoSuggestBox` accepts a native `QStringList` as an ordinary Python string
+list and publishes typed text-change, suggestion-choice, query-submission, and
+popup-state signals. Keyboard preview, Enter/Escape handling, IME-safe focus,
+painting, and its same-window Fluent Flyout remain in C++. The internal string
+model, popup class, and row delegate are deliberately private, and the C++
+theme-refresh hook is removed from both `LineEdit` and its Python subclasses.
 `StackView` keeps native push/pop/replace transitions, page status signals,
 keyboard back navigation, and indexed stack queries. Plain `push()`,
 `replace()`, and `setInitialItem()` preserve the C++ Owned default; fixed
@@ -491,9 +734,13 @@ A complete wheel release/publishing matrix has not yet been added.
 
 Passing the build-tree tests proves the declared API contract; passing the
 clean-wheel smoke proves installation/runtime isolation; the interactive
-showcase proves the visible controls and signal-driven behavior. Native
-Window/TitleBar/backdrop behavior still requires a real desktop and cannot be
-accepted solely from the offscreen snapshot.
+showcase proves the visible controls and signal-driven behavior. The native
+Window acceptance runs with XCB under Xvfb, the Windows plugin on Windows, and
+Cocoa on macOS, recording a PNG and JSON state report. Those lanes prove native
+plugin loading, handle/chrome integration, typed backdrop state, and valid
+fallback behavior. Physical Windows 11 DWM and Linux KWin/Wayland compositor
+effects, system drag/resize interaction, and their visual quality still require
+desktop review; an offscreen snapshot cannot prove them.
 
 Very old Shiboken generators embed an older Clang parser. If Shiboken 6.2
 cannot parse the C++ standard-library headers from a much newer host compiler,

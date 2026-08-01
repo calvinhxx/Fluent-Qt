@@ -3,6 +3,7 @@
 
 #include "Button.h"
 #include <QMenu>
+#include <QPointer>
 
 class QVariantAnimation;
 
@@ -24,6 +25,11 @@ class SplitButton : public Button {
      */
     Q_PROPERTY(QMenu* menu READ menu WRITE setMenu NOTIFY menuChanged)
     /**
+     * @brief Whether the attached menu is currently visible.
+     * zh_CN: 附加菜单当前是否可见。
+     */
+    Q_PROPERTY(bool isOpen READ isOpen NOTIFY openChanged)
+    /**
      * @brief Width of the split-button secondary action region.
      * zh_CN: 拆分按钮二级操作区域宽度。
      */
@@ -34,14 +40,17 @@ public:
 
     explicit SplitButton(const QString& text = "", QWidget* parent = nullptr);
     
-    QMenu* menu() const { return m_menu; }
+    QMenu* menu() const { return m_menu.data(); }
     void setMenu(QMenu* menu);
+
+    bool isOpen() const { return m_isOpen; }
 
     int secondaryWidth() const { return m_secondaryWidth; }
     void setSecondaryWidth(int width);
 
 signals:
     void menuChanged();
+    void openChanged();
     void secondaryWidthChanged();
 
 protected:
@@ -55,12 +64,11 @@ protected:
     QSize minimumSizeHint() const override;
 
     SplitPart getPartAt(const QPoint& pos) const;
-    void updateSplitState(SplitPart hoverPart, SplitPart pressPart);
 
     int primaryTrailingInset() const;
     QRectF primaryContentRect(const QRectF& primaryRect) const;
 
-    QMenu* m_menu = nullptr;
+    QPointer<QMenu> m_menu;
     SplitPart m_hoverPart = None;
     SplitPart m_pressPart = None;
     
@@ -68,10 +76,12 @@ protected:
 
 private:
     void startPressAnimation(SplitPart part);
+    void setOpen(bool open);
 
     QVariantAnimation* m_pressAnimation = nullptr;
     SplitPart m_animatedPart = None;
     qreal m_pressProgress = 0.0;
+    bool m_isOpen = false;
 };
 
 } // namespace fluent::basicinput

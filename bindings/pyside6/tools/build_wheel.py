@@ -21,13 +21,28 @@ PACKAGE_NAME = "fluentqt"
 DIST_INFO_NAME = "fluentqt-{version}.dist-info"
 REQUIRED_PACKAGE_FILES = {
     "__init__.py",
+    "__init__.pyi",
+    "_fluentqt.pyi",
     "basicinput.py",
+    "basicinput.pyi",
+    "collections.pyi",
+    "date_time.pyi",
+    "dialogs_flyouts.pyi",
     "foundation.py",
+    "foundation.pyi",
+    "layout.pyi",
+    "menus_toolbars.py",
+    "menus_toolbars.pyi",
+    "navigation.pyi",
     "py.typed",
     "scrolling.py",
+    "scrolling.pyi",
     "status_info.py",
+    "status_info.pyi",
     "textfields.py",
+    "textfields.pyi",
     "windowing.py",
+    "windowing.pyi",
 }
 
 

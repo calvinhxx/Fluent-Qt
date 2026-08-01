@@ -270,7 +270,7 @@ platform contracts.
 | `collections` | ListView, GridView, FlowView, TreeView, FlipView, SplitView, StackView, DrawerView | Present for listed components | flow-view, gridview-drag-reorder, listview-wheel-input, listview-indicator-motion, tree-view, flipview-wheel-input, split-view, stack-view, drawer-view |
 | `date_time` | CalendarView, CalendarDatePicker, DatePicker, TimePicker | Present for listed components | calendar-date-picker, calendar-view-pager, date-picker, time-picker |
 | `dialogs_flyouts` | Dialog, ContentDialog, Popup, Flyout, TeachingTip | Present for listed components | dialog-winui3-polish, popup-overlay, flyout, teaching-tip |
-| `menus_toolbars` | CommandBar, CommandBarFlyout, FluentMenu, FluentMenuItem, MenuBar | CommandBar and CommandBarFlyout Capability Phase 3 focused tests present; menu classes are also exercised through MenuBar and DropDownButton tests | command-bar, menu-bar |
+| `menus_toolbars` | CommandBar, CommandBarFlyout, FluentMenu, FluentMenuItem, MenuBar | CommandBar and CommandBarFlyout Capability Phase 3 focused tests present; FluentMenu and FluentMenuItem also have direct property/action tests | command-bar, menu-bar |
 | `navigation` | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | Present for listed public components; StackContentHost lifecycle cases share the NavigationView focused target | breadcrumb, navigation-view, pivot, selector-bar, tab-view |
 | `scrolling` | ScrollBar, ScrollView, AnnotatedScrollBar, PipsPager | Present for listed components | scroll-view, annotated-scrollbar, pips-pager |
 | `status_info` | Avatar, ToolTip, InfoBar, InfoBadge, ProgressBar, ProgressRing, Shimmer, Toast | Present for listed components; Capability Phase 4 adds Toast lifecycle and InfoBadge accessibility contracts | tooltip-animation, info-bar, info-badge, progress-bar, progress-ring |
@@ -284,7 +284,7 @@ platform contracts.
 | API-001 | Medium | Open state naming | `src/components/date_time/DatePicker.h`, `src/components/date_time/TimePicker.h`, `src/components/date_time/CalendarDatePicker.h` | Button-like picker entries exposed specific getters (`isDropDownOpen`, `isCalendarOpen`) while nearby `DropDownButton` uses `isOpen`. | Applied compatible `isOpen()` aliases and focused tests. Existing specific getters remain public. |
 | API-002 | Medium | Repeated setter tests | `tests/components/date_time/TestDatePicker.cpp` | `DatePicker::setSelectedDate(...)` already suppresses duplicate signals, but the focused test did not assert the no-op behavior. | Added repeated selected-date and repeated clear assertions. |
 | API-003 | Low | Nullable values | Date/time pickers | `DatePicker`, `TimePicker`, and `CalendarDatePicker` use invalid `QDate()` or `QTime()` as empty selected values. Existing tests cover defaults and clears, but the convention was not documented durably. | Documented the nullable value convention in [Component API Conventions](component-api-conventions.md). |
-| API-004 | Medium | Open state breadth | `src/components/basicinput/SplitButton.h`, `src/components/basicinput/ToggleSplitButton.h` | Split buttons own a menu and have primary/secondary hit zones, but they do not expose an open-state property. Adding one may require QMenu lifecycle semantics and is broader than this audit. | Deferred to follow-up recommendation `standardize-splitbutton-open-state` if callers need observable menu state. |
+| API-004 | Medium | Open state breadth | `src/components/basicinput/SplitButton.h`, `src/components/basicinput/ToggleSplitButton.h` | Split buttons own a menu and have primary/secondary hit zones, so callers need observable menu state without inferring it from QWidget visibility. | Resolved with inherited read-only `isOpen`, `openChanged`, and menu show/hide/replacement/destruction lifecycle tests. |
 | API-005 | Medium | Popup/flyout state naming | `src/components/dialogs_flyouts/Popup.h`, `src/components/dialogs_flyouts/Flyout.h`, `src/components/dialogs_flyouts/ContentDialog.h`, `src/components/dialogs_flyouts/TeachingTip.h` | Overlay components mix Qt visibility, popup open state, light-dismiss, modal, and hosted-content semantics. A cosmetic rename could hide real behavioral differences. | Deferred to follow-up recommendation `standardize-overlay-open-state-semantics`. |
 | API-006 | Low | Collection selection naming | `src/components/collections/ListView.h`, `src/components/collections/TreeView.h`, `src/components/collections/GridView.h`, `src/components/collections/FlowView.h` | Collection views intentionally differ: item-view based components use Qt model/delegate contracts, while ListView/TreeView expose component-specific enum names. | Marked intentional; document selection/current/item ownership expectations rather than force a rename. |
 | API-007 | Low | Caller-composed navigation | `src/components/navigation/NavigationView.h`, `src/components/navigation/StackContentHost.h`, `src/components/navigation/TabView.h` | Navigation components act as shells/hosts and must leave page choice to the application while making any Qt parent-based lifetime transfer explicit. | Resolved for NavigationView/StackContentHost with compatibility-preserving Owned, Borrowed, and Reparented policies; TabView continues to leave external page hosting entirely to the caller. |
@@ -315,15 +315,18 @@ platform contracts.
   - `TabView`: `areTabsClosable()`, `isAddTabButtonVisible()`, `isTabReorderEnabled()`, `areKeyboardAcceleratorsEnabled()`.
   - `ProgressRing`: `isBackgroundVisible()`.
 - Added `DropDownButton::setIsOpen(bool)` as a compatible alias for `setOpen(bool)`.
+- Added observable `menu` and `isOpen` properties to `SplitButton`; `ToggleSplitButton`
+  inherits the same lifecycle contract. Menus are tracked deletion-safely and
+  replacement/external destruction are covered by focused tests.
+- Added direct `FluentMenu` and `FluentMenuItem` tests for typography change
+  notification and QAction trigger behavior.
 - Added focused tests for the new aliases in DropDownButton, ListView, GridView, FlowView, TreeView, FlipView, TabView, and ProgressRing.
 - Published the durable checklist as [Component API Conventions](component-api-conventions.md) so future work can use it without depending on an agent skill path.
 
 ## Deferred Follow-Ups
 
-- `standardize-splitbutton-open-state`: decide whether `SplitButton` and `ToggleSplitButton` should expose observable menu open state.
 - `standardize-overlay-open-state-semantics`: align Popup/Flyout/Dialog/ContentDialog/TeachingTip naming only after light-dismiss, modal, and visibility semantics are specified.
 - `add-overlay-property-notify-signals`: add missing NOTIFY signals for Popup/TeachingTip/Dialog properties after overlay-state semantics are settled.
-- `add-menu-focused-tests`: add direct tests for `FluentMenu` and `FluentMenuItem` font style properties rather than relying only on MenuBar/DropDownButton coverage.
 - `add-component-api-static-checks`: consider a later static or meta-object based checker after the checklist stabilizes.
 - `document-public-property-comments`: add targeted header comments for ambiguous public properties as components are touched.
 
@@ -331,4 +334,7 @@ platform contracts.
 
 - Date/time picker code changes were validated with focused builds and direct test binaries.
 - Alias sweep code changes were validated with focused builds and CTest label filters for `test_dropdown_button`, `test_list_view`, `test_grid_view`, `test_flow_view`, `test_tree_view`, `test_flip_view`, `test_tab_view`, and `test_progress_ring`: 289 tests passed, 0 failed, 8 VisualCheck tests skipped through `SKIP_VISUAL_TEST`.
+- Split/menu lifecycle changes were validated with the focused DropDownButton,
+  SplitButton, ToggleSplitButton, and Menu binaries: 22 automated tests passed,
+  0 failed, and 3 VisualCheck tests were skipped through `SKIP_VISUAL_TEST`.
 - Broad category audits that produced report-only findings did not need automated test changes because no production behavior was modified.

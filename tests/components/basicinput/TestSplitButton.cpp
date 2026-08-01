@@ -4,8 +4,10 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QImage>
+#include <QTimer>
 #include <QVariantAnimation>
 #include <QTest>
+#include <QtTest/QSignalSpy>
 #include "components/menus_toolbars/Menu.h"
 #include "components/basicinput/SplitButton.h"
 #include "components/basicinput/ToggleSplitButton.h"
@@ -122,6 +124,116 @@ TEST_F(SplitButtonTest, SecondaryHitTargetMirrorsInRightToLeftLayouts) {
     button.setLayoutDirection(Qt::RightToLeft);
     EXPECT_EQ(button.getPartAt(QPoint(4, 16)), SplitButton::Secondary);
     EXPECT_EQ(button.getPartAt(QPoint(156, 16)), SplitButton::Primary);
+}
+
+TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) {
+    SplitButton button(QStringLiteral("Choose"));
+    auto* firstMenu = new QMenu(QStringLiteral("First"));
+    auto* secondMenu = new QMenu(QStringLiteral("Second"));
+    QSignalSpy menuSpy(&button, &SplitButton::menuChanged);
+    QSignalSpy openSpy(&button, &SplitButton::openChanged);
+
+    button.setMenu(firstMenu);
+    EXPECT_EQ(button.menu(), firstMenu);
+    EXPECT_EQ(menuSpy.count(), 1);
+    button.setMenu(firstMenu);
+    EXPECT_EQ(menuSpy.count(), 1);
+
+    button.resize(160, 36);
+    button.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&button));
+    QObject::connect(firstMenu, &QMenu::aboutToShow, firstMenu, [firstMenu]() {
+        QTimer::singleShot(0, firstMenu, &QMenu::close);
+    });
+    QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier,
+                      QPoint(button.width() - 8, button.height() / 2));
+    EXPECT_FALSE(button.isOpen());
+    EXPECT_EQ(openSpy.count(), 2);
+
+    button.setMenu(secondMenu);
+    EXPECT_EQ(button.menu(), secondMenu);
+    EXPECT_EQ(menuSpy.count(), 2);
+
+    ASSERT_TRUE(QMetaObject::invokeMethod(firstMenu, "aboutToShow",
+                                          Qt::DirectConnection));
+    EXPECT_FALSE(button.isOpen());
+
+    delete secondMenu;
+    EXPECT_EQ(button.menu(), nullptr);
+    EXPECT_FALSE(button.isOpen());
+    EXPECT_EQ(menuSpy.count(), 3);
+
+    delete firstMenu;
+}
+
+TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle) {
+    SplitButton split(QStringLiteral("Choose"));
+    ToggleSplitButton toggle(QStringLiteral("Pin"));
+    QMenu splitMenu(QStringLiteral("Split"));
+    QMenu toggleMenu(QStringLiteral("Toggle"));
+    split.setMenu(&splitMenu);
+    toggle.setMenu(&toggleMenu);
+    split.resize(160, 36);
+    toggle.resize(160, 36);
+    split.show();
+    toggle.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&split));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&toggle));
+
+    QObject::connect(&splitMenu, &QMenu::aboutToShow, &splitMenu, [&splitMenu]() {
+        QTimer::singleShot(0, &splitMenu, &QMenu::close);
+    });
+    QObject::connect(&toggleMenu, &QMenu::aboutToShow, &toggleMenu, [&toggleMenu]() {
+        QTimer::singleShot(0, &toggleMenu, &QMenu::close);
+    });
+
+    QSignalSpy splitClickSpy(&split, &SplitButton::clicked);
+    QSignalSpy toggleClickSpy(&toggle, &ToggleSplitButton::clicked);
+    QSignalSpy toggledSpy(&toggle, &ToggleSplitButton::toggled);
+    QSignalSpy splitOpenSpy(&split, &SplitButton::openChanged);
+    QSignalSpy toggleOpenSpy(&toggle, &ToggleSplitButton::openChanged);
+
+    const QPoint splitSecondary(split.width() - 8, split.height() / 2);
+    const QPoint toggleSecondary(toggle.width() - 8, toggle.height() / 2);
+    QTest::mouseClick(&split, Qt::LeftButton, Qt::NoModifier, splitSecondary);
+    QTest::mouseClick(&toggle, Qt::LeftButton, Qt::NoModifier, toggleSecondary);
+
+    EXPECT_EQ(splitClickSpy.count(), 0);
+    EXPECT_EQ(toggleClickSpy.count(), 0);
+    EXPECT_EQ(toggledSpy.count(), 0);
+    EXPECT_FALSE(toggle.isChecked());
+    EXPECT_FALSE(split.isOpen());
+    EXPECT_FALSE(toggle.isOpen());
+    EXPECT_EQ(splitOpenSpy.count(), 2);
+    EXPECT_EQ(toggleOpenSpy.count(), 2);
+
+    QTest::mouseClick(&split, Qt::LeftButton, Qt::NoModifier,
+                      QPoint(split.width() / 4, split.height() / 2));
+    QTest::mouseClick(&toggle, Qt::LeftButton, Qt::NoModifier,
+                      QPoint(toggle.width() / 4, toggle.height() / 2));
+
+    EXPECT_EQ(splitClickSpy.count(), 1);
+    EXPECT_EQ(toggleClickSpy.count(), 1);
+    EXPECT_EQ(toggledSpy.count(), 1);
+    EXPECT_TRUE(toggle.isChecked());
+}
+
+TEST_F(SplitButtonTest, CrossSegmentReleaseCancelsPrimaryActivation) {
+    SplitButton split(QStringLiteral("Choose"));
+    split.resize(160, 36);
+    split.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&split));
+    QSignalSpy clickSpy(&split, &SplitButton::clicked);
+
+    const QPoint primary(split.width() / 4, split.height() / 2);
+    const QPoint secondary(split.width() - 8, split.height() / 2);
+    QTest::mousePress(&split, Qt::LeftButton, Qt::NoModifier, primary);
+    QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, secondary);
+    EXPECT_EQ(clickSpy.count(), 0);
+
+    QTest::mousePress(&split, Qt::LeftButton, Qt::NoModifier, secondary);
+    QTest::mouseRelease(&split, Qt::LeftButton, Qt::NoModifier, primary);
+    EXPECT_EQ(clickSpy.count(), 0);
 }
 
 // ─── Design-language × theme compatibility ──────────────────────────────────

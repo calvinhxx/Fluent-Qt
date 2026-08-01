@@ -187,6 +187,8 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox)
 
 void ComboBox::ComboBoxPopup::showForComboBox() {
     m_listView->setModel(m_comboBox->model());
+    m_listView->setRootIndex(m_comboBox->rootModelIndex());
+    m_listView->setModelColumn(m_comboBox->modelColumn());
     m_listView->setFont(m_comboBox->themeFont(m_comboBox->fontRole()).toQFont());
 
     if (m_comboBox->currentIndex() >= 0) {
@@ -489,6 +491,12 @@ void ComboBox::setLineEdit(QLineEdit* edit) {
 
 fluent::textfields::LineEdit* ComboBox::fluentLineEdit() const {
     return qobject_cast<fluent::textfields::LineEdit*>(QComboBox::lineEdit());
+}
+
+void ComboBox::setModel(QAbstractItemModel* model) {
+    QComboBox::setModel(model);
+    if (m_popupVisible && m_popup)
+        m_popup->showForComboBox();
 }
 
 void ComboBox::synchronizeLineEdit() {

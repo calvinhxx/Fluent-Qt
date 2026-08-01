@@ -1,6 +1,7 @@
 """Smoke-test an installed FluentQt wheel without using the source tree."""
 
 import gc
+import ast
 from importlib import metadata
 import os
 from pathlib import Path
@@ -9,8 +10,15 @@ import weakref
 
 import fluentqt
 import fluentqt._fluentqt as native
+import fluentqt.basicinput as basicinput
 import fluentqt.collections as collections
+import fluentqt.date_time as date_time
+import fluentqt.dialogs_flyouts as dialogs_flyouts
+import fluentqt.menus_toolbars as menus_toolbars
 import fluentqt.navigation as navigation
+import fluentqt.status_info as status_info
+import fluentqt.textfields as textfields
+import fluentqt.windowing as windowing
 import PySide6
 import shiboken6
 
@@ -23,12 +31,27 @@ from PySide6.QtCore import (
     QEvent,
     QItemSelectionModel,
     QModelIndex,
+    QPoint,
     QSize,
+    QStringListModel,
+    QTime,
+    QTimer,
     Qt,
     qVersion,
 )
-from PySide6.QtGui import QColor, QStandardItem, QStandardItemModel
-from PySide6.QtWidgets import QApplication, QStyledItemDelegate, QWidget
+from PySide6.QtGui import QAction, QColor, QStandardItem, QStandardItemModel
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import (
+    QApplication,
+    QComboBox,
+    QLineEdit,
+    QListView,
+    QMenu,
+    QMenuBar,
+    QStyledItemDelegate,
+    QWidget,
+    QWidgetAction,
+)
 from shiboken6 import Shiboken
 
 
@@ -201,6 +224,35 @@ def main():
     require_installed_below_prefix(fluentqt.__file__)
     require_installed_below_prefix(native.__file__)
 
+    package_dir = Path(fluentqt.__file__).resolve().parent
+    expected_stubs = {
+        "__init__.pyi",
+        "_fluentqt.pyi",
+        "basicinput.pyi",
+        "collections.pyi",
+        "date_time.pyi",
+        "dialogs_flyouts.pyi",
+        "foundation.pyi",
+        "layout.pyi",
+        "menus_toolbars.pyi",
+        "navigation.pyi",
+        "scrolling.pyi",
+        "status_info.pyi",
+        "textfields.pyi",
+        "windowing.pyi",
+    }
+    installed_stubs = {path.name for path in package_dir.glob("*.pyi")}
+    if installed_stubs != expected_stubs:
+        raise AssertionError(
+            "Installed wheel type stubs differ: expected {0}, found {1}".format(
+                sorted(expected_stubs),
+                sorted(installed_stubs),
+            )
+        )
+    for stub_name in sorted(expected_stubs):
+        stub_path = package_dir / stub_name
+        ast.parse(stub_path.read_text(encoding="utf-8"), filename=str(stub_path))
+
     expected_version = os.environ["FLUENTQT_EXPECTED_VERSION"]
     if metadata.version("FluentQt") != expected_version:
         raise AssertionError("Installed wheel metadata has the wrong version")
@@ -225,30 +277,46 @@ def main():
         fluentqt.AnnotatedScrollBar(),
         fluentqt.Avatar("Ada Lovelace"),
         fluentqt.Button("Button"),
+        fluentqt.CalendarDatePicker(),
         fluentqt.CalendarView(),
         fluentqt.CheckBox("CheckBox"),
+        fluentqt.CoachMark(),
         fluentqt.ColorPicker(),
+        fluentqt.ComboBox(),
         fluentqt.CompoundButton("Install", "Download and restart"),
+        fluentqt.DropDownButton("DropDownButton"),
         fluentqt.FontIcon("ic_fluent_settings_20_regular"),
         fluentqt.HyperlinkButton("HyperlinkButton"),
         fluentqt.RadioButton("RadioButton"),
         fluentqt.RepeatButton("RepeatButton"),
         fluentqt.Slider(Qt.Horizontal),
+        fluentqt.SplitButton("SplitButton"),
         fluentqt.ToggleButton("ToggleButton"),
+        fluentqt.ToggleSplitButton("ToggleSplitButton"),
         fluentqt.ToggleSwitch(),
         fluentqt.Label("Label"),
         fluentqt.LineEdit(),
+        fluentqt.AutoSuggestBox(),
         fluentqt.NumberBox(),
         fluentqt.PasswordBox(),
         fluentqt.TextEdit(),
+        fluentqt.TimePicker(),
         fluentqt.InfoBadge(),
         fluentqt.InfoBar(),
         fluentqt.ProgressBar(),
         fluentqt.ProgressRing(),
         fluentqt.RatingControl(),
         fluentqt.Shimmer(),
+        fluentqt.Toast(),
+        fluentqt.ToolTip(),
         fluentqt.Card(),
         fluentqt.Divider(),
+        fluentqt.Dialog(),
+        fluentqt.ContentDialog(),
+        fluentqt.DatePicker(),
+        fluentqt.DrawerView(),
+        fluentqt.Flyout(),
+        fluentqt.Popup(),
         fluentqt.Expander(),
         fluentqt.FlipView(),
         fluentqt.FlowView(),
@@ -263,6 +331,7 @@ def main():
         fluentqt.ScrollBar(Qt.Horizontal),
         fluentqt.SelectorBar(),
         fluentqt.TabView(),
+        fluentqt.TeachingTip(),
     ]
     if any(not Shiboken.isValid(control) for control in controls):
         raise AssertionError("A wheel-installed component has an invalid wrapper")
@@ -299,6 +368,410 @@ def main():
     gc.collect()
     if plain_split_view_ref() is not None:
         raise AssertionError("Plain SplitView survived Python GC")
+    plain_drawer_view = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.DrawerView)
+    )
+    controls.remove(plain_drawer_view)
+    plain_drawer_view_ref = weakref.ref(plain_drawer_view)
+    del plain_drawer_view
+    gc.collect()
+    if plain_drawer_view_ref() is not None:
+        raise AssertionError("Plain DrawerView survived Python GC")
+    plain_popup = next(
+        control
+        for control in controls
+        if type(control) is fluentqt.Popup
+    )
+    controls.remove(plain_popup)
+    plain_popup_ref = weakref.ref(plain_popup)
+    del plain_popup
+    gc.collect()
+    if plain_popup_ref() is not None:
+        raise AssertionError("Plain Popup survived Python GC")
+    plain_flyout = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.Flyout)
+    )
+    controls.remove(plain_flyout)
+    plain_flyout_ref = weakref.ref(plain_flyout)
+    del plain_flyout
+    gc.collect()
+    if plain_flyout_ref() is not None:
+        raise AssertionError("Plain Flyout survived Python GC")
+    plain_coach_mark = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.CoachMark)
+    )
+    controls.remove(plain_coach_mark)
+    plain_coach_mark_ref = weakref.ref(plain_coach_mark)
+    del plain_coach_mark
+    gc.collect()
+    if plain_coach_mark_ref() is not None:
+        raise AssertionError("Plain CoachMark survived Python GC")
+    plain_teaching_tip = next(
+        control
+        for control in controls
+        if isinstance(control, fluentqt.TeachingTip)
+    )
+    controls.remove(plain_teaching_tip)
+    plain_teaching_tip_ref = weakref.ref(plain_teaching_tip)
+    del plain_teaching_tip
+    gc.collect()
+    if plain_teaching_tip_ref() is not None:
+        raise AssertionError("Plain TeachingTip survived Python GC")
+
+    report_stage("AutoSuggestBox keyboard and popup lifecycle")
+    if textfields.AutoSuggestBox is not fluentqt.AutoSuggestBox:
+        raise AssertionError(
+            "Text-fields module did not re-export AutoSuggestBox"
+        )
+    if native.fluent.AutoSuggestBox is not fluentqt.AutoSuggestBox:
+        raise AssertionError("AutoSuggestBox lost its native binding identity")
+    if not issubclass(fluentqt.AutoSuggestBox, fluentqt.LineEdit):
+        raise AssertionError("AutoSuggestBox lost its Fluent LineEdit base")
+    if hasattr(fluentqt.AutoSuggestBox, "onThemeUpdated"):
+        raise AssertionError("AutoSuggestBox exposed its C++ theme hook")
+    for internal_name in (
+        "SuggestionListPopup",
+        "AutoSuggestItemDelegate",
+    ):
+        if internal_name in dir(native.fluent):
+            raise AssertionError(
+                "AutoSuggestBox exposed internal type {0}".format(
+                    internal_name
+                )
+            )
+
+    suggest_host = QWidget()
+    suggest_host.resize(520, 360)
+    suggest_box = fluentqt.AutoSuggestBox(suggest_host)
+    suggest_box.setGeometry(48, 48, 240, suggest_box.sizeHint().height())
+    suggest_box.setSuggestions(["Alpha", "Alpine", "Azure"])
+    text_reasons = []
+    chosen_suggestions = []
+    submitted_queries = []
+    suggest_box.textChangedWithReason.connect(
+        lambda text, reason: text_reasons.append((text, reason))
+    )
+    suggest_box.suggestionChosen.connect(chosen_suggestions.append)
+    suggest_box.querySubmitted.connect(
+        lambda text, item: submitted_queries.append((text, item))
+    )
+    suggest_host.show()
+    suggest_box.show()
+    suggest_box.setFocus()
+    app.processEvents()
+    QTest.keyClicks(suggest_box, "a")
+    app.processEvents()
+    if not suggest_box.isSuggestionListOpen():
+        raise AssertionError("AutoSuggestBox did not open its suggestions")
+    suggest_popup = suggest_host.findChild(
+        native.fluent.Flyout,
+        "AutoSuggestBoxSuggestionPopup",
+    )
+    if suggest_popup is None or not suggest_popup.isVisible():
+        raise AssertionError("AutoSuggestBox did not create its native Flyout")
+    if suggest_popup.window() is not suggest_host or suggest_popup.isWindow():
+        raise AssertionError("AutoSuggestBox created a separate popup window")
+    QTest.keyClick(suggest_box, Qt.Key_Down)
+    QTest.keyClick(suggest_box, Qt.Key_Return)
+    app.processEvents()
+    if suggest_box.text() != "Alpha":
+        raise AssertionError("AutoSuggestBox selection did not update text")
+    if chosen_suggestions != ["Alpha", "Alpha"]:
+        raise AssertionError("AutoSuggestBox choice signals did not round-trip")
+    if submitted_queries != [("Alpha", "Alpha")]:
+        raise AssertionError("AutoSuggestBox query signal did not round-trip")
+    if (
+        text_reasons[-1][1]
+        != fluentqt.AutoSuggestBox.TextChangeReason.SuggestionChosen
+    ):
+        raise AssertionError("AutoSuggestBox lost its text change reason")
+    suggest_host.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    if Shiboken.isValid(suggest_box) or Shiboken.isValid(suggest_popup):
+        raise AssertionError("AutoSuggestBox popup survived its Qt host")
+    report_stage("AutoSuggestBox lifecycle complete")
+
+    report_stage("ComboBox dropdown, model, and editor lifetime")
+    if basicinput.ComboBox is not fluentqt.ComboBox:
+        raise AssertionError("Basic-input module did not re-export ComboBox")
+    if not issubclass(fluentqt.ComboBox, QComboBox):
+        raise AssertionError("ComboBox lost its native QComboBox base")
+    if "ComboBoxItemDelegate" in dir(native.fluent):
+        raise AssertionError("Wheel exposed the internal ComboBox delegate")
+
+    combo_host = QWidget()
+    combo_host.resize(520, 360)
+    combo = fluentqt.ComboBox(combo_host)
+    combo.setGeometry(48, 48, 190, 32)
+    combo.addItems(["Alpha", "Beta", "Gamma"])
+    combo_host.show()
+    combo.showPopup()
+    app.processEvents()
+    combo_popup = combo_host.findChild(QWidget, "ComboBoxPopup")
+    if combo_popup is None or not combo_popup.isVisible():
+        raise AssertionError("ComboBox did not open its native dropdown")
+    if combo_popup.window() is not combo_host or combo_popup.isWindow():
+        raise AssertionError("ComboBox created a separate popup window")
+    combo_popup_view = combo_popup.findChild(
+        QListView,
+        "ComboBoxPopupListView",
+    )
+    if combo_popup_view is None or combo_popup_view.model() is not combo.model():
+        raise AssertionError("ComboBox dropdown lost its installed model")
+    target = combo_popup_view.model().index(2, 0)
+    QTest.mouseClick(
+        combo_popup_view.viewport(),
+        Qt.LeftButton,
+        Qt.NoModifier,
+        combo_popup_view.visualRect(target).center(),
+    )
+    app.processEvents()
+    if combo.currentIndex() != 2 or combo.currentText() != "Gamma":
+        raise AssertionError("ComboBox dropdown selection did not round-trip")
+    if combo_popup.isVisible():
+        raise AssertionError("ComboBox dropdown stayed open after selection")
+
+    first_model = QStringListModel(["One", "Two"])
+    first_model_ref = weakref.ref(first_model)
+    combo.setModel(first_model)
+    del first_model
+    gc.collect()
+    if combo.model() is not first_model_ref():
+        raise AssertionError("ComboBox did not retain its caller-owned model")
+    replacement_model = QStringListModel(["Red", "Green"])
+    combo.setModel(replacement_model)
+    app.processEvents()
+    gc.collect()
+    if first_model_ref() is not None:
+        raise AssertionError("ComboBox leaked its replaced model wrapper")
+
+    first_editor = QLineEdit()
+    combo.setLineEdit(first_editor)
+    if combo.lineEdit() is not first_editor or first_editor.parent() is not combo:
+        raise AssertionError("ComboBox did not adopt its line editor")
+    second_editor = QLineEdit()
+    combo.setLineEdit(second_editor)
+    if Shiboken.isValid(first_editor):
+        raise AssertionError("ComboBox did not delete its replaced editor")
+    combo.setEditable(False)
+    if Shiboken.isValid(second_editor) or combo.lineEdit() is not None:
+        raise AssertionError("ComboBox did not release editable state")
+    for unsupported in (
+        lambda: combo.view(),
+        lambda: combo.itemDelegate(),
+    ):
+        try:
+            unsupported()
+        except NotImplementedError:
+            pass
+        else:
+            raise AssertionError(
+                "ComboBox exposed an unused QComboBox customization surface"
+            )
+
+    combo_host.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    report_stage("ComboBox lifecycle complete")
+
+    report_stage("Fluent menu buttons and dependency lifetime")
+    if basicinput.DropDownButton is not fluentqt.DropDownButton:
+        raise AssertionError("Basic-input module did not re-export DropDownButton")
+    if basicinput.SplitButton is not fluentqt.SplitButton:
+        raise AssertionError("Basic-input module did not re-export SplitButton")
+    if basicinput.ToggleSplitButton is not fluentqt.ToggleSplitButton:
+        raise AssertionError(
+            "Basic-input module did not re-export ToggleSplitButton"
+        )
+    if menus_toolbars.FluentMenu is not fluentqt.FluentMenu:
+        raise AssertionError("Menus module did not re-export FluentMenu")
+    if menus_toolbars.FluentMenuItem is not fluentqt.FluentMenuItem:
+        raise AssertionError("Menus module did not re-export FluentMenuItem")
+    if not issubclass(fluentqt.FluentMenu, QMenu):
+        raise AssertionError("FluentMenu lost its native QMenu base")
+    if not issubclass(fluentqt.FluentMenuItem, QWidgetAction):
+        raise AssertionError("FluentMenuItem lost its QWidgetAction base")
+
+    menu_buttons = (
+        fluentqt.DropDownButton("Export"),
+        fluentqt.SplitButton("Save"),
+        fluentqt.ToggleSplitButton("Pin"),
+    )
+    primary_clicks = []
+    toggle_changes = []
+    menu_buttons[1].clicked.connect(lambda: primary_clicks.append(True))
+    menu_buttons[2].toggled.connect(toggle_changes.append)
+    menu_refs = []
+    for index, button in enumerate(menu_buttons):
+        menu = fluentqt.FluentMenu("Actions")
+        item = fluentqt.FluentMenuItem("Action {0}".format(index), menu)
+        menu.addAction(item)
+        if menu.actions() != [item]:
+            raise AssertionError("FluentMenu lost its installed action")
+        button.setMenu(menu)
+        if button.menu() is not menu:
+            raise AssertionError("Menu button lost its installed menu identity")
+        close_ref = weakref.ref(menu)
+        menu.aboutToShow.connect(
+            lambda current_ref=close_ref: QTimer.singleShot(
+                0,
+                current_ref().close,
+            )
+            if current_ref() is not None
+            else None
+        )
+        button.resize(170, 36)
+        button.show()
+        menu_refs.append((weakref.ref(menu), weakref.ref(item)))
+        del item
+        del menu
+    gc.collect()
+    if any(reference() is None for pair in menu_refs for reference in pair):
+        raise AssertionError("Menu button did not retain its menu dependency")
+
+    QTest.mouseClick(menu_buttons[0], Qt.LeftButton)
+    for button in menu_buttons[1:]:
+        QTest.mouseClick(
+            button,
+            Qt.LeftButton,
+            Qt.NoModifier,
+            QPoint(button.width() - 8, button.height() // 2),
+        )
+    if primary_clicks or toggle_changes or menu_buttons[2].isChecked():
+        raise AssertionError("A secondary menu click triggered the primary command")
+
+    first_menu_ref, first_item_ref = menu_refs[0]
+    menu_buttons[0].setMenu(None)
+    gc.collect()
+    if first_menu_ref() is not None or first_item_ref() is not None:
+        raise AssertionError("setMenu(None) retained the replaced menu graph")
+
+    final_menu = fluentqt.FluentMenu("Final")
+    menu_buttons[0].setMenu(final_menu)
+    final_menu_ref = weakref.ref(final_menu)
+    del final_menu
+    del menu_buttons
+    del menu_refs
+    gc.collect()
+    if final_menu_ref() is not None:
+        raise AssertionError("Deleting a menu button retained its menu")
+    report_stage("Fluent menu button lifecycle complete")
+
+    report_stage("Command surfaces and borrowed QAction lifetime")
+    for class_name in (
+        "CommandBar",
+        "CommandBarFlyout",
+        "FluentMenuBar",
+    ):
+        if getattr(menus_toolbars, class_name) is not getattr(
+            fluentqt, class_name
+        ):
+            raise AssertionError(
+                "Menus module did not re-export {0}".format(class_name)
+            )
+    if not issubclass(fluentqt.CommandBar, QWidget):
+        raise AssertionError("CommandBar lost its QWidget base")
+    if not issubclass(
+        fluentqt.CommandBarFlyout, native.fluent.Flyout
+    ):
+        raise AssertionError("CommandBarFlyout lost its Flyout base")
+    if not issubclass(fluentqt.FluentMenuBar, QMenuBar):
+        raise AssertionError("FluentMenuBar lost its QMenuBar base")
+
+    class InstalledCommandBar(fluentqt.CommandBar):
+        pass
+
+    command_bar = InstalledCommandBar()
+    command_flyout = fluentqt.CommandBarFlyout()
+    shared_command = QAction("Shared")
+    shared_command_ref = weakref.ref(shared_command)
+    if not command_bar.addPrimaryAction(shared_command):
+        raise AssertionError("CommandBar rejected a primary QAction")
+    if not command_flyout.addSecondaryAction(shared_command):
+        raise AssertionError("CommandBarFlyout rejected a secondary QAction")
+    if shared_command.parent() is not None:
+        raise AssertionError("A command surface reparented a borrowed QAction")
+    del shared_command
+    gc.collect()
+    if shared_command_ref() is None:
+        raise AssertionError("A command surface lost a borrowed QAction wrapper")
+    command_bar.clearPrimaryActions()
+    gc.collect()
+    if shared_command_ref() is None:
+        raise AssertionError("Clearing one surface broke a shared QAction")
+    command_flyout.clearSecondaryActions()
+    gc.collect()
+    if shared_command_ref() is not None:
+        raise AssertionError("Command surfaces leaked a removed QAction")
+
+    generated_calls = []
+    generated_command = command_bar.addAction(
+        "Generated",
+        lambda: generated_calls.append(True),
+    )
+    generated_command.trigger()
+    if generated_calls != [True]:
+        raise AssertionError("CommandBar callable addAction did not trigger")
+    if generated_command.parent() is not command_bar:
+        raise AssertionError("Generated CommandBar QAction lost Qt ownership")
+
+    flyout_calls = []
+    generated_flyout_command = command_flyout.addAction(
+        "Generated flyout",
+        lambda: flyout_calls.append(True),
+    )
+    generated_flyout_command.trigger()
+    if flyout_calls != [True]:
+        raise AssertionError(
+            "CommandBarFlyout callable addAction did not trigger"
+        )
+    if generated_flyout_command.parent() is not command_flyout:
+        raise AssertionError(
+            "Generated CommandBarFlyout QAction lost Qt ownership"
+        )
+
+    command_anchor = QWidget()
+    command_anchor_ref = weakref.ref(command_anchor)
+    command_flyout.setAnchor(command_anchor)
+    del command_anchor
+    gc.collect()
+    if command_flyout.anchor() is not command_anchor_ref():
+        raise AssertionError("CommandBarFlyout did not retain its anchor")
+    command_flyout.setAnchor(None)
+    gc.collect()
+    if command_anchor_ref() is not None:
+        raise AssertionError("CommandBarFlyout leaked its replaced anchor")
+    try:
+        type(
+            "InvalidCommandBarFlyoutSubclass",
+            (fluentqt.CommandBarFlyout,),
+            {},
+        )
+    except TypeError:
+        pass
+    else:
+        raise AssertionError("Final CommandBarFlyout became subclassable")
+
+    fluent_menu_bar = fluentqt.FluentMenuBar()
+    fluent_menu_bar.setFontStyle(fluentqt.FontRole.BodyStrong)
+    menu_bar_menu = fluent_menu_bar.addMenu("File")
+    if menu_bar_menu.parent() is not fluent_menu_bar:
+        raise AssertionError("FluentMenuBar did not own its QMenu")
+    del menu_bar_menu
+    del fluent_menu_bar
+    del generated_command
+    del generated_flyout_command
+    del command_bar
+    del command_flyout
+    gc.collect()
+    report_stage("Command surface lifecycle complete")
 
     report_stage("FlipView page ownership")
     flip_view = fluentqt.FlipView()
@@ -437,6 +910,403 @@ def main():
     gc.collect()
     report_stage("SplitView lifecycle complete")
 
+    report_stage("DrawerView overlay and content ownership")
+    if collections.DrawerView is not fluentqt.DrawerView:
+        raise AssertionError("Collections module did not re-export DrawerView")
+
+    overlay_host = QWidget()
+    overlay_host.resize(640, 480)
+    overlay_host.show()
+    overlay_drawer = fluentqt.DrawerView(overlay_host)
+    overlay_drawer.setAnimationEnabled(False)
+    overlay_drawer.setEdge(fluentqt.DrawerView.DrawerEdge.Right)
+    close_policy = (
+        fluentqt.DrawerView.CloseFlag.CloseOnPressOutside
+        | fluentqt.DrawerView.CloseFlag.CloseOnEscape
+    )
+    overlay_drawer.setClosePolicy(close_policy)
+    overlay_drawer.open()
+    app.processEvents()
+    if not overlay_drawer.isOpen() or overlay_drawer.position() != 1.0:
+        raise AssertionError("DrawerView did not open its native overlay")
+    if overlay_drawer.window() is not overlay_host:
+        raise AssertionError("DrawerView created a separate top-level window")
+    if overlay_drawer.closePolicy() != close_policy:
+        raise AssertionError("DrawerView lost its close-policy flags")
+    overlay_drawer.close()
+    app.processEvents()
+    if overlay_drawer.isOpen() or overlay_drawer.position() != 0.0:
+        raise AssertionError("DrawerView did not close its native overlay")
+    overlay_host.close()
+    del overlay_drawer
+    del overlay_host
+    gc.collect()
+
+    drawer = fluentqt.DrawerView()
+    owned_content = QWidget()
+    borrowed_content = QWidget()
+    first_restore_parent = QWidget()
+    reparented_content = QWidget(first_restore_parent)
+    if not drawer.setOwnedContentWidget(owned_content):
+        raise AssertionError("DrawerView rejected Owned content")
+    if not drawer.setBorrowedContentWidget(borrowed_content):
+        raise AssertionError("DrawerView rejected Borrowed content")
+    if Shiboken.isValid(owned_content):
+        raise AssertionError("DrawerView did not delete replaced Owned content")
+    if not drawer.setReparentedContentWidget(reparented_content):
+        raise AssertionError("DrawerView rejected Reparented content")
+    if borrowed_content.parent() is not None:
+        raise AssertionError("DrawerView did not detach Borrowed content")
+    taken_content = drawer.takeContentWidget()
+    if taken_content is not reparented_content:
+        raise AssertionError("DrawerView did not preserve content identity")
+    if taken_content.parent() is not None:
+        raise AssertionError("DrawerView did not detach taken content")
+    if not Shiboken.ownedByPython(taken_content):
+        raise AssertionError("Taken DrawerView content is not Python-owned")
+
+    second_restore_parent = QWidget()
+    restored_content = QWidget(second_restore_parent)
+    drawer.setReparentedContentWidget(restored_content)
+    drawer_ref = weakref.ref(drawer)
+    del drawer
+    gc.collect()
+    if drawer_ref() is not None:
+        raise AssertionError("DrawerView survived Python GC")
+    if restored_content.parent() is not second_restore_parent:
+        raise AssertionError("DrawerView did not restore Reparented content")
+    del owned_content
+    del borrowed_content
+    del taken_content
+    del reparented_content
+    del first_restore_parent
+    del restored_content
+    del second_restore_parent
+    gc.collect()
+    report_stage("DrawerView lifecycle complete")
+
+    report_stage("Popup overlay and dependency lifetime")
+    if dialogs_flyouts.Popup is not fluentqt.Popup:
+        raise AssertionError("Dialogs module did not re-export Popup")
+
+    popup_host = QWidget()
+    popup_host.resize(640, 480)
+    popup_anchor = fluentqt.Button("Open", popup_host)
+    popup_anchor.setGeometry(80, 72, 120, 36)
+    popup_passthrough = fluentqt.Button("Toolbar", popup_host)
+    popup_passthrough.setGeometry(440, 24, 120, 36)
+    popup_anchor.show()
+    popup_passthrough.show()
+    popup_host.show()
+
+    overlay_popup = fluentqt.Popup(popup_host)
+    overlay_popup.resize(320, 180)
+    overlay_popup.setAnimationEnabled(False)
+    overlay_popup.setExitAnimationEnabled(False)
+    overlay_popup.setModal(True)
+    overlay_popup.setDim(True)
+    overlay_popup.setLightDismissConsumesPress(True)
+    overlay_popup.setPosition(
+        popup_anchor,
+        QPoint(0, popup_anchor.height() + 8),
+    )
+    overlay_popup.setThemeSource(popup_anchor)
+    overlay_popup.addLightDismissPassthrough(popup_passthrough)
+    popup_close_policy = (
+        fluentqt.Popup.CloseFlag.CloseOnPressOutside
+        | fluentqt.Popup.CloseFlag.CloseOnEscape
+    )
+    overlay_popup.setClosePolicy(popup_close_policy)
+    overlay_popup.open()
+    app.processEvents()
+    if not overlay_popup.isOpen() or overlay_popup.popupProgress() != 1.0:
+        raise AssertionError("Popup did not open its native overlay")
+    if overlay_popup.window() is not popup_host:
+        raise AssertionError("Popup created a separate top-level window")
+    if overlay_popup.closePolicy() != popup_close_policy:
+        raise AssertionError("Popup lost its close-policy flags")
+    if popup_host.findChild(QWidget, "PopupScrim") is None:
+        raise AssertionError("Modal Popup did not create a same-window scrim")
+    overlay_popup.close()
+    app.processEvents()
+    if overlay_popup.isOpen() or overlay_popup.popupProgress() != 0.0:
+        raise AssertionError("Popup did not close its native overlay")
+    popup_host.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+
+    dependency_popup = fluentqt.Popup()
+    dependency_anchor = QWidget()
+    dependency_theme = QWidget()
+    dependency_passthrough = QWidget()
+    dependency_popup.setPosition(dependency_anchor, QPoint(4, 8))
+    dependency_popup.setThemeSource(dependency_theme)
+    dependency_popup.addLightDismissPassthrough(dependency_passthrough)
+    dependency_refs = tuple(
+        weakref.ref(widget)
+        for widget in (
+            dependency_anchor,
+            dependency_theme,
+            dependency_passthrough,
+        )
+    )
+    del dependency_anchor
+    del dependency_theme
+    del dependency_passthrough
+    gc.collect()
+    if not all(reference() is not None for reference in dependency_refs):
+        raise AssertionError("Popup did not retain a QWidget dependency")
+    dependency_popup_ref = weakref.ref(dependency_popup)
+    del dependency_popup
+    gc.collect()
+    if dependency_popup_ref() is not None:
+        raise AssertionError("Popup survived Python GC")
+    if not all(reference() is None for reference in dependency_refs):
+        raise AssertionError("Popup leaked a QWidget dependency")
+    report_stage("Popup lifecycle complete")
+
+    report_stage("Flyout placement and anchor lifetime")
+    if dialogs_flyouts.Flyout is not fluentqt.Flyout:
+        raise AssertionError("Dialogs module did not re-export Flyout")
+
+    flyout_host = QWidget()
+    flyout_host.resize(640, 480)
+    flyout_anchor = fluentqt.Button("Open", flyout_host)
+    flyout_anchor.setGeometry(260, 180, 120, 36)
+    flyout_anchor.show()
+    flyout_host.show()
+
+    overlay_flyout = fluentqt.Flyout(flyout_host)
+    overlay_flyout.setFixedSize(320, 180)
+    overlay_flyout.setAnimationEnabled(False)
+    overlay_flyout.setExitAnimationEnabled(False)
+    overlay_flyout.setPlacement(fluentqt.Flyout.Placement.Bottom)
+    overlay_flyout.setAnchorOffset(12)
+    overlay_flyout.setClampToWindow(True)
+    overlay_flyout.showAt(flyout_anchor)
+    app.processEvents()
+    if not overlay_flyout.isOpen():
+        raise AssertionError("Flyout did not open its native overlay")
+    if overlay_flyout.window() is not flyout_host:
+        raise AssertionError("Flyout created a separate top-level window")
+    if overlay_flyout.anchor() is not flyout_anchor:
+        raise AssertionError("Flyout did not preserve anchor identity")
+    visible_card = overlay_flyout.geometry().adjusted(16, 16, -16, -16)
+    if (
+        visible_card.top()
+        != flyout_anchor.geometry().bottom() + overlay_flyout.anchorOffset()
+    ):
+        raise AssertionError("Flyout lost its anchor-relative placement")
+    flyout_scrim = flyout_host.findChild(QWidget, "PopupScrim")
+    if flyout_scrim is not None and flyout_scrim.isVisible():
+        raise AssertionError("Default non-modal Flyout created a visible scrim")
+    overlay_flyout.close()
+    app.processEvents()
+    flyout_host.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+
+    dependency_flyout = fluentqt.Flyout()
+    dependency_anchor = QWidget()
+    dependency_theme = QWidget()
+    dependency_passthrough = QWidget()
+    dependency_flyout.setAnchor(dependency_anchor)
+    dependency_flyout.setThemeSource(dependency_theme)
+    dependency_flyout.addLightDismissPassthrough(dependency_passthrough)
+    dependency_refs = tuple(
+        weakref.ref(widget)
+        for widget in (
+            dependency_anchor,
+            dependency_theme,
+            dependency_passthrough,
+        )
+    )
+    del dependency_anchor
+    del dependency_theme
+    del dependency_passthrough
+    gc.collect()
+    if not all(reference() is not None for reference in dependency_refs):
+        raise AssertionError("Flyout did not retain a QWidget dependency")
+    dependency_flyout_ref = weakref.ref(dependency_flyout)
+    del dependency_flyout
+    gc.collect()
+    if dependency_flyout_ref() is not None:
+        raise AssertionError("Flyout survived Python GC")
+    if not all(reference() is None for reference in dependency_refs):
+        raise AssertionError("Flyout leaked a QWidget dependency")
+    report_stage("Flyout lifecycle complete")
+
+    report_stage("CoachMark and TeachingTip same-window lifecycle")
+    if dialogs_flyouts.CoachMark is not fluentqt.CoachMark:
+        raise AssertionError("Dialogs module did not re-export CoachMark")
+    if dialogs_flyouts.TeachingTip is not fluentqt.TeachingTip:
+        raise AssertionError("Dialogs module did not re-export TeachingTip")
+    if not issubclass(fluentqt.TeachingTip, fluentqt.Popup):
+        raise AssertionError("TeachingTip lost native Popup inheritance")
+    for public_type in (fluentqt.Popup, fluentqt.CoachMark, fluentqt.TeachingTip):
+        if hasattr(public_type, "onThemeUpdated"):
+            raise AssertionError("Guidance overlay exposed its C++ theme hook")
+
+    guidance_host = QWidget()
+    guidance_host.resize(760, 560)
+    coach_target = fluentqt.Button("Coach", guidance_host)
+    coach_target.setGeometry(140, 120, 120, 36)
+    teaching_target = fluentqt.Button("Teach", guidance_host)
+    teaching_target.setGeometry(500, 120, 120, 36)
+    coach_target.show()
+    teaching_target.show()
+    guidance_host.show()
+
+    coach = fluentqt.CoachMark(guidance_host)
+    coach.setCardSize(QSize(280, 140))
+    coach.setPlacement(fluentqt.CoachMark.Placement.Bottom)
+    coach.setTarget(coach_target)
+    coach_content = fluentqt.Label("Coach content", coach.contentHost())
+    coach_content.show()
+    coach.open()
+    app.processEvents()
+    if not coach.isOpen() or coach.window() is not guidance_host:
+        raise AssertionError("CoachMark did not open in its owning window")
+    if coach.contentHost().parent() is not coach:
+        raise AssertionError("CoachMark lost its Qt-owned content host")
+    coach.close()
+
+    tip = fluentqt.TeachingTip(guidance_host)
+    tip.setAnimationEnabled(False)
+    tip.setExitAnimationEnabled(False)
+    tip.setCardSize(QSize(320, 160))
+    tip.setPreferredPlacement(
+        fluentqt.TeachingTip.PreferredPlacement.Bottom
+    )
+    tip.setLightDismissEnabled(True)
+    tip_content = fluentqt.Label("Teaching content", tip.contentHost())
+    tip_content.show()
+    reasons = []
+    tip.closing.connect(reasons.append)
+    tip.showAt(teaching_target)
+    app.processEvents()
+    if not tip.isOpen() or tip.window() is not guidance_host:
+        raise AssertionError("TeachingTip did not open in its owning window")
+    if tip.target() is not teaching_target:
+        raise AssertionError("TeachingTip lost its target identity")
+    tip.closeWithReason(fluentqt.TeachingTip.CloseReason.ActionButton)
+    app.processEvents()
+    if tip.isOpen() or reasons != [fluentqt.TeachingTip.CloseReason.ActionButton]:
+        raise AssertionError("TeachingTip lost its semantic close reason")
+
+    coach_content_host = coach.contentHost()
+    tip_content_host = tip.contentHost()
+    guidance_host.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    for wrapper in (coach, coach_content_host, tip, tip_content_host):
+        if Shiboken.isValid(wrapper):
+            raise AssertionError("A guidance overlay survived its Qt host")
+
+    dependency_coach = fluentqt.CoachMark()
+    dependency_tip = fluentqt.TeachingTip()
+    dependency_coach_target = QWidget()
+    dependency_tip_target = QWidget()
+    dependency_coach.setTarget(dependency_coach_target)
+    dependency_tip.setTarget(dependency_tip_target)
+    dependency_refs = (
+        weakref.ref(dependency_coach_target),
+        weakref.ref(dependency_tip_target),
+    )
+    del dependency_coach_target
+    del dependency_tip_target
+    gc.collect()
+    if not all(reference() is not None for reference in dependency_refs):
+        raise AssertionError("A guidance overlay did not retain its target")
+    del dependency_coach
+    del dependency_tip
+    gc.collect()
+    if not all(reference() is None for reference in dependency_refs):
+        raise AssertionError("A guidance overlay leaked its target")
+    report_stage("CoachMark and TeachingTip lifecycle complete")
+
+    report_stage("Dialog and ContentDialog lifecycle")
+    if dialogs_flyouts.Dialog is not fluentqt.Dialog:
+        raise AssertionError("Dialogs module did not re-export Dialog")
+    if dialogs_flyouts.ContentDialog is not fluentqt.ContentDialog:
+        raise AssertionError("Dialogs module did not re-export ContentDialog")
+    if not issubclass(fluentqt.ContentDialog, fluentqt.Dialog):
+        raise AssertionError("ContentDialog lost native Dialog inheritance")
+
+    dialog_host = QWidget()
+    dialog_host.resize(640, 480)
+    dialog_host.show()
+    overlay_dialog = fluentqt.Dialog(dialog_host)
+    overlay_dialog.setFixedSize(320, 200)
+    overlay_dialog.setAnimationEnabled(False)
+    overlay_dialog.setSmokeEnabled(True)
+    overlay_dialog.open()
+    app.processEvents()
+    if overlay_dialog.window() is not dialog_host:
+        raise AssertionError("Dialog created a separate top-level window")
+    dialog_scrim = dialog_host.findChild(QWidget, "DialogSmokeScrim")
+    if dialog_scrim is None or not dialog_scrim.isVisible():
+        raise AssertionError("Dialog did not create its same-window scrim")
+    overlay_dialog.done(fluentqt.ContentDialog.ResultNone)
+    app.processEvents()
+    if dialog_host.findChild(QWidget, "DialogSmokeScrim") is not None:
+        raise AssertionError("Dialog did not release its same-window scrim")
+
+    dependency_dialog = fluentqt.Dialog()
+    dependency_source = QWidget()
+    dependency_dialog.setThemeSource(dependency_source)
+    dependency_source_ref = weakref.ref(dependency_source)
+    del dependency_source
+    gc.collect()
+    if dependency_source_ref() is None:
+        raise AssertionError("Dialog did not retain its theme source wrapper")
+    dependency_dialog_ref = weakref.ref(dependency_dialog)
+    del dependency_dialog
+    gc.collect()
+    if dependency_dialog_ref() is not None:
+        raise AssertionError("Dialog survived Python GC")
+    if dependency_source_ref() is not None:
+        raise AssertionError("Dialog leaked its theme source wrapper")
+
+    content_dialog = fluentqt.ContentDialog(dialog_host)
+    content_dialog.setAnimationEnabled(False)
+    content_dialog.setTitle("Remove this item?")
+    content_dialog.setPrimaryButtonText("Remove")
+    content_dialog.setSecondaryButtonText("Keep")
+    content_dialog.setDefaultButton(
+        fluentqt.ContentDialogButton.Primary
+    )
+    if content_dialog.title() != "Remove this item?":
+        raise AssertionError("ContentDialog lost its title")
+    if content_dialog.defaultButton() != int(
+        fluentqt.ContentDialogButton.Primary
+    ):
+        raise AssertionError("ContentDialog lost its default button")
+
+    first_content = QWidget()
+    content_dialog.setContent(first_content)
+    if content_dialog.content() is not first_content:
+        raise AssertionError("ContentDialog lost content identity")
+    if first_content.parent() is not content_dialog:
+        raise AssertionError("ContentDialog did not adopt installed content")
+    taken_content = content_dialog.takeContent()
+    if taken_content is not first_content or taken_content.parent() is not None:
+        raise AssertionError("ContentDialog did not return parentless content")
+    if not Shiboken.ownedByPython(taken_content):
+        raise AssertionError("Taken ContentDialog content is not Python-owned")
+
+    owned_content = QWidget()
+    content_dialog.setContent(owned_content)
+    content_dialog.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    if Shiboken.isValid(content_dialog):
+        raise AssertionError("ContentDialog deferred deletion did not finish")
+    if Shiboken.isValid(owned_content):
+        raise AssertionError("ContentDialog did not destroy installed content")
+    dialog_host.close()
+    report_stage("Dialog and ContentDialog lifecycle complete")
+
     annotated = next(
         control
         for control in controls
@@ -526,6 +1396,73 @@ def main():
         raise AssertionError("CalendarView did not preserve its content level")
     if not calendar.isDateSelectable(maximum_date):
         raise AssertionError("CalendarView rejected an in-range date")
+
+    report_stage("date and time picker popup lifecycle")
+    if date_time.CalendarDatePicker is not fluentqt.CalendarDatePicker:
+        raise AssertionError(
+            "Date-time module did not re-export CalendarDatePicker"
+        )
+    if date_time.DatePicker is not fluentqt.DatePicker:
+        raise AssertionError("Date-time module did not re-export DatePicker")
+    if date_time.TimePicker is not fluentqt.TimePicker:
+        raise AssertionError("Date-time module did not re-export TimePicker")
+
+    picker_host = QWidget()
+    picker_host.resize(720, 520)
+    calendar_picker = fluentqt.CalendarDatePicker(picker_host)
+    date_picker = fluentqt.DatePicker(picker_host)
+    time_picker = fluentqt.TimePicker(picker_host)
+    calendar_picker.move(24, 24)
+    date_picker.move(24, 88)
+    time_picker.move(24, 152)
+    picker_host.show()
+    app.processEvents()
+
+    calendar_picker.setDateRange(minimum_date, maximum_date)
+    calendar_picker.setDate(QDate(2026, 5, 1))
+    calendar_picker.openCalendar()
+    app.processEvents()
+    internal_calendar = calendar_picker.calendarView()
+    if not calendar_picker.isCalendarOpen() or internal_calendar is None:
+        raise AssertionError("CalendarDatePicker did not open its calendar")
+    if internal_calendar.selectedDate() != minimum_date:
+        raise AssertionError("CalendarDatePicker did not sync its calendar")
+    calendar_picker.closeCalendar()
+
+    date_picker.setDateRange(minimum_date, maximum_date)
+    date_picker.setSelectedDate(QDate(2026, 5, 30))
+    date_picker.openPicker()
+    app.processEvents()
+    if date_picker.selectedDate() != maximum_date:
+        raise AssertionError("DatePicker did not clamp its selected QDate")
+    if not date_picker.isDropDownOpen():
+        raise AssertionError("DatePicker did not open its native dropdown")
+    date_picker.closePicker()
+
+    time_picker.setMinuteIncrement(15)
+    time_picker.setSelectedTime(QTime(9, 58))
+    time_picker.openPicker()
+    app.processEvents()
+    if time_picker.selectedTime() != QTime(9, 45):
+        raise AssertionError("TimePicker did not snap its selected QTime")
+    if not time_picker.isDropDownOpen():
+        raise AssertionError("TimePicker did not open its native dropdown")
+    time_picker.closePicker()
+
+    picker_host.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    if any(
+        Shiboken.isValid(item)
+        for item in (
+            calendar_picker,
+            date_picker,
+            time_picker,
+            internal_calendar,
+        )
+    ):
+        raise AssertionError("A date/time picker survived its Qt host")
+    report_stage("date and time picker lifecycle complete")
 
     compound = next(
         control
@@ -692,6 +1629,80 @@ def main():
         raise AssertionError("InfoBar survived Python GC")
     if Shiboken.isValid(info_action):
         raise AssertionError("InfoBar did not delete its hosted action")
+
+    if status_info.Toast is not fluentqt.Toast:
+        raise AssertionError("status_info did not re-export Toast")
+    if status_info.ToolTip is not fluentqt.ToolTip:
+        raise AssertionError("status_info did not re-export ToolTip")
+    status_host = QWidget()
+    status_host.resize(520, 300)
+    status_anchor = QWidget(status_host)
+    status_host.show()
+    app.processEvents()
+
+    tooltip = fluentqt.ToolTip.attach(status_anchor, "Installed tooltip")
+    if tooltip.parent() is not status_anchor:
+        raise AssertionError("ToolTip attachment lost target ownership")
+    if fluentqt.ToolTip.attach(status_anchor, "Updated") is not tooltip:
+        raise AssertionError("ToolTip attachment did not reuse its wrapper")
+
+    direct_toast = fluentqt.Toast()
+    direct_action = QAction("Open")
+    direct_action_ref = weakref.ref(direct_action)
+    direct_toast.setAction(direct_action)
+    direct_toast.setAnimationEnabled(False)
+    del direct_action
+    gc.collect()
+    if direct_toast.action() is not direct_action_ref():
+        raise AssertionError("Toast did not retain its borrowed QAction")
+    if not direct_toast.present(status_anchor):
+        raise AssertionError("Direct Toast presentation failed")
+    if direct_toast.parentWidget() is not status_host:
+        raise AssertionError("Direct Toast used the child anchor as its host")
+    direct_toast.dismiss()
+
+    managed_toast = fluentqt.Toast.showOrUpdateToast(
+        status_anchor,
+        "wheel-status",
+        "Preparing",
+        durationMs=0,
+    )
+    updated_toast = fluentqt.Toast.showOrUpdateToast(
+        status_anchor,
+        "wheel-status",
+        "Complete",
+        severity=fluentqt.Toast.Severity.Success,
+        durationMs=0,
+    )
+    if managed_toast is not updated_toast:
+        raise AssertionError("Managed Toast update replaced its wrapper")
+    if managed_toast.message() != "Complete":
+        raise AssertionError("Managed Toast update lost its message")
+    if managed_toast.parentWidget() is not status_host:
+        raise AssertionError("Managed Toast did not use the actual host")
+
+    status_anchor.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    if not Shiboken.isValid(managed_toast):
+        raise AssertionError("Managed Toast followed a transient child anchor")
+    if Shiboken.isValid(tooltip):
+        raise AssertionError("ToolTip outlived its target")
+    managed_toast.setAnimationEnabled(False)
+    managed_toast.dismiss()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    if Shiboken.isValid(managed_toast):
+        raise AssertionError("Managed Toast did not self-delete")
+
+    status_host.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+    app.processEvents()
+    if Shiboken.isValid(direct_toast):
+        raise AssertionError("Direct Toast outlived its top-level host")
+    gc.collect()
+    if direct_action_ref() is not None:
+        raise AssertionError("Toast did not release its QAction wrapper")
 
     scroll_view = fluentqt.ScrollView()
     scroll_content = QWidget()
@@ -1585,7 +2596,40 @@ def main():
         fluentqt.reset_theme_tokens()
         fluentqt.set_theme(previous_theme)
 
+    if windowing.TitleBar is not fluentqt.TitleBar:
+        raise AssertionError("TitleBar category export does not match root API")
+
     window = fluentqt.Window()
+    title_bar = window.titleBar()
+    if not isinstance(title_bar, fluentqt.TitleBar):
+        raise AssertionError("Window did not expose its native TitleBar")
+    if title_bar.window() is not window or Shiboken.ownedByPython(title_bar):
+        raise AssertionError("Window TitleBar lost its Qt-owned lifecycle")
+    if hasattr(fluentqt.TitleBar, "onThemeUpdated"):
+        raise AssertionError("TitleBar exposed its internal theme hook")
+
+    title_content = QWidget()
+    title_bar.setContentWidget(title_content)
+    if title_bar.contentWidget() is not title_content:
+        raise AssertionError("TitleBar did not retain installed content")
+    if title_content.parent() is not title_bar:
+        raise AssertionError("TitleBar content has the wrong Qt parent")
+
+    window.setBackdropEffect(fluentqt.BackdropEffect.Solid)
+    solid_state = window.backdropState()
+    if (
+        solid_state.backend != fluentqt.BackdropBackend.Solid
+        or solid_state.fidelity != fluentqt.BackdropFidelity.Solid
+        or solid_state.surfaceMode
+        != fluentqt.BackdropSurfaceMode.SolidOpaque
+        or solid_state.platformApplied
+    ):
+        raise AssertionError("Window Solid backdrop state is inconsistent")
+    window.setBackdropEffect(fluentqt.BackdropEffect.Mica)
+    mica_state = window.backdropState()
+    if mica_state.requestedEffect != fluentqt.BackdropEffect.Mica:
+        raise AssertionError("Window lost the requested Mica effect")
+
     child = QWidget()
     window.setContentWidget(child)
     window_ref = weakref.ref(window)
@@ -1595,6 +2639,8 @@ def main():
         raise AssertionError("Window survived Python GC")
     if Shiboken.isValid(child):
         raise AssertionError("Window did not own its installed content widget")
+    if Shiboken.isValid(title_bar) or Shiboken.isValid(title_content):
+        raise AssertionError("Window did not destroy its TitleBar hierarchy")
 
     report_stage("runtime dependencies")
     verify_windows_runtime_dependencies()

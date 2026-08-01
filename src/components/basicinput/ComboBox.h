@@ -5,6 +5,7 @@
 #include <QPoint>
 #include <QPointer>
 #include <QStyledItemDelegate>
+#include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/dialogs_flyouts/Flyout.h"
@@ -99,7 +100,7 @@ class ComboBox : public QComboBox, public FluentElement, public QMLPlus {
     /**
      * @brief Animated press progress used by the painted surface.
      * zh_CN: 自绘表面使用的按压动画进度。
-     */
+    */
     Q_PROPERTY(qreal pressProgress READ pressProgress WRITE setPressProgress)
 
 public:
@@ -147,6 +148,8 @@ public:
     fluent::textfields::LineEdit* fluentLineEdit() const;
 
     // --- QComboBox overrides ---
+    QAbstractItemModel* model() const { return QComboBox::model(); }
+    void setModel(QAbstractItemModel* model) FLUENT_QT6_ONLY_OVERRIDE;
     void showPopup() override;
     void hidePopup() override;
 

@@ -10,6 +10,8 @@
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::date_time"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::dialogs_flyouts"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::collections"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::collections::FlowView"
@@ -29,6 +31,8 @@
     <rejection class="fluent::scrolling::AnnotatedScrollBar"
                function-name="^setDetailLabelProvider$"/>
     <rejection class="fluent::layout"
+               function-name="^qt_getEnum(MetaObject|Name)$"/>
+    <rejection class="fluent::menus_toolbars"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::navigation"
                function-name="^qt_getEnum(MetaObject|Name)$"/>
@@ -67,6 +71,27 @@
     <function signature="treeViewHorizontalFluentScrollBar(const fluent::collections::TreeView*)"/>
     <function signature="setBreadcrumbTextItems(fluent::navigation::Breadcrumb*,const QStringList&amp;)"/>
     <function signature="setBreadcrumbMetadataItems(fluent::navigation::Breadcrumb*,const QVector&lt;fluent::navigation::BreadcrumbItem&gt;&amp;)"/>
+    <function signature="showToastForBinding(QWidget*,QWidget*,const QString&amp;,fluent::status_info::Toast::Severity,int,fluent::status_info::Toast::Placement,const QMargins&amp;)">
+        <!-- The facade passes anchor->window() separately so the returned
+             self-deleting Toast is parented to its actual Qt host without
+             losing the original anchor's local theme. -->
+        <modify-function>
+            <modify-argument index="return">
+                <parent index="1" action="add"/>
+                <define-ownership class="native" owner="c++"/>
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+    </function>
+    <function signature="showOrUpdateToastForBinding(QWidget*,QWidget*,const QString&amp;,const QString&amp;,fluent::status_info::Toast::Severity,int,fluent::status_info::Toast::Placement,const QMargins&amp;)">
+        <modify-function>
+            <modify-argument index="return">
+                <parent index="1" action="add"/>
+                <define-ownership class="native" owner="c++"/>
+                <define-ownership class="target" owner="default"/>
+            </modify-argument>
+        </modify-function>
+    </function>
     <function signature="themeRevision()"/>
     <function signature="bindingBuildInfo()"/>
 
@@ -115,23 +140,269 @@
                 <modify-function signature="setAlphaFromSlider(int)"
                                  remove="all"/>
             </object-type>
+            <object-type name="ComboBox">
+                <!-- ComboBox overrides QComboBox::setModel(). Repeat the
+                     caller-owned keep-reference contract on the derived
+                     wrapper so replacing a Python model releases the old
+                     wrapper on Shiboken 6.2+ as well as newer generators. -->
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                        <no-null-pointer/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="model()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- QComboBox owns its installed editor. ComboBox redeclares
+                     setLineEdit(), so repeat PySide's parent contract on the
+                     generated FluentQt wrapper instead of relying on an
+                     inherited typesystem rule. -->
+                <modify-function signature="setLineEdit(QLineEdit*)">
+                    <modify-argument index="1">
+                        <parent index="this" action="add"/>
+                        <no-null-pointer/>
+                    </modify-argument>
+                </modify-function>
+                <!-- Theme refresh is an implementation hook rather than an
+                     application-level Python customization API. -->
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
             <object-type name="CompoundButton"/>
+            <object-type name="DropDownButton">
+                <!-- Menus remain caller-owned. Retain the Python wrapper while
+                     attached without changing QObject parentage or native
+                     ownership; QPointer handles external C++ destruction. -->
+                <modify-function signature="setMenu(QMenu*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="menu()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
             <object-type name="HyperlinkButton"/>
             <object-type name="RadioButton"/>
             <object-type name="RatingControl"/>
             <object-type name="RepeatButton"/>
             <object-type name="Slider"/>
+            <object-type name="SplitButton">
+                <enum-type name="SplitPart"/>
+                <modify-function signature="setMenu(QMenu*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="menu()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
             <object-type name="ToggleButton"/>
+            <object-type name="ToggleSplitButton"/>
             <object-type name="ToggleSwitch"/>
         </namespace-type>
 
         <namespace-type name="date_time" visible="no">
+            <object-type name="CalendarDatePicker">
+                <!-- The popup and CalendarView are owned by the native picker.
+                     Expose the read-only child without changing Python or C++
+                     ownership bookkeeping. -->
+                <modify-function signature="calendarView()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
             <object-type name="CalendarView">
                 <enum-type name="CalendarContentLevel"/>
+            </object-type>
+            <object-type name="DatePicker">
+                <enum-type name="DateField"/>
+                <enum-type name="MonthFormat"/>
+                <enum-type name="DayFormat"/>
+                <enum-type name="YearFormat"/>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="TimePicker">
+                <enum-type name="TimeField"/>
+                <enum-type name="ClockIdentifier"/>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+        </namespace-type>
+
+        <namespace-type name="dialogs_flyouts" visible="no">
+            <object-type name="CoachMark">
+                <enum-type name="SurfaceMode"/>
+                <enum-type name="Placement"/>
+                <!-- CoachMark observes a caller-owned target. The Python
+                     facade retains the wrapper without changing QWidget
+                     parentage or Shiboken ownership. -->
+                <modify-function signature="setTarget(QWidget*)"
+                                 rename="_setTarget"/>
+                <modify-function signature="target()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- The content host remains a Qt-owned child of CoachMark. -->
+                <modify-function signature="contentHost()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="Dialog">
+                <!-- Dialog observes a caller-owned theme source. The Python
+                     facade retains its wrapper without changing QWidget
+                     parentage or Shiboken ownership. -->
+                <modify-function signature="setThemeSource(QWidget*)"
+                                 rename="_setThemeSource"/>
+                <!-- These are C++ implementation hooks rather than a stable
+                     Python customization surface. Standard QWidget event
+                     virtuals remain available for Python subclasses. -->
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+                <modify-function signature="isAnimating()const"
+                                 remove="all"/>
+                <modify-function signature="ownerWidget()const"
+                                 remove="all"/>
+                <modify-function
+                    signature="drawShadow(QPainter&amp;,const QRect&amp;)"
+                    remove="all"/>
+            </object-type>
+            <object-type name="ContentDialog">
+                <enum-type name="ContentDialogButton"/>
+                <!-- Shiboken 6.9 places these static constexpr fields on a
+                     non-existent flattened namespace during module startup.
+                     The Python facade publishes the same stable constants. -->
+                <modify-field name="ResultNone" remove="all"/>
+                <modify-field name="ResultPrimary" remove="all"/>
+                <modify-field name="ResultSecondary" remove="all"/>
+                <!-- Installed content is parented to and destroyed with the
+                     dialog. The Python facade makes replacement and release
+                     explicit while retaining the live wrapper. -->
+                <modify-function signature="setContent(QWidget*)"
+                                 rename="_setContent"/>
+                <modify-function signature="content()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="Popup">
+                <enum-type name="CloseFlag" flags="ClosePolicy"/>
+                <!-- Popup observes caller-owned QWidget dependencies. Keep
+                     the native pointer entry points behind a Python facade
+                     that retains wrappers without changing Qt parentage or
+                     Shiboken ownership. -->
+                <modify-function signature="setPosition(QWidget*,const QPoint&amp;)"
+                                 rename="_setPositionWithAnchor"/>
+                <modify-function signature="setThemeSource(QWidget*)"
+                                 rename="_setThemeSource"/>
+                <modify-function signature="addLightDismissPassthrough(QWidget*)"
+                                 rename="_addLightDismissPassthrough"/>
+                <modify-function signature="clearLightDismissPassthrough()"
+                                 rename="_clearLightDismissPassthrough"/>
+                <!-- These hooks exist for C++ overlay subclasses, not for
+                     application-level Python Popup customization. -->
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+                <modify-function signature="computePosition()const"
+                                 remove="all"/>
+                <modify-function signature="automaticPositionAnchor()const"
+                                 remove="all"/>
+                <modify-function signature="setFocusOnOpenEnabled(bool)"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="Flyout">
+                <enum-type name="Placement"/>
+                <!-- Flyout observes its caller-owned anchor. Keep the raw
+                     QWidget setters behind the dependency-retaining Python
+                     facade without changing parentage or ownership. -->
+                <modify-function signature="setAnchor(QWidget*)"
+                                 rename="_setAnchor"/>
+                <modify-function signature="showAt(QWidget*)"
+                                 rename="_showAt"/>
+                <modify-function signature="anchor()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- Placement calculation remains a C++ implementation hook. -->
+                <modify-function signature="computePosition()const"
+                                 remove="all"/>
+                <modify-function signature="automaticPositionAnchor()const"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="TeachingTip">
+                <enum-type name="PreferredPlacement"/>
+                <enum-type name="CloseReason"/>
+                <!-- TeachingTip observes its caller-owned target while
+                     inheriting Popup's dependency facade for the remaining
+                     QWidget entry points. -->
+                <modify-function signature="setTarget(QWidget*)"
+                                 rename="_setTarget"/>
+                <modify-function signature="showAt(QWidget*)"
+                                 rename="_showAt"/>
+                <modify-function signature="target()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="contentHost()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+                <modify-function signature="computePosition()const"
+                                 remove="all"/>
+                <modify-function signature="automaticPositionAnchor()const"
+                                 remove="all"/>
             </object-type>
         </namespace-type>
 
         <namespace-type name="collections" visible="no">
+            <object-type name="DrawerView">
+                <enum-type name="DrawerEdge"/>
+                <enum-type name="CloseFlag" flags="ClosePolicy"/>
+                <!-- DrawerView selects content release behavior at runtime.
+                     Keep that overload behind the Python facade, which exposes
+                     one method per policy and retains Python wrappers plus the
+                     Reparented restore target. -->
+                <modify-function signature="setContentWidget(QWidget*)"
+                                 remove="all"/>
+                <modify-function
+                    signature="setContentWidget(QWidget*,fluent::WidgetOwnership)"
+                    rename="_setContentWidgetWithOwnership"/>
+                <modify-function signature="contentWidget()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeContentWidget()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
             <object-type name="FlipView">
                 <!-- The Python facade fixes page ownership at each entry
                      point and retains page wrappers plus original parents.
@@ -394,6 +665,430 @@
             </object-type>
         </namespace-type>
 
+        <namespace-type name="menus_toolbars" visible="no">
+            <object-type name="CommandBar">
+                <enum-type name="LabelPosition"/>
+                <inject-code class="native" position="beginning">
+// PySide's QWidget typesystem adds callable addAction() overloads to every
+// derived wrapper, but Shiboken does not repeat QWidget's native glue there.
+// Keep an equivalent local bridge so those inherited overloads compile on
+// both the Qt for Python 6.2 baseline and newer generators. Qt 6.2 only has
+// QWidget::addAction(QAction *), so construct the actions explicitly instead
+// of calling convenience overloads added by newer Qt releases.
+static PyObject *connectCommandBarAction(
+    QAction *action,
+    PyObject *callback)
+{
+    PyObject *pyAction = %CONVERTTOPYTHON[QAction *](action);
+    Shiboken::AutoDecRef result(PyObject_CallMethod(
+        pyAction,
+        "connect",
+        "OsO",
+        pyAction,
+        SIGNAL(triggered()),
+        callback));
+    if (result.isNull()) {
+        Py_DECREF(pyAction);
+        return nullptr;
+    }
+    return pyAction;
+}
+
+static inline PyObject *addActionWithPyObject(
+    QWidget *self,
+    const QString &amp;text,
+    PyObject *callback)
+{
+    auto *action = new QAction(text, self);
+    self->addAction(action);
+    return connectCommandBarAction(action, callback);
+}
+
+static inline PyObject *addActionWithPyObject(
+    QWidget *self,
+    const QIcon &amp;icon,
+    const QString &amp;text,
+    PyObject *callback)
+{
+    auto *action = new QAction(icon, text, self);
+    self->addAction(action);
+    return connectCommandBarAction(action, callback);
+}
+
+static inline PyObject *addActionWithPyObject(
+    QWidget *self,
+    const QString &amp;text,
+    const QKeySequence &amp;shortcut,
+    PyObject *callback)
+{
+    auto *action = new QAction(text, self);
+    action->setShortcut(shortcut);
+    self->addAction(action);
+    return connectCommandBarAction(action, callback);
+}
+
+static inline PyObject *addActionWithPyObject(
+    QWidget *self,
+    const QIcon &amp;icon,
+    const QString &amp;text,
+    const QKeySequence &amp;shortcut,
+    PyObject *callback)
+{
+    auto *action = new QAction(icon, text, self);
+    action->setShortcut(shortcut);
+    self->addAction(action);
+    return connectCommandBarAction(action, callback);
+}
+
+static void syncCommandBarActionReference(
+    SbkObject *self,
+    fluent::menus_toolbars::CommandBar *bar,
+    QAction *action,
+    PyObject *pyAction)
+{
+    static const char primaryKey[] = "CommandBar.primaryActions";
+    static const char secondaryKey[] = "CommandBar.secondaryActions";
+    Shiboken::Object::removeReference(self, primaryKey, pyAction);
+    Shiboken::Object::removeReference(self, secondaryKey, pyAction);
+    if (bar->primaryActions().contains(action))
+        Shiboken::Object::keepReference(self, primaryKey, pyAction, true);
+    else if (bar->secondaryActions().contains(action))
+        Shiboken::Object::keepReference(self, secondaryKey, pyAction, true);
+}
+                </inject-code>
+                <modify-function signature="addAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="insertAction(QAction*,QAction*)">
+                    <!-- Undo QWidget's parent heuristic: CommandBar borrows
+                         the action and only retains its Python wrapper. -->
+                    <modify-argument index="2">
+                        <parent index="this" action="remove"/>
+                    </modify-argument>
+                    <inject-code class="target" position="end">
+syncCommandBarActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %2,
+    %PYARG_2);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="removeAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="addPrimaryAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="insertPrimaryAction(QAction*,QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %2,
+    %PYARG_2);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="addSecondaryAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="insertSecondaryAction(QAction*,QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %2,
+    %PYARG_2);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="removeCommandAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="clearPrimaryActions()">
+                    <inject-code class="target" position="end">
+Shiboken::Object::keepReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    "CommandBar.primaryActions",
+    Py_None);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="clearSecondaryActions()">
+                    <inject-code class="target" position="end">
+Shiboken::Object::keepReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    "CommandBar.secondaryActions",
+    Py_None);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="CommandBarFlyout">
+                <enum-type name="ShowMode"/>
+                <inject-code class="native" position="beginning">
+// See CommandBar's wrapper-local QWidget addAction() compatibility bridge.
+static PyObject *connectCommandBarFlyoutAction(
+    QAction *action,
+    PyObject *callback)
+{
+    PyObject *pyAction = %CONVERTTOPYTHON[QAction *](action);
+    Shiboken::AutoDecRef result(PyObject_CallMethod(
+        pyAction,
+        "connect",
+        "OsO",
+        pyAction,
+        SIGNAL(triggered()),
+        callback));
+    if (result.isNull()) {
+        Py_DECREF(pyAction);
+        return nullptr;
+    }
+    return pyAction;
+}
+
+static inline PyObject *addActionWithPyObject(
+    QWidget *self,
+    const QString &amp;text,
+    PyObject *callback)
+{
+    auto *action = new QAction(text, self);
+    self->addAction(action);
+    return connectCommandBarFlyoutAction(action, callback);
+}
+
+static inline PyObject *addActionWithPyObject(
+    QWidget *self,
+    const QIcon &amp;icon,
+    const QString &amp;text,
+    PyObject *callback)
+{
+    auto *action = new QAction(icon, text, self);
+    self->addAction(action);
+    return connectCommandBarFlyoutAction(action, callback);
+}
+
+static inline PyObject *addActionWithPyObject(
+    QWidget *self,
+    const QString &amp;text,
+    const QKeySequence &amp;shortcut,
+    PyObject *callback)
+{
+    auto *action = new QAction(text, self);
+    action->setShortcut(shortcut);
+    self->addAction(action);
+    return connectCommandBarFlyoutAction(action, callback);
+}
+
+static inline PyObject *addActionWithPyObject(
+    QWidget *self,
+    const QIcon &amp;icon,
+    const QString &amp;text,
+    const QKeySequence &amp;shortcut,
+    PyObject *callback)
+{
+    auto *action = new QAction(icon, text, self);
+    action->setShortcut(shortcut);
+    self->addAction(action);
+    return connectCommandBarFlyoutAction(action, callback);
+}
+
+static void syncCommandBarFlyoutActionReference(
+    SbkObject *self,
+    fluent::menus_toolbars::CommandBarFlyout *flyout,
+    QAction *action,
+    PyObject *pyAction)
+{
+    static const char primaryKey[] = "CommandBarFlyout.primaryActions";
+    static const char secondaryKey[] = "CommandBarFlyout.secondaryActions";
+    Shiboken::Object::removeReference(self, primaryKey, pyAction);
+    Shiboken::Object::removeReference(self, secondaryKey, pyAction);
+    if (flyout->primaryActions().contains(action))
+        Shiboken::Object::keepReference(self, primaryKey, pyAction, true);
+    else if (flyout->secondaryActions().contains(action))
+        Shiboken::Object::keepReference(self, secondaryKey, pyAction, true);
+}
+                </inject-code>
+                <modify-function signature="addAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarFlyoutActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="insertAction(QAction*,QAction*)">
+                    <modify-argument index="2">
+                        <parent index="this" action="remove"/>
+                    </modify-argument>
+                    <inject-code class="target" position="end">
+syncCommandBarFlyoutActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %2,
+    %PYARG_2);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="removeAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarFlyoutActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="addPrimaryAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarFlyoutActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="insertPrimaryAction(QAction*,QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarFlyoutActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %2,
+    %PYARG_2);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="addSecondaryAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarFlyoutActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="insertSecondaryAction(QAction*,QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarFlyoutActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %2,
+    %PYARG_2);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="removeCommandAction(QAction*)">
+                    <inject-code class="target" position="end">
+syncCommandBarFlyoutActionReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    %CPPSELF,
+    %1,
+    %PYARG_1);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="clearPrimaryActions()">
+                    <inject-code class="target" position="end">
+Shiboken::Object::keepReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    "CommandBarFlyout.primaryActions",
+    Py_None);
+                    </inject-code>
+                </modify-function>
+                <modify-function signature="clearSecondaryActions()">
+                    <inject-code class="target" position="end">
+Shiboken::Object::keepReference(
+    reinterpret_cast&lt;SbkObject *>(%PYSELF),
+    "CommandBarFlyout.secondaryActions",
+    Py_None);
+                    </inject-code>
+                </modify-function>
+                <!-- The final C++ class has no Shiboken shell; do not copy
+                     protected QWidget/Flyout virtual glue into its wrapper. -->
+                <modify-function signature="actionEvent(QActionEvent*)"
+                                 remove="all"/>
+                <modify-function signature="eventFilter(QObject*,QEvent*)"
+                                 remove="all"/>
+                <!-- Retain the current caller-owned invocation source without
+                     reparenting or transferring C++ ownership. -->
+                <modify-function signature="setAnchor(QWidget*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"
+                                         variable-name="CommandBarFlyout.anchor"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="showAt(QWidget*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"
+                                         variable-name="CommandBarFlyout.anchor"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="showAt(QWidget*,fluent::menus_toolbars::CommandBarFlyout::ShowMode)">
+                    <modify-argument index="1">
+                        <reference-count action="set"
+                                         variable-name="CommandBarFlyout.anchor"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="showAtPoint(QWidget*,const QPoint&amp;)">
+                    <modify-argument index="1">
+                        <reference-count action="set"
+                                         variable-name="CommandBarFlyout.anchor"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="showAtPoint(QWidget*,const QPoint&amp;,fluent::menus_toolbars::CommandBarFlyout::ShowMode)">
+                    <modify-argument index="1">
+                        <reference-count action="set"
+                                         variable-name="CommandBarFlyout.anchor"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+                <modify-function signature="computePosition()const"
+                                 remove="all"/>
+                <modify-function signature="automaticPositionAnchor()const"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="FluentMenu">
+                <!-- Theme refresh remains an implementation hook. Standard
+                     QMenu virtual events stay available to Python subclasses. -->
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="FluentMenuItem">
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="FluentMenuBar">
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+        </namespace-type>
+
         <namespace-type name="navigation" visible="no">
             <value-type name="BreadcrumbItem"/>
             <object-type name="Breadcrumb">
@@ -509,10 +1204,22 @@
         </namespace-type>
 
         <namespace-type name="textfields" visible="no">
+            <object-type name="AutoSuggestBox">
+                <enum-type name="TextChangeReason"/>
+                <enum-type name="QueryButtonPlacement"/>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
             <object-type name="Label">
                 <enum-type name="TextColorRole"/>
             </object-type>
-            <object-type name="LineEdit"/>
+            <object-type name="LineEdit">
+                <!-- Theme refresh belongs to the C++ styling pipeline. Keep
+                     it out of every Python text-field subclass, including
+                     AutoSuggestBox through inherited method lookup. -->
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
             <object-type name="NumberBox">
                 <enum-type name="SpinButtonPlacementMode"/>
             </object-type>
@@ -566,6 +1273,63 @@
                      configurable until a Python value type is designed.
                      The parameterless QMetaObject signal remains visible. -->
                 <modify-function signature="^clearElements\(.*$" remove="all"/>
+            </object-type>
+            <object-type name="Toast">
+                <enum-type name="Severity"/>
+                <enum-type name="Placement"/>
+                <enum-type name="DismissReason"/>
+                <!-- Toast borrows QAction. Retain only its Python wrapper;
+                     native QPointer and destroyed handling remain authoritative. -->
+                <modify-function signature="setAction(QAction*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="action()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- The Python facade reparents to anchor->window() before
+                     entering C++, keeping Shiboken and Qt parentage aligned. -->
+                <modify-function signature="present(QWidget*)"
+                                 rename="_present"/>
+                <!-- Managed factories must use the two-host BindingApi
+                     adapters above so child anchors do not become false
+                     Python parents of top-level-hosted Toast objects. -->
+                <modify-function signature="showToast(QWidget*,const QString&amp;,fluent::status_info::Toast::Severity,int,fluent::status_info::Toast::Placement,const QMargins&amp;)"
+                                 remove="all"/>
+                <modify-function signature="showOrUpdateToast(QWidget*,const QString&amp;,const QString&amp;,fluent::status_info::Toast::Severity,int,fluent::status_info::Toast::Placement,const QMargins&amp;)"
+                                 remove="all"/>
+                <!-- Animation progress and theme refresh are C++ hooks, not
+                     application-level Python customization APIs. -->
+                <modify-function signature="toastProgress()const"
+                                 remove="all"/>
+                <modify-function signature="setToastProgress(qreal)"
+                                 remove="all"/>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
+            <object-type name="ToolTip">
+                <enum-type name="Placement"/>
+                <!-- attach() returns a target-owned native ToolTip and reuses
+                     the same child on subsequent calls. -->
+                <modify-function signature="attach(QWidget*,const QString&amp;,fluent::status_info::ToolTip::Placement)">
+                    <modify-argument index="return">
+                        <parent index="1" action="add"/>
+                        <define-ownership class="native" owner="c++"/>
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- ToolTip observes the local theme source without
+                     reparenting it, so keep the wrapper only. -->
+                <modify-function signature="setThemeSource(QWidget*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
             </object-type>
         </namespace-type>
 
@@ -638,6 +1402,21 @@
             <enum-type name="BackdropSurfaceMode"/>
             <value-type name="BackdropCapabilities"/>
             <value-type name="BackdropState"/>
+            <object-type name="TitleBar">
+                <modify-function signature="setContentWidget(QWidget*)">
+                    <inject-code class="target" position="beginning">
+                        <insert-template name="replace_child">
+                            <replace from="$FUNCTION_GET_OLD" to="contentWidget"/>
+                            <replace from="$CHILD_TYPE" to="QWidget"/>
+                            <replace from="$PYARG" to="%PYARG_1"/>
+                            <replace from="$CPPARG" to="%1"/>
+                        </insert-template>
+                    </inject-code>
+                </modify-function>
+                <!-- Theme refresh is driven by FluentQt's registry and is not
+                     an application-level Python customization hook. -->
+                <modify-function signature="onThemeUpdated()" remove="all"/>
+            </object-type>
             <object-type name="Window">
                 <modify-function signature="setContentWidget(QWidget*)">
                     <inject-code class="target" position="beginning">
@@ -666,6 +1445,7 @@
                         </conversion-rule>
                     </modify-argument>
                 </modify-function>
+                <modify-function signature="onThemeUpdated()" remove="all"/>
             </object-type>
         </namespace-type>
     </namespace-type>

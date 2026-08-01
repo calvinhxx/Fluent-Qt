@@ -258,6 +258,9 @@ void DrawerView::setContentWidget(QWidget* widget)
 
 bool DrawerView::setContentWidget(QWidget* widget, WidgetOwnership ownership)
 {
+    if (widget == this || (widget && widget->isAncestorOf(this)))
+        return false;
+
     if (m_contentWidget == widget) {
         if (!widget || m_contentOwnership == ownership)
             return true;
