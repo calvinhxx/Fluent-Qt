@@ -56,10 +56,31 @@ void SplitButton::startPressAnimation(SplitPart part) {
 }
 
 void SplitButton::setMenu(QMenu* menu) {
-    if (m_menu != menu) {
-        m_menu = menu;
-        emit menuChanged();
+    if (m_menu == menu)
+        return;
+
+    if (m_menu)
+        disconnect(m_menu.data(), nullptr, this, nullptr);
+    setOpen(false);
+    m_menu = menu;
+    if (m_menu) {
+        connect(m_menu, &QMenu::aboutToShow, this, [this]() { setOpen(true); });
+        connect(m_menu, &QMenu::aboutToHide, this, [this]() { setOpen(false); });
+        connect(m_menu, &QObject::destroyed, this, [this]() {
+            setOpen(false);
+            emit menuChanged();
+        });
+        setOpen(m_menu->isVisible());
     }
+    emit menuChanged();
+}
+
+void SplitButton::setOpen(bool open) {
+    if (m_isOpen == open)
+        return;
+    m_isOpen = open;
+    update();
+    emit openChanged();
 }
 
 void SplitButton::setSecondaryWidth(int width) {
@@ -85,23 +106,46 @@ void SplitButton::mousePressEvent(QMouseEvent* event) {
         m_pressPart = getPartAt(event->pos());
         startPressAnimation(m_pressPart);
         update();
+        if (m_pressPart == Secondary) {
+            event->accept();
+            return;
+        }
     }
     Button::mousePressEvent(event);
 }
 
 void SplitButton::mouseReleaseEvent(QMouseEvent* event) {
     if (event->button() == Qt::LeftButton) {
-        SplitPart releasePart = getPartAt(event->pos());
+        const SplitPart releasePart = getPartAt(event->pos());
 
-        if (releasePart == Secondary && m_pressPart == Secondary && m_menu) {
-            // Pop the menu. zh_CN: 弹出菜单。
-            QPoint popupPos = mapToGlobal(rect().bottomLeft());
-            if (layoutDirection() == Qt::RightToLeft)
-                popupPos.rx() -= m_menu->sizeHint().width() - width();
-            m_menu->exec(popupPos);
-        } else if (releasePart == Primary && m_pressPart == Primary) {
-            // Primary click; the signal is already handled by Button (QPushButton).
-            // zh_CN: 主按钮点击，信号已在 Button (QPushButton) 内部处理。
+        if (m_pressPart == Secondary) {
+            event->accept();
+            if (releasePart == Secondary && m_menu) {
+                // Keep the secondary segment pressed while the nested menu
+                // loop is active. zh_CN: 菜单嵌套事件循环期间保持二级区域按下态。
+                QPoint popupPos = mapToGlobal(rect().bottomLeft());
+                if (layoutDirection() == Qt::RightToLeft)
+                    popupPos.rx() -= m_menu->sizeHint().width() - width();
+                QPointer<SplitButton> guard(this);
+                m_menu->exec(popupPos);
+                if (!guard)
+                    return;
+                guard->setOpen(false);
+            }
+            m_pressPart = None;
+            update();
+            return;
+        }
+
+        if (m_pressPart == Primary && releasePart != Primary) {
+            // Releasing over the secondary segment cancels the primary
+            // command instead of letting QPushButton treat the whole widget
+            // as one hit target. zh_CN: 主区按下后若在二级区释放，则取消主命令。
+            m_pressPart = None;
+            setDown(false);
+            update();
+            event->accept();
+            return;
         }
 
         m_pressPart = None;

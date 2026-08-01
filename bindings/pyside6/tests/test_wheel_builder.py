@@ -19,6 +19,17 @@ WHEEL_BUILDER_SPEC.loader.exec_module(WHEEL_BUILDER)
 
 
 class WheelBuilderTest(unittest.TestCase):
+    def test_native_and_facade_stubs_are_required_in_wheel(self):
+        for name in (
+            "__init__.pyi",
+            "_fluentqt.pyi",
+            "basicinput.pyi",
+            "collections.pyi",
+            "windowing.pyi",
+        ):
+            with self.subTest(name=name):
+                self.assertIn(name, WHEEL_BUILDER.REQUIRED_PACKAGE_FILES)
+
     def test_scrolling_facade_is_required_in_wheel(self):
         self.assertIn(
             "scrolling.py",

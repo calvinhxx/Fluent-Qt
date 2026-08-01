@@ -8,6 +8,7 @@ BackdropEffect = _native.fluent.windowing.BackdropEffect
 BackdropFidelity = _native.fluent.windowing.BackdropFidelity
 BackdropState = _native.fluent.windowing.BackdropState
 BackdropSurfaceMode = _native.fluent.windowing.BackdropSurfaceMode
+TitleBar = _native.fluent.windowing.TitleBar
 Window = _native.fluent.windowing.Window
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "BackdropFidelity",
     "BackdropState",
     "BackdropSurfaceMode",
+    "TitleBar",
     "Window",
 ]

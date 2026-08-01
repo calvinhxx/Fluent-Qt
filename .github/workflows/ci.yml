@@ -890,33 +890,56 @@ jobs:
               bindings/pyside6/ROADMAP.md \
               bindings/pyside6/ROADMAP.zh-CN.md \
               bindings/pyside6/examples/accordion_ownership.py \
+              bindings/pyside6/examples/auto_suggest_box.py \
               bindings/pyside6/examples/breadcrumb_navigation.py \
+              bindings/pyside6/examples/combo_box_dropdown.py \
+              bindings/pyside6/examples/command_surfaces.py \
+              bindings/pyside6/examples/date_time_pickers.py \
+              bindings/pyside6/examples/menu_buttons.py \
               bindings/pyside6/examples/compatibility_showcase.py \
+              bindings/pyside6/examples/content_dialog.py \
+              bindings/pyside6/examples/drawer_view_ownership.py \
               bindings/pyside6/examples/flip_view_ownership.py \
+              bindings/pyside6/examples/flyout_overlay.py \
               bindings/pyside6/examples/flow_view_model.py \
               bindings/pyside6/examples/grid_view_model.py \
+              bindings/pyside6/examples/guidance_overlays.py \
               bindings/pyside6/examples/list_view_model.py \
               bindings/pyside6/examples/navigation_view_ownership.py \
+              bindings/pyside6/examples/popup_overlay.py \
               bindings/pyside6/examples/split_view_ownership.py \
               bindings/pyside6/examples/tree_view_model.py \
               bindings/pyside6/examples/scroll_view_ownership.py \
               bindings/pyside6/examples/selector_pivot_navigation.py \
               bindings/pyside6/examples/stack_view_navigation.py \
+              bindings/pyside6/examples/status_overlays.py \
               bindings/pyside6/examples/tab_view_navigation.py \
+              bindings/pyside6/examples/window_chrome.py \
               bindings/pyside6/native/WindowsBindingPrelude.h \
               bindings/pyside6/native/typesystem_fluentqt.xml \
               bindings/pyside6/src/fluentqt/__init__.py \
+              bindings/pyside6/src/fluentqt/basicinput.py \
               bindings/pyside6/src/fluentqt/collections.py \
+              bindings/pyside6/src/fluentqt/date_time.py \
+              bindings/pyside6/src/fluentqt/dialogs_flyouts.py \
               bindings/pyside6/src/fluentqt/foundation.py \
               bindings/pyside6/src/fluentqt/layout.py \
+              bindings/pyside6/src/fluentqt/menus_toolbars.py \
               bindings/pyside6/src/fluentqt/navigation.py \
               bindings/pyside6/src/fluentqt/scrolling.py \
               bindings/pyside6/src/fluentqt/status_info.py \
+              bindings/pyside6/src/fluentqt/textfields.py \
+              bindings/pyside6/src/fluentqt/windowing.py \
+              bindings/pyside6/src/fluentqt/py.typed \
               bindings/pyside6/tests/test_generated_contract_verifier.py \
+              bindings/pyside6/tests/test_stub_generator.py \
+              bindings/pyside6/tests/test_typecheck_smoke.py \
               bindings/pyside6/tests/test_wheel_builder.py \
               bindings/pyside6/tests/test_wheel_smoke.py \
               bindings/pyside6/tools/build_wheel.py \
-              bindings/pyside6/tools/verify_generated_contracts.py; do
+              bindings/pyside6/tools/generate_stubs.py \
+              bindings/pyside6/tools/verify_generated_contracts.py \
+              bindings/pyside6/tools/verify_stubs.py; do
             if ! grep -x "FluentQt-ci-source/$binding_file" \
                 <<< "$archive_entries" > /dev/null; then
               echo "::error::Missing PySide6 source-package file: $binding_file"
@@ -992,7 +1015,7 @@ jobs:
 
       - name: Build PySide6 bindings
         shell: bash
-        run: cmake --build build/pyside6-qt62 --target _fluentqt --parallel 4
+        run: cmake --build build/pyside6-qt62 --target fluentqt_pyside6_stubs --parallel 4
 
       - name: Verify generated binding contracts
         shell: bash
@@ -1092,6 +1115,13 @@ jobs:
             "$clean_venv/bin/python" \
             bindings/pyside6/tests/test_wheel_smoke.py
           "$clean_venv/bin/python" -m pip check
+          "$clean_venv/bin/python" -m pip install mypy==2.3.0
+          env -u PYTHONPATH \
+            "$clean_venv/bin/python" -m mypy \
+            --strict \
+            --no-incremental \
+            --no-error-summary \
+            bindings/pyside6/tests/test_typecheck_smoke.py
           env \
             -u PYTHONPATH \
             -u LD_LIBRARY_PATH \
@@ -1101,6 +1131,33 @@ jobs:
             "$clean_venv/bin/python" \
             bindings/pyside6/examples/compatibility_showcase.py \
             --snapshot "$RUNNER_TEMP/fluentqt-pyside6-showcase.png"
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/auto_suggest_box.py \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-auto-suggest-box.png"
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/guidance_overlays.py \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-guidance-overlays.png"
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/command_surfaces.py \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-command-surfaces.png"
 
           module="$(
             env -u PYTHONPATH "$clean_venv/bin/python" -c \
@@ -1136,6 +1193,23 @@ jobs:
             esac
           done
 
+      - name: Verify native X11 Window and TitleBar
+        shell: bash
+        run: |
+          set -euo pipefail
+          clean_venv="${RUNNER_TEMP}/fluentqt-wheel-smoke"
+          xvfb-run -a env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=xcb \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/window_chrome.py \
+            --verify-native \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.png" \
+            --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
+
       - name: Upload PySide6 wheel
         uses: actions/upload-artifact@v4
         with:
@@ -1148,6 +1222,15 @@ jobs:
         with:
           name: fluentqt-pyside6-showcase-qt624-linux-x64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
+          if-no-files-found: error
+
+      - name: Upload PySide6 native window acceptance
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-pyside6-window-chrome-qt624-linux-x64
+          path: |
+            ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
+            ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
 
   pyside6_windows:
@@ -1262,7 +1345,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           cmake --build build/pyside6-qt62-windows `
             --config Release `
-            --target _fluentqt `
+            --target fluentqt_pyside6_stubs `
             --parallel
 
       - name: Verify generated binding contracts
@@ -1329,12 +1412,53 @@ jobs:
           $env:FLUENTQT_EXPECTED_VERSION = $wheelVersion.Trim()
           & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
           & $cleanPython -m pip check
+          & $cleanPython -m pip install mypy==2.3.0
+          & $cleanPython -m mypy `
+            --strict `
+            --no-incremental `
+            --no-error-summary `
+            bindings/pyside6/tests/test_typecheck_smoke.py
           $snapshot = Join-Path `
             $env:RUNNER_TEMP `
             "fluentqt-pyside6-showcase.png"
           & $cleanPython `
             bindings/pyside6/examples/compatibility_showcase.py `
             --snapshot $snapshot
+          $autoSuggestSnapshot = Join-Path `
+            $env:RUNNER_TEMP `
+            "fluentqt-pyside6-auto-suggest-box.png"
+          & $cleanPython `
+            bindings/pyside6/examples/auto_suggest_box.py `
+            --snapshot $autoSuggestSnapshot
+          $guidanceSnapshot = Join-Path `
+            $env:RUNNER_TEMP `
+            "fluentqt-pyside6-guidance-overlays.png"
+          & $cleanPython `
+            bindings/pyside6/examples/guidance_overlays.py `
+            --snapshot $guidanceSnapshot
+          $commandSurfacesSnapshot = Join-Path `
+            $env:RUNNER_TEMP `
+            "fluentqt-pyside6-command-surfaces.png"
+          & $cleanPython `
+            bindings/pyside6/examples/command_surfaces.py `
+            --snapshot $commandSurfacesSnapshot
+
+      - name: Verify native Windows Window and TitleBar
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $cleanVenv = Join-Path $env:RUNNER_TEMP "fluentqt-wheel-smoke-windows"
+          $cleanPython = Join-Path $cleanVenv "Scripts/python.exe"
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
+          $env:QT_QPA_PLATFORM = "windows"
+          & $cleanPython `
+            bindings/pyside6/examples/window_chrome.py `
+            --verify-native `
+            --snapshot (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-window-chrome.png") `
+            --report (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-window-chrome.json")
 
       - name: Upload PySide6 wheel
         uses: actions/upload-artifact@v4
@@ -1348,6 +1472,15 @@ jobs:
         with:
           name: fluentqt-pyside6-showcase-qt624-windows-x64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
+          if-no-files-found: error
+
+      - name: Upload PySide6 native window acceptance
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-pyside6-window-chrome-qt624-windows-x64
+          path: |
+            ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
+            ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
 
   pyside6_macos:
@@ -1400,7 +1533,7 @@ jobs:
         shell: bash
         run: |
           cmake --build build/pyside6-qt69-macos \
-            --target _fluentqt \
+            --target fluentqt_pyside6_stubs \
             --parallel 3
 
       - name: Verify generated binding contracts
@@ -1469,6 +1602,13 @@ jobs:
             "$clean_venv/bin/python" \
             bindings/pyside6/tests/test_wheel_smoke.py
           "$clean_venv/bin/python" -m pip check
+          "$clean_venv/bin/python" -m pip install mypy==2.3.0
+          env -u PYTHONPATH \
+            "$clean_venv/bin/python" -m mypy \
+            --strict \
+            --no-incremental \
+            --no-error-summary \
+            bindings/pyside6/tests/test_typecheck_smoke.py
           env \
             -u PYTHONPATH \
             -u DYLD_LIBRARY_PATH \
@@ -1478,6 +1618,33 @@ jobs:
             "$clean_venv/bin/python" \
             bindings/pyside6/examples/compatibility_showcase.py \
             --snapshot "$RUNNER_TEMP/fluentqt-pyside6-showcase.png"
+          env \
+            -u PYTHONPATH \
+            -u DYLD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/auto_suggest_box.py \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-auto-suggest-box.png"
+          env \
+            -u PYTHONPATH \
+            -u DYLD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/guidance_overlays.py \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-guidance-overlays.png"
+          env \
+            -u PYTHONPATH \
+            -u DYLD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/command_surfaces.py \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-command-surfaces.png"
 
           module="$(
             env -u PYTHONPATH "$clean_venv/bin/python" -c \
@@ -1515,6 +1682,23 @@ jobs:
             exit 1
           fi
 
+      - name: Verify native Cocoa Window and TitleBar
+        shell: bash
+        run: |
+          set -euo pipefail
+          clean_venv="${RUNNER_TEMP}/fluentqt-wheel-smoke-macos"
+          env \
+            -u PYTHONPATH \
+            -u DYLD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=cocoa \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/window_chrome.py \
+            --verify-native \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.png" \
+            --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
+
       - name: Upload PySide6 wheel
         uses: actions/upload-artifact@v4
         with:
@@ -1527,6 +1711,15 @@ jobs:
         with:
           name: fluentqt-pyside6-showcase-qt693-macos-arm64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
+          if-no-files-found: error
+
+      - name: Upload PySide6 native window acceptance
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-pyside6-window-chrome-qt693-macos-arm64
+          path: |
+            ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
+            ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
 
   ci-gate:

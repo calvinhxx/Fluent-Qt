@@ -29,12 +29,21 @@ void DropDownButton::initAnimation() {
 
 void DropDownButton::setMenu(QMenu* menu) {
     if (m_menu == menu) return;
-    
+
+    if (m_menu)
+        disconnect(m_menu.data(), nullptr, this, nullptr);
+    setOpen(false);
     m_menu = menu;
     if (m_menu) {
         connect(m_menu, &QMenu::aboutToShow, this, [this]() { setOpen(true); });
         connect(m_menu, &QMenu::aboutToHide, this, [this]() { setOpen(false); });
+        connect(m_menu, &QObject::destroyed, this, [this]() {
+            setOpen(false);
+            emit menuChanged();
+        });
+        setOpen(m_menu->isVisible());
     }
+    emit menuChanged();
 }
 
 void DropDownButton::setOpen(bool open) {
@@ -117,7 +126,10 @@ void DropDownButton::mousePressEvent(QMouseEvent* event) {
         }
 
         if (m_menu) {
+            QPointer<DropDownButton> guard(this);
             m_menu->exec(mapToGlobal(QPoint(0, height())));
+            if (guard)
+                guard->setOpen(false);
             return;
         }
     }

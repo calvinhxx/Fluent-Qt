@@ -26,29 +26,29 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 | M2 — 低风险控件覆盖 | 进行中 | 增加具备属性、信号、示例、manifest 检查和 wheel smoke 验证的叶子 QWidget 控件 |
 | M3 — 托管控件 ownership | 进行中 | 为接管或释放子控件的容器增加 Python 安全适配器和 GC 测试 |
 | M4 — 模型与导航 | 进行中 | Python model/delegate、虚函数分派、选择状态和导航生命周期 |
-| M5 — Overlay 与原生窗口 | 计划中 | 同窗口 overlay 行为以及原生桌面窗口/backdrop 验证 |
-| M6 — 可发布 Python 分发 | 计划中 | wheel 支持矩阵、类型存根、API 兼容策略、签名和发布 |
+| M5 — Overlay 与原生窗口 | 进行中 | 自动化 XCB/Windows/Cocoa 原生验收已通过；仍需实体 DWM/KWin/Wayland compositor 审查 |
+| M6 — 可发布 Python 分发 | 进行中 | 已实现生成式类型存根与 manifest/mypy 门禁；wheel 矩阵、兼容策略、签名和发布仍待完成 |
 
 ## 公共 API 覆盖台账
 
 下表是组件覆盖的事实来源。不能因为当前小批次的复选框全部完成，就把整个里程碑
 标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。当前 manifest 记录
-了 52 个必须存在的类和值类型。
+了 75 个必须存在的类和值类型。
 
 | 分类 | 已绑定 | 剩余边界 |
 |---|---|---|
-| Basic Input | `Button`、`CheckBox`、`ColorPicker`、`CompoundButton`、`HyperlinkButton`、`RadioButton`、`RatingControl`、`RepeatButton`、`Slider`、`ToggleButton`、`ToggleSwitch` | `ComboBox`、`DropDownButton`、`SplitButton`、`ToggleSplitButton` 随 M5 菜单/overlay 一起处理 |
-| Collections | `FlipView`、`FlowView`、`GridView`、`ListView`、`SplitView`、`StackView`、`TreeView` | `DrawerView` 等待 overlay 与页面托管契约 |
-| Date & Time | `CalendarView` | `CalendarDatePicker`、`DatePicker`、`TimePicker` 需要 popup 生命周期覆盖 |
-| Dialogs & Flyouts | — | `CoachMark`、`ContentDialog`、`Dialog`、`Flyout`、`Popup`、`TeachingTip` 属于 M5 overlay 工作 |
+| Basic Input | `Button`、`CheckBox`、`ColorPicker`、`ComboBox`、`CompoundButton`、`DropDownButton`、`HyperlinkButton`、`RadioButton`、`RatingControl`、`RepeatButton`、`Slider`、`SplitButton`、`ToggleButton`、`ToggleSplitButton`、`ToggleSwitch` | — |
+| Collections | `DrawerView`、`FlipView`、`FlowView`、`GridView`、`ListView`、`SplitView`、`StackView`、`TreeView` | 当前公开组件已覆盖完整 |
+| Date & Time | `CalendarDatePicker`、`CalendarView`、`DatePicker`、`TimePicker` | 当前公开组件已覆盖完整 |
+| Dialogs & Flyouts | `CoachMark`、`ContentDialog`、`Dialog`、`Flyout`、`Popup`、`TeachingTip` | 当前公开组件已覆盖完整 |
 | Foundation | `FontIcon`、主题/字体包级 API、ownership 枚举 | `FluentElement`、`QMLPlus`、registry 与 overlay helper 保持实现层能力，不直接作为 Python mixin 发布 |
 | Layout | `Accordion`、`Card`、`Divider`、`Expander` | 当前公开组件已覆盖完整 |
-| Menus & Toolbars | — | `CommandBar`、`CommandBarFlyout`、`Menu`、`MenuBar` 在 M5 一起处理 |
+| Menus & Toolbars | `CommandBar`、`CommandBarFlyout`、`FluentMenu`、`FluentMenuBar`、`FluentMenuItem` | 当前公开组件已覆盖完整；CI run `30715183706` 已通过 |
 | Navigation | `Breadcrumb`、`BreadcrumbItem`、`NavigationView`、`Pivot`、`PivotItem`、`SelectorBar`、`SelectorBarItem`、`StackContentHost`、`TabView`、`TabViewItem` | 当前公开组件已覆盖完整 |
 | Scrolling | `AnnotatedScrollBar`、`AnnotatedScrollBarLabel`、`PipsPager`、`ScrollBar`、`ScrollView` | 当前公开组件已覆盖完整 |
-| Status & Info | `Avatar`、`InfoBadge`、`InfoBar`、`ProgressBar`、`ProgressRing`、`Shimmer` | `Toast`、`ToolTip` 属于 M5 overlay 工作 |
-| Text Fields | `Label`、`LineEdit`、`NumberBox`、`PasswordBox`、`TextEdit` | `AutoSuggestBox` 需要建议 popup 与 model/callback 契约；`EditingCommandRouter` 保持辅助 API |
-| Windowing | `Window` 与 backdrop 值类型 | `TitleBar` 以及原生 Mica/Acrylic/vibrancy/compositor 行为需要 M5 桌面验证 |
+| Status & Info | `Avatar`、`InfoBadge`、`InfoBar`、`ProgressBar`、`ProgressRing`、`Shimmer`、`Toast`、`ToolTip` | 当前公开组件已覆盖完整；CI run `30709495870` 已通过 |
+| Text Fields | `AutoSuggestBox`、`Label`、`LineEdit`、`NumberBox`、`PasswordBox`、`TextEdit` | 公开控件已覆盖完整；`EditingCommandRouter` 保持实现辅助能力 |
+| Windowing | `Window`、`TitleBar` 与 backdrop 值类型 | Windows 11 DWM 与 Linux KWin/Wayland compositor 行为仍需 M5 实体桌面审查 |
 
 ## M0 — 绑定基础设施
 
@@ -69,7 +69,7 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 - Basic Input：`Button`、`CheckBox`、`RadioButton`、`Slider`、
   `ToggleButton` 和 `ToggleSwitch`。
 - Text Fields：`Label`、`LineEdit`、`NumberBox` 和 `PasswordBox`。
-- Windowing：`Window`、backdrop 枚举和 backdrop value type。
+- Windowing：`Window`、`TitleBar`、backdrop 枚举和 backdrop value type。
 - Foundation：Light/Dark 主题、设计语言预设、accent 色、字体角色、字体缩放
   和构建信息。
 
@@ -344,6 +344,19 @@ wheel smoke 测试。
       Qt 6.9.3 上确认 `NavigationView`/`StackContentHost` 批次，包括全部
       54 个绑定 CTest、生成代码契约、Qt 5.15/6.2 C++ 回归、可迁移干净
       wheel、源码包集成、验收截图和最终 CI Gate。
+- [x] 将 `DrawerView` 审计为第九个托管控件边界，也是首个 M5
+      same-window overlay 批次。保留 C++ 的 Borrowed 默认语义，公开固定的
+      Owned、Borrowed、Reparented 内容方法和 `takeContentWidget()`，并覆盖
+      `CloseFlag`、scrim、outside press、Escape、开关生命周期和 Python 虚函数分派。
+- [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地确认：DrawerView 原生
+      24 项中 22 项通过，2 项桌面/人工测试按设计跳过；全部 58 个绑定 CTest、
+      152 个 Python 绑定测试和 104 个契约验证器测试通过。新建的
+      `.venv-pyside69-drawer-wheel` 也通过 wheel 安装、`pip check`、已加载依赖
+      路径、完整 smoke、3 项隔离 GC 压力、源码包重新生成/编译和截图审查。
+- [x] CI run `30685308957` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 `DrawerView` 批次，包括生成代码契约、全部绑定测试、
+      三平台可迁移干净 wheel、验收截图、源码包集成、Qt 5.15/6.2 C++ 回归
+      和最终 CI Gate。
 
 `ScrollView` 的支持契约以普通 Python GC 和 Qt parent 析构为准。托管期间的
 `Shiboken.ownedByPython()` 标志会随 Shiboken 版本变化，不属于公共 API；
@@ -376,6 +389,12 @@ Python 公开固定语义的 Owned、Borrowed、Reparented 入口，
 `removePane()`/`removePaneAt()` 应用已记录策略，`takePaneAt()` 专用于无条件转移
 无父 pane。facade 保活 Python 子类与 Reparented 恢复目标；pane 被外部销毁时，
 原生层与 facade 都会清理对应记录。
+
+`DrawerView` 保留 C++ 普通 `setContentWidget()` 的 Borrowed 默认语义，Python
+同时公开固定语义的 Owned、Borrowed、Reparented 入口以及
+`takeContentWidget()`。facade 保活托管 wrapper 与 Reparented 恢复目标，并在
+替换、外部析构和显式转移时清理记录。宿主自身及其祖先不能作为内容控件；切换
+同一控件的 ownership 模式前必须先显式取回，避免隐式改写生命周期契约。
 
 `InfoBar` 使用更窄的现有 C++ 契约：当前 action 随宿主销毁，但替换、清空或
 `takeActionWidget()` 会将其释放为无父、Python-owned 控件。Python facade
@@ -548,15 +567,179 @@ Python 边界设计后，现已用 `ListView`、`GridView`、`TreeView` 和 `Flo
 Popup、Flyout、ContentDialog、TeachingTip、dropdown 和其他 overlay 组件
 需要验证 scrim 层级、外部点击、Escape、焦点恢复、顶层窗口 resize 和关闭策略。
 
-Window、TitleBar、Mica、Acrylic、vibrancy、compositor blur、拖动和 resize
-必须在原生桌面环境验证。Offscreen 渲染适用于普通控件，但不能作为平台窗口
-集成的验收依据。
+当前批次：
+
+- [x] 绑定 `DrawerView` 的 edge、尺寸、modal/dim、交互、动画、`CloseFlag`、
+      开关生命周期与内容 ownership API。
+- [x] 在本地覆盖 same-window 挂载、scrim 外部点击、Escape、`NoAutoClose`、
+      Python 虚函数覆盖、Owned/Borrowed/Reparented、显式 take、干净 wheel 和
+      可见截图。
+- [x] CI run `30685308957` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 lane 确认该批次，并通过三平台干净 wheel、源码包集成、
+      Qt 5.15/6.2 C++ 回归与最终 CI Gate。
+- [x] 绑定 `Popup` 的开关状态、modal/dim、动画、`CloseFlag`、锚点相对定位、
+      局部主题源和 light-dismiss 穿透区域，并由 facade 保留依赖 wrapper。
+- [x] 在匹配的本机 Qt/PySide6 6.9.3 上覆盖同窗口挂载、scrim 创建、Escape、
+      `NoAutoClose`、焦点归还且不覆盖后续焦点移动、Python 虚函数覆盖、外部
+      QWidget 删除、25 轮依赖 GC 压力、生成契约、已安装 wheel smoke 和可见截图。
+- [x] CI run `30686805469` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 Popup 批次，包括生成代码契约、绑定测试、三平台干净
+      wheel、源码包集成、验收截图、Qt 5.15/6.2 C++ 回归和最终 CI Gate。
+- [x] 绑定 `Flyout` placement、anchor offset、窗口边界约束、继承的 Popup
+      生命周期与 caller-owned anchor API，并复用依赖保留 facade。
+- [x] 在匹配的本机 Qt/PySide6 6.9.3 上覆盖 Top/Bottom 定位、Auto 翻转、
+      同窗口挂载、默认非模态/无 scrim、Escape 与焦点归还、Python 虚函数覆盖、
+      外部 anchor 析构、25 轮依赖 GC 压力、生成契约、已安装干净 wheel、源码包
+      集成和可见截图。
+- [x] CI run `30689337379` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 Flyout 批次，包括生成代码契约、绑定测试、三平台干净
+      wheel、源码包集成、验收截图、Qt 5.15/6.2 C++ 回归和最终 CI Gate。
+- [x] 绑定 `Dialog` 与 `ContentDialog` 的原生同窗口模态、smoke scrim、
+      动画/结果生命周期、命令信号、稳定结果常量、caller-owned 主题源保活，
+      并通过 `setContent()` / `takeContent()` 明确内容安装与释放。
+- [x] 用 `QPointer` 加固原生 `ContentDialog::content()`，禁止会让 Shiboken
+      6.9 在模块启动时崩溃的静态字段生成，并在匹配的本机 Qt/PySide6 6.9.3
+      上覆盖 Python 子类、原生命令结果、外部析构、宿主/祖先拒绝、25 轮 GC
+      压力、生成契约、源码包、干净安装 wheel 与可见截图。本机 43 项原生
+      Dialog 测试全部通过（2 项人工 VisualCheck 按设计跳过），166 项绑定测试、
+      120 项 verifier 测试和全部 65 项 PySide CTest 也已通过。
+- [x] CI run `30692144259` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 Dialog/ContentDialog 批次，包括生成代码契约、全部
+      65 项绑定 CTest、三平台干净 wheel、源码包集成、验收截图、Qt 5.15/6.2
+      C++ 回归和最终 CI Gate。
+- [x] 绑定 `ComboBox` 的条目/当前值 API、信号、可编辑 line editor 接管、
+      caller-owned model 保活、model column/root index、Python popup 虚函数分派
+      和原生 same-window dropdown。
+- [x] 将 popup 内部的 `ListView` 与 delegate 保持为实现细节；拒绝只会修改 Qt
+      未使用 fallback popup 的继承 `setView()`/`setItemDelegate()`，并用生成代码
+      契约约束 model、editor ownership 与 popup 原生 fallback。
+- [x] 在匹配的本机 macOS Qt/PySide6 6.9.3 上通过 40 项原生 ComboBox 测试
+      （1 项人工 VisualCheck 跳过）、170 项绑定测试、126 项 verifier 测试、
+      全部 67 项 PySide CTest、源码包集成、干净 wheel 安装/运行时隔离，以及
+      构建目录与安装 wheel 字节完全一致的可见截图。
+- [x] CI run `30697214451` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 ComboBox 批次，包括生成代码契约、全部 67 项绑定
+      CTest、三平台干净 wheel、源码包集成、验收截图、Qt 5.15/6.2 C++
+      回归和最终 CI Gate。
+- [x] 绑定 `DropDownButton`、`SplitButton`、`ToggleSplitButton`，以及它们
+      依赖的 `FluentMenu`、`FluentMenuItem`。菜单保持 caller-owned；
+      `setMenu()` 在替换、`setMenu(None)` 或宿主销毁前保留 Python wrapper。
+- [x] 用删除安全的 `QPointer`、可观察 `menu`/`isOpen` 属性、替换/外部析构
+      信号、RTL 二级区域命中，以及主操作/二级菜单/toggle 严格分离，加固原生
+      菜单生命周期；直接菜单测试覆盖字体通知与 QAction 触发语义。
+- [x] 在匹配的本机 macOS Qt/PySide6 6.9.3 上通过 25 项聚焦原生测试
+      （3 项人工 VisualCheck 跳过）、174 项绑定测试、129 项生成代码契约
+      verifier、全部 69 项 PySide CTest、解压源码包后的绑定重建、干净安装
+      wheel smoke，以及字节完全一致的构建目录/安装 wheel 菜单按钮截图。
+- [x] CI run `30699845540` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认菜单按钮批次，包括生成代码契约、全部 69 项绑定 CTest、
+      三平台干净 wheel、源码包集成、验收截图、Qt 5.15/6.2 C++ 回归和最终
+      CI Gate；Windows lane 也通过了 parented `ContentDialog` fixture 的 Qt
+      延迟销毁路径。
+- [x] 绑定 `CalendarDatePicker`、`DatePicker` 与 `TimePicker`，公开原生 Qt
+      `QDate`/`QTime`/locale 值、嵌套 field/format 枚举、重复赋值安全的属性信号、
+      Python 虚函数分派，并复用现有原生同窗口 popup。内部 popup/flyout helper
+      全部保持私有；Qt 所有的 `CalendarView` getter 不改变 Shiboken ownership、
+      parent 或保活状态。
+- [x] 在匹配的本机 macOS Qt/PySide6 6.9.3 上通过 55 项聚焦原生测试
+      （3 项人工 VisualCheck 按设计跳过）、178 项绑定测试、132 项生成代码契约
+      verifier、全部 71 项 PySide CTest、解压源码包后的绑定重建，以及新建干净
+      venv 的 wheel smoke。构建目录与安装 wheel 的选择器截图具有完全相同的
+      SHA-256。
+- [x] CI run `30701314187` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认日期/时间选择器批次，包括生成代码契约、全部 71 项绑定
+      CTest、三平台干净 wheel、源码包集成、验收截图、Qt 5.15/6.2 C++ 回归
+      和最终 CI Gate。
+- [x] 在原生 Fluent `LineEdit` 之上直接绑定 `AutoSuggestBox`，支持 Python
+      字符串列表转换、两个嵌套枚举、重复赋值安全的属性、带类型的文本/建议/
+      查询/打开态信号、Python 虚函数分派、键盘预览与提交，并复用现有同窗口
+      建议 Flyout。内部 model、popup 和行 delegate 保持私有，同时从 Python
+      文本输入继承链移除 C++ 主题刷新钩子。
+- [x] 在匹配的本机 macOS Qt/PySide6 6.9.3 上通过全部 15 项自动原生
+      AutoSuggestBox 测试（1 项人工 VisualCheck 跳过）、181 项绑定测试、
+      137 项生成代码契约 verifier、全部 73 项 PySide CTest、解压源码包后的
+      绑定重建/测试，以及新建干净 venv 的 wheel smoke。构建目录与已安装 wheel
+      的验收截图具有完全相同的 SHA-256。
+- [x] CI run `30704322313` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 AutoSuggestBox 批次，包括生成代码契约、全部 73 项绑定
+      CTest、三平台干净 wheel、源码包集成、验收截图、Qt 5.15/6.2 C++ 回归
+      和最终 CI Gate。
+- [x] 绑定 `CoachMark` 与 `TeachingTip`，覆盖 caller-owned target 保活、原生
+      同窗口定位、content host 访问、语义化关闭原因、Python 虚函数分派，并明确
+      禁止绕过 facade 的原始 target API 和内部主题钩子。`TeachingTip` 复用现有
+      Popup 依赖保活 facade，不改变 QWidget ownership。
+- [x] 在匹配的本机 macOS Qt/PySide6 6.9.3 上通过全部 30 项自动原生
+      CoachMark/TeachingTip 测试（2 项人工 VisualCheck 跳过）、184 项绑定测试、
+      143 项生成代码契约 verifier 和全部 75 项 PySide CTest；同时完成解压源码包
+      重建/测试、新建干净 venv 的 wheel smoke 与 `pip check`，构建目录和安装
+      wheel 的验收截图字节完全一致。
+- [x] CI run `30707082998` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 CoachMark/TeachingTip 批次，包括生成代码契约、全部
+      75 项绑定 CTest、三平台干净 wheel、源码包集成、验收截图、Qt 5.15/6.2
+      C++ 回归和最终 CI Gate。
+- [x] 绑定 `Toast` 与 `ToolTip` 的全部嵌套枚举、原生属性和信号、直接/托管
+      展示、按键更新与淘汰、目标控件所有的 tooltip 附加、caller-owned
+      theme source/QAction 保活，并明确移除动画进度和主题刷新实现钩子。Toast
+      facade 将 `anchor.window()` 记录为真实 Python 父对象，同时保留原始子
+      anchor 用于继承局部主题。
+- [x] 在匹配的本机 macOS Qt/PySide6 6.9.3 上通过全部 23 项自动原生
+      Toast/ToolTip 测试（1 项人工 VisualCheck 跳过）、189 项绑定测试、157 项
+      生成代码契约 verifier 和全部 77 项 PySide CTest；同时重建并测试解压后的
+      源码包，通过新建干净 venv 的 wheel smoke 与 `pip check`，且构建目录和
+      已安装 wheel 的 status-overlay 截图字节完全一致。
+- [x] CI run `30709495870` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认 Status & Info 收口批次，包括生成代码契约、全部 77 项
+      绑定 CTest、三平台干净 wheel、源码包集成、验收截图、Qt 5.15/6.2 C++
+      回归和最终 CI Gate。
+- [x] 绑定 `CommandBar`、final `CommandBarFlyout` 与 `FluentMenuBar`，覆盖
+      嵌套枚举、属性、信号、主/次命令变更、同窗口 flyout 调用，以及兼容
+      Qt 6.2 Shiboken 生成器的 Python 可调用 `QWidget::addAction` 重载。
+- [x] 让 caller-owned `QAction` 保持 borrowed，并仅在动作实际所属命令分区中
+      保留 Python wrapper；覆盖 add、insert、分区移动、remove、clear、替换、
+      外部析构与跨命令面共享动作生命周期，且不转移 QObject parent 或 Shiboken
+      ownership。flyout 调用源控件保活到替换、显式清空或宿主销毁为止。
+- [x] 在匹配的本机 macOS Qt/PySide6 6.9.3 上通过 23 项聚焦原生测试
+      （4 项人工/交互检查按设计跳过）、194 项绑定测试、169 项生成代码契约
+      verifier 和全部 79 项 PySide CTest；同时完成解压源码包重建/测试、干净
+      venv wheel smoke 与 `pip check`，并得到字节完全一致的构建目录/安装 wheel
+      命令面截图（`ba5b29a1f29575198bbc086204235cb268c7d91bf3372d0cd277eaabd2b3767e`）。
+- [x] CI run `30715183706` 已在原生 Linux/Windows Qt 6.2.4 与 macOS
+      Qt 6.9.3 上确认命令面批次，包括生成代码契约、全部 79 项绑定 CTest、
+      三平台干净 wheel、源码包集成、验收截图、Qt 5.15/6.2 C++ 回归和最终
+      CI Gate。
+- [x] 绑定 `TitleBar` 与既有 `Window` 的安全 chrome/backdrop API。保持
+      `Window.titleBar()` 为 Qt-owned，使 TitleBar 内容替换时释放旧 Python
+      子控件，移除内部主题刷新钩子，并保留安全的双参数
+      `Window.nativeEvent()` 契约。
+- [x] 覆盖 TitleBar 属性、信号、Python 子类分派，Window/TitleBar 内容
+      生命周期、25 轮 GC stress、生成代码 parent/ownership 契约、manifest
+      导出、干净 wheel smoke 和可见验收窗口。本机工作树和重新解压的源码包中，
+      199 项绑定测试、172 项 verifier 测试和全部 82 项 PySide CTest 均通过。
+- [x] 使用匹配的本机 Qt/PySide6 6.9.3 与原生 Cocoa 插件完成验收：Solid
+      解析为 opaque 后端，Mica 和 Acrylic 都解析为原生 macOS vibrancy 与
+      composited surface。新建 venv 的 wheel smoke 与 `pip check` 通过，工作树
+      和安装 wheel 的 offscreen 截图字节完全一致；原生 JSON 记录两种系统材质
+      后再保存可读的 Solid 截图。
+- [x] CI run `30728227317` 已在 Linux/Windows Qt 6.2.4 与 macOS Qt 6.9.3
+      确认生成代码契约、全部 82 项绑定 CTest、干净 wheel 和原生
+      XCB/Windows/Cocoa 验收报告，同时通过源码包集成、Qt 5.15/6.2 C++ 回归
+      与最终 CI Gate。Qt 6.2 报告路径会将旧 Shiboken 的 byte string 规范化为
+      UTF-8 文本。
+- [ ] 在实体桌面审查 Windows 11 DWM、Linux KWin/Wayland compositor 材质
+      以及系统拖动/resize 行为。
+
+自动化原生验收会拒绝 offscreen/minimal 插件，并验证原生 handle、chrome/内容
+ownership、resize 传递和最终 backdrop 不变量。Xvfb 与托管 CI 能证明平台插件
+集成和 painted fallback，但不能证明 Windows 11 DWM 或 Linux compositor blur
+的视觉质量；这些效果以及指针驱动的系统拖动/resize 仍属于实体桌面验收项。
 
 ## M6 — 可发布 Python 分发
 
 - 定义受支持的 CPython、平台和架构 wheel 矩阵。
 - 每个 wheel 都在原生目标或有明确说明的等价工具链中构建。
-- 生成 `.pyi` 类型存根，并在 CI 中比较公共 API 变化。
+- [x] 从 Shiboken 签名生成 `_fluentqt.pyi` 与 facade `.pyi`，用
+  `api-manifest.json` 校验公共类、枚举、函数和必需方法，将存根纳入干净
+  wheel smoke，并在 CI 中对已安装 wheel 运行严格 mypy 消费方检查。
 - 增加依赖、许可证、wheel repair/audit、干净安装和导入检查。
 - 建立 Python API 版本与弃用规则。
 - 所有必需矩阵 lane 通过后，才签名并发布 wheel。
@@ -609,6 +792,21 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
   ownership 页面，再调用 `takePage()`，确认析构、脱离、原 parent 恢复与显式
   转移行为；运行 `examples/navigation_view_ownership.py`，检查 C++ 所有的内容
   宿主、header/main/footer chrome 策略以及 Left/Top 响应式布局。
+- **同窗口 Overlay**：运行 `examples/drawer_view_ownership.py`，检查右侧 drawer、
+  dim scrim、外部点击关闭、开关信号，以及三种内容 ownership 的释放行为；运行
+  `examples/popup_overlay.py` 检查 Popup 锚点、焦点归还、Escape/外部关闭与
+  passthrough 行为；运行 `examples/flyout_overlay.py` 检查
+  Top/Bottom/Left/Right/Auto 定位、窗口内约束、light dismiss 与 anchor 生命周期；
+  运行 `examples/combo_box_dropdown.py` 检查 Python model 条目、可编辑文本、
+  键盘选择、Escape 关闭与原生 same-window dropdown；运行
+  `examples/date_time_pickers.py` 检查 Python 提供的 `QDate`、`QTime`、locale、
+  field/format 枚举、值信号和三个原生同窗口 picker popup；运行
+  `examples/auto_suggest_box.py` 检查 Python 字符串列表建议、带原因/查询值的
+  信号、键盘预览、焦点保持和原生同窗口建议 Flyout；运行
+  `examples/command_surfaces.py` 检查 FluentMenuBar 排版、CommandBar 主/次
+  命令、同窗口 CommandBarFlyout，以及共享 caller-owned QAction 的行为；
+  向任一示例传入
+  `--snapshot <png>` 可生成可留档截图。
 - **导航值类型**：运行 `examples/breadcrumb_navigation.py`，检查 Python
   `BreadcrumbItem` 元数据、激活信号、完整路径绘制和窄宽度中间溢出行为；运行
   `examples/selector_pivot_navigation.py`，检查调用方页面组合、元数据选择、
@@ -617,8 +815,10 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
   `QT_QPA_PLATFORM=offscreen` 下运行。
 - **安装真实性**：从新建虚拟环境安装 wheel，再运行
   `tests/test_wheel_smoke.py`，确认没有借用源码目录或加载第二套 Qt。
-- **原生窗口**：Window、TitleBar 和 backdrop 必须在真实桌面手工验证；
-  offscreen 截图不能证明拖动、resize、Mica、vibrancy 或 compositor blur。
+- **原生窗口**：使用 Cocoa、Windows、XCB 或 Wayland 运行
+  `examples/window_chrome.py --verify-native --snapshot <png> --report
+  <json>`；预期有原生 Mica/Acrylic/vibrancy/compositor 时再增加
+  `--require-platform-backdrop`。Offscreen 截图仍然只能证明布局。
 
 ## 后续交付顺序
 
@@ -659,8 +859,9 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
     源码包集成、三平台干净 wheel、验收截图与最终 CI Gate 已在 CI run
     `30631865586` 通过，将 `TreeView` hierarchy/model/delegate/reorder
     批次视为完成。
-17. 在 overlay 与托管页面 ownership 边界完成设计和测试前，继续推迟
-    `DrawerView`。
+17. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    三平台干净 wheel、源码包集成、验收截图与最终 CI Gate 已在 CI run
+    `30685308957` 全部通过，将 `DrawerView` overlay/ownership 批次视为完成。
 18. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、干净 wheel smoke、
     验收截图、源码包集成与最终 CI Gate 已在 CI run `30635505335` 通过，
     将 `Breadcrumb` 元数据/导航批次视为完成。
@@ -680,3 +881,56 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
     全部 54 个绑定 CTest、干净 wheel、源码包集成、验收截图和最终 CI Gate
     已在 CI run `30683749605` 一起通过，将 `NavigationView`/
     `StackContentHost` 页面与 chrome ownership 批次视为完成。
+24. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、绑定测试、三平台干净 wheel、源码包集成、验收截图和最终
+    CI Gate 已在 CI run `30686805469` 一起通过，将 `Popup` 同窗口 overlay
+    与 QWidget 依赖生命周期批次视为完成。
+25. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、绑定测试、三平台干净 wheel、源码包集成、验收截图和最终
+    CI Gate 已在 CI run `30689337379` 一起通过，将 `Flyout` 定位与
+    caller-owned anchor 生命周期批次视为完成。
+26. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、全部 65 项绑定 CTest、三平台干净 wheel、源码包集成、
+    验收截图和最终 CI Gate 已在 CI run `30692144259` 一起通过，将
+    `Dialog`/`ContentDialog` 同窗口模态、结果和托管内容 ownership 批次视为完成。
+27. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、全部 67 项绑定 CTest、三平台干净 wheel、源码包集成、
+    验收截图和最终 CI Gate 已在 CI run `30697214451` 一起通过，将
+    `ComboBox` model/editor ownership 与同窗口 dropdown 批次视为完成。
+28. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、全部 69 项绑定 CTest、三平台干净 wheel、源码包集成、
+    验收截图和最终 CI Gate 已在 CI run `30699845540` 一起通过，将菜单按钮
+    与 Fluent menu 批次视为完成。
+29. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、全部 71 项绑定 CTest、三平台干净 wheel、源码包集成、
+    验收截图和最终 CI Gate 已在 CI run `30701314187` 一起通过，将原生
+    日期/时间选择器与 popup 生命周期批次视为完成。
+30. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、全部 73 项绑定 CTest、三平台干净 wheel、源码包集成、
+    验收截图和最终 CI Gate 已在 CI run `30704322313` 一起通过，将
+    AutoSuggestBox 字符串列表/信号与同窗口建议 Flyout 批次视为完成。
+31. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、全部 75 项绑定 CTest、三平台干净 wheel、源码包集成、
+    验收截图和最终 CI Gate 已在 CI run `30707082998` 一起通过，将
+    CoachMark/TeachingTip target 保活、同窗口引导面、content host 和语义化
+    关闭原因批次视为完成。
+32. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、全部 77 项绑定 CTest、三平台干净 wheel、源码包集成、
+    验收截图和最终 CI Gate 已在 CI run `30709495870` 一起通过，将包含
+    Toast/ToolTip overlay 生命周期与 borrowed 依赖处理在内的 Status & Info
+    公开组件批次视为完成。
+33. 原生 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、Qt 5.15/6.2 C++、
+    生成代码契约、全部 79 项绑定 CTest、三平台干净 wheel、源码包集成、
+    验收截图和最终 CI Gate 已在 CI run `30715183706` 一起通过，将
+    `CommandBar`/`CommandBarFlyout`/`FluentMenuBar` borrowed action 与
+    同窗口命令面批次视为完成。
+34. CI run `30728227317` 已通过 Linux/Windows Qt 6.2.4、macOS Qt 6.9.3、
+    生成代码契约、全部 82 项绑定 CTest、三平台干净 wheel、原生
+    XCB/Windows/Cocoa 报告、源码包集成、Qt 5.15/6.2 C++ 回归和最终 CI Gate，
+    将自动化 `Window`/`TitleBar` API、ownership、backdrop 状态与原生平台插件
+    批次视为完成。实体 Windows 11 DWM 与 Linux KWin/Wayland 视觉/交互审查仍未完成。
+35. CI run `30730708691` 已一起通过 14 个生成 stub、覆盖 75 个类/11 个枚举/
+    14 个函数的 manifest gate、全部 84 项绑定 CTest、安装后严格 mypy、原生
+    Linux/Windows Qt 6.2.4 与 macOS Qt 6.9.3 的干净 wheel、源码包集成、
+    Qt 5.15/6.2 C++ 回归和最终 CI Gate，将 M6 的首个类型/API 防回退批次视为
+    完成。更完整的 wheel 矩阵、兼容策略、签名和发布工作仍属于 M6 待办。

@@ -3,6 +3,8 @@
 
 #include "Dialog.h"
 
+#include <QPointer>
+
 namespace fluent::basicinput { class Button; }
 namespace fluent::textfields { class Label; }
 
@@ -101,7 +103,7 @@ private:
     void ensureContentFits();
 
     fluent::textfields::Label* m_titleLabel   = nullptr;
-    QWidget*                     m_contentWidget = nullptr;
+    QPointer<QWidget>            m_contentWidget;
     QWidget*                     m_buttonBar     = nullptr;
 
     fluent::basicinput::Button*    m_primaryBtn    = nullptr;

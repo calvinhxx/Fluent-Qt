@@ -30,30 +30,30 @@ runtime, and CPython ABI requires its own build and validation.
 | M2 — Low-risk widget coverage | In progress | Add leaf QWidget controls with properties, signals, examples, manifest checks, and wheel smoke coverage |
 | M3 — Hosted-widget ownership | In progress | Explicit Python-safe adapters and GC tests for containers that adopt or release child widgets |
 | M4 — Models and navigation | In progress | Python models/delegates, virtual dispatch, selection, and navigation lifecycle |
-| M5 — Overlays and native windows | Planned | Same-window overlay behavior and native desktop window/backdrop validation |
-| M6 — Release-grade Python distribution | Planned | Supported wheel matrix, type stubs, API compatibility policy, signing, and publication |
+| M5 — Overlays and native windows | In progress | Automated XCB/Windows/Cocoa native acceptance passed; physical DWM/KWin/Wayland compositor review remains |
+| M6 — Release-grade Python distribution | In progress | Generated type stubs and manifest/mypy gates implemented; wheel matrix, compatibility policy, signing, and publication remain |
 
 ## Public API coverage ledger
 
 This table is the source of truth for component coverage. A milestone cannot
 be marked complete merely because its current checklist is green; every public
 component below must either be bound or retain an explicit boundary decision.
-The manifest currently records 52 required classes and value types.
+The manifest currently records 75 required classes and value types.
 
 | Category | Bound now | Remaining boundary |
 |---|---|---|
-| Basic Input | `Button`, `CheckBox`, `ColorPicker`, `CompoundButton`, `HyperlinkButton`, `RadioButton`, `RatingControl`, `RepeatButton`, `Slider`, `ToggleButton`, `ToggleSwitch` | `ComboBox`, `DropDownButton`, `SplitButton`, and `ToggleSplitButton` move with menu/overlay work in M5 |
-| Collections | `FlipView`, `FlowView`, `GridView`, `ListView`, `SplitView`, `StackView`, `TreeView` | Defer `DrawerView` to its overlay and hosted-page contract |
-| Date & Time | `CalendarView` | `CalendarDatePicker`, `DatePicker`, and `TimePicker` require popup lifecycle coverage |
-| Dialogs & Flyouts | — | `CoachMark`, `ContentDialog`, `Dialog`, `Flyout`, `Popup`, and `TeachingTip` are M5 overlay work |
+| Basic Input | `Button`, `CheckBox`, `ColorPicker`, `ComboBox`, `CompoundButton`, `DropDownButton`, `HyperlinkButton`, `RadioButton`, `RatingControl`, `RepeatButton`, `Slider`, `SplitButton`, `ToggleButton`, `ToggleSplitButton`, `ToggleSwitch` | — |
+| Collections | `DrawerView`, `FlipView`, `FlowView`, `GridView`, `ListView`, `SplitView`, `StackView`, `TreeView` | Complete for the current public component set |
+| Date & Time | `CalendarDatePicker`, `CalendarView`, `DatePicker`, `TimePicker` | Complete for the current public component set |
+| Dialogs & Flyouts | `CoachMark`, `ContentDialog`, `Dialog`, `Flyout`, `Popup`, `TeachingTip` | Complete for the current public component set |
 | Foundation | `FontIcon`, theme/font package API, ownership enum | `FluentElement`, `QMLPlus`, registries, and overlay helpers stay implementation-facing rather than direct Python mixins |
 | Layout | `Accordion`, `Card`, `Divider`, `Expander` | Complete for the current public component set |
-| Menus & Toolbars | — | `CommandBar`, `CommandBarFlyout`, `Menu`, and `MenuBar` move together in M5 |
+| Menus & Toolbars | `CommandBar`, `CommandBarFlyout`, `FluentMenu`, `FluentMenuBar`, `FluentMenuItem` | Complete for the current public component set; CI run `30715183706` passed |
 | Navigation | `Breadcrumb`, `BreadcrumbItem`, `NavigationView`, `Pivot`, `PivotItem`, `SelectorBar`, `SelectorBarItem`, `StackContentHost`, `TabView`, `TabViewItem` | Complete for the current public component set |
 | Scrolling | `AnnotatedScrollBar`, `AnnotatedScrollBarLabel`, `PipsPager`, `ScrollBar`, `ScrollView` | Complete for the current public component set |
-| Status & Info | `Avatar`, `InfoBadge`, `InfoBar`, `ProgressBar`, `ProgressRing`, `Shimmer` | `Toast` and `ToolTip` are M5 overlay work |
-| Text Fields | `Label`, `LineEdit`, `NumberBox`, `PasswordBox`, `TextEdit` | `AutoSuggestBox` requires suggestion-popup and model/callback contracts; `EditingCommandRouter` remains a helper API |
-| Windowing | `Window` and backdrop values | `TitleBar` plus native Mica/Acrylic/vibrancy/compositor behavior require M5 desktop validation |
+| Status & Info | `Avatar`, `InfoBadge`, `InfoBar`, `ProgressBar`, `ProgressRing`, `Shimmer`, `Toast`, `ToolTip` | Complete for the current public component set; CI run `30709495870` passed |
+| Text Fields | `AutoSuggestBox`, `Label`, `LineEdit`, `NumberBox`, `PasswordBox`, `TextEdit` | Complete for the public widget set; `EditingCommandRouter` remains an implementation helper |
+| Windowing | `Window`, `TitleBar`, and backdrop values | Physical Windows 11 DWM and Linux KWin/Wayland compositor behavior require M5 desktop review |
 
 ## M0 — Binding foundation
 
@@ -75,7 +75,7 @@ The implemented core surface contains:
 - Basic Input: `Button`, `CheckBox`, `RadioButton`, `Slider`, `ToggleButton`,
   and `ToggleSwitch`.
 - Text Fields: `Label`, `LineEdit`, `NumberBox`, and `PasswordBox`.
-- Windowing: `Window`, backdrop enums, and backdrop value types.
+- Windowing: `Window`, `TitleBar`, backdrop enums, and backdrop value types.
 - Foundation: Light/Dark theme selection, design-language presets, accent
   color, typography roles, font scaling, and build information.
 
@@ -414,6 +414,23 @@ Current prototype:
       54 binding CTests, generated contracts, Qt 5.15/6.2 C++ regressions,
       relocatable clean wheels, source-package integration, acceptance
       snapshots, and the final CI Gate.
+- [x] Audit `DrawerView` as the ninth hosted-widget boundary and the first M5
+      same-window overlay slice. Preserve the C++ Borrowed default, publish
+      fixed Owned, Borrowed, and Reparented content methods plus
+      `takeContentWidget()`, and cover `CloseFlag`, scrim, outside press,
+      Escape, open/close lifecycle, and Python virtual dispatch.
+- [x] Confirm the slice locally with matched macOS Qt/PySide6 6.9.3: 22 of 24
+      native DrawerView tests passed and 2 desktop/manual tests were skipped as
+      designed; all 58 binding CTests, 152 Python binding tests, and 104
+      verifier tests passed. A new `.venv-pyside69-drawer-wheel` also passed
+      wheel installation, `pip check`, loaded dependency paths, complete smoke,
+      three isolated GC stresses, source-package regeneration/build, and
+      snapshot review.
+- [x] CI run `30685308957` confirmed the `DrawerView` slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all binding tests, relocatable clean wheels on all three
+      platforms, acceptance snapshots, source-package integration, Qt
+      5.15/6.2 C++ regressions, and the final CI Gate.
 
 The supported `ScrollView` lifecycle uses normal Python GC and Qt parent
 destruction. Hosted `Shiboken.ownedByPython()` flags vary across Shiboken
@@ -453,6 +470,13 @@ points, applies the recorded policy through `removePane()`/`removePaneAt()`,
 and reserves `takePaneAt()` for an unconditional parentless transfer. The
 facade retains Python subclasses and Reparented restore targets; native and
 facade records are cleared when a pane is destroyed externally.
+
+`DrawerView` keeps the C++ Borrowed default for plain `setContentWidget()`.
+Python also exposes fixed Owned, Borrowed, and Reparented entry points plus
+`takeContentWidget()`. The facade retains hosted wrappers and Reparented
+restore targets and clears records on replacement, external destruction, and
+explicit transfer. The host itself and its ancestors cannot become content;
+changing the same widget's ownership mode requires an explicit take first.
 
 `InfoBar` uses its narrower existing C++ contract: the current action dies with
 the host, while replacement, clearing, or `takeActionWidget()` releases it as a
@@ -662,15 +686,220 @@ Popup, Flyout, ContentDialog, TeachingTip, dropdown, and other overlay
 components require tests for scrim ordering, outside press, Escape, focus
 return, top-level resize, and close-policy semantics.
 
-Window, TitleBar, Mica, Acrylic, vibrancy, compositor blur, drag, and resize
-must be tested on native desktops. Offscreen rendering is useful for ordinary
-widgets but is not an acceptance test for platform window integration.
+Current slices:
+
+- [x] Bind `DrawerView` edge, dimensions, modal/dim behavior, interaction,
+      animation, `CloseFlag`, open/close lifecycle, and content ownership APIs.
+- [x] Cover same-window attachment, scrim outside press, Escape,
+      `NoAutoClose`, Python virtual overrides, Owned/Borrowed/Reparented,
+      explicit take, a clean wheel, and a visible snapshot locally.
+- [x] CI run `30685308957` confirmed the slice on native Linux/Windows Qt
+      6.2.4 and macOS Qt 6.9.3, including clean wheels on all three platforms,
+      source-package integration, Qt 5.15/6.2 C++ regressions, and the final CI
+      Gate.
+- [x] Bind `Popup` open/close state, modal/dim behavior, animations,
+      `CloseFlag`, anchor-relative placement, local theme source, and
+      light-dismiss passthrough regions behind a dependency-retaining facade.
+- [x] Cover same-window attachment, scrim creation, Escape, `NoAutoClose`,
+      focus return without stealing a later focus move, Python virtual
+      overrides, external QWidget deletion, 25-cycle dependency GC stress,
+      generated contracts, installed-wheel smoke, and a visible snapshot
+      locally on matched Qt/PySide6 6.9.3.
+- [x] CI run `30686805469` confirmed the Popup slice on native Linux/Windows
+      Qt 6.2.4 and macOS Qt 6.9.3, including generated contracts, binding
+      tests, clean wheels on all three platforms, source-package integration,
+      acceptance snapshots, Qt 5.15/6.2 C++ regressions, and the final CI Gate.
+- [x] Bind `Flyout` placement, anchor offset, window clamping, inherited
+      Popup lifecycle, and caller-owned anchor APIs behind the shared
+      dependency-retaining facade.
+- [x] Cover Top/Bottom placement, Auto flipping, same-window attachment,
+      non-modal/no-scrim defaults, Escape and focus return, Python virtual
+      overrides, external anchor destruction, 25-cycle dependency GC stress,
+      generated contracts, an installed clean wheel, source-package
+      integration, and a visible snapshot locally on matched Qt/PySide6 6.9.3.
+- [x] CI run `30689337379` confirmed the Flyout slice on native Linux/Windows
+      Qt 6.2.4 and macOS Qt 6.9.3, including generated contracts, binding
+      tests, clean wheels on all three platforms, source-package integration,
+      acceptance snapshots, Qt 5.15/6.2 C++ regressions, and the final CI Gate.
+- [x] Bind `Dialog` and `ContentDialog` with native same-window modality,
+      smoke scrim, animation/result lifecycle, command signals, stable result
+      constants, caller-owned theme-source retention, and explicit installed
+      content adoption/release through `setContent()` and `takeContent()`.
+- [x] Harden native `ContentDialog::content()` with `QPointer`, reject unsafe
+      static-field generation that crashes Shiboken 6.9 module startup, and
+      cover Python subclassing, native result buttons, external destruction,
+      host/ancestor rejection, 25-cycle GC stress, generated contracts,
+      source packaging, a clean installed wheel, and a visible snapshot on
+      matched macOS Qt/PySide6 6.9.3. Locally, all 43 native Dialog tests
+      passed (two manual VisualChecks skipped), along with 166 binding tests,
+      120 verifier tests, and all 65 PySide CTests.
+- [x] CI run `30692144259` confirmed the Dialog/ContentDialog slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all 65 binding CTests, clean wheels on all three platforms,
+      source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
+      regressions, and the final CI Gate.
+- [x] Bind `ComboBox` item/current-value APIs, signals, editable-line-editor
+      adoption, caller-owned model retention, model-column/root-index support,
+      Python virtual popup dispatch, and the native same-window dropdown.
+- [x] Keep the popup's internal `ListView` and delegate implementation-facing,
+      reject inherited `setView()`/`setItemDelegate()` calls that would only
+      mutate Qt's unused fallback popup, and enforce generated ownership and
+      native-fallback contracts for models, editors, and popup overrides.
+- [x] On matched macOS Qt/PySide6 6.9.3, pass 40 native ComboBox tests (one
+      manual VisualCheck skipped), 170 binding tests, 126 verifier tests, all
+      67 PySide CTests, source-package integration, clean-wheel
+      installation/runtime isolation, and a visible build-tree/installed-wheel
+      snapshot with identical bytes.
+- [x] CI run `30697214451` confirmed the ComboBox slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all 67 binding CTests, clean wheels on all three platforms,
+      source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
+      regressions, and the final CI Gate.
+- [x] Bind `DropDownButton`, `SplitButton`, and `ToggleSplitButton` together
+      with `FluentMenu` and `FluentMenuItem`. Menus remain caller-owned while
+      `setMenu()` retains their Python wrappers until replacement,
+      `setMenu(None)`, or host teardown.
+- [x] Harden native menu lifecycle state with deletion-safe `QPointer`
+      storage, observable `menu`/`isOpen` properties, replacement and external
+      destruction signals, RTL secondary hit testing, and strict separation
+      between primary, secondary, and toggle activation. Direct native menu
+      tests now cover typography notification and QAction triggering.
+- [x] On matched macOS Qt/PySide6 6.9.3, pass 25 focused native tests (three
+      manual VisualChecks skipped), 174 binding tests, 129 generated-contract
+      verifier tests, all 69 PySide CTests, an extracted source-package binding
+      rebuild, a clean installed wheel smoke, and build-tree/installed-wheel
+      menu-button snapshots with identical bytes.
+- [x] CI run `30699845540` confirmed the menu-button slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all 69 binding CTests, clean wheels on all three platforms,
+      source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
+      regressions, and the final CI Gate. The Windows lane also passed the
+      deferred Qt destruction paths for parented `ContentDialog` fixtures.
+- [x] Bind `CalendarDatePicker`, `DatePicker`, and `TimePicker` with Qt-native
+      `QDate`/`QTime`/locale values, nested field and format enums, repeat-safe
+      property signals, Python virtual dispatch, and their existing native
+      same-window popup implementations. Keep all internal popup/flyout
+      helper classes private, and return the Qt-owned `CalendarView` without
+      changing Shiboken ownership, parentage, or retention state.
+- [x] On matched macOS Qt/PySide6 6.9.3, pass 55 focused native tests (three
+      manual VisualChecks skipped), 178 binding tests, 132 generated-contract
+      verifier tests, all 71 PySide CTests, an extracted source-package binding
+      rebuild, and a newly created clean-venv wheel smoke. The build-tree and
+      installed-wheel picker snapshots have identical SHA-256 values.
+- [x] CI run `30701314187` confirmed the date/time picker slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all 71 binding CTests, clean wheels on all three platforms,
+      source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
+      regressions, and the final CI Gate.
+- [x] Bind `AutoSuggestBox` directly on top of the native Fluent `LineEdit`,
+      with Python string-list conversion, both nested enums, repeat-safe
+      properties, typed text/suggestion/query/open-state signals, Python
+      virtual dispatch, keyboard preview/submission, and the existing
+      same-window suggestion Flyout. Keep its internal model, popup, and row
+      delegate private, and remove the inherited C++ theme-refresh hook from
+      the Python text-field hierarchy.
+- [x] On matched macOS Qt/PySide6 6.9.3, pass all 15 automated native
+      AutoSuggestBox tests (one manual VisualCheck skipped), 181 binding tests,
+      137 generated-contract verifier tests, all 73 PySide CTests, an extracted
+      source-package binding rebuild/test, and a new clean-venv wheel smoke.
+      Build-tree and installed-wheel acceptance snapshots have identical
+      SHA-256 values.
+- [x] CI run `30704322313` confirmed the AutoSuggestBox slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all 73 binding CTests, clean wheels on all three platforms,
+      source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
+      regressions, and the final CI Gate.
+- [x] Bind `CoachMark` and `TeachingTip` with caller-owned target retention,
+      native same-window placement, content-host access, semantic close
+      reasons, Python virtual dispatch, and explicit rejection of raw target
+      and internal theme-hook bypasses. `TeachingTip` reuses the existing
+      Popup dependency-retaining facade without changing QWidget ownership.
+- [x] On matched macOS Qt/PySide6 6.9.3, pass all 30 automated native
+      CoachMark/TeachingTip tests (two manual VisualChecks skipped), 184
+      binding tests, 143 generated-contract verifier tests, and all 75 PySide
+      CTests. Also rebuild and test the extracted source package, pass a new
+      clean-venv wheel smoke and `pip check`, and produce byte-identical
+      build-tree/installed-wheel acceptance snapshots.
+- [x] CI run `30707082998` confirmed the CoachMark/TeachingTip slice on
+      native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all 75 binding CTests, clean wheels on all three platforms,
+      source-package integration,
+      acceptance snapshots, Qt 5.15/6.2 C++ regressions, and the final CI Gate.
+- [x] Bind `Toast` and `ToolTip` with all nested enums, native properties and
+      signals, direct and managed presentation, keyed update/eviction,
+      target-owned tooltip attachment, caller-owned theme-source/QAction
+      retention, and explicit removal of animation/theme implementation hooks.
+      The Toast facade records `anchor.window()` as the real Python parent
+      while preserving the original child anchor for local-theme inheritance.
+- [x] On matched macOS Qt/PySide6 6.9.3, pass all 23 automated native
+      Toast/ToolTip tests (one manual VisualCheck skipped), 189 binding tests,
+      157 generated-contract verifier tests, and all 77 PySide CTests. Also
+      rebuild and test the extracted source package, pass a newly created
+      clean-venv wheel smoke and `pip check`, and produce byte-identical
+      build-tree/installed-wheel status-overlay snapshots.
+- [x] CI run `30709495870` confirmed the Status & Info completion slice on
+      native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all 77 binding CTests, clean wheels on all three platforms,
+      source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
+      regressions, and the final CI Gate.
+- [x] Bind `CommandBar`, final `CommandBarFlyout`, and `FluentMenuBar` with
+      nested enums, properties, signals, primary/secondary command mutation,
+      same-window flyout invocation, and Python-callable `QWidget::addAction`
+      overloads that also work with the Qt 6.2 Shiboken generator.
+- [x] Keep caller-owned `QAction` objects borrowed while retaining their
+      Python wrappers in the command section that actually owns each action;
+      synchronize add, insert, move, remove, clear, replacement, external
+      deletion, and shared-action lifetimes without transferring QObject
+      parentage or Shiboken ownership. Retain flyout invocation widgets until
+      replacement, explicit clearing, or host teardown.
+- [x] On matched macOS Qt/PySide6 6.9.3, pass 23 focused native tests (four
+      manual/interactive checks skipped), 194 binding tests, 169 generated-
+      contract verifier tests, and all 79 PySide CTests. Also rebuild and test
+      the extracted source package, pass a clean-venv wheel smoke and
+      `pip check`, and produce byte-identical build-tree/installed-wheel
+      command-surface snapshots (`ba5b29a1f29575198bbc086204235cb268c7d91bf3372d0cd277eaabd2b3767e`).
+- [x] CI run `30715183706` confirmed the command-surface slice on native
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
+      contracts, all 79 binding CTests, clean wheels on all three platforms,
+      source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
+      regressions, and the final CI Gate.
+- [x] Bind `TitleBar` and the safe existing `Window` chrome/backdrop surface.
+      Keep `Window.titleBar()` Qt-owned, make TitleBar content replacement
+      release the old Python child, remove internal theme-refresh hooks, and
+      preserve the safe two-argument `Window.nativeEvent()` contract.
+- [x] Cover TitleBar properties/signals/subclassing, Window/TitleBar content
+      lifecycle, 25-cycle GC stress, generated parent/ownership contracts,
+      manifest exports, clean-wheel smoke, and a visible acceptance window.
+      Locally, all 199 binding tests, 172 verifier tests, and 82 PySide CTests
+      pass in both the working tree and a freshly extracted source package.
+- [x] Validate the acceptance window locally with the native Cocoa plugin and
+      matched Qt/PySide6 6.9.3. Solid resolved to the opaque backend; Mica and
+      Acrylic both resolved to native macOS vibrancy with a composited surface.
+      A fresh-venv wheel smoke and `pip check` pass; build-tree and installed-
+      wheel offscreen snapshots are byte-identical, and the native JSON report
+      records both platform materials before saving a readable Solid snapshot.
+- [x] CI run `30728227317` confirmed generated contracts, all 82 binding
+      CTests, clean wheels, and native XCB/Windows/Cocoa acceptance reports on
+      Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3. It also passed source-package
+      integration, Qt 5.15/6.2 C++ regressions, and the final CI Gate. The Qt
+      6.2 report path normalizes legacy Shiboken byte strings to UTF-8 text.
+- [ ] Review Windows 11 DWM and Linux KWin/Wayland compositor materials plus
+      system drag/resize behavior on physical desktops.
+
+The automated native acceptance rejects offscreen/minimal plugins and verifies
+native handles, chrome/content ownership, resize propagation, and resolved
+backdrop invariants. Xvfb and hosted CI can prove platform-plugin integration
+and painted fallbacks, but not the visual quality of Windows 11 DWM or Linux
+compositor blur. Those effects and pointer-driven system drag/resize remain
+physical-desktop acceptance items.
 
 ## M6 — Release-grade Python distribution
 
 - Define the supported CPython/platform/architecture wheel matrix.
 - Build each wheel on its native target or a documented equivalent toolchain.
-- Generate `.pyi` type stubs and compare public API changes in CI.
+- [x] Generate `_fluentqt.pyi` from Shiboken signatures plus facade `.pyi`
+  files, validate them against `api-manifest.json`, include them in clean-wheel
+  smoke tests, and run a strict installed-wheel mypy consumer check in CI.
 - Add dependency, license, repair/audit, clean-install, and import checks.
 - Establish versioning and deprecation rules for the Python API.
 - Sign and publish wheels only after every required matrix lane passes.
@@ -733,6 +962,24 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
   detachment, original-parent restoration, and explicit transfer. Run
   `examples/navigation_view_ownership.py` to exercise the C++-owned content
   host, header/main/footer chrome policies, and Left/Top responsive layouts.
+- **Same-window overlay**: run `examples/drawer_view_ownership.py` to inspect
+  the right-side drawer, dim scrim, outside-press close, open/close signals,
+  and release behavior for all three content ownership modes. Run
+  `examples/popup_overlay.py` to inspect Popup anchoring, focus return,
+  Escape/outside dismissal, and passthrough behavior. Run
+  `examples/flyout_overlay.py` to inspect Top/Bottom/Left/Right/Auto placement,
+  clamping, light dismiss, and anchor lifetime. Run
+  `examples/combo_box_dropdown.py` to inspect Python-model rows, editable text,
+  keyboard selection, Escape dismissal, and the native same-window dropdown.
+  Run `examples/date_time_pickers.py` to inspect Python-provided `QDate`,
+  `QTime`, locale, field-format enums, value signals, and all three native
+  same-window picker popups. Run `examples/auto_suggest_box.py` to inspect
+  Python string-list suggestions, typed reason/query signals, keyboard preview,
+  focus retention, and the native same-window suggestion Flyout. Run
+  `examples/command_surfaces.py` to inspect FluentMenuBar typography,
+  CommandBar primary/secondary commands, a same-window CommandBarFlyout, and
+  shared caller-owned QAction behavior.
+  Pass `--snapshot <png>` to an example to save a review artifact.
 - **Navigation values**: run `examples/breadcrumb_navigation.py` to verify
   Python `BreadcrumbItem` metadata, activation signals, full-path rendering,
   and narrow middle-overflow behavior. Run
@@ -743,9 +990,10 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
 - **Installation proof**: install the wheel into a fresh virtual environment
   and run `tests/test_wheel_smoke.py` to prove the process is not borrowing the
   source tree or loading a second Qt.
-- **Native windows**: validate Window, TitleBar, and backdrop behavior on a
-  real desktop. Offscreen snapshots cannot prove drag, resize, Mica, vibrancy,
-  or compositor blur.
+- **Native windows**: run `examples/window_chrome.py --verify-native
+  --snapshot <png> --report <json>` with Cocoa, Windows, XCB, or Wayland. Add
+  `--require-platform-backdrop` where native Mica/Acrylic/vibrancy/compositor
+  support is expected. Offscreen snapshots remain layout-only evidence.
 
 ## Next delivery sequence
 
@@ -789,8 +1037,10 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
     source-package integration, clean wheels on all three platforms,
     acceptance snapshots, and the final CI Gate passed in CI run
     `30631865586`.
-17. Keep `DrawerView` deferred until its overlay and hosted-page ownership
-    boundaries are designed and tested.
+17. Treat the `DrawerView` overlay/ownership slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels on all
+    three platforms, source-package integration, acceptance snapshots, and the
+    final CI Gate all passed in CI run `30685308957`.
 18. Treat the `Breadcrumb` metadata/navigation slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, clean-wheel smoke, acceptance
     snapshots, source-package integration, and the final CI Gate passed in CI
@@ -816,3 +1066,71 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
     Qt 5.15/6.2 C++, all 54 binding CTests, clean wheels, source-package
     integration, acceptance snapshots, and the final CI Gate passed together
     in CI run `30683749605`.
+24. Treat the `Popup` same-window overlay and QWidget-dependency slice as
+    complete after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2
+    C++, generated contracts, binding tests, clean wheels on all three
+    platforms, source-package integration, acceptance snapshots, and the
+    final CI Gate passed together in CI run `30686805469`.
+25. Treat the `Flyout` placement and caller-owned-anchor slice as complete
+    after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++,
+    generated contracts, binding tests, clean wheels on all three platforms,
+    source-package integration, acceptance snapshots, and the final CI Gate
+    passed together in CI run `30689337379`.
+26. Treat the `Dialog`/`ContentDialog` same-window modality, result, and hosted
+    content ownership slice as complete after native Linux/Windows Qt 6.2.4,
+    macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated contracts, all 65 binding
+    CTests, clean wheels on all three platforms, source-package integration,
+    acceptance snapshots, and the final CI Gate passed together in CI run
+    `30692144259`.
+27. Treat the `ComboBox` model/editor ownership and same-window dropdown slice
+    as complete after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3,
+    Qt 5.15/6.2 C++, generated contracts, all 67 binding CTests, clean wheels
+    on all three platforms, source-package integration, acceptance snapshots,
+    and the final CI Gate passed together in CI run `30697214451`.
+28. Treat the menu-button and Fluent-menu slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated
+    contracts, all 69 binding CTests, clean wheels on all three platforms,
+    source-package integration, acceptance snapshots, and the final CI Gate
+    passed together in CI run `30699845540`.
+29. Treat the native date/time picker and popup-lifecycle slice as complete
+    after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++,
+    generated contracts, all 71 binding CTests, clean wheels on all three
+    platforms, source-package integration, acceptance snapshots, and the
+    final CI Gate passed together in CI run `30701314187`.
+30. Treat the AutoSuggestBox string-list/signal and same-window suggestion
+    Flyout slice as complete after native Linux/Windows Qt 6.2.4, macOS
+    Qt 6.9.3, Qt 5.15/6.2 C++, generated contracts, all 73 binding CTests,
+    clean wheels on all three platforms, source-package integration,
+    acceptance snapshots, and the final CI Gate passed together in CI run
+    `30704322313`.
+31. Treat the CoachMark/TeachingTip target-retention, same-window guidance
+    surface, content-host, and semantic-close-reason slice as complete after
+    native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated
+    contracts, all 75 binding CTests, clean wheels on all three platforms,
+    source-package integration, acceptance snapshots, and the final CI Gate
+    passed together in CI run `30707082998`.
+32. Treat the Status & Info component set, including Toast/ToolTip overlay
+    lifetime and borrowed dependency handling, as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated
+    contracts, all 77 binding CTests, clean wheels on all three platforms,
+    source-package integration, acceptance snapshots, and the final CI Gate
+    passed together in CI run `30709495870`.
+33. Treat the `CommandBar`/`CommandBarFlyout`/`FluentMenuBar` borrowed-action
+    and same-window command-surface slice as complete after native
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated
+    contracts, all 79 binding CTests, clean wheels on all three platforms,
+    source-package integration, acceptance snapshots, and the final CI Gate
+    passed together in CI run `30715183706`.
+34. Treat the automated `Window`/`TitleBar` API, ownership, backdrop-state, and
+    native platform-plugin slice as complete after Linux/Windows Qt 6.2.4,
+    macOS Qt 6.9.3, generated contracts, all 82 binding CTests, clean wheels,
+    native XCB/Windows/Cocoa reports, source-package integration, Qt 5.15/6.2
+    C++ regressions, and the final CI Gate passed in run `30728227317`. Physical
+    Windows 11 DWM and Linux KWin/Wayland visual/interaction review remains.
+35. Treat the first M6 typing/API guard slice as complete after the generated
+    14-file stub set, the 75-class/11-enum/14-function manifest gate, all 84
+    binding CTests, strict installed-wheel mypy checks, clean wheels on native
+    Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, source-package integration,
+    Qt 5.15/6.2 C++ regressions, and the final CI Gate passed together in run
+    `30730708691`. The wider wheel matrix, compatibility policy, signing, and
+    publication work remain in M6.

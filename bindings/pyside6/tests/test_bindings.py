@@ -17,8 +17,10 @@ from fluentqt import (
     basicinput,
     collections,
     date_time,
+    dialogs_flyouts,
     foundation,
     layout,
+    menus_toolbars,
     navigation,
     scrolling,
     status_info,
@@ -41,21 +43,33 @@ from PySide6.QtCore import (
     QSize,
     QStandardPaths,
     QStringListModel,
+    QTime,
     QTimer,
     Qt,
     QUrl,
     qVersion,
 )
-from PySide6.QtGui import QColor, QStandardItem, QStandardItemModel
+from PySide6.QtGui import (
+    QAction,
+    QColor,
+    QIcon,
+    QKeySequence,
+    QStandardItem,
+    QStandardItemModel,
+)
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView,
     QCheckBox,
+    QComboBox,
+    QDialog,
     QFrame,
     QLabel,
     QLineEdit,
     QListView,
+    QMenu,
+    QMenuBar,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -65,6 +79,7 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QTreeView,
     QWidget,
+    QWidgetAction,
 )
 from shiboken6 import Shiboken
 
@@ -121,9 +136,49 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(issubclass(fluentqt.Avatar, QWidget))
         self.assertTrue(issubclass(fluentqt.Breadcrumb, QWidget))
         self.assertTrue(issubclass(fluentqt.Button, QPushButton))
+        self.assertTrue(
+            issubclass(fluentqt.CalendarDatePicker, fluentqt.Button)
+        )
         self.assertTrue(issubclass(fluentqt.CalendarView, QWidget))
         self.assertTrue(issubclass(fluentqt.CheckBox, QCheckBox))
         self.assertTrue(issubclass(fluentqt.ColorPicker, QWidget))
+        self.assertTrue(issubclass(fluentqt.ComboBox, QComboBox))
+        self.assertTrue(
+            issubclass(fluentqt.DropDownButton, fluentqt.Button)
+        )
+        self.assertTrue(
+            issubclass(fluentqt.SplitButton, fluentqt.Button)
+        )
+        self.assertTrue(
+            issubclass(
+                fluentqt.ToggleSplitButton,
+                fluentqt.SplitButton,
+            )
+        )
+        self.assertTrue(issubclass(fluentqt.FluentMenu, QMenu))
+        self.assertTrue(issubclass(fluentqt.CommandBar, QWidget))
+        self.assertTrue(
+            issubclass(
+                fluentqt.CommandBarFlyout,
+                native.fluent.Flyout,
+            )
+        )
+        self.assertTrue(issubclass(fluentqt.FluentMenuBar, QMenuBar))
+        self.assertTrue(
+            issubclass(fluentqt.FluentMenuItem, QWidgetAction)
+        )
+        self.assertTrue(issubclass(fluentqt.Popup, QWidget))
+        self.assertTrue(issubclass(fluentqt.Flyout, fluentqt.Popup))
+        self.assertIsInstance(fluentqt.Flyout(), fluentqt.Popup)
+        self.assertTrue(issubclass(fluentqt.CoachMark, QWidget))
+        self.assertTrue(issubclass(fluentqt.TeachingTip, fluentqt.Popup))
+        self.assertIsInstance(fluentqt.TeachingTip(), fluentqt.Popup)
+        self.assertTrue(issubclass(fluentqt.Dialog, QDialog))
+        self.assertTrue(
+            issubclass(fluentqt.ContentDialog, fluentqt.Dialog)
+        )
+        self.assertIsInstance(fluentqt.ContentDialog(), fluentqt.Dialog)
+        self.assertTrue(issubclass(fluentqt.DatePicker, fluentqt.Button))
         self.assertTrue(
             issubclass(fluentqt.CompoundButton, fluentqt.Button)
         )
@@ -136,15 +191,21 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(issubclass(fluentqt.ToggleSwitch, QWidget))
         self.assertTrue(issubclass(fluentqt.Label, QLabel))
         self.assertTrue(issubclass(fluentqt.LineEdit, QLineEdit))
+        self.assertTrue(
+            issubclass(fluentqt.AutoSuggestBox, fluentqt.LineEdit)
+        )
         self.assertTrue(issubclass(fluentqt.NumberBox, QLineEdit))
         self.assertTrue(issubclass(fluentqt.PasswordBox, QLineEdit))
         self.assertTrue(issubclass(fluentqt.Pivot, QWidget))
         self.assertTrue(issubclass(fluentqt.TextEdit, QWidget))
+        self.assertTrue(issubclass(fluentqt.TimePicker, fluentqt.Button))
         self.assertTrue(issubclass(fluentqt.InfoBadge, QWidget))
         self.assertTrue(issubclass(fluentqt.InfoBar, QWidget))
         self.assertTrue(issubclass(fluentqt.ProgressBar, QWidget))
         self.assertTrue(issubclass(fluentqt.ProgressRing, QWidget))
         self.assertTrue(issubclass(fluentqt.Shimmer, QWidget))
+        self.assertTrue(issubclass(fluentqt.Toast, QWidget))
+        self.assertTrue(issubclass(fluentqt.ToolTip, QWidget))
         self.assertTrue(issubclass(fluentqt.Card, QFrame))
         self.assertTrue(issubclass(fluentqt.Divider, QWidget))
         self.assertTrue(
@@ -168,13 +229,50 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(issubclass(fluentqt.StackView, QStackedWidget))
         self.assertTrue(issubclass(fluentqt.TreeView, QTreeView))
         self.assertTrue(issubclass(fluentqt.TabView, QWidget))
+        self.assertTrue(issubclass(fluentqt.TitleBar, QWidget))
         self.assertTrue(issubclass(fluentqt.Window, QWidget))
+        self.assertIs(
+            date_time.CalendarDatePicker,
+            fluentqt.CalendarDatePicker,
+        )
         self.assertIs(date_time.CalendarView, fluentqt.CalendarView)
+        self.assertIs(date_time.DatePicker, fluentqt.DatePicker)
+        self.assertIs(date_time.TimePicker, fluentqt.TimePicker)
         self.assertIs(basicinput.ColorPicker, fluentqt.ColorPicker)
+        self.assertIs(basicinput.ComboBox, fluentqt.ComboBox)
         self.assertIs(basicinput.CompoundButton, fluentqt.CompoundButton)
+        self.assertIs(
+            basicinput.DropDownButton,
+            fluentqt.DropDownButton,
+        )
         self.assertIs(basicinput.HyperlinkButton, fluentqt.HyperlinkButton)
         self.assertIs(basicinput.RatingControl, fluentqt.RatingControl)
+        self.assertIs(basicinput.SplitButton, fluentqt.SplitButton)
+        self.assertIs(
+            basicinput.ToggleSplitButton,
+            fluentqt.ToggleSplitButton,
+        )
         self.assertIs(basicinput.ToggleSwitch, fluentqt.ToggleSwitch)
+        self.assertIs(
+            menus_toolbars.CommandBar,
+            fluentqt.CommandBar,
+        )
+        self.assertIs(
+            menus_toolbars.CommandBarFlyout,
+            fluentqt.CommandBarFlyout,
+        )
+        self.assertIs(
+            menus_toolbars.FluentMenu,
+            fluentqt.FluentMenu,
+        )
+        self.assertIs(
+            menus_toolbars.FluentMenuBar,
+            fluentqt.FluentMenuBar,
+        )
+        self.assertIs(
+            menus_toolbars.FluentMenuItem,
+            fluentqt.FluentMenuItem,
+        )
         self.assertIs(layout.Card, fluentqt.Card)
         self.assertIs(layout.Divider, fluentqt.Divider)
         self.assertIs(layout.Expander, fluentqt.Expander)
@@ -230,15 +328,50 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertIs(status_info.InfoBar, fluentqt.InfoBar)
         self.assertIs(status_info.ProgressRing, fluentqt.ProgressRing)
         self.assertIs(status_info.Shimmer, fluentqt.Shimmer)
+        self.assertIs(status_info.Toast, fluentqt.Toast)
+        self.assertIs(status_info.ToolTip, fluentqt.ToolTip)
+        self.assertIs(
+            textfields.AutoSuggestBox,
+            fluentqt.AutoSuggestBox,
+        )
         self.assertIs(textfields.NumberBox, fluentqt.NumberBox)
         self.assertIs(textfields.TextEdit, fluentqt.TextEdit)
+        self.assertIs(dialogs_flyouts.Flyout, fluentqt.Flyout)
+        self.assertIs(dialogs_flyouts.Popup, fluentqt.Popup)
+        self.assertIs(dialogs_flyouts.Dialog, fluentqt.Dialog)
+        self.assertIs(
+            dialogs_flyouts.ContentDialog,
+            fluentqt.ContentDialog,
+        )
+        self.assertIs(
+            dialogs_flyouts.ContentDialogButton,
+            fluentqt.ContentDialogButton,
+        )
+        self.assertIs(windowing.TitleBar, fluentqt.TitleBar)
         self.assertIs(windowing.Window, fluentqt.Window)
         self.assertIs(foundation.FontIcon, fluentqt.FontIcon)
         self.assertIs(foundation.Theme, fluentqt.Theme)
         self.assertIs(native.fluent.Avatar, fluentqt.Avatar)
         self.assertIs(native.fluent.Button, fluentqt.Button)
+        self.assertIs(
+            native.fluent.CalendarDatePicker,
+            fluentqt.CalendarDatePicker,
+        )
         self.assertIs(native.fluent.CalendarView, fluentqt.CalendarView)
+        self.assertIs(native.fluent.DatePicker, fluentqt.DatePicker)
+        self.assertIs(native.fluent.TimePicker, fluentqt.TimePicker)
+        self.assertIs(
+            native.fluent.AutoSuggestBox,
+            fluentqt.AutoSuggestBox,
+        )
+        self.assertNotIn("SuggestionListPopup", dir(native.fluent))
+        self.assertNotIn("AutoSuggestItemDelegate", dir(native.fluent))
         self.assertIs(native.fluent.ColorPicker, fluentqt.ColorPicker)
+        self.assertTrue(
+            issubclass(fluentqt.ComboBox, native.fluent.ComboBox)
+        )
+        self.assertIsNot(native.fluent.ComboBox, fluentqt.ComboBox)
+        self.assertNotIn("ComboBoxItemDelegate", dir(native.fluent))
         self.assertIs(native.fluent.CompoundButton, fluentqt.CompoundButton)
         self.assertIs(native.fluent.FontIcon, fluentqt.FontIcon)
         self.assertIs(
@@ -306,6 +439,89 @@ class FluentQtBindingTest(unittest.TestCase):
                 "_releasePaneAtWithOwnership",
             )
         )
+        self.assertTrue(
+            issubclass(fluentqt.DrawerView, native.fluent.DrawerView)
+        )
+        self.assertIsNot(native.fluent.DrawerView, fluentqt.DrawerView)
+        self.assertNotIn(
+            "setContentWidget",
+            native.fluent.DrawerView.__dict__,
+        )
+        self.assertTrue(
+            hasattr(
+                native.fluent.DrawerView,
+                "_setContentWidgetWithOwnership",
+            )
+        )
+        self.assertTrue(issubclass(fluentqt.Popup, native.fluent.Popup))
+        self.assertIsNot(native.fluent.Popup, fluentqt.Popup)
+        for method_name in (
+            "setPosition",
+            "setThemeSource",
+            "addLightDismissPassthrough",
+            "clearLightDismissPassthrough",
+        ):
+            self.assertNotIn(method_name, native.fluent.Popup.__dict__)
+            self.assertTrue(hasattr(fluentqt.Popup, method_name))
+        for method_name in (
+            "_setPositionWithAnchor",
+            "_setThemeSource",
+            "_addLightDismissPassthrough",
+            "_clearLightDismissPassthrough",
+        ):
+            self.assertTrue(hasattr(native.fluent.Popup, method_name))
+        for method_name in (
+            "computePosition",
+            "automaticPositionAnchor",
+            "setFocusOnOpenEnabled",
+        ):
+            self.assertFalse(hasattr(fluentqt.Popup, method_name))
+        self.assertTrue(issubclass(fluentqt.Flyout, native.fluent.Flyout))
+        self.assertIsNot(native.fluent.Flyout, fluentqt.Flyout)
+        for method_name in ("setAnchor", "showAt"):
+            self.assertNotIn(method_name, native.fluent.Flyout.__dict__)
+            self.assertIn(method_name, fluentqt.Flyout.__dict__)
+        for method_name in ("_setAnchor", "_showAt"):
+            self.assertTrue(hasattr(native.fluent.Flyout, method_name))
+        for method_name in ("computePosition", "automaticPositionAnchor"):
+            self.assertFalse(hasattr(fluentqt.Flyout, method_name))
+        self.assertTrue(issubclass(fluentqt.Dialog, native.fluent.Dialog))
+        self.assertIsNot(native.fluent.Dialog, fluentqt.Dialog)
+        self.assertNotIn("setThemeSource", native.fluent.Dialog.__dict__)
+        self.assertTrue(hasattr(native.fluent.Dialog, "_setThemeSource"))
+        self.assertTrue(hasattr(fluentqt.Dialog, "setThemeSource"))
+        for method_name in (
+            "onThemeUpdated",
+            "isAnimating",
+            "ownerWidget",
+            "drawShadow",
+        ):
+            self.assertFalse(hasattr(fluentqt.Dialog, method_name))
+        self.assertTrue(
+            issubclass(
+                fluentqt.ContentDialog,
+                native.fluent.ContentDialog,
+            )
+        )
+        self.assertIsNot(
+            native.fluent.ContentDialog,
+            fluentqt.ContentDialog,
+        )
+        self.assertNotIn(
+            "setContent",
+            native.fluent.ContentDialog.__dict__,
+        )
+        self.assertTrue(
+            hasattr(native.fluent.ContentDialog, "_setContent")
+        )
+        self.assertIn("setContent", fluentqt.ContentDialog.__dict__)
+        self.assertIn("takeContent", fluentqt.ContentDialog.__dict__)
+        self.assertFalse(
+            hasattr(native.fluent.ContentDialog, "ResultPrimary")
+        )
+        self.assertEqual(fluentqt.ContentDialog.ResultNone, 0)
+        self.assertEqual(fluentqt.ContentDialog.ResultPrimary, 1)
+        self.assertEqual(fluentqt.ContentDialog.ResultSecondary, 2)
         self.assertTrue(
             issubclass(fluentqt.FlowView, native.fluent.FlowView)
         )
@@ -381,6 +597,15 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(
             hasattr(native.fluent.InfoBar, "_setActionWidget")
         )
+        self.assertTrue(issubclass(fluentqt.Toast, native.fluent.Toast))
+        self.assertIsNot(native.fluent.Toast, fluentqt.Toast)
+        self.assertNotIn("present", native.fluent.Toast.__dict__)
+        self.assertTrue(hasattr(native.fluent.Toast, "_present"))
+        self.assertNotIn("showToast", native.fluent.Toast.__dict__)
+        self.assertNotIn("showOrUpdateToast", native.fluent.Toast.__dict__)
+        self.assertTrue(hasattr(native, "showToastForBinding"))
+        self.assertTrue(hasattr(native, "showOrUpdateToastForBinding"))
+        self.assertIs(native.fluent.ToolTip, fluentqt.ToolTip)
         self.assertTrue(
             issubclass(fluentqt.ScrollView, native.fluent.ScrollView)
         )
@@ -467,6 +692,10 @@ class FluentQtBindingTest(unittest.TestCase):
                 "_setInitialItemWithOwnership",
             )
         )
+        self.assertIs(
+            native.fluent.windowing.TitleBar,
+            fluentqt.TitleBar,
+        )
         self.assertIs(native.fluent.windowing.Window, fluentqt.Window)
 
         info = fluentqt.binding_build_info()
@@ -495,9 +724,41 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(hasattr(fluentqt.CalendarView, "anchors"))
         self.assertFalse(hasattr(fluentqt.CalendarView, "bind"))
         self.assertFalse(hasattr(fluentqt.CalendarView, "setState"))
+        for picker_type in (
+            fluentqt.CalendarDatePicker,
+            fluentqt.DatePicker,
+            fluentqt.TimePicker,
+        ):
+            self.assertFalse(hasattr(picker_type, "anchors"))
+            self.assertFalse(hasattr(picker_type, "bind"))
+            self.assertFalse(hasattr(picker_type, "setState"))
         self.assertFalse(hasattr(fluentqt.ColorPicker, "anchors"))
         self.assertFalse(hasattr(fluentqt.ColorPicker, "bind"))
         self.assertFalse(hasattr(fluentqt.ColorPicker, "setState"))
+        self.assertFalse(hasattr(fluentqt.ComboBox, "anchors"))
+        self.assertFalse(hasattr(fluentqt.ComboBox, "bind"))
+        self.assertFalse(hasattr(fluentqt.ComboBox, "setState"))
+        self.assertTrue(hasattr(fluentqt.ComboBox, "pressProgress"))
+        self.assertTrue(hasattr(fluentqt.ComboBox, "setPressProgress"))
+        self.assertFalse(hasattr(fluentqt.ComboBox, "onThemeUpdated"))
+        for command_surface_type in (
+            fluentqt.CommandBar,
+            fluentqt.CommandBarFlyout,
+            fluentqt.FluentMenuBar,
+        ):
+            self.assertFalse(hasattr(command_surface_type, "anchors"))
+            self.assertFalse(hasattr(command_surface_type, "bind"))
+            self.assertFalse(hasattr(command_surface_type, "setState"))
+            self.assertFalse(
+                hasattr(command_surface_type, "onThemeUpdated")
+            )
+        self.assertFalse(hasattr(fluentqt.LineEdit, "onThemeUpdated"))
+        self.assertFalse(hasattr(fluentqt.AutoSuggestBox, "anchors"))
+        self.assertFalse(hasattr(fluentqt.AutoSuggestBox, "bind"))
+        self.assertFalse(hasattr(fluentqt.AutoSuggestBox, "setState"))
+        self.assertFalse(
+            hasattr(fluentqt.AutoSuggestBox, "onThemeUpdated")
+        )
         self.assertFalse(hasattr(fluentqt.Divider, "anchors"))
         self.assertFalse(hasattr(fluentqt.Divider, "bind"))
         self.assertFalse(hasattr(fluentqt.Divider, "setState"))
@@ -520,6 +781,19 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(hasattr(fluentqt.SplitView, "anchors"))
         self.assertFalse(hasattr(fluentqt.SplitView, "bind"))
         self.assertFalse(hasattr(fluentqt.SplitView, "setState"))
+        self.assertFalse(hasattr(fluentqt.DrawerView, "anchors"))
+        self.assertFalse(hasattr(fluentqt.DrawerView, "bind"))
+        self.assertFalse(hasattr(fluentqt.DrawerView, "setState"))
+        self.assertFalse(hasattr(fluentqt.Popup, "anchors"))
+        self.assertFalse(hasattr(fluentqt.Popup, "bind"))
+        self.assertFalse(hasattr(fluentqt.Popup, "setState"))
+        self.assertFalse(hasattr(fluentqt.Flyout, "anchors"))
+        self.assertFalse(hasattr(fluentqt.Flyout, "bind"))
+        self.assertFalse(hasattr(fluentqt.Flyout, "setState"))
+        for dialog_type in (fluentqt.Dialog, fluentqt.ContentDialog):
+            self.assertFalse(hasattr(dialog_type, "anchors"))
+            self.assertFalse(hasattr(dialog_type, "bind"))
+            self.assertFalse(hasattr(dialog_type, "setState"))
         self.assertFalse(hasattr(fluentqt.Breadcrumb, "anchors"))
         self.assertFalse(hasattr(fluentqt.Breadcrumb, "bind"))
         self.assertFalse(hasattr(fluentqt.Breadcrumb, "setState"))
@@ -569,12 +843,26 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(hasattr(fluentqt.InfoBar, "anchors"))
         self.assertFalse(hasattr(fluentqt.InfoBar, "bind"))
         self.assertFalse(hasattr(fluentqt.InfoBar, "setState"))
+        for status_overlay_type in (fluentqt.Toast, fluentqt.ToolTip):
+            self.assertFalse(hasattr(status_overlay_type, "anchors"))
+            self.assertFalse(hasattr(status_overlay_type, "bind"))
+            self.assertFalse(hasattr(status_overlay_type, "setState"))
+            self.assertFalse(
+                hasattr(status_overlay_type, "onThemeUpdated")
+            )
+        self.assertFalse(hasattr(fluentqt.Toast, "toastProgress"))
+        self.assertFalse(hasattr(fluentqt.Toast, "setToastProgress"))
         self.assertFalse(hasattr(fluentqt.TextEdit, "anchors"))
         self.assertFalse(hasattr(fluentqt.TextEdit, "bind"))
         self.assertFalse(hasattr(fluentqt.TextEdit, "setState"))
         self.assertFalse(hasattr(fluentqt.ScrollView, "anchors"))
         self.assertFalse(hasattr(fluentqt.ScrollView, "bind"))
         self.assertFalse(hasattr(fluentqt.ScrollView, "setState"))
+        for window_type in (fluentqt.TitleBar, fluentqt.Window):
+            self.assertFalse(hasattr(window_type, "anchors"))
+            self.assertFalse(hasattr(window_type, "bind"))
+            self.assertFalse(hasattr(window_type, "setState"))
+            self.assertFalse(hasattr(window_type, "onThemeUpdated"))
         self.assertFalse(
             hasattr(fluentqt.AnnotatedScrollBar, "anchors")
         )
@@ -789,6 +1077,238 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(calendar.isDateSelectable(minimum))
         self.assertFalse(calendar.isDateSelectable(minimum.addDays(-1)))
 
+    def test_calendar_date_picker_values_popup_and_internal_calendar(self):
+        host = QWidget()
+        host.resize(720, 520)
+        picker = fluentqt.CalendarDatePicker(host)
+        picker.move(32, 32)
+        picker.show()
+        host.show()
+        QCoreApplication.processEvents()
+
+        minimum = QDate(2026, 5, 10)
+        maximum = QDate(2026, 5, 20)
+        date_changes = []
+        open_changes = []
+        picker.dateChanged.connect(date_changes.append)
+        picker.calendarOpenChanged.connect(open_changes.append)
+        picker.setPlaceholderText("Choose a date")
+        self.assertEqual(picker.displayText(), "Choose a date")
+        picker.setDateRange(minimum, maximum)
+        picker.setDate(QDate(2026, 5, 1))
+        picker.setDisplayFormat("yyyy-MM-dd")
+
+        self.assertEqual(picker.date(), minimum)
+        self.assertEqual(picker.displayText(), "2026-05-10")
+        self.assertTrue(picker.isDateSelectable(maximum))
+        self.assertFalse(picker.isDateSelectable(maximum.addDays(1)))
+
+        picker.openCalendar()
+        QCoreApplication.processEvents()
+        self.assertTrue(picker.isCalendarOpen())
+        self.assertTrue(picker.isOpen())
+        calendar = picker.calendarView()
+        self.assertIsInstance(calendar, fluentqt.CalendarView)
+        self.assertIs(calendar, picker.calendarView())
+        self.assertTrue(Shiboken.isValid(calendar))
+        self.assertEqual(calendar.minDate(), minimum)
+        self.assertEqual(calendar.maxDate(), maximum)
+        self.assertEqual(calendar.selectedDate(), minimum)
+
+        picker.closeCalendar()
+        QCoreApplication.processEvents()
+        self.assertFalse(picker.isCalendarOpen())
+        picker.clearDate()
+        self.assertFalse(picker.date().isValid())
+        self.assertEqual(picker.displayText(), "Choose a date")
+        self.assertEqual(date_changes, [minimum, QDate()])
+        self.assertEqual(open_changes, [True, False])
+
+        picker.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        self.assertFalse(Shiboken.isValid(picker))
+        self.assertFalse(Shiboken.isValid(calendar))
+        host.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+
+    def test_date_picker_properties_enums_signals_and_popup(self):
+        class PythonDatePicker(fluentqt.DatePicker):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.key_press_count = 0
+
+            def keyPressEvent(self, event):
+                self.key_press_count += 1
+                super().keyPressEvent(event)
+
+        host = QWidget()
+        host.resize(720, 520)
+        picker = PythonDatePicker(host)
+        picker.move(32, 32)
+        picker.show()
+        host.show()
+        QCoreApplication.processEvents()
+
+        minimum = QDate(2026, 7, 10)
+        maximum = QDate(2026, 7, 25)
+        selected_changes = []
+        open_changes = []
+        picker.selectedDateChanged.connect(selected_changes.append)
+        picker.dropDownOpenChanged.connect(open_changes.append)
+        picker.setDateRange(minimum, maximum)
+        picker.setSelectedDate(QDate(2026, 7, 1))
+        picker.setMonthFormat(fluentqt.DatePicker.MonthFormat.TwoDigitMonth)
+        picker.setDayFormat(fluentqt.DatePicker.DayFormat.TwoDigitDay)
+        picker.setYearFormat(fluentqt.DatePicker.YearFormat.TwoDigitYear)
+        picker.setPlaceholderText(
+            fluentqt.DatePicker.DateField.Month,
+            "month",
+        )
+        picker.setFieldTextAlignment(
+            fluentqt.DatePicker.DateField.Month,
+            Qt.AlignRight,
+        )
+
+        self.assertEqual(picker.selectedDate(), minimum)
+        self.assertEqual(
+            picker.fieldDisplayText(fluentqt.DatePicker.DateField.Month),
+            "07",
+        )
+        self.assertEqual(
+            picker.fieldDisplayText(fluentqt.DatePicker.DateField.Day),
+            "10",
+        )
+        self.assertEqual(
+            picker.fieldDisplayText(fluentqt.DatePicker.DateField.Year),
+            "26",
+        )
+        self.assertEqual(
+            picker.fieldTextAlignment(fluentqt.DatePicker.DateField.Month),
+            Qt.AlignRight,
+        )
+
+        picker.setYearVisible(False)
+        self.assertFalse(picker.yearVisible())
+        picker.openPicker()
+        QCoreApplication.processEvents()
+        self.assertTrue(picker.isDropDownOpen())
+        picker.closePicker()
+        QCoreApplication.processEvents()
+        self.assertFalse(picker.isOpen())
+        QTest.keyClick(picker, Qt.Key_Space)
+        QCoreApplication.processEvents()
+        self.assertGreaterEqual(picker.key_press_count, 1)
+        self.assertTrue(picker.isDropDownOpen())
+        picker.closePicker()
+        QCoreApplication.processEvents()
+        picker.clearSelectedDate()
+
+        self.assertFalse(picker.selectedDate().isValid())
+        self.assertEqual(selected_changes, [minimum, QDate()])
+        self.assertEqual(open_changes, [True, False, True, False])
+        host.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+
+    def test_time_picker_properties_enums_signals_and_popup(self):
+        host = QWidget()
+        host.resize(720, 520)
+        picker = fluentqt.TimePicker(host)
+        picker.move(32, 32)
+        picker.show()
+        host.show()
+        QCoreApplication.processEvents()
+
+        selected_changes = []
+        open_changes = []
+        picker.selectedTimeChanged.connect(selected_changes.append)
+        picker.dropDownOpenChanged.connect(open_changes.append)
+        picker.setMinuteIncrement(15)
+        picker.setSelectedTime(QTime(9, 58))
+        picker.setClockIdentifier(
+            fluentqt.TimePicker.ClockIdentifier.TwentyFourHourClock
+        )
+        picker.setPlaceholderText(
+            fluentqt.TimePicker.TimeField.Minute,
+            "minute",
+        )
+        picker.setFieldTextAlignment(
+            fluentqt.TimePicker.TimeField.Hour,
+            Qt.AlignRight,
+        )
+
+        self.assertEqual(picker.minuteIncrement(), 15)
+        self.assertEqual(picker.selectedTime(), QTime(9, 45))
+        self.assertEqual(
+            picker.fieldDisplayText(fluentqt.TimePicker.TimeField.Hour),
+            "09",
+        )
+        self.assertEqual(
+            picker.fieldDisplayText(fluentqt.TimePicker.TimeField.Minute),
+            "45",
+        )
+        self.assertEqual(
+            picker.fieldDisplayText(fluentqt.TimePicker.TimeField.Period),
+            "",
+        )
+        self.assertEqual(
+            picker.fieldTextAlignment(fluentqt.TimePicker.TimeField.Hour),
+            Qt.AlignRight,
+        )
+
+        picker.openPicker()
+        QCoreApplication.processEvents()
+        self.assertTrue(picker.isDropDownOpen())
+        picker.closePicker()
+        QCoreApplication.processEvents()
+        self.assertFalse(picker.isOpen())
+        picker.clearSelectedTime()
+
+        self.assertFalse(picker.selectedTime().isValid())
+        self.assertEqual(selected_changes, [QTime(9, 45), QTime()])
+        self.assertEqual(open_changes, [True, False])
+        host.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+
+    def test_date_time_picker_popup_lifecycle_stress(self):
+        for picker_type, open_method in (
+            (fluentqt.CalendarDatePicker, "openCalendar"),
+            (fluentqt.DatePicker, "openPicker"),
+            (fluentqt.TimePicker, "openPicker"),
+        ):
+            for _ in range(25):
+                host = QWidget()
+                host.resize(640, 480)
+                picker = picker_type(host)
+                picker.show()
+                host.show()
+                QCoreApplication.processEvents()
+                getattr(picker, open_method)()
+                QCoreApplication.processEvents()
+                internal_calendar = (
+                    picker.calendarView()
+                    if isinstance(picker, fluentqt.CalendarDatePicker)
+                    else None
+                )
+                picker_ref = weakref.ref(picker)
+                picker.deleteLater()
+                QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+                QCoreApplication.processEvents()
+                self.assertFalse(Shiboken.isValid(picker))
+                if internal_calendar is not None:
+                    self.assertFalse(Shiboken.isValid(internal_calendar))
+                del internal_calendar
+                del picker
+                host.deleteLater()
+                QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+                QCoreApplication.processEvents()
+                del host
+                gc.collect()
+                self.assertIsNone(picker_ref())
+
     def test_phase_one_component_properties_and_signals(self):
         radio = fluentqt.RadioButton("Option")
         radio.setChecked(True)
@@ -923,6 +1443,300 @@ class FluentQtBindingTest(unittest.TestCase):
             shimmer.shimmerTemplate(),
             fluentqt.Shimmer.ShimmerTemplate.ImageCard,
         )
+
+    def test_tool_tip_attachment_properties_and_theme_source_lifetime(self):
+        host = QWidget()
+        host.resize(480, 260)
+        target = fluentqt.Button("Hover for details", host)
+        target.move(120, 90)
+        host.show()
+        self.app.processEvents()
+
+        tip = fluentqt.ToolTip.attach(
+            target,
+            "Native Fluent tooltip",
+            fluentqt.ToolTip.Placement.Below,
+        )
+        self.assertIsInstance(tip, fluentqt.ToolTip)
+        self.assertIs(tip.parent(), target)
+        self.assertFalse(Shiboken.ownedByPython(tip))
+        self.assertEqual(tip.text(), "Native Fluent tooltip")
+
+        margin_changes = []
+        animation_changes = []
+        tip.marginsChanged.connect(lambda: margin_changes.append(True))
+        tip.animationEnabledChanged.connect(animation_changes.append)
+        tip.setMargins(QMargins(10, 7, 10, 7))
+        tip.setAnimationEnabled(False)
+        self.assertEqual(tip.margins(), QMargins(10, 7, 10, 7))
+        self.assertEqual(margin_changes, [True])
+        self.assertEqual(animation_changes, [False])
+        self.assertGreater(tip.shadowMargin(), 0)
+
+        reused = fluentqt.ToolTip.attach(target, "Updated tooltip")
+        self.assertIs(reused, tip)
+        self.assertEqual(tip.text(), "Updated tooltip")
+
+        theme_source = QWidget()
+        theme_source.marker = "retained-theme-source"
+        source_ref = weakref.ref(theme_source)
+        tip.setThemeSource(theme_source)
+        del theme_source
+        gc.collect()
+        self.assertIsNotNone(source_ref())
+        self.assertEqual(source_ref().marker, "retained-theme-source")
+
+        source_ref().deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.app.processEvents()
+        self.assertFalse(Shiboken.isValid(source_ref()))
+        tip.setThemeSource(None)
+        gc.collect()
+        self.assertIsNone(source_ref())
+
+        target.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.app.processEvents()
+        self.assertFalse(Shiboken.isValid(tip))
+        host.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
+    def test_status_overlay_python_virtual_dispatch(self):
+        class PythonToast(fluentqt.Toast):
+            def __init__(self):
+                super().__init__()
+                self.size_hint_calls = 0
+
+            def sizeHint(self):
+                self.size_hint_calls += 1
+                return QSize(333, 111)
+
+        class PythonToolTip(fluentqt.ToolTip):
+            def __init__(self):
+                super().__init__()
+                self.filtered_events = 0
+
+            def eventFilter(self, watched, event):
+                if event.type() == QEvent.User:
+                    self.filtered_events += 1
+                return super().eventFilter(watched, event)
+
+        toast = PythonToast()
+        host = QWidget()
+        anchor = QWidget(host)
+        host.resize(500, 300)
+        toast.setAnimationEnabled(False)
+        self.assertTrue(toast.present(anchor))
+        self.assertGreater(toast.size_hint_calls, 0)
+
+        watched = QWidget()
+        tip = PythonToolTip()
+        watched.installEventFilter(tip)
+        QCoreApplication.sendEvent(watched, QEvent(QEvent.User))
+        self.assertEqual(tip.filtered_events, 1)
+        host.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
+    def test_toast_properties_action_and_direct_hosting(self):
+        host = QWidget()
+        host.resize(560, 320)
+        anchor = fluentqt.Button("Save", host)
+        anchor.move(24, 24)
+        host.show()
+        self.app.processEvents()
+
+        toast = fluentqt.Toast()
+        title_changes = []
+        message_changes = []
+        severity_changes = []
+        open_changes = []
+        presented = []
+        dismissed = []
+        dismiss_reasons = []
+        action_changes = []
+        toast.titleChanged.connect(title_changes.append)
+        toast.messageChanged.connect(message_changes.append)
+        toast.severityChanged.connect(severity_changes.append)
+        toast.isOpenChanged.connect(open_changes.append)
+        toast.presented.connect(lambda: presented.append(True))
+        toast.dismissed.connect(lambda: dismissed.append(True))
+        toast.dismissedWithReason.connect(dismiss_reasons.append)
+        toast.actionChanged.connect(
+            lambda value: action_changes.append(value is None)
+        )
+
+        toast.setTitle("Saved")
+        toast.setMessage("The document is ready.")
+        toast.setSeverity(fluentqt.Toast.Severity.Success)
+        toast.setPlacement(fluentqt.Toast.Placement.BottomEnd)
+        toast.setPlacementMargins(QMargins(20, 18, 20, 18))
+        toast.setDuration(-1)
+        toast.setAnimationEnabled(False)
+        toast.setPauseOnHoverEnabled(True)
+        toast.setUpdateKey("save-result")
+        self.assertEqual(title_changes, ["Saved"])
+        self.assertEqual(message_changes, ["The document is ready."])
+        self.assertEqual(severity_changes, [fluentqt.Toast.Severity.Success])
+        self.assertEqual(toast.duration(), 0)
+        self.assertTrue(toast.isPauseOnHoverEnabled())
+        self.assertEqual(toast.updateKey(), "save-result")
+
+        action = QAction("Open folder")
+        action.marker = "python-action"
+        action_ref = weakref.ref(action)
+        toast.setAction(action)
+        del action
+        gc.collect()
+        self.assertIs(toast.action(), action_ref())
+        self.assertEqual(toast.action().marker, "python-action")
+        self.assertEqual(action_changes, [False])
+
+        self.assertTrue(toast.present(anchor))
+        self.assertIs(toast.parentWidget(), host)
+        self.assertFalse(Shiboken.ownedByPython(toast))
+        self.assertTrue(toast.isOpen())
+        self.assertEqual(open_changes, [True])
+        self.assertEqual(presented, [True])
+
+        # Toast is hosted by anchor.window(), not by the transient child
+        # anchor. Destroying that child must not invalidate the toast wrapper.
+        anchor.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.app.processEvents()
+        self.assertTrue(Shiboken.isValid(toast))
+        self.assertTrue(toast.isOpen())
+        self.assertIs(toast.parentWidget(), host)
+
+        toast.dismiss()
+        self.assertFalse(toast.isOpen())
+        self.assertEqual(open_changes, [True, False])
+        self.assertEqual(dismissed, [True])
+        self.assertEqual(
+            dismiss_reasons,
+            [fluentqt.Toast.DismissReason.Programmatic],
+        )
+        self.assertTrue(Shiboken.isValid(toast))
+
+        host.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.app.processEvents()
+        self.assertFalse(Shiboken.isValid(toast))
+        gc.collect()
+        self.assertIsNone(action_ref())
+
+    def test_managed_toast_update_eviction_and_self_deletion(self):
+        host = QWidget()
+        host.resize(560, 320)
+        anchor = QWidget(host)
+        host.show()
+        self.app.processEvents()
+
+        previous_maximum = fluentqt.Toast.maximumVisible()
+        try:
+            fluentqt.Toast.setMaximumVisible(1)
+            first = fluentqt.Toast.showOrUpdateToast(
+                anchor,
+                "sync-job",
+                "Preparing",
+                durationMs=0,
+                placement=fluentqt.Toast.Placement.TopEnd,
+            )
+            self.assertIsInstance(first, fluentqt.Toast)
+            self.assertIs(first.parentWidget(), host)
+            self.assertFalse(Shiboken.ownedByPython(first))
+            updated = []
+            evicted = []
+            first.updated.connect(lambda: updated.append(True))
+            first.dismissedWithReason.connect(evicted.append)
+
+            second_reference = fluentqt.Toast.showOrUpdateToast(
+                anchor,
+                "sync-job",
+                "Complete",
+                severity=fluentqt.Toast.Severity.Success,
+                durationMs=0,
+                placement=fluentqt.Toast.Placement.TopEnd,
+            )
+            self.assertIs(second_reference, first)
+            self.assertEqual(first.message(), "Complete")
+            self.assertEqual(first.severity(), fluentqt.Toast.Severity.Success)
+            self.assertEqual(updated, [True])
+
+            replacement_anchor = QWidget(host)
+            anchor.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            self.app.processEvents()
+            self.assertTrue(Shiboken.isValid(first))
+            self.assertIs(first.parentWidget(), host)
+
+            replacement = fluentqt.Toast.showToast(
+                replacement_anchor,
+                "New notification",
+                durationMs=0,
+                placement=fluentqt.Toast.Placement.TopEnd,
+            )
+            self.assertIsInstance(replacement, fluentqt.Toast)
+            self.assertEqual(
+                evicted,
+                [fluentqt.Toast.DismissReason.Evicted],
+            )
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            self.app.processEvents()
+            self.assertFalse(Shiboken.isValid(first))
+
+            replacement.setAnimationEnabled(False)
+            replacement.dismiss()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            self.app.processEvents()
+            self.assertFalse(Shiboken.isValid(replacement))
+        finally:
+            fluentqt.Toast.setMaximumVisible(previous_maximum)
+            host.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
+    def test_status_overlay_lifetime_gc_stress(self):
+        for cycle in range(25):
+            host = QWidget()
+            host.resize(420, 240)
+            anchor = QWidget(host)
+            theme_source = QWidget()
+            action = QAction("Action {0}".format(cycle))
+            tip = fluentqt.ToolTip.attach(anchor, "Tip {0}".format(cycle))
+            tip.setThemeSource(theme_source)
+            managed = fluentqt.Toast.showToast(
+                anchor,
+                "Toast {0}".format(cycle),
+                durationMs=0,
+            )
+            managed.setAction(action)
+            managed.setAnimationEnabled(False)
+
+            tip_ref = weakref.ref(tip)
+            toast_ref = weakref.ref(managed)
+            source_ref = weakref.ref(theme_source)
+            action_ref = weakref.ref(action)
+            del tip
+            del managed
+            del theme_source
+            del action
+            gc.collect()
+            self.assertIsNotNone(tip_ref())
+            self.assertIsNotNone(toast_ref())
+            self.assertIsNotNone(source_ref())
+            self.assertIsNotNone(action_ref())
+
+            toast_ref().dismiss()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            anchor.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            host.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            self.app.processEvents()
+            gc.collect()
+            self.assertIsNone(tip_ref())
+            self.assertIsNone(toast_ref())
+            self.assertIsNone(source_ref())
+            self.assertIsNone(action_ref())
 
     def test_m2_leaf_component_properties_and_signals(self):
         compound = fluentqt.CompoundButton(
@@ -1664,6 +2478,215 @@ class FluentQtBindingTest(unittest.TestCase):
             (False, 0),
         )
 
+    def test_backdrop_value_types_and_window_state(self):
+        capabilities = fluentqt.BackdropCapabilities()
+        self.assertTrue(
+            capabilities.supportsNative(fluentqt.BackdropEffect.Solid)
+        )
+        self.assertFalse(
+            capabilities.supportsTransparentMaterial(
+                fluentqt.BackdropEffect.Mica
+            )
+        )
+        capabilities.alphaSurfaceSupported = True
+        capabilities.nativeMica = True
+        capabilities.provider = "python-test"
+        self.assertTrue(
+            capabilities.supportsNative(fluentqt.BackdropEffect.Mica)
+        )
+        self.assertTrue(
+            capabilities.supportsTransparentMaterial(
+                fluentqt.BackdropEffect.Mica
+            )
+        )
+
+        copied_capabilities = fluentqt.BackdropCapabilities(capabilities)
+        self.assertTrue(copied_capabilities.alphaSurfaceSupported)
+        self.assertTrue(copied_capabilities.nativeMica)
+        self.assertEqual(copied_capabilities.provider, "python-test")
+
+        state = fluentqt.BackdropState()
+        state.requestedEffect = fluentqt.BackdropEffect.Acrylic
+        state.effectiveEffect = fluentqt.BackdropEffect.Acrylic
+        state.backend = fluentqt.BackdropBackend.PaintedMaterial
+        state.fidelity = fluentqt.BackdropFidelity.Emulated
+        state.surfaceMode = fluentqt.BackdropSurfaceMode.PaintedOpaque
+        state.platformApplied = False
+        state.reason = "python-test"
+        self.assertEqual(fluentqt.BackdropState(state), state)
+
+        window = fluentqt.Window()
+        effect_changes = []
+        state_changes = []
+        window.backdropEffectChanged.connect(effect_changes.append)
+        window.backdropStateChanged.connect(state_changes.append)
+
+        window.setBackdropEffect(fluentqt.BackdropEffect.Solid)
+        solid = window.backdropState()
+        self.assertEqual(solid.requestedEffect, fluentqt.BackdropEffect.Solid)
+        self.assertEqual(solid.effectiveEffect, fluentqt.BackdropEffect.Solid)
+        self.assertEqual(solid.backend, fluentqt.BackdropBackend.Solid)
+        self.assertEqual(solid.fidelity, fluentqt.BackdropFidelity.Solid)
+        self.assertEqual(
+            solid.surfaceMode,
+            fluentqt.BackdropSurfaceMode.SolidOpaque,
+        )
+        self.assertFalse(solid.platformApplied)
+
+        window.setBackdropEffect(fluentqt.BackdropEffect.Mica)
+        mica = window.backdropState()
+        self.assertEqual(mica.requestedEffect, fluentqt.BackdropEffect.Mica)
+        self.assertEqual(mica.effectiveEffect, fluentqt.BackdropEffect.Mica)
+        self.assertEqual(
+            mica.backend,
+            fluentqt.BackdropBackend.PaintedMaterial,
+        )
+        self.assertEqual(mica.fidelity, fluentqt.BackdropFidelity.Emulated)
+        self.assertEqual(
+            mica.surfaceMode,
+            fluentqt.BackdropSurfaceMode.PaintedOpaque,
+        )
+        self.assertFalse(mica.platformApplied)
+        self.assertTrue(mica.reason)
+        self.assertEqual(
+            effect_changes,
+            [fluentqt.BackdropEffect.Solid, fluentqt.BackdropEffect.Mica],
+        )
+        self.assertGreaterEqual(len(state_changes), 2)
+
+    def test_title_bar_properties_signals_and_virtual_dispatch(self):
+        class EventTitleBar(fluentqt.TitleBar):
+            def __init__(self):
+                super().__init__()
+                self.user_events = 0
+
+            def event(self, event):
+                if event.type() == QEvent.User:
+                    self.user_events += 1
+                return super().event(event)
+
+        title_bar = EventTitleBar()
+        self.assertIs(title_bar.contentHost(), title_bar)
+        self.assertEqual(
+            title_bar.titleBarHeight(),
+            fluentqt.TitleBar.defaultTitleBarHeight(),
+        )
+
+        leading_changes = []
+        trailing_changes = []
+        height_changes = []
+        active_changes = []
+        title_bar.systemReservedLeadingWidthChanged.connect(
+            leading_changes.append
+        )
+        title_bar.systemReservedTrailingWidthChanged.connect(
+            trailing_changes.append
+        )
+        title_bar.titleBarHeightChanged.connect(height_changes.append)
+        title_bar.windowActiveChanged.connect(active_changes.append)
+
+        title_bar.setSystemReservedLeadingWidth(24)
+        title_bar.setSystemReservedLeadingWidth(24)
+        title_bar.setSystemReservedTrailingWidth(48)
+        title_bar.setTitleBarHeight(44)
+        self.assertEqual(title_bar.systemReservedLeadingWidth(), 24)
+        self.assertEqual(title_bar.systemReservedTrailingWidth(), 48)
+        self.assertEqual(title_bar.titleBarHeight(), 44)
+        self.assertEqual(leading_changes, [24])
+        self.assertEqual(trailing_changes, [48])
+        self.assertEqual(height_changes, [44])
+
+        QCoreApplication.sendEvent(title_bar, QEvent(QEvent.WindowActivate))
+        QCoreApplication.sendEvent(title_bar, QEvent(QEvent.WindowDeactivate))
+        self.assertEqual(active_changes, [True, False])
+        QCoreApplication.sendEvent(title_bar, QEvent(QEvent.User))
+        self.assertEqual(title_bar.user_events, 1)
+        self.assertIsInstance(title_bar.dragExclusionRects(), list)
+
+    def test_title_bar_content_and_window_lifetime(self):
+        title_bar = fluentqt.TitleBar()
+        first = QWidget()
+        second = QWidget()
+        content_changes = []
+        title_bar.contentWidgetChanged.connect(content_changes.append)
+
+        title_bar.setContentWidget(first)
+        self.assertIs(title_bar.contentWidget(), first)
+        self.assertIs(first.parent(), title_bar)
+
+        title_bar.setContentWidget(second)
+        self.assertIsNone(first.parent())
+        self.assertTrue(Shiboken.isValid(first))
+        self.assertIs(title_bar.contentWidget(), second)
+        self.assertIs(second.parent(), title_bar)
+
+        title_bar.setContentWidget(None)
+        self.assertIsNone(second.parent())
+        self.assertTrue(Shiboken.isValid(second))
+        self.assertEqual(content_changes, [first, second, None])
+
+        owned_title_bar = fluentqt.TitleBar()
+        owned_content = QWidget()
+        owned_title_bar.setContentWidget(owned_content)
+        owned_title_bar_ref = weakref.ref(owned_title_bar)
+        del owned_title_bar
+        gc.collect()
+        self.assertIsNone(owned_title_bar_ref())
+        self.assertFalse(Shiboken.isValid(owned_content))
+
+        window = fluentqt.Window()
+        window_title_bar = window.titleBar()
+        self.assertIs(window.titleBar(), window_title_bar)
+        self.assertIs(window_title_bar.window(), window)
+        self.assertFalse(Shiboken.ownedByPython(window_title_bar))
+        self.assertIsNotNone(window.contentHost())
+        window.setChromeInteractive(False)
+        self.assertFalse(window.isChromeInteractive())
+        window.setChromeInteractive(True)
+        self.assertTrue(window.isChromeInteractive())
+        window.resize(640, 420)
+        self.app.processEvents()
+        self.assertTrue(window.chromeFrameRect().isValid())
+
+        window_ref = weakref.ref(window)
+        del window
+        gc.collect()
+        self.assertIsNone(window_ref())
+        self.assertFalse(Shiboken.isValid(window_title_bar))
+
+    def test_title_bar_content_gc_stress(self):
+        for _ in range(25):
+            title_bar = fluentqt.TitleBar()
+            content = QWidget()
+            title_bar.setContentWidget(content)
+            content_ref = weakref.ref(content)
+            del content
+            gc.collect()
+            self.assertIs(title_bar.contentWidget(), content_ref())
+            self.assertTrue(Shiboken.isValid(content_ref()))
+
+            title_bar_ref = weakref.ref(title_bar)
+            del title_bar
+            self.app.processEvents()
+            gc.collect()
+            self.assertIsNone(title_bar_ref())
+            self.assertIsNone(content_ref())
+
+    def test_window_title_bar_gc_stress(self):
+        for _ in range(25):
+            window = fluentqt.Window()
+            title_bar = window.titleBar()
+            title_bar_ref = weakref.ref(title_bar)
+            window_ref = weakref.ref(window)
+            del window
+            self.app.processEvents()
+            gc.collect()
+            self.assertIsNone(window_ref())
+            self.assertFalse(Shiboken.isValid(title_bar))
+            del title_bar
+            gc.collect()
+            self.assertIsNone(title_bar_ref())
+
     def test_window_content_parenting_and_release(self):
         window = fluentqt.Window()
         first = QWidget()
@@ -2173,6 +3196,1914 @@ class FluentQtBindingTest(unittest.TestCase):
             gc.collect()
             self.assertFalse(Shiboken.isValid(item))
             del item
+
+    def test_auto_suggest_box_properties_enums_and_repeat_safe_signals(self):
+        box = fluentqt.AutoSuggestBox()
+        self.assertEqual(box.suggestions(), [])
+        self.assertEqual(
+            box.queryButtonPlacement(),
+            fluentqt.AutoSuggestBox.QueryButtonPlacement.Right,
+        )
+        self.assertFalse(box.isSuggestionListOpen())
+
+        changes = {
+            "suggestions": [],
+            "header": [],
+            "icon": [],
+            "visible": [],
+            "placement": [],
+            "input_height": [],
+            "query_size": [],
+            "clear_size": [],
+            "font": [],
+            "item_height": [],
+        }
+        box.suggestionsChanged.connect(
+            lambda: changes["suggestions"].append(True)
+        )
+        box.headerChanged.connect(lambda: changes["header"].append(True))
+        box.queryIconGlyphChanged.connect(
+            lambda: changes["icon"].append(True)
+        )
+        box.queryIconVisibleChanged.connect(
+            lambda: changes["visible"].append(True)
+        )
+        box.queryButtonPlacementChanged.connect(
+            lambda: changes["placement"].append(True)
+        )
+        box.inputHeightChanged.connect(
+            lambda: changes["input_height"].append(True)
+        )
+        box.queryButtonSizeChanged.connect(
+            lambda: changes["query_size"].append(True)
+        )
+        box.clearButtonSizeChanged.connect(
+            lambda: changes["clear_size"].append(True)
+        )
+        box.suggestionFontRoleChanged.connect(
+            lambda: changes["font"].append(True)
+        )
+        box.suggestionItemHeightChanged.connect(
+            lambda: changes["item_height"].append(True)
+        )
+
+        suggestions = ["Alpha", "Alpine", "Azure"]
+        setters = (
+            (box.setSuggestions, suggestions),
+            (box.setHeader, "Search files"),
+            (box.setQueryIconGlyph, "?"),
+            (box.setQueryIconVisible, False),
+            (
+                box.setQueryButtonPlacement,
+                fluentqt.AutoSuggestBox.QueryButtonPlacement.Left,
+            ),
+            (box.setInputHeight, 28),
+            (box.setQueryButtonSize, 20),
+            (box.setClearButtonSize, 18),
+            (box.setSuggestionFontRole, fluentqt.FontRole.Caption),
+            (box.setSuggestionItemHeight, 30),
+        )
+        for setter, value in setters:
+            setter(value)
+            setter(value)
+
+        self.assertEqual(box.suggestions(), suggestions)
+        self.assertEqual(box.header(), "Search files")
+        self.assertEqual(box.queryIconGlyph(), "?")
+        self.assertFalse(box.isQueryIconVisible())
+        self.assertEqual(
+            box.queryButtonPlacement(),
+            fluentqt.AutoSuggestBox.QueryButtonPlacement.Left,
+        )
+        self.assertEqual(box.inputHeight(), 28)
+        self.assertEqual(box.queryButtonSize(), 20)
+        self.assertEqual(box.clearButtonSize(), 18)
+        self.assertEqual(box.suggestionFontRole(), fluentqt.FontRole.Caption)
+        self.assertEqual(box.suggestionItemHeight(), 30)
+        self.assertGreaterEqual(box.sizeHint().height(), 28)
+        self.assertGreaterEqual(box.minimumSizeHint().height(), 28)
+        for signal_events in changes.values():
+            self.assertEqual(signal_events, [True])
+
+        self.assertNotEqual(
+            fluentqt.AutoSuggestBox.TextChangeReason.UserInput,
+            fluentqt.AutoSuggestBox.TextChangeReason.ProgrammaticChange,
+        )
+        box.clearSuggestions()
+        self.assertEqual(box.suggestions(), [])
+
+    def test_auto_suggest_box_keyboard_signals_and_subclassing(self):
+        class PythonAutoSuggestBox(fluentqt.AutoSuggestBox):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.key_press_count = 0
+
+            def keyPressEvent(self, event):
+                self.key_press_count += 1
+                super().keyPressEvent(event)
+
+        host = QWidget()
+        host.resize(520, 360)
+        box = PythonAutoSuggestBox(host)
+        box.setGeometry(48, 48, 240, box.sizeHint().height())
+        box.setSuggestions(["Alpha", "Alpine", "Azure"])
+        reasons = []
+        chosen = []
+        submitted = []
+        open_states = []
+        box.textChangedWithReason.connect(
+            lambda text, reason: reasons.append((text, reason))
+        )
+        box.suggestionChosen.connect(chosen.append)
+        box.querySubmitted.connect(
+            lambda text, item: submitted.append((text, item))
+        )
+        box.suggestionListOpenChanged.connect(open_states.append)
+
+        host.show()
+        box.show()
+        box.setFocus()
+        QCoreApplication.processEvents()
+        QTest.keyClicks(box, "a")
+        QCoreApplication.processEvents()
+        self.assertTrue(box.isSuggestionListOpen())
+        self.assertIs(QApplication.focusWidget(), box)
+        self.assertEqual(
+            reasons[-1],
+            (
+                "a",
+                fluentqt.AutoSuggestBox.TextChangeReason.UserInput,
+            ),
+        )
+
+        popup = host.findChild(
+            native.fluent.Flyout,
+            "AutoSuggestBoxSuggestionPopup",
+        )
+        self.assertIsNotNone(popup)
+        self.assertTrue(popup.isVisible())
+        self.assertIs(popup.window(), host)
+        self.assertFalse(popup.isWindow())
+
+        QTest.keyClick(box, Qt.Key_Down)
+        QCoreApplication.processEvents()
+        self.assertEqual(box.text(), "Alpha")
+        self.assertEqual(chosen, ["Alpha"])
+        self.assertEqual(
+            reasons[-1][1],
+            fluentqt.AutoSuggestBox.TextChangeReason.ProgrammaticChange,
+        )
+
+        QTest.keyClick(box, Qt.Key_Return)
+        QCoreApplication.processEvents()
+        self.assertFalse(box.isSuggestionListOpen())
+        self.assertEqual(chosen, ["Alpha", "Alpha"])
+        self.assertEqual(submitted, [("Alpha", "Alpha")])
+        self.assertEqual(
+            reasons[-1],
+            (
+                "Alpha",
+                fluentqt.AutoSuggestBox.TextChangeReason.SuggestionChosen,
+            ),
+        )
+        self.assertEqual(open_states, [True, False])
+        self.assertGreaterEqual(box.key_press_count, 3)
+        host.close()
+
+    def test_auto_suggest_box_popup_lifecycle_stress(self):
+        for _ in range(25):
+            host = QWidget()
+            host.resize(520, 360)
+            box = fluentqt.AutoSuggestBox(host)
+            box.setGeometry(48, 48, 240, box.sizeHint().height())
+            box.setSuggestions(["Alpha", "Alpine", "Azure"])
+            host.show()
+            box.show()
+            box.setFocus()
+            QCoreApplication.processEvents()
+            QTest.keyClicks(box, "a")
+            QCoreApplication.processEvents()
+            popup = host.findChild(
+                native.fluent.Flyout,
+                "AutoSuggestBoxSuggestionPopup",
+            )
+            self.assertIsNotNone(popup)
+            self.assertTrue(box.isSuggestionListOpen())
+            self.assertTrue(Shiboken.isValid(popup))
+
+            box_ref = weakref.ref(box)
+            popup_ref = weakref.ref(popup)
+            box.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            QCoreApplication.processEvents()
+            self.assertFalse(Shiboken.isValid(box))
+            self.assertFalse(Shiboken.isValid(popup))
+            del popup
+            del box
+            host.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+            QCoreApplication.processEvents()
+            del host
+            gc.collect()
+            self.assertIsNone(box_ref())
+            self.assertIsNone(popup_ref())
+
+    def test_combo_box_properties_items_and_signals(self):
+        combo = fluentqt.ComboBox()
+        self.assertEqual(combo.fontRole(), fluentqt.FontRole.Body)
+        self.assertGreater(combo.contentPaddingH(), 0)
+        self.assertGreater(combo.contentPaddingV(), 0)
+        self.assertTrue(combo.chevronGlyph())
+        self.assertGreater(combo.chevronSize(), 0)
+        self.assertGreaterEqual(combo.popupOffset(), 0)
+        self.assertEqual(combo.pressProgress(), 0.0)
+
+        font_changes = []
+        layout_changes = []
+        chevron_changes = []
+        index_changes = []
+        text_changes = []
+        combo.fontRoleChanged.connect(lambda: font_changes.append(True))
+        combo.layoutChanged.connect(lambda: layout_changes.append(True))
+        combo.chevronChanged.connect(lambda: chevron_changes.append(True))
+        combo.currentIndexChanged.connect(index_changes.append)
+        combo.currentTextChanged.connect(text_changes.append)
+
+        combo.setFontRole(fluentqt.FontRole.Caption)
+        combo.setContentPaddingH(18)
+        combo.setContentPaddingV(7)
+        combo.setChevronGlyph("v")
+        combo.setChevronSize(15)
+        combo.setChevronOffset(QPoint(12, 1))
+        combo.setPopupOffset(9)
+        combo.setPressProgress(0.5)
+        combo.addItems(["Alpha", "Beta", "Gamma"])
+        combo.setItemData(1, {"route": "beta"}, Qt.UserRole)
+        combo.setCurrentIndex(1)
+
+        self.assertEqual(combo.fontRole(), fluentqt.FontRole.Caption)
+        self.assertEqual(combo.contentPaddingH(), 18)
+        self.assertEqual(combo.contentPaddingV(), 7)
+        self.assertEqual(combo.chevronGlyph(), "v")
+        self.assertEqual(combo.chevronSize(), 15)
+        self.assertEqual(combo.chevronOffset(), QPoint(12, 1))
+        self.assertEqual(combo.popupOffset(), 9)
+        self.assertEqual(combo.pressProgress(), 0.5)
+        self.assertEqual(combo.count(), 3)
+        self.assertEqual(combo.currentIndex(), 1)
+        self.assertEqual(combo.currentText(), "Beta")
+        self.assertEqual(combo.itemData(1, Qt.UserRole), {"route": "beta"})
+        self.assertEqual(font_changes, [True])
+        self.assertEqual(layout_changes, [True, True, True])
+        self.assertEqual(chevron_changes, [True, True, True])
+        self.assertEqual(index_changes[-1:], [1])
+        self.assertEqual(text_changes[-1:], ["Beta"])
+
+    def test_combo_box_dropdown_lifecycle_selection_and_subclassing(self):
+        class PythonComboBox(fluentqt.ComboBox):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.show_popup_count = 0
+                self.key_press_count = 0
+
+            def showPopup(self):
+                self.show_popup_count += 1
+                super().showPopup()
+
+            def keyPressEvent(self, event):
+                self.key_press_count += 1
+                super().keyPressEvent(event)
+
+        host = QWidget()
+        host.resize(520, 360)
+        combo = PythonComboBox(host)
+        combo.setGeometry(48, 48, 190, 32)
+        combo.addItems(["Alpha", "Beta", "Gamma"])
+        combo.setCurrentIndex(0)
+        host.show()
+        QCoreApplication.processEvents()
+
+        QTest.mouseClick(
+            combo,
+            Qt.LeftButton,
+            Qt.NoModifier,
+            QPoint(8, 8),
+        )
+        QCoreApplication.processEvents()
+        popup = host.findChild(QWidget, "ComboBoxPopup")
+        self.assertIsNotNone(popup)
+        self.assertTrue(popup.isVisible())
+        self.assertIs(popup.window(), host)
+        self.assertFalse(popup.isWindow())
+        self.assertEqual(combo.show_popup_count, 1)
+
+        popup_view = popup.findChild(QListView, "ComboBoxPopupListView")
+        self.assertIsNotNone(popup_view)
+        self.assertIs(popup_view.model(), combo.model())
+        target = popup_view.model().index(2, 0)
+        target_rect = popup_view.visualRect(target)
+        self.assertFalse(target_rect.isEmpty())
+        QTest.mouseClick(
+            popup_view.viewport(),
+            Qt.LeftButton,
+            Qt.NoModifier,
+            target_rect.center(),
+        )
+        QCoreApplication.processEvents()
+        self.assertEqual(combo.currentIndex(), 2)
+        self.assertEqual(combo.currentText(), "Gamma")
+        self.assertFalse(popup.isVisible())
+
+        combo.showPopup()
+        QCoreApplication.processEvents()
+        self.assertEqual(combo.show_popup_count, 2)
+        self.assertTrue(popup.isVisible())
+        QTest.keyClick(popup, Qt.Key_Escape)
+        QCoreApplication.processEvents()
+        self.assertFalse(popup.isVisible())
+
+        combo.setCurrentIndex(0)
+        combo.setFocus()
+        QTest.keyClick(combo, Qt.Key_Down)
+        self.assertEqual(combo.key_press_count, 1)
+        self.assertEqual(combo.currentIndex(), 1)
+        host.close()
+
+    def test_combo_box_model_editor_and_customization_boundaries(self):
+        class PythonTextModel(QAbstractListModel):
+            def __init__(self, values):
+                super().__init__()
+                self.values = list(values)
+                self.data_calls = 0
+
+            def rowCount(self, parent=QModelIndex()):
+                return 0 if parent.isValid() else len(self.values)
+
+            def data(self, index, role=Qt.DisplayRole):
+                self.data_calls += 1
+                if index.isValid() and role in (
+                    Qt.DisplayRole,
+                    Qt.EditRole,
+                ):
+                    return self.values[index.row()]
+                return None
+
+        combo = fluentqt.ComboBox()
+        first_model = QStringListModel(["One", "Two", "Three"])
+        first_model_ref = weakref.ref(first_model)
+        combo.setModel(first_model)
+        combo.setCurrentIndex(1)
+        del first_model
+        gc.collect()
+        self.assertIs(combo.model(), first_model_ref())
+        self.assertEqual(combo.currentText(), "Two")
+
+        replacement = QStringListModel(["Red", "Green"])
+        combo.setModel(replacement)
+        QCoreApplication.processEvents()
+        gc.collect()
+        self.assertIsNone(first_model_ref())
+        self.assertIs(combo.model(), replacement)
+
+        python_model = PythonTextModel(["North", "South", "West"])
+        combo.setModel(python_model)
+        combo.setCurrentIndex(1)
+        self.assertEqual(combo.currentText(), "South")
+        self.assertGreater(python_model.data_calls, 0)
+
+        with self.assertRaisesRegex(NotImplementedError, "dropdown view"):
+            combo.view()
+        with self.assertRaisesRegex(NotImplementedError, "custom QComboBox"):
+            combo.setView(QListView())
+        with self.assertRaisesRegex(NotImplementedError, "dropdown delegate"):
+            combo.itemDelegate()
+        with self.assertRaisesRegex(NotImplementedError, "dropdown delegate"):
+            combo.setItemDelegate(QStyledItemDelegate())
+
+        class PythonEditor(QLineEdit):
+            pass
+
+        first_editor = PythonEditor()
+        combo.setLineEdit(first_editor)
+        self.assertTrue(combo.isEditable())
+        self.assertIs(combo.lineEdit(), first_editor)
+        self.assertIs(first_editor.parent(), combo)
+        self.assertFalse(Shiboken.ownedByPython(first_editor))
+
+        second_editor = PythonEditor()
+        combo.setLineEdit(second_editor)
+        self.assertFalse(Shiboken.isValid(first_editor))
+        self.assertIs(combo.lineEdit(), second_editor)
+        combo.setEditable(False)
+        self.assertFalse(Shiboken.isValid(second_editor))
+        self.assertIsNone(combo.lineEdit())
+
+        combo.setEditable(True)
+        fluent_editor = combo.fluentLineEdit()
+        self.assertIsInstance(fluent_editor, fluentqt.LineEdit)
+        self.assertIs(combo.lineEdit(), fluent_editor)
+        self.assertIs(fluent_editor.parent(), combo)
+
+    def test_combo_box_dependency_gc_stress(self):
+        class PythonEditor(QLineEdit):
+            pass
+
+        for _ in range(25):
+            combo = fluentqt.ComboBox()
+            model = QStringListModel(["Alpha", "Beta"])
+            editor = PythonEditor()
+            combo.setModel(model)
+            combo.setLineEdit(editor)
+            combo_ref = weakref.ref(combo)
+            model_ref = weakref.ref(model)
+            editor_ref = weakref.ref(editor)
+            del model
+            del editor
+            gc.collect()
+            self.assertIsNotNone(model_ref())
+            self.assertIsNotNone(editor_ref())
+
+            del combo
+            gc.collect()
+            self.assertIsNone(combo_ref())
+            self.assertIsNone(model_ref())
+            self.assertIsNone(editor_ref())
+
+    def test_menu_buttons_properties_interaction_and_subclassing(self):
+        class PythonSplitButton(fluentqt.SplitButton):
+            def __init__(self):
+                super().__init__("Python split")
+                self.release_count = 0
+
+            def mouseReleaseEvent(self, event):
+                self.release_count += 1
+                super().mouseReleaseEvent(event)
+
+        drop_down = fluentqt.DropDownButton("Options")
+        split = PythonSplitButton()
+        toggle = fluentqt.ToggleSplitButton("Pin")
+        drop_menu = fluentqt.FluentMenu("Options")
+        split_menu = fluentqt.FluentMenu("Split")
+        toggle_menu = fluentqt.FluentMenu("Toggle")
+        for menu in (drop_menu, split_menu, toggle_menu):
+            menu.addAction("First")
+            menu.aboutToShow.connect(
+                lambda current=menu: QTimer.singleShot(
+                    0,
+                    current.close,
+                )
+            )
+
+        drop_down.setMenu(drop_menu)
+        split.setMenu(split_menu)
+        toggle.setMenu(toggle_menu)
+        self.assertIs(drop_down.menu(), drop_menu)
+        self.assertIs(split.menu(), split_menu)
+        self.assertIs(toggle.menu(), toggle_menu)
+        self.assertGreater(split.secondaryWidth(), 0)
+        split.setSecondaryWidth(40)
+        self.assertEqual(split.secondaryWidth(), 40)
+
+        drop_open = []
+        split_open = []
+        toggle_open = []
+        split_clicks = []
+        toggle_changes = []
+        drop_down.openChanged.connect(
+            lambda: drop_open.append(drop_down.isOpen())
+        )
+        split.openChanged.connect(
+            lambda: split_open.append(split.isOpen())
+        )
+        toggle.openChanged.connect(
+            lambda: toggle_open.append(toggle.isOpen())
+        )
+        split.clicked.connect(lambda: split_clicks.append(True))
+        toggle.toggled.connect(toggle_changes.append)
+
+        for button in (drop_down, split, toggle):
+            button.resize(170, 36)
+            button.show()
+        QCoreApplication.processEvents()
+
+        QTest.mouseClick(
+            drop_down,
+            Qt.LeftButton,
+            Qt.NoModifier,
+            drop_down.rect().center(),
+        )
+        QTest.mouseClick(
+            split,
+            Qt.LeftButton,
+            Qt.NoModifier,
+            QPoint(split.width() - 8, split.height() // 2),
+        )
+        QTest.mouseClick(
+            toggle,
+            Qt.LeftButton,
+            Qt.NoModifier,
+            QPoint(toggle.width() - 8, toggle.height() // 2),
+        )
+
+        self.assertEqual(drop_open, [True, False])
+        self.assertEqual(split_open, [True, False])
+        self.assertEqual(toggle_open, [True, False])
+        self.assertEqual(split_clicks, [])
+        self.assertEqual(toggle_changes, [])
+        self.assertFalse(toggle.isChecked())
+
+        QTest.mouseClick(
+            split,
+            Qt.LeftButton,
+            Qt.NoModifier,
+            QPoint(split.width() // 4, split.height() // 2),
+        )
+        QTest.mouseClick(
+            toggle,
+            Qt.LeftButton,
+            Qt.NoModifier,
+            QPoint(toggle.width() // 4, toggle.height() // 2),
+        )
+        self.assertEqual(split.release_count, 2)
+        self.assertEqual(split_clicks, [True])
+        self.assertEqual(toggle_changes, [True])
+        self.assertTrue(toggle.isChecked())
+
+    def test_fluent_menu_item_properties_and_action_semantics(self):
+        menu = fluentqt.FluentMenu("Actions")
+        item = fluentqt.FluentMenuItem("Open", menu)
+        menu.addAction(item)
+        menu_changes = []
+        item_changes = []
+        triggered = []
+        menu.fontStyleChanged.connect(lambda: menu_changes.append(True))
+        item.fontStyleChanged.connect(lambda: item_changes.append(True))
+        item.triggered.connect(lambda: triggered.append(True))
+
+        menu.setFontStyle(fluentqt.FontRole.BodyStrong)
+        item.setFontStyle(fluentqt.FontRole.Caption)
+        self.assertEqual(
+            menu.fontStyle(),
+            fluentqt.FontRole.BodyStrong,
+        )
+        self.assertEqual(item.fontStyle(), fluentqt.FontRole.Caption)
+        self.assertEqual(menu_changes, [True])
+        self.assertEqual(item_changes, [True])
+        self.assertEqual(menu.actions(), [item])
+
+        item.trigger()
+        self.assertEqual(triggered, [True])
+
+    def test_command_surfaces_properties_actions_and_subclassing(self):
+        class PythonCommandBar(fluentqt.CommandBar):
+            def sizeHint(self):
+                return QSize(321, 45)
+
+        command_bar = PythonCommandBar()
+        label_changes = []
+        overflow_changes = []
+        background_changes = []
+        command_bar.labelPositionChanged.connect(label_changes.append)
+        command_bar.dynamicOverflowEnabledChanged.connect(
+            overflow_changes.append
+        )
+        command_bar.backgroundVisibleChanged.connect(
+            background_changes.append
+        )
+
+        command_bar.setLabelPosition(
+            fluentqt.CommandBar.LabelPosition.Collapsed
+        )
+        command_bar.setDynamicOverflowEnabled(False)
+        command_bar.setBackgroundVisible(False)
+        self.assertEqual(
+            command_bar.labelPosition(),
+            fluentqt.CommandBar.LabelPosition.Collapsed,
+        )
+        self.assertFalse(command_bar.isDynamicOverflowEnabled())
+        self.assertFalse(command_bar.isBackgroundVisible())
+        self.assertEqual(
+            label_changes,
+            [fluentqt.CommandBar.LabelPosition.Collapsed],
+        )
+        self.assertEqual(overflow_changes, [False])
+        self.assertEqual(background_changes, [False])
+        self.assertEqual(command_bar.sizeHint(), QSize(321, 45))
+
+        first = QAction("First")
+        inserted = QAction("Inserted")
+        secondary = QAction("Secondary")
+        self.assertTrue(command_bar.addPrimaryAction(first))
+        self.assertTrue(
+            command_bar.insertPrimaryAction(first, inserted)
+        )
+        self.assertTrue(command_bar.addSecondaryAction(secondary))
+        self.assertEqual(command_bar.primaryActions(), [inserted, first])
+        self.assertEqual(command_bar.secondaryActions(), [secondary])
+        self.assertTrue(command_bar.addSecondaryAction(first))
+        self.assertEqual(command_bar.primaryActions(), [inserted])
+        self.assertEqual(
+            command_bar.secondaryActions(), [secondary, first]
+        )
+
+        callback_results = []
+        generated_action = command_bar.addAction(
+            "Generated",
+            lambda: callback_results.append(True),
+        )
+        self.assertIs(generated_action.parent(), command_bar)
+        self.assertIn(generated_action, command_bar.primaryActions())
+        generated_action.trigger()
+        self.assertEqual(callback_results, [True])
+
+        flyout = fluentqt.CommandBarFlyout()
+        flyout_mode_changes = []
+        always_expanded_changes = []
+        flyout.showModeChanged.connect(flyout_mode_changes.append)
+        flyout.alwaysExpandedChanged.connect(
+            always_expanded_changes.append
+        )
+        flyout.setShowMode(
+            fluentqt.CommandBarFlyout.ShowMode.Transient
+        )
+        flyout.setAlwaysExpanded(True)
+        self.assertEqual(
+            flyout.showMode(),
+            fluentqt.CommandBarFlyout.ShowMode.Transient,
+        )
+        self.assertTrue(flyout.isAlwaysExpanded())
+        self.assertEqual(
+            flyout_mode_changes,
+            [fluentqt.CommandBarFlyout.ShowMode.Transient],
+        )
+        self.assertEqual(always_expanded_changes, [True])
+        with self.assertRaises(TypeError):
+            type("PythonCommandBarFlyout", (fluentqt.CommandBarFlyout,), {})
+
+        menu_bar = fluentqt.FluentMenuBar()
+        font_changes = []
+        menu_background_changes = []
+        menu_bar.fontStyleChanged.connect(lambda: font_changes.append(True))
+        menu_bar.backgroundVisibleChanged.connect(
+            menu_background_changes.append
+        )
+        menu_bar.setFontStyle(fluentqt.FontRole.BodyStrong)
+        menu_bar.setBackgroundVisible(False)
+        self.assertEqual(
+            menu_bar.fontStyle(), fluentqt.FontRole.BodyStrong
+        )
+        self.assertFalse(menu_bar.isBackgroundVisible())
+        self.assertEqual(font_changes, [True])
+        self.assertEqual(menu_background_changes, [False])
+        menu = menu_bar.addMenu("File")
+        self.assertIs(menu.parent(), menu_bar)
+        self.assertIn(menu.menuAction(), menu_bar.actions())
+
+    def test_final_type_fallback_for_old_shiboken(self):
+        from fluentqt.menus_toolbars import _enforce_final_type
+
+        class LegacyGeneratedFinalType:
+            pass
+
+        self.assertIs(
+            _enforce_final_type(LegacyGeneratedFinalType),
+            LegacyGeneratedFinalType,
+        )
+        with self.assertRaisesRegex(TypeError, "final"):
+            type(
+                "InvalidLegacyGeneratedSubclass",
+                (LegacyGeneratedFinalType,),
+                {},
+            )
+
+    def test_callable_add_action_fallback_for_old_shiboken(self):
+        from fluentqt.menus_toolbars import (
+            _install_legacy_callable_add_action,
+        )
+
+        class LegacyCommandSurface(QWidget):
+            pass
+
+        _install_legacy_callable_add_action(
+            LegacyCommandSurface,
+            (6, 2, 4),
+        )
+
+        class PythonLegacyCommandSurface(LegacyCommandSurface):
+            pass
+
+        surface = PythonLegacyCommandSurface()
+        calls = []
+        shortcut = QKeySequence("Ctrl+K")
+        cases = (
+            ("Text", lambda: calls.append(0)),
+            (QIcon(), "Icon", lambda: calls.append(1)),
+            ("Shortcut", shortcut, lambda: calls.append(2)),
+            (QIcon(), "Both", shortcut, lambda: calls.append(3)),
+        )
+        for index, arguments in enumerate(cases):
+            action = surface.addAction(*arguments)
+            self.assertIs(action.parent(), surface)
+            self.assertIn(action, surface.actions())
+            if index >= 2:
+                self.assertEqual(action.shortcut(), shortcut)
+            action.trigger()
+        self.assertEqual(calls, [0, 1, 2, 3])
+
+    def test_command_surface_borrowed_dependencies_and_external_delete(self):
+        command_bar = fluentqt.CommandBar()
+        flyout = fluentqt.CommandBarFlyout()
+        shared_action = QAction("Shared")
+        shared_ref = weakref.ref(shared_action)
+
+        self.assertTrue(command_bar.addPrimaryAction(shared_action))
+        self.assertTrue(flyout.addSecondaryAction(shared_action))
+        self.assertIsNone(shared_action.parent())
+        self.assertTrue(Shiboken.ownedByPython(shared_action))
+        del shared_action
+        gc.collect()
+        self.assertIsNotNone(shared_ref())
+        self.assertIs(command_bar.primaryActions()[0], shared_ref())
+        self.assertIs(flyout.secondaryActions()[0], shared_ref())
+
+        command_bar.clearPrimaryActions()
+        gc.collect()
+        self.assertIsNotNone(shared_ref())
+        self.assertEqual(command_bar.primaryActions(), [])
+        flyout.clearSecondaryActions()
+        gc.collect()
+        self.assertIsNone(shared_ref())
+
+        anchor = QWidget()
+        anchor_ref = weakref.ref(anchor)
+        flyout.setAnchor(anchor)
+        del anchor
+        gc.collect()
+        self.assertIs(flyout.anchor(), anchor_ref())
+        flyout.setAnchor(None)
+        gc.collect()
+        self.assertIsNone(anchor_ref())
+
+        externally_deleted = QAction("Deleted externally")
+        deleted_ref = weakref.ref(externally_deleted)
+        self.assertTrue(command_bar.addPrimaryAction(externally_deleted))
+        Shiboken.delete(externally_deleted)
+        self.assertFalse(Shiboken.isValid(externally_deleted))
+        self.assertEqual(command_bar.primaryActions(), [])
+        command_bar.clearPrimaryActions()
+        del externally_deleted
+        gc.collect()
+        self.assertIsNone(deleted_ref())
+
+    def test_command_surface_dependency_gc_stress(self):
+        for _ in range(25):
+            command_bar = fluentqt.CommandBar()
+            flyout = fluentqt.CommandBarFlyout()
+            action = QAction("Shared")
+            anchor = QWidget()
+            command_bar.addPrimaryAction(action)
+            flyout.addSecondaryAction(action)
+            flyout.setAnchor(anchor)
+
+            command_bar_ref = weakref.ref(command_bar)
+            flyout_ref = weakref.ref(flyout)
+            action_ref = weakref.ref(action)
+            anchor_ref = weakref.ref(anchor)
+            del action
+            del anchor
+            gc.collect()
+            self.assertIsNotNone(action_ref())
+            self.assertIsNotNone(anchor_ref())
+
+            del command_bar
+            gc.collect()
+            self.assertIsNone(command_bar_ref())
+            self.assertIsNotNone(action_ref())
+
+            del flyout
+            gc.collect()
+            self.assertIsNone(flyout_ref())
+            self.assertIsNone(action_ref())
+            self.assertIsNone(anchor_ref())
+
+    def test_menu_button_external_delete_clears_native_pointer(self):
+        for button_type in (
+            fluentqt.DropDownButton,
+            fluentqt.SplitButton,
+            fluentqt.ToggleSplitButton,
+        ):
+            with self.subTest(button_type=button_type.__name__):
+                button = button_type("Menu")
+                menu = fluentqt.FluentMenu("Actions")
+                changes = []
+                button.menuChanged.connect(lambda: changes.append(True))
+                button.setMenu(menu)
+                self.assertIs(button.menu(), menu)
+
+                menu.deleteLater()
+                QCoreApplication.sendPostedEvents(
+                    None,
+                    QEvent.DeferredDelete,
+                )
+                QCoreApplication.processEvents()
+                self.assertFalse(Shiboken.isValid(menu))
+                self.assertIsNone(button.menu())
+                self.assertEqual(changes, [True, True])
+
+    def test_menu_button_dependency_gc_stress(self):
+        for button_type in (
+            fluentqt.DropDownButton,
+            fluentqt.SplitButton,
+            fluentqt.ToggleSplitButton,
+        ):
+            for _ in range(25):
+                button = button_type("Menu")
+                first_menu = fluentqt.FluentMenu("First")
+                button.setMenu(first_menu)
+                first_ref = weakref.ref(first_menu)
+                del first_menu
+                gc.collect()
+                self.assertIsNotNone(first_ref())
+                self.assertTrue(Shiboken.isValid(first_ref()))
+
+                replacement = fluentqt.FluentMenu("Replacement")
+                button.setMenu(replacement)
+                gc.collect()
+                self.assertIsNone(first_ref())
+                self.assertIs(button.menu(), replacement)
+
+                replacement_ref = weakref.ref(replacement)
+                button.setMenu(None)
+                del replacement
+                gc.collect()
+                self.assertIsNone(replacement_ref())
+                self.assertIsNone(button.menu())
+
+                final_menu = fluentqt.FluentMenu("Final")
+                button.setMenu(final_menu)
+
+                button_ref = weakref.ref(button)
+                final_ref = weakref.ref(final_menu)
+                del final_menu
+                del button
+                gc.collect()
+                self.assertIsNone(button_ref())
+                self.assertIsNone(final_ref())
+
+    def test_dialog_same_window_lifecycle_exec_and_subclassing(self):
+        class PythonDialog(fluentqt.Dialog):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.show_count = 0
+
+            def showEvent(self, event):
+                self.show_count += 1
+                super().showEvent(event)
+
+        host = QWidget()
+        host.resize(640, 480)
+        host.show()
+        dialog = PythonDialog(host)
+        dialog.setFixedSize(320, 200)
+        dialog.setAnimationEnabled(False)
+        dialog.setDragEnabled(False)
+        dialog.setSmokeEnabled(True)
+        dialog.setWindowModality(Qt.ApplicationModal)
+
+        self.assertEqual(dialog.shadowSize(), 16)
+        self.assertFalse(dialog.isDragEnabled())
+        self.assertFalse(dialog.isAnimationEnabled())
+        self.assertTrue(dialog.isSmokeEnabled())
+        dialog.setAnimationProgress(0.75)
+        self.assertAlmostEqual(dialog.animationProgress(), 0.75)
+
+        dialog.open()
+        QCoreApplication.processEvents()
+        self.assertTrue(dialog.isVisible())
+        self.assertIs(dialog.parentWidget(), host)
+        self.assertIs(dialog.window(), host)
+        self.assertEqual(dialog.windowType(), Qt.Widget)
+        self.assertGreaterEqual(dialog.show_count, 1)
+        scrim = host.findChild(QWidget, "DialogSmokeScrim")
+        self.assertIsNotNone(scrim)
+        self.assertTrue(scrim.isVisible())
+
+        dialog.done(QDialog.Rejected)
+        QCoreApplication.processEvents()
+        self.assertFalse(dialog.isVisible())
+        self.assertIsNone(host.findChild(QWidget, "DialogSmokeScrim"))
+
+        QTimer.singleShot(0, lambda: dialog.done(QDialog.Accepted))
+        self.assertEqual(dialog.exec(), QDialog.Accepted)
+        host.close()
+
+    def test_dialog_theme_source_facade_retains_and_releases_widget(self):
+        dialog = fluentqt.Dialog()
+        with self.assertRaisesRegex(TypeError, "theme source"):
+            dialog.setThemeSource(object())
+        with self.assertRaisesRegex(ValueError, "theme source"):
+            dialog.setThemeSource(dialog)
+
+        source = QWidget()
+        dialog.setThemeSource(source)
+        source_ref = weakref.ref(source)
+        del source
+        gc.collect()
+        self.assertIsNotNone(source_ref())
+
+        dialog.setThemeSource(None)
+        gc.collect()
+        self.assertIsNone(source_ref())
+        self.assertIsNone(dialog._fluentqt_dialog_theme_source_record)
+
+        external = QWidget()
+        dialog.setThemeSource(external)
+        external.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        self.assertIsNone(dialog._fluentqt_dialog_theme_source_record)
+
+    def test_dialog_theme_source_gc_stress(self):
+        for _ in range(25):
+            dialog = fluentqt.Dialog()
+            source = QWidget()
+            dialog.setThemeSource(source)
+            source_ref = weakref.ref(source)
+            del source
+            gc.collect()
+            self.assertIsNotNone(source_ref())
+
+            dialog_ref = weakref.ref(dialog)
+            del dialog
+            gc.collect()
+            self.assertIsNone(dialog_ref())
+            self.assertIsNone(source_ref())
+
+    def test_content_dialog_properties_results_signals_and_subclassing(self):
+        class PythonContentDialog(fluentqt.ContentDialog):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.show_count = 0
+
+            def showEvent(self, event):
+                self.show_count += 1
+                super().showEvent(event)
+
+        host = QWidget()
+        host.resize(640, 480)
+        host.show()
+        dialog = PythonContentDialog(host)
+        dialog.setAnimationEnabled(False)
+        dialog.setTitle("Delete this item?")
+        dialog.setPrimaryButtonText("Delete")
+        dialog.setSecondaryButtonText("Keep")
+        dialog.setCloseButtonText("Cancel")
+        dialog.setDefaultButton(fluentqt.ContentDialogButton.Primary)
+
+        self.assertEqual(dialog.title(), "Delete this item?")
+        self.assertEqual(dialog.primaryButtonText(), "Delete")
+        self.assertEqual(dialog.secondaryButtonText(), "Keep")
+        self.assertEqual(dialog.closeButtonText(), "Cancel")
+        self.assertEqual(
+            dialog.defaultButton(),
+            int(fluentqt.ContentDialogButton.Primary),
+        )
+
+        results = []
+        primary_clicks = []
+        dialog.finished.connect(results.append)
+        dialog.primaryButtonClicked.connect(
+            lambda: primary_clicks.append(True)
+        )
+        dialog.open()
+        QCoreApplication.processEvents()
+        self.assertGreaterEqual(dialog.show_count, 1)
+        self.assertIs(dialog.window(), host)
+
+        primary = next(
+            button
+            for button in dialog.findChildren(fluentqt.Button)
+            if button.text() == "Delete"
+        )
+        primary.click()
+        QCoreApplication.processEvents()
+        self.assertEqual(primary_clicks, [True])
+        self.assertEqual(results, [fluentqt.ContentDialog.ResultPrimary])
+        self.assertEqual(
+            dialog.result(),
+            fluentqt.ContentDialog.ResultPrimary,
+        )
+        host.close()
+
+    def test_content_dialog_content_ownership_and_external_delete(self):
+        class PythonContent(QWidget):
+            pass
+
+        original_parent = QWidget()
+        dialog = fluentqt.ContentDialog()
+        with self.assertRaisesRegex(TypeError, "content"):
+            dialog.setContent(object())
+        with self.assertRaisesRegex(ValueError, "content"):
+            dialog.setContent(dialog)
+
+        ancestor = QWidget()
+        nested_dialog = fluentqt.ContentDialog(ancestor)
+        with self.assertRaisesRegex(ValueError, "ancestor"):
+            nested_dialog.setContent(ancestor)
+        # A parented Python subclass must leave through Qt's deferred-delete
+        # path on PySide6 6.2.4/Windows. Direct Shiboken.delete() can corrupt
+        # the parent's child teardown and fast-fail the next dialog test.
+        nested_dialog.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        self.assertFalse(Shiboken.isValid(nested_dialog))
+
+        first = PythonContent(original_parent)
+        dialog.setContent(first)
+        self.assertIs(dialog.content(), first)
+        self.assertIs(first.parent(), dialog)
+
+        first_ref = weakref.ref(first)
+        del first
+        gc.collect()
+        self.assertIs(dialog.content(), first_ref())
+
+        second = PythonContent(original_parent)
+        retained_first = first_ref()
+        dialog.setContent(second)
+        self.assertIsNone(retained_first.parent())
+        self.assertIs(dialog.content(), second)
+        self.assertIs(second.parent(), dialog)
+        del retained_first
+        gc.collect()
+        self.assertIsNone(first_ref())
+
+        taken = dialog.takeContent()
+        self.assertIs(taken, second)
+        self.assertIsNone(taken.parent())
+        self.assertTrue(Shiboken.ownedByPython(taken))
+        self.assertIsNone(dialog.content())
+        self.assertIsNone(dialog.takeContent())
+
+        external = PythonContent()
+        dialog.setContent(external)
+        # Exercise Qt's supported external-destruction path. Direct
+        # Shiboken.delete() on a still-parented Python subclass can fast-fail
+        # inside PySide6 6.2.4 on Windows before Qt finishes its destroyed
+        # signal chain, so that low-level wrapper operation is not part of the
+        # public ContentDialog lifecycle contract.
+        external.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        self.assertFalse(Shiboken.isValid(external))
+        self.assertIsNone(dialog.content())
+        self.assertIsNone(dialog._fluentqt_content_record)
+
+        owned = PythonContent()
+        dialog.setContent(owned)
+        dialog_ref = weakref.ref(dialog)
+        del dialog
+        gc.collect()
+        self.assertIsNone(dialog_ref())
+        self.assertFalse(Shiboken.isValid(owned))
+
+    def test_content_dialog_constructor_routes_content_through_facade(self):
+        content = QWidget()
+        dialog = fluentqt.ContentDialog(content=content)
+        self.assertIs(dialog.content(), content)
+        self.assertIs(content.parent(), dialog)
+        self.assertIs(dialog.takeContent(), content)
+        self.assertIsNone(content.parent())
+
+    def test_content_dialog_content_gc_stress(self):
+        for _ in range(25):
+            dialog = fluentqt.ContentDialog()
+            content = QWidget()
+            dialog.setContent(content)
+            content_ref = weakref.ref(content)
+            del content
+            gc.collect()
+            self.assertIs(dialog.content(), content_ref())
+
+            dialog_ref = weakref.ref(dialog)
+            del dialog
+            gc.collect()
+            self.assertIsNone(dialog_ref())
+            self.assertIsNone(content_ref())
+
+    def test_popup_properties_overlay_lifecycle_focus_and_subclassing(self):
+        class PythonPopup(fluentqt.Popup):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.show_count = 0
+
+            def showEvent(self, event):
+                self.show_count += 1
+                super().showEvent(event)
+
+        host = QWidget()
+        host.resize(640, 480)
+        trigger = fluentqt.Button("Open", host)
+        trigger.setGeometry(80, 72, 120, 36)
+        trigger.show()
+        passthrough = fluentqt.Button("Toolbar", host)
+        passthrough.setGeometry(440, 24, 120, 36)
+        passthrough.show()
+        host.show()
+        host.activateWindow()
+        trigger.setFocus(Qt.OtherFocusReason)
+        QCoreApplication.processEvents()
+
+        popup = PythonPopup(host)
+        popup.resize(320, 180)
+        popup.setAnimationEnabled(False)
+        popup.setExitAnimationEnabled(False)
+        popup.setModal(True)
+        popup.setDim(True)
+        popup.setLightDismissConsumesPress(True)
+        popup.setPosition(trigger, QPoint(0, trigger.height() + 8))
+        popup.setThemeSource(trigger)
+        popup.addLightDismissPassthrough(passthrough)
+        close_policy = (
+            fluentqt.Popup.CloseFlag.CloseOnPressOutside
+            | fluentqt.Popup.CloseFlag.CloseOnEscape
+        )
+        popup.setClosePolicy(close_policy)
+
+        self.assertIs(dialogs_flyouts.Popup, fluentqt.Popup)
+        self.assertFalse(popup.isOpen())
+        self.assertTrue(popup.isModal())
+        self.assertTrue(popup.isDim())
+        self.assertFalse(popup.isAnimationEnabled())
+        self.assertFalse(popup.isExitAnimationEnabled())
+        self.assertTrue(popup.lightDismissConsumesPress())
+        self.assertEqual(popup.closePolicy(), close_policy)
+
+        lifecycle = []
+        popup.aboutToShow.connect(lambda: lifecycle.append("aboutToShow"))
+        popup.opened.connect(lambda: lifecycle.append("opened"))
+        popup.aboutToHide.connect(lambda: lifecycle.append("aboutToHide"))
+        popup.closed.connect(lambda: lifecycle.append("closed"))
+
+        popup.open()
+        QCoreApplication.processEvents()
+        self.assertTrue(popup.isOpen())
+        self.assertAlmostEqual(popup.popupProgress(), 1.0)
+        self.assertTrue(popup.isVisible())
+        self.assertIs(popup.window(), host)
+        self.assertIs(QApplication.focusWidget(), popup)
+        self.assertGreaterEqual(popup.show_count, 1)
+        self.assertEqual(lifecycle, ["aboutToShow", "opened"])
+        self.assertIsNotNone(host.findChild(QWidget, "PopupScrim"))
+
+        QTest.keyClick(host, Qt.Key_Escape)
+        QCoreApplication.processEvents()
+        self.assertFalse(popup.isOpen())
+        self.assertAlmostEqual(popup.popupProgress(), 0.0)
+        self.assertIs(QApplication.focusWidget(), trigger)
+        self.assertEqual(
+            lifecycle,
+            ["aboutToShow", "opened", "aboutToHide", "closed"],
+        )
+
+        popup.setClosePolicy(fluentqt.Popup.CloseFlag.NoAutoClose)
+        popup.open()
+        QCoreApplication.processEvents()
+        QTest.keyClick(host, Qt.Key_Escape)
+        QCoreApplication.processEvents()
+        self.assertTrue(popup.isOpen())
+        popup.close()
+        QCoreApplication.processEvents()
+        host.close()
+
+    def test_popup_dependency_facade_retains_and_releases_widgets(self):
+        popup = fluentqt.Popup()
+        with self.assertRaisesRegex(TypeError, "position anchor"):
+            popup.setPosition(None, QPoint())
+        with self.assertRaisesRegex(ValueError, "position anchor"):
+            popup.setPosition(popup, QPoint())
+        with self.assertRaisesRegex(ValueError, "theme source"):
+            popup.setThemeSource(popup)
+        with self.assertRaisesRegex(ValueError, "passthrough"):
+            popup.addLightDismissPassthrough(popup)
+
+        anchor = QWidget()
+        theme_source = QWidget()
+        passthrough = QWidget()
+        popup.setPosition(anchor, QPoint(12, 18))
+        popup.setThemeSource(theme_source)
+        popup.addLightDismissPassthrough(passthrough)
+        popup.addLightDismissPassthrough(passthrough)
+
+        anchor_ref = weakref.ref(anchor)
+        theme_ref = weakref.ref(theme_source)
+        passthrough_ref = weakref.ref(passthrough)
+        del anchor
+        del theme_source
+        del passthrough
+        gc.collect()
+        self.assertIsNotNone(anchor_ref())
+        self.assertIsNotNone(theme_ref())
+        self.assertIsNotNone(passthrough_ref())
+        self.assertEqual(len(popup._fluentqt_passthrough_records), 1)
+
+        popup.setThemeSource(None)
+        popup.clearLightDismissPassthrough()
+        gc.collect()
+        self.assertIsNone(theme_ref())
+        self.assertIsNone(passthrough_ref())
+        self.assertIsNone(popup._fluentqt_theme_source_record)
+        self.assertEqual(popup._fluentqt_passthrough_records, {})
+
+        retained_anchor = anchor_ref()
+        retained_anchor.deleteLater()
+        del retained_anchor
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        gc.collect()
+        self.assertIsNone(popup._fluentqt_position_anchor_record)
+        self.assertIsNone(anchor_ref())
+
+    def test_popup_dependency_gc_stress(self):
+        for _ in range(25):
+            popup = fluentqt.Popup()
+            anchor = QWidget()
+            theme_source = QWidget()
+            passthrough = QWidget()
+            popup.setPosition(anchor, QPoint(4, 8))
+            popup.setThemeSource(theme_source)
+            popup.addLightDismissPassthrough(passthrough)
+
+            dependency_refs = tuple(
+                weakref.ref(widget)
+                for widget in (anchor, theme_source, passthrough)
+            )
+            del anchor
+            del theme_source
+            del passthrough
+            gc.collect()
+            self.assertTrue(all(ref() is not None for ref in dependency_refs))
+
+            popup_ref = weakref.ref(popup)
+            del popup
+            gc.collect()
+            self.assertIsNone(popup_ref())
+            self.assertTrue(all(ref() is None for ref in dependency_refs))
+
+    def test_flyout_placement_overlay_lifecycle_and_subclassing(self):
+        class PythonFlyout(fluentqt.Flyout):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.show_count = 0
+
+            def showEvent(self, event):
+                self.show_count += 1
+                super().showEvent(event)
+
+        host = QWidget()
+        host.resize(640, 480)
+        anchor = fluentqt.Button("Open", host)
+        anchor.setGeometry(260, 180, 120, 36)
+        anchor.show()
+        host.show()
+        host.activateWindow()
+        anchor.setFocus(Qt.OtherFocusReason)
+        QCoreApplication.processEvents()
+
+        flyout = PythonFlyout(host)
+        flyout.setFixedSize(320, 180)
+        flyout.setAnimationEnabled(False)
+        flyout.setExitAnimationEnabled(False)
+        flyout.setAnchorOffset(12)
+        flyout.setClampToWindow(True)
+
+        self.assertIs(dialogs_flyouts.Flyout, fluentqt.Flyout)
+        self.assertEqual(flyout.placement(), fluentqt.Flyout.Placement.Bottom)
+        self.assertEqual(flyout.anchorOffset(), 12)
+        self.assertTrue(flyout.clampToWindow())
+        self.assertFalse(flyout.isModal())
+        self.assertFalse(flyout.isDim())
+        self.assertEqual(
+            flyout.closePolicy(),
+            fluentqt.Flyout.CloseFlag.CloseOnPressOutside
+            | fluentqt.Flyout.CloseFlag.CloseOnEscape,
+        )
+
+        placements = []
+        flyout.placementChanged.connect(placements.append)
+        flyout.setPlacement(fluentqt.Flyout.Placement.Right)
+        flyout.setPlacement(fluentqt.Flyout.Placement.Right)
+        flyout.setPlacement(fluentqt.Flyout.Placement.Bottom)
+        self.assertEqual(
+            placements,
+            [
+                fluentqt.Flyout.Placement.Right,
+                fluentqt.Flyout.Placement.Bottom,
+            ],
+        )
+
+        lifecycle = []
+        flyout.aboutToShow.connect(lambda: lifecycle.append("aboutToShow"))
+        flyout.opened.connect(lambda: lifecycle.append("opened"))
+        flyout.aboutToHide.connect(lambda: lifecycle.append("aboutToHide"))
+        flyout.closed.connect(lambda: lifecycle.append("closed"))
+        flyout.showAt(anchor)
+        QCoreApplication.processEvents()
+
+        self.assertTrue(flyout.isOpen())
+        self.assertIs(flyout.anchor(), anchor)
+        self.assertIs(flyout.window(), host)
+        self.assertGreaterEqual(flyout.show_count, 1)
+        self.assertEqual(lifecycle, ["aboutToShow", "opened"])
+        visible_card = flyout.geometry().adjusted(16, 16, -16, -16)
+        self.assertEqual(
+            visible_card.top(),
+            anchor.geometry().bottom() + flyout.anchorOffset(),
+        )
+        scrim = host.findChild(QWidget, "PopupScrim")
+        self.assertTrue(scrim is None or not scrim.isVisible())
+
+        QTest.keyClick(host, Qt.Key_Escape)
+        QCoreApplication.processEvents()
+        self.assertFalse(flyout.isOpen())
+        self.assertIs(QApplication.focusWidget(), anchor)
+        self.assertEqual(
+            lifecycle,
+            ["aboutToShow", "opened", "aboutToHide", "closed"],
+        )
+
+        anchor.move(260, 430)
+        flyout.setPlacement(fluentqt.Flyout.Placement.Auto)
+        flyout.showAt(anchor)
+        QCoreApplication.processEvents()
+        visible_card = flyout.geometry().adjusted(16, 16, -16, -16)
+        self.assertLess(visible_card.bottom(), anchor.geometry().top())
+
+        anchor.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        self.assertFalse(flyout.isOpen())
+        self.assertIsNone(flyout.anchor())
+        self.assertIsNone(flyout._fluentqt_flyout_anchor_record)
+        host.close()
+
+    def test_flyout_dependency_facade_retains_and_releases_widgets(self):
+        flyout = fluentqt.Flyout()
+        with self.assertRaisesRegex(TypeError, "Flyout anchor"):
+            flyout.showAt(None)
+        with self.assertRaisesRegex(TypeError, "Flyout anchor"):
+            flyout.setAnchor(object())
+        with self.assertRaisesRegex(TypeError, "Flyout anchor"):
+            flyout.showAt(object())
+        with self.assertRaisesRegex(ValueError, "Flyout.*anchor"):
+            flyout.setAnchor(flyout)
+        with self.assertRaisesRegex(ValueError, "Flyout.*anchor"):
+            flyout.showAt(flyout)
+
+        anchor = QWidget()
+        replacement = QWidget()
+        theme_source = QWidget()
+        passthrough = QWidget()
+        flyout.setAnchor(anchor)
+        flyout.setThemeSource(theme_source)
+        flyout.addLightDismissPassthrough(passthrough)
+
+        anchor_ref = weakref.ref(anchor)
+        replacement_ref = weakref.ref(replacement)
+        theme_ref = weakref.ref(theme_source)
+        passthrough_ref = weakref.ref(passthrough)
+        del anchor
+        del theme_source
+        del passthrough
+        gc.collect()
+        self.assertIs(flyout.anchor(), anchor_ref())
+        self.assertIsNotNone(theme_ref())
+        self.assertIsNotNone(passthrough_ref())
+
+        flyout.setAnchor(replacement)
+        del replacement
+        gc.collect()
+        self.assertIsNone(anchor_ref())
+        self.assertIs(flyout.anchor(), replacement_ref())
+
+        flyout.setAnchor(None)
+        flyout.setThemeSource(None)
+        flyout.clearLightDismissPassthrough()
+        gc.collect()
+        self.assertIsNone(replacement_ref())
+        self.assertIsNone(theme_ref())
+        self.assertIsNone(passthrough_ref())
+        self.assertIsNone(flyout._fluentqt_flyout_anchor_record)
+
+    def test_flyout_show_at_preserves_reentrant_anchor_change(self):
+        host = QWidget()
+        host.resize(640, 480)
+        original = fluentqt.Button("Original", host)
+        replacement = fluentqt.Button("Replacement", host)
+        original.setGeometry(80, 80, 120, 36)
+        replacement.setGeometry(420, 80, 120, 36)
+        original.show()
+        replacement.show()
+        host.show()
+
+        flyout = fluentqt.Flyout(host)
+        flyout.setAnimationEnabled(False)
+        flyout.setExitAnimationEnabled(False)
+        flyout.aboutToShow.connect(lambda: flyout.setAnchor(replacement))
+        flyout.showAt(original)
+        QCoreApplication.processEvents()
+
+        self.assertIs(flyout.anchor(), replacement)
+        self.assertIs(
+            flyout._fluentqt_flyout_anchor_record[0],
+            replacement,
+        )
+        flyout.close()
+        host.close()
+
+    def test_flyout_dependency_gc_stress(self):
+        for _ in range(25):
+            flyout = fluentqt.Flyout()
+            anchor = QWidget()
+            theme_source = QWidget()
+            passthrough = QWidget()
+            flyout.setAnchor(anchor)
+            flyout.setThemeSource(theme_source)
+            flyout.addLightDismissPassthrough(passthrough)
+
+            dependency_refs = tuple(
+                weakref.ref(widget)
+                for widget in (anchor, theme_source, passthrough)
+            )
+            del anchor
+            del theme_source
+            del passthrough
+            gc.collect()
+            self.assertTrue(all(ref() is not None for ref in dependency_refs))
+
+            flyout_ref = weakref.ref(flyout)
+            del flyout
+            gc.collect()
+            self.assertIsNone(flyout_ref())
+            self.assertTrue(all(ref() is None for ref in dependency_refs))
+
+    def test_coach_mark_same_window_lifecycle_and_subclassing(self):
+        class PythonCoachMark(fluentqt.CoachMark):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.show_count = 0
+
+            def showEvent(self, event):
+                self.show_count += 1
+                super().showEvent(event)
+
+        host = QWidget()
+        host.resize(720, 520)
+        target = fluentqt.Button("Target", host)
+        target.setGeometry(260, 120, 120, 36)
+        target.show()
+        host.show()
+
+        coach = PythonCoachMark(host)
+        coach.setCardSize(QSize(300, 150))
+        coach.setPlacement(fluentqt.CoachMark.Placement.Bottom)
+        content_host = coach.contentHost()
+        content = fluentqt.Label("Python content", content_host)
+        content.show()
+
+        self.assertIs(dialogs_flyouts.CoachMark, fluentqt.CoachMark)
+        self.assertFalse(coach.isOpen())
+        self.assertEqual(coach.cardSize(), QSize(300, 150))
+        self.assertEqual(
+            coach.surfaceMode(),
+            fluentqt.CoachMark.SurfaceMode.SameWindowSurface,
+        )
+        self.assertIs(content_host.parent(), coach)
+        self.assertFalse(hasattr(fluentqt.CoachMark, "onThemeUpdated"))
+
+        lifecycle = []
+        coach.openChanged.connect(
+            lambda opened: lifecycle.append(("changed", opened))
+        )
+        coach.opened.connect(lambda: lifecycle.append(("opened", True)))
+        coach.closed.connect(lambda: lifecycle.append(("closed", False)))
+        coach.setTarget(target)
+        coach.open()
+        QCoreApplication.processEvents()
+
+        self.assertTrue(coach.isOpen())
+        self.assertIs(coach.target(), target)
+        self.assertIs(coach.window(), host)
+        self.assertFalse(coach.isWindow())
+        self.assertGreaterEqual(coach.show_count, 1)
+        self.assertEqual(
+            lifecycle[:2],
+            [("changed", True), ("opened", True)],
+        )
+
+        coach.close()
+        self.assertFalse(coach.isOpen())
+        self.assertEqual(
+            lifecycle[-2:],
+            [("changed", False), ("closed", False)],
+        )
+
+        coach.setTarget(target)
+        target.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        gc.collect()
+        self.assertIsNone(coach.target())
+        self.assertIsNone(coach._fluentqt_coach_mark_target_record)
+
+        host.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        self.assertFalse(Shiboken.isValid(coach))
+        self.assertFalse(Shiboken.isValid(content_host))
+        self.assertFalse(Shiboken.isValid(content))
+
+    def test_teaching_tip_lifecycle_close_reason_and_subclassing(self):
+        class PythonTeachingTip(fluentqt.TeachingTip):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.show_count = 0
+
+            def showEvent(self, event):
+                self.show_count += 1
+                super().showEvent(event)
+
+        host = QWidget()
+        host.resize(760, 560)
+        target = fluentqt.Button("Learn more", host)
+        target.setGeometry(300, 120, 140, 36)
+        target.show()
+        host.show()
+
+        tip = PythonTeachingTip(host)
+        tip.setAnimationEnabled(False)
+        tip.setExitAnimationEnabled(False)
+        tip.setCardSize(QSize(340, 180))
+        tip.setPreferredPlacement(
+            fluentqt.TeachingTip.PreferredPlacement.Bottom
+        )
+        tip.setPlacementMargin(8)
+        tip.setTailVisible(True)
+        tip.setLightDismissEnabled(True)
+        content_host = tip.contentHost()
+        content = fluentqt.Label("Teaching content", content_host)
+        content.show()
+
+        self.assertIs(dialogs_flyouts.TeachingTip, fluentqt.TeachingTip)
+        self.assertIsInstance(tip, fluentqt.Popup)
+        self.assertEqual(tip.cardSize(), QSize(340, 180))
+        self.assertEqual(tip.placementMargin(), 8)
+        self.assertTrue(tip.isTailVisible())
+        self.assertTrue(tip.isLightDismissEnabled())
+        self.assertIs(content_host.parent(), tip)
+        for internal_name in (
+            "onThemeUpdated",
+            "computePosition",
+            "automaticPositionAnchor",
+        ):
+            self.assertFalse(hasattr(fluentqt.TeachingTip, internal_name))
+
+        close_reasons = []
+        tip.closing.connect(close_reasons.append)
+        tip.showAt(target)
+        QCoreApplication.processEvents()
+
+        self.assertTrue(tip.isOpen())
+        self.assertIs(tip.target(), target)
+        self.assertIs(tip.window(), host)
+        self.assertFalse(tip.isWindow())
+        self.assertGreaterEqual(tip.show_count, 1)
+
+        tip.closeWithReason(fluentqt.TeachingTip.CloseReason.ActionButton)
+        QCoreApplication.processEvents()
+        self.assertFalse(tip.isOpen())
+        self.assertEqual(
+            close_reasons[-1],
+            fluentqt.TeachingTip.CloseReason.ActionButton,
+        )
+
+        replacement = fluentqt.Button("Replacement", host)
+        replacement.setGeometry(300, 360, 140, 36)
+        replacement.show()
+        tip.showAt(replacement)
+        self.assertTrue(tip.isOpen())
+        replacement.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        gc.collect()
+        self.assertFalse(tip.isOpen())
+        self.assertIsNone(tip.target())
+        self.assertIsNone(tip._fluentqt_teaching_tip_target_record)
+        self.assertEqual(
+            close_reasons[-1],
+            fluentqt.TeachingTip.CloseReason.TargetDestroyed,
+        )
+
+        with self.assertRaisesRegex(TypeError, "TeachingTip target"):
+            tip.showAt(None)
+        with self.assertRaisesRegex(ValueError, "TeachingTip.*target"):
+            tip.setTarget(tip)
+
+        host.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        self.assertFalse(Shiboken.isValid(tip))
+        self.assertFalse(Shiboken.isValid(content_host))
+        self.assertFalse(Shiboken.isValid(content))
+
+    def test_guidance_overlay_target_dependency_gc_stress(self):
+        for _ in range(25):
+            coach = fluentqt.CoachMark()
+            tip = fluentqt.TeachingTip()
+            coach_target = QWidget()
+            tip_target = QWidget()
+            coach.setTarget(coach_target)
+            tip.setTarget(tip_target)
+
+            coach_target_ref = weakref.ref(coach_target)
+            tip_target_ref = weakref.ref(tip_target)
+            del coach_target
+            del tip_target
+            gc.collect()
+            self.assertIs(coach.target(), coach_target_ref())
+            self.assertIs(tip.target(), tip_target_ref())
+
+            coach_ref = weakref.ref(coach)
+            tip_ref = weakref.ref(tip)
+            del coach
+            del tip
+            gc.collect()
+            self.assertIsNone(coach_ref())
+            self.assertIsNone(tip_ref())
+            self.assertIsNone(coach_target_ref())
+            self.assertIsNone(tip_target_ref())
+
+    def test_drawer_view_properties_overlay_lifecycle_and_subclassing(self):
+        class PythonDrawer(fluentqt.DrawerView):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.show_count = 0
+
+            def showEvent(self, event):
+                self.show_count += 1
+                super().showEvent(event)
+
+        host = QWidget()
+        host.resize(640, 480)
+        host.show()
+        drawer = PythonDrawer(host)
+        drawer.setAnimationEnabled(False)
+        drawer.setDrawerLength(220)
+        drawer.setAvailableMargins(QMargins(10, 20, 30, 40))
+        drawer.setEdge(fluentqt.DrawerView.DrawerEdge.Right)
+
+        self.assertIs(collections.DrawerView, fluentqt.DrawerView)
+        self.assertFalse(drawer.isOpen())
+        self.assertAlmostEqual(drawer.position(), 0.0)
+        self.assertTrue(drawer.isModal())
+        self.assertTrue(drawer.isDim())
+        self.assertTrue(drawer.isInteractive())
+        self.assertEqual(drawer.dragMargin(), 24)
+        self.assertEqual(drawer.outerCornerRadius(), 8)
+        self.assertFalse(drawer.isAnimationEnabled())
+        self.assertEqual(
+            drawer.edge(),
+            fluentqt.DrawerView.DrawerEdge.Right,
+        )
+        default_policy = (
+            fluentqt.DrawerView.CloseFlag.CloseOnPressOutside
+            | fluentqt.DrawerView.CloseFlag.CloseOnEscape
+        )
+        self.assertEqual(drawer.closePolicy(), default_policy)
+
+        lifecycle = []
+        drawer.aboutToShow.connect(lambda: lifecycle.append("aboutToShow"))
+        drawer.opened.connect(lambda: lifecycle.append("opened"))
+        drawer.aboutToHide.connect(lambda: lifecycle.append("aboutToHide"))
+        drawer.closed.connect(lambda: lifecycle.append("closed"))
+
+        drawer.open()
+        QCoreApplication.processEvents()
+        self.assertTrue(drawer.isOpen())
+        self.assertAlmostEqual(drawer.position(), 1.0)
+        self.assertTrue(drawer.isVisible())
+        self.assertIs(drawer.window(), host)
+        self.assertTrue(drawer.panelGeometry().isValid())
+        self.assertTrue(drawer.contentGeometry().isValid())
+        self.assertEqual(drawer.scrimGeometry(), host.rect())
+        self.assertGreaterEqual(drawer.show_count, 1)
+        self.assertEqual(lifecycle, ["aboutToShow", "opened"])
+
+        scrim = host.findChild(QWidget, "DrawerViewScrim")
+        self.assertIsNotNone(scrim)
+        QTest.mouseClick(scrim, Qt.LeftButton, pos=scrim.rect().center())
+        QCoreApplication.processEvents()
+        self.assertFalse(drawer.isOpen())
+        self.assertEqual(
+            lifecycle,
+            ["aboutToShow", "opened", "aboutToHide", "closed"],
+        )
+
+        drawer.setClosePolicy(
+            fluentqt.DrawerView.CloseFlag.CloseOnEscape
+        )
+        drawer.open()
+        QCoreApplication.processEvents()
+        QTest.keyClick(host, Qt.Key_Escape)
+        QCoreApplication.processEvents()
+        self.assertFalse(drawer.isOpen())
+
+        drawer.setClosePolicy(fluentqt.DrawerView.CloseFlag.NoAutoClose)
+        drawer.open()
+        QCoreApplication.processEvents()
+        QTest.keyClick(host, Qt.Key_Escape)
+        QCoreApplication.processEvents()
+        self.assertTrue(drawer.isOpen())
+        drawer.close()
+        QCoreApplication.processEvents()
+
+    def test_drawer_view_constructor_and_content_contract_validation(self):
+        content = QWidget()
+        drawer = fluentqt.DrawerView(contentWidget=content)
+        self.assertIs(drawer.contentWidget(), content)
+        self.assertEqual(
+            drawer.contentOwnership(),
+            fluentqt.WidgetOwnership.Borrowed,
+        )
+        self.assertIs(drawer._fluentqt_content_record[0], content)
+
+        with self.assertRaisesRegex(TypeError, "contentOwnership"):
+            fluentqt.DrawerView(
+                contentOwnership=fluentqt.WidgetOwnership.Owned
+            )
+        with self.assertRaisesRegex(ValueError, "host or its ancestor"):
+            drawer.setOwnedContentWidget(drawer)
+
+        owner = QWidget()
+        nested = fluentqt.DrawerView(owner)
+        nested_content = QWidget()
+        nested.setBorrowedContentWidget(nested_content)
+        with self.assertRaisesRegex(ValueError, "host or its ancestor"):
+            nested.setReparentedContentWidget(owner)
+        self.assertIs(nested.contentWidget(), nested_content)
+
+        with self.assertRaisesRegex(ValueError, "takeContentWidget"):
+            drawer.setOwnedContentWidget(content)
+        self.assertIs(drawer.contentWidget(), content)
+        taken = drawer.takeContentWidget()
+        self.assertIs(taken, content)
+        self.assertIsNone(taken.parent())
+        self.assertTrue(Shiboken.ownedByPython(taken))
+        self.assertIsNone(drawer._fluentqt_content_record)
+
+    def test_drawer_view_owned_content_lifecycle(self):
+        drawer = fluentqt.DrawerView()
+        first = QWidget()
+        second = QWidget()
+
+        self.assertTrue(drawer.setOwnedContentWidget(first))
+        self.assertIs(first.parent(), drawer)
+        self.assertEqual(
+            drawer.contentOwnership(),
+            fluentqt.WidgetOwnership.Owned,
+        )
+        self.assertTrue(drawer.setOwnedContentWidget(second))
+        self.assertFalse(Shiboken.isValid(first))
+        self.assertIs(drawer.contentWidget(), second)
+
+        drawer_ref = weakref.ref(drawer)
+        del drawer
+        gc.collect()
+        self.assertIsNone(drawer_ref())
+        self.assertFalse(Shiboken.isValid(second))
+
+    def test_drawer_view_borrowed_content_lifecycle_and_external_delete(self):
+        class PythonContent(QWidget):
+            def __init__(self):
+                super().__init__()
+                self.marker = "drawer-borrowed"
+
+        drawer = fluentqt.DrawerView()
+        first = PythonContent()
+        first_ref = weakref.ref(first)
+        self.assertTrue(drawer.setContentWidget(first))
+        del first
+        gc.collect()
+
+        hosted = drawer.contentWidget()
+        self.assertIs(hosted, first_ref())
+        self.assertEqual(hosted.marker, "drawer-borrowed")
+        self.assertIs(drawer._fluentqt_content_record[0], hosted)
+
+        second = QWidget()
+        self.assertTrue(drawer.setBorrowedContentWidget(second))
+        self.assertTrue(Shiboken.isValid(hosted))
+        self.assertIsNone(hosted.parent())
+
+        second.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QCoreApplication.processEvents()
+        self.assertIsNone(drawer.contentWidget())
+        self.assertIsNone(drawer._fluentqt_content_record)
+        self.assertEqual(
+            drawer.contentOwnership(),
+            fluentqt.WidgetOwnership.Borrowed,
+        )
+
+        replacement = QWidget()
+        drawer.setBorrowedContentWidget(replacement)
+        drawer_ref = weakref.ref(drawer)
+        del drawer
+        gc.collect()
+        self.assertIsNone(drawer_ref())
+        self.assertTrue(Shiboken.isValid(replacement))
+        self.assertIsNone(replacement.parent())
+
+    def test_drawer_view_reparented_content_lifecycle(self):
+        first_parent = QWidget()
+        first = QWidget(first_parent)
+        second_parent = QWidget()
+        second = QWidget(second_parent)
+        drawer = fluentqt.DrawerView()
+
+        self.assertTrue(drawer.setReparentedContentWidget(first))
+        self.assertIs(first.parent(), drawer)
+        self.assertIs(drawer._fluentqt_content_record[2], first_parent)
+        self.assertTrue(drawer.setReparentedContentWidget(second))
+        self.assertIs(first.parent(), first_parent)
+        self.assertIs(second.parent(), drawer)
+
+        self.assertTrue(drawer.setReparentedContentWidget(None))
+        self.assertIs(second.parent(), second_parent)
+        self.assertIsNone(drawer.contentWidget())
+        self.assertEqual(
+            drawer.contentOwnership(),
+            fluentqt.WidgetOwnership.Borrowed,
+        )
+
+        restore_parent = QWidget()
+        restored = QWidget(restore_parent)
+        restoring_drawer = fluentqt.DrawerView()
+        restoring_drawer.setReparentedContentWidget(restored)
+        restore_parent_ref = weakref.ref(restore_parent)
+        del restore_parent
+        gc.collect()
+        self.assertIsNotNone(restore_parent_ref())
+
+        restoring_drawer_ref = weakref.ref(restoring_drawer)
+        del restoring_drawer
+        gc.collect()
+        self.assertIsNone(restoring_drawer_ref())
+        self.assertTrue(Shiboken.isValid(restored))
+        self.assertIs(restored.parent(), restore_parent_ref())
+
+    def test_drawer_view_owned_gc_stress(self):
+        for _ in range(25):
+            drawer = fluentqt.DrawerView()
+            content = QWidget()
+            drawer.setOwnedContentWidget(content)
+            drawer_ref = weakref.ref(drawer)
+            del drawer
+            gc.collect()
+            self.assertIsNone(drawer_ref())
+            self.assertFalse(Shiboken.isValid(content))
+            del content
+
+    def test_drawer_view_borrowed_gc_stress(self):
+        for _ in range(25):
+            drawer = fluentqt.DrawerView()
+            content = QWidget()
+            drawer.setBorrowedContentWidget(content)
+            drawer_ref = weakref.ref(drawer)
+            del drawer
+            gc.collect()
+            self.assertIsNone(drawer_ref())
+            self.assertTrue(Shiboken.isValid(content))
+            self.assertIsNone(content.parent())
+            del content
+            gc.collect()
+
+    def test_drawer_view_reparented_gc_stress(self):
+        for _ in range(25):
+            original_parent = QWidget()
+            content = QWidget(original_parent)
+            drawer = fluentqt.DrawerView()
+            drawer.setReparentedContentWidget(content)
+            drawer_ref = weakref.ref(drawer)
+            del drawer
+            gc.collect()
+            self.assertIsNone(drawer_ref())
+            self.assertTrue(Shiboken.isValid(content))
+            self.assertIs(content.parent(), original_parent)
+            del original_parent
+            gc.collect()
+            self.assertFalse(Shiboken.isValid(content))
+            del content
 
     def test_flip_view_properties_navigation_and_page_facade(self):
         class PythonPage(QWidget):

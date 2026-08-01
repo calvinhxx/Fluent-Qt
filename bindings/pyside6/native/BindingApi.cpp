@@ -180,6 +180,41 @@ void setBreadcrumbMetadataItems(
     breadcrumb->setItems(items);
 }
 
+fluent::status_info::Toast* showToastForBinding(
+    QWidget* host,
+    QWidget* anchor,
+    const QString& message,
+    fluent::status_info::Toast::Severity severity,
+    int durationMs,
+    fluent::status_info::Toast::Placement placement,
+    const QMargins& margins) {
+  if (!host || !anchor || anchor->window() != host)
+    return nullptr;
+  return fluent::status_info::Toast::showToast(
+      anchor, message, severity, durationMs, placement, margins);
+}
+
+fluent::status_info::Toast* showOrUpdateToastForBinding(
+    QWidget* host,
+    QWidget* anchor,
+    const QString& updateKey,
+    const QString& message,
+    fluent::status_info::Toast::Severity severity,
+    int durationMs,
+    fluent::status_info::Toast::Placement placement,
+    const QMargins& margins) {
+  if (!host || !anchor || anchor->window() != host)
+    return nullptr;
+  return fluent::status_info::Toast::showOrUpdateToast(
+      anchor,
+      updateKey,
+      message,
+      severity,
+      durationMs,
+      placement,
+      margins);
+}
+
 int themeRevision() { return fluent::ThemeRegistry::instance().revision(); }
 
 QVariantMap bindingBuildInfo() {

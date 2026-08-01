@@ -327,21 +327,28 @@ TEST_F(FlyoutTest, NoAnchorFallsBackToCenter) {
 
 TEST_F(FlyoutTest, AnchorDestroyedSafely) {
     auto* btn = makeAnchor(QPoint(350, 280));
+    btn->setFocus(Qt::OtherFocusReason);
+    QApplication::processEvents();
 
     Flyout fl(window);
     fl.setAnimationEnabled(false);
     fl.showAt(btn);
     EXPECT_TRUE(fl.isOpen());
+    EXPECT_EQ(QApplication::focusWidget(), &fl);
 
-    // 销毁 anchor，QPointer 自动置空
+    // 销毁当前焦点归还目标；QPointer 自动置空，且关闭时不能再访问它。
     delete btn;
+    QApplication::processEvents();
     EXPECT_EQ(fl.anchor(), nullptr);
+    EXPECT_FALSE(fl.isOpen());
 
     // 此刻强制重新计算位置（关闭 -> 重开）
     fl.close();
     fl.open();
     EXPECT_TRUE(fl.isOpen());  // 不 crash，回退到居中
     fl.close();
+    window->close();
+    QApplication::processEvents();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

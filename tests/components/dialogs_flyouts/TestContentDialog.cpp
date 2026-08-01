@@ -134,13 +134,40 @@ TEST_F(ContentDialogTest, SetContent) {
     auto* label = new Label("Hello content");
     dialog.setContent(label);
     EXPECT_EQ(dialog.content(), label);
+    EXPECT_EQ(label->parentWidget(), &dialog);
 
     auto* label2 = new Label("New content");
     dialog.setContent(label2);
     EXPECT_EQ(dialog.content(), label2);
+    EXPECT_EQ(label->parentWidget(), nullptr);
+    EXPECT_EQ(label2->parentWidget(), &dialog);
+    delete label;
 
     dialog.setContent(nullptr);
     EXPECT_EQ(dialog.content(), nullptr);
+    EXPECT_EQ(label2->parentWidget(), nullptr);
+    delete label2;
+}
+
+TEST_F(ContentDialogTest, ExternallyDeletedContentIsCleared) {
+    ContentDialog dialog(window);
+    auto* label = new Label("Temporary content");
+    dialog.setContent(label);
+
+    delete label;
+
+    EXPECT_EQ(dialog.content(), nullptr);
+}
+
+TEST_F(ContentDialogTest, InstalledContentIsDestroyedWithDialog) {
+    auto* dialog = new ContentDialog(window);
+    auto* label = new Label("Owned content");
+    QPointer<Label> guard(label);
+    dialog->setContent(label);
+
+    delete dialog;
+
+    EXPECT_TRUE(guard.isNull());
 }
 
 // --- Result constants ---

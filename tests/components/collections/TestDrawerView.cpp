@@ -611,6 +611,23 @@ TEST_F(DrawerViewTest, ContentWidgetHostingReplacesAndClearsWithoutDeleting)
     delete second;
 }
 
+TEST_F(DrawerViewTest, ContentWidgetRejectsHostAndAncestorCycles)
+{
+    QWidget owner;
+    DrawerView drawer(&owner);
+    QWidget content;
+    QSignalSpy contentSpy(&drawer, &DrawerView::contentWidgetChanged);
+
+    ASSERT_TRUE(drawer.setContentWidget(&content, WidgetOwnership::Borrowed));
+    EXPECT_FALSE(drawer.setContentWidget(&drawer, WidgetOwnership::Borrowed));
+    EXPECT_FALSE(drawer.setContentWidget(&owner, WidgetOwnership::Reparented));
+    EXPECT_EQ(drawer.contentWidget(), &content);
+    EXPECT_EQ(drawer.contentOwnership(), WidgetOwnership::Borrowed);
+    EXPECT_EQ(contentSpy.count(), 1);
+    EXPECT_EQ(content.parentWidget(), &drawer);
+    EXPECT_EQ(drawer.parentWidget(), &owner);
+}
+
 TEST_F(DrawerViewTest, ContentOwnershipPoliciesReleaseDeterministically)
 {
     DrawerTestWindow window;

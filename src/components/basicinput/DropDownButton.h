@@ -3,6 +3,7 @@
 
 #include "Button.h"
 #include <QMenu>
+#include <QPointer>
 #include "design/Typography.h"
 #include "design/Spacing.h"
 
@@ -21,6 +22,11 @@ namespace fluent::basicinput {
  */
 class DropDownButton : public Button {
     Q_OBJECT
+    /**
+     * @brief Caller-owned menu opened by the button.
+     * zh_CN: 按钮打开的调用方所有菜单。
+     */
+    Q_PROPERTY(QMenu* menu READ menu WRITE setMenu NOTIFY menuChanged)
     /**
      * @brief Whether the popup, drawer, or notification surface is open.
      * zh_CN: 弹层、抽屉或通知表面是否处于打开状态。
@@ -57,7 +63,7 @@ public:
     explicit DropDownButton(QWidget* parent = nullptr);
 
     void setMenu(QMenu* menu);
-    QMenu* menu() const { return m_menu; }
+    QMenu* menu() const { return m_menu.data(); }
 
     bool isOpen() const { return m_isOpen; }
     void setOpen(bool open);
@@ -82,6 +88,7 @@ public:
     QSize minimumSizeHint() const override;
 
 signals:
+    void menuChanged();
     void openChanged();
     void chevronChanged();
 
@@ -94,7 +101,7 @@ private:
     void initAnimation();
     int chevronReserveWidth() const;
 
-    QMenu* m_menu = nullptr;
+    QPointer<QMenu> m_menu;
     bool m_isOpen = false;
     QString m_chevronGlyph = Typography::Icons::ChevronDown;
     QString m_iconFontFamily = Typography::FontFamily::FluentIcons;

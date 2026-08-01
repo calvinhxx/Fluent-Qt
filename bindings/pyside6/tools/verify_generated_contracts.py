@@ -7,17 +7,56 @@ import sys
 
 
 WINDOW_WRAPPER = "fluent_windowing_window_wrapper.cpp"
+TITLE_BAR_WRAPPER = "fluent_windowing_titlebar_wrapper.cpp"
 WINDOWING_NAMESPACE_WRAPPER = "fluent_windowing_wrapper.cpp"
 MODULE_WRAPPER = "_fluentqt_module_wrapper.cpp"
 FLUENT_NAMESPACE_WRAPPER = "fluent_wrapper.cpp"
 ACCORDION_WRAPPER = "fluent_layout_accordion_wrapper.cpp"
 EXPANDER_WRAPPER = "fluent_layout_expander_wrapper.cpp"
 INFO_BAR_WRAPPER = "fluent_status_info_infobar_wrapper.cpp"
+TOAST_WRAPPER = "fluent_status_info_toast_wrapper.cpp"
+TOOLTIP_WRAPPER = "fluent_status_info_tooltip_wrapper.cpp"
 ANNOTATED_SCROLL_BAR_WRAPPER = (
     "fluent_scrolling_annotatedscrollbar_wrapper.cpp"
 )
 PIPS_PAGER_WRAPPER = "fluent_scrolling_pipspager_wrapper.cpp"
+COMBO_BOX_WRAPPER = "fluent_basicinput_combobox_wrapper.cpp"
+AUTO_SUGGEST_BOX_WRAPPER = (
+    "fluent_textfields_autosuggestbox_wrapper.cpp"
+)
+LINE_EDIT_WRAPPER = "fluent_textfields_lineedit_wrapper.cpp"
+CALENDAR_DATE_PICKER_WRAPPER = (
+    "fluent_date_time_calendardatepicker_wrapper.cpp"
+)
+DATE_PICKER_WRAPPER = "fluent_date_time_datepicker_wrapper.cpp"
+TIME_PICKER_WRAPPER = "fluent_date_time_timepicker_wrapper.cpp"
+DROP_DOWN_BUTTON_WRAPPER = (
+    "fluent_basicinput_dropdownbutton_wrapper.cpp"
+)
+SPLIT_BUTTON_WRAPPER = "fluent_basicinput_splitbutton_wrapper.cpp"
+FLUENT_MENU_WRAPPER = (
+    "fluent_menus_toolbars_fluentmenu_wrapper.cpp"
+)
+FLUENT_MENU_ITEM_WRAPPER = (
+    "fluent_menus_toolbars_fluentmenuitem_wrapper.cpp"
+)
+COMMAND_BAR_WRAPPER = "fluent_menus_toolbars_commandbar_wrapper.cpp"
+COMMAND_BAR_FLYOUT_WRAPPER = (
+    "fluent_menus_toolbars_commandbarflyout_wrapper.cpp"
+)
+FLUENT_MENU_BAR_WRAPPER = (
+    "fluent_menus_toolbars_fluentmenubar_wrapper.cpp"
+)
 SCROLL_VIEW_WRAPPER = "fluent_scrolling_scrollview_wrapper.cpp"
+DRAWER_VIEW_WRAPPER = "fluent_collections_drawerview_wrapper.cpp"
+CONTENT_DIALOG_WRAPPER = (
+    "fluent_dialogs_flyouts_contentdialog_wrapper.cpp"
+)
+DIALOG_WRAPPER = "fluent_dialogs_flyouts_dialog_wrapper.cpp"
+POPUP_WRAPPER = "fluent_dialogs_flyouts_popup_wrapper.cpp"
+FLYOUT_WRAPPER = "fluent_dialogs_flyouts_flyout_wrapper.cpp"
+COACH_MARK_WRAPPER = "fluent_dialogs_flyouts_coachmark_wrapper.cpp"
+TEACHING_TIP_WRAPPER = "fluent_dialogs_flyouts_teachingtip_wrapper.cpp"
 FLIP_VIEW_WRAPPER = "fluent_collections_flipview_wrapper.cpp"
 SPLIT_VIEW_WRAPPER = "fluent_collections_splitview_wrapper.cpp"
 STACK_CONTENT_HOST_WRAPPER = (
@@ -40,6 +79,21 @@ SELECTOR_BAR_ITEM_WRAPPER = (
 TAB_VIEW_WRAPPER = "fluent_navigation_tabview_wrapper.cpp"
 TAB_VIEW_ITEM_WRAPPER = "fluent_navigation_tabviewitem_wrapper.cpp"
 TAB_STRIP_WRAPPER = "fluent_navigation_tabstrip_wrapper.cpp"
+COMBO_BOX_DELEGATE_WRAPPER = (
+    "fluent_basicinput_comboboxitemdelegate_wrapper.cpp"
+)
+COMBO_BOX_POPUP_WRAPPER = (
+    "fluent_basicinput_combobox_comboboxpopup_wrapper.cpp"
+)
+DATE_TIME_INTERNAL_WRAPPERS = (
+    "fluent_date_time_calendardatepickerpopup_wrapper.cpp",
+    "fluent_date_time_datepickerflyout_wrapper.cpp",
+    "fluent_date_time_timepickerflyout_wrapper.cpp",
+)
+AUTO_SUGGEST_INTERNAL_WRAPPERS = (
+    "fluent_textfields_suggestionlistpopup_wrapper.cpp",
+    "fluent_textfields_autosuggestitemdelegate_wrapper.cpp",
+)
 PROTECTED_HACK = re.compile(
     r"^\s*#\s*define\s+protected\s+public\b",
     re.MULTILINE,
@@ -205,6 +259,24 @@ def verify_no_protected_hack(generated_dir):
             raise RuntimeError(
                 "Generated wrapper uses the protected-access macro hack: "
                 "{0}".format(generated_path)
+            )
+
+
+def verify_no_menus_toolbars_enum_helpers(generated_dir):
+    namespace_path = generated_dir / FLUENT_NAMESPACE_WRAPPER
+    if not namespace_path.is_file():
+        raise RuntimeError(
+            "Generated fluent namespace wrapper was not found: {0}".format(
+                namespace_path
+            )
+        )
+    namespace_source = namespace_path.read_text(encoding="utf-8")
+    for helper_name in ("qt_getEnumMetaObject", "qt_getEnumName"):
+        leaked_helper = "fluent::menus_toolbars::{0}".format(helper_name)
+        if leaked_helper in namespace_source:
+            raise RuntimeError(
+                "Shiboken generated an invalid menus_toolbars Q_ENUM helper: "
+                "{0}".format(leaked_helper)
             )
 
 
@@ -439,8 +511,1212 @@ def verify_navigation_view(generated_dir):
         )
 
 
+def verify_drawer_view(generated_dir):
+    wrapper_path = generated_dir / DRAWER_VIEW_WRAPPER
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated DrawerView wrapper was not found: {0}".format(
+                wrapper_path
+            )
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    if "Sbk_fluent_collections_DrawerViewFunc_setContentWidget(" in source:
+        raise RuntimeError(
+            "DrawerView exposes the runtime content ownership bypass"
+        )
+
+    adapter = extract_function(
+        source,
+        (
+            "static PyObject *"
+            "Sbk_fluent_collections_DrawerViewFunc_"
+            "_setContentWidgetWithOwnership("
+        ),
+    )
+    require_text(
+        adapter,
+        "cppSelf->setContentWidget(cppArg0, cppArg1)",
+        "DrawerView private ownership adapter call",
+    )
+    reject_wrapper_bookkeeping(adapter, "DrawerView ownership adapter")
+
+    content_getter = extract_function(
+        source,
+        "static PyObject *Sbk_fluent_collections_DrawerViewFunc_contentWidget(",
+    )
+    reject_wrapper_bookkeeping(content_getter, "DrawerView::contentWidget")
+
+    content_taker = extract_function(
+        source,
+        (
+            "static PyObject *"
+            "Sbk_fluent_collections_DrawerViewFunc_takeContentWidget("
+        ),
+    )
+    require_text(
+        content_taker,
+        "cppSelf->takeContentWidget()",
+        "DrawerView::takeContentWidget call",
+    )
+    require_text(
+        content_taker,
+        "Shiboken::Object::getOwnership(pyResult)",
+        "DrawerView::takeContentWidget Python ownership transfer",
+    )
+    reject_wrapper_bookkeeping(
+        content_taker,
+        "DrawerView::takeContentWidget",
+        allow_python_ownership=True,
+    )
+
+
+def verify_popup(generated_dir):
+    wrapper_path = generated_dir / POPUP_WRAPPER
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated Popup wrapper was not found: {0}".format(wrapper_path)
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    function_prefix = "Sbk_fluent_dialogs_flyouts_PopupFunc_"
+
+    for public_bypass in (
+        "setPosition",
+        "setThemeSource",
+        "addLightDismissPassthrough",
+        "clearLightDismissPassthrough",
+    ):
+        generated_function = "{0}{1}(".format(
+            function_prefix,
+            public_bypass,
+        )
+        if generated_function in source:
+            raise RuntimeError(
+                "Popup exposes a QWidget dependency bypass: {0}".format(
+                    public_bypass
+                )
+            )
+
+    for protected_hook in (
+        "onThemeUpdated",
+        "computePosition",
+        "automaticPositionAnchor",
+        "setFocusOnOpenEnabled",
+    ):
+        generated_function = "{0}{1}(".format(
+            function_prefix,
+            protected_hook,
+        )
+        if generated_function in source:
+            raise RuntimeError(
+                "Popup exposes its protected C++ overlay hook: {0}".format(
+                    protected_hook
+                )
+            )
+        if "PopupWrapper::{0}(".format(protected_hook) in source:
+            raise RuntimeError(
+                "Popup generates a Python override for C++ hook: {0}".format(
+                    protected_hook
+                )
+            )
+
+    for adapter_name, native_call in (
+        (
+            "_setPositionWithAnchor",
+            "cppSelf->setPosition(cppArg0, *cppArg1)",
+        ),
+        ("_setThemeSource", "cppSelf->setThemeSource(cppArg0)"),
+        (
+            "_addLightDismissPassthrough",
+            "cppSelf->addLightDismissPassthrough(cppArg0)",
+        ),
+        (
+            "_clearLightDismissPassthrough",
+            "cppSelf->clearLightDismissPassthrough()",
+        ),
+    ):
+        adapter = extract_function(
+            source,
+            "static PyObject *{0}{1}(".format(
+                function_prefix,
+                adapter_name,
+            ),
+        )
+        require_text(
+            adapter,
+            native_call,
+            "Popup {0} adapter call".format(adapter_name),
+        )
+        reject_wrapper_bookkeeping(
+            adapter,
+            "Popup {0} adapter".format(adapter_name),
+        )
+
+
+def verify_flyout(generated_dir):
+    wrapper_path = generated_dir / FLYOUT_WRAPPER
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated Flyout wrapper was not found: {0}".format(wrapper_path)
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    function_prefix = "Sbk_fluent_dialogs_flyouts_FlyoutFunc_"
+
+    for public_bypass in ("setAnchor", "showAt"):
+        generated_function = "{0}{1}(".format(
+            function_prefix,
+            public_bypass,
+        )
+        if generated_function in source:
+            raise RuntimeError(
+                "Flyout exposes a QWidget dependency bypass: {0}".format(
+                    public_bypass
+                )
+            )
+
+    for protected_hook in ("computePosition", "automaticPositionAnchor"):
+        generated_function = "{0}{1}(".format(
+            function_prefix,
+            protected_hook,
+        )
+        if generated_function in source:
+            raise RuntimeError(
+                "Flyout exposes its protected C++ placement hook: {0}".format(
+                    protected_hook
+                )
+            )
+
+    for adapter_name, native_call in (
+        ("_setAnchor", "cppSelf->setAnchor(cppArg0)"),
+        ("_showAt", "cppSelf->showAt(cppArg0)"),
+    ):
+        adapter = extract_function(
+            source,
+            "static PyObject *{0}{1}(".format(
+                function_prefix,
+                adapter_name,
+            ),
+        )
+        require_text(
+            adapter,
+            native_call,
+            "Flyout {0} adapter call".format(adapter_name),
+        )
+        reject_wrapper_bookkeeping(
+            adapter,
+            "Flyout {0} adapter".format(adapter_name),
+        )
+
+    anchor_getter = extract_function(
+        source,
+        "static PyObject *{0}anchor(".format(function_prefix),
+    )
+    anchor_calls = (
+        "cppSelf->anchor()",
+        "cppSelf)->anchor()",
+    )
+    if not any(native_call in anchor_getter for native_call in anchor_calls):
+        raise RuntimeError("Flyout::anchor native call is missing")
+    reject_wrapper_bookkeeping(anchor_getter, "Flyout::anchor")
+
+
+def verify_observed_target_overlay(
+    generated_dir,
+    class_name,
+    wrapper_name,
+    adapter_calls,
+    protected_hooks,
+):
+    wrapper_path = generated_dir / wrapper_name
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated {0} wrapper was not found: {1}".format(
+                class_name,
+                wrapper_path,
+            )
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    function_prefix = (
+        "Sbk_fluent_dialogs_flyouts_{0}Func_".format(class_name)
+    )
+
+    for public_bypass in (
+        name[1:] for name, _native_call in adapter_calls
+    ):
+        if "{0}{1}(".format(function_prefix, public_bypass) in source:
+            raise RuntimeError(
+                "{0} exposes a QWidget target dependency bypass: {1}".format(
+                    class_name,
+                    public_bypass,
+                )
+            )
+
+    for protected_hook in protected_hooks:
+        if "{0}{1}(".format(function_prefix, protected_hook) in source:
+            raise RuntimeError(
+                "{0} exposes its protected C++ overlay hook: {1}".format(
+                    class_name,
+                    protected_hook,
+                )
+            )
+        if "{0}Wrapper::{1}(".format(class_name, protected_hook) in source:
+            raise RuntimeError(
+                "{0} generates a Python override for C++ hook: {1}".format(
+                    class_name,
+                    protected_hook,
+                )
+            )
+
+    for adapter_name, native_call in adapter_calls:
+        adapter = extract_function(
+            source,
+            "static PyObject *{0}{1}(".format(
+                function_prefix,
+                adapter_name,
+            ),
+        )
+        require_text(
+            adapter,
+            native_call,
+            "{0} {1} adapter call".format(class_name, adapter_name),
+        )
+        reject_wrapper_bookkeeping(
+            adapter,
+            "{0} {1} adapter".format(class_name, adapter_name),
+        )
+
+    for getter_name in ("target", "contentHost"):
+        getter = extract_function(
+            source,
+            "static PyObject *{0}{1}(".format(
+                function_prefix,
+                getter_name,
+            ),
+        )
+        native_calls = (
+            "cppSelf->{0}()".format(getter_name),
+            "cppSelf)->{0}()".format(getter_name),
+        )
+        if not any(call in getter for call in native_calls):
+            raise RuntimeError(
+                "{0}::{1} native call is missing".format(
+                    class_name,
+                    getter_name,
+                )
+            )
+        reject_wrapper_bookkeeping(
+            getter,
+            "{0}::{1}".format(class_name, getter_name),
+        )
+
+
+def verify_coach_mark(generated_dir):
+    verify_observed_target_overlay(
+        generated_dir,
+        "CoachMark",
+        COACH_MARK_WRAPPER,
+        (("_setTarget", "cppSelf->setTarget(cppArg0)"),),
+        ("onThemeUpdated",),
+    )
+
+
+def verify_teaching_tip(generated_dir):
+    verify_observed_target_overlay(
+        generated_dir,
+        "TeachingTip",
+        TEACHING_TIP_WRAPPER,
+        (
+            ("_setTarget", "cppSelf->setTarget(cppArg0)"),
+            ("_showAt", "cppSelf->showAt(cppArg0)"),
+        ),
+        (
+            "onThemeUpdated",
+            "computePosition",
+            "automaticPositionAnchor",
+        ),
+    )
+
+
+def verify_status_overlays(generated_dir):
+    toast_path = generated_dir / TOAST_WRAPPER
+    tooltip_path = generated_dir / TOOLTIP_WRAPPER
+    module_path = generated_dir / MODULE_WRAPPER
+    for class_name, wrapper_path in (
+        ("Toast", toast_path),
+        ("ToolTip", tooltip_path),
+        ("binding module", module_path),
+    ):
+        if not wrapper_path.is_file():
+            raise RuntimeError(
+                "Generated {0} wrapper was not found: {1}".format(
+                    class_name,
+                    wrapper_path,
+                )
+            )
+
+    toast_source = toast_path.read_text(encoding="utf-8")
+    tooltip_source = tooltip_path.read_text(encoding="utf-8")
+    module_source = module_path.read_text(encoding="utf-8")
+    toast_prefix = "Sbk_fluent_status_info_ToastFunc_"
+    tooltip_prefix = "Sbk_fluent_status_info_ToolTipFunc_"
+
+    for public_bypass in ("present", "showToast", "showOrUpdateToast"):
+        if "{0}{1}(".format(toast_prefix, public_bypass) in toast_source:
+            raise RuntimeError(
+                "Toast exposes native lifecycle bypass: {0}".format(
+                    public_bypass
+                )
+            )
+    for internal_hook in (
+        "toastProgress",
+        "setToastProgress",
+        "onThemeUpdated",
+    ):
+        if "{0}{1}(".format(toast_prefix, internal_hook) in toast_source:
+            raise RuntimeError(
+                "Toast exposes internal API: {0}".format(internal_hook)
+            )
+        if "ToastWrapper::{0}(".format(internal_hook) in toast_source:
+            raise RuntimeError(
+                "Toast generates a Python override for C++ hook: {0}".format(
+                    internal_hook
+                )
+            )
+
+    present_adapter = extract_function(
+        toast_source,
+        "static PyObject *{0}_present(".format(toast_prefix),
+    )
+    require_text(
+        present_adapter,
+        "cppSelf->present(cppArg0)",
+        "Toast private present adapter call",
+    )
+    reject_wrapper_bookkeeping(
+        present_adapter,
+        "Toast private present adapter",
+    )
+
+    action_setter = extract_function(
+        toast_source,
+        "static PyObject *{0}setAction(".format(toast_prefix),
+    )
+    require_text(
+        action_setter,
+        "cppSelf->setAction(cppArg0)",
+        "Toast::setAction native call",
+    )
+    require_text(
+        action_setter,
+        "Shiboken::Object::keepReference",
+        "Toast::setAction borrowed QAction retention",
+    )
+    for forbidden in (
+        "Shiboken::Object::setParent",
+        "Shiboken::Object::releaseOwnership",
+        "Shiboken::Object::getOwnership",
+    ):
+        if forbidden in action_setter:
+            raise RuntimeError(
+                "Toast::setAction changes QAction parent or ownership"
+            )
+
+    action_getter = extract_function(
+        toast_source,
+        "static PyObject *{0}action(".format(toast_prefix),
+    )
+    reject_wrapper_bookkeeping(action_getter, "Toast::action")
+
+    for adapter_name, native_call in (
+        (
+            "showToastForBinding",
+            "showToastForBinding(cppArg0, cppArg1, cppArg2, cppArg3, "
+            "cppArg4, cppArg5",
+        ),
+        (
+            "showOrUpdateToastForBinding",
+            "showOrUpdateToastForBinding(cppArg0, cppArg1, cppArg2, "
+            "cppArg3, cppArg4, cppArg5, cppArg6",
+        ),
+    ):
+        adapter = extract_function(
+            module_source,
+            "static PyObject *Sbk_fluentqtModule_{0}(".format(adapter_name),
+        )
+        require_text(
+            adapter,
+            native_call,
+            "Toast managed factory {0} call".format(adapter_name),
+        )
+        require_text(
+            adapter,
+            "Shiboken::Object::setParent(pyArgs[0], pyResult)",
+            "Toast managed factory actual-host parenting",
+        )
+        for forbidden in (
+            "Shiboken::Object::keepReference",
+            "Shiboken::Object::releaseOwnership",
+            "Shiboken::Object::getOwnership",
+        ):
+            if forbidden in adapter:
+                raise RuntimeError(
+                    "Toast managed factory changes wrapper ownership"
+                )
+
+    tooltip_attach = extract_function(
+        tooltip_source,
+        "static PyObject *{0}attach(".format(tooltip_prefix),
+    )
+    require_text(
+        tooltip_attach,
+        "ToolTip::attach(cppArg0, cppArg1, cppArg2)",
+        "ToolTip::attach native call",
+    )
+    require_text(
+        tooltip_attach,
+        "Shiboken::Object::setParent(pyArgs[0], pyResult)",
+        "ToolTip::attach target parenting",
+    )
+    for forbidden in (
+        "Shiboken::Object::keepReference",
+        "Shiboken::Object::releaseOwnership",
+        "Shiboken::Object::getOwnership",
+    ):
+        if forbidden in tooltip_attach:
+            raise RuntimeError(
+                "ToolTip::attach changes target-owned wrapper ownership"
+            )
+
+    theme_setter = extract_function(
+        tooltip_source,
+        "static PyObject *{0}setThemeSource(".format(tooltip_prefix),
+    )
+    require_text(
+        theme_setter,
+        "cppSelf->setThemeSource(cppArg0)",
+        "ToolTip::setThemeSource native call",
+    )
+    require_text(
+        theme_setter,
+        "Shiboken::Object::keepReference",
+        "ToolTip theme-source wrapper retention",
+    )
+    for forbidden in (
+        "Shiboken::Object::setParent",
+        "Shiboken::Object::releaseOwnership",
+        "Shiboken::Object::getOwnership",
+    ):
+        if forbidden in theme_setter:
+            raise RuntimeError(
+                "ToolTip::setThemeSource changes source parent or ownership"
+            )
+    if "{0}onThemeUpdated(".format(tooltip_prefix) in tooltip_source or (
+        "ToolTipWrapper::onThemeUpdated(" in tooltip_source
+    ):
+        raise RuntimeError("ToolTip exposes internal API onThemeUpdated")
+
+
+def verify_dialog(generated_dir):
+    wrapper_path = generated_dir / DIALOG_WRAPPER
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated Dialog wrapper was not found: {0}".format(wrapper_path)
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    function_prefix = "Sbk_fluent_dialogs_flyouts_DialogFunc_"
+
+    if "{0}setThemeSource(".format(function_prefix) in source:
+        raise RuntimeError("Dialog exposes a QWidget dependency bypass")
+
+    for protected_hook in (
+        "onThemeUpdated",
+        "isAnimating",
+        "ownerWidget",
+        "drawShadow",
+    ):
+        if "{0}{1}(".format(function_prefix, protected_hook) in source:
+            raise RuntimeError(
+                "Dialog exposes its protected C++ hook: {0}".format(
+                    protected_hook
+                )
+            )
+        if "DialogWrapper::{0}(".format(protected_hook) in source:
+            raise RuntimeError(
+                "Dialog generates a Python override for C++ hook: {0}".format(
+                    protected_hook
+                )
+            )
+
+    adapter = extract_function(
+        source,
+        "static PyObject *{0}_setThemeSource(".format(function_prefix),
+    )
+    require_text(
+        adapter,
+        "cppSelf->setThemeSource(cppArg0)",
+        "Dialog private theme source adapter call",
+    )
+    reject_wrapper_bookkeeping(adapter, "Dialog theme source adapter")
+
+
+def verify_content_dialog(generated_dir):
+    wrapper_path = generated_dir / CONTENT_DIALOG_WRAPPER
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated ContentDialog wrapper was not found: {0}".format(
+                wrapper_path
+            )
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    function_prefix = "Sbk_fluent_dialogs_flyouts_ContentDialogFunc_"
+
+    if "{0}setContent(".format(function_prefix) in source:
+        raise RuntimeError("ContentDialog exposes a content ownership bypass")
+    if "{0}onThemeUpdated(".format(function_prefix) in source:
+        raise RuntimeError(
+            "ContentDialog exposes its protected C++ theme hook"
+        )
+    if "ContentDialogWrapper::onThemeUpdated(" in source:
+        raise RuntimeError(
+            "ContentDialog generates a Python override for its theme hook"
+        )
+    if "ContentDialogStaticFields" in source:
+        raise RuntimeError(
+            "ContentDialog generates unsafe flattened static field startup"
+        )
+
+    adapter = extract_function(
+        source,
+        "static PyObject *{0}_setContent(".format(function_prefix),
+    )
+    require_text(
+        adapter,
+        "cppSelf->setContent(cppArg0)",
+        "ContentDialog private content adapter call",
+    )
+    reject_wrapper_bookkeeping(adapter, "ContentDialog content adapter")
+
+    content_getter = extract_function(
+        source,
+        "static PyObject *{0}content(".format(function_prefix),
+    )
+    content_calls = (
+        "cppSelf)->content()",
+        "cppSelf->content()",
+    )
+    if not any(call in content_getter for call in content_calls):
+        raise RuntimeError("ContentDialog::content native call is missing")
+    reject_wrapper_bookkeeping(content_getter, "ContentDialog::content")
+
+
+def verify_combo_box(generated_dir):
+    wrapper_path = generated_dir / COMBO_BOX_WRAPPER
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated ComboBox wrapper was not found: {0}".format(
+                wrapper_path
+            )
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    function_prefix = "Sbk_fluent_basicinput_ComboBoxFunc_"
+
+    for internal_name in ("onThemeUpdated",):
+        if "{0}{1}(".format(function_prefix, internal_name) in source:
+            raise RuntimeError(
+                "ComboBox exposes internal API {0}".format(internal_name)
+            )
+        if "ComboBoxWrapper::{0}(".format(internal_name) in source:
+            raise RuntimeError(
+                "ComboBox generates a Python override for internal API {0}".format(
+                    internal_name
+                )
+            )
+    editor_setter = extract_function(
+        source,
+        "static PyObject *{0}setLineEdit(".format(function_prefix),
+    )
+    require_text(
+        editor_setter,
+        "cppSelf->setLineEdit(cppArg0)",
+        "ComboBox::setLineEdit native call",
+    )
+    require_text(
+        editor_setter,
+        "Shiboken::Object::setParent(self, pyArg)",
+        "ComboBox::setLineEdit Qt parent contract",
+    )
+    for forbidden in (
+        "Shiboken::Object::releaseOwnership",
+        "Shiboken::Object::getOwnership",
+        "Shiboken::Object::keepReference",
+    ):
+        if forbidden in editor_setter:
+            raise RuntimeError(
+                "ComboBox::setLineEdit uses conflicting wrapper bookkeeping"
+            )
+
+    model_setter = extract_function(
+        source,
+        "static PyObject *{0}setModel(".format(function_prefix),
+    )
+    require_text(
+        model_setter,
+        "setModel(cppArg0)",
+        "ComboBox::setModel native call",
+    )
+    require_text(
+        model_setter,
+        "Shiboken::Object::keepReference",
+        "ComboBox::setModel caller-owned retention",
+    )
+    for forbidden in (
+        "Shiboken::Object::releaseOwnership",
+        "Shiboken::Object::getOwnership",
+        "Shiboken::Object::setParent",
+    ):
+        if forbidden in model_setter:
+            raise RuntimeError(
+                "ComboBox::setModel changes caller-owned model ownership"
+            )
+
+    model_getter = extract_function(
+        source,
+        "static PyObject *{0}model(".format(function_prefix),
+    )
+    require_text(
+        model_getter,
+        "model()",
+        "ComboBox::model native call",
+    )
+    reject_wrapper_bookkeeping(model_getter, "ComboBox::model")
+    editor_getter = extract_function(
+        source,
+        "static PyObject *{0}fluentLineEdit(".format(function_prefix),
+    )
+    require_text(
+        editor_getter,
+        "fluentLineEdit()",
+        "ComboBox::fluentLineEdit native call",
+    )
+    require_text(
+        editor_getter,
+        "Shiboken::Object::setParent(self, pyResult)",
+        "ComboBox::fluentLineEdit parent identity",
+    )
+
+    for method_name in ("showPopup", "hidePopup"):
+        override = extract_function(
+            source,
+            "void ComboBoxWrapper::{0}()".format(method_name),
+        )
+        require_text(
+            override,
+            "this->::fluent::basicinput::ComboBox::{0}()".format(
+                method_name
+            ),
+            "ComboBox::{0} native fallback".format(method_name),
+        )
+
+    for internal_wrapper in (
+        COMBO_BOX_DELEGATE_WRAPPER,
+        COMBO_BOX_POPUP_WRAPPER,
+    ):
+        if (generated_dir / internal_wrapper).exists():
+            raise RuntimeError(
+                "ComboBox generated internal helper wrapper: {0}".format(
+                    internal_wrapper
+                )
+            )
+
+
+def verify_auto_suggest_box(generated_dir):
+    wrapper_path = generated_dir / AUTO_SUGGEST_BOX_WRAPPER
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated AutoSuggestBox wrapper was not found: {0}".format(
+                wrapper_path
+            )
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    function_prefix = "Sbk_fluent_textfields_AutoSuggestBoxFunc_"
+
+    line_edit_path = generated_dir / LINE_EDIT_WRAPPER
+    if not line_edit_path.is_file():
+        raise RuntimeError(
+            "Generated LineEdit wrapper was not found: {0}".format(
+                line_edit_path
+            )
+        )
+    line_edit_source = line_edit_path.read_text(encoding="utf-8")
+    if "Sbk_fluent_textfields_LineEditFunc_onThemeUpdated(" in line_edit_source:
+        raise RuntimeError(
+            "LineEdit exposes inherited internal API onThemeUpdated"
+        )
+
+    if "{0}onThemeUpdated(".format(function_prefix) in source:
+        raise RuntimeError(
+            "AutoSuggestBox exposes internal API onThemeUpdated"
+        )
+
+    setter = extract_function(
+        source,
+        "static PyObject *{0}setSuggestions(".format(function_prefix),
+    )
+    require_text(
+        setter,
+        "setSuggestions(cppArg0)",
+        "AutoSuggestBox::setSuggestions native call",
+    )
+    require_text(
+        setter,
+        "QStringList",
+        "AutoSuggestBox::setSuggestions QStringList conversion",
+    )
+    require_text(
+        setter,
+        "pythonToCpp",
+        "AutoSuggestBox::setSuggestions Python conversion",
+    )
+
+    getter = extract_function(
+        source,
+        "static PyObject *{0}suggestions(".format(function_prefix),
+    )
+    require_text(
+        getter,
+        "suggestions()",
+        "AutoSuggestBox::suggestions native call",
+    )
+    require_text(
+        getter,
+        "QStringList",
+        "AutoSuggestBox::suggestions QStringList conversion",
+    )
+    require_text(
+        getter,
+        "copyToPython",
+        "AutoSuggestBox::suggestions Python conversion",
+    )
+
+    for method_name in ("clearSuggestions", "isSuggestionListOpen"):
+        require_text(
+            source,
+            "{0}{1}(".format(function_prefix, method_name),
+            "AutoSuggestBox::{0} wrapper".format(method_name),
+        )
+
+    key_press_event = extract_function(
+        source,
+        "void AutoSuggestBoxWrapper::keyPressEvent(",
+    )
+    require_text(
+        key_press_event,
+        (
+            "return this->::fluent::textfields::AutoSuggestBox::"
+            "keyPressEvent(event);"
+        ),
+        "AutoSuggestBox::keyPressEvent native fallback",
+    )
+
+    for internal_wrapper in AUTO_SUGGEST_INTERNAL_WRAPPERS:
+        if (generated_dir / internal_wrapper).exists():
+            raise RuntimeError(
+                "AutoSuggestBox generated internal helper wrapper: {0}".format(
+                    internal_wrapper
+                )
+            )
+
+
+def verify_menu_button(generated_dir, class_name, wrapper_name):
+    wrapper_path = generated_dir / wrapper_name
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated {0} wrapper was not found: {1}".format(
+                class_name,
+                wrapper_path,
+            )
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    function_prefix = "Sbk_fluent_basicinput_{0}Func_".format(class_name)
+
+    setter = extract_function(
+        source,
+        "static PyObject *{0}setMenu(".format(function_prefix),
+    )
+    require_text(
+        setter,
+        "setMenu(cppArg0)",
+        "{0}::setMenu native call".format(class_name),
+    )
+    require_text(
+        setter,
+        "Shiboken::Object::keepReference",
+        "{0}::setMenu caller-owned retention".format(class_name),
+    )
+    for forbidden in (
+        "Shiboken::Object::releaseOwnership",
+        "Shiboken::Object::getOwnership",
+        "Shiboken::Object::setParent",
+    ):
+        if forbidden in setter:
+            raise RuntimeError(
+                "{0}::setMenu changes caller-owned menu ownership".format(
+                    class_name
+                )
+            )
+
+    getter = extract_function(
+        source,
+        "static PyObject *{0}menu(".format(function_prefix),
+    )
+    require_text(
+        getter,
+        "menu()",
+        "{0}::menu native call".format(class_name),
+    )
+    reject_wrapper_bookkeeping(
+        getter,
+        "{0}::menu".format(class_name),
+    )
+
+
+def verify_menu_bindings(generated_dir):
+    verify_menu_button(
+        generated_dir,
+        "DropDownButton",
+        DROP_DOWN_BUTTON_WRAPPER,
+    )
+    verify_menu_button(
+        generated_dir,
+        "SplitButton",
+        SPLIT_BUTTON_WRAPPER,
+    )
+
+    for class_name, wrapper_name in (
+        ("FluentMenu", FLUENT_MENU_WRAPPER),
+        ("FluentMenuItem", FLUENT_MENU_ITEM_WRAPPER),
+    ):
+        wrapper_path = generated_dir / wrapper_name
+        if not wrapper_path.is_file():
+            raise RuntimeError(
+                "Generated {0} wrapper was not found: {1}".format(
+                    class_name,
+                    wrapper_path,
+                )
+            )
+        source = wrapper_path.read_text(encoding="utf-8")
+        function_prefix = (
+            "Sbk_fluent_menus_toolbars_{0}Func_onThemeUpdated(".format(
+                class_name
+            )
+        )
+        if function_prefix in source or (
+            "{0}Wrapper::onThemeUpdated(".format(class_name) in source
+        ):
+            raise RuntimeError(
+                "{0} exposes internal API onThemeUpdated".format(class_name)
+            )
+
+
+def verify_command_action_surface(
+    generated_dir,
+    class_name,
+    wrapper_name,
+    sync_helper,
+):
+    wrapper_path = generated_dir / wrapper_name
+    if not wrapper_path.is_file():
+        raise RuntimeError(
+            "Generated {0} wrapper was not found: {1}".format(
+                class_name,
+                wrapper_path,
+            )
+        )
+    source = wrapper_path.read_text(encoding="utf-8")
+    if "%CLASS_NAME" in source:
+        raise RuntimeError(
+            "{0} contains an unresolved Shiboken class placeholder".format(
+                class_name
+            )
+        )
+    if source.count(
+        "static inline PyObject *addActionWithPyObject("
+    ) != 4:
+        raise RuntimeError(
+            "{0} is missing QWidget callable addAction glue".format(
+                class_name
+            )
+        )
+    if (
+        source.count("new QAction(") != 4
+        or source.count("self->addAction(action);") != 4
+    ):
+        raise RuntimeError(
+            "{0} callable addAction glue does not use Qt 6.2-compatible "
+            "QAction construction".format(class_name)
+        )
+
+    helper = extract_function(source, "static void {0}(".format(sync_helper))
+    for section in ("primaryActions", "secondaryActions"):
+        require_text(
+            helper,
+            '"{0}.{1}"'.format(class_name, section),
+            "{0} {1} reference key".format(class_name, section),
+        )
+    for expected, description in (
+        ("Shiboken::Object::removeReference", "old-section release"),
+        ("primaryActions().contains(action)", "primary membership check"),
+        (
+            "secondaryActions().contains(action)",
+            "secondary membership check",
+        ),
+        ("Shiboken::Object::keepReference", "borrowed-action retention"),
+    ):
+        require_text(
+            helper,
+            expected,
+            "{0} {1}".format(class_name, description),
+        )
+
+    function_prefix = (
+        "Sbk_fluent_menus_toolbars_{0}Func_".format(class_name)
+    )
+    action_methods = (
+        "addAction",
+        "insertAction",
+        "removeAction",
+        "addPrimaryAction",
+        "insertPrimaryAction",
+        "addSecondaryAction",
+        "insertSecondaryAction",
+        "removeCommandAction",
+    )
+    for method_name in action_methods:
+        function = extract_function(
+            source,
+            "static PyObject *{0}{1}(".format(
+                function_prefix,
+                method_name,
+            ),
+        )
+        native_call = "cppSelf->{0}(".format(method_name)
+        native_index = function.find(native_call)
+        sync_index = function.find(sync_helper, native_index + 1)
+        if native_index < 0 or sync_index < 0 or sync_index < native_index:
+            raise RuntimeError(
+                "{0}::{1} does not synchronize borrowed action references "
+                "after the native mutation".format(class_name, method_name)
+            )
+        mutation_tail = function[native_index:sync_index]
+        for forbidden in (
+            "Shiboken::Object::releaseOwnership",
+            "Shiboken::Object::getOwnership",
+            "Shiboken::Object::setParent(self",
+        ):
+            if forbidden in mutation_tail:
+                raise RuntimeError(
+                    "{0}::{1} changes borrowed QAction ownership".format(
+                        class_name,
+                        method_name,
+                    )
+                )
+
+    for method_name, section in (
+        ("clearPrimaryActions", "primaryActions"),
+        ("clearSecondaryActions", "secondaryActions"),
+    ):
+        function = extract_function(
+            source,
+            "static PyObject *{0}{1}(".format(
+                function_prefix,
+                method_name,
+            ),
+        )
+        native_index = function.find("cppSelf->{0}(".format(method_name))
+        release_index = function.find("Shiboken::Object::keepReference")
+        if (
+            native_index < 0
+            or release_index < 0
+            or release_index < native_index
+        ):
+            raise RuntimeError(
+                "{0}::{1} releases Python action references before the "
+                "native clear".format(class_name, method_name)
+            )
+        require_text(
+            function,
+            '"{0}.{1}"'.format(class_name, section),
+            "{0}::{1} section key".format(class_name, method_name),
+        )
+        require_text(
+            function,
+            "Py_None",
+            "{0}::{1} reference release".format(class_name, method_name),
+        )
+
+    if "Py_TPFLAGS_BASETYPE" not in source and class_name == "CommandBar":
+        raise RuntimeError("CommandBar unexpectedly rejects Python subclasses")
+    if "Sbk_fluent_menus_toolbars_{0}Func_onThemeUpdated(".format(
+        class_name
+    ) in source:
+        raise RuntimeError(
+            "{0} exposes internal API onThemeUpdated".format(class_name)
+        )
+    return source
+
+
+def verify_command_surfaces(generated_dir):
+    verify_command_action_surface(
+        generated_dir,
+        "CommandBar",
+        COMMAND_BAR_WRAPPER,
+        "syncCommandBarActionReference",
+    )
+    flyout_source = verify_command_action_surface(
+        generated_dir,
+        "CommandBarFlyout",
+        COMMAND_BAR_FLYOUT_WRAPPER,
+        "syncCommandBarFlyoutActionReference",
+    )
+    # Shiboken 6.2 leaves BASETYPE on final classes. The Python facade rejects
+    # subclassing; the native safety contract is that no virtual shell exists.
+    if (
+        "class CommandBarFlyoutWrapper" in flyout_source
+        or "CommandBarFlyoutWrapper::" in flyout_source
+    ):
+        raise RuntimeError(
+            "CommandBarFlyout is final in C++ but generated a virtual "
+            "wrapper shell"
+        )
+    for method_name in ("setAnchor", "showAt", "showAtPoint"):
+        function = extract_function(
+            flyout_source,
+            (
+                "static PyObject *"
+                "Sbk_fluent_menus_toolbars_CommandBarFlyoutFunc_{0}("
+            ).format(method_name),
+        )
+        require_text(
+            function,
+            '"CommandBarFlyout.anchor"',
+            "CommandBarFlyout::{0} invocation-source retention".format(
+                method_name
+            ),
+        )
+        native_index = function.find("cppSelf->{0}(".format(method_name))
+        retain_index = function.find("Shiboken::Object::keepReference")
+        if native_index < 0 or retain_index < native_index:
+            raise RuntimeError(
+                "CommandBarFlyout::{0} retains its invocation source "
+                "before the native call".format(method_name)
+            )
+    for internal_method in (
+        "computePosition",
+        "automaticPositionAnchor",
+    ):
+        if (
+            "Sbk_fluent_menus_toolbars_CommandBarFlyoutFunc_{0}(".format(
+                internal_method
+            )
+            in flyout_source
+        ):
+            raise RuntimeError(
+                "CommandBarFlyout exposes internal API {0}".format(
+                    internal_method
+                )
+            )
+
+    menu_bar_path = generated_dir / FLUENT_MENU_BAR_WRAPPER
+    if not menu_bar_path.is_file():
+        raise RuntimeError(
+            "Generated FluentMenuBar wrapper was not found: {0}".format(
+                menu_bar_path
+            )
+        )
+    menu_bar_source = menu_bar_path.read_text(encoding="utf-8")
+    if (
+        "Sbk_fluent_menus_toolbars_FluentMenuBarFunc_onThemeUpdated("
+        in menu_bar_source
+        or "FluentMenuBarWrapper::onThemeUpdated(" in menu_bar_source
+    ):
+        raise RuntimeError("FluentMenuBar exposes internal API onThemeUpdated")
+
+
+def verify_date_time_pickers(generated_dir):
+    picker_contracts = (
+        (
+            "CalendarDatePicker",
+            CALENDAR_DATE_PICKER_WRAPPER,
+            ("openCalendar", "closeCalendar"),
+        ),
+        ("DatePicker", DATE_PICKER_WRAPPER, ("openPicker", "closePicker")),
+        ("TimePicker", TIME_PICKER_WRAPPER, ("openPicker", "closePicker")),
+    )
+    sources = {}
+    for class_name, wrapper_name, lifecycle_methods in picker_contracts:
+        wrapper_path = generated_dir / wrapper_name
+        if not wrapper_path.is_file():
+            raise RuntimeError(
+                "Generated {0} wrapper was not found: {1}".format(
+                    class_name,
+                    wrapper_path,
+                )
+            )
+        source = wrapper_path.read_text(encoding="utf-8")
+        sources[class_name] = source
+        function_prefix = "Sbk_fluent_date_time_{0}Func_".format(class_name)
+        for method_name in lifecycle_methods:
+            require_text(
+                source,
+                "{0}{1}(".format(function_prefix, method_name),
+                "{0}::{1} wrapper".format(class_name, method_name),
+            )
+        if "{0}onThemeUpdated(".format(function_prefix) in source:
+            raise RuntimeError(
+                "{0} exposes internal API onThemeUpdated".format(class_name)
+            )
+
+    calendar_getter = extract_function(
+        sources["CalendarDatePicker"],
+        (
+            "static PyObject *"
+            "Sbk_fluent_date_time_CalendarDatePickerFunc_calendarView("
+        ),
+    )
+    require_text(
+        calendar_getter,
+        "calendarView()",
+        "CalendarDatePicker::calendarView native call",
+    )
+    reject_wrapper_bookkeeping(
+        calendar_getter,
+        "CalendarDatePicker::calendarView",
+    )
+
+    for internal_wrapper in DATE_TIME_INTERNAL_WRAPPERS:
+        if (generated_dir / internal_wrapper).exists():
+            raise RuntimeError(
+                "Date/time picker generated internal helper wrapper: {0}".format(
+                    internal_wrapper
+                )
+            )
+
+
 def verify_contracts(generated_dir, check_backdrop_converter):
     verify_no_protected_hack(generated_dir)
+    verify_no_menus_toolbars_enum_helpers(generated_dir)
+    verify_drawer_view(generated_dir)
+    verify_popup(generated_dir)
+    verify_flyout(generated_dir)
+    verify_coach_mark(generated_dir)
+    verify_teaching_tip(generated_dir)
+    verify_status_overlays(generated_dir)
+    verify_dialog(generated_dir)
+    verify_content_dialog(generated_dir)
+    verify_combo_box(generated_dir)
+    verify_auto_suggest_box(generated_dir)
+    verify_menu_bindings(generated_dir)
+    verify_command_surfaces(generated_dir)
+    verify_date_time_pickers(generated_dir)
 
     window_path = generated_dir / WINDOW_WRAPPER
     if not window_path.is_file():
@@ -449,6 +1725,87 @@ def verify_contracts(generated_dir, check_backdrop_converter):
         )
 
     window_source = window_path.read_text(encoding="utf-8")
+    if "Sbk_fluent_windowing_WindowFunc_onThemeUpdated(" in window_source:
+        raise RuntimeError("Window exposes internal API onThemeUpdated")
+
+    title_bar_getter = extract_function(
+        window_source,
+        "static PyObject *Sbk_fluent_windowing_WindowFunc_titleBar(",
+    )
+    require_text(
+        title_bar_getter,
+        "titleBar()",
+        "Window::titleBar native call",
+    )
+    require_text(
+        title_bar_getter,
+        "Shiboken::Object::setParent(self, pyResult)",
+        "Window::titleBar Qt-owned child lifetime",
+    )
+    for forbidden, description in (
+        ("releaseOwnership", "transfers the child to C++"),
+        ("getOwnership", "transfers the child to Python"),
+        ("keepReference", "uses duplicate keep-reference bookkeeping"),
+    ):
+        if forbidden in title_bar_getter:
+            raise RuntimeError("Window::titleBar {0}".format(description))
+
+    title_bar_path = generated_dir / TITLE_BAR_WRAPPER
+    if not title_bar_path.is_file():
+        raise RuntimeError(
+            "Generated TitleBar wrapper was not found: {0}".format(
+                title_bar_path
+            )
+        )
+    title_bar_source = title_bar_path.read_text(encoding="utf-8")
+    if "Sbk_fluent_windowing_TitleBarFunc_onThemeUpdated(" in title_bar_source:
+        raise RuntimeError("TitleBar exposes internal API onThemeUpdated")
+
+    title_bar_setter = extract_function(
+        title_bar_source,
+        "static PyObject *Sbk_fluent_windowing_TitleBarFunc_setContentWidget(",
+    )
+    for expected, description in (
+        ("oldChild = cppSelf->contentWidget()", "old child lookup"),
+        ("Shiboken::Object::setParent(nullptr, pyChild)", "old child release"),
+        ("Shiboken::Object::releaseOwnership(pyChild)", "Python ownership return"),
+        ("Shiboken::Object::setParent(self, pyArg)", "new child parent"),
+        ("cppSelf->setContentWidget(cppArg0)", "native call"),
+    ):
+        require_text(
+            title_bar_setter,
+            expected,
+            "TitleBar::setContentWidget {0}".format(description),
+        )
+    if "keepReference" in title_bar_setter:
+        raise RuntimeError(
+            "TitleBar::setContentWidget uses duplicate keep-reference bookkeeping"
+        )
+
+    title_bar_content_getter = extract_function(
+        title_bar_source,
+        "static PyObject *Sbk_fluent_windowing_TitleBarFunc_contentWidget(",
+    )
+    require_text(
+        title_bar_content_getter,
+        "contentWidget()",
+        "TitleBar::contentWidget native call",
+    )
+    require_text(
+        title_bar_content_getter,
+        "Shiboken::Object::setParent(self, pyResult)",
+        "TitleBar::contentWidget Qt-owned child lifetime",
+    )
+    for forbidden, description in (
+        ("releaseOwnership", "transfers the child to C++"),
+        ("getOwnership", "transfers the child to Python"),
+        ("keepReference", "uses duplicate keep-reference bookkeeping"),
+    ):
+        if forbidden in title_bar_content_getter:
+            raise RuntimeError(
+                "TitleBar::contentWidget {0}".format(description)
+            )
+
     native_event = extract_function(
         window_source,
         "bool WindowWrapper::nativeEvent(",
@@ -2009,6 +3366,21 @@ def verify_contracts(generated_dir, check_backdrop_converter):
             )
     verified_contracts = [
         "nativeEvent",
+        "Window and TitleBar chrome ownership",
+        "DrawerView overlay ownership",
+        "Popup QWidget dependency lifetime",
+        "Flyout anchor dependency lifetime",
+        "CoachMark target dependency lifetime",
+        "TeachingTip target dependency lifetime",
+        "Toast and ToolTip overlay lifetime",
+        "Dialog theme source lifetime",
+        "ContentDialog content ownership",
+        "ComboBox dropdown and editor ownership",
+        "AutoSuggestBox suggestion popup privacy",
+        "Fluent menu ownership",
+        "menus/toolbars Qt 6.2 enum extraction",
+        "command surface borrowed action ownership",
+        "date/time picker popup privacy",
         "ScrollView ownership",
         "FlipView page ownership",
         "SplitView pane ownership",

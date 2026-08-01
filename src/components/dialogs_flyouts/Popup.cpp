@@ -223,6 +223,12 @@ void Popup::open() {
 
     m_anim->stop();
     m_isClosing = false;
+    m_focusRestoreTarget = nullptr;
+    if (m_overlayCoordinator->focusOnOpenEnabled() && qApp) {
+        QWidget* focused = QApplication::focusWidget();
+        if (focused && focused != this && !isAncestorOf(focused))
+            m_focusRestoreTarget = focused;
+    }
 
     QWidget* top = originalParentTopLevel();
     m_overlayCoordinator->attachTo(top);
@@ -347,8 +353,19 @@ void Popup::finalizeOpened() {
 
 void Popup::finalizeClosed() {
     m_isClosing = false;
+    QWidget* focused = qApp ? QApplication::focusWidget() : nullptr;
+    const bool shouldRestoreFocus =
+        !focused || focused == this || isAncestorOf(focused);
+    QPointer<QWidget> focusRestoreTarget = m_focusRestoreTarget;
+    m_focusRestoreTarget = nullptr;
     hide();
     destroyScrim();
+    if (shouldRestoreFocus && focusRestoreTarget
+        && focusRestoreTarget->isVisible()
+        && focusRestoreTarget->isEnabled()
+        && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
+        focusRestoreTarget->setFocus(Qt::PopupFocusReason);
+    }
     if (m_isOpen) {
         m_isOpen = false;
         QPointer<Popup> guard(this);
@@ -391,6 +408,10 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
     QWidget* positionAnchor = trackedPositionAnchor();
     if (event && positionAnchor && event->type() == QEvent::Destroy
         && watched == positionAnchor) {
+        // The invocation target is already inside QObject destruction. Do not
+        // let finalizeClosed() call setFocus() on it while closing the overlay.
+        // zh_CN: 调用目标已进入 QObject 析构；关闭浮层时不能再向其归还焦点。
+        m_focusRestoreTarget = nullptr;
         close();
         return false;
     }
