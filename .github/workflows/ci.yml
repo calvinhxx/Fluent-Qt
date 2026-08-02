@@ -34,6 +34,7 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
       mode: ${{ steps.matrix.outputs.mode }}
+      pyside_release_matrix: ${{ steps.matrix.outputs.pyside_release_matrix }}
       should_build: ${{ steps.changes.outputs.should_build }}
     steps:
       - name: Checkout
@@ -43,6 +44,8 @@ jobs:
         shell: bash
         run: |
           python3 .github/scripts/validate-package-matrix.py
+          python3 .github/scripts/validate-pyside-wheel-matrix.py
+          python3 .github/scripts/test_validate_pyside_wheel_matrix.py
           python3 .github/scripts/validate-project-metadata.py
           python3 .github/scripts/validate-gallery-boundary.py
 
@@ -430,8 +433,14 @@ jobs:
             )"
           fi
 
+          pyside_release_matrix="$(
+            jq -c \
+              '{include: [.scenarios[] | select(.release == true and .fast == false)]}' \
+              bindings/pyside6/wheel-matrix.json
+          )"
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "pyside_release_matrix=$pyside_release_matrix" >> "$GITHUB_OUTPUT"
           echo "Selected $mode validation matrix."
 
   build:
@@ -939,7 +948,8 @@ jobs:
               bindings/pyside6/tools/build_wheel.py \
               bindings/pyside6/tools/generate_stubs.py \
               bindings/pyside6/tools/verify_generated_contracts.py \
-              bindings/pyside6/tools/verify_stubs.py; do
+              bindings/pyside6/tools/verify_stubs.py \
+              bindings/pyside6/wheel-matrix.json; do
             if ! grep -x "FluentQt-ci-source/$binding_file" \
                 <<< "$archive_entries" > /dev/null; then
               echo "::error::Missing PySide6 source-package file: $binding_file"
@@ -1722,9 +1732,403 @@ jobs:
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
 
+  pyside6_release:
+    name: ${{ matrix.name }}
+    needs: plan
+    if: ${{ needs.plan.outputs.should_build == 'true' && needs.plan.outputs.mode == 'full' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.timeout_minutes }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.pyside_release_matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Verify native runner architecture
+        shell: pwsh
+        run: |
+          if ("${{ runner.arch }}" -ne "${{ matrix.runner_arch }}") {
+            throw "Expected runner architecture '${{ matrix.runner_arch }}', got '${{ runner.arch }}'."
+          }
+
+      - name: Install Linux build tools
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh aqt
+
+      - name: Install Python ${{ matrix.python_version }} ${{ matrix.arch }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python_version }}
+          architecture: ${{ matrix.python_arch }}
+
+      - name: Install Qt ${{ matrix.qt_version }} SDK
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          host: ${{ matrix.qt_host }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+          setup-python: false
+
+      - name: Install matching PySide6 and Shiboken6
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          python -m pip install "PySide6-Essentials==${{ matrix.pyside_version }}"
+          python -m pip install `
+            --index-url https://download.qt.io/official_releases/QtForPython/ `
+            "shiboken6_generator==${{ matrix.shiboken_version }}"
+
+      - name: Install Clang 19 builtin headers for Shiboken
+        if: >-
+          ${{
+            runner.os == 'Linux' ||
+            (runner.os == 'Windows' && matrix.arch == 'arm64')
+          }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $clangOutput = Join-Path $env:RUNNER_TEMP "shiboken-clang-19"
+          $clangRoot = python .github/scripts/setup-shiboken-clang.py `
+            --clang-major 19 `
+            --output $clangOutput
+          $clangRoot = $clangRoot.Trim()
+          $clangArmTypes = Join-Path `
+            $clangRoot `
+            "lib/clang/19/include/arm_vector_types.h"
+          if (!(Test-Path $clangArmTypes -PathType Leaf)) {
+            throw "Clang 19 builtin headers were not installed at $clangRoot."
+          }
+          "CLANG_INSTALL_DIR=$clangRoot" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Using Clang 19 builtin headers from $clangRoot"
+
+      - name: Configure PySide6 bindings on Unix
+        if: ${{ runner.os != 'Windows' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          configure_args=(
+            -S .
+            -B "${{ matrix.build_dir }}"
+            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+            -DPython_EXECUTABLE="$(command -v python)"
+            -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON
+            -DFLUENT_QT_BUILD_EXAMPLES=OFF
+            -DFLUENT_QT_BUILD_GALLERY=OFF
+            -DFLUENT_QT_BUILD_TESTS=OFF
+            -DFLUENT_QT_INSTALL=OFF
+            -DBUILD_TESTING=ON
+          )
+          if [[ -n "${{ matrix.macos_deployment_target }}" ]]; then
+            configure_args+=(
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.macos_deployment_target }}
+            )
+          fi
+          cmake "${configure_args[@]}"
+
+      - name: Configure PySide6 bindings on Windows
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
+          $python = (Get-Command python).Source -replace '\\', '/'
+          $configureArgs = @(
+            "-S", ".",
+            "-B", "${{ matrix.build_dir }}",
+            "-G", "Visual Studio 17 2022",
+            "-A", "${{ matrix.cmake_arch }}",
+            "-DCMAKE_PREFIX_PATH=$qtRoot",
+            "-DPython_EXECUTABLE=$python",
+            "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
+            "-DFLUENT_QT_BUILD_EXAMPLES=OFF",
+            "-DFLUENT_QT_BUILD_GALLERY=OFF",
+            "-DFLUENT_QT_BUILD_TESTS=OFF",
+            "-DFLUENT_QT_INSTALL=OFF",
+            "-DBUILD_TESTING=ON"
+          )
+          cmake @configureArgs
+
+      - name: Build PySide6 bindings
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake --build "${{ matrix.build_dir }}" `
+            --config Release `
+            --target fluentqt_pyside6_stubs `
+            --parallel "${{ matrix.build_parallel }}"
+
+      - name: Verify generated binding contracts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $verifyArgs = @(
+            "bindings/pyside6/tools/verify_generated_contracts.py",
+            "--generated-dir",
+            "${{ matrix.build_dir }}/bindings/pyside6/generated/_fluentqt"
+          )
+          if ("${{ matrix.check_backdrop_converter }}" -eq "true") {
+            $verifyArgs += "--check-backdrop-converter"
+          }
+          python @verifyArgs
+
+      - name: Test PySide6 bindings
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          Remove-Item Env:LD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:DYLD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
+          ctest --test-dir "${{ matrix.build_dir }}" `
+            -C Release `
+            -L '^pyside$' `
+            --output-on-failure `
+            --no-tests=error
+
+      - name: Build relocatable PySide6 wheel
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          cmake --build "${{ matrix.build_dir }}" `
+            --config Release `
+            --target fluentqt_pyside6_wheel `
+            --parallel "${{ matrix.build_parallel }}"
+
+      - name: Test wheel in a clean virtual environment
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          $wheels = @(
+            Get-ChildItem `
+              -Path "${{ matrix.build_dir }}/wheelhouse" `
+              -Filter '*.whl' `
+              -File
+          )
+          if ($wheels.Count -ne 1) {
+            throw "Expected one FluentQt wheel, found $($wheels.Count)."
+          }
+          $wheel = $wheels[0]
+          $expectedSuffix = "-${{ matrix.expected_wheel_suffix }}.whl"
+          if (!$wheel.Name.EndsWith($expectedSuffix)) {
+            throw "Unexpected wheel tag: $($wheel.Name); expected *$expectedSuffix"
+          }
+
+          $cleanVenv = Join-Path $env:RUNNER_TEMP "fluentqt-release-wheel-smoke"
+          python -m venv $cleanVenv
+          if ($IsWindows) {
+            $cleanPython = Join-Path $cleanVenv "Scripts/python.exe"
+          } else {
+            $cleanPython = Join-Path $cleanVenv "bin/python"
+          }
+          & $cleanPython -m pip install $wheel.FullName
+          $wheelVersion = & $cleanPython -c 'from importlib.metadata import version; print(version("FluentQt"))'
+
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          Remove-Item Env:LD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:DYLD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $env:FLUENTQT_EXPECTED_VERSION = $wheelVersion.Trim()
+          & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
+          & $cleanPython -m pip check
+          & $cleanPython -m pip install mypy==2.3.0
+          & $cleanPython -m mypy `
+            --strict `
+            --no-incremental `
+            --no-error-summary `
+            bindings/pyside6/tests/test_typecheck_smoke.py
+          & $cleanPython `
+            bindings/pyside6/examples/compatibility_showcase.py `
+            --snapshot (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-showcase.png")
+          & $cleanPython `
+            bindings/pyside6/examples/auto_suggest_box.py `
+            --snapshot (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-auto-suggest-box.png")
+          & $cleanPython `
+            bindings/pyside6/examples/guidance_overlays.py `
+            --snapshot (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-guidance-overlays.png")
+          & $cleanPython `
+            bindings/pyside6/examples/command_surfaces.py `
+            --snapshot (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-command-surfaces.png")
+
+      - name: Audit Linux wheel runtime paths
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          clean_venv="${RUNNER_TEMP}/fluentqt-release-wheel-smoke"
+          module="$(
+            env -u PYTHONPATH "$clean_venv/bin/python" -c \
+              'import fluentqt._fluentqt as native; print(native.__file__)'
+          )"
+          dynamic_section="$(readelf -d "$module")"
+          printf '%s\n' "$dynamic_section"
+          grep -F '$ORIGIN/../PySide6' <<< "$dynamic_section"
+          if grep -F "$GITHUB_WORKSPACE" <<< "$dynamic_section"; then
+            echo "::error::Installed wheel retained a build-tree RPATH."
+            exit 1
+          fi
+
+          dependencies="$(env -u LD_LIBRARY_PATH ldd "$module")"
+          printf '%s\n' "$dependencies"
+          mapfile -t runtime_paths < <(
+            awk \
+              '$1 ~ /^(libQt6(Core|Gui|Widgets)\.so|libpyside6|libshiboken6)/ {print $3}' \
+              <<< "$dependencies"
+          )
+          if (( ${#runtime_paths[@]} < 5 )); then
+            echo "::error::Expected Qt, PySide6, and Shiboken6 dependencies."
+            exit 1
+          fi
+          for runtime_path in "${runtime_paths[@]}"; do
+            resolved_path="$(realpath "$runtime_path")"
+            case "$resolved_path" in
+              "$clean_venv"/*) ;;
+              *)
+                echo "::error::Wheel dependency resolved outside the clean venv: $resolved_path"
+                exit 1
+                ;;
+            esac
+          done
+
+      - name: Audit macOS wheel runtime paths and architecture
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          clean_venv="${RUNNER_TEMP}/fluentqt-release-wheel-smoke"
+          module="$(
+            env -u PYTHONPATH "$clean_venv/bin/python" -c \
+              'import fluentqt._fluentqt as native; print(native.__file__)'
+          )"
+          rpaths="$(
+            otool -l "$module" \
+              | awk '/cmd LC_RPATH/ {getline; getline; print $2}'
+          )"
+          printf '%s\n' "$rpaths"
+          grep -Fx '@loader_path/../PySide6' <<< "$rpaths"
+          grep -Fx '@loader_path/../shiboken6' <<< "$rpaths"
+          grep -Fx '@loader_path/../PySide6/Qt/lib' <<< "$rpaths"
+          if grep -E '^/' <<< "$rpaths"; then
+            echo "::error::Installed wheel retained an absolute RPATH."
+            exit 1
+          fi
+
+          dependencies="$(otool -L "$module")"
+          printf '%s\n' "$dependencies"
+          architecture="$(lipo -archs "$module")"
+          if [[ "$architecture" != "${{ matrix.binary_arch }}" ]]; then
+            echo "::error::Expected ${{ matrix.binary_arch }} extension, found: $architecture"
+            exit 1
+          fi
+          deployment_target="$(
+            otool -l "$module" \
+              | awk '
+                  /cmd LC_BUILD_VERSION/ { in_build_version = 1; next }
+                  in_build_version && $1 == "minos" { print $2; exit }
+                '
+          )"
+          if [[ "$deployment_target" != "${{ matrix.macos_deployment_target }}" ]]; then
+            echo "::error::Expected macOS deployment target ${{ matrix.macos_deployment_target }}, found: $deployment_target"
+            exit 1
+          fi
+
+      - name: Verify native X11 Window and TitleBar
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          clean_venv="${RUNNER_TEMP}/fluentqt-release-wheel-smoke"
+          xvfb-run -a env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=xcb \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/window_chrome.py \
+            --verify-native \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.png" \
+            --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
+
+      - name: Verify native Windows Window and TitleBar
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $cleanPython = Join-Path `
+            $env:RUNNER_TEMP `
+            "fluentqt-release-wheel-smoke/Scripts/python.exe"
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
+          $env:QT_QPA_PLATFORM = "windows"
+          & $cleanPython `
+            bindings/pyside6/examples/window_chrome.py `
+            --verify-native `
+            --snapshot (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-window-chrome.png") `
+            --report (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-window-chrome.json")
+
+      - name: Verify native Cocoa Window and TitleBar
+        if: ${{ runner.os == 'macOS' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          clean_venv="${RUNNER_TEMP}/fluentqt-release-wheel-smoke"
+          env \
+            -u PYTHONPATH \
+            -u DYLD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=cocoa \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/examples/window_chrome.py \
+            --verify-native \
+            --snapshot "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.png" \
+            --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
+
+      - name: Upload PySide6 release wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-pyside6-${{ matrix.artifact_suffix }}
+          path: ${{ matrix.build_dir }}/wheelhouse/*.whl
+          if-no-files-found: error
+
+      - name: Upload PySide6 release acceptance snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-pyside6-showcase-${{ matrix.artifact_suffix }}
+          path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
+          if-no-files-found: error
+
+      - name: Upload PySide6 release native window acceptance
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-pyside6-window-chrome-${{ matrix.artifact_suffix }}
+          path: |
+            ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
+            ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
+          if-no-files-found: error
+
   ci-gate:
     name: CI Gate
-    needs: [plan, build, integration, pyside6_linux, pyside6_windows, pyside6_macos]
+    needs: [plan, build, integration, pyside6_linux, pyside6_windows, pyside6_macos, pyside6_release]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -1737,6 +2141,8 @@ jobs:
           PYSIDE6_LINUX_RESULT: ${{ needs.pyside6_linux.result }}
           PYSIDE6_WINDOWS_RESULT: ${{ needs.pyside6_windows.result }}
           PYSIDE6_MACOS_RESULT: ${{ needs.pyside6_macos.result }}
+          PYSIDE6_RELEASE_RESULT: ${{ needs.pyside6_release.result }}
+          MODE: ${{ needs.plan.outputs.mode }}
           SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}
         shell: bash
         run: |
@@ -1766,6 +2172,10 @@ jobs:
             echo "::error::The macOS arm64 PySide6 Qt 6.9 validation finished with result: $PYSIDE6_MACOS_RESULT"
             exit 1
           fi
+          if [[ "$SHOULD_BUILD" == "true" && "$MODE" == "full" && "$PYSIDE6_RELEASE_RESULT" != "success" ]]; then
+            echo "::error::The x64/ARM64 PySide6 release matrix finished with result: $PYSIDE6_RELEASE_RESULT"
+            exit 1
+          fi
 
           if [[ "$SHOULD_BUILD" == "true" ]]; then
             echo "Required CI validation passed."
@@ -1775,7 +2185,7 @@ jobs:
 
   release-ready:
     name: Release ready
-    needs: [plan, build, integration, pyside6_linux, pyside6_windows, pyside6_macos]
+    needs: [plan, build, integration, pyside6_linux, pyside6_windows, pyside6_macos, pyside6_release]
     if: ${{ always() && needs.plan.outputs.mode == 'full' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -1787,6 +2197,7 @@ jobs:
           PYSIDE6_LINUX_RESULT: ${{ needs.pyside6_linux.result }}
           PYSIDE6_WINDOWS_RESULT: ${{ needs.pyside6_windows.result }}
           PYSIDE6_MACOS_RESULT: ${{ needs.pyside6_macos.result }}
+          PYSIDE6_RELEASE_RESULT: ${{ needs.pyside6_release.result }}
         shell: bash
         run: |
           if [[ "$BUILD_RESULT" != "success" ]]; then
@@ -1807,5 +2218,9 @@ jobs:
           fi
           if [[ "$PYSIDE6_MACOS_RESULT" != "success" ]]; then
             echo "::error::The macOS arm64 PySide6 Qt 6.9 validation finished with result: $PYSIDE6_MACOS_RESULT"
+            exit 1
+          fi
+          if [[ "$PYSIDE6_RELEASE_RESULT" != "success" ]]; then
+            echo "::error::The x64/ARM64 PySide6 release matrix finished with result: $PYSIDE6_RELEASE_RESULT"
             exit 1
           fi

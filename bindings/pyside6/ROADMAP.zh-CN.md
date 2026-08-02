@@ -735,8 +735,13 @@ ownership、resize 传递和最终 backdrop 不变量。Xvfb 与托管 CI 能证
 
 ## M6 — 可发布 Python 分发
 
-- 定义受支持的 CPython、平台和架构 wheel 矩阵。
-- 每个 wheel 都在原生目标或有明确说明的等价工具链中构建。
+- [x] 以 `bindings/pyside6/wheel-matrix.json` 定义并校验受支持的 CPython、
+  平台和架构矩阵。首发覆盖 Linux、macOS、Windows 的 x64 与 ARM64；这里的
+  x64 指 x86_64/AMD64，不包含 32 位 x86。
+- [ ] 在原生目标跑通全部首发 wheel lane。日常 fast CI 保留 Linux/Windows
+  x64 的 Python 3.10 + Qt/PySide/Shiboken 6.2.4 最低兼容门禁和现有 macOS
+  ARM64 lane；full CI 使用 Python 3.11 + 6.9.3 增加 Linux x64/ARM64、
+  Windows x64/ARM64 和 macOS x64，连同现有 macOS ARM64 组成六目标首发集。
 - [x] 从 Shiboken 签名生成 `_fluentqt.pyi` 与 facade `.pyi`，用
   `api-manifest.json` 校验公共类、枚举、函数和必需方法，将存根纳入干净
   wheel smoke，并在 CI 中对已安装 wheel 运行严格 mypy 消费方检查。
@@ -744,8 +749,14 @@ ownership、resize 传递和最终 backdrop 不变量。Xvfb 与托管 CI 能证
 - 建立 Python API 版本与弃用规则。
 - 所有必需矩阵 lane 通过后，才签名并发布 wheel。
 
-首个发布矩阵应有意小于 C++ 包矩阵。只有具备原生构建和运行验证时，才增加新的
-Python 版本及 ARM64/x64 目标。
+Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官方 PySide 6.2.4
+没有 Linux/Windows ARM64 wheel，Linux ARM64 的 Qt/PySide 6.9.3 二进制还要求
+glibc 2.39，因此该 lane 使用 `ubuntu-24.04-arm`。Windows ARM64 使用从 3.11
+开始提供官方 ARM64 工具缓存的 CPython。这样既守住低版本兼容，也避免用版本号
+相同但来源或架构不匹配的两套 Qt。
+
+当前 Linux CI 产物仍是原生 `linux_*` wheel；在定义 manylinux 构建/repair、
+`auditwheel` 审计、签名和上传规则之前，不得将它们作为 PyPI 正式产物发布。
 
 ## 完成标准
 
