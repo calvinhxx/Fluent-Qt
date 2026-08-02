@@ -1522,8 +1522,12 @@ private:
             [this, &result](QAction* action) {
                 QWidget* widget =
                     primaryPresenters.value(action);
-                if (!action || action->isSeparator()
-                    || !widget || !widget->isVisible()
+                // A destroyed borrowed action can remain in the previous
+                // inline projection until the queued presenter rebuild. The
+                // presenter map is cleared first, so use it as the lifetime
+                // guard before reading QAction state.
+                if (!action || !widget || action->isSeparator()
+                    || !widget->isVisible()
                     || !action->isVisible()
                     || !action->isEnabled()) {
                     return;

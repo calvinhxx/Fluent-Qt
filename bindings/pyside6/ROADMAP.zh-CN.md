@@ -21,19 +21,20 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 
 | 里程碑 | 状态 | 交付内容 |
 |---|---|---|
-| M0 — 绑定基础设施 | 已实现 | 可选 CMake target、Qt 6.2 生成路径、版本门禁、单一原生模块、启动 API 和测试 |
-| M1 — 核心控件 API | 已实现 | Basic Input、Text Fields、Window、主题/字体 API、ownership 和 `nativeEvent` 契约 |
-| M2 — 低风险控件覆盖 | 进行中 | 增加具备属性、信号、示例、manifest 检查和 wheel smoke 验证的叶子 QWidget 控件 |
-| M3 — 托管控件 ownership | 进行中 | 为接管或释放子控件的容器增加 Python 安全适配器和 GC 测试 |
-| M4 — 模型与导航 | 进行中 | Python model/delegate、虚函数分派、选择状态和导航生命周期 |
+| M0 — 绑定基础设施 | 已完成 | 可选 CMake target、Qt 6.2 生成路径、版本门禁、单一原生模块、启动 API 和测试 |
+| M1 — 核心控件 API | 已完成 | Basic Input、Text Fields、Window、主题/字体 API、ownership 和 `nativeEvent` 契约 |
+| M2 — 低风险控件覆盖 | 已完成 | 所有计划叶子控件均已绑定或记录明确边界，并具备属性、信号、示例、manifest 检查和 wheel smoke 验证 |
+| M3 — 托管控件 ownership | 已完成 | 计划内托管控件边界均具备固定语义适配器、ownership 与 GC 测试 |
+| M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
 | M5 — Overlay 与原生窗口 | 进行中 | 自动化 XCB/Windows/Cocoa 原生验收已通过；仍需实体 DWM/KWin/Wayland compositor 审查 |
-| M6 — 可发布 Python 分发 | 进行中 | 已实现生成式类型存根与 manifest/mypy 门禁；wheel 矩阵、兼容策略、签名和发布仍待完成 |
+| M6 — 可发布 Python 分发 | 进行中 | 已实现类型存根、manifest/mypy 门禁、六目标 x64/ARM64 wheel 矩阵与 Qt 6.2 兼容门禁；manylinux、API 版本策略、签名和发布仍待完成 |
 
 ## 公共 API 覆盖台账
 
 下表是组件覆盖的事实来源。不能因为当前小批次的复选框全部完成，就把整个里程碑
-标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。当前 manifest 记录
-了 75 个必须存在的类和值类型。
+标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。M0 至 M4 已完成该
+审计。当前 manifest 记录了 75 个必须存在的类和值类型；M5、M6 的剩余边界继续在
+下表及各自章节中记录。
 
 | 分类 | 已绑定 | 剩余边界 |
 |---|---|---|
@@ -79,7 +80,7 @@ wheel smoke 测试。
 
 ## M2 — 低风险控件覆盖
 
-当前批次：
+已完成范围：
 
 - [x] 通过 `fluentqt.status_info` 分类增加 `ProgressBar` 和
       `ProgressRing`。
@@ -205,7 +206,8 @@ wheel smoke 测试。
       生成代码契约检查、全部绑定测试、可迁移 wheel、干净环境 smoke、验收
       截图、C++ 回归门禁和最终 CI Gate。
 
-后续批次需要先进行 API 审计。只有符合以下条件的组件才属于本里程碑：
+M2 已对当前公开组件集闭环。未来新增叶子控件仍需先进行 API 审计；只有符合以下
+条件的组件才属于这一类工作：
 
 - 是不包含运行时 ownership 模式的叶子 `QWidget`；
 - 不暴露 model/delegate 契约；
@@ -219,10 +221,12 @@ wheel smoke 测试。
 
 ## M3 — 托管控件 ownership
 
-候选范围包括 `ScrollView`、`Accordion`、`StackView`、`DrawerView`、
-`TabView` 以及其他接收托管 `QWidget` 的 API。
+已完成范围包括 `ScrollView`、`Expander`、`InfoBar`、`Accordion`、
+`StackView`、`FlipView`、`SplitView`、`NavigationView`/
+`StackContentHost` 和 `DrawerView`。`TabView` 的应用页面由调用方管理，
+因此其 metadata/navigation 契约归入 M4，而不是托管控件边界。
 
-当前原型：
+已完成 ownership 批次：
 
 - [x] 选择 `ScrollView` 作为首个 ownership 宿主。
 - [x] 隐藏依赖运行时参数的
@@ -416,9 +420,9 @@ wrapper 操作不属于兼容性要求。
 
 ## M4 — 模型与导航
 
-本里程碑先接入公共契约中不包含 model 或页面 ownership 的导航组件；在完成
-Python 边界设计后，现已用 `ListView`、`GridView`、`TreeView` 和 `FlowView`
-推进首批依赖 model 的集合组件。
+本里程碑先接入公共契约中不包含 model 或页面 ownership 的导航组件；完成
+Python 边界设计后，也已完成依赖 model 的集合组件 `ListView`、`GridView`、
+`TreeView` 和 `FlowView`。
 验证范围必须包括：
 
 - `QAbstractItemModel` 和 delegate 生命周期；
@@ -427,7 +431,7 @@ Python 边界设计后，现已用 `ListView`、`GridView`、`TreeView` 和 `Flo
 - 从 Python 和 C++ 两侧替换、销毁 model；
 - 键盘、焦点、RTL 和与可访问性相关的导航行为。
 
-当前批次：
+已完成范围：
 
 - [x] 审计 `TabView`：它只拥有 `TabViewItem` 元数据、选择状态和导航行为，
       应用页面继续由调用方组合并管理。
@@ -738,16 +742,19 @@ ownership、resize 传递和最终 backdrop 不变量。Xvfb 与托管 CI 能证
 - [x] 以 `bindings/pyside6/wheel-matrix.json` 定义并校验受支持的 CPython、
   平台和架构矩阵。首发覆盖 Linux、macOS、Windows 的 x64 与 ARM64；这里的
   x64 指 x86_64/AMD64，不包含 32 位 x86。
-- [ ] 在原生目标跑通全部首发 wheel lane。日常 fast CI 保留 Linux/Windows
+- [x] 在原生目标跑通全部首发 wheel lane。日常 fast CI 保留 Linux/Windows
   x64 的 Python 3.10 + Qt/PySide/Shiboken 6.2.4 最低兼容门禁和现有 macOS
   ARM64 lane；full CI 使用 Python 3.11 + 6.9.3 增加 Linux x64/ARM64、
-  Windows x64/ARM64 和 macOS x64，连同现有 macOS ARM64 组成六目标首发集。
+  Windows x64/ARM64 和 macOS x64，连同现有 macOS ARM64 组成六目标首发集；
+  CI run `30745443691` 已在全部原生目标通过。
 - [x] 从 Shiboken 签名生成 `_fluentqt.pyi` 与 facade `.pyi`，用
   `api-manifest.json` 校验公共类、枚举、函数和必需方法，将存根纳入干净
   wheel smoke，并在 CI 中对已安装 wheel 运行严格 mypy 消费方检查。
-- 增加依赖、许可证、wheel repair/audit、干净安装和导入检查。
-- 建立 Python API 版本与弃用规则。
-- 所有必需矩阵 lane 通过后，才签名并发布 wheel。
+- [x] 将精确 PySide/Shiboken 依赖、许可证和 notice 纳入 wheel，并在每个
+  原生 lane 执行干净虚拟环境安装、导入、类型检查及原生依赖/架构检查。
+- [ ] 定义 Linux manylinux 构建、repair 和 `auditwheel` 审计策略。
+- [ ] 建立 Python API 版本与弃用规则。
+- [ ] 所有必需矩阵 lane 通过后，签名并正式发布 wheel。
 
 Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官方 PySide 6.2.4
 没有 Linux/Windows ARM64 wheel，Linux ARM64 的 Qt/PySide 6.9.3 二进制还要求
@@ -783,6 +790,9 @@ Windows 上的确认。
    C++ 公共组件必须明确记录原因，而不能静默缺失。
 3. **发布完成**：M6 完成；明确 CPython/操作系统/架构矩阵，提供类型存根、
    API 兼容和弃用规则，并发布经过干净环境验证的 wheel。
+
+当前 M0 至 M4 已完成。达到功能完整仍需完成 M5 的实体 Windows 11 DWM 与
+Linux KWin/Wayland compositor 审查；达到发布完成还需完成 M6 剩余分发工作。
 
 因此，本项目只有达到第三层，才称为“Python 支持完成并可正式发布”。这不包含
 PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Python 使用的
@@ -831,7 +841,7 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
   <json>`；预期有原生 Mica/Acrylic/vibrancy/compositor 时再增加
   `--require-platform-backdrop`。Offscreen 截图仍然只能证明布局。
 
-## 后续交付顺序
+## 交付记录
 
 1. 原生 Linux/Windows Qt 6.2.4 CI run `30552580180` 已通过，将
    `Card`/`Expander` 视为第二个完成的 M3 批次。
@@ -945,3 +955,14 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
     Linux/Windows Qt 6.2.4 与 macOS Qt 6.9.3 的干净 wheel、源码包集成、
     Qt 5.15/6.2 C++ 回归和最终 CI Gate，将 M6 的首个类型/API 防回退批次视为
     完成。更完整的 wheel 矩阵、兼容策略、签名和发布工作仍属于 M6 待办。
+36. CI run `30745443691` 已在提交 `87fdfe1` 上通过 Linux、macOS、Windows 的
+    x64/ARM64 六个 Python 3.11 + Qt/PySide/Shiboken 6.9.3 首发 wheel lane，
+    同时通过 Linux/Windows x64 的 Python 3.10 + 6.2.4 最低兼容门禁、全部绑定
+    CTest、严格 mypy、干净安装、原生窗口 smoke、Qt 5.15/6.2 C++ 回归、
+    sanitizer、CI Gate 与 Release ready。该轮还验证了 borrowed QAction 销毁后
+    CommandBar 异步焦点重建不再解引用悬空地址，因此将 M6 的原生 wheel 矩阵与
+    最低兼容策略批次视为完成；manylinux repair/audit、Python API 版本规则、签名
+    和正式发布仍属于 M6 待办。
+37. 根据公共 API 台账、本机全部 84 项 PySide CTest 与 CI run `30745443691`
+    对里程碑状态进行同步：M0 至 M4 已完成；M5 因实体 DWM/KWin/Wayland 审查
+    保持进行中，M6 因 manylinux、API 版本治理、签名和正式发布保持进行中。

@@ -25,20 +25,22 @@ runtime, and CPython ABI requires its own build and validation.
 
 | Milestone | State | Deliverable |
 |---|---|---|
-| M0 — Binding foundation | Implemented | Opt-in CMake target, Qt 6.2 generator path, version gates, one native module, startup API, tests |
-| M1 — Core widget surface | Implemented | Basic Input, Text Fields, Window, theme/font API, ownership and `nativeEvent` contracts |
-| M2 — Low-risk widget coverage | In progress | Add leaf QWidget controls with properties, signals, examples, manifest checks, and wheel smoke coverage |
-| M3 — Hosted-widget ownership | In progress | Explicit Python-safe adapters and GC tests for containers that adopt or release child widgets |
-| M4 — Models and navigation | In progress | Python models/delegates, virtual dispatch, selection, and navigation lifecycle |
+| M0 — Binding foundation | Complete | Opt-in CMake target, Qt 6.2 generator path, version gates, one native module, startup API, tests |
+| M1 — Core widget surface | Complete | Basic Input, Text Fields, Window, theme/font API, ownership and `nativeEvent` contracts |
+| M2 — Low-risk widget coverage | Complete | Every planned leaf widget is bound or has an explicit boundary decision, with properties, signals, examples, manifest checks, and wheel smoke coverage |
+| M3 — Hosted-widget ownership | Complete | Planned hosted-widget boundaries have fixed-semantics adapters plus ownership and GC tests |
+| M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
 | M5 — Overlays and native windows | In progress | Automated XCB/Windows/Cocoa native acceptance passed; physical DWM/KWin/Wayland compositor review remains |
-| M6 — Release-grade Python distribution | In progress | Generated type stubs and manifest/mypy gates implemented; wheel matrix, compatibility policy, signing, and publication remain |
+| M6 — Release-grade Python distribution | In progress | Type stubs, manifest/mypy gates, the six-target x64/ARM64 wheel matrix, and Qt 6.2 compatibility gates are implemented; manylinux, API version policy, signing, and publication remain |
 
 ## Public API coverage ledger
 
 This table is the source of truth for component coverage. A milestone cannot
 be marked complete merely because its current checklist is green; every public
 component below must either be bound or retain an explicit boundary decision.
-The manifest currently records 75 required classes and value types.
+That audit is complete for M0 through M4. The manifest currently records 75
+required classes and value types; M5 and M6 retain the open boundaries shown
+below and in their milestone sections.
 
 | Category | Bound now | Remaining boundary |
 |---|---|---|
@@ -86,7 +88,7 @@ smoke tests.
 
 ## M2 — Low-risk widget coverage
 
-Current slice:
+Completed scope:
 
 - [x] Add `ProgressBar` and `ProgressRing` through the `fluentqt.status_info`
       category.
@@ -247,8 +249,9 @@ Current slice:
       checks, all binding tests, relocatable wheels, clean-environment smoke,
       acceptance snapshots, the C++ regression gates, and the final CI Gate.
 
-Subsequent slices should be selected by API audit. A component belongs in this
-milestone only when it:
+M2 is complete for the current public component set. Future leaf components
+must receive an API audit before they can extend this milestone. A component
+belongs to this class of work only when it:
 
 - is a leaf `QWidget` with no runtime ownership mode;
 - does not expose a model/delegate contract;
@@ -262,10 +265,12 @@ coverage, and a runnable example when the control has visible behavior.
 
 ## M3 — Hosted-widget ownership
 
-Candidate areas include `ScrollView`, `Accordion`, `StackView`, `DrawerView`,
-`TabView`, and other APIs that accept hosted `QWidget` instances.
+The completed scope includes `ScrollView`, `Expander`, `InfoBar`, `Accordion`,
+`StackView`, `FlipView`, `SplitView`, `NavigationView`/`StackContentHost`, and
+`DrawerView`. `TabView` metadata/navigation remains in M4 because application
+pages are caller-managed rather than adopted by the control.
 
-Current prototype:
+Completed ownership batches:
 
 - [x] Select `ScrollView` as the first ownership host.
 - [x] Hide the runtime-dependent
@@ -499,9 +504,9 @@ Before exposing each API:
 ## M4 — Models and navigation
 
 This milestone started with navigation components whose public contract has no
-model or hosted-page ownership boundary. It now advances through `ListView`,
-`GridView`, `TreeView`, and `FlowView` as the first model-backed collections
-after designing their Python boundaries.
+model or hosted-page ownership boundary. After defining the Python boundary,
+it also completed the model-backed collection set: `ListView`, `GridView`,
+`TreeView`, and `FlowView`.
 Validation must include:
 
 - `QAbstractItemModel` and delegate lifetime;
@@ -510,7 +515,7 @@ Validation must include:
 - model replacement and destruction from both Python and C++; and
 - keyboard, focus, RTL, and accessibility-relevant navigation behavior.
 
-Current slice:
+Completed scope:
 
 - [x] Audit `TabView`: it owns only `TabViewItem` metadata, selection, and
       navigation behavior; application pages remain caller-owned composition.
@@ -898,17 +903,21 @@ physical-desktop acceptance items.
 - [x] Define and validate the supported CPython/platform/architecture matrix
   in `bindings/pyside6/wheel-matrix.json`. The first release covers x64 and
   ARM64 on Linux, macOS, and Windows; x64 means x86_64/AMD64, not 32-bit x86.
-- [ ] Pass every first-release wheel lane on its native target. Fast CI keeps
+- [x] Pass every first-release wheel lane on its native target. Fast CI keeps
   the Python 3.10 + Qt/PySide/Shiboken 6.2.4 minimum lanes on Linux/Windows
   x64 and the existing macOS ARM64 lane. Full CI adds Python 3.11 + 6.9.3
   release lanes for Linux x64/ARM64, Windows x64/ARM64, and macOS x64; the
-  existing macOS ARM64 lane completes the six-target release set.
+  existing macOS ARM64 lane completes the six-target release set. CI run
+  `30745443691` passed on every native target.
 - [x] Generate `_fluentqt.pyi` from Shiboken signatures plus facade `.pyi`
   files, validate them against `api-manifest.json`, include them in clean-wheel
   smoke tests, and run a strict installed-wheel mypy consumer check in CI.
-- Add dependency, license, repair/audit, clean-install, and import checks.
-- Establish versioning and deprecation rules for the Python API.
-- Sign and publish wheels only after every required matrix lane passes.
+- [x] Package exact PySide/Shiboken dependencies, licenses, and notices, then
+  run clean-venv install, import, type-check, native dependency, and binary
+  architecture checks in every native lane.
+- [ ] Define the Linux manylinux build, repair, and `auditwheel` audit policy.
+- [ ] Establish versioning and deprecation rules for the Python API.
+- [ ] Sign and publish wheels after every required matrix lane passes.
 
 Qt 6.2.4 remains the binding minimum, not the ARM64 wheel build version. The
 official PySide 6.2.4 release has no Linux or Windows ARM64 wheels, Linux ARM64
@@ -950,6 +959,10 @@ is not mistaken for complete support:
 3. **Release complete**: M6 is complete. The supported CPython, OS, and
    architecture matrix, type stubs, API compatibility/deprecation policy, and
    clean-environment wheels are published.
+
+M0 through M4 are complete. Feature completeness still waits on M5's physical
+Windows 11 DWM and Linux KWin/Wayland compositor review; release completeness
+also requires the remaining M6 distribution work.
 
 FluentQt calls Python support complete and release-ready only at the third
 level. This excludes PySide2 and Qt 5 Python bindings and does not require
@@ -1007,7 +1020,7 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
   `--require-platform-backdrop` where native Mica/Acrylic/vibrancy/compositor
   support is expected. Offscreen snapshots remain layout-only evidence.
 
-## Next delivery sequence
+## Delivery record
 
 1. Treat `Card`/`Expander` as the second completed M3 slice after native
    Linux/Windows Qt 6.2.4 CI run `30552580180`.
@@ -1146,3 +1159,17 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
     Qt 5.15/6.2 C++ regressions, and the final CI Gate passed together in run
     `30730708691`. The wider wheel matrix, compatibility policy, signing, and
     publication work remain in M6.
+36. Treat the M6 native wheel-matrix and minimum-compatibility slice as complete
+    after CI run `30745443691` passed at commit `87fdfe1` with all six Python
+    3.11 + Qt/PySide/Shiboken 6.9.3 release wheels for x64 and ARM64 on Linux,
+    macOS, and Windows; the Python 3.10 + 6.2.4 minimum lanes on Linux/Windows
+    x64; all binding CTests; strict mypy; clean installs; native-window smoke;
+    Qt 5.15/6.2 C++ regressions; sanitizers; CI Gate; and Release ready. The
+    run also verifies that CommandBar's queued focus rebuild no longer
+    dereferences a destroyed borrowed QAction. Linux manylinux repair/audit,
+    Python API versioning rules, signing, and formal publication remain in M6.
+37. Synchronize milestone state after the public-API ledger, all 84 local
+    PySide CTests, and CI run `30745443691` confirm the recorded contracts:
+    M0 through M4 are complete. Keep M5 in progress for physical DWM/KWin/
+    Wayland review and M6 in progress for manylinux, API versioning, signing,
+    and formal publication.

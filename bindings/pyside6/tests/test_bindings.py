@@ -3947,7 +3947,13 @@ class FluentQtBindingTest(unittest.TestCase):
         externally_deleted = QAction("Deleted externally")
         deleted_ref = weakref.ref(externally_deleted)
         self.assertTrue(command_bar.addPrimaryAction(externally_deleted))
-        Shiboken.delete(externally_deleted)
+        # Exercise Qt's supported external-destruction path. Direct
+        # Shiboken.delete() can fast-fail inside PySide6 6.2.4 on Windows
+        # before QAction finishes notifying every borrowing widget, so that
+        # low-level wrapper operation is not part of the public contract.
+        externally_deleted.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        self.app.processEvents()
         self.assertFalse(Shiboken.isValid(externally_deleted))
         self.assertEqual(command_bar.primaryActions(), [])
         command_bar.clearPrimaryActions()

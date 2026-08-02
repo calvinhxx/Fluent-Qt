@@ -277,6 +277,8 @@ TEST(CommandBarTest, BorrowedLifetimeAndActionDestructionAreSafe)
     ASSERT_TRUE(bar.addPrimaryAction(transient));
     delete transient;
     EXPECT_TRUE(bar.primaryActions().isEmpty());
+    processDeferredUiWork();
+    EXPECT_TRUE(bar.primaryActions().isEmpty());
 
     auto* ownedBar = new CommandBar();
     QPointer<QAction> surfaceOwned =

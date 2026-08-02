@@ -1589,8 +1589,14 @@ private:
             [this, &result](QAction* action) {
                 QWidget* widget =
                     primaryPresenters.value(action);
-                if (!action || action->isSeparator()
-                    || !widget || !widget->isVisible()
+                // The semantic model removes a destroyed QAction before its
+                // queued presenter rebuild runs. During that short window the
+                // previous inline projection can still contain the dead
+                // address, while its presenter has already been discarded.
+                // Check the presenter first so focus repair never dereferences
+                // a stale borrowed action.
+                if (!action || !widget || action->isSeparator()
+                    || !widget->isVisible()
                     || !action->isEnabled()) {
                     return;
                 }
