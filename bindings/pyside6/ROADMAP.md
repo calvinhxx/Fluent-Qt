@@ -895,8 +895,14 @@ physical-desktop acceptance items.
 
 ## M6 — Release-grade Python distribution
 
-- Define the supported CPython/platform/architecture wheel matrix.
-- Build each wheel on its native target or a documented equivalent toolchain.
+- [x] Define and validate the supported CPython/platform/architecture matrix
+  in `bindings/pyside6/wheel-matrix.json`. The first release covers x64 and
+  ARM64 on Linux, macOS, and Windows; x64 means x86_64/AMD64, not 32-bit x86.
+- [ ] Pass every first-release wheel lane on its native target. Fast CI keeps
+  the Python 3.10 + Qt/PySide/Shiboken 6.2.4 minimum lanes on Linux/Windows
+  x64 and the existing macOS ARM64 lane. Full CI adds Python 3.11 + 6.9.3
+  release lanes for Linux x64/ARM64, Windows x64/ARM64, and macOS x64; the
+  existing macOS ARM64 lane completes the six-target release set.
 - [x] Generate `_fluentqt.pyi` from Shiboken signatures plus facade `.pyi`
   files, validate them against `api-manifest.json`, include them in clean-wheel
   smoke tests, and run a strict installed-wheel mypy consumer check in CI.
@@ -904,9 +910,15 @@ physical-desktop acceptance items.
 - Establish versioning and deprecation rules for the Python API.
 - Sign and publish wheels only after every required matrix lane passes.
 
-The initial release matrix should stay intentionally smaller than the C++
-package matrix. Additional Python versions and ARM64/x64 targets should be
-added only when they have native build and runtime coverage.
+Qt 6.2.4 remains the binding minimum, not the ARM64 wheel build version. The
+official PySide 6.2.4 release has no Linux or Windows ARM64 wheels, Linux ARM64
+Qt/PySide 6.9.3 binaries require glibc 2.39, and the Windows ARM64 Python tool
+cache starts at CPython 3.11. Therefore the ARM64 release lanes use 6.9.3,
+Linux uses `ubuntu-24.04-arm`, and the low-version x64 lanes remain separate.
+
+The current Linux CI artifacts retain native `linux_*` wheel tags. They must
+not be published to PyPI until M6 defines the manylinux build/repair and
+`auditwheel` policy, signing, and upload gates.
 
 ## Definition of done
 

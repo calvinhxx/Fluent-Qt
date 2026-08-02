@@ -727,10 +727,26 @@ Shiboken 6.2 silently omits `TextEdit.verticalScrollBar()` because its return
 type crosses two flattened C++ namespaces. The Python category module supplies
 the same method by locating TextEdit's existing Qt-owned Fluent `ScrollBar`;
 the method does not create, reparent, or transfer ownership of that child.
-The wheel target is validated on Linux x64 and Windows x64 with Qt 6.2.4, plus
-macOS arm64 with Qt 6.9.3. Clean-environment smoke tests verify that the loaded
-Qt, PySide6, and Shiboken6 libraries come from the installed wheel environment.
-A complete wheel release/publishing matrix has not yet been added.
+The authoritative CI and first-release architecture catalog is
+[`wheel-matrix.json`](wheel-matrix.json).
+The minimum compatibility lanes remain Linux x64 and Windows x64 with
+CPython 3.10 plus Qt/PySide/Shiboken 6.2.4. The first-release lanes use
+CPython 3.11 plus the matched 6.9.3 toolchain on Linux, macOS, and Windows,
+each on both x64 and ARM64 native runners. Here `x64` means x86_64/AMD64;
+32-bit x86 is not supported.
+
+The normal fast CI tier keeps the two minimum lanes and macOS ARM64. Full CI
+adds Linux x64/ARM64, Windows x64/ARM64, and macOS x64 release-wheel lanes;
+the existing macOS ARM64 lane completes the six-target release set. Every lane
+builds the extension, checks generated contracts, runs binding tests, installs
+the wheel in a clean virtual environment, runs strict mypy and visible
+acceptance examples, verifies native Window/TitleBar integration, and confirms
+that Qt, PySide6, and Shiboken6 resolve inside that clean environment.
+
+These CI artifacts are not yet publishable Linux wheels: M6 still needs a
+documented manylinux build/repair and `auditwheel` policy, followed by signing
+and upload automation. Architecture coverage must pass before that publishing
+gate is enabled.
 
 Passing the build-tree tests proves the declared API contract; passing the
 clean-wheel smoke proves installation/runtime isolation; the interactive
