@@ -108,6 +108,7 @@ from .scrolling import (
     PipsPager,
     ScrollBar,
     ScrollView,
+    ScrollViewZoomAwareWidget,
     WidgetOwnership,
 )
 from .status_info import (
@@ -122,6 +123,7 @@ from .status_info import (
 )
 from .textfields import (
     AutoSuggestBox,
+    EditingCommandRouter,
     Label,
     LineEdit,
     NumberBox,
@@ -138,6 +140,9 @@ from .windowing import (
     TitleBar,
     Window,
 )
+
+__version__ = str(bindingBuildInfo()["fluentqt_version"])
+__api_version__ = ".".join(__version__.split(".")[:2])
 
 
 def prepare_high_dpi_application():
@@ -188,6 +193,7 @@ __all__ = [
     "Divider",
     "DrawerView",
     "DropDownButton",
+    "EditingCommandRouter",
     "Expander",
     "FontIcon",
     "FontRole",
@@ -219,6 +225,7 @@ __all__ = [
     "RepeatButton",
     "ScrollBar",
     "ScrollView",
+    "ScrollViewZoomAwareWidget",
     "SelectorBar",
     "SelectorBarItem",
     "SelectionMode",
@@ -244,6 +251,8 @@ __all__ = [
     "TreeView",
     "Window",
     "WidgetOwnership",
+    "__api_version__",
+    "__version__",
     "accent_color",
     "accentColor",
     "apply_style_theme",

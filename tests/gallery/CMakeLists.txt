@@ -55,6 +55,8 @@ add_qt_test_module(test_gallery_content_pages
     ${FLUENT_QT_GALLERY_RESOURCES}
 )
 target_include_directories(test_gallery_content_pages PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_compile_definitions(test_gallery_content_pages PRIVATE
+    FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}")
 
 foreach(_gallery_acceptance_scale 1.25 2 3)
     string(REPLACE "." "" _gallery_acceptance_scale_id

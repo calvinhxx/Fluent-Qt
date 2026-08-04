@@ -228,7 +228,7 @@ QVector<GalleryContentEntry> buildCatalog()
     catalog.append({GalleryPageKind::Home,
                     QStringLiteral("home"),
                     QStringLiteral("Home"),
-                    QStringLiteral("Interactive documentation for FluentQt: browse components, run live examples, and inspect focused C++ usage."),
+                    QStringLiteral("Interactive documentation for FluentQt: browse components, run live examples, and inspect focused API usage."),
                     QString(),
                     {QStringLiteral("button"),
                      QStringLiteral("toggle-switch"),

@@ -35,7 +35,12 @@ void ScrollBar::init() {
     // Any value change counts as scrolling: show, then auto-hide.
     // zh_CN: 任意数值变化都视为“正在滚动”，触发显示并自动隐藏。
     connect(this, &QScrollBar::valueChanged, this, [this](int) {
-        showWithAutoHide();
+        // Initial model/setup values are commonly assigned before the widget is shown. They must
+        // not start a hidden fade animation that later overwrites an explicitly pinned opacity.
+        // zh_CN: 初始模型/配置值通常在控件显示前赋予；此时不得启动隐藏的淡入淡出动画，
+        // 以免随后覆盖调用方显式固定的不透明度。
+        if (isVisible())
+            showWithAutoHide();
     });
 }
 

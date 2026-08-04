@@ -1538,10 +1538,15 @@ void TabStrip::stopRevealAnimation(int index)
 void TabStrip::setHeaderWidgetOpacity(TabHeaderWidgets& widgets, qreal opacity)
 {
     const qreal bounded = qBound<qreal>(0.0, opacity, 1.0);
-    if (widgets.labelOpacity)
+    const bool effectRequired = bounded < 1.0;
+    if (widgets.labelOpacity) {
         widgets.labelOpacity->setOpacity(bounded);
-    if (widgets.closeOpacity)
+        widgets.labelOpacity->setEnabled(effectRequired);
+    }
+    if (widgets.closeOpacity) {
         widgets.closeOpacity->setOpacity(bounded);
+        widgets.closeOpacity->setEnabled(effectRequired);
+    }
 }
 
 basicinput::Button* TabStrip::createIconButton(const QString& glyph, int pixelSize)

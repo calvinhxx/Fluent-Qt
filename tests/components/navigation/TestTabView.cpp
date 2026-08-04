@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
 #include <QApplication>
+#include <QGraphicsOpacityEffect>
 #include <QImage>
 #include <QPainter>
 #include <QPalette>
@@ -218,6 +220,31 @@ TEST_F(TabViewTest, DefaultsInheritanceAndMetatypesMatchComponentPattern)
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&tabs), nullptr);
     EXPECT_GT(qMetaTypeId<TabViewItem>(), 0);
     EXPECT_GT(qMetaTypeId<TabView::TabWidthMode>(), 0);
+}
+
+TEST_F(TabViewTest, CompletedTabRevealDisablesOpacityEffects)
+{
+    auto* tabs = new TabView(window);
+    tabs->setGeometry(20, 20, 560, 40);
+    tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+    tabs->setTabsClosable(false);
+    tabs->setAddTabButtonVisible(false);
+    tabs->addTab(TabViewItem(QStringLiteral("Home"), Typography::Icons::Home));
+    tabs->addTab(TabViewItem(QStringLiteral("Details"), Typography::Icons::Document));
+    tabs->addTab(TabViewItem(QStringLiteral("Activity"), Typography::Icons::Calendar));
+
+    showAndProcess(*tabs);
+
+    const auto allEffectsDisabled = [tabs]() {
+        const auto effects = tabs->findChildren<QGraphicsOpacityEffect*>();
+        if (effects.size() < tabs->tabCount())
+            return false;
+        return std::all_of(effects.cbegin(), effects.cend(), [](const auto* effect) {
+            return effect && !effect->isEnabled()
+                && qFuzzyCompare(effect->opacity(), 1.0);
+        });
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(allEffectsDisabled(), 500);
 }
 
 TEST_F(TabViewTest, SelectionHandlerCanSynchronouslyDeleteTabView)

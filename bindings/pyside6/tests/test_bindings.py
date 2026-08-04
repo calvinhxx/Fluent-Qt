@@ -41,6 +41,8 @@ from PySide6.QtCore import (
     QPoint,
     QPersistentModelIndex,
     QSize,
+    QSizeF,
+    QRectF,
     QStandardPaths,
     QStringListModel,
     QTime,
@@ -218,6 +220,9 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(issubclass(fluentqt.PipsPager, QWidget))
         self.assertTrue(issubclass(fluentqt.ScrollBar, QScrollBar))
         self.assertTrue(issubclass(fluentqt.ScrollView, QScrollArea))
+        self.assertTrue(
+            issubclass(fluentqt.ScrollViewZoomAwareWidget, QWidget)
+        )
         self.assertTrue(issubclass(fluentqt.SelectorBar, QWidget))
         self.assertTrue(issubclass(fluentqt.FlipView, QWidget))
         self.assertTrue(issubclass(fluentqt.FlowView, QAbstractItemView))
@@ -288,6 +293,10 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertIs(scrolling.PipsPager, fluentqt.PipsPager)
         self.assertIs(scrolling.ScrollBar, fluentqt.ScrollBar)
         self.assertIs(scrolling.ScrollView, fluentqt.ScrollView)
+        self.assertIs(
+            scrolling.ScrollViewZoomAwareWidget,
+            fluentqt.ScrollViewZoomAwareWidget,
+        )
         self.assertIs(collections.FlowView, fluentqt.FlowView)
         self.assertIs(collections.GridView, fluentqt.GridView)
         self.assertIs(collections.ListView, fluentqt.ListView)
@@ -334,6 +343,10 @@ class FluentQtBindingTest(unittest.TestCase):
             textfields.AutoSuggestBox,
             fluentqt.AutoSuggestBox,
         )
+        self.assertIs(
+            textfields.EditingCommandRouter,
+            fluentqt.EditingCommandRouter,
+        )
         self.assertIs(textfields.NumberBox, fluentqt.NumberBox)
         self.assertIs(textfields.TextEdit, fluentqt.TextEdit)
         self.assertIs(dialogs_flyouts.Flyout, fluentqt.Flyout)
@@ -379,7 +392,13 @@ class FluentQtBindingTest(unittest.TestCase):
             fluentqt.RatingControl,
         )
         self.assertIs(native.fluent.PipsPager, fluentqt.PipsPager)
-        self.assertIs(
+        self.assertTrue(
+            issubclass(
+                fluentqt.AnnotatedScrollBar,
+                native.fluent.AnnotatedScrollBar,
+            )
+        )
+        self.assertIsNot(
             native.fluent.AnnotatedScrollBar,
             fluentqt.AnnotatedScrollBar,
         )
@@ -700,6 +719,14 @@ class FluentQtBindingTest(unittest.TestCase):
 
         info = fluentqt.binding_build_info()
         self.assertEqual(
+            fluentqt.__version__,
+            os.environ["FLUENTQT_EXPECTED_VERSION"],
+        )
+        self.assertEqual(
+            fluentqt.__api_version__,
+            ".".join(fluentqt.__version__.split(".")[:2]),
+        )
+        self.assertEqual(
             info["fluentqt_version"],
             os.environ["FLUENTQT_EXPECTED_VERSION"],
         )
@@ -837,9 +864,9 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(hasattr(fluentqt.Shimmer, "anchors"))
         self.assertFalse(hasattr(fluentqt.Shimmer, "bind"))
         self.assertFalse(hasattr(fluentqt.Shimmer, "setState"))
-        self.assertFalse(hasattr(fluentqt.Shimmer, "elements"))
-        self.assertFalse(hasattr(fluentqt.Shimmer, "setElements"))
-        self.assertFalse(hasattr(fluentqt.Shimmer, "clearElements"))
+        self.assertTrue(hasattr(fluentqt.Shimmer, "elements"))
+        self.assertTrue(hasattr(fluentqt.Shimmer, "setElements"))
+        self.assertTrue(hasattr(fluentqt.Shimmer, "clearElements"))
         self.assertFalse(hasattr(fluentqt.InfoBar, "anchors"))
         self.assertFalse(hasattr(fluentqt.InfoBar, "bind"))
         self.assertFalse(hasattr(fluentqt.InfoBar, "setState"))
@@ -878,7 +905,7 @@ class FluentQtBindingTest(unittest.TestCase):
         with manifest_path.open(encoding="utf-8") as manifest_file:
             manifest = json.load(manifest_file)
 
-        for section in ("classes", "enums", "functions"):
+        for section in ("classes", "enums", "functions", "variables"):
             with self.subTest(section=section):
                 missing = [
                     name
@@ -1397,6 +1424,8 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(bar.railVisible())
 
         ring = fluentqt.ProgressRing()
+        ring.setAnimationEnabled(False)
+        self.assertFalse(ring.isAnimationEnabled())
         ring.setIsIndeterminate(False)
         ring.setRange(0, 200)
         ring_values = []
@@ -1443,6 +1472,29 @@ class FluentQtBindingTest(unittest.TestCase):
             shimmer.shimmerTemplate(),
             fluentqt.Shimmer.ShimmerTemplate.ImageCard,
         )
+
+        element_changes = []
+        shimmer.elementsChanged.connect(lambda: element_changes.append(True))
+        elements = [
+            fluentqt.Shimmer.Element(
+                fluentqt.Shimmer.Shape.Circle,
+                QRectF(8.0, 8.0, 40.0, 40.0),
+            ),
+            fluentqt.Shimmer.Element(
+                fluentqt.Shimmer.Shape.RoundedRect,
+                QRectF(60.0, 10.0, 150.0, 16.0),
+                4.0,
+            ),
+        ]
+        shimmer.setElements(elements)
+        self.assertEqual(shimmer.elements(), elements)
+        self.assertEqual(
+            shimmer.shimmerTemplate(),
+            fluentqt.Shimmer.ShimmerTemplate.Custom,
+        )
+        shimmer.clearElements()
+        self.assertEqual(shimmer.elements(), [])
+        self.assertEqual(element_changes, [True, True])
 
     def test_tool_tip_attachment_properties_and_theme_source_lifetime(self):
         host = QWidget()
@@ -2139,24 +2191,26 @@ class FluentQtBindingTest(unittest.TestCase):
             ["Start", "Middle", "End"],
         )
         self.assertEqual(bar.visibleLabelCount(), 3)
-        self.assertFalse(
-            hasattr(bar, "setDetailLabelProvider")
+        self.assertFalse(bar.hasDetailLabelProvider())
+        provider_offsets = []
+        bar.setDetailLabelProvider(
+            lambda offset: provider_offsets.append(offset)
+            or "Offset {0}".format(offset)
         )
-        self.assertFalse(
-            hasattr(bar, "clearDetailLabelProvider")
-        )
-        self.assertFalse(
-            hasattr(bar, "hasDetailLabelProvider")
-        )
+        self.assertTrue(bar.hasDetailLabelProvider())
 
         bar.show()
         self.app.processEvents()
         QTest.mouseMove(bar, QPoint(12, 19))
         self.app.processEvents()
         self.assertTrue(bar.isDetailLabelVisible())
-        self.assertEqual(bar.detailLabelText(), "Start detail")
+        self.assertEqual(bar.detailLabelText(), "Offset 0")
+        self.assertIn(0, provider_offsets)
         self.assertTrue(detail_requests)
         bar.hide()
+
+        bar.clearDetailLabelProvider()
+        self.assertFalse(bar.hasDetailLabelProvider())
 
         bar.clearLabels()
         self.assertEqual(label_changes, [True, True])
@@ -2466,7 +2520,11 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(button.user_events, 1)
 
     def test_native_event_uses_safe_pyside_contract(self):
-        self.assertNotIn("result", fluentqt.Window.nativeEvent.__doc__)
+        # PySide may omit generated method docstrings for limited-API Python
+        # builds. The generated-code verifier checks pointer privacy; this
+        # runtime probe still proves the public two-argument tuple contract.
+        native_event_doc = fluentqt.Window.nativeEvent.__doc__ or ""
+        self.assertNotIn("result", native_event_doc)
 
         class NativeEventWindow(fluentqt.Window):
             def nativeEvent(self, event_type, message):
@@ -3858,6 +3916,49 @@ class FluentQtBindingTest(unittest.TestCase):
         menu = menu_bar.addMenu("File")
         self.assertIs(menu.parent(), menu_bar)
         self.assertIn(menu.menuAction(), menu_bar.actions())
+
+    def test_editing_command_router_tracks_focus_and_executes_commands(self):
+        scope = QWidget()
+        editor = fluentqt.LineEdit(scope)
+        editor.setText("hello")
+        editor.setGeometry(8, 8, 220, 36)
+        router = fluentqt.EditingCommandRouter(scope, scope)
+        commands = (
+            fluentqt.EditingCommandRouter.Command.Undo,
+            fluentqt.EditingCommandRouter.Command.Redo,
+            fluentqt.EditingCommandRouter.Command.Cut,
+            fluentqt.EditingCommandRouter.Command.Copy,
+            fluentqt.EditingCommandRouter.Command.Paste,
+            fluentqt.EditingCommandRouter.Command.Delete,
+            fluentqt.EditingCommandRouter.Command.SelectAll,
+        )
+
+        self.assertIs(router.scopeWindow(), scope)
+        self.assertEqual(len(commands), 7)
+        self.assertEqual(len(router.actions()), 7)
+        for command in commands:
+            self.assertIs(router.action(command), router.action(command))
+
+        scope.show()
+        editor.setFocus(Qt.FocusReason.OtherFocusReason)
+        self.app.processEvents()
+        router.refresh()
+        self.assertTrue(router.hasActiveTarget())
+        self.assertTrue(
+            router.execute(fluentqt.EditingCommandRouter.Command.SelectAll)
+        )
+        router.refresh()
+        self.assertTrue(
+            router.canExecute(fluentqt.EditingCommandRouter.Command.Copy)
+        )
+        QApplication.clipboard().clear()
+        self.assertTrue(
+            router.execute(fluentqt.EditingCommandRouter.Command.Copy)
+        )
+        self.assertEqual(QApplication.clipboard().text(), "hello")
+        scope.close()
+        scope.deleteLater()
+        self.app.processEvents()
 
     def test_final_type_fallback_for_old_shiboken(self):
         from fluentqt.menus_toolbars import _enforce_final_type
@@ -5572,21 +5673,33 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(view.selectedIndex(), 1)
         self.assertEqual(view.selectedRows(), [1])
 
-        for unsupported in (
-            "header",
-            "setHeader",
-            "footer",
-            "setFooter",
-            "sectionEnabled",
-            "isSectionEnabled",
-            "setSectionEnabled",
-            "setSectionKeyFunction",
-        ):
+        for unsupported in ("header", "setHeader", "footer", "setFooter"):
             self.assertFalse(hasattr(view, unsupported), unsupported)
         with self.assertRaisesRegex(TypeError, "header QWidget hosting"):
             fluentqt.ListView(header=QWidget())
-        with self.assertRaisesRegex(TypeError, "section grouping"):
-            fluentqt.ListView(sectionEnabled=True)
+
+        grouped = fluentqt.ListView(
+            sectionEnabled=True,
+            sectionKeyFunction=lambda row: "A" if row < 2 else "G",
+        )
+        grouped_model = QStringListModel(["Alpha", "Beta", "Gamma"])
+        grouped.setModel(grouped_model)
+        self.assertTrue(grouped.sectionEnabled())
+        self.assertTrue(grouped.isSectionEnabled())
+        grouped.setSectionEnabled(False)
+        self.assertFalse(grouped.sectionEnabled())
+        grouped.setSectionKeyFunction(lambda row: grouped_model.data(
+            grouped_model.index(row, 0)
+        )[0])
+        grouped_model.setStringList(["Alpha", "Beta", "Gamma", "Golf"])
+        self.assertEqual(grouped_model.rowCount(), 4)
+        with self.assertRaisesRegex(TypeError, "must return str"):
+            grouped.setSectionKeyFunction(lambda _row: 7)
+        self.assertEqual(
+            grouped._fluentqt_section_key_function(3),
+            "G",
+        )
+        grouped.setSectionKeyFunction(None)
 
         for getter_name in (
             "verticalFluentScrollBar",
@@ -6241,6 +6354,8 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertFalse(view.isExpanded(parent_index))
         view.setSelectionIndicatorInset(7.5)
         self.assertEqual(view.selectionIndicatorInset(), 7.5)
+        view.setSelectionIndicatorHeight(14.0)
+        self.assertEqual(view.selectionIndicatorHeight(), 14.0)
 
         for method_name in (
             "selectionMode",
@@ -8164,6 +8279,28 @@ class FluentQtBindingTest(unittest.TestCase):
         gc.collect()
         self.assertIsNone(view_ref())
         self.assertFalse(Shiboken.isValid(content))
+
+    def test_scroll_view_zoom_aware_widget_uses_native_interface_dispatch(self):
+        class ZoomAwareCanvas(fluentqt.ScrollViewZoomAwareWidget):
+            def __init__(self):
+                super().__init__()
+                self.factors = []
+
+            def scrollViewUnscaledSize(self):
+                return QSizeF(560, 360)
+
+            def setScrollViewZoomFactor(self, factor):
+                self.factors.append(float(factor))
+                self.resize(round(560 * factor), round(360 * factor))
+
+        view = fluentqt.ScrollView()
+        view.setZoomMode(fluentqt.ScrollView.ZoomMode.Enabled)
+        canvas = ZoomAwareCanvas()
+        view.setOwnedContentWidget(canvas)
+        self.assertEqual(canvas.factors, [1.0])
+        view.zoomTo(1.5, False)
+        self.assertEqual(canvas.factors, [1.0, 1.5])
+        self.assertEqual(canvas.size(), QSize(840, 540))
 
     def test_scroll_view_owned_content_lifecycle(self):
         view = fluentqt.ScrollView()

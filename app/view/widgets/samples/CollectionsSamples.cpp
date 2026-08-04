@@ -2,6 +2,7 @@
 
 #include <functional>
 
+#include <QCoreApplication>
 #include <QEvent>
 #include <QItemSelectionModel>
 #include <QLinearGradient>
@@ -594,6 +595,12 @@ void loadFlowNetworkImages(QStandardItemModel* model,
                            const QVector<FlowPhotoInfo>& photos,
                            QNetworkAccessManager* manager)
 {
+    if (QCoreApplication::instance()
+        && QCoreApplication::instance()
+               ->property("fluentqtGalleryAutomated")
+               .toBool()) {
+        return;
+    }
     for (int row = 0; row < photos.size(); ++row) {
         loadFlowNetworkImage(model, row, flowPhotoUrl(photos.at(row), row), manager);
     }

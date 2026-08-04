@@ -694,7 +694,7 @@ private:
         m_toolTipAnchor->show();
         m_toolTipAnchor->raise();
         m_hoverTip->setText(
-            QStringLiteral("%1\n%2\n%3  ·  %4 px\nClick to copy C++ lookup")
+            QStringLiteral("%1\n%2\n%3  ·  %4 px\nClick to copy lookup")
                 .arg(icon->displayName,
                      icon->name,
                      codepointText(icon->codepoint))
@@ -762,7 +762,7 @@ GalleryIconBrowser::GalleryIconBrowser(QWidget* parent)
     layout->setSpacing(12);
 
     auto* guidance = new fluent::textfields::Label(
-        QStringLiteral("Search the complete Regular catalog by name, size, or U+ codepoint. Exact matches stay deterministic; typos fall back to the closest names. Hover for metadata and click to copy a C++ lookup."),
+        QStringLiteral("Search the complete Regular catalog by name, size, or U+ codepoint. Exact matches stay deterministic; typos fall back to the closest names. Hover for metadata and click to copy a lookup."),
         this);
     guidance->setFluentTypography(Typography::FontRole::Caption);
     guidance->setTextColorRole(fluent::textfields::Label::TextColorRole::Secondary);
@@ -775,7 +775,7 @@ GalleryIconBrowser::GalleryIconBrowser(QWidget* parent)
     auto* search = new fluent::textfields::LineEdit(this);
     search->setObjectName(QStringLiteral("galleryIconSearch"));
     search->setPlaceholderText(
-        QStringLiteral("Search name, 20, U+F109, or paste a C++ lookup..."));
+        QStringLiteral("Search name, 20, U+F109, or paste a lookup..."));
     search->setClearButtonEnabled(true);
     search->setMinimumWidth(240);
     m_countLabel = new fluent::textfields::Label(this);

@@ -144,6 +144,20 @@ QString visualSnapshotFilePath(const QString& variant)
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
+    // Visual snapshots are deterministic artifacts, so the cursor's desktop
+    // position must not leave one arbitrary control in its hover state.
+    const auto clearHoverState = [](QWidget* widget) {
+        if (!widget)
+            return;
+        QEvent leaveEvent(QEvent::Leave);
+        QCoreApplication::sendEvent(widget, &leaveEvent);
+        widget->setAttribute(Qt::WA_UnderMouse, false);
+    };
+    clearHoverState(window);
+    const auto childWidgets = window->findChildren<QWidget*>();
+    for (QWidget* child : childWidgets)
+        clearHoverState(child);
+
     const QPixmap snapshot = window->grab();
     fluent::FluentElement::setTheme(previousTheme);
 

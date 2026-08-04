@@ -127,6 +127,7 @@ def main():
     required_root = set(manifest["classes"])
     required_root.update(manifest["enums"])
     required_root.update(manifest["functions"])
+    required_root.update(manifest["variables"])
     missing_root = sorted(required_root - root_symbols)
     if missing_root:
         raise RuntimeError(
@@ -189,11 +190,13 @@ def main():
         )
 
     print(
-        "Verified {0} stub files, {1} classes, {2} enums, and {3} functions".format(
+        "Verified {0} stub files, {1} classes, {2} enums, {3} functions, "
+        "and {4} variables".format(
             len(facade_trees) + 1,
             len(manifest["classes"]),
             len(manifest["enums"]),
             len(manifest["functions"]),
+            len(manifest["variables"]),
         )
     )
 

@@ -525,6 +525,12 @@ void TreeView::setSelectionIndicatorInset(qreal inset) {
     setSelectionIndicatorStyle(style);
 }
 
+void TreeView::setSelectionIndicatorHeight(qreal height) {
+    SelectionIndicatorStyle style = m_selectionIndicatorStyle;
+    style.height = height;
+    setSelectionIndicatorStyle(style);
+}
+
 bool TreeView::isIndicatorMotionActiveForIndex(const QModelIndex& index) const {
     return index.isValid() && m_activeIndicatorIndex.isValid() && index == m_activeIndicatorIndex;
 }

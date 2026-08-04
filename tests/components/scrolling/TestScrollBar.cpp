@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <QStyle>
 #include <QScrollArea>
+#include <QTest>
 
 #include "components/scrolling/ScrollBar.h"
 #include "components/foundation/QMLPlus.h"
@@ -113,6 +114,17 @@ TEST_F(ScrollBarTest, VerticalThumbKeepsRoundedCapsAtExtremes) {
     EXPECT_GT(pixelAlpha(bottomImage, bottomBounds.center().x(), bottomBounds.bottom()), 0);
     EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.left(), bottomBounds.bottom()), 0);
     EXPECT_EQ(pixelAlpha(bottomImage, bottomBounds.right(), bottomBounds.bottom()), 0);
+}
+
+TEST_F(ScrollBarTest, HiddenInitializationPreservesPinnedOpacity) {
+    ScrollBar scrollBar(Qt::Horizontal);
+    scrollBar.setRange(0, 1000);
+    scrollBar.setPageStep(100);
+    scrollBar.setOpacity(0.45);
+    scrollBar.setValue(420);
+
+    QTest::qWait(250);
+    EXPECT_DOUBLE_EQ(scrollBar.opacity(), 0.45);
 }
 
 // ─── Design-language × theme sweep ──────────────────────────────────────────

@@ -55,6 +55,16 @@
     <function signature="setFontScale(qreal)"/>
     <function signature="fontScale()"/>
     <function signature="currentDesignLanguage()"/>
+    <function signature="listViewSectionEnabled(const fluent::collections::ListView*)"/>
+    <function signature="setListViewSectionEnabled(fluent::collections::ListView*,bool)"/>
+    <function signature="setListViewSectionKeys(fluent::collections::ListView*,const QStringList&amp;)"/>
+    <function signature="clearListViewSectionKeyFunction(fluent::collections::ListView*)"/>
+    <function signature="setAnnotatedScrollBarDetailLabelText(fluent::scrolling::AnnotatedScrollBar*,int,const QString&amp;)"/>
+    <function signature="clearAnnotatedScrollBarDetailLabelProvider(fluent::scrolling::AnnotatedScrollBar*)"/>
+    <function signature="annotatedScrollBarHasDetailLabelProvider(const fluent::scrolling::AnnotatedScrollBar*)"/>
+    <function signature="shimmerElementsForBinding(const fluent::status_info::Shimmer*)"/>
+    <function signature="setShimmerElementsJsonForBinding(fluent::status_info::Shimmer*,const QString&amp;)"/>
+    <function signature="clearShimmerElementsForBinding(fluent::status_info::Shimmer*)"/>
     <function signature="flowViewSelectionMode(const fluent::collections::FlowView*)"/>
     <function signature="setFlowViewSelectionMode(fluent::collections::FlowView*,fluent::binding::SelectionMode)"/>
     <function signature="flowViewVerticalFluentScrollBar(const fluent::collections::FlowView*)"/>
@@ -111,6 +121,7 @@
             <enum-type name="Theme"/>
             <enum-type name="DesignLanguage"/>
             <enum-type name="SelectionMode"/>
+            <object-type name="ScrollViewZoomAwareWidget"/>
         </namespace-type>
 
         <object-type name="FontIcon"/>
@@ -605,8 +616,8 @@
                     </modify-argument>
                 </modify-function>
                 <!-- The rejection above keeps the implementation-oriented
-                     SelectionIndicatorStyle out of Python. The stable scalar
-                     inset and visibility APIs remain available. -->
+                     SelectionIndicatorStyle out of Python. Stable scalar
+                     geometry and visibility APIs remain available. -->
             </object-type>
         </namespace-type>
 
@@ -1209,6 +1220,19 @@ Shiboken::Object::keepReference(
                 <enum-type name="QueryButtonPlacement"/>
                 <modify-function signature="onThemeUpdated()"
                                  remove="all"/>
+            </object-type>
+            <object-type name="EditingCommandRouter">
+                <enum-type name="Command"/>
+                <modify-function signature="scopeWindow()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="action(fluent::textfields::EditingCommandRouter::Command)const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
             </object-type>
             <object-type name="Label">
                 <enum-type name="TextColorRole"/>

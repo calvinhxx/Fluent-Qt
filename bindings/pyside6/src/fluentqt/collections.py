@@ -747,12 +747,20 @@ class GridView(_NativeGridView):
 
 
 class ListView(_NativeListView):
-    """Fluent item view that retains caller-owned Qt models and delegates."""
+    """Fluent item view with Python-callable section grouping.
+
+    ``setSectionKeyFunction()`` accepts a synchronous ``row -> str`` callable.
+    The facade evaluates it for the current model and refreshes the native
+    section keys after row, data, reset, or layout changes.  C++ painting never
+    calls back into Python, so the contract remains stable on Shiboken 6.2+.
+    """
 
     SelectionMode = SelectionMode
 
     def __init__(self, *args, **kwargs):
         selection_mode = kwargs.pop("selectionMode", None)
+        section_enabled = kwargs.pop("sectionEnabled", None)
+        section_key_function = kwargs.pop("sectionKeyFunction", None)
         for unsupported in ("header", "footer"):
             if unsupported in kwargs:
                 raise TypeError(
@@ -761,16 +769,17 @@ class ListView(_NativeListView):
                         unsupported
                     )
                 )
-        if "sectionEnabled" in kwargs:
-            raise TypeError(
-                "ListView section grouping is not exposed to Python; "
-                "compose grouped rows in the model or outside the view"
-            )
+        self._fluentqt_section_key_function = None
+        self._fluentqt_section_model_connections = []
         super().__init__(*args, **kwargs)
         self._fluentqt_item_delegate = None
         self._fluentqt_item_delegate_destroyed = None
         if selection_mode is not None:
             self.setSelectionMode(selection_mode)
+        if section_key_function is not None:
+            self.setSectionKeyFunction(section_key_function)
+        if section_enabled is not None:
+            self.setSectionEnabled(section_enabled)
 
     def selectionMode(self):
         return _native.listViewSelectionMode(self)
@@ -783,6 +792,88 @@ class ListView(_NativeListView):
 
     def horizontalFluentScrollBar(self):
         return _native.listViewHorizontalFluentScrollBar(self)
+
+    def sectionEnabled(self):
+        return _native.listViewSectionEnabled(self)
+
+    def isSectionEnabled(self):
+        return self.sectionEnabled()
+
+    def setSectionEnabled(self, enabled):
+        _native.setListViewSectionEnabled(self, bool(enabled))
+
+    def _disconnect_section_model(self):
+        for model, signal, callback in self._fluentqt_section_model_connections:
+            if not Shiboken.isValid(model):
+                continue
+            try:
+                signal.disconnect(callback)
+            except (RuntimeError, TypeError):
+                pass
+        self._fluentqt_section_model_connections = []
+
+    def _connect_section_model(self, model):
+        self._disconnect_section_model()
+        if model is None:
+            return
+        callback = self._refresh_section_keys
+        for signal_name in (
+            "rowsInserted",
+            "rowsRemoved",
+            "rowsMoved",
+            "modelReset",
+            "dataChanged",
+            "layoutChanged",
+        ):
+            signal = getattr(model, signal_name, None)
+            if signal is None:
+                continue
+            signal.connect(callback)
+            self._fluentqt_section_model_connections.append(
+                (model, signal, callback)
+            )
+
+    def setModel(self, model):
+        # Disconnect while the previous model is still retained and valid.
+        # PySide 6.2 can invalidate the old signal proxy during the base
+        # setModel() call, and disconnecting that proxy afterwards can crash.
+        self._disconnect_section_model()
+        super().setModel(model)
+        self._connect_section_model(model)
+        self._refresh_section_keys()
+
+    def _refresh_section_keys(self, *_args):
+        callback = self._fluentqt_section_key_function
+        if callback is None:
+            _native.clearListViewSectionKeyFunction(self)
+            return
+        model = self.model()
+        row_count = model.rowCount() if model is not None else 0
+        keys = []
+        for row in range(row_count):
+            value = callback(row)
+            if not isinstance(value, str):
+                raise TypeError(
+                    "ListView section key function must return str, got {0} "
+                    "for row {1}".format(type(value).__name__, row)
+                )
+            keys.append(value)
+        _native.setListViewSectionKeys(self, keys)
+
+    def setSectionKeyFunction(self, callback):
+        if callback is not None and not callable(callback):
+            raise TypeError("ListView section key function must be callable or None")
+        previous_callback = self._fluentqt_section_key_function
+        self._fluentqt_section_key_function = callback
+        try:
+            self._refresh_section_keys()
+        except Exception:
+            self._fluentqt_section_key_function = previous_callback
+            try:
+                self._refresh_section_keys()
+            except Exception:
+                pass
+            raise
 
     def setItemDelegate(self, delegate):
         previous = self._fluentqt_item_delegate
