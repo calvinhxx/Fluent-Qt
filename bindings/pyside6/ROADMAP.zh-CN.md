@@ -26,30 +26,30 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 | M2 — 低风险控件覆盖 | 已完成 | 所有计划叶子控件均已绑定或记录明确边界，并具备属性、信号、示例、manifest 检查和 wheel smoke 验证 |
 | M3 — 托管控件 ownership | 已完成 | 计划内托管控件边界均具备固定语义适配器、ownership 与 GC 测试 |
 | M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
-| M5 — Overlay 与原生窗口 | 进行中 | 自动化 XCB/Windows/Cocoa 原生验收已通过；仍需实体 DWM/KWin/Wayland compositor 审查 |
-| M6 — 可发布 Python 分发 | 进行中 | 已实现类型存根、manifest/mypy 门禁、六目标 x64/ARM64 wheel 矩阵与 Qt 6.2 兼容门禁；manylinux、API 版本策略、签名和发布仍待完成 |
+| M5 — Overlay 与原生窗口 | 进行中 | 本机 Windows 11 DWM 材质/布局及指针驱动 move/resize 验收已通过，自动化 XCB/Wayland/Windows/Cocoa 验收也已通过；仅剩实体 KWin/Wayland compositor 审查 |
+| M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六目标 wheel 矩阵、分架构 manylinux repair/audit 路径，以及覆盖全部 88 个原生路由、199 个 SampleCard、除有意保留的 Python/C++ API 文本外像素一致的 wheel 内置 Gallery；仍需完整容器 CI 证据、签名和发布 |
 
 ## 公共 API 覆盖台账
 
 下表是组件覆盖的事实来源。不能因为当前小批次的复选框全部完成，就把整个里程碑
 标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。M0 至 M4 已完成该
-审计。当前 manifest 记录了 75 个必须存在的类和值类型；M5、M6 的剩余边界继续在
-下表及各自章节中记录。
+审计。当前 manifest 记录了 77 个必需类、值类型及支持类型、11 个枚举、14 个函数和 2 个版本变量；
+M5、M6 的剩余边界继续在下表及各自章节中记录。
 
 | 分类 | 已绑定 | 剩余边界 |
 |---|---|---|
 | Basic Input | `Button`、`CheckBox`、`ColorPicker`、`ComboBox`、`CompoundButton`、`DropDownButton`、`HyperlinkButton`、`RadioButton`、`RatingControl`、`RepeatButton`、`Slider`、`SplitButton`、`ToggleButton`、`ToggleSplitButton`、`ToggleSwitch` | — |
-| Collections | `DrawerView`、`FlipView`、`FlowView`、`GridView`、`ListView`、`SplitView`、`StackView`、`TreeView` | 当前公开组件已覆盖完整 |
+| Collections | `DrawerView`、`FlipView`、`FlowView`、`GridView`、`ListView`、`SplitView`、`SplitViewPaneOptions`、`StackView`、`TreeView` | 当前公开组件与支持类型已覆盖完整 |
 | Date & Time | `CalendarDatePicker`、`CalendarView`、`DatePicker`、`TimePicker` | 当前公开组件已覆盖完整 |
 | Dialogs & Flyouts | `CoachMark`、`ContentDialog`、`Dialog`、`Flyout`、`Popup`、`TeachingTip` | 当前公开组件已覆盖完整 |
 | Foundation | `FontIcon`、主题/字体包级 API、ownership 枚举 | `FluentElement`、`QMLPlus`、registry 与 overlay helper 保持实现层能力，不直接作为 Python mixin 发布 |
 | Layout | `Accordion`、`Card`、`Divider`、`Expander` | 当前公开组件已覆盖完整 |
 | Menus & Toolbars | `CommandBar`、`CommandBarFlyout`、`FluentMenu`、`FluentMenuBar`、`FluentMenuItem` | 当前公开组件已覆盖完整；CI run `30715183706` 已通过 |
 | Navigation | `Breadcrumb`、`BreadcrumbItem`、`NavigationView`、`Pivot`、`PivotItem`、`SelectorBar`、`SelectorBarItem`、`StackContentHost`、`TabView`、`TabViewItem` | 当前公开组件已覆盖完整 |
-| Scrolling | `AnnotatedScrollBar`、`AnnotatedScrollBarLabel`、`PipsPager`、`ScrollBar`、`ScrollView` | 当前公开组件已覆盖完整 |
+| Scrolling | `AnnotatedScrollBar`、`AnnotatedScrollBarLabel`、`PipsPager`、`ScrollBar`、`ScrollView`、`ScrollViewZoomAwareWidget` | 当前公开组件与支持类型已覆盖完整 |
 | Status & Info | `Avatar`、`InfoBadge`、`InfoBar`、`ProgressBar`、`ProgressRing`、`Shimmer`、`Toast`、`ToolTip` | 当前公开组件已覆盖完整；CI run `30709495870` 已通过 |
-| Text Fields | `AutoSuggestBox`、`Label`、`LineEdit`、`NumberBox`、`PasswordBox`、`TextEdit` | 公开控件已覆盖完整；`EditingCommandRouter` 保持实现辅助能力 |
-| Windowing | `Window`、`TitleBar` 与 backdrop 值类型 | Windows 11 DWM 与 Linux KWin/Wayland compositor 行为仍需 M5 实体桌面审查 |
+| Text Fields | `AutoSuggestBox`、`EditingCommandRouter`、`Label`、`LineEdit`、`NumberBox`、`PasswordBox`、`TextEdit` | 当前公开组件与支持类型已覆盖完整 |
+| Windowing | `Window`、`TitleBar` 与 backdrop 值类型 | Windows 11 DWM 材质/布局及指针驱动 system move/resize 审查已完成；M5 仍需实体 KWin/Wayland compositor 行为审查 |
 
 ## M0 — 绑定基础设施
 
@@ -729,13 +729,19 @@ Popup、Flyout、ContentDialog、TeachingTip、dropdown 和其他 overlay 组件
       XCB/Windows/Cocoa 验收报告，同时通过源码包集成、Qt 5.15/6.2 C++ 回归
       与最终 CI Gate。Qt 6.2 报告路径会将旧 Shiboken 的 byte string 规范化为
       UTF-8 文本。
-- [ ] 在实体桌面审查 Windows 11 DWM、Linux KWin/Wayland compositor 材质
-      以及系统拖动/resize 行为。
+- [x] 在本机实体 Windows 11 桌面验证 DWM 材质应用与 chrome 布局。Qt 6.9.3
+      通过 `DwmSystemBackdrop` 成功应用 Mica 和 Acrylic；原生报告与可读的 Solid
+      截图确认自定义 chrome、系统标题按钮预留区和 resize 传递均正常。
+- [x] 在本机 Windows 11 桌面审查指针驱动的 system move 与边框 resize。真实
+      标题栏拖动把窗口原点从 `(503,209)` 移到 `(623,289)`；真实右下边框拖动把
+      尺寸从 `914x614` 调整为 `814x534`，对外发布的 chrome frame 同步更新。
+- [ ] 在实体 Linux 桌面审查 KWin/Wayland compositor 材质与系统 move/resize。
 
 自动化原生验收会拒绝 offscreen/minimal 插件，并验证原生 handle、chrome/内容
-ownership、resize 传递和最终 backdrop 不变量。Xvfb 与托管 CI 能证明平台插件
-集成和 painted fallback，但不能证明 Windows 11 DWM 或 Linux compositor blur
-的视觉质量；这些效果以及指针驱动的系统拖动/resize 仍属于实体桌面验收项。
+ownership、resize 传递和最终 backdrop 不变量。本机 WSLg Wayland 与 XCB 报告
+也确认了 painted fallback，但不把它误报为 compositor blur。Windows DWM 材质
+质量及指针驱动 system move/resize 现已有覆盖；实体 KWin blur 与指针行为是 M5
+唯一剩余的桌面验收项。
 
 ## M6 — 可发布 Python 分发
 
@@ -752,8 +758,28 @@ ownership、resize 传递和最终 backdrop 不变量。Xvfb 与托管 CI 能证
   wheel smoke，并在 CI 中对已安装 wheel 运行严格 mypy 消费方检查。
 - [x] 将精确 PySide/Shiboken 依赖、许可证和 notice 纳入 wheel，并在每个
   原生 lane 执行干净虚拟环境安装、导入、类型检查及原生依赖/架构检查。
-- [ ] 定义 Linux manylinux 构建、repair 和 `auditwheel` 审计策略。
-- [ ] 建立 Python API 版本与弃用规则。
+- [x] 定义 Linux manylinux 构建、repair 和 `auditwheel` 审计策略。发布 lane 会在
+  匹配的 PyPA policy image 中重新构建，固定 `auditwheel`，排除由元数据精确固定
+  的 PySide6/Qt/Shiboken runtime，校验可重定位 RPATH 与 wheel 元数据，并生成带
+  hash 的 JSON 审计报告；详见 `bindings/pyside6/MANYLINUX.md`。
+- [x] 建立 Python API 版本与弃用规则。包公开 `__version__` 和
+  `__api_version__`；manifest schema、SemVer、替代符号与“仅后续 major 可移除”
+  规则由 stub 门禁和单元测试强制执行；详见
+  `bindings/pyside6/API_COMPATIBILITY.md`。
+- [x] 交付 wheel 内置的 Python Gallery，作为只消费公开包 API 的集成应用。
+  生成契约以 C++ 目录为事实来源，锁定 12 个分类、顺序一致的 88 个路由、67 个
+  组件页以及全部 199 个原生 SampleCard。路由组件加 10 个内嵌支持类型覆盖全部
+  77 个 manifest 类型。每张卡片都用完整可执行的 `preview_source` 构建公开 API
+  实时预览，而可见的 Source code 区只展示精简、与 C++ 规范方法对齐的 Python
+  教学代码。验收门禁会执行完整预览源码、编译并按 C++ 契约检查可见代码语义，且
+  拒绝 fallback 预览、Gallery 内部导入、预览 parent 泄漏或契约漂移。
+  安装版应用复刻当前 C++ 视觉壳层和页面原型、打包同一批首页/控件图片，并以
+  自动测试锁定标题栏、搜索、导航、Hero、响应式网格、组件分区、SampleCard 与
+  快照几何。最终 Windows 全路由验收会同时以 `1440x900` 重新生成两个应用的
+  快照：21 组路由整图字节一致，其余 67 个组件页只在有意区分 Python/C++ 的
+  `Use` API 文本矩形内存在差异。共比较 114,048,000 个像素，其中
+  113,592,073 个完全一致；455,927 个变化像素全部位于该矩形内，矩形外变化
+  像素为零。快照入口会清除瞬时 hover 状态，因此结果不再取决于宿主鼠标位置。
 - [ ] 所有必需矩阵 lane 通过后，签名并正式发布 wheel。
 
 Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官方 PySide 6.2.4
@@ -762,8 +788,10 @@ glibc 2.39，因此该 lane 使用 `ubuntu-24.04-arm`。Windows ARM64 使用从 
 开始提供官方 ARM64 工具缓存的 CPython。这样既守住低版本兼容，也避免用版本号
 相同但来源或架构不匹配的两套 Qt。
 
-当前 Linux CI 产物仍是原生 `linux_*` wheel；在定义 manylinux 构建/repair、
-`auditwheel` 审计、签名和上传规则之前，不得将它们作为 PyPI 正式产物发布。
+Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 现在会在分架构 policy
+image 中重新构建，只上传修复后的 manylinux wheel 与审计报告，但这条新增容器路径
+仍需完整原生 CI 证据。在所有 lane 通过且显式启用签名/上传门禁之前，不发布任何
+wheel。
 
 ## 完成标准
 
@@ -791,8 +819,8 @@ Windows 上的确认。
 3. **发布完成**：M6 完成；明确 CPython/操作系统/架构矩阵，提供类型存根、
    API 兼容和弃用规则，并发布经过干净环境验证的 wheel。
 
-当前 M0 至 M4 已完成。达到功能完整仍需完成 M5 的实体 Windows 11 DWM 与
-Linux KWin/Wayland compositor 审查；达到发布完成还需完成 M6 剩余分发工作。
+当前 M0 至 M4 已完成。达到功能完整现在只需完成 M5 的实体 Linux
+KWin/Wayland compositor 审查；达到发布完成还需完成 M6 剩余分发工作。
 
 因此，本项目只有达到第三层，才称为“Python 支持完成并可正式发布”。这不包含
 PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Python 使用的
@@ -802,6 +830,9 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
 
 - **自动契约**：运行 `ctest --test-dir build/pyside6 -L '^pyside$'
   --output-on-failure`，检查属性、信号、继承、ownership、生成代码和验收窗口。
+- **Python Gallery**：从已安装 wheel 运行 `python -m fluentqt.gallery` 做交互审查；
+  增加 `--verify-catalog --walk-routes --snapshot <png> --report <json>` 可生成确定性的
+  manifest、路由与渲染证据。
 - **肉眼交互**：运行 `examples/compatibility_showcase.py`，切换 Light/Dark、
   Fluent/Material/macOS 和 accent，拖动 Slider、按住 RepeatButton，并检查文字、
   分隔线、进度控件和信号反馈。
@@ -966,3 +997,68 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
 37. 根据公共 API 台账、本机全部 84 项 PySide CTest 与 CI run `30745443691`
     对里程碑状态进行同步：M0 至 M4 已完成；M5 因实体 DWM/KWin/Wayland 审查
     保持进行中，M6 因 manylinux、API 版本治理、签名和正式发布保持进行中。
+38. 实现 M6 的 API 治理与 manylinux 策略批次。包现已公开完整版本和 major/minor
+    API 版本变量，manifest 包含机器校验的弃用台账；Linux 发布 lane 定义分架构
+    PyPA policy image、固定 repair 输入、外置 PySide6/Qt/Shiboken 边界、可重定位
+    RPATH 检查和 JSON 审计证据。本机 Windows Qt 6.9.3 与 Linux Qt 6.2.4 构建
+    各自通过全部 86 项 PySide CTest、干净 wheel smoke、`pip check`、严格 mypy
+    与运行时依赖解析。Windows 11 DWM 成功应用原生 Mica/Acrylic；WSLg
+    Wayland/XCB 以预期 painted fallback 通过原生 chrome 验收。M5 仍需完成
+    Windows 指针交互与实体 KWin 审查。由于本机没有 Docker，M6 仍需新增
+    manylinux 容器 lane 在完整 CI 中通过后，才能进入签名和正式发布。
+39. 将 wheel 内置的 Python Gallery 集成批次视为完成。应用只使用公开
+    `fluentqt` API。生成契约现以 C++ Gallery 目录为事实来源，锁定同样的 12 个
+    分类、顺序一致的 88 个路由、67 个组件页以及全部 199 个原生 SampleCard。
+    Python 应用通过 67 个路由组件和 10 个内嵌支持类型覆盖全部 77 个 manifest
+    类型；每张卡片都构建公开 API 实时预览并执行完全相同的展示源码，任何通用
+    fallback 都会被拒绝。完成条件还包括原生视觉壳层，而不只是早期的目录原型：
+    Python 应用现共用首页/控件图片，并复刻标题栏、居中搜索、响应式侧边导航、
+    首页 Hero 与网格、组件分区、引用卡、实时 SampleCard 和 Source code 折叠区。
+    几何测试会拒绝旧的原始 TreeView/按钮列表布局；PNG 生成会将透明 DWM/Mica
+    像素合成到 Fluent fallback 底色。本机 Windows Qt/PySide 6.9.3 与 Linux
+    Qt/PySide 6.2.4 源码构建各自通过全部 89 项 PySide CTest；干净 wheel 通过
+    smoke、`pip check`、严格 mypy、88/88 安装版路由遍历、199/199 原生等价示例
+    （fallback 为零），并校验全部 74 张控件图片和 7 张首页 tile。Windows
+    `windows` 与 WSLg `wayland` 安装版快照也已审查。Qt 6.2 验收遍历会在路由
+    之间让出事件循环，避免事件饥饿。该集成证据不能替代 M5 的实体
+    KWin/Wayland 桌面审查，也不会关闭 M6 剩余的容器 CI、签名与正式发布工作。
+40. 关闭本机 Windows 指针验收与 Gallery 对齐缺口。Windows 11 真实指针
+    输入把自定义 chrome 窗口移动了 `120x80` 像素，并通过右下边框将尺寸从
+    `914x614` 调整为 `814x534`；DWM Mica/Acrylic 仍保持原生后端。最终 C++ 与
+    Python 全路由验收分别重新生成 88 张 `1440x900` 快照。当前如实记录的结果为
+    21 组整图字节一致，另 67 个组件页的变化像素只位于 Python/C++ `Use` API
+    文本内；该矩形外的像素全部一致。快照入口现会在渲染前清除瞬时 hover 状态。
+    本机 Windows Qt/PySide 6.9.3 与 Linux Qt/PySide 6.2.4
+    均通过 32 项 Gallery 测试、干净安装 wheel smoke 与 `pip check`；Linux 还
+    通过全部 201 项绑定测试，以及 TreeView（92 通过/1 项可视化跳过）、
+    ProgressRing（11/1）和 ScrollBar（4/1）聚焦 C++ 套件。原生 WSLg Wayland
+    报告确认自定义交互 chrome 与如实上报的 Mica/Acrylic painted fallback。
+    M5 现在只剩实体 KWin/Wayland compositor 与指针审查；M6 仍需容器 CI 证据、
+    签名及发布授权。
+41. 修正 Python Gallery 的启动遮罩、API 参考、示例源码与主题刷新回归。启动遮罩
+    现在覆盖整个 Gallery 客户区，不再只覆盖右侧内容区。组件 `Use` 卡片展示
+    Python import/type/module，不再出现 C++ 头文件或 CMake target；全部 199 个
+    实时预览均由其展示的 Python 源码直接构造，ListView 源码也补齐了与预览一致
+    的头像、delegate、model 设置顺序和选择状态。Icon Browser 的主题刷新不再调用
+    绑定层有意不公开的 `ToolTip::onThemeUpdated()`。共享的非代码文案已改为语言
+    无关，因此最终 Windows 88 路由对比为 21 组整图完全一致、67 组只在 `Use`
+    文本矩形内不同，矩形外变化像素为零。Windows Qt/PySide 6.9.3 与 Linux 6.2.4
+    均通过 33 项 Gallery 测试；两端重新构建并强制安装的 wheel 也通过源码/启动/
+    主题循环聚焦测试、完整 wheel smoke 与 `pip check`。
+42. 关闭 Python Gallery 的生命周期、教学源码、设置切换延迟与 Top→Left 导航状态
+    缺口。交互启动现在使用每用户 `QLockFile`/`QLocalServer` 单实例；程序会在导入
+    88 路由/199 示例的完整 UI 图之前完成加锁和激活握手，主控制器就绪前收到的激活
+    会排队恢复窗口，自动化验收模式则按设计保持相互独立。Windows 真实第二次启动
+    以 0 退出，耗时 1.067 秒，Gallery 窗口始终只有一个。此记录取代第 39、41 条中
+    “展示源码与完整预览源码完全相同”的过度约束：每张卡片保留完整可执行的
+    `preview_source` 来构建像素级预览，同时用独立、精简、只含公开 API 的 `source`
+    作为可见教学代码。199 份完整源码全部成功执行，199 份可见代码全部可编译且保留
+    C++ 契约中的规范 API 操作；可见 Python 总计 2,648 行，对应 C++ 2,369 行
+    （1.118 倍），单块最长 68 行，且不含 Gallery 内部导入或 `gallery_parent`。
+    主题/样式/accent 变化现在只立即刷新壳层与当前路由，隐藏页在真正导航到时再按代次
+    懒刷新；88 页全部构建后，主题切换从 1,460.1 ms 降至 219.0 ms，样式切换从
+    546.5 ms 降至 28.7 ms。左侧 pane 只有在回场动画完全结束后才解除 compact，
+    Windows 真实 Top→Left 往返会恢复全部主导航与 footer 项。最终 Windows
+    Qt/PySide 6.9.3 和 Linux 6.2.4 的源码与强制安装 wheel 均通过 Gallery 套件、
+    wheel smoke、`pip check`、88/88 路由和 199/199 预览，失败数为零。M5 的实体
+    KWin/Wayland 审查以及 M6 的容器 CI、签名和正式发布仍保持未完成。

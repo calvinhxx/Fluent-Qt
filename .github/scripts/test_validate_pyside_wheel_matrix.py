@@ -68,6 +68,60 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
             errors,
         )
 
+    def test_linux_release_must_match_pyside_manylinux_floor(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(
+            item
+            for item in catalog["scenarios"]
+            if item["id"] == "linux-x64-qt693-cp311"
+        )
+        scenario["manylinux_policy"] = "manylinux_2_17"
+        scenario["publish_wheel_suffix"] = (
+            "cp311-cp311-manylinux_2_17_x86_64"
+        )
+
+        errors = VALIDATOR.validate_catalog(catalog)
+
+        self.assertTrue(any("manylinux_policy" in error for error in errors), errors)
+        self.assertTrue(
+            any("publish_wheel_suffix" in error for error in errors),
+            errors,
+        )
+
+    def test_compatibility_lane_cannot_be_published(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(
+            item
+            for item in catalog["scenarios"]
+            if item["id"] == "linux-x64-qt624-cp310"
+        )
+        scenario["publish_wheel_suffix"] = (
+            "cp310-cp310-manylinux_2_17_x86_64"
+        )
+
+        errors = VALIDATOR.validate_catalog(catalog)
+
+        self.assertTrue(
+            any("publish_wheel_suffix" in error for error in errors),
+            errors,
+        )
+
+    def test_manylinux_lane_reserves_time_for_second_build(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(
+            item
+            for item in catalog["scenarios"]
+            if item["id"] == "linux-x64-qt693-cp311"
+        )
+        scenario["timeout_minutes"] = 35
+
+        errors = VALIDATOR.validate_catalog(catalog)
+
+        self.assertTrue(
+            any("both native and manylinux builds" in error for error in errors),
+            errors,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

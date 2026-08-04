@@ -1,8 +1,11 @@
 # FluentQt Library Source Package
 
 This archive contains the reusable FluentQt UI component library, its optional
-PySide6 binding sources, and minimal integration material. Gallery, top-level
-C++ tests, and application logging support are not part of this package.
+PySide6 binding sources, and minimal integration material. The native C++
+Gallery, top-level C++ tests, and application logging support are not part of
+this package. The wheel-installed Python Gallery is included with the optional
+binding sources and can be launched with `python -m fluentqt.gallery` after the
+wheel is built and installed.
 
 Requirements:
 
@@ -12,7 +15,9 @@ Requirements:
 
 The optional PySide6 binding target requires Python 3.10+ and matching Qt,
 PySide6, Shiboken6, and Shiboken6 generator versions from 6.2 onward. See
-`bindings/pyside6/README.md` for setup, wheel, and validation commands.
+`bindings/pyside6/README.md` for setup, wheel, and validation commands,
+`bindings/pyside6/API_COMPATIBILITY.md` for API version governance, and
+`bindings/pyside6/MANYLINUX.md` for the publishable Linux wheel boundary.
 
 Top-level development builds include `FluentQt` and the
 `fluentqt_hello_world` executable example. Source-subproject builds keep the

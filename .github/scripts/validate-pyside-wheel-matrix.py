@@ -38,6 +38,10 @@ REQUIRED_FIELDS = {
     "build_dir",
     "artifact_suffix",
     "expected_wheel_suffix",
+    "publish_wheel_suffix",
+    "manylinux_policy",
+    "manylinux_image",
+    "manylinux_build_dir",
     "legacy_shiboken",
     "check_backdrop_converter",
     "macos_deployment_target",
@@ -100,6 +104,29 @@ WHEEL_PLATFORM_SUFFIX = {
     ("macos", "x64"): "macosx_12_0_x86_64",
     ("macos", "arm64"): "macosx_12_0_arm64",
 }
+MANYLINUX_POLICY = {
+    ("linux", "x64"): (
+        "manylinux_2_28",
+        "x86_64",
+        "quay.io/pypa/manylinux_2_28_x86_64:latest",
+    ),
+    ("linux", "arm64"): (
+        "manylinux_2_39",
+        "aarch64",
+        "quay.io/pypa/manylinux_2_39_aarch64:latest",
+    ),
+}
+AUDITWHEEL_VERSION = "6.7.0"
+AUDITWHEEL_EXCLUDES = [
+    "libQt6*.so.6",
+    "libpyside6*.so.*",
+    "libshiboken6*.so.*",
+]
+MANYLINUX_RPATHS = [
+    "$ORIGIN/../PySide6",
+    "$ORIGIN/../shiboken6",
+    "$ORIGIN/../PySide6/Qt/lib",
+]
 
 
 def load_catalog(path: Path) -> dict[str, Any]:
@@ -115,8 +142,27 @@ def load_catalog(path: Path) -> dict[str, Any]:
 
 def validate_catalog(catalog: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if catalog.get("schema_version") != 1:
-        errors.append("schema_version must be 1")
+    if catalog.get("schema_version") != 2:
+        errors.append("schema_version must be 2")
+
+    manylinux = catalog.get("manylinux")
+    if not isinstance(manylinux, dict):
+        errors.append("manylinux must be an object")
+    else:
+        if manylinux.get("auditwheel_version") != AUDITWHEEL_VERSION:
+            errors.append(
+                f"manylinux.auditwheel_version must be {AUDITWHEEL_VERSION}"
+            )
+        if manylinux.get("external_library_excludes") != AUDITWHEEL_EXCLUDES:
+            errors.append(
+                "manylinux.external_library_excludes must preserve the exact "
+                "PySide6/Qt runtime boundary"
+            )
+        if manylinux.get("required_rpaths") != MANYLINUX_RPATHS:
+            errors.append(
+                "manylinux.required_rpaths must resolve only through the "
+                "installed PySide6/Shiboken6 distributions"
+            )
 
     scenarios = catalog.get("scenarios")
     if not isinstance(scenarios, list) or not scenarios:
@@ -125,6 +171,7 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
     ids: set[str] = set()
     build_dirs: set[str] = set()
     artifact_suffixes: set[str] = set()
+    manylinux_build_dirs: set[str] = set()
     fast_ids: set[str] = set()
     compatibility_ids: set[str] = set()
     release_platforms: set[tuple[str, str]] = set()
@@ -226,6 +273,62 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
                 f"{context} expected_wheel_suffix must be {expected_suffix!r}"
             )
 
+        expected_publish_suffix = ""
+        expected_manylinux_policy = ""
+        expected_manylinux_image = ""
+        expects_manylinux_build = (
+            scenario["release"] is True and platform == "linux"
+        )
+        if scenario["release"] is True:
+            expected_publish_suffix = expected_suffix or ""
+        if expects_manylinux_build:
+            manylinux_policy = MANYLINUX_POLICY.get(platform_arch)
+            if manylinux_policy is None:
+                errors.append(f"{context} has no manylinux policy")
+            else:
+                (
+                    expected_manylinux_policy,
+                    manylinux_arch,
+                    expected_manylinux_image,
+                ) = manylinux_policy
+                if expected_python_tag:
+                    expected_publish_suffix = (
+                        f"{expected_python_tag}-{expected_python_tag}-"
+                        f"{expected_manylinux_policy}_{manylinux_arch}"
+                    )
+
+        if scenario["publish_wheel_suffix"] != expected_publish_suffix:
+            errors.append(
+                f"{context} publish_wheel_suffix must be "
+                f"{expected_publish_suffix!r}"
+            )
+        if scenario["manylinux_policy"] != expected_manylinux_policy:
+            errors.append(
+                f"{context} manylinux_policy must be "
+                f"{expected_manylinux_policy!r}"
+            )
+        if scenario["manylinux_image"] != expected_manylinux_image:
+            errors.append(
+                f"{context} manylinux_image must be "
+                f"{expected_manylinux_image!r}"
+            )
+
+        manylinux_build_dir = scenario["manylinux_build_dir"]
+        if expects_manylinux_build:
+            if not isinstance(manylinux_build_dir, str) or not re.fullmatch(
+                r"build/pyside6-manylinux-[a-z0-9-]+",
+                manylinux_build_dir,
+            ):
+                errors.append(f"{context} has an invalid manylinux_build_dir")
+            elif manylinux_build_dir in manylinux_build_dirs:
+                errors.append(
+                    f"duplicate manylinux_build_dir: {manylinux_build_dir}"
+                )
+            else:
+                manylinux_build_dirs.add(manylinux_build_dir)
+        elif manylinux_build_dir != "":
+            errors.append(f"{context} manylinux_build_dir must be empty")
+
         legacy_expected = scenario["qt_version"] == "6.2.4"
         if scenario["legacy_shiboken"] is not legacy_expected:
             errors.append(
@@ -261,10 +364,14 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
         else:
             artifact_suffixes.add(artifact_suffix)
 
-        if not isinstance(scenario["timeout_minutes"], int) or scenario[
-            "timeout_minutes"
-        ] <= 0:
+        timeout_minutes = scenario["timeout_minutes"]
+        if not isinstance(timeout_minutes, int) or timeout_minutes <= 0:
             errors.append(f"{context} timeout_minutes must be a positive integer")
+        elif expects_manylinux_build and timeout_minutes < 50:
+            errors.append(
+                f"{context} timeout_minutes must cover both native and "
+                "manylinux builds (at least 50 minutes)"
+            )
 
         if scenario["fast"] is True:
             fast_ids.add(scenario_id)
@@ -300,6 +407,11 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
         errors.append(
             "first-release matrix must contain x64 and ARM64 for Linux, macOS, "
             f"and Windows, found {sorted(release_platforms)}"
+        )
+    if len(manylinux_build_dirs) != 2:
+        errors.append(
+            "release matrix must define separate x64 and ARM64 manylinux "
+            f"build directories, found {sorted(manylinux_build_dirs)}"
         )
     return errors
 

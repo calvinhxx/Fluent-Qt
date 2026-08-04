@@ -161,14 +161,32 @@ window.show()
 app.exec()
 ```
 
-当前绑定包含 Basic Input、Collections、Date & Time、Layout、Navigation、
-Scrolling、Text Fields、Status & Info 和 Windowing 中的 39 个控件与值类型，
-并暴露 Light/Dark 模式、
+当前绑定包含 Basic Input、Collections、Date & Time、Dialogs & Flyouts、
+Layout、Menus & Toolbars、Navigation、Scrolling、Text Fields、Status & Info
+和 Windowing 中的 77 个公开类、值类型及内嵌支持类型，并暴露 Light/Dark 模式、
 Fluent/Material/macOS 样式预设、accent 覆盖、字体缩放、Qt 属性与信号以及
 Python 子类能力。准确的 6.2.4
 环境准备、API 范围、wheel target、交互验收窗口和干净环境验证命令见
-[PySide6 绑定指南](bindings/pyside6/README.md)，后续工作见
+[PySide6 绑定指南](bindings/pyside6/README.md)。运行时完整版本与 API major/minor
+版本分别由 `fluentqt.__version__` 和 `fluentqt.__api_version__` 提供；发布治理见
+[API 兼容策略](bindings/pyside6/API_COMPATIBILITY.md)、
+[manylinux 发布策略](bindings/pyside6/MANYLINUX.md)与
 [兼容性路线图](bindings/pyside6/ROADMAP.zh-CN.md)。
+
+wheel 还包含按 C++ Gallery 契约生成的原生 Python Gallery：12 个分类、顺序一致的
+88 个路由、67 个组件页以及全部 199 个原生 SampleCard。路由组件加 10 个内嵌支持
+类型覆盖完整的 77 类型公开 manifest。每张卡片都构建只使用公开 API 的实时预览，
+并执行旁边展示的同一份 Python 源码；通用 fallback 预览会使验收失败。安装版应用
+同时复刻 C++ Gallery 的壳层与页面原型：42 px 标题栏和居中搜索框、260/48 px
+响应式导航、390 px 首页 Hero、共用的首页/控件图片、响应式卡片网格，以及
+Overview/Use/Live examples/Category 组件页结构均受几何和干净 wheel 测试约束：
+
+```bash
+python -m fluentqt.gallery
+```
+
+使用 `python -m fluentqt.gallery --verify-catalog --walk-routes` 可执行确定性的
+88 路由/199 示例集成检查；追加 `--snapshot <png>` 与 `--report <json>` 可保留验收证据。
 
 ## 🛠 构建
 
@@ -234,6 +252,8 @@ cmake --build --preset PRESET --target fluent_qt_gallery --parallel
 
 - [开发工作流](docs/development/README.md)
 - [PySide6 绑定指南](bindings/pyside6/README.md)
+- [PySide6 API 兼容策略](bindings/pyside6/API_COMPATIBILITY.md)
+- [PySide6 manylinux 发布策略](bindings/pyside6/MANYLINUX.md)
 - [PySide6 兼容性路线图](bindings/pyside6/ROADMAP.zh-CN.md)
 - [测试与视觉验收](docs/development/testing-workflow.md)
 - [打包工作流](docs/development/packaging-workflow.md)

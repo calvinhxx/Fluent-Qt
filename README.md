@@ -162,15 +162,38 @@ window.show()
 app.exec()
 ```
 
-The current binding set includes 75 public classes and value types from Basic
-Input, Collections, Date & Time, Dialogs & Flyouts, Layout, Menus & Toolbars,
-Navigation, Scrolling, Text Fields, Status & Info, and Windowing. It also exposes
-Light/Dark mode, Fluent/Material/macOS style presets, accent overrides,
-typography scaling, Qt properties and signals, and Python subclassing. See the
+The current binding set includes 77 public classes, value types, and embedded
+support types from Basic Input, Collections, Date & Time, Dialogs & Flyouts,
+Layout, Menus & Toolbars, Navigation, Scrolling, Text Fields, Status & Info,
+and Windowing. It also exposes Light/Dark mode, Fluent/Material/macOS style
+presets, accent overrides, typography scaling, Qt properties and signals, and
+Python subclassing. See the
 [PySide6 binding guide](bindings/pyside6/README.md) for the exact 6.2.4 setup,
 API scope, generated `.pyi` type stubs, wheel target, and clean-environment
-validation commands, and the
-[compatibility roadmap](bindings/pyside6/ROADMAP.md) for the remaining work.
+validation commands. Runtime and API versions are exposed as
+`fluentqt.__version__` and `fluentqt.__api_version__`; see the
+[API compatibility policy](bindings/pyside6/API_COMPATIBILITY.md),
+[manylinux release policy](bindings/pyside6/MANYLINUX.md), and
+[compatibility roadmap](bindings/pyside6/ROADMAP.md) for release governance.
+
+The wheel also ships a Python-native Gallery generated against the C++ Gallery
+contract: 12 categories, the same 88 ordered routes, 67 component pages, and
+all 199 native SampleCards. The routed components plus 10 embedded support
+types cover the complete 77-type public manifest. Every card builds a live
+public-API preview and executes the same Python source shown beside it; generic
+fallback previews fail acceptance. The installed app also mirrors the native
+Gallery shell and page archetypes: the 42 px title bar and centered search,
+260/48 px responsive navigation pane, 390 px Home hero, shared Home/control
+artwork, responsive entry grids, and Overview/Use/Live examples/Category
+component pages are covered by geometry and clean-wheel tests:
+
+```bash
+python -m fluentqt.gallery
+```
+
+Use `python -m fluentqt.gallery --verify-catalog --walk-routes` for a
+deterministic 88-route/199-sample integration check; add `--snapshot <png>` and
+`--report <json>` to retain review evidence.
 
 ## 🛠 Build
 
@@ -236,6 +259,8 @@ See the [Packaging Workflow](docs/development/packaging-workflow.md) for exact l
 
 - [Development workflow](docs/development/README.md)
 - [PySide6 binding guide](bindings/pyside6/README.md)
+- [PySide6 API compatibility policy](bindings/pyside6/API_COMPATIBILITY.md)
+- [PySide6 manylinux release policy](bindings/pyside6/MANYLINUX.md)
 - [PySide6 compatibility roadmap](bindings/pyside6/ROADMAP.md)
 - [Testing and visual review](docs/development/testing-workflow.md)
 - [Packaging workflow](docs/development/packaging-workflow.md)
