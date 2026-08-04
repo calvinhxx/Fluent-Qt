@@ -50,10 +50,10 @@ retain the open boundaries shown below and in their milestone sections.
 | Dialogs & Flyouts | `CoachMark`, `ContentDialog`, `Dialog`, `Flyout`, `Popup`, `TeachingTip` | Complete for the current public component set |
 | Foundation | `FontIcon`, theme/font package API, ownership enum | `FluentElement`, `QMLPlus`, registries, and overlay helpers stay implementation-facing rather than direct Python mixins |
 | Layout | `Accordion`, `Card`, `Divider`, `Expander` | Complete for the current public component set |
-| Menus & Toolbars | `CommandBar`, `CommandBarFlyout`, `FluentMenu`, `FluentMenuBar`, `FluentMenuItem` | Complete for the current public component set; CI run `30715183706` passed |
+| Menus & Toolbars | `CommandBar`, `CommandBarFlyout`, `FluentMenu`, `FluentMenuBar`, `FluentMenuItem` | Complete for the current public component set; native CI validation passed |
 | Navigation | `Breadcrumb`, `BreadcrumbItem`, `NavigationView`, `Pivot`, `PivotItem`, `SelectorBar`, `SelectorBarItem`, `StackContentHost`, `TabView`, `TabViewItem` | Complete for the current public component set |
 | Scrolling | `AnnotatedScrollBar`, `AnnotatedScrollBarLabel`, `PipsPager`, `ScrollBar`, `ScrollView`, `ScrollViewZoomAwareWidget` | Complete for the current public component and support-type set |
-| Status & Info | `Avatar`, `InfoBadge`, `InfoBar`, `ProgressBar`, `ProgressRing`, `Shimmer`, `Toast`, `ToolTip` | Complete for the current public component set; CI run `30709495870` passed |
+| Status & Info | `Avatar`, `InfoBadge`, `InfoBar`, `ProgressBar`, `ProgressRing`, `Shimmer`, `Toast`, `ToolTip` | Complete for the current public component set; native CI validation passed |
 | Text Fields | `AutoSuggestBox`, `EditingCommandRouter`, `Label`, `LineEdit`, `NumberBox`, `PasswordBox`, `TextEdit` | Complete for the current public component and support-type set |
 | Windowing | `Window`, `TitleBar`, and backdrop values | Windows 11 DWM material/layout and pointer-driven system move/resize review are complete; physical KWin/Wayland compositor behavior remains in M5 |
 
@@ -121,7 +121,7 @@ Completed scope:
 - [x] Confirm the fourth leaf-widget slice on native Linux and Windows
       Qt 6.2.4 CI lanes, including generated-contract checks, the complete
       binding test suite, relocatable wheels, and clean-environment smoke in
-      CI run `30553990409`.
+      native CI validation.
 - [x] Audit `PipsPager` separately and reproduce the generator leak where its
       animation-only `selectedVisualOffset` and `visibleWindowOffset`
       properties appeared as Python constructor keywords.
@@ -135,7 +135,7 @@ Completed scope:
       native tests, all 15 binding CTests, 29 verifier tests, a clean installed
       wheel, dependency-path checks, and visual snapshot review passed.
 - [x] Confirm `PipsPager` on the native Linux and Windows Qt 6.2.4 binding
-      lanes and the Qt 5.15 C++ compatibility lane. CI run `30598949551`
+      lanes and the Qt 5.15 C++ compatibility lane. Native CI validation
       passed generation and compilation, contract checks, the complete binding
       suite, relocatable wheels, clean-venv smoke, and the C++ regression gates.
 - [x] Audit and bind `TextEdit` as the next leaf control. Its Python surface
@@ -152,8 +152,7 @@ Completed scope:
       binding CTests, a newly created clean-environment wheel smoke,
       dependency-path checks, and visible snapshot review passed.
 - [x] Confirm the `TextEdit` slice on native Linux and Windows Qt 6.2.4
-      binding lanes and the Qt 5.15 C++ compatibility lane. CI run
-      `30601608042` passed generation and compilation, generated-contract
+      binding lanes and the Qt 5.15 C++ compatibility lane. Native CI validation passed generation and compilation, generated-contract
       checks, all binding tests, relocatable wheels, clean-environment smoke,
       acceptance snapshots, and the C++ regression gates.
 - [x] Audit and bind `CompoundButton` as the next M2 leaf control. It extends
@@ -168,8 +167,7 @@ Completed scope:
       CTests, a newly created clean-environment wheel smoke, dependency-path
       checks, and visible snapshot review passed.
 - [x] Confirm the `CompoundButton` slice on native Linux and Windows Qt 6.2.4
-      binding lanes and the Qt 5.15 C++ compatibility lane. CI run
-      `30603864933` passed generation and compilation, generated-contract
+      binding lanes and the Qt 5.15 C++ compatibility lane. Native CI validation passed generation and compilation, generated-contract
       checks, all binding tests, relocatable wheels, clean-environment smoke,
       acceptance snapshots, and the C++ regression gates.
 - [x] Audit and bind `FontIcon` as the next M2 foundation leaf. It stays a
@@ -186,8 +184,7 @@ Completed scope:
       binding CTests, a newly created clean-environment wheel smoke,
       dependency-path checks, and visual snapshot review passed.
 - [x] Confirm the `FontIcon` slice on native Linux and Windows Qt 6.2.4
-      binding lanes and the Qt 5.15 C++ compatibility lane. CI run
-      `30604556341` passed generation and compilation, generated-contract
+      binding lanes and the Qt 5.15 C++ compatibility lane. Native CI validation passed generation and compilation, generated-contract
       checks, all binding tests, relocatable wheels, clean-environment smoke,
       acceptance snapshots, and the C++ regression gates.
 - [x] Audit and bind `ColorPicker` as the next M2 leaf control. It remains a
@@ -202,8 +199,7 @@ Completed scope:
       binding CTests, a newly created clean-environment wheel smoke,
       dependency-path checks, and visual snapshot review passed.
 - [x] Confirm the `ColorPicker` slice on native Linux and Windows Qt 6.2.4
-      binding lanes and the Qt 5.15 C++ compatibility lane. CI run
-      `30605260392` passed generation and compilation, generated-contract
+      binding lanes and the Qt 5.15 C++ compatibility lane. Native CI validation passed generation and compilation, generated-contract
       checks, all binding tests, relocatable wheels, clean-environment smoke,
       acceptance snapshots, the C++ regression gates, and the final CI Gate.
 - [x] Audit and bind `CalendarView` as the next M2 leaf control. It exchanges
@@ -219,8 +215,7 @@ Completed scope:
       CTests passed, and a newly created clean-environment wheel, dependency
       paths, direct installed-package import, and visual snapshot were checked.
 - [x] Confirm the `CalendarView` slice on native Linux and Windows Qt 6.2.4
-      binding lanes and the Qt 5.15 C++ compatibility lane. CI run
-      `30607530481` passed generation and compilation, generated-contract
+      binding lanes and the Qt 5.15 C++ compatibility lane. Native CI validation passed generation and compilation, generated-contract
       checks, all binding tests, relocatable wheels, clean-environment smoke,
       acceptance snapshots, the C++ regression gates, and the final CI Gate.
 - [x] Audit and bind `AnnotatedScrollBar` as the next M2 control. Its Python
@@ -244,8 +239,7 @@ Completed scope:
       and a new clean virtual environment passed wheel installation,
       dependency-path checks, `pip check`, runtime smoke, and snapshot review.
 - [x] Confirm the `AnnotatedScrollBar` slice on native Linux and Windows
-      Qt 6.2.4 binding lanes and the Qt 5.15 C++ compatibility lane. CI run
-      `30609069504` passed generation and compilation, generated-contract
+      Qt 6.2.4 binding lanes and the Qt 5.15 C++ compatibility lane. Native CI validation passed generation and compilation, generated-contract
       checks, all binding tests, relocatable wheels, clean-environment smoke,
       acceptance snapshots, the C++ regression gates, and the final CI Gate.
 
@@ -308,8 +302,7 @@ Completed ownership batches:
       InfoBar tests, all 16 binding CTests, 33 verifier tests, a clean installed
       wheel, dependency-path checks, and visible snapshot review passed.
 - [x] Confirm the `InfoBar` ownership slice on native Linux and Windows
-      Qt 6.2.4 binding lanes and the Qt 5.15 C++ compatibility lane in CI run
-      `30599841356`, including generated contracts, runtime tests, relocatable
+      Qt 6.2.4 binding lanes and the Qt 5.15 C++ compatibility lane in native CI validation, including generated contracts, runtime tests, relocatable
       wheels, clean-environment smoke tests, and acceptance snapshots.
 - [x] Audit `Accordion` as the fourth ownership host. It composes already-bound
       `Expander` items and preserves the C++ Borrowed default, while Owned and
@@ -324,8 +317,7 @@ Completed ownership batches:
       installation, `pip check`, dependency-path checks, runtime smoke, GC
       stress, and visible snapshot review.
 - [x] Confirm the `Accordion` ownership slice on native Linux and Windows
-      Qt 6.2.4 binding lanes and the Qt 5.15 C++ compatibility lane. CI run
-      `30610740405` passed generation and compilation, all 41 generated
+      Qt 6.2.4 binding lanes and the Qt 5.15 C++ compatibility lane. Native CI validation passed generation and compilation, all 41 generated
       contract checks, all 24 binding CTests, relocatable wheels,
       clean-environment smoke, acceptance snapshots, C++ regression gates,
       source-package verification, and the final CI Gate.
@@ -346,7 +338,7 @@ Completed ownership batches:
       source-package verification, and visible snapshot review.
 - [x] Confirm the `StackView` ownership/navigation slice on native Linux and
       Windows Qt 6.2.4 binding lanes and the Qt 5.15 C++ compatibility lane.
-      CI run `30613428314` passed generation and compilation, all generated
+      native CI validation passed generation and compilation, all generated
       contract checks, all 28 binding CTests, Qt runtime-path verification,
       relocatable wheels, clean-environment smoke, acceptance snapshots,
       source-package checks, the C++ regression lanes, and the final CI Gate.
@@ -367,7 +359,7 @@ Completed ownership batches:
       environment also passed wheel installation,
       `pip check`, loaded dependency-path inspection, runtime smoke, three GC
       stress cases, source-package integration, and visible snapshot review.
-- [x] CI run `30655442887` confirmed the `FlipView` ownership/navigation slice
+- [x] Native CI validation confirmed the `FlipView` ownership/navigation slice
       on native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including Qt
       5.15/6.2 C++ regressions, relocatable clean wheels, source-package
       integration, acceptance snapshots, and the final CI Gate. The Windows
@@ -392,7 +384,7 @@ Completed ownership batches:
       passed wheel installation, `pip check`, dependency-path inspection,
       runtime smoke, three GC stress cases, source-package integration, and
       visible snapshot review.
-- [x] CI run `30673261072` confirmed the `SplitView` ownership slice on native
+- [x] Native CI validation confirmed the `SplitView` ownership slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated contracts,
       all 47 binding CTests, relocatable clean wheels, source-package
       integration, acceptance snapshots, Qt 5.15/6.2 C++ regressions, and the
@@ -414,7 +406,7 @@ Completed ownership batches:
       passed wheel installation, `pip check`, loaded dependency-path
       inspection, runtime smoke, six isolated GC stress cases, source-package
       integration, and visible snapshot review.
-- [x] CI run `30683749605` confirmed the `NavigationView`/`StackContentHost`
+- [x] Native CI validation confirmed the `NavigationView`/`StackContentHost`
       slice on native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including all
       54 binding CTests, generated contracts, Qt 5.15/6.2 C++ regressions,
       relocatable clean wheels, source-package integration, acceptance
@@ -431,7 +423,7 @@ Completed ownership batches:
       wheel installation, `pip check`, loaded dependency paths, complete smoke,
       three isolated GC stresses, source-package regeneration/build, and
       snapshot review.
-- [x] CI run `30685308957` confirmed the `DrawerView` slice on native
+- [x] Native CI validation confirmed the `DrawerView` slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all binding tests, relocatable clean wheels on all three
       platforms, acceptance snapshots, source-package integration, Qt
@@ -532,8 +524,7 @@ Completed scope:
       49 verifier tests passed. A fresh virtual environment also passed wheel
       installation, `pip check`, dependency-path inspection, runtime smoke,
       source-package integration build, and visible snapshot review.
-- [x] Confirm generated code, tests, source package, and clean wheels in CI run
-      `30615473570`: native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3 binding
+- [x] Confirm generated code, tests, source package, and clean wheels in native CI validation: native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3 binding
       lanes passed generation, compilation, contract checks, binding tests,
       relocatable wheel builds, and clean-environment installation; the Qt 5.15
       and Qt 6.2 C++ integration lanes and final CI Gate also passed.
@@ -557,7 +548,7 @@ Completed scope:
       tests passed. A fresh virtual environment also passed wheel installation,
       `pip check`, dependency-path inspection, runtime smoke, source-package
       integration build, and visible snapshot review.
-- [x] CI run `30620199453` confirmed native Linux/Windows Qt 6.2.4, macOS
+- [x] Native CI validation confirmed native Linux/Windows Qt 6.2.4, macOS
       Qt 6.9.3, Qt 5.15/6.2 C++ regressions, relocatable clean wheels on all
       three platforms, and the final CI Gate. This run also exercised the
       compatibility path for Shiboken 6.2 not discovering the cross-namespace
@@ -586,7 +577,7 @@ Completed scope:
       tests passed. A newly created clean virtual environment also passed wheel
       installation, `pip check`, dependency-path inspection, runtime smoke,
       source-package integration build, and visible snapshot review.
-- [x] CI run `30623470079` confirmed native Linux/Windows Qt 6.2.4, macOS
+- [x] Native CI validation confirmed native Linux/Windows Qt 6.2.4, macOS
       Qt 6.9.3, Qt 5.15/6.2 C++ regressions, relocatable clean wheels on all
       three platforms, acceptance snapshots, and the final CI Gate.
 - [x] Audit `TreeView`: hierarchical models, selection models, and delegates
@@ -609,7 +600,7 @@ Completed scope:
       tests passed. A newly created clean virtual environment also passed wheel
       installation, `pip check`, dependency-path inspection, runtime smoke,
       source-package integration build, and visible snapshot review.
-- [x] CI run `30631865586` confirmed generated contracts, native
+- [x] Native CI validation confirmed generated contracts, native
       Linux/Windows Qt 6.2.4 behavior, macOS Qt 6.9.3, Qt 5.15/6.2 C++
       regressions, source-package integration, relocatable clean wheels and
       acceptance snapshots on all three platforms, and the final CI Gate.
@@ -630,7 +621,7 @@ Completed scope:
       73 verifier tests passed. A newly created virtual environment also passed
       wheel installation, `pip check`, dependency-path inspection, runtime
       smoke, source-package integration build, and visible snapshot review.
-- [x] CI run `30635505335` confirmed the `Breadcrumb` slice on native
+- [x] Native CI validation confirmed the `Breadcrumb` slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated contracts,
       binding tests, clean wheel installation, acceptance snapshots,
       Qt 5.15/6.2 C++ integration, source-package integration, and the final
@@ -654,7 +645,7 @@ Completed scope:
       virtual environment also passed wheel installation, `pip check`, loaded
       dependency-path inspection, runtime smoke, source-package integration
       build, and visible snapshot review.
-- [x] CI run `30641454429` confirmed native Linux/Windows Qt 6.2.4, macOS
+- [x] Native CI validation confirmed native Linux/Windows Qt 6.2.4, macOS
       Qt 6.9.3, Qt 5.15/6.2 C++ regressions, clean wheels, source-package
       integration, acceptance snapshots, and the final CI Gate. The Windows
       lane also passed the supported deferred-destruction paths for retained
@@ -678,7 +669,7 @@ Completed scope:
       82 verifier tests passed. A newly created clean environment also passed
       wheel installation, `pip check`, dependency-path inspection, runtime
       smoke, source-package integration, and snapshot review.
-- [x] CI run `30648150576` confirmed the `FlowView` slice on native
+- [x] Native CI validation confirmed the `FlowView` slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, binding tests, relocatable clean wheels, acceptance snapshots,
       Qt 5.15/6.2 C++ regressions, source-package integration, and the final
@@ -698,7 +689,7 @@ Current slices:
 - [x] Cover same-window attachment, scrim outside press, Escape,
       `NoAutoClose`, Python virtual overrides, Owned/Borrowed/Reparented,
       explicit take, a clean wheel, and a visible snapshot locally.
-- [x] CI run `30685308957` confirmed the slice on native Linux/Windows Qt
+- [x] Native CI validation confirmed the slice on native Linux/Windows Qt
       6.2.4 and macOS Qt 6.9.3, including clean wheels on all three platforms,
       source-package integration, Qt 5.15/6.2 C++ regressions, and the final CI
       Gate.
@@ -710,7 +701,7 @@ Current slices:
       overrides, external QWidget deletion, 25-cycle dependency GC stress,
       generated contracts, installed-wheel smoke, and a visible snapshot
       locally on matched Qt/PySide6 6.9.3.
-- [x] CI run `30686805469` confirmed the Popup slice on native Linux/Windows
+- [x] Native CI validation confirmed the Popup slice on native Linux/Windows
       Qt 6.2.4 and macOS Qt 6.9.3, including generated contracts, binding
       tests, clean wheels on all three platforms, source-package integration,
       acceptance snapshots, Qt 5.15/6.2 C++ regressions, and the final CI Gate.
@@ -722,7 +713,7 @@ Current slices:
       overrides, external anchor destruction, 25-cycle dependency GC stress,
       generated contracts, an installed clean wheel, source-package
       integration, and a visible snapshot locally on matched Qt/PySide6 6.9.3.
-- [x] CI run `30689337379` confirmed the Flyout slice on native Linux/Windows
+- [x] Native CI validation confirmed the Flyout slice on native Linux/Windows
       Qt 6.2.4 and macOS Qt 6.9.3, including generated contracts, binding
       tests, clean wheels on all three platforms, source-package integration,
       acceptance snapshots, Qt 5.15/6.2 C++ regressions, and the final CI Gate.
@@ -738,7 +729,7 @@ Current slices:
       matched macOS Qt/PySide6 6.9.3. Locally, all 43 native Dialog tests
       passed (two manual VisualChecks skipped), along with 166 binding tests,
       120 verifier tests, and all 65 PySide CTests.
-- [x] CI run `30692144259` confirmed the Dialog/ContentDialog slice on native
+- [x] Native CI validation confirmed the Dialog/ContentDialog slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all 65 binding CTests, clean wheels on all three platforms,
       source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
@@ -755,7 +746,7 @@ Current slices:
       67 PySide CTests, source-package integration, clean-wheel
       installation/runtime isolation, and a visible build-tree/installed-wheel
       snapshot with identical bytes.
-- [x] CI run `30697214451` confirmed the ComboBox slice on native
+- [x] Native CI validation confirmed the ComboBox slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all 67 binding CTests, clean wheels on all three platforms,
       source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
@@ -774,7 +765,7 @@ Current slices:
       verifier tests, all 69 PySide CTests, an extracted source-package binding
       rebuild, a clean installed wheel smoke, and build-tree/installed-wheel
       menu-button snapshots with identical bytes.
-- [x] CI run `30699845540` confirmed the menu-button slice on native
+- [x] Native CI validation confirmed the menu-button slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all 69 binding CTests, clean wheels on all three platforms,
       source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
@@ -791,7 +782,7 @@ Current slices:
       verifier tests, all 71 PySide CTests, an extracted source-package binding
       rebuild, and a newly created clean-venv wheel smoke. The build-tree and
       installed-wheel picker snapshots have identical SHA-256 values.
-- [x] CI run `30701314187` confirmed the date/time picker slice on native
+- [x] Native CI validation confirmed the date/time picker slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all 71 binding CTests, clean wheels on all three platforms,
       source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
@@ -809,7 +800,7 @@ Current slices:
       source-package binding rebuild/test, and a new clean-venv wheel smoke.
       Build-tree and installed-wheel acceptance snapshots have identical
       SHA-256 values.
-- [x] CI run `30704322313` confirmed the AutoSuggestBox slice on native
+- [x] Native CI validation confirmed the AutoSuggestBox slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all 73 binding CTests, clean wheels on all three platforms,
       source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
@@ -825,7 +816,7 @@ Current slices:
       CTests. Also rebuild and test the extracted source package, pass a new
       clean-venv wheel smoke and `pip check`, and produce byte-identical
       build-tree/installed-wheel acceptance snapshots.
-- [x] CI run `30707082998` confirmed the CoachMark/TeachingTip slice on
+- [x] Native CI validation confirmed the CoachMark/TeachingTip slice on
       native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all 75 binding CTests, clean wheels on all three platforms,
       source-package integration,
@@ -842,7 +833,7 @@ Current slices:
       rebuild and test the extracted source package, pass a newly created
       clean-venv wheel smoke and `pip check`, and produce byte-identical
       build-tree/installed-wheel status-overlay snapshots.
-- [x] CI run `30709495870` confirmed the Status & Info completion slice on
+- [x] Native CI validation confirmed the Status & Info completion slice on
       native Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all 77 binding CTests, clean wheels on all three platforms,
       source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
@@ -863,7 +854,7 @@ Current slices:
       the extracted source package, pass a clean-venv wheel smoke and
       `pip check`, and produce byte-identical build-tree/installed-wheel
       command-surface snapshots (`ba5b29a1f29575198bbc086204235cb268c7d91bf3372d0cd277eaabd2b3767e`).
-- [x] CI run `30715183706` confirmed the command-surface slice on native
+- [x] Native CI validation confirmed the command-surface slice on native
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, including generated
       contracts, all 79 binding CTests, clean wheels on all three platforms,
       source-package integration, acceptance snapshots, Qt 5.15/6.2 C++
@@ -883,7 +874,7 @@ Current slices:
       A fresh-venv wheel smoke and `pip check` pass; build-tree and installed-
       wheel offscreen snapshots are byte-identical, and the native JSON report
       records both platform materials before saving a readable Solid snapshot.
-- [x] CI run `30728227317` confirmed generated contracts, all 82 binding
+- [x] Native CI validation confirmed generated contracts, all 82 binding
       CTests, clean wheels, and native XCB/Windows/Cocoa acceptance reports on
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3. It also passed source-package
       integration, Qt 5.15/6.2 C++ regressions, and the final CI Gate. The Qt
@@ -915,8 +906,7 @@ pointer behavior remain the sole M5 desktop acceptance item.
   the Python 3.10 + Qt/PySide/Shiboken 6.2.4 minimum lanes on Linux/Windows
   x64 and the existing macOS ARM64 lane. Full CI adds Python 3.11 + 6.9.3
   release lanes for Linux x64/ARM64, Windows x64/ARM64, and macOS x64; the
-  existing macOS ARM64 lane completes the six-target release set. CI run
-  `30745443691` passed on every native target.
+  existing macOS ARM64 lane completes the six-target release set. Native CI validation passed on every native target.
 - [x] Generate `_fluentqt.pyi` from Shiboken signatures plus facade `.pyi`
   files, validate them against `api-manifest.json`, include them in clean-wheel
   smoke tests, and run a strict installed-wheel mypy consumer check in CI.
@@ -1060,147 +1050,146 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
   `--require-platform-backdrop` where native Mica/Acrylic/vibrancy/compositor
   support is expected. Offscreen snapshots remain layout-only evidence.
 
-## Delivery record
+## Historical validation record
+
+The entries below describe the contracts exercised while the binding surface
+was developed. Their individual workflow-dispatch runs are intentionally
+pruned after history consolidation; the retained post-rewrite full CI run is
+the current branch-level evidence source.
 
 1. Treat `Card`/`Expander` as the second completed M3 slice after native
-   Linux/Windows Qt 6.2.4 CI run `30552580180`.
+   Linux/Windows Qt 6.2.4 native CI validation.
 2. Treat the `Avatar`/`RatingControl`/`ScrollBar` leaf slice as complete after
-   native Linux and Windows Qt 6.2.4 CI run `30553990409`.
+   native Linux and Windows Qt 6.2.4 native CI validation.
 3. Treat the `PipsPager` slice as complete after native Linux and Windows
-   Qt 6.2.4 plus Qt 5.15 C++ CI run `30598949551`.
+   Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 4. Treat the `InfoBar` ownership slice as complete after native Linux and
-   Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30599841356`.
+   Windows Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 5. Treat the `TextEdit` leaf slice as complete after native Linux and Windows
-   Qt 6.2.4 plus Qt 5.15 C++ CI run `30601608042`.
+   Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 6. Treat the `CompoundButton` leaf slice as complete after native Linux and
-   Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30603864933`.
+   Windows Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 7. Treat the `FontIcon` foundation leaf as complete after native Linux and
-   Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30604556341`.
+   Windows Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 8. Treat the `ColorPicker` leaf slice as complete after native Linux and
-   Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30605260392`.
+   Windows Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 9. Treat the `CalendarView` leaf slice as complete after native Linux and
-   Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30607530481`.
+   Windows Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 10. Treat the `AnnotatedScrollBar` value-type and borrowed-link slice as
-    complete after native Linux and Windows Qt 6.2.4 plus Qt 5.15 C++ CI run
-    `30609069504`.
+    complete after native Linux and Windows Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 11. Treat the `Accordion` ownership slice as complete after native Linux and
-    Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30610740405`.
+    Windows Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 12. Treat the `StackView` ownership/navigation slice as complete after native
-    Linux/Windows Qt 6.2.4 plus Qt 5.15 C++ CI run `30613428314`.
+    Linux/Windows Qt 6.2.4 plus Qt 5.15 C++ native CI validation.
 13. Treat the `TabView` metadata/navigation slice as complete after native
-    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, and Qt 5.15 C++ CI run
-    `30615473570`.
+    Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, and Qt 5.15 C++ native CI validation.
 14. Treat the `ListView` model/delegate slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels on
-    all three platforms, and the final CI Gate passed in CI run `30620199453`.
+    all three platforms, and the final CI Gate passed in native CI validation.
 15. Treat the `GridView` model/delegate/reorder slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels on
     all three platforms, acceptance snapshots, and the final CI Gate passed in
-    CI run `30623470079`.
+    native CI validation.
 16. Treat the `TreeView` hierarchy/model/delegate/reorder slice as complete
     after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++,
     source-package integration, clean wheels on all three platforms,
-    acceptance snapshots, and the final CI Gate passed in CI run
-    `30631865586`.
+    acceptance snapshots, and the final CI Gate passed in native CI validation.
 17. Treat the `DrawerView` overlay/ownership slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels on all
     three platforms, source-package integration, acceptance snapshots, and the
-    final CI Gate all passed in CI run `30685308957`.
+    final CI Gate all passed in native CI validation.
 18. Treat the `Breadcrumb` metadata/navigation slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, clean-wheel smoke, acceptance
     snapshots, source-package integration, and the final CI Gate passed in CI
-    run `30635505335`.
+    native CI validation.
 19. Treat the `SelectorBar`/`Pivot` metadata-navigation slice as complete after
     native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, clean wheels,
     source-package integration, acceptance snapshots, Qt 5.15/6.2 C++, and the
-    final CI Gate passed in CI run `30641454429`.
+    final CI Gate passed in native CI validation.
 20. Treat the `FlowView` model/delegate slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, clean wheels, source-package
     integration, acceptance snapshots, Qt 5.15/6.2 C++, and the final CI Gate
-    passed in CI run `30648150576`.
+    passed in native CI validation.
 21. Treat the `FlipView` ownership/navigation slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels,
     source-package integration, acceptance snapshots, and the final CI Gate
-    passed in CI run `30655442887`.
+    passed in native CI validation.
 22. Treat the `SplitView` ownership slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, clean wheels,
     source-package integration, acceptance snapshots, and the final CI Gate
-    passed together in CI run `30673261072`.
+    passed together in native CI validation.
 23. Treat the `NavigationView`/`StackContentHost` page-and-chrome ownership
     slice as complete after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3,
     Qt 5.15/6.2 C++, all 54 binding CTests, clean wheels, source-package
     integration, acceptance snapshots, and the final CI Gate passed together
-    in CI run `30683749605`.
+    in native CI validation.
 24. Treat the `Popup` same-window overlay and QWidget-dependency slice as
     complete after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2
     C++, generated contracts, binding tests, clean wheels on all three
     platforms, source-package integration, acceptance snapshots, and the
-    final CI Gate passed together in CI run `30686805469`.
+    final CI Gate passed together in native CI validation.
 25. Treat the `Flyout` placement and caller-owned-anchor slice as complete
     after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++,
     generated contracts, binding tests, clean wheels on all three platforms,
     source-package integration, acceptance snapshots, and the final CI Gate
-    passed together in CI run `30689337379`.
+    passed together in native CI validation.
 26. Treat the `Dialog`/`ContentDialog` same-window modality, result, and hosted
     content ownership slice as complete after native Linux/Windows Qt 6.2.4,
     macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated contracts, all 65 binding
     CTests, clean wheels on all three platforms, source-package integration,
-    acceptance snapshots, and the final CI Gate passed together in CI run
-    `30692144259`.
+    acceptance snapshots, and the final CI Gate passed together in native CI validation.
 27. Treat the `ComboBox` model/editor ownership and same-window dropdown slice
     as complete after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3,
     Qt 5.15/6.2 C++, generated contracts, all 67 binding CTests, clean wheels
     on all three platforms, source-package integration, acceptance snapshots,
-    and the final CI Gate passed together in CI run `30697214451`.
+    and the final CI Gate passed together in native CI validation.
 28. Treat the menu-button and Fluent-menu slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated
     contracts, all 69 binding CTests, clean wheels on all three platforms,
     source-package integration, acceptance snapshots, and the final CI Gate
-    passed together in CI run `30699845540`.
+    passed together in native CI validation.
 29. Treat the native date/time picker and popup-lifecycle slice as complete
     after native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++,
     generated contracts, all 71 binding CTests, clean wheels on all three
     platforms, source-package integration, acceptance snapshots, and the
-    final CI Gate passed together in CI run `30701314187`.
+    final CI Gate passed together in native CI validation.
 30. Treat the AutoSuggestBox string-list/signal and same-window suggestion
     Flyout slice as complete after native Linux/Windows Qt 6.2.4, macOS
     Qt 6.9.3, Qt 5.15/6.2 C++, generated contracts, all 73 binding CTests,
     clean wheels on all three platforms, source-package integration,
-    acceptance snapshots, and the final CI Gate passed together in CI run
-    `30704322313`.
+    acceptance snapshots, and the final CI Gate passed together in native CI validation.
 31. Treat the CoachMark/TeachingTip target-retention, same-window guidance
     surface, content-host, and semantic-close-reason slice as complete after
     native Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated
     contracts, all 75 binding CTests, clean wheels on all three platforms,
     source-package integration, acceptance snapshots, and the final CI Gate
-    passed together in CI run `30707082998`.
+    passed together in native CI validation.
 32. Treat the Status & Info component set, including Toast/ToolTip overlay
     lifetime and borrowed dependency handling, as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated
     contracts, all 77 binding CTests, clean wheels on all three platforms,
     source-package integration, acceptance snapshots, and the final CI Gate
-    passed together in CI run `30709495870`.
+    passed together in native CI validation.
 33. Treat the `CommandBar`/`CommandBarFlyout`/`FluentMenuBar` borrowed-action
     and same-window command-surface slice as complete after native
     Linux/Windows Qt 6.2.4, macOS Qt 6.9.3, Qt 5.15/6.2 C++, generated
     contracts, all 79 binding CTests, clean wheels on all three platforms,
     source-package integration, acceptance snapshots, and the final CI Gate
-    passed together in CI run `30715183706`.
+    passed together in native CI validation.
 34. Treat the automated `Window`/`TitleBar` API, ownership, backdrop-state, and
     native platform-plugin slice as complete after Linux/Windows Qt 6.2.4,
     macOS Qt 6.9.3, generated contracts, all 82 binding CTests, clean wheels,
     native XCB/Windows/Cocoa reports, source-package integration, Qt 5.15/6.2
-    C++ regressions, and the final CI Gate passed in run `30728227317`. Physical
+    C++ regressions, and the final CI Gate passed in native CI validation. Physical
     Windows 11 DWM and Linux KWin/Wayland visual/interaction review remains.
 35. Treat the first M6 typing/API guard slice as complete after the generated
     14-file stub set, the 75-class/11-enum/14-function manifest gate, all 84
     binding CTests, strict installed-wheel mypy checks, clean wheels on native
     Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3, source-package integration,
-    Qt 5.15/6.2 C++ regressions, and the final CI Gate passed together in run
-    `30730708691`. The wider wheel matrix, compatibility policy, signing, and
+    Qt 5.15/6.2 C++ regressions, and the final CI Gate passed together in native CI validation. The wider wheel matrix, compatibility policy, signing, and
     publication work remain in M6.
 36. Treat the M6 native wheel-matrix and minimum-compatibility slice as complete
-    after CI run `30745443691` passed at commit `87fdfe1` with all six Python
+    after native CI validation passed before history consolidation with all six Python
     3.11 + Qt/PySide/Shiboken 6.9.3 release wheels for x64 and ARM64 on Linux,
     macOS, and Windows; the Python 3.10 + 6.2.4 minimum lanes on Linux/Windows
     x64; all binding CTests; strict mypy; clean installs; native-window smoke;
@@ -1209,7 +1198,7 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
     dereferences a destroyed borrowed QAction. Linux manylinux repair/audit,
     Python API versioning rules, signing, and formal publication remain in M6.
 37. Synchronize milestone state after the public-API ledger, all 84 local
-    PySide CTests, and CI run `30745443691` confirm the recorded contracts:
+    PySide CTests, and native CI validation confirm the recorded contracts:
     M0 through M4 are complete. Keep M5 in progress for physical DWM/KWin/
     Wayland review and M6 in progress for manylinux, API versioning, signing,
     and formal publication.
