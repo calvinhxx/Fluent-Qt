@@ -8,6 +8,11 @@ outside the scope of this binding target.
 See the compatibility roadmap
 ([English](ROADMAP.md) · [简体中文](ROADMAP.zh-CN.md)) for the risk-ordered
 component, ownership, platform-validation, and wheel-release milestones.
+The [PySide6 API compatibility policy](API_COMPATIBILITY.md) defines the
+package/API version contract, SemVer boundaries, and mandatory deprecation
+ledger.
+The [manylinux policy](MANYLINUX.md) defines Linux build images, repair
+exclusions, publish tags, and required audit evidence.
 
 Qt/PySide 6.2.4 with Python 3.10 on Ubuntu 22.04 and Windows Server 2022 is the
 minimum CI baseline. macOS arm64 additionally uses the repository's Qt/PySide
@@ -67,6 +72,11 @@ pins the exact matching PySide6 runtime distribution (`PySide6` for 6.2.x,
 relative runtime paths so installation is not tied to the build virtual
 environment.
 
+At runtime, `fluentqt.__version__` matches the full wheel and native FluentQt
+version. `fluentqt.__api_version__` identifies the compatible `MAJOR.MINOR`
+Python API line. Both are typed public exports and are checked against
+`api-manifest.json` during stub generation and clean-wheel smoke testing.
+
 Validate the wheel in a fresh environment without `PYTHONPATH`:
 
 ```bash
@@ -92,6 +102,53 @@ env -u PYTHONPATH \
 The type-check smoke covers root and category imports, theme return types,
 native widget methods, `Window.titleBar()`, and backdrop value types using the
 installed wheel rather than the source tree.
+
+## Python Gallery
+
+The wheel includes a Python-native Gallery that dogfoods only the public
+`fluentqt` package. The native C++ Gallery catalogs are canonical: the build
+generates a contract locking their 12 categories, 88 ordered routes, 67
+component pages, and 199 SampleCards. Those routed component types plus 10
+embedded support types cover all 77 classes and value/support types in
+`api-manifest.json`. Every SampleCard builds a live public-API preview and
+executes the same Python source displayed beside it; a generic fallback preview
+is an acceptance failure.
+
+This is not a catalog-only test harness. The Python app mirrors the native C++
+Gallery's primary visual contracts: a 42 px custom title bar with centered
+search, 260/48 px responsive side navigation, the 390 px Home hero, the same
+packaged Home tiles and 74 control images, responsive component/category grids,
+and the native Overview, Use, Live examples, Source code, and Category page
+sections. Geometry tests reject regressions back to an expanded raw tree or
+prototype button list. Native snapshots composite the transparent DWM/Mica
+area over Fluent's neutral fallback canvas so saved PNG evidence stays readable
+without changing the live platform backdrop.
+
+Launch the Gallery from an installed wheel:
+
+```bash
+.venv-fluentqt-wheel/bin/python -m fluentqt.gallery
+```
+
+Run its deterministic headless acceptance mode from either an installed wheel
+or the build-tree package:
+
+```bash
+QT_QPA_PLATFORM=offscreen \
+  .venv-fluentqt-wheel/bin/python -m fluentqt.gallery \
+  --verify-catalog \
+  --walk-routes \
+  --route home \
+  --snapshot build/pyside6/pyside6-gallery.png \
+  --report build/pyside6/pyside6-gallery.json
+```
+
+`--verify-catalog` constructs all 199 previews and executes every displayed
+snippet, while `--walk-routes` validates all 88 native-ordered routes. The
+contract generator and catalog tests reject C++/Python route or SampleCard
+drift, missing or extra manifest types, and fallback previews. The clean-wheel
+smoke repeats the route walk and verifies the Gallery artwork without a
+source-tree `PYTHONPATH`.
 
 Run the example from the build tree:
 
@@ -479,8 +536,8 @@ QT_QPA_PLATFORM=offscreen \
   --snapshot build/pyside6/pyside6-compatibility-showcase.png
 ```
 
-The current binding phase exports 75 required public classes and value types
-across every component category in the
+The current binding phase exports 77 required public classes, value types, and
+embedded support types across every component category in the
 [coverage ledger](ROADMAP.md#public-api-coverage-ledger), including `Window`,
 `TitleBar`, and the backdrop value types. `api-manifest.json` is the executable
 source of truth for exact names and required methods. The package also supports
@@ -589,7 +646,7 @@ hierarchy-aware selection motion, check-state propagation, persistent indexes,
 and reorder signals stay in the native control. Native drag reordering is
 likewise limited to `QStandardItemModel`. The implementation-oriented
 `SelectionIndicatorStyle` struct remains private; Python uses the stable
-indicator visibility and scalar inset methods.
+indicator visibility, inset, and height methods.
 `FlowView` applies that caller-owned model, selection-model, delegate, and
 borrowed-scrollbar contract to variable-size wrapping geometry. Python models
 may provide per-item `QSize` values through `itemSizeRole`; Python delegate
@@ -743,10 +800,13 @@ the wheel in a clean virtual environment, runs strict mypy and visible
 acceptance examples, verifies native Window/TitleBar integration, and confirms
 that Qt, PySide6, and Shiboken6 resolve inside that clean environment.
 
-These CI artifacts are not yet publishable Linux wheels: M6 still needs a
-documented manylinux build/repair and `auditwheel` policy, followed by signing
-and upload automation. Architecture coverage must pass before that publishing
-gate is enabled.
+Full Linux release lanes additionally rebuild inside the matching PyPA
+manylinux image, repair with the pinned `auditwheel`, reject bundled duplicate
+Qt/PySide6/Shiboken6 libraries, and clean-install the repaired wheel. x64 uses
+`manylinux_2_28`; ARM64 uses `manylinux_2_39`, matching the official
+PySide6-Essentials 6.9.3 wheel floors. Native `linux_*` artifacts remain test
+evidence only. Signing and upload automation stay disabled until every release
+lane passes together.
 
 Passing the build-tree tests proves the declared API contract; passing the
 clean-wheel smoke proves installation/runtime isolation; the interactive

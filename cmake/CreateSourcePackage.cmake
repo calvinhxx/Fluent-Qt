@@ -17,10 +17,12 @@ set(_staging_root "${FLUENT_QT_SOURCE_PACKAGE_DIR}/.source-package")
 set(_package_root "${_staging_root}/${_package_name}")
 set(_archive "${FLUENT_QT_SOURCE_PACKAGE_DIR}/${_package_name}.zip")
 
+file(MAKE_DIRECTORY "${FLUENT_QT_SOURCE_PACKAGE_DIR}")
 file(REMOVE_RECURSE "${_staging_root}")
 file(MAKE_DIRECTORY "${_package_root}/cmake")
 file(MAKE_DIRECTORY "${_package_root}/examples")
 file(MAKE_DIRECTORY "${_package_root}/tools")
+file(MAKE_DIRECTORY "${_package_root}/.github/scripts")
 
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/include"
@@ -32,6 +34,9 @@ file(COPY
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
     PATTERN "*.pyo" EXCLUDE)
+file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/.github/scripts/setup-shiboken-clang.py"
+    DESTINATION "${_package_root}/.github/scripts")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/fonts"
     DESTINATION "${_package_root}/tools")

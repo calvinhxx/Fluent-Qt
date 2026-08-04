@@ -36,6 +36,40 @@ class WheelBuilderTest(unittest.TestCase):
             WHEEL_BUILDER.REQUIRED_PACKAGE_FILES,
         )
 
+    def test_python_gallery_is_required_in_wheel(self):
+        for name in (
+            "gallery/__init__.py",
+            "gallery/__main__.py",
+            "gallery/application_controller.py",
+            "gallery/app.py",
+            "gallery/catalog.py",
+            "gallery/contract.json",
+            "gallery/foundation_pages.py",
+            "gallery/intro_tour.py",
+            "gallery/native_samples.py",
+            "gallery/native_samples_basic.py",
+            "gallery/native_samples_collections.py",
+            "gallery/native_samples_dialogs.py",
+            "gallery/native_samples_navigation.py",
+            "gallery/native_samples_scrolling.py",
+            "gallery/native_samples_status.py",
+            "gallery/native_samples_text_window.py",
+            "gallery/samples.py",
+            "gallery/settings.py",
+            "gallery/single_instance.py",
+            "gallery/update_checker.py",
+            "gallery/visual.py",
+            "gallery/window.py",
+            "gallery/window_placement.py",
+            "gallery/assets/app-icon.png",
+            "gallery/assets/icon_aliases.json",
+            "gallery/assets/icon_catalog.json",
+            "gallery/assets/control_images/Placeholder.png",
+            "gallery/assets/home_header_tiles/Header-WindowsDesign.png",
+        ):
+            with self.subTest(name=name):
+                self.assertIn(name, WHEEL_BUILDER.REQUIRED_PACKAGE_FILES)
+
     def test_qt_62_uses_monolithic_pyside6_distribution(self):
         requirement = WHEEL_BUILDER.pyside_runtime_requirement("6.2.4")
         self.assertEqual(requirement, "PySide6 (==6.2.4)")

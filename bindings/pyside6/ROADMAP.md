@@ -30,32 +30,32 @@ runtime, and CPython ABI requires its own build and validation.
 | M2 — Low-risk widget coverage | Complete | Every planned leaf widget is bound or has an explicit boundary decision, with properties, signals, examples, manifest checks, and wheel smoke coverage |
 | M3 — Hosted-widget ownership | Complete | Planned hosted-widget boundaries have fixed-semantics adapters plus ownership and GC tests |
 | M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
-| M5 — Overlays and native windows | In progress | Automated XCB/Windows/Cocoa native acceptance passed; physical DWM/KWin/Wayland compositor review remains |
-| M6 — Release-grade Python distribution | In progress | Type stubs, manifest/mypy gates, the six-target x64/ARM64 wheel matrix, and Qt 6.2 compatibility gates are implemented; manylinux, API version policy, signing, and publication remain |
+| M5 — Overlays and native windows | In progress | Local Windows 11 DWM material/layout and pointer-driven move/resize acceptance passed, together with automated XCB/Wayland/Windows/Cocoa checks; only physical KWin/Wayland compositor review remains |
+| M6 — Release-grade Python distribution | In progress | Type/API governance, the six-target wheel matrix, architecture-specific manylinux repair/audit, and a wheel-installed Gallery matching all 88 native routes and 199 SampleCards with pixel-identical structure outside intentional Python/C++ API text are implemented; full container CI evidence, signing, and publication remain |
 
 ## Public API coverage ledger
 
 This table is the source of truth for component coverage. A milestone cannot
 be marked complete merely because its current checklist is green; every public
 component below must either be bound or retain an explicit boundary decision.
-That audit is complete for M0 through M4. The manifest currently records 75
-required classes and value types; M5 and M6 retain the open boundaries shown
-below and in their milestone sections.
+That audit is complete for M0 through M4. The manifest currently records 77
+required classes/value/support types, 11 enums, 14 functions, and 2 version variables; M5 and M6
+retain the open boundaries shown below and in their milestone sections.
 
 | Category | Bound now | Remaining boundary |
 |---|---|---|
 | Basic Input | `Button`, `CheckBox`, `ColorPicker`, `ComboBox`, `CompoundButton`, `DropDownButton`, `HyperlinkButton`, `RadioButton`, `RatingControl`, `RepeatButton`, `Slider`, `SplitButton`, `ToggleButton`, `ToggleSplitButton`, `ToggleSwitch` | — |
-| Collections | `DrawerView`, `FlipView`, `FlowView`, `GridView`, `ListView`, `SplitView`, `StackView`, `TreeView` | Complete for the current public component set |
+| Collections | `DrawerView`, `FlipView`, `FlowView`, `GridView`, `ListView`, `SplitView`, `SplitViewPaneOptions`, `StackView`, `TreeView` | Complete for the current public component and support-type set |
 | Date & Time | `CalendarDatePicker`, `CalendarView`, `DatePicker`, `TimePicker` | Complete for the current public component set |
 | Dialogs & Flyouts | `CoachMark`, `ContentDialog`, `Dialog`, `Flyout`, `Popup`, `TeachingTip` | Complete for the current public component set |
 | Foundation | `FontIcon`, theme/font package API, ownership enum | `FluentElement`, `QMLPlus`, registries, and overlay helpers stay implementation-facing rather than direct Python mixins |
 | Layout | `Accordion`, `Card`, `Divider`, `Expander` | Complete for the current public component set |
 | Menus & Toolbars | `CommandBar`, `CommandBarFlyout`, `FluentMenu`, `FluentMenuBar`, `FluentMenuItem` | Complete for the current public component set; CI run `30715183706` passed |
 | Navigation | `Breadcrumb`, `BreadcrumbItem`, `NavigationView`, `Pivot`, `PivotItem`, `SelectorBar`, `SelectorBarItem`, `StackContentHost`, `TabView`, `TabViewItem` | Complete for the current public component set |
-| Scrolling | `AnnotatedScrollBar`, `AnnotatedScrollBarLabel`, `PipsPager`, `ScrollBar`, `ScrollView` | Complete for the current public component set |
+| Scrolling | `AnnotatedScrollBar`, `AnnotatedScrollBarLabel`, `PipsPager`, `ScrollBar`, `ScrollView`, `ScrollViewZoomAwareWidget` | Complete for the current public component and support-type set |
 | Status & Info | `Avatar`, `InfoBadge`, `InfoBar`, `ProgressBar`, `ProgressRing`, `Shimmer`, `Toast`, `ToolTip` | Complete for the current public component set; CI run `30709495870` passed |
-| Text Fields | `AutoSuggestBox`, `Label`, `LineEdit`, `NumberBox`, `PasswordBox`, `TextEdit` | Complete for the public widget set; `EditingCommandRouter` remains an implementation helper |
-| Windowing | `Window`, `TitleBar`, and backdrop values | Physical Windows 11 DWM and Linux KWin/Wayland compositor behavior require M5 desktop review |
+| Text Fields | `AutoSuggestBox`, `EditingCommandRouter`, `Label`, `LineEdit`, `NumberBox`, `PasswordBox`, `TextEdit` | Complete for the current public component and support-type set |
+| Windowing | `Window`, `TitleBar`, and backdrop values | Windows 11 DWM material/layout and pointer-driven system move/resize review are complete; physical KWin/Wayland compositor behavior remains in M5 |
 
 ## M0 — Binding foundation
 
@@ -888,15 +888,23 @@ Current slices:
       Linux/Windows Qt 6.2.4 and macOS Qt 6.9.3. It also passed source-package
       integration, Qt 5.15/6.2 C++ regressions, and the final CI Gate. The Qt
       6.2 report path normalizes legacy Shiboken byte strings to UTF-8 text.
-- [ ] Review Windows 11 DWM and Linux KWin/Wayland compositor materials plus
-      system drag/resize behavior on physical desktops.
+- [x] Validate Windows 11 DWM material application and chrome layout on the
+      local physical desktop. Qt 6.9.3 applied both Mica and Acrylic through
+      `DwmSystemBackdrop`; the native report and readable Solid snapshot
+      confirm custom chrome, reserved caption insets, and resize propagation.
+- [x] Review pointer-driven system move and border resize on the local Windows
+      11 desktop. A real title-bar drag moved the window origin from `(503,209)`
+      to `(623,289)`, and a real bottom-right border drag resized it from
+      `914x614` to `814x534` while the published chrome frame updated with it.
+- [ ] Review KWin/Wayland compositor materials plus system move/resize on a
+      physical Linux desktop.
 
 The automated native acceptance rejects offscreen/minimal plugins and verifies
 native handles, chrome/content ownership, resize propagation, and resolved
-backdrop invariants. Xvfb and hosted CI can prove platform-plugin integration
-and painted fallbacks, but not the visual quality of Windows 11 DWM or Linux
-compositor blur. Those effects and pointer-driven system drag/resize remain
-physical-desktop acceptance items.
+backdrop invariants. The local WSLg Wayland and XCB reports also confirm the
+painted fallback without claiming compositor blur. Windows DWM material quality
+and pointer-driven system move/resize are now covered; physical KWin blur and
+pointer behavior remain the sole M5 desktop acceptance item.
 
 ## M6 — Release-grade Python distribution
 
@@ -915,8 +923,35 @@ physical-desktop acceptance items.
 - [x] Package exact PySide/Shiboken dependencies, licenses, and notices, then
   run clean-venv install, import, type-check, native dependency, and binary
   architecture checks in every native lane.
-- [ ] Define the Linux manylinux build, repair, and `auditwheel` audit policy.
-- [ ] Establish versioning and deprecation rules for the Python API.
+- [x] Define the Linux manylinux build, repair, and `auditwheel` audit policy.
+  Release lanes rebuild in the matching PyPA policy image, pin `auditwheel`,
+  exclude the separately pinned PySide6/Qt/Shiboken runtime, verify relocatable
+  RPATHs and wheel metadata, and emit a hashed JSON audit report; see
+  `bindings/pyside6/MANYLINUX.md`.
+- [x] Establish versioning and deprecation rules for the Python API. The package
+  exposes `__version__` and `__api_version__`; manifest schema, SemVer,
+  replacement, and later-major removal rules are enforced by the stub gate and
+  unit tests; see `bindings/pyside6/API_COMPATIBILITY.md`.
+- [x] Ship a wheel-installed Python Gallery as a public-package integration
+  consumer. A generated contract treats the C++ catalogs as canonical and locks
+  12 categories, 88 ordered routes, 67 component pages, and all 199 native
+  SampleCards. The routed components plus 10 embedded support types cover all
+  77 manifest types. Every card builds its live public-API preview from exact
+  executable `preview_source`, while the visible Source code block presents a
+  concise, canonical-method-aligned Python teaching snippet. Acceptance gates
+  execute the exact preview source, compile and semantically compare the visible
+  snippet with the C++ contract, and reject fallback previews, Gallery-internal
+  imports, preview-parent leakage, or contract drift. The installed
+  app mirrors the current C++ visual shell and page archetypes, packages the
+  same Home/control artwork, and locks title-bar, search, navigation, Hero,
+  responsive-grid, component-section, SampleCard, and snapshot geometry in
+  automated tests. The final Windows all-route acceptance regenerates both
+  applications at `1440x900`: 21 route pairs are byte-identical, while the 67
+  component pairs differ only inside the intentional Python/C++ `Use` API-text
+  rectangle. Across 114,048,000 compared pixels, 113,592,073 are identical and
+  all 455,927 changed pixels are confined to that rectangle; there are zero
+  changed pixels elsewhere. Snapshot capture clears transient hover state so
+  that result no longer depends on the host pointer position.
 - [ ] Sign and publish wheels after every required matrix lane passes.
 
 Qt 6.2.4 remains the binding minimum, not the ARM64 wheel build version. The
@@ -925,9 +960,11 @@ Qt/PySide 6.9.3 binaries require glibc 2.39, and the Windows ARM64 Python tool
 cache starts at CPython 3.11. Therefore the ARM64 release lanes use 6.9.3,
 Linux uses `ubuntu-24.04-arm`, and the low-version x64 lanes remain separate.
 
-The current Linux CI artifacts retain native `linux_*` wheel tags. They must
-not be published to PyPI until M6 defines the manylinux build/repair and
-`auditwheel` policy, signing, and upload gates.
+Native Linux smoke artifacts retain `linux_*` tags. The release workflow now
+rebuilds inside the architecture-specific policy image and uploads only the
+repaired manylinux wheel plus its audit report, but that new container path
+still requires full native CI evidence. No wheel is published until those lanes
+pass and the signing/upload gate is explicitly enabled.
 
 ## Definition of done
 
@@ -960,9 +997,9 @@ is not mistaken for complete support:
    architecture matrix, type stubs, API compatibility/deprecation policy, and
    clean-environment wheels are published.
 
-M0 through M4 are complete. Feature completeness still waits on M5's physical
-Windows 11 DWM and Linux KWin/Wayland compositor review; release completeness
-also requires the remaining M6 distribution work.
+M0 through M4 are complete. Feature completeness now waits only on M5's
+physical Linux KWin/Wayland compositor review; release completeness also
+requires the remaining M6 distribution work.
 
 FluentQt calls Python support complete and release-ready only at the third
 level. This excludes PySide2 and Qt 5 Python bindings and does not require
@@ -973,6 +1010,9 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
 - **Automated contracts**: run `ctest --test-dir build/pyside6 -L '^pyside$'
   --output-on-failure` for properties, signals, subclassing, ownership,
   generated code, and the acceptance window.
+- **Python Gallery**: run `python -m fluentqt.gallery` from an installed wheel
+  for interactive review. Add `--verify-catalog --walk-routes --snapshot
+  <png> --report <json>` for deterministic manifest, route, and render evidence.
 - **Interactive review**: run `examples/compatibility_showcase.py`; switch
   Light/Dark, Fluent/Material/macOS, and accent colors, drag the Slider, hold
   RepeatButton, and inspect text, dividers, progress controls, and signal
@@ -1173,3 +1213,91 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
     M0 through M4 are complete. Keep M5 in progress for physical DWM/KWin/
     Wayland review and M6 in progress for manylinux, API versioning, signing,
     and formal publication.
+38. Implement the M6 API-governance and manylinux-policy slices. The package
+    now publishes full and major/minor version variables, the manifest carries
+    a machine-checked deprecation ledger, and Linux release lanes define
+    architecture-specific PyPA policy images, pinned repair inputs, external
+    PySide6/Qt/Shiboken boundaries, relocatable RPATH checks, and JSON audit
+    evidence. Local Windows Qt 6.9.3 and Linux Qt 6.2.4 builds each passed all
+    86 PySide CTests, clean-wheel smoke, `pip check`, strict mypy, and runtime
+    dependency resolution. Windows 11 DWM applied native Mica and Acrylic;
+    WSLg Wayland/XCB passed native chrome with the expected painted fallback.
+    M5 remains open for pointer-driven Windows and physical KWin review. M6
+    remains open because Docker was unavailable locally, so the new manylinux
+    container lanes still need full CI proof before signing and publication.
+39. Treat the wheel-installed Python Gallery integration slice as complete.
+    A generated contract now makes the C++ Gallery catalogs the source of truth
+    for the same 12 categories, 88 ordered routes, 67 component pages, and all
+    199 native SampleCards. The Python app covers all 77 manifest types through
+    67 routed components and 10 embedded support types; every card constructs a
+    live public-API preview and executes the identical displayed Python source,
+    while any generic fallback is rejected. Completion also requires the native
+    visual shell rather than the earlier catalog-only prototype: the Python app
+    now uses the same Home/control artwork and mirrors the title bar, centered
+    search, responsive side navigation, Home Hero and grids, component sections,
+    reference card, live SampleCards, and Source code expander. Geometry tests
+    reject the old raw TreeView/button-list layout, and PNG generation composites
+    transparent DWM/Mica pixels over the Fluent fallback canvas. Local Windows
+    Qt/PySide 6.9.3 and Linux Qt/PySide 6.2.4 source builds each passed all 89
+    PySide CTests; clean wheels passed smoke, `pip check`, strict mypy, 88/88
+    installed-wheel route walks, 199/199 native-equivalent samples with zero
+    fallbacks, and packaged-asset checks for all 74 control images and 7 Home
+    tiles. Windows `windows` and WSLg `wayland` installed-wheel snapshots were
+    also reviewed. The Qt 6.2 walker yields between routes to avoid event-loop
+    starvation. This evidence does not replace M5's physical KWin/Wayland
+    desktop review or M6's remaining container-CI, signing, and publication work.
+40. Close the local Windows pointer-acceptance and Gallery-parity gaps.
+    Real Windows 11 pointer input moved the custom-chrome window by `120x80`
+    pixels and resized its bottom-right border from `914x614` to `814x534`;
+    DWM Mica/Acrylic remained native. Final C++ and Python all-route captures
+    regenerated 88 snapshots per application at `1440x900`. The current honest
+    language-aware result is 21 byte-identical route pairs plus 67 component
+    pairs whose changed pixels are confined to the Python/C++ `Use` API text;
+    all pixels outside that rectangle are identical. The capture helpers now
+    clear transient hover state before rendering.
+    Windows Qt/PySide 6.9.3 and Linux Qt/PySide 6.2.4 each pass the 32-test
+    Gallery suite, clean installed-wheel smoke, and `pip check`; Linux also
+    passes all 201 binding tests plus the focused TreeView (92 pass/1 visual
+    skip), ProgressRing (11/1), and ScrollBar (4/1) C++ suites. A native WSLg
+    Wayland report confirms custom interactive chrome and honest painted
+    Mica/Acrylic fallback. M5 remains open only for physical KWin/Wayland
+    compositor and pointer review; M6 still requires container-CI evidence,
+    signing, and publication authorization.
+41. Correct the Python Gallery startup, API-reference, sample-source, and
+    theme-refresh regressions. The splash now covers the whole Gallery client
+    area instead of only the right content pane. Component `Use` cards expose
+    Python import/type/module values with no C++ headers or CMake target, and
+    all 199 live previews are constructed by their displayed Python source;
+    ListView source now includes the same avatars, delegate, model ordering,
+    and selection state as its preview. Icon-browser theme refresh no longer
+    calls the intentionally unbound `ToolTip::onThemeUpdated()` hook. Shared
+    non-code copy is language-neutral, so the final 88-route Windows comparison
+    has 21 fully identical frames and 67 frames differing only in the `Use`
+    text rectangle, with zero changed pixels elsewhere. Windows Qt/PySide
+    6.9.3 and Linux 6.2.4 both pass the 33-test Gallery suite; freshly rebuilt
+    and force-installed wheels pass the focused source/startup/theme cycle,
+    complete wheel smoke, and `pip check` in both environments.
+42. Close the Python Gallery lifecycle, teaching-source, settings-latency, and
+    Top-to-Left navigation-state gaps. Interactive launches now use a per-user
+    `QLockFile`/`QLocalServer` singleton; the lock and activation handshake run
+    before the 88-route/199-sample UI graph is imported, queued activations are
+    restored once the primary controller is ready, and automated verification
+    modes remain intentionally independent. A real Windows second launch exits
+    successfully in 1.067 seconds and leaves exactly one Gallery window.
+    Superseding the exact-display wording in records 39 and 41, every card now
+    keeps an exact executable `preview_source` for the pixel-faithful preview
+    and a separate concise public-API `source` for the visible teaching block.
+    All 199 exact sources execute, all 199 visible snippets compile and retain
+    the canonical C++ API operations, and visible Python totals 2,648 lines
+    versus 2,369 C++ lines (1.118x), with a 68-line maximum and no Gallery
+    imports or `gallery_parent` leakage. Theme/style/accent changes now refresh
+    only shell chrome and the active route, then lazily refresh hidden pages on
+    navigation: after all 88 pages are built, measured theme switching falls
+    from 1,460.1 ms to 219.0 ms and style switching from 546.5 ms to 28.7 ms.
+    Left-pane compact state is released only after the animated pane has fully
+    reopened, so a real Windows Top-to-Left cycle restores every main/footer
+    navigation item. Final source and force-installed-wheel validation passes
+    on Windows Qt/PySide 6.9.3 and Linux 6.2.4, including the Gallery suite,
+    wheel smoke, `pip check`, and 88/88 routes with 199/199 previews and zero
+    failures. M5 physical KWin/Wayland review and M6 container-CI, signing, and
+    publication remain open.
