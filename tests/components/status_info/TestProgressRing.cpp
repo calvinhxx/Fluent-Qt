@@ -55,6 +55,7 @@ protected:
 TEST_F(ProgressRingTest, DefaultPropertyValues) {
     ProgressRing ring;
     EXPECT_FALSE(ring.isActive());
+    EXPECT_TRUE(ring.isAnimationEnabled());
     EXPECT_TRUE(ring.isIndeterminate());
     EXPECT_EQ(ring.minimum(), 0);
     EXPECT_EQ(ring.maximum(), 100);
@@ -73,6 +74,15 @@ TEST_F(ProgressRingTest, PropertySignalsAndSameValueNoSignal) {
     QSignalSpy activeSpy(&ring, &ProgressRing::isActiveChanged);
     ring.setIsActive(true);
     EXPECT_EQ(activeSpy.count(), 1);
+
+    QSignalSpy animationSpy(&ring, &ProgressRing::animationEnabledChanged);
+    ring.setAnimationEnabled(false);
+    EXPECT_FALSE(ring.isAnimationEnabled());
+    EXPECT_EQ(animationSpy.count(), 1);
+    ring.setAnimationEnabled(false);
+    EXPECT_EQ(animationSpy.count(), 1);
+    ring.setAnimationEnabled(true);
+    EXPECT_EQ(animationSpy.count(), 2);
     ring.setIsActive(true);
     EXPECT_EQ(activeSpy.count(), 1);
 
@@ -174,6 +184,12 @@ TEST_F(ProgressRingTest, AnimationLifecycle) {
     QApplication::processEvents();
 
     ring.setIsActive(true);
+    EXPECT_TRUE(ring.isAnimationRunning());
+
+    ring.setAnimationEnabled(false);
+    EXPECT_FALSE(ring.isAnimationRunning());
+
+    ring.setAnimationEnabled(true);
     EXPECT_TRUE(ring.isAnimationRunning());
 
     ring.setStatus(ProgressRing::ProgressRingStatus::Paused);

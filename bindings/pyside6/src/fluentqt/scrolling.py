@@ -3,12 +3,13 @@
 from . import _fluentqt as _native
 
 
-AnnotatedScrollBar = _native.fluent.AnnotatedScrollBar
+_NativeAnnotatedScrollBar = _native.fluent.AnnotatedScrollBar
 AnnotatedScrollBarLabel = _native.fluent.AnnotatedScrollBarLabel
 PipsPager = _native.fluent.PipsPager
 ScrollBar = _native.fluent.ScrollBar
 WidgetOwnership = _native.fluent.WidgetOwnership
 _NativeScrollView = _native.fluent.ScrollView
+ScrollViewZoomAwareWidget = _native.fluent.ScrollViewZoomAwareWidget
 _CONTENT_UNSET = object()
 
 
@@ -40,6 +41,68 @@ def _annotated_scroll_bar_label_ne(self, other):
 AnnotatedScrollBarLabel.__eq__ = _annotated_scroll_bar_label_eq
 AnnotatedScrollBarLabel.__ne__ = _annotated_scroll_bar_label_ne
 AnnotatedScrollBarLabel.__hash__ = None
+
+
+class AnnotatedScrollBar(_NativeAnnotatedScrollBar):
+    """Annotated scrollbar with a synchronous Python detail provider.
+
+    The Python callable runs from ``detailLabelRequested``.  Its returned text
+    is copied into a short-lived native provider before C++ completes the same
+    hover event, avoiding a cross-version ``std::function`` converter and
+    avoiding deferred or stale tooltip text.
+    """
+
+    def __init__(self, *args, **kwargs):
+        provider = kwargs.pop("detailLabelProvider", None)
+        self._fluentqt_detail_label_provider = None
+        self._fluentqt_detail_label_provider_error = None
+        super().__init__(*args, **kwargs)
+        self.detailLabelRequested.connect(self._provide_detail_label)
+        if provider is not None:
+            self.setDetailLabelProvider(provider)
+
+    @staticmethod
+    def _detail_text(provider, offset):
+        value = provider(int(offset))
+        if not isinstance(value, str):
+            raise TypeError(
+                "AnnotatedScrollBar detail provider must return str, got {0}"
+                .format(type(value).__name__)
+            )
+        return value
+
+    def _provide_detail_label(self, offset):
+        provider = self._fluentqt_detail_label_provider
+        if provider is None:
+            return
+        try:
+            text = self._detail_text(provider, offset)
+        except Exception as error:
+            self._fluentqt_detail_label_provider_error = error
+            text = ""
+        _native.setAnnotatedScrollBarDetailLabelText(self, int(offset), text)
+
+    def setDetailLabelProvider(self, provider):
+        if not callable(provider):
+            raise TypeError("AnnotatedScrollBar detail provider must be callable")
+        # Validate synchronously so invalid providers fail at the API call
+        # rather than being reduced to an asynchronous Qt warning.
+        offset = self.value()
+        text = self._detail_text(provider, offset)
+        self._fluentqt_detail_label_provider = provider
+        self._fluentqt_detail_label_provider_error = None
+        _native.setAnnotatedScrollBarDetailLabelText(self, offset, text)
+
+    def clearDetailLabelProvider(self):
+        self._fluentqt_detail_label_provider = None
+        self._fluentqt_detail_label_provider_error = None
+        _native.clearAnnotatedScrollBarDetailLabelProvider(self)
+
+    def hasDetailLabelProvider(self):
+        return bool(
+            self._fluentqt_detail_label_provider is not None
+            and _native.annotatedScrollBarHasDetailLabelProvider(self)
+        )
 
 
 class ScrollView(_NativeScrollView):
@@ -159,5 +222,6 @@ __all__ = [
     "PipsPager",
     "ScrollBar",
     "ScrollView",
+    "ScrollViewZoomAwareWidget",
     "WidgetOwnership",
 ]

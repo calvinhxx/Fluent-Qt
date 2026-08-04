@@ -53,6 +53,8 @@
 #include "components/scrolling/ScrollView.h"
 #include "components/status_info/Avatar.h"
 #include "components/status_info/InfoBadge.h"
+#include "components/status_info/ProgressRing.h"
+#include "components/status_info/Shimmer.h"
 #include "components/status_info/ToolTip.h"
 #include "components/status_info/Toast.h"
 #include "components/textfields/EditingCommandRouter.h"
@@ -530,8 +532,7 @@ TEST_F(GalleryContentPagesTest, FoundationVisualCheck)
             QElapsedTimer timer;
             timer.start();
             while (timer.elapsed() < 5000) {
-                auto* page = window.currentContentPage();
-                if (page && page->routeId() == routeId)
+                if (window.currentRouteId() == routeId)
                     return true;
                 QApplication::processEvents(QEventLoop::AllEvents, 25);
                 QTest::qWait(20);
@@ -582,6 +583,109 @@ TEST_F(GalleryContentPagesTest, FoundationVisualCheck)
     }
 
     ASSERT_TRUE(window.selectRoute(QStringLiteral("foundation-typography")));
+    window.show();
+    qApp->exec();
+}
+
+TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
+{
+    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
+        GTEST_SKIP() << "Set SKIP_VISUAL_TEST=1 to skip visual tests";
+    if (tests::support::isHeadlessPlatform())
+        GTEST_SKIP() << "Gallery parity review requires a desktop platform";
+
+    auto& settings = fluent::gallery::GallerySettings::instance();
+    settings.setIntroCompleted(true);
+    const auto previousThemeMode = settings.themeMode();
+    struct ThemeModeRestore final {
+        fluent::gallery::GallerySettings& settings;
+        fluent::gallery::GallerySettings::ThemeMode mode;
+        ~ThemeModeRestore() { settings.setThemeMode(mode); }
+    } restoreThemeMode{settings, previousThemeMode};
+    const QString previousApplicationVersion = QCoreApplication::applicationVersion();
+    struct ApplicationVersionRestore final {
+        QString version;
+        ~ApplicationVersionRestore() { QCoreApplication::setApplicationVersion(version); }
+    } restoreApplicationVersion{previousApplicationVersion};
+    QCoreApplication::setApplicationVersion(
+        QString::fromLatin1(FLUENT_QT_GALLERY_VERSION));
+    const QVariant previousAutomatedProperty =
+        qApp->property("fluentqtGalleryAutomated");
+    struct AutomatedPropertyRestore final {
+        QVariant value;
+        ~AutomatedPropertyRestore()
+        {
+            qApp->setProperty("fluentqtGalleryAutomated", value);
+        }
+    } restoreAutomatedProperty{previousAutomatedProperty};
+    qApp->setProperty("fluentqtGalleryAutomated", true);
+
+    GalleryWindow window;
+    window.setBackdropEffect(fluent::windowing::BackdropEffect::Solid);
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        window.setFixedSize(QSize(1440, 900));
+        window.show();
+
+        QElapsedTimer startupTimer;
+        startupTimer.start();
+        while (window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen"))
+               && startupTimer.elapsed() < 7000) {
+            QApplication::processEvents(QEventLoop::AllEvents, 25);
+            QTest::qWait(20);
+        }
+        ASSERT_EQ(window.findChild<QWidget*>(QStringLiteral("gallerySplashScreen")), nullptr);
+
+        const auto waitForRoute = [&window](const QString& routeId) {
+            QElapsedTimer timer;
+            timer.start();
+            while (timer.elapsed() < 5000) {
+                if (window.currentRouteId() == routeId)
+                    return true;
+                QApplication::processEvents(QEventLoop::AllEvents, 25);
+                QTest::qWait(20);
+            }
+            return false;
+        };
+
+        settings.setThemeMode(fluent::gallery::GallerySettings::ThemeMode::Light);
+        QStringList routes = {
+            QStringLiteral("home"),
+            QStringLiteral("settings"),
+            QStringLiteral("foundation"),
+            QStringLiteral("basic-input"),
+            QStringLiteral("button"),
+        };
+        const QString requestedRoute =
+            qEnvironmentVariable("GALLERY_PARITY_ROUTE").trimmed();
+        if (!requestedRoute.isEmpty())
+            routes = {requestedRoute};
+        else if (qEnvironmentVariableIsSet("GALLERY_PARITY_ALL_ROUTES"))
+            routes = GalleryNavigationViewModel().navigationEntryIds();
+        for (const QString& routeId : routes) {
+            ASSERT_TRUE(window.selectRoute(routeId));
+            ASSERT_TRUE(waitForRoute(routeId)) << routeId.toStdString();
+            QTest::qWait(500);
+            for (auto* ring :
+                 window.findChildren<fluent::status_info::ProgressRing*>()) {
+                ring->setAnimationEnabled(false);
+            }
+            for (auto* shimmer :
+                 window.findChildren<fluent::status_info::Shimmer*>()) {
+                shimmer->setAnimationEnabled(false);
+                shimmer->setShimmerProgress(0.42);
+            }
+            QApplication::processEvents(QEventLoop::AllEvents, 25);
+
+            tests::support::VisualSnapshotOptions options;
+            options.windowSize = QSize(1440, 900);
+            options.variant = QStringLiteral("parity-%1-light").arg(routeId);
+            options.theme = tests::support::VisualSnapshotTheme::Light;
+            ASSERT_TRUE(tests::support::captureVisualSnapshot(&window, options));
+        }
+        return;
+    }
+
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("home")));
     window.show();
     qApp->exec();
 }

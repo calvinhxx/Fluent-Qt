@@ -1,5 +1,7 @@
 #include "WindowingSamples.h"
 
+#include <QCoreApplication>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QFont>
 #include <QPainter>
@@ -277,6 +279,8 @@ public:
             updateChromeGeometry();
         });
         updateChromeGeometry();
+        QEvent activateEvent(QEvent::WindowActivate);
+        QCoreApplication::sendEvent(m_titleBar, &activateEvent);
     }
 
     TitleBar* titleBar() const { return m_titleBar; }

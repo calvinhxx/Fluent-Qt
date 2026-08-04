@@ -2,6 +2,9 @@
 #define FLUENTQT_PYSIDE6_BINDINGAPI_H
 
 #include <QFont>
+#include <QSizeF>
+#include <QStringList>
+#include <QVariantList>
 #include <QVariantMap>
 
 #include <components/basicinput/Button.h>
@@ -66,6 +69,7 @@
 #include <components/status_info/Toast.h>
 #include <components/status_info/ToolTip.h>
 #include <components/textfields/AutoSuggestBox.h>
+#include <components/textfields/EditingCommandRouter.h>
 #include <components/textfields/Label.h>
 #include <components/textfields/LineEdit.h>
 #include <components/textfields/NumberBox.h>
@@ -93,6 +97,20 @@ enum class SelectionMode {
     Single,
     Multiple,
     Extended
+};
+
+class ScrollViewZoomAwareWidget
+    : public QWidget,
+      public fluent::scrolling::ScrollViewZoomAware {
+public:
+    explicit ScrollViewZoomAwareWidget(QWidget* parent = nullptr);
+    ~ScrollViewZoomAwareWidget() override;
+
+    QSizeF scrollViewUnscaledSize() const override;
+    void setScrollViewZoomFactor(qreal factor) override;
+
+private:
+    qreal m_zoomFactor = 1.0;
 };
 
 } // namespace fluent::binding
@@ -132,6 +150,15 @@ fluent::scrolling::ScrollBar* listViewVerticalFluentScrollBar(
     const fluent::collections::ListView* view);
 fluent::scrolling::ScrollBar* listViewHorizontalFluentScrollBar(
     const fluent::collections::ListView* view);
+bool listViewSectionEnabled(const fluent::collections::ListView* view);
+void setListViewSectionEnabled(
+    fluent::collections::ListView* view,
+    bool enabled);
+void setListViewSectionKeys(
+    fluent::collections::ListView* view,
+    const QStringList& keys);
+void clearListViewSectionKeyFunction(
+    fluent::collections::ListView* view);
 fluent::binding::SelectionMode treeViewSelectionMode(
     const fluent::collections::TreeView* view);
 void setTreeViewSelectionMode(
@@ -147,6 +174,21 @@ void setBreadcrumbTextItems(
 void setBreadcrumbMetadataItems(
     fluent::navigation::Breadcrumb* breadcrumb,
     const QVector<fluent::navigation::BreadcrumbItem>& items);
+void setAnnotatedScrollBarDetailLabelText(
+    fluent::scrolling::AnnotatedScrollBar* scrollBar,
+    int offset,
+    const QString& text);
+void clearAnnotatedScrollBarDetailLabelProvider(
+    fluent::scrolling::AnnotatedScrollBar* scrollBar);
+bool annotatedScrollBarHasDetailLabelProvider(
+    const fluent::scrolling::AnnotatedScrollBar* scrollBar);
+QVariantList shimmerElementsForBinding(
+    const fluent::status_info::Shimmer* shimmer);
+bool setShimmerElementsJsonForBinding(
+    fluent::status_info::Shimmer* shimmer,
+    const QString& elementsJson);
+void clearShimmerElementsForBinding(
+    fluent::status_info::Shimmer* shimmer);
 fluent::status_info::Toast* showToastForBinding(
     QWidget* host,
     QWidget* anchor,

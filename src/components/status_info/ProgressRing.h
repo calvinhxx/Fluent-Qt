@@ -26,6 +26,12 @@ class ProgressRing : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(bool isActive READ isActive WRITE setIsActive NOTIFY isActiveChanged)
     /**
+     * @brief Whether indeterminate progress motion is enabled.
+     * zh_CN: 是否启用不确定进度动画。
+     */
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled
+                   NOTIFY animationEnabledChanged)
+    /**
      * @brief Whether the progress indicator uses indeterminate motion.
      * zh_CN: 进度指示器是否使用不确定动画。
      */
@@ -79,6 +85,9 @@ public:
     bool isActive() const { return m_isActive; }
     void setIsActive(bool active);
 
+    bool isAnimationEnabled() const { return m_animationEnabled; }
+    void setAnimationEnabled(bool enabled);
+
     bool isIndeterminate() const { return m_isIndeterminate; }
     void setIsIndeterminate(bool indeterminate);
 
@@ -116,6 +125,7 @@ public:
 
 signals:
     void isActiveChanged(bool active);
+    void animationEnabledChanged(bool enabled);
     void isIndeterminateChanged(bool indeterminate);
     void minimumChanged(int minimum);
     void maximumChanged(int maximum);
@@ -147,6 +157,7 @@ private:
     bool shouldAnimate() const;
 
     bool m_isActive = false;
+    bool m_animationEnabled = true;
     bool m_isIndeterminate = true;
     int m_minimum = 0;
     int m_maximum = 100;

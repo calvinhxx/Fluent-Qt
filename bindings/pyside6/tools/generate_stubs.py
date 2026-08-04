@@ -54,6 +54,10 @@ MODULE_FUNCTION_SIGNATURES = {
     ("fluentqt.foundation", "set_theme"): "(theme: Theme) -> None",
     ("fluentqt.foundation", "theme_revision"): "() -> int",
 }
+MODULE_VARIABLE_TYPES = {
+    ("fluentqt", "__api_version__"): "str",
+    ("fluentqt", "__version__"): "str",
+}
 
 
 def parse_args():
@@ -401,6 +405,10 @@ def generate_root_stub(package, package_dir):
                     getattr(package, name),
                 )
             )
+    for name in export_names:
+        variable_type = MODULE_VARIABLE_TYPES.get((package.__name__, name))
+        if variable_type is not None:
+            lines.append("{0}: {1}".format(name, variable_type))
     lines.append("")
     lines.extend(render_all(export_names))
     lines.append("")

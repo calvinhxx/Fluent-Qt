@@ -50,6 +50,18 @@ void ProgressRing::setIsActive(bool active)
     emit isActiveChanged(m_isActive);
 }
 
+void ProgressRing::setAnimationEnabled(bool enabled)
+{
+    if (m_animationEnabled == enabled)
+        return;
+    m_animationEnabled = enabled;
+    if (!m_animationEnabled)
+        m_animationPhase = 0.0;
+    updateAnimationState();
+    update();
+    emit animationEnabledChanged(m_animationEnabled);
+}
+
 void ProgressRing::setIsIndeterminate(bool indeterminate)
 {
     if (m_isIndeterminate == indeterminate) return;
@@ -473,6 +485,7 @@ void ProgressRing::updateAnimationState()
 bool ProgressRing::shouldAnimate() const
 {
     return m_isActive
+        && m_animationEnabled
         && m_isIndeterminate
         && m_status == ProgressRingStatus::Running
         && isEnabled()

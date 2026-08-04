@@ -1,4 +1,11 @@
 {
+  "schema_version": 1,
+  "api_version": "1.5",
+  "variables": [
+    "__api_version__",
+    "__version__"
+  ],
+  "deprecations": [],
   "classes": [
     "Accordion",
     "AnnotatedScrollBar",
@@ -24,6 +31,7 @@
     "Divider",
     "DropDownButton",
     "DrawerView",
+    "EditingCommandRouter",
     "Expander",
     "FlipView",
     "FlowView",
@@ -53,6 +61,7 @@
     "RepeatButton",
     "ScrollBar",
     "ScrollView",
+    "ScrollViewZoomAwareWidget",
     "SelectorBar",
     "SelectorBarItem",
     "Slider",
@@ -106,6 +115,15 @@
     "theme_revision"
   ],
   "methods": {
+    "EditingCommandRouter": [
+      "action",
+      "actions",
+      "canExecute",
+      "execute",
+      "hasActiveTarget",
+      "refresh",
+      "scopeWindow"
+    ],
     "CoachMark": [
       "cardSize",
       "close",
@@ -487,11 +505,14 @@
     ],
     "AnnotatedScrollBar": [
       "addLabel",
+      "clearDetailLabelProvider",
       "clearLabels",
       "connectToScrollView",
       "connectedScrollView",
       "disconnectScrollView",
+      "hasDetailLabelProvider",
       "labels",
+      "setDetailLabelProvider",
       "setLabels",
       "visibleLabels"
     ],
@@ -937,9 +958,11 @@
       "borderVisible",
       "footerText",
       "headerText",
+      "isSectionEnabled",
       "itemDelegate",
       "model",
       "placeholderText",
+      "sectionEnabled",
       "selectedIndex",
       "selectedRows",
       "selectionMode",
@@ -951,9 +974,16 @@
       "setItemDelegate",
       "setModel",
       "setPlaceholderText",
+      "setSectionEnabled",
+      "setSectionKeyFunction",
       "setSelectedIndex",
       "setSelectionMode",
       "setSelectionModel"
+    ],
+    "Shimmer": [
+      "clearElements",
+      "elements",
+      "setElements"
     ],
     "TreeView": [
       "backgroundVisible",
@@ -1008,6 +1038,10 @@
       "setWidget",
       "takeContentWidget",
       "takeWidget"
+    ],
+    "ScrollViewZoomAwareWidget": [
+      "scrollViewUnscaledSize",
+      "setScrollViewZoomFactor"
     ],
     "SplitView": [
       "addBorrowedPane",

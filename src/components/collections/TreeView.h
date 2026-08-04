@@ -241,6 +241,16 @@ public:
     void setSelectionIndicatorVisible(bool visible);
     qreal selectionIndicatorInset() const { return m_selectionIndicatorStyle.inset; }
     void setSelectionIndicatorInset(qreal inset);
+    /**
+     * @brief Returns the height of the Fluent selection-indicator pill.
+     * zh_CN: 返回 Fluent 选中指示器药丸的高度。
+     */
+    qreal selectionIndicatorHeight() const { return m_selectionIndicatorStyle.height; }
+    /**
+     * @brief Sets the height of the Fluent selection-indicator pill.
+     * zh_CN: 设置 Fluent 选中指示器药丸的高度。
+     */
+    void setSelectionIndicatorHeight(qreal height);
 
     ::fluent::scrolling::ScrollBar* verticalFluentScrollBar() const;
     ::fluent::scrolling::ScrollBar* horizontalFluentScrollBar() const;

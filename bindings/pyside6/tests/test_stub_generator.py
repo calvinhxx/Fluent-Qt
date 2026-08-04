@@ -19,6 +19,20 @@ STUB_GENERATOR_SPEC.loader.exec_module(STUB_GENERATOR)
 
 
 class StubGeneratorTest(unittest.TestCase):
+    def test_public_version_variables_have_string_stub_types(self):
+        self.assertEqual(
+            STUB_GENERATOR.MODULE_VARIABLE_TYPES[
+                ("fluentqt", "__version__")
+            ],
+            "str",
+        )
+        self.assertEqual(
+            STUB_GENERATOR.MODULE_VARIABLE_TYPES[
+                ("fluentqt", "__api_version__")
+            ],
+            "str",
+        )
+
     def test_options_cover_shiboken_62_generate_pyi_contract(self):
         options = STUB_GENERATOR.shiboken_generator_options()
 

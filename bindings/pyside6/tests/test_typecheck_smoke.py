@@ -15,6 +15,8 @@ from fluentqt.windowing import BackdropState, TitleBar, Window
 
 
 fluentqt.prepare_high_dpi_application()
+assert_type(fluentqt.__version__, str)
+assert_type(fluentqt.__api_version__, str)
 assert_type(fluentqt.initialize_resources(), bool)
 assert_type(fluentqt.binding_build_info(), dict[str, object])
 assert_type(fluentqt.current_theme(), fluentqt.Theme)

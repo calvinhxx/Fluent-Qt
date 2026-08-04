@@ -1,6 +1,10 @@
 """Status and information components."""
 
-from PySide6.QtCore import QMargins
+from dataclasses import dataclass
+from enum import IntEnum
+import json
+
+from PySide6.QtCore import QMargins, QRectF
 from PySide6.QtWidgets import QWidget
 
 from . import _fluentqt as _native
@@ -10,10 +14,84 @@ InfoBadge = _native.fluent.InfoBadge
 _NativeInfoBar = _native.fluent.InfoBar
 ProgressBar = _native.fluent.ProgressBar
 ProgressRing = _native.fluent.ProgressRing
-Shimmer = _native.fluent.Shimmer
+_NativeShimmer = _native.fluent.Shimmer
 _NativeToast = _native.fluent.Toast
 ToolTip = _native.fluent.ToolTip
 _ACTION_UNSET = object()
+
+
+class _ShimmerShape(IntEnum):
+    Rectangle = 0
+    RoundedRect = 1
+    Circle = 2
+    Line = 3
+
+
+@dataclass(frozen=True)
+class _ShimmerElement:
+    """One custom Shimmer skeleton shape in local widget coordinates."""
+
+    shape: _ShimmerShape
+    rect: QRectF
+    radius: float = -1.0
+
+    def __post_init__(self):
+        object.__setattr__(self, "shape", _ShimmerShape(self.shape))
+        if not isinstance(self.rect, QRectF):
+            raise TypeError("Shimmer.Element rect must be a QRectF")
+        object.__setattr__(self, "rect", QRectF(self.rect))
+        object.__setattr__(self, "radius", float(self.radius))
+
+
+class Shimmer(_NativeShimmer):
+    """Skeleton placeholder with Python-authored custom elements."""
+
+    Shape = _ShimmerShape
+    Element = _ShimmerElement
+
+    def __init__(self, *args, **kwargs):
+        elements = kwargs.pop("elements", None)
+        super().__init__(*args, **kwargs)
+        if elements is not None:
+            self.setElements(elements)
+
+    @staticmethod
+    def _element_payload(element):
+        if not isinstance(element, _ShimmerElement):
+            raise TypeError(
+                "Shimmer elements must be fluentqt.Shimmer.Element values"
+            )
+        return {
+            "shape": int(element.shape),
+            "x": element.rect.x(),
+            "y": element.rect.y(),
+            "width": element.rect.width(),
+            "height": element.rect.height(),
+            "radius": float(element.radius),
+        }
+
+    def elements(self):
+        values = _native.shimmerElementsForBinding(self)
+        return [
+            _ShimmerElement(
+                _ShimmerShape(int(value["shape"])),
+                QRectF(value["rect"]),
+                float(value["radius"]),
+            )
+            for value in values
+        ]
+
+    def setElements(self, elements):
+        values = list(elements)
+        payload = json.dumps(
+            [self._element_payload(element) for element in values],
+            separators=(",", ":"),
+        )
+        if not _native.setShimmerElementsJsonForBinding(self, payload):
+            raise RuntimeError("FluentQt rejected the Shimmer element payload")
+
+    def clearElements(self):
+        _native.clearShimmerElementsForBinding(self)
 
 
 class _ToastFacadeMeta(type(_NativeToast)):

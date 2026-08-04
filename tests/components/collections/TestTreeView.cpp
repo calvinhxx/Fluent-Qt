@@ -616,6 +616,7 @@ TEST_F(TreeViewTest, SelectionIndicatorVisibilityAndStyleSetters) {
 
     EXPECT_FALSE(tv->selectionIndicatorVisible());
     EXPECT_DOUBLE_EQ(tv->selectionIndicatorInset(), 6.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorHeight(), 16.0);
     EXPECT_DOUBLE_EQ(tv->selectionIndicatorStyle().width, 3.0);
     EXPECT_DOUBLE_EQ(tv->selectionIndicatorStyle().height, 16.0);
     EXPECT_EQ(tv->selectionIndicatorStyle().insetRole, -1);
@@ -641,6 +642,16 @@ TEST_F(TreeViewTest, SelectionIndicatorVisibilityAndStyleSetters) {
     EXPECT_DOUBLE_EQ(tv->selectionIndicatorInset(), 7.0);
     EXPECT_DOUBLE_EQ(tv->selectionIndicatorStyle().width, 5.0);
     EXPECT_EQ(tv->selectionIndicatorStyle().insetRole, kIndicatorInsetRole);
+
+    tv->setSelectionIndicatorHeight(14.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorHeight(), 14.0);
+    EXPECT_EQ(styleSpy.count(), 3);
+    tv->setSelectionIndicatorHeight(14.0);
+    EXPECT_EQ(styleSpy.count(), 3);
+    tv->setSelectionIndicatorHeight(-1.0);
+    EXPECT_DOUBLE_EQ(tv->selectionIndicatorHeight(), 0.0);
+    EXPECT_EQ(styleSpy.count(), 4);
+    tv->setSelectionIndicatorHeight(14.0);
 
     tv->setFixedSize(350, 400);
     showOffscreen(window);
