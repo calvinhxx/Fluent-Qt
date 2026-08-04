@@ -287,7 +287,10 @@ QWidget* createWindowContent() {
     contentLayout->addWidget(heading);
 
     auto* body = new Label(
-        "On macOS, native traffic lights stay on the left. On Windows, the caption buttons are drawn by Qt while DWM still provides resize, Snap, shadow, and maximize geometry.",
+        "On macOS, native traffic lights stay on the left; repeatedly drag the empty "
+        "title-bar area with the built-in trackpad to verify native system movement. "
+        "On Windows, the caption buttons are drawn by Qt while DWM still provides "
+        "resize, Snap, shadow, and maximize geometry.",
         content);
     body->setFluentTypography(Typography::FontRole::Body);
     body->setWordWrap(true);

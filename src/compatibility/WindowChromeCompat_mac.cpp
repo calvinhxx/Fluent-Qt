@@ -28,6 +28,8 @@ constexpr long NSWindowTitleHidden = 1;
 constexpr unsigned long NSWindowCloseButton = 0;
 constexpr unsigned long NSWindowMiniaturizeButton = 1;
 constexpr unsigned long NSWindowZoomButton = 2;
+constexpr unsigned long NSEventTypeLeftMouseDown = 1;
+constexpr unsigned long NSLeftMouseButtonMask = 1UL << 0;
 
 SEL selector(const char* name) {
     return sel_registerName(name);
@@ -52,6 +54,15 @@ id sendClassId(const char* className, const char* name) {
         return nil;
 
     using Send = id (*)(Class, SEL);
+    return reinterpret_cast<Send>(objc_msgSend)(cls, selector(name));
+}
+
+unsigned long sendClassUnsignedLong(const char* className, const char* name) {
+    Class cls = objc_getClass(className);
+    if (!cls)
+        return 0;
+
+    using Send = unsigned long (*)(Class, SEL);
     return reinterpret_cast<Send>(objc_msgSend)(cls, selector(name));
 }
 
@@ -81,6 +92,11 @@ void sendId(id receiver, const char* name, id value) {
 
 unsigned long sendUnsignedLong(id receiver, const char* name) {
     using Send = unsigned long (*)(id, SEL);
+    return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
+}
+
+long sendLong(id receiver, const char* name) {
+    using Send = long (*)(id, SEL);
     return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
 }
 
@@ -124,6 +140,11 @@ CGRect sendRect(id receiver, const char* name) {
     using Send = CGRect (*)(id, SEL);
     return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
 #endif
+}
+
+CGPoint sendPoint(id receiver, const char* name) {
+    using Send = CGPoint (*)(id, SEL);
+    return reinterpret_cast<Send>(objc_msgSend)(receiver, selector(name));
 }
 
 void sendPoint(id receiver, const char* name, CGPoint value) {
@@ -183,6 +204,45 @@ id nativeWindowFor(QWidget* window) {
         return sendId(nativeObject, "window");
 
     return nil;
+}
+
+id createSystemMoveMouseDownEvent(id nsWindow) {
+    static constexpr const char* MouseEventFactory =
+        "mouseEventWithType:location:modifierFlags:timestamp:windowNumber:context:"
+        "eventNumber:clickCount:pressure:";
+
+    Class eventClass = objc_getClass("NSEvent");
+    if (!eventClass
+        || !respondsTo(reinterpret_cast<id>(eventClass), selector(MouseEventFactory))
+        || !respondsTo(nsWindow, selector("mouseLocationOutsideOfEventStream"))
+        || !respondsTo(nsWindow, selector("windowNumber"))) {
+        return nil;
+    }
+
+    const CGPoint location = sendPoint(nsWindow, "mouseLocationOutsideOfEventStream");
+    const long windowNumber = sendLong(nsWindow, "windowNumber");
+    using Send = id (*)(Class,
+                        SEL,
+                        unsigned long,
+                        CGPoint,
+                        unsigned long,
+                        double,
+                        long,
+                        id,
+                        long,
+                        long,
+                        float);
+    return reinterpret_cast<Send>(objc_msgSend)(eventClass,
+                                                 selector(MouseEventFactory),
+                                                 NSEventTypeLeftMouseDown,
+                                                 location,
+                                                 0UL,
+                                                 0.0,
+                                                 windowNumber,
+                                                 nil,
+                                                 0L,
+                                                 1L,
+                                                 1.0f);
 }
 
 void centerTrafficLights(id nsWindow, const QRect& titleBarRect = QRect()) {
@@ -543,9 +603,32 @@ bool handlePlatformNativeEvent(QWidget* window,
 }
 
 bool beginPlatformSystemMove(QWidget* window, const QPoint& globalPos) {
-    Q_UNUSED(window);
     Q_UNUSED(globalPos);
-    return false;
+    if (!window || QGuiApplication::platformName() != QStringLiteral("cocoa"))
+        return false;
+
+    id nsWindow = nativeWindowFor(window);
+    if (!nsWindow || !respondsTo(nsWindow, selector("performWindowDragWithEvent:")))
+        return false;
+
+    // QTBUG-141220: QCocoaWindow::startSystemMove() rejects intermittent trackpad
+    // pressure/gesture events even though the left button is still down. Hand
+    // AppKit a fresh mouse-down event so native dragging, Spaces, and
+    // window-server behavior remain intact instead of using QWidget::move().
+    // zh_CN: QTBUG-141220 中 QCocoaWindow::startSystemMove() 会间歇性拒绝触控板
+    // pressure/gesture 事件；在左键仍按下时合成 mouse-down 交还 AppKit，保留原生拖动与
+    // Spaces 行为。
+    if ((sendClassUnsignedLong("NSEvent", "pressedMouseButtons")
+         & NSLeftMouseButtonMask) == 0) {
+        return false;
+    }
+
+    id mouseDownEvent = createSystemMoveMouseDownEvent(nsWindow);
+    if (!mouseDownEvent)
+        return false;
+
+    sendId(nsWindow, "performWindowDragWithEvent:", mouseDownEvent);
+    return true;
 }
 
 bool beginPlatformSystemResize(QWidget* window, Qt::Edges edges, const QPoint& globalPos) {
