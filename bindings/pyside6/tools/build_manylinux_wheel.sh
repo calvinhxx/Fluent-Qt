@@ -54,14 +54,16 @@ if [[ ! -f "$FLUENTQT_QT_ROOT/lib/cmake/Qt6/Qt6Config.cmake" ]]; then
 fi
 
 # Qt's public CMake targets and GUI library use these manylinux-policy system
-# libraries. They stay external; auditwheel remains responsible for every
-# non-policy library other than the pinned PySide6/Shiboken6/Qt wheel runtime.
+# libraries, while the Shiboken generator requires the libxslt runtime. They
+# stay external; auditwheel remains responsible for every non-policy library
+# other than the pinned PySide6/Shiboken6/Qt wheel runtime.
 dnf install -y \
     fontconfig-devel \
     freetype-devel \
     libX11-devel \
     libXext-devel \
     libXrender-devel \
+    libxslt \
     libxcb-devel \
     libxkbcommon-devel \
     mesa-libGL-devel

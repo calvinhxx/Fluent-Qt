@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 from pathlib import Path
 import re
@@ -18,6 +19,7 @@ fluentqt.prepare_high_dpi_application()
 
 from PySide6.QtCore import (
     QCoreApplication,
+    QElapsedTimer,
     QEvent,
     QEventLoop,
     QPoint,
@@ -83,10 +85,13 @@ from fluentqt.gallery.foundation_pages import (
 from fluentqt.gallery.native_samples import ported_sample_keys
 from fluentqt.gallery.samples import build_sample
 from fluentqt.gallery.visual import (
+    _acrylic_noise_tile,
     _direct_icon_font,
     _direct_icon_glyph,
     _draw_pixmap_in_logical_rect,
+    _qt_seeded_bytes,
     _single_shot,
+    _tint_github_mark,
     css_color,
     gallery_colors,
 )
@@ -172,6 +177,19 @@ def _qwait(delay_ms: int) -> None:
     loop = QEventLoop()
     QTimer.singleShot(max(0, int(delay_ms)), loop.quit)
     loop.exec()
+
+
+def _wait_until(
+    predicate: Callable[[], bool],
+    timeout_ms: int = 2000,
+) -> bool:
+    timer = QElapsedTimer()
+    timer.start()
+    while timer.elapsed() < timeout_ms:
+        if predicate():
+            return True
+        _qwait(min(20, timeout_ms - timer.elapsed()))
+    return predicate()
 
 
 class PythonGalleryTest(unittest.TestCase):
@@ -342,6 +360,7 @@ class PythonGalleryTest(unittest.TestCase):
         window.show()
         QApplication.processEvents()
         try:
+            self.assertTrue(window.isChromeInteractive())
             controller._show_close_behavior_dialog()
             dialog = controller._close_dialog
             self.assertIsNotNone(dialog)
@@ -356,8 +375,9 @@ class PythonGalleryTest(unittest.TestCase):
             )
             self.assertFalse(window.isChromeInteractive())
             dialog.done(fluentqt.ContentDialog.ResultNone)
-            _qwait(300)
-            self.assertTrue(window.isChromeInteractive())
+            self.assertTrue(
+                _wait_until(window.isChromeInteractive, timeout_ms=2000)
+            )
         finally:
             controller.arm_application_quit()
             window.close()
@@ -886,6 +906,38 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         self.assertEqual(image.pixelColor(40, 20), QColor(220, 30, 40))
         self.assertEqual(image.pixelColor(40, 59), QColor(220, 30, 40))
         self.assertEqual(image.pixelColor(40, 60).alpha(), 0)
+
+    def test_gallery_generated_pixels_match_cpp_argb_contract(self):
+        tile = _acrylic_noise_tile()
+        expected_noise = _qt_seeded_bytes(0xACE71C5E, 96 * 96)
+        self.assertEqual(tile.size(), QSize(96, 96))
+        for index in (0, 1, 95, 96, 4096, 9215):
+            value = expected_noise[index]
+            self.assertEqual(
+                int(tile.pixel(index % 96, index // 96)),
+                0xFF000000 | value * 0x010101,
+            )
+
+        mark = QImage(4, 1, QImage.Format_ARGB32)
+        source_pixels = (
+            0xFF000000,
+            0xFFFFFFFF,
+            0xFFFF0000,
+            0x80000000,
+        )
+        mark_pixels = mark.bits().cast("I")
+        for x, pixel in enumerate(source_pixels):
+            mark_pixels[x] = pixel
+        _tint_github_mark(mark, QColor(0x12, 0x34, 0x56))
+        self.assertEqual(
+            tuple(int(mark.pixel(x, 0)) for x in range(4)),
+            (
+                0xFF123456,
+                0x00123456,
+                0xA8123456,
+                0x80123456,
+            ),
+        )
 
     def test_sample_card_and_code_block_match_native_shell_behavior(self):
         window = GalleryWindow()
@@ -1502,7 +1554,16 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window._submit_search("split button", None)
             self.assertEqual(window.current_route, "split-button")
 
-            _qwait(300)
+            self.assertTrue(
+                _wait_until(
+                    lambda: (
+                        window._back_button.width() == 24
+                        and abs(window._back_button.contentOpacity() - 1.0)
+                        <= 0.005
+                    ),
+                    timeout_ms=1000,
+                )
+            )
             self.assertEqual(window._back_button.width(), 24)
             self.assertAlmostEqual(
                 window._back_button.contentOpacity(), 1.0, places=2
@@ -1512,7 +1573,15 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             )
 
             window.navigate_back()
-            _qwait(300)
+            self.assertTrue(
+                _wait_until(
+                    lambda: (
+                        window._back_button.width() == 0
+                        and abs(window._back_button.contentOpacity()) <= 0.005
+                    ),
+                    timeout_ms=1000,
+                )
+            )
             self.assertEqual(window.current_route, "home")
             self.assertEqual(window._back_button.width(), 0)
             self.assertAlmostEqual(
@@ -1733,11 +1802,24 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         QApplication.processEvents()
         try:
             footer = window._footer_navigation_pane
+            rotations: list[float] = []
+            footer._settings_rotation_animation.valueChanged.connect(
+                lambda value: rotations.append(float(value))
+            )
             footer._activate_index(footer._item.index())
-            _qwait(40)
             self.assertEqual(window.current_route, "settings")
-            self.assertGreater(footer._settings_icon_rotation, 0.0)
-            _qwait(420)
+            self.assertTrue(
+                _wait_until(
+                    lambda: any(value > 0.0 for value in rotations),
+                    timeout_ms=1000,
+                )
+            )
+            self.assertTrue(
+                _wait_until(
+                    lambda: abs(footer._settings_icon_rotation) <= 0.005,
+                    timeout_ms=1500,
+                )
+            )
             self.assertAlmostEqual(
                 footer._settings_icon_rotation, 0.0, places=2
             )

@@ -9,10 +9,10 @@ and must never be uploaded to PyPI.
 
 The authoritative values live in [`wheel-matrix.json`](wheel-matrix.json):
 
-| Architecture | Build image | Publish tag |
-|---|---|---|
-| x86_64 | `quay.io/pypa/manylinux_2_28_x86_64` | `manylinux_2_28_x86_64` |
-| aarch64 | `quay.io/pypa/manylinux_2_39_aarch64` | `manylinux_2_39_aarch64` |
+| Architecture | CPython | Build image | Publish tag |
+|---|---|---|---|
+| x86_64 | 3.11 | `quay.io/pypa/manylinux_2_28_x86_64` | `manylinux_2_28_x86_64` |
+| aarch64 | 3.12 | `quay.io/pypa/manylinux_2_39_aarch64` | `manylinux_2_39_aarch64` |
 
 The ARM64 policy is intentionally newer because the official PySide6 6.9.3
 ARM64 wheel itself requires glibc 2.39. Do not relabel either architecture to
@@ -20,14 +20,23 @@ an older policy. PyPA currently labels the `manylinux_2_39` image as alpha, so
 the immutable image digest and full native ARM64 lane are mandatory evidence.
 musllinux is outside the first-release matrix.
 
+Linux ARM64 also uses CPython 3.12. The official Shiboken 6.9.3 aarch64
+runtime omits the owned-reference increment when returning `Py_None` from
+wrapped void functions; on CPython 3.11 this eventually aborts with
+`none_dealloc`, while CPython 3.12 singletons are immortal. Binding
+configuration runs a small ownership probe and rejects the unsafe runtime
+combination. This architecture-specific release floor does not change the
+project-wide Python 3.10 or Qt 6.2 compatibility baselines.
+
 ## Build and repair
 
 The full CI matrix mounts the matching official Qt 6.9.3 SDK into the native
 PyPA manylinux image and runs
 [`tools/build_manylinux_wheel.sh`](tools/build_manylinux_wheel.sh). The script
-uses `/opt/python/cp311-cp311`, the exact PySide6/Shiboken6 6.9.3 packages, and
-the auditwheel version pinned by the matrix. It configures a fresh release
-build and invokes the opt-in CMake target:
+uses `/opt/python/cp311-cp311` for x86_64 and `/opt/python/cp312-cp312` for
+aarch64, the exact PySide6/Shiboken6 6.9.3 packages, and the auditwheel version
+pinned by the matrix. It configures a fresh release build and invokes the
+opt-in CMake target:
 
 ```bash
 cmake --build build/pyside6-manylinux-... \

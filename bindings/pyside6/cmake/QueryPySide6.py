@@ -9,6 +9,7 @@ import sys
 
 import PySide6
 from PySide6.QtCore import qVersion
+from PySide6.QtGui import QImage
 import shiboken6
 import shiboken6_generator
 
@@ -70,6 +71,16 @@ def emit(name, value):
     print('set({0} "{1}")'.format(name, cmake_value(value)))
 
 
+def has_safe_none_returns():
+    """Detect a borrowed-Py_None ABI defect in some Linux ARM64 wheels."""
+    image = QImage(1, 1, QImage.Format_ARGB32)
+    image.setPixel(0, 0, 0xFF000000)
+    before = sys.getrefcount(None)
+    for _ in range(8):
+        image.setPixel(0, 0, 0xFF000000)
+    return sys.getrefcount(None) >= before
+
+
 def main():
     pyside_root = Path(PySide6.__file__).resolve().parent
     shiboken_root = Path(shiboken6.__file__).resolve().parent
@@ -90,6 +101,8 @@ def main():
     emit("FLUENTQT_SHIBOKEN6_VERSION", shiboken6.__version__)
     emit("FLUENTQT_SHIBOKEN6_GENERATOR_VERSION",
          shiboken6_generator.__version__)
+    emit("FLUENTQT_PYSIDE6_SAFE_NONE_RETURNS",
+         "TRUE" if has_safe_none_returns() else "FALSE")
     emit("FLUENTQT_SHIBOKEN6_GENERATOR",
          cmake_path(find_generator(generator_root)))
     emit("FLUENTQT_PYSIDE6_ROOT", cmake_path(pyside_root))

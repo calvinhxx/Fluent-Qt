@@ -761,15 +761,41 @@ def _acrylic_noise_tile() -> QImage:
         return _ACRYLIC_NOISE_TILE
     image = QImage(96, 96, QImage.Format_ARGB32)
     values = iter(_qt_seeded_bytes(0xACE71C5E, 96 * 96))
+    pixels = image.bits().cast("I")
+    stride = image.bytesPerLine() // 4
+    # Write native QRgb words directly. Besides matching the C++ path, this
+    # avoids thousands of Python-to-C++ setter calls on Linux ARM64.
     for y in range(96):
         for x in range(96):
             value = next(values)
-            image.setPixelColor(x, y, QColor(value, value, value, 255))
+            pixels[y * stride + x] = 0xFF000000 | value * 0x010101
     _ACRYLIC_NOISE_TILE = image
     return image
 
 
 _HERO_LINK_PIXMAP_CACHE: dict[tuple[str, int, int], QPixmap] = {}
+
+
+def _tint_github_mark(image: QImage, tint: QColor) -> None:
+    tint_rgb = (tint.red() << 16) | (tint.green() << 8) | tint.blue()
+    pixels = image.bits().cast("I")
+    stride = image.bytesPerLine() // 4
+    width = image.width()
+    height = image.height()
+    # Keep the entire hot loop on the native pixel buffer. Calling a wrapped
+    # void setter once per pixel can exhaust Py_None references with the
+    # PySide 6.9 Linux ARM64 wheel before a 560 px icon is processed.
+    for y in range(height):
+        row = y * stride
+        for x in range(width):
+            source = int(pixels[row + x])
+            luminance = (
+                ((source >> 16) & 0xFF) * 11
+                + ((source >> 8) & 0xFF) * 16
+                + (source & 0xFF) * 5
+            ) // 32
+            alpha = (255 - luminance) * ((source >> 24) & 0xFF) // 255
+            pixels[row + x] = (alpha << 24) | tint_rgb
 
 
 def _hero_link_pixmap(image_name: str, size: int, tint: QColor) -> QPixmap:
@@ -782,20 +808,7 @@ def _hero_link_pixmap(image_name: str, size: int, tint: QColor) -> QPixmap:
         return QPixmap()
     image = image.convertToFormat(QImage.Format_ARGB32)
     if image_name == "GitHub-Mark.png":
-        for y in range(image.height()):
-            for x in range(image.width()):
-                source = image.pixelColor(x, y)
-                luminance = (
-                    source.red() * 11
-                    + source.green() * 16
-                    + source.blue() * 5
-                ) // 32
-                alpha = (255 - luminance) * source.alpha() // 255
-                image.setPixelColor(
-                    x,
-                    y,
-                    QColor(tint.red(), tint.green(), tint.blue(), alpha),
-                )
+        _tint_github_mark(image, tint)
     alpha_image = image.convertToFormat(QImage.Format_RGBA8888)
     raw = bytes(alpha_image.constBits())
     stride = alpha_image.bytesPerLine()

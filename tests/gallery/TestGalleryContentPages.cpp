@@ -657,10 +657,12 @@ TEST_F(GalleryContentPagesTest, PythonParityVisualCheck)
         };
         const QString requestedRoute =
             qEnvironmentVariable("GALLERY_PARITY_ROUTE").trimmed();
-        if (!requestedRoute.isEmpty())
-            routes = {requestedRoute};
-        else if (qEnvironmentVariableIsSet("GALLERY_PARITY_ALL_ROUTES"))
+        if (!requestedRoute.isEmpty()) {
+            routes.clear();
+            routes.append(requestedRoute);
+        } else if (qEnvironmentVariableIsSet("GALLERY_PARITY_ALL_ROUTES")) {
             routes = GalleryNavigationViewModel().navigationEntryIds();
+        }
         for (const QString& routeId : routes) {
             ASSERT_TRUE(window.selectRoute(routeId));
             ASSERT_TRUE(waitForRoute(routeId)) << routeId.toStdString();
