@@ -7,7 +7,7 @@ if(POLICY CMP0091)
 endif()
 set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
 
-project(FluentQt VERSION 1.5.2 LANGUAGES CXX C)
+project(FluentQt VERSION 1.5.3 LANGUAGES CXX C)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
