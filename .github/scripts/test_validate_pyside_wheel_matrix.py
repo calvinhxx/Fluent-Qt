@@ -29,7 +29,7 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
         catalog["scenarios"] = [
             item
             for item in catalog["scenarios"]
-            if item["id"] != "linux-arm64-qt693-cp311"
+            if item["id"] != "linux-arm64-qt693-cp312"
         ]
 
         errors = VALIDATOR.validate_catalog(catalog)
@@ -53,6 +53,27 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
 
         self.assertTrue(
             any("no supported native toolchain policy" in error for error in errors),
+            errors,
+        )
+
+    def test_linux_arm64_requires_python_312(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(
+            item
+            for item in catalog["scenarios"]
+            if item["id"] == "linux-arm64-qt693-cp312"
+        )
+        scenario["python_version"] = "3.11"
+        scenario["python_tag"] = "cp311"
+        scenario["expected_wheel_suffix"] = "cp311-cp311-linux_aarch64"
+        scenario["publish_wheel_suffix"] = (
+            "cp311-cp311-manylinux_2_39_aarch64"
+        )
+
+        errors = VALIDATOR.validate_catalog(catalog)
+
+        self.assertTrue(
+            any("CPython 3.12 release ABI" in error for error in errors),
             errors,
         )
 

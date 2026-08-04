@@ -3,7 +3,14 @@ if(NOT QT_VERSION_MAJOR EQUAL 6)
         "FLUENT_QT_BUILD_PYSIDE6_BINDINGS requires Qt 6.2 or newer")
 endif()
 
-find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development)
+if(WIN32)
+    # Python::Python is required by the Windows extension link step.
+    find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development)
+else()
+    # Unix extension modules do not embed Python. Requiring Development.Embed
+    # rejects the intentionally minimal CPython installations in manylinux.
+    find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development.Module)
+endif()
 
 execute_process(
     COMMAND "${Python_EXECUTABLE}"
@@ -45,6 +52,13 @@ if(NOT FLUENTQT_PYSIDE6_VERSION VERSION_EQUAL
         "version (found ${FLUENTQT_PYSIDE6_VERSION}, "
         "${FLUENTQT_SHIBOKEN6_VERSION}, and "
         "${FLUENTQT_SHIBOKEN6_GENERATOR_VERSION})")
+endif()
+
+if(NOT FLUENTQT_PYSIDE6_SAFE_NONE_RETURNS)
+    message(FATAL_ERROR
+        "The active PySide6/Shiboken6 runtime returns borrowed Py_None from "
+        "wrapped void functions. This ABI combination is unsafe. On Linux "
+        "ARM64 with PySide6 6.9+, use CPython 3.12 or newer.")
 endif()
 
 if(NOT Qt6_VERSION VERSION_EQUAL FLUENTQT_PYSIDE6_QT_VERSION)

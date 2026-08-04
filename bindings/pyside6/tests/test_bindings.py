@@ -100,6 +100,12 @@ class FluentQtBindingTest(unittest.TestCase):
         if not fluentqt.initialize_resources():
             raise RuntimeError("FluentQt resources could not be initialized")
 
+    def tearDown(self):
+        QApplication.processEvents()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        QApplication.processEvents()
+        gc.collect()
+
     def _assert_item_view_gc_stress(self, view_type, model_factory):
         class PythonLifetimeDelegate(QStyledItemDelegate):
             pass

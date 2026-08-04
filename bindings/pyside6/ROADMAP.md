@@ -904,9 +904,11 @@ pointer behavior remain the sole M5 desktop acceptance item.
   ARM64 on Linux, macOS, and Windows; x64 means x86_64/AMD64, not 32-bit x86.
 - [x] Pass every first-release wheel lane on its native target. Fast CI keeps
   the Python 3.10 + Qt/PySide/Shiboken 6.2.4 minimum lanes on Linux/Windows
-  x64 and the existing macOS ARM64 lane. Full CI adds Python 3.11 + 6.9.3
-  release lanes for Linux x64/ARM64, Windows x64/ARM64, and macOS x64; the
-  existing macOS ARM64 lane completes the six-target release set. Native CI validation passed on every native target.
+  x64 and the existing macOS ARM64 lane. Full CI adds 6.9.3 release lanes for
+  Linux x64/ARM64, Windows x64/ARM64, and macOS x64; Linux ARM64 uses Python
+  3.12 because the upstream aarch64 Shiboken runtime requires immortal
+  singletons, while the other release lanes use Python 3.11. The existing
+  macOS ARM64 lane completes the six-target release set.
 - [x] Generate `_fluentqt.pyi` from Shiboken signatures plus facade `.pyi`
   files, validate them against `api-manifest.json`, include them in clean-wheel
   smoke tests, and run a strict installed-wheel mypy consumer check in CI.
@@ -948,7 +950,9 @@ Qt 6.2.4 remains the binding minimum, not the ARM64 wheel build version. The
 official PySide 6.2.4 release has no Linux or Windows ARM64 wheels, Linux ARM64
 Qt/PySide 6.9.3 binaries require glibc 2.39, and the Windows ARM64 Python tool
 cache starts at CPython 3.11. Therefore the ARM64 release lanes use 6.9.3,
-Linux uses `ubuntu-24.04-arm`, and the low-version x64 lanes remain separate.
+Linux uses `ubuntu-24.04-arm` with CPython 3.12, and the low-version x64 lanes
+remain separate. A configure-time reference-ownership probe rejects the unsafe
+Linux ARM64 Shiboken 6.9.3 plus pre-3.12 CPython combination.
 
 Native Linux smoke artifacts retain `linux_*` tags. The release workflow now
 rebuilds inside the architecture-specific policy image and uploads only the
@@ -1189,9 +1193,10 @@ the current branch-level evidence source.
     Qt 5.15/6.2 C++ regressions, and the final CI Gate passed together in native CI validation. The wider wheel matrix, compatibility policy, signing, and
     publication work remain in M6.
 36. Treat the M6 native wheel-matrix and minimum-compatibility slice as complete
-    after native CI validation passed before history consolidation with all six Python
-    3.11 + Qt/PySide/Shiboken 6.9.3 release wheels for x64 and ARM64 on Linux,
-    macOS, and Windows; the Python 3.10 + 6.2.4 minimum lanes on Linux/Windows
+    after native CI validation passed before history consolidation with all six
+    Qt/PySide/Shiboken 6.9.3 release wheels for x64 and ARM64 on Linux, macOS,
+    and Windows; the current Linux ARM64 lane uses Python 3.12 and the other
+    release lanes use Python 3.11. The Python 3.10 + 6.2.4 minimum lanes on Linux/Windows
     x64; all binding CTests; strict mypy; clean installs; native-window smoke;
     Qt 5.15/6.2 C++ regressions; sanitizers; CI Gate; and Release ready. The
     run also verifies that CommandBar's queued focus rebuild no longer

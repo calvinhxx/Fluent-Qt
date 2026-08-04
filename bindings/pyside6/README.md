@@ -787,10 +787,19 @@ the method does not create, reparent, or transfer ownership of that child.
 The authoritative CI and first-release architecture catalog is
 [`wheel-matrix.json`](wheel-matrix.json).
 The minimum compatibility lanes remain Linux x64 and Windows x64 with
-CPython 3.10 plus Qt/PySide/Shiboken 6.2.4. The first-release lanes use
-CPython 3.11 plus the matched 6.9.3 toolchain on Linux, macOS, and Windows,
-each on both x64 and ARM64 native runners. Here `x64` means x86_64/AMD64;
-32-bit x86 is not supported.
+CPython 3.10 plus Qt/PySide/Shiboken 6.2.4. The first-release lanes use the
+matched 6.9.3 toolchain on Linux, macOS, and Windows, each on both x64 and
+ARM64 native runners. CPython 3.11 is used everywhere except Linux ARM64,
+which uses CPython 3.12; here `x64` means x86_64/AMD64, and 32-bit x86 is not
+supported.
+
+The Linux ARM64 exception is an upstream runtime constraint, not a raised Qt
+minimum. Official Shiboken 6.9.3 aarch64 wheels can return borrowed `Py_None`
+from wrapped void functions when loaded by pre-3.12 CPython, eventually
+triggering `none_dealloc`. CPython 3.12's immortal singleton contract makes
+that wheel/runtime combination safe. Configuration performs a live reference
+ownership probe and rejects unsafe combinations instead of allowing a wheel
+that fails only under sustained UI calls.
 
 The normal fast CI tier keeps the two minimum lanes and macOS ARM64. Full CI
 adds Linux x64/ARM64, Windows x64/ARM64, and macOS x64 release-wheel lanes;
@@ -803,10 +812,10 @@ that Qt, PySide6, and Shiboken6 resolve inside that clean environment.
 Full Linux release lanes additionally rebuild inside the matching PyPA
 manylinux image, repair with the pinned `auditwheel`, reject bundled duplicate
 Qt/PySide6/Shiboken6 libraries, and clean-install the repaired wheel. x64 uses
-`manylinux_2_28`; ARM64 uses `manylinux_2_39`, matching the official
-PySide6-Essentials 6.9.3 wheel floors. Native `linux_*` artifacts remain test
-evidence only. Signing and upload automation stay disabled until every release
-lane passes together.
+CPython 3.11 and `manylinux_2_28`; ARM64 uses CPython 3.12 and
+`manylinux_2_39`, matching the official PySide6-Essentials 6.9.3 wheel floors.
+Native `linux_*` artifacts remain test evidence only. Signing and upload
+automation stay disabled until every release lane passes together.
 
 Passing the build-tree tests proves the declared API contract; passing the
 clean-wheel smoke proves installation/runtime isolation; the interactive

@@ -66,6 +66,9 @@ COMPATIBILITY_IDS = {
     "linux-x64-qt624-cp310",
     "windows-x64-qt624-cp310",
 }
+RELEASE_PYTHON_POLICY = {
+    ("linux", "arm64"): "3.12",
+}
 PLATFORM_POLICY = {
     ("linux", "x64", "6.2.4"): (
         "ubuntu-22.04", "X64", "x64", "linux", "gcc_64", "", "x86_64"
@@ -389,8 +392,14 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
             release_platforms.add(platform_arch)
             if versions != ("6.9.3", "6.9.3", "6.9.3"):
                 errors.append(f"{context} must use the Qt 6.9.3 release toolchain")
-            if python_version != "3.11":
-                errors.append(f"{context} must use the CPython 3.11 release ABI")
+            expected_release_python = RELEASE_PYTHON_POLICY.get(
+                platform_arch, "3.11"
+            )
+            if python_version != expected_release_python:
+                errors.append(
+                    f"{context} must use the CPython "
+                    f"{expected_release_python} release ABI"
+                )
 
     if len(scenarios) != 8:
         errors.append(f"matrix must contain 8 scenarios, found {len(scenarios)}")

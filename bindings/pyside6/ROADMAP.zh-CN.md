@@ -750,9 +750,10 @@ ownership、resize 传递和最终 backdrop 不变量。本机 WSLg Wayland 与 
   x64 指 x86_64/AMD64，不包含 32 位 x86。
 - [x] 在原生目标跑通全部首发 wheel lane。日常 fast CI 保留 Linux/Windows
   x64 的 Python 3.10 + Qt/PySide/Shiboken 6.2.4 最低兼容门禁和现有 macOS
-  ARM64 lane；full CI 使用 Python 3.11 + 6.9.3 增加 Linux x64/ARM64、
-  Windows x64/ARM64 和 macOS x64，连同现有 macOS ARM64 组成六目标首发集；
-  原生 CI 验证已在全部原生目标通过。
+  ARM64 lane；full CI 使用 6.9.3 增加 Linux x64/ARM64、Windows x64/ARM64
+  和 macOS x64，连同现有 macOS ARM64 组成六目标首发集。Linux ARM64 因
+  上游 aarch64 Shiboken runtime 依赖 immortal singleton 而使用 Python 3.12，
+  其余发布 lane 使用 Python 3.11。
 - [x] 从 Shiboken 签名生成 `_fluentqt.pyi` 与 facade `.pyi`，用
   `api-manifest.json` 校验公共类、枚举、函数和必需方法，将存根纳入干净
   wheel smoke，并在 CI 中对已安装 wheel 运行严格 mypy 消费方检查。
@@ -786,7 +787,9 @@ Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官�
 没有 Linux/Windows ARM64 wheel，Linux ARM64 的 Qt/PySide 6.9.3 二进制还要求
 glibc 2.39，因此该 lane 使用 `ubuntu-24.04-arm`。Windows ARM64 使用从 3.11
 开始提供官方 ARM64 工具缓存的 CPython。这样既守住低版本兼容，也避免用版本号
-相同但来源或架构不匹配的两套 Qt。
+相同但来源或架构不匹配的两套 Qt。Linux ARM64 进一步固定 CPython 3.12，并在
+配置时探测 void 返回值的引用所有权，拒绝 Shiboken 6.9.3 + pre-3.12 CPython
+这一会在持续 UI 调用后触发 `none_dealloc` 的组合。
 
 Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 现在会在分架构 policy
 image 中重新构建，只上传修复后的 manylinux wheel 与审计报告，但这条新增容器路径
@@ -985,8 +988,9 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     Qt 5.15/6.2 C++ 回归和最终 CI Gate，将 M6 的首个类型/API 防回退批次视为
     完成。更完整的 wheel 矩阵、兼容策略、签名和发布工作仍属于 M6 待办。
 36. 历史压缩前的原生 CI 验证已通过 Linux、macOS、Windows 的
-    x64/ARM64 六个 Python 3.11 + Qt/PySide/Shiboken 6.9.3 首发 wheel lane，
-    同时通过 Linux/Windows x64 的 Python 3.10 + 6.2.4 最低兼容门禁、全部绑定
+    x64/ARM64 六个 Qt/PySide/Shiboken 6.9.3 首发 wheel lane；当前 Linux
+    ARM64 lane 使用 Python 3.12，其余发布 lane 使用 Python 3.11。同时通过
+    Linux/Windows x64 的 Python 3.10 + 6.2.4 最低兼容门禁、全部绑定
     CTest、严格 mypy、干净安装、原生窗口 smoke、Qt 5.15/6.2 C++ 回归、
     sanitizer、CI Gate 与 Release ready。该轮还验证了 borrowed QAction 销毁后
     CommandBar 异步焦点重建不再解引用悬空地址，因此将 M6 的原生 wheel 矩阵与

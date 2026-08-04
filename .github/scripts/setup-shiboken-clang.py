@@ -9,6 +9,8 @@ import hashlib
 import io
 from pathlib import Path, PurePosixPath
 import tarfile
+import time
+import urllib.error
 import urllib.request
 
 
@@ -137,12 +139,23 @@ def package_bytes(spec: PackageSpec, archive_path: Path | None) -> bytes:
     if archive_path is not None:
         return archive_path.read_bytes()
 
-    request = urllib.request.Request(
-        spec.url,
-        headers={"User-Agent": "FluentQt-CI/1.0"},
-    )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return response.read()
+    last_error: BaseException | None = None
+    for attempt in range(1, 4):
+        request = urllib.request.Request(
+            spec.url,
+            headers={"User-Agent": "FluentQt-CI/1.0"},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=90) as response:
+                return response.read()
+        except (OSError, TimeoutError, urllib.error.URLError) as error:
+            last_error = error
+            if attempt < 3:
+                time.sleep(attempt * 2)
+
+    raise RuntimeError(
+        f"Unable to download Clang builtin headers after 3 attempts: {spec.url}"
+    ) from last_error
 
 
 def verify_package(spec: PackageSpec, package: bytes) -> None:
