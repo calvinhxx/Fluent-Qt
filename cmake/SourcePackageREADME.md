@@ -3,9 +3,10 @@
 This archive contains the reusable FluentQt UI component library, its optional
 PySide6 binding sources, and minimal integration material. The native C++
 Gallery, top-level C++ tests, and application logging support are not part of
-this package. The wheel-installed Python Gallery is included with the optional
-binding sources and can be launched with `python -m fluentqt.gallery` after the
-wheel is built and installed.
+this package. The standalone `FluentQt-Gallery` application is intentionally
+excluded because it depends on the native Gallery catalogs and artwork from
+the complete repository. This archive still builds the reusable `FluentQt`
+Python wheel; use a full checkout to build the separate Gallery wheel.
 
 Requirements:
 

@@ -14,6 +14,17 @@ ledger.
 The [manylinux policy](MANYLINUX.md) defines Linux build images, repair
 exclusions, publish tags, and required audit evidence.
 
+The Python deliverables are intentionally split:
+
+- `FluentQt` / `import fluentqt` is the reusable UILib and native extension.
+- `FluentQt-Gallery` / `import fluentqt_gallery` is a standalone pure-Python
+  example application that depends on the exact same `FluentQt` version.
+
+The Gallery stays in this repository so its C++/Python parity contract can be
+tested together with the library, but it is not installed into the core
+package or copied into the library-only source archive. See
+[gallery/README.md](gallery/README.md) for the package boundary.
+
 Qt/PySide 6.2.4 with Python 3.10 on Ubuntu 22.04 and Windows Server 2022 is the
 minimum CI baseline. macOS arm64 additionally uses the repository's Qt/PySide
 6.9.3 release toolchain with Python 3.11 because Shiboken 6.2's embedded parser
@@ -38,6 +49,7 @@ cmake -S . -B build/pyside6 \
   -DCMAKE_PREFIX_PATH=/path/to/Qt/6.2.4 \
   -DPython_EXECUTABLE=/path/to/.venv-pyside/bin/python \
   -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
+  -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
   -DFLUENT_QT_BUILD_EXAMPLES=OFF \
   -DFLUENT_QT_INSTALL=OFF \
   -DBUILD_TESTING=ON
@@ -57,20 +69,23 @@ prevents the build host's newer macOS version from unnecessarily narrowing the
 wheel's deployment target. The macOS CI lane enforces this value on the
 generated extension.
 
-Build a platform- and Python-specific wheel:
+Build the platform-specific UILib wheel and the platform-independent Gallery
+wheel:
 
 ```bash
 cmake --build build/pyside6 \
-  --target fluentqt_pyside6_wheel \
+  --target fluentqt_pyside6_wheels \
   --parallel
 ```
 
-The wheel is written to `build/pyside6/wheelhouse/`. It contains FluentQt and
-the Python modules, but does not bundle Qt, PySide6, or Shiboken6. Its metadata
-pins the exact matching PySide6 runtime distribution (`PySide6` for 6.2.x,
-`PySide6-Essentials` for 6.3+) and Shiboken6 version. The native extension uses
-relative runtime paths so installation is not tied to the build virtual
-environment.
+The UILib wheel is written to `build/pyside6/wheelhouse/`; the Gallery wheel is
+written to `build/pyside6/gallery-wheelhouse/`. The UILib wheel contains the
+native extension and typed Python facade, but does not bundle Qt, PySide6,
+Shiboken6, or the Gallery. Its metadata pins the exact matching PySide6 runtime
+distribution (`PySide6` for 6.2.x, `PySide6-Essentials` for 6.3+) and
+Shiboken6 version. The Gallery wheel is `py3-none-any` and pins the exact
+`FluentQt` version. The native extension uses relative runtime paths so
+installation is not tied to the build virtual environment.
 
 At runtime, `fluentqt.__version__` matches the full wheel and native FluentQt
 version. `fluentqt.__api_version__` identifies the compatible `MAJOR.MINOR`
@@ -82,7 +97,8 @@ Validate the wheel in a fresh environment without `PYTHONPATH`:
 ```bash
 python3.10 -m venv .venv-fluentqt-wheel
 .venv-fluentqt-wheel/bin/python -m pip install \
-  build/pyside6/wheelhouse/fluentqt-*.whl
+  build/pyside6/wheelhouse/fluentqt-*.whl \
+  build/pyside6/gallery-wheelhouse/fluentqt_gallery-*.whl
 QT_QPA_PLATFORM=offscreen \
 FLUENTQT_EXPECTED_VERSION="$(
   .venv-fluentqt-wheel/bin/python -c \
@@ -90,6 +106,13 @@ FLUENTQT_EXPECTED_VERSION="$(
 )" \
   .venv-fluentqt-wheel/bin/python \
   bindings/pyside6/tests/test_wheel_smoke.py
+QT_QPA_PLATFORM=offscreen \
+FLUENTQT_EXPECTED_VERSION="$(
+  .venv-fluentqt-wheel/bin/python -c \
+    'from importlib.metadata import version; print(version("FluentQt"))'
+)" \
+  .venv-fluentqt-wheel/bin/python \
+  bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
 .venv-fluentqt-wheel/bin/python -m pip check
 .venv-fluentqt-wheel/bin/python -m pip install mypy==2.3.0
 env -u PYTHONPATH \
@@ -105,14 +128,15 @@ installed wheel rather than the source tree.
 
 ## Python Gallery
 
-The wheel includes a Python-native Gallery that dogfoods only the public
-`fluentqt` package. The native C++ Gallery catalogs are canonical: the build
+The standalone `FluentQt-Gallery` wheel dogfoods only the public `fluentqt`
+package. The native C++ Gallery catalogs are canonical: the build
 generates a contract locking their 12 categories, 88 ordered routes, 67
-component pages, and 199 SampleCards. Those routed component types plus 10
-embedded support types cover all 77 classes and value/support types in
-`api-manifest.json`. Every SampleCard builds a live public-API preview and
-executes the same Python source displayed beside it; a generic fallback preview
-is an acceptance failure.
+component pages, and 199 SampleCards. Those routed component types plus 20
+embedded support types cover all 87 classes and value/support types in
+`api-manifest.json`. Every SampleCard builds its live public-API preview from
+an exact executable `preview_source`, while the visible code block shows a
+concise public-API teaching snippet with the same canonical operations; a
+generic fallback preview or semantic drift is an acceptance failure.
 
 This is not a catalog-only test harness. The Python app mirrors the native C++
 Gallery's primary visual contracts: a 42 px custom title bar with centered
@@ -124,18 +148,23 @@ prototype button list. Native snapshots composite the transparent DWM/Mica
 area over Fluent's neutral fallback canvas so saved PNG evidence stays readable
 without changing the live platform backdrop.
 
-Launch the Gallery from an installed wheel:
+Launch the Gallery after installing both wheels:
 
 ```bash
-.venv-fluentqt-wheel/bin/python -m fluentqt.gallery
+.venv-fluentqt-wheel/bin/python -m fluentqt_gallery
 ```
+
+The Python Gallery uses its own application and single-instance identity. It
+can run beside the native C++ Gallery for visual comparison, while repeated
+Python launches still reactivate the existing Python window. Its persisted
+settings are isolated from the native Gallery as well.
 
 Run its deterministic headless acceptance mode from either an installed wheel
 or the build-tree package:
 
 ```bash
 QT_QPA_PLATFORM=offscreen \
-  .venv-fluentqt-wheel/bin/python -m fluentqt.gallery \
+  .venv-fluentqt-wheel/bin/python -m fluentqt_gallery \
   --verify-catalog \
   --walk-routes \
   --route home \
@@ -146,15 +175,15 @@ QT_QPA_PLATFORM=offscreen \
 `--verify-catalog` constructs all 199 previews and executes every displayed
 snippet, while `--walk-routes` validates all 88 native-ordered routes. The
 contract generator and catalog tests reject C++/Python route or SampleCard
-drift, missing or extra manifest types, and fallback previews. The clean-wheel
-smoke repeats the route walk and verifies the Gallery artwork without a
-source-tree `PYTHONPATH`.
+drift, missing or extra manifest types, and fallback previews. The
+Gallery-wheel smoke repeats the route walk and verifies the artwork and exact
+core-package dependency without a source-tree `PYTHONPATH`.
 
 Run the example from the build tree:
 
 ```bash
 PYTHONPATH=build/pyside6/python \
-  .venv-pyside/bin/python bindings/pyside6/examples/hello_world.py
+  .venv-pyside/bin/python bindings/pyside6/examples/hello_world/main.py
 ```
 
 Run the Window, TitleBar, and backdrop acceptance window on the host's native
@@ -536,7 +565,7 @@ QT_QPA_PLATFORM=offscreen \
   --snapshot build/pyside6/pyside6-compatibility-showcase.png
 ```
 
-The current binding phase exports 77 required public classes, value types, and
+The current binding phase exports 87 required public classes, value types, and
 embedded support types across every component category in the
 [coverage ledger](ROADMAP.md#public-api-coverage-ledger), including `Window`,
 `TitleBar`, and the backdrop value types. `api-manifest.json` is the executable
@@ -550,48 +579,96 @@ widget ownership.
 from PySide6.QtGui import QColor
 import fluentqt
 
-settings_icon = fluentqt.FontIcon("ic_fluent_settings_20_regular")
-settings_icon.setIconSize(20)
+settings_icon = fluentqt.FontIcon(fluentqt.Typography.Icons.Settings)
+settings_icon.setIconSize(fluentqt.Typography.IconSize.Large)
 fluentqt.set_theme(fluentqt.Theme.Dark)
 fluentqt.apply_style_theme(fluentqt.StyleTheme.Material)
 fluentqt.set_accent_color(QColor("#7f52ff"))
 fluentqt.set_font_scale(1.1)
 ```
 
-The Python Hello World mirrors the complete C++ example: both use the Fluent
-window, application font, content layout, and accent button.
+The single Python Hello World in
+[`examples/hello_world`](examples/hello_world/) mirrors the C++ example: both
+use the Fluent window, application font, content layout, and accent button.
 Importing `fluentqt` has no application-creation or theme side effects.
 `Window.nativeEvent()` follows PySide's safe two-argument override contract:
 Python returns a `(handled, result)` tuple and never receives the result pointer.
 `Window.titleBar()` returns the existing Qt-owned `TitleBar`; Python must not
 delete or reparent it. `TitleBar.setContentWidget()` adopts its content, releases
 the previous child as a parentless Python-owned widget, and destroys the current
-child with the TitleBar. Internal theme-refresh hooks stay outside the Python
-surface.
+child with the TitleBar. Component implementation-only theme hooks stay
+private; Python-authored `FluentWidget` subclasses use the supported
+`on_theme_updated()` hook described below.
 `api-manifest.json` records the required public surface and is checked by the
 binding tests so generator upgrades cannot silently remove required APIs.
 The private native extension preserves the C++ namespace hierarchy to work
 across Shiboken releases; the `fluentqt` package and its category modules
 re-export the stable public Python API shown above.
 
-This phase intentionally does not publish the C++ `FluentElement` or
-`QMLPlus` mixins. Python controls therefore do not expose mixin `anchors()` or
-`bind()` APIs; use Qt layouts, Python signal handlers, and QObject properties.
-An inherited Qt base method with the same name, such as
-`QAbstractItemView.setState()`, keeps its Qt meaning and is not QMLPlus state.
-`Shimmer` exposes its built-in templates, active/animation state, duration, and
-progress. Its `Custom` template value is reserved for now:
-`ShimmerPainter::Element` collections and their getter/mutator API remain C++
-only until a stable Python value-type contract is designed.
+The raw C++ `FluentElement` and `QMLPlus` multiple-inheritance mixins remain
+implementation details because wrapping non-`QObject` mixins directly would
+produce fragile Python MRO, object-identity, and lifetime semantics. Their UI
+authoring capabilities are public through Python-shaped adapters instead:
+
+```python
+import fluentqt
+
+
+class TokenCard(fluentqt.FluentWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.on_theme_updated()
+
+    def on_theme_updated(self):
+        colors = self.theme_tokens().colors
+        self.setStyleSheet(
+            "background: {0}; color: {1}".format(
+                colors.bgLayer.name(),
+                colors.textPrimary.name(),
+            )
+        )
+
+
+fluentqt.bind(slider, "value", progress, "value")
+
+states = fluentqt.StateGroup()
+states.add("busy", {status: {"text": "Working...", "enabled": False}})
+states.set("busy")
+
+layout = fluentqt.AnchorLayout(panel)
+layout.addWidget(action, fluentqt.anchors(top_right=(panel, 12)))
+```
+
+`FluentWidget` provides effective colors, typography, radius, spacing, motion,
+material, elevation, breakpoint and backdrop tokens, design language, and a
+Python-overridable theme hook. Its `ThemeTokens` result supports both typed
+attribute access (`tokens.spacing.border.focused`) and the original mapping
+syntax. Read-only `Typography.Icons`, `Typography.IconSize`, `Spacing`, and
+`CornerRadius` facades mirror C++ design namespaces without publishing the
+mutable registry. `bind()` uses the native `PropertyBinder`;
+`StateGroup` uses the native QMLPlus state engine with default restoration;
+and `AnchorLayout`/`anchors()` use the native anchor solver. This is one shared
+C++ implementation, not a second Python layout or theme engine. Mutable
+`ThemeRegistry` internals and overlay implementation helpers stay private.
+An inherited Qt method with a similar name, such as
+`QAbstractItemView.setState()`, keeps its Qt meaning and is unrelated to
+`StateGroup`.
+
+`Shimmer` exposes built-in templates plus the Python value facade
+`Shimmer.Shape`/`Shimmer.Element`; `elements()`, `setElements()`, and
+`clearElements()` drive the native custom-element implementation without
+publishing `ShimmerPainter` internals.
 `AnnotatedScrollBarLabel` is a mutable, unhashable Python value type with
 `text`, `offset`, and `detailText` fields. The category module normalizes value
 equality across Shiboken versions. Static detail text, label filtering,
 signals, and two-way `ScrollView` synchronization use the native implementation.
 `connectToScrollView()` is borrowed: it neither reparents nor keeps the view
 alive, and `connectedScrollView()` becomes `None` when that view is destroyed.
-The C++ `std::function<QString(int)>` detail provider is deliberately absent
-until a synchronous Python-callable adapter can preserve the same semantics on
-Shiboken 6.2+; use each label's `detailText` in the current API.
+The raw C++ `std::function<QString(int)>` overload stays private.
+`setDetailLabelProvider(callable)` exposes the same synchronous behavior using
+the native request signal and a short-lived native result; the facade validates
+the callable immediately and retains it without asking Shiboken 6.2 to convert
+`std::function`.
 The public `ScrollView` facade exposes separate, statically verifiable
 ownership methods. `setContentWidget()`/`setWidget()` and
 `setOwnedContentWidget()` delete content with the host;

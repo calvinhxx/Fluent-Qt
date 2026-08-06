@@ -1,7 +1,8 @@
 # App Sample Optimization
 
 Use this workflow when improving Gallery app examples for a component under
-`app/view/widgets/samples/`.
+`app/view/widgets/samples/` or its PySide6 counterpart under
+`bindings/pyside6/gallery/src/fluentqt_gallery/`.
 
 The goal is to make each Gallery example a small, trustworthy explanation of one
 component capability: the preview UI must demonstrate the same behavior that the
@@ -110,6 +111,38 @@ Each `GallerySample` card should satisfy all of these requirements:
   state needed to make it understandable.
 - Snippet includes the key setup used by the preview: meaningful properties,
   signal/slot connections, model/content wiring, and button actions.
+- The page-level **Use** section owns the shared `import fluentqt` declaration;
+  do not repeat it in every PySide6 Source code card. Keep any additional
+  PySide6 imports that the card actually uses so their public types remain
+  identifiable, and remove unused names.
+- Keep a Python call on one line when it fits comfortably within the 84-column
+  Gallery reading target. Use 88 columns only as the hard ceiling for an
+  indivisible expression. When the canonical C++ card intentionally wraps the
+  same constructor or component method, mirror that semantic call/argument
+  boundary in Python instead of relying on visual word wrapping. Do not carry
+  preview-source wrapping into a shorter teaching snippet.
+- Keep corresponding C++ and PySide6 snippets at the same teaching granularity.
+  If the canonical C++ block is a focused fragment that assumes surrounding
+  variables such as `painter` or `controlRect`, the Python block may assume the
+  equivalent context too. Do not wrap it in a complete widget subclass, event
+  override, and runnable setup merely to make that one block executable.
+- PySide6 icon examples use semantic constants such as
+  `fluentqt.Typography.Icons.Add`. Never expose private-use font codepoints such
+  as `"\uE710"` in a teaching snippet. Direct catalog names remain a supported
+  low-level API, but semantic constants keep Python and C++ examples aligned
+  and still resolve to the appropriate optical size.
+- When the canonical C++ snippet uses a design token, the PySide6 snippet uses
+  the corresponding public Python token instead of its current numeric value;
+  for example, map `Typography::IconSize::Standard` to
+  `fluentqt.Typography.IconSize.Standard`, not `16`. Preserve the exact semantic
+  icon name used by C++ when several public aliases resolve to the same glyph.
+- In PySide6 cards, construct a small fixed set of controls with explicit,
+  role-named variables, matching the canonical C++ example. Do not hide two to
+  eight fixed controls behind a one-use `values`/`specs` table, comprehension,
+  factory, or `for` loop. Keep iteration when the data set is genuinely dynamic
+  or the canonical example is specifically demonstrating repeated model data.
+- A named helper may centralize shared behavior or configuration, but it must
+  not obscure which public FluentQt controls the example creates.
 - If the preview has interactive controls, the snippet names the same controls or
   equivalent variables and shows the same calls.
 - If the snippet shows a behavior, the preview must make that behavior visible.

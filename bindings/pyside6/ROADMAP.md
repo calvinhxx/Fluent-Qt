@@ -19,6 +19,9 @@ runtime, and CPython ABI requires its own build and validation.
   duplicated.
 - Importing `fluentqt` must not create a `QApplication`, initialize resources,
   or mutate the active theme.
+- The reusable `FluentQt` wheel contains only the UILib. The standalone
+  pure-Python `FluentQt-Gallery` wheel depends on the exact matching core
+  version and imports only public `fluentqt` APIs.
 - PySide2/Shiboken2 compatibility is not part of this roadmap.
 
 ## Status
@@ -30,16 +33,17 @@ runtime, and CPython ABI requires its own build and validation.
 | M2 — Low-risk widget coverage | Complete | Every planned leaf widget is bound or has an explicit boundary decision, with properties, signals, examples, manifest checks, and wheel smoke coverage |
 | M3 — Hosted-widget ownership | Complete | Planned hosted-widget boundaries have fixed-semantics adapters plus ownership and GC tests |
 | M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
+| M4.5 — Foundation authoring API | Validating | `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout`/`anchors()` are implemented and pass local Qt 6.9.3 behavior, Gallery, manifest, and stub tests; Qt 6.2 and three-platform wheel CI regression remains |
 | M5 — Overlays and native windows | In progress | Local Windows 11 DWM material/layout and pointer-driven move/resize acceptance passed, together with automated XCB/Wayland/Windows/Cocoa checks; only physical KWin/Wayland compositor review remains |
-| M6 — Release-grade Python distribution | In progress | Type/API governance, the six-target wheel matrix, architecture-specific manylinux repair/audit, and a wheel-installed Gallery matching all 88 native routes and 199 SampleCards with pixel-identical structure outside intentional Python/C++ API text are implemented; full container CI evidence, signing, and publication remain |
+| M6 — Release-grade Python distribution | In progress | Type/API governance, the six-target native wheel matrix, architecture-specific manylinux repair/audit, and x86_64/AArch64 container-CI evidence are complete; the standalone pure-Python Gallery distribution covers all 88 native routes and 199 SampleCards. The current changes still need required-matrix regression, followed by signing and publication |
 
 ## Public API coverage ledger
 
 This table is the source of truth for component coverage. A milestone cannot
 be marked complete merely because its current checklist is green; every public
 component below must either be bound or retain an explicit boundary decision.
-That audit is complete for M0 through M4. The manifest currently records 77
-required classes/value/support types, 11 enums, 14 functions, and 2 version variables; M5 and M6
+That audit is complete for M0 through M4. The manifest currently records 87
+required classes/value/support types, 13 enums, 16 functions, and 2 version variables; M4.5, M5, and M6
 retain the open boundaries shown below and in their milestone sections.
 
 | Category | Bound now | Remaining boundary |
@@ -48,7 +52,7 @@ retain the open boundaries shown below and in their milestone sections.
 | Collections | `DrawerView`, `FlipView`, `FlowView`, `GridView`, `ListView`, `SplitView`, `SplitViewPaneOptions`, `StackView`, `TreeView` | Complete for the current public component and support-type set |
 | Date & Time | `CalendarDatePicker`, `CalendarView`, `DatePicker`, `TimePicker` | Complete for the current public component set |
 | Dialogs & Flyouts | `CoachMark`, `ContentDialog`, `Dialog`, `Flyout`, `Popup`, `TeachingTip` | Complete for the current public component set |
-| Foundation | `FontIcon`, theme/font package API, ownership enum | `FluentElement`, `QMLPlus`, registries, and overlay helpers stay implementation-facing rather than direct Python mixins |
+| Foundation | `FontIcon`, theme/font package API, read-only `Typography`/`Spacing`/`CornerRadius`, typed `ThemeTokens`, `FluentWidget`, `bind()`, `BindingMode`, `StateGroup`, `AnchorLayout`, `AnchorSpec`, `AnchorEdge`, `anchors()`, ownership enum | Raw `FluentElement`/`QMLPlus` multiple-inheritance mixins, mutable registries, and overlay helpers stay implementation-facing; their theme, binding, state, and anchor capabilities are published through safe facades |
 | Layout | `Accordion`, `Card`, `Divider`, `Expander` | Complete for the current public component set |
 | Menus & Toolbars | `CommandBar`, `CommandBarFlyout`, `FluentMenu`, `FluentMenuBar`, `FluentMenuItem` | Complete for the current public component set; native CI validation passed |
 | Navigation | `Breadcrumb`, `BreadcrumbItem`, `NavigationView`, `Pivot`, `PivotItem`, `SelectorBar`, `SelectorBarItem`, `StackContentHost`, `TabView`, `TabViewItem` | Complete for the current public component set |
@@ -103,8 +107,9 @@ Completed scope:
 - [x] Add `InfoBadge` and the built-in `Shimmer` templates with properties,
       signals, category exports, manifest checks, wheel smoke, and deterministic
       acceptance coverage.
-- [x] Keep `ShimmerPainter::Element` collections private until a stable Python
-      value-type contract is designed.
+- [x] Keep `ShimmerPainter::Element` itself private, then publish custom
+      skeleton authoring through the `Shimmer.Shape`/`Shimmer.Element` Python
+      value facade and `elements()`/`setElements()`/`clearElements()`.
 - [x] Confirm the third slice locally with macOS Qt/PySide6 6.9.3, including
       native component tests and a clean-wheel runtime check.
 - [x] Confirm the third slice on the native Linux and Windows Qt 6.2.4 CI
@@ -125,9 +130,10 @@ Completed scope:
 - [x] Audit `PipsPager` separately and reproduce the generator leak where its
       animation-only `selectedVisualOffset` and `visibleWindowOffset`
       properties appeared as Python constructor keywords.
-- [x] Move the two internal animations to `QVariantAnimation` callbacks so the
-      C++ motion stays unchanged while the implementation offsets leave the Qt
-      meta-object and generated Python API.
+- [x] Move the two internal animations to `QVariantAnimation` callbacks and
+      exclude their implementation-only properties only while Shiboken parses
+      the header. C++ motion and the existing Qt meta-object properties remain
+      compatible, while the generated Python API stays clean.
 - [x] Add the `PipsPager` category export, enum, property/signal/navigation
       tests, manifest entry, generated privacy contract, wheel smoke, and
       visible acceptance coverage.
@@ -228,11 +234,12 @@ Completed scope:
       comparison operators that newer generators expose. Keep the mutable
       value type unhashable and verify the same behavior in build-tree and
       installed-wheel tests.
-- [x] Keep the C++ `std::function<QString(int)>` detail provider private until
-      a synchronous Python-callable adapter can preserve its semantics on
-      Shiboken 6.2+. Generated-contract checks reject that partial provider
-      surface and any parent, ownership, or keep-reference bookkeeping on the
-      borrowed ScrollView link.
+- [x] Keep the raw C++ `std::function<QString(int)>` detail-provider overload
+      private and publish `setDetailLabelProvider(callable)` as a facade that
+      writes the result synchronously during the native request signal on
+      Shiboken 6.2+. Generated-contract checks still reject the raw overload
+      and any parent, ownership, or keep-reference bookkeeping on the borrowed
+      ScrollView link.
 - [x] Confirm the `AnnotatedScrollBar` slice locally with macOS Qt/PySide6
       6.9.3: 11 automated native tests passed with the interactive VisualCheck
       skipped as designed, all 20 binding CTests and 36 verifier tests passed,
@@ -374,6 +381,9 @@ Completed ownership batches:
       mutable `SplitViewPaneOptions` value type. The facade applies recorded
       policies on removal, retains pane subclasses and restore targets, and
       keeps runtime ownership arguments and legacy transfer removals private.
+      Its Python initializer preserves positional, keyword, and copy
+      construction without adding a C++ constructor, so the public C++ value
+      remains aggregate-initializable.
       Generated-code checks require the private adapters to avoid implicit
       Shiboken parent/reference mutation and `takePaneAt()` to return Python
       ownership.
@@ -676,6 +686,43 @@ Completed scope:
       CI Gate. The Windows 6.2.4 lanes also exercised deterministic
       signal/view isolation and installed-wheel FlowView teardown.
 
+## M4.5 — Foundation authoring API
+
+The goal is not to force non-`QObject` C++ mixins into Python multiple
+inheritance. It is to let Python authors use the same theme, property-binding,
+state, and anchor engines through APIs that respect PySide object identity and
+lifetime rules.
+
+- [x] Publish effective theme, design language, typography, color, radius,
+      spacing, motion, material, elevation, breakpoint, and backdrop tokens,
+      plus a theme-update callback through subclassable `FluentWidget`.
+- [x] Publish read-only `Typography.Icons`, `Typography.IconSize`, `Spacing`,
+      and `CornerRadius` namespace facades, plus mapping-compatible typed
+      `ThemeTokens`, so Python teaching snippets use the same semantic names
+      as C++ without exposing mutable registries or private-use glyphs.
+- [x] Reuse native `PropertyBinder` through package-level `bind()` and
+      `BindingMode`, covering one-way/two-way initial sync, invalid properties,
+      and QObject lifetime.
+- [x] Reuse the native QMLPlus state engine through the mapping-oriented
+      `StateGroup`, covering multi-object changes, default restoration, unknown
+      states, destroyed targets, and a Python signal.
+- [x] Reuse the native anchor solver through `AnchorLayout`, `AnchorSpec`,
+      `AnchorEdge`, and the `anchors()` builder, covering center, edge,
+      top-right, and fill semantics.
+- [x] Make the Python Gallery QML+ page execute these public APIs directly;
+      its displayed snippets no longer simulate the C++ features with signal
+      callbacks, `resizeEvent()`, or manual `move()` calls.
+- [x] Local Qt/PySide/Shiboken 6.9.3 passes wrapper compilation, Foundation
+      behavior tests, generated contracts, Gallery contracts, the 87-class/
+      13-enum/16-function manifest, and typing stubs.
+- [ ] Regress the slice on Linux/Windows Qt 6.2.4 minimum lanes and the
+      Linux/macOS/Windows wheel lanes before marking the milestone complete.
+
+Raw `FluentElement`, `QMLPlus`, mutable `ThemeRegistry`, and overlay-helper
+types remain C++ implementation details. That is a binding boundary rather
+than a missing feature: the Python facades call the same native engines and do
+not create a second theme or layout implementation.
+
 ## M5 — Overlays and native windows
 
 Popup, Flyout, ContentDialog, TeachingTip, dropdown, and other overlay
@@ -909,6 +956,11 @@ pointer behavior remain the sole M5 desktop acceptance item.
   3.12 because the upstream aarch64 Shiboken runtime requires immortal
   singletons, while the other release lanes use Python 3.11. The existing
   macOS ARM64 lane completes the six-target release set.
+- [x] Keep pull-request CI proportional with a tested conservative path
+  classifier. Library, binding, Gallery, CMake, resource, and binding-toolchain
+  changes still run the PySide6 baseline on all three platforms; native-test
+  only and unrelated workflow changes skip it. Push, scheduled, and manually
+  dispatched validation continue to run the complete required matrix.
 - [x] Generate `_fluentqt.pyi` from Shiboken signatures plus facade `.pyi`
   files, validate them against `api-manifest.json`, include them in clean-wheel
   smoke tests, and run a strict installed-wheel mypy consumer check in CI.
@@ -920,15 +972,20 @@ pointer behavior remain the sole M5 desktop acceptance item.
   exclude the separately pinned PySide6/Qt/Shiboken runtime, verify relocatable
   RPATHs and wheel metadata, and emit a hashed JSON audit report; see
   `bindings/pyside6/MANYLINUX.md`.
+- [x] Complete full CI evidence for x86_64 and AArch64 manylinux container
+  builds, repair, `auditwheel` audit, clean installation, and artifact upload;
+  the container path is no longer an M6 TODO.
 - [x] Establish versioning and deprecation rules for the Python API. The package
   exposes `__version__` and `__api_version__`; manifest schema, SemVer,
   replacement, and later-major removal rules are enforced by the stub gate and
   unit tests; see `bindings/pyside6/API_COMPATIBILITY.md`.
-- [x] Ship a wheel-installed Python Gallery as a public-package integration
-  consumer. A generated contract treats the C++ catalogs as canonical and locks
+- [x] Ship a standalone pure-Python `FluentQt-Gallery` distribution as a
+  public-package integration consumer. It pins the exact matching `FluentQt`
+  version, while the reusable UILib wheel excludes Gallery code and artwork.
+  A generated contract treats the C++ catalogs as canonical and locks
   12 categories, 88 ordered routes, 67 component pages, and all 199 native
-  SampleCards. The routed components plus 10 embedded support types cover all
-  77 manifest types. Every card builds its live public-API preview from exact
+  SampleCards. The routed components plus 20 embedded support types cover all
+  87 manifest types. Every card builds its live public-API preview from exact
   executable `preview_source`, while the visible Source code block presents a
   concise, canonical-method-aligned Python teaching snippet. Acceptance gates
   execute the exact preview source, compile and semantically compare the visible
@@ -944,7 +1001,8 @@ pointer behavior remain the sole M5 desktop acceptance item.
   all 455,927 changed pixels are confined to that rectangle; there are zero
   changed pixels elsewhere. Snapshot capture clears transient hover state so
   that result no longer depends on the host pointer position.
-- [ ] Sign and publish wheels after every required matrix lane passes.
+- [ ] After every required matrix lane passes, sign and publish the native
+  `FluentQt` wheels plus one `FluentQt-Gallery` `py3-none-any` wheel.
 
 Qt 6.2.4 remains the binding minimum, not the ARM64 wheel build version. The
 official PySide 6.2.4 release has no Linux or Windows ARM64 wheels, Linux ARM64
@@ -956,9 +1014,10 @@ Linux ARM64 Shiboken 6.9.3 plus pre-3.12 CPython combination.
 
 Native Linux smoke artifacts retain `linux_*` tags. The release workflow now
 rebuilds inside the architecture-specific policy image and uploads only the
-repaired manylinux wheel plus its audit report, but that new container path
-still requires full native CI evidence. No wheel is published until those lanes
-pass and the signing/upload gate is explicitly enabled.
+repaired manylinux wheel plus its audit report; both x86_64 and AArch64
+container paths have full CI evidence. The current Foundation-authoring changes
+still require a fresh required-matrix run. No wheel is published until that
+regression passes and the signing/upload gate is explicitly enabled.
 
 ## Definition of done
 
@@ -983,17 +1042,19 @@ is not mistaken for complete support:
 1. **Core usable**: M0 and M1 are complete. The declared core widgets can be
    constructed, signal-connected, property-driven, subclassed, and run from a
    wheel. The project has reached this level.
-2. **Feature complete**: M2 through M5 are complete. Every planned leaf widget,
-   hosted widget, model/navigation surface, overlay, and native-window contract
-   has a Python API plus applicable lifecycle and interaction tests. Any
-   unbound public C++ component has an explicit documented reason.
+2. **Feature complete**: M2 through M5, including M4.5, are complete. Every
+   planned leaf widget, hosted widget, model/navigation surface, Foundation
+   authoring capability, overlay, and native-window contract has a Python API
+   plus applicable lifecycle and interaction tests. Any unbound public C++
+   component has an explicit documented reason.
 3. **Release complete**: M6 is complete. The supported CPython, OS, and
    architecture matrix, type stubs, API compatibility/deprecation policy, and
    clean-environment wheels are published.
 
-M0 through M4 are complete. Feature completeness now waits only on M5's
-physical Linux KWin/Wayland compositor review; release completeness also
-requires the remaining M6 distribution work.
+M0 through M4 are complete. Feature completeness now waits on M4.5's Qt 6.2
+and three-platform wheel CI regression plus M5's physical Linux KWin/Wayland
+compositor review. Release completeness also requires the current M6 matrix
+regression, signing, and formal publication.
 
 FluentQt calls Python support complete and release-ready only at the third
 level. This excludes PySide2 and Qt 5 Python bindings and does not require
@@ -1004,8 +1065,9 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
 - **Automated contracts**: run `ctest --test-dir build/pyside6 -L '^pyside$'
   --output-on-failure` for properties, signals, subclassing, ownership,
   generated code, and the acceptance window.
-- **Python Gallery**: run `python -m fluentqt.gallery` from an installed wheel
-  for interactive review. Add `--verify-catalog --walk-routes --snapshot
+- **Python Gallery**: install the matching `FluentQt` and `FluentQt-Gallery`
+  wheels, then run `python -m fluentqt_gallery` for interactive review. Add
+  `--verify-catalog --walk-routes --snapshot
   <png> --report <json>` for deterministic manifest, route, and render evidence.
 - **Interactive review**: run `examples/compatibility_showcase.py`; switch
   Light/Dark, Fluent/Material/macOS, and accent colors, drag the Slider, hold
@@ -1060,6 +1122,9 @@ The entries below describe the contracts exercised while the binding surface
 was developed. Their individual workflow-dispatch runs are intentionally
 pruned after history consolidation; the retained post-rewrite full CI run is
 the current branch-level evidence source.
+These entries are point-in-time snapshots: their API counts and “still
+remaining” statements are not current status. Use the status table, coverage
+ledger, and highest-numbered record for the current state.
 
 1. Treat `Card`/`Expander` as the second completed M3 slice after native
    Linux/Windows Qt 6.2.4 native CI validation.
@@ -1295,3 +1360,18 @@ the current branch-level evidence source.
     wheel smoke, `pip check`, and 88/88 routes with 199/199 previews and zero
     failures. M5 physical KWin/Wayland review and M6 container-CI, signing, and
     publication remain open.
+43. Full CI run `30932469204` passed at commit `2d452c7`, including the
+    six-target release matrix, both x86_64 and AArch64 manylinux container
+    build/repair/`auditwheel`/clean-install/artifact-upload paths, CI Gate, and
+    Release ready. This supersedes the provisional “container CI evidence
+    remains” wording in records 38–42. M6 now needs required-matrix regression
+    for subsequent changes, followed by signing and formal publication
+    authorization.
+44. Decouple the Python Gallery from the reusable UILib distribution. The
+    source package moves to `bindings/pyside6/gallery/src/fluentqt_gallery`;
+    the core `FluentQt` wheel no longer contains Gallery modules or artwork.
+    A separate `FluentQt-Gallery` `py3-none-any` wheel pins the exact matching
+    core version, launches with `python -m fluentqt_gallery`, and has its own
+    clean-wheel smoke. Baseline and release CI install both distributions and
+    test their composition, while manylinux repair remains scoped to the native
+    core extension.
