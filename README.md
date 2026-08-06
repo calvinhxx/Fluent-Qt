@@ -162,7 +162,10 @@ window.show()
 app.exec()
 ```
 
-The current binding set includes 77 public classes, value types, and embedded
+See [`bindings/pyside6/examples/hello_world`](bindings/pyside6/examples/hello_world/)
+for the single Python Hello World, structured to mirror the C++ example.
+
+The current binding set includes 87 public classes, value types, and embedded
 support types from Basic Input, Collections, Date & Time, Dialogs & Flyouts,
 Layout, Menus & Toolbars, Navigation, Scrolling, Text Fields, Status & Info,
 and Windowing. It also exposes Light/Dark mode, Fluent/Material/macOS style
@@ -176,22 +179,20 @@ validation commands. Runtime and API versions are exposed as
 [manylinux release policy](bindings/pyside6/MANYLINUX.md), and
 [compatibility roadmap](bindings/pyside6/ROADMAP.md) for release governance.
 
-The wheel also ships a Python-native Gallery generated against the C++ Gallery
-contract: 12 categories, the same 88 ordered routes, 67 component pages, and
-all 199 native SampleCards. The routed components plus 10 embedded support
-types cover the complete 77-type public manifest. Every card builds a live
-public-API preview and executes the same Python source shown beside it; generic
-fallback previews fail acceptance. The installed app also mirrors the native
-Gallery shell and page archetypes: the 42 px title bar and centered search,
-260/48 px responsive navigation pane, 390 px Home hero, shared Home/control
-artwork, responsive entry grids, and Overview/Use/Live examples/Category
-component pages are covered by geometry and clean-wheel tests:
+The standalone pure-Python `FluentQt-Gallery` wheel depends on the exact
+matching `FluentQt` wheel and is generated against the C++ Gallery contract:
+12 categories, the same 88 ordered routes, 67 component pages, and all 199
+native SampleCards. Its routed components plus 20 embedded support types cover
+the complete 87-type public manifest. Every card builds a live public-API
+preview; generic fallback previews fail acceptance. The app mirrors the native
+Gallery shell and page archetypes, while keeping demo source and artwork out of
+the reusable UILib distribution:
 
 ```bash
-python -m fluentqt.gallery
+python -m fluentqt_gallery
 ```
 
-Use `python -m fluentqt.gallery --verify-catalog --walk-routes` for a
+Use `python -m fluentqt_gallery --verify-catalog --walk-routes` for a
 deterministic 88-route/199-sample integration check; add `--snapshot <png>` and
 `--report <json>` to retain review evidence.
 

@@ -15,6 +15,9 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 - 所有 Python 分类模块都从同一个原生 `_fluentqt` 模块重新导出，避免重复创建
   主题、资源、Qt 对象身份和其他进程级状态。
 - 导入 `fluentqt` 时不得创建 `QApplication`、初始化资源或修改当前主题。
+- 可复用的 `FluentQt` wheel 只包含 UILib；独立的纯 Python
+  `FluentQt-Gallery` wheel 精确依赖同版本核心包，并且只导入公开
+  `fluentqt` API。
 - 本路线图不包含 PySide2/Shiboken2 兼容。
 
 ## 当前状态
@@ -26,15 +29,16 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 | M2 — 低风险控件覆盖 | 已完成 | 所有计划叶子控件均已绑定或记录明确边界，并具备属性、信号、示例、manifest 检查和 wheel smoke 验证 |
 | M3 — 托管控件 ownership | 已完成 | 计划内托管控件边界均具备固定语义适配器、ownership 与 GC 测试 |
 | M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
+| M4.5 — Foundation 作者 API | 验证中 | 已实现 `FluentWidget`、`bind()`、`StateGroup`、`AnchorLayout`/`anchors()` 并通过本机 Qt 6.9.3 行为、Gallery、manifest 与 stub 测试；仍需 Qt 6.2 和三平台 wheel CI 回归 |
 | M5 — Overlay 与原生窗口 | 进行中 | 本机 Windows 11 DWM 材质/布局及指针驱动 move/resize 验收已通过，自动化 XCB/Wayland/Windows/Cocoa 验收也已通过；仅剩实体 KWin/Wayland compositor 审查 |
-| M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六目标 wheel 矩阵、分架构 manylinux repair/audit 路径，以及覆盖全部 88 个原生路由、199 个 SampleCard、除有意保留的 Python/C++ API 文本外像素一致的 wheel 内置 Gallery；仍需完整容器 CI 证据、签名和发布 |
+| M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六目标原生 wheel 矩阵、分架构 manylinux repair/audit，并取得 x86_64/AArch64 容器 CI 证据；独立的纯 Python Gallery 分发覆盖 88 个原生路由和 199 个 SampleCard。当前改动仍需必需矩阵回归，之后只剩签名与正式发布 |
 
 ## 公共 API 覆盖台账
 
 下表是组件覆盖的事实来源。不能因为当前小批次的复选框全部完成，就把整个里程碑
 标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。M0 至 M4 已完成该
-审计。当前 manifest 记录了 77 个必需类、值类型及支持类型、11 个枚举、14 个函数和 2 个版本变量；
-M5、M6 的剩余边界继续在下表及各自章节中记录。
+审计。当前 manifest 记录了 87 个必需类、值类型及支持类型、13 个枚举、16 个函数和 2 个版本变量；
+M4.5、M5、M6 的剩余边界继续在下表及各自章节中记录。
 
 | 分类 | 已绑定 | 剩余边界 |
 |---|---|---|
@@ -42,7 +46,7 @@ M5、M6 的剩余边界继续在下表及各自章节中记录。
 | Collections | `DrawerView`、`FlipView`、`FlowView`、`GridView`、`ListView`、`SplitView`、`SplitViewPaneOptions`、`StackView`、`TreeView` | 当前公开组件与支持类型已覆盖完整 |
 | Date & Time | `CalendarDatePicker`、`CalendarView`、`DatePicker`、`TimePicker` | 当前公开组件已覆盖完整 |
 | Dialogs & Flyouts | `CoachMark`、`ContentDialog`、`Dialog`、`Flyout`、`Popup`、`TeachingTip` | 当前公开组件已覆盖完整 |
-| Foundation | `FontIcon`、主题/字体包级 API、ownership 枚举 | `FluentElement`、`QMLPlus`、registry 与 overlay helper 保持实现层能力，不直接作为 Python mixin 发布 |
+| Foundation | `FontIcon`、主题/字体包级 API、只读 `Typography`/`Spacing`/`CornerRadius`、类型化 `ThemeTokens`、`FluentWidget`、`bind()`、`BindingMode`、`StateGroup`、`AnchorLayout`、`AnchorSpec`、`AnchorEdge`、`anchors()`、ownership 枚举 | 原始 `FluentElement`/`QMLPlus` 多继承 mixin、可变 registry 与 overlay helper 保持实现层能力；其主题、绑定、state、anchors 能力通过安全 facade 发布 |
 | Layout | `Accordion`、`Card`、`Divider`、`Expander` | 当前公开组件已覆盖完整 |
 | Menus & Toolbars | `CommandBar`、`CommandBarFlyout`、`FluentMenu`、`FluentMenuBar`、`FluentMenuItem` | 当前公开组件已覆盖完整；原生 CI 验证已通过 |
 | Navigation | `Breadcrumb`、`BreadcrumbItem`、`NavigationView`、`Pivot`、`PivotItem`、`SelectorBar`、`SelectorBarItem`、`StackContentHost`、`TabView`、`TabViewItem` | 当前公开组件已覆盖完整 |
@@ -92,8 +96,9 @@ wheel smoke 测试。
 - [x] 在原生 Linux 和 Windows Qt 6.2.4 CI lane 确认第二批叶子控件。
 - [x] 增加 `InfoBadge` 和 `Shimmer` 内置模板，覆盖属性、信号、分类导出、
       manifest、wheel smoke 和确定性验收截图。
-- [x] 在稳定的 Python value type 契约设计完成前，不公开
-      `ShimmerPainter::Element` 集合。
+- [x] 不直接公开 `ShimmerPainter::Element`，并在后续批次以
+      `Shimmer.Shape`/`Shimmer.Element` Python 值 facade 及
+      `elements()`/`setElements()`/`clearElements()` 发布自定义骨架能力。
 - [x] 使用 macOS Qt/PySide6 6.9.3 完成本地第三批验证，包括原生组件测试和
       干净 wheel 运行检查。
 - [x] 在原生 Linux 和 Windows Qt 6.2.4 CI lane 确认第三批控件。
@@ -109,8 +114,9 @@ wheel smoke 测试。
 - [x] 单独审计 `PipsPager`，并复现生成器会把仅供动画使用的
       `selectedVisualOffset` 和 `visibleWindowOffset` 泄漏成 Python
       构造参数的问题。
-- [x] 将两个内部动画改为 `QVariantAnimation` 回调，在保持 C++ 动效不变的
-      同时，从 Qt 元对象和生成的 Python API 中移除实现偏移量。
+- [x] 将两个内部动画改为 `QVariantAnimation` 回调，并仅在 Shiboken 解析头文件
+      时排除这两个实现属性。C++ 动效和既有 Qt 元对象属性保持兼容，生成的
+      Python API 则不会泄漏内部偏移量。
 - [x] 补齐 `PipsPager` 分类导出、枚举、属性/信号/导航测试、manifest、
       生成代码隐私契约、wheel smoke 和可见验收覆盖。
 - [x] 使用 macOS Qt/PySide6 6.9.3 完成第五批本地验证：17 个原生专项测试、
@@ -193,10 +199,11 @@ wheel smoke 测试。
       Shiboken 6.2 不会发布新版生成器可识别的命名空间级 C++ 比较运算符。
       该可变值类型保持不可 hash，并由 build-tree 与已安装 wheel 测试共同锁定
       相同行为。
-- [x] 在能为 Shiboken 6.2+ 提供保持同步返回语义的 Python callable 适配器前，
-      不公开 C++ `std::function<QString(int)>` 详情 provider。生成代码契约会
-      拒绝这组不完整 provider API，也会拒绝 borrowed ScrollView 链接上的
-      parent、ownership 或 keep-reference 记账。
+- [x] 不直接公开 C++ `std::function<QString(int)>` 详情 provider，并通过
+      `setDetailLabelProvider(callable)` facade 在原生 request signal 内同步写回
+      结果，保持 Shiboken 6.2+ 行为一致；生成代码契约继续拒绝原始 overload，
+      也拒绝 borrowed ScrollView 链接上的 parent、ownership 或 keep-reference
+      记账。
 - [x] 使用 macOS Qt/PySide6 6.9.3 完成本地 `AnnotatedScrollBar` 批次验证：
       11 个自动化原生测试通过，交互 VisualCheck 按设计跳过；全部 20 个绑定
       CTest 与 36 个契约验证器测试通过；新建干净虚拟环境也通过 wheel 安装、
@@ -320,6 +327,8 @@ M2 已对当前公开组件集闭环。未来新增叶子控件仍需先进行 A
 - [x] 发布固定语义的 Owned、Borrowed、Reparented add/insert 方法以及可变的
       `SplitViewPaneOptions` 值类型。facade 在 remove 时应用已记录策略，保活
       pane 子类与恢复目标，并隐藏运行时 ownership 参数和传统转移 remove。
+      Python 初始化器继续支持位置参数、关键字参数和拷贝构造，同时不向 C++
+      类型增加构造函数，因此公开 C++ 值类型仍可使用 aggregate 初始化。
       生成代码检查要求私有适配器不得隐式修改 Shiboken parent/reference
       记账，并要求 `takePaneAt()` 返回 Python ownership。
 - [x] 使用版本匹配的 macOS Qt/PySide6 6.9.3 完成本地 `SplitView` 批次验证：
@@ -566,6 +575,36 @@ Python 边界设计后，也已完成依赖 model 的集合组件 `ListView`、`
       CI Gate。Windows 6.2.4 lane 还实际覆盖了确定性的 signal/view 隔离与
       已安装 wheel FlowView 释放顺序。
 
+## M4.5 — Foundation 作者 API
+
+目标不是把非 `QObject` 的 C++ mixin 原样塞进 Python 多继承，而是让 Python
+开发者能够使用同一套主题、属性绑定、state 与 anchors 引擎，且 API 符合
+PySide 的对象和生命周期模型。
+
+- [x] 以可继承的 `FluentWidget` 发布 `FluentElement` 的有效主题、设计语言、
+      typography、颜色/圆角/间距/动效/材质/阴影/断点/backdrop token 与主题
+      刷新回调。
+- [x] 发布只读的 `Typography.Icons`、`Typography.IconSize`、`Spacing`、
+      `CornerRadius` 命名空间 facade，以及兼容 mapping 的类型化 `ThemeTokens`；
+      Python 教学代码由此使用与 C++ 一致的语义名称，同时不公开可变 registry
+      或私有区字形。
+- [x] 以包级 `bind()` 和 `BindingMode` 复用原生 `PropertyBinder`，覆盖单向、
+      双向、首次同步、无效属性与 QObject 生命周期。
+- [x] 以 `StateGroup` 的 Python mapping API 复用原生 QMLPlus state 引擎，覆盖
+      多对象属性、默认值恢复、未知 state、目标析构与 Python 信号。
+- [x] 以 `AnchorLayout`、`AnchorSpec`、`AnchorEdge` 和 `anchors()` builder
+      复用原生 anchor solver，覆盖 center、edge、top-right 与 fill 语义。
+- [x] 将 Python Gallery 的 QML+ 页面改为直接执行这些公开 API；展示源码不再
+      用 signal callback、`resizeEvent()` 或手工 `move()` 模拟 C++ 能力。
+- [x] 本机 Qt/PySide/Shiboken 6.9.3 已通过 wrapper 编译、Foundation 行为测试、
+      生成代码契约、Gallery 契约、87 类/13 枚举/16 函数 manifest 与类型存根。
+- [ ] 在 Linux/Windows Qt 6.2.4 最低 lane 和 Linux/macOS/Windows wheel lane
+      完成回归后，将本里程碑标为完成。
+
+原始 `FluentElement`、`QMLPlus`、可变 `ThemeRegistry` 和 overlay helper 仍是
+C++ 实现层类型。这是绑定边界，不是功能缺失：Python facade 调用的是同一套原生
+实现，不会重新实现第二套主题或布局系统。
+
 ## M5 — Overlay 与原生窗口
 
 Popup、Flyout、ContentDialog、TeachingTip、dropdown 和其他 overlay 组件
@@ -754,6 +793,9 @@ ownership、resize 传递和最终 backdrop 不变量。本机 WSLg Wayland 与 
   和 macOS x64，连同现有 macOS ARM64 组成六目标首发集。Linux ARM64 因
   上游 aarch64 Shiboken runtime 依赖 immortal singleton 而使用 Python 3.12，
   其余发布 lane 使用 Python 3.11。
+- [x] 使用带单元测试的保守路径分类器控制 PR 的 PySide6 CI 成本。UILib、绑定、
+  Gallery、CMake、资源及绑定工具链变更仍会运行三平台基线；只有纯原生测试或
+  无关 workflow 变更才跳过。push、定时和手动触发仍运行完整必需矩阵。
 - [x] 从 Shiboken 签名生成 `_fluentqt.pyi` 与 facade `.pyi`，用
   `api-manifest.json` 校验公共类、枚举、函数和必需方法，将存根纳入干净
   wheel smoke，并在 CI 中对已安装 wheel 运行严格 mypy 消费方检查。
@@ -763,14 +805,18 @@ ownership、resize 传递和最终 backdrop 不变量。本机 WSLg Wayland 与 
   匹配的 PyPA policy image 中重新构建，固定 `auditwheel`，排除由元数据精确固定
   的 PySide6/Qt/Shiboken runtime，校验可重定位 RPATH 与 wheel 元数据，并生成带
   hash 的 JSON 审计报告；详见 `bindings/pyside6/MANYLINUX.md`。
+- [x] 完成 x86_64 与 AArch64 manylinux 容器构建、repair、`auditwheel` 审计、
+  干净安装和 artifact 上传的完整 CI 证据；容器路径已不再是 M6 待办。
 - [x] 建立 Python API 版本与弃用规则。包公开 `__version__` 和
   `__api_version__`；manifest schema、SemVer、替代符号与“仅后续 major 可移除”
   规则由 stub 门禁和单元测试强制执行；详见
   `bindings/pyside6/API_COMPATIBILITY.md`。
-- [x] 交付 wheel 内置的 Python Gallery，作为只消费公开包 API 的集成应用。
-  生成契约以 C++ 目录为事实来源，锁定 12 个分类、顺序一致的 88 个路由、67 个
-  组件页以及全部 199 个原生 SampleCard。路由组件加 10 个内嵌支持类型覆盖全部
-  77 个 manifest 类型。每张卡片都用完整可执行的 `preview_source` 构建公开 API
+- [x] 交付独立的纯 Python `FluentQt-Gallery` 分发，作为只消费公开包 API
+  的集成应用。它精确依赖同版本 `FluentQt`，而可复用 UILib wheel 不包含
+  Gallery 代码和图片。生成契约以 C++ 目录为事实来源，锁定 12 个分类、
+  顺序一致的 88 个路由、67 个
+  组件页以及全部 199 个原生 SampleCard。路由组件加 20 个内嵌支持类型覆盖全部
+  87 个 manifest 类型。每张卡片都用完整可执行的 `preview_source` 构建公开 API
   实时预览，而可见的 Source code 区只展示精简、与 C++ 规范方法对齐的 Python
   教学代码。验收门禁会执行完整预览源码、编译并按 C++ 契约检查可见代码语义，且
   拒绝 fallback 预览、Gallery 内部导入、预览 parent 泄漏或契约漂移。
@@ -781,7 +827,8 @@ ownership、resize 传递和最终 backdrop 不变量。本机 WSLg Wayland 与 
   `Use` API 文本矩形内存在差异。共比较 114,048,000 个像素，其中
   113,592,073 个完全一致；455,927 个变化像素全部位于该矩形内，矩形外变化
   像素为零。快照入口会清除瞬时 hover 状态，因此结果不再取决于宿主鼠标位置。
-- [ ] 所有必需矩阵 lane 通过后，签名并正式发布 wheel。
+- [ ] 所有必需矩阵 lane 通过后，签名并正式发布原生 `FluentQt` wheel，以及唯一
+  一份 `FluentQt-Gallery` `py3-none-any` wheel。
 
 Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官方 PySide 6.2.4
 没有 Linux/Windows ARM64 wheel，Linux ARM64 的 Qt/PySide 6.9.3 二进制还要求
@@ -792,9 +839,9 @@ glibc 2.39，因此该 lane 使用 `ubuntu-24.04-arm`。Windows ARM64 使用从 
 这一会在持续 UI 调用后触发 `none_dealloc` 的组合。
 
 Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 现在会在分架构 policy
-image 中重新构建，只上传修复后的 manylinux wheel 与审计报告，但这条新增容器路径
-仍需完整原生 CI 证据。在所有 lane 通过且显式启用签名/上传门禁之前，不发布任何
-wheel。
+image 中重新构建，只上传修复后的 manylinux wheel 与审计报告；x86_64 和 AArch64
+容器路径均已有完整 CI 证据。当前 Foundation 作者 API 改动仍需重新跑必需矩阵；
+在该回归通过且显式启用签名/上传门禁之前，不发布任何 wheel。
 
 ## 完成标准
 
@@ -816,14 +863,16 @@ Windows 上的确认。
 
 1. **基础可用**：M0 和 M1 完成，已声明的核心控件能够构造、收发信号、读写
    属性、继承并从 wheel 运行。当前已经达到这一层。
-2. **功能完整**：M2–M5 完成；所有计划公开的叶子控件、托管控件、模型/导航、
-   overlay 和原生窗口契约都有 Python API 与对应生命周期/交互测试。未绑定的
-   C++ 公共组件必须明确记录原因，而不能静默缺失。
+2. **功能完整**：M2–M5（含 M4.5）完成；所有计划公开的叶子控件、托管控件、
+   模型/导航、Foundation 作者能力、overlay 和原生窗口契约都有 Python API 与
+   对应生命周期/交互测试。未绑定的 C++ 公共组件必须明确记录原因，而不能静默
+   缺失。
 3. **发布完成**：M6 完成；明确 CPython/操作系统/架构矩阵，提供类型存根、
    API 兼容和弃用规则，并发布经过干净环境验证的 wheel。
 
-当前 M0 至 M4 已完成。达到功能完整现在只需完成 M5 的实体 Linux
-KWin/Wayland compositor 审查；达到发布完成还需完成 M6 剩余分发工作。
+当前 M0 至 M4 已完成。达到功能完整还需让 M4.5 通过 Qt 6.2/三平台 wheel CI，
+并完成 M5 的实体 Linux KWin/Wayland compositor 审查；达到发布完成还需完成
+M6 的当前矩阵回归、签名与正式发布。
 
 因此，本项目只有达到第三层，才称为“Python 支持完成并可正式发布”。这不包含
 PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Python 使用的
@@ -833,8 +882,9 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
 
 - **自动契约**：运行 `ctest --test-dir build/pyside6 -L '^pyside$'
   --output-on-failure`，检查属性、信号、继承、ownership、生成代码和验收窗口。
-- **Python Gallery**：从已安装 wheel 运行 `python -m fluentqt.gallery` 做交互审查；
-  增加 `--verify-catalog --walk-routes --snapshot <png> --report <json>` 可生成确定性的
+- **Python Gallery**：安装版本一致的 `FluentQt` 与 `FluentQt-Gallery` wheel，
+  再运行 `python -m fluentqt_gallery` 做交互审查；增加
+  `--verify-catalog --walk-routes --snapshot <png> --report <json>` 可生成确定性的
   manifest、路由与渲染证据。
 - **肉眼交互**：运行 `examples/compatibility_showcase.py`，切换 Light/Dark、
   Fluent/Material/macOS 和 accent，拖动 Slider、按住 RepeatButton，并检查文字、
@@ -879,6 +929,8 @@ PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Pyt
 
 以下条目记录绑定开发期间实际覆盖过的契约。历史压缩完成后，各批次单独触发的
 workflow run 会按计划删除；重写后保留的最终 full CI 是当前分支级验证证据。
+这些条目是当时的快照，其中的 API 数量和“仍待完成”描述不代表当前状态；判断
+当前进度应以文首状态表、覆盖台账和编号最大的记录为准。
 
 1. 原生 Linux/Windows Qt 6.2.4 原生 CI 验证已通过，将
    `Card`/`Expander` 视为第二个完成的 M3 批次。
@@ -1064,3 +1116,14 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     Qt/PySide 6.9.3 和 Linux 6.2.4 的源码与强制安装 wheel 均通过 Gallery 套件、
     wheel smoke、`pip check`、88/88 路由和 199/199 预览，失败数为零。M5 的实体
     KWin/Wayland 审查以及 M6 的容器 CI、签名和正式发布仍保持未完成。
+43. 完整 CI run `30932469204` 在提交 `2d452c7` 上通过六目标发布矩阵、
+    x86_64/AArch64 两条 manylinux 容器构建/repair/`auditwheel`/干净安装/
+    artifact 上传，以及 CI Gate 与 Release ready。该结果取代第 38–42 条中
+    “仍缺容器 CI 证据”的阶段性描述；M6 现只需让后续改动重新通过必需矩阵，
+    再完成签名与正式发布授权。
+44. 将 Python Gallery 与可复用 UILib 分发解耦。源码迁移到
+    `bindings/pyside6/gallery/src/fluentqt_gallery`；核心 `FluentQt` wheel 不再
+    包含 Gallery 模块和图片。新增独立的 `FluentQt-Gallery` `py3-none-any`
+    wheel，精确依赖同版本核心包，使用 `python -m fluentqt_gallery` 启动，并具备
+    独立的干净 wheel smoke。基线与发布 CI 会同时安装两个分发并验证组合，而
+    manylinux repair 仍只处理包含原生扩展的核心 wheel。
