@@ -41,7 +41,7 @@ _STATUS_HELPER = dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setPen(QPen(colors["strokeCard"], 1.0))
@@ -82,7 +82,7 @@ _STATUS_HELPER = dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setPen(QPen(colors["strokeCard"], 1.0))

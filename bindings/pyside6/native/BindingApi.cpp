@@ -174,6 +174,136 @@ QVariantMap spacingTokens(const fluent::FluentElement::Spacing& spacing) {
   return values;
 }
 
+const fluent::FluentElement* nearestFluentElement(const QWidget* widget) {
+  for (const QWidget* node = widget; node; node = node->parentWidget()) {
+    if (const auto* element =
+            dynamic_cast<const fluent::FluentElement*>(node)) {
+      return element;
+    }
+  }
+  return nullptr;
+}
+
+QVariantMap themeTokens(const fluent::FluentElement& element) {
+  const auto radius = element.themeRadius();
+  QVariantMap radiusValues;
+  radiusValues.insert(QStringLiteral("none"), radius.none);
+  radiusValues.insert(QStringLiteral("control"), radius.control);
+  radiusValues.insert(QStringLiteral("overlay"), radius.overlay);
+
+  const auto animation = element.themeAnimation();
+  QVariantMap durations;
+  durations.insert(QStringLiteral("fast"), animation.fast);
+  durations.insert(QStringLiteral("normal"), animation.normal);
+  durations.insert(QStringLiteral("slow"), animation.slow);
+  durations.insert(QStringLiteral("verySlow"), animation.verySlow);
+  QVariantMap easings;
+  easings.insert(QStringLiteral("standard"),
+                 QVariant::fromValue(animation.standard));
+  easings.insert(QStringLiteral("accelerate"),
+                 QVariant::fromValue(animation.accelerate));
+  easings.insert(QStringLiteral("decelerate"),
+                 QVariant::fromValue(animation.decelerate));
+  easings.insert(QStringLiteral("entrance"),
+                 QVariant::fromValue(animation.entrance));
+  easings.insert(QStringLiteral("exit"),
+                 QVariant::fromValue(animation.exit));
+  QVariantMap animationValues;
+  animationValues.insert(QStringLiteral("duration"), durations);
+  animationValues.insert(QStringLiteral("easing"), easings);
+
+  const auto acrylic = element.themeAcrylic();
+  QVariantMap acrylicValues;
+  acrylicValues.insert(QStringLiteral("tintColor"), acrylic.tintColor);
+  acrylicValues.insert(QStringLiteral("tintOpacity"), acrylic.tintOpacity);
+  acrylicValues.insert(QStringLiteral("luminosityOpacity"),
+                       acrylic.luminosityOpacity);
+  acrylicValues.insert(QStringLiteral("blurRadius"), acrylic.blurRadius);
+  const auto mica = element.themeMica();
+  QVariantMap micaValues;
+  micaValues.insert(QStringLiteral("baseColor"), mica.baseColor);
+  micaValues.insert(QStringLiteral("opacity"), mica.opacity);
+  const auto smoke = element.themeSmoke();
+  QVariantMap smokeValues;
+  smokeValues.insert(QStringLiteral("baseColor"), smoke.baseColor);
+  smokeValues.insert(QStringLiteral("opacity"), smoke.opacity);
+  QVariantMap materialValues;
+  materialValues.insert(QStringLiteral("acrylic"), acrylicValues);
+  materialValues.insert(QStringLiteral("mica"), micaValues);
+  materialValues.insert(QStringLiteral("smoke"), smokeValues);
+
+  auto shadowValues = [&element](Elevation::Level level) {
+    const auto shadow = element.themeShadow(level);
+    QVariantMap values;
+    values.insert(QStringLiteral("offsetX"), shadow.offsetX);
+    values.insert(QStringLiteral("offsetY"), shadow.offsetY);
+    values.insert(QStringLiteral("blurRadius"), shadow.blurRadius);
+    values.insert(QStringLiteral("spreadRadius"), shadow.spreadRadius);
+    values.insert(QStringLiteral("color"), shadow.color);
+    values.insert(QStringLiteral("opacity"), shadow.opacity);
+    return values;
+  };
+  QVariantMap elevationValues;
+  elevationValues.insert(QStringLiteral("none"),
+                         shadowValues(Elevation::None));
+  elevationValues.insert(QStringLiteral("low"),
+                         shadowValues(Elevation::Low));
+  elevationValues.insert(QStringLiteral("medium"),
+                         shadowValues(Elevation::Medium));
+  elevationValues.insert(QStringLiteral("high"),
+                         shadowValues(Elevation::High));
+  elevationValues.insert(QStringLiteral("veryHigh"),
+                         shadowValues(Elevation::VeryHigh));
+
+  QVariantMap breakpointValues;
+  breakpointValues.insert(
+      QStringLiteral("small"),
+      element.themeBreakpoint(Breakpoints::Breakpoint::Small));
+  breakpointValues.insert(
+      QStringLiteral("medium"),
+      element.themeBreakpoint(Breakpoints::Breakpoint::Medium));
+  breakpointValues.insert(
+      QStringLiteral("large"),
+      element.themeBreakpoint(Breakpoints::Breakpoint::Large));
+
+  QVariantMap backdropValues;
+  backdropValues.insert(QStringLiteral("active"),
+                        element.themeBackdrop(true));
+  backdropValues.insert(QStringLiteral("inactive"),
+                        element.themeBackdrop(false));
+
+  QVariantMap values;
+  values.insert(QStringLiteral("theme"),
+                static_cast<int>(element.effectiveTheme()));
+  values.insert(QStringLiteral("designLanguage"),
+                static_cast<int>(element.themeDesignLanguage()));
+  values.insert(QStringLiteral("colors"), colorTokens(element.themeColors()));
+  values.insert(QStringLiteral("radius"), radiusValues);
+  values.insert(QStringLiteral("spacing"),
+                spacingTokens(element.themeSpacing()));
+  values.insert(QStringLiteral("animation"), animationValues);
+  values.insert(QStringLiteral("material"), materialValues);
+  values.insert(QStringLiteral("elevation"), elevationValues);
+  values.insert(QStringLiteral("breakpoints"), breakpointValues);
+  values.insert(QStringLiteral("backdrop"), backdropValues);
+  return values;
+}
+
+void refreshFluentSubtree(QWidget* root) {
+  if (!root)
+    return;
+
+  if (auto* element = dynamic_cast<fluent::FluentElement*>(root))
+    element->onThemeUpdated();
+  root->update();
+
+  const auto children = root->children();
+  for (QObject* child : children) {
+    if (auto* childWidget = qobject_cast<QWidget*>(child))
+      refreshFluentSubtree(childWidget);
+  }
+}
+
 } // namespace
 
 class fluent::binding::AnchorSpecPrivate {
@@ -316,105 +446,7 @@ fluent::binding::FluentWidget::FluentWidget(QWidget* parent)
 fluent::binding::FluentWidget::~FluentWidget() = default;
 
 QVariantMap fluent::binding::FluentWidget::themeTokensForBinding() const {
-  const auto radius = themeRadius();
-  QVariantMap radiusValues;
-  radiusValues.insert(QStringLiteral("none"), radius.none);
-  radiusValues.insert(QStringLiteral("control"), radius.control);
-  radiusValues.insert(QStringLiteral("overlay"), radius.overlay);
-
-  const auto animation = themeAnimation();
-  QVariantMap durations;
-  durations.insert(QStringLiteral("fast"), animation.fast);
-  durations.insert(QStringLiteral("normal"), animation.normal);
-  durations.insert(QStringLiteral("slow"), animation.slow);
-  durations.insert(QStringLiteral("verySlow"), animation.verySlow);
-  QVariantMap easings;
-  easings.insert(QStringLiteral("standard"),
-                 QVariant::fromValue(animation.standard));
-  easings.insert(QStringLiteral("accelerate"),
-                 QVariant::fromValue(animation.accelerate));
-  easings.insert(QStringLiteral("decelerate"),
-                 QVariant::fromValue(animation.decelerate));
-  easings.insert(QStringLiteral("entrance"),
-                 QVariant::fromValue(animation.entrance));
-  easings.insert(QStringLiteral("exit"),
-                 QVariant::fromValue(animation.exit));
-  QVariantMap animationValues;
-  animationValues.insert(QStringLiteral("duration"), durations);
-  animationValues.insert(QStringLiteral("easing"), easings);
-
-  const auto acrylic = themeAcrylic();
-  QVariantMap acrylicValues;
-  acrylicValues.insert(QStringLiteral("tintColor"), acrylic.tintColor);
-  acrylicValues.insert(QStringLiteral("tintOpacity"), acrylic.tintOpacity);
-  acrylicValues.insert(QStringLiteral("luminosityOpacity"),
-                       acrylic.luminosityOpacity);
-  acrylicValues.insert(QStringLiteral("blurRadius"), acrylic.blurRadius);
-  const auto mica = themeMica();
-  QVariantMap micaValues;
-  micaValues.insert(QStringLiteral("baseColor"), mica.baseColor);
-  micaValues.insert(QStringLiteral("opacity"), mica.opacity);
-  const auto smoke = themeSmoke();
-  QVariantMap smokeValues;
-  smokeValues.insert(QStringLiteral("baseColor"), smoke.baseColor);
-  smokeValues.insert(QStringLiteral("opacity"), smoke.opacity);
-  QVariantMap materialValues;
-  materialValues.insert(QStringLiteral("acrylic"), acrylicValues);
-  materialValues.insert(QStringLiteral("mica"), micaValues);
-  materialValues.insert(QStringLiteral("smoke"), smokeValues);
-
-  auto shadowValues = [this](Elevation::Level level) {
-    const auto shadow = themeShadow(level);
-    QVariantMap values;
-    values.insert(QStringLiteral("offsetX"), shadow.offsetX);
-    values.insert(QStringLiteral("offsetY"), shadow.offsetY);
-    values.insert(QStringLiteral("blurRadius"), shadow.blurRadius);
-    values.insert(QStringLiteral("spreadRadius"), shadow.spreadRadius);
-    values.insert(QStringLiteral("color"), shadow.color);
-    values.insert(QStringLiteral("opacity"), shadow.opacity);
-    return values;
-  };
-  QVariantMap elevationValues;
-  elevationValues.insert(QStringLiteral("none"),
-                         shadowValues(Elevation::None));
-  elevationValues.insert(QStringLiteral("low"),
-                         shadowValues(Elevation::Low));
-  elevationValues.insert(QStringLiteral("medium"),
-                         shadowValues(Elevation::Medium));
-  elevationValues.insert(QStringLiteral("high"),
-                         shadowValues(Elevation::High));
-  elevationValues.insert(QStringLiteral("veryHigh"),
-                         shadowValues(Elevation::VeryHigh));
-
-  QVariantMap breakpointValues;
-  breakpointValues.insert(
-      QStringLiteral("small"),
-      themeBreakpoint(Breakpoints::Breakpoint::Small));
-  breakpointValues.insert(
-      QStringLiteral("medium"),
-      themeBreakpoint(Breakpoints::Breakpoint::Medium));
-  breakpointValues.insert(
-      QStringLiteral("large"),
-      themeBreakpoint(Breakpoints::Breakpoint::Large));
-
-  QVariantMap backdropValues;
-  backdropValues.insert(QStringLiteral("active"), themeBackdrop(true));
-  backdropValues.insert(QStringLiteral("inactive"), themeBackdrop(false));
-
-  QVariantMap values;
-  values.insert(QStringLiteral("theme"),
-                static_cast<int>(effectiveTheme()));
-  values.insert(QStringLiteral("designLanguage"),
-                static_cast<int>(themeDesignLanguage()));
-  values.insert(QStringLiteral("colors"), colorTokens(themeColors()));
-  values.insert(QStringLiteral("radius"), radiusValues);
-  values.insert(QStringLiteral("spacing"), spacingTokens(themeSpacing()));
-  values.insert(QStringLiteral("animation"), animationValues);
-  values.insert(QStringLiteral("material"), materialValues);
-  values.insert(QStringLiteral("elevation"), elevationValues);
-  values.insert(QStringLiteral("breakpoints"), breakpointValues);
-  values.insert(QStringLiteral("backdrop"), backdropValues);
-  return values;
+  return themeTokens(*this);
 }
 
 QFont fluent::binding::FluentWidget::themeFontForBinding(
@@ -500,6 +532,15 @@ qreal fontScale() { return fluent::ThemeRegistry::instance().fontScale(); }
 fluent::binding::DesignLanguage currentDesignLanguage() {
   return static_cast<fluent::binding::DesignLanguage>(
       static_cast<int>(fluent::ThemeRegistry::instance().designLanguage()));
+}
+
+QVariantMap themeTokensForWidgetForBinding(const QWidget* widget) {
+  const auto* element = nearestFluentElement(widget);
+  return element ? themeTokens(*element) : QVariantMap{};
+}
+
+void refreshWidgetThemeForBinding(QWidget* widget) {
+  refreshFluentSubtree(widget);
 }
 
 bool bindProperties(QObject* source,

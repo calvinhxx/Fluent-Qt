@@ -55,6 +55,14 @@
     <function signature="setFontScale(qreal)"/>
     <function signature="fontScale()"/>
     <function signature="currentDesignLanguage()"/>
+    <function signature="themeTokensForWidgetForBinding(const QWidget*)"/>
+    <function signature="refreshWidgetThemeForBinding(QWidget*)">
+        <modify-function>
+            <modify-argument index="1">
+                <no-null-pointer/>
+            </modify-argument>
+        </modify-function>
+    </function>
     <function signature="bindProperties(QObject*,const QString&amp;,QObject*,const QString&amp;,fluent::binding::BindingMode)"/>
     <function signature="listViewSectionEnabled(const fluent::collections::ListView*)"/>
     <function signature="setListViewSectionEnabled(fluent::collections::ListView*,bool)"/>

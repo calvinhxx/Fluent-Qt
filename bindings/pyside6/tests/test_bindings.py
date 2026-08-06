@@ -56,6 +56,7 @@ from PySide6.QtGui import (
     QColor,
     QIcon,
     QKeySequence,
+    QPalette,
     QStandardItem,
     QStandardItemModel,
 )
@@ -3667,6 +3668,33 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertIsInstance(fluent_editor, fluentqt.LineEdit)
         self.assertIs(combo.lineEdit(), fluent_editor)
         self.assertIs(fluent_editor.parent(), combo)
+
+    def test_binding_theme_adapter_refreshes_native_widget_subtree(self):
+        previous_theme = fluentqt.current_theme()
+        fluentqt.set_theme(fluentqt.Theme.Light)
+        root = fluentqt.Card()
+        combo = fluentqt.ComboBox(root)
+        combo.addItems(["10", "11", "12"])
+        combo.setEditable(True)
+        editor = combo.fluentLineEdit()
+        self.assertIsNotNone(editor)
+
+        root.setProperty("fluentThemeOverride", int(fluentqt.Theme.Dark))
+        snapshot = native.themeTokensForWidgetForBinding(editor)
+        self.assertEqual(snapshot["theme"], int(fluentqt.Theme.Dark))
+        native.refreshWidgetThemeForBinding(root)
+        self.assertEqual(
+            editor.palette().color(
+                QPalette.ColorGroup.Active,
+                QPalette.ColorRole.Text,
+            ),
+            QColor(snapshot["colors"]["textPrimary"]),
+        )
+        self.assertFalse(hasattr(fluentqt, "refreshWidgetThemeForBinding"))
+        self.assertFalse(hasattr(fluentqt, "themeTokensForWidgetForBinding"))
+
+        root.deleteLater()
+        fluentqt.set_theme(previous_theme)
 
     def test_combo_box_dependency_gc_stress(self):
         class PythonEditor(QLineEdit):

@@ -7,6 +7,7 @@ import sys
 from typing import Callable, Iterable
 
 import fluentqt
+import fluentqt._fluentqt as _native
 from PySide6.QtCore import (
     QEasingCurve,
     QElapsedTimer,
@@ -758,17 +759,10 @@ def build_foundation_topic_page(
 
 
 def _refresh_fluent_subtree(root: QWidget) -> None:
-    widgets = [root] + root.findChildren(QWidget)
-    for widget in widgets:
-        refresh = getattr(widget, "onThemeUpdated", None)
-        if not callable(refresh):
-            refresh = getattr(widget, "on_theme_updated", None)
-        if callable(refresh):
-            refresh()
-        # Item views expose update(QModelIndex), which hides QWidget.update()
-        # in some PySide releases. Call the base overload explicitly so a
-        # theme refresh remains valid for every QWidget subclass.
-        QWidget.update(widget)
+    # Match GallerySampleCard::refreshFluentSubtree: the native adapter can
+    # reach the intentionally hidden FluentElement hook on both bound C++
+    # controls and Python-authored FluentWidget subclasses.
+    _native.refreshWidgetThemeForBinding(root)
 
 
 class _GallerySampleCardLayout(QVBoxLayout):

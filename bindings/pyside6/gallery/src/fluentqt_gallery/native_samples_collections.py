@@ -32,7 +32,7 @@ _MODEL_IMPORTS = (
     "QNetworkRequest)\n"
     "from PySide6.QtWidgets import (QApplication, QHBoxLayout, QStyle, "
     "QStyledItemDelegate, QSizePolicy, QVBoxLayout, QWidget)\n"
-    "from fluentqt_gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import (_theme_snapshot, _theme_tokens)"
 )
 
 _PAGE_HELPER = _SourceHelper(dedent(
@@ -190,12 +190,14 @@ _PHOTO_MODEL_HELPER = _SourceHelper(dedent(
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-            colors = _theme_tokens()
+            snapshot = _theme_snapshot(self)
+            colors = snapshot["colors"]
             selected = bool(option.state & QStyle.StateFlag.State_Selected)
             hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
             enabled = bool(option.state & QStyle.StateFlag.State_Enabled)
             material_grid = self._grid_view is not None and (
-                "Material" in str(fluentqt.current_design_language())
+                int(snapshot["designLanguage"])
+                == int(fluentqt.DesignLanguage.DesignMaterial)
             )
 
             card = QRectF(option.rect).adjusted(2.0, 2.0, -2.0, -2.0)
@@ -535,7 +537,8 @@ _TREE_DELEGATE_HELPER = _SourceHelper(dedent(
         def paint(self, painter, option, index):
             if not index.isValid():
                 return
-            colors = _theme_tokens()
+            snapshot = _theme_snapshot(self)
+            colors = snapshot["colors"]
             painter.save()
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
@@ -543,11 +546,14 @@ _TREE_DELEGATE_HELPER = _SourceHelper(dedent(
             enabled = bool(option.state & QStyle.StateFlag.State_Enabled)
             hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
             pressed = bool(option.state & QStyle.StateFlag.State_Sunken) and hovered
-            language = str(fluentqt.current_design_language())
-            dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+            language = int(snapshot["designLanguage"])
+            dark = int(snapshot["theme"]) == int(fluentqt.Theme.Dark)
             background = QColor(Qt.GlobalColor.transparent)
             text_on_accent = False
-            if enabled and "Material" in language:
+            if (
+                enabled
+                and language == int(fluentqt.DesignLanguage.DesignMaterial)
+            ):
                 if selected:
                     background = QColor(colors["accentDefault"])
                     background.setAlphaF(0.28 if dark else 0.16)
@@ -557,7 +563,10 @@ _TREE_DELEGATE_HELPER = _SourceHelper(dedent(
                         if dark
                         else QColor(0, 0, 0, 0x14)
                     )
-            elif enabled and ("Cupertino" in language or "Mac" in language):
+            elif (
+                enabled
+                and language == int(fluentqt.DesignLanguage.DesignCupertino)
+            ):
                 if selected:
                     background = colors["accentDefault"]
                     text_on_accent = True
@@ -587,8 +596,8 @@ _TREE_DELEGATE_HELPER = _SourceHelper(dedent(
             elif text_on_accent:
                 text_color = colors["textOnAccent"]
 
-            fluent_language = "Material" not in language and not (
-                "Cupertino" in language or "Mac" in language
+            fluent_language = (
+                language == int(fluentqt.DesignLanguage.DesignFluent)
             )
             if (
                 selected
@@ -863,7 +872,7 @@ _DRAWER_HELPER = _SourceHelper(dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             surface = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
@@ -1017,7 +1026,7 @@ _DRAWER_HELPER = _SourceHelper(dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
