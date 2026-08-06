@@ -107,6 +107,8 @@ GalleryContentPage::GalleryContentPage(const QString& routeId,
     m_titleLabel->setObjectName(QStringLiteral("galleryContentTitle"));
     m_titleLabel->setProperty("galleryRouteId", m_routeId);
     m_titleLabel->setFluentTypography(Typography::FontRole::Title);
+    m_titleLabel->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Primary);
     m_titleLabel->setWordWrap(true);
     m_titleLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     m_headerLayout->addWidget(m_titleLabel, 1, Qt::AlignVCenter);
@@ -219,6 +221,10 @@ fluent::textfields::Label* GalleryContentPage::createTrackedLabel(const QString&
 {
     auto* label = new fluent::textfields::Label(text, m_viewport);
     label->setFluentTypography(fontRole);
+    label->setTextColorRole(
+        textRole == TextRole::Primary
+            ? fluent::textfields::Label::TextColorRole::Primary
+            : fluent::textfields::Label::TextColorRole::Secondary);
     m_trackedLabels.append({label, textRole});
     return label;
 }
@@ -228,11 +234,10 @@ void GalleryContentPage::trackLabelColor(fluent::textfields::Label* label, TextR
     if (!label)
         return;
     m_trackedLabels.append({label, textRole});
-    const Colors colors = themeColors();
-    const QColor color =
-        textRole == TextRole::Primary ? colors.textPrimary : colors.textSecondary;
-    label->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                             .arg(cssColor(color)));
+    label->setTextColorRole(
+        textRole == TextRole::Primary
+            ? fluent::textfields::Label::TextColorRole::Primary
+            : fluent::textfields::Label::TextColorRole::Secondary);
 }
 
 void GalleryContentPage::applyBackdrop()
@@ -253,23 +258,7 @@ void GalleryContentPage::applyBackdrop()
 
 void GalleryContentPage::applyPalette()
 {
-    const Colors colors = themeColors();
-
     applyBackdrop();
-
-    if (m_titleLabel) {
-        m_titleLabel->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                                        .arg(cssColor(colors.textPrimary)));
-    }
-    for (const TrackedLabel& tracked : m_trackedLabels) {
-        if (!tracked.label)
-            continue;
-        const QColor color = tracked.role == TextRole::Primary
-            ? colors.textPrimary
-            : colors.textSecondary;
-        tracked.label->setStyleSheet(QStringLiteral("color: %1; background: transparent;")
-                                         .arg(cssColor(color)));
-    }
 }
 
 } // namespace fluent::gallery
