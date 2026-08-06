@@ -13,6 +13,8 @@
 #include <QTest>
 #include <QVBoxLayout>
 
+#include <type_traits>
+
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/collections/SplitView.h"
@@ -20,6 +22,9 @@
 using fluent::collections::SplitView;
 using fluent::collections::SplitViewPaneOptions;
 using fluent::WidgetOwnership;
+
+static_assert(std::is_aggregate<SplitViewPaneOptions>::value,
+              "SplitViewPaneOptions must remain aggregate-initializable");
 
 namespace {
 
@@ -104,7 +109,7 @@ protected:
 TEST_F(SplitViewTest, DefaultPropertiesAndInheritance)
 {
     SplitView splitView;
-    const SplitViewPaneOptions partialOptions(24, 96);
+    const SplitViewPaneOptions partialOptions{24, 96};
 
     EXPECT_EQ(splitView.paneCount(), 0);
     EXPECT_EQ(splitView.orientation(), Qt::Horizontal);

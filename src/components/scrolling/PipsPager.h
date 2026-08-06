@@ -94,6 +94,21 @@ class PipsPager : public QWidget, public FluentElement, public QMLPlus {
      * zh_CN: 页码圆点选中动画时长，单位为毫秒。
      */
     Q_PROPERTY(int selectionAnimationDuration READ selectionAnimationDuration WRITE setSelectionAnimationDuration NOTIFY selectionAnimationDurationChanged)
+    // Shiboken maps every Q_PROPERTY to a Python constructor keyword. These
+    // two properties remain in the real Qt meta-object for C++ compatibility,
+    // but are implementation-only in the Python API.
+#if !defined(FLUENTQT_PYSIDE6_GENERATOR)
+    /**
+     * @brief Visual offset applied to the selected pip.
+     * zh_CN: 选中页码圆点应用的视觉偏移。
+     */
+    Q_PROPERTY(qreal selectedVisualOffset READ selectedVisualOffset WRITE setSelectedVisualOffset)
+    /**
+     * @brief Offset of the visible pip window.
+     * zh_CN: 可见页码圆点窗口的偏移。
+     */
+    Q_PROPERTY(qreal visibleWindowOffset READ visibleWindowOffset WRITE setVisibleWindowOffset)
+#endif
 public:
     enum class PipsPagerButtonVisibility {
         Collapsed,

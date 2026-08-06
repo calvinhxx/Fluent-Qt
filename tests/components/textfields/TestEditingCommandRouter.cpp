@@ -577,6 +577,12 @@ TEST_F(EditingCommandRouterTest,
     router.refresh();
     ASSERT_EQ(edit->selectedText(), QStringLiteral("Alpha"));
     ASSERT_TRUE(router.canExecute(Command::Cut));
+    cutRow->setFocus(Qt::MouseFocusReason);
+    edit->deselect();
+    QApplication::processEvents();
+    EXPECT_FALSE(edit->hasSelectedText());
+    ASSERT_TRUE(router.canExecute(Command::Cut));
+    ASSERT_TRUE(cutRow->isEnabled());
     QTest::mouseClick(cutRow, Qt::LeftButton);
     QApplication::processEvents();
     EXPECT_EQ(cutSpy.count(), 1);

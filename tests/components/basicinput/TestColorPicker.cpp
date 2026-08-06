@@ -5,6 +5,7 @@
 #include "components/basicinput/ColorPicker.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
+#include "components/textfields/Label.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -104,6 +105,25 @@ TEST(ColorPickerContractTest, InternalColumnsResolveAsAnAcyclicGrid) {
     EXPECT_EQ(hueBar->height(), spectrum->height());
     EXPECT_EQ(preview->height(), spectrum->height());
     EXPECT_GT(spectrum->height(), 0);
+}
+
+TEST(ColorPickerContractTest, InternalLabelsUseOwnPrimaryThemeColor) {
+    QWidget styledHost;
+    styledHost.setStyleSheet(QStringLiteral(
+        "QWidget { background: #202020; }"));
+    ColorPicker picker(&styledHost);
+
+    const auto labels =
+        picker.findChildren<fluent::textfields::Label*>();
+    ASSERT_EQ(labels.size(), 7);
+    for (const auto* label : labels) {
+        ASSERT_NE(label, nullptr);
+        EXPECT_EQ(
+            label->textColorRole(),
+            fluent::textfields::Label::TextColorRole::Primary);
+        EXPECT_TRUE(label->styleSheet().contains(
+            QStringLiteral("color:")));
+    }
 }
 
 TEST_F(ColorPickerTest, VisualCheck) {
