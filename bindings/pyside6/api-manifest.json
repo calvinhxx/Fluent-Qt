@@ -8,6 +8,8 @@
   "deprecations": [],
   "classes": [
     "Accordion",
+    "AnchorLayout",
+    "AnchorSpec",
     "AnnotatedScrollBar",
     "AnnotatedScrollBarLabel",
     "AutoSuggestBox",
@@ -26,6 +28,7 @@
     "CommandBarFlyout",
     "CompoundButton",
     "ContentDialog",
+    "CornerRadius",
     "DatePicker",
     "Dialog",
     "Divider",
@@ -39,11 +42,14 @@
     "FluentMenu",
     "FluentMenuBar",
     "FluentMenuItem",
+    "FluentWidget",
     "FontIcon",
     "GridView",
     "HyperlinkButton",
     "InfoBadge",
     "InfoBar",
+    "Icons",
+    "IconSize",
     "Label",
     "LineEdit",
     "ListView",
@@ -69,12 +75,15 @@
     "SplitButton",
     "SplitView",
     "SplitViewPaneOptions",
+    "Spacing",
     "StackContentHost",
     "StackView",
+    "StateGroup",
     "TabView",
     "TabViewItem",
     "TeachingTip",
     "TextEdit",
+    "ThemeTokens",
     "TimePicker",
     "ToggleButton",
     "ToggleSplitButton",
@@ -83,13 +92,16 @@
     "ToolTip",
     "TitleBar",
     "TreeView",
+    "Typography",
     "Window"
   ],
   "enums": [
+    "AnchorEdge",
     "BackdropBackend",
     "BackdropEffect",
     "BackdropFidelity",
     "BackdropSurfaceMode",
+    "BindingMode",
     "ContentDialogButton",
     "DesignLanguage",
     "FontRole",
@@ -100,7 +112,9 @@
   ],
   "functions": [
     "accent_color",
+    "anchors",
     "apply_style_theme",
+    "bind",
     "binding_build_info",
     "current_design_language",
     "current_theme",
@@ -115,6 +129,27 @@
     "theme_revision"
   ],
   "methods": {
+    "AnchorLayout": [
+      "addWidget"
+    ],
+    "AnchorSpec": [
+      "setAnchor",
+      "setFill"
+    ],
+    "FluentWidget": [
+      "design_language",
+      "effective_theme",
+      "on_theme_updated",
+      "theme_font",
+      "theme_tokens"
+    ],
+    "StateGroup": [
+      "add",
+      "clear",
+      "has",
+      "set",
+      "state"
+    ],
     "EditingCommandRouter": [
       "action",
       "actions",

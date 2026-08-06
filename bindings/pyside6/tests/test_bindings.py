@@ -2348,13 +2348,13 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(configured.maxVisiblePips(), 5)
         self.assertFalse(configured.selectionAnimationEnabled())
         meta_object = configured.metaObject()
-        self.assertEqual(
+        self.assertGreaterEqual(
             meta_object.indexOfProperty("selectedVisualOffset"),
-            -1,
+            0,
         )
-        self.assertEqual(
+        self.assertGreaterEqual(
             meta_object.indexOfProperty("visibleWindowOffset"),
-            -1,
+            0,
         )
 
     def test_info_bar_properties_signals_and_action_facade(self):
@@ -5432,6 +5432,17 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(partial_options.preferredSize, 96)
         self.assertEqual(partial_options.maximumSize, 16777215)
         self.assertFalse(partial_options.fill)
+
+        keyword_options = fluentqt.SplitViewPaneOptions(
+            minimumPaneSize=30,
+            preferredPaneSize=90,
+            maximumPaneSize=240,
+            fillPane=True,
+        )
+        self.assertEqual(keyword_options.minimumSize, 30)
+        self.assertEqual(keyword_options.preferredSize, 90)
+        self.assertEqual(keyword_options.maximumSize, 240)
+        self.assertTrue(keyword_options.fill)
 
         view = fluentqt.SplitView()
         self.assertIs(collections.SplitView, fluentqt.SplitView)

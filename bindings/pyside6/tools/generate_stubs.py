@@ -29,6 +29,7 @@ NATIVE_MODULE_NAMES = {
 PUBLIC_DUNDER_METHODS = {
     "__copy__",
     "__eq__",
+    "__getattr__",
     "__hash__",
     "__init__",
     "__ne__",
@@ -41,6 +42,15 @@ MODULE_FUNCTION_SIGNATURES = {
         "() -> PySide6.QtGui.QColor",
     ("fluentqt.foundation", "apply_style_theme"):
         "(style_theme: StyleTheme) -> None",
+    ("fluentqt.foundation", "anchors"):
+        "(*, left: Any = ..., right: Any = ..., top: Any = ..., "
+        "bottom: Any = ..., horizontal_center: Any = ..., "
+        "vertical_center: Any = ..., center_in: Any = ..., "
+        "top_right: Any = ..., fill: Any = ...) -> AnchorSpec",
+    ("fluentqt.foundation", "bind"):
+        "(source: PySide6.QtCore.QObject, source_property: str, "
+        "target: PySide6.QtCore.QObject, target_property: str, "
+        "mode: BindingMode = ...) -> None",
     ("fluentqt.foundation", "current_design_language"):
         "() -> DesignLanguage",
     ("fluentqt.foundation", "current_theme"): "() -> Theme",
@@ -57,6 +67,35 @@ MODULE_FUNCTION_SIGNATURES = {
 MODULE_VARIABLE_TYPES = {
     ("fluentqt", "__api_version__"): "str",
     ("fluentqt", "__version__"): "str",
+}
+CLASS_METHOD_SIGNATURES = {
+    ("fluentqt.foundation", "FluentWidget", "design_language"):
+        "(self) -> DesignLanguage",
+    ("fluentqt.foundation", "FluentWidget", "effective_theme"):
+        "(self) -> Theme",
+    ("fluentqt.foundation", "FluentWidget", "on_theme_updated"):
+        "(self) -> None",
+    ("fluentqt.foundation", "FluentWidget", "theme_font"):
+        "(self, role: FontRole = ...) -> PySide6.QtGui.QFont",
+    ("fluentqt.foundation", "FluentWidget", "theme_tokens"):
+        "(self) -> ThemeTokens",
+    ("fluentqt.foundation", "StateGroup", "add"):
+        "(self, name: str, changes: "
+        "Mapping[PySide6.QtCore.QObject, Mapping[str, Any]]) -> StateGroup",
+    ("fluentqt.foundation", "StateGroup", "__init__"):
+        "(self, parent: PySide6.QtCore.QObject | None = ...) -> None",
+    ("fluentqt.foundation", "StateGroup", "clear"):
+        "(self) -> None",
+    ("fluentqt.foundation", "StateGroup", "has"):
+        "(self, name: str) -> bool",
+    ("fluentqt.foundation", "StateGroup", "set"):
+        "(self, name: str = ...) -> None",
+    ("fluentqt.design", "ThemeTokens", "__getattr__"):
+        "(self, name: str) -> Any",
+}
+CLASS_ATTRIBUTE_TYPES = {
+    ("fluentqt.foundation", "StateGroup", "state_changed"):
+        "PySide6.QtCore.SignalInstance",
 }
 
 
@@ -246,6 +285,8 @@ def python_facade_members(public_class):
             if isinstance(value, (staticmethod, classmethod, property)):
                 members.setdefault(name, value)
                 continue
+            if inspect.isclass(value):
+                continue
             if callable(value):
                 members.setdefault(name, value)
     return members
@@ -266,13 +307,136 @@ def native_base(public_class):
     )
 
 
+def optional_native_base(public_class):
+    for base in public_class.__mro__[1:]:
+        if base.__module__ == NATIVE_MODULE_NAME:
+            return base
+    return None
+
+
+def pure_attribute_type(value):
+    if isinstance(value, bool):
+        return "bool"
+    if isinstance(value, int):
+        return "int"
+    if isinstance(value, float):
+        return "float"
+    if isinstance(value, str):
+        return "str"
+    if inspect.isclass(value) and (value.__module__ or "").startswith(
+        "fluentqt"
+    ):
+        return "type[{0}]".format(value.__name__)
+    return "Any"
+
+
+def pure_python_class_stub(name, public_class, indent=""):
+    try:
+        is_mapping = issubclass(public_class, dict)
+    except TypeError:
+        is_mapping = False
+    base = "(dict[str, Any])" if is_mapping else ""
+    lines = ["{0}class {1}{2}:".format(indent, name, base)]
+    body = []
+
+    for member_name, value in vars(public_class).items():
+        if member_name.startswith("_"):
+            continue
+        if inspect.isclass(value) and (
+            value.__module__ == public_class.__module__
+            and value.__qualname__.startswith(public_class.__qualname__ + ".")
+        ):
+            body.extend(
+                pure_python_class_stub(
+                    member_name,
+                    value,
+                    indent=indent + "    ",
+                )
+            )
+            continue
+        if isinstance(value, (staticmethod, classmethod, property)):
+            continue
+        if callable(value) and not inspect.isclass(value):
+            continue
+        body.append(
+            "{0}    {1}: {2}".format(
+                indent,
+                member_name,
+                pure_attribute_type(value),
+            )
+        )
+
+    facade_members = python_facade_members(public_class)
+    for member_name in sorted(facade_members):
+        value = facade_members[member_name]
+        signature = CLASS_METHOD_SIGNATURES.get(
+            (public_class.__module__, name, member_name)
+        )
+        if signature is not None:
+            body.append(
+                "{0}    def {1}{2}: ...".format(
+                    indent, member_name, signature
+                )
+            )
+            continue
+        if isinstance(value, staticmethod):
+            body.append("{0}    @staticmethod".format(indent))
+            body.append(
+                callable_stub(
+                    member_name,
+                    value.__func__,
+                    include_self=False,
+                    indent=indent + "    ",
+                )
+            )
+        elif isinstance(value, classmethod):
+            body.append("{0}    @classmethod".format(indent))
+            body.append(
+                callable_stub(
+                    member_name,
+                    value.__func__,
+                    include_self=True,
+                    indent=indent + "    ",
+                )
+            )
+        elif isinstance(value, property):
+            body.append("{0}    @property".format(indent))
+            body.append(
+                callable_stub(
+                    member_name,
+                    value.fget,
+                    include_self=True,
+                    indent=indent + "    ",
+                )
+            )
+        else:
+            body.append(
+                callable_stub(
+                    member_name,
+                    value,
+                    include_self=True,
+                    indent=indent + "    ",
+                )
+            )
+
+    if not body:
+        body.append("{0}    ...".format(indent))
+    lines.extend(body)
+    return lines
+
+
 def class_stub(name, public_class):
     facade_members = python_facade_members(public_class)
     is_python_facade = (public_class.__module__ or "").startswith("fluentqt")
     if not is_python_facade and not facade_members:
         return ["{0} = {1}".format(name, native_expression(public_class))]
 
-    base = native_base(public_class) if is_python_facade else public_class
+    native_facade_base = (
+        optional_native_base(public_class) if is_python_facade else None
+    )
+    if is_python_facade and native_facade_base is None:
+        return pure_python_class_stub(name, public_class)
+    base = native_facade_base if is_python_facade else public_class
     lines = ["class {0}({1}):".format(name, native_expression(base))]
     if not facade_members:
         lines.append("    ...")
@@ -280,6 +444,20 @@ def class_stub(name, public_class):
 
     for member_name in sorted(facade_members):
         value = facade_members[member_name]
+        attribute_type = CLASS_ATTRIBUTE_TYPES.get(
+            (public_class.__module__, name, member_name)
+        )
+        if attribute_type is not None:
+            lines.append("    {0}: {1}".format(member_name, attribute_type))
+            continue
+        signature = CLASS_METHOD_SIGNATURES.get(
+            (public_class.__module__, name, member_name)
+        )
+        if signature is not None:
+            lines.append(
+                "    def {0}{1}: ...".format(member_name, signature)
+            )
+            continue
         if isinstance(value, staticmethod):
             lines.append("    @staticmethod")
             lines.append(
@@ -334,11 +512,15 @@ def generate_facade_stub(module, output_path):
     lines = [
         '"""Generated typing facade for {0}."""'.format(module.__name__),
         "",
+        "from collections.abc import Mapping",
         "from typing import Any",
+        "import PySide6.QtCore",
         "import PySide6.QtGui",
         "from . import _fluentqt as _native",
         "",
     ]
+    if module.__name__ == "fluentqt.foundation":
+        lines.insert(-1, "from .design import ThemeTokens")
     for name in export_names:
         value = getattr(module, name)
         if inspect.isclass(value):

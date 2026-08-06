@@ -55,6 +55,7 @@
     <function signature="setFontScale(qreal)"/>
     <function signature="fontScale()"/>
     <function signature="currentDesignLanguage()"/>
+    <function signature="bindProperties(QObject*,const QString&amp;,QObject*,const QString&amp;,fluent::binding::BindingMode)"/>
     <function signature="listViewSectionEnabled(const fluent::collections::ListView*)"/>
     <function signature="setListViewSectionEnabled(fluent::collections::ListView*,bool)"/>
     <function signature="setListViewSectionKeys(fluent::collections::ListView*,const QStringList&amp;)"/>
@@ -121,6 +122,39 @@
             <enum-type name="Theme"/>
             <enum-type name="DesignLanguage"/>
             <enum-type name="SelectionMode"/>
+            <enum-type name="BindingMode"/>
+            <enum-type name="AnchorEdge"/>
+            <value-type name="AnchorSpec"/>
+            <object-type name="AnchorLayout">
+                <modify-function signature="addWidget(QWidget*,const fluent::binding::AnchorSpec&amp;)">
+                    <modify-argument index="1">
+                        <parent index="this" action="add"/>
+                        <no-null-pointer/>
+                    </modify-argument>
+                </modify-function>
+            </object-type>
+            <object-type name="StateGroup">
+                <modify-function signature="addStateChange(const QString&amp;,QObject*,const QString&amp;,const QVariant&amp;)"
+                                 rename="_addStateChange"/>
+                <modify-function signature="clearStateDefinition(const QString&amp;)"
+                                 rename="_clearStateDefinition"/>
+                <modify-function signature="hasState(const QString&amp;)const"
+                                 rename="_hasState"/>
+                <modify-function signature="setState(const QString&amp;)"
+                                 rename="_setState"/>
+            </object-type>
+            <object-type name="FluentWidget">
+                <modify-function signature="themeTokensForBinding()const"
+                                 rename="_themeTokens"/>
+                <modify-function signature="themeFontForBinding(Typography::FontRole)const"
+                                 rename="_themeFont"/>
+                <modify-function signature="effectiveThemeForBinding()const"
+                                 rename="_effectiveTheme"/>
+                <modify-function signature="designLanguageForBinding()const"
+                                 rename="_designLanguage"/>
+                <modify-function signature="onThemeUpdated()"
+                                 rename="_onThemeUpdated"/>
+            </object-type>
             <object-type name="ScrollViewZoomAwareWidget"/>
         </namespace-type>
 
