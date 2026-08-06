@@ -20,6 +20,40 @@ _NativeStackView = _native.fluent.StackView
 _NativeTreeView = _native.fluent.TreeView
 
 
+_native_split_view_options_init = SplitViewPaneOptions.__init__
+
+
+def _split_view_options_init(
+    self,
+    minimumPaneSize=48,
+    preferredPaneSize=160,
+    maximumPaneSize=16777215,
+    fillPane=False,
+):
+    """Construct pane options without changing the aggregate C++ type."""
+    if isinstance(minimumPaneSize, SplitViewPaneOptions):
+        if (
+            preferredPaneSize != 160
+            or maximumPaneSize != 16777215
+            or fillPane is not False
+        ):
+            raise TypeError(
+                "SplitViewPaneOptions copy construction accepts only the "
+                "source value"
+            )
+        _native_split_view_options_init(self, minimumPaneSize)
+        return
+
+    _native_split_view_options_init(self)
+    self.minimumSize = minimumPaneSize
+    self.preferredSize = preferredPaneSize
+    self.maximumSize = maximumPaneSize
+    self.fill = fillPane
+
+
+SplitViewPaneOptions.__init__ = _split_view_options_init
+
+
 def _split_view_options_key(options):
     return (
         options.minimumSize,

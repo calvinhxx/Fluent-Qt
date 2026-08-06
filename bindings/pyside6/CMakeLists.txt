@@ -79,6 +79,10 @@ set(FLUENTQT_PYSIDE6_GENERATED_DIR
 set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/_fluentqt_module_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_binding_anchorlayout_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_binding_anchorspec_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_binding_fluentwidget_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_binding_stategroup_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_button_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_checkbox_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_colorpicker_wrapper.cpp"
@@ -185,6 +189,7 @@ set(FLUENTQT_PYSIDE6_GENERATOR_ARGUMENTS
     --enable-return-value-heuristic
     --use-global-header
     --language-level=c++17
+    --clang-option=-DFLUENTQT_PYSIDE6_GENERATOR
     "${FLUENTQT_PYSIDE6_GENERATOR_INCLUDE_ARGUMENTS}"
     "-T${FLUENTQT_PYSIDE6_TYPESYSTEM_DIR}"
     "--output-directory=${FLUENTQT_PYSIDE6_GENERATED_ROOT}")
@@ -307,6 +312,7 @@ set(FLUENTQT_PYSIDE6_PYTHON_FILES
     basicinput.py
     collections.py
     date_time.py
+    design.py
     dialogs_flyouts.py
     foundation.py
     layout.py
@@ -317,35 +323,13 @@ set(FLUENTQT_PYSIDE6_PYTHON_FILES
     textfields.py
     windowing.py
     py.typed)
-set(FLUENTQT_PYSIDE6_GALLERY_FILES
-    __init__.py
-    __main__.py
-    application_controller.py
-    app.py
-    catalog.py
-    foundation_pages.py
-    intro_tour.py
-    native_samples.py
-    native_samples_basic.py
-    native_samples_collections.py
-    native_samples_dialogs.py
-    native_samples_navigation.py
-    native_samples_scrolling.py
-    native_samples_status.py
-    native_samples_text_window.py
-    samples.py
-    settings.py
-    single_instance.py
-    update_checker.py
-    visual.py
-    window.py
-    window_placement.py)
 set(FLUENTQT_PYSIDE6_STUB_FILES
     __init__.pyi
     _fluentqt.pyi
     basicinput.pyi
     collections.pyi
     date_time.pyi
+    design.pyi
     dialogs_flyouts.pyi
     foundation.pyi
     layout.pyi
@@ -365,91 +349,14 @@ foreach(FLUENTQT_PYSIDE6_PYTHON_FILE
         "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/${FLUENTQT_PYSIDE6_PYTHON_FILE}"
         COPYONLY)
 endforeach()
-file(MAKE_DIRECTORY "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/gallery")
-foreach(FLUENTQT_PYSIDE6_GALLERY_FILE
-        IN LISTS FLUENTQT_PYSIDE6_GALLERY_FILES)
-    list(APPEND FLUENTQT_PYSIDE6_PYTHON_SOURCE_PATHS
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/fluentqt/gallery/${FLUENTQT_PYSIDE6_GALLERY_FILE}")
-    configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/fluentqt/gallery/${FLUENTQT_PYSIDE6_GALLERY_FILE}"
-        "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/gallery/${FLUENTQT_PYSIDE6_GALLERY_FILE}"
-        COPYONLY)
-endforeach()
-
-# Ship the same app-owned artwork as the native C++ Gallery. Keeping these
-# files beside the Python package makes source-tree, installed-prefix, and
-# wheel runs render the same component cards and Home hero.
-set(FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR
-    "${PROJECT_SOURCE_DIR}/app/assets")
-set(FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR
-    "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/gallery/assets")
-file(GLOB_RECURSE FLUENTQT_PYSIDE6_GALLERY_ASSET_FILES
-    CONFIGURE_DEPENDS
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/control_images/*.png"
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/home_header_tiles/*.png")
-list(APPEND FLUENTQT_PYSIDE6_GALLERY_ASSET_FILES
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/app-icon.png")
-foreach(FLUENTQT_PYSIDE6_GALLERY_ASSET
-        IN LISTS FLUENTQT_PYSIDE6_GALLERY_ASSET_FILES)
-    file(RELATIVE_PATH FLUENTQT_PYSIDE6_GALLERY_ASSET_RELATIVE
-        "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}"
-        "${FLUENTQT_PYSIDE6_GALLERY_ASSET}")
-    get_filename_component(FLUENTQT_PYSIDE6_GALLERY_ASSET_RELATIVE_DIR
-        "${FLUENTQT_PYSIDE6_GALLERY_ASSET_RELATIVE}" DIRECTORY)
-    file(MAKE_DIRECTORY
-        "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/${FLUENTQT_PYSIDE6_GALLERY_ASSET_RELATIVE_DIR}")
-    configure_file(
-        "${FLUENTQT_PYSIDE6_GALLERY_ASSET}"
-        "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/${FLUENTQT_PYSIDE6_GALLERY_ASSET_RELATIVE}"
-        COPYONLY)
-endforeach()
-set(FLUENTQT_PYSIDE6_GALLERY_ICON_CATALOG
-    "${PROJECT_SOURCE_DIR}/res/icons/FluentQtIcons.json")
-set(FLUENTQT_PYSIDE6_GALLERY_ICON_ALIASES
-    "${PROJECT_SOURCE_DIR}/res/icons/FluentQtIconAliases.json")
+set(FLUENTQT_PYSIDE6_DESIGN_ICON_ALIASES
+    "${PROJECT_SOURCE_DIR}/tools/fonts/fluent_icon_aliases.json")
 configure_file(
-    "${FLUENTQT_PYSIDE6_GALLERY_ICON_CATALOG}"
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/icon_catalog.json"
-    COPYONLY)
-configure_file(
-    "${FLUENTQT_PYSIDE6_GALLERY_ICON_ALIASES}"
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_PACKAGE_DIR}/icon_aliases.json"
+    "${FLUENTQT_PYSIDE6_DESIGN_ICON_ALIASES}"
+    "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/_icon_aliases.json"
     COPYONLY)
 list(APPEND FLUENTQT_PYSIDE6_PYTHON_SOURCE_PATHS
-    ${FLUENTQT_PYSIDE6_GALLERY_ASSET_FILES}
-    "${FLUENTQT_PYSIDE6_GALLERY_ICON_CATALOG}"
-    "${FLUENTQT_PYSIDE6_GALLERY_ICON_ALIASES}")
-
-# The native C++ Gallery is the canonical route and SampleCard catalog. Generate
-# the packaged Python contract directly from those sources so the two apps
-# cannot silently drift into different component/sample inventories.
-file(GLOB FLUENTQT_PYSIDE6_NATIVE_GALLERY_SAMPLE_SOURCES CONFIGURE_DEPENDS
-    "${PROJECT_SOURCE_DIR}/app/view/widgets/samples/*Samples.cpp")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${PROJECT_SOURCE_DIR}/app/model/GalleryComponentCatalog.cpp"
-    "${PROJECT_SOURCE_DIR}/app/model/GalleryContentCatalog.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/api-manifest.json"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_gallery_contract.py")
-set(FLUENTQT_PYSIDE6_GALLERY_CONTRACT
-    "${FLUENTQT_PYSIDE6_PACKAGE_DIR}/gallery/contract.json")
-execute_process(
-    COMMAND "${Python_EXECUTABLE}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_gallery_contract.py"
-        --project-root "${PROJECT_SOURCE_DIR}"
-        --output "${FLUENTQT_PYSIDE6_GALLERY_CONTRACT}"
-    RESULT_VARIABLE FLUENTQT_PYSIDE6_GALLERY_CONTRACT_RESULT
-    ERROR_VARIABLE FLUENTQT_PYSIDE6_GALLERY_CONTRACT_ERROR)
-if(NOT FLUENTQT_PYSIDE6_GALLERY_CONTRACT_RESULT EQUAL 0)
-    message(FATAL_ERROR
-        "Unable to generate the PySide6 Gallery parity contract:\n"
-        "${FLUENTQT_PYSIDE6_GALLERY_CONTRACT_ERROR}")
-endif()
-list(APPEND FLUENTQT_PYSIDE6_PYTHON_SOURCE_PATHS
-    "${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_gallery_contract.py"
-    "${CMAKE_CURRENT_SOURCE_DIR}/api-manifest.json"
-    "${PROJECT_SOURCE_DIR}/app/model/GalleryComponentCatalog.cpp"
-    "${PROJECT_SOURCE_DIR}/app/model/GalleryContentCatalog.cpp"
-    ${FLUENTQT_PYSIDE6_NATIVE_GALLERY_SAMPLE_SOURCES})
+    "${FLUENTQT_PYSIDE6_DESIGN_ICON_ALIASES}")
 
 set(FLUENTQT_PYSIDE6_STUB_PATHS)
 foreach(FLUENTQT_PYSIDE6_STUB_FILE IN LISTS FLUENTQT_PYSIDE6_STUB_FILES)
@@ -512,38 +419,9 @@ foreach(FLUENTQT_PYSIDE6_PYTHON_FILE
         COMPONENT FluentQtPySide6
         EXCLUDE_FROM_ALL)
 endforeach()
-foreach(FLUENTQT_PYSIDE6_GALLERY_FILE
-        IN LISTS FLUENTQT_PYSIDE6_GALLERY_FILES)
-    install(FILES
-        "${CMAKE_CURRENT_SOURCE_DIR}/src/fluentqt/gallery/${FLUENTQT_PYSIDE6_GALLERY_FILE}"
-        DESTINATION fluentqt/gallery
-        COMPONENT FluentQtPySide6
-        EXCLUDE_FROM_ALL)
-endforeach()
-install(FILES
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/app-icon.png"
-    DESTINATION fluentqt/gallery/assets
-    COMPONENT FluentQtPySide6
-    EXCLUDE_FROM_ALL)
-install(FILES "${FLUENTQT_PYSIDE6_GALLERY_ICON_CATALOG}"
-    DESTINATION fluentqt/gallery/assets
-    RENAME icon_catalog.json
-    COMPONENT FluentQtPySide6
-    EXCLUDE_FROM_ALL)
-install(FILES "${FLUENTQT_PYSIDE6_GALLERY_ICON_ALIASES}"
-    DESTINATION fluentqt/gallery/assets
-    RENAME icon_aliases.json
-    COMPONENT FluentQtPySide6
-    EXCLUDE_FROM_ALL)
-install(DIRECTORY
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/control_images"
-    "${FLUENTQT_PYSIDE6_GALLERY_ASSET_SOURCE_DIR}/home_header_tiles"
-    DESTINATION fluentqt/gallery/assets
-    COMPONENT FluentQtPySide6
-    EXCLUDE_FROM_ALL
-    FILES_MATCHING PATTERN "*.png")
-install(FILES "${FLUENTQT_PYSIDE6_GALLERY_CONTRACT}"
-    DESTINATION fluentqt/gallery
+install(FILES "${FLUENTQT_PYSIDE6_DESIGN_ICON_ALIASES}"
+    DESTINATION fluentqt
+    RENAME _icon_aliases.json
     COMPONENT FluentQtPySide6
     EXCLUDE_FROM_ALL)
 foreach(FLUENTQT_PYSIDE6_STUB_PATH IN LISTS FLUENTQT_PYSIDE6_STUB_PATHS)
@@ -643,6 +521,18 @@ if(BUILD_TESTING)
     set_tests_properties(test_pyside6_bindings PROPERTIES
         ENVIRONMENT
             "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen;FLUENTQT_EXPECTED_VERSION=${PROJECT_VERSION}"
+        LABELS "pyside;unit;ci_fast"
+        TIMEOUT 60)
+
+    add_test(
+        NAME test_pyside6_foundation_authoring
+        COMMAND "${Python_EXECUTABLE}"
+            -X faulthandler
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_foundation_authoring.py"
+            -v)
+    set_tests_properties(test_pyside6_foundation_authoring PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
         LABELS "pyside;unit;ci_fast"
         TIMEOUT 60)
 
@@ -836,25 +726,35 @@ if(BUILD_TESTING)
         LABELS "pyside;unit;ci_fast"
         TIMEOUT 30)
 
-    add_test(
-        NAME test_pyside6_gallery
-        COMMAND "${Python_EXECUTABLE}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_gallery.py")
-    set_tests_properties(test_pyside6_gallery PROPERTIES
-        ENVIRONMENT
-            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
-        LABELS "pyside;unit;ci_fast"
-        TIMEOUT 90)
+    if(FLUENT_QT_BUILD_PYSIDE6_GALLERY)
+        add_test(
+            NAME test_pyside6_gallery
+            COMMAND "${Python_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery.py")
+        set_tests_properties(test_pyside6_gallery PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 90)
 
-    add_test(
-        NAME test_pyside6_gallery_contract_generator
-        COMMAND "${Python_EXECUTABLE}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_gallery_contract_generator.py"
-            --project-root "${PROJECT_SOURCE_DIR}"
-            --contract "${FLUENTQT_PYSIDE6_GALLERY_CONTRACT}")
-    set_tests_properties(test_pyside6_gallery_contract_generator PROPERTIES
-        LABELS "pyside;unit;ci_fast"
-        TIMEOUT 30)
+        add_test(
+            NAME test_pyside6_gallery_contract_generator
+            COMMAND "${Python_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_contract_generator.py"
+                --project-root "${PROJECT_SOURCE_DIR}"
+                --contract "${FLUENTQT_PYSIDE6_GALLERY_CONTRACT}")
+        set_tests_properties(test_pyside6_gallery_contract_generator PROPERTIES
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 30)
+
+        add_test(
+            NAME test_pyside6_gallery_wheel_builder
+            COMMAND "${Python_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_wheel_builder.py")
+        set_tests_properties(test_pyside6_gallery_wheel_builder PROPERTIES
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 30)
+    endif()
 
     add_test(
         NAME test_pyside6_wheel_builder
@@ -1208,19 +1108,21 @@ if(BUILD_TESTING)
         LABELS "pyside;acceptance;ci_fast"
         TIMEOUT 30)
 
-    add_test(
-        NAME test_pyside6_gallery_acceptance
-        COMMAND "${Python_EXECUTABLE}"
-            -m fluentqt.gallery
-            --walk-routes
-            --route home
-            --snapshot "${PROJECT_BINARY_DIR}/pyside6-gallery.png"
-            --report "${PROJECT_BINARY_DIR}/pyside6-gallery.json")
-    set_tests_properties(test_pyside6_gallery_acceptance PROPERTIES
-        ENVIRONMENT
-            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
-        LABELS "pyside;acceptance;ci_fast"
-        TIMEOUT 120)
+    if(FLUENT_QT_BUILD_PYSIDE6_GALLERY)
+        add_test(
+            NAME test_pyside6_gallery_acceptance
+            COMMAND "${Python_EXECUTABLE}"
+                -m fluentqt_gallery
+                --walk-routes
+                --route home
+                --snapshot "${PROJECT_BINARY_DIR}/pyside6-gallery.png"
+                --report "${PROJECT_BINARY_DIR}/pyside6-gallery.json")
+        set_tests_properties(test_pyside6_gallery_acceptance PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;acceptance;ci_fast"
+            TIMEOUT 120)
+    endif()
 
     add_test(
         NAME test_pyside6_window_chrome_example

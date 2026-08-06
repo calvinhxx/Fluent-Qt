@@ -2,6 +2,9 @@
 #define FLUENTQT_PYSIDE6_BINDINGAPI_H
 
 #include <QFont>
+#include <QMargins>
+#include <QObject>
+#include <QPointer>
 #include <QSizeF>
 #include <QStringList>
 #include <QVariantList>
@@ -40,7 +43,9 @@
 #include <components/dialogs_flyouts/Flyout.h>
 #include <components/dialogs_flyouts/Popup.h>
 #include <components/dialogs_flyouts/TeachingTip.h>
+#include <components/foundation/FluentElement.h>
 #include <components/foundation/FontIcon.h>
+#include <components/foundation/QMLPlus.h>
 #include <components/foundation/StyleThemeCatalog.h>
 #include <components/layout/Accordion.h>
 #include <components/layout/Card.h>
@@ -99,6 +104,88 @@ enum class SelectionMode {
     Extended
 };
 
+enum class BindingMode {
+    OneWay,
+    TwoWay
+};
+
+enum class AnchorEdge {
+    None,
+    Left,
+    Right,
+    Top,
+    Bottom,
+    HorizontalCenter,
+    VerticalCenter
+};
+
+class AnchorSpecPrivate;
+
+class AnchorSpec {
+public:
+    AnchorSpec();
+    AnchorSpec(const AnchorSpec& other);
+    AnchorSpec& operator=(const AnchorSpec& other);
+    ~AnchorSpec();
+
+    void setAnchor(AnchorEdge sourceEdge,
+                   QWidget* target,
+                   AnchorEdge targetEdge,
+                   int offset = 0);
+    void setFill(const QMargins& margins = QMargins());
+
+private:
+    friend class AnchorLayout;
+    AnchorSpecPrivate* d_ptr;
+};
+
+class AnchorLayout : public QObject {
+public:
+    explicit AnchorLayout(QWidget* parent = nullptr);
+    ~AnchorLayout() override;
+
+    void addWidget(QWidget* widget, const AnchorSpec& anchors);
+
+private:
+    QPointer<fluent::AnchorLayout> m_layout;
+};
+
+class StateGroupPrivate;
+
+class StateGroup : public QObject, public fluent::QMLPlus {
+public:
+    explicit StateGroup(QObject* parent = nullptr);
+    ~StateGroup() override;
+
+    bool addStateChange(const QString& name,
+                        QObject* target,
+                        const QString& propertyName,
+                        const QVariant& value);
+    void clearStateDefinition(const QString& name);
+    bool hasState(const QString& name) const;
+    void setState(const QString& name);
+    QString state() const;
+
+private:
+    StateGroupPrivate* d_ptr;
+};
+
+class FluentWidget
+    : public QWidget,
+      public fluent::FluentElement,
+      public fluent::QMLPlus {
+public:
+    explicit FluentWidget(QWidget* parent = nullptr);
+    ~FluentWidget() override;
+
+    QVariantMap themeTokensForBinding() const;
+    QFont themeFontForBinding(
+        Typography::FontRole role = Typography::FontRole::Body) const;
+    fluent::binding::Theme effectiveThemeForBinding() const;
+    fluent::binding::DesignLanguage designLanguageForBinding() const;
+    void onThemeUpdated() override;
+};
+
 class ScrollViewZoomAwareWidget
     : public QWidget,
       public fluent::scrolling::ScrollViewZoomAware {
@@ -127,6 +214,11 @@ void resetThemeTokens();
 void setFontScale(qreal scale);
 qreal fontScale();
 fluent::binding::DesignLanguage currentDesignLanguage();
+bool bindProperties(QObject* source,
+                    const QString& sourceProperty,
+                    QObject* target,
+                    const QString& targetProperty,
+                    fluent::binding::BindingMode mode);
 fluent::binding::SelectionMode flowViewSelectionMode(
     const fluent::collections::FlowView* view);
 void setFlowViewSelectionMode(

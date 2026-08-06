@@ -26,8 +26,30 @@ assert_type(fluentqt.font_for_role(fluentqt.FontRole.Body), QFont)
 assert_type(fluentqt.font_scale(), float)
 assert_type(fluentqt.theme_revision(), int)
 
+fluent_widget = fluentqt.FluentWidget()
+assert_type(fluent_widget.effective_theme(), fluentqt.Theme)
+assert_type(fluent_widget.design_language(), fluentqt.DesignLanguage)
+assert_type(fluent_widget.theme_font(), QFont)
+assert_type(fluent_widget.theme_tokens(), fluentqt.ThemeTokens)
+assert_type(fluentqt.Icons.Add, str)
+assert_type(fluentqt.Typography.Icons.Add, str)
+assert_type(fluentqt.IconSize.Standard, int)
+assert_type(fluentqt.Spacing.Border.Focused, int)
+assert_type(fluentqt.CornerRadius.Control, int)
+
 button = Button("Typed button")
 button.setFluentStyle(Button.ButtonStyle.Accent)
+assert_type(fluentqt.bind(button, "enabled", fluent_widget, "enabled"), None)
+
+states = fluentqt.StateGroup()
+assert_type(
+    states.add("disabled", {button: {"enabled": False}}),
+    fluentqt.StateGroup,
+)
+anchor_spec = fluentqt.anchors(center_in=fluent_widget)
+assert_type(anchor_spec, fluentqt.AnchorSpec)
+anchor_layout = fluentqt.AnchorLayout(fluent_widget)
+anchor_layout.addWidget(button, anchor_spec)
 
 scroll_view = ScrollView()
 scroll_view.setOwnedContentWidget(QWidget())
