@@ -9,6 +9,7 @@ import sys
 from typing import Callable, Iterable
 
 import fluentqt
+import fluentqt._fluentqt as _native
 import shiboken6
 from PySide6.QtCore import (
     QCoreApplication,
@@ -82,7 +83,7 @@ def _parse_rgba(value: str) -> QColor:
     return QColor("#" + value)
 
 
-def _theme_tokens() -> dict[str, QColor]:
+def _global_theme_tokens() -> dict[str, QColor]:
     """Return the resolved built-in token palette used by the C++ topic page."""
 
     dark = fluentqt.current_theme() == fluentqt.Theme.Dark
@@ -269,6 +270,35 @@ def _theme_tokens() -> dict[str, QColor]:
     for index, color in enumerate(charts, 1):
         values["chart{0}".format(index)] = QColor(color)
     return values
+
+
+def _theme_snapshot(context=None) -> dict[str, object]:
+    """Resolve tokens from the nearest Fluent widget in a preview subtree."""
+
+    widget = context
+    while widget is not None and not isinstance(widget, QWidget):
+        parent = getattr(widget, "parent", None)
+        widget = parent() if callable(parent) else None
+    if widget is not None:
+        snapshot = dict(_native.themeTokensForWidgetForBinding(widget))
+        if snapshot:
+            colors = dict(snapshot["colors"])
+            for index, color in enumerate(colors.get("charts", ()), 1):
+                colors["chart{0}".format(index)] = QColor(color)
+            snapshot["colors"] = colors
+            return snapshot
+
+    return {
+        "theme": int(fluentqt.current_theme()),
+        "designLanguage": int(fluentqt.current_design_language()),
+        "colors": _global_theme_tokens(),
+    }
+
+
+def _theme_tokens(context=None) -> dict[str, QColor]:
+    """Return colors for the effective preview or application theme."""
+
+    return _theme_snapshot(context)["colors"]
 
 
 def _radii() -> tuple[int, int]:

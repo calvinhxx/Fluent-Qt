@@ -5537,9 +5537,10 @@ class _GalleryListRowDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         if not index.isValid():
             return
-        from .foundation_pages import _theme_tokens
+        from .foundation_pages import _theme_snapshot
 
-        colors = _theme_tokens()
+        snapshot = _theme_snapshot(self)
+        colors = snapshot["colors"]
         painter.save()
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
@@ -5549,15 +5550,21 @@ class _GalleryListRowDelegate(QStyledItemDelegate):
         pressed = bool(option.state & QStyle.StateFlag.State_Sunken) and hovered
         background = QColor(Qt.GlobalColor.transparent)
         text_on_accent = False
-        language = str(fluentqt.current_design_language())
-        dark = fluentqt.current_theme() == fluentqt.Theme.Dark
-        if enabled and "Material" in language:
+        language = int(snapshot["designLanguage"])
+        dark = int(snapshot["theme"]) == int(fluentqt.Theme.Dark)
+        if (
+            enabled
+            and language == int(fluentqt.DesignLanguage.DesignMaterial)
+        ):
             if selected:
                 background = QColor(colors["accentDefault"])
                 background.setAlphaF(0.28 if dark else 0.16)
             elif hovered:
                 background = QColor(255, 255, 255, 0x14) if dark else QColor(0, 0, 0, 0x14)
-        elif enabled and ("Cupertino" in language or "Mac" in language):
+        elif (
+            enabled
+            and language == int(fluentqt.DesignLanguage.DesignCupertino)
+        ):
             if selected:
                 background = colors["accentDefault"]
                 text_on_accent = True

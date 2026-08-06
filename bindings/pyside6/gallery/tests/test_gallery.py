@@ -83,6 +83,7 @@ from fluentqt_gallery.foundation_pages import (
     _catalog_glyphs_for_size,
     _icon_font,
     _load_icon_catalog,
+    _theme_snapshot,
     _theme_tokens,
 )
 from fluentqt_gallery.identity import (
@@ -830,6 +831,55 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         self.assertTrue(shiboken6.isValid(view))
         root.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
+    def test_custom_samples_follow_the_local_preview_theme(self):
+        original_theme = fluentqt.current_theme()
+        fluentqt.set_theme(fluentqt.Theme.Light)
+        preview = fluentqt.Card()
+        preview.setProperty(
+            "fluentThemeOverride", int(fluentqt.Theme.Dark)
+        )
+        cases = (
+            (
+                "tree-view",
+                "tree-view-basic",
+                "row_delegate",
+                "_theme_snapshot(self)",
+            ),
+            (
+                "navigation-view",
+                "navigation-view-chrome-slots",
+                "surface",
+                "_theme_tokens(self)",
+            ),
+        )
+        try:
+            for route_id, sample_id, context_name, source_marker in cases:
+                with self.subTest(route=route_id, sample=sample_id):
+                    result = build_sample(route_id, sample_id, preview)
+                    try:
+                        namespace = (
+                            result.widget._fluentqt_gallery_source_namespace
+                        )
+                        snapshot = _theme_snapshot(namespace[context_name])
+                        self.assertEqual(
+                            snapshot["theme"], int(fluentqt.Theme.Dark)
+                        )
+                        self.assertEqual(
+                            QColor(snapshot["colors"]["textPrimary"]),
+                            QColor("#ffffff"),
+                        )
+                        self.assertIn(source_marker, result.preview_source)
+                        self.assertNotIn(
+                            "_theme_tokens()", result.preview_source
+                        )
+                    finally:
+                        result.widget.close()
+                        result.widget.deleteLater()
+        finally:
+            preview.deleteLater()
+            fluentqt.set_theme(original_theme)
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
     def test_automated_gallery_keeps_native_photo_loading_contract(self):
         previous = QApplication.instance().property(

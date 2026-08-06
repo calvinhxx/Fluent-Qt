@@ -214,6 +214,8 @@ void resetThemeTokens();
 void setFontScale(qreal scale);
 qreal fontScale();
 fluent::binding::DesignLanguage currentDesignLanguage();
+QVariantMap themeTokensForWidgetForBinding(const QWidget* widget);
+void refreshWidgetThemeForBinding(QWidget* widget);
 bool bindProperties(QObject* source,
                     const QString& sourceProperty,
                     QObject* target,

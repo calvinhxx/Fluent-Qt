@@ -51,7 +51,7 @@ _MENUS_HELPER = _SourceHelper(dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setPen(QPen(colors["strokeCard"], 1.0))
@@ -1444,7 +1444,7 @@ _NAV_EXACT_HELPER = dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
@@ -1631,7 +1631,7 @@ _NAV_EXACT_HELPER = dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setPen(QPen(colors["strokeCard"], 1.0))
@@ -1649,7 +1649,7 @@ _NAV_EXACT_HELPER = dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
@@ -1731,7 +1731,7 @@ _NAV_EXACT_HELPER = dedent(
                     break
 
         def draw_card(self, painter, rect, title, value, accent):
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             painter.setPen(colors["strokeCard"])
             painter.setBrush(colors["bgCanvas"])
             painter.drawRoundedRect(rect, 4.0, 4.0)
@@ -2589,7 +2589,7 @@ register_source_samples(
                     class NavigationSampleSurface(QWidget):
                         def paintEvent(self, event):
                             del event
-                            colors = _theme_tokens()
+                            colors = _theme_tokens(self)
                             painter = QPainter(self)
                             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
                             painter.setPen(QPen(colors["strokeCard"], 1.0))

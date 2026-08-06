@@ -20,7 +20,7 @@ _PAINTED_SCROLLING_IMPORTS = (
     "from PySide6.QtCore import QRect, QRectF, QSize, QSizeF, Qt\n"
     "from PySide6.QtGui import (QColor, QFont, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap)\n"
     "from PySide6.QtWidgets import (QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget)\n"
-    "from fluentqt_gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import (_theme_snapshot, _theme_tokens)"
 )
 
 _PAGER_PICTURE_HELPER = dedent(
@@ -38,11 +38,13 @@ _PAGER_PICTURE_HELPER = dedent(
             layout.setAlignment(
                 Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
             )
-            self.setProperty("fluentSurfaceColor", _theme_tokens()["bgCanvas"])
+            self.setProperty(
+                "fluentSurfaceColor", _theme_tokens(self)["bgCanvas"]
+            )
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            colors = _theme_tokens(self)
             self.setProperty("fluentSurfaceColor", colors["bgCanvas"])
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -238,7 +240,8 @@ _SCROLL_CANVAS_HELPER = dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            snapshot = _theme_snapshot(self)
+            colors = snapshot["colors"]
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
@@ -262,7 +265,8 @@ _SCROLL_CANVAS_HELPER = dedent(
                 row = index // 6
                 tile = QRect(28 + col * 102, 76 + row * 96, 72, 64)
                 fill = QColor(swatches[index % len(swatches)])
-                fill.setAlphaF(0.72 if fluentqt.current_theme() == fluentqt.Theme.Dark else 0.88)
+                dark = int(snapshot["theme"]) == int(fluentqt.Theme.Dark)
+                fill.setAlphaF(0.72 if dark else 0.88)
                 painter.setBrush(fill)
                 painter.setPen(Qt.PenStyle.NoPen)
                 painter.drawRoundedRect(tile, 4.0, 4.0)
@@ -404,7 +408,8 @@ _ANNOTATED_SCROLLBAR_HELPER = dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            snapshot = _theme_snapshot(self)
+            colors = snapshot["colors"]
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
@@ -413,7 +418,7 @@ _ANNOTATED_SCROLLBAR_HELPER = dedent(
             font = fluentqt.font_for_role(fluentqt.FontRole.Caption)
             font.setWeight(QFont.Weight.DemiBold)
             painter.setFont(font)
-            dark = fluentqt.current_theme() == fluentqt.Theme.Dark
+            dark = int(snapshot["theme"]) == int(fluentqt.Theme.Dark)
             per_row = items_per_row_for_width(self.width())
             item_index = 0
             for name, color, count in COLOR_SECTIONS:
