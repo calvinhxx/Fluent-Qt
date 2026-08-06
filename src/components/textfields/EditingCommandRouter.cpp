@@ -207,18 +207,20 @@ TextEdit* owningTextEdit(QWidget* widget)
     return nullptr;
 }
 
-bool fullySelected(const QLineEdit* edit)
+bool fullySelected(const QLineEdit* edit,
+                   int selectionStart,
+                   int selectionLength)
 {
     return edit && !edit->text().isEmpty()
-        && edit->selectionStart() == 0
-        && edit->selectedText().size() == edit->text().size();
+        && selectionStart == 0
+        && selectionLength == edit->text().size();
 }
 
-bool fullySelected(const QTextEdit* edit)
+bool fullySelected(const QTextEdit* edit,
+                   const QTextCursor& cursor)
 {
     if (!edit || edit->document()->isEmpty())
         return false;
-    const QTextCursor cursor = edit->textCursor();
     return cursor.hasSelection()
         && cursor.selectionStart() == 0
         && cursor.selectionEnd() >= edit->document()->characterCount() - 1;
@@ -444,12 +446,26 @@ public:
     {
         std::array<bool, 7> enabled = {};
         if (hasTarget() && target->isEnabled()) {
+            const bool presentationActive =
+                isRouterPresentationActive();
             if (kind == TargetKind::LineEdit) {
                 const auto* edit =
                     qobject_cast<const QLineEdit*>(target.data());
                 if (edit) {
                     const bool writable = !edit->isReadOnly();
-                    const bool selected = edit->hasSelectedText();
+                    const int selectionStart =
+                        presentationActive
+                        ? lineSelectionStart
+                        : edit->selectionStart();
+                    const int selectionLength =
+                        presentationActive
+                        ? lineSelectionLength
+                        : (selectionStart >= 0
+                               ? edit->selectedText().size()
+                               : 0);
+                    const bool selected =
+                        selectionStart >= 0
+                        && selectionLength > 0;
                     const bool exportAllowed =
                         !passwordTarget
                         || passwordTarget->passwordRevealMode()
@@ -468,15 +484,23 @@ public:
                         writable && mimeData && mimeData->hasText();
                     enabled[5] = writable && selected;
                     enabled[6] =
-                        !edit->text().isEmpty() && !fullySelected(edit);
+                        !edit->text().isEmpty()
+                        && !fullySelected(
+                            edit,
+                            selectionStart,
+                            selectionLength);
                 }
             } else if (kind == TargetKind::TextEdit) {
                 const auto* edit =
                     qobject_cast<const QTextEdit*>(target.data());
                 if (edit) {
                     const bool writable = !edit->isReadOnly();
-                    const bool selected =
-                        edit->textCursor().hasSelection();
+                    const QTextCursor cursor =
+                        presentationActive
+                        && !textCursorSnapshot.isNull()
+                        ? textCursorSnapshot
+                        : edit->textCursor();
+                    const bool selected = cursor.hasSelection();
                     enabled[0] =
                         writable && edit->document()->isUndoAvailable();
                     enabled[1] =
@@ -487,7 +511,7 @@ public:
                     enabled[5] = writable && selected;
                     enabled[6] =
                         !edit->document()->isEmpty()
-                        && !fullySelected(edit);
+                        && !fullySelected(edit, cursor);
                 }
             }
         }

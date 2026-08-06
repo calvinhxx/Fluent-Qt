@@ -99,6 +99,10 @@ TEST_F(ToolTipTest, InitialState) {
     EXPECT_DOUBLE_EQ(tooltip.windowOpacity(), 1.0);
     EXPECT_DOUBLE_EQ(
         opacityEffectFor(tooltip)->opacity(), 0.0);
+    auto* textBlock = tooltip.findChild<Label*>();
+    ASSERT_NE(textBlock, nullptr);
+    EXPECT_TRUE(textBlock->styleSheet().contains(
+        QStringLiteral("color:")));
 }
 
 TEST_F(ToolTipTest, SetText) {

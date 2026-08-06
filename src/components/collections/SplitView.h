@@ -20,17 +20,6 @@ struct SplitViewPaneOptions {
     int preferredSize = 160;
     int maximumSize = 16777215;
     bool fill = false;
-
-    SplitViewPaneOptions(int minimumPaneSize = 48,
-                         int preferredPaneSize = 160,
-                         int maximumPaneSize = 16777215,
-                         bool fillPane = false)
-        : minimumSize(minimumPaneSize)
-        , preferredSize(preferredPaneSize)
-        , maximumSize(maximumPaneSize)
-        , fill(fillPane)
-    {
-    }
 };
 
 /**

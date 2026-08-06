@@ -83,6 +83,13 @@ TEST_F(ContentDialogTest, SetTitle) {
     ContentDialog dialog(window);
     dialog.setTitle("Save your work?");
     EXPECT_EQ(dialog.title(), "Save your work?");
+    auto* titleLabel = dialog.findChild<Label*>();
+    ASSERT_NE(titleLabel, nullptr);
+    EXPECT_EQ(
+        titleLabel->textColorRole(),
+        Label::TextColorRole::Primary);
+    EXPECT_TRUE(titleLabel->styleSheet().contains(
+        QStringLiteral("color:")));
 
     dialog.setTitle("");
     EXPECT_TRUE(dialog.title().isEmpty());

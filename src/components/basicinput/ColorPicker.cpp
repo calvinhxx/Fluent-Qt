@@ -189,6 +189,15 @@ void ColorPicker::initUi() {
     const auto& spacing = themeSpacing();
     const int pad = spacing.padding.card;
     const int gap = spacing.gap.normal;
+    const auto configureFieldLabel = [](fluent::textfields::Label* label) {
+        // Color through the label's own style sheet so a styled host (for
+        // example GallerySampleCard) cannot replace WindowText with black.
+        // zh_CN: 通过标签自身样式表上色，避免带样式表的宿主（如
+        // GallerySampleCard）把 WindowText 覆盖成黑色。
+        label->setTextColorRole(
+            fluent::textfields::Label::TextColorRole::Primary);
+        label->setFixedWidth(48);
+    };
 
     // Input area: Hex plus four RGBA rows. zh_CN: 输入区——Hex + RGBA 五行。
     auto* inputsPanel = new QWidget(this);
@@ -204,7 +213,7 @@ void ColorPicker::initUi() {
         row->setContentsMargins(0, 0, 0, 0);
         row->setSpacing(spacing.gap.tight);
         auto* label = new fluent::textfields::Label(labelText, inputsPanel);
-        label->setFixedWidth(48);
+        configureFieldLabel(label);
         row->addWidget(label);
         edit = new fluent::textfields::LineEdit(inputsPanel);
         edit->setClearButtonEnabled(false);
@@ -221,7 +230,7 @@ void ColorPicker::initUi() {
     alphaInputRow->setContentsMargins(0, 0, 0, 0);
     alphaInputRow->setSpacing(spacing.gap.tight);
     auto* alphaInputLabel = new fluent::textfields::Label("Alpha:", m_alphaInputRowWidget);
-    alphaInputLabel->setFixedWidth(48);
+    configureFieldLabel(alphaInputLabel);
     m_aEdit = new fluent::textfields::LineEdit(m_alphaInputRowWidget);
     m_aEdit->setClearButtonEnabled(false);
     alphaInputRow->addWidget(alphaInputLabel);
@@ -253,7 +262,7 @@ void ColorPicker::initUi() {
     valueRow->setContentsMargins(0, 0, 0, 0);
     valueRow->setSpacing(spacing.gap.tight);
     auto* valueLabel = new fluent::textfields::Label("Value:", slidersPanel);
-    valueLabel->setFixedWidth(48);
+    configureFieldLabel(valueLabel);
     m_valueSlider = new Slider(Qt::Horizontal, slidersPanel);
     m_valueSlider->setMinimum(0);
     m_valueSlider->setMaximum(100);
@@ -268,7 +277,7 @@ void ColorPicker::initUi() {
     alphaRow->setContentsMargins(0, 0, 0, 0);
     alphaRow->setSpacing(spacing.gap.tight);
     auto* alphaLabel = new fluent::textfields::Label("Alpha:", m_alphaRowWidget);
-    alphaLabel->setFixedWidth(48);
+    configureFieldLabel(alphaLabel);
     m_alphaSlider = new Slider(Qt::Horizontal, m_alphaRowWidget);
     m_alphaSlider->setMinimum(0);
     m_alphaSlider->setMaximum(255);

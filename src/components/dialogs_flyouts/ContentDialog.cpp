@@ -39,6 +39,8 @@ void ContentDialog::setupInternalLayout() {
     // --- Title ---
     m_titleLabel = new fluent::textfields::Label(this);
     m_titleLabel->setFluentTypography(Typography::FontRole::Subtitle);
+    m_titleLabel->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Primary);
     m_titleLabel->setWordWrap(true);
     m_titleLabel->setVisible(false);
     m_titleLabel->anchors()->top   = {this, Edge::Top,   kDialogPadding};

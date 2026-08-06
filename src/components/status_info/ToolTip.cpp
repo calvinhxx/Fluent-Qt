@@ -86,11 +86,12 @@ ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
     setLayout(layout);
     applyLayoutMargins();
 
-    // 3. Initial colors. zh_CN: 初始颜色设置。
-    const auto& c = themeColorsRef();
-    m_bgColor = c.bgLayer;  // Figma tooltip surface is near-white (#FCFCFC); bgLayer matches in both themes.
-    m_borderColor = c.strokeDivider;
-    m_textColor = c.textPrimary;
+    // 3. Initialize both paint colors and the label's own theme-aware text
+    // style. This is required even before a theme source is attached because
+    // a parent may already install QStyleSheetStyle over the subtree.
+    // zh_CN: 初始化绘制颜色与标签自身的主题文字样式；即使尚未设置主题源也必须
+    // 执行，因为父级可能已经在子树上安装 QStyleSheetStyle。
+    onThemeUpdated();
 }
 
 ToolTip* ToolTip::attach(QWidget* target, const QString& text, Placement placement)
