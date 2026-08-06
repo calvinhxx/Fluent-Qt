@@ -36,6 +36,7 @@ jobs:
       mode: ${{ steps.matrix.outputs.mode }}
       pyside_release_matrix: ${{ steps.matrix.outputs.pyside_release_matrix }}
       should_build: ${{ steps.changes.outputs.should_build }}
+      should_build_pyside: ${{ steps.changes.outputs.should_build_pyside }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -46,13 +47,14 @@ jobs:
           python3 .github/scripts/validate-package-matrix.py
           python3 .github/scripts/validate-pyside-wheel-matrix.py
           python3 .github/scripts/test_validate_pyside_wheel_matrix.py
+          python3 .github/scripts/test_classify_ci_changes.py
           python3 bindings/pyside6/tools/verify_api_policy.py
           python3 bindings/pyside6/tests/test_api_policy.py
           python3 bindings/pyside6/tests/test_manylinux_wheel.py
           python3 .github/scripts/validate-project-metadata.py
           python3 .github/scripts/validate-gallery-boundary.py
 
-      - name: Detect documentation-only pull request
+      - name: Classify pull-request changes
         id: changes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -62,6 +64,7 @@ jobs:
           set -euo pipefail
 
           should_build=true
+          should_build_pyside=true
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             changed_files="$(
               gh api --paginate \
@@ -73,24 +76,37 @@ jobs:
               exit 1
             fi
 
-            should_build=false
-            while IFS= read -r file; do
-              case "$file" in
-                *.md|docs/*|site/*|LICENSE|LICENSE.*|.github/ISSUE_TEMPLATE/*)
-                  ;;
-                *)
-                  should_build=true
-                  break
-                  ;;
-              esac
-            done <<< "$changed_files"
+            classification="$(
+              python3 .github/scripts/classify_ci_changes.py \
+                <<< "$changed_files"
+            )"
+            should_build="$(
+              sed -n 's/^should_build=//p' <<< "$classification"
+            )"
+            should_build_pyside="$(
+              sed -n 's/^should_build_pyside=//p' <<< "$classification"
+            )"
           fi
 
+          case "$should_build:$should_build_pyside" in
+            true:true|true:false|false:false) ;;
+            *)
+              echo "::error::Invalid CI change classification: $should_build:$should_build_pyside"
+              exit 1
+              ;;
+          esac
+
           echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
+          echo "should_build_pyside=$should_build_pyside" >> "$GITHUB_OUTPUT"
           if [[ "$should_build" == "true" ]]; then
             echo "The build matrix is required."
           else
             echo "Documentation-only pull request: skipping the build matrix."
+          fi
+          if [[ "$should_build_pyside" == "true" ]]; then
+            echo "The PySide6 matrix is required."
+          else
+            echo "No binding-affecting files changed: skipping the PySide6 matrix."
           fi
 
       - name: Select validation tier
@@ -897,12 +913,18 @@ jobs:
             echo "::error::Non-library files leaked into the FluentQt source package."
             exit 1
           fi
+          if unzip -Z1 "$archive" | grep -E \
+              '^[^/]+/bindings/pyside6/gallery/'; then
+            echo "::error::The standalone Python Gallery leaked into the library source package."
+            exit 1
+          fi
           archive_entries="$(unzip -Z1 "$archive")"
           for binding_file in \
               .github/scripts/setup-shiboken-clang.py \
               bindings/README.md \
               bindings/pyside6/api-manifest.json \
               bindings/pyside6/CMakeLists.txt \
+              bindings/pyside6/cmake/FluentQtPySide6Gallery.cmake \
               bindings/pyside6/API_COMPATIBILITY.md \
               bindings/pyside6/MANYLINUX.md \
               bindings/pyside6/ROADMAP.md \
@@ -939,6 +961,7 @@ jobs:
               bindings/pyside6/src/fluentqt/basicinput.py \
               bindings/pyside6/src/fluentqt/collections.py \
               bindings/pyside6/src/fluentqt/date_time.py \
+              bindings/pyside6/src/fluentqt/design.py \
               bindings/pyside6/src/fluentqt/dialogs_flyouts.py \
               bindings/pyside6/src/fluentqt/foundation.py \
               bindings/pyside6/src/fluentqt/layout.py \
@@ -949,15 +972,8 @@ jobs:
               bindings/pyside6/src/fluentqt/textfields.py \
               bindings/pyside6/src/fluentqt/windowing.py \
               bindings/pyside6/src/fluentqt/py.typed \
-              bindings/pyside6/src/fluentqt/gallery/__init__.py \
-              bindings/pyside6/src/fluentqt/gallery/__main__.py \
-              bindings/pyside6/src/fluentqt/gallery/app.py \
-              bindings/pyside6/src/fluentqt/gallery/catalog.py \
-              bindings/pyside6/src/fluentqt/gallery/samples.py \
-              bindings/pyside6/src/fluentqt/gallery/window.py \
               bindings/pyside6/tests/test_generated_contract_verifier.py \
               bindings/pyside6/tests/test_api_policy.py \
-              bindings/pyside6/tests/test_gallery.py \
               bindings/pyside6/tests/test_manylinux_wheel.py \
               bindings/pyside6/tests/test_stub_generator.py \
               bindings/pyside6/tests/test_typecheck_smoke.py \
@@ -970,7 +986,8 @@ jobs:
               bindings/pyside6/tools/verify_api_policy.py \
               bindings/pyside6/tools/verify_generated_contracts.py \
               bindings/pyside6/tools/verify_stubs.py \
-              bindings/pyside6/wheel-matrix.json; do
+              bindings/pyside6/wheel-matrix.json \
+              tools/fonts/fluent_icon_aliases.json; do
             if ! grep -x "FluentQt-ci-source/$binding_file" \
                 <<< "$archive_entries" > /dev/null; then
               echo "::error::Missing PySide6 source-package file: $binding_file"
@@ -988,7 +1005,7 @@ jobs:
   pyside6_linux:
     name: PySide6 / Qt 6.2.4 / Linux x64
     needs: plan
-    if: ${{ needs.plan.outputs.should_build == 'true' }}
+    if: ${{ needs.plan.outputs.should_build_pyside == 'true' }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -1038,6 +1055,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
             -DPython_EXECUTABLE="$(command -v python)" \
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
+            -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
             -DFLUENT_QT_BUILD_EXAMPLES=OFF \
             -DFLUENT_QT_BUILD_GALLERY=OFF \
             -DFLUENT_QT_BUILD_TESTS=OFF \
@@ -1107,11 +1125,11 @@ jobs:
             --output-on-failure \
             --no-tests=error
 
-      - name: Build relocatable PySide6 wheel
+      - name: Build relocatable PySide6 wheels
         shell: bash
         run: |
           cmake --build build/pyside6-qt62 \
-            --target fluentqt_pyside6_wheel \
+            --target fluentqt_pyside6_wheels \
             --parallel 4
 
       - name: Test wheel in a clean virtual environment
@@ -1127,10 +1145,18 @@ jobs:
             echo "::error::The FluentQt wheel was not generated."
             exit 1
           fi
+          gallery_wheel="$(
+            find build/pyside6-qt62/gallery-wheelhouse \
+              -maxdepth 1 -type f -name '*.whl' -print -quit
+          )"
+          if [[ -z "$gallery_wheel" ]]; then
+            echo "::error::The FluentQt Gallery wheel was not generated."
+            exit 1
+          fi
 
           clean_venv="${RUNNER_TEMP}/fluentqt-wheel-smoke"
           python -m venv "$clean_venv"
-          "$clean_venv/bin/python" -m pip install "$wheel"
+          "$clean_venv/bin/python" -m pip install "$wheel" "$gallery_wheel"
           wheel_version="$(
             "$clean_venv/bin/python" -c \
               'from importlib.metadata import version; print(version("FluentQt"))'
@@ -1145,6 +1171,15 @@ jobs:
             FLUENTQT_EXPECTED_VERSION="$wheel_version" \
             "$clean_venv/bin/python" \
             bindings/pyside6/tests/test_wheel_smoke.py
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            FLUENTQT_EXPECTED_VERSION="$wheel_version" \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
           "$clean_venv/bin/python" -m pip check
           "$clean_venv/bin/python" -m pip install mypy==2.3.0
           env -u PYTHONPATH \
@@ -1245,7 +1280,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fluentqt-pyside6-qt624-linux-x64
-          path: build/pyside6-qt62/wheelhouse/*.whl
+          path: |
+            build/pyside6-qt62/wheelhouse/*.whl
+            build/pyside6-qt62/gallery-wheelhouse/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 acceptance snapshot
@@ -1267,7 +1304,7 @@ jobs:
   pyside6_windows:
     name: PySide6 / Qt 6.2.4 / Windows x64
     needs: plan
-    if: ${{ needs.plan.outputs.should_build == 'true' }}
+    if: ${{ needs.plan.outputs.should_build_pyside == 'true' }}
     runs-on: windows-2022
     timeout-minutes: 35
     steps:
@@ -1361,6 +1398,7 @@ jobs:
             "-DCMAKE_PREFIX_PATH=$qtRoot",
             "-DPython_EXECUTABLE=$python",
             "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
+            "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",
             "-DFLUENT_QT_BUILD_EXAMPLES=OFF",
             "-DFLUENT_QT_BUILD_GALLERY=OFF",
             "-DFLUENT_QT_BUILD_TESTS=OFF",
@@ -1400,14 +1438,14 @@ jobs:
             --output-on-failure `
             --no-tests=error
 
-      - name: Build relocatable PySide6 wheel
+      - name: Build relocatable PySide6 wheels
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           cmake --build build/pyside6-qt62-windows `
             --config Release `
-            --target fluentqt_pyside6_wheel `
+            --target fluentqt_pyside6_wheels `
             --parallel
 
       - name: Test wheel in a clean virtual environment
@@ -1429,11 +1467,24 @@ jobs:
           if ($wheel.Name -notmatch '-cp310-cp310-win_amd64\.whl$') {
             throw "Unexpected Windows wheel tag: $($wheel.Name)"
           }
+          $galleryWheels = @(
+            Get-ChildItem `
+              -Path build/pyside6-qt62-windows/gallery-wheelhouse `
+              -Filter '*.whl' `
+              -File
+          )
+          if ($galleryWheels.Count -ne 1) {
+            throw "Expected one FluentQt Gallery wheel, found $($galleryWheels.Count)."
+          }
+          $galleryWheel = $galleryWheels[0]
+          if ($galleryWheel.Name -notmatch '-py3-none-any\.whl$') {
+            throw "Unexpected Gallery wheel tag: $($galleryWheel.Name)"
+          }
 
           $cleanVenv = Join-Path $env:RUNNER_TEMP "fluentqt-wheel-smoke-windows"
           python -m venv $cleanVenv
           $cleanPython = Join-Path $cleanVenv "Scripts/python.exe"
-          & $cleanPython -m pip install $wheel.FullName
+          & $cleanPython -m pip install $wheel.FullName $galleryWheel.FullName
           $wheelVersion = & $cleanPython -c 'from importlib.metadata import version; print(version("FluentQt"))'
 
           Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
@@ -1442,6 +1493,7 @@ jobs:
           $env:QT_QPA_PLATFORM = "offscreen"
           $env:FLUENTQT_EXPECTED_VERSION = $wheelVersion.Trim()
           & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
+          & $cleanPython bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
           & $cleanPython -m pip check
           & $cleanPython -m pip install mypy==2.3.0
           & $cleanPython -m mypy `
@@ -1495,7 +1547,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fluentqt-pyside6-qt624-windows-x64
-          path: build/pyside6-qt62-windows/wheelhouse/*.whl
+          path: |
+            build/pyside6-qt62-windows/wheelhouse/*.whl
+            build/pyside6-qt62-windows/gallery-wheelhouse/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 acceptance snapshot
@@ -1517,7 +1571,7 @@ jobs:
   pyside6_macos:
     name: PySide6 / Qt 6.9.3 / macOS arm64
     needs: plan
-    if: ${{ needs.plan.outputs.should_build == 'true' }}
+    if: ${{ needs.plan.outputs.should_build_pyside == 'true' }}
     runs-on: macos-15
     timeout-minutes: 35
     steps:
@@ -1554,6 +1608,7 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
             -DPython_EXECUTABLE="$(command -v python)" \
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
+            -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
             -DFLUENT_QT_BUILD_EXAMPLES=OFF \
             -DFLUENT_QT_BUILD_GALLERY=OFF \
             -DFLUENT_QT_BUILD_TESTS=OFF \
@@ -1587,11 +1642,11 @@ jobs:
             --output-on-failure \
             --no-tests=error
 
-      - name: Build relocatable PySide6 wheel
+      - name: Build relocatable PySide6 wheels
         shell: bash
         run: |
           cmake --build build/pyside6-qt69-macos \
-            --target fluentqt_pyside6_wheel \
+            --target fluentqt_pyside6_wheels \
             --parallel 3
 
       - name: Test wheel in a clean virtual environment
@@ -1607,6 +1662,14 @@ jobs:
             echo "::error::The FluentQt wheel was not generated."
             exit 1
           fi
+          gallery_wheel="$(
+            find build/pyside6-qt69-macos/gallery-wheelhouse \
+              -maxdepth 1 -type f -name '*.whl' -print -quit
+          )"
+          if [[ -z "$gallery_wheel" ]]; then
+            echo "::error::The FluentQt Gallery wheel was not generated."
+            exit 1
+          fi
           case "$(basename "$wheel")" in
             *-cp311-cp311-macosx_12_0_arm64.whl) ;;
             *)
@@ -1617,7 +1680,7 @@ jobs:
 
           clean_venv="${RUNNER_TEMP}/fluentqt-wheel-smoke-macos"
           python -m venv "$clean_venv"
-          "$clean_venv/bin/python" -m pip install "$wheel"
+          "$clean_venv/bin/python" -m pip install "$wheel" "$gallery_wheel"
           wheel_version="$(
             "$clean_venv/bin/python" -c \
               'from importlib.metadata import version; print(version("FluentQt"))'
@@ -1632,6 +1695,15 @@ jobs:
             FLUENTQT_EXPECTED_VERSION="$wheel_version" \
             "$clean_venv/bin/python" \
             bindings/pyside6/tests/test_wheel_smoke.py
+          env \
+            -u PYTHONPATH \
+            -u DYLD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            FLUENTQT_EXPECTED_VERSION="$wheel_version" \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
           "$clean_venv/bin/python" -m pip check
           "$clean_venv/bin/python" -m pip install mypy==2.3.0
           env -u PYTHONPATH \
@@ -1734,7 +1806,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fluentqt-pyside6-qt693-macos-arm64
-          path: build/pyside6-qt69-macos/wheelhouse/*.whl
+          path: |
+            build/pyside6-qt69-macos/wheelhouse/*.whl
+            build/pyside6-qt69-macos/gallery-wheelhouse/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 acceptance snapshot
@@ -1756,7 +1830,7 @@ jobs:
   pyside6_release:
     name: ${{ matrix.name }}
     needs: plan
-    if: ${{ needs.plan.outputs.should_build == 'true' && needs.plan.outputs.mode == 'full' }}
+    if: ${{ needs.plan.outputs.should_build_pyside == 'true' && needs.plan.outputs.mode == 'full' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
@@ -1840,6 +1914,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
             -DPython_EXECUTABLE="$(command -v python)"
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON
+            -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON
             -DFLUENT_QT_BUILD_EXAMPLES=OFF
             -DFLUENT_QT_BUILD_GALLERY=OFF
             -DFLUENT_QT_BUILD_TESTS=OFF
@@ -1869,6 +1944,7 @@ jobs:
             "-DCMAKE_PREFIX_PATH=$qtRoot",
             "-DPython_EXECUTABLE=$python",
             "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
+            "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",
             "-DFLUENT_QT_BUILD_EXAMPLES=OFF",
             "-DFLUENT_QT_BUILD_GALLERY=OFF",
             "-DFLUENT_QT_BUILD_TESTS=OFF",
@@ -1918,14 +1994,14 @@ jobs:
             --output-on-failure `
             --no-tests=error
 
-      - name: Build relocatable PySide6 wheel
+      - name: Build relocatable PySide6 wheels
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $PSNativeCommandUseErrorActionPreference = $true
           cmake --build "${{ matrix.build_dir }}" `
             --config Release `
-            --target fluentqt_pyside6_wheel `
+            --target fluentqt_pyside6_wheels `
             --parallel "${{ matrix.build_parallel }}"
 
       - name: Test wheel in a clean virtual environment
@@ -1948,6 +2024,19 @@ jobs:
           if (!$wheel.Name.EndsWith($expectedSuffix)) {
             throw "Unexpected wheel tag: $($wheel.Name); expected *$expectedSuffix"
           }
+          $galleryWheels = @(
+            Get-ChildItem `
+              -Path "${{ matrix.build_dir }}/gallery-wheelhouse" `
+              -Filter '*.whl' `
+              -File
+          )
+          if ($galleryWheels.Count -ne 1) {
+            throw "Expected one FluentQt Gallery wheel, found $($galleryWheels.Count)."
+          }
+          $galleryWheel = $galleryWheels[0]
+          if (!$galleryWheel.Name.EndsWith("-py3-none-any.whl")) {
+            throw "Unexpected Gallery wheel tag: $($galleryWheel.Name)"
+          }
 
           $cleanVenv = Join-Path $env:RUNNER_TEMP "fluentqt-release-wheel-smoke"
           python -m venv $cleanVenv
@@ -1956,7 +2045,7 @@ jobs:
           } else {
             $cleanPython = Join-Path $cleanVenv "bin/python"
           }
-          & $cleanPython -m pip install $wheel.FullName
+          & $cleanPython -m pip install $wheel.FullName $galleryWheel.FullName
           $wheelVersion = & $cleanPython -c 'from importlib.metadata import version; print(version("FluentQt"))'
 
           Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
@@ -1967,6 +2056,7 @@ jobs:
           $env:QT_QPA_PLATFORM = "offscreen"
           $env:FLUENTQT_EXPECTED_VERSION = $wheelVersion.Trim()
           & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
+          & $cleanPython bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
           & $cleanPython -m pip check
           & $cleanPython -m pip install mypy==2.3.0
           & $cleanPython -m mypy `
@@ -2090,7 +2180,17 @@ jobs:
 
           clean_venv="${RUNNER_TEMP}/fluentqt-manylinux-wheel-smoke"
           python -m venv "$clean_venv"
-          "$clean_venv/bin/python" -m pip install "${wheels[0]}"
+          gallery_wheel="$(
+            find "${{ matrix.build_dir }}/gallery-wheelhouse" \
+              -maxdepth 1 -type f -name '*.whl' -print -quit
+          )"
+          if [[ -z "$gallery_wheel" ]]; then
+            echo "::error::The FluentQt Gallery wheel was not generated."
+            exit 1
+          fi
+          "$clean_venv/bin/python" -m pip install \
+            "${wheels[0]}" \
+            "$gallery_wheel"
           wheel_version="$(
             "$clean_venv/bin/python" -c \
               'from importlib.metadata import version; print(version("FluentQt"))'
@@ -2104,6 +2204,15 @@ jobs:
             FLUENTQT_EXPECTED_VERSION="$wheel_version" \
             "$clean_venv/bin/python" \
             bindings/pyside6/tests/test_wheel_smoke.py
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            FLUENTQT_EXPECTED_VERSION="$wheel_version" \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
           "$clean_venv/bin/python" -m pip check
           "$clean_venv/bin/python" -m pip install mypy==2.3.0
           env -u PYTHONPATH \
@@ -2226,7 +2335,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fluentqt-pyside6-${{ matrix.artifact_suffix }}
-          path: ${{ matrix.build_dir }}/wheelhouse/*.whl
+          path: |
+            ${{ matrix.build_dir }}/wheelhouse/*.whl
+            ${{ matrix.build_dir }}/gallery-wheelhouse/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 manylinux release wheel and audit
@@ -2237,6 +2348,7 @@ jobs:
           path: |
             ${{ matrix.manylinux_build_dir }}/manylinux-wheelhouse/*.whl
             ${{ matrix.manylinux_build_dir }}/manylinux-audit.json
+            ${{ matrix.build_dir }}/gallery-wheelhouse/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 release acceptance snapshot
@@ -2273,6 +2385,7 @@ jobs:
           PYSIDE6_RELEASE_RESULT: ${{ needs.pyside6_release.result }}
           MODE: ${{ needs.plan.outputs.mode }}
           SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}
+          SHOULD_BUILD_PYSIDE: ${{ needs.plan.outputs.should_build_pyside }}
         shell: bash
         run: |
           set -euo pipefail
@@ -2289,19 +2402,19 @@ jobs:
             echo "::error::The external integration validation finished with result: $INTEGRATION_RESULT"
             exit 1
           fi
-          if [[ "$SHOULD_BUILD" == "true" && "$PYSIDE6_LINUX_RESULT" != "success" ]]; then
+          if [[ "$SHOULD_BUILD_PYSIDE" == "true" && "$PYSIDE6_LINUX_RESULT" != "success" ]]; then
             echo "::error::The Linux x64 PySide6 Qt 6.2 baseline finished with result: $PYSIDE6_LINUX_RESULT"
             exit 1
           fi
-          if [[ "$SHOULD_BUILD" == "true" && "$PYSIDE6_WINDOWS_RESULT" != "success" ]]; then
+          if [[ "$SHOULD_BUILD_PYSIDE" == "true" && "$PYSIDE6_WINDOWS_RESULT" != "success" ]]; then
             echo "::error::The Windows x64 PySide6 Qt 6.2 baseline finished with result: $PYSIDE6_WINDOWS_RESULT"
             exit 1
           fi
-          if [[ "$SHOULD_BUILD" == "true" && "$PYSIDE6_MACOS_RESULT" != "success" ]]; then
+          if [[ "$SHOULD_BUILD_PYSIDE" == "true" && "$PYSIDE6_MACOS_RESULT" != "success" ]]; then
             echo "::error::The macOS arm64 PySide6 Qt 6.9 validation finished with result: $PYSIDE6_MACOS_RESULT"
             exit 1
           fi
-          if [[ "$SHOULD_BUILD" == "true" && "$MODE" == "full" && "$PYSIDE6_RELEASE_RESULT" != "success" ]]; then
+          if [[ "$SHOULD_BUILD_PYSIDE" == "true" && "$MODE" == "full" && "$PYSIDE6_RELEASE_RESULT" != "success" ]]; then
             echo "::error::The x64/ARM64 PySide6 release matrix finished with result: $PYSIDE6_RELEASE_RESULT"
             exit 1
           fi
@@ -2310,6 +2423,9 @@ jobs:
             echo "Required CI validation passed."
           else
             echo "Documentation-only pull request; the build matrix was not required."
+          fi
+          if [[ "$SHOULD_BUILD_PYSIDE" != "true" ]]; then
+            echo "No binding-affecting files changed; the PySide6 matrix was not required."
           fi
 
   release-ready:
