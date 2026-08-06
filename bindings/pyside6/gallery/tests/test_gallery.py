@@ -11,9 +11,13 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 import uuid
 
 import fluentqt
+import fluentqt_gallery.application_controller as application_controller_module
+import fluentqt_gallery.settings as gallery_settings_module
+import fluentqt_gallery.single_instance as single_instance_module
 import shiboken6
 
 fluentqt.prepare_high_dpi_application()
@@ -23,8 +27,10 @@ from PySide6.QtCore import (
     QElapsedTimer,
     QEvent,
     QEventLoop,
+    QMargins,
     QPoint,
     QPointF,
+    QPropertyAnimation,
     QRect,
     QRectF,
     QSize,
@@ -34,6 +40,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import (
     QColor,
+    QCloseEvent,
     QFont,
     QHelpEvent,
     QIcon,
@@ -107,6 +114,7 @@ from fluentqt_gallery.native_samples import (
 from fluentqt_gallery.samples import build_sample
 from fluentqt_gallery.visual import (
     GalleryCodeBlock,
+    GalleryPageSkeleton,
     _acrylic_noise_tile,
     _direct_icon_font,
     _direct_icon_glyph,
@@ -516,6 +524,145 @@ class PythonGalleryTest(unittest.TestCase):
             window.close()
             window.deleteLater()
             QApplication.processEvents()
+
+    def test_session_shutdown_bypasses_interactive_close_behavior(self):
+        window = GalleryWindow(startup_visuals=False)
+        controller = GalleryApplicationController(
+            window,
+            window._settings,
+            window,
+            setup_status_item=False,
+        )
+        event = QCloseEvent()
+        try:
+            with patch.object(
+                application_controller_module,
+                "_application_is_saving_session",
+                return_value=True,
+            ):
+                self.assertFalse(controller.eventFilter(window, event))
+            self.assertTrue(event.isAccepted())
+            self.assertFalse(controller._close_request_scheduled)
+        finally:
+            controller.arm_application_quit()
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
+    def test_wayland_inactive_window_forces_remap_and_attention(self):
+        class RestoreWindow(QWidget):
+            def __init__(self):
+                super().__init__()
+                self.native_restore_prepared = False
+
+            def prepareForNativeRestore(self):
+                self.native_restore_prepared = True
+
+            def reapplySystemBackdrop(self):
+                pass
+
+            def requestForegroundActivation(self):
+                pass
+
+        window = RestoreWindow()
+        controller = GalleryApplicationController(
+            window,
+            object(),
+            window,
+            setup_status_item=False,
+        )
+        scheduled: list[tuple[int, Callable[[], None]]] = []
+        window.show()
+        QApplication.processEvents()
+        try:
+            with (
+                patch.object(
+                    application_controller_module,
+                    "_is_wayland_platform",
+                    return_value=True,
+                ),
+                patch.object(
+                    application_controller_module,
+                    "_window_is_active",
+                    return_value=False,
+                ),
+                patch.object(
+                    application_controller_module.sys,
+                    "platform",
+                    "linux",
+                ),
+                patch.object(
+                    application_controller_module,
+                    "_single_shot",
+                    side_effect=lambda delay, _context, callback: (
+                        scheduled.append((delay, callback))
+                    ),
+                ),
+                patch.object(
+                    application_controller_module,
+                    "_request_application_attention",
+                ) as request_attention,
+            ):
+                controller.restore_window()
+                self.assertTrue(window.native_restore_prepared)
+                self.assertFalse(window.isVisible())
+                self.assertEqual(
+                    [delay for delay, _callback in scheduled], [100, 250]
+                )
+                next(
+                    callback
+                    for delay, callback in scheduled
+                    if delay == 250
+                )()
+                request_attention.assert_called_once_with(window)
+        finally:
+            controller.arm_application_quit()
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
+    def test_windows_secondary_launch_grants_foreground_permission(self):
+        class LockFile:
+            @staticmethod
+            def getLockInfo():
+                return 4242, "host", "Fluent-Qt Gallery"
+
+        with (
+            patch.object(single_instance_module.sys, "platform", "win32"),
+            patch.object(
+                single_instance_module, "_allow_set_foreground_window"
+            ) as allow_foreground,
+        ):
+            single_instance_module._allow_owner_foreground_activation(
+                LockFile()
+            )
+        allow_foreground.assert_called_once_with(4242)
+
+    def test_windows_system_theme_falls_back_to_registry(self):
+        class UnknownStyleHints:
+            pass
+
+        class UnknownSchemeApplication:
+            @staticmethod
+            def styleHints():
+                return UnknownStyleHints()
+
+        with (
+            patch.object(
+                gallery_settings_module,
+                "QGuiApplication",
+                UnknownSchemeApplication,
+            ),
+            patch.object(
+                gallery_settings_module,
+                "_windows_apps_use_light_theme",
+                return_value=False,
+            ),
+        ):
+            self.assertEqual(
+                gallery_settings_module._system_theme(),
+                fluentqt.Theme.Dark,
+            )
 
     def test_gallery_app_is_single_instance_and_reactivates_primary(self):
         instance_id = "com.fluentqt.gallery.test.{0}".format(uuid.uuid4().hex)
@@ -2892,6 +3039,60 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_page_skeleton_reuses_native_shimmer_geometry_and_lifecycle(self):
+        skeleton = GalleryPageSkeleton()
+        skeleton.resize(1000, 700)
+        skeleton.show()
+        QApplication.processEvents()
+        try:
+            shimmers = skeleton.findChildren(fluentqt.Shimmer)
+            self.assertEqual(len(shimmers), 1)
+            shimmer = shimmers[0]
+            self.assertEqual(
+                shimmer.objectName(), "galleryPageSkeletonShimmer"
+            )
+            self.assertEqual(shimmer.geometry(), skeleton.rect())
+            self.assertEqual(
+                shimmer.shimmerTemplate(),
+                fluentqt.Shimmer.ShimmerTemplate.Custom,
+            )
+            self.assertTrue(shimmer.isAnimationRunning())
+
+            content = QRectF(skeleton.rect()).adjusted(24, 34, -24, -48)
+            expected_rects = [
+                QRectF(content.left(), 34.0, 320.0, 40.0),
+                QRectF(content.left(), 90.0, 460.0, 24.0),
+                QRectF(content.left(), 142.0, content.width(), 132.0),
+                QRectF(content.left(), 290.0, content.width(), 132.0),
+                QRectF(content.left(), 438.0, content.width(), 132.0),
+            ]
+            elements = shimmer.elements()
+            self.assertEqual(len(elements), len(expected_rects))
+            self.assertTrue(
+                all(
+                    element.shape
+                    == fluentqt.Shimmer.Shape.RoundedRect
+                    for element in elements
+                )
+            )
+            self.assertEqual(
+                [element.rect for element in elements], expected_rects
+            )
+            self.assertTrue(
+                all(
+                    element.radius == float(fluentqt.CornerRadius.Control)
+                    for element in elements
+                )
+            )
+
+            skeleton.hide()
+            QApplication.processEvents()
+            self.assertFalse(shimmer.isAnimationRunning())
+        finally:
+            skeleton.close()
+            skeleton.deleteLater()
+            QApplication.processEvents()
+
     def test_title_bar_search_and_back_reveal_match_native_interaction(self):
         window = GalleryWindow()
         window.show()
@@ -2972,6 +3173,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertEqual(
                 window._top_main_navigation_pane.sizeHint().height(), 48
             )
+            self.assertIsInstance(
+                window._top_main_navigation_pane, fluentqt.FluentWidget
+            )
 
             foundation = window._top_main_navigation_pane._buttons[
                 "foundation"
@@ -2982,10 +3186,50 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             popup = window._top_main_navigation_pane._child_flyout
             self.assertIsNotNone(popup)
             self.assertTrue(popup.isVisible())
-            rows = window._top_main_navigation_pane._child_flyout_panel.findChildren(
+            panel = window._top_main_navigation_pane._child_flyout_panel
+            self.assertIsInstance(panel, fluentqt.FluentWidget)
+            rows = panel.findChildren(
                 QWidget, options=Qt.FindDirectChildrenOnly
             )
             self.assertEqual(len(rows), 7)
+            self.assertTrue(
+                all(isinstance(row, fluentqt.FluentWidget) for row in rows)
+            )
+            self.assertTrue(all(row.height() == 36 for row in rows))
+
+            visible_card = popup.rect().marginsRemoved(
+                popup.contentsMargins()
+            )
+            self.assertEqual(
+                panel.geometry(),
+                visible_card.marginsRemoved(QMargins(3, 4, 3, 4)),
+            )
+            entrance = popup.findChild(
+                QPropertyAnimation,
+                "galleryTopNavigationFlyoutEntranceAnimation",
+                Qt.FindDirectChildrenOnly,
+            )
+            self.assertIsNotNone(entrance)
+            motion = window._top_main_navigation_pane.theme_tokens()[
+                "animation"
+            ]
+            self.assertEqual(
+                entrance.duration(), int(motion["duration"]["fast"])
+            )
+            self.assertEqual(
+                entrance.easingCurve(), motion["easing"]["decelerate"]
+            )
+
+            _qwait(int(motion["duration"]["fast"]) + 30)
+            anchor_top_left = foundation.mapTo(window, QPoint(0, 0))
+            visible_geometry = popup.geometry().marginsRemoved(
+                popup.contentsMargins()
+            )
+            self.assertEqual(visible_geometry.left(), anchor_top_left.x())
+            self.assertEqual(
+                visible_geometry.top(),
+                anchor_top_left.y() + foundation.height() + 8,
+            )
 
             window._set_navigation_style(0)
             QApplication.processEvents()
@@ -3611,7 +3855,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 ("Fluent (Windows)", "Material 3 (Google)", "macOS"),
                 ("Left", "Top"),
                 ("Normal", "Mica", "Acrylic"),
-                ("Minimize window", "Keep in system tray", "Quit app"),
+                ("Minimize window", keep_running_choice(), "Quit app"),
             )
             for combo, expected in zip(
                 page._gallery_settings_choices, expected_choices

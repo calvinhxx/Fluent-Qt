@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 import hashlib
+import sys
 
 from PySide6.QtCore import (
     QByteArray,
@@ -56,6 +57,38 @@ def _scoped_instance_name(application_id: str) -> str:
         + user_scope.encode("utf-8")
     ).hexdigest()[:24]
     return "fluent-qt-gallery-{0}".format(digest)
+
+
+def _allow_set_foreground_window(process_id: int) -> None:
+    """Hand foreground permission to an existing Windows process."""
+
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        allow_foreground = user32.AllowSetForegroundWindow
+        allow_foreground.argtypes = [ctypes.c_uint32]
+        allow_foreground.restype = ctypes.c_int
+        allow_foreground(process_id)
+    except (AttributeError, OSError):
+        return
+
+
+def _allow_owner_foreground_activation(lock_file: QLockFile | None) -> None:
+    if sys.platform != "win32" or lock_file is None:
+        return
+    try:
+        owner_process_id, _host_name, _application_name = (
+            lock_file.getLockInfo()
+        )
+        owner_process_id = int(owner_process_id)
+    except (RuntimeError, TypeError, ValueError):
+        return
+    if owner_process_id <= 0 or owner_process_id > 0xFFFFFFFF:
+        return
+    _allow_set_foreground_window(owner_process_id)
 
 
 class GallerySingleInstance(QObject):
@@ -122,6 +155,7 @@ class GallerySingleInstance(QObject):
         self._lock_file = lock_file
 
         if not lock_file.tryLock(0):
+            _allow_owner_foreground_activation(lock_file)
             if self._notify_existing_instance(
                 _EXISTING_INSTANCE_TIMEOUT_MS
             ):

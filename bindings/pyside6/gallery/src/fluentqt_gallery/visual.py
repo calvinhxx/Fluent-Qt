@@ -1035,115 +1035,80 @@ class GalleryPageSkeleton(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("galleryPageSkeleton")
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self._progress = 0.0
-        self._animation = QVariantAnimation(self)
-        self._animation.setDuration(1400)
-        self._animation.setStartValue(0.0)
-        self._animation.setEndValue(1.0)
-        self._animation.setLoopCount(-1)
-        self._animation.setEasingCurve(QEasingCurve.Linear)
-        self._animation.valueChanged.connect(self._set_progress)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-    def _set_progress(self, value: object) -> None:
-        self._progress = float(value)
-        self.update()
-
-    @staticmethod
-    def _blend(
-        foreground: QColor, background: QColor, amount: float
-    ) -> QColor:
-        inverse = 1.0 - amount
-        return QColor(
-            _qround(foreground.red() * amount + background.red() * inverse),
-            _qround(
-                foreground.green() * amount
-                + background.green() * inverse
-            ),
-            _qround(
-                foreground.blue() * amount + background.blue() * inverse
-            ),
-            _qround(
-                foreground.alpha() * amount
-                + background.alpha() * inverse
-            ),
+        # Keep the shell page as a thin composition layer, exactly like the
+        # C++ GalleryPageSkeleton.  The bound native Shimmer remains the sole
+        # owner of theme colors, animation timing, visibility-driven timer
+        # state, and painting behavior.
+        self._shimmer = fluentqt.Shimmer(self)
+        self._shimmer.setObjectName("galleryPageSkeletonShimmer")
+        self._shimmer.setShimmerTemplate(
+            fluentqt.Shimmer.ShimmerTemplate.Custom
         )
+        self._shimmer.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding
+        )
+        layout.addWidget(self._shimmer)
+        self._update_skeleton_elements()
 
-    def showEvent(self, event) -> None:
-        super().showEvent(event)
-        self._animation.start()
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._update_skeleton_elements()
 
-    def hideEvent(self, event) -> None:
-        super().hideEvent(event)
-        self._animation.stop()
-
-    def paintEvent(self, event) -> None:
-        del event
+    def _update_skeleton_elements(self) -> None:
         content = QRectF(self.rect()).adjusted(24, 34, -24, -48)
         if content.isEmpty():
+            self._shimmer.clearElements()
             return
+
+        radius = float(fluentqt.CornerRadius.Control)
         y = content.top()
         elements = [
-            QRectF(content.left(), y, min(320.0, content.width()), 40.0)
+            fluentqt.Shimmer.Element(
+                fluentqt.Shimmer.Shape.RoundedRect,
+                QRectF(
+                    content.left(),
+                    y,
+                    min(320.0, content.width()),
+                    float(fluentqt.Spacing.ControlHeight.Large),
+                ),
+                radius,
+            )
         ]
-        y += 56.0
-        elements.append(
-            QRectF(content.left(), y, min(460.0, content.width()), 24.0)
+        y += (
+            fluentqt.Spacing.ControlHeight.Large
+            + fluentqt.Spacing.Standard
         )
-        y += 52.0
+        elements.append(
+            fluentqt.Shimmer.Element(
+                fluentqt.Shimmer.Shape.RoundedRect,
+                QRectF(
+                    content.left(),
+                    y,
+                    min(460.0, content.width()),
+                    float(fluentqt.Spacing.ControlHeight.Small),
+                ),
+                radius,
+            )
+        )
+        y += (
+            fluentqt.Spacing.ControlHeight.Small
+            + fluentqt.Spacing.Medium
+            + fluentqt.Spacing.Standard
+        )
         for _unused in range(3):
             elements.append(
-                QRectF(content.left(), y, content.width(), 132.0)
+                fluentqt.Shimmer.Element(
+                    fluentqt.Shimmer.Shape.RoundedRect,
+                    QRectF(content.left(), y, content.width(), 132.0),
+                    radius,
+                )
             )
-            y += 140.0
-
-        combined = QPainterPath()
-        bounds = QRectF()
-        for rect in elements:
-            combined.addRoundedRect(rect, 4.0, 4.0)
-            bounds = QRectF(rect) if bounds.isNull() else bounds.united(rect)
-
-        from .foundation_pages import _theme_tokens
-
-        colors = _theme_tokens()
-        canvas = QColor(colors["bgCanvas"])
-        dark = canvas.lightness() < 96
-        base = self._blend(
-            QColor(Qt.white) if dark else QColor(Qt.black),
-            canvas,
-            0.12 if dark else 0.075,
-        )
-        highlight = QColor(255, 255, 255, 68 if dark else 218)
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setPen(Qt.NoPen)
-        painter.setBrush(base)
-        painter.drawPath(combined)
-
-        sweep_width = max(56.0, bounds.width() * 0.42)
-        sweep_x = (
-            bounds.left()
-            - sweep_width
-            + (bounds.width() + sweep_width * 2.0) * self._progress
-        )
-        gradient = QLinearGradient(
-            QPointF(sweep_x - sweep_width, bounds.center().y()),
-            QPointF(sweep_x + sweep_width, bounds.center().y()),
-        )
-        transparent = QColor(highlight)
-        transparent.setAlpha(0)
-        gradient.setColorAt(0.0, transparent)
-        gradient.setColorAt(0.48, highlight)
-        gradient.setColorAt(1.0, transparent)
-        painter.setClipPath(combined)
-        painter.fillRect(
-            bounds.adjusted(-sweep_width, 0.0, sweep_width, 0.0),
-            gradient,
-        )
-        painter.setClipping(False)
-        painter.setBrush(Qt.NoBrush)
-        painter.setPen(QPen(colors["strokeDefault"], 1.0))
-        painter.drawPath(combined)
+            y += 132.0 + fluentqt.Spacing.Standard
+        self._shimmer.setElements(elements)
 
 
 def _draw_elided_wrapped_text(
@@ -2178,6 +2143,74 @@ _CATEGORY_ROUTE = 2
 _COMPONENT_ROUTE = 3
 _FOOTER_ROUTE = 4
 
+# Keep these metrics in lockstep with app/view/shell/GalleryNavigationMetrics.h
+# and GalleryTopNavigationPane.cpp.  The Python Gallery owns its shell widgets,
+# but their geometry must remain identical to the canonical C++ Gallery.
+_NAV_SECTION_HEIGHT = 32
+_NAV_ROUTE_HEIGHT = 36
+_COMPACT_PANE_WIDTH = 48
+_COMPACT_FLYOUT_HORIZONTAL_OFFSET = 8
+_COMPACT_FLYOUT_VERTICAL_OFFSET = -4
+_COMPACT_FLYOUT_ENTRANCE_OFFSET = 8
+_COMPACT_FLYOUT_WINDOW_MARGIN = 12
+_COMPACT_FLYOUT_CONTENT_MARGINS = QMargins(3, 4, 3, 4)
+_TOP_NAV_BAR_HEIGHT = 48
+_TOP_NAV_BUTTON_SIZE = 32
+_TOP_NAV_BUTTON_SPACING = 4
+_TOP_NAV_HORIZONTAL_MARGIN = 8
+_TOP_NAV_FLYOUT_VERTICAL_OFFSET = 8
+
+
+def _overlay_surface_rect(host: QWidget) -> QRect:
+    """Resolve the same bounded overlay surface used by the C++ helpers."""
+
+    value = host.property("fluentOverlaySurfaceRect")
+    if isinstance(value, QRect):
+        surface = value.intersected(host.rect())
+        if not surface.isEmpty():
+            return surface
+    return host.rect()
+
+
+def _clamp_card_top_left(
+    card_top_left: QPoint,
+    card_size: QSize,
+    bounds: QRect,
+    window_margin: int,
+) -> QPoint:
+    """Port overlay::clampCardTopLeft without assuming a zero-origin host."""
+
+    if bounds.isEmpty():
+        return QPoint(card_top_left)
+    margin = max(0, int(window_margin))
+    min_x = bounds.left() + margin
+    min_y = bounds.top() + margin
+    max_x = bounds.right() - max(0, card_size.width()) + 1 - margin
+    max_y = bounds.bottom() - max(0, card_size.height()) + 1 - margin
+    return QPoint(
+        min_x if max_x < min_x else max(min_x, min(card_top_left.x(), max_x)),
+        min_y if max_y < min_y else max(min_y, min(card_top_left.y(), max_y)),
+    )
+
+
+def _resize_popup_for_card(
+    popup: fluentqt.Popup,
+    panel: QWidget,
+    card_size: QSize,
+) -> None:
+    """Size a Popup outer shadow and inset its compact content exactly once."""
+
+    shadow = popup.contentsMargins()
+    popup.resize(
+        card_size.width() + shadow.left() + shadow.right(),
+        card_size.height() + shadow.top() + shadow.bottom(),
+    )
+    panel.setGeometry(
+        popup.rect()
+        .marginsRemoved(shadow)
+        .marginsRemoved(_COMPACT_FLYOUT_CONTENT_MARGINS)
+    )
+
 _NAV_ICON_CACHE: dict[
     tuple[str, int, int, int, int, int, int, int], QPixmap
 ] = {}
@@ -2437,8 +2470,10 @@ class _GalleryNavigationDelegate(QStyledItemDelegate):
     def sizeHint(self, option, index: QModelIndex) -> QSize:
         if int(index.data(_KIND_ROLE) or 0) == _SECTION_HEADER:
             progress = self._compact_progress(option.widget)
-            return QSize(1, _qround(32.0 * (1.0 - progress)))
-        return QSize(1, 36)
+            return QSize(
+                1, _qround(_NAV_SECTION_HEIGHT * (1.0 - progress))
+            )
+        return QSize(1, _NAV_ROUTE_HEIGHT)
 
     def paint(self, painter: QPainter, option, index: QModelIndex) -> None:
         if not index.isValid():
@@ -2475,7 +2510,9 @@ class _GalleryNavigationDelegate(QStyledItemDelegate):
             else option.rect.width()
         )
         fully_compact = compact and compact_progress >= 0.999
-        available_width = 48 if fully_compact else viewport_width
+        available_width = (
+            _COMPACT_PANE_WIDTH if fully_compact else viewport_width
+        )
         right_inset = 4 if compact else 12
         background = QRectF(
             4,
@@ -2527,7 +2564,9 @@ class _GalleryNavigationDelegate(QStyledItemDelegate):
         icon_name = str(index.data(_ICON_GLYPH_ROLE) or "")
         route_id = str(index.data(_ROUTE_ID_ROLE) or "")
         content_left = background.left() + 12
-        compact_icon_left = max(0.0, (48.0 - 20.0) / 2.0)
+        compact_icon_left = max(
+            0.0, (_COMPACT_PANE_WIDTH - 20.0) / 2.0
+        )
         icon_left = content_left + (
             compact_icon_left - content_left
         ) * compact_progress
@@ -3038,7 +3077,12 @@ class GalleryNavigationPane(QWidget):
                 Qt.WA_TransparentForMouseEvents
             )
         anchor = self._compact_flyout_anchor
-        anchor.setGeometry(0, visual_rect.top(), 48, visual_rect.height())
+        anchor.setGeometry(
+            0,
+            visual_rect.top(),
+            _COMPACT_PANE_WIDTH,
+            visual_rect.height(),
+        )
         anchor.show()
 
         popup = fluentqt.Popup(self)
@@ -3053,9 +3097,8 @@ class GalleryNavigationPane(QWidget):
         popup.setLightDismissConsumesPress(True)
         popup.addLightDismissPassthrough(self)
 
-        panel = QWidget(popup)
+        panel = _GalleryCompactFlyoutPanel(popup)
         panel.setObjectName("galleryCompactNavigationFlyoutPanel")
-        panel.setAttribute(Qt.WA_NoSystemBackground)
         panel_layout = QVBoxLayout(panel)
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel_layout.setSpacing(2)
@@ -3078,36 +3121,49 @@ class GalleryNavigationPane(QWidget):
             popup.deleteLater()
             return
 
-        content_width = max(row.sizeHint().width() for row in rows)
-        content_height = len(rows) * 36 + max(0, len(rows) - 1) * 2
+        content_size = panel.sizeHint()
+        content_width = content_size.width()
+        content_height = content_size.height()
         host = self.window()
-        surface = host.property("fluentOverlaySurfaceRect")
-        if not isinstance(surface, QRect):
-            surface = host.rect()
-        else:
-            surface = surface.intersected(host.rect())
-            if surface.isEmpty():
-                surface = host.rect()
+        surface = _overlay_surface_rect(host)
         anchor_top_left = anchor.mapTo(host, QPoint(0, 0))
         tree_top = self._tree.mapTo(host, QPoint(0, 0)).y()
-        safe_top = max(surface.top() + 12, tree_top + 12)
-        safe_bottom = surface.bottom() + 1 - 12
-        max_visible_height = max(36, safe_bottom - safe_top)
-        card_width = content_width + 6
-        card_height = min(content_height + 8, max_visible_height)
-        preferred_top = anchor_top_left.y() - 4
+        safe_top = max(
+            surface.top() + _COMPACT_FLYOUT_WINDOW_MARGIN,
+            tree_top + _COMPACT_FLYOUT_WINDOW_MARGIN,
+        )
+        safe_bottom = (
+            surface.bottom() + 1 - _COMPACT_FLYOUT_WINDOW_MARGIN
+        )
+        max_visible_height = max(_NAV_ROUTE_HEIGHT, safe_bottom - safe_top)
+        card_width = (
+            content_width
+            + _COMPACT_FLYOUT_CONTENT_MARGINS.left()
+            + _COMPACT_FLYOUT_CONTENT_MARGINS.right()
+        )
+        card_height = min(
+            content_height
+            + _COMPACT_FLYOUT_CONTENT_MARGINS.top()
+            + _COMPACT_FLYOUT_CONTENT_MARGINS.bottom(),
+            max_visible_height,
+        )
+        preferred_top = (
+            anchor_top_left.y() + _COMPACT_FLYOUT_VERTICAL_OFFSET
+        )
         card_top = max(
             safe_top,
             min(preferred_top, max(safe_top, safe_bottom - card_height)),
         )
-        card_left = anchor_top_left.x() + anchor.width() + 8
+        card_left = (
+            anchor_top_left.x()
+            + anchor.width()
+            + _COMPACT_FLYOUT_HORIZONTAL_OFFSET
+        )
 
-        popup.resize(card_width + 16, card_height + 16)
-        panel.setGeometry(
-            11,
-            12,
-            content_width,
-            content_height,
+        _resize_popup_for_card(
+            popup,
+            panel,
+            QSize(card_width, card_height),
         )
         panel.show()
         popup.setPosition(host, QPoint(card_left, card_top))
@@ -3127,9 +3183,14 @@ class GalleryNavigationPane(QWidget):
         entrance.setObjectName(
             "galleryCompactNavigationFlyoutEntranceAnimation"
         )
-        entrance.setDuration(100)
-        entrance.setEasingCurve(QEasingCurve.OutCubic)
-        entrance.setStartValue(end_position - QPoint(8, 0))
+        from .foundation_pages import _theme_snapshot
+
+        animation = _theme_snapshot(self._tree)["animation"]
+        entrance.setDuration(int(animation["duration"]["fast"]))
+        entrance.setEasingCurve(animation["easing"]["decelerate"])
+        entrance.setStartValue(
+            end_position - QPoint(_COMPACT_FLYOUT_ENTRANCE_OFFSET, 0)
+        )
         entrance.setEndValue(end_position)
         popup.move(entrance.startValue())
         entrance.start(QPropertyAnimation.DeleteWhenStopped)
@@ -3387,7 +3448,7 @@ class GalleryNavigationFooter(QWidget):
         self._tree.viewport().update()
 
 
-class _GalleryCompactFlyoutRow(QWidget):
+class _GalleryCompactFlyoutRow(fluentqt.FluentWidget):
     """Self-painted child row used by the native top-navigation flyout."""
 
     activated = Signal(str)
@@ -3411,17 +3472,19 @@ class _GalleryCompactFlyoutRow(QWidget):
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.NoFocus)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.setFixedHeight(36)
+        self.setFixedHeight(_NAV_ROUTE_HEIGHT)
 
     def sizeHint(self) -> QSize:
-        font = fluentqt.font_for_role(fluentqt.FontRole.Body)
-        return QSize(max(160, QFontMetrics(font).horizontalAdvance(self._text) + 28), 36)
+        font = self.theme_font(fluentqt.FontRole.Body)
+        return QSize(
+            max(160, QFontMetrics(font).horizontalAdvance(self._text) + 28),
+            _NAV_ROUTE_HEIGHT,
+        )
 
     def paintEvent(self, event) -> None:
         del event
-        from .foundation_pages import _theme_tokens
-
-        tokens = _theme_tokens()
+        snapshot = self.theme_tokens()
+        tokens = snapshot["colors"]
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setRenderHint(QPainter.TextAntialiasing)
@@ -3433,15 +3496,13 @@ class _GalleryCompactFlyoutRow(QWidget):
         if background.alpha() > 0:
             painter.setPen(Qt.NoPen)
             painter.setBrush(background)
-            from .foundation_pages import _radii
-
-            control_radius, _overlay_radius = _radii()
+            control_radius = float(snapshot["radius"]["control"])
             painter.drawRoundedRect(
                 QRectF(self.rect().adjusted(4, 2, -4, -2)),
                 control_radius,
                 control_radius,
             )
-        font = fluentqt.font_for_role(fluentqt.FontRole.Body)
+        font = self.theme_font(fluentqt.FontRole.Body)
         font.setPixelSize(14)
         painter.setFont(font)
         painter.setPen(QColor(tokens["textPrimary"]))
@@ -3488,7 +3549,18 @@ class _GalleryCompactFlyoutRow(QWidget):
         super().mouseReleaseEvent(event)
 
 
-class GalleryTopNavigationPane(QWidget):
+class _GalleryCompactFlyoutPanel(fluentqt.FluentWidget):
+    """Transparent theme host matching the native CompactFlyoutPanel."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setAttribute(Qt.WA_NoSystemBackground)
+
+    def paintEvent(self, event) -> None:
+        del event
+
+
+class GalleryTopNavigationPane(fluentqt.FluentWidget):
     """Icon-only 48 px top navigation chrome matching the C++ Gallery."""
 
     routeActivated = Signal(str)
@@ -3507,10 +3579,15 @@ class GalleryTopNavigationPane(QWidget):
     ) -> None:
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.setMinimumHeight(48)
+        self.setMinimumHeight(_TOP_NAV_BAR_HEIGHT)
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(
+            _TOP_NAV_HORIZONTAL_MARGIN,
+            8,
+            _TOP_NAV_HORIZONTAL_MARGIN,
+            8,
+        )
+        layout.setSpacing(_TOP_NAV_BUTTON_SPACING)
         self._buttons: dict[str, fluentqt.Button] = {}
         self._children: dict[str, tuple[tuple[str, str], ...]] = {}
         self._parents: dict[str, str] = {}
@@ -3530,8 +3607,12 @@ class GalleryTopNavigationPane(QWidget):
             button.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)
             button.setFluentSize(fluentqt.Button.ButtonSize.Small)
             button.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
-            button.setIconGlyph(icon_name, 16)
-            button.setFixedSize(32, 32)
+            button.setIconGlyph(
+                icon_name, fluentqt.Typography.IconSize.Standard
+            )
+            button.setFixedSize(
+                _TOP_NAV_BUTTON_SIZE, _TOP_NAV_BUTTON_SIZE
+            )
             button.clicked.connect(
                 lambda _checked=False, rid=route_id, source=button: (
                     self._activate_route(rid, source)
@@ -3545,7 +3626,12 @@ class GalleryTopNavigationPane(QWidget):
 
     def sizeHint(self) -> QSize:
         count = len(self._buttons)
-        return QSize(16 + count * 32 + max(0, count - 1) * 4, 48)
+        return QSize(
+            2 * _TOP_NAV_HORIZONTAL_MARGIN
+            + count * _TOP_NAV_BUTTON_SIZE
+            + max(0, count - 1) * _TOP_NAV_BUTTON_SPACING,
+            _TOP_NAV_BAR_HEIGHT,
+        )
 
     def sync_selected(self, route_id: str) -> None:
         if self._selected_route_id == route_id:
@@ -3592,9 +3678,8 @@ class GalleryTopNavigationPane(QWidget):
         )
         popup.setLightDismissConsumesPress(True)
 
-        panel = QWidget(popup)
+        panel = _GalleryCompactFlyoutPanel(popup)
         panel.setObjectName("galleryTopNavigationFlyoutPanel")
-        panel.setAttribute(Qt.WA_NoSystemBackground)
         panel_layout = QVBoxLayout(panel)
         panel_layout.setContentsMargins(0, 0, 0, 0)
         panel_layout.setSpacing(2)
@@ -3610,24 +3695,31 @@ class GalleryTopNavigationPane(QWidget):
             panel_layout.addWidget(row)
             rows.append(row)
 
-        content_width = max(row.sizeHint().width() for row in rows)
-        content_height = len(rows) * 36 + max(0, len(rows) - 1) * 2
-        card_size = QSize(content_width + 6, content_height + 8)
-        popup.resize(card_size.width() + 16, card_size.height() + 16)
-        panel.setGeometry(11, 12, content_width, content_height)
+        content_size = panel.sizeHint()
+        card_size = QSize(
+            content_size.width()
+            + _COMPACT_FLYOUT_CONTENT_MARGINS.left()
+            + _COMPACT_FLYOUT_CONTENT_MARGINS.right(),
+            content_size.height()
+            + _COMPACT_FLYOUT_CONTENT_MARGINS.top()
+            + _COMPACT_FLYOUT_CONTENT_MARGINS.bottom(),
+        )
+        _resize_popup_for_card(popup, panel, card_size)
         panel.show()
 
         anchor_top_left = anchor.mapTo(host, QPoint(0, 0))
         card_top_left = QPoint(
             anchor_top_left.x(),
-            anchor_top_left.y() + anchor.height() + 8,
+            anchor_top_left.y()
+            + anchor.height()
+            + _TOP_NAV_FLYOUT_VERTICAL_OFFSET,
         )
-        min_x = 12
-        min_y = 12
-        max_x = max(min_x, host.width() - card_size.width() - 12)
-        max_y = max(min_y, host.height() - card_size.height() - 12)
-        card_top_left.setX(max(min_x, min(card_top_left.x(), max_x)))
-        card_top_left.setY(max(min_y, min(card_top_left.y(), max_y)))
+        card_top_left = _clamp_card_top_left(
+            card_top_left,
+            card_size,
+            _overlay_surface_rect(host),
+            _COMPACT_FLYOUT_WINDOW_MARGIN,
+        )
         popup.setPosition(host, card_top_left)
 
         self._child_flyout = popup
@@ -3645,9 +3737,12 @@ class GalleryTopNavigationPane(QWidget):
         entrance.setObjectName(
             "galleryTopNavigationFlyoutEntranceAnimation"
         )
-        entrance.setDuration(100)
-        entrance.setEasingCurve(QEasingCurve.OutCubic)
-        entrance.setStartValue(end_position - QPoint(0, 8))
+        animation = self.theme_tokens()["animation"]
+        entrance.setDuration(int(animation["duration"]["fast"]))
+        entrance.setEasingCurve(animation["easing"]["decelerate"])
+        entrance.setStartValue(
+            end_position - QPoint(0, _COMPACT_FLYOUT_ENTRANCE_OFFSET)
+        )
         entrance.setEndValue(end_position)
         popup.move(entrance.startValue())
         entrance.start(QPropertyAnimation.DeleteWhenStopped)
@@ -3670,8 +3765,9 @@ class GalleryTopNavigationPane(QWidget):
             popup.hide()
             popup.deleteLater()
 
-    @staticmethod
-    def _start_settings_icon_rotation(button: fluentqt.Button) -> None:
+    def _start_settings_icon_rotation(
+        self, button: fluentqt.Button
+    ) -> None:
         animation = getattr(button, "_gallery_settings_rotation", None)
         if animation is None:
             animation = QPropertyAnimation(button, b"iconRotation", button)
@@ -3682,8 +3778,9 @@ class GalleryTopNavigationPane(QWidget):
             button._gallery_settings_rotation = animation
         animation.stop()
         start = float(button.iconRotation())
-        animation.setDuration(400)
-        animation.setEasingCurve(QEasingCurve.OutCubic)
+        motion = self.theme_tokens()["animation"]
+        animation.setDuration(int(motion["duration"]["slow"]))
+        animation.setEasingCurve(motion["easing"]["decelerate"])
         animation.setStartValue(start)
         animation.setEndValue(start + 359.99)
         animation.start()
