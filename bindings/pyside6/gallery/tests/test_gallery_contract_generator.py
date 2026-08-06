@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     project_root = args.project_root.resolve()
-    tools_dir = project_root / "bindings" / "pyside6" / "tools"
+    tools_dir = Path(__file__).resolve().parents[1] / "tools"
     sys.path.insert(0, str(tools_dir))
     from generate_gallery_contract import generate_contract
 

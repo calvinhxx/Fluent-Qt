@@ -1,4 +1,4 @@
-"""Source-driven ports of native Gallery scrolling SampleCards."""
+"""Standalone Gallery ports of native scrolling SampleCards."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ _PAINTED_SCROLLING_IMPORTS = (
     "from PySide6.QtCore import QRect, QRectF, QSize, QSizeF, Qt\n"
     "from PySide6.QtGui import (QColor, QFont, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap)\n"
     "from PySide6.QtWidgets import (QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget)\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens"
 )
 
 _PAGER_PICTURE_HELPER = dedent(
@@ -336,7 +336,8 @@ _ANNOTATED_SCROLLBAR_HELPER = dedent(
     )
     ANNOTATED_ITEM_WIDTH = 120
     ANNOTATED_ITEM_HEIGHT = 90
-    ANNOTATED_CONTENT_WIDTH = ANNOTATED_ITEM_WIDTH * 3
+    ANNOTATED_VIEWPORT_WIDTH = 380
+    ANNOTATED_CONTENT_WIDTH = ANNOTATED_VIEWPORT_WIDTH
 
 
     def items_per_row_for_width(width):
@@ -551,7 +552,7 @@ register_source_samples(
                 row_layout.setContentsMargins(0, 0, 0, 0)
                 row_layout.setSpacing(12)
                 scroll_view = fluentqt.ScrollView(row)
-                scroll_view.setFixedSize(380, 320)
+                scroll_view.setFixedSize(ANNOTATED_VIEWPORT_WIDTH, 320)
                 scroll_view.setHorizontalScrollBarVisibility(
                     fluentqt.ScrollView.ScrollBarVisibility.Hidden
                 )
@@ -678,7 +679,7 @@ register_source_samples(
                 controls_layout.addWidget(visible_value)
                 controls_layout.addWidget(slider)
                 controls_layout.addStretch(1)
-                layout.addWidget(bar)
+                layout.addWidget(bar, 0, Qt.AlignmentFlag.AlignTop)
                 layout.addWidget(controls, 0, Qt.AlignmentFlag.AlignTop)
                 update_summary()
                 """
@@ -798,9 +799,18 @@ register_source_samples(
                 )
                 layout = root.layout()
                 values = (
-                    ("Collapsed", fluentqt.PipsPager.PipsPagerButtonVisibility.Collapsed),
-                    ("Visible", fluentqt.PipsPager.PipsPagerButtonVisibility.Visible),
-                    ("VisibleOnPointerOver", fluentqt.PipsPager.PipsPagerButtonVisibility.VisibleOnPointerOver),
+                    (
+                        "Collapsed",
+                        fluentqt.PipsPager.PipsPagerButtonVisibility.Collapsed,
+                    ),
+                    (
+                        "Visible",
+                        fluentqt.PipsPager.PipsPagerButtonVisibility.Visible,
+                    ),
+                    (
+                        "VisibleOnPointerOver",
+                        fluentqt.PipsPager.PipsPagerButtonVisibility.VisibleOnPointerOver,
+                    ),
                 )
                 for title, visibility in values:
                     row = horizontal_group(root, 18)
@@ -1218,6 +1228,8 @@ register_source_samples(
 
                 scroll_view = fluentqt.ScrollView(root)
                 scroll_view.setFixedSize(420, 220)
+                ScrollMode = fluentqt.ScrollView.ScrollMode
+                ScrollBarVisibility = fluentqt.ScrollView.ScrollBarVisibility
                 scroll_view.setOwnedContentWidget(
                     ScrollViewDemoCanvas(QSize(680, 420), "Policy canvas")
                 )
@@ -1236,40 +1248,56 @@ register_source_samples(
                         set_button_active(button, False)
 
                 def apply_auto():
-                    scroll_view.setHorizontalScrollMode(fluentqt.ScrollView.ScrollMode.Auto)
-                    scroll_view.setVerticalScrollMode(fluentqt.ScrollView.ScrollMode.Auto)
-                    scroll_view.setHorizontalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Auto)
-                    scroll_view.setVerticalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Auto)
+                    scroll_view.setHorizontalScrollMode(ScrollMode.Auto)
+                    scroll_view.setVerticalScrollMode(ScrollMode.Auto)
+                    scroll_view.setHorizontalScrollBarVisibility(
+                        ScrollBarVisibility.Auto
+                    )
+                    scroll_view.setVerticalScrollBarVisibility(
+                        ScrollBarVisibility.Auto
+                    )
                     scroll_view.scrollTo(80, 80, False)
                     reset_buttons()
                     set_button_active(auto_bars, True)
                     update_status("Auto bars")
 
                 def apply_visible():
-                    scroll_view.setHorizontalScrollMode(fluentqt.ScrollView.ScrollMode.Enabled)
-                    scroll_view.setVerticalScrollMode(fluentqt.ScrollView.ScrollMode.Enabled)
-                    scroll_view.setHorizontalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Visible)
-                    scroll_view.setVerticalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Visible)
+                    scroll_view.setHorizontalScrollMode(ScrollMode.Enabled)
+                    scroll_view.setVerticalScrollMode(ScrollMode.Enabled)
+                    scroll_view.setHorizontalScrollBarVisibility(
+                        ScrollBarVisibility.Visible
+                    )
+                    scroll_view.setVerticalScrollBarVisibility(
+                        ScrollBarVisibility.Visible
+                    )
                     scroll_view.scrollTo(80, 80, False)
                     reset_buttons()
                     set_button_active(visible_bars, True)
                     update_status("Visible bars")
 
                 def hide_horizontal():
-                    scroll_view.setHorizontalScrollMode(fluentqt.ScrollView.ScrollMode.Enabled)
-                    scroll_view.setVerticalScrollMode(fluentqt.ScrollView.ScrollMode.Auto)
-                    scroll_view.setHorizontalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Hidden)
-                    scroll_view.setVerticalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Auto)
+                    scroll_view.setHorizontalScrollMode(ScrollMode.Enabled)
+                    scroll_view.setVerticalScrollMode(ScrollMode.Auto)
+                    scroll_view.setHorizontalScrollBarVisibility(
+                        ScrollBarVisibility.Hidden
+                    )
+                    scroll_view.setVerticalScrollBarVisibility(
+                        ScrollBarVisibility.Auto
+                    )
                     scroll_view.scrollTo(160, 80, False)
                     reset_buttons()
                     set_button_active(hidden_horizontal, True)
                     update_status("Hidden horizontal bar")
 
                 def disable_vertical():
-                    scroll_view.setHorizontalScrollMode(fluentqt.ScrollView.ScrollMode.Auto)
-                    scroll_view.setVerticalScrollMode(fluentqt.ScrollView.ScrollMode.Disabled)
-                    scroll_view.setHorizontalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Auto)
-                    scroll_view.setVerticalScrollBarVisibility(fluentqt.ScrollView.ScrollBarVisibility.Disabled)
+                    scroll_view.setHorizontalScrollMode(ScrollMode.Auto)
+                    scroll_view.setVerticalScrollMode(ScrollMode.Disabled)
+                    scroll_view.setHorizontalScrollBarVisibility(
+                        ScrollBarVisibility.Auto
+                    )
+                    scroll_view.setVerticalScrollBarVisibility(
+                        ScrollBarVisibility.Disabled
+                    )
                     scroll_view.scrollTo(120, 160, False)
                     reset_buttons()
                     set_button_active(vertical_disabled, True)

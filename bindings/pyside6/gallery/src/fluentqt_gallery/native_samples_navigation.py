@@ -1,4 +1,4 @@
-"""Source-driven native Gallery ports for menus and navigation."""
+"""Standalone Gallery ports for native menus and navigation."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ _MENUS_IMPORTS = (
     "from PySide6.QtCore import Qt\n"
     "from PySide6.QtGui import QAction, QActionGroup, QKeySequence, QPainter, QPen\n"
     "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens"
 )
 
 _MENUS_HELPER = _SourceHelper(dedent(
@@ -92,15 +92,16 @@ _COMMAND_FLYOUT_IMPORTS = (
     "from PySide6.QtCore import QRect, QRectF, QTimer, Qt\n"
     "from PySide6.QtGui import QAction, QColor, QFont, QIcon, QLinearGradient, QPainter, QPainterPath, QPen\n"
     "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens\n"
-    "from fluentqt.gallery.visual import gallery_font_icon_pixmap"
+    "from fluentqt_gallery.visual import gallery_font_icon_pixmap\n"
+    "from fluentqt_gallery.window import gallery_window_editing_command_router"
 )
 
 _COMMAND_FLYOUT_HELPER = _SourceHelper(dedent(
     """
-    class SampleSurface(QWidget):
+    class SampleSurface(fluentqt.FluentWidget):
         def __init__(self, parent=None, spacing=12):
             super().__init__(parent)
+            self._action_glyphs = []
             self.setSizePolicy(
                 QSizePolicy.Policy.MinimumExpanding,
                 QSizePolicy.Policy.Fixed,
@@ -114,30 +115,80 @@ _COMMAND_FLYOUT_HELPER = _SourceHelper(dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            tokens = self.theme_tokens()
+            colors = tokens["colors"]
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setPen(QPen(colors["strokeCard"], 1.0))
             painter.setBrush(colors["bgCanvas"])
-            painter.drawRoundedRect(self.rect().adjusted(0, 0, -1, -1), 8.0, 8.0)
+            radius = float(tokens["radius"]["overlay"])
+            painter.drawRoundedRect(
+                self.rect().adjusted(0, 0, -1, -1), radius, radius
+            )
+
+        def set_action_glyph(self, action, glyph):
+            for index, (stored_action, _stored_glyph) in enumerate(
+                self._action_glyphs
+            ):
+                if stored_action is action:
+                    self._action_glyphs[index] = (action, glyph)
+                    self._update_action_icon(action, glyph)
+                    return
+            self._action_glyphs.append((action, glyph))
+            self._update_action_icon(action, glyph)
+
+        def _update_action_icon(self, action, glyph):
+            colors = self.theme_tokens()["colors"]
+            icon = QIcon()
+            for size in (16, 20, 24):
+                normal = gallery_font_icon_pixmap(
+                    glyph, size, colors["textPrimary"]
+                )
+                disabled = gallery_font_icon_pixmap(
+                    glyph, size, colors["textDisabled"]
+                )
+                for mode, state in (
+                    (QIcon.Mode.Normal, QIcon.State.Off),
+                    (QIcon.Mode.Active, QIcon.State.Off),
+                    (QIcon.Mode.Selected, QIcon.State.Off),
+                    (QIcon.Mode.Normal, QIcon.State.On),
+                    (QIcon.Mode.Active, QIcon.State.On),
+                ):
+                    icon.addPixmap(normal, mode, state)
+                icon.addPixmap(
+                    disabled, QIcon.Mode.Disabled, QIcon.State.Off
+                )
+                icon.addPixmap(
+                    disabled, QIcon.Mode.Disabled, QIcon.State.On
+                )
+            action.setIcon(icon)
+
+        def on_theme_updated(self):
+            for action, glyph in self._action_glyphs:
+                self._update_action_icon(action, glyph)
+            super().on_theme_updated()
 
 
-    class CommandPreviewPanel(QWidget):
+    class CommandPreviewPanel(fluentqt.FluentWidget):
         def __init__(self, parent=None):
             super().__init__(parent)
             self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            tokens = self.theme_tokens()
+            colors = tokens["colors"]
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setPen(QPen(colors["strokeCard"], 1.0))
             painter.setBrush(colors["bgLayer"])
-            painter.drawRoundedRect(self.rect().adjusted(0, 0, -1, -1), 8.0, 8.0)
+            radius = float(tokens["radius"]["overlay"])
+            painter.drawRoundedRect(
+                self.rect().adjusted(0, 0, -1, -1), radius, radius
+            )
 
 
-    class ContextMediaTile(QWidget):
+    class ContextMediaTile(fluentqt.FluentWidget):
         def __init__(self, parent=None):
             super().__init__(parent)
             self._invoke_handler = None
@@ -162,7 +213,8 @@ _COMMAND_FLYOUT_HELPER = _SourceHelper(dedent(
 
         def paintEvent(self, event):
             del event
-            colors = _theme_tokens()
+            tokens = self.theme_tokens()
+            colors = tokens["colors"]
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
@@ -178,7 +230,10 @@ _COMMAND_FLYOUT_HELPER = _SourceHelper(dedent(
             )
             painter.setPen(QPen(outline, 1.0))
             painter.setBrush(background)
-            painter.drawRoundedRect(self.rect().adjusted(0, 0, -1, -1), 8.0, 8.0)
+            radius = float(tokens["radius"]["overlay"])
+            painter.drawRoundedRect(
+                self.rect().adjusted(0, 0, -1, -1), radius, radius
+            )
 
             photo = QRectF(12.0, 12.0, 276.0, 160.0)
             gradient = QLinearGradient(photo.topLeft(), photo.bottomRight())
@@ -324,33 +379,6 @@ _COMMAND_FLYOUT_HELPER = _SourceHelper(dedent(
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft
         )
         return group
-
-
-    def set_action_glyph(action, glyph):
-        colors = _theme_tokens()
-        icon = QIcon()
-        for size in (16, 20, 24):
-            normal = gallery_font_icon_pixmap(
-                glyph, size, colors["textPrimary"]
-            )
-            disabled = gallery_font_icon_pixmap(
-                glyph, size, colors["textDisabled"]
-            )
-            for mode, state in (
-                (QIcon.Mode.Normal, QIcon.State.Off),
-                (QIcon.Mode.Active, QIcon.State.Off),
-                (QIcon.Mode.Selected, QIcon.State.Off),
-                (QIcon.Mode.Normal, QIcon.State.On),
-                (QIcon.Mode.Active, QIcon.State.On),
-            ):
-                icon.addPixmap(normal, mode, state)
-            icon.addPixmap(
-                disabled, QIcon.Mode.Disabled, QIcon.State.Off
-            )
-            icon.addPixmap(
-                disabled, QIcon.Mode.Disabled, QIcon.State.On
-            )
-        action.setIcon(icon)
     """
 ))
 
@@ -589,7 +617,7 @@ register_source_samples(
 
                 def make_action(text, glyph):
                     action = QAction(text, root)
-                    set_action_glyph(action, glyph)
+                    root.set_action_glyph(action, glyph)
                     action.triggered.connect(
                         lambda checked=False, value=text: status.setText(
                             f"Command: {value}"
@@ -597,18 +625,32 @@ register_source_samples(
                     )
                     return action
 
-                add_action = make_action("Add", "\ue710")
-                edit_action = make_action("Edit", "\ue70f")
+                add_action = make_action(
+                    "Add", fluentqt.Typography.Icons.Add
+                )
+                edit_action = make_action(
+                    "Edit", fluentqt.Typography.Icons.Edit
+                )
                 edit_action.setPriority(QAction.Priority.HighPriority)
-                share_action = make_action("Share", "\ue72d")
+                share_action = make_action(
+                    "Share", fluentqt.Typography.Icons.Share
+                )
                 separator = QAction(root)
                 separator.setSeparator(True)
-                sync_action = make_action("Sync", "\ue895")
+                sync_action = make_action(
+                    "Sync", fluentqt.Typography.Icons.Sync
+                )
                 sync_action.setPriority(QAction.Priority.LowPriority)
-                pin_action = make_action("Pin", "\ue718")
+                pin_action = make_action(
+                    "Pin", fluentqt.Typography.Icons.Pin
+                )
                 pin_action.setCheckable(True)
-                settings_action = make_action("Settings", "\ue713")
-                help_action = make_action("Help", "\ue946")
+                settings_action = make_action(
+                    "Settings", fluentqt.Typography.Icons.Settings
+                )
+                help_action = make_action(
+                    "Help", fluentqt.Typography.Icons.Info
+                )
 
                 for action in (
                     add_action,
@@ -623,7 +665,9 @@ register_source_samples(
                 bar.addSecondaryAction(help_action)
 
                 document_row = horizontal_group(panel, 10)
-                document_icon = fluentqt.FontIcon("\ue8a5", document_row)
+                document_icon = fluentqt.FontIcon(
+                    fluentqt.Typography.Icons.Document, document_row
+                )
                 document_icon.setIconSize(28)
                 document_text = vertical_group(document_row, 1)
                 document_title = make_preview_label(
@@ -722,7 +766,9 @@ register_source_samples(
                 panel_layout.setSpacing(8)
 
                 heading = horizontal_group(panel, 8)
-                heading_icon = fluentqt.FontIcon("\ue70f", heading)
+                heading_icon = fluentqt.FontIcon(
+                    fluentqt.Typography.Icons.Edit, heading
+                )
                 heading_icon.setIconSize(20)
                 heading_label = make_preview_label(
                     heading,
@@ -737,7 +783,7 @@ register_source_samples(
                 editor.setObjectName("Gallery.CommandBar.EditingTarget")
                 editor.setText("Review the release notes before Friday")
                 editor.setFixedWidth(536)
-                router = fluentqt.EditingCommandRouter(root.window(), root)
+                router = gallery_window_editing_command_router(root)
                 bar = fluentqt.CommandBar(panel)
                 bar.setObjectName("Gallery.CommandBar.EditingRouter")
                 bar.setAccessibleName("Editing commands")
@@ -755,15 +801,15 @@ register_source_samples(
                 bar.addSecondaryAction(router.action(Command.Delete))
                 bar.addSecondaryAction(router.action(Command.SelectAll))
                 for command, glyph in (
-                    (Command.Undo, "\ue7a7"),
-                    (Command.Redo, "\ue7a6"),
-                    (Command.Cut, "\ue8c6"),
-                    (Command.Copy, "\ue8c8"),
-                    (Command.Paste, "\ue8c7"),
-                    (Command.Delete, "\ue74d"),
-                    (Command.SelectAll, "\ue8b3"),
+                    (Command.Undo, fluentqt.Typography.Icons.Undo),
+                    (Command.Redo, fluentqt.Typography.Icons.Redo),
+                    (Command.Cut, fluentqt.Typography.Icons.Cut),
+                    (Command.Copy, fluentqt.Typography.Icons.Copy),
+                    (Command.Paste, fluentqt.Typography.Icons.Paste),
+                    (Command.Delete, fluentqt.Typography.Icons.Delete),
+                    (Command.SelectAll, fluentqt.Typography.Icons.SelectAll),
                 ):
-                    set_action_glyph(router.action(command), glyph)
+                    root.set_action_glyph(router.action(command), glyph)
 
                 panel_layout.addWidget(heading)
                 panel_layout.addWidget(editor)
@@ -881,13 +927,13 @@ register_source_samples(
                     flyout.addSecondaryAction(action)
                     actions[text] = action
                 for text, glyph in (
-                    ("Share", "\ue72d"),
-                    ("Save", "\ue74e"),
-                    ("Delete", "\ue74d"),
-                    ("Resize", "\ue740"),
-                    ("Move", "\ue72a"),
+                    ("Share", fluentqt.Typography.Icons.Share),
+                    ("Save", fluentqt.Typography.Icons.Save),
+                    ("Delete", fluentqt.Typography.Icons.Delete),
+                    ("Resize", fluentqt.Typography.Icons.FullScreen),
+                    ("Move", fluentqt.Typography.Icons.Forward),
                 ):
-                    set_action_glyph(actions[text], glyph)
+                    root.set_action_glyph(actions[text], glyph)
 
                 def invoke(position, standard):
                     flyout.setAlwaysExpanded(False)
@@ -927,7 +973,9 @@ register_source_samples(
                 panel_layout.setContentsMargins(16, 12, 16, 12)
                 panel_layout.setSpacing(12)
 
-                file_icon = fluentqt.FontIcon("\ue8a5", panel)
+                file_icon = fluentqt.FontIcon(
+                    fluentqt.Typography.Icons.Document, panel
+                )
                 file_icon.setIconSize(28)
                 file_text = vertical_group(panel, 1)
                 file_title = make_preview_label(
@@ -967,12 +1015,12 @@ register_source_samples(
                 flyout.addSecondaryAction(rename)
                 flyout.addSecondaryAction(properties)
                 for action, glyph in (
-                    (copy_link, "\ue71b"),
-                    (favorite, "\ue734"),
-                    (rename, "\ue70f"),
-                    (properties, "\ue946"),
+                    (copy_link, fluentqt.Typography.Icons.Link),
+                    (favorite, fluentqt.Typography.Icons.FavoriteStar),
+                    (rename, fluentqt.Typography.Icons.Edit),
+                    (properties, fluentqt.Typography.Icons.Info),
                 ):
-                    set_action_glyph(action, glyph)
+                    root.set_action_glyph(action, glyph)
 
                 controls = horizontal_group(root, 8)
                 expanded = make_sample_button(
@@ -1355,7 +1403,7 @@ _NAV_EXACT_IMPORTS = (
     "from PySide6.QtGui import QFont, QFontMetrics, QPainter, QPen\n"
     "from PySide6.QtWidgets import (QBoxLayout, QHBoxLayout, QSizePolicy, "
     "QVBoxLayout, QWidget)\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens"
 )
 
 _NAV_EXACT_HELPER = dedent(
@@ -2611,7 +2659,7 @@ register_source_samples(
                     """
                 ),
                 "from PySide6.QtGui import QPainter, QPen\n"
-                "from fluentqt.gallery.foundation_pages import _theme_tokens\n"
+                "from fluentqt_gallery.foundation_pages import _theme_tokens\n"
                 + _WIDGETS,
             ),
         ),

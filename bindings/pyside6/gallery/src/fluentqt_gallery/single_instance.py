@@ -1,4 +1,4 @@
-"""Per-user single-instance coordination for the Python Gallery app."""
+"""Per-user single-instance coordination for the standalone Gallery app."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""App-owned visual building blocks matching the native C++ Gallery shell."""
+"""Standalone app visuals matching the native C++ Gallery shell."""
 
 from __future__ import annotations
 
@@ -144,6 +144,19 @@ def _qround(value: float) -> int:
     )
 
 
+def _normalized_device_pixel_ratio(value: float) -> float:
+    """Return the same minimum DPR used by the native Gallery."""
+
+    return max(1.0, float(value))
+
+
+def _primary_screen_device_pixel_ratio() -> float:
+    screen = QApplication.primaryScreen()
+    return _normalized_device_pixel_ratio(
+        screen.devicePixelRatio() if screen is not None else 1.0
+    )
+
+
 def asset_root() -> Path:
     """Resolve packaged assets, with a direct-source checkout fallback."""
 
@@ -161,20 +174,58 @@ def asset_path(*parts: str) -> Path:
     return asset_root().joinpath(*parts)
 
 
+def _macos_dock_icon_pixmap(source: QPixmap) -> QPixmap:
+    """Match the native Gallery's macOS Dock icon visual footprint."""
+
+    if source.isNull():
+        return source
+    canvas_size = 256
+    content_fraction = 0.88
+    inner_size = _qround(canvas_size * content_fraction)
+    offset = (canvas_size - inner_size) // 2
+    padded = QPixmap(canvas_size, canvas_size)
+    padded.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(padded)
+    painter.setRenderHint(QPainter.SmoothPixmapTransform)
+    painter.drawPixmap(
+        QRect(offset, offset, inner_size, inner_size),
+        source,
+        source.rect(),
+    )
+    painter.end()
+    return padded
+
+
 def app_icon() -> QIcon:
-    return QIcon(str(asset_path("app-icon.png")))
+    icon_path = str(asset_path("app-icon.png"))
+    if sys.platform != "darwin":
+        return QIcon(icon_path)
+    source = QPixmap(icon_path)
+    if source.isNull():
+        return QIcon(icon_path)
+    return QIcon(_macos_dock_icon_pixmap(source))
 
 
-def app_icon_pixmap(size: int) -> QPixmap:
+def app_icon_pixmap(
+    size: int,
+    device_pixel_ratio: float = 1.0,
+) -> QPixmap:
+    """Return a DPR-tagged app icon with ``size`` logical pixels."""
+
+    logical_size = max(1, int(size))
+    dpr = _normalized_device_pixel_ratio(device_pixel_ratio)
+    physical_size = max(1, _qround(logical_size * dpr))
     source = QPixmap(str(asset_path("app-icon.png")))
     if source.isNull():
         return source
-    return source.scaled(
-        size,
-        size,
+    scaled = source.scaled(
+        physical_size,
+        physical_size,
         Qt.KeepAspectRatio,
         Qt.SmoothTransformation,
     )
+    scaled.setDevicePixelRatio(dpr)
+    return scaled
 
 
 def _draw_pixmap_in_logical_rect(
@@ -773,7 +824,7 @@ def _acrylic_noise_tile() -> QImage:
     return image
 
 
-_HERO_LINK_PIXMAP_CACHE: dict[tuple[str, int, int], QPixmap] = {}
+_HERO_LINK_PIXMAP_CACHE: dict[tuple[str, int, int, int], QPixmap] = {}
 
 
 def _tint_github_mark(image: QImage, tint: QColor) -> None:
@@ -798,8 +849,21 @@ def _tint_github_mark(image: QImage, tint: QColor) -> None:
             pixels[row + x] = (alpha << 24) | tint_rgb
 
 
-def _hero_link_pixmap(image_name: str, size: int, tint: QColor) -> QPixmap:
-    key = (image_name, size, int(tint.rgba()))
+def _hero_link_pixmap(
+    image_name: str,
+    size: int,
+    tint: QColor,
+    device_pixel_ratio: float = 1.0,
+) -> QPixmap:
+    logical_size = max(1, int(size))
+    dpr = _normalized_device_pixel_ratio(device_pixel_ratio)
+    physical_size = max(1, _qround(logical_size * dpr))
+    key = (
+        image_name,
+        logical_size,
+        int(tint.rgba()),
+        _qround(dpr * 1000.0),
+    )
     cached = _HERO_LINK_PIXMAP_CACHE.get(key)
     if cached is not None:
         return cached
@@ -827,8 +891,14 @@ def _hero_link_pixmap(image_name: str, size: int, tint: QColor) -> QPixmap:
         visible = QRect(left, top, right - left + 1, bottom - top + 1)
         if visible.size() != image.size():
             image = image.copy(visible)
-    image = image.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    image = image.scaled(
+        physical_size,
+        physical_size,
+        Qt.KeepAspectRatio,
+        Qt.SmoothTransformation,
+    )
     pixmap = QPixmap.fromImage(image)
+    pixmap.setDevicePixelRatio(dpr)
     _HERO_LINK_PIXMAP_CACHE[key] = pixmap
     return pixmap
 
@@ -845,7 +915,7 @@ class GallerySplashScreen(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("gallerySplashScreen")
-        self._logo = app_icon_pixmap(self._LOGO_SIZE)
+        self._logo = QPixmap()
         self._progress_text = ""
         self._dismissing = False
         self._fade: QPropertyAnimation | None = None
@@ -859,6 +929,7 @@ class GallerySplashScreen(QWidget):
             self.setGeometry(parent.rect())
         self.raise_()
         self._layout_content()
+        self.refresh_display_scale()
 
     def set_progress(self, done: int, total: int) -> None:
         next_text = (
@@ -889,6 +960,17 @@ class GallerySplashScreen(QWidget):
 
     def refresh_theme(self) -> None:
         self.update()
+
+    def refresh_display_scale(self) -> None:
+        self._logo = app_icon_pixmap(
+            self._LOGO_SIZE,
+            self.devicePixelRatioF(),
+        )
+        self.update()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self.refresh_display_scale()
 
     def eventFilter(self, watched, event) -> bool:
         if (
@@ -1288,8 +1370,16 @@ class GalleryHeroLinkCard(QWidget):
             self._image_name,
             32,
             colors.text_primary,
+            self.devicePixelRatioF(),
         )
         self.update()
+
+    def refresh_display_scale(self) -> None:
+        self.refresh_theme()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self.refresh_display_scale()
 
 
 class GalleryHomeHero(QWidget):
@@ -1354,7 +1444,6 @@ class GalleryHomeHero(QWidget):
         icon = QLabel(self)
         icon.setObjectName("galleryHomeHeroIcon")
         icon.setFixedSize(56, 56)
-        icon.setPixmap(app_icon_pixmap(56))
         layout.addWidget(icon)
         layout.addSpacing(12)
         title = fluentqt.Label("Fluent-Qt Gallery", self)
@@ -1439,8 +1528,10 @@ class GalleryHomeHero(QWidget):
         self._back_button = back
         self._forward_button = forward
         self._cards = tuple(cards)
+        self._icon = icon
         self._title = title
         self._tagline = tagline
+        self.refresh_display_scale()
         self.refresh_theme()
 
     def resizeEvent(self, event) -> None:
@@ -1450,7 +1541,13 @@ class GalleryHomeHero(QWidget):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
+        self.refresh_display_scale()
         self._update_scroll_buttons()
+
+    def refresh_display_scale(self) -> None:
+        self._icon.setPixmap(
+            app_icon_pixmap(56, self.devicePixelRatioF())
+        )
 
     def _scroll_links(self, direction: int) -> None:
         scroll_bar = self._strip.horizontalScrollBar()
@@ -1772,6 +1869,11 @@ class GalleryCodeBlock(fluentqt.Expander):
     def __init__(self, code: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._code = code
+        # Source extraction keeps a terminal line break for stable formatting,
+        # but a rich-text QLabel renders it as an additional empty code line.
+        # Keep the original text for copying and omit serialization-only line
+        # endings from the visual block, matching the native C++ Gallery.
+        self._display_code = code.rstrip("\r\n")
         self._highlighted = False
         self.setObjectName("galleryCodeBlock")
         self.setAppearance(fluentqt.Card.Appearance.LayerAlt)
@@ -1791,6 +1893,7 @@ class GalleryCodeBlock(fluentqt.Expander):
         content = QWidget()
         content.setObjectName("galleryCodeBlockContentInner")
         content.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        content.setMinimumWidth(0)
         layout = QVBoxLayout(content)
         layout.setContentsMargins(16, 12, 14, 16)
         layout.setSpacing(10)
@@ -1829,6 +1932,9 @@ class GalleryCodeBlock(fluentqt.Expander):
         code_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         code_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         code_label.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
+        code_label.setWordWrap(True)
+        code_label.setMinimumWidth(0)
+        code_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         fixed = QFontDatabase.systemFont(QFontDatabase.FixedFont)
         fixed.setPixelSize(14)
         code_label.setFont(fixed)
@@ -1845,18 +1951,44 @@ class GalleryCodeBlock(fluentqt.Expander):
         self.refresh_theme()
 
     @staticmethod
-    def _escape_code(text: str) -> str:
-        return (
-            html.escape(text, quote=True)
-            .replace(" ", "&nbsp;")
-            .replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;")
-            .replace("\n", "<br/>")
-        )
+    def _escape_code(text: str, line_state: list[bool] | None = None) -> str:
+        """Preserve indentation while leaving inter-token spaces wrappable."""
 
-    @classmethod
-    def _token_span(cls, color: str, text: str) -> str:
+        state = line_state if line_state is not None else [True]
+        escaped: list[str] = []
+        index = 0
+        while index < len(text):
+            current = text[index]
+            if current in "\r\n":
+                if (
+                    current == "\r"
+                    and index + 1 < len(text)
+                    and text[index + 1] == "\n"
+                ):
+                    index += 1
+                escaped.append("<br/>")
+                state[0] = True
+                index += 1
+                continue
+            if current in " \t":
+                width = 0
+                while index < len(text) and text[index] in " \t":
+                    width += 4 if text[index] == "\t" else 1
+                    index += 1
+                if state[0]:
+                    escaped.append("&nbsp;" * width)
+                else:
+                    escaped.append("&nbsp;" * max(0, width - 1) + " ")
+                continue
+            escaped.append(html.escape(current, quote=True))
+            state[0] = False
+            index += 1
+        return "".join(escaped)
+
+    @staticmethod
+    def _token_span(color: str, escaped_text: str) -> str:
         return '<span style="color:{0};">{1}</span>'.format(
-            color, cls._escape_code(text)
+            color, escaped_text
         )
 
     @classmethod
@@ -1897,7 +2029,7 @@ class GalleryCodeBlock(fluentqt.Expander):
             tokens = list(tokenize.generate_tokens(io.StringIO(code).readline))
         except (IndentationError, tokenize.TokenError):
             body = cls._escape_code(code)
-            return cls._token_span(palette["text"], code) if body else ""
+            return cls._token_span(palette["text"], body) if body else ""
 
         ignored = {
             token.INDENT,
@@ -1908,11 +2040,14 @@ class GalleryCodeBlock(fluentqt.Expander):
         }
         result: list[str] = []
         cursor = 0
+        line_state = [True]
         for index, current in enumerate(tokens):
             start = absolute(current.start)
             end = absolute(current.end)
             if start > cursor:
-                result.append(cls._escape_code(code[cursor:start]))
+                result.append(
+                    cls._escape_code(code[cursor:start], line_state)
+                )
             text = code[start:end]
             color: str | None = None
             if current.type == token.NAME:
@@ -1934,14 +2069,41 @@ class GalleryCodeBlock(fluentqt.Expander):
                 color = palette["comment"]
             elif current.type == token.NUMBER:
                 color = palette["number"]
+            escaped_text = cls._escape_code(text, line_state)
+            # Commas are semantic argument boundaries. For qualified names,
+            # keep ``fluentqt.Type`` together and expose a fallback break only
+            # after the second (or later) dot. This prevents fragments such as
+            # a bare ``fluentqt.`` while still allowing a very narrow window to
+            # wrap ``fluentqt.Type.NestedEnum.Value`` without horizontal spill.
+            dotted_depth = 0
+            if current.type == token.OP and current.string == ".":
+                candidate_index = index
+                while candidate_index >= 0:
+                    candidate = tokens[candidate_index]
+                    if candidate.type == token.NAME:
+                        candidate_index -= 1
+                        continue
+                    if candidate.type == token.OP and candidate.string == ".":
+                        dotted_depth += 1
+                        candidate_index -= 1
+                        continue
+                    break
+            if (
+                current.type == token.OP
+                and (
+                    current.string == ","
+                    or (current.string == "." and dotted_depth >= 2)
+                )
+            ):
+                escaped_text += "&#8203;"
             result.append(
-                cls._token_span(color, text)
+                cls._token_span(color, escaped_text)
                 if color is not None
-                else cls._escape_code(text)
+                else escaped_text
             )
             cursor = max(cursor, end)
         if cursor < len(code):
-            result.append(cls._escape_code(code[cursor:]))
+            result.append(cls._escape_code(code[cursor:], line_state))
         return '<span style="color:{0};">{1}</span>'.format(
             palette["text"], "".join(result)
         )
@@ -1949,7 +2111,7 @@ class GalleryCodeBlock(fluentqt.Expander):
     def _apply_highlighted_code(self) -> None:
         self._code_label.setText(
             self._highlight_python_to_html(
-                self._code,
+                self._display_code,
                 fluentqt.current_theme() == fluentqt.Theme.Dark,
             )
         )
@@ -2067,10 +2229,20 @@ def _navigation_icon_pixmap(
     return pixmap
 
 
-def gallery_font_icon_pixmap(name: str, size: int, color: QColor) -> QPixmap:
+def gallery_font_icon_pixmap(
+    name: str,
+    size: int,
+    color: QColor,
+    device_pixel_ratio: float | None = None,
+) -> QPixmap:
     """Render a catalog icon through FluentQt's native FontIcon implementation."""
 
-    return _navigation_icon_pixmap(name, size, color)
+    dpr = (
+        _primary_screen_device_pixel_ratio()
+        if device_pixel_ratio is None
+        else _normalized_device_pixel_ratio(device_pixel_ratio)
+    )
+    return _navigation_icon_pixmap(name, size, color, 0, dpr)
 
 
 _ICON_VARIANT_PATTERN = re.compile(r"^(ic_fluent_.+)_([0-9]+)_regular$")
@@ -3535,6 +3707,24 @@ def refresh_gallery_visuals(
             refresh()
 
 
+def refresh_gallery_display_scale(
+    root: QWidget, *, visible_only: bool = True
+) -> None:
+    """Rebuild app-owned raster assets after a screen/DPR transition."""
+
+    seen: set[int] = set()
+    widgets = [root] + root.findChildren(QWidget)
+    for widget in widgets:
+        if id(widget) in seen:
+            continue
+        seen.add(id(widget))
+        if visible_only and widget is not root and not widget.isVisibleTo(root):
+            continue
+        refresh = getattr(widget, "refresh_display_scale", None)
+        if callable(refresh):
+            refresh()
+
+
 __all__ = [
     "GalleryCodeBlock",
     "GalleryEntryCard",
@@ -3550,6 +3740,7 @@ __all__ = [
     "app_icon_pixmap",
     "asset_path",
     "control_image_path",
+    "refresh_gallery_display_scale",
     "refresh_gallery_visuals",
     "route_icon_name",
 ]

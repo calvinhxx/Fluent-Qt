@@ -1,4 +1,4 @@
-"""Persistent application settings matching the native C++ Gallery."""
+"""Standalone application settings matching the native C++ Gallery."""
 
 from __future__ import annotations
 
@@ -19,6 +19,8 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QColor, QGuiApplication
 from PySide6.QtWidgets import QApplication
+
+from .identity import APPLICATION_NAME, ORGANIZATION_NAME
 
 
 class ThemeMode(IntEnum):
@@ -49,8 +51,8 @@ class CloseBehavior(IntEnum):
 
 def persistence_available() -> bool:
     return (
-        QCoreApplication.organizationName() == "Fluent-Qt"
-        and QCoreApplication.applicationName() == "Fluent-Qt Gallery"
+        QCoreApplication.organizationName() == ORGANIZATION_NAME
+        and QCoreApplication.applicationName() == APPLICATION_NAME
     )
 
 

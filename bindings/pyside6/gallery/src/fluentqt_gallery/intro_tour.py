@@ -1,4 +1,4 @@
-"""First-launch CoachMark tour matching the native C++ Gallery."""
+"""Standalone Gallery first-launch tour matching the native C++ app."""
 
 from __future__ import annotations
 

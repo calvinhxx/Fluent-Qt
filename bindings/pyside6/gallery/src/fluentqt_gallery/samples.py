@@ -1,4 +1,4 @@
-"""Live preview builders used by the PySide6 Gallery."""
+"""Live preview builders used by the standalone PySide6 Gallery."""
 
 from __future__ import annotations
 

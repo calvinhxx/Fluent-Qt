@@ -27,6 +27,8 @@ REQUIRED_PACKAGE_FILES = {
     "basicinput.pyi",
     "collections.pyi",
     "date_time.pyi",
+    "design.py",
+    "design.pyi",
     "dialogs_flyouts.pyi",
     "foundation.py",
     "foundation.pyi",
@@ -43,34 +45,7 @@ REQUIRED_PACKAGE_FILES = {
     "textfields.pyi",
     "windowing.py",
     "windowing.pyi",
-    "gallery/__init__.py",
-    "gallery/__main__.py",
-    "gallery/application_controller.py",
-    "gallery/app.py",
-    "gallery/catalog.py",
-    "gallery/contract.json",
-    "gallery/foundation_pages.py",
-    "gallery/intro_tour.py",
-    "gallery/native_samples.py",
-    "gallery/native_samples_basic.py",
-    "gallery/native_samples_collections.py",
-    "gallery/native_samples_dialogs.py",
-    "gallery/native_samples_navigation.py",
-    "gallery/native_samples_scrolling.py",
-    "gallery/native_samples_status.py",
-    "gallery/native_samples_text_window.py",
-    "gallery/samples.py",
-    "gallery/settings.py",
-    "gallery/single_instance.py",
-    "gallery/update_checker.py",
-    "gallery/visual.py",
-    "gallery/window.py",
-    "gallery/window_placement.py",
-    "gallery/assets/app-icon.png",
-    "gallery/assets/icon_aliases.json",
-    "gallery/assets/icon_catalog.json",
-    "gallery/assets/control_images/Placeholder.png",
-    "gallery/assets/home_header_tiles/Header-WindowsDesign.png",
+    "_icon_aliases.json",
 }
 
 
@@ -163,6 +138,11 @@ def package_files(package_dir):
         relative = source.relative_to(package_dir)
         if "__pycache__" in relative.parts or source.suffix in {".pyc", ".pyo"}:
             continue
+        if relative.parts and relative.parts[0] == "gallery":
+            raise RuntimeError(
+                "The reusable FluentQt wheel must not contain Gallery files: "
+                "{0}".format(source)
+            )
         archive_path = Path(PACKAGE_NAME) / relative
         files[archive_path.as_posix()] = source.read_bytes()
         if (

@@ -1,4 +1,4 @@
-"""Source-driven ports of the native Gallery basic-input SampleCards."""
+"""Standalone Gallery ports of native basic-input SampleCards."""
 
 from __future__ import annotations
 
@@ -27,14 +27,19 @@ register_source_samples(
                 """
                 root = QWidget()
                 layout = QHBoxLayout(root)
-                for text, style in (
-                    ("Standard", fluentqt.Button.ButtonStyle.Standard),
-                    ("Accent", fluentqt.Button.ButtonStyle.Accent),
-                    ("Subtle", fluentqt.Button.ButtonStyle.Subtle),
-                ):
-                    button = fluentqt.Button(text, root)
-                    button.setFluentStyle(style)
-                    layout.addWidget(button)
+
+                standard = fluentqt.Button("Standard", root)
+                standard.setFluentStyle(fluentqt.Button.ButtonStyle.Standard)
+
+                accent = fluentqt.Button("Accent", root)
+                accent.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
+
+                subtle = fluentqt.Button("Subtle", root)
+                subtle.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)
+
+                layout.addWidget(standard)
+                layout.addWidget(accent)
+                layout.addWidget(subtle)
                 """,
                 _WIDGETS,
             ),
@@ -45,14 +50,21 @@ register_source_samples(
                 """
                 root = QWidget()
                 layout = QHBoxLayout(root)
-                for text, size in (
-                    ("Small", fluentqt.Button.ButtonSize.Small),
-                    ("Standard", fluentqt.Button.ButtonSize.StandardSize),
-                    ("Large", fluentqt.Button.ButtonSize.Large),
-                ):
-                    button = fluentqt.Button(text, root)
-                    button.setFluentSize(size)
-                    layout.addWidget(button)
+
+                small = fluentqt.Button("Small", root)
+                small.setFluentSize(fluentqt.Button.ButtonSize.Small)
+
+                standard = fluentqt.Button("Standard", root)
+                standard.setFluentSize(
+                    fluentqt.Button.ButtonSize.StandardSize
+                )
+
+                large = fluentqt.Button("Large", root)
+                large.setFluentSize(fluentqt.Button.ButtonSize.Large)
+
+                layout.addWidget(small)
+                layout.addWidget(standard)
+                layout.addWidget(large)
                 """,
                 _WIDGETS,
             ),
@@ -63,18 +75,29 @@ register_source_samples(
                 """
                 root = QWidget()
                 layout = QHBoxLayout(root)
-                values = (
-                    ("Icon before", fluentqt.Button.ButtonLayout.IconBefore, "\ue710"),
-                    ("", fluentqt.Button.ButtonLayout.IconOnly, "\ue712"),
-                    ("Next", fluentqt.Button.ButtonLayout.IconAfter, "\ue76c"),
+
+                leading = fluentqt.Button("Icon before", root)
+                leading.setFluentLayout(
+                    fluentqt.Button.ButtonLayout.IconBefore
                 )
-                for text, button_layout, glyph in values:
-                    button = fluentqt.Button(text, root)
-                    button.setFluentLayout(button_layout)
-                    button.setIconGlyph(glyph)
-                    if button_layout == fluentqt.Button.ButtonLayout.IconOnly:
-                        button.setFixedSize(40, 40)
-                    layout.addWidget(button)
+                leading.setIconGlyph("\ue710")
+
+                icon_only = fluentqt.Button("", root)
+                icon_only.setFluentLayout(
+                    fluentqt.Button.ButtonLayout.IconOnly
+                )
+                icon_only.setIconGlyph("\ue712")
+                icon_only.setFixedSize(40, 40)
+
+                trailing = fluentqt.Button("Next", root)
+                trailing.setFluentLayout(
+                    fluentqt.Button.ButtonLayout.IconAfter
+                )
+                trailing.setIconGlyph("\ue76c")
+
+                layout.addWidget(leading)
+                layout.addWidget(icon_only)
+                layout.addWidget(trailing)
                 """,
                 _WIDGETS,
             ),
@@ -153,7 +176,10 @@ register_source_samples(
                     "Share project", "Invite people with a link", root
                 )
                 share.setFluentLayout(fluentqt.Button.ButtonLayout.IconBefore)
-                share.setIconGlyph("\ue72d", 16)
+                share.setIconGlyph(
+                    fluentqt.Typography.Icons.Share,
+                    fluentqt.Typography.IconSize.Standard,
+                )
                 share.setFocusVisual(True)
                 share.setFixedWidth(240)
                 disabled = fluentqt.CompoundButton(
@@ -332,7 +358,9 @@ register_source_samples(
                 def update_status(color):
                     value = color.name(QColor.NameFormat.HexArgb)
                     swatch.setStyleSheet(
-                        f"background-color: {value}; border: 1px solid rgba(0, 0, 0, 48); border-radius: 6px;"
+                        f"background-color: {value};"
+                        " border: 1px solid rgba(0, 0, 0, 48);"
+                        " border-radius: 6px;"
                     )
                     status.setText(f"Color: {value.upper()}")
 
@@ -412,7 +440,15 @@ register_source_samples(
                 status.setTextElideMode(Qt.TextElideMode.ElideRight)
 
                 def update_status(text):
-                    kind = "Suggested" if combo_box.findText(text, Qt.MatchFlag.MatchFixedString | Qt.MatchFlag.MatchCaseSensitive) >= 0 else "Custom"
+                    match = (
+                        Qt.MatchFlag.MatchFixedString
+                        | Qt.MatchFlag.MatchCaseSensitive
+                    )
+                    kind = (
+                        "Suggested"
+                        if combo_box.findText(text, match) >= 0
+                        else "Custom"
+                    )
                     status.setText(f"{kind} value: {text or '(empty)'}")
 
                 combo_box.editTextChanged.connect(update_status)

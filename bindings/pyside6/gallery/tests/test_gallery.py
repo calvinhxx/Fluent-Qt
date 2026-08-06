@@ -1,7 +1,8 @@
-"""Exact native-parity tests for the wheel-installed Python Gallery."""
+"""Exact native-parity tests for the standalone Python Gallery package."""
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Callable
 import json
 from pathlib import Path
@@ -53,19 +54,20 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from fluentqt.gallery.app import (
+from fluentqt_gallery.app import (
+    _normalize_snapshot_capture,
     _pending_gallery_network_requests,
     _reset_current_page_scroll,
     normalize_route,
     runtime_catalog_errors,
     save_snapshot,
 )
-from fluentqt.gallery.application_controller import (
+from fluentqt_gallery.application_controller import (
     CloseBehaviorPromptContent,
     GalleryApplicationController,
     keep_running_choice,
 )
-from fluentqt.gallery.catalog import (
+from fluentqt_gallery.catalog import (
     CATEGORIES,
     ENTRIES,
     ENTRY_BY_ROUTE_ID,
@@ -75,58 +77,188 @@ from fluentqt.gallery.catalog import (
     catalog_coverage_errors,
     entries_for_category,
 )
-from fluentqt.gallery.foundation_pages import (
+from fluentqt_gallery.foundation_pages import (
     GalleryIconBrowser,
     TypographyRampCard,
     _catalog_glyphs_for_size,
     _icon_font,
     _load_icon_catalog,
+    _theme_tokens,
 )
-from fluentqt.gallery.native_samples import ported_sample_keys
-from fluentqt.gallery.samples import build_sample
-from fluentqt.gallery.visual import (
+from fluentqt_gallery.identity import (
+    APPLICATION_ID,
+    APPLICATION_NAME,
+    ORGANIZATION_NAME,
+)
+from fluentqt_gallery.metrics import (
+    TITLE_BAR_HEIGHT,
+    drawer_title_bar_avoidance_margins,
+)
+from fluentqt_gallery.native_samples import (
+    _CPP_ALIGNMENT_MIN_CALL_LENGTH,
+    _CPP_DISPLAY_MEMBER_ALIASES,
+    _DISPLAY_HARD_LINE_LENGTH,
+    _DISPLAY_PREFERRED_LINE_LENGTH,
+    _cpp_wrapped_call_names,
+    _snake_case,
+    ported_sample_keys,
+)
+from fluentqt_gallery.samples import build_sample
+from fluentqt_gallery.visual import (
+    GalleryCodeBlock,
     _acrylic_noise_tile,
     _direct_icon_font,
     _direct_icon_glyph,
     _draw_pixmap_in_logical_rect,
+    _hero_link_pixmap,
+    _macos_dock_icon_pixmap,
     _qt_seeded_bytes,
     _single_shot,
     _tint_github_mark,
+    app_icon,
+    app_icon_pixmap,
     css_color,
+    gallery_font_icon_pixmap,
     gallery_colors,
 )
-from fluentqt.gallery.update_checker import (
+from fluentqt_gallery.update_checker import (
     UpdateResult,
     UpdateStatus,
     compare_versions,
 )
-from fluentqt.gallery.window import GalleryWindow
-from fluentqt.gallery.window_placement import (
+from fluentqt_gallery.window import (
+    GalleryWindow,
+    _refresh_fluent_subtree,
+    gallery_window_editing_command_router,
+)
+from fluentqt_gallery.window_placement import (
     constrain_geometry,
     effective_minimum_size,
     recommended_initial_size,
     restored_geometry,
 )
-from fluentqt.gallery.settings import CloseBehavior
-from fluentqt.gallery.single_instance import (
+from fluentqt_gallery.settings import CloseBehavior, persistence_available
+from fluentqt_gallery.single_instance import (
     GallerySingleInstance,
     StartResult,
+    _scoped_instance_name,
 )
 
 
-MANIFEST_PATH = Path(__file__).resolve().parents[1] / "api-manifest.json"
+MANIFEST_PATH = Path(__file__).resolve().parents[2] / "api-manifest.json"
 EXPECTED_SUPPORT_TYPES = frozenset(
     {
+        "AnchorLayout",
+        "AnchorSpec",
         "AnnotatedScrollBarLabel",
         "BreadcrumbItem",
+        "CornerRadius",
         "EditingCommandRouter",
         "FluentMenuItem",
+        "FluentWidget",
+        "Icons",
+        "IconSize",
         "PivotItem",
         "ScrollViewZoomAwareWidget",
         "SelectorBarItem",
         "SplitViewPaneOptions",
+        "Spacing",
         "StackContentHost",
+        "StateGroup",
         "TabViewItem",
+        "ThemeTokens",
+        "Typography",
+    }
+)
+SEMANTIC_ICON_CATALOG_PATTERN = re.compile(
+    r"(?P<quote>['\"])(?:{0})(?P=quote)".format(
+        "|".join(
+            re.escape(value)
+            for name, value in vars(fluentqt.Icons).items()
+            if not name.startswith("_") and isinstance(value, str)
+        )
+    )
+)
+DISPLAY_PREVIEW_LAYOUT_METHODS = frozenset(
+    {
+        "addLayout",
+        "addSpacing",
+        "addStretch",
+        "addWidget",
+        "setAlignment",
+        "setContentsMargins",
+        "setSpacing",
+        "setStretch",
+    }
+)
+DISPLAY_PREVIEW_LAYOUT_TYPES = frozenset(
+    {
+        "QFormLayout",
+        "QGridLayout",
+        "QHBoxLayout",
+        "QStackedLayout",
+        "QVBoxLayout",
+    }
+)
+CPP_PYTHON_MEMBER_EQUIVALENTS = frozenset(
+    {
+        "arg",
+        "at",
+        "backgroundVisible",
+        "canExecute",
+        "checkState",
+        "contentHost",
+        "count",
+        "currentIndex",
+        "dragExclusionRects",
+        "height",
+        "isAlwaysExpanded",
+        "isChecked",
+        "isEmpty",
+        "isHidden",
+        "isReadOnly",
+        "isVisible",
+        "itemAt",
+        "itemCount",
+        "labelPosition",
+        "layout",
+        "minimumWidth",
+        "name",
+        "pageCount",
+        "progressText",
+        "property",
+        "scrollableHeight",
+        "scrollableWidth",
+        "size",
+        "sizeHint",
+        "tabAt",
+        "tabCount",
+        "text",
+        "titleBar",
+        "titleBarHeight",
+        "toInt",
+        "toString",
+        "value",
+        "valueToKey",
+        "width",
+        "window",
+    }
+)
+FORBIDDEN_DISPLAY_HELPERS = frozenset(
+    {
+        "AnnotatedColorSectionsContent",
+        "GALLERY_ACCENT_PALETTE",
+        "PagerPicture",
+        "add_labeled_widget",
+        "color_section_labels",
+        "gallery_glyph_pixmap",
+        "gallery_initials_avatar",
+        "make_body_label",
+        "make_gradient_pane",
+        "make_title_bar_content",
+        "make_title_label",
+        "make_window_content",
+        "set_action_glyph",
     }
 )
 
@@ -210,7 +342,7 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_contract_exactly_matches_the_public_binding(self):
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["classes"]), 77)
+        self.assertEqual(len(manifest["classes"]), 87)
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
         self.assertEqual(len(ROUTES), 88)
@@ -227,7 +359,7 @@ class PythonGalleryTest(unittest.TestCase):
         self.assertEqual(SUPPORT_TYPES, EXPECTED_SUPPORT_TYPES)
         routed_types = {entry.name for entry in ENTRIES}
         self.assertTrue(routed_types.isdisjoint(SUPPORT_TYPES))
-        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 77)
+        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 87)
         for entry in ENTRIES:
             self.assertFalse(entry.support_type)
 
@@ -241,7 +373,7 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_navigation_icons_use_native_optical_alias_resolution(self):
         native_catalog_path = (
-            Path(__file__).resolve().parents[3]
+            Path(__file__).resolve().parents[4]
             / "res"
             / "icons"
             / "FluentQtIcons.json"
@@ -398,7 +530,7 @@ class PythonGalleryTest(unittest.TestCase):
         probe = """
 import sys
 from PySide6.QtCore import QCoreApplication
-from fluentqt.gallery.single_instance import GallerySingleInstance
+from fluentqt_gallery.single_instance import GallerySingleInstance
 QCoreApplication.setApplicationName(sys.argv[3])
 QCoreApplication.setOrganizationName(sys.argv[4])
 app = QCoreApplication([])
@@ -442,15 +574,37 @@ instance.close()
                 worker.wait(timeout=1.0)
             primary.close()
 
+    def test_python_and_native_galleries_have_independent_runtime_identity(self):
+        self.assertEqual(APPLICATION_ID, "com.fluentqt.gallery.pyside6")
+        self.assertEqual(APPLICATION_NAME, "Fluent-Qt Gallery (Python)")
+        self.assertEqual(ORGANIZATION_NAME, "Fluent-Qt")
+        self.assertNotEqual(
+            _scoped_instance_name(APPLICATION_ID),
+            _scoped_instance_name("com.fluentqt.gallery"),
+        )
+
+        previous_name = QCoreApplication.applicationName()
+        previous_organization = QCoreApplication.organizationName()
+        try:
+            QCoreApplication.setApplicationName(APPLICATION_NAME)
+            QCoreApplication.setOrganizationName(ORGANIZATION_NAME)
+            self.assertTrue(persistence_available())
+
+            QCoreApplication.setApplicationName("Fluent-Qt Gallery")
+            self.assertFalse(persistence_available())
+        finally:
+            QCoreApplication.setApplicationName(previous_name)
+            QCoreApplication.setOrganizationName(previous_organization)
+
     def test_gallery_app_defers_heavy_ui_imports_until_primary_lock(self):
         probe = """
 import json
 import sys
-import fluentqt.gallery.app
+import fluentqt_gallery.app
 heavy_modules = (
-    "fluentqt.gallery.catalog",
-    "fluentqt.gallery.native_samples",
-    "fluentqt.gallery.window",
+    "fluentqt_gallery.catalog",
+    "fluentqt_gallery.native_samples",
+    "fluentqt_gallery.window",
 )
 print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 """
@@ -503,6 +657,179 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         finally:
             result.widget.deleteLater()
             QApplication.processEvents()
+
+    def test_tree_view_delegate_uses_native_indicator_motion_contract(self):
+        result = build_sample("tree-view", "tree-view-basic")
+        tree = result.widget
+        try:
+            delegate = tree.itemDelegate()
+            paint_names = set(delegate.paint.__func__.__code__.co_names)
+            self.assertIn("selectedIndicatorProgress", paint_names)
+            self.assertIn("isIndicatorMotionActiveForIndex", paint_names)
+            self.assertIn("indicatorMotionDirection", paint_names)
+            self.assertIn("indicatorHierarchyTransition", paint_names)
+            self.assertTrue(tree.isIndicatorMotionAnimationEnabled())
+
+            tree.resize(520, 252)
+            tree.show()
+            _qwait(20)
+            parent_index = tree.model().index(0, 0)
+            child_index = tree.model().index(0, 0, parent_index)
+            tree.setSelectedItem(child_index)
+            QApplication.processEvents()
+            self.assertEqual(tree.indicatorMotionCurrentIndex(), child_index)
+            self.assertEqual(
+                tree.indicatorHierarchyTransition(),
+                fluentqt.TreeView.IndicatorHierarchyTransition.Inward,
+            )
+        finally:
+            tree.close()
+            tree.deleteLater()
+            QApplication.processEvents()
+
+    def test_command_bar_reuses_the_gallery_window_editing_router(self):
+        window = GalleryWindow(startup_visuals=False)
+        window.show()
+        try:
+            window.navigate(
+                "command-bar", record_history=False, animated=False
+            )
+            _qwait(20)
+            routers = window.findChildren(fluentqt.EditingCommandRouter)
+            self.assertEqual(len(routers), 1)
+            router = routers[0]
+            self.assertIs(router.scopeWindow(), window)
+
+            editor = window.findChild(
+                fluentqt.LineEdit,
+                "Gallery.CommandBar.EditingTarget",
+            )
+            self.assertIsNotNone(editor)
+            page = window._pages["command-bar"][1]
+            result = next(
+                item
+                for item in page._gallery_sample_results
+                if item.sample_id == "command-bar-editing-router"
+            )
+            namespace = result.widget._fluentqt_gallery_source_namespace
+            self.assertIs(namespace["router"], router)
+            editor = namespace["editor"]
+            page.ensureWidgetVisible(editor, 40, 180)
+            _qwait(20)
+            QApplication.clipboard().clear()
+            editor.setFocus(Qt.FocusReason.OtherFocusReason)
+            editor.selectAll()
+            _qwait(20)
+            command = fluentqt.EditingCommandRouter.Command.Copy
+            self.assertTrue(router.hasActiveTarget())
+            self.assertTrue(router.canExecute(command))
+            self.assertTrue(router.action(command).isEnabled())
+            self.assertIn("Copy: on", namespace["status"].text())
+
+            bar = namespace["bar"]
+            copy_button = next(
+                button
+                for button in bar.findChildren(fluentqt.Button)
+                if button.text() == "Copy" and button.isVisible()
+            )
+            self.assertTrue(copy_button.isEnabled())
+            copy_button.setFocus(Qt.FocusReason.MouseFocusReason)
+            editor.deselect()
+            _qwait(20)
+            self.assertTrue(router.canExecute(command))
+            self.assertTrue(copy_button.isEnabled())
+            QTest.mouseClick(copy_button, Qt.MouseButton.LeftButton)
+            _qwait(20)
+            self.assertEqual(
+                QApplication.clipboard().text(),
+                "Review the release notes before Friday",
+            )
+
+            editor.setText("Cut this text")
+            editor.setFocus(Qt.FocusReason.OtherFocusReason)
+            editor.selectAll()
+            _qwait(20)
+            cut_command = fluentqt.EditingCommandRouter.Command.Cut
+            cut_button = next(
+                button
+                for button in bar.findChildren(fluentqt.Button)
+                if button.text() == "Cut" and button.isVisible()
+            )
+            cut_button.setFocus(Qt.FocusReason.MouseFocusReason)
+            editor.deselect()
+            _qwait(20)
+            self.assertTrue(router.canExecute(cut_command))
+            self.assertTrue(cut_button.isEnabled())
+            QTest.mouseClick(cut_button, Qt.MouseButton.LeftButton)
+            _qwait(20)
+            self.assertEqual(editor.text(), "")
+            self.assertEqual(
+                QApplication.clipboard().text(), "Cut this text"
+            )
+        finally:
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
+    def test_command_surfaces_and_icons_follow_the_effective_theme(self):
+        cases = (
+            (
+                "command-bar",
+                "command-bar-responsive-overflow",
+                "panel",
+                "bar",
+                "primaryActions",
+            ),
+            (
+                "command-bar-flyout",
+                "command-bar-flyout-show-modes",
+                "photo",
+                "flyout",
+                "primaryActions",
+            ),
+        )
+        for route_id, sample_id, child_name, owner_name, actions_name in cases:
+            with self.subTest(route=route_id, sample=sample_id):
+                result = build_sample(route_id, sample_id)
+                try:
+                    namespace = (
+                        result.widget._fluentqt_gallery_source_namespace
+                    )
+                    root = namespace["root"]
+                    child = namespace[child_name]
+                    owner = namespace[owner_name]
+                    self.assertIsInstance(root, fluentqt.FluentWidget)
+                    self.assertIsInstance(child, fluentqt.FluentWidget)
+                    actions = getattr(owner, actions_name)()
+                    action = next(
+                        item for item in actions if not item.isSeparator()
+                    )
+                    previous_icon_key = action.icon().cacheKey()
+                    target = (
+                        fluentqt.Theme.Light
+                        if root.effective_theme() == fluentqt.Theme.Dark
+                        else fluentqt.Theme.Dark
+                    )
+                    root.setProperty("fluentThemeOverride", int(target))
+                    _refresh_fluent_subtree(root)
+                    QApplication.processEvents()
+                    self.assertEqual(root.effective_theme(), target)
+                    self.assertEqual(child.effective_theme(), target)
+                    self.assertNotEqual(
+                        action.icon().cacheKey(), previous_icon_key
+                    )
+                finally:
+                    result.widget.close()
+                    result.widget.deleteLater()
+                    QApplication.processEvents()
+
+    def test_theme_refresh_handles_item_view_update_overload(self):
+        root = QWidget()
+        view = fluentqt.ListView(root)
+        _refresh_fluent_subtree(root)
+        self.assertTrue(shiboken6.isValid(view))
+        root.deleteLater()
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
     def test_automated_gallery_keeps_native_photo_loading_contract(self):
         previous = QApplication.instance().property(
@@ -659,7 +986,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     ("Gold", 4770),
                 ),
             )
-            self.assertEqual(scroll.contentWidget().size(), QSize(360, 7560))
+            self.assertEqual(scroll.contentWidget().size(), QSize(380, 7560))
             texts = {label.text() for label in result.widget.findChildren(fluentqt.Label)}
             self.assertIn("Section: Azure - offset 0", texts)
         finally:
@@ -684,6 +1011,17 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertTrue(
                 {"Height: 360 px", "Visible labels: 12 of 12"} <= texts
             )
+            result.widget.show()
+            QApplication.processEvents()
+            initial_size = result.widget.size()
+            initial_bar_top = bar.y()
+            slider.setValue(220)
+            QApplication.processEvents()
+            self.assertEqual(result.widget.size(), initial_size)
+            self.assertEqual(result.widget.size(), QSize(382, 360))
+            self.assertEqual(bar.height(), 220)
+            self.assertEqual(bar.y(), initial_bar_top)
+            self.assertEqual(bar.y(), 0)
         finally:
             dispose(result)
 
@@ -779,6 +1117,22 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertEqual(controls.layout().spacing(), 8)
             self.assertTrue(controls.layout().alignment() & Qt.AlignLeft)
             self.assertTrue(controls.layout().alignment() & Qt.AlignVCenter)
+            status = next(
+                label
+                for label in result.widget.findChildren(fluentqt.Label)
+                if label.text().startswith("Current page:")
+            )
+            buttons[1].click()
+            self.assertEqual(flip_view.currentIndex(), 1)
+            self.assertEqual(status.text(), "Current page: 2")
+            self.assertIn(
+                "flip_view.currentIndexChanged.connect(update_status)",
+                result.source,
+            )
+            self.assertIn(
+                "def update_status(index, label=status):",
+                result.preview_source,
+            )
         finally:
             dispose(result)
 
@@ -795,6 +1149,28 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 result.preview_source,
             )
             self.assertIn("page = QLabel(flip_view)", result.preview_source)
+            self.assertEqual(result.widget.pageCount(), 3)
+            self.assertEqual(result.source.count("addOwnedPage("), 3)
+            self.assertIn("addOwnedPage(sunrise_photo)", result.source)
+            self.assertIn("addOwnedPage(ocean_photo)", result.source)
+            self.assertIn("addOwnedPage(forest_photo)", result.source)
+        finally:
+            dispose(result)
+
+        result = build_sample("flip-view", "flip-view-vertical")
+        try:
+            self.assertEqual(result.widget.pageCount(), 3)
+            self.assertEqual(
+                result.widget.orientation(), Qt.Orientation.Vertical
+            )
+            self.assertIn(
+                "flip_view.setOrientation(Qt.Orientation.Vertical)",
+                result.source,
+            )
+            self.assertEqual(result.source.count("addOwnedPage("), 3)
+            self.assertIn("addOwnedPage(first_page)", result.source)
+            self.assertIn("addOwnedPage(second_page)", result.source)
+            self.assertIn("addOwnedPage(third_page)", result.source)
         finally:
             dispose(result)
 
@@ -864,7 +1240,43 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 label.text()
                 for label in result.widget.findChildren(fluentqt.Label)
             )
-            self.assertEqual(captions, ("16 px", "20 px", "24 px", "32 px"))
+            self.assertEqual(captions, ("12 px", "16 px", "24 px", "32 px"))
+            self.assertNotIn("for ", result.source)
+            self.assertNotIn("values =", result.source)
+            self.assertNotIn("make_icon_cell", result.source)
+            for name in ("compact", "standard", "medium", "large"):
+                self.assertIn(
+                    "{0} = fluentqt.FontIcon("
+                    "fluentqt.Typography.Icons.Search)".format(name),
+                    result.source,
+                )
+            self.assertIn(
+                "compact.setIconSize(fluentqt.Typography.IconSize.Compact)",
+                result.source,
+            )
+            self.assertIn(
+                "standard.setIconSize(fluentqt.Typography.IconSize.Standard)",
+                result.source,
+            )
+        finally:
+            dispose(result)
+
+        result = build_sample("button", "button-icon-layouts")
+        try:
+            self.assertIn(
+                "leading.setIconGlyph(fluentqt.Typography.Icons.Add)",
+                result.source,
+            )
+            self.assertIn(
+                'icon_only.setIconGlyph('
+                "fluentqt.Typography.Icons.More)",
+                result.source,
+            )
+            self.assertIn(
+                'trailing.setIconGlyph('
+                "fluentqt.Typography.Icons.ChevronRight)",
+                result.source,
+            )
         finally:
             dispose(result)
 
@@ -906,6 +1318,105 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         self.assertEqual(image.pixelColor(40, 20), QColor(220, 30, 40))
         self.assertEqual(image.pixelColor(40, 59), QColor(220, 30, 40))
         self.assertEqual(image.pixelColor(40, 60).alpha(), 0)
+
+    def test_gallery_raster_assets_are_rendered_at_physical_dpr(self):
+        for dpr, expected_app_size, expected_link_size in (
+            (1.0, 18, 32),
+            (1.25, 23, 40),
+            (2.0, 36, 64),
+            (3.0, 54, 96),
+        ):
+            with self.subTest(dpr=dpr):
+                app_pixmap = app_icon_pixmap(18, dpr)
+                self.assertEqual(
+                    app_pixmap.size(),
+                    QSize(expected_app_size, expected_app_size),
+                )
+                self.assertAlmostEqual(app_pixmap.devicePixelRatioF(), dpr)
+
+                link_pixmap = _hero_link_pixmap(
+                    "GitHub-Mark.png",
+                    32,
+                    QColor("#202020"),
+                    dpr,
+                )
+                self.assertEqual(
+                    max(
+                        link_pixmap.width(),
+                        link_pixmap.height(),
+                    ),
+                    expected_link_size,
+                )
+                self.assertGreaterEqual(
+                    min(
+                        link_pixmap.width(),
+                        link_pixmap.height(),
+                    ),
+                    int(expected_link_size * 0.9),
+                )
+                self.assertAlmostEqual(link_pixmap.devicePixelRatioF(), dpr)
+
+                font_pixmap = gallery_font_icon_pixmap(
+                    "ic_fluent_open_16_regular",
+                    16,
+                    QColor("#202020"),
+                    dpr,
+                )
+                self.assertEqual(
+                    font_pixmap.size(),
+                    QSize(
+                        int(16 * dpr + 0.5),
+                        int(16 * dpr + 0.5),
+                    ),
+                )
+                self.assertAlmostEqual(font_pixmap.devicePixelRatioF(), dpr)
+
+    def test_gallery_display_scale_event_refreshes_visible_raster_assets(self):
+        window = GalleryWindow(startup_visuals=False)
+        window.show()
+        QApplication.processEvents()
+        try:
+            title_icon = window.findChild(
+                QLabel,
+                "GalleryTitleBar.AppIcon",
+            )
+            hero_icon = window.findChild(QLabel, "galleryHomeHeroIcon")
+            self.assertIsNotNone(title_icon)
+            self.assertIsNotNone(hero_icon)
+            title_before = title_icon.pixmap()
+            hero_before = hero_icon.pixmap()
+            self.assertFalse(title_before.isNull())
+            self.assertFalse(hero_before.isNull())
+
+            screen_change = getattr(
+                QEvent.Type,
+                "ScreenChangeInternal",
+                None,
+            )
+            if screen_change is None:
+                self.skipTest("Qt does not expose ScreenChangeInternal")
+            QApplication.sendEvent(window, QEvent(screen_change))
+            _qwait(20)
+
+            title_after = title_icon.pixmap()
+            hero_after = hero_icon.pixmap()
+            self.assertNotEqual(title_after.cacheKey(), title_before.cacheKey())
+            self.assertNotEqual(hero_after.cacheKey(), hero_before.cacheKey())
+            for label, logical_size in ((title_icon, 18), (hero_icon, 56)):
+                pixmap = label.pixmap()
+                dpr = max(1.0, label.devicePixelRatioF())
+                self.assertAlmostEqual(pixmap.devicePixelRatioF(), dpr)
+                self.assertEqual(
+                    pixmap.size(),
+                    QSize(
+                        int(logical_size * dpr + 0.5),
+                        int(logical_size * dpr + 0.5),
+                    ),
+                )
+        finally:
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
 
     def test_gallery_generated_pixels_match_cpp_argb_contract(self):
         tile = _acrylic_noise_tile()
@@ -1002,6 +1513,21 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             code_label = code.findChild(fluentqt.Label, "galleryCodeBlockText")
             self.assertIsNotNone(code_label)
             self.assertEqual(code_label.text(), "")
+            self.assertTrue(code_label.wordWrap())
+            self.assertEqual(
+                code_label.sizePolicy().horizontalPolicy(),
+                QSizePolicy.Policy.Ignored,
+            )
+            source = card._gallery_result.source
+            self.assertNotIn("for text, style in", source)
+            self.assertRegex(
+                source,
+                r"accent = fluentqt\.Button\(['\"]Accent['\"]\)",
+            )
+            self.assertLessEqual(
+                max(len(line) for line in source.splitlines()),
+                88,
+            )
             collapsed_height = card.height()
             code.setExpandedAnimated(True, False)
             QApplication.processEvents()
@@ -1009,12 +1535,12 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertGreater(card.height(), collapsed_height)
             self.assertIn('<span style="color:', code_label.text())
             self.assertNotIn("<pre", code_label.text())
-            expected_keyword = (
-                "#569CD6"
+            expected_function = (
+                "#DCDCAA"
                 if fluentqt.current_theme() == fluentqt.Theme.Dark
-                else "#0000FF"
+                else "#795E26"
             )
-            self.assertIn(expected_keyword, code_label.text())
+            self.assertIn(expected_function, code_label.text())
 
             theme_button = page._gallery_theme_button
             initial_theme = page._gallery_sample_theme
@@ -1035,6 +1561,204 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_code_block_wraps_long_python_at_narrow_width(self):
+        block = GalleryCodeBlock(
+            "result = fluentqt.Button.ButtonStyle.Accent "
+            "+ fluentqt.Button.ButtonLayout.IconBefore"
+        )
+        block.resize(300, block.height())
+        block.setExpandedAnimated(True, False)
+        block.show()
+        QApplication.processEvents()
+        try:
+            label = block.findChild(
+                fluentqt.Label,
+                "galleryCodeBlockText",
+            )
+            content = block.findChild(
+                QWidget,
+                "galleryCodeBlockContentInner",
+            )
+            self.assertIsNotNone(label)
+            self.assertIsNotNone(content)
+            self.assertTrue(label.hasHeightForWidth())
+            self.assertGreater(
+                label.heightForWidth(170),
+                label.heightForWidth(700),
+            )
+            self.assertIn("&#8203;", label.text())
+            self.assertNotIn("fluentqt.&#8203;", label.text())
+            self.assertLessEqual(label.width(), content.width())
+            self.assertLessEqual(content.width(), block.width())
+        finally:
+            block.close()
+            block.deleteLater()
+            QApplication.processEvents()
+
+    def test_code_block_does_not_render_terminal_newline_as_empty_row(self):
+        source = (
+            "button = fluentqt.RepeatButton('Click and hold')\n"
+            "button.clicked.connect(increment)"
+        )
+        blocks = (
+            GalleryCodeBlock(source),
+            GalleryCodeBlock(source + "\n"),
+        )
+        try:
+            heights = []
+            for block in blocks:
+                block.resize(760, block.height())
+                block.setExpandedAnimated(True, False)
+                block.show()
+                QApplication.processEvents()
+                label = block.findChild(
+                    fluentqt.Label,
+                    "galleryCodeBlockText",
+                )
+                content = block.findChild(
+                    QWidget,
+                    "galleryCodeBlockContentInner",
+                )
+                self.assertIsNotNone(label)
+                self.assertIsNotNone(content)
+                heights.append((block.height(), label.height()))
+                self.assertFalse(label.text().endswith("<br/></span>"))
+                margins = content.layout().contentsMargins()
+                self.assertEqual(
+                    content.height() - label.geometry().bottom() - 1,
+                    margins.bottom(),
+                )
+            self.assertEqual(heights[0], heights[1])
+        finally:
+            for block in blocks:
+                block.close()
+                block.deleteLater()
+            QApplication.processEvents()
+
+    def test_drawer_close_policy_avoids_macos_title_bar(self):
+        window = GalleryWindow(startup_visuals=False)
+        window.show()
+        window.navigate("drawer-view", animated=False)
+        QApplication.processEvents()
+        drawer = None
+        try:
+            _index, page = window._pages["drawer-view"]
+            card = next(
+                card
+                for card in page._gallery_sample_cards
+                if card.property("gallerySampleId")
+                == "drawer-view-close-policy"
+            )
+            result = card._gallery_result
+            drawer = result.widget._fluentqt_gallery_source_namespace[
+                "drawer"
+            ]
+            expected_top = (
+                TITLE_BAR_HEIGHT
+                if sys.platform == "darwin"
+                else 0
+            )
+            self.assertEqual(
+                drawer.availableMargins(),
+                drawer_title_bar_avoidance_margins(),
+            )
+            self.assertEqual(drawer.availableMargins().top(), expected_top)
+            self.assertIn(
+                "drawer_title_bar_avoidance_margins()",
+                result.source,
+            )
+            self.assertNotIn("setAvailableMargins(QMargins())", result.source)
+
+            drawer.setAnimationEnabled(False)
+            drawer.open()
+            QApplication.processEvents()
+            self.assertEqual(drawer.geometry().top(), expected_top)
+            if sys.platform == "darwin":
+                self.assertGreater(drawer.geometry().top(), 0)
+        finally:
+            if drawer is not None:
+                drawer.close()
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
+    def test_python_snippets_follow_cpp_semantic_wrap_boundaries(self):
+        cases = (
+            (
+                "compound-button",
+                "compound-button-content",
+                "standard = fluentqt.CompoundButton(\n"
+                "    'Install update',\n"
+                "    'Download and restart the app'\n"
+                ")",
+            ),
+            (
+                "scroll-view",
+                "scroll-view-content-zoom",
+                "scroll_view.setVerticalScrollBarVisibility(\n"
+                "    fluentqt.ScrollView.ScrollBarVisibility.Auto\n"
+                ")",
+            ),
+            (
+                "tab-view",
+                "tab-view-add-close",
+                "tabs.addTab(\n"
+                "    fluentqt.TabViewItem(\"Disabled\", "
+                "fluentqt.Typography.Icons.Lock, True, False)\n"
+                ")",
+            ),
+            (
+                "toast",
+                "toast-title-placement",
+                "bottom_start.clicked.connect(\n"
+                "    lambda: present(bottom_start, "
+                "fluentqt.Toast.Placement.BottomStart)\n"
+                ")",
+            ),
+        )
+        for route_id, sample_id, expected in cases:
+            with self.subTest(route=route_id, sample=sample_id):
+                result = build_sample(route_id, sample_id)
+                try:
+                    self.assertIn(expected, result.source)
+                    self.assertLessEqual(
+                        max(map(len, result.source.splitlines()), default=0),
+                        _DISPLAY_HARD_LINE_LENGTH,
+                    )
+                finally:
+                    result.widget.close()
+                    result.widget.deleteLater()
+
+        command_bar = build_sample(
+            "command-bar", "command-bar-responsive-overflow"
+        )
+        try:
+            self.assertNotIn(
+                "bar.addPrimaryAction(add_action)\n\n"
+                "bar.addPrimaryAction(edit_action)",
+                command_bar.source,
+            )
+        finally:
+            command_bar.widget.close()
+            command_bar.widget.deleteLater()
+            QApplication.processEvents()
+
+    def test_macos_dock_icon_matches_native_gallery_visual_padding(self):
+        source = QPixmap(64, 64)
+        source.fill(QColor("#0078D4"))
+        padded = _macos_dock_icon_pixmap(source)
+        self.assertEqual(padded.size(), QSize(256, 256))
+        image = padded.toImage()
+        self.assertEqual(image.pixelColor(14, 128).alpha(), 0)
+        self.assertGreater(image.pixelColor(15, 128).alpha(), 0)
+        self.assertGreater(image.pixelColor(239, 128).alpha(), 0)
+        self.assertEqual(image.pixelColor(240, 128).alpha(), 0)
+
+        icon = app_icon()
+        self.assertFalse(icon.isNull())
+        if sys.platform == "darwin":
+            self.assertEqual(icon.actualSize(QSize(256, 256)), QSize(256, 256))
+
     def test_content_labels_match_native_tracked_style_sheet_contract(self):
         window = GalleryWindow(startup_visuals=False)
         window.show()
@@ -1043,12 +1767,8 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         try:
             _index, page = window._pages["button"]
             colors = gallery_colors()
-            expected_primary = "color: {0}; background: transparent;".format(
-                css_color(colors.text_primary)
-            )
-            expected_secondary = "color: {0}; background: transparent;".format(
-                css_color(colors.text_secondary)
-            )
+            expected_primary = css_color(colors.text_primary)
+            expected_secondary = css_color(colors.text_secondary)
 
             title = page.findChild(fluentqt.Label, "galleryContentTitle")
             section = page.findChild(
@@ -1058,19 +1778,24 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             self.assertIsNotNone(title)
             self.assertIsNotNone(section)
             self.assertIsNotNone(body)
-            self.assertEqual(title.styleSheet(), expected_primary)
-            self.assertEqual(section.styleSheet(), expected_primary)
-            self.assertEqual(body.styleSheet(), "")
+            self.assertIn(expected_primary, title.styleSheet())
+            self.assertIn(expected_primary, section.styleSheet())
+            self.assertIn(expected_secondary, body.styleSheet())
             self.assertEqual(
-                body.palette().color(QPalette.ColorRole.WindowText),
-                colors.text_primary,
+                title.textColorRole(),
+                fluentqt.Label.TextColorRole.Primary,
             )
             self.assertEqual(
-                body.textColorRole(), fluentqt.Label.TextColorRole.Default
+                section.textColorRole(),
+                fluentqt.Label.TextColorRole.Primary,
+            )
+            self.assertEqual(
+                body.textColorRole(),
+                fluentqt.Label.TextColorRole.Secondary,
             )
 
             page.onThemeUpdated()
-            self.assertEqual(body.styleSheet(), expected_secondary)
+            self.assertIn(expected_secondary, body.styleSheet())
 
             window.navigate("basic-input", animated=False)
             _qwait(50)
@@ -1079,11 +1804,95 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 fluentqt.Label, "galleryContentSubtitle"
             )
             self.assertIsNotNone(subtitle)
-            self.assertEqual(subtitle.styleSheet(), expected_secondary)
+            self.assertIn(expected_secondary, subtitle.styleSheet())
             self.assertEqual(
-                subtitle.textColorRole(), fluentqt.Label.TextColorRole.Default
+                subtitle.textColorRole(),
+                fluentqt.Label.TextColorRole.Secondary,
             )
         finally:
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
+    def test_home_section_headers_follow_a_light_to_dark_theme_switch(self):
+        window = GalleryWindow(startup_visuals=False)
+        original_mode = int(window._settings.theme_mode)
+        window.show()
+        QApplication.processEvents()
+        try:
+            window._set_theme_mode(1)
+            QApplication.processEvents()
+            headers = (
+                window.findChild(
+                    fluentqt.Label, "galleryHomeFeaturedHeader"
+                ),
+                window.findChild(
+                    fluentqt.Label, "galleryHomeCategoriesHeader"
+                ),
+            )
+            self.assertTrue(all(header is not None for header in headers))
+            light_color = css_color(gallery_colors().text_primary)
+            for header in headers:
+                self.assertEqual(
+                    header.textColorRole(),
+                    fluentqt.Label.TextColorRole.Primary,
+                )
+                self.assertIn(light_color, header.styleSheet())
+
+            window._set_theme_mode(2)
+            QApplication.processEvents()
+            dark_color = css_color(gallery_colors().text_primary)
+            self.assertNotEqual(light_color, dark_color)
+            for header in headers:
+                self.assertIn(dark_color, header.styleSheet())
+                self.assertNotIn(light_color, header.styleSheet())
+        finally:
+            window._set_theme_mode(original_mode)
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
+    def test_global_theme_switch_refreshes_scroll_view_viewport_palette(self):
+        window = GalleryWindow(startup_visuals=False)
+        original_mode = int(window._settings.theme_mode)
+        window.show()
+        window.navigate("annotated-scrollbar", animated=False)
+        QApplication.processEvents()
+        try:
+            _index, page = window._pages["annotated-scrollbar"]
+            card = next(
+                card
+                for card in page._gallery_sample_cards
+                if card.property("gallerySampleId")
+                == "annotated-scrollbar-scrollview"
+            )
+            scroll = card._gallery_preview_widget.findChild(
+                fluentqt.ScrollView
+            )
+            self.assertIsNotNone(scroll)
+            self.assertEqual(
+                scroll.contentWidget().width(),
+                scroll.viewport().width(),
+            )
+
+            target_mode = (
+                1
+                if fluentqt.current_theme() == fluentqt.Theme.Dark
+                else 2
+            )
+            window._set_theme_mode(target_mode)
+            QApplication.processEvents()
+
+            expected = QColor(_theme_tokens()["bgCanvas"])
+            palette = scroll.viewport().palette()
+            self.assertEqual(
+                palette.color(QPalette.ColorRole.Window), expected
+            )
+            self.assertEqual(
+                palette.color(QPalette.ColorRole.Base), expected
+            )
+        finally:
+            window._set_theme_mode(original_mode)
             window.close()
             window.deleteLater()
             QApplication.processEvents()
@@ -1154,9 +1963,10 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
     def test_preview_source_executes_and_displayed_source_stays_concise(self):
         app = QApplication.instance()
         self.assertIsNotNone(app)
-        displayed_line_count = 0
+        displayed_statement_count = 0
         cpp_line_count = 0
         maximum_displayed_lines = 0
+        maximum_displayed_width = 0
         for entry in ENTRIES:
             for sample in entry.samples:
                 with self.subTest(route=entry.route_id, sample=sample.id):
@@ -1173,19 +1983,360 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         self.assertTrue(result.source.strip())
                         self.assertTrue(result.preview_source.strip())
                         displayed_lines = len(result.source.splitlines())
-                        displayed_line_count += displayed_lines
+                        displayed_tree = ast.parse(result.source)
+                        cpp_has_layout = bool(
+                            re.search(
+                                r"\bQ(?:Form|Grid|HBox|Stacked|VBox)Layout\b",
+                                sample.cpp_snippet,
+                            )
+                        )
+                        cpp_has_widget = bool(
+                            re.search(r"\bQWidget\b", sample.cpp_snippet)
+                        )
+                        leaked_preview_scaffolding: set[str] = set()
+                        for call in (
+                            node
+                            for node in ast.walk(displayed_tree)
+                            if isinstance(node, ast.Call)
+                        ):
+                            if isinstance(call.func, ast.Attribute):
+                                call_name = call.func.attr
+                            elif isinstance(call.func, ast.Name):
+                                call_name = call.func.id
+                            else:
+                                continue
+                            if (
+                                call_name in DISPLAY_PREVIEW_LAYOUT_METHODS
+                                and not re.search(
+                                    r"(?:->|\.){0}\s*\(".format(
+                                        re.escape(call_name)
+                                    ),
+                                    sample.cpp_snippet,
+                                )
+                            ):
+                                leaked_preview_scaffolding.add(call_name)
+                            elif (
+                                call_name in DISPLAY_PREVIEW_LAYOUT_TYPES
+                                and not cpp_has_layout
+                            ):
+                                leaked_preview_scaffolding.add(call_name)
+                            elif call_name == "QWidget" and not cpp_has_widget:
+                                leaked_preview_scaffolding.add(call_name)
+                        self.assertEqual(
+                            leaked_preview_scaffolding,
+                            set(),
+                            "{0}/{1} exposes Gallery preview layout that the "
+                            "canonical C++ teaching snippet omits".format(
+                                entry.route_id,
+                                sample.id,
+                            ),
+                        )
+                        displayed_semantic_statements = sum(
+                            isinstance(node, ast.stmt)
+                            and not isinstance(
+                                node, (ast.Import, ast.ImportFrom)
+                            )
+                            for node in ast.walk(displayed_tree)
+                        )
+                        cpp_semantic_statements = max(
+                            1, sample.cpp_snippet.count(";")
+                        )
+                        self.assertLessEqual(
+                            displayed_semantic_statements,
+                            max(
+                                cpp_semantic_statements + 4,
+                                int(cpp_semantic_statements * 1.6),
+                            ),
+                            "{0}/{1} teaches substantially more Python "
+                            "operations than its canonical C++ card".format(
+                                entry.route_id,
+                                sample.id,
+                            ),
+                        )
+                        top_level_loops = [
+                            node
+                            for node in displayed_tree.body
+                            if isinstance(node, (ast.For, ast.AsyncFor))
+                        ]
+                        if not re.search(r"\bfor\s*\(", sample.cpp_snippet):
+                            self.assertEqual(
+                                top_level_loops,
+                                [],
+                                "{0}/{1} hides fixed component construction "
+                                "behind a Python loop although the canonical "
+                                "C++ example is explicit".format(
+                                    entry.route_id,
+                                    sample.id,
+                                ),
+                            )
+                            for loop in (
+                                node
+                                for node in ast.walk(displayed_tree)
+                                if isinstance(node, (ast.For, ast.AsyncFor))
+                            ):
+                                fluent_constructors = [
+                                    call
+                                    for call in ast.walk(loop)
+                                    if isinstance(call, ast.Call)
+                                    and isinstance(call.func, ast.Attribute)
+                                    and isinstance(call.func.value, ast.Name)
+                                    and call.func.value.id == "fluentqt"
+                                    and call.func.attr[:1].isupper()
+                                ]
+                                self.assertEqual(
+                                    fluent_constructors,
+                                    [],
+                                    "{0}/{1} constructs fixed FluentQt "
+                                    "controls inside a hidden loop".format(
+                                        entry.route_id,
+                                        sample.id,
+                                    ),
+                                )
+                        displayed_imports = [
+                            node
+                            for node in displayed_tree.body
+                            if isinstance(node, (ast.Import, ast.ImportFrom))
+                        ]
+                        if displayed_imports:
+                            self.assertIs(
+                                displayed_tree.body[0],
+                                displayed_imports[0],
+                                "{0}/{1} must start with its required "
+                                "PySide6 imports".format(
+                                    entry.route_id, sample.id
+                                ),
+                            )
+                        loaded_names = {
+                            node.id
+                            for node in ast.walk(displayed_tree)
+                            if isinstance(node, ast.Name)
+                            and isinstance(node.ctx, ast.Load)
+                        }
+                        for imported in displayed_imports:
+                            for alias in imported.names:
+                                self.assertNotEqual(
+                                    alias.name,
+                                    "fluentqt",
+                                    "{0}/{1} repeats the page-level "
+                                    "import fluentqt declaration".format(
+                                        entry.route_id, sample.id
+                                    ),
+                                )
+                                if alias.name == "*":
+                                    continue
+                                local_name = alias.asname or (
+                                    alias.name
+                                    if isinstance(imported, ast.ImportFrom)
+                                    else alias.name.split(".", 1)[0]
+                                )
+                                self.assertIn(
+                                    local_name,
+                                    loaded_names,
+                                    "{0}/{1} keeps unused import {2}".format(
+                                        entry.route_id,
+                                        sample.id,
+                                        local_name,
+                                    ),
+                                )
+                        cpp_wrapped_calls = _cpp_wrapped_call_names(
+                            sample.cpp_snippet
+                        )
+                        for statement in ast.walk(displayed_tree):
+                            if not isinstance(
+                                statement,
+                                (ast.AnnAssign, ast.Assign, ast.Expr, ast.Return),
+                            ):
+                                continue
+                            if statement.end_lineno is None or (
+                                statement.lineno == statement.end_lineno
+                            ):
+                                continue
+                            if isinstance(statement, ast.Expr):
+                                value = statement.value
+                            elif isinstance(
+                                statement, (ast.Assign, ast.AnnAssign)
+                            ):
+                                value = statement.value
+                            else:
+                                value = statement.value
+                            if not isinstance(value, ast.Call):
+                                continue
+                            rendered = ast.unparse(statement)
+                            if isinstance(value.func, ast.Attribute):
+                                call_name = value.func.attr
+                            elif isinstance(value.func, ast.Name):
+                                call_name = value.func.id
+                            else:
+                                call_name = ""
+                            rendered_length = (
+                                statement.col_offset + len(rendered)
+                            )
+                            aligns_with_cpp = (
+                                call_name in cpp_wrapped_calls
+                                and rendered_length
+                                >= _CPP_ALIGNMENT_MIN_CALL_LENGTH
+                            )
+                            self.assertTrue(
+                                "\n" in rendered
+                                or rendered_length
+                                > _DISPLAY_PREFERRED_LINE_LENGTH
+                                or aligns_with_cpp,
+                                "{0}/{1} needlessly wraps a short call: {2}"
+                                .format(
+                                    entry.route_id,
+                                    sample.id,
+                                    rendered,
+                                ),
+                            )
+                        displayed_statement_count += sum(
+                            isinstance(node, ast.stmt)
+                            for node in ast.walk(displayed_tree)
+                        )
                         cpp_line_count += len(sample.cpp_snippet.splitlines())
                         maximum_displayed_lines = max(
                             maximum_displayed_lines, displayed_lines
                         )
+                        displayed_width = max(
+                            map(len, result.source.splitlines()),
+                            default=0,
+                        )
+                        maximum_displayed_width = max(
+                            maximum_displayed_width,
+                            displayed_width,
+                        )
+                        self.assertLessEqual(
+                            displayed_width,
+                            _DISPLAY_HARD_LINE_LENGTH,
+                            "{0}/{1} displayed Python contains an "
+                            "overlong line".format(
+                                entry.route_id,
+                                sample.id,
+                            ),
+                        )
+                        for line in result.source.splitlines():
+                            if len(line) <= _DISPLAY_PREFERRED_LINE_LENGTH:
+                                continue
+                            expression = line.strip().removesuffix(",")
+                            try:
+                                parsed_expression = ast.parse(
+                                    expression,
+                                    mode="eval",
+                                ).body
+                            except SyntaxError:
+                                self.fail(
+                                    "{0}/{1} exceeds the preferred line "
+                                    "length at a breakable boundary: {2}"
+                                    .format(
+                                        entry.route_id,
+                                        sample.id,
+                                        line,
+                                    )
+                                )
+                            self.assertIsInstance(
+                                parsed_expression,
+                                (ast.Constant, ast.JoinedStr),
+                                "{0}/{1} uses the hard line ceiling for a "
+                                "breakable expression: {2}".format(
+                                    entry.route_id,
+                                    sample.id,
+                                    line,
+                                ),
+                            )
+                        self.assertIsNone(
+                            re.search(
+                                r"['\"](?:\\u[eEfF][0-9A-Fa-f]{3}|"
+                                "[\uE000-\uF8FF])['\"]",
+                                result.source,
+                            ),
+                            "{0}/{1} exposes a private-use icon codepoint "
+                            "instead of a semantic Fluent icon constant"
+                            .format(entry.route_id, sample.id),
+                        )
+                        self.assertIsNone(
+                            SEMANTIC_ICON_CATALOG_PATTERN.search(result.source),
+                            "{0}/{1} uses a raw catalog name that has a public "
+                            "semantic Fluent icon constant".format(
+                                entry.route_id, sample.id
+                            ),
+                        )
+                        expected_design_tokens = {
+                            "fluentqt.Typography.Icons.{0}".format(name)
+                            for name in re.findall(
+                                r"Typography::Icons::([A-Za-z0-9_]+)",
+                                sample.cpp_snippet,
+                            )
+                        }
+                        expected_design_tokens.update(
+                            "fluentqt.Typography.IconSize.{0}".format(name)
+                            for name in re.findall(
+                                r"Typography::IconSize::([A-Za-z0-9_]+)",
+                                sample.cpp_snippet,
+                            )
+                        )
+                        expected_design_tokens.update(
+                            "fluentqt.FontRole.{0}".format(name)
+                            for name in re.findall(
+                                r"Typography::FontRole::([A-Za-z0-9_]+)",
+                                sample.cpp_snippet,
+                            )
+                        )
+                        expected_design_tokens.update(
+                            "fluentqt.Spacing.{0}".format(
+                                name.replace("::", ".")
+                            )
+                            for name in re.findall(
+                                r"Spacing::((?:[A-Za-z0-9_]+::)*"
+                                r"[A-Za-z0-9_]+)",
+                                sample.cpp_snippet,
+                            )
+                        )
+                        expected_design_tokens.update(
+                            "fluentqt.CornerRadius.{0}".format(
+                                "None_" if name == "None" else name
+                            )
+                            for name in re.findall(
+                                r"CornerRadius::([A-Za-z0-9_]+)",
+                                sample.cpp_snippet,
+                            )
+                        )
+                        for design_token in expected_design_tokens:
+                            self.assertIn(
+                                design_token,
+                                result.source,
+                                "{0}/{1} replaces canonical C++ design "
+                                "token {2} with a hard-coded value or a "
+                                "different alias".format(
+                                    entry.route_id,
+                                    sample.id,
+                                    design_token,
+                                ),
+                            )
                         for cxx_token in (
                             "#include",
                             "QStringLiteral",
                             "fluent::",
                         ):
                             self.assertNotIn(cxx_token, result.source)
-                        self.assertNotIn(
-                            "from fluentqt.gallery", result.source
+                        gallery_imports = tuple(
+                            line
+                            for line in result.source.splitlines()
+                            if line.startswith("from fluentqt_gallery")
+                        )
+                        self.assertEqual(
+                            gallery_imports,
+                            (
+                                "from fluentqt_gallery.metrics import "
+                                "drawer_title_bar_avoidance_margins",
+                            )
+                            if (
+                                entry.route_id,
+                                sample.id,
+                            )
+                            == (
+                                "drawer-view",
+                                "drawer-view-close-policy",
+                            )
+                            else (),
                         )
                         self.assertNotIn("gallery_parent", result.source)
                         self.assertTrue(
@@ -1218,24 +2369,148 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                 sample.cpp_snippet,
                             )
                         )
-                        python_methods = set(
-                            re.findall(
-                                r"\.([A-Za-z_][A-Za-z0-9_]*)\s*\(",
+                        python_members = {
+                            node.attr
+                            for node in ast.walk(displayed_tree)
+                            if isinstance(node, ast.Attribute)
+                        }
+                        for member, aliases in (
+                            _CPP_DISPLAY_MEMBER_ALIASES.items()
+                        ):
+                            if any(
+                                alias in python_members
+                                for alias in aliases
+                            ):
+                                python_members.add(member)
+                        missing_cpp_methods = {
+                            member
+                            for member in cpp_methods
+                            if member not in CPP_PYTHON_MEMBER_EQUIVALENTS
+                            and member not in python_members
+                            and _snake_case(member) not in python_members
+                        }
+                        if entry.route_id == "tooltip":
+                            missing_cpp_methods.discard("setText")
+                            self.assertIn(
+                                "fluentqt.ToolTip.attach(",
                                 result.source,
                             )
-                        )
-                        self.assertTrue(
-                            cpp_methods & python_methods
-                            or any(
-                                "fluentqt.{0}".format(covered)
-                                in result.source
-                                for covered in result.covered_types
+                        self.assertEqual(
+                            missing_cpp_methods,
+                            set(),
+                            "{0}/{1} drops canonical C++ member calls: {2}"
+                            .format(
+                                entry.route_id,
+                                sample.id,
+                                sorted(missing_cpp_methods),
                             ),
-                            "{0}/{1} displayed Python no longer demonstrates "
-                            "the canonical component API".format(
+                        )
+
+                        cpp_connection_count = len(
+                            re.findall(
+                                r"(?<![A-Za-z_:])(?:QObject::)?"
+                                r"connect\s*\(",
+                                sample.cpp_snippet,
+                            )
+                        )
+                        python_connection_count = sum(
+                            isinstance(node, ast.Call)
+                            and isinstance(node.func, ast.Attribute)
+                            and node.func.attr == "connect"
+                            for node in ast.walk(displayed_tree)
+                        )
+                        self.assertGreaterEqual(
+                            python_connection_count,
+                            cpp_connection_count,
+                            "{0}/{1} drops a canonical C++ signal "
+                            "connection".format(
                                 entry.route_id, sample.id
                             ),
                         )
+
+                        cpp_constructor_types = re.findall(
+                            r"\bnew\s+([A-Z][A-Za-z0-9_]*)\b",
+                            sample.cpp_snippet,
+                        )
+                        for type_name in set(cpp_constructor_types):
+                            if not hasattr(fluentqt, type_name):
+                                continue
+                            if (
+                                entry.route_id == "tooltip"
+                                and type_name == "ToolTip"
+                            ):
+                                continue
+                            cpp_constructor_count = (
+                                cpp_constructor_types.count(type_name)
+                            )
+                            python_constructor_count = sum(
+                                isinstance(node, ast.Call)
+                                and isinstance(node.func, ast.Attribute)
+                                and isinstance(node.func.value, ast.Name)
+                                and node.func.value.id == "fluentqt"
+                                and node.func.attr == type_name
+                                for node in ast.walk(displayed_tree)
+                            )
+                            self.assertGreaterEqual(
+                                python_constructor_count,
+                                cpp_constructor_count,
+                                "{0}/{1} omits {2} construction shown by "
+                                "the canonical C++ card".format(
+                                    entry.route_id,
+                                    sample.id,
+                                    type_name,
+                                ),
+                            )
+
+                        python_text_literals = {
+                            node.value
+                            for node in ast.walk(displayed_tree)
+                            if isinstance(node, ast.Constant)
+                            and isinstance(node.value, str)
+                            and node.value
+                        }
+                        for raw_literal in re.findall(
+                            r'"((?:\\.|[^"\\])*)"',
+                            sample.cpp_snippet,
+                        ):
+                            try:
+                                cpp_literal = ast.literal_eval(
+                                    '"{0}"'.format(raw_literal)
+                                )
+                            except (SyntaxError, ValueError):
+                                cpp_literal = raw_literal
+                            if (
+                                not cpp_literal
+                                or len(cpp_literal) <= 1
+                                or cpp_literal.startswith(":/")
+                                or "%" in cpp_literal
+                            ):
+                                continue
+                            self.assertTrue(
+                                any(
+                                    cpp_literal in python_literal
+                                    or python_literal in cpp_literal
+                                    for python_literal in python_text_literals
+                                ),
+                                "{0}/{1} omits canonical visible text {2!r}"
+                                .format(
+                                    entry.route_id,
+                                    sample.id,
+                                    cpp_literal,
+                                ),
+                            )
+
+                        for helper_name in FORBIDDEN_DISPLAY_HELPERS:
+                            self.assertNotIn(
+                                helper_name,
+                                result.source,
+                                "{0}/{1} exposes private Gallery helper {2}"
+                                .format(
+                                    entry.route_id,
+                                    sample.id,
+                                    helper_name,
+                                ),
+                            )
                         preview_code = compile(
                             result.preview_source,
                             "<fluentqt-gallery-preview-{0}-{1}>".format(
@@ -1294,12 +2569,13 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                             ),
                         )
         self.assertLessEqual(
-            displayed_line_count,
-            int(cpp_line_count * 1.2),
-            "Python teaching snippets have regressed toward app-internal "
-            "preview implementations",
+            displayed_statement_count,
+            int(cpp_line_count * 1.05),
+            "Python teaching snippets contain more semantic operations than "
+            "the canonical C++ examples",
         )
-        self.assertLessEqual(maximum_displayed_lines, 70)
+        self.assertLessEqual(maximum_displayed_lines, 80)
+        self.assertLessEqual(maximum_displayed_width, 88)
 
     def test_window_builds_all_88_routes_and_199_sample_cards(self):
         window = GalleryWindow()
@@ -1321,6 +2597,31 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     all(result.parity_level == "native-equivalent" for result in results)
                 )
                 self.assertTrue(all(result.source_driven for result in results))
+                unsafe_labels = []
+                for result in results:
+                    labels = list(
+                        result.widget.findChildren(fluentqt.Label)
+                    )
+                    if isinstance(result.widget, fluentqt.Label):
+                        labels.insert(0, result.widget)
+                    for label in labels:
+                        has_own_color = re.search(
+                            r"(?:^|[;{\n])\s*color\s*:",
+                            label.styleSheet(),
+                            flags=re.IGNORECASE,
+                        )
+                        if (
+                            label.textColorRole()
+                            == fluentqt.Label.TextColorRole.Default
+                            and has_own_color is None
+                        ):
+                            unsafe_labels.append(label.text())
+                self.assertEqual(
+                    unsafe_labels,
+                    [],
+                    "{0} keeps palette-only labels below the styled Gallery "
+                    "sample surface".format(entry.route_id),
+                )
                 built_sample_count += len(results)
             self.assertEqual(built_sample_count, 199)
         finally:
@@ -1796,6 +3097,40 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_minimal_navigation_keeps_categories_open_and_dismisses_leaves(self):
+        window = GalleryWindow(startup_visuals=False)
+        window.setFixedSize(520, 760)
+        window.show()
+        window._navigation_view.setAnimationEnabled(False)
+        QApplication.processEvents()
+        try:
+            self.assertEqual(
+                window._navigation_view.effectiveDisplayMode(),
+                fluentqt.NavigationView.DisplayMode.LeftMinimal,
+            )
+            window._toggle_navigation_pane()
+            QApplication.processEvents()
+            self.assertTrue(window._navigation_view.isPaneOpen())
+
+            pane = window._main_navigation_pane
+            category_index = pane._route_items["layout"].index()
+            pane._activate_index(category_index)
+            QApplication.processEvents()
+
+            self.assertEqual(window.current_route, "layout")
+            self.assertTrue(window._navigation_view.isPaneOpen())
+            self.assertTrue(pane._tree.isExpanded(category_index))
+
+            pane._activate_index(pane._route_items["card"].index())
+            QApplication.processEvents()
+
+            self.assertEqual(window.current_route, "card")
+            self.assertFalse(window._navigation_view.isPaneOpen())
+        finally:
+            window.close()
+            window.deleteLater()
+            QApplication.processEvents()
+
     def test_settings_navigation_icon_uses_native_rotation_feedback(self):
         window = GalleryWindow()
         window.show()
@@ -1929,6 +3264,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 "Control heights",
             ),
         }
+        foundation_code_blocks = []
         try:
             for route_id, expected in expected_sections.items():
                 with self.subTest(route=route_id):
@@ -1942,6 +3278,107 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     )
                     self.assertEqual(headings, expected)
                     self.assertNotIn("Overview", headings)
+                    foundation_code_blocks.extend(
+                        page.findChildren(GalleryCodeBlock)
+                    )
+
+            self.assertEqual(len(foundation_code_blocks), 5)
+            for block in foundation_code_blocks:
+                with self.subTest(code_block=block.objectName()):
+                    source = block._code
+                    tree = ast.parse(source)
+                    imports = [
+                        node
+                        for node in tree.body
+                        if isinstance(node, (ast.Import, ast.ImportFrom))
+                    ]
+                    if imports:
+                        self.assertIs(tree.body[0], imports[0])
+                    loaded_names = {
+                        node.id
+                        for node in ast.walk(tree)
+                        if isinstance(node, ast.Name)
+                        and isinstance(node.ctx, ast.Load)
+                    }
+                    for imported in imports:
+                        for alias in imported.names:
+                            self.assertNotEqual(alias.name, "fluentqt")
+                            if alias.name == "*":
+                                continue
+                            local_name = alias.asname or (
+                                alias.name
+                                if isinstance(imported, ast.ImportFrom)
+                                else alias.name.split(".", 1)[0]
+                            )
+                            self.assertIn(local_name, loaded_names)
+                    for statement in ast.walk(tree):
+                        if not isinstance(
+                            statement,
+                            (ast.AnnAssign, ast.Assign, ast.Expr, ast.Return),
+                        ):
+                            continue
+                        if statement.end_lineno is None or (
+                            statement.lineno == statement.end_lineno
+                        ):
+                            continue
+                        value = statement.value
+                        if not isinstance(value, ast.Call):
+                            continue
+                        rendered = ast.unparse(statement)
+                        self.assertTrue(
+                            "\n" in rendered
+                            or statement.col_offset + len(rendered)
+                            > _DISPLAY_PREFERRED_LINE_LENGTH,
+                            "{0} needlessly wraps a short call: {1}".format(
+                                block.objectName(), rendered
+                            ),
+                        )
+                    compiled = compile(
+                        source,
+                        "<{0}>".format(block.objectName()),
+                        "exec",
+                    )
+                    self.assertLessEqual(
+                        max(map(len, source.splitlines()), default=0),
+                        _DISPLAY_HARD_LINE_LENGTH,
+                    )
+                    if block.objectName() != "galleryFoundationGeometryCodeBlock":
+                        namespace = {
+                            "__name__": "fluentqt_foundation_snippet",
+                            "fluentqt": fluentqt,
+                        }
+                        exec(compiled, namespace)
+                        for widget in _take_top_level_widgets(namespace):
+                            if shiboken6.isValid(widget):
+                                widget.close()
+                                widget.deleteLater()
+                        namespace.clear()
+                        QApplication.processEvents()
+
+            geometry_code = next(
+                block._code
+                for block in foundation_code_blocks
+                if block.objectName() == "galleryFoundationGeometryCodeBlock"
+            )
+            self.assertIn(
+                "from PySide6.QtGui import QPen",
+                geometry_code,
+            )
+            self.assertIn("tokens = self.theme_tokens()", geometry_code)
+            self.assertIn(
+                "fluentqt.Spacing.Border.Focused",
+                geometry_code,
+            )
+            self.assertIn("tokens.colors.strokeFocusOuter", geometry_code)
+            self.assertIn("fluentqt.CornerRadius.Control", geometry_code)
+            self.assertIn(
+                "painter.drawRoundedRect(control_rect, radius, radius)",
+                geometry_code,
+            )
+            self.assertNotIn("class GeometryPreview", geometry_code)
+            self.assertNotIn("preview.resize", geometry_code)
+            self.assertLessEqual(len(geometry_code.splitlines()), 12)
+            self.assertNotIn("colors.stroke_focus_outer", geometry_code)
 
             _index, typography = window._pages["foundation-typography"]
             ramp = typography.findChild(
@@ -1980,7 +3417,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
             records = _load_icon_catalog()
             native_catalog_path = (
-                Path(__file__).resolve().parents[3]
+                Path(__file__).resolve().parents[4]
                 / "res"
                 / "icons"
                 / "FluentQtIcons.json"
@@ -2249,6 +3686,19 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.close()
             window.deleteLater()
             QApplication.processEvents()
+
+    def test_snapshot_fills_logical_canvas_at_retina_dpr(self):
+        physical = QImage(160, 80, QImage.Format_ARGB32_Premultiplied)
+        physical.setDevicePixelRatio(2.0)
+        physical.fill(QColor(210, 35, 45))
+
+        image = _normalize_snapshot_capture(physical, QSize(80, 40))
+
+        self.assertEqual(image.size(), QSize(80, 40))
+        self.assertEqual(image.devicePixelRatioF(), 1.0)
+        expected = QColor(210, 35, 45)
+        self.assertEqual(image.pixelColor(0, 0), expected)
+        self.assertEqual(image.pixelColor(79, 39), expected)
 
 
 if __name__ == "__main__":

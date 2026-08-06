@@ -464,6 +464,8 @@ add_custom_target(fluentqt_pyside6_wheel
     USES_TERMINAL
     VERBATIM)
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/FluentQtPySide6Gallery.cmake")
+
 set(FLUENT_QT_PYSIDE6_MANYLINUX_POLICY "" CACHE STRING
     "PEP 600 policy for the opt-in repaired Linux wheel")
 set(FLUENT_QT_PYSIDE6_AUDITWHEEL_VERSION "6.7.0" CACHE STRING

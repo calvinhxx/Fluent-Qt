@@ -31,6 +31,7 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/third_party"
     "${FLUENT_QT_SOURCE_DIR}/bindings"
     DESTINATION "${_package_root}"
+    PATTERN "gallery" EXCLUDE
     PATTERN "__pycache__" EXCLUDE
     PATTERN "*.pyc" EXCLUDE
     PATTERN "*.pyo" EXCLUDE)

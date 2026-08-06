@@ -19,12 +19,6 @@ import fluentqt.navigation as navigation
 import fluentqt.status_info as status_info
 import fluentqt.textfields as textfields
 import fluentqt.windowing as windowing
-from fluentqt.gallery.catalog import CATEGORIES as GALLERY_CATEGORIES
-from fluentqt.gallery.catalog import ENTRIES as GALLERY_ENTRIES
-from fluentqt.gallery.catalog import ROUTES as GALLERY_ROUTES
-from fluentqt.gallery.catalog import SUPPORT_TYPES as GALLERY_SUPPORT_TYPES
-from fluentqt.gallery.native_samples import ported_sample_keys
-from fluentqt.gallery.window import GalleryWindow
 import PySide6
 import shiboken6
 
@@ -233,12 +227,15 @@ def main():
     require_installed_below_prefix(native.__file__)
 
     package_dir = Path(fluentqt.__file__).resolve().parent
+    if (package_dir / "gallery").exists():
+        raise AssertionError("Reusable FluentQt wheel contains Gallery files")
     expected_stubs = {
         "__init__.pyi",
         "_fluentqt.pyi",
         "basicinput.pyi",
         "collections.pyi",
         "date_time.pyi",
+        "design.pyi",
         "dialogs_flyouts.pyi",
         "foundation.pyi",
         "layout.pyi",
@@ -260,71 +257,12 @@ def main():
     for stub_name in sorted(expected_stubs):
         stub_path = package_dir / stub_name
         ast.parse(stub_path.read_text(encoding="utf-8"), filename=str(stub_path))
-
-    expected_gallery_files = {
-        "__init__.py",
-        "__main__.py",
-        "application_controller.py",
-        "app.py",
-        "catalog.py",
-        "foundation_pages.py",
-        "intro_tour.py",
-        "native_samples.py",
-        "native_samples_basic.py",
-        "native_samples_collections.py",
-        "native_samples_dialogs.py",
-        "native_samples_navigation.py",
-        "native_samples_scrolling.py",
-        "native_samples_status.py",
-        "native_samples_text_window.py",
-        "samples.py",
-        "settings.py",
-        "single_instance.py",
-        "update_checker.py",
-        "visual.py",
-        "window.py",
-        "window_placement.py",
-    }
-    gallery_dir = package_dir / "gallery"
-    installed_gallery_files = {
-        path.name for path in gallery_dir.glob("*.py")
-    }
-    if installed_gallery_files != expected_gallery_files:
-        raise AssertionError(
-            "Installed Python Gallery differs: expected {0}, found {1}".format(
-                sorted(expected_gallery_files),
-                sorted(installed_gallery_files),
-            )
-        )
-    gallery_assets = gallery_dir / "assets"
-    required_gallery_assets = (
-        gallery_assets / "app-icon.png",
-        gallery_assets / "icon_aliases.json",
-        gallery_assets / "icon_catalog.json",
-        gallery_assets / "control_images" / "Placeholder.png",
-        gallery_assets
-        / "home_header_tiles"
-        / "Header-WindowsDesign.png",
-    )
-    for asset in required_gallery_assets:
-        if not asset.is_file():
-            raise AssertionError("Installed Python Gallery asset is missing: {0}".format(asset))
-    control_images = tuple((gallery_assets / "control_images").rglob("*.png"))
-    home_tiles = tuple((gallery_assets / "home_header_tiles").glob("*.png"))
-    if len(control_images) != 74:
-        raise AssertionError(
-            "Installed Python Gallery should contain 74 control images, found {0}".format(
-                len(control_images)
-            )
-        )
-    if len(home_tiles) != 7:
-        raise AssertionError(
-            "Installed Python Gallery should contain 7 Home tiles, found {0}".format(
-                len(home_tiles)
-            )
-        )
-    if not (gallery_dir / "contract.json").is_file():
-        raise AssertionError("Installed Python Gallery contract is missing")
+    if not (package_dir / "_icon_aliases.json").is_file():
+        raise AssertionError("Installed semantic icon alias data is missing")
+    if fluentqt.Typography.Icons.Add != "ic_fluent_add_20_regular":
+        raise AssertionError("Installed semantic icon facade is invalid")
+    if fluentqt.Spacing.Border.Focused != 2:
+        raise AssertionError("Installed spacing facade is invalid")
 
     expected_version = os.environ["FLUENTQT_EXPECTED_VERSION"]
     if metadata.version("FluentQt") != expected_version:
@@ -335,41 +273,8 @@ def main():
         raise AssertionError("Public API version does not match the wheel")
 
     app = QApplication.instance() or QApplication([])
-    app.setProperty("fluentqtGalleryAutomated", True)
     if not fluentqt.initialize_resources():
         raise AssertionError("FluentQt resources could not be initialized")
-
-    report_stage("python gallery")
-    gallery_sample_count = sum(
-        len(entry.samples) for entry in GALLERY_ENTRIES
-    )
-    if (
-        len(GALLERY_CATEGORIES) != 12
-        or len(GALLERY_ENTRIES) != 67
-        or len(GALLERY_ROUTES) != 88
-        or len(GALLERY_SUPPORT_TYPES) != 10
-        or gallery_sample_count != 199
-        or len(ported_sample_keys()) != 199
-    ):
-        raise AssertionError("Installed Python Gallery catalog has wrong coverage")
-    gallery_window = GalleryWindow()
-    gallery_window.show()
-    QApplication.processEvents()
-    gallery_failures = gallery_window.visit_all_routes()
-    if gallery_failures:
-        raise AssertionError(
-            "Installed Python Gallery route failures: {0}".format(
-                "; ".join(gallery_failures)
-            )
-        )
-    if len(gallery_window.all_route_ids()) != 88:
-        raise AssertionError("Installed Python Gallery has wrong route coverage")
-    gallery_window.navigate_component("button")
-    if gallery_window.current_route != "button":
-        raise AssertionError("Installed Python Gallery could not navigate")
-    gallery_window.close()
-    gallery_window.deleteLater()
-    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
     info = fluentqt.binding_build_info()
     if info["fluentqt_version"] != expected_version:

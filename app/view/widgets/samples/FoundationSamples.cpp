@@ -61,10 +61,10 @@ QVector<GallerySample> fontIconSamples()
             QStringLiteral("Optical sizes"),
             QStringLiteral("FontIcon resolves the bundled glyph variant that best fits each requested icon size."),
             QStringLiteral("auto* compact = new FontIcon(Typography::Icons::Search, this);\n"
-                           "compact->setIconSize(Typography::IconSize::Compact); // 16 px\n"
+                           "compact->setIconSize(Typography::IconSize::Compact); // 12 px\n"
                            "\n"
                            "auto* standard = new FontIcon(Typography::Icons::Search, this);\n"
-                           "standard->setIconSize(Typography::IconSize::Standard); // 20 px\n"
+                           "standard->setIconSize(Typography::IconSize::Standard); // 16 px\n"
                            "\n"
                            "auto* medium = new FontIcon(Typography::Icons::Search, this);\n"
                            "medium->setIconSize(24);\n"
@@ -81,12 +81,12 @@ QVector<GallerySample> fontIconSamples()
                     card,
                     Typography::Icons::Search,
                     Typography::IconSize::Compact,
-                    QStringLiteral("16 px")));
+                    QStringLiteral("12 px")));
                 layout->addWidget(iconCell(
                     card,
                     Typography::Icons::Search,
                     Typography::IconSize::Standard,
-                    QStringLiteral("20 px")));
+                    QStringLiteral("16 px")));
                 layout->addWidget(iconCell(
                     card,
                     Typography::Icons::Search,

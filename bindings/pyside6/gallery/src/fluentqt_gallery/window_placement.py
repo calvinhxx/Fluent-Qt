@@ -1,4 +1,4 @@
-"""Restore and persist the Python Gallery window like the C++ application."""
+"""Restore and persist the standalone Gallery window like the C++ app."""
 
 from __future__ import annotations
 

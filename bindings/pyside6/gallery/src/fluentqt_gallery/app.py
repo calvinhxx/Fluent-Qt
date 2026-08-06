@@ -1,4 +1,4 @@
-"""Command-line entry point for the wheel-installed PySide6 Gallery."""
+"""Command-line entry point for the standalone PySide6 Gallery."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QColor, QGuiApplication, QImage, QPainter
 from PySide6.QtWidgets import QApplication, QWidget
 
+from .identity import APPLICATION_ID, APPLICATION_NAME, ORGANIZATION_NAME
 from .single_instance import GallerySingleInstance, StartResult
 
 
@@ -168,6 +169,27 @@ def save_report(path: Path, payload: dict[str, object]) -> None:
     print("report: {0}".format(output))
 
 
+def _normalize_snapshot_capture(
+    captured: QImage,
+    target_size: QSize,
+) -> QImage:
+    normalized = QImage(captured)
+    # ``grab()`` stores physical pixels and tags them with the screen DPR. The
+    # output PNG contract is a deterministic logical size, so treat those
+    # physical pixels as an ordinary image before resampling/compositing.
+    # Otherwise QPainter applies the DPR a second time and a Retina capture
+    # occupies only the top-left quarter of the saved PNG.
+    normalized.setDevicePixelRatio(1.0)
+    if normalized.size() != target_size:
+        normalized = normalized.scaled(
+            target_size,
+            Qt.IgnoreAspectRatio,
+            Qt.SmoothTransformation,
+        )
+    normalized.setDevicePixelRatio(1.0)
+    return normalized
+
+
 def save_snapshot(
     window: GalleryWindow,
     path: Path,
@@ -194,14 +216,8 @@ def save_snapshot(
     # many PNG viewers display as black. Composite the widget render over the
     # same neutral fallback canvas used when a platform backdrop is unavailable.
     # Fully opaque page and Hero pixels remain unchanged.
-    captured = pixmap.toImage()
     target_size = snapshot_size if snapshot_size is not None else window.size()
-    if captured.size() != target_size:
-        captured = captured.scaled(
-            target_size,
-            Qt.IgnoreAspectRatio,
-            Qt.SmoothTransformation,
-        )
+    captured = _normalize_snapshot_capture(pixmap.toImage(), target_size)
     image = QImage(captured.size(), QImage.Format_ARGB32_Premultiplied)
     background = (
         QColor("#202020")
@@ -285,14 +301,14 @@ def main(argv: list[str] | None = None) -> int:
         or args.verify_catalog
         or args.walk_routes
     )
-    QCoreApplication.setApplicationName("Fluent-Qt Gallery")
-    QCoreApplication.setOrganizationName("Fluent-Qt")
+    QCoreApplication.setApplicationName(APPLICATION_NAME)
+    QCoreApplication.setOrganizationName(ORGANIZATION_NAME)
     QCoreApplication.setApplicationVersion(fluentqt.__version__)
     fluentqt.prepare_high_dpi_application()
     app = QApplication.instance() or QApplication(sys.argv[:1])
     app.setProperty("fluentqtGalleryAutomated", automated)
     if sys.platform.startswith("linux"):
-        QGuiApplication.setDesktopFileName("com.fluentqt.gallery")
+        QGuiApplication.setDesktopFileName(APPLICATION_ID)
     app.setQuitOnLastWindowClosed(False)
     single_instance = None
     activation_pending = False
@@ -302,7 +318,7 @@ def main(argv: list[str] | None = None) -> int:
         activation_pending = True
 
     if not automated:
-        single_instance = GallerySingleInstance("com.fluentqt.gallery", app)
+        single_instance = GallerySingleInstance(APPLICATION_ID, app)
         single_instance.activationRequested.connect(remember_activation)
         instance_result = single_instance.start()
         if instance_result == StartResult.ExistingInstanceNotified:
