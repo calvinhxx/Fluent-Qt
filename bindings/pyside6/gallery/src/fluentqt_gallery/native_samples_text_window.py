@@ -1,4 +1,4 @@
-"""Source-driven native Gallery ports for text fields and windowing."""
+"""Standalone Gallery ports for native text fields and windowing."""
 
 from __future__ import annotations
 
@@ -20,7 +20,8 @@ _TEXT_IMPORTS = (
     "from PySide6.QtCore import QRectF, Qt\n"
     "from PySide6.QtGui import QPainter, QPen\n"
     "from PySide6.QtWidgets import (QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget)\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens\n"
+    "from fluentqt_gallery.window import gallery_window_editing_command_router"
 )
 
 _TEXT_HELPER = dedent(
@@ -155,7 +156,7 @@ _TITLE_BAR_IMPORTS = (
     "from PySide6.QtCore import QCoreApplication, QEvent, QPoint, QSize, QTimer, Qt\n"
     "from PySide6.QtGui import QFont, QPainter, QPen\n"
     "from PySide6.QtWidgets import (QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget)\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens"
 )
 
 _TITLE_BAR_HELPER = dedent(
@@ -535,7 +536,7 @@ register_source_samples(
             _text_script(
                 """
                 root, layout = make_text_surface()
-                router = fluentqt.EditingCommandRouter(root.window(), root)
+                router = gallery_window_editing_command_router(root)
                 menu_bar = fluentqt.FluentMenuBar(root)
                 menu_bar.setBackgroundVisible(False)
                 menu_bar.setFixedWidth(360)

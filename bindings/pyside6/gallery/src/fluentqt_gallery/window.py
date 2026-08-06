@@ -1,4 +1,4 @@
-"""Native-shaped application shell and pages for the PySide6 Gallery."""
+"""Native-shaped shell and pages for the standalone PySide6 Gallery."""
 
 from __future__ import annotations
 
@@ -57,6 +57,7 @@ from .catalog import (
 )
 from .foundation_pages import populate_foundation_topic_page
 from .intro_tour import GalleryIntroTour, TourStep
+from .metrics import TITLE_BAR_HEIGHT
 from .samples import PreviewResult, build_sample
 from .settings import (
     NavigationStyle,
@@ -86,6 +87,7 @@ from .visual import (
     _draw_native_font_icon,
     _single_shot,
     gallery_colors,
+    refresh_gallery_display_scale,
     refresh_gallery_visuals,
     route_icon_name,
 )
@@ -103,6 +105,7 @@ FEATURED_ROUTES = (
     "slider",
     "tab-view",
 )
+_EDITING_COMMAND_ROUTER_OBJECT_NAME = "Gallery.WindowEditingCommandRouter"
 
 
 _CONTENT_PRIMARY_LABEL_NAMES = frozenset(
@@ -113,18 +116,37 @@ _CONTENT_SECONDARY_LABEL_NAMES = frozenset(
 )
 
 
+def gallery_window_editing_command_router(
+    fallback_context: QWidget,
+) -> fluentqt.EditingCommandRouter:
+    """Return the one editing-command router owned by the current window."""
+
+    scope_window = fallback_context.window() or fallback_context
+    router = scope_window.findChild(
+        fluentqt.EditingCommandRouter,
+        _EDITING_COMMAND_ROUTER_OBJECT_NAME,
+        Qt.FindDirectChildrenOnly,
+    )
+    if router is not None:
+        return router
+    router = fluentqt.EditingCommandRouter(scope_window, scope_window)
+    router.setObjectName(_EDITING_COMMAND_ROUTER_OBJECT_NAME)
+    return router
+
+
 def _apply_content_label_color(
     label: fluentqt.Label,
     *,
     primary: bool,
 ) -> None:
-    """Mirror GalleryContentPage's tracked-label style-sheet color path."""
+    """Give app-owned copy a semantic color that survives ancestor QSS."""
 
-    colors = gallery_colors()
-    color = colors.text_primary if primary else colors.text_secondary
-    style = "color: {0}; background: transparent;".format(css_color(color))
-    if label.styleSheet() != style:
-        label.setStyleSheet(style)
+    role = (
+        fluentqt.Label.TextColorRole.Primary
+        if primary
+        else fluentqt.Label.TextColorRole.Secondary
+    )
+    label.setTextColorRole(role)
 
 
 def _search_tokens(query: str) -> tuple[str, ...]:
@@ -294,6 +316,7 @@ def _body(text: str, parent: QWidget) -> fluentqt.Label:
     label.setObjectName("galleryContentBody")
     label.setFluentTypography(fluentqt.FontRole.Body)
     label.setWordWrap(True)
+    _apply_content_label_color(label, primary=False)
     return label
 
 
@@ -738,9 +761,14 @@ def _refresh_fluent_subtree(root: QWidget) -> None:
     widgets = [root] + root.findChildren(QWidget)
     for widget in widgets:
         refresh = getattr(widget, "onThemeUpdated", None)
+        if not callable(refresh):
+            refresh = getattr(widget, "on_theme_updated", None)
         if callable(refresh):
             refresh()
-        widget.update()
+        # Item views expose update(QModelIndex), which hides QWidget.update()
+        # in some PySide releases. Call the base overload explicitly so a
+        # theme refresh remains valid for every QWidget subclass.
+        QWidget.update(widget)
 
 
 class _GallerySampleCardLayout(QVBoxLayout):
@@ -854,7 +882,7 @@ class _GallerySampleCard(QFrame):
         if self._layout_update_queued:
             return
         self._layout_update_queued = True
-        QTimer.singleShot(0, self._update_anchored_layout)
+        _single_shot(0, self, self._update_anchored_layout)
 
     def eventFilter(self, watched, event) -> bool:
         if event.type() == QEvent.Type.LayoutRequest and watched in (
@@ -1758,7 +1786,6 @@ class _GalleryTitleContent(QWidget):
         icon.setObjectName("GalleryTitleBar.AppIcon")
         icon.setFixedSize(18, 18)
         icon.setAlignment(Qt.AlignCenter)
-        icon.setPixmap(app_icon_pixmap(18))
 
         title = fluentqt.Label("Fluent-Qt Gallery", self)
         title.setObjectName("GalleryTitleBar.Title")
@@ -1806,6 +1833,7 @@ class _GalleryTitleContent(QWidget):
             active_changed = getattr(self._bar, "windowActiveChanged", None)
             if active_changed is not None:
                 active_changed.connect(self._set_window_active)
+        self.refresh_display_scale()
         self._apply_chrome_opacity()
 
     def eventFilter(self, watched, event) -> bool:
@@ -1836,6 +1864,12 @@ class _GalleryTitleContent(QWidget):
     def _set_window_active(self, active: bool) -> None:
         self._window_active = bool(active)
         self._apply_chrome_opacity()
+
+    def refresh_display_scale(self) -> None:
+        source = self._bar if self._bar is not None else self
+        self._icon.setPixmap(
+            app_icon_pixmap(18, source.devicePixelRatioF())
+        )
 
     def _set_chrome_reveal_opacity(self, value: object) -> None:
         self._chrome_reveal_opacity = max(
@@ -2023,11 +2057,8 @@ class GalleryWindow(fluentqt.Window):
             fluentqt.BackdropEffect.Acrylic,
         )
         self.setBackdropEffect(effects[int(self._settings.window_effect)])
-        self._editing_command_router = fluentqt.EditingCommandRouter(
-            self, self
-        )
-        self._editing_command_router.setObjectName(
-            "Gallery.WindowEditingCommandRouter"
+        self._editing_command_router = gallery_window_editing_command_router(
+            self
         )
 
         self._pages: dict[str, tuple[int, QWidget]] = {}
@@ -2183,6 +2214,27 @@ class GalleryWindow(fluentqt.Window):
         self._prewarm_paused = True
         self._prewarm_resume_timer.start()
 
+    def event(self, event: QEvent) -> bool:
+        result = super().event(event)
+        display_scale_events = tuple(
+            event_type
+            for event_type in (
+                getattr(QEvent.Type, "ScreenChangeInternal", None),
+                getattr(QEvent.Type, "DevicePixelRatioChange", None),
+            )
+            if event_type is not None
+        )
+        if event.type() in display_scale_events:
+            # QWidget's DPR changes after the native event has propagated. Match
+            # the C++ Gallery by rebuilding DPR-tagged pixmaps on the next turn.
+            _single_shot(0, self, self._refresh_display_scale_assets)
+        return result
+
+    def _refresh_display_scale_assets(self) -> None:
+        if not hasattr(self, "_title_content"):
+            return
+        refresh_gallery_display_scale(self, visible_only=True)
+
     def _resume_prewarm(self) -> None:
         self._prewarm_paused = False
         # Resume the state machine even when the queue drained while a window
@@ -2208,7 +2260,7 @@ class GalleryWindow(fluentqt.Window):
             self._filter_search_suggestions,
             search_parent=bar,
         )
-        bar.setTitleBarHeight(42)
+        bar.setTitleBarHeight(TITLE_BAR_HEIGHT)
         bar.setContentWidget(content)
         content.show()
         content._update_geometry()
@@ -2340,7 +2392,9 @@ class GalleryWindow(fluentqt.Window):
             )
         elif route.kind == "component":
             page = build_component_page(
-                ENTRY_BY_ROUTE_ID[route.id], self.navigate
+                ENTRY_BY_ROUTE_ID[route.id],
+                self.navigate,
+                self._content_host,
             )
         elif route.kind == "settings":
             page = build_settings_page(
@@ -2406,8 +2460,20 @@ class GalleryWindow(fluentqt.Window):
         request_id = self._navigation_request_id
         self._title_content.set_back_available(bool(self._history))
         self._sync_navigation_selection(route_id)
-        if self._navigation_view.effectiveDisplayMode() != (
-            fluentqt.NavigationView.DisplayMode.Left
+        display_mode = self._navigation_view.effectiveDisplayMode()
+        route_kind = ROUTE_BY_ID[route_id].kind
+        # Match the native Gallery: categories expand in place so users can
+        # continue drilling down; only leaf destinations dismiss the flyout.
+        is_category = route_kind in ("category", "foundation")
+        if (
+            self._navigation_view.isPaneOpen()
+            and self.isVisible()
+            and not is_category
+            and display_mode
+            in (
+                fluentqt.NavigationView.DisplayMode.LeftCompact,
+                fluentqt.NavigationView.DisplayMode.LeftMinimal,
+            )
         ):
             self._navigation_view.setPaneOpen(False)
         if resident is not None:
@@ -2587,6 +2653,7 @@ class GalleryWindow(fluentqt.Window):
         ):
             return
         refresh_gallery_visuals(record[1])
+        _refresh_fluent_subtree(record[1])
         self._page_visual_generations[route_id] = self._visual_generation
 
     def _gallery_visuals_changed(self) -> None:

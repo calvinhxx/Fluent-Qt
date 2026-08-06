@@ -363,7 +363,8 @@ const QVector<ColorSection>& colorSections()
 
 constexpr int kAnnotatedItemWidth = 120;
 constexpr int kAnnotatedItemHeight = 90;
-constexpr int kAnnotatedContentWidth = kAnnotatedItemWidth * 3;
+constexpr int kAnnotatedViewportWidth = 380;
+constexpr int kAnnotatedContentWidth = kAnnotatedViewportWidth;
 
 int totalColorItemCount()
 {
@@ -573,7 +574,7 @@ public:
         rowLayout->setSpacing(12);
 
         auto* scrollView = new ScrollView(row);
-        scrollView->setFixedSize(380, 320);
+        scrollView->setFixedSize(kAnnotatedViewportWidth, 320);
         scrollView->setHorizontalScrollBarVisibility(ScrollView::ScrollBarVisibility::Hidden);
         scrollView->setVerticalScrollBarVisibility(ScrollView::ScrollBarVisibility::Hidden);
         scrollView->setWidget(new AnnotatedColorSectionsContent());
@@ -627,6 +628,7 @@ public:
         : QWidget(parent)
     {
         setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        setFixedSize(382, 360);
 
         auto* layout = new QHBoxLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -679,7 +681,7 @@ public:
         controlsLayout->addWidget(slider);
         controlsLayout->addStretch(1);
 
-        layout->addWidget(bar);
+        layout->addWidget(bar, 0, Qt::AlignTop);
         layout->addWidget(controls, 0, Qt::AlignTop);
         updateSummary();
     }

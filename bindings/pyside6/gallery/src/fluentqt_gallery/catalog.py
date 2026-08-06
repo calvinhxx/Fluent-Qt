@@ -1,4 +1,4 @@
-"""Native-parity data model for the installed PySide6 Gallery."""
+"""Native-parity data model for the standalone PySide6 Gallery."""
 
 from __future__ import annotations
 

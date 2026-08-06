@@ -1,4 +1,4 @@
-"""Source-driven ports of native Gallery status and notification samples."""
+"""Standalone Gallery ports of native status and notification samples."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ _STATUS_IMPORTS = (
     "from PySide6.QtCore import QRectF, Qt\n"
     "from PySide6.QtGui import QColor, QPainter, QPen\n"
     "from PySide6.QtWidgets import (QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget)\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens"
 )
 
 _STATUS_HELPER = dedent(
@@ -265,7 +265,7 @@ register_source_samples(
                 layout.addWidget(row, 0, Qt.AlignmentFlag.AlignLeft)
                 """,
                 "from PySide6.QtGui import QPixmap\n"
-                "from fluentqt.gallery.visual import asset_path",
+                "from fluentqt_gallery.visual import asset_path",
             ),
         ),
     },
@@ -854,8 +854,16 @@ register_source_samples(
                     fluentqt.Toast.showOrUpdateToast(
                         advance,
                         "upload",
-                        "Upload complete" if progress == 100 else f"Uploading: {progress}%",
-                        fluentqt.Toast.Severity.Success if progress == 100 else fluentqt.Toast.Severity.Informational,
+                        (
+                            "Upload complete"
+                            if progress == 100
+                            else f"Uploading: {progress}%"
+                        ),
+                        (
+                            fluentqt.Toast.Severity.Success
+                            if progress == 100
+                            else fluentqt.Toast.Severity.Informational
+                        ),
                         5000,
                         fluentqt.Toast.Placement.TopEnd,
                     )

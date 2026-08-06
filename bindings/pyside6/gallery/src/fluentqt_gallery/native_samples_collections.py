@@ -1,4 +1,4 @@
-"""Source-driven native Gallery ports for collection controls."""
+"""Standalone Gallery ports for native collection controls."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ _MODEL_IMPORTS = (
     "QNetworkRequest)\n"
     "from PySide6.QtWidgets import (QApplication, QHBoxLayout, QStyle, "
     "QStyledItemDelegate, QSizePolicy, QVBoxLayout, QWidget)\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens"
 )
 
 _PAGE_HELPER = _SourceHelper(dedent(
@@ -597,14 +597,79 @@ _TREE_DELEGATE_HELPER = _SourceHelper(dedent(
                 and not self._check_box_visible
                 and not self._view.selectionIndicatorVisible()
             ):
+                progress = max(
+                    0.0,
+                    min(
+                        float(self._view.selectedIndicatorProgress(index)),
+                        1.0,
+                    ),
+                )
+                motion_active = self._view.isIndicatorMotionActiveForIndex(
+                    index
+                )
+                direction = (
+                    self._view.indicatorMotionDirection()
+                    if motion_active
+                    else fluentqt.TreeView.IndicatorVerticalDirection.None_
+                )
+                hierarchy = (
+                    self._view.indicatorHierarchyTransition()
+                    if motion_active
+                    else fluentqt.TreeView.IndicatorHierarchyTransition.None_
+                )
+                indicator_width = 3.0
+                full_height = 16.0
+                indicator_height = full_height * (0.35 + 0.65 * progress)
+                rtl = option.direction == Qt.LayoutDirection.RightToLeft
+                settled_x = (
+                    option.rect.x()
+                    + option.rect.width()
+                    - 4.0
+                    - indicator_width
+                    if rtl
+                    else option.rect.left() + 4.0
+                )
+                settled_y = background_rect.center().y() - full_height / 2.0
+                remaining = 1.0 - progress
+                indicator_x = settled_x
+                if (
+                    hierarchy
+                    == fluentqt.TreeView.IndicatorHierarchyTransition.Inward
+                ):
+                    indicator_x += (-1.0 if rtl else 1.0) * remaining * 4.0
+                elif (
+                    hierarchy
+                    == fluentqt.TreeView.IndicatorHierarchyTransition.Outward
+                ):
+                    indicator_x += (1.0 if rtl else -1.0) * remaining * 3.0
+                indicator_y = (
+                    background_rect.center().y() - indicator_height / 2.0
+                )
+                if (
+                    direction
+                    == fluentqt.TreeView.IndicatorVerticalDirection.Down
+                ):
+                    indicator_y = settled_y - remaining * 6.0
+                elif (
+                    direction
+                    == fluentqt.TreeView.IndicatorVerticalDirection.Up
+                ):
+                    indicator_y = (
+                        settled_y
+                        + full_height
+                        - indicator_height
+                        + remaining * 6.0
+                    )
                 indicator = QRectF(
-                    option.rect.left() + 4.0,
-                    background_rect.center().y() - 8.0,
-                    3.0,
-                    16.0,
+                    indicator_x,
+                    indicator_y,
+                    indicator_width,
+                    indicator_height,
                 )
                 painter.setPen(Qt.PenStyle.NoPen)
-                painter.setBrush(colors["accentDefault"])
+                accent = QColor(colors["accentDefault"])
+                accent.setAlphaF(accent.alphaF() * progress)
+                painter.setBrush(accent)
                 painter.drawRoundedRect(indicator, 1.5, 1.5)
 
             rtl = option.direction == Qt.LayoutDirection.RightToLeft
@@ -1155,7 +1220,9 @@ register_source_samples(
 
                 drawer = fluentqt.DrawerView(host)
                 drawer.setEdge(fluentqt.DrawerView.DrawerEdge.Left)
-                drawer.setAvailableMargins(QMargins())
+                drawer.setAvailableMargins(
+                    drawer_title_bar_avoidance_margins()
+                )
                 drawer.setDrawerLength(224)
                 drawer.setModal(False)
                 drawer.setDim(False)
@@ -1181,7 +1248,9 @@ register_source_samples(
                 )
                 drawer.closed.connect(lambda: status.setText("Closed"))
                 """,
-                _MODEL_IMPORTS,
+                "from fluentqt_gallery.metrics import "
+                "drawer_title_bar_avoidance_margins\n"
+                + _MODEL_IMPORTS,
             ),
         ),
         "drawer-view-interactive-drag": (
@@ -1322,13 +1391,13 @@ register_source_samples(
                 status = fluentqt.Label("Current page: 1", controls)
                 status.setFluentTypography(fluentqt.FontRole.Body)
                 status.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
+
+                def update_status(index, label=status):
+                    label.setText("Current page: {0}".format(index + 1))
+
                 previous.clicked.connect(flip_view.goPrevious)
                 next_button.clicked.connect(flip_view.goNext)
-                flip_view.currentIndexChanged.connect(
-                    lambda index, label=status: label.setText(
-                        "Current page: {0}".format(index + 1)
-                    )
-                )
+                flip_view.currentIndexChanged.connect(update_status)
                 controls_layout.addWidget(previous)
                 controls_layout.addWidget(next_button)
                 controls_layout.addWidget(status)

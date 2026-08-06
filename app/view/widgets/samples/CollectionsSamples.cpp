@@ -616,7 +616,9 @@ QVector<GallerySample> drawerViewSamples()
                                   "drawer->setEdge(DrawerView::DrawerEdge::Right);\n"
                                   "drawer->setDrawerLength(260);\n"
                                   "drawer->setContentWidget(settingsPanel, WidgetOwnership::Owned);\n"
-                                  "drawer->open();"),
+                                  "auto* openButton = new Button(\"Open drawer\", host);\n"
+                                  "QObject::connect(openButton, &Button::clicked,\n"
+                                  "                 drawer, &DrawerView::open);"),
                    [](QWidget* parent) {
                        auto* host = new QWidget(parent);
                        host->setFixedSize(420, 240);
@@ -876,7 +878,8 @@ QVector<GallerySample> flipViewSamples()
                                   "flipView->setOrientation(Qt::Vertical);\n"
                                   "flipView->setShowPageIndicator(true);\n"
                                   "flipView->addPage(firstPage);\n"
-                                  "flipView->addPage(secondPage);"),
+                                  "flipView->addPage(secondPage);\n"
+                                  "flipView->addPage(thirdPage);"),
                    [](QWidget* parent) {
                        auto* flipView = new FlipView(parent);
                        flipView->setFixedSize(300, 240);

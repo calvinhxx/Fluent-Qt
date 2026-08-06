@@ -1,4 +1,4 @@
-"""Pixel-shaped Foundation topic pages shared with the native Gallery design."""
+"""Foundation topic pages for the standalone Python Gallery."""
 
 from __future__ import annotations
 
@@ -293,10 +293,8 @@ def _section_heading(text: str, parent: QWidget) -> fluentqt.Label:
     label.setObjectName("galleryContentSectionHeader")
     label.setFluentTypography(fluentqt.FontRole.Subtitle)
     label.setWordWrap(True)
-    label.setStyleSheet(
-        "color: {0}; background: transparent;".format(
-            css_color(gallery_colors().text_primary)
-        )
+    label.setTextColorRole(
+        fluentqt.Label.TextColorRole.Primary
     )
     return label
 
@@ -676,20 +674,31 @@ class _AnchorDemoBox(QWidget):
         self.centered.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
         self.pinned = fluentqt.Button("Top-right", self)
         self.pinned.setFluentStyle(fluentqt.Button.ButtonStyle.Standard)
-
-    def resizeEvent(self, event) -> None:
-        super().resizeEvent(event)
-        self.centered.adjustSize()
-        self.pinned.adjustSize()
-        self.centered.move(
-            (self.width() - self.centered.width()) // 2,
-            (self.height() - self.centered.height()) // 2,
+        anchor_layout = fluentqt.AnchorLayout(self)
+        anchor_layout.addWidget(
+            self.centered,
+            fluentqt.anchors(center_in=self),
         )
-        self.pinned.move(self.width() - self.pinned.width() - 12, 12)
+        anchor_layout.addWidget(
+            self.pinned,
+            fluentqt.anchors(top_right=(self, 12)),
+        )
 
 
-def _code(lines: Iterable[str], parent: QWidget, object_name: str) -> GalleryCodeBlock:
-    block = GalleryCodeBlock("\n".join(lines), parent)
+def _code(
+    lines: Iterable[str],
+    parent: QWidget,
+    object_name: str,
+    *,
+    imports: Iterable[str] = (),
+) -> GalleryCodeBlock:
+    from .native_samples import _format_display_source
+
+    source = (*imports, "", *lines)
+    block = GalleryCodeBlock(
+        _format_display_source("\n".join(source)),
+        parent,
+    )
     block.setObjectName(object_name)
     return block
 
@@ -701,7 +710,7 @@ def _build_qmlplus(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, ...]
     property_card = QmlPlusDemoCard(content)
     property_card.body.addWidget(
         _secondary_caption(
-            'One-way · PropertyBinder::bind(slider, "value", bar, "value")',
+            'One-way · fluentqt.bind(slider, "value", bar, "value")',
             property_card,
         )
     )
@@ -722,7 +731,7 @@ def _build_qmlplus(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, ...]
     progress.setRange(0, 100)
     progress.setValue(40)
     property_card.body.addWidget(progress)
-    slider.valueChanged.connect(progress.setValue)
+    fluentqt.bind(slider, "value", progress, "value")
     slider.valueChanged.connect(lambda value: value_label.setText("{0}%".format(value)))
     property_card.body.addSpacing(4)
     property_card.body.addWidget(
@@ -739,26 +748,34 @@ def _build_qmlplus(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, ...]
         control.setOffContent("Off")
         switch_layout.addWidget(control)
     switch_layout.addStretch()
-    switch_a.toggled.connect(switch_b.setIsOn)
-    switch_b.toggled.connect(switch_a.setIsOn)
+    fluentqt.bind(
+        switch_a,
+        "isOn",
+        switch_b,
+        "isOn",
+        fluentqt.BindingMode.TwoWay,
+    )
     property_card.body.addWidget(switch_row)
     layout.addWidget(property_card)
     property_code = _code(
         (
-            "slider = fluentqt.Slider(Qt.Horizontal, parent)",
+            "slider = fluentqt.Slider(Qt.Orientation.Horizontal)",
             "slider.setRange(0, 100)",
-            "bar = fluentqt.ProgressBar(parent)",
+            "bar = fluentqt.ProgressBar()",
             "bar.setRange(0, 100)",
             "",
             "# One-way: slider.value drives bar.value.",
-            "slider.valueChanged.connect(bar.setValue)",
+            'fluentqt.bind(slider, "value", bar, "value")',
             "",
             "# Two-way: each switch mirrors the other.",
-            "switch_a.toggled.connect(switch_b.setIsOn)",
-            "switch_b.toggled.connect(switch_a.setIsOn)",
+            "switch_a = fluentqt.ToggleSwitch()",
+            "switch_b = fluentqt.ToggleSwitch()",
+            'fluentqt.bind(switch_a, "isOn", switch_b, "isOn",',
+            "              fluentqt.BindingMode.TwoWay)",
         ),
         content,
         "galleryFoundationQmlPlusPropertyCodeBlock",
+        imports=("from PySide6.QtCore import Qt",),
     )
     layout.addWidget(property_code)
     widgets.extend((property_card, property_code))
@@ -767,7 +784,7 @@ def _build_qmlplus(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, ...]
     state_card = QmlPlusDemoCard(content)
     state_card.body.addWidget(
         _secondary_caption(
-            'setState("active") applies a named bundle of property changes.',
+            'states.set("active") applies a named bundle of property changes.',
             state_card,
         )
     )
@@ -783,19 +800,34 @@ def _build_qmlplus(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, ...]
     state_toggle.setOffContent("Idle")
     state_card.body.addWidget(state_toggle)
 
-    def apply_state(active: bool) -> None:
-        state_label.setText("Active — one state rewrote text + value" if active else "Idle")
-        state_progress.setValue(90 if active else 20)
-
-    state_toggle.toggled.connect(apply_state)
+    states = fluentqt.StateGroup(state_card)
+    states.add(
+        "active",
+        {
+            state_label: {
+                "text": "Active — one state rewrote text + value",
+            },
+            state_progress: {"value": 90},
+        },
+    )
+    state_toggle.toggled.connect(
+        lambda active: states.set("active" if active else "")
+    )
     layout.addWidget(state_card)
     state_code = _code(
         (
-            "def apply_state(active):",
-            '    label.setText("Active — one state, many props" if active else "Idle")',
-            "    bar.setValue(90 if active else 20)",
+            'label = fluentqt.Label("Idle")',
+            "bar = fluentqt.ProgressBar()",
+            "toggle = fluentqt.ToggleSwitch()",
+            "states = fluentqt.StateGroup()",
+            'states.add("active", {',
+            '    label: {"text": "Active — one state, many props"},',
+            '    bar: {"value": 90},',
+            "})",
             "",
-            "toggle.toggled.connect(apply_state)",
+            "toggle.toggled.connect(",
+            '    lambda on: states.set("active" if on else "")',
+            ")",
         ),
         content,
         "galleryFoundationQmlPlusStateCodeBlock",
@@ -816,10 +848,16 @@ def _build_qmlplus(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, ...]
     layout.addWidget(anchor_card)
     anchor_code = _code(
         (
-            "# Python widgets can apply the same center and top-right constraints.",
-            "centered.move((box.width() - centered.width()) // 2,",
-            "              (box.height() - centered.height()) // 2)",
-            "pinned.move(box.width() - pinned.width() - 12, 12)",
+            "box = fluentqt.FluentWidget()",
+            'centered = fluentqt.Button("Centered", box)',
+            'pinned = fluentqt.Button("Top-right", box)',
+            "layout = fluentqt.AnchorLayout(box)",
+            "layout.addWidget(",
+            "    centered, fluentqt.anchors(center_in=box)",
+            ")",
+            "layout.addWidget(",
+            "    pinned, fluentqt.anchors(top_right=(box, 12))",
+            ")",
         ),
         content,
         "galleryFoundationQmlPlusAnchorCodeBlock",
@@ -873,7 +911,7 @@ def _build_typography(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, .
     _add_section_heading(layout, "Use semantic roles", content)
     code = _code(
         (
-            'title = fluentqt.Label("Settings", parent)',
+            'title = fluentqt.Label("Settings")',
             "title.setFluentTypography(fluentqt.FontRole.Title)",
             "",
             "# Every role resolves to the bundled, static, hinted faces.",
@@ -905,11 +943,19 @@ def _build_geometry(layout: QVBoxLayout, content: QWidget) -> tuple[QWidget, ...
     _add_section_heading(layout, "Use geometry tokens", content)
     code = _code(
         (
-            "painter.drawRoundedRect(control_rect, 4, 4)",
-            "focus_pen = QPen(colors.stroke_focus_outer, 2)",
+            "# Inside fluentqt.FluentWidget.paintEvent:",
+            "tokens = self.theme_tokens()",
+            "radius = fluentqt.CornerRadius.Control",
+            "painter.drawRoundedRect(control_rect, radius, radius)",
+            "",
+            "focus_pen = QPen(",
+            "    tokens.colors.strokeFocusOuter,",
+            "    fluentqt.Spacing.Border.Focused,",
+            ")",
         ),
         content,
         "galleryFoundationGeometryCodeBlock",
+        imports=("from PySide6.QtGui import QPen",),
     )
     layout.addWidget(code)
     return radius, strokes, code

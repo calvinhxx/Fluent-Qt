@@ -1,4 +1,4 @@
-"""GitHub release checker used by the Python Gallery settings page."""
+"""GitHub release checker used by the standalone Gallery settings page."""
 
 from __future__ import annotations
 

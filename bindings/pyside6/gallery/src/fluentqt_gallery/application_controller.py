@@ -1,4 +1,4 @@
-"""Application close behavior and status-area handling matching C++ Gallery."""
+"""Standalone application close behavior matching the C++ Gallery."""
 
 from __future__ import annotations
 

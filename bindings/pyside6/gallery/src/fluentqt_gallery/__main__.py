@@ -1,4 +1,4 @@
-"""Run ``python -m fluentqt.gallery``."""
+"""Run ``python -m fluentqt_gallery``."""
 
 from __future__ import annotations
 

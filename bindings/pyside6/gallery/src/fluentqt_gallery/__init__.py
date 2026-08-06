@@ -1,4 +1,4 @@
-"""Wheel-installed Gallery for FluentQt's public PySide6 API."""
+"""Standalone Gallery for FluentQt's public PySide6 API."""
 
 from __future__ import annotations
 

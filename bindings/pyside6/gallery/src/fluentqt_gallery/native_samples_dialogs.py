@@ -1,4 +1,4 @@
-"""Source-driven native Gallery ports for dialogs and flyouts."""
+"""Standalone Gallery ports for native dialogs and flyouts."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ _DIALOGS_IMPORTS = (
     "from PySide6.QtCore import QPoint, QSize, Qt\n"
     "from PySide6.QtGui import QPainter, QPen\n"
     "from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QVBoxLayout, QWidget\n"
-    "from fluentqt.gallery.foundation_pages import _theme_tokens"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens"
 )
 
 _DIALOGS_HELPER = dedent(

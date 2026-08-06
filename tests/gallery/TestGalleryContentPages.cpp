@@ -36,6 +36,7 @@
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/CompoundButton.h"
+#include "components/basicinput/Slider.h"
 #include "compatibility/QtCompat.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
@@ -49,6 +50,7 @@
 #include "components/menus_toolbars/CommandBar.h"
 #include "components/menus_toolbars/CommandBarFlyout.h"
 #include "components/menus_toolbars/Menu.h"
+#include "components/scrolling/AnnotatedScrollBar.h"
 #include "components/scrolling/PipsPager.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/status_info/Avatar.h"
@@ -1415,6 +1417,65 @@ TEST_F(GalleryContentPagesTest, SampleCardsHostLivePreviewAndCode)
     }
 }
 
+TEST_F(GalleryContentPagesTest, LinkedAnnotatedScrollContentCoversItsViewport)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("annotated-scrollbar"),
+        QStringLiteral("annotated-scrollbar-scrollview"),
+        &sample));
+
+    GallerySampleCard card(sample);
+    card.resize(760, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+
+    auto* scrollView =
+        card.previewWidget()->findChild<fluent::scrolling::ScrollView*>();
+    ASSERT_NE(scrollView, nullptr);
+    ASSERT_NE(scrollView->contentWidget(), nullptr);
+    ASSERT_NE(scrollView->viewport(), nullptr);
+    EXPECT_EQ(scrollView->contentWidget()->width(),
+              scrollView->viewport()->width());
+}
+
+TEST_F(GalleryContentPagesTest, AnnotatedScrollDensityKeepsPreviewGeometryStable)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("annotated-scrollbar"),
+        QStringLiteral("annotated-scrollbar-label-density"),
+        &sample));
+
+    GallerySampleCard card(sample);
+    card.resize(760, card.sizeHint().height());
+    card.show();
+    QApplication::processEvents();
+
+    QWidget* preview = card.previewWidget();
+    ASSERT_NE(preview, nullptr);
+    auto* bar = preview->findChild<fluent::scrolling::AnnotatedScrollBar*>();
+    auto* slider = preview->findChild<fluent::basicinput::Slider*>();
+    ASSERT_NE(bar, nullptr);
+    ASSERT_NE(slider, nullptr);
+
+    const QSize previewSize = preview->size();
+    const int barTop = bar->y();
+    const int cardHeight = card.height();
+    const int codeBlockTop = card.codeBlock()->y();
+
+    slider->setValue(220);
+    QApplication::processEvents();
+
+    EXPECT_EQ(preview->size(), previewSize);
+    EXPECT_EQ(preview->size(), QSize(382, 360));
+    EXPECT_EQ(bar->height(), 220);
+    EXPECT_EQ(bar->y(), barTop);
+    EXPECT_EQ(bar->y(), 0);
+    EXPECT_EQ(card.height(), cardHeight);
+    EXPECT_EQ(card.codeBlock()->y(), codeBlockTop);
+}
+
 TEST_F(GalleryContentPagesTest, HorizontalSampleGroupUsesRequestedSpacing)
 {
     std::unique_ptr<QWidget> group(fluent::gallery::samples::horizontalGroup(nullptr, 10));
@@ -1869,11 +1930,64 @@ TEST_F(GalleryContentPagesTest,
             || integrationBar->secondaryActions().contains(action));
         EXPECT_FALSE(action->icon().isNull());
     }
+    QApplication::clipboard()->clear();
     QTest::mouseClick(selectText, Qt::LeftButton);
     QTRY_VERIFY(router->canExecute(
         EditingCommandRouter::Command::Cut));
     EXPECT_TRUE(router->canExecute(
         EditingCommandRouter::Command::Copy));
+
+    const auto visibleCommandButton =
+        [integrationBar](const QString& text) -> Button* {
+            for (Button* button :
+                 integrationBar->findChildren<Button*>()) {
+                if (button && button->text() == text
+                    && button->isVisibleTo(integrationBar)) {
+                    return button;
+                }
+            }
+            return nullptr;
+        };
+    Button* copy =
+        visibleCommandButton(QStringLiteral("Copy"));
+    ASSERT_NE(copy, nullptr);
+    copy->setFocus(Qt::MouseFocusReason);
+    editor->deselect();
+    QApplication::processEvents();
+    EXPECT_TRUE(router->canExecute(
+        EditingCommandRouter::Command::Copy));
+    ASSERT_TRUE(copy->isEnabled());
+    QTest::mouseClick(copy, Qt::LeftButton);
+    QTRY_COMPARE(
+        QApplication::clipboard()->text(),
+        QStringLiteral(
+            "Review the release notes before Friday"));
+
+    editor->setText(QStringLiteral("Cut this text"));
+    editor->setFocus(Qt::OtherFocusReason);
+    editor->selectAll();
+    QApplication::processEvents();
+    Button* cut = visibleCommandButton(QStringLiteral("Cut"));
+    ASSERT_NE(cut, nullptr);
+    cut->setFocus(Qt::MouseFocusReason);
+    editor->deselect();
+    QApplication::processEvents();
+    EXPECT_TRUE(router->canExecute(
+        EditingCommandRouter::Command::Cut));
+    ASSERT_TRUE(cut->isEnabled());
+    QTest::mouseClick(cut, Qt::LeftButton);
+    QTRY_COMPARE(editor->text(), QString());
+    EXPECT_EQ(
+        QApplication::clipboard()->text(),
+        QStringLiteral("Cut this text"));
+
+    editor->setText(
+        QStringLiteral(
+            "Review the release notes before Friday"));
+    editor->setFocus(Qt::OtherFocusReason);
+    editor->selectAll();
+    router->refresh();
+    QApplication::processEvents();
     QTest::mouseClick(readOnly, Qt::LeftButton);
     QTRY_VERIFY(editor->isReadOnly());
     EXPECT_FALSE(router->canExecute(

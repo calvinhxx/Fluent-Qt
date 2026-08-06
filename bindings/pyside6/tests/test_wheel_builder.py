@@ -2,6 +2,7 @@
 
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -25,6 +26,7 @@ class WheelBuilderTest(unittest.TestCase):
             "_fluentqt.pyi",
             "basicinput.pyi",
             "collections.pyi",
+            "design.pyi",
             "windowing.pyi",
         ):
             with self.subTest(name=name):
@@ -36,39 +38,27 @@ class WheelBuilderTest(unittest.TestCase):
             WHEEL_BUILDER.REQUIRED_PACKAGE_FILES,
         )
 
-    def test_python_gallery_is_required_in_wheel(self):
-        for name in (
-            "gallery/__init__.py",
-            "gallery/__main__.py",
-            "gallery/application_controller.py",
-            "gallery/app.py",
-            "gallery/catalog.py",
-            "gallery/contract.json",
-            "gallery/foundation_pages.py",
-            "gallery/intro_tour.py",
-            "gallery/native_samples.py",
-            "gallery/native_samples_basic.py",
-            "gallery/native_samples_collections.py",
-            "gallery/native_samples_dialogs.py",
-            "gallery/native_samples_navigation.py",
-            "gallery/native_samples_scrolling.py",
-            "gallery/native_samples_status.py",
-            "gallery/native_samples_text_window.py",
-            "gallery/samples.py",
-            "gallery/settings.py",
-            "gallery/single_instance.py",
-            "gallery/update_checker.py",
-            "gallery/visual.py",
-            "gallery/window.py",
-            "gallery/window_placement.py",
-            "gallery/assets/app-icon.png",
-            "gallery/assets/icon_aliases.json",
-            "gallery/assets/icon_catalog.json",
-            "gallery/assets/control_images/Placeholder.png",
-            "gallery/assets/home_header_tiles/Header-WindowsDesign.png",
-        ):
+    def test_design_facade_and_semantic_alias_data_are_required_in_wheel(self):
+        for name in ("design.py", "design.pyi", "_icon_aliases.json"):
             with self.subTest(name=name):
                 self.assertIn(name, WHEEL_BUILDER.REQUIRED_PACKAGE_FILES)
+
+    def test_python_gallery_is_excluded_from_core_wheel(self):
+        self.assertFalse(
+            any(
+                name.startswith("gallery/")
+                for name in WHEEL_BUILDER.REQUIRED_PACKAGE_FILES
+            )
+        )
+
+    def test_core_wheel_builder_rejects_staged_gallery_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            package_dir = Path(temporary)
+            gallery_file = package_dir / "gallery" / "__init__.py"
+            gallery_file.parent.mkdir(parents=True)
+            gallery_file.write_text("# must not ship\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "must not contain Gallery"):
+                WHEEL_BUILDER.package_files(package_dir)
 
     def test_qt_62_uses_monolithic_pyside6_distribution(self):
         requirement = WHEEL_BUILDER.pyside_runtime_requirement("6.2.4")
