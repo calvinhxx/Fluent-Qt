@@ -285,6 +285,55 @@ protected:
     }
 };
 
+class ExposedGalleryContentPage final : public GalleryContentPage {
+public:
+    ExposedGalleryContentPage()
+        : GalleryContentPage(QStringLiteral("test"), QStringLiteral("Test"))
+    {
+    }
+
+    fluent::textfields::Label* addBody(const QString& text)
+    {
+        return addBodyText(text);
+    }
+
+    fluent::textfields::Label* addHeader(const QString& text)
+    {
+        return addSectionHeader(text);
+    }
+
+    void trackSecondary(fluent::textfields::Label* label)
+    {
+        trackLabelColor(label, TextRole::Secondary);
+    }
+};
+
+TEST_F(GalleryContentPagesTest, ContentTextRolesAreAppliedBeforeFirstPaint)
+{
+    ExposedGalleryContentPage page;
+    auto* body = page.addBody(QStringLiteral("Body"));
+    auto* section = page.addHeader(QStringLiteral("Section"));
+    auto* status = new fluent::textfields::Label(QStringLiteral("Status"), &page);
+    page.trackSecondary(status);
+
+    ASSERT_NE(page.titleLabel(), nullptr);
+    ASSERT_NE(body, nullptr);
+    ASSERT_NE(section, nullptr);
+    EXPECT_EQ(page.titleLabel()->textColorRole(),
+              fluent::textfields::Label::TextColorRole::Primary);
+    EXPECT_EQ(section->textColorRole(),
+              fluent::textfields::Label::TextColorRole::Primary);
+    EXPECT_EQ(body->textColorRole(),
+              fluent::textfields::Label::TextColorRole::Secondary);
+    EXPECT_EQ(status->textColorRole(),
+              fluent::textfields::Label::TextColorRole::Secondary);
+
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    page.onThemeUpdated();
+    EXPECT_EQ(body->textColorRole(),
+              fluent::textfields::Label::TextColorRole::Secondary);
+}
+
 // Task 6.1: seeded content routes resolve and stay consistent with navigation routes.
 TEST_F(GalleryContentPagesTest, ContentCatalogSeededRoutesMatchNavigation)
 {
