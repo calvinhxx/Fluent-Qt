@@ -1492,6 +1492,10 @@ def build_settings_page(
     set_close_behavior: Callable[[int], None] | None = None,
     parent: QWidget | None = None,
 ) -> fluentqt.ScrollView:
+    # Import locally to keep the page module independent from the application
+    # controller during startup while sharing its platform terminology.
+    from .application_controller import keep_running_choice
+
     settings = gallery_settings()
     page = _GallerySettingsPage(parent)
     page.setObjectName("gallerySettingsPage")
@@ -1543,7 +1547,7 @@ def build_settings_page(
     )
     close_behavior = _settings_choice(
         "gallerySettingsCloseBehaviorChoice",
-        ("Minimize window", "Keep in system tray", "Quit app"),
+        ("Minimize window", keep_running_choice(), "Quit app"),
         int(settings.close_behavior),
         content,
     )

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from enum import IntEnum
 from pathlib import Path
+import sys
 
 import fluentqt
 from PySide6.QtCore import (
@@ -75,6 +76,25 @@ def _bounded(value: object, low: int, high: int, fallback: int) -> int:
         return fallback
 
 
+def _windows_apps_use_light_theme() -> bool | None:
+    """Read the Windows app color preference used by the native Gallery."""
+
+    if sys.platform != "win32":
+        return None
+    registry = QSettings(
+        r"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion"
+        r"\Themes\Personalize",
+        QSettings.NativeFormat,
+    )
+    key = "AppsUseLightTheme"
+    if not registry.contains(key):
+        return None
+    try:
+        return int(registry.value(key, 1)) != 0
+    except (TypeError, ValueError):
+        return None
+
+
 def _system_theme() -> fluentqt.Theme:
     app = QApplication.instance()
     if app is not None:
@@ -86,6 +106,13 @@ def _system_theme() -> fluentqt.Theme:
                 return fluentqt.Theme.Light
         except AttributeError:
             pass
+        use_light_theme = _windows_apps_use_light_theme()
+        if use_light_theme is not None:
+            return (
+                fluentqt.Theme.Light
+                if use_light_theme
+                else fluentqt.Theme.Dark
+            )
         palette = app.palette()
         if (
             palette.window().color().lightness()

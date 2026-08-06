@@ -40,6 +40,27 @@ def keep_running_description() -> str:
     return "Reopen it from the {0} icon.".format(status_area_name())
 
 
+def _application_is_saving_session(app: QApplication | None) -> bool:
+    if app is None:
+        return False
+    is_saving_session = getattr(app, "isSavingSession", None)
+    return bool(is_saving_session()) if callable(is_saving_session) else False
+
+
+def _is_wayland_platform() -> bool:
+    return QApplication.platformName().casefold().startswith("wayland")
+
+
+def _window_is_active(window: QWidget | None) -> bool:
+    return bool(window is not None and window.isActiveWindow())
+
+
+def _request_application_attention(window: QWidget) -> None:
+    app = QApplication.instance()
+    if app is not None:
+        app.alert(window, 3000)
+
+
 class _CloseBehaviorChoiceRow(QWidget):
     def __init__(
         self,
@@ -310,6 +331,8 @@ class GalleryApplicationController(QObject):
             and event.type() == QEvent.Type.Close
             and not self._exit_requested
         ):
+            if _application_is_saving_session(app):
+                return super().eventFilter(watched, event)
             close_event = event
             if isinstance(close_event, QCloseEvent):
                 close_event.ignore()
@@ -401,7 +424,12 @@ class GalleryApplicationController(QObject):
         was_minimized = bool(
             self._window.windowState() & Qt.WindowMinimized
         )
-        if was_hidden or was_minimized:
+        was_active = _window_is_active(self._window)
+        wayland_state_fallback = _is_wayland_platform() and not was_active
+        needs_restore = was_hidden or was_minimized or wayland_state_fallback
+        self._restore_generation += 1
+        generation = self._restore_generation
+        if needs_restore:
             target_state = (
                 self._restore_state
                 if was_hidden
@@ -409,12 +437,10 @@ class GalleryApplicationController(QObject):
             )
             target_state &= ~Qt.WindowMinimized
             target_state &= ~Qt.WindowActive
-            self._restore_generation += 1
-            generation = self._restore_generation
             if sys.platform.startswith("linux"):
                 self._window.hide()
                 self._window.prepareForNativeRestore()
-                delay = 100 if was_minimized else 0
+                delay = 100 if was_minimized or wayland_state_fallback else 0
                 _single_shot(
                     delay,
                     self,
@@ -425,13 +451,26 @@ class GalleryApplicationController(QObject):
                         was_minimized,
                     ),
                 )
-                return
-            self._show_restored_window(
-                generation, target_state, was_hidden, was_minimized
-            )
+            else:
+                self._show_restored_window(
+                    generation, target_state, was_hidden, was_minimized
+                )
+        else:
+            self._complete_window_restore(generation, False)
+        _single_shot(
+            250,
+            self,
+            lambda: self._request_foreground_attention(generation),
+        )
+
+    def _request_foreground_attention(self, generation: int) -> None:
+        if (
+            generation != self._restore_generation
+            or self._exit_requested
+            or _window_is_active(self._window)
+        ):
             return
-        self._restore_generation += 1
-        self._complete_window_restore(self._restore_generation, False)
+        _request_application_attention(self._window)
 
     def _show_restored_window(
         self,
