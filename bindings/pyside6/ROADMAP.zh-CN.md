@@ -30,7 +30,7 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 | M3 — 托管控件 ownership | 已完成 | 计划内托管控件边界均具备固定语义适配器、ownership 与 GC 测试 |
 | M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
 | M4.5 — Foundation 作者 API | 已完成 | `FluentWidget`、`bind()`、`StateGroup`、`AnchorLayout`/`anchors()` 已通过本机 Qt 6.9.3、Linux/Windows Qt 6.2.4 最低线、六目标发布 wheel 与完整 CI 回归 |
-| M5 — Overlay 与原生窗口 | 进行中 | 本机 Windows 11 DWM 材质/布局及指针驱动 move/resize 验收已通过，自动化 XCB/Wayland/Windows/Cocoa 验收也已通过；仅剩实体 KWin/Wayland compositor 审查 |
+| M5 — Overlay 与原生窗口 | 已完成 | 自动化 XCB/Wayland/Windows/Cocoa、实体 Windows 11 DWM，以及非 headless Ubuntu 22.04 ARM64 GNOME Wayland 已覆盖材质、如实 fallback、系统 move/resize 与代表性 overlay |
 | M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六目标原生 wheel 矩阵、分架构 manylinux repair/audit，并取得 x86_64/AArch64 容器 CI 证据；独立的纯 Python Gallery 分发覆盖 88 个原生路由和 199 个 SampleCard。当前必需矩阵已通过，只剩签名与正式发布 |
 
 ## 公共 API 覆盖台账
@@ -38,7 +38,7 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 下表是组件覆盖的事实来源。不能因为当前小批次的复选框全部完成，就把整个里程碑
 标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。M0 至 M4 已完成该
 审计。当前 manifest 记录了 87 个必需类、值类型及支持类型、13 个枚举、16 个函数和 2 个版本变量；
-M4.5 已完成；M5、M6 的剩余边界继续在下表及各自章节中记录。
+M4.5、M5 已完成；M6 的发布边界继续在下表及对应章节中记录。
 
 | 分类 | 已绑定 | 剩余边界 |
 |---|---|---|
@@ -53,7 +53,7 @@ M4.5 已完成；M5、M6 的剩余边界继续在下表及各自章节中记录�
 | Scrolling | `AnnotatedScrollBar`、`AnnotatedScrollBarLabel`、`PipsPager`、`ScrollBar`、`ScrollView`、`ScrollViewZoomAwareWidget` | 当前公开组件与支持类型已覆盖完整 |
 | Status & Info | `Avatar`、`InfoBadge`、`InfoBar`、`ProgressBar`、`ProgressRing`、`Shimmer`、`Toast`、`ToolTip` | 当前公开组件已覆盖完整；原生 CI 验证已通过 |
 | Text Fields | `AutoSuggestBox`、`EditingCommandRouter`、`Label`、`LineEdit`、`NumberBox`、`PasswordBox`、`TextEdit` | 当前公开组件与支持类型已覆盖完整 |
-| Windowing | `Window`、`TitleBar` 与 backdrop 值类型 | Windows 11 DWM 材质/布局及指针驱动 system move/resize 审查已完成；M5 仍需实体 KWin/Wayland compositor 行为审查 |
+| Windowing | `Window`、`TitleBar` 与 backdrop 值类型 | 已完成：Windows 11 DWM 与 Ubuntu 22.04 ARM64 GNOME Wayland 均完成非 headless 材质/chrome/指针审查；可选 KWin/X11 blur 受能力门控，本次不宣称已实体观察 |
 
 ## M0 — 绑定基础设施
 
@@ -777,13 +777,20 @@ Popup、Flyout、ContentDialog、TeachingTip、dropdown 和其他 overlay 组件
 - [x] 在本机 Windows 11 桌面审查指针驱动的 system move 与边框 resize。真实
       标题栏拖动把窗口原点从 `(503,209)` 移到 `(623,289)`；真实右下边框拖动把
       尺寸从 `914x614` 调整为 `814x534`，对外发布的 chrome frame 同步更新。
-- [ ] 在实体 Linux 桌面审查 KWin/Wayland compositor 材质与系统 move/resize。
+- [x] 在非 headless Ubuntu 22.04 ARM64 GNOME Wayland 会话审查 Linux
+      compositor fallback、系统 move/resize 与代表性 same-window overlay。
+      当前 ARM64 Gallery 通过真实指针完成移动与缩放；Flyout、Popup、ComboBox、
+      DrawerView 和 ContentDialog 的挂载、scrim 与关闭行为符合契约。
 
 自动化原生验收会拒绝 offscreen/minimal 插件，并验证原生 handle、chrome/内容
 ownership、resize 传递和最终 backdrop 不变量。本机 WSLg Wayland 与 XCB 报告
-也确认了 painted fallback，但不把它误报为 compositor blur。Windows DWM 材质
-质量及指针驱动 system move/resize 现已有覆盖；实体 KWin blur 与指针行为是 M5
-唯一剩余的桌面验收项。
+也确认了 painted fallback，但不把它误报为 compositor blur。实体 Windows DWM
+与真实 GNOME Wayland compositor 会话现已覆盖材质质量和指针驱动 system
+move/resize。Wayland 没有稳定的跨 compositor blur 协议，因此 Mica/Acrylic
+正确保持 `PaintedMaterial` / `Emulated` / `PaintedOpaque`。KWin 的 X11 blur atom
+属于可选的能力型增强：它仍受 capability 与原生契约测试保护，但本次 ARM64
+Wayland 验收不宣称实体观察到该可选 KWin/X11 效果，也不把它作为通用 Linux
+兼容门禁。
 
 ## M6 — 可发布 Python 分发
 
@@ -873,8 +880,8 @@ Windows 上的确认。
 3. **发布完成**：M6 完成；明确 CPython/操作系统/架构矩阵，提供类型存根、
    API 兼容和弃用规则，并发布经过干净环境验证的 wheel。
 
-当前 M0 至 M4.5 已完成。达到功能完整只剩 M5 的实体 Linux KWin/Wayland
-compositor 审查；达到发布完成还需完成 M6 的签名与正式发布。
+当前 M0 至 M5 已完成，计划内 Python API 已达到功能完整；达到发布完成仍需
+完成 M6 的剩余门禁、签名与正式发布。
 
 因此，本项目只有达到第三层，才称为“Python 支持完成并可正式发布”。这不包含
 PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Python 使用的
@@ -1138,3 +1145,23 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     ready。结合 macOS、Windows 和 WSLg 上 HelloWorld/Gallery 的人工核验，
     Foundation 作者 API 已完成；功能完整只剩 M5 的实体 KWin/Wayland 审查，
     正式发布只剩 M6 的签名与发布授权。
+46. 在 Ubuntu 22.04.5 ARM64 的非 headless 交互桌面完成 M5 验收；会话使用
+    GNOME Shell 42.9 与原生 Wayland plugin。验收对象是完整 CI run
+    `31142098154`（提交 `098f71f`）产出的
+    `Fluent-Qt-Gallery-1.5.3-Linux-arm64.deb`，SHA-256 为
+    `fc1abcff52c123b63bcf09bb4f2cf12cce07be4ecf87c2e1354c4a5af97fabe9`；
+    它以 AArch64 ELF 运行并只加载虚拟机内的一套 system Qt 6。在宿主截图坐标中，
+    真实标题栏拖动把 Gallery 从 `(169,164)` 移到 `(295,260)`；下边框与右边框
+    拖动依次把约 `923x544` 的窗口调整为 `923x462` 和 `802x462`。Flyout 通过
+    Escape 与外部点击关闭，Popup 通过 Escape 关闭，ComboBox 选择后关闭，
+    DrawerView 通过 scrim 关闭，ContentDialog 保持模态 scrim 与结果语义；新建
+    Fluent 子窗口没有黑块或错误透明区域。本轮还发现两个 Gallery 的 Window 示例
+    直接调用 `activateWindow()` 会在 Qt 6.2 Wayland 输出警告，现已统一改用
+    `Window::requestForegroundActivation()`，进入库已有的 compositor-safe 激活
+    路径。Python 绑定/窗口契约此前已由原生 CI 和 WSLg wheel 人工审查覆盖；本轮
+    C++ Gallery 专门隔离验证两端共享的 C++ compositor/指针层，因为该 Ubuntu
+    22.04 虚拟机的 glibc 2.35 无法安装当前 `manylinux_2_39_aarch64` Python wheel。
+    这属于 M6 的二进制策略边界，不隐藏为 M5 失败。GNOME Wayland 如实使用 painted
+    fallback；本机不存在可选 KWin/X11 blur，因此不宣称实体观察到该效果，它继续
+    作为能力门控增强而不是通用 Linux 兼容条件。M0 至 M5 至此达到功能完整，正式
+    发布仍属于 M6。

@@ -34,7 +34,7 @@ runtime, and CPython ABI requires its own build and validation.
 | M3 — Hosted-widget ownership | Complete | Planned hosted-widget boundaries have fixed-semantics adapters plus ownership and GC tests |
 | M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
 | M4.5 — Foundation authoring API | Complete | `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout`/`anchors()` pass local Qt 6.9.3, Linux/Windows Qt 6.2.4 minimum lanes, the six-target release-wheel matrix, and full CI regression |
-| M5 — Overlays and native windows | In progress | Local Windows 11 DWM material/layout and pointer-driven move/resize acceptance passed, together with automated XCB/Wayland/Windows/Cocoa checks; only physical KWin/Wayland compositor review remains |
+| M5 — Overlays and native windows | Complete | Automated XCB/Wayland/Windows/Cocoa checks, physical Windows 11 DWM review, and a non-headless Ubuntu 22.04 ARM64 GNOME Wayland review cover materials, honest fallback, system move/resize, and representative overlays |
 | M6 — Release-grade Python distribution | In progress | Type/API governance, the six-target native wheel matrix, architecture-specific manylinux repair/audit, and x86_64/AArch64 container-CI evidence are complete; the standalone pure-Python Gallery distribution covers all 88 native routes and 199 SampleCards. The current required matrix passes, leaving signing and publication |
 
 ## Public API coverage ledger
@@ -44,8 +44,8 @@ be marked complete merely because its current checklist is green; every public
 component below must either be bound or retain an explicit boundary decision.
 That audit is complete for M0 through M4.5. The manifest currently records 87
 required classes/value/support types, 13 enums, 16 functions, and 2 version
-variables; M5 and M6 retain the open boundaries shown below and in their
-milestone sections.
+variables. M5 is complete; M6 retains the release boundary shown below and in
+its milestone section.
 
 | Category | Bound now | Remaining boundary |
 |---|---|---|
@@ -60,7 +60,7 @@ milestone sections.
 | Scrolling | `AnnotatedScrollBar`, `AnnotatedScrollBarLabel`, `PipsPager`, `ScrollBar`, `ScrollView`, `ScrollViewZoomAwareWidget` | Complete for the current public component and support-type set |
 | Status & Info | `Avatar`, `InfoBadge`, `InfoBar`, `ProgressBar`, `ProgressRing`, `Shimmer`, `Toast`, `ToolTip` | Complete for the current public component set; native CI validation passed |
 | Text Fields | `AutoSuggestBox`, `EditingCommandRouter`, `Label`, `LineEdit`, `NumberBox`, `PasswordBox`, `TextEdit` | Complete for the current public component and support-type set |
-| Windowing | `Window`, `TitleBar`, and backdrop values | Windows 11 DWM material/layout and pointer-driven system move/resize review are complete; physical KWin/Wayland compositor behavior remains in M5 |
+| Windowing | `Window`, `TitleBar`, and backdrop values | Complete: Windows 11 DWM and Ubuntu 22.04 ARM64 GNOME Wayland received non-headless material/chrome/pointer review; optional KWin/X11 blur is capability-gated and is not claimed as physically reviewed |
 
 ## M0 — Binding foundation
 
@@ -939,15 +939,23 @@ Current slices:
       11 desktop. A real title-bar drag moved the window origin from `(503,209)`
       to `(623,289)`, and a real bottom-right border drag resized it from
       `914x614` to `814x534` while the published chrome frame updated with it.
-- [ ] Review KWin/Wayland compositor materials plus system move/resize on a
-      physical Linux desktop.
+- [x] Review Linux compositor fallback, system move/resize, and representative
+      same-window overlays in a non-headless Ubuntu 22.04 ARM64 GNOME Wayland
+      session. The current ARM64 Gallery moved and resized through real pointer
+      input; Flyout, Popup, ComboBox, DrawerView, and ContentDialog preserved
+      their expected attachment, scrim, and close behavior.
 
 The automated native acceptance rejects offscreen/minimal plugins and verifies
 native handles, chrome/content ownership, resize propagation, and resolved
 backdrop invariants. The local WSLg Wayland and XCB reports also confirm the
-painted fallback without claiming compositor blur. Windows DWM material quality
-and pointer-driven system move/resize are now covered; physical KWin blur and
-pointer behavior remain the sole M5 desktop acceptance item.
+painted fallback without claiming compositor blur. Physical Windows DWM and a
+real GNOME Wayland compositor session now cover material quality and
+pointer-driven system move/resize. Wayland has no stable cross-compositor blur
+protocol, so Mica/Acrylic correctly remain `PaintedMaterial` / `Emulated` /
+`PaintedOpaque`. KWin's X11 blur atom is an optional capability-specific
+enhancement: it remains covered by capability and native-contract tests, but
+this ARM64 Wayland review does not claim that optional KWin/X11 effect was
+physically observed. It is not a generic Linux compatibility gate.
 
 ## M6 — Release-grade Python distribution
 
@@ -1056,9 +1064,9 @@ is not mistaken for complete support:
    architecture matrix, type stubs, API compatibility/deprecation policy, and
    clean-environment wheels are published.
 
-M0 through M4.5 are complete. Feature completeness now waits only on M5's
-physical Linux KWin/Wayland compositor review. Release completeness requires
-M6 signing and formal publication.
+M0 through M5 are complete, so the planned Python API is feature complete.
+Release completeness still requires the remaining M6 gates, signing, and
+formal publication.
 
 FluentQt calls Python support complete and release-ready only at the third
 level. This excludes PySide2 and Qt 5 Python bindings and does not require
@@ -1392,3 +1400,28 @@ ledger, and highest-numbered record for the current state.
     authoring API is complete. Feature completeness now waits only on M5's
     physical KWin/Wayland review; formal release waits on M6 signing and
     publication authorization.
+46. Close M5 after an interactive, non-headless Ubuntu 22.04.5 ARM64 desktop
+    review using GNOME Shell 42.9 and the native Wayland plugin. The reviewed
+    `Fluent-Qt-Gallery-1.5.3-Linux-arm64.deb` from full CI run `31142098154`
+    (`098f71f`, SHA-256
+    `fc1abcff52c123b63bcf09bb4f2cf12cce07be4ecf87c2e1354c4a5af97fabe9`)
+    ran as an AArch64 ELF against the guest's single system Qt 6 runtime. In
+    host screenshot coordinates, a real title-bar drag moved the Gallery from
+    `(169,164)` to `(295,260)`; bottom and right border drags changed its frame
+    from about `923x544` to `923x462` and then `802x462`. Flyout passed Escape
+    and outside-dismiss, Popup passed Escape, ComboBox selected and closed,
+    DrawerView dismissed through its scrim, and ContentDialog preserved modal
+    scrim/result behavior. A child Fluent Window rendered without black or
+    incorrectly transparent regions. The review also exposed raw
+    `activateWindow()` calls in both Gallery implementations; they now use
+    `Window::requestForegroundActivation()` so Qt 6.2 Wayland follows the
+    library's compositor-safe activation path. The Python binding/window
+    contract was already covered by native CI and WSLg wheel review; this C++
+    Gallery run intentionally isolates the shared C++ compositor and pointer
+    layer because the Ubuntu 22.04 guest's glibc 2.35 cannot install the
+    current `manylinux_2_39_aarch64` Python wheel. That binary-policy boundary
+    remains in M6 and is not hidden as an M5 failure. GNOME Wayland correctly
+    uses the honest painted fallback. Optional KWin/X11 blur was not present
+    and is not claimed as physically observed; it remains a capability-gated
+    enhancement rather than a generic Linux compatibility requirement. M0
+    through M5 are therefore feature complete, while publication remains M6.

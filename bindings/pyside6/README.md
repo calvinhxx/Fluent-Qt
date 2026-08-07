@@ -900,9 +900,11 @@ showcase proves the visible controls and signal-driven behavior. The native
 Window acceptance runs with XCB under Xvfb, the Windows plugin on Windows, and
 Cocoa on macOS, recording a PNG and JSON state report. Those lanes prove native
 plugin loading, handle/chrome integration, typed backdrop state, and valid
-fallback behavior. Physical Windows 11 DWM and Linux KWin/Wayland compositor
-effects, system drag/resize interaction, and their visual quality still require
-desktop review; an offscreen snapshot cannot prove them.
+fallback behavior. Physical Windows 11 DWM and a non-headless Ubuntu 22.04
+ARM64 GNOME Wayland session additionally cover material quality, system
+drag/resize, and representative overlays. Wayland correctly uses the painted
+fallback; optional KWin/X11 compositor blur remains capability-gated and is not
+advertised as physically reviewed by that Wayland run.
 
 Very old Shiboken generators embed an older Clang parser. If Shiboken 6.2
 cannot parse the C++ standard-library headers from a much newer host compiler,

@@ -2165,6 +2165,26 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             preview.close()
             preview.deleteLater()
 
+    def test_window_samples_use_compositor_safe_activation(self):
+        for sample_id in (
+            "window-content-host",
+            "window-custom-titlebar",
+        ):
+            with self.subTest(sample=sample_id):
+                result = build_sample("window", sample_id)
+                try:
+                    self.assertIn(
+                        "window.requestForegroundActivation()",
+                        result.preview_source,
+                    )
+                    self.assertNotIn(
+                        "window.activateWindow()",
+                        result.preview_source,
+                    )
+                finally:
+                    result.widget.close()
+                    result.widget.deleteLater()
+
     def test_preview_source_executes_and_displayed_source_stays_concise(self):
         app = QApplication.instance()
         self.assertIsNotNone(app)

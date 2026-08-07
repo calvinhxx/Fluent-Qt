@@ -399,8 +399,7 @@ void showWindowNear(Window* window, QWidget* launcher, const QSize& size)
         window->move(center - QPoint(size.width() / 2, size.height() / 2));
     }
     window->show();
-    window->raise();
-    window->activateWindow();
+    window->requestForegroundActivation();
 }
 
 void focusWindow(Window* window)
@@ -408,8 +407,7 @@ void focusWindow(Window* window)
     if (!window)
         return;
     window->showNormal();
-    window->raise();
-    window->activateWindow();
+    window->requestForegroundActivation();
 }
 
 QVector<GallerySample> titleBarSamples()
