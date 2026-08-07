@@ -77,6 +77,29 @@ class WheelBuilderTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Invalid PySide6 version"):
             WHEEL_BUILDER.pyside_runtime_requirement("invalid")
 
+    def test_python_metadata_policies_are_explicit(self):
+        for policy in (">=3.10,<3.11", ">=3.11,<3.14"):
+            with self.subTest(policy=policy):
+                self.assertEqual(
+                    WHEEL_BUILDER.validate_requires_python(policy),
+                    policy,
+                )
+
+        with self.assertRaisesRegex(RuntimeError, "Requires-Python policy"):
+            WHEEL_BUILDER.validate_requires_python(">=3.10")
+
+    def test_release_metadata_excludes_python_310(self):
+        metadata = WHEEL_BUILDER.metadata_contents(
+            "1.5.3",
+            "6.9.3",
+            "6.9.3",
+            ">=3.11,<3.14",
+        )
+
+        self.assertIn("Requires-Python: >=3.11,<3.14", metadata)
+        self.assertIn("Requires-Dist: PySide6-Essentials (==6.9.3)", metadata)
+        self.assertIn("Requires-Dist: shiboken6 (==6.9.3)", metadata)
+
 
 if __name__ == "__main__":
     unittest.main()

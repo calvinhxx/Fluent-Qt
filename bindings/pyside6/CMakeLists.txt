@@ -12,6 +12,37 @@ else()
     find_package(Python 3.10 REQUIRED COMPONENTS Interpreter Development.Module)
 endif()
 
+if(Python_VERSION VERSION_LESS 3.11)
+    set(FLUENTQT_PYSIDE6_DEFAULT_REQUIRES_PYTHON ">=3.10,<3.11")
+else()
+    set(FLUENTQT_PYSIDE6_DEFAULT_REQUIRES_PYTHON ">=3.11,<3.14")
+endif()
+set(FLUENT_QT_PYSIDE6_REQUIRES_PYTHON
+    "${FLUENTQT_PYSIDE6_DEFAULT_REQUIRES_PYTHON}"
+    CACHE STRING
+    "Requires-Python metadata for generated FluentQt wheels")
+if(NOT FLUENT_QT_PYSIDE6_REQUIRES_PYTHON STREQUAL ">=3.10,<3.11"
+   AND NOT FLUENT_QT_PYSIDE6_REQUIRES_PYTHON STREQUAL ">=3.11,<3.14")
+    message(FATAL_ERROR
+        "FLUENT_QT_PYSIDE6_REQUIRES_PYTHON must be either the non-published "
+        "Qt 6.2 compatibility policy '>=3.10,<3.11' or the official release "
+        "policy '>=3.11,<3.14'")
+endif()
+if(FLUENT_QT_PYSIDE6_REQUIRES_PYTHON STREQUAL ">=3.10,<3.11"
+   AND (Python_VERSION VERSION_LESS 3.10
+        OR NOT Python_VERSION VERSION_LESS 3.11))
+    message(FATAL_ERROR
+        "The non-published Qt 6.2 compatibility artifact requires CPython "
+        "3.10, found ${Python_VERSION}")
+endif()
+if(FLUENT_QT_PYSIDE6_REQUIRES_PYTHON STREQUAL ">=3.11,<3.14"
+   AND (Python_VERSION VERSION_LESS 3.11
+        OR NOT Python_VERSION VERSION_LESS 3.14))
+    message(FATAL_ERROR
+        "Official FluentQt wheels currently support CPython 3.11 through "
+        "3.13, found ${Python_VERSION}")
+endif()
+
 execute_process(
     COMMAND "${Python_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/cmake/QueryPySide6.py"
@@ -70,7 +101,8 @@ endif()
 
 message(STATUS
     "Building PySide6 bindings with Python ${Python_VERSION}, "
-    "PySide6 ${FLUENTQT_PYSIDE6_VERSION}, and Qt ${Qt6_VERSION}")
+    "PySide6 ${FLUENTQT_PYSIDE6_VERSION}, Qt ${Qt6_VERSION}, and "
+    "Requires-Python ${FLUENT_QT_PYSIDE6_REQUIRES_PYTHON}")
 
 set(FLUENTQT_PYSIDE6_GENERATED_ROOT
     "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -440,6 +472,8 @@ set(FLUENTQT_PYSIDE6_WHEELHOUSE
 add_custom_target(fluentqt_pyside6_wheel
     COMMAND "${CMAKE_COMMAND}" -E remove_directory
         "${FLUENTQT_PYSIDE6_WHEEL_STAGE}"
+    COMMAND "${CMAKE_COMMAND}" -E remove_directory
+        "${FLUENTQT_PYSIDE6_WHEELHOUSE}"
     COMMAND "${CMAKE_COMMAND}" --install "${PROJECT_BINARY_DIR}"
         --prefix "${FLUENTQT_PYSIDE6_WHEEL_STAGE}"
         --component FluentQtPySide6
@@ -451,6 +485,7 @@ add_custom_target(fluentqt_pyside6_wheel
         --version "${PROJECT_VERSION}"
         --pyside-version "${FLUENTQT_PYSIDE6_VERSION}"
         --shiboken-version "${FLUENTQT_SHIBOKEN6_VERSION}"
+        --requires-python "${FLUENT_QT_PYSIDE6_REQUIRES_PYTHON}"
         --license-file "${PROJECT_SOURCE_DIR}/LICENSE"
         --license-file "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
         --license-file "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"
@@ -485,7 +520,7 @@ if(UNIX AND NOT APPLE AND FLUENT_QT_PYSIDE6_MANYLINUX_POLICY)
         "${PROJECT_BINARY_DIR}/manylinux-wheelhouse")
     set(FLUENTQT_PYSIDE6_MANYLINUX_REPORT
         "${PROJECT_BINARY_DIR}/manylinux-audit.json")
-    add_custom_target(fluentqt_pyside6_manylinux_wheel
+add_custom_target(fluentqt_pyside6_manylinux_wheel
         COMMAND "${CMAKE_COMMAND}" -E remove_directory
             "${FLUENTQT_PYSIDE6_MANYLINUX_WHEELHOUSE}"
         COMMAND "${Python_EXECUTABLE}"
