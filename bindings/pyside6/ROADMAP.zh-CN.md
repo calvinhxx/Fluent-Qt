@@ -1202,3 +1202,13 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     `e031677` 上通过全部 34 个 job，包括全部发布 wheel、五个 Linux manylinux
     构建/repair/审计、两条兼容门禁、CI Gate 与 Release ready。M6 已无剩余兼容性
     或矩阵验证工作，现在只剩签名与正式发布。
+48. 在不削弱验证契约的前提下完成 GitHub Actions 模块化。顶层 `ci.yml` 现只
+    负责变更分类、验证级别选择、可复用 workflow 编排、`CI Gate` 与
+    `Release ready`；`ci-cpp.yml` 独立拥有原生 C++ 和 CMake 集成验证，
+    `ci-python.yml` 独立拥有 PySide6 兼容与发布 wheel 验证。C++ 场景已迁入
+    可审核的 `ci-cpp-matrix.json` 清单，边界契约测试会阻止两个模块互相
+    吸收 job，也阻止具体构建细节回流顶层编排器。fast run `31162213313` 与
+    full run `31163613329` 均在提交 `12e44ea` 上通过；full 共 36 个 job
+    全绿，包括未削减的 C++ 矩阵、全部 17 个发布 wheel、两条 Qt 6.2.4 兼容
+    门禁、`CI Gate` 和 `Release ready`。该结构正式取代单体 workflow；M6 仍只剩
+    签名与正式发布。
