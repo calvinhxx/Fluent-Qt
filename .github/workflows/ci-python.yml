@@ -9,6 +9,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
@@ -66,10 +67,12 @@ jobs:
           fi
 
   pyside6_linux:
-    name: PySide6 / Qt 6.2.4 / Linux x64
+    name: PySide6 compatibility / Linux x64 / CPython 3.10 / Qt 6.2.4
     needs: plan
     runs-on: ubuntu-22.04
     timeout-minutes: 30
+    env:
+      VALIDATION_MODE: ${{ needs.plan.outputs.mode }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -89,6 +92,8 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.10"
+          cache: pip
+          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install matching PySide6 and Shiboken6
         shell: bash
@@ -112,13 +117,17 @@ jobs:
       - name: Configure PySide6 bindings
         shell: bash
         run: |
+          gallery=OFF
+          if [[ "$VALIDATION_MODE" == "full" ]]; then
+            gallery=ON
+          fi
           cmake -S . -B build/pyside6-qt62 \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
             -DPython_EXECUTABLE="$(command -v python)" \
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.10,<3.11" \
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
-            -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
+            -DFLUENT_QT_BUILD_PYSIDE6_GALLERY="$gallery" \
             -DFLUENT_QT_BUILD_EXAMPLES=OFF \
             -DFLUENT_QT_BUILD_GALLERY=OFF \
             -DFLUENT_QT_BUILD_TESTS=OFF \
@@ -196,6 +205,7 @@ jobs:
             --parallel 4
 
       - name: Test wheel in a clean virtual environment
+        if: ${{ needs.plan.outputs.mode == 'full' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -322,7 +332,40 @@ jobs:
             esac
           done
 
+      - name: Test core wheel in a clean virtual environment (fast)
+        if: ${{ needs.plan.outputs.mode != 'full' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          wheel="$(
+            find build/pyside6-qt62/wheelhouse \
+              -maxdepth 1 -type f -name '*.whl' -print -quit
+          )"
+          if [[ -z "$wheel" ]]; then
+            echo "::error::The FluentQt wheel was not generated."
+            exit 1
+          fi
+
+          clean_venv="${RUNNER_TEMP}/fluentqt-core-wheel-smoke"
+          python -m venv "$clean_venv"
+          "$clean_venv/bin/python" -m pip install "$wheel"
+          wheel_version="$(
+            "$clean_venv/bin/python" -c \
+              'from importlib.metadata import version; print(version("FluentQt"))'
+          )"
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            FLUENTQT_EXPECTED_VERSION="$wheel_version" \
+            "$clean_venv/bin/python" \
+            bindings/pyside6/tests/test_wheel_smoke.py
+          "$clean_venv/bin/python" -m pip check
+
       - name: Verify native X11 Window and TitleBar
+        if: ${{ needs.plan.outputs.mode == 'full' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -342,33 +385,37 @@ jobs:
       - name: Upload PySide6 wheel
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-qt624-linux-x64
+          name: fluentqt-pyside6-qt624-cp310-linux-x64
           path: |
             build/pyside6-qt62/wheelhouse/*.whl
             build/pyside6-qt62/gallery-wheelhouse/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 acceptance snapshot
+        if: ${{ needs.plan.outputs.mode == 'full' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-showcase-qt624-linux-x64
+          name: fluentqt-pyside6-showcase-qt624-cp310-linux-x64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
           if-no-files-found: error
 
       - name: Upload PySide6 native window acceptance
+        if: ${{ needs.plan.outputs.mode == 'full' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-window-chrome-qt624-linux-x64
+          name: fluentqt-pyside6-window-chrome-qt624-cp310-linux-x64
           path: |
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
 
   pyside6_windows:
-    name: PySide6 / Qt 6.2.4 / Windows x64
+    name: PySide6 compatibility / Windows x64 / CPython 3.10 / Qt 6.2.4
     needs: plan
     runs-on: windows-2022
     timeout-minutes: 35
+    env:
+      VALIDATION_MODE: ${{ needs.plan.outputs.mode }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -377,6 +424,8 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.10"
+          cache: pip
+          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install Qt 6.2.4 SDK
         uses: jurplel/install-qt-action@v4
@@ -451,6 +500,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
           $python = (Get-Command python).Source -replace '\\', '/'
+          $gallery = if ($env:VALIDATION_MODE -eq "full") { "ON" } else { "OFF" }
           $configureArgs = @(
             "-S", ".",
             "-B", "build/pyside6-qt62-windows",
@@ -461,7 +511,7 @@ jobs:
             "-DPython_EXECUTABLE=$python",
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.10,<3.11",
             "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
-            "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",
+            "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=$gallery",
             "-DFLUENT_QT_BUILD_EXAMPLES=OFF",
             "-DFLUENT_QT_BUILD_GALLERY=OFF",
             "-DFLUENT_QT_BUILD_TESTS=OFF",
@@ -512,6 +562,7 @@ jobs:
             --parallel
 
       - name: Test wheel in a clean virtual environment
+        if: ${{ needs.plan.outputs.mode == 'full' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -558,6 +609,22 @@ jobs:
           & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
           & $cleanPython bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
           & $cleanPython -m pip check
+
+      - name: Run extended compatibility acceptance
+        if: ${{ needs.plan.outputs.mode == 'full' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $cleanPython = Join-Path `
+            $env:RUNNER_TEMP `
+            "fluentqt-wheel-smoke-windows/Scripts/python.exe"
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          Remove-Item Env:LD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:DYLD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
+          $env:QT_QPA_PLATFORM = "offscreen"
           & $cleanPython -m pip install mypy==2.3.0
           & $cleanPython -m mypy `
             --strict `
@@ -589,7 +656,37 @@ jobs:
             bindings/pyside6/examples/command_surfaces.py `
             --snapshot $commandSurfacesSnapshot
 
+      - name: Test core wheel in a clean virtual environment (fast)
+        if: ${{ needs.plan.outputs.mode != 'full' }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $wheels = @(
+            Get-ChildItem `
+              -Path build/pyside6-qt62-windows/wheelhouse `
+              -Filter '*.whl' `
+              -File
+          )
+          if ($wheels.Count -ne 1) {
+            throw "Expected one FluentQt wheel, found $($wheels.Count)."
+          }
+
+          $cleanVenv = Join-Path $env:RUNNER_TEMP "fluentqt-core-wheel-smoke"
+          python -m venv $cleanVenv
+          $cleanPython = Join-Path $cleanVenv "Scripts/python.exe"
+          & $cleanPython -m pip install $wheels[0].FullName
+          $wheelVersion = & $cleanPython -c 'from importlib.metadata import version; print(version("FluentQt"))'
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $env:FLUENTQT_EXPECTED_VERSION = $wheelVersion.Trim()
+          & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
+          & $cleanPython -m pip check
+
       - name: Verify native Windows Window and TitleBar
+        if: ${{ needs.plan.outputs.mode == 'full' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -609,30 +706,32 @@ jobs:
       - name: Upload PySide6 wheel
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-qt624-windows-x64
+          name: fluentqt-pyside6-qt624-cp310-windows-x64
           path: |
             build/pyside6-qt62-windows/wheelhouse/*.whl
             build/pyside6-qt62-windows/gallery-wheelhouse/*.whl
           if-no-files-found: error
 
       - name: Upload PySide6 acceptance snapshot
+        if: ${{ needs.plan.outputs.mode == 'full' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-showcase-qt624-windows-x64
+          name: fluentqt-pyside6-showcase-qt624-cp310-windows-x64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
           if-no-files-found: error
 
       - name: Upload PySide6 native window acceptance
+        if: ${{ needs.plan.outputs.mode == 'full' }}
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-window-chrome-qt624-windows-x64
+          name: fluentqt-pyside6-window-chrome-qt624-cp310-windows-x64
           path: |
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
 
   pyside6_macos:
-    name: PySide6 / Qt 6.9.3 / macOS arm64
+    name: PySide6 release / macOS ARM64 / CPython 3.11 / Qt 6.9.3
     needs: plan
     runs-on: macos-15
     timeout-minutes: 35
@@ -644,6 +743,8 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install Qt 6.9.3 SDK
         uses: jurplel/install-qt-action@v4
@@ -868,7 +969,7 @@ jobs:
       - name: Upload PySide6 wheel
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-qt693-macos-arm64
+          name: fluentqt-pyside6-qt693-cp311-macos-arm64
           path: |
             build/pyside6-qt69-macos/wheelhouse/*.whl
             build/pyside6-qt69-macos/gallery-wheelhouse/*.whl
@@ -877,14 +978,14 @@ jobs:
       - name: Upload PySide6 acceptance snapshot
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-showcase-qt693-macos-arm64
+          name: fluentqt-pyside6-showcase-qt693-cp311-macos-arm64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
           if-no-files-found: error
 
       - name: Upload PySide6 native window acceptance
         uses: actions/upload-artifact@v4
         with:
-          name: fluentqt-pyside6-window-chrome-qt693-macos-arm64
+          name: fluentqt-pyside6-window-chrome-qt693-cp311-macos-arm64
           path: |
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
@@ -920,6 +1021,8 @@ jobs:
         with:
           python-version: ${{ matrix.python_version }}
           architecture: ${{ matrix.python_arch }}
+          cache: pip
+          cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install Qt ${{ matrix.qt_version }} SDK
         uses: jurplel/install-qt-action@v4
@@ -1123,6 +1226,28 @@ jobs:
           & $cleanPython bindings/pyside6/tests/test_wheel_smoke.py
           & $cleanPython bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
           & $cleanPython -m pip check
+
+      - name: Run extended installed-wheel acceptance
+        if: ${{ matrix.extended_acceptance == true }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          if ($IsWindows) {
+            $cleanPython = Join-Path `
+              $env:RUNNER_TEMP `
+              "fluentqt-release-wheel-smoke/Scripts/python.exe"
+          } else {
+            $cleanPython = Join-Path `
+              $env:RUNNER_TEMP `
+              "fluentqt-release-wheel-smoke/bin/python"
+          }
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          Remove-Item Env:LD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:DYLD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
+          $env:QT_QPA_PLATFORM = "offscreen"
           & $cleanPython -m pip install mypy==2.3.0
           & $cleanPython -m mypy `
             --strict `
@@ -1281,13 +1406,15 @@ jobs:
             "$clean_venv/bin/python" \
             bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
           "$clean_venv/bin/python" -m pip check
-          "$clean_venv/bin/python" -m pip install mypy==2.3.0
-          env -u PYTHONPATH \
-            "$clean_venv/bin/python" -m mypy \
-            --strict \
-            --no-incremental \
-            --no-error-summary \
-            bindings/pyside6/tests/test_typecheck_smoke.py
+          if [[ "${{ matrix.extended_acceptance }}" == "true" ]]; then
+            "$clean_venv/bin/python" -m pip install mypy==2.3.0
+            env -u PYTHONPATH \
+              "$clean_venv/bin/python" -m mypy \
+              --strict \
+              --no-incremental \
+              --no-error-summary \
+              bindings/pyside6/tests/test_typecheck_smoke.py
+          fi
 
           module="$(
             env -u PYTHONPATH "$clean_venv/bin/python" -c \
@@ -1343,7 +1470,7 @@ jobs:
           fi
 
       - name: Verify native X11 Window and TitleBar
-        if: ${{ runner.os == 'Linux' }}
+        if: ${{ runner.os == 'Linux' && matrix.extended_acceptance == true }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1361,7 +1488,7 @@ jobs:
             --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
 
       - name: Verify native Windows Window and TitleBar
-        if: ${{ runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' && matrix.extended_acceptance == true }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1380,7 +1507,7 @@ jobs:
             --report (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-window-chrome.json")
 
       - name: Verify native Cocoa Window and TitleBar
-        if: ${{ runner.os == 'macOS' }}
+        if: ${{ runner.os == 'macOS' && matrix.extended_acceptance == true }}
         shell: bash
         run: |
           set -euo pipefail
@@ -1419,6 +1546,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload PySide6 release acceptance snapshot
+        if: ${{ matrix.extended_acceptance == true }}
         uses: actions/upload-artifact@v4
         with:
           name: fluentqt-pyside6-showcase-${{ matrix.artifact_suffix }}
@@ -1426,6 +1554,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload PySide6 release native window acceptance
+        if: ${{ matrix.extended_acceptance == true }}
         uses: actions/upload-artifact@v4
         with:
           name: fluentqt-pyside6-window-chrome-${{ matrix.artifact_suffix }}
@@ -1433,3 +1562,69 @@ jobs:
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
+
+  pyside6_platform_summary:
+    name: Platform status / ${{ matrix.display_name }}
+    needs:
+      - plan
+      - pyside6_linux
+      - pyside6_windows
+      - pyside6_macos
+      - pyside6_release
+    if: ${{ always() && needs.plan.outputs.mode == 'full' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - display_name: Linux x64
+            platform: linux
+            arch: x64
+          - display_name: Linux ARM64
+            platform: linux
+            arch: arm64
+          - display_name: Windows x64
+            platform: windows
+            arch: x64
+          - display_name: Windows ARM64
+            platform: windows
+            arch: arm64
+          - display_name: macOS x64
+            platform: macos
+            arch: x64
+          - display_name: macOS ARM64
+            platform: macos
+            arch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Read current-attempt evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
+            --paginate \
+            --jq '.artifacts[].name' \
+            > "${RUNNER_TEMP}/artifact-names.txt"
+          sort -u "${RUNNER_TEMP}/artifact-names.txt" \
+            -o "${RUNNER_TEMP}/artifact-names.txt"
+          gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs?per_page=100" \
+            --paginate \
+            --jq '.jobs[] | [.name, .conclusion] | @tsv' \
+            > "${RUNNER_TEMP}/job-results.tsv"
+
+      - name: Verify ${{ matrix.display_name }} release evidence
+        shell: bash
+        run: |
+          python3 .github/scripts/verify-pyside-platform-artifacts.py \
+            --platform "${{ matrix.platform }}" \
+            --arch "${{ matrix.arch }}" \
+            --display-name "${{ matrix.display_name }}" \
+            --artifacts "${RUNNER_TEMP}/artifact-names.txt" \
+            --jobs "${RUNNER_TEMP}/job-results.tsv"

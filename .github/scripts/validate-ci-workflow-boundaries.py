@@ -21,6 +21,7 @@ EXPECTED_JOBS = {
         "pyside6_windows",
         "pyside6_macos",
         "pyside6_release",
+        "pyside6_platform_summary",
     },
 }
 
@@ -66,6 +67,7 @@ def validate_boundaries() -> list[str]:
         "uses: ./.github/workflows/ci-python.yml",
         "name: CI Gate",
         "name: Release ready",
+        "actions: read",
     ):
         if required not in orchestrator:
             errors.append(f"ci.yml is missing orchestration contract: {required}")
@@ -87,6 +89,37 @@ def validate_boundaries() -> list[str]:
 
     if "bindings/pyside6/wheel-matrix.json" not in python:
         errors.append("ci-python.yml must own the PySide6 wheel matrix catalog")
+    for required in (
+        "actions: read",
+        "name: Platform status / ${{ matrix.display_name }}",
+        ".github/scripts/verify-pyside-platform-artifacts.py",
+        "matrix.extended_acceptance == true",
+        "fluentqt-pyside6-qt624-cp310-linux-x64",
+        "fluentqt-pyside6-qt624-cp310-windows-x64",
+        "fluentqt-pyside6-qt693-cp311-macos-arm64",
+        "name: PySide6 compatibility / Linux x64 / CPython 3.10 / Qt 6.2.4",
+        "name: PySide6 compatibility / Windows x64 / CPython 3.10 / Qt 6.2.4",
+        "name: PySide6 release / macOS ARM64 / CPython 3.11 / Qt 6.9.3",
+        "display_name: Linux x64",
+        "display_name: Linux ARM64",
+        "display_name: Windows x64",
+        "display_name: Windows ARM64",
+        "display_name: macOS x64",
+        "display_name: macOS ARM64",
+    ):
+        if required not in python:
+            errors.append(f"ci-python.yml is missing platform summary: {required}")
+    for contract, expected_count in (
+        ("Test core wheel in a clean virtual environment (fast)", 2),
+        ("needs.plan.outputs.mode != 'full'", 2),
+        ("Run extended installed-wheel acceptance", 1),
+    ):
+        actual_count = python.count(contract)
+        if actual_count != expected_count:
+            errors.append(
+                f"ci-python.yml must contain {expected_count} occurrence(s) of "
+                f"{contract!r}, found {actual_count}"
+            )
     for forbidden in ("VCPKG_BINARY_SOURCES", "fluent_qt_ci_full_tests", "Library integration"):
         if forbidden in python:
             errors.append(f"ci-python.yml contains C++ matrix detail: {forbidden}")

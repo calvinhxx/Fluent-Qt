@@ -85,7 +85,13 @@ reusable validation modules, and owns only the stable `CI Gate` and
   [C++ matrix catalog](../../.github/ci-cpp-matrix.json).
 - [PySide6 CI module](../../.github/workflows/ci-python.yml) owns binding
   generation, compatibility baselines, native Python wheels, clean-environment
-  tests, manylinux repair/audit, and
+  tests, manylinux repair/audit, and six final platform/architecture status
+  checks that make Linux, Windows, and macOS x64/ARM64 coverage explicit in
+  the Actions UI. Its fast Qt 6.2 compatibility lanes clean-install only the
+  core wheel. Full validation still builds, tests, and clean-installs every
+  declared wheel, while Gallery, typing, visible-example, and native-window
+  acceptance run on both Qt 6.2 gates and the lowest supported CPython lane
+  for each platform/architecture. The module also owns
   [the wheel matrix](../../bindings/pyside6/wheel-matrix.json).
 
 Do not add compiler, SDK, package-manager, wheel, or platform steps to the

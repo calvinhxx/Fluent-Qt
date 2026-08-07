@@ -22,6 +22,7 @@ REQUIRED_FIELDS = {
     "fast",
     "release",
     "compatibility",
+    "extended_acceptance",
     "os",
     "platform",
     "arch",
@@ -159,8 +160,8 @@ def load_catalog(path: Path) -> dict[str, Any]:
 
 def validate_catalog(catalog: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if catalog.get("schema_version") != 3:
-        errors.append("schema_version must be 3")
+    if catalog.get("schema_version") != 4:
+        errors.append("schema_version must be 4")
 
     manylinux = catalog.get("manylinux")
     if not isinstance(manylinux, dict):
@@ -221,6 +222,7 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
             "fast",
             "release",
             "compatibility",
+            "extended_acceptance",
             "legacy_shiboken",
             "check_backdrop_converter",
         ):
@@ -259,6 +261,20 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
             errors.append(
                 f"{context} python_tag must match python_version "
                 f"({expected_python_tag!r})"
+            )
+
+        release_versions = RELEASE_PYTHON_POLICY.get(platform_arch, set())
+        expected_extended_acceptance = scenario["compatibility"] is True
+        if scenario["release"] is True and release_versions:
+            lowest_release_version = min(
+                release_versions,
+                key=lambda version: tuple(int(part) for part in version.split(".")),
+            )
+            expected_extended_acceptance = python_version == lowest_release_version
+        if scenario["extended_acceptance"] is not expected_extended_acceptance:
+            errors.append(
+                f"{context} extended_acceptance must be "
+                f"{expected_extended_acceptance} for its support tier"
             )
 
         requires_python = scenario["requires_python"]
