@@ -29,16 +29,16 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 | M2 — 低风险控件覆盖 | 已完成 | 所有计划叶子控件均已绑定或记录明确边界，并具备属性、信号、示例、manifest 检查和 wheel smoke 验证 |
 | M3 — 托管控件 ownership | 已完成 | 计划内托管控件边界均具备固定语义适配器、ownership 与 GC 测试 |
 | M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
-| M4.5 — Foundation 作者 API | 验证中 | 已实现 `FluentWidget`、`bind()`、`StateGroup`、`AnchorLayout`/`anchors()` 并通过本机 Qt 6.9.3 行为、Gallery、manifest 与 stub 测试；仍需 Qt 6.2 和三平台 wheel CI 回归 |
+| M4.5 — Foundation 作者 API | 已完成 | `FluentWidget`、`bind()`、`StateGroup`、`AnchorLayout`/`anchors()` 已通过本机 Qt 6.9.3、Linux/Windows Qt 6.2.4 最低线、六目标发布 wheel 与完整 CI 回归 |
 | M5 — Overlay 与原生窗口 | 进行中 | 本机 Windows 11 DWM 材质/布局及指针驱动 move/resize 验收已通过，自动化 XCB/Wayland/Windows/Cocoa 验收也已通过；仅剩实体 KWin/Wayland compositor 审查 |
-| M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六目标原生 wheel 矩阵、分架构 manylinux repair/audit，并取得 x86_64/AArch64 容器 CI 证据；独立的纯 Python Gallery 分发覆盖 88 个原生路由和 199 个 SampleCard。当前改动仍需必需矩阵回归，之后只剩签名与正式发布 |
+| M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六目标原生 wheel 矩阵、分架构 manylinux repair/audit，并取得 x86_64/AArch64 容器 CI 证据；独立的纯 Python Gallery 分发覆盖 88 个原生路由和 199 个 SampleCard。当前必需矩阵已通过，只剩签名与正式发布 |
 
 ## 公共 API 覆盖台账
 
 下表是组件覆盖的事实来源。不能因为当前小批次的复选框全部完成，就把整个里程碑
 标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。M0 至 M4 已完成该
 审计。当前 manifest 记录了 87 个必需类、值类型及支持类型、13 个枚举、16 个函数和 2 个版本变量；
-M4.5、M5、M6 的剩余边界继续在下表及各自章节中记录。
+M4.5 已完成；M5、M6 的剩余边界继续在下表及各自章节中记录。
 
 | 分类 | 已绑定 | 剩余边界 |
 |---|---|---|
@@ -598,8 +598,11 @@ PySide 的对象和生命周期模型。
       用 signal callback、`resizeEvent()` 或手工 `move()` 模拟 C++ 能力。
 - [x] 本机 Qt/PySide/Shiboken 6.9.3 已通过 wrapper 编译、Foundation 行为测试、
       生成代码契约、Gallery 契约、87 类/13 枚举/16 函数 manifest 与类型存根。
-- [ ] 在 Linux/Windows Qt 6.2.4 最低 lane 和 Linux/macOS/Windows wheel lane
-      完成回归后，将本里程碑标为完成。
+- [x] 完整 CI run `31142098154` 已在提交 `098f71f` 上通过 Linux/Windows
+      Qt 6.2.4 最低 lane、Linux/macOS/Windows x64/ARM64 六目标 6.9.3
+      发布 wheel、x86_64/AArch64 manylinux repair/audit、干净 wheel smoke、
+      原生窗口验收、CI Gate 与 Release ready；结合 macOS、Windows、WSLg
+      上 HelloWorld 和 Gallery 的人工核验，将本里程碑标为完成。
 
 原始 `FluentElement`、`QMLPlus`、可变 `ThemeRegistry` 和 overlay helper 仍是
 C++ 实现层类型。这是绑定边界，不是功能缺失：Python facade 调用的是同一套原生
@@ -840,8 +843,8 @@ glibc 2.39，因此该 lane 使用 `ubuntu-24.04-arm`。Windows ARM64 使用从 
 
 Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 现在会在分架构 policy
 image 中重新构建，只上传修复后的 manylinux wheel 与审计报告；x86_64 和 AArch64
-容器路径均已有完整 CI 证据。当前 Foundation 作者 API 改动仍需重新跑必需矩阵；
-在该回归通过且显式启用签名/上传门禁之前，不发布任何 wheel。
+容器路径均已有完整 CI 证据。Foundation 作者 API 已在完整 CI run `31142098154`
+重新通过必需矩阵；在显式启用签名/上传门禁之前，不发布任何 wheel。
 
 ## 完成标准
 
@@ -870,9 +873,8 @@ Windows 上的确认。
 3. **发布完成**：M6 完成；明确 CPython/操作系统/架构矩阵，提供类型存根、
    API 兼容和弃用规则，并发布经过干净环境验证的 wheel。
 
-当前 M0 至 M4 已完成。达到功能完整还需让 M4.5 通过 Qt 6.2/三平台 wheel CI，
-并完成 M5 的实体 Linux KWin/Wayland compositor 审查；达到发布完成还需完成
-M6 的当前矩阵回归、签名与正式发布。
+当前 M0 至 M4.5 已完成。达到功能完整只剩 M5 的实体 Linux KWin/Wayland
+compositor 审查；达到发布完成还需完成 M6 的签名与正式发布。
 
 因此，本项目只有达到第三层，才称为“Python 支持完成并可正式发布”。这不包含
 PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Python 使用的
@@ -1127,3 +1129,12 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     wheel，精确依赖同版本核心包，使用 `python -m fluentqt_gallery` 启动，并具备
     独立的干净 wheel smoke。基线与发布 CI 会同时安装两个分发并验证组合，而
     manylinux repair 仍只处理包含原生扩展的核心 wheel。
+45. 将 M4.5 标记为完成。首轮完整矩阵识别出 Linux 客户端窗框偏移被 Gallery
+    测试误当成可用边距，以及 macOS x64 的 59 项 Gallery 集成套件超过 90 秒
+    时限；提交 `098f71f` 分别按 `fluentOverlaySurfaceRect` 校验真实坐标，并将
+    该集成测试时限调整为 240 秒。随后完整 CI run `31142098154` 的 23 个 job
+    全部通过，包括 Linux/Windows Qt 6.2.4 最低线、六目标 6.9.3 发布 wheel、
+    双架构 manylinux、Qt 5.15/6.2 C++ 回归、原生窗口验收、CI Gate 与 Release
+    ready。结合 macOS、Windows 和 WSLg 上 HelloWorld/Gallery 的人工核验，
+    Foundation 作者 API 已完成；功能完整只剩 M5 的实体 KWin/Wayland 审查，
+    正式发布只剩 M6 的签名与发布授权。
