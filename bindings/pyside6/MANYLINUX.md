@@ -11,8 +11,8 @@ The authoritative values live in [`wheel-matrix.json`](wheel-matrix.json):
 
 | Architecture | CPython | Build image | Publish tag |
 |---|---|---|---|
-| x86_64 | 3.11 | `quay.io/pypa/manylinux_2_28_x86_64` | `manylinux_2_28_x86_64` |
-| aarch64 | 3.12 | `quay.io/pypa/manylinux_2_39_aarch64` | `manylinux_2_39_aarch64` |
+| x86_64 | 3.11–3.13 | `quay.io/pypa/manylinux_2_28_x86_64` | `manylinux_2_28_x86_64` |
+| aarch64 | 3.12–3.13 | `quay.io/pypa/manylinux_2_39_aarch64` | `manylinux_2_39_aarch64` |
 
 The ARM64 policy is intentionally newer because the official PySide6 6.9.3
 ARM64 wheel itself requires glibc 2.39. Do not relabel either architecture to
@@ -26,17 +26,18 @@ wrapped void functions; on CPython 3.11 this eventually aborts with
 `none_dealloc`, while CPython 3.12 singletons are immortal. Binding
 configuration runs a small ownership probe and rejects the unsafe runtime
 combination. This architecture-specific release floor does not change the
-project-wide Python 3.10 or Qt 6.2 compatibility baselines.
+non-published Python 3.10 + Qt 6.2 compatibility baseline; official package
+metadata starts at Python 3.11.
 
 ## Build and repair
 
 The full CI matrix mounts the matching official Qt 6.9.3 SDK into the native
 PyPA manylinux image and runs
 [`tools/build_manylinux_wheel.sh`](tools/build_manylinux_wheel.sh). The script
-uses `/opt/python/cp311-cp311` for x86_64 and `/opt/python/cp312-cp312` for
-aarch64, the exact PySide6/Shiboken6 6.9.3 packages, and the auditwheel version
-pinned by the matrix. It configures a fresh release build and invokes the
-opt-in CMake target:
+selects `/opt/python/<tag>-<tag>` for each declared CPython ABI, installs the
+exact PySide6/Shiboken6 6.9.3 packages and the auditwheel version pinned by the
+matrix, then configures a fresh release build and invokes the opt-in CMake
+target:
 
 ```bash
 cmake --build build/pyside6-manylinux-... \
@@ -81,9 +82,10 @@ Every Linux release lane must produce one repaired wheel and
   runner, passes the full wheel smoke, `pip check`, strict mypy, and `ldd`
   resolution without `LD_LIBRARY_PATH`.
 
-The six release architectures must pass together before a publication job can
-consume their artifacts. Compatibility lanes using Qt/PySide 6.2.4 remain
-non-publishable regression gates and are not repaired.
+All five Linux ABI/architecture release lanes must pass together with the
+other 12 native release wheels before a publication job can consume their
+artifacts. Compatibility lanes using Qt/PySide 6.2.4 remain non-publishable
+regression gates and are not repaired.
 
 Upstream references: [PyPA manylinux images](https://github.com/pypa/manylinux),
 [auditwheel](https://github.com/pypa/auditwheel), and the

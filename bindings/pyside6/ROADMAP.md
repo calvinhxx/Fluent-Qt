@@ -10,8 +10,9 @@ runtime, and CPython ABI requires its own build and validation.
 ## Compatibility contract
 
 - The C++ library continues to support Qt 5.15+ and Qt 6.2+.
-- The optional PySide6 target supports Qt/PySide6/Shiboken6 6.2+ and remains
-  disabled by default.
+- The optional PySide6 target is Qt 6-only. Its minimum source/build baseline
+  is CPython 3.10 plus Qt/PySide6/Shiboken6 6.2.4, and it remains disabled by
+  default.
 - PySide6, Shiboken6 runtime, Shiboken6 generator, and the C++ Qt SDK must use
   the same version.
 - All Python categories re-export one native `_fluentqt` module so theme,
@@ -22,7 +23,30 @@ runtime, and CPython ABI requires its own build and validation.
 - The reusable `FluentQt` wheel contains only the UILib. The standalone
   pure-Python `FluentQt-Gallery` wheel depends on the exact matching core
   version and imports only public `fluentqt` APIs.
-- PySide2/Shiboken2 compatibility is not part of this roadmap.
+- The Gallery is a standalone integration application and must not raise the
+  Python or Qt minimum of the reusable `fluentqt` UILib.
+- PySide2/Shiboken2, Qt 5 Python, PyPy, and 32-bit x86 compatibility are not
+  part of this roadmap.
+
+### Version support tiers
+
+Support for a native Python extension is not described by one version number.
+The CPython ABI, PySide6/Shiboken6/Qt, operating system, and CPU architecture
+together determine whether a binary can be loaded safely. The project makes
+the following promises:
+
+| Support tier | Promise |
+|---|---|
+| Minimum compatibility gate | CPython 3.10 plus Qt/PySide6/Shiboken6 6.2.4; blocking Linux/Windows x64 CI currently protects generation, compilation, runtime behavior, and clean installation |
+| Official prebuilt wheels | Only the CPython/platform/architecture combinations listed in `wheel-matrix.json`, with an exact matching PySide6/Shiboken6/Qt runtime |
+| Qt 6.3 through the current toolchain | Source compatibility remains a goal and representative versions are sampled; a combination outside the release matrix is not advertised as having an official wheel |
+| Out-of-matrix combinations | May be built from source with a matching toolchain, without a binary-availability promise |
+
+Official wheels use `Requires-Python: >=3.11,<3.14`; the non-published Qt 6.2.4
+compatibility artifacts use `>=3.10,<3.11`. Raising the CPython, PySide6, or Qt
+minimum is a release-compatibility change and requires an updated roadmap,
+matrix, and migration note. A release wheel using 6.9.3 must never silently
+remove the 6.2.4 source/build baseline.
 
 ## Status
 
@@ -35,7 +59,7 @@ runtime, and CPython ABI requires its own build and validation.
 | M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
 | M4.5 — Foundation authoring API | Complete | `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout`/`anchors()` pass local Qt 6.9.3, Linux/Windows Qt 6.2.4 minimum lanes, the six-target release-wheel matrix, and full CI regression |
 | M5 — Overlays and native windows | Complete | Automated XCB/Wayland/Windows/Cocoa checks, physical Windows 11 DWM review, and a non-headless Ubuntu 22.04 ARM64 GNOME Wayland review cover materials, honest fallback, system move/resize, and representative overlays |
-| M6 — Release-grade Python distribution | In progress | Type/API governance, the six-target native wheel matrix, architecture-specific manylinux repair/audit, and x86_64/AArch64 container-CI evidence are complete; the standalone pure-Python Gallery distribution covers all 88 native routes and 199 SampleCards. The current required matrix passes, leaving signing and publication |
+| M6 — Release-grade Python distribution | In progress | Type/API governance, six seed native targets, architecture-specific manylinux repair/audit, and x86_64/AArch64 container-CI evidence are complete; the standalone Gallery covers all 88 routes and 199 SampleCards. The release policy now targets 17 CPython 3.11–3.13 wheels; the 11 newly added ABI lanes still need full CI evidence before signing and publication |
 
 ## Public API coverage ledger
 
@@ -959,16 +983,20 @@ physically observed. It is not a generic Linux compatibility gate.
 
 ## M6 — Release-grade Python distribution
 
+- [x] Establish three explicit support tiers: minimum compatibility gates,
+  official prebuilt wheels, and out-of-matrix source builds. Keep the package
+  release range separate from the non-published Python 3.10 compatibility
+  artifacts.
 - [x] Define and validate the supported CPython/platform/architecture matrix
-  in `bindings/pyside6/wheel-matrix.json`. The first release covers x64 and
-  ARM64 on Linux, macOS, and Windows; x64 means x86_64/AMD64, not 32-bit x86.
-- [x] Pass every first-release wheel lane on its native target. Fast CI keeps
-  the Python 3.10 + Qt/PySide/Shiboken 6.2.4 minimum lanes on Linux/Windows
-  x64 and the existing macOS ARM64 lane. Full CI adds 6.9.3 release lanes for
-  Linux x64/ARM64, Windows x64/ARM64, and macOS x64; Linux ARM64 uses Python
-  3.12 because the upstream aarch64 Shiboken runtime requires immortal
-  singletons, while the other release lanes use Python 3.11. The existing
-  macOS ARM64 lane completes the six-target release set.
+  in `bindings/pyside6/wheel-matrix.json`. The first release targets CPython
+  3.11 through 3.13 on x64 and ARM64 across Linux, macOS, and Windows, except
+  that Linux ARM64 starts at 3.12. This produces 17 native release wheels;
+  x64 means x86_64/AMD64, not 32-bit x86.
+- [x] Pass the original six architecture seed lanes on their native targets.
+  Fast CI retains the Python 3.10 + Qt/PySide/Shiboken 6.2.4 minimum lanes on
+  Linux/Windows x64 and the macOS ARM64 CPython 3.11 release lane.
+- [ ] Pass the expanded 17-wheel CPython 3.11–3.13 release matrix in full CI,
+  including all five architecture-specific manylinux builds and audits.
 - [x] Keep pull-request CI proportional with a tested conservative path
   classifier. Library, binding, Gallery, CMake, resource, and binding-toolchain
   changes still run the PySide6 baseline on all three platforms; native-test
@@ -1014,6 +1042,9 @@ physically observed. It is not a generic Linux compatibility gate.
   all 455,927 changed pixels are confined to that rectangle; there are zero
   changed pixels elsewhere. Snapshot capture clears transient hover state so
   that result no longer depends on the host pointer position.
+- [x] Decide the CPython 3.10 scope: retain Linux/Windows x64 Qt 6.2.4 lanes as
+  non-published source/build compatibility gates only. Official `FluentQt` and
+  `FluentQt-Gallery` wheels declare `Requires-Python: >=3.11,<3.14`.
 - [ ] After every required matrix lane passes, sign and publish the native
   `FluentQt` wheels plus one `FluentQt-Gallery` `py3-none-any` wheel.
 
@@ -1021,16 +1052,18 @@ Qt 6.2.4 remains the binding minimum, not the ARM64 wheel build version. The
 official PySide 6.2.4 release has no Linux or Windows ARM64 wheels, Linux ARM64
 Qt/PySide 6.9.3 binaries require glibc 2.39, and the Windows ARM64 Python tool
 cache starts at CPython 3.11. Therefore the ARM64 release lanes use 6.9.3,
-Linux uses `ubuntu-24.04-arm` with CPython 3.12, and the low-version x64 lanes
-remain separate. A configure-time reference-ownership probe rejects the unsafe
-Linux ARM64 Shiboken 6.9.3 plus pre-3.12 CPython combination.
+Linux uses `ubuntu-24.04-arm` with CPython 3.12 and 3.13, and the low-version
+x64 lanes remain separate. A configure-time reference-ownership probe rejects
+the unsafe Linux ARM64 Shiboken 6.9.3 plus pre-3.12 CPython combination.
 
 Native Linux smoke artifacts retain `linux_*` tags. The release workflow now
 rebuilds inside the architecture-specific policy image and uploads only the
 repaired manylinux wheel plus its audit report; both x86_64 and AArch64
-container paths have full CI evidence. The Foundation-authoring changes pass a
-fresh required-matrix run in full CI run `31142098154`. No wheel is published
-until the signing/upload gate is explicitly enabled.
+container paths have seed CI evidence. The earlier six-target matrix passed in
+full CI run `31142098154`; the expanded 17-wheel matrix must pass again before
+signing. No wheel is published until the signing/upload gate is explicitly
+enabled. PySide/Shiboken 6.11.1 on Linux ARM64 CPython 3.11 remains a
+post-first-release compatibility probe, not a claim of current support.
 
 ## Definition of done
 
