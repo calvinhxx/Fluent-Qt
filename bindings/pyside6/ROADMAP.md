@@ -33,18 +33,19 @@ runtime, and CPython ABI requires its own build and validation.
 | M2 — Low-risk widget coverage | Complete | Every planned leaf widget is bound or has an explicit boundary decision, with properties, signals, examples, manifest checks, and wheel smoke coverage |
 | M3 — Hosted-widget ownership | Complete | Planned hosted-widget boundaries have fixed-semantics adapters plus ownership and GC tests |
 | M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
-| M4.5 — Foundation authoring API | Validating | `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout`/`anchors()` are implemented and pass local Qt 6.9.3 behavior, Gallery, manifest, and stub tests; Qt 6.2 and three-platform wheel CI regression remains |
+| M4.5 — Foundation authoring API | Complete | `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout`/`anchors()` pass local Qt 6.9.3, Linux/Windows Qt 6.2.4 minimum lanes, the six-target release-wheel matrix, and full CI regression |
 | M5 — Overlays and native windows | In progress | Local Windows 11 DWM material/layout and pointer-driven move/resize acceptance passed, together with automated XCB/Wayland/Windows/Cocoa checks; only physical KWin/Wayland compositor review remains |
-| M6 — Release-grade Python distribution | In progress | Type/API governance, the six-target native wheel matrix, architecture-specific manylinux repair/audit, and x86_64/AArch64 container-CI evidence are complete; the standalone pure-Python Gallery distribution covers all 88 native routes and 199 SampleCards. The current changes still need required-matrix regression, followed by signing and publication |
+| M6 — Release-grade Python distribution | In progress | Type/API governance, the six-target native wheel matrix, architecture-specific manylinux repair/audit, and x86_64/AArch64 container-CI evidence are complete; the standalone pure-Python Gallery distribution covers all 88 native routes and 199 SampleCards. The current required matrix passes, leaving signing and publication |
 
 ## Public API coverage ledger
 
 This table is the source of truth for component coverage. A milestone cannot
 be marked complete merely because its current checklist is green; every public
 component below must either be bound or retain an explicit boundary decision.
-That audit is complete for M0 through M4. The manifest currently records 87
-required classes/value/support types, 13 enums, 16 functions, and 2 version variables; M4.5, M5, and M6
-retain the open boundaries shown below and in their milestone sections.
+That audit is complete for M0 through M4.5. The manifest currently records 87
+required classes/value/support types, 13 enums, 16 functions, and 2 version
+variables; M5 and M6 retain the open boundaries shown below and in their
+milestone sections.
 
 | Category | Bound now | Remaining boundary |
 |---|---|---|
@@ -715,8 +716,12 @@ lifetime rules.
 - [x] Local Qt/PySide/Shiboken 6.9.3 passes wrapper compilation, Foundation
       behavior tests, generated contracts, Gallery contracts, the 87-class/
       13-enum/16-function manifest, and typing stubs.
-- [ ] Regress the slice on Linux/Windows Qt 6.2.4 minimum lanes and the
-      Linux/macOS/Windows wheel lanes before marking the milestone complete.
+- [x] Full CI run `31142098154` passes at commit `098f71f`, including the
+      Linux/Windows Qt 6.2.4 minimum lanes, all six Linux/macOS/Windows
+      x64/ARM64 Qt 6.9.3 release wheels, x86_64/AArch64 manylinux
+      repair/audit, clean-wheel smoke, native-window acceptance, CI Gate, and
+      Release ready. Together with manual HelloWorld and Gallery review on
+      macOS, Windows, and WSLg, this completes the milestone.
 
 Raw `FluentElement`, `QMLPlus`, mutable `ThemeRegistry`, and overlay-helper
 types remain C++ implementation details. That is a binding boundary rather
@@ -1015,9 +1020,9 @@ Linux ARM64 Shiboken 6.9.3 plus pre-3.12 CPython combination.
 Native Linux smoke artifacts retain `linux_*` tags. The release workflow now
 rebuilds inside the architecture-specific policy image and uploads only the
 repaired manylinux wheel plus its audit report; both x86_64 and AArch64
-container paths have full CI evidence. The current Foundation-authoring changes
-still require a fresh required-matrix run. No wheel is published until that
-regression passes and the signing/upload gate is explicitly enabled.
+container paths have full CI evidence. The Foundation-authoring changes pass a
+fresh required-matrix run in full CI run `31142098154`. No wheel is published
+until the signing/upload gate is explicitly enabled.
 
 ## Definition of done
 
@@ -1051,10 +1056,9 @@ is not mistaken for complete support:
    architecture matrix, type stubs, API compatibility/deprecation policy, and
    clean-environment wheels are published.
 
-M0 through M4 are complete. Feature completeness now waits on M4.5's Qt 6.2
-and three-platform wheel CI regression plus M5's physical Linux KWin/Wayland
-compositor review. Release completeness also requires the current M6 matrix
-regression, signing, and formal publication.
+M0 through M4.5 are complete. Feature completeness now waits only on M5's
+physical Linux KWin/Wayland compositor review. Release completeness requires
+M6 signing and formal publication.
 
 FluentQt calls Python support complete and release-ready only at the third
 level. This excludes PySide2 and Qt 5 Python bindings and does not require
@@ -1375,3 +1379,16 @@ ledger, and highest-numbered record for the current state.
     clean-wheel smoke. Baseline and release CI install both distributions and
     test their composition, while manylinux repair remains scoped to the native
     core extension.
+45. Mark M4.5 complete. The first full-matrix run exposed two validation
+    assumptions: the Gallery test treated Linux client-frame offset as an
+    available margin, and the 59-test Gallery integration suite exceeded its
+    90-second limit on macOS x64. Commit `098f71f` validates panel coordinates
+    against `fluentOverlaySurfaceRect` and gives that integration suite a
+    240-second limit. Full CI run `31142098154` then passes all 23 jobs,
+    including Linux/Windows Qt 6.2.4 minimum lanes, six Qt 6.9.3 release-wheel
+    targets, both manylinux architectures, Qt 5.15/6.2 C++ regressions,
+    native-window acceptance, CI Gate, and Release ready. Together with manual
+    HelloWorld/Gallery review on macOS, Windows, and WSLg, the Foundation
+    authoring API is complete. Feature completeness now waits only on M5's
+    physical KWin/Wayland review; formal release waits on M6 signing and
+    publication authorization.
