@@ -29,7 +29,11 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
         catalog["scenarios"] = [
             item
             for item in catalog["scenarios"]
-            if item["id"] != "linux-arm64-qt693-cp312"
+            if not (
+                item["platform"] == "linux"
+                and item["arch"] == "arm64"
+                and item["release"] is True
+            )
         ]
 
         errors = VALIDATOR.validate_catalog(catalog)
@@ -56,7 +60,7 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
             errors,
         )
 
-    def test_linux_arm64_requires_python_312(self):
+    def test_linux_arm64_rejects_python_311(self):
         catalog = copy.deepcopy(self.catalog)
         scenario = next(
             item
@@ -73,7 +77,57 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
         errors = VALIDATOR.validate_catalog(catalog)
 
         self.assertTrue(
-            any("CPython 3.12 release ABI" in error for error in errors),
+            any("does not support the CPython 3.11" in error for error in errors),
+            errors,
+        )
+
+    def test_release_matrix_requires_python_313(self):
+        catalog = copy.deepcopy(self.catalog)
+        catalog["scenarios"] = [
+            item
+            for item in catalog["scenarios"]
+            if item["id"] != "windows-x64-qt693-cp313"
+        ]
+
+        errors = VALIDATOR.validate_catalog(catalog)
+
+        self.assertTrue(
+            any("CPython 3.11 through 3.13" in error for error in errors),
+            errors,
+        )
+
+    def test_release_wheel_requires_python_range_is_enforced(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(
+            item
+            for item in catalog["scenarios"]
+            if item["id"] == "macos-arm64-qt693-cp311"
+        )
+        scenario["requires_python"] = ">=3.10"
+
+        errors = VALIDATOR.validate_catalog(catalog)
+
+        self.assertTrue(
+            any("release wheel must use Requires-Python" in error for error in errors),
+            errors,
+        )
+
+    def test_compatibility_artifact_is_not_public_python_metadata(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(
+            item
+            for item in catalog["scenarios"]
+            if item["id"] == "linux-x64-qt624-cp310"
+        )
+        scenario["requires_python"] = ">=3.11,<3.14"
+
+        errors = VALIDATOR.validate_catalog(catalog)
+
+        self.assertTrue(
+            any(
+                "compatibility artifact must use Requires-Python" in error
+                for error in errors
+            ),
             errors,
         )
 
