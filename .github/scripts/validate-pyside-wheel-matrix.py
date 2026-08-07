@@ -29,6 +29,7 @@ REQUIRED_FIELDS = {
     "python_version",
     "python_arch",
     "python_tag",
+    "requires_python",
     "qt_version",
     "pyside_version",
     "shiboken_version",
@@ -66,9 +67,22 @@ COMPATIBILITY_IDS = {
     "linux-x64-qt624-cp310",
     "windows-x64-qt624-cp310",
 }
+RELEASE_PYTHON_VERSIONS = {"3.11", "3.12", "3.13"}
 RELEASE_PYTHON_POLICY = {
-    ("linux", "arm64"): "3.12",
+    platform_arch: (
+        {"3.12", "3.13"}
+        if platform_arch == ("linux", "arm64")
+        else set(RELEASE_PYTHON_VERSIONS)
+    )
+    for platform_arch in PLATFORM_ARCHES
 }
+RELEASE_TARGETS = {
+    (*platform_arch, python_version)
+    for platform_arch, python_versions in RELEASE_PYTHON_POLICY.items()
+    for python_version in python_versions
+}
+COMPATIBILITY_REQUIRES_PYTHON = ">=3.10,<3.11"
+RELEASE_REQUIRES_PYTHON = ">=3.11,<3.14"
 PLATFORM_POLICY = {
     ("linux", "x64", "6.2.4"): (
         "ubuntu-22.04", "X64", "x64", "linux", "gcc_64", "", "x86_64"
@@ -145,8 +159,8 @@ def load_catalog(path: Path) -> dict[str, Any]:
 
 def validate_catalog(catalog: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if catalog.get("schema_version") != 2:
-        errors.append("schema_version must be 2")
+    if catalog.get("schema_version") != 3:
+        errors.append("schema_version must be 3")
 
     manylinux = catalog.get("manylinux")
     if not isinstance(manylinux, dict):
@@ -178,6 +192,7 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
     fast_ids: set[str] = set()
     compatibility_ids: set[str] = set()
     release_platforms: set[tuple[str, str]] = set()
+    release_targets: set[tuple[str, str, str]] = set()
 
     for index, scenario in enumerate(scenarios):
         if not isinstance(scenario, dict):
@@ -245,6 +260,10 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
                 f"{context} python_tag must match python_version "
                 f"({expected_python_tag!r})"
             )
+
+        requires_python = scenario["requires_python"]
+        if not isinstance(requires_python, str):
+            errors.append(f"{context} requires_python must be a string")
 
         policy_key = (platform, arch, scenario["qt_version"])
         expected_policy = PLATFORM_POLICY.get(policy_key)
@@ -384,25 +403,42 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
                 errors.append(f"{context} must preserve the Qt 6.2.4 baseline")
             if python_version != "3.10":
                 errors.append(f"{context} must preserve the Python 3.10 baseline")
-        if scenario["release"] is True:
-            if platform_arch in release_platforms:
+            if requires_python != COMPATIBILITY_REQUIRES_PYTHON:
                 errors.append(
-                    f"multiple first-release wheels target {platform} {arch}"
+                    f"{context} compatibility artifact must use Requires-Python "
+                    f"{COMPATIBILITY_REQUIRES_PYTHON}"
                 )
+        if scenario["release"] is True:
+            release_target = (*platform_arch, python_version)
+            if release_target in release_targets:
+                errors.append(
+                    "multiple release wheels target "
+                    f"{platform} {arch} CPython {python_version}"
+                )
+            release_targets.add(release_target)
             release_platforms.add(platform_arch)
             if versions != ("6.9.3", "6.9.3", "6.9.3"):
                 errors.append(f"{context} must use the Qt 6.9.3 release toolchain")
-            expected_release_python = RELEASE_PYTHON_POLICY.get(
-                platform_arch, "3.11"
+            expected_release_pythons = RELEASE_PYTHON_POLICY.get(
+                platform_arch, set()
             )
-            if python_version != expected_release_python:
+            if python_version not in expected_release_pythons:
                 errors.append(
-                    f"{context} must use the CPython "
-                    f"{expected_release_python} release ABI"
+                    f"{context} does not support the CPython {python_version} "
+                    f"release ABI; expected {sorted(expected_release_pythons)}"
+                )
+            if requires_python != RELEASE_REQUIRES_PYTHON:
+                errors.append(
+                    f"{context} release wheel must use Requires-Python "
+                    f"{RELEASE_REQUIRES_PYTHON}"
                 )
 
-    if len(scenarios) != 8:
-        errors.append(f"matrix must contain 8 scenarios, found {len(scenarios)}")
+    expected_scenario_count = len(COMPATIBILITY_IDS) + len(RELEASE_TARGETS)
+    if len(scenarios) != expected_scenario_count:
+        errors.append(
+            f"matrix must contain {expected_scenario_count} scenarios, "
+            f"found {len(scenarios)}"
+        )
     if fast_ids != FAST_IDS:
         errors.append(
             f"fast matrix must contain {sorted(FAST_IDS)}, found {sorted(fast_ids)}"
@@ -417,10 +453,19 @@ def validate_catalog(catalog: dict[str, Any]) -> list[str]:
             "first-release matrix must contain x64 and ARM64 for Linux, macOS, "
             f"and Windows, found {sorted(release_platforms)}"
         )
-    if len(manylinux_build_dirs) != 2:
+    if release_targets != RELEASE_TARGETS:
         errors.append(
-            "release matrix must define separate x64 and ARM64 manylinux "
-            f"build directories, found {sorted(manylinux_build_dirs)}"
+            "release matrix must contain CPython 3.11 through 3.13 on every "
+            "platform/architecture except Linux ARM64, which starts at 3.12"
+        )
+    expected_manylinux_builds = sum(
+        platform == "linux" for platform, _arch, _python in RELEASE_TARGETS
+    )
+    if len(manylinux_build_dirs) != expected_manylinux_builds:
+        errors.append(
+            "release matrix must define a separate manylinux build directory "
+            "for every Linux CPython ABI, "
+            f"found {sorted(manylinux_build_dirs)}"
         )
     return errors
 

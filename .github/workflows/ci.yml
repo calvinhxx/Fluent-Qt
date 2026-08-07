@@ -1054,6 +1054,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
             -DPython_EXECUTABLE="$(command -v python)" \
+            "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.10,<3.11" \
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
             -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
             -DFLUENT_QT_BUILD_EXAMPLES=OFF \
@@ -1397,6 +1398,7 @@ jobs:
             "-T", "v142",
             "-DCMAKE_PREFIX_PATH=$qtRoot",
             "-DPython_EXECUTABLE=$python",
+            "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.10,<3.11",
             "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
             "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",
             "-DFLUENT_QT_BUILD_EXAMPLES=OFF",
@@ -1607,6 +1609,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
             -DPython_EXECUTABLE="$(command -v python)" \
+            "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.11,<3.14" \
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
             -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
             -DFLUENT_QT_BUILD_EXAMPLES=OFF \
@@ -1913,6 +1916,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
             -DPython_EXECUTABLE="$(command -v python)"
+            "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=${{ matrix.requires_python }}"
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON
             -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON
             -DFLUENT_QT_BUILD_EXAMPLES=OFF
@@ -1943,6 +1947,7 @@ jobs:
             "-A", "${{ matrix.cmake_arch }}",
             "-DCMAKE_PREFIX_PATH=$qtRoot",
             "-DPython_EXECUTABLE=$python",
+            "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=${{ matrix.requires_python }}",
             "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
             "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",
             "-DFLUENT_QT_BUILD_EXAMPLES=OFF",
@@ -2125,6 +2130,7 @@ jobs:
           FLUENTQT_MANYLINUX_ARCH: ${{ matrix.binary_arch }}
           FLUENTQT_MANYLINUX_BUILD_DIR: ${{ matrix.manylinux_build_dir }}
           FLUENTQT_PYTHON_TAG: ${{ matrix.python_tag }}
+          FLUENTQT_REQUIRES_PYTHON: ${{ matrix.requires_python }}
           FLUENTQT_PYSIDE_VERSION: ${{ matrix.pyside_version }}
           FLUENTQT_SHIBOKEN_VERSION: ${{ matrix.shiboken_version }}
           FLUENTQT_AUDITWHEEL_VERSION: ${{ matrix.auditwheel_version }}
@@ -2148,6 +2154,7 @@ jobs:
             --env FLUENTQT_MANYLINUX_ARCH \
             --env FLUENTQT_MANYLINUX_BUILD_DIR \
             --env FLUENTQT_PYTHON_TAG \
+            --env FLUENTQT_REQUIRES_PYTHON \
             --env FLUENTQT_QT_ROOT=/opt/fluentqt-qt \
             --env FLUENTQT_PYSIDE_VERSION \
             --env FLUENTQT_SHIBOKEN_VERSION \
