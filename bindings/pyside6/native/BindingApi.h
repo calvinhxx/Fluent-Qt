@@ -119,6 +119,7 @@ enum class AnchorEdge {
     VerticalCenter
 };
 
+class AnchorLayout;
 class AnchorSpecPrivate;
 
 class AnchorSpec {
