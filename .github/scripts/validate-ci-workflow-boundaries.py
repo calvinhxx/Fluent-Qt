@@ -21,7 +21,16 @@ EXPECTED_JOBS = {
         "pyside6_windows",
         "pyside6_macos",
         "pyside6_release",
+        "pyside6_release_bundle",
         "pyside6_platform_summary",
+    },
+    "python-release.yml": {
+        "preflight",
+        "prepare",
+        "publish_testpypi",
+        "verify_testpypi",
+        "publish_pypi",
+        "verify_pypi",
     },
 }
 
@@ -36,6 +45,15 @@ def job_ids(contents: str) -> set[str]:
     except IndexError:
         return set()
     return set(re.findall(r"^  ([A-Za-z0-9_-]+):$", jobs, re.MULTILINE))
+
+
+def job_section(contents: str, job_id: str) -> str:
+    match = re.search(
+        rf"^  {re.escape(job_id)}:\n(?P<body>.*?)(?=^  [A-Za-z0-9_-]+:\n|\Z)",
+        contents,
+        re.MULTILINE | re.DOTALL,
+    )
+    return match.group(0) if match else ""
 
 
 def validate_boundaries() -> list[str]:
@@ -59,6 +77,7 @@ def validate_boundaries() -> list[str]:
     orchestrator = contents["ci.yml"]
     cpp = contents["ci-cpp.yml"]
     python = contents["ci-python.yml"]
+    python_release = contents["python-release.yml"]
 
     if len(orchestrator.splitlines()) > 260:
         errors.append("ci.yml must remain a compact orchestration-only workflow")
@@ -94,6 +113,7 @@ def validate_boundaries() -> list[str]:
         "name: Platform status / ${{ matrix.display_name }}",
         ".github/scripts/verify-pyside-platform-artifacts.py",
         ".github/scripts/select-pyside-release-matrix.py",
+        ".github/scripts/assemble-pyside-release-bundle.py",
         "Prioritized representative scenarios:",
         "matrix.extended_acceptance == true",
         "fluentqt-pyside6-qt624-cp310-linux-x64",
@@ -102,6 +122,8 @@ def validate_boundaries() -> list[str]:
         "name: PySide6 compatibility / Linux x64 / CPython 3.10 / Qt 6.2.4",
         "name: PySide6 compatibility / Windows x64 / CPython 3.10 / Qt 6.2.4",
         "name: PySide6 release / macOS ARM64 / CPython 3.11 / Qt 6.9.3",
+        "name: Assemble canonical Python release bundle",
+        "name: fluentqt-python-release-bundle",
         "display_name: Linux x64",
         "display_name: Linux ARM64",
         "display_name: Windows x64",
@@ -125,6 +147,53 @@ def validate_boundaries() -> list[str]:
     for forbidden in ("VCPKG_BINARY_SOURCES", "fluent_qt_ci_full_tests", "Library integration"):
         if forbidden in python:
             errors.append(f"ci-python.yml contains C++ matrix detail: {forbidden}")
+
+    for required in (
+        "workflow_dispatch:",
+        "name: Publish to TestPyPI",
+        "name: Publish to PyPI",
+        "environment:\n      name: testpypi",
+        "environment:\n      name: pypi",
+        "uses: pypa/gh-action-pypi-publish@release/v1",
+        "name: fluentqt-python-release-bundle",
+        ".github/scripts/verify-python-package-index.py",
+        "attestations: true",
+        "skip-existing: ${{ inputs.recovery }}",
+    ):
+        if required not in python_release:
+            errors.append(
+                f"python-release.yml is missing publication contract: {required}"
+            )
+    if "workflow_call:" in python_release:
+        errors.append(
+            "python-release.yml must remain a top-level Trusted Publisher workflow"
+        )
+    if python_release.count("id-token: write") != 2:
+        errors.append(
+            "python-release.yml must grant id-token: write to exactly two publish jobs"
+        )
+    for job_id in ("publish_testpypi", "publish_pypi"):
+        section = job_section(python_release, job_id)
+        if not section:
+            errors.append(f"python-release.yml is missing job {job_id}")
+            continue
+        if "id-token: write" not in section:
+            errors.append(f"{job_id} must receive the short-lived OIDC permission")
+        for forbidden in ("actions/checkout", ".github/scripts/", "run:"):
+            if forbidden in section:
+                errors.append(
+                    f"{job_id} must not execute repository code: {forbidden}"
+                )
+    for forbidden in (
+        "PYPI_API_TOKEN",
+        "TEST_PYPI_API_TOKEN",
+        "secrets.PYPI",
+        "password:",
+    ):
+        if forbidden in python_release:
+            errors.append(
+                f"python-release.yml must not use long-lived publishing credentials: {forbidden}"
+            )
 
     return errors
 
