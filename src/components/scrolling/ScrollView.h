@@ -250,7 +250,9 @@ private:
     void updateCornerWidget();
     void stopAnimations();
     void stopZoomAnimation();
-    void animateScrollBar(QScrollBar* scrollBar, QPropertyAnimation* animation, int targetValue);
+    void animateScrollBar(QScrollBar* scrollBar, QPropertyAnimation* animation,
+                          int targetValue, bool fast = false);
+    bool handleDiscreteWheel(QWheelEvent* event);
     int clampedTarget(QScrollBar* scrollBar, int value) const;
     bool isAxisEnabled(Axis axis) const;
     ScrollMode modeForAxis(Axis axis) const;

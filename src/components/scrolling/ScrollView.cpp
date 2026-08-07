@@ -4,12 +4,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <QCoreApplication>
 #include <QEvent>
 #include <QGestureEvent>
 #include <QPalette>
 #include <QPaintEvent>
 #include <QPinchGesture>
 #include <QScrollBar>
+#include <QSignalBlocker>
 #include <QWheelEvent>
 #include <QWidget>
 
@@ -492,6 +494,16 @@ void ScrollView::wheelEvent(QWheelEvent* event) {
         return;
     }
 
+    // Mouse wheels and WSL/RDP commonly arrive as angle-only, no-phase
+    // events. Preserve Qt's native wheel-distance calculation, but animate the
+    // resulting scrollbar target so a single notch is presented across
+    // several frames. Pixel/phase-based touchpad input remains native.
+    if (handleDiscreteWheel(event))
+        return;
+
+    // Direct manipulation must win immediately over an in-flight discrete
+    // wheel animation.
+    stopAnimations();
     QScrollArea::wheelEvent(event);
 
     // With chaining disabled, a view that has scrollable range owns the wheel
@@ -503,6 +515,81 @@ void ScrollView::wheelEvent(QWheelEvent* event) {
     // 内容的视图则照常透传。
     if (!m_scrollChainingEnabled && !event->isAccepted() && hasScrollableRange())
         event->accept();
+}
+
+bool ScrollView::handleDiscreteWheel(QWheelEvent* event) {
+    if (!event
+        || fluentWheelInputKind(event) != FluentWheelInputKind::NoPhaseDiscrete
+        || event->angleDelta().isNull()) {
+        return false;
+    }
+
+    const bool horizontal = qAbs(event->angleDelta().x())
+        > qAbs(event->angleDelta().y());
+    const Axis axis = horizontal ? Axis::Horizontal : Axis::Vertical;
+    QScrollBar* scrollBar = horizontal ? horizontalScrollBar()
+                                       : verticalScrollBar();
+    QPropertyAnimation* animation = horizontal ? m_horizontalAnimation
+                                               : m_verticalAnimation;
+
+    event->ignore();
+    if (!scrollBar || !isAxisEnabled(axis)) {
+        if (!m_scrollChainingEnabled && hasScrollableRange())
+            event->accept();
+        return true;
+    }
+
+    const int currentValue = scrollBar->value();
+    int nativeWheelValue = currentValue;
+    {
+        // Let QScrollBar retain Qt's platform wheel-line, modifier, inverted,
+        // and fractional-delta behavior without exposing its immediate jump.
+        // Blocking signals keeps QAbstractScrollArea's content stationary
+        // while the target is sampled and the current value is restored.
+        const QSignalBlocker blocker(scrollBar);
+        QCoreApplication::sendEvent(scrollBar, event);
+        nativeWheelValue = scrollBar->value();
+        scrollBar->setValue(currentValue);
+    }
+
+    const int wheelStep = nativeWheelValue - currentValue;
+    if (wheelStep != 0) {
+        int baseValue = currentValue;
+        if (animation && animation->state() == QAbstractAnimation::Running) {
+            const int pendingValue = clampedTarget(
+                scrollBar, animation->endValue().toInt());
+            const int pendingStep = pendingValue - currentValue;
+            const bool sameDirection =
+                (pendingStep > 0 && wheelStep > 0)
+                || (pendingStep < 0 && wheelStep < 0);
+            if (sameDirection)
+                baseValue = pendingValue;
+        }
+
+        const qint64 extendedTarget = static_cast<qint64>(baseValue)
+            + static_cast<qint64>(wheelStep);
+        const int targetValue = static_cast<int>(std::clamp<qint64>(
+            extendedTarget,
+            static_cast<qint64>(scrollBar->minimum()),
+            static_cast<qint64>(scrollBar->maximum())));
+
+        const bool alreadyHeadingThere = animation
+            && animation->state() == QAbstractAnimation::Running
+            && clampedTarget(scrollBar, animation->endValue().toInt())
+                == targetValue;
+        if (targetValue != currentValue && !alreadyHeadingThere)
+            animateScrollBar(scrollBar, animation, targetValue, true);
+        event->accept();
+        return true;
+    }
+
+    // Match the existing ScrollView chaining contract at an edge while still
+    // preserving QScrollBar's accepted state for fractional wheel deltas.
+    if (!m_scrollChainingEnabled && !event->isAccepted()
+        && hasScrollableRange()) {
+        event->accept();
+    }
+    return true;
 }
 
 bool ScrollView::hasScrollableRange() const {
@@ -624,7 +711,10 @@ void ScrollView::stopZoomAnimation() {
     m_zoomAnimationAnchor = QPointF(-1.0, -1.0);
 }
 
-void ScrollView::animateScrollBar(QScrollBar* scrollBar, QPropertyAnimation* animation, int targetValue) {
+void ScrollView::animateScrollBar(QScrollBar* scrollBar,
+                                  QPropertyAnimation* animation,
+                                  int targetValue,
+                                  bool fast) {
     if (!scrollBar || !animation)
         return;
 
@@ -637,7 +727,7 @@ void ScrollView::animateScrollBar(QScrollBar* scrollBar, QPropertyAnimation* ani
     animation->stop();
     animation->setTargetObject(scrollBar);
     animation->setPropertyName("value");
-    animation->setDuration(anim.normal);
+    animation->setDuration(fast ? anim.fast : anim.normal);
     animation->setEasingCurve(anim.decelerate);
     animation->setStartValue(scrollBar->value());
     animation->setEndValue(targetValue);
