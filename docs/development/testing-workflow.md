@@ -75,6 +75,25 @@ real mixed-monitor review.
 
 ## Validation Tiers
 
+The public [CI workflow](../../.github/workflows/ci.yml) is an orchestration
+layer. It classifies changed paths, selects `fast` or `full`, invokes two
+reusable validation modules, and owns only the stable `CI Gate` and
+`Release ready` checks:
+
+- [C++ CI module](../../.github/workflows/ci-cpp.yml) owns native Qt builds,
+  CTest, CMake consumer integration, native packages, and the validated
+  [C++ matrix catalog](../../.github/ci-cpp-matrix.json).
+- [PySide6 CI module](../../.github/workflows/ci-python.yml) owns binding
+  generation, compatibility baselines, native Python wheels, clean-environment
+  tests, manylinux repair/audit, and
+  [the wheel matrix](../../bindings/pyside6/wheel-matrix.json).
+
+Do not add compiler, SDK, package-manager, wheel, or platform steps to the
+orchestrator. Add them to the owning reusable workflow and update its catalog.
+`.github/scripts/validate-ci-workflow-boundaries.py` enforces that separation.
+Both modules upload artifacts into the caller's workflow run, so release jobs
+can consume Python wheels without coupling C++ validation to PyPI publishing.
+
 - GitHub Actions `matrix=fast` is the default PR/push validation tier. It runs
   the narrow `ci_fast` set on Linux x64 and Windows x64, then compiles the
   library on macOS arm64. Native Linux and Windows ARM64 execution stays in the
