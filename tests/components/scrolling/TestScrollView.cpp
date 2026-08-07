@@ -134,6 +134,21 @@ bool waitUntil(std::function<bool()> predicate, int timeoutMs = 1000) {
     return predicate();
 }
 
+class WheelScrollLinesGuard {
+public:
+    explicit WheelScrollLinesGuard(int lines)
+        : m_previous(QApplication::wheelScrollLines()) {
+        QApplication::setWheelScrollLines(lines);
+    }
+
+    ~WheelScrollLinesGuard() {
+        QApplication::setWheelScrollLines(m_previous);
+    }
+
+private:
+    int m_previous;
+};
+
 void sendWheel(QWidget* target, int angleDeltaY, Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
     FLUENT_MAKE_WHEEL_EVENT(event, 64, 48, angleDeltaY, modifiers);
     QApplication::sendEvent(target, &event);
@@ -348,6 +363,58 @@ TEST_F(ScrollViewTest, AnimatedScrollReachesTargetAndEmitsPositionChanges) {
         return view.horizontalOffset() == targetX && view.verticalOffset() == targetY;
     }));
     EXPECT_GT(spy.count(), 0);
+}
+
+TEST_F(ScrollViewTest, DiscreteWheelAnimatesAndAccumulatesNotches) {
+    WheelScrollLinesGuard wheelLines(3);
+    ScrollView view;
+    view.resize(180, 120);
+    view.setWidget(createContent(QSize(420, 520)));
+    view.verticalScrollBar()->setSingleStep(20);
+    showAndProcess(view);
+
+    sendWheel(view.viewport(), -120);
+    sendWheel(view.viewport(), -120);
+
+    // The two native 60 px wheel steps are accumulated into one smooth 120 px
+    // target instead of jumping the viewport synchronously.
+    EXPECT_EQ(view.verticalOffset(), 0);
+    EXPECT_TRUE(waitUntil([&view]() {
+        return view.verticalOffset() > 0;
+    }));
+    EXPECT_LT(view.verticalOffset(), 120);
+    EXPECT_TRUE(waitUntil([&view]() {
+        return view.verticalOffset() == 120;
+    }));
+}
+
+TEST_F(ScrollViewTest, PixelWheelInterruptsDiscreteAnimationAndRemainsNative) {
+    WheelScrollLinesGuard wheelLines(3);
+    ScrollView view;
+    view.resize(180, 120);
+    view.setWidget(createContent(QSize(420, 520)));
+    view.verticalScrollBar()->setSingleStep(20);
+    showAndProcess(view);
+
+    sendWheel(view.viewport(), -120);
+    EXPECT_EQ(view.verticalOffset(), 0);
+
+    FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(pixelWheel,
+                                       QPoint(64, 48),
+                                       QPoint(64, 48),
+                                       QPoint(0, -30),
+                                       QPoint(0, -120),
+                                       Qt::NoButton,
+                                       Qt::NoModifier,
+                                       Qt::NoScrollPhase,
+                                       false);
+    QApplication::sendEvent(view.viewport(), &pixelWheel);
+
+    const int immediateOffset = view.verticalOffset();
+    EXPECT_GT(immediateOffset, 0);
+    QTest::qWait(220);
+    QApplication::processEvents();
+    EXPECT_EQ(view.verticalOffset(), immediateOffset);
 }
 
 TEST_F(ScrollViewTest, VisibilityPoliciesMapToQtPolicies) {
