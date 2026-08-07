@@ -1468,3 +1468,16 @@ ledger, and highest-numbered record for the current state.
     build/repair/audit paths, both compatibility gates, CI Gate, and Release
     ready. M6 now has no remaining compatibility or matrix-validation work;
     only signing and formal publication remain.
+48. Modularize GitHub Actions without weakening the validation contract. The
+    top-level `ci.yml` now owns only change classification, validation-tier
+    selection, reusable-workflow orchestration, `CI Gate`, and `Release ready`;
+    `ci-cpp.yml` owns native C++ and CMake integration validation, while
+    `ci-python.yml` owns PySide6 compatibility and release-wheel validation.
+    The C++ scenarios now come from the reviewed `ci-cpp-matrix.json` catalog,
+    and boundary tests prevent either module from absorbing the other's jobs
+    or leaking build details back into the orchestrator. Fast run
+    `31162213313` and full run `31163613329` both passed at commit `12e44ea`;
+    the full run passed all 36 jobs, including the unchanged C++ matrix, all 17
+    release wheels, both Qt 6.2.4 compatibility gates, `CI Gate`, and
+    `Release ready`. This replaces the monolithic workflow as the retained CI
+    structure; M6 still has only signing and formal publication remaining.
