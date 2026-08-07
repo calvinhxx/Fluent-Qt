@@ -1,0 +1,521 @@
+name: Python Release
+run-name: Python ${{ inputs.stage }} release from ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Package index to validate and publish.
+        required: true
+        default: testpypi
+        type: choice
+        options:
+          - testpypi
+          - pypi
+      recovery:
+        description: Resume a partial production upload after hash verification.
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: python-release-${{ github.ref }}-${{ inputs.stage }}
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  checks: read
+  contents: read
+
+jobs:
+  preflight:
+    name: Resolve vetted release bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      source_commit: ${{ steps.resolve.outputs.source_commit }}
+      ci_run_id: ${{ steps.resolve.outputs.ci_run_id }}
+      ci_run_attempt: ${{ steps.resolve.outputs.ci_run_attempt }}
+      stage: ${{ steps.resolve.outputs.stage }}
+      recovery: ${{ steps.resolve.outputs.recovery }}
+    steps:
+      - name: Checkout selected release ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release identity and full-CI evidence
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_STAGE: ${{ inputs.stage }}
+          RECOVERY: ${{ inputs.recovery }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$RECOVERY" == "true" && "$RELEASE_STAGE" != "pypi" ]]; then
+            echo "::error::Recovery mode is only valid for a partial production PyPI upload."
+            exit 1
+          fi
+
+          version="$(
+            sed -nE \
+              's/^[[:space:]]*project[[:space:]]*\([[:space:]]*FluentQt[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' \
+              CMakeLists.txt | head -n 1
+          )"
+          if [[ ! "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            echo "::error::Could not resolve a stable FluentQt project version."
+            exit 1
+          fi
+          version_major="${BASH_REMATCH[1]}"
+          version_minor="${BASH_REMATCH[2]}"
+
+          git fetch --force --tags origin
+          source_commit="$(git rev-parse 'HEAD^{commit}')"
+          if [[ "$RELEASE_STAGE" == "testpypi" ]]; then
+            expected_branch="release/${version_major}.${version_minor}.x"
+            if [[ "$GITHUB_REF_TYPE" != "branch" || "$GITHUB_REF_NAME" != "$expected_branch" ]]; then
+              echo "::error::TestPyPI must run from $expected_branch, got $GITHUB_REF."
+              exit 1
+            fi
+          elif [[ "$RELEASE_STAGE" == "pypi" ]]; then
+            if [[ "$GITHUB_REF_TYPE" != "tag" || ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Production PyPI must run from a stable vX.Y.Z tag."
+              exit 1
+            fi
+            if ! git rev-parse -q --verify "refs/tags/$GITHUB_REF_NAME^{tag}" >/dev/null; then
+              echo "::error::Production tag must be annotated: $GITHUB_REF_NAME"
+              exit 1
+            fi
+            if [[ "${GITHUB_REF_NAME#v}" != "$version" ]]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match project version $version."
+              exit 1
+            fi
+            tag_commit="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
+            if [[ "$tag_commit" != "$source_commit" ]]; then
+              echo "::error::Checked-out tag does not resolve to the selected commit."
+              exit 1
+            fi
+          else
+            echo "::error::Unsupported Python release stage: $RELEASE_STAGE"
+            exit 1
+          fi
+
+          mapfile -t check_urls < <(
+            gh api \
+              "repos/$GITHUB_REPOSITORY/commits/$source_commit/check-runs?per_page=100" \
+              --jq \
+                '.check_runs |
+                 map(select(.name == "Release ready" and
+                            .status == "completed" and
+                            .conclusion == "success")) |
+                 sort_by(.completed_at) | reverse | .[].details_url'
+          )
+          if (( ${#check_urls[@]} == 0 )); then
+            echo "::error::No successful Release ready check exists for $source_commit."
+            exit 1
+          fi
+
+          ci_run_id=""
+          ci_run_attempt=""
+          for details_url in "${check_urls[@]}"; do
+            if [[ ! "$details_url" =~ /actions/runs/([0-9]+) ]]; then
+              continue
+            fi
+            candidate_run="${BASH_REMATCH[1]}"
+            candidate_json="$(
+              gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run"
+            )"
+            candidate_sha="$(jq -r '.head_sha' <<< "$candidate_json")"
+            candidate_name="$(jq -r '.name' <<< "$candidate_json")"
+            candidate_status="$(jq -r '.status' <<< "$candidate_json")"
+            candidate_conclusion="$(jq -r '.conclusion' <<< "$candidate_json")"
+            candidate_attempt="$(jq -r '.run_attempt' <<< "$candidate_json")"
+            if [[ "$candidate_sha" != "$source_commit" ||
+                  "$candidate_name" != "CI" ||
+                  "$candidate_status" != "completed" ||
+                  "$candidate_conclusion" != "success" ||
+                  ! "$candidate_attempt" =~ ^[1-9][0-9]*$ ]]; then
+              continue
+            fi
+            artifact_count="$(
+              gh api \
+                "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run/artifacts?per_page=100" \
+                --jq \
+                  '[.artifacts[] |
+                    select(.name == "fluentqt-python-release-bundle" and
+                           .expired == false)] | length'
+            )"
+            if [[ "$artifact_count" == "1" ]]; then
+              ci_run_id="$candidate_run"
+              ci_run_attempt="$candidate_attempt"
+              break
+            fi
+          done
+          if [[ -z "$ci_run_id" ]]; then
+            echo "::error::No successful full CI run produced the canonical Python release bundle."
+            exit 1
+          fi
+
+          if [[ "$RELEASE_STAGE" == "pypi" ]]; then
+            release_json="$(
+              gh release view "$GITHUB_REF_NAME" \
+                --repo "$GITHUB_REPOSITORY" \
+                --json isDraft,isPrerelease,tagName
+            )"
+            jq -e \
+              --arg tag "$GITHUB_REF_NAME" \
+              '.tagName == $tag and .isDraft == false and .isPrerelease == false' \
+              <<< "$release_json" >/dev/null || {
+                echo "::error::The stable GitHub Release must be published before PyPI."
+                exit 1
+              }
+          fi
+
+          {
+            echo "version=$version"
+            echo "source_commit=$source_commit"
+            echo "ci_run_id=$ci_run_id"
+            echo "ci_run_attempt=$ci_run_attempt"
+            echo "stage=$RELEASE_STAGE"
+            echo "recovery=$RECOVERY"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summarize release preflight
+        shell: bash
+        run: |
+          {
+            echo "## Python release preflight"
+            echo ""
+            echo "- Stage: ${{ steps.resolve.outputs.stage }}"
+            echo "- Version: ${{ steps.resolve.outputs.version }}"
+            echo "- Ref: ${GITHUB_REF}"
+            echo "- Commit: ${{ steps.resolve.outputs.source_commit }}"
+            echo "- Source full-CI run: ${{ steps.resolve.outputs.ci_run_id }}"
+            echo "- Source full-CI attempt: ${{ steps.resolve.outputs.ci_run_attempt }}"
+            echo "- Recovery: ${{ steps.resolve.outputs.recovery }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  prepare:
+    name: Verify immutable publication candidate
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout selected release ref
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download canonical bundle from full CI
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-python-release-bundle
+          path: ${{ runner.temp }}/fluentqt-python-publish-candidate
+          run-id: ${{ needs.preflight.outputs.ci_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify bundle identity and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate="${RUNNER_TEMP}/fluentqt-python-publish-candidate"
+          manifest="$candidate/python-release-manifest.json"
+          jq -e \
+            --arg version "${{ needs.preflight.outputs.version }}" \
+            --arg commit "${{ needs.preflight.outputs.source_commit }}" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --argjson run_id "${{ needs.preflight.outputs.ci_run_id }}" \
+            --argjson run_attempt "${{ needs.preflight.outputs.ci_run_attempt }}" \
+            '.schema_version == 1 and
+             .version == $version and
+             .source.repository == $repository and
+             .source.commit == $commit and
+             .source.ci_run_id == $run_id and
+             .source.ci_run_attempt == $run_attempt and
+             (.files | length) == 18 and
+             (.audits | length) == 5' \
+            "$manifest"
+          (
+            cd "$candidate"
+            sha256sum --check PYTHON_SHA256SUMS.txt
+          )
+
+      - name: Verify package-index preconditions
+        env:
+          RELEASE_STAGE: ${{ needs.preflight.outputs.stage }}
+          RECOVERY: ${{ needs.preflight.outputs.recovery }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidate="${RUNNER_TEMP}/fluentqt-python-publish-candidate"
+          manifest="$candidate/python-release-manifest.json"
+          if [[ "$RELEASE_STAGE" == "testpypi" ]]; then
+            python3 .github/scripts/verify-python-package-index.py \
+              --manifest "$manifest" \
+              --bundle "$candidate" \
+              --index-json-url https://test.pypi.org/pypi \
+              --mode subset
+            python3 .github/scripts/verify-python-package-index.py \
+              --manifest "$manifest" \
+              --bundle "$candidate" \
+              --index-json-url https://pypi.org/pypi \
+              --mode absent
+          else
+            python3 .github/scripts/verify-python-package-index.py \
+              --manifest "$manifest" \
+              --bundle "$candidate" \
+              --index-json-url https://test.pypi.org/pypi \
+              --mode complete
+            production_mode=absent
+            if [[ "$RECOVERY" == "true" ]]; then
+              production_mode=subset
+            fi
+            python3 .github/scripts/verify-python-package-index.py \
+              --manifest "$manifest" \
+              --bundle "$candidate" \
+              --index-json-url https://pypi.org/pypi \
+              --mode "$production_mode"
+          fi
+
+      - name: Upload vetted publication candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-python-publish-candidate
+          path: ${{ runner.temp }}/fluentqt-python-publish-candidate
+          if-no-files-found: error
+          retention-days: 7
+
+  publish_testpypi:
+    name: Publish to TestPyPI
+    needs: [preflight, prepare]
+    if: ${{ needs.preflight.outputs.stage == 'testpypi' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/FluentQt/${{ needs.preflight.outputs.version }}/
+    permissions:
+      actions: read
+      id-token: write
+    steps:
+      - name: Download vetted publication candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-python-publish-candidate
+          path: fluentqt-python-publish-candidate
+
+      - name: Publish signed wheels to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          packages-dir: fluentqt-python-publish-candidate/dist/
+          verify-metadata: true
+          skip-existing: true
+          print-hash: true
+          attestations: true
+
+  verify_testpypi:
+    name: Verify TestPyPI installation
+    needs: [preflight, prepare, publish_testpypi]
+    if: ${{ needs.preflight.outputs.stage == 'testpypi' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout selected release ref
+        uses: actions/checkout@v6
+
+      - name: Download vetted publication candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-python-publish-candidate
+          path: fluentqt-python-publish-candidate
+
+      - name: Install Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Linux runtime dependencies
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh aqt
+
+      - name: Wait for complete TestPyPI release metadata
+        shell: bash
+        run: |
+          python3 .github/scripts/verify-python-package-index.py \
+            --manifest fluentqt-python-publish-candidate/python-release-manifest.json \
+            --bundle fluentqt-python-publish-candidate \
+            --index-json-url https://test.pypi.org/pypi \
+            --mode complete \
+            --attempts 20 \
+            --delay-seconds 15 \
+            --report testpypi-evidence.json
+
+      - name: Install and smoke-test TestPyPI wheels
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(jq -r '.version' fluentqt-python-publish-candidate/python-release-manifest.json)"
+          python -m venv "${RUNNER_TEMP}/fluentqt-testpypi-smoke"
+          smoke_python="${RUNNER_TEMP}/fluentqt-testpypi-smoke/bin/python"
+          "$smoke_python" -m pip install \
+            PySide6-Essentials==6.9.3 \
+            shiboken6==6.9.3
+          "$smoke_python" -m pip install \
+            --index-url https://test.pypi.org/simple \
+            --no-deps \
+            "FluentQt==$version" \
+            "FluentQt-Gallery==$version"
+          "$smoke_python" -m pip check
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            FLUENTQT_EXPECTED_VERSION="$version" \
+            "$smoke_python" bindings/pyside6/tests/test_wheel_smoke.py
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            FLUENTQT_EXPECTED_VERSION="$version" \
+            "$smoke_python" bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+
+      - name: Upload TestPyPI evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-testpypi-evidence
+          path: |
+            testpypi-evidence.json
+            fluentqt-python-publish-candidate/PYTHON_SHA256SUMS.txt
+            fluentqt-python-publish-candidate/python-release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  publish_pypi:
+    name: Publish to PyPI
+    needs: [preflight, prepare]
+    if: ${{ needs.preflight.outputs.stage == 'pypi' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: pypi
+      url: https://pypi.org/project/FluentQt/${{ needs.preflight.outputs.version }}/
+    permissions:
+      actions: read
+      id-token: write
+    steps:
+      - name: Download vetted publication candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-python-publish-candidate
+          path: fluentqt-python-publish-candidate
+
+      - name: Publish signed wheels to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: fluentqt-python-publish-candidate/dist/
+          verify-metadata: true
+          skip-existing: ${{ inputs.recovery }}
+          print-hash: true
+          attestations: true
+
+  verify_pypi:
+    name: Verify PyPI publication and attestations
+    needs: [preflight, prepare, publish_pypi]
+    if: ${{ needs.preflight.outputs.stage == 'pypi' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout selected release ref
+        uses: actions/checkout@v6
+
+      - name: Download vetted publication candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-python-publish-candidate
+          path: fluentqt-python-publish-candidate
+
+      - name: Install Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install Linux runtime dependencies
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh aqt
+
+      - name: Wait for complete PyPI release metadata
+        shell: bash
+        run: |
+          python3 .github/scripts/verify-python-package-index.py \
+            --manifest fluentqt-python-publish-candidate/python-release-manifest.json \
+            --bundle fluentqt-python-publish-candidate \
+            --index-json-url https://pypi.org/pypi \
+            --mode complete \
+            --attempts 20 \
+            --delay-seconds 15 \
+            --report pypi-evidence.json \
+            --url-file pypi-release-urls.txt
+
+      - name: Verify every PyPI attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install pypi-attestations==0.0.29
+          url_count="$(grep -c '^https://' pypi-release-urls.txt)"
+          if [[ "$url_count" != "18" ]]; then
+            echo "::error::Expected 18 PyPI file URLs, found $url_count."
+            exit 1
+          fi
+          while IFS= read -r wheel_url; do
+            pypi-attestations verify pypi \
+              --repository https://github.com/calvinhxx/Fluent-Qt \
+              "$wheel_url"
+          done < pypi-release-urls.txt
+
+      - name: Install and smoke-test public PyPI wheels
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(jq -r '.version' fluentqt-python-publish-candidate/python-release-manifest.json)"
+          python -m venv "${RUNNER_TEMP}/fluentqt-pypi-smoke"
+          smoke_python="${RUNNER_TEMP}/fluentqt-pypi-smoke/bin/python"
+          "$smoke_python" -m pip install \
+            "FluentQt==$version" \
+            "FluentQt-Gallery==$version"
+          "$smoke_python" -m pip check
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            FLUENTQT_EXPECTED_VERSION="$version" \
+            "$smoke_python" bindings/pyside6/tests/test_wheel_smoke.py
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            FLUENTQT_EXPECTED_VERSION="$version" \
+            "$smoke_python" bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
+
+      - name: Upload PyPI publication evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-pypi-publication-evidence
+          path: |
+            pypi-evidence.json
+            pypi-release-urls.txt
+            fluentqt-python-publish-candidate/PYTHON_SHA256SUMS.txt
+            fluentqt-python-publish-candidate/python-release-manifest.json
+          if-no-files-found: error
+          retention-days: 90
