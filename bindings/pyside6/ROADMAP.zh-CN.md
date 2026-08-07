@@ -53,7 +53,7 @@ wheel 使用 6.9.3 而暗中移除 6.2.4 源码/构建基线。
 | M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
 | M4.5 — Foundation 作者 API | 已完成 | `FluentWidget`、`bind()`、`StateGroup`、`AnchorLayout`/`anchors()` 已通过本机 Qt 6.9.3、Linux/Windows Qt 6.2.4 最低线、六目标发布 wheel 与完整 CI 回归 |
 | M5 — Overlay 与原生窗口 | 已完成 | 自动化 XCB/Wayland/Windows/Cocoa、实体 Windows 11 DWM，以及非 headless Ubuntu 22.04 ARM64 GNOME Wayland 已覆盖材质、如实 fallback、系统 move/resize 与代表性 overlay |
-| M6 — 可发布 Python 分发 | 进行中 | 全部 17 个 CPython 3.11–3.13 原生发布 wheel、五个分架构 manylinux 构建/审计和两条 Qt 6.2.4 兼容门禁均已通过完整 CI；独立 Gallery 覆盖 88 个路由和 199 个 SampleCard。现在只剩签名与正式发布 |
+| M6 — 可发布 Python 分发 | 进行中 | API/类型治理、17 个原生 wheel、五份 manylinux 审计、兼容门禁、独立 Gallery、唯一 18-wheel bundle 契约和两阶段 Trusted Publishing workflow 均已实现。完成仍需 1.6.0 候选完整 CI、publisher/environment 配置、TestPyPI 演练、稳定 tag、PyPI 上传、attestation 与公开索引干净安装 |
 
 ## 公共 API 覆盖台账
 
@@ -866,8 +866,25 @@ Wayland 验收不宣称实体观察到该可选 KWin/X11 效果，也不把它�
 - [x] 明确 CPython 3.10 范围：Linux/Windows x64 Qt 6.2.4 lane 只作为
   不可发布的源码/构建兼容门禁。官方 `FluentQt` 和 `FluentQt-Gallery`
   wheel 使用 `Requires-Python: >=3.11,<3.14`。
-- [ ] 所有必需矩阵 lane 通过后，签名并正式发布原生 `FluentQt` wheel，以及唯一
-  一份 `FluentQt-Gallery` `py3-none-any` wheel。
+- [x] 建立唯一发布包合同。完整 CI 复用 17 个原生 artifact，校验五份 manylinux
+  报告和逐字节一致的 Gallery 输出，拒绝兼容门禁/raw Linux/多余/缺失文件及
+  metadata 漂移，最终只生成一个带 checksum 与来源 manifest 的 18-wheel bundle。
+- [x] 新增不保存 token、也不重新构建 wheel 的顶层 Trusted Publishing workflow。
+  它会锁定所选提交对应的成功 full-CI bundle，校验 release branch / stable tag /
+  GitHub Release 身份，只给两个上传 job OIDC 权限，校验索引 hash，支持 hash 安全的
+  部分恢复，并执行 TestPyPI/PyPI 安装 smoke 与生产 attestation 验证；详见
+  `bindings/pyside6/PUBLISHING.md`。
+- [ ] 在最终未打 tag 的 `release/1.6.x` 提交上跑通完整 CI，生成唯一 `1.6.0`
+  bundle，并记录 run、commit 与 manifest SHA-256。
+- [ ] 配置 `testpypi` 与需维护者审批的 `pypi` GitHub environment，并为
+  `FluentQt` / `FluentQt-Gallery` 注册四条 Trusted Publisher；仓库中不保存长期
+  package-index token。
+- [ ] 创建 tag 前，先把同一 bundle 上传 TestPyPI 并完成 hash、安装与 Gallery
+  offscreen 验证。
+- [ ] 创建 annotated `v1.6.0`，发布非 draft GitHub Release，人工批准生产部署，
+  再把完全相同的 17+1 文件上传 PyPI。
+- [ ] 验证所有公开文件 hash 与 attestation，在全新环境从公开索引安装两个分发，
+  记录三个 run ID 和项目 URL，之后才能把 M6 标为完成并将 tag 提交同步回 `main`。
 
 Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官方 PySide 6.2.4
 没有 Linux/Windows ARM64 wheel，Linux ARM64 的 Qt/PySide 6.9.3 二进制还要求
@@ -880,8 +897,9 @@ CPython 这一会在持续 UI 调用后触发 `none_dealloc` 的组合。
 Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 现在会在分架构 policy
 image 中重新构建，只上传修复后的 manylinux wheel 与审计报告。扩展后的 17-wheel
 矩阵已在提交 `e031677` 的完整 CI run `31156212793` 中通过全部 34 个 job，包括两条
-Qt 6.2.4 兼容门禁、五个 manylinux 构建/审计、CI Gate 与 Release ready。在显式
-启用签名/上传门禁之前，不发布任何 wheel。Linux ARM64 CPython 3.11 上的
+Qt 6.2.4 兼容门禁、五个 manylinux 构建/审计、CI Gate 与 Release ready。bundle 与
+发布 workflow 已实现，但在配置 GitHub environment/Trusted Publisher 并完成
+TestPyPI-before-tag 流程前不会发布 wheel。Linux ARM64 CPython 3.11 上的
 PySide/Shiboken 6.11.1 作为首发后的兼容探针，不属于当前支持声明。
 
 ## 完成标准
@@ -911,8 +929,8 @@ Windows 上的确认。
 3. **发布完成**：M6 完成；明确 CPython/操作系统/架构矩阵，提供类型存根、
    API 兼容和弃用规则，并发布经过干净环境验证的 wheel。
 
-当前 M0 至 M5 已完成，计划内 Python API 已达到功能完整；达到发布完成仍需
-完成 M6 的剩余门禁、签名与正式发布。
+当前 M0 至 M5 已完成，计划内 Python API 已达到功能完整；达到发布完成仍需完成
+M6 的候选 bundle、TestPyPI、tag、PyPI、attestation 与公开索引干净安装门禁。
 
 因此，本项目只有达到第三层，才称为“Python 支持完成并可正式发布”。这不包含
 PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Python 使用的
@@ -1212,3 +1230,13 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     全绿，包括未削减的 C++ 矩阵、全部 17 个发布 wheel、两条 Qt 6.2.4 兼容
     门禁、`CI Gate` 和 `Release ready`。该结构正式取代单体 workflow；M6 仍只剩
     签名与正式发布。
+49. 实现 M6 发布合同，但不提前宣称尚未发生的发布结果。Python full CI 会把
+    17 个原生 wheel、五份 manylinux 报告和 17 份逐字节一致的 Gallery 输出汇总为
+    唯一、可审计的 18-wheel bundle；单元测试覆盖正常路径，以及缺失、多余、版本
+    错误、平台错误、hash 冲突和 Gallery 漂移。独立顶层 `python-release.yml` 只下载
+    成功 full-CI artifact，不重新构建；它强制 TestPyPI 先于 annotated stable tag，
+    只给两个上传 job OIDC 权限，并验证 TestPyPI/PyPI hash、干净安装、部分恢复和
+    生产 attestation。项目与 Python API metadata 已准备到 `1.6.0`。M6 仍保持
+    进行中，直到最终候选 full CI、四条 Trusted Publisher、TestPyPI run、稳定 tag /
+    GitHub Release、获批的 PyPI run、attestation 与公开索引干净安装全部产生可记录
+    的收尾证据。

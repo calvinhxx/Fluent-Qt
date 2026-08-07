@@ -59,7 +59,7 @@ remove the 6.2.4 source/build baseline.
 | M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
 | M4.5 — Foundation authoring API | Complete | `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout`/`anchors()` pass local Qt 6.9.3, Linux/Windows Qt 6.2.4 minimum lanes, the six-target release-wheel matrix, and full CI regression |
 | M5 — Overlays and native windows | Complete | Automated XCB/Wayland/Windows/Cocoa checks, physical Windows 11 DWM review, and a non-headless Ubuntu 22.04 ARM64 GNOME Wayland review cover materials, honest fallback, system move/resize, and representative overlays |
-| M6 — Release-grade Python distribution | In progress | Type/API governance, all 17 CPython 3.11–3.13 native release wheels, five architecture-specific manylinux builds/audits, and both Qt 6.2.4 compatibility gates pass full CI; the standalone Gallery covers all 88 routes and 199 SampleCards. Only signing and formal publication remain |
+| M6 — Release-grade Python distribution | In progress | Type/API governance, the 17 native release wheels, five manylinux audits, compatibility gates, standalone Gallery, canonical 18-wheel bundle contract, and two-stage Trusted Publishing workflow are implemented. Completion still requires a successful 1.6.0 bundle run, publisher/environment setup, TestPyPI rehearsal, stable tag, PyPI upload, attestations, and public clean installation |
 
 ## Public API coverage ledger
 
@@ -1046,8 +1046,28 @@ physically observed. It is not a generic Linux compatibility gate.
 - [x] Decide the CPython 3.10 scope: retain Linux/Windows x64 Qt 6.2.4 lanes as
   non-published source/build compatibility gates only. Official `FluentQt` and
   `FluentQt-Gallery` wheels declare `Requires-Python: >=3.11,<3.14`.
-- [ ] After every required matrix lane passes, sign and publish the native
-  `FluentQt` wheels plus one `FluentQt-Gallery` `py3-none-any` wheel.
+- [x] Build the canonical release-bundle contract. Full CI reuses all 17 native
+  artifacts, verifies the five manylinux reports and byte-identical Gallery
+  outputs, rejects compatibility/raw-Linux/extra/missing files and metadata
+  drift, then emits one checksummed 18-wheel bundle and source manifest.
+- [x] Add a top-level, token-free Trusted Publishing workflow that never
+  rebuilds wheels. It resolves the successful full-CI bundle for the selected
+  commit, enforces release-branch/stable-tag/GitHub-Release identity, limits
+  OIDC permission to the two upload jobs, verifies index hashes, supports
+  hash-safe partial recovery, and runs TestPyPI/PyPI install smoke plus
+  production attestation verification; see `bindings/pyside6/PUBLISHING.md`.
+- [ ] Produce the canonical `1.6.0` bundle from a successful full CI run on the
+  final untagged `release/1.6.x` commit and record its run, commit, and manifest
+  SHA-256.
+- [ ] Configure the `testpypi` and reviewer-gated `pypi` GitHub environments
+  plus four Trusted Publisher records for `FluentQt` and `FluentQt-Gallery`,
+  without any long-lived package-index token.
+- [ ] Upload and verify that exact bundle on TestPyPI before creating the tag.
+- [ ] Create annotated `v1.6.0`, publish the non-draft GitHub Release, approve
+  the production deployment, and upload the same 17+1 files to PyPI.
+- [ ] Verify all public file hashes and attestations, complete a clean public
+  install of both distributions, record the three run IDs and project URLs,
+  then mark M6 complete and synchronize the tagged commit to `main`.
 
 Qt 6.2.4 remains the binding minimum, not the ARM64 wheel build version. The
 official PySide 6.2.4 release has no Linux or Windows ARM64 wheels, Linux ARM64
@@ -1063,9 +1083,11 @@ repaired manylinux wheel plus its audit report; both x86_64 and AArch64
 container paths have seed CI evidence. The expanded 17-wheel matrix passed all
 34 jobs in full CI run `31156212793` at commit `e031677`, including both Qt
 6.2.4 compatibility gates, all five manylinux builds/audits, CI Gate, and
-Release ready. No wheel is published until the signing/upload gate is
-explicitly enabled. PySide/Shiboken 6.11.1 on Linux ARM64 CPython 3.11 remains
-a post-first-release compatibility probe, not a claim of current support.
+Release ready. The bundle and publication workflows are implemented, but no
+wheel is published until the deployment environments and Trusted Publishers
+are configured and the TestPyPI-before-tag sequence succeeds.
+PySide/Shiboken 6.11.1 on Linux ARM64 CPython 3.11 remains a post-first-release
+compatibility probe, not a claim of current support.
 
 ## Definition of done
 
@@ -1100,8 +1122,8 @@ is not mistaken for complete support:
    clean-environment wheels are published.
 
 M0 through M5 are complete, so the planned Python API is feature complete.
-Release completeness still requires the remaining M6 gates, signing, and
-formal publication.
+Release completeness still requires the external M6 candidate, TestPyPI, tag,
+PyPI, attestation, and public-install gates.
 
 FluentQt calls Python support complete and release-ready only at the third
 level. This excludes PySide2 and Qt 5 Python bindings and does not require
@@ -1481,3 +1503,16 @@ ledger, and highest-numbered record for the current state.
     release wheels, both Qt 6.2.4 compatibility gates, `CI Gate`, and
     `Release ready`. This replaces the monolithic workflow as the retained CI
     structure; M6 still has only signing and formal publication remaining.
+49. Implement the M6 publication contract without claiming an unreleased
+    result. Full Python CI now assembles the 17 native wheels, five manylinux
+    reports, and 17 byte-identical Gallery outputs into one audited 18-wheel
+    bundle; unit tests cover the valid path and missing, extra, wrong-version,
+    wrong-platform, hash-conflict, and Gallery-drift failures. A separate
+    top-level `python-release.yml` downloads that successful full-CI artifact
+    instead of rebuilding, enforces TestPyPI before an annotated stable tag,
+    grants OIDC only to the two upload jobs, and verifies TestPyPI/PyPI hashes,
+    clean installs, partial recovery, and production attestations. Project and
+    Python API metadata are prepared for `1.6.0`. M6 remains in progress until
+    the final candidate full CI, four Trusted Publisher records, TestPyPI run,
+    stable tag/GitHub Release, approved PyPI run, attestations, and public-index
+    clean installation produce the recorded closure evidence.
