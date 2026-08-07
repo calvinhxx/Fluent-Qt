@@ -181,6 +181,22 @@ class PySideWheelMatrixValidatorTest(unittest.TestCase):
             errors,
         )
 
+    def test_each_architecture_keeps_one_extended_release_acceptance(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(
+            item
+            for item in catalog["scenarios"]
+            if item["id"] == "windows-arm64-qt693-cp311"
+        )
+        scenario["extended_acceptance"] = False
+
+        errors = VALIDATOR.validate_catalog(catalog)
+
+        self.assertTrue(
+            any("extended_acceptance must be True" in error for error in errors),
+            errors,
+        )
+
     def test_manylinux_lane_reserves_time_for_second_build(self):
         catalog = copy.deepcopy(self.catalog)
         scenario = next(

@@ -902,12 +902,23 @@ ownership probe and rejects unsafe combinations instead of allowing a wheel
 that fails only under sustained UI calls.
 
 The normal fast CI tier keeps the two minimum lanes and the macOS ARM64
-CPython 3.11 release lane. Full CI expands that seed coverage to the complete
-17-wheel release matrix. Every lane builds the extension, checks generated
-contracts, runs binding tests, installs the wheel in a clean virtual
-environment, runs strict mypy and visible acceptance examples, verifies native
-Window/TitleBar integration, and confirms that Qt, PySide6, and Shiboken6
-resolve inside that clean environment.
+CPython 3.11 release lane. In fast CI, the Linux and Windows Qt 6.2.4 lanes
+generate and compile the bindings, run the core binding contracts, and
+clean-install the core wheel; the macOS release seed retains the full visible
+acceptance path. Gallery wheel smoke, strict mypy, the complete example set,
+and native Window/TitleBar acceptance return on the compatibility lanes in
+full CI. Pip downloads are cached by the reviewed wheel-matrix policy.
+
+Full CI expands that seed coverage to the complete 17-wheel release matrix.
+Every release lane builds the extension, checks generated contracts, runs
+binding tests, installs both wheels in a clean virtual environment, and
+confirms that Qt, PySide6, and Shiboken6 resolve inside that environment. The
+lowest supported CPython lane for each platform/architecture additionally runs
+strict mypy, visible acceptance examples, and native Window/TitleBar
+integration. Six final `Platform status` jobs verify all 17 release-wheel
+artifacts, both compatibility-wheel artifacts, and the eight representative
+acceptance pairs. They expose Linux, Windows, and macOS x64/ARM64 success as
+separate checks in the Actions UI.
 
 Full Linux release lanes additionally rebuild inside the matching PyPA
 manylinux image, repair with the pinned `auditwheel`, reject bundled duplicate
