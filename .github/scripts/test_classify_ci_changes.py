@@ -69,6 +69,20 @@ class ClassifyCiChangesTest(unittest.TestCase):
             pyside=True,
         )
 
+    def test_python_module_change_runs_pyside_matrix(self):
+        self.assert_classification(
+            [".github/workflows/ci-python.yml"],
+            native=True,
+            pyside=True,
+        )
+
+    def test_cpp_module_change_skips_pyside_matrix(self):
+        self.assert_classification(
+            [".github/workflows/ci-cpp.yml", ".github/ci-cpp-matrix.json"],
+            native=True,
+            pyside=False,
+        )
+
     def test_mixed_test_and_library_change_runs_pyside_matrix(self):
         self.assert_classification(
             [
