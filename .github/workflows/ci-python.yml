@@ -29,6 +29,8 @@ jobs:
           python3 .github/scripts/validate-pyside-wheel-matrix.py
           python3 .github/scripts/test_validate_pyside_wheel_matrix.py
           python3 .github/scripts/test_select_pyside_release_matrix.py
+          python3 .github/scripts/test_assemble_pyside_release_bundle.py
+          python3 .github/scripts/test_verify_python_package_index.py
           python3 bindings/pyside6/tools/verify_api_policy.py
           python3 bindings/pyside6/tests/test_api_policy.py
           python3 bindings/pyside6/tests/test_manylinux_wheel.py
@@ -1565,6 +1567,81 @@ jobs:
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
+
+  pyside6_release_bundle:
+    name: Assemble canonical Python release bundle
+    needs:
+      - plan
+      - pyside6_release
+    if: >-
+      ${{
+        always() &&
+        needs.plan.outputs.mode == 'full' &&
+        needs.pyside6_release.result == 'success'
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download release-wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fluentqt-pyside6-qt693-*
+          path: ${{ runner.temp }}/fluentqt-python-release-input
+          merge-multiple: false
+
+      - name: Assemble and verify release bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/assemble-pyside-release-bundle.py \
+            --input "${RUNNER_TEMP}/fluentqt-python-release-input" \
+            --output "${RUNNER_TEMP}/fluentqt-python-release-bundle"
+          jq -e \
+            '.schema_version == 1 and
+             .policy.core_wheel_count == 17 and
+             .policy.gallery_wheel_count == 1 and
+             .policy.manylinux_audit_count == 5 and
+             (.files | length) == 18 and
+             (.audits | length) == 5' \
+            "${RUNNER_TEMP}/fluentqt-python-release-bundle/python-release-manifest.json"
+          (
+            cd "${RUNNER_TEMP}/fluentqt-python-release-bundle"
+            sha256sum --check PYTHON_SHA256SUMS.txt
+          )
+
+      - name: Summarize release bundle
+        shell: bash
+        run: |
+          manifest_sha="$(
+            sha256sum \
+              "${RUNNER_TEMP}/fluentqt-python-release-bundle/python-release-manifest.json" \
+              | awk '{print $1}'
+          )"
+          {
+            echo "## Python release bundle"
+            echo ""
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Core wheels: 17"
+            echo "- Gallery wheels: 1"
+            echo "- manylinux audits: 5"
+            echo "- Manifest SHA-256: $manifest_sha"
+            echo ""
+            echo '```text'
+            sed 's#  dist/#  #' \
+              "${RUNNER_TEMP}/fluentqt-python-release-bundle/PYTHON_SHA256SUMS.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload canonical Python release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-python-release-bundle
+          path: ${{ runner.temp }}/fluentqt-python-release-bundle
+          if-no-files-found: error
+          retention-days: 30
 
   pyside6_platform_summary:
     name: Platform status / ${{ matrix.display_name }}
