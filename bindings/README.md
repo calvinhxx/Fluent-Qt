@@ -9,7 +9,9 @@ the library's Qt 5.15+ compatibility.
   ownership work, native-platform validation, and wheel release readiness;
   a [Simplified Chinese version](pyside6/ROADMAP.zh-CN.md) is also available.
   The reusable `FluentQt` wheel and standalone pure-Python
-  [`FluentQt-Gallery`](pyside6/gallery/) wheel are separate distributions.
+  [`FluentQt-Gallery`](pyside6/gallery/) wheel are separate distributions. The
+  [publishing runbook](pyside6/PUBLISHING.md) keeps both distributions tied to
+  one CI-built, checksummed release bundle.
 
 Each binding owns its native generator input, language package sources,
 examples, tests, and packaging metadata.

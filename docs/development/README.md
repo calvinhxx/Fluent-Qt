@@ -18,6 +18,7 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [PySide6 Binding Workflow](../../bindings/pyside6/README.md)
 - [PySide6 API Compatibility Policy](../../bindings/pyside6/API_COMPATIBILITY.md)
 - [PySide6 manylinux Release Policy](../../bindings/pyside6/MANYLINUX.md)
+- [PySide6 Publishing Runbook](../../bindings/pyside6/PUBLISHING.md)
 - [PySide6 Compatibility Roadmap](../../bindings/pyside6/ROADMAP.md)
 - [PySide6 兼容性路线图](../../bindings/pyside6/ROADMAP.zh-CN.md)
 - [App Sample Optimization](app-sample-optimization.md)

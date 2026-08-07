@@ -219,6 +219,14 @@ Before creating a stable tag:
 8. Publish the GitHub Release notes, installers, and one aggregate
    `SHA256SUMS.txt`.
 
+For releases that publish the optional PySide6 distributions, also follow the
+[Python publishing runbook](../../bindings/pyside6/PUBLISHING.md). Python
+publication has an additional immutable-artifact sequence: full CI creates one
+18-wheel bundle, that exact bundle passes TestPyPI before the stable tag is
+created, and the tagged production workflow publishes the same files through
+Trusted Publishing after environment approval. A successful native wheel
+matrix alone is not a published Python release.
+
 Later automation may perform these steps, but the rules above remain the
 contract that CI, changelog, and packaging workflows should enforce.
 

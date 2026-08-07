@@ -14,6 +14,9 @@ package/API version contract, SemVer boundaries, and mandatory deprecation
 ledger.
 The [manylinux policy](MANYLINUX.md) defines Linux build images, repair
 exclusions, publish tags, and required audit evidence.
+The [Python publishing runbook](PUBLISHING.md) defines the canonical 18-wheel
+bundle, TestPyPI rehearsal, Trusted Publishing approval, recovery, and final
+PyPI evidence contract.
 
 The Python deliverables are intentionally split:
 
@@ -930,10 +933,11 @@ manylinux image, repair with the pinned `auditwheel`, reject bundled duplicate
 Qt/PySide6/Shiboken6 libraries, and clean-install the repaired wheel. x64 uses
 CPython 3.11 through 3.13 and `manylinux_2_28`; ARM64 uses CPython 3.12 through
 3.13 and `manylinux_2_39`, matching the official PySide6-Essentials 6.9.3
-wheel floors. Native `linux_*` artifacts remain test evidence only. Signing
-and upload automation remain deliberately separate from validation; the full
-17-wheel matrix has passed together, but no artifact is published until the
-dedicated release workflow and its approval gate are enabled.
+wheel floors. Native `linux_*` artifacts remain test evidence only. Full CI
+consolidates the 17 repaired native wheels and one byte-identical Gallery wheel
+into a single checksummed release bundle. The top-level Python release workflow
+can publish only that bundle, first to TestPyPI and then, after a stable tag and
+environment approval, to PyPI; it never rebuilds release files.
 
 Passing the build-tree tests proves the declared API contract; passing the
 clean-wheel smoke proves installation/runtime isolation; the interactive

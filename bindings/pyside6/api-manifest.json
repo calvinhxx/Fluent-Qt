@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "api_version": "1.5",
+  "api_version": "1.6",
   "variables": [
     "__api_version__",
     "__version__"
