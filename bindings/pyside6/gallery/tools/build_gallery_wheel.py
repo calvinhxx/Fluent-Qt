@@ -19,6 +19,10 @@ PACKAGE_NAME = "fluentqt_gallery"
 DISTRIBUTION_NAME = "FluentQt-Gallery"
 DIST_INFO_NAME = "fluentqt_gallery-{version}.dist-info"
 WHEEL_TAG = "py3-none-any"
+SUPPORTED_REQUIRES_PYTHON = {
+    ">=3.10,<3.11",
+    ">=3.11,<3.14",
+}
 REQUIRED_PACKAGE_FILES = {
     "__init__.py",
     "__main__.py",
@@ -51,6 +55,14 @@ REQUIRED_PACKAGE_FILES = {
     "assets/control_images/Placeholder.png",
     "assets/home_header_tiles/Header-WindowsDesign.png",
 }
+
+
+def validate_requires_python(value):
+    if value not in SUPPORTED_REQUIRES_PYTHON:
+        raise RuntimeError(
+            "Unsupported Requires-Python policy: {0}".format(value)
+        )
+    return value
 
 
 def package_files(package_dir):
@@ -118,16 +130,21 @@ def build_wheel(args):
 
     files = package_files(package_dir)
     dist_info = DIST_INFO_NAME.format(version=args.version)
+    requires_python = validate_requires_python(args.requires_python)
     metadata = (
         "Metadata-Version: 2.1\n"
         "Name: {distribution}\n"
         "Version: {version}\n"
         "Summary: Standalone Gallery for the FluentQt PySide6 widget library\n"
         "License: MIT\n"
-        "Requires-Python: >=3.10\n"
+        "Requires-Python: {requires_python}\n"
         "Requires-Dist: FluentQt (=={version})\n"
         "\n"
-    ).format(distribution=DISTRIBUTION_NAME, version=args.version)
+    ).format(
+        distribution=DISTRIBUTION_NAME,
+        version=args.version,
+        requires_python=requires_python,
+    )
     wheel_metadata = (
         "Wheel-Version: 1.0\n"
         "Generator: FluentQt standalone Gallery wheel builder\n"
@@ -174,6 +191,7 @@ def parse_args():
     parser.add_argument("--package-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--version", required=True)
+    parser.add_argument("--requires-python", required=True)
     parser.add_argument("--license-file", action="append", default=[])
     return parser.parse_args()
 

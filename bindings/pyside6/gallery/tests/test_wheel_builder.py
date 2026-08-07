@@ -61,6 +61,7 @@ class GalleryWheelBuilderTest(unittest.TestCase):
                     package_dir=str(package_dir),
                     output_dir=str(output_dir),
                     version="1.5.0",
+                    requires_python=">=3.11,<3.14",
                     license_file=[],
                 )
             )
@@ -78,6 +79,7 @@ class GalleryWheelBuilderTest(unittest.TestCase):
             self.assertIn("fluentqt_gallery/__init__.py", names)
             self.assertFalse(any(name.startswith("fluentqt/") for name in names))
             self.assertIn("Requires-Dist: FluentQt (==1.5.0)", metadata)
+            self.assertIn("Requires-Python: >=3.11,<3.14", metadata)
             self.assertIn("Root-Is-Purelib: true", wheel)
             self.assertIn("Tag: py3-none-any", wheel)
 

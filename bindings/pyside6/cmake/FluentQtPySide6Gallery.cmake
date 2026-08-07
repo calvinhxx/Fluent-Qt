@@ -175,6 +175,8 @@ set(FLUENTQT_PYSIDE6_GALLERY_WHEELHOUSE
 add_custom_target(fluentqt_pyside6_gallery_wheel
     COMMAND "${CMAKE_COMMAND}" -E remove_directory
         "${FLUENTQT_PYSIDE6_GALLERY_WHEEL_STAGE}"
+    COMMAND "${CMAKE_COMMAND}" -E remove_directory
+        "${FLUENTQT_PYSIDE6_GALLERY_WHEELHOUSE}"
     COMMAND "${CMAKE_COMMAND}" --install "${PROJECT_BINARY_DIR}"
         --prefix "${FLUENTQT_PYSIDE6_GALLERY_WHEEL_STAGE}"
         --component FluentQtPySide6Gallery
@@ -185,6 +187,7 @@ add_custom_target(fluentqt_pyside6_gallery_wheel
             "${FLUENTQT_PYSIDE6_GALLERY_WHEEL_STAGE}/fluentqt_gallery"
         --output-dir "${FLUENTQT_PYSIDE6_GALLERY_WHEELHOUSE}"
         --version "${PROJECT_VERSION}"
+        --requires-python "${FLUENT_QT_PYSIDE6_REQUIRES_PYTHON}"
         --license-file "${PROJECT_SOURCE_DIR}/LICENSE"
         --license-file "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
         --license-file "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"

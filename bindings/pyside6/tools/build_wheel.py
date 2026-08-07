@@ -19,6 +19,10 @@ import zipfile
 
 PACKAGE_NAME = "fluentqt"
 DIST_INFO_NAME = "fluentqt-{version}.dist-info"
+SUPPORTED_REQUIRES_PYTHON = {
+    ">=3.10,<3.11",
+    ">=3.11,<3.14",
+}
 REQUIRED_PACKAGE_FILES = {
     "__init__.py",
     "__init__.pyi",
@@ -49,6 +53,14 @@ REQUIRED_PACKAGE_FILES = {
 }
 
 
+def validate_requires_python(value):
+    if value not in SUPPORTED_REQUIRES_PYTHON:
+        raise RuntimeError(
+            "Unsupported Requires-Python policy: {0}".format(value)
+        )
+    return value
+
+
 def pyside_runtime_requirement(version):
     match = re.match(r"^(\d+)\.(\d+)(?:[.\-+]|$)", version)
     if not match:
@@ -61,6 +73,26 @@ def pyside_runtime_requirement(version):
         else "PySide6-Essentials"
     )
     return "{0} (=={1})".format(distribution, version)
+
+
+def metadata_contents(version, pyside_version, shiboken_version, requires_python):
+    requires_python = validate_requires_python(requires_python)
+    return (
+        "Metadata-Version: 2.1\n"
+        "Name: FluentQt\n"
+        "Version: {version}\n"
+        "Summary: PySide6 bindings for the FluentQt widget library\n"
+        "License: MIT\n"
+        "Requires-Python: {requires_python}\n"
+        "Requires-Dist: {pyside_requirement}\n"
+        "Requires-Dist: shiboken6 (=={shiboken_version})\n"
+        "\n"
+    ).format(
+        version=version,
+        requires_python=requires_python,
+        pyside_requirement=pyside_runtime_requirement(pyside_version),
+        shiboken_version=shiboken_version,
+    )
 
 
 def normalized_platform_tag(extension):
@@ -206,22 +238,11 @@ def build_wheel(args):
     files, extension = package_files(package_dir)
     tag = python_wheel_tag(extension)
     dist_info = DIST_INFO_NAME.format(version=args.version)
-    pyside_requirement = pyside_runtime_requirement(args.pyside_version)
-
-    metadata = (
-        "Metadata-Version: 2.1\n"
-        "Name: FluentQt\n"
-        "Version: {version}\n"
-        "Summary: PySide6 bindings for the FluentQt widget library\n"
-        "License: MIT\n"
-        "Requires-Python: >=3.10\n"
-        "Requires-Dist: {pyside_requirement}\n"
-        "Requires-Dist: shiboken6 (=={shiboken_version})\n"
-        "\n"
-    ).format(
-        version=args.version,
-        pyside_requirement=pyside_requirement,
-        shiboken_version=args.shiboken_version,
+    metadata = metadata_contents(
+        args.version,
+        args.pyside_version,
+        args.shiboken_version,
+        args.requires_python,
     )
     wheel_metadata = (
         "Wheel-Version: 1.0\n"
@@ -269,6 +290,7 @@ def parse_args():
     parser.add_argument("--version", required=True)
     parser.add_argument("--pyside-version", required=True)
     parser.add_argument("--shiboken-version", required=True)
+    parser.add_argument("--requires-python", required=True)
     parser.add_argument("--license-file", action="append", default=[])
     return parser.parse_args()
 
