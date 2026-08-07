@@ -53,7 +53,7 @@ wheel 使用 6.9.3 而暗中移除 6.2.4 源码/构建基线。
 | M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
 | M4.5 — Foundation 作者 API | 已完成 | `FluentWidget`、`bind()`、`StateGroup`、`AnchorLayout`/`anchors()` 已通过本机 Qt 6.9.3、Linux/Windows Qt 6.2.4 最低线、六目标发布 wheel 与完整 CI 回归 |
 | M5 — Overlay 与原生窗口 | 已完成 | 自动化 XCB/Wayland/Windows/Cocoa、实体 Windows 11 DWM，以及非 headless Ubuntu 22.04 ARM64 GNOME Wayland 已覆盖材质、如实 fallback、系统 move/resize 与代表性 overlay |
-| M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六个原生种子目标、分架构 manylinux repair/audit 和 x86_64/AArch64 容器 CI 证据；独立 Gallery 覆盖 88 个路由和 199 个 SampleCard。发布策略现扩展为 17 个 CPython 3.11–3.13 wheel，新增的 11 个 ABI lane 仍需完整 CI 证据，之后才能签名和发布 |
+| M6 — 可发布 Python 分发 | 进行中 | 全部 17 个 CPython 3.11–3.13 原生发布 wheel、五个分架构 manylinux 构建/审计和两条 Qt 6.2.4 兼容门禁均已通过完整 CI；独立 Gallery 覆盖 88 个路由和 199 个 SampleCard。现在只剩签名与正式发布 |
 
 ## 公共 API 覆盖台账
 
@@ -826,8 +826,9 @@ Wayland 验收不宣称实体观察到该可选 KWin/X11 效果，也不把它�
 - [x] 已在原生目标跑通原有六个架构种子 lane。日常 fast CI 保留
   Linux/Windows x64 的 Python 3.10 + Qt/PySide/Shiboken 6.2.4 最低兼容门禁，
   以及 macOS ARM64 CPython 3.11 发布 lane。
-- [ ] 在完整 CI 中跑通扩展后的 17-wheel CPython 3.11–3.13 发布矩阵，
-  包括全部五个分架构 manylinux 构建和审计。
+- [x] 在完整 CI 中跑通扩展后的 17-wheel CPython 3.11–3.13 发布矩阵，
+  包括全部五个分架构 manylinux 构建和审计。完整 CI run `31156212793`
+  已在提交 `e031677` 上通过全部 34 个 job。
 - [x] 使用带单元测试的保守路径分类器控制 PR 的 PySide6 CI 成本。UILib、绑定、
   Gallery、CMake、资源及绑定工具链变更仍会运行三平台基线；只有纯原生测试或
   无关 workflow 变更才跳过。push、定时和手动触发仍运行完整必需矩阵。
@@ -877,9 +878,10 @@ glibc 2.39，因此该 lane 使用 `ubuntu-24.04-arm`。Windows ARM64 使用从 
 CPython 这一会在持续 UI 调用后触发 `none_dealloc` 的组合。
 
 Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 现在会在分架构 policy
-image 中重新构建，只上传修复后的 manylinux wheel 与审计报告。此前六目标矩阵已在
-完整 CI run `31142098154` 通过；扩展后的 17-wheel 矩阵必须重新全绿后才能签名。
-在显式启用签名/上传门禁之前，不发布任何 wheel。Linux ARM64 CPython 3.11 上的
+image 中重新构建，只上传修复后的 manylinux wheel 与审计报告。扩展后的 17-wheel
+矩阵已在提交 `e031677` 的完整 CI run `31156212793` 中通过全部 34 个 job，包括两条
+Qt 6.2.4 兼容门禁、五个 manylinux 构建/审计、CI Gate 与 Release ready。在显式
+启用签名/上传门禁之前，不发布任何 wheel。Linux ARM64 CPython 3.11 上的
 PySide/Shiboken 6.11.1 作为首发后的兼容探针，不属于当前支持声明。
 
 ## 完成标准
@@ -1194,3 +1196,9 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     fallback；本机不存在可选 KWin/X11 blur，因此不宣称实体观察到该效果，它继续
     作为能力门控增强而不是通用 Linux 兼容条件。M0 至 M5 至此达到功能完整，正式
     发布仍属于 M6。
+47. 将首发策略从六个种子目标扩展为 Windows、Linux、macOS x64/ARM64 上 17 个
+    CPython 3.11–3.13 原生 wheel，同时保留 Linux/Windows x64 CPython 3.10 +
+    Qt/PySide/Shiboken 6.2.4 非发布兼容门禁。完整 CI run `31156212793` 已在提交
+    `e031677` 上通过全部 34 个 job，包括全部发布 wheel、五个 Linux manylinux
+    构建/repair/审计、两条兼容门禁、CI Gate 与 Release ready。M6 已无剩余兼容性
+    或矩阵验证工作，现在只剩签名与正式发布。
