@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 .github/scripts/validate-pyside-wheel-matrix.py
           python3 .github/scripts/test_validate_pyside_wheel_matrix.py
+          python3 .github/scripts/test_select_pyside_release_matrix.py
           python3 bindings/pyside6/tools/verify_api_policy.py
           python3 bindings/pyside6/tests/test_api_policy.py
           python3 bindings/pyside6/tests/test_manylinux_wheel.py
@@ -50,18 +51,20 @@ jobs:
           esac
 
           release_matrix="$(
-            jq -c \
-              '.manylinux.auditwheel_version as $auditwheel_version |
-               {include: [.scenarios[] |
-                 select(.release == true and .fast == false) |
-                 . + {auditwheel_version: $auditwheel_version}]}' \
-              bindings/pyside6/wheel-matrix.json
+            python3 .github/scripts/select-pyside-release-matrix.py
           )"
 
           echo "mode=$VALIDATION_MODE" >> "$GITHUB_OUTPUT"
           echo "pyside_release_matrix=$release_matrix" >> "$GITHUB_OUTPUT"
           if [[ "$VALIDATION_MODE" == "full" ]]; then
             echo "Selected $(jq '.include | length' <<< "$release_matrix") dynamic release scenarios."
+            echo "Prioritized representative scenarios: $(
+              jq -r \
+                '[.include[] |
+                  select(.extended_acceptance == true) |
+                  .id] | join(", ")' \
+                <<< "$release_matrix"
+            )"
           else
             echo "Fast validation selected; dynamic release scenarios will be skipped."
           fi

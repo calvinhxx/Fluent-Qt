@@ -915,7 +915,12 @@ binding tests, installs both wheels in a clean virtual environment, and
 confirms that Qt, PySide6, and Shiboken6 resolve inside that environment. The
 lowest supported CPython lane for each platform/architecture additionally runs
 strict mypy, visible acceptance examples, and native Window/TitleBar
-integration. Six final `Platform status` jobs verify all 17 release-wheel
+integration. The dynamic matrix queues the longest Windows ARM64 CPython 3.11
+representative first, followed by the other extended-acceptance lanes. This
+lets constrained hosted-runner capacity start the critical coverage before
+secondary CPython rows without removing any wheel or test. Runner allocation
+remains controlled by GitHub, so the run summary is the final scheduling
+evidence. Six final `Platform status` jobs verify all 17 release-wheel
 artifacts, both compatibility-wheel artifacts, and the eight representative
 acceptance pairs. They expose Linux, Windows, and macOS x64/ARM64 success as
 separate checks in the Actions UI.
