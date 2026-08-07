@@ -36,6 +36,7 @@ PYSIDE_CI_FILES = {
     ".github/scripts/test_validate_pyside_wheel_matrix.py",
     ".github/scripts/validate-pyside-wheel-matrix.py",
     ".github/workflows/ci.yml",
+    ".github/workflows/ci-python.yml",
 }
 
 
