@@ -59,7 +59,7 @@ remove the 6.2.4 source/build baseline.
 | M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
 | M4.5 — Foundation authoring API | Complete | `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout`/`anchors()` pass local Qt 6.9.3, Linux/Windows Qt 6.2.4 minimum lanes, the six-target release-wheel matrix, and full CI regression |
 | M5 — Overlays and native windows | Complete | Automated XCB/Wayland/Windows/Cocoa checks, physical Windows 11 DWM review, and a non-headless Ubuntu 22.04 ARM64 GNOME Wayland review cover materials, honest fallback, system move/resize, and representative overlays |
-| M6 — Release-grade Python distribution | In progress | Type/API governance, six seed native targets, architecture-specific manylinux repair/audit, and x86_64/AArch64 container-CI evidence are complete; the standalone Gallery covers all 88 routes and 199 SampleCards. The release policy now targets 17 CPython 3.11–3.13 wheels; the 11 newly added ABI lanes still need full CI evidence before signing and publication |
+| M6 — Release-grade Python distribution | In progress | Type/API governance, all 17 CPython 3.11–3.13 native release wheels, five architecture-specific manylinux builds/audits, and both Qt 6.2.4 compatibility gates pass full CI; the standalone Gallery covers all 88 routes and 199 SampleCards. Only signing and formal publication remain |
 
 ## Public API coverage ledger
 
@@ -995,8 +995,9 @@ physically observed. It is not a generic Linux compatibility gate.
 - [x] Pass the original six architecture seed lanes on their native targets.
   Fast CI retains the Python 3.10 + Qt/PySide/Shiboken 6.2.4 minimum lanes on
   Linux/Windows x64 and the macOS ARM64 CPython 3.11 release lane.
-- [ ] Pass the expanded 17-wheel CPython 3.11–3.13 release matrix in full CI,
-  including all five architecture-specific manylinux builds and audits.
+- [x] Pass the expanded 17-wheel CPython 3.11–3.13 release matrix in full CI,
+  including all five architecture-specific manylinux builds and audits. Full
+  CI run `31156212793` passed all 34 jobs at commit `e031677`.
 - [x] Keep pull-request CI proportional with a tested conservative path
   classifier. Library, binding, Gallery, CMake, resource, and binding-toolchain
   changes still run the PySide6 baseline on all three platforms; native-test
@@ -1059,11 +1060,12 @@ the unsafe Linux ARM64 Shiboken 6.9.3 plus pre-3.12 CPython combination.
 Native Linux smoke artifacts retain `linux_*` tags. The release workflow now
 rebuilds inside the architecture-specific policy image and uploads only the
 repaired manylinux wheel plus its audit report; both x86_64 and AArch64
-container paths have seed CI evidence. The earlier six-target matrix passed in
-full CI run `31142098154`; the expanded 17-wheel matrix must pass again before
-signing. No wheel is published until the signing/upload gate is explicitly
-enabled. PySide/Shiboken 6.11.1 on Linux ARM64 CPython 3.11 remains a
-post-first-release compatibility probe, not a claim of current support.
+container paths have seed CI evidence. The expanded 17-wheel matrix passed all
+34 jobs in full CI run `31156212793` at commit `e031677`, including both Qt
+6.2.4 compatibility gates, all five manylinux builds/audits, CI Gate, and
+Release ready. No wheel is published until the signing/upload gate is
+explicitly enabled. PySide/Shiboken 6.11.1 on Linux ARM64 CPython 3.11 remains
+a post-first-release compatibility probe, not a claim of current support.
 
 ## Definition of done
 
@@ -1458,3 +1460,11 @@ ledger, and highest-numbered record for the current state.
     and is not claimed as physically observed; it remains a capability-gated
     enhancement rather than a generic Linux compatibility requirement. M0
     through M5 are therefore feature complete, while publication remains M6.
+47. Expand the first-release policy from six seed targets to 17 native CPython
+    3.11–3.13 wheels across Windows, Linux, and macOS x64/ARM64, while keeping
+    Linux/Windows x64 CPython 3.10 + Qt/PySide/Shiboken 6.2.4 as non-published
+    compatibility gates. Full CI run `31156212793` passed all 34 jobs at
+    commit `e031677`, including every release wheel, all five Linux manylinux
+    build/repair/audit paths, both compatibility gates, CI Gate, and Release
+    ready. M6 now has no remaining compatibility or matrix-validation work;
+    only signing and formal publication remain.
