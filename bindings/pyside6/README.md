@@ -881,6 +881,11 @@ the same method by locating TextEdit's existing Qt-owned Fluent `ScrollBar`;
 the method does not create, reparent, or transfer ownership of that child.
 The authoritative CI and first-release architecture catalog is
 [`wheel-matrix.json`](wheel-matrix.json).
+The reusable [PySide6 CI workflow](../../.github/workflows/ci-python.yml) owns
+all binding-generation, wheel, clean-install, native-window, and manylinux
+steps. The top-level [CI workflow](../../.github/workflows/ci.yml) only selects
+the validation tier and invokes that module alongside the independent C++
+module.
 The minimum compatibility lanes remain Linux x64 and Windows x64 with
 CPython 3.10 plus Qt/PySide/Shiboken 6.2.4. The first-release lanes use the
 matched 6.9.3 toolchain on Linux, macOS, and Windows, each on both x64 and
@@ -910,8 +915,9 @@ Qt/PySide6/Shiboken6 libraries, and clean-install the repaired wheel. x64 uses
 CPython 3.11 through 3.13 and `manylinux_2_28`; ARM64 uses CPython 3.12 through
 3.13 and `manylinux_2_39`, matching the official PySide6-Essentials 6.9.3
 wheel floors. Native `linux_*` artifacts remain test evidence only. Signing
-and upload automation stay disabled until every expanded release lane passes
-together.
+and upload automation remain deliberately separate from validation; the full
+17-wheel matrix has passed together, but no artifact is published until the
+dedicated release workflow and its approval gate are enabled.
 
 Passing the build-tree tests proves the declared API contract; passing the
 clean-wheel smoke proves installation/runtime isolation; the interactive
