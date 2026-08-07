@@ -1,8 +1,9 @@
 # PySide6 bindings
 
-The optional binding target supports PySide6, Shiboken6, and Qt 6.2 or newer.
-The three Qt for Python packages and the C++ Qt SDK must use the same version;
-mixing Qt runtimes in one process is unsupported.
+The optional Qt 6-only binding target has a minimum source/build baseline of
+CPython 3.10 plus PySide6, Shiboken6, and Qt 6.2.4. The three Qt for Python
+packages and the C++ Qt SDK must use the same version; mixing Qt runtimes in
+one process is unsupported.
 This does not change the C++ library's Qt 5.15 support; PySide2/Shiboken2 are
 outside the scope of this binding target.
 See the compatibility roadmap
@@ -19,6 +20,23 @@ The Python deliverables are intentionally split:
 - `FluentQt` / `import fluentqt` is the reusable UILib and native extension.
 - `FluentQt-Gallery` / `import fluentqt_gallery` is a standalone pure-Python
   example application that depends on the exact same `FluentQt` version.
+
+Compatibility is deliberately tiered:
+
+- Linux/Windows x64 CI blocks regressions against the CPython 3.10 plus
+  Qt/PySide/Shiboken 6.2.4 minimum. Those compatibility artifacts are never
+  published.
+- Official prebuilt wheel support is limited to the exact CPython, platform,
+  architecture, and runtime combinations in
+  [`wheel-matrix.json`](wheel-matrix.json).
+- Other matching Qt 6.2.4+ toolchains may build from source, but are not an
+  official binary promise until they enter that matrix.
+
+Official `FluentQt` and `FluentQt-Gallery` wheels declare
+`Requires-Python: >=3.11,<3.14`. The non-published Qt 6.2.4 compatibility
+artifacts declare `>=3.10,<3.11` only so their clean-install gate remains
+meaningful. PySide2, Qt 5 Python, PyPy, and 32-bit x86 are out of scope. The
+standalone Gallery always follows the reusable UILib's release range.
 
 The Gallery stays in this repository so its C++/Python parity contract can be
 tested together with the library, but it is not installed into the core
@@ -866,9 +884,9 @@ The authoritative CI and first-release architecture catalog is
 The minimum compatibility lanes remain Linux x64 and Windows x64 with
 CPython 3.10 plus Qt/PySide/Shiboken 6.2.4. The first-release lanes use the
 matched 6.9.3 toolchain on Linux, macOS, and Windows, each on both x64 and
-ARM64 native runners. CPython 3.11 is used everywhere except Linux ARM64,
-which uses CPython 3.12; here `x64` means x86_64/AMD64, and 32-bit x86 is not
-supported.
+ARM64 native runners. Windows, macOS, and Linux x64 cover CPython 3.11 through
+3.13; Linux ARM64 covers CPython 3.12 and 3.13. Here `x64` means
+x86_64/AMD64, and 32-bit x86 is not supported.
 
 The Linux ARM64 exception is an upstream runtime constraint, not a raised Qt
 minimum. Official Shiboken 6.9.3 aarch64 wheels can return borrowed `Py_None`
@@ -878,21 +896,22 @@ that wheel/runtime combination safe. Configuration performs a live reference
 ownership probe and rejects unsafe combinations instead of allowing a wheel
 that fails only under sustained UI calls.
 
-The normal fast CI tier keeps the two minimum lanes and macOS ARM64. Full CI
-adds Linux x64/ARM64, Windows x64/ARM64, and macOS x64 release-wheel lanes;
-the existing macOS ARM64 lane completes the six-target release set. Every lane
-builds the extension, checks generated contracts, runs binding tests, installs
-the wheel in a clean virtual environment, runs strict mypy and visible
-acceptance examples, verifies native Window/TitleBar integration, and confirms
-that Qt, PySide6, and Shiboken6 resolve inside that clean environment.
+The normal fast CI tier keeps the two minimum lanes and the macOS ARM64
+CPython 3.11 release lane. Full CI expands that seed coverage to the complete
+17-wheel release matrix. Every lane builds the extension, checks generated
+contracts, runs binding tests, installs the wheel in a clean virtual
+environment, runs strict mypy and visible acceptance examples, verifies native
+Window/TitleBar integration, and confirms that Qt, PySide6, and Shiboken6
+resolve inside that clean environment.
 
 Full Linux release lanes additionally rebuild inside the matching PyPA
 manylinux image, repair with the pinned `auditwheel`, reject bundled duplicate
 Qt/PySide6/Shiboken6 libraries, and clean-install the repaired wheel. x64 uses
-CPython 3.11 and `manylinux_2_28`; ARM64 uses CPython 3.12 and
-`manylinux_2_39`, matching the official PySide6-Essentials 6.9.3 wheel floors.
-Native `linux_*` artifacts remain test evidence only. Signing and upload
-automation stay disabled until every release lane passes together.
+CPython 3.11 through 3.13 and `manylinux_2_28`; ARM64 uses CPython 3.12 through
+3.13 and `manylinux_2_39`, matching the official PySide6-Essentials 6.9.3
+wheel floors. Native `linux_*` artifacts remain test evidence only. Signing
+and upload automation stay disabled until every expanded release lane passes
+together.
 
 Passing the build-tree tests proves the declared API contract; passing the
 clean-wheel smoke proves installation/runtime isolation; the interactive

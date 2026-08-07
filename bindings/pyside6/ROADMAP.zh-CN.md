@@ -9,7 +9,8 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 ## 兼容性契约
 
 - C++ 组件库继续支持 Qt 5.15+ 和 Qt 6.2+。
-- 可选 PySide6 target 支持 Qt/PySide6/Shiboken6 6.2+，并保持默认关闭。
+- 可选 PySide6 target 只支持 Qt 6，最低源码/构建基线为
+  CPython 3.10 + Qt/PySide6/Shiboken6 6.2.4，并保持默认关闭。
 - PySide6、Shiboken6 runtime、Shiboken6 generator 和 C++ Qt SDK 必须使用
   相同版本。
 - 所有 Python 分类模块都从同一个原生 `_fluentqt` 模块重新导出，避免重复创建
@@ -18,7 +19,28 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 - 可复用的 `FluentQt` wheel 只包含 UILib；独立的纯 Python
   `FluentQt-Gallery` wheel 精确依赖同版本核心包，并且只导入公开
   `fluentqt` API。
-- 本路线图不包含 PySide2/Shiboken2 兼容。
+- Gallery 是独立集成应用，不得抬高 `fluentqt` UILib 的 Python 或 Qt
+  最低版本。
+- 本路线图不包含 PySide2/Shiboken2、Qt 5 Python、PyPy 或 32 位 x86
+  兼容。
+
+### 版本支持分层
+
+Python 原生扩展的“支持”不是一个单独版本号。CPython ABI、
+PySide6/Shiboken6/Qt、操作系统和 CPU 架构共同决定一个二进制包
+能否安全加载。项目按以下层级对外承诺：
+
+| 支持层级 | 承诺 |
+|---|---|
+| 最低兼容门禁 | CPython 3.10 + Qt/PySide6/Shiboken6 6.2.4；当前由 Linux/Windows x64 阻断式 CI 守住生成、编译、运行和干净环境安装 |
+| 官方预编译 wheel | 只承诺 `wheel-matrix.json` 列出的 CPython/平台/架构组合，并精确匹配 PySide6/Shiboken6/Qt 运行时 |
+| Qt 6.3 至当前工具链 | 保持源码兼容目标并抽样验证；未进入发布矩阵的组合不宣称已提供官方 wheel |
+| 矩阵外组合 | 可使用匹配工具链自行构建，但不作二进制可用性承诺 |
+
+官方 wheel 使用 `Requires-Python: >=3.11,<3.14`；不可发布的 Qt 6.2.4
+兼容 artifact 使用 `>=3.10,<3.11`。提高 CPython、PySide6 或 Qt 最低版本
+属于发布兼容性变更：必须先更新路线图、矩阵和迁移说明，不得因为当前发布
+wheel 使用 6.9.3 而暗中移除 6.2.4 源码/构建基线。
 
 ## 当前状态
 
@@ -31,7 +53,7 @@ CPU 架构、Qt 运行时和 CPython ABI 都需要独立构建和验证。
 | M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
 | M4.5 — Foundation 作者 API | 已完成 | `FluentWidget`、`bind()`、`StateGroup`、`AnchorLayout`/`anchors()` 已通过本机 Qt 6.9.3、Linux/Windows Qt 6.2.4 最低线、六目标发布 wheel 与完整 CI 回归 |
 | M5 — Overlay 与原生窗口 | 已完成 | 自动化 XCB/Wayland/Windows/Cocoa、实体 Windows 11 DWM，以及非 headless Ubuntu 22.04 ARM64 GNOME Wayland 已覆盖材质、如实 fallback、系统 move/resize 与代表性 overlay |
-| M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六目标原生 wheel 矩阵、分架构 manylinux repair/audit，并取得 x86_64/AArch64 容器 CI 证据；独立的纯 Python Gallery 分发覆盖 88 个原生路由和 199 个 SampleCard。当前必需矩阵已通过，只剩签名与正式发布 |
+| M6 — 可发布 Python 分发 | 进行中 | 已实现类型/API 治理、六个原生种子目标、分架构 manylinux repair/audit 和 x86_64/AArch64 容器 CI 证据；独立 Gallery 覆盖 88 个路由和 199 个 SampleCard。发布策略现扩展为 17 个 CPython 3.11–3.13 wheel，新增的 11 个 ABI lane 仍需完整 CI 证据，之后才能签名和发布 |
 
 ## 公共 API 覆盖台账
 
@@ -794,15 +816,18 @@ Wayland 验收不宣称实体观察到该可选 KWin/X11 效果，也不把它�
 
 ## M6 — 可发布 Python 分发
 
+- [x] 建立“最低兼容门禁 / 官方预编译 wheel / 矩阵外自行构建”
+  三层支持策略。将官方发布范围与不可发布的 Python 3.10 兼容 artifact
+  分开表述。
 - [x] 以 `bindings/pyside6/wheel-matrix.json` 定义并校验受支持的 CPython、
-  平台和架构矩阵。首发覆盖 Linux、macOS、Windows 的 x64 与 ARM64；这里的
-  x64 指 x86_64/AMD64，不包含 32 位 x86。
-- [x] 在原生目标跑通全部首发 wheel lane。日常 fast CI 保留 Linux/Windows
-  x64 的 Python 3.10 + Qt/PySide/Shiboken 6.2.4 最低兼容门禁和现有 macOS
-  ARM64 lane；full CI 使用 6.9.3 增加 Linux x64/ARM64、Windows x64/ARM64
-  和 macOS x64，连同现有 macOS ARM64 组成六目标首发集。Linux ARM64 因
-  上游 aarch64 Shiboken runtime 依赖 immortal singleton 而使用 Python 3.12，
-  其余发布 lane 使用 Python 3.11。
+  平台和架构矩阵。首发目标为 Linux、macOS、Windows 的 x64/ARM64 上
+  CPython 3.11–3.13；Linux ARM64 从 3.12 起，共 17 个原生发布 wheel。
+  这里的 x64 指 x86_64/AMD64，不包含 32 位 x86。
+- [x] 已在原生目标跑通原有六个架构种子 lane。日常 fast CI 保留
+  Linux/Windows x64 的 Python 3.10 + Qt/PySide/Shiboken 6.2.4 最低兼容门禁，
+  以及 macOS ARM64 CPython 3.11 发布 lane。
+- [ ] 在完整 CI 中跑通扩展后的 17-wheel CPython 3.11–3.13 发布矩阵，
+  包括全部五个分架构 manylinux 构建和审计。
 - [x] 使用带单元测试的保守路径分类器控制 PR 的 PySide6 CI 成本。UILib、绑定、
   Gallery、CMake、资源及绑定工具链变更仍会运行三平台基线；只有纯原生测试或
   无关 workflow 变更才跳过。push、定时和手动触发仍运行完整必需矩阵。
@@ -837,6 +862,9 @@ Wayland 验收不宣称实体观察到该可选 KWin/X11 效果，也不把它�
   `Use` API 文本矩形内存在差异。共比较 114,048,000 个像素，其中
   113,592,073 个完全一致；455,927 个变化像素全部位于该矩形内，矩形外变化
   像素为零。快照入口会清除瞬时 hover 状态，因此结果不再取决于宿主鼠标位置。
+- [x] 明确 CPython 3.10 范围：Linux/Windows x64 Qt 6.2.4 lane 只作为
+  不可发布的源码/构建兼容门禁。官方 `FluentQt` 和 `FluentQt-Gallery`
+  wheel 使用 `Requires-Python: >=3.11,<3.14`。
 - [ ] 所有必需矩阵 lane 通过后，签名并正式发布原生 `FluentQt` wheel，以及唯一
   一份 `FluentQt-Gallery` `py3-none-any` wheel。
 
@@ -844,14 +872,15 @@ Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官�
 没有 Linux/Windows ARM64 wheel，Linux ARM64 的 Qt/PySide 6.9.3 二进制还要求
 glibc 2.39，因此该 lane 使用 `ubuntu-24.04-arm`。Windows ARM64 使用从 3.11
 开始提供官方 ARM64 工具缓存的 CPython。这样既守住低版本兼容，也避免用版本号
-相同但来源或架构不匹配的两套 Qt。Linux ARM64 进一步固定 CPython 3.12，并在
-配置时探测 void 返回值的引用所有权，拒绝 Shiboken 6.9.3 + pre-3.12 CPython
-这一会在持续 UI 调用后触发 `none_dealloc` 的组合。
+相同但来源或架构不匹配的两套 Qt。Linux ARM64 发布 CPython 3.12 和 3.13，
+并在配置时探测 void 返回值的引用所有权，拒绝 Shiboken 6.9.3 + pre-3.12
+CPython 这一会在持续 UI 调用后触发 `none_dealloc` 的组合。
 
 Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 现在会在分架构 policy
-image 中重新构建，只上传修复后的 manylinux wheel 与审计报告；x86_64 和 AArch64
-容器路径均已有完整 CI 证据。Foundation 作者 API 已在完整 CI run `31142098154`
-重新通过必需矩阵；在显式启用签名/上传门禁之前，不发布任何 wheel。
+image 中重新构建，只上传修复后的 manylinux wheel 与审计报告。此前六目标矩阵已在
+完整 CI run `31142098154` 通过；扩展后的 17-wheel 矩阵必须重新全绿后才能签名。
+在显式启用签名/上传门禁之前，不发布任何 wheel。Linux ARM64 CPython 3.11 上的
+PySide/Shiboken 6.11.1 作为首发后的兼容探针，不属于当前支持声明。
 
 ## 完成标准
 
