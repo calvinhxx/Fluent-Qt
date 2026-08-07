@@ -93,6 +93,8 @@ def validate_boundaries() -> list[str]:
         "actions: read",
         "name: Platform status / ${{ matrix.display_name }}",
         ".github/scripts/verify-pyside-platform-artifacts.py",
+        ".github/scripts/select-pyside-release-matrix.py",
+        "Prioritized representative scenarios:",
         "matrix.extended_acceptance == true",
         "fluentqt-pyside6-qt624-cp310-linux-x64",
         "fluentqt-pyside6-qt624-cp310-windows-x64",

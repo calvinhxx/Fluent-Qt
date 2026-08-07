@@ -93,6 +93,10 @@ reusable validation modules, and owns only the stable `CI Gate` and
   acceptance run on both Qt 6.2 gates and the lowest supported CPython lane
   for each platform/architecture. The module also owns
   [the wheel matrix](../../bindings/pyside6/wheel-matrix.json).
+  Full release scenarios are queued critical-path first: Windows ARM64 with
+  CPython 3.11 precedes the other extended-acceptance representatives, and
+  secondary CPython rows fill runner capacity afterward. This changes only
+  scheduling order; it does not reduce the supported or validated matrix.
 
 Do not add compiler, SDK, package-manager, wheel, or platform steps to the
 orchestrator. Add them to the owning reusable workflow and update its catalog.
