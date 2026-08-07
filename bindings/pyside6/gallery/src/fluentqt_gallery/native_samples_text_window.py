@@ -984,8 +984,7 @@ register_source_samples(
                     window = state["window"]
                     if window is not None:
                         window.showNormal()
-                        window.raise_()
-                        window.activateWindow()
+                        window.requestForegroundActivation()
                         status.setText("Focused")
                         return
                     window = fluentqt.Window()
@@ -1013,8 +1012,7 @@ register_source_samples(
                         center - QPoint(size.width() // 2, size.height() // 2)
                     )
                     window.show()
-                    window.raise_()
-                    window.activateWindow()
+                    window.requestForegroundActivation()
                     status.setText("Open")
 
                 launch.clicked.connect(open_window)
@@ -1058,8 +1056,7 @@ register_source_samples(
                     window = state["window"]
                     if window is not None:
                         window.showNormal()
-                        window.raise_()
-                        window.activateWindow()
+                        window.requestForegroundActivation()
                         status.setText("Focused")
                         return
                     window = fluentqt.Window()
@@ -1098,8 +1095,7 @@ register_source_samples(
                         center - QPoint(size.width() // 2, size.height() // 2)
                     )
                     window.show()
-                    window.raise_()
-                    window.activateWindow()
+                    window.requestForegroundActivation()
                     status.setText("Open")
 
                 launch.clicked.connect(open_window)
