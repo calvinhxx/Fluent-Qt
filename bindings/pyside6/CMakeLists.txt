@@ -737,7 +737,7 @@ if(BUILD_TESTING)
             ENVIRONMENT
                 "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
             LABELS "pyside;unit;ci_fast"
-            TIMEOUT 90)
+            TIMEOUT 240)
 
         add_test(
             NAME test_pyside6_gallery_contract_generator

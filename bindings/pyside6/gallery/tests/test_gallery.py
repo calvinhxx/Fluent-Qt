@@ -1850,7 +1850,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             drawer = result.widget._fluentqt_gallery_source_namespace[
                 "drawer"
             ]
-            expected_top = (
+            expected_available_top = (
                 TITLE_BAR_HEIGHT
                 if sys.platform == "darwin"
                 else 0
@@ -1859,7 +1859,10 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 drawer.availableMargins(),
                 drawer_title_bar_avoidance_margins(),
             )
-            self.assertEqual(drawer.availableMargins().top(), expected_top)
+            self.assertEqual(
+                drawer.availableMargins().top(),
+                expected_available_top,
+            )
             self.assertIn(
                 "drawer_title_bar_avoidance_margins()",
                 result.source,
@@ -1869,7 +1872,12 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             drawer.setAnimationEnabled(False)
             drawer.open()
             QApplication.processEvents()
-            self.assertEqual(drawer.geometry().top(), expected_top)
+            overlay_surface = window.property("fluentOverlaySurfaceRect")
+            self.assertIsInstance(overlay_surface, QRect)
+            self.assertEqual(
+                drawer.geometry().top(),
+                overlay_surface.top() + expected_available_top,
+            )
             if sys.platform == "darwin":
                 self.assertGreater(drawer.geometry().top(), 0)
         finally:
