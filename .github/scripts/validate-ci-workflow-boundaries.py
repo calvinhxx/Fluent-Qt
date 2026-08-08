@@ -152,10 +152,13 @@ def validate_boundaries() -> list[str]:
         "workflow_dispatch:",
         "name: Publish to TestPyPI",
         "name: Publish to PyPI",
-        "environment:\n      name: testpypi",
-        "environment:\n      name: pypi",
+        "environment:\n      name: ${{ matrix.environment_name }}",
         "uses: pypa/gh-action-pypi-publish@release/v1",
         "name: fluentqt-python-release-bundle",
+        "name: fluentqt-python-core-publish-candidate",
+        "name: fluentqt-python-gallery-publish-candidate",
+        "dist/fluentqt-*.whl",
+        "dist/fluentqt_gallery-*.whl",
         ".github/scripts/verify-python-package-index.py",
         "attestations: true",
         "skip-existing: ${{ inputs.recovery }}",
@@ -170,15 +173,36 @@ def validate_boundaries() -> list[str]:
         )
     if python_release.count("id-token: write") != 2:
         errors.append(
-            "python-release.yml must grant id-token: write to exactly two publish jobs"
+            "python-release.yml must grant id-token: write to exactly two matrix publish jobs"
         )
-    for job_id in ("publish_testpypi", "publish_pypi"):
+    publisher_contracts = {
+        "publish_testpypi": (
+            "environment_name: testpypi",
+            "environment_name: testpypi-gallery",
+        ),
+        "publish_pypi": (
+            "environment_name: pypi",
+            "environment_name: pypi-gallery",
+        ),
+    }
+    for job_id, environments in publisher_contracts.items():
         section = job_section(python_release, job_id)
         if not section:
             errors.append(f"python-release.yml is missing job {job_id}")
             continue
         if "id-token: write" not in section:
             errors.append(f"{job_id} must receive the short-lived OIDC permission")
+        for required in (
+            "distribution: FluentQt",
+            "distribution: FluentQt-Gallery",
+            "candidate_artifact: fluentqt-python-core-publish-candidate",
+            "candidate_artifact: fluentqt-python-gallery-publish-candidate",
+            "name: ${{ matrix.candidate_artifact }}",
+            "packages-dir: publisher-candidate/",
+            *environments,
+        ):
+            if required not in section:
+                errors.append(f"{job_id} is missing scoped publisher contract: {required}")
         for forbidden in ("actions/checkout", ".github/scripts/", "run:"):
             if forbidden in section:
                 errors.append(

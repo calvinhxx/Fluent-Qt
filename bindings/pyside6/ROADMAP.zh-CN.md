@@ -871,14 +871,16 @@ Wayland 验收不宣称实体观察到该可选 KWin/X11 效果，也不把它�
   metadata 漂移，最终只生成一个带 checksum 与来源 manifest 的 18-wheel bundle。
 - [x] 新增不保存 token、也不重新构建 wheel 的顶层 Trusted Publishing workflow。
   它会锁定所选提交对应的成功 full-CI bundle，校验 release branch / stable tag /
-  GitHub Release 身份，只给两个上传 job OIDC 权限，校验索引 hash，支持 hash 安全的
-  部分恢复，并执行 TestPyPI/PyPI 安装 smoke 与生产 attestation 验证；详见
+  GitHub Release 身份，只给两个按分发展开的矩阵上传 job OIDC 权限，并用独立
+  environment 将 Core 17 个 wheel 与 Gallery 1 个 wheel 绑定到互不歧义的
+  Pending Publisher 身份。它同时校验索引 hash，支持 hash 安全的部分恢复，并执行
+  TestPyPI/PyPI 安装 smoke 与生产 attestation 验证；详见
   `bindings/pyside6/PUBLISHING.md`。
 - [ ] 在最终未打 tag 的 `release/1.6.x` 提交上跑通完整 CI，生成唯一 `1.6.0`
   bundle，并记录 run、commit 与 manifest SHA-256。
-- [ ] 配置 `testpypi` 与需维护者审批的 `pypi` GitHub environment，并为
-  `FluentQt` / `FluentQt-Gallery` 注册四条 Trusted Publisher；仓库中不保存长期
-  package-index token。
+- [ ] 配置 Core/Gallery 各自的 `testpypi` / `pypi` GitHub environment（生产环境
+  均需维护者审批），并为 `FluentQt` / `FluentQt-Gallery` 注册四条互不歧义的
+  Trusted Publisher；仓库中不保存长期 package-index token。
 - [ ] 创建 tag 前，先把同一 bundle 上传 TestPyPI 并完成 hash、安装与 Gallery
   offscreen 验证。
 - [ ] 创建 annotated `v1.6.0`，发布非 draft GitHub Release，人工批准生产部署，
@@ -1235,7 +1237,8 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     唯一、可审计的 18-wheel bundle；单元测试覆盖正常路径，以及缺失、多余、版本
     错误、平台错误、hash 冲突和 Gallery 漂移。独立顶层 `python-release.yml` 只下载
     成功 full-CI artifact，不重新构建；它强制 TestPyPI 先于 annotated stable tag，
-    只给两个上传 job OIDC 权限，并验证 TestPyPI/PyPI hash、干净安装、部分恢复和
+    只给两个按分发展开的矩阵上传 job OIDC 权限，以独立 environment 避免两个新项目
+    共享 Pending Publisher 身份，并验证 TestPyPI/PyPI hash、干净安装、部分恢复和
     生产 attestation。项目与 Python API metadata 已准备到 `1.6.0`。M6 仍保持
     进行中，直到最终候选 full CI、四条 Trusted Publisher、TestPyPI run、稳定 tag /
     GitHub Release、获批的 PyPI run、attestation 与公开索引干净安装全部产生可记录
