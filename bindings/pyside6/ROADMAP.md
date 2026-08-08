@@ -1061,15 +1061,20 @@ physically observed. It is not a generic Linux compatibility gate.
 - [ ] Produce the canonical `1.6.0` bundle from a successful full CI run on the
   final untagged `release/1.6.x` commit and record its run, commit, and manifest
   SHA-256.
-- [ ] Configure package-specific `testpypi` and reviewer-gated `pypi` GitHub
+- [x] Configure package-specific `testpypi` and reviewer-gated `pypi` GitHub
   environments plus four unambiguous Trusted Publisher records for `FluentQt`
-  and `FluentQt-Gallery`, without any long-lived package-index token.
+  and `FluentQt-Gallery`, without any long-lived package-index token. The two
+  rehearsal environments accept `release/*`; the workflow still requires the
+  exact version-derived `release/X.Y.x` branch. Production remains limited to
+  `v*` tags with maintainer review, and administrator bypass is disabled on all
+  four environments.
 - [ ] Upload and verify that exact bundle on TestPyPI before creating the tag.
 - [ ] Create annotated `v1.6.0`, publish the non-draft GitHub Release, approve
   the production deployment, and upload the same 17+1 files to PyPI.
 - [ ] Verify all public file hashes and attestations, complete a clean public
   install of both distributions, record the three run IDs and project URLs,
-  then mark M6 complete and synchronize the tagged commit to `main`.
+  then mark M6 complete. The repository maintainer performs the final tagged
+  commit synchronization to `main` after reviewing the release content.
 
 Qt 6.2.4 remains the binding minimum, not the ARM64 wheel build version. The
 official PySide 6.2.4 release has no Linux or Windows ARM64 wheels, Linux ARM64
