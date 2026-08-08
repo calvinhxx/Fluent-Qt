@@ -6,9 +6,8 @@ packages and the C++ Qt SDK must use the same version; mixing Qt runtimes in
 one process is unsupported.
 This does not change the C++ library's Qt 5.15 support; PySide2/Shiboken2 are
 outside the scope of this binding target.
-See the compatibility roadmap
-([English](ROADMAP.md) · [简体中文](ROADMAP.zh-CN.md)) for the risk-ordered
-component, ownership, platform-validation, and wheel-release milestones.
+See the [compatibility roadmap](ROADMAP.md) for the risk-ordered component,
+ownership, platform-validation, and wheel-release milestones.
 The [PySide6 API compatibility policy](API_COMPATIBILITY.md) defines the
 package/API version contract, SemVer boundaries, and mandatory deprecation
 ledger.

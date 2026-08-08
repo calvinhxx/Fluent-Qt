@@ -525,7 +525,6 @@ jobs:
               bindings/pyside6/API_COMPATIBILITY.md \
               bindings/pyside6/MANYLINUX.md \
               bindings/pyside6/ROADMAP.md \
-              bindings/pyside6/ROADMAP.zh-CN.md \
               bindings/pyside6/examples/accordion_ownership.py \
               bindings/pyside6/examples/auto_suggest_box.py \
               bindings/pyside6/examples/breadcrumb_navigation.py \

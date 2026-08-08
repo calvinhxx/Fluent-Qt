@@ -1,7 +1,5 @@
 # PySide6 Compatibility Roadmap
 
-[简体中文](ROADMAP.zh-CN.md)
-
 This roadmap expands FluentQt's Python surface in risk-ordered milestones. It
 does not treat Python source portability as proof that the native `_fluentqt`
 extension is portable: every supported operating system, architecture, Qt

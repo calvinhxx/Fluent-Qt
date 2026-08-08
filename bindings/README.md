@@ -6,8 +6,7 @@ the library's Qt 5.15+ compatibility.
 
 - [`pyside6`](pyside6/) provides the Qt 6.2+ Python binding generated with
   Shiboken6. Its [roadmap](pyside6/ROADMAP.md) tracks component coverage,
-  ownership work, native-platform validation, and wheel release readiness;
-  a [Simplified Chinese version](pyside6/ROADMAP.zh-CN.md) is also available.
+  ownership work, native-platform validation, and wheel release readiness.
   The reusable `FluentQt` wheel and standalone pure-Python
   [`FluentQt-Gallery`](pyside6/gallery/) wheel are separate distributions. The
   [publishing runbook](pyside6/PUBLISHING.md) keeps both distributions tied to
