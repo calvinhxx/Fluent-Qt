@@ -38,17 +38,44 @@ def write_wheel(
     requirements: list[str],
     purelib: bool,
     marker: bytes = b"same Gallery payload",
+    description: str | None = None,
+    description_content_type: str = "text/markdown; charset=UTF-8; variant=GFM",
+    project_urls: tuple[tuple[str, str], ...] | None = None,
 ) -> None:
     normalized = distribution.lower().replace("-", "_")
     dist_info = f"{normalized}-{version}.dist-info"
+    if description is None:
+        description = (
+            f"# {distribution}\n\n"
+            "A complete release description used by the canonical bundle "
+            "contract. It explains installation, compatibility, package "
+            "contents, supported platforms, project links, validation, and "
+            "licensing so the Python Package Index never receives a blank "
+            "project page.\n"
+        )
+    if project_urls is None:
+        project_urls = tuple(
+            (label, f"https://example.invalid/{label.lower()}")
+            for label in sorted(ASSEMBLER.REQUIRED_PROJECT_URL_LABELS)
+        )
     metadata = (
-        "Metadata-Version: 2.1\n"
+        "Metadata-Version: 2.4\n"
         f"Name: {distribution}\n"
         f"Version: {version}\n"
-        "License: MIT\n"
+        "Summary: FluentQt release fixture\n"
+        "License-Expression: MIT\n"
+        "License-File: LICENSE\n"
+        "License-File: THIRD_PARTY_NOTICES.md\n"
+        "License-File: TRADEMARKS.md\n"
         f"Requires-Python: {ASSEMBLER.RELEASE_REQUIRES_PYTHON}\n"
         + "".join(f"Requires-Dist: {item}\n" for item in requirements)
+        + f"Description-Content-Type: {description_content_type}\n"
+        + "Classifier: Programming Language :: Python :: 3\n"
+        + "".join(
+            f"Project-URL: {label}, {url}\n" for label, url in project_urls
+        )
         + "\n"
+        + description
     ).encode("utf-8")
     wheel_metadata = (
         "Wheel-Version: 1.0\n"
@@ -212,6 +239,49 @@ class ReleaseBundleAssemblerTest(unittest.TestCase):
         )
 
         with self.assertRaisesRegex(ASSEMBLER.BundleError, "declares Version"):
+            self.assemble()
+
+    def test_blank_pypi_description_is_rejected(self):
+        scenario = next(
+            item for item in self.scenarios if item["platform"] == "windows"
+        )
+        write_wheel(
+            self.core_wheel(scenario),
+            distribution="FluentQt",
+            version=self.version,
+            tag=scenario["publish_wheel_suffix"],
+            requirements=[
+                f"PySide6-Essentials (=={scenario['pyside_version']})",
+                f"shiboken6 (=={scenario['shiboken_version']})",
+            ],
+            purelib=False,
+            description="",
+        )
+
+        with self.assertRaisesRegex(
+            ASSEMBLER.BundleError,
+            "complete Markdown description",
+        ):
+            self.assemble()
+
+    def test_missing_pypi_project_links_are_rejected(self):
+        scenario = next(
+            item for item in self.scenarios if item["platform"] == "windows"
+        )
+        write_wheel(
+            self.core_wheel(scenario),
+            distribution="FluentQt",
+            version=self.version,
+            tag=scenario["publish_wheel_suffix"],
+            requirements=[
+                f"PySide6-Essentials (=={scenario['pyside_version']})",
+                f"shiboken6 (=={scenario['shiboken_version']})",
+            ],
+            purelib=False,
+            project_urls=(("Homepage", "https://example.invalid"),),
+        )
+
+        with self.assertRaisesRegex(ASSEMBLER.BundleError, "Project-URL"):
             self.assemble()
 
     def test_manylinux_hash_conflict_is_rejected(self):

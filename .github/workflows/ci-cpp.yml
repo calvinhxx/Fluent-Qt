@@ -524,6 +524,7 @@ jobs:
               bindings/pyside6/cmake/FluentQtPySide6Gallery.cmake \
               bindings/pyside6/API_COMPATIBILITY.md \
               bindings/pyside6/MANYLINUX.md \
+              bindings/pyside6/PYPI.md \
               bindings/pyside6/ROADMAP.md \
               bindings/pyside6/examples/accordion_ownership.py \
               bindings/pyside6/examples/auto_suggest_box.py \

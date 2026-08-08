@@ -24,9 +24,10 @@ python-release-bundle/
 
 `.github/scripts/assemble-pyside-release-bundle.py` rejects compatibility-only
 CPython 3.10 wheels, raw `linux_*` wheels, missing or extra matrix entries,
-wrong package metadata, mismatched manylinux evidence, and non-identical
-Gallery wheels. The 17 build lanes must produce a byte-identical Gallery wheel;
-the bundle retains exactly one copy.
+wrong package metadata, missing PyPI Markdown descriptions or project links,
+mismatched manylinux evidence, and non-identical Gallery wheels. The 17 build
+lanes must produce a byte-identical Gallery wheel; the bundle retains exactly
+one copy.
 
 The manifest records the project version, source commit, originating full-CI
 run and attempt, every wheel hash, and every audit hash. TestPyPI and PyPI must
@@ -93,8 +94,8 @@ candidate: Core receives 17 wheels and Gallery receives one.
 
 1. Integrate the intended changes into `release/1.6.x`.
 2. Keep the CMake, vcpkg, documentation, Python API manifest, core wheel, and
-   Gallery wheel versions aligned at `1.6.0`.
-3. Review `docs/releases/v1.6.0.md` and the maintainer changelog.
+   Gallery wheel versions aligned at the intended `X.Y.Z` version.
+3. Review `docs/releases/vX.Y.Z.md` and the maintainer changelog.
 4. Run full CI on the untagged release commit:
 
    ```bash
@@ -108,7 +109,7 @@ candidate: Core receives 17 wheels and Gallery receives one.
    sha256sum python-release-manifest.json
    ```
 
-Do not create `v1.6.0` until the TestPyPI stage below succeeds.
+Do not create `vX.Y.Z` until the TestPyPI stage below succeeds.
 
 ## TestPyPI rehearsal
 
@@ -143,8 +144,8 @@ requires a new version; package-index files are immutable.
 Once TestPyPI succeeds, create the annotated tag from the same commit:
 
 ```bash
-git tag -a v1.6.0 -m "Release v1.6.0"
-git push origin v1.6.0
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin vX.Y.Z
 ```
 
 Wait for the existing C++ Release workflow to publish a non-draft stable
@@ -152,7 +153,7 @@ GitHub Release and its desktop packages. Then dispatch production publication:
 
 ```bash
 gh workflow run python-release.yml \
-  --ref v1.6.0 \
+  --ref vX.Y.Z \
   -f stage=pypi \
   -f recovery=false
 ```
@@ -175,12 +176,12 @@ Use recovery only when a production run uploaded some, but not all, files:
 
 ```bash
 gh workflow run python-release.yml \
-  --ref v1.6.0 \
+  --ref vX.Y.Z \
   -f stage=pypi \
   -f recovery=true
 ```
 
-Recovery first requires every existing PyPI file for `1.6.0` to be a subset of
+Recovery first requires every existing PyPI file for `X.Y.Z` to be a subset of
 the manifest with an identical SHA-256. Only then may the publish action skip
 existing files. Never use recovery to replace a file, upload a rebuilt wheel,
 or bypass TestPyPI.

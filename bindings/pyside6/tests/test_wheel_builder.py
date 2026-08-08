@@ -1,6 +1,7 @@
 """Tests for FluentQt wheel metadata helpers."""
 
 import importlib.util
+from email.parser import Parser
 from pathlib import Path
 import tempfile
 import unittest
@@ -94,11 +95,37 @@ class WheelBuilderTest(unittest.TestCase):
             "6.9.3",
             "6.9.3",
             ">=3.11,<3.14",
+            "# FluentQt\n\nNative PySide6 bindings for Fluent-Qt.",
+            ("LICENSE", "THIRD_PARTY_NOTICES.md", "TRADEMARKS.md"),
         )
 
         self.assertIn("Requires-Python: >=3.11,<3.14", metadata)
         self.assertIn("Requires-Dist: PySide6-Essentials (==6.9.3)", metadata)
         self.assertIn("Requires-Dist: shiboken6 (==6.9.3)", metadata)
+
+        parsed = Parser().parsestr(metadata)
+        self.assertEqual(parsed["Metadata-Version"], "2.4")
+        self.assertEqual(parsed["License-Expression"], "MIT")
+        self.assertEqual(
+            parsed["Description-Content-Type"],
+            "text/markdown; charset=UTF-8; variant=GFM",
+        )
+        self.assertEqual(
+            set(parsed.get_all("License-File", [])),
+            {"LICENSE", "THIRD_PARTY_NOTICES.md", "TRADEMARKS.md"},
+        )
+        self.assertIn("# FluentQt", parsed.get_payload())
+        self.assertIn(
+            "https://github.com/calvinhxx/Fluent-Qt",
+            "\n".join(parsed.get_all("Project-URL", [])),
+        )
+
+    def test_empty_pypi_description_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            description = Path(temporary) / "PYPI.md"
+            description.write_text(" \n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "must not be empty"):
+                WHEEL_BUILDER.read_markdown_description(description)
 
 
 if __name__ == "__main__":

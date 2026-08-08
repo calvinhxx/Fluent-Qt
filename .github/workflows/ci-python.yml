@@ -1612,6 +1612,14 @@ jobs:
             sha256sum --check PYTHON_SHA256SUMS.txt
           )
 
+      - name: Validate PyPI Markdown rendering
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install twine==7.0.0
+          python3 -m twine check \
+            "${RUNNER_TEMP}/fluentqt-python-release-bundle/dist/"*.whl
+
       - name: Summarize release bundle
         shell: bash
         run: |

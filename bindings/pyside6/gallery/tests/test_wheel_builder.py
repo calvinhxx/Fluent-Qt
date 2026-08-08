@@ -1,6 +1,7 @@
 """Tests for the standalone FluentQt Gallery wheel builder."""
 
 import importlib.util
+from email.parser import Parser
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
@@ -56,12 +57,18 @@ class GalleryWheelBuilderTest(unittest.TestCase):
                     b"{}" if path.suffix == ".json" else b"# test\n"
                 )
             output_dir = root / "wheelhouse"
+            description_file = root / "PYPI.md"
+            description_file.write_text(
+                "# FluentQt Gallery\n\nInstallable Python Gallery.",
+                encoding="utf-8",
+            )
             WHEEL_BUILDER.build_wheel(
                 SimpleNamespace(
                     package_dir=str(package_dir),
                     output_dir=str(output_dir),
                     version="1.5.0",
                     requires_python=">=3.11,<3.14",
+                    description_file=str(description_file),
                     license_file=[],
                 )
             )
@@ -80,8 +87,26 @@ class GalleryWheelBuilderTest(unittest.TestCase):
             self.assertFalse(any(name.startswith("fluentqt/") for name in names))
             self.assertIn("Requires-Dist: FluentQt (==1.5.0)", metadata)
             self.assertIn("Requires-Python: >=3.11,<3.14", metadata)
+            parsed = Parser().parsestr(metadata)
+            self.assertEqual(parsed["Metadata-Version"], "2.4")
+            self.assertEqual(
+                parsed["Description-Content-Type"],
+                "text/markdown; charset=UTF-8; variant=GFM",
+            )
+            self.assertIn("# FluentQt Gallery", parsed.get_payload())
+            self.assertIn(
+                "https://pypi.org/project/FluentQt/",
+                "\n".join(parsed.get_all("Project-URL", [])),
+            )
             self.assertIn("Root-Is-Purelib: true", wheel)
             self.assertIn("Tag: py3-none-any", wheel)
+
+    def test_empty_pypi_description_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            description = Path(temporary) / "PYPI.md"
+            description.write_text("\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "must not be empty"):
+                WHEEL_BUILDER.read_markdown_description(description)
 
 
 if __name__ == "__main__":

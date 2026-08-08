@@ -25,6 +25,18 @@ RELEASE_REQUIRES_PYTHON = ">=3.11,<3.14"
 CORE_DISTRIBUTION = "FluentQt"
 GALLERY_DISTRIBUTION = "FluentQt-Gallery"
 GALLERY_TAG = "py3-none-any"
+REQUIRED_PROJECT_URL_LABELS = {
+    "Changelog",
+    "Documentation",
+    "Homepage",
+    "Issues",
+    "Repository",
+}
+REQUIRED_LICENSE_FILES = {
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "TRADEMARKS.md",
+}
 COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 VERSION_PATTERN = re.compile(
     r"project\s*\(\s*FluentQt\s+VERSION\s+([0-9]+\.[0-9]+\.[0-9]+)",
@@ -136,6 +148,46 @@ def require_wheel_metadata(
         raise BundleError(
             f"wheel {wheel.name} must declare Requires-Python: "
             f"{RELEASE_REQUIRES_PYTHON}"
+        )
+    if metadata.get("Metadata-Version") != "2.4":
+        raise BundleError(
+            f"wheel {wheel.name} must use Core Metadata 2.4"
+        )
+    if metadata.get("License-Expression") != "MIT":
+        raise BundleError(
+            f"wheel {wheel.name} must declare License-Expression: MIT"
+        )
+    actual_license_files = set(metadata.get_all("License-File", []))
+    if actual_license_files != REQUIRED_LICENSE_FILES:
+        raise BundleError(
+            f"wheel {wheel.name} has unexpected License-File metadata: "
+            f"{sorted(actual_license_files)}"
+        )
+    content_type = metadata.get("Description-Content-Type", "")
+    if content_type.split(";", 1)[0].strip().lower() != "text/markdown":
+        raise BundleError(
+            f"wheel {wheel.name} must declare a Markdown description"
+        )
+    description = metadata.get_payload()
+    if not isinstance(description, str) or len(description.strip()) < 200:
+        raise BundleError(
+            f"wheel {wheel.name} must contain a complete Markdown description"
+        )
+    project_url_labels = set()
+    for value in metadata.get_all("Project-URL", []):
+        label, separator, url = value.partition(",")
+        if separator and url.strip().startswith("https://"):
+            project_url_labels.add(label.strip())
+    missing_project_urls = REQUIRED_PROJECT_URL_LABELS - project_url_labels
+    if missing_project_urls:
+        raise BundleError(
+            f"wheel {wheel.name} is missing Project-URL labels: "
+            f"{sorted(missing_project_urls)}"
+        )
+    classifiers = set(metadata.get_all("Classifier", []))
+    if "Programming Language :: Python :: 3" not in classifiers:
+        raise BundleError(
+            f"wheel {wheel.name} must declare its Python 3 classifier"
         )
     actual_requirements = set(metadata.get_all("Requires-Dist", []))
     if actual_requirements != requirements:

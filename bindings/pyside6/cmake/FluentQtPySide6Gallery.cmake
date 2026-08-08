@@ -188,12 +188,14 @@ add_custom_target(fluentqt_pyside6_gallery_wheel
         --output-dir "${FLUENTQT_PYSIDE6_GALLERY_WHEELHOUSE}"
         --version "${PROJECT_VERSION}"
         --requires-python "${FLUENT_QT_PYSIDE6_REQUIRES_PYTHON}"
+        --description-file "${CMAKE_CURRENT_SOURCE_DIR}/gallery/PYPI.md"
         --license-file "${PROJECT_SOURCE_DIR}/LICENSE"
         --license-file "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
         --license-file "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"
     DEPENDS
         ${FLUENTQT_PYSIDE6_GALLERY_SOURCE_PATHS}
         "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tools/build_gallery_wheel.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/gallery/PYPI.md"
         "${PROJECT_SOURCE_DIR}/LICENSE"
         "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
         "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"

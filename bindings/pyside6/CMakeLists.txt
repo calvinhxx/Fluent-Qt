@@ -486,12 +486,14 @@ add_custom_target(fluentqt_pyside6_wheel
         --pyside-version "${FLUENTQT_PYSIDE6_VERSION}"
         --shiboken-version "${FLUENTQT_SHIBOKEN6_VERSION}"
         --requires-python "${FLUENT_QT_PYSIDE6_REQUIRES_PYTHON}"
+        --description-file "${CMAKE_CURRENT_SOURCE_DIR}/PYPI.md"
         --license-file "${PROJECT_SOURCE_DIR}/LICENSE"
         --license-file "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
         --license-file "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"
     DEPENDS
         fluentqt_pyside6_stubs
         "${CMAKE_CURRENT_SOURCE_DIR}/tools/build_wheel.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/PYPI.md"
         "${PROJECT_SOURCE_DIR}/LICENSE"
         "${PROJECT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
         "${PROJECT_SOURCE_DIR}/TRADEMARKS.md"
