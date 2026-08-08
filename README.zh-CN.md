@@ -59,7 +59,7 @@ include(FetchContent)
 FetchContent_Declare(
     fluentqt
     GIT_REPOSITORY https://github.com/calvinhxx/Fluent-Qt.git
-    GIT_TAG v1.6.0
+    GIT_TAG v1.6.1
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(fluentqt)
@@ -274,6 +274,7 @@ python -m fluentqt_gallery
 - [架构约定](docs/architecture/README.md)
 - [设计语言参考](docs/design-languages/README.md)
 - [PySide6 绑定指南](bindings/pyside6/README.md)
+- [Fluent-Qt 1.6.1 发布说明](docs/releases/v1.6.1.md)
 - [Fluent-Qt 1.6.0 发布说明](docs/releases/v1.6.0.md)
 
 ## 🔗 参考
