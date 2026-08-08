@@ -162,6 +162,8 @@ def validate_boundaries() -> list[str]:
         ".github/scripts/verify-python-package-index.py",
         "attestations: true",
         "skip-existing: ${{ inputs.recovery }}",
+        "for discovery_attempt in {1..12}",
+        "Release evidence is not fully visible yet; retrying in 10 seconds.",
     ):
         if required not in python_release:
             errors.append(
