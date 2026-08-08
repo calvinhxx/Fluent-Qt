@@ -657,6 +657,61 @@ h3 {
   margin-top: 34px;
 }
 
+.hero-python-callout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  gap: 8px 10px;
+  margin-top: 18px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--hero-accent) 34%, transparent);
+  border-radius: 10px;
+  color: var(--hero-muted);
+  background: color-mix(in srgb, var(--white) 42%, transparent);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.hero-python-label {
+  color: var(--hero-accent);
+  font-weight: 700;
+}
+
+.hero-python-copy {
+  flex-basis: 100%;
+}
+
+.hero-python-install,
+.hero-python-gallery {
+  color: var(--hero-ink);
+  font-weight: 650;
+}
+
+.hero-python-install {
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--hero-ink) 18%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--white) 58%, transparent);
+}
+
+.hero-python-install code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.hero-python-gallery {
+  border-bottom: 1px solid color-mix(in srgb, var(--hero-ink) 36%, transparent);
+}
+
+.hero-python-install:hover,
+.hero-python-gallery:hover {
+  color: var(--hero-accent);
+  border-color: var(--hero-accent);
+}
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -1145,6 +1200,17 @@ h3 {
   border-color: var(--accent);
 }
 
+.quick-start-links {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  margin-top: 30px;
+}
+
+.quick-start-links .text-link {
+  margin-top: 0;
+}
+
 .code-panel {
   overflow: clip;
   min-width: 0;
@@ -1471,6 +1537,24 @@ h3 {
 .asset-links a:hover {
   color: var(--ink);
   background: var(--download-hover);
+}
+
+.python-release-row {
+  border-top: 1px solid var(--soft-line);
+  background: color-mix(in srgb, var(--panel) 42%, var(--white));
+}
+
+.python-release-row code {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 7px 10px;
+  border: 1px solid var(--soft-line);
+  border-radius: 7px;
+  color: var(--ink);
+  background: var(--white);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .site-footer {

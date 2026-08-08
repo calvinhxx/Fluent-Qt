@@ -6,13 +6,13 @@
     <title>Fluent-Qt — Qt Widgets 的 Fluent 控件库</title>
     <meta
       name="description"
-      content="Fluent-Qt 是面向 Qt Widgets 的跨平台 C++17 控件库，提供可运行的 Gallery、真实控件状态和可复制的示例。"
+      content="Fluent-Qt 是面向 Qt Widgets 的跨平台 C++17 控件库，并提供可选的 Python / PySide6 兼容层。"
     >
     <meta name="theme-color" content="#eef3f7">
     <meta property="og:title" content="Fluent-Qt">
     <meta
       property="og:description"
-      content="Fluent controls for Qt Widgets, with a runnable Gallery and copyable C++ examples."
+      content="A C++17 control library for Qt Widgets with optional Python / PySide6 compatibility."
     >
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/og.png">
@@ -23,7 +23,7 @@
     <meta name="twitter:title" content="Fluent-Qt">
     <meta
       name="twitter:description"
-      content="Fluent controls for Qt Widgets, with a runnable Gallery and copyable C++ examples."
+      content="A C++17 control library for Qt Widgets with optional Python / PySide6 compatibility."
     >
     <meta name="twitter:image" content="assets/og.png">
     <meta name="fluent-qt-cloudflare-token" content="faf445759813451ca2d7a0652139b292">
@@ -117,8 +117,8 @@
           <div class="hero-message">
             <img class="hero-app-icon" src="assets/app-icon.png" alt="" width="96" height="96">
             <h1 id="hero-title">Fluent-Qt</h1>
-            <p class="hero-tagline" data-i18n="hero.tagline">面向 Qt Widgets 的 Fluent 控件库</p>
-            <p class="hero-techline" aria-label="C++17, Qt 5.15 or Qt 6.2 and above, MIT">
+            <p class="hero-tagline" data-i18n="hero.tagline">面向 Qt Widgets 的 Fluent C++ 控件库</p>
+            <p class="hero-techline" aria-label="C++17、Qt 5.15 或 Qt 6.2 及以上、MIT" data-i18n-aria-label="a11y.heroTech">
               <strong>C++17</strong>
               <span aria-hidden="true">·</span>
               <span>Qt 5.15+ / 6.2+</span>
@@ -139,6 +139,14 @@
                 <span data-i18n="hero.quickStart">查看接入方式</span>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
               </a>
+            </div>
+            <div class="hero-python-callout">
+              <span class="hero-python-label" data-i18n="hero.pythonLabel">Python 兼容</span>
+              <span class="hero-python-copy" data-i18n="hero.pythonCopy">通过 PySide6 使用同一套 C++ 控件</span>
+              <a class="hero-python-install" href="https://pypi.org/project/FluentQt/" data-analytics-event="pypi_hero">
+                <code>pip install FluentQt</code>
+              </a>
+              <a class="hero-python-gallery" href="https://pypi.org/project/FluentQt-Gallery/" data-analytics-event="pypi_gallery_hero" data-i18n="hero.pythonGallery">Gallery</a>
             </div>
           </div>
 
@@ -287,12 +295,18 @@
         <div class="page-shell quick-start-grid">
           <div class="quick-start-copy" data-reveal>
             <p class="section-index">04 / QUICK START</p>
-            <h2 id="quick-start-title"><span data-i18n="quickStart.title">CMake 接入</span></h2>
-            <p data-i18n="quickStart.copy">支持 FetchContent、add_subdirectory 与 find_package</p>
-            <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/tree/main/examples/hello_world">
-              <span data-i18n="quickStart.example">查看完整 hello_world</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-            </a>
+            <h2 id="quick-start-title"><span data-i18n="quickStart.title">快速接入</span></h2>
+            <p data-i18n="quickStart.copy">C++ 使用 CMake；Python / PySide6 通过 PyPI 安装</p>
+            <div class="quick-start-links">
+              <a class="text-link" href="https://github.com/calvinhxx/Fluent-Qt/tree/main/examples/hello_world">
+                <span data-i18n="quickStart.example">查看完整 hello_world</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+              <a class="text-link" href="https://pypi.org/project/FluentQt/" data-analytics-event="pypi_quick_start">
+                <span data-i18n="quickStart.python">Python / PySide6 · pip install FluentQt</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+            </div>
           </div>
 
           <article class="code-panel" data-reveal data-reveal-delay="100">
@@ -393,6 +407,19 @@ target_link_libraries(
               <a data-release-asset="macArm" href="https://github.com/calvinhxx/Fluent-Qt/releases/latest">macOS ARM64</a>
               <a data-release-asset="linuxX64" href="https://github.com/calvinhxx/Fluent-Qt/releases/latest">Linux x64</a>
               <a data-release-asset="linuxArm" href="https://github.com/calvinhxx/Fluent-Qt/releases/latest">Linux ARM64</a>
+            </div>
+
+            <div class="release-row python-release-row">
+              <span>
+                <small data-i18n="downloads.pythonEyebrow">可选兼容</small>
+                <strong>Python / PySide6</strong>
+              </span>
+              <code>python -m pip install FluentQt</code>
+            </div>
+
+            <div class="asset-links">
+              <a href="https://pypi.org/project/FluentQt/">FluentQt · PyPI</a>
+              <a href="https://pypi.org/project/FluentQt-Gallery/" data-i18n="downloads.pythonGallery">Python Gallery</a>
             </div>
           </div>
         </div>
