@@ -13,8 +13,7 @@ represent supported patch lines, not Git Flow release branches.
   Keep it releasable, but do not use it for routine post-release development.
 - `release/<major>.<minor>.x` branches are long-lived patch lines. The highest
   active version is the normal working branch for features, fixes, CI,
-  packaging, documentation, and other maintenance. The current working branch
-  is `release/1.4.x`.
+  packaging, documentation, and other maintenance.
 - Commit routine single-maintainer changes directly to the latest long-lived
   release branch after appropriate validation. Do not create a short-lived
   `feat/*`, `fix/*`, `docs/*`, `ci/*`, or `chore/*` branch by default. Keeping
@@ -24,6 +23,9 @@ represent supported patch lines, not Git Flow release branches.
 - Cut `vX.Y.Z` tags from the matching `release/X.Y.x` branch. After publishing
   the latest stable release, fast-forward or rebase-merge that released commit
   into `main`; create the next long-lived minor line from the updated `main`.
+- Pushing a stable tag starts the public release workflow even when the release
+  branch has not yet been synchronized to `main`. Treat tag creation as the
+  publication boundary and obtain explicit maintainer approval first.
 - Create a temporary branch only when explicitly needed for external review,
   contributor work, or risky isolation. Rebase-merge it to keep history linear,
   then delete it promptly.
@@ -199,7 +201,10 @@ The GitHub Release workflow publishes notes from this generator with
 
 Before creating a stable tag:
 
-1. Confirm `main` contains the intended release commits.
+1. Confirm the matching `release/X.Y.x` branch contains the intended release
+   commit and the maintainer has explicitly approved making the version public.
+   Synchronize the published commit to `main` afterward unless the maintainer
+   deliberately chooses to promote it first.
 2. Confirm the worktree is clean.
 3. Confirm the CMake project version matches the intended tag.
 4. Run the supported CI build/test matrix for the release, normally
