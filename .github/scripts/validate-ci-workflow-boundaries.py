@@ -164,6 +164,8 @@ def validate_boundaries() -> list[str]:
         "skip-existing: ${{ inputs.recovery }}",
         "for discovery_attempt in {1..12}",
         "Release evidence is not fully visible yet; retrying in 10 seconds.",
+        'candidate_name" != "CI full"',
+        'candidate_path" != ".github/workflows/ci.yml"',
     ):
         if required not in python_release:
             errors.append(

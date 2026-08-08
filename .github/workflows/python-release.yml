@@ -126,11 +126,13 @@ jobs:
               )"
               candidate_sha="$(jq -r '.head_sha' <<< "$candidate_json")"
               candidate_name="$(jq -r '.name' <<< "$candidate_json")"
+              candidate_path="$(jq -r '.path' <<< "$candidate_json")"
               candidate_status="$(jq -r '.status' <<< "$candidate_json")"
               candidate_conclusion="$(jq -r '.conclusion' <<< "$candidate_json")"
               candidate_attempt="$(jq -r '.run_attempt' <<< "$candidate_json")"
               if [[ "$candidate_sha" != "$source_commit" ||
-                    "$candidate_name" != "CI" ||
+                    "$candidate_name" != "CI full" ||
+                    "$candidate_path" != ".github/workflows/ci.yml" ||
                     "$candidate_status" != "completed" ||
                     "$candidate_conclusion" != "success" ||
                     ! "$candidate_attempt" =~ ^[1-9][0-9]*$ ]]; then
