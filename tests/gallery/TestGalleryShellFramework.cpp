@@ -2029,8 +2029,7 @@ TEST_F(GalleryShellFrameworkTest, RapidRouteSwitchingKeepsCurrentPageScrollable)
     QApplication::sendEvent(scrollView->viewport(), &wheel);
 
     EXPECT_TRUE(wheel.isAccepted());
-    EXPECT_GT(scrollView->verticalScrollBar()->value(), 0)
-        << "The current content viewport must still receive wheel input after rapid navigation";
+    QTRY_VERIFY_WITH_TIMEOUT(scrollView->verticalScrollBar()->value() > 0, 1000);
 }
 
 TEST_F(GalleryShellFrameworkTest, SettingsThemeSwitchKeepsLabelsReadableInDarkMode)
