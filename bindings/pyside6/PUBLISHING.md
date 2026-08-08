@@ -44,14 +44,21 @@ Create these GitHub deployment environments:
 
 | Environment | Deployment branch/tag policy | Approval |
 |---|---|---|
-| `testpypi` | Selected branch `release/1.6.x` | Optional for the rehearsal |
-| `testpypi-gallery` | Selected branch `release/1.6.x` | Optional for the rehearsal |
+| `testpypi` | Selected branches matching `release/*` | Optional for the rehearsal |
+| `testpypi-gallery` | Selected branches matching `release/*` | Optional for the rehearsal |
 | `pypi` | Protected tags matching `v*` | Required reviewer: repository maintainer |
 | `pypi-gallery` | Protected tags matching `v*` | Required reviewer: repository maintainer |
 
 For a single-maintainer repository, leave **Prevent self-review** disabled on
 both production environments. Otherwise the only maintainer cannot approve the
-two production deployment jobs.
+two production deployment jobs. Disable administrator bypass on all four
+environments so that the branch/tag and reviewer rules cannot be skipped.
+
+The `release/*` environment policy is intentionally reusable across release
+lines. The workflow applies the narrower check dynamically: a project version
+of `1.6.z` must run from `release/1.6.x`, `1.7.z` must run from
+`release/1.7.x`, and so on. A mismatched release branch is rejected before any
+publisher job receives an OIDC token.
 
 The package-specific environments are intentional. PyPI rejects two pending
 projects that use the same owner/repository/workflow/environment identity,
@@ -189,6 +196,7 @@ Record the following in both roadmaps before marking M6 complete:
 - SHA-256 of `python-release-manifest.json`;
 - successful public-index clean-install and attestation verification.
 
-Finally synchronize the tagged release commit to `main` following release
-governance and delete the temporary `python-sup` branch. The Qt 6.2.4 /
-CPython 3.10 lanes remain non-published compatibility gates.
+After reviewing the final release content, the repository maintainer explicitly
+authorizes and performs synchronization of the tagged release commit to `main`
+following release governance. Then delete the temporary `python-sup` branch.
+The Qt 6.2.4 / CPython 3.10 lanes remain non-published compatibility gates.

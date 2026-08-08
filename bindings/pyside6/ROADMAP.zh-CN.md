@@ -878,15 +878,18 @@ Wayland 验收不宣称实体观察到该可选 KWin/X11 效果，也不把它�
   `bindings/pyside6/PUBLISHING.md`。
 - [ ] 在最终未打 tag 的 `release/1.6.x` 提交上跑通完整 CI，生成唯一 `1.6.0`
   bundle，并记录 run、commit 与 manifest SHA-256。
-- [ ] 配置 Core/Gallery 各自的 `testpypi` / `pypi` GitHub environment（生产环境
+- [x] 配置 Core/Gallery 各自的 `testpypi` / `pypi` GitHub environment（生产环境
   均需维护者审批），并为 `FluentQt` / `FluentQt-Gallery` 注册四条互不歧义的
-  Trusted Publisher；仓库中不保存长期 package-index token。
+  Trusted Publisher；仓库中不保存长期 package-index token。两个演练环境接受
+  `release/*`，工作流仍强制使用由版本推导出的精确 `release/X.Y.x` 分支；生产
+  环境仅接受 `v*` tag，四个环境均已关闭管理员绕过。
 - [ ] 创建 tag 前，先把同一 bundle 上传 TestPyPI 并完成 hash、安装与 Gallery
   offscreen 验证。
 - [ ] 创建 annotated `v1.6.0`，发布非 draft GitHub Release，人工批准生产部署，
   再把完全相同的 17+1 文件上传 PyPI。
 - [ ] 验证所有公开文件 hash 与 attestation，在全新环境从公开索引安装两个分发，
-  记录三个 run ID 和项目 URL，之后才能把 M6 标为完成并将 tag 提交同步回 `main`。
+  记录三个 run ID 和项目 URL，之后才能把 M6 标为完成。最终 tag 提交同步回
+  `main` 由仓库维护者审阅发布内容后亲自执行。
 
 Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官方 PySide 6.2.4
 没有 Linux/Windows ARM64 wheel，Linux ARM64 的 Qt/PySide 6.9.3 二进制还要求
