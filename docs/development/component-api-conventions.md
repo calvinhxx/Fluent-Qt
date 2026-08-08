@@ -31,6 +31,16 @@ APIs under `src/components/**`.
 - Views and host components should keep caller-owned content caller-owned. Do
   not move application page choice, item composition, model ownership, or
   navigation routing into a reusable component just to normalize APIs.
+- Hosted `QWidget` APIs that record `WidgetOwnership` use these names
+  consistently:
+
+  | API | Lifetime contract |
+  | --- | --- |
+  | `remove*()` / `take*()` | Detach and transfer the widget to the caller without applying the recorded ownership policy. |
+  | `release*()` | Apply the recorded policy: destroy `Owned`, detach `Borrowed`, or restore the original parent for `Reparented`. |
+
+  Keep legacy transfer behavior source-compatible; add a distinct `release*()`
+  API instead of repurposing an existing removal method.
 - Specialized Qt bases are acceptable when they carry essential behavior, such
   as item views, scroll bars, dialogs, or line edits.
 
