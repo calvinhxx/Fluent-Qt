@@ -288,30 +288,56 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload FluentQt publisher candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-python-core-publish-candidate
+          path: ${{ runner.temp }}/fluentqt-python-publish-candidate/dist/fluentqt-*.whl
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload FluentQt Gallery publisher candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-python-gallery-publish-candidate
+          path: ${{ runner.temp }}/fluentqt-python-publish-candidate/dist/fluentqt_gallery-*.whl
+          if-no-files-found: error
+          retention-days: 7
+
   publish_testpypi:
-    name: Publish to TestPyPI
+    name: Publish to TestPyPI / ${{ matrix.distribution }}
     needs: [preflight, prepare]
     if: ${{ needs.preflight.outputs.stage == 'testpypi' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distribution: FluentQt
+            candidate_artifact: fluentqt-python-core-publish-candidate
+            environment_name: testpypi
+          - distribution: FluentQt-Gallery
+            candidate_artifact: fluentqt-python-gallery-publish-candidate
+            environment_name: testpypi-gallery
     environment:
-      name: testpypi
-      url: https://test.pypi.org/project/FluentQt/${{ needs.preflight.outputs.version }}/
+      name: ${{ matrix.environment_name }}
+      url: https://test.pypi.org/project/${{ matrix.distribution }}/${{ needs.preflight.outputs.version }}/
     permissions:
       actions: read
       id-token: write
     steps:
-      - name: Download vetted publication candidate
+      - name: Download publisher-scoped candidate
         uses: actions/download-artifact@v4
         with:
-          name: fluentqt-python-publish-candidate
-          path: fluentqt-python-publish-candidate
+          name: ${{ matrix.candidate_artifact }}
+          path: publisher-candidate
 
-      - name: Publish signed wheels to TestPyPI
+      - name: Publish signed ${{ matrix.distribution }} wheels to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          packages-dir: fluentqt-python-publish-candidate/dist/
+          packages-dir: publisher-candidate/
           verify-metadata: true
           skip-existing: true
           print-hash: true
@@ -399,28 +425,38 @@ jobs:
           retention-days: 30
 
   publish_pypi:
-    name: Publish to PyPI
+    name: Publish to PyPI / ${{ matrix.distribution }}
     needs: [preflight, prepare]
     if: ${{ needs.preflight.outputs.stage == 'pypi' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distribution: FluentQt
+            candidate_artifact: fluentqt-python-core-publish-candidate
+            environment_name: pypi
+          - distribution: FluentQt-Gallery
+            candidate_artifact: fluentqt-python-gallery-publish-candidate
+            environment_name: pypi-gallery
     environment:
-      name: pypi
-      url: https://pypi.org/project/FluentQt/${{ needs.preflight.outputs.version }}/
+      name: ${{ matrix.environment_name }}
+      url: https://pypi.org/project/${{ matrix.distribution }}/${{ needs.preflight.outputs.version }}/
     permissions:
       actions: read
       id-token: write
     steps:
-      - name: Download vetted publication candidate
+      - name: Download publisher-scoped candidate
         uses: actions/download-artifact@v4
         with:
-          name: fluentqt-python-publish-candidate
-          path: fluentqt-python-publish-candidate
+          name: ${{ matrix.candidate_artifact }}
+          path: publisher-candidate
 
-      - name: Publish signed wheels to PyPI
+      - name: Publish signed ${{ matrix.distribution }} wheels to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: fluentqt-python-publish-candidate/dist/
+          packages-dir: publisher-candidate/
           verify-metadata: true
           skip-existing: ${{ inputs.recovery }}
           print-hash: true

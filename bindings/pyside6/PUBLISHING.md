@@ -45,25 +45,42 @@ Create these GitHub deployment environments:
 | Environment | Deployment branch/tag policy | Approval |
 |---|---|---|
 | `testpypi` | Selected branch `release/1.6.x` | Optional for the rehearsal |
+| `testpypi-gallery` | Selected branch `release/1.6.x` | Optional for the rehearsal |
 | `pypi` | Protected tags matching `v*` | Required reviewer: repository maintainer |
+| `pypi-gallery` | Protected tags matching `v*` | Required reviewer: repository maintainer |
 
 For a single-maintainer repository, leave **Prevent self-review** disabled on
-the `pypi` environment. Otherwise the only maintainer cannot approve the
-production deployment.
+both production environments. Otherwise the only maintainer cannot approve the
+two production deployment jobs.
+
+The package-specific environments are intentional. PyPI rejects two pending
+projects that use the same owner/repository/workflow/environment identity,
+because that identity would be ambiguous when it creates a project for the
+first time. After the projects exist, one publisher may technically authorize
+multiple projects, but retaining separate identities keeps first publication
+and later releases consistent and limits each short-lived token to one
+distribution.
 
 Register four Trusted Publisher records, one for each distribution and index:
 
 | Index | PyPI project | Owner | Repository | Workflow | Environment |
 |---|---|---|---|---|---|
 | TestPyPI | `FluentQt` | `calvinhxx` | `Fluent-Qt` | `python-release.yml` | `testpypi` |
-| TestPyPI | `FluentQt-Gallery` | `calvinhxx` | `Fluent-Qt` | `python-release.yml` | `testpypi` |
+| TestPyPI | `FluentQt-Gallery` | `calvinhxx` | `Fluent-Qt` | `python-release.yml` | `testpypi-gallery` |
 | PyPI | `FluentQt` | `calvinhxx` | `Fluent-Qt` | `python-release.yml` | `pypi` |
-| PyPI | `FluentQt-Gallery` | `calvinhxx` | `Fluent-Qt` | `python-release.yml` | `pypi` |
+| PyPI | `FluentQt-Gallery` | `calvinhxx` | `Fluent-Qt` | `python-release.yml` | `pypi-gallery` |
+
+If the `FluentQt` pending records were already registered with `testpypi` and
+`pypi`, keep them. Add only the two Gallery environments and register the two
+Gallery records with the `-gallery` environment names. Do not delete and
+recreate a valid Core record.
 
 Use pending publishers when a project does not yet exist. Do not add a PyPI or
 TestPyPI API token to repository, organization, or environment secrets. Only
-the two upload jobs receive `id-token: write`; they do not checkout source or
-execute repository scripts.
+the two matrix upload job definitions receive `id-token: write`; each expands
+to package-scoped Core and Gallery jobs. They do not checkout source or execute
+repository scripts. Both jobs download subsets of the same verified 18-wheel
+candidate: Core receives 17 wheels and Gallery receives one.
 
 ## Prepare a release candidate
 
@@ -136,7 +153,8 @@ gh workflow run python-release.yml \
 Production preflight rejects a lightweight or prerelease tag, version drift,
 a different TestPyPI/full-CI commit, an unpublished GitHub Release, an
 incomplete TestPyPI file set, or an existing production version. The upload
-job then pauses at the `pypi` environment for maintainer approval.
+jobs then pause at the `pypi` and `pypi-gallery` environments for maintainer
+approval. Both must be approved before the complete release can be verified.
 
 After approval, the official PyPI publish action uploads the same 18 files
 through OIDC Trusted Publishing and creates attestations. Verification checks

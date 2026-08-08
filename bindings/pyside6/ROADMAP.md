@@ -1053,15 +1053,17 @@ physically observed. It is not a generic Linux compatibility gate.
 - [x] Add a top-level, token-free Trusted Publishing workflow that never
   rebuilds wheels. It resolves the successful full-CI bundle for the selected
   commit, enforces release-branch/stable-tag/GitHub-Release identity, limits
-  OIDC permission to the two upload jobs, verifies index hashes, supports
-  hash-safe partial recovery, and runs TestPyPI/PyPI install smoke plus
-  production attestation verification; see `bindings/pyside6/PUBLISHING.md`.
+  OIDC permission to two distribution-matrix upload jobs, and binds the 17 Core
+  wheels and one Gallery wheel to unambiguous package-specific environments.
+  It verifies index hashes, supports hash-safe partial recovery, and runs
+  TestPyPI/PyPI install smoke plus production attestation verification; see
+  `bindings/pyside6/PUBLISHING.md`.
 - [ ] Produce the canonical `1.6.0` bundle from a successful full CI run on the
   final untagged `release/1.6.x` commit and record its run, commit, and manifest
   SHA-256.
-- [ ] Configure the `testpypi` and reviewer-gated `pypi` GitHub environments
-  plus four Trusted Publisher records for `FluentQt` and `FluentQt-Gallery`,
-  without any long-lived package-index token.
+- [ ] Configure package-specific `testpypi` and reviewer-gated `pypi` GitHub
+  environments plus four unambiguous Trusted Publisher records for `FluentQt`
+  and `FluentQt-Gallery`, without any long-lived package-index token.
 - [ ] Upload and verify that exact bundle on TestPyPI before creating the tag.
 - [ ] Create annotated `v1.6.0`, publish the non-draft GitHub Release, approve
   the production deployment, and upload the same 17+1 files to PyPI.
@@ -1510,8 +1512,9 @@ ledger, and highest-numbered record for the current state.
     wrong-platform, hash-conflict, and Gallery-drift failures. A separate
     top-level `python-release.yml` downloads that successful full-CI artifact
     instead of rebuilding, enforces TestPyPI before an annotated stable tag,
-    grants OIDC only to the two upload jobs, and verifies TestPyPI/PyPI hashes,
-    clean installs, partial recovery, and production attestations. Project and
+    grants OIDC only to two distribution-matrix upload jobs with separate Core
+    and Gallery environments, and verifies TestPyPI/PyPI hashes, clean installs,
+    partial recovery, and production attestations. Project and
     Python API metadata are prepared for `1.6.0`. M6 remains in progress until
     the final candidate full CI, four Trusted Publisher records, TestPyPI run,
     stable tag/GitHub Release, approved PyPI run, attestations, and public-index
