@@ -200,3 +200,31 @@ After reviewing the final release content, the repository maintainer explicitly
 authorizes and performs synchronization of the tagged release commit to `main`
 following release governance. Then delete the temporary `python-sup` branch.
 The Qt 6.2.4 / CPython 3.10 lanes remain non-published compatibility gates.
+
+### v1.6.0 closure record
+
+M6 closed with this immutable release chain:
+
+- source commit: `e2523ded0d0ae664321b0f2d1d8dd59a1cf0be7c`;
+- full CI: [run 31251091780](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31251091780),
+  producing 17 Core wheels, one Gallery wheel, and five Linux audit reports;
+- release-manifest SHA-256:
+  `b015b48abe1a43955530f2e5c6f0046c3c136a78f55694ed0981385155585f94`;
+- TestPyPI: [run 31252283807](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31252283807),
+  with all 17+1 files hash-verified before tag creation in
+  [FluentQt 1.6.0](https://test.pypi.org/project/FluentQt/1.6.0/) and
+  [FluentQt-Gallery 1.6.0](https://test.pypi.org/project/FluentQt-Gallery/1.6.0/);
+- annotated tag and non-draft GitHub Release:
+  [`v1.6.0`](https://github.com/calvinhxx/Fluent-Qt/releases/tag/v1.6.0),
+  published by [run 31252452593](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31252452593);
+- reviewer-approved PyPI Trusted Publishing:
+  [run 31252873846](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31252873846);
+- public projects: [FluentQt 1.6.0](https://pypi.org/project/FluentQt/1.6.0/)
+  and [FluentQt-Gallery 1.6.0](https://pypi.org/project/FluentQt-Gallery/1.6.0/).
+
+The production workflow verified exact public-index file hashes, all 18
+repository-bound attestations, and a clean Linux CPython 3.11 installation of
+both distributions. An independent macOS ARM64 CPython 3.11 installation from
+public PyPI also passed `pip check`, UILib wheel smoke, and standalone Gallery
+wheel smoke. Synchronization to `main` remains a separate, explicit maintainer
+action; the release workflow did not perform it.

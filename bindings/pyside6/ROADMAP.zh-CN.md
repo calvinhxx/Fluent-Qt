@@ -53,14 +53,14 @@ wheel 使用 6.9.3 而暗中移除 6.2.4 源码/构建基线。
 | M4 — 模型与导航 | 已完成 | 计划内 model/navigation 组件已覆盖 Python model/delegate、虚函数分派、选择与生命周期 |
 | M4.5 — Foundation 作者 API | 已完成 | `FluentWidget`、`bind()`、`StateGroup`、`AnchorLayout`/`anchors()` 已通过本机 Qt 6.9.3、Linux/Windows Qt 6.2.4 最低线、六目标发布 wheel 与完整 CI 回归 |
 | M5 — Overlay 与原生窗口 | 已完成 | 自动化 XCB/Wayland/Windows/Cocoa、实体 Windows 11 DWM，以及非 headless Ubuntu 22.04 ARM64 GNOME Wayland 已覆盖材质、如实 fallback、系统 move/resize 与代表性 overlay |
-| M6 — 可发布 Python 分发 | 进行中 | API/类型治理、17 个原生 wheel、五份 manylinux 审计、兼容门禁、独立 Gallery、唯一 18-wheel bundle 契约和两阶段 Trusted Publishing workflow 均已实现。完成仍需 1.6.0 候选完整 CI、publisher/environment 配置、TestPyPI 演练、稳定 tag、PyPI 上传、attestation 与公开索引干净安装 |
+| M6 — 可发布 Python 分发 | 已完成 | `1.6.0` 已通过唯一 18-wheel bundle、TestPyPI 演练、annotated tag/GitHub Release、人工审批 PyPI Trusted Publishing、公开 hash/attestation 与两个分发的干净安装验证 |
 
 ## 公共 API 覆盖台账
 
 下表是组件覆盖的事实来源。不能因为当前小批次的复选框全部完成，就把整个里程碑
 标记完成；每个公开组件都必须完成绑定，或保留明确的边界决策。M0 至 M4 已完成该
 审计。当前 manifest 记录了 87 个必需类、值类型及支持类型、13 个枚举、16 个函数和 2 个版本变量；
-M4.5、M5 已完成；M6 的发布边界继续在下表及对应章节中记录。
+M4.5、M5、M6 均已完成；M6 章节保留 `1.6.0` 的精确发布证据。
 
 | 分类 | 已绑定 | 剩余边界 |
 |---|---|---|
@@ -876,20 +876,25 @@ Wayland 验收不宣称实体观察到该可选 KWin/X11 效果，也不把它�
   Pending Publisher 身份。它同时校验索引 hash，支持 hash 安全的部分恢复，并执行
   TestPyPI/PyPI 安装 smoke 与生产 attestation 验证；详见
   `bindings/pyside6/PUBLISHING.md`。
-- [ ] 在最终未打 tag 的 `release/1.6.x` 提交上跑通完整 CI，生成唯一 `1.6.0`
-  bundle，并记录 run、commit 与 manifest SHA-256。
+- [x] 完整 CI run `31251091780` 已在提交
+  `e2523ded0d0ae664321b0f2d1d8dd59a1cf0be7c` 上生成唯一 `1.6.0`
+  18-wheel bundle；manifest SHA-256 为
+  `b015b48abe1a43955530f2e5c6f0046c3c136a78f55694ed0981385155585f94`。
 - [x] 配置 Core/Gallery 各自的 `testpypi` / `pypi` GitHub environment（生产环境
   均需维护者审批），并为 `FluentQt` / `FluentQt-Gallery` 注册四条互不歧义的
   Trusted Publisher；仓库中不保存长期 package-index token。两个演练环境接受
   `release/*`，工作流仍强制使用由版本推导出的精确 `release/X.Y.x` 分支；生产
   环境仅接受 `v*` tag，四个环境均已关闭管理员绕过。
-- [ ] 创建 tag 前，先把同一 bundle 上传 TestPyPI 并完成 hash、安装与 Gallery
+- [x] 创建 tag 前，TestPyPI workflow run `31252283807` 已上传并校验同一 bundle
+  的 17 个 Core wheel 与一份逐字节一致的 Gallery wheel，并完成安装与 Gallery
   offscreen 验证。
-- [ ] 创建 annotated `v1.6.0`，发布非 draft GitHub Release，人工批准生产部署，
-  再把完全相同的 17+1 文件上传 PyPI。
-- [ ] 验证所有公开文件 hash 与 attestation，在全新环境从公开索引安装两个分发，
-  记录三个 run ID 和项目 URL，之后才能把 M6 标为完成。最终 tag 提交同步回
-  `main` 由仓库维护者审阅发布内容后亲自执行。
+- [x] 已创建 annotated `v1.6.0`；run `31252452593` 发布非 draft GitHub Release，
+  run `31252873846` 经人工批准后把完全相同的 17+1 文件上传 PyPI。
+- [x] 已验证全部公开文件 hash 和 18 份 PyPI attestation，并在干净 Linux
+  CPython 3.11 与独立 macOS ARM64 CPython 3.11 环境从公开索引安装两个分发。
+  项目地址为 [FluentQt 1.6.0](https://pypi.org/project/FluentQt/1.6.0/) 与
+  [FluentQt-Gallery 1.6.0](https://pypi.org/project/FluentQt-Gallery/1.6.0/)。
+  后续同步 `main` 仍由仓库维护者控制，不属于 Python 分发完成门禁。
 
 Qt 6.2.4 仍是绑定最低版本，而不是 ARM64 wheel 的构建版本：官方 PySide 6.2.4
 没有 Linux/Windows ARM64 wheel，Linux ARM64 的 Qt/PySide 6.9.3 二进制还要求
@@ -899,12 +904,15 @@ glibc 2.39，因此该 lane 使用 `ubuntu-24.04-arm`。Windows ARM64 使用从 
 并在配置时探测 void 返回值的引用所有权，拒绝 Shiboken 6.9.3 + pre-3.12
 CPython 这一会在持续 UI 调用后触发 `none_dealloc` 的组合。
 
-Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 现在会在分架构 policy
-image 中重新构建，只上传修复后的 manylinux wheel 与审计报告。扩展后的 17-wheel
-矩阵已在提交 `e031677` 的完整 CI run `31156212793` 中通过全部 34 个 job，包括两条
-Qt 6.2.4 兼容门禁、五个 manylinux 构建/审计、CI Gate 与 Release ready。bundle 与
-发布 workflow 已实现，但在配置 GitHub environment/Trusted Publisher 并完成
-TestPyPI-before-tag 流程前不会发布 wheel。Linux ARM64 CPython 3.11 上的
+Linux 原生 smoke 产物仍保留 `linux_*` 标签。发布 workflow 会在分架构 policy
+image 中重新构建，只上传修复后的 manylinux wheel 与审计报告。最终候选完整 CI
+run `31251091780` 从提交 `e2523ded0d0ae664321b0f2d1d8dd59a1cf0be7c`
+生成唯一 bundle；TestPyPI run `31252283807` 在创建 annotated `v1.6.0` 前验证
+完整 17+1 文件。随后 GitHub Release run `31252452593` 与经人工审批的 PyPI run
+`31252873846` 发布同一批文件。公开索引严格得到 17 个 Core 文件和 1 个 Gallery
+文件，hash 均与 manifest 一致；18 份 attestation 均验证到本仓库和
+`python-release.yml`，公开 wheel 干净安装 smoke 通过。M6 已完成。Linux ARM64
+CPython 3.11 上的
 PySide/Shiboken 6.11.1 作为首发后的兼容探针，不属于当前支持声明。
 
 ## 完成标准
@@ -934,8 +942,8 @@ Windows 上的确认。
 3. **发布完成**：M6 完成；明确 CPython/操作系统/架构矩阵，提供类型存根、
    API 兼容和弃用规则，并发布经过干净环境验证的 wheel。
 
-当前 M0 至 M5 已完成，计划内 Python API 已达到功能完整；达到发布完成仍需完成
-M6 的候选 bundle、TestPyPI、tag、PyPI、attestation 与公开索引干净安装门禁。
+当前 M0 至 M6 均已完成：计划内 Python API 已达到功能完整，`1.6.0` 两个分发也已
+通过候选 bundle、TestPyPI、tag、PyPI、attestation 与公开索引干净安装门禁。
 
 因此，本项目只有达到第三层，才称为“Python 支持完成并可正式发布”。这不包含
 PySide2、Qt 5 Python 绑定，也不要求 Python 重写 C++ 绘制逻辑；Python 使用的
@@ -1246,3 +1254,13 @@ workflow run 会按计划删除；重写后保留的最终 full CI 是当前分�
     进行中，直到最终候选 full CI、四条 Trusted Publisher、TestPyPI run、稳定 tag /
     GitHub Release、获批的 PyPI run、attestation 与公开索引干净安装全部产生可记录
     的收尾证据。
+50. 以不可变的 `1.6.0` 发布链关闭 M6。完整 CI run `31251091780` 从提交
+    `e2523ded0d0ae664321b0f2d1d8dd59a1cf0be7c` 生成唯一 18-wheel bundle，
+    manifest SHA-256 为
+    `b015b48abe1a43955530f2e5c6f0046c3c136a78f55694ed0981385155585f94`。
+    TestPyPI run `31252283807` 在创建 annotated `v1.6.0` 前发布并验证完整
+    17+1 文件；GitHub Release run `31252452593` 发布非 draft 桌面/源码版本；
+    经人工审批的 PyPI run `31252873846` 发布完全相同的 Python 文件、验证全部
+    公开 hash 与 attestation，并通过 Linux 干净安装 smoke。另在独立 macOS ARM64
+    CPython 3.11 环境从公开 PyPI 安装后通过 `pip check`、UILib smoke 和独立
+    Gallery smoke。同步 `main` 仍是 M6 门禁之外、由维护者明确执行的动作。
