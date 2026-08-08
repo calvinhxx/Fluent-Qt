@@ -1,5 +1,3 @@
-"""Minimal PySide6 application mirroring examples/hello_world/main.cpp."""
-
 import sys
 
 import fluentqt
@@ -7,7 +5,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 from fluentqt.basicinput import Button
 from fluentqt.windowing import Window
-
 
 def main() -> int:
     fluentqt.prepare_high_dpi_application()
@@ -32,7 +29,6 @@ def main() -> int:
     window.setContentWidget(content)
     window.show()
     return app.exec()
-
 
 if __name__ == "__main__":
     sys.exit(main())

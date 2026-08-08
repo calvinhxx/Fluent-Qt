@@ -20,6 +20,7 @@
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
+  <a href="https://pypi.org/project/FluentQt/"><img alt="PyPI" src="https://img.shields.io/pypi/v/FluentQt?color=3776AB"></a>
 </p>
 
 <p align="center">
@@ -30,14 +31,14 @@
 
 | Scope | Dependencies |
 |---|---|
-| FluentQt library | C++17, CMake 3.16+, Qt Widgets |
-| Optional PySide6 bindings | Python 3.10+, FluentQt, matching Qt/PySide6/Shiboken6 6.2+ |
-| Gallery | FluentQt, Qt Network, spdlog/fmt |
+| FluentQt C++ library | C++17, CMake 3.16+, Qt Widgets 5.15+ or 6.2+ |
+| C++ Gallery | FluentQt, Qt Network, spdlog/fmt |
 | Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
+| Optional PySide6 bindings | Qt 6.2+; Python 3.10+ for source builds |
 
 ## 🚀 Quick Start
 
-### Integration
+### C++ integration
 
 | Integration | CMake |
 |---|---|
@@ -101,100 +102,99 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 If FluentQt is outside the system search path, configure with `-DCMAKE_PREFIX_PATH=/path/to/fluentqt`.
 
-### Minimal example
+### C++ minimal example
 
 `main.cpp`:
 
 ```cpp
 #include <FluentQt/FluentQt.h>
+
 #include <QApplication>
-#include <QString>
+#include <QVBoxLayout>
+#include <QWidget>
 
 int main(int argc, char* argv[])
 {
     fluent::prepareHighDpiApplication();
     QApplication app(argc, argv);
     fluent::initializeResources();
+    app.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());
 
-    fluent::basicinput::Button button(QStringLiteral("Hello FluentQt"));
-    button.show();
+    fluent::windowing::Window window;
+    window.setWindowTitle(QStringLiteral("FluentQt Hello World"));
+    window.resize(480, 320);
+
+    auto* content = new QWidget;
+    auto* layout = new QVBoxLayout(content);
+    layout->setContentsMargins(32, 32, 32, 32);
+
+    auto* button = new fluent::basicinput::Button(
+        QStringLiteral("Hello from FluentQt"), content);
+    button->setFluentStyle(fluent::basicinput::Button::Accent);
+    layout->addStretch();
+    layout->addWidget(button, 0, Qt::AlignCenter);
+    layout->addStretch();
+
+    window.setContentWidget(content);
+    window.show();
     return app.exec();
 }
 ```
 
-FluentQt follows the operating system display scale through Qt. Keep application
-geometry in device-independent coordinates and do not add a second app-level multiplier.
-
 See [`examples/hello_world`](examples/hello_world/) for the complete project, or run the `fluentqt_hello_world` target directly from an IDE.
 
-### PySide6
+### Optional Python compatibility
 
-The optional Python bindings support matching Qt, PySide6, Shiboken6, and
-Shiboken6 generator versions from 6.2 onward. Qt/PySide 6.2.4 is the minimum
-CI baseline. The C++ library continues to support Qt 5.15; the Python target
-does not add PySide2 bindings.
+The PySide6 compatibility layer exposes Fluent-Qt's native C++ widgets to
+Python through Shiboken6.
+
+```bash
+python -m pip install FluentQt
+```
 
 ```python
+import sys
+
 import fluentqt
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from fluentqt.basicinput import Button
+from fluentqt.windowing import Window
 
-fluentqt.prepare_high_dpi_application()
-app = QApplication([])
-fluentqt.initialize_resources()
-app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
+def main() -> int:
+    fluentqt.prepare_high_dpi_application()
+    app = QApplication(sys.argv)
+    fluentqt.initialize_resources()
+    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
 
-window = fluentqt.Window()
-window.setWindowTitle("FluentQt Hello World")
-window.resize(480, 320)
+    window = Window()
+    window.setWindowTitle("FluentQt Hello World")
+    window.resize(480, 320)
 
-content = QWidget()
-layout = QVBoxLayout(content)
-layout.setContentsMargins(32, 32, 32, 32)
-button = fluentqt.Button("Hello from FluentQt", content)
-button.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)
-layout.addStretch()
-layout.addWidget(button, 0, Qt.AlignCenter)
-layout.addStretch()
+    content = QWidget()
+    layout = QVBoxLayout(content)
+    layout.setContentsMargins(32, 32, 32, 32)
 
-window.setContentWidget(content)
-window.show()
-app.exec()
+    button = Button("Hello from FluentQt", content)
+    button.setFluentStyle(Button.ButtonStyle.Accent)
+    layout.addStretch()
+    layout.addWidget(button, 0, Qt.AlignCenter)
+    layout.addStretch()
+
+    window.setContentWidget(content)
+    window.show()
+    return app.exec()
+
+if __name__ == "__main__":
+    sys.exit(main())
 ```
 
 See [`bindings/pyside6/examples/hello_world`](bindings/pyside6/examples/hello_world/)
-for the single Python Hello World, structured to mirror the C++ example.
+for the complete Python example.
 
-The current binding set includes 87 public classes, value types, and embedded
-support types from Basic Input, Collections, Date & Time, Dialogs & Flyouts,
-Layout, Menus & Toolbars, Navigation, Scrolling, Text Fields, Status & Info,
-and Windowing. It also exposes Light/Dark mode, Fluent/Material/macOS style
-presets, accent overrides, typography scaling, Qt properties and signals, and
-Python subclassing. See the
-[PySide6 binding guide](bindings/pyside6/README.md) for the exact 6.2.4 setup,
-API scope, generated `.pyi` type stubs, wheel target, and clean-environment
-validation commands. Runtime and API versions are exposed as
-`fluentqt.__version__` and `fluentqt.__api_version__`; see the
-[API compatibility policy](bindings/pyside6/API_COMPATIBILITY.md),
-[manylinux release policy](bindings/pyside6/MANYLINUX.md), and
-[compatibility roadmap](bindings/pyside6/ROADMAP.md) for release governance.
-
-The standalone pure-Python `FluentQt-Gallery` wheel depends on the exact
-matching `FluentQt` wheel and is generated against the C++ Gallery contract:
-12 categories, the same 88 ordered routes, 67 component pages, and all 199
-native SampleCards. Its routed components plus 20 embedded support types cover
-the complete 87-type public manifest. Every card builds a live public-API
-preview; generic fallback previews fail acceptance. The app mirrors the native
-Gallery shell and page archetypes, while keeping demo source and artwork out of
-the reusable UILib distribution:
-
-```bash
-python -m fluentqt_gallery
-```
-
-Use `python -m fluentqt_gallery --verify-catalog --walk-routes` for a
-deterministic 88-route/199-sample integration check; add `--snapshot <png>` and
-`--report <json>` to retain review evidence.
+Python support targets Qt 6. See the
+[PySide6 binding guide](bindings/pyside6/README.md) for supported wheels,
+source builds, API coverage, and validation.
 
 ## 🛠 Build
 
@@ -221,7 +221,7 @@ cmake --build build/fluentqt --target fluent_qt_source_package
 
 Gallery is used to browse, demonstrate, and validate FluentQt components.
 
-### Release packages
+### C++ Gallery packages
 
 Download the Gallery for the required platform, Qt version, and architecture from [GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest):
 
@@ -231,7 +231,7 @@ Download the Gallery for the required platform, Qt version, and architecture fro
 | macOS | 5.15.2 | 6.9.3 | 6.9.3 | `.dmg` |
 | Linux | 5.15 | 6.2.4 | 6.2.4 | `.deb` |
 
-### Run locally
+### Run the C++ Gallery locally
 
 | Platform | x64 preset | ARM64 preset |
 |---|---|---|
@@ -246,7 +246,7 @@ cmake --preset PRESET
 cmake --build --preset PRESET --target fluent_qt_gallery --parallel
 ```
 
-### Package locally
+### Package the C++ Gallery locally
 
 | Platform | x64 packaging preset | ARM64 packaging preset | Format |
 |---|---|---|---|
@@ -256,18 +256,28 @@ cmake --build --preset PRESET --target fluent_qt_gallery --parallel
 
 See the [Packaging Workflow](docs/development/packaging-workflow.md) for exact local packaging commands.
 
+### Python compatibility Gallery
+
+The Python Gallery is available from
+[PyPI](https://pypi.org/project/FluentQt-Gallery/).
+
+```bash
+python -m pip install FluentQt-Gallery
+python -m fluentqt_gallery
+```
+
+`FluentQt-Gallery` installs the matching `FluentQt` version automatically.
+
 ## 📚 Documentation
 
 - [Development workflow](docs/development/README.md)
-- [PySide6 binding guide](bindings/pyside6/README.md)
-- [PySide6 API compatibility policy](bindings/pyside6/API_COMPATIBILITY.md)
-- [PySide6 manylinux release policy](bindings/pyside6/MANYLINUX.md)
-- [PySide6 compatibility roadmap](bindings/pyside6/ROADMAP.md)
 - [Testing and visual review](docs/development/testing-workflow.md)
 - [Packaging workflow](docs/development/packaging-workflow.md)
 - [Release governance](docs/development/release-governance.md)
 - [Architecture contracts](docs/architecture/README.md)
 - [Design language references](docs/design-languages/README.md)
+- [PySide6 binding guide](bindings/pyside6/README.md)
+- [Fluent-Qt 1.6.0 release notes](docs/releases/v1.6.0.md)
 
 ## 🔗 References
 
@@ -277,18 +287,6 @@ See the [Packaging Workflow](docs/development/packaging-workflow.md) for exact l
 | [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS style reference |
 | [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 style reference |
 | [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | Component behavior and sample page reference |
-
-## ⭐ Star History
-
-<p align="center">
-  <a href="https://www.star-history.com/?type=date&amp;repos=calvinhxx%2FFluent-Qt">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=calvinhxx/Fluent-Qt&amp;type=date&amp;theme=dark&amp;legend=top-left&amp;sealed_token=5uu92EgOlUC9-xsiTo-jtgWIXlpuwyqUZv6T-OkI3i98eXHmX-twtcffxg0vsJQXdrSnhu52jkCJzQppzhC2AYUlcT3Hz4FZ-Li9V9ymhCzitOQIVPP5lZyhAdBK1BVDbLtDVH3GbLHt_AotSiZFR-MMOamnvCxTC9CiYzgQQs8vqXNFLzt2cgYSPEjk">
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=calvinhxx/Fluent-Qt&amp;type=date&amp;legend=top-left&amp;sealed_token=5uu92EgOlUC9-xsiTo-jtgWIXlpuwyqUZv6T-OkI3i98eXHmX-twtcffxg0vsJQXdrSnhu52jkCJzQppzhC2AYUlcT3Hz4FZ-Li9V9ymhCzitOQIVPP5lZyhAdBK1BVDbLtDVH3GbLHt_AotSiZFR-MMOamnvCxTC9CiYzgQQs8vqXNFLzt2cgYSPEjk">
-      <img alt="Fluent-Qt Star History Chart" src="https://api.star-history.com/chart?repos=calvinhxx/Fluent-Qt&amp;type=date&amp;legend=top-left&amp;sealed_token=5uu92EgOlUC9-xsiTo-jtgWIXlpuwyqUZv6T-OkI3i98eXHmX-twtcffxg0vsJQXdrSnhu52jkCJzQppzhC2AYUlcT3Hz4FZ-Li9V9ymhCzitOQIVPP5lZyhAdBK1BVDbLtDVH3GbLHt_AotSiZFR-MMOamnvCxTC9CiYzgQQs8vqXNFLzt2cgYSPEjk">
-    </picture>
-  </a>
-</p>
 
 ## License
 
