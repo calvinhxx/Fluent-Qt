@@ -23,6 +23,27 @@ SUPPORTED_REQUIRES_PYTHON = {
     ">=3.10,<3.11",
     ">=3.11,<3.14",
 }
+PROJECT_URLS = (
+    ("Homepage", "https://calvinhxx.github.io/Fluent-Qt/"),
+    ("Documentation", "https://github.com/calvinhxx/Fluent-Qt#readme"),
+    ("Repository", "https://github.com/calvinhxx/Fluent-Qt"),
+    ("Issues", "https://github.com/calvinhxx/Fluent-Qt/issues"),
+    ("Changelog", "https://github.com/calvinhxx/Fluent-Qt/releases"),
+    ("Library", "https://pypi.org/project/FluentQt/"),
+)
+CLASSIFIERS = (
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: User Interfaces",
+)
 REQUIRED_PACKAGE_FILES = {
     "__init__.py",
     "__main__.py",
@@ -63,6 +84,73 @@ def validate_requires_python(value):
             "Unsupported Requires-Python policy: {0}".format(value)
         )
     return value
+
+
+def normalized_markdown_description(value):
+    description = value.strip()
+    if not description:
+        raise RuntimeError("PyPI Markdown description must not be empty")
+    return description + "\n"
+
+
+def read_markdown_description(path):
+    description_path = Path(path).resolve()
+    if not description_path.is_file():
+        raise RuntimeError(
+            "PyPI Markdown description does not exist: {0}".format(
+                description_path
+            )
+        )
+    try:
+        contents = description_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        raise RuntimeError(
+            "Cannot read PyPI Markdown description {0}: {1}".format(
+                description_path,
+                error,
+            )
+        )
+    return normalized_markdown_description(contents)
+
+
+def metadata_contents(version, requires_python, description, license_files=()):
+    requires_python = validate_requires_python(requires_python)
+    description = normalized_markdown_description(description)
+    project_urls = "".join(
+        "Project-URL: {0}, {1}\n".format(label, url)
+        for label, url in PROJECT_URLS
+    )
+    classifiers = "".join(
+        "Classifier: {0}\n".format(classifier)
+        for classifier in CLASSIFIERS
+    )
+    license_metadata = "".join(
+        "License-File: {0}\n".format(name) for name in license_files
+    )
+    headers = (
+        "Metadata-Version: 2.4\n"
+        "Name: {distribution}\n"
+        "Version: {version}\n"
+        "Summary: Installable Gallery for the FluentQt PySide6 bindings\n"
+        "Author: calvinhxx\n"
+        "License-Expression: MIT\n"
+        "Keywords: Qt,PySide6,Fluent Design,WinUI,Gallery\n"
+        "Requires-Python: {requires_python}\n"
+        "Requires-Dist: FluentQt (=={version})\n"
+        "Description-Content-Type: text/markdown; charset=UTF-8; variant=GFM\n"
+        "{project_urls}"
+        "{classifiers}"
+        "{license_metadata}"
+        "\n"
+    ).format(
+        distribution=DISTRIBUTION_NAME,
+        version=version,
+        requires_python=requires_python,
+        project_urls=project_urls,
+        classifiers=classifiers,
+        license_metadata=license_metadata,
+    )
+    return headers + description
 
 
 def package_files(package_dir):
@@ -130,20 +218,17 @@ def build_wheel(args):
 
     files = package_files(package_dir)
     dist_info = DIST_INFO_NAME.format(version=args.version)
-    requires_python = validate_requires_python(args.requires_python)
-    metadata = (
-        "Metadata-Version: 2.1\n"
-        "Name: {distribution}\n"
-        "Version: {version}\n"
-        "Summary: Standalone Gallery for the FluentQt PySide6 widget library\n"
-        "License: MIT\n"
-        "Requires-Python: {requires_python}\n"
-        "Requires-Dist: FluentQt (=={version})\n"
-        "\n"
-    ).format(
-        distribution=DISTRIBUTION_NAME,
-        version=args.version,
-        requires_python=requires_python,
+    license_paths = [Path(name).resolve() for name in args.license_file]
+    for license_path in license_paths:
+        if not license_path.is_file():
+            raise RuntimeError(
+                "License file does not exist: {0}".format(license_path)
+            )
+    metadata = metadata_contents(
+        args.version,
+        args.requires_python,
+        read_markdown_description(args.description_file),
+        tuple(path.name for path in license_paths),
     )
     wheel_metadata = (
         "Wheel-Version: 1.0\n"
@@ -155,12 +240,7 @@ def build_wheel(args):
     files["{0}/METADATA".format(dist_info)] = metadata.encode("utf-8")
     files["{0}/WHEEL".format(dist_info)] = wheel_metadata.encode("utf-8")
 
-    for license_name in args.license_file:
-        license_path = Path(license_name).resolve()
-        if not license_path.is_file():
-            raise RuntimeError(
-                "License file does not exist: {0}".format(license_path)
-            )
+    for license_path in license_paths:
         archive_path = "{0}/licenses/{1}".format(dist_info, license_path.name)
         files[archive_path] = license_path.read_bytes()
 
@@ -192,6 +272,7 @@ def parse_args():
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--requires-python", required=True)
+    parser.add_argument("--description-file", required=True)
     parser.add_argument("--license-file", action="append", default=[])
     return parser.parse_args()
 
