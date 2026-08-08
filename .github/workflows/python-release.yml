@@ -103,59 +103,63 @@ jobs:
             exit 1
           fi
 
-          mapfile -t check_urls < <(
-            gh api \
-              "repos/$GITHUB_REPOSITORY/commits/$source_commit/check-runs?per_page=100" \
-              --jq \
-                '.check_runs |
-                 map(select(.name == "Release ready" and
-                            .status == "completed" and
-                            .conclusion == "success")) |
-                 sort_by(.completed_at) | reverse | .[].details_url'
-          )
-          if (( ${#check_urls[@]} == 0 )); then
-            echo "::error::No successful Release ready check exists for $source_commit."
-            exit 1
-          fi
-
           ci_run_id=""
           ci_run_attempt=""
-          for details_url in "${check_urls[@]}"; do
-            if [[ ! "$details_url" =~ /actions/runs/([0-9]+) ]]; then
-              continue
-            fi
-            candidate_run="${BASH_REMATCH[1]}"
-            candidate_json="$(
-              gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run"
-            )"
-            candidate_sha="$(jq -r '.head_sha' <<< "$candidate_json")"
-            candidate_name="$(jq -r '.name' <<< "$candidate_json")"
-            candidate_status="$(jq -r '.status' <<< "$candidate_json")"
-            candidate_conclusion="$(jq -r '.conclusion' <<< "$candidate_json")"
-            candidate_attempt="$(jq -r '.run_attempt' <<< "$candidate_json")"
-            if [[ "$candidate_sha" != "$source_commit" ||
-                  "$candidate_name" != "CI" ||
-                  "$candidate_status" != "completed" ||
-                  "$candidate_conclusion" != "success" ||
-                  ! "$candidate_attempt" =~ ^[1-9][0-9]*$ ]]; then
-              continue
-            fi
-            artifact_count="$(
+          for discovery_attempt in {1..12}; do
+            mapfile -t check_urls < <(
               gh api \
-                "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run/artifacts?per_page=100" \
+                "repos/$GITHUB_REPOSITORY/commits/$source_commit/check-runs?per_page=100" \
                 --jq \
-                  '[.artifacts[] |
-                    select(.name == "fluentqt-python-release-bundle" and
-                           .expired == false)] | length'
-            )"
-            if [[ "$artifact_count" == "1" ]]; then
-              ci_run_id="$candidate_run"
-              ci_run_attempt="$candidate_attempt"
+                  '.check_runs |
+                   map(select(.name == "Release ready" and
+                              .status == "completed" and
+                              .conclusion == "success")) |
+                   sort_by(.completed_at) | reverse | .[].details_url'
+            )
+            for details_url in "${check_urls[@]}"; do
+              if [[ ! "$details_url" =~ /actions/runs/([0-9]+) ]]; then
+                continue
+              fi
+              candidate_run="${BASH_REMATCH[1]}"
+              candidate_json="$(
+                gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run"
+              )"
+              candidate_sha="$(jq -r '.head_sha' <<< "$candidate_json")"
+              candidate_name="$(jq -r '.name' <<< "$candidate_json")"
+              candidate_status="$(jq -r '.status' <<< "$candidate_json")"
+              candidate_conclusion="$(jq -r '.conclusion' <<< "$candidate_json")"
+              candidate_attempt="$(jq -r '.run_attempt' <<< "$candidate_json")"
+              if [[ "$candidate_sha" != "$source_commit" ||
+                    "$candidate_name" != "CI" ||
+                    "$candidate_status" != "completed" ||
+                    "$candidate_conclusion" != "success" ||
+                    ! "$candidate_attempt" =~ ^[1-9][0-9]*$ ]]; then
+                continue
+              fi
+              artifact_count="$(
+                gh api \
+                  "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run/artifacts?per_page=100" \
+                  --jq \
+                    '[.artifacts[] |
+                      select(.name == "fluentqt-python-release-bundle" and
+                             .expired == false)] | length'
+              )"
+              if [[ "$artifact_count" == "1" ]]; then
+                ci_run_id="$candidate_run"
+                ci_run_attempt="$candidate_attempt"
+                break
+              fi
+            done
+            if [[ -n "$ci_run_id" ]]; then
               break
+            fi
+            if (( discovery_attempt < 12 )); then
+              echo "::notice::Release evidence is not fully visible yet; retrying in 10 seconds."
+              sleep 10
             fi
           done
           if [[ -z "$ci_run_id" ]]; then
-            echo "::error::No successful full CI run produced the canonical Python release bundle."
+            echo "::error::No successful full CI run and canonical Python release bundle became visible within 120 seconds."
             exit 1
           fi
 
