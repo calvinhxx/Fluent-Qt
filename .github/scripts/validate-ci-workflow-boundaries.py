@@ -13,8 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 
 EXPECTED_JOBS = {
-    "ci.yml": {"plan", "cpp", "python", "ci-gate", "release-ready"},
+    "ci.yml": {"plan", "cpp", "python", "wasm", "ci-gate", "release-ready"},
     "ci-cpp.yml": {"plan", "build", "integration"},
+    "ci-wasm.yml": {"build"},
     "ci-python.yml": {
         "plan",
         "pyside6_linux",
@@ -32,6 +33,7 @@ EXPECTED_JOBS = {
         "publish_pypi",
         "verify_pypi",
     },
+    "pages.yml": {"wasm", "deploy"},
 }
 
 
@@ -76,29 +78,72 @@ def validate_boundaries() -> list[str]:
 
     orchestrator = contents["ci.yml"]
     cpp = contents["ci-cpp.yml"]
+    wasm = contents["ci-wasm.yml"]
     python = contents["ci-python.yml"]
     python_release = contents["python-release.yml"]
+    pages = contents["pages.yml"]
 
     if len(orchestrator.splitlines()) > 260:
         errors.append("ci.yml must remain a compact orchestration-only workflow")
     for required in (
         "uses: ./.github/workflows/ci-cpp.yml",
         "uses: ./.github/workflows/ci-python.yml",
+        "uses: ./.github/workflows/ci-wasm.yml",
         "name: CI Gate",
         "name: Release ready",
         "actions: read",
     ):
         if required not in orchestrator:
             errors.append(f"ci.yml is missing orchestration contract: {required}")
-    for forbidden in ("cmake --build", "install-qt-action", "PySide6==", "vcpkg-"):
+    for forbidden in (
+        "cmake --build",
+        "install-qt-action",
+        "PySide6==",
+        "vcpkg-",
+        "emsdk",
+        "playwright",
+    ):
         if forbidden in orchestrator:
             errors.append(f"ci.yml contains module implementation detail: {forbidden}")
 
-    for name, module in (("ci-cpp.yml", cpp), ("ci-python.yml", python)):
+    for name, module in (
+        ("ci-cpp.yml", cpp),
+        ("ci-python.yml", python),
+        ("ci-wasm.yml", wasm),
+    ):
         if "workflow_call:" not in module:
             errors.append(f"{name} must be a reusable workflow")
         if "needs.plan.outputs.should_build" in module:
             errors.append(f"{name} must not depend on orchestrator classification outputs")
+
+    for required in (
+        "Qt 6.9.3 / Emscripten 3.1.70",
+        "wasm_singlethread",
+        "aqtinstall==3.3.0",
+        "playwright==1.58.0",
+        "cmake --preset wasm",
+        "cmake --build --preset wasm --parallel",
+        "Verify installed FluentQt WebAssembly consumer",
+        "build/wasm-installed-consumer",
+        ".github/scripts/run-wasm-browser-smoke.py",
+        ".github/scripts/stage-wasm-pages.py",
+        "name: fluentqt-wasm-pages",
+    ):
+        if required not in wasm:
+            errors.append(f"ci-wasm.yml is missing browser validation contract: {required}")
+    for forbidden in ("VCPKG_ROOT", "PySide6==", "shiboken6_generator=="):
+        if forbidden in wasm:
+            errors.append(f"ci-wasm.yml contains unrelated module detail: {forbidden}")
+
+    for required in (
+        "uses: ./.github/workflows/ci-wasm.yml",
+        "mode: full",
+        "name: fluentqt-wasm-pages",
+        "path: build/pages",
+        "needs: wasm",
+    ):
+        if required not in pages:
+            errors.append(f"pages.yml is missing WebAssembly deployment contract: {required}")
 
     if ".github/ci-cpp-matrix.json" not in cpp:
         errors.append("ci-cpp.yml must own the C++ matrix catalog")

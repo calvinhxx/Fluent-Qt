@@ -15,16 +15,18 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ClassifyCiChangesTest(unittest.TestCase):
-    def assert_classification(self, paths, *, native, pyside):
+    def assert_classification(self, paths, *, native, pyside, wasm):
         result = MODULE.classify_changes(paths)
         self.assertEqual(result.should_build, native)
         self.assertEqual(result.should_build_pyside, pyside)
+        self.assertEqual(result.should_build_wasm, wasm)
 
     def test_documentation_only_skips_all_builds(self):
         self.assert_classification(
             ["README.md", "docs/development/testing-workflow.md", "site/index.html"],
             native=False,
             pyside=False,
+            wasm=False,
         )
 
     def test_library_change_runs_both_matrices(self):
@@ -32,6 +34,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             ["src/components/basicinput/Button.cpp"],
             native=True,
             pyside=True,
+            wasm=True,
         )
 
     def test_binding_change_runs_both_matrices(self):
@@ -39,6 +42,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             ["bindings/pyside6/native/typesystem_fluentqt.xml"],
             native=True,
             pyside=True,
+            wasm=False,
         )
 
     def test_gallery_asset_change_runs_pyside_matrix(self):
@@ -46,6 +50,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             ["app/assets/control_images/Button.png"],
             native=True,
             pyside=True,
+            wasm=True,
         )
 
     def test_native_test_only_change_skips_pyside_matrix(self):
@@ -53,6 +58,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             ["tests/components/basicinput/TestButton.cpp"],
             native=True,
             pyside=False,
+            wasm=False,
         )
 
     def test_unrelated_workflow_change_skips_pyside_matrix(self):
@@ -60,6 +66,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             [".github/workflows/site.yml"],
             native=True,
             pyside=False,
+            wasm=False,
         )
 
     def test_ci_workflow_change_runs_pyside_matrix(self):
@@ -67,6 +74,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             [".github/workflows/ci.yml"],
             native=True,
             pyside=True,
+            wasm=True,
         )
 
     def test_python_module_change_runs_pyside_matrix(self):
@@ -74,6 +82,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             [".github/workflows/ci-python.yml"],
             native=True,
             pyside=True,
+            wasm=False,
         )
 
     def test_cpp_module_change_skips_pyside_matrix(self):
@@ -81,6 +90,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
             [".github/workflows/ci-cpp.yml", ".github/ci-cpp-matrix.json"],
             native=True,
             pyside=False,
+            wasm=False,
         )
 
     def test_mixed_test_and_library_change_runs_pyside_matrix(self):
@@ -91,6 +101,31 @@ class ClassifyCiChangesTest(unittest.TestCase):
             ],
             native=True,
             pyside=True,
+            wasm=True,
+        )
+
+    def test_wasm_module_change_runs_wasm_only(self):
+        self.assert_classification(
+            [".github/workflows/ci-wasm.yml"],
+            native=True,
+            pyside=False,
+            wasm=True,
+        )
+
+    def test_wasm_smoke_change_runs_wasm_only(self):
+        self.assert_classification(
+            [".github/scripts/run-wasm-browser-smoke.py"],
+            native=True,
+            pyside=False,
+            wasm=True,
+        )
+
+    def test_wasm_adapter_change_runs_wasm_only(self):
+        self.assert_classification(
+            ["platforms/webassembly/CMakeLists.txt"],
+            native=True,
+            pyside=False,
+            wasm=True,
         )
 
     def test_empty_input_is_rejected(self):

@@ -1388,6 +1388,10 @@ h3 {
   border-bottom: 1px solid var(--workflow-line);
 }
 
+.gallery-web-link {
+  margin-top: 28px;
+}
+
 .workflow-list > li > span {
   color: var(--accent);
   font-size: 11px;
