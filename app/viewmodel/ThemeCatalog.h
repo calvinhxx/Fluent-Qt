@@ -22,16 +22,16 @@ namespace ThemeCatalog {
 
 void apply(GallerySettings::StyleTheme theme);
 
-/// Absolute path of the user-editable override file for a style theme. zh_CN: 样式主题用户覆盖文件的绝对路径。
+/// Absolute override path when the runtime supports theme files. zh_CN: 运行时支持主题文件时的覆盖文件绝对路径。
 QString userThemeFilePath(GallerySettings::StyleTheme theme);
 
-/// Directory holding user-editable style-theme override files. zh_CN: 保存用户可编辑样式主题覆盖文件的目录。
+/// Override directory when supported by the runtime. zh_CN: 运行时支持时的主题覆盖目录。
 QString themesDirectory();
 
 /// Export an editable theme template without replacing an existing override. zh_CN: 导出可编辑主题模板，且不覆盖现有覆盖文件。
 bool exportUserThemeTemplate(GallerySettings::StyleTheme theme, bool overwrite = false);
 
-/// Persist a custom accent into the style theme's override file. zh_CN: 将自定义强调色持久化到样式主题覆盖文件。
+/// Persist an accent through the selected runtime backend. zh_CN: 通过所选运行时后端持久化强调色。
 void setUserAccent(GallerySettings::StyleTheme theme, const QColor& accent);
 
 /// Remove the persisted custom accent override from the style theme. zh_CN: 移除样式主题中已持久化的自定义强调色覆盖。

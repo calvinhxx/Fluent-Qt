@@ -4,6 +4,7 @@
 
 #include "components/foundation/ThemeRegistry.h"
 #include "components/menus_toolbars/Menu.h"
+#include "design/Spacing.h"
 #include "design/Typography.h"
 
 using fluent::ThemeRegistry;
@@ -52,4 +53,18 @@ TEST_F(MenuTest, MenuItemRetainsQActionTriggerSemantics) {
     EXPECT_EQ(triggerSpy.count(), 1);
     ASSERT_EQ(menu.actions().size(), 1);
     EXPECT_EQ(menu.actions().constFirst(), item);
+}
+
+TEST_F(MenuTest, MultipleVisibleActionsContributeIndependentRowsToSizeHint) {
+    FluentMenu menu(QStringLiteral("Actions"));
+    menu.addAction(QStringLiteral("First action"));
+    menu.addAction(QStringLiteral("Second action"));
+    menu.addAction(QStringLiteral("Third action"));
+
+    const QMargins margins = menu.contentsMargins();
+    const int minimumRowsHeight =
+        3 * Spacing::ControlHeight::Small
+        + margins.top() + margins.bottom();
+    EXPECT_GE(menu.sizeHint().height(), minimumRowsHeight)
+        << "A multi-action popup must never collapse to a single WASM row";
 }

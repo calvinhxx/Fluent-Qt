@@ -19,11 +19,14 @@ import tempfile
 from pathlib import Path
 
 import fontTools
+from fontTools import subset
 from fontTools.ttLib import TTFont
 
 
 ROOT = Path(__file__).resolve().parents[2]
 INTER_DIR = ROOT / "third_party" / "fonts" / "inter"
+NOTO_SANS_SC_DIR = ROOT / "third_party" / "fonts" / "noto-sans-sc"
+NOTO_SANS_SC_SOURCE = NOTO_SANS_SC_DIR / "NotoSansSC-Regular.otf"
 FLUENT_ICONS_DIR = ROOT / "third_party" / "icons" / "fluentui-system-icons"
 ICON_SOURCE = FLUENT_ICONS_DIR / "FluentSystemIcons-Regular.ttf"
 ICON_CATALOG_SOURCE = FLUENT_ICONS_DIR / "FluentSystemIcons-Regular.json"
@@ -82,6 +85,9 @@ TEXT_FACES = (
 )
 
 TEXT_HINT_TABLES = {"cvt ", "fpgm", "prep", "gasp"}
+NOTO_SANS_SC_SHA256 = (
+    "faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9"
+)
 
 
 def sha256(path: Path) -> str:
@@ -183,6 +189,91 @@ def generate_text_faces(output_dir: Path) -> list[Path]:
             generated.close()
         outputs.append(output)
     return outputs
+
+
+def simplified_chinese_codepoints() -> set[int]:
+    """Return the deterministic GB 2312 repertoire plus basic UI spacing."""
+    codepoints = set(range(0x20, 0x7F))
+    codepoints.update({0x00A0, 0x3000})
+    for lead in range(0xA1, 0xF8):
+        for trail in range(0xA1, 0xFF):
+            try:
+                value = bytes((lead, trail)).decode("gb2312")
+            except UnicodeDecodeError:
+                continue
+            if len(value) == 1:
+                codepoints.add(ord(value))
+    return codepoints
+
+
+def generate_simplified_chinese_fallback(output_dir: Path) -> Path:
+    """Build the optional WebAssembly fallback without a pan-CJK payload."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    options = subset.Options()
+    options.layout_features = ["*"]
+    options.name_IDs = ["*"]
+    options.name_languages = ["*"]
+    options.name_legacy = True
+    options.notdef_glyph = True
+    options.notdef_outline = True
+    options.recommended_glyphs = True
+
+    font = TTFont(NOTO_SANS_SC_SOURCE, recalcTimestamp=False)
+    try:
+        subsetter = subset.Subsetter(options=options)
+        subsetter.populate(unicodes=simplified_chinese_codepoints())
+        subsetter.subset(font)
+        rename_face(
+            font,
+            family="FluentQt UI Simplified Chinese",
+            subfamily="Regular",
+            postscript="FluentQtUISimplifiedChinese-Regular",
+            weight=400,
+        )
+        output = output_dir / "FluentQtUISimplifiedChinese-Regular.otf"
+        font.save(output, reorderTables=False)
+    finally:
+        font.close()
+
+    generated = TTFont(output, lazy=True)
+    try:
+        cmap = unicode_cmap(generated)
+        required = {ord(character) for character in "一二三四五六七八九十月周日年"}
+        missing = required - set(cmap)
+        if missing:
+            values = ", ".join(f"U+{value:04X}" for value in sorted(missing))
+            raise RuntimeError(f"Simplified Chinese fallback is missing {values}")
+    finally:
+        generated.close()
+    return output
+
+
+def generate_web_fallback(output_root: Path) -> Path:
+    if fontTools.__version__ != FONTTOOLS_VERSION:
+        raise RuntimeError(
+            f"fontTools {FONTTOOLS_VERSION} is required; found {fontTools.__version__}"
+        )
+    if not NOTO_SANS_SC_SOURCE.is_file():
+        raise FileNotFoundError(NOTO_SANS_SC_SOURCE)
+    actual = sha256(NOTO_SANS_SC_SOURCE)
+    if actual != NOTO_SANS_SC_SHA256:
+        raise RuntimeError(
+            f"Unexpected upstream asset hash for {NOTO_SANS_SC_SOURCE}: "
+            f"{actual} (expected {NOTO_SANS_SC_SHA256})"
+        )
+    return generate_simplified_chinese_fallback(output_root / "res" / "fonts")
+
+
+def check_web_fallback_output() -> None:
+    with tempfile.TemporaryDirectory(prefix="fluentqt-web-font-") as temporary:
+        generated = generate_web_fallback(Path(temporary))
+        relative = generated.relative_to(temporary)
+        reference = ROOT / relative
+        if not reference.is_file() or generated.read_bytes() != reference.read_bytes():
+            raise RuntimeError(
+                f"Generated WebAssembly font asset differs: {relative}"
+            )
+    print("WebAssembly font asset is reproducible.")
 
 
 def typography_icon_codepoints() -> dict[str, int]:
@@ -360,7 +451,24 @@ def main() -> None:
         action="store_true",
         help="verify committed outputs without changing them",
     )
+    parser.add_argument(
+        "--web-fallback",
+        action="store_true",
+        help="generate only the optional WebAssembly Simplified Chinese fallback",
+    )
+    parser.add_argument(
+        "--check-web-fallback",
+        action="store_true",
+        help="verify only the committed WebAssembly fallback font",
+    )
     args = parser.parse_args()
+    if args.check_web_fallback:
+        check_web_fallback_output()
+        return
+    if args.web_fallback:
+        output = generate_web_fallback(ROOT)
+        print(f"{output.relative_to(ROOT)} {output.stat().st_size} bytes {sha256(output)}")
+        return
     if args.check:
         check_outputs()
         return

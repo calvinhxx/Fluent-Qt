@@ -1,14 +1,27 @@
 #include "WindowChromeCompat.h"
 
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
+
 #if !defined(Q_OS_WIN) && !defined(Q_OS_MAC) && !defined(Q_OS_LINUX)
 
 namespace compatibility {
 namespace detail {
 
 void applyPlatformWindowFlags(QWidget* window, const WindowChromeOptions& options) {
-    Q_UNUSED(options);
-    if (window)
-        window->setWindowFlag(Qt::Window, true);
+    if (!window)
+        return;
+
+    // A runtime-owned desktop surface keeps application windows as regular
+    // child widgets. Re-applying Qt::Window during showEvent() would promote
+    // them back to browser top-level canvases and lose stable move/resize
+    // geometry.
+    // zh_CN: 运行时桌面表面把应用窗口作为普通子控件承载。showEvent() 中若重新
+    // 施加 Qt::Window，会再次提升为浏览器顶层画布并丢失稳定的移动/缩放几何。
+    if (runtimePlatformCapabilities().hostsApplicationWindowsInDesktopSurface)
+        return;
+
+    window->setWindowFlag(Qt::Window, true);
+    window->setWindowFlag(Qt::FramelessWindowHint, options.useCustomWindowChrome);
 }
 
 bool handlePlatformNativeEvent(QWidget* window,
@@ -96,14 +109,15 @@ BackdropApplyResult applyPlatformSystemBackdrop(QWidget* window,
 
 int clientSideFrameMargin(QWidget* window, const WindowChromeOptions& options) {
     Q_UNUSED(window);
-    Q_UNUSED(options);
-    return 0;
+    return options.useCustomWindowChrome
+        ? qMax(0, runtimePlatformCapabilities().clientSideFrameMargin)
+        : 0;
 }
 
 bool manualMoveResizeFallbackAllowed(QWidget* window, const WindowChromeOptions& options) {
     Q_UNUSED(window);
-    Q_UNUSED(options);
-    return false;
+    return options.useCustomWindowChrome && options.chromeInteractive
+        && runtimePlatformCapabilities().manualMoveResizeFallback;
 }
 
 } // namespace detail

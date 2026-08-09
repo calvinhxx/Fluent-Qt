@@ -695,7 +695,7 @@ bool ComboBox::eventFilter(QObject* watched, QEvent* event) {
             auto* contextEvent =
                 static_cast<QContextMenuEvent*>(event);
             if (fluent::menus_toolbars::detail::
-                    execTextEditingContextMenu(
+                    showTextEditingContextMenu(
                         m_observedLineEdit.data(),
                         m_observedLineEdit
                             ->createStandardContextMenu(),

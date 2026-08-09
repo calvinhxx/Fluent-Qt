@@ -19,6 +19,7 @@
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/SurfacePainter_p.h"
 #include "compatibility/QtCompat.h"
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
 
 namespace fluent::menus_toolbars {
 
@@ -165,7 +166,12 @@ FluentMenu::FluentMenu(const QString& title, QWidget* parent)
                    | Qt::Popup
                    | Qt::FramelessWindowHint
                    | Qt::NoDropShadowWindowHint);
-    setAttribute(Qt::WA_TranslucentBackground);
+    m_translucentSurface =
+        compatibility::detail::runtimePlatformCapabilities()
+            .translucentPopupSurfaces;
+    m_shadowSize = m_translucentSurface ? ::Spacing::Standard : 0;
+    setAttribute(Qt::WA_TranslucentBackground, m_translucentSurface);
+    setAttribute(Qt::WA_OpaquePaintEvent, !m_translucentSurface);
     setAttribute(Qt::WA_Hover);
     setAutoFillBackground(false);
     setContentsMargins(m_shadowSize, m_shadowSize, m_shadowSize, m_shadowSize);
@@ -194,16 +200,22 @@ void FluentMenu::onThemeUpdated() {
     // zh_CN: 用 margins 为阴影和内部 padding 预留空间，QMenu 的 sizeHint 会自动
     // 包含这些边距，确保窗口足够大。
     setContentsMargins(m_shadowSize, m_shadowSize + vPadding, m_shadowSize, m_shadowSize + vPadding);
-    const int separatorHeight = s.gap.normal + 1;
-    const int itemVerticalPadding = s.padding.listItemV;
+    setItemLayoutMetrics(s.padding.listItemV, s.gap.normal + 1);
+    setMinimumWidth(sizeHint().width());
+    updateGeometry();
+    update();
+}
+
+void FluentMenu::setItemLayoutMetrics(int verticalPadding,
+                                      int separatorHeight)
+{
+    m_itemVerticalPadding = qMax(0, verticalPadding);
+    m_separatorHeight = qMax(1, separatorHeight);
     setStyleSheet(QStringLiteral(
         "QMenu { background-color: transparent; border: 0px; padding: 0px; }"
         "QMenu::item { background-color: transparent; padding: %1px 0px; margin: 0px; }"
         "QMenu::separator { height: %2px; }"
-    ).arg(itemVerticalPadding).arg(separatorHeight));
-    setMinimumWidth(sizeHint().width());
-    updateGeometry();
-    update();
+    ).arg(m_itemVerticalPadding).arg(m_separatorHeight));
 }
 
 void FluentMenu::actionEvent(QActionEvent* event)
@@ -335,9 +347,14 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     p.setRenderHint(QPainter::Antialiasing);
     p.setRenderHint(QPainter::TextAntialiasing);
 
-    // 1. Clear to transparent. zh_CN: 透明清屏。
+    const auto& colors = themeColorsRef();
+
+    // 1. Clear alpha-capable popups; runtimes without popup alpha receive a
+    // fully opaque Fluent layer so text never floats on an unpainted window.
+    // zh_CN: 支持 alpha 时透明清屏；不支持 popup alpha 的运行时完整填充 Fluent
+    // layer，避免文字漂浮在未绘制窗口上。
     p.setCompositionMode(QPainter::CompositionMode_Source);
-    p.fillRect(rect(), Qt::transparent);
+    p.fillRect(rect(), m_translucentSurface ? Qt::transparent : colors.bgLayer);
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
     // Fade only this custom paint pass. Applying QGraphicsOpacityEffect to a
     // native QMenu popup can leave a Wayland QMenu::exec() surface invisible
@@ -345,10 +362,10 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     // zh_CN: 仅对当前自绘过程应用透明度；在原生 QMenu popup 上安装
     // QGraphicsOpacityEffect 可能使 Wayland 的 QMenu::exec() 表面不可见，
     // 但模态事件循环仍继续阻塞输入。
-    p.setOpacity(
-        qBound<qreal>(0.0, m_revealProgress, 1.0));
+    p.setOpacity(m_translucentSurface
+        ? qBound<qreal>(0.0, m_revealProgress, 1.0)
+        : 1.0);
 
-    const auto& colors = themeColorsRef();
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 
@@ -379,11 +396,12 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
 
     // Reveal animation: clip downward from the top while progress < 1.
     // zh_CN: 揭示动画：progress < 1 时从顶部向下裁剪可见高度。
-    if (m_revealProgress < 1.0)
+    if (m_translucentSurface && m_revealProgress < 1.0)
         p.setClipRect(QRectF(0, 0, width(), height() * m_revealProgress));
 
     // 3. Paint the layered soft shadow. zh_CN: 绘制多层软阴影。
-    drawShadow(p, contentRect);
+    if (m_translucentSurface)
+        drawShadow(p, contentRect);
 
     // 4. Paint the rounded background and border. zh_CN: 绘制圆角背景与边框。
     int r = radius.overlay;
@@ -588,7 +606,28 @@ QSize FluentMenu::sizeHint() const
                            + maxLabelWidth(this, fontMetrics)
                            + shortcutColumn
                            + trailingColumn;
-    return QSize(qMax(base.width(), contentWidth + 2 * m_shadowSize), base.height());
+
+    // Qt WASM can report only one row from QMenu::sizeHint() for a popup with
+    // several actions. Compute a backend-independent lower bound from the
+    // visible action list; the later resize lets QMenu rebuild actionGeometry
+    // for every row while native platforms retain their larger style hint.
+    // zh_CN: Qt WASM 对多动作 popup 的 QMenu::sizeHint() 有时只返回一行高度。
+    // 根据可见动作列表计算与后端无关的下界；随后 resize 会让 QMenu 为每一行重建
+    // actionGeometry，原生平台仍保留其更大的 style hint。
+    int contentHeight = contentsMargins().top() + contentsMargins().bottom();
+    const int itemContentHeight = qMax(fontMetrics.height(),
+                                       Typography::IconSize::Standard);
+    const int itemHeight = qMax(::Spacing::ControlHeight::Small,
+                                itemContentHeight + 2 * m_itemVerticalPadding);
+    for (QAction* action : actions()) {
+        if (!action || !action->isVisible())
+            continue;
+        contentHeight += action->isSeparator()
+            ? m_separatorHeight
+            : itemHeight;
+    }
+    return QSize(qMax(base.width(), contentWidth + 2 * m_shadowSize),
+                 qMax(base.height(), contentHeight));
 }
 
 void FluentMenu::showEvent(QShowEvent* event) {
@@ -618,7 +657,29 @@ void FluentMenu::showEvent(QShowEvent* event) {
     move(targetPos);
     normalizePopupLayering();
     QTimer::singleShot(0, this, [this]() {
+        const QSize targetSize = size().expandedTo(sizeHint());
+        bool geometryNeedsRefresh = false;
+        for (QAction* action : actions()) {
+            if (!action || action->isSeparator() || !action->isVisible())
+                continue;
+            if (actionGeometry(action).isEmpty()) {
+                geometryNeedsRefresh = true;
+                break;
+            }
+        }
+        if (size() != targetSize)
+            resize(targetSize);
+        if (geometryNeedsRefresh) {
+            // QMenu's WASM backend can retain its pre-popup one-row cache when
+            // resized from inside showEvent(). A one-pixel post-show nudge
+            // invalidates that cache, then restores the token-derived size.
+            // zh_CN: QMenu 的 WASM 后端可能保留 showEvent() 之前的单行缓存。
+            // 显示后一像素的尺寸扰动会使其失效，再恢复 token 计算出的尺寸。
+            resize(targetSize + QSize(0, 1));
+            resize(targetSize);
+        }
         normalizePopupLayering();
+        update();
     });
 
     if (auto* previousAnimation =
@@ -633,7 +694,16 @@ void FluentMenu::showEvent(QShowEvent* event) {
     // Native window opacity and graphics effects deliberately remain untouched.
     // zh_CN: 初始状态：自绘内容透明且揭示进度归零；不修改原生窗口透明度，
     // 也不在顶层菜单安装 graphics effect。
-    m_revealProgress = 0.0;
+    m_revealProgress = m_translucentSurface ? 0.0 : 1.0;
+
+    // Opaque popup runtimes cannot reveal through transparent pixels. Paint
+    // the complete stable card immediately instead of flashing a partial menu.
+    // zh_CN: 不透明 popup 运行时无法通过透明像素做揭示动画，直接绘制完整稳定
+    // 菜单，避免闪现残缺表面。
+    if (!m_translucentSurface) {
+        update();
+        return;
+    }
 
     // One timeline drives both the height reveal and paint opacity, keeping
     // the WinUI PopupThemeTransition without native-window opacity calls.

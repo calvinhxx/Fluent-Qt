@@ -29,6 +29,7 @@ from PySide6.QtCore import (
     QCoreApplication,
     QDate,
     QEvent,
+    QEventLoop,
     QItemSelectionModel,
     QModelIndex,
     QPoint,
@@ -55,6 +56,12 @@ from PySide6.QtWidgets import (
     QWidgetAction,
 )
 from shiboken6 import Shiboken
+
+
+def wait_for_events(duration_ms):
+    loop = QEventLoop()
+    QTimer.singleShot(duration_ms, loop.quit)
+    loop.exec()
 
 
 def require_installed_below_prefix(path):
@@ -722,6 +729,7 @@ def main():
         raise AssertionError("Menu button did not retain its menu dependency")
 
     QTest.mouseClick(menu_buttons[0], Qt.LeftButton)
+    wait_for_events(1)
     for button in menu_buttons[1:]:
         QTest.mouseClick(
             button,
@@ -729,6 +737,7 @@ def main():
             Qt.NoModifier,
             QPoint(button.width() - 8, button.height() // 2),
         )
+        wait_for_events(1)
     if primary_clicks or toggle_changes or menu_buttons[2].isChecked():
         raise AssertionError("A secondary menu click triggered the primary command")
 

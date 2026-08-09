@@ -18,6 +18,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     include/FluentQt/StatusInfo.h
     include/FluentQt/TextFields.h
     include/FluentQt/Windowing.h
+    include/FluentQt/WebAssembly.h
 
     src/compatibility/FontCompat.h
     src/compatibility/QtCompat.h

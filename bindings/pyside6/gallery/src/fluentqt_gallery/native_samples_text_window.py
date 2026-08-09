@@ -1088,7 +1088,7 @@ register_source_samples(
                         status.setText("Closed")
 
                     window.destroyed.connect(window_destroyed)
-                    size = QSize(680, 360)
+                    size = QSize(720, 520)
                     window.resize(size)
                     center = root.mapToGlobal(root.rect().center())
                     window.move(
