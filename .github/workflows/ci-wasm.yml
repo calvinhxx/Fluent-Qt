@@ -1,0 +1,178 @@
+name: WebAssembly CI module
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        description: Browser validation tier selected by the caller.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Qt 6.9.3 / Emscripten 3.1.70 / ${{ inputs.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      QT_VERSION: 6.9.3
+      EMSCRIPTEN_VERSION: 3.1.70
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure runner paths
+        shell: bash
+        run: |
+          echo "QT_WASM_ROOT=$RUNNER_TEMP/Qt/$QT_VERSION/wasm_singlethread" >> "$GITHUB_ENV"
+          echo "EMSDK_ROOT=$RUNNER_TEMP/emsdk" >> "$GITHUB_ENV"
+          echo "EM_CACHE=$RUNNER_TEMP/emscripten-cache" >> "$GITHUB_ENV"
+
+      - name: Validate browser tier
+        shell: bash
+        run: |
+          case "${{ inputs.mode }}" in
+            fast|full) ;;
+            *) echo "::error::Unsupported WebAssembly tier"; exit 1 ;;
+          esac
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install WebAssembly tooling frontends
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check \
+            "aqtinstall==3.3.0" \
+            "playwright==1.58.0"
+
+      - name: Cache Qt WebAssembly and host kits
+        id: qt-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/Qt
+          key: fluentqt-qt-wasm-${{ runner.os }}-${{ runner.arch }}-6.9.3
+
+      - name: Install Qt WebAssembly and host kits
+        if: ${{ steps.qt-cache.outputs.cache-hit != 'true' }}
+        shell: bash
+        run: |
+          python -m aqt install-qt \
+            -O "$RUNNER_TEMP/Qt" \
+            all_os wasm "$QT_VERSION" wasm_singlethread \
+            --autodesktop
+
+      - name: Verify Qt kits
+        shell: bash
+        run: |
+          test -f "$QT_WASM_ROOT/bin/qt-cmake"
+          chmod +x "$QT_WASM_ROOT/bin/qt-cmake"
+          qt_host_cmake="$(
+            find "$RUNNER_TEMP/Qt/$QT_VERSION" \
+              -mindepth 3 -maxdepth 3 \
+              -type f -path '*/bin/qt-cmake' \
+              ! -path '*/wasm_*/*' \
+              -print -quit
+          )"
+          test -n "$qt_host_cmake"
+          chmod +x "$qt_host_cmake"
+          qt_host_root="${qt_host_cmake%/bin/qt-cmake}"
+          echo "QT_HOST_ROOT=$qt_host_root" >> "$GITHUB_ENV"
+          "$QT_WASM_ROOT/bin/qt-cmake" --version
+          "$qt_host_cmake" --version
+
+      - name: Cache Emscripten SDK
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/emsdk
+          key: fluentqt-emsdk-${{ runner.os }}-${{ runner.arch }}-3.1.70
+
+      - name: Install and activate Emscripten
+        shell: bash
+        run: |
+          if [[ ! -x "$EMSDK_ROOT/emsdk" ]]; then
+            git clone --depth 1 https://github.com/emscripten-core/emsdk.git \
+              "$EMSDK_ROOT"
+          fi
+          if [[ ! -x "$EMSDK_ROOT/upstream/emscripten/emcc" ]]; then
+            "$EMSDK_ROOT/emsdk" install "$EMSCRIPTEN_VERSION"
+          fi
+          "$EMSDK_ROOT/emsdk" activate "$EMSCRIPTEN_VERSION"
+
+      - name: Cache Emscripten system libraries
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/emscripten-cache
+          key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-3.1.70
+
+      - name: Configure and build WebAssembly targets
+        shell: bash
+        run: |
+          source "$EMSDK_ROOT/emsdk_env.sh"
+          em++ --version
+          cmake --preset wasm
+          cmake --build --preset wasm --parallel 4
+
+      - name: Verify installed FluentQt WebAssembly consumer
+        shell: bash
+        run: |
+          source "$EMSDK_ROOT/emsdk_env.sh"
+          install_prefix="$RUNNER_TEMP/fluentqt-wasm-install"
+          cmake --install build/wasm \
+            --prefix "$install_prefix" \
+            --component Development
+          "$QT_WASM_ROOT/bin/qt-cmake" \
+            -S examples/hello_world \
+            -B build/wasm-installed-consumer \
+            -G Ninja \
+            -DQT_HOST_PATH="$QT_HOST_ROOT" \
+            -DFluentQt_DIR="$install_prefix/lib/cmake/FluentQt"
+          cmake --build build/wasm-installed-consumer --parallel 4
+          test -f build/wasm-installed-consumer/fluentqt_hello_world.wasm
+
+      - name: Cache Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: fluentqt-playwright-${{ runner.os }}-${{ runner.arch }}-1.58.0
+
+      - name: Install Chromium runtime
+        shell: bash
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run browser smoke
+        shell: bash
+        run: |
+          python .github/scripts/run-wasm-browser-smoke.py \
+            --root build/wasm \
+            --mode "${{ inputs.mode }}" \
+            --device-scale-factor 2
+          python .github/scripts/run-wasm-browser-smoke.py \
+            --root build/wasm \
+            --mode fast \
+            --device-scale-factor 2 \
+            --viewport-width 1920 \
+            --viewport-height 1080
+
+      - name: Stage GitHub Pages payload
+        shell: bash
+        run: |
+          python .github/scripts/stage-wasm-pages.py \
+            build/wasm/app \
+            build/wasm-pages \
+            --qt-version "$QT_VERSION" \
+            --emscripten-version "$EMSCRIPTEN_VERSION" \
+            --validation-mode "${{ inputs.mode }}" \
+            --commit "$GITHUB_SHA"
+
+      - name: Upload WebAssembly Pages payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-wasm-pages
+          path: build/wasm-pages
+          if-no-files-found: error
+          retention-days: 7
