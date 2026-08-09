@@ -16,7 +16,7 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/calvinhxx/Fluent-Qt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/calvinhxx/Fluent-Qt?style=flat&color=111827"></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-111827.svg"></a>
-  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-111827.svg">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20WebAssembly-111827.svg">
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
@@ -33,6 +33,7 @@
 |---|---|
 | FluentQt C++ 组件库 | C++17、CMake 3.16+、Qt Widgets 5.15+ 或 6.2+ |
 | C++ Gallery | FluentQt、Qt Network、spdlog/fmt |
+| C++ WebAssembly | Qt 6.9.3 `wasm_singlethread`、Emscripten 3.1.70 |
 | 测试 | FluentQt、Qt Test/Network、GTest、spdlog/fmt |
 | 可选 PySide6 绑定 | Qt 6.2+；源码构建支持 Python 3.10+ |
 
@@ -191,9 +192,6 @@ if __name__ == "__main__":
 完整 Python 工程见
 [`bindings/pyside6/examples/hello_world`](bindings/pyside6/examples/hello_world/)。
 
-Python 兼容层仅支持 Qt 6。支持的 wheel、源码构建、API 范围和验证方式见
-[PySide6 绑定指南](bindings/pyside6/README.md)。
-
 ## 🛠 构建
 
 ### 组件库
@@ -215,9 +213,35 @@ cmake --install build/fluentqt --config Release \
 cmake --build build/fluentqt --target fluent_qt_source_package
 ```
 
+### WebAssembly
+
+激活 Emscripten 3.1.70，并让公共 preset 指向匹配的 Qt 目标 kit 与宿主 kit：
+
+```bash
+source "$HOME/Qt/Tools/emsdk/emsdk_env.sh"
+export QT_WASM_ROOT="$HOME/Qt/6.9.3/wasm_singlethread"
+export QT_HOST_ROOT="$HOME/Qt/6.9.3/macos"
+cmake --preset wasm
+cmake --build --preset wasm --parallel
+python3 -m http.server 4173 --bind 127.0.0.1 --directory build/wasm
+```
+
+打开 `http://127.0.0.1:4173/app/index.html`。浏览器 smoke、Asyncify、平台边界、
+CI、部署与许可证说明见 [WebAssembly 工作流](docs/development/webassembly-workflow.md)。
+该 preset 会启用可选的 `FluentQt::WebAssembly` 运行时，在单一 Qt 浏览器桌面
+中承载可移动、可缩放的 Fluent 窗口；普通原生目标保持独立。
+高分屏默认使用自适应 1x–1.25x 渲染档位，限制浏览器 backing store 的像素量；
+需要时可通过 Gallery 页脚切换平衡或原生分辨率。
+
 ## 🖼 Gallery
 
 Gallery 用于浏览、演示和验证 FluentQt 组件。
+
+### C++ Web Gallery
+
+Qt 6.9.3 单线程浏览器版本发布在
+[C++ Web Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/)。这是独立的
+WebAssembly 渠道；桌面安装包仍通过 GitHub Releases 分发。
 
 ### C++ Gallery 安装包
 
@@ -273,9 +297,9 @@ python -m fluentqt_gallery
 - [发布治理](docs/development/release-governance.md)
 - [架构约定](docs/architecture/README.md)
 - [设计语言参考](docs/design-languages/README.md)
-- [PySide6 绑定指南](bindings/pyside6/README.md)
-- [Fluent-Qt 1.6.1 发布说明](docs/releases/v1.6.1.md)
-- [Fluent-Qt 1.6.0 发布说明](docs/releases/v1.6.0.md)
+- [WebAssembly 工作流](docs/development/webassembly-workflow.md)
+- [WebAssembly 路线图](docs/development/webassembly-roadmap.zh-CN.md)
+- [Python 兼容](bindings/pyside6/README.md)
 
 ## 🔗 参考
 
