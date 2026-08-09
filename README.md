@@ -16,7 +16,7 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/calvinhxx/Fluent-Qt/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/calvinhxx/Fluent-Qt/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/calvinhxx/Fluent-Qt?style=flat&color=111827"></a>
   <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-111827.svg"></a>
-  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-111827.svg">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20WebAssembly-111827.svg">
   <img alt="Qt Widgets" src="https://img.shields.io/badge/UI-Qt%20Widgets-41CD52.svg">
   <img alt="Qt" src="https://img.shields.io/badge/Qt-5.15%2B%20%7C%206.2%2B-41CD52.svg">
   <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C.svg">
@@ -33,6 +33,7 @@
 |---|---|
 | FluentQt C++ library | C++17, CMake 3.16+, Qt Widgets 5.15+ or 6.2+ |
 | C++ Gallery | FluentQt, Qt Network, spdlog/fmt |
+| C++ WebAssembly | Qt 6.9.3 `wasm_singlethread`, Emscripten 3.1.70 |
 | Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
 | Optional PySide6 bindings | Qt 6.2+; Python 3.10+ for source builds |
 
@@ -192,10 +193,6 @@ if __name__ == "__main__":
 See [`bindings/pyside6/examples/hello_world`](bindings/pyside6/examples/hello_world/)
 for the complete Python example.
 
-Python support targets Qt 6. See the
-[PySide6 binding guide](bindings/pyside6/README.md) for supported wheels,
-source builds, API coverage, and validation.
-
 ## 🛠 Build
 
 ### Library
@@ -217,9 +214,39 @@ Create the reduced library source package for offline or source integration:
 cmake --build build/fluentqt --target fluent_qt_source_package
 ```
 
+### WebAssembly
+
+Activate Emscripten 3.1.70 and point the public preset at the matching Qt target
+and host kits:
+
+```bash
+source "$HOME/Qt/Tools/emsdk/emsdk_env.sh"
+export QT_WASM_ROOT="$HOME/Qt/6.9.3/wasm_singlethread"
+export QT_HOST_ROOT="$HOME/Qt/6.9.3/macos"
+cmake --preset wasm
+cmake --build --preset wasm --parallel
+python3 -m http.server 4173 --bind 127.0.0.1 --directory build/wasm
+```
+
+Open `http://127.0.0.1:4173/app/index.html`. See the
+[WebAssembly workflow](docs/development/webassembly-workflow.md) for browser
+smoke, Asyncify, platform boundaries, CI, deployment, and licensing. The preset
+enables the optional `FluentQt::WebAssembly` runtime, which hosts movable and
+resizable Fluent windows inside one Qt browser desktop; normal native targets
+remain independent.
+High-density displays use an adaptive 1x–1.25x render profile that bounds the
+browser backing-store pixel count; the Gallery footer exposes balanced and
+native-resolution choices when needed.
+
 ## 🖼 Gallery
 
 Gallery is used to browse, demonstrate, and validate FluentQt components.
+
+### C++ Web Gallery
+
+The Qt 6.9.3 single-threaded browser build is published at the
+[C++ Web Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/). It is a
+separate WebAssembly channel; desktop installers remain on GitHub Releases.
 
 ### C++ Gallery packages
 
@@ -276,9 +303,9 @@ python -m fluentqt_gallery
 - [Release governance](docs/development/release-governance.md)
 - [Architecture contracts](docs/architecture/README.md)
 - [Design language references](docs/design-languages/README.md)
-- [PySide6 binding guide](bindings/pyside6/README.md)
-- [Fluent-Qt 1.6.1 release notes](docs/releases/v1.6.1.md)
-- [Fluent-Qt 1.6.0 release notes](docs/releases/v1.6.0.md)
+- [WebAssembly workflow](docs/development/webassembly-workflow.md)
+- [WebAssembly roadmap](docs/development/webassembly-roadmap.md)
+- [Python compatibility](bindings/pyside6/README.md)
 
 ## 🔗 References
 
