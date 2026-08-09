@@ -172,7 +172,7 @@
             <div><dt data-i18n="spec.runtime">UI 运行时</dt><dd>Qt Widgets</dd></div>
             <div><dt data-i18n="spec.qt">Qt 支持</dt><dd>5.15+ / 6.2+</dd></div>
             <div><dt data-i18n="spec.toolchain">工具链</dt><dd>CMake + C++17</dd></div>
-            <div><dt data-i18n="spec.platforms">桌面平台</dt><dd>Windows / macOS / Linux</dd></div>
+            <div><dt data-i18n="spec.platforms">运行平台</dt><dd>Windows / macOS / Linux / Web</dd></div>
           </dl>
         </div>
       </section>
@@ -363,6 +363,14 @@ target_link_libraries(
               <li><span>02</span><div><strong data-i18n="gallery.stateTitle">验证</strong><p data-i18n="gallery.stateCopy">切换 Light / Dark 与强调色</p></div></li>
               <li><span>03</span><div><strong data-i18n="gallery.codeTitle">查看示例</strong><p data-i18n="gallery.codeCopy">展开对应的 C++ 代码</p></div></li>
             </ol>
+            <a
+              class="button button-primary gallery-web-link"
+              href="gallery/"
+              data-analytics-event="cpp_web_gallery"
+            >
+              <span data-i18n="gallery.webAction">运行 C++ Web Gallery</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+            </a>
           </div>
         </div>
       </section>
@@ -446,7 +454,7 @@ target_link_libraries(
           </div>
         </div>
       </div>
-      <div class="page-shell footer-meta"><span>© 2026 Fluent-Qt</span><span>Built for desktop software</span></div>
+      <div class="page-shell footer-meta"><span>© 2026 Fluent-Qt</span><span>Built for desktop and browser software</span></div>
     </footer>
   </body>
 </html>
