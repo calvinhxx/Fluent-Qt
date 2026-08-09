@@ -57,7 +57,7 @@ remove the 6.2.4 source/build baseline.
 | M4 — Models and navigation | Complete | Planned model/navigation surfaces cover Python models/delegates, virtual dispatch, selection, and lifecycle |
 | M4.5 — Foundation authoring API | Complete | `FluentWidget`, `bind()`, `StateGroup`, and `AnchorLayout`/`anchors()` pass local Qt 6.9.3, Linux/Windows Qt 6.2.4 minimum lanes, the six-target release-wheel matrix, and full CI regression |
 | M5 — Overlays and native windows | Complete | Automated XCB/Wayland/Windows/Cocoa checks, physical Windows 11 DWM review, and a non-headless Ubuntu 22.04 ARM64 GNOME Wayland review cover materials, honest fallback, system move/resize, and representative overlays |
-| M6 — Release-grade Python distribution | Complete | `1.6.0` passed the canonical 18-wheel bundle gate, TestPyPI rehearsal, annotated-tag/GitHub Release flow, reviewer-approved PyPI Trusted Publishing, public hash and attestation verification, and clean installation of both distributions |
+| M6 — Release-grade Python distribution | Complete | `1.6.0` established the release contract; standard release `1.6.1` repeated the canonical 18-wheel bundle, TestPyPI, annotated-tag/GitHub Release, approved PyPI, hash/attestation, and clean-install gates after metadata corrections |
 
 ## Public API coverage ledger
 
@@ -67,7 +67,7 @@ component below must either be bound or retain an explicit boundary decision.
 That audit is complete for M0 through M4.5. The manifest currently records 87
 required classes/value/support types, 13 enums, 16 functions, and 2 version
 variables. M5 and M6 are complete; the M6 milestone section retains the exact
-release evidence for `1.6.0`.
+release evidence for both `1.6.0` and the standard `1.6.1` follow-up.
 
 | Category | Bound now | Remaining boundary |
 |---|---|---|
@@ -1137,8 +1137,8 @@ is not mistaken for complete support:
    clean-environment wheels are published.
 
 M0 through M6 are complete: the planned Python API is feature complete and the
-`1.6.0` distributions have passed the external bundle, TestPyPI, tag, PyPI,
-attestation, and public-install gates.
+current `1.6.1` distributions have passed the external bundle, TestPyPI, tag,
+PyPI, attestation, and public-install gates.
 
 FluentQt calls Python support complete and release-ready only at the third
 level. This excludes PySide2 and Qt 5 Python bindings and does not require
@@ -1544,3 +1544,16 @@ ledger, and highest-numbered record for the current state.
     independent macOS ARM64 CPython 3.11 public-index installation also passed
     `pip check`, UILib smoke, and standalone Gallery smoke. Synchronization to
     `main` remains an explicit maintainer action outside the M6 release gate.
+51. Publish the metadata-corrected standard `1.6.1` release through the same
+    immutable contract. Full CI run `31269181384` produced a new 17+1 bundle
+    from commit `fd4ce4b4a05671b01fcb3e88da0015c9011f5240`; the manifest
+    SHA-256 is
+    `f766d5214a2073f0f59710e9c306187594060b48bd7540623d548405d1b729de`.
+    TestPyPI run `31270655830` completed on attempt 3 after index propagation,
+    GitHub Release run `31271042718` published the annotated `v1.6.1` desktop
+    and source release, and reviewer-approved PyPI run `31271530901` published
+    and verified all 18 hashes and attestations. Clean Linux CPython 3.11 and
+    independent macOS ARM64 public-index installs passed, including UILib,
+    Gallery, and the 67-component/88-route catalog walk. The tagged commit is
+    synchronized to `main` and `release/1.6.x`; bounded Simple API install
+    retries now absorb future package-index propagation without rebuilding.
