@@ -32,8 +32,12 @@ height, and covered-script metrics are the portable contract.
 
 Inter covers the Latin, Greek, and Cyrillic UI text used by the Gallery. CJK,
 emoji, and other scripts not present in the bundled face continue through Qt's
-platform fallback. This avoids adding a very large pan-CJK font to every
-binary.
+platform fallback. Supported WebAssembly builds are the exception because the
+browser sandbox exposes no host CJK font: they embed the optional
+`FluentQt UI Simplified Chinese` GB 2312 subset and register it as a Han-script
+application fallback. CMake selects that resource without adding WebAssembly
+branches to components or typography roles. Native binaries do not carry the
+additional face, avoiding a large pan-CJK payload in every package.
 
 `FluentQt Icons` retains the complete Regular catalog from Microsoft Fluent UI
 System Icons 1.1.328. `Typography::Icons::catalog()` exposes every upstream
@@ -74,6 +78,8 @@ sources in `third_party/`:
 python -m pip install -r tools/fonts/requirements.txt
 python tools/fonts/generate_typography_assets.py
 python tools/fonts/generate_typography_assets.py --check
+python tools/fonts/generate_typography_assets.py --web-fallback
+python tools/fonts/generate_typography_assets.py --check-web-fallback
 ```
 
 The generator verifies every upstream SHA-256 hash and its exact fontTools

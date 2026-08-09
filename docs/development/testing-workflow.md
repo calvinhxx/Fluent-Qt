@@ -76,7 +76,7 @@ real mixed-monitor review.
 ## Validation Tiers
 
 The public [CI workflow](../../.github/workflows/ci.yml) is an orchestration
-layer. It classifies changed paths, selects `fast` or `full`, invokes two
+layer. It classifies changed paths, selects `fast` or `full`, invokes three
 reusable validation modules, and owns only the stable `CI Gate` and
 `Release ready` checks:
 
@@ -97,11 +97,15 @@ reusable validation modules, and owns only the stable `CI Gate` and
   CPython 3.11 precedes the other extended-acceptance representatives, and
   secondary CPython rows fill runner capacity afterward. This changes only
   scheduling order; it does not reduce the supported or validated matrix.
+- [WebAssembly CI module](../../.github/workflows/ci-wasm.yml) owns the pinned
+  Qt 6.9.3 `wasm_singlethread` and Emscripten 3.1.70 toolchain, builds Hello
+  World and the C++ Gallery, runs the fast/full Chromium smoke, and stages the
+  Pages payload consumed by [the Pages workflow](../../.github/workflows/pages.yml).
 
 Do not add compiler, SDK, package-manager, wheel, or platform steps to the
 orchestrator. Add them to the owning reusable workflow and update its catalog.
 `.github/scripts/validate-ci-workflow-boundaries.py` enforces that separation.
-Both modules upload artifacts into the caller's workflow run, so release jobs
+All three modules upload artifacts into the caller's workflow run, so release jobs
 can consume Python wheels without coupling C++ validation to PyPI publishing.
 
 - GitHub Actions `matrix=fast` is the default PR/push validation tier. It runs
