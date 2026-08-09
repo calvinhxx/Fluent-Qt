@@ -66,7 +66,8 @@ void setLevel(Level level);
  *
  * macOS/Linux use AppLocalDataLocation/logs/<app>.log; Windows uses
  * AppLocalDataLocation/logs/<app>.log with the native separator. Pass the returned path to
- * InitializationOptions::logFilePath to enable file logging explicitly.
+ * InitializationOptions::logFilePath to enable file logging explicitly. Runtime backends without
+ * persistent file access return an empty path.
  */
 QString defaultLogFilePath();
 void installQtMessageHandler();

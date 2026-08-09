@@ -121,16 +121,14 @@ void SplitButton::mouseReleaseEvent(QMouseEvent* event) {
         if (m_pressPart == Secondary) {
             event->accept();
             if (releasePart == Secondary && m_menu) {
-                // Keep the secondary segment pressed while the nested menu
-                // loop is active. zh_CN: 菜单嵌套事件循环期间保持二级区域按下态。
+                // aboutToShow/aboutToHide own the open state while the
+                // asynchronous popup is visible, without blocking the caller
+                // in a nested event loop. zh_CN: 异步菜单显示期间由
+                // aboutToShow/aboutToHide 管理打开态，不通过嵌套事件循环阻塞调用方。
                 QPoint popupPos = mapToGlobal(rect().bottomLeft());
                 if (layoutDirection() == Qt::RightToLeft)
                     popupPos.rx() -= m_menu->sizeHint().width() - width();
-                QPointer<SplitButton> guard(this);
-                m_menu->exec(popupPos);
-                if (!guard)
-                    return;
-                guard->setOpen(false);
+                m_menu->popup(popupPos);
             }
             m_pressPart = None;
             update();

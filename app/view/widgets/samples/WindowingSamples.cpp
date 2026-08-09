@@ -23,6 +23,7 @@
 #include "components/windowing/Window.h"
 #include "compatibility/QtCompat.h"
 #include "design/Typography.h"
+#include "platform/GalleryPlatform.h"
 #include "SampleBuilders.h"
 
 namespace fluent::gallery {
@@ -393,12 +394,12 @@ QWidget* makeWindowContent(const QString& heading, const QString& body)
 
 void showWindowNear(Window* window, QWidget* launcher, const QSize& size)
 {
-    window->resize(size);
+    QRect geometry(QPoint(), size);
     if (launcher) {
         const QPoint center = launcher->mapToGlobal(launcher->rect().center());
-        window->move(center - QPoint(size.width() / 2, size.height() / 2));
+        geometry.moveTopLeft(center - QPoint(size.width() / 2, size.height() / 2));
     }
-    window->show();
+    platform::showTopLevelWindow(window, geometry);
     window->requestForegroundActivation();
 }
 
@@ -537,7 +538,7 @@ QVector<GallerySample> windowSamples()
                                   "\n"
                                   "auto* content = new QWidget();\n"
                                   "window->setContentWidget(content);\n"
-                                  "window->resize(520, 340);\n"
+                                  "window->resize(640, 520);\n"
                                   "window->show();"),
                    [](QWidget* parent) {
                        auto* group = verticalGroup(parent, 8);
@@ -575,7 +576,7 @@ QVector<GallerySample> windowSamples()
                            QObject::connect(window, &QObject::destroyed, status, [status]() {
                                status->setText(QStringLiteral("Closed"));
                            });
-                           showWindowNear(window, group, QSize(520, 340));
+                           showWindowNear(window, group, QSize(640, 520));
                            status->setText(QStringLiteral("Open"));
                        });
                        return group;
@@ -600,6 +601,7 @@ QVector<GallerySample> windowSamples()
                                   "window->titleBar()->setContentWidget(titleBarContent);\n"
                                   "window->titleBar()->refreshChromeExclusions();\n"
                                   "window->setContentWidget(pageContent);\n"
+                                  "window->resize(720, 520);\n"
                                   "window->show();"),
                    [](QWidget* parent) {
                        auto* group = verticalGroup(parent, 8);
@@ -651,7 +653,7 @@ QVector<GallerySample> windowSamples()
                            QObject::connect(window, &QObject::destroyed, status, [status]() {
                                status->setText(QStringLiteral("Closed"));
                            });
-                           showWindowNear(window, group, QSize(680, 360));
+                           showWindowNear(window, group, QSize(720, 520));
                            status->setText(QStringLiteral("Open"));
                        });
                        return group;

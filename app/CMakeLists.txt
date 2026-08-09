@@ -11,9 +11,16 @@ file(GLOB_RECURSE FLUENT_QT_GALLERY_SOURCES CONFIGURE_DEPENDS
 set(FLUENT_QT_GALLERY_RESOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/gallery_resources.qrc
 )
+if(EMSCRIPTEN)
+    list(FILTER FLUENT_QT_GALLERY_SOURCES EXCLUDE REGEX
+        "/Gallery(ApplicationController|SingleInstance|WindowPlacement)\\.(cpp|h)$")
+    list(FILTER FLUENT_QT_GALLERY_SOURCES EXCLUDE REGEX
+        "/GalleryCloseBehaviorPrompt\\.(cpp|h)$")
+endif()
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
     ${FLUENT_QT_GALLERY_SOURCES}
     ${FLUENT_QT_GALLERY_RESOURCES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/GalleryPlatform.h"
 )
 
 set(FLUENT_QT_GALLERY_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
@@ -22,12 +29,22 @@ set(FLUENT_QT_GALLERY_RESOURCES ${FLUENT_QT_GALLERY_RESOURCES} PARENT_SCOPE)
 
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Network)
 
-add_executable(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
-    main.cpp
-    ${FLUENT_QT_GALLERY_SOURCES}
-    ${FLUENT_QT_GALLERY_RESOURCES}
-)
+if(COMMAND qt_add_executable)
+    qt_add_executable(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
+        main.cpp
+        ${FLUENT_QT_GALLERY_SOURCES}
+        ${FLUENT_QT_GALLERY_RESOURCES}
+    )
+else()
+    add_executable(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
+        main.cpp
+        ${FLUENT_QT_GALLERY_SOURCES}
+        ${FLUENT_QT_GALLERY_RESOURCES}
+    )
+endif()
 fluent_qt_configure_cpp_target(${FLUENT_QT_GALLERY_EXECUTABLE_NAME})
+target_sources(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/platform/GalleryPlatform.h")
 target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     PRIVATE
     FluentQt::FluentQt
@@ -35,6 +52,16 @@ target_link_libraries(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Network
 )
+if(EMSCRIPTEN)
+    include("${CMAKE_CURRENT_SOURCE_DIR}/platform/wasm/FluentQtGalleryWebAssembly.cmake")
+    fluent_qt_configure_gallery_webassembly(
+        ${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
+        "${CMAKE_CURRENT_SOURCE_DIR}")
+else()
+    target_sources(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/platform/desktop/GalleryApplication.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp")
+endif()
 target_include_directories(${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(${FLUENT_QT_GALLERY_EXECUTABLE_NAME} PRIVATE
@@ -88,14 +115,16 @@ if(APPLE)
     )
 endif()
 
-include(GNUInstallDirs)
-install(TARGETS ${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
-    COMPONENT GalleryRuntime
-    BUNDLE DESTINATION "."
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+if(NOT EMSCRIPTEN)
+    include(GNUInstallDirs)
+    install(TARGETS ${FLUENT_QT_GALLERY_EXECUTABLE_NAME}
+        COMPONENT GalleryRuntime
+        BUNDLE DESTINATION "."
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
+endif()
 
 # Linux: generate and install the freedesktop launcher from the shared identity.
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT EMSCRIPTEN)
     set(FLUENT_QT_GALLERY_DESKTOP_FILE
         "${CMAKE_CURRENT_BINARY_DIR}/${FLUENT_QT_GALLERY_APP_ID}.desktop")
     configure_file(

@@ -26,6 +26,7 @@ option(FLUENT_QT_BUILD_TESTS "Build Fluent-Qt test targets" OFF)
 option(FLUENT_QT_BUILD_GALLERY "Build the Fluent-Qt Gallery application" OFF)
 option(FLUENT_QT_BUILD_EXAMPLES "Build Fluent-Qt executable examples" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_BUILD_PYSIDE6_BINDINGS "Build the optional PySide6 bindings" OFF)
+option(FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT "Build the optional WebAssembly adapter targets" OFF)
 option(FLUENT_QT_INSTALL "Install Fluent-Qt library targets, headers, and CMake package files" ${FLUENT_QT_IS_TOP_LEVEL})
 option(FLUENT_QT_ENABLE_GALLERY_PACKAGING "Enable CPack packaging for the Gallery application" OFF)
 option(FLUENT_QT_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer for FluentQt tests" OFF)
@@ -55,7 +56,17 @@ file(GLOB_RECURSE SRC CONFIGURE_DEPENDS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 list(SORT SRC)
-set(RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
+set(FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES "")
+if(EMSCRIPTEN AND FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
+	set(FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES
+        "        <file alias=\"res/fonts/FluentQtUISimplifiedChinese-Regular.otf\">${CMAKE_CURRENT_SOURCE_DIR}/res/fonts/FluentQtUISimplifiedChinese-Regular.otf</file>")
+endif()
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
+configure_file(
+	"${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc"
+	"${CMAKE_CURRENT_BINARY_DIR}/generated/resources.qrc"
+	@ONLY)
+set(RESOURCES ${CMAKE_CURRENT_BINARY_DIR}/generated/resources.qrc)
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src FILES ${SRC})
 
 add_library(FluentQt STATIC ${SRC} ${RESOURCES})
@@ -86,6 +97,10 @@ set_target_properties(FluentQt PROPERTIES
 	OUTPUT_NAME FluentQt
 )
 
+if(FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
+	add_subdirectory(platforms/webassembly)
+endif()
+
 if(FLUENT_QT_BUILD_PYSIDE6_BINDINGS)
 	if(NOT QT_VERSION_MAJOR EQUAL 6)
 		message(FATAL_ERROR
@@ -104,7 +119,14 @@ add_custom_target(fluent_qt_source_package
 	COMMENT "Create the FluentQt library source package")
 
 if(FLUENT_QT_INSTALL)
-	install(TARGETS FluentQt
+	set(_fluent_qt_install_targets FluentQt)
+	if(TARGET FluentQtWasmRuntime)
+		list(APPEND _fluent_qt_install_targets FluentQtWasmRuntime)
+	endif()
+	if(TARGET FluentQtWasmAsyncify)
+		list(APPEND _fluent_qt_install_targets FluentQtWasmAsyncify)
+	endif()
+	install(TARGETS ${_fluent_qt_install_targets}
 		EXPORT FluentQtTargets
 		ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development
 		LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" COMPONENT Development
@@ -141,6 +163,12 @@ if(FLUENT_QT_INSTALL)
 	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/inter/LICENSE.txt"
 		DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt/third_party/inter"
 		COMPONENT Development)
+	if(EMSCRIPTEN AND FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
+		install(FILES
+			"${CMAKE_CURRENT_SOURCE_DIR}/third_party/fonts/noto-sans-sc/LICENSE.txt"
+			DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt/third_party/noto-sans-sc"
+			COMPONENT Development)
+	endif()
 	install(FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/LICENSE.txt"
 		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/NOTICE.txt"
@@ -149,16 +177,29 @@ if(FLUENT_QT_INSTALL)
 endif()
 
 if(FLUENT_QT_BUILD_GALLERY OR (BUILD_TESTING AND FLUENT_QT_BUILD_TESTS))
-	find_package(spdlog CONFIG REQUIRED)
+	if(EMSCRIPTEN)
+		if(NOT FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT)
+			message(FATAL_ERROR
+				"Gallery logging requires FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT")
+		endif()
+		set(_fluent_qt_logging_source
+			"${CMAKE_CURRENT_SOURCE_DIR}/platforms/webassembly/LogBackend.cpp")
+	else()
+		find_package(spdlog CONFIG REQUIRED)
+		set(_fluent_qt_logging_source
+			"${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.cpp")
+	endif()
 	add_library(FluentQtLoggingSupport STATIC
-		"${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.cpp"
+		"${_fluent_qt_logging_source}"
 		"${CMAKE_CURRENT_SOURCE_DIR}/support/logging/Log.h")
 	fluent_qt_configure_cpp_target(FluentQtLoggingSupport)
 	target_include_directories(FluentQtLoggingSupport
 		PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(FluentQtLoggingSupport
-		PUBLIC Qt${QT_VERSION_MAJOR}::Core
-		PRIVATE spdlog::spdlog)
+		PUBLIC Qt${QT_VERSION_MAJOR}::Core)
+	if(NOT EMSCRIPTEN)
+		target_link_libraries(FluentQtLoggingSupport PRIVATE spdlog::spdlog)
+	endif()
 	fluent_qt_enable_sanitizers(FluentQtLoggingSupport)
 endif()
 
@@ -170,11 +211,15 @@ if(FLUENT_QT_BUILD_EXAMPLES)
 	add_subdirectory(examples/hello_world)
 endif()
 
+if(EMSCRIPTEN AND TARGET fluent_qt_gallery AND TARGET fluentqt_hello_world)
+	add_dependencies(fluent_qt_gallery fluentqt_hello_world)
+endif()
+
 # ut
 if(BUILD_TESTING AND FLUENT_QT_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
 
-if(FLUENT_QT_BUILD_GALLERY AND FLUENT_QT_ENABLE_GALLERY_PACKAGING)
+if(FLUENT_QT_BUILD_GALLERY AND FLUENT_QT_ENABLE_GALLERY_PACKAGING AND NOT EMSCRIPTEN)
 	include(cmake/FluentQTPackaging.cmake)
 endif()

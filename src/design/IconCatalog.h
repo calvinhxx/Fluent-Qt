@@ -82,8 +82,11 @@ QFont font(int pixelSize);
  * Resolves the optical variant for @p pixelSize, snaps @p targetRect to the
  * device pixel grid, then draws with QPainter::drawText(rect, alignment) so
  * compact chevrons stay centered and sharp (same pattern as SplitButton).
+ * The painter font is restored before returning so an icon/text compound
+ * control cannot accidentally render its label with the icon face.
  * zh_CN: 按 @p pixelSize 解析光学变体，将 @p targetRect 对齐到设备像素网格，再用
  * QPainter::drawText(rect, alignment) 绘制，使紧凑箭头居中且清晰（与 SplitButton 同模式）。
+ * 返回前会恢复 painter 字体，避免图标/文字复合控件误用图标字体绘制标签。
  */
 void paintGlyph(QPainter& painter,
                 const QRectF& targetRect,

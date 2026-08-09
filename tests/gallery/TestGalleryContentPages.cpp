@@ -2826,6 +2826,7 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)
     QApplication::sendEvent(code, &event);
 
     EXPECT_TRUE(event.isAccepted());
+    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_TRUE(sawCopy);
     EXPECT_TRUE(sawSelectAll);
@@ -2884,6 +2885,7 @@ TEST_F(
     QApplication::sendEvent(value, &event);
 
     EXPECT_TRUE(event.isAccepted());
+    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
     EXPECT_TRUE(sawFluentMenu);
 }
 

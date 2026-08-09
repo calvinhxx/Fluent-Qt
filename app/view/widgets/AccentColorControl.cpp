@@ -20,6 +20,7 @@
 #include "components/textfields/Label.h"
 #include "compatibility/QtCompat.h"
 #include "design/Typography.h"
+#include "platform/GalleryPlatform.h"
 #include "viewmodel/GallerySettings.h"
 #include "viewmodel/ThemeCatalog.h"
 
@@ -284,14 +285,16 @@ void AccentColorControl::openFlyout()
     // Theme application is read-only. Export a template only when the user asks
     // to edit it, then open the containing directory.
     // zh_CN: 应用主题本身只读；仅当用户明确要求编辑时才导出模板并打开目录。
-    auto* folder = new HyperlinkButton(QStringLiteral("Open themes folder"), flyout);
-    folder->setFluentSize(Button::Small);
-    connect(folder, &Button::clicked, flyout, [settings, flyout]() {
-        ThemeCatalog::exportUserThemeTemplate(settings->styleTheme());
-        QDesktopServices::openUrl(QUrl::fromLocalFile(ThemeCatalog::themesDirectory()));
-        flyout->close();
-    });
-    layout->addWidget(folder);
+    if (platform::capabilities().editsThemeFiles) {
+        auto* folder = new HyperlinkButton(QStringLiteral("Open themes folder"), flyout);
+        folder->setFluentSize(Button::Small);
+        connect(folder, &Button::clicked, flyout, [settings, flyout]() {
+            ThemeCatalog::exportUserThemeTemplate(settings->styleTheme());
+            QDesktopServices::openUrl(QUrl::fromLocalFile(ThemeCatalog::themesDirectory()));
+            flyout->close();
+        });
+        layout->addWidget(folder);
+    }
 
     flyout->showAt(this);
 }

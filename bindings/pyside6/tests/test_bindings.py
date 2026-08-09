@@ -3784,18 +3784,21 @@ class FluentQtBindingTest(unittest.TestCase):
             Qt.NoModifier,
             drop_down.rect().center(),
         )
+        wait_for_events(1)
         QTest.mouseClick(
             split,
             Qt.LeftButton,
             Qt.NoModifier,
             QPoint(split.width() - 8, split.height() // 2),
         )
+        wait_for_events(1)
         QTest.mouseClick(
             toggle,
             Qt.LeftButton,
             Qt.NoModifier,
             QPoint(toggle.width() - 8, toggle.height() // 2),
         )
+        wait_for_events(1)
 
         self.assertEqual(drop_open, [True, False])
         self.assertEqual(split_open, [True, False])

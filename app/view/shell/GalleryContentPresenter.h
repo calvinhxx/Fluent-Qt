@@ -37,7 +37,8 @@ class GalleryContentPresenter : public QObject {
 public:
     GalleryContentPresenter(fluent::navigation::StackContentHost* contentHost,
                             const GalleryNavigationViewModel& navigationViewModel,
-                            QObject* parent = nullptr);
+                            QObject* parent = nullptr,
+                            int maxResidentRoutes = 0);
 
     QString currentRouteId() const { return m_currentRouteId; }
     QWidget* currentPage() const;
@@ -111,6 +112,8 @@ private:
     void watchNavigationPage(QWidget* page, qint64 buildMs);
     void cancelNavigationWatch();
     void connectPageNavigation(QWidget* page);
+    void touchResidentRoute(const QString& routeId);
+    void trimResidentRoutes(const QString& protectedRouteId);
     int ensurePageBuilt(const QString& routeId, qint64* buildMs = nullptr);
     void ensureSkeleton();
     void scheduleLazyBuild(const QString& routeId, quint64 requestId);
@@ -125,13 +128,15 @@ private:
     // stack (parented to the host, just shown/hidden). Navigating is a show/hide of an
     // already-parented, already-laid-out widget — no reparenting, so Qt skips the full
     // style re-polish + relayout that made even revisits cost hundreds of ms. The map
-    // remembers each route's stack index; indices are stable because pages are only
-    // ever appended, never removed.
+    // remembers each route's stack index. Desktop keeps the cache unbounded by default;
+    // a platform-supplied cap may evict least-recently-used pages and repair indices.
     // zh_CN: 每个路由的页面只建一次，之后常驻 content host 的栈里（挂在 host 上，仅显示/隐藏）。
     // 导航变成对"已挂父级、已完成布局"的页面做显示/隐藏——不再 reparent，于是 Qt 跳过整棵子树的
-    // 样式重新 polish + 重新布局（那正是连重访都要几百毫秒的根因）。此表记住每个路由的栈索引；
-    // 页面只追加、从不移除，所以索引稳定。
+    // 样式重新 polish + 重新布局（那正是连重访都要几百毫秒的根因）。此表记住每个路由的栈索引。
+    // 桌面端默认不限制缓存；平台可提供上限，按 LRU 淘汰页面并同步修正索引。
     QHash<QString, int> m_routeStackIndex;
+    QStringList m_routeRecency;
+    int m_maxResidentRoutes = 0;
 
     // A single shimmer skeleton page, parked in the stack and shown the instant a cold
     // route is requested so navigation feels immediate while the real page builds.

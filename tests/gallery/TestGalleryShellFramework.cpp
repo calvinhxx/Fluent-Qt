@@ -1448,6 +1448,45 @@ TEST_F(GalleryShellFrameworkTest, NavigationTimingCoversColdAndWarmTargetFirstPa
     EXPECT_GE(warmTiming.at(4).toLongLong(), warmTiming.at(3).toLongLong());
 }
 
+TEST_F(GalleryShellFrameworkTest, BoundedRouteCacheEvictsLeastRecentlyUsedPage)
+{
+    GalleryNavigationViewModel model;
+    StackContentHost host;
+    host.resize(900, 700);
+    host.show();
+    GalleryContentPresenter presenter(&host, model, nullptr, 2);
+    QSignalSpy presentedSpy(&presenter, &GalleryContentPresenter::navigationPresented);
+
+    auto navigate = [&](const QString& routeId) -> QList<QVariant> {
+        presentedSpy.clear();
+        EXPECT_TRUE(presenter.presentRoute(routeId));
+        QElapsedTimer waitTimer;
+        waitTimer.start();
+        while (presentedSpy.isEmpty() && waitTimer.elapsed() < 5000) {
+            QApplication::processEvents();
+            QTest::qWait(10);
+        }
+        EXPECT_FALSE(presentedSpy.isEmpty());
+        return presentedSpy.isEmpty()
+            ? QList<QVariant>()
+            : presentedSpy.takeLast();
+    };
+
+    ASSERT_FALSE(navigate(QStringLiteral("home")).isEmpty());
+    ASSERT_FALSE(navigate(QStringLiteral("password-box")).isEmpty());
+    ASSERT_FALSE(navigate(QStringLiteral("checkbox")).isEmpty());
+
+    // Two route pages plus the one reusable skeleton remain resident.
+    // zh_CN: 常驻两个路由页和一个复用骨架页。
+    EXPECT_LE(host.count(), 3);
+
+    const QList<QVariant> revisitedHome = navigate(QStringLiteral("home"));
+    ASSERT_EQ(revisitedHome.size(), 5);
+    EXPECT_EQ(revisitedHome.at(0).toString(), QStringLiteral("home"));
+    EXPECT_TRUE(revisitedHome.at(1).toBool())
+        << "The least-recently-used Home page should be rebuilt after eviction";
+}
+
 TEST_F(GalleryShellFrameworkTest, StartupPrewarmPrioritizesHomeFeaturedTabView)
 {
     GalleryWindow window;

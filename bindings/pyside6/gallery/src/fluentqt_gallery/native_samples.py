@@ -3362,7 +3362,8 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             layout.addStretch(1)
             layout.addLayout(command_row)
             apply_button.clicked.connect(lambda: dialog.done(1))
-            dialog.exec()
+            dialog.finished.connect(dialog.deleteLater)
+            dialog.open()
             """,
             imports="from PySide6.QtWidgets import QVBoxLayout",
         )
@@ -3687,6 +3688,7 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             window.titleBar().setContentWidget(title_bar_content)
             window.titleBar().refreshChromeExclusions()
             window.setContentWidget(page_content)
+            window.resize(720, 520)
             window.show()
             """,
             imports="from PySide6.QtWidgets import QHBoxLayout, QWidget",

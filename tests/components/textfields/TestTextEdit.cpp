@@ -126,6 +126,7 @@ bool triggerContextAction(QTextEdit* inner, QKeySequence::StandardKey standardKe
     const QPoint globalPos = inner->viewport()->mapToGlobal(localPos);
     QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
     QApplication::sendEvent(inner->viewport(), &event);
+    QTest::qWait(1);
     return triggered;
 }
 
@@ -390,6 +391,7 @@ TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
     QApplication::sendEvent(inner->viewport(), &event);
 
     EXPECT_TRUE(event.isAccepted());
+    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_TRUE(sawCopy);
     EXPECT_TRUE(sawSelectAll);
@@ -435,6 +437,11 @@ TEST_F(
                 popup);
         sawFluentMenu = menu != nullptr;
         if (menu) {
+            EXPECT_FALSE(standardMenu->isVisible());
+            EXPECT_TRUE(standardMenu->isHidden());
+            EXPECT_TRUE(
+                standardMenu->testAttribute(
+                    Qt::WA_DontShowOnScreen));
             for (QAction* action : menu->actions()) {
                 if (action->isSeparator())
                     continue;
@@ -484,12 +491,13 @@ TEST_F(
 
     EXPECT_TRUE(
         fluent::menus_toolbars::detail::
-            execTextEditingContextMenu(
+            showTextEditingContextMenu(
                 window,
                 standardMenu,
                 window->mapToGlobal(QPoint(40, 40)),
                 QStringLiteral(
                     "FluentTextEdit.PlatformFallbackMenu")));
+    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_EQ(editingActionCount, 7);
     EXPECT_EQ(iconCount, editingActionCount);
@@ -579,6 +587,8 @@ TEST_F(TextEditTest, ContextMenuVisualCheck) {
 
         QContextMenuEvent event(QContextMenuEvent::Mouse, localPos, globalPos);
         QApplication::sendEvent(inner->viewport(), &event);
+        QTRY_VERIFY_WITH_TIMEOUT(
+            snapshotSaved || !snapshotError.isEmpty(), 1000);
         ASSERT_TRUE(snapshotSaved) << snapshotError.toStdString();
         return;
     }

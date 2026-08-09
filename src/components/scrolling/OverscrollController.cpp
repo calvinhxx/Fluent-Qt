@@ -21,6 +21,11 @@ namespace {
 constexpr qreal kMaxOverscrollPx = 100.0;
 constexpr int   kClusterGapMs = 120;
 constexpr int   kNoPhaseBoundaryBounceDelayMs = 16;
+// Some backends deliver pixel/phase updates without a terminal ScrollEnd.
+// Settle after a short quiet period while still honoring an explicit end event.
+// zh_CN: 部分后端只发送 pixel/phase 更新而没有最终 ScrollEnd；在短暂无输入后
+// 自动回弹，同时继续优先响应明确的结束事件。
+constexpr int   kGestureBounceFallbackMs = 120;
 constexpr qreal kDiscreteBoundaryOverscrollMinPx = 12.0;
 constexpr qreal kDiscreteBoundaryOverscrollMaxPx = 48.0;
 
@@ -107,6 +112,7 @@ void OverscrollController::resetNoPhaseBoundaryBounce() {
 }
 
 void OverscrollController::startBounceBack() {
+    m_bounceTimer->stop();
     if (qFuzzyIsNull(m_overscroll)) {
         resetNoPhaseBoundaryBounce();
         return;
@@ -285,6 +291,8 @@ void OverscrollController::handleWheel(QWheelEvent* event) {
         m_overscroll = qBound(-kMaxOverscrollPx, m_overscroll, kMaxOverscrollPx);
         if ((prev > 0.0 && m_overscroll <= 0.0) || (prev < 0.0 && m_overscroll >= 0.0))
             m_overscroll = 0.0;
+        if (!qFuzzyIsNull(m_overscroll))
+            m_bounceTimer->start(kGestureBounceFallbackMs);
         notifyChanged();
         event->accept();
         return;
@@ -318,6 +326,7 @@ void OverscrollController::handleWheel(QWheelEvent* event) {
             return;
         }
         m_overscroll = scrollPx * 0.5;
+        m_bounceTimer->start(kGestureBounceFallbackMs);
         notifyChanged();
         event->accept();
         return;
