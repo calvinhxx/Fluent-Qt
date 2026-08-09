@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Classify pull-request paths for the native and PySide6 CI matrices."""
+"""Classify pull-request paths for native, PySide6, and WebAssembly CI."""
 
 from __future__ import annotations
 
@@ -39,11 +39,41 @@ PYSIDE_CI_FILES = {
     ".github/workflows/ci-python.yml",
 }
 
+WASM_PREFIXES = (
+    "app/",
+    "cmake/",
+    "examples/hello_world/",
+    "include/",
+    "platforms/webassembly/",
+    "res/",
+    "src/",
+    "support/logging/",
+    "third_party/",
+)
+
+WASM_ROOT_FILES = {
+    "CMakeLists.txt",
+    "CMakePresets.json",
+    "resources.qrc",
+}
+
+WASM_CI_FILES = {
+    ".github/scripts/classify_ci_changes.py",
+    ".github/scripts/run-wasm-browser-smoke.py",
+    ".github/scripts/stage-wasm-pages.py",
+    ".github/scripts/test_classify_ci_changes.py",
+    ".github/scripts/validate-ci-workflow-boundaries.py",
+    ".github/workflows/ci.yml",
+    ".github/workflows/ci-wasm.yml",
+    ".github/workflows/pages.yml",
+}
+
 
 @dataclass(frozen=True)
 class ChangeClassification:
     should_build: bool
     should_build_pyside: bool
+    should_build_wasm: bool
 
 
 def is_documentation_path(path: str) -> bool:
@@ -66,6 +96,16 @@ def affects_pyside(path: str) -> bool:
     )
 
 
+def affects_wasm(path: str) -> bool:
+    """Return whether a non-documentation path can affect browser artifacts."""
+    return (
+        path in WASM_ROOT_FILES
+        or path in WASM_CI_FILES
+        or path.startswith(WASM_PREFIXES)
+        or path.endswith(".qrc")
+    )
+
+
 def classify_changes(paths: list[str]) -> ChangeClassification:
     """Classify a non-empty list of repository-relative changed paths."""
     normalized = [path.strip() for path in paths if path.strip()]
@@ -76,6 +116,7 @@ def classify_changes(paths: list[str]) -> ChangeClassification:
     return ChangeClassification(
         should_build=bool(build_paths),
         should_build_pyside=any(affects_pyside(path) for path in build_paths),
+        should_build_wasm=any(affects_wasm(path) for path in build_paths),
     )
 
 
@@ -88,6 +129,7 @@ def main() -> int:
 
     print(f"should_build={str(result.should_build).lower()}")
     print(f"should_build_pyside={str(result.should_build_pyside).lower()}")
+    print(f"should_build_wasm={str(result.should_build_wasm).lower()}")
     return 0
 
 

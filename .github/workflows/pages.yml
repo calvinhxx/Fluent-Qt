@@ -5,10 +5,26 @@ on:
     branches: [main]
     paths:
       - site/**
+      - app/**
+      - cmake/**
+      - examples/hello_world/**
+      - include/**
+      - platforms/webassembly/**
+      - res/**
+      - src/**
+      - support/logging/**
+      - third_party/**
+      - CMakeLists.txt
+      - CMakePresets.json
+      - resources.qrc
+      - .github/scripts/run-wasm-browser-smoke.py
+      - .github/scripts/stage-wasm-pages.py
+      - .github/workflows/ci-wasm.yml
       - .github/workflows/pages.yml
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -18,8 +34,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  wasm:
+    name: Build C++ Web Gallery
+    uses: ./.github/workflows/ci-wasm.yml
+    with:
+      mode: full
+
   deploy:
     name: Deploy GitHub Pages
+    needs: wasm
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -31,10 +54,25 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload static site
+      - name: Download C++ Web Gallery
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-wasm-pages
+          path: build/wasm-pages
+
+      - name: Assemble Pages site
+        shell: bash
+        run: |
+          mkdir -p build/pages/gallery
+          cp -R site/. build/pages/
+          cp -R build/wasm-pages/. build/pages/gallery/
+          test -f build/pages/gallery/index.html
+          test -f build/pages/gallery/build-info.json
+
+      - name: Upload static site and C++ Web Gallery
         uses: actions/upload-pages-artifact@v4
         with:
-          path: site
+          path: build/pages
 
       - name: Deploy
         id: deployment

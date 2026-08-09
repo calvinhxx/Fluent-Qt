@@ -36,6 +36,7 @@ jobs:
       mode: ${{ steps.mode.outputs.mode }}
       should_build: ${{ steps.changes.outputs.should_build }}
       should_build_pyside: ${{ steps.changes.outputs.should_build_pyside }}
+      should_build_wasm: ${{ steps.changes.outputs.should_build_wasm }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -57,6 +58,7 @@ jobs:
 
           should_build=true
           should_build_pyside=true
+          should_build_wasm=true
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             changed_files="$(
               gh api --paginate \
@@ -78,18 +80,26 @@ jobs:
             should_build_pyside="$(
               sed -n 's/^should_build_pyside=//p' <<< "$classification"
             )"
+            should_build_wasm="$(
+              sed -n 's/^should_build_wasm=//p' <<< "$classification"
+            )"
           fi
 
-          case "$should_build:$should_build_pyside" in
-            true:true|true:false|false:false) ;;
-            *)
-              echo "::error::Invalid CI change classification: $should_build:$should_build_pyside"
+          for value in "$should_build" "$should_build_pyside" "$should_build_wasm"; do
+            [[ "$value" == "true" || "$value" == "false" ]] || {
+              echo "::error::Invalid CI change classification value: $value"
               exit 1
-              ;;
-          esac
+            }
+          done
+          if [[ "$should_build" == "false" && \
+                ("$should_build_pyside" == "true" || "$should_build_wasm" == "true") ]]; then
+            echo "::error::A specialized module cannot run when native validation is skipped."
+            exit 1
+          fi
 
           echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
           echo "should_build_pyside=$should_build_pyside" >> "$GITHUB_OUTPUT"
+          echo "should_build_wasm=$should_build_wasm" >> "$GITHUB_OUTPUT"
           if [[ "$should_build" == "true" ]]; then
             echo "The C++ validation module is required."
           else
@@ -99,6 +109,11 @@ jobs:
             echo "The PySide6 validation module is required."
           else
             echo "No binding-affecting files changed: skipping PySide6 validation."
+          fi
+          if [[ "$should_build_wasm" == "true" ]]; then
+            echo "The WebAssembly validation module is required."
+          else
+            echo "No browser-affecting files changed: skipping WebAssembly validation."
           fi
 
       - name: Select validation tier
@@ -141,9 +156,17 @@ jobs:
     with:
       mode: ${{ needs.plan.outputs.mode }}
 
+  wasm:
+    name: WebAssembly validation
+    needs: plan
+    if: ${{ needs.plan.outputs.should_build_wasm == 'true' }}
+    uses: ./.github/workflows/ci-wasm.yml
+    with:
+      mode: ${{ needs.plan.outputs.mode }}
+
   ci-gate:
     name: CI Gate
-    needs: [plan, cpp, python]
+    needs: [plan, cpp, python, wasm]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -153,8 +176,10 @@ jobs:
           PLAN_RESULT: ${{ needs.plan.result }}
           CPP_RESULT: ${{ needs.cpp.result }}
           PYTHON_RESULT: ${{ needs.python.result }}
+          WASM_RESULT: ${{ needs.wasm.result }}
           SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}
           SHOULD_BUILD_PYSIDE: ${{ needs.plan.outputs.should_build_pyside }}
+          SHOULD_BUILD_WASM: ${{ needs.plan.outputs.should_build_wasm }}
         shell: bash
         run: |
           set -euo pipefail
@@ -179,12 +204,20 @@ jobs:
             echo "::error::PySide6 validation should have been skipped, got: $PYTHON_RESULT"
             exit 1
           fi
+          if [[ "$SHOULD_BUILD_WASM" == "true" && "$WASM_RESULT" != "success" ]]; then
+            echo "::error::The WebAssembly validation module finished with result: $WASM_RESULT"
+            exit 1
+          fi
+          if [[ "$SHOULD_BUILD_WASM" != "true" && "$WASM_RESULT" != "skipped" ]]; then
+            echo "::error::WebAssembly validation should have been skipped, got: $WASM_RESULT"
+            exit 1
+          fi
 
           echo "Required CI validation passed."
 
   release-ready:
     name: Release ready
-    needs: [plan, cpp, python]
+    needs: [plan, cpp, python, wasm]
     if: ${{ always() && needs.plan.outputs.mode == 'full' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -194,8 +227,10 @@ jobs:
           PLAN_RESULT: ${{ needs.plan.result }}
           CPP_RESULT: ${{ needs.cpp.result }}
           PYTHON_RESULT: ${{ needs.python.result }}
+          WASM_RESULT: ${{ needs.wasm.result }}
           SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}
           SHOULD_BUILD_PYSIDE: ${{ needs.plan.outputs.should_build_pyside }}
+          SHOULD_BUILD_WASM: ${{ needs.plan.outputs.should_build_wasm }}
         shell: bash
         run: |
           set -euo pipefail
@@ -210,6 +245,10 @@ jobs:
           fi
           if [[ "$SHOULD_BUILD_PYSIDE" == "true" && "$PYTHON_RESULT" != "success" ]]; then
             echo "::error::The full PySide6 validation module finished with result: $PYTHON_RESULT"
+            exit 1
+          fi
+          if [[ "$SHOULD_BUILD_WASM" == "true" && "$WASM_RESULT" != "success" ]]; then
+            echo "::error::The full WebAssembly validation module finished with result: $WASM_RESULT"
             exit 1
           fi
 
