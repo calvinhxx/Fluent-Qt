@@ -79,7 +79,7 @@ protected:
         // 承载，避免原生 QMenu 继承编辑器透明的 Base/Window 调色板；Win10
         // 与 Win11 对该透明调色板的回退绘制并不一致。
         auto* standardMenu = createStandardContextMenu(event->pos());
-        if (!::fluent::menus_toolbars::detail::execTextEditingContextMenu(
+        if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(
                 this,
                 standardMenu,
                 event->globalPos(),

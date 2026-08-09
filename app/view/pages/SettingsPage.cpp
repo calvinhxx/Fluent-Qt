@@ -1,6 +1,7 @@
 #include "SettingsPage.h"
 
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFrame>
 #include <QGridLayout>
@@ -20,6 +21,7 @@
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "platform/GalleryPlatform.h"
 #include "support/logging/Log.h"
 #include "view/support/GalleryCloseBehaviorUi.h"
 #include "view/widgets/AccentColorControl.h"
@@ -227,11 +229,15 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         QStringLiteral("gallerySettingsEffectChoice"),
         {QStringLiteral("Normal"), QStringLiteral("Mica"), QStringLiteral("Acrylic")},
         static_cast<int>(settings->windowEffect()));
-    m_closeBehaviorChoice = createChoiceBox(
-        QStringLiteral("gallerySettingsCloseBehaviorChoice"),
-        closebehaviorui::choices(),
-        static_cast<int>(settings->closeBehavior()));
-    m_updateChecker = new UpdateChecker(this);
+    const auto& runtime = platform::capabilities();
+    if (runtime.exposesCloseBehavior) {
+        m_closeBehaviorChoice = createChoiceBox(
+            QStringLiteral("gallerySettingsCloseBehaviorChoice"),
+            closebehaviorui::choices(),
+            static_cast<int>(settings->closeBehavior()));
+    }
+    if (runtime.checksForUpdates)
+        m_updateChecker = new UpdateChecker(this);
 
     connect(m_themeChoice, qOverload<int>(&QComboBox::currentIndexChanged),
             this, [settings](int index) {
@@ -275,17 +281,19 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                 const QSignalBlocker blocker(m_effectChoice);
                 m_effectChoice->setCurrentIndex(static_cast<int>(effect));
             });
-    connect(m_closeBehaviorChoice, qOverload<int>(&QComboBox::currentIndexChanged),
-            this, [settings](int index) {
-                settings->setCloseBehavior(
-                    static_cast<GallerySettings::CloseBehavior>(index));
-                settings->setCloseBehaviorConfirmed(true);
-            });
-    connect(settings, &GallerySettings::closeBehaviorChanged, this,
-            [this](GallerySettings::CloseBehavior behavior) {
-                const QSignalBlocker blocker(m_closeBehaviorChoice);
-                m_closeBehaviorChoice->setCurrentIndex(static_cast<int>(behavior));
-            });
+    if (m_closeBehaviorChoice) {
+        connect(m_closeBehaviorChoice, qOverload<int>(&QComboBox::currentIndexChanged),
+                this, [settings](int index) {
+                    settings->setCloseBehavior(
+                        static_cast<GallerySettings::CloseBehavior>(index));
+                    settings->setCloseBehaviorConfirmed(true);
+                });
+        connect(settings, &GallerySettings::closeBehaviorChanged, this,
+                [this](GallerySettings::CloseBehavior behavior) {
+                    const QSignalBlocker blocker(m_closeBehaviorChoice);
+                    m_closeBehaviorChoice->setCurrentIndex(static_cast<int>(behavior));
+                });
+    }
 
     // Style + accent share one row: both shape the brand palette, so they read as a single
     // "appearance style" choice (preset selector + accent swatch) rather than two near-identical rows.
@@ -319,19 +327,21 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
                                                  QStringLiteral("Window background effect"),
                                                  QStringLiteral("Uses the system compositor when available, otherwise a software Fluent material"),
                                                  m_effectChoice));
+    if (m_closeBehaviorChoice) {
+        m_contentLayout->addSpacing(10);
+        m_contentLayout->addWidget(createSectionTitle(QStringLiteral("App behavior")));
+        m_contentLayout->addWidget(createSettingsRow(
+            Typography::Icons::Power,
+            QStringLiteral("Close button behavior"),
+            QStringLiteral("Choose what happens when the main window is closed"),
+            m_closeBehaviorChoice));
+    }
     m_contentLayout->addSpacing(10);
-    m_contentLayout->addWidget(createSectionTitle(QStringLiteral("App behavior")));
+    m_contentLayout->addWidget(createSectionTitle(runtime.distributionSectionTitle));
     m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::Power,
-        QStringLiteral("Close button behavior"),
-        QStringLiteral("Choose what happens when the main window is closed"),
-        m_closeBehaviorChoice));
-    m_contentLayout->addSpacing(10);
-    m_contentLayout->addWidget(createSectionTitle(QStringLiteral("Updates")));
-    m_contentLayout->addWidget(createSettingsRow(
-        Typography::Icons::Sync,
-        QStringLiteral("Gallery updates"),
-        QStringLiteral("Check GitHub Releases and open the latest package for this platform"),
+        runtime.checksForUpdates ? Typography::Icons::Sync : Typography::Icons::Link,
+        runtime.distributionTitle,
+        runtime.distributionDescription,
         createUpdateCheckControl()));
     m_contentLayout->addStretch(1);
 
@@ -428,6 +438,29 @@ QWidget* SettingsPage::createUpdateCheckControl()
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(12);
     layout->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+    const auto& runtime = platform::capabilities();
+    if (!runtime.checksForUpdates) {
+        m_updateActionUrl = runtime.distributionActionUrl;
+        m_updateStatusLabel = new SecondaryLabel(
+            QStringLiteral("Version %1 / %2")
+                .arg(QCoreApplication::applicationVersion(), runtime.runtimeLabel),
+            panel);
+        m_updateStatusLabel->setObjectName(QStringLiteral("gallerySettingsUpdateStatus"));
+        m_updateStatusLabel->setFluentTypography(Typography::FontRole::Caption);
+        m_updateStatusLabel->setAlignment(Qt::AlignRight);
+
+        m_updateButton = new fluent::basicinput::Button(
+            runtime.distributionActionText, panel);
+        m_updateButton->setObjectName(QStringLiteral("gallerySettingsViewSourceButton"));
+        m_updateButton->setFluentLayout(fluent::basicinput::Button::IconBefore);
+        m_updateButton->setIconGlyph(Typography::Icons::Link, Typography::IconSize::Standard);
+        connect(m_updateButton, &QPushButton::clicked, this, &SettingsPage::openUpdateTarget);
+
+        layout->addWidget(m_updateStatusLabel, 1, Qt::AlignRight | Qt::AlignVCenter);
+        layout->addWidget(m_updateButton, 0, Qt::AlignRight);
+        return panel;
+    }
 
     m_updateStatusLabel = new SecondaryLabel(
         QStringLiteral("Current %1 / %2")

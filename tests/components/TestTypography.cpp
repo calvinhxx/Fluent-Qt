@@ -567,6 +567,23 @@ TEST_F(TypographyTest, SnapIconPixelSizePrefersCrispOpticalSlots) {
     EXPECT_EQ(Typography::Icons::font(21).pixelSize(), Typography::IconSize::Large);
 }
 
+TEST_F(TypographyTest, PaintGlyphPreservesCallerFontForCompoundControls) {
+    QImage image(QSize(64, 32), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    const QFont textFont = Typography::Styles::BodyStrong.toQFont();
+    painter.setFont(textFont);
+    Typography::Icons::paintGlyph(
+        painter,
+        QRectF(0, 0, 32, 32),
+        Typography::Icons::GlobalNav,
+        Typography::IconSize::Standard);
+
+    EXPECT_EQ(painter.font(), textFont)
+        << "Icon painting must not leak the icon face into adjacent labels";
+}
+
 TEST_F(TypographyTest, ApplicationDefaultUsesBundledTextRegular) {
     const QFontInfo resolved(qApp->font());
     EXPECT_EQ(resolved.family(), fluent::fontcompat::UITextFamily);

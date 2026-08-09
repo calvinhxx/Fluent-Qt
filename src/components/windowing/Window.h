@@ -13,6 +13,8 @@
 
 class QMouseEvent;
 class QPaintEvent;
+class QPainter;
+class QPixmap;
 class QResizeEvent;
 class QShowEvent;
 class QVBoxLayout;
@@ -197,10 +199,15 @@ private:
     BackdropState paintedFallbackState(const QString& reason) const;
     void setupCaptionButtons();
     void updateMaximizeButtonIcon();
+    bool usesHostedWindowSurface() const;
+    bool isEffectivelyActive() const;
+    bool isEffectivelyMaximized() const;
     int captionButtonReservedWidth() const;
     int activeClientSideFrameMargin() const;
     QRect windowFrameRect() const;
     ClientSideFramePaintOptions clientSideFramePaintOptions() const;
+    void invalidatePaintedSurfaceCache();
+    void paintPaintedSurface(QPainter& painter, bool includeClientFrame);
     void syncClientSideFrameMargins();
     void syncClientSideFrameShape();
     void syncClientSideResizeInput();
@@ -238,7 +245,12 @@ private:
     QString m_closeAccessibleName;
     QString m_restoreAccessibleName;
     QPoint m_fallbackDragOffset;
+    QRect m_hostedRestoreGeometry;
     std::unique_ptr<WindowResizeSession> m_resizeSession;
+    std::unique_ptr<QPixmap> m_paintedSurfaceCache;
+    QSize m_paintedSurfaceCachePixelSize;
+    qreal m_paintedSurfaceCacheDpr = 0.0;
+    bool m_paintedSurfaceCacheIncludesFrame = false;
 };
 
 } // namespace fluent::windowing

@@ -279,7 +279,9 @@ QVector<GallerySample> contentDialogSamples() {
               "dialog->setDefaultButton(ContentDialog::Primary);\n"
               "connect(dialog, &ContentDialog::primaryButtonClicked, status,\n"
               "        [status] { status->setText(\"Result: Save\"); });\n"
-              "const int result = dialog->exec();"),
+              "connect(dialog, &QDialog::finished, dialog,\n"
+              "        &QObject::deleteLater);\n"
+              "dialog->open();"),
           [](QWidget *parent) {
             auto *surface = sampleSurface(parent);
             auto *row = horizontalGroup(surface, 12);
@@ -317,11 +319,18 @@ QVector<GallerySample> contentDialogSamples() {
                                          QStringLiteral("Result: Cancel"));
                                    });
 
-                  const int result = dialog->exec();
-                  if (status->text() == QStringLiteral("Result: not shown"))
-                    status->setText(QStringLiteral("Result: %1")
-                                        .arg(contentDialogResultText(result)));
-                  dialog->deleteLater();
+                  QObject::connect(
+                      dialog, &QDialog::finished, status,
+                      [status](int result) {
+                        if (status->text() ==
+                            QStringLiteral("Result: not shown")) {
+                          status->setText(QStringLiteral("Result: %1")
+                                              .arg(contentDialogResultText(result)));
+                        }
+                      });
+                  QObject::connect(dialog, &QDialog::finished, dialog,
+                                   &QObject::deleteLater);
+                  dialog->open();
                 });
 
             boxLayout(row)->addWidget(button);
@@ -343,7 +352,9 @@ QVector<GallerySample> contentDialogSamples() {
               "dialog->setDefaultButton(ContentDialog::None);\n"
               "connect(dialog, &ContentDialog::primaryButtonClicked, status,\n"
               "        [status] { status->setText(\"Draft shared\"); });\n"
-              "dialog->exec();"),
+              "connect(dialog, &QDialog::finished, dialog,\n"
+              "        &QObject::deleteLater);\n"
+              "dialog->open();"),
           [](QWidget *parent) {
             auto *surface = sampleSurface(parent);
             auto *row = horizontalGroup(surface, 12);
@@ -390,8 +401,9 @@ QVector<GallerySample> contentDialogSamples() {
                         status->setText(QStringLiteral("Draft state: private"));
                       });
 
-                  dialog->exec();
-                  dialog->deleteLater();
+                  QObject::connect(dialog, &QDialog::finished, dialog,
+                                   &QObject::deleteLater);
+                  dialog->open();
                 });
 
             boxLayout(row)->addWidget(button);
@@ -417,7 +429,9 @@ QVector<GallerySample> dialogSamples() {
                          "layout->addLayout(commandRow);\n"
                          "connect(applyButton, &Button::clicked, dialog,\n"
                          "        [dialog] { dialog->done(1); });\n"
-                         "dialog->exec();"),
+                         "connect(dialog, &QDialog::finished, dialog,\n"
+                         "        &QObject::deleteLater);\n"
+                         "dialog->open();"),
           [](QWidget *parent) {
             auto *surface = sampleSurface(parent);
             auto *row = horizontalGroup(surface, 12);
@@ -448,16 +462,16 @@ QVector<GallerySample> dialogSamples() {
                   addDialogButtons(layout, dialog, status);
 
                   QObject::connect(
-                      dialog, &QDialog::accepted, status, [status, nameEdit]() {
-                        status->setText(QStringLiteral("Project name: %1")
-                                            .arg(nameEdit->text()));
+                      dialog, &QDialog::finished, status,
+                      [status, nameEdit](int result) {
+                        if (result == 1) {
+                          status->setText(QStringLiteral("Project name: %1")
+                                              .arg(nameEdit->text()));
+                        }
                       });
-
-                  const int result = dialog->exec();
-                  if (result == 1)
-                    status->setText(QStringLiteral("Project name: %1")
-                                        .arg(nameEdit->text()));
-                  dialog->deleteLater();
+                  QObject::connect(dialog, &QDialog::finished, dialog,
+                                   &QObject::deleteLater);
+                  dialog->open();
                 });
 
             boxLayout(row)->addWidget(button);
@@ -474,7 +488,9 @@ QVector<GallerySample> dialogSamples() {
                          "dialog->setSmokeEnabled(useSmoke);\n"
                          "dialog->setAnimationEnabled(useAnimation);\n"
                          "dialog->setMinimumSize(420, 220);\n"
-                         "dialog->exec();"),
+                         "connect(dialog, &QDialog::finished, dialog,\n"
+                         "        &QObject::deleteLater);\n"
+                         "dialog->open();"),
           [](QWidget *parent) {
             auto *surface = sampleSurface(parent);
             auto *row = horizontalGroup(surface, 10);
@@ -508,12 +524,17 @@ QVector<GallerySample> dialogSamples() {
               QObject::connect(closeButton, &Button::clicked, dialog,
                                [dialog]() { dialog->done(0); });
               layout->addWidget(closeButton, 0, Qt::AlignRight);
-              dialog->exec();
-              status->setText(
-                  animation
-                      ? QStringLiteral("Last dialog: animated with smoke")
-                      : QStringLiteral("Last dialog: instant without smoke"));
-              dialog->deleteLater();
+              QObject::connect(
+                  dialog, &QDialog::finished, status,
+                  [status, animation](int) {
+                    status->setText(
+                        animation
+                            ? QStringLiteral("Last dialog: animated with smoke")
+                            : QStringLiteral("Last dialog: instant without smoke"));
+                  });
+              QObject::connect(dialog, &QDialog::finished, dialog,
+                               &QObject::deleteLater);
+              dialog->open();
             };
 
             QObject::connect(

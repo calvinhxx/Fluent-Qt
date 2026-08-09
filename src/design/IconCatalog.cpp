@@ -306,6 +306,7 @@ void paintGlyph(QPainter& painter,
         return;
 
     const QString paintedGlyph = glyphForSize(glyphOrName, pixelSize);
+    const QFont previousFont = painter.font();
     painter.setFont(font(pixelSize));
 
     // Draw into a device-pixel-aligned slot with Qt's text alignment. Measuring
@@ -332,6 +333,7 @@ void paintGlyph(QPainter& painter,
         flags |= Qt::AlignVCenter;
 
     painter.drawText(slot, flags, paintedGlyph);
+    painter.setFont(previousFont);
 }
 
 } // namespace Typography::Icons

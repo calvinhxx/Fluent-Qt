@@ -2,6 +2,8 @@
 
 #include <QWindow>
 
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
+
 namespace compatibility {
 
 namespace detail {
@@ -138,7 +140,8 @@ bool WindowChromeCompat::requestForegroundActivation() {
 bool WindowChromeCompat::usesCustomWindowChrome() const {
     const Platform platform = currentPlatform();
     return m_options.useCustomWindowChrome
-        && (platform == Platform::Windows || platform == Platform::Linux);
+        && (platform == Platform::Windows || platform == Platform::Linux
+            || platform == Platform::Other);
 }
 
 bool WindowChromeCompat::prefersNativeMacControls() const {
@@ -179,7 +182,8 @@ WindowChromeCompat::Platform WindowChromeCompat::currentPlatform() {
 }
 
 bool WindowChromeCompat::platformPrefersCustomWindowChrome() {
-    return currentPlatform() == Platform::Windows;
+    return currentPlatform() == Platform::Windows
+        || detail::runtimePlatformCapabilities().customWindowChromePreferred;
 }
 
 bool WindowChromeCompat::expandedClientAreaHintsAvailable() {

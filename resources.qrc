@@ -1,12 +1,13 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/">
-        <file>res/fonts/FluentQtUIText-Regular.ttf</file>
-        <file>res/fonts/FluentQtUIText-Semibold.ttf</file>
-        <file>res/fonts/FluentQtUIHeading-Semibold.ttf</file>
-        <file>res/fonts/FluentQtUIDisplay-Semibold.ttf</file>
-        <file>res/icons/FluentQtIcons.ttf</file>
-        <file>res/icons/FluentQtIcons.json</file>
-        <file>res/icons/FluentQtIconAliases.json</file>
+        <file alias="res/fonts/FluentQtUIText-Regular.ttf">@CMAKE_CURRENT_SOURCE_DIR@/res/fonts/FluentQtUIText-Regular.ttf</file>
+        <file alias="res/fonts/FluentQtUIText-Semibold.ttf">@CMAKE_CURRENT_SOURCE_DIR@/res/fonts/FluentQtUIText-Semibold.ttf</file>
+        <file alias="res/fonts/FluentQtUIHeading-Semibold.ttf">@CMAKE_CURRENT_SOURCE_DIR@/res/fonts/FluentQtUIHeading-Semibold.ttf</file>
+        <file alias="res/fonts/FluentQtUIDisplay-Semibold.ttf">@CMAKE_CURRENT_SOURCE_DIR@/res/fonts/FluentQtUIDisplay-Semibold.ttf</file>
+@FLUENT_QT_OPTIONAL_RESOURCE_ENTRIES@
+        <file alias="res/icons/FluentQtIcons.ttf">@CMAKE_CURRENT_SOURCE_DIR@/res/icons/FluentQtIcons.ttf</file>
+        <file alias="res/icons/FluentQtIcons.json">@CMAKE_CURRENT_SOURCE_DIR@/res/icons/FluentQtIcons.json</file>
+        <file alias="res/icons/FluentQtIconAliases.json">@CMAKE_CURRENT_SOURCE_DIR@/res/icons/FluentQtIconAliases.json</file>
     </qresource>
 </RCC>

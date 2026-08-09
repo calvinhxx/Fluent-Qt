@@ -14,6 +14,7 @@
 #include "components/windowing/TitleBar.h"
 #include "design/Typography.h"
 #include "model/GalleryContentCatalog.h"
+#include "platform/GalleryPlatform.h"
 #include "support/logging/Log.h"
 #include "AppIcon.h"
 #include "GalleryContentPresenter.h"
@@ -58,18 +59,21 @@ GalleryWindow::GalleryWindow(QWidget* parent)
     , m_navigationState(this)
 {
     setObjectName(QStringLiteral("galleryWindow"));
-    setWindowTitle(QStringLiteral("Fluent-Qt Gallery"));
+    setWindowTitle(platform::capabilities().windowTitle);
     setWindowIcon(appicon::icon());
     const auto chromePlatform = compatibility::WindowChromeCompat::currentPlatform();
-    const bool useCustomChrome =
-        chromePlatform == compatibility::WindowChromeCompat::Platform::Windows
+    const bool useClientTitleBar =
+        platform::capabilities().usesClientSideTitleBar
+        || chromePlatform == compatibility::WindowChromeCompat::Platform::Windows
         || chromePlatform == compatibility::WindowChromeCompat::Platform::Linux;
-    setCustomWindowChromeEnabled(useCustomChrome);
-    // Self-drawn caption buttons exist only on Windows/Linux custom chrome.
-    // macOS keeps native traffic lights, so these tooltips do not apply there.
-    // zh_CN: 自绘标题按钮仅在 Windows/Linux 自定义 chrome 下存在；
-    // macOS 仍用系统红绿灯，此处提示文案不适用。
-    if (useCustomChrome) {
+    const bool useCaptionButtons = useClientTitleBar
+        && chromePlatform != compatibility::WindowChromeCompat::Platform::MacOS;
+    setCustomWindowChromeEnabled(useClientTitleBar);
+    // Application-owned chrome includes caption controls on desktop Linux,
+    // Windows, and browser-hosted windows. macOS keeps native traffic lights.
+    // zh_CN: Windows、Linux 与浏览器宿主窗口的应用自绘 chrome 包含标题栏按钮；
+    // macOS 保留原生 traffic lights。
+    if (useCaptionButtons) {
         setCaptionButtonToolTips(QStringLiteral("Minimize"),
                                  QStringLiteral("Maximize"),
                                  QStringLiteral("Close"),
@@ -253,21 +257,24 @@ void GalleryWindow::prewarmRemainingRoutes()
     // zh_CN: 先预热 Home 上可直接点击的精选路由，再按导航顺序补齐。Debug 构建可能在
     // 全目录常驻前触及固定启动预算；优先落地页入口可让 Button/TabView 等保持瞬时，且不延长 splash。
     QStringList routeIds;
-    auto appendUnique = [&routeIds](const QString& routeId) {
-        if (!routeId.isEmpty() && !routeIds.contains(routeId))
-            routeIds.append(routeId);
-    };
-    if (const GalleryContentEntry* home = galleryContentEntry(
-            m_navigationViewModel.defaultRouteId())) {
-        for (const QString& routeId : home->relatedRouteIds)
-            appendUnique(routeId);
-    }
-    if (m_mainNavigationPane)
-        for (const QString& routeId : m_mainNavigationPane->routeIds())
-            appendUnique(routeId);
-    if (m_footerNavigationPane) {
-        for (const QString& routeId : m_footerNavigationPane->routeIds())
-            appendUnique(routeId);
+    if (platform::capabilities().prewarmsRoutes) {
+        auto appendUnique = [&routeIds](const QString& routeId) {
+            if (!routeId.isEmpty() && !routeIds.contains(routeId))
+                routeIds.append(routeId);
+        };
+        if (const GalleryContentEntry* home = galleryContentEntry(
+                m_navigationViewModel.defaultRouteId())) {
+            for (const QString& routeId : home->relatedRouteIds)
+                appendUnique(routeId);
+        }
+        if (m_mainNavigationPane) {
+            for (const QString& routeId : m_mainNavigationPane->routeIds())
+                appendUnique(routeId);
+        }
+        if (m_footerNavigationPane) {
+            for (const QString& routeId : m_footerNavigationPane->routeIds())
+                appendUnique(routeId);
+        }
     }
     m_contentPresenter->prewarmRoutes(routeIds);
 }
@@ -492,7 +499,8 @@ void GalleryWindow::buildContentPresenter()
     // 页面内导航经 routeActivated 回流。
     m_contentPresenter = new GalleryContentPresenter(m_navigationView->contentHost(),
                                                      m_navigationViewModel,
-                                                     this);
+                                                     this,
+                                                     platform::capabilities().maxResidentRoutes);
     connect(m_contentPresenter, &GalleryContentPresenter::routeActivated,
             this, [this](const QString& routeId) {
                 selectRoute(routeId);

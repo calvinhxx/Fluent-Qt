@@ -5,12 +5,12 @@
 #include <QEvent>
 #include <QPalette>
 #include <QSettings>
-#include <QStandardPaths>
 #include <QTimer>
 
 #include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "platform/GalleryPlatform.h"
 #include "support/logging/Log.h"
 #include "viewmodel/ThemeCatalog.h"
 
@@ -36,26 +36,6 @@ using BackdropEffect = fluent::windowing::BackdropEffect;
 static_assert(static_cast<int>(BackdropEffect::Solid) == 0, "Solid setting must remain 0");
 static_assert(static_cast<int>(BackdropEffect::Mica) == 1, "Mica setting must remain 1");
 static_assert(static_cast<int>(BackdropEffect::Acrylic) == 2, "Acrylic setting must remain 2");
-
-bool persistenceAvailable()
-{
-    return QCoreApplication::organizationName() == QStringLiteral("Fluent-Qt")
-        && QCoreApplication::applicationName() == QStringLiteral("Fluent-Qt Gallery");
-}
-
-// Single config file, in the same per-user app folder as the logs (AppLocalDataLocation), so all app
-// data lives under one directory: %LOCALAPPDATA%\Fluent-Qt\Fluent-Qt Gallery\{config.ini, logs\}.
-// zh_CN: 单一配置文件,与日志同处每用户 app 目录(AppLocalDataLocation),让所有 app 数据集中在一个目录下。
-QString configFilePath()
-{
-    return QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)
-        + QStringLiteral("/config.ini");
-}
-
-QSettings configSettings()
-{
-    return QSettings(configFilePath(), QSettings::IniFormat);
-}
 
 fluent::FluentElement::Theme systemTheme()
 {
@@ -123,9 +103,9 @@ void GallerySettings::setThemeMode(ThemeMode mode)
         return;
 
     m_themeMode = mode;
-    if (persistenceAvailable()) {
-        configSettings().setValue(QString::fromLatin1(kThemeModeKey),
-                                  static_cast<int>(mode));
+    if (platform::persistenceAvailable()) {
+        platform::createSettings().setValue(QString::fromLatin1(kThemeModeKey),
+                                            static_cast<int>(mode));
     }
     applyThemeMode();
     emit themeModeChanged(m_themeMode);
@@ -139,9 +119,9 @@ void GallerySettings::setStyleTheme(StyleTheme theme)
         return;
 
     m_styleTheme = theme;
-    if (persistenceAvailable()) {
-        configSettings().setValue(QString::fromLatin1(kStyleThemeKey),
-                                  static_cast<int>(theme));
+    if (platform::persistenceAvailable()) {
+        platform::createSettings().setValue(QString::fromLatin1(kStyleThemeKey),
+                                            static_cast<int>(theme));
     }
     // ThemeRegistry commits the complete preset and schedules exactly one refresh.
     // zh_CN: 装入新的调色板/圆角预设,再强制原子重绘(refreshTheme 重广播当前明暗模式;因模式未变,
@@ -190,9 +170,9 @@ void GallerySettings::setNavigationStyle(NavigationStyle style)
         return;
 
     m_navigationStyle = style;
-    if (persistenceAvailable()) {
-        configSettings().setValue(QString::fromLatin1(kNavigationStyleKey),
-                                  static_cast<int>(style));
+    if (platform::persistenceAvailable()) {
+        platform::createSettings().setValue(QString::fromLatin1(kNavigationStyleKey),
+                                            static_cast<int>(style));
     }
     emit navigationStyleChanged(m_navigationStyle);
     LOG_INFO(QStringLiteral("GallerySettings navigationStyleChanged style=%1")
@@ -205,9 +185,9 @@ void GallerySettings::setWindowEffect(fluent::windowing::BackdropEffect effect)
         return;
 
     m_windowEffect = effect;
-    if (persistenceAvailable()) {
-        configSettings().setValue(QString::fromLatin1(kWindowEffectKey),
-                                  static_cast<int>(effect));
+    if (platform::persistenceAvailable()) {
+        platform::createSettings().setValue(QString::fromLatin1(kWindowEffectKey),
+                                            static_cast<int>(effect));
     }
     emit windowEffectChanged(m_windowEffect);
     LOG_INFO(QStringLiteral("GallerySettings windowEffectChanged effect=%1")
@@ -220,9 +200,9 @@ void GallerySettings::setCloseBehavior(CloseBehavior behavior)
         return;
 
     m_closeBehavior = behavior;
-    if (persistenceAvailable()) {
-        configSettings().setValue(QString::fromLatin1(kCloseBehaviorKey),
-                                  static_cast<int>(behavior));
+    if (platform::persistenceAvailable()) {
+        platform::createSettings().setValue(QString::fromLatin1(kCloseBehaviorKey),
+                                            static_cast<int>(behavior));
     }
     emit closeBehaviorChanged(m_closeBehavior);
     LOG_INFO(QStringLiteral("GallerySettings closeBehaviorChanged behavior=%1")
@@ -242,10 +222,12 @@ void GallerySettings::setWindowPlacement(const QRect& normalGeometry,
     m_windowNormalGeometry = normalGeometry;
     m_windowScreenName = screenName;
     m_windowMaximized = maximized;
-    if (!persistenceAvailable())
+    if (!platform::capabilities().persistsWindowPlacement)
+        return;
+    if (!platform::persistenceAvailable())
         return;
 
-    QSettings settings = configSettings();
+    QSettings settings = platform::createSettings();
     settings.setValue(QString::fromLatin1(kWindowNormalGeometryKey), normalGeometry);
     settings.setValue(QString::fromLatin1(kWindowScreenNameKey), screenName);
     settings.setValue(QString::fromLatin1(kWindowMaximizedKey), maximized);
@@ -257,8 +239,8 @@ void GallerySettings::setCloseBehaviorConfirmed(bool confirmed)
         return;
 
     m_closeBehaviorConfirmed = confirmed;
-    if (persistenceAvailable()) {
-        QSettings settings = configSettings();
+    if (platform::persistenceAvailable()) {
+        QSettings settings = platform::createSettings();
         settings.setValue(QString::fromLatin1(kCloseBehaviorConfirmedKey), confirmed);
         if (confirmed) {
             settings.setValue(QString::fromLatin1(kCloseBehaviorKey),
@@ -273,8 +255,10 @@ void GallerySettings::setIntroCompleted(bool completed)
         return;
 
     m_introCompleted = completed;
-    if (persistenceAvailable())
-        configSettings().setValue(QString::fromLatin1(kIntroCompletedKey), completed);
+    if (platform::persistenceAvailable()) {
+        platform::createSettings().setValue(
+            QString::fromLatin1(kIntroCompletedKey), completed);
+    }
 }
 
 bool GallerySettings::eventFilter(QObject* watched, QEvent* event)
@@ -298,10 +282,10 @@ void GallerySettings::applyThemeMode()
 
 void GallerySettings::load()
 {
-    if (!persistenceAvailable())
+    if (!platform::persistenceAvailable())
         return;
 
-    const QSettings settings(configFilePath(), QSettings::IniFormat);
+    const QSettings settings = platform::createSettings();
     const int theme = qBound(0, settings.value(QString::fromLatin1(kThemeModeKey), 0).toInt(), 2);
     const int styleTheme = qBound(0, settings.value(QString::fromLatin1(kStyleThemeKey), 0).toInt(), 2);
     const int navigation = qBound(0,
@@ -321,12 +305,14 @@ void GallerySettings::load()
     m_navigationStyle = static_cast<NavigationStyle>(navigation);
     m_windowEffect = static_cast<BackdropEffect>(windowEffect);
     m_closeBehavior = static_cast<CloseBehavior>(closeBehavior);
-    m_windowNormalGeometry = settings.value(
-        QString::fromLatin1(kWindowNormalGeometryKey)).toRect();
-    m_windowScreenName = settings.value(
-        QString::fromLatin1(kWindowScreenNameKey)).toString();
-    m_windowMaximized = settings.value(
-        QString::fromLatin1(kWindowMaximizedKey), false).toBool();
+    if (platform::capabilities().persistsWindowPlacement) {
+        m_windowNormalGeometry = settings.value(
+            QString::fromLatin1(kWindowNormalGeometryKey)).toRect();
+        m_windowScreenName = settings.value(
+            QString::fromLatin1(kWindowScreenNameKey)).toString();
+        m_windowMaximized = settings.value(
+            QString::fromLatin1(kWindowMaximizedKey), false).toBool();
+    }
     m_closeBehaviorConfirmed = settings.value(
         QString::fromLatin1(kCloseBehaviorConfirmedKey), false).toBool();
     m_introCompleted = settings.value(QString::fromLatin1(kIntroCompletedKey), false).toBool();

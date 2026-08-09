@@ -254,7 +254,7 @@ void Label::contextMenuEvent(QContextMenuEvent* event)
         setSelection(0, renderedText.size());
     });
 
-    fluent::menus_toolbars::detail::execTextEditingContextMenu(
+    fluent::menus_toolbars::detail::showTextEditingContextMenu(
         this,
         standardMenu,
         event->globalPos(),

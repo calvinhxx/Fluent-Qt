@@ -147,7 +147,7 @@ TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) 
     });
     QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier,
                       QPoint(button.width() - 8, button.height() / 2));
-    EXPECT_FALSE(button.isOpen());
+    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
     EXPECT_EQ(openSpy.count(), 2);
 
     button.setMenu(secondMenu);
@@ -197,6 +197,9 @@ TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle) {
     const QPoint toggleSecondary(toggle.width() - 8, toggle.height() / 2);
     QTest::mouseClick(&split, Qt::LeftButton, Qt::NoModifier, splitSecondary);
     QTest::mouseClick(&toggle, Qt::LeftButton, Qt::NoModifier, toggleSecondary);
+
+    QTRY_VERIFY_WITH_TIMEOUT(!split.isOpen(), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(!toggle.isOpen(), 1000);
 
     EXPECT_EQ(splitClickSpy.count(), 0);
     EXPECT_EQ(toggleClickSpy.count(), 0);

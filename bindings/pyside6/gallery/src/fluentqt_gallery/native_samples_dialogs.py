@@ -136,8 +136,8 @@ register_source_samples(
                     dialog.closeButtonClicked.connect(
                         lambda: status.setText("Result: Cancel")
                     )
-                    dialog.exec()
-                    dialog.deleteLater()
+                    dialog.finished.connect(dialog.deleteLater)
+                    dialog.open()
 
                 show.clicked.connect(open_dialog)
                 """),
@@ -199,8 +199,8 @@ register_source_samples(
                     dialog.closeButtonClicked.connect(
                         lambda: status.setText("Draft state: private")
                     )
-                    dialog.exec()
-                    dialog.deleteLater()
+                    dialog.finished.connect(dialog.deleteLater)
+                    dialog.open()
 
                 show.clicked.connect(open_dialog)
                 """),
@@ -268,13 +268,15 @@ register_source_samples(
                     button_row.addWidget(cancel_button)
                     dialog_layout.addLayout(button_row)
 
-                    result = dialog.exec()
-                    status.setText(
-                        f"Project name: {name_edit.text()}"
-                        if result == 1
-                        else "Dialog result: Cancel"
-                    )
-                    dialog.deleteLater()
+                    def finish_dialog(result):
+                        if result == 1:
+                            status.setText(
+                                f"Project name: {name_edit.text()}"
+                            )
+                        dialog.deleteLater()
+
+                    dialog.finished.connect(finish_dialog)
+                    dialog.open()
 
                 show.clicked.connect(open_dialog)
                 """),
@@ -327,13 +329,16 @@ register_source_samples(
                     dialog_layout.addWidget(
                         close_button, 0, Qt.AlignmentFlag.AlignRight
                     )
-                    dialog.exec()
-                    status.setText(
-                        "Last dialog: animated with smoke"
-                        if animation
-                        else "Last dialog: instant without smoke"
-                    )
-                    dialog.deleteLater()
+                    def finish_dialog(_result):
+                        status.setText(
+                            "Last dialog: animated with smoke"
+                            if animation
+                            else "Last dialog: instant without smoke"
+                        )
+                        dialog.deleteLater()
+
+                    dialog.finished.connect(finish_dialog)
+                    dialog.open()
 
                 animated.clicked.connect(
                     lambda: open_dialog(animated, True, True)

@@ -15,6 +15,18 @@ FluentQt-specific family names and do not use Inter's Reserved Font Name.
 - Source and provenance: `third_party/fonts/inter/README.md`
 - License: `third_party/fonts/inter/LICENSE.txt`
 
+## Noto Sans SC WebAssembly fallback
+
+Supported WebAssembly builds embed `FluentQt UI Simplified Chinese`, a
+GB 2312 repertoire subset derived from Noto Sans SC. The subset is used only
+when the semantic Inter faces do not contain a requested Han glyph; desktop
+builds continue to use their platform font fallback. The derivative uses a
+FluentQt-specific family name and does not use the upstream Reserved Font
+Name. Noto Sans SC is licensed under the SIL Open Font License 1.1.
+
+- Source and provenance: `third_party/fonts/noto-sans-sc/README.md`
+- License: `third_party/fonts/noto-sans-sc/LICENSE.txt`
+
 ## Fluent UI System Icons
 
 The complete Regular icon face and name-to-codepoint catalog in `res/icons/`
@@ -49,6 +61,19 @@ and platform plug-in runtime contract currently used by Gallery, including the
 third-party source and license material shipped inside Qt Base. If the runtime
 contract grows beyond Qt Base, the corresponding module source must be added
 before publishing the package.
+
+The C++ Web Gallery is a separate static WebAssembly distribution built with
+Qt 6.9.3 `wasm_singlethread`. Its open-source binary is conveyed under GPLv3;
+FluentQt's own source remains MIT licensed. The Pages payload includes the full
+Qt license notice, a link to the exact Qt 6.9.3 corresponding source archive,
+the Emscripten license, this notice, and the complete FluentQt source link.
+
+## Emscripten compiler runtime
+
+The C++ Web Gallery is compiled with Emscripten 3.1.70. Emscripten is offered
+under the MIT and University of Illinois/NCSA licenses, and its license also
+records the bundled musl libc and Node.js notices. The generated Pages payload
+includes `Emscripten-LICENSE.txt` copied from the active compiler SDK.
 
 ## spdlog
 

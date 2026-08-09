@@ -8,12 +8,20 @@
 
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/windowing/WindowBackdrop.h"
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
 
 namespace fluent::windowing {
 
 namespace {
 
 constexpr int TitleBarDefaultLeadingMargin = 8;
+
+bool effectiveWindowActivation(bool nativeActive)
+{
+    return nativeActive
+        || compatibility::detail::runtimePlatformCapabilities()
+               .hostsApplicationWindowsInDesktopSurface;
+}
 
 void refreshFluentDescendants(QWidget* root)
 {
@@ -32,8 +40,12 @@ void refreshFluentDescendants(QWidget* root)
 
 TitleBar::TitleBar(QWidget* parent)
     : QWidget(parent) {
-    m_windowActive = isActiveWindow();
+    m_windowActive = effectiveWindowActivation(isActiveWindow());
     setAttribute(Qt::WA_Hover);
+    setAttribute(
+        Qt::WA_OpaquePaintEvent,
+        compatibility::detail::runtimePlatformCapabilities()
+            .opaqueClientTitleBarSurface);
     setAutoFillBackground(false);
     setFixedHeight(m_titleBarHeight);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -151,7 +163,8 @@ bool TitleBar::event(QEvent* event) {
     // and caller-owned chrome can then dim in lockstep while layout and hit testing stay intact.
     // zh_CN: 将激活状态作为标题栏契约发布，使窗口按钮和调用方 chrome 同步变暗，且不影响布局与命中区域。
     if (event->type() == QEvent::WindowActivate || event->type() == QEvent::WindowDeactivate) {
-        const bool active = event->type() == QEvent::WindowActivate;
+        const bool active = effectiveWindowActivation(
+            event->type() == QEvent::WindowActivate);
         if (m_windowActive != active) {
             m_windowActive = active;
             emit windowActiveChanged(active);
@@ -171,12 +184,23 @@ void TitleBar::paintEvent(QPaintEvent*) {
     // 必须清除（而非不绘制）：半透明顶层下 macOS 后备缓冲不会自动清除，否则动画/重排的 chrome（返回按钮展开、
     // 标题重排）会叠在残影上重影。有效色则是纯色回退背景。
     QPainter painter(this);
+    const bool opaqueClientSurface =
+        compatibility::detail::runtimePlatformCapabilities()
+            .opaqueClientTitleBarSurface;
     // The top-level Window already painted the software material. Leaving this
     // child surface untouched preserves one continuous gradient/noise field.
-    if (windowBackdropUsesPaintedMaterial(window()))
+    if (windowBackdropUsesPaintedMaterial(window()) && !opaqueClientSurface)
         return;
 
-    const QColor fill = windowChromeBackdropFill(*this, window(), m_windowActive);
+    QColor fill = windowChromeBackdropFill(*this, window(), m_windowActive);
+    if (opaqueClientSurface) {
+        if (!fill.isValid())
+            fill = themeBackdrop(m_windowActive);
+        fill.setAlpha(255);
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(rect(), fill);
+        return;
+    }
     if (!fill.isValid()) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(rect(), Qt::transparent);

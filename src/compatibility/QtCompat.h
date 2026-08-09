@@ -31,6 +31,7 @@
 #include <QAccessible>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QFontDatabase>
 #include <QGuiApplication>
 #include <QHoverEvent>
 #include <QIcon>
@@ -93,6 +94,21 @@ enum class FluentAccessibleAnnouncementPoliteness {
     Polite,
     Assertive
 };
+
+/**
+ * @brief Registers an application font as a script-specific fallback when the
+ * active Qt version supports that API.
+ * zh_CN: 在当前 Qt 版本支持对应 API 时，将应用字体注册为指定 script 的回退字体。
+ */
+inline void fluentAddApplicationFallbackFontFamily(
+    QChar::Script script, const QString& family) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+    QFontDatabase::addApplicationFallbackFontFamily(script, family);
+#else
+    Q_UNUSED(script);
+    Q_UNUSED(family);
+#endif
+}
 
 /**
  * @brief Returns the accessibility event type used for live announcements.

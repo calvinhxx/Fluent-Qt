@@ -21,6 +21,26 @@
       }
     },
     {
+      "name": "wasm",
+      "displayName": "Qt 6.9 WebAssembly single-threaded Release",
+      "description": "Browser build using QT_WASM_ROOT and QT_HOST_ROOT; no vcpkg dependencies are used.",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "generator": "Ninja",
+      "toolchainFile": "$env{QT_WASM_ROOT}/lib/cmake/Qt6/qt.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "QT_HOST_PATH": "$env{QT_HOST_ROOT}",
+        "BUILD_TESTING": "OFF",
+        "FLUENT_QT_BUILD_EXAMPLES": "ON",
+        "FLUENT_QT_BUILD_GALLERY": "ON",
+        "FLUENT_QT_BUILD_TESTS": "OFF",
+        "FLUENT_QT_BUILD_PYSIDE6_BINDINGS": "OFF",
+        "FLUENT_QT_BUILD_WEBASSEMBLY_SUPPORT": "ON",
+        "FLUENT_QT_INSTALL": "ON",
+        "FLUENT_QT_ENABLE_GALLERY_PACKAGING": "OFF"
+      }
+    },
+    {
       "name": "vcpkg-osx",
       "displayName": "vcpkg macOS arm64 Debug",
       "description": "Apple Silicon build using vcpkg manifest dependencies. Qt is discovered from the local Qt installation.",
@@ -208,6 +228,11 @@
     }
   ],
   "buildPresets": [
+    {
+      "name": "wasm",
+      "configurePreset": "wasm",
+      "configuration": "Release"
+    },
     {
       "name": "vcpkg-osx",
       "configurePreset": "vcpkg-osx",

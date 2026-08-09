@@ -114,6 +114,7 @@ bool triggerContextAction(LineEdit* edit,
     QContextMenuEvent event(
         QContextMenuEvent::Mouse, localPos, globalPos);
     QApplication::sendEvent(edit, &event);
+    QTest::qWait(1);
     return triggered;
 }
 
@@ -272,6 +273,7 @@ TEST_F(LineEditTest, Contract_StandardEditingActionsUseFluentContextMenu)
     QApplication::sendEvent(edit, &event);
 
     EXPECT_TRUE(event.isAccepted());
+    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
     EXPECT_TRUE(sawFluentMenu);
     EXPECT_TRUE(sawCopy);
     EXPECT_TRUE(sawSelectAll);
