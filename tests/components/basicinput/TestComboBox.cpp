@@ -387,6 +387,7 @@ TEST_F(ComboBoxTest, CallerSuppliedQtEditorUsesFluentContextMenu)
     QApplication::sendEvent(editor, &event);
 
     EXPECT_TRUE(event.isAccepted());
+    QTRY_VERIFY_WITH_TIMEOUT(sawFluentMenu, 1000);
     EXPECT_TRUE(sawFluentMenu);
 }
 

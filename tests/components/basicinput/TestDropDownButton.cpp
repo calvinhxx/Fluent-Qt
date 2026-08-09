@@ -94,7 +94,7 @@ TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestructio
     });
     QTest::mouseClick(&button, Qt::LeftButton, Qt::NoModifier,
                       button.rect().center());
-    EXPECT_FALSE(button.isOpen());
+    QTRY_VERIFY_WITH_TIMEOUT(!button.isOpen(), 1000);
     EXPECT_EQ(openSpy.count(), 2);
 
     button.setMenu(secondMenu);

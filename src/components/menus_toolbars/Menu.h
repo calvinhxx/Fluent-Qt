@@ -85,6 +85,7 @@ signals:
     void fontStyleChanged();
 
 protected:
+    void setItemLayoutMetrics(int verticalPadding, int separatorHeight);
     void actionEvent(QActionEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
@@ -96,8 +97,13 @@ private:
     void normalizePopupLayering();
     void drawShadow(QPainter& painter, const QRect& contentRect);
 
-    // Matches the drawShadow spread with a little headroom for a natural fade. zh_CN: 与 drawShadow 扩散范围一致，略留余量自然淡出。
-    const int m_shadowSize = ::Spacing::Standard;
+    // Alpha-capable popup surfaces reserve a painted shadow; opaque runtime
+    // fallbacks use the complete popup rect. zh_CN: 支持 alpha 的 popup 预留
+    // 自绘阴影；不透明运行时回退使用完整 popup 矩形。
+    int m_shadowSize = ::Spacing::Standard;
+    bool m_translucentSurface = true;
+    int m_itemVerticalPadding = ::Spacing::Padding::ListItemVertical;
+    int m_separatorHeight = ::Spacing::Gap::Normal + 1;
 
     Typography::FontRole m_fontStyle = Typography::FontRole::Body;
     qreal m_revealProgress = 1.0;

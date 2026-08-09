@@ -42,10 +42,12 @@ constexpr int kPrewarmBudgetMs = 3000;
 GalleryContentPresenter::GalleryContentPresenter(
     fluent::navigation::StackContentHost* contentHost,
     const GalleryNavigationViewModel& navigationViewModel,
-    QObject* parent)
+    QObject* parent,
+    int maxResidentRoutes)
     : QObject(parent)
     , m_contentHost(contentHost)
     , m_navigationViewModel(navigationViewModel)
+    , m_maxResidentRoutes(qMax(0, maxResidentRoutes))
 {
 }
 
@@ -156,6 +158,7 @@ bool GalleryContentPresenter::presentRoute(const QString& routeId)
         // Warm: the page is already built and resident — a pure show/hide (~1 ms).
         // zh_CN: 已预热：页面已建好常驻——纯显示/隐藏（约 1ms）。
         beginNavigationWatch(routeId, false, requestId);
+        touchResidentRoute(routeId);
         watchNavigationPage(m_contentHost->pageWidget(existing), 0);
         m_pendingSwitchMs = switchToStackPage(existing);
         return true;
@@ -332,8 +335,10 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* bui
     if (buildMs)
         *buildMs = 0;
     const int existing = m_routeStackIndex.value(routeId, -1);
-    if (existing >= 0)
+    if (existing >= 0) {
+        touchResidentRoute(routeId);
         return existing;
+    }
 
     const GalleryNavigationItem* item = m_navigationViewModel.itemById(routeId);
     if (!item) {
@@ -356,15 +361,67 @@ int GalleryContentPresenter::ensurePageBuilt(const QString& routeId, qint64* bui
     const int index = m_contentHost->count();
     m_contentHost->insertPage(index, page);
     m_routeStackIndex.insert(routeId, index);
+    touchResidentRoute(routeId);
+    trimResidentRoutes(routeId);
     const qint64 elapsedBuildMs = buildTimer.elapsed();
     if (buildMs)
         *buildMs = elapsedBuildMs;
+    const int residentIndex = m_routeStackIndex.value(routeId, -1);
     LOG_DEBUG(QStringLiteral("PERF buildPage routeId=%1 buildMs=%2 pageType=%3 stackIndex=%4")
                   .arg(routeId)
                   .arg(elapsedBuildMs)
                   .arg(QString::fromLatin1(page->metaObject()->className()))
-                  .arg(index));
-    return index;
+                  .arg(residentIndex));
+    return residentIndex;
+}
+
+void GalleryContentPresenter::touchResidentRoute(const QString& routeId)
+{
+    m_routeRecency.removeAll(routeId);
+    m_routeRecency.append(routeId);
+}
+
+void GalleryContentPresenter::trimResidentRoutes(const QString& protectedRouteId)
+{
+    if (!m_contentHost || m_maxResidentRoutes <= 0)
+        return;
+
+    while (m_routeStackIndex.size() > m_maxResidentRoutes) {
+        QString victimRouteId;
+        for (const QString& routeId : m_routeRecency) {
+            if (routeId != protectedRouteId
+                && m_routeStackIndex.contains(routeId)) {
+                victimRouteId = routeId;
+                break;
+            }
+        }
+        if (victimRouteId.isEmpty())
+            return;
+
+        const int removedIndex = m_routeStackIndex.value(victimRouteId);
+        if (!m_contentHost->releasePage(removedIndex)) {
+            LOG_WARN(QStringLiteral(
+                         "GalleryContentPresenter cache eviction failed routeId=%1 index=%2")
+                         .arg(victimRouteId)
+                         .arg(removedIndex));
+            return;
+        }
+        m_routeStackIndex.remove(victimRouteId);
+        m_routeRecency.removeAll(victimRouteId);
+
+        for (auto it = m_routeStackIndex.begin(); it != m_routeStackIndex.end(); ++it) {
+            if (it.value() > removedIndex)
+                --it.value();
+        }
+        if (m_skeletonIndex > removedIndex)
+            --m_skeletonIndex;
+
+        LOG_DEBUG(QStringLiteral(
+                      "GalleryContentPresenter cache evicted routeId=%1 resident=%2 limit=%3")
+                      .arg(victimRouteId)
+                      .arg(m_routeStackIndex.size())
+                      .arg(m_maxResidentRoutes));
+    }
 }
 
 void GalleryContentPresenter::connectPageNavigation(QWidget* page)

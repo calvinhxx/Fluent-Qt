@@ -3,6 +3,7 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QCoreApplication>
+#include <QFile>
 #include <QGuiApplication>
 #include <QResource>
 #include <QString>
@@ -38,6 +39,27 @@ void configureSystemTextFallback()
     };
     for (const QString& family : bundledFamilies)
         QFont::insertSubstitution(family, systemFamily);
+}
+
+void configureSimplifiedChineseFallback(const QString& family)
+{
+    if (family.isEmpty())
+        return;
+
+    const QStringList bundledFamilies = {
+        fluent::fontcompat::UITextFamily,
+        fluent::fontcompat::UIHeadingFamily,
+        fluent::fontcompat::UIDisplayFamily,
+    };
+    for (const QString& bundledFamily : bundledFamilies)
+        QFont::insertSubstitution(bundledFamily, family);
+
+    // Qt's WebAssembly platform has no host CJK fonts to discover. Registering
+    // the optional face by script keeps semantic typography roles unchanged
+    // while Qt resolves only missing Han glyphs through this application font.
+    // zh_CN: Qt WebAssembly 无法发现宿主机 CJK 字体；按 script 注册可选字体，
+    // 可保持语义字体角色不变，仅让缺失的汉字 glyph 使用 application font。
+    fluentAddApplicationFallbackFontFamily(QChar::Script_Han, family);
 }
 
 void configureLinuxEmojiFontFallback()
@@ -121,10 +143,23 @@ bool loadBundledFonts()
         QStringLiteral(":/res/icons/FluentQtIcons.ttf"),
         fluent::fontcompat::IconFamily);
 
+    bool optionalFallbackLoaded = true;
+    const QString simplifiedChinesePath = QStringLiteral(
+        ":/res/fonts/FluentQtUISimplifiedChinese-Regular.otf");
+    if (QFile::exists(simplifiedChinesePath)) {
+        optionalFallbackLoaded = loadBundledFace(
+            simplifiedChinesePath,
+            fluent::fontcompat::UISimplifiedChineseFamily);
+        if (optionalFallbackLoaded) {
+            configureSimplifiedChineseFallback(
+                fluent::fontcompat::UISimplifiedChineseFamily);
+        }
+    }
+
     configureLinuxEmojiFontFallback();
 
     return textRegularLoaded && textSemiboldLoaded && headingSemiboldLoaded
-        && displaySemiboldLoaded && iconsLoaded;
+        && displaySemiboldLoaded && iconsLoaded && optionalFallbackLoaded;
 }
 
 } // namespace

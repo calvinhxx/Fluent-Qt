@@ -20,6 +20,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "compatibility/WindowChromeCompat.h"
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "design/Breakpoints.h"
 #include "design/Typography.h"
 #include "components/foundation/FluentElement.h"
@@ -83,6 +84,24 @@ public:
 struct WindowVisualLauncher {
     QWidget* window = nullptr;
     Button* showButton = nullptr;
+};
+
+class RuntimeCapabilitiesScope final {
+public:
+    explicit RuntimeCapabilitiesScope(
+        const compatibility::detail::RuntimePlatformCapabilities& capabilities)
+        : m_previous(compatibility::detail::runtimePlatformCapabilities())
+    {
+        compatibility::detail::setRuntimePlatformCapabilities(capabilities);
+    }
+
+    ~RuntimeCapabilitiesScope()
+    {
+        compatibility::detail::setRuntimePlatformCapabilities(m_previous);
+    }
+
+private:
+    compatibility::detail::RuntimePlatformCapabilities m_previous;
 };
 
 QImage renderBackdropMaterial(BackdropEffect effect, bool dark = false) {
@@ -387,6 +406,61 @@ TEST_F(WindowTest, DefaultConstructionCreatesChromeAndContentHost) {
               linuxPlatform);
     EXPECT_EQ(window.findChild<QWidget*>(QStringLiteral("fluentWindowFrameEdgeOverlay")) != nullptr,
               linuxPlatform);
+}
+
+TEST_F(WindowTest, RuntimeCanUseOpaqueTitleBarAndCachedPaintedSurface) {
+    auto capabilities = compatibility::detail::runtimePlatformCapabilities();
+    capabilities.customWindowChromePreferred = true;
+    capabilities.hostsApplicationWindowsInDesktopSurface = true;
+    capabilities.opaqueClientTitleBarSurface = true;
+    capabilities.cachePaintedWindowSurfaces = true;
+    RuntimeCapabilitiesScope capabilityScope(capabilities);
+
+    Window window;
+    window.resize(520, 360);
+    window.ensurePolished();
+    if (window.layout())
+        window.layout()->activate();
+
+    ASSERT_EQ(window.backdropState().surfaceMode,
+              BackdropSurfaceMode::PaintedOpaque);
+    ASSERT_NE(window.titleBar(), nullptr);
+    EXPECT_TRUE(window.titleBar()->testAttribute(Qt::WA_OpaquePaintEvent));
+    EXPECT_TRUE(window.titleBar()->isWindowActive());
+
+    QEvent deactivateEvent(QEvent::WindowDeactivate);
+    QApplication::sendEvent(window.titleBar(), &deactivateEvent);
+    EXPECT_TRUE(window.titleBar()->isWindowActive());
+
+    QImage titleImage(window.titleBar()->size(),
+                      QImage::Format_ARGB32_Premultiplied);
+    titleImage.fill(Qt::transparent);
+    window.titleBar()->render(&titleImage);
+    EXPECT_TRUE(imageIsFullyOpaque(titleImage));
+
+    QImage firstFrame(window.size(), QImage::Format_ARGB32_Premultiplied);
+    firstFrame.fill(Qt::transparent);
+    window.render(&firstFrame);
+    const int firstGeneration =
+        window.property("fluentPaintedSurfaceCacheGeneration").toInt();
+    EXPECT_GT(firstGeneration, 0);
+
+    QImage secondFrame(window.size(), QImage::Format_ARGB32_Premultiplied);
+    secondFrame.fill(Qt::transparent);
+    window.render(&secondFrame);
+    EXPECT_EQ(
+        window.property("fluentPaintedSurfaceCacheGeneration").toInt(),
+        firstGeneration);
+
+    window.resize(560, 360);
+    if (window.layout())
+        window.layout()->activate();
+    QImage resizedFrame(window.size(), QImage::Format_ARGB32_Premultiplied);
+    resizedFrame.fill(Qt::transparent);
+    window.render(&resizedFrame);
+    EXPECT_GT(
+        window.property("fluentPaintedSurfaceCacheGeneration").toInt(),
+        firstGeneration);
 }
 
 TEST_F(WindowTest, ApplicationSuppliesCaptionButtonAccessibleNames) {

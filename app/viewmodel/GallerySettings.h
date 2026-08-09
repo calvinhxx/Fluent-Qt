@@ -59,9 +59,10 @@ public:
 
     // Accent color of the active style theme (the effective value for the current Light/Dark mode,
     // i.e. preset accent unless the user customized it). Customizing persists into the style theme's
-    // themes/<key>.json override file, so it survives restarts and is orthogonal to the preset switch.
+    // selected platform persistence backend, so it survives restarts/reloads and is orthogonal to
+    // the preset switch.
     // zh_CN: 当前样式主题的强调色(当前明暗模式下的生效值,即未自定义时为预设强调色)。自定义会持久化进该样式主题的
-    // themes/<key>.json 覆盖文件,可跨重启保留,且与预设切换正交。
+    // 所选平台持久化后端。该设置可跨重启/刷新保留，且与预设切换正交。
     QColor accentColor() const;
     void setAccentColor(const QColor& accent);
     void resetAccentColor();

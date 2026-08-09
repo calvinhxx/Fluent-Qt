@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en" data-fluent-qt-loaded="false">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>Fluent-Qt C++ Web Gallery</title>
+  <script>
+    document.documentElement.dataset.fluentQtLoadStartedAt = String(Date.now());
+    // Qt 6.9's WebAssembly platform reads window.devicePixelRatio directly
+    // when sizing the QWidget backing store. Cap it before qtloader starts so
+    // Retina displays do not turn a 1280x720 Gallery into a 2560x1440 paint
+    // target. The default adapts between 1x and 1.25x to keep the backing
+    // store near 1.6 million pixels. Append ?render-scale=native to opt back
+    // into native resolution.
+    window.fluentQtRenderProfile = (() => {
+      const params = new URLSearchParams(window.location.search);
+      const nativeDpr = Number(window.devicePixelRatio) || 1;
+      const requested = params.get('render-scale');
+      const nativeMode = requested === 'native';
+      const numeric = Number(requested);
+      const pixelBudget = 1600000;
+      const viewportPixels = Math.max(1, window.innerWidth * window.innerHeight);
+      const adaptiveDpr = Math.max(1, Math.floor(
+        Math.min(1.25, Math.sqrt(pixelBudget / viewportPixels)) * 20
+      ) / 20);
+      const requestedDpr = Number.isFinite(numeric) && numeric > 0
+        ? numeric
+        : adaptiveDpr;
+      const targetDpr = nativeMode
+        ? nativeDpr
+        : Math.min(nativeDpr, Math.max(1, requestedDpr));
+
+      if (targetDpr < nativeDpr) {
+        try {
+          Object.defineProperty(window, 'devicePixelRatio', {
+            configurable: true,
+            get: () => targetDpr
+          });
+        } catch (error) {
+          console.warn('Could not cap WebAssembly render scale', error);
+        }
+      }
+
+      const effectiveDpr = Number(window.devicePixelRatio) || nativeDpr;
+      const mode = effectiveDpr < nativeDpr ? 'performance' : 'native';
+      const profile = nativeMode
+        ? 'native'
+        : (Number.isFinite(numeric) && numeric > 0 ? 'fixed' : 'adaptive');
+      document.documentElement.dataset.fluentQtNativeDpr = String(nativeDpr);
+      document.documentElement.dataset.fluentQtRenderDpr = String(effectiveDpr);
+      document.documentElement.dataset.fluentQtRenderMode = mode;
+      document.documentElement.dataset.fluentQtRenderProfile = profile;
+      document.documentElement.dataset.fluentQtPixelBudget = String(pixelBudget);
+      return { nativeDpr, effectiveDpr, mode, profile, pixelBudget };
+    })();
+    window.fluentQtWindowProfile = (() => {
+      const params = new URLSearchParams(window.location.search);
+      const requested = params.get('window-mode');
+      const compactViewport = window.innerWidth < 948 || window.innerHeight < 678;
+      const mode = requested === 'windowed' || requested === 'maximized'
+        ? requested
+        : (compactViewport ? 'maximized' : 'windowed');
+      document.documentElement.dataset.fluentQtWindowMode = mode;
+      return { mode };
+    })();
+  </script>
+  <style>
+    :root { color-scheme: light dark; font-family: Inter, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { display: grid; grid-template-rows: minmax(0, 1fr) auto; background: #e9edf3; }
+    #qt-container { position: relative; min-width: 0; min-height: 0; overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 8%, rgb(0 103 192 / 10%), transparent 34%),
+        radial-gradient(circle at 82% 92%, rgb(124 77 255 / 9%), transparent 38%),
+        #eef1f5; }
+    #loading {
+      position: absolute; inset: 0; z-index: 10; display: grid; place-content: center;
+      gap: 14px; padding: 24px; text-align: center; background: #f3f3f3;
+      transition: opacity 180ms ease;
+    }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    #loading.error { color: #b42318; }
+    .spinner { width: 28px; height: 28px; margin: auto; border: 3px solid #c7c7c7;
+      border-top-color: #0067c0; border-radius: 50%; animation: spin .8s linear infinite; }
+    #loading.error .spinner { display: none; }
+    footer { min-height: 30px; display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 5px 12px; font-size: 12px; color: #5d5d5d; background: #fafafa;
+      border-top: 1px solid #dedede; }
+    footer nav { display: flex; gap: 12px; }
+    footer a { color: #005fb8; }
+    @media (max-width: 760px) {
+      footer { align-items: flex-start; flex-direction: column; gap: 2px; }
+      footer nav { flex-wrap: wrap; }
+    }
+    @media (prefers-color-scheme: dark) {
+      body, #loading { background: #202020; color: #f5f5f5; }
+      #qt-container { background:
+        radial-gradient(circle at 18% 8%, rgb(96 205 255 / 10%), transparent 34%),
+        radial-gradient(circle at 82% 92%, rgb(139 92 246 / 10%), transparent 38%),
+        #20242a; }
+      footer { color: #c7c7c7; background: #181818; border-color: #3b3b3b; }
+      footer a { color: #60cdff; }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+  <link rel="preload" href="fluent_qt_gallery.wasm" as="fetch"
+        type="application/wasm" crossorigin>
+</head>
+<body>
+  <main id="qt-container" aria-label="Fluent-Qt C++ Web Gallery">
+    <section id="loading" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <strong>Loading the C++ Web Gallery…</strong>
+      <span id="loading-detail">Qt 6.9.3 · WebAssembly single-threaded</span>
+    </section>
+  </main>
+  <footer>
+    <span>Fluent-Qt @PROJECT_VERSION@ · C++ Web Gallery · <span id="window-mode-status">starting</span> · <span id="render-scale-status"></span></span>
+    <nav aria-label="Web build information">
+      <a id="window-mode-toggle" href="#"></a>
+      <a id="render-scale-toggle" href="#"></a>
+      <a href="hello-world/">Minimal UILib app</a>
+      <a href="https://github.com/calvinhxx/Fluent-Qt">Source</a>
+      <a href="licenses.html">Licenses &amp; build info</a>
+    </nav>
+  </footer>
+  <script src="qtloader.js"></script>
+  <script src="fluent_qt_gallery.js"></script>
+  <script>
+    const container = document.getElementById('qt-container');
+    const loading = document.getElementById('loading');
+    const detail = document.getElementById('loading-detail');
+    const windowModeStatus = document.getElementById('window-mode-status');
+    const windowModeToggle = document.getElementById('window-mode-toggle');
+    const renderScaleStatus = document.getElementById('render-scale-status');
+    const renderScaleToggle = document.getElementById('render-scale-toggle');
+    const renderProfile = window.fluentQtRenderProfile;
+    const formatScale = value => Number(value).toFixed(2).replace(/\.?0+$/, '');
+    const profileLabel = renderProfile.profile === 'adaptive' ? 'adaptive ' : '';
+    const softOneX = renderProfile.nativeDpr > 1
+      && renderProfile.effectiveDpr <= 1.01;
+    renderScaleStatus.textContent = softOneX
+      ? `${profileLabel}1x performance render (soft on HiDPI)`
+      : `${profileLabel}${formatScale(renderProfile.effectiveDpr)}x render`;
+    detail.textContent = `Qt 6.9.3 · WebAssembly single-threaded · ${formatScale(renderProfile.effectiveDpr)}x render`;
+    const nextRenderUrl = new URL(window.location.href);
+    const balancedDpr = Math.min(renderProfile.nativeDpr, 1.25);
+    if (renderProfile.profile === 'native') {
+      nextRenderUrl.searchParams.delete('render-scale');
+      renderScaleToggle.textContent = 'Adaptive resolution';
+    } else if (renderProfile.effectiveDpr + 0.01 < balancedDpr) {
+      nextRenderUrl.searchParams.set('render-scale', '1.25');
+      renderScaleToggle.textContent = `Sharper ${formatScale(balancedDpr)}x resolution`;
+    } else {
+      nextRenderUrl.searchParams.set('render-scale', 'native');
+      renderScaleToggle.textContent = `Native ${formatScale(renderProfile.nativeDpr)}x resolution`;
+    }
+    renderScaleToggle.href = `${nextRenderUrl.pathname}${nextRenderUrl.search}${nextRenderUrl.hash}`;
+    const syncWindowMode = () => {
+      const mode = window.fluentQtWindowProfile.mode;
+      windowModeStatus.textContent = `${mode} app`;
+      const nextWindowUrl = new URL(window.location.href);
+      if (mode === 'windowed') {
+        nextWindowUrl.searchParams.set('window-mode', 'maximized');
+        windowModeToggle.textContent = 'Maximize app';
+      } else {
+        nextWindowUrl.searchParams.set('window-mode', 'windowed');
+        windowModeToggle.textContent = 'Windowed app';
+      }
+      windowModeToggle.href = `${nextWindowUrl.pathname}${nextWindowUrl.search}${nextWindowUrl.hash}`;
+    };
+    (async () => {
+      try {
+        await qtLoad({
+          qt: {
+            entryFunction: window.fluent_qt_gallery_entry,
+            containerElements: [container],
+            onLoaded: () => {
+              document.documentElement.dataset.fluentQtLoaded = 'true';
+              document.documentElement.dataset.fluentQtLoadMs = String(
+                Date.now() - Number(
+                  document.documentElement.dataset.fluentQtLoadStartedAt));
+              syncWindowMode();
+              loading.classList.add('hidden');
+              window.setTimeout(() => loading.remove(), 220);
+            },
+            onExit: exit => {
+              document.documentElement.dataset.fluentQtExit = String(exit?.code ?? 'unknown');
+            }
+          }
+        });
+      } catch (error) {
+        console.error(error);
+        document.documentElement.dataset.fluentQtError = String(error);
+        loading.classList.add('error');
+        detail.textContent = `Could not start WebAssembly: ${error}`;
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -73,7 +73,7 @@ void LineEdit::contextMenuEvent(QContextMenuEvent* event)
         return;
 
     auto* standardMenu = createStandardContextMenu();
-    if (!::fluent::menus_toolbars::detail::execTextEditingContextMenu(
+    if (!::fluent::menus_toolbars::detail::showTextEditingContextMenu(
             this,
             standardMenu,
             event->globalPos(),

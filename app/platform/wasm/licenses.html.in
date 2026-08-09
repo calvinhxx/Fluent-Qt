@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Fluent-Qt WebAssembly licenses and build information</title>
+  <style>
+    body { max-width: 760px; margin: 40px auto; padding: 0 24px; font: 16px/1.55 system-ui, sans-serif; }
+    code { background: #eee; padding: 2px 5px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Licenses and build information</h1>
+  <p>This is Fluent-Qt @PROJECT_VERSION@ compiled from C++ to WebAssembly with Qt @Qt6_VERSION@.</p>
+  <ul>
+    <li>Fluent-Qt source: <a href="https://github.com/calvinhxx/Fluent-Qt">GitHub repository</a> — <a href="FluentQt-LICENSE.txt">MIT license</a>.</li>
+    <li>Qt for WebAssembly: GNU GPL version 3 or a commercial Qt license — <a href="Qt-LICENSE.txt">Qt licensing notice and GPLv3 text</a>. This open-source web binary is conveyed under GPLv3 because Qt is statically linked; Fluent-Qt's own source remains available under MIT.</li>
+    <li>Corresponding Qt source: <a href="https://download.qt.io/official_releases/qt/6.9/6.9.3/single/qt-everywhere-src-6.9.3.tar.xz">Qt 6.9.3 source archive</a>.</li>
+    <li>Emscripten compiler runtime: <a href="Emscripten-LICENSE.txt">MIT and University of Illinois/NCSA licenses</a>.</li>
+    <li>Bundled fonts and icons: <a href="THIRD_PARTY_NOTICES.md">third-party notices</a>, including the WebAssembly-only Noto Sans SC subset under the <a href="NotoSansSC-LICENSE.txt">SIL Open Font License 1.1</a>.</li>
+  </ul>
+  <p>The supported build uses Qt 6.9.3 <code>wasm_singlethread</code> and Emscripten 3.1.70. Gallery dialogs and menus use asynchronous APIs, so the application does not link whole-program Asyncify. High-density displays use an adaptive 1x–1.25x QWidget backing store with a bounded route cache; the Gallery footer can still select balanced or native resolution.</p>
+  <p>This build comes with no warranty to the extent permitted by law. You may copy, modify, and convey the GPL-covered binary under the terms in <a href="Qt-LICENSE.txt">Qt-LICENSE.txt</a>; complete corresponding source links are listed above.</p>
+  <p><a href="index.html">Return to the C++ Web Gallery</a></p>
+</body>
+</html>

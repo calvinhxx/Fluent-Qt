@@ -6,10 +6,10 @@
 #include <QMenu>
 #include <QPainter>
 #include <QPixmap>
-#include <QScopedPointer>
 #include <QtMath>
 
 #include "components/menus_toolbars/Menu.h"
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -219,7 +219,11 @@ public:
         // the former 18 px / 10 px combination.
         setFont(themeFont(Typography::FontRole::Caption).toQFont());
         const auto spacing = themeSpacing();
-        const int shadow = ::Spacing::Standard;
+        const int shadow =
+            compatibility::detail::runtimePlatformCapabilities()
+                    .translucentPopupSurfaces
+            ? ::Spacing::Standard
+            : 0;
         const int verticalInset =
             qMax(1, spacing.gap.tight / 2);
         setContentsMargins(
@@ -227,12 +231,8 @@ public:
             shadow + verticalInset,
             shadow,
             shadow + verticalInset);
-        setStyleSheet(QStringLiteral(
-            "QMenu { background-color: transparent; border: 0px; padding: 0px; }"
-            "QMenu::item { background-color: transparent; padding: %1px 0px; margin: 0px; }"
-            "QMenu::separator { height: %2px; }")
-            .arg(qMax(1, spacing.padding.listItemV / 2))
-            .arg(spacing.gap.normal));
+        setItemLayoutMetrics(qMax(1, spacing.padding.listItemV / 2),
+                             spacing.gap.normal);
         setMinimumWidth(sizeHint().width());
         updateGeometry();
         update();
@@ -283,7 +283,7 @@ public:
 
 } // namespace
 
-bool execTextEditingContextMenu(QWidget* parent,
+bool showTextEditingContextMenu(QWidget* parent,
                                 QMenu* standardMenu,
                                 const QPoint& globalPosition,
                                 const QString& objectName)
@@ -291,8 +291,19 @@ bool execTextEditingContextMenu(QWidget* parent,
     if (!standardMenu)
         return false;
 
-    QScopedPointer<QMenu> standardMenuGuard(standardMenu);
-    TextEditingContextMenu menu(parent, objectName);
+    auto* menu = new TextEditingContextMenu(parent, objectName);
+    // Keep Qt's standard menu alive because some platform actions dispatch
+    // through its internal action chain, but never let that implementation
+    // menu become a visible child of the Fluent popup. In Qt WASM, merely
+    // reparenting the hidden QMenu is otherwise enough for it to be mapped
+    // together with its new parent, painting a second copy of every label and
+    // shortcut over the Fluent rows.
+    // zh_CN: 保留 Qt 原生菜单以维持部分平台 action 的内部触发链，但禁止这个
+    // 实现菜单随 Fluent popup 一起显示。Qt WASM 会把仅重新挂载的隐藏 QMenu
+    // 映射为可见子菜单，导致标签和快捷键重复叠绘。
+    standardMenu->setParent(menu);
+    standardMenu->setAttribute(Qt::WA_DontShowOnScreen, true);
+    standardMenu->hide();
     const QList<QAction*> standardActions = standardMenu->actions();
     const bool usePositionalFallback =
         hasStandardEditingActionShape(standardActions);
@@ -301,7 +312,7 @@ bool execTextEditingContextMenu(QWidget* parent,
 
     for (QAction* sourceAction : standardActions) {
         if (sourceAction->isSeparator()) {
-            menu.addSeparator();
+            menu->addSeparator();
             ++section;
             indexInSection = 0;
             continue;
@@ -310,7 +321,7 @@ bool execTextEditingContextMenu(QWidget* parent,
         // Some Qt versions dispatch Undo/Redo through the standard menu's
         // action chain. Proxy the action instead of changing its owner.
         auto* action = new QAction(
-            sourceAction->icon(), sourceAction->text(), &menu);
+            sourceAction->icon(), sourceAction->text(), menu);
         action->setEnabled(sourceAction->isEnabled());
         action->setCheckable(sourceAction->isCheckable());
         action->setChecked(sourceAction->isChecked());
@@ -327,7 +338,7 @@ bool execTextEditingContextMenu(QWidget* parent,
             editingKey = positionalEditingActionKey(
                 section, indexInSection);
         }
-        if (menu.shortcutTextForAction(action).isEmpty()) {
+        if (menu->shortcutTextForAction(action).isEmpty()) {
             const QString shortcutText =
                 standardEditingShortcutText(editingKey);
             if (!shortcutText.isEmpty()) {
@@ -347,12 +358,14 @@ bool execTextEditingContextMenu(QWidget* parent,
             iconGlyph = positionalEditingActionGlyph(
                 section, indexInSection);
         if (!iconGlyph.isEmpty())
-            action->setIcon(menu.editingIcon(iconGlyph));
-        menu.addAction(action);
+            action->setIcon(menu->editingIcon(iconGlyph));
+        menu->addAction(action);
         ++indexInSection;
     }
 
-    menu.exec(globalPosition);
+    QObject::connect(menu, &QMenu::aboutToHide,
+                     menu, &QObject::deleteLater);
+    menu->popup(globalPosition);
     return true;
 }
 

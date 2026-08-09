@@ -1697,6 +1697,40 @@ TEST_F(ListViewTest, MacOsTrackpadOverscrollNoRegression) {
         << "After bounce-back, scrollbar should be at boundary";
 }
 
+TEST_F(ListViewTest, PhaseBasedOverscrollSettlesWhenBackendOmitsScrollEnd) {
+    auto* lv = makeInspectableScrollableListView(window);
+    if (lv->verticalScrollBar()->maximum() <= 0) {
+        GTEST_SKIP() << "Layout not scrollable in this environment";
+    }
+    scrollToBottom(lv);
+    const int beforeOffset = lv->exposedVerticalOffset();
+
+    sendWheel(lv->viewport(), QPoint(0, -40), QPoint(0, 0), Qt::ScrollUpdate);
+    ASSERT_GT(lv->exposedVerticalOffset(), beforeOffset)
+        << "A boundary gesture should expose elastic feedback";
+
+    QTest::qWait(500);
+    EXPECT_EQ(lv->exposedVerticalOffset(), beforeOffset)
+        << "Missing ScrollEnd must not leave a browser-style gesture stretched";
+}
+
+TEST_F(ListViewTest, NoPhasePixelOverscrollSettlesAfterInputBecomesIdle) {
+    auto* lv = makeInspectableScrollableListView(window);
+    if (lv->verticalScrollBar()->maximum() <= 0) {
+        GTEST_SKIP() << "Layout not scrollable in this environment";
+    }
+    scrollToBottom(lv);
+    const int beforeOffset = lv->exposedVerticalOffset();
+
+    sendWheel(lv->viewport(), QPoint(0, -40), QPoint(0, -120), Qt::NoScrollPhase);
+    ASSERT_GT(lv->exposedVerticalOffset(), beforeOffset)
+        << "Pixel-delta input should expose elastic feedback at the boundary";
+
+    QTest::qWait(500);
+    EXPECT_EQ(lv->exposedVerticalOffset(), beforeOffset)
+        << "NoPhasePixel input must bounce back after the wheel stream goes idle";
+}
+
 // 5.1 三类事件分类：NoScrollPhase + pixelDelta != 0 走 NoPhasePixel 路径
 TEST_F(ListViewTest, NoPhasePixelDirectScroll) {
     auto* lv = makeScrollableListView(window);

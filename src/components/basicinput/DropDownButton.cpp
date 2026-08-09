@@ -126,10 +126,11 @@ void DropDownButton::mousePressEvent(QMouseEvent* event) {
         }
 
         if (m_menu) {
-            QPointer<DropDownButton> guard(this);
-            m_menu->exec(mapToGlobal(QPoint(0, height())));
-            if (guard)
-                guard->setOpen(false);
+            // Keep menu interaction asynchronous so callers are not blocked by
+            // a nested event loop. zh_CN: 菜单交互保持异步，避免嵌套事件循环
+            // 阻塞调用方。
+            event->accept();
+            m_menu->popup(mapToGlobal(QPoint(0, height())));
             return;
         }
     }
