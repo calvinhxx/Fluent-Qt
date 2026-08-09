@@ -160,6 +160,7 @@ def validate_boundaries() -> list[str]:
         "dist/fluentqt-*.whl",
         "dist/fluentqt_gallery-*.whl",
         ".github/scripts/verify-python-package-index.py",
+        ".github/scripts/install-python-release-from-index.py",
         "attestations: true",
         "skip-existing: ${{ inputs.recovery }}",
         "for discovery_attempt in {1..12}",
