@@ -396,11 +396,14 @@ jobs:
           "$smoke_python" -m pip install \
             PySide6-Essentials==6.9.3 \
             shiboken6==6.9.3
-          "$smoke_python" -m pip install \
+          python3 .github/scripts/install-python-release-from-index.py \
+            --python "$smoke_python" \
             --index-url https://test.pypi.org/simple \
             --no-deps \
-            "FluentQt==$version" \
-            "FluentQt-Gallery==$version"
+            --attempts 20 \
+            --delay-seconds 15 \
+            --package "FluentQt==$version" \
+            --package "FluentQt-Gallery==$version"
           "$smoke_python" -m pip check
           env \
             -u PYTHONPATH \
@@ -529,9 +532,13 @@ jobs:
           version="$(jq -r '.version' fluentqt-python-publish-candidate/python-release-manifest.json)"
           python -m venv "${RUNNER_TEMP}/fluentqt-pypi-smoke"
           smoke_python="${RUNNER_TEMP}/fluentqt-pypi-smoke/bin/python"
-          "$smoke_python" -m pip install \
-            "FluentQt==$version" \
-            "FluentQt-Gallery==$version"
+          python3 .github/scripts/install-python-release-from-index.py \
+            --python "$smoke_python" \
+            --index-url https://pypi.org/simple \
+            --attempts 20 \
+            --delay-seconds 15 \
+            --package "FluentQt==$version" \
+            --package "FluentQt-Gallery==$version"
           "$smoke_python" -m pip check
           env \
             -u PYTHONPATH \
