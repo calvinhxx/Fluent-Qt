@@ -47,13 +47,16 @@ Create these GitHub deployment environments:
 |---|---|---|
 | `testpypi` | Selected branches matching `release/*` | Optional for the rehearsal |
 | `testpypi-gallery` | Selected branches matching `release/*` | Optional for the rehearsal |
-| `pypi` | Protected tags matching `v*` | Required reviewer: repository maintainer |
-| `pypi-gallery` | Protected tags matching `v*` | Required reviewer: repository maintainer |
+| `pypi` | Protected tags matching `v*` | Explicit production workflow dispatch |
+| `pypi-gallery` | Protected tags matching `v*` | Explicit production workflow dispatch |
 
-For a single-maintainer repository, leave **Prevent self-review** disabled on
-both production environments. Otherwise the only maintainer cannot approve the
-two production deployment jobs. Disable administrator bypass on all four
-environments so that the branch/tag and reviewer rules cannot be skipped.
+For a single-maintainer repository, do not configure required reviewers on the
+two production environments. The explicit `stage=pypi` workflow dispatch is
+the production approval, while the environments still enforce the `v*` tag
+boundary and package-scoped Trusted Publisher identities. Disable
+administrator bypass on all four environments so that branch and tag rules
+cannot be skipped. If release ownership later expands to multiple maintainers,
+required reviewers can be restored as an additional separation-of-duties gate.
 
 The `release/*` environment policy is intentionally reusable across release
 lines. The workflow applies the narrower check dynamically: a project version
@@ -165,11 +168,11 @@ gh workflow run python-release.yml \
 
 Production preflight rejects a lightweight or prerelease tag, version drift,
 a different TestPyPI/full-CI commit, an unpublished GitHub Release, an
-incomplete TestPyPI file set, or an existing production version. The upload
-jobs then pause at the `pypi` and `pypi-gallery` environments for maintainer
-approval. Both must be approved before the complete release can be verified.
+incomplete TestPyPI file set, or an existing production version. The manual
+workflow dispatch is the production authorization; after preflight, both
+package-scoped upload jobs proceed without a second deployment approval.
 
-After approval, the official PyPI publish action uploads the same 18 files
+The official PyPI publish action uploads the same 18 files
 through OIDC Trusted Publishing and creates attestations. Verification checks
 the public JSON hashes, validates all 18 attestations against
 `calvinhxx/Fluent-Qt`, and performs a normal clean-index installation of both
