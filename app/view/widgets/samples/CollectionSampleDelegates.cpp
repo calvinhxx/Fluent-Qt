@@ -18,6 +18,7 @@
 #include "components/collections/ListView.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/private/TextPaintMetrics_p.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -404,7 +405,7 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     }
 
     const QString text = index.data(Qt::DisplayRole).toString();
-    const QRectF textRect(cursorX, bgRect.top(), bgRect.right() - cursorX - 8.0, bgRect.height());
+    const QRectF textSlot(cursorX, bgRect.top(), bgRect.right() - cursorX - 8.0, bgRect.height());
     // macOS solid-accent selection flips the row text to textOnAccent so it stays legible. zh_CN: macOS 纯强调色选中时,行文字翻转为 textOnAccent 以保证可读。
     QColor rowTextColor = isEnabled ? colors.textPrimary : colors.textDisabled;
     if (isEnabled && fill.textOnAccent && colors.textOnAccent.isValid())
@@ -414,8 +415,13 @@ void ListRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     if (isSelected)
         font.setWeight(QFont::DemiBold);
     painter->setFont(font);
+    const QFontMetricsF metrics(painter->font());
+    const QString elidedText = metrics.elidedText(
+        text, Qt::ElideRight, qRound(textSlot.width()));
+    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+        textSlot, metrics, elidedText);
     painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter,
-                      painter->fontMetrics().elidedText(text, Qt::ElideRight, int(textRect.width())));
+                      elidedText);
 
     painter->restore();
 }
@@ -663,7 +669,7 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     }
 
     // Text.
-    const QRectF textRect = rtl
+    const QRectF textSlot = rtl
         ? QRectF(bgRect.left() + 8.0, bgRect.top(),
                  qMax<qreal>(0.0, cursorX - bgRect.left() - 8.0), bgRect.height())
         : QRectF(cursorX, bgRect.top(),
@@ -671,11 +677,14 @@ void TreeRowDelegate::paint(QPainter* painter, const QStyleOptionViewItem& optio
     painter->setPen(textColor);
     painter->setFont(option.font);
     const QString text = index.data(Qt::DisplayRole).toString();
+    const QFontMetricsF metrics(painter->font());
+    const QString elidedText = metrics.elidedText(
+        text, rtl ? Qt::ElideLeft : Qt::ElideRight, qRound(textSlot.width()));
+    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+        textSlot, metrics, elidedText);
     painter->drawText(textRect,
                       (rtl ? Qt::AlignRight : Qt::AlignLeft) | Qt::AlignVCenter,
-                      painter->fontMetrics().elidedText(
-                          text, rtl ? Qt::ElideLeft : Qt::ElideRight,
-                          int(textRect.width())));
+                      elidedText);
 
     painter->restore();
 }

@@ -7,6 +7,7 @@
 #include <QPainterPath>
 #include <QPoint>
 #include <QRect>
+#include <QRegion>
 #include <QSize>
 #include <QVariant>
 #include <QWidget>
@@ -233,6 +234,29 @@ inline QPainterPath roundedRectPath(const QRectF& rect, qreal radius)
     }
     path.addRoundedRect(rect, radius, radius);
     return path;
+}
+
+inline QRegion roundedRectRegion(const QRect& rect, int radius)
+{
+    if (rect.isEmpty() || radius <= 0)
+        return QRegion(rect);
+
+    const int diameter = qMin(radius * 2, qMin(rect.width(), rect.height()));
+    const int effectiveRadius = diameter / 2;
+    QRegion region(rect.adjusted(effectiveRadius, 0, -effectiveRadius, 0));
+    region += QRegion(rect.adjusted(0, effectiveRadius, 0, -effectiveRadius));
+    region += QRegion(QRect(rect.topLeft(), QSize(diameter, diameter)), QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()),
+                            QSize(diameter, diameter)),
+                      QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1),
+                            QSize(diameter, diameter)),
+                      QRegion::Ellipse);
+    region += QRegion(QRect(QPoint(rect.right() - diameter + 1,
+                                   rect.bottom() - diameter + 1),
+                            QSize(diameter, diameter)),
+                      QRegion::Ellipse);
+    return region;
 }
 
 inline QPainterPath roundedCornerRectPath(const QRectF& rect, qreal radius,

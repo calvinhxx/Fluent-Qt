@@ -65,6 +65,15 @@ fluent::FluentElement::Theme systemTheme()
     return fluent::FluentElement::Light;
 }
 
+GallerySettings::ThemeMode hostThemeMode(platform::HostTheme theme)
+{
+    if (theme == platform::HostTheme::Dark)
+        return GallerySettings::ThemeMode::Dark;
+    if (theme == platform::HostTheme::Light)
+        return GallerySettings::ThemeMode::Light;
+    return GallerySettings::ThemeMode::System;
+}
+
 } // namespace
 
 GallerySettings& GallerySettings::instance()
@@ -77,6 +86,15 @@ GallerySettings::GallerySettings(QObject* parent)
     : QObject(parent)
 {
     load();
+    if (platform::capabilities().hostControlsTheme) {
+        const ThemeMode initialHostMode = hostThemeMode(platform::hostTheme());
+        if (initialHostMode != ThemeMode::System)
+            m_themeMode = initialHostMode;
+        platform::setHostThemeChangedHandler(
+            this, [this](platform::HostTheme theme) {
+                applyHostThemeMode(hostThemeMode(theme));
+            });
+    }
     // Install the persisted brand style theme into the ThemeRegistry before any widget paints, so the
     // first frame already uses the right palette + radius. zh_CN: 在任何控件绘制前把持久化的品牌样式主题
     // 装入 ThemeRegistry,使首帧即用正确的调色板与圆角。
@@ -99,6 +117,10 @@ GallerySettings::GallerySettings(QObject* parent)
 
 void GallerySettings::setThemeMode(ThemeMode mode)
 {
+    if (platform::capabilities().hostControlsTheme) {
+        applyHostThemeMode(hostThemeMode(platform::hostTheme()));
+        return;
+    }
     if (m_themeMode == mode)
         return;
 
@@ -110,6 +132,22 @@ void GallerySettings::setThemeMode(ThemeMode mode)
     applyThemeMode();
     emit themeModeChanged(m_themeMode);
     LOG_INFO(QStringLiteral("GallerySettings themeModeChanged mode=%1")
+                 .arg(static_cast<int>(mode)));
+}
+
+void GallerySettings::applyHostThemeMode(ThemeMode mode)
+{
+    if (!platform::capabilities().hostControlsTheme
+        || mode == ThemeMode::System) {
+        return;
+    }
+    if (m_themeMode == mode)
+        return;
+
+    m_themeMode = mode;
+    applyThemeMode();
+    emit themeModeChanged(m_themeMode);
+    LOG_INFO(QStringLiteral("GallerySettings hostThemeChanged mode=%1")
                  .arg(static_cast<int>(mode)));
 }
 

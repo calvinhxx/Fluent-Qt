@@ -13,6 +13,7 @@
 
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
+#include "components/foundation/private/TextPaintMetrics_p.h"
 #include "design/Typography.h"
 #include "GalleryNavigationMetrics.h"
 #include "model/GalleryNavigationItem.h"
@@ -226,16 +227,21 @@ public:
         const qreal textRight = hasChildren && !compact
             ? chevronRect.left() - kTextRightGap
             : backgroundRect.right() - kTextRightGap;
-        const QRectF textRect(textX - 6.0 * compactProgress,
+        const QRectF textSlot(textX - 6.0 * compactProgress,
                               backgroundRect.top(),
                               qMax<qreal>(0.0, textRight - textX),
                               backgroundRect.height());
         if (expandedOpacity > 0.01) {
+            const QFontMetricsF metrics(painter->font());
+            const QString elidedText = cachedElidedText(
+                painter->fontMetrics(), text, qRound(textSlot.width()));
+            const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+                textSlot, metrics, elidedText);
             painter->save();
             painter->setOpacity(expandedOpacity);
             painter->drawText(textRect,
                               Qt::AlignLeft | Qt::AlignVCenter,
-                              cachedElidedText(painter->fontMetrics(), text, qRound(textRect.width())));
+                              elidedText);
             painter->restore();
         }
         painter->restore();

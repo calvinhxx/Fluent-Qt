@@ -1,15 +1,40 @@
 #include <gtest/gtest.h>
 
+#include <QRegion>
 #include <QtTest/QSignalSpy>
+#include <QtTest/QTest>
 
 #include "components/foundation/ThemeRegistry.h"
 #include "components/menus_toolbars/Menu.h"
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
 using fluent::ThemeRegistry;
 using fluent::menus_toolbars::FluentMenu;
 using fluent::menus_toolbars::FluentMenuItem;
+
+namespace {
+
+class RuntimeCapabilitiesScope final {
+public:
+    explicit RuntimeCapabilitiesScope(
+        const compatibility::detail::RuntimePlatformCapabilities& capabilities)
+        : m_previous(compatibility::detail::runtimePlatformCapabilities())
+    {
+        compatibility::detail::setRuntimePlatformCapabilities(capabilities);
+    }
+
+    ~RuntimeCapabilitiesScope()
+    {
+        compatibility::detail::setRuntimePlatformCapabilities(m_previous);
+    }
+
+private:
+    compatibility::detail::RuntimePlatformCapabilities m_previous;
+};
+
+} // namespace
 
 class MenuTest : public ::testing::Test {
 protected:
@@ -67,4 +92,66 @@ TEST_F(MenuTest, MultipleVisibleActionsContributeIndependentRowsToSizeHint) {
         + margins.top() + margins.bottom();
     EXPECT_GE(menu.sizeHint().height(), minimumRowsHeight)
         << "A multi-action popup must never collapse to a single WASM row";
+}
+
+TEST_F(MenuTest, OpaquePopupSurfaceUsesRoundedWindowMask) {
+    auto capabilities =
+        compatibility::detail::runtimePlatformCapabilities();
+    capabilities.translucentPopupSurfaces = false;
+    RuntimeCapabilitiesScope capabilityScope(capabilities);
+
+    FluentMenu menu(QStringLiteral("Actions"));
+    menu.addAction(QStringLiteral("Confirm selection"));
+    menu.addAction(QStringLiteral("Review changes"));
+    menu.popup(QPoint(100, 100));
+    QTRY_VERIFY(menu.isVisible());
+    QTest::qWait(20);
+
+    const QRegion surfaceMask = menu.mask();
+    ASSERT_FALSE(surfaceMask.isEmpty());
+    EXPECT_FALSE(surfaceMask.contains(menu.rect().topLeft()));
+    EXPECT_FALSE(surfaceMask.contains(menu.rect().topRight()));
+    EXPECT_FALSE(surfaceMask.contains(menu.rect().bottomRight()));
+    EXPECT_FALSE(surfaceMask.contains(menu.rect().bottomLeft()));
+    EXPECT_TRUE(surfaceMask.contains(menu.rect().center()));
+    menu.hide();
+}
+
+TEST_F(MenuTest, RepeatedPopupKeepsStableHeight) {
+    FluentMenu menu(QStringLiteral("Actions"));
+    menu.addAction(QStringLiteral("Confirm selection"));
+    menu.addAction(QStringLiteral("Review changes"));
+
+    menu.popup(QPoint(100, 100));
+    QTRY_VERIFY(menu.isVisible());
+    QTest::qWait(20);
+    const int firstHeight = menu.height();
+    const int firstHintHeight = menu.sizeHint().height();
+    const QList<QAction*> firstActions = menu.actions();
+    const int firstRowHeight = menu.actionGeometry(firstActions.constFirst()).height();
+
+    menu.hide();
+    QTRY_VERIFY(!menu.isVisible());
+
+    menu.popup(QPoint(100, 100));
+    QTRY_VERIFY(menu.isVisible());
+    QTest::qWait(20);
+    const int secondHeight = menu.height();
+    const int secondHintHeight = menu.sizeHint().height();
+    const QList<QAction*> secondActions = menu.actions();
+    const int secondRowHeight = menu.actionGeometry(secondActions.constFirst()).height();
+    menu.hide();
+
+    EXPECT_EQ(firstHeight, firstHintHeight)
+        << "The first popup must discard any transient platform-window excess";
+    EXPECT_EQ(secondHeight, secondHintHeight)
+        << "Later popups must continue to follow the settled size hint";
+    EXPECT_EQ(firstRowHeight, secondRowHeight)
+        << "Repeated popup must not change the action layout";
+    EXPECT_EQ(firstHeight, secondHeight)
+        << "The first popup must use the same settled geometry as later opens"
+        << "; first hint=" << firstHintHeight
+        << ", second hint=" << secondHintHeight
+        << ", first row=" << firstRowHeight
+        << ", second row=" << secondRowHeight;
 }

@@ -21,6 +21,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/foundation/private/TextPaintMetrics_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
@@ -33,7 +34,6 @@ static constexpr int kPopupWindowMargin = 4;
 static constexpr int kPopupItemOuterInset = 5;
 static constexpr int kPopupItemTextLeftInset = 16;
 static constexpr int kPopupItemTextRightInset = 8;
-static constexpr qreal kPopupTextOpticalOffsetY = -2.0;
 static constexpr int kClosedFieldTextFitClearance = ::Spacing::XSmall;
 
 // Suppress QStyle's PE_PanelLineEdit native panel — ComboBox paints its own bg
@@ -120,18 +120,20 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     const QRect logicalTextRect =
         logicalBgRect.adjusted(kPopupItemTextLeftInset, 0,
                                -kPopupItemTextRightInset, 0);
-    QRectF textRect =
+    const QRectF textSlot =
         QStyle::visualRect(option.direction, option.rect, logicalTextRect);
-    // Center the actual UI-font ink rather than its asymmetric ascent/descent line box.
-    // zh_CN: 按 UI 字体的字形墨迹居中，而不是按上下不对称的 ascent/descent 行框居中。
-    textRect.translate(0, kPopupTextOpticalOffsetY);
     painter->setPen(textColor);
     painter->setFont(option.font);
     const QString text = index.data(Qt::DisplayRole).toString();
+    const QFontMetricsF metrics(painter->font());
+    const QString elidedText = metrics.elidedText(
+        text, Qt::ElideRight, qRound(textSlot.width()));
+    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+        textSlot, metrics, elidedText);
     painter->drawText(textRect,
                       QStyle::visualAlignment(option.direction,
                                               Qt::AlignLeft | Qt::AlignVCenter),
-                      painter->fontMetrics().elidedText(text, Qt::ElideRight, int(textRect.width())));
+                      elidedText);
 
     painter->restore();
 }
@@ -928,20 +930,23 @@ void ComboBox::paintEvent(QPaintEvent*) {
     const QRect logicalTextRect =
         rect().adjusted(m_contentPaddingH, m_contentPaddingV,
                         -chevronAreaW, -m_contentPaddingV);
-    QRectF textRect =
+    const QRectF textSlot =
         QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
-    // Figma: pb-[2px] on text wrapper
-    textRect.adjust(0, 0, 0, -2);
 
     // In editable mode, QLineEdit handles text display
     if (!m_observedLineEdit) {
         painter.setPen(textColor);
         painter.setFont(font());
         const QString text = currentText();
+        const QFontMetricsF metrics(painter.font());
+        const QString elidedText = metrics.elidedText(
+            text, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+            textSlot, metrics, elidedText);
         painter.drawText(textRect,
                          QStyle::visualAlignment(layoutDirection(),
                                                  Qt::AlignLeft | Qt::AlignVCenter),
-                         fontMetrics().elidedText(text, Qt::ElideRight, int(textRect.width())));
+                         elidedText);
     }
 
     // ── Chevron ──────────────────────────────────────────────────────────

@@ -84,29 +84,6 @@ QPoint pointerLocalPosForWindow(QWidget* source, QWidget* window, QMouseEvent* e
     return source == window ? sourcePos : source->mapTo(window, sourcePos);
 }
 
-QRegion roundedRectRegion(const QRect& rect, int radius)
-{
-    if (rect.isEmpty() || radius <= 0)
-        return QRegion(rect);
-
-    const int diameter = qMin(radius * 2, qMin(rect.width(), rect.height()));
-    const int effectiveRadius = diameter / 2;
-    QRegion region(rect.adjusted(effectiveRadius, 0, -effectiveRadius, 0));
-    region += QRegion(rect.adjusted(0, effectiveRadius, 0, -effectiveRadius));
-    region += QRegion(QRect(rect.topLeft(), QSize(diameter, diameter)), QRegion::Ellipse);
-    region += QRegion(QRect(QPoint(rect.right() - diameter + 1, rect.top()),
-                            QSize(diameter, diameter)),
-                      QRegion::Ellipse);
-    region += QRegion(QRect(QPoint(rect.left(), rect.bottom() - diameter + 1),
-                            QSize(diameter, diameter)),
-                      QRegion::Ellipse);
-    region += QRegion(QRect(QPoint(rect.right() - diameter + 1,
-                                   rect.bottom() - diameter + 1),
-                            QSize(diameter, diameter)),
-                      QRegion::Ellipse);
-    return region;
-}
-
 } // namespace
 
 Window::Window(QWidget* parent)
@@ -1065,7 +1042,8 @@ void Window::syncClientSideFrameShape() {
     if (!qFuzzyCompare(m_frameHost->property(radiusProperty).toDouble() + 1.0, radius + 1.0))
         m_frameHost->setProperty(radiusProperty, radius);
     if (radius > 0.0) {
-        const QRegion frameMask = roundedRectRegion(m_frameHost->rect(), qCeil(radius));
+        const QRegion frameMask = ::fluent::overlay::roundedRectRegion(
+            m_frameHost->rect(), qCeil(radius));
         if (m_frameHost->mask() != frameMask)
             m_frameHost->setMask(frameMask);
     } else if (!m_frameHost->mask().isEmpty()) {

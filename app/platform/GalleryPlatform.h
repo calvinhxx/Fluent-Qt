@@ -1,14 +1,25 @@
 #ifndef FLUENTQT_GALLERY_PLATFORM_H
 #define FLUENTQT_GALLERY_PLATFORM_H
 
+#include <functional>
+
 #include <QString>
 #include <QUrl>
 
+class QObject;
 class QSettings;
 class QRect;
 class QWidget;
 
 namespace fluent::gallery::platform {
+
+enum class HostTheme {
+    System,
+    Light,
+    Dark
+};
+
+using HostThemeChangedHandler = std::function<void(HostTheme)>;
 
 /**
  * @brief Capabilities supplied by the selected Gallery runtime adapter.
@@ -21,6 +32,12 @@ struct Capabilities {
     bool editsThemeFiles = true;
     bool prewarmsRoutes = true;
     bool usesClientSideTitleBar = false;
+    bool hostControlsTheme = false;
+
+    // Browser visitors enter through an explanatory website and should land
+    // directly in the catalog; desktop packages keep the first-run tour.
+    // zh_CN: 浏览器访客已由官网引导，应直接进入目录；桌面安装包保留首启引导。
+    bool showsIntroTour = true;
 
     // Zero keeps every visited page resident. Browser adapters can cap the
     // cache so a long single-threaded session does not retain every live demo.
@@ -41,6 +58,9 @@ struct Capabilities {
 const Capabilities& capabilities();
 bool persistenceAvailable();
 QSettings createSettings();
+HostTheme hostTheme();
+void setHostThemeChangedHandler(QObject* context,
+                                HostThemeChangedHandler handler);
 void showTopLevelWindow(QWidget* window,
                         const QRect& normalGeometry,
                         bool maximized = false);

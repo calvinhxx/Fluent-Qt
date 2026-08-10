@@ -327,7 +327,8 @@ void GalleryWindow::finishStartup()
         m_splashScreen->dismiss();  // fades out, then self-deletes
 
     // First launch only: once the chrome has settled, run the intro tour. zh_CN: 仅首次启动：chrome 稳定后跑引导。
-    if (!GallerySettings::instance().introCompleted())
+    if (platform::capabilities().showsIntroTour
+        && !GallerySettings::instance().introCompleted())
         QTimer::singleShot(kIntroTourDelayMs, this, [this]() { maybeStartIntroTour(); });
 }
 
