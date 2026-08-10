@@ -13,7 +13,7 @@
 
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
-#include "components/foundation/private/TextPaintMetrics_p.h"
+#include "compatibility/TextPaintCompat.h"
 #include "design/Typography.h"
 #include "GalleryNavigationMetrics.h"
 #include "model/GalleryNavigationItem.h"

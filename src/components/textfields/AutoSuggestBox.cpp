@@ -27,7 +27,7 @@
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
-#include "components/foundation/private/TextPaintMetrics_p.h"
+#include "compatibility/TextPaintCompat.h"
 
 namespace fluent::textfields {
 

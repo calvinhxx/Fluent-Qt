@@ -34,7 +34,7 @@
 #include "components/collections/SplitView.h"
 #include "components/collections/StackView.h"
 #include "components/collections/TreeView.h"
-#include "components/foundation/private/TextPaintMetrics_p.h"
+#include "compatibility/TextPaintCompat.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"

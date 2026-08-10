@@ -21,7 +21,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
-#include "components/foundation/private/TextPaintMetrics_p.h"
+#include "compatibility/TextPaintCompat.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
