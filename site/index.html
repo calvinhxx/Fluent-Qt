@@ -40,7 +40,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260811">
     <script src="site.js" defer></script>
   </head>
   <body>
@@ -253,40 +253,55 @@
             <article>
               <figure class="showcase-media">
                 <img
-                  src="assets/gallery/gallery-toggleswitch-real.png"
-                  data-theme-src-light="assets/gallery/gallery-toggleswitch-real.png"
-                  data-theme-src-dark="assets/gallery/gallery-toggleswitch-dark.png"
-                  alt="Fluent-Qt Gallery 中完整的 ToggleSwitch 控件页面"
-                  data-i18n-alt="images.toggle"
+                  src="assets/gallery/gallery-collections-real.png"
+                  data-theme-src-light="assets/gallery/gallery-collections-real.png"
+                  data-theme-src-dark="assets/gallery/gallery-collections-dark.png"
+                  alt="Fluent-Qt Gallery 中的集合视图页面"
+                  data-i18n-alt="images.collections"
                   width="1194"
                   height="774"
                   loading="lazy"
                   decoding="async"
                 >
               </figure>
-              <div class="pair-caption"><span>02 / STATEFUL</span><strong>ToggleSwitch</strong></div>
+              <div class="pair-caption"><span>02 / COLLECTIONS</span><strong>ListView · GridView · TreeView</strong></div>
             </article>
             <article>
               <figure class="showcase-media">
                 <img
-                  src="assets/gallery/gallery-slider-real.png"
-                  data-theme-src-light="assets/gallery/gallery-slider-real.png"
-                  data-theme-src-dark="assets/gallery/gallery-slider-dark.png"
-                  alt="Fluent-Qt Gallery 中完整的 Slider 控件页面"
-                  data-i18n-alt="images.slider"
+                  src="assets/gallery/gallery-home-real.png"
+                  data-theme-src-light="assets/gallery/gallery-home-real.png"
+                  data-theme-src-dark="assets/gallery/gallery-home-dark.png"
+                  alt="Fluent-Qt Gallery 的导航与窗口界面"
+                  data-i18n-alt="images.system"
                   width="1194"
                   height="774"
                   loading="lazy"
                   decoding="async"
                 >
               </figure>
-              <div class="pair-caption"><span>03 / LIVE VALUE</span><strong>Slider</strong></div>
+              <div class="pair-caption"><span>03 / SHELL</span><strong>Navigation · Windowing</strong></div>
             </article>
           </div>
 
           <div class="family-line" data-reveal>
-            <span data-i18n="components.familiesLabel">10 个控件家族</span>
-            <p data-i18n="components.families">基础输入 · 集合视图 · 日期与时间 · 对话框 · 菜单 · 导航 · 滚动 · 状态信息 · 文本输入 · 窗口系统</p>
+            <span data-i18n="components.familiesLabel">11 个控件家族</span>
+            <p data-i18n="components.families">基础输入 · 集合视图 · 日期与时间 · 对话框 · 布局 · 菜单 · 导航 · 滚动 · 状态信息 · 文本输入 · 窗口系统</p>
+          </div>
+
+          <div class="component-directory" aria-label="组件模块" data-i18n-aria-label="a11y.componentModules" data-reveal>
+            <article><strong>Foundation</strong><span>Theme · Typography · FontIcon</span></article>
+            <article><strong>Basic input</strong><span>Button · ComboBox · ToggleSwitch</span></article>
+            <article><strong>Collections</strong><span>ListView · GridView · TreeView</span></article>
+            <article><strong>Date &amp; time</strong><span>CalendarView · DatePicker · TimePicker</span></article>
+            <article><strong>Dialogs &amp; flyouts</strong><span>ContentDialog · Flyout · TeachingTip</span></article>
+            <article><strong>Layout</strong><span>Card · Accordion · Expander</span></article>
+            <article><strong>Menus &amp; toolbars</strong><span>Menu · MenuBar · CommandBar</span></article>
+            <article><strong>Navigation</strong><span>NavigationView · TabView · Breadcrumb</span></article>
+            <article><strong>Scrolling</strong><span>ScrollView · PipsPager · AnnotatedScrollBar</span></article>
+            <article><strong>Status &amp; info</strong><span>InfoBar · ProgressRing · Toast</span></article>
+            <article><strong>Text fields</strong><span>LineEdit · PasswordBox · AutoSuggestBox</span></article>
+            <article><strong>Windowing</strong><span>Window · TitleBar · WindowBackdrop</span></article>
           </div>
         </div>
       </section>
@@ -338,39 +353,87 @@ target_link_libraries(
       </section>
 
       <section class="gallery-section" id="gallery" aria-labelledby="gallery-title">
-        <div class="page-shell gallery-grid">
-          <figure class="gallery-product" data-reveal>
-            <div class="gallery-product-label"><span>GALLERY / SETTINGS</span><span data-theme-label data-theme-label-light="LIGHT" data-theme-label-dark="DARK">LIGHT</span></div>
-            <img
-              src="assets/gallery/gallery-collections-real.png"
-              data-theme-src-light="assets/gallery/gallery-collections-real.png"
-              data-theme-src-dark="assets/gallery/gallery-collections-dark.png"
-              alt="Fluent-Qt Gallery 设置页面，完整展示主题、风格和窗口选项"
-              data-i18n-alt="images.settings"
-              width="1194"
-              height="774"
-              loading="lazy"
-              decoding="async"
-            >
-          </figure>
-
-          <div class="gallery-copy" data-reveal data-reveal-delay="80">
-            <p class="section-index">05 / GALLERY</p>
-            <h2 id="gallery-title"><span data-i18n="gallery.title">Gallery 控件示例</span></h2>
-            <p data-i18n="gallery.copy">随仓库提供的桌面示例</p>
+        <div class="page-shell">
+          <div class="gallery-intro" data-reveal>
+            <div class="gallery-copy">
+              <p class="section-index">05 / GALLERY</p>
+              <h2 id="gallery-title"><span data-i18n="gallery.title">Gallery 控件示例</span></h2>
+              <p data-i18n="gallery.copy">随仓库提供的桌面示例</p>
+              <a
+                class="button button-primary gallery-web-link"
+                href="gallery/"
+                data-analytics-event="cpp_web_gallery"
+              >
+                <span data-i18n="gallery.webAction">运行 C++ Web Gallery</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+            </div>
             <ol class="workflow-list">
               <li><span>01</span><div><strong data-i18n="gallery.searchTitle">搜索</strong><p data-i18n="gallery.searchCopy">按控件名定位页面</p></div></li>
               <li><span>02</span><div><strong data-i18n="gallery.stateTitle">验证</strong><p data-i18n="gallery.stateCopy">切换 Light / Dark 与强调色</p></div></li>
               <li><span>03</span><div><strong data-i18n="gallery.codeTitle">查看示例</strong><p data-i18n="gallery.codeCopy">展开对应的 C++ 代码</p></div></li>
             </ol>
-            <a
-              class="button button-primary gallery-web-link"
-              href="gallery/"
-              data-analytics-event="cpp_web_gallery"
-            >
-              <span data-i18n="gallery.webAction">运行 C++ Web Gallery</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-            </a>
+          </div>
+
+          <div
+            class="live-gallery-shell"
+            data-live-gallery
+            data-gallery-state="waiting"
+            data-gallery-src="gallery/?embed=site&amp;window-mode=maximized&amp;render-scale=1"
+            data-reveal
+          >
+            <div class="live-gallery-toolbar">
+              <div class="live-gallery-brand">
+                <span class="live-indicator" aria-hidden="true"></span>
+                <strong>C++ Web Gallery</strong>
+                <span class="live-gallery-status" data-gallery-status data-i18n="gallery.liveStateWaiting">等待进入视口</span>
+              </div>
+              <div class="live-gallery-actions">
+                <button type="button" class="live-toolbar-button" data-gallery-load>
+                  <span data-i18n="gallery.loadNow">立即加载</span>
+                </button>
+                <a class="live-toolbar-link" href="gallery/" target="_blank" rel="noopener">
+                  <span data-i18n="gallery.fullPage">完整页面</span> <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="live-gallery-viewport">
+              <img
+                class="live-gallery-poster"
+                src="assets/gallery/gallery-hero-real.png"
+                alt="C++ Web Gallery 加载前预览"
+                data-i18n-alt="images.webGallery"
+                width="1600"
+                height="900"
+                loading="lazy"
+                decoding="async"
+              >
+              <iframe
+                class="live-gallery-frame"
+                data-gallery-frame
+                title="Fluent-Qt C++ Web Gallery 实时体验"
+                data-i18n-title="gallery.frameTitle"
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+              ></iframe>
+              <div class="live-gallery-overlay" data-gallery-overlay role="status" aria-live="polite">
+                <span class="gallery-loader" aria-hidden="true"></span>
+                <strong data-gallery-message data-i18n="gallery.waitingTitle">滚动到这里后自动启动</strong>
+                <p data-gallery-detail data-i18n="gallery.waitingDetail">首屏不会请求 WebAssembly 文件；也可以现在手动加载。</p>
+                <div class="live-gallery-overlay-actions">
+                  <button type="button" class="button button-primary" data-gallery-load>
+                    <span data-i18n="gallery.loadAction">启动实时体验</span>
+                  </button>
+                  <a class="button button-quiet" href="gallery/" target="_blank" rel="noopener">
+                    <span data-i18n="gallery.openAction">在新页面打开</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <noscript>
+              <p class="noscript-note"><a href="gallery/">Open the C++ Web Gallery.</a></p>
+            </noscript>
           </div>
         </div>
       </section>
