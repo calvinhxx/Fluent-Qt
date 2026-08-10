@@ -3,10 +3,43 @@
 #include <FluentQt/WebAssembly.h>
 
 #include <QCoreApplication>
+#include <QObject>
+#include <QPointer>
 #include <QRect>
 #include <QSettings>
 
+#include <emscripten.h>
+
+#include <utility>
+
 namespace fluent::gallery::platform {
+namespace {
+
+QPointer<QObject> hostThemeContext;
+HostThemeChangedHandler hostThemeChangedHandler;
+
+EM_JS(int, fluentQtGalleryEmbeddedHost, (), {
+    return window.fluentQtEmbedded === true ? 1 : 0;
+});
+
+EM_JS(int, fluentQtGalleryHostTheme, (), {
+    if (window.fluentQtHostTheme === 'dark')
+        return 2;
+    if (window.fluentQtHostTheme === 'light')
+        return 1;
+    return 0;
+});
+
+HostTheme normalizedHostTheme(int value)
+{
+    if (value == 2)
+        return HostTheme::Dark;
+    if (value == 1)
+        return HostTheme::Light;
+    return HostTheme::System;
+}
+
+} // namespace
 
 const Capabilities& capabilities()
 {
@@ -18,6 +51,8 @@ const Capabilities& capabilities()
         result.editsThemeFiles = false;
         result.prewarmsRoutes = false;
         result.usesClientSideTitleBar = true;
+        result.hostControlsTheme = fluentQtGalleryEmbeddedHost() != 0;
+        result.showsIntroTour = false;
         result.maxResidentRoutes = 16;
         result.applicationName = QStringLiteral("Fluent-Qt C++ Web Gallery");
         result.windowTitle = result.applicationName;
@@ -46,6 +81,31 @@ QSettings createSettings()
                      QSettings::UserScope,
                      QCoreApplication::organizationName(),
                      QCoreApplication::applicationName());
+}
+
+HostTheme hostTheme()
+{
+    if (!capabilities().hostControlsTheme)
+        return HostTheme::System;
+    return normalizedHostTheme(fluentQtGalleryHostTheme());
+}
+
+void setHostThemeChangedHandler(QObject* context,
+                                HostThemeChangedHandler handler)
+{
+    hostThemeContext = context;
+    hostThemeChangedHandler = std::move(handler);
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE
+void fluentQtGalleryApplyHostTheme(int value)
+{
+    const HostTheme next = normalizedHostTheme(value);
+    if (next == HostTheme::System || !hostThemeContext
+        || !hostThemeChangedHandler) {
+        return;
+    }
+    hostThemeChangedHandler(next);
 }
 
 void showTopLevelWindow(QWidget* window,

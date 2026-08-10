@@ -103,6 +103,7 @@ protected:
 
 private:
     explicit GallerySettings(QObject* parent = nullptr);
+    void applyHostThemeMode(ThemeMode mode);
     void applyThemeMode();
     void load();
 

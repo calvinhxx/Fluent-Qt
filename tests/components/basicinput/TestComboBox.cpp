@@ -32,6 +32,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/private/TextPaintMetrics_p.h"
 #include "design/Typography.h"
 
 using namespace fluent;
@@ -821,20 +822,38 @@ TEST_F(ComboBoxTest, PopupIndicatorAndTextShareOpticalCenterline) {
 
     const QModelIndex index = listView->model()->index(0, 0);
     const QRectF rowRect = static_cast<QListView*>(listView)->visualRect(index);
-    const QRectF textRect = rowRect.adjusted(5, 3, -5, -3).translated(0, -2);
+    const QRectF textSlot = rowRect.adjusted(5, 3, -5, -3);
     const QFontMetricsF metrics(listView->font());
-    const qreal baseline = textRect.top()
-        + (textRect.height() - metrics.height()) / 2.0
-        + metrics.ascent();
-    const qreal textInkCenter = baseline
-        + metrics.tightBoundingRect(index.data(Qt::DisplayRole).toString()).center().y();
+    const QString text = index.data(Qt::DisplayRole).toString();
+    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+        textSlot, metrics, text);
+    const qreal textInkCenter = fluent::painting::alignedTextInkCenterY(
+        textRect, metrics, text);
 
-    // Offscreen font fallback on macOS/Linux can move tight ink bounds by a
-    // couple logical pixels while the visual centerline still reads aligned.
-    constexpr qreal kOpticalCenterTolerance = 2.5;
+    constexpr qreal kOpticalCenterTolerance = 0.01;
     EXPECT_NEAR(listView->selectedIndicatorRect().center().y(),
                 textInkCenter,
                 kOpticalCenterTolerance);
+}
+
+TEST_F(ComboBoxTest, TextInkCenteringAdaptsToRepresentativeGlyphProfiles) {
+    const QRectF textSlot(0.0, 0.0, 180.0, Spacing::ControlHeight::Large);
+    const QFontMetricsF metrics(window->font());
+    const QStringList samples{
+        QStringLiteral("Mica"),
+        QStringLiteral("gyp"),
+        QStringLiteral("2026"),
+        QString::fromUtf8("中文")
+    };
+
+    for (const QString& text : samples) {
+        SCOPED_TRACE(text.toStdString());
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+            textSlot, metrics, text);
+        EXPECT_NEAR(textSlot.center().y(),
+                    fluent::painting::alignedTextInkCenterY(textRect, metrics, text),
+                    0.01);
+    }
 }
 
 // ─── Design-language × theme compatibility ──────────────────────────────────

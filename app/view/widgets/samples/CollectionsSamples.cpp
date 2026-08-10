@@ -34,6 +34,7 @@
 #include "components/collections/SplitView.h"
 #include "components/collections/StackView.h"
 #include "components/collections/TreeView.h"
+#include "components/foundation/private/TextPaintMetrics_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
@@ -412,13 +413,18 @@ protected:
                                               : Typography::FontRole::Body).toQFont();
         painter.setFont(textFont);
         painter.setPen(isEnabled() ? colors.textPrimary : colors.textDisabled);
-        const QRectF textRect(iconRect.right() + 14.0,
+        const QRectF textSlot(iconRect.right() + 14.0,
                               rowRect.top(),
                               rowRect.right() - iconRect.right() - 22.0,
                               rowRect.height());
+        const QFontMetricsF metrics(painter.font());
+        const QString elidedText = metrics.elidedText(
+            m_text, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+            textSlot, metrics, elidedText);
         painter.drawText(textRect,
                          Qt::AlignLeft | Qt::AlignVCenter,
-                         painter.fontMetrics().elidedText(m_text, Qt::ElideRight, qRound(textRect.width())));
+                         elidedText);
     }
 
 private:
