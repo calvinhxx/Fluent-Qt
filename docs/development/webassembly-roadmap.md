@@ -105,24 +105,27 @@ Feature integration is complete:
 4. The local and remote `codex/web-sup` branches, its rewrite worktree, and the
    requested temporary-branch Actions history were removed after integration.
 
-Promotion from `release/1.6.x` to `main` is maintainer-owned and must remain a
-manual repository-governance action. Automation and coding assistants must not
-perform that merge. The Pages workflow intentionally deploys only from `main`.
+Promotion from `release/1.6.x` to `main` is maintainer-owned and requires an
+explicit, per-PR maintainer instruction. Automation and coding assistants must
+not perform or bypass review for that merge without that authorization. The
+Pages workflow intentionally deploys only from `main`.
 
 ## Production acceptance after maintainer promotion
 
 This checklist validates the published artifact without blocking or reopening
 the completed development milestones:
 
-- [ ] A maintainer manually promotes the intended `release/1.6.x` revision to
-  `main`.
-- [ ] The Pages workflow deploys the staged payload successfully.
-- [ ] `https://calvinhxx.github.io/Fluent-Qt/gallery/` and its
+- [x] The maintainer explicitly authorized PR
+  [#29](https://github.com/calvinhxx/Fluent-Qt/pull/29) to rebase-promote
+  `release/1.6.x` revision `61b21b7` to `main` as `2d81131` after all fast and
+  full CI gates passed.
+- [x] The Pages workflow deploys the staged payload successfully.
+- [x] `https://calvinhxx.github.io/Fluent-Qt/gallery/` and its
   `hello-world/` consumer load over HTTPS without missing assets.
-- [ ] Production smoke covers startup, route navigation, browser text input,
+- [x] Production smoke covers startup, route navigation, browser text input,
   menus, resize/maximize, OpenWindow, Simplified Chinese fallback, and
   WebLocalStorage persistence.
-- [ ] Record the deployed revision, URL, date, and smoke result in the
+- [x] Record the deployed revision, URL, date, and smoke result in the
   verification log or release notes.
 
 ## Verification log
@@ -149,7 +152,8 @@ the completed development milestones:
 | 2026-08-10 | Release branch integration | Pass | PR [#27](https://github.com/calvinhxx/Fluent-Qt/pull/27) was consolidated into three commits and rebase-merged into `release/1.6.x` at `99701c3`; local and remote `codex/web-sup` refs were removed, while `main` remained unchanged. |
 | 2026-08-10 | Remote fast CI | Pass | PR #27 pre-integration fast CI passed the WebAssembly browser smoke, the three PySide6 compatibility/release paths, five native C++/integration paths, and `CI Gate`. Its temporary-branch Actions history is pruned after integration while this result summary remains in the roadmap. |
 | 2026-08-10 | Remote full CI | Pass | Pre-integration full CI passed all 44 jobs, including Qt 5.15/6.2 native compatibility, x64/ARM64 packages and tests, sanitizer contracts, Python 3.10-3.13 release wheels, `CI Gate`, and `Release ready`. The WebAssembly full smoke traversed all 88 routes in 9.705 s at DPR 2 / render DPR 1.25; browser elapsed time was 10.17 s, the slowest route took 168 ms, and heap capacity stayed at 128 MiB. The temporary-branch run record is intentionally removed after integration. |
-| 2026-08-10 | Pages deployment readiness | Pass | Fast and full CI staged and uploaded the `/gallery/` payload, including the minimal `hello-world/` consumer, licenses, and `build-info.json`. Public deployment awaits maintainer-owned promotion to `main` and is tracked by the production acceptance checklist. |
+| 2026-08-10 | Pages deployment readiness | Pass | Fast and full CI staged and uploaded the `/gallery/` payload, including the minimal `hello-world/` consumer, licenses, and `build-info.json`. At this pre-promotion checkpoint public deployment still awaited maintainer-owned promotion to `main`; the completed production acceptance is recorded below. |
+| 2026-08-10 | Production Pages acceptance | Pass | The maintainer explicitly authorized PR [#29](https://github.com/calvinhxx/Fluent-Qt/pull/29), whose fast CI passed 17/17 jobs and whose full CI passed 44/44 jobs after one transient macOS x64 offscreen segfault passed on failed-job retry. The PR was rebase-merged to `main` as `2d81131`. Pages run [31350526373](https://github.com/calvinhxx/Fluent-Qt/actions/runs/31350526373) rebuilt that revision, ran the full 88-route smoke in 9.99 s at DPR 2 / render DPR 1.25, and passed storage, window, dialog, menu, browser text input, text-menu, CJK fallback, bounded-memory, and windowed Hello World checks before deploying the same payload. Public `build-info.json` reports `2d81131`, Qt 6.9.3, Emscripten 3.1.70, and full validation; both the [Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) and [Hello World](https://calvinhxx.github.io/Fluent-Qt/gallery/hello-world/) returned HTTPS 200, and a real browser rendered the windowed Gallery with opaque title chrome, navigation, content, and the welcome dialog. |
 
 ## Progress update rule
 
