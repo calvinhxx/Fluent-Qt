@@ -10,6 +10,7 @@
 class QActionEvent;
 class QKeyEvent;
 class QMouseEvent;
+class QResizeEvent;
 
 namespace fluent::menus_toolbars {
 
@@ -91,9 +92,11 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
 
 private:
+    void updateSurfaceMask();
     void normalizePopupLayering();
     void drawShadow(QPainter& painter, const QRect& contentRect);
 
@@ -102,6 +105,7 @@ private:
     // 自绘阴影；不透明运行时回退使用完整 popup 矩形。
     int m_shadowSize = ::Spacing::Standard;
     bool m_translucentSurface = true;
+    bool m_surfaceMaskApplied = false;
     int m_itemVerticalPadding = ::Spacing::Padding::ListItemVertical;
     int m_separatorHeight = ::Spacing::Gap::Normal + 1;
 

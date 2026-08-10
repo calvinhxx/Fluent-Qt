@@ -27,6 +27,7 @@
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/foundation/private/TextPaintMetrics_p.h"
 
 namespace fluent::textfields {
 
@@ -91,10 +92,15 @@ public:
         painter->setFont(m_themeHost->themeFont(m_fontRole).toQFont());
         painter->setPen(textColor);
 
-        const QRectF textRect = QRectF(option.rect).adjusted(12, 0, -8, 0);
+        const QRectF textSlot = QRectF(option.rect).adjusted(12, 0, -8, 0);
         const QString display = index.data(Qt::DisplayRole).toString();
+        const QFontMetricsF metrics(painter->font());
+        const QString elidedText = metrics.elidedText(
+            display, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+            textSlot, metrics, elidedText);
         painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter,
-                          painter->fontMetrics().elidedText(display, Qt::ElideRight, int(textRect.width())));
+                          elidedText);
 
         painter->restore();
     }
