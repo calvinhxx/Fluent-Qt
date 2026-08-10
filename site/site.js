@@ -12,6 +12,7 @@ const translations = {
     "a11y.useLightTheme": "切换到浅色主题",
     "a11y.specs": "项目规格",
     "a11y.downloads": "平台下载",
+    "a11y.componentModules": "组件模块",
     "a11y.heroTech": "C++17、Qt 5.15 或 Qt 6.2 及以上、MIT",
     "nav.why": "概览",
     "nav.components": "控件",
@@ -60,6 +61,27 @@ const translations = {
     "gallery.codeTitle": "查看示例",
     "gallery.codeCopy": "展开对应的 C++ 代码",
     "gallery.webAction": "运行 C++ Web Gallery",
+    "gallery.liveStateWaiting": "等待进入视口",
+    "gallery.liveStateLoading": "正在启动",
+    "gallery.liveStateReady": "可以操作",
+    "gallery.liveStateSlow": "仍在加载",
+    "gallery.liveStateError": "启动失败",
+    "gallery.loadNow": "立即加载",
+    "gallery.fullPage": "完整页面",
+    "gallery.waitingTitle": "滚动到这里后自动启动",
+    "gallery.waitingDetail": "首屏不会请求 WebAssembly 文件；也可以现在手动加载。",
+    "gallery.loadingTitle": "正在加载 Qt 与 C++ Gallery",
+    "gallery.loadingDetail": "首次下载取决于网络速度；完成后会直接显示可操作界面。",
+    "gallery.slowTitle": "下载仍在继续",
+    "gallery.slowDetail": "可以继续等待，或在新页面中打开完整 Gallery。",
+    "gallery.readyTitle": "Gallery 已就绪",
+    "gallery.readyDetail": "现在可以搜索组件、切换主题并操作示例。",
+    "gallery.errorTitle": "实时体验没有成功启动",
+    "gallery.errorDetail": "可以重试，或直接在完整页面中打开 Gallery。",
+    "gallery.loadAction": "启动实时体验",
+    "gallery.retryAction": "重新加载",
+    "gallery.openAction": "在新页面打开",
+    "gallery.frameTitle": "Fluent-Qt C++ Web Gallery 实时体验",
     "downloads.title": "下载 Gallery",
     "downloads.copy": "提供 Windows、macOS 与 Linux 安装包",
     "downloads.recommended": "为当前设备推荐",
@@ -76,6 +98,9 @@ const translations = {
     "images.button": "Fluent-Qt Gallery 中完整的 Button 控件页面",
     "images.toggle": "Fluent-Qt Gallery 中完整的 ToggleSwitch 控件页面",
     "images.slider": "Fluent-Qt Gallery 中完整的 Slider 控件页面",
+    "images.collections": "Fluent-Qt Gallery 中的集合视图页面",
+    "images.system": "Fluent-Qt Gallery 的导航与窗口界面",
+    "images.webGallery": "C++ Web Gallery 加载前预览",
     "images.settings": "Fluent-Qt Gallery 设置页面，完整展示主题、风格和窗口选项"
   },
   en: {
@@ -91,6 +116,7 @@ const translations = {
     "a11y.useLightTheme": "Switch to light theme",
     "a11y.specs": "Project specifications",
     "a11y.downloads": "Platform downloads",
+    "a11y.componentModules": "Component modules",
     "a11y.heroTech": "C++17, Qt 5.15 or Qt 6.2 and above, MIT",
     "nav.why": "Overview",
     "nav.components": "Controls",
@@ -139,6 +165,27 @@ const translations = {
     "gallery.codeTitle": "Open an example",
     "gallery.codeCopy": "Expand the corresponding C++ code",
     "gallery.webAction": "Run the C++ Web Gallery",
+    "gallery.liveStateWaiting": "Waiting for viewport",
+    "gallery.liveStateLoading": "Starting",
+    "gallery.liveStateReady": "Interactive",
+    "gallery.liveStateSlow": "Still loading",
+    "gallery.liveStateError": "Could not start",
+    "gallery.loadNow": "Load now",
+    "gallery.fullPage": "Full page",
+    "gallery.waitingTitle": "Starts automatically when you reach this section",
+    "gallery.waitingDetail": "The first viewport does not request the WebAssembly file. You can also start it now.",
+    "gallery.loadingTitle": "Loading Qt and the C++ Gallery",
+    "gallery.loadingDetail": "The first download depends on your connection. The interactive app appears as soon as it is ready.",
+    "gallery.slowTitle": "The download is still in progress",
+    "gallery.slowDetail": "Keep waiting or open the complete Gallery in a separate page.",
+    "gallery.readyTitle": "Gallery is ready",
+    "gallery.readyDetail": "Search controls, switch themes, and use the examples.",
+    "gallery.errorTitle": "The live Gallery did not start",
+    "gallery.errorDetail": "Retry here or open the full Gallery in a separate page.",
+    "gallery.loadAction": "Start live experience",
+    "gallery.retryAction": "Try again",
+    "gallery.openAction": "Open in a new page",
+    "gallery.frameTitle": "Live Fluent-Qt C++ Web Gallery",
     "downloads.title": "Download Gallery",
     "downloads.copy": "Packages are available for Windows, macOS, and Linux",
     "downloads.recommended": "Recommended for this device",
@@ -155,6 +202,9 @@ const translations = {
     "images.button": "Complete Button control page in Fluent-Qt Gallery",
     "images.toggle": "Complete ToggleSwitch control page in Fluent-Qt Gallery",
     "images.slider": "Complete Slider control page in Fluent-Qt Gallery",
+    "images.collections": "Collections page in Fluent-Qt Gallery",
+    "images.system": "Navigation and window UI in Fluent-Qt Gallery",
+    "images.webGallery": "C++ Web Gallery preview before loading",
     "images.settings": "Complete Gallery settings page showing theme, style, and window options"
   }
 };
@@ -178,6 +228,16 @@ const themeToggle = document.querySelector("[data-theme-toggle]");
 const copyAnnouncement = document.querySelector(".copy-announcement");
 const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 let followsSystemTheme = true;
+
+const galleryRoot = document.querySelector("[data-live-gallery]");
+const galleryFrame = document.querySelector("[data-gallery-frame]");
+const galleryStatus = document.querySelector("[data-gallery-status]");
+const galleryMessage = document.querySelector("[data-gallery-message]");
+const galleryDetail = document.querySelector("[data-gallery-detail]");
+const galleryLoadButtons = Array.from(document.querySelectorAll("[data-gallery-load]"));
+let galleryState = "waiting";
+let gallerySlowTimer = 0;
+let galleryRetry = 0;
 
 function dictionary() {
   return translations[releaseState.language] || translations.zh;
@@ -428,6 +488,15 @@ function updateThemeMedia(theme) {
   });
 }
 
+function syncGalleryTheme() {
+  if (!galleryFrame?.contentWindow || !galleryFrame.getAttribute("src")) return;
+  galleryFrame.contentWindow.postMessage({
+    source: "fluent-qt-site",
+    type: "theme",
+    theme: activeTheme()
+  }, window.location.origin);
+}
+
 function applyTheme(theme, shouldStore = false) {
   const normalized = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = normalized;
@@ -435,6 +504,7 @@ function applyTheme(theme, shouldStore = false) {
   metaThemeColor?.setAttribute("content", normalized === "dark" ? "#070c12" : "#eef3f7");
   updateThemeMedia(normalized);
   updateThemeToggle();
+  syncGalleryTheme();
 
   if (shouldStore) {
     followsSystemTheme = false;
@@ -488,6 +558,37 @@ function updateMenuLabel() {
   menuButton.setAttribute("aria-label", dictionary()[menuIsOpen() ? "a11y.closeMenu" : "a11y.openMenu"]);
 }
 
+function renderGalleryState() {
+  if (!galleryRoot) return;
+  const values = dictionary();
+  const stateKeys = {
+    waiting: ["gallery.liveStateWaiting", "gallery.waitingTitle", "gallery.waitingDetail"],
+    loading: ["gallery.liveStateLoading", "gallery.loadingTitle", "gallery.loadingDetail"],
+    slow: ["gallery.liveStateSlow", "gallery.slowTitle", "gallery.slowDetail"],
+    ready: ["gallery.liveStateReady", "gallery.readyTitle", "gallery.readyDetail"],
+    error: ["gallery.liveStateError", "gallery.errorTitle", "gallery.errorDetail"]
+  };
+  const [statusKey, messageKey, detailKey] = stateKeys[galleryState] || stateKeys.waiting;
+  galleryRoot.dataset.galleryState = galleryState;
+  document.documentElement.dataset.galleryLoadState = galleryState;
+  if (galleryStatus) galleryStatus.textContent = values[statusKey];
+  if (galleryMessage) galleryMessage.textContent = values[messageKey];
+  if (galleryDetail) galleryDetail.textContent = values[detailKey];
+
+  const actionKey = galleryState === "error" ? "gallery.retryAction" : "gallery.loadAction";
+  galleryLoadButtons.forEach((button) => {
+    const label = button.querySelector("span") || button;
+    if (button.closest(".live-gallery-toolbar") && galleryState !== "error") {
+      label.textContent = values["gallery.loadNow"];
+    } else {
+      label.textContent = values[actionKey];
+    }
+    button.disabled = galleryState === "loading"
+      || galleryState === "slow"
+      || galleryState === "ready";
+  });
+}
+
 function setLanguage(language, shouldStore = true) {
   const normalized = language === "en" ? "en" : "zh";
   const values = translations[normalized];
@@ -508,6 +609,10 @@ function setLanguage(language, shouldStore = true) {
     const value = values[node.dataset.i18nAlt];
     if (value) node.setAttribute("alt", value);
   });
+  document.querySelectorAll("[data-i18n-title]").forEach((node) => {
+    const value = values[node.dataset.i18nTitle];
+    if (value) node.setAttribute("title", value);
+  });
   document.querySelectorAll("[data-readme-link]").forEach((link) => {
     link.href = normalized === "zh"
       ? "https://github.com/calvinhxx/Fluent-Qt/blob/main/README.zh-CN.md"
@@ -519,6 +624,7 @@ function setLanguage(language, shouldStore = true) {
 
   updateMenuLabel();
   updateThemeToggle();
+  renderGalleryState();
   updateDownloads();
   if (shouldStore) storeLanguage(normalized);
 }
@@ -580,6 +686,80 @@ async function copyCode(button) {
   }, 1500);
 }
 
+function galleryUrl(retry = false) {
+  const url = new URL(galleryRoot.dataset.gallerySrc, window.location.href);
+  url.searchParams.set("host-theme", activeTheme());
+  if (retry) url.searchParams.set("site-retry", String(galleryRetry));
+  return url.href;
+}
+
+function loadGallery(retry = false, trigger = "manual") {
+  if (!galleryRoot || !galleryFrame) return;
+  if (galleryState === "loading" || galleryState === "slow" || galleryState === "ready") return;
+
+  if (retry) galleryRetry += 1;
+  galleryState = "loading";
+  renderGalleryState();
+  window.clearTimeout(gallerySlowTimer);
+  gallerySlowTimer = window.setTimeout(() => {
+    if (galleryState === "loading") {
+      galleryState = "slow";
+      renderGalleryState();
+    }
+  }, 30000);
+  galleryFrame.src = galleryUrl(retry);
+  trackEvent("gallery_embed_start", { trigger, retry: String(galleryRetry) });
+}
+
+function setupLiveGallery() {
+  if (!galleryRoot || !galleryFrame) return;
+  renderGalleryState();
+  galleryLoadButtons.forEach((button) => {
+    button.addEventListener("click", () => loadGallery(galleryState === "error", "manual"));
+  });
+
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin || event.source !== galleryFrame.contentWindow) return;
+    if (event.data?.source !== "fluent-qt-gallery") return;
+    if (event.data.state === "ready") {
+      window.clearTimeout(gallerySlowTimer);
+      galleryState = "ready";
+      renderGalleryState();
+      syncGalleryTheme();
+      trackEvent("gallery_embed_ready", { load_ms: String(event.data.detail?.loadMs || "") });
+    } else if (event.data.state === "error" || event.data.state === "exit") {
+      window.clearTimeout(gallerySlowTimer);
+      galleryState = "error";
+      renderGalleryState();
+      trackEvent("gallery_embed_error", { state: event.data.state });
+    }
+  });
+
+  galleryFrame.addEventListener("load", () => {
+    syncGalleryTheme();
+    if (galleryState !== "loading" && galleryState !== "slow") return;
+    try {
+      if (!galleryFrame.contentDocument?.querySelector("#qt-container")) {
+        window.clearTimeout(gallerySlowTimer);
+        galleryState = "error";
+        renderGalleryState();
+      }
+    } catch {
+      // The Pages deployment is same-origin. A custom host can still use the
+      // Gallery's explicit postMessage contract as the authoritative signal.
+    }
+  });
+
+  if (!("IntersectionObserver" in window)) return;
+  const preloadMargin = navigator.connection?.saveData ? "0px" : "240px 0px";
+  const observer = new IntersectionObserver((entries) => {
+    if (!entries.some((entry) => entry.isIntersecting)) return;
+    observer.disconnect();
+    loadGallery(false, "viewport");
+  }, { rootMargin: preloadMargin, threshold: 0.01 });
+  observer.observe(galleryRoot);
+}
+
 function setupInteractions() {
   languageButtons.forEach((button) => {
     button.addEventListener("click", () => setLanguage(button.dataset.lang));
@@ -603,6 +783,7 @@ function setupInteractions() {
 loadAnalytics();
 setupNavigation();
 setupInteractions();
+setupLiveGallery();
 setupReveal();
 releaseState.platform = detectPlatform();
 setLanguage(savedLanguage() === "en" ? "en" : "zh", false);
