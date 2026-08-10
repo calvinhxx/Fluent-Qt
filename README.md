@@ -24,7 +24,13 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery preview">
+  <a href="https://calvinhxx.github.io/Fluent-Qt/#top"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery preview"></a>
+</p>
+
+<p align="center">
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/#gallery">Try the live C++ Web Gallery</a></strong>
+  ·
+  <a href="https://calvinhxx.github.io/Fluent-Qt/#top">Project website</a>
 </p>
 
 ## 🧱 Dependencies
@@ -216,8 +222,7 @@ cmake --build build/fluentqt --target fluent_qt_source_package
 
 ### WebAssembly
 
-Activate Emscripten 3.1.70 and point the public preset at the matching Qt target
-and host kits:
+Build the WebAssembly Gallery with Qt 6.9.3 `wasm_singlethread` and Emscripten 3.1.70:
 
 ```bash
 source "$HOME/Qt/Tools/emsdk/emsdk_env.sh"
@@ -228,15 +233,7 @@ cmake --build --preset wasm --parallel
 python3 -m http.server 4173 --bind 127.0.0.1 --directory build/wasm
 ```
 
-Open `http://127.0.0.1:4173/app/index.html`. See the
-[WebAssembly workflow](docs/development/webassembly-workflow.md) for browser
-smoke, Asyncify, platform boundaries, CI, deployment, and licensing. The preset
-enables the optional `FluentQt::WebAssembly` runtime, which hosts movable and
-resizable Fluent windows inside one Qt browser desktop; normal native targets
-remain independent.
-High-density displays use an adaptive 1x–1.25x render profile that bounds the
-browser backing-store pixel count; the Gallery footer exposes balanced and
-native-resolution choices when needed.
+Open `http://127.0.0.1:4173/app/index.html`. See the [WebAssembly workflow](docs/development/webassembly-workflow.md) for setup, testing, CI, deployment, and platform notes.
 
 ## 🖼 Gallery
 
@@ -244,9 +241,7 @@ Gallery is used to browse, demonstrate, and validate FluentQt components.
 
 ### C++ Web Gallery
 
-The Qt 6.9.3 single-threaded browser build is published at the
-[C++ Web Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/). It is a
-separate WebAssembly channel; desktop installers remain on GitHub Releases.
+Online: [project website](https://calvinhxx.github.io/Fluent-Qt/#gallery) · [standalone page](https://calvinhxx.github.io/Fluent-Qt/gallery/).
 
 ### C++ Gallery packages
 
@@ -303,8 +298,7 @@ python -m fluentqt_gallery
 - [Release governance](docs/development/release-governance.md)
 - [Architecture contracts](docs/architecture/README.md)
 - [Design language references](docs/design-languages/README.md)
-- [WebAssembly workflow](docs/development/webassembly-workflow.md)
-- [WebAssembly roadmap](docs/development/webassembly-roadmap.md)
+- [WebAssembly compatibility](docs/development/webassembly-workflow.md)
 - [Python compatibility](bindings/pyside6/README.md)
 
 ## 🔗 References
