@@ -298,7 +298,7 @@ python -m fluentqt_gallery
 - [架构约定](docs/architecture/README.md)
 - [设计语言参考](docs/design-languages/README.md)
 - [WebAssembly 工作流](docs/development/webassembly-workflow.md)
-- [WebAssembly 路线图](docs/development/webassembly-roadmap.zh-CN.md)
+- [WebAssembly Roadmap（唯一状态源）](docs/development/webassembly-roadmap.md)
 - [Python 兼容](bindings/pyside6/README.md)
 
 ## 🔗 参考
