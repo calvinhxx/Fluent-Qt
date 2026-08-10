@@ -18,7 +18,7 @@
 #include "components/collections/ListView.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
-#include "components/foundation/private/TextPaintMetrics_p.h"
+#include "compatibility/TextPaintCompat.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"

@@ -32,7 +32,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/QMLPlus.h"
-#include "components/foundation/private/TextPaintMetrics_p.h"
+#include "compatibility/TextPaintCompat.h"
 #include "design/Typography.h"
 
 using namespace fluent;
