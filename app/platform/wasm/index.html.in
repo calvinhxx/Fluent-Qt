@@ -7,6 +7,21 @@
   <title>Fluent-Qt C++ Web Gallery</title>
   <script>
     document.documentElement.dataset.fluentQtLoadStartedAt = String(Date.now());
+    window.fluentQtEmbedded = (() => {
+      const embedded = new URLSearchParams(window.location.search).get('embed') === 'site';
+      document.documentElement.dataset.fluentQtEmbedded = String(embedded);
+      return embedded;
+    })();
+    window.fluentQtHostTheme = (() => {
+      const requested = new URLSearchParams(window.location.search).get('host-theme');
+      window.fluentQtHostThemeFollowsSystem = requested !== 'dark' && requested !== 'light';
+      const theme = requested === 'dark' || requested === 'light'
+        ? requested
+        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.dataset.fluentQtTheme = theme;
+      document.documentElement.style.colorScheme = theme;
+      return theme;
+    })();
     // Qt 6.9's WebAssembly platform reads window.devicePixelRatio directly
     // when sizing the QWidget backing store. Cap it before qtloader starts so
     // Retina displays do not turn a 1280x720 Gallery into a 2560x1440 paint
@@ -70,6 +85,8 @@
     * { box-sizing: border-box; }
     html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
     body { display: grid; grid-template-rows: minmax(0, 1fr) auto; background: #e9edf3; }
+    html[data-fluent-qt-embedded="true"] body { grid-template-rows: minmax(0, 1fr); }
+    html[data-fluent-qt-embedded="true"] footer { display: none; }
     #qt-container { position: relative; min-width: 0; min-height: 0; overflow: hidden;
       background:
         radial-gradient(circle at 18% 8%, rgb(0 103 192 / 10%), transparent 34%),
@@ -94,15 +111,21 @@
       footer { align-items: flex-start; flex-direction: column; gap: 2px; }
       footer nav { flex-wrap: wrap; }
     }
-    @media (prefers-color-scheme: dark) {
-      body, #loading { background: #202020; color: #f5f5f5; }
-      #qt-container { background:
-        radial-gradient(circle at 18% 8%, rgb(96 205 255 / 10%), transparent 34%),
-        radial-gradient(circle at 82% 92%, rgb(139 92 246 / 10%), transparent 38%),
-        #20242a; }
-      footer { color: #c7c7c7; background: #181818; border-color: #3b3b3b; }
-      footer a { color: #60cdff; }
+    html[data-fluent-qt-theme="dark"] body,
+    html[data-fluent-qt-theme="dark"] #loading {
+      background: #202020;
+      color: #f5f5f5;
     }
+    html[data-fluent-qt-theme="dark"] #qt-container { background:
+      radial-gradient(circle at 18% 8%, rgb(96 205 255 / 10%), transparent 34%),
+      radial-gradient(circle at 82% 92%, rgb(139 92 246 / 10%), transparent 38%),
+      #20242a; }
+    html[data-fluent-qt-theme="dark"] footer {
+      color: #c7c7c7;
+      background: #181818;
+      border-color: #3b3b3b;
+    }
+    html[data-fluent-qt-theme="dark"] footer a { color: #60cdff; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
   <link rel="preload" href="fluent_qt_gallery.wasm" as="fetch"
@@ -137,6 +160,42 @@
     const renderScaleStatus = document.getElementById('render-scale-status');
     const renderScaleToggle = document.getElementById('render-scale-toggle');
     const renderProfile = window.fluentQtRenderProfile;
+    let wasmInstance = null;
+    const normalizeHostTheme = theme => theme === 'dark' ? 'dark' : 'light';
+    const applyHostTheme = theme => {
+      const normalized = normalizeHostTheme(theme);
+      window.fluentQtHostTheme = normalized;
+      document.documentElement.dataset.fluentQtTheme = normalized;
+      document.documentElement.style.colorScheme = normalized;
+      const applyToGallery = wasmInstance?._fluentQtGalleryApplyHostTheme;
+      if (typeof applyToGallery === 'function')
+        applyToGallery(normalized === 'dark' ? 2 : 1);
+    };
+    window.addEventListener('message', event => {
+      if (!window.fluentQtEmbedded || event.source !== window.parent
+          || event.origin !== window.location.origin
+          || event.data?.source !== 'fluent-qt-site'
+          || event.data?.type !== 'theme') {
+        return;
+      }
+      applyHostTheme(event.data.theme);
+    });
+    if (!window.fluentQtEmbedded && window.fluentQtHostThemeFollowsSystem) {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
+      const syncSystemTheme = event => applyHostTheme(event.matches ? 'dark' : 'light');
+      if (typeof systemTheme.addEventListener === 'function')
+        systemTheme.addEventListener('change', syncSystemTheme);
+      else
+        systemTheme.addListener(syncSystemTheme);
+    }
+    const notifyHost = (state, detail = {}) => {
+      if (!window.fluentQtEmbedded || window.parent === window) return;
+      window.parent.postMessage({
+        source: 'fluent-qt-gallery',
+        state,
+        detail
+      }, window.location.origin);
+    };
     const formatScale = value => Number(value).toFixed(2).replace(/\.?0+$/, '');
     const profileLabel = renderProfile.profile === 'adaptive' ? 'adaptive ' : '';
     const softOneX = renderProfile.nativeDpr > 1
@@ -171,31 +230,36 @@
       }
       windowModeToggle.href = `${nextWindowUrl.pathname}${nextWindowUrl.search}${nextWindowUrl.hash}`;
     };
+    notifyHost('loading', { phase: 'runtime' });
     (async () => {
       try {
-        await qtLoad({
+        wasmInstance = await qtLoad({
           qt: {
             entryFunction: window.fluent_qt_gallery_entry,
             containerElements: [container],
             onLoaded: () => {
+              const loadMs = Date.now() - Number(
+                document.documentElement.dataset.fluentQtLoadStartedAt);
               document.documentElement.dataset.fluentQtLoaded = 'true';
-              document.documentElement.dataset.fluentQtLoadMs = String(
-                Date.now() - Number(
-                  document.documentElement.dataset.fluentQtLoadStartedAt));
+              document.documentElement.dataset.fluentQtLoadMs = String(loadMs);
               syncWindowMode();
               loading.classList.add('hidden');
+              notifyHost('ready', { loadMs });
               window.setTimeout(() => loading.remove(), 220);
             },
             onExit: exit => {
               document.documentElement.dataset.fluentQtExit = String(exit?.code ?? 'unknown');
+              notifyHost('exit', { code: exit?.code ?? 'unknown' });
             }
           }
         });
+        applyHostTheme(window.fluentQtHostTheme);
       } catch (error) {
         console.error(error);
         document.documentElement.dataset.fluentQtError = String(error);
         loading.classList.add('error');
         detail.textContent = `Could not start WebAssembly: ${error}`;
+        notifyHost('error', { message: String(error) });
       }
     })();
   </script>

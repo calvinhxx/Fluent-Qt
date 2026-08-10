@@ -202,10 +202,16 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     m_contentLayout->addSpacing(16);
 
     auto* settings = &GallerySettings::instance();
+    const auto& runtime = platform::capabilities();
     m_themeChoice = createChoiceBox(
         QStringLiteral("gallerySettingsThemeChoice"),
         {QStringLiteral("Use system setting"), QStringLiteral("Light"), QStringLiteral("Dark")},
         static_cast<int>(settings->themeMode()));
+    if (runtime.hostControlsTheme) {
+        m_themeChoice->setEnabled(false);
+        m_themeChoice->setToolTip(
+            QStringLiteral("The embedded Gallery follows the website theme"));
+    }
     // Brand style theme: swaps the whole palette + corner-radius preset at runtime via ThemeRegistry.
     // zh_CN: 品牌样式主题:经 ThemeRegistry 在运行时整体替换调色板 + 圆角预设。
     m_styleChoice = createChoiceBox(
@@ -229,7 +235,6 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
         QStringLiteral("gallerySettingsEffectChoice"),
         {QStringLiteral("Normal"), QStringLiteral("Mica"), QStringLiteral("Acrylic")},
         static_cast<int>(settings->windowEffect()));
-    const auto& runtime = platform::capabilities();
     if (runtime.exposesCloseBehavior) {
         m_closeBehaviorChoice = createChoiceBox(
             QStringLiteral("gallerySettingsCloseBehaviorChoice"),
@@ -313,7 +318,9 @@ SettingsPage::SettingsPage(const GalleryNavigationItem& item, QWidget* parent)
     // zh_CN: 应用主题改用「亮度」字形,不再与样式行的调色板图标重复。
     m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Brightness,
                                                  QStringLiteral("App theme"),
-                                                 QStringLiteral("Select which app theme to display"),
+                                                 runtime.hostControlsTheme
+                                                     ? QStringLiteral("Follows the website theme while embedded")
+                                                     : QStringLiteral("Select which app theme to display"),
                                                  m_themeChoice));
     m_contentLayout->addWidget(createSettingsRow(Typography::Icons::Brush,
                                                  QStringLiteral("Style & accent color"),

@@ -8,6 +8,8 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPointer>
+#include <QRegion>
+#include <QResizeEvent>
 #include <QShowEvent>
 #include <QTimer>
 #include <QVariantAnimation>
@@ -202,6 +204,7 @@ void FluentMenu::onThemeUpdated() {
     setContentsMargins(m_shadowSize, m_shadowSize + vPadding, m_shadowSize, m_shadowSize + vPadding);
     setItemLayoutMetrics(s.padding.listItemV, s.gap.normal + 1);
     setMinimumWidth(sizeHint().width());
+    updateSurfaceMask();
     updateGeometry();
     update();
 }
@@ -584,6 +587,39 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     p.restore();
 }
 
+void FluentMenu::resizeEvent(QResizeEvent* event) {
+    QMenu::resizeEvent(event);
+    updateSurfaceMask();
+}
+
+void FluentMenu::updateSurfaceMask() {
+    if (m_translucentSurface || rect().isEmpty()) {
+        // Do not clear a native/platform mask that QMenu may own. Only remove
+        // the opaque fallback mask installed by this class.
+        // zh_CN: 不清除 QMenu 可能持有的平台原生 mask；只移除本类为不透明
+        // 回退表面安装的遮罩。
+        if (m_surfaceMaskApplied) {
+            clearMask();
+            m_surfaceMaskApplied = false;
+        }
+        return;
+    }
+
+    // Browser popup windows use an opaque backing surface for stable text and
+    // animation. Clip that surface at the widget/window boundary so the full-
+    // rect opaque clear cannot leak through the painted rounded corners.
+    // QRegion is intentionally used only for the opaque fallback; translucent
+    // desktop popups keep their antialiased alpha edge and painted shadow.
+    // zh_CN: 浏览器 popup 使用不透明后备表面以保证文字与动画稳定。通过控件/
+    // 窗口边界遮罩裁掉矩形清屏的四角，避免覆盖后续绘制的圆角轮廓。QRegion 只
+    // 用于不透明回退；桌面透明 popup 继续使用抗锯齿 alpha 边缘与自绘阴影。
+    const QRegion surfaceMask = ::fluent::overlay::roundedRectRegion(
+        rect(), themeRadius().overlay);
+    if (mask() != surfaceMask)
+        setMask(surfaceMask);
+    m_surfaceMaskApplied = true;
+}
+
 QSize FluentMenu::sizeHint() const
 {
     QSize base = QMenu::sizeHint();
@@ -636,12 +672,25 @@ void FluentMenu::showEvent(QShowEvent* event) {
     if (::fluent::overlay::syncInheritedThemeOverride(this, parentWidget()))
         onThemeUpdated();
 
-    const QSize preferredSize = sizeHint();
-    const QSize targetSize = size().expandedTo(preferredSize);
+    // QMenu can enter showEvent() with a transient platform-window height that
+    // is larger than its already-settled sizeHint (notably on the first macOS
+    // popup). Treat the Fluent/native-combined hint as authoritative instead
+    // of preserving that one-shot excess with expandedTo(). Fixed widget size
+    // constraints are still honored by QWidget::resize().
+    // zh_CN: QMenu 首次进入 showEvent() 时，平台窗口高度可能暂时大于已经稳定的
+    // sizeHint（macOS 尤其明显）。以 Fluent/native 合并后的 hint 为准，避免
+    // expandedTo() 锁住这次性的多余高度；QWidget::resize() 仍会遵守固定尺寸约束。
+    const QSize targetSize = sizeHint();
     if (size() != targetSize) {
         resize(targetSize);
         updateGeometry();
     }
+    // QMenu's platform style may replace a mask while processing its base
+    // showEvent (macOS keeps only its own native corner convention). Reapply
+    // the Fluent surface mask after base-show geometry has settled.
+    // zh_CN: QMenu 平台样式可能在基类 showEvent 中替换 mask（macOS 会保留
+    // 自己的原生圆角约定）；基类显示几何稳定后重新应用 Fluent 表面遮罩。
+    updateSurfaceMask();
 
     // Compensate the shadow margin: top-level menus cancel it fully, cascaded
     // submenus keep a small gap so the parent's shadow never covers their content.
@@ -657,7 +706,7 @@ void FluentMenu::showEvent(QShowEvent* event) {
     move(targetPos);
     normalizePopupLayering();
     QTimer::singleShot(0, this, [this]() {
-        const QSize targetSize = size().expandedTo(sizeHint());
+        const QSize targetSize = sizeHint();
         bool geometryNeedsRefresh = false;
         for (QAction* action : actions()) {
             if (!action || action->isSeparator() || !action->isVisible())
@@ -678,6 +727,7 @@ void FluentMenu::showEvent(QShowEvent* event) {
             resize(targetSize + QSize(0, 1));
             resize(targetSize);
         }
+        updateSurfaceMask();
         normalizePopupLayering();
         update();
     });

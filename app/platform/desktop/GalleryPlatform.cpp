@@ -40,6 +40,18 @@ QSettings createSettings()
     return QSettings(path, QSettings::IniFormat);
 }
 
+HostTheme hostTheme()
+{
+    return HostTheme::System;
+}
+
+void setHostThemeChangedHandler(QObject* context,
+                                HostThemeChangedHandler handler)
+{
+    Q_UNUSED(context);
+    Q_UNUSED(handler);
+}
+
 void showTopLevelWindow(QWidget* window,
                         const QRect& normalGeometry,
                         bool maximized)

@@ -10,6 +10,7 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontMetrics>
+#include <QRegion>
 #include <QSettings>
 #include <QTimer>
 #include <QUrlQuery>
@@ -297,18 +298,27 @@ private:
                     && !actionRect.isEmpty()
                     && menu->rect().contains(actionRect.center());
             }
+            const QRegion surfaceMask = menu->mask();
+            const bool roundedMaskValid = !surfaceMask.isEmpty()
+                && !surfaceMask.contains(menu->rect().topLeft())
+                && !surfaceMask.contains(menu->rect().topRight())
+                && !surfaceMask.contains(menu->rect().bottomRight())
+                && !surfaceMask.contains(menu->rect().bottomLeft())
+                && surfaceMask.contains(menu->rect().center());
             if (!menu->isVisible()
                 || menu->testAttribute(Qt::WA_TranslucentBackground)
-                || !actionGeometryValid) {
+                || !actionGeometryValid
+                || !roundedMaskValid) {
                 menu->close();
                 fail(QStringLiteral(
                     "Opaque browser menu surface/geometry check failed "
-                    "size=%1x%2 hint=%3x%4 geometry=%5")
+                    "size=%1x%2 hint=%3x%4 geometry=%5 roundedMask=%6")
                          .arg(menu->width())
                          .arg(menu->height())
                          .arg(menu->sizeHint().width())
                          .arg(menu->sizeHint().height())
-                         .arg(geometrySummary.join(QLatin1Char('|'))));
+                         .arg(geometrySummary.join(QLatin1Char('|')))
+                         .arg(roundedMaskValid));
                 return;
             }
             QTimer::singleShot(25, menu, &QMenu::close);
