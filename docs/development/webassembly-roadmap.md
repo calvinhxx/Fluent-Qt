@@ -1,10 +1,11 @@
 # WebAssembly Roadmap
 
-[简体中文](webassembly-roadmap.zh-CN.md)
-
 This roadmap tracks implementation and verification of Fluent-Qt in a browser.
-It is the status source of truth; a milestone is complete only when its listed
-evidence exists. Desktop Qt 5.15+ and Qt 6.2+ support remains unchanged.
+It is the single canonical development status source; a milestone is complete
+only when its listed evidence exists on `release/1.6.x`. Production Pages
+acceptance is tracked separately because deployment is intentionally triggered
+only after a maintainer promotes the release branch to `main`. Desktop Qt 5.15+
+and Qt 6.2+ support remains unchanged.
 
 ## Status
 
@@ -15,8 +16,12 @@ evidence exists. Desktop Qt 5.15+ and Qt 6.2+ support remains unchanged.
 | M2 - C++ Web Gallery | Complete | Browser runtime, console logging, WebLocalStorage settings, lazy page loading, client-side title bar, Retina performance profile | DPR 2 Chromium smoke passed 88 routes plus storage and asynchronous dialog/menu checks in 11.70 s on 2026-08-09; slowest cold route was 185 ms |
 | M2.1 - Browser productization | Complete | Responsive windowed shell, adaptive pixel budget, bounded route cache, Simplified Chinese font fallback, staged minimal UILib app, installed-consumer validation | At 1920x1080 / DPR 2, adaptive 1x fast smoke completed in 1.06 s versus 2.15 s at native 2x; full 88-route smoke held heap capacity at 128 MiB; an installed `FluentQt::FluentQt` consumer linked and built on 2026-08-09 |
 | M2.2 - Browser parity hardening | Complete | One focusable Qt desktop surface, movable/resizable Fluent windows, maximize/restore and OpenWindow, opaque active title chrome, cached software material, idle bounce fallback, font-state isolation, opaque multi-row menus, browser keyboard input | Real-browser resize crossed the navigation breakpoint, maximize/restore and OpenWindow passed visual QA; physical browser keys reached the Fluent text controls; the latest 1.25x 88-route smoke passed in 6.89 s and the complete 1,378-test native CTest inventory had no remaining failures on 2026-08-09 |
-| M3 - CI and GitHub Pages | In progress | Reusable WebAssembly CI module, browser smoke, Pages deployment at `/gallery/`, website entry | Remote fast/full Actions and the Pages payload pass; the deployed URL remains pending promotion to `main` |
+| M3 - CI and deployment readiness | Complete | Reusable WebAssembly CI module, browser smoke, deployable `/gallery/` payload, website entry | Remote fast/full validation, installed-consumer checks, and Pages payload staging passed before integration on 2026-08-10 |
 | M4 - Distribution and maintenance | Complete | Workflow/license/source-package documentation and supported-toolchain policy | Pre-integration full CI passed all 44 jobs plus `CI Gate` and `Release ready` on 2026-08-10; temporary-branch run history is pruned after integration |
+
+All seven development milestones are complete on `release/1.6.x`. Publishing
+the already-validated payload and checking its public URL are release acceptance
+activities; they do not reopen the implementation roadmap.
 
 ## Supported target
 
@@ -87,23 +92,38 @@ exercises asynchronous dialog/menu paths, validates persistence and the render
 profile, and packages the Pages payload. The
 top-level `CI Gate` remains the stable branch-protection check.
 
-## Integration path
+## Integration record and ownership
 
-The WebAssembly work is isolated on `codex/web-sup`, based directly on
-`release/1.6.x`. Complete it through the following linear path:
+Feature integration is complete:
 
-1. Keep implementation, focused local validation, and review fixes on
-   `codex/web-sup`.
-2. Push the branch and open a pull request targeting `release/1.6.x`; require
-   `CI Gate` and run the full CI tier before integration.
-3. Rebase-merge the reviewed commits into `release/1.6.x`, then delete the
-   temporary local and remote branch.
-4. Promote the released `release/1.6.x` commit to `main` according to the
-   release governance workflow. The automatic Pages deployment intentionally
-   remains tied to `main`.
-5. Verify the deployed `/gallery/` URL and update both roadmap files. M3 closes
-   on deployed Pages evidence; M4 closes on the corresponding remote
-   `Release ready` evidence.
+1. `codex/web-sup` was based directly on `release/1.6.x`; implementation,
+   focused validation, and review fixes remained isolated there.
+2. PR [#27](https://github.com/calvinhxx/Fluent-Qt/pull/27) passed the fast
+   `CI Gate` and the complete 44-job validation tier.
+3. The work was consolidated into three responsibility-oriented commits and
+   rebase-merged into `release/1.6.x` as `2b33563`, `16a5997`, and `99701c3`.
+4. The local and remote `codex/web-sup` branches, its rewrite worktree, and the
+   requested temporary-branch Actions history were removed after integration.
+
+Promotion from `release/1.6.x` to `main` is maintainer-owned and must remain a
+manual repository-governance action. Automation and coding assistants must not
+perform that merge. The Pages workflow intentionally deploys only from `main`.
+
+## Production acceptance after maintainer promotion
+
+This checklist validates the published artifact without blocking or reopening
+the completed development milestones:
+
+- [ ] A maintainer manually promotes the intended `release/1.6.x` revision to
+  `main`.
+- [ ] The Pages workflow deploys the staged payload successfully.
+- [ ] `https://calvinhxx.github.io/Fluent-Qt/gallery/` and its
+  `hello-world/` consumer load over HTTPS without missing assets.
+- [ ] Production smoke covers startup, route navigation, browser text input,
+  menus, resize/maximize, OpenWindow, Simplified Chinese fallback, and
+  WebLocalStorage persistence.
+- [ ] Record the deployed revision, URL, date, and smoke result in the
+  verification log or release notes.
 
 ## Verification log
 
@@ -126,14 +146,15 @@ The WebAssembly work is isolated on `codex/web-sup`, based directly on
 | 2026-08-09 | Title clarity and repaint cost | Pass | Fixed two independent causes: explicit 1x is now identified as a soft HiDPI performance mode, and hosted browser chrome is forced active and painted as an opaque token surface. The static software material is cached between invalidating changes. At DPR 2 / render DPR 1.25, the full 88-route smoke passed title/cache contracts, storage, window, dialog, menus, CJK fallback, and Hello World in 7.01 s; the slowest route took 103 ms and heap capacity remained 128 MiB. The 200-test focused native suite had 0 failures with 25 expected skips. Multithreading remains an experiment because the installed Qt SDK provides only `wasm_singlethread` and a threaded kit would not move QWidget GUI work off the main thread. |
 | 2026-08-09 | Browser text input | Pass | Removed the non-activating flags from the single WebAssembly desktop surface so Qt can focus its hidden HTML input bridge. Real-browser physical keys updated LineEdit, PasswordBox, TextEdit, NumberBox, and AutoSuggestBox; the latter emitted `UserInput` and opened suggestions. The automated DPR 2 / render DPR 1.25 full smoke now drives physical keys into a real Fluent LineEdit and passed all 88 routes, text editing menus, and Hello World in 6.89 s. The change remains isolated to `FluentQt::WebAssembly`; native text controls are unchanged. |
 | 2026-08-09 | Pre-integration local gates | Pass | CI classifier tests (14/14), modular workflow boundaries, Gallery/UILib boundary, project metadata, all nine package scenarios, CI C++ matrix tests (6/6), reproducible pinned WebAssembly font output, and the 16-file Pages payload all passed. The complete 1,378-test macOS CTest inventory exposed one scattered Qt-version guard; after moving the Qt 6.8 font fallback API behind `QtCompat.h`, that test was rebuilt and passed, leaving no runnable native failures. A fresh WebAssembly rebuild and full browser smoke then passed all 88 routes in 6.89 s. |
-| 2026-08-09 | Integration branch | Pass | Pushed the reviewed WebAssembly scope to `codex/web-sup` and opened [draft PR #27](https://github.com/calvinhxx/Fluent-Qt/pull/27) against `release/1.6.x`. |
+| 2026-08-10 | Release branch integration | Pass | PR [#27](https://github.com/calvinhxx/Fluent-Qt/pull/27) was consolidated into three commits and rebase-merged into `release/1.6.x` at `99701c3`; local and remote `codex/web-sup` refs were removed, while `main` remained unchanged. |
 | 2026-08-10 | Remote fast CI | Pass | PR #27 pre-integration fast CI passed the WebAssembly browser smoke, the three PySide6 compatibility/release paths, five native C++/integration paths, and `CI Gate`. Its temporary-branch Actions history is pruned after integration while this result summary remains in the roadmap. |
 | 2026-08-10 | Remote full CI | Pass | Pre-integration full CI passed all 44 jobs, including Qt 5.15/6.2 native compatibility, x64/ARM64 packages and tests, sanitizer contracts, Python 3.10-3.13 release wheels, `CI Gate`, and `Release ready`. The WebAssembly full smoke traversed all 88 routes in 9.705 s at DPR 2 / render DPR 1.25; browser elapsed time was 10.17 s, the slowest route took 168 ms, and heap capacity stayed at 128 MiB. The temporary-branch run record is intentionally removed after integration. |
-| 2026-08-10 | Pages deployment | In progress | Fast and full CI both staged and uploaded the `/gallery/` payload. Automatic deployment remains intentionally tied to `main`, so the public URL is the sole remaining M3 completion item. |
+| 2026-08-10 | Pages deployment readiness | Pass | Fast and full CI staged and uploaded the `/gallery/` payload, including the minimal `hello-world/` consumer, licenses, and `build-info.json`. Public deployment awaits maintainer-owned promotion to `main` and is tracked by the production acceptance checklist. |
 
 ## Progress update rule
 
 When a milestone changes state, update both the status table and verification
 log in the same change. Record commands and concrete pass/fail evidence in the
-log; do not mark browser support verified from a native build alone. Keep this
-file and `webassembly-roadmap.zh-CN.md` synchronized in the same change.
+log; do not mark browser support verified from a native build alone. This file
+is the only roadmap status source. A pending production-acceptance item does not
+reopen a completed development milestone unless it reveals a product defect.

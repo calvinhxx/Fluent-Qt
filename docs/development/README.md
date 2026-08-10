@@ -12,8 +12,7 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [Logging Workflow](logging-workflow.md)
 - [Linux Workflow](linux-workflow.md)
 - [WebAssembly Workflow](webassembly-workflow.md)
-- WebAssembly Roadmap: [English](webassembly-roadmap.md) |
-  [简体中文](webassembly-roadmap.zh-CN.md)
+- [WebAssembly Roadmap](webassembly-roadmap.md)
 - [High-DPI Workflow](high-dpi-workflow.md)
 - [Release Governance](release-governance.md)
 - [Packaging Workflow](packaging-workflow.md)
