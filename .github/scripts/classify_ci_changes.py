@@ -11,8 +11,15 @@ from dataclasses import dataclass
 DOCUMENTATION_PREFIXES = (
     "docs/",
     "site/",
+    ".agents/skills/",
+    ".claude/skills/",
     ".github/ISSUE_TEMPLATE/",
+    "tools/ai/",
 )
+
+DOCUMENTATION_ROOT_FILES = {
+    "llms.txt",
+}
 
 PYSIDE_PREFIXES = (
     "app/",
@@ -82,6 +89,7 @@ def is_documentation_path(path: str) -> bool:
         path.endswith(".md")
         or path == "LICENSE"
         or path.startswith("LICENSE.")
+        or path in DOCUMENTATION_ROOT_FILES
         or path.startswith(DOCUMENTATION_PREFIXES)
     )
 

@@ -20,8 +20,11 @@ set(_archive "${FLUENT_QT_SOURCE_PACKAGE_DIR}/${_package_name}.zip")
 file(MAKE_DIRECTORY "${FLUENT_QT_SOURCE_PACKAGE_DIR}")
 file(REMOVE_RECURSE "${_staging_root}")
 file(MAKE_DIRECTORY "${_package_root}/cmake")
+file(MAKE_DIRECTORY "${_package_root}/docs")
 file(MAKE_DIRECTORY "${_package_root}/examples")
 file(MAKE_DIRECTORY "${_package_root}/tools")
+file(MAKE_DIRECTORY "${_package_root}/.agents/skills")
+file(MAKE_DIRECTORY "${_package_root}/.claude/skills")
 file(MAKE_DIRECTORY "${_package_root}/.github/scripts")
 
 file(COPY
@@ -43,8 +46,22 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/fonts"
     DESTINATION "${_package_root}/tools")
 file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/tools/ai/query_ai_catalog.py"
+    "${FLUENT_QT_SOURCE_DIR}/tools/ai/evaluate_ai_catalog.py"
+    DESTINATION "${_package_root}/tools/ai")
+file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/docs/ai"
+    DESTINATION "${_package_root}/docs")
+file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui"
+    DESTINATION "${_package_root}/.agents/skills")
+file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/.claude/skills/build-fluentqt-gui"
+    DESTINATION "${_package_root}/.claude/skills")
+file(COPY
     "${FLUENT_QT_SOURCE_DIR}/CMakeLists.txt"
     "${FLUENT_QT_SOURCE_DIR}/resources.qrc"
+    "${FLUENT_QT_SOURCE_DIR}/llms.txt"
     "${FLUENT_QT_SOURCE_DIR}/LICENSE"
     "${FLUENT_QT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md"
     "${FLUENT_QT_SOURCE_DIR}/TRADEMARKS.md"
