@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 
-# CMP0091: 启用 CMAKE_MSVC_RUNTIME_LIBRARY (NEW) — 必须在 project() 之前设置。
-# Windows Qt 官方预编译包使用动态 CRT；项目保持 /MD 与 Qt 二进制一致。
+# Enable CMake's MSVC runtime abstraction before targets are created. The
+# caller's toolchain, including a vcpkg triplet, remains responsible for
+# selecting dynamic or static CRT linkage through CMAKE_MSVC_RUNTIME_LIBRARY.
 if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
