@@ -1,0 +1,602 @@
+{
+  "schema_version": 1,
+  "integration_patterns": [
+    {
+      "id": "direct-library",
+      "title": "Direct library integration",
+      "choose_when": "The project already exposes reusable domain or application APIs that can be called without starting its existing user interface.",
+      "avoid_when": "The reusable API is unstable, unsafe to call from a GUI process, or tied to a different event loop without an adapter.",
+      "required_evidence": [
+        "Public entry points and ownership rules",
+        "Threading and cancellation behavior",
+        "Existing domain-level tests"
+      ]
+    },
+    {
+      "id": "service-api",
+      "title": "Service client",
+      "choose_when": "The project already exposes a local or remote HTTP, RPC, socket, or message-based service contract.",
+      "avoid_when": "The service contract is an internal implementation detail or the GUI must work fully offline without the service.",
+      "required_evidence": [
+        "Versioned request and response contract",
+        "Authentication and error behavior",
+        "Timeout, retry, and cancellation policy"
+      ]
+    },
+    {
+      "id": "structured-process",
+      "title": "Structured child process",
+      "choose_when": "The project has a stable command-line entry point but no safe in-process library boundary.",
+      "avoid_when": "The only output is human-oriented terminal control sequences or the process cannot report structured progress and errors.",
+      "required_evidence": [
+        "Stable arguments or a JSON-lines protocol",
+        "Exit-code and structured-error semantics",
+        "Cancellation and child-process cleanup behavior"
+      ]
+    },
+    {
+      "id": "plugin-extension",
+      "title": "Native project extension",
+      "choose_when": "The host project has a documented plugin, frontend, or module extension point that can own a GUI surface.",
+      "avoid_when": "Using the extension point would require private host APIs or couple the GUI to an unstable ABI.",
+      "required_evidence": [
+        "Supported extension API",
+        "Lifecycle and version compatibility",
+        "Host-owned packaging rules"
+      ]
+    },
+    {
+      "id": "extract-core",
+      "title": "Extract a reusable core",
+      "choose_when": "Business behavior is coupled to an existing UI entry point but can be separated with a narrow, test-preserving refactor.",
+      "avoid_when": "The requested GUI is too small to justify a broad refactor or the extraction would change established behavior without adequate tests.",
+      "required_evidence": [
+        "Behavior-preserving characterization tests",
+        "A narrow interface independent of UI widgets",
+        "Both old and new frontends consume the same core"
+      ]
+    },
+    {
+      "id": "greenfield",
+      "title": "Greenfield application",
+      "choose_when": "No reusable application exists yet, or the request is explicitly for a new standalone GUI product.",
+      "avoid_when": "An existing supported interface can satisfy the requirement with less duplication and lower maintenance cost.",
+      "required_evidence": [
+        "User outcomes and data sources",
+        "Application state and persistence boundaries",
+        "Supported platforms and distribution target"
+      ]
+    }
+  ],
+  "application_patterns": [
+    {
+      "id": "library-frontend",
+      "title": "Library frontend",
+      "signals": [
+        "The repository primarily exposes a reusable library",
+        "Users need to configure inputs, run operations, and inspect results"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "extract-core"
+      ],
+      "components": [
+        "window",
+        "navigation-view",
+        "list-view",
+        "info-bar",
+        "progress-bar"
+      ]
+    },
+    {
+      "id": "service-client",
+      "title": "Service client",
+      "signals": [
+        "The backend already runs independently",
+        "The GUI needs connection, loading, error, and retry states"
+      ],
+      "preferred_integrations": [
+        "service-api"
+      ],
+      "components": [
+        "window",
+        "navigation-view",
+        "shimmer",
+        "info-bar",
+        "toast"
+      ]
+    },
+    {
+      "id": "file-workbench",
+      "title": "File-oriented workbench",
+      "signals": [
+        "Users open or create files and inspect or transform their contents",
+        "The interface needs navigation, editing, preview, and export"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "structured-process",
+        "greenfield"
+      ],
+      "components": [
+        "window",
+        "command-bar",
+        "tree-view",
+        "split-view",
+        "tab-view",
+        "info-bar"
+      ]
+    },
+    {
+      "id": "command-runner",
+      "title": "Command runner",
+      "signals": [
+        "Users launch long-running operations and need progress, cancellation, and logs",
+        "The backend may be a library, CLI, TUI core, or service"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "structured-process",
+        "service-api"
+      ],
+      "components": [
+        "window",
+        "command-bar",
+        "progress-bar",
+        "text-edit",
+        "info-bar",
+        "toast"
+      ]
+    },
+    {
+      "id": "data-dashboard",
+      "title": "Data dashboard",
+      "signals": [
+        "Users monitor collections, status, and trends",
+        "Readability and refresh states matter more than document editing"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "service-api"
+      ],
+      "components": [
+        "window",
+        "navigation-view",
+        "grid-view",
+        "card",
+        "info-badge",
+        "progress-ring"
+      ]
+    },
+    {
+      "id": "multi-page-desktop-app",
+      "title": "Multi-page desktop application",
+      "signals": [
+        "The product has several top-level work areas",
+        "Navigation, settings, persistence, and platform packaging are first-class requirements"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "plugin-extension",
+        "greenfield"
+      ],
+      "components": [
+        "window",
+        "navigation-view",
+        "stack-view",
+        "command-bar",
+        "content-dialog",
+        "toast"
+      ]
+    }
+  ],
+  "selection_guides": [
+    {
+      "id": "actions",
+      "question": "How should a user invoke an action?",
+      "candidates": [
+        {
+          "component_id": "button",
+          "choose_when": "One immediate action needs a standard, accent, or subtle push surface.",
+          "avoid_when": "The action must remain active while pressed or expose secondary choices."
+        },
+        {
+          "component_id": "compound-button",
+          "choose_when": "An action needs a persistent secondary explanation below its primary label.",
+          "avoid_when": "A concise label already communicates the action."
+        },
+        {
+          "component_id": "repeat-button",
+          "choose_when": "Holding the pointer or key should invoke the same action repeatedly.",
+          "avoid_when": "Repeated activation could duplicate a destructive or asynchronous operation."
+        },
+        {
+          "component_id": "hyperlink-button",
+          "choose_when": "The action navigates to a URL and should read visually as a link.",
+          "avoid_when": "The action changes local state without navigation."
+        },
+        {
+          "component_id": "dropdown-button",
+          "choose_when": "The surface only opens a menu of related commands.",
+          "avoid_when": "The primary part must also invoke a default action."
+        },
+        {
+          "component_id": "split-button",
+          "choose_when": "A primary action and a menu of alternatives share one surface.",
+          "avoid_when": "There is no safe or obvious default action."
+        },
+        {
+          "component_id": "toggle-split-button",
+          "choose_when": "The primary action toggles state while the secondary part exposes related options.",
+          "avoid_when": "State and options are independent concepts that should use separate controls."
+        }
+      ]
+    },
+    {
+      "id": "choices",
+      "question": "How should a user choose or adjust a value?",
+      "candidates": [
+        {
+          "component_id": "checkbox",
+          "choose_when": "An independent option may be on, off, or optionally indeterminate.",
+          "avoid_when": "Exactly one item must be chosen from a visible set."
+        },
+        {
+          "component_id": "color-picker",
+          "choose_when": "Users need visual color selection with numeric or alpha editing.",
+          "avoid_when": "Only a small fixed palette is allowed."
+        },
+        {
+          "component_id": "combobox",
+          "choose_when": "One value is selected from a compact list that need not stay visible.",
+          "avoid_when": "All alternatives must remain visible for comparison."
+        },
+        {
+          "component_id": "radio-button",
+          "choose_when": "Exactly one option from a small visible group may be selected.",
+          "avoid_when": "The option set is long, dynamic, or space constrained."
+        },
+        {
+          "component_id": "rating-control",
+          "choose_when": "Users view or set an ordered star-style rating.",
+          "avoid_when": "The numeric value needs precise arbitrary input."
+        },
+        {
+          "component_id": "slider",
+          "choose_when": "A bounded numeric value benefits from direct relative adjustment.",
+          "avoid_when": "Exact text entry is the primary requirement."
+        },
+        {
+          "component_id": "toggle-button",
+          "choose_when": "A button-like command surface also communicates an on/off state.",
+          "avoid_when": "The setting should read as a persistent form preference."
+        },
+        {
+          "component_id": "toggle-switch",
+          "choose_when": "A persistent binary setting takes effect immediately.",
+          "avoid_when": "Submitting a form is required before the value takes effect."
+        }
+      ]
+    },
+    {
+      "id": "collections",
+      "question": "How should a collection or sequence be presented?",
+      "candidates": [
+        {
+          "component_id": "list-view",
+          "choose_when": "Items form a primarily vertical collection with selection. The built-in delegate covers ordinary text and icon rows; use a custom delegate for richer item composition.",
+          "avoid_when": "Hierarchy or two-dimensional visual scanning is the main task."
+        },
+        {
+          "component_id": "grid-view",
+          "choose_when": "Uniform visual items should be scanned in rows and columns.",
+          "avoid_when": "Items vary substantially in size or form a hierarchy."
+        },
+        {
+          "component_id": "flow-view",
+          "choose_when": "Variable-sized items should wrap responsively like tags or cards.",
+          "avoid_when": "Uniform cells or strict row alignment are required."
+        },
+        {
+          "component_id": "tree-view",
+          "choose_when": "The data has expandable parent-child hierarchy.",
+          "avoid_when": "The hierarchy is only navigational and should use page navigation instead."
+        },
+        {
+          "component_id": "flip-view",
+          "choose_when": "Users browse one item or page at a time in a short sequence.",
+          "avoid_when": "Users need to compare several items simultaneously."
+        },
+        {
+          "component_id": "stack-view",
+          "choose_when": "Pages follow push, pop, and back navigation semantics.",
+          "avoid_when": "Peer pages need persistent visible tabs or top-level navigation."
+        }
+      ]
+    },
+    {
+      "id": "date-time",
+      "question": "How should dates and times be selected?",
+      "candidates": [
+        {
+          "component_id": "calendar-date-picker",
+          "choose_when": "A compact field should open a calendar for one optional date.",
+          "avoid_when": "The calendar must stay visible."
+        },
+        {
+          "component_id": "calendar-view",
+          "choose_when": "Users need a persistent month surface for browsing and date selection.",
+          "avoid_when": "Screen space is constrained and selection is occasional."
+        },
+        {
+          "component_id": "date-picker",
+          "choose_when": "A compact locale-aware day, month, and year field is preferred over a calendar.",
+          "avoid_when": "Users need surrounding-day context."
+        },
+        {
+          "component_id": "time-picker",
+          "choose_when": "Users select a locale-aware time of day.",
+          "avoid_when": "The value represents duration rather than clock time."
+        }
+      ]
+    },
+    {
+      "id": "transient-surfaces",
+      "question": "Which transient surface should present temporary content?",
+      "candidates": [
+        {
+          "component_id": "content-dialog",
+          "choose_when": "A same-window modal decision needs a title, content, and up to three commit actions.",
+          "avoid_when": "The task must remain modeless or needs a separate top-level window."
+        },
+        {
+          "component_id": "dialog",
+          "choose_when": "Arbitrary modal content requires its own window surface.",
+          "avoid_when": "A compact decision fits the same-window content-dialog contract."
+        },
+        {
+          "component_id": "flyout",
+          "choose_when": "Contextual content should anchor to an invoking control and dismiss lightly.",
+          "avoid_when": "The content must remain open while users work elsewhere."
+        },
+        {
+          "component_id": "popup",
+          "choose_when": "A low-level positioned overlay is needed and the application owns its complete behavior.",
+          "avoid_when": "Flyout, menu, tooltip, or dialog already expresses the intended semantics."
+        },
+        {
+          "component_id": "teaching-tip",
+          "choose_when": "An anchored tip introduces a feature without blocking the rest of the application.",
+          "avoid_when": "The message is routine status or validation feedback."
+        },
+        {
+          "component_id": "coach-mark",
+          "choose_when": "A standalone guided tip must point at targets and move between them.",
+          "avoid_when": "A simple anchored teaching tip is sufficient."
+        }
+      ]
+    },
+    {
+      "id": "layout-surfaces",
+      "question": "How should related content be grouped or revealed?",
+      "candidates": [
+        {
+          "component_id": "card",
+          "choose_when": "Related content needs a token-backed rounded visual surface.",
+          "avoid_when": "Grouping is already clear from hierarchy and spacing."
+        },
+        {
+          "component_id": "divider",
+          "choose_when": "Adjacent regions need a lightweight visual separator.",
+          "avoid_when": "A separate Card or additional spacing communicates structure more clearly."
+        },
+        {
+          "component_id": "expander",
+          "choose_when": "One section independently reveals optional caller-owned content.",
+          "avoid_when": "Several sections require coordinated expansion behavior."
+        },
+        {
+          "component_id": "accordion",
+          "choose_when": "Several vertically stacked sections need coordinated single or multiple expansion.",
+          "avoid_when": "Only one disclosure region exists."
+        },
+        {
+          "component_id": "drawer-view",
+          "choose_when": "A temporary panel should slide over content from a window edge.",
+          "avoid_when": "Both regions must remain visible and resizable."
+        },
+        {
+          "component_id": "split-view",
+          "choose_when": "Two or more persistent regions need draggable size allocation.",
+          "avoid_when": "The secondary region is temporary or modal."
+        }
+      ]
+    },
+    {
+      "id": "command-surfaces",
+      "question": "How should several commands be organized?",
+      "candidates": [
+        {
+          "component_id": "menu",
+          "choose_when": "A transient vertical list of commands is opened from context or a button.",
+          "avoid_when": "Primary commands must remain visible."
+        },
+        {
+          "component_id": "menu-bar",
+          "choose_when": "A desktop application needs persistent top-level command categories.",
+          "avoid_when": "The application has only a few task-focused actions."
+        },
+        {
+          "component_id": "command-bar",
+          "choose_when": "Primary actions should stay visible while lower-priority commands overflow responsively.",
+          "avoid_when": "Commands are purely contextual to one pointer location."
+        },
+        {
+          "component_id": "command-bar-flyout",
+          "choose_when": "A contextual surface combines primary and secondary command groups.",
+          "avoid_when": "A simple menu or persistent command bar is sufficient."
+        }
+      ]
+    },
+    {
+      "id": "navigation",
+      "question": "How should users move between application areas?",
+      "candidates": [
+        {
+          "component_id": "navigation-view",
+          "choose_when": "Several top-level areas need adaptive application navigation and a content host.",
+          "avoid_when": "Only a few peer views exist inside one local context."
+        },
+        {
+          "component_id": "tab-view",
+          "choose_when": "Users manage several open documents or peer work surfaces with visible tabs.",
+          "avoid_when": "The destinations are fixed top-level product areas."
+        },
+        {
+          "component_id": "pivot",
+          "choose_when": "A small set of peer views uses text headers and an animated indicator.",
+          "avoid_when": "Users add, close, or reorder views."
+        },
+        {
+          "component_id": "selector-bar",
+          "choose_when": "A compact row of selectable items switches among nearby views.",
+          "avoid_when": "Deep hierarchy or overflow-heavy navigation is expected."
+        },
+        {
+          "component_id": "breadcrumb",
+          "choose_when": "Users need the current hierarchical path and direct navigation to ancestors.",
+          "avoid_when": "The product structure is flat or the trail would duplicate top-level navigation."
+        }
+      ]
+    },
+    {
+      "id": "scrolling-and-paging",
+      "question": "How should content beyond the viewport be navigated?",
+      "candidates": [
+        {
+          "component_id": "scroll-view",
+          "choose_when": "Caller-owned content needs a scrollable viewport with Fluent scrollbars and optional zoom.",
+          "avoid_when": "A Qt item view already owns scrolling."
+        },
+        {
+          "component_id": "scrollbar",
+          "choose_when": "A custom scrolling host needs a standalone Fluent scrollbar.",
+          "avoid_when": "ScrollView or an item view can own the complete viewport."
+        },
+        {
+          "component_id": "annotated-scrollbar",
+          "choose_when": "Long content benefits from semantic labels or landmarks along its scroll range.",
+          "avoid_when": "The content is short or labels would add noise."
+        },
+        {
+          "component_id": "pips-pager",
+          "choose_when": "A short sequence needs dot-style page navigation.",
+          "avoid_when": "The page count is large or exact page numbers matter."
+        }
+      ]
+    },
+    {
+      "id": "status-and-identity",
+      "question": "How should status, progress, help, or identity be communicated?",
+      "candidates": [
+        {
+          "component_id": "avatar",
+          "choose_when": "A person or identity needs an image, initials fallback, and optional presence.",
+          "avoid_when": "The image is generic content rather than identity."
+        },
+        {
+          "component_id": "info-badge",
+          "choose_when": "A compact count, icon, or attention dot annotates another surface.",
+          "avoid_when": "The message needs explanatory text or an action."
+        },
+        {
+          "component_id": "info-bar",
+          "choose_when": "Persistent inline status or validation feedback needs severity and optional actions.",
+          "avoid_when": "The message is brief, nonessential, and can disappear automatically."
+        },
+        {
+          "component_id": "progress-bar",
+          "choose_when": "Progress is naturally read along a horizontal range or in a content row.",
+          "avoid_when": "Space is constrained to a compact square indicator."
+        },
+        {
+          "component_id": "progress-ring",
+          "choose_when": "A compact circular indicator communicates determinate or indeterminate activity.",
+          "avoid_when": "Users need precise progress comparison across a long operation."
+        },
+        {
+          "component_id": "shimmer",
+          "choose_when": "A skeleton placeholder should preserve content geometry while data loads.",
+          "avoid_when": "The operation has explicit measurable progress or failed."
+        },
+        {
+          "component_id": "toast",
+          "choose_when": "A brief same-window notification confirms an outcome without interrupting work.",
+          "avoid_when": "The user must acknowledge or resolve the condition."
+        },
+        {
+          "component_id": "tooltip",
+          "choose_when": "A concise hover or focus hint clarifies an otherwise understandable control.",
+          "avoid_when": "Critical instructions or validation errors must remain visible."
+        }
+      ]
+    },
+    {
+      "id": "text-and-numeric-input",
+      "question": "How should text or numeric values be entered and displayed?",
+      "candidates": [
+        {
+          "component_id": "label",
+          "choose_when": "Static text needs Fluent typography, wrapping, or elision.",
+          "avoid_when": "The text must be edited."
+        },
+        {
+          "component_id": "line-edit",
+          "choose_when": "Users enter one line of general text.",
+          "avoid_when": "Suggestions, numeric validation, passwords, or multiple lines are central."
+        },
+        {
+          "component_id": "auto-suggest-box",
+          "choose_when": "One-line input benefits from dynamic matching suggestions.",
+          "avoid_when": "The choice set is small and fixed enough for ComboBox."
+        },
+        {
+          "component_id": "number-box",
+          "choose_when": "Users need validated numeric input with spin controls or expressions.",
+          "avoid_when": "Relative dragging is more important than exact entry."
+        },
+        {
+          "component_id": "password-box",
+          "choose_when": "Sensitive single-line input must be concealed with optional reveal behavior.",
+          "avoid_when": "The value is not secret."
+        },
+        {
+          "component_id": "text-edit",
+          "choose_when": "Users enter or inspect multiple lines of text, logs, or documents.",
+          "avoid_when": "Only a short single-line value is expected."
+        }
+      ]
+    },
+    {
+      "id": "window-and-icons",
+      "question": "Which primitives establish the application window and iconography?",
+      "candidates": [
+        {
+          "component_id": "window",
+          "choose_when": "A top-level Fluent application window with custom chrome and theming is required.",
+          "avoid_when": "The UI is embedded inside an existing host-owned window."
+        },
+        {
+          "component_id": "title-bar",
+          "choose_when": "A host window needs a reusable custom title bar and drag regions.",
+          "avoid_when": "Fluent Window already owns the complete chrome contract."
+        },
+        {
+          "component_id": "font-icon",
+          "choose_when": "A theme-aware bundled Fluent glyph should render as a widget.",
+          "avoid_when": "A product-specific illustration or arbitrary image is required."
+        }
+      ]
+    }
+  ]
+}

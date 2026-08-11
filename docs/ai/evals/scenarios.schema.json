@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/ai/evals/scenarios.schema.json",
+  "title": "FluentQt AI regression scenarios",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "project_shapes", "retrieval_cases"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "project_shapes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/projectShape" }
+    },
+    "retrieval_cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/retrievalCase" }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "projectShape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "existing_interfaces",
+        "signals",
+        "expected_integration",
+        "expected_application_pattern",
+        "evidence"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "existing_interfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "library",
+              "cli",
+              "tui",
+              "service",
+              "plugin",
+              "gui",
+              "none"
+            ]
+          }
+        },
+        "signals": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "expected_integration": { "$ref": "#/$defs/nonEmptyString" },
+        "expected_application_pattern": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence": { "$ref": "#/$defs/nonEmptyStringArray" }
+      }
+    },
+    "retrievalCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "intent", "expected_components_any"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "intent": { "$ref": "#/$defs/nonEmptyString" },
+        "expected_components_any": {
+          "$ref": "#/$defs/nonEmptyStringArray"
+        }
+      }
+    }
+  }
+}
