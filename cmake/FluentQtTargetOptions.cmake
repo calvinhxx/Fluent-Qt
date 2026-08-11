@@ -20,8 +20,9 @@ function(fluent_qt_configure_cpp_target target)
         # the same target PDB. Serialize those writes to avoid C1041 failures.
         # Qt 5 moc can also emit unused internal notify-signal probes.
         target_compile_options("${target}" PRIVATE /utf-8 /FS /wd4505)
-        set_target_properties("${target}" PROPERTIES
-            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+        # Do not override MSVC_RUNTIME_LIBRARY here. With CMP0091 enabled, each
+        # target inherits CMAKE_MSVC_RUNTIME_LIBRARY from the caller/toolchain,
+        # so vcpkg's VCPKG_CRT_LINKAGE choice remains effective.
     endif()
 endfunction()
 
