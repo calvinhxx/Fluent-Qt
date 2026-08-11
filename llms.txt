@@ -1,0 +1,37 @@
+# FluentQt
+
+> FluentQt is a C++17 Qt Widgets component library with optional PySide6 bindings. This index routes coding agents to public APIs, machine-readable UI guidance, executable samples, and validation contracts.
+
+## AI-assisted GUI development
+
+- [AI-friendly entry point](docs/ai/README.md): scope, compatibility, commands, and roadmap
+- [Add a GUI to any project](docs/ai/add-gui-to-project.md): evidence-driven workflow for existing and greenfield projects
+- [Generated AI catalog](docs/ai/generated/fluentqt-ai-catalog.json): versioned integration patterns, public C++/Python APIs, components, tests, and samples
+- [AI catalog schema](docs/ai/fluentqt-ai-catalog.schema.json): JSON Schema draft 2020-12 contract
+- [Project analysis schema](docs/ai/project-analysis.schema.json): optional machine-readable target-project analysis
+- [AI regression scenarios](docs/ai/evals/scenarios.json): project-shape coverage and deterministic intent-retrieval cases
+- [AI regression schema](docs/ai/evals/scenarios.schema.json): machine-readable fixture contract
+- [FluentQt GUI Skill](.agents/skills/build-fluentqt-gui/SKILL.md): canonical open Agent Skills workflow for Codex, Cursor, Copilot, Claude adapters, and other compatible agents
+
+## Public integration
+
+- [Project overview](README.md): supported Qt versions, CMake setup, Python bindings, and packaging
+- [C++ hello world](examples/hello_world): minimal in-tree and installed-package consumer
+- [PySide6 bindings](bindings/pyside6/README.md): build, package, and compatibility workflow
+- [Architecture contracts](docs/architecture/README.md): reusable component and overlay boundaries
+
+## Development and verification
+
+- [Development workflow](docs/development/README.md): canonical contributor workflow index
+- [Testing workflow](docs/development/testing-workflow.md): focused targets, CTest labels, and visual tests
+- [Component API conventions](docs/development/component-api-conventions.md): public API and implementation rules
+- [Gallery sample optimization](docs/development/app-sample-optimization.md): preview/snippet semantic alignment
+
+## Query without loading the full catalog
+
+```bash
+python3 tools/ai/query_ai_catalog.py --search "expandable hierarchy"
+python3 tools/ai/query_ai_catalog.py --component tree-view
+python3 tools/ai/query_ai_catalog.py --pattern greenfield
+python3 tools/ai/evaluate_ai_catalog.py --project-root .
+```

@@ -1,0 +1,329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/ai/fluentqt-ai-catalog.schema.json",
+  "title": "FluentQt AI catalog",
+  "description": "Versioned, generated facts used to discover FluentQt integration patterns, components, tests, and samples.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project",
+    "canonical_sources",
+    "integration_patterns",
+    "application_patterns",
+    "selection_guides",
+    "categories",
+    "components",
+    "routes",
+    "binding_support_types",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "project": { "$ref": "#/$defs/project" },
+    "canonical_sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/canonicalSource" }
+    },
+    "integration_patterns": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/integrationPattern" }
+    },
+    "application_patterns": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/applicationPattern" }
+    },
+    "selection_guides": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/selectionGuide" }
+    },
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/category" }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/component" }
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/route" }
+    },
+    "binding_support_types": { "$ref": "#/$defs/stringArray" },
+    "summary": { "$ref": "#/$defs/summary" }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "nonEmptyStringArray": {
+      "allOf": [
+        { "$ref": "#/$defs/stringArray" },
+        { "minItems": 1 }
+      ]
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "api_version",
+        "cpp_standard",
+        "qt_versions",
+        "python_versions",
+        "pyside_versions",
+        "cpp_target",
+        "python_package"
+      ],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "version": { "$ref": "#/$defs/nonEmptyString" },
+        "api_version": { "$ref": "#/$defs/nonEmptyString" },
+        "cpp_standard": { "$ref": "#/$defs/nonEmptyString" },
+        "qt_versions": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "python_versions": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "pyside_versions": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "cpp_target": { "$ref": "#/$defs/nonEmptyString" },
+        "python_package": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "canonicalSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "role"],
+      "properties": {
+        "path": { "$ref": "#/$defs/nonEmptyString" },
+        "role": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "integrationPattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "choose_when",
+        "avoid_when",
+        "required_evidence"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "choose_when": { "$ref": "#/$defs/nonEmptyString" },
+        "avoid_when": { "$ref": "#/$defs/nonEmptyString" },
+        "required_evidence": { "$ref": "#/$defs/nonEmptyStringArray" }
+      }
+    },
+    "applicationPattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "signals",
+        "preferred_integrations",
+        "components"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "signals": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "preferred_integrations": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "components": { "$ref": "#/$defs/nonEmptyStringArray" }
+      }
+    },
+    "selectionCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["component_id", "choose_when", "avoid_when"],
+      "properties": {
+        "component_id": { "$ref": "#/$defs/nonEmptyString" },
+        "choose_when": { "$ref": "#/$defs/nonEmptyString" },
+        "avoid_when": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "selectionGuide": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "question", "candidates"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "question": { "$ref": "#/$defs/nonEmptyString" },
+        "candidates": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/selectionCandidate" }
+        }
+      }
+    },
+    "category": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "components",
+        "cpp_header",
+        "python_module"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "components": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "cpp_header": { "$ref": "#/$defs/nonEmptyString" },
+        "python_module": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "test": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "source", "ctest_label"],
+      "properties": {
+        "target": { "$ref": "#/$defs/nonEmptyString" },
+        "source": { "$ref": "#/$defs/nonEmptyString" },
+        "ctest_label": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "previewLayout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["orientation", "spacing"],
+      "properties": {
+        "orientation": { "enum": ["horizontal", "vertical"] },
+        "spacing": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "description", "cpp_snippet"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "cpp_snippet": { "$ref": "#/$defs/nonEmptyString" },
+        "preview_layout": { "$ref": "#/$defs/previewLayout" }
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "category_id",
+        "description",
+        "capabilities",
+        "search_terms",
+        "cpp",
+        "python",
+        "tests",
+        "gallery",
+        "samples"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "category_id": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "$ref": "#/$defs/nonEmptyString" },
+        "capabilities": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "search_terms": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "cpp": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "public_header",
+            "declaration",
+            "qualified_type",
+            "cmake_target"
+          ],
+          "properties": {
+            "public_header": { "$ref": "#/$defs/nonEmptyString" },
+            "declaration": { "$ref": "#/$defs/nonEmptyString" },
+            "qualified_type": { "$ref": "#/$defs/nonEmptyString" },
+            "cmake_target": { "$ref": "#/$defs/nonEmptyString" }
+          }
+        },
+        "python": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["package", "module", "type", "import_statement"],
+          "properties": {
+            "package": { "$ref": "#/$defs/nonEmptyString" },
+            "module": { "$ref": "#/$defs/nonEmptyString" },
+            "type": { "$ref": "#/$defs/nonEmptyString" },
+            "import_statement": { "$ref": "#/$defs/nonEmptyString" }
+          }
+        },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/test" }
+        },
+        "gallery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["route_id", "sample_source", "control_image"],
+          "properties": {
+            "route_id": { "$ref": "#/$defs/nonEmptyString" },
+            "sample_source": { "$ref": "#/$defs/nonEmptyString" },
+            "control_image": { "type": ["string", "null"] }
+          }
+        },
+        "samples": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/sample" }
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "kind", "parent_id", "description"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "kind": { "$ref": "#/$defs/nonEmptyString" },
+        "parent_id": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_count",
+        "component_count",
+        "sample_count",
+        "integration_pattern_count",
+        "application_pattern_count",
+        "selection_guide_count",
+        "guided_component_count"
+      ],
+      "properties": {
+        "route_count": { "type": "integer", "minimum": 1 },
+        "component_count": { "type": "integer", "minimum": 1 },
+        "sample_count": { "type": "integer", "minimum": 1 },
+        "integration_pattern_count": { "type": "integer", "minimum": 1 },
+        "application_pattern_count": { "type": "integer", "minimum": 1 },
+        "selection_guide_count": { "type": "integer", "minimum": 1 },
+        "guided_component_count": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

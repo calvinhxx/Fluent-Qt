@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "project_shapes": [
+    {
+      "id": "greenfield-desktop-product",
+      "existing_interfaces": ["none"],
+      "signals": [
+        "No application or interaction layer exists",
+        "The user has defined a new standalone desktop workflow"
+      ],
+      "expected_integration": "greenfield",
+      "expected_application_pattern": "multi-page-desktop-app",
+      "evidence": [
+        "User outcomes and data sources",
+        "State, persistence, supported-platform, and distribution boundaries"
+      ]
+    },
+    {
+      "id": "reusable-library-frontend",
+      "existing_interfaces": ["library"],
+      "signals": [
+        "Stable public APIs already implement the use cases",
+        "The GUI can run safely in the same process"
+      ],
+      "expected_integration": "direct-library",
+      "expected_application_pattern": "library-frontend",
+      "evidence": [
+        "Public entry points and ownership rules",
+        "Threading, cancellation, and domain-level tests"
+      ]
+    },
+    {
+      "id": "tui-with-reusable-core",
+      "existing_interfaces": ["library", "tui"],
+      "signals": [
+        "The TUI is one frontend over a tested application core",
+        "The GUI must preserve the TUI entry point"
+      ],
+      "expected_integration": "direct-library",
+      "expected_application_pattern": "command-runner",
+      "evidence": [
+        "The TUI-to-core boundary",
+        "Core progress, error, and cancellation contracts"
+      ]
+    },
+    {
+      "id": "cli-structured-process",
+      "existing_interfaces": ["cli"],
+      "signals": [
+        "The executable is the only supported integration boundary",
+        "It exposes versioned structured input and output"
+      ],
+      "expected_integration": "structured-process",
+      "expected_application_pattern": "command-runner",
+      "evidence": [
+        "Structured protocol and version contract",
+        "Exit, cancellation, progress, and error semantics"
+      ]
+    },
+    {
+      "id": "remote-service-client",
+      "existing_interfaces": ["service"],
+      "signals": [
+        "A service is the authoritative state and operation boundary",
+        "Connectivity and authentication are user-visible states"
+      ],
+      "expected_integration": "service-api",
+      "expected_application_pattern": "service-client",
+      "evidence": [
+        "API schema and compatibility policy",
+        "Authentication, retry, timeout, and offline behavior"
+      ]
+    },
+    {
+      "id": "host-plugin-frontend",
+      "existing_interfaces": ["plugin"],
+      "signals": [
+        "The host exposes a supported embedded frontend extension point",
+        "The GUI shares the host lifecycle"
+      ],
+      "expected_integration": "plugin-extension",
+      "expected_application_pattern": "multi-page-desktop-app",
+      "evidence": [
+        "Host ABI or API and event-loop contract",
+        "Load, unload, ownership, and distribution rules"
+      ]
+    },
+    {
+      "id": "file-processing-workbench",
+      "existing_interfaces": ["library"],
+      "signals": [
+        "Users open files, configure an operation, and inspect output",
+        "A reusable library owns parsing and transformation"
+      ],
+      "expected_integration": "direct-library",
+      "expected_application_pattern": "file-workbench",
+      "evidence": [
+        "Supported file types and validation errors",
+        "Long-running operation and result ownership rules"
+      ]
+    }
+  ],
+  "retrieval_cases": [
+    {
+      "id": "hierarchical-data",
+      "intent": "expandable hierarchy",
+      "expected_components_any": ["tree-view"]
+    },
+    {
+      "id": "observable-progress",
+      "intent": "determinate progress",
+      "expected_components_any": ["progress-bar", "progress-ring"]
+    },
+    {
+      "id": "loading-placeholder",
+      "intent": "skeleton placeholder",
+      "expected_components_any": ["shimmer"]
+    },
+    {
+      "id": "temporary-notification",
+      "intent": "notification",
+      "expected_components_any": ["toast", "info-bar"]
+    },
+    {
+      "id": "numeric-entry",
+      "intent": "numeric value input",
+      "expected_components_any": ["number-box"]
+    },
+    {
+      "id": "application-navigation",
+      "intent": "navigation",
+      "expected_components_any": ["navigation-view", "breadcrumb", "tab-view"]
+    },
+    {
+      "id": "contextual-commands",
+      "intent": "context menu",
+      "expected_components_any": ["menu"]
+    },
+    {
+      "id": "secret-entry",
+      "intent": "password input",
+      "expected_components_any": ["password-box"]
+    },
+    {
+      "id": "secondary-command-surface",
+      "intent": "secondary commands",
+      "expected_components_any": ["command-bar-flyout", "command-bar"]
+    },
+    {
+      "id": "calendar-input",
+      "intent": "calendar date picker",
+      "expected_components_any": ["calendar-date-picker", "date-picker"]
+    },
+    {
+      "id": "temporary-side-panel",
+      "intent": "temporary side panel",
+      "expected_components_any": ["drawer-view"]
+    },
+    {
+      "id": "permission-decision",
+      "intent": "permission decision dialog",
+      "expected_components_any": ["content-dialog", "dialog"]
+    },
+    {
+      "id": "multiline-prompt",
+      "intent": "multi-line prompt input",
+      "expected_components_any": ["text-edit"]
+    },
+    {
+      "id": "cancellable-command-progress",
+      "intent": "cancel long running command progress",
+      "expected_components_any": ["progress-bar", "progress-ring", "command-bar"]
+    },
+    {
+      "id": "streamed-conversation",
+      "intent": "streamed conversation",
+      "expected_components_any": ["scroll-view", "text-edit"]
+    }
+  ]
+}

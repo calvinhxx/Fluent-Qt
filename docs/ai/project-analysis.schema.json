@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/ai/project-analysis.schema.json",
+  "title": "GUI project analysis",
+  "description": "A portable analysis record for adding a FluentQt GUI to an existing or greenfield project.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project",
+    "architecture",
+    "gui_goal",
+    "integration",
+    "constraints",
+    "validation"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "languages",
+        "build_systems",
+        "entry_points",
+        "existing_interfaces"
+      ],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "languages": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "build_systems": { "$ref": "#/$defs/stringArray" },
+        "entry_points": { "$ref": "#/$defs/stringArray" },
+        "existing_interfaces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "library",
+              "cli",
+              "tui",
+              "service",
+              "plugin",
+              "gui",
+              "none"
+            ]
+          }
+        }
+      }
+    },
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain_modules",
+        "long_running_operations",
+        "persistence",
+        "external_io"
+      ],
+      "properties": {
+        "domain_modules": { "$ref": "#/$defs/stringArray" },
+        "long_running_operations": { "$ref": "#/$defs/stringArray" },
+        "persistence": { "$ref": "#/$defs/stringArray" },
+        "external_io": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "gui_goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "user_outcomes",
+        "work_areas",
+        "actions",
+        "data_views"
+      ],
+      "properties": {
+        "user_outcomes": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "work_areas": { "$ref": "#/$defs/stringArray" },
+        "actions": { "$ref": "#/$defs/stringArray" },
+        "data_views": { "$ref": "#/$defs/stringArray" }
+      }
+    },
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "chosen_pattern",
+        "evidence",
+        "rejected_alternatives"
+      ],
+      "properties": {
+        "chosen_pattern": {
+          "enum": [
+            "direct-library",
+            "service-api",
+            "structured-process",
+            "plugin-extension",
+            "extract-core",
+            "greenfield"
+          ]
+        },
+        "evidence": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "rejected_alternatives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pattern", "reason"],
+            "properties": {
+              "pattern": { "$ref": "#/$defs/nonEmptyString" },
+              "reason": { "$ref": "#/$defs/nonEmptyString" }
+            }
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "preserve_interfaces",
+        "supported_platforms",
+        "minimum_qt",
+        "allow_new_runtime"
+      ],
+      "properties": {
+        "preserve_interfaces": { "$ref": "#/$defs/stringArray" },
+        "supported_platforms": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "minimum_qt": { "$ref": "#/$defs/nonEmptyString" },
+        "allow_new_runtime": { "type": "boolean" }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "build_commands",
+        "test_commands",
+        "visual_requirements"
+      ],
+      "properties": {
+        "build_commands": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "test_commands": { "$ref": "#/$defs/stringArray" },
+        "visual_requirements": { "$ref": "#/$defs/stringArray" }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "nonEmptyStringArray": {
+      "allOf": [
+        { "$ref": "#/$defs/stringArray" },
+        { "minItems": 1 }
+      ]
+    }
+  }
+}
