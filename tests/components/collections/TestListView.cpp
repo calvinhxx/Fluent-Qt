@@ -2,6 +2,7 @@
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QHash>
+#include <QImage>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMetaEnum>
@@ -166,6 +167,21 @@ void showWindowAndProcess(QWidget* widget) {
 
 QRectF itemBackgroundRect(const IndicatorListView* lv, int row) {
     return QRectF(lv->exposedVisualRect(row)).adjusted(2.0, 1.0, -2.0, -1.0);
+}
+
+QImage renderViewport(QWidget* viewport) {
+    QImage image(viewport->size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    viewport->render(&painter);
+    return image;
+}
+
+bool isNearColor(const QColor& sample, const QColor& target, int tolerance = 72) {
+    return sample.alpha() > 96
+        && qAbs(sample.red() - target.red()) <= tolerance
+        && qAbs(sample.green() - target.green()) <= tolerance
+        && qAbs(sample.blue() - target.blue()) <= tolerance;
 }
 
 IndicatorListView* createIndicatorListView(QWidget* parent,
@@ -953,6 +969,38 @@ TEST_F(ListViewTest, HorizontalFlowCustomModel) {
     EXPECT_EQ(lv->model()->rowCount(), 3);
     lv->setSelectedIndex(2);
     EXPECT_EQ(lv->selectedIndex(), 2);
+}
+
+TEST_F(ListViewTest, DefaultDelegateKeepsTextClearOfSelectionIndicator) {
+    auto* lv = new IndicatorListView(window);
+    lv->setGeometry(10, 10, 460, 160);
+    lv->setSelectedIndicatorAnimationEnabled(false);
+    auto* model = new QStringListModel({QStringLiteral("Refine settings panel")}, lv);
+    lv->setModel(model);
+    lv->setSelectedIndex(0);
+    showWindowAndProcess(window);
+
+    const QRectF indicator = lv->selectedIndicatorRect();
+    ASSERT_FALSE(indicator.isEmpty());
+    const QImage image = renderViewport(lv->viewport());
+    ASSERT_FALSE(image.isNull());
+
+    const QRect row = lv->exposedVisualRect(0).intersected(image.rect());
+    const QColor textColor = lv->themeColors().textPrimary;
+    int firstTextPixelX = -1;
+    for (int x = qMax(row.left(), qCeil(indicator.right()) + 1);
+         x <= row.right() && firstTextPixelX < 0; ++x) {
+        for (int y = row.top(); y <= row.bottom(); ++y) {
+            if (isNearColor(QColor::fromRgba(image.pixel(x, y)), textColor)) {
+                firstTextPixelX = x;
+                break;
+            }
+        }
+    }
+
+    ASSERT_GE(firstTextPixelX, 0);
+    EXPECT_GE(firstTextPixelX - indicator.right(), 6.0)
+        << "Default ListView text must not collide with the 3 px selection indicator";
 }
 
 // ── Selected indicator motion ────────────────────────────────────────────────

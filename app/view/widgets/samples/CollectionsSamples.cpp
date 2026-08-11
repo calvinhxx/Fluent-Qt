@@ -1271,8 +1271,6 @@ QVector<GallerySample> listViewSamples()
                        listView->setFixedSize(320, 240);
                        listView->setHeaderText(QStringLiteral("Contacts"));
                        listView->setIconSize(QSize(28, 28));
-                       listView->setItemDelegate(new ListRowDelegate(
-                           static_cast<fluent::FluentElement*>(listView), listView, listView));
                        const QStringList names{
                            QStringLiteral("Kendall Collins"), QStringLiteral("Henry Ross"),
                            QStringLiteral("Nicole Wagner"), QStringLiteral("Adam Wolfe"),
@@ -1306,8 +1304,6 @@ QVector<GallerySample> listViewSamples()
                        listView->setFixedSize(320, 244);
                        listView->setHeaderText(QStringLiteral("Filters"));
                        listView->setIconSize(QSize(24, 24));
-                       listView->setItemDelegate(new ListRowDelegate(
-                           static_cast<fluent::FluentElement*>(listView), listView, listView));
                        listView->setSelectionMode(ListView::SelectionMode::Multiple);
                        listView->setModel(makeGlyphListModel(
                            listView,
@@ -1340,8 +1336,6 @@ QVector<GallerySample> listViewSamples()
                        listView->setHeaderText(QStringLiteral("Library"));
                        listView->setFlow(QListView::LeftToRight);
                        listView->setIconSize(QSize(26, 26));
-                       listView->setItemDelegate(new ListRowDelegate(
-                           static_cast<fluent::FluentElement*>(listView), listView, listView));
                        listView->setModel(makeGlyphListModel(
                            listView,
                            {{QStringLiteral("Home"), Typography::Icons::Home},
@@ -1366,8 +1360,6 @@ QVector<GallerySample> listViewSamples()
                        listView->setFixedSize(320, 220);
                        listView->setHeaderText(QStringLiteral("Playlist"));
                        listView->setIconSize(QSize(24, 24));
-                       listView->setItemDelegate(new ListRowDelegate(
-                           static_cast<fluent::FluentElement*>(listView), listView, listView));
                        listView->setCanReorderItems(true);
                        listView->setModel(makeGlyphListModel(
                            listView,
@@ -1400,8 +1392,6 @@ QVector<GallerySample> listViewSamples()
                        listView->setFixedSize(340, 252);
                        listView->setHeaderText(QStringLiteral("Notifications"));
                        listView->setIconSize(QSize(24, 24));
-                       listView->setItemDelegate(new ListRowDelegate(
-                           static_cast<fluent::FluentElement*>(listView), listView, listView));
                        listView->setSectionEnabled(true);
                        listView->setSectionKeyFunction([](int row) {
                            if (row < 3)
@@ -1438,8 +1428,6 @@ QVector<GallerySample> listViewSamples()
                        listView->setFooterText(QStringLiteral("Wheel input stays in this ListView"));
                        listView->setScrollChainingEnabled(false);
                        listView->setIconSize(QSize(24, 24));
-                       listView->setItemDelegate(new ListRowDelegate(
-                           static_cast<fluent::FluentElement*>(listView), listView, listView));
 
                        QVector<QPair<QString, QString>> rows;
                        for (int i = 0; i < 20; ++i)
