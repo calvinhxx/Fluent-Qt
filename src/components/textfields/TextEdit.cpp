@@ -16,6 +16,7 @@
 #include <QFocusEvent>
 #include <QEvent>
 #include <QFontMetrics>
+#include <QInputMethodEvent>
 #include <QResizeEvent>
 #include <QTimer>
 #include <QTextLayout>
@@ -103,7 +104,7 @@ protected:
         // Qt's stock placeholder ignores the rootFrame topMargin, so paint it
         // ourselves to keep it vertically centered.
         // zh_CN: Qt 原生 placeholder 不受 rootFrame topMargin 影响，自绘实现垂直居中。
-        if (!m_owner || !document()->isEmpty()) return;
+        if (!m_owner || !document()->isEmpty() || m_hasPreedit) return;
         const QString ph = m_owner->placeholderText();
         if (ph.isEmpty()) return;
 
@@ -114,6 +115,16 @@ protected:
         painter.setPen(palette().color(QPalette::PlaceholderText));
         painter.setFont(font());
         painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, ph);
+    }
+
+    void inputMethodEvent(QInputMethodEvent* event) override {
+        QTextEdit::inputMethodEvent(event);
+        const bool hasPreedit = event && !event->preeditString().isEmpty();
+        if (m_hasPreedit == hasPreedit)
+            return;
+        m_hasPreedit = hasPreedit;
+        if (viewport())
+            viewport()->update();
     }
 
 private:
@@ -154,6 +165,7 @@ private:
     }
 
     TextEdit* m_owner = nullptr;
+    bool m_hasPreedit = false;
 };
 
 // ── Construction. zh_CN: 构造 ───────────────────────────────────────────────────
