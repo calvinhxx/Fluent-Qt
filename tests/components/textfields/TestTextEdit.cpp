@@ -2,8 +2,10 @@
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QImage>
+#include <QInputMethodEvent>
 #include <QMetaProperty>
 #include <QMenu>
+#include <QPainter>
 #include <QScrollBar>
 #include <QTextEdit>
 #include <QTimer>
@@ -130,6 +132,30 @@ bool triggerContextAction(QTextEdit* inner, QKeySequence::StandardKey standardKe
     return triggered;
 }
 
+QImage renderWidget(QWidget* widget)
+{
+    QImage image(widget->size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    widget->render(&painter);
+    return image;
+}
+
+int differingPixels(const QImage& lhs, const QImage& rhs, const QRect& area)
+{
+    if (lhs.size() != rhs.size())
+        return -1;
+    const QRect bounded = area.intersected(lhs.rect()).intersected(rhs.rect());
+    int count = 0;
+    for (int y = bounded.top(); y <= bounded.bottom(); ++y) {
+        for (int x = bounded.left(); x <= bounded.right(); ++x) {
+            if (lhs.pixel(x, y) != rhs.pixel(x, y))
+                ++count;
+        }
+    }
+    return count;
+}
+
 } // namespace
 
 TEST_F(TextEditTest, TextAndPlaceholder) {
@@ -139,6 +165,42 @@ TEST_F(TextEditTest, TextAndPlaceholder) {
 
     edit->setPlainText("line1\nline2");
     EXPECT_EQ(edit->toPlainText(), "line1\nline2");
+}
+
+TEST_F(TextEditTest, PlaceholderIsHiddenDuringInputMethodPreedit) {
+    auto* edit = new TextEdit(window);
+    edit->setFixedSize(360, edit->lineHeight());
+    edit->move(20, 20);
+    window->show();
+    edit->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    inner->setFocus(Qt::OtherFocusReason);
+    const QString placeholder = QStringLiteral("Ask Claude to inspect this project");
+
+    edit->setPlaceholderText(QString());
+    QApplication::processEvents();
+    const QImage blank = renderWidget(inner->viewport());
+
+    edit->setPlaceholderText(placeholder);
+    QApplication::processEvents();
+    const QImage withPlaceholder = renderWidget(inner->viewport());
+
+    QInputMethodEvent preedit(QStringLiteral("a's'd"), {});
+    QApplication::sendEvent(inner, &preedit);
+    QApplication::processEvents();
+    EXPECT_TRUE(edit->toPlainText().isEmpty());
+    const QImage duringPreedit = renderWidget(inner->viewport());
+
+    const QRect placeholderTail(64, 0,
+                                qMax(0, inner->viewport()->width() - 64),
+                                inner->viewport()->height());
+    EXPECT_GT(differingPixels(withPlaceholder, blank, placeholderTail), 20)
+        << "The fixture must contain visible placeholder glyphs in the tail region";
+    EXPECT_LT(differingPixels(duringPreedit, blank, placeholderTail), 8)
+        << "IME preedit text must replace, not overlap, the placeholder";
 }
 
 TEST_F(TextEditTest, Contract_LayoutPropertiesAreAvailableThroughQtMetaObject) {

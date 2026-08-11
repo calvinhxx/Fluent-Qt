@@ -6,6 +6,8 @@
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QDateTime>
+#include <QFontMetricsF>
+#include <QIcon>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMouseEvent>
@@ -24,6 +26,7 @@
 #include <QWheelEvent>
 
 #include "compatibility/QtCompat.h"
+#include "compatibility/TextPaintCompat.h"
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -62,7 +65,170 @@ qreal indicatorLeadingProgress(qreal progress) {
 qreal indicatorTrailingProgress(qreal progress) {
     return qBound(0.0, (progress - 0.18) / 0.82, 1.0);
 }
+
+struct RowSelectionFill {
+    QColor color = Qt::transparent;
+    bool textOnAccent = false;
+};
+
+RowSelectionFill defaultRowSelectionFill(
+    const QStyleOptionViewItem& option,
+    const FluentElement::Colors& colors,
+    FluentElement::DesignLanguage language,
+    bool dark)
+{
+    RowSelectionFill fill;
+    if (!(option.state & QStyle::State_Enabled))
+        return fill;
+
+    const bool hovered = option.state & QStyle::State_MouseOver;
+    const bool pressed = (option.state & QStyle::State_Sunken) && hovered;
+    const bool selected = option.state & QStyle::State_Selected;
+    const auto interactionVeil = [dark](int alpha) {
+        return dark ? QColor(255, 255, 255, alpha)
+                    : QColor(0, 0, 0, alpha);
+    };
+
+    if (language == FluentElement::DesignMaterial) {
+        if (selected && colors.accentDefault.isValid()) {
+            fill.color = colors.accentDefault;
+            fill.color.setAlphaF(dark ? 0.28 : 0.16);
+        } else if (hovered) {
+            fill.color = interactionVeil(0x14);
+        }
+        return fill;
+    }
+
+    if (language == FluentElement::DesignCupertino) {
+        if (selected && colors.accentDefault.isValid()) {
+            fill.color = colors.accentDefault;
+            fill.textOnAccent = true;
+        } else if (hovered) {
+            fill.color = interactionVeil(dark ? 0x12 : 0x10);
+        }
+        return fill;
+    }
+
+    if (pressed)
+        fill.color = colors.subtleTertiary;
+    else if (selected || hovered)
+        fill.color = colors.subtleSecondary;
+    return fill;
+}
 } // namespace
+
+// Default text/icon rows must remain usable without an application-supplied
+// delegate. Custom delegates still own richer business item composition.
+// zh_CN: 默认文本/图标行在应用未提供 delegate 时也必须可用；更复杂的业务条目
+// 仍由调用方自定义 delegate 负责。
+class DefaultListItemDelegate final : public QStyledItemDelegate {
+public:
+    explicit DefaultListItemDelegate(ListView* listView)
+        : QStyledItemDelegate(listView), m_listView(listView)
+    {
+    }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override
+    {
+        if (!painter || !index.isValid() || !m_listView)
+            return;
+
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setRenderHint(QPainter::SmoothPixmapTransform);
+
+        const auto& colors = m_listView->themeColorsRef();
+        const auto radius = m_listView->themeRadius();
+        const auto language = m_listView->themeDesignLanguage();
+        const bool dark = m_listView->effectiveTheme() == FluentElement::Dark;
+        const bool selected = option.state & QStyle::State_Selected;
+        const bool enabled = option.state & QStyle::State_Enabled;
+        const QRectF background = QRectF(option.rect).adjusted(2.0, 1.0, -2.0, -1.0);
+
+        const RowSelectionFill fill = defaultRowSelectionFill(
+            option, colors, language, dark);
+        if (fill.color.isValid() && fill.color.alpha() > 0) {
+            QPainterPath path;
+            path.addRoundedRect(background, radius.control, radius.control);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(fill.color);
+            painter->drawPath(path);
+        }
+
+        // 14 px from the row edge leaves a stable gap after the 3 px indicator
+        // at background.left() + 4 px. zh_CN: 内容从行边缘内缩 14 px，使文字
+        // 与位于 background.left()+4 px 的 3 px 指示条保持稳定间距。
+        qreal cursorX = background.left() + 14.0;
+        QSize iconExtent = option.decorationSize;
+        if (!iconExtent.isValid() || iconExtent.isEmpty())
+            iconExtent = m_listView->iconSize();
+        if (!iconExtent.isValid() || iconExtent.isEmpty())
+            iconExtent = QSize(24, 24);
+
+        const QVariant decoration = index.data(Qt::DecorationRole);
+        QPixmap iconPixmap;
+        if (decoration.canConvert<QPixmap>()) {
+            iconPixmap = decoration.value<QPixmap>();
+        } else if (decoration.canConvert<QIcon>()) {
+            const QIcon icon = decoration.value<QIcon>();
+            if (!icon.isNull()) {
+                const qreal dpr = painter->device()
+                    ? qMax<qreal>(1.0, painter->device()->devicePixelRatioF())
+                    : 1.0;
+                iconPixmap = fluentIconPixmapForLogicalExtent(
+                    icon, iconExtent, dpr,
+                    m_listView->window() ? m_listView->window()->windowHandle()
+                                         : nullptr);
+            }
+        }
+
+        if (!iconPixmap.isNull()) {
+            const QRect iconRect(qRound(cursorX),
+                                 qRound(background.center().y()
+                                        - iconExtent.height() / 2.0),
+                                 iconExtent.width(), iconExtent.height());
+            painter->drawPixmap(iconRect, iconPixmap);
+            cursorX = iconRect.right() + 12.0;
+        }
+
+        QColor textColor = enabled ? colors.textPrimary : colors.textDisabled;
+        if (enabled && fill.textOnAccent && colors.textOnAccent.isValid())
+            textColor = colors.textOnAccent;
+        painter->setPen(textColor);
+
+        QFont font = option.font;
+        if (selected)
+            font.setWeight(QFont::DemiBold);
+        painter->setFont(font);
+
+        const QString text = index.data(Qt::DisplayRole).toString();
+        const QRectF textSlot(cursorX, background.top(),
+                              qMax<qreal>(0.0, background.right() - cursorX - 8.0),
+                              background.height());
+        const QFontMetricsF metrics(font);
+        const QString elided = metrics.elidedText(
+            text, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
+            textSlot, metrics, elided);
+        painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, elided);
+        painter->restore();
+    }
+
+    QSize sizeHint(const QStyleOptionViewItem& option,
+                   const QModelIndex& index) const override
+    {
+        QSize hint = QStyledItemDelegate::sizeHint(option, index);
+        hint.setHeight(qMax(hint.height(),
+                            ::Spacing::ControlHeight::Standard
+                                + ::Spacing::Gap::Tight));
+        hint.setWidth(hint.width() + 26);
+        return hint;
+    }
+
+private:
+    ListView* m_listView = nullptr;
+};
 
 // ── Section proxy delegate ────────────────────────────────────────────────────
 // Wraps the user's delegate and adds extra space + section header painting
@@ -187,6 +353,12 @@ ListView::ListView(QWidget* parent)
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setMouseTracking(true);
     setSpacing(2);  // 2px around each item, also spacing first/last from the border. zh_CN: item 四周留 2px，兼顾首尾与边框的间隙。
+
+    // Keep the no-configuration path Fluent and reserve room for the selection
+    // indicator. Applications can replace this delegate for richer rows.
+    // zh_CN: 无需额外配置即可获得 Fluent 行样式并为选择指示条留位；应用仍可
+    // 替换 delegate 以实现更丰富的条目。
+    QListView::setItemDelegate(new DefaultListItemDelegate(this));
 
     QListView::setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
