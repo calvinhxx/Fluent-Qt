@@ -81,9 +81,8 @@ target_link_libraries(FluentQt
 	Qt${QT_VERSION_MAJOR}::Widgets
 )
 if(APPLE)
-	find_library(COREGRAPHICS_FRAMEWORK CoreGraphics REQUIRED)
-	find_library(OBJC_LIBRARY objc REQUIRED)
-	target_link_libraries(FluentQt PUBLIC ${COREGRAPHICS_FRAMEWORK} ${OBJC_LIBRARY})
+	include(cmake/FluentQtApplePlatformDependencies.cmake)
+	target_link_libraries(FluentQt PUBLIC FluentQt::ApplePlatformDependencies)
 endif()
 target_include_directories(FluentQt
 	PUBLIC
@@ -152,6 +151,7 @@ if(FLUENT_QT_INSTALL)
 	install(FILES
 		"${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfig.cmake"
 		"${CMAKE_CURRENT_BINARY_DIR}/FluentQtConfigVersion.cmake"
+		"${CMAKE_CURRENT_SOURCE_DIR}/cmake/FluentQtApplePlatformDependencies.cmake"
 		DESTINATION "${FLUENT_QT_CMAKE_PACKAGE_DIR}"
 		COMPONENT Development)
 	install(FILES
