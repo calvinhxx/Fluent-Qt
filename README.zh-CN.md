@@ -43,6 +43,10 @@
 | 测试 | FluentQt、Qt Test/Network、GTest、spdlog/fmt |
 | 可选 PySide6 绑定 | Qt 6.2+；源码构建支持 Python 3.10+ |
 
+## 🤖 AI 辅助开发
+
+使用跨 Agent 的 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill，可为现有或全新项目构建达到 Gallery 完成度的 C++ 或 PySide6 GUI，无需预先具备 CLI/TUI。主题、组件选择和视觉精调可用于 Codex、Cursor、GitHub Copilot 与 Claude Code，详见 [AI 辅助开发指南](docs/ai/README.md)。
+
 ## 🚀 快速开始
 
 ### C++ 集成方式
@@ -290,6 +294,7 @@ python -m fluentqt_gallery
 
 ## 📚 文档
 
+- [AI 辅助应用开发](docs/ai/README.md)
 - [开发工作流](docs/development/README.md)
 - [测试与视觉验收](docs/development/testing-workflow.md)
 - [打包工作流](docs/development/packaging-workflow.md)

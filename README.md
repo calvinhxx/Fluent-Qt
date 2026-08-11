@@ -43,6 +43,10 @@
 | Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
 | Optional PySide6 bindings | Qt 6.2+; Python 3.10+ for source builds |
 
+## 🤖 AI-assisted development
+
+Use the cross-agent [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill to build a Gallery-quality C++ or PySide6 GUI for an existing or new project, including one without a CLI/TUI. It covers themes, component selection, and visual refinement across Codex, Cursor, GitHub Copilot, and Claude Code; see the [AI-assisted development guide](docs/ai/README.md).
+
 ## 🚀 Quick Start
 
 ### C++ integration
@@ -292,6 +296,7 @@ python -m fluentqt_gallery
 
 ## 📚 Documentation
 
+- [AI-assisted app development](docs/ai/README.md)
 - [Development workflow](docs/development/README.md)
 - [Testing and visual review](docs/development/testing-workflow.md)
 - [Packaging workflow](docs/development/packaging-workflow.md)

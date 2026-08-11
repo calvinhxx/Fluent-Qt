@@ -4,6 +4,7 @@
 
 - Use [README.md](README.md) for the project overview, supported Qt versions, CMake presets, and local IDE expectations.
 - Use [docs/development/README.md](docs/development/README.md) as the index for reusable workflow rules; link to those docs instead of copying them into new agent files.
+- Use [.agents/skills/build-fluentqt-gui/SKILL.md](.agents/skills/build-fluentqt-gui/SKILL.md) as the canonical cross-agent workflow when adding a FluentQt GUI to an existing or greenfield project. Use [docs/ai/README.md](docs/ai/README.md) for discovery, component selection, compatibility, and catalog maintenance.
 - Use [docs/development/gallery-control-images.md](docs/development/gallery-control-images.md) when adding or regenerating Gallery component-card icons under `app/assets/control_images/` (transparent canvas, category color families, qrc registration).
 - Use [docs/development/app-sample-optimization.md](docs/development/app-sample-optimization.md) when adding or editing Gallery live examples: Source code snippets must stay semantically aligned with the preview UI.
 - Use [docs/development/linux-workflow.md](docs/development/linux-workflow.md) for desktop Linux portability, supported Qt versions, CI baselines, and Linux build/test presets.

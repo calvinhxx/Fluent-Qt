@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Gallery-Quality FluentQt Apps"
+  short_description: "Build Gallery-quality FluentQt desktop apps"
+  default_prompt: "Use $build-fluentqt-gui to design, build, and visually refine a Gallery-quality FluentQt desktop app for this project."
