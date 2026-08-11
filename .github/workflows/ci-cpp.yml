@@ -227,6 +227,46 @@ jobs:
           }
           cmake @buildArgs
 
+      - name: Verify relocatable macOS CMake package
+        if: ${{ matrix.id == 'mac-arm64-qt62-build' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          original_prefix="$RUNNER_TEMP/fluentqt-original"
+          relocated_prefix="$RUNNER_TEMP/fluentqt-relocated"
+          consumer_build="$RUNNER_TEMP/fluentqt-relocated-consumer"
+
+          cmake --install "build/${{ matrix.preset }}" \
+            --config Debug \
+            --component Development \
+            --prefix "$original_prefix"
+
+          package_dir="$original_prefix/lib/cmake/FluentQt"
+          test -f "$package_dir/FluentQtApplePlatformDependencies.cmake"
+          if grep -R -F \
+            -e "$GITHUB_WORKSPACE" \
+            -e "$RUNNER_TEMP" \
+            -e "$QT_ROOT_DIR" \
+            -e "/Applications/Xcode.app" \
+            "$package_dir"; then
+            echo "::error::Build-machine path leaked into the FluentQt CMake package."
+            exit 1
+          fi
+          if grep -R -E 'MacOSX[^/]*\.sdk' "$package_dir"; then
+            echo "::error::Apple SDK path leaked into the FluentQt CMake package."
+            exit 1
+          fi
+
+          mv "$original_prefix" "$relocated_prefix"
+          cmake \
+            -S .github/integration \
+            -B "$consumer_build" \
+            -DFLUENT_QT_INTEGRATION_MODE=INSTALLED \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_PREFIX_PATH="$relocated_prefix;$QT_ROOT_DIR"
+          cmake --build "$consumer_build" --parallel 4
+
       - name: Smoke launch native Windows ARM64 Gallery
         if: ${{ matrix.windows_arm64_native == true && matrix.gallery_smoke == true }}
         shell: pwsh
