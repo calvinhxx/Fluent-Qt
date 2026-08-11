@@ -15,6 +15,7 @@
 #include <QStyledItemDelegate>
 #include <QStyleOptionViewItem>
 #include <QStringListModel>
+#include <QtMath>
 #include "compatibility/QtCompat.h"
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
