@@ -46,6 +46,7 @@ jobs:
         run: |
           python3 .github/scripts/test_classify_ci_changes.py
           python3 .github/scripts/validate-ci-workflow-boundaries.py
+          python3 tools/ai/validate_ai_assets.py --project-root .
 
       - name: Classify pull-request changes
         id: changes

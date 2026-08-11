@@ -175,6 +175,35 @@ if(FLUENT_QT_INSTALL)
 		"${CMAKE_CURRENT_SOURCE_DIR}/third_party/icons/fluentui-system-icons/NOTICE.txt"
 		DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/FluentQt/third_party/fluentui-system-icons"
 		COMPONENT Development)
+
+	set(_fluent_qt_ai_doc_root "${CMAKE_INSTALL_DATADIR}/doc/FluentQt")
+	install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/llms.txt"
+		DESTINATION "${_fluent_qt_ai_doc_root}"
+		COMPONENT Development)
+	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/docs/ai"
+		DESTINATION "${_fluent_qt_ai_doc_root}/docs"
+		COMPONENT Development)
+	install(PROGRAMS
+		"${CMAKE_CURRENT_SOURCE_DIR}/tools/ai/query_ai_catalog.py"
+		"${CMAKE_CURRENT_SOURCE_DIR}/tools/ai/evaluate_ai_catalog.py"
+		DESTINATION "${_fluent_qt_ai_doc_root}/tools/ai"
+		COMPONENT Development)
+	install(FILES
+		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/SKILL.md"
+		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui"
+		COMPONENT Development)
+	install(FILES
+		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/agents/openai.yaml"
+		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui/agents"
+		COMPONENT Development)
+	install(DIRECTORY
+		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/references"
+		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui"
+		COMPONENT Development)
+	install(FILES
+		"${CMAKE_CURRENT_SOURCE_DIR}/.claude/skills/build-fluentqt-gui/SKILL.md"
+		DESTINATION "${_fluent_qt_ai_doc_root}/.claude/skills/build-fluentqt-gui"
+		COMPONENT Development)
 endif()
 
 if(FLUENT_QT_BUILD_GALLERY OR (BUILD_TESTING AND FLUENT_QT_BUILD_TESTS))
