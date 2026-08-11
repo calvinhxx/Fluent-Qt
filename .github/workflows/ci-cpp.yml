@@ -556,7 +556,13 @@ jobs:
             exit 1
           fi
           archive_entries="$(unzip -Z1 "$archive")"
-          for binding_file in \
+          for source_file in \
+              .agents/skills/build-fluentqt-gui/SKILL.md \
+              .agents/skills/build-fluentqt-gui/agents/openai.yaml \
+              .agents/skills/build-fluentqt-gui/references/component-selection.md \
+              .agents/skills/build-fluentqt-gui/references/theme-system.md \
+              .agents/skills/build-fluentqt-gui/references/visual-refinement.md \
+              .claude/skills/build-fluentqt-gui/SKILL.md \
               .github/scripts/setup-shiboken-clang.py \
               bindings/README.md \
               bindings/pyside6/api-manifest.json \
@@ -624,14 +630,31 @@ jobs:
               bindings/pyside6/tools/verify_generated_contracts.py \
               bindings/pyside6/tools/verify_stubs.py \
               bindings/pyside6/wheel-matrix.json \
+              docs/ai/README.md \
+              docs/ai/add-gui-to-project.md \
+              docs/ai/evals/scenarios.json \
+              docs/ai/evals/scenarios.schema.json \
+              docs/ai/fluentqt-ai-catalog.schema.json \
+              docs/ai/generated/fluentqt-ai-catalog.json \
+              docs/ai/guidance.json \
+              docs/ai/project-analysis.schema.json \
+              llms.txt \
+              tools/ai/evaluate_ai_catalog.py \
+              tools/ai/query_ai_catalog.py \
               tools/fonts/fluent_icon_aliases.json; do
-            if ! grep -x "FluentQt-ci-source/$binding_file" \
+            if ! grep -x "FluentQt-ci-source/$source_file" \
                 <<< "$archive_entries" > /dev/null; then
-              echo "::error::Missing PySide6 source-package file: $binding_file"
+              echo "::error::Missing source-package file: $source_file"
               exit 1
             fi
           done
           unzip -q "$archive" -d "$output/unpacked"
+          python3 \
+            "$output/unpacked/FluentQt-ci-source/tools/ai/query_ai_catalog.py" \
+            --component tree-view > /dev/null
+          python3 \
+            "$output/unpacked/FluentQt-ci-source/tools/ai/evaluate_ai_catalog.py" \
+            --project-root "$output/unpacked/FluentQt-ci-source"
           cmake -S .github/integration -B build/integration-source-package \
             -DFLUENT_QT_SOURCE_DIR="$output/unpacked/FluentQt-ci-source" \
             -DCMAKE_BUILD_TYPE=Release \

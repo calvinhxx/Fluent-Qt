@@ -29,6 +29,21 @@ class ClassifyCiChangesTest(unittest.TestCase):
             wasm=False,
         )
 
+    def test_ai_contract_only_skips_native_builds(self):
+        self.assert_classification(
+            [
+                "llms.txt",
+                ".agents/skills/build-fluentqt-gui/SKILL.md",
+                ".claude/skills/build-fluentqt-gui/SKILL.md",
+                "docs/ai/guidance.json",
+                "tools/ai/query_ai_catalog.py",
+                ".agents/skills/build-fluentqt-gui/agents/openai.yaml",
+            ],
+            native=False,
+            pyside=False,
+            wasm=False,
+        )
+
     def test_library_change_runs_both_matrices(self):
         self.assert_classification(
             ["src/components/basicinput/Button.cpp"],

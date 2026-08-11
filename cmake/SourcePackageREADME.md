@@ -35,6 +35,17 @@ example disabled and build only the library. The included
 `examples/hello_world` project demonstrates both in-tree and installed-package
 integration.
 
+For AI-assisted integration, start with `llms.txt` and
+`docs/ai/README.md`. The source package includes the generated component and
+integration catalog, its JSON Schemas, the cross-agent `build-fluentqt-gui`
+Skill and its theme, component-selection, and visual-review references under
+`.agents/skills/`, a Claude Code discovery adapter under
+`.claude/skills/`, plus the catalog query and deterministic evaluation tools
+under `tools/ai/`. It intentionally omits the catalog
+generator because regeneration depends on Gallery sources from a full checkout.
+Catalog source and focused-test paths point back to that full checkout; sample
+code itself remains embedded in the catalog and is available with `--json`.
+
 The project's own source is MIT licensed. Bundled assets retain the licenses
 and notices included in `THIRD_PARTY_NOTICES.md` and `third_party/`. Qt is a
 consumer-supplied dynamic dependency of this source package and is not covered
