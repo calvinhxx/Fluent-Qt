@@ -1,0 +1,1005 @@
+{
+  "schema_version": 1,
+  "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
+  "summary": {
+    "component_count": 67,
+    "sample_count": 199
+  },
+  "samples": [
+    {
+      "route_id": "button",
+      "sample_id": "button-styles",
+      "source": "standard = fluentqt.Button('Standard')\nstandard.setFluentStyle(fluentqt.Button.ButtonStyle.Standard)\naccent = fluentqt.Button('Accent')\naccent.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\nsubtle = fluentqt.Button('Subtle')\nsubtle.setFluentStyle(fluentqt.Button.ButtonStyle.Subtle)\n"
+    },
+    {
+      "route_id": "button",
+      "sample_id": "button-sizes",
+      "source": "small = fluentqt.Button('Small')\nsmall.setFluentSize(fluentqt.Button.ButtonSize.Small)\nstandard = fluentqt.Button('Standard')\nstandard.setFluentSize(fluentqt.Button.ButtonSize.StandardSize)\nlarge = fluentqt.Button('Large')\nlarge.setFluentSize(fluentqt.Button.ButtonSize.Large)\n"
+    },
+    {
+      "route_id": "button",
+      "sample_id": "button-icon-layouts",
+      "source": "leading = fluentqt.Button('Icon before')\nleading.setFluentLayout(fluentqt.Button.ButtonLayout.IconBefore)\nleading.setIconGlyph(fluentqt.Typography.Icons.Add)\nicon_only = fluentqt.Button('')\nicon_only.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)\nicon_only.setIconGlyph(fluentqt.Typography.Icons.More)\ntrailing = fluentqt.Button('Next')\ntrailing.setFluentLayout(fluentqt.Button.ButtonLayout.IconAfter)\ntrailing.setIconGlyph(fluentqt.Typography.Icons.ChevronRight)\n"
+    },
+    {
+      "route_id": "button",
+      "sample_id": "button-interaction-state",
+      "source": "rest = fluentqt.Button(\"Rest\")\n\nhover = fluentqt.Button(\"Hover\")\nhover.setInteractionState(fluentqt.Button.InteractionState.Hover)\n\npressed = fluentqt.Button(\"Pressed\")\npressed.setInteractionState(fluentqt.Button.InteractionState.Pressed)\n\nfocused = fluentqt.Button(\"Focus\")\nfocused.setFocusVisual(True)\n\ndisabled = fluentqt.Button(\"Disabled\")\ndisabled.setInteractionState(fluentqt.Button.InteractionState.Disabled)\n"
+    },
+    {
+      "route_id": "button",
+      "sample_id": "button-critical-hover",
+      "source": "button = fluentqt.Button(\"Delete\")\nbutton.setFluentLayout(fluentqt.Button.ButtonLayout.IconBefore)\nbutton.setIconGlyph(fluentqt.Typography.Icons.Delete)\nbutton.setCriticalOnHover(True)\nbutton.setInteractionState(fluentqt.Button.InteractionState.Hover)\n"
+    },
+    {
+      "route_id": "compound-button",
+      "sample_id": "compound-button-content",
+      "source": "standard = fluentqt.CompoundButton(\n    'Install update',\n    'Download and restart the app'\n)\nstandard.setFixedWidth(220)\naccent = fluentqt.CompoundButton(\n    'Start trial',\n    'No payment method required'\n)\naccent.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\naccent.setFixedWidth(220)\n"
+    },
+    {
+      "route_id": "compound-button",
+      "sample_id": "compound-button-icon",
+      "source": "share = fluentqt.CompoundButton(\n    'Share project',\n    'Invite people with a link'\n)\nshare.setFluentLayout(fluentqt.Button.ButtonLayout.IconBefore)\nshare.setIconGlyph(\n    fluentqt.Typography.Icons.Share,\n    fluentqt.Typography.IconSize.Standard\n)\nshare.setFocusVisual(True)\nshare.setFixedWidth(240)\ndisabled = fluentqt.CompoundButton(\n    'Publish',\n    'Resolve validation errors first'\n)\ndisabled.setEnabled(False)\ndisabled.setFixedWidth(240)\n"
+    },
+    {
+      "route_id": "checkbox",
+      "sample_id": "checkbox-two-state",
+      "source": "from PySide6.QtCore import Qt\n\ncheck_box = fluentqt.CheckBox(\"Accept terms\")\nstatus = fluentqt.Label(\"State: Unchecked\")\ncheck_box.stateChanged.connect(\n    lambda state: status.setText(\n        \"State: Checked\"\n        if Qt.CheckState(state) == Qt.CheckState.Checked\n        else \"State: Unchecked\"\n    )\n)\n"
+    },
+    {
+      "route_id": "checkbox",
+      "sample_id": "checkbox-three-state",
+      "source": "from PySide6.QtCore import Qt\n\ncheck_box = fluentqt.CheckBox('Enable selected items')\ncheck_box.setTristate(True)\ncheck_box.setCheckState(Qt.CheckState.PartiallyChecked)\nnames = {\n    Qt.CheckState.Checked: \"State: Checked\",\n    Qt.CheckState.PartiallyChecked: \"State: Mixed\",\n    Qt.CheckState.Unchecked: \"State: Unchecked\",\n}\ncheck_box.stateChanged.connect(\n    lambda state: status.setText(names[Qt.CheckState(state)])\n)\n"
+    },
+    {
+      "route_id": "checkbox",
+      "sample_id": "checkbox-select-all",
+      "source": "from PySide6.QtCore import Qt\n\nselect_all = fluentqt.CheckBox(\"Select all\")\nselect_all.setTristate(True)\nmail = fluentqt.CheckBox(\"Mail\")\ncalendar = fluentqt.CheckBox(\"Calendar\")\npeople = fluentqt.CheckBox(\"People\")\n\ndef update_select_all():\n    checked = sum(item.isChecked() for item in (mail, calendar, people))\n    state = (\n        Qt.CheckState.Unchecked if checked == 0\n        else Qt.CheckState.Checked if checked == 3\n        else Qt.CheckState.PartiallyChecked\n    )\n    select_all.setCheckState(state)\n\ndef apply_select_all():\n    checked = select_all.checkState() == Qt.CheckState.Checked\n    mail.setChecked(checked)\n    calendar.setChecked(checked)\n    people.setChecked(checked)\n\nselect_all.clicked.connect(apply_select_all)\nmail.clicked.connect(update_select_all)\ncalendar.clicked.connect(update_select_all)\npeople.clicked.connect(update_select_all)\n"
+    },
+    {
+      "route_id": "checkbox",
+      "sample_id": "checkbox-metrics",
+      "source": "large = fluentqt.CheckBox('Larger box')\nlarge.setBoxSize(24)\ncompact = fluentqt.CheckBox('Compact spacing')\ncompact.setBoxSize(16)\ncompact.setBoxMargin(4)\ncompact.setTextGap(6)\nhover_row = fluentqt.CheckBox('Hover row background')\nhover_row.setHoverBackgroundEnabled(True)\n"
+    },
+    {
+      "route_id": "color-picker",
+      "sample_id": "color-picker-rgba",
+      "source": "from PySide6.QtGui import QColor\n\npicker = fluentqt.ColorPicker()\npicker.setColor(QColor(0, 120, 212, 180))\npicker.colorChanged.connect(apply_color)\n"
+    },
+    {
+      "route_id": "color-picker",
+      "sample_id": "color-picker-opaque",
+      "source": "from PySide6.QtGui import QColor\n\npicker = fluentqt.ColorPicker()\npicker.setAlphaEnabled(False)\npicker.setColor(QColor(16, 124, 16))\npicker.setMinimumSize(420, 420)\n"
+    },
+    {
+      "route_id": "combobox",
+      "sample_id": "combobox-selection",
+      "source": "combo_box = fluentqt.ComboBox()\ncombo_box.addItems(['Blue', 'Green', 'Red', 'Yellow'])\ncombo_box.setCurrentIndex(0)\ncombo_box.currentIndexChanged.connect(\n    lambda _index: status.setText(f\"Selected: {combo_box.currentText()}\")\n)\n"
+    },
+    {
+      "route_id": "combobox",
+      "sample_id": "combobox-editable",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QVBoxLayout\n\nlayout = QVBoxLayout(root)\nlayout.setContentsMargins(0, 0, 0, 0)\nlayout.setSpacing(8)\ncombo_box = fluentqt.ComboBox()\ncombo_box.addItems(['8', '9', '10', '11', '12', '14', '16'])\ncombo_box.setEditable(True)\ncombo_box.setInsertPolicy(fluentqt.ComboBox.InsertPolicy.NoInsert)\ncombo_box.setCurrentIndex(4)\ncombo_box.setFixedWidth(200)\nstatus = fluentqt.Label()\nstatus.setFixedWidth(200)\nstatus.setTextElideMode(Qt.TextElideMode.ElideRight)\ndef update_status(text):\n    match = Qt.MatchFlag.MatchFixedString | Qt.MatchFlag.MatchCaseSensitive\n    kind = 'Suggested' if combo_box.findText(text, match) >= 0 else 'Custom'\n    status.setText(f\"{kind} value: {text or '(empty)'}\")\ncombo_box.editTextChanged.connect(update_status)\nupdate_status(combo_box.currentText())\nlayout.addWidget(combo_box)\nlayout.addWidget(status)\n"
+    },
+    {
+      "route_id": "combobox",
+      "sample_id": "combobox-many-items",
+      "source": "combo_box = fluentqt.ComboBox()\ncombo_box.addItems([f\"Item {index}\" for index in range(1, 21)])\ncombo_box.setCurrentIndex(5)\ncombo_box.setFixedWidth(200)\n"
+    },
+    {
+      "route_id": "combobox",
+      "sample_id": "combobox-appearance",
+      "source": "combo_box = fluentqt.ComboBox()\ncombo_box.addItems([\"Compact\", \"Comfortable\", \"Spacious\"])\ncombo_box.setCurrentIndex(1)\ncombo_box.setFixedWidth(180)\ncombo_box.setFontRole(fluentqt.FontRole.Caption)\ncombo_box.setContentPaddingH(12)\ncombo_box.setChevronGlyph(fluentqt.Typography.Icons.ChevronDown)\ncombo_box.setPopupOffset(8)\n"
+    },
+    {
+      "route_id": "dropdown-button",
+      "sample_id": "dropdown-button-menu",
+      "source": "button = fluentqt.DropDownButton('Options')\nbutton.setMinimumWidth(140)\nmenu = fluentqt.FluentMenu('Options', button)\nmenu.addAction('Edit profile')\nmenu.addAction('Account settings')\nmenu.addAction('Sign out')\nbutton.setMenu(menu)\n"
+    },
+    {
+      "route_id": "dropdown-button",
+      "sample_id": "dropdown-button-accent",
+      "source": "button = fluentqt.DropDownButton('Primary action')\nbutton.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\nbutton.setMinimumWidth(168)\nmenu = fluentqt.FluentMenu('Primary action', button)\nmenu.addAction('Confirm selection')\nmenu.addAction('Review changes')\nbutton.setMenu(menu)\n"
+    },
+    {
+      "route_id": "dropdown-button",
+      "sample_id": "dropdown-button-chevron",
+      "source": "from PySide6.QtCore import QPoint\n\nup = fluentqt.DropDownButton('Chevron up')\nup.setChevronGlyph(fluentqt.Typography.Icons.ChevronUp)\nup.setChevronSize(16)\nmore = fluentqt.DropDownButton('More actions')\nmore.setChevronGlyph(fluentqt.Typography.Icons.More)\nmore.setChevronOffset(QPoint(16, 3))\n"
+    },
+    {
+      "route_id": "dropdown-button",
+      "sample_id": "dropdown-button-icon-layout",
+      "source": "from PySide6.QtCore import QPoint\n\nicon_only = fluentqt.DropDownButton('')\nicon_only.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)\nicon_only.setIconGlyph(fluentqt.Typography.Icons.Send)\nicon_only.setChevronOffset(QPoint(10, 0))\nicon_text = fluentqt.DropDownButton('More actions')\nicon_text.setFluentLayout(fluentqt.Button.ButtonLayout.IconBefore)\nicon_text.setIconGlyph(fluentqt.Typography.Icons.More)\n"
+    },
+    {
+      "route_id": "hyperlink-button",
+      "sample_id": "hyperlink-button-url",
+      "source": "from PySide6.QtCore import QUrl\n\nlink = fluentqt.HyperlinkButton(\"calvinhxx/Fluent-Qt\")\nlink.setUrl(QUrl(\"https://github.com/calvinhxx/Fluent-Qt\"))\n"
+    },
+    {
+      "route_id": "hyperlink-button",
+      "sample_id": "hyperlink-button-underline",
+      "source": "link = fluentqt.HyperlinkButton(\"Show underline\")\nlink.setShowUnderline(True)\n"
+    },
+    {
+      "route_id": "radio-button",
+      "sample_id": "radio-button-group",
+      "source": "low = fluentqt.RadioButton('Low')\nmedium = fluentqt.RadioButton('Medium')\nhigh = fluentqt.RadioButton('High')\nmedium.setChecked(True)\nlow.toggled.connect(\n    lambda checked, value=low: status.setText(\n    f\"Selected: {value.text()}\"\n    ) if checked else None\n)\n\nmedium.toggled.connect(\n    lambda checked, value=medium: status.setText(\n    f\"Selected: {value.text()}\"\n    ) if checked else None\n)\n\nhigh.toggled.connect(\n    lambda checked, value=high: status.setText(\n    f\"Selected: {value.text()}\"\n    ) if checked else None\n)\n"
+    },
+    {
+      "route_id": "radio-button",
+      "sample_id": "radio-button-metrics",
+      "source": "compact = fluentqt.RadioButton('Compact')\ncompact.setCircleSize(16)\ncompact.setTextGap(6)\nlarge = fluentqt.RadioButton('Large')\nlarge.setCircleSize(24)\nlarge.setTextGap(12)\n"
+    },
+    {
+      "route_id": "radio-button",
+      "sample_id": "radio-button-disabled",
+      "source": "disabled_off = fluentqt.RadioButton('Disabled off')\ndisabled_off.setEnabled(False)\ndisabled_on = fluentqt.RadioButton('Disabled on')\ndisabled_on.setChecked(True)\ndisabled_on.setEnabled(False)\n"
+    },
+    {
+      "route_id": "rating-control",
+      "sample_id": "rating-control-value",
+      "source": "rating = fluentqt.RatingControl()\nrating.setCaption('312 ratings')\nrating.valueChanged.connect(\n    lambda value: (\n    rating.setCaption(\"Your rating\"),\n    status.setText(\n    \"Value: Unset\"\n    if value < 0.0\n    else f\"Value: {value:.1f} stars\"\n    ),\n    )\n)\n"
+    },
+    {
+      "route_id": "rating-control",
+      "sample_id": "rating-control-placeholder",
+      "source": "rating = fluentqt.RatingControl()\nrating.setPlaceholderValue(3.5)\nrating.setCaption(\"Suggested rating\")\n"
+    },
+    {
+      "route_id": "rating-control",
+      "sample_id": "rating-control-readonly",
+      "source": "read_only = fluentqt.RatingControl()\nread_only.setValue(4.0)\nread_only.setIsReadOnly(True)\ndisabled = fluentqt.RatingControl()\ndisabled.setValue(2.5)\ndisabled.setEnabled(False)\n"
+    },
+    {
+      "route_id": "rating-control",
+      "sample_id": "rating-control-max-size",
+      "source": "rating = fluentqt.RatingControl()\nrating.setMaxRating(10)\nrating.setStarSize(20)\nrating.setPlaceholderValue(7.0)\nrating.setCaption(\"10 point scale\")\n"
+    },
+    {
+      "route_id": "repeat-button",
+      "sample_id": "repeat-button-counter",
+      "source": "button = fluentqt.RepeatButton('Click and hold')\ncounter = fluentqt.Label('Clicks: 0')\nstate = [0]\ndef increment():\n    state[0] += 1\n    counter.setText(f'Clicks: {state[0]}')\nbutton.clicked.connect(increment)\n"
+    },
+    {
+      "route_id": "repeat-button",
+      "sample_id": "repeat-button-timing",
+      "source": "normal = fluentqt.RepeatButton('Normal')\nnormal.setDelay(300)\nnormal.setInterval(100)\nfast = fluentqt.RepeatButton('Fast')\nfast.setDelay(150)\nfast.setInterval(30)\nfast.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\n"
+    },
+    {
+      "route_id": "slider",
+      "sample_id": "slider-live-value",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Orientation.Horizontal)\nslider.setRange(0, 100)\nslider.setValue(32)\nslider.valueChanged.connect(lambda value: status.setText(f'Value: {value}'))\n"
+    },
+    {
+      "route_id": "slider",
+      "sample_id": "slider-range-steps",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Orientation.Horizontal)\nslider.setRange(500, 1000)\nslider.setSingleStep(10)\nslider.setPageStep(50)\nslider.setValue(800)\n"
+    },
+    {
+      "route_id": "slider",
+      "sample_id": "slider-tick-marks",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Orientation.Horizontal)\nslider.setRange(0, 10)\nslider.setTickInterval(1)\nslider.setTickPosition(fluentqt.Slider.TickPosition.TicksBelow)\n"
+    },
+    {
+      "route_id": "slider",
+      "sample_id": "slider-vertical",
+      "source": "from PySide6.QtCore import Qt\n\nslider = fluentqt.Slider(Qt.Orientation.Vertical)\nslider.setRange(0, 100)\nslider.setValue(25)\nslider.setFixedHeight(160)\n"
+    },
+    {
+      "route_id": "split-button",
+      "sample_id": "split-button-primary-menu",
+      "source": "button = fluentqt.SplitButton('Choose color')\nmenu = fluentqt.FluentMenu('Colors', button)\nmenu.addAction('Red')\nmenu.addAction('Green')\nmenu.addAction('Blue')\nbutton.setMenu(menu)\nbutton.clicked.connect(lambda: status.setText('Status: Primary clicked'))\n"
+    },
+    {
+      "route_id": "split-button",
+      "sample_id": "split-button-accent",
+      "source": "button = fluentqt.SplitButton('Submit')\nbutton.setFluentStyle(fluentqt.Button.ButtonStyle.Accent)\nmenu = fluentqt.FluentMenu('Actions', button)\nmenu.addAction('Submit and close')\nmenu.addAction('Submit and notify')\nbutton.setMenu(menu)\n"
+    },
+    {
+      "route_id": "split-button",
+      "sample_id": "split-button-sizes",
+      "source": "small_button = fluentqt.SplitButton('Small')\nsmall_button.setFluentSize(fluentqt.Button.ButtonSize.Small)\n\nstandard_button = fluentqt.SplitButton('Standard')\nstandard_button.setFluentSize(fluentqt.Button.ButtonSize.StandardSize)\n\nlarge_button = fluentqt.SplitButton('Large')\nlarge_button.setFluentSize(fluentqt.Button.ButtonSize.Large)\n"
+    },
+    {
+      "route_id": "toggle-button",
+      "sample_id": "toggle-button-state",
+      "source": "toggle = fluentqt.ToggleButton('Bold')\ntoggle.toggled.connect(\n    lambda checked: status.setText(\n        \"State: Checked\" if checked else \"State: Unchecked\"\n    )\n)\n"
+    },
+    {
+      "route_id": "toggle-button",
+      "sample_id": "toggle-button-three-state",
+      "source": "from PySide6.QtCore import Qt\n\ntoggle = fluentqt.ToggleButton('Three state')\ntoggle.setThreeState(True)\nnames = {\n    Qt.CheckState.Checked: \"State: Checked\",\n    Qt.CheckState.PartiallyChecked: \"State: Mixed\",\n    Qt.CheckState.Unchecked: \"State: Unchecked\",\n}\ntoggle.checkStateChanged.connect(lambda state: status.setText(names[state]))\n"
+    },
+    {
+      "route_id": "toggle-button",
+      "sample_id": "toggle-button-disabled",
+      "source": "off = fluentqt.ToggleButton('Disabled off')\noff.setEnabled(False)\non = fluentqt.ToggleButton('Disabled on')\non.setChecked(True)\non.setEnabled(False)\n"
+    },
+    {
+      "route_id": "toggle-split-button",
+      "sample_id": "toggle-split-button-menu",
+      "source": "button = fluentqt.ToggleSplitButton('List options')\nbutton.setFluentLayout(fluentqt.Button.ButtonLayout.IconBefore)\nbutton.setIconGlyph(fluentqt.Typography.Icons.List)\nmenu = fluentqt.FluentMenu('Styles', button)\nmenu.addAction('None')\nmenu.addAction('Bulleted')\nmenu.addAction('Numbered')\nbutton.setMenu(menu)\nbutton.toggled.connect(\n    lambda checked: status.setText(\n        \"State: Checked\" if checked else \"State: Unchecked\"\n    )\n)\n"
+    },
+    {
+      "route_id": "toggle-split-button",
+      "sample_id": "toggle-split-button-icon-only",
+      "source": "button = fluentqt.ToggleSplitButton(\"\")\nbutton.setFluentLayout(fluentqt.Button.ButtonLayout.IconOnly)\nbutton.setIconGlyph(fluentqt.Typography.Icons.Settings)\nbutton.setFixedSize(64, 34)\n"
+    },
+    {
+      "route_id": "toggle-switch",
+      "sample_id": "toggle-switch-state",
+      "source": "toggle = fluentqt.ToggleSwitch()\ntoggle.setOnContent(\"On\")\ntoggle.setOffContent(\"Off\")\nstatus = fluentqt.Label(\"State: Off\")\ntoggle.toggled.connect(\n    lambda on: status.setText(\"State: On\" if on else \"State: Off\")\n)\n"
+    },
+    {
+      "route_id": "toggle-switch",
+      "sample_id": "toggle-switch-content",
+      "source": "label = fluentqt.Label(\"Wi-Fi\")\ntoggle = fluentqt.ToggleSwitch()\ntoggle.setOnContent(\"Connected\")\ntoggle.setOffContent(\"Disconnected\")\ntoggle.setIsOn(True)\n"
+    },
+    {
+      "route_id": "toggle-switch",
+      "sample_id": "toggle-switch-disabled",
+      "source": "off = fluentqt.ToggleSwitch()\noff.setOffContent('Off')\noff.setEnabled(False)\non = fluentqt.ToggleSwitch()\non.setOnContent('On')\non.setIsOn(True)\non.setEnabled(False)\n"
+    },
+    {
+      "route_id": "drawer-view",
+      "sample_id": "drawer-view-basic",
+      "source": "drawer = fluentqt.DrawerView(host)\ndrawer.setEdge(fluentqt.DrawerView.DrawerEdge.Right)\ndrawer.setDrawerLength(260)\ndrawer.setOwnedContentWidget(settings_panel)\n\nopen_button = fluentqt.Button(\"Open drawer\", host)\nopen_button.clicked.connect(drawer.open)\n"
+    },
+    {
+      "route_id": "drawer-view",
+      "sample_id": "drawer-view-edges",
+      "source": "drawer = fluentqt.DrawerView(host)\ndrawer.setDrawerLength(170)\ndrawer.setModal(False)\ndrawer.setDim(False)\n\ndef open_from(edge):\n    drawer.setEdge(edge)\n    drawer.open()\n"
+    },
+    {
+      "route_id": "drawer-view",
+      "sample_id": "drawer-view-close-policy",
+      "source": "from PySide6.QtWidgets import QVBoxLayout, QWidget\nfrom fluentqt_gallery.metrics import drawer_title_bar_avoidance_margins\n\ndrawer = fluentqt.DrawerView(host)\ndrawer.setAvailableMargins(drawer_title_bar_avoidance_margins())\ndrawer.setModal(False)\ndrawer.setDim(False)\ndrawer.setClosePolicy(\n    fluentqt.DrawerView.ClosePolicy(fluentqt.DrawerView.NoAutoClose)\n)\n\npanel = QWidget()\npanel_layout = QVBoxLayout(panel)\npanel_layout.setContentsMargins(16, 18, 16, 18)\ndrawer.setOwnedContentWidget(panel)\nclose_button.clicked.connect(drawer.close)\n"
+    },
+    {
+      "route_id": "drawer-view",
+      "sample_id": "drawer-view-interactive-drag",
+      "source": "drawer = fluentqt.DrawerView(host)\ndrawer.setInteractive(True)\ndrawer.setDragMargin(36)\ndrawer.setAnimationEnabled(True)\ndrawer.setEdge(fluentqt.DrawerView.DrawerEdge.Left)\nopen_button.clicked.connect(drawer.open)\nclose_button.clicked.connect(drawer.close)\n"
+    },
+    {
+      "route_id": "flip-view",
+      "sample_id": "flip-view-basic",
+      "source": "flip_view = fluentqt.FlipView()\nflip_view.addOwnedPage(sunrise_photo)\nflip_view.addOwnedPage(ocean_photo)\nflip_view.addOwnedPage(forest_photo)\nflip_view.setShowPageIndicator(True)\n"
+    },
+    {
+      "route_id": "flip-view",
+      "sample_id": "flip-view-vertical",
+      "source": "from PySide6.QtCore import Qt\n\nflip_view = fluentqt.FlipView()\nflip_view.setOrientation(Qt.Orientation.Vertical)\nflip_view.setShowPageIndicator(True)\nflip_view.addOwnedPage(first_page)\nflip_view.addOwnedPage(second_page)\nflip_view.addOwnedPage(third_page)\n"
+    },
+    {
+      "route_id": "flip-view",
+      "sample_id": "flip-view-external-navigation",
+      "source": "flip_view = fluentqt.FlipView()\nflip_view.setShowNavigationButtons(False)\nflip_view.setShowPageIndicator(False)\nprevious.clicked.connect(flip_view.goPrevious)\nnext_button.clicked.connect(flip_view.goNext)\nflip_view.currentIndexChanged.connect(update_status)\n"
+    },
+    {
+      "route_id": "flow-view",
+      "sample_id": "flow-view-basic",
+      "source": "from PySide6.QtCore import QSize\n\nflow_view = fluentqt.FlowView()\nflow_view.setSelectionMode(fluentqt.SelectionMode.Single)\nflow_view.setDefaultItemSize(QSize(160, 118))\nflow_view.setItemDelegate(photo_delegate)\nflow_view.setModel(model)\n"
+    },
+    {
+      "route_id": "flow-view",
+      "sample_id": "flow-view-reorder",
+      "source": "flow_view = fluentqt.FlowView()\nflow_view.setCanReorderItems(True)\nflow_view.setItemDelegate(photo_delegate)\nflow_view.setModel(model)\n"
+    },
+    {
+      "route_id": "flow-view",
+      "sample_id": "flow-view-scroll-bounce",
+      "source": "from PySide6.QtCore import QSize\n\nflow_view = fluentqt.FlowView()\nflow_view.setDefaultItemSize(QSize(126, 88))\nflow_view.setScrollChainingEnabled(False)\nflow_view.setOverscrollEnabled(True)\nflow_view.setModel(model)\n"
+    },
+    {
+      "route_id": "flow-view",
+      "sample_id": "flow-view-placeholder",
+      "source": "from PySide6.QtGui import QStandardItemModel\n\nflow_view = fluentqt.FlowView()\nflow_view.setFixedSize(420, 178)\nflow_view.setHeaderText(\"Uploads\")\nflow_view.setPlaceholderText(\"No queued uploads\")\nflow_view.setModel(QStandardItemModel(flow_view))\n"
+    },
+    {
+      "route_id": "grid-view",
+      "sample_id": "grid-view-basic",
+      "source": "from PySide6.QtCore import QSize\n\ngrid_view = fluentqt.GridView()\ngrid_view.setCellSize(QSize(150, 112))\ngrid_view.setItemDelegate(photo_delegate)\ngrid_view.setModel(model)\ngrid_view.setSelectedIndex(0)\n"
+    },
+    {
+      "route_id": "grid-view",
+      "sample_id": "grid-view-multi-select",
+      "source": "grid_view = fluentqt.GridView()\ngrid_view.setSelectionMode(fluentqt.SelectionMode.Multiple)\n"
+    },
+    {
+      "route_id": "grid-view",
+      "sample_id": "grid-view-reorder",
+      "source": "grid_view = fluentqt.GridView()\ngrid_view.setSelectionMode(fluentqt.SelectionMode.Multiple)\ngrid_view.setCanReorderItems(True)\n"
+    },
+    {
+      "route_id": "grid-view",
+      "sample_id": "grid-view-scroll-bounce",
+      "source": "from PySide6.QtCore import QSize\n\ngrid_view = fluentqt.GridView()\ngrid_view.setScrollChainingEnabled(False)\ngrid_view.setOverscrollEnabled(True)\ngrid_view.setCellSize(QSize(118, 88))\ngrid_view.setMaxColumns(3)\ngrid_view.setModel(model)\n"
+    },
+    {
+      "route_id": "grid-view",
+      "sample_id": "grid-view-placeholder",
+      "source": "from PySide6.QtGui import QStandardItemModel\n\ngrid_view = fluentqt.GridView()\ngrid_view.setFixedSize(410, 178)\ngrid_view.setHeaderText(\"Pinned photos\")\ngrid_view.setPlaceholderText(\"No pinned photos\")\ngrid_view.setModel(QStandardItemModel(grid_view))\n"
+    },
+    {
+      "route_id": "list-view",
+      "sample_id": "list-view-basic",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QStandardItem\n\nlist_view = fluentqt.ListView()\nfor contact in contacts:\n    item = QStandardItem(contact)\n    item.setData(\n        initials_avatar(contact),\n        Qt.ItemDataRole.DecorationRole\n    )\n    model.appendRow(item)\nlist_view.setModel(model)\nlist_view.setHeaderText(\"Contacts\")\n"
+    },
+    {
+      "route_id": "list-view",
+      "sample_id": "list-view-multi-select",
+      "source": "list_view.setSelectionMode(fluentqt.SelectionMode.Multiple)\nlist_view.setModel(filter_model)\n# Each click toggles that row's selection.\n"
+    },
+    {
+      "route_id": "list-view",
+      "sample_id": "list-view-horizontal",
+      "source": "from PySide6.QtWidgets import QListView\n\nlist_view.setFlow(QListView.Flow.LeftToRight)\nlist_view.setModel(model)\n"
+    },
+    {
+      "route_id": "list-view",
+      "sample_id": "list-view-reorder",
+      "source": "list_view = fluentqt.ListView()\nlist_view.setHeaderText(\"Playlist\")\nlist_view.setModel(model)\nlist_view.setCanReorderItems(True)\n"
+    },
+    {
+      "route_id": "list-view",
+      "sample_id": "list-view-sections",
+      "source": "list_view = fluentqt.ListView()\nlist_view.setSectionEnabled(True)\n\ndef section_key(row):\n    if row < 3:\n        return \"Today\"\n    if row < 6:\n        return \"Yesterday\"\n    return \"Earlier\"\n\nlist_view.setSectionKeyFunction(section_key)\nlist_view.setModel(model)\n"
+    },
+    {
+      "route_id": "list-view",
+      "sample_id": "list-view-scroll-chaining",
+      "source": "list_view = fluentqt.ListView()\nlist_view.setScrollChainingEnabled(False)\nlist_view.setHeaderText(\"Queue\")\nlist_view.setModel(model)\n"
+    },
+    {
+      "route_id": "list-view",
+      "sample_id": "list-view-placeholder",
+      "source": "from PySide6.QtGui import QStandardItemModel\n\nlist_view = fluentqt.ListView()\nlist_view.setHeaderText(\"Downloads\")\nlist_view.setFooterText(\"0 items\")\nlist_view.setPlaceholderText(\"No downloads yet\")\nlist_view.setModel(QStandardItemModel(list_view))\n"
+    },
+    {
+      "route_id": "split-view",
+      "sample_id": "split-view-basic",
+      "source": "split_view = fluentqt.SplitView()\nsplit_view.addOwnedPane(first_pane)\nsplit_view.addOwnedPane(second_pane)\nsplit_view.addOwnedPane(third_pane)\nsplit_view.setPanePreferredSize(0, 150)\nsplit_view.setPaneFill(2, True)\n"
+    },
+    {
+      "route_id": "split-view",
+      "sample_id": "split-view-vertical-constraints",
+      "source": "from PySide6.QtCore import Qt\n\nsplit_view = fluentqt.SplitView()\nsplit_view.setOrientation(Qt.Orientation.Vertical)\nsplit_view.addOwnedPane(\n    top_pane,\n    fluentqt.SplitViewPaneOptions(80, 110, 150, False)\n)\nsplit_view.addOwnedPane(\n    fill_pane,\n    fluentqt.SplitViewPaneOptions(90, 160, 500, True)\n)\nsplit_view.addOwnedPane(\n    bottom_pane,\n    fluentqt.SplitViewPaneOptions(60, 120, 140, False)\n)\n"
+    },
+    {
+      "route_id": "split-view",
+      "sample_id": "split-view-hidden-pane",
+      "source": "split_view = fluentqt.SplitView()\nsplit_view.addOwnedPane(\n    first_pane,\n    fluentqt.SplitViewPaneOptions(60, 120, 240, False)\n)\nsplit_view.addOwnedPane(\n    details_pane,\n    fluentqt.SplitViewPaneOptions(60, 150, 260, False)\n)\nsplit_view.addOwnedPane(\n    fill_pane,\n    fluentqt.SplitViewPaneOptions(60, 180, 500, True)\n)\n\ndef toggle_details():\n    details_pane.setVisible(not details_pane.isVisible())\n\ntoggle.clicked.connect(toggle_details)\n"
+    },
+    {
+      "route_id": "stack-view",
+      "sample_id": "stack-view-basic",
+      "source": "stack_view = fluentqt.StackView()\nstack_view.setInitialOwnedItem(first_page)\nstack_view.pushOwnedItem(next_page)\nstack_view.pop()\nstack_view.depthChanged.connect(update_status)\n"
+    },
+    {
+      "route_id": "stack-view",
+      "sample_id": "stack-view-transition-type",
+      "source": "stack_view.setTransitionDuration(220)\nstack_view.setTransitionType(\n    fluentqt.StackView.StackViewTransitionType.ScaleFade\n)\nstack_view.pushOwnedItem(next_page)\nstack_view.pop()\n"
+    },
+    {
+      "route_id": "stack-view",
+      "sample_id": "stack-view-replace-pop-to-root",
+      "source": "stack_view = fluentqt.StackView()\nstack_view.setTransitionAnimationEnabled(False)\nstack_view.setInitialOwnedItem(root_page)\nstack_view.pushOwnedItem(details_page)\nstack_view.replaceOwnedItem(replacement_page)\nstack_view.popToRoot()\n"
+    },
+    {
+      "route_id": "tree-view",
+      "sample_id": "tree-view-basic",
+      "source": "tree = fluentqt.TreeView()\ntree.setItemDelegate(row_delegate)\ntree.setModel(model)\ntree.expandAll()\n"
+    },
+    {
+      "route_id": "tree-view",
+      "sample_id": "tree-view-checkboxes",
+      "source": "tree = fluentqt.TreeView()\nrow_delegate.setCheckBoxVisible(True)\ntree.setItemDelegate(row_delegate)\n"
+    },
+    {
+      "route_id": "tree-view",
+      "sample_id": "tree-view-reorder",
+      "source": "tree.setCanReorderItems(True)\ntree.itemReordered.connect(update_external_order)\n"
+    },
+    {
+      "route_id": "tree-view",
+      "sample_id": "tree-view-indicator-motion",
+      "source": "tree.setSelectionIndicatorVisible(True)\ntree.setIndicatorMotionAnimationEnabled(True)\n\nparent_index = model.index(0, 0)\nchild_index = model.index(0, 0, parent_index)\nsibling_index = model.index(1, 0, parent_index)\ntree.setSelectedItem(parent_index)\n\ndef bind_target(button, index):\n    button.clicked.connect(lambda: tree.setSelectedItem(index))\n\nbind_target(parent_button, parent_index)\nbind_target(child_button, child_index)\nbind_target(sibling_button, sibling_index)\ntree.indicatorHierarchyTransitionChanged.connect(update_status)\n"
+    },
+    {
+      "route_id": "tree-view",
+      "sample_id": "tree-view-scroll-bounce",
+      "source": "from PySide6.QtGui import QStandardItemModel\n\ntree = fluentqt.TreeView()\ntree.setScrollChainingEnabled(False)\ntree.setOverscrollEnabled(True)\nmodel = QStandardItemModel(tree)\ntree.setModel(model)\ntree.expandAll()\n"
+    },
+    {
+      "route_id": "calendar-date-picker",
+      "sample_id": "calendar-date-picker-basic",
+      "source": "picker = fluentqt.CalendarDatePicker()\npicker.setPlaceholderText(\"Pick a date\")\npicker.dateChanged.connect(lambda date: print(date.toString()))\n"
+    },
+    {
+      "route_id": "calendar-view",
+      "sample_id": "calendar-view-basic",
+      "source": "from PySide6.QtCore import QDate\n\ncalendar = fluentqt.CalendarView()\ncalendar.setSelectedDate(QDate.currentDate())\n"
+    },
+    {
+      "route_id": "date-picker",
+      "sample_id": "date-picker-basic",
+      "source": "from PySide6.QtCore import QDate\n\npicker = fluentqt.DatePicker()\npicker.setPlaceholderText(fluentqt.DatePicker.DateField.Month, \"month\")\npicker.setPlaceholderText(fluentqt.DatePicker.DateField.Day, \"day\")\npicker.setPlaceholderText(fluentqt.DatePicker.DateField.Year, \"year\")\npicker.setConfirmButtonAccessibleName(\"Accept date\")\npicker.setCancelButtonAccessibleName(\"Cancel date\")\npicker.setDate(QDate.currentDate())\n"
+    },
+    {
+      "route_id": "time-picker",
+      "sample_id": "time-picker-basic",
+      "source": "from PySide6.QtCore import QTime\n\npicker = fluentqt.TimePicker()\npicker.setPlaceholderText(fluentqt.TimePicker.TimeField.Hour, \"hour\")\npicker.setPlaceholderText(fluentqt.TimePicker.TimeField.Minute, \"minute\")\npicker.setPlaceholderText(fluentqt.TimePicker.TimeField.Period, \"AM/PM\")\npicker.setConfirmButtonAccessibleName(\"Accept time\")\npicker.setCancelButtonAccessibleName(\"Cancel time\")\npicker.setTime(QTime(9, 30))\npicker.setMinuteIncrement(5)\n"
+    },
+    {
+      "route_id": "content-dialog",
+      "sample_id": "content-dialog-result-buttons",
+      "source": "def open_dialog():\n    dialog = fluentqt.ContentDialog(show.window())\n    dialog.setTitle('Save your work?')\n    dialog.setPrimaryButtonText('Save')\n    dialog.setSecondaryButtonText(\"Don't save\")\n    dialog.setCloseButtonText('Cancel')\n    dialog.setDefaultButton(fluentqt.ContentDialog.ContentDialogButton.Primary)\n    dialog.primaryButtonClicked.connect(lambda: status.setText('Result: Save'))\n    dialog.secondaryButtonClicked.connect(\n        lambda: status.setText(\"Result: Don't save\")\n    )\n    dialog.closeButtonClicked.connect(lambda: status.setText('Result: Cancel'))\n    dialog.finished.connect(dialog.deleteLater)\n    dialog.open()\nshow.clicked.connect(open_dialog)\n"
+    },
+    {
+      "route_id": "content-dialog",
+      "sample_id": "content-dialog-custom-content",
+      "source": "def open_dialog():\n    dialog = fluentqt.ContentDialog(show.window())\n    dialog.setTitle('Share draft?')\n    dialog.setContent(content)\n    dialog.setPrimaryButtonText('Share')\n    dialog.setCloseButtonText('Not now')\n    dialog.setDefaultButton(fluentqt.ContentDialog.ContentDialogButton.None_)\n    dialog.primaryButtonClicked.connect(\n        lambda: status.setText(\n            \"Draft shared with attachments\"\n            if upload.isChecked()\n            else \"Draft shared without attachments\"\n        )\n    )\n    dialog.closeButtonClicked.connect(\n        lambda: status.setText('Draft state: private')\n    )\n    dialog.finished.connect(dialog.deleteLater)\n    dialog.open()\nshow.clicked.connect(open_dialog)\n"
+    },
+    {
+      "route_id": "dialog",
+      "sample_id": "dialog-owned-content",
+      "source": "from PySide6.QtWidgets import QVBoxLayout\n\ndialog = fluentqt.Dialog(window)\ndialog.setMinimumSize(480, 280)\nlayout = QVBoxLayout(dialog)\nlayout.addWidget(title_label)\nlayout.addWidget(name_edit)\nlayout.addStretch(1)\nlayout.addLayout(command_row)\napply_button.clicked.connect(lambda: dialog.done(1))\ndialog.finished.connect(dialog.deleteLater)\ndialog.open()\n"
+    },
+    {
+      "route_id": "dialog",
+      "sample_id": "dialog-animation-smoke",
+      "source": "def open_dialog(trigger, animation, smoke):\n    dialog = fluentqt.Dialog(trigger.window())\n    dialog.setSmokeEnabled(smoke)\n    dialog.setAnimationEnabled(animation)\n    dialog.setMinimumSize(420, 220)\n    dialog.deleteLater()\n    dialog.finished.connect(finish_dialog)\n    dialog.open()\nanimated.clicked.connect(lambda: open_dialog(animated, True, True))\ninstant.clicked.connect(lambda: open_dialog(instant, False, False))\n"
+    },
+    {
+      "route_id": "flyout",
+      "sample_id": "flyout-placement-anchors",
+      "source": "flyout = fluentqt.Flyout(window)\nflyout.setPlacement(fluentqt.Flyout.Placement.Right)\npopulate_flyout(flyout)\nflyout.closed.connect(flyout.deleteLater)\nflyout.showAt(anchor_button)\n"
+    },
+    {
+      "route_id": "flyout",
+      "sample_id": "flyout-command-confirmation",
+      "source": "flyout = fluentqt.Flyout(command_button.window())\nflyout.setPlacement(fluentqt.Flyout.Placement.Right)\nconfirm = fluentqt.Button(\"Empty cart\", flyout)\nconfirm.clicked.connect(flyout.close)\nflyout.showAt(command_button)\n"
+    },
+    {
+      "route_id": "popup",
+      "sample_id": "popup-position-light-dismiss",
+      "source": "from PySide6.QtCore import QPoint\n\ndef open_popup():\n    popup = fluentqt.Popup(anchor.window())\n    popup.setClosePolicy(fluentqt.Popup.ClosePolicy(policy))\n    popup.setPosition(anchor, QPoint(0, anchor.height() + 8))\n    popup.open()\nanchor.clicked.connect(open_popup)\n"
+    },
+    {
+      "route_id": "popup",
+      "sample_id": "popup-modal-dim",
+      "source": "def open_popup():\n    popup = fluentqt.Popup(show.window())\n    popup.setModal(True)\n    popup.setDim(True)\n    popup.setClosePolicy(fluentqt.Popup.CloseOnEscape)\n    popup.open()\nshow.clicked.connect(open_popup)\n"
+    },
+    {
+      "route_id": "teaching-tip",
+      "sample_id": "teaching-tip-targeted-action",
+      "source": "from PySide6.QtCore import QSize\n\nclose_reason_names = {\n    fluentqt.TeachingTip.CloseReason.ActionButton: \"action button\",\n    fluentqt.TeachingTip.CloseReason.CloseButton: \"close button\",\n    fluentqt.TeachingTip.CloseReason.LightDismiss: \"light dismiss\",\n    fluentqt.TeachingTip.CloseReason.TargetDestroyed: \"target destroyed\",\n    fluentqt.TeachingTip.CloseReason.Programmatic: \"programmatic\",\n}\ndef show_tip():\n    tip = fluentqt.TeachingTip(target.window())\n    tip.setPreferredPlacement(fluentqt.TeachingTip.PreferredPlacement.Right)\n    tip.setLightDismissEnabled(True)\n    tip.setCardSize(QSize(320, 154))\n    tip.closing.connect(\n        lambda reason: status.setText(\n            f\"Closed by {close_reason_names.get(reason, 'programmatic')}\"\n        )\n    )\n    tip.showAt(target)\ntarget.clicked.connect(show_tip)\n"
+    },
+    {
+      "route_id": "teaching-tip",
+      "sample_id": "teaching-tip-placement-tail",
+      "source": "from PySide6.QtCore import QSize\n\ntip = fluentqt.TeachingTip(window)\ntip.setPreferredPlacement(fluentqt.TeachingTip.PreferredPlacement.RightTop)\ntip.setTailVisible(show_tail)\ntip.setCardSize(QSize(300, 136))\ntip.showAt(anchor_button)\n"
+    },
+    {
+      "route_id": "coach-mark",
+      "sample_id": "coach-mark-targeted-glide",
+      "source": "from PySide6.QtCore import QSize\n\ncoach = fluentqt.CoachMark(window)\ncoach.setCardSize(QSize(320, 150))\ncoach.setPlacement(fluentqt.CoachMark.Placement.Bottom)\ncoach.setTarget(target_button)\nclose_button.clicked.connect(coach.close)\ncoach.open()\n"
+    },
+    {
+      "route_id": "accordion",
+      "sample_id": "accordion-single-expansion",
+      "source": "from PySide6.QtWidgets import QVBoxLayout, QWidget\n\naccordion = fluentqt.Accordion()\naccordion.setExpansionMode(fluentqt.Accordion.ExpansionMode.Single)\naccordion.setFixedWidth(520)\n\ndef make_section(title, detail):\n    item = fluentqt.Expander()\n    item.setHeaderText(title)\n    body = QWidget()\n    body_layout = QVBoxLayout(body)\n    body_layout.setContentsMargins(16, 12, 16, 14)\n    body_layout.addWidget(\n        fluentqt.Label(\"Additional details\", body)\n    )\n    body_layout.addWidget(fluentqt.Label(detail, body))\n    item.setOwnedContentWidget(body)\n    return item\n\naccount = make_section(\"Account\", \"Profile, sign-in, and recovery options.\")\nnotifications = make_section(\n    \"Notifications\",\n    \"Choose which activity can interrupt you.\"\n)\nprivacy = make_section(\n    \"Privacy\",\n    \"Review diagnostics and personalization settings.\"\n)\naccordion.addOwnedItem(account)\naccordion.addOwnedItem(notifications)\naccordion.addOwnedItem(privacy)\naccount.setExpandedAnimated(True, False)\n"
+    },
+    {
+      "route_id": "accordion",
+      "sample_id": "accordion-multiple-expansion",
+      "source": "from PySide6.QtWidgets import QVBoxLayout, QWidget\n\naccordion = fluentqt.Accordion()\naccordion.setExpansionMode(\n    fluentqt.Accordion.ExpansionMode.Multiple\n)\naccordion.setFixedWidth(520)\n\nnetwork_item = fluentqt.Expander()\nnetwork_item.setHeaderText(\"Network\")\nnetwork_body = QWidget()\nnetwork_layout = QVBoxLayout(network_body)\nnetwork_layout.setContentsMargins(16, 12, 16, 14)\nnetwork_layout.addWidget(\n    fluentqt.Label(\"Additional details\", network_body)\n)\nnetwork_layout.addWidget(\n    fluentqt.Label(\"Wi-Fi and Ethernet are connected.\", network_body)\n)\nnetwork_item.setOwnedContentWidget(network_body)\n\nproxy_item = fluentqt.Expander()\nproxy_item.setHeaderText(\"Proxy\")\nproxy_body = QWidget()\nproxy_layout = QVBoxLayout(proxy_body)\nproxy_layout.setContentsMargins(16, 12, 16, 14)\nproxy_layout.addWidget(\n    fluentqt.Label(\"Additional details\", proxy_body)\n)\nproxy_layout.addWidget(\n    fluentqt.Label(\"Use system proxy settings.\", proxy_body)\n)\nproxy_item.setOwnedContentWidget(proxy_body)\n\naccordion.addOwnedItem(network_item)\naccordion.addOwnedItem(proxy_item)\nnetwork_item.setExpandedAnimated(True, False)\nproxy_item.setExpandedAnimated(True, False)\n"
+    },
+    {
+      "route_id": "card",
+      "sample_id": "card-surface-appearances",
+      "source": "from PySide6.QtWidgets import QVBoxLayout\n\nlayer = fluentqt.Card()\nlayer.setAppearance(fluentqt.Card.Appearance.Layer)\nlayer.setFixedSize(170, 88)\nlayer_layout = QVBoxLayout(layer)\nlayer_layout.setContentsMargins(16, 12, 16, 12)\nlayer_layout.addWidget(fluentqt.Label(\"Layer\", layer))\nlayer_layout.addWidget(fluentqt.Label(\"Default grouped surface\", layer))\n\nalternate = fluentqt.Card()\nalternate.setAppearance(fluentqt.Card.Appearance.LayerAlt)\nalternate.setFixedSize(170, 88)\nalternate_layout = QVBoxLayout(alternate)\nalternate_layout.setContentsMargins(16, 12, 16, 12)\nalternate_layout.addWidget(fluentqt.Label(\"LayerAlt\", alternate))\nalternate_layout.addWidget(fluentqt.Label(\"Alternate layer tone\", alternate))\n\ncanvas = fluentqt.Card()\ncanvas.setAppearance(fluentqt.Card.Appearance.Canvas)\ncanvas.setFixedSize(170, 88)\ncanvas_layout = QVBoxLayout(canvas)\ncanvas_layout.setContentsMargins(16, 12, 16, 12)\ncanvas_layout.addWidget(fluentqt.Label(\"Canvas\", canvas))\ncanvas_layout.addWidget(fluentqt.Label(\"Matches the page canvas\", canvas))\n"
+    },
+    {
+      "route_id": "card",
+      "sample_id": "card-border-visibility",
+      "source": "from PySide6.QtWidgets import QVBoxLayout\n\nbordered = fluentqt.Card()\nbordered.setAppearance(fluentqt.Card.Appearance.Layer)\nbordered.setBorderVisible(True)\nbordered.setFixedSize(170, 88)\nbordered_layout = QVBoxLayout(bordered)\nbordered_layout.addWidget(fluentqt.Label(\"Bordered\", bordered))\nbordered_layout.addWidget(fluentqt.Label(\"Independent surface\", bordered))\n\nborderless = fluentqt.Card()\nborderless.setAppearance(fluentqt.Card.Appearance.Layer)\nborderless.setBorderVisible(False)\nborderless.setFixedSize(170, 88)\nborderless_layout = QVBoxLayout(borderless)\nborderless_layout.addWidget(fluentqt.Label(\"Borderless\", borderless))\nborderless_layout.addWidget(fluentqt.Label(\"Nested composition\", borderless))\n"
+    },
+    {
+      "route_id": "divider",
+      "sample_id": "divider-horizontal-insets",
+      "source": "from PySide6.QtWidgets import QVBoxLayout\n\ncard = fluentqt.Card()\nlayout = QVBoxLayout(card)\nlayout.setContentsMargins(16, 14, 16, 14)\nlayout.setSpacing(10)\nfull_label = fluentqt.Label('Full-width separator', card)\nlayout.addWidget(full_label)\nfull = fluentqt.Divider(card)\nlayout.addWidget(full)\ninset_label = fluentqt.Label('Inset separator', card)\nlayout.addWidget(inset_label)\ninset = fluentqt.Divider(card)\ninset.setLeadingInset(24)\ninset.setTrailingInset(48)\nlayout.addWidget(inset)\n"
+    },
+    {
+      "route_id": "divider",
+      "sample_id": "divider-vertical-orientation",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QHBoxLayout\n\ncard = fluentqt.Card()\nlayout = QHBoxLayout(card)\nlayout.setContentsMargins(20, 16, 20, 16)\nlayout.setSpacing(16)\ndetails = fluentqt.Label('Details', card)\nlayout.addWidget(details)\nfirst = fluentqt.Divider(Qt.Vertical, card)\nfirst.setLeadingInset(4)\nfirst.setTrailingInset(4)\nfirst.setFixedHeight(44)\nlayout.addWidget(first)\nactivity = fluentqt.Label('Activity', card)\nlayout.addWidget(activity)\nsecond = fluentqt.Divider(Qt.Vertical, card)\nsecond.setLeadingInset(4)\nsecond.setTrailingInset(4)\nsecond.setFixedHeight(44)\nlayout.addWidget(second)\nhistory = fluentqt.Label('History', card)\nlayout.addWidget(history)\n"
+    },
+    {
+      "route_id": "expander",
+      "sample_id": "expander-text-content",
+      "source": "from PySide6.QtWidgets import QVBoxLayout, QWidget\n\nexpander = fluentqt.Expander()\nexpander.setHeaderText(\"Connection details\")\n\nbody = QWidget()\nbody_layout = QVBoxLayout(body)\nbody_layout.setContentsMargins(16, 12, 16, 14)\nbody_layout.setSpacing(4)\nbody_layout.addWidget(fluentqt.Label(\"Additional details\", body))\nbody_layout.addWidget(\n    fluentqt.Label(\n        \"Server: api.example.com\\nTransport: TLS 1.3\", body\n    )\n)\n\nexpander.setOwnedContentWidget(body)\nexpander.setExpandedAnimated(True, False)\n"
+    },
+    {
+      "route_id": "expander",
+      "sample_id": "expander-state-signal",
+      "source": "from PySide6.QtWidgets import QVBoxLayout, QWidget\n\nstatus = fluentqt.Label(\"Collapsed\")\n\noptions = QWidget()\noptions_layout = QVBoxLayout(options)\noptions_layout.setContentsMargins(16, 12, 16, 14)\noptions_layout.addWidget(\n    fluentqt.Label(\"Additional details\", options)\n)\noptions_layout.addWidget(\n    fluentqt.Label(\"Diagnostic logging and retry behavior.\", options)\n)\n\nexpander = fluentqt.Expander()\nexpander.setHeaderText(\"Advanced options\")\nexpander.setOwnedContentWidget(options)\nexpander.expandedChanged.connect(\n    lambda expanded: status.setText(\"Expanded\" if expanded else \"Collapsed\")\n)\n"
+    },
+    {
+      "route_id": "menu",
+      "sample_id": "menu-command-shortcuts",
+      "source": "from PySide6.QtGui import QKeySequence\n\nbutton = fluentqt.DropDownButton(\"File\")\nstatus = fluentqt.Label(\"Clicked: (none)\")\nmenu = fluentqt.FluentMenu(\"\", button)\n\nnew_action = menu.addAction(\"New\")\nnew_action.setShortcut(QKeySequence.StandardKey.New)\nnew_action.triggered.connect(lambda: status.setText(\"Clicked: New\"))\n\nopen_action = menu.addAction(\"Open...\")\nopen_action.setShortcut(QKeySequence.StandardKey.Open)\nsave_action = menu.addAction(\"Save\")\nsave_action.setShortcut(QKeySequence.StandardKey.Save)\nmenu.addSeparator()\npublish = menu.addAction(\"Publish\")\npublish.setEnabled(False)\nbutton.setMenu(menu)\n"
+    },
+    {
+      "route_id": "menu",
+      "sample_id": "menu-cascading-selection",
+      "source": "from PySide6.QtGui import QActionGroup\n\nmenu = fluentqt.FluentMenu(\"\")\nsort_menu = fluentqt.FluentMenu(\"Sort by\", menu)\nsort_menu.addAction(\"Name\")\nsort_menu.addAction(\"Date modified\")\nmenu.addMenu(sort_menu)\n\nview_group = QActionGroup(menu)\nview_group.setExclusive(True)\ncompact = menu.addAction(\"Compact list\")\ncompact.setCheckable(True)\nview_group.addAction(compact)\ncomfortable = menu.addAction(\"Comfortable list\")\ncomfortable.setCheckable(True)\ncomfortable.setChecked(True)\nview_group.addAction(comfortable)\n\nhidden = menu.addAction(\"Show hidden files\")\nhidden.setCheckable(True)\n"
+    },
+    {
+      "route_id": "menu-bar",
+      "sample_id": "menu-bar-hosted-surface",
+      "source": "menu_bar = fluentqt.FluentMenuBar()\nstatus = fluentqt.Label(\"Clicked: (none)\")\nmenu_bar.setBackgroundVisible(False)\n\nfile_menu = fluentqt.FluentMenu(\"File\", menu_bar)\nnew_action = file_menu.addAction(\"New\")\nnew_action.triggered.connect(lambda: status.setText(\"Clicked: New\"))\nfile_menu.addAction(\"Open...\")\nmenu_bar.addMenu(file_menu)\n\nedit_menu = fluentqt.FluentMenu(\"Edit\", menu_bar)\nedit_menu.addAction(\"Undo\")\nmenu_bar.addMenu(edit_menu)\n"
+    },
+    {
+      "route_id": "menu-bar",
+      "sample_id": "menu-bar-access-keys",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QAction, QKeySequence\n\nmenu_bar = fluentqt.FluentMenuBar()\nfocus_button = fluentqt.Button(\"Focus\")\nstatus = fluentqt.Label(\"Command: (none)\")\nfocus_button.clicked.connect(\n    lambda: menu_bar.setFocus(Qt.FocusReason.OtherFocusReason)\n)\n\nfile_menu = fluentqt.FluentMenu(\"&File\", menu_bar)\nfile_menu.menuAction().setProperty(\"accessKey\", \"F\")\nsave_action = file_menu.addAction(\"Save\")\nsave_action.setShortcut(QKeySequence.StandardKey.Save)\nmenu_bar.addMenu(file_menu)\n\nrun_action = QAction(\"Run\", menu_bar)\nrun_action.triggered.connect(lambda: status.setText(\"Command: Run\"))\nmenu_bar.addAction(run_action)\n"
+    },
+    {
+      "route_id": "command-bar",
+      "sample_id": "command-bar-responsive-overflow",
+      "source": "from PySide6.QtGui import QAction, QIcon\nfrom PySide6.QtWidgets import QHBoxLayout, QWidget\n\nbar_host = QWidget()\nbar_host.setFixedWidth(536)\nbar_layout = QHBoxLayout(bar_host)\nbar_layout.setContentsMargins(0, 0, 0, 0)\nbar = fluentqt.CommandBar(bar_host)\nbar.setAccessibleName(\"Document commands\")\nbar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)\nbar.setBackgroundVisible(False)\nbar_layout.addWidget(bar)\n\nadd_action = QAction(QIcon(\":/icons/add.svg\"), \"Add\", bar)\nedit_action = QAction(QIcon(\":/icons/edit.svg\"), \"Edit\", bar)\nedit_action.setPriority(QAction.Priority.HighPriority)\nshare_action = QAction(QIcon(\":/icons/share.svg\"), \"Share\", bar)\nseparator = QAction(bar)\nseparator.setSeparator(True)\nsync_action = QAction(QIcon(\":/icons/sync.svg\"), \"Sync\", bar)\nsync_action.setPriority(QAction.Priority.LowPriority)\npin_action = QAction(QIcon(\":/icons/pin.svg\"), \"Pin\", bar)\npin_action.setCheckable(True)\n\nbar.addPrimaryAction(add_action)\nbar.addPrimaryAction(edit_action)\nbar.addPrimaryAction(share_action)\nbar.addPrimaryAction(separator)\nbar.addPrimaryAction(sync_action)\nbar.addPrimaryAction(pin_action)\nbar.addSecondaryAction(\n    QAction(QIcon(\":/icons/settings.svg\"), \"Settings\", bar)\n)\nbar.addSecondaryAction(\n    QAction(QIcon(\":/icons/help.svg\"), \"Help\", bar)\n)\n\ncompact_button = fluentqt.Button(\"Compact view\")\nlabels_button = fluentqt.Button(\"Labels: Right\")\nbackground_button = fluentqt.Button(\"Show background\")\n\ndef toggle_compact():\n    bar_host.setFixedWidth(288 if bar_host.width() > 300 else 536)\n\ndef toggle_labels():\n    collapsed = (\n        bar.labelPosition()\n        == fluentqt.CommandBar.LabelPosition.Collapsed\n    )\n    bar.setLabelPosition(\n        fluentqt.CommandBar.LabelPosition.Right\n        if collapsed\n        else fluentqt.CommandBar.LabelPosition.Collapsed\n    )\n\ndef toggle_background():\n    bar.setBackgroundVisible(not bar.backgroundVisible())\n\ncompact_button.clicked.connect(toggle_compact)\nlabels_button.clicked.connect(toggle_labels)\nbackground_button.clicked.connect(toggle_background)\n"
+    },
+    {
+      "route_id": "command-bar",
+      "sample_id": "command-bar-editing-router",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QAction, QIcon\n\neditor = fluentqt.LineEdit()\neditor.setText(\"Review the release notes before Friday\")\nrouter = fluentqt.EditingCommandRouter(window)\nbar = fluentqt.CommandBar()\nbar.setAccessibleName(\"Editing commands\")\nbar.setLabelPosition(fluentqt.CommandBar.LabelPosition.Right)\nbar.setBackgroundVisible(False)\nCommand = fluentqt.EditingCommandRouter.Command\n\ndef command_action(command, icon_path):\n    action = router.action(command)\n    action.setIcon(QIcon(icon_path))\n    return action\n\nbar.addPrimaryAction(\n    command_action(Command.Undo, \":/icons/undo.svg\")\n)\nbar.addPrimaryAction(\n    command_action(Command.Redo, \":/icons/redo.svg\")\n)\nseparator = QAction(bar)\nseparator.setSeparator(True)\nbar.addPrimaryAction(separator)\nbar.addPrimaryAction(\n    command_action(Command.Cut, \":/icons/cut.svg\")\n)\nbar.addPrimaryAction(\n    command_action(Command.Copy, \":/icons/copy.svg\")\n)\nbar.addPrimaryAction(\n    command_action(Command.Paste, \":/icons/paste.svg\")\n)\nbar.addSecondaryAction(\n    command_action(Command.Delete, \":/icons/delete.svg\")\n)\nbar.addSecondaryAction(\n    command_action(Command.SelectAll, \":/icons/select-all.svg\")\n)\n\nselect_text = fluentqt.Button(\"Select text\")\nclear_selection = fluentqt.Button(\"Clear selection\")\nread_only = fluentqt.Button(\"Read-only: Off\")\nread_only.setCheckable(True)\n\ndef select_all():\n    editor.setFocus(Qt.FocusReason.OtherFocusReason)\n    editor.selectAll()\n    router.refresh()\n\ndef deselect():\n    editor.setFocus(Qt.FocusReason.OtherFocusReason)\n    editor.deselect()\n    router.refresh()\n\ndef set_read_only(value):\n    editor.setFocus(Qt.FocusReason.OtherFocusReason)\n    editor.setReadOnly(value)\n    editor.selectAll()\n    router.refresh()\n\nselect_text.clicked.connect(select_all)\nclear_selection.clicked.connect(deselect)\nread_only.toggled.connect(set_read_only)\n"
+    },
+    {
+      "route_id": "command-bar-flyout",
+      "sample_id": "command-bar-flyout-show-modes",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QAction\n\nflyout = fluentqt.CommandBarFlyout()\nshare_action = QAction(\"Share\")\nsave_action = QAction(\"Save\")\ndelete_action = QAction(\"Delete\")\nresize_action = QAction(\"Resize\")\nmove_action = QAction(\"Move\")\nflyout.addPrimaryAction(share_action)\nflyout.addPrimaryAction(save_action)\nflyout.addPrimaryAction(delete_action)\nflyout.addSecondaryAction(resize_action)\nflyout.addSecondaryAction(move_action)\n\nphoto.clicked.connect(\n    lambda: flyout.showAt(photo, fluentqt.CommandBarFlyout.ShowMode.Transient)\n)\nphoto.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)\nphoto.customContextMenuRequested.connect(\n    lambda point: flyout.showAtPoint(\n        photo,\n        point,\n        fluentqt.CommandBarFlyout.ShowMode.Standard\n    )\n)\n"
+    },
+    {
+      "route_id": "command-bar-flyout",
+      "sample_id": "command-bar-flyout-always-expanded",
+      "source": "from PySide6.QtGui import QAction, QIcon\n\nflyout = fluentqt.CommandBarFlyout()\nflyout.setAlwaysExpanded(True)\ncopy_link = QAction(QIcon(\":/icons/link.svg\"), \"Copy link\", flyout)\nfavorite = QAction(\n    QIcon(\":/icons/favorite.svg\"),\n    \"Favorite\",\n    flyout\n)\nfavorite.setCheckable(True)\nrename = QAction(QIcon(\":/icons/edit.svg\"), \"Rename\", flyout)\nproperties = QAction(\n    QIcon(\":/icons/info.svg\"),\n    \"Properties\",\n    flyout\n)\nflyout.addPrimaryAction(copy_link)\nflyout.addPrimaryAction(favorite)\nflyout.addSecondaryAction(rename)\nflyout.addSecondaryAction(properties)\n\nopen_button = fluentqt.Button(\"Open actions\")\nalways_expanded = fluentqt.Button(\"Always expanded: On\")\nopen_button.clicked.connect(\n    lambda: flyout.showAt(open_button, fluentqt.CommandBarFlyout.ShowMode.Transient)\n)\nalways_expanded.setCheckable(True)\nalways_expanded.setChecked(True)\nalways_expanded.toggled.connect(flyout.setAlwaysExpanded)\n"
+    },
+    {
+      "route_id": "breadcrumb",
+      "sample_id": "breadcrumb-size",
+      "source": "path = [\"Home\", \"Documents\", \"Images\"]\n\nstandard = fluentqt.Breadcrumb()\nstandard.setItems(path)\nstandard.setBreadcrumbSize(fluentqt.Breadcrumb.BreadcrumbSize.Standard)\nstandard.setFixedHeight(20)\n\nlarge = fluentqt.Breadcrumb()\nlarge.setItems(path)\nlarge.setBreadcrumbSize(fluentqt.Breadcrumb.BreadcrumbSize.Large)\nlarge.setFixedHeight(40)\n"
+    },
+    {
+      "route_id": "breadcrumb",
+      "sample_id": "breadcrumb-overflow-mode",
+      "source": "path = [\"Home\", \"Projects\", \"Fluent\", \"Controls\", \"Breadcrumb\"]\n\nnone = fluentqt.Breadcrumb()\nnone.setItems(path)\nnone.setOverflowMode(fluentqt.Breadcrumb.OverflowMode.None_)\nnone.setFixedWidth(520)\n\nbeginning = fluentqt.Breadcrumb()\nbeginning.setItems(path)\nbeginning.setOverflowMode(fluentqt.Breadcrumb.OverflowMode.Beginning)\nbeginning.setFixedWidth(260)\n\nmiddle = fluentqt.Breadcrumb()\nmiddle.setItems(path)\nmiddle.setOverflowMode(fluentqt.Breadcrumb.OverflowMode.Middle)\nmiddle.setFixedWidth(260)\n\ndef inspect_hidden_indexes(hidden_indexes):\n    return hidden_indexes\n\nmiddle.overflowActivated.connect(inspect_hidden_indexes)\n"
+    },
+    {
+      "route_id": "breadcrumb",
+      "sample_id": "breadcrumb-item-state",
+      "source": "items = [\n    fluentqt.BreadcrumbItem(\"Home\", \"home\"),\n    fluentqt.BreadcrumbItem(\"Archive\", \"archive\", False, \"Archive folder\"),\n    fluentqt.BreadcrumbItem(\"Reports\", \"reports\"),\n    fluentqt.BreadcrumbItem(\"Current\", \"current\"),\n]\nbreadcrumb = fluentqt.Breadcrumb()\nbreadcrumb.setItems(items)\nbreadcrumb.itemActivated.connect(\n    lambda index, item: status.setText(\n        f\"Activated {item.text}, data: {item.data}, index: {index}\"\n    )\n)\n"
+    },
+    {
+      "route_id": "breadcrumb",
+      "sample_id": "breadcrumb-auto-truncate",
+      "source": "full_path = ['This PC', 'Local Disk', 'Users', 'Public', 'Pictures']\nbreadcrumb = fluentqt.Breadcrumb()\nbreadcrumb.setItems(full_path)\nbreadcrumb.setAutoTruncateOnItemClick(True)\nreset = fluentqt.Button('Reset')\nstatus = fluentqt.Label('Items: 5')\ndef update_items_status():\n    count = breadcrumb.itemCount()\n    if count == 0:\n        status.setText('Items: 0')\n    else:\n        status.setText(\n            f'Items: {count}, current: {breadcrumb.itemAt(count - 1).text}'\n        )\nbreadcrumb.itemActivated.connect(\n    lambda index, item: status.setText(f\"Activated {item.text} at index {index}\")\n)\nbreadcrumb.itemsChanged.connect(update_items_status)\nreset.clicked.connect(\n    lambda: (breadcrumb.setItems(full_path), status.setText(\"Items: 5\"))\n)\n"
+    },
+    {
+      "route_id": "breadcrumb",
+      "sample_id": "breadcrumb-activation",
+      "source": "full_path = ['Home', 'Projects', 'Fluent', 'Controls', 'Breadcrumb']\nbreadcrumb = fluentqt.Breadcrumb()\nbreadcrumb.setItems(full_path)\nbreadcrumb.setOverflowMode(fluentqt.Breadcrumb.OverflowMode.None_)\nhost = fluentqt.StackContentHost()\nfor index, title in enumerate(full_path):\n    host.addOwnedPage(\n        make_page(\n            title,\n            f\"StackContentHost page {index + 1} selected from a full breadcrumb trail.\"\n        )\n    )\nhost.setCurrentIndex(len(full_path) - 1, 0, False)\ndef jump_to(index):\n    bounded = max(0, min(index, len(full_path) - 1))\n    direction = 1 if bounded >= host.currentIndex() else -1\n    host.setCurrentIndex(bounded, direction, True)\nbreadcrumb.itemActivated.connect(lambda index, _item: jump_to(index))\n"
+    },
+    {
+      "route_id": "navigation-view",
+      "sample_id": "navigation-view-chrome-slots",
+      "source": "nav = fluentqt.NavigationView()\nnav.setDisplayMode(fluentqt.NavigationView.DisplayMode.Left)\nnav.setExpandedPaneWidth(180)\nnav.setHeaderChromeWidget(header_section)\nnav.setMainChromeWidget(main_section)\nnav.setFooterChromeWidget(footer_section)\npopulate_navigation_pages(nav.contentHost())\ndef route_to_page(source, page_index):\n    host = nav.contentHost()\n    direction = 1 if page_index >= host.currentIndex() else -1\n    host.setCurrentIndex(page_index, direction, True)\nheader_section.on_activated = lambda index: route_to_page(header_section, index)\nmain_section.on_activated = lambda index: route_to_page(main_section, index)\nfooter_section.on_activated = lambda index: route_to_page(footer_section, index)\n"
+    },
+    {
+      "route_id": "navigation-view",
+      "sample_id": "navigation-view-display-modes",
+      "source": "from PySide6.QtCore import Qt\n\nnav.setAnimationEnabled(True)\nnav.setExpandedPaneWidth(180)\nnav.setCompactPaneWidth(52)\n\ndef apply_display_mode(mode):\n    top = mode == fluentqt.NavigationView.DisplayMode.Top\n    compact = mode != fluentqt.NavigationView.DisplayMode.Left\n    orientation = (\n        Qt.Orientation.Horizontal\n        if top\n        else Qt.Orientation.Vertical\n    )\n    header_section.set_orientation(orientation)\n    main_section.set_orientation(orientation)\n    footer_section.set_orientation(orientation)\n    header_section.set_compact(compact)\n    main_section.set_compact(compact)\n    footer_section.set_compact(compact)\n    nav.contentHost().setTransitionEffect(\n        fluentqt.StackContentHost.TransitionEffect.SlideFromBottom\n        if top\n        else fluentqt.StackContentHost.TransitionEffect.SlideFromLeft\n    )\n    nav.setPaneOpen(mode == fluentqt.NavigationView.DisplayMode.Left or top)\n    nav.setDisplayMode(mode)\n\ndef route_to_page(page_index):\n    host = nav.contentHost()\n    direction = 1 if page_index >= host.currentIndex() else -1\n    host.setCurrentIndex(page_index, direction, True)\n\nheader_section.on_activated = route_to_page\nmain_section.on_activated = route_to_page\nfooter_section.on_activated = route_to_page\nleft_button.clicked.connect(\n    lambda: apply_display_mode(fluentqt.NavigationView.DisplayMode.Left)\n)\ncompact_button.clicked.connect(\n    lambda: apply_display_mode(fluentqt.NavigationView.DisplayMode.LeftCompact)\n)\nminimal_button.clicked.connect(\n    lambda: apply_display_mode(fluentqt.NavigationView.DisplayMode.LeftMinimal)\n)\ntop_button.clicked.connect(\n    lambda: apply_display_mode(fluentqt.NavigationView.DisplayMode.Top)\n)\n"
+    },
+    {
+      "route_id": "navigation-view",
+      "sample_id": "navigation-view-content-host",
+      "source": "nav = fluentqt.NavigationView()\nnav.setExpandedPaneWidth(180)\nhost = nav.contentHost()\nhost.setTransitionEffect(fluentqt.StackContentHost.TransitionEffect.SlideFromLeft)\ndef route_to_page(page_index):\n    direction = 1 if page_index >= host.currentIndex() else -1\n    host.setCurrentIndex(page_index, direction, True)\n"
+    },
+    {
+      "route_id": "pivot",
+      "sample_id": "pivot-basic",
+      "source": "pivot = fluentqt.Pivot()\npivot.addItem(fluentqt.PivotItem(\"All\", fluentqt.Typography.Icons.Mail))\npivot.addItem(fluentqt.PivotItem(\"Unread\", fluentqt.Typography.Icons.Filter))\npivot.addItem(fluentqt.PivotItem(\"Flagged\", fluentqt.Typography.Icons.Flag))\npivot.addItem(fluentqt.PivotItem(\"Locked\", fluentqt.Typography.Icons.Lock, False))\npivot.addItem(fluentqt.PivotItem(\"Mentions\", fluentqt.Typography.Icons.Contact))\n\nhost = fluentqt.StackContentHost()\nfor index in range(pivot.itemCount()):\n    host.insertOwnedPage(index, create_page(pivot.itemAt(index).header))\n\npivot.currentChanged.connect(lambda index: host.setCurrentIndex(index, 0, True))\n"
+    },
+    {
+      "route_id": "pivot",
+      "sample_id": "pivot-item-state",
+      "source": "pivot = fluentqt.Pivot()\npivot.addItem(\n    fluentqt.PivotItem(\n        \"Inbox\",\n        fluentqt.Typography.Icons.Mail,\n        True,\n        \"inbox\",\n        \"Inbox view\"\n    )\n)\npivot.addItem(\n    fluentqt.PivotItem(\n        \"Flagged\",\n        fluentqt.Typography.Icons.Flag,\n        True,\n        \"flagged\",\n        \"Flagged mail\"\n    )\n)\npivot.addItem(\n    fluentqt.PivotItem(\n        \"Locked\",\n        fluentqt.Typography.Icons.Lock,\n        False,\n        \"locked\",\n        \"Locked view\"\n    )\n)\npivot.setSelectedIndex(0)\n\ndef rename_flagged():\n    pivot.setItemHeader(1, \"Priority\")\n    pivot.setItemIconGlyph(1, fluentqt.Typography.Icons.ImportantBadge12)\n    pivot.setItemData(1, \"priority\")\n\nrename_button.clicked.connect(rename_flagged)\nunlock_button.clicked.connect(lambda: pivot.setItemEnabled(2, True))\npivot.currentChanged.connect(lambda index: pivot.itemAt(index).data)\n"
+    },
+    {
+      "route_id": "pivot",
+      "sample_id": "pivot-overflow-behavior",
+      "source": "items = (\n    fluentqt.PivotItem(\n        \"All\", fluentqt.Typography.Icons.Mail\n    ),\n    fluentqt.PivotItem(\n        \"Unread\", fluentqt.Typography.Icons.Filter\n    ),\n    fluentqt.PivotItem(\n        \"Flagged\", fluentqt.Typography.Icons.Flag\n    ),\n    fluentqt.PivotItem(\n        \"Mentions\", fluentqt.Typography.Icons.Contact\n    ),\n    fluentqt.PivotItem(\n        \"Archive\", fluentqt.Typography.Icons.Storage\n    ),\n    fluentqt.PivotItem(\n        \"Long category\", fluentqt.Typography.Icons.Folder\n    ),\n)\n\nscroll_buttons = fluentqt.Pivot()\nfor item in items:\n    scroll_buttons.addItem(item)\nscroll_buttons.setOverflowBehavior(fluentqt.Pivot.OverflowBehavior.ScrollButtons)\nscroll_buttons.setFixedWidth(420)\n\nmore_button = fluentqt.Pivot()\nfor item in items:\n    more_button.addItem(item)\nmore_button.setOverflowBehavior(fluentqt.Pivot.OverflowBehavior.MoreButton)\nmore_button.setFixedWidth(420)\nmore_button.overflowActivated.connect(inspect_hidden_indexes)\n"
+    },
+    {
+      "route_id": "selector-bar",
+      "sample_id": "selector-bar-basic",
+      "source": "selector = fluentqt.SelectorBar()\nselector.addItem(\n    fluentqt.SelectorBarItem(\n        \"Inbox\",\n        fluentqt.Typography.Icons.Mail,\n        True,\n        True,\n        \"inbox\"\n    )\n)\nselector.addItem(\n    fluentqt.SelectorBarItem(\n        \"Calendar\",\n        fluentqt.Typography.Icons.Calendar,\n        True,\n        True,\n        \"calendar\"\n    )\n)\nselector.addItem(\n    fluentqt.SelectorBarItem(\n        \"Settings\",\n        fluentqt.Typography.Icons.Settings,\n        True,\n        True,\n        \"settings\"\n    )\n)\n\nhost = fluentqt.StackContentHost()\nfor index in range(selector.itemCount()):\n    host.insertOwnedPage(index, create_page(selector.itemAt(index).text))\n\nselector.currentChanged.connect(lambda index: host.setCurrentIndex(index, 0, True))\nselector.selectionChanged.connect(lambda _index, item: item.data)\n"
+    },
+    {
+      "route_id": "selector-bar",
+      "sample_id": "selector-bar-item-state",
+      "source": "selector = fluentqt.SelectorBar()\nselector.addItem(\n    fluentqt.SelectorBarItem(\n        \"Overview\",\n        fluentqt.Typography.Icons.Home,\n        True,\n        True,\n        \"overview\"\n    )\n)\nselector.addItem(\n    fluentqt.SelectorBarItem(\n        \"Sample code\",\n        fluentqt.Typography.Icons.Document,\n        True,\n        False,\n        \"code\"\n    )\n)\nselector.addItem(\n    fluentqt.SelectorBarItem(\n        \"Disabled\",\n        fluentqt.Typography.Icons.Lock,\n        False,\n        True,\n        \"disabled\"\n    )\n)\nselector.addItem(\n    fluentqt.SelectorBarItem(\n        \"Settings\",\n        fluentqt.Typography.Icons.Settings,\n        True,\n        True,\n        \"settings\"\n    )\n)\nselector.setItemVisible(1, False)\nselector.setItemEnabled(2, False)\nselector.setItemSelected(0, True)\nshow_code_button.clicked.connect(lambda: selector.setItemVisible(1, True))\n"
+    },
+    {
+      "route_id": "selector-bar",
+      "sample_id": "selector-bar-overflow-behavior",
+      "source": "items = [\n    fluentqt.SelectorBarItem(\n        \"Category 1\", fluentqt.Typography.Icons.Folder\n    ),\n    fluentqt.SelectorBarItem(\n        \"Category 2\", fluentqt.Typography.Icons.Document\n    ),\n    fluentqt.SelectorBarItem(\n        \"Category 3\", fluentqt.Typography.Icons.Folder\n    ),\n    fluentqt.SelectorBarItem(\n        \"Category 4\", fluentqt.Typography.Icons.Document\n    ),\n    fluentqt.SelectorBarItem(\n        \"Category 5\", fluentqt.Typography.Icons.Folder\n    ),\n    fluentqt.SelectorBarItem(\n        \"Category 6\", fluentqt.Typography.Icons.Document\n    ),\n]\n\nscroll_buttons = fluentqt.SelectorBar()\nfor item in items:\n    scroll_buttons.addItem(item)\nscroll_buttons.setOverflowBehavior(\n    fluentqt.SelectorBar.OverflowBehavior.ScrollButtons\n)\nscroll_buttons.setFixedWidth(360)\n\nmore_button = fluentqt.SelectorBar()\nfor item in items:\n    more_button.addItem(item)\nmore_button.setOverflowBehavior(fluentqt.SelectorBar.OverflowBehavior.MoreButton)\nmore_button.setFixedWidth(360)\nmore_button.overflowActivated.connect(inspect_hidden_indexes)\n"
+    },
+    {
+      "route_id": "tab-view",
+      "sample_id": "tab-view-hosted-pages",
+      "source": "tabs = fluentqt.TabView()\ntabs.setTabWidthMode(fluentqt.TabView.TabWidthMode.SizeToContent)\ntabs.setTabReorderEnabled(True)\ntabs.setTabsClosable(False)\ntabs.setAddTabButtonVisible(False)\ntabs.addTab(fluentqt.TabViewItem(\"Home\", fluentqt.Typography.Icons.Home))\ntabs.addTab(fluentqt.TabViewItem(\"Details\", fluentqt.Typography.Icons.Document))\ntabs.addTab(fluentqt.TabViewItem(\"Activity\", fluentqt.Typography.Icons.Calendar))\n\nhost = fluentqt.StackContentHost()\nfor index in range(tabs.tabCount()):\n    host.insertOwnedPage(index, create_page(tabs.tabAt(index).text))\n\ntabs.currentChanged.connect(lambda index: host.setCurrentIndex(index, 0, True))\ntabs.tabMoved.connect(host.movePage)\n"
+    },
+    {
+      "route_id": "tab-view",
+      "sample_id": "tab-view-add-close",
+      "source": "tabs = fluentqt.TabView()\ntabs.setCloseButtonOverlayMode(fluentqt.TabView.CloseButtonOverlayMode.Always)\ntabs.setAddTabButtonVisible(True)\ntabs.setTabsClosable(True)\ntabs.addTab(fluentqt.TabViewItem(\"Home\", fluentqt.Typography.Icons.Home, False))\ntabs.addTab(fluentqt.TabViewItem(\"Draft\", fluentqt.Typography.Icons.Document))\ntabs.addTab(fluentqt.TabViewItem(\"Review\", fluentqt.Typography.Icons.Edit))\ntabs.addTab(\n    fluentqt.TabViewItem(\"Disabled\", fluentqt.Typography.Icons.Lock, True, False)\n)\n\ndef add_tab():\n    index = tabs.addTab(\n        fluentqt.TabViewItem(\"Document\", fluentqt.Typography.Icons.Document)\n    )\n    tabs.setSelectedIndex(index)\n\ntabs.addTabRequested.connect(add_tab)\ntabs.tabCloseRequested.connect(tabs.closeTab)\n"
+    },
+    {
+      "route_id": "tab-view",
+      "sample_id": "tab-view-keyboard-accelerators",
+      "source": "tabs = fluentqt.TabView()\ntabs.setAddTabButtonVisible(True)\ntabs.setTabsClosable(True)\ntabs.setKeyboardAcceleratorsEnabled(True)\ntabs.addTab(\n    fluentqt.TabViewItem(\"Shortcut A\", fluentqt.Typography.Icons.Document)\n)\ntabs.addTab(\n    fluentqt.TabViewItem(\"Shortcut B\", fluentqt.Typography.Icons.Document)\n)\ntabs.addTab(\n    fluentqt.TabViewItem(\"Shortcut C\", fluentqt.Typography.Icons.Document)\n)\n\ndef add_tab():\n    index = tabs.addTab(\n        fluentqt.TabViewItem(\"Added\", fluentqt.Typography.Icons.Document)\n    )\n    tabs.setSelectedIndex(index)\n\ntabs.addTabRequested.connect(add_tab)\ntabs.tabCloseRequested.connect(tabs.closeTab)\ndisable_button.clicked.connect(lambda: tabs.setKeyboardAcceleratorsEnabled(False))\nenable_button.clicked.connect(lambda: tabs.setKeyboardAcceleratorsEnabled(True))\n"
+    },
+    {
+      "route_id": "tab-view",
+      "sample_id": "tab-view-width-modes",
+      "source": "def add_tabs(tabs):\n    tabs.addTab(fluentqt.TabViewItem(\"Home\", fluentqt.Typography.Icons.Home))\n    tabs.addTab(\n        fluentqt.TabViewItem(\"Long document\", fluentqt.Typography.Icons.Document)\n    )\n    tabs.addTab(\n        fluentqt.TabViewItem(\"Activity\", fluentqt.Typography.Icons.Calendar)\n    )\n    tabs.setTabsClosable(False)\n    tabs.setAddTabButtonVisible(False)\n\nequal = fluentqt.TabView()\nadd_tabs(equal)\nequal.setTabWidthMode(fluentqt.TabView.TabWidthMode.Equal)\n\nsize_to_content = fluentqt.TabView()\nadd_tabs(size_to_content)\nsize_to_content.setTabWidthMode(fluentqt.TabView.TabWidthMode.SizeToContent)\n\ncompact = fluentqt.TabView()\nadd_tabs(compact)\ncompact.setTabWidthMode(fluentqt.TabView.TabWidthMode.Compact)\ncompact.setSelectedIndex(1)\n"
+    },
+    {
+      "route_id": "tab-view",
+      "sample_id": "tab-view-close-button-modes",
+      "source": "def add_tabs(tabs):\n    tabs.addTab(\n        fluentqt.TabViewItem(\"Primary\", fluentqt.Typography.Icons.AppIconDefault)\n    )\n    tabs.addTab(\n        fluentqt.TabViewItem(\"Reference\", fluentqt.Typography.Icons.Document)\n    )\n    tabs.addTab(\n        fluentqt.TabViewItem(\"Pinned\", fluentqt.Typography.Icons.Pin, False)\n    )\n    tabs.setAddTabButtonVisible(False)\n\nauto_tabs = fluentqt.TabView()\nadd_tabs(auto_tabs)\nauto_tabs.setCloseButtonOverlayMode(fluentqt.TabView.CloseButtonOverlayMode.Auto)\n\nhover_tabs = fluentqt.TabView()\nadd_tabs(hover_tabs)\nhover_tabs.setCloseButtonOverlayMode(\n    fluentqt.TabView.CloseButtonOverlayMode.OnHover\n)\n\nalways_tabs = fluentqt.TabView()\nadd_tabs(always_tabs)\nalways_tabs.setCloseButtonOverlayMode(\n    fluentqt.TabView.CloseButtonOverlayMode.Always\n)\n"
+    },
+    {
+      "route_id": "tab-view",
+      "sample_id": "tab-view-overflow-reorder",
+      "source": "tabs = fluentqt.TabView()\ntabs.setTabWidthMode(fluentqt.TabView.TabWidthMode.SizeToContent)\ntabs.setTabReorderEnabled(True)\ntabs.setTabsClosable(False)\ntabs.setAddTabButtonVisible(False)\ntabs.setFixedWidth(360)\nfor index in range(1, 9):\n    tabs.addTab(\n        fluentqt.TabViewItem(\n            f\"Document {index} with longer title\",\n            fluentqt.Typography.Icons.Document\n        )\n    )\ntabs.tabMoved.connect(keep_page_order_aligned)\n"
+    },
+    {
+      "route_id": "annotated-scrollbar",
+      "sample_id": "annotated-scrollbar-basic",
+      "source": "bar = fluentqt.AnnotatedScrollBar()\nbar.setRange(0, 960)\nbar.setPageStep(120)\nbar.setLabels(\n    [\n    fluentqt.AnnotatedScrollBarLabel(\"2023\", 0, \"October 2023\"),\n    fluentqt.AnnotatedScrollBarLabel(\"2022\", 120, \"October 2022\"),\n    fluentqt.AnnotatedScrollBarLabel(\"2021\", 240, \"October 2021\"),\n    fluentqt.AnnotatedScrollBarLabel(\"2020\", 360, \"October 2020\"),\n    fluentqt.AnnotatedScrollBarLabel(\"2019\", 480, \"October 2019\"),\n    fluentqt.AnnotatedScrollBarLabel(\"2018\", 600, \"October 2018\"),\n    fluentqt.AnnotatedScrollBarLabel(\"2017\", 720, \"October 2017\"),\n    fluentqt.AnnotatedScrollBarLabel(\"2016\", 840, \"October 2016\"),\n    fluentqt.AnnotatedScrollBarLabel(\"2015\", 960, \"October 2015\"),\n    ]\n)\n\ndef detail_for_offset(offset):\n    year = 2023 - max(0, min(offset // 120, 8))\n    return f\"October {year}\"\n\nbar.setDetailLabelProvider(detail_for_offset)\n"
+    },
+    {
+      "route_id": "annotated-scrollbar",
+      "sample_id": "annotated-scrollbar-scrollview",
+      "source": "scroll_view = fluentqt.ScrollView()\nscroll_view.setOwnedContentWidget(color_sections_content)\nscroll_view.setVerticalScrollBarVisibility(\n    fluentqt.ScrollView.ScrollBarVisibility.Hidden\n)\n\nbar = fluentqt.AnnotatedScrollBar()\nbar.setLabels(\n    [\n    fluentqt.AnnotatedScrollBarLabel(\"Azure\", 0),\n    fluentqt.AnnotatedScrollBarLabel(\"Crimson\", 900),\n    fluentqt.AnnotatedScrollBarLabel(\"Cyan\", 2430),\n    fluentqt.AnnotatedScrollBarLabel(\"Fuchsia\", 2700),\n    fluentqt.AnnotatedScrollBarLabel(\"Gold\", 4770),\n    ]\n)\nbar.setDetailLabelProvider(color_section_for_offset)\nbar.connectToScrollView(scroll_view)\n"
+    },
+    {
+      "route_id": "annotated-scrollbar",
+      "sample_id": "annotated-scrollbar-label-density",
+      "source": "from PySide6.QtCore import Qt\n\nbar = fluentqt.AnnotatedScrollBar()\nbar.setRange(0, 1100)\nbar.setMinimumLabelSpacing(28)\nbar.setLabels(month_labels)\n\nheight_slider = fluentqt.Slider(Qt.Orientation.Horizontal)\nheight_slider.setRange(180, 360)\nheight_slider.valueChanged.connect(bar.setFixedHeight)\n"
+    },
+    {
+      "route_id": "pips-pager",
+      "sample_id": "pips-pager-flipview",
+      "source": "flip_view = fluentqt.FlipView()\nflip_view.setShowPageIndicator(False)\nfor page in pages:\n    flip_view.addOwnedPage(page)\n\npager = fluentqt.PipsPager()\npager.setNumberOfPages(flip_view.pageCount())\npager.setMaxVisiblePips(5)\npager.selectedPageIndexChanged.connect(flip_view.setCurrentIndex)\nflip_view.currentIndexChanged.connect(pager.setSelectedPageIndex)\n"
+    },
+    {
+      "route_id": "pips-pager",
+      "sample_id": "pips-pager-orientation",
+      "source": "from PySide6.QtCore import Qt\n\npager = fluentqt.PipsPager()\npager.setNumberOfPages(7)\npager.setSelectedPageIndex(3)\npager.setPreviousButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\npager.setNextButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\n\ndef apply_orientation(orientation):\n    pager.setOrientation(orientation)\n    pager.setFixedSize(pager.sizeHint())\n\nhorizontal_button.clicked.connect(\n    lambda: apply_orientation(Qt.Orientation.Horizontal)\n)\nvertical_button.clicked.connect(lambda: apply_orientation(Qt.Orientation.Vertical))\n"
+    },
+    {
+      "route_id": "pips-pager",
+      "sample_id": "pips-pager-button-visibility",
+      "source": "def configure(pager, visibility):\n    pager.setNumberOfPages(7)\n    pager.setSelectedPageIndex(3)\n    pager.setPreviousButtonVisibility(visibility)\n    pager.setNextButtonVisibility(visibility)\n\ncollapsed = fluentqt.PipsPager()\nconfigure(\n    collapsed,\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Collapsed\n)\nvisible = fluentqt.PipsPager()\nconfigure(\n    visible,\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\nhover = fluentqt.PipsPager()\nconfigure(\n    hover,\n    fluentqt.PipsPager.PipsPagerButtonVisibility.VisibleOnPointerOver\n)\n"
+    },
+    {
+      "route_id": "pips-pager",
+      "sample_id": "pips-pager-visible-window",
+      "source": "pager = fluentqt.PipsPager()\npager.setNumberOfPages(10)\npager.setMaxVisiblePips(5)\npager.setPreviousButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\npager.setNextButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\ndef update_status(*unused):\n    status.setText(\n        \"Selected: {0}, first visible page: {1}\".format(\n            pager.selectedPageIndex(),\n            pager.firstVisiblePage()\n        )\n    )\nfirst.clicked.connect(lambda: pager.setSelectedPageIndex(0))\nmiddle.clicked.connect(lambda: pager.setSelectedPageIndex(4))\nlast.clicked.connect(lambda: pager.setSelectedPageIndex(9))\npager.selectedPageIndexChanged.connect(update_status)\n"
+    },
+    {
+      "route_id": "pips-pager",
+      "sample_id": "pips-pager-metrics-animation",
+      "source": "pager = fluentqt.PipsPager()\npager.setNumberOfPages(8)\npager.setSelectedPageIndex(2)\npager.setMaxVisiblePips(6)\npager.setPipCellSize(16)\npager.setInactivePipDiameter(6)\npager.setSelectedPipDiameter(10)\npager.setNavigationButtonSize(30)\npager.setNavigationIconSize(12)\npager.setSelectionAnimationDuration(420)\npager.setPreviousButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\npager.setNextButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\ndef update_status(*unused):\n    del unused\n    status.setText(\n        \"Page {0} of {1}\".format(\n            pager.selectedPageIndex() + 1,\n            pager.numberOfPages()\n        )\n    )\nprevious.clicked.connect(pager.goToPreviousPage)\nnext_button.clicked.connect(pager.goToNextPage)\npager.selectedPageIndexChanged.connect(update_status)\n"
+    },
+    {
+      "route_id": "pips-pager",
+      "sample_id": "pips-pager-disabled-empty",
+      "source": "disabled = fluentqt.PipsPager()\ndisabled.setNumberOfPages(6)\ndisabled.setSelectedPageIndex(2)\ndisabled.setPreviousButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\ndisabled.setNextButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\ndisabled.setEnabled(False)\nempty = fluentqt.PipsPager()\nempty.setNumberOfPages(0)\nempty.setPreviousButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\nempty.setNextButtonVisibility(\n    fluentqt.PipsPager.PipsPagerButtonVisibility.Visible\n)\n"
+    },
+    {
+      "route_id": "scrollbar",
+      "sample_id": "scrollbar-basic",
+      "source": "from PySide6.QtCore import Qt\n\nhorizontal = fluentqt.ScrollBar(Qt.Orientation.Horizontal)\nhorizontal.setRange(0, 1000)\nhorizontal.setPageStep(100)\nhorizontal.setValue(420)\nhorizontal.setOpacity(1.0)\nstatus = fluentqt.Label('Value: 420')\nvertical = fluentqt.ScrollBar(Qt.Orientation.Vertical)\nvertical.setRange(0, 1000)\nvertical.setPageStep(100)\nvertical.setValue(420)\nvertical.setOpacity(1.0)\ndef sync_vertical(value):\n    vertical.setValue(value)\n    status.setText(f'Value: {value}')\ndef sync_horizontal(value):\n    horizontal.setValue(value)\n    status.setText(f'Value: {value}')\nhorizontal.valueChanged.connect(sync_vertical)\nvertical.valueChanged.connect(sync_horizontal)\n"
+    },
+    {
+      "route_id": "scrollbar",
+      "sample_id": "scrollbar-thickness",
+      "source": "from PySide6.QtCore import Qt\n\nthin = fluentqt.ScrollBar(Qt.Orientation.Horizontal)\nthin.setRange(0, 1000)\nthin.setPageStep(100)\nthin.setValue(220)\nthin.setThickness(6)\nthin.setOpacity(1.0)\n\nstandard = fluentqt.ScrollBar(Qt.Orientation.Horizontal)\nstandard.setRange(0, 1000)\nstandard.setPageStep(100)\nstandard.setValue(420)\nstandard.setThickness(7)\nstandard.setOpacity(1.0)\n\nlarge = fluentqt.ScrollBar(Qt.Orientation.Horizontal)\nlarge.setRange(0, 1000)\nlarge.setPageStep(100)\nlarge.setValue(640)\nlarge.setThickness(24)\nlarge.setOpacity(1.0)\n"
+    },
+    {
+      "route_id": "scrollbar",
+      "sample_id": "scrollbar-opacity",
+      "source": "from PySide6.QtCore import Qt\n\nvisible = fluentqt.ScrollBar(Qt.Orientation.Horizontal)\nvisible.setRange(0, 1000)\nvisible.setPageStep(100)\nvisible.setValue(420)\nvisible.setOpacity(1.0)\n\nsubdued = fluentqt.ScrollBar(Qt.Orientation.Horizontal)\nsubdued.setRange(0, 1000)\nsubdued.setPageStep(100)\nsubdued.setValue(420)\nsubdued.setOpacity(0.45)\n"
+    },
+    {
+      "route_id": "scroll-view",
+      "sample_id": "scroll-view-content-zoom",
+      "source": "from PySide6.QtCore import QSize\n\nscroll_view = fluentqt.ScrollView()\nscroll_view.setFixedSize(420, 240)\nscroll_view.setOwnedContentWidget(\n    ScrollViewDemoCanvas(QSize(760, 520), \"Content canvas\")\n)\nscroll_view.setZoomMode(fluentqt.ScrollView.ZoomMode.Enabled)\nscroll_view.setMinZoomFactor(0.5)\nscroll_view.setMaxZoomFactor(2.0)\nscroll_view.setHorizontalScrollBarVisibility(\n    fluentqt.ScrollView.ScrollBarVisibility.Auto\n)\nscroll_view.setVerticalScrollBarVisibility(\n    fluentqt.ScrollView.ScrollBarVisibility.Auto\n)\nzoom_in.clicked.connect(lambda: scroll_view.zoomBy(1.25, True))\nzoom_out.clicked.connect(lambda: scroll_view.zoomBy(0.8, True))\nreset.clicked.connect(lambda: scroll_view.resetZoom(True))\n"
+    },
+    {
+      "route_id": "scroll-view",
+      "sample_id": "scroll-view-scrollbar-policies",
+      "source": "scroll_view = fluentqt.ScrollView()\n\ndef apply_auto_bars():\n    scroll_view.setHorizontalScrollMode(fluentqt.ScrollView.ScrollMode.Auto)\n    scroll_view.setVerticalScrollMode(fluentqt.ScrollView.ScrollMode.Auto)\n    scroll_view.setHorizontalScrollBarVisibility(\n        fluentqt.ScrollView.ScrollBarVisibility.Auto\n    )\n    scroll_view.setVerticalScrollBarVisibility(\n        fluentqt.ScrollView.ScrollBarVisibility.Auto\n    )\n\ndef apply_visible_bars():\n    scroll_view.setHorizontalScrollMode(fluentqt.ScrollView.ScrollMode.Enabled)\n    scroll_view.setVerticalScrollMode(fluentqt.ScrollView.ScrollMode.Enabled)\n    scroll_view.setHorizontalScrollBarVisibility(\n        fluentqt.ScrollView.ScrollBarVisibility.Visible\n    )\n    scroll_view.setVerticalScrollBarVisibility(\n        fluentqt.ScrollView.ScrollBarVisibility.Visible\n    )\n\ndef apply_hidden_horizontal():\n    scroll_view.setHorizontalScrollMode(fluentqt.ScrollView.ScrollMode.Enabled)\n    scroll_view.setHorizontalScrollBarVisibility(\n        fluentqt.ScrollView.ScrollBarVisibility.Hidden\n    )\n\ndef apply_vertical_disabled():\n    scroll_view.setVerticalScrollMode(fluentqt.ScrollView.ScrollMode.Disabled)\n    scroll_view.setVerticalScrollBarVisibility(\n        fluentqt.ScrollView.ScrollBarVisibility.Disabled\n    )\n"
+    },
+    {
+      "route_id": "scroll-view",
+      "sample_id": "scroll-view-programmatic-scroll",
+      "source": "scroll_view = fluentqt.ScrollView()\nscroll_view.setFixedSize(420, 250)\nscroll_view.setOwnedContentWidget(make_scroll_view_stack_content())\ntop.clicked.connect(lambda: scroll_view.scrollTo(0, 0, True))\ncenter.clicked.connect(\n    lambda: scroll_view.scrollTo(\n        scroll_view.scrollableWidth() // 2,\n        scroll_view.scrollableHeight() // 2,\n        True\n    )\n)\nend.clicked.connect(\n    lambda: scroll_view.scrollTo(\n        scroll_view.scrollableWidth(),\n        scroll_view.scrollableHeight(),\n        True\n    )\n)\nnudge.clicked.connect(lambda: scroll_view.scrollBy(0, 120, True))\n"
+    },
+    {
+      "route_id": "scroll-view",
+      "sample_id": "scroll-view-constant-velocity",
+      "source": "from PySide6.QtCore import QTimer\n\nscroll_view = fluentqt.ScrollView()\nscroll_view.setOwnedContentWidget(make_scroll_view_stack_content())\ntimer = QTimer(scroll_view)\ntimer.setInterval(50)\ntimer.setProperty('velocity', 0)\ntimer.timeout.connect(\n    lambda: scroll_view.scrollBy(0, int(timer.property(\"velocity\")), False)\n)\ndef update_status(*unused):\n    status.setText(\n        \"Velocity: {0} px/tick - {1}\".format(\n            timer.property(\"velocity\"),\n            scroll_view_offset_text(scroll_view)\n        )\n    )\ndef set_velocity(velocity):\n    timer.setProperty('velocity', velocity)\n    timer.stop() if velocity == 0 else timer.start()\nscroll_view.scrollPositionChanged.connect(update_status)\nup.clicked.connect(lambda: set_velocity(-12))\nstop.clicked.connect(lambda: set_velocity(0))\ndown.clicked.connect(lambda: set_velocity(12))\n"
+    },
+    {
+      "route_id": "scroll-view",
+      "sample_id": "scroll-view-scroll-chaining",
+      "source": "from PySide6.QtCore import QSize\n\ndefault_view = fluentqt.ScrollView(default_column)\ndefault_view.setOwnedContentWidget(\n    make_scroll_view_stack_content(image_size=QSize(190, 100))\n)\ndefault_view.setScrollChainingEnabled(True)\ncontained_view = fluentqt.ScrollView(contained_column)\ncontained_view.setOwnedContentWidget(\n    make_scroll_view_stack_content(image_size=QSize(190, 100))\n)\ncontained_view.setScrollChainingEnabled(False)\n"
+    },
+    {
+      "route_id": "scroll-view",
+      "sample_id": "scroll-view-zoom-aware-content",
+      "source": "from PySide6.QtCore import QSizeF\n\nclass ZoomAwareCanvas(fluentqt.ScrollViewZoomAwareWidget):\n    def scrollViewUnscaledSize(self):\n        return QSizeF(560, 360)\n\n    def setScrollViewZoomFactor(self, factor):\n        self.resize(round(560 * factor), round(360 * factor))\n\nscroll_view = fluentqt.ScrollView()\nscroll_view.setZoomMode(fluentqt.ScrollView.ZoomMode.Enabled)\nscroll_view.setOwnedContentWidget(ZoomAwareCanvas())\nscroll_view.zoomTo(1.5, True)\n"
+    },
+    {
+      "route_id": "avatar",
+      "sample_id": "avatar-initials-sizes",
+      "source": "small = fluentqt.Avatar(\"Ada Lovelace\")\nsmall.setAvatarSize(fluentqt.Avatar.AvatarSize.Small)\n\nmedium = fluentqt.Avatar(\"Grace Hopper\")\nmedium.setAvatarSize(fluentqt.Avatar.AvatarSize.Medium)\n\nlarge = fluentqt.Avatar(\"Lin Chen\")\nlarge.setAvatarSize(fluentqt.Avatar.AvatarSize.Large)\n\nextra_large = fluentqt.Avatar(\"Sam Rivera\")\nextra_large.setAvatarSize(fluentqt.Avatar.AvatarSize.ExtraLarge)\n"
+    },
+    {
+      "route_id": "avatar",
+      "sample_id": "avatar-image-presence",
+      "source": "from PySide6.QtGui import QPixmap\n\nprofile = fluentqt.Avatar('Product account', row)\nprofile.setAvatarSize(fluentqt.Avatar.AvatarSize.ExtraLarge)\nprofile.setImage(QPixmap(str(asset_path('app-icon.png'))))\nprofile.setPresence(fluentqt.Avatar.PresenceStatus.Available)\naway = fluentqt.Avatar('Alex Morgan', row)\naway.setAvatarSize(fluentqt.Avatar.AvatarSize.Large)\naway.setShape(fluentqt.Avatar.AvatarShape.Square)\naway.setPresence(fluentqt.Avatar.PresenceStatus.Away)\nbusy = fluentqt.Avatar('Jordan Lee', row)\nbusy.setAvatarSize(fluentqt.Avatar.AvatarSize.Large)\nbusy.setPresence(fluentqt.Avatar.PresenceStatus.Busy)\noffline = fluentqt.Avatar('Taylor Reed', row)\noffline.setAvatarSize(fluentqt.Avatar.AvatarSize.Large)\noffline.setPresence(fluentqt.Avatar.PresenceStatus.Offline)\n"
+    },
+    {
+      "route_id": "info-badge",
+      "sample_id": "info-badge-display-modes",
+      "source": "dot_badge = fluentqt.InfoBadge(row)\nicon_badge = fluentqt.InfoBadge(row)\nicon_badge.setIconGlyph(fluentqt.Typography.Icons.Mail)\nvalue_badge = fluentqt.InfoBadge(row)\nvalue_badge.setValue(7)\nexplicit_dot = fluentqt.InfoBadge(row)\nexplicit_dot.setDisplayMode(fluentqt.InfoBadge.InfoBadgeDisplayMode.Dot)\n"
+    },
+    {
+      "route_id": "info-badge",
+      "sample_id": "info-badge-status-colors",
+      "source": "success = fluentqt.InfoBadge()\nsuccess.setDisplayMode(fluentqt.InfoBadge.InfoBadgeDisplayMode.Value)\nsuccess.setValue(5)\nsuccess.setStatus(fluentqt.InfoBadge.InfoBadgeStatus.Success)\n\ncritical = fluentqt.InfoBadge()\ncritical.setDisplayMode(fluentqt.InfoBadge.InfoBadgeDisplayMode.Value)\ncritical.setValue(5)\ncritical.setStatus(fluentqt.InfoBadge.InfoBadgeStatus.Critical)\n"
+    },
+    {
+      "route_id": "info-badge",
+      "sample_id": "info-badge-custom-metrics",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtGui import QColor\n\ninbox_button = fluentqt.Button(\"Inbox\")\nbadge = fluentqt.InfoBadge(inbox_button)\nbadge.setDisplayMode(fluentqt.InfoBadge.InfoBadgeDisplayMode.Icon)\nbadge.setIconGlyph(fluentqt.Typography.Icons.Mail)\nbadge.setCustomBackgroundColor(QColor(\"#C42B1C\"))\nbadge.setCustomTextColor(Qt.GlobalColor.white)\nbadge.setBadgeHeight(18)\nbadge.setIconGlyphSize(12)\n"
+    },
+    {
+      "route_id": "info-badge",
+      "sample_id": "info-badge-accessibility",
+      "source": "inbox = fluentqt.Button(\"Inbox\")\ninbox.setAccessibleName(\"Inbox\")\nbadge = fluentqt.InfoBadge(inbox)\nbadge.setDisplayMode(fluentqt.InfoBadge.InfoBadgeDisplayMode.Value)\nbadge.setAccessibleName(\"Unread messages\")\nbadge.setValue(3)\n\nincrement = fluentqt.Button(\"Increment\")\ntoggle = fluentqt.Button(\"Toggle badge\")\nstatus = fluentqt.Label(\"Unread value: 3\")\n\ndef increment_value():\n    badge.setValue(badge.value() + 1)\n    status.setText(f\"Unread value: {badge.value()}\")\n\ndef toggle_badge():\n    show_badge = badge.isHidden()\n    badge.setVisible(show_badge)\n    status.setText(\"Badge visible\" if show_badge else \"Badge hidden\")\n\nincrement.clicked.connect(increment_value)\ntoggle.clicked.connect(toggle_badge)\n"
+    },
+    {
+      "route_id": "info-bar",
+      "sample_id": "info-bar-severities",
+      "source": "info = fluentqt.InfoBar()\ninfo.setSeverity(fluentqt.InfoBar.InfoBarSeverity.Informational)\ninfo.setTitle(\"Update available\")\ninfo.setMessage(\"Version 3.2 is ready.\")\n\nsuccess = fluentqt.InfoBar()\nsuccess.setSeverity(fluentqt.InfoBar.InfoBarSeverity.Success)\nsuccess.setTitle(\"Saved\")\nsuccess.setMessage(\"All changes were saved.\")\n\nwarning = fluentqt.InfoBar()\nwarning.setSeverity(fluentqt.InfoBar.InfoBarSeverity.Warning)\nwarning.setTitle(\"Storage almost full\")\nwarning.setMessage(\"Clear space before syncing.\")\n\nerror = fluentqt.InfoBar()\nerror.setSeverity(fluentqt.InfoBar.InfoBarSeverity.Error)\nerror.setTitle(\"Upload failed\")\nerror.setMessage(\"The document could not be saved.\")\n"
+    },
+    {
+      "route_id": "info-bar",
+      "sample_id": "info-bar-action-layout",
+      "source": "retry_button = fluentqt.Button(\"Retry\")\n\ninfo_bar = fluentqt.InfoBar()\ninfo_bar.setSeverity(fluentqt.InfoBar.InfoBarSeverity.Warning)\ninfo_bar.setSingleLine(False)\ninfo_bar.setTitle(\"Sync paused\")\ninfo_bar.setMessage(\"Some files need attention before the next sync can finish.\")\ninfo_bar.setActionWidget(retry_button)\nkeep_info_bar_open(info_bar)\n"
+    },
+    {
+      "route_id": "info-bar",
+      "sample_id": "info-bar-open-close",
+      "source": "status = fluentqt.Label(\"Visible\")\nopen_button = fluentqt.Button(\"Show again\")\n\ninfo_bar = fluentqt.InfoBar()\ninfo_bar.setTitle(\"Draft saved\")\ninfo_bar.setMessage(\"You can safely leave this page.\")\ninfo_bar.setIsClosable(True)\n\ndef reopen():\n    info_bar.setIsOpen(True)\n    status.setText(\"Visible\")\n\nopen_button.clicked.connect(reopen)\ninfo_bar.closed.connect(lambda: status.setText(\"Dismissed\"))\n"
+    },
+    {
+      "route_id": "progress-bar",
+      "sample_id": "progress-bar-determinate-value",
+      "source": "import math\n\nprogress_bar = fluentqt.ProgressBar()\nprogress_bar.setRange(0, 100)\nprogress_bar.setBarWidth(320)\n\nprogress_box = fluentqt.NumberBox()\nprogress_box.setHeader(\"Progress\")\nprogress_box.setRange(0, 100)\nprogress_box.setSmallChange(1)\nprogress_box.setLargeChange(10)\nprogress_box.setDisplayPrecision(0)\nprogress_box.setSpinButtonPlacementMode(\n    fluentqt.NumberBox.SpinButtonPlacementMode.Inline\n)\n\nstatus = fluentqt.Label(\"Progress: 44%\")\nstatus.setFixedWidth(124)\n\ndef update_progress(value):\n    progress_bar.setValue(value if math.isfinite(value) else 0.0)\n    status.setText(f\"Progress: {progress_bar.progressText()}%\")\n\nprogress_box.valueChanged.connect(update_progress)\nprogress_box.setValue(44)\n"
+    },
+    {
+      "route_id": "progress-bar",
+      "sample_id": "progress-bar-states",
+      "source": "running = fluentqt.ProgressBar()\nrunning.setIsIndeterminate(True)\npaused = fluentqt.ProgressBar()\npaused.setValue(65)\npaused.setShowPaused(True)\nerror = fluentqt.ProgressBar()\nerror.setValue(65)\nerror.setShowError(True)\n"
+    },
+    {
+      "route_id": "progress-bar",
+      "sample_id": "progress-bar-metrics",
+      "source": "thick = fluentqt.ProgressBar()\nthick.setValue(70)\nthick.setBarWidth(280)\nthick.setTrackThickness(6.0)\nno_rail = fluentqt.ProgressBar()\nno_rail.setValue(70)\nno_rail.setBarWidth(280)\nno_rail.setRailVisible(False)\n"
+    },
+    {
+      "route_id": "progress-ring",
+      "sample_id": "progress-ring-indeterminate-sizes",
+      "source": "small = fluentqt.ProgressRing(row)\nsmall.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Small)\nsmall.setIsActive(True)\nmedium = fluentqt.ProgressRing(row)\nmedium.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Medium)\nmedium.setIsActive(True)\nlarge = fluentqt.ProgressRing(row)\nlarge.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Large)\nlarge.setIsActive(True)\n"
+    },
+    {
+      "route_id": "progress-ring",
+      "sample_id": "progress-ring-determinate-value",
+      "source": "import math\n\nring = fluentqt.ProgressRing()\nring.setIsIndeterminate(False)\nring.setIsActive(True)\nring.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Large)\nring.setBackgroundVisible(True)\n\nprogress_box = fluentqt.NumberBox()\nprogress_box.setHeader(\"Progress\")\nprogress_box.setRange(0, 100)\nprogress_box.setSmallChange(1)\nprogress_box.setLargeChange(10)\nprogress_box.setDisplayPrecision(0)\nprogress_box.setSpinButtonPlacementMode(\n    fluentqt.NumberBox.SpinButtonPlacementMode.Inline\n)\n\nstatus = fluentqt.Label(\"Value: 44%\")\nstatus.setFixedWidth(124)\n\ndef update_progress(value):\n    progress = int(value) if math.isfinite(value) else 0\n    ring.setValue(progress)\n    status.setText(f\"Value: {progress}%\")\n\nprogress_box.valueChanged.connect(update_progress)\nprogress_box.setValue(44)\n"
+    },
+    {
+      "route_id": "progress-ring",
+      "sample_id": "progress-ring-status",
+      "source": "running = fluentqt.ProgressRing()\nrunning.setIsIndeterminate(False)\nrunning.setIsActive(True)\nrunning.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Large)\nrunning.setValue(65)\nrunning.setStatus(fluentqt.ProgressRing.ProgressRingStatus.Running)\nrunning.setBackgroundVisible(True)\n\npaused = fluentqt.ProgressRing()\npaused.setIsIndeterminate(False)\npaused.setIsActive(True)\npaused.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Large)\npaused.setValue(65)\npaused.setStatus(fluentqt.ProgressRing.ProgressRingStatus.Paused)\npaused.setBackgroundVisible(True)\n\nerror = fluentqt.ProgressRing()\nerror.setIsIndeterminate(False)\nerror.setIsActive(True)\nerror.setRingSize(fluentqt.ProgressRing.ProgressRingSize.Large)\nerror.setValue(65)\nerror.setStatus(fluentqt.ProgressRing.ProgressRingStatus.Error)\nerror.setBackgroundVisible(True)\n"
+    },
+    {
+      "route_id": "shimmer",
+      "sample_id": "shimmer-templates",
+      "source": "image = fluentqt.Shimmer()\nimage.setShimmerTemplate(fluentqt.Shimmer.ShimmerTemplate.ImageCard)\nimage.setFixedSize(160, 92)\n\navatar_row = fluentqt.Shimmer()\navatar_row.setShimmerTemplate(fluentqt.Shimmer.ShimmerTemplate.AvatarTextRow)\navatar_row.setFixedSize(180, 56)\n\ntext = fluentqt.Shimmer()\ntext.setShimmerTemplate(fluentqt.Shimmer.ShimmerTemplate.TextBlock)\ntext.setFixedSize(220, 72)\n"
+    },
+    {
+      "route_id": "shimmer",
+      "sample_id": "shimmer-custom-elements",
+      "source": "from PySide6.QtCore import QRectF\n\nshimmer = fluentqt.Shimmer()\nshimmer.setFixedSize(330, 160)\nshimmer.setElements(\n    [\n    fluentqt.Shimmer.Element(\n    fluentqt.Shimmer.Shape.RoundedRect,\n    QRectF(0, 0, 330, 82),\n    8.0,\n    ),\n    fluentqt.Shimmer.Element(\n    fluentqt.Shimmer.Shape.Circle,\n    QRectF(0, 104, 36, 36),\n    ),\n    fluentqt.Shimmer.Element(\n    fluentqt.Shimmer.Shape.Line,\n    QRectF(50, 106, 180, 12),\n    ),\n    fluentqt.Shimmer.Element(\n    fluentqt.Shimmer.Shape.Line,\n    QRectF(50, 128, 124, 12),\n    ),\n    fluentqt.Shimmer.Element(\n    fluentqt.Shimmer.Shape.RoundedRect,\n    QRectF(250, 106, 72, 30),\n    6.0,\n    ),\n    ]\n)\n"
+    },
+    {
+      "route_id": "shimmer",
+      "sample_id": "shimmer-static-phase",
+      "source": "shimmer = fluentqt.Shimmer()\nshimmer.setShimmerTemplate(fluentqt.Shimmer.ShimmerTemplate.TextBlock)\nshimmer.setFixedSize(260, 72)\nshimmer.setAnimationEnabled(False)\nshimmer.setShimmerProgress(0.42)\n"
+    },
+    {
+      "route_id": "toast",
+      "sample_id": "toast-severity",
+      "source": "toast = fluentqt.Toast()\ntoast.setDuration(2200)\n\ninfo_button = fluentqt.Button(\"Info\")\ndef show_info():\n    toast.setMessage(\"Draft saved locally\")\n    toast.setSeverity(fluentqt.Toast.Severity.Informational)\n    toast.present(info_button)\ninfo_button.clicked.connect(show_info)\n\nsuccess_button = fluentqt.Button(\"Success\")\ndef show_success():\n    toast.setMessage(\"Changes published\")\n    toast.setSeverity(fluentqt.Toast.Severity.Success)\n    toast.present(success_button)\nsuccess_button.clicked.connect(show_success)\n\nwarning_button = fluentqt.Button(\"Warning\")\ndef show_warning():\n    toast.setMessage(\"Connection is unstable\")\n    toast.setSeverity(fluentqt.Toast.Severity.Warning)\n    toast.present(warning_button)\nwarning_button.clicked.connect(show_warning)\n\nerror_button = fluentqt.Button(\"Error\")\ndef show_error():\n    toast.setMessage(\"Upload could not finish\")\n    toast.setSeverity(fluentqt.Toast.Severity.Error)\n    toast.present(error_button)\nerror_button.clicked.connect(show_error)\n"
+    },
+    {
+      "route_id": "toast",
+      "sample_id": "toast-title-placement",
+      "source": "toast = fluentqt.Toast()\ntoast.setTitle(\"Sync complete\")\ntoast.setMessage(\"12 files are now available offline.\")\ntoast.setSeverity(fluentqt.Toast.Severity.Success)\ntoast.setDuration(2600)\n\ndef present(button, placement):\n    toast.setPlacement(placement)\n    toast.present(button)\n\ntop_start = fluentqt.Button(\"Top start\")\ntop_start.clicked.connect(\n    lambda: present(top_start, fluentqt.Toast.Placement.TopStart)\n)\ntop = fluentqt.Button(\"Top\")\ntop.clicked.connect(lambda: present(top, fluentqt.Toast.Placement.Top))\ntop_end = fluentqt.Button(\"Top end\")\ntop_end.clicked.connect(lambda: present(top_end, fluentqt.Toast.Placement.TopEnd))\nbottom_start = fluentqt.Button(\"Bottom start\")\nbottom_start.clicked.connect(\n    lambda: present(bottom_start, fluentqt.Toast.Placement.BottomStart)\n)\nbottom = fluentqt.Button(\"Bottom\")\nbottom.clicked.connect(lambda: present(bottom, fluentqt.Toast.Placement.Bottom))\nbottom_end = fluentqt.Button(\"Bottom end\")\nbottom_end.clicked.connect(\n    lambda: present(bottom_end, fluentqt.Toast.Placement.BottomEnd)\n)\n"
+    },
+    {
+      "route_id": "toast",
+      "sample_id": "toast-stacking",
+      "source": "fluentqt.Toast.setMaximumVisible(3)\n\nfluentqt.Toast.showToast(\n    host,\n    \"Draft saved\",\n    fluentqt.Toast.Severity.Informational\n)\nfluentqt.Toast.showToast(\n    host,\n    \"Upload finished\",\n    fluentqt.Toast.Severity.Success\n)\nfluentqt.Toast.showToast(\n    host,\n    \"Connection is unstable\",\n    fluentqt.Toast.Severity.Warning,\n    2200,\n    fluentqt.Toast.Placement.TopEnd\n)\n"
+    },
+    {
+      "route_id": "toast",
+      "sample_id": "toast-action-lifecycle",
+      "source": "from PySide6.QtGui import QAction\n\nretry = QAction(\"Retry\")\ntoast = fluentqt.Toast()\ntoast.setAction(retry)\ntoast.setPauseOnHoverEnabled(True)\ntoast.setDuration(5000)\n\nshow_toast = fluentqt.Button(\"Show actionable toast\")\nstatus = fluentqt.Label(\"Ready\")\n\ndef present():\n    toast.setMessage(\"Upload failed. Retry when ready.\")\n    toast.setSeverity(fluentqt.Toast.Severity.Error)\n    toast.present(show_toast)\n    status.setText(\"Toast open; hover pauses timeout\")\n\nshow_toast.clicked.connect(present)\nretry.triggered.connect(lambda: status.setText(\"Retry requested\"))\ntoast.dismissedWithReason.connect(\n    lambda reason: status.setText(f\"Dismissed: {reason.name}\")\n)\n"
+    },
+    {
+      "route_id": "toast",
+      "sample_id": "toast-update-key",
+      "source": "advance = fluentqt.Button(\"Advance upload\")\nstatus = fluentqt.Label(\"Progress: 0%\")\nadvance.setProperty(\"progress\", 0)\n\ndef advance_upload():\n    current = int(advance.property(\"progress\"))\n    progress = 25 if current >= 100 else current + 25\n    advance.setProperty(\"progress\", progress)\n    fluentqt.Toast.showOrUpdateToast(\n        advance,\n        \"upload\",\n        \"Upload complete\" if progress == 100 else f\"Uploading: {progress}%\",\n        fluentqt.Toast.Severity.Success\n        if progress == 100\n        else fluentqt.Toast.Severity.Informational,\n        5000,\n        fluentqt.Toast.Placement.TopEnd\n    )\n    status.setText(f\"Progress: {progress}%\")\n\nadvance.clicked.connect(advance_upload)\n"
+    },
+    {
+      "route_id": "tooltip",
+      "sample_id": "tooltip-hover",
+      "source": "button = fluentqt.Button(\"Archive\")\ntooltip = fluentqt.ToolTip.attach(\n    button,\n    \"Move the selected message to Archive\",\n    fluentqt.ToolTip.Placement.Above\n)\n"
+    },
+    {
+      "route_id": "tooltip",
+      "sample_id": "tooltip-margins-font",
+      "source": "from PySide6.QtCore import QMargins\nfrom PySide6.QtGui import QFont\n\nbutton = fluentqt.Button('Custom tip')\ntooltip = fluentqt.ToolTip.attach(\n    button,\n    \"Larger content margins\",\n    fluentqt.ToolTip.Placement.Right\n)\ntooltip.setMargins(QMargins(20, 10, 20, 10))\nfont = QFont()\nfont.setPixelSize(15)\nfont.setItalic(True)\ntooltip.setFont(font)\n"
+    },
+    {
+      "route_id": "tooltip",
+      "sample_id": "tooltip-animation",
+      "source": "button = fluentqt.Button(\"Instant tip\")\ntooltip = fluentqt.ToolTip.attach(\n    button,\n    \"Animation disabled\",\n    fluentqt.ToolTip.Placement.Above\n)\ntooltip.setAnimationEnabled(False)\n"
+    },
+    {
+      "route_id": "auto-suggest-box",
+      "sample_id": "auto-suggest-box-suggestions",
+      "source": "box = fluentqt.AutoSuggestBox()\nbox.setHeader('Fruit')\nbox.setPlaceholderText('Type a fruit name')\nbox.setSuggestions(\n    [\n    \"Apple\",\n    \"Apricot\",\n    \"Banana\",\n    \"Blueberry\",\n    \"Cherry\",\n    \"Grape\",\n    \"Orange\",\n    \"Strawberry\",\n    ]\n)\ndef reason_name(reason):\n    name = reason.name\nbox.textChangedWithReason.connect(\n    lambda text, reason: status.setText(\n        f\"Text: {text}, reason: {reason_name(reason)}\"\n    )\n)\nbox.suggestionChosen.connect(lambda item: status.setText(f'Chosen: {item}'))\nbox.querySubmitted.connect(\n    lambda query, chosen: status.setText(f\"Submitted: {query} ({chosen})\")\n)\n"
+    },
+    {
+      "route_id": "auto-suggest-box",
+      "sample_id": "auto-suggest-box-query-placement",
+      "source": "box = fluentqt.AutoSuggestBox()\nbox.setPlaceholderText('Filter commands')\nbox.setSuggestions(['Open', 'Open recent', 'Save', 'Save as', 'Settings', 'Sync'])\nbox.setQueryButtonPlacement(fluentqt.AutoSuggestBox.QueryButtonPlacement.Left)\nbox.setQueryIconGlyph(fluentqt.Typography.Icons.Filter)\nbox.setInputHeight(28)\nbox.setQueryButtonSize(20)\nbox.setClearButtonSize(18)\nbox.setSuggestionFontRole(fluentqt.FontRole.Caption)\nbox.setSuggestionItemHeight(28)\nbox.querySubmitted.connect(\n    lambda query, _chosen: status.setText(f'Filter: {query}')\n)\n"
+    },
+    {
+      "route_id": "label",
+      "sample_id": "label-typography",
+      "source": "roles = (\n    (fluentqt.FontRole.Caption, \"Caption\"),\n    (fluentqt.FontRole.Body, \"Body\"),\n    (fluentqt.FontRole.BodyStrong, \"Body strong\"),\n    (fluentqt.FontRole.Subtitle, \"Subtitle\"),\n    (fluentqt.FontRole.Title, \"Title\"),\n)\nfor role, text in roles:\n    label = fluentqt.Label(text)\n    label.setFluentTypography(role)\n"
+    },
+    {
+      "route_id": "label",
+      "sample_id": "label-elide",
+      "source": "from PySide6.QtCore import Qt\n\ncomponent_label = fluentqt.Label(\n    \"src/components/textfields/examples/LabelSample.cpp\"\n)\ncomponent_label.setTextElideMode(Qt.TextElideMode.ElideMiddle)\ncomponent_label.setFixedWidth(260)\n\nrelease_label = fluentqt.Label(\"Quarterly release summary for the planning review\")\nrelease_label.setTextElideMode(Qt.TextElideMode.ElideRight)\nrelease_label.setFixedWidth(190)\n\nartifact_label = fluentqt.Label(\"fluent-qt-release-textfields-label-preview-bundle\")\nartifact_label.setTextElideMode(Qt.TextElideMode.ElideLeft)\nartifact_label.setFixedWidth(240)\n"
+    },
+    {
+      "route_id": "line-edit",
+      "sample_id": "line-edit-clear",
+      "source": "line_edit = fluentqt.LineEdit()\nline_edit.setPlaceholderText('Enter your name')\nline_edit.setClearButtonEnabled(True)\nline_edit.textChanged.connect(\n    lambda text: status.setText(f'Text length: {len(text)}')\n)\n"
+    },
+    {
+      "route_id": "line-edit",
+      "sample_id": "line-edit-editing-commands",
+      "source": "Command = fluentqt.EditingCommandRouter.Command\nrouter = fluentqt.EditingCommandRouter(window)\nmenu_bar = fluentqt.FluentMenuBar()\nmenu_bar.setBackgroundVisible(False)\nmenu_bar.setFixedWidth(360)\n\nedit_menu = fluentqt.FluentMenu(\"Edit\", menu_bar)\nedit_menu.addAction(router.action(Command.Undo))\nedit_menu.addAction(router.action(Command.Redo))\nedit_menu.addSeparator()\nedit_menu.addAction(router.action(Command.Cut))\nedit_menu.addAction(router.action(Command.Copy))\nedit_menu.addAction(router.action(Command.Paste))\nedit_menu.addAction(router.action(Command.Delete))\nedit_menu.addSeparator()\nedit_menu.addAction(router.action(Command.SelectAll))\nmenu_bar.addMenu(edit_menu)\n\nline_edit = fluentqt.LineEdit()\nline_edit.setText(\"Edit this line\")\nline_edit.setFixedWidth(360)\n\ntext_edit = fluentqt.TextEdit()\ntext_edit.setPlainText(\"The same actions follow this editor.\")\ntext_edit.setMinVisibleLines(2)\ntext_edit.setMaxVisibleLines(2)\ntext_edit.setFixedWidth(360)\n\nstatus = fluentqt.Label(\"No editing target\")\nrouter.activeTargetChanged.connect(\n    lambda active: status.setText(\n        \"Editing target active\" if active else \"No editing target\"\n    )\n)\n"
+    },
+    {
+      "route_id": "line-edit",
+      "sample_id": "line-edit-validator",
+      "source": "from PySide6.QtGui import QIntValidator\n\nline_edit = fluentqt.LineEdit()\nline_edit.setPlaceholderText('0-100')\nline_edit.setValidator(QIntValidator(0, 100, line_edit))\nline_edit.setText('42')\nline_edit.textChanged.connect(\n    lambda _text: status.setText(\n        \"Acceptable input\" if line_edit.hasAcceptableInput() else \"Out of range\"\n    )\n)\n"
+    },
+    {
+      "route_id": "line-edit",
+      "sample_id": "line-edit-frame-metrics",
+      "source": "from PySide6.QtCore import QMargins, QPoint\n\nemphasized = fluentqt.LineEdit()\nemphasized.setText('Border thickness demo')\nemphasized.setContentMargins(QMargins(10, 4, 10, 4))\nemphasized.setFocusedBorderWidth(3)\nemphasized.setUnfocusedBorderWidth(2)\ninline = fluentqt.LineEdit()\ninline.setText('Frameless inline field')\ninline.setFrameVisible(False)\ninline.setClearButtonOffset(QPoint(12, 0))\n"
+    },
+    {
+      "route_id": "number-box",
+      "sample_id": "number-box-expression",
+      "source": "import math\n\nnumber_box = fluentqt.NumberBox()\nnumber_box.setHeader('Equation')\nnumber_box.setPlaceholderText('1 + 2^2')\nnumber_box.setAcceptsExpression(True)\ndef update(value):\n    status.setText('Value: NaN' if math.isnan(value) else f'Value: {value:.2f}')\nnumber_box.valueChanged.connect(update)\n"
+    },
+    {
+      "route_id": "number-box",
+      "sample_id": "number-box-spin-placement",
+      "source": "inline = fluentqt.NumberBox()\ninline.setHeader(\"Inline\")\ninline.setRange(0, 100)\ninline.setSmallChange(5)\ninline.setLargeChange(25)\ninline.setValue(50)\ninline.setSpinButtonPlacementMode(\n    fluentqt.NumberBox.SpinButtonPlacementMode.Inline\n)\n\ncompact = fluentqt.NumberBox()\ncompact.setHeader(\"Compact\")\ncompact.setRange(0, 100)\ncompact.setSmallChange(5)\ncompact.setLargeChange(25)\ncompact.setValue(50)\ncompact.setSpinButtonPlacementMode(\n    fluentqt.NumberBox.SpinButtonPlacementMode.Compact\n)\n"
+    },
+    {
+      "route_id": "number-box",
+      "sample_id": "number-box-formatting",
+      "source": "number_box = fluentqt.NumberBox()\nnumber_box.setHeader('Amount')\nnumber_box.setDisplayPrecision(2)\nnumber_box.setFormatStep(0.25)\nnumber_box.setValue(1.13)\nnumber_box.valueChanged.connect(\n    lambda value: status.setText(f'Rounded: {value:.2f}')\n)\n"
+    },
+    {
+      "route_id": "password-box",
+      "sample_id": "password-box-basic",
+      "source": "password_box = fluentqt.PasswordBox()\npassword_box.setPassword('Fluent123')\npassword_box.passwordChanged.connect(\n    lambda password: status.setText(f\"Length: {len(password)}\")\n)\n"
+    },
+    {
+      "route_id": "password-box",
+      "sample_id": "password-box-header-placeholder",
+      "source": "password_box = fluentqt.PasswordBox()\npassword_box.setHeader(\"Password\")\npassword_box.setPlaceholderText(\"Enter your password\")\npassword_box.setFixedWidth(300)\n"
+    },
+    {
+      "route_id": "password-box",
+      "sample_id": "password-box-reveal-modes",
+      "source": "peek_box = fluentqt.PasswordBox()\npeek_box.setPassword(\"Peek mode\")\npeek_box.setPasswordRevealMode(fluentqt.PasswordBox.PasswordRevealMode.Peek)\n\nhidden_box = fluentqt.PasswordBox()\nhidden_box.setPassword(\"Hidden mode\")\nhidden_box.setPasswordRevealMode(fluentqt.PasswordBox.PasswordRevealMode.Hidden)\n\nvisible_box = fluentqt.PasswordBox()\nvisible_box.setPassword(\"Visible mode\")\nvisible_box.setPasswordRevealMode(fluentqt.PasswordBox.PasswordRevealMode.Visible)\n"
+    },
+    {
+      "route_id": "text-edit",
+      "sample_id": "text-edit-visible-lines",
+      "source": "text_edit = fluentqt.TextEdit()\ntext_edit.setPlaceholderText('Type your notes here')\ntext_edit.setMinVisibleLines(2)\ntext_edit.setMaxVisibleLines(4)\ntext_edit.setPlainText('First line\\nSecond line')\ndef line_count_text():\n    count = max(1, text_edit.toPlainText().count('\\n') + 1)\ntext_edit.textChanged.connect(lambda: status.setText(line_count_text()))\n"
+    },
+    {
+      "route_id": "text-edit",
+      "sample_id": "text-edit-scrollable-content",
+      "source": "text_edit = fluentqt.TextEdit()\ntext_edit.setMinVisibleLines(3)\ntext_edit.setMaxVisibleLines(3)\ntext_edit.setLineHeight(28)\ntext_edit.setPlainText(\"Alpha\\nBeta\\nGamma\\nDelta\\nEpsilon\\nZeta\")\ntext_edit.setFixedWidth(360)\n"
+    },
+    {
+      "route_id": "text-edit",
+      "sample_id": "text-edit-read-only",
+      "source": "from PySide6.QtCore import QMargins\n\ntext_edit = fluentqt.TextEdit()\ntext_edit.setPlainText(\"Terms reviewed and locked for approval.\")\ntext_edit.setReadOnly(True)\ntext_edit.setFontRole(fluentqt.FontRole.BodyStrong)\ntext_edit.setContentMargins(QMargins(12, 6, 12, 6))\ntext_edit.setFixedWidth(360)\n"
+    },
+    {
+      "route_id": "title-bar",
+      "sample_id": "title-bar-content-regions",
+      "source": "from PySide6.QtWidgets import QHBoxLayout, QWidget\n\ntitle_bar = fluentqt.TitleBar()\ntitle_bar.setSystemReservedLeadingWidth(platform_leading_width)\ntitle_bar.setSystemReservedTrailingWidth(platform_trailing_width)\n\ncontent = QWidget(title_bar)\nlayout = QHBoxLayout(content)\nlayout.addWidget(title_label)\nlayout.addWidget(search_box)\nlayout.addWidget(share_button)\ntitle_bar.setContentWidget(content)\n"
+    },
+    {
+      "route_id": "title-bar",
+      "sample_id": "title-bar-height-exclusions",
+      "source": "title_bar = fluentqt.TitleBar()\ntitle_bar.setTitleBarHeight(48)\ntitle_bar.setContentWidget(toolbar_content)\ntitle_bar.chromeGeometryChanged.connect(update_exclusions)\ntitle_bar.refreshChromeExclusions()\n"
+    },
+    {
+      "route_id": "window",
+      "sample_id": "window-content-host",
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QWidget\n\nwindow = fluentqt.Window()\nwindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)\nwindow.setWindowTitle(\"Fluent window\")\n\ncontent = QWidget()\nwindow.setContentWidget(content)\nwindow.resize(520, 340)\nwindow.show()\n"
+    },
+    {
+      "route_id": "window",
+      "sample_id": "window-custom-titlebar",
+      "source": "from PySide6.QtWidgets import QHBoxLayout, QWidget\n\nwindow = fluentqt.Window()\nwindow.setWindowTitle(\"Custom title bar\")\nwindow.setCustomWindowChromeEnabled(True)\nwindow.setCaptionButtonToolTips(\n    \"Minimize\",\n    \"Maximize\",\n    \"Close\",\n    \"Restore\"\n)\nwindow.setCaptionButtonAccessibleNames(\n    \"Minimize\",\n    \"Maximize\",\n    \"Close\",\n    \"Restore\"\n)\n\ntitle_bar_content = QWidget(window.titleBar())\nlayout = QHBoxLayout(title_bar_content)\nlayout.addWidget(title_label)\nlayout.addWidget(search_box)\nlayout.addWidget(share_button)\nwindow.titleBar().setContentWidget(title_bar_content)\nwindow.titleBar().refreshChromeExclusions()\nwindow.setContentWidget(page_content)\nwindow.resize(720, 520)\nwindow.show()\n"
+    },
+    {
+      "route_id": "font-icon",
+      "sample_id": "font-icon-optical-sizes",
+      "source": "compact = fluentqt.FontIcon(fluentqt.Typography.Icons.Search)\ncompact.setIconSize(fluentqt.Typography.IconSize.Compact)\n\nstandard = fluentqt.FontIcon(fluentqt.Typography.Icons.Search)\nstandard.setIconSize(fluentqt.Typography.IconSize.Standard)\n\nmedium = fluentqt.FontIcon(fluentqt.Typography.Icons.Search)\nmedium.setIconSize(24)\n\nlarge = fluentqt.FontIcon(fluentqt.Typography.Icons.Search)\nlarge.setIconSize(32)\n"
+    },
+    {
+      "route_id": "font-icon",
+      "sample_id": "font-icon-color-rotation",
+      "source": "from PySide6.QtGui import QColor\n\ninherited = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\ninherited.setIconSize(24)\n\naccent = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\naccent.setIconSize(24)\naccent.setColor(QColor(\"#0F6CBD\"))\naccent.setRotation(90.0)\n\nwarning = fluentqt.FontIcon(fluentqt.Typography.Icons.Forward)\nwarning.setIconSize(24)\nwarning.setColor(QColor(\"#F7630C\"))\nwarning.setRotation(180.0)\n"
+    }
+  ]
+}

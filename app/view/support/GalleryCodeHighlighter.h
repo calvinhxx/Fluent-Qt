@@ -17,6 +17,12 @@ namespace fluent::gallery {
  */
 QString highlightCppToHtml(const QString& code, bool darkTheme);
 
+/**
+ * @brief Renders a Python snippet with the same light/dark token palette.
+ * zh_CN: 使用同一套明暗 token 配色渲染 Python 片段。
+ */
+QString highlightPythonToHtml(const QString& code, bool darkTheme);
+
 } // namespace fluent::gallery
 
 #endif // GALLERYCODEHIGHLIGHTER_H

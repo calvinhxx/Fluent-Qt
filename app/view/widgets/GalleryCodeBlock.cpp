@@ -12,6 +12,7 @@
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "GalleryLanguageSelector.h"
 #include "support/logging/Log.h"
 #include "view/support/GalleryCodeHighlighter.h"
 #include "view/support/GalleryStyleSupport.h"
@@ -25,8 +26,16 @@ constexpr int kCopyCheckRevertMs = 1300;
 } // namespace
 
 GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
+    : GalleryCodeBlock(code, QString(), parent)
+{
+}
+
+GalleryCodeBlock::GalleryCodeBlock(const QString& cppCode,
+                                   const QString& pythonCode,
+                                   QWidget* parent)
     : Expander(parent),
-      m_code(code)
+      m_cppCode(cppCode),
+      m_pythonCode(pythonCode)
 {
     setObjectName(QStringLiteral("galleryCodeBlock"));
     setAppearance(Card::LayerAlt);
@@ -60,26 +69,40 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
     topRow->setContentsMargins(0, 0, 0, 0);
     topRow->setSpacing(8);
 
-    auto* langColumn = new QVBoxLayout;
-    langColumn->setContentsMargins(0, 0, 0, 0);
-    langColumn->setSpacing(4);
+    if (hasPythonCode()) {
+        m_languageSelector =
+            new GalleryLanguageSelector(m_contentInner);
+        m_languageSelector->setObjectName(
+            QStringLiteral("galleryCodeBlockLanguageSelector"));
+        connect(m_languageSelector,
+                &GalleryLanguageSelector::languageChanged,
+                this,
+                &GalleryCodeBlock::setCodeLanguage);
+        topRow->addWidget(
+            m_languageSelector, 0, Qt::AlignVCenter);
+    } else {
+        auto* langColumn = new QVBoxLayout;
+        langColumn->setContentsMargins(0, 0, 0, 0);
+        langColumn->setSpacing(4);
 
-    m_langLabel = new fluent::textfields::Label(
-        QStringLiteral("C++"), m_contentInner);
-    m_langLabel->setObjectName(
-        QStringLiteral("galleryCodeBlockLang"));
-    m_langLabel->setFluentTypography(
-        Typography::FontRole::Caption);
-    m_langLabel->setTextColorRole(
-        fluent::textfields::Label::TextColorRole::Secondary);
+        m_langLabel = new fluent::textfields::Label(
+            QStringLiteral("C++"), m_contentInner);
+        m_langLabel->setObjectName(
+            QStringLiteral("galleryCodeBlockLang"));
+        m_langLabel->setFluentTypography(
+            Typography::FontRole::Caption);
+        m_langLabel->setTextColorRole(
+            fluent::textfields::Label::TextColorRole::Secondary);
 
-    m_langUnderline = new QWidget(m_contentInner);
-    m_langUnderline->setObjectName(
-        QStringLiteral("galleryCodeBlockLangUnderline"));
-    m_langUnderline->setFixedSize(22, 3);
-    langColumn->addWidget(m_langLabel, 0, Qt::AlignLeft);
-    langColumn->addWidget(
-        m_langUnderline, 0, Qt::AlignLeft);
+        m_langUnderline = new QWidget(m_contentInner);
+        m_langUnderline->setObjectName(
+            QStringLiteral("galleryCodeBlockLangUnderline"));
+        m_langUnderline->setFixedSize(22, 3);
+        langColumn->addWidget(m_langLabel, 0, Qt::AlignLeft);
+        langColumn->addWidget(
+            m_langUnderline, 0, Qt::AlignLeft);
+        topRow->addLayout(langColumn);
+    }
 
     m_copyButton = new fluent::basicinput::Button(m_contentInner);
     m_copyButton->setObjectName(
@@ -102,11 +125,11 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
             this,
             [this]() {
         if (QClipboard* clipboard = QApplication::clipboard()) {
-            clipboard->setText(m_code);
+            clipboard->setText(code());
             LOG_DEBUG(
                 QStringLiteral(
                     "GalleryCodeBlock copyCode chars=%1")
-                    .arg(m_code.size()));
+                    .arg(code().size()));
             showGalleryToast(
                 this, QStringLiteral("Copied to clipboard"));
             m_copyButton->setIconGlyph(
@@ -125,9 +148,8 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
         }
     });
 
-    topRow->addLayout(langColumn);
     topRow->addStretch(1);
-    topRow->addWidget(m_copyButton, 0, Qt::AlignTop);
+    topRow->addWidget(m_copyButton, 0, Qt::AlignVCenter);
 
     m_codeLabel =
         new fluent::textfields::Label(m_contentInner);
@@ -163,6 +185,43 @@ GalleryCodeBlock::GalleryCodeBlock(const QString& code, QWidget* parent)
     applyPalette();
 }
 
+QString GalleryCodeBlock::code() const
+{
+    if (m_codeLanguage == GalleryCodeLanguage::Python
+        && hasPythonCode()) {
+        return m_pythonCode;
+    }
+    return m_cppCode;
+}
+
+void GalleryCodeBlock::setCodeLanguage(
+    GalleryCodeLanguage language)
+{
+    if (language == GalleryCodeLanguage::Python && !hasPythonCode())
+        return;
+    if (m_codeLanguage == language)
+        return;
+
+    const bool reopen = isExpanded();
+    if (reopen)
+        setExpandedAnimated(false, /*animated=*/false);
+    m_codeLanguage = language;
+    if (m_languageSelector)
+        m_languageSelector->setLanguage(language);
+    if (m_codeLabel)
+        m_codeLabel->clear();
+    if (reopen) {
+        applyHighlightedCode();
+        if (m_contentInner && m_contentInner->layout()) {
+            m_contentInner->layout()->invalidate();
+            m_contentInner->layout()->activate();
+            m_contentInner->adjustSize();
+        }
+        setExpandedAnimated(true, /*animated=*/false);
+    }
+    emit codeLanguageChanged(language);
+}
+
 void GalleryCodeBlock::setExpanded(
     bool expanded, bool animated)
 {
@@ -178,8 +237,12 @@ void GalleryCodeBlock::onThemeUpdated()
 {
     Expander::onThemeUpdated();
     applyPalette();
-    if (m_highlighted)
+    m_cppHighlightedHtml.clear();
+    m_pythonHighlightedHtml.clear();
+    if (isExpanded())
         applyHighlightedCode();
+    else if (m_codeLabel)
+        m_codeLabel->clear();
 }
 
 void GalleryCodeBlock::applyHighlightedCode()
@@ -187,14 +250,24 @@ void GalleryCodeBlock::applyHighlightedCode()
     if (!m_codeLabel)
         return;
 
-    m_codeLabel->setText(
-        highlightCppToHtml(m_code, effectiveTheme() == Dark));
-    m_highlighted = true;
+    const bool dark = effectiveTheme() == Dark;
+    if (m_codeLanguage == GalleryCodeLanguage::Python
+        && hasPythonCode()) {
+        if (m_pythonHighlightedHtml.isEmpty()) {
+            m_pythonHighlightedHtml =
+                highlightPythonToHtml(m_pythonCode, dark);
+        }
+        m_codeLabel->setText(m_pythonHighlightedHtml);
+    } else {
+        if (m_cppHighlightedHtml.isEmpty())
+            m_cppHighlightedHtml = highlightCppToHtml(m_cppCode, dark);
+        m_codeLabel->setText(m_cppHighlightedHtml);
+    }
 }
 
 void GalleryCodeBlock::ensureHighlighted()
 {
-    if (!m_highlighted)
+    if (m_codeLabel && m_codeLabel->text().isEmpty())
         applyHighlightedCode();
 }
 
@@ -213,6 +286,8 @@ void GalleryCodeBlock::applyPalette()
         m_codeLabel->onThemeUpdated();
     if (m_copyButton)
         m_copyButton->onThemeUpdated();
+    if (m_languageSelector)
+        m_languageSelector->onThemeUpdated();
 }
 
 } // namespace fluent::gallery

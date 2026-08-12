@@ -7,12 +7,21 @@
 #include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
+#include "GalleryLanguageSelector.h"
 #include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {
 
 GalleryComponentReferenceCard::GalleryComponentReferenceCard(
     const GalleryComponentReference& reference,
+    QWidget* parent)
+    : GalleryComponentReferenceCard(reference, false, parent)
+{
+}
+
+GalleryComponentReferenceCard::GalleryComponentReferenceCard(
+    const GalleryComponentReference& reference,
+    bool showLanguageSelector,
     QWidget* parent)
     : QFrame(parent)
     , m_reference(reference)
@@ -27,23 +36,53 @@ GalleryComponentReferenceCard::GalleryComponentReferenceCard(
     layout->setVerticalSpacing(8);
     layout->setColumnStretch(1, 1);
 
-    addRow(layout, 0,
-           QStringLiteral("Header"),
-           reference.header,
-           QStringLiteral("galleryComponentReferenceHeader"),
+    int row = 0;
+    if (showLanguageSelector && m_reference.hasPythonReference()) {
+        m_languageSelector = new GalleryLanguageSelector(this);
+        m_languageSelector->setObjectName(
+            QStringLiteral("galleryComponentReferenceLanguageSelector"));
+        layout->addWidget(m_languageSelector, row++, 0, 1, 2, Qt::AlignLeft);
+        connect(m_languageSelector,
+                &GalleryLanguageSelector::languageChanged,
+                this,
+                &GalleryComponentReferenceCard::setCodeLanguage);
+    }
+
+    addRow(layout, row++,
+           QString(),
+           QString(),
+           QString(),
            true);
-    addRow(layout, 1,
-           QStringLiteral("Type"),
-           reference.qualifiedType,
-           QStringLiteral("galleryComponentReferenceType"),
+    addRow(layout, row++,
+           QString(),
+           QString(),
+           QString(),
            true);
-    addRow(layout, 2,
-           QStringLiteral("CMake target"),
-           reference.cmakeTarget,
-           QStringLiteral("galleryComponentReferenceCMakeTarget"),
+    addRow(layout, row,
+           QString(),
+           QString(),
+           QString(),
            true);
 
+    updateReferenceRows();
     applyPalette();
+}
+
+void GalleryComponentReferenceCard::setCodeLanguage(
+    GalleryCodeLanguage language)
+{
+    if (language == GalleryCodeLanguage::Python
+        && (!m_languageSelector || !m_reference.hasPythonReference())) {
+        return;
+    }
+    if (m_codeLanguage == language)
+        return;
+
+    m_codeLanguage = language;
+    if (m_languageSelector)
+        m_languageSelector->setLanguage(language);
+    updateReferenceRows();
+    emit codeLanguageChanged(language);
 }
 
 void GalleryComponentReferenceCard::onThemeUpdated()
@@ -56,6 +95,8 @@ void GalleryComponentReferenceCard::onThemeUpdated()
         if (label)
             label->onThemeUpdated();
     }
+    if (m_languageSelector)
+        m_languageSelector->onThemeUpdated();
     applyPalette();
 }
 
@@ -87,6 +128,45 @@ void GalleryComponentReferenceCard::addRow(QGridLayout* layout,
     layout->addWidget(valueLabel, row, 1);
     m_nameLabels.append(nameLabel);
     m_valueLabels.append(valueLabel);
+}
+
+void GalleryComponentReferenceCard::updateReferenceRows()
+{
+    if (m_nameLabels.size() != 3 || m_valueLabels.size() != 3)
+        return;
+
+    QStringList names;
+    QStringList values;
+    QStringList objectNames;
+    if (m_codeLanguage == GalleryCodeLanguage::Python) {
+        names = {QStringLiteral("Install"),
+                 QStringLiteral("Import"),
+                 QStringLiteral("Type")};
+        values = {m_reference.pythonInstall,
+                  m_reference.pythonImport,
+                  m_reference.pythonType};
+        objectNames = {
+            QStringLiteral("galleryComponentReferencePythonInstall"),
+            QStringLiteral("galleryComponentReferencePythonImport"),
+            QStringLiteral("galleryComponentReferencePythonType")};
+    } else {
+        names = {QStringLiteral("Header"),
+                 QStringLiteral("Type"),
+                 QStringLiteral("CMake target")};
+        values = {m_reference.header,
+                  m_reference.qualifiedType,
+                  m_reference.cmakeTarget};
+        objectNames = {
+            QStringLiteral("galleryComponentReferenceHeader"),
+            QStringLiteral("galleryComponentReferenceType"),
+            QStringLiteral("galleryComponentReferenceCMakeTarget")};
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        m_nameLabels.at(i)->setText(names.at(i));
+        m_valueLabels.at(i)->setText(values.at(i));
+        m_valueLabels.at(i)->setObjectName(objectNames.at(i));
+    }
 }
 
 void GalleryComponentReferenceCard::applyPalette()
