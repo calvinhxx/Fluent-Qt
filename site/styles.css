@@ -2208,7 +2208,7 @@ h3 {
   .code-panel { max-width: 720px; }
 
   .gallery-product { order: 2; }
-  .gallery-copy { order: 1; }
+  .gallery-grid .gallery-copy { order: 1; }
   .gallery-copy > p:not(.section-index) { max-width: 620px; }
 
   .download-panel { max-width: 720px; }

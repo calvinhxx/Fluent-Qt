@@ -40,7 +40,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260811">
+    <link rel="stylesheet" href="styles.css?v=20260812">
     <script src="site.js" defer></script>
   </head>
   <body>
@@ -67,10 +67,10 @@
 
         <div class="nav-cluster" id="primary-navigation">
           <div class="nav-links">
+            <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
             <a href="#why" data-i18n="nav.why">为什么是 Fluent-Qt</a>
             <a href="#components" data-i18n="nav.components">控件</a>
             <a href="#quick-start" data-i18n="nav.quickStart">接入</a>
-            <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
             <a href="#downloads" data-i18n="nav.downloads">下载</a>
           </div>
 
@@ -177,10 +177,96 @@
         </div>
       </section>
 
+      <section class="gallery-section" id="gallery" aria-labelledby="gallery-title">
+        <div class="page-shell">
+          <div class="gallery-intro" data-reveal>
+            <div class="gallery-copy">
+              <p class="section-index">02 / GALLERY</p>
+              <h2 id="gallery-title"><span data-i18n="gallery.title">Gallery 控件示例</span></h2>
+              <p data-i18n="gallery.copy">随仓库提供的桌面示例</p>
+              <a
+                class="button button-primary gallery-web-link"
+                href="gallery/"
+                data-analytics-event="cpp_web_gallery"
+              >
+                <span data-i18n="gallery.webAction">运行 C++ Web Gallery</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+            </div>
+            <ol class="workflow-list">
+              <li><span>01</span><div><strong data-i18n="gallery.searchTitle">搜索</strong><p data-i18n="gallery.searchCopy">按控件名定位页面</p></div></li>
+              <li><span>02</span><div><strong data-i18n="gallery.stateTitle">验证</strong><p data-i18n="gallery.stateCopy">切换 Light / Dark 与强调色</p></div></li>
+              <li><span>03</span><div><strong data-i18n="gallery.codeTitle">查看示例</strong><p data-i18n="gallery.codeCopy">展开对应的 C++ 代码</p></div></li>
+            </ol>
+          </div>
+
+          <div
+            class="live-gallery-shell"
+            data-live-gallery
+            data-gallery-state="waiting"
+            data-gallery-src="gallery/?embed=site&amp;window-mode=maximized&amp;render-scale=1"
+            data-reveal
+          >
+            <div class="live-gallery-toolbar">
+              <div class="live-gallery-brand">
+                <span class="live-indicator" aria-hidden="true"></span>
+                <strong>C++ Web Gallery</strong>
+                <span class="live-gallery-status" data-gallery-status data-i18n="gallery.liveStateWaiting">等待进入视口</span>
+              </div>
+              <div class="live-gallery-actions">
+                <button type="button" class="live-toolbar-button" data-gallery-load>
+                  <span data-i18n="gallery.loadNow">立即加载</span>
+                </button>
+                <a class="live-toolbar-link" href="gallery/" target="_blank" rel="noopener">
+                  <span data-i18n="gallery.fullPage">完整页面</span> <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="live-gallery-viewport">
+              <img
+                class="live-gallery-poster"
+                src="assets/gallery/gallery-hero-real.png"
+                alt="C++ Web Gallery 加载前预览"
+                data-i18n-alt="images.webGallery"
+                width="1600"
+                height="900"
+                loading="lazy"
+                decoding="async"
+              >
+              <iframe
+                class="live-gallery-frame"
+                data-gallery-frame
+                title="Fluent-Qt C++ Web Gallery 实时体验"
+                data-i18n-title="gallery.frameTitle"
+                loading="lazy"
+                referrerpolicy="strict-origin-when-cross-origin"
+              ></iframe>
+              <div class="live-gallery-overlay" data-gallery-overlay role="status" aria-live="polite">
+                <span class="gallery-loader" aria-hidden="true"></span>
+                <strong data-gallery-message data-i18n="gallery.waitingTitle">滚动到这里后自动启动</strong>
+                <p data-gallery-detail data-i18n="gallery.waitingDetail">首屏不会请求 WebAssembly 文件；也可以现在手动加载。</p>
+                <div class="live-gallery-overlay-actions">
+                  <button type="button" class="button button-primary" data-gallery-load>
+                    <span data-i18n="gallery.loadAction">启动实时体验</span>
+                  </button>
+                  <a class="button button-quiet" href="gallery/" target="_blank" rel="noopener">
+                    <span data-i18n="gallery.openAction">在新页面打开</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <noscript>
+              <p class="noscript-note"><a href="gallery/">Open the C++ Web Gallery.</a></p>
+            </noscript>
+          </div>
+        </div>
+      </section>
+
       <section class="positioning-section" id="why" aria-labelledby="positioning-title">
         <div class="page-shell positioning-grid">
           <div class="positioning-lead" data-reveal>
-            <p class="section-index">02 / POSITIONING</p>
+            <p class="section-index">03 / POSITIONING</p>
             <h2 id="positioning-title">
               <span data-i18n="positioning.titleLine1">独立控件</span>
               <span data-i18n="positioning.titleLine2">不止主题皮肤</span>
@@ -218,7 +304,7 @@
         <div class="page-shell">
           <div class="section-heading component-heading" data-reveal>
             <div>
-              <p class="section-index">03 / COMPONENTS</p>
+              <p class="section-index">04 / COMPONENTS</p>
               <h2 id="components-title"><span data-i18n="components.title">控件按用途分类</span></h2>
             </div>
             <p data-i18n="components.copy">以下为 Gallery 中的部分控件</p>
@@ -309,7 +395,7 @@
       <section class="quick-start-section" id="quick-start" aria-labelledby="quick-start-title">
         <div class="page-shell quick-start-grid">
           <div class="quick-start-copy" data-reveal>
-            <p class="section-index">04 / QUICK START</p>
+            <p class="section-index">05 / QUICK START</p>
             <h2 id="quick-start-title"><span data-i18n="quickStart.title">快速接入</span></h2>
             <p data-i18n="quickStart.copy">C++ 使用 CMake；Python / PySide6 通过 PyPI 安装</p>
             <div class="quick-start-links">
@@ -350,92 +436,6 @@ target_link_libraries(
           </article>
         </div>
         <p class="copy-announcement" aria-live="polite"></p>
-      </section>
-
-      <section class="gallery-section" id="gallery" aria-labelledby="gallery-title">
-        <div class="page-shell">
-          <div class="gallery-intro" data-reveal>
-            <div class="gallery-copy">
-              <p class="section-index">05 / GALLERY</p>
-              <h2 id="gallery-title"><span data-i18n="gallery.title">Gallery 控件示例</span></h2>
-              <p data-i18n="gallery.copy">随仓库提供的桌面示例</p>
-              <a
-                class="button button-primary gallery-web-link"
-                href="gallery/"
-                data-analytics-event="cpp_web_gallery"
-              >
-                <span data-i18n="gallery.webAction">运行 C++ Web Gallery</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-              </a>
-            </div>
-            <ol class="workflow-list">
-              <li><span>01</span><div><strong data-i18n="gallery.searchTitle">搜索</strong><p data-i18n="gallery.searchCopy">按控件名定位页面</p></div></li>
-              <li><span>02</span><div><strong data-i18n="gallery.stateTitle">验证</strong><p data-i18n="gallery.stateCopy">切换 Light / Dark 与强调色</p></div></li>
-              <li><span>03</span><div><strong data-i18n="gallery.codeTitle">查看示例</strong><p data-i18n="gallery.codeCopy">展开对应的 C++ 代码</p></div></li>
-            </ol>
-          </div>
-
-          <div
-            class="live-gallery-shell"
-            data-live-gallery
-            data-gallery-state="waiting"
-            data-gallery-src="gallery/?embed=site&amp;window-mode=maximized&amp;render-scale=1"
-            data-reveal
-          >
-            <div class="live-gallery-toolbar">
-              <div class="live-gallery-brand">
-                <span class="live-indicator" aria-hidden="true"></span>
-                <strong>C++ Web Gallery</strong>
-                <span class="live-gallery-status" data-gallery-status data-i18n="gallery.liveStateWaiting">等待进入视口</span>
-              </div>
-              <div class="live-gallery-actions">
-                <button type="button" class="live-toolbar-button" data-gallery-load>
-                  <span data-i18n="gallery.loadNow">立即加载</span>
-                </button>
-                <a class="live-toolbar-link" href="gallery/" target="_blank" rel="noopener">
-                  <span data-i18n="gallery.fullPage">完整页面</span> <span aria-hidden="true">↗</span>
-                </a>
-              </div>
-            </div>
-
-            <div class="live-gallery-viewport">
-              <img
-                class="live-gallery-poster"
-                src="assets/gallery/gallery-hero-real.png"
-                alt="C++ Web Gallery 加载前预览"
-                data-i18n-alt="images.webGallery"
-                width="1600"
-                height="900"
-                loading="lazy"
-                decoding="async"
-              >
-              <iframe
-                class="live-gallery-frame"
-                data-gallery-frame
-                title="Fluent-Qt C++ Web Gallery 实时体验"
-                data-i18n-title="gallery.frameTitle"
-                loading="lazy"
-                referrerpolicy="strict-origin-when-cross-origin"
-              ></iframe>
-              <div class="live-gallery-overlay" data-gallery-overlay role="status" aria-live="polite">
-                <span class="gallery-loader" aria-hidden="true"></span>
-                <strong data-gallery-message data-i18n="gallery.waitingTitle">滚动到这里后自动启动</strong>
-                <p data-gallery-detail data-i18n="gallery.waitingDetail">首屏不会请求 WebAssembly 文件；也可以现在手动加载。</p>
-                <div class="live-gallery-overlay-actions">
-                  <button type="button" class="button button-primary" data-gallery-load>
-                    <span data-i18n="gallery.loadAction">启动实时体验</span>
-                  </button>
-                  <a class="button button-quiet" href="gallery/" target="_blank" rel="noopener">
-                    <span data-i18n="gallery.openAction">在新页面打开</span>
-                  </a>
-                </div>
-              </div>
-            </div>
-            <noscript>
-              <p class="noscript-note"><a href="gallery/">Open the C++ Web Gallery.</a></p>
-            </noscript>
-          </div>
-        </div>
       </section>
 
       <section class="download-section" id="downloads" aria-labelledby="downloads-title">
