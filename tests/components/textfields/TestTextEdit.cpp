@@ -288,6 +288,39 @@ TEST_F(TextEditTest, ContentMargins) {
     EXPECT_EQ(edit->contentMargins(), margins);
 }
 
+TEST_F(TextEditTest, ContentMarginsOwnPaintedTextInsetsWithoutInflatingDefaults) {
+    auto* edit = new TextEdit(window);
+    edit->setLineHeight(32);
+    edit->setMinVisibleLines(2);
+    edit->setMaxVisibleLines(5);
+    edit->setContentMargins(QMargins(12, 10, 12, 8));
+    edit->setPlainText(QStringLiteral("Alpha\nBeta"));
+    layout->addWidget(edit);
+    window->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+
+    QTextCursor cursor(inner->document());
+    cursor.movePosition(QTextCursor::Start);
+    inner->setTextCursor(cursor);
+    const QPoint firstCaret = inner->viewport()->mapTo(
+        edit, inner->cursorRect().topLeft());
+    EXPECT_GE(firstCaret.x(), 11);
+    EXPECT_GE(firstCaret.y(), 9);
+
+    cursor.movePosition(QTextCursor::End);
+    inner->setTextCursor(cursor);
+    const QPoint lastBottom = inner->viewport()->mapTo(
+        edit, inner->cursorRect().bottomRight());
+    EXPECT_GE(edit->height() - lastBottom.y(), 7);
+
+    TextEdit compact;
+    EXPECT_EQ(compact.height(), Spacing::ControlHeight::Standard)
+        << "default margins must remain inside the standard line slot";
+}
+
 TEST_F(TextEditTest, FluentPropertiesDefaultsAndSetters) {
     TextEdit* edit = new TextEdit(window);
 
