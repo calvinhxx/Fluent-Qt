@@ -139,24 +139,24 @@ void GalleryComponentReferenceCard::updateReferenceRows()
     QStringList values;
     QStringList objectNames;
     if (m_codeLanguage == GalleryCodeLanguage::Python) {
-        names = {QStringLiteral("Install"),
-                 QStringLiteral("Import"),
-                 QStringLiteral("Type")};
-        values = {m_reference.pythonInstall,
-                  m_reference.pythonImport,
-                  m_reference.pythonType};
-        objectNames = {
+        names = QStringList{QStringLiteral("Install"),
+                            QStringLiteral("Import"),
+                            QStringLiteral("Type")};
+        values = QStringList{m_reference.pythonInstall,
+                             m_reference.pythonImport,
+                             m_reference.pythonType};
+        objectNames = QStringList{
             QStringLiteral("galleryComponentReferencePythonInstall"),
             QStringLiteral("galleryComponentReferencePythonImport"),
             QStringLiteral("galleryComponentReferencePythonType")};
     } else {
-        names = {QStringLiteral("Header"),
-                 QStringLiteral("Type"),
-                 QStringLiteral("CMake target")};
-        values = {m_reference.header,
-                  m_reference.qualifiedType,
-                  m_reference.cmakeTarget};
-        objectNames = {
+        names = QStringList{QStringLiteral("Header"),
+                            QStringLiteral("Type"),
+                            QStringLiteral("CMake target")};
+        values = QStringList{m_reference.header,
+                             m_reference.qualifiedType,
+                             m_reference.cmakeTarget};
+        objectNames = QStringList{
             QStringLiteral("galleryComponentReferenceHeader"),
             QStringLiteral("galleryComponentReferenceType"),
             QStringLiteral("galleryComponentReferenceCMakeTarget")};
