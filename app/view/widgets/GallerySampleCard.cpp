@@ -14,6 +14,7 @@
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
 #include "GalleryCodeBlock.h"
+#include "model/GalleryPythonSnippetCatalog.h"
 #include "view/support/GalleryStyleSupport.h"
 
 namespace fluent::gallery {
@@ -57,6 +58,13 @@ void refreshFluentSubtree(QWidget* root)
 }
 
 GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* parent)
+    : GallerySampleCard(QString(), sample, parent)
+{
+}
+
+GallerySampleCard::GallerySampleCard(const QString& routeId,
+                                     const GallerySample& sample,
+                                     QWidget* parent)
     : QFrame(parent)
     , m_sampleId(sample.id)
 {
@@ -104,7 +112,11 @@ GallerySampleCard::GallerySampleCard(const GallerySample& sample, QWidget* paren
     }
 
     if (!sample.codeSnippet.isEmpty()) {
-        m_codeBlock = new GalleryCodeBlock(sample.codeSnippet, this);
+        const QString pythonCode = routeId.isEmpty()
+            ? QString()
+            : galleryPythonSnippet(routeId, sample.id);
+        m_codeBlock = new GalleryCodeBlock(
+            sample.codeSnippet, pythonCode, this);
         connect(m_codeBlock, &GalleryCodeBlock::layoutHeightChanged, this,
                 [this]() { updateCodeBlockTransitionLayout(); });
     }

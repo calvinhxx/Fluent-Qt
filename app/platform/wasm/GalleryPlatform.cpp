@@ -52,6 +52,7 @@ const Capabilities& capabilities()
         result.prewarmsRoutes = false;
         result.usesClientSideTitleBar = true;
         result.hostControlsTheme = fluentQtGalleryEmbeddedHost() != 0;
+        result.showsBilingualDocumentation = true;
         result.showsIntroTour = false;
         result.maxResidentRoutes = 16;
         result.applicationName = QStringLiteral("Fluent-Qt C++ Web Gallery");

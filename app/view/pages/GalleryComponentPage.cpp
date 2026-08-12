@@ -5,8 +5,11 @@
 #include "design/Typography.h"
 #include "model/GalleryComponentCatalog.h"
 #include "model/GalleryNavigationItem.h"
+#include "model/GalleryPythonSnippetCatalog.h"
+#include "platform/GalleryPlatform.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "view/widgets/GalleryComponentReferenceCard.h"
+#include "view/widgets/GalleryCodeBlock.h"
 #include "view/widgets/GalleryEntryCard.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
@@ -32,6 +35,20 @@ QString previewThemeGlyph(FluentElement::Theme theme)
 GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
                                            const GalleryNavigationViewModel& navigationViewModel,
                                            QWidget* parent)
+    : GalleryComponentPage(
+          entry,
+          navigationViewModel,
+          GalleryComponentPageOptions{
+              platform::capabilities().showsBilingualDocumentation},
+          parent)
+{
+}
+
+GalleryComponentPage::GalleryComponentPage(
+    const GalleryContentEntry& entry,
+    const GalleryNavigationViewModel& navigationViewModel,
+    const GalleryComponentPageOptions& options,
+    QWidget* parent)
     : GalleryContentPage(entry.routeId, entry.title, QString(), parent)
     , m_overviewText(entry.description)
     , m_sampleTheme(currentTheme())
@@ -53,10 +70,36 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     if (!m_overviewText.isEmpty())
         addBodyText(m_overviewText);
 
+    const QVector<GallerySample> samples =
+        gallerySamplesForRoute(entry.routeId);
+    QStringList codeSampleIds;
+    codeSampleIds.reserve(samples.size());
+    for (const GallerySample& sample : samples) {
+        if (!sample.codeSnippet.isEmpty())
+            codeSampleIds.append(sample.id);
+    }
+
     const GalleryComponentReference reference = galleryComponentReference(entry.routeId);
+    m_bilingualDocumentationEnabled =
+        options.requestBilingualDocumentation
+        && reference.hasPythonReference()
+        && galleryPythonSnippetsAvailable(entry.routeId, codeSampleIds);
+    if (options.requestBilingualDocumentation
+        && !m_bilingualDocumentationEnabled) {
+        LOG_WARN(QStringLiteral(
+                     "GalleryComponentPage bilingual source unavailable; using C++ only routeId=%1")
+                     .arg(entry.routeId));
+    }
     if (reference.isValid()) {
         addSectionHeader(QStringLiteral("Use"));
-        m_referenceCard = new GalleryComponentReferenceCard(reference, this);
+        m_referenceCard = new GalleryComponentReferenceCard(
+            reference, m_bilingualDocumentationEnabled, this);
+        if (m_referenceCard->languageSelector()) {
+            connect(m_referenceCard,
+                    &GalleryComponentReferenceCard::codeLanguageChanged,
+                    this,
+                    &GalleryComponentPage::setCodeLanguage);
+        }
         addContentWidget(m_referenceCard);
     } else {
         LOG_WARN(QStringLiteral("GalleryComponentPage reference missing routeId=%1 title=%2")
@@ -64,7 +107,6 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
     }
 
     addSectionHeader(QStringLiteral("Live examples"));
-    const QVector<GallerySample> samples = gallerySamplesForRoute(entry.routeId);
     // A component page without samples is a coverage gap in the sample catalog,
     // not a normal state — surface it loudly.
     // zh_CN: 组件页没有任何示例说明示例目录存在覆盖缺口，不是正常状态——大声暴露出来。
@@ -73,7 +115,18 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
                      .arg(entry.routeId, entry.title));
     }
     for (const GallerySample& sample : samples) {
-        auto* card = new GallerySampleCard(sample, this);
+        auto* card = m_bilingualDocumentationEnabled
+            ? new GallerySampleCard(entry.routeId, sample, this)
+            : new GallerySampleCard(sample, this);
+        if (GalleryCodeBlock* block = card->codeBlock()) {
+            if (block->languageSelector()) {
+                connect(block,
+                        &GalleryCodeBlock::codeLanguageChanged,
+                        this,
+                        &GalleryComponentPage::setCodeLanguage);
+                block->setCodeLanguage(m_codeLanguage);
+            }
+        }
         addContentWidget(card);
         m_sampleCards.append(card);
     }
@@ -105,6 +158,21 @@ GalleryComponentPage::GalleryComponentPage(const GalleryContentEntry& entry,
                   .arg(entry.routeId)
                   .arg(samples.size())
                   .arg(entry.relatedRouteIds.size()));
+}
+
+void GalleryComponentPage::setCodeLanguage(
+    GalleryCodeLanguage language)
+{
+    if (m_codeLanguage == language)
+        return;
+
+    m_codeLanguage = language;
+    if (m_referenceCard)
+        m_referenceCard->setCodeLanguage(language);
+    for (GallerySampleCard* card : m_sampleCards) {
+        if (card && card->codeBlock())
+            card->codeBlock()->setCodeLanguage(language);
+    }
 }
 
 void GalleryComponentPage::onThemeUpdated()

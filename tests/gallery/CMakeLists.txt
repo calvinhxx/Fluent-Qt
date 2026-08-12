@@ -16,6 +16,11 @@ if(NOT DEFINED FLUENT_QT_GALLERY_RESOURCES)
         ${FLUENT_QT_GALLERY_SOURCE_DIR}/gallery_resources.qrc
     )
 endif()
+if(NOT DEFINED FLUENT_QT_GALLERY_WEB_RESOURCES)
+    set(FLUENT_QT_GALLERY_WEB_RESOURCES
+        ${FLUENT_QT_GALLERY_SOURCE_DIR}/gallery_web_resources.qrc
+    )
+endif()
 
 add_executable(test_gallery_single_instance_probe
     GallerySingleInstanceProbe.cpp
@@ -55,6 +60,7 @@ add_qt_test_module(test_gallery_content_pages
     ${FLUENT_QT_GALLERY_SOURCES}
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
     ${FLUENT_QT_GALLERY_RESOURCES}
+    ${FLUENT_QT_GALLERY_WEB_RESOURCES}
 )
 target_include_directories(test_gallery_content_pages PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
 target_compile_definitions(test_gallery_content_pages PRIVATE
