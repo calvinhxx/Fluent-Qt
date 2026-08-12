@@ -7,7 +7,9 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import subprocess
 import sys
+import tempfile
 from typing import Iterable
 
 
@@ -32,8 +34,13 @@ REQUIRED_PATHS = (
     ".agents/skills/build-fluentqt-gui/SKILL.md",
     ".agents/skills/build-fluentqt-gui/agents/openai.yaml",
     ".agents/skills/build-fluentqt-gui/references/component-selection.md",
+    ".agents/skills/build-fluentqt-gui/references/experience-differentiation.md",
+    ".agents/skills/build-fluentqt-gui/references/performance-lifecycle.md",
+    ".agents/skills/build-fluentqt-gui/references/product-reference-patterns.md",
     ".agents/skills/build-fluentqt-gui/references/theme-system.md",
+    ".agents/skills/build-fluentqt-gui/references/visual-evidence-contract.md",
     ".agents/skills/build-fluentqt-gui/references/visual-refinement.md",
+    ".agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py",
     ".claude/skills/build-fluentqt-gui/SKILL.md",
     "llms.txt",
 )
@@ -191,8 +198,13 @@ def _validate_skill(project_root: Path) -> None:
         "docs/ai/README.md",
         "docs/ai/add-gui-to-project.md",
         "references/component-selection.md",
+        "references/experience-differentiation.md",
+        "references/performance-lifecycle.md",
+        "references/product-reference-patterns.md",
         "references/theme-system.md",
+        "references/visual-evidence-contract.md",
         "references/visual-refinement.md",
+        "scripts/validate_visual_evidence.py",
         "tools/ai/evaluate_ai_catalog.py",
         "tools/ai/query_ai_catalog.py",
         "tools/ai/validate_ai_assets.py",
@@ -201,6 +213,23 @@ def _validate_skill(project_root: Path) -> None:
             raise AssertionError(f"FluentQt GUI Skill does not route to {required}")
 
     reference_requirements = {
+        "references/experience-differentiation.md": (
+            "Define the product signature",
+            "Generate structurally distinct concepts",
+            "Scan semantic component opportunities",
+            "Differentiation acceptance gate",
+        ),
+        "references/product-reference-patterns.md": (
+            "Reference-synthesis protocol",
+            "Fast selection matrix",
+            "Acceptance gate",
+        ),
+        "references/performance-lifecycle.md": (
+            "Classify the data before choosing a viewport",
+            "Preserve item-view virtualization",
+            "Choose transient lifetime deliberately",
+            "Acceptance gate",
+        ),
         "references/theme-system.md": (
             "ThemeRegistry::defaultSnapshot()",
             "apply_style_theme",
@@ -218,6 +247,12 @@ def _validate_skill(project_root: Path) -> None:
             "minimum supported window",
             "Record actionable findings",
             "Visual acceptance gate",
+        ),
+        "references/visual-evidence-contract.md": (
+            "Cover mandatory states",
+            "Verify dynamic convergence",
+            "picture-in-picture crops",
+            "Visual acceptance requires",
         ),
     }
     for relative_path, anchors in reference_requirements.items():
@@ -254,6 +289,98 @@ def _validate_skill(project_root: Path) -> None:
     claude_description = claude_loader.split("\n", 3)[2]
     if claude_description != canonical_description:
         raise AssertionError("Cross-agent Skill descriptions have drifted")
+
+
+def _validate_visual_evidence_validator(project_root: Path) -> None:
+    script = (
+        project_root
+        / ".agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py"
+    )
+    with tempfile.TemporaryDirectory(prefix="fluentqt-visual-evidence-") as temp:
+        root = Path(temp)
+        (root / "reviewed-app").mkdir()
+        (root / "capture.png").write_bytes(b"visual-evidence-fixture")
+        manifest_path = root / "visual-evidence.json"
+        fixture = {
+            "application": "validator-fixture",
+            "reviewed_build": "reviewed-app",
+            "platform": "test platform, scale 1x",
+            "profile": "lite",
+            "states": [
+                {
+                    "id": state_id,
+                    "status": "pass",
+                    "evidence": ["capture.png"],
+                }
+                for state_id in (
+                    "normal-light",
+                    "normal-dark",
+                    "narrow",
+                    "minimum",
+                    "long-localized-content",
+                    "selected-focus-disabled",
+                )
+            ],
+            "regions": [
+                {
+                    "id": region_id,
+                    "status": "pass",
+                    "evidence": ["capture.png"],
+                }
+                for region_id in (
+                    "titlebar",
+                    "primary-viewport",
+                    "footer-or-primary-input",
+                )
+            ],
+            "dynamic_checks": [],
+            "measurements": [
+                {
+                    "id": "fixture-inset",
+                    "expected": "12",
+                    "actual": "12",
+                    "status": "pass",
+                    "evidence": "capture.png",
+                }
+            ],
+            "issues": [],
+        }
+
+        def run_validator() -> subprocess.CompletedProcess[str]:
+            manifest_path.write_text(
+                json.dumps(fixture, ensure_ascii=False), encoding="utf-8"
+            )
+            return subprocess.run(
+                [sys.executable, str(script), str(manifest_path)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        passing = run_validator()
+        if passing.returncode != 0 or "visual evidence: PASS (lite" not in passing.stdout:
+            raise AssertionError(
+                "Visual evidence validator rejects a complete lite fixture: "
+                + passing.stderr.strip()
+            )
+
+        fixture["states"][0]["evidence"] = ["missing.png"]
+        missing_file = run_validator()
+        if missing_file.returncode == 0 or "does not exist" not in missing_file.stderr:
+            raise AssertionError(
+                "Visual evidence validator accepts an invented evidence path"
+            )
+
+        fixture["states"][0]["evidence"] = ["capture.png"]
+        fixture["profile"] = "full"
+        incomplete_full = run_validator()
+        if (
+            incomplete_full.returncode == 0
+            or "missing required ids" not in incomplete_full.stderr
+        ):
+            raise AssertionError(
+                "Visual evidence validator accepts lite coverage as full"
+            )
 
 
 def validate(project_root: Path) -> dict[str, int]:
@@ -395,6 +522,7 @@ def validate(project_root: Path) -> dict[str, int]:
         )
 
     _validate_skill(project_root)
+    _validate_visual_evidence_validator(project_root)
     return {
         "components": summary["component_count"],
         "samples": summary["sample_count"],
@@ -402,6 +530,7 @@ def validate(project_root: Path) -> dict[str, int]:
         "integration_patterns": summary["integration_pattern_count"],
         "project_shapes": eval_report["project_shape_count"],
         "retrieval_cases": eval_report["retrieval_case_count"],
+        "composition_cases": eval_report["composition_case_count"],
     }
 
 
@@ -426,7 +555,8 @@ def main(argv: Iterable[str] | None = None) -> int:
         "{application_patterns} application patterns, "
         "{integration_patterns} integration patterns, "
         "{project_shapes} project shapes, "
-        "{retrieval_cases} retrieval cases".format(**counts)
+        "{retrieval_cases} retrieval cases, "
+        "{composition_cases} composition cases".format(**counts)
     )
     return 0
 

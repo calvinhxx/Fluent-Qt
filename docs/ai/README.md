@@ -70,12 +70,17 @@ metadata; other agents ignore it, and the workflow does not depend on it. An
 agent without automatic Agent Skills discovery can still read the canonical
 `SKILL.md` explicitly.
 
-The Skill also carries tool-neutral contracts for theme design, component
-selection, and iterative visual review. They require a semantic Light/Dark
-palette, evidence-backed component decisions, responsive views, and at least
-one inspect-fix-recheck cycle. The shipped Gallery is the quality benchmark:
-applications may use a different structure, but should reach the same degree
-of component, token, state, and visual polish before being called complete.
+The Skill routes tool-neutral contracts for theme design, component selection,
+product-reference synthesis, performance/lifecycle, visual evidence, and
+iterative refinement according to task risk. A `lite` profile reduces planning
+and matrix ceremony for bounded single-surface work; a `full` profile applies
+to new GUIs, collections, asynchronous work, transient surfaces, custom themes,
+and product-shell decisions. Both retain the same visual and engineering
+quality gates. The reference layer extracts structural grammar from official
+product evidence rather than providing screens to copy. The shipped Gallery is
+the finish benchmark: applications may use a different structure, but should
+reach the same component, token, state, performance, and visual quality before
+being called complete.
 
 Validate the portable structure and deterministic catalog behavior with:
 
@@ -128,7 +133,7 @@ project-analysis record uses [its own schema](project-analysis.schema.json).
 | M2: general workflow | Evidence-based integration for existing and greenfield projects | Implemented |
 | M3: reusable Skill | Open Agent Skills workflow with cross-agent discovery adapters | Implemented |
 | M4: drift prevention | CI validation and source-package delivery | Implemented |
-| M5: measured quality | Seven project shapes and fifteen deterministic retrieval regressions | Baseline implemented |
+| M5: measured quality | Seventeen project shapes, sixteen retrieval regressions, and four cross-pattern composition gates | Baseline implemented |
 | M6: distribution | Registry or optional plugin bundles after the Skill/API stabilizes | Planned |
 
 The open-format Skill is the executable workflow and remains the first
@@ -138,8 +143,10 @@ substitute for the repository-level catalog and validation contract.
 
 The deterministic cases in `evals/scenarios.json` cover projects with no
 interface as well as library, CLI, TUI, service, and plugin boundaries. They
-measure catalog consistency and retrieval, not end-to-end model quality. Live
-agent tasks and judged implementation outcomes remain a later evaluation layer.
+measure catalog consistency, retrieval, component-set differentiation, and a
+negative guard against generic chat/sidebar shell convergence—not end-to-end
+model or visual quality. Live agent tasks and judged implementation outcomes
+remain a later evaluation layer.
 
 ## Compatibility boundary
 

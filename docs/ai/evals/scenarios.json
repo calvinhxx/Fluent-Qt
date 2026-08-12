@@ -98,6 +98,146 @@
         "Supported file types and validation errors",
         "Long-running operation and result ownership rules"
       ]
+    },
+    {
+      "id": "peer-document-editor",
+      "existing_interfaces": ["library"],
+      "signals": [
+        "Users keep several editable documents open and arrange peer work surfaces",
+        "Project hierarchy, contextual commands, and diagnostics support a dominant editor canvas"
+      ],
+      "expected_integration": "direct-library",
+      "expected_application_pattern": "multi-document-workbench",
+      "evidence": [
+        "Document identity, dirty state, persistence, and split ownership",
+        "Hierarchy, command routing, diagnostics, and close behavior"
+      ]
+    },
+    {
+      "id": "scene-authoring-tool",
+      "existing_interfaces": ["library"],
+      "signals": [
+        "Users directly arrange selectable objects in a spatial scene",
+        "The selected object drives hierarchy state, contextual tools, and editable properties"
+      ],
+      "expected_integration": "direct-library",
+      "expected_application_pattern": "spatial-authoring-workbench",
+      "evidence": [
+        "Scene graph, selection, transform, undo, and persistence contracts",
+        "Property model, play-test, diagnostics, and teardown behavior"
+      ]
+    },
+    {
+      "id": "nearby-device-transfer-client",
+      "existing_interfaces": ["service"],
+      "signals": [
+        "A local service discovers nearby endpoints and negotiates transfers",
+        "Users choose content and a destination, then follow acceptance, progress, completion, or failure"
+      ],
+      "expected_integration": "service-api",
+      "expected_application_pattern": "nearby-transfer-flow",
+      "evidence": [
+        "Discovery lifetime, endpoint identity, trust, and acceptance protocol",
+        "Transfer progress, retry, cancellation, and partial-failure behavior"
+      ]
+    },
+    {
+      "id": "live-media-operator-console",
+      "existing_interfaces": ["library"],
+      "signals": [
+        "A composed preview remains active while sources and levels change",
+        "Operators must distinguish configured, armed, active, muted, failing, and stopped states immediately"
+      ],
+      "expected_integration": "direct-library",
+      "expected_application_pattern": "live-production-console",
+      "evidence": [
+        "Preview/output lifecycle, source ordering, and real-time update contracts",
+        "Metering, state transitions, start-stop safety, and recovery behavior"
+      ]
+    },
+    {
+      "id": "knowledge-document-workspace",
+      "existing_interfaces": ["service"],
+      "signals": [
+        "A service owns a hierarchy of durable documents and structured records",
+        "Users edit one object through text, grid, board, or other peer representations"
+      ],
+      "expected_integration": "service-api",
+      "expected_application_pattern": "document-knowledge-workspace",
+      "evidence": [
+        "Workspace hierarchy, document identity, view schema, and persistence",
+        "Conflict, offline, synchronization, permission, and revision behavior"
+      ]
+    },
+    {
+      "id": "prompt-agent-artifact-workbench",
+      "existing_interfaces": ["service"],
+      "signals": [
+        "A remote agent edits durable workspace artifacts from user prompts",
+        "Run diagnostics are useful but do not need a permanent inspector"
+      ],
+      "expected_integration": "service-api",
+      "expected_application_pattern": "agent-workbench",
+      "evidence": [
+        "Artifact lifecycle, revisions, and supported edit operations",
+        "Agent run, cancellation, and temporary diagnostic contracts"
+      ]
+    },
+    {
+      "id": "structured-build-pipeline",
+      "existing_interfaces": ["cli"],
+      "signals": [
+        "A structured process reports ordered build stages and progress",
+        "Users retry failed stages and inspect step output"
+      ],
+      "expected_integration": "structured-process",
+      "expected_application_pattern": "build-pipeline",
+      "evidence": [
+        "Stage identifiers, ordering, progress, and retry semantics",
+        "Structured output, cancellation, and failure contracts"
+      ]
+    },
+    {
+      "id": "revision-artifact-review",
+      "existing_interfaces": ["library"],
+      "signals": [
+        "A library exposes a hierarchy of revisioned artifacts",
+        "Users compare, annotate, and approve precise locations"
+      ],
+      "expected_integration": "direct-library",
+      "expected_application_pattern": "artifact-review-workbench",
+      "evidence": [
+        "Artifact hierarchy, revision identity, and annotation model",
+        "Comparison, approval, persistence, and ownership APIs"
+      ]
+    },
+    {
+      "id": "replayable-agent-events",
+      "existing_interfaces": ["service"],
+      "signals": [
+        "Session state is reconstructed from a sequenced event stream",
+        "Users inspect decisions, recovery boundaries, and replay position"
+      ],
+      "expected_integration": "service-api",
+      "expected_application_pattern": "event-replay-console",
+      "evidence": [
+        "Event sequence, snapshot, gap recovery, and replay contracts",
+        "Decision requests, completion, and connection state"
+      ]
+    },
+    {
+      "id": "concurrent-agent-orchestration",
+      "existing_interfaces": ["service"],
+      "signals": [
+        "Several named agents own concurrent tasks and handoffs",
+        "Users monitor coordination, exceptions, and worker status"
+      ],
+      "expected_integration": "service-api",
+      "expected_application_pattern": "multi-agent-orchestrator",
+      "evidence": [
+        "Agent identity, task ownership, and handoff state",
+        "Concurrency, failure, cancellation, and coordination APIs"
+      ]
     }
   ],
   "retrieval_cases": [
@@ -174,7 +314,118 @@
     {
       "id": "streamed-conversation",
       "intent": "streamed conversation",
-      "expected_components_any": ["scroll-view", "text-edit"]
+      "expected_components_any": ["list-view"]
+    },
+    {
+      "id": "growing-event-history",
+      "intent": "long growing event history with virtualized rows",
+      "expected_components_any": ["list-view"]
+    }
+  ],
+  "composition_cases": [
+    {
+      "id": "developer-agent-product-structures",
+      "application_patterns": [
+        "agent-workbench",
+        "build-pipeline",
+        "event-replay-console"
+      ],
+      "min_pairwise_component_difference": 4
+    },
+    {
+      "id": "artifact-event-orchestration-structures",
+      "application_patterns": [
+        "artifact-review-workbench",
+        "event-replay-console",
+        "multi-agent-orchestrator"
+      ],
+      "min_pairwise_component_difference": 6
+    },
+    {
+      "id": "reference-derived-product-archetypes",
+      "application_patterns": [
+        "multi-document-workbench",
+        "spatial-authoring-workbench",
+        "nearby-transfer-flow",
+        "live-production-console",
+        "document-knowledge-workspace"
+      ],
+      "min_pairwise_component_difference": 7,
+      "required_components_by_pattern": {
+        "multi-document-workbench": [
+          "tab-view",
+          "command-bar-flyout"
+        ],
+        "spatial-authoring-workbench": [
+          "selector-bar",
+          "expander",
+          "slider"
+        ],
+        "nearby-transfer-flow": [
+          "grid-view",
+          "progress-bar",
+          "teaching-tip"
+        ],
+        "live-production-console": [
+          "list-view",
+          "slider",
+          "toggle-button",
+          "info-badge"
+        ],
+        "document-knowledge-workspace": [
+          "breadcrumb",
+          "text-edit",
+          "pivot",
+          "flyout"
+        ]
+      }
+    },
+    {
+      "id": "reject-generic-chat-sidebar-shell",
+      "application_patterns": [
+        "agent-workbench",
+        "build-pipeline",
+        "event-replay-console",
+        "multi-agent-orchestrator",
+        "nearby-transfer-flow"
+      ],
+      "min_pairwise_component_difference": 4,
+      "required_components_by_pattern": {
+        "agent-workbench": [
+          "selector-bar",
+          "drawer-view"
+        ],
+        "build-pipeline": [
+          "tree-view",
+          "progress-bar"
+        ],
+        "event-replay-console": [
+          "list-view",
+          "annotated-scrollbar"
+        ],
+        "multi-agent-orchestrator": [
+          "flow-view",
+          "avatar"
+        ],
+        "nearby-transfer-flow": [
+          "grid-view",
+          "progress-bar"
+        ]
+      },
+      "forbidden_component_sets": [
+        [
+          "navigation-view",
+          "list-view",
+          "text-edit",
+          "drawer-view"
+        ],
+        [
+          "navigation-view",
+          "tree-view",
+          "split-view",
+          "tab-view"
+        ]
+      ]
     }
   ]
 }

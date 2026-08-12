@@ -560,8 +560,13 @@ jobs:
               .agents/skills/build-fluentqt-gui/SKILL.md \
               .agents/skills/build-fluentqt-gui/agents/openai.yaml \
               .agents/skills/build-fluentqt-gui/references/component-selection.md \
+              .agents/skills/build-fluentqt-gui/references/experience-differentiation.md \
+              .agents/skills/build-fluentqt-gui/references/performance-lifecycle.md \
+              .agents/skills/build-fluentqt-gui/references/product-reference-patterns.md \
               .agents/skills/build-fluentqt-gui/references/theme-system.md \
+              .agents/skills/build-fluentqt-gui/references/visual-evidence-contract.md \
               .agents/skills/build-fluentqt-gui/references/visual-refinement.md \
+              .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
               .claude/skills/build-fluentqt-gui/SKILL.md \
               .github/scripts/setup-shiboken-clang.py \
               bindings/README.md \
