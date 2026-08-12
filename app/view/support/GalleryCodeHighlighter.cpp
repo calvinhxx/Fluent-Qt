@@ -62,6 +62,30 @@ const QSet<QString>& cppKeywords()
     return keywords;
 }
 
+const QSet<QString>& pythonKeywords()
+{
+    static const QSet<QString> keywords{
+        QStringLiteral("and"), QStringLiteral("as"),
+        QStringLiteral("assert"), QStringLiteral("async"),
+        QStringLiteral("await"), QStringLiteral("break"),
+        QStringLiteral("class"), QStringLiteral("continue"),
+        QStringLiteral("def"), QStringLiteral("del"),
+        QStringLiteral("elif"), QStringLiteral("else"),
+        QStringLiteral("except"), QStringLiteral("False"),
+        QStringLiteral("finally"), QStringLiteral("for"),
+        QStringLiteral("from"), QStringLiteral("global"),
+        QStringLiteral("if"), QStringLiteral("import"),
+        QStringLiteral("in"), QStringLiteral("is"),
+        QStringLiteral("lambda"), QStringLiteral("None"),
+        QStringLiteral("nonlocal"), QStringLiteral("not"),
+        QStringLiteral("or"), QStringLiteral("pass"),
+        QStringLiteral("raise"), QStringLiteral("return"),
+        QStringLiteral("True"), QStringLiteral("try"),
+        QStringLiteral("while"), QStringLiteral("with"),
+        QStringLiteral("yield")};
+    return keywords;
+}
+
 QString escapeChar(QChar c)
 {
     switch (c.unicode()) {
@@ -190,6 +214,111 @@ QString highlightCppToHtml(const QString& code, bool darkTheme)
     // zh_CN: 用默认色整体包一层，让未上 span 的文本（普通标识符、运算符）也随主题着色，
     // 与宿主 label 自身的颜色无关。
     return QStringLiteral("<span style=\"color:%1;\">%2</span>").arg(pal.text, html);
+}
+
+QString highlightPythonToHtml(const QString& code, bool darkTheme)
+{
+    const Palette& pal = paletteFor(darkTheme);
+    const QSet<QString>& keywords = pythonKeywords();
+
+    QString html;
+    html.reserve(code.size() * 2);
+
+    const int n = code.size();
+    int i = 0;
+    while (i < n) {
+        const QChar c = code.at(i);
+
+        if (c == QLatin1Char('#')) {
+            int j = i;
+            while (j < n && code.at(j) != QLatin1Char('\n'))
+                ++j;
+            html += span(pal.comment, code.mid(i, j - i));
+            i = j;
+            continue;
+        }
+
+        if (c == QLatin1Char('"') || c == QLatin1Char('\'')) {
+            const QChar quote = c;
+            const bool triple = i + 2 < n
+                && code.at(i + 1) == quote
+                && code.at(i + 2) == quote;
+            int j = i + (triple ? 3 : 1);
+            while (j < n) {
+                if (code.at(j) == QLatin1Char('\\') && j + 1 < n) {
+                    j += 2;
+                    continue;
+                }
+                if (triple) {
+                    if (j + 2 < n
+                        && code.at(j) == quote
+                        && code.at(j + 1) == quote
+                        && code.at(j + 2) == quote) {
+                        j += 3;
+                        break;
+                    }
+                } else if (code.at(j) == quote) {
+                    ++j;
+                    break;
+                } else if (code.at(j) == QLatin1Char('\n')) {
+                    break;
+                }
+                ++j;
+            }
+            html += span(pal.string, code.mid(i, j - i));
+            i = j;
+            continue;
+        }
+
+        if (c.isDigit()) {
+            int j = i;
+            while (j < n
+                   && (isIdentPart(code.at(j))
+                       || code.at(j) == QLatin1Char('.')))
+                ++j;
+            html += span(pal.number, code.mid(i, j - i));
+            i = j;
+            continue;
+        }
+
+        if (c == QLatin1Char('@')) {
+            int j = i + 1;
+            while (j < n
+                   && (isIdentPart(code.at(j))
+                       || code.at(j) == QLatin1Char('.')))
+                ++j;
+            html += span(pal.preprocessor, code.mid(i, j - i));
+            i = j;
+            continue;
+        }
+
+        if (isIdentStart(c)) {
+            int j = i;
+            while (j < n && isIdentPart(code.at(j)))
+                ++j;
+            const QString word = code.mid(i, j - i);
+            int k = j;
+            while (k < n && code.at(k).isSpace())
+                ++k;
+            const bool isCall = k < n && code.at(k) == QLatin1Char('(');
+            if (keywords.contains(word))
+                html += span(pal.keyword, word);
+            else if (isCall)
+                html += span(pal.function, word);
+            else if (word.at(0).isUpper())
+                html += span(pal.type, word);
+            else
+                html += escape(word);
+            i = j;
+            continue;
+        }
+
+        html += escapeChar(c);
+        ++i;
+    }
+
+    return QStringLiteral("<span style=\"color:%1;\">%2</span>")
+        .arg(pal.text, html);
 }
 
 } // namespace fluent::gallery

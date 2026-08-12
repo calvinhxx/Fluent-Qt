@@ -37,6 +37,7 @@
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/CompoundButton.h"
 #include "components/basicinput/Slider.h"
+#include "components/basicinput/ToggleButton.h"
 #include "compatibility/QtCompat.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
@@ -67,6 +68,8 @@
 #include "design/Typography.h"
 #include "model/GalleryComponentCatalog.h"
 #include "model/GalleryContentCatalog.h"
+#include "model/GalleryPythonSnippetCatalog.h"
+#include "platform/GalleryPlatform.h"
 #include "view/pages/GalleryCategoryPage.h"
 #include "view/widgets/GalleryCodeBlock.h"
 #include "view/pages/GalleryComponentPage.h"
@@ -75,6 +78,7 @@
 #include "view/widgets/GalleryComponentReferenceCard.h"
 #include "view/widgets/GalleryEntryGrid.h"
 #include "view/widgets/GalleryIconBrowser.h"
+#include "view/widgets/GalleryLanguageSelector.h"
 #include "view/widgets/GallerySampleCard.h"
 #include "view/widgets/GallerySampleCatalog.h"
 #include "view/widgets/samples/SampleBuilders.h"
@@ -86,7 +90,9 @@
 
 using fluent::gallery::GalleryCategoryPage;
 using fluent::gallery::GalleryCodeBlock;
+using fluent::gallery::GalleryCodeLanguage;
 using fluent::gallery::GalleryComponentPage;
+using fluent::gallery::GalleryComponentPageOptions;
 using fluent::gallery::GalleryComponentReferenceCard;
 using fluent::gallery::GalleryContentPage;
 using fluent::gallery::GalleryEntryGrid;
@@ -95,11 +101,15 @@ using fluent::gallery::GalleryIconBrowser;
 using fluent::gallery::GalleryNavigationViewModel;
 using fluent::gallery::GallerySampleCard;
 using fluent::gallery::GalleryWindow;
+using fluent::gallery::GalleryPythonSnippetCatalog;
 using fluent::gallery::galleryComponentCatalog;
 using fluent::gallery::galleryComponentReference;
 using fluent::gallery::galleryControlImageResource;
 using fluent::gallery::galleryContentCatalog;
 using fluent::gallery::galleryContentEntry;
+using fluent::gallery::galleryPythonSnippet;
+using fluent::gallery::galleryPythonSnippetCount;
+using fluent::gallery::galleryPythonSnippetsAvailable;
 using fluent::collections::TreeView;
 using fluent::menus_toolbars::CommandBar;
 using fluent::menus_toolbars::CommandBarFlyout;
@@ -754,6 +764,13 @@ TEST_F(GalleryContentPagesTest, ComponentReferencesMatchPublicIntegrationSurface
             EXPECT_TRUE(reference.header.endsWith(QStringLiteral(".h>")));
             EXPECT_NE(reference.header, QStringLiteral("<FluentQt/FluentQt.h>"));
             EXPECT_EQ(reference.cmakeTarget, QStringLiteral("FluentQt::FluentQt"));
+            EXPECT_TRUE(reference.hasPythonReference());
+            EXPECT_EQ(reference.pythonInstall,
+                      QStringLiteral("python -m pip install FluentQt"));
+            EXPECT_EQ(reference.pythonImport,
+                      QStringLiteral("import fluentqt"));
+            EXPECT_TRUE(reference.pythonType.startsWith(
+                QStringLiteral("fluentqt.")));
             const QString expectedNamespace = component.apiNamespace.isEmpty()
                 ? QStringLiteral("fluent::%1").arg(category.sourceDirectory)
                 : component.apiNamespace;
@@ -2300,7 +2317,7 @@ TEST_F(GalleryContentPagesTest, TreeViewIndicatorTargetsDoNotAutoScrollThePrevie
     }
 }
 
-TEST_F(GalleryContentPagesTest, EverySampleCodeBlockUsesCppAndNamesItsPreviewComponent)
+TEST_F(GalleryContentPagesTest, EverySampleHasCppAndGeneratedPythonTeachingSource)
 {
     int auditedSamples = 0;
     for (const auto& category : galleryComponentCatalog()) {
@@ -2313,6 +2330,7 @@ TEST_F(GalleryContentPagesTest, EverySampleCodeBlockUsesCppAndNamesItsPreviewCom
 
             const auto samples = fluent::gallery::gallerySamplesForRoute(component.id);
             ASSERT_FALSE(samples.isEmpty()) << component.id.toStdString();
+            QStringList codeSampleIds;
             for (const auto& sample : samples) {
                 SCOPED_TRACE(QStringLiteral("route=%1 sample=%2")
                                  .arg(component.id, sample.id)
@@ -2324,6 +2342,9 @@ TEST_F(GalleryContentPagesTest, EverySampleCodeBlockUsesCppAndNamesItsPreviewCom
                     << "Gallery source blocks are C++ statements, not pseudocode or QML";
                 EXPECT_FALSE(sample.codeSnippet.contains(QStringLiteral("import QtQuick")));
                 EXPECT_FALSE(sample.codeSnippet.contains(QStringLiteral("import QtQuick.Controls")));
+                const QString pythonSource =
+                    galleryPythonSnippet(component.id, sample.id);
+                EXPECT_FALSE(pythonSource.isEmpty());
 
                 std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
                 ASSERT_NE(preview, nullptr);
@@ -2362,13 +2383,60 @@ TEST_F(GalleryContentPagesTest, EverySampleCodeBlockUsesCppAndNamesItsPreviewCom
                     QStringLiteral("galleryCodeBlockLang"));
                 ASSERT_NE(language, nullptr);
                 EXPECT_EQ(language->text(), QStringLiteral("C++"));
+                codeSampleIds.append(sample.id);
                 ++auditedSamples;
             }
+            EXPECT_TRUE(galleryPythonSnippetsAvailable(
+                component.id, codeSampleIds));
         }
     }
 
     EXPECT_GT(auditedSamples, 100)
         << "The audit must cover the complete component sample catalog";
+    EXPECT_EQ(galleryPythonSnippetCount(), auditedSamples);
+}
+
+TEST_F(GalleryContentPagesTest, PythonSnippetCatalogToleratesStaleSummaryCounts)
+{
+    const QByteArray payload = R"json({
+        "schema_version": 1,
+        "summary": {"component_count": 67, "sample_count": 199},
+        "samples": [
+            {"route_id": "button", "sample_id": "styles", "source": "button = fluentqt.Button()"},
+            {"route_id": "button", "sample_id": "sizes", "source": "small = fluentqt.Button()"}
+        ]
+    })json";
+
+    const GalleryPythonSnippetCatalog catalog =
+        GalleryPythonSnippetCatalog::fromJson(payload);
+    ASSERT_TRUE(catalog.isLoaded());
+    EXPECT_EQ(catalog.snippetCount(), 2);
+    EXPECT_TRUE(catalog.hasCompleteRoute(
+        QStringLiteral("button"),
+        {QStringLiteral("styles"), QStringLiteral("sizes")}));
+}
+
+TEST_F(GalleryContentPagesTest, PythonSnippetCatalogIsolatesAnInvalidRoute)
+{
+    const QByteArray payload = R"json({
+        "schema_version": 1,
+        "summary": {"component_count": 2, "sample_count": 3},
+        "samples": [
+            {"route_id": "button", "sample_id": "styles", "source": "button = fluentqt.Button()"},
+            {"route_id": "button", "sample_id": "styles", "source": "duplicate = fluentqt.Button()"},
+            {"route_id": "slider", "sample_id": "range", "source": "slider = fluentqt.Slider()"}
+        ]
+    })json";
+
+    const GalleryPythonSnippetCatalog catalog =
+        GalleryPythonSnippetCatalog::fromJson(payload);
+    ASSERT_TRUE(catalog.isLoaded());
+    EXPECT_FALSE(catalog.hasCompleteRoute(
+        QStringLiteral("button"), {QStringLiteral("styles")}));
+    EXPECT_TRUE(catalog.snippet(
+        QStringLiteral("button"), QStringLiteral("styles")).isEmpty());
+    EXPECT_TRUE(catalog.hasCompleteRoute(
+        QStringLiteral("slider"), {QStringLiteral("range")}));
 }
 
 TEST_F(GalleryContentPagesTest, SampleCardRefreshesWhenPreviewSizeHintChanges)
@@ -2741,6 +2809,152 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesBodySizedNativeMonospaceFont)
     EXPECT_EQ(code->font().family(),
               QFontDatabase::systemFont(QFontDatabase::FixedFont).family());
     EXPECT_EQ(code->font().pixelSize(), Typography::FontSize::Body);
+}
+
+TEST_F(GalleryContentPagesTest, DualLanguageCodeBlockSwitchesAndCopiesCurrentSource)
+{
+    const QString cppSource =
+        QStringLiteral("auto* button = new Button();");
+    const QString pythonSource =
+        QStringLiteral("import fluentqt\n\nbutton = fluentqt.Button()\n");
+    GalleryCodeBlock block(cppSource, pythonSource);
+    ASSERT_NE(block.languageSelector(), nullptr);
+    EXPECT_EQ(block.codeLanguage(), GalleryCodeLanguage::Cpp);
+    EXPECT_EQ(block.code(), cppSource);
+
+    auto* codeLabel = block.findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryCodeBlockText"));
+    ASSERT_NE(codeLabel, nullptr);
+    EXPECT_TRUE(codeLabel->text().isEmpty())
+        << "Collapsed source must remain lazily highlighted";
+
+    block.languageSelector()->pythonButton()->click();
+    EXPECT_EQ(block.codeLanguage(), GalleryCodeLanguage::Python);
+    EXPECT_EQ(block.code(), pythonSource);
+    EXPECT_TRUE(codeLabel->text().isEmpty());
+
+    block.setExpanded(true, /*animated=*/false);
+    EXPECT_FALSE(codeLabel->text().isEmpty());
+    EXPECT_TRUE(codeLabel->text().contains(QStringLiteral("fluentqt")));
+    ASSERT_NE(QApplication::clipboard(), nullptr);
+    block.copyButton()->click();
+    EXPECT_EQ(QApplication::clipboard()->text(), pythonSource);
+
+    block.languageSelector()->cppButton()->click();
+    EXPECT_EQ(block.codeLanguage(), GalleryCodeLanguage::Cpp);
+    EXPECT_EQ(block.code(), cppSource);
+    EXPECT_TRUE(codeLabel->text().contains(QStringLiteral("Button")));
+}
+
+TEST_F(GalleryContentPagesTest, DualLanguageCodeBlockRemeasuresExpandedContent)
+{
+    const QString cppSource = QStringLiteral("Button button;");
+    const QString pythonSource = QStringLiteral(
+        "import fluentqt\n\n"
+        "button = fluentqt.Button()\n"
+        "button.setText(\"One\")\n"
+        "button.setEnabled(True)\n"
+        "button.setMinimumWidth(160)\n");
+    GalleryCodeBlock block(cppSource, pythonSource);
+    block.resize(520, block.sizeHint().height());
+    block.show();
+    QApplication::processEvents();
+    block.setExpanded(true, /*animated=*/false);
+    QApplication::processEvents();
+    const int cppHeight = block.minimumHeight();
+
+    block.setCodeLanguage(GalleryCodeLanguage::Python);
+    QApplication::processEvents();
+    EXPECT_GT(block.minimumHeight(), cppHeight);
+
+    block.setCodeLanguage(GalleryCodeLanguage::Cpp);
+    QApplication::processEvents();
+    EXPECT_EQ(block.minimumHeight(), cppHeight);
+}
+
+TEST_F(GalleryContentPagesTest, BilingualReferenceCardSwitchesTeachingLanguage)
+{
+    const auto reference = galleryComponentReference(QStringLiteral("button"));
+    ASSERT_TRUE(reference.hasPythonReference());
+    GalleryComponentReferenceCard card(
+        reference, /*showLanguageSelector=*/true);
+    ASSERT_NE(card.languageSelector(), nullptr);
+
+    card.languageSelector()->pythonButton()->click();
+    EXPECT_EQ(card.codeLanguage(), GalleryCodeLanguage::Python);
+    auto* pythonImport = card.findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryComponentReferencePythonImport"));
+    ASSERT_NE(pythonImport, nullptr);
+    EXPECT_EQ(pythonImport->text(), reference.pythonImport);
+
+    card.languageSelector()->cppButton()->click();
+    EXPECT_EQ(card.codeLanguage(), GalleryCodeLanguage::Cpp);
+    auto* cppHeader = card.findChild<fluent::textfields::Label*>(
+        QStringLiteral("galleryComponentReferenceHeader"));
+    ASSERT_NE(cppHeader, nullptr);
+    EXPECT_EQ(cppHeader->text(), reference.header);
+}
+
+TEST_F(GalleryContentPagesTest, BilingualComponentPageSynchronizesUseAndSources)
+{
+    const auto* entry = galleryContentEntry(QStringLiteral("button"));
+    ASSERT_NE(entry, nullptr);
+    GalleryNavigationViewModel navigationViewModel;
+    GalleryComponentPageOptions options;
+    options.requestBilingualDocumentation = true;
+    GalleryComponentPage page(*entry, navigationViewModel, options);
+
+    ASSERT_TRUE(page.bilingualDocumentationEnabled());
+    ASSERT_NE(page.referenceCard(), nullptr);
+    ASSERT_NE(page.referenceCard()->languageSelector(), nullptr);
+    ASSERT_FALSE(page.sampleCards().isEmpty());
+
+    page.referenceCard()->languageSelector()->pythonButton()->click();
+    EXPECT_EQ(page.codeLanguage(), GalleryCodeLanguage::Python);
+    EXPECT_EQ(page.referenceCard()->codeLanguage(),
+              GalleryCodeLanguage::Python);
+    for (GallerySampleCard* card : page.sampleCards()) {
+        ASSERT_NE(card, nullptr);
+        ASSERT_NE(card->codeBlock(), nullptr);
+        ASSERT_NE(card->codeBlock()->languageSelector(), nullptr);
+        EXPECT_EQ(card->codeBlock()->codeLanguage(),
+                  GalleryCodeLanguage::Python);
+    }
+
+    GalleryCodeBlock* sourceBlock = page.sampleCards().last()->codeBlock();
+    ASSERT_NE(sourceBlock, nullptr);
+    sourceBlock->languageSelector()->cppButton()->click();
+    EXPECT_EQ(page.codeLanguage(), GalleryCodeLanguage::Cpp);
+    EXPECT_EQ(page.referenceCard()->codeLanguage(), GalleryCodeLanguage::Cpp);
+    for (GallerySampleCard* card : page.sampleCards()) {
+        ASSERT_NE(card, nullptr);
+        ASSERT_NE(card->codeBlock(), nullptr);
+        EXPECT_EQ(card->codeBlock()->codeLanguage(),
+                  GalleryCodeLanguage::Cpp);
+    }
+}
+
+TEST_F(GalleryContentPagesTest, NativeComponentPageKeepsCppOnlyPresentation)
+{
+    EXPECT_FALSE(fluent::gallery::platform::capabilities()
+                     .showsBilingualDocumentation);
+    GalleryWindow window;
+    ASSERT_TRUE(window.selectRoute(QStringLiteral("button")));
+    auto* page = waitForCurrentPage<GalleryComponentPage>(window);
+    ASSERT_NE(page, nullptr);
+    ASSERT_NE(page->referenceCard(), nullptr);
+    EXPECT_EQ(page->referenceCard()->languageSelector(), nullptr);
+    EXPECT_EQ(page->referenceCard()->codeLanguage(),
+              GalleryCodeLanguage::Cpp);
+    ASSERT_FALSE(page->sampleCards().isEmpty());
+
+    for (GallerySampleCard* card : page->sampleCards()) {
+        ASSERT_NE(card->codeBlock(), nullptr);
+        EXPECT_FALSE(card->codeBlock()->hasPythonCode());
+        EXPECT_EQ(card->codeBlock()->languageSelector(), nullptr);
+        EXPECT_EQ(card->codeBlock()->codeLanguage(),
+                  GalleryCodeLanguage::Cpp);
+    }
 }
 
 TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)

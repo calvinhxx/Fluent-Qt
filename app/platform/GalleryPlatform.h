@@ -34,6 +34,13 @@ struct Capabilities {
     bool usesClientSideTitleBar = false;
     bool hostControlsTheme = false;
 
+    // Browser component pages can be cross-language documentation surfaces
+    // even though their live previews run as native C++ WebAssembly. Installed
+    // C++ and PySide6 Galleries keep their source presentation runtime-native.
+    // zh_CN: 浏览器组件页可以作为跨语言文档入口，但实时预览仍运行原生 C++
+    // WebAssembly；安装版 C++ 与 PySide6 Gallery 保持各自运行时原生展示。
+    bool showsBilingualDocumentation = false;
+
     // Browser visitors enter through an explanatory website and should land
     // directly in the catalog; desktop packages keep the first-run tour.
     // zh_CN: 浏览器访客已由官网引导，应直接进入目录；桌面安装包保留首启引导。

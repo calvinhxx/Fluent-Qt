@@ -777,6 +777,18 @@ if(BUILD_TESTING)
             TIMEOUT 240)
 
         add_test(
+            NAME test_pyside6_gallery_python_snippet_catalog
+            COMMAND "${Python_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tools/generate_native_python_snippet_catalog.py"
+                --output "${PROJECT_SOURCE_DIR}/app/data/gallery_python_snippets.json"
+                --check)
+        set_tests_properties(test_pyside6_gallery_python_snippet_catalog PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 240)
+
+        add_test(
             NAME test_pyside6_gallery_contract_generator
             COMMAND "${Python_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_gallery_contract_generator.py"

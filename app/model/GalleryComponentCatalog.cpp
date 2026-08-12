@@ -195,7 +195,10 @@ GalleryComponentReference galleryComponentReference(const QString& routeId)
                 categoryHeaders.value(category.sourceDirectory,
                                       QStringLiteral("<FluentQt/FluentQt.h>")),
                 QStringLiteral("%1::%2").arg(apiNamespace, typeName),
-                QStringLiteral("FluentQt::FluentQt")
+                QStringLiteral("FluentQt::FluentQt"),
+                QStringLiteral("python -m pip install FluentQt"),
+                QStringLiteral("import fluentqt"),
+                QStringLiteral("fluentqt.%1").arg(typeName)
             };
         }
     }
