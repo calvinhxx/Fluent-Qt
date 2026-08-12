@@ -776,17 +776,24 @@ if(BUILD_TESTING)
             LABELS "pyside;unit;ci_fast"
             TIMEOUT 240)
 
-        add_test(
-            NAME test_pyside6_gallery_python_snippet_catalog
-            COMMAND "${Python_EXECUTABLE}"
-                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tools/generate_native_python_snippet_catalog.py"
-                --output "${PROJECT_SOURCE_DIR}/app/data/gallery_python_snippets.json"
-                --check)
-        set_tests_properties(test_pyside6_gallery_python_snippet_catalog PROPERTIES
-            ENVIRONMENT
-                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
-            LABELS "pyside;unit;ci_fast"
-            TIMEOUT 240)
+        # The checked-in WebAssembly teaching catalog is produced by the
+        # official PySide6 release runtime. Older, non-published Qt 6.2
+        # compatibility wheels can render equivalent enum expressions with
+        # different source spelling, so keep their Gallery behavior tests but
+        # do not use them as canonical catalog generators.
+        if(FLUENT_QT_PYSIDE6_REQUIRES_PYTHON STREQUAL ">=3.11,<3.14")
+            add_test(
+                NAME test_pyside6_gallery_python_snippet_catalog
+                COMMAND "${Python_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tools/generate_native_python_snippet_catalog.py"
+                    --output "${PROJECT_SOURCE_DIR}/app/data/gallery_python_snippets.json"
+                    --check)
+            set_tests_properties(test_pyside6_gallery_python_snippet_catalog PROPERTIES
+                ENVIRONMENT
+                    "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+                LABELS "pyside;unit;ci_fast"
+                TIMEOUT 240)
+        endif()
 
         add_test(
             NAME test_pyside6_gallery_contract_generator
