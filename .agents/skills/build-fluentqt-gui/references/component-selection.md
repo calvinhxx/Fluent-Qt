@@ -3,9 +3,17 @@
 Choose controls from user intent, state semantics, and layout ownership. Visual
 similarity alone is not enough.
 
+Select the product signature and information architecture first. Components
+implement that composition; they must not decide it by accident.
+
+If a product reference was used, treat its component probes as questions, not a
+shopping list. Select from the target-specific winning concept and re-query the
+FluentQt catalog; do not inherit a reference product's widget inventory.
+
 ## Contents
 
 - Decision table and selection order
+- Semantic opportunity scan
 - Shell, grouping, action, and feedback choices
 - Raw Qt exception rule
 - Component acceptance gate
@@ -22,6 +30,21 @@ Include shell/navigation, primary input, primary action, result presentation,
 status/progress, optional detail, and overlays. Small self-evident labels and
 dividers do not need individual rows.
 
+## Run a semantic opportunity scan
+
+After the interface concept is selected, query the relevant selection guides
+and classify plausible component families as **must use**, **conditional**, or
+**not applicable**. Include the semantic trigger for every must-use or
+conditional family. For example, a temporary inspectable side surface can make
+`DrawerView` conditional; it becomes must-use only when the workflow actually
+contains such details.
+
+There is no minimum component count. Do not perform component bingo. A control
+that does not own a required behavior, state, lifetime, or data shape is a
+liability even when it would make the screen look different. Diversity should
+come from the product's primary object, time model, and signature surface, then
+from the controls that naturally express them.
+
 ## Decide in this order
 
 1. **Semantics:** action, persistent setting, selection, navigation, disclosure,
@@ -29,7 +52,7 @@ dividers do not need individual rows.
 2. **Lifetime and scope:** persistent, modal, anchored transient, temporary side
    panel, or top-level window.
 3. **Data shape:** scalar, short choice list, long collection, hierarchy,
-   document, or stream.
+   document, or stream; include expected cardinality and whether it is bounded.
 4. **Interaction:** keyboard focus, selection, reordering, cancellation,
    validation, and destructive behavior.
 5. **Density:** prominent task surface, normal content, compact toolbar, or
@@ -60,6 +83,10 @@ sample, not only the displayed snippet. Record the model roles, delegate,
 selection-indicator owner, row height, icon size, and any proxy model. Ordinary
 `ListView` text/icon rows may use its built-in delegate; richer rows need an
 explicit delegate whose indicator and content insets match the reference.
+For long or growing data, also record paging/windowing, incremental update,
+cache, and editor-materialization policies. `ScrollView` does not virtualize a
+layout of child widgets; `ListView` loses virtualization if every index receives
+a persistent widget. Follow [Performance and lifecycle](performance-lifecycle.md).
 
 ## Common shell choices
 
@@ -110,9 +137,17 @@ first evaluating composition.
 ## Component acceptance gate
 
 - Every major control has one clear semantic job.
+- The shell follows the selected product concept rather than the first catalog
+  pattern returned.
+- The opportunity scan contains no decorative component justified only by
+  variety, novelty, or quota.
 - No page contains competing accent actions.
 - Collection controls match hierarchy and selection needs.
 - Temporary content uses the correct modal/modeless/anchored lifetime.
+- One-shot surfaces are created on demand and destroyed after close; any cached
+  temporary surface is lazy and justified by state or measured reuse cost.
+- Unbounded collections use model/view virtualization plus a separate paging,
+  retention, and incremental-update contract.
 - Visible raw Qt exceptions are documented and theme-aware.
 - The implemented API matches the verified public sample or header.
 - Component size variants match the region's declared density; peer controls do

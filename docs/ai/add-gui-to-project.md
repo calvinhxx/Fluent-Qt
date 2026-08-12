@@ -5,6 +5,20 @@ one possible signal, not a prerequisite and not the architectural boundary.
 The GUI should depend on reusable domain/application behavior rather than screen
 scraping or emulating another interface.
 
+## 0. Choose a proportional profile
+
+Use `lite` only for a focused bounded correction or a small single-surface
+utility with no new integration boundary, growing collection, asynchronous
+operation, transient surface, custom theme bridge, or application-shell
+decision. Use `full` for every new GUI or major surface and whenever any lite
+condition is false or uncertain.
+
+The profile scales planning artifacts and evidence breadth, not quality. Both
+profiles require a real build, Light/Dark and normal/narrow review, realistic
+text, measured geometry, safe close behavior, and independent visual and
+engineering acceptance. Reclassify to full if implementation introduces a
+full trigger. The canonical Skill contains the reference-routing table.
+
 ## 1. Discover the target before choosing a UI
 
 Read the target repository's local agent instructions and inspect its build,
@@ -53,18 +67,35 @@ Describe the smallest end-to-end user slice in terms of:
 4. result presentation and any persistent state;
 5. cancellation, retry, close, and cleanup behavior.
 
-Add a concise visual contract before composing widgets:
+Both profiles record the user outcome, affected surface, primary object, hero
+interaction, selected composition, one rejected alternative, one project or
+Gallery reference, major component decisions, exact density metrics, theme
+strategy, and applicable normal/narrow/long-text/focus/disabled/close states.
 
-- the product or neutral Fluent visual reference and its evidence;
-- a named Gallery route, sample, or component `VisualCheck` for every major
-  surface or control family;
-- canvas, layer, panel, card, overlay, and primary-action hierarchy;
-- Light/Dark theme strategy, semantic brand colors, typography, and radius;
-- normal, narrow, and minimum supported layouts;
-- a density/metric sheet for shell height, panel insets, group and section
-  gaps, control and row heights, footer height, and icon size;
-- a component decision table with intent, chosen component, rejected
-  alternative, and catalog/API evidence.
+Lite also records why its child/data count is finite and why no full trigger is
+present. It does not need three concepts, dual product references, or a
+data/lifetime table for states that cannot exist.
+
+Full additionally records:
+
+- a complete product-signature identity card;
+- aligned and contrastive product references with transferred and rejected
+  structural rules and excluded brand/screenshot copying;
+- at least three structurally distinct information-architecture concepts;
+- named Gallery/sample/`VisualCheck` evidence for every major surface;
+- full surface hierarchy, Light/Dark strategy, and normal/narrow/minimum layout;
+- semantic component-opportunity scan and decision table;
+- data/lifetime table covering cardinality, updates, item-model/delegate
+  ownership, paging/windowing, cache limits, and transient construction and
+  destruction;
+- cross-product similarity review when relevant prior GUI work exists;
+- complete state-by-region evidence matrix.
+
+Full concepts differ in primary surface, persistent/transient regions, hero
+interaction, or narrow behavior. Color and pane-width variants do not count.
+At most one concept may retain the aligned reference's complete topology. If
+the selected design matches four or more structural dimensions of a recent
+unrelated GUI, cite domain evidence or redesign it.
 
 Keep four responsibilities distinct even when the first slice is small:
 
@@ -95,6 +126,9 @@ components. Each catalog entry includes its focused test and sample source.
 Choose by semantics, lifetime, data shape, interaction, and density. Do not use
 a raw Qt widget merely because it is familiar; document and theme every raw
 widget that remains because FluentQt has no suitable public contract.
+Application patterns are hypotheses, not complete screen templates. Choose the
+information architecture from the product signature before applying a pattern's
+component shortlist.
 
 For C++, link `FluentQt::FluentQt` and use installed headers such as
 `<FluentQt/FluentQt.h>` or the category header reported by the query. For
@@ -113,6 +147,14 @@ Build one useful workflow before expanding navigation or visual polish:
    object ownership and cancellation.
 6. Preserve existing entry points and regression tests.
 
+For every long or growing collection, use a Qt item model and delegate rather
+than a `ScrollView` layout containing one widget per record. Keep inserts and
+stream changes incremental, preserve a deliberate scroll position, and bound
+the model/transport/cache separately through pagination, windowing, retention,
+or a proven finite maximum. For one-shot dialogs and flyouts, construct on
+demand, guard deferred deletion, and destroy on finish; create repeat-use
+drawers lazily and cache them only when their state or measured cost warrants it.
+
 Use progress controls only for work that is actually observable. Disable or
 guard duplicate actions while work is running. Surface recoverable errors near
 the affected workflow and log diagnostic detail through the target project's
@@ -128,6 +170,10 @@ Validation is proportional to the change but must cover all of these layers:
 - the target builds through its supported build/package flow;
 - relevant FluentQt focused tests pass when FluentQt itself changes;
 - interactive workflows remain responsive during long-running work;
+- long/growing collections prove viewport-bounded materialization, targeted
+  model signals, and a paging or retention contract under realistic stress;
+- repeated one-shot transient open/close cycles return live instances to the
+  idle baseline after deferred deletion;
 - Light/Dark themes, text fit, keyboard focus, disabled/hover/pressed states,
   scaling, resize, and supported platforms receive visual review;
 - deterministic representative data is inspected at normal and narrow widths,
@@ -143,6 +189,20 @@ Validation is proportional to the change but must cover all of these layers:
   interaction states, or visual finish;
 - installers or wheels include the new GUI and required assets when shipping is
   in scope.
+- the product signature is recognizable without its logo or accent color and is
+  not merely a relabeled navigation/session/chat/inspector shell.
+
+Keep a task-local visual-evidence manifest with `"profile": "lite"` or
+`"profile": "full"`, then run:
+
+```bash
+python3 .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
+  /path/to/visual-evidence.json
+```
+
+The validator checks profile-specific coverage and that referenced local files
+exist. It does not judge aesthetics; the live and pixel review remains
+mandatory.
 
 For changes to FluentQt's own AI contract, finish with:
 

@@ -200,6 +200,10 @@ if(FLUENT_QT_INSTALL)
 		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/references"
 		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui"
 		COMPONENT Development)
+	install(PROGRAMS
+		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py"
+		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui/scripts"
+		COMPONENT Development)
 	install(FILES
 		"${CMAKE_CURRENT_SOURCE_DIR}/.claude/skills/build-fluentqt-gui/SKILL.md"
 		DESTINATION "${_fluent_qt_ai_doc_root}/.claude/skills/build-fluentqt-gui"

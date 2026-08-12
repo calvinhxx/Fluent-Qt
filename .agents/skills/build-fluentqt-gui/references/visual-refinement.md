@@ -3,6 +3,11 @@
 Treat visual quality as an iterative engineering task. A compiling window and a
 single screenshot are not a finished GUI.
 
+Visual and engineering quality are co-equal acceptance gates. Use this
+reference together with Performance and lifecycle; polished pixels do not
+compensate for unbounded object creation, full-model rebuilds, blocked event
+loops, or incorrect transient ownership.
+
 ## Contents
 
 - Gallery-equivalent quality bar
@@ -183,6 +188,22 @@ that hover, focus, animation, or live interaction remains manually unverified.
 Do not automate a different host application as a substitute for inspecting the
 GUI being built.
 
+### Live picture-in-picture detail loop
+
+When Computer Use is available, drive the built application through its live
+accessibility tree and keep evidence at two scales:
+
+1. a full-window view that preserves hierarchy and responsive context;
+2. native-resolution crops of the current high-risk detail, assembled beside
+   or over the full view as a compact picture-in-picture board.
+
+After each interaction, refresh the accessibility state before the next click.
+Use the loop to inspect the signature surface, selected navigation state,
+drawer/dialog/flyout stacking, title-bar geometry, input edge, and theme
+transition. The crop must identify its source state; never approve geometry from
+an enlarged or stale crop. A picture-in-picture board is review evidence, not a
+substitute for exercising the actual window.
+
 ## Record actionable findings
 
 Use short issue/fix notes, for example:
@@ -240,6 +261,8 @@ pass.
 
 ## Visual acceptance gate
 
+- Visual acceptance is independent of performance/lifecycle acceptance; both
+  must pass.
 - Every major surface or control family has a named comparison reference.
 - The real application was compared beside that reference in a comparable
   theme and scale.
