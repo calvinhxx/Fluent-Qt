@@ -29,8 +29,9 @@ namespace fluent::textfields {
 class TextEdit : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
     /**
-     * @brief Margins applied around the control content area.
-     * zh_CN: 控件内容区域周围的边距。
+     * @brief Minimum insets around the editable text; vertical values share
+     *        the line slot and expand the control only when they overflow it.
+     * zh_CN: 可编辑文本周围的最小内边距；垂直值优先包含在行槽中，仅在超出时扩展控件。
      */
     Q_PROPERTY(QMargins contentMargins READ contentMargins WRITE setContentMargins NOTIFY contentMarginsChanged)
     /**
@@ -141,10 +142,9 @@ private:
     void updateHeightForContent();
 
     /**
-     * @brief Applies rootFrame/block margins for vertical centering plus the
-     *        horizontal viewport margins.
-     * zh_CN: 设置 rootFrame margin + block bottomMargin 实现垂直居中，
-     * 并设置左右 viewport margins。
+     * @brief Applies requested text insets, remaining vertical centering, and
+     *        the horizontal viewport margins.
+     * zh_CN: 应用文本内边距、剩余垂直居中空间及左右 viewport margin。
      */
     void applyBlockCenterFormat();
 
