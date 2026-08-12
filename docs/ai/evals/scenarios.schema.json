@@ -4,7 +4,12 @@
   "title": "FluentQt AI regression scenarios",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "project_shapes", "retrieval_cases"],
+  "required": [
+    "schema_version",
+    "project_shapes",
+    "retrieval_cases",
+    "composition_cases"
+  ],
   "properties": {
     "schema_version": { "const": 1 },
     "project_shapes": {
@@ -16,6 +21,11 @@
       "type": "array",
       "minItems": 1,
       "items": { "$ref": "#/$defs/retrievalCase" }
+    },
+    "composition_cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/compositionCase" }
     }
   },
   "$defs": {
@@ -75,6 +85,47 @@
         "intent": { "$ref": "#/$defs/nonEmptyString" },
         "expected_components_any": {
           "$ref": "#/$defs/nonEmptyStringArray"
+        }
+      }
+    },
+    "compositionCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "application_patterns",
+        "min_pairwise_component_difference"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "application_patterns": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "min_pairwise_component_difference": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "required_components_by_pattern": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/nonEmptyString" },
+          "additionalProperties": {
+            "$ref": "#/$defs/nonEmptyStringArray"
+          }
+        },
+        "forbidden_component_sets": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/nonEmptyString" }
+          }
         }
       }
     }

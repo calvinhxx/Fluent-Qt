@@ -128,6 +128,123 @@
       ]
     },
     {
+      "id": "multi-document-workbench",
+      "title": "Multi-document command workbench",
+      "signals": [
+        "Users continuously edit several peer documents or work surfaces",
+        "A dominant canvas is surrounded by project hierarchy, contextual commands, splits, and diagnostics"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "structured-process",
+        "service-api",
+        "plugin-extension",
+        "greenfield"
+      ],
+      "components": [
+        "window",
+        "tab-view",
+        "split-view",
+        "tree-view",
+        "command-bar-flyout",
+        "annotated-scrollbar"
+      ]
+    },
+    {
+      "id": "spatial-authoring-workbench",
+      "title": "Spatial authoring workbench",
+      "signals": [
+        "Users directly manipulate a scene, graph, canvas, or other spatial artifact",
+        "Hierarchy selection drives contextual tools, properties, and collapsible diagnostics"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "structured-process",
+        "plugin-extension",
+        "greenfield"
+      ],
+      "components": [
+        "window",
+        "split-view",
+        "tree-view",
+        "selector-bar",
+        "command-bar",
+        "expander",
+        "slider",
+        "drawer-view"
+      ]
+    },
+    {
+      "id": "nearby-transfer-flow",
+      "title": "Nearby endpoint transfer flow",
+      "signals": [
+        "Users discover nearby endpoints, choose a payload and destination, then observe transfer progress",
+        "The workflow is short, responsive, and must expose discovery, acceptance, failure, and completion clearly"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "service-api",
+        "structured-process",
+        "greenfield"
+      ],
+      "components": [
+        "window",
+        "grid-view",
+        "compound-button",
+        "progress-bar",
+        "info-bar",
+        "teaching-tip",
+        "content-dialog"
+      ]
+    },
+    {
+      "id": "live-production-console",
+      "title": "Live production console",
+      "signals": [
+        "A preview or program output remains active while users adjust sources and controls",
+        "Continuous meters, armed or active states, ordering, and immediate operator feedback must stay visible"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "service-api",
+        "plugin-extension"
+      ],
+      "components": [
+        "window",
+        "split-view",
+        "list-view",
+        "slider",
+        "toggle-button",
+        "info-badge",
+        "command-bar",
+        "content-dialog"
+      ]
+    },
+    {
+      "id": "document-knowledge-workspace",
+      "title": "Document knowledge workspace",
+      "signals": [
+        "Users organize durable documents or records in a workspace hierarchy",
+        "One knowledge object can switch between text, grid, board, or other structured views"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "service-api",
+        "plugin-extension",
+        "greenfield"
+      ],
+      "components": [
+        "window",
+        "tree-view",
+        "breadcrumb",
+        "tab-view",
+        "text-edit",
+        "grid-view",
+        "pivot",
+        "flyout"
+      ]
+    },
+    {
       "id": "command-runner",
       "title": "Command runner",
       "signals": [
@@ -187,6 +304,112 @@
         "command-bar",
         "content-dialog",
         "toast"
+      ]
+    },
+    {
+      "id": "agent-workbench",
+      "title": "Agent artifact workbench",
+      "signals": [
+        "A prompt-driven agent creates or edits durable artifacts",
+        "Users need to inspect work products while run details remain secondary"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "service-api",
+        "structured-process"
+      ],
+      "components": [
+        "window",
+        "selector-bar",
+        "tree-view",
+        "command-bar",
+        "drawer-view",
+        "info-badge"
+      ]
+    },
+    {
+      "id": "build-pipeline",
+      "title": "Build pipeline workspace",
+      "signals": [
+        "Work advances through ordered stages with observable progress",
+        "Users diagnose individual steps and retry or cancel a run"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "structured-process",
+        "service-api"
+      ],
+      "components": [
+        "window",
+        "command-bar",
+        "tree-view",
+        "progress-bar",
+        "expander",
+        "drawer-view"
+      ]
+    },
+    {
+      "id": "artifact-review-workbench",
+      "title": "Artifact review workbench",
+      "signals": [
+        "Users compare, annotate, or approve durable files or documents",
+        "Hierarchy and revision location matter more than a chronological chat"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "structured-process",
+        "service-api",
+        "plugin-extension"
+      ],
+      "components": [
+        "window",
+        "tab-view",
+        "breadcrumb",
+        "tree-view",
+        "split-view",
+        "annotated-scrollbar"
+      ]
+    },
+    {
+      "id": "event-replay-console",
+      "title": "Event replay console",
+      "signals": [
+        "The authoritative state is reconstructed from an ordered event stream",
+        "Users inspect sequence boundaries, decisions, recovery, and replay state"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "service-api",
+        "structured-process"
+      ],
+      "components": [
+        "window",
+        "selector-bar",
+        "list-view",
+        "annotated-scrollbar",
+        "expander",
+        "drawer-view"
+      ]
+    },
+    {
+      "id": "multi-agent-orchestrator",
+      "title": "Multi-agent orchestrator",
+      "signals": [
+        "Several autonomous workers own concurrent tasks or resources",
+        "Identity, coordination, exceptions, and handoffs must remain visible"
+      ],
+      "preferred_integrations": [
+        "direct-library",
+        "service-api",
+        "plugin-extension"
+      ],
+      "components": [
+        "window",
+        "flow-view",
+        "avatar",
+        "info-badge",
+        "accordion",
+        "command-bar"
       ]
     }
   ],
@@ -284,8 +507,8 @@
       "candidates": [
         {
           "component_id": "list-view",
-          "choose_when": "Items form a primarily vertical collection with selection. The built-in delegate covers ordinary text and icon rows; use a custom delegate for richer item composition.",
-          "avoid_when": "Hierarchy or two-dimensional visual scanning is the main task."
+          "choose_when": "Items form a primarily vertical collection, stream, conversation, event history, or log. Use a QAbstractItemModel and delegate so long or growing data stays virtualized; the built-in delegate covers ordinary text and icon rows, while richer rows use a bounded custom delegate.",
+          "avoid_when": "Hierarchy or two-dimensional visual scanning is the main task, or the implementation would defeat virtualization with one persistent widget per row."
         },
         {
           "component_id": "grid-view",
@@ -475,8 +698,8 @@
       "candidates": [
         {
           "component_id": "scroll-view",
-          "choose_when": "Caller-owned content needs a scrollable viewport with Fluent scrollbars and optional zoom.",
-          "avoid_when": "A Qt item view already owns scrolling."
+          "choose_when": "One caller-owned document, canvas, or deliberately finite widget composition needs a scrollable viewport with Fluent scrollbars and optional zoom.",
+          "avoid_when": "A Qt item view already owns scrolling, or records can grow into an unbounded layout of child widgets."
         },
         {
           "component_id": "scrollbar",
