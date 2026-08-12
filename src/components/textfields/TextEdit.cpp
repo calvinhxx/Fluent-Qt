@@ -28,9 +28,22 @@ namespace fluent::textfields {
 
 // ── Helpers. zh_CN: 辅助函数 ───────────────────────────────────────────────────
 
-static int calcTopPad(const QFont& font, int lineHeight) {
+static int verticalMarginOverflow(const QFont& font,
+                                  int lineHeight,
+                                  const QMargins& margins) {
     const int fontLh = QFontMetrics(font).lineSpacing();
-    return qMax(0, lineHeight - fontLh) / 2;
+    const int slotSlack = qMax(0, lineHeight - fontLh);
+    return qMax(0, margins.top() + margins.bottom() - slotSlack);
+}
+
+static int calcTopPad(const QFont& font,
+                      int lineHeight,
+                      const QMargins& margins) {
+    const int fontLh = QFontMetrics(font).lineSpacing();
+    const int slotSlack = qMax(0, lineHeight - fontLh);
+    const int distributable = qMax(
+        0, slotSlack - margins.top() - margins.bottom());
+    return qMax(0, margins.top()) + distributable / 2;
 }
 
 static int calcBotPad(const QFont& font, int lineHeight) {
@@ -47,7 +60,8 @@ static bool formatMetricEquals(qreal lhs, qreal rhs) {
 // QTextEdit is used (not QPlainTextEdit) because QTextDocumentLayout natively
 // honors QTextBlockFormat top/bottom margins plus the rootFrame margin. Each
 // text line and the caret center vertically inside the lineHeight slot via:
-//   - rootFrame topMargin = (lineHeight - fontLh) / 2  … space above line one
+//   - rootFrame topMargin = requested top inset + remaining centered slack
+//     … space above line one
 //   - per-block bottomMargin = lineHeight - fontLh     … line spacing
 // Qt then handles caret placement, selection, and hit testing without a
 // custom paintEvent.
@@ -109,7 +123,8 @@ protected:
         if (ph.isEmpty()) return;
 
         QPainter painter(viewport());
-        const int topPad = calcTopPad(font(), m_owner->lineHeight());
+        const int topPad = calcTopPad(
+            font(), m_owner->lineHeight(), m_owner->contentMargins());
         const int fontLh = QFontMetrics(font()).lineSpacing();
         QRect textRect(0, topPad, viewport()->width(), fontLh);
         painter.setPen(palette().color(QPalette::PlaceholderText));
@@ -513,6 +528,9 @@ void TextEdit::setContentMargins(const QMargins& margins) {
     if (m_contentMargins == margins) return;
     m_contentMargins = margins;
     applyThemeStyle();
+    updateHeightForContent();
+    if (m_editor && m_editor->viewport())
+        m_editor->viewport()->update();
     emit contentMarginsChanged();
 }
 
@@ -520,6 +538,7 @@ void TextEdit::setFontRole(Typography::FontRole role) {
     if (m_fontRole == role) return;
     m_fontRole = role;
     applyThemeStyle();
+    updateHeightForContent();
     if (m_editor && m_editor->viewport())
         m_editor->viewport()->update();
     emit fontRoleChanged();
@@ -581,6 +600,7 @@ void TextEdit::setScrollChainingEnabled(bool enabled) {
 
 void TextEdit::onThemeUpdated() {
     applyThemeStyle();
+    updateHeightForContent();
 }
 
 // ── Core internals. zh_CN: 核心私有方法 ─────────────────────────────────────────
@@ -635,7 +655,7 @@ void TextEdit::applyBlockCenterFormat() {
     m_updatingFormat = true;
 
     const QFont f = m_editor->font();
-    const int topPad = calcTopPad(f, m_lineHeight);
+    const int topPad = calcTopPad(f, m_lineHeight, m_contentMargins);
     const int botPad = calcBotPad(f, m_lineHeight);
 
     // 1. rootFrame topMargin: space above line one for vertical centering.
@@ -731,8 +751,14 @@ void TextEdit::updateHeightForContent() {
     const int maximumLines = qMax(minimumLines, m_maxVisibleLines);
     const int clamped = qBound(minimumLines, visualLines, maximumLines);
 
-    // height = clampedLines × lineHeight
-    const int targetHeight = clamped * m_lineHeight;
+    // The normal Fluent margin fits inside the line slot and therefore keeps a
+    // one-line editor equal to other 32 px controls. Larger caller-provided
+    // vertical insets add only the overflow required to keep both edges real.
+    // zh_CN: 默认 Fluent 内边距包含在行槽中，因此单行编辑器仍与 32px 控件等高；
+    // 调用方设置更大的上下内边距时，仅补足超出行槽余量的高度。
+    const int marginOverflow = verticalMarginOverflow(
+        m_editor->font(), m_lineHeight, m_contentMargins);
+    const int targetHeight = clamped * m_lineHeight + marginOverflow;
     if (minimumHeight() != targetHeight || maximumHeight() != targetHeight)
         setFixedHeight(targetHeight);
 
