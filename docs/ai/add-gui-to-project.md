@@ -15,9 +15,14 @@ condition is false or uncertain.
 
 The profile scales planning artifacts and evidence breadth, not quality. Both
 profiles require a real build, Light/Dark and normal/narrow review, realistic
-text, measured geometry, safe close behavior, and independent visual and
-engineering acceptance. Reclassify to full if implementation introduces a
-full trigger. The canonical Skill contains the reference-routing table.
+text, measured geometry, safe close behavior, independent visual and
+engineering acceptance, the applicable premium-shell material path, and a
+finished signature surface. An application-owned top-level shell uses Mica or
+Acrylic with revealed pane gaps; an embedded GUI preserves its host-owned
+window. Both require quiet chrome on the owning surface and a designed primary
+object rather than a labeled log. Reclassify to full if implementation
+introduces a full trigger. The canonical Skill contains the reference-routing
+table.
 
 ## 1. Discover the target before choosing a UI
 
@@ -42,6 +47,11 @@ Query an exact pattern with:
 ```bash
 python3 tools/ai/query_ai_catalog.py --pattern direct-library
 ```
+
+Apply the returned machine-readable `window_ownership` before considering an
+application pattern's component candidates. `host-owned` means return an
+embedded child surface and do not construct a second `Window` or event loop;
+`caller-decides` requires target evidence before choosing a shell.
 
 | Pattern | Use it when | Important boundary |
 | --- | --- | --- |
@@ -141,7 +151,13 @@ Build one useful workflow before expanding navigation or visual polish:
 
 1. Add the narrow application adapter and unit-test it without a window.
 2. Model deterministic view states and transitions.
-3. Compose the minimum FluentQt surface for the workflow.
+3. If the slice owns a top-level window, install the premium shell first:
+   Fluent `Window`, Mica, theme before construct, and unfilled hosts that
+   reveal window material. If it is embedded, keep the host-owned window and
+   lifecycle. Then finish the signature surface for the primary object, any
+   primary input, and pane chrome. Do not stamp opaque `bgCanvas` / `bgLayer`
+   fills onto every pane, wrap a composer in a `Card`, or use a filled
+   `ComboBox` as a pane title.
 4. Move blocking I/O or computation off the GUI thread.
 5. Marshal results back through Qt signals or queued invocations with clear
    object ownership and cancellation.
@@ -189,20 +205,24 @@ Validation is proportional to the change but must cover all of these layers:
   interaction states, or visual finish;
 - installers or wheels include the new GUI and required assets when shipping is
   in scope.
-- the product signature is recognizable without its logo or accent color and is
-  not merely a relabeled navigation/session/chat/inspector shell.
+- the product signature is recognizable without its logo or accent color;
+  a run or conversation is a finished transcript, not a labeled log, and the
+  result is not merely a relabeled navigation/session/chat/inspector shell
+  when that is not the primary object.
 
-Keep a task-local visual-evidence manifest with `"profile": "lite"` or
-`"profile": "full"`, then run:
+Keep a task-local visual-evidence manifest with `"contract_version": 2` and
+`"profile": "lite"` or `"profile": "full"`, then run:
 
 ```bash
 python3 .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
   /path/to/visual-evidence.json
 ```
 
-The validator checks profile-specific coverage and that referenced local files
-exist. It does not judge aesthetics; the live and pixel review remains
-mandatory.
+The validator checks profile-specific coverage, local file existence, window
+material fields, and signature-surface fields. Legacy manifests without
+`contract_version` still validate as v1 with a migration warning, but new
+evidence must use v2. The script does not judge aesthetics; live and pixel
+review remains mandatory.
 
 For changes to FluentQt's own AI contract, finish with:
 

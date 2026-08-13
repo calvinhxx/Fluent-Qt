@@ -29,7 +29,9 @@ Before choosing an application pattern or shell, record one short identity card:
 
 Use repository evidence for every answer. A generic noun such as “workspace,”
 “chat,” or “dashboard” is insufficient unless the domain itself makes that the
-primary object.
+primary object. If the primary object is a run or conversation, name it that
+way and finish the transcript; do not relabel a log as a chat or hide a real
+run behind an unrelated artifact workbench.
 
 ## Synthesize references instead of copying them
 
@@ -99,9 +101,12 @@ Examples of meaningful compositions:
 | Artifact inspection and revision | document tabs + hierarchy + annotated navigation + review overlay |
 | Several autonomous workers | spatial/collection view + identity/status + coordinated task disclosure |
 | Prompt-driven agent with editable artifacts | artifact workbench + compact command surface + temporary run details |
+| Prompt-driven agent whose primary object is the run | designed transcript (user / assistant / tool / permission) + integrated composer |
 
 These examples are not mandatory layouts. Use them to challenge a generic
-conversation-first default.
+conversation-first default unless the identity card names the run or
+conversation as the primary object. Then follow
+[Signature surface](signature-surface.md).
 
 ## Review cross-product similarity
 
@@ -143,4 +148,5 @@ Before final acceptance:
 - the narrow layout preserves the product signature rather than collapsing into
   an undifferentiated list;
 - the result is not merely the same navigation/session/chat/inspector skeleton
-  with new labels and colors.
+  with new labels and colors, unless the identity card names that skeleton's
+  primary object and the signature surface is finished rather than wireframed.

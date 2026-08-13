@@ -36,7 +36,9 @@ REQUIRED_PATHS = (
     ".agents/skills/build-fluentqt-gui/references/component-selection.md",
     ".agents/skills/build-fluentqt-gui/references/experience-differentiation.md",
     ".agents/skills/build-fluentqt-gui/references/performance-lifecycle.md",
+    ".agents/skills/build-fluentqt-gui/references/premium-shell.md",
     ".agents/skills/build-fluentqt-gui/references/product-reference-patterns.md",
+    ".agents/skills/build-fluentqt-gui/references/signature-surface.md",
     ".agents/skills/build-fluentqt-gui/references/theme-system.md",
     ".agents/skills/build-fluentqt-gui/references/visual-evidence-contract.md",
     ".agents/skills/build-fluentqt-gui/references/visual-refinement.md",
@@ -200,7 +202,9 @@ def _validate_skill(project_root: Path) -> None:
         "references/component-selection.md",
         "references/experience-differentiation.md",
         "references/performance-lifecycle.md",
+        "references/premium-shell.md",
         "references/product-reference-patterns.md",
+        "references/signature-surface.md",
         "references/theme-system.md",
         "references/visual-evidence-contract.md",
         "references/visual-refinement.md",
@@ -230,10 +234,24 @@ def _validate_skill(project_root: Path) -> None:
             "Choose transient lifetime deliberately",
             "Acceptance gate",
         ),
+        "references/premium-shell.md": (
+            "Default window material",
+            "Reveal the window material",
+            "Reject these first-render patterns",
+            "Premium-shell acceptance gate",
+        ),
+        "references/signature-surface.md": (
+            "Finish the product object, not the shell",
+            "Conversation and run timeline",
+            "Composer and command dock",
+            "Reject these unfinished surfaces",
+            "Signature-surface acceptance gate",
+        ),
         "references/theme-system.md": (
             "ThemeRegistry::defaultSnapshot()",
             "apply_style_theme",
             "Audit raw Qt widgets",
+            "Install window material with the theme",
             "Theme acceptance gate",
         ),
         "references/component-selection.md": (
@@ -243,6 +261,7 @@ def _validate_skill(project_root: Path) -> None:
         ),
         "references/visual-refinement.md": (
             "Gallery-equivalent quality bar",
+            "Start with window material, then density",
             "normal window, Light",
             "minimum supported window",
             "Record actionable findings",
@@ -252,6 +271,9 @@ def _validate_skill(project_root: Path) -> None:
             "Cover mandatory states",
             "Verify dynamic convergence",
             "picture-in-picture crops",
+            "contract_version",
+            "window_backdrop",
+            "signature_finish",
             "Visual acceptance requires",
         ),
     }
@@ -302,10 +324,18 @@ def _validate_visual_evidence_validator(project_root: Path) -> None:
         (root / "capture.png").write_bytes(b"visual-evidence-fixture")
         manifest_path = root / "visual-evidence.json"
         fixture = {
+            "contract_version": 2,
             "application": "validator-fixture",
             "reviewed_build": "reviewed-app",
             "platform": "test platform, scale 1x",
             "profile": "lite",
+            "window_backdrop": "mica",
+            "surface_fill_policy": "reveal-material",
+            "signature_finish": "product",
+            "chrome_on_material": "quiet",
+            "sparse_canvas_treatment": "composed",
+            "primary_input_treatment": "integrated-dock",
+            "visible_copy_register": "user-facing",
             "states": [
                 {
                     "id": state_id,
@@ -364,6 +394,50 @@ def _validate_visual_evidence_validator(project_root: Path) -> None:
                 + passing.stderr.strip()
             )
 
+        fixture["window_backdrop"] = "host-owned"
+        fixture["window_backdrop_reason"] = "Embedded in the IDE-owned panel"
+        fixture["surface_fill_policy"] = "inherit-host"
+        fixture["surface_fill_reason"] = "The host owns the panel surface"
+        fixture["primary_input_treatment"] = "none"
+        valid_host_owned = run_validator()
+        if valid_host_owned.returncode != 0:
+            raise AssertionError(
+                "Visual evidence validator rejects a valid host-owned surface: "
+                + valid_host_owned.stderr.strip()
+            )
+
+        fixture["window_backdrop"] = "mica"
+        fixture["surface_fill_policy"] = "reveal-material"
+        fixture["primary_input_treatment"] = "integrated-dock"
+        fixture.pop("window_backdrop_reason", None)
+        fixture.pop("surface_fill_reason", None)
+
+        legacy_fixture = json.loads(json.dumps(fixture))
+        for field in (
+            "contract_version",
+            "window_backdrop",
+            "surface_fill_policy",
+            "signature_finish",
+            "chrome_on_material",
+            "sparse_canvas_treatment",
+            "primary_input_treatment",
+            "visible_copy_register",
+        ):
+            legacy_fixture.pop(field, None)
+        manifest_path.write_text(
+            json.dumps(legacy_fixture, ensure_ascii=False), encoding="utf-8"
+        )
+        legacy = subprocess.run(
+            [sys.executable, str(script), str(manifest_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if legacy.returncode != 0 or "legacy contract v1" not in legacy.stderr:
+            raise AssertionError(
+                "Visual evidence validator does not preserve legacy v1 manifests"
+            )
+
         fixture["states"][0]["evidence"] = ["missing.png"]
         missing_file = run_validator()
         if missing_file.returncode == 0 or "does not exist" not in missing_file.stderr:
@@ -380,6 +454,76 @@ def _validate_visual_evidence_validator(project_root: Path) -> None:
         ):
             raise AssertionError(
                 "Visual evidence validator accepts lite coverage as full"
+            )
+
+        fixture["profile"] = "lite"
+        fixture["window_backdrop"] = "solid"
+        fixture.pop("window_backdrop_reason", None)
+        solid_without_reason = run_validator()
+        if (
+            solid_without_reason.returncode == 0
+            or "window_backdrop_reason" not in solid_without_reason.stderr
+        ):
+            raise AssertionError(
+                "Visual evidence validator accepts Solid backdrop without a reason"
+            )
+
+        fixture["window_backdrop"] = "host-owned"
+        fixture.pop("window_backdrop_reason", None)
+        host_without_reason = run_validator()
+        if (
+            host_without_reason.returncode == 0
+            or "window_backdrop_reason" not in host_without_reason.stderr
+        ):
+            raise AssertionError(
+                "Visual evidence validator accepts host-owned backdrop without a reason"
+            )
+
+        fixture["window_backdrop_reason"] = "Embedded in the IDE-owned panel"
+        host_with_wrong_fill = run_validator()
+        if (
+            host_with_wrong_fill.returncode == 0
+            or "requires surface_fill_policy" not in host_with_wrong_fill.stderr
+        ):
+            raise AssertionError(
+                "Visual evidence validator accepts inconsistent host-owned material"
+            )
+
+        fixture["window_backdrop"] = "mica"
+        fixture.pop("window_backdrop_reason", None)
+        fixture["signature_finish"] = "wireframe"
+        wireframe = run_validator()
+        if wireframe.returncode == 0 or "wireframe" not in wireframe.stderr:
+            raise AssertionError(
+                "Visual evidence validator accepts signature_finish wireframe"
+            )
+
+        fixture["signature_finish"] = "product"
+        fixture["chrome_on_material"] = "filled-stickers"
+        stickers = run_validator()
+        if stickers.returncode == 0 or "filled-stickers" not in stickers.stderr:
+            raise AssertionError(
+                "Visual evidence validator accepts chrome_on_material filled-stickers"
+            )
+
+        fixture["chrome_on_material"] = "quiet"
+        fixture["primary_input_treatment"] = "independent-card"
+        fixture.pop("primary_input_reason", None)
+        card_without_reason = run_validator()
+        if (
+            card_without_reason.returncode == 0
+            or "primary_input_reason" not in card_without_reason.stderr
+        ):
+            raise AssertionError(
+                "Visual evidence validator accepts independent-card without a reason"
+            )
+
+        fixture["primary_input_reason"] = "The editor is an independent document"
+        valid_independent_card = run_validator()
+        if valid_independent_card.returncode != 0:
+            raise AssertionError(
+                "Visual evidence validator rejects a justified independent card: "
+                + valid_independent_card.stderr.strip()
             )
 
 

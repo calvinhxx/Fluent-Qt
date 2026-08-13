@@ -1,9 +1,10 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "integration_patterns": [
     {
       "id": "direct-library",
       "title": "Direct library integration",
+      "window_ownership": "caller-decides",
       "choose_when": "The project already exposes reusable domain or application APIs that can be called without starting its existing user interface.",
       "avoid_when": "The reusable API is unstable, unsafe to call from a GUI process, or tied to a different event loop without an adapter.",
       "required_evidence": [
@@ -15,6 +16,7 @@
     {
       "id": "service-api",
       "title": "Service client",
+      "window_ownership": "caller-decides",
       "choose_when": "The project already exposes a local or remote HTTP, RPC, socket, or message-based service contract.",
       "avoid_when": "The service contract is an internal implementation detail or the GUI must work fully offline without the service.",
       "required_evidence": [
@@ -26,6 +28,7 @@
     {
       "id": "structured-process",
       "title": "Structured child process",
+      "window_ownership": "caller-decides",
       "choose_when": "The project has a stable command-line entry point but no safe in-process library boundary.",
       "avoid_when": "The only output is human-oriented terminal control sequences or the process cannot report structured progress and errors.",
       "required_evidence": [
@@ -37,6 +40,7 @@
     {
       "id": "plugin-extension",
       "title": "Native project extension",
+      "window_ownership": "host-owned",
       "choose_when": "The host project has a documented plugin, frontend, or module extension point that can own a GUI surface.",
       "avoid_when": "Using the extension point would require private host APIs or couple the GUI to an unstable ABI.",
       "required_evidence": [
@@ -48,6 +52,7 @@
     {
       "id": "extract-core",
       "title": "Extract a reusable core",
+      "window_ownership": "caller-decides",
       "choose_when": "Business behavior is coupled to an existing UI entry point but can be separated with a narrow, test-preserving refactor.",
       "avoid_when": "The requested GUI is too small to justify a broad refactor or the extraction would change established behavior without adequate tests.",
       "required_evidence": [
@@ -59,6 +64,7 @@
     {
       "id": "greenfield",
       "title": "Greenfield application",
+      "window_ownership": "application-owned",
       "choose_when": "No reusable application exists yet, or the request is explicitly for a new standalone GUI product.",
       "avoid_when": "An existing supported interface can satisfy the requirement with less duplication and lower maintenance cost.",
       "required_evidence": [
@@ -248,8 +254,8 @@
       "id": "command-runner",
       "title": "Command runner",
       "signals": [
-        "Users launch long-running operations and need progress, cancellation, and logs",
-        "The backend may be a library, CLI, TUI core, or service"
+        "Users launch long-running operations and need progress, cancellation, and a designed result surface",
+        "A raw log widget is correct only when the product is itself a log viewer"
       ],
       "preferred_integrations": [
         "direct-library",
@@ -325,6 +331,27 @@
         "command-bar",
         "drawer-view",
         "info-badge"
+      ]
+    },
+    {
+      "id": "agent-run-workspace",
+      "title": "Agent run workspace",
+      "signals": [
+        "Users send a task and watch an ordered run of user, assistant, tool, and permission events",
+        "The transcript is the signature surface; a session list is supporting chrome, not a generic chat shell"
+      ],
+      "preferred_integrations": [
+        "service-api",
+        "direct-library",
+        "structured-process"
+      ],
+      "components": [
+        "window",
+        "list-view",
+        "text-edit",
+        "info-bar",
+        "content-dialog",
+        "command-bar"
       ]
     },
     {
@@ -472,7 +499,7 @@
         {
           "component_id": "combobox",
           "choose_when": "One value is selected from a compact list that need not stay visible.",
-          "avoid_when": "All alternatives must remain visible for comparison."
+          "avoid_when": "All alternatives must remain visible for comparison, or the control is pane chrome on window material."
         },
         {
           "component_id": "radio-button",
@@ -806,7 +833,7 @@
       "candidates": [
         {
           "component_id": "window",
-          "choose_when": "A top-level Fluent application window with custom chrome and theming is required.",
+          "choose_when": "A top-level Fluent application window with custom chrome, Mica or Acrylic material, and theming is required.",
           "avoid_when": "The UI is embedded inside an existing host-owned window."
         },
         {

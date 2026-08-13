@@ -13,7 +13,7 @@ loops, or incorrect transient ownership.
 - Gallery-equivalent quality bar
 - Coherent desktop density
 - Comparable views and 100% perimeter review
-- Four refinement passes
+- Material, signature, hierarchy, geometry, interaction, and resilience passes
 - Geometry, layer, and final acceptance gates
 
 ## Gallery-equivalent quality bar
@@ -44,9 +44,17 @@ Do not require pixel identity: native chrome and product structure may differ.
 Do require comparable completeness. An unexplained downgrade in a major
 dimension blocks visual acceptance.
 
-## Start with a coherent desktop density
+## Start with window material, then density
 
-Choose one density before composing the shell. Prefer compact desktop metrics
+Before choosing row heights, decide whether the slice owns the top-level
+window. If it does, install the [Premium shell](premium-shell.md) and compare
+the first render with Gallery window chrome on the same platform and theme. If
+it is embedded, preserve the host surface and record that constraint. Reject
+the first render when an application-owned window is a flat Solid slab or every
+host is painted with `bgCanvas` / `bgLayer`. Then finish the applicable
+[Signature surface](signature-surface.md) before calling density done.
+
+Then choose one density before composing the shell. Prefer compact desktop metrics
 for tool, developer, data, and productivity applications; use a roomier scale
 only when touch, accessibility, or content hierarchy requires it. Do not let
 each region invent its own scale.
@@ -114,7 +122,32 @@ edge.
 
 ## Review in passes
 
-### Pass 1: hierarchy
+### Pass 0: material
+
+- Does an application-owned window request Mica or Acrylic, or does an embedded
+  surface correctly inherit and document its host-owned window?
+- Are title-bar rest areas, split gaps, and list viewports unfilled?
+- Are the composer and pane chrome on material rather than wrapped in cards?
+- Do overlays use elevation from Fluent dialog/flyout/drawer components?
+
+### Pass 1: signature surface
+
+Read [Signature surface](signature-surface.md) and reject the first product
+render when any of these appear:
+
+- labeled log rows (`Request` / `Agent` or protocol names) as the timeline;
+- a large opaque composer `Card` or filled `ComboBox` pane header on Mica;
+- one or two bare rows with no intentional measure, hierarchy, or nearby
+  context, or a short transcript vertically centered/bottom-anchored in a tall canvas;
+- an empty state that is only placeholder text or blank material;
+- missing user/assistant/tool/permission visual grammar when the primary
+  object is a run or conversation.
+- tool rows that are Standard-height white slabs, or next-turn text showing
+  through a Mica `ListView` (viewport not erased; `sizeHint` ≠ paint).
+- a composer whose rest height is `ControlHeight::Standard` instead of the
+  Body font's `lineSpacing`.
+
+### Pass 2: hierarchy
 
 - Is the primary workflow obvious within a few seconds?
 - Do canvas, sidebar, content, inspector, card, and overlay layers separate
@@ -123,7 +156,7 @@ edge.
 - Does the layout resemble the chosen reference in hierarchy and density rather
   than only in color?
 
-### Pass 2: geometry and typography
+### Pass 3: geometry and typography
 
 - Check the 4 px spacing rhythm, aligned edges, balanced margins, and consistent
   control heights.
@@ -154,7 +187,7 @@ these acceptance defaults:
 Intentional 1 px strokes are not spacing. A painted hover, selected, or focus
 background must not consume the gap between adjacent controls.
 
-### Pass 3: interaction detail
+### Pass 4: interaction detail
 
 - Check rest, hover, pressed, focused, selected, disabled, loading, and
   destructive states that apply.
@@ -168,7 +201,7 @@ background must not consume the gap between adjacent controls.
 - Select collection rows and inspect the indicator, icon, and text as separate
   layers. No indicator may touch or paint through text.
 
-### Pass 4: resilience
+### Pass 5: resilience
 
 - Resize across breakpoints instead of testing only two endpoints.
 - Use long labels, paths, errors, collection items, and localized text where
@@ -243,6 +276,8 @@ Acceptance is blocked by any of these:
 Reject the first render immediately when any of these common low-fidelity
 patterns appears:
 
+- the window is Solid, or pane hosts are opaque-filled, without a recorded
+  reason in the visual-evidence manifest;
 - compact desktop controls, text, icons, cards, or headings are visibly
   oversized relative to their Gallery counterparts;
 - `AlignVCenter` is treated as proof of optical alignment for mixed-size text,
@@ -253,7 +288,21 @@ patterns appears:
 - borders, cards, accent colors, font weights, or corner radii are repeated
   without semantic purpose;
 - a scaled-down full-window screenshot is the only evidence used to approve
-  small chrome, spacing, or layer details.
+  small chrome, spacing, or layer details;
+- the signature surface is a labeled log, a composer or ComboBox sticker on
+  Mica, or two short rows in unused canvas.
+- a transparent `ListView`/`TreeView` directly on composited Mica paints items
+  without first erasing the viewport (`CompositionMode_Source`), or clears
+  through an intentionally painted parent instead of preserving it; Gallery
+  filled lists do not catch either path.
+- a variable-height delegate whose `sizeHint` does not match painted height,
+  or that paints outside `option.rect`.
+- a `TextEdit` composer that keeps the default 32 px line slot.
+- a transcript that paints `# heading` / `---` as raw Body, or caps a turn
+  at 8 wrapped lines.
+- a tool chip whose title is empty (`· done`) because snapshot `name` was
+  not resolved from `tool_calls`, or that shows `[User denied tool execution]`.
+- a new session row whose title/preview is a `cwd` path.
 
 If automation cannot exercise native input methods, hover, or a platform
 overlay, report that state as unverified. Do not convert missing coverage into a
@@ -267,6 +316,10 @@ pass.
 - The real application was compared beside that reference in a comparable
   theme and scale.
 - No major Gallery-equivalent dimension has an unexplained downgrade.
+- An application-owned window uses Mica or Acrylic unless a Solid reason is
+  recorded; an embedded surface records and preserves its host-owned material.
+- The signature surface is a finished product object, not a labeled log, opaque
+  sticker chrome, or vacant mica canvas. See [Signature surface](signature-surface.md).
 - Two theme modes and at least two widths were reviewed.
 - Important visible states were reviewed or explicitly marked unverified.
 - Geometry measurements satisfy the table above or cite the component-specific

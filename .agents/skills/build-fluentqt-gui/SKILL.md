@@ -1,6 +1,6 @@
 ---
 name: build-fluentqt-gui
-description: Analyze existing or greenfield projects and design, build, performance-test, and visually refine validated FluentQt C++ or PySide6 desktop GUIs. Use when adding a GUI to a library, CLI, TUI, service, plugin, data tool, or project with no current interface; when creating a new FluentQt application; when choosing FluentQt components and model/view architecture; when defining brand-aware Light/Dark themes; or when fixing density, alignment, wrapping, dynamic height, scrolling, transient lifetime, responsiveness, and visual detail to Gallery-equivalent quality.
+description: Analyze existing or greenfield projects and design, build, performance-test, and visually refine validated FluentQt C++ or PySide6 desktop GUIs. Use when adding a GUI to a library, CLI, TUI, service, plugin, data tool, or project with no current interface; when creating a new FluentQt application; when choosing FluentQt components and model/view architecture; when defining brand-aware Light/Dark themes; when installing Mica/Acrylic window material and revealed layer hierarchy; when finishing a conversation, run timeline, document canvas, or composer so it is not a labeled log or opaque sticker on material; or when fixing density, alignment, wrapping, dynamic height, scrolling, transient lifetime, responsiveness, and visual detail to Gallery-equivalent quality.
 ---
 
 # Build a Polished FluentQt GUI
@@ -16,8 +16,19 @@ behavior, and object lifetime. A lighter workflow never means a lower bar.
 
 Use the shipped FluentQt Gallery as the finish benchmark, not as an
 information-architecture template. Match its component fidelity, semantic
-tokens, typography, 4 px spacing rhythm, radius, material, icons, interaction
-states, theme behavior, and resize resilience.
+tokens, typography, 4 px spacing rhythm, radius, window material, icons,
+interaction states, theme behavior, and resize resilience.
+
+When the slice owns a top-level window, install the
+[Premium shell](references/premium-shell.md) before composing product content:
+`Window` + Mica, theme before construct, and pane gaps that reveal material.
+When the GUI is embedded in a host-owned window, preserve that host's chrome,
+material, lifecycle, and unload contract; do not create a second `Window`.
+Finish the applicable [Signature surface](references/signature-surface.md): a
+designed primary object, quiet chrome on its owning surface, intentional
+sparse/empty states, and an integrated input only when the workflow has a
+primary input. A flat opaque shell, labeled log, or white composer slab on
+Mica is a failed first render, not a neutral starting point.
 
 ## Choose a proportional profile
 
@@ -56,6 +67,8 @@ teardown.
 | Trigger | Required reading |
 | --- | --- |
 | New GUI, greenfield app, or changed integration boundary | `../../../docs/ai/README.md` and `../../../docs/ai/add-gui-to-project.md` |
+| New top-level GUI, application-owned shell, or window chrome | [Premium shell](references/premium-shell.md) |
+| Conversation, run timeline, document/object canvas, composer, sparse state, or pane chrome | [Signature surface](references/signature-surface.md) |
 | Any visible layout, density, typography, or interaction change | [Visual refinement](references/visual-refinement.md) |
 | Adding/replacing controls, collections, navigation, or overlays | [Component selection](references/component-selection.md) |
 | Custom theme, brand mapping, or visible raw Qt widget | [Theme system](references/theme-system.md) |
@@ -90,6 +103,10 @@ Choose one primary pattern with file-level evidence:
 - `plugin-extension` for an intentional host extension point;
 - `extract-core` when behavior is trapped in an interface layer;
 - `greenfield` when no reusable application layer exists.
+
+Apply the catalog's `window_ownership` before application-pattern component
+candidates. `host-owned` is a hard prohibition on creating a second
+application `Window` or event loop; `caller-decides` requires target evidence.
 
 Record why materially different alternatives are unsafe or disproportionate.
 If evidence is insufficient, test a narrow adapter spike before composing the
@@ -138,17 +155,20 @@ Record:
     [Performance and lifecycle](references/performance-lifecycle.md).
 
 Do not default a CLI, TUI, service, or coding tool to the same persistent
-navigation/session/chat/inspector skeleton. When the user asks to resemble
-another product, transfer hierarchy, density, spacing, panel lifetime, and
-semantic color roles—not marks, assets, exact colors, copy, or screenshot
-geometry.
+navigation/session/chat/inspector skeleton. If the identity card names a run
+or conversation as the primary object, finish that transcript with
+[Signature surface](references/signature-surface.md) instead of demoting it
+to a labeled log. When the user asks to resemble another product, transfer
+hierarchy, density, spacing, panel lifetime, and semantic color roles—not
+marks, assets, exact colors, copy, or screenshot geometry.
 
 ## Implement one complete vertical slice
 
 1. Keep domain/application behavior, integration adapter, view state, and
    FluentQt view as distinct responsibilities.
 2. Build one end-to-end workflow before broad navigation. A generic shell
-   around placeholder content is not a vertical slice.
+   around placeholder content, or a Mica window around labeled log rows, is
+   not a vertical slice.
 3. Keep blocking work off the GUI thread. Define ownership, progress,
    cancellation, retry, teardown, and stale-result handling.
 4. Select components by behavior, lifetime, data shape, interaction, and
@@ -156,8 +176,13 @@ geometry.
    focused test rather than trusting a short catalog result alone.
 5. Prefer FluentQt components and semantic tokens. Keep visible raw Qt widgets
    behind small theme-aware adapters when no public component fits.
-6. Install the theme before constructing the window. Use one accent hierarchy
-   per decision region and centralize repeated shell metrics.
+6. Install the theme before constructing an application-owned top-level
+   window. Follow [Premium shell](references/premium-shell.md) only when the
+   slice owns that shell; otherwise inherit the host surface. Follow
+   [Signature surface](references/signature-surface.md) for the primary object,
+   any primary input, and pane chrome. Centralize repeated shell metrics. Do
+   not stamp `bgCanvas` / `bgLayer` onto every `QWidget`, wrap a composer in a
+   `Card`, or use a filled `ComboBox` as a pane title.
 7. Put mixed-size chrome items and peer pane footers in shared-height hosts;
    layout flags alone are not optical-alignment evidence.
 8. Give dynamic text and collections an explicit wrap/elide, growth,
@@ -203,7 +228,8 @@ even when the build and functional tests pass.
 
 ## Validate visual evidence
 
-Keep a task-local manifest with `"profile": "lite"` or `"profile": "full"`:
+Keep a task-local v2 manifest with `"contract_version": 2` and
+`"profile": "lite"` or `"profile": "full"`:
 
 ```bash
 python3 .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
@@ -212,9 +238,13 @@ python3 .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
 
 Lite validates a compact invariant set. Full validates the complete state,
 region, and dynamic-convergence matrix. The script also requires the reviewed
-build and evidence files to exist; it checks bookkeeping, not aesthetic
-quality. Inspect pixels and interactions yourself. A missing, failed, or
-unverified mandatory entry blocks acceptance.
+build and evidence files to exist; it checks bookkeeping and the declared
+material/signature fields, not pixel aesthetics. Inspect pixels and
+interactions yourself. Declaring `wireframe`, `filled-stickers`,
+`dead-space`, or `developer-labeled` fails. A missing, failed, or unverified
+mandatory entry blocks acceptance. A legacy manifest without
+`contract_version` remains readable as v1 with a migration warning; do not
+create new v1 evidence.
 
 ## Validate engineering and report
 
@@ -231,6 +261,11 @@ not label feasibility as verified support.
 Before finishing, require:
 
 - semantic components and tokens with no unjustified raw-widget substitute;
+- Mica or Acrylic with revealed pane gaps for an application-owned top-level
+  shell; otherwise a recorded host-owned surface contract;
+- a finished signature surface: product copy, quiet chrome on material,
+  composed sparse/empty canvas, and an integrated input when the workflow has
+  one (or a recorded `none` when it does not);
 - one clear primary action per region and restrained typography/density;
 - no layout dependent on one demo string or one window size;
 - no unbounded collection implemented as a child-widget stack;
