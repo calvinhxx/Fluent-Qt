@@ -30,6 +30,10 @@
     <link rel="icon" href="assets/app-icon.png">
     <script>
       (() => {
+        const isChinese = (tag) => {
+          const value = String(tag || "").trim().toLowerCase().replace(/_/g, "-");
+          return value === "zh" || value.startsWith("zh-");
+        };
         try {
           const saved = localStorage.getItem("fluent-qt-theme");
           document.documentElement.dataset.theme = saved === "dark" || saved === "light"
@@ -38,10 +42,23 @@
         } catch {
           document.documentElement.dataset.theme = "light";
         }
+        try {
+          const saved = localStorage.getItem("fluent-qt-language");
+          const language = saved === "en" || saved === "zh"
+            ? saved
+            : isChinese((navigator.languages && navigator.languages[0]) || navigator.language)
+              ? "zh"
+              : "en";
+          document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+          document.documentElement.dataset.siteLanguage = language;
+        } catch {
+          document.documentElement.lang = "en";
+          document.documentElement.dataset.siteLanguage = "en";
+        }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260812">
-    <script src="site.js" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260813">
+    <script src="site.js?v=20260813" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">跳到主要内容</a>
