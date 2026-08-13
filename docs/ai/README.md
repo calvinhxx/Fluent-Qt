@@ -79,8 +79,19 @@ and product-shell decisions. Both retain the same visual and engineering
 quality gates. The reference layer extracts structural grammar from official
 product evidence rather than providing screens to copy. The shipped Gallery is
 the finish benchmark: applications may use a different structure, but should
-reach the same component, token, state, performance, and visual quality before
-being called complete.
+reach the same component, token, window material, state, performance, and visual
+quality before being called complete. An application-owned top-level shell uses
+a Mica `Window` whose pane gaps reveal that material; an embedded GUI preserves
+and records its host-owned window instead. Solid or opaque host fills require a
+recorded reason. The signature surface must be a finished product object: quiet
+chrome on its owning surface, designed sparse/empty states, and an integrated
+input only when the workflow has one. A Mica shell around a labeled log is not
+complete.
+
+Integration records expose machine-readable `window_ownership`. Treat an
+application pattern's `components` as candidates after applying that boundary:
+`host-owned` forbids a second application `Window`, while `caller-decides`
+requires repository evidence before choosing a shell.
 
 Validate the portable structure and deterministic catalog behavior with:
 
@@ -121,8 +132,10 @@ python3 tools/ai/validate_ai_assets.py --project-root .
 ```
 
 The catalog uses
-[JSON Schema draft 2020-12](fluentqt-ai-catalog.schema.json). The optional
-project-analysis record uses [its own schema](project-analysis.schema.json).
+[JSON Schema draft 2020-12](fluentqt-ai-catalog.schema.json). Catalog schema v2
+adds required integration `window_ownership`; v1 consumers should migrate
+before reading newly generated catalogs. The optional project-analysis record
+uses [its own schema](project-analysis.schema.json).
 
 ## Roadmap
 
@@ -133,7 +146,7 @@ project-analysis record uses [its own schema](project-analysis.schema.json).
 | M2: general workflow | Evidence-based integration for existing and greenfield projects | Implemented |
 | M3: reusable Skill | Open Agent Skills workflow with cross-agent discovery adapters | Implemented |
 | M4: drift prevention | CI validation and source-package delivery | Implemented |
-| M5: measured quality | Seventeen project shapes, sixteen retrieval regressions, and four cross-pattern composition gates | Baseline implemented |
+| M5: measured quality | Eighteen project shapes, sixteen retrieval regressions, and five cross-pattern composition gates | Baseline implemented |
 | M6: distribution | Registry or optional plugin bundles after the Skill/API stabilizes | Planned |
 
 The open-format Skill is the executable workflow and remains the first

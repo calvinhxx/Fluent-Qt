@@ -183,8 +183,8 @@ def _test_targets(project_root: Path) -> dict[str, dict[str, str]]:
 def _guidance(project_root: Path) -> dict[str, object]:
     path = project_root / "docs" / "ai" / "guidance.json"
     guidance = json.loads(path.read_text(encoding="utf-8"))
-    if guidance.get("schema_version") != 1:
-        raise ValueError("docs/ai/guidance.json schema_version must be 1")
+    if guidance.get("schema_version") != 2:
+        raise ValueError("docs/ai/guidance.json schema_version must be 2")
     return guidance
 
 
@@ -228,6 +228,16 @@ def _validate_guidance(
     integration_ids = {
         pattern["id"] for pattern in guidance["integration_patterns"]
     }
+    allowed_window_ownership = {
+        "application-owned",
+        "host-owned",
+        "caller-decides",
+    }
+    for pattern in guidance["integration_patterns"]:
+        if pattern.get("window_ownership") not in allowed_window_ownership:
+            raise ValueError(
+                f"Integration pattern {pattern['id']} has invalid window_ownership"
+            )
     for pattern in guidance["application_patterns"]:
         unknown_integrations = set(pattern["preferred_integrations"]) - integration_ids
         if unknown_integrations:
@@ -441,7 +451,7 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
         )
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "project": {
             "name": "FluentQt",
             "version": _project_version(project_root),

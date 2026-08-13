@@ -1,4 +1,4 @@
 interface:
   display_name: "Build Gallery-Quality FluentQt Apps"
   short_description: "Design, stress-test, and polish FluentQt GUIs"
-  default_prompt: "Use $build-fluentqt-gui to choose a proportional lite/full workflow, then design, stress-test, and visually refine a Gallery-quality FluentQt desktop app for this project."
+  default_prompt: "Use $build-fluentqt-gui to identify this project's GUI integration boundary, choose a proportional lite/full workflow, then build and refine a Gallery-quality FluentQt surface."

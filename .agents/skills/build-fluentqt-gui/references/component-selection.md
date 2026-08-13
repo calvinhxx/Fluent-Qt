@@ -83,6 +83,20 @@ sample, not only the displayed snippet. Record the model roles, delegate,
 selection-indicator owner, row height, icon size, and any proxy model. Ordinary
 `ListView` text/icon rows may use its built-in delegate; richer rows need an
 explicit delegate whose indicator and content insets match the reference.
+Variable-height custom delegates **must clip** and keep `sizeHint == paint`;
+Gallery's default 32–36 px uniform rows hide overlap. Tool/step rows are
+compact Caption chips (name · status on one line), not Standard-sized cards.
+A backgroundless `ListView`/`TreeView` that directly reveals composited Mica
+must erase its viewport (`CompositionMode_Source`)—filled Gallery lists never
+exercise that path. A backgroundless `GridView` uses the same public
+`backgroundVisible` contract. When any of these views sits on an intentionally
+painted parent instead of directly on composited material, set
+`fluentPreserveParentSurface` on both the view and viewport and set
+`Qt::WA_NoSystemBackground` on the viewport; remove all three together if the
+view returns to direct material. Keep a background when the view is itself the
+bounded surface.
+A `TextEdit` used as a composer must `setLineHeight` from the text font's
+`lineSpacing()`, not `ControlHeight::Standard` (32).
 For long or growing data, also record paging/windowing, incremental update,
 cache, and editor-materialization policies. `ScrollView` does not virtualize a
 layout of child widgets; `ListView` loses virtualization if every index receives
@@ -102,7 +116,8 @@ a persistent widget. Follow [Performance and lifecycle](performance-lifecycle.md
 
 - Prefer spacing and typography before adding a `Card`.
 - Use `Card` when the surface has a distinct fill, boundary, selection, or
-  independent interaction.
+  independent interaction. Do not wrap the composer or pane header in a `Card`
+  to fake hierarchy on Mica.
 - Use `Divider` for a lightweight region boundary.
 - Use `Expander` for one disclosure and `Accordion` for coordinated sections.
 - Use `SplitView` when users need persistent resizable regions.
@@ -114,6 +129,9 @@ a persistent widget. Follow [Performance and lifecycle](performance-lifecycle.md
 - Accent `Button`: one primary commit action in a region.
 - Standard `Button`: ordinary visible action.
 - Subtle `Button`: window chrome, compact toolbar, or low-emphasis action.
+- `DropDownButton` Subtle: pane-header switchers on window material.
+- `ComboBox`: forms and settings. Do not use its filled bezel as a Mica pane
+  title.
 - `ToggleButton`: an action surface that must communicate on/off state.
 - `ToggleSwitch`: a persistent setting that takes effect immediately.
 - `InfoBar`: persistent inline status or validation with optional action.
@@ -154,3 +172,6 @@ first evaluating composition.
   not drift into unrelated heights or icon scales.
 - Collection rows keep their selection indicator, icon, and text in separate
   measured slots in rest, selected, and hover states.
+- Variable-height delegates clip to the row and report a `sizeHint` equal to
+  painted height; tool chips hug Caption metrics rather than Standard control
+  height.

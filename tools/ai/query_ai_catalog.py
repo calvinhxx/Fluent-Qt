@@ -219,12 +219,14 @@ def format_pattern(pattern: dict[str, object]) -> str:
                 "",
                 "Preferred integrations: "
                 + ", ".join(pattern["preferred_integrations"]),
-                "Components: " + ", ".join(pattern["components"]),
+                "Candidate components (apply integration window ownership first): "
+                + ", ".join(pattern["components"]),
             )
         )
     else:
         lines.extend(
             (
+                f"Window ownership: {pattern['window_ownership']}",
                 f"Choose when: {pattern['choose_when']}",
                 f"Avoid when: {pattern['avoid_when']}",
                 "Required evidence:",

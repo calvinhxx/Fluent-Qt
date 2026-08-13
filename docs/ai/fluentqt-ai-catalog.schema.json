@@ -19,7 +19,7 @@
     "summary"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "project": { "$ref": "#/$defs/project" },
     "canonical_sources": {
       "type": "array",
@@ -116,6 +116,7 @@
       "required": [
         "id",
         "title",
+        "window_ownership",
         "choose_when",
         "avoid_when",
         "required_evidence"
@@ -123,6 +124,9 @@
       "properties": {
         "id": { "$ref": "#/$defs/nonEmptyString" },
         "title": { "$ref": "#/$defs/nonEmptyString" },
+        "window_ownership": {
+          "enum": ["application-owned", "host-owned", "caller-decides"]
+        },
         "choose_when": { "$ref": "#/$defs/nonEmptyString" },
         "avoid_when": { "$ref": "#/$defs/nonEmptyString" },
         "required_evidence": { "$ref": "#/$defs/nonEmptyStringArray" }

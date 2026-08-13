@@ -184,6 +184,20 @@
       ]
     },
     {
+      "id": "coding-agent-run-workspace",
+      "existing_interfaces": ["service", "tui"],
+      "signals": [
+        "A local agent service owns ordered runs of user, assistant, tool, and permission events",
+        "Users compose a task and watch the run as the primary object"
+      ],
+      "expected_integration": "service-api",
+      "expected_application_pattern": "agent-run-workspace",
+      "evidence": [
+        "Run identity, streaming events, cancellation, and permission prompts",
+        "Existing TUI or web entry points that must remain"
+      ]
+    },
+    {
       "id": "structured-build-pipeline",
       "existing_interfaces": ["cli"],
       "signals": [
@@ -327,6 +341,7 @@
       "id": "developer-agent-product-structures",
       "application_patterns": [
         "agent-workbench",
+        "agent-run-workspace",
         "build-pipeline",
         "event-replay-console"
       ],
@@ -426,6 +441,25 @@
           "tab-view"
         ]
       ]
+    },
+    {
+      "id": "agent-artifact-versus-run-transcript",
+      "application_patterns": [
+        "agent-workbench",
+        "agent-run-workspace"
+      ],
+      "min_pairwise_component_difference": 6,
+      "required_components_by_pattern": {
+        "agent-workbench": [
+          "selector-bar",
+          "drawer-view"
+        ],
+        "agent-run-workspace": [
+          "list-view",
+          "text-edit",
+          "info-bar"
+        ]
+      }
     }
   ]
 }

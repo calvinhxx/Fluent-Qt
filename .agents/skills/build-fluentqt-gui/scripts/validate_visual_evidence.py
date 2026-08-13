@@ -64,6 +64,15 @@ LITE_REQUIRED_DYNAMIC_CHECKS: set[str] = set()
 
 ALLOWED_STATUS = {"pass", "fail", "unverified", "not-applicable"}
 ALLOWED_PROFILES = {"lite", "full"}
+CURRENT_CONTRACT_VERSION = 2
+ALLOWED_CONTRACT_VERSIONS = {1, CURRENT_CONTRACT_VERSION}
+ALLOWED_BACKDROPS = {"mica", "acrylic", "solid", "host-owned"}
+ALLOWED_FILL_POLICIES = {"reveal-material", "opaque-hosts", "inherit-host"}
+ALLOWED_SIGNATURE_FINISH = {"product", "wireframe"}
+ALLOWED_CHROME_ON_MATERIAL = {"quiet", "filled-stickers"}
+ALLOWED_SPARSE_CANVAS = {"composed", "dead-space"}
+ALLOWED_PRIMARY_INPUT = {"integrated-dock", "independent-card", "none"}
+ALLOWED_COPY_REGISTER = {"user-facing", "developer-labeled"}
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
@@ -215,6 +224,115 @@ def validate_issues(data: dict[str, Any], errors: list[str]) -> None:
             )
 
 
+def validate_contract_version(data: dict[str, Any], errors: list[str]) -> int:
+    version = data.get("contract_version")
+    if version is None:
+        return 1
+    if isinstance(version, bool) or not isinstance(version, int):
+        errors.append("contract_version must be an integer")
+        return CURRENT_CONTRACT_VERSION
+    if version not in ALLOWED_CONTRACT_VERSIONS:
+        errors.append(
+            "contract_version must be one of "
+            + ", ".join(str(item) for item in sorted(ALLOWED_CONTRACT_VERSIONS))
+        )
+        return CURRENT_CONTRACT_VERSION
+    return version
+
+
+def validate_window_material(data: dict[str, Any], errors: list[str]) -> None:
+    backdrop = data.get("window_backdrop")
+    fill_policy = data.get("surface_fill_policy")
+    if backdrop not in ALLOWED_BACKDROPS:
+        errors.append(
+            "window_backdrop must be one of " + ", ".join(sorted(ALLOWED_BACKDROPS))
+        )
+    elif backdrop in {"solid", "host-owned"}:
+        reason = data.get("window_backdrop_reason")
+        if not isinstance(reason, str) or not reason.strip():
+            errors.append(
+                f"window_backdrop {backdrop} requires a non-empty "
+                "window_backdrop_reason"
+            )
+    if fill_policy not in ALLOWED_FILL_POLICIES:
+        errors.append(
+            "surface_fill_policy must be one of "
+            + ", ".join(sorted(ALLOWED_FILL_POLICIES))
+        )
+    elif fill_policy in {"opaque-hosts", "inherit-host"}:
+        reason = data.get("surface_fill_reason")
+        if not isinstance(reason, str) or not reason.strip():
+            errors.append(
+                f"surface_fill_policy {fill_policy} requires a non-empty "
+                "surface_fill_reason"
+            )
+    if backdrop == "host-owned" and fill_policy not in {
+        "inherit-host",
+        "opaque-hosts",
+    }:
+        errors.append(
+            "window_backdrop host-owned requires surface_fill_policy inherit-host "
+            "or opaque-hosts"
+        )
+    if fill_policy == "inherit-host" and backdrop != "host-owned":
+        errors.append(
+            "surface_fill_policy inherit-host requires window_backdrop host-owned"
+        )
+
+
+def validate_signature_surface(data: dict[str, Any], errors: list[str]) -> None:
+    finish = data.get("signature_finish")
+    chrome = data.get("chrome_on_material")
+    sparse = data.get("sparse_canvas_treatment")
+    primary_input = data.get("primary_input_treatment")
+    copy_register = data.get("visible_copy_register")
+
+    if finish not in ALLOWED_SIGNATURE_FINISH:
+        errors.append(
+            "signature_finish must be one of "
+            + ", ".join(sorted(ALLOWED_SIGNATURE_FINISH))
+        )
+    elif finish == "wireframe":
+        errors.append("signature_finish wireframe never passes")
+
+    if chrome not in ALLOWED_CHROME_ON_MATERIAL:
+        errors.append(
+            "chrome_on_material must be one of "
+            + ", ".join(sorted(ALLOWED_CHROME_ON_MATERIAL))
+        )
+    elif chrome == "filled-stickers":
+        errors.append("chrome_on_material filled-stickers never passes")
+
+    if sparse not in ALLOWED_SPARSE_CANVAS:
+        errors.append(
+            "sparse_canvas_treatment must be one of "
+            + ", ".join(sorted(ALLOWED_SPARSE_CANVAS))
+        )
+    elif sparse == "dead-space":
+        errors.append("sparse_canvas_treatment dead-space never passes")
+
+    if primary_input not in ALLOWED_PRIMARY_INPUT:
+        errors.append(
+            "primary_input_treatment must be one of "
+            + ", ".join(sorted(ALLOWED_PRIMARY_INPUT))
+        )
+    elif primary_input == "independent-card":
+        reason = data.get("primary_input_reason")
+        if not isinstance(reason, str) or not reason.strip():
+            errors.append(
+                "primary_input_treatment independent-card requires a "
+                "non-empty primary_input_reason"
+            )
+
+    if copy_register not in ALLOWED_COPY_REGISTER:
+        errors.append(
+            "visible_copy_register must be one of "
+            + ", ".join(sorted(ALLOWED_COPY_REGISTER))
+        )
+    elif copy_register == "developer-labeled":
+        errors.append("visible_copy_register developer-labeled never passes")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest", type=Path)
@@ -227,6 +345,7 @@ def main() -> int:
         return 1
 
     errors: list[str] = []
+    contract_version = validate_contract_version(data, errors)
     for key in ("application", "reviewed_build", "platform", "profile"):
         if not isinstance(data.get(key), str) or not data[key].strip():
             errors.append(f"{key} must be a non-empty string")
@@ -282,6 +401,9 @@ def main() -> int:
     )
     validate_measurements(data, args.manifest, errors)
     validate_issues(data, errors)
+    if contract_version >= 2:
+        validate_window_material(data, errors)
+        validate_signature_surface(data, errors)
 
     if errors:
         print("visual evidence: FAIL", file=sys.stderr)
@@ -289,9 +411,17 @@ def main() -> int:
             print(f"- {error}", file=sys.stderr)
         return 1
 
+    if contract_version == 1:
+        print(
+            "visual evidence: WARNING legacy contract v1; add contract_version 2 "
+            "and material/signature fields for new evidence",
+            file=sys.stderr,
+        )
+
     print(
         "visual evidence: PASS "
-        f"({profile}, {len(data['states'])} states, {len(data['regions'])} regions, "
+        f"({profile}, contract v{contract_version}, {len(data['states'])} states, "
+        f"{len(data['regions'])} regions, "
         f"{len(data['measurements'])} measurements)"
     )
     return 0

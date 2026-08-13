@@ -7,6 +7,7 @@ manifest task-local unless it is useful project documentation.
 ## Contents
 
 - Build identity and evidence rules
+- Contract version and legacy migration
 - Mandatory state and region coverage
 - Painted geometry checks
 - Dynamic convergence checks
@@ -20,12 +21,54 @@ platform, display scale, theme, capture time, and selected `lite` or `full`
 profile. Rebuild before the final review. Do not mix captures from different
 binaries in one passing manifest.
 
+New manifests use `contract_version: 2`. Record window material as first-class
+evidence, not as an optional note:
+
+| Field | Allowed values | Rule |
+| --- | --- | --- |
+| `window_backdrop` | `mica`, `acrylic`, `solid`, `host-owned` | Required. `solid` and `host-owned` also require `window_backdrop_reason`. |
+| `surface_fill_policy` | `reveal-material`, `opaque-hosts`, `inherit-host` | Required. `opaque-hosts` and `inherit-host` also require `surface_fill_reason`. |
+| `signature_finish` | `product`, `wireframe` | Required. `wireframe` never passes. |
+| `chrome_on_material` | `quiet`, `filled-stickers` | Required. `filled-stickers` never passes. |
+| `sparse_canvas_treatment` | `composed`, `dead-space` | Required. `dead-space` never passes. |
+| `primary_input_treatment` | `integrated-dock`, `independent-card`, `none` | Required. `independent-card` also requires `primary_input_reason`. |
+| `visible_copy_register` | `user-facing`, `developer-labeled` | Required. `developer-labeled` never passes. |
+
+`host-owned` means an embedded GUI correctly leaves the top-level chrome and
+backdrop under host control. It is not permission to create a nested window;
+the reason names the host and constraint. Pair it with `inherit-host` when
+child fills follow the host contract, or `opaque-hosts` when the host requires
+an opaque plugin surface. `inherit-host` is invalid for an application-owned
+window.
+
+`reveal-material` means content hosts, split panes, and collection viewports
+leave unused pixels unfilled so the window material shows through. Capture
+harnesses must not switch the window to Solid merely to make screenshots
+flatter. If Solid or opaque hosts are required, the reason must name the host,
+capture, or accessibility constraint.
+
+`product` means the primary object is a designed surface, not a labeled log.
+`quiet` means pane chrome and the composer are Subtle or integrated, not opaque
+stickers on Mica. `composed` means 0/1/2/many items each have an intentional
+layout. See [Signature surface](signature-surface.md).
+
 Every evidence path must identify a full-window capture or a native-resolution
 detail crop. Label picture-in-picture crops with their source state and region.
 Do not use a scaled crop to measure logical pixels. The validator resolves
 relative evidence paths from the manifest directory and requires the reviewed
 build and every passing evidence file to exist. A non-empty invented path does
 not count as evidence.
+
+## Version the manifest
+
+The current contract is version 2. A manifest without `contract_version` is
+treated as legacy v1 so existing task-local evidence does not fail solely
+because the validator was upgraded. The validator prints a migration warning
+and does not enforce the v2 material/signature fields for that legacy file.
+
+Do not create new v1 evidence. Add `"contract_version": 2`, inspect the final
+build, and populate the required fields rather than mechanically copying pass
+values. Explicit unsupported versions fail validation.
 
 ## Choose evidence breadth proportionally
 
@@ -162,10 +205,18 @@ Create JSON with this minimum shape and validate it with the bundled script:
 
 ```json
 {
+  "contract_version": 2,
   "application": "example-app",
   "reviewed_build": "/absolute/path/to/executable",
   "platform": "macOS arm64, scale 2x",
   "profile": "full",
+  "window_backdrop": "mica",
+  "surface_fill_policy": "reveal-material",
+  "signature_finish": "product",
+  "chrome_on_material": "quiet",
+  "sparse_canvas_treatment": "composed",
+  "primary_input_treatment": "integrated-dock",
+  "visible_copy_register": "user-facing",
   "states": [
     {"id": "normal-light", "status": "pass", "evidence": ["/tmp/normal-light.png"]}
   ],
@@ -184,6 +235,10 @@ Create JSON with this minimum shape and validate it with the bundled script:
 }
 ```
 
-The validator enforces profile-specific bookkeeping, known ids, and local file
-existence only. Never convert its success into a claim that the pixels,
-interaction, or product hierarchy are good.
+For v2, the validator enforces profile-specific bookkeeping, known ids, local
+file existence, the window-material fields, and the signature-surface fields.
+Never convert its success into a claim that the pixels, interaction, or product
+hierarchy are good. A manifest with `window_backdrop: "solid"` or
+`"host-owned"` and no reason fails. A manifest that declares `wireframe`,
+`filled-stickers`, `dead-space`, or `developer-labeled` is a failed product
+surface.

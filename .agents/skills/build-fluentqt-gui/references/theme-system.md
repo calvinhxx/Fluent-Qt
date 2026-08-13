@@ -37,6 +37,33 @@ Install tokens before constructing the main window. Persist the user's explicit
 Light/Dark choice when the application has settings; a `system` choice may be
 resolved at startup when cross-version dynamic system tracking is unavailable.
 
+## Install window material with the theme
+
+Color tokens are not the whole surface. An application-owned Fluent window
+requests Mica (default) or Acrylic and lets unused canvas, pane gaps, and
+chrome rest areas reveal that material. An embedded GUI inherits its
+host-owned window instead. Follow [Premium shell](premium-shell.md) for both
+paths.
+
+- Call `Window::setBackdropEffect(BackdropEffect::Mica)` (or Acrylic) before
+  show. Do not switch to `Solid` to make screenshots look simpler.
+- Use `setAutoFillBackground(false)` on hosts and gaps intended to reveal the
+  owning material. Set a collection view's `backgroundVisible` to false only
+  when it belongs to that continuous canvas; retain one deliberate background
+  when the view is a bounded surface. If it sits on a painted host, follow the
+  complete parent-surface contract in [Premium shell](premium-shell.md)
+  instead of clearing through it or letting Qt restore a default base fill.
+- Never apply `Qt::WA_TranslucentBackground` to descendant content widgets;
+  that punches a hole through painted-Mica fallback instead of revealing it.
+- A helper that paints `bgCanvas` / `bgLayer` onto every `QWidget` is a theme
+  defect, not a layer strategy. Use `Card` only for an independent object.
+  Follow [Signature surface](signature-surface.md) for composers and pane
+  chrome on material.
+
+Solid is allowed only when a host, capture harness, or accessibility surface
+requires an opaque backing store. Record `window_backdrop_reason` in the visual
+evidence manifest. Opaque host fills require `surface_fill_reason`.
+
 ## Map the whole palette
 
 Define both modes together. For each mode, verify:
@@ -85,3 +112,7 @@ application-wide stylesheet that bypasses component states.
 - Focus and disabled states remain legible.
 - Brand literals are centralized in one application theme module.
 - Theme token tests cover representative Light/Dark values and radii.
+- An application-owned window requests Mica or Acrylic unless a Solid reason
+  is recorded; an embedded surface preserves and records the host window.
+- Pane gaps reveal the owning material rather than a stamped opaque palette,
+  unless the host contract requires an opaque surface.

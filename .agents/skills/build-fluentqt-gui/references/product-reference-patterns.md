@@ -60,6 +60,7 @@ target into this library merely because a card looks polished.
 | LocalSend | Payload plus nearby destination | Discover, choose, transfer, complete | Responsive destination collection, direct send action, explicit progress and recovery | The workflow is short, endpoint-oriented, and often touch-adjacent | Dense expert editing or many simultaneous persistent tools are required |
 | OBS Studio | Live composed output | Continuous real-time operation | Preview/program canvas with scene/source collections, meters, and direct controls | Operators must monitor and adjust several live signals at once | The product is primarily asynchronous reading or document creation |
 | AppFlowy | Hierarchical document or database view | Persistent knowledge editing and organization | Quiet document canvas, workspace tree, view switching, contextual block commands | Users create durable knowledge in several representations | The result is ephemeral or dominated by a live operational loop |
+| Run-first coding agent (Codex-style) | Ordered agent run or conversation | Streaming transcript + integrated composer | Compact session rail, mixed-height turn timeline, one-line composer dock | The run/conversation is the primary object | Peer documents or an IDE editor must remain the dominant canvas |
 
 ## Multi-document command workbench
 
@@ -187,6 +188,36 @@ quiet editing canvas plus alternate structured representations**.
   `GridView`, `Pivot`, and contextual `Flyout` surfaces.
 - Reject: turning every setting or result into a document block; permanently
   showing database controls for ordinary text documents.
+
+## Coding-agent run workspace
+
+**Reference:** Codex Desktop as a run-first hierarchy. Treat IDE/editor-hosted
+agents as contrast references when the editor or artifact owns the primary
+surface. Transfer hierarchy and density only—not marks, colors, copy, or
+screenshot geometry.
+
+This pattern uses a compact session rail, a transcript that **is** the product,
+and an integrated composer dock. Prefer it when the identity is an ordered
+run/conversation. Contrast with editor-hosted agents when peer documents must
+stay dominant; do not force a run-first shell into an IDE panel.
+
+- Transfer: left rail is workspace identity + session rows + one New action,
+  with the footer inset (12–16 px), not glued to the window corner. Center
+  canvas distinguishes user / assistant / tool / error / permission without
+  protocol labels (`Request` / `Agent`). Tool calls are one- or two-line
+  chips; status sits on the same row as the name. Composer rest height is
+  one Body `lineSpacing` line, grows to ~6, and Stop replaces Send. Header
+  chrome is one ~32 px slot (title + mode + status); theme lives in the
+  window chrome, not the traffic-light corner.
+- Density: 4 px rhythm, 12/16 pane inset, 8 px related gap. Messages have a
+  readable measure; they are not sparse labels in a mica void.
+- Narrow behavior: collapse the session rail; keep the transcript and
+  composer.
+- Component probes: `ListView` + mixed-height delegate, Subtle
+  `DropDownButton`, `TextEdit` composer, permission `InfoBar`.
+- Reject: Gallery-uniform 32–36 px rows as tool cards; bottom-anchoring a
+  short transcript; wrapping the composer in a `Card`; treating handshake
+  frames as turns.
 
 ## Acceptance gate
 
