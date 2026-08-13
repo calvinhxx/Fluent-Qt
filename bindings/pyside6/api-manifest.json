@@ -959,6 +959,7 @@
       "toggleMaximizeRestore"
     ],
     "GridView": [
+      "backgroundVisible",
       "borderVisible",
       "canReorderItems",
       "cellSize",
@@ -972,6 +973,7 @@
       "selectedRows",
       "selectionMode",
       "selectionModel",
+      "setBackgroundVisible",
       "setBorderVisible",
       "setCanReorderItems",
       "setCellSize",

@@ -27,6 +27,7 @@
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
+#include "components/collections/CollectionViewBackdrop_p.h"
 
 namespace fluent::collections {
 
@@ -158,6 +159,13 @@ void GridView::setBorderVisible(bool visible) {
     emit borderVisibleChanged();
 }
 
+void GridView::setBackgroundVisible(bool visible) {
+    if (m_backgroundVisible == visible) return;
+    m_backgroundVisible = visible;
+    if (viewport()) viewport()->update();
+    emit backgroundVisibleChanged();
+}
+
 void GridView::setHeaderText(const QString& text) {
     if (m_headerText == text) return;
     m_headerText = text;
@@ -271,12 +279,20 @@ void GridView::setSelectedIndex(int index) {
 void GridView::paintEvent(QPaintEvent* event) {
     const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
-
     // --- 1. Container background. zh_CN: 绘制容器背景。---
-    {
+    if (m_backgroundVisible) {
         QPainter p(viewport());
         p.setRenderHint(QPainter::Antialiasing);
         p.fillRect(viewport()->rect(), c.bgLayer);
+        p.end();
+    } else if (detail::shouldClearCompositedViewport(this)) {
+        // Composited Mica/Acrylic viewports share the top-level backing store.
+        // Clear stale cells while allowing callers to preserve an opaque parent layer.
+        // zh_CN: 合成式 Mica/Acrylic viewport 与顶层窗口共享后备缓冲；每帧清除旧单元格，
+        // 同时允许调用方保留不透明父级表面。
+        QPainter p(viewport());
+        p.setCompositionMode(QPainter::CompositionMode_Source);
+        p.fillRect(viewport()->rect(), Qt::transparent);
         p.end();
     }
 

@@ -27,6 +27,7 @@
 #include "components/basicinput/Button.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "components/collections/CollectionViewBackdrop_p.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -791,6 +792,37 @@ TEST_F(ListViewTest, BackgroundVisibleProperty) {
     EXPECT_EQ(spy.count(), 1);
     lv->setBackgroundVisible(false);
     EXPECT_EQ(spy.count(), 1);
+}
+
+TEST_F(ListViewTest, CompositedClearHonorsPreserveParentSurface) {
+    window->setAttribute(Qt::WA_TranslucentBackground, true);
+
+    fluent::windowing::BackdropState state;
+    state.requestedEffect = fluent::windowing::BackdropEffect::Mica;
+    state.effectiveEffect = fluent::windowing::BackdropEffect::Mica;
+    state.backend = fluent::windowing::BackdropBackend::MacVibrancy;
+    state.fidelity = fluent::windowing::BackdropFidelity::Native;
+    state.surfaceMode = fluent::windowing::BackdropSurfaceMode::CompositedTransparent;
+    fluent::windowing::publishWindowBackdropState(window, state);
+
+    auto* lv = new ListView(window);
+    EXPECT_TRUE(detail::shouldClearCompositedViewport(lv));
+
+    lv->setProperty("fluentPreserveParentSurface", true);
+    EXPECT_FALSE(detail::shouldClearCompositedViewport(lv));
+
+    lv->setProperty("fluentPreserveParentSurface", false);
+    lv->viewport()->setProperty("fluentPreserveParentSurface", true);
+    EXPECT_FALSE(detail::shouldClearCompositedViewport(lv));
+
+    lv->viewport()->setProperty("fluentPreserveParentSurface", false);
+    window->setAttribute(Qt::WA_TranslucentBackground, false);
+    EXPECT_FALSE(detail::shouldClearCompositedViewport(lv));
+
+    window->setAttribute(Qt::WA_TranslucentBackground, true);
+    state.surfaceMode = fluent::windowing::BackdropSurfaceMode::PaintedOpaque;
+    fluent::windowing::publishWindowBackdropState(window, state);
+    EXPECT_FALSE(detail::shouldClearCompositedViewport(lv));
 }
 
 TEST_F(ListViewTest, FlowChangeRefreshesScrollBars) {

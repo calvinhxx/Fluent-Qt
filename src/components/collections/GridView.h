@@ -74,6 +74,11 @@ public:
      */
     Q_PROPERTY(bool borderVisible READ borderVisible WRITE setBorderVisible NOTIFY borderVisibleChanged)
     /**
+     * @brief Whether the control background is painted.
+     * zh_CN: 是否绘制控件背景。
+     */
+    Q_PROPERTY(bool backgroundVisible READ backgroundVisible WRITE setBackgroundVisible NOTIFY backgroundVisibleChanged)
+    /**
      * @brief Convenience text displayed in the header area.
      * zh_CN: 显示在头部区域的便捷标题文本。
      */
@@ -119,6 +124,10 @@ public:
     bool borderVisible() const { return m_borderVisible; }
     bool isBorderVisible() const { return borderVisible(); }
     void setBorderVisible(bool visible);
+
+    bool backgroundVisible() const { return m_backgroundVisible; }
+    bool isBackgroundVisible() const { return backgroundVisible(); }
+    void setBackgroundVisible(bool visible);
 
     QString headerText() const { return m_headerText; }
     void setHeaderText(const QString& text);
@@ -166,6 +175,7 @@ signals:
     void fontRoleChanged();
     void viewportHoveredChanged();
     void borderVisibleChanged();
+    void backgroundVisibleChanged();
     void headerTextChanged();
     void placeholderTextChanged();
     void cellSizeChanged();
@@ -217,6 +227,7 @@ private:
 
     // --- Container visuals ---
     bool m_borderVisible = true;
+    bool m_backgroundVisible = true;
     QString m_headerText;
     QString m_placeholderText;
     QLabel* m_headerLabel = nullptr;

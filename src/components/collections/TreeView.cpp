@@ -28,7 +28,7 @@
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
-#include "components/windowing/WindowBackdrop.h"
+#include "components/collections/CollectionViewBackdrop_p.h"
 
 namespace fluent::collections {
 
@@ -621,19 +621,13 @@ void TreeView::setHorizontalFluentScrollBarEnabled(bool enabled) {
 void TreeView::paintEvent(QPaintEvent* event) {
     const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
-    const bool preserveParentSurface =
-        property("fluentPreserveParentSurface").toBool()
-        || (viewport() && viewport()->property("fluentPreserveParentSurface").toBool());
-
     // --- 1. Container background ---
     if (m_backgroundVisible) {
         QPainter p(viewport());
         p.setRenderHint(QPainter::Antialiasing);
         p.fillRect(viewport()->rect(), c.bgLayer);
         p.end();
-    } else if (!preserveParentSurface
-               && window() && window()->testAttribute(Qt::WA_TranslucentBackground)
-               && windowing::windowBackdropRequiresTransparentClear(window())) {
+    } else if (detail::shouldClearCompositedViewport(this)) {
         // Background hidden under a REAL OS backdrop (Windows DWM/Acrylic, macOS vibrancy): keep the
         // viewport transparent so the backdrop shows, erasing each paint (the backing store isn't
         // auto-cleared on macOS, so scrolled/expanded rows would otherwise ghost on stale pixels).
