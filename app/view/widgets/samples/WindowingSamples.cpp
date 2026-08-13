@@ -531,12 +531,15 @@ QVector<GallerySample> windowSamples()
     return {
         makeSample(QStringLiteral("window-content-host"),
                    QStringLiteral("Top-level content host"),
-                   QStringLiteral("Open a Fluent Window and assign caller-owned content to its content host."),
+                   QStringLiteral("Open a Fluent Window with Mica material and assign caller-owned content to its content host."),
                    QStringLiteral("auto* window = new Window();\n"
                                   "window->setAttribute(Qt::WA_DeleteOnClose);\n"
                                   "window->setWindowTitle(\"Fluent window\");\n"
+                                  "window->setCustomWindowChromeEnabled(true);\n"
+                                  "window->setBackdropEffect(BackdropEffect::Mica);\n"
                                   "\n"
                                   "auto* content = new QWidget();\n"
+                                  "content->setAutoFillBackground(false);\n"
                                   "window->setContentWidget(content);\n"
                                   "window->resize(640, 520);\n"
                                   "window->show();"),
@@ -569,6 +572,8 @@ QVector<GallerySample> windowSamples()
                            demoWindow = window;
                            window->setAttribute(Qt::WA_DeleteOnClose);
                            window->setWindowTitle(QStringLiteral("Fluent content window"));
+                           window->setCustomWindowChromeEnabled(true);
+                           window->setBackdropEffect(fluent::windowing::BackdropEffect::Mica);
                            window->setContentWidget(makeWindowContent(
                                QStringLiteral("Hosted content"),
                                QStringLiteral("This widget is parented under Window::contentHost().")));
@@ -587,6 +592,7 @@ QVector<GallerySample> windowSamples()
                    QStringLiteral("auto* window = new Window();\n"
                                   "window->setWindowTitle(\"Custom title bar\");\n"
                                   "window->setCustomWindowChromeEnabled(true);\n"
+                                  "window->setBackdropEffect(BackdropEffect::Mica);\n"
                                   "window->setCaptionButtonToolTips(\"Minimize\", \"Maximize\",\n"
                                   "                                 \"Close\", \"Restore\");\n"
                                   "window->setCaptionButtonAccessibleNames(\"Minimize\", \"Maximize\",\n"
@@ -633,6 +639,7 @@ QVector<GallerySample> windowSamples()
                            window->setAttribute(Qt::WA_DeleteOnClose);
                            window->setWindowTitle(QStringLiteral("Custom title bar"));
                            window->setCustomWindowChromeEnabled(true);
+                           window->setBackdropEffect(fluent::windowing::BackdropEffect::Mica);
                            window->setCaptionButtonToolTips(QStringLiteral("Minimize"),
                                                            QStringLiteral("Maximize"),
                                                            QStringLiteral("Close"),
