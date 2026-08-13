@@ -1914,6 +1914,11 @@ h3 {
   text-transform: uppercase;
 }
 
+html:not([data-site-language="zh"]) [data-lang-zh],
+html[data-site-language="zh"] [data-lang-en] {
+  display: none;
+}
+
 .error-page {
   min-height: 100vh;
   display: grid;

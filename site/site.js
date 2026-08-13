@@ -214,7 +214,7 @@ const latestReleaseUrl = "https://github.com/calvinhxx/Fluent-Qt/releases/latest
 const latestReleaseApi = "https://api.github.com/repos/calvinhxx/Fluent-Qt/releases/latest";
 const releaseState = {
   architecture: "",
-  language: "zh",
+  language: "en",
   platform: "other",
   release: null
 };
@@ -240,7 +240,7 @@ let gallerySlowTimer = 0;
 let galleryRetry = 0;
 
 function dictionary() {
-  return translations[releaseState.language] || translations.zh;
+  return translations[releaseState.language] || translations.en;
 }
 
 function isLocalPreview() {
@@ -436,6 +436,29 @@ function savedLanguage() {
   }
 }
 
+function isChineseLanguageTag(tag) {
+  const normalized = String(tag || "").trim().toLowerCase().replace(/_/g, "-");
+  return normalized === "zh" || normalized.startsWith("zh-");
+}
+
+function browserLanguage() {
+  const candidates = [];
+  if (Array.isArray(navigator.languages)) {
+    candidates.push(...navigator.languages);
+  }
+  if (navigator.language) {
+    candidates.push(navigator.language);
+  }
+  const primary = candidates.find((tag) => String(tag || "").trim());
+  return isChineseLanguageTag(primary) ? "zh" : "en";
+}
+
+function preferredLanguage() {
+  const saved = savedLanguage();
+  if (saved === "en" || saved === "zh") return saved;
+  return browserLanguage();
+}
+
 function storeLanguage(language) {
   try {
     localStorage.setItem("fluent-qt-language", language);
@@ -594,6 +617,8 @@ function setLanguage(language, shouldStore = true) {
   const values = translations[normalized];
   releaseState.language = normalized;
   document.documentElement.lang = normalized === "zh" ? "zh-CN" : "en";
+  document.documentElement.dataset.siteLanguage = normalized;
+  document.documentElement.setAttribute("data-i18n-ready", "");
   document.title = values["meta.title"];
   metaDescription?.setAttribute("content", values["meta.description"]);
 
@@ -780,13 +805,13 @@ function setupInteractions() {
   });
 }
 
+setLanguage(preferredLanguage(), false);
 loadAnalytics();
 setupNavigation();
 setupInteractions();
 setupLiveGallery();
 setupReveal();
 releaseState.platform = detectPlatform();
-setLanguage(savedLanguage() === "en" ? "en" : "zh", false);
 initializeTheme();
 hydrateLatestRelease();
 detectArchitecture().then((architecture) => {
