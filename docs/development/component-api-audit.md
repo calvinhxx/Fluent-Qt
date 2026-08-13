@@ -3,6 +3,20 @@
 Date: 2026-05-26
 Change: `audit-component-api-consistency`
 
+## 2026-08-13 collection material addendum
+
+- `GridView` now matches `ListView` and `TreeView` with a source-compatible
+  `backgroundVisible` property, `isBackgroundVisible()` alias, setter, and
+  changed signal.
+- Backgroundless `ListView` and `GridView` clear stale backing-store pixels
+  only for a typed composited backdrop. The existing
+  `fluentPreserveParentSurface` opt-out prevents that explicit clear for an
+  intentionally painted parent; callers also suppress the viewport's Qt base
+  fill with `Qt::WA_NoSystemBackground` while that topology is active.
+- Focused native tests cover the property default, signal, and repeated-setter
+  no-op behavior; the PySide6 API manifest and public-surface test include the
+  new GridView property.
+
 ## 2026-07-24 Phase 0/1 contract addendum
 
 The current executable contract inventory, Phase 1 resolutions, deferred

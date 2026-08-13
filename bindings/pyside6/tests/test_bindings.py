@@ -6104,6 +6104,7 @@ class FluentQtBindingTest(unittest.TestCase):
             horizontalSpacing=8,
             verticalSpacing=10,
             maxColumns=3,
+            backgroundVisible=False,
         )
         self.assertEqual(
             view.selectionMode(),
@@ -6115,6 +6116,7 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(view.horizontalSpacing(), 8)
         self.assertEqual(view.verticalSpacing(), 10)
         self.assertEqual(view.maxColumns(), 3)
+        self.assertFalse(view.backgroundVisible())
 
         model = QStringListModel(["Alpha", "Beta", "Gamma"])
         view.setModel(model)

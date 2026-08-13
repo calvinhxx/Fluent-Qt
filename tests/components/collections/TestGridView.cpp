@@ -487,6 +487,19 @@ TEST_F(GridViewTest, SetBorderVisible) {
     EXPECT_EQ(spy.count(), 1);
 }
 
+TEST_F(GridViewTest, BackgroundVisibleProperty) {
+    GridView* gv = new GridView(window);
+    EXPECT_TRUE(gv->backgroundVisible());
+    EXPECT_TRUE(gv->isBackgroundVisible());
+    QSignalSpy spy(gv, &GridView::backgroundVisibleChanged);
+    gv->setBackgroundVisible(false);
+    EXPECT_FALSE(gv->backgroundVisible());
+    EXPECT_FALSE(gv->isBackgroundVisible());
+    EXPECT_EQ(spy.count(), 1);
+    gv->setBackgroundVisible(false);
+    EXPECT_EQ(spy.count(), 1);
+}
+
 TEST_F(GridViewTest, DefaultHeaderText) {
     GridView* gv = new GridView(window);
     EXPECT_TRUE(gv->headerText().isEmpty());

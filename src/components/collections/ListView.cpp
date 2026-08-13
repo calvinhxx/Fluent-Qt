@@ -33,6 +33,7 @@
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
+#include "components/collections/CollectionViewBackdrop_p.h"
 
 namespace fluent::collections {
 
@@ -962,12 +963,21 @@ int ListView::dropIndicatorRow(const QPoint& pos) const {
 void ListView::paintEvent(QPaintEvent* event) {
     const auto& c = themeColorsRef();
     const int r = CornerRadius::Control;
-
     // --- 1. Container background. zh_CN: 绘制容器背景。---
     if (m_backgroundVisible) {
         QPainter p(viewport());
         p.setRenderHint(QPainter::Antialiasing);
         p.fillRect(viewport()->rect(), c.bgLayer);
+        p.end();
+    } else if (detail::shouldClearCompositedViewport(this)) {
+        // Match TreeView: composited Mica viewports do not auto-clear, so transparent
+        // rows would otherwise stack over stale glyphs. The preserve flag keeps an
+        // intentionally painted parent layer intact.
+        // zh_CN: 与 TreeView 一致。合成式 Mica 的 viewport 后备缓冲不会自动擦除，
+        // 透明行会叠在旧字形上；preserve 标记用于保留有意绘制的父级表面。
+        QPainter p(viewport());
+        p.setCompositionMode(QPainter::CompositionMode_Source);
+        p.fillRect(viewport()->rect(), Qt::transparent);
         p.end();
     }
 
