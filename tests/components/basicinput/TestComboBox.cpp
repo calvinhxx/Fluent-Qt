@@ -131,7 +131,7 @@ TEST_F(ComboBoxTest, DefaultProperties) {
               Typography::Icons::glyph(
                   QStringLiteral("ic_fluent_chevron_down_12_regular")));
     EXPECT_EQ(cb.chevronOffset(), QPoint(Spacing::Padding::ComboBoxHorizontal, 0));
-    EXPECT_EQ(cb.popupOffset(), Spacing::XSmall);
+    EXPECT_EQ(cb.popupOffset(), Spacing::Small);
     EXPECT_DOUBLE_EQ(cb.pressProgress(), 0.0);
 }
 
@@ -486,12 +486,17 @@ TEST_F(ComboBoxTest, PopupOpensAsFlyoutAndClosesThroughLifecycle) {
     EXPECT_FALSE(popup->isWindow());
     EXPECT_NE(popup->windowType(), Qt::Window);
     EXPECT_NE(popup->windowType(), Qt::Dialog);
-    // The flyout card (Popup::paintEvent) already paints the opaque rounded surface, so the inner
+    // ComboBoxPopup already paints the opaque rounded surface, so the inner
     // ListView keeps its own background OFF — a second background would add a tighter (control-radius)
     // corner mask that pokes past the card's overlay-radius corners as white "dog-ears".
-    // zh_CN: Flyout 卡片(Popup::paintEvent)已绘制不透明圆角表面,故内部 ListView 不再画自身背景——
+    // zh_CN: ComboBoxPopup 已绘制不透明圆角表面,故内部 ListView 不再画自身背景——
     // 否则会叠加一层更紧(control 圆角)的角遮罩,超出卡片 overlay 圆角形成白色「狗耳」。
     EXPECT_FALSE(listView->backgroundVisible());
+    EXPECT_TRUE(listView->property("fluentPreserveParentSurface").toBool());
+    ASSERT_NE(listView->viewport(), nullptr);
+    EXPECT_TRUE(listView->viewport()
+                    ->property("fluentPreserveParentSurface")
+                    .toBool());
 
     cb->hidePopup();
     QApplication::processEvents();
@@ -648,6 +653,7 @@ TEST_F(ComboBoxTest, PopupAlignsBelowWithComboBoxWidth) {
     EXPECT_EQ(card.left(), cb->geometry().left());
     EXPECT_GE(card.width(), cb->width());
     EXPECT_EQ(card.top(), cb->geometry().bottom() + 1 + cb->popupOffset());
+    EXPECT_GE(card.top() - cb->geometry().bottom() - 1, Spacing::Small);
 
     auto* listView = popup->findChild<fluent::collections::ListView*>("ComboBoxPopupListView");
     ASSERT_NE(listView, nullptr);
@@ -978,6 +984,7 @@ TEST_F(ComboBoxTest, VisualCheck) {
     auto* mainLayout = new QVBoxLayout(window);
     mainLayout->setSpacing(16);
     mainLayout->setContentsMargins(24, 24, 24, 24);
+    ComboBox* openStateCombo = nullptr;
 
     // Title
     auto* title = new QLabel("ComboBox — WinUI 3 Fluent Design", window);
@@ -995,6 +1002,7 @@ TEST_F(ComboBoxTest, VisualCheck) {
         combo->setCurrentIndex(0);
         combo->setFixedWidth(200);
         mainLayout->addWidget(combo);
+        openStateCombo = combo;
     }
 
     // Example 2: Font family ComboBox
@@ -1072,5 +1080,9 @@ TEST_F(ComboBoxTest, VisualCheck) {
     });
 
     window->show();
+    QTimer::singleShot(0, window, [openStateCombo]() {
+        if (openStateCombo)
+            openStateCombo->showPopup();
+    });
     qApp->exec();
 }
