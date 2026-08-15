@@ -685,6 +685,11 @@
           "avoid_when": "A separate Card or additional spacing communicates structure more clearly."
         },
         {
+          "component_id": "field",
+          "choose_when": "An existing editor needs a shared label, required mark, helper text, or validation presentation while retaining its own value API.",
+          "avoid_when": "The editor already provides the complete labeling and validation presentation, or the content is not an editable field."
+        },
+        {
           "component_id": "expander",
           "choose_when": "One section independently reveals optional caller-owned content.",
           "avoid_when": "Several sections require coordinated expansion behavior."
@@ -966,7 +971,8 @@
         "accordion",
         "card",
         "divider",
-        "expander"
+        "expander",
+        "field"
       ],
       "cpp_header": "<FluentQt/Layout.h>",
       "python_module": "fluentqt.layout"
@@ -4744,6 +4750,110 @@
       ]
     },
     {
+      "id": "field",
+      "title": "Field",
+      "category_id": "layout",
+      "description": "Adds a label, required marker, helper text, and validation feedback to any input control.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "search_terms": [
+        "adds",
+        "any",
+        "around",
+        "changing",
+        "choice",
+        "color",
+        "compact",
+        "control",
+        "control.",
+        "date",
+        "editor",
+        "editor.",
+        "editors.",
+        "error",
+        "existing",
+        "feedback",
+        "field",
+        "field-helper-text",
+        "field-required-error",
+        "field-warning-success",
+        "fields",
+        "helper",
+        "icon",
+        "indicator.",
+        "input",
+        "label",
+        "layout",
+        "layout-surfaces",
+        "marker",
+        "never",
+        "other",
+        "pair",
+        "presentation",
+        "required",
+        "same",
+        "semantic",
+        "show",
+        "slotted",
+        "status",
+        "success",
+        "text",
+        "text.",
+        "treatment",
+        "use",
+        "validation",
+        "warning",
+        "without",
+        "wrap",
+        "writes"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "declaration": "src/components/layout/Field.h",
+        "qualified_type": "fluent::layout::Field",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "Field",
+        "import_statement": "from fluentqt.layout import Field"
+      },
+      "tests": [
+        {
+          "target": "test_field",
+          "source": "tests/components/layout/TestField.cpp",
+          "ctest_label": "test_field"
+        }
+      ],
+      "gallery": {
+        "route_id": "field",
+        "sample_source": "app/view/widgets/samples/LayoutSamples.cpp",
+        "control_image": "app/assets/control_images/layout/Field.png"
+      },
+      "samples": [
+        {
+          "id": "field-helper-text",
+          "title": "Wrap any input control",
+          "description": "Use the same label and helper treatment around text, choice, date, or other existing editors.",
+          "cpp_snippet": "auto* emailField = new Field(this);\nemailField->setLabelText(\"Email\");\nemailField->setHelperText(\"Used only for account recovery.\");\n\nauto* emailEditor = new LineEdit;\nemailEditor->setPlaceholderText(\"name@example.com\");\nemailField->setEditor(\n    emailEditor, WidgetOwnership::Owned);\n\nauto* roleField = new Field(this);\nroleField->setLabelText(\"Role\");\nauto* roleEditor = new ComboBox;\nroleEditor->addItems({\"Designer\", \"Developer\", \"Researcher\"});\nroleField->setEditor(\n    roleEditor, WidgetOwnership::Owned);"
+        },
+        {
+          "id": "field-required-error",
+          "title": "Required with error",
+          "description": "Required fields show an indicator. Validation presentation never writes the editor text.",
+          "cpp_snippet": "auto* field = new Field(this);\nfield->setLabelText(\"Password\");\nfield->setRequired(true);\nfield->setValidationState(Field::ValidationState::Error);\nfield->setValidationMessage(\n    \"Password must be at least 8 characters.\");\n\nauto* editor = new LineEdit;\neditor->setText(\"1234\");\nfield->setEditor(editor, WidgetOwnership::Owned);"
+        },
+        {
+          "id": "field-warning-success",
+          "title": "Warning and success",
+          "description": "Warning and success pair a compact semantic icon with status color without changing the slotted editor.",
+          "cpp_snippet": "auto* warning = new Field(this);\nwarning->setLabelText(\"Username\");\nwarning->setValidationState(Field::ValidationState::Warning);\nwarning->setValidationMessage(\"This name is already taken.\");\nauto* warningEditor = new LineEdit;\nwarningEditor->setText(\"alex\");\nwarning->setEditor(\n    warningEditor, WidgetOwnership::Owned);\n\nauto* success = new Field(this);\nsuccess->setLabelText(\"Display name\");\nsuccess->setValidationState(Field::ValidationState::Success);\nsuccess->setValidationMessage(\"Looks good\");\nauto* successEditor = new LineEdit;\nsuccessEditor->setText(\"Alex Chen\");\nsuccess->setEditor(\n    successEditor, WidgetOwnership::Owned);"
+        }
+      ]
+    },
+    {
       "id": "menu",
       "title": "Menu",
       "category_id": "menus-toolbars",
@@ -8255,6 +8365,13 @@
       "description": "A disclosure surface that reveals caller-supplied content with an optional animation."
     },
     {
+      "id": "field",
+      "title": "Field",
+      "kind": "component",
+      "parent_id": "layout",
+      "description": "Adds a label, required marker, helper text, and validation feedback to any input control."
+    },
+    {
       "id": "menus-toolbars",
       "title": "Menus & toolbars",
       "kind": "category",
@@ -8530,12 +8647,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 88,
-    "component_count": 67,
-    "sample_count": 199,
+    "route_count": 89,
+    "component_count": 68,
+    "sample_count": 202,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 12,
-    "guided_component_count": 67
+    "guided_component_count": 68
   }
 }

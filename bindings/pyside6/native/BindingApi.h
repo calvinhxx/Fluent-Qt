@@ -51,6 +51,7 @@
 #include <components/layout/Card.h>
 #include <components/layout/Divider.h>
 #include <components/layout/Expander.h>
+#include <components/layout/Field.h>
 #include <components/menus_toolbars/CommandBar.h>
 #include <components/menus_toolbars/CommandBarFlyout.h>
 #include <components/menus_toolbars/Menu.h>

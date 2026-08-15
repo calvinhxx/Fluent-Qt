@@ -641,6 +641,11 @@
           "avoid_when": "A separate Card or additional spacing communicates structure more clearly."
         },
         {
+          "component_id": "field",
+          "choose_when": "An existing editor needs a shared label, required mark, helper text, or validation presentation while retaining its own value API.",
+          "avoid_when": "The editor already provides the complete labeling and validation presentation, or the content is not an editable field."
+        },
+        {
           "component_id": "expander",
           "choose_when": "One section independently reveals optional caller-owned content.",
           "avoid_when": "Several sections require coordinated expansion behavior."

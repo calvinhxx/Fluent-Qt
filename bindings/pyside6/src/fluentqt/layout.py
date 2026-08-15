@@ -10,7 +10,9 @@ Divider = _native.fluent.Divider
 WidgetOwnership = _native.fluent.WidgetOwnership
 _NativeAccordion = _native.fluent.Accordion
 _NativeExpander = _native.fluent.Expander
+_NativeField = _native.fluent.Field
 _CONTENT_UNSET = object()
+_EDITOR_UNSET = object()
 
 
 class Accordion(_NativeAccordion):
@@ -278,4 +280,97 @@ class Expander(_NativeExpander):
         return widget
 
 
-__all__ = ["Accordion", "Card", "Divider", "Expander"]
+class Field(_NativeField):
+    """Labeled editor shell with explicit editor ownership methods.
+
+    ``setEditor()`` uses the C++ Field's borrowed default.
+    ``setOwnedEditor()`` deletes the editor with the host, while
+    ``setReparentedEditor()`` restores the QWidget parent present at adoption.
+    Field only presents label, helper, and validation state; it never owns the
+    editor's value. Call ``takeEditor()`` before reinstalling the same editor
+    with a different ownership mode.
+    """
+
+    _fluentqt_hosted_editor = None
+    _fluentqt_original_parent = None
+
+    def __init__(self, *args, **kwargs):
+        editor = kwargs.pop("editor", _EDITOR_UNSET)
+        super().__init__(*args, **kwargs)
+        self._fluentqt_hosted_editor = None
+        self._fluentqt_original_parent = None
+        if editor is not _EDITOR_UNSET:
+            self.setEditor(editor)
+
+    def _set_editor_with_ownership(self, widget, ownership):
+        effective_ownership = (
+            WidgetOwnership.Borrowed if widget is None else ownership
+        )
+        if widget is self or (
+            widget is not None and widget.isAncestorOf(self)
+        ):
+            raise ValueError("Field editor cannot be the host or its ancestor")
+
+        current = super().editor()
+        if widget is current:
+            if widget is None:
+                self._fluentqt_hosted_editor = None
+                self._fluentqt_original_parent = None
+                return
+            if super().editorOwnership() != effective_ownership:
+                raise ValueError("takeEditor() before changing ownership mode")
+            self._fluentqt_hosted_editor = widget
+            return
+
+        original_parent = None
+        if (
+            widget is not None
+            and effective_ownership == WidgetOwnership.Reparented
+        ):
+            original_parent = widget.parentWidget()
+        elif widget is not None and widget.parent() is not None:
+            widget.setParent(None)
+
+        applied = super()._setEditorWithOwnership(
+            widget,
+            effective_ownership,
+        )
+        if not applied:
+            raise RuntimeError("Field rejected the editor contract")
+
+        self._fluentqt_hosted_editor = widget
+        self._fluentqt_original_parent = original_parent
+
+    def setOwnedEditor(self, widget):
+        """Install an editor that is deleted when it leaves the Field."""
+
+        self._set_editor_with_ownership(widget, WidgetOwnership.Owned)
+
+    def setBorrowedEditor(self, widget):
+        """Install an editor that becomes parentless when released."""
+
+        self._set_editor_with_ownership(widget, WidgetOwnership.Borrowed)
+
+    def setReparentedEditor(self, widget):
+        """Install an editor that returns to its current QWidget parent."""
+
+        self._set_editor_with_ownership(widget, WidgetOwnership.Reparented)
+
+    def setEditor(self, widget):
+        self.setBorrowedEditor(widget)
+
+    def takeEditor(self):
+        widget = super().takeEditor()
+        if widget is not None:
+            widget.setParent(None)
+        self._fluentqt_hosted_editor = None
+        self._fluentqt_original_parent = None
+        return widget
+
+    def releaseEditor(self):
+        super().releaseEditor()
+        self._fluentqt_hosted_editor = None
+        self._fluentqt_original_parent = None
+
+
+__all__ = ["Accordion", "Card", "Divider", "Expander", "Field"]

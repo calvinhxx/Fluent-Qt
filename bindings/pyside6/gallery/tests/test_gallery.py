@@ -351,24 +351,24 @@ class PythonGalleryTest(unittest.TestCase):
 
     def test_contract_exactly_matches_the_public_binding(self):
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
-        self.assertEqual(len(manifest["classes"]), 87)
+        self.assertEqual(len(manifest["classes"]), 88)
         self.assertEqual(catalog_coverage_errors(manifest["classes"]), [])
         self.assertEqual(runtime_catalog_errors(), [])
-        self.assertEqual(len(ROUTES), 88)
-        self.assertEqual(len(ENTRIES), 67)
+        self.assertEqual(len(ROUTES), 89)
+        self.assertEqual(len(ENTRIES), 68)
         self.assertEqual(len(CATEGORIES), 12)
         self.assertEqual(
             sum(len(entry.samples) for entry in ENTRIES),
-            199,
+            202,
         )
-        self.assertEqual(len({route.id for route in ROUTES}), 88)
-        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 67)
+        self.assertEqual(len({route.id for route in ROUTES}), 89)
+        self.assertEqual(len({entry.route_id for entry in ENTRIES}), 68)
 
     def test_support_types_are_explicit_and_embedded_in_real_samples(self):
         self.assertEqual(SUPPORT_TYPES, EXPECTED_SUPPORT_TYPES)
         routed_types = {entry.name for entry in ENTRIES}
         self.assertTrue(routed_types.isdisjoint(SUPPORT_TYPES))
-        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 87)
+        self.assertEqual(len(routed_types | set(SUPPORT_TYPES)), 88)
         for entry in ENTRIES:
             self.assertFalse(entry.support_type)
 
@@ -768,7 +768,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
 
     def test_every_native_sample_has_an_exact_python_port(self):
         expected = _contract_sample_keys()
-        self.assertEqual(len(expected), 199)
+        self.assertEqual(len(expected), 202)
         self.assertEqual(ported_sample_keys(), expected)
 
     def test_command_bar_action_icons_match_native_size_variants(self):
@@ -2802,14 +2802,14 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         self.assertLessEqual(maximum_displayed_lines, 80)
         self.assertLessEqual(maximum_displayed_width, 88)
 
-    def test_window_builds_all_88_routes_and_199_sample_cards(self):
+    def test_window_builds_all_89_routes_and_202_sample_cards(self):
         window = GalleryWindow()
         window.show()
         QApplication.processEvents()
         try:
             self.assertEqual(window.all_route_ids(), tuple(route.id for route in ROUTES))
             self.assertEqual(window.visit_all_routes(), [])
-            self.assertEqual(len(window._pages), 88)
+            self.assertEqual(len(window._pages), 89)
             built_sample_count = 0
             for entry in ENTRIES:
                 _index, page = window._pages[entry.route_id]
@@ -2848,7 +2848,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                     "sample surface".format(entry.route_id),
                 )
                 built_sample_count += len(results)
-            self.assertEqual(built_sample_count, 199)
+            self.assertEqual(built_sample_count, 202)
         finally:
             window.close()
             window.deleteLater()

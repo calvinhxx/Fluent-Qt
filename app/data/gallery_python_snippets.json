@@ -2,8 +2,8 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 67,
-    "sample_count": 199
+    "component_count": 68,
+    "sample_count": 202
   },
   "samples": [
     {
@@ -525,6 +525,21 @@
       "route_id": "expander",
       "sample_id": "expander-state-signal",
       "source": "from PySide6.QtWidgets import QVBoxLayout, QWidget\n\nstatus = fluentqt.Label(\"Collapsed\")\n\noptions = QWidget()\noptions_layout = QVBoxLayout(options)\noptions_layout.setContentsMargins(16, 12, 16, 14)\noptions_layout.addWidget(\n    fluentqt.Label(\"Additional details\", options)\n)\noptions_layout.addWidget(\n    fluentqt.Label(\"Diagnostic logging and retry behavior.\", options)\n)\n\nexpander = fluentqt.Expander()\nexpander.setHeaderText(\"Advanced options\")\nexpander.setOwnedContentWidget(options)\nexpander.expandedChanged.connect(\n    lambda expanded: status.setText(\"Expanded\" if expanded else \"Collapsed\")\n)\n"
+    },
+    {
+      "route_id": "field",
+      "sample_id": "field-helper-text",
+      "source": "email_field = fluentqt.Field(card)\nemail_field.setLabelText('Email')\nemail_field.setHelperText('Used only for account recovery.')\nemail_editor = fluentqt.LineEdit()\nemail_editor.setPlaceholderText('name@example.com')\nemail_field.setOwnedEditor(email_editor)\nrole_field = fluentqt.Field(card)\nrole_field.setLabelText('Role')\nrole_editor = fluentqt.ComboBox()\nrole_editor.addItems(['Designer', 'Developer', 'Researcher'])\nrole_field.setOwnedEditor(role_editor)\n"
+    },
+    {
+      "route_id": "field",
+      "sample_id": "field-required-error",
+      "source": "field = fluentqt.Field(card)\nfield.setLabelText('Password')\nfield.setRequired(True)\nfield.setValidationState(fluentqt.Field.ValidationState.Error)\nfield.setValidationMessage(\n    'Password must be at least 8 characters.'\n)\neditor = fluentqt.LineEdit()\neditor.setText('1234')\nfield.setOwnedEditor(editor)\n"
+    },
+    {
+      "route_id": "field",
+      "sample_id": "field-warning-success",
+      "source": "warning = fluentqt.Field(card)\nwarning.setLabelText('Username')\nwarning.setValidationState(fluentqt.Field.ValidationState.Warning)\nwarning.setValidationMessage('This name is already taken.')\nwarning_editor = fluentqt.LineEdit()\nwarning_editor.setText('alex')\nwarning.setOwnedEditor(warning_editor)\nsuccess = fluentqt.Field(card)\nsuccess.setLabelText('Display name')\nsuccess.setValidationState(fluentqt.Field.ValidationState.Success)\nsuccess.setValidationMessage('Looks good')\nsuccess_editor = fluentqt.LineEdit()\nsuccess_editor.setText('Alex Chen')\nsuccess.setOwnedEditor(success_editor)\n"
     },
     {
       "route_id": "menu",

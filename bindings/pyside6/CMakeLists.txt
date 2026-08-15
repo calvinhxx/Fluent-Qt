@@ -154,6 +154,7 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_card_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_divider_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_expander_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_layout_field_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_menus_toolbars_commandbar_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_menus_toolbars_commandbarflyout_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_menus_toolbars_fluentmenu_wrapper.cpp"
@@ -602,6 +603,15 @@ if(BUILD_TESTING)
     fluentqt_add_pyside6_isolated_lifetime_test(
         test_pyside6_expander_reparented_gc_stress
         test_expander_reparented_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_field_owned_gc_stress
+        test_field_owned_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_field_borrowed_gc_stress
+        test_field_borrowed_gc_stress)
+    fluentqt_add_pyside6_isolated_lifetime_test(
+        test_pyside6_field_reparented_gc_stress
+        test_field_reparented_gc_stress)
     fluentqt_add_pyside6_isolated_lifetime_test(
         test_pyside6_accordion_owned_gc_stress
         test_accordion_owned_gc_stress)

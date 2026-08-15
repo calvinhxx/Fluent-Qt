@@ -79,6 +79,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/layout/Card.h
     src/components/layout/Divider.h
     src/components/layout/Expander.h
+    src/components/layout/Field.h
 
     src/components/menus_toolbars/CommandBar.h
     src/components/menus_toolbars/CommandBarFlyout.h

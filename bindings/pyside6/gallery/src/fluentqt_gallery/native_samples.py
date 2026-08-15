@@ -1283,6 +1283,7 @@ _CPP_DISPLAY_MEMBER_ALIASES = {
     "push": ("pushOwnedItem",),
     "replace": ("replaceOwnedItem",),
     "setContentWidget": ("setOwnedContentWidget",),
+    "setEditor": ("setOwnedEditor",),
     "setInitialItem": ("setInitialOwnedItem",),
     "setWidget": ("setOwnedContentWidget",),
 }
@@ -3656,10 +3657,13 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 Qt.WidgetAttribute.WA_DeleteOnClose, True
             )
             window.setWindowTitle("Fluent window")
+            window.setCustomWindowChromeEnabled(True)
+            window.setBackdropEffect(fluentqt.BackdropEffect.Mica)
 
             content = QWidget()
+            content.setAutoFillBackground(False)
             window.setContentWidget(content)
-            window.resize(520, 340)
+            window.resize(640, 520)
             window.show()
             """,
             imports=(
@@ -3673,6 +3677,7 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             window = fluentqt.Window()
             window.setWindowTitle("Custom title bar")
             window.setCustomWindowChromeEnabled(True)
+            window.setBackdropEffect(fluentqt.BackdropEffect.Mica)
             window.setCaptionButtonToolTips(
                 "Minimize", "Maximize", "Close", "Restore"
             )
@@ -5236,6 +5241,158 @@ def _expander(sample_id: str, parent: QWidget | None) -> PreviewResult:
             imports="from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QVBoxLayout, QWidget",
         ),
         "Expander",
+    )
+
+
+@native_samples(
+    "field",
+    "field-helper-text",
+    "field-required-error",
+    "field-warning-success",
+)
+def _field(sample_id: str, parent: QWidget | None) -> PreviewResult:
+    card = fluentqt.Card(parent)
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(16, 14, 16, 14)
+
+    if sample_id == "field-helper-text":
+        card.setFixedSize(520, 220)
+        layout.setSpacing(12)
+        email_field = fluentqt.Field(card)
+        email_field.setLabelText("Email")
+        email_field.setHelperText("Used only for account recovery.")
+        email_editor = fluentqt.LineEdit()
+        email_editor.setPlaceholderText("name@example.com")
+        email_field.setOwnedEditor(email_editor)
+        layout.addWidget(email_field)
+        role_field = fluentqt.Field(card)
+        role_field.setLabelText("Role")
+        role_editor = fluentqt.ComboBox()
+        role_editor.addItems(["Designer", "Developer", "Researcher"])
+        role_field.setOwnedEditor(role_editor)
+        layout.addWidget(role_field)
+        _hold(
+            card,
+            email_field,
+            email_editor,
+            role_field,
+            role_editor,
+        )
+        return _result(
+            card,
+            _source(
+                "card = fluentqt.Card()",
+                "card.setFixedSize(520, 220)",
+                "layout = QVBoxLayout(card)",
+                "layout.setContentsMargins(16, 14, 16, 14)",
+                "layout.setSpacing(12)",
+                "email_field = fluentqt.Field(card)",
+                'email_field.setLabelText("Email")',
+                'email_field.setHelperText("Used only for account recovery.")',
+                "email_editor = fluentqt.LineEdit()",
+                'email_editor.setPlaceholderText("name@example.com")',
+                "email_field.setOwnedEditor(email_editor)",
+                "layout.addWidget(email_field)",
+                "role_field = fluentqt.Field(card)",
+                'role_field.setLabelText("Role")',
+                "role_editor = fluentqt.ComboBox()",
+                'role_editor.addItems(["Designer", "Developer", "Researcher"])',
+                "role_field.setOwnedEditor(role_editor)",
+                "layout.addWidget(role_field)",
+                imports="from PySide6.QtWidgets import QVBoxLayout",
+            ),
+            "Field",
+        )
+
+    if sample_id == "field-required-error":
+        card.setFixedSize(520, 148)
+        layout.setSpacing(0)
+        field = fluentqt.Field(card)
+        field.setLabelText("Password")
+        field.setRequired(True)
+        field.setValidationState(fluentqt.Field.ValidationState.Error)
+        field.setValidationMessage("Password must be at least 8 characters.")
+        editor = fluentqt.LineEdit()
+        editor.setText("1234")
+        field.setOwnedEditor(editor)
+        layout.addWidget(field)
+        _hold(card, field, editor)
+        return _result(
+            card,
+            _source(
+                "card = fluentqt.Card()",
+                "card.setFixedSize(520, 148)",
+                "layout = QVBoxLayout(card)",
+                "layout.setContentsMargins(16, 14, 16, 14)",
+                "layout.setSpacing(0)",
+                "field = fluentqt.Field(card)",
+                'field.setLabelText("Password")',
+                "field.setRequired(True)",
+                "field.setValidationState(",
+                "    fluentqt.Field.ValidationState.Error",
+                ")",
+                "field.setValidationMessage(",
+                '    "Password must be at least 8 characters."',
+                ")",
+                "editor = fluentqt.LineEdit()",
+                'editor.setText("1234")',
+                "field.setOwnedEditor(editor)",
+                "layout.addWidget(field)",
+                imports="from PySide6.QtWidgets import QVBoxLayout",
+            ),
+            "Field",
+        )
+
+    card.setFixedSize(520, 220)
+    layout.setSpacing(16)
+    warning = fluentqt.Field(card)
+    warning.setLabelText("Username")
+    warning.setValidationState(fluentqt.Field.ValidationState.Warning)
+    warning.setValidationMessage("This name is already taken.")
+    warning_editor = fluentqt.LineEdit()
+    warning_editor.setText("alex")
+    warning.setOwnedEditor(warning_editor)
+    layout.addWidget(warning)
+    success = fluentqt.Field(card)
+    success.setLabelText("Display name")
+    success.setValidationState(fluentqt.Field.ValidationState.Success)
+    success.setValidationMessage("Looks good")
+    success_editor = fluentqt.LineEdit()
+    success_editor.setText("Alex Chen")
+    success.setOwnedEditor(success_editor)
+    layout.addWidget(success)
+    _hold(card, warning, warning_editor, success, success_editor)
+    return _result(
+        card,
+        _source(
+            "card = fluentqt.Card()",
+            "card.setFixedSize(520, 220)",
+            "layout = QVBoxLayout(card)",
+            "layout.setContentsMargins(16, 14, 16, 14)",
+            "layout.setSpacing(16)",
+            "warning = fluentqt.Field(card)",
+            'warning.setLabelText("Username")',
+            "warning.setValidationState(",
+            "    fluentqt.Field.ValidationState.Warning",
+            ")",
+            'warning.setValidationMessage("This name is already taken.")',
+            "warning_editor = fluentqt.LineEdit()",
+            'warning_editor.setText("alex")',
+            "warning.setOwnedEditor(warning_editor)",
+            "layout.addWidget(warning)",
+            "success = fluentqt.Field(card)",
+            'success.setLabelText("Display name")',
+            "success.setValidationState(",
+            "    fluentqt.Field.ValidationState.Success",
+            ")",
+            'success.setValidationMessage("Looks good")',
+            "success_editor = fluentqt.LineEdit()",
+            'success_editor.setText("Alex Chen")',
+            "success.setOwnedEditor(success_editor)",
+            "layout.addWidget(success)",
+            imports="from PySide6.QtWidgets import QVBoxLayout",
+        ),
+        "Field",
     )
 
 

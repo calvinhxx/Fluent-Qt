@@ -98,7 +98,7 @@ from .foundation import (
     theme_revision,
     themeRevision,
 )
-from .layout import Accordion, Card, Divider, Expander
+from .layout import Accordion, Card, Divider, Expander, Field
 from .menus_toolbars import (
     CommandBar,
     CommandBarFlyout,
@@ -216,6 +216,7 @@ __all__ = [
     "DropDownButton",
     "EditingCommandRouter",
     "Expander",
+    "Field",
     "FontIcon",
     "FontRole",
     "FlipView",

@@ -340,6 +340,7 @@ def main():
         fluentqt.Flyout(),
         fluentqt.Popup(),
         fluentqt.Expander(),
+        fluentqt.Field(),
         fluentqt.FlipView(),
         fluentqt.FlowView(),
         fluentqt.GridView(),
@@ -1920,6 +1921,45 @@ def main():
         raise AssertionError("Reparented Expander survived Python GC")
     if reparented_expander_content.parent() is not expander_parent:
         raise AssertionError("Expander did not restore the original parent")
+
+    field = fluentqt.Field()
+    field_editor = fluentqt.LineEdit()
+    field_editor.setText("keep-me")
+    field.setValidationState(fluentqt.Field.ValidationState.Error)
+    field.setValidationMessage("Required")
+    field.setEditor(field_editor)
+    taken_field_editor = field.takeEditor()
+    if taken_field_editor is not field_editor:
+        raise AssertionError("Field did not preserve editor wrapper identity")
+    if taken_field_editor.text() != "keep-me":
+        raise AssertionError("Field validation mutated the editor value")
+    if taken_field_editor.parent() is not None:
+        raise AssertionError("Field take did not detach the editor")
+    if not Shiboken.ownedByPython(taken_field_editor):
+        raise AssertionError("Field take did not return Python ownership")
+
+    owned_field = fluentqt.Field()
+    owned_field_editor = fluentqt.LineEdit()
+    owned_field.setOwnedEditor(owned_field_editor)
+    owned_field_ref = weakref.ref(owned_field)
+    del owned_field
+    gc.collect()
+    if owned_field_ref() is not None:
+        raise AssertionError("Owned Field survived Python GC")
+    if Shiboken.isValid(owned_field_editor):
+        raise AssertionError("Field did not delete its owned editor")
+
+    field_parent = QWidget()
+    reparented_field_editor = fluentqt.LineEdit(field_parent)
+    reparented_field = fluentqt.Field()
+    reparented_field.setReparentedEditor(reparented_field_editor)
+    reparented_field_ref = weakref.ref(reparented_field)
+    del reparented_field
+    gc.collect()
+    if reparented_field_ref() is not None:
+        raise AssertionError("Reparented Field survived Python GC")
+    if reparented_field_editor.parent() is not field_parent:
+        raise AssertionError("Field did not restore the original parent")
 
     accordion = fluentqt.Accordion()
     borrowed_item = fluentqt.Expander()

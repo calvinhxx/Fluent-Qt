@@ -13,6 +13,7 @@ MODULE_WRAPPER = "_fluentqt_module_wrapper.cpp"
 FLUENT_NAMESPACE_WRAPPER = "fluent_wrapper.cpp"
 ACCORDION_WRAPPER = "fluent_layout_accordion_wrapper.cpp"
 EXPANDER_WRAPPER = "fluent_layout_expander_wrapper.cpp"
+FIELD_WRAPPER = "fluent_layout_field_wrapper.cpp"
 INFO_BAR_WRAPPER = "fluent_status_info_infobar_wrapper.cpp"
 TOAST_WRAPPER = "fluent_status_info_toast_wrapper.cpp"
 TOOLTIP_WRAPPER = "fluent_status_info_tooltip_wrapper.cpp"
@@ -3300,6 +3301,89 @@ def verify_contracts(generated_dir, check_backdrop_converter):
     if "Sbk_fluent_layout_ExpanderFunc_headerButton(" in expander_source:
         raise RuntimeError("Expander exposes its internal header button")
 
+    field_path = generated_dir / FIELD_WRAPPER
+    if not field_path.is_file():
+        raise RuntimeError(
+            "Generated Field wrapper was not found: {0}".format(field_path)
+        )
+    field_source = field_path.read_text(encoding="utf-8")
+    field_setter = extract_function(
+        field_source,
+        "static PyObject *Sbk_fluent_layout_FieldFunc_setEditor(",
+    )
+    require_text(
+        field_setter,
+        "cppSelf->setEditor(cppArg0)",
+        "Field::setEditor call",
+    )
+    if "WidgetOwnership" in field_setter:
+        raise RuntimeError(
+            "Field::setEditor exposes the runtime ownership overload"
+        )
+    for forbidden, description in (
+        ("Shiboken::Object::releaseOwnership", "changes wrapper ownership"),
+        ("Shiboken::Object::getOwnership", "changes wrapper ownership"),
+        ("Shiboken::Object::keepReference", "uses keep-reference bookkeeping"),
+        ("Shiboken::Object::setParent", "uses parent bookkeeping"),
+    ):
+        if forbidden in field_setter:
+            raise RuntimeError("Field::setEditor {0}".format(description))
+
+    field_adapter = extract_function(
+        field_source,
+        "static PyObject *Sbk_fluent_layout_FieldFunc__setEditorWithOwnership(",
+    )
+    require_text(
+        field_adapter,
+        "cppSelf->setEditor(cppArg0, cppArg1)",
+        "Field private ownership adapter call",
+    )
+    for forbidden, description in (
+        ("Shiboken::Object::releaseOwnership", "changes wrapper ownership"),
+        ("Shiboken::Object::getOwnership", "changes wrapper ownership"),
+        ("Shiboken::Object::keepReference", "uses keep-reference bookkeeping"),
+        ("Shiboken::Object::setParent", "uses parent bookkeeping"),
+    ):
+        if forbidden in field_adapter:
+            raise RuntimeError(
+                "Field private ownership adapter {0}".format(description)
+            )
+
+    field_getter = extract_function(
+        field_source,
+        "static PyObject *Sbk_fluent_layout_FieldFunc_editor(",
+    )
+    if "Shiboken::Object::setParent" in field_getter:
+        raise RuntimeError(
+            "Field::editor uses the return-value parent heuristic"
+        )
+    if (
+        "Shiboken::Object::releaseOwnership" in field_getter
+        or "Shiboken::Object::getOwnership" in field_getter
+    ):
+        raise RuntimeError("Field::editor changes Python wrapper ownership")
+
+    field_taker = extract_function(
+        field_source,
+        "static PyObject *Sbk_fluent_layout_FieldFunc_takeEditor(",
+    )
+    require_text(
+        field_taker,
+        "cppSelf->takeEditor()",
+        "Field::takeEditor call",
+    )
+    require_text(
+        field_taker,
+        "Shiboken::Object::getOwnership(pyResult)",
+        "Field::takeEditor Python ownership transfer",
+    )
+    if "Shiboken::Object::keepReference" in field_taker:
+        raise RuntimeError("Field::takeEditor uses keep-reference bookkeeping")
+    if "Shiboken::Object::setParent" in field_taker:
+        raise RuntimeError("Field::takeEditor uses parent bookkeeping")
+    if "Sbk_fluent_layout_FieldFunc_onThemeUpdated(" in field_source:
+        raise RuntimeError("Field exposes its internal theme refresh hook")
+
     info_bar_path = generated_dir / INFO_BAR_WRAPPER
     if not info_bar_path.is_file():
         raise RuntimeError(
@@ -3394,6 +3478,7 @@ def verify_contracts(generated_dir, check_backdrop_converter):
         "AnnotatedScrollBar borrowed link",
         "Accordion ownership",
         "Expander ownership",
+        "Field ownership",
         "InfoBar action ownership",
         "PipsPager animation privacy",
     ]
