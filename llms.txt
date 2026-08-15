@@ -11,7 +11,7 @@
 - [Project analysis schema](docs/ai/project-analysis.schema.json): optional machine-readable target-project analysis
 - [AI regression scenarios](docs/ai/evals/scenarios.json): project-shape coverage and deterministic intent-retrieval cases
 - [AI regression schema](docs/ai/evals/scenarios.schema.json): machine-readable fixture contract
-- [FluentQt GUI Skill](.agents/skills/build-fluentqt-gui/SKILL.md): canonical open Agent Skills workflow for Codex, Cursor, Copilot, Claude adapters, and other compatible agents
+- [FluentQt GUI Skill](.agents/skills/build-fluentqt-gui/SKILL.md): self-contained Agent Skill shared by Codex, Claude Code, Cursor, Copilot, and other compatible agents
 
 ## Public integration
 

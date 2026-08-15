@@ -218,6 +218,9 @@ python3 .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
   /path/to/visual-evidence.json
 ```
 
+From a consumer project, the same script is
+`<skill-root>/scripts/validate_visual_evidence.py`.
+
 The validator checks profile-specific coverage, local file existence, window
 material fields, and signature-surface fields. Legacy manifests without
 `contract_version` still validate as v1 with a migration warning, but new

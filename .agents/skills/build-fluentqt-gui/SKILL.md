@@ -57,16 +57,16 @@ teardown.
 
 ## Load only the applicable contract
 
-1. Locate the FluentQt root and target-project root. They may be the same
-   checkout, siblings, or a consumer and installed dependency.
-2. Read the target repository's agent instructions, build/package metadata,
+1. Read the target repository's agent instructions, build/package metadata,
    tests, supported-platform documentation, and relevant entry points.
-3. Use this routing table. Read every selected file completely; do not load
+2. Use this routing table. Read every selected file completely; do not load
    unrelated references merely because they exist.
+
+`<skill-root>` is the directory that contains this `SKILL.md`.
 
 | Trigger | Required reading |
 | --- | --- |
-| New GUI, greenfield app, or changed integration boundary | `../../../docs/ai/README.md` and `../../../docs/ai/add-gui-to-project.md` |
+| New GUI, greenfield app, or changed integration boundary | The integration-boundary and vertical-slice sections in this Skill |
 | New top-level GUI, application-owned shell, or window chrome | [Premium shell](references/premium-shell.md) |
 | Conversation, run timeline, document/object canvas, composer, sparse state, or pane chrome | [Signature surface](references/signature-surface.md) |
 | Any visible layout, density, typography, or interaction change | [Visual refinement](references/visual-refinement.md) |
@@ -79,15 +79,17 @@ teardown.
 Query only catalog slices needed for the current decision:
 
 ```bash
-python3 tools/ai/query_ai_catalog.py --pattern greenfield
-python3 tools/ai/query_ai_catalog.py --search "user intent"
-python3 tools/ai/query_ai_catalog.py --component component-id
-python3 tools/ai/query_ai_catalog.py --guide navigation
+python3 <skill-root>/scripts/query_catalog.py --pattern greenfield
+python3 <skill-root>/scripts/query_catalog.py --search "user intent"
+python3 <skill-root>/scripts/query_catalog.py --component component-id
+python3 <skill-root>/scripts/query_catalog.py --guide navigation
 ```
 
-Run from the FluentQt root. In an installed package, the query script resolves
-the adjacent `docs/ai` catalog automatically; `--project-root` and
-`--catalog` remain available for an explicit or relocated catalog.
+Run from any working directory. The script reads
+`assets/fluentqt-ai-catalog.json`, the snapshot bundled with this Skill. Use
+`--project-root /path/to/Fluent-QT` or
+`--catalog /path/to/catalog.json` only when an explicit checkout or catalog
+should override that snapshot.
 
 ## Analyze the integration boundary
 
@@ -232,7 +234,7 @@ Keep a task-local v2 manifest with `"contract_version": 2` and
 `"profile": "lite"` or `"profile": "full"`:
 
 ```bash
-python3 .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
+python3 <skill-root>/scripts/validate_visual_evidence.py \
   /path/to/visual-evidence.json
 ```
 
@@ -280,8 +282,8 @@ Before finishing, require:
 - a product signature that is not a relabeled
   navigation/session/chat/inspector template.
 
-When modifying FluentQt's catalog, guidance, docs, or this Skill in a full
-checkout, run:
+When modifying FluentQt's catalog, guidance, docs, or this Skill inside a full
+FluentQt checkout, run from that checkout:
 
 ```bash
 python3 tools/ai/evaluate_ai_catalog.py --project-root .

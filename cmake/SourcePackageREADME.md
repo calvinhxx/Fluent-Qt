@@ -40,13 +40,14 @@ For AI-assisted integration, start with `llms.txt` and
 integration catalog, its JSON Schemas, the cross-agent `build-fluentqt-gui`
 Skill, its product-reference, differentiation, component-selection, theme, and
 visual-evidence contracts under `.agents/skills/`, plus its proportional
-`lite`/`full` routing and performance/lifecycle contract. The package also
-includes a Claude Code discovery adapter under `.claude/skills/`, plus the
-catalog query and deterministic evaluation tools under `tools/ai/`. It
-intentionally omits the catalog
-generator because regeneration depends on Gallery sources from a full checkout.
-Catalog source and focused-test paths point back to that full checkout; sample
-code itself remains embedded in the catalog and is available with `--json`.
+`lite`/`full` routing and performance/lifecycle contract. The Skill is
+self-contained: its scripts read the bundled catalog snapshot and the same
+directory can be installed in any compatible agent. The package also includes
+the Skill packager, catalog compatibility query, and deterministic evaluation
+tools under `tools/ai/`. It intentionally omits the catalog generator because
+regeneration depends on Gallery sources from a full checkout. Catalog source
+and focused-test paths point back to that checkout; sample code remains
+embedded in the catalog and is available with `--json`.
 
 The project's own source is MIT licensed. Bundled assets retain the licenses
 and notices included in `THIRD_PARTY_NOTICES.md` and `third_party/`. Qt is a

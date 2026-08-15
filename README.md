@@ -45,7 +45,7 @@
 
 ## 🤖 AI-assisted development
 
-Use the cross-agent [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill to build a Gallery-quality C++ or PySide6 GUI for an existing or new project, including one without a CLI/TUI. It covers themes, component selection, and visual refinement across Codex, Cursor, GitHub Copilot, and Claude Code; see the [AI-assisted development guide](docs/ai/README.md).
+The installable [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill helps Codex, Claude Code, Cursor, and GitHub Copilot build Gallery-quality C++ or PySide6 GUIs for existing or new projects. It includes component selection, theming, and visual refinement; see the [AI-assisted development guide](docs/ai/README.md).
 
 ## 🚀 Quick Start
 
