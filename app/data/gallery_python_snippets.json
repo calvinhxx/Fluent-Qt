@@ -999,12 +999,12 @@
     {
       "route_id": "window",
       "sample_id": "window-content-host",
-      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QWidget\n\nwindow = fluentqt.Window()\nwindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)\nwindow.setWindowTitle(\"Fluent window\")\n\ncontent = QWidget()\nwindow.setContentWidget(content)\nwindow.resize(520, 340)\nwindow.show()\n"
+      "source": "from PySide6.QtCore import Qt\nfrom PySide6.QtWidgets import QWidget\n\nwindow = fluentqt.Window()\nwindow.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)\nwindow.setWindowTitle(\"Fluent window\")\nwindow.setCustomWindowChromeEnabled(True)\nwindow.setBackdropEffect(fluentqt.BackdropEffect.Mica)\n\ncontent = QWidget()\ncontent.setAutoFillBackground(False)\nwindow.setContentWidget(content)\nwindow.resize(640, 520)\nwindow.show()\n"
     },
     {
       "route_id": "window",
       "sample_id": "window-custom-titlebar",
-      "source": "from PySide6.QtWidgets import QHBoxLayout, QWidget\n\nwindow = fluentqt.Window()\nwindow.setWindowTitle(\"Custom title bar\")\nwindow.setCustomWindowChromeEnabled(True)\nwindow.setCaptionButtonToolTips(\n    \"Minimize\",\n    \"Maximize\",\n    \"Close\",\n    \"Restore\"\n)\nwindow.setCaptionButtonAccessibleNames(\n    \"Minimize\",\n    \"Maximize\",\n    \"Close\",\n    \"Restore\"\n)\n\ntitle_bar_content = QWidget(window.titleBar())\nlayout = QHBoxLayout(title_bar_content)\nlayout.addWidget(title_label)\nlayout.addWidget(search_box)\nlayout.addWidget(share_button)\nwindow.titleBar().setContentWidget(title_bar_content)\nwindow.titleBar().refreshChromeExclusions()\nwindow.setContentWidget(page_content)\nwindow.resize(720, 520)\nwindow.show()\n"
+      "source": "from PySide6.QtWidgets import QHBoxLayout, QWidget\n\nwindow = fluentqt.Window()\nwindow.setWindowTitle(\"Custom title bar\")\nwindow.setCustomWindowChromeEnabled(True)\nwindow.setBackdropEffect(fluentqt.BackdropEffect.Mica)\nwindow.setCaptionButtonToolTips(\n    \"Minimize\",\n    \"Maximize\",\n    \"Close\",\n    \"Restore\"\n)\nwindow.setCaptionButtonAccessibleNames(\n    \"Minimize\",\n    \"Maximize\",\n    \"Close\",\n    \"Restore\"\n)\n\ntitle_bar_content = QWidget(window.titleBar())\nlayout = QHBoxLayout(title_bar_content)\nlayout.addWidget(title_label)\nlayout.addWidget(search_box)\nlayout.addWidget(share_button)\nwindow.titleBar().setContentWidget(title_bar_content)\nwindow.titleBar().refreshChromeExclusions()\nwindow.setContentWidget(page_content)\nwindow.resize(720, 520)\nwindow.show()\n"
     },
     {
       "route_id": "font-icon",

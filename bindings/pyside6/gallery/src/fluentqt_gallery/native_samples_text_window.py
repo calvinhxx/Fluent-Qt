@@ -993,19 +993,21 @@ register_source_samples(
                         Qt.WidgetAttribute.WA_DeleteOnClose, True
                     )
                     window.setWindowTitle("Fluent content window")
-                    window.setContentWidget(
-                        make_window_content(
-                            "Hosted content",
-                            "This widget is parented under Window::contentHost().",
-                        )
+                    window.setCustomWindowChromeEnabled(True)
+                    window.setBackdropEffect(fluentqt.BackdropEffect.Mica)
+                    content = make_window_content(
+                        "Hosted content",
+                        "This widget is parented under Window::contentHost().",
                     )
+                    content.setAutoFillBackground(False)
+                    window.setContentWidget(content)
 
                     def window_destroyed():
                         state["window"] = None
                         status.setText("Closed")
 
                     window.destroyed.connect(window_destroyed)
-                    size = QSize(520, 340)
+                    size = QSize(640, 520)
                     window.resize(size)
                     center = root.mapToGlobal(root.rect().center())
                     window.move(
@@ -1066,6 +1068,7 @@ register_source_samples(
                     )
                     window.setWindowTitle("Custom title bar")
                     window.setCustomWindowChromeEnabled(True)
+                    window.setBackdropEffect(fluentqt.BackdropEffect.Mica)
                     window.setCaptionButtonToolTips(
                         "Minimize", "Maximize", "Close", "Restore"
                     )

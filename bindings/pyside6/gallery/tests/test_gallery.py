@@ -2166,10 +2166,18 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             preview.deleteLater()
 
     def test_window_samples_use_compositor_safe_activation(self):
-        for sample_id in (
-            "window-content-host",
-            "window-custom-titlebar",
-        ):
+        expected_fragments = {
+            "window-content-host": (
+                "window.setCustomWindowChromeEnabled(True)",
+                "window.setBackdropEffect(fluentqt.BackdropEffect.Mica)",
+                "content.setAutoFillBackground(False)",
+            ),
+            "window-custom-titlebar": (
+                "window.setCustomWindowChromeEnabled(True)",
+                "window.setBackdropEffect(fluentqt.BackdropEffect.Mica)",
+            ),
+        }
+        for sample_id, fragments in expected_fragments.items():
             with self.subTest(sample=sample_id):
                 result = build_sample("window", sample_id)
                 try:
@@ -2181,6 +2189,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                         "window.activateWindow()",
                         result.preview_source,
                     )
+                    for source in (result.preview_source, result.source):
+                        for fragment in fragments:
+                            self.assertIn(fragment, source)
                 finally:
                     result.widget.close()
                     result.widget.deleteLater()
