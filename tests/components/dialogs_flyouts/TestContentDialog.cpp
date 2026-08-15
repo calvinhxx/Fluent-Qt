@@ -77,6 +77,50 @@ TEST_F(ContentDialogTest, DefaultProperties) {
     EXPECT_EQ(dialog.shadowSize(), 16);
 }
 
+TEST_F(ContentDialogTest, Contract_IsOpenAndNotifyNoOps) {
+    window->show();
+    QApplication::processEvents();
+
+    ContentDialog dialog(window);
+    dialog.setAnimationEnabled(false);
+    EXPECT_TRUE(dialog.isSmokeEnabled());
+    EXPECT_TRUE(dialog.isModal());
+    EXPECT_TRUE(dialog.isDim());
+
+    QSignalSpy titleSpy(&dialog, &ContentDialog::titleChanged);
+    QSignalSpy primarySpy(&dialog, &ContentDialog::primaryButtonTextChanged);
+    dialog.setTitle(QStringLiteral("Save?"));
+    dialog.setTitle(QStringLiteral("Save?"));
+    dialog.setPrimaryButtonText(QStringLiteral("Save"));
+    dialog.setPrimaryButtonText(QStringLiteral("Save"));
+    EXPECT_EQ(titleSpy.count(), 1);
+    EXPECT_EQ(primarySpy.count(), 1);
+
+    QStringList order;
+    QObject::connect(&dialog, &Dialog::opening, [&] { order << QStringLiteral("opening"); });
+    QObject::connect(&dialog, &Dialog::aboutToShow, [&] { order << QStringLiteral("aboutToShow"); });
+    QObject::connect(&dialog, &Dialog::opened, [&] { order << QStringLiteral("opened"); });
+    QObject::connect(&dialog, &Dialog::closing, [&] { order << QStringLiteral("closing"); });
+    QObject::connect(&dialog, &Dialog::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&dialog, &Dialog::closed, [&] { order << QStringLiteral("closed"); });
+
+    dialog.open();
+    QApplication::processEvents();
+    EXPECT_TRUE(dialog.isOpen());
+    dialog.setIsOpen(true);
+    dialog.done(ContentDialog::ResultNone);
+    QApplication::processEvents();
+    EXPECT_FALSE(dialog.isOpen());
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("aboutToShow"),
+                          QStringLiteral("opened"),
+                          QStringLiteral("closing"),
+                          QStringLiteral("aboutToHide"),
+                          QStringLiteral("closed"),
+                      }));
+}
+
 // --- Title ---
 
 TEST_F(ContentDialogTest, SetTitle) {

@@ -50,11 +50,11 @@ bool isRightPlacement(TeachingTip::PreferredPlacement placement) {
 TeachingTip::TeachingTip(QWidget* parent) : Popup(parent) {
     setModal(false);
     setDim(false);
+    setClosePolicy(ClosePolicy(NoAutoClose));
 
     m_contentHost = new QWidget(this);
 
     connect(this, &Popup::aboutToHide, this, &TeachingTip::emitClosingReason);
-    setLightDismissEnabled(m_lightDismissEnabled);
     updateWidgetSize();
     onThemeUpdated();
 }
@@ -72,6 +72,8 @@ void TeachingTip::setTarget(QWidget* targetWidget) {
 
     if (m_target) m_target->installEventFilter(this);
 
+    emit targetChanged(m_target.data());
+
     if (isOpen()) {
         updateWidgetSize();
         move(computePosition());
@@ -81,6 +83,7 @@ void TeachingTip::setTarget(QWidget* targetWidget) {
 void TeachingTip::setPreferredPlacement(PreferredPlacement placement) {
     if (m_preferredPlacement == placement) return;
     m_preferredPlacement = placement;
+    emit preferredPlacementChanged(m_preferredPlacement);
     if (isOpen()) {
         updateWidgetSize();
         move(computePosition());
@@ -91,20 +94,23 @@ void TeachingTip::setPlacementMargin(int margin) {
     margin = qMax(0, margin);
     if (m_placementMargin == margin) return;
     m_placementMargin = margin;
+    emit placementMarginChanged(m_placementMargin);
     if (isOpen()) move(computePosition());
 }
 
 void TeachingTip::setLightDismissEnabled(bool enabled) {
-    const bool changed = m_lightDismissEnabled != enabled;
+    if (m_lightDismissEnabled == enabled)
+        return;
     m_lightDismissEnabled = enabled;
     setClosePolicy(enabled ? ClosePolicy(CloseOnPressOutside | CloseOnEscape)
                            : ClosePolicy(NoAutoClose));
-    if (!changed) return;
+    emit lightDismissEnabledChanged(m_lightDismissEnabled);
 }
 
 void TeachingTip::setTailVisible(bool visible) {
     if (m_tailVisible == visible) return;
     m_tailVisible = visible;
+    emit tailVisibleChanged(m_tailVisible);
     updateWidgetSize();
     if (isOpen()) move(computePosition());
     update();
@@ -125,7 +131,7 @@ void TeachingTip::showAt(QWidget* targetWidget) {
 
 void TeachingTip::closeWithReason(CloseReason reason) {
     markPendingCloseReason(reason);
-    Popup::close();
+    Popup::closeWithReason(static_cast<Popup::CloseReason>(reason));
 }
 
 QPoint TeachingTip::computePosition() const {
@@ -154,6 +160,17 @@ bool TeachingTip::eventFilter(QObject* watched, QEvent* event) {
         default:
             break;
         }
+    }
+
+    if ((isVisible() || isOpen()) && isLightDismissEnabled()
+        && event->type() == QEvent::KeyPress
+        && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
+        // Popup installs this object as an application event filter, so an
+        // Escape sent to the owning window reaches here before keyPressEvent().
+        // Keep TeachingTip's legacy close-reason surface at LightDismiss.
+        // zh_CN: Popup 会把本对象安装为应用事件过滤器；宿主窗口收到 Esc 时会先到这里，
+        // 早于 keyPressEvent()。TeachingTip 的兼容关闭原因仍保持 LightDismiss。
+        markPendingCloseReason(LightDismiss);
     }
 
     if ((isVisible() || isOpen()) && isLightDismissEnabled() && event->type() == QEvent::MouseButtonPress) {
@@ -427,6 +444,7 @@ QMargins TeachingTip::tailInsets(PreferredPlacement placement) const {
 void TeachingTip::markPendingCloseReason(CloseReason reason) {
     m_pendingCloseReason = reason;
     m_closeReasonExplicit = true;
+    Popup::setPendingCloseReason(static_cast<Popup::CloseReason>(reason));
 }
 
 void TeachingTip::emitClosingReason() {

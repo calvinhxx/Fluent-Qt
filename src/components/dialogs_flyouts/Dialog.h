@@ -2,6 +2,7 @@
 #define DIALOG_H
 
 #include <QDialog>
+#include <QFlags>
 #include <QPointer>
 #include <QPropertyAnimation>
 
@@ -12,6 +13,7 @@
 class QEvent;
 class QGraphicsOpacityEffect;
 class QHideEvent;
+class QKeyEvent;
 class QMouseEvent;
 class QPaintEvent;
 class QPainter;
@@ -35,25 +37,62 @@ namespace fluent::dialogs_flyouts {
  */
 class Dialog : public QDialog, public FluentElement, public QMLPlus {
     Q_OBJECT
-    Q_PROPERTY(double animationProgress READ animationProgress WRITE setAnimationProgress)
-    Q_PROPERTY(bool dragEnabled READ isDragEnabled WRITE setDragEnabled)
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled)
 
 public:
+    /**
+     * @brief Overlay light-dismiss flags; same bits as Popup::CloseFlag.
+     * zh_CN: 浮层轻关闭标志，位值与 Popup::CloseFlag 相同。
+     */
+    enum CloseFlag {
+        NoAutoClose         = 0,
+        CloseOnPressOutside = 1 << 0,
+        CloseOnEscape       = 1 << 1,
+    };
+    Q_DECLARE_FLAGS(ClosePolicy, CloseFlag)
+    Q_FLAG(ClosePolicy)
+
+    /**
+     * @brief Logical requested open state, not animation-complete or QWidget visibility.
+     * zh_CN: 逻辑请求打开态，不是动画完成态，也不是 QWidget 可见性。
+     */
+    Q_PROPERTY(bool isOpen READ isOpen WRITE setIsOpen NOTIFY isOpenChanged)
+    Q_PROPERTY(double animationProgress READ animationProgress WRITE setAnimationProgress)
+    Q_PROPERTY(bool dragEnabled READ isDragEnabled WRITE setDragEnabled NOTIFY dragEnabledChanged)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
+    /**
+     * @brief Historical smoke bundle; enabled only while modal and dim are both on.
+     * zh_CN: 历史烟雾包；仅在 modal 与 dim 同时开启时视为启用。
+     */
+    Q_PROPERTY(bool smokeEnabled READ isSmokeEnabled WRITE setSmokeEnabled NOTIFY smokeEnabledChanged)
+    Q_PROPERTY(bool modal READ isModal WRITE setModal NOTIFY modalChanged)
+    Q_PROPERTY(bool dim READ isDim WRITE setDim NOTIFY dimChanged)
+    Q_PROPERTY(ClosePolicy closePolicy READ closePolicy WRITE setClosePolicy NOTIFY closePolicyChanged)
+
     explicit Dialog(QWidget* parent = nullptr);
     ~Dialog() override;
 
     void onThemeUpdated() override;
 
+    bool isOpen() const { return m_isOpen; }
+
     int shadowSize() const { return m_shadowSize; }
 
-    void setDragEnabled(bool enabled) { m_dragEnabled = enabled; }
+    void setDragEnabled(bool enabled);
     bool isDragEnabled() const { return m_dragEnabled; }
 
-    void setSmokeEnabled(bool enabled) { m_smokeEnabled = enabled; }
-    bool isSmokeEnabled() const { return m_smokeEnabled; }
+    void setSmokeEnabled(bool enabled);
+    bool isSmokeEnabled() const { return m_modal && m_dim; }
 
-    void setAnimationEnabled(bool enabled) { m_animationEnabled = enabled; }
+    bool isModal() const { return m_modal; }
+    void setModal(bool modal);
+
+    bool isDim() const { return m_dim; }
+    void setDim(bool dim);
+
+    ClosePolicy closePolicy() const { return m_closePolicy; }
+    void setClosePolicy(ClosePolicy policy);
+
+    void setAnimationEnabled(bool enabled);
     bool isAnimationEnabled() const { return m_animationEnabled; }
 
     /**
@@ -68,6 +107,30 @@ public:
     void open() override;
     int exec() override;
     void done(int result) override;
+    void setIsOpen(bool open);
+
+signals:
+    void isOpenChanged(bool open);
+    /**
+     * @brief Opening transition started. Compatibility alias: aboutToShow().
+     * zh_CN: 开始打开。兼容别名：aboutToShow()。
+     */
+    void opening();
+    void opened();
+    /**
+     * @brief Closing transition started. Compatibility alias: aboutToHide().
+     * zh_CN: 开始关闭。兼容别名：aboutToHide()。
+     */
+    void closing();
+    void closed();
+    void aboutToShow();
+    void aboutToHide();
+    void dragEnabledChanged(bool enabled);
+    void animationEnabledChanged(bool enabled);
+    void smokeEnabledChanged(bool enabled);
+    void modalChanged(bool modal);
+    void dimChanged(bool dim);
+    void closePolicyChanged(ClosePolicy policy);
 
 protected:
     bool isAnimating() const { return m_isAnimating; }
@@ -81,6 +144,7 @@ protected:
     void paintEvent(QPaintEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 
     void mousePressEvent(QMouseEvent* event) override;
@@ -97,10 +161,14 @@ private:
     void setSurfaceOpacity(qreal opacity);
     void showSmokeOverlay();
     void hideSmokeOverlay();
+    void updateScrimState();
+    void emitOpenedIfNeeded();
 
     const int m_shadowSize = ::Spacing::Standard;
 
-    bool m_smokeEnabled = false;
+    bool m_modal = false;
+    bool m_dim = false;
+    ClosePolicy m_closePolicy = ClosePolicy(CloseOnEscape);
     bool m_dragEnabled = true;
     QPoint m_dragOffset;
     QPointer<QWidget> m_originalParent;
@@ -110,6 +178,9 @@ private:
     bool m_animationEnabled = true;
     bool m_isAnimating = false;
     bool m_isClosing = false;
+    bool m_isOpen = false;
+    bool m_openInProgress = false;
+    bool m_openedEmitted = false;
     double m_animationProgress = 1.0;
     int m_closingResult = 0;
 
@@ -122,5 +193,7 @@ private:
 };
 
 } // namespace fluent::dialogs_flyouts
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(fluent::dialogs_flyouts::Dialog::ClosePolicy)
 
 #endif // DIALOG_H

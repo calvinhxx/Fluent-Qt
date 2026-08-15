@@ -111,33 +111,48 @@ void ContentDialog::setupInternalLayout() {
 
 QString ContentDialog::title() const { return m_titleLabel->text(); }
 void ContentDialog::setTitle(const QString& text) {
+    if (m_titleLabel->text() == text)
+        return;
     m_titleLabel->setText(text);
     m_titleLabel->setVisible(!text.isEmpty());
     updateContentAnchors();
+    emit titleChanged(text);
 }
 
 QString ContentDialog::primaryButtonText() const { return m_primaryBtn->text(); }
 void ContentDialog::setPrimaryButtonText(const QString& text) {
+    if (m_primaryBtn->text() == text)
+        return;
     m_primaryBtn->setText(text);
     updateButtonBar();
+    emit primaryButtonTextChanged(text);
 }
 
 QString ContentDialog::secondaryButtonText() const { return m_secondaryBtn->text(); }
 void ContentDialog::setSecondaryButtonText(const QString& text) {
+    if (m_secondaryBtn->text() == text)
+        return;
     m_secondaryBtn->setText(text);
     updateButtonBar();
+    emit secondaryButtonTextChanged(text);
 }
 
 QString ContentDialog::closeButtonText() const { return m_closeBtn->text(); }
 void ContentDialog::setCloseButtonText(const QString& text) {
+    if (m_closeBtn->text() == text)
+        return;
     m_closeBtn->setText(text);
     updateButtonBar();
+    emit closeButtonTextChanged(text);
 }
 
 int  ContentDialog::defaultButton() const { return m_defaultButton; }
 void ContentDialog::setDefaultButton(int btn) {
+    if (m_defaultButton == btn)
+        return;
     m_defaultButton = btn;
     updateButtonBar();
+    emit defaultButtonChanged(btn);
 }
 
 QWidget* ContentDialog::content() const { return m_contentWidget.data(); }

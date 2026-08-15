@@ -15,6 +15,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/textfields/Label.h"
+#include "compatibility/QtCompat.h"
 #include <QImage>
 
 using namespace fluent::dialogs_flyouts;
@@ -52,6 +53,13 @@ void processEvents() {
 // ── Fixture ──────────────────────────────────────────────────────────────────
 class PopupTest : public ::testing::Test {
 protected:
+    static void SetUpTestSuite()
+    {
+        fluentRegisterMetaTypeNames<fluent::dialogs_flyouts::Popup::CloseReason>(
+            "fluent::dialogs_flyouts::Popup::CloseReason",
+            "CloseReason");
+    }
+
     void SetUp() override {
         window = new FluentTestWindow();
         window->setFixedSize(800, 600);
@@ -196,6 +204,313 @@ TEST_F(PopupTest, SetIsOpen_DelegatesToOpenClose) {
     p.setIsOpen(false);
     EXPECT_EQ(closed.count(), 1);
     EXPECT_FALSE(p.isOpen());
+}
+
+TEST_F(PopupTest, Contract_IsOpenIsLogicalRequestedState) {
+    Popup p(window);
+    QSignalSpy opened(&p, &Popup::opened);
+    QSignalSpy closed(&p, &Popup::closed);
+    QSignalSpy openChanged(&p, &Popup::isOpenChanged);
+
+    p.open();
+    EXPECT_TRUE(p.isOpen());
+    EXPECT_TRUE(p.isVisible());
+    EXPECT_EQ(opened.count(), 0);
+    EXPECT_EQ(openChanged.count(), 1);
+    EXPECT_LT(p.popupProgress(), 1.0);
+
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return opened.count() == 1; }, 1000));
+    EXPECT_TRUE(p.isOpen());
+    EXPECT_TRUE(p.isVisible());
+    EXPECT_DOUBLE_EQ(p.popupProgress(), 1.0);
+
+    p.close();
+    EXPECT_FALSE(p.isOpen());
+    EXPECT_TRUE(p.isVisible());
+    EXPECT_EQ(closed.count(), 0);
+    EXPECT_EQ(openChanged.count(), 2);
+
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return closed.count() == 1; }, 1000));
+    EXPECT_FALSE(p.isOpen());
+    EXPECT_FALSE(p.isVisible());
+}
+
+TEST_F(PopupTest, Contract_AnimationDisabledSyncSettlesOpenState) {
+    Popup p(window);
+    p.setAnimationEnabled(false);
+
+    QStringList order;
+    QObject::connect(&p, &Popup::opening, [&] {
+        EXPECT_FALSE(p.isOpen());
+        EXPECT_FALSE(p.isVisible());
+        order << QStringLiteral("opening");
+    });
+    QObject::connect(&p, &Popup::aboutToShow, [&] {
+        EXPECT_FALSE(p.isOpen());
+        EXPECT_FALSE(p.isVisible());
+        order << QStringLiteral("aboutToShow");
+    });
+    QObject::connect(&p, &Popup::isOpenChanged, [&](bool open) {
+        EXPECT_EQ(p.isOpen(), open);
+        EXPECT_EQ(p.isVisible(), !open);
+        order << (open ? QStringLiteral("isOpenChanged(true)")
+                       : QStringLiteral("isOpenChanged(false)"));
+    });
+    QObject::connect(&p, &Popup::opened, [&] {
+        EXPECT_TRUE(p.isOpen());
+        EXPECT_TRUE(p.isVisible());
+        order << QStringLiteral("opened");
+    });
+    QObject::connect(&p, &Popup::closing, [&] {
+        EXPECT_TRUE(p.isOpen());
+        EXPECT_TRUE(p.isVisible());
+        order << QStringLiteral("closing");
+    });
+    QObject::connect(&p, &Popup::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&p, &Popup::closed, [&] {
+        EXPECT_FALSE(p.isOpen());
+        EXPECT_FALSE(p.isVisible());
+        order << QStringLiteral("closed");
+    });
+
+    p.open();
+    EXPECT_TRUE(p.isOpen());
+    EXPECT_TRUE(p.isVisible());
+    EXPECT_DOUBLE_EQ(p.popupProgress(), 1.0);
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("aboutToShow"),
+                          QStringLiteral("isOpenChanged(true)"),
+                          QStringLiteral("opened"),
+                      }));
+
+    p.close();
+    EXPECT_FALSE(p.isOpen());
+    EXPECT_FALSE(p.isVisible());
+    EXPECT_DOUBLE_EQ(p.popupProgress(), 0.0);
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("aboutToShow"),
+                          QStringLiteral("isOpenChanged(true)"),
+                          QStringLiteral("opened"),
+                          QStringLiteral("closing"),
+                          QStringLiteral("aboutToHide"),
+                          QStringLiteral("isOpenChanged(false)"),
+                          QStringLiteral("closed"),
+                      }));
+}
+
+TEST_F(PopupTest, Contract_CloseWhileOpeningCancelsEntrance) {
+    Popup p(window);
+    p.setAnimationEnabled(false);
+
+    QStringList order;
+    QObject::connect(&p, &Popup::opening, [&] { order << QStringLiteral("opening"); });
+    QObject::connect(&p, &Popup::aboutToShow, [&] { order << QStringLiteral("aboutToShow"); });
+    QObject::connect(&p, &Popup::opened, [&] { order << QStringLiteral("opened"); });
+    QObject::connect(&p, &Popup::closing, [&] { order << QStringLiteral("closing"); });
+    QObject::connect(&p, &Popup::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&p, &Popup::closed, [&] { order << QStringLiteral("closed"); });
+    bool cancelNextOpen = true;
+    QObject::connect(&p, &Popup::opening, &p, [&]() {
+        if (cancelNextOpen)
+            p.close();
+    });
+
+    p.open();
+    EXPECT_FALSE(p.isOpen());
+    EXPECT_FALSE(p.isVisible());
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("closing"),
+                          QStringLiteral("aboutToHide"),
+                          QStringLiteral("closed"),
+                      }));
+
+    cancelNextOpen = false;
+    p.open();
+    EXPECT_TRUE(p.isOpen());
+    p.close();
+    EXPECT_FALSE(p.isOpen());
+
+    Popup animated(window);
+    QSignalSpy opened(&animated, &Popup::opened);
+    QSignalSpy closed(&animated, &Popup::closed);
+    animated.open();
+    EXPECT_TRUE(animated.isOpen());
+    EXPECT_EQ(opened.count(), 0);
+
+    animated.close();
+    EXPECT_FALSE(animated.isOpen());
+    EXPECT_TRUE(animated.isVisible());
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return closed.count() == 1; }, 1000));
+    EXPECT_FALSE(animated.isVisible());
+    EXPECT_EQ(opened.count(), 0);
+}
+
+TEST_F(PopupTest, Contract_OpenWhileOpeningIsIgnored) {
+    Popup p(window);
+    p.setAnimationEnabled(false);
+
+    QSignalSpy opening(&p, &Popup::opening);
+    QSignalSpy opened(&p, &Popup::opened);
+    QObject::connect(&p, &Popup::opening, &p, [&]() { p.open(); });
+
+    p.open();
+    EXPECT_EQ(opening.count(), 1);
+    EXPECT_EQ(opened.count(), 1);
+    EXPECT_TRUE(p.isOpen());
+    p.close();
+}
+
+TEST_F(PopupTest, Contract_CloseWhileClosingIsIgnored) {
+    Popup p(window);
+    p.setAnimationEnabled(false);
+
+    QSignalSpy closing(&p, &Popup::closing);
+    QSignalSpy closed(&p, &Popup::closed);
+    QObject::connect(&p, &Popup::closing, &p, [&]() { p.close(); });
+
+    p.open();
+    p.close();
+    EXPECT_EQ(closing.count(), 1);
+    EXPECT_EQ(closed.count(), 1);
+    EXPECT_FALSE(p.isOpen());
+}
+
+TEST_F(PopupTest, Contract_OpenWhileClosingReversesToOpen) {
+    Popup p(window);
+    QSignalSpy opened(&p, &Popup::opened);
+    p.open();
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return opened.count() == 1; }, 1000));
+
+    p.close();
+    EXPECT_FALSE(p.isOpen());
+    EXPECT_TRUE(p.isVisible());
+
+    p.open();
+    EXPECT_TRUE(p.isOpen());
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return opened.count() == 2; }, 1000));
+    EXPECT_TRUE(p.isVisible());
+    EXPECT_DOUBLE_EQ(p.popupProgress(), 1.0);
+    p.close();
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return !p.isVisible(); }, 1000));
+}
+
+TEST_F(PopupTest, Contract_CloseReasonsAndNotifyNoOps) {
+    Popup p(window);
+    p.setAnimationEnabled(false);
+
+    QSignalSpy closing(&p, &Popup::closing);
+    QSignalSpy modalChanged(&p, &Popup::modalChanged);
+    QSignalSpy dimChanged(&p, &Popup::dimChanged);
+    QSignalSpy policyChanged(&p, &Popup::closePolicyChanged);
+    QSignalSpy animationChanged(&p, &Popup::animationEnabledChanged);
+    QSignalSpy openChanged(&p, &Popup::isOpenChanged);
+
+    p.setModal(true);
+    p.setModal(true);
+    p.setDim(true);
+    p.setDim(true);
+    p.setClosePolicy(Popup::CloseOnEscape);
+    p.setClosePolicy(Popup::CloseOnEscape);
+    p.setAnimationEnabled(false);
+    p.setAnimationEnabled(false);
+    EXPECT_EQ(modalChanged.count(), 1);
+    EXPECT_EQ(dimChanged.count(), 1);
+    EXPECT_EQ(policyChanged.count(), 1);
+    EXPECT_EQ(animationChanged.count(), 0);
+
+    p.open();
+    p.close();
+    ASSERT_EQ(closing.count(), 1);
+    EXPECT_EQ(closing.at(0).at(0).toInt(), static_cast<int>(Popup::Programmatic));
+
+    p.open();
+    QKeyEvent ev(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+    QApplication::sendEvent(&p, &ev);
+    ASSERT_EQ(closing.count(), 2);
+    EXPECT_EQ(closing.at(1).at(0).toInt(), static_cast<int>(Popup::Escape));
+
+    p.setClosePolicy(Popup::ClosePolicy(Popup::CloseOnPressOutside | Popup::CloseOnEscape));
+    p.open();
+    QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, QPoint(10, 10));
+    processEvents();
+    ASSERT_EQ(closing.count(), 3);
+    EXPECT_EQ(closing.at(2).at(0).toInt(), static_cast<int>(Popup::LightDismiss));
+
+    p.setIsOpen(true);
+    const int openSignals = openChanged.count();
+    p.setIsOpen(true);
+    EXPECT_EQ(openChanged.count(), openSignals);
+    p.setIsOpen(false);
+}
+
+TEST_F(PopupTest, Contract_ModalDimClosePolicyAreOrthogonal) {
+    Popup p(window);
+    p.setAnimationEnabled(false);
+    p.setClosePolicy(Popup::NoAutoClose);
+
+    p.setModal(false);
+    p.setDim(false);
+    p.open();
+    EXPECT_EQ(window->findChild<fluent::overlay::OverlayScrim*>(
+                  QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly),
+              nullptr);
+    p.close();
+
+    p.setModal(true);
+    p.setDim(false);
+    p.open();
+    auto* modalScrim = window->findChild<fluent::overlay::OverlayScrim*>(
+        QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly);
+    ASSERT_NE(modalScrim, nullptr);
+    EXPECT_FALSE(modalScrim->testAttribute(Qt::WA_TransparentForMouseEvents));
+    p.close();
+    processEvents();
+
+    p.setModal(false);
+    p.setDim(true);
+    p.open();
+    auto* dimScrim = window->findChild<fluent::overlay::OverlayScrim*>(
+        QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly);
+    ASSERT_NE(dimScrim, nullptr);
+    EXPECT_TRUE(dimScrim->testAttribute(Qt::WA_TransparentForMouseEvents));
+    p.close();
+    processEvents();
+
+    p.setModal(true);
+    p.setDim(true);
+    p.open();
+    auto* both = window->findChild<fluent::overlay::OverlayScrim*>(
+        QStringLiteral("PopupScrim"), Qt::FindDirectChildrenOnly);
+    ASSERT_NE(both, nullptr);
+    EXPECT_FALSE(both->testAttribute(Qt::WA_TransparentForMouseEvents));
+    p.close();
+}
+
+TEST_F(PopupTest, Contract_ThemeChangeDoesNotMutateOpenState) {
+    Popup p(window);
+    p.setAnimationEnabled(false);
+    p.open();
+
+    QSignalSpy openChanged(&p, &Popup::isOpenChanged);
+    QSignalSpy opened(&p, &Popup::opened);
+    QSignalSpy closed(&p, &Popup::closed);
+
+    const auto previous = fluent::FluentElement::currentTheme();
+    fluent::FluentElement::setTheme(previous == fluent::FluentElement::Light
+                                        ? fluent::FluentElement::Dark
+                                        : fluent::FluentElement::Light);
+    p.onThemeUpdated();
+
+    EXPECT_TRUE(p.isOpen());
+    EXPECT_EQ(openChanged.count(), 0);
+    EXPECT_EQ(opened.count(), 0);
+    EXPECT_EQ(closed.count(), 0);
+
+    fluent::FluentElement::setTheme(previous);
+    p.close();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -615,10 +930,12 @@ TEST_F(PopupTest, AnimationProgress_DrivesUpdates) {
     Popup p(window);
 
     QSignalSpy spy(&p, &Popup::popupProgressChanged);
+    QSignalSpy opened(&p, &Popup::opened);
     p.open();
+    EXPECT_TRUE(p.isOpen());
+    EXPECT_TRUE(p.isVisible());
 
-    bool gotOpened = QTest::qWaitFor([&]() { return p.isOpen(); }, 1000);
-    EXPECT_TRUE(gotOpened);
+    ASSERT_TRUE(QTest::qWaitFor([&]() { return opened.count() == 1; }, 1000));
     EXPECT_GT(spy.count(), 1);
     EXPECT_DOUBLE_EQ(p.popupProgress(), 1.0);
 

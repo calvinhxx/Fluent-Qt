@@ -1,7 +1,9 @@
 #include "Dialog.h"
 
+#include <QAbstractAnimation>
 #include <QGraphicsOpacityEffect>
 #include <QHideEvent>
+#include <QKeyEvent>
 #include <QLayout>
 #include <QMouseEvent>
 #include <QPainter>
@@ -87,12 +89,14 @@ Dialog::Dialog(QWidget* parent)
             guard->setMinimumSize(guard->m_savedMinSize);
             guard->setMaximumSize(guard->m_savedMaxSize);
             guard->setSurfaceOpacity(1.0);
+            emit closed();
         } else {
             resize(m_targetSize);
             setMinimumSize(m_savedMinSize);
             setMaximumSize(m_savedMaxSize);
             m_isAnimating = false;
             m_targetSize = QSize();
+            emitOpenedIfNeeded();
         }
     });
 
@@ -136,6 +140,81 @@ void Dialog::setAnimationProgress(double progress)
     update();
 }
 
+void Dialog::setDragEnabled(bool enabled)
+{
+    if (m_dragEnabled == enabled)
+        return;
+    m_dragEnabled = enabled;
+    emit dragEnabledChanged(m_dragEnabled);
+}
+
+void Dialog::setAnimationEnabled(bool enabled)
+{
+    if (m_animationEnabled == enabled)
+        return;
+    m_animationEnabled = enabled;
+    emit animationEnabledChanged(m_animationEnabled);
+}
+
+void Dialog::setModal(bool modal)
+{
+    if (m_modal == modal)
+        return;
+    const bool smokeWasEnabled = isSmokeEnabled();
+    m_modal = modal;
+    updateScrimState();
+    emit modalChanged(m_modal);
+    if (smokeWasEnabled != isSmokeEnabled())
+        emit smokeEnabledChanged(isSmokeEnabled());
+}
+
+void Dialog::setDim(bool dim)
+{
+    if (m_dim == dim)
+        return;
+    const bool smokeWasEnabled = isSmokeEnabled();
+    m_dim = dim;
+    updateScrimState();
+    emit dimChanged(m_dim);
+    if (smokeWasEnabled != isSmokeEnabled())
+        emit smokeEnabledChanged(isSmokeEnabled());
+}
+
+void Dialog::setSmokeEnabled(bool enabled)
+{
+    if (enabled) {
+        setDim(true);
+        setModal(true);
+    } else {
+        setDim(false);
+        setModal(false);
+    }
+}
+
+void Dialog::setClosePolicy(ClosePolicy policy)
+{
+    if (m_closePolicy == policy)
+        return;
+    m_closePolicy = policy;
+    emit closePolicyChanged(m_closePolicy);
+}
+
+void Dialog::setIsOpen(bool open)
+{
+    if (open)
+        this->open();
+    else
+        done(QDialog::Rejected);
+}
+
+void Dialog::emitOpenedIfNeeded()
+{
+    if (m_openedEmitted || !m_isOpen || m_isClosing)
+        return;
+    m_openedEmitted = true;
+    emit opened();
+}
+
 void Dialog::setThemeSource(QWidget* source)
 {
     if (m_themeSource == source)
@@ -153,12 +232,46 @@ bool Dialog::syncThemeOverrideFromSource()
 
 void Dialog::open()
 {
+    if (m_openInProgress)
+        return;
+    if (m_isOpen && !m_isClosing)
+        return;
+
+    m_openInProgress = true;
+    m_isClosing = false;
+    m_openedEmitted = false;
+    QPointer<Dialog> guard(this);
+
+    auto abortIfCancelled = [&]() -> bool {
+        if (!guard)
+            return true;
+        if (!m_openInProgress || m_isClosing) {
+            m_openInProgress = false;
+            if (m_isClosing && m_animation->state() != QAbstractAnimation::Running)
+                m_isClosing = false;
+            return true;
+        }
+        return false;
+    };
+
+    emit opening();
+    if (abortIfCancelled())
+        return;
+    emit aboutToShow();
+    if (abortIfCancelled())
+        return;
+
+    if (!m_isOpen) {
+        m_isOpen = true;
+        emit isOpenChanged(true);
+        if (abortIfCancelled())
+            return;
+    }
+
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
     attachToOwner();
     prepareSurfaceSize();
-    if (m_smokeEnabled)
-        showSmokeOverlay();
 
     if (m_animationEnabled && !isVisible()) {
         m_isAnimating = true;
@@ -175,30 +288,22 @@ void Dialog::open()
     if (windowModality() == Qt::NonModal)
         setWindowModality(Qt::WindowModal);
     QDialog::show();
+    if (abortIfCancelled())
+        return;
 
-    if (m_smokeEnabled)
-        showSmokeOverlay();
+    updateScrimState();
     m_overlayCoordinator->raiseStack();
     setFocus(Qt::ActiveWindowFocusReason);
+
+    if (!m_animationEnabled)
+        emitOpenedIfNeeded();
+    if (guard)
+        m_openInProgress = false;
 }
 
 int Dialog::exec()
 {
-    if (syncThemeOverrideFromSource())
-        onThemeUpdated();
-    attachToOwner();
-    prepareSurfaceSize();
-    if (m_smokeEnabled)
-        showSmokeOverlay();
-
-    if (m_animationEnabled && !isVisible()) {
-        m_isAnimating = true;
-        m_animationProgress = 0.0;
-        setSurfaceOpacity(0.0);
-    } else {
-        setSurfaceOpacity(1.0);
-    }
-
+    open();
     QPointer<Dialog> guard(this);
     const int result = QDialog::exec();
     if (guard)
@@ -214,11 +319,14 @@ void Dialog::showEvent(QShowEvent* event)
     positionInOwner();
     QDialog::showEvent(event);
     m_overlayCoordinator->raiseStack();
+    updateScrimState();
 
     if (!m_animationEnabled || !m_isAnimating) {
         m_animationProgress = 1.0;
         m_isAnimating = false;
         setSurfaceOpacity(1.0);
+        if (m_isOpen)
+            emitOpenedIfNeeded();
         return;
     }
 
@@ -253,11 +361,33 @@ void Dialog::hideEvent(QHideEvent* event)
     QDialog::hideEvent(event);
 }
 
+void Dialog::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Escape) {
+        if (m_closePolicy & CloseOnEscape)
+            done(QDialog::Rejected);
+        event->accept();
+        return;
+    }
+    QDialog::keyPressEvent(event);
+}
+
 bool Dialog::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == m_overlayCoordinator->scrim() && event) {
         switch (event->type()) {
         case QEvent::MouseButtonPress:
+            if ((m_closePolicy & CloseOnPressOutside) && isVisible()) {
+                done(QDialog::Rejected);
+                event->accept();
+                return true;
+            }
+            if (isVisible()) {
+                raise();
+                setFocus(Qt::MouseFocusReason);
+            }
+            event->accept();
+            return true;
         case QEvent::MouseButtonDblClick:
         case QEvent::MouseButtonRelease:
         case QEvent::Wheel:
@@ -315,7 +445,7 @@ void Dialog::positionInOwner()
     const bool defaultPlacement = pos().isNull();
     const bool outsideSurface = !surface.contains(current);
     QPoint next = pos();
-    if (m_smokeEnabled || defaultPlacement || outsideSurface) {
+    if (m_dim || defaultPlacement || outsideSurface) {
         next = QPoint(surface.left() + (surface.width() - width()) / 2,
                       surface.top() + (surface.height() - height()) / 2);
     }
@@ -341,19 +471,46 @@ void Dialog::setSurfaceOpacity(qreal opacity)
 
 void Dialog::done(int result)
 {
-    if (!m_animationEnabled) {
-        setSurfaceOpacity(0.0);
-        QPointer<Dialog> guard(this);
+    if (m_isClosing)
+        return;
+    if (!m_isOpen && !isVisible() && !m_openInProgress) {
         QDialog::done(result);
-        if (guard)
-            guard->setSurfaceOpacity(1.0);
         return;
     }
 
-    if (m_isClosing)
-        return;
     m_isClosing = true;
     m_closingResult = result;
+    QPointer<Dialog> guard(this);
+    emit closing();
+    if (!guard)
+        return;
+    emit aboutToHide();
+    if (!guard)
+        return;
+    if (!m_isClosing)
+        return;
+
+    if (m_isOpen) {
+        m_isOpen = false;
+        emit isOpenChanged(false);
+        if (!guard)
+            return;
+        if (m_isOpen || !m_isClosing)
+            return;
+    }
+
+    if (!m_animationEnabled || !isVisible()) {
+        setSurfaceOpacity(0.0);
+        QDialog::done(result);
+        if (guard) {
+            guard->setSurfaceOpacity(1.0);
+            if (!m_openInProgress)
+                m_isClosing = false;
+            emit closed();
+        }
+        return;
+    }
+
     m_animation->stop();
 
     if (!m_isAnimating) {
@@ -401,6 +558,19 @@ void Dialog::mouseReleaseEvent(QMouseEvent* event)
     QDialog::mouseReleaseEvent(event);
 }
 
+void Dialog::updateScrimState()
+{
+    if (!m_isOpen && !isVisible()) {
+        hideSmokeOverlay();
+        return;
+    }
+    if (!m_modal && !m_dim) {
+        hideSmokeOverlay();
+        return;
+    }
+    showSmokeOverlay();
+}
+
 void Dialog::showSmokeOverlay()
 {
     QWidget* owner = ownerWidget();
@@ -425,7 +595,7 @@ void Dialog::showSmokeOverlay()
         ::fluent::overlay::attachToTopLevel(smoke, owner);
     }
     smoke->setSurfaceRadius(surfaceRadius);
-    smoke->setModalAndDim(true, true);
+    smoke->setModalAndDim(m_modal, m_dim);
     smoke->show();
 
     if (!m_smokeAnim) {

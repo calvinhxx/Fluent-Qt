@@ -29,27 +29,27 @@ class TeachingTip : public Popup {
      * @brief Target widget used for teaching-tip anchoring.
      * zh_CN: 教学提示用于锚定的目标控件。
      */
-    Q_PROPERTY(QWidget* target READ target WRITE setTarget)
+    Q_PROPERTY(QWidget* target READ target WRITE setTarget NOTIFY targetChanged)
     /**
      * @brief Preferred teaching-tip placement around the target.
      * zh_CN: 教学提示围绕目标的首选位置。
      */
-    Q_PROPERTY(PreferredPlacement preferredPlacement READ preferredPlacement WRITE setPreferredPlacement)
+    Q_PROPERTY(PreferredPlacement preferredPlacement READ preferredPlacement WRITE setPreferredPlacement NOTIFY preferredPlacementChanged)
     /**
      * @brief Margin kept between teaching tip and target.
      * zh_CN: 教学提示与目标之间保留的间距。
      */
-    Q_PROPERTY(int placementMargin READ placementMargin WRITE setPlacementMargin)
+    Q_PROPERTY(int placementMargin READ placementMargin WRITE setPlacementMargin NOTIFY placementMarginChanged)
     /**
      * @brief Whether outside interaction dismisses the teaching tip.
      * zh_CN: 外部交互是否关闭教学提示。
      */
-    Q_PROPERTY(bool lightDismissEnabled READ isLightDismissEnabled WRITE setLightDismissEnabled)
+    Q_PROPERTY(bool lightDismissEnabled READ isLightDismissEnabled WRITE setLightDismissEnabled NOTIFY lightDismissEnabledChanged)
     /**
      * @brief Whether the teaching-tip tail is painted.
      * zh_CN: 是否绘制教学提示尾巴。
      */
-    Q_PROPERTY(bool tailVisible READ isTailVisible WRITE setTailVisible)
+    Q_PROPERTY(bool tailVisible READ isTailVisible WRITE setTailVisible NOTIFY tailVisibleChanged)
 
 public:
     enum PreferredPlacement {
@@ -70,11 +70,11 @@ public:
     Q_ENUM(PreferredPlacement)
 
     enum CloseReason {
-        Programmatic,
-        ActionButton,
-        CloseButton,
-        LightDismiss,
-        TargetDestroyed,
+        Programmatic = Popup::Programmatic,
+        ActionButton = Popup::ActionButton,
+        CloseButton = Popup::CloseButton,
+        LightDismiss = Popup::LightDismiss,
+        TargetDestroyed = Popup::TargetDestroyed,
     };
     Q_ENUM(CloseReason)
 
@@ -113,6 +113,11 @@ public:
 
 signals:
     void closing(CloseReason reason);
+    void targetChanged(QWidget* target);
+    void preferredPlacementChanged(PreferredPlacement placement);
+    void placementMarginChanged(int margin);
+    void lightDismissEnabledChanged(bool enabled);
+    void tailVisibleChanged(bool visible);
 
 protected:
     QPoint computePosition() const override;

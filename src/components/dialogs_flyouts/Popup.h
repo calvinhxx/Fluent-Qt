@@ -39,30 +39,47 @@ public:
     Q_FLAG(ClosePolicy)
 
     /**
-     * @brief Whether the popup, drawer, or notification surface is open.
-     * zh_CN: 弹层、抽屉或通知表面是否处于打开状态。
+     * @brief Why an overlay closed.
+     * zh_CN: 浮层关闭原因。
+     *
+     * Values 0–4 match TeachingTip::CloseReason for source compatibility.
+     * zh_CN: 0–4 与 TeachingTip::CloseReason 对齐，保持源兼容。
+     */
+    enum CloseReason {
+        Programmatic = 0,
+        ActionButton = 1,
+        CloseButton = 2,
+        LightDismiss = 3,
+        TargetDestroyed = 4,
+        Escape = 5,
+    };
+    Q_ENUM(CloseReason)
+
+    /**
+     * @brief Logical requested open state, not animation-complete or QWidget visibility.
+     * zh_CN: 逻辑请求打开态，不是动画完成态，也不是 QWidget 可见性。
      */
     Q_PROPERTY(bool isOpen READ isOpen WRITE setIsOpen NOTIFY isOpenChanged)
     /**
      * @brief Policy controlling outside-click, escape, or programmatic close behavior.
      * zh_CN: 控制外部点击、Esc 或编程关闭行为的策略。
      */
-    Q_PROPERTY(ClosePolicy closePolicy READ closePolicy WRITE setClosePolicy)
+    Q_PROPERTY(ClosePolicy closePolicy READ closePolicy WRITE setClosePolicy NOTIFY closePolicyChanged)
     /**
      * @brief Whether the overlay blocks interaction outside itself.
      * zh_CN: 浮层是否阻止其外部交互。
      */
-    Q_PROPERTY(bool modal READ isModal WRITE setModal)
+    Q_PROPERTY(bool modal READ isModal WRITE setModal NOTIFY modalChanged)
     /**
      * @brief Whether a dim/scrim layer is shown behind the overlay.
      * zh_CN: 浮层后方是否显示遮罩层。
      */
-    Q_PROPERTY(bool dim READ isDim WRITE setDim)
+    Q_PROPERTY(bool dim READ isDim WRITE setDim NOTIFY dimChanged)
     /**
      * @brief Whether popup open/close transitions are animated.
      * zh_CN: 弹层打开/关闭过程是否播放过渡动画。
      */
-    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled)
+    Q_PROPERTY(bool animationEnabled READ isAnimationEnabled WRITE setAnimationEnabled NOTIFY animationEnabledChanged)
     /**
      * @brief Popup open/close animation progress.
      * zh_CN: 弹层打开/关闭动画进度。
@@ -78,10 +95,10 @@ public:
     bool isOpen() const { return m_isOpen; }
 
     ClosePolicy closePolicy() const { return m_closePolicy; }
-    void setClosePolicy(ClosePolicy p) { m_closePolicy = p; }
+    void setClosePolicy(ClosePolicy p);
 
     bool isModal() const { return m_modal; }
-    void setModal(bool m) { m_modal = m; }
+    void setModal(bool m);
 
     // When true, a CloseOnPressOutside light-dismiss SWALLOWS the dismissing press instead of letting
     // it fall through to whatever is underneath — ComboBox-dropdown semantics (one click only closes
@@ -103,10 +120,10 @@ public:
     void clearLightDismissPassthrough() { m_lightDismissPassthrough.clear(); }
 
     bool isDim() const { return m_dim; }
-    void setDim(bool d) { m_dim = d; }
+    void setDim(bool d);
 
     bool isAnimationEnabled() const { return m_animationEnabled; }
-    void setAnimationEnabled(bool e) { m_animationEnabled = e; }
+    void setAnimationEnabled(bool e);
 
     // When false, close() skips the exit (fade-out) animation and hides instantly; the open/enter
     // animation is unaffected. Lets a caller drop just the dismissal animation for a specific popup
@@ -114,7 +131,7 @@ public:
     // native vibrancy backdrop on macOS. zh_CN: 为 false 时，close() 跳过关闭(淡出)动画，瞬间隐藏；入场动画不受影响。
     // 让调用方只去掉某个弹窗的关闭动画而不动共享默认值——例如 macOS 原生 vibrancy 背景上淡出(opacity effect)表现异常时。
     bool isExitAnimationEnabled() const { return m_exitAnimationEnabled; }
-    void setExitAnimationEnabled(bool e) { m_exitAnimationEnabled = e; }
+    void setExitAnimationEnabled(bool e);
 
     /**
      * @brief Uses a widget as the local theme source when no anchor drives the popup.
@@ -140,13 +157,33 @@ public slots:
     void close();
     void setIsOpen(bool open);
 
+    /**
+     * @brief Closes with an explicit reason; close() uses Programmatic unless a reason is pending.
+     * zh_CN: 带关闭原因关闭；无参 close() 在未挂起原因时视为 Programmatic。
+     */
+    void closeWithReason(CloseReason reason);
+
 signals:
     void isOpenChanged(bool open);
+    /**
+     * @brief Opening transition started. Compatibility alias: aboutToShow().
+     * zh_CN: 开始打开。兼容别名：aboutToShow()。
+     */
+    void opening();
     void opened();
+    /**
+     * @brief Closing transition started. aboutToHide() is the parameterless compatibility alias.
+     * zh_CN: 开始关闭。aboutToHide() 是无参兼容别名。
+     */
+    void closing(CloseReason reason);
     void closed();
     void aboutToShow();
     void aboutToHide();
     void popupProgressChanged(double progress);
+    void closePolicyChanged(ClosePolicy policy);
+    void modalChanged(bool modal);
+    void dimChanged(bool dim);
+    void animationEnabledChanged(bool enabled);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -171,6 +208,12 @@ protected:
      */
     void setFocusOnOpenEnabled(bool enabled);
 
+    /**
+     * @brief Records a close reason used by the next close() if none is passed explicitly.
+     * zh_CN: 记录下一次无参 close() 使用的关闭原因。
+     */
+    void setPendingCloseReason(CloseReason reason);
+
 private:
     QPoint resolvedPosition() const;
     QWidget* trackedPositionAnchor() const;
@@ -184,8 +227,10 @@ private:
     void  finalizeOpened();
     void  finalizeClosed();
 
-    void  ensureScrim();
+    void  updateScrimState();
     void  destroyScrim();
+    void  beginClose(CloseReason reason);
+    void  resetPendingCloseReason();
 
     QWidget* originalParentTopLevel() const;
 
@@ -210,6 +255,9 @@ private:
     QPointer<QWidget> m_positionRelativeTo;
     QPoint m_positionLocalPos;
     bool m_positionSyncPending = false;
+
+    CloseReason m_pendingCloseReason = Programmatic;
+    bool m_closeReasonExplicit = false;
 
     double m_popupProgress = 0.0;
     QPropertyAnimation* m_anim = nullptr;
