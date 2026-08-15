@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QTimer>
+#include <QSignalSpy>
 #include <QTest>
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/basicinput/Button.h"
@@ -59,6 +60,181 @@ TEST_F(DialogTest, DefaultProperties) {
     EXPECT_FALSE(dialog.isSmokeEnabled());
     EXPECT_EQ(dialog.shadowSize(), 16);
     EXPECT_DOUBLE_EQ(dialog.animationProgress(), 1.0);
+}
+
+TEST_F(DialogTest, Contract_OpenStateAndAliases) {
+    window->show();
+    QApplication::processEvents();
+
+    Dialog dialog(window);
+    dialog.setAnimationEnabled(false);
+    dialog.setFixedSize(300, 200);
+
+    QStringList order;
+    QObject::connect(&dialog, &Dialog::opening, [&] {
+        EXPECT_FALSE(dialog.isOpen());
+        EXPECT_FALSE(dialog.isVisible());
+        order << QStringLiteral("opening");
+    });
+    QObject::connect(&dialog, &Dialog::aboutToShow, [&] {
+        EXPECT_FALSE(dialog.isOpen());
+        EXPECT_FALSE(dialog.isVisible());
+        order << QStringLiteral("aboutToShow");
+    });
+    QObject::connect(&dialog, &Dialog::isOpenChanged, [&](bool open) {
+        EXPECT_EQ(dialog.isOpen(), open);
+        EXPECT_EQ(dialog.isVisible(), !open);
+        order << (open ? QStringLiteral("isOpenChanged(true)")
+                       : QStringLiteral("isOpenChanged(false)"));
+    });
+    QObject::connect(&dialog, &Dialog::opened, [&] {
+        EXPECT_TRUE(dialog.isOpen());
+        EXPECT_TRUE(dialog.isVisible());
+        order << QStringLiteral("opened");
+    });
+    QObject::connect(&dialog, &Dialog::closing, [&] {
+        EXPECT_TRUE(dialog.isOpen());
+        EXPECT_TRUE(dialog.isVisible());
+        order << QStringLiteral("closing");
+    });
+    QObject::connect(&dialog, &Dialog::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&dialog, &Dialog::closed, [&] {
+        EXPECT_FALSE(dialog.isOpen());
+        EXPECT_FALSE(dialog.isVisible());
+        order << QStringLiteral("closed");
+    });
+
+    dialog.open();
+    QApplication::processEvents();
+    EXPECT_TRUE(dialog.isOpen());
+    EXPECT_TRUE(dialog.isVisible());
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("aboutToShow"),
+                          QStringLiteral("isOpenChanged(true)"),
+                          QStringLiteral("opened"),
+                      }));
+
+    const int openSignals = order.count();
+    dialog.open();
+    EXPECT_EQ(order.count(), openSignals);
+
+    dialog.done(QDialog::Rejected);
+    QApplication::processEvents();
+    EXPECT_FALSE(dialog.isOpen());
+    EXPECT_FALSE(dialog.isVisible());
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("aboutToShow"),
+                          QStringLiteral("isOpenChanged(true)"),
+                          QStringLiteral("opened"),
+                          QStringLiteral("closing"),
+                          QStringLiteral("aboutToHide"),
+                          QStringLiteral("isOpenChanged(false)"),
+                          QStringLiteral("closed"),
+                      }));
+}
+
+TEST_F(DialogTest, Contract_CloseWhileOpeningCancelsEntrance) {
+    window->show();
+    QApplication::processEvents();
+
+    Dialog dialog(window);
+    dialog.setAnimationEnabled(false);
+    dialog.setFixedSize(300, 200);
+
+    QStringList order;
+    QObject::connect(&dialog, &Dialog::opening, [&] { order << QStringLiteral("opening"); });
+    QObject::connect(&dialog, &Dialog::aboutToShow, [&] { order << QStringLiteral("aboutToShow"); });
+    QObject::connect(&dialog, &Dialog::opened, [&] { order << QStringLiteral("opened"); });
+    QObject::connect(&dialog, &Dialog::closing, [&] { order << QStringLiteral("closing"); });
+    QObject::connect(&dialog, &Dialog::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&dialog, &Dialog::closed, [&] { order << QStringLiteral("closed"); });
+    QObject::connect(&dialog, &Dialog::opening, &dialog, [&]() { dialog.done(QDialog::Rejected); });
+
+    dialog.open();
+    QApplication::processEvents();
+    EXPECT_FALSE(dialog.isOpen());
+    EXPECT_FALSE(dialog.isVisible());
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("closing"),
+                          QStringLiteral("aboutToHide"),
+                          QStringLiteral("closed"),
+                      }));
+}
+
+TEST_F(DialogTest, Contract_NotifyNoOpsAndSmokeBundle) {
+    Dialog dialog(window);
+    QSignalSpy modalSpy(&dialog, &Dialog::modalChanged);
+    QSignalSpy dimSpy(&dialog, &Dialog::dimChanged);
+    QSignalSpy smokeSpy(&dialog, &Dialog::smokeEnabledChanged);
+    QSignalSpy dragSpy(&dialog, &Dialog::dragEnabledChanged);
+    QSignalSpy animSpy(&dialog, &Dialog::animationEnabledChanged);
+
+    dialog.setModal(true);
+    dialog.setModal(true);
+    EXPECT_FALSE(dialog.isSmokeEnabled());
+    EXPECT_EQ(smokeSpy.count(), 0);
+    dialog.setDim(true);
+    dialog.setDim(true);
+    EXPECT_TRUE(dialog.isSmokeEnabled());
+    dialog.setDragEnabled(false);
+    dialog.setDragEnabled(false);
+    dialog.setAnimationEnabled(false);
+    dialog.setAnimationEnabled(false);
+    EXPECT_EQ(modalSpy.count(), 1);
+    EXPECT_EQ(dimSpy.count(), 1);
+    EXPECT_EQ(smokeSpy.count(), 1);
+    EXPECT_EQ(dragSpy.count(), 1);
+    EXPECT_EQ(animSpy.count(), 1);
+
+    dialog.setSmokeEnabled(false);
+    dialog.setSmokeEnabled(false);
+    EXPECT_FALSE(dialog.isDim());
+    EXPECT_FALSE(dialog.isModal());
+    EXPECT_FALSE(dialog.isSmokeEnabled());
+
+    dialog.setSmokeEnabled(true);
+    EXPECT_TRUE(dialog.isDim());
+    EXPECT_TRUE(dialog.isModal());
+    EXPECT_TRUE(dialog.isSmokeEnabled());
+
+    dialog.setModal(false);
+    EXPECT_FALSE(dialog.isSmokeEnabled());
+    dialog.setModal(true);
+    EXPECT_TRUE(dialog.isSmokeEnabled());
+}
+
+TEST_F(DialogTest, Contract_ThemeChangeDoesNotMutateOpenState) {
+    window->show();
+    QApplication::processEvents();
+
+    Dialog dialog(window);
+    dialog.setAnimationEnabled(false);
+    dialog.setFixedSize(300, 200);
+    dialog.open();
+    QApplication::processEvents();
+    ASSERT_TRUE(dialog.isOpen());
+
+    QSignalSpy openChanged(&dialog, &Dialog::isOpenChanged);
+    QSignalSpy opened(&dialog, &Dialog::opened);
+    QSignalSpy closed(&dialog, &Dialog::closed);
+
+    const auto previous = fluent::FluentElement::currentTheme();
+    fluent::FluentElement::setTheme(previous == fluent::FluentElement::Light
+                                        ? fluent::FluentElement::Dark
+                                        : fluent::FluentElement::Light);
+    dialog.onThemeUpdated();
+
+    EXPECT_TRUE(dialog.isOpen());
+    EXPECT_EQ(openChanged.count(), 0);
+    EXPECT_EQ(opened.count(), 0);
+    EXPECT_EQ(closed.count(), 0);
+
+    fluent::FluentElement::setTheme(previous);
+    dialog.done(QDialog::Rejected);
+    QApplication::processEvents();
 }
 
 TEST_F(DialogTest, SmokeProperty) {

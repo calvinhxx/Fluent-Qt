@@ -26,12 +26,12 @@ class Flyout : public Popup {
      * @brief Offset from the anchor edge in pixels.
      * zh_CN: 相对锚点边缘的像素偏移。
      */
-    Q_PROPERTY(int anchorOffset READ anchorOffset WRITE setAnchorOffset)
+    Q_PROPERTY(int anchorOffset READ anchorOffset WRITE setAnchorOffset NOTIFY anchorOffsetChanged)
     /**
      * @brief Whether flyout geometry is clamped to the host window.
      * zh_CN: 浮层几何是否限制在宿主窗口内。
      */
-    Q_PROPERTY(bool clampToWindow READ clampToWindow WRITE setClampToWindow)
+    Q_PROPERTY(bool clampToWindow READ clampToWindow WRITE setClampToWindow NOTIFY clampToWindowChanged)
 
 public:
     enum Placement {
@@ -51,10 +51,10 @@ public:
     void      setPlacement(Placement p);
 
     int       anchorOffset() const       { return m_anchorOffset; }
-    void      setAnchorOffset(int px)    { m_anchorOffset = px; }
+    void      setAnchorOffset(int px);
 
     bool      clampToWindow() const      { return m_clampToWindow; }
-    void      setClampToWindow(bool e)   { m_clampToWindow = e; }
+    void      setClampToWindow(bool e);
 
     QWidget*  anchor() const             { return m_anchor.data(); }
 
@@ -67,6 +67,8 @@ public:
 
 signals:
     void placementChanged(Placement p);
+    void anchorOffsetChanged(int px);
+    void clampToWindowChanged(bool enabled);
 
 protected:
     /// Override: computes the move() target from the anchor geometry, the

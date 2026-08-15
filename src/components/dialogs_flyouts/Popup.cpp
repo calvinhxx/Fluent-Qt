@@ -1,5 +1,6 @@
 #include "Popup.h"
 
+#include <QAbstractAnimation>
 #include <QPainter>
 #include <QPainterPath>
 #include <QKeyEvent>
@@ -106,6 +107,52 @@ void Popup::setPopupProgress(double p) {
     if (m_opacityEffect) m_opacityEffect->setOpacity(p);
     update();
     emit popupProgressChanged(p);
+}
+
+void Popup::setClosePolicy(ClosePolicy p) {
+    if (m_closePolicy == p)
+        return;
+    m_closePolicy = p;
+    emit closePolicyChanged(m_closePolicy);
+}
+
+void Popup::setModal(bool m) {
+    if (m_modal == m)
+        return;
+    m_modal = m;
+    updateScrimState();
+    emit modalChanged(m_modal);
+}
+
+void Popup::setDim(bool d) {
+    if (m_dim == d)
+        return;
+    m_dim = d;
+    updateScrimState();
+    emit dimChanged(m_dim);
+}
+
+void Popup::setAnimationEnabled(bool e) {
+    if (m_animationEnabled == e)
+        return;
+    m_animationEnabled = e;
+    emit animationEnabledChanged(m_animationEnabled);
+}
+
+void Popup::setExitAnimationEnabled(bool e) {
+    if (m_exitAnimationEnabled == e)
+        return;
+    m_exitAnimationEnabled = e;
+}
+
+void Popup::setPendingCloseReason(CloseReason reason) {
+    m_pendingCloseReason = reason;
+    m_closeReasonExplicit = true;
+}
+
+void Popup::resetPendingCloseReason() {
+    m_pendingCloseReason = Programmatic;
+    m_closeReasonExplicit = false;
 }
 
 void Popup::setThemeSource(QWidget* source) {
@@ -217,12 +264,17 @@ void Popup::syncPositionToAnchor() {
 // ── open / close ─────────────────────────────────────────────────────────────
 
 void Popup::open() {
-    if (m_openInProgress || (m_isOpen && !m_isClosing)) return;
+    if (m_openInProgress)
+        return;
+    if (m_isOpen && !m_isClosing)
+        return;
+
     m_openInProgress = true;
     QPointer<Popup> guard(this);
 
     m_anim->stop();
     m_isClosing = false;
+    resetPendingCloseReason();
     m_focusRestoreTarget = nullptr;
     if (m_overlayCoordinator->focusOnOpenEnabled() && qApp) {
         QWidget* focused = QApplication::focusWidget();
@@ -235,11 +287,31 @@ void Popup::open() {
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
 
+    auto abortIfCancelled = [&]() -> bool {
+        if (!guard)
+            return true;
+        if (!m_openInProgress || m_isClosing) {
+            m_openInProgress = false;
+            if (m_isClosing && m_anim->state() != QAbstractAnimation::Running)
+                m_isClosing = false;
+            return true;
+        }
+        return false;
+    };
+
+    emit opening();
+    if (abortIfCancelled())
+        return;
     emit aboutToShow();
-    if (!guard)
+    if (abortIfCancelled())
         return;
 
-    ensureScrim();
+    if (!m_isOpen) {
+        m_isOpen = true;
+        emit isOpenChanged(true);
+        if (abortIfCancelled())
+            return;
+    }
 
     ensurePolished();
     if (layout()) layout()->activate();
@@ -263,49 +335,64 @@ void Popup::open() {
     if (qApp)
         qApp->installEventFilter(this);
 
+    updateScrimState();
+
     if (!m_animationEnabled) {
         setPopupProgress(1.0);
-        if (!guard)
+        if (abortIfCancelled())
             return;
-        m_isOpen = true;
-        emit isOpenChanged(true);
-        if (!guard)
-            return;
-        if (!m_isOpen || m_isClosing) {
-            m_openInProgress = false;
-            return;
-        }
         emit opened();
         if (guard)
             m_openInProgress = false;
         return;
     }
 
-    m_popupProgress = 0.0;
     startEnterAnimation();
     if (guard)
         m_openInProgress = false;
 }
 
 void Popup::close() {
-    if (!m_isOpen && !m_anim->state()) {
-        if (!isVisible()) return;
-    }
-    if (m_isClosing) return;
+    closeWithReason(m_closeReasonExplicit ? m_pendingCloseReason : Programmatic);
+}
+
+void Popup::closeWithReason(CloseReason reason) {
+    beginClose(reason);
+}
+
+void Popup::beginClose(CloseReason reason) {
+    if (m_isClosing)
+        return;
+    if (!m_isOpen && !isVisible() && !m_anim->state() && !m_openInProgress)
+        return;
 
     m_anim->stop();
     m_isClosing = true;
+    m_pendingCloseReason = reason;
+    m_closeReasonExplicit = true;
     QPointer<Popup> guard(this);
+    emit closing(reason);
+    if (!guard)
+        return;
     emit aboutToHide();
     if (!guard)
         return;
     if (!m_isClosing)
         return;
 
+    if (m_isOpen) {
+        m_isOpen = false;
+        emit isOpenChanged(false);
+        if (!guard)
+            return;
+        if (m_isOpen || !m_isClosing)
+            return;
+    }
+
     if (qApp)
         qApp->removeEventFilter(this);
 
-    if (!m_animationEnabled || !m_exitAnimationEnabled) {
+    if (!m_animationEnabled || !m_exitAnimationEnabled || !isVisible()) {
         setPopupProgress(0.0);
         if (!guard)
             return;
@@ -342,17 +429,24 @@ void Popup::startExitAnimation() {
 }
 
 void Popup::finalizeOpened() {
-    if (m_isOpen) return;
-    m_isOpen = true;
-    QPointer<Popup> guard(this);
-    emit isOpenChanged(true);
-    if (!guard || !m_isOpen || m_isClosing)
+    if (m_isClosing || !m_isOpen)
         return;
+    QPointer<Popup> guard(this);
     emit opened();
+    if (guard)
+        m_openInProgress = false;
 }
 
 void Popup::finalizeClosed() {
-    m_isClosing = false;
+    if (m_isOpen) {
+        m_isClosing = false;
+        return;
+    }
+    // Leave m_isClosing set while open() is still on the stack so the
+    // Opening path can abort instead of continuing after a nested close.
+    // zh_CN: open() 仍在栈上时保留 m_isClosing，避免 Opening 里嵌套 close() 后继续完成打开。
+    if (!m_openInProgress)
+        m_isClosing = false;
     QWidget* focused = qApp ? QApplication::focusWidget() : nullptr;
     const bool shouldRestoreFocus =
         !focused || focused == this || isAncestorOf(focused);
@@ -366,31 +460,36 @@ void Popup::finalizeClosed() {
         && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
         focusRestoreTarget->setFocus(Qt::PopupFocusReason);
     }
-    if (m_isOpen) {
-        m_isOpen = false;
-        QPointer<Popup> guard(this);
-        emit isOpenChanged(false);
-        if (!guard || isVisible())
-            return;
-    }
+    QPointer<Popup> guard(this);
     emit closed();
+    if (guard)
+        resetPendingCloseReason();
 }
 
 // ── Scrim ────────────────────────────────────────────────────────────────────
 
-void Popup::ensureScrim() {
-    if (!m_modal) return;
+void Popup::updateScrimState() {
+    if (!m_isOpen && !isVisible()) {
+        destroyScrim();
+        return;
+    }
+    if (!m_modal && !m_dim) {
+        destroyScrim();
+        return;
+    }
+
     QWidget* top = m_overlayCoordinator->topLevelWidget();
     if (!top)
         top = originalParentTopLevel();
-    if (!top) return;
+    if (!top)
+        return;
 
     m_overlayCoordinator->attachTo(top);
     auto* scrim =
         m_overlayCoordinator->ensureScrim(QStringLiteral("PopupScrim"));
     if (!scrim)
         return;
-    scrim->setModalAndDim(true, m_dim);
+    scrim->setModalAndDim(m_modal, m_dim);
     ::fluent::overlay::syncInheritedThemeOverride(scrim, this);
     scrim->show();
     m_overlayCoordinator->raiseStack();
@@ -412,6 +511,8 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
         // let finalizeClosed() call setFocus() on it while closing the overlay.
         // zh_CN: 调用目标已进入 QObject 析构；关闭浮层时不能再向其归还焦点。
         m_focusRestoreTarget = nullptr;
+        if (!m_closeReasonExplicit)
+            setPendingCloseReason(TargetDestroyed);
         close();
         return false;
     }
@@ -421,6 +522,8 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
     const bool noAutoClose = m_closePolicy == ClosePolicy(NoAutoClose);
     if (::fluent::overlay::isEscapeKeyPress(event) &&
         ::fluent::overlay::allowsImplicitClose(noAutoClose, m_closePolicy & CloseOnEscape)) {
+        if (!m_closeReasonExplicit)
+            setPendingCloseReason(Escape);
         close();
         event->accept();
         return true;
@@ -434,6 +537,8 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
     const QPoint local = mapFromGlobal(globalPos);
     if (::fluent::overlay::visibleCardContains(rect(), local)) return false;
 
+    if (!m_closeReasonExplicit)
+        setPendingCloseReason(LightDismiss);
     close();
     // ComboBox-dropdown semantics when requested: swallow the dismissing press so it doesn't also
     // activate the widget beneath — EXCEPT inside a registered passthrough region (e.g. the sibling nav
@@ -467,6 +572,8 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
 
 void Popup::keyPressEvent(QKeyEvent* event) {
     if (event->key() == Qt::Key_Escape && (m_closePolicy & CloseOnEscape)) {
+        if (!m_closeReasonExplicit)
+            setPendingCloseReason(Escape);
         close();
         event->accept();
         return;

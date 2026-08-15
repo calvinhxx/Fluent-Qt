@@ -20,6 +20,20 @@ void Flyout::setPlacement(Placement p) {
     emit placementChanged(p);
 }
 
+void Flyout::setAnchorOffset(int px) {
+    if (m_anchorOffset == px)
+        return;
+    m_anchorOffset = px;
+    emit anchorOffsetChanged(m_anchorOffset);
+}
+
+void Flyout::setClampToWindow(bool e) {
+    if (m_clampToWindow == e)
+        return;
+    m_clampToWindow = e;
+    emit clampToWindowChanged(m_clampToWindow);
+}
+
 void Flyout::setAnchor(QWidget* anchor) {
     m_anchor = anchor;
 }

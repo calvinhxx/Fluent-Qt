@@ -218,6 +218,25 @@ TEST_F(TeachingTipTest, LightDismissClosesWithLightDismissReason) {
     EXPECT_EQ(lastCloseReason(closingSpy), TeachingTip::LightDismiss);
 }
 
+TEST_F(TeachingTipTest, EscapeFromOwnerClosesWithLightDismissReason) {
+    auto* anchor = makeAnchor(QPoint(360, 260));
+
+    TeachingTip tip(window);
+    tip.setAnimationEnabled(false);
+    tip.setLightDismissEnabled(true);
+
+    QSignalSpy closingSpy(&tip, &TeachingTip::closing);
+    tip.showAt(anchor);
+    ASSERT_TRUE(tip.isOpen());
+
+    QTest::keyClick(window, Qt::Key_Escape);
+    QApplication::processEvents();
+
+    EXPECT_FALSE(tip.isOpen());
+    ASSERT_EQ(closingSpy.count(), 1);
+    EXPECT_EQ(lastCloseReason(closingSpy), TeachingTip::LightDismiss);
+}
+
 TEST_F(TeachingTipTest, DisabledLightDismissKeepsTeachingTipOpen) {
     auto* anchor = makeAnchor(QPoint(360, 260));
 
@@ -280,6 +299,54 @@ TEST_F(TeachingTipTest, CloseWithReasonEmitsClosingSignal) {
 
     ASSERT_EQ(closingSpy.count(), 1);
     EXPECT_EQ(lastCloseReason(closingSpy), TeachingTip::ActionButton);
+}
+
+TEST_F(TeachingTipTest, Contract_PopupClosingAliasAndNotifyNoOps) {
+    auto* anchor = makeAnchor(QPoint(360, 300));
+    TeachingTip tip(window);
+    tip.setAnimationEnabled(false);
+
+    fluentRegisterMetaTypeNames<fluent::dialogs_flyouts::Popup::CloseReason>(
+        "fluent::dialogs_flyouts::Popup::CloseReason",
+        "CloseReason");
+
+    QSignalSpy popupClosing(&tip, &Popup::closing);
+    QSignalSpy tipClosing(&tip, &TeachingTip::closing);
+    QSignalSpy targetSpy(&tip, &TeachingTip::targetChanged);
+    QSignalSpy lightSpy(&tip, &TeachingTip::lightDismissEnabledChanged);
+
+    tip.setTarget(anchor);
+    tip.setTarget(anchor);
+    tip.setLightDismissEnabled(false);
+    tip.setLightDismissEnabled(true);
+    tip.setLightDismissEnabled(true);
+    EXPECT_EQ(targetSpy.count(), 1);
+    EXPECT_EQ(lightSpy.count(), 1);
+
+    QStringList order;
+    QObject::connect(&tip, &Popup::opening, [&] { order << QStringLiteral("opening"); });
+    QObject::connect(&tip, &Popup::aboutToShow, [&] { order << QStringLiteral("aboutToShow"); });
+    QObject::connect(&tip, &Popup::opened, [&] { order << QStringLiteral("opened"); });
+    QObject::connect(&tip, &Popup::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&tip, &Popup::closed, [&] { order << QStringLiteral("closed"); });
+
+    tip.showAt(anchor);
+    ASSERT_TRUE(tip.isOpen());
+    tip.closeWithReason(TeachingTip::CloseButton);
+    QApplication::processEvents();
+
+    EXPECT_FALSE(tip.isOpen());
+    ASSERT_EQ(popupClosing.count(), 1);
+    EXPECT_EQ(popupClosing.at(0).at(0).toInt(), static_cast<int>(Popup::CloseButton));
+    ASSERT_EQ(tipClosing.count(), 1);
+    EXPECT_EQ(lastCloseReason(tipClosing), TeachingTip::CloseButton);
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("aboutToShow"),
+                          QStringLiteral("opened"),
+                          QStringLiteral("aboutToHide"),
+                          QStringLiteral("closed"),
+                      }));
 }
 
 // ─── Design-language × theme painter sweep ──────────────────────────────────

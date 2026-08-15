@@ -76,6 +76,45 @@ TEST_F(FlyoutTest, DefaultProperties) {
     EXPECT_EQ(fl.anchor(), nullptr);
 }
 
+TEST_F(FlyoutTest, Contract_InheritsPopupLifecycleAndNotifyNoOps) {
+    auto* btn = makeAnchor(QPoint(350, 280));
+    Flyout fl(window);
+    fl.setAnimationEnabled(false);
+
+    QStringList order;
+    QObject::connect(&fl, &Popup::opening, [&] { order << QStringLiteral("opening"); });
+    QObject::connect(&fl, &Popup::aboutToShow, [&] { order << QStringLiteral("aboutToShow"); });
+    QObject::connect(&fl, &Popup::opened, [&] { order << QStringLiteral("opened"); });
+    QObject::connect(&fl, &Popup::closing, [&] { order << QStringLiteral("closing"); });
+    QObject::connect(&fl, &Popup::aboutToHide, [&] { order << QStringLiteral("aboutToHide"); });
+    QObject::connect(&fl, &Popup::closed, [&] { order << QStringLiteral("closed"); });
+
+    QSignalSpy offsetSpy(&fl, &Flyout::anchorOffsetChanged);
+    QSignalSpy clampSpy(&fl, &Flyout::clampToWindowChanged);
+    fl.setAnchorOffset(8);
+    fl.setClampToWindow(true);
+    fl.setAnchorOffset(12);
+    fl.setAnchorOffset(12);
+    fl.setClampToWindow(false);
+    fl.setClampToWindow(false);
+    EXPECT_EQ(offsetSpy.count(), 1);
+    EXPECT_EQ(clampSpy.count(), 1);
+
+    fl.showAt(btn);
+    EXPECT_TRUE(fl.isOpen());
+    EXPECT_TRUE(fl.isVisible());
+    fl.close();
+    EXPECT_FALSE(fl.isOpen());
+    EXPECT_EQ(order, (QStringList{
+                          QStringLiteral("opening"),
+                          QStringLiteral("aboutToShow"),
+                          QStringLiteral("opened"),
+                          QStringLiteral("closing"),
+                          QStringLiteral("aboutToHide"),
+                          QStringLiteral("closed"),
+                      }));
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // 2. showAt → setAnchor + open
 // ══════════════════════════════════════════════════════════════════════════════

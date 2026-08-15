@@ -25,27 +25,27 @@ class ContentDialog : public Dialog {
      * @brief Title text displayed by the surface.
      * zh_CN: 界面显示的标题文本。
      */
-    Q_PROPERTY(QString title READ title WRITE setTitle)
+    Q_PROPERTY(QString title READ title WRITE setTitle NOTIFY titleChanged)
     /**
      * @brief Text displayed by the primary command button.
      * zh_CN: 主命令按钮显示的文本。
      */
-    Q_PROPERTY(QString primaryButtonText READ primaryButtonText WRITE setPrimaryButtonText)
+    Q_PROPERTY(QString primaryButtonText READ primaryButtonText WRITE setPrimaryButtonText NOTIFY primaryButtonTextChanged)
     /**
      * @brief Text displayed by the secondary command button.
      * zh_CN: 次命令按钮显示的文本。
      */
-    Q_PROPERTY(QString secondaryButtonText READ secondaryButtonText WRITE setSecondaryButtonText)
+    Q_PROPERTY(QString secondaryButtonText READ secondaryButtonText WRITE setSecondaryButtonText NOTIFY secondaryButtonTextChanged)
     /**
      * @brief Text displayed by the close command button.
      * zh_CN: 关闭命令按钮显示的文本。
      */
-    Q_PROPERTY(QString closeButtonText READ closeButtonText WRITE setCloseButtonText)
+    Q_PROPERTY(QString closeButtonText READ closeButtonText WRITE setCloseButtonText NOTIFY closeButtonTextChanged)
     /**
      * @brief Command button selected as the default action.
      * zh_CN: 作为默认操作的命令按钮。
      */
-    Q_PROPERTY(int defaultButton READ defaultButton WRITE setDefaultButton)
+    Q_PROPERTY(int defaultButton READ defaultButton WRITE setDefaultButton NOTIFY defaultButtonChanged)
 
 public:
     enum ContentDialogButton { None = 0, Primary, Secondary, Close };
@@ -91,6 +91,11 @@ signals:
     void primaryButtonClicked();
     void secondaryButtonClicked();
     void closeButtonClicked();
+    void titleChanged(const QString& text);
+    void primaryButtonTextChanged(const QString& text);
+    void secondaryButtonTextChanged(const QString& text);
+    void closeButtonTextChanged(const QString& text);
+    void defaultButtonChanged(int btn);
 
 protected:
     void paintEvent(QPaintEvent* event) override;
