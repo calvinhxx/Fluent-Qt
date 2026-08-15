@@ -4,7 +4,9 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QImage>
 #include <QImageReader>
+#include <QTemporaryDir>
 #include <QWidget>
 
 #include <gtest/gtest.h>
@@ -80,6 +82,86 @@ TEST(QtTestEnvironmentTest, SnapshotCaptureSavesNonEmptyPng)
     EXPECT_TRUE(outputInfo.exists());
     EXPECT_GT(outputInfo.size(), 0);
     EXPECT_EQ(QImageReader(outputPath).size(), options.windowSize);
+}
+
+TEST(QtTestEnvironmentTest, BaselineFilePathUsesIdentityAndVariant)
+{
+    const QString path = tests::support::visualBaselineFilePath(QStringLiteral("button-states-light-ltr"));
+    const QFileInfo info(path);
+
+    EXPECT_EQ(info.fileName(),
+              QStringLiteral("test_qt_test_environment__QtTestEnvironmentTest__BaselineFilePathUsesIdentityAndVariant__button-states-light-ltr.png"));
+}
+
+TEST(QtTestEnvironmentTest, VisualCompareIdenticalImagesSucceeds)
+{
+    QImage image(24, 16, QImage::Format_ARGB32);
+    image.fill(Qt::white);
+    EXPECT_TRUE(tests::support::compareVisualImages(image, image));
+}
+
+TEST(QtTestEnvironmentTest, VisualCompareDifferentImagesFails)
+{
+    QImage actual(24, 16, QImage::Format_ARGB32);
+    actual.fill(Qt::white);
+    QImage expected(24, 16, QImage::Format_ARGB32);
+    expected.fill(Qt::black);
+    EXPECT_FALSE(tests::support::compareVisualImages(actual, expected));
+}
+
+TEST(QtTestEnvironmentTest, VisualCompareSizeMismatchFails)
+{
+    QImage actual(24, 16, QImage::Format_ARGB32);
+    actual.fill(Qt::white);
+    QImage expected(12, 8, QImage::Format_ARGB32);
+    expected.fill(Qt::white);
+    EXPECT_FALSE(tests::support::compareVisualImages(actual, expected));
+}
+
+TEST(QtTestEnvironmentTest, VisualCompareMissingBaselineFails)
+{
+    QTemporaryDir temp;
+    ASSERT_TRUE(temp.isValid());
+    EnvVarGuard baselineGuard("FLUENT_QT_VISUAL_BASELINE_DIR", temp.path().toUtf8());
+
+    QImage actual(24, 16, QImage::Format_ARGB32);
+    actual.fill(Qt::white);
+    const QString actualPath = temp.filePath(QStringLiteral("actual.png"));
+    ASSERT_TRUE(actual.save(actualPath, "PNG"));
+
+    const auto result = tests::support::compareVisualSnapshotToBaseline(
+        actualPath, QStringLiteral("missing-baseline"));
+    EXPECT_FALSE(result);
+    EXPECT_TRUE(QString::fromUtf8(result.message()).contains(QStringLiteral("Missing visual baseline")));
+}
+
+TEST(QtTestEnvironmentTest, VisualGateRejectsWrongScale)
+{
+    EnvVarGuard scaleGuard("QT_SCALE_FACTOR", QByteArray("2"));
+    EnvVarGuard dpiGuard("QT_FONT_DPI", QByteArray("96"));
+
+    EXPECT_FALSE(tests::support::isVisualGateApprovalHost());
+}
+
+TEST(QtTestEnvironmentTest, VisualCompareToBaselineDetectsMismatch)
+{
+    QTemporaryDir temp;
+    ASSERT_TRUE(temp.isValid());
+    EnvVarGuard baselineGuard("FLUENT_QT_VISUAL_BASELINE_DIR", temp.path().toUtf8());
+
+    QImage expected(24, 16, QImage::Format_ARGB32);
+    expected.fill(Qt::white);
+    const QString baselinePath =
+        tests::support::visualBaselineFilePath(QStringLiteral("mismatch"));
+    ASSERT_TRUE(expected.save(baselinePath, "PNG"));
+
+    QImage actual(24, 16, QImage::Format_ARGB32);
+    actual.fill(Qt::red);
+    const QString actualPath = temp.filePath(QStringLiteral("actual.png"));
+    ASSERT_TRUE(actual.save(actualPath, "PNG"));
+
+    EXPECT_FALSE(tests::support::compareVisualSnapshotToBaseline(
+        actualPath, QStringLiteral("mismatch")));
 }
 
 TEST(QtTestEnvironmentLabelMetadata, SlowMetadataLabel)
