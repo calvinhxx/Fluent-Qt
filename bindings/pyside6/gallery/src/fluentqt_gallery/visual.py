@@ -282,6 +282,17 @@ ROUTE_ICON_NAMES = {
 }
 
 
+# Control images are authored at 72 physical pixels. A 36 logical-pixel draw
+# rect maps them one-for-one on the common 2x desktop backing store, while the
+# surrounding 40-pixel slot preserves the native Gallery card layout.
+CONTROL_IMAGE_SIZE = 36
+
+
+def _control_image_rect(slot: QRect) -> QRect:
+    inset = max(0, (min(slot.width(), slot.height()) - CONTROL_IMAGE_SIZE) // 2)
+    return slot.adjusted(inset, inset, -inset, -inset)
+
+
 def route_icon_name(route_id: str) -> str:
     return ROUTE_ICON_NAMES.get(route_id, "ic_fluent_square_20_regular")
 
@@ -328,7 +339,11 @@ class _GalleryIconTile(QWidget):
                 colors.text_primary,
             )
         elif not self._pixmap.isNull():
-            _draw_pixmap_in_logical_rect(painter, self.rect(), self._pixmap)
+            _draw_pixmap_in_logical_rect(
+                painter,
+                _control_image_rect(self.rect()),
+                self._pixmap,
+            )
 
 
 class GalleryEntryCard(QFrame):
@@ -680,7 +695,7 @@ class GalleryEntryGrid(QWidget):
             else:
                 _draw_pixmap_in_logical_rect(
                     painter,
-                    icon_rect,
+                    _control_image_rect(icon_rect),
                     card._entry_pixmap,
                 )
 
