@@ -75,7 +75,10 @@ APIs under `src/components/**`.
 
 - Components that expose popup, flyout, dropdown, calendar, or pane state should
   provide a clear boolean getter, a command or setter to open/close, and a
-  changed signal.
+  changed signal. Same-window overlays use the state machine in
+  [Overlay Behavior](../architecture/overlay-behavior.md): public `isOpen` is
+  the logical requested state, not animation-complete and not `QWidget`
+  visibility.
 - `isOpen()` is the preferred common alias for button-like entry open state when
   a component also keeps a more specific legacy getter such as
   `isDropDownOpen()` or `isCalendarOpen()`.

@@ -16,9 +16,9 @@ behavior is under implementation. Phase 1 leaves no disabled contract test in
 the current suite.
 
 The Phase 0/1 resolution sections remain the historical `release/1.4.x`
-baseline. The **Full UILib Review Matrix** and later guardrails are a living
-post-baseline inventory and may point to current work. Cross-component editing
-and notification work is tracked in the
+baseline. The **Full UILib Review Matrix**, the 2026-08-13 addendum, and later
+guardrails are a living post-baseline inventory and may point to current work.
+Cross-component editing and notification work is tracked in the
 [System Capability Roadmap](system-capability-roadmap.md).
 
 ## Test Labels
@@ -65,9 +65,21 @@ Run one acceptance contract explicitly:
 
 ## Deferred Foundation Decision
 
-| ID | Area | Decision still required | Planned phase |
-|---|---|---|---|
-| `FND-LAYOUT-002` | AnchorLayout | Define item-derived size hints and deterministic cyclic-anchor diagnostics | Phase 2 |
+None. `FND-LAYOUT-002` is recorded as Resolved in the 2026-08-13 addendum.
+
+## Addendum 2026-08-13
+
+`FND-LAYOUT-002` is **Resolved**. Item-derived size hints follow the anchored
+item chain; cyclic sibling anchors use a stable fallback and emit a
+Tarjan-based diagnostic once. Implementation is in
+`src/components/foundation/QMLPlus.cpp`.
+
+| ID | Area | Accepted behavior | Active acceptance test | Status |
+|---|---|---|---|---|
+| `FND-LAYOUT-002` | AnchorLayout | Item-derived size hints follow the anchored item chain; cyclic sibling anchors use a stable fallback and emit a Tarjan-based diagnostic once | `AnchorLayoutTest.Contract_SizeHintsComeFromAnchoredItemChain`, `Contract_SizeHintPreservesNaturalSizeBetweenOpposingAnchors`, `Contract_CyclicSiblingAnchorsUseStableFallback` | Resolved |
+
+Remaining Phase 2 foundation/overlay work is unchanged: theme transactions and
+persistence, plus overlay lifecycle/property semantics.
 
 ## Active Guardrails Added in Phases 0 and 1
 
@@ -93,7 +105,7 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 
 | Category | Public surface reviewed | Current disposition |
 |---|---|---|
-| Foundation | FluentElement, QMLPlus, AnchorLayout, ThemeRegistry, StyleThemeCatalog, overlay helpers | Phase 1 state/lifetime/non-widget layout/oversized overlay defects resolved; size hints, cycle diagnostics, theme transactions, and persistence remain Phase 2 |
+| Foundation | FluentElement, QMLPlus, AnchorLayout, ThemeRegistry, StyleThemeCatalog, overlay helpers | Phase 1 state/lifetime/non-widget layout/oversized overlay defects resolved; `FND-LAYOUT-002` size hints and Tarjan cycle diagnostics resolved; theme transactions and persistence remain Phase 2 |
 | Layout | Accordion, Card, Divider, Expander | Reusable token-driven surfaces replace Gallery-local card, separator, and disclosure implementations; Accordion composes Expander with explicit item ownership, single/multiple coordination, and header-key navigation |
 | Basic input | Button, CompoundButton, CheckBox, ColorPicker, ComboBox, DropDownButton, HyperlinkButton, RadioButton, RatingControl, RepeatButton, Slider, SplitButton, ToggleButton, ToggleSplitButton, ToggleSwitch | CompoundButton retains Button interaction semantics while adding caller-owned secondary content; base-class coherence, keyboard, RTL, and accessibility remain covered by focused contracts |
 | Collections | DrawerView, FlipView, FlowView, GridView, ListView, SplitView, StackView, TreeView | Phase 4 keeps FlowView large-model painting and hit testing viewport-bounded and uses one shared drag-displacement animation |
@@ -117,7 +129,7 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 | Gallery boundary | Gallery code cannot include private UILib implementation headers | `validate-gallery-boundary.py` |
 | Component routes | Every component route renders live public-API samples under Dark/RTL/disabled review states without escaping its card | `GalleryAcceptanceMatrixCoversEveryComponentRoute` |
 | Gallery DPI | Representative Gallery composition preserves logical geometry and physical DPR at 125%, 200%, and 300% | `GalleryAcceptanceScaleTest.*` |
-| Visual review | Button pointer/focus/disabled states and TreeView RTL receive deterministic Light/Dark snapshots | `ComponentStateMatrixVisualCheck` |
+| Visual review | Button pointer/focus/disabled states and TreeView RTL receive deterministic Light/Dark snapshots; the 1.7 pixel gate compares three checked-in PNGs | `ComponentStateMatrixVisualCheck`; `VisualGate.CompareBaselines` |
 
 ## Decisions Deliberately Deferred
 
