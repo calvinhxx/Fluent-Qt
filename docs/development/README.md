@@ -15,6 +15,8 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [WebAssembly Roadmap](webassembly-roadmap.md)
 - [High-DPI Workflow](high-dpi-workflow.md)
 - [Release Governance](release-governance.md)
+- [FluentQt 1.7 Roadmap](release-1.7-roadmap.md)
+- [Field API Proposal](field-api-proposal.md)
 - [Packaging Workflow](packaging-workflow.md)
 - [Testing Workflow](testing-workflow.md)
 - [PySide6 Binding Workflow](../../bindings/pyside6/README.md)

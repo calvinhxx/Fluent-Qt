@@ -69,9 +69,22 @@ allowlist, have focused contract tests, and have dedicated Gallery routes with
 live samples. Their follow-up review also registers public enum signal types for
 Qt 5, preserves fractional-DPR cover geometry and Unicode grapheme initials,
 and keeps CompoundButton's text-plus-parent construction aligned with Button.
-`Field` remains deferred because editor ownership, validation state,
+At this checkpoint, `Field` was deferred because editor ownership, validation state,
 helper/error composition, and accessibility relationships need a separate
 contract rather than a thin visual wrapper.
+
+## 2026-08-14 Field composition shell
+
+- `fluent::layout::Field` is a labeled editor slot, not a new input base class.
+  It reuses `WidgetOwnership`, presents helper/validation text, and forwards
+  focus/buddy/accessible relationships to the slotted editor.
+- Validation presentation never writes the editor value. `takeEditor()`
+  transfers a parentless widget; `releaseEditor()` applies the recorded
+  ownership policy. Changing ownership mode for the same editor requires an
+  explicit `takeEditor()` boundary in both C++ and PySide6.
+- Field is not a Tab stop and does not rewrite the editor's size policy.
+- Contract tests live in `test_field`. Gallery route `field` ships three live
+  samples. See [field-api-proposal.md](field-api-proposal.md).
 
 ## 2026-08-01 SplitView ownership addendum
 
@@ -299,19 +312,19 @@ platform contracts.
 | API-002 | Medium | Repeated setter tests | `tests/components/date_time/TestDatePicker.cpp` | `DatePicker::setSelectedDate(...)` already suppresses duplicate signals, but the focused test did not assert the no-op behavior. | Added repeated selected-date and repeated clear assertions. |
 | API-003 | Low | Nullable values | Date/time pickers | `DatePicker`, `TimePicker`, and `CalendarDatePicker` use invalid `QDate()` or `QTime()` as empty selected values. Existing tests cover defaults and clears, but the convention was not documented durably. | Documented the nullable value convention in [Component API Conventions](component-api-conventions.md). |
 | API-004 | Medium | Open state breadth | `src/components/basicinput/SplitButton.h`, `src/components/basicinput/ToggleSplitButton.h` | Split buttons own a menu and have primary/secondary hit zones, so callers need observable menu state without inferring it from QWidget visibility. | Resolved with inherited read-only `isOpen`, `openChanged`, and menu show/hide/replacement/destruction lifecycle tests. |
-| API-005 | Medium | Popup/flyout state naming | `src/components/dialogs_flyouts/Popup.h`, `src/components/dialogs_flyouts/Flyout.h`, `src/components/dialogs_flyouts/ContentDialog.h`, `src/components/dialogs_flyouts/TeachingTip.h` | Overlay components mix Qt visibility, popup open state, light-dismiss, modal, and hosted-content semantics. A cosmetic rename could hide real behavioral differences. | Deferred to follow-up recommendation `standardize-overlay-open-state-semantics`. |
+| API-005 | Medium | Popup/flyout state naming | `src/components/dialogs_flyouts/Popup.h`, `src/components/dialogs_flyouts/Flyout.h`, `src/components/dialogs_flyouts/ContentDialog.h`, `src/components/dialogs_flyouts/TeachingTip.h` | Overlay components mix Qt visibility, popup open state, light-dismiss, modal, and hosted-content semantics. A cosmetic rename could hide real behavioral differences. | Applied in 1.7-A: public `isOpen` is logical requested state; Opening/Open/Closing/Closed plus aliases are specified in [overlay-behavior.md](../architecture/overlay-behavior.md) and guarded by `Contract_*` tests. Inheritance is not unified. |
 | API-006 | Low | Collection selection naming | `src/components/collections/ListView.h`, `src/components/collections/TreeView.h`, `src/components/collections/GridView.h`, `src/components/collections/FlowView.h` | Collection views intentionally differ: item-view based components use Qt model/delegate contracts, while ListView/TreeView expose component-specific enum names. | Marked intentional; document selection/current/item ownership expectations rather than force a rename. |
 | API-007 | Low | Caller-composed navigation | `src/components/navigation/NavigationView.h`, `src/components/navigation/StackContentHost.h`, `src/components/navigation/TabView.h` | Navigation components act as shells/hosts and must leave page choice to the application while making any Qt parent-based lifetime transfer explicit. | Resolved for NavigationView/StackContentHost with compatibility-preserving Owned, Borrowed, and Reparented policies; TabView continues to leave external page hosting entirely to the caller. |
 | API-008 | Low | Header documentation | Broad `src/components/**` | Some public properties lack explanatory header comments, especially where names are inherited from WinUI concepts. | Documented project-level checklist now; individual comments can be added when touching the owning component. |
 | API-009 | Medium | Boolean getter aliases | `src/components/collections/ListView.h`, `src/components/collections/GridView.h`, `src/components/collections/FlowView.h`, `src/components/collections/TreeView.h`, `src/components/collections/FlipView.h`, `src/components/navigation/TabView.h`, `src/components/status_info/ProgressRing.h` | Several public bool getters used noun-style names such as `borderVisible()`, `backgroundVisible()`, `showNavigationButtons()`, or `addTabButtonVisible()` while nearby components already use `is*`, `are*`, or `has*` for state queries. | Applied compatible alias getters and focused tests. Existing getters remain public. |
 | API-010 | Low | Open setter alias | `src/components/basicinput/DropDownButton.h` | `DropDownButton` exposes `isOpen()` but only had `setOpen(bool)`, while other open-state components expose `setIsOpen(bool)`. | Applied compatible `setIsOpen(bool)` alias and focused test. Existing `setOpen(bool)` remains public. |
-| API-011 | Medium | Popup property notify gaps | `src/components/dialogs_flyouts/Popup.h`, `src/components/dialogs_flyouts/TeachingTip.h`, `src/components/dialogs_flyouts/ContentDialog.h` | Some overlay properties do not expose NOTIFY signals, but adding these signals should be paired with overlay-state semantics and binding tests rather than rushed into an API audit sweep. | Deferred to follow-up recommendation `standardize-overlay-open-state-semantics`. |
+| API-011 | Medium | Popup property notify gaps | `src/components/dialogs_flyouts/Popup.h`, `src/components/dialogs_flyouts/TeachingTip.h`, `src/components/dialogs_flyouts/ContentDialog.h` | Some overlay properties do not expose NOTIFY signals, but adding these signals should be paired with overlay-state semantics and binding tests rather than rushed into an API audit sweep. | Applied in 1.7-A with overlay-state semantics: NOTIFY + no-op on overlay bindable properties; focused `Contract_*` tests. |
 
 ## Intentional Deviations
 
 - `ListView`, `GridView`, `FlowView`, and `TreeView` keep separate selection/reorder APIs because their Qt bases and model/delegate responsibilities differ.
 - `NavigationView` and `StackContentHost` keep page choice and composition caller-controlled while recording explicit Owned, Borrowed, or Reparented release policies; `TabView` does not host application pages.
-- `Popup`, `Flyout`, `ContentDialog`, and `TeachingTip` keep specialized open and dismissal semantics until a dedicated overlay-state migration specifies common terms.
+- `Popup`, `Flyout`, `ContentDialog`, `Dialog`, and `TeachingTip` share observable overlay semantics (logical `isOpen`, lifecycle signals, orthogonal `modal`/`dim`/`closePolicy`) without sharing an inheritance tree. `DrawerView` keeps its own `ClosePolicy` type. Split buttons keep QMenu `isOpen`.
 - `CalendarDatePicker`, `DatePicker`, and `TimePicker` keep specific legacy getters while adding the common `isOpen()` alias for compatibility.
 - Existing noun-style boolean getters remain public for source compatibility while clearer aliases are added for new code.
 
@@ -329,6 +342,7 @@ platform contracts.
   - `TabView`: `areTabsClosable()`, `isAddTabButtonVisible()`, `isTabReorderEnabled()`, `areKeyboardAcceleratorsEnabled()`.
   - `ProgressRing`: `isBackgroundVisible()`.
 - Added `DropDownButton::setIsOpen(bool)` as a compatible alias for `setOpen(bool)`.
+- 1.7-A overlay slice: public `isOpen` is logical requested state; `opening`/`opened`/`closing`/`closed` with `aboutToShow`/`aboutToHide` aliases; NOTIFY + no-op on overlay bindable properties; orthogonal `modal`/`dim`/`closePolicy`; `Dialog::setSmokeEnabled` remains the historical modal+dim bundle. See [overlay-behavior.md](../architecture/overlay-behavior.md) and [release-1.7-roadmap.md](release-1.7-roadmap.md).
 - Added observable `menu` and `isOpen` properties to `SplitButton`; `ToggleSplitButton`
   inherits the same lifecycle contract. Menus are tracked deletion-safely and
   replacement/external destruction are covered by focused tests.
@@ -339,8 +353,8 @@ platform contracts.
 
 ## Deferred Follow-Ups
 
-- `standardize-overlay-open-state-semantics`: align Popup/Flyout/Dialog/ContentDialog/TeachingTip naming only after light-dismiss, modal, and visibility semantics are specified.
-- `add-overlay-property-notify-signals`: add missing NOTIFY signals for Popup/TeachingTip/Dialog properties after overlay-state semantics are settled.
+- `standardize-overlay-open-state-semantics`: resolved in 1.7-A ([overlay-behavior.md](../architecture/overlay-behavior.md), [release-1.7-roadmap.md](release-1.7-roadmap.md)). CoachMark and DrawerView are not on the shared inheritance tree; SplitButton/DropDownButton remain QMenu `isOpen`.
+- `add-overlay-property-notify-signals`: resolved in 1.7-A for the overlay bindable properties covered by API-011 and the overlay state machine.
 - `add-component-api-static-checks`: consider a later static or meta-object based checker after the checklist stabilizes.
 - `document-public-property-comments`: add targeted header comments for ambiguous public properties as components are touched.
 

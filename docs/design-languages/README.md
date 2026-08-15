@@ -22,6 +22,8 @@ the linked design kits — so the control work has a single, verifiable target i
 - [Design Kit Sources and Verification](figma-sources.md) — file keys, node IDs,
   and the measurement workflow. External kit screenshots and source layers are
   intentionally not redistributed.
+- [Coverage ledger](coverage-ledger.md) — which controls actually branch on
+  `themeDesignLanguage()` versus color/token-only. Not a paint plan.
 
 ## How it maps to the code
 
@@ -29,7 +31,7 @@ the linked design kits — so the control work has a single, verifiable target i
 |---|---|
 | [`ThemeRegistry`](../../src/components/foundation/ThemeRegistry.h) | Runtime store of the active Light/Dark `Colors`, radius, font, and `DesignLanguage`. Seeded from the Fluent defaults. |
 | [`ThemeCatalog`](../../app/viewmodel/ThemeCatalog.h) | Installs the brand preset (the role→`Colors` mapping + radius + design language) and any user JSON overrides. |
-| Control `paintEvent`s | Read `themeDesignLanguage()` and branch shape/interaction. `Button`, `ToggleSwitch`, `CheckBox`, `RadioButton`, `Slider` are design-language-aware today. |
+| Control `paintEvent`s | Read `themeDesignLanguage()` and branch shape/interaction when the control is in the geometry bucket of the [coverage ledger](coverage-ledger.md). Everyone else still recolors via tokens. |
 
 The Fluent baseline is documented in [fluent.md](fluent.md) (and seeds `ThemeRegistry`); the
 Material 3 and macOS pages describe the deltas layered on top of it.
