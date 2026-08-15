@@ -45,7 +45,7 @@
 
 ## 🤖 AI 辅助开发
 
-使用跨 Agent 的 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill，可为现有或全新项目构建达到 Gallery 完成度的 C++ 或 PySide6 GUI，无需预先具备 CLI/TUI。主题、组件选择和视觉精调可用于 Codex、Cursor、GitHub Copilot 与 Claude Code，详见 [AI 辅助开发指南](docs/ai/README.md)。
+可安装的 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill 支持 Codex、Claude Code、Cursor 和 GitHub Copilot，为现有或全新项目构建达到 Gallery 完成度的 C++ 或 PySide6 GUI，并覆盖组件选择、主题与视觉精调。详见 [AI 辅助开发指南](docs/ai/README.md)。
 
 ## 🚀 快速开始
 

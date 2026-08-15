@@ -50,48 +50,36 @@ validation.
 
 ## Cross-agent Skill
 
-The canonical Skill is
-[`../../.agents/skills/build-fluentqt-gui/SKILL.md`](../../.agents/skills/build-fluentqt-gui/SKILL.md).
-It follows the [Agent Skills open specification](https://agentskills.io/specification),
-so its core instructions, scripts, references, and assets are not tied to one
-model vendor or coding agent.
+[`../../.agents/skills/build-fluentqt-gui`](../../.agents/skills/build-fluentqt-gui)
+is the only source. It follows the
+[Agent Skills specification](https://agentskills.io/specification) and contains
+its instructions, references, scripts, and catalog snapshot. There is no
+second Claude-, Cursor-, or Copilot-specific copy in this repository.
 
-| Agent | Repository discovery entry | Invocation |
-| --- | --- | --- |
-| Codex | `.agents/skills/build-fluentqt-gui/SKILL.md` | Select or mention `$build-fluentqt-gui`, or let the description trigger it |
-| Cursor | `.agents/skills/build-fluentqt-gui/SKILL.md` | Use `/build-fluentqt-gui`, or let Agent select it |
-| GitHub Copilot | `.agents/skills/build-fluentqt-gui/SKILL.md` | Invoke it where supported, or let Copilot select it |
-| Claude Code | `.claude/skills/build-fluentqt-gui/SKILL.md` | Use `/build-fluentqt-gui`, or let Claude select it |
-| Other compatible agents | Import or point the agent at the canonical Skill directory | Follow that agent's invocation mechanism |
+Build the installable archive with:
 
-The Claude entry is deliberately a small compatibility loader that routes back
-to the canonical `.agents` Skill. `agents/openai.yaml` is optional Codex UI
-metadata; other agents ignore it, and the workflow does not depend on it. An
-agent without automatic Agent Skills discovery can still read the canonical
-`SKILL.md` explicitly.
+```bash
+python3 tools/ai/package_fluentqt_skill.py \
+  --project-root . \
+  --output-dir dist
+```
 
-The Skill routes tool-neutral contracts for theme design, component selection,
-product-reference synthesis, performance/lifecycle, visual evidence, and
-iterative refinement according to task risk. A `lite` profile reduces planning
-and matrix ceremony for bounded single-surface work; a `full` profile applies
-to new GUIs, collections, asynchronous work, transient surfaces, custom themes,
-and product-shell decisions. Both retain the same visual and engineering
-quality gates. The reference layer extracts structural grammar from official
-product evidence rather than providing screens to copy. The shipped Gallery is
-the finish benchmark: applications may use a different structure, but should
-reach the same component, token, window material, state, performance, and visual
-quality before being called complete. An application-owned top-level shell uses
-a Mica `Window` whose pane gaps reveal that material; an embedded GUI preserves
-and records its host-owned window instead. Solid or opaque host fills require a
-recorded reason. The signature surface must be a finished product object: quiet
-chrome on its owning surface, designed sparse/empty states, and an integrated
-input only when the workflow has one. A Mica shell around a labeled log is not
-complete.
+The archive has one top-level `build-fluentqt-gui/` directory. Extract that
+same directory into the Skills location supported by Codex, Claude Code,
+Cursor, GitHub Copilot, or another compatible agent. Agents that discover
+`.agents/skills/` can use the repository copy directly. `agents/openai.yaml`
+only supplies optional Codex UI metadata. In Codex, mention
+`$build-fluentqt-gui`; other agents use their normal Skill invocation.
 
-Integration records expose machine-readable `window_ownership`. Treat an
-application pattern's `components` as candidates after applying that boundary:
-`host-owned` forbids a second application `Window`, while `caller-decides`
-requires repository evidence before choosing a shell.
+The bundled `scripts/query_catalog.py` reads
+`assets/fluentqt-ai-catalog.json`, so the installed Skill does not need a
+FluentQt source checkout or a guessed sibling path. `--project-root` and
+`--catalog` provide explicit overrides when working against another checkout.
+
+The Skill has `lite` and `full` routes, but both keep the same visual and
+engineering bar. Gallery remains the finish benchmark. Integration records
+also expose `window_ownership`; `host-owned` forbids a second application
+window, while `caller-decides` requires repository evidence.
 
 Validate the portable structure and deterministic catalog behavior with:
 
@@ -117,10 +105,11 @@ identical prose.
 
 ## Sources of truth
 
-The generated catalog derives component identity, route descriptions, C++
+The generated catalogs derive component identity, route descriptions, C++
 samples, Python API names, installed headers, and focused tests from canonical
 repository files. Human-authored decision semantics live in `guidance.json`.
-Do not hand-edit `generated/fluentqt-ai-catalog.json`.
+Do not hand-edit either `generated/fluentqt-ai-catalog.json` or the Skill copy
+under `assets/`; the generator updates and checks both.
 
 In a full checkout, after changing a component, sample, binding, test, or AI
 guidance entry, run:
@@ -144,15 +133,13 @@ uses [its own schema](project-analysis.schema.json).
 | M0: discoverability | `llms.txt`, canonical index, supported-version facts | Implemented |
 | M1: machine contract | Generated catalog, JSON Schemas, intent query | Implemented |
 | M2: general workflow | Evidence-based integration for existing and greenfield projects | Implemented |
-| M3: reusable Skill | Open Agent Skills workflow with cross-agent discovery adapters | Implemented |
-| M4: drift prevention | CI validation and source-package delivery | Implemented |
+| M3: reusable Skill | One self-contained Agent Skill shared by compatible agents | Implemented |
+| M4: drift prevention | CI validation, catalog synchronization, and source-package delivery | Implemented |
 | M5: measured quality | Eighteen project shapes, sixteen retrieval regressions, and five cross-pattern composition gates | Baseline implemented |
-| M6: distribution | Registry or optional plugin bundles after the Skill/API stabilizes | Planned |
+| M6: distribution | Deterministic versioned Skill archive | Implemented |
 
-The open-format Skill is the executable workflow and remains the first
-distribution unit. A vendor plugin becomes useful later only if FluentQt needs
-to bundle additional MCP tools, apps, or several related Skills. Neither is a
-substitute for the repository-level catalog and validation contract.
+The Skill remains the distribution unit. A plugin is only warranted later if
+FluentQt needs MCP servers, apps, or several related Skills.
 
 The deterministic cases in `evals/scenarios.json` cover projects with no
 interface as well as library, CLI, TUI, service, and plugin boundaries. They

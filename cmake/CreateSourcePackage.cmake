@@ -24,7 +24,6 @@ file(MAKE_DIRECTORY "${_package_root}/docs")
 file(MAKE_DIRECTORY "${_package_root}/examples")
 file(MAKE_DIRECTORY "${_package_root}/tools")
 file(MAKE_DIRECTORY "${_package_root}/.agents/skills")
-file(MAKE_DIRECTORY "${_package_root}/.claude/skills")
 file(MAKE_DIRECTORY "${_package_root}/.github/scripts")
 
 file(COPY
@@ -48,6 +47,7 @@ file(COPY
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/ai/query_ai_catalog.py"
     "${FLUENT_QT_SOURCE_DIR}/tools/ai/evaluate_ai_catalog.py"
+    "${FLUENT_QT_SOURCE_DIR}/tools/ai/package_fluentqt_skill.py"
     DESTINATION "${_package_root}/tools/ai")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/docs/ai"
@@ -55,9 +55,6 @@ file(COPY
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui"
     DESTINATION "${_package_root}/.agents/skills")
-file(COPY
-    "${FLUENT_QT_SOURCE_DIR}/.claude/skills/build-fluentqt-gui"
-    DESTINATION "${_package_root}/.claude/skills")
 file(COPY
     "${FLUENT_QT_SOURCE_DIR}/CMakeLists.txt"
     "${FLUENT_QT_SOURCE_DIR}/resources.qrc"

@@ -188,26 +188,13 @@ if(FLUENT_QT_INSTALL)
 		"${CMAKE_CURRENT_SOURCE_DIR}/tools/ai/evaluate_ai_catalog.py"
 		DESTINATION "${_fluent_qt_ai_doc_root}/tools/ai"
 		COMPONENT Development)
-	install(FILES
-		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/SKILL.md"
-		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui"
-		COMPONENT Development)
-	install(FILES
-		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/agents/openai.yaml"
-		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui/agents"
-		COMPONENT Development)
 	install(DIRECTORY
-		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/references"
-		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui"
-		COMPONENT Development)
-	install(PROGRAMS
-		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py"
-		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills/build-fluentqt-gui/scripts"
-		COMPONENT Development)
-	install(FILES
-		"${CMAKE_CURRENT_SOURCE_DIR}/.claude/skills/build-fluentqt-gui/SKILL.md"
-		DESTINATION "${_fluent_qt_ai_doc_root}/.claude/skills/build-fluentqt-gui"
-		COMPONENT Development)
+		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui"
+		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills"
+		COMPONENT Development
+		PATTERN "__pycache__" EXCLUDE
+		PATTERN "*.pyc" EXCLUDE
+		PATTERN "*.pyo" EXCLUDE)
 endif()
 
 if(FLUENT_QT_BUILD_GALLERY OR (BUILD_TESTING AND FLUENT_QT_BUILD_TESTS))

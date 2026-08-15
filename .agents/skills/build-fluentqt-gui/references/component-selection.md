@@ -63,12 +63,13 @@ Use compact variants for title bars, toolbars, navigation footers, and dense
 developer/productivity shells. Do not enlarge a component merely to fill an
 underspecified layout; fix the surface hierarchy and spacing instead.
 
-Query the matching catalog guide, then inspect each shortlisted component:
+Query the matching catalog guide, then inspect each shortlisted component.
+`<skill-root>` is the directory that contains this skill's `SKILL.md`.
 
 ```bash
-python3 tools/ai/query_ai_catalog.py --guide actions --json
-python3 tools/ai/query_ai_catalog.py --guide layout-surfaces --json
-python3 tools/ai/query_ai_catalog.py --component button --json
+python3 <skill-root>/scripts/query_catalog.py --guide actions --json
+python3 <skill-root>/scripts/query_catalog.py --guide layout-surfaces --json
+python3 <skill-root>/scripts/query_catalog.py --component button --json
 ```
 
 Query one decision or closely related intent per call. Use a broad natural

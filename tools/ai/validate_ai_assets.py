@@ -6,11 +6,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 from typing import Iterable
+import zipfile
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -32,7 +34,9 @@ REQUIRED_PATHS = (
     "docs/ai/project-analysis.schema.json",
     "docs/ai/generated/fluentqt-ai-catalog.json",
     ".agents/skills/build-fluentqt-gui/SKILL.md",
+    ".agents/skills/build-fluentqt-gui/LICENSE.txt",
     ".agents/skills/build-fluentqt-gui/agents/openai.yaml",
+    ".agents/skills/build-fluentqt-gui/assets/fluentqt-ai-catalog.json",
     ".agents/skills/build-fluentqt-gui/references/component-selection.md",
     ".agents/skills/build-fluentqt-gui/references/experience-differentiation.md",
     ".agents/skills/build-fluentqt-gui/references/performance-lifecycle.md",
@@ -42,8 +46,9 @@ REQUIRED_PATHS = (
     ".agents/skills/build-fluentqt-gui/references/theme-system.md",
     ".agents/skills/build-fluentqt-gui/references/visual-evidence-contract.md",
     ".agents/skills/build-fluentqt-gui/references/visual-refinement.md",
+    ".agents/skills/build-fluentqt-gui/scripts/query_catalog.py",
     ".agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py",
-    ".claude/skills/build-fluentqt-gui/SKILL.md",
+    "tools/ai/package_fluentqt_skill.py",
     "llms.txt",
 )
 
@@ -197,8 +202,7 @@ def _validate_skill(project_root: Path) -> None:
     if not contents.startswith("---\nname: build-fluentqt-gui\ndescription:"):
         raise AssertionError("FluentQt GUI Skill has invalid frontmatter")
     for required in (
-        "docs/ai/README.md",
-        "docs/ai/add-gui-to-project.md",
+        "assets/fluentqt-ai-catalog.json",
         "references/component-selection.md",
         "references/experience-differentiation.md",
         "references/performance-lifecycle.md",
@@ -208,13 +212,16 @@ def _validate_skill(project_root: Path) -> None:
         "references/theme-system.md",
         "references/visual-evidence-contract.md",
         "references/visual-refinement.md",
+        "scripts/query_catalog.py",
         "scripts/validate_visual_evidence.py",
-        "tools/ai/evaluate_ai_catalog.py",
-        "tools/ai/query_ai_catalog.py",
-        "tools/ai/validate_ai_assets.py",
     ):
         if required not in contents:
             raise AssertionError(f"FluentQt GUI Skill does not route to {required}")
+    for forbidden in (".claude/skills", "fluentqt_root.py", "../../../docs"):
+        if forbidden in contents:
+            raise AssertionError(
+                f"Installable FluentQt GUI Skill contains repository coupling: {forbidden}"
+            )
 
     reference_requirements = {
         "references/experience-differentiation.md": (
@@ -290,27 +297,6 @@ def _validate_skill(project_root: Path) -> None:
     ).read_text(encoding="utf-8")
     if "Use $build-fluentqt-gui" not in metadata:
         raise AssertionError("Skill UI metadata has a stale default prompt")
-
-    claude_loader_path = (
-        project_root / ".claude/skills/build-fluentqt-gui/SKILL.md"
-    )
-    claude_loader = claude_loader_path.read_text(encoding="utf-8")
-    if not claude_loader.startswith(
-        "---\nname: build-fluentqt-gui\ndescription:"
-    ):
-        raise AssertionError("Claude Skill loader has invalid frontmatter")
-    if "../../../.agents/skills/build-fluentqt-gui/SKILL.md" not in claude_loader:
-        raise AssertionError("Claude Skill loader does not route to the canonical Skill")
-    claude_target = (
-        claude_loader_path.parent
-        / "../../../.agents/skills/build-fluentqt-gui/SKILL.md"
-    ).resolve()
-    if claude_target != skill_path.resolve():
-        raise AssertionError("Claude Skill loader resolves outside the canonical Skill")
-    canonical_description = contents.split("\n", 3)[2]
-    claude_description = claude_loader.split("\n", 3)[2]
-    if claude_description != canonical_description:
-        raise AssertionError("Cross-agent Skill descriptions have drifted")
 
 
 def _validate_visual_evidence_validator(project_root: Path) -> None:
@@ -527,6 +513,105 @@ def _validate_visual_evidence_validator(project_root: Path) -> None:
             )
 
 
+def _validate_installable_skill(project_root: Path) -> None:
+    skill_root = project_root / ".agents/skills/build-fluentqt-gui"
+    query = skill_root / "scripts/query_catalog.py"
+    catalog = project_root / "docs/ai/generated/fluentqt-ai-catalog.json"
+    bundled_catalog = skill_root / "assets/fluentqt-ai-catalog.json"
+    if bundled_catalog.read_bytes() != catalog.read_bytes():
+        raise AssertionError("Installable Skill catalog snapshot is stale")
+    if (skill_root / "LICENSE.txt").read_bytes() != (
+        project_root / "LICENSE"
+    ).read_bytes():
+        raise AssertionError("Installable Skill license has drifted from LICENSE")
+
+    environment = dict(os.environ)
+    environment.pop("FLUENTQT_ROOT", None)
+    with tempfile.TemporaryDirectory(prefix="fluentqt-installable-skill-") as temp:
+        temp_root = Path(temp)
+        queried = subprocess.run(
+            [sys.executable, str(query), "--component", "window"],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_root,
+            env=environment,
+        )
+        if queried.returncode != 0 or "window" not in queried.stdout.lower():
+            raise AssertionError(
+                "Skill catalog query failed outside the FluentQt checkout: "
+                + (queried.stderr or queried.stdout).strip()
+            )
+
+        package = subprocess.run(
+            [
+                sys.executable,
+                str(project_root / "tools/ai/package_fluentqt_skill.py"),
+                "--project-root",
+                str(project_root),
+                "--output-dir",
+                str(temp_root / "dist"),
+                "--version",
+                "validation",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_root,
+            env=environment,
+        )
+        if package.returncode != 0:
+            raise AssertionError(
+                "Could not package installable FluentQt GUI Skill: "
+                + package.stderr.strip()
+            )
+        archive = Path(package.stdout.strip())
+        if not archive.is_file():
+            raise AssertionError("Skill packager did not produce an archive")
+
+        with zipfile.ZipFile(archive) as packaged_skill:
+            entries = set(packaged_skill.namelist())
+            prefix = "build-fluentqt-gui/"
+            if not entries or any(not entry.startswith(prefix) for entry in entries):
+                raise AssertionError("Skill archive has an invalid top-level layout")
+            for relative_path in (
+                "SKILL.md",
+                "LICENSE.txt",
+                "agents/openai.yaml",
+                "assets/fluentqt-ai-catalog.json",
+                "scripts/query_catalog.py",
+                "scripts/validate_visual_evidence.py",
+            ):
+                if prefix + relative_path not in entries:
+                    raise AssertionError(
+                        f"Skill archive is missing {relative_path}"
+                    )
+            if any(".claude/" in entry for entry in entries):
+                raise AssertionError("Skill archive contains an agent-specific copy")
+            packaged_skill.extractall(temp_root / "installed")
+
+        installed_query = (
+            temp_root
+            / "installed"
+            / "build-fluentqt-gui"
+            / "scripts"
+            / "query_catalog.py"
+        )
+        installed = subprocess.run(
+            [sys.executable, str(installed_query), "--component", "field"],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_root,
+            env=environment,
+        )
+        if installed.returncode != 0 or "field" not in installed.stdout.lower():
+            raise AssertionError(
+                "Packaged Skill catalog query failed after extraction: "
+                + (installed.stderr or installed.stdout).strip()
+            )
+
+
 def validate(project_root: Path) -> dict[str, int]:
     project_root = project_root.resolve()
     for relative_path in REQUIRED_PATHS:
@@ -557,6 +642,12 @@ def validate(project_root: Path) -> dict[str, int]:
     )
     if not check_catalog(generated, catalog_path):
         raise AssertionError("Committed FluentQt AI catalog is stale")
+    skill_catalog_path = (
+        project_root
+        / ".agents/skills/build-fluentqt-gui/assets/fluentqt-ai-catalog.json"
+    )
+    if not check_catalog(generated, skill_catalog_path):
+        raise AssertionError("Installable Skill catalog snapshot is stale")
     committed = json.loads(catalog_path.read_text(encoding="utf-8"))
     if committed != generated:
         raise AssertionError("Committed FluentQt AI catalog is not canonical")
@@ -667,6 +758,7 @@ def validate(project_root: Path) -> dict[str, int]:
 
     _validate_skill(project_root)
     _validate_visual_evidence_validator(project_root)
+    _validate_installable_skill(project_root)
     return {
         "components": summary["component_count"],
         "samples": summary["sample_count"],
