@@ -716,6 +716,24 @@
                 <modify-function signature="headerButton()const"
                                  remove="all"/>
             </object-type>
+            <object-type name="Field">
+                <enum-type name="ValidationState"/>
+                <modify-function
+                    signature="setEditor(QWidget*,fluent::WidgetOwnership)"
+                    rename="_setEditorWithOwnership"/>
+                <modify-function signature="editor()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="takeEditor()">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="target"/>
+                    </modify-argument>
+                </modify-function>
+                <!-- Theme refresh is driven by FluentQt's registry. -->
+                <modify-function signature="onThemeUpdated()" remove="all"/>
+            </object-type>
         </namespace-type>
 
         <namespace-type name="menus_toolbars" visible="no">

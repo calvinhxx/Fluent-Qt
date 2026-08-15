@@ -20,6 +20,7 @@ MODULE_WRAPPER = "_fluentqt_module_wrapper.cpp"
 FLUENT_NAMESPACE_WRAPPER = "fluent_wrapper.cpp"
 ACCORDION_WRAPPER = "fluent_layout_accordion_wrapper.cpp"
 EXPANDER_WRAPPER = "fluent_layout_expander_wrapper.cpp"
+FIELD_WRAPPER = "fluent_layout_field_wrapper.cpp"
 INFO_BAR_WRAPPER = "fluent_status_info_infobar_wrapper.cpp"
 TOAST_WRAPPER = "fluent_status_info_toast_wrapper.cpp"
 TOOLTIP_WRAPPER = "fluent_status_info_tooltip_wrapper.cpp"
@@ -2222,6 +2223,28 @@ def expander_source(include_header_button=False, **kwargs):
     return source
 
 
+def field_source(include_theme_hook=False, **kwargs):
+    source = scroll_view_source(**kwargs)
+    source = source.replace(
+        "fluent_scrolling_ScrollView",
+        "fluent_layout_Field",
+    ).replace("ScrollView::", "Field::")
+    source = source.replace("setContentWidget", "setEditor")
+    source = source.replace("contentWidget", "editor")
+    source = source.replace("takeContentWidget", "takeEditor")
+    if include_theme_hook:
+        source += textwrap.dedent(
+            """
+            static PyObject *Sbk_fluent_layout_FieldFunc_onThemeUpdated(
+                PyObject *self)
+            {
+                return Py_None;
+            }
+            """
+        )
+    return source
+
+
 def stack_view_source(
     public_bypass=None,
     adapter_bookkeeping=None,
@@ -2975,6 +2998,7 @@ class GeneratedContractVerifierTest(unittest.TestCase):
         self.write_annotated_scroll_bar()
         self.write_accordion()
         self.write_expander()
+        self.write_field()
         self.write_info_bar()
         self.write_toast()
         self.write_tooltip()
@@ -3306,6 +3330,15 @@ class GeneratedContractVerifierTest(unittest.TestCase):
         (self.generated_dir / EXPANDER_WRAPPER).write_text(
             expander_source(
                 include_header_button=include_header_button,
+                **kwargs,
+            ),
+            encoding="utf-8",
+        )
+
+    def write_field(self, include_theme_hook=False, **kwargs):
+        (self.generated_dir / FIELD_WRAPPER).write_text(
+            field_source(
+                include_theme_hook=include_theme_hook,
                 **kwargs,
             ),
             encoding="utf-8",
@@ -5190,6 +5223,42 @@ class GeneratedContractVerifierTest(unittest.TestCase):
         result = self.run_verifier()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("internal header button", result.stderr)
+
+    def test_field_runtime_ownership_overload_is_rejected(self):
+        self.write_field(runtime_overload=True)
+        result = self.run_verifier()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Field::setEditor exposes", result.stderr)
+
+    def test_field_parent_bookkeeping_is_rejected(self):
+        self.write_field(use_parent=True)
+        result = self.run_verifier()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Field::setEditor uses parent bookkeeping", result.stderr)
+
+    def test_field_adapter_ownership_change_is_rejected(self):
+        self.write_field(adapter_transfer_to_cpp=True)
+        result = self.run_verifier()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "Field private ownership adapter changes wrapper ownership",
+            result.stderr,
+        )
+
+    def test_field_missing_take_ownership_is_rejected(self):
+        self.write_field(transfer_to_python=False)
+        result = self.run_verifier()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "Field::takeEditor Python ownership transfer is missing",
+            result.stderr,
+        )
+
+    def test_field_internal_theme_hook_is_rejected(self):
+        self.write_field(include_theme_hook=True)
+        result = self.run_verifier()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("internal theme refresh hook", result.stderr)
 
     def test_info_bar_action_parent_bookkeeping_is_rejected(self):
         self.write_info_bar(setter_parent=True)

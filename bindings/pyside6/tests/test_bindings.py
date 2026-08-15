@@ -220,6 +220,7 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(
             issubclass(fluentqt.Expander, fluentqt.Card)
         )
+        self.assertTrue(issubclass(fluentqt.Field, QWidget))
         self.assertTrue(issubclass(fluentqt.FontIcon, QWidget))
         self.assertTrue(
             issubclass(fluentqt.AnnotatedScrollBar, QWidget)
@@ -288,6 +289,7 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertIs(layout.Card, fluentqt.Card)
         self.assertIs(layout.Divider, fluentqt.Divider)
         self.assertIs(layout.Expander, fluentqt.Expander)
+        self.assertIs(layout.Field, fluentqt.Field)
         self.assertIs(layout.Accordion, fluentqt.Accordion)
         self.assertIs(
             scrolling.AnnotatedScrollBar,
@@ -664,6 +666,12 @@ class FluentQtBindingTest(unittest.TestCase):
             )
         )
         self.assertFalse(hasattr(native.fluent.Expander, "headerButton"))
+        self.assertTrue(issubclass(fluentqt.Field, native.fluent.Field))
+        self.assertIsNot(native.fluent.Field, fluentqt.Field)
+        self.assertTrue(
+            hasattr(native.fluent.Field, "_setEditorWithOwnership")
+        )
+        self.assertFalse(hasattr(native.fluent.Field, "onThemeUpdated"))
         self.assertTrue(
             issubclass(fluentqt.Accordion, native.fluent.Accordion)
         )
@@ -3043,6 +3051,147 @@ class FluentQtBindingTest(unittest.TestCase):
             gc.collect()
             self.assertFalse(Shiboken.isValid(child))
             del child
+
+    def test_field_constructor_and_validation_preserve_editor_value(self):
+        editor = fluentqt.LineEdit()
+        editor.setText("keep-me")
+        field = fluentqt.Field(editor=editor)
+        field.setLabelText("Email")
+        field.setRequired(True)
+        field.setHelperText("Used for recovery")
+        field.setValidationState(fluentqt.Field.ValidationState.Error)
+        field.setValidationMessage("Enter a valid address")
+
+        self.assertIs(field.editor(), editor)
+        self.assertIs(field._fluentqt_hosted_editor, editor)
+        self.assertEqual(
+            field.editorOwnership(),
+            fluentqt.WidgetOwnership.Borrowed,
+        )
+        self.assertEqual(editor.text(), "keep-me")
+        self.assertEqual(field.labelText(), "Email")
+        self.assertTrue(field.isRequired())
+        self.assertEqual(field.helperText(), "Used for recovery")
+        self.assertEqual(field.validationMessage(), "Enter a valid address")
+
+    def test_field_owned_editor_lifecycle(self):
+        field = fluentqt.Field()
+        first = fluentqt.LineEdit()
+        second = fluentqt.LineEdit()
+
+        field.setOwnedEditor(first)
+        self.assertIs(field.editor(), first)
+        self.assertEqual(
+            field.editorOwnership(),
+            fluentqt.WidgetOwnership.Owned,
+        )
+
+        field.setOwnedEditor(second)
+        self.assertFalse(Shiboken.isValid(first))
+        self.assertIs(field.editor(), second)
+
+        field.releaseEditor()
+        self.assertFalse(Shiboken.isValid(second))
+        self.assertIsNone(field.editor())
+        self.assertIsNone(field._fluentqt_hosted_editor)
+
+    def test_field_borrowed_editor_lifecycle(self):
+        class PythonEditor(fluentqt.LineEdit):
+            marker = "field-borrowed-subclass"
+
+        field = fluentqt.Field()
+        editor = PythonEditor()
+        editor_ref = weakref.ref(editor)
+        field.setEditor(editor)
+        del editor
+        gc.collect()
+
+        hosted = field.editor()
+        self.assertIs(hosted, editor_ref())
+        self.assertEqual(hosted.marker, "field-borrowed-subclass")
+        field.releaseEditor()
+        self.assertTrue(Shiboken.isValid(hosted))
+        self.assertIsNone(hosted.parent())
+        self.assertIsNone(field.editor())
+
+    def test_field_reparented_editor_lifecycle(self):
+        first_parent = QWidget()
+        first = fluentqt.LineEdit(first_parent)
+        second_parent = QWidget()
+        second = fluentqt.LineEdit(second_parent)
+        field = fluentqt.Field()
+
+        field.setReparentedEditor(first)
+        self.assertIsNot(first.parent(), first_parent)
+        self.assertIs(field._fluentqt_original_parent, first_parent)
+        field.setReparentedEditor(second)
+        self.assertIs(first.parent(), first_parent)
+        self.assertIsNot(second.parent(), second_parent)
+        field.releaseEditor()
+        self.assertIs(second.parent(), second_parent)
+
+    def test_field_take_and_invalid_editor_contracts(self):
+        parent = QWidget()
+        field = fluentqt.Field(parent)
+        editor = fluentqt.LineEdit()
+        field.setBorrowedEditor(editor)
+
+        with self.assertRaisesRegex(ValueError, "takeEditor"):
+            field.setOwnedEditor(editor)
+        with self.assertRaisesRegex(ValueError, "host or its ancestor"):
+            field.setBorrowedEditor(field)
+        with self.assertRaisesRegex(ValueError, "host or its ancestor"):
+            field.setBorrowedEditor(parent)
+
+        taken = field.takeEditor()
+        self.assertIs(taken, editor)
+        self.assertIsNone(taken.parent())
+        self.assertTrue(Shiboken.ownedByPython(taken))
+        self.assertIsNone(field._fluentqt_hosted_editor)
+        self.assertIsNone(field._fluentqt_original_parent)
+
+    def test_field_owned_gc_stress(self):
+        for _ in range(25):
+            field = fluentqt.Field()
+            editor = fluentqt.LineEdit()
+            field.setOwnedEditor(editor)
+            field_ref = weakref.ref(field)
+            del field
+            gc.collect()
+            self.assertIsNone(field_ref())
+            self.assertFalse(Shiboken.isValid(editor))
+            del editor
+
+    def test_field_borrowed_gc_stress(self):
+        for _ in range(25):
+            field = fluentqt.Field()
+            editor = fluentqt.LineEdit()
+            field.setBorrowedEditor(editor)
+            field_ref = weakref.ref(field)
+            del field
+            gc.collect()
+            self.assertIsNone(field_ref())
+            self.assertTrue(Shiboken.isValid(editor))
+            self.assertIsNone(editor.parent())
+            del editor
+            gc.collect()
+
+    def test_field_reparented_gc_stress(self):
+        for _ in range(25):
+            original_parent = QWidget()
+            editor = fluentqt.LineEdit(original_parent)
+            field = fluentqt.Field()
+            field.setReparentedEditor(editor)
+            field_ref = weakref.ref(field)
+            del field
+            gc.collect()
+            self.assertIsNone(field_ref())
+            self.assertTrue(Shiboken.isValid(editor))
+            self.assertIs(editor.parent(), original_parent)
+            del original_parent
+            gc.collect()
+            self.assertFalse(Shiboken.isValid(editor))
+            del editor
 
     def test_accordion_properties_signals_and_item_facade(self):
         class PythonItem(fluentqt.Expander):

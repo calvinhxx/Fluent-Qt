@@ -75,7 +75,8 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
              {QStringLiteral("accordion"), QStringLiteral("Accordion"), Typography::Icons::ChevronDown},
              {QStringLiteral("card"), QStringLiteral("Card"), Typography::Icons::BackToWindow},
              {QStringLiteral("divider"), QStringLiteral("Divider"), Typography::Icons::Hyphen},
-             {QStringLiteral("expander"), QStringLiteral("Expander"), Typography::Icons::ChevronDown}
+             {QStringLiteral("expander"), QStringLiteral("Expander"), Typography::Icons::ChevronDown},
+             {QStringLiteral("field"), QStringLiteral("Field"), Typography::Icons::Edit}
          }},
         {QStringLiteral("menus-toolbars"),
          QStringLiteral("Menus & toolbars"),

@@ -135,6 +135,8 @@ const QHash<QString, QString>& routeDescriptions()
          QStringLiteral("A DPI-aligned horizontal or vertical separator with optional insets.")},
         {QStringLiteral("expander"),
          QStringLiteral("A disclosure surface that reveals caller-supplied content with an optional animation.")},
+        {QStringLiteral("field"),
+         QStringLiteral("Adds a label, required marker, helper text, and validation feedback to any input control.")},
         // Menus & toolbars
         {QStringLiteral("menu"),
          QStringLiteral("A list of commands shown in a transient surface.")},

@@ -4,12 +4,15 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 
+#include "components/basicinput/ComboBox.h"
 #include "components/foundation/WidgetOwnership.h"
 #include "components/layout/Accordion.h"
 #include "components/layout/Card.h"
 #include "components/layout/Divider.h"
 #include "components/layout/Expander.h"
+#include "components/layout/Field.h"
 #include "components/textfields/Label.h"
+#include "components/textfields/LineEdit.h"
 #include "design/Typography.h"
 #include "SampleBuilders.h"
 
@@ -20,7 +23,10 @@ using fluent::layout::Accordion;
 using fluent::layout::Card;
 using fluent::layout::Divider;
 using fluent::layout::Expander;
+using fluent::layout::Field;
+using fluent::basicinput::ComboBox;
 using fluent::textfields::Label;
+using fluent::textfields::LineEdit;
 using samples::horizontalGroup;
 using samples::makeSample;
 using samples::verticalGroup;
@@ -503,6 +509,144 @@ QVector<GallerySample> accordionSamples()
     };
 }
 
+QVector<GallerySample> fieldSamples()
+{
+    return {
+        makeSample(
+            QStringLiteral("field-helper-text"),
+            QStringLiteral("Wrap any input control"),
+            QStringLiteral("Use the same label and helper treatment around text, choice, date, or other existing editors."),
+            QStringLiteral("auto* emailField = new Field(this);\n"
+                           "emailField->setLabelText(\"Email\");\n"
+                           "emailField->setHelperText(\"Used only for account recovery.\");\n"
+                           "\n"
+                           "auto* emailEditor = new LineEdit;\n"
+                           "emailEditor->setPlaceholderText(\"name@example.com\");\n"
+                           "emailField->setEditor(\n"
+                           "    emailEditor, WidgetOwnership::Owned);\n"
+                           "\n"
+                           "auto* roleField = new Field(this);\n"
+                           "roleField->setLabelText(\"Role\");\n"
+                           "auto* roleEditor = new ComboBox;\n"
+                           "roleEditor->addItems({\"Designer\", \"Developer\", \"Researcher\"});\n"
+                           "roleField->setEditor(\n"
+                           "    roleEditor, WidgetOwnership::Owned);"),
+            [](QWidget* parent) {
+                auto* card = new Card(parent);
+                card->setFixedSize(520, 220);
+                auto* layout = new QVBoxLayout(card);
+                layout->setContentsMargins(16, 14, 16, 14);
+                layout->setSpacing(12);
+
+                auto* emailField = new Field(card);
+                emailField->setLabelText(QStringLiteral("Email"));
+                emailField->setHelperText(
+                    QStringLiteral("Used only for account recovery."));
+                auto* emailEditor = new LineEdit;
+                emailEditor->setPlaceholderText(
+                    QStringLiteral("name@example.com"));
+                emailField->setEditor(
+                    emailEditor, WidgetOwnership::Owned);
+                layout->addWidget(emailField);
+
+                auto* roleField = new Field(card);
+                roleField->setLabelText(QStringLiteral("Role"));
+                auto* roleEditor = new ComboBox;
+                roleEditor->addItems(
+                    {QStringLiteral("Designer"),
+                     QStringLiteral("Developer"),
+                     QStringLiteral("Researcher")});
+                roleField->setEditor(
+                    roleEditor, WidgetOwnership::Owned);
+                layout->addWidget(roleField);
+                return card;
+            }),
+        makeSample(
+            QStringLiteral("field-required-error"),
+            QStringLiteral("Required with error"),
+            QStringLiteral("Required fields show an indicator. Validation presentation never writes the editor text."),
+            QStringLiteral("auto* field = new Field(this);\n"
+                           "field->setLabelText(\"Password\");\n"
+                           "field->setRequired(true);\n"
+                           "field->setValidationState(Field::ValidationState::Error);\n"
+                           "field->setValidationMessage(\n"
+                           "    \"Password must be at least 8 characters.\");\n"
+                           "\n"
+                           "auto* editor = new LineEdit;\n"
+                           "editor->setText(\"1234\");\n"
+                           "field->setEditor(editor, WidgetOwnership::Owned);"),
+            [](QWidget* parent) {
+                auto* card = new Card(parent);
+                card->setFixedSize(520, 148);
+                auto* layout = new QVBoxLayout(card);
+                layout->setContentsMargins(16, 14, 16, 14);
+                layout->setSpacing(0);
+
+                auto* field = new Field(card);
+                field->setLabelText(QStringLiteral("Password"));
+                field->setRequired(true);
+                field->setValidationState(Field::ValidationState::Error);
+                field->setValidationMessage(
+                    QStringLiteral("Password must be at least 8 characters."));
+                auto* editor = new LineEdit;
+                editor->setText(QStringLiteral("1234"));
+                field->setEditor(editor, WidgetOwnership::Owned);
+                layout->addWidget(field);
+                return card;
+            }),
+        makeSample(
+            QStringLiteral("field-warning-success"),
+            QStringLiteral("Warning and success"),
+            QStringLiteral("Warning and success pair a compact semantic icon with status color without changing the slotted editor."),
+            QStringLiteral("auto* warning = new Field(this);\n"
+                           "warning->setLabelText(\"Username\");\n"
+                           "warning->setValidationState(Field::ValidationState::Warning);\n"
+                           "warning->setValidationMessage(\"This name is already taken.\");\n"
+                           "auto* warningEditor = new LineEdit;\n"
+                           "warningEditor->setText(\"alex\");\n"
+                           "warning->setEditor(\n"
+                           "    warningEditor, WidgetOwnership::Owned);\n"
+                           "\n"
+                           "auto* success = new Field(this);\n"
+                           "success->setLabelText(\"Display name\");\n"
+                           "success->setValidationState(Field::ValidationState::Success);\n"
+                           "success->setValidationMessage(\"Looks good\");\n"
+                           "auto* successEditor = new LineEdit;\n"
+                           "successEditor->setText(\"Alex Chen\");\n"
+                           "success->setEditor(\n"
+                           "    successEditor, WidgetOwnership::Owned);"),
+            [](QWidget* parent) {
+                auto* card = new Card(parent);
+                card->setFixedSize(520, 220);
+                auto* layout = new QVBoxLayout(card);
+                layout->setContentsMargins(16, 14, 16, 14);
+                layout->setSpacing(16);
+
+                auto* warning = new Field(card);
+                warning->setLabelText(QStringLiteral("Username"));
+                warning->setValidationState(Field::ValidationState::Warning);
+                warning->setValidationMessage(
+                    QStringLiteral("This name is already taken."));
+                auto* warningEditor = new LineEdit;
+                warningEditor->setText(QStringLiteral("alex"));
+                warning->setEditor(
+                    warningEditor, WidgetOwnership::Owned);
+                layout->addWidget(warning);
+
+                auto* success = new Field(card);
+                success->setLabelText(QStringLiteral("Display name"));
+                success->setValidationState(Field::ValidationState::Success);
+                success->setValidationMessage(QStringLiteral("Looks good"));
+                auto* successEditor = new LineEdit;
+                successEditor->setText(QStringLiteral("Alex Chen"));
+                success->setEditor(
+                    successEditor, WidgetOwnership::Owned);
+                layout->addWidget(success);
+                return card;
+            })
+    };
+}
+
 } // namespace
 
 QVector<GallerySample> layoutSamples(const QString& routeId)
@@ -515,6 +659,8 @@ QVector<GallerySample> layoutSamples(const QString& routeId)
         return dividerSamples();
     if (routeId == QStringLiteral("expander"))
         return expanderSamples();
+    if (routeId == QStringLiteral("field"))
+        return fieldSamples();
     return {};
 }
 

@@ -61,7 +61,7 @@ def main():
     for asset in required_assets:
         if not asset.is_file():
             raise AssertionError("Standalone Gallery asset is missing: {0}".format(asset))
-    if len(tuple((package_dir / "assets" / "control_images").rglob("*.png"))) != 74:
+    if len(tuple((package_dir / "assets" / "control_images").rglob("*.png"))) != 75:
         raise AssertionError("Standalone Gallery has the wrong control-image count")
     if len(tuple((package_dir / "assets" / "home_header_tiles").glob("*.png"))) != 7:
         raise AssertionError("Standalone Gallery has the wrong Home-tile count")
@@ -69,11 +69,11 @@ def main():
     sample_count = sum(len(entry.samples) for entry in ENTRIES)
     if (
         len(CATEGORIES) != 12
-        or len(ENTRIES) != 67
-        or len(ROUTES) != 88
+        or len(ENTRIES) != 68
+        or len(ROUTES) != 89
         or len(SUPPORT_TYPES) != 20
-        or sample_count != 199
-        or len(ported_sample_keys()) != 199
+        or sample_count != 202
+        or len(ported_sample_keys()) != 202
     ):
         raise AssertionError("Standalone Gallery catalog has wrong coverage")
 
@@ -94,7 +94,7 @@ def main():
         raise AssertionError(
             "Standalone Gallery route failures: {0}".format("; ".join(failures))
         )
-    if len(window.all_route_ids()) != 88:
+    if len(window.all_route_ids()) != 89:
         raise AssertionError("Standalone Gallery has wrong route coverage")
     window.navigate_component("button")
     if window.current_route != "button":
