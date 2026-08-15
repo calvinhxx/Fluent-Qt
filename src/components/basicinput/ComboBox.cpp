@@ -21,8 +21,10 @@
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 #include "compatibility/TextPaintCompat.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayShadow.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/LineEdit.h"
@@ -35,6 +37,9 @@ static constexpr int kPopupItemOuterInset = 5;
 static constexpr int kPopupItemTextLeftInset = 16;
 static constexpr int kPopupItemTextRightInset = 8;
 static constexpr int kClosedFieldTextFitClearance = ::Spacing::XSmall;
+static constexpr qreal kPopupShadowIntensity = 0.18;
+static constexpr int kPopupShadowLayerCount = 6;
+static constexpr int kPopupShadowVerticalOffset = 1;
 
 // Suppress QStyle's PE_PanelLineEdit native panel — ComboBox paints its own bg
 class TransparentLineEditStyle : public QProxyStyle {
@@ -149,7 +154,7 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox)
     setObjectName("ComboBoxPopup");
     setAnimationEnabled(false);
     setPlacement(fluent::dialogs_flyouts::Flyout::Auto);
-    setAnchorOffset(comboBox ? comboBox->popupOffset() : ::Spacing::XSmall);
+    setAnchorOffset(comboBox ? comboBox->popupOffset() : ::Spacing::Small);
     setModal(false);
     setDim(false);
     setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
@@ -157,14 +162,23 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox)
     m_listView = new fluent::collections::ListView(this);
     m_listView->setObjectName("ComboBoxPopupListView");
     m_listView->setBorderVisible(false);
-    // The Flyout card (Popup::paintEvent) already paints an opaque bgLayer surface rounded at the
+    // ComboBoxPopup already paints an opaque bgLayer surface rounded at the
     // overlay radius (8px). A second ListView background would also paint an opaque corner mask
     // rounded at only the control radius (4px) and inset just 2px, so its filled corners poke past
     // the card's 8px-rounded corners as white "dog-ears". Let the card be the single surface.
-    // zh_CN: Flyout 卡片(Popup::paintEvent)已绘制按 overlay 圆角(8px)的不透明 bgLayer 表面。再让 ListView
+    // zh_CN: ComboBoxPopup 已绘制按 overlay 圆角(8px)的不透明 bgLayer 表面。再让 ListView
     // 画背景会叠加一层按 control 圆角(4px)、仅内缩 2px 的不透明圆角遮罩,其填充的四角会超出卡片 8px 圆角,
     // 形成白色「狗耳」。让卡片成为唯一表面即可。
     m_listView->setBackgroundVisible(false);
+    // The transparent collection viewport must preserve that parent-painted
+    // card. On Mica windows its normal stale-pixel cleanup uses Source mode;
+    // without this opt-out it erases the locally themed popup surface and
+    // exposes the window backdrop (most visible in a dark Gallery preview).
+    // zh_CN: 透明列表视口必须保留父级绘制的卡片。Mica 窗口下常规清屏会用
+    // Source 模式擦掉局部主题底板，露出窗口背景；暗色 Gallery 预览最明显。
+    m_listView->setProperty("fluentPreserveParentSurface", true);
+    if (m_listView->viewport())
+        m_listView->viewport()->setProperty("fluentPreserveParentSurface", true);
     m_listView->setSelectionMode(fluent::collections::ListView::SelectionMode::Single);
     m_listView->setSpacing(0);
 
@@ -258,6 +272,41 @@ void ComboBox::ComboBoxPopup::onThemeUpdated() {
         m_listView->setFont(m_comboBox->themeFont(m_comboBox->fontRole()).toQFont());
     }
     if (m_listView && m_listView->viewport()) m_listView->viewport()->update();
+}
+
+void ComboBox::ComboBoxPopup::paintEvent(QPaintEvent*) {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // ComboBox dropdowns sit close to their field, so use the compact menu
+    // elevation profile instead of Popup's denser floating-card shadow. The
+    // smaller spread plus the default 8px anchor gap prevents the shadow from
+    // painting back across the closed field in either placement direction.
+    // zh_CN: ComboBox 下拉紧邻输入框，使用更轻、更窄的菜单高程，而不是 Popup
+    // 的高强度浮层阴影；配合默认 8px 间距，向上或向下弹出时都不会反压输入框。
+    const QRect contentRect = ::fluent::overlay::visibleCardRect(
+        rect(), kPopupShadowMargin);
+    const int radius = themeRadius().overlay;
+    ::fluent::overlay::paintLayeredShadow(
+        painter,
+        contentRect,
+        radius,
+        themeShadow(Elevation::High),
+        kPopupShadowIntensity,
+        kPopupShadowLayerCount,
+        kPopupShadowVerticalOffset);
+
+    const auto& colors = themeColorsRef();
+    fluent::painting::RoundedSurfacePaint surface;
+    surface.fill = colors.bgLayer;
+    surface.radius = radius;
+    if (themeDesignLanguage() == DesignMaterial)
+        surface.border = Qt::transparent;
+    else if (themeDesignLanguage() == DesignCupertino)
+        surface.border = colors.strokeDefault;
+    else
+        surface.border = colors.strokeCard;
+    fluent::painting::paintRoundedSurface(painter, QRectF(contentRect), surface);
 }
 
 QPoint ComboBox::ComboBoxPopup::computePosition() const {

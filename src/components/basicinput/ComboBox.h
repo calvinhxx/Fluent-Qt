@@ -190,7 +190,7 @@ private:
     QString m_chevronGlyph   = Typography::Icons::ChevronDownMed;
     int     m_chevronSize    = Typography::IconSize::Compact;
     QPoint  m_chevronOffset  {::Spacing::Padding::ComboBoxHorizontal, 0};
-    int     m_popupOffset    = ::Spacing::XSmall; // 4px gap between combo and popup
+    int     m_popupOffset    = ::Spacing::Small; // 8px keeps the dropdown shadow clear of its anchor
 
     // --- State ---
     bool  m_hovered  = false;
@@ -230,6 +230,7 @@ public:
     void onThemeUpdated() override;
 
 protected:
+    void paintEvent(QPaintEvent* event) override;
     QPoint computePosition() const override;
     bool eventFilter(QObject* watched, QEvent* event) override;
 

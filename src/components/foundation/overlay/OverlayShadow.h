@@ -14,6 +14,8 @@ namespace fluent::overlay {
  * zh_CN: 浮层卡片阴影的默认逐层透明度系数。
  */
 constexpr qreal defaultShadowIntensity = 0.35;
+constexpr int defaultShadowLayerCount = 10;
+constexpr int defaultShadowVerticalOffset = 2;
 
 /**
  * @brief Paints a WinUI-style soft shadow as stacked translucent rounded rects.
@@ -33,15 +35,20 @@ constexpr qreal defaultShadowIntensity = 0.35;
  *               zh_CN: 主题阴影 token（颜色与基础透明度）。
  * @param intensity Per-layer opacity multiplier; see defaultShadowIntensity.
  *                  zh_CN: 逐层透明度系数，见 defaultShadowIntensity。
+ * @param layerCount Number of expanding shadow layers.
+ *                   zh_CN: 向外扩散的阴影层数。
+ * @param verticalOffset Downward offset applied to every layer.
+ *                       zh_CN: 每层阴影统一向下偏移的像素数。
  */
 inline void paintLayeredShadow(QPainter& painter,
                                const QRect& cardRect,
                                qreal cornerRadius,
                                const Elevation::ShadowParams& params,
-                               qreal intensity = defaultShadowIntensity)
+                               qreal intensity = defaultShadowIntensity,
+                               int layerCount = defaultShadowLayerCount,
+                               int verticalOffset = defaultShadowVerticalOffset)
 {
-    constexpr int layers = 10;
-    constexpr int offsetY = 2;
+    const int layers = layerCount > 0 ? layerCount : 1;
 
     painter.setPen(Qt::NoPen);
     for (int i = 0; i < layers; ++i) {
@@ -50,7 +57,7 @@ inline void paintLayeredShadow(QPainter& painter,
         layerColor.setAlphaF(params.opacity * ratio * intensity);
         painter.setBrush(layerColor);
         painter.drawRoundedRect(
-            cardRect.adjusted(-i, -i, i, i).translated(0, offsetY),
+            cardRect.adjusted(-i, -i, i, i).translated(0, verticalOffset),
             cornerRadius + i, cornerRadius + i);
     }
 }
