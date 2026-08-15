@@ -36,6 +36,13 @@ When generating artwork with an image model, assume the model may emit an
 opaque full-bleed square. Always post-process with a transparent rounded-rect
 mask before committing.
 
+Gallery cards reserve a 40 × 40 logical-pixel icon slot but center bitmap
+artwork in a 36 × 36 rectangle. This maps a 72 × 72 source one-for-one on a
+2x backing store instead of blurring it through a 72 → 80 upscale. Do not
+enlarge the bitmap to fill the slot in application or binding code. FontIcon
+glyph tiles may use the complete 40 × 40 slot because they render at the target
+device resolution.
+
 ## Category Color Families
 
 Icons in the same category share one background color family. Glyphs stay
@@ -65,6 +72,14 @@ control.
 5. Add the file under the correct `control_images/<category-id>/` folder.
 6. Register it in `app/gallery_resources.qrc`.
 7. Rebuild Gallery and confirm the card image on light and dark chrome.
+8. Run `python tools/gallery/normalize_control_images.py`. Use `--fix` only
+   when importing a legacy image whose canvas is not 72 × 72; smaller images
+   are centered without enlarging their artwork, while oversized canvases are
+   proportionally reduced.
+
+The five Layout-family tiles are deterministic assets. Regenerate them with
+`python tools/gallery/generate_layout_control_images.py` so their coral fill,
+line weight, radius, and alpha treatment stay identical.
 
 ## Verification
 

@@ -11,6 +11,7 @@ namespace fluent::gallery {
 namespace {
 
 constexpr int kTileSize = 40;
+constexpr int kControlImageSize = 36;
 constexpr int kGlyphSize = Typography::IconSize::Large;
 
 } // namespace
@@ -51,8 +52,13 @@ void GalleryIconTile::paintEvent(QPaintEvent*)
         return;
     }
 
-    if (!m_pixmap.isNull())
-        fluentDrawPixmapInLogicalRect(painter, rect(), m_pixmap);
+    if (!m_pixmap.isNull()) {
+        const int inset = (kTileSize - kControlImageSize) / 2;
+        fluentDrawPixmapInLogicalRect(
+            painter,
+            rect().adjusted(inset, inset, -inset, -inset),
+            m_pixmap);
+    }
 }
 
 } // namespace fluent::gallery

@@ -10,6 +10,7 @@
 #include <QBoxLayout>
 #include <QClipboard>
 #include <QContextMenuEvent>
+#include <QDirIterator>
 #include <QElapsedTimer>
 #include <QEvent>
 #include <QFrame>
@@ -25,6 +26,7 @@
 #include <QPoint>
 #include <QPixmap>
 #include <QScrollBar>
+#include <QSet>
 #include <QSizePolicy>
 #include <QStringList>
 #include <QTest>
@@ -1123,6 +1125,60 @@ TEST_F(GalleryContentPagesTest, ComponentCardsUseBundledImagesOrCatalogGlyphs)
             EXPECT_NE(resource, placeholder) << component.title.toStdString();
             EXPECT_TRUE(QFile::exists(resource)) << resource.toStdString();
         }
+    }
+}
+
+TEST_F(GalleryContentPagesTest, ControlImageAssetsMeetPixelContract)
+{
+    const QString placeholder =
+        QStringLiteral(":/app/assets/control_images/Placeholder.png");
+    QSet<QString> expected{placeholder};
+    for (const auto& category : galleryComponentCatalog()) {
+        for (const auto& component : category.components) {
+            const QString resource = galleryControlImageResource(component.title);
+            ASSERT_FALSE(resource.isEmpty()) << component.title.toStdString();
+            ASSERT_NE(resource, placeholder) << component.title.toStdString();
+            expected.insert(resource);
+        }
+    }
+    const QStringList foundationTopics{
+        QStringLiteral("QML+"),
+        QStringLiteral("Typography"),
+        QStringLiteral("Color"),
+        QStringLiteral("Iconography"),
+        QStringLiteral("Geometry"),
+        QStringLiteral("Spacing")
+    };
+    for (const QString& title : foundationTopics) {
+        const QString resource = galleryControlImageResource(title);
+        ASSERT_FALSE(resource.isEmpty()) << title.toStdString();
+        ASSERT_NE(resource, placeholder) << title.toStdString();
+        expected.insert(resource);
+    }
+
+    QSet<QString> actual;
+    QDirIterator resources(
+        QStringLiteral(":/app/assets/control_images"),
+        QStringList{QStringLiteral("*.png")},
+        QDir::Files,
+        QDirIterator::Subdirectories);
+    while (resources.hasNext())
+        actual.insert(resources.next());
+
+    EXPECT_EQ(actual, expected);
+    for (const QString& resource : actual) {
+        const QImage image(resource);
+        ASSERT_FALSE(image.isNull()) << resource.toStdString();
+        EXPECT_EQ(image.size(), QSize(72, 72)) << resource.toStdString();
+        EXPECT_TRUE(image.hasAlphaChannel()) << resource.toStdString();
+        EXPECT_EQ(qAlpha(image.pixel(0, 0)), 0) << resource.toStdString();
+        EXPECT_EQ(qAlpha(image.pixel(image.width() - 1, 0)), 0)
+            << resource.toStdString();
+        EXPECT_EQ(qAlpha(image.pixel(0, image.height() - 1)), 0)
+            << resource.toStdString();
+        EXPECT_EQ(
+            qAlpha(image.pixel(image.width() - 1, image.height() - 1)),
+            0) << resource.toStdString();
     }
 }
 

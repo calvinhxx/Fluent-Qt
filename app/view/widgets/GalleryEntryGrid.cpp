@@ -20,6 +20,13 @@ constexpr int kGridSpacing = 12;
 constexpr int kMinCardHeight = 86;
 constexpr int kCardPadding = 16;
 constexpr int kIconSize = 40;
+// Control artwork is authored at 72 px. Keep a 40 px layout slot, but paint the
+// bitmap into 36 logical px so a 2x backing store consumes the source pixels
+// one-for-one instead of upsampling 72 -> 80. Glyph tiles still use the full
+// slot because they are rendered from the bundled vector-like icon font.
+// zh_CN: 控件图以 72px 制作。布局槽位仍为 40px，但位图只绘制到 36 个逻辑像素，
+// 使 2x 背板恰好按 72→72 映射，避免 72→80 放大；字体图标仍使用完整槽位。
+constexpr int kControlImageSize = 36;
 constexpr int kIconTextGap = 16;
 constexpr int kTitleDescGap = 3;
 
@@ -296,7 +303,11 @@ void GalleryEntryGrid::paintEvent(QPaintEvent* event)
             painter.drawText(iconRect, Qt::AlignCenter,
                              Typography::Icons::glyphForSize(entry.iconGlyph, glyphSize));
         } else if (!entry.icon.isNull()) {
-            fluentDrawPixmapInLogicalRect(painter, iconRect, entry.icon);
+            const int inset = (kIconSize - kControlImageSize) / 2;
+            fluentDrawPixmapInLogicalRect(
+                painter,
+                iconRect.adjusted(inset, inset, -inset, -inset),
+                entry.icon);
         }
 
         const int textLeft = iconRect.right() + 1 + kIconTextGap;
