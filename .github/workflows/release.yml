@@ -447,7 +447,7 @@ jobs:
             build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
 
   source-package:
-    name: Package FluentQt source
+    name: Package source and Agent Skill
     needs: preflight
     runs-on: ubuntu-latest
     permissions:
@@ -458,16 +458,21 @@ jobs:
         with:
           ref: ${{ needs.preflight.outputs.tag }}
 
-      - name: Create FluentQt library source package
+      - name: Create source and Agent Skill packages
         shell: bash
         run: |
+          set -euo pipefail
           cmake \
             -D "FLUENT_QT_SOURCE_DIR=$GITHUB_WORKSPACE" \
             -D "FLUENT_QT_SOURCE_PACKAGE_DIR=$RUNNER_TEMP/release-source" \
             -D "FLUENT_QT_SOURCE_PACKAGE_VERSION=${{ needs.preflight.outputs.version }}" \
             -P cmake/CreateSourcePackage.cmake
+          python3 tools/ai/package_fluentqt_skill.py \
+            --project-root . \
+            --output-dir "$RUNNER_TEMP/release-source" \
+            --version "${{ needs.preflight.outputs.version }}"
 
-      - name: Upload FluentQt library source package
+      - name: Upload source and Agent Skill packages
         uses: actions/upload-artifact@v4
         with:
           name: release-source
