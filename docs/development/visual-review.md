@@ -87,6 +87,10 @@ Run only VisualCheck tests. The window closes when the reviewer closes it.
 Do not set `SKIP_VISUAL_TEST` for manual review. Automated CTest runs set
 `SKIP_VISUAL_TEST=1` to skip interactive cases.
 
+For Light/Dark/RTL *regression* against three checked-in PNGs, use the
+opt-in `visual_gate` in [Testing Workflow](testing-workflow.md). That gate is
+not a substitute for this interactive review.
+
 ## Review Checklist
 
 - Colors match semantic tokens in `ThemeColors.h`.

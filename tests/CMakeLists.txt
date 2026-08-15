@@ -156,6 +156,7 @@ macro(add_qt_test_module module_name source_file)
     target_compile_definitions(${module_name} PRIVATE
         FLUENT_QT_TEST_BINARY_DIR="${CMAKE_BINARY_DIR}"
         FLUENT_QT_TEST_TARGET="${module_name}"
+        FLUENT_QT_VISUAL_BASELINE_DIR="${CMAKE_SOURCE_DIR}/tests/visual-baselines"
     )
     set_target_properties(${module_name} PROPERTIES LABELS "${_test_labels}")
 
@@ -186,6 +187,7 @@ macro(add_qt_test_module module_name source_file)
             set(_fluent_qt_is_manual_visual FALSE)
             set(_fluent_qt_is_local_desktop FALSE)
             set(_fluent_qt_is_known_contract_gap FALSE)
+            set(_fluent_qt_is_visual_gate FALSE)
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])Contract_")
                 list(APPEND _fluent_qt_labels contract)
                 get_test_property(
@@ -212,6 +214,9 @@ macro(add_qt_test_module module_name source_file)
                 set(_fluent_qt_is_local_desktop TRUE)
                 list(APPEND _fluent_qt_labels local_desktop)
             endif()
+            if(_fluent_qt_test_name MATCHES "(^|[._/:-])VisualGate")
+                set(_fluent_qt_is_visual_gate TRUE)
+            endif()
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*Interactive[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels interactive)
             endif()
@@ -229,20 +234,24 @@ macro(add_qt_test_module module_name source_file)
             elseif(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels platform_macos)
             endif()
-            if(NOT _fluent_qt_is_manual_visual AND NOT _fluent_qt_is_known_contract_gap)
+            if(NOT _fluent_qt_is_manual_visual
+               AND NOT _fluent_qt_is_known_contract_gap
+               AND NOT _fluent_qt_is_visual_gate)
                 list(APPEND _fluent_qt_labels local_full)
             endif()
             if(_fluent_qt_is_ci_full_target
                AND NOT _fluent_qt_is_manual_visual
                AND NOT _fluent_qt_is_local_desktop
-               AND NOT _fluent_qt_is_known_contract_gap)
+               AND NOT _fluent_qt_is_known_contract_gap
+               AND NOT _fluent_qt_is_visual_gate)
                 list(APPEND _fluent_qt_labels ci_full)
                 set(_fluent_qt_target_has_ci_full TRUE)
             endif()
             if(_fluent_qt_is_ci_fast_target
                AND NOT _fluent_qt_is_manual_visual
                AND NOT _fluent_qt_is_local_desktop
-               AND NOT _fluent_qt_is_known_contract_gap)
+               AND NOT _fluent_qt_is_known_contract_gap
+               AND NOT _fluent_qt_is_visual_gate)
                 list(APPEND _fluent_qt_labels ci_fast)
             endif()
             list(REMOVE_DUPLICATES _fluent_qt_labels)
@@ -258,11 +267,13 @@ endmacro()
 # 直接运行二进制（Qt Creator 中运行）时，可视化测试默认执行。
 # ctest 自动化运行时，通过 ENVIRONMENT 属性注入 SKIP_VISUAL_TEST=1，自动跳过。
 # 直接运行二进制并设置 VISUAL_SNAPSHOT=1 时，已迁移的 VisualCheck 生成 PNG 后退出。
+# 代表性 visual_gate 用 VISUAL_COMPARE=1 对比 tests/visual-baselines/；默认 CTest 仍注入 SKIP_VISUAL_TEST=1。
 # 运行方式：
 #   ctest --verbose                                              ← 跑全部单元测试，VisualCheck 自动 SKIP
 #   ./build/bin/test_xxx                                         ← 启动某个组件的全部测试（含可视化）
 #   ./build/bin/test_xxx --gtest_filter="*VisualCheck*"         ← 只跑可视化测试
 #   VISUAL_SNAPSHOT=1 ./build/bin/test_xxx --gtest_filter="*VisualCheck*" ← 生成 build/visual/*.png
+#   ctest --preset vcpkg-osx -L '^visual_gate$' --output-on-failure ← 3 张基线的 opt-in 像素门禁
 
 # 按源码目录结构添加子目录，Qt Creator 工程树会呈现层级
 add_qt_test_module(test_project_logging TestProjectLogging.cpp)

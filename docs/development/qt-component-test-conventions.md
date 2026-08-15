@@ -67,6 +67,9 @@ synchronization, use [Testing Workflow](testing-workflow.md).
 - VisualCheck tests must guard on `SKIP_VISUAL_TEST`, show the test window, and
   block with `qApp->exec()` until the window is closed.
 - Do not replace VisualCheck event-loop blocking with `QTest::qWait()`.
+- Do not convert VisualCheck tests into baseline compares. The representative
+  Light/Dark/RTL pixel gate lives in `test_visual_gate` and is documented in
+  [Testing Workflow](testing-workflow.md).
 
 ## Validation
 

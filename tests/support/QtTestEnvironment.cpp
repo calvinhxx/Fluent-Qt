@@ -5,8 +5,11 @@
 #include "components/foundation/FluentElement.h"
 
 #include <QApplication>
+#include <QColor>
+#include <QCoreApplication>
 #include <QDir>
 #include <QEvent>
+#include <QEventLoop>
 #include <QGuiApplication>
 #include <QFile>
 #include <QFileInfo>
@@ -15,6 +18,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QStringLiteral>
+#include <QStyle>
 #include <QWidget>
 
 #ifndef FLUENT_QT_TEST_BINARY_DIR
@@ -23,6 +27,10 @@
 
 #ifndef FLUENT_QT_TEST_TARGET
 #define FLUENT_QT_TEST_TARGET "unknown_test"
+#endif
+
+#ifndef FLUENT_QT_VISUAL_BASELINE_DIR
+#define FLUENT_QT_VISUAL_BASELINE_DIR ""
 #endif
 
 namespace tests::support {
@@ -43,6 +51,45 @@ QString configuredBinaryDir()
 {
     const QString binaryDir = QString::fromUtf8(FLUENT_QT_TEST_BINARY_DIR);
     return binaryDir.isEmpty() ? QDir::currentPath() : binaryDir;
+}
+
+QString snapshotIdentityFileName(const QString& variant)
+{
+    QStringList parts;
+    parts << sanitizeSnapshotPart(QString::fromUtf8(FLUENT_QT_TEST_TARGET));
+
+    if (const auto* info = ::testing::UnitTest::GetInstance()->current_test_info()) {
+        parts << sanitizeSnapshotPart(QString::fromUtf8(info->test_suite_name()));
+        parts << sanitizeSnapshotPart(QString::fromUtf8(info->name()));
+    } else {
+        parts << QStringLiteral("unknown_suite") << QStringLiteral("unknown_test");
+    }
+
+    if (!variant.trimmed().isEmpty())
+        parts << sanitizeSnapshotPart(variant);
+
+    return parts.join(QStringLiteral("__")) + QStringLiteral(".png");
+}
+
+QString visualDiffFilePath(const QString& actualPath)
+{
+    const QFileInfo info(actualPath);
+    return info.dir().filePath(info.completeBaseName() + QStringLiteral(".diff.png"));
+}
+
+QImage normalizeSnapshotImage(const QImage& image)
+{
+    if (image.isNull())
+        return image;
+    if (image.format() == QImage::Format_ARGB32)
+        return image;
+    return image.convertToFormat(QImage::Format_ARGB32);
+}
+
+bool envFlagIsOn(const char* name)
+{
+    return qEnvironmentVariableIsSet(name)
+        && qEnvironmentVariable(name) == QStringLiteral("1");
 }
 } // namespace
 
@@ -87,13 +134,52 @@ bool isHeadlessPlatform()
 
 bool isVisualSnapshotMode()
 {
-    return qEnvironmentVariableIsSet("VISUAL_SNAPSHOT")
-        && qEnvironmentVariable("VISUAL_SNAPSHOT") == QStringLiteral("1");
+    return envFlagIsOn("VISUAL_SNAPSHOT");
+}
+
+bool isVisualCompareMode()
+{
+    return envFlagIsOn("VISUAL_COMPARE");
+}
+
+bool shouldUpdateVisualBaseline()
+{
+    return envFlagIsOn("VISUAL_UPDATE_BASELINE");
 }
 
 bool shouldCaptureVisualSnapshot()
 {
     return isVisualSnapshotMode() && !shouldSkipVisualTest();
+}
+
+bool shouldRunVisualGate()
+{
+    return !shouldSkipVisualTest()
+        && (isVisualSnapshotMode() || isVisualCompareMode() || shouldUpdateVisualBaseline());
+}
+
+bool isVisualGateApprovalHost()
+{
+#if defined(Q_OS_MACOS) && defined(Q_PROCESSOR_ARM_64)
+    if (isHeadlessPlatform()
+        || QGuiApplication::platformName() != QLatin1String("cocoa")) {
+        return false;
+    }
+
+    const QStyle* style = QApplication::style();
+    const bool fusionStyle = style
+        && style->objectName().compare(QStringLiteral("fusion"),
+                                       Qt::CaseInsensitive) == 0;
+    const bool fixedScale = qEnvironmentVariable("QT_SCALE_FACTOR")
+        == QLatin1String("1");
+    const bool fixedFontDpi = qEnvironmentVariable("QT_FONT_DPI")
+        == QLatin1String("96");
+    const bool noPerScreenOverride =
+        qEnvironmentVariableIsEmpty("QT_SCREEN_SCALE_FACTORS");
+    return fusionStyle && fixedScale && fixedFontDpi && noPerScreenOverride;
+#else
+    return false;
+#endif
 }
 
 QString visualSnapshotDirectory()
@@ -103,20 +189,125 @@ QString visualSnapshotDirectory()
 
 QString visualSnapshotFilePath(const QString& variant)
 {
-    QStringList parts;
-    parts << sanitizeSnapshotPart(QString::fromUtf8(FLUENT_QT_TEST_TARGET));
+    return QDir(visualSnapshotDirectory()).filePath(snapshotIdentityFileName(variant));
+}
 
-    if (const auto* info = ::testing::UnitTest::GetInstance()->current_test_info()) {
-        parts << sanitizeSnapshotPart(QString::fromUtf8(info->test_suite_name()));
-        parts << sanitizeSnapshotPart(QString::fromUtf8(info->name()));
-    } else {
-        parts << QStringLiteral("unknown_suite") << QStringLiteral("unknown_test");
+QString visualBaselineDirectory()
+{
+    const QString fromEnv = qEnvironmentVariable("FLUENT_QT_VISUAL_BASELINE_DIR");
+    if (!fromEnv.trimmed().isEmpty())
+        return fromEnv;
+
+    const QString fromCompile = QString::fromUtf8(FLUENT_QT_VISUAL_BASELINE_DIR);
+    if (!fromCompile.trimmed().isEmpty())
+        return fromCompile;
+
+    return QDir(configuredBinaryDir()).filePath(QStringLiteral("visual-baselines"));
+}
+
+QString visualBaselineFilePath(const QString& variant)
+{
+    return QDir(visualBaselineDirectory()).filePath(snapshotIdentityFileName(variant));
+}
+
+::testing::AssertionResult compareVisualImages(const QImage& actual, const QImage& expected)
+{
+    if (actual.isNull())
+        return ::testing::AssertionFailure() << "Actual visual snapshot image is null";
+    if (expected.isNull())
+        return ::testing::AssertionFailure() << "Expected visual baseline image is null";
+
+    const QImage actualArgb = normalizeSnapshotImage(actual);
+    const QImage expectedArgb = normalizeSnapshotImage(expected);
+    if (actualArgb.size() != expectedArgb.size()) {
+        return ::testing::AssertionFailure()
+               << "Visual snapshot size " << actualArgb.width() << "x" << actualArgb.height()
+               << " does not match baseline " << expectedArgb.width() << "x"
+               << expectedArgb.height();
     }
 
-    if (!variant.trimmed().isEmpty())
-        parts << sanitizeSnapshotPart(variant);
+    int mismatchedPixels = 0;
+    int maxChannelDelta = 0;
+    for (int y = 0; y < actualArgb.height(); ++y) {
+        const auto* actualLine = reinterpret_cast<const QRgb*>(actualArgb.constScanLine(y));
+        const auto* expectedLine = reinterpret_cast<const QRgb*>(expectedArgb.constScanLine(y));
+        for (int x = 0; x < actualArgb.width(); ++x) {
+            const QRgb actualPixel = actualLine[x];
+            const QRgb expectedPixel = expectedLine[x];
+            if (actualPixel == expectedPixel)
+                continue;
 
-    return QDir(visualSnapshotDirectory()).filePath(parts.join(QStringLiteral("__")) + QStringLiteral(".png"));
+            ++mismatchedPixels;
+            const int delta = qMax(qMax(qAbs(qRed(actualPixel) - qRed(expectedPixel)),
+                                        qAbs(qGreen(actualPixel) - qGreen(expectedPixel))),
+                                   qMax(qAbs(qBlue(actualPixel) - qBlue(expectedPixel)),
+                                        qAbs(qAlpha(actualPixel) - qAlpha(expectedPixel))));
+            maxChannelDelta = qMax(maxChannelDelta, delta);
+        }
+    }
+
+    if (mismatchedPixels == 0)
+        return ::testing::AssertionSuccess();
+
+    return ::testing::AssertionFailure()
+           << mismatchedPixels << " of "
+           << (actualArgb.width() * actualArgb.height())
+           << " pixels differ from the visual baseline (max channel delta "
+           << maxChannelDelta << ")";
+}
+
+::testing::AssertionResult compareVisualSnapshotToBaseline(const QString& actualPath,
+                                                           const QString& variant)
+{
+    const QString baselinePath = visualBaselineFilePath(variant);
+    const QFileInfo baselineInfo(baselinePath);
+    if (!baselineInfo.exists() || baselineInfo.size() <= 0) {
+        return ::testing::AssertionFailure()
+               << "Missing visual baseline: " << baselinePath.toStdString()
+               << ". Generate it on the approval host with VISUAL_SNAPSHOT=1 "
+                  "VISUAL_UPDATE_BASELINE=1.";
+    }
+
+    const QImage actual(actualPath);
+    const QImage expected(baselinePath);
+    const auto comparison = compareVisualImages(actual, expected);
+    if (comparison)
+        return comparison;
+
+    const QImage actualArgb = normalizeSnapshotImage(actual);
+    const QImage expectedArgb = normalizeSnapshotImage(expected);
+    if (!actualArgb.isNull() && actualArgb.size() == expectedArgb.size()) {
+        QImage diff(actualArgb.size(), QImage::Format_ARGB32);
+        for (int y = 0; y < actualArgb.height(); ++y) {
+            const auto* actualLine = reinterpret_cast<const QRgb*>(actualArgb.constScanLine(y));
+            const auto* expectedLine = reinterpret_cast<const QRgb*>(expectedArgb.constScanLine(y));
+            auto* diffLine = reinterpret_cast<QRgb*>(diff.scanLine(y));
+            for (int x = 0; x < actualArgb.width(); ++x) {
+                if (actualLine[x] == expectedLine[x]) {
+                    const QColor dim = QColor::fromRgba(actualLine[x]);
+                    diffLine[x] = QColor(dim.red() / 3, dim.green() / 3, dim.blue() / 3, 255).rgba();
+                } else {
+                    diffLine[x] = qRgb(220, 32, 32);
+                }
+            }
+        }
+
+        const QString diffPath = visualDiffFilePath(actualPath);
+        QFile::remove(diffPath);
+        if (!diff.save(diffPath, "PNG")) {
+            return ::testing::AssertionFailure()
+                   << comparison.message() << "; also failed to write diff PNG "
+                   << diffPath.toStdString();
+        }
+        return ::testing::AssertionFailure()
+               << comparison.message() << "; actual=" << actualPath.toStdString()
+               << " baseline=" << baselinePath.toStdString()
+               << " diff=" << diffPath.toStdString();
+    }
+
+    return ::testing::AssertionFailure()
+           << comparison.message() << "; actual=" << actualPath.toStdString()
+           << " baseline=" << baselinePath.toStdString();
 }
 
 ::testing::AssertionResult captureVisualSnapshot(QWidget* window, const VisualSnapshotOptions& options)
@@ -158,6 +349,13 @@ QString visualSnapshotFilePath(const QString& variant)
     for (QWidget* child : childWidgets)
         clearHoverState(child);
 
+    // QWidget::grab() keeps the platform graphics context required by native
+    // item-view/style painting on macOS. QWidget::render(QImage) can fall back
+    // to incomplete native-style output (missing selection layers and frames).
+    // Normalize the physical-DPR pixmap back to the requested logical size.
+    // zh_CN: QWidget::grab() 会保留 macOS 原生 item-view/style 绘制所需的
+    // graphics context；直接 render(QImage) 可能丢失选中层和边框。最终再把
+    // 物理 DPR 图像归一到约定的逻辑尺寸。
     const QPixmap snapshot = window->grab();
     fluent::FluentElement::setTheme(previousTheme);
 
@@ -165,8 +363,10 @@ QString visualSnapshotFilePath(const QString& variant)
         return ::testing::AssertionFailure() << "Visual snapshot grab returned a null pixmap";
 
     QImage snapshotImage = snapshot.toImage();
-    if (snapshotImage.size() != snapshotSize)
-        snapshotImage = snapshotImage.scaled(snapshotSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    if (snapshotImage.size() != snapshotSize) {
+        snapshotImage = snapshotImage.scaled(
+            snapshotSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    }
 
     const QString outputDir = visualSnapshotDirectory();
     if (!QDir().mkpath(outputDir)) {
@@ -186,6 +386,27 @@ QString visualSnapshotFilePath(const QString& variant)
         return ::testing::AssertionFailure()
                << "Visual snapshot PNG is empty: " << outputPath.toStdString();
     }
+
+    if (shouldUpdateVisualBaseline()) {
+        const QString baselineDir = visualBaselineDirectory();
+        if (!QDir().mkpath(baselineDir)) {
+            return ::testing::AssertionFailure()
+                   << "Failed to create visual baseline directory: "
+                   << baselineDir.toStdString();
+        }
+        const QString baselinePath = visualBaselineFilePath(options.variant);
+        QFile::remove(baselinePath);
+        if (!QFile::copy(outputPath, baselinePath)) {
+            return ::testing::AssertionFailure()
+                   << "Failed to copy visual snapshot to baseline: "
+                   << baselinePath.toStdString();
+        }
+        return ::testing::AssertionSuccess()
+               << "Updated visual baseline: " << baselinePath.toStdString();
+    }
+
+    if (isVisualCompareMode())
+        return compareVisualSnapshotToBaseline(outputPath, options.variant);
 
     return ::testing::AssertionSuccess()
            << "Saved visual snapshot: " << outputPath.toStdString();

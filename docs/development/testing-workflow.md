@@ -23,6 +23,9 @@ with README, CMake, and agent instructions.
 - `manual_visual` identifies tests that must be reviewed by running the binary
   directly. `local_desktop` identifies tests that need a real windowing desktop
   rather than the CI offscreen platform.
+- `visual_gate` is the opt-in representative Light/Dark/RTL snapshot compare
+  (three checked-in PNGs). It is not part of `ci_fast`, `ci_full`, or
+  `local_full`.
 - Discovered tests also receive conservative semantic labels based on test-name
   tokens: `visual`, `interactive`, `animation`, `slow`, `platform_windows`,
   `platform_macos`, and `design_macos`. VisualCheck tests receive `visual`,
@@ -40,6 +43,7 @@ ctest --preset vcpkg-osx -L '^local_full$' --output-on-failure
 ctest --preset vcpkg-osx -N -L '^visual$'
 ctest --preset vcpkg-osx -N -L '^manual_visual$'
 ctest --preset vcpkg-osx -N -L '^local_desktop$'
+ctest --preset vcpkg-osx -N -L '^visual_gate$'
 ctest --preset vcpkg-osx -L '^animation$' --output-on-failure
 ctest --preset vcpkg-osx -N -L '^platform_macos$'
 ```
@@ -245,20 +249,80 @@ directly so `SKIP_VISUAL_TEST` is not inherited from CTest.
 VISUAL_SNAPSHOT=1 ./build/vcpkg-osx/tests/components/textfields/test_label --gtest_filter="LabelTest.VisualCheck"
 ```
 
-- Snapshot files are written to `build/vcpkg-osx/visual/` using stable names such
+- Snapshot files are written to `build/<preset>/visual/` using stable names such
   as `<target>__<suite>__<test>[_variant].png`. Repeated runs overwrite the same
-  file. This phase only verifies that a non-empty PNG is generated; it does not
-  perform pixel diffing or baseline approval.
+  file. Migrated VisualCheck tests still only verify that a non-empty PNG was
+  written. They are not a screenshot farm and do not compare against baselines.
 - If both `SKIP_VISUAL_TEST=1` and `VISUAL_SNAPSHOT=1` are set, skip behavior wins
   and no snapshot should be generated.
-
 - VisualCheck tests must guard on `SKIP_VISUAL_TEST`, show the test window, and
   block with `qApp->exec()` until the window closes unless they branch to the
   shared snapshot helper for `VISUAL_SNAPSHOT=1`.
 - Do not replace VisualCheck event-loop blocking with `QTest::qWait()`.
-- See [Qt Component Test Conventions](qt-component-test-conventions.md) for
-  VisualCheck authoring rules.
-- See [Visual Review](visual-review.md) for manual UI review workflow.
+- Do not convert every VisualCheck into a baseline compare. The pixel gate below
+  is a separate, tiny allowlist.
+
+## Representative visual gate
+
+A 1.7 quality-track gate for three checked-in PNGs under
+[tests/visual-baselines/](../../tests/visual-baselines/README.md):
+
+- Button Rest/Hover/Pressed/Focus/Disabled in Light LTR
+- The same Button row in Dark LTR
+- Compact TreeView in Light RTL
+
+Compare uses exact logical-pixel equality via `tests::support::compareVisualImages`.
+A mismatch fails the test and writes `<name>.diff.png` next to the capture under
+`build/<preset>/visual/`.
+
+Default automated CTest still injects `SKIP_VISUAL_TEST=1`, so discovered
+`VisualGateTest.*` rows skip. `VisualGate.CompareBaselines` is the row that
+diffs against the checked-in PNGs. Both are labeled `visual_gate`; the compare
+entry is also `local_desktop`. Neither is in `ci_fast`, `ci_full`, or
+`local_full`.
+
+Run the gate on the approval host (macOS arm64 / `vcpkg-osx`, Fusion, bundled
+fonts, `QT_SCALE_FACTOR=1`, `QT_FONT_DPI=96`):
+
+```bash
+cmake --build --preset vcpkg-osx --target test_visual_gate --parallel
+ctest --preset vcpkg-osx -L '^visual_gate$' --output-on-failure
+```
+
+Equivalent direct invocation:
+
+```bash
+VISUAL_SNAPSHOT=1 VISUAL_COMPARE=1 QT_SCALE_FACTOR=1 QT_FONT_DPI=96 \
+  ./build/vcpkg-osx/tests/components/test_visual_gate
+```
+
+Regenerate baselines after an intentional visual change:
+
+```bash
+VISUAL_SNAPSHOT=1 VISUAL_UPDATE_BASELINE=1 QT_SCALE_FACTOR=1 QT_FONT_DPI=96 \
+  ./build/vcpkg-osx/tests/components/test_visual_gate
+```
+
+### CI limitation
+
+Hosted runners use `QT_QPA_PLATFORM=offscreen`. Offscreen, Linux, and Windows
+pixel output does not match these macOS desktop baselines (font engine, DPI,
+platform plugin). The gate therefore:
+
+- Skips on headless `offscreen` / `minimal` platforms
+- Skips compare/update unless the process is macOS arm64 + Cocoa + Fusion with
+  `QT_SCALE_FACTOR=1`, `QT_FONT_DPI=96`, and no per-screen scale override
+- Is excluded from GitHub Actions by the `ci_fast` / `ci_full` label filters and
+  by `-LE '^(manual_visual|local_desktop)$'`
+- Must not be added as a default-red CI job
+
+Keep the helper tests in `test_qt_test_environment` (synthetic image compare,
+missing baseline) on the normal CTest path. Those do not render widgets against
+checked-in PNGs.
+
+See [Qt Component Test Conventions](qt-component-test-conventions.md) for
+VisualCheck authoring rules.
+See [Visual Review](visual-review.md) for manual UI review workflow.
 
 ## App Visual Geometry Verification
 
