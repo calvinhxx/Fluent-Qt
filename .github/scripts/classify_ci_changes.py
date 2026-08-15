@@ -12,7 +12,6 @@ DOCUMENTATION_PREFIXES = (
     "docs/",
     "site/",
     ".agents/skills/",
-    ".claude/skills/",
     ".github/ISSUE_TEMPLATE/",
     "tools/ai/",
 )

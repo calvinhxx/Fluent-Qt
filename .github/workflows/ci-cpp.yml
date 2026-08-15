@@ -558,7 +558,9 @@ jobs:
           archive_entries="$(unzip -Z1 "$archive")"
           for source_file in \
               .agents/skills/build-fluentqt-gui/SKILL.md \
+              .agents/skills/build-fluentqt-gui/LICENSE.txt \
               .agents/skills/build-fluentqt-gui/agents/openai.yaml \
+              .agents/skills/build-fluentqt-gui/assets/fluentqt-ai-catalog.json \
               .agents/skills/build-fluentqt-gui/references/component-selection.md \
               .agents/skills/build-fluentqt-gui/references/experience-differentiation.md \
               .agents/skills/build-fluentqt-gui/references/performance-lifecycle.md \
@@ -568,8 +570,8 @@ jobs:
               .agents/skills/build-fluentqt-gui/references/theme-system.md \
               .agents/skills/build-fluentqt-gui/references/visual-evidence-contract.md \
               .agents/skills/build-fluentqt-gui/references/visual-refinement.md \
+              .agents/skills/build-fluentqt-gui/scripts/query_catalog.py \
               .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
-              .claude/skills/build-fluentqt-gui/SKILL.md \
               .github/scripts/setup-shiboken-clang.py \
               bindings/README.md \
               bindings/pyside6/api-manifest.json \
@@ -647,6 +649,7 @@ jobs:
               docs/ai/project-analysis.schema.json \
               llms.txt \
               tools/ai/evaluate_ai_catalog.py \
+              tools/ai/package_fluentqt_skill.py \
               tools/ai/query_ai_catalog.py \
               tools/fonts/fluent_icon_aliases.json; do
             if ! grep -x "FluentQt-ci-source/$source_file" \
@@ -659,6 +662,17 @@ jobs:
           python3 \
             "$output/unpacked/FluentQt-ci-source/tools/ai/query_ai_catalog.py" \
             --component tree-view > /dev/null
+          python3 \
+            "$output/unpacked/FluentQt-ci-source/tools/ai/package_fluentqt_skill.py" \
+            --project-root "$output/unpacked/FluentQt-ci-source" \
+            --output-dir "$output/skill-dist" \
+            --version ci > /dev/null
+          skill_archive="$output/skill-dist/build-fluentqt-gui-ci.zip"
+          test -f "$skill_archive"
+          unzip -q "$skill_archive" -d "$output/skill-installed"
+          python3 \
+            "$output/skill-installed/build-fluentqt-gui/scripts/query_catalog.py" \
+            --component field > /dev/null
           python3 \
             "$output/unpacked/FluentQt-ci-source/tools/ai/evaluate_ai_catalog.py" \
             --project-root "$output/unpacked/FluentQt-ci-source"
