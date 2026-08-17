@@ -146,7 +146,7 @@ bool hasRelation(QAccessibleInterface* source, QWidget* target,
     QAccessibleInterface* expected = accessible(target);
     for (const auto& candidate : source->relations(QAccessible::AllRelations)) {
         if (candidate.first == expected
-            && candidate.second.testFlags(relation)) {
+            && (candidate.second & relation) == relation) {
             return true;
         }
     }
