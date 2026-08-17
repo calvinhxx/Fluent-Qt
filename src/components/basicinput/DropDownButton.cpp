@@ -24,7 +24,8 @@ DropDownButton::DropDownButton(QWidget* parent)
 
 void DropDownButton::initAnimation() {
     if (m_pressAnimation) return;
-    m_pressAnimation = new QPropertyAnimation(this, "pressProgress");
+    m_pressAnimation = new QPropertyAnimation(
+        this, "pressProgress", this);
     // Global motion tokens: slow contrast with a decelerate curve.
     // zh_CN: 使用全局动画规范——慢速对比效果 + 减速曲线。
     m_pressAnimation->setDuration(themeAnimation().slow);

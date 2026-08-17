@@ -36,7 +36,8 @@ ToggleSwitch::ToggleSwitch(QWidget* parent)
     auto fs = themeFont(m_fontRole);
     setFont(fs.toQFont());
 
-    m_knobAnimation = new QPropertyAnimation(this, "knobPosition");
+    m_knobAnimation = new QPropertyAnimation(
+        this, "knobPosition", this);
     m_knobAnimation->setDuration(themeAnimation().fast);
     m_knobAnimation->setEasingCurve(themeAnimation().decelerate);
     updateAccessibleText();

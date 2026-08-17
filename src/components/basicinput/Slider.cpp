@@ -23,11 +23,11 @@ Slider::Slider(Qt::Orientation orientation, QWidget* parent)
 
     const auto& anim = themeAnimation();
 
-    m_hoverAnim = new QPropertyAnimation(this, "hoverRatio");
+    m_hoverAnim = new QPropertyAnimation(this, "hoverRatio", this);
     m_hoverAnim->setDuration(anim.normal);
     m_hoverAnim->setEasingCurve(anim.decelerate);
 
-    m_pressAnim = new QPropertyAnimation(this, "pressRatio");
+    m_pressAnim = new QPropertyAnimation(this, "pressRatio", this);
     m_pressAnim->setDuration(anim.normal);
     m_pressAnim->setEasingCurve(anim.decelerate);
 }

@@ -25,7 +25,8 @@ CheckBox::CheckBox(QWidget* parent)
 }
 
 void CheckBox::initAnimation() {
-    m_checkAnimation = new QPropertyAnimation(this, "checkProgress");
+    m_checkAnimation = new QPropertyAnimation(
+        this, "checkProgress", this);
     m_checkAnimation->setDuration(themeAnimation().fast);
     m_checkAnimation->setEasingCurve(themeAnimation().decelerate);
 }

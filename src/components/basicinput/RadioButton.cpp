@@ -24,11 +24,13 @@ RadioButton::RadioButton(QWidget* parent)
 }
 
 void RadioButton::initAnimation() {
-    m_checkAnimation = new QPropertyAnimation(this, "checkProgress");
+    m_checkAnimation = new QPropertyAnimation(
+        this, "checkProgress", this);
     m_checkAnimation->setDuration(themeAnimation().fast);
     m_checkAnimation->setEasingCurve(themeAnimation().decelerate);
 
-    m_dotScaleAnimation = new QPropertyAnimation(this, "dotScale");
+    m_dotScaleAnimation = new QPropertyAnimation(
+        this, "dotScale", this);
     m_dotScaleAnimation->setDuration(themeAnimation().fast);
     m_dotScaleAnimation->setEasingCurve(themeAnimation().decelerate);
 }
