@@ -225,12 +225,12 @@ inline void fluentRefreshAccessibleInterfaceAfterConstruction(
 #if QT_CONFIG(accessibility)
     if (!object)
         return;
-    QAccessibleInterface* interface =
+    QAccessibleInterface* accessibleInterface =
         QAccessible::queryAccessibleInterface(object);
-    if (!interface || interface->role() == expectedRole)
+    if (!accessibleInterface || accessibleInterface->role() == expectedRole)
         return;
 
-    const QAccessible::Id id = QAccessible::uniqueId(interface);
+    const QAccessible::Id id = QAccessible::uniqueId(accessibleInterface);
     if (id)
         QAccessible::deleteAccessibleInterface(id);
     QAccessible::queryAccessibleInterface(object);

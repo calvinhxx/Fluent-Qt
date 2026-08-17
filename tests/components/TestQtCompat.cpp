@@ -15,7 +15,15 @@
 #include <QWidget>
 #include <type_traits>
 
+#ifndef interface
+#define FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
+#define interface struct
+#endif
 #include "compatibility/QtCompat.h"
+#ifdef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
+#undef interface
+#undef FLUENT_QT_TEST_DEFINED_INTERFACE_MACRO
+#endif
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QEnterEvent>
