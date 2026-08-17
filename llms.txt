@@ -16,6 +16,7 @@
 ## Public integration
 
 - [Project overview](README.md): supported Qt versions, CMake setup, Python bindings, and packaging
+- [Contributing](CONTRIBUTING.md): issue quality, local validation, public API, and pull-request scope
 - [C++ hello world](examples/hello_world): minimal in-tree and installed-package consumer
 - [PySide6 bindings](bindings/pyside6/README.md): build, package, and compatibility workflow
 - [Architecture contracts](docs/architecture/README.md): reusable component and overlay boundaries
@@ -25,6 +26,8 @@
 - [Development workflow](docs/development/README.md): canonical contributor workflow index
 - [Testing workflow](docs/development/testing-workflow.md): focused targets, CTest labels, and visual tests
 - [Component API conventions](docs/development/component-api-conventions.md): public API and implementation rules
+- [DataGrid API contract](docs/development/datagrid-api-proposal.md): model/view ownership, staged delivery, and acceptance matrix
+- [Accessibility contract](docs/development/accessibility-contract.md): semantic, keyboard, event, and audit requirements
 - [Gallery sample optimization](docs/development/app-sample-optimization.md): preview/snippet semantic alignment
 
 ## Query without loading the full catalog

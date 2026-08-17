@@ -17,6 +17,11 @@ APIs under `src/components/**`.
   previous `view::...` component namespace was removed as a deliberate breaking
   migration; do not add `view` namespace aliases, compatibility typedefs, or
   forwarding declarations for new code.
+- Before a new public C++ component or non-trivial API ships, record whether it
+  is supported by PySide6 in the same release slice or intentionally C++-only.
+  A private prototype may precede binding work; an installed public header must
+  not create an accidental, undocumented Python parity gap. Follow the
+  [PySide6 API compatibility policy](../../bindings/pyside6/API_COMPATIBILITY.md).
 - When performing an audit, update [Component API Audit](component-api-audit.md)
   with inventory, findings, intentional deviations, applied fixes, deferred
   follow-ups, and validation notes.
@@ -97,6 +102,27 @@ APIs under `src/components/**`.
   should match their Qt meaning where practical.
 - Collection views should not own business item composition when model/delegate
   ownership is caller-provided.
+- Large item views must scale through `QAbstractItemModel`, views, and delegates.
+  Do not create one persistent widget per row or cell, and do not copy model
+  data into a second component-owned store merely to style it.
+
+## Accessibility
+
+- Every public visible Gallery component must have exactly one entry in the
+  [Accessibility Inventory](accessibility-inventory.md). Run
+  `python3 tools/quality/validate_accessibility_inventory.py --project-root .`
+  after adding, removing, or reclassifying a component.
+- New or materially changed visible components follow the
+  [Accessibility Contract](accessibility-contract.md): role, caller-owned name
+  and description, value/state, keyboard path, real-change events, logical
+  children, and platform compatibility are reviewed explicitly.
+- A custom-painted interactive surface cannot be treated as accessible merely
+  because its root `QWidget` has an `accessibleName`. Use native child controls
+  or a private logical adapter; never create one persistent widget per model
+  item only to satisfy accessibility.
+- Focused semantic tests use the `Contract_Accessibility*` prefix and query
+  `QAccessibleInterface`. VisualCheck evidence cannot substitute for roles,
+  states, actions, or event/no-op contracts.
 
 ## Fix or Defer
 
