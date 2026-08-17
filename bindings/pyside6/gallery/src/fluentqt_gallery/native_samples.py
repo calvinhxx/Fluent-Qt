@@ -5708,28 +5708,7 @@ class _GalleryListRowDelegate(QStyledItemDelegate):
         hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
         pressed = bool(option.state & QStyle.StateFlag.State_Sunken) and hovered
         background = QColor(Qt.GlobalColor.transparent)
-        text_on_accent = False
-        language = int(snapshot["designLanguage"])
-        dark = int(snapshot["theme"]) == int(fluentqt.Theme.Dark)
-        if (
-            enabled
-            and language == int(fluentqt.DesignLanguage.DesignMaterial)
-        ):
-            if selected:
-                background = QColor(colors["accentDefault"])
-                background.setAlphaF(0.28 if dark else 0.16)
-            elif hovered:
-                background = QColor(255, 255, 255, 0x14) if dark else QColor(0, 0, 0, 0x14)
-        elif (
-            enabled
-            and language == int(fluentqt.DesignLanguage.DesignCupertino)
-        ):
-            if selected:
-                background = colors["accentDefault"]
-                text_on_accent = True
-            elif hovered:
-                background = QColor(255, 255, 255, 0x12) if dark else QColor(0, 0, 0, 0x10)
-        elif enabled:
+        if enabled:
             if pressed:
                 background = colors["subtleTertiary"]
             elif selected or hovered:
@@ -5768,8 +5747,6 @@ class _GalleryListRowDelegate(QStyledItemDelegate):
         )
         if not enabled:
             text_color = colors["textDisabled"]
-        elif text_on_accent:
-            text_color = colors["textOnAccent"]
         else:
             text_color = colors["textPrimary"]
         painter.setPen(text_color)

@@ -19,15 +19,6 @@ static_assert(
     static_cast<int>(fluent::binding::Theme::Dark) ==
     static_cast<int>(fluent::FluentElement::Dark));
 static_assert(
-    static_cast<int>(fluent::binding::DesignLanguage::DesignFluent) ==
-    static_cast<int>(fluent::FluentElement::DesignFluent));
-static_assert(
-    static_cast<int>(fluent::binding::DesignLanguage::DesignMaterial) ==
-    static_cast<int>(fluent::FluentElement::DesignMaterial));
-static_assert(
-    static_cast<int>(fluent::binding::DesignLanguage::DesignCupertino) ==
-    static_cast<int>(fluent::FluentElement::DesignCupertino));
-static_assert(
     static_cast<int>(fluent::binding::SelectionMode::None) ==
     static_cast<int>(fluent::collections::SelectionMode::None));
 static_assert(
@@ -275,8 +266,6 @@ QVariantMap themeTokens(const fluent::FluentElement& element) {
   QVariantMap values;
   values.insert(QStringLiteral("theme"),
                 static_cast<int>(element.effectiveTheme()));
-  values.insert(QStringLiteral("designLanguage"),
-                static_cast<int>(element.themeDesignLanguage()));
   values.insert(QStringLiteral("colors"), colorTokens(element.themeColors()));
   values.insert(QStringLiteral("radius"), radiusValues);
   values.insert(QStringLiteral("spacing"),
@@ -460,12 +449,6 @@ fluent::binding::FluentWidget::effectiveThemeForBinding() const {
       static_cast<int>(effectiveTheme()));
 }
 
-fluent::binding::DesignLanguage
-fluent::binding::FluentWidget::designLanguageForBinding() const {
-  return static_cast<fluent::binding::DesignLanguage>(
-      static_cast<int>(themeDesignLanguage()));
-}
-
 void fluent::binding::FluentWidget::onThemeUpdated() { update(); }
 
 fluent::binding::ScrollViewZoomAwareWidget::ScrollViewZoomAwareWidget(
@@ -507,12 +490,12 @@ fluent::binding::Theme currentTheme() {
       static_cast<int>(fluent::FluentElement::currentTheme()));
 }
 
-void applyStyleTheme(fluent::StyleTheme theme) {
-  fluent::StyleThemeCatalog::apply(theme);
+void applyUserTheme() {
+  fluent::UserTheme::apply();
 }
 
 void setAccentColor(const QColor &color) {
-  fluent::StyleThemeCatalog::applyAccentOverride(color);
+  fluent::UserTheme::applyAccentOverride(color);
 }
 
 QColor accentColor() {
@@ -528,11 +511,6 @@ void setFontScale(qreal scale) {
 }
 
 qreal fontScale() { return fluent::ThemeRegistry::instance().fontScale(); }
-
-fluent::binding::DesignLanguage currentDesignLanguage() {
-  return static_cast<fluent::binding::DesignLanguage>(
-      static_cast<int>(fluent::ThemeRegistry::instance().designLanguage()));
-}
 
 QVariantMap themeTokensForWidgetForBinding(const QWidget* widget) {
   const auto* element = nearestFluentElement(widget);

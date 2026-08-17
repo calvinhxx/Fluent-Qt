@@ -36,20 +36,6 @@ public:
      */
     enum Theme { Light, Dark };
 
-    /**
-     * @brief Shape/interaction language a brand style theme paints in.
-     * zh_CN: 品牌样式主题所采用的形状/交互设计语言。
-     *
-     * Colors and radius are data (ThemeRegistry), but some fidelity is structural — Material 3 filled
-     * buttons are stadium-shaped with a translucent state layer; macOS push buttons use a vertical
-     * bezel gradient. Controls read this to branch their paint beyond what a palette swap can express.
-     * Defaults to DesignFluent so nothing changes unless a brand preset opts in.
-     * zh_CN: 颜色与圆角是数据(ThemeRegistry),但部分保真是结构性的——Material 3 填充按钮为胶囊形并带半透明
-     * state layer;macOS 按钮用纵向斜面渐变。控件据此在调色板替换之外分支绘制。默认 DesignFluent,品牌预设不
-     * 选用则一切不变。
-     */
-    enum DesignLanguage { DesignFluent, DesignMaterial, DesignCupertino };
-
     // Design token snapshots returned to components.
     // zh_CN: 返回给组件使用的设计 token 快照。
 
@@ -147,10 +133,10 @@ public:
      * zh_CN: 在设计 token 变化后重新广播当前主题以触发重绘。
      *
      * setThemeDeferred() early-outs when the Light/Dark mode is unchanged, so it cannot repaint a
-     * pure palette swap (e.g. switching the brand style theme via ThemeRegistry while staying in the
-     * same mode). This forces the same atomic visible-first refresh without changing the mode.
-     * zh_CN: setThemeDeferred() 在明暗模式未变时会提前返回,无法重绘纯调色板替换(如保持同一模式下经
-     * ThemeRegistry 切换品牌主题)。此入口在不改模式的前提下,强制同样的「可见优先原子刷新」。
+     * pure token update while staying in the same mode. This forces the same atomic visible-first
+     * refresh without changing the mode.
+     * zh_CN: setThemeDeferred() 在明暗模式未变时会提前返回，无法重绘纯 token 更新。
+     * 此入口在不改模式的前提下，强制同样的「可见优先原子刷新」。
      */
     static void refreshTheme();
 
@@ -198,11 +184,6 @@ public:
     FontStyle themeFont(Typography::FontRole role = Typography::FontRole::Body) const;
     Radius themeRadius() const;
 
-    /**
-     * @brief Active shape/interaction design language (from the installed brand style theme).
-     * zh_CN: 当前生效的形状/交互设计语言(来自已安装的品牌样式主题)。
-     */
-    DesignLanguage themeDesignLanguage() const;
     Spacing themeSpacing() const;
     Animation themeAnimation() const;
     

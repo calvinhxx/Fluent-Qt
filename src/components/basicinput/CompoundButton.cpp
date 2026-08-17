@@ -1,8 +1,8 @@
 #include "components/basicinput/CompoundButton.h"
 
 #include <QFontMetrics>
-#include <QPainter>
 #include <QPaintEvent>
+#include <QPainter>
 
 #include "design/Typography.h"
 
@@ -119,8 +119,7 @@ void CompoundButton::paintEvent(QPaintEvent* event)
         else if (underMouse())
             state = Hover;
     }
-    if (state == Pressed && fluentStyle() != Subtle
-        && themeDesignLanguage() == DesignFluent) {
+    if (state == Pressed && fluentStyle() != Subtle) {
         surfaceRect.translate(0, 0.5);
     }
 

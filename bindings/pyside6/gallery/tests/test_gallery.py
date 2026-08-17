@@ -1252,9 +1252,13 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 view.itemDelegate().sizeHint(None, view.model().index(0, 0)),
                 view.gridSize(),
             )
-            self.assertIn("scrim.setAlpha(0x24)", result.preview_source)
             self.assertIn(
-                "2.5 if material_grid else 2.0", result.preview_source
+                "scrim.setColorAt(0.0, QColor(0, 0, 0, 20))",
+                result.preview_source,
+            )
+            self.assertIn(
+                "scrim.setColorAt(1.0, QColor(0, 0, 0, 150))",
+                result.preview_source,
             )
             self.assertIn('QFont("FluentQt Icons")', result.preview_source)
             self.assertIn("\ue73e", result.preview_source)
@@ -2881,10 +2885,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
-    def test_all_built_routes_survive_theme_and_style_refresh_cycles(self):
+    def test_all_built_routes_survive_theme_refresh_cycles(self):
         window = GalleryWindow(startup_visuals=False)
         original_theme = int(window._settings.theme_mode)
-        original_style = int(window._settings.style_theme)
         window.show()
         QApplication.processEvents()
         try:
@@ -2892,7 +2895,7 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.navigate("settings", record_history=False)
             QApplication.processEvents()
             button_generation = window._page_visual_generations["button"]
-            window._set_style((original_style + 1) % 3)
+            window._set_theme_mode(2 if original_theme != 2 else 1)
             self.assertGreater(window._visual_generation, button_generation)
             self.assertEqual(
                 window._page_visual_generations["button"],
@@ -2906,11 +2909,9 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 window._visual_generation,
             )
             window.navigate("settings", record_history=False)
-            for style in (0, 1, 2):
-                window._set_style(style)
-                for theme in (1, 2, 0):
-                    window._set_theme_mode(theme)
-                    QApplication.processEvents()
+            for theme in (1, 2, 0):
+                window._set_theme_mode(theme)
+                QApplication.processEvents()
 
             _index, iconography = window._pages["foundation-iconography"]
             browser = iconography.findChild(
@@ -2922,7 +2923,6 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 hasattr(browser.grid._hover_tip, "onThemeUpdated")
             )
         finally:
-            window._set_style(original_style)
             window._set_theme_mode(original_theme)
             window.close()
             window.deleteLater()
@@ -3892,11 +3892,16 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         try:
             _index, page = window._pages["settings"]
             self.assertEqual(len(page._gallery_settings_rows), 6)
+            self.assertIsNone(
+                page.findChild(
+                    fluentqt.ComboBox, "gallerySettingsStyleChoice"
+                )
+            )
             labels = tuple(label.text() for label in page.findChildren(fluentqt.Label))
             for text in (
                 "Appearance & behavior",
                 "App theme",
-                "Style & accent color",
+                "Accent color",
                 "Navigation style",
                 "Window background effect",
                 "App behavior",
@@ -3907,7 +3912,6 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                 self.assertIn(text, labels)
             expected_choices = (
                 ("Use system setting", "Light", "Dark"),
-                ("Fluent (Windows)", "Material 3 (Google)", "macOS"),
                 ("Left", "Top"),
                 ("Normal", "Mica", "Acrylic"),
                 ("Minimize window", keep_running_choice(), "Quit app"),

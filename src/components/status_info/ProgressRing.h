@@ -1,11 +1,12 @@
 #ifndef PROGRESSRING_H
 #define PROGRESSRING_H
 
+#include "components/foundation/FluentElement.h"
+#include "components/foundation/QMLPlus.h"
+
 #include <QBasicTimer>
 #include <QColor>
 #include <QWidget>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
 
 namespace fluent::status_info {
 
@@ -13,10 +14,10 @@ namespace fluent::status_info {
  * @brief Fluent circular progress indicator for active or indeterminate work.
  * zh_CN: 用于活动或不确定任务的 Fluent 环形进度指示器。
  *
- * ProgressRing exposes active state, value range, ring size, stroke width, status,
- * and optional background rendering for compact progress feedback.
- * zh_CN: ProgressRing 暴露活动态、值范围、环尺寸、描边宽度、状态和可选背景绘制，
- * 用于紧凑进度反馈。
+ * ProgressRing exposes active state, value range, ring size, stroke width,
+ * status, and optional background rendering for compact progress feedback.
+ * zh_CN: ProgressRing
+ * 暴露活动态、值范围、环尺寸、描边宽度、状态和可选背景绘制， 用于紧凑进度反馈。
  */
 class ProgressRing : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -146,12 +147,6 @@ private:
     int diameterForSize() const;
     QRectF ringRect(qreal effectiveStrokeWidth) const;
     QColor indicatorColor() const;
-    // Design-language paint branches. DesignFluent is inlined in paintEvent and stays unchanged;
-    // these render the Material 3 circular indicator and the macOS spoke spinner / accent ring.
-    // zh_CN: 设计语言绘制分支。DesignFluent 内联于 paintEvent 且保持不变;
-    // 这两个绘制 Material 3 环形指示器与 macOS 辐条转轮/强调环。
-    void paintMaterial(QPainter& painter, const QRectF& arcRect, qreal effectiveStrokeWidth);
-    void paintCupertino(QPainter& painter, const QRectF& arcRect, qreal effectiveStrokeWidth);
     void updateThemeColors();
     void updateAnimationState();
     bool shouldAnimate() const;

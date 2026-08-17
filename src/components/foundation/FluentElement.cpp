@@ -1,17 +1,17 @@
 #include "components/foundation/FluentElement.h"
-#include "components/foundation/private/FluentElement_p.h"
 #include "components/foundation/ThemeRegistry.h"
+#include "components/foundation/private/FluentElement_p.h"
+#include "design/Animation.h"
+#include "design/Breakpoints.h"
+#include "design/CornerRadius.h"
+#include "design/Elevation.h"
+#include "design/Material.h"
+#include "design/Spacing.h"
+#include "design/ThemeColors.h"
+#include "design/Typography.h"
 
 #include <QVariant>
 #include <QWidget>
-#include "design/ThemeColors.h"
-#include "design/Typography.h"
-#include "design/Spacing.h"
-#include "design/CornerRadius.h"
-#include "design/Elevation.h"
-#include "design/Animation.h"
-#include "design/Material.h"
-#include "design/Breakpoints.h"
 
 namespace fluent {
 
@@ -104,10 +104,10 @@ FluentElement::Theme FluentElement::effectiveTheme() const {
 
 FluentElement::Colors FluentElement::themeColors() const {
     // Colors now come from the runtime ThemeRegistry (seeded with the built-in Fluent palette, so the
-    // default result is identical to the former compile-time construction). The app layer can install a
-    // brand preset or user-file overrides without touching any control. effectiveTheme() still honors a
-    // per-subtree fluentThemeOverride. zh_CN: 颜色改由运行时 ThemeRegistry 提供(以内置 Fluent 调色板播种,
-    // 默认结果与原编译期构造完全一致)。应用层可安装品牌预设或用户文件覆盖而不动任何控件;effectiveTheme()
+    // default result is identical to the former compile-time construction). The app layer can install
+    // user-file overrides without touching any control. effectiveTheme() still honors a per-subtree
+    // fluentThemeOverride. zh_CN: 颜色改由运行时 ThemeRegistry 提供(以内置 Fluent 调色板播种,
+    // 默认结果与原编译期构造完全一致)。应用层可安装用户文件覆盖而不动任何控件;effectiveTheme()
     // 仍尊重子树级 fluentThemeOverride。
     return ThemeRegistry::instance().colors(effectiveTheme() == Dark);
 }
@@ -125,10 +125,6 @@ FluentElement::FontStyle FluentElement::themeFont(Typography::FontRole role) con
 
 FluentElement::Radius FluentElement::themeRadius() const {
     return ThemeRegistry::instance().radius();
-}
-
-FluentElement::DesignLanguage FluentElement::themeDesignLanguage() const {
-    return ThemeRegistry::instance().designLanguage();
 }
 
 FluentElement::Spacing FluentElement::themeSpacing() const {

@@ -35,8 +35,8 @@
 
 namespace fluent::menus_toolbars {
 
-using detail::CommandActionModel;
 using detail::CommandAccessibleRole;
+using detail::CommandActionModel;
 using detail::CommandMoreButton;
 using detail::CommandPresenter;
 
@@ -931,21 +931,7 @@ public:
                 QPainter painter(q);
                 if (backgroundVisible) {
                     const auto& colors = q->themeColorsRef();
-                    const FluentElement::DesignLanguage language =
-                        q->themeDesignLanguage();
-                    if (language
-                        == FluentElement::DesignMaterial) {
-                        painter.fillRect(q->rect(), colors.bgLayerAlt);
-                    } else if (language
-                               == FluentElement::DesignCupertino) {
-                        painter.fillRect(q->rect(), colors.bgLayer);
-                        painter.setPen(colors.strokeDefault);
-                        painter.drawLine(
-                            q->rect().bottomLeft(),
-                            q->rect().bottomRight());
-                    } else {
                         painter.fillRect(q->rect(), colors.bgCanvas);
-                    }
                 }
                 return true;
             }

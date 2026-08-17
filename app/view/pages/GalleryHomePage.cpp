@@ -34,11 +34,11 @@
 #include "design/Typography.h"
 #include "model/GalleryComponentCatalog.h"
 #include "model/GalleryNavigationItem.h"
-#include "viewmodel/GalleryNavigationViewModel.h"
+#include "support/logging/Log.h"
 #include "view/shell/AppIcon.h"
 #include "view/support/GalleryStyleSupport.h"
 #include "view/widgets/GalleryEntryGrid.h"
-#include "support/logging/Log.h"
+#include "viewmodel/GalleryNavigationViewModel.h"
 
 namespace fluent::gallery {
 namespace {
@@ -416,9 +416,10 @@ public:
         setAttribute(Qt::WA_TranslucentBackground);
         viewport()->setAttribute(Qt::WA_TranslucentBackground);
         viewport()->setCursor(Qt::PointingHandCursor);
-        setStyleSheet(QStringLiteral(
-            "QListView#galleryHomeHeroLinksView { background: transparent; border: none; }"
-            "QListView#galleryHomeHeroLinksView::item { background: transparent; }"));
+        setStyleSheet(QStringLiteral("QListView#galleryHomeHeroLinksView { "
+                                 "background: transparent; border: none; }"
+                                 "QListView#galleryHomeHeroLinksView::item { "
+                                 "background: transparent; }"));
 
         auto* delegate = new GalleryHomeLinkDelegate(this);
         setItemDelegate(delegate);
@@ -440,14 +441,6 @@ public:
                QStringLiteral("Guidelines and toolkits for Fluent design."),
                QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit"),
                QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png"));
-        append(QStringLiteral("macOS 27 Community"),
-               QStringLiteral("Community Figma design kit for macOS 27."),
-               QStringLiteral("https://www.figma.com/community/file/1651309434229735362"),
-               QStringLiteral(":/app/assets/home_header_tiles/Header-macOS27.png"));
-        append(QStringLiteral("Material 3 Design Kit"),
-               QStringLiteral("Community Figma kit for Material 3."),
-               QStringLiteral("https://www.figma.com/community/file/1035203688168086460"),
-               QStringLiteral(":/app/assets/home_header_tiles/Header-Material3.png"));
         append(QStringLiteral("WinUI Gallery"),
                QStringLiteral("WinUI Gallery source on GitHub."),
                QStringLiteral("https://github.com/microsoft/WinUI-Gallery"),
@@ -978,7 +971,8 @@ GalleryHomePage::GalleryHomePage(const GalleryContentEntry& entry,
 
     addContentWidget(body);
 
-    LOG_DEBUG(QStringLiteral("GalleryHomePage created routeId=%1 featuredCards=%2 categoryCards=%3")
+    LOG_DEBUG(QStringLiteral("GalleryHomePage created routeId=%1 "
+                           "featuredCards=%2 categoryCards=%3")
                   .arg(entry.routeId)
                   .arg(featuredEntries.size())
                   .arg(categoryEntries.size()));

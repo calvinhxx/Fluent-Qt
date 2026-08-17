@@ -1,22 +1,24 @@
 #ifndef PROGRESSBAR_H
 #define PROGRESSBAR_H
 
+#include "components/foundation/FluentElement.h"
+#include "components/foundation/QMLPlus.h"
+
 #include <QBasicTimer>
 #include <QColor>
 #include <QString>
 #include <QWidget>
-#include "components/foundation/FluentElement.h"
-#include "components/foundation/QMLPlus.h"
 
 namespace fluent::status_info {
 
 /**
- * @brief Fluent linear progress indicator for determinate and indeterminate work.
- * zh_CN: 用于确定和不确定进度的 Fluent 线性进度指示器。
+ * @brief Fluent linear progress indicator for determinate and indeterminate
+ * work. zh_CN: 用于确定和不确定进度的 Fluent 线性进度指示器。
  *
  * ProgressBar exposes value bounds, paused/error status, rail visibility, bar
  * thickness, and indeterminate animation as explicit visual state.
- * zh_CN: ProgressBar 将值范围、暂停/错误状态、轨道可见性、条厚度和不确定动画暴露为明确视觉状态。
+ * zh_CN: ProgressBar
+ * 将值范围、暂停/错误状态、轨道可见性、条厚度和不确定动画暴露为明确视觉状态。
  */
 class ProgressBar : public QWidget, public FluentElement, public QMLPlus {
     Q_OBJECT
@@ -129,11 +131,6 @@ protected:
 private:
     QRectF barRect() const;
     QColor indicatorColor() const;
-    // Design-language paint branches. DesignFluent stays inline in paintEvent (byte-for-byte the original
-    // treatment); Material 3 and macOS dispatch to these helpers. zh_CN: 设计语言绘制分支。DesignFluent 保留在
-    // paintEvent 内（与原实现逐字节一致）；Material 3 与 macOS 分派到这些辅助函数。
-    void paintMaterial(QPainter& painter, const QRectF& bounds);
-    void paintCupertino(QPainter& painter, const QRectF& bounds);
     void updateThemeColors();
     void updateAnimationState();
     bool shouldAnimate() const;

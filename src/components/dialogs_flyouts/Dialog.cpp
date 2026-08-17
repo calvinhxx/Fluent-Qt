@@ -658,16 +658,10 @@ void Dialog::paintEvent(QPaintEvent*)
     drawShadow(painter, contentRect);
 
     const auto& colors = themeColorsRef();
-    const DesignLanguage lang = themeDesignLanguage();
 
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;
     surface.radius = themeRadius().overlay;
-    if (lang == DesignMaterial)
-        surface.border = Qt::transparent;
-    else if (lang == DesignCupertino)
-        surface.border = colors.strokeStrong;
-    else
         surface.border = colors.strokeDefault;
     fluent::painting::paintRoundedSurface(painter, QRectF(contentRect), surface);
 }

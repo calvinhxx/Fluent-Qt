@@ -42,10 +42,8 @@ layout.addWidget(Divider())
 
 theme_row = QHBoxLayout()
 theme_button = Button("Switch to Dark")
-style_button = Button("Style: Fluent")
-style_button.setFluentStyle(Button.ButtonStyle.Accent)
+theme_button.setFluentStyle(Button.ButtonStyle.Accent)
 theme_row.addWidget(theme_button)
-theme_row.addWidget(style_button)
 theme_row.addStretch()
 layout.addLayout(theme_row)
 
@@ -139,12 +137,6 @@ def toggle_theme():
     theme_button.setText("Switch to Light" if dark else "Switch to Dark")
 
 
-styles = [
-    ("Fluent", fluentqt.StyleTheme.Fluent),
-    ("Material", fluentqt.StyleTheme.Material),
-    ("macOS", fluentqt.StyleTheme.MacOS),
-]
-style_index = 0
 click_count = 0
 
 
@@ -154,16 +146,7 @@ def count_repeat_click():
     repeat_count.setText(f"Clicks: {click_count}")
 
 
-def cycle_style():
-    global style_index
-    style_index = (style_index + 1) % len(styles)
-    name, style = styles[style_index]
-    fluentqt.apply_style_theme(style)
-    style_button.setText(f"Style: {name}")
-
-
 theme_button.clicked.connect(toggle_theme)
-style_button.clicked.connect(cycle_style)
 repeat_button.clicked.connect(count_repeat_click)
 check_box.toggled.connect(shimmer.setAnimationEnabled)
 

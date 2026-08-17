@@ -1,13 +1,13 @@
 #include "ContentDialog.h"
 #include "components/basicinput/Button.h"
-#include "components/textfields/Label.h"
 #include "components/foundation/QMLPlus.h"
-#include "design/Spacing.h"
+#include "components/textfields/Label.h"
 #include "design/CornerRadius.h"
-#include <QPainter>
-#include <QPainterPath>
+#include "design/Spacing.h"
 #include <QHBoxLayout>
 #include <QLayout>
+#include <QPainter>
+#include <QPainterPath>
 #include <QPointer>
 
 namespace fluent::dialogs_flyouts {
@@ -308,22 +308,12 @@ void ContentDialog::paintEvent(QPaintEvent*) {
 
     const auto& colors = themeColorsRef();
     const int r = themeRadius().overlay;
-    const DesignLanguage lang = themeDesignLanguage();
 
     // Clip to the rounded card. zh_CN: 用圆角矩形做裁剪区。
     QPainterPath clipPath;
     clipPath.addRoundedRect(contentRect, r, r);
     painter.setClipPath(clipPath);
-
-    if (lang == DesignMaterial) {
-        // Material 3 dialog: a single tonal "surface-container-high" surface — NO separate button
-        // region, NO divider. Elevation is conveyed by drawShadow alone (no outer stroke, applied
-        // below). zh_CN: Material 3 对话框:单一色调 "surface-container-high" 表面——无独立按钮区、无分割线。
-        // 高度仅由 drawShadow 表达(无外描边,见下方)。
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(colors.bgLayer);
-        painter.drawRect(contentRect);
-    } else if (m_buttonBar && m_buttonBar->isVisible()) {
+    if (m_buttonBar && m_buttonBar->isVisible()) {
         const int dividerY = m_buttonBar->geometry().top();
 
         // Content area (bgLayer). zh_CN: 内容区。
@@ -351,18 +341,7 @@ void ContentDialog::paintEvent(QPaintEvent*) {
 
     // Outer border. zh_CN: 外边框。
     painter.setBrush(Qt::NoBrush);
-    if (lang == DesignMaterial) {
-        // M3 conveys elevation with the shadow, not a stroke. zh_CN: M3 以阴影而非描边表达高度。
-        painter.setPen(Qt::NoPen);
-    } else if (lang == DesignCupertino) {
-        // macOS alert/sheet: a crisp 1px hairline edge using the stronger neutral stroke (the
-        // two-region + divider body layout is kept). zh_CN: macOS 警告/sheet:用更强的中性描边绘制清晰
-        // 的 1px 发丝边缘(保留两区域 + 分割线布局)。
-        painter.setPen(QPen(colors.strokeStrong, 1));
-    } else {
-        // DesignFluent (default): unchanged WinUI overlay stroke. zh_CN: 默认 Fluent,WinUI 浮层描边不变。
         painter.setPen(colors.strokeDefault);
-    }
     painter.drawRoundedRect(contentRect, r, r);
 }
 

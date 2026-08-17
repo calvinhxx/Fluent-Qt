@@ -1,12 +1,14 @@
-#include <gtest/gtest.h>
-#include <QApplication>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QImage>
-#include <QColor>
 #include "components/basicinput/HyperlinkButton.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
+#include <QApplication>
+#include <QColor>
+#include <QImage>
+#include <QLabel>
+#include <QSignalSpy>
+#include <QVBoxLayout>
+
+#include <gtest/gtest.h>
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -96,93 +98,62 @@ protected:
     HyperlinkButtonTestWindow* window = nullptr;
 };
 
-// ─── Design-language × theme compatibility ──────────────────────────────────
-//
-// HyperlinkButton paints a TEXT LINK per brand: Fluent (subtle-fill text link), Material 3
-// (accent text + accent state-layer pill on hover/press), macOS (restrained accent link with a
-// hover underline). A resting hyperlink has NO fill, so this suite grabs the control across the
-// full {language × theme} matrix and asserts (1) it paints a valid sized image with ink on it,
-// and (2) the resting CENTER pixel is never an opaque near-#000 fill — the signature of the
-// invalid-QColor "solid black" trap (alpha()==255 on an unassigned QColor). Design language +
-// theme are GLOBAL singletons, so TearDown restores defaults.
-// zh_CN: HyperlinkButton 按品牌绘制文本链接:Fluent(subtle 填充文本链接)、Material 3(强调色文字 +
-// hover/press 强调色 state-layer 胶囊)、macOS(克制强调链接 + hover 下划线)。静息超链接无填充,本套件
-// 遍历 {设计语言 × 主题} 全矩阵,断言:(1) 渲染出有效尺寸且确有像素的图像;(2) 静息中心像素绝非不透明近黑
-// 填充——即未赋值 QColor 的 alpha()==255「涂黑」陷阱特征。设计语言与主题为全局单例,故 TearDown 复位默认值。
+TEST_F(HyperlinkButtonTest, Contract_PropertiesSignalOnlyOnRealChanges)
+{
+    HyperlinkButton link(QStringLiteral("Docs"));
+    EXPECT_TRUE(link.url().isEmpty());
+    EXPECT_FALSE(link.showUnderline());
 
-class HyperlinkButtonDesignLanguageTest : public ::testing::Test {
-protected:
-    void TearDown() override {
-        // Design language + theme are GLOBAL — reset so other suites start clean.
-        // zh_CN: 设计语言与主题为全局状态——重置以保证其它套件从干净状态开始。
-        fluent::ThemeRegistry::instance().resetToDefaults();
-        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    }
+    QSignalSpy urlSpy(&link, &HyperlinkButton::urlChanged);
+    QSignalSpy underlineSpy(&link, &HyperlinkButton::showUnderlineChanged);
+    const QUrl url(QStringLiteral("https://example.com/docs"));
 
-    // Build a hyperlink, size it ~120x32, and grab it at REST as an image.
-    // zh_CN: 构建超链接,设定 ~120x32 尺寸,在静息态抓取为图像。
-    static QImage grabLink() {
-        HyperlinkButton link("Fluent QT home page");
-        link.setUrl(QUrl("https://example.com"));
+    link.setUrl(url);
+    link.setUrl(url);
+    link.setShowUnderline(true);
+    link.setShowUnderline(true);
+
+    EXPECT_EQ(link.url(), url);
+    EXPECT_TRUE(link.showUnderline());
+    EXPECT_EQ(urlSpy.count(), 1);
+    EXPECT_EQ(underlineSpy.count(), 1);
+}
+
+TEST_F(HyperlinkButtonTest, Contract_LightAndDarkRestPaintsWithoutOpaqueBlackFill)
+{
+    const FluentElement::Theme themes[]{FluentElement::Light,
+                                        FluentElement::Dark};
+    for (const auto theme : themes) {
+        FluentElement::setTheme(theme);
+        HyperlinkButton link(QStringLiteral("FluentQt"));
+        link.setUrl(QUrl(QStringLiteral("https://example.com")));
         link.resize(120, 32);
-        return link.grab().toImage();
-    }
-};
+        const QImage image = link.grab().toImage();
+        ASSERT_FALSE(image.isNull()) << "theme=" << theme;
 
-TEST_F(HyperlinkButtonDesignLanguageTest, AllLanguagesThemesPaintAccentTextWithoutBlackFill) {
-    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
-    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
-
-    const LangCase langs[] = {
-        { fluent::FluentElement::DesignFluent, "Fluent" },
-        { fluent::FluentElement::DesignMaterial, "Material" },
-        { fluent::FluentElement::DesignCupertino, "Cupertino" },
-    };
-    const ThemeCase themes[] = {
-        { fluent::FluentElement::Light, "Light" },
-        { fluent::FluentElement::Dark, "Dark" },
-    };
-
-    for (const auto& l : langs) {
-        for (const auto& t : themes) {
-            fluent::ThemeRegistry::instance().setDesignLanguage(l.lang);
-            fluent::FluentElement::setTheme(t.theme);
-
-            const QImage img = grabLink();
-            const std::string ctx = std::string(l.name) + "/" + t.name;
-
-            // 1. No crash + valid image of the requested size. zh_CN: 不崩溃 + 图像有效且尺寸正确。
-            ASSERT_FALSE(img.isNull()) << ctx;
-            EXPECT_GT(img.width(), 0) << ctx;
-            EXPECT_GT(img.height(), 0) << ctx;
-
-            // 2. Painted content: a hyperlink always draws accent text, so some pixel must differ
-            // from the top-left background pixel. zh_CN: 已绘制内容:超链接始终绘制强调色文字,必有
-            // 像素不同于左上角背景。
-            const QRgb bg = img.pixel(0, 0);
-            bool painted = false;
-            for (int y = 0; y < img.height() && !painted; ++y) {
-                for (int x = 0; x < img.width(); ++x) {
-                    if (img.pixel(x, y) != bg) {
-                        painted = true;
-                        break;
-                    }
+        const QRgb background = image.pixel(0, 0);
+        bool painted = false;
+        for (int y = 0; y < image.height() && !painted; ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixel(x, y) != background) {
+                    painted = true;
+                    break;
                 }
             }
-            EXPECT_TRUE(painted) << "HyperlinkButton painted nothing: " << ctx;
-
-            // 3. Resting hyperlink has NO fill: the center pixel must NOT be an opaque near-#000
-            // fill (the invalid-QColor solid-black signature). zh_CN: 静息超链接无填充:中心像素
-            // 绝非不透明近黑填充(无效 QColor 涂黑特征)。
-            const QColor c = img.pixelColor(img.width() / 2, img.height() / 2);
-            const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
-            const bool opaqueBlack = c.alpha() > 200 && lum < 16;
-            EXPECT_FALSE(opaqueBlack)
-                << "HyperlinkButton painted an opaque black fill at rest: " << ctx
-                << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << ","
-                << c.alpha() << ")";
         }
+        EXPECT_TRUE(painted) << "theme=" << theme;
+
+        const QColor center = image.pixelColor(image.width() / 2,
+                                                image.height() / 2);
+        const int luminance = qRound(0.299 * center.red()
+                                     + 0.587 * center.green()
+                                     + 0.114 * center.blue());
+        EXPECT_FALSE(center.alpha() > 200 && luminance < 16)
+            << "theme=" << theme;
     }
+
+    ThemeRegistry::instance().resetToDefaults();
+    FluentElement::setTheme(FluentElement::Light);
 }
 
 TEST_F(HyperlinkButtonTest, VisualCheck) {

@@ -8,9 +8,9 @@
 #include <QGraphicsOpacityEffect>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QPaintEvent>
 #include <QPalette>
 #include <QPointer>
 #include <QPropertyAnimation>
@@ -21,12 +21,12 @@
 #include <QWheelEvent>
 
 #include "compatibility/QtCompat.h"
-#include "design/CornerRadius.h"
-#include "design/Typography.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
 #include "components/navigation/private/NavigationSelectionAccessibility_p.h"
 #include "components/textfields/Label.h"
+#include "design/CornerRadius.h"
+#include "design/Typography.h"
 
 namespace fluent::navigation {
 
@@ -113,7 +113,7 @@ QPainterPath topRoundedTabPath(const QRect& rect, int radius)
     path.closeSubpath();
     return path;
 }
-}
+} // namespace
 
 TabStrip::TabStrip(QWidget* parent)
     : QWidget(parent)
@@ -1460,22 +1460,10 @@ void TabStrip::updateHeaderWidgets()
         // setTextColorRole 在角色未变时直接返回，故重排时开销很小；角色与 textColorForTab 一致。
         const bool tabUsable = isEnabled() && isValidIndex(record.tabIndex)
                                && m_items.at(record.tabIndex).enabled;
-        // Brand-specific label color role, DesignFluent unchanged (Primary selected / Secondary rest).
-        // M3 selected label is Accent text; macOS selected label is OnAccent (white) over the accent
-        // segment. Kept in lockstep with textColorForTab so the painted icon matches the label.
-        // zh_CN: 品牌专属标签颜色角色，DesignFluent 不变（选中 Primary / 其余 Secondary）。M3 选中标签为
-        // Accent 文字；macOS 选中标签为强调段上的 OnAccent（白）。与 textColorForTab 同步，使图标与标签一致。
         const bool tabSelected = record.tabIndex == m_selectedIndex;
-        const DesignLanguage labelLang = themeDesignLanguage();
         textfields::Label::TextColorRole role;
         if (!tabUsable) {
             role = textfields::Label::TextColorRole::Disabled;
-        } else if (labelLang == DesignMaterial) {
-            role = tabSelected ? textfields::Label::TextColorRole::Accent
-                               : textfields::Label::TextColorRole::Secondary;
-        } else if (labelLang == DesignCupertino) {
-            role = tabSelected ? textfields::Label::TextColorRole::OnAccent
-                               : textfields::Label::TextColorRole::Secondary;
         } else {
             role = tabSelected ? textfields::Label::TextColorRole::Primary
                                : textfields::Label::TextColorRole::Secondary;
@@ -1711,22 +1699,10 @@ void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
     const bool selected = record.tabIndex == m_selectedIndex;
     const qreal revealOpacity = tabRevealOpacity(record.tabIndex);
     const QColor fill = tabFillColor(record);
-
-    // Branch the tab chrome per brand, preserving DesignFluent EXACTLY (the document-style raised
-    // tab with curved join feet). Document tabs aren't a native M3/macOS pattern, so M3 and macOS get
-    // a tasteful, conservative treatment consistent with our Pivot tabs rather than a redesign:
-    // M3 keeps the surface neutral and adds an accent label + rounded accent underbar; macOS retints
-    // the selected tab toward the accent like a segmented control. Geometry is untouched — we only
-    // reuse the existing tab/indicator rects. zh_CN: 按品牌分支 tab 外观，DesignFluent 完全保持原样
-    //（带弧形接脚的文档式凸起 tab）。文档式 tab 非 M3/macOS 原生范式，故 M3 与 macOS 采用与 Pivot 一致的
-    // 克制处理而非重设计：M3 保持面中性并加强调标签 + 圆角强调下划条；macOS 把选中 tab 朝强调色微调，如分段
-    // 控件。几何不变——仅复用既有 tab/指示条矩形。
-    const DesignLanguage lang = themeDesignLanguage();
     painter.save();
     painter.setOpacity(revealOpacity);
     painter.setPen(Qt::NoPen);
     painter.setBrush(fill);
-    if (lang == DesignFluent) {
         if (selected) {
             const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
             const int radius = qMax(2, currentMetrics.cornerRadius + 2);
@@ -1755,33 +1731,6 @@ void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
             tabVisualRect.setBottom(row.bottom());
             painter.drawPath(topRoundedTabPath(tabVisualRect, currentMetrics.cornerRadius));
         }
-    } else {
-        // M3 + macOS share a within-bounds rounded-rect fill (no curved join feet, no clipped halos)
-        // so selected/hover affordances stay tidy inside each tab; tabFillColor() already supplies the
-        // brand-correct color. zh_CN: M3 与 macOS 共用限制在范围内的圆角填充（无接脚、无溢出光晕），选中/
-        // 悬停效果整洁地留在各 tab 内；颜色由 tabFillColor() 提供。
-        if (fill.alpha() > 0) {
-            const int radius = qMax(2, currentMetrics.cornerRadius + (selected ? 2 : 0));
-            painter.drawRoundedRect(visualRecord.tabRect, radius, radius);
-        }
-
-        // M3 §5 tabs: a rounded primary indicator (~3 dp) along the selected tab's lower edge, hugging
-        // the label width with fully rounded ends — mirrors Pivot's M3 indicator. macOS uses the
-        // accent segment fill above instead of an underbar. zh_CN: M3 §5 tabs：选中 tab 下缘的圆角 primary
-        // 指示条（约 3dp），贴合标签宽度且两端全圆角——与 Pivot 的 M3 指示条一致。macOS 用上面的强调段填充代替下划条。
-        if (lang == DesignMaterial && selected) {
-            const QRect base = indicatorRectForTab(record.tabIndex);
-            if (base.isValid() && !base.isEmpty()) {
-                const int textWidth = QFontMetrics(tabFont()).horizontalAdvance(item.text);
-                const int labelWidth = qMin(base.width(), qMax(currentMetrics.minTabWidth / 2, textWidth));
-                const int cx = visualRecord.tabRect.center().x();
-                const QRect indicator(cx - labelWidth / 2, base.top(), labelWidth, base.height());
-                painter.setBrush(themeColorsRef().accentDefault);
-                const qreal r = indicator.height() / 2.0;
-                painter.drawRoundedRect(indicator, r, r);
-            }
-        }
-    }
 
     const QColor textColor = textColorForTab(record.tabIndex);
     if (!visualRecord.iconRect.isEmpty()) {
@@ -1797,8 +1746,9 @@ void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
         }
     }
 
-    if (!selected && !m_dragActive && m_focusVisualVisible && !sameHit(m_pressedHit, HitRecord{HitKind::Tab, record.tabIndex}) && hasFocus() && sameHit(m_focusedHit, HitRecord{HitKind::Tab, record.tabIndex}))
+    if (!selected && !m_dragActive && m_focusVisualVisible && !sameHit(m_pressedHit, HitRecord{HitKind::Tab, record.tabIndex}) && hasFocus() && sameHit(m_focusedHit, HitRecord{HitKind::Tab, record.tabIndex})) {
         paintFocus(painter, visualRecord.tabRect.adjusted(1, 1, -1, -1));
+    }
     painter.restore();
 }
 
@@ -1873,36 +1823,6 @@ QColor TabStrip::tabFillColor(const TabRecord& record) const
     const HitRecord closeHit{HitKind::Close, record.tabIndex};
     const bool pressed = sameHit(m_pressedHit, tabHit) || sameHit(m_pressedHit, closeHit);
     const bool hovered = sameHit(m_hoveredHit, tabHit) || sameHit(m_hoveredHit, closeHit);
-
-    // Brand-specific tab fill, DesignFluent unchanged. zh_CN: 品牌专属 tab 填充，DesignFluent 保持不变。
-    const DesignLanguage lang = themeDesignLanguage();
-    if (lang == DesignMaterial) {
-        // M3 keeps document tabs on the neutral surface (no elevated selected fill); selection is
-        // carried by the accent label + underbar. Hover/press get a subtle within-bounds primary
-        // state-layer veil. zh_CN: M3 文档 tab 保持中性面（选中不抬升填充），选中由强调标签 + 下划条体现；
-        // 悬停/按下用限制在范围内的轻量 primary state-layer 薄层。
-        if (pressed || hovered) {
-            QColor stateLayer = themeColorsRef().accentDefault;
-            stateLayer.setAlpha(pressed ? 0x1A : 0x14);
-            return stateLayer;
-        }
-        return Qt::transparent;
-    }
-    if (lang == DesignCupertino) {
-        // macOS reads the selected tab as the active segment of a segmented control: an accent fill.
-        // Inactive hover gets a faint theme-aware veil; otherwise neutral. zh_CN: macOS 把选中 tab 视为
-        // 分段控件的激活段：强调色填充。未选中悬停为淡淡的主题感知薄层，其余中性。
-        if (selected)
-            return themeColorsRef().accentDefault;
-        if (pressed || hovered) {
-            const bool darkTheme = effectiveTheme() == Dark;
-            return darkTheme ? QColor(255, 255, 255, pressed ? 0x2C : 0x1C)
-                             : QColor(0, 0, 0, pressed ? 0x24 : 0x14);
-        }
-        return Qt::transparent;
-    }
-
-    // DesignFluent (default): unchanged. zh_CN: 默认 Fluent，保持不变。
     if (selected)
         return themeColorsRef().bgLayer;
     if (pressed)
@@ -1918,16 +1838,6 @@ QColor TabStrip::textColorForTab(int index) const
         return themeColorsRef().textDisabled;
 
     const bool selected = index == m_selectedIndex;
-    // Brand-specific tab text/icon color, DesignFluent unchanged. Mirrors the Label role chosen in
-    // updateHeaderWidgets so the painted icon glyph matches the label. zh_CN: 品牌专属 tab 文字/图标色，
-    // DesignFluent 不变。与 updateHeaderWidgets 选择的 Label 角色一致，使绘制的图标字符与标签匹配。
-    const DesignLanguage lang = themeDesignLanguage();
-    if (lang == DesignMaterial)
-        return selected ? themeColorsRef().accentDefault : themeColorsRef().textSecondary;
-    if (lang == DesignCupertino)
-        return selected ? themeColorsRef().textOnAccent : themeColorsRef().textSecondary;
-
-    // DesignFluent (default): unchanged. zh_CN: 默认 Fluent，保持不变。
     return selected ? themeColorsRef().textPrimary : themeColorsRef().textSecondary;
 }
 

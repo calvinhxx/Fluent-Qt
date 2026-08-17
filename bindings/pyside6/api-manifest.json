@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "api_version": "1.6",
+  "api_version": "1.7",
   "variables": [
     "__api_version__",
     "__version__"
@@ -105,20 +105,17 @@
     "BackdropSurfaceMode",
     "BindingMode",
     "ContentDialogButton",
-    "DesignLanguage",
     "FontRole",
     "SelectionMode",
-    "StyleTheme",
     "Theme",
     "WidgetOwnership"
   ],
   "functions": [
     "accent_color",
     "anchors",
-    "apply_style_theme",
+    "apply_user_theme",
     "bind",
     "binding_build_info",
-    "current_design_language",
     "current_theme",
     "font_for_role",
     "font_scale",
@@ -139,7 +136,6 @@
       "setFill"
     ],
     "FluentWidget": [
-      "design_language",
       "effective_theme",
       "on_theme_updated",
       "theme_font",

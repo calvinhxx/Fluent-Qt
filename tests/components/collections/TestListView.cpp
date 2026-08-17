@@ -1,4 +1,4 @@
-#include <gtest/gtest.h>
+#include "compatibility/QtCompat.h"
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QHash>
@@ -12,24 +12,24 @@
 #include <QPainter>
 #include <QScrollArea>
 #include <QStandardItemModel>
-#include <QStyledItemDelegate>
-#include <QStyleOptionViewItem>
 #include <QStringListModel>
+#include <QStyleOptionViewItem>
+#include <QStyledItemDelegate>
 #include <QtMath>
-#include "compatibility/QtCompat.h"
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
-#include "utils/DebugOverlay.h"
+#include <gtest/gtest.h>
 #include "FluentListItemDelegate.h"
-#include "components/collections/ListView.h"
-#include "components/textfields/Label.h"
 #include "components/basicinput/Button.h"
+#include "components/collections/CollectionViewBackdrop_p.h"
+#include "components/collections/ListView.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
-#include "components/collections/CollectionViewBackdrop_p.h"
+#include "components/textfields/Label.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "utils/DebugOverlay.h"
 
 #include "components/scrolling/ScrollBar.h"
 
@@ -44,7 +44,8 @@ int defaultListRowHeight() {
     return Spacing::ControlHeight::Standard + Spacing::Gap::Tight;
 }
 
-/** 业务组装：为 ListView 挂上 Fluent 行高代理（主题来自 ListView 的 fluent::FluentElement）。 */
+/** 业务组装：为 ListView 挂上 Fluent 行高代理（主题来自 ListView 的
+ * fluent::FluentElement）。 */
 void attachFluentDelegate(ListView* lv, int rowHeight = defaultListRowHeight()) {
     lv->setItemDelegate(new listview_test::FluentListItemDelegate(
         static_cast<fluent::FluentElement*>(lv), rowHeight, lv, lv));
@@ -1033,7 +1034,8 @@ TEST_F(ListViewTest, DefaultDelegateKeepsTextClearOfSelectionIndicator) {
 
     ASSERT_GE(firstTextPixelX, 0);
     EXPECT_GE(firstTextPixelX - indicator.right(), 6.0)
-        << "Default ListView text must not collide with the 3 px selection indicator";
+        << "Default ListView text must not collide with the 3 px selection "
+         "indicator";
 }
 
 // ── Selected indicator motion ────────────────────────────────────────────────
@@ -1052,6 +1054,41 @@ TEST_F(ListViewTest, SelectedIndicatorVerticalPlacement) {
     EXPECT_NEAR(indicator.width(), 3.0, 0.75);
     EXPECT_NEAR(indicator.height(), 16.0, 0.75);
     EXPECT_NEAR(indicator.center().y(), bg.center().y(), 0.75);
+}
+
+TEST_F(ListViewTest, Contract_SelectedIndicatorPaintsAccentInLightAndDark)
+{
+    const FluentElement::Theme themes[]{FluentElement::Light,
+                                        FluentElement::Dark};
+    for (const auto theme : themes) {
+        FluentElement::setTheme(theme);
+        auto* listView = createIndicatorListView(window);
+        listView->setSelectedIndex(1);
+        showWindowAndProcess(window);
+
+        const QRect indicatorRect = listView->selectedIndicatorRect()
+                                        .toAlignedRect()
+                                        .adjusted(-1, -1, 1, 1);
+        const QImage image = renderViewport(listView->viewport());
+        ASSERT_FALSE(image.isNull()) << "theme=" << theme;
+
+        bool foundAccent = false;
+        const QRect bounded = indicatorRect.intersected(image.rect());
+        for (int y = bounded.top(); y <= bounded.bottom() && !foundAccent; ++y) {
+            for (int x = bounded.left(); x <= bounded.right(); ++x) {
+                if (isNearColor(QColor::fromRgba(image.pixel(x, y)),
+                                listView->themeColors().accentDefault)) {
+                    foundAccent = true;
+                    break;
+                }
+            }
+        }
+        EXPECT_TRUE(foundAccent) << "theme=" << theme;
+        delete listView;
+    }
+
+    ThemeRegistry::instance().resetToDefaults();
+    FluentElement::setTheme(FluentElement::Light);
 }
 
 TEST_F(ListViewTest, SelectedIndicatorHorizontalPlacement) {
@@ -1553,7 +1590,8 @@ TEST_F(ListViewTest, MouseWheelHalfTickStillScrolls) {
     QTest::qWait(20);
 
     EXPECT_GT(lv->verticalScrollBar()->value(), before)
-        << "High-resolution Windows wheel/touchpad fallback ticks should not feel inert";
+        << "High-resolution Windows wheel/touchpad fallback ticks should not "
+         "feel inert";
 }
 
 TEST_F(ListViewTest, ScrollChainingPropertyControlsBoundaryWheel) {
@@ -1653,7 +1691,8 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailStartsBounceAndSettles) {
     QTest::qWait(20);
 
     EXPECT_GT(lv->exposedVerticalOffset(), beforeOffset)
-        << "Windows NoPhaseDiscrete boundary input should still show a bounded bounce";
+        << "Windows NoPhaseDiscrete boundary input should still show a bounded "
+         "bounce";
 
     QTest::qWait(500);
 
@@ -1672,7 +1711,8 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailDoesNotExtendActiveBounce) {
     sendWheel(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
     const int firstDelta = lv->exposedVerticalOffset() - beforeOffset;
     ASSERT_GT(firstDelta, 0)
-        << "Pre-condition: boundary input should create visible overscroll feedback";
+        << "Pre-condition: boundary input should create "
+                              "visible overscroll feedback";
 
     for (int i = 0; i < 4; ++i) {
         sendWheel(lv->viewport(), QPoint(0, 0), QPoint(0, -120), Qt::NoScrollPhase);
@@ -1681,11 +1721,13 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailDoesNotExtendActiveBounce) {
 
     const int tailDelta = lv->exposedVerticalOffset() - beforeOffset;
     EXPECT_LE(tailDelta, firstDelta)
-        << "Same-direction boundary tails should not extend or restart the active bounce";
+        << "Same-direction boundary tails should "
+                                      "not extend or restart the active bounce";
 
     QTest::qWait(400);
     EXPECT_EQ(lv->exposedVerticalOffset(), beforeOffset)
-        << "The original bounce should settle without being prolonged by tail events";
+        << "The original bounce should settle without being prolonged by tail "
+         "events";
 }
 
 TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailAllowsReverseRecovery) {
@@ -1702,13 +1744,15 @@ TEST_F(ListViewTest, NoPhaseDiscreteBoundaryTailAllowsReverseRecovery) {
     }
 
     EXPECT_EQ(lv->verticalScrollBar()->value(), maxValue)
-        << "Same-direction NoPhaseDiscrete boundary tails should be consumed at the edge";
+        << "Same-direction NoPhaseDiscrete boundary tails should be consumed at "
+         "the edge";
 
     sendWheel(lv->viewport(), QPoint(0, 0), QPoint(0, 120), Qt::NoScrollPhase);
     QTest::qWait(20);
 
     EXPECT_LT(lv->verticalScrollBar()->value(), maxValue)
-        << "Reverse NoPhaseDiscrete input should immediately scroll back into content";
+        << "Reverse NoPhaseDiscrete input should immediately scroll back into "
+         "content";
 }
 
 TEST_F(ListViewTest, RdpClusterReachingBoundaryRecoversOnReverseTick) {
@@ -1725,13 +1769,15 @@ TEST_F(ListViewTest, RdpClusterReachingBoundaryRecoversOnReverseTick) {
         QTest::qWait(20);
     }
     EXPECT_EQ(lv->verticalScrollBar()->value(), maxValue)
-        << "High-frequency NoPhaseDiscrete cluster should pin at the bottom boundary";
+        << "High-frequency NoPhaseDiscrete cluster should pin at the bottom "
+         "boundary";
 
     sendWheel(lv->viewport(), QPoint(0, 0), QPoint(0, 120), Qt::NoScrollPhase);
     QTest::qWait(20);
 
     EXPECT_LT(lv->verticalScrollBar()->value(), maxValue)
-        << "A reverse tick after the boundary cluster should not be swallowed by stale state";
+        << "A reverse tick after the boundary cluster should not be swallowed by "
+         "stale state";
 }
 
 // 5.5 bounce 期间 NoPhase 事件被吞
@@ -1860,7 +1906,8 @@ TEST_F(ListViewTest, HorizontalNoPhaseDiscreteUsesDominantAxis) {
     QTest::qWait(20);
 
     EXPECT_GT(lv->horizontalScrollBar()->value(), before)
-        << "LeftToRight ListView should scroll horizontally from dominant Y-axis NoPhaseDiscrete input";
+        << "LeftToRight ListView should scroll horizontally from dominant Y-axis "
+         "NoPhaseDiscrete input";
 }
 
 TEST_F(ListViewTest, KeyboardSelectionWorksAfterNoPhaseDiscreteWheel) {
@@ -1880,7 +1927,8 @@ TEST_F(ListViewTest, KeyboardSelectionWorksAfterNoPhaseDiscreteWheel) {
     QTest::qWait(20);
 
     EXPECT_EQ(lv->selectedIndex(), 1)
-        << "Keyboard navigation and selection should remain governed by the selection model";
+        << "Keyboard navigation and selection should remain governed by the "
+         "selection model";
 }
 
 // ── 可视化测试（业务组装与上面一致）───────────────────────────────────────────
@@ -2206,152 +2254,4 @@ TEST_F(ListViewTest, VisualCheck) {
     window->show();
     syncFluentBar();
     qApp->exec();
-}
-
-// ─── Design-language × theme: accent selection-indicator gating ──────────────
-//
-// The Fluent ListView draws an ADDITIONAL animated accent pill at a selected row's leading edge.
-// Under Material 3 / macOS the selected row is filled by the item delegate (a tonal/solid wash), so
-// that Fluent pill would double-up and must be SUPPRESSED. This sweep crosses the 3 design languages
-// with the 2 app themes and asserts: every combination paints valid content with no opaque near-black
-// trap surface on a non-selected row, AND the leading-edge accent pill is present ONLY under Fluent.
-// Design language + theme are GLOBAL singletons, so the fixture restores both in TearDown.
-// zh_CN: Fluent ListView 在选中行前缘额外绘制动画 accent 药丸。Material 3 / macOS 下选中行由委托整行填充
-//(色调/实心),该药丸会叠加,必须抑制。本套件以 3 设计语言 × 2 主题遍历并断言:每种组合都绘制出有效内容、
-// 非选中行无不透明近黑陷阱面,且前缘 accent 药丸仅在 Fluent 下出现。设计语言与主题为全局单例,夹具在
-// TearDown 中复位二者。
-class ListViewDesignLanguageTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        window = new FluentTestWindow();
-        window->setFixedSize(500, 320);
-        window->setAttribute(Qt::WA_DontShowOnScreen, true);
-    }
-
-    void TearDown() override {
-        delete window;
-        window = nullptr;
-        // Design language + theme are GLOBAL — reset so later suites see defaults.
-        // zh_CN: 设计语言与主题为全局状态;复位以保证后续套件看到默认值。
-        fluent::ThemeRegistry::instance().resetToDefaults();
-        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    }
-
-    // Is `color` close enough to `accent` (and opaque enough) to count as an accent pixel?
-    // zh_CN: color 是否足够接近 accent(且足够不透明)以计为 accent 像素?
-    static bool isAccentLike(const QColor& color, const QColor& accent) {
-        constexpr int kTolerance = 42;
-        return color.alpha() > 160
-            && qAbs(color.red() - accent.red()) <= kTolerance
-            && qAbs(color.green() - accent.green()) <= kTolerance
-            && qAbs(color.blue() - accent.blue()) <= kTolerance;
-    }
-
-    static QImage renderViewport(QWidget* viewport) {
-        QImage image(viewport->size(), QImage::Format_ARGB32_Premultiplied);
-        image.fill(Qt::transparent);
-        QPainter painter(&image);
-        viewport->render(&painter);
-        painter.end();
-        return image;
-    }
-
-    static bool hasAccentPixelInRect(const QImage& image, const QRect& rect, const QColor& accent) {
-        const QRect bounded = rect.intersected(QRect(0, 0, image.width(), image.height()));
-        for (int y = bounded.top(); y <= bounded.bottom(); ++y)
-            for (int x = bounded.left(); x <= bounded.right(); ++x)
-                if (isAccentLike(QColor::fromRgba(image.pixel(x, y)), accent))
-                    return true;
-        return false;
-    }
-
-    static bool hasPaintedContent(const QImage& image) {
-        const QRgb bg = image.pixel(0, 0);
-        for (int y = 0; y < image.height(); ++y)
-            for (int x = 0; x < image.width(); ++x)
-                if (image.pixel(x, y) != bg)
-                    return true;
-        return false;
-    }
-
-    FluentTestWindow* window = nullptr;
-};
-
-TEST_F(ListViewDesignLanguageTest, AccentSelectionPillIsFluentOnlyAcrossThemes) {
-    struct LangCase { fluent::FluentElement::DesignLanguage lang; const char* name; };
-    struct ThemeCase { fluent::FluentElement::Theme theme; const char* name; };
-
-    const LangCase langs[] = {
-        { fluent::FluentElement::DesignFluent, "Fluent" },
-        { fluent::FluentElement::DesignMaterial, "Material" },
-        { fluent::FluentElement::DesignCupertino, "Cupertino" },
-    };
-    const ThemeCase themes[] = {
-        { fluent::FluentElement::Light, "Light" },
-        { fluent::FluentElement::Dark, "Dark" },
-    };
-
-    for (const auto& lang : langs) {
-        for (const auto& th : themes) {
-            fluent::ThemeRegistry::instance().setDesignLanguage(lang.lang);
-            fluent::FluentElement::setTheme(th.theme);
-
-            const std::string ctx = std::string(lang.name) + "/" + th.name;
-
-            // Single-select (default) → uses the MOVING pill. Animation off so the pill snaps to target.
-            // zh_CN: 单选(默认)→ 使用移动药丸。关闭动画使药丸直接定位到目标。
-            auto* lv = createIndicatorListView(window);
-            showWindowAndProcess(window);
-
-            constexpr int kSelectedRow = 1;
-            constexpr int kOtherRow = 3;
-            lv->setSelectedIndex(kSelectedRow);
-            QApplication::processEvents();
-
-            const QImage image = renderViewport(lv->viewport());
-            ASSERT_FALSE(image.isNull()) << ctx;
-            EXPECT_GT(image.width(), 0) << ctx;
-            EXPECT_GT(image.height(), 0) << ctx;
-            EXPECT_TRUE(hasPaintedContent(image)) << "painted nothing: " << ctx;
-
-            const QColor accent = lv->themeColors().accentDefault;
-            ASSERT_TRUE(accent.isValid()) << ctx;
-
-            // The pill's geometry is computed identically regardless of design language; only PAINTING
-            // is gated. Sample a thin strip at that leading edge for accent pixels.
-            // zh_CN: 药丸几何与设计语言无关,仅绘制被门控。在该前缘采样窄带查找 accent 像素。
-            const QRectF pillRect = lv->selectedIndicatorRect();
-            ASSERT_FALSE(pillRect.isEmpty()) << ctx;
-            const QRectF selBg = itemBackgroundRect(lv, kSelectedRow);
-            const QRect leadingStrip(qMax(0, int(selBg.left()) - 1),
-                                     int(selBg.top()),
-                                     14,
-                                     int(selBg.height()));
-            const bool pillPresent = hasAccentPixelInRect(image, leadingStrip, accent);
-
-            if (lang.lang == fluent::FluentElement::DesignFluent) {
-                EXPECT_TRUE(pillPresent)
-                    << "Fluent must paint the accent selection pill at the leading edge: " << ctx;
-            } else {
-                EXPECT_FALSE(pillPresent)
-                    << "Fluent accent pill must be SUPPRESSED under M3/macOS: " << ctx;
-            }
-
-            // Trap guard: a non-selected row must not be an opaque near-black surface (invalid-QColor
-            // setBrush trap / default-light-QPalette trap). zh_CN: 陷阱守卫:非选中行不得为不透明近黑面。
-            const QRectF otherBg = itemBackgroundRect(lv, kOtherRow);
-            const QPoint probe(int(otherBg.center().x()), int(otherBg.center().y()));
-            if (image.rect().contains(probe)) {
-                const QColor c = QColor::fromRgba(image.pixel(probe));
-                const int lum = qRound(0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue());
-                const bool opaqueBlack = c.alpha() > 200 && lum < 16;
-                EXPECT_FALSE(opaqueBlack)
-                    << "non-selected row is an opaque near-black surface: " << ctx
-                    << " rgba=(" << c.red() << "," << c.green() << "," << c.blue() << ","
-                    << c.alpha() << ")";
-            }
-
-            delete lv;
-        }
-    }
 }

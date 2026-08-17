@@ -1,11 +1,11 @@
-#include <gtest/gtest.h>
-#include <QApplication>
-#include <QTest>
-#include <QWidget>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/windowing/WindowBackdrop.h"
 #include "design/CornerRadius.h"
+#include <QApplication>
+#include <QTest>
+#include <QWidget>
+#include <gtest/gtest.h>
 
 // 模拟一个继承自 fluent::FluentElement 的组件
 class MockComponent : public QWidget, public fluent::FluentElement {
@@ -18,28 +18,27 @@ public:
     }
 };
 
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QPushButton>
 #include "components/basicinput/Button.h"
-#include <QFrame>
-#include <QTimer>
-#include <QVariant>
 #include <QElapsedTimer>
-#include <QScrollArea>
+#include <QFrame>
+#include <QGraphicsDropShadowEffect>
 #include <QGridLayout>
 #include <QGroupBox>
-#include <QGraphicsDropShadowEffect>
-#include <QStackedLayout>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QMap>
-
-#include <QPropertyAnimation>
-#include <QResizeEvent>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QStackedLayout>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QVariant>
 #include <QComboBox>
+#include <QLinearGradient>
 #include <QPainter>
 #include <QPainterPath>
-#include <QLinearGradient>
+#include <QPropertyAnimation>
+#include <QResizeEvent>
 
 // 材质预览卡片：用 paintEvent 手动合成渐变底图 + 材质覆盖层，避免 QSS/QPalette 无法做透明合成的问题
 class MaterialPreviewCard : public QWidget {
@@ -374,7 +373,8 @@ private:
 
     void updateSpacing() {
         const auto& s = themeSpacing();
-        m_spacingFrame->setStyleSheet(QString("background: palette(midlight); border: %1px solid %2; margin: %3px;")
+        m_spacingFrame->setStyleSheet(QString("background: palette(midlight); border: %1px solid %2; margin: "
+                "%3px;")
             .arg(s.small)
             .arg(themeColors().accentDefault.name())
             .arg(s.standard));
@@ -421,7 +421,8 @@ private:
             "<html><body>"
             "Current Width: <b style='font-size: 16px;'>%1 px</b> | "
             "Breakpoint: <b style='color: %2; font-size: 16px;'>%3</b>"
-            "<br><small style='color: gray;'>Guide: Small &lt;= %4px | Medium &lt;= %5px | Large &gt; %5px</small>"
+                "<br><small style='color: gray;'>Guide: Small &lt;= %4px | "
+                "Medium &lt;= %5px | Large &gt; %5px</small>"
             "</body></html>"
         ).arg(w).arg(color).arg(name).arg(small).arg(medium));
     }
@@ -499,7 +500,6 @@ TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce) {
     auto next = registry.snapshot();
     next.lightColors.accentDefault = QColor(QStringLiteral("#A23BEC"));
     next.radius.control = 9;
-    next.designLanguage = fluent::FluentElement::DesignMaterial;
     next.fontFamilyOverride = QStringLiteral("Theme Snapshot Test");
     next.fontScale = 1.25;
 
@@ -509,7 +509,6 @@ TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce) {
     EXPECT_EQ(component->updateCount, initialUpdates + 1);
     EXPECT_EQ(registry.colors(false).accentDefault, QColor(QStringLiteral("#A23BEC")));
     EXPECT_EQ(registry.radius().control, 9);
-    EXPECT_EQ(registry.designLanguage(), fluent::FluentElement::DesignMaterial);
     EXPECT_EQ(registry.fontFamilyOverride(), QStringLiteral("Theme Snapshot Test"));
     EXPECT_DOUBLE_EQ(registry.fontScale(), 1.25);
 

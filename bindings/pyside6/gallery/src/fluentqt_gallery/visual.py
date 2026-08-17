@@ -86,8 +86,8 @@ class GalleryColors:
 
 def gallery_colors() -> GalleryColors:
     """Return the app palette used by the native Gallery-owned surfaces."""
-    # Resolve the same live StyleThemeCatalog palette used by C++ so Gallery-
-    # owned paint code follows Fluent, Material, and macOS style changes too.
+    # Resolve the same live Fluent user-theme palette used by C++ so Gallery-
+    # owned paint code follows Fluent Light/Dark and accent changes.
     # Import lazily because the Foundation topic module also reuses visual.py.
     from .foundation_pages import _theme_tokens
 
@@ -1373,18 +1373,6 @@ class GalleryHomeHero(QWidget):
             "Guidelines and toolkits for Fluent design.",
             "https://aka.ms/WinUI/3.0-figma-toolkit",
             "Header-WindowsDesign.png",
-        ),
-        (
-            "macOS 27 Community",
-            "Community Figma design kit for macOS 27.",
-            "https://www.figma.com/community/file/1651309434229735362",
-            "Header-macOS27.png",
-        ),
-        (
-            "Material 3 Design Kit",
-            "Community Figma kit for Material 3.",
-            "https://www.figma.com/community/file/1035203688168086460",
-            "Header-Material3.png",
         ),
         (
             "WinUI Gallery",

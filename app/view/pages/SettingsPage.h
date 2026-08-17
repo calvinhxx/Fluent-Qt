@@ -20,7 +20,7 @@ class Label;
 namespace fluent::basicinput {
 class Button;
 class ComboBox;
-}
+} // namespace fluent::basicinput
 
 namespace fluent::gallery {
 
@@ -59,7 +59,6 @@ private:
     QVBoxLayout* m_contentLayout = nullptr;
     fluent::textfields::Label* m_titleLabel = nullptr;
     fluent::basicinput::ComboBox* m_themeChoice = nullptr;
-    fluent::basicinput::ComboBox* m_styleChoice = nullptr;
     AccentColorControl* m_accentControl = nullptr;
     fluent::basicinput::ComboBox* m_navigationChoice = nullptr;
     fluent::basicinput::ComboBox* m_effectChoice = nullptr;

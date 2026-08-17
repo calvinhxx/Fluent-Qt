@@ -50,13 +50,12 @@
     <function signature="fontForRole(Typography::FontRole)"/>
     <function signature="setTheme(fluent::binding::Theme)"/>
     <function signature="currentTheme()"/>
-    <function signature="applyStyleTheme(fluent::StyleTheme)"/>
+    <function signature="applyUserTheme()"/>
     <function signature="setAccentColor(const QColor&amp;)"/>
     <function signature="accentColor()"/>
     <function signature="resetThemeTokens()"/>
     <function signature="setFontScale(qreal)"/>
     <function signature="fontScale()"/>
-    <function signature="currentDesignLanguage()"/>
     <function signature="themeTokensForWidgetForBinding(const QWidget*)"/>
     <function signature="refreshWidgetThemeForBinding(QWidget*)">
         <modify-function>
@@ -130,11 +129,9 @@
          fluentqt Python package re-exports the intended flat public API. -->
     <namespace-type name="fluent">
         <include file-name="BindingApi.h" location="global"/>
-        <enum-type name="StyleTheme"/>
         <enum-type name="WidgetOwnership"/>
         <namespace-type name="binding" visible="no">
             <enum-type name="Theme"/>
-            <enum-type name="DesignLanguage"/>
             <enum-type name="SelectionMode"/>
             <enum-type name="BindingMode"/>
             <enum-type name="AnchorEdge"/>
@@ -164,8 +161,6 @@
                                  rename="_themeFont"/>
                 <modify-function signature="effectiveThemeForBinding()const"
                                  rename="_effectiveTheme"/>
-                <modify-function signature="designLanguageForBinding()const"
-                                 rename="_designLanguage"/>
                 <modify-function signature="onThemeUpdated()"
                                  rename="_onThemeUpdated"/>
             </object-type>

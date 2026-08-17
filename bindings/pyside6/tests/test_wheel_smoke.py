@@ -2733,12 +2733,7 @@ def main():
     previous_theme = fluentqt.current_theme()
     try:
         fluentqt.set_theme(fluentqt.Theme.Dark)
-        fluentqt.apply_style_theme(fluentqt.StyleTheme.Material)
-        if (
-            fluentqt.current_design_language()
-            != fluentqt.DesignLanguage.DesignMaterial
-        ):
-            raise AssertionError("Installed theme adapter did not update tokens")
+        fluentqt.apply_user_theme()
     finally:
         fluentqt.reset_theme_tokens()
         fluentqt.set_theme(previous_theme)

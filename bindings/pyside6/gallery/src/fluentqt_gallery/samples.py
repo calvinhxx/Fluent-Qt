@@ -152,14 +152,14 @@ def _simple_preview(name: str, parent: QWidget | None) -> PreviewResult | None:
 
     if name == "ComboBox":
         control = fluentqt.ComboBox(parent)
-        control.addItems(["Fluent", "Material", "macOS"])
+        control.addItems(["Design", "Development", "Research"])
         control.setCurrentIndex(0)
         control.setMinimumWidth(220)
         return PreviewResult(
             control,
             _source(
                 "control = fluentqt.ComboBox()",
-                'control.addItems(["Fluent", "Material", "macOS"])',
+                'control.addItems(["Design", "Development", "Research"])',
                 "control.setCurrentIndex(0)",
                 "control.setMinimumWidth(220)",
             ),

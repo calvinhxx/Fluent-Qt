@@ -7,8 +7,7 @@ from . import _fluentqt as _native
 from ._fluentqt import (
     FontRole,
     accentColor,
-    applyStyleTheme,
-    currentDesignLanguage,
+    applyUserTheme,
     currentTheme,
     fontScale,
     fontForRole,
@@ -20,9 +19,7 @@ from ._fluentqt import (
 )
 from .design import ThemeTokens
 
-StyleTheme = _native.fluent.StyleTheme
 Theme = _native.fluent.Theme
-DesignLanguage = _native.fluent.DesignLanguage
 FontIcon = _native.fluent.FontIcon
 AnchorEdge = _native.fluent.AnchorEdge
 AnchorLayout = _native.fluent.AnchorLayout
@@ -59,12 +56,6 @@ class FluentWidget(_NativeFluentWidget):
         """Return the Light/Dark theme inherited by this widget."""
 
         return self._effectiveTheme()
-
-    def design_language(self):
-        """Return the widget's Fluent, Material, or Cupertino language."""
-
-        return self._designLanguage()
-
 
 class StateGroup(_NativeStateGroup):
     """Named property bundles with default restoration and safe QObject targets."""
@@ -299,9 +290,9 @@ def current_theme():
     return currentTheme()
 
 
-def apply_style_theme(style_theme):
-    """Install a Fluent, Material, or macOS design-token preset."""
-    applyStyleTheme(style_theme)
+def apply_user_theme():
+    """Load the user-editable Fluent token overrides, if present."""
+    applyUserTheme()
 
 
 def set_accent_color(color):
@@ -329,11 +320,6 @@ def font_scale():
     return fontScale()
 
 
-def current_design_language():
-    """Return the structural design language selected by the style theme."""
-    return currentDesignLanguage()
-
-
 def theme_revision():
     """Return the token-registry revision counter."""
     return themeRevision()
@@ -344,22 +330,18 @@ __all__ = [
     "AnchorLayout",
     "AnchorSpec",
     "BindingMode",
-    "DesignLanguage",
     "FluentWidget",
     "FontIcon",
     "FontRole",
     "StateGroup",
-    "StyleTheme",
     "Theme",
     "accent_color",
     "accentColor",
     "anchors",
-    "apply_style_theme",
-    "applyStyleTheme",
+    "apply_user_theme",
+    "applyUserTheme",
     "bind",
-    "current_design_language",
     "current_theme",
-    "currentDesignLanguage",
     "currentTheme",
     "font_scale",
     "font_for_role",

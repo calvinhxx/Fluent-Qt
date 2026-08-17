@@ -8,8 +8,8 @@
 #include <QPixmap>
 #include <QtMath>
 
-#include "components/menus_toolbars/Menu.h"
 #include "compatibility/private/RuntimePlatformCapabilities_p.h"
+#include "components/menus_toolbars/Menu.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 
@@ -244,10 +244,7 @@ public:
             return QIcon();
 
         const Colors& colors = themeColorsRef();
-        const QColor activeColor =
-            themeDesignLanguage() == DesignCupertino
-            ? colors.textOnAccent
-            : colors.textPrimary;
+        const QColor activeColor = colors.textPrimary;
 
         auto pixmapForColor =
             [this, &glyph](const QColor& color) {

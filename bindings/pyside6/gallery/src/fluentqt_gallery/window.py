@@ -1486,7 +1486,6 @@ def _settings_section(title: str, parent: QWidget) -> fluentqt.Label:
 
 def build_settings_page(
     set_theme_mode: Callable[[int], None],
-    set_style: Callable[[int], None],
     set_navigation_style: Callable[[int], None] | None = None,
     set_effect: Callable[[int], None] | None = None,
     set_close_behavior: Callable[[int], None] | None = None,
@@ -1527,12 +1526,6 @@ def build_settings_page(
         int(settings.theme_mode),
         content,
     )
-    style = _settings_choice(
-        "gallerySettingsStyleChoice",
-        ("Fluent (Windows)", "Material 3 (Google)", "macOS"),
-        int(settings.style_theme),
-        content,
-    )
     navigation = _settings_choice(
         "gallerySettingsNavigationChoice",
         ("Left", "Top"),
@@ -1552,7 +1545,6 @@ def build_settings_page(
         content,
     )
     theme.currentIndexChanged.connect(set_theme_mode)
-    style.currentIndexChanged.connect(set_style)
     if set_navigation_style is not None:
         navigation.currentIndexChanged.connect(set_navigation_style)
     if set_effect is not None:
@@ -1561,13 +1553,6 @@ def build_settings_page(
         close_behavior.currentIndexChanged.connect(set_close_behavior)
 
     accent = _AccentColorControl(content)
-    style_accent = QWidget(content)
-    style_accent.setObjectName("gallerySettingsStyleAccentTrailing")
-    style_accent_layout = QHBoxLayout(style_accent)
-    style_accent_layout.setContentsMargins(0, 0, 0, 0)
-    style_accent_layout.setSpacing(12)
-    style_accent_layout.addWidget(style)
-    style_accent_layout.addWidget(accent)
 
     update_panel = QWidget(content)
     update_panel.setObjectName("gallerySettingsUpdateCheckControl")
@@ -1674,9 +1659,9 @@ def build_settings_page(
         ),
         _SettingsRow(
             "\uE790",
-            "Style & accent color",
-            "Switch the palette and shape language (Fluent, Material 3, macOS) and pick an accent",
-            style_accent,
+            "Accent color",
+            "Choose the accent used by the Fluent interface",
+            accent,
             content,
         ),
         _SettingsRow(
@@ -1721,7 +1706,6 @@ def build_settings_page(
     page._gallery_settings_rows = rows
     page._gallery_settings_choices = (
         theme,
-        style,
         navigation,
         effect,
         close_behavior,
@@ -2083,13 +2067,6 @@ class GalleryWindow(fluentqt.Window):
         )
         self._visual_generation = 0
         self._page_visual_generations: dict[str, int] = {}
-        self._style_index = int(self._settings.style_theme)
-        self._styles = (
-            ("Fluent", fluentqt.StyleTheme.Fluent),
-            ("Material", fluentqt.StyleTheme.Material),
-            ("macOS", fluentqt.StyleTheme.MacOS),
-        )
-
         self._build_title_bar()
         self._build_navigation_shell()
         self._apply_navigation_style(self._settings.navigation_style)
@@ -2397,7 +2374,6 @@ class GalleryWindow(fluentqt.Window):
         elif route.kind == "settings":
             page = build_settings_page(
                 self._set_theme_mode,
-                self._set_style,
                 self._set_navigation_style,
                 self._set_effect,
                 self._set_close_behavior,
@@ -2679,9 +2655,6 @@ class GalleryWindow(fluentqt.Window):
         dark = fluentqt.current_theme() != fluentqt.Theme.Dark
         self._set_theme_mode(2 if dark else 1)
 
-    def _cycle_style(self) -> None:
-        self._set_style((self._style_index + 1) % len(self._styles))
-
     def _set_theme_mode(self, index: int) -> None:
         self._settings.set_theme_mode(index)
         self._gallery_visuals_changed()
@@ -2691,11 +2664,6 @@ class GalleryWindow(fluentqt.Window):
         for _index, page in self._pages.values():
             if hasattr(page, "_gallery_sample_theme_explicit"):
                 _sync_component_sample_theme(page)
-
-    def _set_style(self, index: int) -> None:
-        self._style_index = max(0, min(int(index), len(self._styles) - 1))
-        self._settings.set_style_theme(self._style_index)
-        self._gallery_visuals_changed()
 
     def _set_navigation_style(self, index: int) -> None:
         style = (

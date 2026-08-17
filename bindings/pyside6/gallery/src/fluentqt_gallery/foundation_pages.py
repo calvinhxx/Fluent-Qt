@@ -70,7 +70,7 @@ def _rgba(red: int, green: int, blue: int, alpha: int = 255) -> QColor:
 
 
 def _parse_rgba(value: str) -> QColor:
-    """Parse the StyleThemeCatalog #RRGGBB/#RRGGBBAA convention."""
+    """Parse the Fluent user-theme #RRGGBB/#RRGGBBAA convention."""
 
     value = value.lstrip("#")
     if len(value) == 8:
@@ -202,62 +202,6 @@ def _global_theme_tokens() -> dict[str, QColor]:
             "#E3008C", "#D83B01", "#EA4300", "#FF8C00",
         )
 
-    language = str(fluentqt.current_design_language())
-    if "Material" in language:
-        overrides = (
-            {
-                "accentDefault": "#D0BCFF", "textOnAccent": "#381E72",
-                "bgCanvas": "#141218", "bgLayer": "#1D1B20",
-                "bgLayerAlt": "#211F26", "bgSolid": "#0F0D13",
-                "textPrimary": "#E6E0E9", "textSecondary": "#CAC4D0",
-                "textTertiary": "#938F99", "systemCritical": "#F2B8B5",
-                "systemCriticalBg": "#8C1D18", "systemCaution": "#F5C518",
-                "systemCautionBg": "#4A3C00", "systemInfo": "#D0BCFF",
-                "systemInfoBg": "#4F378B", "systemSuccess": "#6DD58C",
-                "systemSuccessBg": "#0A3818",
-            }
-            if dark
-            else {
-                "accentDefault": "#6750A4", "textOnAccent": "#FFFFFF",
-                "bgCanvas": "#FEF7FF", "bgLayer": "#FFFFFF",
-                "bgLayerAlt": "#F7F2FA", "bgSolid": "#F3EDF7",
-                "textPrimary": "#1D1B20", "textSecondary": "#49454F",
-                "textTertiary": "#79747E", "systemCritical": "#B3261E",
-                "systemCriticalBg": "#F9DEDC", "systemCaution": "#7A5900",
-                "systemCautionBg": "#FCEFC7", "systemInfo": "#6750A4",
-                "systemInfoBg": "#EADDFF", "systemSuccess": "#146C2E",
-                "systemSuccessBg": "#C4EED0",
-            }
-        )
-        values.update({key: _parse_rgba(value) for key, value in overrides.items()})
-    elif "Cupertino" in language:
-        overrides = (
-            {
-                "accentDefault": "#0A84FF", "textOnAccent": "#FFFFFF",
-                "bgCanvas": "#1E1E1E", "bgLayer": "#2C2C2E",
-                "bgLayerAlt": "#3A3A3C", "bgSolid": "#161618",
-                "textPrimary": "#FFFFFF", "textSecondary": "#FFFFFF8C",
-                "textTertiary": "#FFFFFF40", "systemCritical": "#FF453A",
-                "systemCriticalBg": "#3A1F1E", "systemCaution": "#FF9F0A",
-                "systemCautionBg": "#3A2C12", "systemInfo": "#0A84FF",
-                "systemInfoBg": "#16263A", "systemSuccess": "#30D158",
-                "systemSuccessBg": "#15321E",
-            }
-            if dark
-            else {
-                "accentDefault": "#007AFF", "textOnAccent": "#FFFFFF",
-                "bgCanvas": "#ECECEC", "bgLayer": "#FFFFFF",
-                "bgLayerAlt": "#F5F5F7", "bgSolid": "#E3E3E3",
-                "textPrimary": "#000000D9", "textSecondary": "#0000007F",
-                "textTertiary": "#00000042", "systemCritical": "#FF3B30",
-                "systemCriticalBg": "#FFE5E3", "systemCaution": "#FF9500",
-                "systemCautionBg": "#FFF0DB", "systemInfo": "#007AFF",
-                "systemInfoBg": "#E3F0FF", "systemSuccess": "#34C759",
-                "systemSuccessBg": "#E3F9E5",
-            }
-        )
-        values.update({key: _parse_rgba(value) for key, value in overrides.items()})
-
     active_accent = QColor(fluentqt.accent_color())
     if active_accent.isValid():
         values["accentDefault"] = active_accent
@@ -290,7 +234,6 @@ def _theme_snapshot(context=None) -> dict[str, object]:
 
     return {
         "theme": int(fluentqt.current_theme()),
-        "designLanguage": int(fluentqt.current_design_language()),
         "colors": _global_theme_tokens(),
     }
 
@@ -302,11 +245,6 @@ def _theme_tokens(context=None) -> dict[str, QColor]:
 
 
 def _radii() -> tuple[int, int]:
-    language = str(fluentqt.current_design_language())
-    if "Material" in language:
-        return 8, 12
-    if "Cupertino" in language:
-        return 6, 10
     return 4, 8
 
 

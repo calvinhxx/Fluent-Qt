@@ -2494,17 +2494,18 @@ class FluentQtBindingTest(unittest.TestCase):
         previous_theme = fluentqt.current_theme()
         try:
             fluentqt.reset_theme_tokens()
-            initial_revision = fluentqt.theme_revision()
 
             fluentqt.set_theme(fluentqt.Theme.Dark)
             self.assertEqual(fluentqt.current_theme(), fluentqt.Theme.Dark)
 
-            fluentqt.apply_style_theme(fluentqt.StyleTheme.Material)
-            self.assertEqual(
-                fluentqt.current_design_language(),
-                fluentqt.DesignLanguage.DesignMaterial,
-            )
+            fluentqt.apply_user_theme()
+            applied_scale = fluentqt.font_scale()
+            temporary_scale = 1.25 if abs(applied_scale - 1.25) > 0.01 else 1.5
+            fluentqt.set_font_scale(temporary_scale)
+            initial_revision = fluentqt.theme_revision()
+            fluentqt.apply_user_theme()
             self.assertGreater(fluentqt.theme_revision(), initial_revision)
+            self.assertAlmostEqual(fluentqt.font_scale(), applied_scale)
 
             accent_revision = fluentqt.theme_revision()
             accent = QColor("#7f52ff")

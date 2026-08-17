@@ -4,8 +4,8 @@
 #include <QAccessible>
 #include <QApplication>
 #include <QDir>
-#include <QEvent>
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QFile>
 #include <QFontMetrics>
 #include <QFrame>
@@ -33,6 +33,7 @@
 #include <QVector>
 #include <QtGlobal>
 
+#include "VisualGeometryTestUtils.h"
 #include "compatibility/QtCompat.h"
 #include "compatibility/WindowChromeCompat.h"
 #include "components/basicinput/Button.h"
@@ -42,52 +43,50 @@
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/FontIcon.h"
-#include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/QMLPlus.h"
+#include "components/foundation/ThemeRegistry.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayScrim.h"
 #include "components/navigation/NavigationView.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/status_info/Shimmer.h"
+#include "components/status_info/ToolTip.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
-#include "components/status_info/ToolTip.h"
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/WindowBackdrop.h"
 #include "design/Typography.h"
 #include "view/pages/GalleryContentPage.h"
+#include "view/pages/SettingsPage.h"
 #include "view/shell/GalleryApplicationController.h"
 #include "view/shell/GalleryContentPresenter.h"
+#include "view/shell/GalleryIntroTour.h"
+#include "view/shell/GalleryNavigationMetrics.h"
+#include "view/shell/GalleryNavigationPane.h"
+#include "view/shell/GalleryPageSkeleton.h"
 #include "view/shell/GallerySingleInstance.h"
 #include "view/shell/GalleryTitleBarController.h"
-#include "view/support/GalleryCloseBehaviorPrompt.h"
-#include "view/shell/GalleryNavigationPane.h"
-#include "view/shell/GalleryNavigationMetrics.h"
-#include "view/shell/GalleryPageSkeleton.h"
+#include "view/shell/GalleryWindow.h"
 #include "view/shell/GalleryWindowMetrics.h"
 #include "view/shell/GalleryWindowPlacement.h"
+#include "view/support/GalleryCloseBehaviorPrompt.h"
 #include "view/widgets/GalleryEntryCard.h"
 #include "view/widgets/samples/WindowingSamples.h"
-#include "VisualGeometryTestUtils.h"
-#include "view/shell/GalleryWindow.h"
-#include "view/shell/GalleryIntroTour.h"
-#include "view/pages/SettingsPage.h"
 #include "viewmodel/GalleryNavigationViewModel.h"
 #include "viewmodel/GallerySettings.h"
-#include "viewmodel/ThemeCatalog.h"
-#include "components/foundation/ThemeRegistry.h"
+#include "viewmodel/GalleryUserTheme.h"
 
 using fluent::basicinput::Button;
 using fluent::basicinput::ComboBox;
 using fluent::collections::TreeView;
 using fluent::dialogs_flyouts::ContentDialog;
 using fluent::dialogs_flyouts::Popup;
-using fluent::overlay::OverlayScrim;
 using fluent::gallery::CloseBehaviorPromptContent;
 using fluent::gallery::GalleryApplicationController;
-using fluent::gallery::GalleryContentPresenter;
 using fluent::gallery::GalleryContentPage;
+using fluent::gallery::GalleryContentPresenter;
 using fluent::gallery::GalleryEntryCard;
 using fluent::gallery::GalleryIntroTour;
 using fluent::gallery::GalleryNavigationPane;
@@ -99,6 +98,7 @@ using fluent::gallery::GalleryWindow;
 using fluent::gallery::SettingsPage;
 using fluent::navigation::NavigationView;
 using fluent::navigation::StackContentHost;
+using fluent::overlay::OverlayScrim;
 using fluent::scrolling::ScrollView;
 using fluent::status_info::Shimmer;
 using fluent::status_info::ToolTip;
@@ -337,7 +337,7 @@ TEST_F(GalleryShellFrameworkTest, TitleBarControllerSurvivesWatchedTitleBarTeard
     delete host;
 }
 
-TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithDesignResourceCards)
+TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithFluentResourceCards)
 {
     GalleryWindow window;
 
@@ -364,12 +364,13 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithDesignResourceCards)
         {QStringLiteral("Design"),
          QUrl(QStringLiteral("https://aka.ms/WinUI/3.0-figma-toolkit")),
          QStringLiteral(":/app/assets/home_header_tiles/Header-WindowsDesign.png")},
-        {QStringLiteral("macOS 27 Community"),
-         QUrl(QStringLiteral("https://www.figma.com/community/file/1651309434229735362")),
-         QStringLiteral(":/app/assets/home_header_tiles/Header-macOS27.png")},
-        {QStringLiteral("Material 3 Design Kit"),
-         QUrl(QStringLiteral("https://www.figma.com/community/file/1035203688168086460")),
-         QStringLiteral(":/app/assets/home_header_tiles/Header-Material3.png")},
+        {QStringLiteral("WinUI Gallery"),
+         QUrl(QStringLiteral("https://github.com/microsoft/WinUI-Gallery")),
+         QStringLiteral(":/app/assets/home_header_tiles/GitHub-Mark.png")},
+        {QStringLiteral("Fluent UI"),
+         QUrl(QStringLiteral(
+           "https://developer.microsoft.com/en-us/fluentui#/controls/web")),
+         QStringLiteral(":/app/assets/home_header_tiles/Header-Toolkit.png")},
     };
     constexpr int kHomeLinkUrlRole = Qt::UserRole + 3;
     constexpr int kHomeLinkImageRole = Qt::UserRole + 4;
@@ -1484,7 +1485,8 @@ TEST_F(GalleryShellFrameworkTest, ColdRouteSelectionKeepsPreparedSkeletonOffClic
     EXPECT_EQ(window.findChild<GalleryPageSkeleton*>(), preparedSkeleton);
     EXPECT_EQ(preparedSkeleton->findChildren<Shimmer*>().size(), 1);
     EXPECT_LT(clickMs, 100)
-        << "Cold navigation should only swap in the prepared skeleton; page construction is deferred";
+        << "Cold navigation should only swap in the prepared "
+                             "skeleton; page construction is deferred";
 }
 
 TEST_F(GalleryShellFrameworkTest, NavigationTimingCoversColdAndWarmTargetFirstPaint)
@@ -1569,7 +1571,8 @@ TEST_F(GalleryShellFrameworkTest, StartupPrewarmPrioritizesHomeFeaturedTabView)
     ASSERT_TRUE(window.selectRoute(QStringLiteral("tab-view")));
     auto* page = window.currentContentPage();
     ASSERT_NE(page, nullptr)
-        << "The Home-featured TabView route should be resident before the startup budget expires";
+        << "The Home-featured TabView route should be "
+                              "resident before the startup budget expires";
     EXPECT_EQ(page->routeId(), QStringLiteral("tab-view"));
 }
 
@@ -1842,7 +1845,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     auto* updateButton = page->findChild<Button*>(
         QStringLiteral("gallerySettingsCheckUpdatesButton"));
     ASSERT_NE(themeChoice, nullptr);
-    ASSERT_NE(styleChoice, nullptr);
+    EXPECT_EQ(styleChoice, nullptr);
     ASSERT_NE(navigationChoice, nullptr);
     ASSERT_NE(effectChoice, nullptr);
     ASSERT_NE(closeBehaviorChoice, nullptr);
@@ -1860,8 +1863,6 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_FALSE(settingsViewport->autoFillBackground());
     EXPECT_EQ(themeChoice->count(), 3);
     EXPECT_EQ(themeChoice->currentText(), QStringLiteral("Light"));
-    // Style theme offers the three brand presets (Fluent / Material 3 / macOS). zh_CN: 样式主题提供三套品牌预设。
-    EXPECT_EQ(styleChoice->count(), 3);
     // Navigation style mirrors the native WinUI Gallery: only "Left" and "Top" are offered. "Left"
     // is the responsive Auto mode, so the Auto config above shows as "Left" (index 0).
     EXPECT_EQ(navigationChoice->count(), 2);
@@ -1869,7 +1870,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
     EXPECT_EQ(effectChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->count(), 3);
     EXPECT_EQ(closeBehaviorChoice->currentIndex(), static_cast<int>(settings.closeBehavior()));
-    for (auto* choice : {themeChoice, styleChoice, navigationChoice,
+    for (auto* choice : {themeChoice, navigationChoice,
                          effectChoice, closeBehaviorChoice}) {
         EXPECT_EQ(choice->sizePolicy().horizontalPolicy(), QSizePolicy::Preferred);
         EXPECT_EQ(choice->maximumWidth(), QWIDGETSIZE_MAX);
@@ -1883,8 +1884,7 @@ TEST_F(GalleryShellFrameworkTest, SettingsChoicesApplyAndDeferredRowsAreOmitted)
             EXPECT_EQ(metrics.elidedText(item, Qt::ElideRight, availableTextWidth), item);
         }
     }
-    // Appearance & behavior (4 rows) + App behavior (1 row) + Updates (1 row) = 6 rows;
-    // Style theme + Accent color share one row.
+    // Appearance & behavior (4 rows) + App behavior (1 row) + Updates (1 row) = 6 rows.
     EXPECT_NE(page->findChild<QWidget*>(QStringLiteral("gallerySettingsAccentControl")), nullptr);
     EXPECT_EQ(page->findChildren<QFrame*>(QStringLiteral("gallerySettingsRow")).size(), 6);
 
@@ -2097,7 +2097,8 @@ TEST_F(GalleryShellFrameworkTest, CompositedMicaHeroDissolvesAtRetinaScale)
     const int centerX = image.width() / 2;
     EXPECT_GT(image.pixelColor(centerX, qMax(0, qRound(24 * dpr))).alpha(), 180);
     EXPECT_LT(image.pixelColor(centerX, image.height() - 2).alpha(), 16)
-        << "The hero's device-scaled artwork must reach the transparent end of its bottom dissolve";
+        << "The hero's device-scaled artwork must reach the transparent end of "
+         "its bottom dissolve";
 }
 
 TEST_F(GalleryShellFrameworkTest, RapidRouteSwitchingKeepsCurrentPageScrollable)
@@ -2305,7 +2306,8 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActiva
         });
         QTRY_VERIFY_WITH_TIMEOUT(observedZeroTurn, 1000);
         EXPECT_FALSE(visibleAfterZeroTurn)
-            << "The minimized surface must stay unmapped through the first event-loop turn";
+            << "The minimized surface must stay unmapped through the first "
+           "event-loop turn";
     }
 
     QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
@@ -2316,17 +2318,20 @@ TEST_F(GalleryShellFrameworkTest, RestoreFromMinimizedRefreshesFrameBeforeActiva
     const auto platform = compatibility::WindowChromeCompat::currentPlatform();
     if (platform == compatibility::WindowChromeCompat::Platform::MacOS) {
         EXPECT_EQ(captionHost, nullptr)
-            << "macOS must keep using its native traffic-light controls after restore";
+            << "macOS must keep using its native "
+                                       "traffic-light controls after restore";
     } else {
         ASSERT_NE(captionHost, nullptr);
         ASSERT_NE(window.titleBar(), nullptr);
         EXPECT_TRUE(window.titleBar()->rect().contains(captionHost->geometry()))
-            << "Restore must not leave the client caption strip outside its title bar";
+            << "Restore must not leave the client caption strip outside its title "
+           "bar";
     }
 
     if (platform == compatibility::WindowChromeCompat::Platform::Linux) {
         EXPECT_TRUE(window.windowFlags().testFlag(Qt::FramelessWindowHint))
-            << "Linux restore must retain client-side chrome instead of exposing a native title bar";
+            << "Linux restore must retain client-side chrome instead of exposing a "
+           "native title bar";
     }
 
     window.close();
@@ -2440,35 +2445,34 @@ TEST_F(GalleryShellFrameworkTest, WaylandInactiveVisibleWindowUsesRemapFallback)
     applicationController.restoreWindow();
 
     EXPECT_FALSE(window.isVisible())
-        << "Inactive visible Wayland windows must use the compositor-state fallback";
+        << "Inactive visible Wayland windows must "
+                                      "use the compositor-state fallback";
     QTRY_VERIFY_WITH_TIMEOUT(window.isVisible(), 1000);
     EXPECT_FALSE(window.windowState().testFlag(Qt::WindowMinimized));
     competingWindow.hide();
     window.hide();
 }
 
-TEST(ThemeCatalogPersistenceTest, ApplyingPresetDoesNotCreateUserFile)
+TEST(GalleryUserThemePersistenceTest, ApplyingThemeDoesNotCreateUserFile)
 {
-    namespace tc = fluent::gallery::ThemeCatalog;
-    constexpr auto kTheme = GallerySettings::StyleTheme::Material;
-    const QString path = tc::userThemeFilePath(kTheme);
+    namespace tc = fluent::gallery::GalleryUserTheme;
+    const QString path = tc::filePath();
     QFile::remove(path);
 
-    tc::apply(kTheme);
+    tc::apply();
 
     EXPECT_FALSE(QFile::exists(path));
     fluent::ThemeRegistry::instance().resetToDefaults();
 }
 
-TEST(ThemeCatalogPersistenceTest, ExplicitExportWritesVersionedEditableEnvelope)
+TEST(GalleryUserThemePersistenceTest, ExplicitExportWritesVersionedEditableEnvelope)
 {
-    namespace tc = fluent::gallery::ThemeCatalog;
-    constexpr auto kTheme = GallerySettings::StyleTheme::MacOS;
-    const QString path = tc::userThemeFilePath(kTheme);
+    namespace tc = fluent::gallery::GalleryUserTheme;
+    const QString path = tc::filePath();
     QFile::remove(path);
 
-    ASSERT_TRUE(tc::exportUserThemeTemplate(kTheme));
-    EXPECT_FALSE(tc::exportUserThemeTemplate(kTheme));
+    ASSERT_TRUE(tc::exportTemplate());
+    EXPECT_FALSE(tc::exportTemplate());
 
     QFile file(path);
     ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text));
@@ -2476,7 +2480,7 @@ TEST(ThemeCatalogPersistenceTest, ExplicitExportWritesVersionedEditableEnvelope)
     ASSERT_TRUE(document.isObject());
     const QJsonObject root = document.object();
     EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
-    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("macos"));
+    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
     const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
     EXPECT_TRUE(overrides.value(QStringLiteral("radius")).isObject());
     EXPECT_TRUE(overrides.value(QStringLiteral("light")).isObject());
@@ -2485,14 +2489,13 @@ TEST(ThemeCatalogPersistenceTest, ExplicitExportWritesVersionedEditableEnvelope)
     QFile::remove(path);
 }
 
-TEST(ThemeCatalogPersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExplicitEdit)
+TEST(GalleryUserThemePersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExplicitEdit)
 {
     using fluent::ThemeRegistry;
-    namespace tc = fluent::gallery::ThemeCatalog;
-    constexpr auto kTheme = GallerySettings::StyleTheme::Material;
-    const QString path = tc::userThemeFilePath(kTheme);
+    namespace tc = fluent::gallery::GalleryUserTheme;
+    const QString path = tc::filePath();
     QFile::remove(path);
-    QDir().mkpath(tc::themesDirectory());
+    QDir().mkpath(tc::directory());
 
     QJsonObject radius;
     radius.insert(QStringLiteral("control"), 17);
@@ -2511,7 +2514,7 @@ TEST(ThemeCatalogPersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExplicitE
     ASSERT_EQ(legacyFile.write(legacyPayload), legacyPayload.size());
     legacyFile.close();
 
-    tc::apply(kTheme);
+    tc::apply();
     EXPECT_EQ(ThemeRegistry::instance().radius().control, 17);
     EXPECT_EQ(ThemeRegistry::instance().colors(false).bgCanvas.rgb(),
               QColor(QStringLiteral("#123456")).rgb());
@@ -2519,13 +2522,13 @@ TEST(ThemeCatalogPersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExplicitE
               QColor(QStringLiteral("#654321")).rgb());
 
     const QColor picked(QStringLiteral("#4DA04D"));
-    tc::setUserAccent(kTheme, picked);
+    tc::setAccent(picked);
 
     QFile migratedFile(path);
     ASSERT_TRUE(migratedFile.open(QIODevice::ReadOnly | QIODevice::Text));
     const QJsonObject root = QJsonDocument::fromJson(migratedFile.readAll()).object();
     EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
-    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("material"));
+    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
     const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
     EXPECT_EQ(overrides.value(QStringLiteral("radius")).toObject()
                   .value(QStringLiteral("control")).toInt(),
@@ -2548,13 +2551,12 @@ TEST(ThemeCatalogPersistenceTest, LegacyFlatThemeIsAppliedAndMigratedOnExplicitE
     ThemeRegistry::instance().resetToDefaults();
 }
 
-TEST(ThemeCatalogPersistenceTest, UnsupportedSchemaIsIgnored)
+TEST(GalleryUserThemePersistenceTest, UnsupportedSchemaIsIgnored)
 {
     using fluent::ThemeRegistry;
-    namespace tc = fluent::gallery::ThemeCatalog;
-    constexpr auto kTheme = GallerySettings::StyleTheme::Material;
-    const QString path = tc::userThemeFilePath(kTheme);
-    QDir().mkpath(tc::themesDirectory());
+    namespace tc = fluent::gallery::GalleryUserTheme;
+    const QString path = tc::filePath();
+    QDir().mkpath(tc::directory());
 
     QJsonObject light;
     light.insert(QStringLiteral("accentDefault"), QStringLiteral("#FF0000"));
@@ -2562,7 +2564,7 @@ TEST(ThemeCatalogPersistenceTest, UnsupportedSchemaIsIgnored)
     overrides.insert(QStringLiteral("light"), light);
     QJsonObject root;
     root.insert(QStringLiteral("schemaVersion"), 999);
-    root.insert(QStringLiteral("theme"), QStringLiteral("material"));
+    root.insert(QStringLiteral("theme"), QStringLiteral("fluent"));
     root.insert(QStringLiteral("overrides"), overrides);
     QFile file(path);
     ASSERT_TRUE(file.open(QIODevice::WriteOnly | QIODevice::Text));
@@ -2570,12 +2572,12 @@ TEST(ThemeCatalogPersistenceTest, UnsupportedSchemaIsIgnored)
     ASSERT_EQ(file.write(payload), payload.size());
     file.close();
 
-    tc::apply(kTheme);
+    tc::apply();
 
     EXPECT_EQ(ThemeRegistry::instance().colors(false).accentDefault.rgb(),
-              tc::presetAccent(kTheme, false).rgb());
+              tc::defaultAccent(false).rgb());
 
-    tc::setUserAccent(kTheme, QColor(QStringLiteral("#4DA04D")));
+    tc::setAccent(QColor(QStringLiteral("#4DA04D")));
     QFile preservedFile(path);
     ASSERT_TRUE(preservedFile.open(QIODevice::ReadOnly | QIODevice::Text));
     EXPECT_EQ(preservedFile.readAll(), payload);
@@ -2585,12 +2587,11 @@ TEST(ThemeCatalogPersistenceTest, UnsupportedSchemaIsIgnored)
     ThemeRegistry::instance().resetToDefaults();
 }
 
-TEST(ThemeCatalogPersistenceTest, MalformedThemeIsNotOverwrittenByAccentEdit)
+TEST(GalleryUserThemePersistenceTest, MalformedThemeIsNotOverwrittenByAccentEdit)
 {
-    namespace tc = fluent::gallery::ThemeCatalog;
-    constexpr auto kTheme = GallerySettings::StyleTheme::Fluent;
-    const QString path = tc::userThemeFilePath(kTheme);
-    QDir().mkpath(tc::themesDirectory());
+    namespace tc = fluent::gallery::GalleryUserTheme;
+    const QString path = tc::filePath();
+    QDir().mkpath(tc::directory());
     const QByteArray malformedPayload("{ this is not valid JSON");
 
     QFile file(path);
@@ -2598,7 +2599,7 @@ TEST(ThemeCatalogPersistenceTest, MalformedThemeIsNotOverwrittenByAccentEdit)
     ASSERT_EQ(file.write(malformedPayload), malformedPayload.size());
     file.close();
 
-    tc::setUserAccent(kTheme, QColor(QStringLiteral("#4DA04D")));
+    tc::setAccent(QColor(QStringLiteral("#4DA04D")));
 
     QFile preservedFile(path);
     ASSERT_TRUE(preservedFile.open(QIODevice::ReadOnly | QIODevice::Text));
@@ -2612,23 +2613,22 @@ TEST(ThemeCatalogPersistenceTest, MalformedThemeIsNotOverwrittenByAccentEdit)
 // follow the new accent instead of retaining stale preset values.
 // zh_CN: 回归——自定义强调色覆盖保持稀疏，派生变体始终跟随新强调色，
 // 不会残留旧预设值。
-TEST(ThemeCatalogAccentConsistencyTest, SetUserAccentWritesSparseOverrideAndReDerivesVariants)
+TEST(GalleryUserThemeAccentConsistencyTest, SetAccentWritesSparseOverrideAndReDerivesVariants)
 {
     using fluent::ThemeRegistry;
-    namespace tc = fluent::gallery::ThemeCatalog;
-    constexpr auto kTheme = GallerySettings::StyleTheme::MacOS;
+    namespace tc = fluent::gallery::GalleryUserTheme;
 
-    QFile::remove(tc::userThemeFilePath(kTheme));
+    QFile::remove(tc::filePath());
 
     const QColor picked(0x4D, 0xA0, 0x4D);  // the green that originally clashed with stale blue variants
-    tc::setUserAccent(kTheme, picked);
+    tc::setAccent(picked);
 
-    QFile file(tc::userThemeFilePath(kTheme));
+    QFile file(tc::filePath());
     ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text));
     const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
     file.close();
     EXPECT_EQ(root.value(QStringLiteral("schemaVersion")).toInt(), 1);
-    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("macos"));
+    EXPECT_EQ(root.value(QStringLiteral("theme")).toString(), QStringLiteral("fluent"));
     const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
     for (const QString& modeName : {QStringLiteral("light"), QStringLiteral("dark")}) {
         const QJsonObject mode = overrides.value(modeName).toObject();
@@ -2637,7 +2637,7 @@ TEST(ThemeCatalogAccentConsistencyTest, SetUserAccentWritesSparseOverrideAndReDe
                   QStringLiteral("#4DA04D"));
     }
 
-    tc::apply(kTheme);
+    tc::apply();
 
     for (bool dark : {false, true}) {
         const auto colors = ThemeRegistry::instance().colors(dark);
@@ -2650,46 +2650,17 @@ TEST(ThemeCatalogAccentConsistencyTest, SetUserAccentWritesSparseOverrideAndReDe
     }
 
     // Reset reverts cleanly to the preset accent (no half-override left behind).
-    tc::clearUserAccent(kTheme);
-    tc::apply(kTheme);
+    tc::clearAccent();
+    tc::apply();
     EXPECT_EQ(ThemeRegistry::instance().colors(false).accentDefault.rgb(),
-              tc::presetAccent(kTheme, false).rgb());
+              tc::defaultAccent(false).rgb());
 
-    QFile::remove(tc::userThemeFilePath(kTheme));
+    QFile::remove(tc::filePath());
     ThemeRegistry::instance().resetToDefaults();
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
 }
 
-// --- Windowing TitleBar caption controls follow the active design language. ----------------------
-// zh_CN: Windowing 标题栏 caption 控件跟随当前设计语言。
-//
-// The TitleBar sample renders Windows-style trailing caption buttons under Fluent/Material and
-// leading macOS traffic lights under Cupertino, switching live on a Style-theme change — the real
-// platform difference, rendered by design language rather than by the host OS.
-// zh_CN: TitleBar 示例在 Fluent/Material 下渲染 Windows 风格尾部标题栏按钮,在 Cupertino 下渲染前导 macOS
-// 红绿灯,并在样式主题切换时实时切换——真实的平台差异,按设计语言而非宿主系统渲染。
-class WindowingSamplesTest : public ::testing::Test {
-protected:
-    void TearDown() override {
-        fluent::ThemeRegistry::instance().resetToDefaults();
-        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    }
-};
-
-TEST_F(WindowingSamplesTest, CaptionStyleMapsCupertinoToTrafficLights) {
-    using fluent::gallery::captionStyleForDesignLanguage;
-    using fluent::gallery::TitleBarCaptionStyle;
-
-    EXPECT_EQ(captionStyleForDesignLanguage(fluent::FluentElement::DesignFluent),
-              TitleBarCaptionStyle::WindowsCaptionButtons);
-    EXPECT_EQ(captionStyleForDesignLanguage(fluent::FluentElement::DesignMaterial),
-              TitleBarCaptionStyle::WindowsCaptionButtons);
-    EXPECT_EQ(captionStyleForDesignLanguage(fluent::FluentElement::DesignCupertino),
-              TitleBarCaptionStyle::MacTrafficLights);
-}
-
-TEST_F(WindowingSamplesTest, TitleBarSampleReservesCaptionSpaceByDesignLanguage) {
-    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
+TEST(GalleryWindowingSamplesTest, TitleBarSampleReservesTrailingCaptionSpace) {
 
     const auto samples = fluent::gallery::windowingSamples(QStringLiteral("title-bar"));
     ASSERT_FALSE(samples.isEmpty());
@@ -2702,27 +2673,6 @@ TEST_F(WindowingSamplesTest, TitleBarSampleReservesCaptionSpaceByDesignLanguage)
 
     auto* titleBar = preview->findChild<TitleBar*>();
     ASSERT_NE(titleBar, nullptr);
-
-    // Fluent: trailing Windows caption buttons reserve the right, leading is free.
-    // zh_CN: Fluent:尾部 Windows 标题栏按钮占右侧,前导留空。
-    EXPECT_GT(titleBar->systemReservedTrailingWidth(), 0);
-    EXPECT_EQ(titleBar->systemReservedLeadingWidth(), 0);
-
-    // Switch to Cupertino: a live Style-theme change must flip the reservation to leading traffic
-    // lights. refreshTheme() re-broadcasts onThemeUpdated to the visible preview, which rebuilds.
-    // zh_CN: 切到 Cupertino:实时样式主题切换须把预留翻到前导红绿灯。refreshTheme() 向可见预览重广播 onThemeUpdated。
-    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignCupertino);
-    fluent::FluentElement::refreshTheme();
-    QApplication::processEvents();
-
-    EXPECT_GT(titleBar->systemReservedLeadingWidth(), 0);
-    EXPECT_EQ(titleBar->systemReservedTrailingWidth(), 0);
-
-    // And back to Fluent restores the trailing caption buttons.
-    // zh_CN: 切回 Fluent 恢复尾部标题栏按钮。
-    fluent::ThemeRegistry::instance().setDesignLanguage(fluent::FluentElement::DesignFluent);
-    fluent::FluentElement::refreshTheme();
-    QApplication::processEvents();
 
     EXPECT_GT(titleBar->systemReservedTrailingWidth(), 0);
     EXPECT_EQ(titleBar->systemReservedLeadingWidth(), 0);
@@ -2787,7 +2737,8 @@ TEST_F(GalleryShellFrameworkTest, TopFlyoutRowClickDismissesAfterReopen)
 
     EXPECT_EQ(window.currentRouteId(), QStringLiteral("tree-view"));
     EXPECT_TRUE(secondPtr.isNull() || !secondPtr->isVisible())
-        << "flyout stayed open after row click following a light-dismiss + reopen";
+        << "flyout stayed open after row click following a light-dismiss + "
+         "reopen";
 
     QApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     settings.setNavigationStyle(previousStyle);

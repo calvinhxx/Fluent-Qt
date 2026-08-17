@@ -325,10 +325,6 @@ _PHOTO_MODEL_HELPER = _SourceHelper(dedent(
             selected = bool(option.state & QStyle.StateFlag.State_Selected)
             hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
             enabled = bool(option.state & QStyle.StateFlag.State_Enabled)
-            material_grid = self._grid_view is not None and (
-                int(snapshot["designLanguage"])
-                == int(fluentqt.DesignLanguage.DesignMaterial)
-            )
 
             card = QRectF(option.rect).adjusted(2.0, 2.0, -2.0, -2.0)
             clip = QPainterPath()
@@ -419,17 +415,11 @@ _PHOTO_MODEL_HELPER = _SourceHelper(dedent(
                     )
                 painter.setClipping(False)
 
-            if material_grid and selected and enabled:
-                scrim = QColor(colors["accentDefault"])
-                scrim.setAlpha(0x24)
-                if scrim.isValid() and scrim.alpha() > 0:
-                    painter.fillPath(clip, scrim)
-
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.setPen(
                 QPen(
                     colors["accentDefault"] if selected else colors["strokeDefault"],
-                    (2.5 if material_grid else 2.0) if selected else 1.0,
+                    2.0 if selected else 1.0,
                 )
             )
             painter.drawPath(clip)
@@ -676,37 +666,8 @@ _TREE_DELEGATE_HELPER = _SourceHelper(dedent(
             enabled = bool(option.state & QStyle.StateFlag.State_Enabled)
             hovered = bool(option.state & QStyle.StateFlag.State_MouseOver)
             pressed = bool(option.state & QStyle.StateFlag.State_Sunken) and hovered
-            language = int(snapshot["designLanguage"])
-            dark = int(snapshot["theme"]) == int(fluentqt.Theme.Dark)
             background = QColor(Qt.GlobalColor.transparent)
-            text_on_accent = False
-            if (
-                enabled
-                and language == int(fluentqt.DesignLanguage.DesignMaterial)
-            ):
-                if selected:
-                    background = QColor(colors["accentDefault"])
-                    background.setAlphaF(0.28 if dark else 0.16)
-                elif hovered:
-                    background = (
-                        QColor(255, 255, 255, 0x14)
-                        if dark
-                        else QColor(0, 0, 0, 0x14)
-                    )
-            elif (
-                enabled
-                and language == int(fluentqt.DesignLanguage.DesignCupertino)
-            ):
-                if selected:
-                    background = colors["accentDefault"]
-                    text_on_accent = True
-                elif hovered:
-                    background = (
-                        QColor(255, 255, 255, 0x12)
-                        if dark
-                        else QColor(0, 0, 0, 0x10)
-                    )
-            elif enabled:
+            if enabled:
                 if pressed:
                     background = colors["subtleTertiary"]
                 elif selected or hovered:
@@ -723,16 +684,10 @@ _TREE_DELEGATE_HELPER = _SourceHelper(dedent(
             text_color = colors["textPrimary"]
             if not enabled:
                 text_color = colors["textDisabled"]
-            elif text_on_accent:
-                text_color = colors["textOnAccent"]
 
-            fluent_language = (
-                language == int(fluentqt.DesignLanguage.DesignFluent)
-            )
             if (
                 selected
                 and enabled
-                and fluent_language
                 and not self._check_box_visible
                 and not self._view.selectionIndicatorVisible()
             ):
@@ -884,7 +839,7 @@ _TREE_DELEGATE_HELPER = _SourceHelper(dedent(
             if glyph:
                 glyph_color = text_color
                 color_value = index.data(TREE_ICON_COLOR_ROLE)
-                if isinstance(color_value, QColor) and color_value.isValid() and not text_on_accent:
+                if isinstance(color_value, QColor) and color_value.isValid():
                     glyph_color = color_value
                 icon_font = QFont("FluentQt Icons")
                 icon_font.setPixelSize(16)

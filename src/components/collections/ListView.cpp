@@ -11,9 +11,9 @@
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QPaintEvent>
 #include <QPointer>
 #include <QResizeEvent>
 #include <QScrollBar>
@@ -27,13 +27,13 @@
 
 #include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
-#include "design/CornerRadius.h"
-#include "design/Spacing.h"
-#include "design/Typography.h"
+#include "components/collections/CollectionViewBackdrop_p.h"
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
-#include "components/collections/CollectionViewBackdrop_p.h"
+#include "design/CornerRadius.h"
+#include "design/Spacing.h"
+#include "design/Typography.h"
 
 namespace fluent::collections {
 
@@ -74,9 +74,7 @@ struct RowSelectionFill {
 
 RowSelectionFill defaultRowSelectionFill(
     const QStyleOptionViewItem& option,
-    const FluentElement::Colors& colors,
-    FluentElement::DesignLanguage language,
-    bool dark)
+    const FluentElement::Colors& colors)
 {
     RowSelectionFill fill;
     if (!(option.state & QStyle::State_Enabled))
@@ -85,30 +83,6 @@ RowSelectionFill defaultRowSelectionFill(
     const bool hovered = option.state & QStyle::State_MouseOver;
     const bool pressed = (option.state & QStyle::State_Sunken) && hovered;
     const bool selected = option.state & QStyle::State_Selected;
-    const auto interactionVeil = [dark](int alpha) {
-        return dark ? QColor(255, 255, 255, alpha)
-                    : QColor(0, 0, 0, alpha);
-    };
-
-    if (language == FluentElement::DesignMaterial) {
-        if (selected && colors.accentDefault.isValid()) {
-            fill.color = colors.accentDefault;
-            fill.color.setAlphaF(dark ? 0.28 : 0.16);
-        } else if (hovered) {
-            fill.color = interactionVeil(0x14);
-        }
-        return fill;
-    }
-
-    if (language == FluentElement::DesignCupertino) {
-        if (selected && colors.accentDefault.isValid()) {
-            fill.color = colors.accentDefault;
-            fill.textOnAccent = true;
-        } else if (hovered) {
-            fill.color = interactionVeil(dark ? 0x12 : 0x10);
-        }
-        return fill;
-    }
 
     if (pressed)
         fill.color = colors.subtleTertiary;
@@ -141,14 +115,12 @@ public:
 
         const auto& colors = m_listView->themeColorsRef();
         const auto radius = m_listView->themeRadius();
-        const auto language = m_listView->themeDesignLanguage();
-        const bool dark = m_listView->effectiveTheme() == FluentElement::Dark;
         const bool selected = option.state & QStyle::State_Selected;
         const bool enabled = option.state & QStyle::State_Enabled;
         const QRectF background = QRectF(option.rect).adjusted(2.0, 1.0, -2.0, -1.0);
 
         const RowSelectionFill fill = defaultRowSelectionFill(
-            option, colors, language, dark);
+            option, colors);
         if (fill.color.isValid() && fill.color.alpha() > 0) {
             QPainterPath path;
             path.addRoundedRect(background, radius.control, radius.control);
@@ -1761,10 +1733,6 @@ void ListView::refreshSelectedIndicatorGeometry(bool snapToTarget) {
 }
 
 void ListView::paintSelectedIndicator(QPainter& painter) const {
-    // M3/macOS carry selection via the delegate's full-row fill, not a Fluent accent pill — suppress it.
-    // zh_CN: M3/macOS 的选择由委托整行填充承载,而非 Fluent accent 指示条——在此抑制。
-    if (themeDesignLanguage() != DesignFluent)
-        return;
 
     if (!themeColorsRef().accentDefault.isValid() || !selectionModel())
         return;

@@ -8,27 +8,28 @@
 #include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QMoveEvent>
+#include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QPaintEvent>
-#include <QResizeEvent>
 #include <QRegion>
-#include <QStyledItemDelegate>
+#include <QResizeEvent>
 #include <QStringListModel>
 #include <QStyle>
 #include <QStyleOptionViewItem>
 
+#include <QStyledItemDelegate>
+
 #include <functional>
 #include <utility>
 
-#include "design/Spacing.h"
-#include "design/Typography.h"
+#include "compatibility/TextPaintCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/textfields/private/AutoSuggestBoxAccessibility_p.h"
-#include "compatibility/TextPaintCompat.h"
+#include "design/Spacing.h"
+#include "design/Typography.h"
 
 namespace fluent::textfields {
 
@@ -44,7 +45,7 @@ bool isEditableKey(QKeyEvent* event) {
 int normalizedPositiveSize(int size) {
     return qMax(1, size);
 }
-}
+} // namespace
 
 class AutoSuggestItemDelegate : public QStyledItemDelegate {
 public:
@@ -787,92 +788,11 @@ void AutoSuggestBox::setTextWithReason(const QString& value, TextChangeReason re
     setText(value);
 }
 
-bool AutoSuggestBox::paintBrandInputFrame(QPainter& painter) {
-    const auto lang = themeDesignLanguage();
-    if (lang == DesignFluent) return false;
-
-    const auto& colors = themeColorsRef();
-    const QRectF base = QRectF(inputRect());
-    const fluent::painting::DpiPaintMetrics paintMetrics(painter);
-
-    if (lang == DesignMaterial) {
-        // Material 3 outlined field: transparent fill, 1dp outline thickening to 2dp accent on focus.
-        // zh_CN: M3 描边字段:透明填充,1dp 描边聚焦时加粗为 2dp accent。
-        QColor outlineColor;
-        qreal outlineWidth = 1.0;
-        if (!isEnabled()) {
-            outlineColor = colors.strokeDivider;
-        } else if (m_focused) {
-            outlineColor = colors.accentDefault;
-            outlineWidth = 2.0;
-        } else {
-            outlineColor = colors.strokeStrong;
-        }
-        const auto outlineStroke = paintMetrics.alignedStroke(base, outlineWidth);
-        const qreal r = themeRadius().control;
-        QPainterPath framePath;
-        framePath.addRoundedRect(outlineStroke.rect, r, r);
-        painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(outlineColor, outlineStroke.width));
-        painter.drawPath(framePath);
-        return true;
-    }
-
-    // DesignCupertino: hairline rect + accent focus ring with a soft glow, all inset to avoid clipping.
-    // zh_CN: macOS:发丝矩形 + 内缩的强调焦点环及柔和辉光,避免裁切。
-    const qreal r = 6.0;
-
-    // Bezel fill (docs §4): restrained near-white / white@10% surface, matching LineEdit/ComboBox so
-    // the field reads as a raised control. zh_CN: bezel 填充(文档 §4):与 LineEdit/ComboBox 同款不透明 bezel。
-    {
-        const QColor fill = !isEnabled() ? colors.controlDisabled : colors.bgLayerAlt;
-        const auto hairStroke = paintMetrics.alignedStroke(base, 1.0);
-        QPainterPath fillPath;
-        fillPath.addRoundedRect(hairStroke.rect, r, r);
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(fill);
-        painter.drawPath(fillPath);
-    }
-
-    if (isEnabled() && m_focused) {
-        QColor glow = colors.accentDefault;
-        glow.setAlpha(0x40);
-        QPainterPath glowPath;
-        glowPath.addRoundedRect(base.adjusted(0.5, 0.5, -0.5, -0.5), r, r);
-        painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(glow, 2.0));
-        painter.drawPath(glowPath);
-
-        QPainterPath ringPath;
-        ringPath.addRoundedRect(base.adjusted(1.5, 1.5, -1.5, -1.5),
-                                qMax<qreal>(0.0, r - 1.0), qMax<qreal>(0.0, r - 1.0));
-        painter.setPen(QPen(colors.accentDefault, 2.0));
-        painter.drawPath(ringPath);
-        return true;
-    }
-
-    QColor hairline = !isEnabled() ? colors.strokeDivider
-                                   : (m_hovered ? colors.strokeStrong : colors.strokeDefault);
-    const auto hairStroke = paintMetrics.alignedStroke(base, 1.0);
-    QPainterPath hairPath;
-    hairPath.addRoundedRect(hairStroke.rect, r, r);
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(hairline, hairStroke.width));
-    painter.drawPath(hairPath);
-    return true;
-}
-
 void AutoSuggestBox::paintInputFrame(QPainter& painter) {
     const auto& colors = themeColorsRef();
     const fluent::painting::DpiPaintMetrics paintMetrics(painter);
     const auto frameStroke = paintMetrics.alignedStroke(QRectF(inputRect()), 1.0);
     const QRectF frameRect = frameStroke.rect;
-
-    // Brand-aware frame for the input row; the query/clear buttons are fluent::Buttons that already follow
-    // the design language, and the suggestion popup paints via FluentElement tokens. DesignFluent falls
-    // through to the original path below unchanged. zh_CN: 输入行的品牌感知边框;query/clear 按钮是
-    // fluent::Button,已跟随设计语言,建议弹层经 FluentElement token 绘制。DesignFluent 落到下方原路径不变。
-    if (paintBrandInputFrame(painter)) return;
 
     QColor bgColor;
     QColor borderColor;
