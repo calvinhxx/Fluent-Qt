@@ -63,8 +63,23 @@ def main():
             raise AssertionError("Standalone Gallery asset is missing: {0}".format(asset))
     if len(tuple((package_dir / "assets" / "control_images").rglob("*.png"))) != 76:
         raise AssertionError("Standalone Gallery has the wrong control-image count")
-    if len(tuple((package_dir / "assets" / "home_header_tiles").glob("*.png"))) != 7:
-        raise AssertionError("Standalone Gallery has the wrong Home-tile count")
+    expected_home_tiles = {
+        "GitHub-Mark.png",
+        "Header-Toolkit.png",
+        "Header-WindowsDesign.png",
+        "Header-WinUI.png",
+        "Qt-Logo.png",
+    }
+    actual_home_tiles = {
+        path.name
+        for path in (package_dir / "assets" / "home_header_tiles").glob("*.png")
+    }
+    if actual_home_tiles != expected_home_tiles:
+        raise AssertionError(
+            "Standalone Gallery has the wrong Home tiles: {0}".format(
+                sorted(actual_home_tiles)
+            )
+        )
 
     sample_count = sum(len(entry.samples) for entry in ENTRIES)
     if (
