@@ -2,8 +2,8 @@
 
 #include <QCoreApplication>
 #include <QEvent>
-#include <QHBoxLayout>
 #include <QFont>
+#include <QHBoxLayout>
 #include <QPainter>
 #include <QPoint>
 #include <QPointer>
@@ -13,6 +13,8 @@
 #include <QTimer>
 #include <QVBoxLayout>
 
+#include "SampleBuilders.h"
+#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
@@ -21,10 +23,8 @@
 #include "components/textfields/Label.h"
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/Window.h"
-#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "platform/GalleryPlatform.h"
-#include "SampleBuilders.h"
 
 namespace fluent::gallery {
 namespace {
@@ -37,8 +37,6 @@ using fluent::windowing::Window;
 using samples::horizontalGroup;
 using samples::makeSample;
 using samples::verticalGroup;
-
-constexpr int kMacTrafficLightsReservedWidth = 78;
 constexpr int kWindowsCaptionButtonWidth = 46;
 constexpr int kWindowsCaptionButtonsReservedWidth = kWindowsCaptionButtonWidth * 3;
 
@@ -145,85 +143,6 @@ AutoSuggestBox* makeTitleBarSearch(QWidget* parent)
     return search;
 }
 
-// macOS traffic lights, custom-painted so they read faithfully: three colored dots at the leading
-// edge (close / minimize / zoom), the ×/−/+ glyphs revealed only while the cluster is hovered, and a
-// neutral gray when the host window is inactive — matching how AppKit dims its window controls.
-// zh_CN: 自绘 macOS 红绿灯,力求传神:前导三色圆点(关闭/最小化/缩放),仅在悬停簇上时显出 ×/−/+ 字形,
-// 宿主窗口失焦时转中性灰——对齐 AppKit 对窗口控件的变暗处理。
-class MacTrafficLights : public QWidget, public fluent::FluentElement
-{
-public:
-    explicit MacTrafficLights(QWidget* parent = nullptr)
-        : QWidget(parent)
-    {
-        setFixedWidth(kMacTrafficLightsReservedWidth);
-        setFocusPolicy(Qt::NoFocus);
-        setAttribute(Qt::WA_Hover, true);
-    }
-
-    void onThemeUpdated() override { update(); }
-
-protected:
-    void enterEvent(FluentEnterEvent*) override
-    {
-        m_hovered = true;
-        update();
-    }
-
-    void leaveEvent(QEvent*) override
-    {
-        m_hovered = false;
-        update();
-    }
-
-    void paintEvent(QPaintEvent*) override
-    {
-        QPainter painter(this);
-        painter.setRenderHint(QPainter::Antialiasing);
-
-        const QWidget* top = window();
-        const bool active = !top || top->isActiveWindow();
-
-        // close / minimize / zoom, left-to-right (the canonical macOS order). zh_CN: 关闭/最小化/缩放,自左向右。
-        static constexpr int kDotDiameter = 12;
-        static constexpr int kLeadingMargin = 14;
-        static constexpr int kSpacing = 8;
-        const qreal radius = kDotDiameter / 2.0;
-        const qreal cy = height() / 2.0;
-        const QColor colors[3] = {QColor(0xFF, 0x5F, 0x57), QColor(0xFF, 0xBD, 0x2E), QColor(0x28, 0xC8, 0x40)};
-        const QColor inactive(0xC8, 0xC8, 0xC8);
-
-        qreal cx[3];
-        for (int i = 0; i < 3; ++i)
-            cx[i] = kLeadingMargin + radius + i * (kDotDiameter + kSpacing);
-
-        painter.setPen(Qt::NoPen);
-        for (int i = 0; i < 3; ++i) {
-            painter.setBrush(active ? colors[i] : inactive);
-            painter.drawEllipse(QPointF(cx[i], cy), radius, radius);
-        }
-
-        if (m_hovered && active) {
-            QPen glyphPen(QColor(0, 0, 0, 150));
-            glyphPen.setWidthF(1.2);
-            glyphPen.setCapStyle(Qt::RoundCap);
-            painter.setPen(glyphPen);
-            const qreal g = 3.0;  // glyph half-extent. zh_CN: 字形半幅。
-            // close ×
-            painter.drawLine(QPointF(cx[0] - g, cy - g), QPointF(cx[0] + g, cy + g));
-            painter.drawLine(QPointF(cx[0] - g, cy + g), QPointF(cx[0] + g, cy - g));
-            // minimize −
-            painter.drawLine(QPointF(cx[1] - g, cy), QPointF(cx[1] + g, cy));
-            // zoom +
-            painter.drawLine(QPointF(cx[2] - g, cy), QPointF(cx[2] + g, cy));
-            painter.drawLine(QPointF(cx[2], cy - g), QPointF(cx[2], cy + g));
-        }
-    }
-
-private:
-    bool m_hovered = false;
-};
-
 Button* makeWindowsCaptionButton(QWidget* parent,
                                  const QString& glyph,
                                  const QString& tooltip,
@@ -260,13 +179,6 @@ QWidget* makeWindowsCaptionButtons(QWidget* parent)
                                                true));
     return buttons;
 }
-
-// Title-bar preview that swaps its caption controls by the active DESIGN LANGUAGE (not the host OS):
-// Cupertino shows leading macOS traffic lights, Fluent/Material show trailing Windows-style caption
-// buttons. It rebuilds live on a design-language switch, so toggling Settings → Style theme reskins
-// the preview in place. zh_CN: 按当前**设计语言**(而非宿主系统)切换 caption 控件的标题栏预览:Cupertino 显前导
-// macOS 红绿灯,Fluent/Material 显尾部 Windows 风格标题栏按钮。设计语言切换时实时重建,故在 设置→样式主题 切换会
-// 原地重新换肤。
 class TitleBarPreview : public QWidget, public fluent::FluentElement {
 public:
     explicit TitleBarPreview(int width, QWidget* parent = nullptr)
@@ -285,13 +197,10 @@ public:
     }
 
     TitleBar* titleBar() const { return m_titleBar; }
-    TitleBarCaptionStyle captionStyle() const { return m_captionStyle; }
 
     void onThemeUpdated() override
     {
-        // A design-language switch re-themes visible elements; rebuild the caption controls if the
-        // language now calls for a different style. zh_CN: 设计语言切换会重刷可见元素;若新语言需要不同样式则重建。
-        if (!m_platformControls || captionStyleForDesignLanguage(themeDesignLanguage()) != m_captionStyle)
+        if (!m_platformControls)
             rebuildPlatformControls();
         update();
     }
@@ -306,21 +215,13 @@ protected:
 private:
     void rebuildPlatformControls()
     {
-        m_captionStyle = captionStyleForDesignLanguage(themeDesignLanguage());
         if (m_platformControls) {
             delete m_platformControls;
             m_platformControls = nullptr;
         }
-
-        if (m_captionStyle == TitleBarCaptionStyle::MacTrafficLights) {
-            m_platformControls = new MacTrafficLights(m_titleBar);
-            m_titleBar->setSystemReservedLeadingWidth(kMacTrafficLightsReservedWidth);
-            m_titleBar->setSystemReservedTrailingWidth(0);
-        } else {
             m_platformControls = makeWindowsCaptionButtons(m_titleBar);
             m_titleBar->setSystemReservedLeadingWidth(0);
             m_titleBar->setSystemReservedTrailingWidth(kWindowsCaptionButtonsReservedWidth);
-        }
         m_platformControls->show();
         updateChromeGeometry();
     }
@@ -330,8 +231,6 @@ private:
         m_titleBar->setGeometry(rect());
         if (!m_platformControls)
             return;
-
-        if (m_captionStyle == TitleBarCaptionStyle::WindowsCaptionButtons) {
             m_platformControls->setGeometry(width() - kWindowsCaptionButtonsReservedWidth,
                                             0,
                                             kWindowsCaptionButtonsReservedWidth,
@@ -339,15 +238,11 @@ private:
             const auto captionButtons = m_platformControls->findChildren<Button*>();
             for (Button* button : captionButtons)
                 button->setFixedSize(kWindowsCaptionButtonWidth, height());
-        } else {
-            m_platformControls->setGeometry(0, 0, kMacTrafficLightsReservedWidth, height());
-        }
         m_platformControls->raise();
     }
 
     TitleBar* m_titleBar = nullptr;
     QWidget* m_platformControls = nullptr;
-    TitleBarCaptionStyle m_captionStyle = TitleBarCaptionStyle::WindowsCaptionButtons;
 };
 
 QWidget* makeTitleBarContent(QWidget* parent,
@@ -416,12 +311,15 @@ QVector<GallerySample> titleBarSamples()
     return {
         makeSample(QStringLiteral("title-bar-content-regions"),
                    QStringLiteral("Content respects system regions"),
-                   QStringLiteral("Place custom content in TitleBar while preserving macOS leading controls or Windows trailing caption buttons."),
+                   QStringLiteral(
+              "Place custom content in TitleBar while preserving macOS leading "
+              "controls or Windows trailing caption buttons."),
                    QStringLiteral("auto* titleBar = new TitleBar(this);\n"
                                   "// macOS reserves leading traffic-light controls;\n"
                                   "// Windows reserves trailing caption buttons.\n"
                                   "titleBar->setSystemReservedLeadingWidth(platformLeadingWidth);\n"
-                                  "titleBar->setSystemReservedTrailingWidth(platformTrailingWidth);\n"
+              "titleBar->setSystemReservedTrailingWidth(platformTrailingWidth);"
+              "\n"
                                   "\n"
                                   "auto* content = new QWidget(titleBar);\n"
                                   "auto* layout = new QHBoxLayout(content);\n"
@@ -458,14 +356,16 @@ QVector<GallerySample> titleBarSamples()
                    }),
         makeSample(QStringLiteral("title-bar-height-exclusions"),
                    QStringLiteral("Height and drag exclusions"),
-                   QStringLiteral("Adjust TitleBar height while platform chrome controls stay aligned with drag exclusions."),
+                   QStringLiteral("Adjust TitleBar height while platform chrome "
+                         "controls stay aligned with drag exclusions."),
                    QStringLiteral("auto* titleBar = new TitleBar(this);\n"
                                   "titleBar->setTitleBarHeight(48);\n"
                                   "titleBar->setContentWidget(toolbarContent);\n"
                                   "\n"
                                   "connect(titleBar, &TitleBar::chromeGeometryChanged,\n"
                                   "        this, [titleBar] {\n"
-                                  "            const auto exclusions = titleBar->dragExclusionRects();\n"
+                         "            const auto exclusions = "
+                         "titleBar->dragExclusionRects();\n"
                                   "        });\n"
                                   "\n"
                                   "titleBar->refreshChromeExclusions();"),
@@ -531,7 +431,8 @@ QVector<GallerySample> windowSamples()
     return {
         makeSample(QStringLiteral("window-content-host"),
                    QStringLiteral("Top-level content host"),
-                   QStringLiteral("Open a Fluent Window with Mica material and assign caller-owned content to its content host."),
+                   QStringLiteral("Open a Fluent Window with Mica material and assign "
+                         "caller-owned content to its content host."),
                    QStringLiteral("auto* window = new Window();\n"
                                   "window->setAttribute(Qt::WA_DeleteOnClose);\n"
                                   "window->setWindowTitle(\"Fluent window\");\n"
@@ -576,7 +477,8 @@ QVector<GallerySample> windowSamples()
                            window->setBackdropEffect(fluent::windowing::BackdropEffect::Mica);
                            window->setContentWidget(makeWindowContent(
                                QStringLiteral("Hosted content"),
-                               QStringLiteral("This widget is parented under Window::contentHost().")));
+                               QStringLiteral("This widget is parented under "
+                                     "Window::contentHost().")));
                            window->onThemeUpdated();
                            QObject::connect(window, &QObject::destroyed, status, [status]() {
                                status->setText(QStringLiteral("Closed"));
@@ -588,15 +490,18 @@ QVector<GallerySample> windowSamples()
                    }),
         makeSample(QStringLiteral("window-custom-titlebar"),
                    QStringLiteral("Window with custom title bar content"),
-                   QStringLiteral("Use Window's built-in TitleBar to host search or actions while keeping chrome behavior."),
+                   QStringLiteral("Use Window's built-in TitleBar to host search or "
+                         "actions while keeping chrome behavior."),
                    QStringLiteral("auto* window = new Window();\n"
                                   "window->setWindowTitle(\"Custom title bar\");\n"
                                   "window->setCustomWindowChromeEnabled(true);\n"
                                   "window->setBackdropEffect(BackdropEffect::Mica);\n"
                                   "window->setCaptionButtonToolTips(\"Minimize\", \"Maximize\",\n"
                                   "                                 \"Close\", \"Restore\");\n"
-                                  "window->setCaptionButtonAccessibleNames(\"Minimize\", \"Maximize\",\n"
-                                  "                                        \"Close\", \"Restore\");\n"
+              "window->setCaptionButtonAccessibleNames(\"Minimize\", "
+              "\"Maximize\",\n"
+              "                                        \"Close\", "
+              "\"Restore\");\n"
                                   "\n"
                                   "auto* titleBarContent = new QWidget(window->titleBar());\n"
                                   "auto* layout = new QHBoxLayout(titleBarContent);\n"
@@ -655,7 +560,8 @@ QVector<GallerySample> windowSamples()
                            window->titleBar()->refreshChromeExclusions();
                            window->setContentWidget(makeWindowContent(
                                QStringLiteral("Custom title bar"),
-                               QStringLiteral("Interactive title-bar children are excluded from drag hit testing.")));
+                               QStringLiteral("Interactive title-bar children are "
+                                     "excluded from drag hit testing.")));
                            window->onThemeUpdated();
                            QObject::connect(window, &QObject::destroyed, status, [status]() {
                                status->setText(QStringLiteral("Closed"));
@@ -669,17 +575,6 @@ QVector<GallerySample> windowSamples()
 }
 
 } // namespace
-
-TitleBarCaptionStyle captionStyleForDesignLanguage(fluent::FluentElement::DesignLanguage language)
-{
-    // Cupertino is the only language whose window controls are the leading traffic lights; Fluent and
-    // Material both use a trailing minimize/maximize/close row (the Button paints each in its own
-    // idiom). zh_CN: 仅 Cupertino 的窗口控件是前导红绿灯;Fluent 与 Material 都用尾部 最小化/最大化/关闭 行
-    //(Button 各自按其语言绘制)。
-    return language == fluent::FluentElement::DesignCupertino
-               ? TitleBarCaptionStyle::MacTrafficLights
-               : TitleBarCaptionStyle::WindowsCaptionButtons;
-}
 
 QVector<GallerySample> windowingSamples(const QString& routeId)
 {

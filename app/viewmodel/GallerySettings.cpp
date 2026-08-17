@@ -12,13 +12,12 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "platform/GalleryPlatform.h"
 #include "support/logging/Log.h"
-#include "viewmodel/ThemeCatalog.h"
+#include "viewmodel/GalleryUserTheme.h"
 
 namespace fluent::gallery {
 namespace {
 
 constexpr char kThemeModeKey[] = "settings/themeMode";
-constexpr char kStyleThemeKey[] = "settings/styleTheme";
 constexpr char kNavigationStyleKey[] = "settings/navigationStyle";
 constexpr char kWindowEffectKey[] = "settings/windowEffect";
 constexpr char kCloseBehaviorKey[] = "settings/closeBehavior";
@@ -95,10 +94,10 @@ GallerySettings::GallerySettings(QObject* parent)
                 applyHostThemeMode(hostThemeMode(theme));
             });
     }
-    // Install the persisted brand style theme into the ThemeRegistry before any widget paints, so the
-    // first frame already uses the right palette + radius. zh_CN: 在任何控件绘制前把持久化的品牌样式主题
-    // 装入 ThemeRegistry,使首帧即用正确的调色板与圆角。
-    ThemeCatalog::apply(m_styleTheme);
+    // Install Fluent token overrides before any widget paints so the first
+    // frame already uses the complete supported visual contract.
+    // zh_CN: 在任何控件绘制前安装 Fluent token 覆盖，确保首帧即为完整受支持视觉契约。
+    GalleryUserTheme::apply();
     if (qApp)
         qApp->installEventFilter(this);
     auto* systemThemePoll = new QTimer(this);
@@ -151,28 +150,6 @@ void GallerySettings::applyHostThemeMode(ThemeMode mode)
                  .arg(static_cast<int>(mode)));
 }
 
-void GallerySettings::setStyleTheme(StyleTheme theme)
-{
-    if (m_styleTheme == theme)
-        return;
-
-    m_styleTheme = theme;
-    if (platform::persistenceAvailable()) {
-        platform::createSettings().setValue(QString::fromLatin1(kStyleThemeKey),
-                                            static_cast<int>(theme));
-    }
-    // ThemeRegistry commits the complete preset and schedules exactly one refresh.
-    // zh_CN: 装入新的调色板/圆角预设,再强制原子重绘(refreshTheme 重广播当前明暗模式;因模式未变,
-    // setThemeDeferred 会跳过)。
-    ThemeCatalog::apply(theme);
-    emit styleThemeChanged(m_styleTheme);
-    // Switching presets changes the effective accent too, so any accent UI can resync. zh_CN: 切换预设也会
-    // 改变生效强调色,便于强调色 UI 同步。
-    emit accentColorChanged(accentColor());
-    LOG_INFO(QStringLiteral("GallerySettings styleThemeChanged theme=%1")
-                 .arg(static_cast<int>(theme)));
-}
-
 QColor GallerySettings::accentColor() const
 {
     const bool dark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Dark;
@@ -183,23 +160,21 @@ void GallerySettings::setAccentColor(const QColor& accent)
 {
     if (!accent.isValid())
         return;
-    // Persist the override, then install it through one ThemeRegistry snapshot commit. zh_CN: 把覆盖
-    // 持久化进当前样式主题的 JSON,再原子地重新安装并重绘(refreshTheme 重广播当前模式,setThemeDeferred 会跳过)。
-    ThemeCatalog::setUserAccent(m_styleTheme, accent);
-    ThemeCatalog::apply(m_styleTheme);
+    // Persist the override, then install it through one ThemeRegistry snapshot
+    // commit. zh_CN: 持久化 Fluent 强调色覆盖，再通过一次 ThemeRegistry 快照提交完成安装与重绘。
+    GalleryUserTheme::setAccent(accent);
+    GalleryUserTheme::apply();
     emit accentColorChanged(accentColor());
-    LOG_INFO(QStringLiteral("GallerySettings setAccentColor theme=%1 accent=%2")
-                 .arg(static_cast<int>(m_styleTheme))
+    LOG_INFO(QStringLiteral("GallerySettings setAccentColor accent=%1")
                  .arg(accent.name(QColor::HexArgb)));
 }
 
 void GallerySettings::resetAccentColor()
 {
-    ThemeCatalog::clearUserAccent(m_styleTheme);
-    ThemeCatalog::apply(m_styleTheme);
+    GalleryUserTheme::clearAccent();
+    GalleryUserTheme::apply();
     emit accentColorChanged(accentColor());
-    LOG_INFO(QStringLiteral("GallerySettings resetAccentColor theme=%1")
-                 .arg(static_cast<int>(m_styleTheme)));
+    LOG_INFO(QStringLiteral("GallerySettings resetAccentColor"));
 }
 
 void GallerySettings::setNavigationStyle(NavigationStyle style)
@@ -323,9 +298,8 @@ void GallerySettings::load()
     if (!platform::persistenceAvailable())
         return;
 
-    const QSettings settings = platform::createSettings();
+    QSettings settings = platform::createSettings();
     const int theme = qBound(0, settings.value(QString::fromLatin1(kThemeModeKey), 0).toInt(), 2);
-    const int styleTheme = qBound(0, settings.value(QString::fromLatin1(kStyleThemeKey), 0).toInt(), 2);
     const int navigation = qBound(0,
                                   settings.value(QString::fromLatin1(kNavigationStyleKey), 0).toInt(),
                                   4);
@@ -339,7 +313,6 @@ void GallerySettings::load()
         settings.value(QString::fromLatin1(kCloseBehaviorKey), 1).toInt(),
         2);
     m_themeMode = static_cast<ThemeMode>(theme);
-    m_styleTheme = static_cast<StyleTheme>(styleTheme);
     m_navigationStyle = static_cast<NavigationStyle>(navigation);
     m_windowEffect = static_cast<BackdropEffect>(windowEffect);
     m_closeBehavior = static_cast<CloseBehavior>(closeBehavior);

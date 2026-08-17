@@ -1,12 +1,11 @@
 #include "InfoBar.h"
-#include "components/foundation/private/SurfacePainter_p.h"
 #include "components/status_info/private/StatusPresentationAccessibility_p.h"
 
 #include <QEvent>
 #include <QFontMetrics>
+#include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QPaintEvent>
 #include <QPointer>
 #include <QResizeEvent>
 #include <QSizePolicy>
@@ -38,7 +37,7 @@ void setLabelColor(fluent::textfields::Label* label, const QColor& color)
     label->setStyleSheet(QStringLiteral("color: rgba(%1, %2, %3, %4); background: transparent;")
                              .arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha()));
 }
-}
+} // namespace
 
 InfoBar::InfoBar(QWidget* parent)
     : QWidget(parent)
@@ -388,17 +387,6 @@ void InfoBar::paintEvent(QPaintEvent*)
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-
-    // Per-design-language container treatment. DesignFluent is the original WinUI rendering and MUST stay
-    // byte-for-byte unchanged: a rounded container (m_cornerRadius) with the tonal severity background +
-    // strokeCard hairline, then a filled circular severity badge with a white glyph. Material/macOS drop
-    // the filled badge in favor of a tint-on-glyph idiom over their own container shapes.
-    // zh_CN: 按设计语言区分容器处理。DesignFluent 为原始 WinUI 渲染,必须逐字节保持不变:圆角容器
-    //（m_cornerRadius）+ 色调严重级别背景 + strokeCard 发丝描边,再绘制填充圆形徽标 + 白色字形。
-    // Material/macOS 放弃填充徽标,改用各自容器形状上的「字形着色」范式。
-    const DesignLanguage lang = themeDesignLanguage();
-
-    if (lang == DesignFluent) {
         const QRectF frameRect = rect().adjusted(0, 0, -1, -1);
         painter.setPen(QPen(m_strokeColor, 1.0));
         painter.setBrush(m_backgroundColor);
@@ -417,62 +405,6 @@ void InfoBar::paintEvent(QPaintEvent*)
         painter.drawEllipse(badgeBase);
 
         drawSeverityGlyph(painter, badgeBase);
-        return;
-    }
-
-    // ─── Material 3 / macOS shared resolution ──────────────────────────────────
-    const auto& colors = themeColorsRef();
-    // Guard every optional fill against the invalid-QColor trap: a default-constructed QColor is INVALID
-    // yet alpha()==255, so setBrush(invalidColor) paints SOLID OPAQUE BLACK. Severity tonal backgrounds
-    // come from the seeded tables and are valid, but we still verify before painting. zh_CN: 用 isValid()
-    // 防御无效 QColor 陷阱(默认构造的 QColor 无效却 alpha==255,setBrush 会涂成不透明纯黑)。
-    QColor fill = severityBackgroundColor();
-    if (!fill.isValid()) fill = Qt::transparent;
-    // Brand icon tint uses the semantic systemXxx foreground (not severityColor(), which substitutes the
-    // app accent for Informational); fall back to textPrimary if the token is unset. zh_CN: 品牌图标着色用
-    // 语义 systemXxx 前景色(而非 severityColor()——其对 Informational 用 app 强调色替代);token 缺省时回退 textPrimary。
-    QColor tint;
-    switch (m_severity) {
-        case Success: tint = colors.systemSuccess; break;
-        case Warning: tint = colors.systemCaution; break;
-        case Error: tint = colors.systemCritical; break;
-        case Informational:
-        default: tint = colors.systemInfo; break;
-    }
-    if (!tint.isValid()) tint = colors.textPrimary;
-
-    qreal radius = 12.0;
-    QColor border = Qt::transparent;
-
-    if (lang == DesignMaterial) {
-        // Material 3 (≈ Snackbar/Banner): a rounded tonal container at radius ~12 carries the severity
-        // through its systemXxxBg fill; no left accent badge, and the border is suppressed because the
-        // tonal fill already reads the severity. The leading icon is tinted with the severity color.
-        // zh_CN: Material 3:radius~12 的色调容器以 systemXxxBg 填充承载严重级别;无左侧徽标,描边抑制
-        //（色调填充已表达严重级别）。前导图标用严重级别色着色。
-        const int overlayRadius = themeRadius().overlay;
-        radius = (overlayRadius > 0) ? qMax(overlayRadius, 12) : 12.0;
-        border = Qt::transparent;
-    } else { // DesignCupertino
-        // macOS: a quiet bezel — rounded container at radius ~10 with a subtle severity fill and a
-        // hairline strokeStrong border; icon tinted with the severity color. No loud full-width band,
-        // no left accent strip. zh_CN: macOS:安静的 bezel——radius~10 圆角容器 + 轻微严重级别填充 +
-        // strokeStrong 发丝描边;图标用严重级别色着色。无整宽强调带,无左侧强调条。
-        radius = (themeRadius().control > 0) ? qMax(themeRadius().control, 10) : 10.0;
-        border = colors.strokeStrong;
-    }
-
-    fluent::painting::RoundedSurfacePaint surface;
-    surface.fill = fill;
-    surface.border = border;
-    surface.radius = radius;
-    fluent::painting::paintRoundedSurface(painter, QRectF(rect()), surface);
-
-    if (!m_isIconVisible) return;
-
-    // Tint the leading icon glyph (no filled circular badge). zh_CN: 着色前导图标字形(无填充圆形徽标)。
-    const QColor glyphColor = isEnabled() ? tint : m_disabledTextColor;
-    drawSeverityGlyphTinted(painter, badgeRect(), glyphColor);
 }
 
 void InfoBar::resizeEvent(QResizeEvent* event)
@@ -621,25 +553,6 @@ void InfoBar::drawSeverityGlyph(QPainter& painter, const QRectF& targetRect) con
     painter.setBrush(Qt::NoBrush);
     Typography::Icons::paintGlyph(
         painter, targetRect, glyph, m_severityIconGlyphSize, Qt::AlignCenter);
-    painter.restore();
-}
-
-void InfoBar::drawSeverityGlyphTinted(QPainter& painter, const QRectF& targetRect, const QColor& color) const
-{
-    const QString glyph = severityGlyph();
-    if (glyph.isEmpty() || targetRect.isEmpty() || !color.isValid()) return;
-
-    // The Fluent badge glyph is intentionally tiny (m_severityIconGlyphSize ~10) because it sits inside a
-    // filled circle. Without that circle the tinted glyph should fill the icon slot, so scale to the slot
-    // height. zh_CN: Fluent 徽标字形刻意很小（~10）因为它在填充圆内。去掉圆后,着色字形应撑满图标槽,
-    // 故按槽高缩放。
-    const int slotSize = qMax(1, qRound(targetRect.height()));
-
-    painter.save();
-    painter.setPen(color);
-    painter.setBrush(Qt::NoBrush);
-    Typography::Icons::paintGlyph(
-        painter, targetRect, glyph, slotSize, Qt::AlignCenter);
     painter.restore();
 }
 

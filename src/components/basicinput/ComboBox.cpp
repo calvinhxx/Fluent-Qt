@@ -1,33 +1,31 @@
 #include "ComboBox.h"
-
-#include <QPainter>
-#include <QPainterPath>
-#include <QMouseEvent>
-#include <QPropertyAnimation>
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QFontMetrics>
 #include <QKeyEvent>
+#include <QMouseEvent>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPropertyAnimation>
+#include <QProxyStyle>
 #include <QResizeEvent>
+#include <QScrollBar>
+#include <QStringListModel>
+#include <QStyle>
 #include <QWheelEvent>
 #include <QtMath>
-#include <QStringListModel>
-#include <QProxyStyle>
-#include <QScrollBar>
-#include <QStyle>
-
-#include "design/CornerRadius.h"
-#include "design/Animation.h"
 #include "compatibility/QtCompat.h"
-#include "components/collections/ListView.h"
-#include "components/foundation/private/DpiPaintMetrics_p.h"
-#include "components/foundation/private/SurfacePainter_p.h"
 #include "compatibility/TextPaintCompat.h"
+#include "components/collections/ListView.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 #include "components/menus_toolbars/private/TextEditingMenu_p.h"
 #include "components/scrolling/ScrollBar.h"
 #include "components/textfields/LineEdit.h"
+#include "design/Animation.h"
+#include "design/CornerRadius.h"
 
 namespace {
 static constexpr int kPopupShadowMargin = ::Spacing::Standard;
@@ -50,7 +48,7 @@ public:
         QProxyStyle::drawPrimitive(pe, opt, p, w);
     }
 };
-}
+} // namespace
 
 namespace fluent::basicinput {
 
@@ -300,11 +298,6 @@ void ComboBox::ComboBoxPopup::paintEvent(QPaintEvent*) {
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;
     surface.radius = radius;
-    if (themeDesignLanguage() == DesignMaterial)
-        surface.border = Qt::transparent;
-    else if (themeDesignLanguage() == DesignCupertino)
-        surface.border = colors.strokeDefault;
-    else
         surface.border = colors.strokeCard;
     fluent::painting::paintRoundedSurface(painter, QRectF(contentRect), surface);
 }
@@ -780,18 +773,6 @@ void ComboBox::paintEvent(QPaintEvent*) {
     const QRectF r(rect());
     const fluent::painting::DpiPaintMetrics paintMetrics(painter);
 
-    // Branch the closed-field surface on the active design language. The chevron and text
-    // (drawn further down) are shared; only the field background/border differ per brand.
-    // zh_CN: 闭合表面按当前设计语言分支绘制。下方的箭头与文字为共用部分,仅字段背景/边框按品牌区分。
-    const DesignLanguage lang = themeDesignLanguage();
-    // Theme-aware interaction veil (same idiom as Button): DARKEN light surfaces, LIGHTEN dark
-    // ones so hover/press stay visible under both App themes. zh_CN: 主题感知交互薄层(与 Button 同):
-    // 浅色面变暗、深色面变亮,使 hover/press 在明暗两主题下都可见。
-    const bool darkTheme = effectiveTheme() == Dark;
-    const auto veil = [darkTheme](int alpha) {
-        return darkTheme ? QColor(255, 255, 255, alpha) : QColor(0, 0, 0, alpha);
-    };
-
     // ── Background ───────────────────────────────────────────────────────
     // Figma: Outer 1px padding + 4px radius, inner base 3px radius
     // Outer wrapper
@@ -813,106 +794,7 @@ void ComboBox::paintEvent(QPaintEvent*) {
         outerBg = colors.controlDefault;
     }
 
-    // "Open" reads as focus for the closed field on every brand (popup up or line-edit focused).
-    // zh_CN: 对闭合字段而言,"展开"等同于聚焦(弹层打开或输入框聚焦)。
-    const bool fieldFocused = enabled && (lineEditFocused || m_popupVisible);
-
-    if (lang == DesignMaterial) {
-        // Material 3: outlined text-field look. Transparent/controlDefault fill, a 1 dp `outline`
-        // (strokeStrong) at rest, a 2 dp `primary` (accentDefault) outline when focused/open. Hover
-        // adds a within-bounds state-layer veil (never a halo beyond the widget). §4/§5.
-        // zh_CN: Material 3:描边文本框外观。透明/controlDefault 填充,静息 1dp outline(strokeStrong),
-        // 聚焦/展开时 2dp primary(accentDefault) 描边。Hover 叠加界内 state-layer 薄层(不画超出控件的光晕)。
-        const qreal mR = qMax<qreal>(0.0, radius.control);
-        QColor fill = enabled ? (m_pressed || m_popupVisible ? colors.controlDefault : QColor(Qt::transparent))
-                              : colors.controlDisabled;
-
-        QPainterPath bgPath;
-        bgPath.addRoundedRect(r.adjusted(1.0, 1.0, -1.0, -1.0), mR, mR);
-        painter.setPen(Qt::NoPen);
-        if (fill != Qt::transparent) {
-            painter.setBrush(fill);
-            painter.drawPath(bgPath);
-        }
-
-        // State layer veil, clipped inside the field so it can't bleed into the surrounding band.
-        // zh_CN: state-layer 薄层,裁剪在字段内,避免溢出到周围条带。
-        if (enabled && !fieldFocused) {
-            QColor stateLayer;
-            if (m_pressed) stateLayer = veil(0x1A);       // 10%
-            else if (m_hovered) stateLayer = veil(0x14);  // 8%
-            if (stateLayer.isValid() && stateLayer.alpha() > 0) {
-                painter.save();
-                painter.setClipPath(bgPath);
-                painter.setBrush(stateLayer);
-                painter.drawPath(bgPath);
-                painter.restore();
-            }
-        }
-
-        // Outline: 1 dp strokeStrong at rest, 2 dp accent when focused/open. zh_CN: 描边:静息 1dp strokeStrong,聚焦/展开 2dp accent。
-        const qreal sw = fieldFocused ? 2.0 : 1.0;
-        const QColor outline = !enabled ? colors.strokeSecondary
-                                        : (fieldFocused ? colors.accentDefault : colors.strokeStrong);
-        const auto outlineStroke = paintMetrics.alignedStroke(r, sw);
-        painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(outline, outlineStroke.width));
-        painter.drawRoundedRect(outlineStroke.rect, mR, mR);
-    } else if (lang == DesignCupertino) {
-        // macOS: bezel push-button look. Subtle fill + 1px strokeStrong hairline + small radius (~6)
-        // + a faint 1px lower-edge drop shadow (matching the Button bezel). Pressed/open darken via the
-        // theme-aware veil; focus/open gets an accent hairline. zh_CN: macOS:bezel 按钮外观。柔和填充 +
-        // 1px strokeStrong 发丝边框 + 小圆角(~6) + 底缘 1px 柔和投影(与 Button bezel 一致)。按下/展开用主题感知
-        // 薄层压暗;聚焦/展开使用强调色发丝边。
-        const qreal mR = qMax<qreal>(0.0, qMin<qreal>(radius.control, 6.0));
-        QColor fill = enabled ? colors.bgLayerAlt : colors.controlDisabled;
-
-        const auto hairStroke = paintMetrics.alignedStroke(r, 1.0);
-        QPainterPath bgPath;
-        bgPath.addRoundedRect(hairStroke.rect, mR, mR);
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(fill);
-        painter.drawPath(bgPath);
-
-        // Pressed/hover veil over the bezel keeps feedback visible on both light and dark.
-        // zh_CN: bezel 上叠加按下/悬停薄层,使反馈在浅/深主题上都可见。
-        if (enabled) {
-            QColor stateLayer;
-            if (m_pressed || m_popupVisible) stateLayer = veil(darkTheme ? 0x3A : 0x30);
-            else if (m_hovered) stateLayer = veil(darkTheme ? 0x1C : 0x16);
-            // NOTE: guard on isValid() too — a default-constructed QColor is INVALID but reports
-            // alpha()==255 (Qt stores invalid as 0xFFFF alpha), so a bare alpha()>0 check would fire
-            // at rest and setBrush(invalid) paints SOLID BLACK over the bezel. zh_CN: 必须同时判 isValid()
-            // ——默认构造的 QColor 虽无效,alpha() 却返回 255(Qt 用 0xFFFF 存无效 alpha),裸 alpha()>0 会在静息
-            // 命中,setBrush(无效色) 会把 bezel 整片涂成不透明黑。
-            if (stateLayer.isValid() && stateLayer.alpha() > 0) {
-                painter.save();
-                painter.setClipPath(bgPath);
-                painter.setBrush(stateLayer);
-                painter.drawPath(bgPath);
-                painter.restore();
-            }
-        }
-
-        // Faint 1px drop shadow hugging the bottom inner edge — sells the raised bezel. zh_CN: 贴底缘内侧 1px 柔和投影——读出凸起 bezel。
-        if (enabled && !m_pressed && !m_popupVisible) {
-            painter.save();
-            painter.setClipPath(bgPath);
-            painter.setBrush(Qt::NoBrush);
-            QColor shadow(0, 0, 0, darkTheme ? 0x3A : 0x1E);
-            painter.setPen(QPen(shadow, 1.0));
-            painter.drawRoundedRect(r.adjusted(1.0, 2.0, -1.0, -1.0), mR, mR);
-            painter.restore();
-        }
-
-        // Hairline border: strokeStrong at rest, accent when focused/open. zh_CN: 发丝边框:静息 strokeStrong,聚焦/展开 accent。
-        const QColor hairline = !enabled ? colors.strokeSecondary
-                                         : (fieldFocused ? colors.accentDefault : colors.strokeStrong);
-        painter.setBrush(Qt::NoBrush);
-        painter.setPen(QPen(hairline, hairStroke.width));
-        painter.drawRoundedRect(hairStroke.rect, mR, mR);
-    } else {
-        // DesignFluent (default): unchanged WinUI 3 treatment. zh_CN: 默认 Fluent,WinUI 3 处理不变。
+    // Fluent treatment. zh_CN: Fluent 样式。
         // Draw the control background with 1px inset for border
         const qreal outerR = radius.control; // 4px
         const qreal innerR = outerR - 1;     // 3px
@@ -966,7 +848,6 @@ void ComboBox::paintEvent(QPaintEvent*) {
                 painter.setPen(Qt::NoPen);
                 painter.setBrush(colors.strokeSecondary);
                 painter.drawPath(bp);
-            }
         }
     }
 

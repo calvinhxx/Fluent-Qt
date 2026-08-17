@@ -967,8 +967,7 @@ TEST(CommandBarTest,
 #endif
 }
 
-TEST(CommandBarTest,
-     Contract_AllDesignLanguagesAndThemesPaintInlineSurface)
+TEST(CommandBarTest, Contract_LightAndDarkThemesPaintInlineSurface)
 {
     QWidget window;
     window.resize(520, 180);
@@ -985,26 +984,17 @@ TEST(CommandBarTest,
         QStringLiteral("FluentCommandBar.MoreButton"));
     ASSERT_NE(more, nullptr);
 
-    const fluent::FluentElement::DesignLanguage languages[] = {
-        fluent::FluentElement::DesignFluent,
-        fluent::FluentElement::DesignMaterial,
-        fluent::FluentElement::DesignCupertino,
-    };
     const fluent::FluentElement::Theme themes[] = {
         fluent::FluentElement::Light,
         fluent::FluentElement::Dark,
     };
-    for (auto language : languages) {
-        for (auto theme : themes) {
-            fluent::ThemeRegistry::instance().setDesignLanguage(
-                language);
+    for (auto theme : themes) {
             fluent::FluentElement::setTheme(theme);
             bar.onThemeUpdated();
             processDeferredUiWork();
             const QImage image = bar.grab().toImage();
             ASSERT_FALSE(image.isNull())
-                << "language=" << language
-                << " theme=" << theme;
+                << "theme=" << theme;
             bool painted = false;
             const QColor baseline = image.pixelColor(0, 0);
             for (int y = 0;
@@ -1018,10 +1008,8 @@ TEST(CommandBarTest,
                 }
             }
             EXPECT_TRUE(painted)
-                << "language=" << language
-                << " theme=" << theme;
+                << "theme=" << theme;
             EXPECT_TRUE(more->isVisible());
-        }
     }
     fluent::ThemeRegistry::instance().resetToDefaults();
     fluent::FluentElement::setTheme(

@@ -26,8 +26,8 @@
 #include <components/basicinput/ToggleSplitButton.h>
 #include <components/basicinput/ToggleSwitch.h>
 #include <components/collections/DataGrid.h>
-#include <components/collections/FlipView.h>
 #include <components/collections/DrawerView.h>
+#include <components/collections/FlipView.h>
 #include <components/collections/FlowView.h>
 #include <components/collections/GridView.h>
 #include <components/collections/ListView.h>
@@ -47,7 +47,7 @@
 #include <components/foundation/FluentElement.h>
 #include <components/foundation/FontIcon.h>
 #include <components/foundation/QMLPlus.h>
-#include <components/foundation/StyleThemeCatalog.h>
+#include <components/foundation/UserTheme.h>
 #include <components/layout/Accordion.h>
 #include <components/layout/Card.h>
 #include <components/layout/Divider.h>
@@ -91,12 +91,6 @@ namespace fluent::binding {
 enum class Theme {
     Light,
     Dark
-};
-
-enum class DesignLanguage {
-    DesignFluent,
-    DesignMaterial,
-    DesignCupertino
 };
 
 enum class SelectionMode {
@@ -185,7 +179,6 @@ public:
     QFont themeFontForBinding(
         Typography::FontRole role = Typography::FontRole::Body) const;
     fluent::binding::Theme effectiveThemeForBinding() const;
-    fluent::binding::DesignLanguage designLanguageForBinding() const;
     void onThemeUpdated() override;
 };
 
@@ -210,13 +203,12 @@ bool initializeResources();
 QFont fontForRole(Typography::FontRole role);
 void setTheme(fluent::binding::Theme theme);
 fluent::binding::Theme currentTheme();
-void applyStyleTheme(fluent::StyleTheme theme);
+void applyUserTheme();
 void setAccentColor(const QColor &color);
 QColor accentColor();
 void resetThemeTokens();
 void setFontScale(qreal scale);
 qreal fontScale();
-fluent::binding::DesignLanguage currentDesignLanguage();
 QVariantMap themeTokensForWidgetForBinding(const QWidget* widget);
 void refreshWidgetThemeForBinding(QWidget* widget);
 bool bindProperties(QObject* source,

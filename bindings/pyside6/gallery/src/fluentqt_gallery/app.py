@@ -341,7 +341,6 @@ def main(argv: list[str] | None = None) -> int:
     from .settings import (
         CloseBehavior,
         NavigationStyle,
-        StyleTheme,
         ThemeMode,
         gallery_settings,
     )
@@ -360,11 +359,10 @@ def main(argv: list[str] | None = None) -> int:
         # app identity, so persisted user choices are intentionally absent.
         # Keep Python verification equally deterministic while leaving normal
         # interactive launches persistent.
-        settings.style_theme = StyleTheme.Fluent
         settings.navigation_style = NavigationStyle.Auto
         settings.window_effect = 1
         settings.close_behavior = CloseBehavior.Tray
-        settings.apply_style_theme()
+        settings.apply_user_theme()
     if args.theme == "light":
         settings.theme_mode = ThemeMode.Light
         settings.apply_theme_mode()

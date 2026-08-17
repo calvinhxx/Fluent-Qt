@@ -10,17 +10,17 @@
 #include <QtTest/QSignalSpy>
 #include <QtTest/QTest>
 
-#include "design/Spacing.h"
-#include "design/Typography.h"
+#include "compatibility/QtCompat.h"
+#include "components/basicinput/Button.h"
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
 #include "components/scrolling/ScrollBar.h"
-#include "components/basicinput/Button.h"
 #include "components/textfields/AutoSuggestBox.h"
 #include "components/textfields/Label.h"
-#include "compatibility/QtCompat.h"
+#include "design/Spacing.h"
+#include "design/Typography.h"
 
 using namespace fluent;
 using namespace fluent::basicinput;
@@ -298,7 +298,8 @@ TEST_F(AutoSuggestBoxTest, UserInputOpensAndEscapeClosesSuggestions) {
     EXPECT_TRUE(box->isSuggestionListOpen());
     EXPECT_EQ(QApplication::focusWidget(), box);
     EXPECT_EQ(focusSpy.count(), 0)
-        << "Opening suggestions must not interrupt IME composition with a focus transfer";
+        << "Opening suggestions must not interrupt "
+                                    "IME composition with a focus transfer";
     ASSERT_GE(openSpy.count(), 1);
     EXPECT_TRUE(openSpy.first().at(0).toBool());
 
@@ -561,70 +562,6 @@ TEST_F(AutoSuggestBoxTest, OutsidePressLightDismissesSuggestions) {
     EXPECT_FALSE(box->isSuggestionListOpen());
 }
 
-// ── Design-language × theme coverage ─────────────────────────────────────────
-//
-// AutoSuggestBox subclasses LineEdit but paints its own input-row frame (so the header
-// row stays unboxed). That frame is now brand-aware: Fluent keeps the WinUI fill +
-// bottom accent underline, Material draws an outlined rect (2dp accent on focus),
-// Cupertino draws a hairline + accent focus ring. The query/clear buttons are
-// fluent::Buttons that follow the language for free, and the suggestion popup paints via
-// FluentElement tokens. This suite grabs the rendered control across {language × theme},
-// asserting every combination paints valid, non-empty content and never crashes. Design
-// language + theme are GLOBAL, so TearDown restores defaults.
-// zh_CN: AutoSuggestBox 继承 LineEdit 但自绘输入行边框(标题行不被框住)。该边框现已品牌感知:
-// Fluent 保留 WinUI 填充+底部强调下划线,Material 描边矩形(聚焦 2dp accent),Cupertino 发丝边框+
-// 强调焦点环。query/clear 按钮是 fluent::Button,自动跟随语言,建议弹层经 FluentElement token 绘制。
-// 本套件遍历 {语言 × 主题} 抓取渲染结果,确保每种组合绘制有效非空内容且不崩溃。语言与主题全局,TearDown 复位。
-
-class AutoSuggestBoxDesignLanguageTest : public ::testing::Test {
-protected:
-    void TearDown() override {
-        fluent::ThemeRegistry::instance().resetToDefaults();
-        fluent::FluentElement::setTheme(fluent::FluentElement::Light);
-    }
-
-    static bool hasPaintedContent(const QImage& image) {
-        if (image.isNull()) return false;
-        const QRgb bg = image.pixel(0, 0);
-        for (int y = 0; y < image.height(); ++y)
-            for (int x = 0; x < image.width(); ++x)
-                if (image.pixel(x, y) != bg) return true;
-        return false;
-    }
-
-    static QImage grabBox() {
-        AutoSuggestBox box;
-        box.setText("sea");
-        box.resize(220, 32);
-        return box.grab().toImage();
-    }
-};
-
-TEST_F(AutoSuggestBoxDesignLanguageTest, AllLanguagesThemesPaintValid) {
-    const fluent::FluentElement::DesignLanguage langs[] = {
-        fluent::FluentElement::DesignFluent,
-        fluent::FluentElement::DesignMaterial,
-        fluent::FluentElement::DesignCupertino,
-    };
-    const fluent::FluentElement::Theme themes[] = {
-        fluent::FluentElement::Light,
-        fluent::FluentElement::Dark,
-    };
-
-    for (auto lang : langs) {
-        for (auto theme : themes) {
-            fluent::ThemeRegistry::instance().setDesignLanguage(lang);
-            fluent::FluentElement::setTheme(theme);
-
-            QImage image = grabBox();
-            ASSERT_FALSE(image.isNull()) << "lang=" << lang << " theme=" << theme;
-            EXPECT_EQ(image.width(), 220) << "lang=" << lang << " theme=" << theme;
-            EXPECT_EQ(image.height(), 32) << "lang=" << lang << " theme=" << theme;
-            EXPECT_TRUE(hasPaintedContent(image))
-                << "painted nothing for lang=" << lang << " theme=" << theme;
-        }
-    }
-}
 
 TEST_F(AutoSuggestBoxTest, VisualCheck) {
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {

@@ -1,34 +1,34 @@
 #include "TreeView.h"
-
-#include <QScopeGuard>
 #include <QAbstractItemModel>
 #include <QApplication>
 #include <QItemSelectionModel>
 #include <QLabel>
 #include <QMouseEvent>
+#include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QPaintEvent>
 #include <QPointer>
 #include <QProxyStyle>
 #include <QResizeEvent>
+#include <QScopeGuard>
 #include <QScrollBar>
 #include <QShowEvent>
 #include <QTimer>
-#include <QtMath>
 #include <QVariantAnimation>
 #include <QWheelEvent>
 
+#include <QtMath>
+
 #include "compatibility/QtCompat.h"
-#include "design/CornerRadius.h"
-#include "design/Animation.h"
-#include "design/Spacing.h"
-#include "design/Typography.h"
+#include "components/collections/CollectionViewBackdrop_p.h"
+#include "components/foundation/private/DpiPaintMetrics_p.h"
 #include "components/scrolling/OverlayScrollChrome.h"
 #include "components/scrolling/OverscrollController.h"
 #include "components/scrolling/ScrollBar.h"
-#include "components/foundation/private/DpiPaintMetrics_p.h"
-#include "components/collections/CollectionViewBackdrop_p.h"
+#include "design/Animation.h"
+#include "design/CornerRadius.h"
+#include "design/Spacing.h"
+#include "design/Typography.h"
 
 namespace fluent::collections {
 
@@ -492,12 +492,6 @@ qreal TreeView::selectedIndicatorProgress(const QModelIndex& index) const {
 }
 
 bool TreeView::selectionIndicatorVisible() const {
-    // The Fluent accent pill is suppressed under M3/macOS (the delegate fills the whole row instead);
-    // report it as hidden so the delegate draws its own bar and view + delegate stay consistent.
-    // zh_CN: Fluent accent 药丸在 M3/macOS 下被抑制(改由委托整行填充);此处报告为隐藏,
-    // 使委托绘制自身指示条,从而保持视图与委托一致。
-    if (themeDesignLanguage() != DesignFluent)
-        return false;
     return m_selectionIndicatorVisible;
 }
 
@@ -1527,10 +1521,6 @@ QRectF TreeView::currentSelectedIndicatorRect() const {
 }
 
 void TreeView::paintSelectedIndicator(QPainter& painter) const {
-    // M3/macOS carry selection via the delegate's full-row fill, not a Fluent accent pill — suppress it.
-    // zh_CN: M3/macOS 的选择由委托整行填充承载,而非 Fluent accent 指示条——在此抑制。
-    if (themeDesignLanguage() != DesignFluent)
-        return;
 
     if (!selectionModel() || !themeColorsRef().accentDefault.isValid())
         return;

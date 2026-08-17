@@ -1,7 +1,9 @@
 #include "Menu.h"
 
 #include <QActionEvent>
+#include <QEasingCurve>
 #include <QEvent>
+#include <QFontMetrics>
 #include <QGuiApplication>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -13,15 +15,12 @@
 #include <QShowEvent>
 #include <QTimer>
 #include <QVariantAnimation>
-#include <QEasingCurve>
-#include <QFontMetrics>
-
-#include "design/Typography.h"
+#include "compatibility/QtCompat.h"
+#include "compatibility/private/RuntimePlatformCapabilities_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/SurfacePainter_p.h"
-#include "compatibility/QtCompat.h"
-#include "compatibility/private/RuntimePlatformCapabilities_p.h"
+#include "design/Typography.h"
 
 namespace fluent::menus_toolbars {
 
@@ -216,7 +215,8 @@ void FluentMenu::setItemLayoutMetrics(int verticalPadding,
     m_separatorHeight = qMax(1, separatorHeight);
     setStyleSheet(QStringLiteral(
         "QMenu { background-color: transparent; border: 0px; padding: 0px; }"
-        "QMenu::item { background-color: transparent; padding: %1px 0px; margin: 0px; }"
+          "QMenu::item { background-color: transparent; padding: %1px 0px; "
+          "margin: 0px; }"
         "QMenu::separator { height: %2px; }"
     ).arg(m_itemVerticalPadding).arg(m_separatorHeight));
 }
@@ -372,16 +372,6 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     const auto& spacing = themeSpacing();
     const auto& radius = themeRadius();
 
-    // Design language drives the surface stroke and per-item highlight treatment below; resolve it
-    // once up front. Fluent (default) is unchanged. zh_CN: 设计语言决定下方的表面描边与逐项高亮处理;在此
-    // 一次性解析。Fluent(默认)保持不变。
-    const DesignLanguage lang = themeDesignLanguage();
-    // Theme-aware interaction veil: a translucent overlay that DARKENS light surfaces and LIGHTENS
-    // dark ones, so a neutral on-surface state layer stays visible under both App themes. zh_CN: 主题
-    // 感知交互薄层:浅色面变暗、深色面变亮,使中性 on-surface state layer 在明暗两主题下都可见。
-    const bool dark = effectiveTheme() == Dark;
-    const auto veil = [dark](int a) { return dark ? QColor(255, 255, 255, a) : QColor(0, 0, 0, a); };
-
     // 2. Vertical extent of the items. zh_CN: 计算 items 垂直范围。
     QRect itemsRect;
     for (QAction* action : actions()) {
@@ -412,20 +402,9 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
     QPainterPath clipPath;
     clipPath.addRoundedRect(contentRect, r, r);
     p.setClipPath(clipPath);
-
-    // Card stroke: Fluent + macOS keep a hairline border (Fluent → strokeCard, macOS → a hairline
-    // strokeDefault); Material 3's surface-container panel drops the visible border and leans on the
-    // existing layered shadow for elevation. The bgLayer fill + overlay radius are shared. zh_CN: 底板
-    // 描边:Fluent + macOS 保留发丝边框(Fluent→strokeCard,macOS→发丝 strokeDefault);Material 3 的
-    // surface-container 面板去掉可见边框,改由既有多层阴影表达高程。bgLayer 填充 + overlay 圆角共用。
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;
     surface.radius = r;
-    if (lang == DesignMaterial)
-        surface.border = Qt::transparent;
-    else if (lang == DesignCupertino)
-        surface.border = colors.strokeDefault;
-    else
         surface.border = colors.strokeCard;
     fluent::painting::paintRoundedSurface(p, QRectF(contentRect), surface);
 
@@ -476,28 +455,9 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
         bool isEnabled = action->isEnabled();
         bool isActive  = (action == activeAction());
         const bool highlighted = isEnabled && (action->isChecked() || isActive);
-
-        // macOS highlights the active item with a SOLID accent selection bar and flips all of its
-        // text/glyphs to white; so flag it here to override primaryText/secondaryText below. zh_CN:
-        // macOS 用实心 accent 选择条高亮当前项,并将其文字/字形全部翻白;在此置位,供下方覆盖
-        // primaryText/secondaryText。
-        const bool cupertinoActiveBar = (lang == DesignCupertino) && highlighted;
-
-        // Item highlight fill. zh_CN: 逐项高亮填充。
-        //  - Fluent (default): solid subtleSecondary rounded rect. zh_CN: 实心 subtleSecondary 圆角块。
-        //  - Material 3: a NEUTRAL on-surface state layer (veil ~8%/0x14), a translucent veil over the
-        //    item rather than a fill swap, inscribed in the rounded rect (§4). zh_CN: 中性 on-surface
-        //    state layer(veil ~8%/0x14),为半透明薄层而非换填充,内切于圆角矩形(§4)。
-        //  - macOS: the classic SOLID accentDefault selection bar. zh_CN: 经典实心 accentDefault 选择条。
-        QColor bg = Qt::transparent;
-        if (highlighted) {
-            if (lang == DesignMaterial)
-                bg = veil(0x14);              // ~8% neutral on-surface state layer
-            else if (lang == DesignCupertino)
-                bg = colors.accentDefault;    // solid blue selection bar
-            else
-                bg = colors.subtleSecondary;  // Fluent (unchanged)
-        }
+        const QColor bg = highlighted
+            ? colors.subtleSecondary
+            : QColor(Qt::transparent);
 
         // §2 invalid-QColor guard: only paint a valid, non-transparent fill. zh_CN: §2 无效 QColor 防护:
         // 仅在色值有效且非透明时绘制填充。
@@ -507,14 +467,8 @@ void FluentMenu::paintEvent(QPaintEvent* event) {
             p.setBrush(bg);
             p.drawRoundedRect(bgRect, radius.control, radius.control);
         }
-
-        // For the macOS active bar, label + shortcut + checkmark + chevron all read white on accent;
-        // override BOTH text roles. zh_CN: macOS 活动条上,标签 + 快捷键 + 勾选 + 箭头都在 accent 上读作白色;
-        // 故同时覆盖两个文字角色。
-        const QColor primaryText = cupertinoActiveBar ? colors.textOnAccent
-                                                      : (isEnabled ? colors.textPrimary : colors.textDisabled);
-        const QColor secondaryText = cupertinoActiveBar ? colors.textOnAccent
-                                                        : (isEnabled ? colors.textSecondary : colors.textDisabled);
+        const QColor primaryText = isEnabled ? colors.textPrimary : colors.textDisabled;
+        const QColor secondaryText = isEnabled ? colors.textSecondary : colors.textDisabled;
 
         if (leadingColumn > 0) {
             const QRect leadingRect(itemRect.left() + itemInset,

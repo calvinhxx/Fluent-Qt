@@ -4,9 +4,9 @@
 #include <QEvent>
 #include <QGraphicsOpacityEffect>
 #include <QKeyEvent>
+#include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
-#include <QPaintEvent>
 #include <QPoint>
 #include <QPointer>
 #include <QPolygon>
@@ -16,11 +16,11 @@
 #include <QResizeEvent>
 #include <QTimer>
 
+#include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 #include "components/foundation/overlay/OverlayCoordinator.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayWindow.h"
-#include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 
 namespace fluent::dialogs_flyouts {
 
@@ -426,17 +426,9 @@ void CoachMark::paintEvent(QPaintEvent*)
     }
 
     const auto& colors = themeColorsRef();
-    const DesignLanguage lang = themeDesignLanguage();
-    QPen outlinePen;
-    if (lang == DesignMaterial)
-        outlinePen = QPen(Qt::NoPen);
-    else if (lang == DesignCupertino)
-        outlinePen = QPen(colors.strokeStrong, 1);
-    else
-        outlinePen = QPen(colors.strokeDefault);
 
     painter.setBrush(colors.bgLayer);
-    painter.setPen(outlinePen);
+    painter.setPen(QPen(colors.strokeDefault));
     painter.drawPath(path);
 }
 

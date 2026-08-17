@@ -23,9 +23,10 @@ namespace detail { class AutoSuggestBoxAccessible; }
  * @brief LineEdit-based input box with query affordance and suggestion flyout.
  * zh_CN: 基于 LineEdit、带查询入口和建议浮层的输入框。
  *
- * AutoSuggestBox combines query icon, clear button, suggestion model, popup open
- * state, item metrics, and suggestion typography for search-style workflows.
- * zh_CN: AutoSuggestBox 组合查询图标、清除按钮、建议模型、弹层打开态、item 尺寸和建议排版，
+ * AutoSuggestBox combines query icon, clear button, suggestion model, popup
+ * open state, item metrics, and suggestion typography for search-style
+ * workflows. zh_CN: AutoSuggestBox
+ * 组合查询图标、清除按钮、建议模型、弹层打开态、item 尺寸和建议排版，
  * 用于搜索式输入流程。
  */
 class AutoSuggestBox : public LineEdit {
@@ -192,7 +193,6 @@ private:
     void setTextWithReason(const QString& value, TextChangeReason reason, bool emitWhenUnchanged = false);
 
     void paintInputFrame(QPainter& painter);
-    bool paintBrandInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
 
     QStringList m_suggestions;

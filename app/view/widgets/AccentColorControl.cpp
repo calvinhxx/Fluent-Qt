@@ -13,16 +13,16 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ColorPicker.h"
 #include "components/basicinput/HyperlinkButton.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/textfields/Label.h"
-#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "platform/GalleryPlatform.h"
 #include "viewmodel/GallerySettings.h"
-#include "viewmodel/ThemeCatalog.h"
+#include "viewmodel/GalleryUserTheme.h"
 
 namespace fluent::gallery {
 namespace {
@@ -34,9 +34,8 @@ using fluent::dialogs_flyouts::Flyout;
 using fluent::dialogs_flyouts::Popup;
 using fluent::textfields::Label;
 
-// Curated accent presets, including the three shipping brand accents (Fluent #005FB8, Material #6750A4,
-// macOS #007AFF) so they're one click away. zh_CN: 精选预设强调色,含三套出厂品牌强调色(Fluent #005FB8、
-// Material #6750A4、macOS #007AFF),一键可达。
+// Curated accents spanning Fluent blue, violet, teal, green, amber, orange,
+// red, and magenta families. zh_CN: 覆盖 Fluent 蓝、紫、青、绿、琥珀、橙、红与洋红色系的精选强调色。
 const QList<QColor>& presetSwatches()
 {
     static const QList<QColor> swatches = {
@@ -147,8 +146,6 @@ AccentColorControl::AccentColorControl(QWidget* parent)
     m_accent = settings->accentColor();
     connect(settings, &GallerySettings::accentColorChanged, this,
             [this](const QColor&) { refreshAccent(); });
-    connect(settings, &GallerySettings::styleThemeChanged, this,
-            [this](GallerySettings::StyleTheme) { refreshAccent(); });
 }
 
 QSize AccentColorControl::sizeHint() const
@@ -288,9 +285,9 @@ void AccentColorControl::openFlyout()
     if (platform::capabilities().editsThemeFiles) {
         auto* folder = new HyperlinkButton(QStringLiteral("Open themes folder"), flyout);
         folder->setFluentSize(Button::Small);
-        connect(folder, &Button::clicked, flyout, [settings, flyout]() {
-            ThemeCatalog::exportUserThemeTemplate(settings->styleTheme());
-            QDesktopServices::openUrl(QUrl::fromLocalFile(ThemeCatalog::themesDirectory()));
+        connect(folder, &Button::clicked, flyout, [ flyout]() {
+            GalleryUserTheme::exportTemplate();
+            QDesktopServices::openUrl(QUrl::fromLocalFile(GalleryUserTheme::directory()));
             flyout->close();
         });
         layout->addWidget(folder);

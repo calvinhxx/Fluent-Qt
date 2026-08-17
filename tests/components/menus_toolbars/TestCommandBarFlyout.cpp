@@ -19,8 +19,8 @@
 
 #include <algorithm>
 
-#include "components/dialogs_flyouts/Flyout.h"
 #include "components/basicinput/Button.h"
+#include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -936,8 +936,7 @@ TEST(CommandBarFlyoutTest,
         fluent::FluentElement::Light);
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_AllDesignLanguagesAndThemesRenderAndPreserveState)
+TEST(CommandBarFlyoutTest, Contract_LightAndDarkThemesRenderAndPreserveState)
 {
     QWidget window;
     window.resize(520, 320);
@@ -954,26 +953,17 @@ TEST(CommandBarFlyoutTest,
         &anchor, CommandBarFlyout::ShowMode::Standard);
     processDeferredUiWork();
 
-    const fluent::FluentElement::DesignLanguage languages[] = {
-        fluent::FluentElement::DesignFluent,
-        fluent::FluentElement::DesignMaterial,
-        fluent::FluentElement::DesignCupertino,
-    };
     const fluent::FluentElement::Theme themes[] = {
         fluent::FluentElement::Light,
         fluent::FluentElement::Dark,
     };
-    for (auto language : languages) {
-        for (auto theme : themes) {
-            fluent::ThemeRegistry::instance().setDesignLanguage(
-                language);
+    for (auto theme : themes) {
             fluent::FluentElement::setTheme(theme);
             flyout.onThemeUpdated();
             processDeferredUiWork();
             const QImage image = flyout.grab().toImage();
             ASSERT_FALSE(image.isNull())
-                << "language=" << language
-                << " theme=" << theme;
+                << "theme=" << theme;
             bool hasOpaqueNonBlackPixel = false;
             for (int y = 0;
                  y < image.height() && !hasOpaqueNonBlackPixel;
@@ -990,8 +980,7 @@ TEST(CommandBarFlyoutTest,
                 }
             }
             EXPECT_TRUE(hasOpaqueNonBlackPixel)
-                << "opaque fallback artifact for language="
-                << language << " theme=" << theme;
+                << "opaque fallback artifact for theme=" << theme;
             EXPECT_TRUE(flyout.isOpen());
             EXPECT_TRUE(flyout.isExpanded());
             EXPECT_EQ(
@@ -1000,7 +989,6 @@ TEST(CommandBarFlyoutTest,
             EXPECT_EQ(
                 flyout.secondaryActions(),
                 (QList<QAction*>{&secondary}));
-        }
     }
     fluent::ThemeRegistry::instance().resetToDefaults();
     fluent::FluentElement::setTheme(
@@ -1146,21 +1134,12 @@ TEST(CommandBarFlyoutTest, VisualCheck)
         window, Edge::Bottom, -28};
     theme->anchors()->left = {title, Edge::Left, 0};
     layout->addWidget(theme);
-    auto* language = new Button(
-        QStringLiteral("Design language"), window);
-    language->setFixedSize(148, 40);
-    language->anchors()->bottom = {
-        theme, Edge::Bottom, 0};
-    language->anchors()->left = {
-        theme, Edge::Right, 12};
-    layout->addWidget(language);
     auto* direction = new Button(
         QStringLiteral("LTR / RTL"), window);
     direction->setFixedSize(112, 40);
     direction->anchors()->bottom = {
         theme, Edge::Bottom, 0};
-    direction->anchors()->left = {
-        language, Edge::Right, 12};
+    direction->anchors()->left = {theme, Edge::Right, 12};
     layout->addWidget(direction);
 
     QObject::connect(
@@ -1173,26 +1152,6 @@ TEST(CommandBarFlyoutTest, VisualCheck)
                         == fluent::FluentElement::Light
                     ? fluent::FluentElement::Dark
                     : fluent::FluentElement::Light);
-            window->onThemeUpdated();
-            bar->onThemeUpdated();
-            flyout->onThemeUpdated();
-        });
-    QObject::connect(
-        language,
-        &Button::clicked,
-        window,
-        [window, bar, flyout]() {
-            auto& registry =
-                fluent::ThemeRegistry::instance();
-            const auto current = registry.designLanguage();
-            const auto next =
-                current == fluent::FluentElement::DesignFluent
-                ? fluent::FluentElement::DesignMaterial
-                : current
-                        == fluent::FluentElement::DesignMaterial
-                    ? fluent::FluentElement::DesignCupertino
-                    : fluent::FluentElement::DesignFluent;
-            registry.setDesignLanguage(next);
             window->onThemeUpdated();
             bar->onThemeUpdated();
             flyout->onThemeUpdated();

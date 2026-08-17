@@ -40,8 +40,7 @@ MODULE_FUNCTION_SIGNATURES = {
     ("fluentqt", "prepare_high_dpi_application"): "() -> None",
     ("fluentqt.foundation", "accent_color"):
         "() -> PySide6.QtGui.QColor",
-    ("fluentqt.foundation", "apply_style_theme"):
-        "(style_theme: StyleTheme) -> None",
+    ("fluentqt.foundation", "apply_user_theme"): "() -> None",
     ("fluentqt.foundation", "anchors"):
         "(*, left: Any = ..., right: Any = ..., top: Any = ..., "
         "bottom: Any = ..., horizontal_center: Any = ..., "
@@ -51,8 +50,6 @@ MODULE_FUNCTION_SIGNATURES = {
         "(source: PySide6.QtCore.QObject, source_property: str, "
         "target: PySide6.QtCore.QObject, target_property: str, "
         "mode: BindingMode = ...) -> None",
-    ("fluentqt.foundation", "current_design_language"):
-        "() -> DesignLanguage",
     ("fluentqt.foundation", "current_theme"): "() -> Theme",
     ("fluentqt.foundation", "font_for_role"):
         "(role: FontRole = ...) -> PySide6.QtGui.QFont",
@@ -69,8 +66,6 @@ MODULE_VARIABLE_TYPES = {
     ("fluentqt", "__version__"): "str",
 }
 CLASS_METHOD_SIGNATURES = {
-    ("fluentqt.foundation", "FluentWidget", "design_language"):
-        "(self) -> DesignLanguage",
     ("fluentqt.foundation", "FluentWidget", "effective_theme"):
         "(self) -> Theme",
     ("fluentqt.foundation", "FluentWidget", "on_theme_updated"):

@@ -20,7 +20,8 @@ namespace fluent::textfields {
  *
  * PasswordBox builds on LineEdit while keeping password value, header text, and
  * reveal behavior explicit in the public API.
- * zh_CN: PasswordBox 基于 LineEdit，并将密码值、标题文本和显示/隐藏行为显式暴露为公开 API。
+ * zh_CN: PasswordBox 基于
+ * LineEdit，并将密码值、标题文本和显示/隐藏行为显式暴露为公开 API。
  */
 class PasswordBox : public LineEdit {
     Q_OBJECT
@@ -96,7 +97,6 @@ private:
     void updateEchoMode();
     void setPeekActive(bool active);
     void paintInputFrame(QPainter& painter);
-    bool paintBrandInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
     bool canPeekReveal() const;
 

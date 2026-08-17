@@ -30,12 +30,6 @@ class ThemeMode(IntEnum):
     Dark = 2
 
 
-class StyleTheme(IntEnum):
-    Fluent = 0
-    Material = 1
-    MacOS = 2
-
-
 class NavigationStyle(IntEnum):
     Auto = 0
     Left = 1
@@ -48,6 +42,10 @@ class CloseBehavior(IntEnum):
     Minimize = 0
     Tray = 1
     Quit = 2
+
+
+_ACCENT_KEY = "appearance/accent/fluent"
+_LEGACY_ACCENT_KEY = "settings/accent/0"
 
 
 def persistence_available() -> bool:
@@ -124,7 +122,6 @@ def _system_theme() -> fluentqt.Theme:
 
 class GallerySettings(QObject):
     themeModeChanged = Signal(int)
-    styleThemeChanged = Signal(int)
     accentColorChanged = Signal(QColor)
     navigationStyleChanged = Signal(int)
     windowEffectChanged = Signal(int)
@@ -133,7 +130,6 @@ class GallerySettings(QObject):
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self.theme_mode = ThemeMode.System
-        self.style_theme = StyleTheme.Fluent
         self.navigation_style = NavigationStyle.Auto
         self.window_effect = 1
         self.close_behavior = CloseBehavior.Tray
@@ -143,7 +139,7 @@ class GallerySettings(QObject):
         self.close_behavior_confirmed = False
         self.intro_completed = False
         self._load()
-        self.apply_style_theme()
+        self.apply_user_theme()
         self.apply_theme_mode()
         app = QApplication.instance()
         if app is not None:
@@ -160,9 +156,13 @@ class GallerySettings(QObject):
         self.theme_mode = ThemeMode(
             _bounded(settings.value("settings/themeMode", 0), 0, 2, 0)
         )
-        self.style_theme = StyleTheme(
-            _bounded(settings.value("settings/styleTheme", 0), 0, 2, 0)
-        )
+        if settings.contains(_LEGACY_ACCENT_KEY) and not settings.contains(
+            _ACCENT_KEY
+        ):
+            settings.setValue(
+                _ACCENT_KEY, settings.value(_LEGACY_ACCENT_KEY, "")
+            )
+        settings.remove(_LEGACY_ACCENT_KEY)
         self.navigation_style = NavigationStyle(
             _bounded(
                 settings.value("settings/navigationStyle", 0), 0, 4, 0
@@ -193,20 +193,10 @@ class GallerySettings(QObject):
             settings.value("intro/completed", False, type=bool)
         )
 
-    @staticmethod
-    def _style_value(style: StyleTheme) -> fluentqt.StyleTheme:
-        return (
-            fluentqt.StyleTheme.Fluent,
-            fluentqt.StyleTheme.Material,
-            fluentqt.StyleTheme.MacOS,
-        )[int(style)]
-
-    def apply_style_theme(self) -> None:
-        fluentqt.apply_style_theme(self._style_value(self.style_theme))
+    def apply_user_theme(self) -> None:
+        fluentqt.apply_user_theme()
         if persistence_available():
-            value = _config_settings().value(
-                "settings/accent/{0}".format(int(self.style_theme)), ""
-            )
+            value = _config_settings().value(_ACCENT_KEY, "")
             accent = QColor(str(value))
             if accent.isValid():
                 fluentqt.set_accent_color(accent)
@@ -232,37 +222,20 @@ class GallerySettings(QObject):
         self.apply_theme_mode()
         self.themeModeChanged.emit(int(self.theme_mode))
 
-    def set_style_theme(self, style: int | StyleTheme) -> None:
-        next_style = StyleTheme(_bounded(style, 0, 2, 0))
-        if self.style_theme == next_style:
-            self.apply_style_theme()
-            return
-        self.style_theme = next_style
-        if persistence_available():
-            _config_settings().setValue(
-                "settings/styleTheme", int(self.style_theme)
-            )
-        self.apply_style_theme()
-        self.styleThemeChanged.emit(int(self.style_theme))
-        self.accentColorChanged.emit(QColor(fluentqt.accent_color()))
-
     def set_accent_color(self, accent: QColor) -> None:
         if not accent.isValid():
             return
         fluentqt.set_accent_color(accent)
         if persistence_available():
             _config_settings().setValue(
-                "settings/accent/{0}".format(int(self.style_theme)),
-                accent.name(QColor.HexArgb),
+                _ACCENT_KEY, accent.name(QColor.HexArgb)
             )
         self.accentColorChanged.emit(QColor(fluentqt.accent_color()))
 
     def reset_accent_color(self) -> None:
         if persistence_available():
-            _config_settings().remove(
-                "settings/accent/{0}".format(int(self.style_theme))
-            )
-        fluentqt.apply_style_theme(self._style_value(self.style_theme))
+            _config_settings().remove(_ACCENT_KEY)
+        fluentqt.apply_user_theme()
         self.accentColorChanged.emit(QColor(fluentqt.accent_color()))
 
     def set_navigation_style(
@@ -365,7 +338,6 @@ __all__ = [
     "CloseBehavior",
     "GallerySettings",
     "NavigationStyle",
-    "StyleTheme",
     "ThemeMode",
     "config_file_path",
     "gallery_settings",

@@ -17,8 +17,8 @@ namespace fluent::basicinput { class RepeatButton; }
 namespace fluent::textfields {
 
 /**
- * @brief Numeric LineEdit with value bounds, expression input, and spin buttons.
- * zh_CN: 支持数值边界、表达式输入和步进按钮的数值输入框。
+ * @brief Numeric LineEdit with value bounds, expression input, and spin
+ * buttons. zh_CN: 支持数值边界、表达式输入和步进按钮的数值输入框。
  *
  * NumberBox builds on LineEdit while exposing numeric formatting, small/large
  * increments, spin-button placement, compact metrics, and display precision.
@@ -68,13 +68,13 @@ class NumberBox : public LineEdit {
      */
     Q_PROPERTY(SpinButtonPlacementMode spinButtonPlacementMode READ spinButtonPlacementMode WRITE setSpinButtonPlacementMode NOTIFY spinButtonPlacementModeChanged)
     /**
-     * @brief Button size used when spin buttons are rendered outside the text field.
-     * zh_CN: 步进按钮绘制在文本框外侧时使用的按钮尺寸。
+     * @brief Button size used when spin buttons are rendered outside the text
+   * field. zh_CN: 步进按钮绘制在文本框外侧时使用的按钮尺寸。
      */
     Q_PROPERTY(QSize spinButtonSize READ spinButtonSize WRITE setSpinButtonSize NOTIFY spinButtonSizeChanged)
     /**
-     * @brief Button size used when spin buttons are rendered inside the text field.
-     * zh_CN: 步进按钮绘制在文本框内部时使用的按钮尺寸。
+     * @brief Button size used when spin buttons are rendered inside the text
+   * field. zh_CN: 步进按钮绘制在文本框内部时使用的按钮尺寸。
      */
     Q_PROPERTY(QSize inlineSpinButtonSize READ inlineSpinButtonSize WRITE setInlineSpinButtonSize NOTIFY inlineSpinButtonSizeChanged)
     /**
@@ -229,7 +229,6 @@ private:
     bool parseInputText(const QString& input, double* result) const;
     bool setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN);
     void paintInputFrame(QPainter& painter);
-    bool paintBrandInputFrame(QPainter& painter);
     void paintHeader(QPainter& painter);
     bool hasSpinnerButtonsVisible() const;
     int inlineSpinnerWidth() const;

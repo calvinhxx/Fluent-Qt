@@ -21,6 +21,7 @@ set(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
 
 set(FLUENT_QT_CONTRACT_TEST_TARGETS
     test_foundation_contracts
+    test_user_theme
     test_anchor_layout
     test_qml_plus
     test_resource_initialization
@@ -240,9 +241,7 @@ macro(add_qt_test_module module_name source_file)
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(Windows|Win32|WinUIWindows)[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels platform_windows)
             endif()
-            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOsRestState|DesignLanguageTest[._/:-].*MacOs)[^._/:-]*($|[._/:-])")
-                list(APPEND _fluent_qt_labels design_macos)
-            elseif(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])")
+            if(_fluent_qt_test_name MATCHES "(^|[._/:-])[^._/:-]*(MacOS|MacOs|macOS|Darwin|Cocoa)[^._/:-]*($|[._/:-])")
                 list(APPEND _fluent_qt_labels platform_macos)
             endif()
             if(NOT _fluent_qt_is_manual_visual

@@ -67,8 +67,8 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/foundation/FluentElement.h
     src/components/foundation/FontIcon.h
     src/components/foundation/QMLPlus.h
-    src/components/foundation/StyleThemeCatalog.h
     src/components/foundation/ThemeRegistry.h
+    src/components/foundation/UserTheme.h
     src/components/foundation/WidgetOwnership.h
     src/components/foundation/overlay/OverlayGeometry.h
     src/components/foundation/overlay/OverlayLightDismiss.h

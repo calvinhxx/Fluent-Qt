@@ -78,7 +78,6 @@ bool snapshotsEqual(const ThemeRegistry::Snapshot& lhs,
         && lhs.radius.none == rhs.radius.none
         && lhs.radius.control == rhs.radius.control
         && lhs.radius.overlay == rhs.radius.overlay
-        && lhs.designLanguage == rhs.designLanguage
         && lhs.fontFamilyOverride == rhs.fontFamilyOverride
         && qFuzzyCompare(lhs.fontScale, rhs.fontScale);
 }
@@ -115,7 +114,6 @@ ThemeRegistry::Snapshot ThemeRegistry::snapshot() const
     result.lightColors = m_light;
     result.darkColors = m_dark;
     result.radius = radius();
-    result.designLanguage = m_designLanguage;
     result.fontFamilyOverride = m_fontFamily;
     result.fontScale = m_fontScale;
     return result;
@@ -154,7 +152,6 @@ bool ThemeRegistry::applySnapshot(const Snapshot& next)
     m_radiusNone = next.radius.none;
     m_radiusControl = next.radius.control;
     m_radiusOverlay = next.radius.overlay;
-    m_designLanguage = next.designLanguage;
     m_fontFamily = next.fontFamilyOverride;
     m_fontScale = next.fontScale;
     ++m_revision;
@@ -258,7 +255,6 @@ void ThemeRegistry::seedDefaults()
     m_radiusNone = ::CornerRadius::None;
     m_radiusControl = ::CornerRadius::Control;
     m_radiusOverlay = ::CornerRadius::Overlay;
-    m_designLanguage = FluentElement::DesignFluent;
     m_fontFamily.clear();
     m_fontScale = 1.0;
 }
@@ -274,13 +270,6 @@ void ThemeRegistry::setRadius(int none, int control, int overlay)
 {
     Snapshot next = snapshot();
     next.radius = {none, control, overlay};
-    applySnapshot(next);
-}
-
-void ThemeRegistry::setDesignLanguage(FluentElement::DesignLanguage language)
-{
-    Snapshot next = snapshot();
-    next.designLanguage = language;
     applySnapshot(next);
 }
 

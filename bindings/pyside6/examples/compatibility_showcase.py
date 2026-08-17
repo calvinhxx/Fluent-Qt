@@ -139,12 +139,10 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
     settings_icon = FontIcon("ic_fluent_settings_20_regular", content)
     settings_icon.setIconSize(20)
     theme_button = Button("Theme: Light", content)
-    style_button = Button("Style: Fluent", content)
-    style_button.setFluentStyle(Button.ButtonStyle.Accent)
     accent_button = Button("Accent: Blue", content)
+    accent_button.setFluentStyle(Button.ButtonStyle.Accent)
     toolbar.addWidget(settings_icon)
     toolbar.addWidget(theme_button)
-    toolbar.addWidget(style_button)
     toolbar.addWidget(accent_button)
     toolbar.addStretch()
     root.addLayout(toolbar)
@@ -351,19 +349,6 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
         )
         theme_button.setText("Theme: Dark" if dark else "Theme: Light")
 
-    styles = [
-        ("Fluent", fluentqt.StyleTheme.Fluent),
-        ("Material", fluentqt.StyleTheme.Material),
-        ("macOS", fluentqt.StyleTheme.MacOS),
-    ]
-    style_index = {"value": 0}
-
-    def cycle_style() -> None:
-        style_index["value"] = (style_index["value"] + 1) % len(styles)
-        name, style = styles[style_index["value"]]
-        fluentqt.apply_style_theme(style)
-        style_button.setText(f"Style: {name}")
-
     accents = [
         ("Blue", QColor("#0067c0")),
         ("Purple", QColor("#7f52ff")),
@@ -379,7 +364,6 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
 
     repeat_button.clicked.connect(count_repeat_click)
     theme_button.clicked.connect(toggle_theme)
-    style_button.clicked.connect(cycle_style)
     accent_button.clicked.connect(cycle_accent)
     check_box.toggled.connect(shimmer.setAnimationEnabled)
     slider.valueChanged.connect(progress_bar.setValue)
@@ -391,7 +375,6 @@ def build_showcase(info: dict[str, str]) -> tuple[Window, list[QWidget]]:
 
     controls = [
         theme_button,
-        style_button,
         accent_button,
         settings_icon,
         compound,
