@@ -56,10 +56,10 @@ QWidget* relationTargetFor(QWidget* surface,
     return nullptr;
 }
 
-QList<std::pair<QAccessibleInterface*, QAccessible::Relation>>
+FluentAccessibleRelationList
 surfaceRelations(
     QWidget* surface,
-    QList<std::pair<QAccessibleInterface*, QAccessible::Relation>> inherited,
+    FluentAccessibleRelationList inherited,
     QAccessible::Relation match)
 {
     QAccessible::Relation relation = QAccessible::AllRelations;
@@ -112,7 +112,7 @@ public:
         return result;
     }
 
-    QList<std::pair<QAccessibleInterface*, QAccessible::Relation>>
+    FluentAccessibleRelationList
     relations(QAccessible::Relation match) const override
     {
         return surfaceRelations(
@@ -200,7 +200,7 @@ public:
         return result;
     }
 
-    QList<std::pair<QAccessibleInterface*, QAccessible::Relation>>
+    FluentAccessibleRelationList
     relations(QAccessible::Relation match) const override
     {
         return surfaceRelations(

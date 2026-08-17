@@ -29,6 +29,7 @@
 #include <QtGlobal>
 #include <QAbstractItemView>
 #include <QAccessible>
+#include <QAccessibleInterface>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFontDatabase>
@@ -86,6 +87,10 @@ using FluentEnterEvent = QEvent;
 #else
 #define FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION 0
 #endif
+
+using FluentAccessibleRelationList = decltype(
+    std::declval<const QAccessibleInterface&>().relations(
+        QAccessible::AllRelations));
 
 #include <type_traits>
 static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value,

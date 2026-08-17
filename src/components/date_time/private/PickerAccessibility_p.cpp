@@ -8,6 +8,7 @@
 #include "components/date_time/DatePicker.h"
 #include "components/date_time/TimePicker.h"
 #include "components/foundation/private/ValueAccessibility_p.h"
+#include "compatibility/QtCompat.h"
 
 namespace fluent::date_time::detail {
 
@@ -84,7 +85,7 @@ public:
         return inherited;
     }
 
-    QList<std::pair<QAccessibleInterface*, QAccessible::Relation>>
+    FluentAccessibleRelationList
     relations(QAccessible::Relation match) const override
     {
         auto result = QAccessibleWidget::relations(match);
