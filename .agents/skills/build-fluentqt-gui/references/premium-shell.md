@@ -39,7 +39,7 @@ fluent::prepareHighDpiApplication();
 QApplication app(argc, argv);
 fluent::initializeResources();
 app.setFont(Typography::fontStyle(Typography::FontRole::Body).toQFont());
-fluent::StyleThemeCatalog::apply(fluent::StyleTheme::Fluent);
+fluent::UserTheme::apply();
 ```
 
 ## Respect a host-owned window

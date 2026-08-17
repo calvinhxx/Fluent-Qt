@@ -256,7 +256,7 @@ def _validate_skill(project_root: Path) -> None:
         ),
         "references/theme-system.md": (
             "ThemeRegistry::defaultSnapshot()",
-            "apply_style_theme",
+            "apply_user_theme",
             "Audit raw Qt widgets",
             "Install window material with the theme",
             "Theme acceptance gate",
