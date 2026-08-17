@@ -48,6 +48,7 @@ ctest --preset vcpkg-osx --output-on-failure
   spdlog dependency to `FluentQt` itself.
 - [src/components/foundation/](src/components/foundation/) contains shared component infrastructure such as `fluent::FluentElement`, `fluent::QMLPlus`, `fluent::AnchorLayout`, and `fluent::overlay` contracts.
 - [src/components/layout/](src/components/layout/) contains reusable composition surfaces such as `fluent::layout::Card`, `fluent::layout::Divider`, and `fluent::layout::Expander`.
+- [src/components/collections/](src/components/collections/) contains model/view collection surfaces, including the caller-owned-model `fluent::collections::DataGrid`.
 - [src/components/](src/components/) is grouped by component category; component tests mirror those categories under [tests/components/](tests/components/).
 
 ## Component Conventions
@@ -61,6 +62,7 @@ ctest --preset vcpkg-osx --output-on-failure
 - For visible UI in tests and demos, prefer existing project Fluent components over raw Qt widgets when an equivalent exists.
 - Within `namespace fluent::<category>`, spell shared mixin inheritance as `public FluentElement, public QMLPlus`; outside component namespaces, qualify them as `fluent::FluentElement` and `fluent::QMLPlus`.
 - New visible components should compose existing Fluent components before adding raw Qt widgets or duplicating paint/style code.
+- New or materially changed visible components must update the machine-checked [accessibility inventory](docs/development/accessibility-inventory.md) and follow its risk-ordered contract gates.
 - Do not keep empty placeholder directories under `src/components/`. When adding or removing a component directory, update the README overview, tests CMake, and this agent instruction file.
 
 ## Testing Conventions

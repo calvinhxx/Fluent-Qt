@@ -33,6 +33,8 @@
   <a href="https://calvinhxx.github.io/Fluent-Qt/#top">项目官网</a>
 </p>
 
+集合类组件包括 ListView、GridView、FlowView、TreeView 和 DataGrid。DataGrid 沿用 Qt 的模型与委托所有权约定，大数据表格的工作量保持在可视区域内。
+
 ## 🧱 依赖
 
 | 范围 | 依赖 |
@@ -294,6 +296,7 @@ python -m fluentqt_gallery
 
 ## 📚 文档
 
+- [参与贡献](CONTRIBUTING.md)
 - [AI 辅助应用开发](docs/ai/README.md)
 - [开发工作流](docs/development/README.md)
 - [测试与视觉验收](docs/development/testing-workflow.md)
