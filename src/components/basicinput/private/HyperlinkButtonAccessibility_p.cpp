@@ -200,20 +200,33 @@ QAccessibleInterface* hyperlinkButtonAccessibilityFactory(
         : nullptr;
 }
 
-const bool hyperlinkButtonAccessibilityFactoryInstalled = [] {
-    QAccessible::installFactory(hyperlinkButtonAccessibilityFactory);
-    return true;
-}();
-
 } // namespace
 
 #endif // QT_CONFIG(accessibility)
 
+namespace {
+
 void ensureHyperlinkButtonAccessibilityFactory()
 {
 #if QT_CONFIG(accessibility)
-    Q_UNUSED(hyperlinkButtonAccessibilityFactoryInstalled)
+    static const bool installed = [] {
+        QAccessible::installFactory(
+            hyperlinkButtonAccessibilityFactory);
+        return true;
+    }();
+    Q_UNUSED(installed)
 #endif
+}
+
+} // namespace
+
+const QString& prepareHyperlinkButtonAccessibility(
+    const QString& text)
+{
+    // Run before Button's base constructor so Qt 5 cannot cache the native
+    // QPushButton interface before the link factory becomes available.
+    ensureHyperlinkButtonAccessibilityFactory();
+    return text;
 }
 
 void notifyHyperlinkButtonAccessibilityUrlChanged(

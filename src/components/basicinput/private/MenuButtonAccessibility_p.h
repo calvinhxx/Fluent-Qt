@@ -1,6 +1,9 @@
 #ifndef FLUENTQT_COMPONENTS_BASICINPUT_PRIVATE_MENUBUTTONACCESSIBILITY_P_H
 #define FLUENTQT_COMPONENTS_BASICINPUT_PRIVATE_MENUBUTTONACCESSIBILITY_P_H
 
+class QString;
+class QWidget;
+
 namespace fluent::basicinput {
 
 class DropDownButton;
@@ -8,7 +11,8 @@ class SplitButton;
 
 namespace detail {
 
-void ensureMenuButtonAccessibilityFactory();
+const QString& prepareMenuButtonAccessibility(const QString& text);
+QWidget* prepareMenuButtonAccessibility(QWidget* parent);
 
 void showMenuButtonMenu(DropDownButton* button);
 void showMenuButtonMenu(SplitButton* button);
