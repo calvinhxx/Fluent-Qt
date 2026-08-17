@@ -335,6 +335,34 @@ QString visualBaselineFilePath(const QString& variant)
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
+    if (!options.focusObjectName.isEmpty()) {
+        QWidget* focusWidget = window->findChild<QWidget*>(
+            options.focusObjectName);
+        if (!focusWidget) {
+            fluent::FluentElement::setTheme(previousTheme);
+            return ::testing::AssertionFailure()
+                   << "Visual snapshot focus target was not found: "
+                   << options.focusObjectName.toStdString();
+        }
+        // CTest may launch the Cocoa process without making its first window
+        // active. setActiveWindow() gives the capture a deterministic Qt focus
+        // owner; activateWindow() alone remains asynchronous on that path.
+        QT_WARNING_PUSH
+        QT_WARNING_DISABLE_DEPRECATED
+        QApplication::setActiveWindow(window);
+        QT_WARNING_POP
+        window->activateWindow();
+        QApplication::processEvents(QEventLoop::AllEvents, 50);
+        focusWidget->setFocus(Qt::OtherFocusReason);
+        QApplication::processEvents(QEventLoop::AllEvents, 50);
+        if (!focusWidget->hasFocus()) {
+            fluent::FluentElement::setTheme(previousTheme);
+            return ::testing::AssertionFailure()
+                   << "Visual snapshot focus target did not receive focus: "
+                   << options.focusObjectName.toStdString();
+        }
+    }
+
     // Visual snapshots are deterministic artifacts, so the cursor's desktop
     // position must not leave one arbitrary control in its hover state.
     const auto clearHoverState = [](QWidget* widget) {

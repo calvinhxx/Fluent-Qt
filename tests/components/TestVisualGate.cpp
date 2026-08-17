@@ -80,9 +80,9 @@ GateSurface* makeButtonStateWindow()
     layout->addWidget(pressed);
 
     auto* focus = new Button(QStringLiteral("Focus"), window);
+    focus->setObjectName(QStringLiteral("visualGateFocusButton"));
     focus->setFluentStyle(Button::Accent);
     focus->setFocusVisual(true);
-    focus->setFocus(Qt::OtherFocusReason);
     focus->anchors()->verticalCenter = {rest, Edge::VCenter, 0};
     focus->anchors()->left = {pressed, Edge::Right, 16};
     layout->addWidget(focus);
@@ -152,6 +152,7 @@ TEST(VisualGateTest, ButtonStatesLightLtr)
     tests::support::VisualSnapshotOptions options;
     options.windowSize = kButtonGateSize;
     options.variant = QStringLiteral("button-states-light-ltr");
+    options.focusObjectName = QStringLiteral("visualGateFocusButton");
     options.theme = tests::support::VisualSnapshotTheme::Light;
     ASSERT_TRUE(tests::support::captureVisualSnapshot(window.get(), options));
 }
@@ -164,6 +165,7 @@ TEST(VisualGateTest, ButtonStatesDarkLtr)
     tests::support::VisualSnapshotOptions options;
     options.windowSize = kButtonGateSize;
     options.variant = QStringLiteral("button-states-dark-ltr");
+    options.focusObjectName = QStringLiteral("visualGateFocusButton");
     options.theme = tests::support::VisualSnapshotTheme::Dark;
     ASSERT_TRUE(tests::support::captureVisualSnapshot(window.get(), options));
 }
