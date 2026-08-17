@@ -19,7 +19,7 @@ set(FLUENT_QT_CI_WINDOWS_PLATFORM_TARGETS
     test_flip_view
 )
 
-set(FLUENT_QT_CONTRACT_TEST_TARGETS
+set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_foundation_contracts
     test_user_theme
     test_anchor_layout
@@ -55,7 +55,7 @@ set(FLUENT_QT_CONTRACT_TEST_TARGETS
 
 set(FLUENT_QT_CI_FULL_TARGETS
     ${FLUENT_QT_CI_FAST_TARGETS}
-    ${FLUENT_QT_CONTRACT_TEST_TARGETS}
+    ${FLUENT_QT_CI_FULL_CONTRACT_TARGETS}
     test_high_dpi
     test_project_logging
     test_fluent_element
@@ -117,6 +117,10 @@ define_property(GLOBAL PROPERTY FLUENT_QT_TEST_TARGETS
 define_property(GLOBAL PROPERTY FLUENT_QT_CI_FULL_TEST_TARGETS
     BRIEF_DOCS "Qt/GTest targets that contain at least one ci_full test"
     FULL_DOCS "Qt/GTest targets that contain at least one ci_full test"
+)
+define_property(GLOBAL PROPERTY FLUENT_QT_CONTRACT_TEST_TARGETS
+    BRIEF_DOCS "Qt/GTest targets that contain at least one contract test"
+    FULL_DOCS "Qt/GTest targets that contain at least one contract test"
 )
 
 set(FLUENT_QT_QT_GTEST_SUPPORT_SOURCES
@@ -190,6 +194,7 @@ macro(add_qt_test_module module_name source_file)
             set(_fluent_qt_is_ci_full_target TRUE)
         endif()
         set(_fluent_qt_target_has_ci_full FALSE)
+        set(_fluent_qt_target_has_contract FALSE)
 
         set_tests_properties(${_fluent_qt_registered_tests} PROPERTIES
             ENVIRONMENT "SKIP_VISUAL_TEST=1"
@@ -202,6 +207,7 @@ macro(add_qt_test_module module_name source_file)
             set(_fluent_qt_is_visual_gate FALSE)
             if(_fluent_qt_test_name MATCHES "(^|[._/:-])Contract_")
                 list(APPEND _fluent_qt_labels contract)
+                set(_fluent_qt_target_has_contract TRUE)
                 get_test_property(
                     "${_fluent_qt_test_name}" DISABLED
                     _fluent_qt_contract_test_disabled)
@@ -270,6 +276,9 @@ macro(add_qt_test_module module_name source_file)
         if(_fluent_qt_target_has_ci_full)
             set_property(GLOBAL APPEND PROPERTY FLUENT_QT_CI_FULL_TEST_TARGETS ${module_name})
         endif()
+        if(_fluent_qt_target_has_contract)
+            set_property(GLOBAL APPEND PROPERTY FLUENT_QT_CONTRACT_TEST_TARGETS ${module_name})
+        endif()
     endif()
 endmacro()
 
@@ -330,6 +339,7 @@ endif()
 
 get_property(FLUENT_QT_ALL_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_TEST_TARGETS)
 get_property(FLUENT_QT_CI_FULL_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_CI_FULL_TEST_TARGETS)
+get_property(FLUENT_QT_CONTRACT_TEST_TARGETS GLOBAL PROPERTY FLUENT_QT_CONTRACT_TEST_TARGETS)
 if(FLUENT_QT_ALL_TEST_TARGETS)
     add_custom_target(fluent_qt_ci_fast_tests
         DEPENDS ${FLUENT_QT_CI_FAST_TARGETS}
