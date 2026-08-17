@@ -1,4 +1,6 @@
 #include "SplitButton.h"
+#include "components/basicinput/private/MenuButtonAccessibility_p.h"
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -29,6 +31,7 @@ int splitButtonTextWidth(const QFontMetrics& fm, const QString& text)
 
 SplitButton::SplitButton(const QString& text, QWidget* parent)
     : Button(text, parent) {
+    detail::ensureMenuButtonAccessibilityFactory();
     setMouseTracking(true);
     m_pressAnimation = new QVariantAnimation(this);
     connect(m_pressAnimation, &QVariantAnimation::valueChanged, this,
@@ -59,6 +62,7 @@ void SplitButton::setMenu(QMenu* menu) {
     if (m_menu == menu)
         return;
 
+    const bool hadMenu = m_menu != nullptr;
     if (m_menu)
         disconnect(m_menu.data(), nullptr, this, nullptr);
     setOpen(false);
@@ -68,10 +72,13 @@ void SplitButton::setMenu(QMenu* menu) {
         connect(m_menu, &QMenu::aboutToHide, this, [this]() { setOpen(false); });
         connect(m_menu, &QObject::destroyed, this, [this]() {
             setOpen(false);
+            detail::notifyMenuButtonMenuAccessibility(this, true);
             emit menuChanged();
         });
         setOpen(m_menu->isVisible());
     }
+    detail::notifyMenuButtonMenuAccessibility(
+        this, hadMenu != (m_menu != nullptr));
     emit menuChanged();
 }
 
@@ -80,6 +87,7 @@ void SplitButton::setOpen(bool open) {
         return;
     m_isOpen = open;
     update();
+    detail::notifyMenuButtonOpenAccessibility(this);
     emit openChanged();
 }
 
@@ -120,16 +128,8 @@ void SplitButton::mouseReleaseEvent(QMouseEvent* event) {
 
         if (m_pressPart == Secondary) {
             event->accept();
-            if (releasePart == Secondary && m_menu) {
-                // aboutToShow/aboutToHide own the open state while the
-                // asynchronous popup is visible, without blocking the caller
-                // in a nested event loop. zh_CN: 异步菜单显示期间由
-                // aboutToShow/aboutToHide 管理打开态，不通过嵌套事件循环阻塞调用方。
-                QPoint popupPos = mapToGlobal(rect().bottomLeft());
-                if (layoutDirection() == Qt::RightToLeft)
-                    popupPos.rx() -= m_menu->sizeHint().width() - width();
-                m_menu->popup(popupPos);
-            }
+            if (releasePart == Secondary && m_menu)
+                detail::showMenuButtonMenu(this);
             m_pressPart = None;
             update();
             return;
@@ -150,6 +150,20 @@ void SplitButton::mouseReleaseEvent(QMouseEvent* event) {
         update();
     }
     Button::mouseReleaseEvent(event);
+}
+
+void SplitButton::keyPressEvent(QKeyEvent* event)
+{
+    const bool altDown = event->key() == Qt::Key_Down
+        && event->modifiers().testFlag(Qt::AltModifier);
+    const bool f4 = event->key() == Qt::Key_F4
+        && event->modifiers() == Qt::NoModifier;
+    if (m_menu && (altDown || f4)) {
+        detail::showMenuButtonMenu(this);
+        event->accept();
+        return;
+    }
+    Button::keyPressEvent(event);
 }
 
 void SplitButton::leaveEvent(QEvent* event) {

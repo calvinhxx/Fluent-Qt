@@ -26,6 +26,8 @@ class Label;
 
 namespace fluent::status_info {
 
+namespace detail { class InfoBarAccessible; }
+
 /**
  * @brief Fluent inline notification bar with severity, actions, and close behavior.
  * zh_CN: 带严重级别、操作区和关闭行为的 Fluent 内联通知栏。
@@ -301,6 +303,8 @@ protected:
     void changeEvent(QEvent* event) override;
 
 private:
+    friend class detail::InfoBarAccessible;
+
     QRect badgeRect() const;
     int contentLeft() const;
     int contentRight() const;

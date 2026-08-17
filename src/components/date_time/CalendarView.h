@@ -16,6 +16,10 @@ class QWheelEvent;
 
 namespace fluent::date_time {
 
+namespace detail {
+class CalendarViewAccessible;
+}
+
 /**
  * @brief Fluent calendar surface for browsing and selecting dates across levels.
  * zh_CN: 用于按日、月、年层级浏览和选择日期的 Fluent 日历视图。
@@ -146,6 +150,8 @@ protected:
     void onThemeUpdated() override;
 
 private:
+    friend class detail::CalendarViewAccessible;
+
     struct DayPageKey {
         int year = 0;
         int month = 0;

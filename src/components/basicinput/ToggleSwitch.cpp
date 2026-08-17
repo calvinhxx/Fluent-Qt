@@ -6,6 +6,8 @@
 #include <QKeyEvent>
 #include <QPropertyAnimation>
 #include <QStyle>
+#include "components/basicinput/private/BasicValueAccessibility_p.h"
+#include "components/foundation/private/ValueAccessibility_p.h"
 #include "design/Typography.h"
 #include "design/Spacing.h"
 
@@ -26,6 +28,7 @@ namespace {
 ToggleSwitch::ToggleSwitch(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureBasicValueAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setCursor(Qt::PointingHandCursor);
     setFocusPolicy(Qt::StrongFocus);
@@ -55,6 +58,9 @@ void ToggleSwitch::setIsOn(bool on)
     animateKnob(on);
     updateAccessibleText();
     update();
+    QAccessible::State changed;
+    changed.checked = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
     emit toggled(m_isOn);
 }
 

@@ -12,6 +12,9 @@
 #include <cmath>
 #include <limits>
 
+#include "components/foundation/private/ValueAccessibility_p.h"
+#include "components/status_info/private/ProgressAccessibility_p.h"
+
 namespace fluent::status_info {
 
 namespace {
@@ -31,6 +34,7 @@ bool nearlyEqual(qreal left, qreal right)
 ProgressRing::ProgressRing(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureProgressAccessibilityFactory();
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     updateThemeColors();
@@ -47,6 +51,12 @@ void ProgressRing::setIsActive(bool active)
     m_isActive = active;
     updateAnimationState();
     update();
+    QAccessible::State changed;
+    changed.busy = true;
+    changed.animated = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
+    accessibility::detail::notifyValueAccessibilityText(
+        this, QAccessible::DescriptionChanged);
     emit isActiveChanged(m_isActive);
 }
 
@@ -59,6 +69,9 @@ void ProgressRing::setAnimationEnabled(bool enabled)
         m_animationPhase = 0.0;
     updateAnimationState();
     update();
+    QAccessible::State changed;
+    changed.animated = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
     emit animationEnabledChanged(m_animationEnabled);
 }
 
@@ -68,6 +81,14 @@ void ProgressRing::setIsIndeterminate(bool indeterminate)
     m_isIndeterminate = indeterminate;
     updateAnimationState();
     update();
+    QAccessible::State changed;
+    changed.busy = true;
+    changed.animated = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
+    accessibility::detail::notifyValueAccessibilityValue(
+        this, m_isIndeterminate ? QVariant() : QVariant(m_value));
+    accessibility::detail::notifyValueAccessibilityText(
+        this, QAccessible::DescriptionChanged);
     emit isIndeterminateChanged(m_isIndeterminate);
 }
 
@@ -106,6 +127,7 @@ void ProgressRing::setRange(int minimum, int maximum)
     if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow) return;
 
     update();
+    accessibility::detail::notifyValueAccessibilityValue(this, m_value);
     if (minimumChangedNow) emit minimumChanged(m_minimum);
     if (maximumChangedNow) emit maximumChanged(m_maximum);
     if (valueChangedNow) emit valueChanged(m_value);
@@ -117,6 +139,7 @@ void ProgressRing::setValue(int value)
     if (m_value == clampedValue) return;
     m_value = clampedValue;
     update();
+    accessibility::detail::notifyValueAccessibilityValue(this, m_value);
     emit valueChanged(m_value);
 }
 
@@ -143,6 +166,12 @@ void ProgressRing::setStatus(ProgressRingStatus status)
     m_status = status;
     updateAnimationState();
     update();
+    QAccessible::State changed;
+    changed.busy = true;
+    changed.animated = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
+    accessibility::detail::notifyValueAccessibilityText(
+        this, QAccessible::DescriptionChanged);
     emit statusChanged(m_status);
 }
 
@@ -410,6 +439,11 @@ void ProgressRing::changeEvent(QEvent* event)
     if (event->type() == QEvent::EnabledChange) {
         updateAnimationState();
         update();
+        QAccessible::State changed;
+        changed.disabled = true;
+        changed.busy = true;
+        changed.animated = true;
+        accessibility::detail::notifyValueAccessibilityState(this, changed);
     }
 }
 

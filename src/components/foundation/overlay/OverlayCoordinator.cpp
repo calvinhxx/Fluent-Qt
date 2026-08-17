@@ -11,6 +11,7 @@ OverlayCoordinator::OverlayCoordinator(QWidget* overlay, QObject* parent)
     : QObject(parent),
       m_overlay(overlay)
 {
+    markOverlaySurface(overlay);
 }
 
 OverlayCoordinator::~OverlayCoordinator()

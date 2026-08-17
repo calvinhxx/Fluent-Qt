@@ -19,6 +19,10 @@ class QResizeEvent;
 
 namespace fluent::navigation {
 
+namespace detail {
+class BreadcrumbAccessible;
+}
+
 struct BreadcrumbItem {
     QString text;
     QVariant data;
@@ -148,6 +152,8 @@ protected:
     void focusOutEvent(QFocusEvent* event) override;
 
 private:
+    friend class detail::BreadcrumbAccessible;
+
     enum class RecordType {
         Item,
         Separator,
@@ -184,6 +190,7 @@ private:
     QVector<int> visibleItemsForCurrentMode() const;
     void buildRecords(const QVector<int>& visibleItems, bool hasOverflow, const QVector<int>& hiddenItems);
     void clampFocusedRecord();
+    int focusedItemIndex() const;
     int recordAt(const QPoint& position) const;
     int firstInteractiveRecord() const;
     int lastInteractiveRecord() const;

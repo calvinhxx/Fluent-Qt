@@ -305,6 +305,7 @@ private:
     bool m_animationEnabled = true;
 
     QPointer<QWidget> m_originalParent;
+    QPointer<QWidget> m_focusRestoreTarget;
     QPointer<QWidget> m_contentWidget;
     QPointer<QWidget> m_originalContentParent;
     WidgetOwnership m_contentOwnership = WidgetOwnership::Borrowed;

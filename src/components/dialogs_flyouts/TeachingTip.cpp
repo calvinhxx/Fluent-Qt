@@ -10,6 +10,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 #include "design/Spacing.h"
 
 namespace fluent::dialogs_flyouts {
@@ -72,7 +73,11 @@ void TeachingTip::setTarget(QWidget* targetWidget) {
 
     if (m_target) m_target->installEventFilter(this);
 
+    QPointer<TeachingTip> guard(this);
     emit targetChanged(m_target.data());
+    if (!guard)
+        return;
+    detail::notifyTransientSurfaceAccessibilityRelationChanged(this);
 
     if (isOpen()) {
         updateWidgetSize();
@@ -152,6 +157,7 @@ bool TeachingTip::eventFilter(QObject* watched, QEvent* event) {
         switch (event->type()) {
         case QEvent::Destroy:
             m_target = nullptr;
+            detail::notifyTransientSurfaceAccessibilityRelationChanged(this);
             if (isVisible() || isOpen()) closeWithReason(TargetDestroyed);
             break;
         case QEvent::Hide:

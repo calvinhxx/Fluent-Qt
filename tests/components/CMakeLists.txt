@@ -7,6 +7,11 @@ add_qt_test_module(test_qml_plus TestQMLPlus.cpp)
 add_qt_test_module(test_resource_initialization TestResourceInitialization.cpp)
 add_qt_test_module(test_typography TestTypography.cpp DesignTokenProbe.cpp)
 add_qt_test_module(test_qt_compat TestQtCompat.cpp)
+add_qt_test_module(test_value_accessibility TestValueAccessibility.cpp)
+add_qt_test_module(test_complex_input_accessibility TestComplexInputAccessibility.cpp)
+add_qt_test_module(test_auxiliary_surface_accessibility TestAuxiliarySurfaceAccessibility.cpp)
+add_qt_test_module(test_collection_surface_accessibility TestCollectionSurfaceAccessibility.cpp)
+add_qt_test_module(test_semantic_presentation_accessibility TestSemanticPresentationAccessibility.cpp)
 add_qt_test_module(test_visual_gate TestVisualGate.cpp)
 
 # Opt-in representative Light/Dark/RTL pixel gate. Not in ci_fast/ci_full/local_full.

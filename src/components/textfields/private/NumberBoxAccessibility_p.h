@@ -1,0 +1,10 @@
+#ifndef FLUENTQT_COMPONENTS_TEXTFIELDS_PRIVATE_NUMBERBOXACCESSIBILITY_P_H
+#define FLUENTQT_COMPONENTS_TEXTFIELDS_PRIVATE_NUMBERBOXACCESSIBILITY_P_H
+
+namespace fluent::textfields::detail {
+
+void ensureNumberBoxAccessibilityFactory();
+
+} // namespace fluent::textfields::detail
+
+#endif // FLUENTQT_COMPONENTS_TEXTFIELDS_PRIVATE_NUMBERBOXACCESSIBILITY_P_H

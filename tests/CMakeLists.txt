@@ -2,6 +2,7 @@ include(GoogleTest)
 
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Test Network)
 find_package(GTest CONFIG REQUIRED)
+find_package(Python3 3.10 COMPONENTS Interpreter QUIET)
 
 set(FLUENT_QT_CI_FAST_TARGETS
     test_qt_compat
@@ -25,10 +26,20 @@ set(FLUENT_QT_CONTRACT_TEST_TARGETS
     test_resource_initialization
     test_font_icon
     test_compound_button
+    test_split_button_accessibility
+    test_transient_accessibility
     test_accordion
     test_card
     test_divider
     test_expander
+    test_data_grid
+    test_calendar_view
+    test_navigation_accessibility
+    test_value_accessibility
+    test_complex_input_accessibility
+    test_auxiliary_surface_accessibility
+    test_collection_surface_accessibility
+    test_semantic_presentation_accessibility
     test_stack_view
     test_avatar
     test_toast
@@ -279,6 +290,19 @@ endmacro()
 add_qt_test_module(test_project_logging TestProjectLogging.cpp)
 add_qt_test_module(test_qt_test_environment TestQtTestEnvironment.cpp)
 add_qt_test_module(test_high_dpi TestHighDpi.cpp)
+
+if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME AccessibilityInventory.Contract_Complete
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/quality/validate_accessibility_inventory.py
+            --project-root ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(AccessibilityInventory.Contract_Complete PROPERTIES
+        LABELS "quality;contract;ci_fast;ci_full;local_full"
+        TIMEOUT 30
+    )
+endif()
 
 foreach(_fluent_qt_high_dpi_scale 1.1 1.25 1.5 1.75 2 3)
     string(REPLACE "." "" _fluent_qt_high_dpi_percent

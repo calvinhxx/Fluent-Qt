@@ -1,4 +1,5 @@
 #include "Shimmer.h"
+#include "components/status_info/private/StatusPresentationAccessibility_p.h"
 
 #include <QEvent>
 #include <QLinearGradient>
@@ -214,6 +215,7 @@ Shimmer::Shimmer(QWidget* parent)
     : QWidget(parent)
     , m_cycleDuration(kDefaultCycleDurationMs)
 {
+    detail::ensureStatusPresentationAccessibilityFactory();
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
     updateThemePalette();
@@ -232,6 +234,7 @@ void Shimmer::setActive(bool active)
     m_active = active;
     updateAnimationState();
     update();
+    detail::notifyShimmerAccessibilityActiveChanged(this);
     emit activeChanged(m_active);
 }
 
@@ -242,6 +245,7 @@ void Shimmer::setAnimationEnabled(bool enabled)
     m_animationEnabled = enabled;
     updateAnimationState();
     update();
+    detail::notifyShimmerAccessibilityAnimationChanged(this);
     emit animationEnabledChanged(m_animationEnabled);
 }
 
@@ -369,6 +373,7 @@ void Shimmer::changeEvent(QEvent* event)
         updateThemePalette();
         updateAnimationState();
         update();
+        detail::notifyShimmerAccessibilityEnabledChanged(this);
     }
 }
 

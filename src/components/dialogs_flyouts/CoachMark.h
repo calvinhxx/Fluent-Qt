@@ -91,7 +91,15 @@ public slots:
 
 signals:
     void openChanged(bool open);
+    /**
+     * @brief Emitted after the entrance fade completes.
+     * zh_CN: 入场淡入完成后发出。
+     */
     void opened();
+    /**
+     * @brief Emitted after the exit fade completes and the surface is hidden.
+     * zh_CN: 退场淡出完成并隐藏后发出。
+     */
     void closed();
 
 protected:

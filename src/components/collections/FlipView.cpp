@@ -1,4 +1,5 @@
 #include "FlipView.h"
+#include "private/FlipViewAccessibility_p.h"
 #include <QPainter>
 #include <QPainterPath>
 #include <QMouseEvent>
@@ -108,6 +109,7 @@ private:
 FlipView::FlipView(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureFlipViewAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -182,6 +184,8 @@ bool FlipView::insertPage(int index,
         return false;
     }
 
+    const int oldCount = m_pages.size();
+    const int oldIndex = m_currentIndex;
     index = qBound(0, index, m_pages.size());
     PageRecord record;
     record.identity = page;
@@ -206,6 +210,8 @@ bool FlipView::insertPage(int index,
     layoutPages();
     raiseOverlay();
     update();
+    detail::notifyFlipViewAccessibilityStructureChanged(
+        this, oldCount, oldIndex);
     return true;
 }
 
@@ -251,9 +257,13 @@ QWidget* FlipView::takePage(int index)
 
 FlipView::PageRecord FlipView::extractPageRecord(int index)
 {
+    const int oldCount = m_pages.size();
+    const int oldIndex = m_currentIndex;
     PageRecord record = m_pages.takeAt(index);
     QObject::disconnect(record.destroyedConnection);
     updateAfterPageRemoval(index);
+    detail::notifyFlipViewAccessibilityStructureChanged(
+        this, oldCount, oldIndex);
     return record;
 }
 
@@ -336,6 +346,7 @@ void FlipView::setCurrentIndex(int index)
     m_currentIndex = index;
     animateSlide(oldIndex, index);
     emit currentIndexChanged(m_currentIndex);
+    detail::notifyFlipViewAccessibilityCurrentChanged(this, oldIndex);
 }
 
 void FlipView::setOrientation(Qt::Orientation orientation)
@@ -345,6 +356,7 @@ void FlipView::setOrientation(Qt::Orientation orientation)
     layoutPages();
     update();
     emit orientationChanged();
+    detail::notifyFlipViewAccessibilityOrientationChanged(this);
 }
 
 void FlipView::setShowNavigationButtons(bool show)

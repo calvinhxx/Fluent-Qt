@@ -21,6 +21,7 @@
 #include "compatibility/QtCompat.h"
 #include "design/Typography.h"
 #include "components/status_info/ToolTip.h"
+#include "components/scrolling/private/AnnotatedScrollBarAccessibility_p.h"
 
 namespace fluent::scrolling {
 
@@ -49,6 +50,7 @@ AnnotatedScrollBar::~AnnotatedScrollBar()
 
 void AnnotatedScrollBar::init()
 {
+    detail::ensureAnnotatedScrollBarAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setAttribute(Qt::WA_NoSystemBackground);
     setAutoFillBackground(false);
@@ -94,6 +96,10 @@ void AnnotatedScrollBar::setRange(int minimum, int maximum)
     updateGeometry();
     update();
 
+    if (rangeChangedValue)
+        detail::notifyAnnotatedScrollBarRangeChanged(this);
+    if (oldValue != m_value)
+        detail::notifyAnnotatedScrollBarValueChanged(this);
     if (rangeChangedValue)
         emit rangeChanged(m_minimum, m_maximum);
     if (oldValue != m_value)
@@ -225,6 +231,7 @@ void AnnotatedScrollBar::setLabels(const QVector<AnnotatedScrollBarLabel>& label
     m_labels = labels;
     invalidateLabelLayout();
     update();
+    detail::notifyAnnotatedScrollBarStructureChanged(this);
     emit labelsChanged();
 }
 
@@ -233,6 +240,7 @@ void AnnotatedScrollBar::addLabel(const AnnotatedScrollBarLabel& label)
     m_labels.append(label);
     invalidateLabelLayout();
     update();
+    detail::notifyAnnotatedScrollBarStructureChanged(this);
     emit labelsChanged();
 }
 
@@ -244,6 +252,7 @@ void AnnotatedScrollBar::clearLabels()
     m_labels.clear();
     invalidateLabelLayout();
     update();
+    detail::notifyAnnotatedScrollBarStructureChanged(this);
     emit labelsChanged();
 }
 
@@ -306,6 +315,11 @@ void AnnotatedScrollBar::disconnectScrollView()
         QObject::disconnect(connection);
     m_scrollConnections.clear();
     m_scrollView = nullptr;
+}
+
+ScrollView* AnnotatedScrollBar::connectedScrollView() const
+{
+    return m_scrollView.data();
 }
 
 QVector<AnnotatedScrollBarLabel> AnnotatedScrollBar::visibleLabels() const
@@ -653,6 +667,7 @@ bool AnnotatedScrollBar::setValueInternal(int value, bool emitChange)
 
     m_value = normalized;
     update();
+    detail::notifyAnnotatedScrollBarValueChanged(this);
     if (emitChange)
         emit valueChanged(m_value);
     return true;

@@ -27,6 +27,7 @@ class ToolTip;
 namespace fluent::scrolling {
 
 class ScrollView;
+namespace detail { class AnnotatedScrollBarAccessible; }
 
 /**
  * @brief Label metadata rendered beside an AnnotatedScrollBar offset.
@@ -214,7 +215,7 @@ public:
      */
     void connectToScrollView(ScrollView* scrollView);
     void disconnectScrollView();
-    ScrollView* connectedScrollView() const { return m_scrollView.data(); }
+    ScrollView* connectedScrollView() const;
 
     /**
      * @brief Returns the collision-filtered labels currently eligible for painting.
@@ -260,6 +261,8 @@ protected:
     void onThemeUpdated() override;
 
 private:
+    friend class detail::AnnotatedScrollBarAccessible;
+
     struct VisibleLabel {
         AnnotatedScrollBarLabel label;
         int originalIndex = -1;

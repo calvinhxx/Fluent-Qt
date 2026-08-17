@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QGuiApplication>
 #include <QLabel>
+#include <QMenu>
 #include <QPointer>
 #include <QScreen>
 #include <QSignalSpy>
@@ -12,6 +13,7 @@
 
 #include "components/basicinput/Button.h"
 #include "components/dialogs_flyouts/CoachMark.h"
+#include "components/dialogs_flyouts/Popup.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/foundation/ThemeRegistry.h"
@@ -125,9 +127,10 @@ TEST_F(CoachMarkTest, OpenCloseToggleStateAndEmitOnce) {
 
     coach.open();
     EXPECT_TRUE(coach.isOpen());
-    ASSERT_EQ(openedSpy.count(), 1);
     ASSERT_EQ(openChangedSpy.count(), 1);
     EXPECT_TRUE(openChangedSpy.last().at(0).toBool());
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&]() { return openedSpy.count() == 1; }, 1000));
 
     // Opening again while open is a no-op — no duplicate signals.
     coach.open();
@@ -136,9 +139,11 @@ TEST_F(CoachMarkTest, OpenCloseToggleStateAndEmitOnce) {
 
     coach.close();
     EXPECT_FALSE(coach.isOpen());
-    ASSERT_EQ(closedSpy.count(), 1);
     ASSERT_EQ(openChangedSpy.count(), 2);
     EXPECT_FALSE(openChangedSpy.last().at(0).toBool());
+    EXPECT_EQ(closedSpy.count(), 0);
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&]() { return closedSpy.count() == 1; }, 1000));
 
     // Closing again while closed is a no-op.
     coach.close();
@@ -173,6 +178,73 @@ TEST_F(CoachMarkTest, SetOpenDelegates) {
     EXPECT_TRUE(coach.isOpen());
     coach.setOpen(false);
     EXPECT_FALSE(coach.isOpen());
+}
+
+TEST_F(CoachMarkTest, EscapeInUnrelatedWindowDoesNotDismiss) {
+    auto* target = makeTarget(QPoint(260, 220));
+    target->setFocus(Qt::OtherFocusReason);
+
+    CoachMark coach(window);
+    coach.setTarget(target);
+    coach.open();
+
+    QWidget otherWindow;
+    otherWindow.resize(240, 120);
+    Button otherTarget(QStringLiteral("Other window"), &otherWindow);
+    otherTarget.setGeometry(24, 24, 140, 32);
+    otherWindow.show();
+    otherTarget.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&otherWindow));
+
+    QTest::keyClick(&otherTarget, Qt::Key_Escape);
+
+    EXPECT_TRUE(coach.isOpen());
+    coach.close();
+}
+
+TEST_F(CoachMarkTest, ActiveMenuHandlesEscapeBeforeCoachMark) {
+    auto* target = makeTarget(QPoint(260, 220));
+    target->setFocus(Qt::OtherFocusReason);
+
+    CoachMark coach(window);
+    coach.setTarget(target);
+    coach.open();
+
+    QMenu menu(target);
+    menu.addAction(QStringLiteral("Action"));
+    menu.popup(target->mapToGlobal(QPoint(0, target->height())));
+    ASSERT_TRUE(QTest::qWaitFor(
+        [&menu]() { return menu.isVisible(); }, 1000));
+
+    QTest::keyClick(&menu, Qt::Key_Escape);
+
+    EXPECT_TRUE(QTest::qWaitFor(
+        [&menu]() { return !menu.isVisible(); }, 1000));
+    EXPECT_TRUE(coach.isOpen());
+
+    QTest::keyClick(target, Qt::Key_Escape);
+    EXPECT_FALSE(coach.isOpen());
+}
+
+TEST_F(CoachMarkTest, RaisedSameWindowPopupHandlesEscapeBeforeCoachMark) {
+    auto* target = makeTarget(QPoint(260, 220));
+    target->setFocus(Qt::OtherFocusReason);
+
+    Popup popup(window);
+    popup.setAnimationEnabled(false);
+    popup.setClosePolicy(Popup::CloseOnEscape);
+    popup.open();
+
+    CoachMark coach(window);
+    coach.setTarget(target);
+    coach.open();
+    popup.raise();
+
+    QTest::keyClick(&popup, Qt::Key_Escape);
+
+    EXPECT_FALSE(popup.isOpen());
+    EXPECT_TRUE(coach.isOpen());
+    coach.close();
 }
 
 TEST_F(CoachMarkTest, HostsAsChildOfOwnerTopLevel) {

@@ -15,6 +15,10 @@ class QResizeEvent;
 
 namespace fluent::collections {
 
+namespace detail {
+class SplitViewHandle;
+}
+
 struct SplitViewPaneOptions {
     int minimumSize = 48;
     int preferredSize = 160;
@@ -201,6 +205,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
+    friend class detail::SplitViewHandle;
+
     struct PaneRecord {
         QPointer<QWidget> widget;
         QWidget* rawWidget = nullptr;
@@ -246,6 +252,13 @@ private:
     void updateLayout();
     void updateCursorForHover();
     int hitTestHandle(const QPoint& position) const;
+    void syncAccessibilityHandles();
+    int handleLeadingPaneIndex(int handleIndex) const;
+    int handleTrailingPaneIndex(int handleIndex) const;
+    int handleAccessibleValue(int handleIndex) const;
+    int handleAccessibleMinimum(int handleIndex) const;
+    int handleAccessibleMaximum(int handleIndex) const;
+    bool setHandleAccessibleValue(int handleIndex, int value);
     void setResizing(bool resizing);
     void setHoveredHandle(int index);
     void clearDragState();
@@ -258,6 +271,7 @@ private:
     QVector<PaneRecord> m_panes;
     QVector<QRect> m_handleRects;
     QVector<HandlePair> m_handlePairs;
+    QVector<QPointer<QWidget>> m_accessibilityHandles;
     Qt::Orientation m_orientation = Qt::Horizontal;
     int m_handleWidth = 8;
     int m_handleVisualThickness = 2;

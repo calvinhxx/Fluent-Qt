@@ -1,4 +1,6 @@
 #include "DropDownButton.h"
+#include "components/basicinput/private/MenuButtonAccessibility_p.h"
+#include <QKeyEvent>
 #include <QPainter>
 #include <QMouseEvent>
 #include <QStyleOptionButton>
@@ -10,11 +12,13 @@ namespace fluent::basicinput {
 
 DropDownButton::DropDownButton(const QString& text, QWidget* parent)
     : Button(text, parent) {
+    detail::ensureMenuButtonAccessibilityFactory();
     initAnimation();
 }
 
 DropDownButton::DropDownButton(QWidget* parent)
     : Button(parent) {
+    detail::ensureMenuButtonAccessibilityFactory();
     initAnimation();
 }
 
@@ -30,6 +34,7 @@ void DropDownButton::initAnimation() {
 void DropDownButton::setMenu(QMenu* menu) {
     if (m_menu == menu) return;
 
+    const bool hadMenu = m_menu != nullptr;
     if (m_menu)
         disconnect(m_menu.data(), nullptr, this, nullptr);
     setOpen(false);
@@ -39,10 +44,13 @@ void DropDownButton::setMenu(QMenu* menu) {
         connect(m_menu, &QMenu::aboutToHide, this, [this]() { setOpen(false); });
         connect(m_menu, &QObject::destroyed, this, [this]() {
             setOpen(false);
+            detail::notifyMenuButtonMenuAccessibility(this, true);
             emit menuChanged();
         });
         setOpen(m_menu->isVisible());
     }
+    detail::notifyMenuButtonMenuAccessibility(
+        this, hadMenu != (m_menu != nullptr));
     emit menuChanged();
 }
 
@@ -50,6 +58,7 @@ void DropDownButton::setOpen(bool open) {
     if (m_isOpen == open) return;
     m_isOpen = open;
     update();
+    detail::notifyMenuButtonOpenAccessibility(this);
     emit openChanged();
 }
 
@@ -130,11 +139,30 @@ void DropDownButton::mousePressEvent(QMouseEvent* event) {
             // a nested event loop. zh_CN: 菜单交互保持异步，避免嵌套事件循环
             // 阻塞调用方。
             event->accept();
-            m_menu->popup(mapToGlobal(QPoint(0, height())));
+            detail::showMenuButtonMenu(this);
             return;
         }
     }
     Button::mousePressEvent(event);
+}
+
+void DropDownButton::keyPressEvent(QKeyEvent* event)
+{
+    const bool altDown = event->key() == Qt::Key_Down
+        && event->modifiers().testFlag(Qt::AltModifier);
+    const bool f4 = event->key() == Qt::Key_F4
+        && event->modifiers() == Qt::NoModifier;
+    const bool primaryOpen =
+        (event->key() == Qt::Key_Space
+         || event->key() == Qt::Key_Return
+         || event->key() == Qt::Key_Enter)
+        && event->modifiers() == Qt::NoModifier;
+    if (m_menu && (altDown || f4 || primaryOpen)) {
+        detail::showMenuButtonMenu(this);
+        event->accept();
+        return;
+    }
+    Button::keyPressEvent(event);
 }
 
 void DropDownButton::paintEvent(QPaintEvent* event) {

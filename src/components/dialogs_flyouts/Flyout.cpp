@@ -1,6 +1,7 @@
 #include "Flyout.h"
 
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 
 namespace fluent::dialogs_flyouts {
 
@@ -35,7 +36,10 @@ void Flyout::setClampToWindow(bool e) {
 }
 
 void Flyout::setAnchor(QWidget* anchor) {
+    if (m_anchor == anchor)
+        return;
     m_anchor = anchor;
+    detail::notifyTransientSurfaceAccessibilityRelationChanged(this);
 }
 
 void Flyout::showAt(QWidget* anchor) {

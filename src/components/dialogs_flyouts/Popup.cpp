@@ -17,6 +17,8 @@
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayWindow.h"
 #include "components/foundation/private/SurfacePainter_p.h"
+#include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
+#include "components/dialogs_flyouts/Flyout.h"
 
 namespace fluent::dialogs_flyouts {
 
@@ -40,6 +42,7 @@ void refreshFluentDescendants(QWidget* root)
 // ── Construction / destruction. zh_CN: 构造 / 析构 ───────────────────────────
 
 Popup::Popup(QWidget* parent) : QWidget(parent) {
+    detail::ensureTransientSurfaceAccessibilityFactory();
     m_originalParent = parent;
     m_overlayCoordinator =
         new ::fluent::overlay::OverlayCoordinator(this, this);
@@ -113,7 +116,10 @@ void Popup::setClosePolicy(ClosePolicy p) {
     if (m_closePolicy == p)
         return;
     m_closePolicy = p;
+    QPointer<Popup> guard(this);
     emit closePolicyChanged(m_closePolicy);
+    if (guard)
+        detail::notifyPopupAccessibilityActionsChanged(guard.data());
 }
 
 void Popup::setModal(bool m) {
@@ -121,7 +127,10 @@ void Popup::setModal(bool m) {
         return;
     m_modal = m;
     updateScrimState();
+    QPointer<Popup> guard(this);
     emit modalChanged(m_modal);
+    if (guard)
+        detail::notifyPopupAccessibilityModalChanged(guard.data());
 }
 
 void Popup::setDim(bool d) {
@@ -311,6 +320,7 @@ void Popup::open() {
         emit isOpenChanged(true);
         if (abortIfCancelled())
             return;
+        detail::notifyPopupAccessibilityOpenChanged(this, true);
     }
 
     ensurePolished();
@@ -387,6 +397,7 @@ void Popup::beginClose(CloseReason reason) {
             return;
         if (m_isOpen || !m_isClosing)
             return;
+        detail::notifyPopupAccessibilityOpenChanged(this, false);
     }
 
     if (qApp)
@@ -511,6 +522,8 @@ bool Popup::eventFilter(QObject* watched, QEvent* event) {
         // let finalizeClosed() call setFocus() on it while closing the overlay.
         // zh_CN: 调用目标已进入 QObject 析构；关闭浮层时不能再向其归还焦点。
         m_focusRestoreTarget = nullptr;
+        if (auto* flyout = qobject_cast<Flyout*>(this))
+            flyout->setAnchor(nullptr);
         if (!m_closeReasonExplicit)
             setPendingCloseReason(TargetDestroyed);
         close();

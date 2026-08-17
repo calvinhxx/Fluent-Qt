@@ -43,7 +43,7 @@ Overlay surface、border、shadow、smoke/scrim 均使用 Fluent token 和自绘
 
 ## Open State Machine
 
-Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / `TeachingTip` 与 `Dialog` / `ContentDialog` 保持各自的 Qt 基类；`DrawerView`、`ComboBox` dropdown、`SplitButton` / `DropDownButton`（QMenu）不并入同一基类。
+Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / `TeachingTip`、`CoachMark` 与 `Dialog` / `ContentDialog` 保持各自的 Qt 基类；`DrawerView`、`ComboBox` dropdown、`SplitButton` / `DropDownButton`（QMenu）不并入同一基类。
 
 ### 三个“打开”分别指什么
 
@@ -75,6 +75,11 @@ Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / 
 
 `Dialog` / `ContentDialog` 使用同一顺序。`QDialog::finished(int)` / `accepted()` / `rejected()` 保留；它们不是 overlay 相位信号。`TeachingTip::closing(TeachingTip::CloseReason)` 保留为组件特定信号，数值 0–4 与 `Popup::CloseReason` 对齐。
 
+`CoachMark` 保留既有 `open` 属性、`isOpen()` / `setOpen()` 和
+`openChanged(bool)`，不在 1.7 中新增一组同义公开 API。`openChanged` 在逻辑请求态
+变化时发出；`opened` 在淡入完成后发出，`closed` 在淡出完成并隐藏后发出。打开中
+关闭或关闭中重开会反转当前过渡，不得为被取消的方向发出完成信号。
+
 ### 重入
 
 | 调用 | 规则 |
@@ -101,6 +106,10 @@ Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / 
 | `Escape` | `CloseOnEscape`（TeachingTip 在 light-dismiss 开启时仍通过自己的 `closing` 报告 `LightDismiss`，以保持既有数值） |
 
 未标明时默认为 `Programmatic`。重复 `close()` 不重复发 `closing`。
+
+应用级事件过滤器只能处理所属顶层窗口内的 Escape。若按键来自原生菜单、
+其他顶层窗口，或当前事件位于另一个同窗口 overlay 内，应先交给该表面处理；
+CoachMark 不得跨窗口关闭，也不得抢先吞掉更上层菜单或 overlay 的 Escape。
 
 ### `modal`、`dim`、`closePolicy` 正交
 

@@ -21,6 +21,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayScrim.h"
 #include "components/foundation/overlay/OverlayWindow.h"
+#include "components/collections/private/DrawerViewAccessibility_p.h"
 
 namespace fluent::collections {
 
@@ -52,6 +53,7 @@ DrawerView::DrawerView(QWidget* parent)
     : QWidget(parent),
       m_originalParent(parent)
 {
+    detail::ensureDrawerViewAccessibilityFactory();
     m_overlayCoordinator =
         new ::fluent::overlay::OverlayCoordinator(this, this);
     connect(m_overlayCoordinator,
@@ -186,6 +188,7 @@ void DrawerView::setModal(bool modal)
 
     m_modal = modal;
     updateScrimState();
+    detail::notifyDrawerViewAccessibilityModalChanged(this);
     emit modalChanged(m_modal);
 }
 
@@ -205,6 +208,7 @@ void DrawerView::setClosePolicy(ClosePolicy policy)
         return;
 
     m_closePolicy = policy;
+    detail::notifyDrawerViewAccessibilityActionsChanged(this);
     emit closePolicyChanged(m_closePolicy);
 }
 
@@ -285,6 +289,7 @@ bool DrawerView::setContentWidget(QWidget* widget, WidgetOwnership ownership)
     }
 
     updateContentGeometry();
+    detail::notifyDrawerViewAccessibilityContentChanged(this);
     emit contentWidgetChanged(widget);
     if (previousOwnership != m_contentOwnership)
         emit contentOwnershipChanged(m_contentOwnership);
@@ -297,6 +302,7 @@ QWidget* DrawerView::takeContentWidget()
     QWidget* content = releaseContentWidget(false, false);
     if (content) {
         updateContentGeometry();
+        detail::notifyDrawerViewAccessibilityContentChanged(this);
         emit contentWidgetChanged(nullptr);
         if (previousOwnership != m_contentOwnership)
             emit contentOwnershipChanged(m_contentOwnership);
@@ -353,6 +359,7 @@ void DrawerView::observeContentWidget(QWidget* widget,
             m_contentOwnership = WidgetOwnership::Borrowed;
             m_contentDestroyedConnection = {};
             updateContentGeometry();
+            detail::notifyDrawerViewAccessibilityContentChanged(this);
             emit contentWidgetChanged(nullptr);
             if (previousOwnership != m_contentOwnership)
                 emit contentOwnershipChanged(m_contentOwnership);
@@ -669,6 +676,12 @@ void DrawerView::beginVisibleTransition()
 
     QPointer<DrawerView> guard(this);
     if (!isVisible()) {
+        m_focusRestoreTarget = nullptr;
+        if (qApp) {
+            QWidget* focused = QApplication::focusWidget();
+            if (focused && focused != this && !isAncestorOf(focused))
+                m_focusRestoreTarget = focused;
+        }
         emit aboutToShow();
         if (!guard)
             return;
@@ -692,6 +705,7 @@ void DrawerView::finalizeOpened()
     raiseOverlayStack();
     if (!m_isOpen) {
         m_isOpen = true;
+        detail::notifyDrawerViewAccessibilityOpenChanged(this);
         emit isOpenChanged(true);
         if (!guard || !m_isOpen || m_isClosing)
             return;
@@ -706,15 +720,27 @@ void DrawerView::finalizeClosed()
     setPosition(0.0);
     if (!guard)
         return;
+    QWidget* focused = qApp ? QApplication::focusWidget() : nullptr;
+    const bool shouldRestoreFocus =
+        !focused || focused == this || isAncestorOf(focused);
+    QPointer<QWidget> focusRestoreTarget = m_focusRestoreTarget;
+    m_focusRestoreTarget = nullptr;
     hide();
     destroyScrim();
     if (m_contentWidget)
         m_contentWidget->hide();
     if (m_isOpen) {
         m_isOpen = false;
+        detail::notifyDrawerViewAccessibilityOpenChanged(this);
         emit isOpenChanged(false);
         if (!guard || m_isOpen || isVisible())
             return;
+    }
+    if (shouldRestoreFocus && focusRestoreTarget
+        && focusRestoreTarget->isVisible()
+        && focusRestoreTarget->isEnabled()
+        && focusRestoreTarget->focusPolicy() != Qt::NoFocus) {
+        focusRestoreTarget->setFocus(Qt::PopupFocusReason);
     }
     emit closed();
 }

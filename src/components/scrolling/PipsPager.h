@@ -18,6 +18,10 @@ class QVariantAnimation;
 
 namespace fluent::scrolling {
 
+namespace detail {
+class PipsPagerAccessible;
+}
+
 /**
  * @brief Fluent page indicator with selectable pips and navigation buttons.
  * zh_CN: 带可选圆点和导航按钮的 Fluent 页码指示器。
@@ -204,6 +208,8 @@ protected:
     void changeEvent(QEvent* event) override;
 
 private:
+    friend class detail::PipsPagerAccessible;
+
     enum class HitKind {
         None,
         PreviousButton,

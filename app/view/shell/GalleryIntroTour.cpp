@@ -2,10 +2,12 @@
 
 #include <algorithm>
 
+#include <QApplication>
 #include <QColor>
 #include <QEvent>
 #include <QFont>
 #include <QHBoxLayout>
+#include <QKeyEvent>
 #include <QMargins>
 #include <QPropertyAnimation>
 #include <QRect>
@@ -90,8 +92,9 @@ void GalleryIntroTour::build()
     m_close->setFluentSize(Button::Small);
     m_close->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard);
     m_close->setFixedSize(28, 28);
-    m_close->setFocusPolicy(Qt::NoFocus);
+    m_close->setFocusPolicy(Qt::StrongFocus);
     m_close->setToolTip(QStringLiteral("Skip tour"));
+    m_close->setAccessibleName(QStringLiteral("Skip tour"));
     header->addWidget(m_close, 0, Qt::AlignTop);
     root->addLayout(header);
 
@@ -107,11 +110,13 @@ void GalleryIntroTour::build()
     footer->addWidget(m_counter, 0);
     footer->addStretch(1);
     m_prev = new Button(QStringLiteral("Previous"), host);
+    m_prev->setObjectName(QStringLiteral("GalleryIntroTour.PreviousButton"));
     m_prev->setFluentStyle(Button::Standard);
-    m_prev->setFocusPolicy(Qt::NoFocus);
+    m_prev->setFocusPolicy(Qt::StrongFocus);
     m_next = new Button(QStringLiteral("Next"), host);
+    m_next->setObjectName(QStringLiteral("GalleryIntroTour.NextButton"));
     m_next->setFluentStyle(Button::Accent);
-    m_next->setFocusPolicy(Qt::NoFocus);
+    m_next->setFocusPolicy(Qt::StrongFocus);
     footer->addWidget(m_prev, 0);
     footer->addWidget(m_next, 0);
     root->addLayout(footer);
@@ -126,6 +131,16 @@ void GalleryIntroTour::build()
             finishTour();
         else
             goToStep(m_index + 1);
+    });
+    m_close->installEventFilter(this);
+    m_prev->installEventFilter(this);
+    m_next->installEventFilter(this);
+    connect(m_card, &CoachMark::closed, this, [this]() {
+        if (!m_finished)
+            finishTour();
+    });
+    connect(m_card, &QObject::destroyed, this, [this]() {
+        m_card = nullptr;
     });
 
     win->installEventFilter(this);
@@ -248,6 +263,7 @@ void GalleryIntroTour::start()
     applyStep(0, /*animateSpotlight*/ false);
     m_card->open();  // CoachMark positions + fades itself in
     m_card->raise();
+    m_next->setFocus(Qt::TabFocusReason);
 }
 
 void GalleryIntroTour::applyStep(int index, bool animateSpotlight)
@@ -261,6 +277,12 @@ void GalleryIntroTour::applyStep(int index, bool animateSpotlight)
     m_prev->setVisible(index > 0);
     const bool last = (index + 1 == m_steps.size());
     m_next->setText(last ? QStringLiteral("Finish") : QStringLiteral("Next"));
+    m_card->setAccessibleName(step.title);
+    m_card->setAccessibleDescription(
+        QStringLiteral("%1 Step %2 of %3.")
+            .arg(step.body)
+            .arg(index + 1)
+            .arg(m_steps.size()));
 
     // CoachMark glides to the new target itself when retargeted while open.
     // zh_CN: 打开状态下重定向时,CoachMark 自己滑动到新目标。
@@ -291,12 +313,16 @@ void GalleryIntroTour::finishTour()
     }
 
     if (m_card) {
-        m_card->close();  // fades out + hides
         QPointer<CoachMark> card = m_card;
-        fluentConnectSingleShot(m_card, &CoachMark::closed, card.data(), [card]() {
-            if (card)
-                card->deleteLater();
-        });
+        if (m_card->isOpen()) {
+            fluentConnectSingleShot(m_card, &CoachMark::closed, card.data(), [card]() {
+                if (card)
+                    card->deleteLater();
+            });
+            m_card->close();  // fades out + hides
+        } else {
+            m_card->deleteLater();
+        }
     }
 
     if (m_spotAnim)
@@ -319,6 +345,35 @@ void GalleryIntroTour::finishTour()
 
 bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
 {
+    if (event && event->type() == QEvent::KeyPress
+        && (watched == m_close || watched == m_prev || watched == m_next)) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if (keyEvent->key() == Qt::Key_Tab
+            || keyEvent->key() == Qt::Key_Backtab) {
+            QList<Button*> focusOrder;
+            if (m_close && m_close->isVisible())
+                focusOrder.append(m_close);
+            if (m_prev && m_prev->isVisible())
+                focusOrder.append(m_prev);
+            if (m_next && m_next->isVisible())
+                focusOrder.append(m_next);
+
+            const int current = focusOrder.indexOf(
+                qobject_cast<Button*>(watched));
+            if (current >= 0 && !focusOrder.isEmpty()) {
+                const bool backward = keyEvent->key() == Qt::Key_Backtab
+                    || keyEvent->modifiers().testFlag(Qt::ShiftModifier);
+                const int delta = backward ? -1 : 1;
+                const int next = (current + delta + focusOrder.size())
+                    % focusOrder.size();
+                focusOrder.at(next)->setFocus(
+                    backward ? Qt::BacktabFocusReason : Qt::TabFocusReason);
+                event->accept();
+                return true;
+            }
+        }
+    }
+
     // The window is locked during the tour, but keep the scrim glued to it and on top as a safety net.
     // zh_CN: 引导期间窗口已锁定,但仍把遮罩贴住窗口并置顶,作为保险。
     if (m_scrim && m_host && watched == m_host->window()

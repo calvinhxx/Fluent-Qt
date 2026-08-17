@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <QAccessible>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDate>
@@ -26,6 +27,58 @@ using fluent::textfields::Label;
 namespace {
 
 using Edge = AnchorLayout::Edge;
+
+#if QT_CONFIG(accessibility)
+
+struct AccessibleEventRecord {
+    QAccessible::Event type = QAccessible::InvalidEvent;
+    QAccessibleTableModelChangeEvent::ModelChangeType modelChangeType =
+        QAccessibleTableModelChangeEvent::ModelReset;
+};
+
+QVector<AccessibleEventRecord> g_accessibleEvents;
+
+void captureAccessibleEvent(QAccessibleEvent* event)
+{
+    if (!event)
+        return;
+    AccessibleEventRecord record;
+    record.type = event->type();
+    if (event->type() == QAccessible::TableModelChanged) {
+        record.modelChangeType =
+            static_cast<QAccessibleTableModelChangeEvent*>(event)
+                ->modelChangeType();
+    }
+    g_accessibleEvents.append(record);
+}
+
+struct ScopedAccessibleEventCapture {
+    ScopedAccessibleEventCapture()
+    {
+        previous = QAccessible::installUpdateHandler(captureAccessibleEvent);
+        g_accessibleEvents.clear();
+    }
+
+    ~ScopedAccessibleEventCapture()
+    {
+        QAccessible::installUpdateHandler(previous);
+        g_accessibleEvents.clear();
+    }
+
+    int count(QAccessible::Event type) const
+    {
+        int result = 0;
+        for (const AccessibleEventRecord& record : g_accessibleEvents) {
+            if (record.type == type)
+                ++result;
+        }
+        return result;
+    }
+
+    QAccessible::UpdateHandler previous = nullptr;
+};
+
+#endif
 
 class CalendarViewTestWindow : public QWidget, public fluent::FluentElement {
 public:
@@ -130,6 +183,198 @@ TEST_F(CalendarViewTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_NE(dynamic_cast<QWidget*>(&view), nullptr);
     EXPECT_NE(dynamic_cast<fluent::FluentElement*>(&view), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&view), nullptr);
+}
+
+TEST_F(CalendarViewTest, Contract_AccessibilityExposesLogicalCalendarTable)
+{
+#if !QT_CONFIG(accessibility)
+    GTEST_SKIP() << "Qt accessibility support is disabled";
+#else
+    auto* view = new CalendarView(window);
+    view->setGeometry(32, 32, view->sizeHint().width(),
+                      view->sizeHint().height());
+    view->setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
+    view->setVisibleMonth(QDate(2026, 5, 1));
+    view->setSelectedDate(QDate(2026, 5, 21));
+    view->setAccessibleName(QStringLiteral("Release calendar"));
+    view->setAccessibleDescription(
+        QStringLiteral("Choose a release date"));
+    showWindow(window);
+
+    QAccessibleInterface* root =
+        QAccessible::queryAccessibleInterface(view);
+    ASSERT_NE(root, nullptr);
+    EXPECT_EQ(root->role(), QAccessible::Table);
+    EXPECT_EQ(root->text(QAccessible::Name),
+              QStringLiteral("Release calendar"));
+    EXPECT_EQ(root->text(QAccessible::Description),
+              QStringLiteral("Choose a release date"));
+    EXPECT_EQ(root->text(QAccessible::Value),
+              view->locale().toString(
+                  QDate(2026, 5, 21), QLocale::LongFormat));
+    EXPECT_EQ(root->childCount(), 45);
+
+    ASSERT_NE(root->child(0), nullptr);
+    ASSERT_NE(root->child(1), nullptr);
+    ASSERT_NE(root->child(2), nullptr);
+    EXPECT_EQ(root->child(0)->role(), QAccessible::Button);
+    EXPECT_EQ(root->child(0)->text(QAccessible::Name),
+              QStringLiteral("Previous page"));
+    EXPECT_EQ(root->child(1)->text(QAccessible::Name),
+              QStringLiteral("May 2026"));
+    EXPECT_EQ(root->child(2)->text(QAccessible::Name),
+              QStringLiteral("Next page"));
+
+    QAccessibleTableInterface* table = root->tableInterface();
+    ASSERT_NE(table, nullptr);
+    EXPECT_EQ(table->rowCount(), 6);
+    EXPECT_EQ(table->columnCount(), 7);
+    EXPECT_EQ(table->columnDescription(0),
+              view->locale().standaloneDayName(
+                  view->firstDayOfWeek(), QLocale::LongFormat));
+
+    const int offset = view->gridStartDate().daysTo(QDate(2026, 5, 21));
+    ASSERT_GE(offset, 0);
+    QAccessibleInterface* selected =
+        table->cellAt(offset / 7, offset % 7);
+    ASSERT_NE(selected, nullptr);
+    EXPECT_EQ(selected->role(), QAccessible::Cell);
+    EXPECT_EQ(selected->text(QAccessible::Name),
+              view->locale().toString(
+                  QDate(2026, 5, 21), QLocale::LongFormat));
+    EXPECT_TRUE(selected->state().selectable);
+    EXPECT_TRUE(selected->state().selected);
+    ASSERT_NE(selected->tableCellInterface(), nullptr);
+    EXPECT_EQ(selected->tableCellInterface()->rowIndex(), offset / 7);
+    EXPECT_EQ(selected->tableCellInterface()->columnIndex(), offset % 7);
+    EXPECT_EQ(table->selectedCellCount(), 1);
+
+    view->setFocus(Qt::OtherFocusReason);
+    processEvents();
+    ASSERT_NE(root->focusChild(), nullptr);
+    EXPECT_EQ(root->focusChild(), selected);
+    EXPECT_TRUE(selected->state().focused);
+
+    view->setVisibleMonth(QDate(2026, 6, 1));
+    EXPECT_EQ(root->text(QAccessible::Name),
+              QStringLiteral("Release calendar"));
+    EXPECT_EQ(root->text(QAccessible::Description),
+              QStringLiteral("Choose a release date"));
+#endif
+}
+
+TEST_F(CalendarViewTest, Contract_AccessibilityActionsTrackRangeAndContentLevels)
+{
+#if !QT_CONFIG(accessibility)
+    GTEST_SKIP() << "Qt accessibility support is disabled";
+#else
+    auto* view = new CalendarView(window);
+    view->setGeometry(32, 32, view->sizeHint().width(),
+                      view->sizeHint().height());
+    view->setLocale(QLocale(QLocale::English, QLocale::UnitedStates));
+    view->setDateRange(QDate(2026, 5, 10), QDate(2026, 5, 20));
+    showWindow(window);
+
+    QAccessibleInterface* root =
+        QAccessible::queryAccessibleInterface(view);
+    ASSERT_NE(root, nullptr);
+    QAccessibleTableInterface* table = root->tableInterface();
+    ASSERT_NE(table, nullptr);
+
+    const int disabledOffset =
+        view->gridStartDate().daysTo(QDate(2026, 5, 9));
+    QAccessibleInterface* disabled =
+        table->cellAt(disabledOffset / 7, disabledOffset % 7);
+    ASSERT_NE(disabled, nullptr);
+    EXPECT_TRUE(disabled->state().disabled);
+    ASSERT_NE(disabled->actionInterface(), nullptr);
+    EXPECT_TRUE(disabled->actionInterface()->actionNames().isEmpty());
+
+    const int enabledOffset =
+        view->gridStartDate().daysTo(QDate(2026, 5, 15));
+    QAccessibleInterface* enabled =
+        table->cellAt(enabledOffset / 7, enabledOffset % 7);
+    ASSERT_NE(enabled, nullptr);
+    ASSERT_NE(enabled->actionInterface(), nullptr);
+    EXPECT_FALSE(enabled->state().disabled);
+    QSignalSpy activatedSpy(view, &CalendarView::dateActivated);
+    enabled->actionInterface()->doAction(
+        QAccessibleActionInterface::pressAction());
+    EXPECT_EQ(view->selectedDate(), QDate(2026, 5, 15));
+    EXPECT_EQ(activatedSpy.count(), 1);
+
+    EXPECT_TRUE(root->child(0)->state().disabled);
+    EXPECT_TRUE(root->child(2)->state().disabled);
+
+    QAccessibleInterface* title = root->child(1);
+    ASSERT_NE(title, nullptr);
+    ASSERT_NE(title->actionInterface(), nullptr);
+    title->actionInterface()->doAction(
+        QAccessibleActionInterface::pressAction());
+    EXPECT_EQ(view->contentLevel(),
+              CalendarView::CalendarContentLevel::Month);
+    EXPECT_EQ(table->rowCount(), 4);
+    EXPECT_EQ(table->columnCount(), 3);
+    EXPECT_EQ(root->childCount(), 15);
+
+    QAccessibleInterface* january = table->cellAt(0, 0);
+    QAccessibleInterface* may = table->cellAt(1, 1);
+    ASSERT_NE(january, nullptr);
+    ASSERT_NE(may, nullptr);
+    EXPECT_EQ(january->text(QAccessible::Name), QStringLiteral("January"));
+    EXPECT_TRUE(january->state().disabled);
+    EXPECT_EQ(may->text(QAccessible::Name), QStringLiteral("May"));
+    EXPECT_TRUE(may->state().selected);
+    may->actionInterface()->doAction(
+        QAccessibleActionInterface::pressAction());
+    EXPECT_EQ(view->contentLevel(),
+              CalendarView::CalendarContentLevel::Day);
+
+    title = root->child(1);
+    title->actionInterface()->doAction(
+        QAccessibleActionInterface::pressAction());
+    title->actionInterface()->doAction(
+        QAccessibleActionInterface::pressAction());
+    EXPECT_EQ(view->contentLevel(),
+              CalendarView::CalendarContentLevel::Year);
+    EXPECT_EQ(table->cellAt(0, 0)->text(QAccessible::Name),
+              QStringLiteral("2016"));
+    EXPECT_EQ(table->cellAt(2, 2)->text(QAccessible::Name),
+              QStringLiteral("2024"));
+#endif
+}
+
+TEST_F(CalendarViewTest, Contract_AccessibilityEventsFollowRealChangesAndNoOps)
+{
+#if !QT_CONFIG(accessibility)
+    GTEST_SKIP() << "Qt accessibility support is disabled";
+#else
+    CalendarView view;
+    view.setVisibleMonth(QDate(2026, 5, 1));
+    ASSERT_NE(QAccessible::queryAccessibleInterface(&view), nullptr);
+
+    ScopedAccessibleEventCapture capture;
+    view.setSelectedDate(QDate(2026, 5, 12));
+    EXPECT_EQ(capture.count(QAccessible::Selection), 1);
+    EXPECT_EQ(capture.count(QAccessible::ValueChanged), 1);
+
+    view.setSelectedDate(QDate(2026, 5, 12));
+    EXPECT_EQ(capture.count(QAccessible::Selection), 1);
+    EXPECT_EQ(capture.count(QAccessible::ValueChanged), 1);
+
+    view.setVisibleMonth(QDate(2026, 6, 1));
+    EXPECT_EQ(capture.count(QAccessible::TableModelChanged), 1);
+    view.setVisibleMonth(QDate(2026, 6, 1));
+    EXPECT_EQ(capture.count(QAccessible::TableModelChanged), 1);
+
+    view.setContentLevel(CalendarView::CalendarContentLevel::Month);
+    EXPECT_EQ(capture.count(QAccessible::TableModelChanged), 2);
+    view.setContentLevel(CalendarView::CalendarContentLevel::Month);
+    EXPECT_EQ(capture.count(QAccessible::TableModelChanged), 2);
+    ASSERT_GE(g_accessibleEvents.size(), 4);
+    EXPECT_EQ(g_accessibleEvents.last().modelChangeType,
+              QAccessibleTableModelChangeEvent::ModelReset);
+#endif
 }
 
 TEST_F(CalendarViewTest, FrameVisibilityCanBeDisabledForPopupHosts)

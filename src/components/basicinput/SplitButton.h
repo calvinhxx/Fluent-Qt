@@ -6,6 +6,7 @@
 #include <QPointer>
 
 class QVariantAnimation;
+class QKeyEvent;
 
 namespace fluent::basicinput {
 
@@ -58,6 +59,7 @@ protected:
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     void leaveEvent(QEvent* event) override;
 
     QSize sizeHint() const override;
