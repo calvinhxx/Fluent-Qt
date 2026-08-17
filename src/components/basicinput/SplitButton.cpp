@@ -46,6 +46,11 @@ SplitButton::SplitButton(const QString& text, QWidget* parent)
     });
 }
 
+SplitButton::~SplitButton() {
+    if (m_menu)
+        disconnect(m_menu.data(), nullptr, this, nullptr);
+}
+
 void SplitButton::startPressAnimation(SplitPart part) {
     if (!m_pressAnimation || part == None)
         return;

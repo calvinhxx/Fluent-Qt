@@ -40,6 +40,7 @@ public:
     enum SplitPart { None, Primary, Secondary };
 
     explicit SplitButton(const QString& text = "", QWidget* parent = nullptr);
+    ~SplitButton() override;
     
     QMenu* menu() const { return m_menu.data(); }
     void setMenu(QMenu* menu);

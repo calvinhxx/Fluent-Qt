@@ -113,6 +113,14 @@ TEST_F(DropDownButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestructio
     delete firstMenu;
 }
 
+TEST_F(DropDownButtonTest, Contract_ParentOwnedMenuTearsDownSafely) {
+    auto* button = new DropDownButton(QStringLiteral("Options"));
+    auto* menu = new QMenu(QStringLiteral("Owned"), button);
+    button->setMenu(menu);
+
+    delete button;
+}
+
 TEST_F(DropDownButtonTest, PressAnimationCompletesSmoothProgress) {
     DropDownButton button("Options");
     button.resize(140, 32);
