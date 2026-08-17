@@ -118,6 +118,17 @@ TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion) {
 #endif
 }
 
+TEST(QtCompat, AutomatedLinuxTestsEnableAccessibilityNotifications) {
+#if defined(Q_OS_LINUX)
+    if (!qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
+        GTEST_SKIP() << "Accessibility activation is scoped to automation";
+    EXPECT_EQ(qEnvironmentVariable("QT_LINUX_ACCESSIBILITY_ALWAYS_ON"),
+              QStringLiteral("1"));
+#else
+    SUCCEED();
+#endif
+}
+
 TEST(QtCompat, WheelPositionHelperReturnsLocalPosition) {
     FLUENT_MAKE_WHEEL_EVENT(event, 12, 18, 120, Qt::ControlModifier);
 
