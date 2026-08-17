@@ -13,7 +13,7 @@ loops, or incorrect transient ownership.
 - Gallery-equivalent quality bar
 - Coherent desktop density
 - Comparable views and 100% perimeter review
-- Material, signature, hierarchy, geometry, interaction, and resilience passes
+- Backdrop, signature, hierarchy, geometry, interaction, and resilience passes
 - Geometry, layer, and final acceptance gates
 
 ## Gallery-equivalent quality bar

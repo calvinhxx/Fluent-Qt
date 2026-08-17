@@ -20,15 +20,16 @@ control radius, overlay radius, typography, and density.
 ## Choose the supported strategy
 
 - Use the built-in Fluent theme when branding is not part of the task.
-- Use `fluent::StyleThemeCatalog::apply()` for the supported Fluent, Material,
-  or macOS design-language presets.
-- Use `fluent::StyleThemeCatalog::applyAccentOverride()` when only the accent
+- Fluent is the only supported component geometry and interaction language.
+  Use `fluent::UserTheme::apply()` to load the optional user-editable
+  Fluent token override before constructing the main window.
+- Use `fluent::UserTheme::applyAccentOverride()` when only the accent
   changes and the remaining semantic palette stays valid.
 - For a C++ application-specific brand, start from
   `fluent::ThemeRegistry::defaultSnapshot()`, override complete Light and Dark
   semantic roles, then commit once with `applySnapshot()`.
 - In PySide6, use the public `fluentqt.foundation` functions such as
-  `apply_style_theme`, `set_accent_color`, `set_theme`, and `set_font_scale`.
+  `apply_user_theme`, `set_accent_color`, `set_theme`, and `set_font_scale`.
   Do not invent a private full-palette API. If a full branded snapshot is
   required but not publicly bound, either scope the design to supported tokens
   or add and test the missing public binding in FluentQt.

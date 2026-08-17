@@ -23,8 +23,8 @@ A signature surface is done only when all of these are true:
 5. When a primary input exists, it is an integrated dock unless it is itself
    the document. A monitor or read-only surface may correctly have no input.
 
-Material acceptance from [Premium shell](premium-shell.md) is a prerequisite,
-not a substitute.
+Backdrop and window-material acceptance from
+[Premium shell](premium-shell.md) is a prerequisite, not a substitute.
 
 ## Choose the finish from the time model
 
