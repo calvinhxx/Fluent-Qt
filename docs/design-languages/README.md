@@ -1,44 +1,51 @@
-# Design Language References
+# Fluent Design Contract
 
-Fluent-Qt ships three switchable **style themes** (Settings → *Style theme*): Fluent (Windows),
-Material 3 (Google), and macOS. Beyond recoloring, each brand changes component **shape and
-interaction** through `FluentElement::DesignLanguage` (`DesignFluent` / `DesignMaterial` /
-`DesignCupertino`), which controls' `paintEvent`s branch on.
+Fluent is FluentQt's only visual language. Components share one geometry,
+interaction, accessibility, and state contract across Windows, macOS, Linux,
+and WebAssembly. Platform integration may differ, but component design does
+not switch to a second brand shell.
 
-This folder is the **canonical spec** for all three design languages — Fluent quoted from our own
-design headers (it is the reference implementation), with Material 3 and macOS measured against
-the linked design kits — so the control work has a single, verifiable target instead of guesswork.
+## 1.7 migration
 
-## Documents
+Version 1.7 removes the former design-language selector instead of preserving
+single-value or no-op compatibility APIs.
 
-- [Fluent (Windows)](fluent.md) — the **baseline** the other two are deltas on. Real token values
-  from `src/design/*.h` (accents `#005FB8` / `#60CDFF`, radius 4 / 8, FluentQt UI), and the
-  `DesignFluent` per-component specs. Selecting Fluent is just `resetToDefaults()`.
-- [Material 3 (Google)](material-3.md) — role colors, Roboto type scale, shape scale, **state
-  layers**, and per-component specs (buttons, selection controls, sliders, text fields, tabs, and the
-  Status & info family — progress, snackbar/InfoBar, badges).
-- [macOS (Apple)](macos.md) — system/accent colors, SF Pro, small-radius bezel treatment, and
-  per-component specs. **Note:** the macOS switch "on" state is **accent blue, not green**.
-- [Design Kit Sources and Verification](figma-sources.md) — file keys, node IDs,
-  and the measurement workflow. External kit screenshots and source layers are
-  intentionally not redistributed.
-- [Coverage ledger](coverage-ledger.md) — which controls actually branch on
-  `themeDesignLanguage()` versus color/token-only. Not a paint plan.
+| Removed C++ surface | Replacement |
+|---|---|
+| `FluentElement::DesignLanguage` and `themeDesignLanguage()` | No replacement; components are always Fluent |
+| `ThemeRegistry::designLanguage()` / `setDesignLanguage()` | Light/Dark `FluentElement::Theme` plus semantic token snapshots |
+| `StyleTheme` and `StyleThemeCatalog` | `UserTheme::apply()` and Fluent token customization |
 
-## How it maps to the code
+| Removed PySide6 surface | Replacement |
+|---|---|
+| `DesignLanguage` and `current_design_language()` | `Theme` and `current_theme()` |
+| `FluentWidget.design_language()` | `FluentWidget.effective_theme()` and `theme_tokens()` |
+| `StyleTheme` and `apply_style_theme()` | `apply_user_theme()`, `set_accent_color()`, and `reset_theme_tokens()` |
+
+Old Material/Cupertino paint branches, Gallery choices, binding entries,
+tests, documentation, and image assets were removed in the same release.
+An existing Gallery `settings/styleTheme` value is ignored, so the Gallery
+starts with Fluent on 1.7. Former `material.json` or `macos.json` user files
+are left untouched but are no longer read; `fluent.json` remains the only
+supported user token override.
+
+## Runtime mapping
 
 | Layer | Responsibility |
 |---|---|
-| [`ThemeRegistry`](../../src/components/foundation/ThemeRegistry.h) | Runtime store of the active Light/Dark `Colors`, radius, font, and `DesignLanguage`. Seeded from the Fluent defaults. |
-| [`ThemeCatalog`](../../app/viewmodel/ThemeCatalog.h) | Installs the brand preset (the role→`Colors` mapping + radius + design language) and any user JSON overrides. |
-| Control `paintEvent`s | Read `themeDesignLanguage()` and branch shape/interaction when the control is in the geometry bucket of the [coverage ledger](coverage-ledger.md). Everyone else still recolors via tokens. |
+| [`ThemeRegistry`](../../src/components/foundation/ThemeRegistry.h) | Stores active Light/Dark Fluent colors, radius, and typography |
+| [`UserTheme`](../../src/components/foundation/UserTheme.h) | Loads the optional `fluent.json` token override and manages accent customization |
+| Component paint paths | Implement the single Fluent geometry and interaction contract |
+| Platform/windowing layer | Adapts native chrome, input, and Mica/Acrylic capability without changing component design language |
 
-The Fluent baseline is documented in [fluent.md](fluent.md) (and seeds `ThemeRegistry`); the
-Material 3 and macOS pages describe the deltas layered on top of it.
+Product branding belongs in complete Light/Dark semantic token overrides,
+accent color, typography, and content—not alternate component geometry.
+Hover, press, focus, disabled, and selected states must remain visible in both
+modes.
 
-## Interaction rule that applies to every brand branch
+## References
 
-Hover/press **must** be visible in light *and* dark. Use the **theme-aware veil**
-(`darkTheme ? white@α : black@α`) for neutral surfaces, the **on-color state layer** for M3
-fills, and **accent gradient modulation** for accent fills — never a bare `.darker()`/`.lighter()`
-on a surface color, which is theme-fragile. See each per-system doc's checklist.
+- [Fluent token and component reference](fluent.md)
+- [Design kit source](figma-sources.md)
+- [Component API conventions](../development/component-api-conventions.md)
+- [Visual review](../development/visual-review.md)

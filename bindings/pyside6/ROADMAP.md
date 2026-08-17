@@ -1154,7 +1154,7 @@ rewriting C++ painting in Python; Python uses the same native FluentQt widgets.
   `--verify-catalog --walk-routes --snapshot
   <png> --report <json>` for deterministic manifest, route, and render evidence.
 - **Interactive review**: run `examples/compatibility_showcase.py`; switch
-  Light/Dark, Fluent/Material/macOS, and accent colors, drag the Slider, hold
+  Light/Dark and accent colors, drag the Slider, hold
   RepeatButton, and inspect text, dividers, progress controls, and signal
   feedback.
 - **Model boundary**: run `examples/list_view_model.py`,

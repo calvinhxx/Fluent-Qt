@@ -13,6 +13,9 @@ APIs under `src/components/**`.
   canonical includes such as `components/foundation/FluentElement.h`,
   `components/foundation/QMLPlus.h`, and `components/foundation/overlay/...` in project
   code.
+- Fluent is the only visual contract. New components and examples must not add
+  a design-language selector, alternate geometry preset, or per-language paint
+  branch. Product branding belongs in Fluent Light/Dark semantic tokens.
 - Public reusable component APIs use the canonical `fluent` namespace. The
   previous `view::...` component namespace was removed as a deliberate breaking
   migration; do not add `view` namespace aliases, compatibility typedefs, or

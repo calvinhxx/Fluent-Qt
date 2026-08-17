@@ -105,7 +105,7 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 
 | Category | Public surface reviewed | Current disposition |
 |---|---|---|
-| Foundation | FluentElement, QMLPlus, AnchorLayout, ThemeRegistry, StyleThemeCatalog, overlay helpers | Phase 1 state/lifetime/non-widget layout/oversized overlay defects resolved; `FND-LAYOUT-002` size hints and Tarjan cycle diagnostics resolved; theme transactions and persistence remain Phase 2 |
+| Foundation | FluentElement, QMLPlus, AnchorLayout, ThemeRegistry, UserTheme, overlay helpers | Phase 1 state/lifetime/non-widget layout/oversized overlay defects resolved; `FND-LAYOUT-002` size hints and Tarjan cycle diagnostics resolved; theme transactions and persistence remain Phase 2 |
 | Layout | Accordion, Card, Divider, Expander | Reusable token-driven surfaces replace Gallery-local card, separator, and disclosure implementations; Accordion composes Expander with explicit item ownership, single/multiple coordination, and header-key navigation |
 | Basic input | Button, CompoundButton, CheckBox, ColorPicker, ComboBox, DropDownButton, HyperlinkButton, RadioButton, RatingControl, RepeatButton, Slider, SplitButton, ToggleButton, ToggleSplitButton, ToggleSwitch | CompoundButton retains Button interaction semantics while adding caller-owned secondary content; base-class coherence, keyboard, RTL, and accessibility remain covered by focused contracts |
 | Collections | DrawerView, FlipView, FlowView, GridView, ListView, SplitView, StackView, TreeView | Phase 4 keeps FlowView large-model painting and hit testing viewport-bounded and uses one shared drag-displacement animation |

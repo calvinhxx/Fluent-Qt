@@ -35,6 +35,10 @@
 
 集合类组件包括 ListView、GridView、FlowView、TreeView 和 DataGrid。DataGrid 沿用 Qt 的模型与委托所有权约定，大数据表格的工作量保持在可视区域内。
 
+Fluent 是项目唯一的视觉语言。1.7 直接移除原有 Material/Cupertino 枚举、
+预设、绘制分支、Gallery 选项和 PySide6 入口；产品配色仍通过 Fluent
+Light/Dark 语义 token 完成。
+
 ## 🧱 依赖
 
 | 范围 | 依赖 |
@@ -303,7 +307,7 @@ python -m fluentqt_gallery
 - [打包工作流](docs/development/packaging-workflow.md)
 - [发布治理](docs/development/release-governance.md)
 - [架构约定](docs/architecture/README.md)
-- [设计语言参考](docs/design-languages/README.md)
+- [Fluent 设计参考与旧主题迁移](docs/design-languages/README.md)
 - [WebAssembly 兼容](docs/development/webassembly-workflow.md)
 - [Python 兼容](bindings/pyside6/README.md)
 
@@ -312,8 +316,6 @@ python -m fluentqt_gallery
 | 来源 | 用途 |
 |---|---|
 | [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows 视觉参考 |
-| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS 风格参考 |
-| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 风格参考 |
 | [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | 组件行为和示例页面参考 |
 
 ## 许可证

@@ -38,9 +38,16 @@ contracts.
    active ledger entry in the same change and record the breaking change in
    the curated release notes.
 
-The repository currently has no deprecated PySide6 symbols. The empty
-`deprecations` ledger is intentional and is validated so the first future
-deprecation must adopt this contract.
+### 1.7 Fluent-only reset
+
+Version 1.7 is an explicitly approved one-time breaking cleanup made before the
+binding reached broad adoption. It removes `DesignLanguage`, `StyleTheme`,
+`current_design_language()`, `FluentWidget.design_language()`, and
+`apply_style_theme()` instead of carrying no-op compatibility shells. Use
+Light/Dark `Theme`, Fluent semantic tokens, `set_accent_color()`, and
+`apply_user_theme()` instead. These removed symbols are absent from the 1.7 API
+manifest rather than listed as active deprecations. Future removals follow the
+major-version policy above.
 
 ## New C++ surface decisions
 

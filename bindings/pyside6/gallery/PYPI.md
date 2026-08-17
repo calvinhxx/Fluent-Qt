@@ -20,8 +20,8 @@ No separate `.exe`, `.dmg`, or `.deb` is required for the Python application.
 - The same component categories and ordered routes as the native C++ Gallery.
 - Live Python examples for input, collections, date and time, overlays,
   navigation, scrolling, status, text fields, and windowing.
-- Light and dark themes, Fluent / Material / macOS-style presets, responsive
-  navigation, search, isolated settings, and native window integration.
+- Fluent Light and Dark themes, accent customization, responsive navigation,
+  search, isolated settings, and native window integration.
 - Packaged artwork and source snippets without adding Gallery assets to the
   core `FluentQt` wheel.
 
