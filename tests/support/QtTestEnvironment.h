@@ -25,6 +25,11 @@ struct VisualSnapshotOptions {
 
 void configureOffscreenPlatformForAutomation();
 void initializeQtTestEnvironment();
+// Qt 5.15 through 6.5 dispatch an installed QAccessible update handler only
+// while the platform accessibility bridge is active. Qt 6.6+ dispatches the
+// in-process handler independently, which makes event contracts observable on
+// headless CI without AT-SPI, UI Automation, or VoiceOver.
+bool canCaptureAccessibilityEvents();
 bool shouldSkipVisualTest();
 // True when running under a headless platform plugin (offscreen/minimal) that
 // cannot faithfully deliver synthetic pointer/keyboard input or show native
@@ -56,5 +61,12 @@ QString visualBaselineFilePath(const QString& variant = QString());
 												 const VisualSnapshotOptions& options = VisualSnapshotOptions());
 
 } // namespace tests::support
+
+#define FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE()                         \
+	do {                                                                  \
+		if (!::tests::support::canCaptureAccessibilityEvents())            \
+			GTEST_SKIP() << "Qt < 6.6 requires an active platform "        \
+			                "accessibility bridge to capture update events"; \
+	} while (false)
 
 #endif // FLUENT_QT_QT_TEST_ENVIRONMENT_H

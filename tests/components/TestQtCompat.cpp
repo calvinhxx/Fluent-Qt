@@ -113,19 +113,10 @@ TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion) {
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
     EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION, 1);
+    EXPECT_EQ(FLUENT_HAS_UNCONDITIONAL_ACCESSIBLE_UPDATE_HANDLER, 1);
 #else
     EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION, 0);
-#endif
-}
-
-TEST(QtCompat, AutomatedLinuxTestsEnableAccessibilityNotifications) {
-#if defined(Q_OS_LINUX)
-    if (!qEnvironmentVariableIsSet("SKIP_VISUAL_TEST"))
-        GTEST_SKIP() << "Accessibility activation is scoped to automation";
-    EXPECT_EQ(qEnvironmentVariable("QT_LINUX_ACCESSIBILITY_ALWAYS_ON"),
-              QStringLiteral("1"));
-#else
-    SUCCEED();
+    EXPECT_EQ(FLUENT_HAS_UNCONDITIONAL_ACCESSIBLE_UPDATE_HANDLER, 0);
 #endif
 }
 

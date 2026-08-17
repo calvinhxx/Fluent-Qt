@@ -14,6 +14,7 @@
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
 #include "compatibility/QtCompat.h"
+#include "QtTestEnvironment.h"
 
 using fluent::basicinput::Button;
 using fluent::basicinput::DropDownButton;
@@ -199,6 +200,7 @@ TEST(AuxiliarySurfaceAccessibilityTest, Contract_AccessibilityDropDownButtonExpo
     EXPECT_EQ(clicked.count(), 1);
     clicked.clear();
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     button.setMenu(&first);
     EXPECT_TRUE(root->state().hasPopup);
@@ -313,6 +315,7 @@ TEST(AuxiliarySurfaceAccessibilityTest, Contract_AccessibilityDrawerExposesPaneS
     ASSERT_NE(root->actionInterface(), nullptr);
     EXPECT_TRUE(root->actionInterface()->actionNames().isEmpty());
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     drawer.open();
     EXPECT_TRUE(root->state().active);
@@ -377,6 +380,7 @@ TEST(AuxiliarySurfaceAccessibilityTest, Contract_AccessibilityToolTipExposesText
                             QAccessible::DescriptionFor));
 #endif
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     tip->setText(QStringLiteral("Save all changes"));
     tip->setText(QStringLiteral("Save all changes"));

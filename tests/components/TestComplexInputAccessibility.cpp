@@ -15,6 +15,7 @@
 #include "components/scrolling/ScrollView.h"
 #include "components/scrolling/AnnotatedScrollBar.h"
 #include "components/textfields/AutoSuggestBox.h"
+#include "QtTestEnvironment.h"
 
 using fluent::basicinput::Button;
 using fluent::basicinput::ColorPicker;
@@ -167,6 +168,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityColorPickerExposesColo
     sendKey(spectrum, Qt::Key_Right);
     EXPECT_GT(picker.saturation(), oldSaturation);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
     picker.setColor(picker.color());
     EXPECT_EQ(capture.count(&picker, QAccessible::ValueChanged), 0);
@@ -274,6 +276,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityDateAndTimePickersSepa
     time.closePicker();
     QApplication::processEvents();
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
     date.setSelectedDate(date.selectedDate());
     EXPECT_EQ(capture.count(&date, QAccessible::ValueChanged), 0);
@@ -330,6 +333,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAnnotatedScrollBarKeep
     EXPECT_EQ(bar.value(), 50);
     EXPECT_EQ(activated.count(), 1);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
     bar.setValue(50);
     EXPECT_EQ(capture.count(&bar, QAccessible::ValueChanged), 0);
@@ -387,6 +391,7 @@ TEST(ComplexInputAccessibilityTest, Contract_AccessibilityAutoSuggestRetainsText
     EXPECT_TRUE(root->state().expanded);
     EXPECT_EQ(QApplication::focusWidget(), &box);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
     sendKey(&box, Qt::Key_Down);
     EXPECT_EQ(capture.count(

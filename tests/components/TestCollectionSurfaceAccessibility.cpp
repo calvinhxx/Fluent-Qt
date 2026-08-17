@@ -9,6 +9,7 @@
 #include "components/basicinput/Button.h"
 #include "components/collections/FlipView.h"
 #include "components/collections/SplitView.h"
+#include "QtTestEnvironment.h"
 
 using fluent::collections::FlipView;
 using fluent::collections::SplitView;
@@ -211,6 +212,7 @@ TEST(CollectionSurfaceAccessibilityTest, Contract_AccessibilityFlipViewEventsFol
     showAndProcess(view, QSize(400, 260));
     ASSERT_NE(accessible(&view), nullptr);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     view.setCurrentIndex(0);
     EXPECT_EQ(events.count(&view, QAccessible::ValueChanged), 0);
@@ -305,6 +307,7 @@ TEST(CollectionSurfaceAccessibilityTest, Contract_AccessibilitySplitViewExposesP
               (QStringList{QStringLiteral("Right"),
                            QStringLiteral("Shift+Right")}));
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     QObject* firstGripObject = firstGrip->object();
     ASSERT_NE(firstGripObject, nullptr);
@@ -354,6 +357,7 @@ TEST(CollectionSurfaceAccessibilityTest, Contract_AccessibilitySplitViewStructur
     ASSERT_NE(root, nullptr);
     ASSERT_EQ(childrenWithRole(root, QAccessible::Grip).size(), 2);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     second->hide();
     QApplication::processEvents();

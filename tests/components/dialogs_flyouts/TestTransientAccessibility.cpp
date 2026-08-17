@@ -14,6 +14,7 @@
 #include "components/dialogs_flyouts/TeachingTip.h"
 #include "components/textfields/Label.h"
 #include "compatibility/QtCompat.h"
+#include "QtTestEnvironment.h"
 
 using fluent::basicinput::Button;
 using fluent::dialogs_flyouts::CoachMark;
@@ -189,6 +190,7 @@ TEST_F(TransientAccessibilityTest, Contract_AccessibilityPopupExposesLogicalStat
     ASSERT_NE(root->actionInterface(), nullptr);
     EXPECT_TRUE(root->actionInterface()->actionNames().isEmpty());
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     popup.open();
     EXPECT_TRUE(root->state().active);
@@ -245,6 +247,7 @@ TEST_F(TransientAccessibilityTest, Contract_AccessibilityFlyoutTracksAnchorRelat
     QAccessibleInterface* root = accessible(&flyout);
     ASSERT_NE(root, nullptr);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     flyout.setAnchor(first);
     EXPECT_TRUE(hasRelation(root, first, QAccessible::Controlled));
@@ -305,6 +308,7 @@ TEST_F(TransientAccessibilityTest, Contract_AccessibilityTeachingTipKeepsHelpTex
     tip.close();
 
     tip.setLightDismissEnabled(true);
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     QSignalSpy closing(&tip, &TeachingTip::closing);
     tip.showAt(target);
@@ -346,6 +350,7 @@ TEST_F(TransientAccessibilityTest, Contract_AccessibilityCoachMarkAnnouncesRetai
 #endif
     EXPECT_TRUE(hasAccessibleAncestor(next, &coach));
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     QSignalSpy opened(&coach, &CoachMark::opened);
     QSignalSpy closed(&coach, &CoachMark::closed);
@@ -388,6 +393,7 @@ TEST_F(TransientAccessibilityTest, Contract_AccessibilityTransientRelationAndPol
     tip.setLightDismissEnabled(true);
     tip.showAt(target);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     tip.setTarget(target);
     tip.setLightDismissEnabled(true);

@@ -13,6 +13,7 @@
 #include "components/basicinput/HyperlinkButton.h"
 #include "components/status_info/InfoBar.h"
 #include "components/status_info/Shimmer.h"
+#include "QtTestEnvironment.h"
 
 using fluent::basicinput::Button;
 using fluent::basicinput::HyperlinkButton;
@@ -221,6 +222,7 @@ TEST(SemanticPresentationAccessibilityTest, Contract_AccessibilityHyperlinkExpos
               (QStringList{QStringLiteral("Space"),
                            QStringLiteral("Enter")}));
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     actions->doAction(QAccessibleActionInterface::pressAction());
     EXPECT_EQ(capture.count, 1);
@@ -318,6 +320,7 @@ TEST(SemanticPresentationAccessibilityTest, Contract_AccessibilityInfoBarUpdates
     showAndProcess(bar, bar.sizeHint());
     ASSERT_NE(accessible(&bar), nullptr);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     bar.setMessage(QStringLiteral("Connection lost"));
     bar.setMessage(QStringLiteral("Connection lost"));
@@ -390,6 +393,7 @@ TEST(SemanticPresentationAccessibilityTest, Contract_AccessibilityInfoBarRetains
               bar.findChild<Button*>(
                   QStringLiteral("InfoBarCloseButton")));
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     bar.setIsClosable(false);
     bar.setIsClosable(false);
@@ -420,6 +424,7 @@ TEST(SemanticPresentationAccessibilityTest, Contract_AccessibilityShimmerExposes
     EXPECT_FALSE(root->state().focusable);
     EXPECT_TRUE(root->actionInterface()->actionNames().isEmpty());
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture events;
     shimmer.setShimmerProgress(0.25);
     QTest::qWait(48);

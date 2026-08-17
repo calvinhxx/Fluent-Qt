@@ -1483,6 +1483,7 @@ TEST_F(DataGridTest, Contract_AccessibilityModelReplacementEmitsOneReset)
     ASSERT_NE(root->tableInterface(), nullptr);
     ASSERT_NE(root->tableInterface()->cellAt(0, 0), nullptr);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibleModelEventCapture capture;
     view.setModel(&replacement);
     processEvents();
