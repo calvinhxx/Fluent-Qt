@@ -261,6 +261,11 @@ QAccessibleInterface* menuButtonAccessibilityFactory(
     return nullptr;
 }
 
+const bool menuButtonAccessibilityFactoryInstalled = [] {
+    QAccessible::installFactory(menuButtonAccessibilityFactory);
+    return true;
+}();
+
 template<typename ButtonType>
 void notifyMenuAvailability(ButtonType* button, bool availabilityChanged)
 {
@@ -298,11 +303,7 @@ void notifyOpenState(ButtonType* button)
 void ensureMenuButtonAccessibilityFactory()
 {
 #if QT_CONFIG(accessibility)
-    static const bool installed = [] {
-        QAccessible::installFactory(menuButtonAccessibilityFactory);
-        return true;
-    }();
-    Q_UNUSED(installed)
+    Q_UNUSED(menuButtonAccessibilityFactoryInstalled)
 #endif
 }
 
