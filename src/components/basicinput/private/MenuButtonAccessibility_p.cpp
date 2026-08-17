@@ -261,11 +261,6 @@ QAccessibleInterface* menuButtonAccessibilityFactory(
     return nullptr;
 }
 
-const bool menuButtonAccessibilityFactoryInstalled = [] {
-    QAccessible::installFactory(menuButtonAccessibilityFactory);
-    return true;
-}();
-
 template<typename ButtonType>
 void notifyMenuAvailability(ButtonType* button, bool availabilityChanged)
 {
@@ -300,11 +295,34 @@ void notifyOpenState(ButtonType* button)
 
 } // namespace
 
+namespace {
+
 void ensureMenuButtonAccessibilityFactory()
 {
 #if QT_CONFIG(accessibility)
-    Q_UNUSED(menuButtonAccessibilityFactoryInstalled)
+    static const bool installed = [] {
+        QAccessible::installFactory(menuButtonAccessibilityFactory);
+        return true;
+    }();
+    Q_UNUSED(installed)
 #endif
+}
+
+} // namespace
+
+const QString& prepareMenuButtonAccessibility(const QString& text)
+{
+    // Run before Button's base constructor; Qt 5 can otherwise cache the
+    // native QPushButton interface before this custom factory is installed.
+    ensureMenuButtonAccessibilityFactory();
+    return text;
+}
+
+QWidget* prepareMenuButtonAccessibility(QWidget* parent)
+{
+    // Keep the parent-only constructor on the same pre-base path.
+    ensureMenuButtonAccessibilityFactory();
+    return parent;
 }
 
 void showMenuButtonMenu(DropDownButton* button)
