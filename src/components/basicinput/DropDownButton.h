@@ -62,6 +62,7 @@ class DropDownButton : public Button {
 public:
     explicit DropDownButton(const QString& text, QWidget* parent = nullptr);
     explicit DropDownButton(QWidget* parent = nullptr);
+    ~DropDownButton() override;
 
     void setMenu(QMenu* menu);
     QMenu* menu() const { return m_menu.data(); }

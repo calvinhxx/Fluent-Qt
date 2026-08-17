@@ -167,6 +167,14 @@ TEST_F(SplitButtonTest, MenuLifecycleTracksVisibilityReplacementAndDestruction) 
     delete firstMenu;
 }
 
+TEST_F(SplitButtonTest, Contract_ParentOwnedMenuTearsDownSafely) {
+    auto* button = new SplitButton(QStringLiteral("Choose"));
+    auto* menu = new QMenu(QStringLiteral("Owned"), button);
+    button->setMenu(menu);
+
+    delete button;
+}
+
 TEST_F(SplitButtonTest, SecondaryActivationDoesNotEmitPrimaryClickOrToggle) {
     SplitButton split(QStringLiteral("Choose"));
     ToggleSplitButton toggle(QStringLiteral("Pin"));

@@ -22,6 +22,11 @@ DropDownButton::DropDownButton(QWidget* parent)
     initAnimation();
 }
 
+DropDownButton::~DropDownButton() {
+    if (m_menu)
+        disconnect(m_menu.data(), nullptr, this, nullptr);
+}
+
 void DropDownButton::initAnimation() {
     if (m_pressAnimation) return;
     m_pressAnimation = new QPropertyAnimation(
