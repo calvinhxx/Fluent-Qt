@@ -44,7 +44,7 @@ public:
         return result;
     }
 
-    QList<std::pair<QAccessibleInterface*, QAccessible::Relation>>
+    FluentAccessibleRelationList
     relations(QAccessible::Relation match) const override
     {
         auto result = QAccessibleWidget::relations(match);

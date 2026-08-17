@@ -8,6 +8,7 @@
 #include <limits>
 
 #include "components/textfields/AutoSuggestBox.h"
+#include "compatibility/QtCompat.h"
 
 namespace fluent::textfields::detail {
 
@@ -72,7 +73,7 @@ public:
         QAccessibleWidget::setText(type, value);
     }
 
-    QList<std::pair<QAccessibleInterface*, QAccessible::Relation>>
+    FluentAccessibleRelationList
     relations(QAccessible::Relation match) const override
     {
         auto result = QAccessibleWidget::relations(match);
