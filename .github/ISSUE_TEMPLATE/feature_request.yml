@@ -1,0 +1,56 @@
+name: Feature request
+description: Propose a reusable component, API, workflow, or platform improvement.
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: User outcome
+      description: What should an application developer or end user be able to accomplish?
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Primary surface
+      options:
+        - C++ component API
+        - PySide6 binding
+        - WebAssembly compatibility
+        - Gallery or documentation
+        - Build, package, or release tooling
+        - Design language or accessibility
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Concrete scenario
+      description: Show the workflow, data size, interaction, and platform constraints that make this useful.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed scope
+      description: Describe the smallest reusable behavior. API sketches are welcome but optional.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Explain how raw Qt, an existing FluentQt component, or application-layer code falls short.
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Compatibility, accessibility, and performance constraints
+      description: Include model sizes, keyboard needs, ownership, supported Qt versions, or cross-language expectations.
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I can help validate the design or implementation.
+        - label: I can contribute code or documentation after the contract is agreed.
