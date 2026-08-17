@@ -147,12 +147,22 @@ def validate_boundaries() -> list[str]:
 
     if ".github/ci-cpp-matrix.json" not in cpp:
         errors.append("ci-cpp.yml must own the C++ matrix catalog")
+    cpp_build = job_section(cpp, "build")
+    if "max-parallel: 4" not in cpp_build:
+        errors.append(
+            "ci-cpp.yml build matrix must cap parallel action downloads at 4"
+        )
     for forbidden in ("pip install PySide6", "shiboken6_generator==", "pyside6_release:"):
         if forbidden in cpp:
             errors.append(f"ci-cpp.yml contains PySide6 execution detail: {forbidden}")
 
     if "bindings/pyside6/wheel-matrix.json" not in python:
         errors.append("ci-python.yml must own the PySide6 wheel matrix catalog")
+    pyside_release = job_section(python, "pyside6_release")
+    if "max-parallel: 4" not in pyside_release:
+        errors.append(
+            "ci-python.yml release matrix must cap parallel action downloads at 4"
+        )
     for required in (
         "actions: read",
         "name: Platform status / ${{ matrix.display_name }}",
