@@ -216,6 +216,31 @@ inline void fluentSendAccessibleAnnouncement(
 }
 
 /**
+ * @brief Replaces an accessibility interface cached before a widget finished
+ * constructing when it does not expose the expected role.
+ * zh_CN: 当控件构造完成前缓存的无障碍接口角色不正确时，重新创建该接口。
+ */
+inline void fluentRefreshAccessibleInterfaceAfterConstruction(
+    QObject* object, QAccessible::Role expectedRole) {
+#if QT_CONFIG(accessibility)
+    if (!object)
+        return;
+    QAccessibleInterface* interface =
+        QAccessible::queryAccessibleInterface(object);
+    if (!interface || interface->role() == expectedRole)
+        return;
+
+    const QAccessible::Id id = QAccessible::uniqueId(interface);
+    if (id)
+        QAccessible::deleteAccessibleInterface(id);
+    QAccessible::queryAccessibleInterface(object);
+#else
+    Q_UNUSED(object);
+    Q_UNUSED(expectedRole);
+#endif
+}
+
+/**
  * @brief Applies the supported Qt-version-specific High-DPI startup settings.
  * zh_CN: 应用当前 Qt 版本所需的 High-DPI 启动设置。
  */
