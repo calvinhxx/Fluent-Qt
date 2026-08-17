@@ -98,6 +98,20 @@ TEST(QtCompat, QtVersionMacrosDefined) {
     EXPECT_GE(QT_VERSION_MAJOR, 5);
 }
 
+TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE, 1);
+#else
+    EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE, 0);
+#endif
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE, 1);
+#else
+    EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE, 0);
+#endif
+}
+
 TEST(QtCompat, WheelPositionHelperReturnsLocalPosition) {
     FLUENT_MAKE_WHEEL_EVENT(event, 12, 18, 120, Qt::ControlModifier);
 

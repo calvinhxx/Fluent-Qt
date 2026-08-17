@@ -6,6 +6,7 @@
 #include <QKeySequence>
 
 #include "components/basicinput/HyperlinkButton.h"
+#include "compatibility/QtCompat.h"
 
 namespace fluent::basicinput::detail {
 
@@ -65,8 +66,11 @@ void sendTraversedChanged(HyperlinkButton* button)
 } // namespace
 
 class HyperlinkButtonAccessible final
-    : public QAccessibleWidget,
-      public QAccessibleHyperlinkInterface {
+    : public QAccessibleWidget
+#if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
+    , public QAccessibleHyperlinkInterface
+#endif
+{
 public:
     explicit HyperlinkButtonAccessible(HyperlinkButton* button)
         : QAccessibleWidget(button, QAccessible::Link)
@@ -106,8 +110,10 @@ public:
 
     void* interface_cast(QAccessible::InterfaceType type) override
     {
+#if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
         if (type == QAccessible::HyperlinkInterface)
             return static_cast<QAccessibleHyperlinkInterface*>(this);
+#endif
         return QAccessibleWidget::interface_cast(type);
     }
 
@@ -156,6 +162,7 @@ public:
                   actionName);
     }
 
+#if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
     QString anchor() const override
     {
         return button() ? stripMnemonic(button()->text()) : QString{};
@@ -168,6 +175,7 @@ public:
 
     int startIndex() const override { return 0; }
     int endIndex() const override { return anchor().size(); }
+#endif
 
     bool isValid() const override
     {
