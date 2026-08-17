@@ -201,6 +201,7 @@ TEST(SemanticPresentationAccessibilityTest, Contract_AccessibilityHyperlinkExpos
               QStringLiteral("fluentqt-test://docs/getting-started"));
     EXPECT_TRUE(root->state().linked);
     EXPECT_FALSE(root->state().traversed);
+#if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
     ASSERT_NE(root->hyperlinkInterface(), nullptr);
     EXPECT_EQ(root->hyperlinkInterface()->anchor(),
               QStringLiteral("Documentation"));
@@ -209,6 +210,7 @@ TEST(SemanticPresentationAccessibilityTest, Contract_AccessibilityHyperlinkExpos
     EXPECT_EQ(root->hyperlinkInterface()->startIndex(), 0);
     EXPECT_EQ(root->hyperlinkInterface()->endIndex(), 13);
     EXPECT_TRUE(root->hyperlinkInterface()->isValid());
+#endif
 
     QAccessibleActionInterface* actions = root->actionInterface();
     ASSERT_NE(actions, nullptr);
@@ -241,8 +243,10 @@ TEST(SemanticPresentationAccessibilityTest, Contract_AccessibilityHyperlinkExpos
     events.clear();
     link.setUrl(QUrl(QStringLiteral("fluentqt-test://docs/api")));
     EXPECT_FALSE(root->state().traversed);
+#if FLUENT_HAS_ACCESSIBLE_HYPERLINK_INTERFACE
     EXPECT_EQ(root->hyperlinkInterface()->anchorTarget(),
               QStringLiteral("fluentqt-test://docs/api"));
+#endif
     EXPECT_EQ(events.countState(
                   &link,
                   ScopedAccessibilityEventCapture::StateField::Traversed),
