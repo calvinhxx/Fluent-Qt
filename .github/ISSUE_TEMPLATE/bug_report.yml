@@ -1,0 +1,76 @@
+name: Bug report
+description: Report reproducible incorrect behavior in FluentQt.
+title: "[Bug]: "
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      options:
+        - C++ library or Gallery
+        - PySide6 binding or Gallery
+        - WebAssembly Gallery
+        - Build or package
+        - Documentation or AI guidance
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: FluentQt version or commit
+      placeholder: v1.7.0 or git commit
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, architecture, Qt version, and Python/PySide6 version when applicable.
+      placeholder: macOS 15 arm64, Qt 6.8.3, Python 3.12, PySide6 6.8.3
+    validations:
+      required: true
+  - type: input
+    id: install
+    attributes:
+      label: Build or install route
+      placeholder: vcpkg-osx preset, installed CMake package, PyPI wheel, source build
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide commands, code, or a Gallery route and the exact interaction sequence.
+      placeholder: |
+        1. Build ...
+        2. Open route ...
+        3. Click or type ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, screenshots, or sample project
+      description: Drag files here or link a minimal repository. Redact secrets and private data.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same behavior.
+          required: true
+        - label: I removed credentials, customer data, and other private information.
+          required: true
