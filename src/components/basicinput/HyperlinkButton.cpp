@@ -8,7 +8,8 @@
 namespace fluent::basicinput {
 
 HyperlinkButton::HyperlinkButton(const QString& text, QWidget* parent)
-    : Button(detail::prepareHyperlinkButtonAccessibility(text), parent) {
+    : Button(text, parent) {
+    detail::initializeHyperlinkButtonAccessibility(this);
     setFluentStyle(Subtle);
     setCursor(Qt::PointingHandCursor);
     

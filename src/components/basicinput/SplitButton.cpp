@@ -30,7 +30,8 @@ int splitButtonTextWidth(const QFontMetrics& fm, const QString& text)
 } // namespace
 
 SplitButton::SplitButton(const QString& text, QWidget* parent)
-    : Button(detail::prepareMenuButtonAccessibility(text), parent) {
+    : Button(text, parent) {
+    detail::initializeMenuButtonAccessibility(this);
     setMouseTracking(true);
     m_pressAnimation = new QVariantAnimation(this);
     connect(m_pressAnimation, &QVariantAnimation::valueChanged, this,

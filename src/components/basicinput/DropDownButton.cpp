@@ -11,12 +11,14 @@
 namespace fluent::basicinput {
 
 DropDownButton::DropDownButton(const QString& text, QWidget* parent)
-    : Button(detail::prepareMenuButtonAccessibility(text), parent) {
+    : Button(text, parent) {
+    detail::initializeMenuButtonAccessibility(this);
     initAnimation();
 }
 
 DropDownButton::DropDownButton(QWidget* parent)
-    : Button(detail::prepareMenuButtonAccessibility(parent)) {
+    : Button(parent) {
+    detail::initializeMenuButtonAccessibility(this);
     initAnimation();
 }
 

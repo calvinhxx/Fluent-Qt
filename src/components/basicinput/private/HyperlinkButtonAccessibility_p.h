@@ -1,8 +1,6 @@
 #ifndef FLUENTQT_COMPONENTS_BASICINPUT_PRIVATE_HYPERLINKBUTTONACCESSIBILITY_P_H
 #define FLUENTQT_COMPONENTS_BASICINPUT_PRIVATE_HYPERLINKBUTTONACCESSIBILITY_P_H
 
-class QString;
-
 namespace fluent::basicinput {
 
 class HyperlinkButton;
@@ -11,8 +9,7 @@ namespace detail {
 
 class HyperlinkButtonAccessible;
 
-const QString& prepareHyperlinkButtonAccessibility(
-    const QString& text);
+void initializeHyperlinkButtonAccessibility(HyperlinkButton* button);
 void notifyHyperlinkButtonAccessibilityUrlChanged(
     HyperlinkButton* button, bool visitedChanged);
 void notifyHyperlinkButtonAccessibilityVisited(

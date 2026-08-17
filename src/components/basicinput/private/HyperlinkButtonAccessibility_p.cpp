@@ -220,13 +220,11 @@ void ensureHyperlinkButtonAccessibilityFactory()
 
 } // namespace
 
-const QString& prepareHyperlinkButtonAccessibility(
-    const QString& text)
+void initializeHyperlinkButtonAccessibility(HyperlinkButton* button)
 {
-    // Run before Button's base constructor so Qt 5 cannot cache the native
-    // QPushButton interface before the link factory becomes available.
     ensureHyperlinkButtonAccessibilityFactory();
-    return text;
+    fluentRefreshAccessibleInterfaceAfterConstruction(
+        button, QAccessible::Link);
 }
 
 void notifyHyperlinkButtonAccessibilityUrlChanged(

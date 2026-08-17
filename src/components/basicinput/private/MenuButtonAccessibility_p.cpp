@@ -9,6 +9,7 @@
 
 #include "components/basicinput/DropDownButton.h"
 #include "components/basicinput/SplitButton.h"
+#include "compatibility/QtCompat.h"
 
 namespace fluent::basicinput::detail {
 
@@ -310,19 +311,18 @@ void ensureMenuButtonAccessibilityFactory()
 
 } // namespace
 
-const QString& prepareMenuButtonAccessibility(const QString& text)
+void initializeMenuButtonAccessibility(DropDownButton* button)
 {
-    // Run before Button's base constructor; Qt 5 can otherwise cache the
-    // native QPushButton interface before this custom factory is installed.
     ensureMenuButtonAccessibilityFactory();
-    return text;
+    fluentRefreshAccessibleInterfaceAfterConstruction(
+        button, QAccessible::ButtonMenu);
 }
 
-QWidget* prepareMenuButtonAccessibility(QWidget* parent)
+void initializeMenuButtonAccessibility(SplitButton* button)
 {
-    // Keep the parent-only constructor on the same pre-base path.
     ensureMenuButtonAccessibilityFactory();
-    return parent;
+    fluentRefreshAccessibleInterfaceAfterConstruction(
+        button, QAccessible::ButtonMenu);
 }
 
 void showMenuButtonMenu(DropDownButton* button)
