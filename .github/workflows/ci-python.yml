@@ -1005,6 +1005,9 @@ jobs:
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
+      # The release matrix shares one pinned Qt setup action. Throttle its
+      # initial downloads so GitHub codeload does not rate-limit the run.
+      max-parallel: 4
       matrix: ${{ fromJson(needs.plan.outputs.pyside_release_matrix) }}
     steps:
       - name: Checkout

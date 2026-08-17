@@ -71,6 +71,9 @@ jobs:
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
+      # Avoid a codeload.github.com burst when every lane prepares the same
+      # pinned Qt setup action at once.
+      max-parallel: 4
       matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
     env:
       VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
