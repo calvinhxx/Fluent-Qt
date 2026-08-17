@@ -18,6 +18,7 @@
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
 #include "components/collections/SplitView.h"
+#include "components/collections/private/SplitViewAccessibility_p.h"
 
 using fluent::collections::SplitView;
 using fluent::collections::SplitViewPaneOptions;
@@ -492,6 +493,31 @@ TEST_F(SplitViewTest, ThemeUpdateAndHandleMetricsAreSafe)
     fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
     splitView.onThemeUpdated();
     EXPECT_EQ(splitView.panePreferredSize(first), oldPreferred);
+}
+
+TEST_F(SplitViewTest, HandleVisualGeometryStaysCenteredForEvenAndOddMetrics)
+{
+    using fluent::collections::detail::centeredSplitHandleVisualRect;
+
+    const QRect horizontalHandle(100, 20, 12, 80);
+    const QRect horizontalVisual = centeredSplitHandleVisualRect(
+        horizontalHandle, Qt::Horizontal, 2);
+    EXPECT_EQ(horizontalVisual, QRect(105, 24, 2, 72));
+    EXPECT_EQ(horizontalVisual.left() - horizontalHandle.left(),
+              horizontalHandle.right() - horizontalVisual.right());
+
+    const QRect oddHorizontalHandle(10, 30, 7, 60);
+    const QRect oddHorizontalVisual = centeredSplitHandleVisualRect(
+        oddHorizontalHandle, Qt::Horizontal, 3);
+    EXPECT_EQ(oddHorizontalVisual.left() - oddHorizontalHandle.left(),
+              oddHorizontalHandle.right() - oddHorizontalVisual.right());
+
+    const QRect verticalHandle(20, 100, 80, 12);
+    const QRect verticalVisual = centeredSplitHandleVisualRect(
+        verticalHandle, Qt::Vertical, 2);
+    EXPECT_EQ(verticalVisual, QRect(24, 105, 72, 2));
+    EXPECT_EQ(verticalVisual.top() - verticalHandle.top(),
+              verticalHandle.bottom() - verticalVisual.bottom());
 }
 
 TEST_F(SplitViewTest, VisualCheck)

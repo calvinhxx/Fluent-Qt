@@ -12,6 +12,8 @@ namespace fluent::textfields { class Label; }
 
 namespace fluent::status_info {
 
+namespace detail { class ToolTipAccessible; }
+
 /**
  * @brief Fluent tooltip bubble with margin and animation controls.
  * zh_CN: 支持边距和动画控制的 Fluent 提示气泡。
@@ -86,6 +88,8 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    friend class detail::ToolTipAccessible;
+
     void setTarget(QWidget* target, Placement placement);
     void positionForTarget();
     bool syncThemeOverrideFromSource();
@@ -103,6 +107,7 @@ private:
     QColor m_textColor;
 
     bool m_animationEnabled = true;
+    bool m_accessibilityVisible = false;
     bool m_hideOnAnimationFinished = false;
     QPropertyAnimation* m_opacityAnimation = nullptr;
     QPointer<QWidget> m_target;

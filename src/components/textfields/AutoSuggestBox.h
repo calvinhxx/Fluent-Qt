@@ -17,6 +17,7 @@ namespace fluent::basicinput { class Button; }
 namespace fluent::textfields {
 
 class SuggestionListPopup;
+namespace detail { class AutoSuggestBoxAccessible; }
 
 /**
  * @brief LineEdit-based input box with query affordance and suggestion flyout.
@@ -160,6 +161,8 @@ protected:
     void changeEvent(QEvent* event) override;
 
 private:
+    friend class detail::AutoSuggestBoxAccessible;
+
     static constexpr int kDefaultInputHeight = 32;
     static constexpr int kDefaultSuggestionItemHeight = 40;
     static constexpr int kHeaderHeight = 20;

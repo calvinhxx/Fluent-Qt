@@ -40,6 +40,10 @@ class Label;
 
 namespace fluent::navigation {
 
+namespace detail {
+class TabViewAccessible;
+}
+
 struct TabViewItem {
     QString text;
     QString iconGlyph;
@@ -175,6 +179,8 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    friend class detail::TabViewAccessible;
+
     enum class HitKind {
         None,
         Tab,
@@ -504,6 +510,8 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    friend class detail::TabViewAccessible;
+
     bool isValidIndex(int index) const;
     bool isSelectableIndex(int index) const;
     bool isCloseableIndex(int index) const;

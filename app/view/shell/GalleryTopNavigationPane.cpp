@@ -204,14 +204,14 @@ void GalleryTopNavigationPane::closeChildFlyout(bool animated)
     auto* popup = m_childFlyout;
     m_childFlyout = nullptr;
     m_childFlyoutPanel = nullptr;
-    if (animated && popup->isVisible()) {
-        connect(popup, &fluent::dialogs_flyouts::Popup::closed,
-                popup, &QObject::deleteLater);
+    if (!animated)
+        popup->setExitAnimationEnabled(false);
+    connect(popup, &fluent::dialogs_flyouts::Popup::closed,
+            popup, &QObject::deleteLater);
+    if (popup->isOpen() || popup->isVisible())
         popup->close();
-    } else {
-        popup->hide();
+    else
         popup->deleteLater();
-    }
 }
 
 void GalleryTopNavigationPane::startSettingsIconRotation(

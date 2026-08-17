@@ -15,6 +15,8 @@
 #include <QVariantAnimation>
 
 #include "compatibility/QtCompat.h"
+#include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/navigation/private/NavigationSelectionAccessibility_p.h"
 #include "design/Typography.h"
 #include "design/CornerRadius.h"
 
@@ -58,6 +60,7 @@ SelectorBar::SelectorBar(QWidget* parent)
     , m_iconFontFamily(Typography::FontFamily::FluentIcons)
     , m_indicatorAnimation(new QVariantAnimation(this))
 {
+    detail::ensureNavigationSelectionAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -123,7 +126,10 @@ bool SelectorBar::insertItem(int index, const SelectorBarItem& item)
 
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
         emit selectionChanged(m_selectedIndex, selectedItem());
@@ -158,7 +164,10 @@ bool SelectorBar::removeItem(int index)
 
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
         emit selectionChanged(m_selectedIndex, selectedItem());
@@ -182,7 +191,10 @@ void SelectorBar::clearItems()
     m_pressedHit = HitRecord();
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (hadSelection) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, -1);
         emit selectedIndexChanged(-1);
         emit currentChanged(-1);
         emit selectionChanged(-1, SelectorBarItem());
@@ -198,6 +210,8 @@ bool SelectorBar::setItemText(int index, const QString& text)
     m_items[index].text = text;
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
+        this, index);
     emit itemsChanged();
     return true;
 }
@@ -222,7 +236,7 @@ bool SelectorBar::setItemEnabled(int index, bool enabled)
     if (!enabled && m_selectedIndex == index)
         clampSelectionAfterMutation(index + 1 < m_items.size() ? index + 1 : index - 1, false);
     else if (enabled && m_selectedIndex < 0 && m_items.at(index).visible)
-        m_selectedIndex = index;
+        setSelectedIndexInternal(index, false);
 
     if (!isSelectableIndex(m_focusedIndex))
         m_focusedIndex = m_selectedIndex >= 0 ? m_selectedIndex : firstSelectableIndex();
@@ -230,6 +244,8 @@ bool SelectorBar::setItemEnabled(int index, bool enabled)
 
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
+        this, index);
     if (m_selectedIndex != previousIndex) {
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
@@ -249,7 +265,7 @@ bool SelectorBar::setItemVisible(int index, bool visible)
     if (!visible && m_selectedIndex == index)
         clampSelectionAfterMutation(index + 1 < m_items.size() ? index + 1 : index - 1, false);
     else if (visible && m_selectedIndex < 0 && m_items.at(index).enabled)
-        m_selectedIndex = index;
+        setSelectedIndexInternal(index, false);
 
     if (!isSelectableIndex(m_focusedIndex))
         m_focusedIndex = m_selectedIndex >= 0 ? m_selectedIndex : firstSelectableIndex();
@@ -257,6 +273,8 @@ bool SelectorBar::setItemVisible(int index, bool visible)
 
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
+        this, index);
     if (m_selectedIndex != previousIndex) {
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
@@ -281,6 +299,8 @@ bool SelectorBar::setItemAccessibleName(int index, const QString& accessibleName
         return false;
     m_items[index].accessibleName = accessibleName;
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
+        this, index);
     emit itemsChanged();
     return true;
 }
@@ -557,8 +577,12 @@ void SelectorBar::keyPressEvent(QKeyEvent* event)
 void SelectorBar::focusInEvent(QFocusEvent* event)
 {
     QWidget::focusInEvent(event);
-    if (!isSelectableIndex(m_focusedIndex))
+    if (!isSelectableIndex(m_focusedIndex)) {
         focusItem(m_selectedIndex >= 0 ? m_selectedIndex : firstSelectableIndex());
+    } else {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, m_focusedIndex);
+    }
     update();
 }
 
@@ -878,6 +902,7 @@ void SelectorBar::setSelectedIndexInternal(int index, bool emitSignals)
     if (m_selectedIndex == index)
         return;
 
+    const int previousIndex = m_selectedIndex;
     ensureLayout();
     const QRect oldIndicator = indicatorRectForItem(m_selectedIndex);
     m_selectedIndex = index;
@@ -889,6 +914,12 @@ void SelectorBar::setSelectedIndexInternal(int index, bool emitSignals)
     ensureLayout();
     animateIndicator(oldIndicator, indicatorRectForItem(m_selectedIndex));
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+        this, m_selectedIndex);
+    if (hasFocus() && m_focusedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, m_focusedIndex);
+    }
     if (emitSignals) {
         emit selectedIndexChanged(m_selectedIndex);
         emit currentChanged(m_selectedIndex);
@@ -1025,6 +1056,10 @@ void SelectorBar::focusItem(int index)
         return;
     m_focusedIndex = index;
     ensureIndexVisible(index);
+    if (hasFocus()) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, m_focusedIndex);
+    }
     update();
 }
 

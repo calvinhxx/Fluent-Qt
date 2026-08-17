@@ -14,6 +14,8 @@
 #include <QStyle>
 
 #include "compatibility/QtCompat.h"
+#include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/navigation/private/NavigationSelectionAccessibility_p.h"
 #include "design/Typography.h"
 #include "design/CornerRadius.h"
 
@@ -44,6 +46,7 @@ PivotItem::PivotItem(const QString& itemHeader,
 Pivot::Pivot(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureNavigationSelectionAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -96,7 +99,10 @@ bool Pivot::insertItem(int index, const PivotItem& item)
 
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
         emit this->selectedIndexChanged(m_selectedIndex);
         emit this->currentChanged(m_selectedIndex);
     }
@@ -120,7 +126,10 @@ bool Pivot::removeItem(int index)
 
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
         emit this->selectedIndexChanged(m_selectedIndex);
         emit this->currentChanged(m_selectedIndex);
     }
@@ -143,7 +152,10 @@ void Pivot::clearItems()
     m_pressedHit = HitRecord();
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (selectionChanged) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, -1);
         emit this->selectedIndexChanged(-1);
         emit this->currentChanged(-1);
     }
@@ -158,6 +170,8 @@ bool Pivot::setItemHeader(int index, const QString& header)
     m_items[index].header = header;
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
+        this, index);
     emit this->itemsChanged();
     return true;
 }
@@ -188,7 +202,11 @@ bool Pivot::setItemEnabled(int index, bool enabled)
 
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
+        this, index);
     if (m_selectedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
         emit this->selectedIndexChanged(m_selectedIndex);
         emit this->currentChanged(m_selectedIndex);
     }
@@ -211,6 +229,8 @@ bool Pivot::setItemAccessibleName(int index, const QString& accessibleName)
         return false;
     m_items[index].accessibleName = accessibleName;
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
+        this, index);
     emit this->itemsChanged();
     return true;
 }
@@ -477,8 +497,12 @@ void Pivot::keyPressEvent(QKeyEvent* event)
 void Pivot::focusInEvent(QFocusEvent* event)
 {
     QWidget::focusInEvent(event);
-    if (!isSelectableIndex(m_focusedIndex))
+    if (!isSelectableIndex(m_focusedIndex)) {
         focusItem(m_selectedIndex >= 0 ? m_selectedIndex : firstEnabledIndex());
+    } else {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, m_focusedIndex);
+    }
     update();
 }
 
@@ -752,9 +776,14 @@ void Pivot::setSelectedIndexInternal(int index, bool emitSignals, bool animated)
         m_focusedIndex = index;
     ensureSelectedHeaderVisible();
     invalidateLayout(false);
-    Q_UNUSED(previousIndex)
     Q_UNUSED(animated)
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+        this, m_selectedIndex);
+    if (hasFocus() && m_focusedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, m_focusedIndex);
+    }
     if (emitSignals) {
         emit this->selectedIndexChanged(m_selectedIndex);
         emit this->currentChanged(m_selectedIndex);
@@ -850,6 +879,10 @@ void Pivot::focusItem(int index)
     if (index < m_firstVisibleIndex || !m_visibleIndexes.contains(index)) {
         m_firstVisibleIndex = index;
         invalidateLayout(false);
+    }
+    if (hasFocus()) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, m_focusedIndex);
     }
     update();
 }

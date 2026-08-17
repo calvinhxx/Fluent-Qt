@@ -15,6 +15,8 @@
 #include "design/CornerRadius.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/navigation/private/NavigationSelectionAccessibility_p.h"
 
 namespace fluent::navigation {
 
@@ -41,6 +43,7 @@ BreadcrumbItem::BreadcrumbItem(const QString& itemText, const QVariant& itemData
 Breadcrumb::Breadcrumb(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureNavigationSelectionAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -70,6 +73,7 @@ void Breadcrumb::setItems(const QVector<BreadcrumbItem>& items)
     m_focusedRecord = -1;
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit itemsChanged();
 }
 
@@ -78,6 +82,7 @@ void Breadcrumb::appendItem(const BreadcrumbItem& item)
     m_items.append(item);
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit itemsChanged();
 }
 
@@ -93,6 +98,7 @@ void Breadcrumb::insertItem(int index, const BreadcrumbItem& item)
     m_items.insert(index, item);
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit itemsChanged();
 }
 
@@ -103,6 +109,7 @@ bool Breadcrumb::removeItemAt(int index)
     m_items.removeAt(index);
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit itemsChanged();
     return true;
 }
@@ -117,6 +124,7 @@ void Breadcrumb::clearItems()
     m_focusedRecord = -1;
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit itemsChanged();
 }
 
@@ -301,7 +309,13 @@ void Breadcrumb::mousePressEvent(QMouseEvent* event)
     const int hit = recordAt(event->pos());
     if (isRecordInteractive(hit)) {
         m_pressedRecord = hit;
+        const int previousFocusedItem = focusedItemIndex();
         m_focusedRecord = hit;
+        const int focusedItem = focusedItemIndex();
+        if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+                this, focusedItem);
+        }
         update();
         event->accept();
         return;
@@ -347,34 +361,68 @@ void Breadcrumb::keyPressEvent(QKeyEvent* event)
     }
 
     ensureLayout();
-    if (m_focusedRecord < 0)
+    if (m_focusedRecord < 0) {
         m_focusedRecord = firstInteractiveRecord();
+        const int focusedItem = focusedItemIndex();
+        if (focusedItem >= 0) {
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+                this, focusedItem);
+        }
+    }
 
     switch (event->key()) {
-    case Qt::Key_Left:
+    case Qt::Key_Left: {
+        const int previousFocusedItem = focusedItemIndex();
         m_focusedRecord = nextInteractiveRecord(
             m_focusedRecord,
             layoutDirection() == Qt::RightToLeft ? 1 : -1);
+        const int focusedItem = focusedItemIndex();
+        if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+                this, focusedItem);
+        }
         update();
         event->accept();
         return;
-    case Qt::Key_Right:
+    }
+    case Qt::Key_Right: {
+        const int previousFocusedItem = focusedItemIndex();
         m_focusedRecord = nextInteractiveRecord(
             m_focusedRecord,
             layoutDirection() == Qt::RightToLeft ? -1 : 1);
+        const int focusedItem = focusedItemIndex();
+        if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+                this, focusedItem);
+        }
         update();
         event->accept();
         return;
-    case Qt::Key_Home:
+    }
+    case Qt::Key_Home: {
+        const int previousFocusedItem = focusedItemIndex();
         m_focusedRecord = firstInteractiveRecord();
+        const int focusedItem = focusedItemIndex();
+        if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+                this, focusedItem);
+        }
         update();
         event->accept();
         return;
-    case Qt::Key_End:
+    }
+    case Qt::Key_End: {
+        const int previousFocusedItem = focusedItemIndex();
         m_focusedRecord = lastInteractiveRecord();
+        const int focusedItem = focusedItemIndex();
+        if (focusedItem >= 0 && focusedItem != previousFocusedItem) {
+            fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+                this, focusedItem);
+        }
         update();
         event->accept();
         return;
+    }
     case Qt::Key_Return:
     case Qt::Key_Enter:
     case Qt::Key_Space:
@@ -397,6 +445,11 @@ void Breadcrumb::focusInEvent(QFocusEvent* event)
     ensureLayout();
     if (m_focusedRecord < 0)
         m_focusedRecord = firstInteractiveRecord();
+    const int focusedItem = focusedItemIndex();
+    if (focusedItem >= 0) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, focusedItem);
+    }
     update();
 }
 
@@ -687,6 +740,15 @@ void Breadcrumb::clampFocusedRecord()
     m_focusedRecord = firstInteractiveRecord();
 }
 
+int Breadcrumb::focusedItemIndex() const
+{
+    ensureLayout();
+    if (m_focusedRecord < 0 || m_focusedRecord >= m_records.size())
+        return -1;
+    const DisplayRecord& record = m_records.at(m_focusedRecord);
+    return record.type == RecordType::Item ? record.itemIndex : -1;
+}
+
 int Breadcrumb::recordAt(const QPoint& position) const
 {
     ensureLayout();
@@ -809,6 +871,7 @@ void Breadcrumb::truncateAfter(int itemIndex)
     m_focusedRecord = -1;
     invalidateLayout();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit itemsChanged();
 }
 

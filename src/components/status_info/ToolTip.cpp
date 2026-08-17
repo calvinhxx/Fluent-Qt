@@ -2,6 +2,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/SurfacePainter_p.h"
+#include "components/status_info/private/ToolTipAccessibility_p.h"
 #include "components/textfields/Label.h"
 #include "design/Elevation.h"
 #include "design/Typography.h"
@@ -52,6 +53,7 @@ void setVisualOpacity(QWidget* widget, qreal opacity)
 }
 
 ToolTip::ToolTip(QWidget* parent) : QWidget(parent) {
+    detail::ensureToolTipAccessibilityFactory();
     setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
@@ -111,10 +113,13 @@ ToolTip* ToolTip::attach(QWidget* target, const QString& text, Placement placeme
 }
 
 void ToolTip::setText(const QString& text) {
+    const bool changed = m_textBlock->text() != text;
     m_textBlock->setText(text);
     if (m_target)
         m_target->setToolTip(text);
     adjustSize();
+    if (changed)
+        detail::notifyToolTipAccessibilityTextChanged(this);
 }
 
 QString ToolTip::text() const {
@@ -181,6 +186,10 @@ void ToolTip::setAnimationEnabled(bool enabled) {
 }
 
 void ToolTip::setVisible(bool visible) {
+    if (m_accessibilityVisible != visible) {
+        m_accessibilityVisible = visible;
+        detail::notifyToolTipAccessibilityVisibilityChanged(this);
+    }
     if (visible && syncThemeOverrideFromSource())
         onThemeUpdated();
 
@@ -272,6 +281,7 @@ void ToolTip::setTarget(QWidget* target, Placement placement)
 {
     if (m_target == target && m_placement == placement)
         return;
+    QWidget* previousTarget = m_target.data();
     if (m_target)
         m_target->removeEventFilter(this);
     m_target = target;
@@ -282,6 +292,8 @@ void ToolTip::setTarget(QWidget* target, Placement placement)
         m_target->setToolTip(text());
         m_target->installEventFilter(this);
     }
+    if (previousTarget != m_target.data())
+        detail::notifyToolTipAccessibilityTargetChanged(this);
 }
 
 bool ToolTip::syncThemeOverrideFromSource()

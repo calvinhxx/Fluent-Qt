@@ -1,0 +1,10 @@
+#ifndef FLUENTQT_COMPONENTS_BASICINPUT_PRIVATE_BASICVALUEACCESSIBILITY_P_H
+#define FLUENTQT_COMPONENTS_BASICINPUT_PRIVATE_BASICVALUEACCESSIBILITY_P_H
+
+namespace fluent::basicinput::detail {
+
+void ensureBasicValueAccessibilityFactory();
+
+} // namespace fluent::basicinput::detail
+
+#endif // FLUENTQT_COMPONENTS_BASICINPUT_PRIVATE_BASICVALUEACCESSIBILITY_P_H

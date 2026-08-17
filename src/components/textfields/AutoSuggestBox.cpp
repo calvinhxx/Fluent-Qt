@@ -27,6 +27,7 @@
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
+#include "components/textfields/private/AutoSuggestBoxAccessibility_p.h"
 #include "compatibility/TextPaintCompat.h"
 
 namespace fluent::textfields {
@@ -249,6 +250,7 @@ private:
 
 AutoSuggestBox::AutoSuggestBox(QWidget* parent)
     : LineEdit(parent) {
+    detail::ensureAutoSuggestBoxAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setClearButtonEnabled(false);
     setFrameVisible(false);
@@ -287,6 +289,7 @@ void AutoSuggestBox::setHeader(const QString& header) {
     updateGeometry();
     update();
     if (isSuggestionListOpen()) m_suggestionPopup->showForOwner();
+    detail::notifyAutoSuggestNameChanged(this);
     emit headerChanged();
 }
 
@@ -404,6 +407,7 @@ void AutoSuggestBox::setSuggestions(const QStringList& suggestions) {
     if (m_suggestions == suggestions) return;
     m_suggestions = suggestions;
     if (m_suggestionPopup) m_suggestionPopup->setSuggestions(m_suggestions);
+    detail::notifyAutoSuggestSuggestionsChanged(this);
     emit suggestionsChanged();
 
     if (m_suggestions.isEmpty()) {
@@ -435,6 +439,15 @@ void AutoSuggestBox::resizeEvent(QResizeEvent* event) {
 
 void AutoSuggestBox::keyPressEvent(QKeyEvent* event) {
     if (!event) return;
+
+    if (isEnabled() && !m_suggestions.isEmpty()
+        && (event->key() == Qt::Key_F4
+            || (event->key() == Qt::Key_Down
+                && event->modifiers().testFlag(Qt::AltModifier)))) {
+        openSuggestionList();
+        event->accept();
+        return;
+    }
 
     switch (event->key()) {
     case Qt::Key_Down:
@@ -555,6 +568,7 @@ void AutoSuggestBox::initializeButtons() {
     m_queryButton->setFluentLayout(::fluent::basicinput::Button::IconOnly);
     m_queryButton->setFluentSize(::fluent::basicinput::Button::Small);
     m_queryButton->setFocusPolicy(Qt::NoFocus);
+    m_queryButton->setAccessibleName(tr("Submit query"));
     m_queryButton->setFixedSize(m_queryButtonSize, m_queryButtonSize);
     m_queryButton->setIconGlyph(m_queryIconGlyph, Typography::IconSize::Standard,
                                 Typography::FontFamily::FluentIcons);
@@ -572,6 +586,7 @@ void AutoSuggestBox::initializeButtons() {
     m_clearButton->setFluentLayout(::fluent::basicinput::Button::IconOnly);
     m_clearButton->setFluentSize(::fluent::basicinput::Button::Small);
     m_clearButton->setFocusPolicy(Qt::NoFocus);
+    m_clearButton->setAccessibleName(tr("Clear text"));
     m_clearButton->setFixedSize(m_clearButtonSize, m_clearButtonSize);
     m_clearButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard,
                                 Typography::FontFamily::FluentIcons);
@@ -676,9 +691,11 @@ void AutoSuggestBox::ensureSuggestionPopup() {
         chooseSuggestion(row);
     });
     connect(popup, &fluent::dialogs_flyouts::Popup::opened, this, [this]() {
+        detail::notifyAutoSuggestPopupChanged(this);
         emit suggestionListOpenChanged(true);
     });
     connect(popup, &fluent::dialogs_flyouts::Popup::closed, this, [this]() {
+        detail::notifyAutoSuggestPopupChanged(this);
         emit suggestionListOpenChanged(false);
     });
 }
@@ -747,7 +764,12 @@ void AutoSuggestBox::chooseSuggestion(int row) {
 }
 
 void AutoSuggestBox::setPopupCurrentRow(int row) {
-    if (m_suggestionPopup) m_suggestionPopup->setCurrentRow(row);
+    if (!m_suggestionPopup)
+        return;
+    const int before = m_suggestionPopup->currentRow();
+    m_suggestionPopup->setCurrentRow(row);
+    if (before != m_suggestionPopup->currentRow())
+        detail::notifyAutoSuggestActiveDescendantChanged(this);
 }
 
 void AutoSuggestBox::setTextWithReason(const QString& value, TextChangeReason reason, bool emitWhenUnchanged) {

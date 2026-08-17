@@ -6,6 +6,8 @@
 
 namespace fluent::basicinput {
 
+namespace detail { class HyperlinkButtonAccessible; }
+
 /**
  * @brief Button-styled hyperlink entry with URL and underline control.
  * zh_CN: 具备 URL 和下划线控制的按钮式超链接入口。
@@ -48,8 +50,11 @@ protected:
     void paintEvent(QPaintEvent* event) override;
 
 private:
+    friend class detail::HyperlinkButtonAccessible;
+
     QUrl m_url;
     bool m_showUnderline = false; // 默认悬停不显示下划线
+    bool m_accessibilityVisited = false;
 };
 
 } // namespace fluent::basicinput

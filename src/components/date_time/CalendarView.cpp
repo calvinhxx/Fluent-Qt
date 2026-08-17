@@ -1,5 +1,7 @@
 #include "CalendarView.h"
 
+#include "private/CalendarViewAccessibility_p.h"
+
 #include <QDateTime>
 #include <QEvent>
 #include <QFocusEvent>
@@ -112,6 +114,7 @@ int contentLevelDepth(CalendarView::CalendarContentLevel level)
 CalendarView::CalendarView(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureCalendarViewAccessibilityFactory();
     m_observedLocale = QWidget::locale();
     m_firstDayOfWeek = m_observedLocale.firstDayOfWeek();
     setObjectName(QStringLiteral("CalendarView"));
@@ -311,6 +314,7 @@ void CalendarView::setSelectedDate(const QDate& date)
     refreshProperties();
     update();
     emit selectedDateChanged(m_selectedDate);
+    detail::notifyCalendarViewAccessibilitySelection(this);
 }
 
 void CalendarView::setVisibleMonth(const QDate& month)
@@ -330,6 +334,7 @@ void CalendarView::setVisibleMonth(const QDate& month)
     refreshProperties();
     update();
     emit visibleMonthChanged(m_visibleMonth);
+    detail::notifyCalendarViewAccessibilityReset(this);
 }
 
 void CalendarView::setMinDate(const QDate& date)
@@ -366,6 +371,7 @@ void CalendarView::setDateRange(const QDate& minDate, const QDate& maxDate)
         emit minDateChanged(m_minDate);
     if (maxChanged)
         emit maxDateChanged(m_maxDate);
+    detail::notifyCalendarViewAccessibilityReset(this);
 }
 
 void CalendarView::setLocale(const QLocale& locale)
@@ -389,6 +395,7 @@ void CalendarView::setFirstDayOfWeek(Qt::DayOfWeek day)
     refreshProperties();
     update();
     emit firstDayOfWeekChanged(m_firstDayOfWeek);
+    detail::notifyCalendarViewAccessibilityReset(this);
 }
 
 void CalendarView::resetFirstDayOfWeek()
@@ -403,6 +410,7 @@ void CalendarView::resetFirstDayOfWeek()
     refreshProperties();
     update();
     emit firstDayOfWeekChanged(m_firstDayOfWeek);
+    detail::notifyCalendarViewAccessibilityReset(this);
 }
 
 void CalendarView::setContentLevel(CalendarContentLevel level)
@@ -418,6 +426,7 @@ void CalendarView::setContentLevel(CalendarContentLevel level)
     refreshProperties();
     update();
     emit contentLevelChanged(m_contentLevel);
+    detail::notifyCalendarViewAccessibilityReset(this);
 }
 
 void CalendarView::setFrameVisible(bool visible)
@@ -504,12 +513,15 @@ void CalendarView::mousePressEvent(QMouseEvent* event)
         if (m_contentLevel == CalendarContentLevel::Day) {
             const QDate pressedDate = dateAt(pos);
             if (isDateSelectable(pressedDate)) {
+                const bool alreadyFocused = hasFocus();
                 m_pressedDate = pressedDate;
                 m_focusedDate = pressedDate;
                 m_focusIndicatorVisible = false;
                 refreshProperties();
                 setFocus(Qt::MouseFocusReason);
                 update();
+                if (alreadyFocused)
+                    detail::notifyCalendarViewAccessibilityFocus(this);
                 event->accept();
                 return;
             }
@@ -760,6 +772,7 @@ void CalendarView::focusInEvent(QFocusEvent* event)
         m_focusedDate = focusFallbackDate(false);
     refreshProperties();
     update();
+    detail::notifyCalendarViewAccessibilityFocus(this);
     QWidget::focusInEvent(event);
 }
 
@@ -792,6 +805,7 @@ void CalendarView::changeEvent(QEvent* event)
     updateGeometry();
     update();
     emit localeChanged(m_observedLocale);
+    detail::notifyCalendarViewAccessibilityReset(this);
 }
 
 void CalendarView::onThemeUpdated()
@@ -1390,6 +1404,7 @@ void CalendarView::enforceSelectedDateInRange()
         m_focusedDate = m_selectedDate;
     m_focusIndicatorVisible = false;
     emit selectedDateChanged(m_selectedDate);
+    detail::notifyCalendarViewAccessibilitySelection(this);
 }
 
 void CalendarView::moveMonth(int months, bool showFocusIndicator)
@@ -1404,6 +1419,8 @@ void CalendarView::moveMonth(int months, bool showFocusIndicator)
     m_focusIndicatorVisible = showFocusIndicator && m_focusedDate.isValid();
     refreshProperties();
     update();
+    if (m_focusIndicatorVisible)
+        detail::notifyCalendarViewAccessibilityFocus(this);
 }
 
 void CalendarView::moveYear(int years)
@@ -1625,6 +1642,7 @@ void CalendarView::moveFocusByDays(int days)
             m_focusIndicatorVisible = true;
             refreshProperties();
             update();
+            detail::notifyCalendarViewAccessibilityFocus(this);
             return;
         }
         candidate = candidate.addDays(direction);

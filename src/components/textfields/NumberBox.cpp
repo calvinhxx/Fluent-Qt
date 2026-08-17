@@ -13,6 +13,8 @@
 #include <cmath>
 #include <limits>
 
+#include "components/foundation/private/ValueAccessibility_p.h"
+#include "components/textfields/private/NumberBoxAccessibility_p.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/basicinput/RepeatButton.h"
@@ -179,6 +181,7 @@ NumberBox::NumberBox(QWidget* parent)
       m_value(std::numeric_limits<double>::quiet_NaN()),
       m_minimum(-std::numeric_limits<double>::infinity()),
       m_maximum(std::numeric_limits<double>::infinity()) {
+    detail::ensureNumberBoxAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setFrameVisible(false);
     setFixedHeight(totalPreferredHeight());
@@ -220,6 +223,10 @@ void NumberBox::setRange(double minimum, double maximum) {
 
     if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow) return;
     updateSpinnerState();
+    if (!valueChangedNow) {
+        accessibility::detail::notifyValueAccessibilityValue(
+            this, isNan(m_value) ? QVariant() : QVariant(m_value));
+    }
     if (minimumChangedNow) emit minimumChanged(m_minimum);
     if (maximumChangedNow) emit maximumChanged(m_maximum);
 }
@@ -227,6 +234,8 @@ void NumberBox::setRange(double minimum, double maximum) {
 void NumberBox::setSmallChange(double change) {
     if (!(change > 0.0) || !isFiniteNumber(change) || numbersEqual(m_smallChange, change)) return;
     m_smallChange = change;
+    accessibility::detail::notifyValueAccessibilityValue(
+        this, isNan(m_value) ? QVariant() : QVariant(m_value));
     emit smallChangeChanged(m_smallChange);
 }
 
@@ -244,6 +253,8 @@ void NumberBox::setHeader(const QString& header) {
     updateChildGeometry();
     updateGeometry();
     update();
+    accessibility::detail::notifyValueAccessibilityText(
+        this, QAccessible::NameChanged);
     emit headerChanged();
 }
 
@@ -460,6 +471,11 @@ void NumberBox::changeEvent(QEvent* event) {
         updateSpinnerState();
         updateTextMarginsForChrome();
         update();
+        QAccessible::State changed;
+        changed.disabled = true;
+        changed.readOnly = true;
+        changed.editable = true;
+        accessibility::detail::notifyValueAccessibilityState(this, changed);
     }
 }
 
@@ -630,6 +646,10 @@ void NumberBox::setInvalidValueFromText() {
     if (numbersEqual(m_value, nan)) return;
     m_value = nan;
     updateSpinnerState();
+    accessibility::detail::notifyValueAccessibilityValue(this, QVariant());
+    QAccessible::State changed;
+    changed.invalid = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
     emit valueChanged(m_value);
 }
 
@@ -681,12 +701,23 @@ bool NumberBox::parseInputText(const QString& input, double* result) const {
 
 bool NumberBox::setValueInternal(double value, bool updateText, bool keepUserTextWhenNaN) {
     const double normalized = normalizeValue(value);
+    const bool wasInvalid = isNan(m_value);
     const bool changed = !numbersEqual(m_value, normalized);
     m_value = normalized;
 
     if (updateText && !(keepUserTextWhenNaN && isNan(m_value))) setText(formatValue(m_value));
     if (changed) updateSpinnerState();
-    if (changed) emit valueChanged(m_value);
+    if (changed) {
+        accessibility::detail::notifyValueAccessibilityValue(
+            this, isNan(m_value) ? QVariant() : QVariant(m_value));
+        if (wasInvalid != isNan(m_value)) {
+            QAccessible::State changedState;
+            changedState.invalid = true;
+            accessibility::detail::notifyValueAccessibilityState(
+                this, changedState);
+        }
+        emit valueChanged(m_value);
+    }
     return changed;
 }
 

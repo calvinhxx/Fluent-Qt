@@ -13,6 +13,9 @@
 #include <cmath>
 #include <limits>
 
+#include "components/foundation/private/ValueAccessibility_p.h"
+#include "components/status_info/private/ProgressAccessibility_p.h"
+
 namespace fluent::status_info {
 
 namespace {
@@ -37,6 +40,7 @@ bool nearlyEqual(double left, double right)
 ProgressBar::ProgressBar(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureProgressAccessibilityFactory();
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     updateThemeColors();
@@ -54,6 +58,14 @@ void ProgressBar::setIsIndeterminate(bool indeterminate)
     m_isIndeterminate = indeterminate;
     updateAnimationState();
     update();
+    QAccessible::State changed;
+    changed.busy = true;
+    changed.animated = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
+    accessibility::detail::notifyValueAccessibilityValue(
+        this, m_isIndeterminate ? QVariant() : QVariant(m_value));
+    accessibility::detail::notifyValueAccessibilityText(
+        this, QAccessible::DescriptionChanged);
     emit isIndeterminateChanged(m_isIndeterminate);
 }
 
@@ -92,6 +104,7 @@ void ProgressBar::setRange(double minimum, double maximum)
     if (!minimumChangedNow && !maximumChangedNow && !valueChangedNow) return;
 
     update();
+    accessibility::detail::notifyValueAccessibilityValue(this, m_value);
     if (minimumChangedNow) emit minimumChanged(m_minimum);
     if (maximumChangedNow) emit maximumChanged(m_maximum);
     if (valueChangedNow) emit valueChanged(m_value);
@@ -103,6 +116,7 @@ void ProgressBar::setValue(double value)
     if (nearlyEqual(m_value, clampedValue)) return;
     m_value = clampedValue;
     update();
+    accessibility::detail::notifyValueAccessibilityValue(this, m_value);
     emit valueChanged(m_value);
 }
 
@@ -112,6 +126,12 @@ void ProgressBar::setShowPaused(bool paused)
     m_showPaused = paused;
     updateAnimationState();
     update();
+    QAccessible::State changed;
+    changed.busy = true;
+    changed.animated = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
+    accessibility::detail::notifyValueAccessibilityText(
+        this, QAccessible::DescriptionChanged);
     emit showPausedChanged(m_showPaused);
 }
 
@@ -121,6 +141,12 @@ void ProgressBar::setShowError(bool error)
     m_showError = error;
     updateAnimationState();
     update();
+    QAccessible::State changed;
+    changed.busy = true;
+    changed.animated = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
+    accessibility::detail::notifyValueAccessibilityText(
+        this, QAccessible::DescriptionChanged);
     emit showErrorChanged(m_showError);
 }
 
@@ -420,6 +446,11 @@ void ProgressBar::changeEvent(QEvent* event)
     if (event->type() == QEvent::EnabledChange) {
         updateAnimationState();
         update();
+        QAccessible::State changed;
+        changed.disabled = true;
+        changed.busy = true;
+        changed.animated = true;
+        accessibility::detail::notifyValueAccessibilityState(this, changed);
     }
 }
 

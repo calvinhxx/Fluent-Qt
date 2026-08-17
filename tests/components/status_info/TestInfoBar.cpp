@@ -103,7 +103,8 @@ TEST_F(InfoBarTest, DefaultPropertyValues) {
     auto* closeButton = bar.findChild<Button*>("InfoBarCloseButton");
     ASSERT_NE(closeButton, nullptr);
     EXPECT_FALSE(closeButton->isHidden());
-    EXPECT_TRUE(closeButton->accessibleName().isEmpty());
+    EXPECT_EQ(closeButton->accessibleName(),
+              QStringLiteral("Dismiss notification"));
 }
 
 TEST_F(InfoBarTest, PropertySignalsAndSameValueNoSignal) {

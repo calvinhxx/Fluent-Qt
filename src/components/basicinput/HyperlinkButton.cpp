@@ -1,4 +1,5 @@
 #include "HyperlinkButton.h"
+#include "components/basicinput/private/HyperlinkButtonAccessibility_p.h"
 #include <QDesktopServices>
 #include <QPainter>
 #include <QPainterPath>
@@ -8,6 +9,7 @@ namespace fluent::basicinput {
 
 HyperlinkButton::HyperlinkButton(const QString& text, QWidget* parent)
     : Button(text, parent) {
+    detail::ensureHyperlinkButtonAccessibilityFactory();
     setFluentStyle(Subtle);
     setCursor(Qt::PointingHandCursor);
     
@@ -15,7 +17,12 @@ HyperlinkButton::HyperlinkButton(const QString& text, QWidget* parent)
     // zh_CN: 连接点击信号，设置了 URL 则自动打开。
     connect(this, &QPushButton::clicked, this, [this]() {
         if (m_url.isValid()) {
-            QDesktopServices::openUrl(m_url);
+            if (QDesktopServices::openUrl(m_url)
+                && !m_accessibilityVisited) {
+                m_accessibilityVisited = true;
+                detail::notifyHyperlinkButtonAccessibilityVisited(
+                    this);
+            }
         }
     });
 
@@ -29,7 +36,11 @@ HyperlinkButton::HyperlinkButton(const QString& text, const QUrl& url, QWidget* 
 
 void HyperlinkButton::setUrl(const QUrl& url) {
     if (m_url != url) {
+        const bool visitedChanged = m_accessibilityVisited;
         m_url = url;
+        m_accessibilityVisited = false;
+        detail::notifyHyperlinkButtonAccessibilityUrlChanged(
+            this, visitedChanged);
         emit urlChanged();
     }
 }

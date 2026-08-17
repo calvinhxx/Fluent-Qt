@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QEvent>
 #include <QGraphicsOpacityEffect>
+#include <QKeyEvent>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
@@ -19,6 +20,7 @@
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/overlay/OverlayWindow.h"
+#include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 
 namespace fluent::dialogs_flyouts {
 
@@ -46,6 +48,7 @@ CoachMark::CoachMark(QWidget* owner, SurfaceMode /*surfaceMode*/)
     : QWidget(owner)
     , m_owner(owner)
 {
+    detail::ensureTransientSurfaceAccessibilityFactory();
     m_overlayCoordinator =
         new ::fluent::overlay::OverlayCoordinator(this, this);
     connect(m_overlayCoordinator,
@@ -70,8 +73,12 @@ CoachMark::CoachMark(QWidget* owner, SurfaceMode /*surfaceMode*/)
 
     m_fadeAnim = new QPropertyAnimation(this, "fadeOpacity", this);
     connect(m_fadeAnim, &QPropertyAnimation::finished, this, [this]() {
-        if (!m_open)
+        if (!m_open) {
             hide();
+            emit closed();
+        } else {
+            emit opened();
+        }
     });
     m_moveAnim = new QPropertyAnimation(this, "pos", this);
 
@@ -110,6 +117,7 @@ void CoachMark::setTarget(QWidget* target)
     if (m_target == target)
         return;
     m_target = target;
+    detail::notifyTransientSurfaceAccessibilityRelationChanged(this);
     if (syncThemeOverrideFromSource())
         onThemeUpdated();
     if (m_open) {
@@ -153,7 +161,7 @@ void CoachMark::open()
     emit openChanged(true);
     if (!guard || !m_open)
         return;
-    emit opened();
+    detail::notifyCoachMarkAccessibilityOpenChanged(this, true);
 }
 
 void CoachMark::close()
@@ -174,7 +182,7 @@ void CoachMark::close()
     emit openChanged(false);
     if (!guard || m_open)
         return;
-    emit closed();
+    detail::notifyCoachMarkAccessibilityOpenChanged(this, false);
 }
 
 void CoachMark::setOpen(bool open)
@@ -191,8 +199,35 @@ bool CoachMark::eventFilter(QObject* watched, QEvent* event)
         return QWidget::eventFilter(watched, event);
 
     if (event->type() == QEvent::Destroy && watched == m_target) {
+        m_target = nullptr;
+        detail::notifyTransientSurfaceAccessibilityRelationChanged(this);
         close();
         return false;
+    }
+
+    if (event->type() == QEvent::KeyPress
+        && static_cast<QKeyEvent*>(event)->key() == Qt::Key_Escape) {
+        QWidget* ownerTopLevel = m_overlayCoordinator
+            ? m_overlayCoordinator->topLevelWidget() : nullptr;
+        if (!ownerTopLevel)
+            ownerTopLevel = m_owner ? m_owner->window() : window();
+        if (!ownerTopLevel
+            || ::fluent::overlay::eventTopLevel(watched)
+                != ownerTopLevel) {
+            return QWidget::eventFilter(watched, event);
+        }
+
+        QWidget* eventWidget = qobject_cast<QWidget*>(watched);
+        if (!eventWidget)
+            eventWidget = QApplication::focusWidget();
+        QWidget* eventSurface =
+            ::fluent::overlay::enclosingOverlaySurface(eventWidget);
+        if (eventSurface && eventSurface != this)
+            return QWidget::eventFilter(watched, event);
+
+        close();
+        event->accept();
+        return true;
     }
 
     QWidget* trackingAnchor = m_target ? m_target.data()

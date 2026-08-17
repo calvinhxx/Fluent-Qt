@@ -23,6 +23,10 @@ class QResizeEvent;
 
 namespace fluent::navigation {
 
+namespace detail {
+class PivotAccessible;
+}
+
 struct PivotItem {
     QString header;
     QString iconGlyph;
@@ -153,6 +157,8 @@ protected:
     void focusOutEvent(QFocusEvent* event) override;
 
 private:
+    friend class detail::PivotAccessible;
+
     enum class HitKind {
         None,
         Header,

@@ -6,6 +6,8 @@
 #include <QMouseEvent>
 #include <QStyle>
 #include <QtMath>
+#include "components/basicinput/private/BasicValueAccessibility_p.h"
+#include "components/foundation/private/ValueAccessibility_p.h"
 #include "design/Typography.h"
 
 namespace fluent::basicinput {
@@ -56,6 +58,7 @@ void drawRatingStar(QPainter& painter, const QPainterPath& path,
 RatingControl::RatingControl(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureBasicValueAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
 #ifdef Q_OS_MAC
     setAttribute(Qt::WA_MacShowFocusRect, false);
@@ -83,6 +86,8 @@ void RatingControl::setValue(double value)
     if (qFuzzyCompare(m_value, value)) return;
     m_value = value;
     update();
+    accessibility::detail::notifyValueAccessibilityValue(
+        this, qMax(0.0, m_value));
     emit valueChanged(m_value);
 }
 
@@ -101,6 +106,8 @@ void RatingControl::setCaption(const QString& caption)
     m_caption = caption;
     updateGeometry();
     update();
+    accessibility::detail::notifyValueAccessibilityText(
+        this, QAccessible::DescriptionChanged);
     emit captionChanged(m_caption);
 }
 
@@ -108,6 +115,8 @@ void RatingControl::setIsClearEnabled(bool enabled)
 {
     if (m_isClearEnabled == enabled) return;
     m_isClearEnabled = enabled;
+    accessibility::detail::notifyValueAccessibilityValue(
+        this, qMax(0.0, m_value));
     emit isClearEnabledChanged(m_isClearEnabled);
 }
 
@@ -117,6 +126,10 @@ void RatingControl::setIsReadOnly(bool readOnly)
     m_isReadOnly = readOnly;
     setCursor(readOnly ? Qt::ArrowCursor : Qt::PointingHandCursor);
     update();
+    QAccessible::State changed;
+    changed.readOnly = true;
+    changed.editable = true;
+    accessibility::detail::notifyValueAccessibilityState(this, changed);
     emit isReadOnlyChanged(m_isReadOnly);
 }
 
@@ -129,6 +142,8 @@ void RatingControl::setMaxRating(int rating)
     if (m_placeholderValue > m_maxRating) m_placeholderValue = m_maxRating;
     updateGeometry();
     update();
+    accessibility::detail::notifyValueAccessibilityValue(
+        this, qMax(0.0, m_value));
     emit maxRatingChanged(m_maxRating);
 }
 

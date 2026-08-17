@@ -24,6 +24,8 @@
 #include "design/CornerRadius.h"
 #include "design/Typography.h"
 #include "components/basicinput/Button.h"
+#include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/navigation/private/NavigationSelectionAccessibility_p.h"
 #include "components/textfields/Label.h"
 
 namespace fluent::navigation {
@@ -1943,6 +1945,7 @@ TabView::TabView(QWidget* parent)
     : QWidget(parent)
     , m_tabStrip(new TabStrip(this))
 {
+    detail::ensureNavigationSelectionAccessibilityFactory();
     setFocusPolicy(Qt::StrongFocus);
     if (qApp)
         qApp->installEventFilter(this);
@@ -2007,7 +2010,10 @@ bool TabView::insertTab(int index, const TabViewItem& item)
     syncTabStrip();
     m_tabStrip->revealTab(index);
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (m_selectedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
         QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
         if (!guard)
@@ -2041,7 +2047,10 @@ bool TabView::removeTab(int index)
 
     syncTabStrip();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (selectionChanged) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
         QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
         if (!guard)
@@ -2072,7 +2081,10 @@ void TabView::clearTabs()
 
     syncTabStrip();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     if (selectionChanged) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, -1);
         QPointer<TabView> guard(this);
         emit selectedIndexChanged(-1);
         if (!guard)
@@ -2103,6 +2115,11 @@ bool TabView::moveTab(int from, int to)
 
     syncTabStrip();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
+    if (m_selectedIndex != oldSelected) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
+    }
     QPointer<TabView> guard(this);
     emit tabMoved(from, to);
     if (!guard)
@@ -2126,6 +2143,8 @@ bool TabView::setTabText(int index, const QString& text)
     m_items[index].text = text;
     syncTabStrip();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
+        this, index);
     emit tabsChanged();
     return true;
 }
@@ -2147,6 +2166,8 @@ bool TabView::setTabClosable(int index, bool closable)
     m_items[index].closable = closable;
     syncTabStrip();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
+        this, index);
     emit tabsChanged();
     return true;
 }
@@ -2168,7 +2189,11 @@ bool TabView::setTabEnabled(int index, bool enabled)
 
     syncTabStrip();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
+        this, index);
     if (m_selectedIndex != previousIndex) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedIndex);
         QPointer<TabView> guard(this);
         emit selectedIndexChanged(m_selectedIndex);
         if (!guard)
@@ -2197,6 +2222,8 @@ bool TabView::setTabAccessibleName(int index, const QString& accessibleName)
     m_items[index].accessibleName = accessibleName;
     syncTabStrip();
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityName(
+        this, index);
     emit tabsChanged();
     return true;
 }
@@ -2212,6 +2239,8 @@ void TabView::setSelectedIndex(int index)
     syncTabStrip();
     Q_UNUSED(previousIndex)
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+        this, m_selectedIndex);
     QPointer<TabView> guard(this);
     emit selectedIndexChanged(m_selectedIndex);
     if (guard)
@@ -2243,6 +2272,7 @@ void TabView::setTabsClosable(bool closable)
     m_tabsClosable = closable;
     m_tabStrip->setTabsClosable(m_tabsClosable);
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit tabsClosableChanged(m_tabsClosable);
 }
 
@@ -2253,6 +2283,8 @@ void TabView::setAddTabButtonVisible(bool visible)
     m_addTabButtonVisible = visible;
     m_tabStrip->setAddButtonVisible(m_addTabButtonVisible);
     updateAccessibleText();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
+        this, tabCount());
     emit addTabButtonVisibleChanged(m_addTabButtonVisible);
 }
 
@@ -2262,6 +2294,7 @@ void TabView::setTabReorderEnabled(bool enabled)
         return;
     m_tabReorderEnabled = enabled;
     m_tabStrip->setTabReorderEnabled(m_tabReorderEnabled);
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit tabReorderEnabledChanged(m_tabReorderEnabled);
 }
 
@@ -2398,6 +2431,10 @@ void TabView::focusInEvent(QFocusEvent* event)
     setActiveShortcutOwner();
     if (m_tabStrip)
         m_tabStrip->setFocus(event->reason());
+    if (m_selectedIndex >= 0) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, m_selectedIndex);
+    }
 }
 
 bool TabView::eventFilter(QObject* watched, QEvent* event)

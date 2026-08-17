@@ -3,9 +3,29 @@
 
 #include <QApplication>
 #include <QPointer>
+#include <QVariant>
 #include <QWidget>
 
 namespace fluent::overlay {
+
+inline constexpr char kOverlaySurfaceProperty[] =
+    "_fluent_qt_overlay_surface";
+
+inline void markOverlaySurface(QWidget* overlay)
+{
+    if (overlay)
+        overlay->setProperty(kOverlaySurfaceProperty, true);
+}
+
+inline QWidget* enclosingOverlaySurface(QWidget* widget)
+{
+    for (QWidget* current = widget; current;
+         current = current->parentWidget()) {
+        if (current->property(kOverlaySurfaceProperty).toBool())
+            return current;
+    }
+    return nullptr;
+}
 
 inline QWidget* resolveOwningTopLevel(const QPointer<QWidget>& originalParent, QWidget* currentParent)
 {

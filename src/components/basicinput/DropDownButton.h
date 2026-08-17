@@ -8,6 +8,7 @@
 #include "design/Spacing.h"
 
 class QPropertyAnimation;
+class QKeyEvent;
 
 namespace fluent::basicinput {
 
@@ -95,6 +96,7 @@ signals:
 protected:
     void paintEvent(QPaintEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     QRectF contentPaintRect(const QRectF& surfaceRect) const override;
 
 private:

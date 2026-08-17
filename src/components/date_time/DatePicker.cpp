@@ -19,6 +19,7 @@
 #include "design/Spacing.h"
 #include "design/Typography.h"
 #include "components/basicinput/Button.h"
+#include "components/date_time/private/PickerAccessibility_p.h"
 #include "components/dialogs_flyouts/Flyout.h"
 
 namespace fluent::date_time {
@@ -118,13 +119,26 @@ QDate dateWithClampedDay(int year, int month, int day)
 class DatePickerFlyout;
 class DatePickerFlyoutPanel;
 
-class PickerColumn : public QWidget, public FluentElement {
+class PickerColumn : public QWidget,
+                     public FluentElement,
+                     public detail::PickerColumnAccessibilityHost {
 public:
     PickerColumn(DatePickerFlyout* flyout, DatePicker::DateField field, QWidget* parent = nullptr);
 
     DatePicker::DateField field() const { return m_field; }
     QSize sizeHint() const override { return QSize(m_widthHint, kColumnHeight); }
     void setWidthHint(int width);
+
+    QWidget* pickerColumnWidget() override { return this; }
+    QString pickerColumnName() const override;
+    QString pickerColumnValueText() const override;
+    QVariant pickerColumnCurrentValue() const override;
+    QVariant pickerColumnMinimumValue() const override;
+    QVariant pickerColumnMaximumValue() const override;
+    QVariant pickerColumnStepSize() const override { return 1; }
+    bool pickerColumnCanShift(int direction) const override;
+    void pickerColumnShift(int direction) override;
+    void pickerColumnSetValue(const QVariant& value) override;
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -202,6 +216,7 @@ private:
 
     QVector<DatePicker::DateField> visibleFields() const;
     int preferredColumnWidth(DatePicker::DateField field) const;
+    void notifyColumnValueChanges(const QDate& before, const QDate& after);
     void updateColumns();
 
     DatePicker* m_owner = nullptr;
@@ -257,6 +272,106 @@ PickerColumn::PickerColumn(DatePickerFlyout* flyout, DatePicker::DateField field
         update();
     });
     refreshProperties();
+}
+
+QString PickerColumn::pickerColumnName() const
+{
+    switch (m_field) {
+    case DatePicker::DateField::Month:
+        return QCoreApplication::translate("PickerAccessibility", "Month");
+    case DatePicker::DateField::Day:
+        return QCoreApplication::translate("PickerAccessibility", "Day");
+    case DatePicker::DateField::Year:
+        return QCoreApplication::translate("PickerAccessibility", "Year");
+    }
+    return {};
+}
+
+QString PickerColumn::pickerColumnValueText() const
+{
+    return m_flyout
+        ? m_flyout->displayText(m_field, m_flyout->pendingDate())
+        : QString();
+}
+
+QVariant PickerColumn::pickerColumnCurrentValue() const
+{
+    const QDate value = m_flyout ? m_flyout->pendingDate() : QDate();
+    if (!value.isValid())
+        return {};
+    switch (m_field) {
+    case DatePicker::DateField::Month:
+        return value.month();
+    case DatePicker::DateField::Day:
+        return value.day();
+    case DatePicker::DateField::Year:
+        return value.year();
+    }
+    return {};
+}
+
+QVariant PickerColumn::pickerColumnMinimumValue() const
+{
+    if (!m_flyout || !m_flyout->owner())
+        return {};
+    const QDate pending = m_flyout->pendingDate();
+    const QDate minimum = m_flyout->owner()->minimumDate();
+    if (m_field == DatePicker::DateField::Year)
+        return minimum.year();
+    if (m_field == DatePicker::DateField::Month
+        && pending.year() == minimum.year()) {
+        return minimum.month();
+    }
+    if (m_field == DatePicker::DateField::Day
+        && pending.year() == minimum.year()
+        && pending.month() == minimum.month()) {
+        return minimum.day();
+    }
+    return 1;
+}
+
+QVariant PickerColumn::pickerColumnMaximumValue() const
+{
+    if (!m_flyout || !m_flyout->owner())
+        return {};
+    const QDate pending = m_flyout->pendingDate();
+    const QDate maximum = m_flyout->owner()->maximumDate();
+    if (m_field == DatePicker::DateField::Year)
+        return maximum.year();
+    if (m_field == DatePicker::DateField::Month)
+        return pending.year() == maximum.year() ? maximum.month() : 12;
+    if (pending.year() == maximum.year()
+        && pending.month() == maximum.month()) {
+        return maximum.day();
+    }
+    return pending.isValid()
+        ? QVariant(pending.daysInMonth()) : QVariant();
+}
+
+bool PickerColumn::pickerColumnCanShift(int direction) const
+{
+    return m_flyout && m_flyout->canShift(m_field, direction);
+}
+
+void PickerColumn::pickerColumnShift(int direction)
+{
+    if (m_flyout)
+        m_flyout->shiftField(m_field, direction);
+}
+
+void PickerColumn::pickerColumnSetValue(const QVariant& value)
+{
+    if (!m_flyout)
+        return;
+    bool ok = false;
+    int requested = value.toInt(&ok);
+    const int current = pickerColumnCurrentValue().toInt();
+    if (ok) {
+        requested = qBound(pickerColumnMinimumValue().toInt(), requested,
+                           pickerColumnMaximumValue().toInt());
+    }
+    if (ok && requested != current)
+        m_flyout->shiftField(m_field, requested - current);
 }
 
 void PickerColumn::setWidthHint(int width)
@@ -687,12 +802,20 @@ void DatePickerFlyoutPanel::updateColumns()
 void DatePickerFlyoutPanel::refreshActionAccessibility()
 {
     DatePicker* owner = m_flyout ? m_flyout->owner() : nullptr;
-    if (m_confirmButton)
-        m_confirmButton->setAccessibleName(
-            owner ? owner->confirmButtonAccessibleName() : QString());
-    if (m_cancelButton)
-        m_cancelButton->setAccessibleName(
-            owner ? owner->cancelButtonAccessibleName() : QString());
+    if (m_confirmButton) {
+        const QString overrideName = owner
+            ? owner->confirmButtonAccessibleName() : QString();
+        m_confirmButton->setAccessibleName(overrideName.isEmpty()
+            ? QCoreApplication::translate("PickerAccessibility", "Confirm date")
+            : overrideName);
+    }
+    if (m_cancelButton) {
+        const QString overrideName = owner
+            ? owner->cancelButtonAccessibleName() : QString();
+        m_cancelButton->setAccessibleName(overrideName.isEmpty()
+            ? QCoreApplication::translate("PickerAccessibility", "Cancel")
+            : overrideName);
+    }
 }
 
 void DatePickerFlyoutPanel::refreshTheme()
@@ -848,8 +971,10 @@ void DatePickerFlyout::setPendingDate(const QDate& date)
     const QDate normalized = m_owner->clampDate(date.isValid() ? date : m_owner->date());
     if (m_pendingDate == normalized)
         return;
+    const QDate before = m_pendingDate;
     m_pendingDate = normalized;
     updateColumns();
+    notifyColumnValueChanges(before, m_pendingDate);
 }
 
 QDate DatePickerFlyout::shifted(DatePicker::DateField field, int offset) const
@@ -889,8 +1014,10 @@ void DatePickerFlyout::shiftField(DatePicker::DateField field, int offset)
     const QDate next = shifted(field, offset);
     if (!isDateSelectable(next) || next == m_pendingDate)
         return;
+    const QDate before = m_pendingDate;
     m_pendingDate = next;
     updateColumns();
+    notifyColumnValueChanges(before, m_pendingDate);
 }
 
 void DatePickerFlyout::commit()
@@ -940,9 +1067,29 @@ void DatePickerFlyout::updateColumns()
     update();
 }
 
+void DatePickerFlyout::notifyColumnValueChanges(
+    const QDate& before, const QDate& after)
+{
+    if (!m_panel || before == after)
+        return;
+    auto notify = [this](const char* objectName) {
+        if (QWidget* column = m_panel->findChild<QWidget*>(
+                QString::fromLatin1(objectName))) {
+            detail::notifyPickerColumnValueChanged(column);
+        }
+    };
+    if (before.month() != after.month())
+        notify("DatePickerMonthColumn");
+    if (before.day() != after.day())
+        notify("DatePickerDayColumn");
+    if (before.year() != after.year())
+        notify("DatePickerYearColumn");
+}
+
 DatePicker::DatePicker(QWidget* parent)
     : fluent::basicinput::Button(parent)
 {
+    detail::ensurePickerAccessibilityFactory();
     m_observedLocale = QWidget::locale();
     const QDate today = QDate::currentDate();
     m_minimumDate = today.addYears(-100);
@@ -992,6 +1139,9 @@ void DatePicker::setSelectedDate(const QDate& date)
     m_selectedDate = normalized;
 
     if (oldSelected != m_selectedDate)
+        detail::notifyPickerRootValueChanged(this);
+
+    if (oldSelected != m_selectedDate)
         emit selectedDateChanged(m_selectedDate);
     if (oldDate != this->date())
         emit dateChanged(this->date());
@@ -1003,6 +1153,7 @@ void DatePicker::clearSelectedDate()
     if (!m_selectedDate.isValid())
         return;
     m_selectedDate = QDate();
+    detail::notifyPickerRootValueChanged(this);
     emit selectedDateChanged(m_selectedDate);
     update();
 }
@@ -1043,6 +1194,7 @@ void DatePicker::setDateRange(const QDate& minimumDate, const QDate& maximumDate
         if (clamped != m_selectedDate) {
             m_selectedDate = clamped;
             m_date = clamped;
+            detail::notifyPickerRootValueChanged(this);
             emit selectedDateChanged(m_selectedDate);
         }
     } else {
@@ -1058,20 +1210,29 @@ void DatePicker::setDateRange(const QDate& minimumDate, const QDate& maximumDate
 
 void DatePicker::setMonthVisible(bool visible)
 {
-    if (setFieldVisible(DateField::Month, visible))
+    if (setFieldVisible(DateField::Month, visible)) {
+        if (m_selectedDate.isValid())
+            detail::notifyPickerRootValueChanged(this);
         emit monthVisibleChanged(m_monthVisible);
+    }
 }
 
 void DatePicker::setDayVisible(bool visible)
 {
-    if (setFieldVisible(DateField::Day, visible))
+    if (setFieldVisible(DateField::Day, visible)) {
+        if (m_selectedDate.isValid())
+            detail::notifyPickerRootValueChanged(this);
         emit dayVisibleChanged(m_dayVisible);
+    }
 }
 
 void DatePicker::setYearVisible(bool visible)
 {
-    if (setFieldVisible(DateField::Year, visible))
+    if (setFieldVisible(DateField::Year, visible)) {
+        if (m_selectedDate.isValid())
+            detail::notifyPickerRootValueChanged(this);
         emit yearVisibleChanged(m_yearVisible);
+    }
 }
 
 void DatePicker::setMonthFormat(MonthFormat format)
@@ -1082,6 +1243,8 @@ void DatePicker::setMonthFormat(MonthFormat format)
     if (m_flyout && m_flyout->isOpen())
         m_flyout->showForPicker();
     update();
+    if (m_selectedDate.isValid())
+        detail::notifyPickerRootValueChanged(this);
     emit monthFormatChanged(m_monthFormat);
 }
 
@@ -1093,6 +1256,8 @@ void DatePicker::setDayFormat(DayFormat format)
     if (m_flyout && m_flyout->isOpen())
         m_flyout->showForPicker();
     update();
+    if (m_selectedDate.isValid())
+        detail::notifyPickerRootValueChanged(this);
     emit dayFormatChanged(m_dayFormat);
 }
 
@@ -1104,6 +1269,8 @@ void DatePicker::setYearFormat(YearFormat format)
     if (m_flyout && m_flyout->isOpen())
         m_flyout->showForPicker();
     update();
+    if (m_selectedDate.isValid())
+        detail::notifyPickerRootValueChanged(this);
     emit yearFormatChanged(m_yearFormat);
 }
 
@@ -1418,7 +1585,10 @@ void DatePicker::paintEvent(QPaintEvent*)
 void DatePicker::keyPressEvent(QKeyEvent* event)
 {
     if (!m_dropDownOpen && isEnabled() &&
-        (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)) {
+        (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return
+         || event->key() == Qt::Key_Enter || event->key() == Qt::Key_F4
+         || (event->key() == Qt::Key_Down
+             && event->modifiers().testFlag(Qt::AltModifier)))) {
         openPicker();
         event->accept();
         return;
@@ -1435,6 +1605,8 @@ void DatePicker::changeEvent(QEvent* event)
         if (m_flyout && m_flyout->isOpen())
             m_flyout->showForPicker();
         updateGeometry();
+        if (m_selectedDate.isValid())
+            detail::notifyPickerRootValueChanged(this);
         update();
         emit localeChanged(m_observedLocale);
     }
@@ -1636,6 +1808,7 @@ void DatePicker::setDropDownOpen(bool open)
     if (m_dropDownOpen == open)
         return;
     m_dropDownOpen = open;
+    detail::notifyPickerRootPopupChanged(this);
     QPointer<DatePicker> guard(this);
     emit dropDownOpenChanged(m_dropDownOpen);
     if (guard)

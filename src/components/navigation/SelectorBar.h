@@ -23,6 +23,10 @@ class QVariantAnimation;
 
 namespace fluent::navigation {
 
+namespace detail {
+class SelectorBarAccessible;
+}
+
 struct SelectorBarItem {
     QString text;
     QString iconGlyph;
@@ -160,6 +164,8 @@ protected:
     void focusOutEvent(QFocusEvent* event) override;
 
 private:
+    friend class detail::SelectorBarAccessible;
+
     enum class HitKind {
         None,
         Item,

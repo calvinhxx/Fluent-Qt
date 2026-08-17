@@ -1,4 +1,5 @@
 #include "SplitView.h"
+#include "private/SplitViewAccessibility_p.h"
 
 #include <algorithm>
 #include <limits>
@@ -22,9 +23,10 @@ constexpr quint16 kStateVersion = 1;
 SplitView::SplitView(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureSplitViewAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setMouseTracking(true);
-    setFocusPolicy(Qt::StrongFocus);
+    setFocusPolicy(Qt::NoFocus);
 }
 
 SplitView::~SplitView()
@@ -102,6 +104,7 @@ int SplitView::insertPane(int index,
     if (oldCount != m_panes.size())
         emit paneCountChanged(m_panes.size());
     emit fillPaneIndexChanged(fillPaneIndex());
+    detail::notifySplitViewAccessibilityStructureChanged(this);
     return index;
 }
 
@@ -191,6 +194,8 @@ void SplitView::setOrientation(Qt::Orientation orientation)
     clearDragState();
     updateLayout();
     emit orientationChanged(m_orientation);
+    detail::notifySplitViewAccessibilityOrientationChanged(this);
+    detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
 }
 
 void SplitView::setHandleWidth(int width)
@@ -204,6 +209,7 @@ void SplitView::setHandleWidth(int width)
         m_handleVisualThickness = m_handleWidth;
     updateLayout();
     emit handleWidthChanged(m_handleWidth);
+    detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
 }
 
 void SplitView::setHandleVisualThickness(int thickness)
@@ -237,6 +243,8 @@ void SplitView::setFillPaneIndex(int index)
         emit fillPaneIndexChanged(newFill);
     if (index >= 0)
         emit paneConfigurationChanged(index);
+    if (oldFill != newFill)
+        detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
 }
 
 void SplitView::setDefaultSizeHint(const QSize& size)
@@ -280,6 +288,7 @@ void SplitView::setPaneMinimumSize(int index, int size)
     normalizePane(pane);
     updateLayout();
     emit paneConfigurationChanged(index);
+    detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
 }
 
 int SplitView::paneMinimumSize(QWidget* pane) const
@@ -309,6 +318,8 @@ void SplitView::setPanePreferredSize(int index, int size)
     updateLayout();
     emitPaneSizeIfChanged(index, oldSize);
     emit paneConfigurationChanged(index);
+    if (oldSize != pane.preferredSize)
+        detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
 }
 
 int SplitView::panePreferredSize(QWidget* pane) const
@@ -340,6 +351,7 @@ void SplitView::setPaneMaximumSize(int index, int size)
     normalizePane(pane);
     updateLayout();
     emit paneConfigurationChanged(index);
+    detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
 }
 
 int SplitView::paneMaximumSize(QWidget* pane) const
@@ -372,6 +384,7 @@ void SplitView::setPaneFill(int index, bool fill)
     if (oldFill != newFill)
         emit fillPaneIndexChanged(newFill);
     emit paneConfigurationChanged(index);
+    detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
 }
 
 bool SplitView::isPaneFill(QWidget* pane) const
@@ -411,6 +424,7 @@ QByteArray SplitView::saveState() const
 
 bool SplitView::restoreState(const QByteArray& state)
 {
+    const Qt::Orientation oldOrientation = m_orientation;
     QDataStream stream(state);
     quint32 magic = 0;
     quint16 version = 0;
@@ -448,6 +462,9 @@ bool SplitView::restoreState(const QByteArray& state)
     updateLayout();
     emit orientationChanged(m_orientation);
     emit fillPaneIndexChanged(this->fillPaneIndex());
+    if (oldOrientation != m_orientation)
+        detail::notifySplitViewAccessibilityOrientationChanged(this);
+    detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
     return true;
 }
 
@@ -495,6 +512,7 @@ bool SplitView::eventFilter(QObject* watched, QEvent* event)
         for (const PaneRecord& pane : m_panes) {
             if (pane.rawWidget == watched) {
                 updateLayout();
+                detail::notifySplitViewAccessibilityStructureChanged(this);
                 break;
             }
         }
@@ -517,17 +535,10 @@ void SplitView::paintEvent(QPaintEvent*)
             color = colors.accentDefault;
         } else if (index == m_hoveredHandle) {
             color = colors.strokeStrong;
-            painter.fillRect(handleRect, colors.subtleSecondary);
         }
 
-        QRect visualRect = handleRect;
-        if (m_orientation == Qt::Horizontal) {
-            const int x = handleRect.center().x() - m_handleVisualThickness / 2;
-            visualRect = QRect(x, handleRect.top() + 4, m_handleVisualThickness, std::max(0, handleRect.height() - 8));
-        } else {
-            const int y = handleRect.center().y() - m_handleVisualThickness / 2;
-            visualRect = QRect(handleRect.left() + 4, y, std::max(0, handleRect.width() - 8), m_handleVisualThickness);
-        }
+        const QRect visualRect = detail::centeredSplitHandleVisualRect(
+            handleRect, m_orientation, m_handleVisualThickness);
         painter.setPen(Qt::NoPen);
         painter.setBrush(color);
         painter.drawRoundedRect(visualRect, m_handleVisualThickness / 2.0, m_handleVisualThickness / 2.0);
@@ -537,6 +548,7 @@ void SplitView::paintEvent(QPaintEvent*)
 void SplitView::resizeEvent(QResizeEvent*)
 {
     updateLayout();
+    detail::notifySplitViewAccessibilityAllHandleValuesChanged(this);
 }
 
 void SplitView::enterEvent(FluentEnterEvent* event)
@@ -616,6 +628,11 @@ void SplitView::mouseMoveEvent(QMouseEvent* event)
     updateLayout();
     emitPaneSizeIfChanged(m_drag.leadingPane, oldLeading);
     emitPaneSizeIfChanged(m_drag.trailingPane, oldTrailing);
+    if (oldLeading != leadingPane.preferredSize
+        || oldTrailing != trailingPane.preferredSize) {
+        detail::notifySplitViewAccessibilityHandleValueChanged(
+            this, m_drag.handleIndex);
+    }
     event->accept();
 }
 
@@ -733,6 +750,7 @@ void SplitView::updateLayout()
         for (PaneRecord& pane : m_panes)
             pane.geometry = QRect();
         m_layingOut = false;
+        syncAccessibilityHandles();
         update();
         return;
     }
@@ -803,6 +821,7 @@ void SplitView::updateLayout()
         m_pressedHandle = -1;
     updateCursorForHover();
     m_layingOut = false;
+    syncAccessibilityHandles();
     update();
 }
 
@@ -823,6 +842,104 @@ int SplitView::hitTestHandle(const QPoint& position) const
             return index;
     }
     return -1;
+}
+
+void SplitView::syncAccessibilityHandles()
+{
+    const int targetCount = m_handleRects.size();
+    while (m_accessibilityHandles.size() > targetCount) {
+        QWidget* handle = m_accessibilityHandles.takeLast().data();
+        delete handle;
+    }
+    while (m_accessibilityHandles.size() < targetCount) {
+        const int index = m_accessibilityHandles.size();
+        m_accessibilityHandles.append(
+            new detail::SplitViewHandle(this, index));
+    }
+    for (int index = 0; index < m_accessibilityHandles.size(); ++index) {
+        auto* handle = dynamic_cast<detail::SplitViewHandle*>(
+            m_accessibilityHandles.at(index).data());
+        if (!handle)
+            continue;
+        handle->setHandleIndex(index);
+        handle->setGeometry(m_handleRects.at(index));
+        handle->show();
+        handle->raise();
+    }
+}
+
+int SplitView::handleLeadingPaneIndex(int handleIndex) const
+{
+    return handleIndex >= 0 && handleIndex < m_handlePairs.size()
+        ? m_handlePairs.at(handleIndex).leadingPane : -1;
+}
+
+int SplitView::handleTrailingPaneIndex(int handleIndex) const
+{
+    return handleIndex >= 0 && handleIndex < m_handlePairs.size()
+        ? m_handlePairs.at(handleIndex).trailingPane : -1;
+}
+
+int SplitView::handleAccessibleValue(int handleIndex) const
+{
+    const int leading = handleLeadingPaneIndex(handleIndex);
+    return isValidPaneIndex(leading)
+        ? dragStartLength(leading) : 0;
+}
+
+int SplitView::handleAccessibleMinimum(int handleIndex) const
+{
+    const int leading = handleLeadingPaneIndex(handleIndex);
+    const int trailing = handleTrailingPaneIndex(handleIndex);
+    if (!isValidPaneIndex(leading) || !isValidPaneIndex(trailing))
+        return 0;
+    const int sum = dragStartLength(leading) + dragStartLength(trailing);
+    return std::max(m_panes.at(leading).minimumSize,
+                    sum - m_panes.at(trailing).maximumSize);
+}
+
+int SplitView::handleAccessibleMaximum(int handleIndex) const
+{
+    const int leading = handleLeadingPaneIndex(handleIndex);
+    const int trailing = handleTrailingPaneIndex(handleIndex);
+    if (!isValidPaneIndex(leading) || !isValidPaneIndex(trailing))
+        return 0;
+    const int sum = dragStartLength(leading) + dragStartLength(trailing);
+    return std::min(m_panes.at(leading).maximumSize,
+                    sum - m_panes.at(trailing).minimumSize);
+}
+
+bool SplitView::setHandleAccessibleValue(int handleIndex, int value)
+{
+    const int leading = handleLeadingPaneIndex(handleIndex);
+    const int trailing = handleTrailingPaneIndex(handleIndex);
+    if (!isEnabled() || !isValidPaneIndex(leading)
+        || !isValidPaneIndex(trailing)) {
+        return false;
+    }
+
+    const int oldValue = handleAccessibleValue(handleIndex);
+    const int bounded = qBound(handleAccessibleMinimum(handleIndex),
+                               value,
+                               handleAccessibleMaximum(handleIndex));
+    if (oldValue == bounded)
+        return false;
+
+    PaneRecord& leadingPane = m_panes[leading];
+    PaneRecord& trailingPane = m_panes[trailing];
+    const int sum = dragStartLength(leading) + dragStartLength(trailing);
+    const int oldLeading = leadingPane.preferredSize;
+    const int oldTrailing = trailingPane.preferredSize;
+    leadingPane.preferredSize = bounded;
+    trailingPane.preferredSize = sum - bounded;
+    normalizePane(leadingPane);
+    normalizePane(trailingPane);
+    updateLayout();
+    emitPaneSizeIfChanged(leading, oldLeading);
+    emitPaneSizeIfChanged(trailing, oldTrailing);
+    detail::notifySplitViewAccessibilityHandleValueChanged(
+        this, handleIndex);
+    return true;
 }
 
 void SplitView::setResizing(bool resizing)
@@ -879,6 +996,7 @@ void SplitView::finishPaneRemoval(int index, QWidget* pane)
     emit paneRemoved(index, pane);
     emit paneCountChanged(m_panes.size());
     emit fillPaneIndexChanged(fillPaneIndex());
+    detail::notifySplitViewAccessibilityStructureChanged(this);
 }
 
 void SplitView::handlePaneDestroyed(QWidget* pane)

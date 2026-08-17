@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <QAbstractItemView>
+#include <QAccessible>
 #include <QApplication>
 #include <QDir>
 #include <QEvent>
@@ -465,6 +466,78 @@ TEST_F(GalleryShellFrameworkTest, IntroTourLocksAndRestoresWindowChrome)
     EXPECT_TRUE(window.isChromeInteractive());
 
     window.close();
+}
+
+TEST_F(GalleryShellFrameworkTest, IntroTourExposesStepTextAndTrapsActionFocus)
+{
+#if !QT_CONFIG(accessibility)
+    GTEST_SKIP() << "Qt accessibility support is disabled";
+#else
+    GalleryWindow window;
+    window.resize(900, 700);
+    window.show();
+    QApplication::processEvents();
+
+    GalleryIntroTour tour(&window);
+    GalleryIntroTour::Step first;
+    first.title = QStringLiteral("Search");
+    first.body = QStringLiteral("Find any component by name.");
+    first.centered = true;
+    GalleryIntroTour::Step second;
+    second.title = QStringLiteral("Browse");
+    second.body = QStringLiteral("Explore controls by category.");
+    second.centered = true;
+    tour.setSteps({first, second});
+    tour.start();
+
+    auto* coach = window.findChild<fluent::dialogs_flyouts::CoachMark*>();
+    auto* closeButton = window.findChild<Button*>(
+        QStringLiteral("GalleryIntroTour.CloseButton"));
+    auto* previousButton = window.findChild<Button*>(
+        QStringLiteral("GalleryIntroTour.PreviousButton"));
+    auto* nextButton = window.findChild<Button*>(
+        QStringLiteral("GalleryIntroTour.NextButton"));
+    ASSERT_NE(coach, nullptr);
+    ASSERT_NE(closeButton, nullptr);
+    ASSERT_NE(previousButton, nullptr);
+    ASSERT_NE(nextButton, nullptr);
+
+    QAccessibleInterface* accessibleCoach =
+        QAccessible::queryAccessibleInterface(coach);
+    ASSERT_NE(accessibleCoach, nullptr);
+    EXPECT_EQ(accessibleCoach->role(), QAccessible::HelpBalloon);
+    EXPECT_EQ(accessibleCoach->text(QAccessible::Name),
+              QStringLiteral("Search"));
+    EXPECT_TRUE(accessibleCoach->text(QAccessible::Description)
+                    .contains(QStringLiteral("Step 1 of 2")));
+    EXPECT_EQ(closeButton->accessibleName(), QStringLiteral("Skip tour"));
+    EXPECT_FALSE(previousButton->isVisible());
+    EXPECT_EQ(QApplication::focusWidget(), nextButton);
+
+    QTest::keyClick(nextButton, Qt::Key_Tab);
+    EXPECT_EQ(QApplication::focusWidget(), closeButton);
+    QTest::keyClick(closeButton, Qt::Key_Tab);
+    EXPECT_EQ(QApplication::focusWidget(), nextButton);
+
+    QTest::mouseClick(nextButton, Qt::LeftButton);
+    EXPECT_EQ(accessibleCoach->text(QAccessible::Name),
+              QStringLiteral("Browse"));
+    EXPECT_TRUE(accessibleCoach->text(QAccessible::Description)
+                    .contains(QStringLiteral("Step 2 of 2")));
+    EXPECT_TRUE(previousButton->isVisible());
+    EXPECT_EQ(nextButton->text(), QStringLiteral("Finish"));
+
+    QTest::keyClick(nextButton, Qt::Key_Tab);
+    EXPECT_EQ(QApplication::focusWidget(), closeButton);
+    QTest::keyClick(closeButton, Qt::Key_Escape);
+    QTRY_VERIFY_WITH_TIMEOUT(window.isChromeInteractive(), 1000);
+    QTRY_VERIFY_WITH_TIMEOUT(
+        window.findChild<OverlayScrim*>(
+            QStringLiteral("GalleryIntroTour.Scrim")) == nullptr,
+        1500);
+
+    window.close();
+#endif
 }
 
 TEST_F(GalleryShellFrameworkTest, IntroTourSpotlightsAnchoredTarget)

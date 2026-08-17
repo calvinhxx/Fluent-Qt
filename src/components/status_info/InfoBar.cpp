@@ -1,5 +1,6 @@
 #include "InfoBar.h"
 #include "components/foundation/private/SurfacePainter_p.h"
+#include "components/status_info/private/StatusPresentationAccessibility_p.h"
 
 #include <QEvent>
 #include <QFontMetrics>
@@ -42,6 +43,7 @@ void setLabelColor(fluent::textfields::Label* label, const QColor& color)
 InfoBar::InfoBar(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensureStatusPresentationAccessibilityFactory();
     setAttribute(Qt::WA_TranslucentBackground);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Minimum);
     initializeChildren();
@@ -66,6 +68,7 @@ void InfoBar::setIsOpen(bool open)
     updateChildVisibility();
     updateGeometry();
     update();
+    detail::notifyInfoBarAccessibilityOpenChanged(this);
     emit isOpenChanged(m_isOpen);
 }
 
@@ -76,6 +79,7 @@ void InfoBar::setTitle(const QString& title)
     updateLabels();
     updateGeometry();
     updateChildGeometry();
+    detail::notifyInfoBarAccessibilityContentChanged(this);
     emit titleChanged(m_title);
 }
 
@@ -86,6 +90,7 @@ void InfoBar::setMessage(const QString& message)
     updateLabels();
     updateGeometry();
     updateChildGeometry();
+    detail::notifyInfoBarAccessibilityContentChanged(this);
     emit messageChanged(m_message);
 }
 
@@ -95,6 +100,7 @@ void InfoBar::setSeverity(InfoBarSeverity severity)
     m_severity = severity;
     updateThemeColors();
     update();
+    detail::notifyInfoBarAccessibilitySeverityChanged(this);
     emit severityChanged(m_severity);
 }
 
@@ -106,6 +112,7 @@ void InfoBar::setIsClosable(bool closable)
     updateCloseButtonState();
     updateGeometry();
     updateChildGeometry();
+    detail::notifyInfoBarAccessibilityDismissChanged(this);
     emit isClosableChanged(m_isClosable);
 }
 
@@ -199,6 +206,8 @@ void InfoBar::setActionWidget(QWidget* widget)
                 updateChildVisibility();
                 updateGeometry();
                 updateChildGeometry();
+                detail::notifyInfoBarAccessibilityStructureChanged(
+                    this);
                 emit actionWidgetChanged(nullptr);
             });
     }
@@ -206,6 +215,7 @@ void InfoBar::setActionWidget(QWidget* widget)
     updateChildVisibility();
     updateGeometry();
     updateChildGeometry();
+    detail::notifyInfoBarAccessibilityStructureChanged(this);
     emit actionWidgetChanged(m_actionWidget);
 }
 
@@ -235,7 +245,10 @@ void InfoBar::setCloseButtonAccessibleName(const QString& name)
         return;
     m_closeButtonAccessibleName = name;
     if (m_closeButton)
-        m_closeButton->setAccessibleName(m_closeButtonAccessibleName);
+        m_closeButton->setAccessibleName(
+            m_closeButtonAccessibleName.isEmpty()
+                ? detail::infoBarDismissAccessibleName()
+                : m_closeButtonAccessibleName);
     emit closeButtonAccessibleNameChanged(m_closeButtonAccessibleName);
 }
 
@@ -475,6 +488,7 @@ void InfoBar::changeEvent(QEvent* event)
         updateLabels();
         updateCloseButtonState();
         update();
+        detail::notifyInfoBarAccessibilityEnabledChanged(this);
     }
 }
 
@@ -649,7 +663,10 @@ void InfoBar::initializeChildren()
     m_closeButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_closeButton->setIconGlyph(Typography::Icons::ChromeClose, kCloseIconSize);
     m_closeButton->setFixedSize(m_closeButtonSize, m_closeButtonSize);
-    m_closeButton->setAccessibleName(m_closeButtonAccessibleName);
+    m_closeButton->setAccessibleName(
+        m_closeButtonAccessibleName.isEmpty()
+            ? detail::infoBarDismissAccessibleName()
+            : m_closeButtonAccessibleName);
     connect(m_closeButton, &QPushButton::clicked, this, [this]() {
         if (!m_isClosable || !isEnabled()) return;
         QPointer<InfoBar> guard(this);

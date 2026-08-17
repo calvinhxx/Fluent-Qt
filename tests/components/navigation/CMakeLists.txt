@@ -12,3 +12,6 @@ add_qt_test_module(test_pivot TestPivot.cpp)
 
 # SelectorBar
 add_qt_test_module(test_selector_bar TestSelectorBar.cpp)
+
+# Shared logical navigation accessibility contract
+add_qt_test_module(test_navigation_accessibility TestNavigationAccessibility.cpp)

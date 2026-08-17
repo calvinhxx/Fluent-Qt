@@ -14,6 +14,8 @@
 #include <cmath>
 
 #include "design/Typography.h"
+#include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/scrolling/private/PipsPagerAccessibility_p.h"
 
 namespace fluent::scrolling {
 
@@ -37,6 +39,7 @@ int pressedDiameter(int restDiameter)
 PipsPager::PipsPager(QWidget* parent)
     : QWidget(parent)
 {
+    detail::ensurePipsPagerAccessibilityFactory();
     setAttribute(Qt::WA_Hover);
     setAttribute(Qt::WA_NoSystemBackground);
     setAutoFillBackground(false);
@@ -81,8 +84,14 @@ void PipsPager::setNumberOfPages(int pages)
     updateGeometry();
     update();
 
-    if (pagesChanged) emit numberOfPagesChanged(m_numberOfPages);
+    if (pagesChanged) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(
+            this);
+        emit numberOfPagesChanged(m_numberOfPages);
+    }
     if (selectionChanged) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+            this, m_selectedPageIndex);
         emit selectedPageIndexChanged(m_selectedPageIndex);
         emit selectedIndexChanged(oldSelectedIndex, m_selectedPageIndex);
     }
@@ -105,6 +114,8 @@ void PipsPager::setSelectedPageIndex(int index)
     animateVisibleWindowOffset(oldWindowOffset, nextWindowOffset);
     update();
 
+    fluent::accessibility::detail::notifyLogicalItemAccessibilitySelection(
+        this, m_selectedPageIndex);
     emit selectedPageIndexChanged(m_selectedPageIndex);
     emit selectedIndexChanged(oldIndex, m_selectedPageIndex);
 }
@@ -120,6 +131,7 @@ void PipsPager::setMaxVisiblePips(int count)
     syncVisibleWindowOffset();
     updateGeometry();
     update();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit maxVisiblePipsChanged(m_maxVisiblePips);
 }
 
@@ -133,6 +145,7 @@ void PipsPager::setOrientation(Qt::Orientation orientation)
     syncVisibleWindowOffset();
     updateGeometry();
     update();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit orientationChanged(m_orientation);
 }
 
@@ -146,6 +159,7 @@ void PipsPager::setPreviousButtonVisibility(PipsPagerButtonVisibility visibility
     syncVisibleWindowOffset();
     updateGeometry();
     update();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit previousButtonVisibilityChanged(m_previousButtonVisibility);
 }
 
@@ -159,6 +173,7 @@ void PipsPager::setNextButtonVisibility(PipsPagerButtonVisibility visibility)
     syncVisibleWindowOffset();
     updateGeometry();
     update();
+    fluent::accessibility::detail::notifyLogicalItemAccessibilityStructure(this);
     emit nextButtonVisibilityChanged(m_nextButtonVisibility);
 }
 
@@ -520,6 +535,10 @@ void PipsPager::focusInEvent(QFocusEvent* event)
 {
     update();
     QWidget::focusInEvent(event);
+    if (m_numberOfPages > 0) {
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityFocus(
+            this, m_selectedPageIndex);
+    }
 }
 
 void PipsPager::focusOutEvent(QFocusEvent* event)
@@ -535,6 +554,8 @@ void PipsPager::changeEvent(QEvent* event)
     if (event->type() == QEvent::EnabledChange) {
         clearInteractionState();
         update();
+        fluent::accessibility::detail::notifyLogicalItemAccessibilityState(
+            this, -1);
     } else if (event->type() == QEvent::LayoutDirectionChange) {
         clearInteractionState();
         update();
