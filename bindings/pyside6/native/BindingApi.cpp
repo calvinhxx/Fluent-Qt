@@ -599,6 +599,30 @@ fluent::scrolling::ScrollBar* flowViewVerticalFluentScrollBar(
   return view->verticalFluentScrollBar();
 }
 
+fluent::binding::SelectionMode dataGridSelectionMode(
+    const fluent::collections::DataGrid* view) {
+  return static_cast<fluent::binding::SelectionMode>(
+      static_cast<int>(view->selectionMode()));
+}
+
+void setDataGridSelectionMode(
+    fluent::collections::DataGrid* view,
+    fluent::binding::SelectionMode mode) {
+  view->setSelectionMode(
+      static_cast<fluent::collections::SelectionMode>(
+          static_cast<int>(mode)));
+}
+
+fluent::scrolling::ScrollBar* dataGridVerticalFluentScrollBar(
+    const fluent::collections::DataGrid* view) {
+  return view->verticalFluentScrollBar();
+}
+
+fluent::scrolling::ScrollBar* dataGridHorizontalFluentScrollBar(
+    const fluent::collections::DataGrid* view) {
+  return view->horizontalFluentScrollBar();
+}
+
 fluent::binding::SelectionMode gridViewSelectionMode(
     const fluent::collections::GridView* view) {
   return static_cast<fluent::binding::SelectionMode>(

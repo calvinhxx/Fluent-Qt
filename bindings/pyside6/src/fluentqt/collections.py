@@ -9,6 +9,7 @@ from . import _fluentqt as _native
 
 WidgetOwnership = _native.fluent.WidgetOwnership
 SelectionMode = _native.fluent.SelectionMode
+_NativeDataGrid = _native.fluent.DataGrid
 _NativeDrawerView = _native.fluent.DrawerView
 _NativeFlipView = _native.fluent.FlipView
 _NativeFlowView = _native.fluent.FlowView
@@ -651,6 +652,69 @@ class SplitView(_NativeSplitView):
             pane.setParent(None)
             self._forget_pane(pane)
         return pane
+
+
+class DataGrid(_NativeDataGrid):
+    """Fluent table view for caller-owned Qt models and delegates."""
+
+    SelectionMode = SelectionMode
+
+    def __init__(self, *args, **kwargs):
+        selection_mode = kwargs.pop("selectionMode", None)
+        super().__init__(*args, **kwargs)
+        self._fluentqt_item_delegate = None
+        self._fluentqt_item_delegate_destroyed = None
+        if selection_mode is not None:
+            self.setSelectionMode(selection_mode)
+
+    def selectionMode(self):
+        return _native.dataGridSelectionMode(self)
+
+    def setSelectionMode(self, mode):
+        _native.setDataGridSelectionMode(self, mode)
+
+    def verticalFluentScrollBar(self):
+        return _native.dataGridVerticalFluentScrollBar(self)
+
+    def horizontalFluentScrollBar(self):
+        return _native.dataGridHorizontalFluentScrollBar(self)
+
+    def setItemDelegate(self, delegate):
+        previous = self._fluentqt_item_delegate
+        callback = self._fluentqt_item_delegate_destroyed
+        super().setItemDelegate(delegate)
+
+        if previous is not None and callback is not None:
+            try:
+                previous.destroyed.disconnect(callback)
+            except (RuntimeError, TypeError):
+                pass
+
+        self._fluentqt_item_delegate = delegate
+        self._fluentqt_item_delegate_destroyed = None
+        if delegate is None:
+            return
+
+        host_ref = weakref.ref(self)
+
+        def forget_destroyed_delegate(*_args):
+            host = host_ref()
+            if host is not None:
+                host._fluentqt_item_delegate = None
+                host._fluentqt_item_delegate_destroyed = None
+
+        delegate.destroyed.connect(forget_destroyed_delegate)
+        self._fluentqt_item_delegate_destroyed = forget_destroyed_delegate
+
+    def itemDelegate(self, *args):
+        delegate = self._fluentqt_item_delegate
+        if delegate is not None and not args:
+            if Shiboken.isValid(delegate):
+                return delegate
+            self._fluentqt_item_delegate = None
+            self._fluentqt_item_delegate_destroyed = None
+            return None
+        return super().itemDelegate(*args)
 
 
 class FlowView(_NativeFlowView):
@@ -1414,6 +1478,7 @@ class StackView(_NativeStackView):
 
 
 __all__ = [
+    "DataGrid",
     "DrawerView",
     "FlipView",
     "FlowView",

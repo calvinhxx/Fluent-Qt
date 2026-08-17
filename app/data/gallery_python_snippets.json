@@ -2,8 +2,8 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 68,
-    "sample_count": 202
+    "component_count": 69,
+    "sample_count": 205
   },
   "samples": [
     {
@@ -260,6 +260,21 @@
       "route_id": "drawer-view",
       "sample_id": "drawer-view-interactive-drag",
       "source": "drawer = fluentqt.DrawerView(host)\ndrawer.setInteractive(True)\ndrawer.setDragMargin(36)\ndrawer.setAnimationEnabled(True)\ndrawer.setEdge(fluentqt.DrawerView.DrawerEdge.Left)\nopen_button.clicked.connect(drawer.open)\nclose_button.clicked.connect(drawer.close)\n"
+    },
+    {
+      "route_id": "data-grid",
+      "sample_id": "data-grid-large-read-only",
+      "source": "from PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\ngrid.setModel(LargeDataGridModel(grid))\ngrid.setScrollChainingEnabled(True)\ngrid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)\ngrid.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)\n"
+    },
+    {
+      "route_id": "data-grid",
+      "sample_id": "data-grid-column-selection",
+      "source": "from PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\ngrid.setModel(model)\ngrid.setScrollChainingEnabled(True)\ngrid.setSelectionMode(fluentqt.SelectionMode.Extended)\ngrid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)\ngrid.setSortingEnabled(True)\ngrid.horizontalHeader().setSectionsMovable(True)\ngrid.horizontalHeader().setStretchLastSection(True)\n"
+    },
+    {
+      "route_id": "data-grid",
+      "sample_id": "data-grid-edit-validation",
+      "source": "from PySide6.QtGui import QStandardItemModel\nfrom PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\nQStandardItemModel.setData(\n    model,\n    model.index(2, 1),\n    \"Use at least 3 characters\",\n    DATA_GRID_VALIDATION_MESSAGE_ROLE\n)\ngrid.setModel(model)\ngrid.setScrollChainingEnabled(True)\ngrid.setItemDelegate(DataGridValidationDelegate(grid))\ngrid.setEditTriggers(\n    QAbstractItemView.EditTrigger.DoubleClicked\n    | QAbstractItemView.EditTrigger.EditKeyPressed\n)\n"
     },
     {
       "route_id": "flip-view",

@@ -88,6 +88,8 @@ const QHash<QString, QString>& routeDescriptions()
         {QStringLiteral("toggle-switch"),
          QStringLiteral("A switch that flips between on and off states.")},
         // Collections
+        {QStringLiteral("data-grid"),
+         QStringLiteral("Presents large model-backed rows and columns with headers, sorting, selection, and delegate editing.")},
         {QStringLiteral("drawer-view"),
          QStringLiteral("A panel that slides in from a window edge over the content.")},
         {QStringLiteral("flip-view"),

@@ -329,7 +329,7 @@
       "components": [
         "window",
         "navigation-view",
-        "grid-view",
+        "data-grid",
         "card",
         "info-badge",
         "progress-ring"
@@ -580,6 +580,11 @@
           "component_id": "list-view",
           "choose_when": "Items form a primarily vertical collection, stream, conversation, event history, or log. Use a QAbstractItemModel and delegate so long or growing data stays virtualized; the built-in delegate covers ordinary text and icon rows, while richer rows use a bounded custom delegate.",
           "avoid_when": "Hierarchy or two-dimensional visual scanning is the main task, or the implementation would defeat virtualization with one persistent widget per row."
+        },
+        {
+          "component_id": "data-grid",
+          "choose_when": "Rows and columns need headers, aligned fields, sorting, multi-selection, or delegate-based cell editing over a QAbstractItemModel.",
+          "avoid_when": "The content is a visual card gallery, a wrapping collection, or a parent-child hierarchy."
         },
         {
           "component_id": "grid-view",
@@ -927,6 +932,7 @@
       "title": "Collections",
       "components": [
         "drawer-view",
+        "data-grid",
         "flip-view",
         "flow-view",
         "grid-view",
@@ -2770,6 +2776,114 @@
           "title": "Interactive drag margin",
           "description": "Interactive drawers can be opened or adjusted by dragging from the configured edge margin.",
           "cpp_snippet": "auto* drawer = new DrawerView(host);\ndrawer->setInteractive(true);\ndrawer->setDragMargin(36);\ndrawer->setAnimationEnabled(true);\ndrawer->setEdge(DrawerView::DrawerEdge::Left);"
+        }
+      ]
+    },
+    {
+      "id": "data-grid",
+      "title": "DataGrid",
+      "category_id": "collections",
+      "description": "Presents large model-backed rows and columns with headers, sorting, selection, and delegate editing.",
+      "capabilities": [
+        "collections"
+      ],
+      "search_terms": [
+        "000",
+        "100",
+        "asks",
+        "cells",
+        "characters",
+        "click",
+        "collections",
+        "columns",
+        "ctrl",
+        "data",
+        "data-grid",
+        "data-grid-column-selection",
+        "data-grid-edit-validation",
+        "data-grid-large-read-only",
+        "datagrid",
+        "delegate",
+        "double-click",
+        "edit.",
+        "editing",
+        "editing.",
+        "extend",
+        "header",
+        "headers",
+        "large",
+        "model",
+        "model-backed",
+        "needed",
+        "only",
+        "paints",
+        "presents",
+        "press",
+        "read-only",
+        "rejects",
+        "remains",
+        "reorder",
+        "resize",
+        "role.",
+        "row",
+        "rows",
+        "selection",
+        "selection.",
+        "shift",
+        "shorter",
+        "sort",
+        "sorting",
+        "than",
+        "three",
+        "use",
+        "validation",
+        "values",
+        "viewport.",
+        "virtualized",
+        "while"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "declaration": "src/components/collections/DataGrid.h",
+        "qualified_type": "fluent::collections::DataGrid",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "DataGrid",
+        "import_statement": "from fluentqt.collections import DataGrid"
+      },
+      "tests": [
+        {
+          "target": "test_data_grid",
+          "source": "tests/components/collections/TestDataGrid.cpp",
+          "ctest_label": "test_data_grid"
+        }
+      ],
+      "gallery": {
+        "route_id": "data-grid",
+        "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
+        "control_image": "app/assets/control_images/collections/DataGrid.png"
+      },
+      "samples": [
+        {
+          "id": "data-grid-large-read-only",
+          "title": "Large read-only data",
+          "description": "A model with 100,000 rows remains virtualized: DataGrid asks only for cells needed by the viewport.",
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setModel(new LargeDataGridModel(grid));\ngrid->setScrollChainingEnabled(true);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setEditTriggers(QAbstractItemView::NoEditTriggers);"
+        },
+        {
+          "id": "data-grid-column-selection",
+          "title": "Columns, sorting, and selection",
+          "description": "Resize or reorder headers, click a header to sort, and use Ctrl or Shift to extend row selection.",
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setModel(projectModel);\ngrid->setScrollChainingEnabled(true);\ngrid->setSelectionMode(DataGrid::SelectionMode::Extended);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setSortingEnabled(true);\ngrid->horizontalHeader()->setSectionsMovable(true);"
+        },
+        {
+          "id": "data-grid-edit-validation",
+          "title": "Delegate editing and validation",
+          "description": "Double-click or press F2 to edit. The model rejects values shorter than three characters while the delegate paints its validation role.",
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setModel(validationModel);\ngrid->setScrollChainingEnabled(true);\ngrid->setItemDelegate(new ValidationDelegate(grid));\ngrid->setEditTriggers(QAbstractItemView::DoubleClicked\n                      | QAbstractItemView::EditKeyPressed);\n// ValidationModel::setData(EditRole) returns false and\n// publishes an application-defined validation role."
         }
       ]
     },
@@ -8197,6 +8311,13 @@
       "description": "A panel that slides in from a window edge over the content."
     },
     {
+      "id": "data-grid",
+      "title": "DataGrid",
+      "kind": "component",
+      "parent_id": "collections",
+      "description": "Presents large model-backed rows and columns with headers, sorting, selection, and delegate editing."
+    },
+    {
       "id": "flip-view",
       "title": "FlipView",
       "kind": "component",
@@ -8647,12 +8768,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 89,
-    "component_count": 68,
-    "sample_count": 202,
+    "route_count": 90,
+    "component_count": 69,
+    "sample_count": 205,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 12,
-    "guided_component_count": 68
+    "guided_component_count": 69
   }
 }

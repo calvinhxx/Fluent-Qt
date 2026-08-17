@@ -25,6 +25,7 @@
 #include <components/basicinput/ToggleButton.h>
 #include <components/basicinput/ToggleSplitButton.h>
 #include <components/basicinput/ToggleSwitch.h>
+#include <components/collections/DataGrid.h>
 #include <components/collections/FlipView.h>
 #include <components/collections/DrawerView.h>
 #include <components/collections/FlowView.h>
@@ -230,6 +231,15 @@ void setFlowViewSelectionMode(
     fluent::binding::SelectionMode mode);
 fluent::scrolling::ScrollBar* flowViewVerticalFluentScrollBar(
     const fluent::collections::FlowView* view);
+fluent::binding::SelectionMode dataGridSelectionMode(
+    const fluent::collections::DataGrid* view);
+void setDataGridSelectionMode(
+    fluent::collections::DataGrid* view,
+    fluent::binding::SelectionMode mode);
+fluent::scrolling::ScrollBar* dataGridVerticalFluentScrollBar(
+    const fluent::collections::DataGrid* view);
+fluent::scrolling::ScrollBar* dataGridHorizontalFluentScrollBar(
+    const fluent::collections::DataGrid* view);
 fluent::binding::SelectionMode gridViewSelectionMode(
     const fluent::collections::GridView* view);
 void setGridViewSelectionMode(

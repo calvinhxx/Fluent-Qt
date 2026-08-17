@@ -130,6 +130,7 @@ set(FLUENTQT_PYSIDE6_GENERATED_SOURCES
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_togglebutton_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_togglesplitbutton_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_basicinput_toggleswitch_wrapper.cpp"
+    "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_datagrid_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_drawerview_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_flipview_wrapper.cpp"
     "${FLUENTQT_PYSIDE6_GENERATED_DIR}/fluent_collections_flowview_wrapper.cpp"

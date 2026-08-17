@@ -16,6 +16,8 @@
                function-name="^qt_getEnum(MetaObject|Name)$"/>
     <rejection class="fluent::collections::FlowView"
                function-name="^(selectionMode|setSelectionMode|verticalFluentScrollBar)$"/>
+    <rejection class="fluent::collections::DataGrid"
+               function-name="^(selectionMode|setSelectionMode|verticalFluentScrollBar|horizontalFluentScrollBar)$"/>
     <rejection class="fluent::collections::GridView"
                function-name="^(selectionMode|setSelectionMode|verticalFluentScrollBar)$"/>
     <rejection class="fluent::collections::ListView"
@@ -77,6 +79,10 @@
     <function signature="flowViewSelectionMode(const fluent::collections::FlowView*)"/>
     <function signature="setFlowViewSelectionMode(fluent::collections::FlowView*,fluent::binding::SelectionMode)"/>
     <function signature="flowViewVerticalFluentScrollBar(const fluent::collections::FlowView*)"/>
+    <function signature="dataGridSelectionMode(const fluent::collections::DataGrid*)"/>
+    <function signature="setDataGridSelectionMode(fluent::collections::DataGrid*,fluent::binding::SelectionMode)"/>
+    <function signature="dataGridVerticalFluentScrollBar(const fluent::collections::DataGrid*)"/>
+    <function signature="dataGridHorizontalFluentScrollBar(const fluent::collections::DataGrid*)"/>
     <function signature="gridViewSelectionMode(const fluent::collections::GridView*)"/>
     <function signature="setGridViewSelectionMode(fluent::collections::GridView*,fluent::binding::SelectionMode)"/>
     <function signature="gridViewVerticalFluentScrollBar(const fluent::collections::GridView*)"/>
@@ -433,6 +439,24 @@
         </namespace-type>
 
         <namespace-type name="collections" visible="no">
+            <object-type name="DataGrid">
+                <!-- DataGrid redeclares the model and selection-model entry
+                     points. Preserve the caller-owned Qt objects while their
+                     Python wrappers are installed in the generated class. -->
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function
+                    signature="setSelectionModel(QItemSelectionModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
             <object-type name="DrawerView">
                 <enum-type name="DrawerEdge"/>
                 <enum-type name="CloseFlag" flags="ClosePolicy"/>

@@ -42,6 +42,34 @@ The repository currently has no deprecated PySide6 symbols. The empty
 `deprecations` ledger is intentional and is validated so the first future
 deprecation must adopt this contract.
 
+## New C++ surface decisions
+
+Every new installed C++ component or non-trivial public API records one of
+these decisions before release:
+
+- **Supported in Python:** the Shiboken export, API manifest, typing/runtime
+  checks, ownership tests, and a Python example land in the same release slice
+  as the public C++ API.
+- **Intentionally C++-only:** the limitation and reason are documented in the
+  release roadmap and binding coverage ledger, and generated guidance must not
+  advertise a Python import.
+
+Private prototypes may stay C++-only while an API is still changing. They are
+not installed, exported from `<FluentQt/FluentQt.h>`, or represented as public
+catalog entries. Do not publish a C++ API first and silently treat Python as an
+unscheduled follow-up; either finish the selected surface or keep the feature
+private/preview.
+
+For item views, Python ownership follows Qt's model/view/delegate contracts.
+Bindings must not introduce a Python-owned mirror of the model or a persistent
+widget per item to compensate for missing native API.
+
+`DataGrid` is supported in Python in the same slice as its C++ API. The facade
+retains Python wrappers for the caller-supplied model, selection model, and
+delegate while Qt remains the native object owner; replacement and garbage-
+collection tests guard that boundary. Its Python Gallery routes use the same
+three read-only, selection/column, and editing/validation scenarios as C++.
+
 ## Gates
 
 `tools/verify_api_policy.py` rejects version drift, malformed or duplicate

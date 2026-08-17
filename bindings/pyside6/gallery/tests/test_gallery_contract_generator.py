@@ -30,9 +30,9 @@ def main() -> int:
         )
     summary = generated["summary"]
     if summary != {
-        "route_count": 89,
-        "component_count": 68,
-        "sample_count": 202,
+        "route_count": 90,
+        "component_count": 69,
+        "sample_count": 205,
     }:
         raise AssertionError("unexpected Gallery contract summary: {0!r}".format(summary))
     print(

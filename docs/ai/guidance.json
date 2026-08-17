@@ -285,7 +285,7 @@
       "components": [
         "window",
         "navigation-view",
-        "grid-view",
+        "data-grid",
         "card",
         "info-badge",
         "progress-ring"
@@ -536,6 +536,11 @@
           "component_id": "list-view",
           "choose_when": "Items form a primarily vertical collection, stream, conversation, event history, or log. Use a QAbstractItemModel and delegate so long or growing data stays virtualized; the built-in delegate covers ordinary text and icon rows, while richer rows use a bounded custom delegate.",
           "avoid_when": "Hierarchy or two-dimensional visual scanning is the main task, or the implementation would defeat virtualization with one persistent widget per row."
+        },
+        {
+          "component_id": "data-grid",
+          "choose_when": "Rows and columns need headers, aligned fields, sorting, multi-selection, or delegate-based cell editing over a QAbstractItemModel.",
+          "avoid_when": "The content is a visual card gallery, a wrapping collection, or a parent-child hierarchy."
         },
         {
           "component_id": "grid-view",

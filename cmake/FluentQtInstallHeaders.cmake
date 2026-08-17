@@ -41,6 +41,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/basicinput/ToggleSplitButton.h
     src/components/basicinput/ToggleSwitch.h
 
+    src/components/collections/DataGrid.h
     src/components/collections/DrawerView.h
     src/components/collections/FlipView.h
     src/components/collections/FlowView.h
