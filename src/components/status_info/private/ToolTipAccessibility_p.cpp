@@ -3,6 +3,7 @@
 #include <QAccessible>
 #include <QAccessibleWidget>
 
+#include "compatibility/QtCompat.h"
 #include "components/status_info/ToolTip.h"
 
 namespace fluent::status_info::detail {
@@ -47,6 +48,7 @@ public:
     relations(QAccessible::Relation match) const override
     {
         auto result = QAccessibleWidget::relations(match);
+#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
         ToolTip* surface = toolTip();
         if (!surface || !surface->m_target
             || !(match & QAccessible::DescriptionFor)) {
@@ -65,6 +67,7 @@ public:
             }
         }
         result.append({target, QAccessible::DescriptionFor});
+#endif
         return result;
     }
 

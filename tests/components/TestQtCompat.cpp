@@ -110,6 +110,12 @@ TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion) {
 #else
     EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE, 0);
 #endif
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION, 1);
+#else
+    EXPECT_EQ(FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION, 0);
+#endif
 }
 
 TEST(QtCompat, WheelPositionHelperReturnsLocalPosition) {

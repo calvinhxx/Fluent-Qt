@@ -81,6 +81,12 @@ using FluentEnterEvent = QEvent;
 #define FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE 0
 #endif
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+#define FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION 1
+#else
+#define FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION 0
+#endif
+
 #include <type_traits>
 static_assert(std::is_base_of<QEvent, FluentEnterEvent>::value,
               "FluentEnterEvent must derive from QEvent");

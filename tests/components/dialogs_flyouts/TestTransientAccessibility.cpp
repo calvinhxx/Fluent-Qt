@@ -13,6 +13,7 @@
 #include "components/dialogs_flyouts/Popup.h"
 #include "components/dialogs_flyouts/TeachingTip.h"
 #include "components/textfields/Label.h"
+#include "compatibility/QtCompat.h"
 
 using fluent::basicinput::Button;
 using fluent::dialogs_flyouts::CoachMark;
@@ -291,7 +292,9 @@ TEST_F(TransientAccessibilityTest, Contract_AccessibilityTeachingTipKeepsHelpTex
               QStringLiteral("Account settings help"));
     EXPECT_EQ(root->text(QAccessible::Description),
               QStringLiteral("Review privacy before continuing"));
+#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     EXPECT_TRUE(hasRelation(root, target, QAccessible::DescriptionFor));
+#endif
     EXPECT_TRUE(hasAccessibleAncestor(title, &tip));
     EXPECT_TRUE(hasAccessibleAncestor(action, &tip));
 
@@ -338,7 +341,9 @@ TEST_F(TransientAccessibilityTest, Contract_AccessibilityCoachMarkAnnouncesRetai
     QAccessibleInterface* root = accessible(&coach);
     ASSERT_NE(root, nullptr);
     EXPECT_EQ(root->role(), QAccessible::HelpBalloon);
+#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     EXPECT_TRUE(hasRelation(root, target, QAccessible::DescriptionFor));
+#endif
     EXPECT_TRUE(hasAccessibleAncestor(next, &coach));
 
     ScopedAccessibilityEventCapture events;

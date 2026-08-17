@@ -4,6 +4,7 @@
 #include <QAccessibleWidget>
 #include <QCoreApplication>
 
+#include "compatibility/QtCompat.h"
 #include "components/dialogs_flyouts/CoachMark.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/dialogs_flyouts/Popup.h"
@@ -36,18 +37,22 @@ bool popupCanDismiss(const Popup* popup)
 QWidget* relationTargetFor(QWidget* surface,
                            QAccessible::Relation* relation)
 {
+#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     if (auto* teachingTip = qobject_cast<TeachingTip*>(surface)) {
         *relation = QAccessible::DescriptionFor;
         return teachingTip->target();
     }
+#endif
     if (auto* flyout = qobject_cast<Flyout*>(surface)) {
         *relation = QAccessible::Controlled;
         return flyout->anchor();
     }
+#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     if (auto* coachMark = qobject_cast<CoachMark*>(surface)) {
         *relation = QAccessible::DescriptionFor;
         return coachMark->target();
     }
+#endif
     return nullptr;
 }
 

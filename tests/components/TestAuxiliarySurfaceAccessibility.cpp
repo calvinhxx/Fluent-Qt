@@ -13,6 +13,7 @@
 #include "components/collections/DrawerView.h"
 #include "components/status_info/ToolTip.h"
 #include "components/textfields/Label.h"
+#include "compatibility/QtCompat.h"
 
 using fluent::basicinput::Button;
 using fluent::basicinput::DropDownButton;
@@ -371,8 +372,10 @@ TEST(AuxiliarySurfaceAccessibilityTest, Contract_AccessibilityToolTipExposesText
               QStringLiteral("Save current document"));
     EXPECT_TRUE(root->state().invisible);
     EXPECT_FALSE(root->state().focusable);
+#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     EXPECT_TRUE(hasRelation(root, &target,
                             QAccessible::DescriptionFor));
+#endif
 
     ScopedAccessibilityEventCapture events;
     tip->setText(QStringLiteral("Save all changes"));
@@ -406,8 +409,10 @@ TEST(AuxiliarySurfaceAccessibilityTest, Contract_AccessibilityToolTipExposesText
     EXPECT_EQ(ToolTip::attach(
                   &target, QStringLiteral("Changed visible help")),
               tip);
+#if FLUENT_HAS_ACCESSIBLE_DESCRIPTION_RELATION
     EXPECT_TRUE(hasRelation(root, &target,
                             QAccessible::DescriptionFor));
+#endif
     EXPECT_EQ(events.count(tip, QAccessible::ObjectReorder), 0);
 #endif
 }
