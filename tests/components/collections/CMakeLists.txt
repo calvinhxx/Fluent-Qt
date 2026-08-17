@@ -21,3 +21,6 @@ add_qt_test_module(test_split_view TestSplitView.cpp)
 
 # DrawerView
 add_qt_test_module(test_drawer_view TestDrawerView.cpp)
+
+# DataGrid
+add_qt_test_module(test_data_grid TestDataGrid.cpp)

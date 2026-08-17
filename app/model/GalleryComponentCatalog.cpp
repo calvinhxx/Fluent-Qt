@@ -36,6 +36,7 @@ const QVector<GalleryComponentCategory>& galleryComponentCatalog()
          QStringLiteral("collections"),
          Typography::Icons::Grid,
          {
+             {QStringLiteral("data-grid"), QStringLiteral("DataGrid"), Typography::Icons::Grid},
              {QStringLiteral("drawer-view"), QStringLiteral("DrawerView"), Typography::Icons::List},
              {QStringLiteral("flip-view"), QStringLiteral("FlipView"), Typography::Icons::Forward},
              {QStringLiteral("flow-view"), QStringLiteral("FlowView"), Typography::Icons::Grid},

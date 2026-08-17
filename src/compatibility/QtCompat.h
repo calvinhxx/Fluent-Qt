@@ -68,9 +68,11 @@
 #include <QEnterEvent>
 using FluentEnterEvent = QEnterEvent;
 #define FLUENT_QT6_ONLY_OVERRIDE override
+#define FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE 1
 #else
 using FluentEnterEvent = QEvent;
 #define FLUENT_QT6_ONLY_OVERRIDE
+#define FLUENT_HAS_ACCESSIBLE_SELECTION_INTERFACE 0
 #endif
 
 #include <type_traits>

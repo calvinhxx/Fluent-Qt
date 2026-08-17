@@ -157,6 +157,136 @@ _FLAT_MODEL_HELPER = _SourceHelper(dedent(
     """
 ))
 
+_DATA_GRID_IMPORTS = (
+    "from PySide6.QtCore import (QAbstractTableModel, QItemSelectionModel, "
+    "QModelIndex, QRectF, Qt)\n"
+    "from PySide6.QtGui import QPen, QStandardItem, QStandardItemModel\n"
+    "from PySide6.QtWidgets import QAbstractItemView, QStyledItemDelegate\n"
+    "from fluentqt_gallery.foundation_pages import _theme_tokens"
+)
+
+_DATA_GRID_MODEL_HELPER = _SourceHelper(dedent(
+    """
+    class LargeDataGridModel(QAbstractTableModel):
+        def rowCount(self, parent=QModelIndex()):
+            return 0 if parent.isValid() else 100_000
+
+        def columnCount(self, parent=QModelIndex()):
+            return 0 if parent.isValid() else 5
+
+        def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+            if not index.isValid():
+                return None
+            if (
+                role == Qt.ItemDataRole.TextAlignmentRole
+                and index.column() >= 3
+            ):
+                return Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            if role != Qt.ItemDataRole.DisplayRole:
+                return None
+            row = index.row() + 1
+            values = (
+                "Build #{0:06d}".format(row),
+                "macOS-{0:02d}".format(row % 24 + 1),
+                ("Passed", "Running", "Queued")[row % 3],
+                "{0}m {1:02d}s".format(row % 9 + 1, row % 60),
+                str(row % 12),
+            )
+            return values[index.column()]
+
+        def headerData(self, section, orientation, role):
+            if role != Qt.ItemDataRole.DisplayRole:
+                return None
+            if orientation == Qt.Orientation.Vertical:
+                return section + 1
+            headers = ("Build", "Runner", "Status", "Duration", "Artifacts")
+            return headers[section] if 0 <= section < len(headers) else None
+
+        def flags(self, index):
+            if not index.isValid():
+                return Qt.ItemFlag.NoItemFlags
+            return Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+
+
+    def make_project_data_grid_model(parent, editable):
+        model = QStandardItemModel(parent)
+        model.setHorizontalHeaderLabels(
+            ("Project", "Owner", "Status", "Priority")
+        )
+        projects = (
+            "Aurora", "Beacon", "Canvas", "Delta",
+            "Ember", "Fjord", "Grove", "Harbor",
+        )
+        owners = ("Maya", "Noah", "Priya", "Riley")
+        for row, project in enumerate(projects):
+            items = [
+                QStandardItem(project),
+                QStandardItem(owners[row % len(owners)]),
+                QStandardItem("Review" if row % 3 == 0 else "Active"),
+                QStandardItem(str(row % 4 + 1)),
+            ]
+            for item in items:
+                item.setEditable(editable)
+            items[-1].setTextAlignment(
+                Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+            )
+            model.appendRow(items)
+        return model
+    """
+))
+
+_DATA_GRID_VALIDATION_HELPER = _SourceHelper(dedent(
+    """
+    DATA_GRID_VALIDATION_MESSAGE_ROLE = int(Qt.ItemDataRole.UserRole) + 420
+
+
+    class ValidatingDataGridModel(QStandardItemModel):
+        def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+            if (
+                role == Qt.ItemDataRole.EditRole
+                and len(str(value).strip()) < 3
+            ):
+                QStandardItemModel.setData(
+                    self,
+                    index,
+                    "Use at least 3 characters",
+                    DATA_GRID_VALIDATION_MESSAGE_ROLE,
+                )
+                return False
+            if role == Qt.ItemDataRole.EditRole:
+                QStandardItemModel.setData(
+                    self,
+                    index,
+                    None,
+                    DATA_GRID_VALIDATION_MESSAGE_ROLE,
+                )
+            return QStandardItemModel.setData(self, index, value, role)
+
+
+    class DataGridValidationDelegate(QStyledItemDelegate):
+        def __init__(self, grid):
+            super().__init__(grid)
+            self._base_delegate = grid.itemDelegate()
+
+        def paint(self, painter, option, index):
+            if self._base_delegate is not None:
+                self._base_delegate.paint(painter, option, index)
+            else:
+                super().paint(painter, option, index)
+            if not index.data(DATA_GRID_VALIDATION_MESSAGE_ROLE):
+                return
+            painter.save()
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            painter.setPen(QPen(_theme_tokens(self)["systemCritical"], 1.5))
+            painter.drawRoundedRect(
+                QRectF(option.rect).adjusted(1.5, 1.5, -1.5, -1.5),
+                3.0,
+                3.0,
+            )
+            painter.restore()
+    """
+))
+
 _PHOTO_MODEL_HELPER = _SourceHelper(dedent(
     """
     PHOTO_IMAGE_ROLE = int(Qt.ItemDataRole.UserRole) + 701
@@ -1414,6 +1544,93 @@ register_source_samples(
                 layout.addWidget(controls)
                 """,
                 _GRADIENT_IMPORTS,
+            ),
+        ),
+    },
+)
+
+
+register_source_samples(
+    "data-grid",
+    ("DataGrid",),
+    {
+        "data-grid-large-read-only": (
+            "grid",
+            _script(
+                _DATA_GRID_MODEL_HELPER
+                + """
+                grid = fluentqt.DataGrid(globals().get("gallery_parent"))
+                grid.setFixedSize(680, 252)
+                grid.setModel(LargeDataGridModel(grid))
+                grid.setScrollChainingEnabled(True)
+                grid.setSelectionBehavior(
+                    QAbstractItemView.SelectionBehavior.SelectRows
+                )
+                grid.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+                grid.horizontalHeader().setStretchLastSection(True)
+                grid.setColumnWidth(0, 150)
+                grid.setColumnWidth(1, 120)
+                """,
+                _DATA_GRID_IMPORTS,
+            ),
+        ),
+        "data-grid-column-selection": (
+            "grid",
+            _script(
+                _DATA_GRID_MODEL_HELPER
+                + """
+                grid = fluentqt.DataGrid(globals().get("gallery_parent"))
+                grid.setFixedSize(680, 252)
+                model = make_project_data_grid_model(grid, False)
+                grid.setModel(model)
+                grid.setScrollChainingEnabled(True)
+                grid.setSelectionMode(fluentqt.SelectionMode.Extended)
+                grid.setSelectionBehavior(
+                    QAbstractItemView.SelectionBehavior.SelectRows
+                )
+                grid.setSortingEnabled(True)
+                grid.horizontalHeader().setSectionsMovable(True)
+                grid.horizontalHeader().setStretchLastSection(True)
+                grid.setColumnWidth(0, 170)
+                grid.setColumnWidth(1, 130)
+                """,
+                _DATA_GRID_IMPORTS,
+            ),
+        ),
+        "data-grid-edit-validation": (
+            "grid",
+            _script(
+                _DATA_GRID_VALIDATION_HELPER
+                + """
+                grid = fluentqt.DataGrid(globals().get("gallery_parent"))
+                grid.setFixedSize(680, 224)
+                model = ValidatingDataGridModel(grid)
+                model.setHorizontalHeaderLabels(("Setting", "Value", "Scope"))
+                for row in (
+                    ("Channel", "stable", "Workspace"),
+                    ("Region", "eu-west", "Account"),
+                    ("Mode", "No", "Session"),
+                ):
+                    model.appendRow([QStandardItem(value) for value in row])
+                QStandardItemModel.setData(
+                    model,
+                    model.index(2, 1),
+                    "Use at least 3 characters",
+                    DATA_GRID_VALIDATION_MESSAGE_ROLE,
+                )
+                grid.setModel(model)
+                grid.setScrollChainingEnabled(True)
+                grid.setItemDelegate(DataGridValidationDelegate(grid))
+                grid.setEditTriggers(
+                    QAbstractItemView.EditTrigger.DoubleClicked
+                    | QAbstractItemView.EditTrigger.EditKeyPressed
+                )
+                grid.horizontalHeader().setStretchLastSection(True)
+                grid.setColumnWidth(0, 180)
+                grid.setColumnWidth(1, 220)
+                grid.setCurrentIndex(model.index(2, 1))
+                """,
+                _DATA_GRID_IMPORTS,
             ),
         ),
     },

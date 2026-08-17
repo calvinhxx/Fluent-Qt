@@ -335,6 +335,7 @@ def main():
         fluentqt.Divider(),
         fluentqt.Dialog(),
         fluentqt.ContentDialog(),
+        fluentqt.DataGrid(),
         fluentqt.DatePicker(),
         fluentqt.DrawerView(),
         fluentqt.Flyout(),
@@ -2013,6 +2014,8 @@ def main():
     if reparented_item.parent() is not item_parent:
         raise AssertionError("Accordion did not restore the item parent")
 
+    if collections.DataGrid is not fluentqt.DataGrid:
+        raise AssertionError("Collections module did not re-export DataGrid")
     if collections.FlowView is not fluentqt.FlowView:
         raise AssertionError("Collections module did not re-export FlowView")
     if collections.GridView is not fluentqt.GridView:

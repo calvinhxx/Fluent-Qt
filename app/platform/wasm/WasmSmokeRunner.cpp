@@ -2,6 +2,7 @@
 
 #include <FluentQt/WebAssembly.h>
 
+#include <QAbstractItemModel>
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
@@ -10,7 +11,10 @@
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontMetrics>
+#include <QKeyEvent>
+#include <QLineEdit>
 #include <QRegion>
+#include <QScrollBar>
 #include <QSettings>
 #include <QTimer>
 #include <QUrlQuery>
@@ -18,6 +22,7 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/heap.h>
 
+#include "components/collections/DataGrid.h"
 #include "components/dialogs_flyouts/Dialog.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/textfields/LineEdit.h"
@@ -89,6 +94,7 @@ public:
     WasmSmokeRunner(GalleryWindow* window, bool full)
         : QObject(window)
         , m_window(window)
+        , m_requireDataGridInteraction(full)
     {
         const QStringList available = window->navigationEntryIds();
         if (full) {
@@ -148,6 +154,12 @@ private:
     void waitForCurrentRoute()
     {
         if (currentRouteReady(m_currentRoute)) {
+            if (m_currentRoute == QStringLiteral("data-grid")) {
+                QString failure;
+                if (!verifyDataGridRoute(&failure))
+                    return fail(failure);
+                m_dataGridInteractionPassed = true;
+            }
             const qint64 routeMs = m_routeTimer.elapsed();
             if (routeMs > m_slowestRouteMs) {
                 m_slowestRouteMs = routeMs;
@@ -165,6 +177,81 @@ private:
         if (m_routeTimer.elapsed() > 30000)
             return fail(QStringLiteral("Timed out waiting for route %1").arg(m_currentRoute));
         QTimer::singleShot(25, this, [this]() { waitForCurrentRoute(); });
+    }
+
+    bool verifyDataGridRoute(QString* failure) const
+    {
+        auto reject = [failure](const QString& reason) {
+            if (failure)
+                *failure = reason;
+            return false;
+        };
+        GalleryContentPage* page = m_window ? m_window->currentContentPage()
+                                            : nullptr;
+        if (!page)
+            return reject(QStringLiteral("DataGrid Gallery page is unavailable"));
+
+        const auto grids = page->findChildren<fluent::collections::DataGrid*>();
+        if (grids.size() < 3)
+            return reject(QStringLiteral("DataGrid Gallery samples are incomplete"));
+
+        fluent::collections::DataGrid* largeGrid = nullptr;
+        fluent::collections::DataGrid* selectionGrid = nullptr;
+        fluent::collections::DataGrid* editingGrid = nullptr;
+        for (auto* grid : grids) {
+            if (!grid || !grid->model())
+                continue;
+            if (grid->model()->rowCount() >= 100000)
+                largeGrid = grid;
+            if (grid->selectionMode()
+                == fluent::collections::DataGrid::SelectionMode::Extended) {
+                selectionGrid = grid;
+            }
+            if (grid->editTriggers() != QAbstractItemView::NoEditTriggers)
+                editingGrid = grid;
+        }
+        if (!largeGrid || !selectionGrid || !editingGrid)
+            return reject(QStringLiteral(
+                "DataGrid Gallery scenarios did not expose scale, selection, and editing views"));
+        if (!largeGrid->isScrollChainingEnabled()
+            || !selectionGrid->isScrollChainingEnabled()
+            || !editingGrid->isScrollChainingEnabled()) {
+            return reject(QStringLiteral(
+                "DataGrid Gallery samples do not share boundary scroll chaining"));
+        }
+
+        QScrollBar* scrollBar = largeGrid->verticalScrollBar();
+        if (!scrollBar || scrollBar->maximum() <= scrollBar->minimum())
+            return reject(QStringLiteral("DataGrid large-model scrollbar is not usable"));
+        scrollBar->setValue(scrollBar->maximum());
+        QApplication::processEvents();
+        if (scrollBar->value() != scrollBar->maximum())
+            return reject(QStringLiteral("DataGrid large-model scrolling did not reach the end"));
+
+        const QModelIndex first = selectionGrid->model()->index(0, 0);
+        selectionGrid->setCurrentIndex(first);
+        selectionGrid->setFocus(Qt::OtherFocusReason);
+        QKeyEvent downEvent(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+        QApplication::sendEvent(selectionGrid, &downEvent);
+        if (selectionGrid->currentIndex().row() != 1)
+            return reject(QStringLiteral("DataGrid keyboard selection did not advance"));
+
+        const QModelIndex editableIndex = editingGrid->model()->index(0, 1);
+        editingGrid->setCurrentIndex(editableIndex);
+        editingGrid->edit(editableIndex);
+        QApplication::processEvents();
+        QLineEdit* editor = editingGrid->findChild<QLineEdit*>();
+        if (!editor || !editor->isVisible())
+            return reject(QStringLiteral("DataGrid delegate editor did not open"));
+        const QString committedValue = QStringLiteral("browser-edit");
+        editor->setText(committedValue);
+        QKeyEvent commitEvent(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QApplication::sendEvent(editor, &commitEvent);
+        QApplication::processEvents();
+        if (editableIndex.data(Qt::EditRole).toString() != committedValue)
+            return reject(QStringLiteral("DataGrid delegate editor did not commit"));
+
+        return true;
     }
 
     void runRuntimeChecks()
@@ -478,17 +565,25 @@ private:
 
     void complete()
     {
+        if (m_requireDataGridInteraction && !m_dataGridInteractionPassed) {
+            return fail(QStringLiteral(
+                "Full smoke did not exercise the DataGrid Gallery route"));
+        }
         const qint64 totalMs = m_totalTimer.elapsed();
         const qint64 finalHeapMiB = heapCapacityMiB();
         const qint64 finalHeapBreakMiB = heapBreakMiB();
         publishSmokeState("pass",
                           QStringLiteral(
                               "%1 routes, storage, window, dialog, menu, browser text input, and text menu passed in %2 ms; "
+                              "%3"
                               "CJK fallback passed; "
-                              "slowest route %3 took %4 ms; heap %5 -> %6 MiB; "
-                              "break %7 -> %8 MiB")
+                              "slowest route %4 took %5 ms; heap %6 -> %7 MiB; "
+                              "break %8 -> %9 MiB")
                               .arg(m_routes.size())
                               .arg(totalMs)
+                              .arg(m_dataGridInteractionPassed
+                                       ? QStringLiteral("DataGrid scroll, keyboard selection, and editing passed; ")
+                                       : QString())
                               .arg(m_slowestRoute)
                               .arg(m_slowestRouteMs)
                               .arg(m_initialHeapMiB)
@@ -517,6 +612,8 @@ private:
     }
 
     GalleryWindow* m_window = nullptr;
+    bool m_requireDataGridInteraction = false;
+    bool m_dataGridInteractionPassed = false;
     QStringList m_routes;
     QString m_currentRoute;
     int m_routeIndex = 0;

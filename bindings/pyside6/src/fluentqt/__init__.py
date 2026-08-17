@@ -32,6 +32,7 @@ from .basicinput import (
     ToggleSwitch,
 )
 from .collections import (
+    DataGrid,
     DrawerView,
     FlipView,
     FlowView,
@@ -209,6 +210,7 @@ __all__ = [
     "ContentDialogButton",
     "CornerRadius",
     "DatePicker",
+    "DataGrid",
     "DesignLanguage",
     "Dialog",
     "Divider",

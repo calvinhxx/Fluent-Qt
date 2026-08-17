@@ -2,8 +2,11 @@
 
 #include <functional>
 
+#include <QAbstractItemDelegate>
+#include <QAbstractTableModel>
 #include <QCoreApplication>
 #include <QEvent>
+#include <QHeaderView>
 #include <QItemSelectionModel>
 #include <QLinearGradient>
 #include <QMouseEvent>
@@ -26,6 +29,7 @@
 
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
+#include "components/collections/DataGrid.h"
 #include "components/collections/DrawerView.h"
 #include "components/collections/FlipView.h"
 #include "components/collections/FlowView.h"
@@ -49,6 +53,7 @@ namespace fluent::gallery {
 namespace {
 
 using fluent::basicinput::Button;
+using fluent::collections::DataGrid;
 using fluent::collections::DrawerView;
 using fluent::collections::FlipView;
 using fluent::collections::FlowView;
@@ -1120,6 +1125,266 @@ QStandardItemModel* makeGridPhotoModel(GridView* grid, const QSize& cell)
     return model;
 }
 
+class LargeDataGridModel final : public QAbstractTableModel {
+public:
+    explicit LargeDataGridModel(QObject* parent = nullptr)
+        : QAbstractTableModel(parent)
+    {
+    }
+
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : 100000;
+    }
+
+    int columnCount(const QModelIndex& parent = QModelIndex()) const override
+    {
+        return parent.isValid() ? 0 : 5;
+    }
+
+    QVariant data(const QModelIndex& index,
+                  int role = Qt::DisplayRole) const override
+    {
+        if (!index.isValid())
+            return {};
+        if (role == Qt::TextAlignmentRole && index.column() >= 3)
+            return static_cast<int>(Qt::AlignRight | Qt::AlignVCenter);
+        if (role != Qt::DisplayRole)
+            return {};
+
+        switch (index.column()) {
+        case 0:
+            return QStringLiteral("Build %1")
+                .arg(index.row() + 1, 6, 10, QLatin1Char('0'));
+        case 1:
+            return QStringLiteral("Runner %1").arg(index.row() % 24 + 1);
+        case 2:
+            return index.row() % 7 == 0
+                ? QStringLiteral("Queued")
+                : QStringLiteral("Complete");
+        case 3:
+            return QStringLiteral("%1 s").arg(18 + index.row() % 83);
+        case 4:
+            return QStringLiteral("%1 MB").arg(42 + index.row() % 900);
+        }
+        return {};
+    }
+
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override
+    {
+        if (role != Qt::DisplayRole)
+            return {};
+        if (orientation == Qt::Vertical)
+            return section + 1;
+        static const QStringList headers{
+            QStringLiteral("Build"), QStringLiteral("Runner"),
+            QStringLiteral("Status"), QStringLiteral("Duration"),
+            QStringLiteral("Artifacts")};
+        return section >= 0 && section < headers.size()
+            ? headers.at(section)
+            : QVariant();
+    }
+
+    Qt::ItemFlags flags(const QModelIndex& index) const override
+    {
+        return index.isValid()
+            ? Qt::ItemIsEnabled | Qt::ItemIsSelectable
+            : Qt::NoItemFlags;
+    }
+};
+
+QStandardItemModel* makeProjectDataGridModel(QObject* parent,
+                                             bool editable)
+{
+    auto* model = new QStandardItemModel(parent);
+    model->setHorizontalHeaderLabels({
+        QStringLiteral("Project"), QStringLiteral("Owner"),
+        QStringLiteral("Status"), QStringLiteral("Priority")});
+    const QStringList projects{
+        QStringLiteral("Aurora"), QStringLiteral("Beacon"),
+        QStringLiteral("Canvas"), QStringLiteral("Delta"),
+        QStringLiteral("Ember"), QStringLiteral("Fjord"),
+        QStringLiteral("Grove"), QStringLiteral("Harbor")};
+    const QStringList owners{
+        QStringLiteral("Maya"), QStringLiteral("Noah"),
+        QStringLiteral("Priya"), QStringLiteral("Riley")};
+    for (int row = 0; row < projects.size(); ++row) {
+        QList<QStandardItem*> items{
+            new QStandardItem(projects.at(row)),
+            new QStandardItem(owners.at(row % owners.size())),
+            new QStandardItem(row % 3 == 0
+                                  ? QStringLiteral("Review")
+                                  : QStringLiteral("Active")),
+            new QStandardItem(QString::number(row % 4 + 1))};
+        for (QStandardItem* item : items)
+            item->setEditable(editable);
+        items.last()->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        model->appendRow(items);
+    }
+    return model;
+}
+
+constexpr int kDataGridValidationMessageRole = Qt::UserRole + 420;
+
+class ValidatingDataGridModel final : public QStandardItemModel {
+public:
+    using QStandardItemModel::QStandardItemModel;
+
+    bool setData(const QModelIndex& index, const QVariant& value,
+                 int role = Qt::EditRole) override
+    {
+        if (role == Qt::EditRole && value.toString().trimmed().size() < 3) {
+            QStandardItemModel::setData(
+                index, QStringLiteral("Use at least 3 characters"),
+                kDataGridValidationMessageRole);
+            return false;
+        }
+        if (role == Qt::EditRole) {
+            QStandardItemModel::setData(
+                index, QVariant(), kDataGridValidationMessageRole);
+        }
+        return QStandardItemModel::setData(index, value, role);
+    }
+};
+
+class DataGridValidationDelegate final : public QStyledItemDelegate {
+public:
+    explicit DataGridValidationDelegate(DataGrid* grid)
+        : QStyledItemDelegate(grid)
+        , m_grid(grid)
+        , m_baseDelegate(grid ? grid->itemDelegate() : nullptr)
+    {
+    }
+
+    void paint(QPainter* painter, const QStyleOptionViewItem& option,
+               const QModelIndex& index) const override
+    {
+        if (m_baseDelegate)
+            m_baseDelegate->paint(painter, option, index);
+        else
+            QStyledItemDelegate::paint(painter, option, index);
+        if (!m_grid || index.data(kDataGridValidationMessageRole)
+                           .toString().isEmpty()) {
+            return;
+        }
+        painter->save();
+        painter->setBrush(Qt::NoBrush);
+        painter->setPen(QPen(m_grid->themeColorsRef().systemCritical, 1.5));
+        painter->drawRoundedRect(
+            QRectF(option.rect).adjusted(1.5, 1.5, -1.5, -1.5), 3.0, 3.0);
+        painter->restore();
+    }
+
+private:
+    DataGrid* m_grid = nullptr;
+    QAbstractItemDelegate* m_baseDelegate = nullptr;
+};
+
+QVector<GallerySample> dataGridSamples()
+{
+    QVector<GallerySample> samples{
+        makeSample(
+            QStringLiteral("data-grid-large-read-only"),
+            QStringLiteral("Large read-only data"),
+            QStringLiteral("A model with 100,000 rows remains virtualized: DataGrid asks only for cells needed by the viewport."),
+            QStringLiteral(
+                "auto* grid = new DataGrid(this);\n"
+                "grid->setModel(new LargeDataGridModel(grid));\n"
+                "grid->setScrollChainingEnabled(true);\n"
+                "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
+                "grid->setEditTriggers(QAbstractItemView::NoEditTriggers);"),
+            [](QWidget* parent) {
+                auto* grid = new DataGrid(parent);
+                grid->setFixedSize(680, 252);
+                grid->setModel(new LargeDataGridModel(grid));
+                grid->setScrollChainingEnabled(true);
+                grid->setSelectionBehavior(QAbstractItemView::SelectRows);
+                grid->setEditTriggers(QAbstractItemView::NoEditTriggers);
+                grid->horizontalHeader()->setStretchLastSection(true);
+                grid->setColumnWidth(0, 150);
+                grid->setColumnWidth(1, 120);
+                return grid;
+            }),
+        makeSample(
+            QStringLiteral("data-grid-column-selection"),
+            QStringLiteral("Columns, sorting, and selection"),
+            QStringLiteral("Resize or reorder headers, click a header to sort, and use Ctrl or Shift to extend row selection."),
+            QStringLiteral(
+                "auto* grid = new DataGrid(this);\n"
+                "grid->setModel(projectModel);\n"
+                "grid->setScrollChainingEnabled(true);\n"
+                "grid->setSelectionMode(DataGrid::SelectionMode::Extended);\n"
+                "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
+                "grid->setSortingEnabled(true);\n"
+                "grid->horizontalHeader()->setSectionsMovable(true);"),
+            [](QWidget* parent) {
+                auto* grid = new DataGrid(parent);
+                grid->setFixedSize(680, 252);
+                auto* model = makeProjectDataGridModel(grid, false);
+                grid->setModel(model);
+                grid->setScrollChainingEnabled(true);
+                grid->setSelectionMode(DataGrid::SelectionMode::Extended);
+                grid->setSelectionBehavior(QAbstractItemView::SelectRows);
+                grid->setSortingEnabled(true);
+                grid->horizontalHeader()->setSectionsMovable(true);
+                grid->horizontalHeader()->setStretchLastSection(true);
+                grid->setColumnWidth(0, 170);
+                grid->setColumnWidth(1, 130);
+                return grid;
+            }),
+        makeSample(
+            QStringLiteral("data-grid-edit-validation"),
+            QStringLiteral("Delegate editing and validation"),
+            QStringLiteral("Double-click or press F2 to edit. The model rejects values shorter than three characters while the delegate paints its validation role."),
+            QStringLiteral(
+                "auto* grid = new DataGrid(this);\n"
+                "grid->setModel(validationModel);\n"
+                "grid->setScrollChainingEnabled(true);\n"
+                "grid->setItemDelegate(new ValidationDelegate(grid));\n"
+                "grid->setEditTriggers(QAbstractItemView::DoubleClicked\n"
+                "                      | QAbstractItemView::EditKeyPressed);\n"
+                "// ValidationModel::setData(EditRole) returns false and\n"
+                "// publishes an application-defined validation role."),
+            [](QWidget* parent) {
+                auto* grid = new DataGrid(parent);
+                grid->setFixedSize(680, 224);
+                auto* model = new ValidatingDataGridModel(grid);
+                model->setHorizontalHeaderLabels({
+                    QStringLiteral("Setting"), QStringLiteral("Value"),
+                    QStringLiteral("Scope")});
+                const QVector<QStringList> rows{
+                    {QStringLiteral("Channel"), QStringLiteral("stable"),
+                     QStringLiteral("Workspace")},
+                    {QStringLiteral("Region"), QStringLiteral("eu-west"),
+                     QStringLiteral("Account")},
+                    {QStringLiteral("Mode"), QStringLiteral("No"),
+                     QStringLiteral("Session")}};
+                for (const QStringList& row : rows) {
+                    QList<QStandardItem*> items;
+                    for (const QString& value : row)
+                        items.append(new QStandardItem(value));
+                    model->appendRow(items);
+                }
+                model->QStandardItemModel::setData(
+                    model->index(2, 1),
+                    QStringLiteral("Use at least 3 characters"),
+                    kDataGridValidationMessageRole);
+                grid->setModel(model);
+                grid->setScrollChainingEnabled(true);
+                grid->setItemDelegate(new DataGridValidationDelegate(grid));
+                grid->setEditTriggers(QAbstractItemView::DoubleClicked
+                                      | QAbstractItemView::EditKeyPressed);
+                grid->horizontalHeader()->setStretchLastSection(true);
+                grid->setColumnWidth(0, 180);
+                grid->setColumnWidth(1, 220);
+                grid->setCurrentIndex(model->index(2, 1));
+                return grid;
+            })
+    };
+    return samples;
+}
+
 QVector<GallerySample> gridViewSamples()
 {
     return {
@@ -2025,6 +2290,8 @@ QVector<GallerySample> collectionsSamples(const QString& routeId)
 {
     if (routeId == QStringLiteral("drawer-view"))
         return drawerViewSamples();
+    if (routeId == QStringLiteral("data-grid"))
+        return dataGridSamples();
     if (routeId == QStringLiteral("flip-view"))
         return flipViewSamples();
     if (routeId == QStringLiteral("flow-view"))

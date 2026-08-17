@@ -29,6 +29,7 @@ from fluentqt import (
 )
 from PySide6.QtCore import (
     QAbstractListModel,
+    QAbstractTableModel,
     QByteArray,
     QCoreApplication,
     QDate,
@@ -60,7 +61,7 @@ from PySide6.QtGui import (
     QStandardItem,
     QStandardItemModel,
 )
-from PySide6.QtTest import QTest
+from PySide6.QtTest import QSignalSpy, QTest
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView,
@@ -80,6 +81,7 @@ from PySide6.QtWidgets import (
     QSlider,
     QStackedWidget,
     QStyledItemDelegate,
+    QTableView,
     QTreeView,
     QWidget,
     QWidgetAction,
@@ -233,6 +235,7 @@ class FluentQtBindingTest(unittest.TestCase):
         )
         self.assertTrue(issubclass(fluentqt.SelectorBar, QWidget))
         self.assertTrue(issubclass(fluentqt.FlipView, QWidget))
+        self.assertTrue(issubclass(fluentqt.DataGrid, QTableView))
         self.assertTrue(issubclass(fluentqt.FlowView, QAbstractItemView))
         self.assertTrue(issubclass(fluentqt.GridView, QListView))
         self.assertTrue(issubclass(fluentqt.ListView, QListView))
@@ -307,6 +310,7 @@ class FluentQtBindingTest(unittest.TestCase):
             fluentqt.ScrollViewZoomAwareWidget,
         )
         self.assertIs(collections.FlowView, fluentqt.FlowView)
+        self.assertIs(collections.DataGrid, fluentqt.DataGrid)
         self.assertIs(collections.GridView, fluentqt.GridView)
         self.assertIs(collections.ListView, fluentqt.ListView)
         self.assertIs(collections.SelectionMode, fluentqt.SelectionMode)
@@ -552,6 +556,9 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(fluentqt.ContentDialog.ResultSecondary, 2)
         self.assertTrue(
             issubclass(fluentqt.FlowView, native.fluent.FlowView)
+        )
+        self.assertTrue(
+            issubclass(fluentqt.DataGrid, native.fluent.DataGrid)
         )
         self.assertTrue(
             issubclass(fluentqt.GridView, native.fluent.GridView)
@@ -4980,6 +4987,8 @@ class FluentQtBindingTest(unittest.TestCase):
         )
         coach.opened.connect(lambda: lifecycle.append(("opened", True)))
         coach.closed.connect(lambda: lifecycle.append(("closed", False)))
+        opened_spy = QSignalSpy(coach.opened)
+        closed_spy = QSignalSpy(coach.closed)
         coach.setTarget(target)
         coach.open()
         QCoreApplication.processEvents()
@@ -4989,6 +4998,9 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertIs(coach.window(), host)
         self.assertFalse(coach.isWindow())
         self.assertGreaterEqual(coach.show_count, 1)
+        self.assertEqual(lifecycle, [("changed", True)])
+        if opened_spy.count() == 0:
+            self.assertTrue(opened_spy.wait(1000))
         self.assertEqual(
             lifecycle[:2],
             [("changed", True), ("opened", True)],
@@ -4996,6 +5008,9 @@ class FluentQtBindingTest(unittest.TestCase):
 
         coach.close()
         self.assertFalse(coach.isOpen())
+        self.assertEqual(lifecycle[-1], ("changed", False))
+        if closed_spy.count() == 0:
+            self.assertTrue(closed_spy.wait(1000))
         self.assertEqual(
             lifecycle[-2:],
             [("changed", False), ("closed", False)],
@@ -6236,6 +6251,98 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertEqual(view.layoutDirection(), Qt.RightToLeft)
         self.assertEqual(view.accessibleName(), "Python adaptive flow")
         self.assertNotEqual(view.focusPolicy(), Qt.NoFocus)
+
+    def test_data_grid_public_surface_and_caller_owned_dependencies(self):
+        self.assertTrue(issubclass(fluentqt.DataGrid, QTableView))
+        self.assertIs(collections.DataGrid, fluentqt.DataGrid)
+        self.assertIs(
+            fluentqt.DataGrid.SelectionMode,
+            fluentqt.SelectionMode,
+        )
+
+        view = fluentqt.DataGrid(
+            selectionMode=fluentqt.SelectionMode.Extended,
+            placeholderText="No rows",
+            borderVisible=False,
+            backgroundVisible=False,
+            scrollChainingEnabled=True,
+        )
+        self.assertEqual(
+            view.selectionMode(),
+            fluentqt.SelectionMode.Extended,
+        )
+        self.assertEqual(view.placeholderText(), "No rows")
+        self.assertFalse(view.isBorderVisible())
+        self.assertFalse(view.isBackgroundVisible())
+        self.assertTrue(view.isScrollChainingEnabled())
+        self.assertTrue(view.isShowingPlaceholder())
+
+        class PythonTableModel(QAbstractTableModel):
+            def rowCount(self, parent=QModelIndex()):
+                return 0 if parent.isValid() else 2
+
+            def columnCount(self, parent=QModelIndex()):
+                return 0 if parent.isValid() else 2
+
+            def data(self, index, role=Qt.DisplayRole):
+                if index.isValid() and role == Qt.DisplayRole:
+                    return f"R{index.row()} C{index.column()}"
+                return None
+
+        model = PythonTableModel()
+        model_ref = weakref.ref(model)
+        view.setModel(model)
+        del model
+        gc.collect()
+        self.assertIs(view.model(), model_ref())
+        self.assertFalse(view.isShowingPlaceholder())
+
+        delegate = QStyledItemDelegate()
+        delegate_ref = weakref.ref(delegate)
+        view.setItemDelegate(delegate)
+        del delegate
+        gc.collect()
+        self.assertIs(view.itemDelegate(), delegate_ref())
+
+        selection = QItemSelectionModel(model_ref())
+        selection_ref = weakref.ref(selection)
+        view.setSelectionModel(selection)
+        del selection
+        gc.collect()
+        self.assertIs(view.selectionModel(), selection_ref())
+
+        changes = []
+        view.selectionModeChanged.connect(lambda: changes.append(True))
+        view.setSelectionMode(fluentqt.SelectionMode.Single)
+        view.setSelectionMode(fluentqt.SelectionMode.Single)
+        self.assertEqual(changes, [True])
+
+        for method_name in (
+            "selectionMode",
+            "setSelectionMode",
+            "verticalFluentScrollBar",
+            "horizontalFluentScrollBar",
+        ):
+            self.assertNotIn(
+                method_name,
+                native.fluent.DataGrid.__dict__,
+            )
+            self.assertIn(method_name, fluentqt.DataGrid.__dict__)
+        for bar in (
+            view.verticalFluentScrollBar(),
+            view.horizontalFluentScrollBar(),
+        ):
+            self.assertTrue(Shiboken.isValid(bar))
+            self.assertFalse(Shiboken.ownedByPython(bar))
+
+        view_ref = weakref.ref(view)
+        del view
+        self.app.processEvents()
+        gc.collect()
+        self.assertIsNone(view_ref())
+        self.assertIsNone(model_ref())
+        self.assertIsNone(delegate_ref())
+        self.assertIsNone(selection_ref())
 
     def test_grid_view_public_surface_properties_and_selection(self):
         self.assertTrue(issubclass(fluentqt.GridView, QListView))
