@@ -200,6 +200,11 @@ QAccessibleInterface* hyperlinkButtonAccessibilityFactory(
         : nullptr;
 }
 
+const bool hyperlinkButtonAccessibilityFactoryInstalled = [] {
+    QAccessible::installFactory(hyperlinkButtonAccessibilityFactory);
+    return true;
+}();
+
 } // namespace
 
 #endif // QT_CONFIG(accessibility)
@@ -207,12 +212,7 @@ QAccessibleInterface* hyperlinkButtonAccessibilityFactory(
 void ensureHyperlinkButtonAccessibilityFactory()
 {
 #if QT_CONFIG(accessibility)
-    static const bool installed = [] {
-        QAccessible::installFactory(
-            hyperlinkButtonAccessibilityFactory);
-        return true;
-    }();
-    Q_UNUSED(installed)
+    Q_UNUSED(hyperlinkButtonAccessibilityFactoryInstalled)
 #endif
 }
 
