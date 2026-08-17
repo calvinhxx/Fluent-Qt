@@ -11,6 +11,7 @@
 #include "components/navigation/SelectorBar.h"
 #include "components/navigation/TabView.h"
 #include "components/scrolling/PipsPager.h"
+#include "QtTestEnvironment.h"
 
 using fluent::navigation::Breadcrumb;
 using fluent::navigation::BreadcrumbItem;
@@ -292,6 +293,7 @@ TEST(NavigationAccessibilityTest, Contract_AccessibilityEventsFollowEffectiveCha
     showAndProcess(pivot, QSize(320, 44));
     ASSERT_NE(accessible(&pivot), nullptr);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
     pivot.setSelectedIndex(1);
     EXPECT_EQ(capture.count(QAccessible::Selection), 1);

@@ -9,6 +9,7 @@
 
 #include "components/basicinput/SplitButton.h"
 #include "components/basicinput/ToggleSplitButton.h"
+#include "QtTestEnvironment.h"
 
 using fluent::basicinput::SplitButton;
 using fluent::basicinput::ToggleSplitButton;
@@ -293,6 +294,7 @@ TEST(SplitButtonAccessibilityTest, Contract_AccessibilitySplitStateEventsFollowE
     QAccessibleInterface* root = accessible(&button);
     ASSERT_NE(root, nullptr);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
     button.setMenu(&first);
     EXPECT_EQ(capture.countPopupState(&button), 1);

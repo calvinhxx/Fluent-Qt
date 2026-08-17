@@ -18,6 +18,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "QtTestEnvironment.h"
 
 using fluent::AnchorLayout;
 using fluent::basicinput::Button;
@@ -353,6 +354,7 @@ TEST_F(CalendarViewTest, Contract_AccessibilityEventsFollowRealChangesAndNoOps)
     view.setVisibleMonth(QDate(2026, 5, 1));
     ASSERT_NE(QAccessible::queryAccessibleInterface(&view), nullptr);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibleEventCapture capture;
     view.setSelectedDate(QDate(2026, 5, 12));
     EXPECT_EQ(capture.count(QAccessible::Selection), 1);

@@ -13,6 +13,7 @@
 #include "components/status_info/ProgressBar.h"
 #include "components/status_info/ProgressRing.h"
 #include "components/textfields/NumberBox.h"
+#include "QtTestEnvironment.h"
 
 using fluent::basicinput::RatingControl;
 using fluent::basicinput::ToggleSwitch;
@@ -317,6 +318,7 @@ TEST(ValueAccessibilityTest, Contract_AccessibilityValueEventsFollowEffectiveCha
     ASSERT_NE(accessible(&number), nullptr);
     ASSERT_NE(accessible(&progress), nullptr);
 
+    FLUENT_REQUIRE_ACCESSIBLE_EVENT_CAPTURE();
     ScopedAccessibilityEventCapture capture;
 
     toggle.setIsOn(true);
