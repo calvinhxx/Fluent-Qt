@@ -103,6 +103,15 @@ void configureOffscreenPlatformForAutomation()
     // 每个 exe 的 AppData)。必须在任何路径解析(下方日志初始化 + QApplication)之前调用。
     QStandardPaths::setTestModeEnabled(true);
 
+#if defined(Q_OS_LINUX)
+    // Qt 6.2 suppresses accessibility notifications until the Linux bridge is
+    // active. Automated tests install an in-process update handler, so enable
+    // the bridge before QApplication is constructed.
+    if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST")) {
+        qputenv("QT_LINUX_ACCESSIBILITY_ALWAYS_ON", QByteArray("1"));
+    }
+#endif
+
     if (qEnvironmentVariableIsSet("SKIP_VISUAL_TEST") && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM"))
         qputenv("QT_QPA_PLATFORM", QByteArray("offscreen"));
 
