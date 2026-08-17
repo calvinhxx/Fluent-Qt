@@ -275,6 +275,11 @@ Compare uses exact logical-pixel equality via `tests::support::compareVisualImag
 A mismatch fails the test and writes `<name>.diff.png` next to the capture under
 `build/<preset>/visual/`.
 
+If the approved state includes keyboard focus, assign the target a stable
+object name and set `VisualSnapshotOptions::focusObjectName`. The snapshot
+helper activates the shown window and restores that focus immediately before
+capture, so a background CTest launch cannot silently drop the focus ring.
+
 Default automated CTest still injects `SKIP_VISUAL_TEST=1`, so discovered
 `VisualGateTest.*` rows skip. `VisualGate.CompareBaselines` is the row that
 diffs against the checked-in PNGs. Both are labeled `visual_gate`; the compare

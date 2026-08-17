@@ -19,6 +19,7 @@ enum class VisualSnapshotTheme {
 struct VisualSnapshotOptions {
 	QSize windowSize;
 	QString variant;
+	QString focusObjectName;
 	VisualSnapshotTheme theme = VisualSnapshotTheme::Light;
 };
 
