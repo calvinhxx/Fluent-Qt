@@ -52,7 +52,7 @@ sys.exit(app.exec())
 
 ## Package contents
 
-- Native Qt Widgets with Fluent, Material, and macOS-style theme presets.
+- Native Qt Widgets with the Fluent design contract and Light/Dark themes.
 - Qt properties, signals, enums, Python subclassing, and typed package stubs.
 - Explicit ownership contracts for hosted widgets, overlays, models, and
   native windows.

@@ -149,8 +149,8 @@ Accepted components:
 
 The proposal defines action ownership, unsupported action kinds, deterministic
 overflow order, keyboard navigation, focus restoration, RTL placement,
-touch/pointer behavior, accessibility, and behavior under Fluent, Material, and
-Cupertino design languages. It includes one default-preserving protected
+touch/pointer behavior, accessibility, and Fluent Light/Dark behavior. It
+includes one default-preserving protected
 `Popup` focus-on-open setter so Transient flyouts can avoid even a temporary
 focus transfer without changing Popup object layout or adding an
 application-facing property. It also splits implementation into four
@@ -199,9 +199,8 @@ Capability Phases 3C and 3D automated validation completed on 2026-07-28:
 - Private accessibility adapters expose toolbar, command, popup-menu, menu-item,
   accelerator, checked, disabled, focus, and More expansion semantics without
   adding installed API.
-- `CommandBar` and `CommandBarFlyout` render under Fluent, Material, and
-  Cupertino in Light and Dark themes. Focused rendering and accessibility
-  contracts run on Qt 6.9.3 and Qt 5.15.2.
+- `CommandBar` and `CommandBarFlyout` render under Fluent in Light and Dark.
+  Focused rendering and accessibility contracts run on Qt 6.9.3 and Qt 5.15.2.
 - EditingCommandRouter actions can be reused by inline and flyout command
   surfaces without losing the active editor or selection; cross-window command
   surfaces reject those window-scoped actions.
@@ -219,7 +218,7 @@ Capability Phases 3C and 3D automated validation completed on 2026-07-28:
   API. Installed public headers include both command surfaces, while private
   action-model, presenter, and accessibility headers remain absent.
 - Focused Computer Use review exercised the CommandBarFlyout VisualCheck and
-  Gallery under Fluent Light/Dark, a Material transition, LTR/RTL,
+  Gallery under Fluent Light/Dark, LTR/RTL,
   Standard/Transient/expanded modes, narrow responsive overflow, pointer and
   keyboard paths, and focus preservation.
 - That review exposed stale pre-exposure scroll-viewport widths in both

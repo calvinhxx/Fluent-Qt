@@ -9,7 +9,8 @@
 lands **Field** as a composition shell, and delivers **DataGrid** contract-first.
 Parallel tracks keep accessibility, C++/Python surface decisions, visual
 evidence, and public contribution intake explicit instead of treating them as
-release cleanup.
+release cleanup. It also narrows the product contract to Fluent and removes the
+former Material/Cupertino API, paint branches, Gallery choices, and bindings.
 
 This is not a Qt-version or WebView release. The reusable `FluentQt` library
 still depends only on Qt Widgets. Qt 5.15 remains the current sampling strategy
@@ -23,7 +24,7 @@ Related contracts:
 - [DataGrid API Contract](datagrid-api-proposal.md) — model/view boundary, slices, and acceptance matrix
 - [Accessibility Contract](accessibility-contract.md) — roles, names, state, keyboard, and event rules
 - [Testing Workflow](testing-workflow.md) — CTest labels, VisualCheck, snapshot PNG limits
-- [Design Language Coverage Ledger](../design-languages/coverage-ledger.md) — who branches on `themeDesignLanguage()`
+- [Fluent Design Contract](../design-languages/README.md) — the single supported visual contract and 1.7 migration
 
 ## Status
 
@@ -33,7 +34,7 @@ Related contracts:
 | 1.7-A Overlay implementation | Function | Compatible API/behavior for Popup, Flyout, Dialog, ContentDialog, TeachingTip; coordinator stays internal | Complete |
 | 1.7-A Overlay tests | Function | `Contract_*` coverage on existing `add_qt_test_module` targets | Complete |
 | 1.7-A Stale layout docs | Function | Close `FND-LAYOUT-002` (AnchorLayout size hints + Tarjan cycle diagnostics already exist) | Complete |
-| 1.7-A Quality ledger | Quality | Inventory which controls branch on design language vs color-only vs Fluent-only; propose the next visual gate | Complete — [coverage-ledger.md](../design-languages/coverage-ledger.md) (42 geometry / 28 color-only / 1 Fluent-only) |
+| 1.7-A Quality ledger | Quality | Inventory the former alternate-language branches and use it to drive a complete Fluent-only cleanup | Complete — all alternate geometry, API, Gallery, binding, test-matrix, documentation, and asset paths were removed in 1.7-P |
 | 1.7-B Field | Function | Composition shell: label, editor slot, helper/error, validation presentation, focus/a11y; reuse `WidgetOwnership`; not a new editor base class | Complete — C++, Gallery, PySide6, catalogs, ownership stress tests, and focused visual evidence are green. [field-api-proposal.md](field-api-proposal.md) |
 | 1.7-C0 DataGrid contract and prototype | Function | Fix model/view ownership, MVP scope, performance structure, accessibility, and cross-language acceptance before a public class lands | Complete — private 100,000 × 20 prototype and 4 structural `Contract_*` tests are green; [datagrid-api-proposal.md](datagrid-api-proposal.md) |
 | 1.7-C1 DataGrid read-only core | Function | Internal component implementation, headers, visible-cell painting, empty state, keyboard current/selection, no per-cell widgets | Complete — the implementation was held private while 8 `Contract_*` tests and full-profile Light/Dark/RTL/minimum/empty/dense/scroll-end visual evidence were completed |
@@ -43,8 +44,8 @@ Related contracts:
 | 1.7-Q Accessibility baseline | Quality | Repository-wide contract plus a risk-ordered audit; new or changed visible components cannot rely on visual labels alone | Complete — 69/69 inventory is machine-gated; nine focused gates close every recorded high- and medium-risk gap |
 | 1.7-Q Representative visual gate | Quality | Small Light/Dark/RTL snapshot gate **or** keep the ledger + a concrete next-gate proposal if a full CI pixel diff is too large | Landed (local opt-in gate; no CI pixel job) |
 | 1.7-COM Public contribution intake | Community | Contributor guide plus structured bug and feature forms with platform/surface/reproduction data | Complete |
+| 1.7-P Fluent-only positioning | Product | Remove Material/Cupertino design-language and style-theme APIs, rendering branches, Gallery/Skill discovery, bindings, tests, docs, and assets | Complete |
 | 1.7 closeout | Delivery | Manual C++/Python/WASM Gallery review plus native, PySide6, WASM, accessibility, AI asset, and representative visual gates | Complete |
-| Post-1.7 Shell geometry | Design language | Decide whether macOS and Material are first-class geometry systems before changing NavigationView, Window, and Card structure | Decision gate only; not a 1.7 blocker |
 
 ## Non-goals
 
@@ -56,7 +57,8 @@ Related contracts:
 - Implementing Field or DataGrid in the overlay slice.
 - Shipping a public DataGrid that creates a `QWidget`/`Field` for every cell or
   owns the caller's model, selection model, delegate, sorting, or persistence.
-- Treating a color-token switch as complete Material or macOS geometry support.
+- Adding alternate design-language paint branches. Visual work targets the
+  Fluent contract only.
 - A CI pixel-diff job without a matching host. `VISUAL_SNAPSHOT=1` still writes
   PNGs under `build/<preset>/visual/` for migrated VisualCheck tests and only
   checks that a non-empty file was produced. The 1.7 representative gate
@@ -246,7 +248,7 @@ covered.
 | 11 | Menu-button and auxiliary-surface accessibility | Complete — DropDownButton, DrawerView, and ToolTip expose keyboard, state, relation, dismissal, lifecycle, and focus-return contracts |
 | 12 | Collection paging and splitter accessibility | Complete — FlipView exposes page value/actions and authored content; SplitView exposes native panes plus keyboard-resizable grip values |
 | 13 | Semantic-presentation accessibility | Complete — HyperlinkButton, InfoBar, and Shimmer expose link, notification, announcement, dismissal, and busy-state contracts; no inventory gaps remain |
-| 14 | Shell geometry decision | Product decision names Fluent-only or first-class Material/macOS geometry, with reference screens and budgets |
+| 14 | Fluent-only product decision | Deprecation contract, Gallery migration, documentation, Python warning, and cross-Agent Skill all name Fluent as the only supported visual language |
 
 Keep repository-wide visual repaints and shell geometry work separate from the
 now-frozen DataGrid model/view delivery so each change remains reviewable.
@@ -273,8 +275,10 @@ allowlist later; they are not required to close 1.7-Q.
 
 Final macOS closeout evidence (2026-08-17):
 
-- C++ `local_full`: 1440/1440 tests passed; platform-specific and interactive
-  VisualCheck cases remained skipped by contract.
+- C++ `local_full`: 1471/1471 tests passed. The Fluent-only cleanup retains 25
+  focused behavior, no-op signal, state, and Light/Dark rendering contracts;
+  platform-specific and interactive VisualCheck cases remained skipped by
+  contract.
 - PySide6: the binding rebuilt and all 95 registered tests passed.
 - WASM: the 90-route full browser smoke passed, including DataGrid scrolling,
   keyboard selection, and delegate editing.

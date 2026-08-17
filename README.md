@@ -35,6 +35,10 @@
 
 Collection controls include ListView, GridView, FlowView, TreeView, and DataGrid. DataGrid keeps Qt's caller-owned model/delegate contract and stays viewport-bound for large tables.
 
+Fluent is the project's only visual language. Version 1.7 removes the former
+Material/Cupertino enums, presets, paint branches, Gallery choices, and PySide6
+entry points; product branding stays within Fluent Light/Dark semantic tokens.
+
 ## 🧱 Dependencies
 
 | Scope | Dependencies |
@@ -305,7 +309,7 @@ python -m fluentqt_gallery
 - [Packaging workflow](docs/development/packaging-workflow.md)
 - [Release governance](docs/development/release-governance.md)
 - [Architecture contracts](docs/architecture/README.md)
-- [Design language references](docs/design-languages/README.md)
+- [Fluent design reference and legacy-theme migration](docs/design-languages/README.md)
 - [WebAssembly compatibility](docs/development/webassembly-workflow.md)
 - [Python compatibility](bindings/pyside6/README.md)
 
@@ -314,8 +318,6 @@ python -m fluentqt_gallery
 | Entry | Purpose |
 |---|---|
 | [Windows UI Kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659) | Fluent / Windows visual reference |
-| [macOS 27 UI Kit (Community)](https://www.figma.com/design/W0PjLoNXuQyLACYlAE3QKi/macOS-27--Community-?node-id=131-8996) | macOS style reference |
-| [Material 3 Design Kit (Community)](https://www.figma.com/design/sfn7GB1zXX6Lu8hfhYqhbA/Material-3-Design-Kit--Community-?node-id=49823-12141) | Material 3 style reference |
 | [WinUI Gallery](https://github.com/microsoft/WinUI-Gallery) | Component behavior and sample page reference |
 
 ## License

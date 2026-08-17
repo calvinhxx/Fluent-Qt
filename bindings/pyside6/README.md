@@ -572,7 +572,7 @@ PYTHONPATH=build/pyside6/python \
 
 The window prints the loaded package/native-extension paths and exact
 FluentQt/PySide6/Qt versions. Use its controls to review Light/Dark,
-Fluent/Material/macOS, accent switching, signals, values, multiline text, and
+Fluent accent switching, signals, values, multiline text, and
 press-and-hold behavior. The `Animate shimmer` checkbox exercises the Shimmer
 timer, while the deterministic snapshot keeps it at a fixed progress. Save the
 same view for review or CI:
@@ -590,8 +590,7 @@ embedded support types across every component category in the
 [coverage ledger](ROADMAP.md#public-api-coverage-ledger), including `Window`,
 `TitleBar`, and the backdrop value types. `api-manifest.json` is the executable
 source of truth for exact names and required methods. The package also supports
-Light/Dark mode,
-Fluent/Material/macOS style presets, in-memory accent overrides, typography
+Light/Dark mode, the Fluent visual language, in-memory accent overrides, typography
 scaling, Qt properties and signals, Python subclassing, and explicit hosted
 widget ownership.
 
@@ -602,7 +601,7 @@ import fluentqt
 settings_icon = fluentqt.FontIcon(fluentqt.Typography.Icons.Settings)
 settings_icon.setIconSize(fluentqt.Typography.IconSize.Large)
 fluentqt.set_theme(fluentqt.Theme.Dark)
-fluentqt.apply_style_theme(fluentqt.StyleTheme.Material)
+fluentqt.apply_user_theme()
 fluentqt.set_accent_color(QColor("#7f52ff"))
 fluentqt.set_font_scale(1.1)
 ```

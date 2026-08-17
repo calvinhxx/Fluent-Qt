@@ -28,7 +28,7 @@ with README, CMake, and agent instructions.
   `local_full`.
 - Discovered tests also receive conservative semantic labels based on test-name
   tokens: `visual`, `interactive`, `animation`, `slow`, `platform_windows`,
-  `platform_macos`, and `design_macos`. VisualCheck tests receive `visual`,
+  and `platform_macos`. VisualCheck tests receive `visual`,
   `interactive`, `manual_visual`, and `local_desktop`.
 - Use anchored label filters so substring matches do not select adjacent
   components:
@@ -76,6 +76,27 @@ real mixed-monitor review.
   or `MacOS`/`MacOs`/`Darwin`/`Cocoa`.
 - Semantic labels are additive. VisualCheck tests still keep `qt`, `unit`,
   category, target, and component labels.
+
+## Removing a Test Matrix Axis
+
+When a public mode, platform abstraction, or product variant is removed, do
+not delete its whole parameterized fixture until every assertion is classified:
+
+1. Move design-neutral behavior, signal, ownership, and no-op assertions into
+   the component's normal `Contract_*` fixture.
+2. Keep representative Fluent Light/Dark state distinctions and painted
+   geometry/color invariants when the deleted matrix was their only automated
+   coverage.
+3. Delete only assertions that require the removed axis or its branch-specific
+   output. Do not retain a one-value compatibility matrix merely to preserve
+   the old fixture shape.
+4. Compare the deleted and remaining test names, then confirm that no affected
+   component is left with only a skipped/manual `VisualCheck` unless another
+   focused target owns its executable contract.
+
+Run the affected component labels and `visual_gate` after the extraction.
+VisualCheck remains a separate manual review surface; it does not replace
+automated state and pixel invariants.
 
 ## Validation Tiers
 

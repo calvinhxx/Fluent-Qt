@@ -1,17 +1,15 @@
 # Fluent (Windows) — Design Reference
 
 Source of truth: **Windows UI kit (Community)** — file `qpecbg7hOfos9DcHWeKlfw`.
-Unlike the Material 3 and macOS pages, Fluent is **not** a porting target — it is the
-**baseline this app already implements**. The values below are quoted directly from our own
+Fluent is the project's only supported visual contract. The values below are quoted directly from our own
 design headers (`src/design/*.h`), which seed the runtime `ThemeRegistry`; the Figma kit was
 the original measurement source and is kept as visual grounding (see
 [figma-sources.md](figma-sources.md)).
 
 > Fluent is **token-based**: controls read semantic `FluentElement::Colors`, `themeRadius()`,
-> and `themeFont()` at runtime. For the Fluent brand those tokens **are** the seed —
-> `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark}` straight into `Colors` and
-> sets `DesignLanguage = DesignFluent`, with **no** override spec on top. Material 3 and macOS
-> are deltas applied *over* this seed.
+> and `themeFont()` at runtime. Those tokens **are** the seed —
+> `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark}` straight into `Colors`,
+> with optional user overrides layered on top.
 
 ---
 
@@ -60,12 +58,11 @@ The neutral `Grey10…Grey200` ramp (e.g. `Grey10 #FAF9F8`, `Grey130 #605E5C`, `
 `ThemeColors::Contrast` namespace carries the high-contrast tokens (accent `#1AEBFF`, black
 canvas, yellow hyperlinks) but is not part of the Light/Dark runtime swap.
 
-### Why this is the seed, not a mapping
+### Why this is the seed
 
-Material 3 and macOS each ship a `builtinSpec()` that *overrides* a handful of roles onto these
-fields; **Fluent ships none** (`ThemeCatalog::apply()` adds no built-in spec for the Fluent
-theme). Selecting Fluent in Settings is exactly `resetToDefaults()` — i.e. the raw
-`ThemeColors` values above, unmodified.
+`ThemeRegistry::defaultSnapshot()` returns these values directly. Calling
+`UserTheme::apply()` starts from that snapshot and then layers the
+optional user-editable `fluent.json` overrides.
 
 ---
 
@@ -109,9 +106,7 @@ A deliberately tiny two-step scale — the WinUI default.
 | `Indicator` | 1.5 | Selection-indicator pills (TabView/SelectorBar/Pivot bar — 3 px bar, rounded at half-thickness) |
 
 `themeRadius().control` is **4** and `themeRadius().overlay` is **8** for the Fluent seed.
-`Button::cornerRadii()` returns `control` (4) on all four corners by default. This small radius
-is the most visible difference from Material 3 (8/12 + full pills) and is shared in spirit with
-macOS's ~6.
+`Button::cornerRadii()` returns `control` (4) on all four corners by default.
 
 ---
 
@@ -129,8 +124,7 @@ themes without a `.darker()`/`.lighter()` guess:
   drag-over. This is the "subtle" command-bar/list-item treatment.
 - **Accent fills** step `AccentDefault → AccentSecondary (hover, ~90 %) → AccentTertiary
   (pressed, ~80 %)` — i.e. the accent itself fades, not a neutral veil.
-- **Pressed motion:** Fluent nudges button content **down 0.5 px** while pressed (a small physical
-  cue); Material/macOS use color only.
+- **Pressed motion:** Fluent nudges button content **down 0.5 px** while pressed.
 - **Focus:** a two-ring focus rect — `Stroke::FocusOuter` (a near-opaque ring) over
   `Stroke::FocusInner` (the opposite polarity), drawn inset.
 
@@ -141,10 +135,10 @@ behind the page.
 
 ---
 
-## 5. Component specs (the `DesignFluent` baseline)
+## 5. Component specs
 
-These describe the resting Fluent shape and interaction — the `else`/default branch of each
-control's `paintEvent`. Every other brand branches off these.
+These describe the resting Fluent shape and interaction implemented by each
+control's paint path.
 
 ### Primitives
 
@@ -210,19 +204,14 @@ Overview of the control family below.
 
 ---
 
-## 6. `DesignFluent` is the baseline
+## 6. Fluent is the runtime contract
 
 Everything above is the **default** the app boots into. Concretely:
 
-- `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark}` into `Colors`, installs
-  radius **4 / 8** and the FluentQt UI type scale, and sets
-  `DesignLanguage = DesignFluent`.
+- `ThemeRegistry::seedDefaults()` copies `ThemeColors::{Light,Dark}` into `Colors` and installs
+  radius **4 / 8** plus the FluentQt UI type scale.
 - `ThemeRegistry::resetToDefaults()` re-runs exactly that seed.
-- `ThemeCatalog::apply(Fluent)` is just `resetToDefaults()` + `DesignFluent` with **no
-  `builtinSpec`** — there is nothing to override because the seed already *is* Fluent.
-- Selecting **Material 3** or **macOS** in Settings layers a `builtinSpec()` (a few role swaps +
-  radius + design language) **on top of** this same seed.
-
-So the [Material 3](material-3.md) and [macOS](macos.md) references describe *deltas*; this page
-describes the **floor** they are measured against. To restore it from any brand, pick **Fluent**
-(or call `resetToDefaults()`).
+- `UserTheme::apply()` resets to the seed and then loads optional
+  `fluent.json` semantic-token overrides.
+- `ThemeRegistry::applySnapshot()` lets C++ applications commit a complete
+  branded Light/Dark Fluent token set atomically.

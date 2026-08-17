@@ -291,7 +291,7 @@ platform contracts.
 
 | Category | Public components audited | Focused tests | Relevant specs found |
 | --- | --- | --- | --- |
-| `foundation` | FontIcon, FluentElement, QMLPlus, StyleThemeCatalog, ThemeRegistry, WidgetOwnership | FontIcon focused visual contract present; infrastructure is covered by its owning contract suites | foundation contracts |
+| `foundation` | FontIcon, FluentElement, QMLPlus, ThemeRegistry, UserTheme, WidgetOwnership | FontIcon focused visual contract present; infrastructure is covered by its owning contract suites | foundation contracts |
 | `layout` | Accordion, Card, Divider, Expander | Present for listed components | layout surface contracts |
 | `basicinput` | Button, CompoundButton, CheckBox, RadioButton, Slider, ComboBox, ColorPicker, ToggleSwitch, ToggleButton, SplitButton, ToggleSplitButton, DropDownButton, HyperlinkButton, RepeatButton, RatingControl | Present for listed components | combobox-dropdown-flyout |
 | `collections` | ListView, GridView, FlowView, TreeView, DataGrid, FlipView, SplitView, StackView, DrawerView | Present for listed components | data-grid, flow-view, gridview-drag-reorder, listview-wheel-input, listview-indicator-motion, tree-view, flipview-wheel-input, split-view, stack-view, drawer-view |

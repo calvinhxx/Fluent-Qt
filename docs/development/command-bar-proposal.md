@@ -58,8 +58,8 @@ action model plus inline and overlay presenters.
   command surface.
 - Provide complete keyboard, pointer, touch, focus-restoration, and
   accessibility contracts.
-- Keep Light/Dark and Fluent, Material, and Cupertino presentation differences
-  visual only; command identity and behavior remain unchanged.
+- Keep Fluent Light/Dark presentation visual only; command identity and
+  behavior remain unchanged.
 - Keep the core target dependent only on Qt Widgets.
 
 ## Non-goals
@@ -668,7 +668,7 @@ visible sibling, then More, then the surface root.
 ## Pointer and Touch Contract
 
 - Standard command hit targets are at least 40 by 40 device-independent pixels,
-  even when the visible glyph or Cupertino bezel is smaller.
+  even when the visible glyph is smaller.
 - The More target follows the same minimum.
 - Hover never triggers a command and is not required for discovery.
 - Press and release must occur in the same enabled target; dragging out
@@ -682,24 +682,17 @@ visible sibling, then More, then the surface root.
 The 40 px baseline follows Microsoft's current touch-target guidance and the
 project's 4 px spacing grid.
 
-## Design-Language Contract
+## Fluent Visual Contract
 
-Behavior, measurement order, action identity, and accessibility do not change
-between design languages.
+The inline surface uses semantic Fluent tokens; command targets expose clear
+rest, hover, press, checked, disabled, and focus states; overlays use the
+shared Fluent radius, border, and elevation. Primary icon slots are 20 px and
+overflow icon slots are 16 px. The interactive target remains at least 40 px.
+Light/Dark changes while open preserve state and actions, then remeasure and
+repaint atomically.
 
-| Language | Inline surface | Command target | Overlay |
-|---|---|---|---|
-| Fluent | Token canvas/layer strip | Subtle rest, Fluent hover/press/focus | Overlay radius, border, elevation |
-| Material | Surface-container strip | Neutral state layer; checked uses tonal selection | Elevated borderless surface-container |
-| Cupertino | Quiet toolbar surface | Inset bezel/veil; checked uses accent selection | Hairline rounded panel with soft shadow |
-
-Primary icon slots are 20 px and overflow icon slots are 16 px across
-languages. The interactive target remains at least 40 px. Theme or design
-language changes while open preserve open/expanded state and actions, then
-remeasure and repaint atomically.
-
-Visual checks cover Light and Dark for all three languages, long translated
-labels, icon-only and text-only commands, high DPI, LTR, and RTL.
+Visual checks cover Light and Dark, long translated labels, icon-only and
+text-only commands, high DPI, LTR, and RTL.
 
 ## Accessibility Contract
 
@@ -818,8 +811,7 @@ Normal resize, measurement, hover, and action-state changes do not log.
 - Every command and More target is at least 40 by 40 logical pixels.
 - Press-drag-cancel, touch release, right button, hover, and disabled behavior
   are deterministic.
-- Fluent, Material, and Cupertino paint in Light/Dark without opaque fallback
-  artifacts.
+- Fluent paints in Light/Dark without opaque fallback artifacts.
 - Theme switching while open preserves state and recomputes overflow once.
 - Accessible roles, names, accelerators, focus, checked state, and expanded
   state are queryable.
@@ -894,8 +886,8 @@ Normal resize, measurement, hover, and action-state changes do not log.
      skips. Source-subproject and installed-package consumers compile and link
      the public API; the install tree excludes all private command model,
      presenter, and accessibility headers.
-   - Focused Computer Use review covered Fluent Light/Dark, a Material
-     transition, LTR/RTL, Standard/Transient/expanded flyouts, responsive
+   - Focused Computer Use review covered Fluent Light/Dark, LTR/RTL,
+     Standard/Transient/expanded flyouts, responsive
      Gallery overflow, and focus preservation. It exposed and drove fixes for
      stale pre-exposure `QScrollArea` viewport widths in both flyout secondary
      rows and inline overflow rows; the corresponding geometry contracts now
