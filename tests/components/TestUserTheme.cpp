@@ -193,6 +193,7 @@ TEST_F(UserThemeTest, Contract_SetAccentPersistsSparseOverrideAndDerivesVariants
     QFile file(fluent::UserTheme::filePath());
     ASSERT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text));
     const QJsonObject root = QJsonDocument::fromJson(file.readAll()).object();
+    file.close();
     const QJsonObject overrides = root.value(QStringLiteral("overrides")).toObject();
     for (const QString& modeName : {QStringLiteral("light"),
                                     QStringLiteral("dark")}) {
