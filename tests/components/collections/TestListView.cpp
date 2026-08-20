@@ -1091,6 +1091,29 @@ TEST_F(ListViewTest, Contract_SelectedIndicatorPaintsAccentInLightAndDark)
     FluentElement::setTheme(FluentElement::Light);
 }
 
+TEST_F(ListViewTest, Contract_SelectionIndicatorVisibilityKeepsSelection)
+{
+    auto* listView = createIndicatorListView(window);
+    listView->setSelectedIndicatorAnimationEnabled(false);
+    listView->setSelectedIndex(1);
+    showWindowAndProcess(window);
+
+    EXPECT_TRUE(listView->selectionIndicatorVisible());
+    ASSERT_FALSE(listView->selectedIndicatorRect().isEmpty());
+    QSignalSpy visibleSpy(listView, &ListView::selectionIndicatorVisibleChanged);
+
+    listView->setSelectionIndicatorVisible(false);
+    QApplication::processEvents();
+
+    EXPECT_FALSE(listView->selectionIndicatorVisible());
+    EXPECT_TRUE(listView->selectedIndicatorRect().isEmpty());
+    EXPECT_EQ(listView->selectedIndex(), 1);
+    EXPECT_EQ(visibleSpy.count(), 1);
+
+    listView->setSelectionIndicatorVisible(false);
+    EXPECT_EQ(visibleSpy.count(), 1);
+}
+
 TEST_F(ListViewTest, SelectedIndicatorHorizontalPlacement) {
     auto* lv = createIndicatorListView(window, QListView::LeftToRight);
     showWindowAndProcess(window);

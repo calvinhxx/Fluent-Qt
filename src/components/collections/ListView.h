@@ -87,6 +87,11 @@ public:
      * zh_CN: 是否启用选中指示器动画。
      */
     Q_PROPERTY(bool selectedIndicatorAnimationEnabled READ selectedIndicatorAnimationEnabled WRITE setSelectedIndicatorAnimationEnabled NOTIFY selectedIndicatorAnimationEnabledChanged)
+    /**
+     * @brief Whether the selected-item indicator is painted.
+     * zh_CN: 是否绘制选中项指示器。
+     */
+    Q_PROPERTY(bool selectionIndicatorVisible READ selectionIndicatorVisible WRITE setSelectionIndicatorVisible NOTIFY selectionIndicatorVisibleChanged)
 
     /**
      * @brief Whether the control frame border is painted.
@@ -213,6 +218,16 @@ public:
     bool selectedIndicatorAnimationEnabled() const { return m_selectedIndicatorAnimationEnabled; }
     bool isSelectedIndicatorAnimationEnabled() const { return selectedIndicatorAnimationEnabled(); }
     void setSelectedIndicatorAnimationEnabled(bool enabled);
+    /**
+     * @brief Returns whether the selected-item indicator is painted.
+     * zh_CN: 返回是否绘制选中项指示器。
+     */
+    bool selectionIndicatorVisible() const { return m_selectionIndicatorVisible; }
+    /**
+     * @brief Shows or hides the indicator without changing selection semantics.
+     * zh_CN: 显示或隐藏指示器，但不改变选择语义。
+     */
+    void setSelectionIndicatorVisible(bool visible);
     /** 返回当前绘制用的 selected indicator viewport 几何；无可见选中项时为空。 */
     QRectF selectedIndicatorRect() const;
     /** 返回指定归一化进度下的 selected indicator viewport 几何，供自动化测试验证过渡轨迹。 */
@@ -253,6 +268,7 @@ signals:
     void selectedIndicatorProgressChanged();
     void selectedIndicatorMotionDirectionChanged();
     void selectedIndicatorAnimationEnabledChanged();
+    void selectionIndicatorVisibleChanged();
     void itemClicked(int index);
     void itemReordered(int fromRow, int toRow);
 
@@ -373,6 +389,7 @@ private:
     qreal m_selectedIndicatorProgress = 1.0;
     IndicatorMotionDirection m_selectedIndicatorMotionDirection = IndicatorMotionDirection::None;
     bool m_selectedIndicatorAnimationEnabled = true;
+    bool m_selectionIndicatorVisible = true;
 };
 
 } // namespace fluent::collections
