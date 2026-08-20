@@ -34,7 +34,7 @@ body:
     attributes:
       label: FluentQt version and environment
       description: Include C++ or PySide6, Qt version, operating system, and architecture when useful.
-      placeholder: FluentQt 1.7.0, C++17, Qt 6.8.3, Windows 11 x64
+      placeholder: FluentQt 1.7.1, C++17, Qt 6.8.3, Windows 11 x64
   - type: textarea
     id: evidence
     attributes:
