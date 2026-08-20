@@ -5,7 +5,7 @@
 #include <QContextMenuEvent>
 #include <QEvent>
 #include <QFocusEvent>
-#include <QFontMetrics>
+#include <QFontMetricsF>
 #include <QInputMethodEvent>
 #include <QPaintEvent>
 #include <QPainter>
@@ -28,19 +28,33 @@ namespace fluent::textfields {
 
 // ── Helpers. zh_CN: 辅助函数 ───────────────────────────────────────────────────
 
+static int naturalLineHeight(const QFont& font) {
+    // QTextLayout keeps sub-pixel font metrics and rounds the resulting line
+    // box up. QFontMetrics::lineSpacing() can round the same value down on
+    // Qt 5, which makes a capped editor one pixel too short per visible line.
+    // zh_CN: QTextLayout 保留字体的小数度量并向上取整行框；Qt 5 中
+    // QFontMetrics::lineSpacing() 可能对同一数值向下取整，导致每个可见行
+    // 少算 1 px。
+    return qCeil(QFontMetricsF(font).lineSpacing());
+}
+
+static int effectiveLineHeight(const QFont& font, int requestedLineHeight) {
+    return qMax(requestedLineHeight, naturalLineHeight(font));
+}
+
 static int verticalMarginOverflow(const QFont& font,
                                   int lineHeight,
                                   const QMargins& margins) {
-    const int fontLh = QFontMetrics(font).lineSpacing();
-    const int slotSlack = qMax(0, lineHeight - fontLh);
+    const int fontLh = naturalLineHeight(font);
+    const int slotSlack = effectiveLineHeight(font, lineHeight) - fontLh;
     return qMax(0, margins.top() + margins.bottom() - slotSlack);
 }
 
 static QMargins calcContentViewportMargins(const QFont& font,
                                            int lineHeight,
                                            const QMargins& margins) {
-    const int fontLh = QFontMetrics(font).lineSpacing();
-    const int slotSlack = qMax(0, lineHeight - fontLh);
+    const int fontLh = naturalLineHeight(font);
+    const int slotSlack = effectiveLineHeight(font, lineHeight) - fontLh;
     const int requestedTop = qMax(0, margins.top());
     const int requestedBottom = qMax(0, margins.bottom());
     const int centeredSlack = qMax(
@@ -52,8 +66,7 @@ static QMargins calcContentViewportMargins(const QFont& font,
 }
 
 static int calcBotPad(const QFont& font, int lineHeight) {
-    const int fontLh = QFontMetrics(font).lineSpacing();
-    return qMax(0, lineHeight - fontLh);
+    return effectiveLineHeight(font, lineHeight) - naturalLineHeight(font);
 }
 
 static bool formatMetricEquals(qreal lhs, qreal rhs) {
@@ -128,7 +141,7 @@ protected:
         if (ph.isEmpty()) return;
 
         QPainter painter(viewport());
-        const int fontLh = QFontMetrics(font()).lineSpacing();
+        const int fontLh = naturalLineHeight(font());
         QRect textRect(0, 0, viewport()->width(), fontLh);
         painter.setPen(palette().color(QPalette::PlaceholderText));
         painter.setFont(font());
@@ -744,7 +757,8 @@ void TextEdit::updateHeightForContent() {
     // 调用方设置更大的上下内边距时，仅补足超出行槽余量的高度。
     const int marginOverflow = verticalMarginOverflow(
         m_editor->font(), m_lineHeight, m_contentMargins);
-    const int targetHeight = clamped * m_lineHeight + marginOverflow;
+    const int targetHeight = clamped * effectiveLineHeight(
+        m_editor->font(), m_lineHeight) + marginOverflow;
     if (minimumHeight() != targetHeight || maximumHeight() != targetHeight)
         setFixedHeight(targetHeight);
 
