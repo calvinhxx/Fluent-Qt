@@ -17,6 +17,11 @@ on:
         required: true
         default: false
         type: boolean
+      source_tag:
+        description: Existing stable tag to rehearse on TestPyPI after a missed pre-tag stage.
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: python-release-${{ github.ref }}-${{ inputs.stage }}
@@ -37,6 +42,7 @@ jobs:
       source_commit: ${{ steps.resolve.outputs.source_commit }}
       ci_run_id: ${{ steps.resolve.outputs.ci_run_id }}
       ci_run_attempt: ${{ steps.resolve.outputs.ci_run_attempt }}
+      source_ref: ${{ steps.resolve.outputs.source_ref }}
       stage: ${{ steps.resolve.outputs.stage }}
       recovery: ${{ steps.resolve.outputs.recovery }}
     steps:
@@ -51,12 +57,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_STAGE: ${{ inputs.stage }}
           RECOVERY: ${{ inputs.recovery }}
+          SOURCE_TAG: ${{ inputs.source_tag }}
         shell: bash
         run: |
           set -euo pipefail
 
           if [[ "$RECOVERY" == "true" && "$RELEASE_STAGE" != "pypi" ]]; then
             echo "::error::Recovery mode is only valid for a partial production PyPI upload."
+            exit 1
+          fi
+          if [[ -n "$SOURCE_TAG" && "$RELEASE_STAGE" != "testpypi" ]]; then
+            echo "::error::source_tag is only valid for a missed TestPyPI rehearsal."
             exit 1
           fi
 
@@ -74,11 +85,40 @@ jobs:
 
           git fetch --force --tags origin
           source_commit="$(git rev-parse 'HEAD^{commit}')"
+          source_ref="$GITHUB_REF_NAME"
           if [[ "$RELEASE_STAGE" == "testpypi" ]]; then
             expected_branch="release/${version_major}.${version_minor}.x"
             if [[ "$GITHUB_REF_TYPE" != "branch" || "$GITHUB_REF_NAME" != "$expected_branch" ]]; then
               echo "::error::TestPyPI must run from $expected_branch, got $GITHUB_REF."
               exit 1
+            fi
+            if [[ -n "$SOURCE_TAG" ]]; then
+              if [[ ! "$SOURCE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "::error::TestPyPI source_tag must be a stable vX.Y.Z tag."
+                exit 1
+              fi
+              if ! git rev-parse -q --verify "refs/tags/$SOURCE_TAG^{tag}" >/dev/null; then
+                echo "::error::TestPyPI source_tag must be annotated: $SOURCE_TAG"
+                exit 1
+              fi
+              if [[ "${SOURCE_TAG#v}" != "$version" ]]; then
+                echo "::error::TestPyPI source_tag $SOURCE_TAG does not match project version $version."
+                exit 1
+              fi
+              release_json="$(
+                gh release view "$SOURCE_TAG" \
+                  --repo "$GITHUB_REPOSITORY" \
+                  --json isDraft,isPrerelease,tagName
+              )"
+              jq -e \
+                --arg tag "$SOURCE_TAG" \
+                '.tagName == $tag and .isDraft == false and .isPrerelease == false' \
+                <<< "$release_json" >/dev/null || {
+                  echo "::error::TestPyPI source_tag recovery requires a published stable GitHub Release."
+                  exit 1
+                }
+              source_commit="$(git rev-list -n 1 "$SOURCE_TAG")"
+              source_ref="$SOURCE_TAG"
             fi
           elif [[ "$RELEASE_STAGE" == "pypi" ]]; then
             if [[ "$GITHUB_REF_TYPE" != "tag" || ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -183,6 +223,7 @@ jobs:
           {
             echo "version=$version"
             echo "source_commit=$source_commit"
+            echo "source_ref=$source_ref"
             echo "ci_run_id=$ci_run_id"
             echo "ci_run_attempt=$ci_run_attempt"
             echo "stage=$RELEASE_STAGE"
@@ -198,6 +239,7 @@ jobs:
             echo "- Stage: ${{ steps.resolve.outputs.stage }}"
             echo "- Version: ${{ steps.resolve.outputs.version }}"
             echo "- Ref: ${GITHUB_REF}"
+            echo "- Source ref: ${{ steps.resolve.outputs.source_ref }}"
             echo "- Commit: ${{ steps.resolve.outputs.source_commit }}"
             echo "- Source full-CI run: ${{ steps.resolve.outputs.ci_run_id }}"
             echo "- Source full-CI attempt: ${{ steps.resolve.outputs.ci_run_attempt }}"
@@ -214,6 +256,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ needs.preflight.outputs.source_ref }}
 
       - name: Download canonical bundle from full CI
         uses: actions/download-artifact@v4
@@ -358,6 +401,8 @@ jobs:
     steps:
       - name: Checkout selected release ref
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.preflight.outputs.source_ref }}
 
       - name: Download vetted publication candidate
         uses: actions/download-artifact@v4
@@ -480,6 +525,8 @@ jobs:
     steps:
       - name: Checkout selected release ref
         uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.preflight.outputs.source_ref }}
 
       - name: Download vetted publication candidate
         uses: actions/download-artifact@v4
