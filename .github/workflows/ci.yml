@@ -1,5 +1,5 @@
 name: CI
-run-name: CI ${{ github.event_name == 'schedule' && 'full' || github.event.inputs.matrix || 'fast' }}
+run-name: CI ${{ (github.event_name == 'schedule' || github.event_name == 'push') && 'full' || github.event.inputs.matrix || 'fast' }}
 
 on:
   push:
@@ -15,6 +15,11 @@ on:
         options:
           - fast
           - full
+      python_release_bundle:
+        description: Build every publishable PySide6 wheel (full tier only).
+        required: true
+        default: false
+        type: boolean
   schedule:
     # Weekly full validation matrix. Times are UTC.
     - cron: "23 18 * * 0"
@@ -34,6 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       mode: ${{ steps.mode.outputs.mode }}
+      python_release_bundle: ${{ steps.mode.outputs.python_release_bundle }}
       should_build: ${{ steps.changes.outputs.should_build }}
       should_build_pyside: ${{ steps.changes.outputs.should_build_pyside }}
       should_build_wasm: ${{ steps.changes.outputs.should_build_wasm }}
@@ -124,10 +130,15 @@ jobs:
           set -euo pipefail
 
           mode="fast"
+          python_release_bundle="false"
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            mode="full"
+            python_release_bundle="true"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
             mode="full"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             mode="${{ github.event.inputs.matrix }}"
+            python_release_bundle="${{ github.event.inputs.python_release_bundle }}"
           fi
 
           case "$mode" in
@@ -137,9 +148,14 @@ jobs:
               exit 1
               ;;
           esac
+          if [[ "$python_release_bundle" == "true" && "$mode" != "full" ]]; then
+            echo "::error::The Python release bundle requires matrix=full."
+            exit 1
+          fi
 
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
-          echo "Selected $mode validation."
+          echo "python_release_bundle=$python_release_bundle" >> "$GITHUB_OUTPUT"
+          echo "Selected $mode validation (Python release bundle: $python_release_bundle)."
 
   cpp:
     name: C++ validation
@@ -156,6 +172,7 @@ jobs:
     uses: ./.github/workflows/ci-python.yml
     with:
       mode: ${{ needs.plan.outputs.mode }}
+      build_release_bundle: ${{ needs.plan.outputs.python_release_bundle == 'true' }}
 
   wasm:
     name: WebAssembly validation

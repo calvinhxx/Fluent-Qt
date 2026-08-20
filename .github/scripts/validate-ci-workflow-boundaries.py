@@ -83,7 +83,7 @@ def validate_boundaries() -> list[str]:
     python_release = contents["python-release.yml"]
     pages = contents["pages.yml"]
 
-    if len(orchestrator.splitlines()) > 260:
+    if len(orchestrator.splitlines()) > 280:
         errors.append("ci.yml must remain a compact orchestration-only workflow")
     for required in (
         "uses: ./.github/workflows/ci-cpp.yml",
@@ -91,6 +91,9 @@ def validate_boundaries() -> list[str]:
         "uses: ./.github/workflows/ci-wasm.yml",
         "name: CI Gate",
         "name: Release ready",
+        "python_release_bundle:",
+        'python_release_bundle="true"',
+        "build_release_bundle: ${{ needs.plan.outputs.python_release_bundle == 'true' }}",
         "actions: read",
     ):
         if required not in orchestrator:
@@ -158,6 +161,12 @@ def validate_boundaries() -> list[str]:
 
     if "bindings/pyside6/wheel-matrix.json" not in python:
         errors.append("ci-python.yml must own the PySide6 wheel matrix catalog")
+    if "build_release_bundle:" not in python:
+        errors.append("ci-python.yml must expose the optional Python release-bundle input")
+    if python.count("inputs.build_release_bundle") < 4:
+        errors.append(
+            "ci-python.yml must gate matrix selection, release jobs, bundle, and summary"
+        )
     pyside_release = job_section(python, "pyside6_release")
     if "max-parallel: 4" not in pyside_release:
         errors.append(

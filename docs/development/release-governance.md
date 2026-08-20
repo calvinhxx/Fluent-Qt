@@ -9,8 +9,8 @@ represent supported patch lines, not Git Flow release branches.
 
 ## Branches
 
-- `main` is the default branch and records the latest promoted stable baseline.
-  Keep it releasable, but do not use it for routine post-release development.
+- `main` is the default branch, the stable-tag source, and the latest promoted
+  baseline. A push to `main` automatically runs the standard full release gate.
 - `release/<major>.<minor>.x` branches are long-lived patch lines. The highest
   active version is the normal working branch for features, fixes, CI,
   packaging, documentation, and other maintenance.
@@ -20,12 +20,14 @@ represent supported patch lines, not Git Flow release branches.
   the patch line linear makes tag-to-tag changelog review straightforward.
 - Use older supported release branches only for deliberate backports to those
   patch lines. Do not mix new-line development into an older branch.
-- Cut `vX.Y.Z` tags from the matching `release/X.Y.x` branch. After publishing
-  the latest stable release, fast-forward or rebase-merge that released commit
-  into `main`; create the next long-lived minor line from the updated `main`.
-- Pushing a stable tag starts the public release workflow even when the release
-  branch has not yet been synchronized to `main`. Treat tag creation as the
+- Promote the intended `release/X.Y.x` commit to `main` before a stable release,
+  normally with a rebase merge. Wait for `Release ready` on that final `main`
+  SHA, then cut `vX.Y.Z` from the same commit. Treat tag creation as the
   publication boundary and obtain explicit maintainer approval first.
+- After publication, merge the tagged `main` commit back into the matching
+  release branch before new patch work. This synchronization merge is the
+  deliberate exception to the otherwise linear patch line; it keeps the public
+  tag in that branch's ancestry after a rebase merge changed commit IDs.
 - Create a temporary branch only when explicitly needed for external review,
   contributor work, or risky isolation. Rebase-merge it to keep history linear,
   then delete it promptly.
@@ -203,15 +205,15 @@ Before creating a stable tag:
 
 1. Confirm the matching `release/X.Y.x` branch contains the intended release
    commit and the maintainer has explicitly approved making the version public.
-   Synchronize the published commit to `main` afterward unless the maintainer
-   deliberately chooses to promote it first.
-2. Confirm the worktree is clean.
+   Rebase-merge it into `main`; do not tag the pre-merge release-branch SHA.
+2. Confirm `main` and the worktree are clean and point at the intended commit.
 3. Confirm the CMake project version matches the intended tag.
-4. Run the supported CI build/test matrix for the release, normally
-   `gh workflow run CI --ref <branch-or-tag> -f matrix=full` or an equivalent
-   local host full validation. The GitHub Release workflow requires the tagged
-   commit to have a successful `Release ready` check produced by this full
-   matrix unless `require_ci=false` is selected manually.
+4. Wait for the automatic `CI full` run triggered by the `main` push. If a
+   manual rerun is needed, use
+   `gh workflow run CI --ref main -f matrix=full -f python_release_bundle=false`.
+   The GitHub Release workflow requires the exact tagged commit to have a
+   successful `Release ready` check; do not substitute a tree-equivalent run
+   from the release branch or disable `require_ci` for a standard release.
    If the change touches CMake, tests, Qt compatibility, platform behavior, or
    component input/windowing behavior, include the Ubuntu 22.04 Linux validation
    covered in [Linux Workflow](linux-workflow.md).
@@ -223,16 +225,19 @@ Before creating a stable tag:
    source required by their Qt `NOTICE.md`.
 8. Publish the GitHub Release notes, installers, and one aggregate
    `SHA256SUMS.txt`.
+9. Merge the tagged `main` commit back into `release/X.Y.x` before continuing
+   patch development on that line.
 
 For releases that publish the optional PySide6 distributions, also follow the
 [Python publishing runbook](../../bindings/pyside6/PUBLISHING.md). Python
-publication has an additional immutable-artifact sequence: full CI creates one
-18-wheel bundle, that exact bundle passes TestPyPI before the stable tag is
-created, and the tagged production workflow publishes the same files through
-Trusted Publishing after an explicit maintainer workflow dispatch. The
-production environments retain their `v*` tag restrictions without requiring
-a second deployment approval in the single-maintainer setup. A successful
-native wheel matrix alone is not a published Python release.
+publication is the deliberate exception to the standard main-first sequence:
+full CI creates one 18-wheel bundle on `release/X.Y.x`, that exact bundle passes
+TestPyPI before the stable tag is created on the same release-branch commit,
+and the tagged production workflow publishes the same files through Trusted
+Publishing. Promote the tagged commit to `main` afterward; do not rebase it
+before tagging because that changes the artifact SHA. Build the bundle only
+when Python publication is intended, with
+`gh workflow run CI --ref release/X.Y.x -f matrix=full -f python_release_bundle=true`.
 
 Later automation may perform these steps, but the rules above remain the
 contract that CI, changelog, and packaging workflows should enforce.

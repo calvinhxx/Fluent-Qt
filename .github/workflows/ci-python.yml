@@ -7,6 +7,10 @@ on:
         description: Validation tier selected by the CI orchestrator.
         required: true
         type: string
+      build_release_bundle:
+        description: Build the complete publishable wheel matrix and bundle.
+        required: true
+        type: boolean
 
 permissions:
   actions: read
@@ -59,7 +63,8 @@ jobs:
 
           echo "mode=$VALIDATION_MODE" >> "$GITHUB_OUTPUT"
           echo "pyside_release_matrix=$release_matrix" >> "$GITHUB_OUTPUT"
-          if [[ "$VALIDATION_MODE" == "full" ]]; then
+          if [[ "$VALIDATION_MODE" == "full" && \
+                "${{ inputs.build_release_bundle }}" == "true" ]]; then
             echo "Selected $(jq '.include | length' <<< "$release_matrix") dynamic release scenarios."
             echo "Prioritized representative scenarios: $(
               jq -r \
@@ -68,6 +73,8 @@ jobs:
                   .id] | join(", ")' \
                 <<< "$release_matrix"
             )"
+          elif [[ "$VALIDATION_MODE" == "full" ]]; then
+            echo "Selected representative full validation; the optional Python release bundle is disabled."
           else
             echo "Fast validation selected; dynamic release scenarios will be skipped."
           fi
@@ -1000,7 +1007,7 @@ jobs:
   pyside6_release:
     name: ${{ matrix.name }}
     needs: plan
-    if: ${{ needs.plan.outputs.mode == 'full' }}
+    if: ${{ needs.plan.outputs.mode == 'full' && inputs.build_release_bundle }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
@@ -1581,6 +1588,7 @@ jobs:
       ${{
         always() &&
         needs.plan.outputs.mode == 'full' &&
+        inputs.build_release_bundle &&
         needs.pyside6_release.result == 'success'
       }}
     runs-on: ubuntu-latest
@@ -1663,7 +1671,7 @@ jobs:
       - pyside6_windows
       - pyside6_macos
       - pyside6_release
-    if: ${{ always() && needs.plan.outputs.mode == 'full' }}
+    if: ${{ always() && needs.plan.outputs.mode == 'full' && inputs.build_release_bundle }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     strategy:

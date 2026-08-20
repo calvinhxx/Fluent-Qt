@@ -11,8 +11,8 @@ clean public-install verification without rebuilding any wheel.
 
 ## Immutable release bundle
 
-A successful full CI run creates one artifact named
-`fluentqt-python-release-bundle`:
+A successful full CI run with `python_release_bundle=true` creates one artifact
+named `fluentqt-python-release-bundle`:
 
 ```text
 python-release-bundle/
@@ -95,14 +95,14 @@ candidate: Core receives 17 wheels and Gallery receives one.
 
 ## Prepare a release candidate
 
-1. Integrate the intended changes into `release/1.6.x`.
+1. Integrate the intended changes into the matching `release/X.Y.x` branch.
 2. Keep the CMake, vcpkg, documentation, Python API manifest, core wheel, and
    Gallery wheel versions aligned at the intended `X.Y.Z` version.
 3. Review `docs/releases/vX.Y.Z.md` and the maintainer changelog.
-4. Run full CI on the untagged release commit:
+4. Run full CI with the Python release bundle enabled on the untagged commit:
 
    ```bash
-   gh workflow run CI --ref release/1.6.x -f matrix=full
+   gh workflow run CI --ref release/X.Y.x -f matrix=full -f python_release_bundle=true
    ```
 
 5. Require `Release ready` to pass. Download or inspect the canonical bundle
@@ -121,7 +121,7 @@ successful full-CI bundle:
 
 ```bash
 gh workflow run python-release.yml \
-  --ref release/1.6.x \
+  --ref release/X.Y.x \
   -f stage=testpypi \
   -f recovery=false
 ```
@@ -207,8 +207,8 @@ Record the following in both roadmaps before marking M6 complete:
 
 After reviewing the final release content, the repository maintainer explicitly
 authorizes and performs synchronization of the tagged release commit to `main`
-following release governance. Then delete the temporary `python-sup` branch.
-The Qt 6.2.4 / CPython 3.10 lanes remain non-published compatibility gates.
+following release governance. The Qt 6.2.4 / CPython 3.10 lanes remain
+non-published compatibility gates.
 
 ### v1.6.0 closure record
 

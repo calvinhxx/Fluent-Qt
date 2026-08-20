@@ -161,7 +161,7 @@ jobs:
             fi
           done
           if [[ -z "$ci_run_id" ]]; then
-            echo "::error::No successful full CI run and canonical Python release bundle became visible within 120 seconds."
+            echo "::error::No successful bundle-enabled full CI run became visible within 120 seconds."
             exit 1
           fi
 
