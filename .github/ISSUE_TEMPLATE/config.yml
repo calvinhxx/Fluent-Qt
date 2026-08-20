@@ -1,1 +1,11 @@
 blank_issues_enabled: true
+contact_links:
+  - name: Questions and support / 使用帮助
+    url: https://github.com/calvinhxx/Fluent-Qt/discussions/categories/q-a
+    about: Ask installation, integration, and usage questions in GitHub Discussions. / 安装、接入和使用问题请前往 Discussions。
+  - name: Explore an idea / 讨论想法
+    url: https://github.com/calvinhxx/Fluent-Qt/discussions/categories/ideas
+    about: Discuss the user scenario and smallest useful scope before opening a feature request. / 提交功能请求前，先讨论使用场景和最小范围。
+  - name: Show what you built / 展示作品
+    url: https://github.com/calvinhxx/Fluent-Qt/discussions/categories/show-and-tell
+    about: Share an application, prototype, screenshot, or migration experience. / 分享应用、原型、截图或迁移经验。

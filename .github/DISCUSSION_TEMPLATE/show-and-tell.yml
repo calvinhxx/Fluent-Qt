@@ -1,0 +1,70 @@
+title: "[Show and tell] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share an application, prototype, migration, screenshot, or integration experience built with Fluent-Qt.
+
+        This is a public forum. Share only material that you are authorized to
+        publish, and remove credentials, customer data, private repository
+        links, and identifying information you do not want indexed.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What are you sharing?
+      options:
+        - Application or product
+        - Prototype or experiment
+        - Qt Widgets migration
+        - Component integration
+        - Theme or visual exploration
+        - Tutorial or learning resource
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What did you build?
+      description: Describe the user workflow and how Fluent-Qt is used.
+    validations:
+      required: true
+  - type: input
+    id: stack
+    attributes:
+      label: FluentQt version and environment
+      description: Include C++ or PySide6, Qt version, operating system, and architecture when useful.
+      placeholder: FluentQt 1.7.0, C++17, Qt 6.8.3, Windows 11 x64
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Links, screenshots, or demo
+      description: Drag public screenshots here or link a public repository, article, video, or demo.
+  - type: textarea
+    id: lessons
+    attributes:
+      label: What worked and what was difficult?
+      description: Share useful components, rough edges, performance notes, or migration lessons.
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback wanted
+      description: Tell the community what kind of review, testing, or advice would help.
+  - type: checkboxes
+    id: permissions
+    attributes:
+      label: Sharing permissions
+      options:
+        - label: I am authorized to publish the text, links, and images included in this public Discussion.
+          required: true
+        - label: >-
+            Fluent-Qt maintainers may link to this public Discussion from
+            project documentation. This does not grant permission to reuse
+            logos, screenshots, or quotes elsewhere.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I removed credentials, customer data, private links, and other information that should not be public.
+          required: true

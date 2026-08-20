@@ -1,0 +1,64 @@
+title: "[Idea] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this category to explore a real application need before turning it into a scoped feature request.
+
+        Reproducible incorrect behavior belongs in the bug report form. Please
+        do not include credentials, customer data, or other private information.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Area
+      options:
+        - C++ component or API
+        - PySide6 binding
+        - Gallery, examples, or documentation
+        - WebAssembly
+        - Build, packaging, or release
+        - Design language or accessibility
+        - Community or contributor experience
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should an application developer or end user be able to accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Concrete scenario
+      description: Describe the workflow, data size, interaction, platform, and Qt or PySide6 version when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: current-approach
+    attributes:
+      label: Current approach or workaround
+      description: Explain what you use today and where an existing Qt or FluentQt surface falls short.
+  - type: textarea
+    id: smallest-scope
+    attributes:
+      label: Smallest useful scope
+      description: Suggest the smallest reusable behavior that would solve the scenario. API sketches are optional.
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: How you can help
+      options:
+        - label: I can validate a proposed design or implementation.
+        - label: I can contribute code, documentation, or a minimal example after the scope is agreed.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before posting
+      options:
+        - label: I searched existing Discussions and Issues for a similar request.
+          required: true
+        - label: I removed credentials, customer data, and other private information.
+          required: true

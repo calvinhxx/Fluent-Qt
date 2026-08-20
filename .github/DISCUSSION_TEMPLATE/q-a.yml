@@ -1,0 +1,54 @@
+title: "[Q&A] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for using Fluent-Qt. Use this category for installation, integration, API, and usage questions.
+
+        For reproducible incorrect behavior, open a bug report instead. Do not
+        include credentials, customer data, or other private information.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Area
+      options:
+        - C++ library or desktop Gallery
+        - PySide6 binding or Python Gallery
+        - WebAssembly Gallery
+        - Build, installation, or packaging
+        - Documentation or AI guidance
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: FluentQt version or commit
+      placeholder: v1.7.0 or git commit
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, architecture, Qt version, and Python/PySide6 version when applicable.
+      placeholder: Windows 11 x64, Qt 6.9.3, or Python 3.12 with PySide6 6.9.3
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Describe what you are trying to accomplish and where you are blocked.
+    validations:
+      required: true
+  - type: textarea
+    id: attempts
+    attributes:
+      label: What have you tried?
+      description: Share relevant code, commands, documentation, or Gallery routes. A minimal example is helpful.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before posting
+      options:
+        - label: I searched existing Discussions and Issues for the same question.
+          required: true
+        - label: I removed credentials, customer data, and other private information.
+          required: true
