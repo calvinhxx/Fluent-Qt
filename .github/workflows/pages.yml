@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - site/**
+      - tools/site/**
       - app/**
       - cmake/**
       - examples/hello_world/**
@@ -51,6 +52,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Validate localized site outputs
+        run: python3 tools/site/generate_localized_site.py --check
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
@@ -66,6 +70,8 @@ jobs:
           mkdir -p build/pages/gallery
           cp -R site/. build/pages/
           cp -R build/wasm-pages/. build/pages/gallery/
+          test -f build/pages/zh-CN/index.html
+          test -f build/pages/sitemap.xml
           test -f build/pages/gallery/index.html
           test -f build/pages/gallery/build-info.json
 

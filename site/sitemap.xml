@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://calvinhxx.github.io/Fluent-Qt/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://calvinhxx.github.io/Fluent-Qt/" />
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://calvinhxx.github.io/Fluent-Qt/" />
+  </url>
+  <url>
+    <loc>https://calvinhxx.github.io/Fluent-Qt/zh-CN/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://calvinhxx.github.io/Fluent-Qt/" />
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://calvinhxx.github.io/Fluent-Qt/" />
+  </url>
+</urlset>

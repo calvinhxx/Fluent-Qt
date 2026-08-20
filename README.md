@@ -31,6 +31,8 @@
   <strong><a href="https://calvinhxx.github.io/Fluent-Qt/#gallery">Try the live C++ Web Gallery</a></strong>
   ·
   <a href="https://calvinhxx.github.io/Fluent-Qt/#top">Project website</a>
+  ·
+  <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">Questions &amp; community</a>
 </p>
 
 Collection controls include ListView, GridView, FlowView, TreeView, and DataGrid. DataGrid keeps Qt's caller-owned model/delegate contract and stays viewport-bound for large tables.
@@ -302,7 +304,10 @@ python -m fluentqt_gallery
 
 ## 📚 Documentation
 
+- [Support and community](SUPPORT.md)
 - [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 - [AI-assisted app development](docs/ai/README.md)
 - [Development workflow](docs/development/README.md)
 - [Testing and visual review](docs/development/testing-workflow.md)
