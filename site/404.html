@@ -1,17 +1,20 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-site-language="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Fluent-Qt — Page not found</title>
+    <meta name="robots" content="noindex, follow">
     <meta name="theme-color" content="#e3ebf2">
+    <base href="/Fluent-Qt/">
+    <script>
+      if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+        document.querySelector("base").href = "/";
+      }
+    </script>
     <link rel="icon" href="assets/app-icon.png">
     <script>
       (() => {
-        const isChinese = (tag) => {
-          const value = String(tag || "").trim().toLowerCase().replace(/_/g, "-");
-          return value === "zh" || value.startsWith("zh-");
-        };
         try {
           const saved = localStorage.getItem("fluent-qt-theme");
           const theme = saved === "dark" || saved === "light"
@@ -22,23 +25,13 @@
         } catch {
           document.documentElement.dataset.theme = "light";
         }
-        try {
-          const saved = localStorage.getItem("fluent-qt-language");
-          const language = saved === "en" || saved === "zh"
-            ? saved
-            : isChinese((navigator.languages && navigator.languages[0]) || navigator.language)
-              ? "zh"
-              : "en";
-          document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
-          document.documentElement.dataset.siteLanguage = language;
-          document.title = language === "zh" ? "Fluent-Qt — 页面未找到" : "Fluent-Qt — Page not found";
-        } catch {
-          document.documentElement.lang = "en";
-          document.documentElement.dataset.siteLanguage = "en";
-        }
+        const language = /\/zh-cn(?:\/|$)/i.test(location.pathname) ? "zh" : "en";
+        document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
+        document.documentElement.dataset.siteLanguage = language;
+        document.title = language === "zh" ? "Fluent-Qt — 页面未找到" : "Fluent-Qt — Page not found";
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260813">
+    <link rel="stylesheet" href="styles.css?v=20260820-3">
   </head>
   <body class="error-page">
     <main class="error-card">
@@ -47,7 +40,7 @@
       <h1 data-lang-en>This page<br>got lost.</h1>
       <p data-lang-zh>这个页面不存在，但 Fluent-Qt 项目还在原处。</p>
       <p data-lang-en>This page does not exist, but Fluent-Qt is still right where you left it.</p>
-      <a class="button button-primary" href="./" data-lang-zh>返回首页</a>
+      <a class="button button-primary" href="zh-CN/" data-lang-zh>返回首页</a>
       <a class="button button-primary" href="./" data-lang-en>Back to home</a>
     </main>
   </body>

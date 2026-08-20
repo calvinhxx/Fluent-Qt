@@ -23,7 +23,12 @@ class ClassifyCiChangesTest(unittest.TestCase):
 
     def test_documentation_only_skips_all_builds(self):
         self.assert_classification(
-            ["README.md", "docs/development/testing-workflow.md", "site/index.html"],
+            [
+                "README.md",
+                "docs/development/testing-workflow.md",
+                "site/index.html",
+                "tools/site/generate_localized_site.py",
+            ],
             native=False,
             pyside=False,
             wasm=False,

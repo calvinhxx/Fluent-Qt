@@ -1,10 +1,11 @@
 const translations = {
   zh: {
-    "meta.title": "Fluent-Qt — Qt Widgets 的 Fluent 控件库",
-    "meta.description": "Fluent-Qt 是面向 Qt Widgets 的 Fluent C++17 控件库，支持 PySide6，并提供桌面 GUI Skill。",
+    "meta.title": "Fluent-Qt — 无需重写 QML 的 Qt Widgets Fluent 控件库",
+    "meta.description": "无需重写 QML，用原生 C++17 Fluent 控件升级现有 Qt Widgets 应用；支持 Qt 5/6、PySide6，并可在线体验 WebAssembly Gallery。",
     "a11y.skip": "跳到主要内容",
     "a11y.primaryNav": "主导航",
     "a11y.home": "Fluent-Qt 首页",
+    "a11y.openGallery": "打开 C++ Web Gallery",
     "a11y.openMenu": "打开导航",
     "a11y.closeMenu": "关闭导航",
     "a11y.language": "语言",
@@ -13,25 +14,42 @@ const translations = {
     "a11y.specs": "项目规格",
     "a11y.downloads": "平台下载",
     "a11y.componentModules": "组件模块",
+    "a11y.relatedControls": "相关控件",
     "a11y.aiBuildCapabilities": "Skill 能力",
     "a11y.heroTech": "C++17、Qt 5.15 或 Qt 6.2 及以上、MIT",
     "nav.why": "概览",
     "nav.components": "控件",
     "nav.quickStart": "接入",
     "nav.gallery": "Gallery",
+    "nav.community": "Q&A",
     "nav.aiBuild": "GUI Skill",
     "nav.downloads": "下载",
-    "hero.tagline": "面向 Qt Widgets 的 Fluent C++ 控件库",
+    "hero.tagline": "无需重写 QML，升级现有 Qt Widgets 应用",
+    "hero.detail": "原生 C++17 控件，可继续使用现有的 signals、slots、布局和工程结构。",
+    "hero.tryGallery": "在线打开 Gallery",
     "hero.download": "下载 Gallery",
-    "hero.quickStart": "查看接入方式",
-    "hero.pythonLabel": "Python 兼容",
-    "hero.pythonCopy": "通过 PySide6 使用同一套 C++ 控件",
+    "hero.quickStart": "查看接入说明",
+    "hero.actionNote": "在线 Gallery 在浏览器中运行，无需在本机配置 Qt；接入项目仍需 Qt 5.15+ 或 6.2+ 开发环境。",
+    "hero.pythonLabel": "Python / PySide6",
+    "hero.pythonCopy": "Python 项目可通过 PySide6 使用同一套控件",
     "hero.pythonGallery": "Gallery",
     "hero.visualCaption": "Gallery 实际界面",
     "spec.runtime": "UI 运行时",
     "spec.qt": "Qt 支持",
     "spec.toolchain": "工具链",
     "spec.platforms": "运行平台",
+    "path.kicker": "开始使用",
+    "path.title": "开始使用 Fluent-Qt",
+    "path.copy": "先打开在线 Gallery 查看控件效果，或直接查看 C++ / Python 接入说明。",
+    "path.tryTitle": "在线 Gallery",
+    "path.tryCopy": "搜索控件、切换主题，直接操作 C++ WebAssembly 示例。",
+    "path.tryAction": "打开 Gallery",
+    "path.cppTitle": "C++ / Qt Widgets",
+    "path.cppCopy": "复制 CMake 配置，按最小示例接入现有 Qt Widgets 项目。",
+    "path.cppAction": "查看 C++ 接入",
+    "path.pythonTitle": "Python / PySide6",
+    "path.pythonCopy": "从 PyPI 安装 FluentQt，通过 PySide6 使用同一套控件。",
+    "path.pythonAction": "查看 PyPI 安装",
     "positioning.titleLine1": "独立控件",
     "positioning.titleLine2": "不止主题皮肤",
     "positioning.copy": "每个控件都有独立的 C++ API、状态与布局行为",
@@ -47,22 +65,26 @@ const translations = {
     "components.familiesLabel": "11 个控件家族",
     "components.families": "基础输入 · 集合视图 · 日期与时间 · 对话框 · 布局 · 菜单 · 导航 · 滚动 · 状态信息 · 文本输入 · 窗口系统",
     "quickStart.title": "快速接入",
-    "quickStart.copy": "C++ 使用 CMake；Python / PySide6 通过 PyPI 安装",
+    "quickStart.copy": "复制 CMake 片段即可接入现有工程；也支持 add_subdirectory 与 find_package。",
+    "quickStart.keepProject": "保留现有 Widgets 工程与事件循环",
+    "quickStart.libraryOnly": "库目标只依赖 Qt Widgets",
+    "quickStart.sameApi": "Qt 5 / Qt 6 使用同一应用层接口",
     "quickStart.example": "查看完整 hello_world",
     "quickStart.python": "Python / PySide6 · pip install FluentQt",
+    "quickStart.help": "提问与获取帮助",
     "copy.copy": "复制",
     "copy.copied": "已复制",
     "copy.announcement": "代码已复制到剪贴板",
     "copy.failed": "复制失败，请手动选择代码",
     "gallery.title": "Gallery 控件示例",
-    "gallery.copy": "随仓库提供的桌面示例",
+    "gallery.copy": "这个 Gallery 在浏览器中运行，无需本地配置 Qt；接入项目仍需 Qt 5.15+ 或 6.2+。",
     "gallery.searchTitle": "搜索",
     "gallery.searchCopy": "按控件名定位页面",
     "gallery.stateTitle": "验证",
     "gallery.stateCopy": "切换 Light / Dark 与强调色",
     "gallery.codeTitle": "查看示例",
     "gallery.codeCopy": "展开对应的 C++ 代码",
-    "gallery.webAction": "运行 C++ Web Gallery",
+    "gallery.webAction": "启动实时 Gallery",
     "gallery.liveStateWaiting": "等待进入视口",
     "gallery.liveStateLoading": "正在启动",
     "gallery.liveStateReady": "可以操作",
@@ -84,6 +106,7 @@ const translations = {
     "gallery.retryAction": "重新加载",
     "gallery.openAction": "在新页面打开",
     "gallery.frameTitle": "Fluent-Qt C++ Web Gallery 实时体验",
+    "gallery.noscript": "打开 C++ Web Gallery",
     "aiBuild.title": "构建桌面 GUI",
     "aiBuild.structureTitle": "工程",
     "aiBuild.structureCopy": "C++ / PySide6 项目结构",
@@ -98,7 +121,7 @@ const translations = {
     "aiBuild.disclaimer": "FluentQt 独立实现，非 DeepSeek 官方应用。",
     "aiBuild.upstreamAction": "上游项目",
     "downloads.title": "下载 Gallery",
-    "downloads.copy": "提供 Windows、macOS 与 Linux 安装包",
+    "downloads.copy": "桌面安装包用于离线体验；应用接入仍使用 CMake 或 PyPI。",
     "downloads.recommended": "为当前设备推荐",
     "downloads.latest": "最新 Release",
     "downloads.all": "全部版本与校验文件",
@@ -120,11 +143,12 @@ const translations = {
     "images.settings": "Fluent-Qt Gallery 设置页面，完整展示主题、风格和窗口选项"
   },
   en: {
-    "meta.title": "Fluent-Qt — Fluent controls for Qt Widgets",
-    "meta.description": "Fluent controls for Qt Widgets, with PySide6 support and a desktop GUI Skill.",
+    "meta.title": "Fluent-Qt — Modern Fluent controls for Qt Widgets",
+    "meta.description": "Modernize existing Qt Widgets apps with native C++17 Fluent controls—without rewriting in QML. Optional PySide6 and a live WebAssembly Gallery.",
     "a11y.skip": "Skip to main content",
     "a11y.primaryNav": "Primary navigation",
     "a11y.home": "Fluent-Qt home",
+    "a11y.openGallery": "Open the C++ Web Gallery",
     "a11y.openMenu": "Open navigation",
     "a11y.closeMenu": "Close navigation",
     "a11y.language": "Language",
@@ -133,25 +157,42 @@ const translations = {
     "a11y.specs": "Project specifications",
     "a11y.downloads": "Platform downloads",
     "a11y.componentModules": "Component modules",
+    "a11y.relatedControls": "Related controls",
     "a11y.aiBuildCapabilities": "Skill capabilities",
     "a11y.heroTech": "C++17, Qt 5.15 or Qt 6.2 and above, MIT",
     "nav.why": "Overview",
     "nav.components": "Controls",
     "nav.quickStart": "Quick start",
     "nav.gallery": "Gallery",
+    "nav.community": "Q&A",
     "nav.aiBuild": "GUI Skill",
     "nav.downloads": "Download",
-    "hero.tagline": "Fluent C++ controls for Qt Widgets",
+    "hero.tagline": "Modernize Qt Widgets apps without rewriting in QML",
+    "hero.detail": "Native C++17 controls that keep your existing signals, slots, layouts, and project structure.",
+    "hero.tryGallery": "Open the online Gallery",
     "hero.download": "Download Gallery",
-    "hero.quickStart": "Quick start",
-    "hero.pythonLabel": "Python compatibility",
-    "hero.pythonCopy": "Use the same C++ controls through PySide6",
+    "hero.quickStart": "Setup guide",
+    "hero.actionNote": "The online Gallery runs in your browser and does not need a local Qt setup. Integrating Fluent-Qt still requires Qt 5.15+ or 6.2+.",
+    "hero.pythonLabel": "Python / PySide6",
+    "hero.pythonCopy": "Use the same controls from Python through PySide6",
     "hero.pythonGallery": "Gallery",
     "hero.visualCaption": "Gallery interface",
     "spec.runtime": "UI runtime",
     "spec.qt": "Qt support",
     "spec.toolchain": "Toolchain",
     "spec.platforms": "Platforms",
+    "path.kicker": "GET STARTED",
+    "path.title": "Get started with Fluent-Qt",
+    "path.copy": "Open the online Gallery, or go straight to the C++ or Python setup guide.",
+    "path.tryTitle": "Online Gallery",
+    "path.tryCopy": "Search controls, switch themes, and interact with the C++ WebAssembly examples.",
+    "path.tryAction": "Open Gallery",
+    "path.cppTitle": "C++ / Qt Widgets",
+    "path.cppCopy": "Copy the CMake setup and follow the minimal example for an existing Qt Widgets project.",
+    "path.cppAction": "Read the C++ guide",
+    "path.pythonTitle": "Python / PySide6",
+    "path.pythonCopy": "Install FluentQt from PyPI and use the same controls through PySide6.",
+    "path.pythonAction": "View installation",
     "positioning.titleLine1": "Independent controls",
     "positioning.titleLine2": "beyond styling",
     "positioning.copy": "Each control has its own C++ API, states, and layout behavior",
@@ -167,22 +208,26 @@ const translations = {
     "components.familiesLabel": "11 control families",
     "components.families": "Basic input · Collections · Date and time · Dialogs · Layout · Menus · Navigation · Scrolling · Status · Text input · Windowing",
     "quickStart.title": "Quick start",
-    "quickStart.copy": "Use CMake for C++; install Python / PySide6 support from PyPI",
+    "quickStart.copy": "Copy the CMake snippet into an existing project; add_subdirectory and find_package are also supported.",
+    "quickStart.keepProject": "Keep the Widgets project and event loop you already have",
+    "quickStart.libraryOnly": "The library target depends only on Qt Widgets",
+    "quickStart.sameApi": "Use the same application-facing API with Qt 5 and Qt 6",
     "quickStart.example": "Open the complete hello_world",
     "quickStart.python": "Python / PySide6 · pip install FluentQt",
+    "quickStart.help": "Ask a question",
     "copy.copy": "Copy",
     "copy.copied": "Copied",
     "copy.announcement": "Code copied to the clipboard",
     "copy.failed": "Copy failed; select the code manually",
     "gallery.title": "Gallery examples",
-    "gallery.copy": "Desktop examples included in the repository",
+    "gallery.copy": "This Gallery runs in your browser and does not need a local Qt setup. Project integration still requires Qt 5.15+ or 6.2+.",
     "gallery.searchTitle": "Search",
     "gallery.searchCopy": "Locate a page by control name",
     "gallery.stateTitle": "Verify",
     "gallery.stateCopy": "Switch Light, Dark, and accent color",
     "gallery.codeTitle": "Open an example",
     "gallery.codeCopy": "Expand the corresponding C++ code",
-    "gallery.webAction": "Run the C++ Web Gallery",
+    "gallery.webAction": "Start the live Gallery",
     "gallery.liveStateWaiting": "Waiting for viewport",
     "gallery.liveStateLoading": "Starting",
     "gallery.liveStateReady": "Interactive",
@@ -204,6 +249,7 @@ const translations = {
     "gallery.retryAction": "Try again",
     "gallery.openAction": "Open in a new page",
     "gallery.frameTitle": "Live Fluent-Qt C++ Web Gallery",
+    "gallery.noscript": "Open the C++ Web Gallery",
     "aiBuild.title": "Build desktop GUIs",
     "aiBuild.structureTitle": "Project",
     "aiBuild.structureCopy": "C++ / PySide6 application structure",
@@ -218,7 +264,7 @@ const translations = {
     "aiBuild.disclaimer": "Independent FluentQt build; not an official DeepSeek app.",
     "aiBuild.upstreamAction": "Upstream project",
     "downloads.title": "Download Gallery",
-    "downloads.copy": "Packages are available for Windows, macOS, and Linux",
+    "downloads.copy": "Desktop packages are for offline evaluation; integrate applications through CMake or PyPI.",
     "downloads.recommended": "Recommended for this device",
     "downloads.latest": "Latest release",
     "downloads.all": "All versions and checksums",
@@ -246,13 +292,11 @@ const latestReleaseUrl = "https://github.com/calvinhxx/Fluent-Qt/releases/latest
 const latestReleaseApi = "https://api.github.com/repos/calvinhxx/Fluent-Qt/releases/latest";
 const releaseState = {
   architecture: "",
-  language: "en",
+  language: document.documentElement.lang.toLowerCase().startsWith("zh") ? "zh" : "en",
   platform: "other",
   release: null
 };
 
-const languageButtons = Array.from(document.querySelectorAll("[data-lang]"));
-const metaDescription = document.querySelector("meta[name='description']");
 const metaThemeColor = document.querySelector("meta[name='theme-color']");
 const siteHeader = document.querySelector(".site-header");
 const menuButton = document.querySelector(".menu-button");
@@ -460,45 +504,6 @@ async function hydrateLatestRelease() {
   updateDownloads();
 }
 
-function savedLanguage() {
-  try {
-    return localStorage.getItem("fluent-qt-language");
-  } catch {
-    return null;
-  }
-}
-
-function isChineseLanguageTag(tag) {
-  const normalized = String(tag || "").trim().toLowerCase().replace(/_/g, "-");
-  return normalized === "zh" || normalized.startsWith("zh-");
-}
-
-function browserLanguage() {
-  const candidates = [];
-  if (Array.isArray(navigator.languages)) {
-    candidates.push(...navigator.languages);
-  }
-  if (navigator.language) {
-    candidates.push(navigator.language);
-  }
-  const primary = candidates.find((tag) => String(tag || "").trim());
-  return isChineseLanguageTag(primary) ? "zh" : "en";
-}
-
-function preferredLanguage() {
-  const saved = savedLanguage();
-  if (saved === "en" || saved === "zh") return saved;
-  return browserLanguage();
-}
-
-function storeLanguage(language) {
-  try {
-    localStorage.setItem("fluent-qt-language", language);
-  } catch {
-    // Switching still works when storage is disabled.
-  }
-}
-
 function savedTheme() {
   try {
     const value = localStorage.getItem("fluent-qt-theme");
@@ -644,48 +649,6 @@ function renderGalleryState() {
   });
 }
 
-function setLanguage(language, shouldStore = true) {
-  const normalized = language === "en" ? "en" : "zh";
-  const values = translations[normalized];
-  releaseState.language = normalized;
-  document.documentElement.lang = normalized === "zh" ? "zh-CN" : "en";
-  document.documentElement.dataset.siteLanguage = normalized;
-  document.documentElement.setAttribute("data-i18n-ready", "");
-  document.title = values["meta.title"];
-  metaDescription?.setAttribute("content", values["meta.description"]);
-
-  document.querySelectorAll("[data-i18n]").forEach((node) => {
-    const value = values[node.dataset.i18n];
-    if (value) node.textContent = value;
-  });
-  document.querySelectorAll("[data-i18n-aria-label]").forEach((node) => {
-    const value = values[node.dataset.i18nAriaLabel];
-    if (value) node.setAttribute("aria-label", value);
-  });
-  document.querySelectorAll("[data-i18n-alt]").forEach((node) => {
-    const value = values[node.dataset.i18nAlt];
-    if (value) node.setAttribute("alt", value);
-  });
-  document.querySelectorAll("[data-i18n-title]").forEach((node) => {
-    const value = values[node.dataset.i18nTitle];
-    if (value) node.setAttribute("title", value);
-  });
-  document.querySelectorAll("[data-readme-link]").forEach((link) => {
-    link.href = normalized === "zh"
-      ? "https://github.com/calvinhxx/Fluent-Qt/blob/main/README.zh-CN.md"
-      : "https://github.com/calvinhxx/Fluent-Qt/blob/main/README.md";
-  });
-  languageButtons.forEach((button) => {
-    button.setAttribute("aria-pressed", String(button.dataset.lang === normalized));
-  });
-
-  updateMenuLabel();
-  updateThemeToggle();
-  renderGalleryState();
-  updateDownloads();
-  if (shouldStore) storeLanguage(normalized);
-}
-
 function setMenuOpen(open) {
   if (!siteHeader || !menuButton) return;
   siteHeader.dataset.menuOpen = String(open);
@@ -738,6 +701,7 @@ async function copyCode(button) {
   if (copyAnnouncement) {
     copyAnnouncement.textContent = dictionary()[copied ? "copy.announcement" : "copy.failed"];
   }
+  trackEvent("copy_cmake", { success: String(copied) });
   window.setTimeout(() => {
     label.textContent = dictionary()["copy.copy"];
   }, 1500);
@@ -818,9 +782,6 @@ function setupLiveGallery() {
 }
 
 function setupInteractions() {
-  languageButtons.forEach((button) => {
-    button.addEventListener("click", () => setLanguage(button.dataset.lang));
-  });
   themeToggle?.addEventListener("click", () => {
     applyTheme(activeTheme() === "dark" ? "light" : "dark", true);
   });
@@ -837,7 +798,7 @@ function setupInteractions() {
   });
 }
 
-setLanguage(preferredLanguage(), false);
+document.documentElement.setAttribute("data-i18n-ready", "");
 loadAnalytics();
 setupNavigation();
 setupInteractions();

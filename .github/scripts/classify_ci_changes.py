@@ -14,6 +14,7 @@ DOCUMENTATION_PREFIXES = (
     ".agents/skills/",
     ".github/ISSUE_TEMPLATE/",
     "tools/ai/",
+    "tools/site/",
 )
 
 DOCUMENTATION_ROOT_FILES = {
