@@ -36,14 +36,19 @@ static int verticalMarginOverflow(const QFont& font,
     return qMax(0, margins.top() + margins.bottom() - slotSlack);
 }
 
-static int calcTopPad(const QFont& font,
-                      int lineHeight,
-                      const QMargins& margins) {
+static QMargins calcContentViewportMargins(const QFont& font,
+                                           int lineHeight,
+                                           const QMargins& margins) {
     const int fontLh = QFontMetrics(font).lineSpacing();
     const int slotSlack = qMax(0, lineHeight - fontLh);
-    const int distributable = qMax(
-        0, slotSlack - margins.top() - margins.bottom());
-    return qMax(0, margins.top()) + distributable / 2;
+    const int requestedTop = qMax(0, margins.top());
+    const int requestedBottom = qMax(0, margins.bottom());
+    const int centeredSlack = qMax(
+        0, slotSlack - requestedTop - requestedBottom);
+    const int top = requestedTop + centeredSlack / 2;
+    const int bottom = requestedBottom + centeredSlack - centeredSlack / 2;
+    return QMargins(qMax(0, margins.left()), top,
+                    qMax(0, margins.right()), bottom);
 }
 
 static int calcBotPad(const QFont& font, int lineHeight) {
@@ -58,15 +63,14 @@ static bool formatMetricEquals(qreal lhs, qreal rhs) {
 // ── Inner editor. zh_CN: 内部编辑器 ────────────────────────────────────────────
 //
 // QTextEdit is used (not QPlainTextEdit) because QTextDocumentLayout natively
-// honors QTextBlockFormat top/bottom margins plus the rootFrame margin. Each
-// text line and the caret center vertically inside the lineHeight slot via:
-//   - rootFrame topMargin = requested top inset + remaining centered slack
-//     … space above line one
-//   - per-block bottomMargin = lineHeight - fontLh     … line spacing
+// honors QTextBlockFormat line spacing. Each text line and the caret center
+// vertically inside the lineHeight slot via:
+//   - viewport top/bottom margins = requested insets + remaining centered slack
+//   - LineDistanceHeight = lineHeight - fontLh          … inter-line spacing
 // Qt then handles caret placement, selection, and hit testing without a
 // custom paintEvent.
 // zh_CN: 使用 QTextEdit（而非 QPlainTextEdit），因为 QTextDocumentLayout 原生
-// 支持 QTextBlockFormat 的上下边距及 rootFrame 边距。借助上述两条公式，每行
+// 支持 QTextBlockFormat 行距。借助上述两条公式，每行
 // 文本与光标在 lineHeight 槽内垂直居中；光标定位、选区高亮、点击映射均由 Qt
 // 自动处理，无需自定义 paintEvent。
 
@@ -115,18 +119,17 @@ protected:
 
     void paintEvent(QPaintEvent* e) override {
         QTextEdit::paintEvent(e);
-        // Qt's stock placeholder ignores the rootFrame topMargin, so paint it
-        // ourselves to keep it vertically centered.
-        // zh_CN: Qt 原生 placeholder 不受 rootFrame topMargin 影响，自绘实现垂直居中。
+        // Paint the placeholder on the same viewport and font metrics as real
+        // text so empty and populated states keep identical alignment.
+        // zh_CN: placeholder 与真实文本共用 viewport 和字体度量，自绘以保证
+        // 空态与有内容状态对齐一致。
         if (!m_owner || !document()->isEmpty() || m_hasPreedit) return;
         const QString ph = m_owner->placeholderText();
         if (ph.isEmpty()) return;
 
         QPainter painter(viewport());
-        const int topPad = calcTopPad(
-            font(), m_owner->lineHeight(), m_owner->contentMargins());
         const int fontLh = QFontMetrics(font()).lineSpacing();
-        QRect textRect(0, topPad, viewport()->width(), fontLh);
+        QRect textRect(0, 0, viewport()->width(), fontLh);
         painter.setPen(palette().color(QPalette::PlaceholderText));
         painter.setFont(font());
         painter.drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, ph);
@@ -201,20 +204,27 @@ TextEdit::TextEdit(QWidget* parent)
     setFocusPolicy(m_editor->focusPolicy());
     setFocusProxy(m_editor);
 
-    // Remove the document's default padding; rootFrame and block margins own it.
-    // zh_CN: 移除文档默认四周留白（由 rootFrame margin + block margin 全权控制）。
+    // Remove the document's default padding; viewport margins and block line
+    // spacing own the geometry.
+    // zh_CN: 移除文档默认四周留白，由 viewport margin 与 block 行距统一控制。
     m_editor->document()->setDocumentMargin(0);
 
-    // New blocks inherit the current QTextBlockFormat, so normal typing only
-    // needs a height refresh. Reapplying the frame/block format here would add
-    // an invisible formatting command after every edit and make the first
-    // Undo appear to do nothing.
-    // zh_CN: 新 block 会继承当前 QTextBlockFormat，普通输入只需更新高度。
-    // 若每次编辑后都重写 frame/block 格式，会在 undo 栈末尾加入不可见的格式
-    // 命令，导致第一次 Undo 看起来没有效果。
+    // New blocks inherit the current QTextBlockFormat, so ordinary typing
+    // makes applyBlockCenterFormat() a no-op. A direct QTextEdit/AX value
+    // replacement can reset those formats, though; re-check them here so the
+    // real editing surface keeps the same line geometry as setPlainText().
+    // The helper compares formats before merging, which preserves the user's
+    // normal Undo stack instead of appending an invisible command per key.
+    // zh_CN: 新 block 会继承当前 QTextBlockFormat，普通输入时
+    // applyBlockCenterFormat() 不会写入任何格式。但直接通过 QTextEdit/辅助
+    // 功能替换值可能重置格式，因此在真实编辑入口重新校验，保证它与
+    // setPlainText() 的行几何一致；helper 仅在格式确有变化时 merge，避免每次
+    // 按键都向 Undo 栈加入不可见命令。
     connect(m_editor, &QTextEdit::textChanged, this, [this]() {
-        if (!m_updatingFormat)
-            updateHeightForContent();
+        if (m_updatingFormat)
+            return;
+        applyBlockCenterFormat();
+        updateHeightForContent();
         emit textChanged();
     });
     connect(m_editor, &QTextEdit::cursorPositionChanged,
@@ -493,6 +503,15 @@ void TextEdit::setMaxVisibleLines(int lines) {
     emit layoutMetricsChanged();
 }
 
+void TextEdit::setTabChangesFocus(bool enabled) {
+    if (m_tabChangesFocus == enabled)
+        return;
+    m_tabChangesFocus = enabled;
+    if (m_editor)
+        m_editor->setTabChangesFocus(enabled);
+    emit tabChangesFocusChanged();
+}
+
 void TextEdit::setScrollChainingEnabled(bool enabled) {
     if (m_scrollChainingEnabled == enabled) return;
     m_scrollChainingEnabled = enabled;
@@ -500,15 +519,60 @@ void TextEdit::setScrollChainingEnabled(bool enabled) {
 }
 
 void TextEdit::onThemeUpdated() {
+    QScrollBar* innerScrollBar = m_editor ? m_editor->verticalScrollBar() : nullptr;
+    const bool hadScrollableRange = innerScrollBar
+        && innerScrollBar->maximum() > innerScrollBar->minimum();
+    const int previousValue = innerScrollBar ? innerScrollBar->value() : 0;
+    const bool wasAtTop = hadScrollableRange
+        && previousValue <= innerScrollBar->minimum();
+    const bool wasAtBottom = hadScrollableRange
+        && previousValue >= innerScrollBar->maximum();
+
     applyThemeStyle();
     updateHeightForContent();
+
+    // A parent Fluent surface may update its style sheet later in the same
+    // theme-notification pass. Qt then repolishes child widgets and can restore
+    // the platform selection palette. Reapply only the color palette after the
+    // notification stack unwinds; geometry stays untouched.
+    // zh_CN: 同一轮主题通知中，父级 Fluent 容器可能稍后更新样式表，Qt 会重新
+    // polish 子控件并恢复平台默认选区色。通知栈结束后仅重应用调色板，不改几何。
+    QTimer::singleShot(0, this, [this]() {
+        applyEditorPalette();
+        if (m_editor && m_editor->viewport())
+            m_editor->viewport()->update();
+    });
+
+    // QTextDocument may finish a palette/font relayout after this callback.
+    // Preserve a logical boundary anchor instead of retaining a stale pixel
+    // offset that can expose a clipped line after a Light/Dark transition.
+    // zh_CN: QTextDocument 可能在本回调后才完成调色板/字体重排。主题切换时
+    // 保留顶部或尾部的逻辑锚点，避免沿用旧像素偏移而露出半行。
+    const auto restoreScrollAnchor = [this, previousValue, wasAtTop, wasAtBottom]() {
+        if (!m_editor)
+            return;
+        m_editor->document()->documentLayout()->documentSize();
+        updateHeightForContent();
+        QScrollBar* bar = m_editor->verticalScrollBar();
+        if (!bar || bar->maximum() <= bar->minimum())
+            return;
+        if (wasAtBottom)
+            bar->setValue(bar->maximum());
+        else if (wasAtTop)
+            bar->setValue(bar->minimum());
+        else
+            bar->setValue(qBound(bar->minimum(), previousValue, bar->maximum()));
+    };
+    restoreScrollAnchor();
+    if (hadScrollableRange)
+        QTimer::singleShot(0, this, restoreScrollAnchor);
 }
 
 // ── Core internals. zh_CN: 核心私有方法 ─────────────────────────────────────────
 
-void TextEdit::applyThemeStyle() {
-    if (!m_editor) return;
-
+void TextEdit::applyEditorPalette() {
+    if (!m_editor)
+        return;
     const auto& c = themeColorsRef();
     QPalette pal = palette();
     pal.setColor(QPalette::Base,             Qt::transparent);
@@ -522,19 +586,25 @@ void TextEdit::applyThemeStyle() {
     pal.setColor(QPalette::Disabled, QPalette::Text,             c.textDisabled);
     pal.setColor(QPalette::Disabled, QPalette::PlaceholderText,  c.textDisabled);
     m_editor->setPalette(pal);
-    m_editor->setFont(themeFont(m_fontRole).toQFont());
+}
 
-    QString qss = QString(
-                    "QTextEdit { "
-                    "background: transparent; "
-                    "color: %1; "
-                    "selection-background-color: %2; "
-                    "selection-color: %3; "
-                    "border: none; }")
-                    .arg(c.textPrimary.name(QColor::HexArgb))
-                    .arg(c.accentDefault.name(QColor::HexArgb))
-                    .arg(c.textOnAccent.name(QColor::HexArgb));
-    m_editor->setStyleSheet(qss);
+void TextEdit::applyThemeStyle() {
+    if (!m_editor) return;
+
+    applyEditorPalette();
+    const QFont roleFont = themeFont(m_fontRole).toQFont();
+    if (m_editor->font() != roleFont)
+        m_editor->setFont(roleFont);
+
+    // Geometry-affecting QSS stays theme-independent. Text and selection
+    // colors come from QPalette, so a Light/Dark transition does not force
+    // QTextDocument to rebuild otherwise unchanged line geometry.
+    // zh_CN: 影响几何的 QSS 与主题无关；文本和选区颜色完全由 QPalette
+    // 提供，避免 Light/Dark 切换重建未变化的 QTextDocument 行布局。
+    const QString editorQss = QStringLiteral(
+        "QTextEdit { background: transparent; border: none; }");
+    if (m_editor->styleSheet() != editorQss)
+        m_editor->setStyleSheet(editorQss);
 
     if (auto* vp = m_editor->viewport()) {
         vp->setAutoFillBackground(false);
@@ -542,7 +612,10 @@ void TextEdit::applyThemeStyle() {
         vpal.setColor(QPalette::Base,   Qt::transparent);
         vpal.setColor(QPalette::Window, Qt::transparent);
         vp->setPalette(vpal);
-        vp->setStyleSheet("background: transparent; border: none;");
+        const QString viewportQss = QStringLiteral(
+            "background: transparent; border: none;");
+        if (vp->styleSheet() != viewportQss)
+            vp->setStyleSheet(viewportQss);
     }
 
     // Recompute centering margins after font changes (fontLineSpacing may differ).
@@ -556,21 +629,26 @@ void TextEdit::applyBlockCenterFormat() {
     m_updatingFormat = true;
 
     const QFont f = m_editor->font();
-    const int topPad = calcTopPad(f, m_lineHeight, m_contentMargins);
     const int botPad = calcBotPad(f, m_lineHeight);
 
-    // 1. rootFrame topMargin: space above line one for vertical centering.
-    // zh_CN: rootFrame topMargin — 首行上方留白，实现垂直居中。
+    // 1. Keep outer insets out of the document. LineDistanceHeight contributes
+    // spacing after the final visual line as well as between lines; cancel that
+    // trailing distance at the root frame so the maximum scroll position lands
+    // on a complete first tail line. Viewport margins own both outer edges.
+    // zh_CN: 外围 inset 不进入文档。LineDistanceHeight 除行间距外还会在末行后
+    // 留出距离；在 root frame 抵消这段尾距，使最大滚动位置落在完整行边界。
+    // 上下外围间距仍统一交给 viewport margin。
     QTextFrame* rootFrame = m_editor->document()->rootFrame();
     QTextFrameFormat rff = rootFrame->frameFormat();
+    const qreal trailingLineDistance = -static_cast<qreal>(botPad);
     const bool frameFormatChanged =
-        !formatMetricEquals(rff.topMargin(), topPad)
-        || !formatMetricEquals(rff.bottomMargin(), 0)
+        !formatMetricEquals(rff.topMargin(), 0)
+        || !formatMetricEquals(rff.bottomMargin(), trailingLineDistance)
         || !formatMetricEquals(rff.leftMargin(), 0)
         || !formatMetricEquals(rff.rightMargin(), 0);
     if (frameFormatChanged) {
-        rff.setTopMargin(topPad);
-        rff.setBottomMargin(0);
+        rff.setTopMargin(0);
+        rff.setBottomMargin(trailingLineDistance);
         rff.setLeftMargin(0);
         rff.setRightMargin(0);
         rootFrame->setFrameFormat(rff);
@@ -610,9 +688,16 @@ void TextEdit::applyBlockCenterFormat() {
         cursor.mergeBlockFormat(fmt);
     }
 
-    // 3. Left/right viewport margins. zh_CN: 左右 viewport margins。
+    // 3. Viewport margins own the requested outer insets and distribute any
+    // line-slot slack that remains after satisfying them. The text viewport
+    // therefore contains whole visual lines at both scroll boundaries.
+    // zh_CN: viewport margin 承担外部 inset，并分配满足 inset 后剩余的行槽
+    // 余量，因此滚动顶部和尾部都只显示完整视觉行。
+    const QMargins viewportMargins = calcContentViewportMargins(
+        f, m_lineHeight, m_contentMargins);
     static_cast<InnerTextEdit*>(m_editor)->setContentViewportMargins(
-        m_contentMargins.left(), 0, m_contentMargins.right(), 0);
+        viewportMargins.left(), viewportMargins.top(),
+        viewportMargins.right(), viewportMargins.bottom());
 
     m_updatingFormat = false;
 }
