@@ -149,6 +149,14 @@ jobs:
           fi
 
           tag_sha="$(git rev-list -n 1 "$tag")"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" &&
+                "$publish" == "true" &&
+                "$draft" == "false" &&
+                "$prerelease" == "false" &&
+                "$GITHUB_SHA" != "$tag_sha" ]]; then
+            echo "::error::A manual stable publication must dispatch release.yml from $tag."
+            exit 1
+          fi
 
           {
             echo "tag=$tag"
@@ -480,10 +488,37 @@ jobs:
           retention-days: 14
           path: ${{ runner.temp }}/release-source/*.zip
 
+  python_candidate:
+    name: Build Python release candidate
+    needs: preflight
+    if: >-
+      ${{
+        needs.preflight.outputs.publish == 'true' &&
+        needs.preflight.outputs.draft == 'false' &&
+        needs.preflight.outputs.prerelease == 'false'
+      }}
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/ci-python.yml
+    with:
+      mode: full
+      build_release_bundle: true
+
   publish:
     name: Publish GitHub Release
-    needs: [preflight, package, source-package]
-    if: ${{ needs.preflight.outputs.publish == 'true' }}
+    needs: [preflight, package, source-package, python_candidate]
+    if: >-
+      ${{
+        always() &&
+        needs.preflight.result == 'success' &&
+        needs.package.result == 'success' &&
+        needs.source-package.result == 'success' &&
+        needs.preflight.outputs.publish == 'true' &&
+        (needs.preflight.outputs.draft == 'true' ||
+         needs.preflight.outputs.prerelease == 'true' ||
+         needs.python_candidate.result == 'success')
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -548,14 +583,13 @@ jobs:
             gh release edit "$tag" \
               --repo "$GITHUB_REPOSITORY" \
               --title "Fluent-Qt $tag" \
-              --notes-file release-notes.md
+              --notes-file release-notes.md \
+              --draft="$draft" \
+              --prerelease="$prerelease"
             gh release upload "$tag" release-dist/* --repo "$GITHUB_REPOSITORY" --clobber
             exit 0
           fi
 
-          # Stable releases are tagged from a release branch before that branch
-          # is merged into main, so --fail-on-no-commits would inspect the
-          # still-old default branch and reject a valid release.
           args=(
             release create "$tag"
             release-dist/*
@@ -581,4 +615,127 @@ jobs:
             echo "## Release assets"
             echo ""
             find release-dist -maxdepth 1 -type f -printf "- %f\n" | sort
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish_python:
+    name: Publish Python distributions
+    needs: [preflight, python_candidate, publish]
+    if: >-
+      ${{
+        always() &&
+        needs.preflight.result == 'success' &&
+        needs.python_candidate.result == 'success' &&
+        needs.publish.result == 'success' &&
+        needs.preflight.outputs.publish == 'true' &&
+        needs.preflight.outputs.draft == 'false' &&
+        needs.preflight.outputs.prerelease == 'false'
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Download synchronized Python candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-python-release-bundle
+          path: ${{ runner.temp }}/fluentqt-python-release-bundle
+
+      - name: Resolve synchronized candidate identity
+        id: candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          manifest="${RUNNER_TEMP}/fluentqt-python-release-bundle/python-release-manifest.json"
+          source_run_id="$(jq -r '.source.ci_run_id' "$manifest")"
+          source_run_attempt="$(jq -r '.source.ci_run_attempt' "$manifest")"
+          if [[ "$source_run_id" != "$GITHUB_RUN_ID" ||
+                ! "$source_run_attempt" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::The Python candidate does not belong to this Release run."
+            exit 1
+          fi
+          {
+            echo "source_run_id=$source_run_id"
+            echo "source_run_attempt=$source_run_attempt"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch synchronized Python publication
+        id: python_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${{ needs.preflight.outputs.tag }}"
+          tag_sha="${{ needs.preflight.outputs.tag_sha }}"
+          release_json="$(
+            gh release view "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json isDraft,isPrerelease,tagName
+          )"
+          jq -e \
+            --arg tag "$tag" \
+            '.tagName == $tag and .isDraft == false and .isPrerelease == false' \
+            <<< "$release_json" >/dev/null || {
+              echo "::error::Python publication requires a public stable GitHub Release."
+              exit 1
+            }
+
+          run_url="$(
+            gh workflow run python-release.yml \
+              --repo "$GITHUB_REPOSITORY" \
+              --ref "$tag" \
+              -f stage=all \
+              -f recovery=false \
+              -f source_run_id="${{ steps.candidate.outputs.source_run_id }}" \
+              -f source_run_attempt="${{ steps.candidate.outputs.source_run_attempt }}"
+          )"
+          if [[ ! "$run_url" =~ /actions/runs/([0-9]+)$ ]]; then
+            for discovery_attempt in {1..12}; do
+              run_url="$(
+                gh run list \
+                  --repo "$GITHUB_REPOSITORY" \
+                  --workflow python-release.yml \
+                  --event workflow_dispatch \
+                  --commit "$tag_sha" \
+                  --limit 20 \
+                  --json databaseId,displayTitle,url \
+                  --jq \
+                    'map(select(.displayTitle == "Python all release from '"$tag"'")) |
+                     sort_by(.databaseId) | reverse | .[0].url // empty'
+              )"
+              if [[ "$run_url" =~ /actions/runs/([0-9]+)$ ]]; then
+                break
+              fi
+              if (( discovery_attempt < 12 )); then
+                sleep 5
+              fi
+            done
+          fi
+          if [[ ! "$run_url" =~ /actions/runs/([0-9]+)$ ]]; then
+            echo "::error::Python Release was dispatched, but its run could not be resolved."
+            exit 1
+          fi
+          run_id="${BASH_REMATCH[1]}"
+          {
+            echo "run_id=$run_id"
+            echo "run_url=$run_url"
+          } >> "$GITHUB_OUTPUT"
+
+          gh run watch "$run_id" \
+            --repo "$GITHUB_REPOSITORY" \
+            --compact \
+            --interval 10 \
+            --exit-status
+
+      - name: Summarize Python publication
+        shell: bash
+        run: |
+          {
+            echo "## Python distributions"
+            echo ""
+            echo "- TestPyPI and PyPI: ${{ steps.python_release.outputs.run_url }}"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -11,8 +11,10 @@ clean public-install verification without rebuilding any wheel.
 
 ## Immutable release bundle
 
-A successful full CI run with `python_release_bundle=true` creates one artifact
-named `fluentqt-python-release-bundle`:
+The stable Release workflow builds one artifact named
+`fluentqt-python-release-bundle` while desktop packages build in parallel.
+Scheduled or manual full CI can build the same artifact by setting
+`python_release_bundle=true`.
 
 ```text
 python-release-bundle/
@@ -29,10 +31,9 @@ mismatched manylinux evidence, and non-identical Gallery wheels. The 17 build
 lanes must produce a byte-identical Gallery wheel; the bundle retains exactly
 one copy.
 
-The manifest records the project version, source commit, originating full-CI
+The manifest records the project version, source commit, originating workflow
 run and attempt, every wheel hash, and every audit hash. TestPyPI and PyPI must
-receive the files from this artifact. Never rebuild a release wheel after the
-TestPyPI rehearsal.
+receive the files from this artifact. A publication run never rebuilds wheels.
 
 ## One-time Trusted Publishing setup
 
@@ -45,24 +46,20 @@ Create these GitHub deployment environments:
 
 | Environment | Deployment branch/tag policy | Approval |
 |---|---|---|
-| `testpypi` | Selected branches matching `release/*` | Optional for the rehearsal |
-| `testpypi-gallery` | Selected branches matching `release/*` | Optional for the rehearsal |
-| `pypi` | Protected tags matching `v*` | Explicit production workflow dispatch |
-| `pypi-gallery` | Protected tags matching `v*` | Explicit production workflow dispatch |
+| `testpypi` | Selected branches `release/*` and protected tags `v*` | Workflow gate |
+| `testpypi-gallery` | Selected branches `release/*` and protected tags `v*` | Workflow gate |
+| `pypi` | Protected tags matching `v*` | Workflow gate |
+| `pypi-gallery` | Protected tags matching `v*` | Workflow gate |
 
 For a single-maintainer repository, do not configure required reviewers on the
-two production environments. The explicit `stage=pypi` workflow dispatch is
-the production approval, while the environments still enforce the `v*` tag
-boundary and package-scoped Trusted Publisher identities. Disable
-administrator bypass on all four environments so that branch and tag rules
-cannot be skipped. If release ownership later expands to multiple maintainers,
-required reviewers can be restored as an additional separation-of-duties gate.
+four environments. The stable Release workflow is the publication boundary;
+the environments still enforce the ref and package-scoped Trusted Publisher
+identities. Disable administrator bypass. If release ownership expands,
+required reviewers can be added as a second gate.
 
-The `release/*` environment policy is intentionally reusable across release
-lines. The workflow applies the narrower check dynamically: a project version
-of `1.6.z` must run from `release/1.6.x`, `1.7.z` must run from
-`release/1.7.x`, and so on. A mismatched release branch is rejected before any
-publisher job receives an OIDC token.
+The `release/*` policy supports manual TestPyPI checks before tagging. The
+standard stable path runs both index stages from the protected `v*` tag. A
+mismatched release branch or tag is rejected before a publisher receives OIDC.
 
 The package-specific environments are intentional. PyPI rejects two pending
 projects that use the same owner/repository/workflow/environment identity,
@@ -95,44 +92,67 @@ candidate: Core receives 17 wheels and Gallery receives one.
 
 ## Prepare a release candidate
 
-1. Integrate the intended changes into the matching `release/X.Y.x` branch.
-2. Keep the CMake, vcpkg, documentation, Python API manifest, core wheel, and
-   Gallery wheel versions aligned at the intended `X.Y.Z` version.
+1. Integrate the release into `release/X.Y.x`, then promote it to `main` as
+   described in the release governance document.
+2. Keep the CMake, vcpkg, documentation, Python API manifest, Core wheel, and
+   Gallery wheel versions aligned at `X.Y.Z`.
 3. Review `docs/releases/vX.Y.Z.md` and the maintainer changelog.
-4. Run full CI with the Python release bundle enabled on the untagged commit:
+4. Require the automatic `CI full` run on the final `main` commit to pass
+   `Release ready`.
 
-   ```bash
-   gh workflow run CI --ref release/X.Y.x -f matrix=full -f python_release_bundle=true
-   ```
+The normal main-push CI intentionally omits the 18-wheel publication bundle.
+The stable Release workflow builds it once, in parallel with desktop packages.
+This keeps ordinary main validation fast without leaving Python publication as
+a manual follow-up.
 
-5. Require `Release ready` to pass. Download or inspect the canonical bundle
-   and record the full-CI run ID, commit SHA, and manifest SHA-256:
+## Optional TestPyPI check
 
-   ```bash
-   sha256sum python-release-manifest.json
-   ```
-
-Do not create `vX.Y.Z` until the TestPyPI stage below succeeds.
-
-## TestPyPI rehearsal
-
-Dispatch the release workflow from the exact release commit that produced the
-successful full-CI bundle:
+For an isolated pre-tag package check, manually run bundle-enabled full CI on
+the matching release branch and then dispatch:
 
 ```bash
+gh workflow run CI \
+  --ref release/X.Y.x \
+  -f matrix=full \
+  -f python_release_bundle=true
+
 gh workflow run python-release.yml \
   --ref release/X.Y.x \
   -f stage=testpypi \
   -f recovery=false
 ```
 
-The workflow locates the successful `Release ready` run for that commit,
-downloads its bundle, verifies all local hashes, rejects any production PyPI
-files for the version, and compares pre-existing TestPyPI files with the
-manifest before using `skip-existing`.
+This check is optional and never authorizes PyPI. It locates the successful
+bundle-enabled CI run, verifies the manifest and existing index files, uploads
+with `skip-existing`, then performs clean installation and smoke tests.
 
-After upload it waits for both TestPyPI JSON records to contain the exact
-17+1 file set, then uses Linux x64 with CPython 3.11 to:
+## Stable tag and synchronized publication
+
+Create the annotated tag only after the final `main` commit passes
+`Release ready`:
+
+```bash
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin vX.Y.Z
+```
+
+The tag starts one standard chain:
+
+1. Release builds desktop packages and the immutable 18-wheel Python candidate
+   in parallel.
+2. Release publishes the stable GitHub Release.
+3. Release dispatches `python-release.yml` at the same tag with `stage=all` and
+   waits for it.
+4. The Python workflow publishes and verifies TestPyPI before any PyPI upload.
+5. It publishes the same files to PyPI, verifies all attestations, installs
+   both public distributions, and runs the smoke suites.
+
+The Release run is successful only when the synchronized Python run succeeds.
+The Python preflight verifies the tag, public GitHub Release, source commit,
+originating Release run and attempt, bundle manifest, hashes, and package-index
+state. No wheel is rebuilt between indexes.
+
+The TestPyPI smoke uses Linux x64 with CPython 3.11 to:
 
 - install PySide6-Essentials and Shiboken6 6.9.3 from production PyPI;
 - install both FluentQt distributions from TestPyPI with `--no-deps`;
@@ -140,61 +160,13 @@ After upload it waits for both TestPyPI JSON records to contain the exact
 
 Package-index JSON and Simple API edges can converge at different times. The
 exact-version install therefore uses bounded, cache-free retries after the
-hash gate passes; this handles propagation delay without rebuilding or
-replacing any wheel.
+hash gate passes. Existing files are skipped only after their hashes match the
+manifest. A mismatch requires a new version because package-index files are
+immutable.
 
-An interrupted TestPyPI run is retried with the same command. Existing files
-are skipped only after their hashes match the immutable manifest. A mismatch
-requires a new version; package-index files are immutable.
-
-If the stable tag and GitHub Release were published before this rehearsal was
-dispatched, recover from the release branch without moving either ref:
-
-```bash
-gh workflow run python-release.yml \
-  --ref release/X.Y.x \
-  -f stage=testpypi \
-  -f recovery=false \
-  -f source_tag=vX.Y.Z
-```
-
-`source_tag` is a post-tag recovery input, not an alternate release path. The
-workflow requires an annotated version-matching tag, a published stable GitHub
-Release, and the unexpired 18-wheel bundle from successful full CI on that
-exact tag commit. Preparation and smoke tests check out the tag, while the
-workflow itself remains on `release/X.Y.x` for the TestPyPI environment and
-Trusted Publisher boundary. It never rebuilds a wheel or rewrites a branch.
-
-## Stable tag and production publication
-
-Once TestPyPI succeeds, create the annotated tag from the same commit:
-
-```bash
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
-git push origin vX.Y.Z
-```
-
-Wait for the existing C++ Release workflow to publish a non-draft stable
-GitHub Release and its desktop packages. Then dispatch production publication:
-
-```bash
-gh workflow run python-release.yml \
-  --ref vX.Y.Z \
-  -f stage=pypi \
-  -f recovery=false
-```
-
-Production preflight rejects a lightweight or prerelease tag, version drift,
-a different TestPyPI/full-CI commit, an unpublished GitHub Release, an
-incomplete TestPyPI file set, or an existing production version. The manual
-workflow dispatch is the production authorization; after preflight, both
-package-scoped upload jobs proceed without a second deployment approval.
-
-The official PyPI publish action uploads the same 18 files
-through OIDC Trusted Publishing and creates attestations. Verification checks
-the public JSON hashes, validates all 18 attestations against
-`calvinhxx/Fluent-Qt`, and performs a normal clean-index installation of both
-distributions followed by the UILib and Gallery smoke suites.
+If the synchronized publisher is interrupted, rerun the failed Release jobs.
+`stage=all` accepts only exact manifest subsets on both indexes, skips matching
+files, and resumes the same TestPyPI-to-PyPI sequence.
 
 ## Partial production recovery
 
@@ -212,13 +184,16 @@ the manifest with an identical SHA-256. Only then may the publish action skip
 existing files. Never use recovery to replace a file, upload a rebuilt wheel,
 or bypass TestPyPI.
 
+`source_tag` remains an emergency input for a missed TestPyPI stage from a
+bundle-enabled release-branch CI run. It is not part of the standard release
+path and never moves a ref or rebuilds a wheel.
+
 ## M6 closure evidence
 
 Record the following in both roadmaps before marking M6 complete:
 
-- full-CI run ID and source commit;
-- TestPyPI workflow run ID;
-- production PyPI workflow run ID;
+- Release run ID, attempt, and source commit;
+- synchronized Python workflow run ID;
 - `FluentQt` and `FluentQt-Gallery` PyPI project URLs;
 - SHA-256 of `python-release-manifest.json`;
 - successful public-index clean-install and attestation verification.
