@@ -42,6 +42,20 @@ static int effectiveLineHeight(const QFont& font, int requestedLineHeight) {
     return qMax(requestedLineHeight, naturalLineHeight(font));
 }
 
+static int nativeVerticalDocumentInset(QTextEdit* editor) {
+    if (!editor || !editor->document())
+        return 0;
+    const QTextBlock firstBlock = editor->document()->begin();
+    if (!firstBlock.isValid())
+        return 0;
+
+    editor->document()->documentLayout()->documentSize();
+    const QScrollBar* scrollBar = editor->verticalScrollBar();
+    const int scrollOffset = scrollBar ? scrollBar->value() : 0;
+    return qMax(0, editor->cursorRect(QTextCursor(firstBlock)).top()
+        + scrollOffset);
+}
+
 static int verticalMarginOverflow(const QFont& font,
                                   int lineHeight,
                                   const QMargins& margins) {
@@ -706,11 +720,23 @@ void TextEdit::applyBlockCenterFormat() {
     // therefore contains whole visual lines at both scroll boundaries.
     // zh_CN: viewport margin 承担外部 inset，并分配满足 inset 后剩余的行槽
     // 余量，因此滚动顶部和尾部都只显示完整视觉行。
-    const QMargins viewportMargins = calcContentViewportMargins(
+    const QMargins requestedViewportMargins = calcContentViewportMargins(
         f, m_lineHeight, m_contentMargins);
+    // Qt 5 can retain a vertical QTextLayout origin even after the root-frame
+    // margin is cleared. Count that native inset toward the requested Fluent
+    // inset instead of stacking both values; otherwise the capped viewport is
+    // too short and its maximum scroll value lands between lines.
+    // zh_CN: Qt 5 在 root frame margin 清零后仍可能保留垂直文本布局
+    // 原点。将它计入 Fluent inset，避免叠加后压缩 viewport，导致尾部
+    // 滚动停在两行之间。
+    const int nativeVerticalInset = nativeVerticalDocumentInset(m_editor);
+    const int viewportTop = qMax(
+        0, requestedViewportMargins.top() - nativeVerticalInset);
+    const int viewportBottom = qMax(
+        0, requestedViewportMargins.bottom() - nativeVerticalInset);
     static_cast<InnerTextEdit*>(m_editor)->setContentViewportMargins(
-        viewportMargins.left(), viewportMargins.top(),
-        viewportMargins.right(), viewportMargins.bottom());
+        requestedViewportMargins.left(), viewportTop,
+        requestedViewportMargins.right(), viewportBottom);
 
     m_updatingFormat = false;
 }
