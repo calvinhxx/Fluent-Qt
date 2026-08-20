@@ -23,7 +23,7 @@
     {"id":"flip-view","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/collections/private/FlipViewAccessibility_p.cpp","tests/components/TestCollectionSurfaceAccessibility.cpp"],"gap":""},
     {"id":"flow-view","classification":"augmented","risk":"medium","status":"covered","evidence":["tests/components/collections/TestFlowView.cpp"],"gap":""},
     {"id":"grid-view","classification":"native","risk":"medium","status":"covered","evidence":["src/components/collections/GridView.h"],"gap":""},
-    {"id":"list-view","classification":"native","risk":"medium","status":"covered","evidence":["src/components/collections/ListView.h"],"gap":""},
+    {"id":"list-view","classification":"native","risk":"medium","status":"covered","evidence":["src/components/collections/ListView.h","tests/components/collections/TestListView.cpp"],"gap":""},
     {"id":"split-view","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/collections/private/SplitViewAccessibility_p.cpp","tests/components/TestCollectionSurfaceAccessibility.cpp"],"gap":""},
     {"id":"stack-view","classification":"native","risk":"low","status":"covered","evidence":["src/components/collections/StackView.h"],"gap":""},
     {"id":"tree-view","classification":"native","risk":"medium","status":"covered","evidence":["src/components/collections/TreeView.h"],"gap":""},
@@ -76,7 +76,7 @@
     {"id":"line-edit","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/LineEdit.h"],"gap":""},
     {"id":"number-box","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/textfields/private/NumberBoxAccessibility_p.cpp","tests/components/TestValueAccessibility.cpp"],"gap":""},
     {"id":"password-box","classification":"native","risk":"low","status":"covered","evidence":["src/components/textfields/PasswordBox.h"],"gap":""},
-    {"id":"text-edit","classification":"native","risk":"medium","status":"covered","evidence":["src/components/textfields/TextEdit.h"],"gap":""},
+    {"id":"text-edit","classification":"native","risk":"medium","status":"covered","evidence":["src/components/textfields/TextEdit.h","tests/components/textfields/TestTextEdit.cpp"],"gap":""},
 
     {"id":"title-bar","classification":"not-applicable","risk":"low","status":"not-applicable","evidence":["src/components/windowing/TitleBar.h"],"gap":"Drag surface semantics are owned by Window and its caption controls."},
     {"id":"window","classification":"augmented","risk":"medium","status":"covered","evidence":["tests/components/windowing/TestWindow.cpp"],"gap":""},
