@@ -24,13 +24,15 @@
 </p>
 
 <p align="center">
-  <a href="https://calvinhxx.github.io/Fluent-Qt/#top"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery 预览"></a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#top"><img src="docs/assets/readme/hero.png" alt="Fluent-Qt Gallery 预览"></a>
 </p>
 
 <p align="center">
-  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/#gallery">实时体验 C++ Web Gallery</a></strong>
+  <strong><a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery">实时体验 C++ Web Gallery</a></strong>
   ·
-  <a href="https://calvinhxx.github.io/Fluent-Qt/#top">项目官网</a>
+  <a href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/#top">项目官网</a>
+  ·
+  <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">提问与交流</a>
 </p>
 
 集合类组件包括 ListView、GridView、FlowView、TreeView 和 DataGrid。DataGrid 沿用 Qt 的模型与委托所有权约定，大数据表格的工作量保持在可视区域内。
@@ -51,7 +53,7 @@ Light/Dark 语义 token 完成。
 
 ## 🤖 AI 辅助开发
 
-Codex、Claude Code、Cursor 等 Agent 可通过 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) 构建原生 C++ / PySide6 GUI。[示例](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [文档](docs/ai/README.md)
+Codex、Claude Code、Cursor 等 Agent 可通过 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) 构建原生 C++ / PySide6 GUI。[示例](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [文档](docs/ai/README.md)
 
 ## 🚀 快速开始
 
@@ -250,7 +252,7 @@ Gallery 用于浏览、演示和验证 FluentQt 组件。
 
 ### C++ Web Gallery
 
-在线体验：[项目官网](https://calvinhxx.github.io/Fluent-Qt/#gallery) · [独立页面](https://calvinhxx.github.io/Fluent-Qt/gallery/)。
+在线体验：[项目官网](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#gallery) · [独立页面](https://calvinhxx.github.io/Fluent-Qt/gallery/)。
 
 ### C++ Gallery 安装包
 
@@ -300,7 +302,10 @@ python -m fluentqt_gallery
 
 ## 📚 文档
 
+- [支持与社区](SUPPORT.md)
 - [参与贡献](CONTRIBUTING.md)
+- [安全策略](SECURITY.md)
+- [社区行为准则](CODE_OF_CONDUCT.md)
 - [AI 辅助应用开发](docs/ai/README.md)
 - [开发工作流](docs/development/README.md)
 - [测试与视觉验收](docs/development/testing-workflow.md)
