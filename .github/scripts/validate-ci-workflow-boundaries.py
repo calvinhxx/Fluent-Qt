@@ -33,6 +33,14 @@ EXPECTED_JOBS = {
         "publish_pypi",
         "verify_pypi",
     },
+    "release.yml": {
+        "preflight",
+        "package",
+        "source-package",
+        "python_candidate",
+        "publish",
+        "publish_python",
+    },
     "pages.yml": {"wasm", "deploy"},
 }
 
@@ -81,6 +89,7 @@ def validate_boundaries() -> list[str]:
     wasm = contents["ci-wasm.yml"]
     python = contents["ci-python.yml"]
     python_release = contents["python-release.yml"]
+    release = contents["release.yml"]
     pages = contents["pages.yml"]
 
     if len(orchestrator.splitlines()) > 280:
@@ -98,6 +107,11 @@ def validate_boundaries() -> list[str]:
     ):
         if required not in orchestrator:
             errors.append(f"ci.yml is missing orchestration contract: {required}")
+    if orchestrator.count('python_release_bundle="true"') != 1:
+        errors.append(
+            "ci.yml must reserve the complete Python bundle for scheduled validation; "
+            "stable Release builds its own candidate"
+        )
     for forbidden in (
         "cmake --build",
         "install-qt-action",
@@ -226,11 +240,20 @@ def validate_boundaries() -> list[str]:
         ".github/scripts/verify-python-package-index.py",
         ".github/scripts/install-python-release-from-index.py",
         "attestations: true",
-        "skip-existing: ${{ inputs.recovery }}",
+        "skip-existing: ${{ needs.preflight.outputs.stage == 'all' || needs.preflight.outputs.recovery == 'true' }}",
+        "- all",
+        "needs.preflight.outputs.stage == 'all'",
         "source_tag:",
         "SOURCE_TAG: ${{ inputs.source_tag }}",
+        "source_run_id:",
+        "SOURCE_RUN_ID: ${{ inputs.source_run_id }}",
+        "source_run_attempt:",
+        "SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}",
+        "source_run_id and source_run_attempt are reserved for stage=all.",
+        'candidate_name" != "Release"',
+        'candidate_path" != ".github/workflows/release.yml"',
         "source_ref: ${{ steps.resolve.outputs.source_ref }}",
-        "source_tag is only valid for a missed TestPyPI rehearsal.",
+        "source_tag is only valid for manual TestPyPI recovery.",
         "TestPyPI source_tag recovery requires a published stable GitHub Release.",
         "ref: ${{ needs.preflight.outputs.source_ref }}",
         "for discovery_attempt in {1..12}",
@@ -250,6 +273,41 @@ def validate_boundaries() -> list[str]:
         errors.append(
             "python-release.yml must grant id-token: write to exactly two matrix publish jobs"
         )
+    for required in (
+        "actions: write",
+        "name: Build Python release candidate",
+        "uses: ./.github/workflows/ci-python.yml",
+        "build_release_bundle: true",
+        "A manual stable publication must dispatch release.yml from $tag.",
+        "name: Dispatch synchronized Python publication",
+        "gh workflow run python-release.yml",
+        "-f stage=all",
+        'source_run_id="$(jq -r',
+        'source_run_attempt="$(jq -r',
+        "-f source_run_id=\"${{ steps.candidate.outputs.source_run_id }}\"",
+        "-f source_run_attempt=\"${{ steps.candidate.outputs.source_run_attempt }}\"",
+        "gh run watch",
+        "--exit-status",
+    ):
+        if required not in release:
+            errors.append(f"release.yml is missing Python publication orchestration: {required}")
+    stable_publish = job_section(release, "publish")
+    for required in (
+        "needs: [preflight, package, source-package, python_candidate]",
+        "always()",
+        "needs.package.result == 'success'",
+        "needs.source-package.result == 'success'",
+        "needs.preflight.outputs.draft == 'true'",
+        "needs.preflight.outputs.prerelease == 'true'",
+        "needs.python_candidate.result == 'success'",
+    ):
+        if required not in stable_publish:
+            errors.append(
+                "release.yml stable publish must wait for the Python candidate: "
+                f"{required}"
+            )
+    if "id-token: write" in release:
+        errors.append("release.yml must dispatch the top-level publisher, not receive OIDC")
     publisher_contracts = {
         "publish_testpypi": (
             "environment_name: testpypi",

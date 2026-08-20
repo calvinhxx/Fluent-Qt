@@ -12,13 +12,24 @@ on:
         options:
           - testpypi
           - pypi
+          - all
       recovery:
         description: Resume a partial production upload after hash verification.
         required: true
         default: false
         type: boolean
       source_tag:
-        description: Existing stable tag to rehearse on TestPyPI after a missed pre-tag stage.
+        description: Existing stable tag for a manual post-tag TestPyPI recovery.
+        required: false
+        default: ""
+        type: string
+      source_run_id:
+        description: Release workflow run that produced the synchronized candidate.
+        required: false
+        default: ""
+        type: string
+      source_run_attempt:
+        description: Attempt of the Release workflow run that produced the candidate.
         required: false
         default: ""
         type: string
@@ -58,6 +69,8 @@ jobs:
           RELEASE_STAGE: ${{ inputs.stage }}
           RECOVERY: ${{ inputs.recovery }}
           SOURCE_TAG: ${{ inputs.source_tag }}
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
         shell: bash
         run: |
           set -euo pipefail
@@ -67,7 +80,17 @@ jobs:
             exit 1
           fi
           if [[ -n "$SOURCE_TAG" && "$RELEASE_STAGE" != "testpypi" ]]; then
-            echo "::error::source_tag is only valid for a missed TestPyPI rehearsal."
+            echo "::error::source_tag is only valid for manual TestPyPI recovery."
+            exit 1
+          fi
+          if [[ "$RELEASE_STAGE" == "all" ]]; then
+            if [[ ! "$SOURCE_RUN_ID" =~ ^[1-9][0-9]*$ ||
+                  ! "$SOURCE_RUN_ATTEMPT" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::The synchronized all stage requires a Release run ID and attempt."
+              exit 1
+            fi
+          elif [[ -n "$SOURCE_RUN_ID" || -n "$SOURCE_RUN_ATTEMPT" ]]; then
+            echo "::error::source_run_id and source_run_attempt are reserved for stage=all."
             exit 1
           fi
 
@@ -120,9 +143,9 @@ jobs:
               source_commit="$(git rev-list -n 1 "$SOURCE_TAG")"
               source_ref="$SOURCE_TAG"
             fi
-          elif [[ "$RELEASE_STAGE" == "pypi" ]]; then
+          elif [[ "$RELEASE_STAGE" == "pypi" || "$RELEASE_STAGE" == "all" ]]; then
             if [[ "$GITHUB_REF_TYPE" != "tag" || ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "::error::Production PyPI must run from a stable vX.Y.Z tag."
+              echo "::error::Stable Python publication must run from a vX.Y.Z tag."
               exit 1
             fi
             if ! git rev-parse -q --verify "refs/tags/$GITHUB_REF_NAME^{tag}" >/dev/null; then
@@ -145,67 +168,114 @@ jobs:
 
           ci_run_id=""
           ci_run_attempt=""
-          for discovery_attempt in {1..12}; do
-            mapfile -t check_urls < <(
-              gh api \
-                "repos/$GITHUB_REPOSITORY/commits/$source_commit/check-runs?per_page=100" \
-                --jq \
-                  '.check_runs |
-                   map(select(.name == "Release ready" and
-                              .status == "completed" and
-                              .conclusion == "success")) |
-                   sort_by(.completed_at) | reverse | .[].details_url'
-            )
-            for details_url in "${check_urls[@]}"; do
-              if [[ ! "$details_url" =~ /actions/runs/([0-9]+) ]]; then
-                continue
-              fi
-              candidate_run="${BASH_REMATCH[1]}"
+          if [[ "$RELEASE_STAGE" == "all" ]]; then
+            for discovery_attempt in {1..12}; do
               candidate_json="$(
-                gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run"
+                gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID"
               )"
               candidate_sha="$(jq -r '.head_sha' <<< "$candidate_json")"
               candidate_name="$(jq -r '.name' <<< "$candidate_json")"
               candidate_path="$(jq -r '.path' <<< "$candidate_json")"
+              candidate_event="$(jq -r '.event' <<< "$candidate_json")"
               candidate_status="$(jq -r '.status' <<< "$candidate_json")"
-              candidate_conclusion="$(jq -r '.conclusion' <<< "$candidate_json")"
+              candidate_conclusion="$(jq -r '.conclusion // ""' <<< "$candidate_json")"
               candidate_attempt="$(jq -r '.run_attempt' <<< "$candidate_json")"
               if [[ "$candidate_sha" != "$source_commit" ||
-                    "$candidate_name" != "CI full" ||
-                    "$candidate_path" != ".github/workflows/ci.yml" ||
-                    "$candidate_status" != "completed" ||
-                    "$candidate_conclusion" != "success" ||
-                    ! "$candidate_attempt" =~ ^[1-9][0-9]*$ ]]; then
-                continue
+                    "$candidate_name" != "Release" ||
+                    "$candidate_path" != ".github/workflows/release.yml" ||
+                    ("$candidate_event" != "push" && "$candidate_event" != "workflow_dispatch") ||
+                    ("$candidate_status" != "in_progress" && "$candidate_status" != "completed") ||
+                    ( -n "$candidate_conclusion" && "$candidate_conclusion" != "success" ) ||
+                    ! "$candidate_attempt" =~ ^[1-9][0-9]*$ ||
+                    "$SOURCE_RUN_ATTEMPT" -gt "$candidate_attempt" ]]; then
+                echo "::error::The supplied Release run does not match the stable publication candidate."
+                exit 1
               fi
               artifact_count="$(
                 gh api \
-                  "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run/artifacts?per_page=100" \
+                  "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100" \
                   --jq \
                     '[.artifacts[] |
                       select(.name == "fluentqt-python-release-bundle" and
                              .expired == false)] | length'
               )"
               if [[ "$artifact_count" == "1" ]]; then
-                ci_run_id="$candidate_run"
-                ci_run_attempt="$candidate_attempt"
+                ci_run_id="$SOURCE_RUN_ID"
+                ci_run_attempt="$SOURCE_RUN_ATTEMPT"
                 break
               fi
+              if (( discovery_attempt < 12 )); then
+                echo "::notice::The Release bundle is not visible yet; retrying in 10 seconds."
+                sleep 10
+              fi
             done
-            if [[ -n "$ci_run_id" ]]; then
-              break
+            if [[ -z "$ci_run_id" ]]; then
+              echo "::error::The synchronized Release run did not expose one Python bundle within 120 seconds."
+              exit 1
             fi
-            if (( discovery_attempt < 12 )); then
-              echo "::notice::Release evidence is not fully visible yet; retrying in 10 seconds."
-              sleep 10
+          else
+            for discovery_attempt in {1..12}; do
+              mapfile -t check_urls < <(
+                gh api \
+                  "repos/$GITHUB_REPOSITORY/commits/$source_commit/check-runs?per_page=100" \
+                  --jq \
+                    '.check_runs |
+                     map(select(.name == "Release ready" and
+                                .status == "completed" and
+                                .conclusion == "success")) |
+                     sort_by(.completed_at) | reverse | .[].details_url'
+              )
+              for details_url in "${check_urls[@]}"; do
+                if [[ ! "$details_url" =~ /actions/runs/([0-9]+) ]]; then
+                  continue
+                fi
+                candidate_run="${BASH_REMATCH[1]}"
+                candidate_json="$(
+                  gh api "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run"
+                )"
+                candidate_sha="$(jq -r '.head_sha' <<< "$candidate_json")"
+                candidate_name="$(jq -r '.name' <<< "$candidate_json")"
+                candidate_path="$(jq -r '.path' <<< "$candidate_json")"
+                candidate_status="$(jq -r '.status' <<< "$candidate_json")"
+                candidate_conclusion="$(jq -r '.conclusion' <<< "$candidate_json")"
+                candidate_attempt="$(jq -r '.run_attempt' <<< "$candidate_json")"
+                if [[ "$candidate_sha" != "$source_commit" ||
+                      "$candidate_name" != "CI full" ||
+                      "$candidate_path" != ".github/workflows/ci.yml" ||
+                      "$candidate_status" != "completed" ||
+                      "$candidate_conclusion" != "success" ||
+                      ! "$candidate_attempt" =~ ^[1-9][0-9]*$ ]]; then
+                  continue
+                fi
+                artifact_count="$(
+                  gh api \
+                    "repos/$GITHUB_REPOSITORY/actions/runs/$candidate_run/artifacts?per_page=100" \
+                    --jq \
+                      '[.artifacts[] |
+                        select(.name == "fluentqt-python-release-bundle" and
+                               .expired == false)] | length'
+                )"
+                if [[ "$artifact_count" == "1" ]]; then
+                  ci_run_id="$candidate_run"
+                  ci_run_attempt="$candidate_attempt"
+                  break
+                fi
+              done
+              if [[ -n "$ci_run_id" ]]; then
+                break
+              fi
+              if (( discovery_attempt < 12 )); then
+                echo "::notice::Release evidence is not fully visible yet; retrying in 10 seconds."
+                sleep 10
+              fi
+            done
+            if [[ -z "$ci_run_id" ]]; then
+              echo "::error::No successful bundle-enabled full CI run became visible within 120 seconds."
+              exit 1
             fi
-          done
-          if [[ -z "$ci_run_id" ]]; then
-            echo "::error::No successful bundle-enabled full CI run became visible within 120 seconds."
-            exit 1
           fi
 
-          if [[ "$RELEASE_STAGE" == "pypi" ]]; then
+          if [[ "$RELEASE_STAGE" == "pypi" || "$RELEASE_STAGE" == "all" ]]; then
             release_json="$(
               gh release view "$GITHUB_REF_NAME" \
                 --repo "$GITHUB_REPOSITORY" \
@@ -301,17 +371,21 @@ jobs:
           set -euo pipefail
           candidate="${RUNNER_TEMP}/fluentqt-python-publish-candidate"
           manifest="$candidate/python-release-manifest.json"
-          if [[ "$RELEASE_STAGE" == "testpypi" ]]; then
+          if [[ "$RELEASE_STAGE" == "testpypi" || "$RELEASE_STAGE" == "all" ]]; then
             python3 .github/scripts/verify-python-package-index.py \
               --manifest "$manifest" \
               --bundle "$candidate" \
               --index-json-url https://test.pypi.org/pypi \
               --mode subset
+            production_mode=absent
+            if [[ "$RELEASE_STAGE" == "all" ]]; then
+              production_mode=subset
+            fi
             python3 .github/scripts/verify-python-package-index.py \
               --manifest "$manifest" \
               --bundle "$candidate" \
               --index-json-url https://pypi.org/pypi \
-              --mode absent
+              --mode "$production_mode"
           else
             python3 .github/scripts/verify-python-package-index.py \
               --manifest "$manifest" \
@@ -356,7 +430,7 @@ jobs:
   publish_testpypi:
     name: Publish to TestPyPI / ${{ matrix.distribution }}
     needs: [preflight, prepare]
-    if: ${{ needs.preflight.outputs.stage == 'testpypi' }}
+    if: ${{ needs.preflight.outputs.stage != 'pypi' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -395,7 +469,7 @@ jobs:
   verify_testpypi:
     name: Verify TestPyPI installation
     needs: [preflight, prepare, publish_testpypi]
-    if: ${{ needs.preflight.outputs.stage == 'testpypi' }}
+    if: ${{ needs.preflight.outputs.stage != 'pypi' }}
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     steps:
@@ -480,8 +554,16 @@ jobs:
 
   publish_pypi:
     name: Publish to PyPI / ${{ matrix.distribution }}
-    needs: [preflight, prepare]
-    if: ${{ needs.preflight.outputs.stage == 'pypi' }}
+    needs: [preflight, prepare, verify_testpypi]
+    if: >-
+      ${{
+        always() &&
+        needs.preflight.result == 'success' &&
+        needs.prepare.result == 'success' &&
+        (needs.preflight.outputs.stage == 'pypi' ||
+         (needs.preflight.outputs.stage == 'all' &&
+          needs.verify_testpypi.result == 'success'))
+      }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -512,14 +594,14 @@ jobs:
         with:
           packages-dir: publisher-candidate/
           verify-metadata: true
-          skip-existing: ${{ inputs.recovery }}
+          skip-existing: ${{ needs.preflight.outputs.stage == 'all' || needs.preflight.outputs.recovery == 'true' }}
           print-hash: true
           attestations: true
 
   verify_pypi:
     name: Verify PyPI publication and attestations
     needs: [preflight, prepare, publish_pypi]
-    if: ${{ needs.preflight.outputs.stage == 'pypi' }}
+    if: ${{ needs.preflight.outputs.stage != 'testpypi' }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:

@@ -223,22 +223,21 @@ Before creating a stable tag:
 7. Build and attach release artifacts. For Windows/macOS Gallery packages,
    verify the installed runtime notices and retain the exact corresponding Qt
    source required by their Qt `NOTICE.md`.
-8. Publish the GitHub Release notes, installers, and one aggregate
-   `SHA256SUMS.txt`.
-9. Merge the tagged `main` commit back into `release/X.Y.x` before continuing
+8. Let the stable Release workflow publish the GitHub Release, installers, one
+   aggregate `SHA256SUMS.txt`, and the synchronized Python release.
+9. Require the linked Python run to verify TestPyPI, PyPI, attestations, and
+   clean installation of both distributions.
+10. Merge the tagged `main` commit back into `release/X.Y.x` before continuing
    patch development on that line.
 
 Stable releases publish the supported PySide6 distributions to TestPyPI and
-PyPI, so also follow the
-[Python publishing runbook](../../bindings/pyside6/PUBLISHING.md). Python
-publication is the deliberate exception to the standard main-first sequence:
-full CI creates one 18-wheel bundle on `release/X.Y.x`, that exact bundle passes
-TestPyPI before the stable tag is created on the same release-branch commit,
-and the tagged production workflow publishes the same files through Trusted
-Publishing. Promote the tagged commit to `main` afterward; do not rebase it
-before tagging because that changes the artifact SHA. Build the bundle only
-when Python publication is intended, with
-`gh workflow run CI --ref release/X.Y.x -f matrix=full -f python_release_bundle=true`.
+PyPI; follow the
+[Python publishing runbook](../../bindings/pyside6/PUBLISHING.md). The normal
+main-push gate omits the expensive 18-wheel bundle. A stable tag makes Release
+build that bundle once in parallel with desktop packages, then automatically
+run TestPyPI → verification → PyPI → attestation and install verification.
+Release is not green until the linked Python workflow succeeds. Manual Python
+dispatches are recovery tools, not standard release steps.
 
 Later automation may perform these steps, but the rules above remain the
 contract that CI, changelog, and packaging workflows should enforce.
