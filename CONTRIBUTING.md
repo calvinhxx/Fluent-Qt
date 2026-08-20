@@ -4,6 +4,10 @@ Bug reports, focused fixes, documentation improvements, and component proposals
 are welcome. Small, reproducible changes are easier to review and validate
 across C++, PySide6, and WebAssembly.
 
+By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+For installation and usage help, follow the routing in [SUPPORT.md](SUPPORT.md)
+instead of opening a support Issue.
+
 ## Before opening an issue
 
 - Search existing issues and confirm the behavior on a supported Qt version.
