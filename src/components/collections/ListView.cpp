@@ -777,12 +777,23 @@ void ListView::setSelectedIndicatorAnimationEnabled(bool enabled) {
     emit selectedIndicatorAnimationEnabledChanged();
 }
 
+void ListView::setSelectionIndicatorVisible(bool visible) {
+    if (m_selectionIndicatorVisible == visible)
+        return;
+    m_selectionIndicatorVisible = visible;
+    if (visible && usesMovingSelectedIndicator())
+        updateSelectedIndicatorFromSelection();
+    if (viewport())
+        viewport()->update();
+    emit selectionIndicatorVisibleChanged();
+}
+
 QRectF ListView::selectedIndicatorRect() const {
     return selectedIndicatorRect(m_selectedIndicatorProgress);
 }
 
 QRectF ListView::selectedIndicatorRect(qreal progress) const {
-    if (!usesMovingSelectedIndicator())
+    if (!m_selectionIndicatorVisible || !usesMovingSelectedIndicator())
         return {};
     if (!m_currentIndicatorIndex.isValid())
         return {};
@@ -809,6 +820,8 @@ QRectF ListView::selectedIndicatorRect(qreal progress) const {
 }
 
 QRectF ListView::selectedIndicatorRectForRow(int row) const {
+    if (!m_selectionIndicatorVisible)
+        return {};
     if (usesMovingSelectedIndicator())
         return row == selectedIndex() ? selectedIndicatorRect() : QRectF();
 
@@ -819,7 +832,8 @@ QRectF ListView::selectedIndicatorRectForRow(int row) const {
 }
 
 QRectF ListView::selectedIndicatorRectForRow(int row, qreal progress) const {
-    if (!model() || row < 0 || row >= model()->rowCount())
+    if (!m_selectionIndicatorVisible
+        || !model() || row < 0 || row >= model()->rowCount())
         return {};
 
     const QModelIndex index = model()->index(row, 0);
@@ -1733,8 +1747,8 @@ void ListView::refreshSelectedIndicatorGeometry(bool snapToTarget) {
 }
 
 void ListView::paintSelectedIndicator(QPainter& painter) const {
-
-    if (!themeColorsRef().accentDefault.isValid() || !selectionModel())
+    if (!m_selectionIndicatorVisible
+        || !themeColorsRef().accentDefault.isValid() || !selectionModel())
         return;
 
     if (usesMovingSelectedIndicator()) {
