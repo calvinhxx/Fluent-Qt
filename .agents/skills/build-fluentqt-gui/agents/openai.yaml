@@ -1,4 +1,4 @@
 interface:
-  display_name: "Build Gallery-Quality FluentQt Apps"
-  short_description: "Design, stress-test, and polish FluentQt GUIs"
-  default_prompt: "Use $build-fluentqt-gui to identify this project's GUI integration boundary, choose a proportional lite/full workflow, then build and refine a Gallery-quality FluentQt surface."
+  display_name: "Build Production-Quality FluentQt Apps"
+  short_description: "Build branded, concise, polished FluentQt desktop GUIs"
+  default_prompt: "Use $build-fluentqt-gui to establish a maintainable C++ or PySide6 architecture, derive three product-grounded visual directions, edit concise product copy, create or refine the application icon and semantic palette, build the selected FluentQt experience, and pass independent engineering and Gallery-quality visual review."

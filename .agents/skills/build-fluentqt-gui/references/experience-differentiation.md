@@ -65,8 +65,12 @@ width. Useful lenses include:
 For each concept, name the primary surface, hero interaction, persistent panes,
 temporary surfaces, narrow-layout behavior, and one reason it may fail. Score
 the concepts against workflow fit, state visibility, responsiveness, component
-semantics, implementation risk, and product distinctiveness. Select one and
-record why the other two lose.
+semantics, implementation risk, and product distinctiveness. For full new-GUI
+or redesign work, continue through
+[Art direction and human selection](art-direction.md): resolve each concept as
+a same-content high-fidelity comp and obtain a human selection. Scores inform
+the review; they do not authorize the implementation agent to select its own
+concept.
 
 At most one concept may retain the aligned reference's complete region
 topology. Start the other concepts from the target's object, time model, or
@@ -134,8 +138,10 @@ Before the vertical slice:
 - the identity card is specific and evidence-backed;
 - the aligned/contrast synthesis names both transferred and rejected traits;
 - at least three structurally distinct concepts were considered;
-- the selected concept gives the signature surface more visual priority than
-  supporting controls;
+- full new-GUI or redesign concepts have comparable high-fidelity comps and a
+  recorded human selection;
+- the human-selected concept gives the signature surface more visual priority
+  than supporting controls;
 - component opportunities were classified without a usage quota;
 - any resemblance to prior unrelated GUIs is justified or redesigned.
 

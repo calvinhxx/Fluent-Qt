@@ -8,7 +8,7 @@ the same discovery and integration contract.
 
 ## What AI-friendly means here
 
-FluentQt v1 provides five layers:
+FluentQt provides seven AI-facing layers:
 
 1. `llms.txt` gives agents a small, predictable repository entry point.
 2. `generated/fluentqt-ai-catalog.json` exposes versioned component, C++,
@@ -21,6 +21,13 @@ FluentQt v1 provides five layers:
    record.
 5. `build-fluentqt-gui` packages that workflow using the open Agent Skills
    format, and CI rejects stale generated facts or broken platform routing.
+6. Design-brief contract v4 records product vernacular and taste evidence, one
+   controlled aesthetic risk, a genericity revision, six global tuning axes,
+   three same-content high-fidelity directions, and an implementation system
+   extracted only after human selection.
+7. Visual evidence contract v4 renders a local comparison board and
+   requires a human or fresh agent—not the implementation author—to review the
+   final build.
 
 The catalog is evidence, not a replacement for repository inspection. An agent
 must still verify the target project's public interfaces, ownership, event loop,
@@ -88,6 +95,16 @@ python3 tools/ai/validate_ai_assets.py --project-root .
 python3 tools/ai/evaluate_ai_catalog.py --project-root .
 ```
 
+For new GUIs, initialize a recipe-backed brief, ground it in the product's
+subject and taste context, create three same-content high-fidelity full-window
+comps, render the human selection board, and validate first with `--stage
+concepts`. Only the default design-brief `PASS` after a recorded human decision
+and implementation-spec extraction authorizes implementation. After final
+captures, compare the built surface to the accepted concept, render the visual
+review board, and require contract v4 with `--require-current`. The exact
+commands and reviewer boundaries are in
+[Adding a GUI to any project](add-gui-to-project.md).
+
 For a behavioral smoke test, open a fresh session in each target agent and ask:
 
 ```text
@@ -137,6 +154,8 @@ uses [its own schema](project-analysis.schema.json).
 | M4: drift prevention | CI validation, catalog synchronization, and source-package delivery | Implemented |
 | M5: measured quality | Eighteen project shapes, sixteen retrieval regressions, and five cross-pattern composition gates | Baseline implemented |
 | M6: distribution | Deterministic versioned Skill archive | Implemented |
+| M7: judged visual loop | Icon-aware nine-dimension concept board, contract v4, and independent visual review | Baseline implemented |
+| M8: design intelligence | Subject grounding, controlled risk, anti-genericity critique, tuning axes, and concept-to-code fidelity | Baseline implemented |
 
 The Skill remains the distribution unit. A plugin is only warranted later if
 FluentQt needs MCP servers, apps, or several related Skills.
@@ -145,8 +164,10 @@ The deterministic cases in `evals/scenarios.json` cover projects with no
 interface as well as library, CLI, TUI, service, and plugin boundaries. They
 measure catalog consistency, retrieval, component-set differentiation, and a
 negative guard against generic chat/sidebar shell convergence—not end-to-end
-model or visual quality. Live agent tasks and judged implementation outcomes
-remain a later evaluation layer.
+model or visual quality. The bundled
+`assets/benchmarks/agent-run-workspace.json` specification starts that judged
+layer, but live cross-agent runs and pairwise preference results must still be
+recorded separately from deterministic catalog scores.
 
 ## Compatibility boundary
 

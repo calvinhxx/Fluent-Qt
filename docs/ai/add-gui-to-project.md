@@ -89,9 +89,24 @@ data/lifetime table for states that cannot exist.
 Full additionally records:
 
 - a complete product-signature identity card;
+- subject materials, artifacts, instruments, verbs, and workflow tempo;
+- explicit user/project taste signals, recent patterns to avoid, and one
+  non-UI subject reference with transferred and rejected traits;
+- a specific visual world, signature element, typography/palette/motion voice,
+  concrete anti-goals, one controlled aesthetic risk with usability guard and
+  fallback, and one representative-content fixture;
+- a genericity critique with one concrete subject-specific revision and six
+  global tuning axes;
+- one coherent icon family with provenance, size, outline/filled, semantic
+  color, and icon-only accessibility rules;
 - aligned and contrastive product references with transferred and rejected
   structural rules and excluded brand/screenshot copying;
-- at least three structurally distinct information-architecture concepts;
+- exactly three structurally and aesthetically distinct concepts with
+  same-content high-fidelity full-window comps and a nine-dimension visual
+  scorecard;
+- a recorded human selection or rejection before production UI code;
+- a compact implementation design system extracted from the selected concept,
+  including locked decisions, allowed adaptations, risks, and comparison areas;
 - named Gallery/sample/`VisualCheck` evidence for every major surface;
 - full surface hierarchy, Light/Dark strategy, and normal/narrow/minimum layout;
 - semantic component-opportunity scan and decision table;
@@ -102,7 +117,8 @@ Full additionally records:
 - complete state-by-region evidence matrix.
 
 Full concepts differ in primary surface, persistent/transient regions, hero
-interaction, or narrow behavior. Color and pane-width variants do not count.
+interaction, subject translation, controlled aesthetic risk, or narrow
+behavior. Color and pane-width variants do not count.
 At most one concept may retain the aligned reference's complete topology. If
 the selected design matches four or more structural dimensions of a recent
 unrelated GUI, cite domain evidence or redesign it.
@@ -149,19 +165,21 @@ Shiboken versions and architectures aligned.
 
 Build one useful workflow before expanding navigation or visual polish:
 
-1. Add the narrow application adapter and unit-test it without a window.
-2. Model deterministic view states and transitions.
-3. If the slice owns a top-level window, install the premium shell first:
+1. For a full new GUI or redesign, rerun the design-brief validator without
+   `--stage` and stop unless it reports human-approved `PASS`.
+2. Add the narrow application adapter and unit-test it without a window.
+3. Model deterministic view states and transitions.
+4. If the slice owns a top-level window, install the premium shell first:
    Fluent `Window`, Mica, theme before construct, and unfilled hosts that
    reveal window material. If it is embedded, keep the host-owned window and
    lifecycle. Then finish the signature surface for the primary object, any
    primary input, and pane chrome. Do not stamp opaque `bgCanvas` / `bgLayer`
    fills onto every pane, wrap a composer in a `Card`, or use a filled
    `ComboBox` as a pane title.
-4. Move blocking I/O or computation off the GUI thread.
-5. Marshal results back through Qt signals or queued invocations with clear
+5. Move blocking I/O or computation off the GUI thread.
+6. Marshal results back through Qt signals or queued invocations with clear
    object ownership and cancellation.
-6. Preserve existing entry points and regression tests.
+7. Preserve existing entry points and regression tests.
 
 For every long or growing collection, use a Qt item model and delegate rather
 than a `ScrollView` layout containing one widget per record. Keep inserts and
@@ -192,6 +210,8 @@ Validation is proportional to the change but must cover all of these layers:
   idle baseline after deferred deletion;
 - Light/Dark themes, text fit, keyboard focus, disabled/hover/pressed states,
   scaling, resize, and supported platforms receive visual review;
+- icons use one provenanced family and preserve optical alignment, semantic
+  color, accessible names, and state treatment at native scale;
 - deterministic representative data is inspected at normal and narrow widths,
   concrete visual issues are fixed, and the same views are rechecked;
 - the full window and 100% crops of title bars, pane headers, selected rows,
@@ -203,6 +223,8 @@ Validation is proportional to the change but must cover all of these layers:
 - the application is compared beside its named Gallery/component references in
   a matching theme and scale, with no unexplained downgrade in token fidelity,
   interaction states, or visual finish;
+- the rebuilt full window and high-risk detail are compared directly with the
+  accepted concept, and every material deviation is recorded and justified;
 - installers or wheels include the new GUI and required assets when shipping is
   in scope.
 - the product signature is recognizable without its logo or accent color;
@@ -210,11 +232,48 @@ Validation is proportional to the change but must cover all of these layers:
   result is not merely a relabeled navigation/session/chat/inspector shell
   when that is not the primary object.
 
-Keep a task-local visual-evidence manifest with `"contract_version": 2` and
-`"profile": "lite"` or `"profile": "full"`, then run:
+For a new GUI or major redesign, initialize design-brief contract v4. Fill its
+subject vernacular, taste context, controlled risk, genericity revision, and
+tuning axes from product evidence. Create the three declared high-fidelity comp
+files in two passes—broad visual exploration, then readable desktop anatomy—
+using the same content, theme, and viewport. Then render and validate the
+human-review stage:
+
+```bash
+python3 .agents/skills/build-fluentqt-gui/scripts/init_design_brief.py \
+  --application "Product name" --recipe agent-run --profile full \
+  --author-id "implementation-agent-id" --output /path/to/design-brief.json
+python3 .agents/skills/build-fluentqt-gui/scripts/render_design_board.py \
+  /path/to/design-brief.json
+python3 .agents/skills/build-fluentqt-gui/scripts/validate_design_brief.py \
+  --stage concepts /path/to/design-brief.json
+```
+
+`CONCEPTS READY` does not authorize C++ work. Show the board and raw comps to
+the user or named human design owner. Record their approval or rejection in the
+brief, then rerun `validate_design_brief.py` without `--stage`; only its `PASS`
+result unlocks implementation. A wireframe or component-region diagram does
+not count as a high-fidelity comp.
+
+After final captures, keep a task-local visual-evidence manifest with
+`"contract_version": 4` and `"profile": "lite"` or `"profile": "full"`.
+Render a local comparison board and have a human or fresh agent—never
+the implementation author—record the evidence-backed review:
+
+```bash
+python3 .agents/skills/build-fluentqt-gui/scripts/render_visual_review.py \
+  /path/to/visual-evidence.json
+```
+
+The default board links local captures. Add `--embed-images` only when a single
+portable file is required; full-resolution evidence can make embedded HTML
+large.
+
+Then run:
 
 ```bash
 python3 .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
+  --require-current \
   /path/to/visual-evidence.json
 ```
 
@@ -222,10 +281,13 @@ From a consumer project, the same script is
 `<skill-root>/scripts/validate_visual_evidence.py`.
 
 The validator checks profile-specific coverage, local file existence, window
-material fields, and signature-surface fields. Legacy manifests without
-`contract_version` still validate as v1 with a migration warning, but new
-evidence must use v2. The script does not judge aesthetics; live and pixel
-review remains mandatory.
+material fields, signature-surface fields, the validated design brief, and a
+different reviewer with nine evidence-backed scores of at least 4/5, including
+iconography and surface composition. Legacy v1/v2/v3 manifests remain readable
+with a migration warning, but
+`--require-current` rejects them for new work. The script still does not infer
+taste from pixels; live inspection and the independent board review remain
+mandatory.
 
 For changes to FluentQt's own AI contract, finish with:
 

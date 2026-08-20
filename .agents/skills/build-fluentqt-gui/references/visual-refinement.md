@@ -156,6 +156,44 @@ render when any of these appear:
 - Does the layout resemble the chosen reference in hierarchy and density rather
   than only in color?
 
+### Pass 2a: action ownership
+
+Create an action inventory before approving the hierarchy. For every visible
+operation record its stable action id, owning region, primary entry, visibility
+condition, responsive fallback, and whether another entry can be visible at the
+same time.
+
+- Keep one primary visible entry for an action in each layout state.
+- Make wide and narrow fallbacks mutually exclusive instead of leaving both on
+  screen and merely changing one label or icon.
+- Allow a simultaneous secondary entry only when it has a distinct local scope,
+  consequence, or recovery value that the primary entry cannot provide.
+- Do not count keyboard shortcuts, menu commands, or accessibility actions as
+  visual duplication, but keep them mapped to the same semantic action.
+- Do not style passive context such as the current workspace like a button. If
+  it cannot be activated, remove hover, accent border, action cursor, and other
+  interactive affordances.
+- Trace repeated signals or callbacks to the final handler. Two labels that both
+  invoke the same operation are duplicates even when they live in different
+  view classes.
+- Do not repeat the selected navigation row as a second oversized card in the
+  work canvas. An empty state should add only the missing instruction or action,
+  and the composer should own task creation when text entry is the next step.
+- Draw connector lines only for a real parent/child, dependency, or navigable
+  relationship. Selection correspondence between a rail row and its detail
+  view needs no decorative wire, node, or gutter.
+- Keep organization controls and executor status distinct. Group and move
+  actions belong with the collection; running/queued state belongs with the
+  task and scheduler. Do not present an execution-slot limit as navigation
+  structure or permanent footer copy.
+- Give each selected collection row one visual owner. If a row fill already
+  communicates selection, disable the collection indicator; never stack the
+  component indicator and a delegate-painted indicator.
+- Put running, queued, and failed feedback on the affected item. Do not repeat
+  the same state in a collection footer unless the aggregate has a separate
+  decision or action. Compact markers still need accessible state text and
+  shape or motion differences when color is not sufficient.
+
 ### Pass 3: geometry and typography
 
 - Check the 4 px spacing rhythm, aligned edges, balanced margins, and consistent
@@ -329,4 +367,9 @@ pass.
 - No raw widget breaks the palette.
 - Text remains readable with realistic long content.
 - Primary and secondary actions have stable hierarchy.
+- Each visible operation has one owning region and primary entry; responsive
+  fallbacks are mutually exclusive, and any simultaneous secondary entry has a
+  recorded distinct purpose.
+- Empty states do not restate the selected row, title header, and composer
+  action, and decorative connectors do not imply relationships the model lacks.
 - The final report names concrete issues found and fixed, not only "looks good."

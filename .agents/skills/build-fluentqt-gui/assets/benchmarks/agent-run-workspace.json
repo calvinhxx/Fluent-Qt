@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "id": "agent-run-workspace",
+  "title": "Structured-process agent desktop workspace",
+  "prompt": "Add a native FluentQt desktop client to an existing structured-process agent runtime. Preserve the existing runtime entry point. The client must support one real run, streamed assistant output, tool and permission events, cancellation, retry, an empty state, and a narrow layout.",
+  "required_product_evidence": [
+    "The target repository's process protocol and lifecycle",
+    "The durable result or primary run object",
+    "Subject materials, artifacts, instruments, verbs, and workflow tempo",
+    "Explicit user and project taste signals plus one non-UI subject reference",
+    "At least one aligned and one contrastive product reference",
+    "One justified aesthetic risk with a quiet zone, usability guard, and fallback",
+    "A genericity critique with at least one concrete subject-specific revision",
+    "Six recorded global tuning axes",
+    "One coherent icon family with provenance, reuse-or-generation decision, application-tile and in-product-mark strategies, small-size evidence, state, and accessibility rules",
+    "One approved identity anchor expanded into restrained Light and Dark semantic roles",
+    "One product-copy policy with direct voice, shared state vocabulary, compression rules, and localization behavior",
+    "A full-profile architecture manifest with app, domain, application, infrastructure, and UI layers",
+    "A composition-only shell under the configured line and member budgets",
+    "Layer-mirrored controller, adapter, model, and UI tests",
+    "One shared representative-content fixture and three high-fidelity full-window comps",
+    "A recorded human concept decision before production UI code",
+    "An implementation design system extracted from the accepted concept",
+    "The final built application in Light, Dark, narrow, and minimum states"
+  ],
+  "design_intelligence_checks": [
+    "The primary surface communicates the product object and time model without relying on a logo or accent color.",
+    "The selected concept could not be reused unchanged for an unrelated desktop product.",
+    "The controlled aesthetic risk is visible but does not weaken text, focus, keyboard, IME, localization, or native behavior.",
+    "The implementation preserves the accepted concept's container model, hierarchy, typography roles, state grammar, and signature move.",
+    "Material deviations from the accepted full-window and detail comps are recorded and justified.",
+    "Product-owned copy names objects, states, and actions without assistant narration or repeated explanation.",
+    "Each visible operation has one owning region and primary entry; wide and narrow fallbacks are mutually exclusive.",
+    "The packaged application tile, transparent in-product mark, and semantic palette visibly belong to one restrained identity system."
+  ],
+  "engineering_checks": [
+    "The project-structure validator passes in strict mode.",
+    "The shell owns window composition and platform events, not protocol parsing, process launch, settings validation, or demo generation.",
+    "Domain and application layers do not import Qt Widgets or FluentQt.",
+    "The structured-process adapter owns process and protocol lifetime behind an application-facing boundary.",
+    "Growing events use a bounded model and delegate rather than one child widget per event."
+  ],
+  "blind_review_dimensions": [
+    "workflow_fit",
+    "product_signature",
+    "visual_hierarchy",
+    "density_and_typography",
+    "theme_and_material",
+    "iconography",
+    "surface_composition",
+    "responsive_quality",
+    "state_and_interaction_polish"
+  ],
+  "pass_threshold": {
+    "minimum_dimension_score": 4,
+    "minimum_pairwise_preference_percent": 70,
+    "open_blocker_or_major_findings": 0
+  },
+  "anti_shortcuts": [
+    "Do not expose raw protocol method names or identifiers as the main transcript copy.",
+    "Do not render every event kind as the same rounded card with a different label.",
+    "Do not present a concept that could fit an unrelated app by changing only its logo and copy.",
+    "Do not replace the controlled aesthetic risk with a generic safe shell during implementation.",
+    "Do not mix icon packs, emoji, arbitrary glyphs, or unlicensed screenshot-derived assets.",
+    "Do not replace a valid upstream mark with an unreviewed generated icon or reuse a transparent title glyph as the packaged application tile.",
+    "Do not turn one sampled logo color into every pane, border, action, and status role.",
+    "Do not leave two simultaneously visible controls wired to the same operation merely because they occupy different regions.",
+    "Do not fill sparse space with assistant narration, procedural headings, duplicated help, or generic marketing copy.",
+    "Do not keep a permanent navigation rail unless several stable destinations justify it.",
+    "Do not default-select the first recipe or treat a schematic SVG as a high-fidelity comp.",
+    "Do not let the implementation agent record human concept approval.",
+    "Do not let the implementation agent perform the final visual review.",
+    "Do not split a God window into partial source files while preserving the same unrelated ownership.",
+    "Do not add broad source-root exceptions or raise architecture budgets to make validation pass.",
+    "Do not treat build, functional tests, or manifest validation as aesthetic acceptance."
+  ],
+  "cross_agent_runs": [
+    "Codex with build-fluentqt-gui",
+    "Claude Code with the same installed Skill package",
+    "Cursor with the same installed Skill package"
+  ]
+}

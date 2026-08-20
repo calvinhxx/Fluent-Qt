@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "templates": {
+    "cpp-lite": {
+      "language": "cpp",
+      "profile": "lite",
+      "directories": [
+        "app",
+        "application",
+        "ui",
+        "ui/theme"
+      ],
+      "test_directories": [
+        "application",
+        "ui"
+      ],
+      "layers": {
+        "app": ["app"],
+        "application": ["application"],
+        "ui": ["ui"]
+      },
+      "budgets": {
+        "shell_max_lines": 500,
+        "source_file_max_lines": 800,
+        "shell_member_max": 48
+      }
+    },
+    "cpp-full": {
+      "language": "cpp",
+      "profile": "full",
+      "directories": [
+        "app",
+        "domain",
+        "application",
+        "infrastructure",
+        "ui/shell",
+        "ui/pages",
+        "ui/components",
+        "ui/models",
+        "ui/delegates",
+        "ui/theme"
+      ],
+      "test_directories": [
+        "domain",
+        "application",
+        "infrastructure",
+        "ui"
+      ],
+      "layers": {
+        "app": ["app"],
+        "domain": ["domain"],
+        "application": ["application"],
+        "infrastructure": ["infrastructure"],
+        "ui": ["ui"]
+      },
+      "budgets": {
+        "shell_max_lines": 500,
+        "source_file_max_lines": 800,
+        "shell_member_max": 48
+      }
+    },
+    "pyside6-lite": {
+      "language": "pyside6",
+      "profile": "lite",
+      "directories": [
+        "app",
+        "application",
+        "ui",
+        "ui/theme"
+      ],
+      "test_directories": [
+        "application",
+        "ui"
+      ],
+      "layers": {
+        "app": ["app"],
+        "application": ["application"],
+        "ui": ["ui"]
+      },
+      "budgets": {
+        "shell_max_lines": 400,
+        "source_file_max_lines": 650,
+        "shell_member_max": 40
+      }
+    },
+    "pyside6-full": {
+      "language": "pyside6",
+      "profile": "full",
+      "directories": [
+        "app",
+        "domain",
+        "application",
+        "infrastructure",
+        "ui/shell",
+        "ui/pages",
+        "ui/components",
+        "ui/models",
+        "ui/delegates",
+        "ui/theme"
+      ],
+      "test_directories": [
+        "domain",
+        "application",
+        "infrastructure",
+        "ui"
+      ],
+      "layers": {
+        "app": ["app"],
+        "domain": ["domain"],
+        "application": ["application"],
+        "infrastructure": ["infrastructure"],
+        "ui": ["ui"]
+      },
+      "budgets": {
+        "shell_max_lines": 400,
+        "source_file_max_lines": 650,
+        "shell_member_max": 40
+      }
+    }
+  }
+}

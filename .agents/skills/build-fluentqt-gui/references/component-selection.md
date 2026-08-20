@@ -84,6 +84,10 @@ sample, not only the displayed snippet. Record the model roles, delegate,
 selection-indicator owner, row height, icon size, and any proxy model. Ordinary
 `ListView` text/icon rows may use its built-in delegate; richer rows need an
 explicit delegate whose indicator and content insets match the reference.
+When a custom row fill already owns selection, call
+`setSelectionIndicatorVisible(false)` and do not paint a second indicator in
+the delegate. Keep the real selection model; presentation is not a reason to
+discard keyboard or accessibility selection semantics.
 Variable-height custom delegates **must clip** and keep `sizeHint == paint`;
 Gallery's default 32–36 px uniform rows hide overlap. Tool/step rows are
 compact Caption chips (name · status on one line), not Standard-sized cards.
@@ -98,6 +102,11 @@ view returns to direct material. Keep a background when the view is itself the
 bounded surface.
 A `TextEdit` used as a composer must `setLineHeight` from the text font's
 `lineSpacing()`, not `ControlHeight::Standard` (32).
+Message-style composers should also call `setTabChangesFocus(true)`, give the
+next primary action `Qt::StrongFocus`, and set an explicit tab order. Verify
+that Tab moves focus without inserting `\t` on macOS. At the declared maximum
+line count, the first overflow line must be fully owned by the editor scroll
+viewport; no glyph may paint through the focus stroke.
 For long or growing data, also record paging/windowing, incremental update,
 cache, and editor-materialization policies. `ScrollView` does not virtualize a
 layout of child widgets; `ListView` loses virtualization if every index receives

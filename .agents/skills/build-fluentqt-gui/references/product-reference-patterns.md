@@ -202,7 +202,12 @@ run/conversation. Contrast with editor-hosted agents when peer documents must
 stay dominant; do not force a run-first shell into an IDE panel.
 
 - Transfer: left rail is workspace identity + session rows + one New action,
-  with the footer inset (12–16 px), not glued to the window corner. Center
+  with optional groups when the product has enough durable work to organize;
+  grouping, retained history, and active execution capacity remain separate.
+  Overflow work queues visibly instead of disabling creation because a runtime
+  slot is busy. Keep the New action and contextual move/close operations in
+  their owning collection region, and keep the footer inset (12–16 px), not
+  glued to the window corner. Center
   canvas distinguishes user / assistant / tool / error / permission without
   protocol labels (`Request` / `Agent`). Tool calls are one- or two-line
   chips; status sits on the same row as the name. Composer rest height is
@@ -217,7 +222,8 @@ stay dominant; do not force a run-first shell into an IDE panel.
   `DropDownButton`, `TextEdit` composer, permission `InfoBar`.
 - Reject: Gallery-uniform 32–36 px rows as tool cards; bottom-anchoring a
   short transcript; wrapping the composer in a `Card`; treating handshake
-  frames as turns.
+  frames as turns; decorative wires between a selected session row and detail;
+  repeating that row as an oversized empty-state card.
 
 ## Acceptance gate
 
