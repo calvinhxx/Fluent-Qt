@@ -228,7 +228,8 @@ Before creating a stable tag:
 9. Merge the tagged `main` commit back into `release/X.Y.x` before continuing
    patch development on that line.
 
-For releases that publish the optional PySide6 distributions, also follow the
+Stable releases publish the supported PySide6 distributions to TestPyPI and
+PyPI, so also follow the
 [Python publishing runbook](../../bindings/pyside6/PUBLISHING.md). Python
 publication is the deliberate exception to the standard main-first sequence:
 full CI creates one 18-wheel bundle on `release/X.Y.x`, that exact bundle passes

@@ -147,6 +147,24 @@ An interrupted TestPyPI run is retried with the same command. Existing files
 are skipped only after their hashes match the immutable manifest. A mismatch
 requires a new version; package-index files are immutable.
 
+If the stable tag and GitHub Release were published before this rehearsal was
+dispatched, recover from the release branch without moving either ref:
+
+```bash
+gh workflow run python-release.yml \
+  --ref release/X.Y.x \
+  -f stage=testpypi \
+  -f recovery=false \
+  -f source_tag=vX.Y.Z
+```
+
+`source_tag` is a post-tag recovery input, not an alternate release path. The
+workflow requires an annotated version-matching tag, a published stable GitHub
+Release, and the unexpired 18-wheel bundle from successful full CI on that
+exact tag commit. Preparation and smoke tests check out the tag, while the
+workflow itself remains on `release/X.Y.x` for the TestPyPI environment and
+Trusted Publisher boundary. It never rebuilds a wheel or rewrites a branch.
+
 ## Stable tag and production publication
 
 Once TestPyPI succeeds, create the annotated tag from the same commit:
