@@ -10,12 +10,15 @@
 #include "design/Typography.h"
 #include <QApplication>
 #include <QContextMenuEvent>
+#include <QFontMetrics>
 #include <QImage>
 #include <QInputMethodEvent>
 #include <QMenu>
 #include <QMetaProperty>
 #include <QPainter>
 #include <QScrollBar>
+#include <QTextBlock>
+#include <QTextCursor>
 #include <QTextEdit>
 #include <QTimer>
 #include <QWheelEvent>
@@ -209,7 +212,8 @@ TEST_F(TextEditTest, Contract_LayoutPropertiesAreAvailableThroughQtMetaObject) {
     const QMetaObject* metaObject = edit->metaObject();
 
     for (const char* propertyName : {
-             "lineHeight", "minVisibleLines", "maxVisibleLines"}) {
+             "lineHeight", "minVisibleLines", "maxVisibleLines",
+             "tabChangesFocus"}) {
         const int propertyIndex = metaObject->indexOfProperty(propertyName);
         ASSERT_GE(propertyIndex, 0) << propertyName;
         const QMetaProperty property = metaObject->property(propertyIndex);
@@ -217,6 +221,322 @@ TEST_F(TextEditTest, Contract_LayoutPropertiesAreAvailableThroughQtMetaObject) {
         EXPECT_TRUE(property.isWritable()) << propertyName;
         EXPECT_TRUE(property.hasNotifySignal()) << propertyName;
     }
+}
+
+TEST_F(TextEditTest, Contract_TabChangesFocusIsOptInAndForwardsToEditor) {
+    TextEdit* edit = new TextEdit(window);
+    auto* next = new fluent::basicinput::Button(QStringLiteral("Next"), window);
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+
+    edit->move(20, 20);
+    next->move(20, 80);
+    next->setFocusPolicy(Qt::StrongFocus);
+    QWidget::setTabOrder(edit, next);
+    window->show();
+    edit->show();
+    next->show();
+    QApplication::processEvents();
+
+    EXPECT_FALSE(edit->tabChangesFocus());
+    EXPECT_FALSE(inner->tabChangesFocus());
+    QSignalSpy spy(edit, &TextEdit::tabChangesFocusChanged);
+
+    edit->setPlainText(QStringLiteral("tab probe"));
+    QTextCursor insertionCursor = inner->textCursor();
+    insertionCursor.movePosition(QTextCursor::End);
+    inner->setTextCursor(insertionCursor);
+    inner->setFocus(Qt::OtherFocusReason);
+    ASSERT_EQ(QApplication::focusWidget(), inner);
+    QTest::keyClick(inner, Qt::Key_Tab);
+    EXPECT_EQ(edit->toPlainText(), QStringLiteral("tab probe\t"));
+    EXPECT_EQ(QApplication::focusWidget(), inner);
+
+    edit->setTabChangesFocus(true);
+    EXPECT_TRUE(edit->tabChangesFocus());
+    EXPECT_TRUE(inner->tabChangesFocus());
+    EXPECT_EQ(spy.count(), 1);
+
+    edit->setPlainText(QStringLiteral("tab probe"));
+    inner->setFocus(Qt::OtherFocusReason);
+    ASSERT_EQ(QApplication::focusWidget(), inner);
+    QTest::keyClick(inner, Qt::Key_Tab);
+    EXPECT_EQ(edit->toPlainText(), QStringLiteral("tab probe"));
+    EXPECT_EQ(QApplication::focusWidget(), next);
+
+    edit->setTabChangesFocus(true);
+    EXPECT_EQ(spy.count(), 1);
+}
+
+TEST_F(TextEditTest, Contract_MaxLineViewportDoesNotRevealPartialOverflowLine) {
+    const FluentElement::Theme previousTheme = FluentElement::currentTheme();
+    struct ThemeRestorer {
+        FluentElement::Theme theme;
+        ~ThemeRestorer() {
+            FluentElement::setTheme(theme);
+            QApplication::processEvents();
+        }
+    } restoreTheme{previousTheme};
+    FluentElement::setTheme(FluentElement::Light);
+
+    TextEdit* edit = new TextEdit(window);
+    edit->setFontRole(Typography::FontRole::Body);
+    const int fontLineHeight =
+        QFontMetrics(edit->themeFont(Typography::FontRole::Body).toQFont()).lineSpacing();
+    edit->setLineHeight(fontLineHeight);
+    edit->setMinVisibleLines(1);
+    edit->setMaxVisibleLines(6);
+    edit->setContentMargins(QMargins(12, 6, 12, 6));
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    const QString fullText = QStringLiteral(
+        "请检查这个仓库中 JSON-RPC 运行时的关闭流程。\n"
+        "确认 stdin、terminate 和 kill 的顺序。\n"
+        "说明启动阶段失败时如何重试。\n"
+        "检查非常长的工作区路径是否会截断。\n"
+        "给出最小且安全的修改建议。\n"
+        "同时列出需要保留的兼容行为。\n"
+        "这一行用于验证超过最大可见行数后的内部滚动。");
+    // Use the real editing/accessibility surface. This deliberately bypasses
+    // TextEdit::setPlainText(), just as typing and AX value replacement do.
+    inner->setPlainText(fullText);
+    edit->setGeometry(0, 0, 475, edit->height());
+    window->show();
+    QApplication::processEvents();
+
+    QTextBlock sixthBlock = inner->document()->begin();
+    for (int index = 0; index < 5; ++index)
+        sixthBlock = sixthBlock.next();
+    const QTextBlock seventhBlock = sixthBlock.next();
+    ASSERT_TRUE(sixthBlock.isValid());
+    ASSERT_TRUE(seventhBlock.isValid());
+    const QTextLine seventhLine = seventhBlock.layout()->lineAt(0);
+    QTextCursor seventhCursor(seventhBlock);
+
+    const QRect seventhCaret = inner->cursorRect(seventhCursor);
+    EXPECT_GE(seventhCaret.top(), inner->viewport()->height())
+        << "seventh visual line top=" << seventhCaret.top()
+        << ", viewport height=" << inner->viewport()->height()
+        << ", layout line height=" << seventhLine.height()
+        << ", declared line height=" << edit->lineHeight();
+
+    const int sixLineLength = seventhBlock.position() - 1;
+    inner->setPlainText(fullText.left(sixLineLength));
+    QApplication::processEvents();
+    const QImage sixLines = renderWidget(inner->viewport());
+
+    inner->setPlainText(fullText);
+    inner->verticalScrollBar()->setValue(inner->verticalScrollBar()->minimum());
+    QApplication::processEvents();
+    const QImage overflow = renderWidget(inner->viewport());
+    const QRect textViewport(0, 0, qMax(0, overflow.width() - 24), overflow.height());
+    EXPECT_EQ(differingPixels(sixLines, overflow, textViewport), 0)
+        << "overflow content changed pixels inside the capped text viewport";
+
+    QScrollBar* innerScrollBar = inner->verticalScrollBar();
+    ASSERT_NE(innerScrollBar, nullptr);
+    const auto caretRectForBlock = [inner](int blockIndex) {
+        QTextBlock block = inner->document()->begin();
+        for (int index = 0; index < blockIndex && block.isValid(); ++index)
+            block = block.next();
+        return block.isValid()
+            ? inner->cursorRect(QTextCursor(block))
+            : QRect();
+    };
+    const auto sixthCaretBottom = [inner]() {
+        QTextBlock sixth = inner->document()->begin();
+        for (int index = 0; index < 5; ++index)
+            sixth = sixth.next();
+        if (!sixth.isValid())
+            return -1;
+        return inner->cursorRect(QTextCursor(sixth)).bottom();
+    };
+    const int lightMaximum = innerScrollBar->maximum();
+    const int lightPageStep = innerScrollBar->pageStep();
+    const int lightSixthBottom = sixthCaretBottom();
+    innerScrollBar->setValue(lightMaximum);
+    QApplication::processEvents();
+    const QRect lightSecondAtTail = caretRectForBlock(1);
+    const QRect lightSeventhAtTail = caretRectForBlock(6);
+
+    FluentElement::setThemeDeferred(FluentElement::Dark);
+    QApplication::processEvents();
+    QTest::qWait(1);
+    QApplication::processEvents();
+    innerScrollBar->setValue(innerScrollBar->minimum());
+    QApplication::processEvents();
+    const int darkMaximum = innerScrollBar->maximum();
+    const int darkPageStep = innerScrollBar->pageStep();
+    const int darkSixthBottom = sixthCaretBottom();
+    innerScrollBar->setValue(darkMaximum);
+    QApplication::processEvents();
+    const QRect darkSecondAtTail = caretRectForBlock(1);
+    const QRect darkSeventhAtTail = caretRectForBlock(6);
+
+    FluentElement::setThemeDeferred(FluentElement::Light);
+    QApplication::processEvents();
+    QTest::qWait(1);
+    QApplication::processEvents();
+    innerScrollBar->setValue(innerScrollBar->minimum());
+    QApplication::processEvents();
+    const int returnedLightMaximum = innerScrollBar->maximum();
+    const int returnedLightPageStep = innerScrollBar->pageStep();
+    const int returnedLightSixthBottom = sixthCaretBottom();
+    innerScrollBar->setValue(returnedLightMaximum);
+    QApplication::processEvents();
+    const QRect returnedLightSecondAtTail = caretRectForBlock(1);
+    const QRect returnedLightSeventhAtTail = caretRectForBlock(6);
+
+    EXPECT_EQ(darkMaximum, lightMaximum)
+        << "Light-to-Dark must not change the capped editor scroll range";
+    EXPECT_EQ(darkPageStep, lightPageStep)
+        << "Light-to-Dark must not change the capped editor viewport extent";
+    EXPECT_EQ(returnedLightMaximum, lightMaximum)
+        << "Dark-to-Light must restore identical capped editor geometry";
+    EXPECT_EQ(returnedLightPageStep, lightPageStep)
+        << "Dark-to-Light must preserve the capped editor viewport extent";
+    EXPECT_LT(lightSixthBottom, inner->viewport()->height())
+        << "the sixth line must fit before the Light theme transition";
+    EXPECT_LT(darkSixthBottom, inner->viewport()->height())
+        << "the sixth line must fit after the Light-to-Dark transition";
+    EXPECT_LT(returnedLightSixthBottom, inner->viewport()->height())
+        << "the sixth line must remain fitted after Dark-to-Light";
+    const auto expectWholeTail = [inner](const char* phase,
+                                         const QRect& firstVisible,
+                                         const QRect& lastVisible) {
+        EXPECT_TRUE(firstVisible.isValid()) << phase;
+        EXPECT_TRUE(lastVisible.isValid()) << phase;
+        EXPECT_GE(firstVisible.top(), 0)
+            << phase << " must not clip the first visible line at the top";
+        EXPECT_LT(firstVisible.top(), inner->viewport()->height())
+            << phase << " must keep the first tail line visible";
+        EXPECT_GE(lastVisible.top(), 0)
+            << phase << " must keep the final line inside the viewport";
+        EXPECT_LT(lastVisible.bottom(), inner->viewport()->height())
+            << phase << " must not clip the final line at the bottom";
+    };
+    expectWholeTail("Light tail", lightSecondAtTail, lightSeventhAtTail);
+    expectWholeTail("Dark tail", darkSecondAtTail, darkSeventhAtTail);
+    expectWholeTail("returned Light tail",
+                    returnedLightSecondAtTail,
+                    returnedLightSeventhAtTail);
+}
+
+TEST_F(TextEditTest, Contract_SelectionPaletteTracksTheme) {
+    const FluentElement::Theme previousTheme = FluentElement::currentTheme();
+    struct ThemeRestorer {
+        FluentElement::Theme theme;
+        ~ThemeRestorer() {
+            FluentElement::setTheme(theme);
+            QApplication::processEvents();
+        }
+    } restoreTheme{previousTheme};
+
+    auto* edit = new TextEdit(window);
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+
+    const auto expectSelectionPalette = [edit, inner](const char* phase) {
+        const QPalette palette = inner->palette();
+        const auto& colors = edit->themeColorsRef();
+        EXPECT_EQ(
+            palette.color(QPalette::Active, QPalette::Highlight),
+            colors.accentDefault)
+            << phase;
+        EXPECT_EQ(
+            palette.color(QPalette::Active, QPalette::HighlightedText),
+            colors.textOnAccent)
+            << phase;
+        EXPECT_EQ(
+            palette.color(QPalette::Inactive, QPalette::Highlight),
+            colors.accentDefault)
+            << phase;
+        EXPECT_EQ(
+            palette.color(QPalette::Inactive, QPalette::HighlightedText),
+            colors.textOnAccent)
+            << phase;
+        EXPECT_FALSE(inner->styleSheet().contains(QStringLiteral("selection-")))
+            << phase;
+    };
+
+    FluentElement::setTheme(FluentElement::Light);
+    QApplication::processEvents();
+    expectSelectionPalette("Light");
+
+    FluentElement::setTheme(FluentElement::Dark);
+    QApplication::processEvents();
+    expectSelectionPalette("Dark");
+}
+
+TEST_F(TextEditTest, Contract_ScopedThemeTransitionPreservesTailAnchor) {
+    window->setProperty("fluentThemeOverride",
+                        static_cast<int>(FluentElement::Light));
+
+    auto* edit = new TextEdit(window);
+    edit->setMinVisibleLines(2);
+    edit->setMaxVisibleLines(3);
+    edit->setPlainText(QStringLiteral(
+        "Alpha\nBeta\nGamma\nDelta\nEpsilon\nZeta"));
+    edit->setGeometry(20, 20, 360, edit->height());
+    window->show();
+    edit->show();
+    QApplication::processEvents();
+
+    QTextEdit* inner = innerTextEdit(edit);
+    ASSERT_NE(inner, nullptr);
+    QScrollBar* bar = inner->verticalScrollBar();
+    ASSERT_NE(bar, nullptr);
+    ASSERT_GT(bar->maximum(), bar->minimum());
+    bar->setValue(bar->maximum());
+    QApplication::processEvents();
+
+    const auto caretRectForBlock = [inner](int blockIndex) {
+        QTextBlock block = inner->document()->begin();
+        for (int index = 0; index < blockIndex && block.isValid(); ++index)
+            block = block.next();
+        return block.isValid()
+            ? inner->cursorRect(QTextCursor(block))
+            : QRect();
+    };
+    const auto expectWholeTail = [edit, inner, bar, &caretRectForBlock](const char* phase) {
+        const QRect firstVisible = caretRectForBlock(3);
+        const QRect finalVisible = caretRectForBlock(5);
+        const QString geometry = QStringLiteral(
+            "%1 value=%2 max=%3 page=%4 viewport=%5 lineHeight=%6 fontLine=%7 first=%8,%9,%10,%11 final=%12,%13,%14,%15")
+            .arg(QString::fromLatin1(phase))
+            .arg(bar->value())
+            .arg(bar->maximum())
+            .arg(bar->pageStep())
+            .arg(inner->viewport()->height())
+            .arg(edit->lineHeight())
+            .arg(QFontMetrics(inner->font()).lineSpacing())
+            .arg(firstVisible.x()).arg(firstVisible.y())
+            .arg(firstVisible.width()).arg(firstVisible.height())
+            .arg(finalVisible.x()).arg(finalVisible.y())
+            .arg(finalVisible.width()).arg(finalVisible.height());
+        EXPECT_EQ(bar->value(), bar->maximum()) << geometry.toStdString();
+        EXPECT_GE(firstVisible.top(), 0)
+            << geometry.toStdString() << " must not clip Delta at the top";
+        EXPECT_LT(finalVisible.bottom(), inner->viewport()->height())
+            << geometry.toStdString() << " must not clip Zeta at the bottom";
+    };
+    expectWholeTail("Light tail");
+
+    window->setProperty("fluentThemeOverride",
+                        static_cast<int>(FluentElement::Dark));
+    edit->onThemeUpdated();
+    QApplication::processEvents();
+    QTest::qWait(1);
+    QApplication::processEvents();
+    expectWholeTail("Dark tail");
+
+    window->setProperty("fluentThemeOverride",
+                        static_cast<int>(FluentElement::Light));
+    edit->onThemeUpdated();
+    QApplication::processEvents();
+    QTest::qWait(1);
+    QApplication::processEvents();
+    expectWholeTail("returned Light tail");
 }
 
 TEST_F(TextEditTest, Contract_WidthReflowRecomputesVisibleLineHeight) {
@@ -780,7 +1100,7 @@ TEST_F(TextEditTest, VisualCheck) {
     edit1->anchors()->right = {window, Edge::Right, -40};
     layout->addWidget(edit1);
 
-    Label* header2 = new Label("预填 2 行（高度 = 64px）:", window);
+    Label* header2 = new Label("预填 2 行（选区应使用强调色）:", window);
     header2->anchors()->top  = {edit1, Edge::Bottom, 12};
     header2->anchors()->left = {window, Edge::Left, 40};
     layout->addWidget(header2);
@@ -806,6 +1126,14 @@ TEST_F(TextEditTest, VisualCheck) {
     });
 
     window->show();
+    if (QTextEdit* inner = innerTextEdit(edit2)) {
+        QTextCursor cursor = inner->textCursor();
+        cursor.setPosition(0);
+        cursor.setPosition(QStringLiteral("First line").size(),
+                           QTextCursor::KeepAnchor);
+        inner->setTextCursor(cursor);
+        inner->setFocus(Qt::OtherFocusReason);
+    }
     if (tests::support::shouldCaptureVisualSnapshot()) {
         ASSERT_TRUE(tests::support::captureVisualSnapshot(window));
         return;

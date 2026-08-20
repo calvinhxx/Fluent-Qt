@@ -65,6 +65,11 @@ class TextEdit : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(int maxVisibleLines READ maxVisibleLines WRITE setMaxVisibleLines NOTIFY layoutMetricsChanged)
     /**
+     * @brief Whether Tab advances focus instead of inserting a tab character.
+     * zh_CN: Tab 键是否移动焦点而不是插入制表符。
+     */
+    Q_PROPERTY(bool tabChangesFocus READ tabChangesFocus WRITE setTabChangesFocus NOTIFY tabChangesFocusChanged)
+    /**
      * @brief Whether boundary wheel input may continue to an enclosing scroller.
      * zh_CN: 边界滚轮输入是否允许继续传递给外层滚动容器。
      */
@@ -112,6 +117,9 @@ public:
     int maxVisibleLines() const { return m_maxVisibleLines; }
     void setMaxVisibleLines(int lines);
 
+    bool tabChangesFocus() const { return m_tabChangesFocus; }
+    void setTabChangesFocus(bool enabled);
+
     bool isScrollChainingEnabled() const { return m_scrollChainingEnabled; }
     void setScrollChainingEnabled(bool enabled);
 
@@ -124,6 +132,7 @@ signals:
     void focusedBorderWidthChanged();
     void unfocusedBorderWidthChanged();
     void layoutMetricsChanged();
+    void tabChangesFocusChanged();
     void scrollChainingEnabledChanged();
 
 protected:
@@ -136,6 +145,7 @@ protected:
     bool eventFilter(QObject* obj, QEvent* event) override;
 
 private:
+    void applyEditorPalette();
     void applyThemeStyle();
     void paintFrame(QPainter& painter);
     void scheduleHeightForContentUpdate();
@@ -143,8 +153,8 @@ private:
 
     /**
      * @brief Applies requested text insets, remaining vertical centering, and
-     *        the horizontal viewport margins.
-     * zh_CN: 应用文本内边距、剩余垂直居中空间及左右 viewport margin。
+     *        viewport margins.
+     * zh_CN: 应用文本内边距、剩余垂直居中空间及 viewport margin。
      */
     void applyBlockCenterFormat();
 
@@ -167,6 +177,7 @@ private:
     int      m_lineHeight           = ::Spacing::ControlHeight::Standard;
     int      m_minVisibleLines      = 1;
     int      m_maxVisibleLines      = 4;
+    bool     m_tabChangesFocus      = false;
     bool     m_scrollChainingEnabled = false;
     QString  m_placeholderText;
 };
