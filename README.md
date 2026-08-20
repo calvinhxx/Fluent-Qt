@@ -51,7 +51,7 @@ entry points; product branding stays within Fluent Light/Dark semantic tokens.
 
 ## 🤖 AI-assisted development
 
-The installable [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill helps Codex, Claude Code, Cursor, and GitHub Copilot build Gallery-quality C++ or PySide6 GUIs for existing or new projects. It includes component selection, theming, and visual refinement; see the [AI-assisted development guide](docs/ai/README.md).
+Codex, Claude Code, Cursor, and other agents can use [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) to build native C++ or PySide6 GUIs. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Docs](docs/ai/README.md)
 
 ## 🚀 Quick Start
 

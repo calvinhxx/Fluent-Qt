@@ -51,7 +51,7 @@ Light/Dark 语义 token 完成。
 
 ## 🤖 AI 辅助开发
 
-可安装的 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) Skill 支持 Codex、Claude Code、Cursor 和 GitHub Copilot，为现有或全新项目构建达到 Gallery 完成度的 C++ 或 PySide6 GUI，并覆盖组件选择、主题与视觉精调。详见 [AI 辅助开发指南](docs/ai/README.md)。
+Codex、Claude Code、Cursor 等 Agent 可通过 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) 构建原生 C++ / PySide6 GUI。[示例](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [文档](docs/ai/README.md)
 
 ## 🚀 快速开始
 
