@@ -6,13 +6,13 @@
     <title>Fluent-Qt — Qt Widgets 的 Fluent 控件库</title>
     <meta
       name="description"
-      content="Fluent-Qt 是面向 Qt Widgets 的跨平台 C++17 控件库，并提供可选的 Python / PySide6 兼容层。"
+      content="Fluent-Qt 是面向 Qt Widgets 的 Fluent C++17 控件库，支持 PySide6，并提供桌面 GUI Skill。"
     >
     <meta name="theme-color" content="#eef3f7">
     <meta property="og:title" content="Fluent-Qt">
     <meta
       property="og:description"
-      content="A C++17 control library for Qt Widgets with optional Python / PySide6 compatibility."
+      content="Fluent controls for Qt Widgets, with PySide6 support and a desktop GUI Skill."
     >
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/og.png">
@@ -23,7 +23,7 @@
     <meta name="twitter:title" content="Fluent-Qt">
     <meta
       name="twitter:description"
-      content="A C++17 control library for Qt Widgets with optional Python / PySide6 compatibility."
+      content="Fluent controls for Qt Widgets, with PySide6 support and a desktop GUI Skill."
     >
     <meta name="twitter:image" content="assets/og.png">
     <meta name="fluent-qt-cloudflare-token" content="faf445759813451ca2d7a0652139b292">
@@ -57,8 +57,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="styles.css?v=20260813">
-    <script src="site.js?v=20260813" defer></script>
+    <link rel="stylesheet" href="styles.css?v=20260820">
+    <script src="site.js?v=20260820" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content" data-i18n="a11y.skip">跳到主要内容</a>
@@ -85,6 +85,7 @@
         <div class="nav-cluster" id="primary-navigation">
           <div class="nav-links">
             <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
+            <a href="#ai-build" data-i18n="nav.aiBuild">GUI Skill</a>
             <a href="#why" data-i18n="nav.why">为什么是 Fluent-Qt</a>
             <a href="#components" data-i18n="nav.components">控件</a>
             <a href="#quick-start" data-i18n="nav.quickStart">接入</a>
@@ -280,10 +281,76 @@
         </div>
       </section>
 
+      <section class="ai-build-section" id="ai-build" aria-labelledby="ai-build-title">
+        <div class="page-shell ai-build-grid">
+          <div class="ai-build-copy" data-reveal>
+            <p class="section-index">03 / GUI SKILL</p>
+            <h2 id="ai-build-title" data-i18n="aiBuild.title">构建桌面 GUI</h2>
+
+            <ul class="ai-build-points" aria-label="Skill 能力" data-i18n-aria-label="a11y.aiBuildCapabilities">
+              <li><strong data-i18n="aiBuild.structureTitle">工程</strong><span data-i18n="aiBuild.structureCopy">C++ / PySide6 项目结构</span></li>
+              <li><strong data-i18n="aiBuild.designTitle">界面</strong><span data-i18n="aiBuild.designCopy">Fluent 组件、主题与配色</span></li>
+              <li><strong data-i18n="aiBuild.reviewTitle">检查</strong><span data-i18n="aiBuild.reviewCopy">Light / Dark、窄窗口与交互</span></li>
+            </ul>
+
+            <div class="ai-build-actions">
+              <a
+                class="button button-primary"
+                href="https://github.com/calvinhxx/Fluent-Qt/tree/main/.agents/skills/build-fluentqt-gui"
+                data-analytics-event="ai_skill"
+              >
+                <span data-i18n="aiBuild.skillAction">查看 Skill</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </a>
+              <a
+                class="ai-build-guide"
+                href="https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/ai/README.md"
+                data-analytics-event="ai_guide"
+                data-i18n="aiBuild.guideAction"
+              >文档</a>
+            </div>
+          </div>
+
+          <figure class="ai-build-case" data-reveal data-reveal-delay="80">
+            <div class="ai-build-case-header">
+              <div>
+                <span data-i18n="aiBuild.caseEyebrow">REFERENCE BUILD</span>
+                <strong>DeepSeek Desktop</strong>
+              </div>
+              <span>C++ · FluentQt</span>
+            </div>
+            <div class="ai-build-case-media">
+              <img
+                src="assets/cases/deepseek-harness-light.jpg?v=20260820"
+                data-theme-src-light="assets/cases/deepseek-harness-light.jpg?v=20260820"
+                data-theme-src-dark="assets/cases/deepseek-harness-dark.jpg?v=20260820"
+                alt="使用 build-fluentqt-gui 构建的 DeepSeek Desktop 原生桌面参考界面"
+                data-i18n-alt="images.deepseekDesktop"
+                width="1120"
+                height="760"
+                loading="lazy"
+                decoding="async"
+              >
+            </div>
+            <figcaption>
+              <p data-i18n="aiBuild.caseCopy">任务分组、运行时间线、输入与 Light / Dark 主题。</p>
+              <p class="ai-build-disclaimer" data-i18n="aiBuild.disclaimer">FluentQt 独立实现，非 DeepSeek 官方应用。</p>
+              <a
+                href="https://github.com/deepseek-ai/deepseek-harness"
+                data-analytics-event="deepseek_harness_reference"
+              >
+                <span data-i18n="aiBuild.upstreamAction">上游项目</span>
+                <span aria-hidden="true">↗</span>
+              </a>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
       <section class="positioning-section" id="why" aria-labelledby="positioning-title">
         <div class="page-shell positioning-grid">
           <div class="positioning-lead" data-reveal>
-            <p class="section-index">03 / POSITIONING</p>
+            <p class="section-index">04 / POSITIONING</p>
             <h2 id="positioning-title">
               <span data-i18n="positioning.titleLine1">独立控件</span>
               <span data-i18n="positioning.titleLine2">不止主题皮肤</span>
@@ -321,7 +388,7 @@
         <div class="page-shell">
           <div class="section-heading component-heading" data-reveal>
             <div>
-              <p class="section-index">04 / COMPONENTS</p>
+              <p class="section-index">05 / COMPONENTS</p>
               <h2 id="components-title"><span data-i18n="components.title">控件按用途分类</span></h2>
             </div>
             <p data-i18n="components.copy">以下为 Gallery 中的部分控件</p>
@@ -412,7 +479,7 @@
       <section class="quick-start-section" id="quick-start" aria-labelledby="quick-start-title">
         <div class="page-shell quick-start-grid">
           <div class="quick-start-copy" data-reveal>
-            <p class="section-index">05 / QUICK START</p>
+            <p class="section-index">06 / QUICK START</p>
             <h2 id="quick-start-title"><span data-i18n="quickStart.title">快速接入</span></h2>
             <p data-i18n="quickStart.copy">C++ 使用 CMake；Python / PySide6 通过 PyPI 安装</p>
             <div class="quick-start-links">
@@ -458,7 +525,7 @@ target_link_libraries(
       <section class="download-section" id="downloads" aria-labelledby="downloads-title">
         <div class="page-shell download-grid">
           <div class="download-copy" data-reveal>
-            <p class="section-index">06 / DOWNLOAD</p>
+            <p class="section-index">07 / DOWNLOAD</p>
             <h2 id="downloads-title">
               <span data-i18n="downloads.title">下载 Gallery</span>
             </h2>
