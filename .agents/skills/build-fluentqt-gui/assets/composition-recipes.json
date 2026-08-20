@@ -1,0 +1,335 @@
+{
+  "schema_version": 1,
+  "recipes": [
+    {
+      "id": "agent-run",
+      "title": "Ordered agent run",
+      "signals": [
+        "A conversation or ordered run is the primary object",
+        "Assistant, tool, permission, progress, and error events stream over time",
+        "A composer or command dock starts and continues work"
+      ],
+      "default_density": {
+        "chrome_height": 40,
+        "edge_inset": 16,
+        "related_gap": 8,
+        "section_gap": 16,
+        "control_height": 32,
+        "row_height": 36,
+        "icon_size": 16
+      },
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "narrow",
+        "minimum",
+        "empty",
+        "collection-density",
+        "long-localized-content",
+        "input-single-line",
+        "input-max-lines",
+        "scroll-end",
+        "async-settled",
+        "selected-focus-disabled",
+        "transient-surface",
+        "ime-preedit"
+      ],
+      "concepts": [
+        {
+          "id": "transcript-first",
+          "title": "Transcript first",
+          "topology": "single-primary-with-conditional-rail",
+          "primary_surface": "Mixed-height run transcript with grouped tool and permission events",
+          "hero_interaction": "Continue or stop the current run from an integrated command dock",
+          "layout_regions": [
+            {"id": "run-header", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "session-list", "placement": "left", "lifetime": "conditional", "priority": "supporting"},
+            {"id": "transcript", "placement": "center", "lifetime": "persistent", "priority": "primary"},
+            {"id": "command-dock", "placement": "bottom", "lifetime": "persistent", "priority": "hero"},
+            {"id": "event-details", "placement": "right", "lifetime": "transient", "priority": "supporting"}
+          ],
+          "narrow_behavior": "Remove the conditional session rail, keep the transcript readable, and open event details as a drawer.",
+          "failure_risk": "Becomes a generic chat shell when protocol events remain labeled cards instead of a designed transcript grammar.",
+          "preferred_components": ["list-view", "text-edit", "drawer-view", "info-bar", "button"]
+        },
+        {
+          "id": "stage-first",
+          "title": "Stage and progress first",
+          "topology": "ordered-stage-navigator-with-output",
+          "primary_surface": "Ordered stage list with the active step output and durable run progress",
+          "hero_interaction": "Inspect, retry, cancel, or resume a concrete stage",
+          "layout_regions": [
+            {"id": "run-summary", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "stages", "placement": "left", "lifetime": "persistent", "priority": "primary"},
+            {"id": "stage-output", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "run-actions", "placement": "bottom", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "raw-events", "placement": "right", "lifetime": "transient", "priority": "supporting"}
+          ],
+          "narrow_behavior": "Show one selected stage and its output; move the stage navigator and raw events into mutually exclusive drawers.",
+          "failure_risk": "Misrepresents free-form conversation when the runtime has no stable stage model.",
+          "preferred_components": ["tree-view", "progress-bar", "expander", "drawer-view", "command-bar"]
+        },
+        {
+          "id": "artifact-first",
+          "title": "Artifact and change first",
+          "topology": "artifact-canvas-with-transient-run",
+          "primary_surface": "Durable file, diff, report, or result produced by the run",
+          "hero_interaction": "Review and accept the produced change while the run remains contextual",
+          "layout_regions": [
+            {"id": "artifact-tabs", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "artifact-canvas", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "outline", "placement": "left", "lifetime": "conditional", "priority": "supporting"},
+            {"id": "run-timeline", "placement": "right", "lifetime": "transient", "priority": "supporting"},
+            {"id": "review-actions", "placement": "bottom", "lifetime": "persistent", "priority": "primary"}
+          ],
+          "narrow_behavior": "Keep the artifact canvas and review action; collapse outline and run history into drawers.",
+          "failure_risk": "Feels empty or dishonest when the run does not create a durable artifact.",
+          "preferred_components": ["tab-view", "tree-view", "annotated-scroll-bar", "drawer-view", "command-bar"]
+        }
+      ]
+    },
+    {
+      "id": "data-console",
+      "title": "Data and operations console",
+      "signals": [
+        "Users scan, sort, filter, or compare many structured records",
+        "Selection drives contextual detail or actions",
+        "Density and terminal scrolling matter more than decorative cards"
+      ],
+      "default_density": {
+        "chrome_height": 40,
+        "edge_inset": 16,
+        "related_gap": 8,
+        "section_gap": 16,
+        "control_height": 32,
+        "row_height": 36,
+        "icon_size": 16
+      },
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "narrow",
+        "minimum",
+        "empty",
+        "collection-density",
+        "long-localized-content",
+        "scroll-end",
+        "async-settled",
+        "selected-focus-disabled",
+        "transient-surface"
+      ],
+      "concepts": [
+        {
+          "id": "table-first",
+          "title": "Table first",
+          "topology": "dominant-grid-with-contextual-inspector",
+          "primary_surface": "Dense sortable collection with stable columns and row selection",
+          "hero_interaction": "Filter, select, and act on records without losing the scan position",
+          "layout_regions": [
+            {"id": "query-command", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "data-grid", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "saved-views", "placement": "left", "lifetime": "conditional", "priority": "supporting"},
+            {"id": "row-details", "placement": "right", "lifetime": "transient", "priority": "primary"},
+            {"id": "selection-summary", "placement": "bottom", "lifetime": "conditional", "priority": "supporting"}
+          ],
+          "narrow_behavior": "Keep the grid horizontally viable and open row details as a full-height drawer.",
+          "failure_risk": "Turns every row into a card and destroys comparison density.",
+          "preferred_components": ["data-grid", "command-bar", "drawer-view", "auto-suggest-box", "info-bar"]
+        },
+        {
+          "id": "exception-first",
+          "title": "Exception first",
+          "topology": "exception-queue-with-resolution-canvas",
+          "primary_surface": "Prioritized queue of records that need attention",
+          "hero_interaction": "Resolve the selected exception with visible evidence and consequences",
+          "layout_regions": [
+            {"id": "queue-summary", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "exception-queue", "placement": "left", "lifetime": "persistent", "priority": "primary"},
+            {"id": "resolution-canvas", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "history", "placement": "right", "lifetime": "transient", "priority": "supporting"},
+            {"id": "resolution-actions", "placement": "bottom", "lifetime": "persistent", "priority": "primary"}
+          ],
+          "narrow_behavior": "Use queue and resolution as separate pages while preserving the current item identity.",
+          "failure_risk": "Adds workflow ceremony when records are read-only or rarely need intervention.",
+          "preferred_components": ["list-view", "info-badge", "field", "drawer-view", "command-bar"]
+        },
+        {
+          "id": "monitor-first",
+          "title": "Monitor first",
+          "topology": "live-status-canvas-with-drilldown",
+          "primary_surface": "Live operational state and trend changes",
+          "hero_interaction": "Spot an abnormal state and drill into the responsible records",
+          "layout_regions": [
+            {"id": "status-strip", "placement": "top", "lifetime": "persistent", "priority": "primary"},
+            {"id": "live-canvas", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "scope-navigation", "placement": "left", "lifetime": "conditional", "priority": "supporting"},
+            {"id": "drilldown", "placement": "right", "lifetime": "transient", "priority": "primary"},
+            {"id": "time-controls", "placement": "bottom", "lifetime": "conditional", "priority": "supporting"}
+          ],
+          "narrow_behavior": "Keep critical status and one live scope; move scope selection and drilldown to transient pages.",
+          "failure_risk": "Creates dashboard decoration when data is not actually live or comparable over time.",
+          "preferred_components": ["progress-bar", "info-badge", "selector-bar", "drawer-view", "data-grid"]
+        }
+      ]
+    },
+    {
+      "id": "document-workbench",
+      "title": "Document and artifact workbench",
+      "signals": [
+        "Users create or review a durable document, file, diff, or structured artifact",
+        "The canvas must dominate while hierarchy and commands stay contextual",
+        "Selection or cursor position changes nearby tools"
+      ],
+      "default_density": {
+        "chrome_height": 40,
+        "edge_inset": 16,
+        "related_gap": 8,
+        "section_gap": 20,
+        "control_height": 32,
+        "row_height": 32,
+        "icon_size": 16
+      },
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "narrow",
+        "minimum",
+        "empty",
+        "long-localized-content",
+        "selected-focus-disabled",
+        "transient-surface"
+      ],
+      "concepts": [
+        {
+          "id": "canvas-first",
+          "title": "Canvas first",
+          "topology": "dominant-document-with-context-tools",
+          "primary_surface": "Readable or editable document canvas",
+          "hero_interaction": "Create, edit, or review the artifact without leaving the canvas",
+          "layout_regions": [
+            {"id": "document-tabs", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "document-canvas", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "outline", "placement": "left", "lifetime": "conditional", "priority": "supporting"},
+            {"id": "properties", "placement": "right", "lifetime": "transient", "priority": "primary"},
+            {"id": "document-status", "placement": "bottom", "lifetime": "persistent", "priority": "supporting"}
+          ],
+          "narrow_behavior": "Keep one focused document; move outline and properties into mutually exclusive drawers.",
+          "failure_risk": "Permanent tools crowd the canvas even when they have no selection-dependent meaning.",
+          "preferred_components": ["tab-view", "tree-view", "text-edit", "drawer-view", "command-bar"]
+        },
+        {
+          "id": "outline-first",
+          "title": "Structure first",
+          "topology": "hierarchy-navigator-with-section-editor",
+          "primary_surface": "Document hierarchy controlling a focused section editor",
+          "hero_interaction": "Reorder or navigate structure while editing one selected section",
+          "layout_regions": [
+            {"id": "document-command", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "hierarchy", "placement": "left", "lifetime": "persistent", "priority": "primary"},
+            {"id": "section-editor", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "metadata", "placement": "right", "lifetime": "transient", "priority": "supporting"},
+            {"id": "validation", "placement": "bottom", "lifetime": "conditional", "priority": "primary"}
+          ],
+          "narrow_behavior": "Switch hierarchy and section editor as pages and keep the current section breadcrumb visible.",
+          "failure_risk": "Overemphasizes hierarchy when the document is short or linear.",
+          "preferred_components": ["tree-view", "breadcrumb", "field", "drawer-view", "info-bar"]
+        },
+        {
+          "id": "review-first",
+          "title": "Review first",
+          "topology": "change-canvas-with-review-queue",
+          "primary_surface": "Changed regions and reviewer decisions",
+          "hero_interaction": "Move through changes and accept, reject, or comment with context",
+          "layout_regions": [
+            {"id": "review-progress", "placement": "top", "lifetime": "persistent", "priority": "primary"},
+            {"id": "change-queue", "placement": "left", "lifetime": "conditional", "priority": "supporting"},
+            {"id": "change-canvas", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "discussion", "placement": "right", "lifetime": "transient", "priority": "primary"},
+            {"id": "decision-actions", "placement": "bottom", "lifetime": "persistent", "priority": "primary"}
+          ],
+          "narrow_behavior": "Keep the active change and decision action; open queue and discussion as transient surfaces.",
+          "failure_risk": "Adds review chrome to an ordinary authoring flow.",
+          "preferred_components": ["list-view", "annotated-scroll-bar", "drawer-view", "command-bar", "info-bar"]
+        }
+      ]
+    },
+    {
+      "id": "focused-utility",
+      "title": "Focused desktop utility",
+      "signals": [
+        "The workflow has one short durable outcome",
+        "Navigation is unnecessary or shallow",
+        "Confidence, progress, recovery, and completion matter more than density"
+      ],
+      "default_density": {
+        "chrome_height": 40,
+        "edge_inset": 20,
+        "related_gap": 8,
+        "section_gap": 20,
+        "control_height": 32,
+        "row_height": 40,
+        "icon_size": 20
+      },
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "narrow",
+        "minimum",
+        "empty",
+        "long-localized-content",
+        "selected-focus-disabled",
+        "transient-surface"
+      ],
+      "concepts": [
+        {
+          "id": "guided-flow",
+          "title": "Guided flow",
+          "topology": "linear-step-flow",
+          "primary_surface": "One current step with explicit progress and recovery",
+          "hero_interaction": "Complete the current step and advance with confidence",
+          "layout_regions": [
+            {"id": "progress", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "step-content", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "step-help", "placement": "right", "lifetime": "transient", "priority": "supporting"},
+            {"id": "navigation-actions", "placement": "bottom", "lifetime": "persistent", "priority": "primary"}
+          ],
+          "narrow_behavior": "Stack the current step and actions; keep help transient.",
+          "failure_risk": "Introduces needless steps when the task can be completed on one surface.",
+          "preferred_components": ["progress-bar", "field", "info-bar", "button", "teaching-tip"]
+        },
+        {
+          "id": "single-canvas",
+          "title": "Single canvas",
+          "topology": "single-surface-command",
+          "primary_surface": "One composed surface containing input, preview, and outcome",
+          "hero_interaction": "Perform the primary action without changing context",
+          "layout_regions": [
+            {"id": "utility-header", "placement": "top", "lifetime": "persistent", "priority": "supporting"},
+            {"id": "utility-canvas", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "advanced-options", "placement": "right", "lifetime": "transient", "priority": "supporting"},
+            {"id": "primary-action", "placement": "bottom", "lifetime": "persistent", "priority": "primary"}
+          ],
+          "narrow_behavior": "Reflow the canvas vertically and preserve the primary action next to its outcome.",
+          "failure_risk": "Becomes a featureless settings form when hierarchy and feedback are not composed.",
+          "preferred_components": ["field", "expander", "button", "info-bar", "progress-ring"]
+        },
+        {
+          "id": "queue-first",
+          "title": "Queue and completion",
+          "topology": "bounded-work-queue",
+          "primary_surface": "Small bounded list of items moving through one operation",
+          "hero_interaction": "Add, start, cancel, retry, and verify completion",
+          "layout_regions": [
+            {"id": "queue-command", "placement": "top", "lifetime": "persistent", "priority": "primary"},
+            {"id": "work-queue", "placement": "center", "lifetime": "persistent", "priority": "hero"},
+            {"id": "item-details", "placement": "right", "lifetime": "transient", "priority": "supporting"},
+            {"id": "aggregate-progress", "placement": "bottom", "lifetime": "persistent", "priority": "primary"}
+          ],
+          "narrow_behavior": "Keep the queue and progress; show item details as a drawer.",
+          "failure_risk": "Uses a queue metaphor when only one item can ever exist.",
+          "preferred_components": ["list-view", "progress-bar", "drawer-view", "command-bar", "info-bar"]
+        }
+      ]
+    }
+  ]
+}

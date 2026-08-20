@@ -80,6 +80,29 @@ cancel stale requests on scope changes, reject late results by request/session
 identity, and move parsing or expensive formatting off the GUI thread when it
 can exceed an interaction frame.
 
+## Separate organization, retention, and execution capacity
+
+For tasks, sessions, documents, transfers, jobs, and other runnable records,
+model these as different contracts:
+
+| Concern | User model | Engineering control |
+| --- | --- | --- |
+| Organization | groups, projects, folders, filters, or history | model roles, proxy models, ordering, persistence |
+| Retention | what remains available to review or resume | pagination, archival, durable storage, explicit in-memory limits |
+| Execution admission | what may actively consume CPU, network, model, or subprocess capacity | FIFO/priority scheduler, queue state, cancellation, retry |
+
+Do not expose an executor limit as a limit on creating, reviewing, or grouping
+records. If capacity is exhausted, preserve the record and show an honest
+queued state with position or reason, cancellation, and deterministic
+admission. A fixed number may be a runtime default or advanced setting; it is
+not navigation copy unless the user must act on it.
+
+Likewise, a folder or group must not imply process isolation, independent
+filesystem state, persistence, or scheduling priority unless the underlying
+model provides that behavior. Test organization and admission separately:
+group moves preserve identity and state, while queue tests cover ordering,
+duplicate admission, cancellation, teardown, and slot release.
+
 ## Choose transient lifetime deliberately
 
 Classify each secondary surface by frequency, state, and cost:
@@ -138,4 +161,8 @@ counts, cache limits, request identities, and teardown completion.
   to zero live instances after close.
 - Cached drawers or inspectors have a written reuse reason and are lazy-loaded.
 - Session/workspace changes cancel or ignore stale asynchronous work.
+- Organization, retention, and execution admission are separate contracts;
+  executor capacity never silently limits task/session creation.
+- Runnable overflow has an explicit queued/rejected policy with visible state,
+  cancellation, ordering, and deterministic tests.
 - Performance tests exercise realistic dense data, not only 0/1/2/8 rows.

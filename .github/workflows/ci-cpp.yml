@@ -563,17 +563,32 @@ jobs:
               .agents/skills/build-fluentqt-gui/SKILL.md \
               .agents/skills/build-fluentqt-gui/LICENSE.txt \
               .agents/skills/build-fluentqt-gui/agents/openai.yaml \
+              .agents/skills/build-fluentqt-gui/assets/benchmarks/agent-run-workspace.json \
+              .agents/skills/build-fluentqt-gui/assets/composition-recipes.json \
               .agents/skills/build-fluentqt-gui/assets/fluentqt-ai-catalog.json \
+              .agents/skills/build-fluentqt-gui/assets/project-structure-templates.json \
+              .agents/skills/build-fluentqt-gui/references/art-direction.md \
               .agents/skills/build-fluentqt-gui/references/component-selection.md \
+              .agents/skills/build-fluentqt-gui/references/design-intelligence.md \
               .agents/skills/build-fluentqt-gui/references/experience-differentiation.md \
+              .agents/skills/build-fluentqt-gui/references/iconography.md \
               .agents/skills/build-fluentqt-gui/references/performance-lifecycle.md \
               .agents/skills/build-fluentqt-gui/references/premium-shell.md \
               .agents/skills/build-fluentqt-gui/references/product-reference-patterns.md \
+              .agents/skills/build-fluentqt-gui/references/project-architecture.md \
+              .agents/skills/build-fluentqt-gui/references/product-copy.md \
               .agents/skills/build-fluentqt-gui/references/signature-surface.md \
               .agents/skills/build-fluentqt-gui/references/theme-system.md \
               .agents/skills/build-fluentqt-gui/references/visual-evidence-contract.md \
               .agents/skills/build-fluentqt-gui/references/visual-refinement.md \
+              .agents/skills/build-fluentqt-gui/scripts/init_design_brief.py \
+              .agents/skills/build-fluentqt-gui/scripts/init_project_structure.py \
+              .agents/skills/build-fluentqt-gui/scripts/init_visual_evidence.py \
               .agents/skills/build-fluentqt-gui/scripts/query_catalog.py \
+              .agents/skills/build-fluentqt-gui/scripts/render_design_board.py \
+              .agents/skills/build-fluentqt-gui/scripts/render_visual_review.py \
+              .agents/skills/build-fluentqt-gui/scripts/validate_design_brief.py \
+              .agents/skills/build-fluentqt-gui/scripts/validate_project_structure.py \
               .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
               .github/scripts/setup-shiboken-clang.py \
               bindings/README.md \

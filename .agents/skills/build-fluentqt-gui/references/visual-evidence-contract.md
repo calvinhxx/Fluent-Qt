@@ -11,6 +11,7 @@ manifest task-local unless it is useful project documentation.
 - Mandatory state and region coverage
 - Painted geometry checks
 - Dynamic convergence checks
+- Independent review
 - Severity and acceptance
 - Manifest shape
 
@@ -21,8 +22,13 @@ platform, display scale, theme, capture time, and selected `lite` or `full`
 profile. Rebuild before the final review. Do not mix captures from different
 binaries in one passing manifest.
 
-New manifests use `contract_version: 2`. Record window material as first-class
-evidence, not as an optional note:
+New manifests use `contract_version: 4`, identify the implementation
+`author_id`, and point to the validated machine-readable `design_brief`. Record
+window material as first-class evidence, not as an optional note:
+
+For full new-GUI or redesign work, the referenced design brief must pass its
+default approved-stage validation. `CONCEPTS READY`, a pending/rejected human
+decision, or a schematic-only board cannot seed final visual evidence.
 
 | Field | Allowed values | Rule |
 | --- | --- | --- |
@@ -61,14 +67,18 @@ not count as evidence.
 
 ## Version the manifest
 
-The current contract is version 2. A manifest without `contract_version` is
-treated as legacy v1 so existing task-local evidence does not fail solely
-because the validator was upgraded. The validator prints a migration warning
-and does not enforce the v2 material/signature fields for that legacy file.
+The current contract is version 4. A manifest without `contract_version` is
+treated as legacy v1; versions 2 and 3 remain readable so existing task-local
+evidence does not fail solely because the validator was upgraded. Version 3
+keeps its original seven review dimensions and may reference its version 2
+design brief. The validator prints a migration warning. Use `--require-current`
+for new work so a legacy manifest cannot be mistaken for current visual
+acceptance.
 
-Do not create new v1 evidence. Add `"contract_version": 2`, inspect the final
-build, and populate the required fields rather than mechanically copying pass
-values. Explicit unsupported versions fail validation.
+Do not create new v1/v2/v3 evidence. Initialize v4 from a current validated
+design brief, inspect the final build, render the review board, and populate the required
+fields rather than mechanically copying pass values. Explicit unsupported
+versions fail validation.
 
 ## Choose evidence breadth proportionally
 
@@ -177,6 +187,49 @@ component-specific Gallery metric proves otherwise. Grow by visual line until
 the declared maximum, then let the editor own overflow scrolling. Test CJK,
 mixed Latin/CJK, emoji, pasted long lines, and IME when applicable.
 
+## Require independent visual review
+
+The implementation agent may collect evidence and render the local review
+board, but it may not grant final visual acceptance. Give the raw design
+brief, review board, and final build to a human or a fresh independent agent.
+Do not include the implementation agent's diagnosis, preferred verdict, or
+intended fixes in that review task.
+
+Concept selection and final-build review are separate decisions. The human
+art-direction owner chooses which high-fidelity comp to build; this reviewer
+judges whether the actual application reached that direction across states and
+constraints. One person may perform both human roles, but neither role may be
+claimed by the implementation agent.
+
+Contract v4 records different `author_id` and `reviewer_id` values plus one of
+`human` or `independent-agent` as `reviewer_kind`. A full review includes at
+least one local reference image captured at a comparable platform, theme,
+scale, and typography setup. The reviewer assigns evidence-backed 1–5 scores
+for:
+
+- workflow fit;
+- product signature;
+- visual hierarchy;
+- density and typography;
+- theme and material;
+- iconography;
+- surface composition;
+- responsive quality;
+- state and interaction polish.
+
+`iconography` judges family coherence, provenance, optical sizing/alignment,
+semantic color, state variants, and icon-only clarity. `surface_composition`
+judges whether material, panes, cards, dividers, borders, radius, and empty
+space form a purposeful layer hierarchy instead of a stack of opaque stickers.
+
+Every score must be at least 4 to pass. A score is a judgment, not a replacement
+for concrete findings. Record each issue with severity and status; any open
+blocker or major finding fails the contract. Generate the board with
+`scripts/render_visual_review.py` so the reviewer sees declared claims,
+references, final-state captures, score notes, and findings together.
+The default board links full-resolution local images to keep the HTML small.
+Use `--embed-images` only when a single portable file is required.
+
 ## Classify findings and block acceptance
 
 | Severity | Examples | Acceptance |
@@ -197,7 +250,11 @@ Visual acceptance requires:
 - all measurements pass or cite a component-specific exception;
 - all dynamic checks pass;
 - no open blocker or major issue remains;
-- all evidence points to the final reviewed build.
+- all evidence points to the final reviewed build;
+- the design brief passes `scripts/validate_design_brief.py`;
+- the independent reviewer differs from the implementation author;
+- all nine review dimensions score at least 4/5 with evidence;
+- the review board and, for full, comparable local reference images exist.
 
 ## Use the manifest shape
 
@@ -205,8 +262,10 @@ Create JSON with this minimum shape and validate it with the bundled script:
 
 ```json
 {
-  "contract_version": 2,
+  "contract_version": 4,
   "application": "example-app",
+  "author_id": "implementation-agent-1",
+  "design_brief": "/tmp/example-app/design-brief.json",
   "reviewed_build": "/absolute/path/to/executable",
   "platform": "macOS arm64, scale 2x",
   "profile": "full",
@@ -231,14 +290,35 @@ Create JSON with this minimum shape and validate it with the bundled script:
     {"id": "multiline-input", "status": "pass", "evidence": ["/tmp/input.png"]},
     {"id": "async-scroll-end", "status": "pass", "evidence": ["/tmp/scroll-end.png"]}
   ],
-  "issues": []
+  "issues": [],
+  "review": {
+    "reviewer_kind": "independent-agent",
+    "reviewer_id": "visual-reviewer-1",
+    "reviewed_at": "2026-08-18T12:00:00Z",
+    "verdict": "pass",
+    "review_board": "/tmp/example-app/visual-review.html",
+    "reference_images": ["/tmp/example-app/gallery-reference.png"],
+    "scores": {
+      "workflow_fit": {"score": 4, "note": "The primary workflow is immediately visible.", "evidence": ["/tmp/example-app/normal-light.png"]},
+      "product_signature": {"score": 4, "note": "The primary object is recognizable without logo or accent.", "evidence": ["/tmp/example-app/normal-light.png"]},
+      "visual_hierarchy": {"score": 4, "note": "The signature surface dominates supporting chrome.", "evidence": ["/tmp/example-app/normal-dark.png"]},
+      "density_and_typography": {"score": 4, "note": "Repeated rows and type follow recorded metrics.", "evidence": ["/tmp/example-app/normal-light.png"]},
+      "theme_and_material": {"score": 4, "note": "Both themes preserve contrast and reveal Mica.", "evidence": ["/tmp/example-app/normal-light.png", "/tmp/example-app/normal-dark.png"]},
+      "iconography": {"score": 4, "note": "One licensed family keeps peer actions optically aligned across states.", "evidence": ["/tmp/example-app/states.png"]},
+      "surface_composition": {"score": 4, "note": "Material, panes, dividers, and bounded surfaces form a deliberate hierarchy.", "evidence": ["/tmp/example-app/normal-dark.png"]},
+      "responsive_quality": {"score": 4, "note": "Narrow layout preserves the primary object.", "evidence": ["/tmp/example-app/narrow.png"]},
+      "state_and_interaction_polish": {"score": 4, "note": "Focus, disabled, transient, and terminal states are finished.", "evidence": ["/tmp/example-app/states.png"]}
+    },
+    "findings": []
+  }
 }
 ```
 
-For v2, the validator enforces profile-specific bookkeeping, known ids, local
-file existence, the window-material fields, and the signature-surface fields.
-Never convert its success into a claim that the pixels, interaction, or product
-hierarchy are good. A manifest with `window_backdrop: "solid"` or
+For v4, the validator enforces profile-specific bookkeeping, known ids, local
+file existence, the window-material and signature fields, a validated design
+brief, and independent review metadata. Never convert script success alone into
+a claim that the pixels, interaction, or product hierarchy are good; the named
+reviewer owns that judgment. A manifest with `window_backdrop: "solid"` or
 `"host-owned"` and no reason fails. A manifest that declares `wireframe`,
 `filled-stickers`, `dead-space`, or `developer-labeled` is a failed product
 surface.

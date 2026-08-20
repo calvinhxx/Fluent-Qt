@@ -17,6 +17,37 @@ not isolated pixels: canvas, layer, alternate layer, primary/secondary text,
 control fills, strokes, accent, focus, critical, caution, information, success,
 control radius, overlay radius, typography, and density.
 
+## Derive the palette from the approved identity
+
+When an application has an approved mark or icon, use its clean foreground
+shape as one input to the theme rather than treating the application tile as a
+ready-made palette. Ignore transparent pixels, neutral tile backgrounds,
+shadows, highlights, and edge anti-aliasing. Record the authoritative asset,
+the selected chromatic anchor, any supporting hue, the inferred neutral
+temperature, and the roles that remain independent.
+
+Expand the anchor into semantic relationships instead of repeating one literal
+color:
+
+- accent default plus hover, pressed, subtle, disabled, focus, and text-on-
+  accent roles;
+- a low-chroma neutral family whose temperature can echo the identity without
+  making canvas and text visibly colored;
+- restrained accent-tinted selection or signature surfaces;
+- critical, caution, information, and success roles chosen for meaning and
+  contrast rather than extracted from the logo.
+
+Derive Light and Dark together. Adjust lightness and chroma for each mode; do
+not invert Light, reuse one hex value everywhere, or make Dark mode a black
+canvas with neon brand color. If color tooling supports a perceptual space,
+use it to build a coherent ramp, then verify the actual rendered controls and
+text against the target project's accessibility policy.
+
+The resulting theme should still look related to the identity when the logo is
+hidden, through accent relationships, neutral temperature, focus treatment,
+and one restrained signature surface. It must also remain recognizably Fluent
+without adding product-specific geometry branches.
+
 ## Choose the supported strategy
 
 - Use the built-in Fluent theme when branding is not part of the task.
@@ -108,6 +139,8 @@ application-wide stylesheet that bypasses component states.
 
 ## Theme acceptance gate
 
+- `theme.palette_source` and `theme.palette_derivation` record how authoritative
+  identity or product evidence became semantic Light/Dark roles.
 - Switching modes repaints the open window without restart.
 - No visible control retains a Light background or dark text in Dark mode.
 - Focus and disabled states remain legible.
@@ -117,3 +150,6 @@ application-wide stylesheet that bypasses component states.
   is recorded; an embedded surface preserves and records the host window.
 - Pane gaps reveal the owning material rather than a stamped opaque palette,
   unless the host contract requires an opaque surface.
+- The application icon, title mark, focus, selected state, and primary action
+  feel related without turning routine chrome or semantic status into brand
+  decoration.

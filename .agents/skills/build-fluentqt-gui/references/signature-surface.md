@@ -136,10 +136,13 @@ edit->setMaxVisibleLines(6);
 edit->setPlaceholderText(QStringLiteral("Message"));
 const QFontMetrics bodyMetrics(edit->themeFont(Typography::FontRole::Body).toQFont());
 edit->setLineHeight(qMax(bodyMetrics.lineSpacing(), bodyMetrics.height()));
+edit->setTabChangesFocus(true);
 
 auto* send = new fluent::basicinput::Button(QStringLiteral("Send"), dock);
 send->setFluentStyle(fluent::basicinput::Button::Accent);
 send->setFluentSize(fluent::basicinput::Button::Small);
+send->setFocusPolicy(Qt::StrongFocus);
+QWidget::setTabOrder(edit, send);
 ```
 
 Rest height of the dock is about 44–56 px plus a compact tool row. One Accent

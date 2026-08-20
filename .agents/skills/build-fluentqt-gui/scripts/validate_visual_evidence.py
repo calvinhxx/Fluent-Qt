@@ -11,6 +11,8 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
+from validate_design_brief import load_brief, validate_brief
+
 
 FULL_REQUIRED_STATES = {
     "normal-light",
@@ -64,8 +66,8 @@ LITE_REQUIRED_DYNAMIC_CHECKS: set[str] = set()
 
 ALLOWED_STATUS = {"pass", "fail", "unverified", "not-applicable"}
 ALLOWED_PROFILES = {"lite", "full"}
-CURRENT_CONTRACT_VERSION = 2
-ALLOWED_CONTRACT_VERSIONS = {1, CURRENT_CONTRACT_VERSION}
+CURRENT_CONTRACT_VERSION = 4
+ALLOWED_CONTRACT_VERSIONS = {1, 2, 3, CURRENT_CONTRACT_VERSION}
 ALLOWED_BACKDROPS = {"mica", "acrylic", "solid", "host-owned"}
 ALLOWED_FILL_POLICIES = {"reveal-material", "opaque-hosts", "inherit-host"}
 ALLOWED_SIGNATURE_FINISH = {"product", "wireframe"}
@@ -73,6 +75,20 @@ ALLOWED_CHROME_ON_MATERIAL = {"quiet", "filled-stickers"}
 ALLOWED_SPARSE_CANVAS = {"composed", "dead-space"}
 ALLOWED_PRIMARY_INPUT = {"integrated-dock", "independent-card", "none"}
 ALLOWED_COPY_REGISTER = {"user-facing", "developer-labeled"}
+ALLOWED_REVIEWER_KINDS = {"human", "independent-agent"}
+LEGACY_V3_REVIEW_SCORES = {
+    "workflow_fit",
+    "product_signature",
+    "visual_hierarchy",
+    "density_and_typography",
+    "theme_and_material",
+    "responsive_quality",
+    "state_and_interaction_polish",
+}
+CURRENT_REVIEW_SCORES = LEGACY_V3_REVIEW_SCORES | {
+    "iconography",
+    "surface_composition",
+}
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
@@ -333,9 +349,179 @@ def validate_signature_surface(data: dict[str, Any], errors: list[str]) -> None:
         errors.append("visible_copy_register developer-labeled never passes")
 
 
+def validate_design_brief_reference(
+    data: dict[str, Any],
+    manifest_path: Path,
+    contract_version: int,
+    errors: list[str],
+) -> None:
+    raw_path = data.get("design_brief")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        errors.append("design_brief must be a non-empty local path for contract v3+")
+        return
+    brief_path = resolve_local_path(raw_path, manifest_path)
+    if brief_path is None or not brief_path.is_file():
+        errors.append(f"design_brief file does not exist: {raw_path}")
+        return
+    try:
+        brief = load_brief(brief_path)
+    except ValueError as exc:
+        errors.append(f"design_brief is invalid: {exc}")
+        return
+    for brief_error in validate_brief(
+        brief,
+        brief_path,
+        require_current=contract_version >= CURRENT_CONTRACT_VERSION,
+    ):
+        errors.append(f"design_brief: {brief_error}")
+    for field in ("application", "profile", "author_id"):
+        if brief.get(field) != data.get(field):
+            errors.append(f"design_brief {field} must match visual evidence")
+
+
+def _validate_review_evidence(
+    evidence: object,
+    manifest_path: Path,
+    label: str,
+    errors: list[str],
+) -> None:
+    if (
+        not isinstance(evidence, list)
+        or not evidence
+        or not all(isinstance(item, str) and item for item in evidence)
+    ):
+        errors.append(f"{label} must be a non-empty evidence-path array")
+        return
+    for index, raw_path in enumerate(evidence):
+        validate_existing_path(
+            raw_path,
+            manifest_path,
+            f"{label}[{index}]",
+            errors,
+            require_file=True,
+        )
+
+
+def validate_independent_review(
+    data: dict[str, Any],
+    manifest_path: Path,
+    contract_version: int,
+    errors: list[str],
+) -> None:
+    author_id = data.get("author_id")
+    if not isinstance(author_id, str) or not author_id.strip():
+        errors.append("author_id must be a non-empty string for contract v3+")
+        author_id = ""
+    review = data.get("review")
+    if not isinstance(review, dict):
+        errors.append("review must be an object for contract v3+")
+        return
+    reviewer_kind = review.get("reviewer_kind")
+    reviewer_id = review.get("reviewer_id")
+    if reviewer_kind not in ALLOWED_REVIEWER_KINDS:
+        errors.append(
+            "review.reviewer_kind must be one of "
+            + ", ".join(sorted(ALLOWED_REVIEWER_KINDS))
+        )
+    if not isinstance(reviewer_id, str) or not reviewer_id.strip():
+        errors.append("review.reviewer_id must be a non-empty string")
+    elif author_id and reviewer_id.strip().casefold() == author_id.strip().casefold():
+        errors.append("reviewer_id must differ from author_id")
+    reviewed_at = review.get("reviewed_at")
+    if not isinstance(reviewed_at, str) or not reviewed_at.strip():
+        errors.append("review.reviewed_at must be a non-empty string")
+    if review.get("verdict") != "pass":
+        errors.append("review.verdict must be pass")
+
+    review_board = review.get("review_board")
+    if not isinstance(review_board, str) or not review_board.strip():
+        errors.append("review.review_board must be a non-empty local path")
+    else:
+        validate_existing_path(
+            review_board,
+            manifest_path,
+            "review.review_board",
+            errors,
+            require_file=True,
+        )
+
+    reference_images = review.get("reference_images")
+    if data.get("profile") == "full":
+        _validate_review_evidence(
+            reference_images,
+            manifest_path,
+            "review.reference_images",
+            errors,
+        )
+    elif reference_images:
+        _validate_review_evidence(
+            reference_images,
+            manifest_path,
+            "review.reference_images",
+            errors,
+        )
+
+    scores = review.get("scores")
+    if not isinstance(scores, dict):
+        errors.append("review.scores must be an object")
+    else:
+        required_scores = (
+            CURRENT_REVIEW_SCORES
+            if contract_version >= CURRENT_CONTRACT_VERSION
+            else LEGACY_V3_REVIEW_SCORES
+        )
+        missing_scores = required_scores - set(scores)
+        if missing_scores:
+            errors.append(
+                "review.scores missing: " + ", ".join(sorted(missing_scores))
+            )
+        for score_id in sorted(required_scores):
+            entry = scores.get(score_id)
+            prefix = f"review.scores.{score_id}"
+            if not isinstance(entry, dict):
+                continue
+            score = entry.get("score")
+            if isinstance(score, bool) or not isinstance(score, int) or not 1 <= score <= 5:
+                errors.append(f"{prefix}.score must be an integer 1..5")
+            elif score < 4:
+                errors.append(f"{prefix}.score must be at least 4 to pass")
+            note = entry.get("note")
+            if not isinstance(note, str) or not note.strip():
+                errors.append(f"{prefix}.note must be a non-empty string")
+            _validate_review_evidence(
+                entry.get("evidence"),
+                manifest_path,
+                f"{prefix}.evidence",
+                errors,
+            )
+
+    findings = review.get("findings")
+    if not isinstance(findings, list):
+        errors.append("review.findings must be an array")
+    else:
+        for index, finding in enumerate(findings):
+            if not isinstance(finding, dict):
+                errors.append(f"review.findings[{index}] must be an object")
+                continue
+            if (
+                finding.get("status") == "open"
+                and finding.get("severity") in {"blocker", "major"}
+            ):
+                errors.append(
+                    "independent review has an open "
+                    f"{finding.get('severity')} finding: "
+                    f"{finding.get('id', index)}"
+                )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest", type=Path)
+    parser.add_argument(
+        "--require-current",
+        action="store_true",
+        help="reject legacy evidence that does not use the current contract",
+    )
     args = parser.parse_args()
 
     try:
@@ -346,6 +532,11 @@ def main() -> int:
 
     errors: list[str] = []
     contract_version = validate_contract_version(data, errors)
+    if args.require_current and contract_version != CURRENT_CONTRACT_VERSION:
+        errors.append(
+            f"contract_version {CURRENT_CONTRACT_VERSION} is required; "
+            f"received {contract_version}"
+        )
     for key in ("application", "reviewed_build", "platform", "profile"):
         if not isinstance(data.get(key), str) or not data[key].strip():
             errors.append(f"{key} must be a non-empty string")
@@ -404,6 +595,13 @@ def main() -> int:
     if contract_version >= 2:
         validate_window_material(data, errors)
         validate_signature_surface(data, errors)
+    if contract_version >= 3:
+        validate_design_brief_reference(
+            data, args.manifest, contract_version, errors
+        )
+        validate_independent_review(
+            data, args.manifest, contract_version, errors
+        )
 
     if errors:
         print("visual evidence: FAIL", file=sys.stderr)
@@ -411,10 +609,11 @@ def main() -> int:
             print(f"- {error}", file=sys.stderr)
         return 1
 
-    if contract_version == 1:
+    if contract_version < CURRENT_CONTRACT_VERSION:
         print(
-            "visual evidence: WARNING legacy contract v1; add contract_version 2 "
-            "and material/signature fields for new evidence",
+            f"visual evidence: WARNING legacy contract v{contract_version}; "
+            f"new evidence uses contract_version {CURRENT_CONTRACT_VERSION} "
+            "with a validated design brief and nine-dimension independent review",
             file=sys.stderr,
         )
 
