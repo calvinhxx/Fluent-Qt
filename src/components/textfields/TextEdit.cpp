@@ -28,47 +28,53 @@ namespace fluent::textfields {
 
 // ── Helpers. zh_CN: 辅助函数 ───────────────────────────────────────────────────
 
-static int naturalLineHeight(const QFont& font) {
-    // QTextLayout keeps sub-pixel font metrics and rounds the resulting line
-    // box up. QFontMetrics::lineSpacing() can round the same value down on
-    // Qt 5, which makes a capped editor one pixel too short per visible line.
-    // zh_CN: QTextLayout 保留字体的小数度量并向上取整行框；Qt 5 中
-    // QFontMetrics::lineSpacing() 可能对同一数值向下取整，导致每个可见行
-    // 少算 1 px。
-    return qCeil(QFontMetricsF(font).lineSpacing());
-}
+static int naturalLineHeight(QTextEdit* editor) {
+    if (!editor)
+        return 1;
 
-static int effectiveLineHeight(const QFont& font, int requestedLineHeight) {
-    return qMax(requestedLineHeight, naturalLineHeight(font));
-}
+    // The font metric is only a fallback. On Qt 5/X11, lineSpacing() can be
+    // 17 px while QTextLayout and the caret actually occupy 18 px. Measuring
+    // the live document keeps capped viewport geometry aligned with what Qt
+    // paints and hit-tests on every platform.
+    // zh_CN: 字体度量仅作为兜底。Qt 5/X11 可能报告 17 px 行距，但
+    // QTextLayout 与光标实际占用 18 px；直接测量当前文档可使封顶 viewport
+    // 与各平台真实绘制及命中几何一致。
+    int height = qCeil(QFontMetricsF(editor->font()).lineSpacing());
+    QTextDocument* document = editor->document();
+    if (!document)
+        return qMax(1, height);
 
-static int nativeVerticalDocumentInset(QTextEdit* editor) {
-    if (!editor || !editor->document())
-        return 0;
-    const QTextBlock firstBlock = editor->document()->begin();
+    document->documentLayout()->documentSize();
+    const QTextBlock firstBlock = document->begin();
     if (!firstBlock.isValid())
-        return 0;
+        return qMax(1, height);
 
-    editor->document()->documentLayout()->documentSize();
-    const QScrollBar* scrollBar = editor->verticalScrollBar();
-    const int scrollOffset = scrollBar ? scrollBar->value() : 0;
-    return qMax(0, editor->cursorRect(QTextCursor(firstBlock)).top()
-        + scrollOffset);
+    if (QTextLayout* layout = firstBlock.layout();
+        layout && layout->lineCount() > 0) {
+        height = qMax(height, qCeil(layout->lineAt(0).height()));
+    }
+    height = qMax(height,
+                  editor->cursorRect(QTextCursor(firstBlock)).height());
+    return qMax(1, height);
 }
 
-static int verticalMarginOverflow(const QFont& font,
+static int effectiveLineHeight(int naturalHeight, int requestedLineHeight) {
+    return qMax(requestedLineHeight, naturalHeight);
+}
+
+static int verticalMarginOverflow(int naturalHeight,
                                   int lineHeight,
                                   const QMargins& margins) {
-    const int fontLh = naturalLineHeight(font);
-    const int slotSlack = effectiveLineHeight(font, lineHeight) - fontLh;
+    const int slotSlack = effectiveLineHeight(naturalHeight, lineHeight)
+        - naturalHeight;
     return qMax(0, margins.top() + margins.bottom() - slotSlack);
 }
 
-static QMargins calcContentViewportMargins(const QFont& font,
+static QMargins calcContentViewportMargins(int naturalHeight,
                                            int lineHeight,
                                            const QMargins& margins) {
-    const int fontLh = naturalLineHeight(font);
-    const int slotSlack = effectiveLineHeight(font, lineHeight) - fontLh;
+    const int slotSlack = effectiveLineHeight(naturalHeight, lineHeight)
+        - naturalHeight;
     const int requestedTop = qMax(0, margins.top());
     const int requestedBottom = qMax(0, margins.bottom());
     const int centeredSlack = qMax(
@@ -79,8 +85,8 @@ static QMargins calcContentViewportMargins(const QFont& font,
                     qMax(0, margins.right()), bottom);
 }
 
-static int calcBotPad(const QFont& font, int lineHeight) {
-    return effectiveLineHeight(font, lineHeight) - naturalLineHeight(font);
+static int calcBotPad(int naturalHeight, int lineHeight) {
+    return effectiveLineHeight(naturalHeight, lineHeight) - naturalHeight;
 }
 
 static bool formatMetricEquals(qreal lhs, qreal rhs) {
@@ -155,7 +161,7 @@ protected:
         if (ph.isEmpty()) return;
 
         QPainter painter(viewport());
-        const int fontLh = naturalLineHeight(font());
+        const int fontLh = naturalLineHeight(this);
         QRect textRect(0, 0, viewport()->width(), fontLh);
         painter.setPen(palette().color(QPalette::PlaceholderText));
         painter.setFont(font());
@@ -655,8 +661,8 @@ void TextEdit::applyBlockCenterFormat() {
 
     m_updatingFormat = true;
 
-    const QFont f = m_editor->font();
-    const int botPad = calcBotPad(f, m_lineHeight);
+    const int naturalHeight = naturalLineHeight(m_editor);
+    const int botPad = calcBotPad(naturalHeight, m_lineHeight);
 
     // 1. Keep outer insets out of the document. LineDistanceHeight contributes
     // spacing after the final visual line as well as between lines; cancel that
@@ -720,23 +726,11 @@ void TextEdit::applyBlockCenterFormat() {
     // therefore contains whole visual lines at both scroll boundaries.
     // zh_CN: viewport margin 承担外部 inset，并分配满足 inset 后剩余的行槽
     // 余量，因此滚动顶部和尾部都只显示完整视觉行。
-    const QMargins requestedViewportMargins = calcContentViewportMargins(
-        f, m_lineHeight, m_contentMargins);
-    // Qt 5 can retain a vertical QTextLayout origin even after the root-frame
-    // margin is cleared. Count that native inset toward the requested Fluent
-    // inset instead of stacking both values; otherwise the capped viewport is
-    // too short and its maximum scroll value lands between lines.
-    // zh_CN: Qt 5 在 root frame margin 清零后仍可能保留垂直文本布局
-    // 原点。将它计入 Fluent inset，避免叠加后压缩 viewport，导致尾部
-    // 滚动停在两行之间。
-    const int nativeVerticalInset = nativeVerticalDocumentInset(m_editor);
-    const int viewportTop = qMax(
-        0, requestedViewportMargins.top() - nativeVerticalInset);
-    const int viewportBottom = qMax(
-        0, requestedViewportMargins.bottom() - nativeVerticalInset);
+    const QMargins viewportMargins = calcContentViewportMargins(
+        naturalHeight, m_lineHeight, m_contentMargins);
     static_cast<InnerTextEdit*>(m_editor)->setContentViewportMargins(
-        requestedViewportMargins.left(), viewportTop,
-        requestedViewportMargins.right(), viewportBottom);
+        viewportMargins.left(), viewportMargins.top(),
+        viewportMargins.right(), viewportMargins.bottom());
 
     m_updatingFormat = false;
 }
@@ -781,10 +775,11 @@ void TextEdit::updateHeightForContent() {
     // vertical insets add only the overflow required to keep both edges real.
     // zh_CN: 默认 Fluent 内边距包含在行槽中，因此单行编辑器仍与 32px 控件等高；
     // 调用方设置更大的上下内边距时，仅补足超出行槽余量的高度。
+    const int naturalHeight = naturalLineHeight(m_editor);
     const int marginOverflow = verticalMarginOverflow(
-        m_editor->font(), m_lineHeight, m_contentMargins);
+        naturalHeight, m_lineHeight, m_contentMargins);
     const int targetHeight = clamped * effectiveLineHeight(
-        m_editor->font(), m_lineHeight) + marginOverflow;
+        naturalHeight, m_lineHeight) + marginOverflow;
     if (minimumHeight() != targetHeight || maximumHeight() != targetHeight)
         setFixedHeight(targetHeight);
 
