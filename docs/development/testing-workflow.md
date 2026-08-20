@@ -110,15 +110,15 @@ reusable validation modules, and owns only the stable `CI Gate` and
   [C++ matrix catalog](../../.github/ci-cpp-matrix.json).
 - [PySide6 CI module](../../.github/workflows/ci-python.yml) owns binding
   generation, compatibility baselines, native Python wheels, clean-environment
-  tests, manylinux repair/audit, and six final platform/architecture status
-  checks that make Linux, Windows, and macOS x64/ARM64 coverage explicit in
-  the Actions UI. Its fast Qt 6.2 compatibility lanes clean-install only the
-  core wheel. Full validation still builds, tests, and clean-installs every
-  declared wheel, while Gallery, typing, visible-example, and native-window
-  acceptance run on both Qt 6.2 gates and the lowest supported CPython lane
-  for each platform/architecture. The module also owns
+  tests, and the optional publishable wheel matrix. Fast CI clean-installs the
+  core wheel on its Qt 6.2 compatibility lanes. Standard full CI adds Gallery,
+  typing, visible-example, and native-window acceptance on the two Qt 6.2 gates
+  and the macOS ARM64 release representative. `python_release_bundle=true`
+  additionally builds every declared release wheel, runs manylinux repair and
+  audit, assembles the immutable 18-wheel bundle, and reports six explicit
+  platform/architecture checks in the Actions UI. The module also owns
   [the wheel matrix](../../bindings/pyside6/wheel-matrix.json).
-  Full release scenarios are queued critical-path first: Windows ARM64 with
+  Python release scenarios are queued critical-path first: Windows ARM64 with
   CPython 3.11 precedes the other extended-acceptance representatives, and
   secondary CPython rows fill runner capacity afterward. This changes only
   scheduling order; it does not reduce the supported or validated matrix.
@@ -130,10 +130,12 @@ reusable validation modules, and owns only the stable `CI Gate` and
 Do not add compiler, SDK, package-manager, wheel, or platform steps to the
 orchestrator. Add them to the owning reusable workflow and update its catalog.
 `.github/scripts/validate-ci-workflow-boundaries.py` enforces that separation.
-All three modules upload artifacts into the caller's workflow run, so release jobs
-can consume Python wheels without coupling C++ validation to PyPI publishing.
+All three modules upload artifacts into the caller's workflow run. Standard
+desktop releases therefore remain independent of PyPI publishing, while an
+opted-in full run exposes the immutable bundle to the Python release workflow.
 
-- GitHub Actions `matrix=fast` is the default PR/push validation tier. It runs
+- GitHub Actions `matrix=fast` is the default pull-request and manual validation
+  tier. It runs
   the narrow `ci_fast` set on Linux x64 and Windows x64, then compiles the
   library on macOS arm64. Native Linux and Windows ARM64 execution stays in the
   scheduled/manual full tier instead of running for every pull request.
@@ -141,7 +143,10 @@ can consume Python wheels without coupling C++ validation to PyPI publishing.
   template files skip the native build matrix. The stable `CI Gate` job still
   reports success, so branch protection can require one check for every pull
   request without spending hosted-runner time on documentation-only changes.
-- GitHub Actions `matrix=full` is the scheduled/manual CI matrix. macOS arm64
+- GitHub Actions `matrix=full` runs automatically after pushes to `main` and on
+  the weekly schedule, and is available manually. Weekly runs also enable the
+  complete Python release bundle; ordinary `main` and manual full runs keep it
+  disabled unless `python_release_bundle=true` is selected. macOS arm64
   remains the broadest macOS test lane for the curated `ci_full` subset; Linux
   covers Ubuntu 22.04 x64 and ARM64 with distro Qt 6.2.x plus official Qt
   5.15.2 `gcc_64` on x64; macOS x64 is a Gallery build smoke; Windows lanes
