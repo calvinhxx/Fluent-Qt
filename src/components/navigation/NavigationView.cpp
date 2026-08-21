@@ -925,9 +925,9 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
         // shared material; it gates this at paint time.
         // zh_CN: 提供 Solid 使用的不透明内容层；原生合成或 UILib 软件 Mica/Acrylic 下，
         // 宿主让透明页面间隙共享同一材质，并在绘制时按强类型状态判断。
-        m_contentHost->setContentSurface(themeColorsRef().bgLayerAlt,
+        m_contentHost->setContentSurface(themeColorsRef().bgLayerOverlay,
                                          framed ? themeRadius().overlay : 0.0,
-                                         QColor());
+                                         themeColorsRef().strokeCard);
         m_contentHost->show();
         m_contentHost->lower();
     }

@@ -92,7 +92,7 @@ void StackContentHost::paintEvent(QPaintEvent* event)
         && windowing::windowBackdropRequiresTransparentClear(window())) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(event->rect(), Qt::transparent);
-        return;
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     }
 
     // In PaintedOpaque mode the top-level already owns one continuous, fully
@@ -100,8 +100,6 @@ void StackContentHost::paintEvent(QPaintEvent* event)
     // that material just like they reveal DWM/vibrancy/compositor backdrops.
     // zh_CN: PaintedOpaque 下由顶层绘制连续且全不透明的材质；宿主不再覆盖，
     // 使透明页面间隙与原生合成背景保持一致。
-    if (windowing::windowBackdropUsesPaintedMaterial(window()))
-        return;
 
     painter.setRenderHint(QPainter::Antialiasing);
 

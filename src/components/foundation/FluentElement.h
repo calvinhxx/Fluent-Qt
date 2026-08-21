@@ -57,7 +57,7 @@ public:
         QColor textAccentPrimary;   // Accent text on plain backgrounds (dark/light blue). zh_CN: 普通背景上的强调色文字。
 
         // Backgrounds & Neutrals
-        QColor bgCanvas, bgLayer, bgLayerAlt, bgSolid;
+        QColor bgCanvas, bgLayer, bgLayerAlt, bgLayerOverlay, bgSolid;
         QColor grey10, grey20, grey30, grey40, grey50, grey60, grey90, grey130, grey160, grey190;
 
         // System / Semantic Colors

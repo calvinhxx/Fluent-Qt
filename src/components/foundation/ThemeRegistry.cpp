@@ -198,6 +198,7 @@ void ThemeRegistry::seedDefaults()
         c.bgCanvas = BackgroundCanvas;
         c.bgLayer = BackgroundLayer;
         c.bgLayerAlt = BackgroundLayerAlt;
+        c.bgLayerOverlay = BackgroundLayerOverlay;
         c.bgSolid = BackgroundSolid;
         c.grey10 = Grey10; c.grey20 = Grey20; c.grey30 = Grey30; c.grey40 = Grey40;
         c.grey50 = Grey50; c.grey60 = Grey60; c.grey90 = Grey90;
@@ -241,6 +242,7 @@ void ThemeRegistry::seedDefaults()
         c.bgCanvas = BackgroundCanvas;
         c.bgLayer = BackgroundLayer;
         c.bgLayerAlt = BackgroundLayerAlt;
+        c.bgLayerOverlay = BackgroundLayerOverlay;
         c.bgSolid = BackgroundSolid;
         c.grey10 = Grey10; c.grey20 = Grey20; c.grey30 = Grey30; c.grey40 = Grey40;
         c.grey50 = Grey50; c.grey60 = Grey60; c.grey90 = Grey90;

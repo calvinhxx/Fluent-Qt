@@ -101,6 +101,7 @@ namespace ThemeColors {
         extern const QColor BackgroundCanvas;
         extern const QColor BackgroundLayer;
         extern const QColor BackgroundLayerAlt;
+        extern const QColor BackgroundLayerOverlay;
         extern const QColor BackgroundSolid;
 
         // --- Neutral Palette ---
@@ -203,6 +204,7 @@ namespace ThemeColors {
         extern const QColor BackgroundCanvas;
         extern const QColor BackgroundLayer;
         extern const QColor BackgroundLayerAlt;
+        extern const QColor BackgroundLayerOverlay;
         extern const QColor BackgroundSolid;
 
         // --- Neutral Palette ---
