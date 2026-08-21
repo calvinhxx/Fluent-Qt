@@ -68,6 +68,9 @@ public:
 
         // Charts
         QList<QColor> charts;
+
+        // Overlay / Translucent Layers
+        QColor bgLayerOverlay;  // layered content mask for translucent windows. zh_CN: 半透明窗口下的分层内容遮罩。
     };
 
     struct FontStyle {

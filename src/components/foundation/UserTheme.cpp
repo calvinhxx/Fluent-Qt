@@ -125,6 +125,8 @@ void forEachColorField(FluentElement::Colors& c, Fn&& fn)
     fn("systemInfoBg", c.systemInfoBg);
     fn("systemSuccess", c.systemSuccess);
     fn("systemSuccessBg", c.systemSuccessBg);
+
+    fn("bgLayerOverlay", c.bgLayerOverlay);
 }
 
 // Serialize one mode's overridable tokens to a complete spec object. Because

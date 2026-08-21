@@ -26,13 +26,14 @@ These are the canonical Fluent swatches: `ThemeRegistry::seedDefaults()` assigns
 | `Fill::AccentDefault` | `#005FB8` | `BackgroundCanvas` | `#F3F3F3` |
 | `Fill::AccentSecondary` | accent @ ~90 % (`0,95,184,230`) | `BackgroundLayer` | `#FFFFFF` |
 | `Fill::AccentTertiary` | accent @ ~80 % (`0,95,184,204`) | `BackgroundLayerAlt` | `#F9F9F9` |
-| `Fill::ControlDefault` | `#FFFFFF` | `BackgroundSolid` | `#EEEEEE` |
-| `Stroke::ControlDefault` | black @ ~5 % (`0,0,0,12`) | `Text::Primary` | black @ ~90 % (`0,0,0,230`) |
-| `Stroke::ControlStrong` | black @ ~44 % (`0,0,0,112`) | `Text::Secondary` | black @ ~60 % (`0,0,0,154`) |
-| `Stroke::DividerDefault` | black @ ~8 % (`0,0,0,20`) | `Text::OnAccentPrimary` | `#FFFFFF` |
-| `Stroke::FocusOuter` | black @ ~90 % (`0,0,0,230`) | `Text::AccentPrimary` | `#003E92` |
-| `System::Critical` | `#C42B1C` | `System::Success` | `#0F7B0F` |
-| `System::Caution` | `#9D5D00` | `System::Informational` | `#015CDA` |
+| `Fill::ControlDefault` | `#FFFFFF` | `BackgroundLayerOverlay` | white @ ~50 % (`255,255,255,128`) |
+| `Stroke::ControlDefault` | black @ ~5 % (`0,0,0,12`) | `BackgroundSolid` | `#EEEEEE` |
+| `Stroke::ControlStrong` | black @ ~44 % (`0,0,0,112`) | `Text::Primary` | black @ ~90 % (`0,0,0,230`) |
+| `Stroke::DividerDefault` | black @ ~8 % (`0,0,0,20`) | `Text::Secondary` | black @ ~60 % (`0,0,0,154`) |
+| `Stroke::FocusOuter` | black @ ~90 % (`0,0,0,230`) | `Text::OnAccentPrimary` | `#FFFFFF` |
+| `System::Critical` | `#C42B1C` | `Text::AccentPrimary` | `#003E92` |
+| `System::Caution` | `#9D5D00` | `System::Success` | `#0F7B0F` |
+| `System::Informational` | `#015CDA` | | |
 
 ### Dark theme (`ThemeColors::Dark`)
 
@@ -41,13 +42,14 @@ These are the canonical Fluent swatches: `ThemeRegistry::seedDefaults()` assigns
 | `Fill::AccentDefault` | `#60CDFF` | `BackgroundCanvas` | `#202020` |
 | `Fill::AccentSecondary` | accent @ ~90 % (`96,205,255,230`) | `BackgroundLayer` | `#2C2C2C` |
 | `Fill::AccentTertiary` | accent @ ~80 % (`96,205,255,204`) | `BackgroundLayerAlt` | `#3D3D3D` |
-| `Fill::ControlDefault` | white @ ~6 % (`255,255,255,15`) | `BackgroundSolid` | `#1C1C1C` |
-| `Stroke::ControlDefault` | white @ ~7 % (`255,255,255,17`) | `Text::Primary` | `#FFFFFF` |
-| `Stroke::ControlStrong` | white @ ~54 % (`255,255,255,138`) | `Text::Secondary` | white @ ~78 % (`255,255,255,199`) |
-| `Stroke::DividerDefault` | white @ ~8 % (`255,255,255,20`) | `Text::OnAccentPrimary` | `#000000` |
-| `Stroke::FocusOuter` | white @ ~90 % (`255,255,255,230`) | `Text::AccentPrimary` | `#99EBFF` |
-| `System::Critical` | `#FF99A4` | `System::Success` | `#6CCB5F` |
-| `System::Caution` | `#FCE100` | `System::Informational` | `#60CDFF` |
+| `Fill::ControlDefault` | white @ ~6 % (`255,255,255,15`) | `BackgroundLayerOverlay` | `#3A3A3A` @ ~30 % (`58,58,58,76`) |
+| `Stroke::ControlDefault` | white @ ~7 % (`255,255,255,17`) | `BackgroundSolid` | `#1C1C1C` |
+| `Stroke::ControlStrong` | white @ ~54 % (`255,255,255,138`) | `Text::Primary` | `#FFFFFF` |
+| `Stroke::DividerDefault` | white @ ~8 % (`255,255,255,20`) | `Text::Secondary` | white @ ~78 % (`255,255,255,199`) |
+| `Stroke::FocusOuter` | white @ ~90 % (`255,255,255,230`) | `Text::OnAccentPrimary` | `#000000` |
+| `System::Critical` | `#FF99A4` | `Text::AccentPrimary` | `#99EBFF` |
+| `System::Caution` | `#FCE100` | `System::Success` | `#6CCB5F` |
+| `System::Informational` | `#60CDFF` | | |
 
 > **Headline accents:** Light `#005FB8` (a deep WinUI blue), Dark `#60CDFF` (a bright cyan).
 > Note the polarity flip in `OnAccentPrimary` — **white** text on the light accent, **black** on

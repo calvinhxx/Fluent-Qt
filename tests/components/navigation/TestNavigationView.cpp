@@ -44,6 +44,18 @@ void publishCompositedBackdrop(QWidget* window)
     fluent::windowing::publishWindowBackdropState(window, state);
 }
 
+void publishPaintedOpaqueBackdrop(QWidget* window)
+{
+    fluent::windowing::BackdropState state;
+    state.requestedEffect = fluent::windowing::BackdropEffect::Mica;
+    state.effectiveEffect = fluent::windowing::BackdropEffect::Mica;
+    state.backend = fluent::windowing::BackdropBackend::PaintedMaterial;
+    state.fidelity = fluent::windowing::BackdropFidelity::Emulated;
+    state.surfaceMode = fluent::windowing::BackdropSurfaceMode::PaintedOpaque;
+    state.platformApplied = true;
+    fluent::windowing::publishWindowBackdropState(window, state);
+}
+
 class NavigationViewTestWindow : public QWidget, public fluent::FluentElement {
 public:
     using QWidget::QWidget;
@@ -1051,6 +1063,72 @@ TEST_F(NavigationViewTest, StackContentHostClearsTranslucentBackdropPixels)
 
     EXPECT_EQ(image.pixelColor(host.rect().center()).alpha(), 0)
         << "A translucent content host must replace pixels left by the outgoing page";
+}
+
+TEST_F(NavigationViewTest, StackContentHostLeavesPaintedBackdropUncoveredWithoutSurface)
+{
+    StackContentHost host;
+    publishPaintedOpaqueBackdrop(&host);
+    host.resize(240, 160);
+
+    QImage image(host.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    host.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    painter.end();
+
+    EXPECT_EQ(image.pixelColor(host.rect().center()).alpha(), 0)
+        << "A host without an explicit surface must not cover the parent material";
+}
+
+TEST_F(NavigationViewTest, StackContentHostUsesDefaultLayerOutsideMaterialBackdrops)
+{
+    StackContentHost host;
+    host.resize(240, 160);
+
+    QImage image(host.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    host.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    painter.end();
+
+    EXPECT_EQ(image.pixelColor(host.rect().center()), QColor("#FFFFFF"));
+}
+
+TEST_F(NavigationViewTest, NavigationViewConfiguresOverlayAcrossBackdropModes)
+{
+    NavigationView nav;
+    nav.setAnimationEnabled(false);
+    nav.setAttribute(Qt::WA_TranslucentBackground, true);
+    nav.resize(240, 160);
+    showAndProcess(nav);
+
+    auto verifyOverlay = [&nav]() {
+        StackContentHost* host = nav.contentHost();
+        ASSERT_NE(host, nullptr);
+        ASSERT_FALSE(host->size().isEmpty());
+
+        QImage image(host->size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+
+        QPainter painter(&image);
+        host->render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+        painter.end();
+
+        const QColor pixel = image.pixelColor(host->rect().center());
+        EXPECT_EQ(pixel.alpha(), 128);
+        EXPECT_NEAR(pixel.red(), 255, 1);
+        EXPECT_NEAR(pixel.green(), 255, 1);
+        EXPECT_NEAR(pixel.blue(), 255, 1);
+    };
+
+    publishCompositedBackdrop(&nav);
+    verifyOverlay();
+
+    publishPaintedOpaqueBackdrop(&nav);
+    verifyOverlay();
 }
 
 TEST_F(NavigationViewTest, StackContentHostCoalescesBackdropClearAcrossRapidSwitches)

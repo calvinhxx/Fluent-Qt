@@ -58,7 +58,8 @@ constexpr ColorMember kColorMembers[] = {
     &Colors::systemInfo,
     &Colors::systemInfoBg,
     &Colors::systemSuccess,
-    &Colors::systemSuccessBg
+    &Colors::systemSuccessBg,
+    &Colors::bgLayerOverlay
 };
 
 bool colorsEqual(const Colors& lhs, const Colors& rhs)
@@ -207,6 +208,7 @@ void ThemeRegistry::seedDefaults()
         c.systemInfo = System::Informational;     c.systemInfoBg = System::InfoBackground;
         c.systemSuccess = System::Success;        c.systemSuccessBg = System::SuccessBackground;
         c.charts = QList<QColor>(Charts.begin(), Charts.end());
+        c.bgLayerOverlay = BackgroundLayerOverlay;
     }
     {
         using namespace ThemeColors::Dark;
@@ -250,6 +252,7 @@ void ThemeRegistry::seedDefaults()
         c.systemInfo = System::Informational;     c.systemInfoBg = System::InfoBackground;
         c.systemSuccess = System::Success;        c.systemSuccessBg = System::SuccessBackground;
         c.charts = QList<QColor>(Charts.begin(), Charts.end());
+        c.bgLayerOverlay = BackgroundLayerOverlay;
     }
 
     m_radiusNone = ::CornerRadius::None;

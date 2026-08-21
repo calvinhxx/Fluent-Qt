@@ -87,35 +87,25 @@ void StackContentHost::paintEvent(QPaintEvent* event)
     // Transparent widgets share the top-level backing store. Replace this region on every
     // backdrop frame so pixels from an outgoing page cannot survive a stack switch.
     // zh_CN: 透明控件共享顶层后备缓冲；每个背景帧都替换此区域，避免切页后保留旧页面像素。
-    if (window()
+    const bool transparentBackdrop = window()
         && window()->testAttribute(Qt::WA_TranslucentBackground)
-        && windowing::windowBackdropRequiresTransparentClear(window())) {
+        && windowing::windowBackdropRequiresTransparentClear(window());
+    if (transparentBackdrop) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(event->rect(), Qt::transparent);
-        return;
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     }
 
-    // In PaintedOpaque mode the top-level already owns one continuous, fully
-    // opaque material. Leave this host unfilled so transparent page gaps reveal
-    // that material just like they reveal DWM/vibrancy/compositor backdrops.
-    // zh_CN: PaintedOpaque 下由顶层绘制连续且全不透明的材质；宿主不再覆盖，
-    // 使透明页面间隙与原生合成背景保持一致。
-    if (windowing::windowBackdropUsesPaintedMaterial(window()))
-        return;
-
-    painter.setRenderHint(QPainter::Antialiasing);
-
     if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0) {
-        // Default content layer when no explicit surface is configured. Painted directly
-        // (not via QPalette::Window + autoFillBackground) so it survives an ancestor style
-        // sheet — QStyleSheetStyle re-polishes the subtree and drops child palettes, which
-        // is why a hosted-page box rendered with a wrong (dark) default on a styled sample card.
-        // zh_CN: 未显式配置表面时的默认内容层。直接绘制（而非 QPalette::Window + autoFill），
-        // 以在祖先样式表下仍正确——QStyleSheetStyle 会重 polish 子树并丢弃子 palette，这正是带样式表
-        // 的示例卡片上托管页盒子渲染成错误深色的原因。
+        // Material backdrops belong to the parent; regular windows retain the legacy layer.
+        // zh_CN: 材质背景由父级提供；普通窗口保留原有的默认内容层。
+        if (transparentBackdrop || windowing::windowBackdropUsesPaintedMaterial(window()))
+            return;
         painter.fillRect(rect(), themeColorsRef().bgLayer);
         return;
     }
+
+    painter.setRenderHint(QPainter::Antialiasing);
 
     const bool hasBorder = m_surfaceBorder.isValid() && m_surfaceBorder.alpha() > 0;
     const fluent::painting::DpiPaintMetrics metrics(painter);
@@ -130,7 +120,7 @@ void StackContentHost::paintEvent(QPaintEvent* event)
     const QPainterPath panel = fluent::overlay::roundedCornerRectPath(
         panelRect, m_surfaceTopLeftRadius, /*TL*/ rounded, /*TR*/ false, /*BR*/ false, /*BL*/ false);
 
-    painter.fillPath(panel, m_surfaceFill);  // opaque layer — survives a translucent top-level
+    painter.fillPath(panel, m_surfaceFill);  // Explicit surface, including a translucent overlay.
     if (hasBorder) {
         painter.setPen(QPen(m_surfaceBorder, stroke.width));
         painter.setBrush(Qt::NoBrush);

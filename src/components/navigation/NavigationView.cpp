@@ -920,12 +920,9 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
 
     if (m_contentHost) {
         m_contentHost->setGeometry(state.contentRect);
-        // Provide the opaque Solid content layer. Under native/composited or
-        // UILib-painted Mica/Acrylic the host leaves transparent page gaps on the
-        // shared material; it gates this at paint time.
-        // zh_CN: 提供 Solid 使用的不透明内容层；原生合成或 UILib 软件 Mica/Acrylic 下，
-        // 宿主让透明页面间隙共享同一材质，并在绘制时按强类型状态判断。
-        m_contentHost->setContentSurface(themeColorsRef().bgLayerAlt,
+        // Configure this layout's content overlay.
+        // zh_CN: 配置当前布局的内容覆盖层。
+        m_contentHost->setContentSurface(themeColorsRef().bgLayerOverlay,
                                          framed ? themeRadius().overlay : 0.0,
                                          QColor());
         m_contentHost->show();

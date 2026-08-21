@@ -205,6 +205,10 @@ class FoundationAuthoringTest(unittest.TestCase):
             tokens.colors.strokeFocusOuter,
             tokens["colors"]["strokeFocusOuter"],
         )
+        self.assertEqual(
+            tokens.colors.bgLayerOverlay,
+            tokens["colors"]["bgLayerOverlay"],
+        )
         self.assertIn("animation", tokens)
         self.assertIn("material", tokens)
         self.assertIn("elevation", tokens)

@@ -499,6 +499,7 @@ TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce) {
 
     auto next = registry.snapshot();
     next.lightColors.accentDefault = QColor(QStringLiteral("#A23BEC"));
+    next.lightColors.bgLayerOverlay = QColor(0x12, 0x34, 0x56, 0x78);
     next.radius.control = 9;
     next.fontFamilyOverride = QStringLiteral("Theme Snapshot Test");
     next.fontScale = 1.25;
@@ -508,6 +509,7 @@ TEST_F(FluentElementTest, ThemeSnapshotCommitsOnceAndRefreshesOnce) {
     EXPECT_EQ(fluent::FluentElement::themeGeneration(), initialGeneration + 1);
     EXPECT_EQ(component->updateCount, initialUpdates + 1);
     EXPECT_EQ(registry.colors(false).accentDefault, QColor(QStringLiteral("#A23BEC")));
+    EXPECT_EQ(registry.colors(false).bgLayerOverlay, QColor(0x12, 0x34, 0x56, 0x78));
     EXPECT_EQ(registry.radius().control, 9);
     EXPECT_EQ(registry.fontFamilyOverride(), QStringLiteral("Theme Snapshot Test"));
     EXPECT_DOUBLE_EQ(registry.fontScale(), 1.25);

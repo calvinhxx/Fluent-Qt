@@ -235,4 +235,35 @@ TEST_F(UserThemeTest, Contract_InMemoryAccentDoesNotWriteAndInvalidColorIsNoOp)
     EXPECT_GT(registry.revision(), initialRevision);
 }
 
+TEST_F(UserThemeTest, Contract_CustomBgLayerOverlayAppliesThroughUserTheme)
+{
+    using fluent::ThemeRegistry;
+    const QString path = fluent::UserTheme::filePath();
+    ASSERT_TRUE(QDir().mkpath(fluent::UserTheme::directory()));
+
+    QJsonObject light;
+    light.insert(QStringLiteral("bgLayerOverlay"), QStringLiteral("#11223344"));
+    QJsonObject dark;
+    dark.insert(QStringLiteral("bgLayerOverlay"), QStringLiteral("#55667788"));
+    QJsonObject root;
+    root.insert(QStringLiteral("schemaVersion"), 1);
+    root.insert(QStringLiteral("theme"), QStringLiteral("fluent"));
+    QJsonObject overrides;
+    overrides.insert(QStringLiteral("light"), light);
+    overrides.insert(QStringLiteral("dark"), dark);
+    root.insert(QStringLiteral("overrides"), overrides);
+
+    QFile file(path);
+    ASSERT_TRUE(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    const QByteArray payload = QJsonDocument(root).toJson();
+    ASSERT_EQ(file.write(payload), payload.size());
+    file.close();
+
+    fluent::UserTheme::apply();
+    EXPECT_EQ(ThemeRegistry::instance().colors(false).bgLayerOverlay.rgba(),
+              QColor(0x11, 0x22, 0x33, 0x44).rgba());
+    EXPECT_EQ(ThemeRegistry::instance().colors(true).bgLayerOverlay.rgba(),
+              QColor(0x55, 0x66, 0x77, 0x88).rgba());
+}
+
 } // namespace
