@@ -297,6 +297,7 @@ target_compile_definitions(_fluentqt PRIVATE
     FLUENT_QT_SHIBOKEN6_GENERATOR_VERSION="${FLUENTQT_SHIBOKEN6_GENERATOR_VERSION}")
 if(MSVC)
     target_compile_options(_fluentqt PRIVATE
+        /MP
         "/FI${CMAKE_CURRENT_SOURCE_DIR}/native/WindowsBindingPrelude.h")
 endif()
 target_include_directories(_fluentqt PRIVATE

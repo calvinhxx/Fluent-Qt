@@ -11,10 +11,11 @@ clean public-install verification without rebuilding any wheel.
 
 ## Immutable release bundle
 
-The stable Release workflow builds one artifact named
-`fluentqt-python-release-bundle` while desktop packages build in parallel.
-Scheduled or manual full CI can build the same artifact by setting
-`python_release_bundle=true`.
+The automatic Release Candidate workflow builds one artifact named
+`fluentqt-python-release-bundle` while the nine desktop packages build in
+parallel. The stable Release workflow promotes that exact artifact instead of
+rebuilding wheels after the tag. Scheduled or manual full CI can still build
+the same bundle by setting `python_release_bundle=true` for isolated checks.
 
 ```text
 python-release-bundle/
@@ -97,13 +98,13 @@ candidate: Core receives 17 wheels and Gallery receives one.
 2. Keep the CMake, vcpkg, documentation, Python API manifest, Core wheel, and
    Gallery wheel versions aligned at `X.Y.Z`.
 3. Review `docs/releases/vX.Y.Z.md` and the maintainer changelog.
-4. Require the automatic `CI full` run on the final `main` commit to pass
-   `Release ready`.
+4. Require the automatic `CI full` and `Release Candidate` runs on the final
+   `main` commit to pass `Release ready` and `Release Candidate ready`.
 
 The normal main-push CI intentionally omits the 18-wheel publication bundle.
-The stable Release workflow builds it once, in parallel with desktop packages.
-This keeps ordinary main validation fast without leaving Python publication as
-a manual follow-up.
+The separate candidate workflow builds it once before tagging, in parallel
+with desktop packages and normal validation. Its receipt binds both candidate
+manifests to the exact repository, commit, run, and producing attempts.
 
 ## Optional TestPyPI check
 
@@ -128,8 +129,8 @@ with `skip-existing`, then performs clean installation and smoke tests.
 
 ## Stable tag and synchronized publication
 
-Create the annotated tag only after the final `main` commit passes
-`Release ready`:
+Create the annotated tag only after the final `main` commit passes both
+`Release ready` and `Release Candidate ready`:
 
 ```bash
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
@@ -138,9 +139,10 @@ git push origin vX.Y.Z
 
 The tag starts one standard chain:
 
-1. Release builds desktop packages and the immutable 18-wheel Python candidate
-   in parallel.
-2. Release publishes the stable GitHub Release.
+1. Release resolves the successful candidate run for the exact tag commit and
+   verifies both manifests and checksums without recompiling.
+2. Release packages the source and Agent Skill, then publishes the stable
+   GitHub Release with the prebuilt desktop packages.
 3. Release dispatches `python-release.yml` at the same tag with `stage=all` and
    waits for it.
 4. The Python workflow publishes and verifies TestPyPI before any PyPI upload.
@@ -149,8 +151,9 @@ The tag starts one standard chain:
 
 The Release run is successful only when the synchronized Python run succeeds.
 The Python preflight verifies the tag, public GitHub Release, source commit,
-originating Release run and attempt, bundle manifest, hashes, and package-index
-state. No wheel is rebuilt between indexes.
+originating Release Candidate run and artifact-producing attempt, bundle
+manifest, hashes, and package-index state. No wheel is rebuilt after the final
+`main` candidate or between indexes.
 
 The TestPyPI smoke uses Linux x64 with CPython 3.11 to:
 
@@ -167,6 +170,11 @@ immutable.
 If the synchronized publisher is interrupted, rerun the failed Release jobs.
 `stage=all` accepts only exact manifest subsets on both indexes, skips matching
 files, and resumes the same TestPyPI-to-PyPI sequence.
+
+If candidate artifacts expire or a post-tag packaging recovery is required,
+manually run `Release Candidate` from the stable tag, wait for
+`Release Candidate ready`, and rerun Release. Do not use `require_ci=false` to
+substitute artifacts from another commit.
 
 ## Partial production recovery
 
@@ -192,7 +200,8 @@ path and never moves a ref or rebuilds a wheel.
 
 Record the following in both roadmaps before marking M6 complete:
 
-- Release run ID, attempt, and source commit;
+- Release Candidate run ID, artifact-producing attempts, and source commit;
+- promoting Release run ID;
 - synchronized Python workflow run ID;
 - `FluentQt` and `FluentQt-Gallery` PyPI project URLs;
 - SHA-256 of `python-release-manifest.json`;

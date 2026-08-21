@@ -10,7 +10,9 @@ represent supported patch lines, not Git Flow release branches.
 ## Branches
 
 - `main` is the default branch, the stable-tag source, and the latest promoted
-  baseline. A push to `main` automatically runs the standard full release gate.
+  baseline. A push to `main` runs both the standard full validation gate and,
+  for an untagged project version, the immutable desktop/Python release
+  candidate build.
 - `release/<major>.<minor>.x` branches are long-lived patch lines. The highest
   active version is the normal working branch for features, fixes, CI,
   packaging, documentation, and other maintenance.
@@ -21,9 +23,10 @@ represent supported patch lines, not Git Flow release branches.
 - Use older supported release branches only for deliberate backports to those
   patch lines. Do not mix new-line development into an older branch.
 - Promote the intended `release/X.Y.x` commit to `main` before a stable release,
-  normally with a rebase merge. Wait for `Release ready` on that final `main`
-  SHA, then cut `vX.Y.Z` from the same commit. Treat tag creation as the
-  publication boundary and obtain explicit maintainer approval first.
+  normally with a rebase merge. Wait for both `Release ready` and
+  `Release Candidate ready` on that final `main` SHA, then cut `vX.Y.Z` from
+  the same commit. Treat tag creation as the publication boundary and obtain
+  explicit maintainer approval first.
 - After publication, merge the tagged `main` commit back into the matching
   release branch before new patch work. This synchronization merge is the
   deliberate exception to the otherwise linear patch line; it keeps the public
@@ -205,10 +208,15 @@ Before creating a stable tag:
 
 1. Confirm the matching `release/X.Y.x` branch contains the intended release
    commit and the maintainer has explicitly approved making the version public.
-   Rebase-merge it into `main`; do not tag the pre-merge release-branch SHA.
-2. Confirm `main` and the worktree are clean and point at the intended commit.
-3. Confirm the CMake project version matches the intended tag.
-4. Wait for the automatic `CI full` run triggered by the `main` push. If a
+2. Add and review `docs/releases/vX.Y.Z.md`, then preview it with
+   `--require-curated` and review the maintainer changelog from the previous
+   release tag. The automatic candidate refuses to package an untagged version
+   without these curated notes.
+3. Rebase-merge the approved commit into `main`; do not tag the pre-merge
+   release-branch SHA.
+4. Confirm `main` and the worktree are clean, point at the intended commit, and
+   declare the intended CMake project version.
+5. Wait for the automatic `CI full` run triggered by the `main` push. If a
    manual rerun is needed, use
    `gh workflow run CI --ref main -f matrix=full -f python_release_bundle=false`.
    The GitHub Release workflow requires the exact tagged commit to have a
@@ -217,13 +225,15 @@ Before creating a stable tag:
    If the change touches CMake, tests, Qt compatibility, platform behavior, or
    component input/windowing behavior, include the Ubuntu 22.04 Linux validation
    covered in [Linux Workflow](linux-workflow.md).
-5. Add `docs/releases/vX.Y.Z.md`, preview it with `--require-curated`, and review
-   the maintainer changelog from the previous release tag.
-6. Create an annotated tag.
-7. Build and attach release artifacts. For Windows/macOS Gallery packages,
-   verify the installed runtime notices and retain the exact corresponding Qt
-   source required by their Qt `NOTICE.md`.
-8. Let the stable Release workflow publish the GitHub Release, installers, one
+6. Wait for `Release Candidate ready` on the same `main` SHA. It must contain
+   the nine desktop packages, the 18-wheel Python bundle, and a receipt binding
+   both candidates to that repository and commit. For a post-tag recovery, run
+   `Release Candidate` manually from the tag instead of weakening the identity
+   checks. For Windows/macOS packages, verify the installed runtime notices and
+   retain the exact corresponding Qt source required by their Qt `NOTICE.md`.
+7. Create and push an annotated tag on that exact SHA.
+8. Let the stable Release workflow verify and promote the immutable candidates,
+   package the source and Agent Skill, then publish the GitHub Release, one
    aggregate `SHA256SUMS.txt`, and the synchronized Python release.
 9. Require the linked Python run to verify TestPyPI, PyPI, attestations, and
    clean installation of both distributions.
@@ -233,11 +243,13 @@ Before creating a stable tag:
 Stable releases publish the supported PySide6 distributions to TestPyPI and
 PyPI; follow the
 [Python publishing runbook](../../bindings/pyside6/PUBLISHING.md). The normal
-main-push gate omits the expensive 18-wheel bundle. A stable tag makes Release
-build that bundle once in parallel with desktop packages, then automatically
-run TestPyPI → verification → PyPI → attestation and install verification.
-Release is not green until the linked Python workflow succeeds. Manual Python
-dispatches are recovery tools, not standard release steps.
+`CI full` run remains focused on validation. In parallel, the automatic
+`Release Candidate` workflow builds the expensive 18-wheel bundle and desktop
+packages before tagging. A stable tag verifies their commit-bound manifests
+and promotes them without recompiling, then runs TestPyPI → verification →
+PyPI → attestation and install verification. Release is not green until the
+linked Python workflow succeeds. Manual candidate and Python dispatches are
+recovery tools, not standard release steps.
 
 Later automation may perform these steps, but the rules above remain the
 contract that CI, changelog, and packaging workflows should enforce.

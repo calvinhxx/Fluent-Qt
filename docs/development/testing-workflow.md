@@ -133,6 +133,11 @@ orchestrator. Add them to the owning reusable workflow and update its catalog.
 All three modules upload artifacts into the caller's workflow run. Standard
 desktop releases therefore remain independent of PyPI publishing, while an
 opted-in full run exposes the immutable bundle to the Python release workflow.
+The separate [Release Candidate workflow](../../.github/workflows/release-candidate.yml)
+runs for an untagged version on `main`: it invokes the reusable desktop
+packaging module and bundle-enabled PySide6 module in parallel, then emits
+`Release Candidate ready` only after both commit-bound manifests pass. The tag
+workflow promotes those artifacts; it does not rebuild them.
 
 - GitHub Actions `matrix=fast` is the default pull-request and manual validation
   tier. It runs
@@ -146,7 +151,8 @@ opted-in full run exposes the immutable bundle to the Python release workflow.
 - GitHub Actions `matrix=full` runs automatically after pushes to `main` and on
   the weekly schedule, and is available manually. Weekly runs also enable the
   complete Python release bundle; ordinary `main` and manual full runs keep it
-  disabled unless `python_release_bundle=true` is selected. macOS arm64
+  disabled unless `python_release_bundle=true` is selected. The automatic
+  Release Candidate run owns the pre-tag publication bundle instead. macOS arm64
   remains the broadest macOS test lane for the curated `ci_full` subset; Linux
   covers Ubuntu 22.04 x64 and ARM64 with distro Qt 6.2.x plus official Qt
   5.15.2 `gcc_64` on x64; macOS x64 is a Gallery build smoke; Windows lanes
