@@ -25,7 +25,7 @@ jobs:
       pyside_release_matrix: ${{ steps.matrix.outputs.pyside_release_matrix }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate PySide6 catalogs and policies
         shell: bash
@@ -88,7 +88,7 @@ jobs:
       VALIDATION_MODE: ${{ needs.plan.outputs.mode }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Linux build tools
         shell: bash
@@ -102,7 +102,7 @@ jobs:
           cache: true
 
       - name: Install Python 3.10
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.10"
           cache: pip
@@ -396,7 +396,7 @@ jobs:
             --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
 
       - name: Upload PySide6 wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-qt624-cp310-linux-x64
           path: |
@@ -406,7 +406,7 @@ jobs:
 
       - name: Upload PySide6 acceptance snapshot
         if: ${{ needs.plan.outputs.mode == 'full' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-showcase-qt624-cp310-linux-x64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
@@ -414,7 +414,7 @@ jobs:
 
       - name: Upload PySide6 native window acceptance
         if: ${{ needs.plan.outputs.mode == 'full' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-window-chrome-qt624-cp310-linux-x64
           path: |
@@ -431,10 +431,10 @@ jobs:
       VALIDATION_MODE: ${{ needs.plan.outputs.mode }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Python 3.10
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.10"
           cache: pip
@@ -717,7 +717,7 @@ jobs:
             --report (Join-Path $env:RUNNER_TEMP "fluentqt-pyside6-window-chrome.json")
 
       - name: Upload PySide6 wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-qt624-cp310-windows-x64
           path: |
@@ -727,7 +727,7 @@ jobs:
 
       - name: Upload PySide6 acceptance snapshot
         if: ${{ needs.plan.outputs.mode == 'full' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-showcase-qt624-cp310-windows-x64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
@@ -735,7 +735,7 @@ jobs:
 
       - name: Upload PySide6 native window acceptance
         if: ${{ needs.plan.outputs.mode == 'full' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-window-chrome-qt624-cp310-windows-x64
           path: |
@@ -750,10 +750,10 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Python 3.11
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
@@ -980,7 +980,7 @@ jobs:
             --report "$RUNNER_TEMP/fluentqt-pyside6-window-chrome.json"
 
       - name: Upload PySide6 wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-qt693-cp311-macos-arm64
           path: |
@@ -989,14 +989,14 @@ jobs:
           if-no-files-found: error
 
       - name: Upload PySide6 acceptance snapshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-showcase-qt693-cp311-macos-arm64
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
           if-no-files-found: error
 
       - name: Upload PySide6 native window acceptance
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-window-chrome-qt693-cp311-macos-arm64
           path: |
@@ -1018,7 +1018,7 @@ jobs:
       matrix: ${{ fromJson(needs.plan.outputs.pyside_release_matrix) }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Verify native runner architecture
         shell: pwsh
@@ -1033,7 +1033,7 @@ jobs:
         run: bash .github/scripts/install-linux-dependencies.sh aqt
 
       - name: Install Python ${{ matrix.python_version }} ${{ matrix.arch }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python_version }}
           architecture: ${{ matrix.python_arch }}
@@ -1542,7 +1542,7 @@ jobs:
 
       - name: Upload PySide6 release wheel
         if: ${{ runner.os != 'Linux' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-${{ matrix.artifact_suffix }}
           path: |
@@ -1552,7 +1552,7 @@ jobs:
 
       - name: Upload PySide6 manylinux release wheel and audit
         if: ${{ runner.os == 'Linux' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-${{ matrix.artifact_suffix }}
           path: |
@@ -1563,7 +1563,7 @@ jobs:
 
       - name: Upload PySide6 release acceptance snapshot
         if: ${{ matrix.extended_acceptance == true }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-showcase-${{ matrix.artifact_suffix }}
           path: ${{ runner.temp }}/fluentqt-pyside6-showcase.png
@@ -1571,7 +1571,7 @@ jobs:
 
       - name: Upload PySide6 release native window acceptance
         if: ${{ matrix.extended_acceptance == true }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pyside6-window-chrome-${{ matrix.artifact_suffix }}
           path: |
@@ -1595,10 +1595,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download release-wheel artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: fluentqt-pyside6-qt693-*
           path: ${{ runner.temp }}/fluentqt-python-release-input
@@ -1656,7 +1656,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload canonical Python release bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-python-release-bundle
           path: ${{ runner.temp }}/fluentqt-python-release-bundle
@@ -1698,7 +1698,7 @@ jobs:
             arch: arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Read current-attempt evidence
         env:
