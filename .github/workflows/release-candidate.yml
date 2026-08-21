@@ -1,0 +1,240 @@
+name: Release Candidate
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  plan:
+    name: Plan release candidate
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.plan.outputs.should_build }}
+      source_commit: ${{ steps.plan.outputs.source_commit }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve candidate identity
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          source_commit="$(git rev-parse 'HEAD^{commit}')"
+          if [[ "$source_commit" != "$GITHUB_SHA" ]]; then
+            echo "::error::Checkout resolved to $source_commit, expected $GITHUB_SHA."
+            exit 1
+          fi
+          version="$(
+            sed -nE \
+              's/^[[:space:]]*project[[:space:]]*\([[:space:]]*FluentQt[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' \
+              CMakeLists.txt | head -n 1
+          )"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Could not resolve a stable FluentQt project version."
+            exit 1
+          fi
+
+          git fetch --force --tags origin
+          should_build="true"
+          tag="v$version"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]] &&
+             git rev-parse -q --verify "refs/tags/$tag^{tag}" >/dev/null; then
+            should_build="false"
+            echo "::notice::$tag already exists; no new release candidate is needed."
+          fi
+          if [[ "$should_build" == "true" && ! -f "docs/releases/$tag.md" ]]; then
+            echo "::error::Release candidate requires curated notes at docs/releases/$tag.md."
+            exit 1
+          fi
+
+          {
+            echo "should_build=$should_build"
+            echo "source_commit=$source_commit"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summarize candidate plan
+        shell: bash
+        run: |
+          {
+            echo "## Release candidate plan"
+            echo ""
+            echo "- Commit: ${{ steps.plan.outputs.source_commit }}"
+            echo "- Version: ${{ steps.plan.outputs.version }}"
+            echo "- Build candidate: ${{ steps.plan.outputs.should_build }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  desktop:
+    name: Build desktop candidate
+    needs: plan
+    if: ${{ needs.plan.outputs.should_build == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/desktop-release-candidate.yml
+    with:
+      source_ref: ${{ needs.plan.outputs.source_commit }}
+      source_commit: ${{ needs.plan.outputs.source_commit }}
+      version: ${{ needs.plan.outputs.version }}
+      package_set: standard
+
+  python:
+    name: Build Python candidate
+    needs: plan
+    if: ${{ needs.plan.outputs.should_build == 'true' }}
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/ci-python.yml
+    with:
+      mode: full
+      build_release_bundle: true
+
+  ready:
+    name: Release Candidate ready
+    needs: [plan, desktop, python]
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.should_build == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Require complete candidate jobs
+        env:
+          DESKTOP_RESULT: ${{ needs.desktop.result }}
+          PYTHON_RESULT: ${{ needs.python.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$DESKTOP_RESULT" != "success" || "$PYTHON_RESULT" != "success" ]]; then
+            echo "::error::Candidate jobs are incomplete: desktop=$DESKTOP_RESULT, python=$PYTHON_RESULT."
+            exit 1
+          fi
+
+      - name: Checkout candidate source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.plan.outputs.source_commit }}
+
+      - name: Download desktop candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-desktop-release-candidate
+          path: ${{ runner.temp }}/fluentqt-desktop-release-candidate
+
+      - name: Download Python candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: fluentqt-python-release-bundle
+          path: ${{ runner.temp }}/fluentqt-python-release-bundle
+
+      - name: Verify synchronized candidates
+        env:
+          SOURCE_COMMIT: ${{ needs.plan.outputs.source_commit }}
+          VERSION: ${{ needs.plan.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          desktop="${RUNNER_TEMP}/fluentqt-desktop-release-candidate"
+          python="${RUNNER_TEMP}/fluentqt-python-release-bundle"
+          desktop_attempt="$(jq -r '.source.ci_run_attempt' "$desktop/desktop-release-manifest.json")"
+          python_attempt="$(jq -r '.source.ci_run_attempt' "$python/python-release-manifest.json")"
+          for attempt in "$desktop_attempt" "$python_attempt"; do
+            if [[ ! "$attempt" =~ ^[1-9][0-9]*$ || "$attempt" -gt "$GITHUB_RUN_ATTEMPT" ]]; then
+              echo "::error::Candidate contains an invalid workflow attempt: $attempt."
+              exit 1
+            fi
+          done
+
+          python3 .github/scripts/assemble-desktop-release-candidate.py verify \
+            --candidate "$desktop" \
+            --version "$VERSION" \
+            --package-set standard \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$SOURCE_COMMIT" \
+            --ci-run-id "$GITHUB_RUN_ID" \
+            --ci-run-attempt "$desktop_attempt"
+          jq -e \
+            --arg version "$VERSION" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commit "$SOURCE_COMMIT" \
+            --argjson run_id "$GITHUB_RUN_ID" \
+            --argjson run_attempt "$python_attempt" \
+            '.schema_version == 1 and
+             .version == $version and
+             .source.repository == $repository and
+             .source.commit == $commit and
+             .source.ci_run_id == $run_id and
+             .source.ci_run_attempt == $run_attempt and
+             (.files | length) == 18 and
+             (.audits | length) == 5' \
+            "$python/python-release-manifest.json"
+          (
+            cd "$python"
+            sha256sum --check PYTHON_SHA256SUMS.txt
+          )
+
+          desktop_manifest_sha="$(sha256sum "$desktop/desktop-release-manifest.json" | awk '{print $1}')"
+          python_manifest_sha="$(sha256sum "$python/python-release-manifest.json" | awk '{print $1}')"
+          jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commit "$SOURCE_COMMIT" \
+            --arg version "$VERSION" \
+            --argjson run_id "$GITHUB_RUN_ID" \
+            --argjson desktop_attempt "$desktop_attempt" \
+            --argjson python_attempt "$python_attempt" \
+            --arg desktop_manifest_sha256 "$desktop_manifest_sha" \
+            --arg python_manifest_sha256 "$python_manifest_sha" \
+            '{
+              schema_version: 1,
+              version: $version,
+              source: {
+                repository: $repository,
+                commit: $commit,
+                ci_run_id: $run_id
+              },
+              desktop: {
+                ci_run_attempt: $desktop_attempt,
+                manifest_sha256: $desktop_manifest_sha256
+              },
+              python: {
+                ci_run_attempt: $python_attempt,
+                manifest_sha256: $python_manifest_sha256
+              }
+            }' > "${RUNNER_TEMP}/release-candidate-receipt.json"
+
+      - name: Upload release candidate receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-release-candidate-receipt
+          path: ${{ runner.temp }}/release-candidate-receipt.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summarize synchronized candidate
+        shell: bash
+        run: |
+          {
+            echo "## Release candidate ready"
+            echo ""
+            echo "- Commit: ${{ needs.plan.outputs.source_commit }}"
+            echo "- Version: ${{ needs.plan.outputs.version }}"
+            echo "- Desktop packages: 9"
+            echo "- Python wheels: 18"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -33,9 +33,11 @@ EXPECTED_JOBS = {
         "publish_pypi",
         "verify_pypi",
     },
+    "desktop-release-candidate.yml": {"plan", "package", "assemble"},
+    "release-candidate.yml": {"plan", "desktop", "python", "ready"},
     "release.yml": {
         "preflight",
-        "package",
+        "desktop_candidate",
         "source-package",
         "python_candidate",
         "publish",
@@ -89,6 +91,8 @@ def validate_boundaries() -> list[str]:
     wasm = contents["ci-wasm.yml"]
     python = contents["ci-python.yml"]
     python_release = contents["python-release.yml"]
+    desktop_candidate = contents["desktop-release-candidate.yml"]
+    release_candidate = contents["release-candidate.yml"]
     release = contents["release.yml"]
     pages = contents["pages.yml"]
 
@@ -110,7 +114,7 @@ def validate_boundaries() -> list[str]:
     if orchestrator.count('python_release_bundle="true"') != 1:
         errors.append(
             "ci.yml must reserve the complete Python bundle for scheduled validation; "
-            "stable Release builds its own candidate"
+            "the release-candidate workflow owns stable promotion artifacts"
         )
     for forbidden in (
         "cmake --build",
@@ -227,6 +231,57 @@ def validate_boundaries() -> list[str]:
             errors.append(f"ci-python.yml contains C++ matrix detail: {forbidden}")
 
     for required in (
+        "workflow_call:",
+        "source_ref:",
+        "source_commit:",
+        "package_set:",
+        ".github/package-matrix.json",
+        "name: fluentqt-desktop-package-${{ matrix.id }}",
+        "name: fluentqt-desktop-release-candidate",
+        ".github/scripts/assemble-desktop-release-candidate.py assemble",
+        ".github/scripts/assemble-desktop-release-candidate.py verify",
+        "for attempt in 1 2 3",
+        "smoke-launch-macos-gallery.sh",
+        "diagnostics-desktop-release-${{ matrix.id }}-${{ github.run_attempt }}",
+    ):
+        if required not in desktop_candidate:
+            errors.append(
+                "desktop-release-candidate.yml is missing packaging contract: "
+                f"{required}"
+            )
+    if "workflow_dispatch:" in desktop_candidate or "push:" in desktop_candidate:
+        errors.append(
+            "desktop-release-candidate.yml must remain reusable-only"
+        )
+
+    for required in (
+        "name: Release Candidate",
+        "branches:\n      - main",
+        "workflow_dispatch:",
+        "uses: ./.github/workflows/desktop-release-candidate.yml",
+        "uses: ./.github/workflows/ci-python.yml",
+        "build_release_bundle: true",
+        "name: Release Candidate ready",
+        "refs/tags/$tag^{tag}",
+        "docs/releases/$tag.md",
+        "name: fluentqt-desktop-release-candidate",
+        "name: fluentqt-python-release-bundle",
+        "name: fluentqt-release-candidate-receipt",
+        ".github/scripts/assemble-desktop-release-candidate.py verify",
+        ".source.ci_run_id == $run_id",
+        "cancel-in-progress: true",
+    ):
+        if required not in release_candidate:
+            errors.append(
+                f"release-candidate.yml is missing promotion contract: {required}"
+            )
+    for forbidden in ("contents: write", "id-token: write", "gh release"):
+        if forbidden in release_candidate:
+            errors.append(
+                f"release-candidate.yml may not publish external state: {forbidden}"
+            )
+
+    for required in (
         "workflow_dispatch:",
         "name: Publish to TestPyPI",
         "name: Publish to PyPI",
@@ -250,8 +305,10 @@ def validate_boundaries() -> list[str]:
         "source_run_attempt:",
         "SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}",
         "source_run_id and source_run_attempt are reserved for stage=all.",
-        'candidate_name" != "Release"',
-        'candidate_path" != ".github/workflows/release.yml"',
+        '"$candidate_name" == "Release"',
+        '"$candidate_path" == ".github/workflows/release.yml"',
+        '"$candidate_name" == "Release Candidate"',
+        '"$candidate_path" == ".github/workflows/release-candidate.yml"',
         "source_ref: ${{ steps.resolve.outputs.source_ref }}",
         "source_tag is only valid for manual TestPyPI recovery.",
         "TestPyPI source_tag recovery requires a published stable GitHub Release.",
@@ -278,6 +335,10 @@ def validate_boundaries() -> list[str]:
         "name: Build Python release candidate",
         "uses: ./.github/workflows/ci-python.yml",
         "build_release_bundle: true",
+        "name: Resolve immutable release candidate",
+        "name: fluentqt-desktop-release-candidate",
+        "run-id: ${{ needs.preflight.outputs.candidate_run_id }}",
+        "needs.preflight.outputs.promote_candidate == 'true'",
         "A manual stable publication must dispatch release.yml from $tag.",
         "name: Dispatch synchronized Python publication",
         "gh workflow run python-release.yml",
@@ -293,17 +354,20 @@ def validate_boundaries() -> list[str]:
             errors.append(f"release.yml is missing Python publication orchestration: {required}")
     stable_publish = job_section(release, "publish")
     for required in (
-        "needs: [preflight, package, source-package, python_candidate]",
+        "needs: [preflight, desktop_candidate, source-package, python_candidate]",
         "always()",
-        "needs.package.result == 'success'",
+        "needs.desktop_candidate.result == 'skipped'",
+        "needs.desktop_candidate.result == 'success'",
         "needs.source-package.result == 'success'",
-        "needs.preflight.outputs.draft == 'true'",
-        "needs.preflight.outputs.prerelease == 'true'",
+        "needs.preflight.outputs.promote_candidate == 'true'",
+        "needs.preflight.outputs.promote_candidate != 'true'",
         "needs.python_candidate.result == 'success'",
+        ".github/scripts/assemble-desktop-release-candidate.py verify",
+        "name: release-source",
     ):
         if required not in stable_publish:
             errors.append(
-                "release.yml stable publish must wait for the Python candidate: "
+                "release.yml stable publish must promote or build a complete candidate: "
                 f"{required}"
             )
     for required in (
@@ -315,9 +379,9 @@ def validate_boundaries() -> list[str]:
             errors.append(
                 f"release.yml is missing scoped release asset handling: {required}"
             )
-    if "name: diagnostics-release-${{ matrix.id }}" not in release:
+    if "name: diagnostics-desktop-release-${{ matrix.id }}-${{ github.run_attempt }}" not in desktop_candidate:
         errors.append(
-            "release.yml must keep diagnostics outside the release-* artifact namespace"
+            "desktop-release-candidate.yml must keep diagnostics outside the candidate namespace"
         )
     for forbidden in (
         "name: release-diagnostics-${{ matrix.id }}",

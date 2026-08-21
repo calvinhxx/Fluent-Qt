@@ -1,0 +1,391 @@
+name: Desktop release candidate module
+
+on:
+  workflow_call:
+    inputs:
+      source_ref:
+        description: Exact Git ref to package.
+        required: true
+        type: string
+      source_commit:
+        description: Commit SHA that the candidate must contain.
+        required: true
+        type: string
+      version:
+        description: Stable X.Y.Z project version used in package names.
+        required: true
+        type: string
+      package_set:
+        description: Desktop package matrix to build.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: Plan desktop candidate
+    runs-on: ubuntu-latest
+    outputs:
+      package_matrix: ${{ steps.plan.outputs.package_matrix }}
+    steps:
+      - name: Checkout selected source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Validate source and select package matrix
+        id: plan
+        env:
+          EXPECTED_COMMIT: ${{ inputs.source_commit }}
+          EXPECTED_VERSION: ${{ inputs.version }}
+          PACKAGE_SET: ${{ inputs.package_set }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$EXPECTED_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::source_commit must be a lowercase 40-character SHA."
+            exit 1
+          fi
+          resolved_commit="$(git rev-parse 'HEAD^{commit}')"
+          if [[ "$resolved_commit" != "$EXPECTED_COMMIT" ]]; then
+            echo "::error::Selected source resolved to $resolved_commit, expected $EXPECTED_COMMIT."
+            exit 1
+          fi
+
+          project_version="$(
+            sed -nE \
+              's/^[[:space:]]*project[[:space:]]*\([[:space:]]*FluentQt[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' \
+              CMakeLists.txt | head -n 1
+          )"
+          if [[ "$project_version" != "$EXPECTED_VERSION" ]]; then
+            echo "::error::Project version $project_version does not match $EXPECTED_VERSION."
+            exit 1
+          fi
+
+          python3 .github/scripts/validate-package-matrix.py
+          case "$PACKAGE_SET" in
+            smoke|standard) ;;
+            *)
+              echo "::error::package_set must be smoke or standard: $PACKAGE_SET"
+              exit 1
+              ;;
+          esac
+          package_matrix="$(
+            jq -c \
+              --arg package_set "$PACKAGE_SET" \
+              '{include: [.scenarios[] | select(.[$package_set] == true)]}' \
+              .github/package-matrix.json
+          )"
+          echo "package_matrix=$package_matrix" >> "$GITHUB_OUTPUT"
+
+  package:
+    name: Package ${{ matrix.id }}
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.package_matrix) }}
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
+      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 0
+
+      - name: Verify candidate commit
+        env:
+          EXPECTED_COMMIT: ${{ inputs.source_commit }}
+        shell: bash
+        run: test "$(git rev-parse 'HEAD^{commit}')" = "$EXPECTED_COMMIT"
+
+      - name: Prepare vcpkg binary cache
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+
+      - name: Cache vcpkg binary packages
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg-binary-cache
+          key: release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
+          restore-keys: |
+            release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
+            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
+
+      - name: Install NSIS
+        if: ${{ matrix.needs_nsis == true }}
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
+      - name: Install Linux build and packaging dependencies
+        if: ${{ matrix.platform == 'linux' }}
+        shell: bash
+        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
+
+      - name: Install host Qt ${{ matrix.qt_version }}
+        if: ${{ matrix.windows_arm64_cross == true }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.host_qt_arch }}
+          cache: true
+
+      - name: Remember host Qt path
+        if: ${{ matrix.windows_arm64_cross == true }}
+        shell: pwsh
+        run: |
+          $qtHostPath = $env:QT_ROOT_DIR -replace '\\', '/'
+          "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
+
+      - name: Install Qt ${{ matrix.qt_version }}
+        if: ${{ matrix.qt_source == 'aqt' }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ matrix.qt_version }}
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Set VCPKG_ROOT
+        shell: pwsh
+        run: |
+          if (-not $env:VCPKG_INSTALLATION_ROOT) {
+            throw "VCPKG_INSTALLATION_ROOT is not set on this runner."
+          }
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
+
+      - name: Configure
+        if: ${{ matrix.windows_arm64_cross != true && matrix.platform != 'linux' }}
+        run: cmake --preset ${{ matrix.preset }}
+
+      - name: Configure Linux package
+        if: ${{ matrix.platform == 'linux' }}
+        shell: bash
+        run: |
+          cmake --preset "${{ matrix.preset }}" \
+            -DCMAKE_DISABLE_FIND_PACKAGE_${{ matrix.disable_qt }}=TRUE
+
+      - name: Configure Windows ARM64 cross-build
+        if: ${{ matrix.windows_arm64_cross == true }}
+        shell: pwsh
+        run: |
+          $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
+          $qtHost = $env:QT_HOST_PATH -replace '\\', '/'
+          cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$qtRoot" -D "QT_HOST_PATH=$qtHost"
+
+      - name: Validate generated Linux desktop entry
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: desktop-file-validate build/${{ matrix.preset }}/app/*.desktop
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $buildArgs = @("--build", "--preset", "${{ matrix.preset }}")
+          $buildParallel = "${{ matrix.build_parallel }}"
+          if ($buildParallel) {
+            $buildArgs += @("--parallel", $buildParallel)
+          } else {
+            $buildArgs += "--parallel"
+          }
+          cmake @buildArgs
+
+      - name: Smoke launch macOS Release Gallery
+        if: ${{ matrix.platform == 'macos' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if bash .github/scripts/smoke-launch-macos-gallery.sh \
+              "build/${{ matrix.preset }}" 15; then
+              exit 0
+            fi
+            if (( attempt < 3 )); then
+              echo "::warning::macOS Gallery smoke failed on attempt $attempt; retrying."
+              sleep $((5 * attempt))
+            fi
+          done
+          exit 1
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $preset = "${{ matrix.package_preset }}"
+          $packageArgs = @("--preset", $preset)
+          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
+            # Keep CPack's NSIS staging tree short. Qt's nested runtime paths
+            # can otherwise exceed the legacy path limit used by makensis.
+            $packageArgs += @("-B", (Join-Path $env:RUNNER_TEMP "fq-win-arm64"))
+          }
+          $maxAttempts = if ($env:RUNNER_OS -eq "macOS") { 3 } else { 1 }
+          $exitCode = 0
+
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            if ($attempt -gt 1) {
+              Write-Host "Retrying package attempt $attempt of $maxAttempts..."
+            }
+
+            & cpack @packageArgs
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) {
+              if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
+                $packageOutput = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
+                $stagedGallery = Get-ChildItem `
+                  -LiteralPath (Join-Path $packageOutput "_CPack_Packages") `
+                  -Filter fluent_qt_gallery.exe -File -Recurse |
+                  Where-Object { $_.Directory.Name -eq "bin" } |
+                  Select-Object -First 1
+                if (-not $stagedGallery) {
+                  throw "The staged Windows ARM64 Gallery executable was not found."
+                }
+                & "$env:GITHUB_WORKSPACE/cmake/VerifyWindowsPeArchitecture.ps1" `
+                  -Root $stagedGallery.Directory.FullName `
+                  -ExpectedMachine Arm64 `
+                  -RequireMsvcRuntime
+              }
+              exit 0
+            }
+
+            if ($attempt -ge $maxAttempts -or $env:RUNNER_OS -ne "macOS") {
+              if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
+                Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP "fq-win-arm64") `
+                  -Filter NSISOutput.log -Recurse -ErrorAction SilentlyContinue |
+                  ForEach-Object { Get-Content -LiteralPath $_.FullName }
+              }
+              exit $exitCode
+            }
+
+            $volumePath = "/Volumes/Fluent-Qt Gallery ${{ inputs.version }}"
+            Write-Warning "cpack failed with exit code $exitCode. Forcing detach of '$volumePath' before retry."
+            & /bin/sync
+            & /usr/bin/hdiutil detach $volumePath -force
+            if ($LASTEXITCODE -ne 0) {
+              Write-Warning "hdiutil detach failed or the volume was already gone."
+            }
+            Start-Sleep -Seconds (5 * $attempt)
+          }
+
+          exit $exitCode
+
+      - name: Verify Linux package metadata
+        if: ${{ runner.os == 'Linux' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(build/${{ matrix.preset }}/*.deb)
+          if (( ${#packages[@]} != 1 )); then
+            echo "::error::Expected exactly one DEB package, found ${#packages[@]}."
+            exit 1
+          fi
+
+          dpkg-deb --field "${packages[0]}" Architecture Depends Recommends
+          depends="$(dpkg-deb --field "${packages[0]}" Depends)"
+          expected="${{ matrix.linux_qt_dependency }}"
+          if [[ -n "$expected" && "$depends" != *"$expected"* ]]; then
+            echo "::error::The DEB package does not depend on $expected."
+            exit 1
+          fi
+
+      - name: Collect package artifact
+        shell: pwsh
+        run: |
+          $source = "build/${{ matrix.preset }}"
+          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
+            $source = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
+          }
+          $destination = "${{ runner.temp }}/release-artifact"
+          New-Item -ItemType Directory -Force -Path $destination | Out-Null
+
+          $packages = @(
+            Get-ChildItem -LiteralPath $source -File |
+              Where-Object { $_.Extension -in @(".dmg", ".exe", ".deb") }
+          )
+          if ($packages.Count -ne 1) {
+            throw "Expected exactly one release package in $source, found $($packages.Count)."
+          }
+
+          $package = $packages[0]
+          $targetName = $package.Name
+          $assetSuffix = "${{ matrix.asset_suffix }}"
+          if ($assetSuffix) {
+            $targetName = "$($package.BaseName)-$assetSuffix$($package.Extension)"
+          }
+          Copy-Item `
+            -LiteralPath $package.FullName `
+            -Destination (Join-Path $destination $targetName)
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-desktop-package-${{ matrix.id }}
+          if-no-files-found: error
+          retention-days: 30
+          path: ${{ runner.temp }}/release-artifact/*
+
+      - name: Upload packaging diagnostics
+        if: failure()
+        timeout-minutes: 10
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-desktop-release-${{ matrix.id }}-${{ github.run_attempt }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            build/${{ matrix.preset }}/CMakeCache.txt
+            build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
+            build/${{ matrix.preset }}/vcpkg-manifest-install.log
+            build/${{ matrix.preset }}/_CPack_Packages/**/*.log
+            ${{ runner.temp }}/fluent-qt-gallery-smoke.log
+            ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
+            build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
+
+  assemble:
+    name: Assemble immutable desktop candidate
+    needs: [plan, package]
+    if: ${{ always() && needs.plan.result == 'success' && needs.package.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref }}
+
+      - name: Download desktop package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fluentqt-desktop-package-*
+          merge-multiple: false
+          path: ${{ runner.temp }}/fluentqt-desktop-release-input
+
+      - name: Assemble and verify desktop candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/assemble-desktop-release-candidate.py assemble \
+            --input "${RUNNER_TEMP}/fluentqt-desktop-release-input" \
+            --output "${RUNNER_TEMP}/fluentqt-desktop-release-candidate" \
+            --version "${{ inputs.version }}" \
+            --package-set "${{ inputs.package_set }}" \
+            --commit "${{ inputs.source_commit }}"
+          python3 .github/scripts/assemble-desktop-release-candidate.py verify \
+            --candidate "${RUNNER_TEMP}/fluentqt-desktop-release-candidate" \
+            --version "${{ inputs.version }}" \
+            --package-set "${{ inputs.package_set }}" \
+            --commit "${{ inputs.source_commit }}"
+
+      - name: Upload canonical desktop release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-desktop-release-candidate
+          path: ${{ runner.temp }}/fluentqt-desktop-release-candidate
+          if-no-files-found: error
+          retention-days: 30

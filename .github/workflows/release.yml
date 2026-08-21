@@ -46,18 +46,22 @@ jobs:
     name: Preflight
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       checks: read
       contents: read
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
+      base_version: ${{ steps.release.outputs.base_version }}
       prerelease: ${{ steps.release.outputs.prerelease }}
       draft: ${{ steps.release.outputs.draft }}
       require_ci: ${{ steps.release.outputs.require_ci }}
       package_set: ${{ steps.release.outputs.package_set }}
-      package_matrix: ${{ steps.release.outputs.package_matrix }}
       publish: ${{ steps.release.outputs.publish }}
       tag_sha: ${{ steps.release.outputs.tag_sha }}
+      promote_candidate: ${{ steps.release.outputs.promote_candidate }}
+      candidate_run_id: ${{ steps.candidate.outputs.run_id }}
+      candidate_run_attempt: ${{ steps.candidate.outputs.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -131,13 +135,8 @@ jobs:
             publish="true"
           fi
 
-          package_catalog=".github/package-matrix.json"
-          smoke_matrix="$(jq -c '{include: [.scenarios[] | select(.smoke == true)]}' "$package_catalog")"
-          release_matrix="$(jq -c '{include: [.scenarios[] | select(.standard == true)]}' "$package_catalog")"
-
           case "$package_set" in
-            smoke) package_matrix="$smoke_matrix" ;;
-            standard) package_matrix="$release_matrix" ;;
+            smoke|standard) ;;
             *)
               echo "::error::package_set must be smoke or standard: $package_set"
               exit 1
@@ -158,16 +157,26 @@ jobs:
             exit 1
           fi
 
+          promote_candidate="false"
+          if [[ "$publish" == "true" &&
+                "$draft" == "false" &&
+                "$prerelease" == "false" &&
+                "$require_ci" == "true" &&
+                "$package_set" == "standard" ]]; then
+            promote_candidate="true"
+          fi
+
           {
             echo "tag=$tag"
             echo "version=$version"
+            echo "base_version=$base_version"
             echo "prerelease=$prerelease"
             echo "draft=$draft"
             echo "require_ci=$require_ci"
             echo "package_set=$package_set"
-            echo "package_matrix=$package_matrix"
             echo "publish=$publish"
             echo "tag_sha=$tag_sha"
+            echo "promote_candidate=$promote_candidate"
           } >> "$GITHUB_OUTPUT"
 
       - name: Verify CI succeeded for tag commit
@@ -187,9 +196,92 @@ jobs:
 
           if [[ "$successful_checks" == "0" ]]; then
             echo "::error::No successful 'Release ready' CI check was found for ${{ steps.release.outputs.tag_sha }}."
-            echo "::error::Run CI with matrix=full on the tagged commit first, or rerun this workflow_dispatch with require_ci=false."
+            echo "::error::Run full CI on the exact commit before creating the tag, or use require_ci=false for a manual recovery build."
             exit 1
           fi
+
+      - name: Resolve immutable release candidate
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMOTE_CANDIDATE: ${{ steps.release.outputs.promote_candidate }}
+          TAG_SHA: ${{ steps.release.outputs.tag_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$PROMOTE_CANDIDATE" != "true" ]]; then
+            {
+              echo "run_id=$GITHUB_RUN_ID"
+              echo "run_attempt=$GITHUB_RUN_ATTEMPT"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          for discovery_attempt in {1..12}; do
+            mapfile -t check_urls < <(
+              gh api \
+                "repos/$GITHUB_REPOSITORY/commits/$TAG_SHA/check-runs?per_page=100" \
+                --jq \
+                  '.check_runs |
+                   map(select(.name == "Release Candidate ready" and
+                              .status == "completed" and
+                              .conclusion == "success")) |
+                   sort_by(.completed_at) | reverse | .[].details_url'
+            )
+            for details_url in "${check_urls[@]}"; do
+              if [[ ! "$details_url" =~ /actions/runs/([0-9]+) ]]; then
+                continue
+              fi
+              run_id="${BASH_REMATCH[1]}"
+              run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id")"
+              run_sha="$(jq -r '.head_sha' <<< "$run_json")"
+              run_name="$(jq -r '.name' <<< "$run_json")"
+              run_path="$(jq -r '.path' <<< "$run_json")"
+              run_event="$(jq -r '.event' <<< "$run_json")"
+              run_status="$(jq -r '.status' <<< "$run_json")"
+              run_conclusion="$(jq -r '.conclusion' <<< "$run_json")"
+              run_attempt="$(jq -r '.run_attempt' <<< "$run_json")"
+              if [[ "$run_sha" != "$TAG_SHA" ||
+                    "$run_name" != "Release Candidate" ||
+                    "$run_path" != ".github/workflows/release-candidate.yml" ||
+                    ("$run_event" != "push" && "$run_event" != "workflow_dispatch") ||
+                    "$run_status" != "completed" ||
+                    "$run_conclusion" != "success" ||
+                    ! "$run_attempt" =~ ^[1-9][0-9]*$ ]]; then
+                continue
+              fi
+
+              artifact_counts="$(
+                gh api \
+                  "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/artifacts?per_page=100" \
+                  --jq \
+                    '[.artifacts[] | select(.expired == false)] |
+                     {
+                       desktop: map(select(.name == "fluentqt-desktop-release-candidate")) | length,
+                       python: map(select(.name == "fluentqt-python-release-bundle")) | length,
+                       receipt: map(select(.name == "fluentqt-release-candidate-receipt")) | length
+                     }'
+              )"
+              if jq -e \
+                '.desktop == 1 and .python == 1 and .receipt == 1' \
+                <<< "$artifact_counts" >/dev/null; then
+                {
+                  echo "run_id=$run_id"
+                  echo "run_attempt=$run_attempt"
+                } >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            done
+            if (( discovery_attempt < 12 )); then
+              echo "::notice::Release candidate evidence is not fully visible; retrying in 10 seconds."
+              sleep 10
+            fi
+          done
+
+          echo "::error::No complete 'Release Candidate ready' run was found for $TAG_SHA."
+          echo "::error::Wait for the automatic candidate on main, or manually run Release Candidate on the tag."
+          exit 1
 
       - name: Summarize preflight
         shell: bash
@@ -205,254 +297,22 @@ jobs:
             echo "- Required CI: ${{ steps.release.outputs.require_ci }}"
             echo "- Package set: ${{ steps.release.outputs.package_set }}"
             echo "- Publish: ${{ steps.release.outputs.publish }}"
+            echo "- Promote candidate: ${{ steps.release.outputs.promote_candidate }}"
+            echo "- Candidate run: ${{ steps.candidate.outputs.run_id }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
-  package:
-    name: Package ${{ matrix.id }}
+  desktop_candidate:
+    name: Build desktop release candidate
     needs: preflight
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 120
+    if: ${{ needs.preflight.outputs.promote_candidate != 'true' }}
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.preflight.outputs.package_matrix) }}
-    env:
-      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}/.vcpkg-binary-cache
-      VCPKG_BINARY_SOURCES: "clear;files,${{ github.workspace }}/.vcpkg-binary-cache,readwrite"
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.preflight.outputs.tag }}
-          fetch-depth: 0
-
-      - name: Prepare vcpkg binary cache
-        shell: pwsh
-        run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
-
-      - name: Cache vcpkg binary packages
-        uses: actions/cache@v4
-        with:
-          path: .vcpkg-binary-cache
-          key: release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
-          restore-keys: |
-            release-vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
-            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-qt-${{ matrix.qt_version }}-
-            vcpkg-${{ runner.os }}-${{ runner.arch }}-${{ matrix.preset }}-
-
-      - name: Install NSIS
-        if: ${{ matrix.needs_nsis == true }}
-        shell: pwsh
-        run: choco install nsis -y --no-progress
-
-      - name: Install Linux build and packaging dependencies
-        if: ${{ matrix.platform == 'linux' }}
-        shell: bash
-        run: bash .github/scripts/install-linux-dependencies.sh "${{ matrix.qt_source }}"
-
-      - name: Install host Qt ${{ matrix.qt_version }}
-        if: ${{ matrix.windows_arm64_cross == true }}
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ matrix.qt_version }}
-          arch: ${{ matrix.host_qt_arch }}
-          cache: true
-
-      - name: Remember host Qt path
-        if: ${{ matrix.windows_arm64_cross == true }}
-        shell: pwsh
-        run: |
-          $qtHostPath = $env:QT_ROOT_DIR -replace '\\', '/'
-          "QT_HOST_PATH=$qtHostPath" >> $env:GITHUB_ENV
-
-      - name: Install Qt ${{ matrix.qt_version }}
-        if: ${{ matrix.qt_source == 'aqt' }}
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ matrix.qt_version }}
-          arch: ${{ matrix.qt_arch }}
-          cache: true
-
-      - name: Set VCPKG_ROOT
-        shell: pwsh
-        run: |
-          if (-not $env:VCPKG_INSTALLATION_ROOT) {
-            throw "VCPKG_INSTALLATION_ROOT is not set on this runner."
-          }
-          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
-
-      - name: Configure
-        if: ${{ matrix.windows_arm64_cross != true && matrix.platform != 'linux' }}
-        run: cmake --preset ${{ matrix.preset }}
-
-      - name: Configure Linux package
-        if: ${{ matrix.platform == 'linux' }}
-        shell: bash
-        run: |
-          cmake --preset "${{ matrix.preset }}" \
-            -DCMAKE_DISABLE_FIND_PACKAGE_${{ matrix.disable_qt }}=TRUE
-
-      - name: Configure Windows ARM64 cross-build
-        if: ${{ matrix.windows_arm64_cross == true }}
-        shell: pwsh
-        run: |
-          $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
-          $qtHost = $env:QT_HOST_PATH -replace '\\', '/'
-          cmake --preset ${{ matrix.preset }} -D "CMAKE_PREFIX_PATH=$qtRoot" -D "QT_HOST_PATH=$qtHost"
-
-      - name: Validate generated Linux desktop entry
-        if: ${{ runner.os == 'Linux' }}
-        shell: bash
-        run: desktop-file-validate build/${{ matrix.preset }}/app/*.desktop
-
-      - name: Build
-        shell: pwsh
-        run: |
-          $buildArgs = @("--build", "--preset", "${{ matrix.preset }}")
-          $buildParallel = "${{ matrix.build_parallel }}"
-          if ($buildParallel) {
-            $buildArgs += @("--parallel", $buildParallel)
-          } else {
-            $buildArgs += "--parallel"
-          }
-          cmake @buildArgs
-
-      - name: Smoke launch macOS Release Gallery
-        if: ${{ matrix.platform == 'macos' }}
-        shell: bash
-        run: bash .github/scripts/smoke-launch-macos-gallery.sh "build/${{ matrix.preset }}"
-
-      - name: Package
-        shell: pwsh
-        run: |
-          $preset = "${{ matrix.package_preset }}"
-          $packageArgs = @("--preset", $preset)
-          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
-            # Keep CPack's NSIS staging tree short. Qt's nested runtime paths
-            # can otherwise exceed the legacy path limit used by makensis.
-            $packageArgs += @("-B", (Join-Path $env:RUNNER_TEMP "fq-win-arm64"))
-          }
-          $maxAttempts = if ($env:RUNNER_OS -eq "macOS") { 3 } else { 1 }
-          $exitCode = 0
-
-          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
-            if ($attempt -gt 1) {
-              Write-Host "Retrying package attempt $attempt of $maxAttempts..."
-            }
-
-            & cpack @packageArgs
-            $exitCode = $LASTEXITCODE
-            if ($exitCode -eq 0) {
-              if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
-                $packageOutput = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
-                $stagedGallery = Get-ChildItem `
-                  -LiteralPath (Join-Path $packageOutput "_CPack_Packages") `
-                  -Filter fluent_qt_gallery.exe -File -Recurse |
-                  Where-Object { $_.Directory.Name -eq "bin" } |
-                  Select-Object -First 1
-                if (-not $stagedGallery) {
-                  throw "The staged Windows ARM64 Gallery executable was not found."
-                }
-                & "$env:GITHUB_WORKSPACE/cmake/VerifyWindowsPeArchitecture.ps1" `
-                  -Root $stagedGallery.Directory.FullName `
-                  -ExpectedMachine Arm64 `
-                  -RequireMsvcRuntime
-              }
-              exit 0
-            }
-
-            if ($attempt -ge $maxAttempts -or $env:RUNNER_OS -ne "macOS") {
-              if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
-                Get-ChildItem -LiteralPath (Join-Path $env:RUNNER_TEMP "fq-win-arm64") `
-                  -Filter NSISOutput.log -Recurse -ErrorAction SilentlyContinue |
-                  ForEach-Object { Get-Content -LiteralPath $_.FullName }
-              }
-              exit $exitCode
-            }
-
-            $volumePath = "/Volumes/Fluent-Qt Gallery ${{ needs.preflight.outputs.version }}"
-            Write-Warning "cpack failed with exit code $exitCode. Forcing detach of '$volumePath' before retry."
-            & /bin/sync
-            & /usr/bin/hdiutil detach $volumePath -force
-            if ($LASTEXITCODE -ne 0) {
-              Write-Warning "hdiutil detach failed or the volume was already gone."
-            }
-            Start-Sleep -Seconds (5 * $attempt)
-          }
-
-          exit $exitCode
-
-      - name: Verify Linux package metadata
-        if: ${{ runner.os == 'Linux' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          packages=(build/${{ matrix.preset }}/*.deb)
-          if (( ${#packages[@]} != 1 )); then
-            echo "::error::Expected exactly one DEB package, found ${#packages[@]}."
-            exit 1
-          fi
-
-          dpkg-deb --field "${packages[0]}" Architecture Depends Recommends
-          depends="$(dpkg-deb --field "${packages[0]}" Depends)"
-          expected="${{ matrix.linux_qt_dependency }}"
-          if [[ -n "$expected" && "$depends" != *"$expected"* ]]; then
-            echo "::error::The DEB package does not depend on $expected."
-            exit 1
-          fi
-
-      - name: Collect package artifacts
-        shell: pwsh
-        run: |
-          $source = "build/${{ matrix.preset }}"
-          if ("${{ matrix.windows_arm64_cross }}" -eq "true") {
-            $source = Join-Path $env:RUNNER_TEMP "fq-win-arm64"
-          }
-          $destination = "${{ runner.temp }}/release-artifacts"
-          New-Item -ItemType Directory -Force -Path $destination | Out-Null
-
-          $packages = Get-ChildItem -LiteralPath $source -File |
-            Where-Object { $_.Extension -in @(".dmg", ".exe", ".deb") }
-          if (-not $packages) {
-            throw "No release package was found in $source."
-          }
-
-          $assetSuffix = "${{ matrix.asset_suffix }}"
-          foreach ($package in $packages) {
-            $targetName = $package.Name
-            if ($assetSuffix) {
-              $targetName = "$($package.BaseName)-$assetSuffix$($package.Extension)"
-            }
-            $targetPath = Join-Path $destination $targetName
-            Copy-Item -LiteralPath $package.FullName -Destination $targetPath
-          }
-
-      - name: Upload package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-${{ matrix.id }}
-          if-no-files-found: error
-          retention-days: 14
-          path: ${{ runner.temp }}/release-artifacts/*
-
-      - name: Upload packaging diagnostics
-        if: failure()
-        timeout-minutes: 10
-        uses: actions/upload-artifact@v4
-        with:
-          name: diagnostics-release-${{ matrix.id }}
-          if-no-files-found: ignore
-          retention-days: 7
-          path: |
-            build/${{ matrix.preset }}/CMakeCache.txt
-            build/${{ matrix.preset }}/CMakeFiles/CMakeConfigureLog.yaml
-            build/${{ matrix.preset }}/vcpkg-manifest-install.log
-            build/${{ matrix.preset }}/_CPack_Packages/**/*.log
-            ${{ runner.temp }}/fluent-qt-gallery-smoke.log
-            ${{ runner.temp }}/fq-win-arm64/_CPack_Packages/**/*.log
-            build/${{ matrix.preset }}/vcpkg_installed/vcpkg/issue_body.md
+    uses: ./.github/workflows/desktop-release-candidate.yml
+    with:
+      source_ref: ${{ needs.preflight.outputs.tag }}
+      source_commit: ${{ needs.preflight.outputs.tag_sha }}
+      version: ${{ needs.preflight.outputs.base_version }}
+      package_set: ${{ needs.preflight.outputs.package_set }}
 
   source-package:
     name: Package source and Agent Skill
@@ -495,7 +355,8 @@ jobs:
       ${{
         needs.preflight.outputs.publish == 'true' &&
         needs.preflight.outputs.draft == 'false' &&
-        needs.preflight.outputs.prerelease == 'false'
+        needs.preflight.outputs.prerelease == 'false' &&
+        needs.preflight.outputs.promote_candidate != 'true'
       }}
     permissions:
       actions: read
@@ -507,21 +368,26 @@ jobs:
 
   publish:
     name: Publish GitHub Release
-    needs: [preflight, package, source-package, python_candidate]
+    needs: [preflight, desktop_candidate, source-package, python_candidate]
     if: >-
       ${{
         always() &&
         needs.preflight.result == 'success' &&
-        needs.package.result == 'success' &&
         needs.source-package.result == 'success' &&
         needs.preflight.outputs.publish == 'true' &&
-        (needs.preflight.outputs.draft == 'true' ||
-         needs.preflight.outputs.prerelease == 'true' ||
-         needs.python_candidate.result == 'success')
+        ((needs.preflight.outputs.promote_candidate == 'true' &&
+          needs.desktop_candidate.result == 'skipped' &&
+          needs.python_candidate.result == 'skipped') ||
+         (needs.preflight.outputs.promote_candidate != 'true' &&
+          needs.desktop_candidate.result == 'success' &&
+          (needs.preflight.outputs.draft == 'true' ||
+           needs.preflight.outputs.prerelease == 'true' ||
+           needs.python_candidate.result == 'success')))
       }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
+      actions: read
       contents: write
     steps:
       - name: Checkout release tag
@@ -541,11 +407,45 @@ jobs:
             --check \
             --output release-notes.md
 
-      - name: Download package artifacts
+      - name: Download immutable desktop candidate
         uses: actions/download-artifact@v4
         with:
-          pattern: release-*
-          merge-multiple: true
+          name: fluentqt-desktop-release-candidate
+          path: ${{ runner.temp }}/fluentqt-desktop-release-candidate
+          run-id: ${{ needs.preflight.outputs.candidate_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify and stage desktop packages
+        env:
+          CANDIDATE_RUN_ID: ${{ needs.preflight.outputs.candidate_run_id }}
+          CANDIDATE_RUN_ATTEMPT: ${{ needs.preflight.outputs.candidate_run_attempt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          candidate="${RUNNER_TEMP}/fluentqt-desktop-release-candidate"
+          manifest="$candidate/desktop-release-manifest.json"
+          source_attempt="$(jq -r '.source.ci_run_attempt' "$manifest")"
+          if [[ ! "$source_attempt" =~ ^[1-9][0-9]*$ ||
+                "$source_attempt" -gt "$CANDIDATE_RUN_ATTEMPT" ]]; then
+            echo "::error::Desktop candidate contains an invalid workflow attempt."
+            exit 1
+          fi
+          python3 .github/scripts/assemble-desktop-release-candidate.py verify \
+            --candidate "$candidate" \
+            --version "${{ needs.preflight.outputs.base_version }}" \
+            --package-set "${{ needs.preflight.outputs.package_set }}" \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "${{ needs.preflight.outputs.tag_sha }}" \
+            --ci-run-id "$CANDIDATE_RUN_ID" \
+            --ci-run-attempt "$source_attempt"
+          mkdir -p release-dist
+          cp "$candidate/dist/"* release-dist/
+
+      - name: Download source packages
+        uses: actions/download-artifact@v4
+        with:
+          name: release-source
           path: release-dist
 
       - name: Generate SHA256SUMS.txt
@@ -632,11 +532,14 @@ jobs:
       ${{
         always() &&
         needs.preflight.result == 'success' &&
-        needs.python_candidate.result == 'success' &&
         needs.publish.result == 'success' &&
         needs.preflight.outputs.publish == 'true' &&
         needs.preflight.outputs.draft == 'false' &&
-        needs.preflight.outputs.prerelease == 'false'
+        needs.preflight.outputs.prerelease == 'false' &&
+        ((needs.preflight.outputs.promote_candidate == 'true' &&
+          needs.python_candidate.result == 'skipped') ||
+         (needs.preflight.outputs.promote_candidate != 'true' &&
+          needs.python_candidate.result == 'success'))
       }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -649,6 +552,8 @@ jobs:
         with:
           name: fluentqt-python-release-bundle
           path: ${{ runner.temp }}/fluentqt-python-release-bundle
+          run-id: ${{ needs.preflight.outputs.candidate_run_id }}
+          github-token: ${{ github.token }}
 
       - name: Resolve synchronized candidate identity
         id: candidate
@@ -659,11 +564,20 @@ jobs:
           manifest="${RUNNER_TEMP}/fluentqt-python-release-bundle/python-release-manifest.json"
           source_run_id="$(jq -r '.source.ci_run_id' "$manifest")"
           source_run_attempt="$(jq -r '.source.ci_run_attempt' "$manifest")"
-          if [[ "$source_run_id" != "$GITHUB_RUN_ID" ||
-                ! "$source_run_attempt" =~ ^[1-9][0-9]*$ ]]; then
-            echo "::error::The Python candidate does not belong to this Release run."
+          if [[ "$source_run_id" != "${{ needs.preflight.outputs.candidate_run_id }}" ||
+                ! "$source_run_attempt" =~ ^[1-9][0-9]*$ ||
+                "$source_run_attempt" -gt "${{ needs.preflight.outputs.candidate_run_attempt }}" ]]; then
+            echo "::error::The Python candidate does not belong to the selected candidate run."
             exit 1
           fi
+          jq -e \
+            --arg version "${{ needs.preflight.outputs.base_version }}" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg commit "${{ needs.preflight.outputs.tag_sha }}" \
+            '.version == $version and
+             .source.repository == $repository and
+             .source.commit == $commit' \
+            "$manifest"
           {
             echo "source_run_id=$source_run_id"
             echo "source_run_attempt=$source_run_attempt"

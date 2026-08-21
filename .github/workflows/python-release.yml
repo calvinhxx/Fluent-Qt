@@ -24,12 +24,12 @@ on:
         default: ""
         type: string
       source_run_id:
-        description: Release workflow run that produced the synchronized candidate.
+        description: Release or Release Candidate run that produced the synchronized candidate.
         required: false
         default: ""
         type: string
       source_run_attempt:
-        description: Attempt of the Release workflow run that produced the candidate.
+        description: Artifact-producing attempt within the selected source run.
         required: false
         default: ""
         type: string
@@ -180,15 +180,21 @@ jobs:
               candidate_status="$(jq -r '.status' <<< "$candidate_json")"
               candidate_conclusion="$(jq -r '.conclusion // ""' <<< "$candidate_json")"
               candidate_attempt="$(jq -r '.run_attempt' <<< "$candidate_json")"
+              candidate_workflow="false"
+              if [[ ("$candidate_name" == "Release" &&
+                     "$candidate_path" == ".github/workflows/release.yml") ||
+                    ("$candidate_name" == "Release Candidate" &&
+                     "$candidate_path" == ".github/workflows/release-candidate.yml") ]]; then
+                candidate_workflow="true"
+              fi
               if [[ "$candidate_sha" != "$source_commit" ||
-                    "$candidate_name" != "Release" ||
-                    "$candidate_path" != ".github/workflows/release.yml" ||
+                    "$candidate_workflow" != "true" ||
                     ("$candidate_event" != "push" && "$candidate_event" != "workflow_dispatch") ||
                     ("$candidate_status" != "in_progress" && "$candidate_status" != "completed") ||
                     ( -n "$candidate_conclusion" && "$candidate_conclusion" != "success" ) ||
                     ! "$candidate_attempt" =~ ^[1-9][0-9]*$ ||
                     "$SOURCE_RUN_ATTEMPT" -gt "$candidate_attempt" ]]; then
-                echo "::error::The supplied Release run does not match the stable publication candidate."
+                echo "::error::The supplied source run does not match the stable publication candidate."
                 exit 1
               fi
               artifact_count="$(
@@ -205,12 +211,12 @@ jobs:
                 break
               fi
               if (( discovery_attempt < 12 )); then
-                echo "::notice::The Release bundle is not visible yet; retrying in 10 seconds."
+                echo "::notice::The synchronized bundle is not visible yet; retrying in 10 seconds."
                 sleep 10
               fi
             done
             if [[ -z "$ci_run_id" ]]; then
-              echo "::error::The synchronized Release run did not expose one Python bundle within 120 seconds."
+              echo "::error::The synchronized source run did not expose one Python bundle within 120 seconds."
               exit 1
             fi
           else
