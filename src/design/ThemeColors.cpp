@@ -164,7 +164,7 @@ namespace ThemeColors::Dark {
 const QColor BackgroundCanvas("#202020");
 const QColor BackgroundLayer("#2C2C2C");
 const QColor BackgroundLayerAlt("#3D3D3D");
-const QColor BackgroundLayerOverlay(255, 255, 255, 12);
+const QColor BackgroundLayerOverlay(58, 58, 58, 76);
 const QColor BackgroundSolid("#1C1C1C");
 const QColor Grey10("#FAF9F8");
 const QColor Grey20("#F3F2F1");
