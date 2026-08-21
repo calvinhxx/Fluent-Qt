@@ -306,6 +306,27 @@ def validate_boundaries() -> list[str]:
                 "release.yml stable publish must wait for the Python candidate: "
                 f"{required}"
             )
+    for required in (
+        "find release-dist -maxdepth 1 -type f -print0 | sort -z",
+        "mapfile -d '' release_assets",
+        '"${release_assets[@]}"',
+    ):
+        if required not in stable_publish:
+            errors.append(
+                f"release.yml is missing scoped release asset handling: {required}"
+            )
+    if "name: diagnostics-release-${{ matrix.id }}" not in release:
+        errors.append(
+            "release.yml must keep diagnostics outside the release-* artifact namespace"
+        )
+    for forbidden in (
+        "name: release-diagnostics-${{ matrix.id }}",
+        "release-dist/*",
+    ):
+        if forbidden in release:
+            errors.append(
+                f"release.yml may publish unintended release assets: {forbidden}"
+            )
     if "id-token: write" in release:
         errors.append("release.yml must dispatch the top-level publisher, not receive OIDC")
     publisher_contracts = {
