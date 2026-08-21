@@ -87,17 +87,21 @@ void StackContentHost::paintEvent(QPaintEvent* event)
     // Transparent widgets share the top-level backing store. Replace this region on every
     // backdrop frame so pixels from an outgoing page cannot survive a stack switch.
     // zh_CN: 透明控件共享顶层后备缓冲；每个背景帧都替换此区域，避免切页后保留旧页面像素。
-    if (window()
+    const bool transparentBackdrop = window()
         && window()->testAttribute(Qt::WA_TranslucentBackground)
-        && windowing::windowBackdropRequiresTransparentClear(window())) {
+        && windowing::windowBackdropRequiresTransparentClear(window());
+    if (transparentBackdrop) {
         painter.setCompositionMode(QPainter::CompositionMode_Source);
         painter.fillRect(event->rect(), Qt::transparent);
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     }
 
-    // Paint only an explicitly configured surface; otherwise page gaps stay transparent.
-    // zh_CN: 仅绘制显式配置的表面；否则页面间隙保持透明。
     if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0) {
+        // Material backdrops belong to the parent; regular windows retain the legacy layer.
+        // zh_CN: 材质背景由父级提供；普通窗口保留原有的默认内容层。
+        if (transparentBackdrop || windowing::windowBackdropUsesPaintedMaterial(window()))
+            return;
+        painter.fillRect(rect(), themeColorsRef().bgLayer);
         return;
     }
 

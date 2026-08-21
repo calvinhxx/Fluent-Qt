@@ -1082,6 +1082,21 @@ TEST_F(NavigationViewTest, StackContentHostLeavesPaintedBackdropUncoveredWithout
         << "A host without an explicit surface must not cover the parent material";
 }
 
+TEST_F(NavigationViewTest, StackContentHostUsesDefaultLayerOutsideMaterialBackdrops)
+{
+    StackContentHost host;
+    host.resize(240, 160);
+
+    QImage image(host.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+
+    QPainter painter(&image);
+    host.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    painter.end();
+
+    EXPECT_EQ(image.pixelColor(host.rect().center()), QColor("#FFFFFF"));
+}
+
 TEST_F(NavigationViewTest, NavigationViewConfiguresOverlayAcrossBackdropModes)
 {
     NavigationView nav;

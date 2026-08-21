@@ -107,10 +107,11 @@ public:
      * @brief Configures the optional content surface drawn above the window backdrop.
      * zh_CN: 配置绘制在窗口背景之上的可选内容表面。
      *
-     * The host remains transparent until a valid, non-transparent fill is provided,
-     * so page gaps continue to reveal the shared native or UILib-painted backdrop.
-     * zh_CN: 在提供有效且非透明的填充前宿主保持透明，使页面间隙继续露出共享的原生或
-     * UILib 软件背景。
+     * The host paints this fill when it is valid and non-transparent. Without an
+     * explicit fill, material backdrop modes remain transparent and other modes use
+     * the default content layer.
+     * zh_CN: 填充有效且非透明时宿主绘制该表面；未显式配置时，材质背景模式保持透明，
+     * 其他模式使用默认内容层。
      */
     void setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border);
 
