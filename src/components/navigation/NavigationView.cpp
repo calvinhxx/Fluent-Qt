@@ -927,7 +927,7 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
         // 宿主让透明页面间隙共享同一材质，并在绘制时按强类型状态判断。
         m_contentHost->setContentSurface(themeColorsRef().bgLayerOverlay,
                                          framed ? themeRadius().overlay : 0.0,
-                                         themeColorsRef().strokeCard);
+                                         QColor());
         m_contentHost->show();
         m_contentHost->lower();
     }

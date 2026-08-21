@@ -40,6 +40,7 @@ constexpr ColorMember kColorMembers[] = {
     &Colors::bgCanvas,
     &Colors::bgLayer,
     &Colors::bgLayerAlt,
+    &Colors::bgLayerOverlay,
     &Colors::bgSolid,
     &Colors::grey10,
     &Colors::grey20,

@@ -92,6 +92,7 @@ void forEachColorField(FluentElement::Colors& c, Fn&& fn)
     fn("bgCanvas", c.bgCanvas);
     fn("bgLayer", c.bgLayer);
     fn("bgLayerAlt", c.bgLayerAlt);
+    fn("bgLayerOverlay", c.bgLayerOverlay);
     fn("bgSolid", c.bgSolid);
 
     fn("textPrimary", c.textPrimary);
