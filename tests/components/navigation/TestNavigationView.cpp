@@ -1082,26 +1082,38 @@ TEST_F(NavigationViewTest, StackContentHostLeavesPaintedBackdropUncoveredWithout
         << "A host without an explicit surface must not cover the parent material";
 }
 
-TEST_F(NavigationViewTest, StackContentHostPaintsExplicitOverlayAcrossBackdropModes)
+TEST_F(NavigationViewTest, NavigationViewConfiguresOverlayAcrossBackdropModes)
 {
-    StackContentHost host;
-    host.setAttribute(Qt::WA_TranslucentBackground, true);
-    publishCompositedBackdrop(&host);
-    host.setContentSurface(QColor(32, 96, 192, 128), 0.0, QColor());
-    host.resize(240, 160);
+    NavigationView nav;
+    nav.setAnimationEnabled(false);
+    nav.setAttribute(Qt::WA_TranslucentBackground, true);
+    nav.resize(240, 160);
+    showAndProcess(nav);
 
-    QImage image(host.size(), QImage::Format_ARGB32_Premultiplied);
-    image.fill(QColor(255, 0, 255, 255));
+    auto verifyOverlay = [&nav]() {
+        StackContentHost* host = nav.contentHost();
+        ASSERT_NE(host, nullptr);
+        ASSERT_FALSE(host->size().isEmpty());
 
-    QPainter painter(&image);
-    host.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
-    painter.end();
+        QImage image(host->size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
 
-    const QColor pixel = image.pixelColor(host.rect().center());
-    EXPECT_EQ(pixel.alpha(), 128);
-    EXPECT_NEAR(pixel.red(), 32, 1);
-    EXPECT_NEAR(pixel.green(), 96, 1);
-    EXPECT_NEAR(pixel.blue(), 192, 1);
+        QPainter painter(&image);
+        host->render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+        painter.end();
+
+        const QColor pixel = image.pixelColor(host->rect().center());
+        EXPECT_EQ(pixel.alpha(), 128);
+        EXPECT_NEAR(pixel.red(), 255, 1);
+        EXPECT_NEAR(pixel.green(), 255, 1);
+        EXPECT_NEAR(pixel.blue(), 255, 1);
+    };
+
+    publishCompositedBackdrop(&nav);
+    verifyOverlay();
+
+    publishPaintedOpaqueBackdrop(&nav);
+    verifyOverlay();
 }
 
 TEST_F(NavigationViewTest, StackContentHostCoalescesBackdropClearAcrossRapidSwitches)

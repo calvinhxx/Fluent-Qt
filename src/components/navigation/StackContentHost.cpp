@@ -118,7 +118,7 @@ void StackContentHost::paintEvent(QPaintEvent* event)
     const QPainterPath panel = fluent::overlay::roundedCornerRectPath(
         panelRect, m_surfaceTopLeftRadius, /*TL*/ rounded, /*TR*/ false, /*BR*/ false, /*BL*/ false);
 
-    painter.fillPath(panel, m_surfaceFill);  // opaque layer — survives a translucent top-level
+    painter.fillPath(panel, m_surfaceFill);  // Explicit surface, including a translucent overlay.
     if (hasBorder) {
         painter.setPen(QPen(m_surfaceBorder, stroke.width));
         painter.setBrush(Qt::NoBrush);
