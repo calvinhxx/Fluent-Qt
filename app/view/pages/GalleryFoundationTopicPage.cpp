@@ -863,6 +863,7 @@ void GalleryFoundationTopicPage::buildColor()
             swatch(QStringLiteral("bgCanvas"), [](const Colors& c) { return c.bgCanvas; }),
             swatch(QStringLiteral("bgLayer"), [](const Colors& c) { return c.bgLayer; }),
             swatch(QStringLiteral("bgLayerAlt"), [](const Colors& c) { return c.bgLayerAlt; }),
+            swatch(QStringLiteral("bgLayerOverlay"), [](const Colors& c) { return c.bgLayerOverlay; }),
             swatch(QStringLiteral("bgSolid"), [](const Colors& c) { return c.bgSolid; }),
             swatch(QStringLiteral("grey10"), [](const Colors& c) { return c.grey10; }),
             swatch(QStringLiteral("grey20"), [](const Colors& c) { return c.grey20; }),
