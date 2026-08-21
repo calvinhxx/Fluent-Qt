@@ -104,14 +104,13 @@ public:
     void setTransitionEffect(TransitionEffect effect);
 
     /**
-     * @brief Configures the opaque Solid-mode content surface.
-     * zh_CN: 配置 Solid 模式使用的不透明内容表面。
+     * @brief Configures the optional content surface drawn above the window backdrop.
+     * zh_CN: 配置绘制在窗口背景之上的可选内容表面。
      *
-     * The host paints this layer for Solid and leaves material modes transparent
-     * to the shared native or UILib-painted backdrop. Pass an invalid/transparent
-     * fill to disable the Solid layer as well.
-     * zh_CN: Solid 下宿主绘制该层；材质模式保持透明以共享原生或 UILib 软件背景。
-     * 传入无效/透明填充也可关闭 Solid 层。
+     * The host remains transparent until a valid, non-transparent fill is provided,
+     * so page gaps continue to reveal the shared native or UILib-painted backdrop.
+     * zh_CN: 在提供有效且非透明的填充前宿主保持透明，使页面间隙继续露出共享的原生或
+     * UILib 软件背景。
      */
     void setContentSurface(const QColor& fill, qreal topLeftRadius, const QColor& border);
 

@@ -95,25 +95,15 @@ void StackContentHost::paintEvent(QPaintEvent* event)
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     }
 
-    // In PaintedOpaque mode the top-level already owns one continuous, fully
-    // opaque material. Leave this host unfilled so transparent page gaps reveal
-    // that material just like they reveal DWM/vibrancy/compositor backdrops.
-    // zh_CN: PaintedOpaque 下由顶层绘制连续且全不透明的材质；宿主不再覆盖，
-    // 使透明页面间隙与原生合成背景保持一致。
-
-    painter.setRenderHint(QPainter::Antialiasing);
-
+    // The NavigationView explicitly supplies its overlay when it needs one.
+    // Otherwise every backdrop mode must leave page gaps to the parent material.
+    // zh_CN: NavigationView 需要覆盖层时会显式提供；否则所有背景模式均保留页面间隙，
+    // 使其露出父级材质。
     if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0) {
-        // Default content layer when no explicit surface is configured. Painted directly
-        // (not via QPalette::Window + autoFillBackground) so it survives an ancestor style
-        // sheet — QStyleSheetStyle re-polishes the subtree and drops child palettes, which
-        // is why a hosted-page box rendered with a wrong (dark) default on a styled sample card.
-        // zh_CN: 未显式配置表面时的默认内容层。直接绘制（而非 QPalette::Window + autoFill），
-        // 以在祖先样式表下仍正确——QStyleSheetStyle 会重 polish 子树并丢弃子 palette，这正是带样式表
-        // 的示例卡片上托管页盒子渲染成错误深色的原因。
-        painter.fillRect(rect(), themeColorsRef().bgLayer);
         return;
     }
+
+    painter.setRenderHint(QPainter::Antialiasing);
 
     const bool hasBorder = m_surfaceBorder.isValid() && m_surfaceBorder.alpha() > 0;
     const fluent::painting::DpiPaintMetrics metrics(painter);
