@@ -45,7 +45,7 @@ jobs:
       should_build_wasm: ${{ steps.changes.outputs.should_build_wasm }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate CI orchestration contracts
         shell: bash

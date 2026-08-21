@@ -58,7 +58,7 @@ jobs:
       recovery: ${{ steps.resolve.outputs.recovery }}
     steps:
       - name: Checkout selected release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -323,13 +323,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout selected release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: ${{ needs.preflight.outputs.source_ref }}
 
       - name: Download canonical bundle from full CI
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: fluentqt-python-release-bundle
           path: ${{ runner.temp }}/fluentqt-python-publish-candidate
@@ -404,7 +404,7 @@ jobs:
           fi
 
       - name: Upload vetted publication candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-python-publish-candidate
           path: ${{ runner.temp }}/fluentqt-python-publish-candidate
@@ -412,7 +412,7 @@ jobs:
           retention-days: 7
 
       - name: Upload FluentQt publisher candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-python-core-publish-candidate
           path: ${{ runner.temp }}/fluentqt-python-publish-candidate/dist/fluentqt-*.whl
@@ -420,7 +420,7 @@ jobs:
           retention-days: 7
 
       - name: Upload FluentQt Gallery publisher candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-python-gallery-publish-candidate
           path: ${{ runner.temp }}/fluentqt-python-publish-candidate/dist/fluentqt_gallery-*.whl
@@ -451,7 +451,7 @@ jobs:
       id-token: write
     steps:
       - name: Download publisher-scoped candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.candidate_artifact }}
           path: publisher-candidate
@@ -474,18 +474,18 @@ jobs:
     timeout-minutes: 25
     steps:
       - name: Checkout selected release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.source_ref }}
 
       - name: Download vetted publication candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: fluentqt-python-publish-candidate
           path: fluentqt-python-publish-candidate
 
       - name: Install Python 3.11
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -542,7 +542,7 @@ jobs:
             "$smoke_python" bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
 
       - name: Upload TestPyPI evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-testpypi-evidence
           path: |
@@ -584,7 +584,7 @@ jobs:
       id-token: write
     steps:
       - name: Download publisher-scoped candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.candidate_artifact }}
           path: publisher-candidate
@@ -606,18 +606,18 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout selected release ref
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.source_ref }}
 
       - name: Download vetted publication candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: fluentqt-python-publish-candidate
           path: fluentqt-python-publish-candidate
 
       - name: Install Python 3.11
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 
@@ -687,7 +687,7 @@ jobs:
             "$smoke_python" bindings/pyside6/gallery/tests/test_gallery_wheel_smoke.py
 
       - name: Upload PyPI publication evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fluentqt-pypi-publication-evidence
           path: |
