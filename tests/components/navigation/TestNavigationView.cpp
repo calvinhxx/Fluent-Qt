@@ -1058,7 +1058,7 @@ TEST_F(NavigationViewTest, StackContentHostClearsTranslucentBackdropPixels)
     image.fill(QColor(255, 0, 255, 255));
 
     QPainter painter(&image);
-    host.render(&painter, QPoint(), QRegion(), QWidget::DrawChildren);
+    host.render(&painter, QPoint(), QRegion(), QWidget::DrawWindowBackground);
     painter.end();
 
     EXPECT_EQ(image.pixelColor(host.rect().center()).alpha(), 0)

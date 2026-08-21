@@ -95,7 +95,6 @@ QVariantMap colorTokens(const fluent::FluentElement::Colors& colors) {
   FLUENTQT_COLOR_TOKEN(bgCanvas);
   FLUENTQT_COLOR_TOKEN(bgLayer);
   FLUENTQT_COLOR_TOKEN(bgLayerAlt);
-  FLUENTQT_COLOR_TOKEN(bgLayerOverlay);
   FLUENTQT_COLOR_TOKEN(bgSolid);
   FLUENTQT_COLOR_TOKEN(grey10);
   FLUENTQT_COLOR_TOKEN(grey20);
@@ -115,6 +114,7 @@ QVariantMap colorTokens(const fluent::FluentElement::Colors& colors) {
   FLUENTQT_COLOR_TOKEN(systemInfoBg);
   FLUENTQT_COLOR_TOKEN(systemSuccess);
   FLUENTQT_COLOR_TOKEN(systemSuccessBg);
+  FLUENTQT_COLOR_TOKEN(bgLayerOverlay);
 #undef FLUENTQT_COLOR_TOKEN
   QVariantList charts;
   charts.reserve(colors.charts.size());

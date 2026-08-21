@@ -40,7 +40,6 @@ constexpr ColorMember kColorMembers[] = {
     &Colors::bgCanvas,
     &Colors::bgLayer,
     &Colors::bgLayerAlt,
-    &Colors::bgLayerOverlay,
     &Colors::bgSolid,
     &Colors::grey10,
     &Colors::grey20,
@@ -59,7 +58,8 @@ constexpr ColorMember kColorMembers[] = {
     &Colors::systemInfo,
     &Colors::systemInfoBg,
     &Colors::systemSuccess,
-    &Colors::systemSuccessBg
+    &Colors::systemSuccessBg,
+    &Colors::bgLayerOverlay
 };
 
 bool colorsEqual(const Colors& lhs, const Colors& rhs)
@@ -199,7 +199,6 @@ void ThemeRegistry::seedDefaults()
         c.bgCanvas = BackgroundCanvas;
         c.bgLayer = BackgroundLayer;
         c.bgLayerAlt = BackgroundLayerAlt;
-        c.bgLayerOverlay = BackgroundLayerOverlay;
         c.bgSolid = BackgroundSolid;
         c.grey10 = Grey10; c.grey20 = Grey20; c.grey30 = Grey30; c.grey40 = Grey40;
         c.grey50 = Grey50; c.grey60 = Grey60; c.grey90 = Grey90;
@@ -209,6 +208,7 @@ void ThemeRegistry::seedDefaults()
         c.systemInfo = System::Informational;     c.systemInfoBg = System::InfoBackground;
         c.systemSuccess = System::Success;        c.systemSuccessBg = System::SuccessBackground;
         c.charts = QList<QColor>(Charts.begin(), Charts.end());
+        c.bgLayerOverlay = BackgroundLayerOverlay;
     }
     {
         using namespace ThemeColors::Dark;
@@ -243,7 +243,6 @@ void ThemeRegistry::seedDefaults()
         c.bgCanvas = BackgroundCanvas;
         c.bgLayer = BackgroundLayer;
         c.bgLayerAlt = BackgroundLayerAlt;
-        c.bgLayerOverlay = BackgroundLayerOverlay;
         c.bgSolid = BackgroundSolid;
         c.grey10 = Grey10; c.grey20 = Grey20; c.grey30 = Grey30; c.grey40 = Grey40;
         c.grey50 = Grey50; c.grey60 = Grey60; c.grey90 = Grey90;
@@ -253,6 +252,7 @@ void ThemeRegistry::seedDefaults()
         c.systemInfo = System::Informational;     c.systemInfoBg = System::InfoBackground;
         c.systemSuccess = System::Success;        c.systemSuccessBg = System::SuccessBackground;
         c.charts = QList<QColor>(Charts.begin(), Charts.end());
+        c.bgLayerOverlay = BackgroundLayerOverlay;
     }
 
     m_radiusNone = ::CornerRadius::None;

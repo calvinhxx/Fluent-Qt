@@ -92,7 +92,6 @@ void forEachColorField(FluentElement::Colors& c, Fn&& fn)
     fn("bgCanvas", c.bgCanvas);
     fn("bgLayer", c.bgLayer);
     fn("bgLayerAlt", c.bgLayerAlt);
-    fn("bgLayerOverlay", c.bgLayerOverlay);
     fn("bgSolid", c.bgSolid);
 
     fn("textPrimary", c.textPrimary);
@@ -126,6 +125,8 @@ void forEachColorField(FluentElement::Colors& c, Fn&& fn)
     fn("systemInfoBg", c.systemInfoBg);
     fn("systemSuccess", c.systemSuccess);
     fn("systemSuccessBg", c.systemSuccessBg);
+
+    fn("bgLayerOverlay", c.bgLayerOverlay);
 }
 
 // Serialize one mode's overridable tokens to a complete spec object. Because
