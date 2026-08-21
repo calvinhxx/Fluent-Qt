@@ -95,10 +95,8 @@ void StackContentHost::paintEvent(QPaintEvent* event)
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     }
 
-    // The NavigationView explicitly supplies its overlay when it needs one.
-    // Otherwise every backdrop mode must leave page gaps to the parent material.
-    // zh_CN: NavigationView 需要覆盖层时会显式提供；否则所有背景模式均保留页面间隙，
-    // 使其露出父级材质。
+    // Paint only an explicitly configured surface; otherwise page gaps stay transparent.
+    // zh_CN: 仅绘制显式配置的表面；否则页面间隙保持透明。
     if (!m_surfaceFill.isValid() || m_surfaceFill.alpha() == 0) {
         return;
     }

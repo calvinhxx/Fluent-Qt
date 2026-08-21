@@ -920,10 +920,8 @@ void NavigationView::applyChildGeometries(const LayoutState& state)
 
     if (m_contentHost) {
         m_contentHost->setGeometry(state.contentRect);
-        // Explicitly configure NavigationView's content overlay. StackContentHost
-        // otherwise remains transparent, so standalone hosts still reveal their parent material.
-        // zh_CN: 显式配置 NavigationView 的内容覆盖层；StackContentHost 未配置时保持透明，
-        // 因此独立宿主仍会露出父级材质。
+        // Configure this layout's content overlay.
+        // zh_CN: 配置当前布局的内容覆盖层。
         m_contentHost->setContentSurface(themeColorsRef().bgLayerOverlay,
                                          framed ? themeRadius().overlay : 0.0,
                                          QColor());
