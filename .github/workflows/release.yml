@@ -442,7 +442,7 @@ jobs:
         timeout-minutes: 10
         uses: actions/upload-artifact@v4
         with:
-          name: release-diagnostics-${{ matrix.id }}
+          name: diagnostics-release-${{ matrix.id }}
           if-no-files-found: ignore
           retention-days: 7
           path: |
@@ -554,7 +554,7 @@ jobs:
           set -euo pipefail
 
           mapfile -d '' packages < <(
-            find release-dist -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.deb' -o -name '*.zip' \) -print0 | sort -z
+            find release-dist -maxdepth 1 -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.deb' -o -name '*.zip' \) -print0 | sort -z
           )
           if [[ "${#packages[@]}" == "0" ]]; then
             echo "::error::No release packages were downloaded."
@@ -579,6 +579,14 @@ jobs:
           draft="${{ needs.preflight.outputs.draft }}"
           prerelease="${{ needs.preflight.outputs.prerelease }}"
 
+          mapfile -d '' release_assets < <(
+            find release-dist -maxdepth 1 -type f -print0 | sort -z
+          )
+          if [[ "${#release_assets[@]}" == "0" ]]; then
+            echo "::error::No release assets were prepared."
+            exit 1
+          fi
+
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release edit "$tag" \
               --repo "$GITHUB_REPOSITORY" \
@@ -586,13 +594,13 @@ jobs:
               --notes-file release-notes.md \
               --draft="$draft" \
               --prerelease="$prerelease"
-            gh release upload "$tag" release-dist/* --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload "$tag" "${release_assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
             exit 0
           fi
 
           args=(
             release create "$tag"
-            release-dist/*
+            "${release_assets[@]}"
             --repo "$GITHUB_REPOSITORY"
             --verify-tag
             --title "Fluent-Qt $tag"
