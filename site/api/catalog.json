@@ -1,0 +1,3944 @@
+{
+  "schema_version": 1,
+  "project": {
+    "name": "FluentQt",
+    "version": "1.7.1",
+    "api_version": "1.7",
+    "cpp_standard": "C++17",
+    "qt_versions": [
+      "5.15+",
+      "6.2+"
+    ],
+    "python_versions": [
+      "3.10+"
+    ],
+    "pyside_versions": [
+      "6.2+"
+    ],
+    "cpp_target": "FluentQt::FluentQt",
+    "python_package": "FluentQt"
+  },
+  "generated_from": [
+    "cmake/FluentQtInstallHeaders.cmake",
+    "docs/ai/generated/fluentqt-ai-catalog.json"
+  ],
+  "summary": {
+    "components": 69,
+    "public_headers": 114,
+    "categories": 12
+  },
+  "categories": [
+    {
+      "id": "basic-input",
+      "title": "Basic input",
+      "component_count": 15
+    },
+    {
+      "id": "collections",
+      "title": "Collections",
+      "component_count": 9
+    },
+    {
+      "id": "date-time",
+      "title": "Date & time",
+      "component_count": 4
+    },
+    {
+      "id": "dialogs-flyouts",
+      "title": "Dialogs & flyouts",
+      "component_count": 6
+    },
+    {
+      "id": "layout",
+      "title": "Layout",
+      "component_count": 5
+    },
+    {
+      "id": "menus-toolbars",
+      "title": "Menus & toolbars",
+      "component_count": 4
+    },
+    {
+      "id": "navigation",
+      "title": "Navigation",
+      "component_count": 5
+    },
+    {
+      "id": "scrolling",
+      "title": "Scrolling",
+      "component_count": 4
+    },
+    {
+      "id": "status-info",
+      "title": "Status & info",
+      "component_count": 8
+    },
+    {
+      "id": "text-fields",
+      "title": "Text fields",
+      "component_count": 6
+    },
+    {
+      "id": "windowing",
+      "title": "Windowing",
+      "component_count": 2
+    },
+    {
+      "id": "foundation",
+      "title": "Foundation",
+      "component_count": 1
+    }
+  ],
+  "components": [
+    {
+      "id": "button",
+      "title": "Button",
+      "category_id": "basic-input",
+      "description": "A control that responds to user input and raises a click event.",
+      "capabilities": [
+        "actions"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/Button.h>",
+        "qualified_type": "fluent::basicinput::Button",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/Button.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "Button",
+        "import_statement": "from fluentqt.basicinput import Button"
+      },
+      "gallery": {
+        "route_id": "button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_button",
+          "ctest_label": "test_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestButton.cpp"
+        }
+      ],
+      "sample_count": 5
+    },
+    {
+      "id": "compound-button",
+      "title": "CompoundButton",
+      "category_id": "basic-input",
+      "description": "A button with primary text and a second line that explains the action.",
+      "capabilities": [
+        "actions"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/CompoundButton.h>",
+        "qualified_type": "fluent::basicinput::CompoundButton",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/CompoundButton.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "CompoundButton",
+        "import_statement": "from fluentqt.basicinput import CompoundButton"
+      },
+      "gallery": {
+        "route_id": "compound-button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=compound-button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_compound_button",
+          "ctest_label": "test_compound_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestCompoundButton.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "checkbox",
+      "title": "CheckBox",
+      "category_id": "basic-input",
+      "description": "Lets people select or clear an option, with an optional indeterminate state.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/CheckBox.h>",
+        "qualified_type": "fluent::basicinput::CheckBox",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/CheckBox.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "CheckBox",
+        "import_statement": "from fluentqt.basicinput import CheckBox"
+      },
+      "gallery": {
+        "route_id": "checkbox",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=checkbox",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_checkbox",
+          "ctest_label": "test_checkbox",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestCheckBox.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "color-picker",
+      "title": "ColorPicker",
+      "category_id": "basic-input",
+      "description": "A spectrum surface for picking a color, with RGB, hex, and optional alpha editing.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/ColorPicker.h>",
+        "qualified_type": "fluent::basicinput::ColorPicker",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ColorPicker.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "ColorPicker",
+        "import_statement": "from fluentqt.basicinput import ColorPicker"
+      },
+      "gallery": {
+        "route_id": "color-picker",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=color-picker",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_color_picker",
+          "ctest_label": "test_color_picker",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestColorPicker.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "combobox",
+      "title": "ComboBox",
+      "category_id": "basic-input",
+      "description": "A drop-down list for selecting one item from a set of options.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/ComboBox.h>",
+        "qualified_type": "fluent::basicinput::ComboBox",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ComboBox.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "ComboBox",
+        "import_statement": "from fluentqt.basicinput import ComboBox"
+      },
+      "gallery": {
+        "route_id": "combobox",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=combobox",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_combo_box",
+          "ctest_label": "test_combo_box",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestComboBox.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "dropdown-button",
+      "title": "DropDownButton",
+      "category_id": "basic-input",
+      "description": "A button that reveals a menu of related commands when invoked.",
+      "capabilities": [
+        "actions"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/DropDownButton.h>",
+        "qualified_type": "fluent::basicinput::DropDownButton",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/DropDownButton.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "DropDownButton",
+        "import_statement": "from fluentqt.basicinput import DropDownButton"
+      },
+      "gallery": {
+        "route_id": "dropdown-button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=dropdown-button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_dropdown_button",
+          "ctest_label": "test_dropdown_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestDropDownButton.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "hyperlink-button",
+      "title": "HyperlinkButton",
+      "category_id": "basic-input",
+      "description": "A button styled like a hyperlink that opens a URL when clicked.",
+      "capabilities": [
+        "actions"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/HyperlinkButton.h>",
+        "qualified_type": "fluent::basicinput::HyperlinkButton",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/HyperlinkButton.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "HyperlinkButton",
+        "import_statement": "from fluentqt.basicinput import HyperlinkButton"
+      },
+      "gallery": {
+        "route_id": "hyperlink-button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=hyperlink-button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_hyperlink_button",
+          "ctest_label": "test_hyperlink_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestHyperlinkButton.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "radio-button",
+      "title": "RadioButton",
+      "category_id": "basic-input",
+      "description": "Lets people select one option from a mutually exclusive group.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/RadioButton.h>",
+        "qualified_type": "fluent::basicinput::RadioButton",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RadioButton.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "RadioButton",
+        "import_statement": "from fluentqt.basicinput import RadioButton"
+      },
+      "gallery": {
+        "route_id": "radio-button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=radio-button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_radio_button",
+          "ctest_label": "test_radio_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestRadioButton.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "rating-control",
+      "title": "RatingControl",
+      "category_id": "basic-input",
+      "description": "Lets people view, set, or clear star ratings.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/RatingControl.h>",
+        "qualified_type": "fluent::basicinput::RatingControl",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RatingControl.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "RatingControl",
+        "import_statement": "from fluentqt.basicinput import RatingControl"
+      },
+      "gallery": {
+        "route_id": "rating-control",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=rating-control",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_rating_control",
+          "ctest_label": "test_rating_control",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestRatingControl.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "repeat-button",
+      "title": "RepeatButton",
+      "category_id": "basic-input",
+      "description": "A button that raises its click event repeatedly while it stays pressed.",
+      "capabilities": [
+        "actions"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/RepeatButton.h>",
+        "qualified_type": "fluent::basicinput::RepeatButton",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RepeatButton.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "RepeatButton",
+        "import_statement": "from fluentqt.basicinput import RepeatButton"
+      },
+      "gallery": {
+        "route_id": "repeat-button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=repeat-button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_repeat_button",
+          "ctest_label": "test_repeat_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestRepeatButton.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "slider",
+      "title": "Slider",
+      "category_id": "basic-input",
+      "description": "Lets people select a value from a range by dragging a handle along a track.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/Slider.h>",
+        "qualified_type": "fluent::basicinput::Slider",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/Slider.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "Slider",
+        "import_statement": "from fluentqt.basicinput import Slider"
+      },
+      "gallery": {
+        "route_id": "slider",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=slider",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_slider",
+          "ctest_label": "test_slider",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestSlider.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "split-button",
+      "title": "SplitButton",
+      "category_id": "basic-input",
+      "description": "A two-part button: a primary action plus a chevron that opens a menu.",
+      "capabilities": [
+        "actions"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/SplitButton.h>",
+        "qualified_type": "fluent::basicinput::SplitButton",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/SplitButton.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "SplitButton",
+        "import_statement": "from fluentqt.basicinput import SplitButton"
+      },
+      "gallery": {
+        "route_id": "split-button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=split-button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_split_button",
+          "ctest_label": "test_split_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestSplitButton.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "toggle-button",
+      "title": "ToggleButton",
+      "category_id": "basic-input",
+      "description": "A button that switches between checked and unchecked states.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/ToggleButton.h>",
+        "qualified_type": "fluent::basicinput::ToggleButton",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ToggleButton.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "ToggleButton",
+        "import_statement": "from fluentqt.basicinput import ToggleButton"
+      },
+      "gallery": {
+        "route_id": "toggle-button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=toggle-button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_toggle_button",
+          "ctest_label": "test_toggle_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestToggleButton.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "toggle-split-button",
+      "title": "ToggleSplitButton",
+      "category_id": "basic-input",
+      "description": "A split button whose primary half toggles on and off.",
+      "capabilities": [
+        "actions"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/ToggleSplitButton.h>",
+        "qualified_type": "fluent::basicinput::ToggleSplitButton",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ToggleSplitButton.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "ToggleSplitButton",
+        "import_statement": "from fluentqt.basicinput import ToggleSplitButton"
+      },
+      "gallery": {
+        "route_id": "toggle-split-button",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=toggle-split-button",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_toggle_split_button",
+          "ctest_label": "test_toggle_split_button",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestToggleSplitButton.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "toggle-switch",
+      "title": "ToggleSwitch",
+      "category_id": "basic-input",
+      "description": "A switch that flips between on and off states.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/ToggleSwitch.h>",
+        "qualified_type": "fluent::basicinput::ToggleSwitch",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ToggleSwitch.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "ToggleSwitch",
+        "import_statement": "from fluentqt.basicinput import ToggleSwitch"
+      },
+      "gallery": {
+        "route_id": "toggle-switch",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=toggle-switch",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_toggle_switch",
+          "ctest_label": "test_toggle_switch",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestToggleSwitch.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "drawer-view",
+      "title": "DrawerView",
+      "category_id": "collections",
+      "description": "A panel that slides in from a window edge over the content.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/DrawerView.h>",
+        "qualified_type": "fluent::collections::DrawerView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/DrawerView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "DrawerView",
+        "import_statement": "from fluentqt.collections import DrawerView"
+      },
+      "gallery": {
+        "route_id": "drawer-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=drawer-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_drawer_view",
+          "ctest_label": "test_drawer_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestDrawerView.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "data-grid",
+      "title": "DataGrid",
+      "category_id": "collections",
+      "description": "Presents large model-backed rows and columns with headers, sorting, selection, and delegate editing.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/DataGrid.h>",
+        "qualified_type": "fluent::collections::DataGrid",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/DataGrid.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "DataGrid",
+        "import_statement": "from fluentqt.collections import DataGrid"
+      },
+      "gallery": {
+        "route_id": "data-grid",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=data-grid",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_data_grid",
+          "ctest_label": "test_data_grid",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestDataGrid.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "flip-view",
+      "title": "FlipView",
+      "category_id": "collections",
+      "description": "Lets people flip through a collection of pages one at a time.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/FlipView.h>",
+        "qualified_type": "fluent::collections::FlipView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/FlipView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "FlipView",
+        "import_statement": "from fluentqt.collections import FlipView"
+      },
+      "gallery": {
+        "route_id": "flip-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=flip-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_flip_view",
+          "ctest_label": "test_flip_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestFlipView.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "flow-view",
+      "title": "FlowView",
+      "category_id": "collections",
+      "description": "Lays out variable-sized items in wrapping rows, like a tag cloud.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/FlowView.h>",
+        "qualified_type": "fluent::collections::FlowView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/FlowView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "FlowView",
+        "import_statement": "from fluentqt.collections import FlowView"
+      },
+      "gallery": {
+        "route_id": "flow-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=flow-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_flow_view",
+          "ctest_label": "test_flow_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestFlowView.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "grid-view",
+      "title": "GridView",
+      "category_id": "collections",
+      "description": "Presents items in a grid of uniform cells with selection.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/GridView.h>",
+        "qualified_type": "fluent::collections::GridView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/GridView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "GridView",
+        "import_statement": "from fluentqt.collections import GridView"
+      },
+      "gallery": {
+        "route_id": "grid-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=grid-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_grid_view",
+          "ctest_label": "test_grid_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestGridView.cpp"
+        }
+      ],
+      "sample_count": 5
+    },
+    {
+      "id": "list-view",
+      "title": "ListView",
+      "category_id": "collections",
+      "description": "Presents a vertical list of interactive items with selection.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/ListView.h>",
+        "qualified_type": "fluent::collections::ListView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/ListView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "ListView",
+        "import_statement": "from fluentqt.collections import ListView"
+      },
+      "gallery": {
+        "route_id": "list-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=list-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_list_view",
+          "ctest_label": "test_list_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestListView.cpp"
+        }
+      ],
+      "sample_count": 7
+    },
+    {
+      "id": "split-view",
+      "title": "SplitView",
+      "category_id": "collections",
+      "description": "Hosts resizable panes separated by draggable handles.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/SplitView.h>",
+        "qualified_type": "fluent::collections::SplitView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/SplitView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "SplitView",
+        "import_statement": "from fluentqt.collections import SplitView"
+      },
+      "gallery": {
+        "route_id": "split-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=split-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_split_view",
+          "ctest_label": "test_split_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestSplitView.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "stack-view",
+      "title": "StackView",
+      "category_id": "collections",
+      "description": "A stack-based container that pushes and pops pages with transitions.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/StackView.h>",
+        "qualified_type": "fluent::collections::StackView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/StackView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "StackView",
+        "import_statement": "from fluentqt.collections import StackView"
+      },
+      "gallery": {
+        "route_id": "stack-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=stack-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_stack_view",
+          "ctest_label": "test_stack_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestStackView.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "tree-view",
+      "title": "TreeView",
+      "category_id": "collections",
+      "description": "A control that presents hierarchical data with expandable nodes.",
+      "capabilities": [
+        "collections"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Collections.h>",
+        "installed_declaration_header": "<FluentQt/components/collections/TreeView.h>",
+        "qualified_type": "fluent::collections::TreeView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/TreeView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.collections",
+        "type": "TreeView",
+        "import_statement": "from fluentqt.collections import TreeView"
+      },
+      "gallery": {
+        "route_id": "tree-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=tree-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_tree_view",
+          "ctest_label": "test_tree_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/collections/TestTreeView.cpp"
+        }
+      ],
+      "sample_count": 5
+    },
+    {
+      "id": "calendar-date-picker",
+      "title": "CalendarDatePicker",
+      "category_id": "date-time",
+      "description": "A drop-down calendar for picking a single date.",
+      "capabilities": [
+        "date-time"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DateTime.h>",
+        "installed_declaration_header": "<FluentQt/components/date_time/CalendarDatePicker.h>",
+        "qualified_type": "fluent::date_time::CalendarDatePicker",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/CalendarDatePicker.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.date_time",
+        "type": "CalendarDatePicker",
+        "import_statement": "from fluentqt.date_time import CalendarDatePicker"
+      },
+      "gallery": {
+        "route_id": "calendar-date-picker",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=calendar-date-picker",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DateTimeSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_calendar_date_picker",
+          "ctest_label": "test_calendar_date_picker",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/date_time/TestCalendarDatePicker.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "calendar-view",
+      "title": "CalendarView",
+      "category_id": "date-time",
+      "description": "A calendar surface for browsing months and selecting dates.",
+      "capabilities": [
+        "date-time"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DateTime.h>",
+        "installed_declaration_header": "<FluentQt/components/date_time/CalendarView.h>",
+        "qualified_type": "fluent::date_time::CalendarView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/CalendarView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.date_time",
+        "type": "CalendarView",
+        "import_statement": "from fluentqt.date_time import CalendarView"
+      },
+      "gallery": {
+        "route_id": "calendar-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=calendar-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DateTimeSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_calendar_view",
+          "ctest_label": "test_calendar_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/date_time/TestCalendarView.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "date-picker",
+      "title": "DatePicker",
+      "category_id": "date-time",
+      "description": "A spinning-field picker for choosing a day, month, and year.",
+      "capabilities": [
+        "date-time"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DateTime.h>",
+        "installed_declaration_header": "<FluentQt/components/date_time/DatePicker.h>",
+        "qualified_type": "fluent::date_time::DatePicker",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/DatePicker.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.date_time",
+        "type": "DatePicker",
+        "import_statement": "from fluentqt.date_time import DatePicker"
+      },
+      "gallery": {
+        "route_id": "date-picker",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=date-picker",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DateTimeSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_date_picker",
+          "ctest_label": "test_date_picker",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/date_time/TestDatePicker.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "time-picker",
+      "title": "TimePicker",
+      "category_id": "date-time",
+      "description": "A spinning-field picker for choosing a time of day.",
+      "capabilities": [
+        "date-time"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DateTime.h>",
+        "installed_declaration_header": "<FluentQt/components/date_time/TimePicker.h>",
+        "qualified_type": "fluent::date_time::TimePicker",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/TimePicker.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.date_time",
+        "type": "TimePicker",
+        "import_statement": "from fluentqt.date_time import TimePicker"
+      },
+      "gallery": {
+        "route_id": "time-picker",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=time-picker",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DateTimeSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_time_picker",
+          "ctest_label": "test_time_picker",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/date_time/TestTimePicker.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "content-dialog",
+      "title": "ContentDialog",
+      "category_id": "dialogs-flyouts",
+      "description": "A modal dialog with title, content, and up to three commit buttons.",
+      "capabilities": [
+        "transient-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DialogsFlyouts.h>",
+        "installed_declaration_header": "<FluentQt/components/dialogs_flyouts/ContentDialog.h>",
+        "qualified_type": "fluent::dialogs_flyouts::ContentDialog",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/ContentDialog.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.dialogs_flyouts",
+        "type": "ContentDialog",
+        "import_statement": "from fluentqt.dialogs_flyouts import ContentDialog"
+      },
+      "gallery": {
+        "route_id": "content-dialog",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=content-dialog",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DialogsFlyoutsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_content_dialog",
+          "ctest_label": "test_content_dialog",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/dialogs_flyouts/TestContentDialog.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "dialog",
+      "title": "Dialog",
+      "category_id": "dialogs-flyouts",
+      "description": "A modal window surface that hosts arbitrary content above the app.",
+      "capabilities": [
+        "transient-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DialogsFlyouts.h>",
+        "installed_declaration_header": "<FluentQt/components/dialogs_flyouts/Dialog.h>",
+        "qualified_type": "fluent::dialogs_flyouts::Dialog",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/Dialog.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.dialogs_flyouts",
+        "type": "Dialog",
+        "import_statement": "from fluentqt.dialogs_flyouts import Dialog"
+      },
+      "gallery": {
+        "route_id": "dialog",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=dialog",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DialogsFlyoutsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_dialog",
+          "ctest_label": "test_dialog",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/dialogs_flyouts/TestDialog.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "flyout",
+      "title": "Flyout",
+      "category_id": "dialogs-flyouts",
+      "description": "A light-dismiss container anchored to the control that opened it.",
+      "capabilities": [
+        "transient-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DialogsFlyouts.h>",
+        "installed_declaration_header": "<FluentQt/components/dialogs_flyouts/Flyout.h>",
+        "qualified_type": "fluent::dialogs_flyouts::Flyout",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/Flyout.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.dialogs_flyouts",
+        "type": "Flyout",
+        "import_statement": "from fluentqt.dialogs_flyouts import Flyout"
+      },
+      "gallery": {
+        "route_id": "flyout",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=flyout",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DialogsFlyoutsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_flyout",
+          "ctest_label": "test_flyout",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/dialogs_flyouts/TestFlyout.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "popup",
+      "title": "Popup",
+      "category_id": "dialogs-flyouts",
+      "description": "A floating surface positioned over app content.",
+      "capabilities": [
+        "transient-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DialogsFlyouts.h>",
+        "installed_declaration_header": "<FluentQt/components/dialogs_flyouts/Popup.h>",
+        "qualified_type": "fluent::dialogs_flyouts::Popup",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/Popup.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.dialogs_flyouts",
+        "type": "Popup",
+        "import_statement": "from fluentqt.dialogs_flyouts import Popup"
+      },
+      "gallery": {
+        "route_id": "popup",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=popup",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DialogsFlyoutsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_popup",
+          "ctest_label": "test_popup",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/dialogs_flyouts/TestPopup.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "teaching-tip",
+      "title": "TeachingTip",
+      "category_id": "dialogs-flyouts",
+      "description": "An anchored tip that draws attention to a feature without blocking interaction.",
+      "capabilities": [
+        "transient-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DialogsFlyouts.h>",
+        "installed_declaration_header": "<FluentQt/components/dialogs_flyouts/TeachingTip.h>",
+        "qualified_type": "fluent::dialogs_flyouts::TeachingTip",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/TeachingTip.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.dialogs_flyouts",
+        "type": "TeachingTip",
+        "import_statement": "from fluentqt.dialogs_flyouts import TeachingTip"
+      },
+      "gallery": {
+        "route_id": "teaching-tip",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=teaching-tip",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DialogsFlyoutsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_teaching_tip",
+          "ctest_label": "test_teaching_tip",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/dialogs_flyouts/TestTeachingTip.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "coach-mark",
+      "title": "CoachMark",
+      "category_id": "dialogs-flyouts",
+      "description": "A standalone teaching tip in its own window that points a tail at a target and glides between them.",
+      "capabilities": [
+        "transient-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/DialogsFlyouts.h>",
+        "installed_declaration_header": "<FluentQt/components/dialogs_flyouts/CoachMark.h>",
+        "qualified_type": "fluent::dialogs_flyouts::CoachMark",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/CoachMark.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.dialogs_flyouts",
+        "type": "CoachMark",
+        "import_statement": "from fluentqt.dialogs_flyouts import CoachMark"
+      },
+      "gallery": {
+        "route_id": "coach-mark",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=coach-mark",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/DialogsFlyoutsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_coach_mark",
+          "ctest_label": "test_coach_mark",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/dialogs_flyouts/TestCoachMark.cpp"
+        }
+      ],
+      "sample_count": 1
+    },
+    {
+      "id": "accordion",
+      "title": "Accordion",
+      "category_id": "layout",
+      "description": "Coordinates a vertical group of expandable sections with single or multiple expansion.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/Accordion.h>",
+        "qualified_type": "fluent::layout::Accordion",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Accordion.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "Accordion",
+        "import_statement": "from fluentqt.layout import Accordion"
+      },
+      "gallery": {
+        "route_id": "accordion",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=accordion",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_accordion",
+          "ctest_label": "test_accordion",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestAccordion.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "card",
+      "title": "Card",
+      "category_id": "layout",
+      "description": "A rounded, token-backed surface for grouping related content.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/Card.h>",
+        "qualified_type": "fluent::layout::Card",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Card.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "Card",
+        "import_statement": "from fluentqt.layout import Card"
+      },
+      "gallery": {
+        "route_id": "card",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=card",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_card",
+          "ctest_label": "test_card",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestCard.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "divider",
+      "title": "Divider",
+      "category_id": "layout",
+      "description": "A DPI-aligned horizontal or vertical separator with optional insets.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/Divider.h>",
+        "qualified_type": "fluent::layout::Divider",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Divider.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "Divider",
+        "import_statement": "from fluentqt.layout import Divider"
+      },
+      "gallery": {
+        "route_id": "divider",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=divider",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_divider",
+          "ctest_label": "test_divider",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestDivider.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "expander",
+      "title": "Expander",
+      "category_id": "layout",
+      "description": "A disclosure surface that reveals caller-supplied content with an optional animation.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/Expander.h>",
+        "qualified_type": "fluent::layout::Expander",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Expander.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "Expander",
+        "import_statement": "from fluentqt.layout import Expander"
+      },
+      "gallery": {
+        "route_id": "expander",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=expander",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_expander",
+          "ctest_label": "test_expander",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestExpander.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "field",
+      "title": "Field",
+      "category_id": "layout",
+      "description": "Adds a label, required marker, helper text, and validation feedback to any input control.",
+      "capabilities": [
+        "layout-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Layout.h>",
+        "installed_declaration_header": "<FluentQt/components/layout/Field.h>",
+        "qualified_type": "fluent::layout::Field",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Field.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.layout",
+        "type": "Field",
+        "import_statement": "from fluentqt.layout import Field"
+      },
+      "gallery": {
+        "route_id": "field",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=field",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/LayoutSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_field",
+          "ctest_label": "test_field",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/layout/TestField.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "menu",
+      "title": "Menu",
+      "category_id": "menus-toolbars",
+      "description": "A list of commands shown in a transient surface.",
+      "capabilities": [
+        "command-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/MenusToolbars.h>",
+        "installed_declaration_header": "<FluentQt/components/menus_toolbars/Menu.h>",
+        "qualified_type": "fluent::menus_toolbars::FluentMenu",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/Menu.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.menus_toolbars",
+        "type": "FluentMenu",
+        "import_statement": "from fluentqt.menus_toolbars import FluentMenu"
+      },
+      "gallery": {
+        "route_id": "menu",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=menu",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/MenusToolbarsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_menu",
+          "ctest_label": "test_menu",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestMenu.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "menu-bar",
+      "title": "MenuBar",
+      "category_id": "menus-toolbars",
+      "description": "A horizontal bar of top-level menus, each hosting commands.",
+      "capabilities": [
+        "command-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/MenusToolbars.h>",
+        "installed_declaration_header": "<FluentQt/components/menus_toolbars/MenuBar.h>",
+        "qualified_type": "fluent::menus_toolbars::FluentMenuBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/MenuBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.menus_toolbars",
+        "type": "FluentMenuBar",
+        "import_statement": "from fluentqt.menus_toolbars import FluentMenuBar"
+      },
+      "gallery": {
+        "route_id": "menu-bar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=menu-bar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/MenusToolbarsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_menu_bar",
+          "ctest_label": "test_menu_bar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestMenuBar.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "command-bar",
+      "title": "CommandBar",
+      "category_id": "menus-toolbars",
+      "description": "A responsive command strip with primary and overflow actions.",
+      "capabilities": [
+        "command-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/MenusToolbars.h>",
+        "installed_declaration_header": "<FluentQt/components/menus_toolbars/CommandBar.h>",
+        "qualified_type": "fluent::menus_toolbars::CommandBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/CommandBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.menus_toolbars",
+        "type": "CommandBar",
+        "import_statement": "from fluentqt.menus_toolbars import CommandBar"
+      },
+      "gallery": {
+        "route_id": "command-bar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=command-bar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/MenusToolbarsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_command_bar",
+          "ctest_label": "test_command_bar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestCommandBar.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "command-bar-flyout",
+      "title": "CommandBarFlyout",
+      "category_id": "menus-toolbars",
+      "description": "A contextual command surface with primary and secondary actions.",
+      "capabilities": [
+        "command-surfaces"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/MenusToolbars.h>",
+        "installed_declaration_header": "<FluentQt/components/menus_toolbars/CommandBarFlyout.h>",
+        "qualified_type": "fluent::menus_toolbars::CommandBarFlyout",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/CommandBarFlyout.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.menus_toolbars",
+        "type": "CommandBarFlyout",
+        "import_statement": "from fluentqt.menus_toolbars import CommandBarFlyout"
+      },
+      "gallery": {
+        "route_id": "command-bar-flyout",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=command-bar-flyout",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/MenusToolbarsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_command_bar_flyout",
+          "ctest_label": "test_command_bar_flyout",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/menus_toolbars/TestCommandBarFlyout.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "breadcrumb",
+      "title": "Breadcrumb",
+      "category_id": "navigation",
+      "description": "Shows the trail to the current location and lets people go back up the hierarchy.",
+      "capabilities": [
+        "navigation"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Navigation.h>",
+        "installed_declaration_header": "<FluentQt/components/navigation/Breadcrumb.h>",
+        "qualified_type": "fluent::navigation::Breadcrumb",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/Breadcrumb.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.navigation",
+        "type": "Breadcrumb",
+        "import_statement": "from fluentqt.navigation import Breadcrumb"
+      },
+      "gallery": {
+        "route_id": "breadcrumb",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=breadcrumb",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/NavigationSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_breadcrumb",
+          "ctest_label": "test_breadcrumb",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/navigation/TestBreadcrumb.cpp"
+        }
+      ],
+      "sample_count": 5
+    },
+    {
+      "id": "navigation-view",
+      "title": "NavigationView",
+      "category_id": "navigation",
+      "description": "An adaptive left pane plus content area for top-level navigation.",
+      "capabilities": [
+        "navigation"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Navigation.h>",
+        "installed_declaration_header": "<FluentQt/components/navigation/NavigationView.h>",
+        "qualified_type": "fluent::navigation::NavigationView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/NavigationView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.navigation",
+        "type": "NavigationView",
+        "import_statement": "from fluentqt.navigation import NavigationView"
+      },
+      "gallery": {
+        "route_id": "navigation-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=navigation-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/NavigationSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_navigation_view",
+          "ctest_label": "test_navigation_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/navigation/TestNavigationView.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "pivot",
+      "title": "Pivot",
+      "category_id": "navigation",
+      "description": "Header-based navigation between peer views with an animated indicator.",
+      "capabilities": [
+        "navigation"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Navigation.h>",
+        "installed_declaration_header": "<FluentQt/components/navigation/Pivot.h>",
+        "qualified_type": "fluent::navigation::Pivot",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/Pivot.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.navigation",
+        "type": "Pivot",
+        "import_statement": "from fluentqt.navigation import Pivot"
+      },
+      "gallery": {
+        "route_id": "pivot",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=pivot",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/NavigationSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_pivot",
+          "ctest_label": "test_pivot",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/navigation/TestPivot.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "selector-bar",
+      "title": "SelectorBar",
+      "category_id": "navigation",
+      "description": "A row of selectable items for switching between views.",
+      "capabilities": [
+        "navigation"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Navigation.h>",
+        "installed_declaration_header": "<FluentQt/components/navigation/SelectorBar.h>",
+        "qualified_type": "fluent::navigation::SelectorBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/SelectorBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.navigation",
+        "type": "SelectorBar",
+        "import_statement": "from fluentqt.navigation import SelectorBar"
+      },
+      "gallery": {
+        "route_id": "selector-bar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=selector-bar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/NavigationSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_selector_bar",
+          "ctest_label": "test_selector_bar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/navigation/TestSelectorBar.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "tab-view",
+      "title": "TabView",
+      "category_id": "navigation",
+      "description": "A control that hosts multiple pages of content behind a tab strip.",
+      "capabilities": [
+        "navigation"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Navigation.h>",
+        "installed_declaration_header": "<FluentQt/components/navigation/TabView.h>",
+        "qualified_type": "fluent::navigation::TabView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/TabView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.navigation",
+        "type": "TabView",
+        "import_statement": "from fluentqt.navigation import TabView"
+      },
+      "gallery": {
+        "route_id": "tab-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=tab-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/NavigationSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_tab_view",
+          "ctest_label": "test_tab_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/navigation/TestTabView.cpp"
+        }
+      ],
+      "sample_count": 6
+    },
+    {
+      "id": "annotated-scrollbar",
+      "title": "AnnotatedScrollBar",
+      "category_id": "scrolling",
+      "description": "A scrollbar with labels that make long content easier to navigate.",
+      "capabilities": [
+        "scrolling-and-paging"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Scrolling.h>",
+        "installed_declaration_header": "<FluentQt/components/scrolling/AnnotatedScrollBar.h>",
+        "qualified_type": "fluent::scrolling::AnnotatedScrollBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/AnnotatedScrollBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.scrolling",
+        "type": "AnnotatedScrollBar",
+        "import_statement": "from fluentqt.scrolling import AnnotatedScrollBar"
+      },
+      "gallery": {
+        "route_id": "annotated-scrollbar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=annotated-scrollbar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ScrollingSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_annotated_scrollbar",
+          "ctest_label": "test_annotated_scrollbar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/scrolling/TestAnnotatedScrollBar.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "pips-pager",
+      "title": "PipsPager",
+      "category_id": "scrolling",
+      "description": "Dot-style pagination for moving through a small set of pages.",
+      "capabilities": [
+        "scrolling-and-paging"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Scrolling.h>",
+        "installed_declaration_header": "<FluentQt/components/scrolling/PipsPager.h>",
+        "qualified_type": "fluent::scrolling::PipsPager",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/PipsPager.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.scrolling",
+        "type": "PipsPager",
+        "import_statement": "from fluentqt.scrolling import PipsPager"
+      },
+      "gallery": {
+        "route_id": "pips-pager",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=pips-pager",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ScrollingSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_pips_pager",
+          "ctest_label": "test_pips_pager",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/scrolling/TestPipsPager.cpp"
+        }
+      ],
+      "sample_count": 6
+    },
+    {
+      "id": "scrollbar",
+      "title": "ScrollBar",
+      "category_id": "scrolling",
+      "description": "A Fluent-styled scrollbar with hover expansion.",
+      "capabilities": [
+        "scrolling-and-paging"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Scrolling.h>",
+        "installed_declaration_header": "<FluentQt/components/scrolling/ScrollBar.h>",
+        "qualified_type": "fluent::scrolling::ScrollBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/ScrollBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.scrolling",
+        "type": "ScrollBar",
+        "import_statement": "from fluentqt.scrolling import ScrollBar"
+      },
+      "gallery": {
+        "route_id": "scrollbar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=scrollbar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ScrollingSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_scrollbar",
+          "ctest_label": "test_scrollbar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/scrolling/TestScrollBar.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "scroll-view",
+      "title": "ScrollView",
+      "category_id": "scrolling",
+      "description": "A scrollable viewport with Fluent scrollbars and optional zoom.",
+      "capabilities": [
+        "scrolling-and-paging"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Scrolling.h>",
+        "installed_declaration_header": "<FluentQt/components/scrolling/ScrollView.h>",
+        "qualified_type": "fluent::scrolling::ScrollView",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/ScrollView.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.scrolling",
+        "type": "ScrollView",
+        "import_statement": "from fluentqt.scrolling import ScrollView"
+      },
+      "gallery": {
+        "route_id": "scroll-view",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=scroll-view",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/ScrollingSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_scroll_view",
+          "ctest_label": "test_scroll_view",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/scrolling/TestScrollView.cpp"
+        }
+      ],
+      "sample_count": 6
+    },
+    {
+      "id": "avatar",
+      "title": "Avatar",
+      "category_id": "status-info",
+      "description": "Represents a person or identity with an image, initials fallback, shape, size, and presence.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/Avatar.h>",
+        "qualified_type": "fluent::status_info::Avatar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/Avatar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "Avatar",
+        "import_statement": "from fluentqt.status_info import Avatar"
+      },
+      "gallery": {
+        "route_id": "avatar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=avatar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_avatar",
+          "ctest_label": "test_avatar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestAvatar.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "info-badge",
+      "title": "InfoBadge",
+      "category_id": "status-info",
+      "description": "A small badge that shows counts, icons, or attention dots.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/InfoBadge.h>",
+        "qualified_type": "fluent::status_info::InfoBadge",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/InfoBadge.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "InfoBadge",
+        "import_statement": "from fluentqt.status_info import InfoBadge"
+      },
+      "gallery": {
+        "route_id": "info-badge",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=info-badge",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_info_badge",
+          "ctest_label": "test_info_badge",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestInfoBadge.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "info-bar",
+      "title": "InfoBar",
+      "category_id": "status-info",
+      "description": "An inline bar for status messages with severity and optional actions.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/InfoBar.h>",
+        "qualified_type": "fluent::status_info::InfoBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/InfoBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "InfoBar",
+        "import_statement": "from fluentqt.status_info import InfoBar"
+      },
+      "gallery": {
+        "route_id": "info-bar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=info-bar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_info_bar",
+          "ctest_label": "test_info_bar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestInfoBar.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "progress-bar",
+      "title": "ProgressBar",
+      "category_id": "status-info",
+      "description": "Shows determinate or indeterminate progress along a line.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/ProgressBar.h>",
+        "qualified_type": "fluent::status_info::ProgressBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/ProgressBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "ProgressBar",
+        "import_statement": "from fluentqt.status_info import ProgressBar"
+      },
+      "gallery": {
+        "route_id": "progress-bar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=progress-bar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_progress_bar",
+          "ctest_label": "test_progress_bar",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestProgressBar.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "progress-ring",
+      "title": "ProgressRing",
+      "category_id": "status-info",
+      "description": "Shows determinate or indeterminate progress around a ring.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/ProgressRing.h>",
+        "qualified_type": "fluent::status_info::ProgressRing",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/ProgressRing.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "ProgressRing",
+        "import_statement": "from fluentqt.status_info import ProgressRing"
+      },
+      "gallery": {
+        "route_id": "progress-ring",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=progress-ring",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_progress_ring",
+          "ctest_label": "test_progress_ring",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestProgressRing.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "shimmer",
+      "title": "Shimmer",
+      "category_id": "status-info",
+      "description": "Shows a skeleton placeholder while content is loading.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/Shimmer.h>",
+        "qualified_type": "fluent::status_info::Shimmer",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/Shimmer.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "Shimmer",
+        "import_statement": "from fluentqt.status_info import Shimmer"
+      },
+      "gallery": {
+        "route_id": "shimmer",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=shimmer",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_shimmer",
+          "ctest_label": "test_shimmer",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestShimmer.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "toast",
+      "title": "Toast",
+      "category_id": "status-info",
+      "description": "Shows a brief same-window notification without interrupting the current task.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/Toast.h>",
+        "qualified_type": "fluent::status_info::Toast",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/Toast.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "Toast",
+        "import_statement": "from fluentqt.status_info import Toast"
+      },
+      "gallery": {
+        "route_id": "toast",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=toast",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_toast",
+          "ctest_label": "test_toast",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestToast.cpp"
+        }
+      ],
+      "sample_count": 5
+    },
+    {
+      "id": "tooltip",
+      "title": "ToolTip",
+      "category_id": "status-info",
+      "description": "A popup label that shows extra information about a control on hover.",
+      "capabilities": [
+        "status-and-identity"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/StatusInfo.h>",
+        "installed_declaration_header": "<FluentQt/components/status_info/ToolTip.h>",
+        "qualified_type": "fluent::status_info::ToolTip",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/ToolTip.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.status_info",
+        "type": "ToolTip",
+        "import_statement": "from fluentqt.status_info import ToolTip"
+      },
+      "gallery": {
+        "route_id": "tooltip",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=tooltip",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/StatusInfoSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_tooltip",
+          "ctest_label": "test_tooltip",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/status_info/TestToolTip.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "auto-suggest-box",
+      "title": "AutoSuggestBox",
+      "category_id": "text-fields",
+      "description": "A text box that suggests matching items while people type.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "installed_declaration_header": "<FluentQt/components/textfields/AutoSuggestBox.h>",
+        "qualified_type": "fluent::textfields::AutoSuggestBox",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/AutoSuggestBox.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "AutoSuggestBox",
+        "import_statement": "from fluentqt.textfields import AutoSuggestBox"
+      },
+      "gallery": {
+        "route_id": "auto-suggest-box",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=auto-suggest-box",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/TextFieldsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_auto_suggest_box",
+          "ctest_label": "test_auto_suggest_box",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestAutoSuggestBox.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "label",
+      "title": "Label",
+      "category_id": "text-fields",
+      "description": "Static text rendered with Fluent typography roles and elision.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "installed_declaration_header": "<FluentQt/components/textfields/Label.h>",
+        "qualified_type": "fluent::textfields::Label",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/Label.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "Label",
+        "import_statement": "from fluentqt.textfields import Label"
+      },
+      "gallery": {
+        "route_id": "label",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=label",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/TextFieldsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_label",
+          "ctest_label": "test_label",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestLabel.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "line-edit",
+      "title": "LineEdit",
+      "category_id": "text-fields",
+      "description": "A single-line text box with Fluent styling and a clear button.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "installed_declaration_header": "<FluentQt/components/textfields/LineEdit.h>",
+        "qualified_type": "fluent::textfields::LineEdit",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/LineEdit.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "LineEdit",
+        "import_statement": "from fluentqt.textfields import LineEdit"
+      },
+      "gallery": {
+        "route_id": "line-edit",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=line-edit",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/TextFieldsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_line_edit",
+          "ctest_label": "test_line_edit",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestLineEdit.cpp"
+        }
+      ],
+      "sample_count": 4
+    },
+    {
+      "id": "number-box",
+      "title": "NumberBox",
+      "category_id": "text-fields",
+      "description": "A numeric input with spin buttons and inline expression support.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "installed_declaration_header": "<FluentQt/components/textfields/NumberBox.h>",
+        "qualified_type": "fluent::textfields::NumberBox",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/NumberBox.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "NumberBox",
+        "import_statement": "from fluentqt.textfields import NumberBox"
+      },
+      "gallery": {
+        "route_id": "number-box",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=number-box",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/TextFieldsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_number_box",
+          "ctest_label": "test_number_box",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestNumberBox.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "password-box",
+      "title": "PasswordBox",
+      "category_id": "text-fields",
+      "description": "A text box that conceals input with an optional reveal button.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "installed_declaration_header": "<FluentQt/components/textfields/PasswordBox.h>",
+        "qualified_type": "fluent::textfields::PasswordBox",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/PasswordBox.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "PasswordBox",
+        "import_statement": "from fluentqt.textfields import PasswordBox"
+      },
+      "gallery": {
+        "route_id": "password-box",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=password-box",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/TextFieldsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_password_box",
+          "ctest_label": "test_password_box",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestPasswordBox.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "text-edit",
+      "title": "TextEdit",
+      "category_id": "text-fields",
+      "description": "A multi-line text surface for longer-form input.",
+      "capabilities": [
+        "text-and-numeric-input"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/TextFields.h>",
+        "installed_declaration_header": "<FluentQt/components/textfields/TextEdit.h>",
+        "qualified_type": "fluent::textfields::TextEdit",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/TextEdit.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.textfields",
+        "type": "TextEdit",
+        "import_statement": "from fluentqt.textfields import TextEdit"
+      },
+      "gallery": {
+        "route_id": "text-edit",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=text-edit",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/TextFieldsSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_text_edit",
+          "ctest_label": "test_text_edit",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/textfields/TestTextEdit.cpp"
+        }
+      ],
+      "sample_count": 3
+    },
+    {
+      "id": "title-bar",
+      "title": "TitleBar",
+      "category_id": "windowing",
+      "description": "A custom window title bar with drag regions and themed chrome.",
+      "capabilities": [
+        "window-and-icons"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Windowing.h>",
+        "installed_declaration_header": "<FluentQt/components/windowing/TitleBar.h>",
+        "qualified_type": "fluent::windowing::TitleBar",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/TitleBar.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.windowing",
+        "type": "TitleBar",
+        "import_statement": "from fluentqt.windowing import TitleBar"
+      },
+      "gallery": {
+        "route_id": "title-bar",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=title-bar",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/WindowingSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_window",
+          "ctest_label": "test_window",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/windowing/TestWindow.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "window",
+      "title": "Window",
+      "category_id": "windowing",
+      "description": "A Fluent top-level window with custom chrome and theming.",
+      "capabilities": [
+        "window-and-icons"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Windowing.h>",
+        "installed_declaration_header": "<FluentQt/components/windowing/Window.h>",
+        "qualified_type": "fluent::windowing::Window",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/Window.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.windowing",
+        "type": "Window",
+        "import_statement": "from fluentqt.windowing import Window"
+      },
+      "gallery": {
+        "route_id": "window",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=window",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/WindowingSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_window",
+          "ctest_label": "test_window",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/windowing/TestWindow.cpp"
+        }
+      ],
+      "sample_count": 2
+    },
+    {
+      "id": "font-icon",
+      "title": "FontIcon",
+      "category_id": "foundation",
+      "description": "A theme-aware widget that renders bundled Fluent icon glyphs at optical sizes.",
+      "capabilities": [
+        "window-and-icons"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/Foundation.h>",
+        "installed_declaration_header": "<FluentQt/components/foundation/FontIcon.h>",
+        "qualified_type": "fluent::FontIcon",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/FontIcon.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.foundation",
+        "type": "FontIcon",
+        "import_statement": "from fluentqt.foundation import FontIcon"
+      },
+      "gallery": {
+        "route_id": "font-icon",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=font-icon",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/FoundationSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_font_icon",
+          "ctest_label": "test_font_icon",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/TestFontIcon.cpp"
+        }
+      ],
+      "sample_count": 2
+    }
+  ],
+  "public_headers": [
+    {
+      "include": "<FluentQt/BasicInput.h>",
+      "source": "include/FluentQt/BasicInput.h",
+      "summary": "Public declarations provided by BasicInput.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/BasicInput.h"
+    },
+    {
+      "include": "<FluentQt/Collections.h>",
+      "source": "include/FluentQt/Collections.h",
+      "summary": "Public declarations provided by Collections.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Collections.h"
+    },
+    {
+      "include": "<FluentQt/DateTime.h>",
+      "source": "include/FluentQt/DateTime.h",
+      "summary": "Public declarations provided by DateTime.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/DateTime.h"
+    },
+    {
+      "include": "<FluentQt/Design.h>",
+      "source": "include/FluentQt/Design.h",
+      "summary": "Public declarations provided by Design.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Design.h"
+    },
+    {
+      "include": "<FluentQt/Diagnostics.h>",
+      "source": "include/FluentQt/Diagnostics.h",
+      "summary": "Public declarations provided by Diagnostics.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Diagnostics.h"
+    },
+    {
+      "include": "<FluentQt/DialogsFlyouts.h>",
+      "source": "include/FluentQt/DialogsFlyouts.h",
+      "summary": "Public declarations provided by DialogsFlyouts.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/DialogsFlyouts.h"
+    },
+    {
+      "include": "<FluentQt/FluentQt.h>",
+      "source": "include/FluentQt/FluentQt.h",
+      "summary": "Configures process-wide High-DPI behavior before QApplication exists.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/FluentQt.h"
+    },
+    {
+      "include": "<FluentQt/Foundation.h>",
+      "source": "include/FluentQt/Foundation.h",
+      "summary": "Public declarations provided by Foundation.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Foundation.h"
+    },
+    {
+      "include": "<FluentQt/Layout.h>",
+      "source": "include/FluentQt/Layout.h",
+      "summary": "Public declarations provided by Layout.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Layout.h"
+    },
+    {
+      "include": "<FluentQt/MenusToolbars.h>",
+      "source": "include/FluentQt/MenusToolbars.h",
+      "summary": "Public declarations provided by MenusToolbars.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/MenusToolbars.h"
+    },
+    {
+      "include": "<FluentQt/Navigation.h>",
+      "source": "include/FluentQt/Navigation.h",
+      "summary": "Public declarations provided by Navigation.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Navigation.h"
+    },
+    {
+      "include": "<FluentQt/Scrolling.h>",
+      "source": "include/FluentQt/Scrolling.h",
+      "summary": "Public declarations provided by Scrolling.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Scrolling.h"
+    },
+    {
+      "include": "<FluentQt/StatusInfo.h>",
+      "source": "include/FluentQt/StatusInfo.h",
+      "summary": "Public declarations provided by StatusInfo.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/StatusInfo.h"
+    },
+    {
+      "include": "<FluentQt/TextFields.h>",
+      "source": "include/FluentQt/TextFields.h",
+      "summary": "Public declarations provided by TextFields.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/TextFields.h"
+    },
+    {
+      "include": "<FluentQt/Windowing.h>",
+      "source": "include/FluentQt/Windowing.h",
+      "summary": "Public declarations provided by Windowing.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/Windowing.h"
+    },
+    {
+      "include": "<FluentQt/WebAssembly.h>",
+      "source": "include/FluentQt/WebAssembly.h",
+      "summary": "Initial presentation for a browser-hosted top-level widget.",
+      "declarations": [
+        "QRect",
+        "QWidget",
+        "WindowPresentation"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/include/FluentQt/WebAssembly.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/FontCompat.h>",
+      "source": "src/compatibility/FontCompat.h",
+      "summary": "Public declarations provided by FontCompat.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/FontCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/QtCompat.h>",
+      "source": "src/compatibility/QtCompat.h",
+      "summary": "Qt 5/Qt 6 compatibility layer for shared component code.",
+      "declarations": [
+        "FluentSystemColorScheme",
+        "FluentWheelInputKind",
+        "FluentAccessibleAnnouncementPoliteness"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/QtCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/TextPaintCompat.h>",
+      "source": "src/compatibility/TextPaintCompat.h",
+      "summary": "Returns the vertical translation that centers visible glyph ink in a target rectangle.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/TextPaintCompat.h"
+    },
+    {
+      "include": "<FluentQt/compatibility/WindowChromeCompat.h>",
+      "source": "src/compatibility/WindowChromeCompat.h",
+      "summary": "Native-event result type used by QWidget::nativeEvent() across Qt versions.",
+      "declarations": [
+        "WindowChromeOptions",
+        "WindowChromeCompat",
+        "Platform",
+        "HitTest"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/compatibility/WindowChromeCompat.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/Button.h>",
+      "source": "src/components/basicinput/Button.h",
+      "summary": "Fluent-styled push button with token-driven painting and optional iconfont content.",
+      "declarations": [
+        "Button",
+        "ButtonStyle",
+        "ButtonSize",
+        "ButtonLayout",
+        "InteractionState"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/Button.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/CheckBox.h>",
+      "source": "src/components/basicinput/CheckBox.h",
+      "summary": "Fluent checkbox with animated check-state painting.",
+      "declarations": [
+        "QPropertyAnimation",
+        "QFocusEvent",
+        "QKeyEvent",
+        "QMouseEvent",
+        "CheckBox"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/CheckBox.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/ColorPicker.h>",
+      "source": "src/components/basicinput/ColorPicker.h",
+      "summary": "Fluent color picker for RGB, HSV, hex, and optional alpha editing.",
+      "declarations": [
+        "Slider",
+        "ColorPicker"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ColorPicker.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/ComboBox.h>",
+      "source": "src/components/basicinput/ComboBox.h",
+      "summary": "Delegate that paints ComboBox popup rows with Fluent metrics.",
+      "declarations": [
+        "QPropertyAnimation",
+        "QKeyEvent",
+        "QLineEdit",
+        "QWheelEvent",
+        "ListView",
+        "ComboBoxItemDelegate",
+        "ComboBox",
+        "ComboBoxPopup"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ComboBox.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/CompoundButton.h>",
+      "source": "src/components/basicinput/CompoundButton.h",
+      "summary": "Button with a primary label and a secondary description.",
+      "declarations": [
+        "CompoundButton"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/CompoundButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/DropDownButton.h>",
+      "source": "src/components/basicinput/DropDownButton.h",
+      "summary": "Fluent button that opens an attached dropdown or flyout.",
+      "declarations": [
+        "QPropertyAnimation",
+        "QKeyEvent",
+        "DropDownButton"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/DropDownButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/HyperlinkButton.h>",
+      "source": "src/components/basicinput/HyperlinkButton.h",
+      "summary": "Button-styled hyperlink entry with URL and underline control.",
+      "declarations": [
+        "HyperlinkButton"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/HyperlinkButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/RadioButton.h>",
+      "source": "src/components/basicinput/RadioButton.h",
+      "summary": "Fluent radio button with animated selection feedback.",
+      "declarations": [
+        "QPropertyAnimation",
+        "QFocusEvent",
+        "QKeyEvent",
+        "QMouseEvent",
+        "RadioButton"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RadioButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/RatingControl.h>",
+      "source": "src/components/basicinput/RatingControl.h",
+      "summary": "Fluent rating selector with pointer-driven value selection.",
+      "declarations": [
+        "QKeyEvent",
+        "QFocusEvent",
+        "RatingControl"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RatingControl.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/RepeatButton.h>",
+      "source": "src/components/basicinput/RepeatButton.h",
+      "summary": "Button that repeats click actions while pressed.",
+      "declarations": [
+        "RepeatButton"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/RepeatButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/Slider.h>",
+      "source": "src/components/basicinput/Slider.h",
+      "summary": "Fluent slider with custom track, handle, and animated feedback metrics.",
+      "declarations": [
+        "QPainter",
+        "QStyleOptionSlider",
+        "Slider"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/Slider.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/SplitButton.h>",
+      "source": "src/components/basicinput/SplitButton.h",
+      "summary": "Button with separate primary action and secondary menu regions.",
+      "declarations": [
+        "QVariantAnimation",
+        "QKeyEvent",
+        "SplitButton",
+        "SplitPart"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/SplitButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/ToggleButton.h>",
+      "source": "src/components/basicinput/ToggleButton.h",
+      "summary": "Fluent button with persistent checked or tri-state behavior.",
+      "declarations": [
+        "ToggleButton"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ToggleButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/ToggleSplitButton.h>",
+      "source": "src/components/basicinput/ToggleSplitButton.h",
+      "summary": "Split button whose primary region toggles checked state.",
+      "declarations": [
+        "ToggleSplitButton"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ToggleSplitButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/ToggleSwitch.h>",
+      "source": "src/components/basicinput/ToggleSwitch.h",
+      "summary": "Fluent switch for binary on/off settings.",
+      "declarations": [
+        "QPropertyAnimation",
+        "QFocusEvent",
+        "ToggleSwitch"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/ToggleSwitch.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/DataGrid.h>",
+      "source": "src/components/collections/DataGrid.h",
+      "summary": "Fluent two-dimensional item view for large model-backed data sets.",
+      "declarations": [
+        "QAbstractItemModel",
+        "QEvent",
+        "QItemSelectionModel",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QResizeEvent",
+        "QShowEvent",
+        "QWheelEvent",
+        "ScrollBar",
+        "DataGridCellDelegate",
+        "DataGrid"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/DataGrid.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/DrawerView.h>",
+      "source": "src/components/collections/DrawerView.h",
+      "summary": "Same-window drawer overlay with modal, dim, and drag behavior.",
+      "declarations": [
+        "QMouseEvent",
+        "QPaintEvent",
+        "QPropertyAnimation",
+        "OverlayCoordinator",
+        "DrawerView",
+        "DragState",
+        "DrawerEdge",
+        "CloseFlag",
+        "TransitionTarget"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/DrawerView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/FlipView.h>",
+      "source": "src/components/collections/FlipView.h",
+      "summary": "Fluent carousel that presents one item at a time.",
+      "declarations": [
+        "QPropertyAnimation",
+        "FlipView",
+        "PageRecord"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/FlipView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/FlowView.h>",
+      "source": "src/components/collections/FlowView.h",
+      "summary": "Fluent collection view that wraps items across rows or columns.",
+      "declarations": [
+        "QLabel",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QResizeEvent",
+        "QShowEvent",
+        "QTimer",
+        "QWheelEvent",
+        "QVariantAnimation",
+        "FlowView",
+        "LayoutBand"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/FlowView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/GridView.h>",
+      "source": "src/components/collections/GridView.h",
+      "summary": "Fluent grid collection view with configurable cell metrics.",
+      "declarations": [
+        "QLabel",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QResizeEvent",
+        "QShowEvent",
+        "QTimer",
+        "QVariantAnimation",
+        "QWheelEvent",
+        "GridView"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/GridView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/ListView.h>",
+      "source": "src/components/collections/ListView.h",
+      "summary": "Fluent list collection view with header, footer, sections, and indicator motion.",
+      "declarations": [
+        "QLabel",
+        "QItemSelection",
+        "QItemSelectionModel",
+        "QPaintEvent",
+        "QPainter",
+        "QResizeEvent",
+        "QShowEvent",
+        "QTimer",
+        "QVariantAnimation",
+        "QWheelEvent",
+        "QPropertyAnimation",
+        "ListView",
+        "IndicatorMotionDirection"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/ListView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/SelectionMode.h>",
+      "source": "src/components/collections/SelectionMode.h",
+      "summary": "Shared item-selection behavior for Fluent collection views.",
+      "declarations": [
+        "SelectionMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/SelectionMode.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/SplitView.h>",
+      "source": "src/components/collections/SplitView.h",
+      "summary": "Resizable multi-pane container with Fluent splitter handles.",
+      "declarations": [
+        "QMouseEvent",
+        "QPaintEvent",
+        "QResizeEvent",
+        "SplitViewHandle",
+        "SplitViewPaneOptions",
+        "SplitView",
+        "PaneRecord",
+        "HandlePair",
+        "DragState"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/SplitView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/StackView.h>",
+      "source": "src/components/collections/StackView.h",
+      "summary": "Stacked page host with push/pop navigation semantics.",
+      "declarations": [
+        "QGraphicsOpacityEffect",
+        "QKeyEvent",
+        "QParallelAnimationGroup",
+        "QResizeEvent",
+        "StackView",
+        "StackEntry",
+        "PendingRemoval",
+        "OperationGuard",
+        "StackViewItemStatus",
+        "StackViewTransitionOperation",
+        "StackViewTransitionType"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/StackView.h"
+    },
+    {
+      "include": "<FluentQt/components/collections/TreeView.h>",
+      "source": "src/components/collections/TreeView.h",
+      "summary": "Fluent tree collection view with hierarchy-aware selection visuals.",
+      "declarations": [
+        "QLabel",
+        "QPaintEvent",
+        "QResizeEvent",
+        "QShowEvent",
+        "QVariantAnimation",
+        "QWheelEvent",
+        "QTimer",
+        "TreeView",
+        "SelectionIndicatorStyle",
+        "IndicatorVerticalDirection",
+        "IndicatorHierarchyTransition",
+        "DropMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/collections/TreeView.h"
+    },
+    {
+      "include": "<FluentQt/components/date_time/CalendarDatePicker.h>",
+      "source": "src/components/date_time/CalendarDatePicker.h",
+      "summary": "Button-like date entry that opens a CalendarView popup.",
+      "declarations": [
+        "CalendarDatePickerPopup",
+        "CalendarView",
+        "CalendarDatePicker"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/CalendarDatePicker.h"
+    },
+    {
+      "include": "<FluentQt/components/date_time/CalendarView.h>",
+      "source": "src/components/date_time/CalendarView.h",
+      "summary": "Fluent calendar surface for browsing and selecting dates across levels.",
+      "declarations": [
+        "QPainter",
+        "QVariantAnimation",
+        "QWheelEvent",
+        "CalendarViewAccessible",
+        "CalendarView",
+        "DayPageKey",
+        "MonthPageKey",
+        "YearPageKey",
+        "CalendarContentLevel",
+        "WheelGestureKind"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/CalendarView.h"
+    },
+    {
+      "include": "<FluentQt/components/date_time/DatePicker.h>",
+      "source": "src/components/date_time/DatePicker.h",
+      "summary": "Button-like date picker with nullable selected-date semantics.",
+      "declarations": [
+        "DatePickerFlyout",
+        "DatePicker",
+        "FieldSegment",
+        "DateField",
+        "MonthFormat",
+        "DayFormat",
+        "YearFormat"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/DatePicker.h"
+    },
+    {
+      "include": "<FluentQt/components/date_time/TimePicker.h>",
+      "source": "src/components/date_time/TimePicker.h",
+      "summary": "Button-like time picker with nullable selected-time semantics.",
+      "declarations": [
+        "TimePickerFlyout",
+        "TimePicker",
+        "FieldSegment",
+        "TimeField",
+        "ClockIdentifier"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/date_time/TimePicker.h"
+    },
+    {
+      "include": "<FluentQt/components/dialogs_flyouts/CoachMark.h>",
+      "source": "src/components/dialogs_flyouts/CoachMark.h",
+      "summary": "Same-window teaching tip with a tail aimed at a target.",
+      "declarations": [
+        "QPaintEvent",
+        "QEvent",
+        "QGraphicsOpacityEffect",
+        "QPropertyAnimation",
+        "QResizeEvent",
+        "OverlayCoordinator",
+        "CoachMark",
+        "SurfaceMode",
+        "Placement"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/CoachMark.h"
+    },
+    {
+      "include": "<FluentQt/components/dialogs_flyouts/ContentDialog.h>",
+      "source": "src/components/dialogs_flyouts/ContentDialog.h",
+      "summary": "WinUI-style content dialog with title, content, and command buttons.",
+      "declarations": [
+        "ContentDialog",
+        "ContentDialogButton"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/ContentDialog.h"
+    },
+    {
+      "include": "<FluentQt/components/dialogs_flyouts/Dialog.h>",
+      "source": "src/components/dialogs_flyouts/Dialog.h",
+      "summary": "Same-window Fluent dialog shell with optional smoke scrim and enter/exit fade.",
+      "declarations": [
+        "QEvent",
+        "QGraphicsOpacityEffect",
+        "QHideEvent",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QPainter",
+        "QShowEvent",
+        "OverlayCoordinator",
+        "Dialog",
+        "CloseFlag"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/Dialog.h"
+    },
+    {
+      "include": "<FluentQt/components/dialogs_flyouts/Flyout.h>",
+      "source": "src/components/dialogs_flyouts/Flyout.h",
+      "summary": "Popup anchored to a target with placement and window clamping rules.",
+      "declarations": [
+        "Flyout",
+        "Placement"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/Flyout.h"
+    },
+    {
+      "include": "<FluentQt/components/dialogs_flyouts/Popup.h>",
+      "source": "src/components/dialogs_flyouts/Popup.h",
+      "summary": "Base same-window popup surface with open state and close policy control.",
+      "declarations": [
+        "QGraphicsOpacityEffect",
+        "OverlayCoordinator",
+        "Popup",
+        "CloseFlag",
+        "CloseReason"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/Popup.h"
+    },
+    {
+      "include": "<FluentQt/components/dialogs_flyouts/TeachingTip.h>",
+      "source": "src/components/dialogs_flyouts/TeachingTip.h",
+      "summary": "Contextual teaching flyout with target placement and optional tail.",
+      "declarations": [
+        "QKeyEvent",
+        "QPaintEvent",
+        "QResizeEvent",
+        "QWidget",
+        "TeachingTip",
+        "PreferredPlacement",
+        "CloseReason"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/dialogs_flyouts/TeachingTip.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/FluentElement.h>",
+      "source": "src/components/foundation/FluentElement.h",
+      "summary": "Provides shared Fluent design tokens and theme callbacks to QWidget-based components.",
+      "declarations": [
+        "QWidget",
+        "FluentElementPrivate",
+        "FluentElement",
+        "Colors",
+        "FontStyle",
+        "Radius",
+        "Spacing",
+        "Animation",
+        "Theme"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/FluentElement.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/FontIcon.h>",
+      "source": "src/components/foundation/FontIcon.h",
+      "summary": "Theme-aware Fluent icon glyph with optical-size selection.",
+      "declarations": [
+        "FontIcon"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/FontIcon.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/QMLPlus.h>",
+      "source": "src/components/foundation/QMLPlus.h",
+      "summary": "Lightweight anchor-based layout for QWidget controls.",
+      "declarations": [
+        "AnchorLayout",
+        "Anchor",
+        "Anchors",
+        "Item",
+        "PropertyLink",
+        "PropertyBinder",
+        "PropertyChange",
+        "QMLState",
+        "QMLPlus",
+        "Edge",
+        "Direction"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/QMLPlus.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/ThemeRegistry.h>",
+      "source": "src/components/foundation/ThemeRegistry.h",
+      "summary": "Runtime store for the theme-able design tokens consumed by every",
+      "declarations": [
+        "ThemeRegistry",
+        "Snapshot",
+        "UninitializedTag"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/ThemeRegistry.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/UserTheme.h>",
+      "source": "src/components/foundation/UserTheme.h",
+      "summary": "Loads Fluent token overrides and accent customization into",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/UserTheme.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/WidgetOwnership.h>",
+      "source": "src/components/foundation/WidgetOwnership.h",
+      "summary": "Defines how a widget host releases caller-supplied content.",
+      "declarations": [
+        "WidgetOwnership"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/WidgetOwnership.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/overlay/OverlayGeometry.h>",
+      "source": "src/components/foundation/overlay/OverlayGeometry.h",
+      "summary": "Returns whether an application event can change an anchor's mapped geometry.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayGeometry.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/overlay/OverlayLightDismiss.h>",
+      "source": "src/components/foundation/overlay/OverlayLightDismiss.h",
+      "summary": "Public declarations provided by OverlayLightDismiss.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayLightDismiss.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/overlay/OverlayScrim.h>",
+      "source": "src/components/foundation/overlay/OverlayScrim.h",
+      "summary": "Same-window dim/scrim used behind modal overlays, drawers, and spotlights.",
+      "declarations": [
+        "QMouseEvent",
+        "QPaintEvent",
+        "QWheelEvent",
+        "OverlayScrim"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayScrim.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/overlay/OverlayShadow.h>",
+      "source": "src/components/foundation/overlay/OverlayShadow.h",
+      "summary": "Default per-layer opacity multiplier for overlay card shadows.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayShadow.h"
+    },
+    {
+      "include": "<FluentQt/components/foundation/overlay/OverlayWindow.h>",
+      "source": "src/components/foundation/overlay/OverlayWindow.h",
+      "summary": "Public declarations provided by OverlayWindow.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/foundation/overlay/OverlayWindow.h"
+    },
+    {
+      "include": "<FluentQt/components/layout/Accordion.h>",
+      "source": "src/components/layout/Accordion.h",
+      "summary": "Vertical group of Expander items with coordinated expansion and keyboard focus.",
+      "declarations": [
+        "QEvent",
+        "QVBoxLayout",
+        "Expander",
+        "Accordion",
+        "ItemRecord",
+        "ExpansionMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Accordion.h"
+    },
+    {
+      "include": "<FluentQt/components/layout/Card.h>",
+      "source": "src/components/layout/Card.h",
+      "summary": "Non-interactive Fluent surface for grouping caller-owned content.",
+      "declarations": [
+        "Card",
+        "Appearance"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Card.h"
+    },
+    {
+      "include": "<FluentQt/components/layout/Divider.h>",
+      "source": "src/components/layout/Divider.h",
+      "summary": "DPI-aligned horizontal or vertical Fluent separator.",
+      "declarations": [
+        "Divider"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Divider.h"
+    },
+    {
+      "include": "<FluentQt/components/layout/Expander.h>",
+      "source": "src/components/layout/Expander.h",
+      "summary": "Fluent disclosure surface with an animated, caller-supplied body.",
+      "declarations": [
+        "QResizeEvent",
+        "QScrollArea",
+        "QScrollBar",
+        "QVariantAnimation",
+        "FontIcon",
+        "Button",
+        "Divider",
+        "Label",
+        "Expander"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Expander.h"
+    },
+    {
+      "include": "<FluentQt/components/layout/Field.h>",
+      "source": "src/components/layout/Field.h",
+      "summary": "Composition shell that labels an existing editor and presents helper",
+      "declarations": [
+        "Label",
+        "FontIcon",
+        "Field",
+        "ValidationState"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/layout/Field.h"
+    },
+    {
+      "include": "<FluentQt/components/menus_toolbars/CommandBar.h>",
+      "source": "src/components/menus_toolbars/CommandBar.h",
+      "summary": "Hosts ordered primary and secondary application commands.",
+      "declarations": [
+        "QAction",
+        "QActionEvent",
+        "CommandBarPrivate",
+        "CommandBar",
+        "LabelPosition"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/CommandBar.h"
+    },
+    {
+      "include": "<FluentQt/components/menus_toolbars/CommandBarFlyout.h>",
+      "source": "src/components/menus_toolbars/CommandBarFlyout.h",
+      "summary": "Contextual command surface with collapsed and expanded show modes.",
+      "declarations": [
+        "QAction",
+        "QActionEvent",
+        "CommandBarFlyoutPrivate",
+        "CommandBarFlyout",
+        "ShowMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/CommandBarFlyout.h"
+    },
+    {
+      "include": "<FluentQt/components/menus_toolbars/Menu.h>",
+      "source": "src/components/menus_toolbars/Menu.h",
+      "summary": "Menu item action with Fluent typography metadata.",
+      "declarations": [
+        "QActionEvent",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QResizeEvent",
+        "FluentMenuItem",
+        "FluentMenu"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/Menu.h"
+    },
+    {
+      "include": "<FluentQt/components/menus_toolbars/MenuBar.h>",
+      "source": "src/components/menus_toolbars/MenuBar.h",
+      "summary": "Fluent-styled menu bar with configurable font role.",
+      "declarations": [
+        "QAction",
+        "QActionEvent",
+        "QEvent",
+        "QFocusEvent",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QResizeEvent",
+        "FluentMenu",
+        "FluentMenuBar",
+        "Metrics"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/menus_toolbars/MenuBar.h"
+    },
+    {
+      "include": "<FluentQt/components/navigation/Breadcrumb.h>",
+      "source": "src/components/navigation/Breadcrumb.h",
+      "summary": "Breadcrumb navigation control with overflow handling and item sizing.",
+      "declarations": [
+        "QFocusEvent",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QResizeEvent",
+        "BreadcrumbAccessible",
+        "BreadcrumbItem",
+        "Breadcrumb",
+        "Metrics",
+        "DisplayRecord",
+        "BreadcrumbSize",
+        "OverflowMode",
+        "RecordType"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/Breadcrumb.h"
+    },
+    {
+      "include": "<FluentQt/components/navigation/NavigationView.h>",
+      "source": "src/components/navigation/NavigationView.h",
+      "summary": "Lightweight navigation shell with pane display modes and content hosting.",
+      "declarations": [
+        "QPaintEvent",
+        "QEvent",
+        "QPropertyAnimation",
+        "QResizeEvent",
+        "QShowEvent",
+        "StackContentHost",
+        "NavigationView",
+        "ChromeRecord",
+        "LayoutState",
+        "DisplayMode",
+        "ChromeSlot",
+        "LayoutTransitionKind"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/NavigationView.h"
+    },
+    {
+      "include": "<FluentQt/components/navigation/Pivot.h>",
+      "source": "src/components/navigation/Pivot.h",
+      "summary": "Pivot-style horizontal navigation selector.",
+      "declarations": [
+        "QFocusEvent",
+        "QColor",
+        "QFont",
+        "QFontMetrics",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QPainter",
+        "QResizeEvent",
+        "PivotAccessible",
+        "PivotItem",
+        "Pivot",
+        "HeaderRecord",
+        "HitRecord",
+        "Metrics",
+        "OverflowBehavior",
+        "HitKind"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/Pivot.h"
+    },
+    {
+      "include": "<FluentQt/components/navigation/SelectorBar.h>",
+      "source": "src/components/navigation/SelectorBar.h",
+      "summary": "Horizontal selector bar for mutually exclusive navigation items.",
+      "declarations": [
+        "QFocusEvent",
+        "QColor",
+        "QFont",
+        "QFontMetrics",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QPainter",
+        "QResizeEvent",
+        "QVariantAnimation",
+        "SelectorBarAccessible",
+        "SelectorBarItem",
+        "SelectorBar",
+        "ItemRecord",
+        "HitRecord",
+        "Metrics",
+        "OverflowBehavior",
+        "HitKind"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/SelectorBar.h"
+    },
+    {
+      "include": "<FluentQt/components/navigation/StackContentHost.h>",
+      "source": "src/components/navigation/StackContentHost.h",
+      "summary": "Content host that switches stacked pages with configurable transitions.",
+      "declarations": [
+        "QParallelAnimationGroup",
+        "QResizeEvent",
+        "QStackedLayout",
+        "StackContentHost",
+        "PageRecord",
+        "TransitionEffect"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/StackContentHost.h"
+    },
+    {
+      "include": "<FluentQt/components/navigation/TabView.h>",
+      "source": "src/components/navigation/TabView.h",
+      "summary": "Internal tab strip that paints tab chrome and indicator geometry.",
+      "declarations": [
+        "QColor",
+        "QEvent",
+        "QFocusEvent",
+        "QFont",
+        "QFontMetrics",
+        "QGraphicsOpacityEffect",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QObject",
+        "QPainter",
+        "QPaintEvent",
+        "QPropertyAnimation",
+        "QResizeEvent",
+        "QScrollBar",
+        "QVariantAnimation",
+        "QWheelEvent",
+        "Button",
+        "Label",
+        "TabViewAccessible",
+        "TabViewItem",
+        "TabStrip",
+        "Metrics",
+        "TabRecord",
+        "TabHeaderWidgets",
+        "HitRecord",
+        "TabView",
+        "WidthMode",
+        "CloseButtonOverlayMode",
+        "HitKind",
+        "TabWidthMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/navigation/TabView.h"
+    },
+    {
+      "include": "<FluentQt/components/scrolling/AnnotatedScrollBar.h>",
+      "source": "src/components/scrolling/AnnotatedScrollBar.h",
+      "summary": "Label metadata rendered beside an AnnotatedScrollBar offset.",
+      "declarations": [
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QResizeEvent",
+        "QWheelEvent",
+        "ToolTip",
+        "ScrollView",
+        "AnnotatedScrollBarLabel",
+        "AnnotatedScrollBar",
+        "VisibleLabel"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/AnnotatedScrollBar.h"
+    },
+    {
+      "include": "<FluentQt/components/scrolling/PipsPager.h>",
+      "source": "src/components/scrolling/PipsPager.h",
+      "summary": "Fluent page indicator with selectable pips and navigation buttons.",
+      "declarations": [
+        "QFocusEvent",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QPainter",
+        "QVariantAnimation",
+        "PipsPagerAccessible",
+        "PipsPager",
+        "HitTarget",
+        "PipsPagerButtonVisibility",
+        "HitKind"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/PipsPager.h"
+    },
+    {
+      "include": "<FluentQt/components/scrolling/ScrollBar.h>",
+      "source": "src/components/scrolling/ScrollBar.h",
+      "summary": "Fluent scrollbar with custom thickness and opacity animation.",
+      "declarations": [
+        "ScrollBar"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/ScrollBar.h"
+    },
+    {
+      "include": "<FluentQt/components/scrolling/ScrollView.h>",
+      "source": "src/components/scrolling/ScrollView.h",
+      "summary": "Helper content widget that exposes ScrollView zoom state to layout code.",
+      "declarations": [
+        "QScrollBar",
+        "QWheelEvent",
+        "QObject",
+        "ScrollBar",
+        "ScrollViewZoomAware",
+        "ScrollView",
+        "ScrollMode",
+        "ScrollBarVisibility",
+        "ZoomMode",
+        "Axis"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/scrolling/ScrollView.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/Avatar.h>",
+      "source": "src/components/status_info/Avatar.h",
+      "summary": "Fluent identity image with initials fallback and optional presence status.",
+      "declarations": [
+        "QPaintEvent",
+        "QResizeEvent",
+        "InfoBadge",
+        "Avatar",
+        "AvatarShape",
+        "AvatarSize",
+        "PresenceStatus"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/Avatar.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/InfoBadge.h>",
+      "source": "src/components/status_info/InfoBadge.h",
+      "summary": "Compact Fluent badge for value, icon, status, or attention signals.",
+      "declarations": [
+        "QPainter",
+        "QRectF",
+        "QHideEvent",
+        "QShowEvent",
+        "InfoBadge",
+        "InfoBadgeDisplayMode",
+        "InfoBadgeStatus"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/InfoBadge.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/InfoBar.h>",
+      "source": "src/components/status_info/InfoBar.h",
+      "summary": "Fluent inline notification bar with severity, actions, and close behavior.",
+      "declarations": [
+        "QResizeEvent",
+        "QEvent",
+        "QPainter",
+        "Button",
+        "Label",
+        "InfoBar",
+        "InfoBarSeverity"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/InfoBar.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/ProgressBar.h>",
+      "source": "src/components/status_info/ProgressBar.h",
+      "summary": "Fluent linear progress indicator for determinate and indeterminate",
+      "declarations": [
+        "ProgressBar"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/ProgressBar.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/ProgressRing.h>",
+      "source": "src/components/status_info/ProgressRing.h",
+      "summary": "Fluent circular progress indicator for active or indeterminate work.",
+      "declarations": [
+        "ProgressRing",
+        "ProgressRingSize",
+        "ProgressRingStatus"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/ProgressRing.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/Shimmer.h>",
+      "source": "src/components/status_info/Shimmer.h",
+      "summary": "Painter helper for Fluent skeleton loading visuals.",
+      "declarations": [
+        "QPainter",
+        "QPaintEvent",
+        "QHideEvent",
+        "QResizeEvent",
+        "QShowEvent",
+        "QTimerEvent",
+        "ShimmerPainter",
+        "Palette",
+        "Element",
+        "Shimmer",
+        "Shape",
+        "ShimmerTemplate"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/Shimmer.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/Toast.h>",
+      "source": "src/components/status_info/Toast.h",
+      "summary": "Transient same-window notification with severity and edge placement.",
+      "declarations": [
+        "QEvent",
+        "QFrame",
+        "QGraphicsOpacityEffect",
+        "QPaintEvent",
+        "QPropertyAnimation",
+        "QTimer",
+        "OverlayCoordinator",
+        "FontIcon",
+        "Button",
+        "Label",
+        "Toast",
+        "Severity",
+        "Placement",
+        "DismissReason"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/Toast.h"
+    },
+    {
+      "include": "<FluentQt/components/status_info/ToolTip.h>",
+      "source": "src/components/status_info/ToolTip.h",
+      "summary": "Fluent tooltip bubble with margin and animation controls.",
+      "declarations": [
+        "QPropertyAnimation",
+        "ToolTip",
+        "Placement"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/status_info/ToolTip.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/AutoSuggestBox.h>",
+      "source": "src/components/textfields/AutoSuggestBox.h",
+      "summary": "LineEdit-based input box with query affordance and suggestion flyout.",
+      "declarations": [
+        "QKeyEvent",
+        "QMoveEvent",
+        "QPainter",
+        "SuggestionListPopup",
+        "AutoSuggestBox",
+        "TextChangeReason",
+        "QueryButtonPlacement"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/AutoSuggestBox.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/EditingCommandRouter.h>",
+      "source": "src/components/textfields/EditingCommandRouter.h",
+      "summary": "Provides window-scoped semantic actions for the focused Fluent editor.",
+      "declarations": [
+        "QAction",
+        "QWidget",
+        "EditingCommandRouterPrivate",
+        "EditingCommandRouter",
+        "Command"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/EditingCommandRouter.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/Label.h>",
+      "source": "src/components/textfields/Label.h",
+      "summary": "Fluent typography label with optional text elision.",
+      "declarations": [
+        "QContextMenuEvent",
+        "Label",
+        "TextColorRole"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/Label.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/LineEdit.h>",
+      "source": "src/components/textfields/LineEdit.h",
+      "summary": "Fluent single-line text input with clear button and focus underline.",
+      "declarations": [
+        "QPainter",
+        "QPaintEvent",
+        "QResizeEvent",
+        "QContextMenuEvent",
+        "LineEdit"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/LineEdit.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/NumberBox.h>",
+      "source": "src/components/textfields/NumberBox.h",
+      "summary": "Numeric LineEdit with value bounds, expression input, and spin",
+      "declarations": [
+        "QFocusEvent",
+        "QKeyEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QPainter",
+        "QResizeEvent",
+        "NumberBox",
+        "SpinButtonPlacementMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/NumberBox.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/PasswordBox.h>",
+      "source": "src/components/textfields/PasswordBox.h",
+      "summary": "Password text field with header and reveal-mode support.",
+      "declarations": [
+        "QContextMenuEvent",
+        "QFocusEvent",
+        "QMouseEvent",
+        "QPaintEvent",
+        "QPainter",
+        "QResizeEvent",
+        "PasswordBox",
+        "PasswordRevealMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/PasswordBox.h"
+    },
+    {
+      "include": "<FluentQt/components/textfields/TextEdit.h>",
+      "source": "src/components/textfields/TextEdit.h",
+      "summary": "Fluent multi-line text input with line-count based sizing.",
+      "declarations": [
+        "QTextEdit",
+        "QPainter",
+        "QPaintEvent",
+        "TextEdit"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/textfields/TextEdit.h"
+    },
+    {
+      "include": "<FluentQt/components/windowing/TitleBar.h>",
+      "source": "src/components/windowing/TitleBar.h",
+      "summary": "Custom title bar container with reserved system button regions.",
+      "declarations": [
+        "TitleBar"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/TitleBar.h"
+    },
+    {
+      "include": "<FluentQt/components/windowing/Window.h>",
+      "source": "src/components/windowing/Window.h",
+      "summary": "Application shell window with title-bar and content hosting.",
+      "declarations": [
+        "QMouseEvent",
+        "QPaintEvent",
+        "QPainter",
+        "QPixmap",
+        "QResizeEvent",
+        "QShowEvent",
+        "QVBoxLayout",
+        "Button",
+        "ClientSideFrameEdgeOverlay",
+        "ClientSideFramePaintOptions",
+        "TitleBar",
+        "WindowResizeSession",
+        "Window"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/Window.h"
+    },
+    {
+      "include": "<FluentQt/components/windowing/WindowBackdrop.h>",
+      "source": "src/components/windowing/WindowBackdrop.h",
+      "summary": "Logical background material requested for a Fluent window.",
+      "declarations": [
+        "QWidget",
+        "FluentElement",
+        "BackdropCapabilities",
+        "BackdropApplyResult",
+        "BackdropState",
+        "BackdropEffect",
+        "BackdropBackend",
+        "BackdropFidelity",
+        "BackdropSurfaceMode"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/WindowBackdrop.h"
+    },
+    {
+      "include": "<FluentQt/components/windowing/WindowBackdropMaterial.h>",
+      "source": "src/components/windowing/WindowBackdropMaterial.h",
+      "summary": "Parameters for the app-painted Fluent window backdrop.",
+      "declarations": [
+        "QPainter",
+        "WindowBackdropMaterialOptions",
+        "WindowBackdropMaterial"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/windowing/WindowBackdropMaterial.h"
+    },
+    {
+      "include": "<FluentQt/design/Animation.h>",
+      "source": "src/design/Animation.h",
+      "summary": "Defines Fluent motion duration and easing tokens.",
+      "declarations": [
+        "EasingType"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/Animation.h"
+    },
+    {
+      "include": "<FluentQt/design/Breakpoints.h>",
+      "source": "src/design/Breakpoints.h",
+      "summary": "Defines Fluent adaptive layout breakpoints and window-size constraints.",
+      "declarations": [
+        "Breakpoint"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/Breakpoints.h"
+    },
+    {
+      "include": "<FluentQt/design/CornerRadius.h>",
+      "source": "src/design/CornerRadius.h",
+      "summary": "Defines Fluent corner-radius tokens.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/CornerRadius.h"
+    },
+    {
+      "include": "<FluentQt/design/Elevation.h>",
+      "source": "src/design/Elevation.h",
+      "summary": "Defines Fluent shadow elevation levels and paint parameters.",
+      "declarations": [
+        "ShadowParams",
+        "Level"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/Elevation.h"
+    },
+    {
+      "include": "<FluentQt/design/IconCatalog.h>",
+      "source": "src/design/IconCatalog.h",
+      "summary": "Metadata for one glyph in the bundled Fluent UI System Icons face.",
+      "declarations": [
+        "IconInfo"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/IconCatalog.h"
+    },
+    {
+      "include": "<FluentQt/design/Material.h>",
+      "source": "src/design/Material.h",
+      "summary": "Defines Fluent material tokens for Acrylic, Mica, and Smoke surfaces.",
+      "declarations": [
+        "AcrylicToken",
+        "MicaToken",
+        "SmokeToken",
+        "Type"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/Material.h"
+    },
+    {
+      "include": "<FluentQt/design/Spacing.h>",
+      "source": "src/design/Spacing.h",
+      "summary": "Defines Fluent spacing, padding, border, and control-size tokens.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/Spacing.h"
+    },
+    {
+      "include": "<FluentQt/design/ThemeColors.h>",
+      "source": "src/design/ThemeColors.h",
+      "summary": "Defines Fluent semantic color tokens for light, dark, and contrast themes.",
+      "declarations": [],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/ThemeColors.h"
+    },
+    {
+      "include": "<FluentQt/design/Typography.h>",
+      "source": "src/design/Typography.h",
+      "summary": "Defines Fluent typography roles, font metrics, and icon glyph tokens.",
+      "declarations": [
+        "FontStyle",
+        "FontRole"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/design/Typography.h"
+    },
+    {
+      "include": "<FluentQt/utils/Inspector.h>",
+      "source": "src/utils/Inspector.h",
+      "summary": "Configures the read-only checks performed by Inspector.",
+      "declarations": [
+        "QWidget",
+        "InspectorOptions",
+        "Inspector"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/utils/Inspector.h"
+    }
+  ]
+}

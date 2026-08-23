@@ -13,4 +13,7 @@
     <xhtml:link rel="alternate" hreflang="zh-CN" href="https://calvinhxx.github.io/Fluent-Qt/zh-CN/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://calvinhxx.github.io/Fluent-Qt/" />
   </url>
+  <url>
+    <loc>https://calvinhxx.github.io/Fluent-Qt/api/</loc>
+  </url>
 </urlset>

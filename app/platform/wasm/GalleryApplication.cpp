@@ -34,6 +34,13 @@ QString requestedWindowMode()
     return QString::fromUtf8(rawMode ? rawMode : "windowed");
 }
 
+QString requestedRoute()
+{
+    const char* rawRoute = emscripten_run_script_string(
+        "new URLSearchParams(window.location.search).get('route') || ''");
+    return QString::fromUtf8(rawRoute ? rawRoute : "").trimmed();
+}
+
 void showGalleryWindow(GalleryWindow* window)
 {
     if (!window)
@@ -96,6 +103,11 @@ int runApplication(int argc, char** argv)
     application->setWindowIcon(appicon::icon());
 
     galleryWindow = std::make_unique<GalleryWindow>();
+    const QString initialRoute = requestedRoute();
+    if (!initialRoute.isEmpty() && !galleryWindow->selectRoute(initialRoute)) {
+        LOG_WARN(QStringLiteral("GalleryApp ignored unknown requested route=%1")
+                     .arg(initialRoute));
+    }
     // The browser owns only the Qt screen. The runtime adapter selects the
     // initial presentation while Fluent Window remains the single owner of
     // chrome, resizing, maximize/restore, and responsive content geometry.
