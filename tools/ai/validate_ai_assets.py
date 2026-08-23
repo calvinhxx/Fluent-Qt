@@ -22,7 +22,10 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from generate_ai_catalog import check_catalog, generate_catalog
 from evaluate_ai_catalog import evaluate_catalog
-from package_fluentqt_skill import REQUIRED_SKILL_FILES
+from package_fluentqt_skill import (
+    REQUIRED_PACKAGED_ONBOARDING_FILES,
+    REQUIRED_SKILL_FILES,
+)
 from query_ai_catalog import component_by_id, pattern_by_id, search_components
 
 
@@ -30,6 +33,8 @@ SKILL_SOURCE_ROOT = ".agents/skills/build-fluentqt-gui"
 REQUIRED_PATHS = (
     "docs/ai/README.md",
     "docs/ai/add-gui-to-project.md",
+    "docs/ai/evals/application-scenes.json",
+    "docs/ai/evals/application-scenes.schema.json",
     "docs/ai/evals/scenarios.json",
     "docs/ai/evals/scenarios.schema.json",
     "docs/ai/guidance.json",
@@ -40,6 +45,22 @@ REQUIRED_PATHS = (
     "tools/ai/package_fluentqt_skill.py",
     "llms.txt",
 )
+
+REQUIRED_APPLICATION_SCENE_COVERAGE = {
+    "light",
+    "dark",
+    "wide",
+    "narrow",
+    "minimum-window",
+    "ready",
+    "empty",
+    "loading",
+    "error",
+    "long-text",
+    "ime",
+    "dense-data",
+    "scroll-boundary",
+}
 
 
 def _resolve_local_ref(root_schema: dict[str, object], reference: str) -> object:
@@ -191,11 +212,13 @@ def _validate_skill(project_root: Path) -> None:
     if not contents.startswith("---\nname: build-fluentqt-gui\ndescription:"):
         raise AssertionError("FluentQt GUI Skill has invalid frontmatter")
     for required in (
+        "assets/benchmarks/agent-run.schema.json",
         "assets/benchmarks/agent-run-workspace.json",
         "assets/composition-recipes.json",
         "assets/fluentqt-ai-catalog.json",
         "assets/project-structure-templates.json",
         "references/art-direction.md",
+        "references/cross-agent-benchmark.md",
         "references/design-intelligence.md",
         "references/iconography.md",
         "references/product-copy.md",
@@ -210,6 +233,7 @@ def _validate_skill(project_root: Path) -> None:
         "references/visual-evidence-contract.md",
         "references/visual-refinement.md",
         "scripts/init_design_brief.py",
+        "scripts/benchmark_run.py",
         "scripts/init_project_structure.py",
         "scripts/init_visual_evidence.py",
         "scripts/query_catalog.py",
@@ -234,6 +258,13 @@ def _validate_skill(project_root: Path) -> None:
             "Produce three high-fidelity comps",
             "Require a human decision",
             "Art-direction acceptance gate",
+        ),
+        "references/cross-agent-benchmark.md": (
+            "Fixed inputs",
+            "Initialize one run",
+            "Record the run",
+            "Summarize the three runs",
+            "awaiting-preference",
         ),
         "references/design-intelligence.md": (
             "Ground the design in the product's world",
@@ -429,6 +460,15 @@ def _validate_skill(project_root: Path) -> None:
         raise AssertionError(
             "Agent-run visual benchmark is missing product-specific design evidence"
         )
+    threshold = benchmark.get("pass_threshold", {})
+    if threshold != {
+        "minimum_build_success_percent": 85,
+        "minimum_workflow_completion_percent": 80,
+        "minimum_dimension_score": 4,
+        "minimum_pairwise_preference_percent": 70,
+        "open_blocker_or_major_findings": 0,
+    }:
+        raise AssertionError("Agent-run visual benchmark thresholds have drifted")
 
 
 def _validate_visual_evidence_validator(project_root: Path) -> None:
@@ -1573,6 +1613,155 @@ def _validate_design_and_review_tooling(project_root: Path) -> None:
             raise AssertionError("Visual evidence validator accepts self-review")
 
 
+def _validate_benchmark_tooling(project_root: Path) -> None:
+    skill_root = project_root / ".agents/skills/build-fluentqt-gui"
+    script = skill_root / "scripts/benchmark_run.py"
+    schema = json.loads(
+        (skill_root / "assets/benchmarks/agent-run.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    with tempfile.TemporaryDirectory(prefix="fluentqt-agent-benchmark-") as temp:
+        root = Path(temp)
+        manifests: list[Path] = []
+        for agent in ("codex", "claude-code", "cursor"):
+            run_root = root / agent
+            manifest_path = run_root / "run.json"
+            initialized = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "init",
+                    "--agent",
+                    agent,
+                    "--author-id",
+                    f"{agent}-runner",
+                    "--skill-package",
+                    str(skill_root),
+                    "--workspace",
+                    str(project_root),
+                    "--run-id",
+                    f"fixture-{agent}",
+                    "--output",
+                    str(manifest_path),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if initialized.returncode != 0:
+                raise AssertionError(
+                    "Benchmark run initializer failed: "
+                    + (initialized.stderr or initialized.stdout).strip()
+                )
+
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            _validate_json_instance(manifest, schema, schema)
+            artifact_root = run_root / "artifacts"
+            artifact_root.mkdir()
+            for name in (
+                "design_brief",
+                "project_structure",
+                "visual_evidence",
+                "inspector_report",
+                "built_application",
+            ):
+                artifact = artifact_root / f"{name}.json"
+                artifact.write_text(f'{{"fixture": "{name}"}}\n', encoding="utf-8")
+                manifest["artifacts"][name] = artifact.relative_to(run_root).as_posix()
+            log_path = run_root / "validation.log"
+            log_path.write_text("fixture passed\n", encoding="utf-8")
+            review_path = run_root / "review.txt"
+            review_path.write_text("blind fixture review\n", encoding="utf-8")
+            manifest["status"] = "completed"
+            manifest["started_at"] = "2026-01-01T00:00:00Z"
+            manifest["completed_at"] = "2026-01-01T00:01:00Z"
+            manifest["workspace"]["source_commit"] = "0" * 40
+            manifest["commands"] = [
+                {
+                    "command": "fixture validation",
+                    "exit_code": 0,
+                    "duration_ms": 1,
+                    "evidence": [log_path.relative_to(run_root).as_posix()],
+                }
+            ]
+            manifest["checks"] = {name: True for name in manifest["checks"]}
+            manifest["review"]["reviewer_id"] = "independent-reviewer"
+            manifest["review"]["verdict"] = "pass"
+            for dimension in manifest["review"]["dimensions"].values():
+                dimension["score"] = 4
+                dimension["evidence"] = [
+                    review_path.relative_to(run_root).as_posix()
+                ]
+            manifest_path.write_text(
+                json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "validate",
+                    str(manifest_path),
+                    "--require-pass",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if completed.returncode != 0:
+                raise AssertionError(
+                    "Benchmark run validator rejected a passing run: "
+                    + (completed.stderr or completed.stdout).strip()
+                )
+            manifests.append(manifest_path)
+
+        summary_path = root / "summary.json"
+        base_summary_command = [
+            sys.executable,
+            str(script),
+            "summarize",
+            *(str(path) for path in manifests),
+            "--output",
+            str(summary_path),
+        ]
+        awaiting = subprocess.run(
+            base_summary_command,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if awaiting.returncode != 0:
+            raise AssertionError(
+                "Benchmark summary could not reach awaiting-preference: "
+                + (awaiting.stderr or awaiting.stdout).strip()
+            )
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        if summary.get("status") != "awaiting-preference":
+            raise AssertionError("Benchmark summary skips the human preference gate")
+
+        passing = subprocess.run(
+            [
+                *base_summary_command,
+                "--pairwise-preference-percent",
+                "75",
+                "--preference-note",
+                "Blind fixture comparison",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if passing.returncode != 0:
+            raise AssertionError(
+                "Benchmark summary rejected a passing preference result: "
+                + (passing.stderr or passing.stdout).strip()
+            )
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        if summary.get("status") != "pass":
+            raise AssertionError("Benchmark summary does not enforce the final gate")
+
+
 def _validate_installable_skill(project_root: Path) -> None:
     skill_root = project_root / ".agents/skills/build-fluentqt-gui"
     query = skill_root / "scripts/query_catalog.py"
@@ -1639,6 +1828,12 @@ def _validate_installable_skill(project_root: Path) -> None:
                     raise AssertionError(
                         f"Skill archive is missing {relative_path}"
                     )
+            for relative_path in REQUIRED_PACKAGED_ONBOARDING_FILES:
+                archive_path = prefix + "tools/onboarding/" + relative_path
+                if archive_path not in entries:
+                    raise AssertionError(
+                        f"Skill archive is missing tools/onboarding/{relative_path}"
+                    )
             if any(".claude/" in entry for entry in entries):
                 raise AssertionError("Skill archive contains an agent-specific copy")
             packaged_skill.extractall(temp_root / "installed")
@@ -1662,6 +1857,46 @@ def _validate_installable_skill(project_root: Path) -> None:
             raise AssertionError(
                 "Packaged Skill catalog query failed after extraction: "
                 + (installed.stderr or installed.stdout).strip()
+            )
+
+        installed_onboarding = (
+            temp_root
+            / "installed"
+            / "build-fluentqt-gui"
+            / "tools"
+            / "onboarding"
+            / "fluentqt"
+        )
+        generated_project = temp_root / "standalone-skill-starter"
+        created = subprocess.run(
+            [
+                sys.executable,
+                str(installed_onboarding),
+                "create",
+                str(generated_project),
+                "--language",
+                "cpp",
+                "--starter",
+                "workbench",
+                "--format",
+                "json",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            cwd=temp_root,
+            env=environment,
+        )
+        if created.returncode != 0:
+            raise AssertionError(
+                "Packaged Skill starter creation failed after extraction: "
+                + (created.stderr or created.stdout).strip()
+            )
+        if not (generated_project / "CMakeLists.txt").is_file() or not (
+            generated_project / ".fluentqt" / "architecture.json"
+        ).is_file():
+            raise AssertionError(
+                "Packaged Skill starter is missing its build or architecture files"
             )
 
 
@@ -1948,9 +2183,107 @@ def validate(project_root: Path) -> dict[str, int]:
             "AI catalog eval failed: " + "; ".join(eval_report["failures"])
         )
 
+    application_scenes = json.loads(
+        (project_root / "docs/ai/evals/application-scenes.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    application_scenes_schema = json.loads(
+        (
+            project_root
+            / "docs/ai/evals/application-scenes.schema.json"
+        ).read_text(encoding="utf-8")
+    )
+    if application_scenes_schema.get("$schema") != schema["$schema"]:
+        raise AssertionError(
+            "Application scene schema must use JSON Schema draft 2020-12"
+        )
+    _validate_json_instance(
+        application_scenes,
+        application_scenes_schema,
+        application_scenes_schema,
+    )
+    route_ids = {route["id"] for route in committed["routes"]}
+    application_routes = {
+        "fluent_qt_gallery": route_ids,
+        "fluentqt_cpp_workbench": {"workspace"},
+        "fluentqt_pyside6_workbench": {"workspace"},
+    }
+    declared_applications = set(application_scenes["applications"])
+    unknown_applications = declared_applications - set(application_routes)
+    if unknown_applications:
+        raise AssertionError(
+            "Unknown application scene targets: "
+            + ", ".join(sorted(unknown_applications))
+        )
+    scene_ids: set[str] = set()
+    scene_applications: set[str] = set()
+    covered_states: set[str] = set()
+    automated_scene_count = 0
+    manual_scene_count = 0
+    for scene in application_scenes["scenes"]:
+        scene_id = scene["id"]
+        if scene_id in scene_ids:
+            raise AssertionError(f"Duplicate application scene id: {scene_id}")
+        scene_ids.add(scene_id)
+        application_id = scene["application"]
+        if application_id not in declared_applications:
+            raise AssertionError(
+                f"Application scene {scene_id} references undeclared application "
+                f"{application_id}"
+            )
+        scene_applications.add(application_id)
+        if scene["route"] not in application_routes[application_id]:
+            raise AssertionError(
+                f"Application scene {scene_id} references unknown route "
+                f"{application_id}:{scene['route']}"
+            )
+        covered_states.update(scene["coverage"])
+        if scene["automation"] == "automated":
+            automated_scene_count += 1
+            if "inspector" not in scene:
+                raise AssertionError(
+                    f"Automated application scene {scene_id} has no Inspector budget"
+                )
+        else:
+            manual_scene_count += 1
+            if not scene.get("interactions"):
+                raise AssertionError(
+                    f"Manual application scene {scene_id} has no interactions"
+                )
+
+    if scene_applications != declared_applications:
+        missing_applications = declared_applications - scene_applications
+        raise AssertionError(
+            "Declared applications without scenes: "
+            + ", ".join(sorted(missing_applications))
+        )
+
+    deferred_states = {
+        item["state"] for item in application_scenes["deferred_coverage"]
+    }
+    if covered_states.intersection(deferred_states):
+        raise AssertionError(
+            "Application scene coverage cannot be active and deferred at once"
+        )
+    declared_states = covered_states.union(deferred_states)
+    unknown_states = declared_states - REQUIRED_APPLICATION_SCENE_COVERAGE
+    if unknown_states:
+        raise AssertionError(
+            "Unknown application scene coverage: "
+            + ", ".join(sorted(unknown_states))
+        )
+    missing_states = REQUIRED_APPLICATION_SCENE_COVERAGE - declared_states
+    if missing_states:
+        raise AssertionError(
+            "Application scene coverage is missing: "
+            + ", ".join(sorted(missing_states))
+        )
+
     _validate_skill(project_root)
     _validate_visual_evidence_validator(project_root)
     _validate_design_and_review_tooling(project_root)
+    _validate_benchmark_tooling(project_root)
     _validate_installable_skill(project_root)
     _validate_project_structure_tooling(project_root)
     return {
@@ -1961,6 +2294,9 @@ def validate(project_root: Path) -> dict[str, int]:
         "project_shapes": eval_report["project_shape_count"],
         "retrieval_cases": eval_report["retrieval_case_count"],
         "composition_cases": eval_report["composition_case_count"],
+        "application_scenes": len(scene_ids),
+        "automated_application_scenes": automated_scene_count,
+        "manual_application_scenes": manual_scene_count,
     }
 
 
@@ -1986,7 +2322,10 @@ def main(argv: Iterable[str] | None = None) -> int:
         "{integration_patterns} integration patterns, "
         "{project_shapes} project shapes, "
         "{retrieval_cases} retrieval cases, "
-        "{composition_cases} composition cases".format(**counts)
+        "{composition_cases} composition cases, "
+        "{application_scenes} application scenes "
+        "({automated_application_scenes} automated, "
+        "{manual_application_scenes} manual)".format(**counts)
     )
     return 0
 

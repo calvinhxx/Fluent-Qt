@@ -95,6 +95,7 @@ teardown.
 | New GUI, major redesign, distinctive visual direction, taste feedback, concept rendering, or implementation fidelity | [Design intelligence](references/design-intelligence.md) |
 | New GUI, major redesign, visual concept generation, or user taste decision | [Art direction and human selection](references/art-direction.md) |
 | Full evidence matrix, dynamic layout, or transient/scroll acceptance | [Visual evidence contract](references/visual-evidence-contract.md) |
+| Evaluating this Skill across Codex, Claude Code, and Cursor | [Cross-agent benchmark](references/cross-agent-benchmark.md) |
 
 Query only catalog slices needed for the current decision:
 
@@ -110,6 +111,33 @@ Run from any working directory. The script reads
 `--project-root /path/to/Fluent-QT` or
 `--catalog /path/to/catalog.json` only when an explicit checkout or catalog
 should override that snapshot.
+
+Resolve `<onboarding>` before editing the target project. Use
+`<skill-root>/tools/onboarding/fluentqt` from the installable Skill, or
+`<FluentQt-root>/tools/onboarding/fluentqt` from a checkout, source package, or
+development package. Then run its read-only consumer preflight:
+
+```bash
+python3 <onboarding> doctor --profile cpp --format json
+```
+
+Resolve blocking findings before scaffolding. A missing optional tool or a
+doctor warning is evidence to record, not permission to rewrite the target's
+build system.
+
+For a greenfield project, or when the target has no stable application
+structure yet, start from a maintained starter instead of creating a flat
+shell by hand:
+
+```bash
+python3 <onboarding> create /path/to/new-app \
+  --language cpp --starter workbench --format json
+```
+
+Use `existing-qt` for a bounded integration slice and `pyside6` only when the
+chosen delivery path is Python. Preserve the generated architecture manifest;
+product-specific composition and art direction still require the workflow
+below.
 
 For a new GUI or major redesign, initialize one of the bundled composition
 recipes instead of inventing the first shell from scratch:
@@ -444,6 +472,28 @@ Fix structural failures by extracting coherent ownership boundaries. Do not
 raise budgets, add broad root-file exceptions, or mechanically create partial
 source files to make the validator green.
 
+For applications built with a FluentQt version that provides Inspector, run it
+after the real window has completed layout. Generated C++ Workbench projects
+provide a machine-readable entry point:
+
+```bash
+./build/<app-target> --quality-report > /path/to/quality-report.json
+```
+
+Other C++ applications include `<FluentQt/Diagnostics.h>` explicitly and can
+serialize `fluent::diagnostics::Inspector::report(rootWidget)`. PySide6
+applications use `fluentqt.inspect_widget(root_widget)`. Both routes call the
+same native rules and return a versioned JSON-compatible report. Keep the report
+with the final binary evidence. Treat every finding as a review prompt: resolve
+it or record a scene-specific reason, but never raise a global budget to
+manufacture a pass.
+If the consuming FluentQt version has no Inspector, record that boundary rather
+than copying its private heuristics into the application.
+
+Inspector does not judge composition, hierarchy, brand fit, or taste. A clean
+report therefore never replaces Light, Dark, narrow, long-copy, interaction,
+and independent visual review.
+
 Record visual and engineering results separately and require both to pass. Do
 not label feasibility as verified support.
 
@@ -486,6 +536,8 @@ Before finishing, require:
   empty space express hierarchy without opaque-card proliferation;
 - no stale palette, clipped popup, hidden focus cue, or unreadable final row;
 - evidence from the final rebuilt binary rather than stale captures;
+- a versioned Inspector report from the settled final surface, or a recorded
+  compatibility reason when the consuming FluentQt version cannot provide it;
 - a product signature that is not a relabeled
   navigation/session/chat/inspector template.
 - one controlled aesthetic risk grounded in the subject, with everything else
@@ -507,4 +559,8 @@ boundaries.
 When changing this Skill's composition or review behavior, use
 `assets/benchmarks/agent-run-workspace.json` as the first blind forward test.
 Run the same packaged Skill in each target agent without leaking the intended
-layout or prior diagnosis. Compare judged artifacts, not prose similarity.
+layout or prior diagnosis. Follow
+[Cross-agent benchmark](references/cross-agent-benchmark.md), initialize and
+validate each `assets/benchmarks/agent-run.schema.json` record with
+`scripts/benchmark_run.py`, and compare judged artifacts rather than prose
+similarity.

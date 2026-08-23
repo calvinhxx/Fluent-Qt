@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FluentQt cross-agent benchmark run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "benchmark_id",
+    "run_id",
+    "agent",
+    "status",
+    "author_id",
+    "created_at",
+    "started_at",
+    "completed_at",
+    "spec",
+    "skill_package",
+    "workspace",
+    "prompt",
+    "blind_protocol",
+    "commands",
+    "artifacts",
+    "checks",
+    "review"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "benchmark_id": { "$ref": "#/$defs/nonEmptyString" },
+    "run_id": { "$ref": "#/$defs/nonEmptyString" },
+    "agent": { "enum": ["codex", "claude-code", "cursor"] },
+    "status": { "enum": ["planned", "running", "completed", "blocked"] },
+    "author_id": { "$ref": "#/$defs/nonEmptyString" },
+    "created_at": { "$ref": "#/$defs/nonEmptyString" },
+    "started_at": { "type": ["string", "null"] },
+    "completed_at": { "type": ["string", "null"] },
+    "spec": { "$ref": "#/$defs/hashedPath" },
+    "skill_package": { "$ref": "#/$defs/hashedPath" },
+    "workspace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "source_commit"],
+      "properties": {
+        "path": { "$ref": "#/$defs/nonEmptyString" },
+        "source_commit": { "type": ["string", "null"] }
+      }
+    },
+    "prompt": { "$ref": "#/$defs/nonEmptyString" },
+    "blind_protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_only_context", "no_intended_layout", "no_prior_diagnosis"],
+      "properties": {
+        "prompt_only_context": { "type": "boolean" },
+        "no_intended_layout": { "type": "boolean" },
+        "no_prior_diagnosis": { "type": "boolean" }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "exit_code", "duration_ms", "evidence"],
+        "properties": {
+          "command": { "$ref": "#/$defs/nonEmptyString" },
+          "exit_code": { "type": ["integer", "null"] },
+          "duration_ms": { "type": ["integer", "null"], "minimum": 0 },
+          "evidence": { "$ref": "#/$defs/stringArray" }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "design_brief",
+        "project_structure",
+        "visual_evidence",
+        "inspector_report",
+        "built_application"
+      ],
+      "properties": {
+        "design_brief": { "$ref": "#/$defs/optionalPath" },
+        "project_structure": { "$ref": "#/$defs/optionalPath" },
+        "visual_evidence": { "$ref": "#/$defs/optionalPath" },
+        "inspector_report": { "$ref": "#/$defs/optionalPath" },
+        "built_application": { "$ref": "#/$defs/optionalPath" }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_structure",
+        "build",
+        "tests",
+        "workflow",
+        "inspector",
+        "visual_evidence"
+      ],
+      "properties": {
+        "project_structure": { "$ref": "#/$defs/optionalBoolean" },
+        "build": { "$ref": "#/$defs/optionalBoolean" },
+        "tests": { "$ref": "#/$defs/optionalBoolean" },
+        "workflow": { "$ref": "#/$defs/optionalBoolean" },
+        "inspector": { "$ref": "#/$defs/optionalBoolean" },
+        "visual_evidence": { "$ref": "#/$defs/optionalBoolean" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewer_id", "dimensions", "verdict", "blockers", "notes"],
+      "properties": {
+        "reviewer_id": { "type": ["string", "null"] },
+        "dimensions": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/dimension" }
+        },
+        "verdict": { "enum": ["pass", "fail", null] },
+        "blockers": { "$ref": "#/$defs/stringArray" },
+        "notes": { "$ref": "#/$defs/stringArray" }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "stringArray": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "optionalPath": { "type": ["string", "null"] },
+    "optionalBoolean": { "type": ["boolean", "null"] },
+    "hashedPath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/nonEmptyString" },
+        "sha256": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "dimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "evidence"],
+      "properties": {
+        "score": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+        "evidence": { "$ref": "#/$defs/stringArray" }
+      }
+    }
+  }
+}
