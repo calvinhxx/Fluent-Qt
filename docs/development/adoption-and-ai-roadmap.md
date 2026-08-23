@@ -66,9 +66,8 @@ distribution evidence.
 Only three P0 items are active, with a work-in-progress limit of one engineering
 change and one live acceptance effort:
 
-1. run the next full CI and evaluate the `fluentqt trial` reports from its five
-   selected C++ clean-consumer environments against the ten-minute/80% gate;
-   Python wheel jobs also publish Linux, Windows, and macOS reports;
+1. publish the generated API Explorer with the next promotion to `main`, then
+   verify its public entry point and component deep links;
 2. run the existing `agent-run-workspace` task once each in Codex, Claude Code,
    and Cursor; change the Skill from evidence before specifying another task;
 3. help three external projects integrate and turn repeated failures into a
@@ -119,8 +118,13 @@ Acceptance:
 
 ### 1B. Project creation
 
-Status: Complete locally; cross-platform evidence collection is wired and the
-next push will confirm it.
+Status: Complete. [Full CI #32654501221](https://github.com/calvinhxx/Fluent-Qt/actions/runs/32654501221)
+produced passing reports in all five C++ clean-consumer environments across
+Linux x64/ARM64, Qt 5/6, macOS, and Windows. Completion was 100% with a median
+time to first window of 9.692 seconds. The three Linux, Windows, and macOS
+Python wheel lanes also passed, with a 0.546-second median. All eight reports
+reached the real window path with no blockers.
+
 The portable command, four maintained C++ / PySide6 starters, architecture
 manifests, versioned report contract, source/development-package delivery, and
 CI acceptance jobs are implemented. Both C++ starters build against an
@@ -132,9 +136,7 @@ window show path in one versioned report. Fast CI selects three representative
 C++ lanes; full CI selects exactly five across Linux x64/ARM64, Qt 5/6, macOS,
 and Windows. The Linux, Windows, and macOS wheel jobs publish the same Python
 report. These jobs install existing build outputs and compile only the small
-generated starter, so the evidence does not duplicate the FluentQt build. The
-remaining gap is a passing remote run and its measured reports, not another
-scaffolding feature.
+generated starter, so the evidence does not duplicate the FluentQt build.
 
 Add `fluentqt create` only after the doctor output contract is stable. Generate
 two maintained starters rather than a generic empty shell:
@@ -150,12 +152,15 @@ copying C++ ownership details mechanically.
 ### 1C. Searchable public API
 
 Status: Local acceptance complete; Pages publication remains for the next
-remote run. The generated API Explorer covers all 69 catalog components and
-114 installed public headers, with search, category filters, C++ / Python
-names, declaration links, focused tests, and Gallery routes. The WebAssembly
-Gallery deep link compiled and opened the requested DataGrid route locally.
-Generation is checked against the installed-header allowlist and the existing
-AI catalog rather than a second hand-maintained index.
+promotion to `main`. The generated API Explorer covers all 69 catalog
+components and 114 installed public headers, with search, category filters,
+C++ / Python names, declaration links, focused tests, and Gallery routes. The
+WebAssembly Gallery deep link compiled and opened the requested DataGrid route
+locally. A full run on `release/1.7.x` produces the site artifact, but
+production Pages is published only from `main`; local files and CI artifacts
+are therefore not reported as a public launch. Generation is checked against
+the installed-header allowlist and the existing AI catalog rather than a
+second hand-maintained index.
 
 Publish generated API reference for installed public headers and link every
 catalog component to the relevant declaration, Gallery route, and focused
@@ -166,6 +171,9 @@ Phase gate: after the doctor prerequisites are available, five clean consumer
 environments run `fluentqt trial` for the relevant starter with a median
 first-window-path time below ten minutes and at least 80% completion. The
 automated smoke reaches the real `show()` path; it is not an aesthetic review.
+
+The remote evidence for 1B exceeds this gate. Phase 1 remains in progress until
+1C is published on public Pages and its entry point plus deep links are checked.
 
 ## Phase 2: AI Quality Loop
 
