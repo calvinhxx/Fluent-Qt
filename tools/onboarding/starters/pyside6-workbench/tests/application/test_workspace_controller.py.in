@@ -1,0 +1,33 @@
+import unittest
+
+from @APP_MODULE@.application.workspace_controller import WorkspaceController
+from @APP_MODULE@.domain.workspace import Workspace
+
+
+class Repository:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def current_workspace(self) -> Workspace:
+        self.calls += 1
+        if self.calls == 1:
+            return Workspace("", "")
+        return Workspace("FluentQt", "/work/FluentQt")
+
+
+class WorkspaceControllerTest(unittest.TestCase):
+    def test_refresh_and_theme_state(self) -> None:
+        controller = WorkspaceController(Repository())
+        self.assertFalse(controller.state.has_workspace)
+        self.assertEqual(controller.state.title, "No workspace")
+        self.assertEqual(controller.state.status, "Unavailable")
+        controller.refresh()
+        self.assertTrue(controller.state.has_workspace)
+        self.assertEqual(controller.state.title, "FluentQt")
+        self.assertFalse(controller.state.dark_theme)
+        controller.toggle_theme()
+        self.assertTrue(controller.state.dark_theme)
+
+
+if __name__ == "__main__":
+    unittest.main()

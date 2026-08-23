@@ -35,6 +35,27 @@ example disabled and build only the library. The included
 `examples/hello_world` project demonstrates both in-tree and installed-package
 integration.
 
+Before changing a consumer, run the bundled local preflight. It performs no
+network requests and configures its Qt Widgets probe in a temporary directory:
+
+```bash
+python3 tools/onboarding/fluentqt_doctor.py --profile cpp
+```
+
+Use `--profile python` for the optional installed Python distribution and
+`--format json` when an agent consumes the result.
+
+Create a maintained C++ starter without adding repository-specific paths:
+
+```bash
+python3 tools/onboarding/fluentqt create my-app \
+  --language cpp --starter workbench
+```
+
+Use `--starter existing-qt` for an embeddable integration slice or
+`--language pyside6` for the Python counterpart. See
+`tools/onboarding/README.md` for the full contract.
+
 For AI-assisted integration, start with `llms.txt` and
 `docs/ai/README.md`. The source package includes the generated component and
 integration catalog, its JSON Schemas, the cross-agent `build-fluentqt-gui`

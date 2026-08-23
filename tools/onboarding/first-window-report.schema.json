@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fluentqt.dev/schemas/first-window-report.schema.json",
+  "title": "FluentQt first-window trial report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "trial_version",
+    "recorded_at",
+    "profile",
+    "starter",
+    "status",
+    "first_window_reached",
+    "target",
+    "kept_workspace",
+    "total_duration_ms",
+    "host",
+    "doctor",
+    "steps",
+    "blockers"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "trial_version": { "type": "string", "minLength": 1 },
+    "recorded_at": { "type": "string", "format": "date-time" },
+    "profile": { "enum": ["cpp", "python"] },
+    "starter": { "enum": ["existing-qt", "workbench"] },
+    "status": { "enum": ["passed", "blocked", "failed"] },
+    "first_window_reached": { "type": "boolean" },
+    "target": { "type": "string", "minLength": 1 },
+    "kept_workspace": { "type": "boolean" },
+    "total_duration_ms": { "type": "integer", "minimum": 0 },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "release", "machine", "python"],
+      "properties": {
+        "system": { "type": "string" },
+        "release": { "type": "string" },
+        "machine": { "type": "string" },
+        "python": { "type": "string" }
+      }
+    },
+    "doctor": { "type": ["object", "null"] },
+    "steps": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "duration_ms", "command", "detail"],
+        "properties": {
+          "id": {
+            "enum": ["doctor", "create", "configure", "build", "tests", "window"]
+          },
+          "status": { "enum": ["passed", "failed", "skipped"] },
+          "duration_ms": { "type": "integer", "minimum": 0 },
+          "command": { "type": "array", "items": { "type": "string" } },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "blockers": { "type": "array", "items": { "type": "string" } }
+  }
+}

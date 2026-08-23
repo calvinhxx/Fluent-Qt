@@ -1,0 +1,18 @@
+import unittest
+
+from @APP_MODULE@.application.workspace_summary import (
+    WorkspaceSummary,
+    workspace_title,
+)
+
+
+class WorkspaceSummaryTest(unittest.TestCase):
+    def test_title_falls_back_for_an_unnamed_workspace(self) -> None:
+        self.assertEqual(workspace_title(WorkspaceSummary("FluentQt", "")), "FluentQt")
+        self.assertEqual(
+            workspace_title(WorkspaceSummary("", "")), "Untitled workspace"
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,39 @@
+#include "application/WorkspaceController.h"
+
+#include "application/WorkspaceRepository.h"
+
+namespace @APP_NAMESPACE@::application {
+
+WorkspaceController::WorkspaceController(WorkspaceRepository& repository)
+    : m_repository(repository)
+{
+    refresh();
+}
+
+const WorkspaceViewState& WorkspaceController::state() const
+{
+    return m_state;
+}
+
+void WorkspaceController::refresh()
+{
+    const domain::Workspace workspace = m_repository.currentWorkspace();
+    m_state.hasWorkspace = !workspace.name.empty() && !workspace.path.empty();
+    if (m_state.hasWorkspace) {
+        m_state.title = workspace.name;
+        m_state.path = workspace.path;
+        m_state.status = "Ready";
+        return;
+    }
+
+    m_state.title = "No workspace";
+    m_state.path = "Workspace unavailable.";
+    m_state.status = "Unavailable";
+}
+
+void WorkspaceController::toggleTheme()
+{
+    m_state.darkTheme = !m_state.darkTheme;
+}
+
+} // namespace @APP_NAMESPACE@::application

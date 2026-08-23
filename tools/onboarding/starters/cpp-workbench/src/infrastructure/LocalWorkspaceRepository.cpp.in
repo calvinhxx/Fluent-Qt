@@ -1,0 +1,16 @@
+#include "infrastructure/LocalWorkspaceRepository.h"
+
+#include <filesystem>
+
+namespace @APP_NAMESPACE@::infrastructure {
+
+domain::Workspace LocalWorkspaceRepository::currentWorkspace() const
+{
+    const std::filesystem::path path = std::filesystem::current_path();
+    const std::string name = path.filename().empty()
+        ? path.string()
+        : path.filename().string();
+    return {name, path.string()};
+}
+
+} // namespace @APP_NAMESPACE@::infrastructure

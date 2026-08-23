@@ -1,0 +1,30 @@
+#pragma once
+
+#include <string>
+
+namespace @APP_NAMESPACE@::application {
+
+class WorkspaceRepository;
+
+struct WorkspaceViewState {
+    std::string title;
+    std::string path;
+    std::string status;
+    bool hasWorkspace = false;
+    bool darkTheme = false;
+};
+
+class WorkspaceController {
+public:
+    explicit WorkspaceController(WorkspaceRepository& repository);
+
+    const WorkspaceViewState& state() const;
+    void refresh();
+    void toggleTheme();
+
+private:
+    WorkspaceRepository& m_repository;
+    WorkspaceViewState m_state;
+};
+
+} // namespace @APP_NAMESPACE@::application

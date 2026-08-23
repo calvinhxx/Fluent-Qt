@@ -1,0 +1,111 @@
+#include "ui/shell/MainWindow.h"
+
+#include <FluentQt/FluentQt.h>
+
+#include <QHBoxLayout>
+#include <QString>
+#include <QVBoxLayout>
+#include <QWidget>
+
+#include "application/WorkspaceController.h"
+#include "ui/theme/BrandTheme.h"
+
+namespace @APP_NAMESPACE@::ui {
+namespace {
+
+QString text(const std::string& value)
+{
+    return QString::fromUtf8(value.data(), static_cast<int>(value.size()));
+}
+
+} // namespace
+
+MainWindow::MainWindow(application::WorkspaceController& controller)
+    : m_controller(controller)
+{
+    setWindowTitle(QStringLiteral("@APP_NAME_CPP@"));
+    resize(880, 620);
+
+    auto* content = new QWidget;
+    content->setObjectName(QStringLiteral("workbenchContent"));
+    auto* root = new QVBoxLayout(content);
+    root->setContentsMargins(32, 28, 32, 32);
+    root->setSpacing(20);
+
+    auto* header = new QHBoxLayout;
+    auto* title = new fluent::textfields::Label(
+        QStringLiteral("@APP_NAME_CPP@"), content);
+    title->setFluentTypography(Typography::FontRole::Title);
+    header->addWidget(title);
+    header->addStretch();
+
+    m_themeButton = new fluent::basicinput::Button(content);
+    m_themeButton->setAccessibleName(QStringLiteral("Change color theme"));
+    header->addWidget(m_themeButton);
+    root->addLayout(header);
+
+    auto* card = new fluent::layout::Card(content);
+    auto* cardLayout = new QVBoxLayout(card);
+    cardLayout->setContentsMargins(24, 22, 24, 22);
+    cardLayout->setSpacing(10);
+
+    auto* eyebrow = new fluent::textfields::Label(
+        QStringLiteral("CURRENT WORKSPACE"), card);
+    eyebrow->setFluentTypography(Typography::FontRole::Caption);
+    eyebrow->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    cardLayout->addWidget(eyebrow);
+
+    m_workspaceName = new fluent::textfields::Label(card);
+    m_workspaceName->setFluentTypography(Typography::FontRole::Subtitle);
+    cardLayout->addWidget(m_workspaceName);
+
+    m_workspacePath = new fluent::textfields::Label(card);
+    m_workspacePath->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    m_workspacePath->setTextElideMode(Qt::ElideMiddle);
+    cardLayout->addWidget(m_workspacePath);
+
+    auto* actions = new QHBoxLayout;
+    m_status = new fluent::textfields::Label(card);
+    m_status->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    actions->addWidget(m_status);
+    actions->addStretch();
+    m_refreshButton = new fluent::basicinput::Button(card);
+    m_refreshButton->setFluentStyle(fluent::basicinput::Button::Accent);
+    actions->addWidget(m_refreshButton);
+    cardLayout->addLayout(actions);
+    root->addWidget(card);
+    root->addStretch();
+
+    connect(m_refreshButton, &fluent::basicinput::Button::clicked, this, [this] {
+        m_controller.refresh();
+        render(m_controller.state());
+    });
+    connect(m_themeButton, &fluent::basicinput::Button::clicked, this, [this] {
+        m_controller.toggleTheme();
+        theme::applyBrandTheme(m_controller.state().darkTheme);
+        render(m_controller.state());
+    });
+
+    setContentWidget(content);
+    render(m_controller.state());
+}
+
+void MainWindow::render(const application::WorkspaceViewState& state)
+{
+    m_workspaceName->setText(text(state.title));
+    m_workspacePath->setText(text(state.path));
+    m_status->setText(text(state.status));
+    m_refreshButton->setText(
+        state.hasWorkspace ? QStringLiteral("Refresh") : QStringLiteral("Retry"));
+    m_refreshButton->setAccessibleName(
+        state.hasWorkspace ? QStringLiteral("Refresh workspace")
+                           : QStringLiteral("Retry workspace connection"));
+    m_themeButton->setText(
+        state.darkTheme ? QStringLiteral("Use light theme")
+                        : QStringLiteral("Use dark theme"));
+}
+
+} // namespace @APP_NAMESPACE@::ui

@@ -1,0 +1,12 @@
+#include "application/WorkspaceSummary.h"
+
+#include <cassert>
+
+int main()
+{
+    using @APP_NAMESPACE@::application::WorkspaceSummary;
+    using @APP_NAMESPACE@::application::workspaceTitle;
+    assert(workspaceTitle(WorkspaceSummary{"FluentQt", {}}) == "FluentQt");
+    assert(workspaceTitle(WorkspaceSummary{{}, {}}) == "Untitled workspace");
+    return 0;
+}

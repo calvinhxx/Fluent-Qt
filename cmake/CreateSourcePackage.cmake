@@ -45,6 +45,12 @@ file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/fonts"
     DESTINATION "${_package_root}/tools")
 file(COPY
+    "${FLUENT_QT_SOURCE_DIR}/tools/onboarding"
+    DESTINATION "${_package_root}/tools"
+    PATTERN "__pycache__" EXCLUDE
+    PATTERN "*.pyc" EXCLUDE
+    PATTERN "*.pyo" EXCLUDE)
+file(COPY
     "${FLUENT_QT_SOURCE_DIR}/tools/ai/query_ai_catalog.py"
     "${FLUENT_QT_SOURCE_DIR}/tools/ai/evaluate_ai_catalog.py"
     "${FLUENT_QT_SOURCE_DIR}/tools/ai/package_fluentqt_skill.py"

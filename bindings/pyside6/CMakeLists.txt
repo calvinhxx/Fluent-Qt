@@ -567,6 +567,17 @@ if(BUILD_TESTING)
         TIMEOUT 60)
 
     add_test(
+        NAME test_pyside6_onboarding_workbench_inspector
+        COMMAND "${Python_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_onboarding_workbench.py"
+            --project-root "${PROJECT_SOURCE_DIR}")
+    set_tests_properties(test_pyside6_onboarding_workbench_inspector PROPERTIES
+        ENVIRONMENT
+            "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+        LABELS "pyside;integration;ci_fast"
+        TIMEOUT 60)
+
+    add_test(
         NAME test_pyside6_foundation_authoring
         COMMAND "${Python_EXECUTABLE}"
             -X faulthandler

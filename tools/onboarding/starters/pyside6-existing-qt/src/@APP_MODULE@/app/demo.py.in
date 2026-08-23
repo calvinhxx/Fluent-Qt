@@ -1,0 +1,40 @@
+from __future__ import annotations
+
+import sys
+
+import fluentqt
+
+fluentqt.prepare_high_dpi_application()
+
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
+from fluentqt.windowing import Window
+
+from @APP_MODULE@.application.workspace_summary import WorkspaceSummary
+from @APP_MODULE@.ui.workspace_panel import WorkspacePanel
+
+
+def main(argv: list[str] | None = None) -> int:
+    application = QApplication(list(sys.argv if argv is None else argv))
+    fluentqt.initialize_resources()
+    window = Window()
+    window.setWindowTitle(@APP_NAME_PY@ + " panel")
+    window.resize(680, 420)
+    content = QWidget()
+    layout = QVBoxLayout(content)
+    layout.setContentsMargins(28, 28, 28, 28)
+    panel = WorkspacePanel(content)
+    summary = WorkspaceSummary(@APP_NAME_PY@, "/path/to/workspace")
+    panel.set_summary(summary)
+    panel.set_refresh_handler(lambda: panel.set_summary(summary))
+    layout.addWidget(panel)
+    layout.addStretch()
+    window.setContentWidget(content)
+    window.show()
+    if "--smoke-test" in application.arguments():
+        QTimer.singleShot(0, application.quit)
+    return application.exec()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

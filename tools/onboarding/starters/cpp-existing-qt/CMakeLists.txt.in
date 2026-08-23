@@ -1,0 +1,53 @@
+cmake_minimum_required(VERSION 3.16)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    project(@APP_TARGET@_fluentqt_slice VERSION 0.1.0 LANGUAGES CXX)
+    include(CTest)
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(FLUENTQT_SOURCE_DIR "" CACHE PATH "Optional FluentQt source checkout")
+if(FLUENTQT_SOURCE_DIR AND NOT TARGET FluentQt::FluentQt)
+    set(FLUENT_QT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
+    set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${FLUENTQT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_deps/fluentqt"
+        EXCLUDE_FROM_ALL)
+elseif(NOT TARGET FluentQt::FluentQt)
+    find_package(FluentQt 1.7 CONFIG REQUIRED)
+endif()
+
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+
+add_library(@APP_TARGET@_workspace_panel STATIC
+    src/application/WorkspaceSummary.cpp
+    src/application/WorkspaceSummary.h
+    src/ui/WorkspacePanel.cpp
+    src/ui/WorkspacePanel.h)
+target_link_libraries(@APP_TARGET@_workspace_panel
+    PUBLIC FluentQt::FluentQt Qt${QT_VERSION_MAJOR}::Widgets)
+target_include_directories(@APP_TARGET@_workspace_panel PUBLIC src)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    add_executable(@APP_TARGET@_panel_demo src/app/main.cpp)
+    target_link_libraries(@APP_TARGET@_panel_demo
+        PRIVATE @APP_TARGET@_workspace_panel)
+
+    if(BUILD_TESTING)
+        add_executable(@APP_TARGET@_summary_test
+            tests/application/WorkspaceSummaryTest.cpp)
+        target_link_libraries(@APP_TARGET@_summary_test
+            PRIVATE @APP_TARGET@_workspace_panel)
+        add_test(NAME @APP_TARGET@_summary_test
+            COMMAND @APP_TARGET@_summary_test)
+        add_test(NAME @APP_TARGET@_panel_smoke
+            COMMAND @APP_TARGET@_panel_demo --smoke-test)
+        set_tests_properties(@APP_TARGET@_panel_smoke PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    endif()
+endif()

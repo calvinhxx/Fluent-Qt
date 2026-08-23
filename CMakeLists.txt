@@ -188,6 +188,24 @@ if(FLUENT_QT_INSTALL)
 		"${CMAKE_CURRENT_SOURCE_DIR}/tools/ai/evaluate_ai_catalog.py"
 		DESTINATION "${_fluent_qt_ai_doc_root}/tools/ai"
 		COMPONENT Development)
+	install(PROGRAMS
+		"${CMAKE_CURRENT_SOURCE_DIR}/tools/onboarding/fluentqt"
+		"${CMAKE_CURRENT_SOURCE_DIR}/tools/onboarding/fluentqt_create.py"
+		"${CMAKE_CURRENT_SOURCE_DIR}/tools/onboarding/fluentqt_doctor.py"
+		"${CMAKE_CURRENT_SOURCE_DIR}/tools/onboarding/fluentqt_trial.py"
+		DESTINATION "${_fluent_qt_ai_doc_root}/tools/onboarding"
+		COMPONENT Development)
+	install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/tools/onboarding/"
+		DESTINATION "${_fluent_qt_ai_doc_root}/tools/onboarding"
+		COMPONENT Development
+		PATTERN "fluentqt" EXCLUDE
+		PATTERN "fluentqt_create.py" EXCLUDE
+		PATTERN "fluentqt_doctor.py" EXCLUDE
+		PATTERN "fluentqt_trial.py" EXCLUDE
+		PATTERN "test_*.py" EXCLUDE
+		PATTERN "__pycache__" EXCLUDE
+		PATTERN "*.pyc" EXCLUDE
+		PATTERN "*.pyo" EXCLUDE)
 	install(DIRECTORY
 		"${CMAKE_CURRENT_SOURCE_DIR}/.agents/skills/build-fluentqt-gui"
 		DESTINATION "${_fluent_qt_ai_doc_root}/.agents/skills"

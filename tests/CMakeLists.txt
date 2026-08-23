@@ -51,6 +51,7 @@ set(FLUENT_QT_CI_FULL_CONTRACT_TARGETS
     test_line_edit
     test_password_box
     test_text_edit
+    test_onboarding_workbench
 )
 
 set(FLUENT_QT_CI_FULL_TARGETS
@@ -333,6 +334,7 @@ foreach(_fluent_qt_high_dpi_scale 1.1 1.25 1.5 1.75 2 3)
 endforeach()
 
 add_subdirectory(components)
+add_subdirectory(onboarding)
 if(FLUENT_QT_BUILD_GALLERY)
     add_subdirectory(gallery)
 endif()

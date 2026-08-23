@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fluent-qt.dev/schemas/create-report.schema.json",
+  "title": "FluentQt project creation report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "creator_version",
+    "status",
+    "template",
+    "language",
+    "profile",
+    "application",
+    "identifier",
+    "target",
+    "files",
+    "next_steps"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "creator_version": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["planned", "created"] },
+    "template": {
+      "enum": [
+        "cpp-existing-qt",
+        "cpp-workbench",
+        "pyside6-existing-qt",
+        "pyside6-workbench"
+      ]
+    },
+    "language": { "enum": ["cpp", "pyside6"] },
+    "profile": { "enum": ["lite", "full"] },
+    "application": { "type": "string", "minLength": 1 },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "target": { "type": "string", "minLength": 1 },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "next_steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  }
+}

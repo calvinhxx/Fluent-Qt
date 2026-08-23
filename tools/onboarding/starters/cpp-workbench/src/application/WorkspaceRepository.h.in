@@ -1,0 +1,13 @@
+#pragma once
+
+#include "domain/Workspace.h"
+
+namespace @APP_NAMESPACE@::application {
+
+class WorkspaceRepository {
+public:
+    virtual ~WorkspaceRepository() = default;
+    virtual domain::Workspace currentWorkspace() const = 0;
+};
+
+} // namespace @APP_NAMESPACE@::application

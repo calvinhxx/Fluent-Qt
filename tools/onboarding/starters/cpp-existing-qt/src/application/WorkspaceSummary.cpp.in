@@ -1,0 +1,10 @@
+#include "application/WorkspaceSummary.h"
+
+namespace @APP_NAMESPACE@::application {
+
+std::string workspaceTitle(const WorkspaceSummary& summary)
+{
+    return summary.name.empty() ? "Untitled workspace" : summary.name;
+}
+
+} // namespace @APP_NAMESPACE@::application
