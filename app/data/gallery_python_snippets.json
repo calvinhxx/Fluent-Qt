@@ -264,17 +264,17 @@
     {
       "route_id": "data-grid",
       "sample_id": "data-grid-large-read-only",
-      "source": "from PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\ngrid.setModel(LargeDataGridModel(grid))\ngrid.setScrollChainingEnabled(True)\ngrid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)\ngrid.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)\n"
+      "source": "from PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\ngrid.setAccessibleName('Large data')\ngrid.setModel(LargeDataGridModel(grid))\ngrid.setScrollChainingEnabled(True)\ngrid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)\ngrid.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)\n"
     },
     {
       "route_id": "data-grid",
       "sample_id": "data-grid-column-selection",
-      "source": "from PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\ngrid.setModel(model)\ngrid.setScrollChainingEnabled(True)\ngrid.setSelectionMode(fluentqt.SelectionMode.Extended)\ngrid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)\ngrid.setSortingEnabled(True)\ngrid.horizontalHeader().setSectionsMovable(True)\ngrid.horizontalHeader().setStretchLastSection(True)\n"
+      "source": "from PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\ngrid.setAccessibleName('Projects')\ngrid.setModel(model)\ngrid.setScrollChainingEnabled(True)\ngrid.setSelectionMode(fluentqt.SelectionMode.Extended)\ngrid.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)\ngrid.setSortingEnabled(True)\ngrid.horizontalHeader().setSectionsMovable(True)\ngrid.horizontalHeader().setStretchLastSection(True)\n"
     },
     {
       "route_id": "data-grid",
       "sample_id": "data-grid-edit-validation",
-      "source": "from PySide6.QtGui import QStandardItemModel\nfrom PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\nQStandardItemModel.setData(\n    model,\n    model.index(2, 1),\n    \"Use at least 3 characters\",\n    DATA_GRID_VALIDATION_MESSAGE_ROLE\n)\ngrid.setModel(model)\ngrid.setScrollChainingEnabled(True)\ngrid.setItemDelegate(DataGridValidationDelegate(grid))\ngrid.setEditTriggers(\n    QAbstractItemView.EditTrigger.DoubleClicked\n    | QAbstractItemView.EditTrigger.EditKeyPressed\n)\n"
+      "source": "from PySide6.QtGui import QStandardItemModel\nfrom PySide6.QtWidgets import QAbstractItemView\n\ngrid = fluentqt.DataGrid()\ngrid.setAccessibleName('Settings')\nQStandardItemModel.setData(\n    model,\n    model.index(2, 1),\n    \"Use at least 3 characters\",\n    DATA_GRID_VALIDATION_MESSAGE_ROLE\n)\ngrid.setModel(model)\ngrid.setScrollChainingEnabled(True)\ngrid.setItemDelegate(DataGridValidationDelegate(grid))\ngrid.setEditTriggers(\n    QAbstractItemView.EditTrigger.DoubleClicked\n    | QAbstractItemView.EditTrigger.EditKeyPressed\n)\n"
     },
     {
       "route_id": "flip-view",
@@ -989,17 +989,17 @@
     {
       "route_id": "text-edit",
       "sample_id": "text-edit-visible-lines",
-      "source": "text_edit = fluentqt.TextEdit()\ntext_edit.setPlaceholderText('Type your notes here')\ntext_edit.setMinVisibleLines(2)\ntext_edit.setMaxVisibleLines(4)\ntext_edit.setPlainText('First line\\nSecond line')\ndef line_count_text():\n    count = max(1, text_edit.toPlainText().count('\\n') + 1)\ntext_edit.textChanged.connect(lambda: status.setText(line_count_text()))\n"
+      "source": "text_edit = fluentqt.TextEdit()\ntext_edit.setAccessibleName('Notes')\ntext_edit.setPlaceholderText('Type your notes here')\ntext_edit.setMinVisibleLines(2)\ntext_edit.setMaxVisibleLines(4)\ntext_edit.setPlainText('First line\\nSecond line')\ndef line_count_text():\n    count = max(1, text_edit.toPlainText().count('\\n') + 1)\ntext_edit.textChanged.connect(lambda: status.setText(line_count_text()))\n"
     },
     {
       "route_id": "text-edit",
       "sample_id": "text-edit-scrollable-content",
-      "source": "text_edit = fluentqt.TextEdit()\ntext_edit.setMinVisibleLines(3)\ntext_edit.setMaxVisibleLines(3)\ntext_edit.setLineHeight(28)\ntext_edit.setPlainText(\"Alpha\\nBeta\\nGamma\\nDelta\\nEpsilon\\nZeta\")\ntext_edit.setFixedWidth(360)\n"
+      "source": "text_edit = fluentqt.TextEdit()\ntext_edit.setAccessibleName(\"Scrollable notes\")\ntext_edit.setMinVisibleLines(3)\ntext_edit.setMaxVisibleLines(3)\ntext_edit.setLineHeight(28)\ntext_edit.setPlainText(\"Alpha\\nBeta\\nGamma\\nDelta\\nEpsilon\\nZeta\")\ntext_edit.setFixedWidth(360)\n"
     },
     {
       "route_id": "text-edit",
       "sample_id": "text-edit-read-only",
-      "source": "from PySide6.QtCore import QMargins\n\ntext_edit = fluentqt.TextEdit()\ntext_edit.setPlainText(\"Terms reviewed and locked for approval.\")\ntext_edit.setReadOnly(True)\ntext_edit.setFontRole(fluentqt.FontRole.BodyStrong)\ntext_edit.setContentMargins(QMargins(12, 6, 12, 6))\ntext_edit.setFixedWidth(360)\n"
+      "source": "from PySide6.QtCore import QMargins\n\ntext_edit = fluentqt.TextEdit()\ntext_edit.setAccessibleName(\"Review terms\")\ntext_edit.setPlainText(\"Terms reviewed and locked for approval.\")\ntext_edit.setReadOnly(True)\ntext_edit.setFontRole(fluentqt.FontRole.BodyStrong)\ntext_edit.setContentMargins(QMargins(12, 6, 12, 6))\ntext_edit.setFixedWidth(360)\n"
     },
     {
       "route_id": "title-bar",

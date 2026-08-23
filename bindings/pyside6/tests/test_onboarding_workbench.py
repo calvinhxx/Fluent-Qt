@@ -72,8 +72,7 @@ class PySide6WorkbenchInspectorTest(unittest.TestCase):
 
     def test_generated_workbench_passes_application_scenes(self) -> None:
         import fluentqt
-        from PySide6.QtCore import QEvent, QEventLoop
-        from PySide6.QtTest import QTest
+        from PySide6.QtCore import QEvent, QEventLoop, QTimer
         from PySide6.QtWidgets import QApplication
 
         manifest = json.loads(
@@ -136,7 +135,9 @@ class PySide6WorkbenchInspectorTest(unittest.TestCase):
                         application.processEvents(QEventLoop.ProcessEventsFlag.AllEvents)
                         settle_ms = scene.get("settle_ms", 0)
                         if settle_ms:
-                            QTest.qWait(settle_ms)
+                            settle_loop = QEventLoop()
+                            QTimer.singleShot(settle_ms, settle_loop.quit)
+                            settle_loop.exec()
 
                         report = fluentqt.inspect_widget(window.contentWidget())
                         budget = scene["inspector"]
