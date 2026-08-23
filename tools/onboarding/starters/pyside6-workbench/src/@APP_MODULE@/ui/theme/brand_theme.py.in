@@ -1,0 +1,8 @@
+from PySide6.QtGui import QColor
+
+import fluentqt
+
+
+def apply_brand_theme(dark: bool) -> None:
+    fluentqt.set_accent_color(QColor("@ACCENT@"))
+    fluentqt.set_theme(fluentqt.Theme.Dark if dark else fluentqt.Theme.Light)

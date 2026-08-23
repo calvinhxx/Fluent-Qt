@@ -1,0 +1,17 @@
+#include "ui/theme/BrandTheme.h"
+
+#include <FluentQt/FluentQt.h>
+
+#include <QColor>
+
+namespace @APP_NAMESPACE@::ui::theme {
+
+void applyBrandTheme(bool dark)
+{
+    fluent::UserTheme::apply();
+    fluent::UserTheme::applyAccentOverride(QColor(QStringLiteral("@ACCENT@")));
+    fluent::FluentElement::setTheme(
+        dark ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
+}
+
+} // namespace @APP_NAMESPACE@::ui::theme

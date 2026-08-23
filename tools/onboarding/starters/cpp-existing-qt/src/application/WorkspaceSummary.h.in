@@ -1,0 +1,14 @@
+#pragma once
+
+#include <string>
+
+namespace @APP_NAMESPACE@::application {
+
+struct WorkspaceSummary {
+    std::string name;
+    std::string path;
+};
+
+std::string workspaceTitle(const WorkspaceSummary& summary);
+
+} // namespace @APP_NAMESPACE@::application

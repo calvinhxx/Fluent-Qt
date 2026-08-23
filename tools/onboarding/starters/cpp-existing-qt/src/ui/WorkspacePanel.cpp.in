@@ -1,0 +1,65 @@
+#include "ui/WorkspacePanel.h"
+
+#include <FluentQt/FluentQt.h>
+
+#include <QHBoxLayout>
+#include <QString>
+#include <QVBoxLayout>
+
+#include <utility>
+
+namespace @APP_NAMESPACE@::ui {
+namespace {
+
+QString text(const std::string& value)
+{
+    return QString::fromUtf8(value.data(), static_cast<int>(value.size()));
+}
+
+} // namespace
+
+WorkspacePanel::WorkspacePanel(QWidget* parent)
+    : fluent::layout::Card(parent)
+{
+    auto* root = new QVBoxLayout(this);
+    root->setContentsMargins(20, 18, 20, 18);
+    root->setSpacing(8);
+
+    m_title = new fluent::textfields::Label(this);
+    m_title->setFluentTypography(Typography::FontRole::Subtitle);
+    root->addWidget(m_title);
+
+    m_path = new fluent::textfields::Label(this);
+    m_path->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    m_path->setTextElideMode(Qt::ElideMiddle);
+    root->addWidget(m_path);
+
+    auto* actions = new QHBoxLayout;
+    actions->addStretch();
+    auto* refresh = new fluent::basicinput::Button(
+        QStringLiteral("Refresh"), this);
+    refresh->setFluentStyle(fluent::basicinput::Button::Accent);
+    refresh->setAccessibleName(QStringLiteral("Refresh workspace"));
+    actions->addWidget(refresh);
+    root->addLayout(actions);
+
+    connect(refresh, &fluent::basicinput::Button::clicked, this, [this] {
+        if (m_refreshHandler)
+            m_refreshHandler();
+    });
+    setSummary({"Workspace", {}});
+}
+
+void WorkspacePanel::setSummary(const application::WorkspaceSummary& summary)
+{
+    m_title->setText(text(application::workspaceTitle(summary)));
+    m_path->setText(text(summary.path));
+}
+
+void WorkspacePanel::setRefreshHandler(std::function<void()> handler)
+{
+    m_refreshHandler = std::move(handler);
+}
+
+} // namespace @APP_NAMESPACE@::ui

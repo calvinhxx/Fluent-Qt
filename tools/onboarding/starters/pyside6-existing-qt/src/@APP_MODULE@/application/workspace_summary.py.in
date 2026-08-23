@@ -1,0 +1,11 @@
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class WorkspaceSummary:
+    name: str
+    path: str
+
+
+def workspace_title(summary: WorkspaceSummary) -> str:
+    return summary.name or "Untitled workspace"

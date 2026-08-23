@@ -1,0 +1,9 @@
+from pathlib import Path
+
+from @APP_MODULE@.domain.workspace import Workspace
+
+
+class LocalWorkspaceRepository:
+    def current_workspace(self) -> Workspace:
+        path = Path.cwd()
+        return Workspace(path.name or str(path), str(path))

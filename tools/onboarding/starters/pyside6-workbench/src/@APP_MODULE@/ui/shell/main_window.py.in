@@ -1,0 +1,95 @@
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+
+from fluentqt.basicinput import Button
+from fluentqt.layout import Card
+from fluentqt.textfields import Label
+from fluentqt.windowing import Window
+import fluentqt
+
+from @APP_MODULE@.application.workspace_controller import (
+    WorkspaceController,
+    WorkspaceViewState,
+)
+from @APP_MODULE@.ui.theme.brand_theme import apply_brand_theme
+
+
+class MainWindow(Window):
+    def __init__(self, controller: WorkspaceController) -> None:
+        super().__init__()
+        self._controller = controller
+        self.setWindowTitle(@APP_NAME_PY@)
+        self.resize(880, 620)
+
+        content = QWidget()
+        root = QVBoxLayout(content)
+        root.setContentsMargins(32, 28, 32, 32)
+        root.setSpacing(20)
+
+        header = QHBoxLayout()
+        title = Label(@APP_NAME_PY@, content)
+        title.setFluentTypography(fluentqt.FontRole.Title)
+        header.addWidget(title)
+        header.addStretch()
+        self._theme_button = Button(content)
+        self._theme_button.setAccessibleName("Change color theme")
+        header.addWidget(self._theme_button)
+        root.addLayout(header)
+
+        card = Card(content)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(24, 22, 24, 22)
+        card_layout.setSpacing(10)
+
+        eyebrow = Label("CURRENT WORKSPACE", card)
+        eyebrow.setFluentTypography(fluentqt.FontRole.Caption)
+        eyebrow.setTextColorRole(Label.TextColorRole.Secondary)
+        card_layout.addWidget(eyebrow)
+
+        self._workspace_name = Label(card)
+        self._workspace_name.setFluentTypography(fluentqt.FontRole.Subtitle)
+        card_layout.addWidget(self._workspace_name)
+        self._workspace_path = Label(card)
+        self._workspace_path.setTextColorRole(Label.TextColorRole.Secondary)
+        self._workspace_path.setTextElideMode(Qt.ElideMiddle)
+        card_layout.addWidget(self._workspace_path)
+
+        actions = QHBoxLayout()
+        self._status = Label(card)
+        self._status.setTextColorRole(Label.TextColorRole.Secondary)
+        actions.addWidget(self._status)
+        actions.addStretch()
+        self._refresh_button = Button(card)
+        self._refresh_button.setFluentStyle(Button.ButtonStyle.Accent)
+        actions.addWidget(self._refresh_button)
+        card_layout.addLayout(actions)
+        root.addWidget(card)
+        root.addStretch()
+
+        self._refresh_button.clicked.connect(self._refresh)
+        self._theme_button.clicked.connect(self._toggle_theme)
+        self.setContentWidget(content)
+        self._render(controller.state)
+
+    def _refresh(self) -> None:
+        self._controller.refresh()
+        self._render(self._controller.state)
+
+    def _toggle_theme(self) -> None:
+        self._controller.toggle_theme()
+        apply_brand_theme(self._controller.state.dark_theme)
+        self._render(self._controller.state)
+
+    def _render(self, state: WorkspaceViewState) -> None:
+        self._workspace_name.setText(state.title)
+        self._workspace_path.setText(state.path)
+        self._status.setText(state.status)
+        self._refresh_button.setText("Refresh" if state.has_workspace else "Retry")
+        self._refresh_button.setAccessibleName(
+            "Refresh workspace"
+            if state.has_workspace
+            else "Retry workspace connection"
+        )
+        self._theme_button.setText(
+            "Use light theme" if state.dark_theme else "Use dark theme"
+        )

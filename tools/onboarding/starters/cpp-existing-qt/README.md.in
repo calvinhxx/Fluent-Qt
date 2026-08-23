@@ -1,0 +1,17 @@
+# @APP_NAME@ FluentQt integration slice
+
+This starter provides a bounded `WorkspacePanel` target for an existing Qt
+Widgets application. Add this directory with `add_subdirectory`, then link
+`@APP_TARGET@_workspace_panel` to the host executable.
+
+To build the included demo against a FluentQt checkout:
+
+```bash
+cmake -S . -B build -DFLUENTQT_SOURCE_DIR=/path/to/Fluent-QT
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+Application text stays in `application`; FluentQt construction stays in `ui`.
+Move the slice into matching host layers instead of creating a second app
+architecture beside the existing one.

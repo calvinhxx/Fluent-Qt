@@ -1,0 +1,13 @@
+#pragma once
+
+#include "application/WorkspaceRepository.h"
+
+namespace @APP_NAMESPACE@::infrastructure {
+
+class LocalWorkspaceRepository final
+    : public application::WorkspaceRepository {
+public:
+    domain::Workspace currentWorkspace() const override;
+};
+
+} // namespace @APP_NAMESPACE@::infrastructure

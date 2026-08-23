@@ -1,0 +1,79 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(@APP_TARGET@ VERSION 0.1.0 LANGUAGES CXX)
+
+include(CTest)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(FLUENTQT_SOURCE_DIR "" CACHE PATH "Optional FluentQt source checkout")
+if(FLUENTQT_SOURCE_DIR)
+    set(FLUENT_QT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(FLUENT_QT_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
+    set(FLUENT_QT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(FLUENT_QT_INSTALL OFF CACHE BOOL "" FORCE)
+    add_subdirectory("${FLUENTQT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_deps/fluentqt"
+        EXCLUDE_FROM_ALL)
+else()
+    find_package(FluentQt 1.7 CONFIG REQUIRED)
+endif()
+
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+
+add_library(@APP_TARGET@_domain INTERFACE)
+target_include_directories(@APP_TARGET@_domain INTERFACE src)
+
+add_library(@APP_TARGET@_application STATIC
+    src/application/WorkspaceController.cpp
+    src/application/WorkspaceController.h
+    src/application/WorkspaceRepository.h)
+target_link_libraries(@APP_TARGET@_application PUBLIC @APP_TARGET@_domain)
+target_include_directories(@APP_TARGET@_application PUBLIC src)
+
+add_library(@APP_TARGET@_infrastructure STATIC
+    src/infrastructure/LocalWorkspaceRepository.cpp
+    src/infrastructure/LocalWorkspaceRepository.h)
+target_link_libraries(@APP_TARGET@_infrastructure
+    PUBLIC @APP_TARGET@_application @APP_TARGET@_domain)
+target_include_directories(@APP_TARGET@_infrastructure PUBLIC src)
+
+add_library(@APP_TARGET@_ui STATIC
+    src/ui/shell/MainWindow.cpp
+    src/ui/shell/MainWindow.h
+    src/ui/theme/BrandTheme.cpp
+    src/ui/theme/BrandTheme.h)
+target_link_libraries(@APP_TARGET@_ui
+    PUBLIC
+    @APP_TARGET@_application
+    FluentQt::FluentQt
+    Qt${QT_VERSION_MAJOR}::Widgets)
+target_include_directories(@APP_TARGET@_ui PUBLIC src)
+
+add_executable(@APP_TARGET@ src/app/main.cpp)
+target_link_libraries(@APP_TARGET@
+    PRIVATE
+    @APP_TARGET@_ui
+    @APP_TARGET@_infrastructure)
+
+if(BUILD_TESTING)
+    add_executable(@APP_TARGET@_application_test
+        tests/application/WorkspaceControllerTest.cpp)
+    target_link_libraries(@APP_TARGET@_application_test
+        PRIVATE @APP_TARGET@_application)
+    add_test(NAME @APP_TARGET@_application_test
+        COMMAND @APP_TARGET@_application_test)
+    add_test(NAME @APP_TARGET@_ui_smoke
+        COMMAND @APP_TARGET@ --smoke-test)
+    add_test(NAME @APP_TARGET@_quality_report
+        COMMAND @APP_TARGET@ --quality-report)
+    set_tests_properties(
+        @APP_TARGET@_ui_smoke
+        @APP_TARGET@_quality_report
+        PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    set_tests_properties(@APP_TARGET@_quality_report PROPERTIES
+        PASS_REGULAR_EXPRESSION "\\\"schema_version\\\":1")
+endif()

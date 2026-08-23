@@ -1,0 +1,38 @@
+#include "application/WorkspaceController.h"
+#include "application/WorkspaceRepository.h"
+
+#include <cassert>
+
+namespace {
+
+class Repository final : public @APP_NAMESPACE@::application::WorkspaceRepository {
+public:
+    @APP_NAMESPACE@::domain::Workspace currentWorkspace() const override
+    {
+        ++m_calls;
+        if (m_calls == 1)
+            return {};
+        return { "FluentQt", "/work/FluentQt" };
+    }
+
+private:
+    mutable int m_calls = 0;
+};
+
+} // namespace
+
+int main()
+{
+    Repository repository;
+    @APP_NAMESPACE@::application::WorkspaceController controller(repository);
+    assert(!controller.state().hasWorkspace);
+    assert(controller.state().title == "No workspace");
+    assert(controller.state().status == "Unavailable");
+    controller.refresh();
+    assert(controller.state().hasWorkspace);
+    assert(controller.state().title == "FluentQt");
+    assert(!controller.state().darkTheme);
+    controller.toggleTheme();
+    assert(controller.state().darkTheme);
+    return 0;
+}

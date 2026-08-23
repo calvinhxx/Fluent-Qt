@@ -1,0 +1,12 @@
+# @APP_NAME@ FluentQt integration slice
+
+`WorkspacePanel` is an embeddable PySide6 widget backed by native FluentQt
+components. Move the application and UI modules into the matching host
+packages rather than creating a parallel architecture.
+
+```bash
+python -m venv .venv
+python -m pip install -e .
+python -m unittest discover -s tests
+@APP_ID@-panel-demo
+```

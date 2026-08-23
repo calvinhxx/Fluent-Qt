@@ -1,0 +1,28 @@
+#pragma once
+
+#include <FluentQt/Layout.h>
+
+#include <functional>
+
+#include "application/WorkspaceSummary.h"
+
+namespace fluent::textfields {
+class Label;
+}
+
+namespace @APP_NAMESPACE@::ui {
+
+class WorkspacePanel final : public fluent::layout::Card {
+public:
+    explicit WorkspacePanel(QWidget* parent = nullptr);
+
+    void setSummary(const application::WorkspaceSummary& summary);
+    void setRefreshHandler(std::function<void()> handler);
+
+private:
+    fluent::textfields::Label* m_title = nullptr;
+    fluent::textfields::Label* m_path = nullptr;
+    std::function<void()> m_refreshHandler;
+};
+
+} // namespace @APP_NAMESPACE@::ui

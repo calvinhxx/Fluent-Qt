@@ -1,0 +1,49 @@
+#include <FluentQt/FluentQt.h>
+#include <FluentQt/Diagnostics.h>
+
+#include <QApplication>
+#include <QEvent>
+#include <QEventLoop>
+#include <QJsonDocument>
+#include <QTextStream>
+#include <QTimer>
+
+#include <cstdio>
+
+#include "application/WorkspaceController.h"
+#include "infrastructure/LocalWorkspaceRepository.h"
+#include "ui/shell/MainWindow.h"
+#include "ui/theme/BrandTheme.h"
+
+int main(int argc, char* argv[])
+{
+    fluent::prepareHighDpiApplication();
+    QApplication application(argc, argv);
+    application.setApplicationName(QStringLiteral("@APP_NAME_CPP@"));
+    fluent::initializeResources();
+    application.setFont(
+        Typography::fontStyle(Typography::FontRole::Body).toQFont());
+    @APP_NAMESPACE@::ui::theme::applyBrandTheme(false);
+
+    @APP_NAMESPACE@::infrastructure::LocalWorkspaceRepository repository;
+    @APP_NAMESPACE@::application::WorkspaceController controller(repository);
+    @APP_NAMESPACE@::ui::MainWindow window(controller);
+    window.show();
+
+    const QStringList arguments = application.arguments();
+    if (arguments.contains(QStringLiteral("--quality-report"))) {
+        QTimer::singleShot(0, &application, [&application, &window]() {
+            QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            QApplication::processEvents(QEventLoop::AllEvents);
+            const QJsonObject report = fluent::diagnostics::Inspector::report(
+                window.contentWidget());
+            QTextStream output(stdout);
+            output << QJsonDocument(report).toJson(QJsonDocument::Compact)
+                   << Qt::endl;
+            application.quit();
+        });
+    } else if (arguments.contains(QStringLiteral("--smoke-test"))) {
+        QTimer::singleShot(0, &application, &QCoreApplication::quit);
+    }
+    return application.exec();
+}

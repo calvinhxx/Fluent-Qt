@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "@APP_ID@-fluentqt-slice"
+version = "0.1.0"
+description = "FluentQt integration panel for @APP_NAME@"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "FluentQt>=1.7,<2",
+  "PySide6>=6.2,<7"
+]
+
+[project.scripts]
+@APP_ID@-panel-demo = "@APP_MODULE@.app.demo:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

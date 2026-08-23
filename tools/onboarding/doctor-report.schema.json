@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fluent-qt.dev/schemas/doctor-report.schema.json",
+  "title": "FluentQt environment doctor report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "doctor_version",
+    "profile",
+    "ready",
+    "host",
+    "summary",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "doctor_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profile": {
+      "enum": ["cpp", "python"]
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "host": {
+      "$ref": "#/$defs/host"
+    },
+    "summary": {
+      "$ref": "#/$defs/summary"
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    }
+  },
+  "$defs": {
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "release", "machine"],
+      "properties": {
+        "system": { "type": "string" },
+        "release": { "type": "string" },
+        "machine": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "warnings", "failures"],
+      "properties": {
+        "passed": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 },
+        "failures": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "summary", "detail", "hint"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "status": {
+          "enum": ["pass", "warn", "fail"]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": { "type": "string" },
+        "hint": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+#pragma once
+
+namespace @APP_NAMESPACE@::ui::theme {
+
+void applyBrandTheme(bool dark);
+
+} // namespace @APP_NAMESPACE@::ui::theme

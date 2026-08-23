@@ -1,0 +1,34 @@
+#include <FluentQt/FluentQt.h>
+
+#include <QApplication>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QWidget>
+
+#include "ui/WorkspacePanel.h"
+
+int main(int argc, char* argv[])
+{
+    fluent::prepareHighDpiApplication();
+    QApplication application(argc, argv);
+    fluent::initializeResources();
+
+    fluent::windowing::Window window;
+    window.setWindowTitle(QStringLiteral("@APP_NAME_CPP@ panel"));
+    window.resize(680, 420);
+    auto* content = new QWidget;
+    auto* layout = new QVBoxLayout(content);
+    layout->setContentsMargins(28, 28, 28, 28);
+    auto* panel = new @APP_NAMESPACE@::ui::WorkspacePanel(content);
+    panel->setSummary({"@APP_NAME_CPP@", "/path/to/workspace"});
+    panel->setRefreshHandler([panel] {
+        panel->setSummary({"@APP_NAME_CPP@", "/path/to/workspace"});
+    });
+    layout->addWidget(panel);
+    layout->addStretch();
+    window.setContentWidget(content);
+    window.show();
+    if (application.arguments().contains(QStringLiteral("--smoke-test")))
+        QTimer::singleShot(0, &application, &QApplication::quit);
+    return application.exec();
+}

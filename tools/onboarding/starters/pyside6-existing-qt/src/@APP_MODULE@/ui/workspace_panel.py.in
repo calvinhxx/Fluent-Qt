@@ -1,0 +1,52 @@
+from collections.abc import Callable
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+
+from fluentqt.basicinput import Button
+from fluentqt.layout import Card
+from fluentqt.textfields import Label
+import fluentqt
+
+from @APP_MODULE@.application.workspace_summary import (
+    WorkspaceSummary,
+    workspace_title,
+)
+
+
+class WorkspacePanel(Card):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._refresh: Callable[[], None] | None = None
+        root = QVBoxLayout(self)
+        root.setContentsMargins(20, 18, 20, 18)
+        root.setSpacing(8)
+
+        self._title = Label(self)
+        self._title.setFluentTypography(fluentqt.FontRole.Subtitle)
+        root.addWidget(self._title)
+        self._path = Label(self)
+        self._path.setTextColorRole(Label.TextColorRole.Secondary)
+        self._path.setTextElideMode(Qt.ElideMiddle)
+        root.addWidget(self._path)
+
+        actions = QHBoxLayout()
+        actions.addStretch()
+        refresh = Button("Refresh", self)
+        refresh.setFluentStyle(Button.ButtonStyle.Accent)
+        refresh.setAccessibleName("Refresh workspace")
+        actions.addWidget(refresh)
+        root.addLayout(actions)
+        refresh.clicked.connect(self._handle_refresh)
+        self.set_summary(WorkspaceSummary("Workspace", ""))
+
+    def set_summary(self, summary: WorkspaceSummary) -> None:
+        self._title.setText(workspace_title(summary))
+        self._path.setText(summary.path)
+
+    def set_refresh_handler(self, handler: Callable[[], None]) -> None:
+        self._refresh = handler
+
+    def _handle_refresh(self) -> None:
+        if self._refresh is not None:
+            self._refresh()

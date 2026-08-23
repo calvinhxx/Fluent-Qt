@@ -1,0 +1,44 @@
+from dataclasses import dataclass, replace
+from typing import Protocol
+
+from @APP_MODULE@.domain.workspace import Workspace
+
+
+class WorkspaceRepository(Protocol):
+    def current_workspace(self) -> Workspace: ...
+
+
+@dataclass(frozen=True)
+class WorkspaceViewState:
+    title: str
+    path: str
+    status: str
+    has_workspace: bool = False
+    dark_theme: bool = False
+
+
+class WorkspaceController:
+    def __init__(self, repository: WorkspaceRepository) -> None:
+        self._repository = repository
+        self._state = WorkspaceViewState(
+            "No workspace", "Workspace unavailable.", "Unavailable"
+        )
+        self.refresh()
+
+    @property
+    def state(self) -> WorkspaceViewState:
+        return self._state
+
+    def refresh(self) -> None:
+        workspace = self._repository.current_workspace()
+        has_workspace = bool(workspace.name and workspace.path)
+        self._state = replace(
+            self._state,
+            title=workspace.name if has_workspace else "No workspace",
+            path=workspace.path if has_workspace else "Workspace unavailable.",
+            status="Ready" if has_workspace else "Unavailable",
+            has_workspace=has_workspace,
+        )
+
+    def toggle_theme(self) -> None:
+        self._state = replace(self._state, dark_theme=not self._state.dark_theme)

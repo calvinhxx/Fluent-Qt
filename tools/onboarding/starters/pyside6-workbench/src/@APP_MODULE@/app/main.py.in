@@ -1,0 +1,47 @@
+from __future__ import annotations
+
+import json
+import sys
+
+import fluentqt
+
+fluentqt.prepare_high_dpi_application()
+
+from PySide6.QtCore import QEvent, QTimer
+from PySide6.QtWidgets import QApplication
+
+from @APP_MODULE@.application.workspace_controller import WorkspaceController
+from @APP_MODULE@.infrastructure.local_workspace_repository import (
+    LocalWorkspaceRepository,
+)
+from @APP_MODULE@.ui.shell.main_window import MainWindow
+from @APP_MODULE@.ui.theme.brand_theme import apply_brand_theme
+
+
+def main(argv: list[str] | None = None) -> int:
+    arguments = list(sys.argv if argv is None else argv)
+    application = QApplication(arguments)
+    application.setApplicationName(@APP_NAME_PY@)
+    fluentqt.initialize_resources()
+    apply_brand_theme(False)
+
+    controller = WorkspaceController(LocalWorkspaceRepository())
+    window = MainWindow(controller)
+    window.show()
+
+    if "--quality-report" in arguments:
+        def write_quality_report() -> None:
+            QApplication.sendPostedEvents(None, QEvent.Type.LayoutRequest)
+            application.processEvents()
+            report = fluentqt.inspect_widget(window.contentWidget())
+            print(json.dumps(report, separators=(",", ":"), sort_keys=True))
+            application.quit()
+
+        QTimer.singleShot(0, write_quality_report)
+    elif "--smoke-test" in arguments:
+        QTimer.singleShot(0, application.quit)
+    return application.exec()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

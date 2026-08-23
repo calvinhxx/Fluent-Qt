@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "templates": {
+    "cpp-existing-qt": {
+      "description": "A bounded FluentQt panel that can be added to an existing Qt Widgets project.",
+      "directory": "cpp-existing-qt",
+      "profile": "lite",
+      "shell_files": [
+        "ui/WorkspacePanel.h",
+        "ui/WorkspacePanel.cpp"
+      ],
+      "next_steps": [
+        "cmake -S . -B build",
+        "cmake --build build --parallel",
+        "ctest --test-dir build --output-on-failure"
+      ]
+    },
+    "cpp-workbench": {
+      "description": "A layered native C++ workbench with application, domain, infrastructure, UI, tests, and CI.",
+      "directory": "cpp-workbench",
+      "profile": "full",
+      "shell_files": [
+        "ui/shell/MainWindow.h",
+        "ui/shell/MainWindow.cpp"
+      ],
+      "next_steps": [
+        "cmake -S . -B build",
+        "cmake --build build --parallel",
+        "ctest --test-dir build --output-on-failure"
+      ]
+    },
+    "pyside6-existing-qt": {
+      "description": "An embeddable FluentQt PySide6 panel with a small application boundary and test.",
+      "directory": "pyside6-existing-qt",
+      "profile": "lite",
+      "shell_files": [
+        "ui/workspace_panel.py"
+      ],
+      "next_steps": [
+        "python -m venv .venv",
+        "python -m pip install -e .",
+        "python -m unittest discover -s tests"
+      ]
+    },
+    "pyside6-workbench": {
+      "description": "A layered PySide6 workbench mirroring the native product boundaries without C++ ownership boilerplate.",
+      "directory": "pyside6-workbench",
+      "profile": "full",
+      "shell_files": [
+        "ui/shell/main_window.py"
+      ],
+      "next_steps": [
+        "python -m venv .venv",
+        "python -m pip install -e .",
+        "python -m unittest discover -s tests"
+      ]
+    }
+  }
+}
