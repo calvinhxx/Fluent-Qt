@@ -61,8 +61,7 @@ Star 和页面访问量只能反映曝光，不能代表接入成功。
 
 当前只保留三项 P0 工作，并限制同时进行一项工程改动和一项真实验收：
 
-1. 在下一次完整 CI 中读取五个选定 C++ 干净消费环境的 `fluentqt trial` 报告，确认
-   10 分钟与 80% 门槛；Python Wheel 任务同时发布 Linux、Windows、macOS 报告；
+1. 随下一次合入 `main` 发布已生成的 API Explorer，并确认公开入口与组件深链；
 2. 只运行现有 `agent-run-workspace` 任务的 Codex、Claude Code、Cursor 三组
    真实盲测；先根据结果改 Skill，再决定是否需要第二个任务；
 3. 协助三个外部项目接入，把重复失败转成诊断、Starter 或组件修复。
@@ -108,16 +107,19 @@ P1 只做已被真实接入触发的生产证据：启动/内存、DataGrid 大�
 
 ### 1B. 项目创建
 
-状态：本地已完成，跨平台证据收集已接入，等待下一次推送确认。可移植命令、四套 C++ /
-PySide6 Starter、架构清单、版本化输出契约、源码包/开发包交付和 CI 验收任务均
-已落地。两套 C++ Starter 已通过安装包路径完成编译、应用层测试和无界面 GUI
-冒烟；Python Starter 已完成语法检查并实际执行应用层测试。独立 Skill 安装包
-也已包含 `doctor`、`create` 和四套 Starter。`fluentqt trial` 已把诊断、创建、
-构建、测试和真实窗口 show 路径组合成版本化报告。快速 CI 只选 3 条代表性 C++
-通道；完整 CI 固定选 5 条，覆盖 Linux x64/ARM64、Qt 5/6、macOS 和 Windows；
-Linux、Windows、macOS 的 Wheel 任务也会发布同格式 Python 报告。这些任务复用
-现有构建产物，只编译很小的生成工程，不重复构建 FluentQt。当前缺口是远端运行
-通过并读取报告，不是新的脚手架功能。
+状态：已完成。[完整 CI #32654501221](https://github.com/calvinhxx/Fluent-Qt/actions/runs/32654501221)
+在 Linux x64/ARM64、Qt 5/6、macOS 和 Windows 的五个 C++ 干净消费环境中均产出
+通过报告，完成率 100%，首次窗口中位耗时 9.692 秒；Linux、Windows、macOS 的
+三条 Python Wheel 通道同样全部通过，中位耗时 0.546 秒。八份报告均进入真实
+窗口路径且没有 blocker。
+
+可移植命令、四套 C++ / PySide6 Starter、架构清单、版本化输出契约、源码包/
+开发包交付和 CI 验收任务均已落地。两套 C++ Starter 已通过安装包路径完成编译、
+应用层测试和无界面 GUI 冒烟；Python Starter 已完成语法检查并实际执行应用层
+测试。独立 Skill 安装包也已包含 `doctor`、`create` 和四套 Starter。
+`fluentqt trial` 把诊断、创建、构建、测试和真实窗口 show 路径组合成版本化报告。
+快速 CI 只选 3 条代表性 C++ 通道；完整 CI 固定选上述 5 条。所有任务复用现有
+构建产物，只编译很小的生成工程，不重复构建 FluentQt。
 
 环境诊断输出稳定后再增加 `fluentqt create`。维护两套明确的 Starter，而不是
 生成一个空壳：
@@ -131,11 +133,12 @@ Starter 保持相同的产品结构，但不机械照搬 C++ 所有权细节。
 
 ### 1C. 可搜索的公开 API
 
-状态：本地验收完成，等待下一次远端任务确认 Pages 发布。API Explorer 已覆盖
+状态：本地验收完成，等待随下一次合入 `main` 发布到 Pages。API Explorer 已覆盖
 目录中的 69 个组件和 114 个安装头文件，支持搜索、分类筛选、C++ / Python
 名称、声明、聚焦测试和 Gallery 路由。WebAssembly Gallery 深链已在本地完成
-编译，并能直接打开指定的 DataGrid 页面。生成过程直接校验安装头文件白名单与
-现有 AI 目录，不再维护第二份手写索引。
+编译，并能直接打开指定的 DataGrid 页面。`release/1.7.x` 的完整 CI 会生成站点
+产物，但生产 Pages 只从 `main` 发布，因此当前不把本地文件或 CI 产物记作公开
+上线。生成过程直接校验安装头文件白名单与现有 AI 目录，不再维护第二份手写索引。
 
 为已安装的公开头文件生成 API 文档，并把目录中的每个组件链接到对应声明、
 Gallery 路由和聚焦测试。Quick Start 只保留任务导向内容，不承担完整 API 手册
@@ -144,6 +147,9 @@ Gallery 路由和聚焦测试。Quick Start 只保留任务导向内容，不承
 阶段门槛：在 Qt 与 FluentQt 前置条件就绪的五个干净消费环境中运行对应 Starter
 的 `fluentqt trial`，首次窗口路径的中位耗时低于 10 分钟，完成率不低于 80%。
 自动冒烟证明程序进入真实 `show()` 路径，但不代替界面美学验收。
+
+1B 的远端证据已超过上述门槛；阶段 1 仍保持“进行中”，直到 1C 在公开 Pages
+上线并完成入口与深链检查。
 
 ## 阶段 2：AI 质量闭环
 
