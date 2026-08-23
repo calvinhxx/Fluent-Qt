@@ -6,6 +6,7 @@ on:
     paths:
       - site/**
       - tools/site/**
+      - docs/ai/**
       - app/**
       - cmake/**
       - examples/hello_world/**
@@ -53,7 +54,9 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Validate localized site outputs
-        run: python3 tools/site/generate_localized_site.py --check
+        run: |
+          python3 tools/site/generate_localized_site.py --check
+          python3 tools/site/generate_api_reference.py --check
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -71,6 +74,8 @@ jobs:
           cp -R site/. build/pages/
           cp -R build/wasm-pages/. build/pages/gallery/
           test -f build/pages/zh-CN/index.html
+          test -f build/pages/api/index.html
+          test -f build/pages/api/catalog.json
           test -f build/pages/sitemap.xml
           test -f build/pages/gallery/index.html
           test -f build/pages/gallery/build-info.json

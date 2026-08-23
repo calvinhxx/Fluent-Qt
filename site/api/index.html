@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fluent-Qt API Explorer</title>
+    <meta name="description" content="Search Fluent-Qt controls and installed public C++ headers.">
+    <meta name="theme-color" content="#eef3f7">
+    <link rel="canonical" href="https://calvinhxx.github.io/Fluent-Qt/api/">
+    <link rel="icon" href="../assets/app-icon.png">
+    <script>
+      try {
+        const saved = localStorage.getItem("fluent-qt-theme");
+        document.documentElement.dataset.theme = saved === "dark" || saved === "light"
+          ? saved
+          : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    </script>
+    <link rel="stylesheet" href="api.css?v=1">
+    <script src="api.js?v=1" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#results">Skip to results</a>
+    <header class="topbar">
+      <a class="brand" href="../">
+        <img src="../assets/app-icon.png" alt="" width="30" height="30">
+        <span>Fluent-Qt</span>
+      </a>
+      <nav aria-label="Reference navigation">
+        <a href="../gallery/" data-label="gallery">Gallery</a>
+        <a href="https://github.com/calvinhxx/Fluent-Qt" data-label="source">Source</a>
+        <button type="button" data-language aria-label="Switch language">中</button>
+        <button type="button" data-theme-toggle aria-label="Switch theme">◐</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">FLUENT-QT / API</p>
+        <h1 id="page-title">API Explorer</h1>
+        <p data-label="intro">Find a control, its include, Gallery example, and focused test.</p>
+        <dl class="summary" aria-label="API coverage">
+          <div><dt data-components-count>—</dt><dd data-label="controls">Controls</dd></div>
+          <div><dt data-headers-count>—</dt><dd data-label="headers">Public headers</dd></div>
+          <div><dt data-version>—</dt><dd data-label="version">Version</dd></div>
+        </dl>
+      </section>
+
+      <section class="explorer" aria-labelledby="search-title">
+        <h2 class="visually-hidden" id="search-title">Search API</h2>
+        <div class="toolbar">
+          <label class="search-field">
+            <span class="visually-hidden" data-label="search">Search</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+            <input type="search" autocomplete="off" data-search placeholder="Search controls, types, or headers…">
+            <kbd>⌘ K</kbd>
+          </label>
+          <div class="view-switch" role="group" aria-label="Reference view">
+            <button type="button" data-view="components" aria-pressed="true" data-label="controls">Controls</button>
+            <button type="button" data-view="headers" aria-pressed="false" data-label="headers">Public headers</button>
+          </div>
+        </div>
+        <div class="filter-row" data-category-filters aria-label="Control categories"></div>
+        <div class="result-meta" aria-live="polite" data-result-meta></div>
+        <div class="results" id="results" data-results></div>
+        <div class="empty" data-empty hidden>
+          <strong data-label="noResults">No matches</strong>
+          <span data-label="tryAnother">Try another name or clear the category filter.</span>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span data-label="generated">Generated from the installed-header allowlist and Gallery catalog.</span>
+      <a href="https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/ai/README.md">AI catalog ↗</a>
+    </footer>
+  </body>
+</html>

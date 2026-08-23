@@ -198,7 +198,7 @@ def prefix_resources(page: str, prefix: str) -> str:
     attribute_names = "|".join(re.escape(name) for name in attributes)
     pattern = re.compile(
         rf'(?P<head>\b(?:{attribute_names})=")'
-        r'(?P<url>(?:assets/|styles\.css|site\.js|gallery/)[^"]*)'
+        r'(?P<url>(?:assets/|styles\.css|site\.js|gallery/|api/)[^"]*)'
     )
     return pattern.sub(
         lambda match: f'{match.group("head")}{prefix}{match.group("url")}', page
@@ -298,6 +298,9 @@ def render_sitemap() -> str:
     <xhtml:link rel="alternate" hreflang="en" href="{BASE_URL}" />
     <xhtml:link rel="alternate" hreflang="zh-CN" href="{BASE_URL}zh-CN/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="{BASE_URL}" />
+  </url>
+  <url>
+    <loc>{BASE_URL}api/</loc>
   </url>
 </urlset>
 '''
