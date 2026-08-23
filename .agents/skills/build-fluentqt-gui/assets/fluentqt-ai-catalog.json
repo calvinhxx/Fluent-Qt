@@ -2871,19 +2871,19 @@
           "id": "data-grid-large-read-only",
           "title": "Large read-only data",
           "description": "A model with 100,000 rows remains virtualized: DataGrid asks only for cells needed by the viewport.",
-          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setModel(new LargeDataGridModel(grid));\ngrid->setScrollChainingEnabled(true);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setEditTriggers(QAbstractItemView::NoEditTriggers);"
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Large data\");\ngrid->setModel(new LargeDataGridModel(grid));\ngrid->setScrollChainingEnabled(true);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setEditTriggers(QAbstractItemView::NoEditTriggers);"
         },
         {
           "id": "data-grid-column-selection",
           "title": "Columns, sorting, and selection",
           "description": "Resize or reorder headers, click a header to sort, and use Ctrl or Shift to extend row selection.",
-          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setModel(projectModel);\ngrid->setScrollChainingEnabled(true);\ngrid->setSelectionMode(DataGrid::SelectionMode::Extended);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setSortingEnabled(true);\ngrid->horizontalHeader()->setSectionsMovable(true);"
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Projects\");\ngrid->setModel(projectModel);\ngrid->setScrollChainingEnabled(true);\ngrid->setSelectionMode(DataGrid::SelectionMode::Extended);\ngrid->setSelectionBehavior(QAbstractItemView::SelectRows);\ngrid->setSortingEnabled(true);\ngrid->horizontalHeader()->setSectionsMovable(true);"
         },
         {
           "id": "data-grid-edit-validation",
           "title": "Delegate editing and validation",
           "description": "Double-click or press F2 to edit. The model rejects values shorter than three characters while the delegate paints its validation role.",
-          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setModel(validationModel);\ngrid->setScrollChainingEnabled(true);\ngrid->setItemDelegate(new ValidationDelegate(grid));\ngrid->setEditTriggers(QAbstractItemView::DoubleClicked\n                      | QAbstractItemView::EditKeyPressed);\n// ValidationModel::setData(EditRole) returns false and\n// publishes an application-defined validation role."
+          "cpp_snippet": "auto* grid = new DataGrid(this);\ngrid->setAccessibleName(\"Settings\");\ngrid->setModel(validationModel);\ngrid->setScrollChainingEnabled(true);\ngrid->setItemDelegate(new ValidationDelegate(grid));\ngrid->setEditTriggers(QAbstractItemView::DoubleClicked\n                      | QAbstractItemView::EditKeyPressed);\n// ValidationModel::setData(EditRole) returns false and\n// publishes an application-defined validation role."
         }
       ]
     },
@@ -7833,19 +7833,19 @@
           "id": "text-edit-visible-lines",
           "title": "Auto height from visible lines",
           "description": "TextEdit grows between min and max visible lines before scrolling is needed.",
-          "cpp_snippet": "auto* textEdit = new TextEdit(this);\ntextEdit->setPlaceholderText(\"Type your notes here\");\ntextEdit->setMinVisibleLines(2);\ntextEdit->setMaxVisibleLines(4);\ntextEdit->setPlainText(\"First line\\nSecond line\");\n\nconnect(textEdit, &TextEdit::textChanged,\n        statusLabel, [textEdit, statusLabel] {\n            statusLabel->setText(lineCountText(textEdit));\n        });"
+          "cpp_snippet": "auto* textEdit = new TextEdit(this);\ntextEdit->setAccessibleName(\"Notes\");\ntextEdit->setPlaceholderText(\"Type your notes here\");\ntextEdit->setMinVisibleLines(2);\ntextEdit->setMaxVisibleLines(4);\ntextEdit->setPlainText(\"First line\\nSecond line\");\n\nconnect(textEdit, &TextEdit::textChanged,\n        statusLabel, [textEdit, statusLabel] {\n            statusLabel->setText(lineCountText(textEdit));\n        });"
         },
         {
           "id": "text-edit-scrollable-content",
           "title": "Scrollable multi-line content",
           "description": "When text exceeds the maximum visible line count, the Fluent vertical scrollbar takes over.",
-          "cpp_snippet": "auto* textEdit = new TextEdit(this);\ntextEdit->setMinVisibleLines(3);\ntextEdit->setMaxVisibleLines(3);\ntextEdit->setLineHeight(28);\ntextEdit->setPlainText(\"Alpha\\nBeta\\nGamma\\nDelta\\nEpsilon\\nZeta\");"
+          "cpp_snippet": "auto* textEdit = new TextEdit(this);\ntextEdit->setAccessibleName(\"Scrollable notes\");\ntextEdit->setMinVisibleLines(3);\ntextEdit->setMaxVisibleLines(3);\ntextEdit->setLineHeight(28);\ntextEdit->setPlainText(\"Alpha\\nBeta\\nGamma\\nDelta\\nEpsilon\\nZeta\");"
         },
         {
           "id": "text-edit-read-only",
           "title": "Read-only text surface",
           "description": "Read-only text keeps the Fluent frame and typography while blocking edits.",
-          "cpp_snippet": "auto* textEdit = new TextEdit(this);\ntextEdit->setPlainText(\"Terms reviewed and locked for approval.\");\ntextEdit->setReadOnly(true);\ntextEdit->setFontRole(Typography::FontRole::BodyStrong);\ntextEdit->setContentMargins(QMargins(12, 6, 12, 6));"
+          "cpp_snippet": "auto* textEdit = new TextEdit(this);\ntextEdit->setAccessibleName(\"Review terms\");\ntextEdit->setPlainText(\"Terms reviewed and locked for approval.\");\ntextEdit->setReadOnly(true);\ntextEdit->setFontRole(Typography::FontRole::BodyStrong);\ntextEdit->setContentMargins(QMargins(12, 6, 12, 6));"
         }
       ]
     },

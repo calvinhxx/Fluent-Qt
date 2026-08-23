@@ -82,6 +82,7 @@ from PySide6.QtWidgets import (
     QStackedWidget,
     QStyledItemDelegate,
     QTableView,
+    QToolButton,
     QTreeView,
     QWidget,
     QWidgetAction,
@@ -2489,6 +2490,43 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(bar_ref())
             self.assertFalse(Shiboken.isValid(action))
             del action
+
+    def test_inspector_report_and_options(self):
+        root = QWidget()
+        root.setObjectName("bindingInspectorRoot")
+        root.resize(320, 180)
+        button = QToolButton(root)
+        button.setObjectName("smallUnnamedAction")
+        button.setGeometry(12, 12, 18, 18)
+        root.show()
+        QApplication.processEvents()
+
+        report = fluentqt.inspect_widget(root)
+        self.assertEqual(report["schema_version"], 1)
+        self.assertEqual(report["tool"], "FluentQt Inspector")
+        codes = {finding["code"] for finding in report["findings"]}
+        self.assertIn("accessibility.missing-name", codes)
+        self.assertIn("input.small-hit-area", codes)
+
+        quiet_report = fluentqt.inspect_widget(
+            root,
+            check_clipped_text=False,
+            check_accessibility_names=False,
+            check_hit_areas=False,
+            check_focus_order=False,
+            check_duplicate_actions=False,
+            check_nested_scrolling=False,
+        )
+        self.assertEqual(quiet_report["summary"]["findings"], 0)
+        with self.assertRaises(TypeError):
+            fluentqt.inspect_widget(object())
+        with self.assertRaises(TypeError):
+            fluentqt.inspect_widget(root, minimum_hit_area=(24.5, 24))
+        with self.assertRaises(TypeError):
+            fluentqt.inspect_widget(root, spacing_grid="4")
+        with self.assertRaises(ValueError):
+            fluentqt.inspect_widget(root, spacing_grid=0)
+        root.close()
 
     def test_theme_api(self):
         previous_theme = fluentqt.current_theme()

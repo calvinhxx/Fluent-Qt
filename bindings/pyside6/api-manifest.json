@@ -120,6 +120,7 @@
     "font_for_role",
     "font_scale",
     "initialize_resources",
+    "inspect_widget",
     "prepare_high_dpi_application",
     "reset_theme_tokens",
     "set_accent_color",

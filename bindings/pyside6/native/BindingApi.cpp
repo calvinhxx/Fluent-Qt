@@ -1,5 +1,6 @@
 #include "BindingApi.h"
 
+#include <FluentQt/Diagnostics.h>
 #include <FluentQt/FluentQt.h>
 
 #include <components/foundation/ThemeRegistry.h>
@@ -516,6 +517,31 @@ qreal fontScale() { return fluent::ThemeRegistry::instance().fontScale(); }
 QVariantMap themeTokensForWidgetForBinding(const QWidget* widget) {
   const auto* element = nearestFluentElement(widget);
   return element ? themeTokens(*element) : QVariantMap{};
+}
+
+QVariantMap inspectWidgetForBinding(QWidget* widget,
+                                    int minimumHitWidth,
+                                    int minimumHitHeight,
+                                    int spacingGrid,
+                                    bool checkClippedText,
+                                    bool checkAccessibilityNames,
+                                    bool checkHitAreas,
+                                    bool checkFocusOrder,
+                                    bool checkDuplicateActions,
+                                    bool checkNestedScrolling,
+                                    bool checkLayoutGrid) {
+  fluent::diagnostics::InspectorOptions options;
+  options.minimumHitArea =
+      QSize(qMax(1, minimumHitWidth), qMax(1, minimumHitHeight));
+  options.spacingGrid = qMax(1, spacingGrid);
+  options.checkClippedText = checkClippedText;
+  options.checkAccessibilityNames = checkAccessibilityNames;
+  options.checkHitAreas = checkHitAreas;
+  options.checkFocusOrder = checkFocusOrder;
+  options.checkDuplicateActions = checkDuplicateActions;
+  options.checkNestedScrolling = checkNestedScrolling;
+  options.checkLayoutGrid = checkLayoutGrid;
+  return fluent::diagnostics::Inspector::report(widget, options).toVariantMap();
 }
 
 void refreshWidgetThemeForBinding(QWidget* widget) {

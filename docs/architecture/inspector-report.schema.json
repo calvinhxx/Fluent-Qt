@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/calvinhxx/Fluent-Qt/main/docs/architecture/inspector-report.schema.json",
+  "title": "FluentQt Inspector report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tool", "root", "summary", "findings"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "tool": { "const": "FluentQt Inspector" },
+    "root": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "class": { "type": "string" },
+        "object_name": { "type": "string" },
+        "width": { "type": "integer", "minimum": 0 },
+        "height": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["findings", "by_severity", "by_category"],
+      "properties": {
+        "findings": { "type": "integer", "minimum": 0 },
+        "by_severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["info", "warning", "error"],
+          "properties": {
+            "info": { "type": "integer", "minimum": 0 },
+            "warning": { "type": "integer", "minimum": 0 },
+            "error": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "by_category": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "category", "severity", "path", "rect", "message", "details"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z]+(?:[.-][a-z]+)*$" },
+          "category": {
+            "enum": ["text", "accessibility", "input", "focus", "layout", "actions", "scrolling"]
+          },
+          "severity": { "enum": ["info", "warning", "error"] },
+          "path": { "type": "string", "minLength": 1 },
+          "rect": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["x", "y", "width", "height"],
+            "properties": {
+              "x": { "type": "integer" },
+              "y": { "type": "integer" },
+              "width": { "type": "integer", "minimum": 0 },
+              "height": { "type": "integer", "minimum": 0 }
+            }
+          },
+          "message": { "type": "string", "minLength": 1 },
+          "details": { "type": "object" }
+        }
+      }
+    }
+  }
+}

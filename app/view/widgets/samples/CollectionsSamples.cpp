@@ -1290,12 +1290,14 @@ QVector<GallerySample> dataGridSamples()
             QStringLiteral("A model with 100,000 rows remains virtualized: DataGrid asks only for cells needed by the viewport."),
             QStringLiteral(
                 "auto* grid = new DataGrid(this);\n"
+                "grid->setAccessibleName(\"Large data\");\n"
                 "grid->setModel(new LargeDataGridModel(grid));\n"
                 "grid->setScrollChainingEnabled(true);\n"
                 "grid->setSelectionBehavior(QAbstractItemView::SelectRows);\n"
                 "grid->setEditTriggers(QAbstractItemView::NoEditTriggers);"),
             [](QWidget* parent) {
                 auto* grid = new DataGrid(parent);
+                grid->setAccessibleName(QStringLiteral("Large data"));
                 grid->setFixedSize(680, 252);
                 grid->setModel(new LargeDataGridModel(grid));
                 grid->setScrollChainingEnabled(true);
@@ -1312,6 +1314,7 @@ QVector<GallerySample> dataGridSamples()
             QStringLiteral("Resize or reorder headers, click a header to sort, and use Ctrl or Shift to extend row selection."),
             QStringLiteral(
                 "auto* grid = new DataGrid(this);\n"
+                "grid->setAccessibleName(\"Projects\");\n"
                 "grid->setModel(projectModel);\n"
                 "grid->setScrollChainingEnabled(true);\n"
                 "grid->setSelectionMode(DataGrid::SelectionMode::Extended);\n"
@@ -1320,6 +1323,7 @@ QVector<GallerySample> dataGridSamples()
                 "grid->horizontalHeader()->setSectionsMovable(true);"),
             [](QWidget* parent) {
                 auto* grid = new DataGrid(parent);
+                grid->setAccessibleName(QStringLiteral("Projects"));
                 grid->setFixedSize(680, 252);
                 auto* model = makeProjectDataGridModel(grid, false);
                 grid->setModel(model);
@@ -1339,6 +1343,7 @@ QVector<GallerySample> dataGridSamples()
             QStringLiteral("Double-click or press F2 to edit. The model rejects values shorter than three characters while the delegate paints its validation role."),
             QStringLiteral(
                 "auto* grid = new DataGrid(this);\n"
+                "grid->setAccessibleName(\"Settings\");\n"
                 "grid->setModel(validationModel);\n"
                 "grid->setScrollChainingEnabled(true);\n"
                 "grid->setItemDelegate(new ValidationDelegate(grid));\n"
@@ -1348,6 +1353,7 @@ QVector<GallerySample> dataGridSamples()
                 "// publishes an application-defined validation role."),
             [](QWidget* parent) {
                 auto* grid = new DataGrid(parent);
+                grid->setAccessibleName(QStringLiteral("Settings"));
                 grid->setFixedSize(680, 224);
                 auto* model = new ValidatingDataGridModel(grid);
                 model->setHorizontalHeaderLabels({

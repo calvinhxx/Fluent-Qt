@@ -211,6 +211,17 @@ void setFontScale(qreal scale);
 qreal fontScale();
 QVariantMap themeTokensForWidgetForBinding(const QWidget* widget);
 void refreshWidgetThemeForBinding(QWidget* widget);
+QVariantMap inspectWidgetForBinding(QWidget* widget,
+                                    int minimumHitWidth,
+                                    int minimumHitHeight,
+                                    int spacingGrid,
+                                    bool checkClippedText,
+                                    bool checkAccessibilityNames,
+                                    bool checkHitAreas,
+                                    bool checkFocusOrder,
+                                    bool checkDuplicateActions,
+                                    bool checkNestedScrolling,
+                                    bool checkLayoutGrid);
 bool bindProperties(QObject* source,
                     const QString& sourceProperty,
                     QObject* target,

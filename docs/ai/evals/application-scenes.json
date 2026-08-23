@@ -1,0 +1,179 @@
+{
+  "schema_version": 2,
+  "suite_id": "fluentqt-application-quality-v1",
+  "applications": [
+    "fluent_qt_gallery",
+    "fluentqt_cpp_workbench",
+    "fluentqt_pyside6_workbench"
+  ],
+  "scenes": [
+    {
+      "id": "button-light-wide",
+      "application": "fluent_qt_gallery",
+      "automation": "automated",
+      "route": "button",
+      "theme": "light",
+      "viewport": { "width": 1180, "height": 760 },
+      "coverage": ["light", "wide", "ready"],
+      "settle_ms": 80,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["Primary actions remain visible and named", "Content does not clip"]
+    },
+    {
+      "id": "button-dark-wide",
+      "application": "fluent_qt_gallery",
+      "automation": "automated",
+      "route": "button",
+      "theme": "dark",
+      "viewport": { "width": 1180, "height": 760 },
+      "coverage": ["dark", "wide", "ready"],
+      "settle_ms": 80,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["Text and control states retain contrast", "Surfaces remain visually distinct"]
+    },
+    {
+      "id": "field-light-narrow-long-text",
+      "application": "fluent_qt_gallery",
+      "automation": "automated",
+      "route": "field",
+      "theme": "light",
+      "viewport": { "width": 760, "height": 700 },
+      "coverage": ["light", "narrow", "long-text"],
+      "settle_ms": 80,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["Labels and validation messages remain readable", "Editors stay aligned"]
+    },
+    {
+      "id": "data-grid-dark-dense-scroll",
+      "application": "fluent_qt_gallery",
+      "automation": "automated",
+      "route": "data-grid",
+      "theme": "dark",
+      "viewport": { "width": 1180, "height": 760 },
+      "coverage": ["dark", "wide", "dense-data", "scroll-boundary"],
+      "settle_ms": 100,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["Grid and page scrolling have explicit ownership", "Dense rows retain hierarchy"]
+    },
+    {
+      "id": "info-bar-light-error",
+      "application": "fluent_qt_gallery",
+      "automation": "automated",
+      "route": "info-bar",
+      "theme": "light",
+      "viewport": { "width": 900, "height": 720 },
+      "coverage": ["light", "error"],
+      "settle_ms": 80,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["Error state is identifiable without relying on color alone"]
+    },
+    {
+      "id": "progress-ring-dark-loading",
+      "application": "fluent_qt_gallery",
+      "automation": "automated",
+      "route": "progress-ring",
+      "theme": "dark",
+      "viewport": { "width": 900, "height": 720 },
+      "coverage": ["dark", "loading"],
+      "settle_ms": 80,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["Loading state remains visible and semantically described"]
+    },
+    {
+      "id": "button-light-minimum-window",
+      "application": "fluent_qt_gallery",
+      "automation": "automated",
+      "route": "button",
+      "theme": "light",
+      "viewport": { "width": 640, "height": 480 },
+      "coverage": ["light", "minimum-window", "ready"],
+      "settle_ms": 80,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["Navigation and content remain operable at the minimum review size"]
+    },
+    {
+      "id": "cpp-workbench-light-wide",
+      "application": "fluentqt_cpp_workbench",
+      "automation": "automated",
+      "route": "workspace",
+      "theme": "light",
+      "viewport": { "width": 880, "height": 620 },
+      "coverage": ["light", "wide", "ready"],
+      "settle_ms": 40,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["The generated workspace surface has no unnamed controls", "The primary action remains visible"]
+    },
+    {
+      "id": "cpp-workbench-dark-narrow",
+      "application": "fluentqt_cpp_workbench",
+      "automation": "automated",
+      "route": "workspace",
+      "theme": "dark",
+      "viewport": { "width": 640, "height": 480 },
+      "coverage": ["dark", "narrow", "ready"],
+      "settle_ms": 40,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["The generated workspace surface remains usable at its narrow review size"]
+    },
+    {
+      "id": "cpp-workbench-light-empty",
+      "application": "fluentqt_cpp_workbench",
+      "automation": "automated",
+      "route": "workspace",
+      "theme": "light",
+      "viewport": { "width": 880, "height": 620 },
+      "coverage": ["light", "wide", "empty"],
+      "settle_ms": 40,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["The empty workspace is explicit", "Retry remains visible and named"]
+    },
+    {
+      "id": "pyside6-workbench-light-wide",
+      "application": "fluentqt_pyside6_workbench",
+      "automation": "automated",
+      "route": "workspace",
+      "theme": "light",
+      "viewport": { "width": 880, "height": 620 },
+      "coverage": ["light", "wide", "ready"],
+      "settle_ms": 40,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["The generated Python workspace exposes the same quality contract as C++"]
+    },
+    {
+      "id": "pyside6-workbench-dark-narrow",
+      "application": "fluentqt_pyside6_workbench",
+      "automation": "automated",
+      "route": "workspace",
+      "theme": "dark",
+      "viewport": { "width": 640, "height": 480 },
+      "coverage": ["dark", "narrow", "ready"],
+      "settle_ms": 40,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["The generated Python workspace remains usable at its narrow review size"]
+    },
+    {
+      "id": "pyside6-workbench-dark-empty",
+      "application": "fluentqt_pyside6_workbench",
+      "automation": "automated",
+      "route": "workspace",
+      "theme": "dark",
+      "viewport": { "width": 880, "height": 620 },
+      "coverage": ["dark", "wide", "empty"],
+      "settle_ms": 40,
+      "inspector": { "max_findings": 0, "allowed_codes": [] },
+      "review": ["The Python empty workspace matches the C++ state contract"]
+    },
+    {
+      "id": "text-edit-light-ime",
+      "application": "fluent_qt_gallery",
+      "automation": "manual",
+      "route": "text-edit",
+      "theme": "light",
+      "viewport": { "width": 900, "height": 720 },
+      "coverage": ["light", "ime", "long-text"],
+      "interactions": ["Focus the first editor", "Enter and confirm a multi-candidate CJK composition"],
+      "review": ["Pre-edit text is visible", "Candidate selection does not change editor geometry", "Committed text remains intact"]
+    }
+  ],
+  "deferred_coverage": []
+}

@@ -57,6 +57,13 @@
     <function signature="setFontScale(qreal)"/>
     <function signature="fontScale()"/>
     <function signature="themeTokensForWidgetForBinding(const QWidget*)"/>
+    <function signature="inspectWidgetForBinding(QWidget*,int,int,int,bool,bool,bool,bool,bool,bool,bool)">
+        <modify-function>
+            <modify-argument index="1">
+                <no-null-pointer/>
+            </modify-argument>
+        </modify-function>
+    </function>
     <function signature="refreshWidgetThemeForBinding(QWidget*)">
         <modify-function>
             <modify-argument index="1">
