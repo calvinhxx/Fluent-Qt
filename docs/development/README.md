@@ -17,6 +17,8 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [High-DPI Workflow](high-dpi-workflow.md)
 - [Release Governance](release-governance.md)
 - [FluentQt 1.7 Roadmap](release-1.7-roadmap.md)
+- Adoption and AI Delivery Roadmap: [English](adoption-and-ai-roadmap.md) ·
+  [简体中文](adoption-and-ai-roadmap.zh-CN.md)
 - [Field API Contract](field-api-proposal.md)
 - [DataGrid API Contract](datagrid-api-proposal.md)
 - [Accessibility Contract](accessibility-contract.md)

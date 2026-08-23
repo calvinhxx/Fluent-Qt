@@ -35,11 +35,11 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">提问与交流</a>
 </p>
 
-集合类组件包括 ListView、GridView、FlowView、TreeView 和 DataGrid。DataGrid 沿用 Qt 的模型与委托所有权约定，大数据表格的工作量保持在可视区域内。
+Fluent-Qt 是面向 Qt Widgets 的跨平台 Fluent UI 组件库，提供输入、导航、集合、数据表格、弹窗和窗口等原生控件。它保留 Qt Widgets 熟悉的对象模型和 CMake 工作流，支持 Windows、macOS、Linux、WebAssembly、Light/Dark 主题，以及 C++ 和可选 PySide6 接口，可直接接入现有项目。
 
-Fluent 是项目唯一的视觉语言。1.7 直接移除原有 Material/Cupertino 枚举、
-预设、绘制分支、Gallery 选项和 PySide6 入口；产品配色仍通过 Fluent
-Light/Dark 语义 token 完成。
+## 🤖 使用 Agent 构建
+
+在 Codex、Claude Code 或 Cursor 中调用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md)，直接描述要构建的桌面应用。[查看效果](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)
 
 ## 🧱 依赖
 
@@ -51,13 +51,11 @@ Light/Dark 语义 token 完成。
 | 测试 | FluentQt、Qt Test/Network、GTest、spdlog/fmt |
 | 可选 PySide6 绑定 | Qt 6.2+；源码构建支持 Python 3.10+ |
 
-## 🤖 AI 辅助开发
-
-Codex、Claude Code、Cursor 等 Agent 可通过 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) 构建原生 C++ / PySide6 GUI。[示例](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [文档](docs/ai/README.md)
-
 ## 🚀 快速开始
 
-### C++ 集成方式
+选择一种方式将 FluentQt 链接到 CMake 项目。新项目推荐使用 `FetchContent`。
+
+### C++ 接入
 
 | 集成方式 | CMake |
 |---|---|
@@ -302,11 +300,13 @@ python -m fluentqt_gallery
 
 ## 📚 文档
 
+- [可搜索的公开 API](https://calvinhxx.github.io/Fluent-Qt/api/)
 - [支持与社区](SUPPORT.md)
 - [参与贡献](CONTRIBUTING.md)
 - [安全策略](SECURITY.md)
 - [社区行为准则](CODE_OF_CONDUCT.md)
 - [AI 辅助应用开发](docs/ai/README.md)
+- [环境检查与项目模板](tools/onboarding/README.md)
 - [开发工作流](docs/development/README.md)
 - [测试与视觉验收](docs/development/testing-workflow.md)
 - [打包工作流](docs/development/packaging-workflow.md)
@@ -325,8 +325,4 @@ python -m fluentqt_gallery
 
 ## 许可证
 
-Fluent-Qt 项目自身的源代码使用 [MIT License](LICENSE) 发布。
-项目中捆绑的资源以及发布包中的运行时依赖继续适用各自的上游许可；
-具体版本、来源、对应源码提供规则和许可证位置见
-[第三方声明](THIRD_PARTY_NOTICES.md)。产品名称、徽标及外部设计参考的相关说明见
-[商标与外部引用声明](TRADEMARKS.md)。
+Fluent-Qt 项目自身的源代码使用 [MIT License](LICENSE) 发布。项目中捆绑的资源以及发布包中的运行时依赖继续适用各自的上游许可；具体版本、来源、对应源码提供规则和许可证位置见[第三方声明](THIRD_PARTY_NOTICES.md)。产品名称、徽标及外部设计参考的相关说明见[商标与外部引用声明](TRADEMARKS.md)。
