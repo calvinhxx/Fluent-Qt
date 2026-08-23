@@ -35,11 +35,11 @@
   <a href="https://github.com/calvinhxx/Fluent-Qt/discussions">Questions &amp; community</a>
 </p>
 
-Collection controls include ListView, GridView, FlowView, TreeView, and DataGrid. DataGrid keeps Qt's caller-owned model/delegate contract and stays viewport-bound for large tables.
+Fluent-Qt is a cross-platform Fluent UI component library for Qt Widgets. It provides native controls for input, navigation, collections, data grids, overlays, and windows while preserving Qt's object model and CMake workflow. It supports Windows, macOS, Linux, WebAssembly, Light/Dark themes, C++, and optional PySide6 bindings, and can be added directly to existing projects.
 
-Fluent is the project's only visual language. Version 1.7 removes the former
-Material/Cupertino enums, presets, paint branches, Gallery choices, and PySide6
-entry points; product branding stays within Fluent Light/Dark semantic tokens.
+## 🤖 Build with AI
+
+Use [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code, or Cursor, then describe the desktop app you want. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)
 
 ## 🧱 Dependencies
 
@@ -51,13 +51,11 @@ entry points; product branding stays within Fluent Light/Dark semantic tokens.
 | Tests | FluentQt, Qt Test/Network, GTest, spdlog/fmt |
 | Optional PySide6 bindings | Qt 6.2+; Python 3.10+ for source builds |
 
-## 🤖 AI-assisted development
-
-Codex, Claude Code, Cursor, and other agents can use [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) to build native C++ or PySide6 GUIs. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Docs](docs/ai/README.md)
-
 ## 🚀 Quick Start
 
-### C++ integration
+Link FluentQt to a CMake project using one of the following methods. `FetchContent` is recommended for new projects.
+
+### C++ setup
 
 | Integration | CMake |
 |---|---|
@@ -304,11 +302,13 @@ python -m fluentqt_gallery
 
 ## 📚 Documentation
 
+- [Searchable public API](https://calvinhxx.github.io/Fluent-Qt/api/)
 - [Support and community](SUPPORT.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [AI-assisted app development](docs/ai/README.md)
+- [Environment checks and project starters](tools/onboarding/README.md)
 - [Development workflow](docs/development/README.md)
 - [Testing and visual review](docs/development/testing-workflow.md)
 - [Packaging workflow](docs/development/packaging-workflow.md)
@@ -327,9 +327,4 @@ python -m fluentqt_gallery
 
 ## License
 
-Fluent-Qt's own source code is released under the [MIT License](LICENSE).
-Bundled assets and packaged runtime dependencies retain their upstream terms;
-versions, provenance, source-availability rules, and license locations are
-listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Product names,
-logos, and external design references are addressed in
-[TRADEMARKS.md](TRADEMARKS.md).
+Fluent-Qt's own source code is released under the [MIT License](LICENSE). Bundled assets and packaged runtime dependencies retain their upstream terms; versions, provenance, source-availability rules, and license locations are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Product names, logos, and external design references are addressed in [TRADEMARKS.md](TRADEMARKS.md).
