@@ -34,6 +34,34 @@ must still verify the target project's public interfaces, ownership, event loop,
 threading, cancellation, persistence, and test contracts before choosing an
 integration pattern.
 
+The human-facing [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/)
+is generated from the same catalog and installed-header allowlist. It links
+controls to their declarations, Gallery routes, and focused tests.
+
+The versioned [application scene manifest](evals/application-scenes.json)
+drives Inspector acceptance against built Gallery pages and generated C++ and
+PySide6 Workbenches. It records viewport, theme, state coverage, review prompts,
+and explicit finding budgets; manual IME work remains separate from deterministic
+checks.
+
+Applications can run the same read-only checks directly:
+
+```cpp
+#include <FluentQt/Diagnostics.h>
+
+const QJsonObject report =
+    fluent::diagnostics::Inspector::report(window.contentWidget());
+```
+
+```python
+report = fluentqt.inspect_widget(window.contentWidget())
+```
+
+The report contract and rule boundaries are documented in
+[Inspector Report Contract](../architecture/inspector-report.md). Generated
+C++ and PySide6 Workbench projects print their built-window report with
+`--quality-report`.
+
 ## Quick start
 
 List application and integration patterns:
@@ -78,10 +106,18 @@ Cursor, GitHub Copilot, or another compatible agent. Agents that discover
 only supplies optional Codex UI metadata. In Codex, mention
 `$build-fluentqt-gui`; other agents use their normal Skill invocation.
 
+The archive also carries the local `doctor` and `create` commands plus the four
+maintained starters. After extraction, use them without a FluentQt checkout:
+
+```bash
+python3 <skill-root>/tools/onboarding/fluentqt doctor --profile cpp
+python3 <skill-root>/tools/onboarding/fluentqt create my-app \
+  --language cpp --starter workbench
+```
+
 The bundled `scripts/query_catalog.py` reads
-`assets/fluentqt-ai-catalog.json`, so the installed Skill does not need a
-FluentQt source checkout or a guessed sibling path. `--project-root` and
-`--catalog` provide explicit overrides when working against another checkout.
+`assets/fluentqt-ai-catalog.json`. `--project-root` and `--catalog` provide
+explicit overrides when working against another checkout.
 
 The Skill has `lite` and `full` routes, but both keep the same visual and
 engineering bar. Gallery remains the finish benchmark. Integration records
@@ -156,6 +192,8 @@ uses [its own schema](project-analysis.schema.json).
 | M6: distribution | Deterministic versioned Skill archive | Implemented |
 | M7: judged visual loop | Icon-aware nine-dimension concept board, contract v4, and independent visual review | Baseline implemented |
 | M8: design intelligence | Subject grounding, controlled risk, anti-genericity critique, tuning axes, and concept-to-code fidelity | Baseline implemented |
+| M9: application quality scenes | Manifest-driven built-app Inspector checks and manual interaction scenes | In progress |
+| M10: cross-agent run package | Portable run records, provenance checks, score aggregation, and an explicit human preference gate | Implemented; live runs pending |
 
 The Skill remains the distribution unit. A plugin is only warranted later if
 FluentQt needs MCP servers, apps, or several related Skills.
@@ -166,8 +204,10 @@ measure catalog consistency, retrieval, component-set differentiation, and a
 negative guard against generic chat/sidebar shell convergence—not end-to-end
 model or visual quality. The bundled
 `assets/benchmarks/agent-run-workspace.json` specification starts that judged
-layer, but live cross-agent runs and pairwise preference results must still be
-recorded separately from deterministic catalog scores.
+layer. `scripts/benchmark_run.py` initializes and validates one portable record
+per agent, then summarizes the three records without treating missing human
+preference data as a pass. Live runs and pairwise preference results remain
+separate from deterministic catalog scores.
 
 ## Compatibility boundary
 

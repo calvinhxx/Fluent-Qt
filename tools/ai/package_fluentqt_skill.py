@@ -21,12 +21,14 @@ REQUIRED_SKILL_FILES = (
     "SKILL.md",
     "LICENSE.txt",
     "agents/openai.yaml",
+    "assets/benchmarks/agent-run.schema.json",
     "assets/benchmarks/agent-run-workspace.json",
     "assets/composition-recipes.json",
     "assets/fluentqt-ai-catalog.json",
     "assets/project-structure-templates.json",
     "references/art-direction.md",
     "references/component-selection.md",
+    "references/cross-agent-benchmark.md",
     "references/design-intelligence.md",
     "references/experience-differentiation.md",
     "references/iconography.md",
@@ -39,6 +41,7 @@ REQUIRED_SKILL_FILES = (
     "references/theme-system.md",
     "references/visual-evidence-contract.md",
     "references/visual-refinement.md",
+    "scripts/benchmark_run.py",
     "scripts/init_design_brief.py",
     "scripts/init_project_structure.py",
     "scripts/init_visual_evidence.py",
@@ -48,6 +51,18 @@ REQUIRED_SKILL_FILES = (
     "scripts/validate_design_brief.py",
     "scripts/validate_project_structure.py",
     "scripts/validate_visual_evidence.py",
+)
+REQUIRED_PACKAGED_ONBOARDING_FILES = (
+    "README.md",
+    "create-report.schema.json",
+    "doctor-report.schema.json",
+    "first-window-report.schema.json",
+    "fluentqt",
+    "fluentqt_create.py",
+    "fluentqt_doctor.py",
+    "fluentqt_trial.py",
+    "qt_widgets_probe/CMakeLists.txt",
+    "starters/manifest.json",
 )
 
 
@@ -71,6 +86,21 @@ def skill_files(skill_root: Path) -> list[Path]:
     return sorted(files, key=lambda path: path.relative_to(skill_root).as_posix())
 
 
+def onboarding_files(onboarding_root: Path) -> list[Path]:
+    files = [
+        path
+        for path in onboarding_root.rglob("*")
+        if path.is_file()
+        and "__pycache__" not in path.parts
+        and path.suffix not in {".pyc", ".pyo"}
+        and path.name != ".DS_Store"
+        and not (path.parent == onboarding_root and path.name.startswith("test_"))
+    ]
+    return sorted(
+        files, key=lambda path: path.relative_to(onboarding_root).as_posix()
+    )
+
+
 def validate_skill_root(skill_root: Path) -> None:
     missing = [
         relative
@@ -84,6 +114,16 @@ def validate_skill_root(skill_root: Path) -> None:
         "---\nname: build-fluentqt-gui\ndescription:"
     ):
         raise ValueError("Skill source has invalid SKILL.md frontmatter")
+
+
+def validate_onboarding_root(onboarding_root: Path) -> None:
+    missing = [
+        relative
+        for relative in REQUIRED_PACKAGED_ONBOARDING_FILES
+        if not (onboarding_root / relative).is_file()
+    ]
+    if missing:
+        raise ValueError("Onboarding source is incomplete: " + ", ".join(missing))
 
 
 def _zip_info(archive_path: str, *, executable: bool) -> zipfile.ZipInfo:
@@ -101,7 +141,9 @@ def build_skill_package(
     project_root = project_root.resolve()
     output_dir = output_dir.resolve()
     skill_root = project_root / ".agents" / "skills" / SKILL_NAME
+    onboarding_root = project_root / "tools" / "onboarding"
     validate_skill_root(skill_root)
+    validate_onboarding_root(onboarding_root)
 
     resolved_version = version or project_version(project_root)
     if PACKAGE_VERSION_PATTERN.fullmatch(resolved_version) is None:
@@ -119,6 +161,15 @@ def build_skill_package(
                 _zip_info(
                     f"{SKILL_NAME}/{relative}",
                     executable=source.suffix == ".py",
+                ),
+                source.read_bytes(),
+            )
+        for source in onboarding_files(onboarding_root):
+            relative = source.relative_to(onboarding_root).as_posix()
+            package.writestr(
+                _zip_info(
+                    f"{SKILL_NAME}/tools/onboarding/{relative}",
+                    executable=source.suffix == ".py" or source.name == "fluentqt",
                 ),
                 source.read_bytes(),
             )

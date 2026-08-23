@@ -52,6 +52,8 @@
     "state_and_interaction_polish"
   ],
   "pass_threshold": {
+    "minimum_build_success_percent": 85,
+    "minimum_workflow_completion_percent": 80,
     "minimum_dimension_score": 4,
     "minimum_pairwise_preference_percent": 70,
     "open_blocker_or_major_findings": 0
