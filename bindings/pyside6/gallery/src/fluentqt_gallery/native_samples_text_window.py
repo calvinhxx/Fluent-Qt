@@ -756,6 +756,7 @@ register_source_samples(
                 """
                 root, layout = make_text_surface()
                 text_edit = fluentqt.TextEdit(root)
+                text_edit.setAccessibleName("Notes")
                 text_edit.setPlaceholderText("Type your notes here")
                 text_edit.setMinVisibleLines(2)
                 text_edit.setMaxVisibleLines(4)
@@ -783,6 +784,7 @@ register_source_samples(
             _script(
                 """
                 text_edit = fluentqt.TextEdit(globals().get("gallery_parent"))
+                text_edit.setAccessibleName("Scrollable notes")
                 text_edit.setMinVisibleLines(3)
                 text_edit.setMaxVisibleLines(3)
                 text_edit.setLineHeight(28)
@@ -796,6 +798,7 @@ register_source_samples(
             _script(
                 """
                 text_edit = fluentqt.TextEdit(globals().get("gallery_parent"))
+                text_edit.setAccessibleName("Review terms")
                 text_edit.setPlainText("Terms reviewed and locked for approval.")
                 text_edit.setReadOnly(True)
                 text_edit.setFontRole(fluentqt.FontRole.BodyStrong)

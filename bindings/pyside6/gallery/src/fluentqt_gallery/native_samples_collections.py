@@ -1515,6 +1515,7 @@ register_source_samples(
                 _DATA_GRID_MODEL_HELPER
                 + """
                 grid = fluentqt.DataGrid(globals().get("gallery_parent"))
+                grid.setAccessibleName("Large data")
                 grid.setFixedSize(680, 252)
                 grid.setModel(LargeDataGridModel(grid))
                 grid.setScrollChainingEnabled(True)
@@ -1535,6 +1536,7 @@ register_source_samples(
                 _DATA_GRID_MODEL_HELPER
                 + """
                 grid = fluentqt.DataGrid(globals().get("gallery_parent"))
+                grid.setAccessibleName("Projects")
                 grid.setFixedSize(680, 252)
                 model = make_project_data_grid_model(grid, False)
                 grid.setModel(model)
@@ -1558,6 +1560,7 @@ register_source_samples(
                 _DATA_GRID_VALIDATION_HELPER
                 + """
                 grid = fluentqt.DataGrid(globals().get("gallery_parent"))
+                grid.setAccessibleName("Settings")
                 grid.setFixedSize(680, 224)
                 model = ValidatingDataGridModel(grid)
                 model.setHorizontalHeaderLabels(("Setting", "Value", "Scope"))
