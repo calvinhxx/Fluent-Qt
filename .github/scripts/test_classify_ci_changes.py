@@ -80,6 +80,52 @@ class ClassifyCiChangesTest(unittest.TestCase):
             wasm=False,
         )
 
+    def test_onboarding_tool_runs_native_matrix_only(self):
+        self.assert_classification(
+            ["tools/onboarding/fluentqt_doctor.py"],
+            native=True,
+            pyside=False,
+            wasm=False,
+        )
+
+    def test_shared_starter_creator_runs_native_and_pyside_matrices(self):
+        self.assert_classification(
+            ["tools/onboarding/fluentqt_create.py"],
+            native=True,
+            pyside=True,
+            wasm=False,
+        )
+
+    def test_first_window_trial_runs_native_and_pyside_matrices(self):
+        self.assert_classification(
+            ["tools/onboarding/fluentqt_trial.py"],
+            native=True,
+            pyside=True,
+            wasm=False,
+        )
+
+    def test_python_starter_runs_native_and_pyside_matrices(self):
+        self.assert_classification(
+            [
+                "tools/onboarding/starters/pyside6-workbench/"
+                "src/app_module/app/main.py.in"
+            ],
+            native=True,
+            pyside=True,
+            wasm=False,
+        )
+
+    def test_cpp_starter_skips_pyside_matrix(self):
+        self.assert_classification(
+            [
+                "tools/onboarding/starters/cpp-workbench/"
+                "src/app/main.cpp.in"
+            ],
+            native=True,
+            pyside=False,
+            wasm=False,
+        )
+
     def test_unrelated_workflow_change_skips_pyside_matrix(self):
         self.assert_classification(
             [".github/workflows/site.yml"],

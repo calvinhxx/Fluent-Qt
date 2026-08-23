@@ -22,6 +22,7 @@
       "ctest_timeout": 180,
       "timeout_minutes": 30,
       "configure_args": "",
+      "first_window_trial": true,
       "windows_arm64_cross": false
     },
     {
@@ -45,6 +46,7 @@
       "ctest_timeout": 180,
       "timeout_minutes": 30,
       "configure_args": "",
+      "first_window_trial": true,
       "windows_arm64_cross": false
     },
     {
@@ -68,6 +70,7 @@
       "ctest_timeout": 180,
       "timeout_minutes": 30,
       "configure_args": "-DBUILD_TESTING=OFF",
+      "first_window_trial": true,
       "windows_arm64_cross": false
     },
     {
@@ -95,6 +98,7 @@
       "package_arch": "x64",
       "package_build_preset": "vcpkg-linux-release",
       "package_preset": "vcpkg-linux-deb",
+      "first_window_trial": true,
       "windows_arm64_cross": false
     },
     {
@@ -120,6 +124,7 @@
       "configure_args": "-DFLUENT_QT_ENABLE_SANITIZERS=ON",
       "asan_options": "detect_leaks=1:halt_on_error=1",
       "ubsan_options": "print_stacktrace=1:halt_on_error=1",
+      "first_window_trial": false,
       "windows_arm64_cross": false
     },
     {
@@ -149,6 +154,7 @@
       "package_arch": "arm64",
       "package_build_preset": "vcpkg-linux-arm64-release",
       "package_preset": "vcpkg-linux-arm64-deb",
+      "first_window_trial": true,
       "windows_arm64_cross": false
     },
     {
@@ -172,6 +178,7 @@
       "ctest_timeout": 240,
       "timeout_minutes": 45,
       "configure_args": "",
+      "first_window_trial": true,
       "windows_arm64_cross": false
     },
     {
@@ -195,6 +202,7 @@
       "ctest_timeout": 240,
       "timeout_minutes": 90,
       "configure_args": "",
+      "first_window_trial": true,
       "windows_arm64_cross": false
     },
     {
@@ -218,6 +226,7 @@
       "ctest_timeout": 180,
       "timeout_minutes": 40,
       "configure_args": "-DBUILD_TESTING=OFF",
+      "first_window_trial": false,
       "windows_arm64_cross": false
     },
     {
@@ -241,6 +250,7 @@
       "ctest_timeout": 180,
       "timeout_minutes": 45,
       "configure_args": "",
+      "first_window_trial": true,
       "windows_arm64_cross": false
     },
     {
@@ -264,6 +274,7 @@
       "ctest_timeout": 180,
       "timeout_minutes": 30,
       "configure_args": "",
+      "first_window_trial": false,
       "windows_arm64_cross": false
     },
     {
@@ -291,6 +302,7 @@
       "gallery_smoke": true,
       "qt_qpa_platform": "windows",
       "windows_arm64_native": true,
+      "first_window_trial": false,
       "windows_arm64_cross": false
     },
     {
@@ -316,6 +328,7 @@
       "configure_args": "",
       "windows_package": true,
       "package_preset": "vcpkg-windows-arm64-installer",
+      "first_window_trial": false,
       "windows_arm64_cross": true
     }
   ]

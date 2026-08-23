@@ -33,6 +33,21 @@ EXPECTED_IDS = {
     },
 }
 
+EXPECTED_FIRST_WINDOW_TRIAL_IDS = {
+    "fast": {
+        "linux-x64-qt62-fast",
+        "win-x64-qt62-fast",
+        "mac-arm64-qt62-build",
+    },
+    "full": {
+        "linux-x64-qt62-full",
+        "linux-arm64-qt62-full",
+        "linux-x64-qt515-full",
+        "mac-arm64-qt62-full",
+        "win-x64-qt62-platform",
+    },
+}
+
 REQUIRED_FIELDS = {
     "mode",
     "id",
@@ -54,6 +69,7 @@ REQUIRED_FIELDS = {
     "ctest_timeout",
     "timeout_minutes",
     "configure_args",
+    "first_window_trial",
     "windows_arm64_cross",
 }
 
@@ -71,6 +87,7 @@ def validate_catalog(data: Any) -> list[str]:
         return errors
 
     ids_by_mode = {mode: set() for mode in EXPECTED_IDS}
+    trial_ids_by_mode = {mode: set() for mode in EXPECTED_IDS}
     all_ids: set[str] = set()
     for index, scenario in enumerate(scenarios):
         context = f"scenarios[{index}]"
@@ -97,9 +114,20 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(f"{context}.mode must be fast or full")
         if scenario.get("qt_source") not in {"apt", "aqt"}:
             errors.append(f"{context}.qt_source must be apt or aqt")
-        for field in ("build", "test", "windows_arm64_cross"):
+        for field in (
+            "build",
+            "test",
+            "first_window_trial",
+            "windows_arm64_cross",
+        ):
             if not isinstance(scenario.get(field), bool):
                 errors.append(f"{context}.{field} must be a boolean")
+        if (
+            mode in trial_ids_by_mode
+            and isinstance(scenario_id, str)
+            and scenario.get("first_window_trial") is True
+        ):
+            trial_ids_by_mode[mode].add(scenario_id)
         for field in ("ctest_timeout", "timeout_minutes"):
             value = scenario.get(field)
             if not isinstance(value, int) or value <= 0:
@@ -113,6 +141,20 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(f"{mode} matrix is missing: {', '.join(missing)}")
         if unexpected:
             errors.append(f"{mode} matrix has unexpected ids: {', '.join(unexpected)}")
+
+        actual_trial_ids = trial_ids_by_mode[mode]
+        expected_trial_ids = EXPECTED_FIRST_WINDOW_TRIAL_IDS[mode]
+        missing_trials = sorted(expected_trial_ids - actual_trial_ids)
+        unexpected_trials = sorted(actual_trial_ids - expected_trial_ids)
+        if missing_trials:
+            errors.append(
+                f"{mode} first-window trials are missing: {', '.join(missing_trials)}"
+            )
+        if unexpected_trials:
+            errors.append(
+                f"{mode} first-window trials have unexpected ids: "
+                f"{', '.join(unexpected_trials)}"
+            )
 
     return errors
 
