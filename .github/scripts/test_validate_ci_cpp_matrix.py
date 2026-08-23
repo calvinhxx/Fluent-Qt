@@ -49,6 +49,26 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
         catalog["scenarios"][0]["timeout_minutes"] = 0
         self.assertTrue(any("positive integer" in error for error in MODULE.validate_catalog(catalog)))
 
+    def test_non_boolean_first_window_trial_is_rejected(self):
+        catalog = copy.deepcopy(self.catalog)
+        catalog["scenarios"][0]["first_window_trial"] = "yes"
+        self.assertTrue(
+            any(
+                "first_window_trial must be a boolean" in error
+                for error in MODULE.validate_catalog(catalog)
+            )
+        )
+
+    def test_first_window_trial_lane_set_is_locked(self):
+        catalog = copy.deepcopy(self.catalog)
+        catalog["scenarios"][0]["first_window_trial"] = False
+        self.assertTrue(
+            any(
+                "fast first-window trials are missing" in error
+                for error in MODULE.validate_catalog(catalog)
+            )
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

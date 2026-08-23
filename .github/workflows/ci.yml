@@ -53,6 +53,9 @@ jobs:
           python3 .github/scripts/test_classify_ci_changes.py
           python3 .github/scripts/validate-ci-workflow-boundaries.py
           python3 tools/ai/validate_ai_assets.py --project-root .
+          python3 tools/onboarding/test_fluentqt_doctor.py
+          python3 tools/onboarding/test_fluentqt_create.py
+          python3 tools/onboarding/test_fluentqt_trial.py
 
       - name: Classify pull-request changes
         id: changes

@@ -426,6 +426,54 @@ jobs:
             ${{ runner.temp }}/fq-win-arm64/*.exe
           if-no-files-found: error
 
+      - name: Record installed C++ first-window trial
+        if: ${{ matrix.first_window_trial == true }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $installPrefix = Join-Path `
+            $env:RUNNER_TEMP `
+            "fluentqt-first-window-install"
+          cmake --install "build/${{ matrix.preset }}" `
+            --config Debug `
+            --component Development `
+            --prefix $installPrefix
+
+          $prefixParts = @(($installPrefix -replace '\\', '/'))
+          if ($env:QT_ROOT_DIR) {
+            $prefixParts += ($env:QT_ROOT_DIR -replace '\\', '/')
+          }
+          $prefixPath = $prefixParts -join ";"
+          $launcher = Join-Path `
+            $installPrefix `
+            "share/doc/FluentQt/tools/onboarding/fluentqt"
+          $report = Join-Path `
+            $env:RUNNER_TEMP `
+            "fluentqt-first-window-cpp.json"
+          $parallel = "${{ matrix.build_parallel }}"
+          if (-not $parallel) {
+            $parallel = "4"
+          }
+
+          python $launcher trial `
+            --profile cpp `
+            --starter workbench `
+            --cmake-prefix-path $prefixPath `
+            --config Debug `
+            --parallel $parallel `
+            --timeout-seconds 600 `
+            --output $report
+
+      - name: Upload C++ first-window report
+        if: ${{ always() && matrix.first_window_trial == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-first-window-${{ needs.plan.outputs.mode }}-${{ matrix.id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fluentqt-first-window-cpp.json
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
@@ -500,6 +548,13 @@ jobs:
             --component Development \
             --prefix "$RUNNER_TEMP/fluentqt"
 
+      - name: Verify installed onboarding command
+        shell: bash
+        run: |
+          command="$RUNNER_TEMP/fluentqt/share/doc/FluentQt/tools/onboarding/fluentqt"
+          test -x "$command"
+          "$command" --help
+
       - name: Verify library-only CMake package
         shell: bash
         run: |
@@ -507,6 +562,8 @@ jobs:
           package_dir="$RUNNER_TEMP/fluentqt/lib/cmake/FluentQt"
           test -f "$package_dir/FluentQtConfig.cmake"
           test -f "$package_dir/FluentQtTargets.cmake"
+          test -f "$RUNNER_TEMP/fluentqt/include/FluentQt/Diagnostics.h"
+          test -f "$RUNNER_TEMP/fluentqt/include/FluentQt/utils/Inspector.h"
           if grep -R -E 'spdlog|fmt::|GTest|FluentQtLoggingSupport|support/logging' "$package_dir"; then
             echo "::error::Gallery or test dependencies leaked into the FluentQt package."
             exit 1
@@ -514,6 +571,7 @@ jobs:
           for header in \
             components/foundation/private/FluentElement_p.h \
             components/windowing/private/WindowBackdrop_p.h \
+            utils/private/Inspector_p.h \
             utils/private/FluentQtLogging_p.h \
             utils/private/FluentQtResources_p.h; do
             if [[ -e "$RUNNER_TEMP/fluentqt/include/FluentQt/$header" ]]; then
@@ -563,12 +621,14 @@ jobs:
               .agents/skills/build-fluentqt-gui/SKILL.md \
               .agents/skills/build-fluentqt-gui/LICENSE.txt \
               .agents/skills/build-fluentqt-gui/agents/openai.yaml \
+              .agents/skills/build-fluentqt-gui/assets/benchmarks/agent-run.schema.json \
               .agents/skills/build-fluentqt-gui/assets/benchmarks/agent-run-workspace.json \
               .agents/skills/build-fluentqt-gui/assets/composition-recipes.json \
               .agents/skills/build-fluentqt-gui/assets/fluentqt-ai-catalog.json \
               .agents/skills/build-fluentqt-gui/assets/project-structure-templates.json \
               .agents/skills/build-fluentqt-gui/references/art-direction.md \
               .agents/skills/build-fluentqt-gui/references/component-selection.md \
+              .agents/skills/build-fluentqt-gui/references/cross-agent-benchmark.md \
               .agents/skills/build-fluentqt-gui/references/design-intelligence.md \
               .agents/skills/build-fluentqt-gui/references/experience-differentiation.md \
               .agents/skills/build-fluentqt-gui/references/iconography.md \
@@ -581,6 +641,7 @@ jobs:
               .agents/skills/build-fluentqt-gui/references/theme-system.md \
               .agents/skills/build-fluentqt-gui/references/visual-evidence-contract.md \
               .agents/skills/build-fluentqt-gui/references/visual-refinement.md \
+              .agents/skills/build-fluentqt-gui/scripts/benchmark_run.py \
               .agents/skills/build-fluentqt-gui/scripts/init_design_brief.py \
               .agents/skills/build-fluentqt-gui/scripts/init_project_structure.py \
               .agents/skills/build-fluentqt-gui/scripts/init_visual_evidence.py \
@@ -659,16 +720,33 @@ jobs:
               bindings/pyside6/wheel-matrix.json \
               docs/ai/README.md \
               docs/ai/add-gui-to-project.md \
+              docs/ai/evals/application-scenes.json \
+              docs/ai/evals/application-scenes.schema.json \
               docs/ai/evals/scenarios.json \
               docs/ai/evals/scenarios.schema.json \
               docs/ai/fluentqt-ai-catalog.schema.json \
               docs/ai/generated/fluentqt-ai-catalog.json \
               docs/ai/guidance.json \
               docs/ai/project-analysis.schema.json \
+              include/FluentQt/Diagnostics.h \
               llms.txt \
+              src/utils/Inspector.h \
               tools/ai/evaluate_ai_catalog.py \
               tools/ai/package_fluentqt_skill.py \
               tools/ai/query_ai_catalog.py \
+              tools/onboarding/README.md \
+              tools/onboarding/create-report.schema.json \
+              tools/onboarding/doctor-report.schema.json \
+              tools/onboarding/first-window-report.schema.json \
+              tools/onboarding/fluentqt \
+              tools/onboarding/fluentqt_create.py \
+              tools/onboarding/fluentqt_doctor.py \
+              tools/onboarding/fluentqt_trial.py \
+              tools/onboarding/qt_widgets_probe/CMakeLists.txt \
+              tools/onboarding/starters/manifest.json \
+              tools/onboarding/test_fluentqt_create.py \
+              tools/onboarding/test_fluentqt_doctor.py \
+              tools/onboarding/test_fluentqt_trial.py \
               tools/fonts/fluent_icon_aliases.json; do
             if ! grep -x "FluentQt-ci-source/$source_file" \
                 <<< "$archive_entries" > /dev/null; then
@@ -677,6 +755,8 @@ jobs:
             fi
           done
           unzip -q "$archive" -d "$output/unpacked"
+          test -x \
+            "$output/unpacked/FluentQt-ci-source/tools/onboarding/fluentqt"
           python3 \
             "$output/unpacked/FluentQt-ci-source/tools/ai/query_ai_catalog.py" \
             --component tree-view > /dev/null
@@ -694,9 +774,38 @@ jobs:
           python3 \
             "$output/unpacked/FluentQt-ci-source/tools/ai/evaluate_ai_catalog.py" \
             --project-root "$output/unpacked/FluentQt-ci-source"
+          python3 \
+            "$output/unpacked/FluentQt-ci-source/tools/onboarding/test_fluentqt_doctor.py"
+          python3 \
+            "$output/unpacked/FluentQt-ci-source/tools/onboarding/test_fluentqt_create.py"
+          python3 \
+            "$output/unpacked/FluentQt-ci-source/tools/onboarding/test_fluentqt_trial.py"
           cmake -S .github/integration -B build/integration-source-package \
             -DFLUENT_QT_SOURCE_DIR="$output/unpacked/FluentQt-ci-source" \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_DISABLE_FIND_PACKAGE_spdlog=TRUE \
             -DCMAKE_DISABLE_FIND_PACKAGE_GTest=TRUE
           cmake --build build/integration-source-package --parallel 4
+
+      - name: Record installed C++ first-window trial
+        shell: bash
+        run: |
+          set -euo pipefail
+          command="$RUNNER_TEMP/fluentqt/share/doc/FluentQt/tools/onboarding/fluentqt"
+          "$command" trial \
+            --profile cpp \
+            --starter workbench \
+            --cmake-prefix-path "$RUNNER_TEMP/fluentqt" \
+            --config Release \
+            --parallel 4 \
+            --timeout-seconds 600 \
+            --output "$RUNNER_TEMP/fluentqt-first-window-integration.json"
+
+      - name: Upload integration first-window report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-first-window-integration-${{ matrix.qt_source }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fluentqt-first-window-integration.json
+          if-no-files-found: warn
+          retention-days: 14

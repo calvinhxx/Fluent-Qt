@@ -46,6 +46,21 @@ PYSIDE_CI_FILES = {
     ".github/workflows/ci-python.yml",
 }
 
+PYSIDE_ONBOARDING_FILES = {
+    "tools/onboarding/create-report.schema.json",
+    "tools/onboarding/first-window-report.schema.json",
+    "tools/onboarding/fluentqt",
+    "tools/onboarding/fluentqt_create.py",
+    "tools/onboarding/fluentqt_trial.py",
+    "tools/onboarding/starters/manifest.json",
+    "tools/onboarding/test_fluentqt_create.py",
+    "tools/onboarding/test_fluentqt_trial.py",
+}
+
+PYSIDE_ONBOARDING_PREFIXES = (
+    "tools/onboarding/starters/pyside6-",
+)
+
 WASM_PREFIXES = (
     "app/",
     "cmake/",
@@ -99,7 +114,9 @@ def affects_pyside(path: str) -> bool:
     return (
         path in PYSIDE_ROOT_FILES
         or path in PYSIDE_CI_FILES
+        or path in PYSIDE_ONBOARDING_FILES
         or path.startswith(PYSIDE_PREFIXES)
+        or path.startswith(PYSIDE_ONBOARDING_PREFIXES)
         or path.endswith(".qrc")
     )
 

@@ -422,6 +422,36 @@ jobs:
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
 
+      - name: Record Linux PySide6 first-window trial
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ needs.plan.outputs.mode }}" == "full" ]]; then
+            clean_venv="${RUNNER_TEMP}/fluentqt-wheel-smoke"
+          else
+            clean_venv="${RUNNER_TEMP}/fluentqt-core-wheel-smoke"
+          fi
+          env \
+            -u PYTHONPATH \
+            -u LD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            "$clean_venv/bin/python" tools/onboarding/fluentqt trial \
+            --profile python \
+            --starter workbench \
+            --timeout-seconds 300 \
+            --output "$RUNNER_TEMP/fluentqt-first-window-python-linux.json"
+
+      - name: Upload Linux PySide6 first-window report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-first-window-python-${{ needs.plan.outputs.mode }}-linux-x64-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fluentqt-first-window-python-linux.json
+          if-no-files-found: warn
+          retention-days: 14
+
   pyside6_windows:
     name: PySide6 compatibility / Windows x64 / CPython 3.10 / Qt 6.2.4
     needs: plan
@@ -743,6 +773,42 @@ jobs:
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
 
+      - name: Record Windows PySide6 first-window trial
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          if ("${{ needs.plan.outputs.mode }}" -eq "full") {
+            $cleanVenv = Join-Path `
+              $env:RUNNER_TEMP `
+              "fluentqt-wheel-smoke-windows"
+          } else {
+            $cleanVenv = Join-Path `
+              $env:RUNNER_TEMP `
+              "fluentqt-core-wheel-smoke"
+          }
+          $cleanPython = Join-Path $cleanVenv "Scripts/python.exe"
+          Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue
+          Remove-Item Env:LD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:DYLD_LIBRARY_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_PLUGIN_PATH -ErrorAction SilentlyContinue
+          Remove-Item Env:QT_QPA_PLATFORM_PLUGIN_PATH -ErrorAction SilentlyContinue
+          $env:QT_QPA_PLATFORM = "offscreen"
+          & $cleanPython tools/onboarding/fluentqt trial `
+            --profile python `
+            --starter workbench `
+            --timeout-seconds 300 `
+            --output (Join-Path $env:RUNNER_TEMP "fluentqt-first-window-python-windows.json")
+
+      - name: Upload Windows PySide6 first-window report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-first-window-python-${{ needs.plan.outputs.mode }}-windows-x64-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fluentqt-first-window-python-windows.json
+          if-no-files-found: warn
+          retention-days: 14
+
   pyside6_macos:
     name: PySide6 release / macOS ARM64 / CPython 3.11 / Qt 6.9.3
     needs: plan
@@ -1003,6 +1069,32 @@ jobs:
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.png
             ${{ runner.temp }}/fluentqt-pyside6-window-chrome.json
           if-no-files-found: error
+
+      - name: Record macOS PySide6 first-window trial
+        shell: bash
+        run: |
+          set -euo pipefail
+          clean_venv="${RUNNER_TEMP}/fluentqt-wheel-smoke-macos"
+          env \
+            -u PYTHONPATH \
+            -u DYLD_LIBRARY_PATH \
+            -u QT_PLUGIN_PATH \
+            -u QT_QPA_PLATFORM_PLUGIN_PATH \
+            QT_QPA_PLATFORM=offscreen \
+            "$clean_venv/bin/python" tools/onboarding/fluentqt trial \
+            --profile python \
+            --starter workbench \
+            --timeout-seconds 300 \
+            --output "$RUNNER_TEMP/fluentqt-first-window-python-macos.json"
+
+      - name: Upload macOS PySide6 first-window report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-first-window-python-${{ needs.plan.outputs.mode }}-macos-arm64-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/fluentqt-first-window-python-macos.json
+          if-no-files-found: warn
+          retention-days: 14
 
   pyside6_release:
     name: ${{ matrix.name }}
