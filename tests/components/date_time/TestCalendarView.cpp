@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDate>
+#include <QElapsedTimer>
 #include <QImage>
 #include <QPalette>
 #include <QSignalSpy>
@@ -859,6 +860,11 @@ TEST_F(CalendarViewTest, NoPhasePixelGesturePagesOnce)
 
 TEST_F(CalendarViewTest, NoPhasePixelSameDirectionTailAfterAnimationUsesExtendedGap)
 {
+    constexpr int kDefaultClusterGapMs = 120;
+    constexpr int kCommittedTailGapMs = 220;
+    constexpr int kProbeGapMs = kDefaultClusterGapMs + 10;
+    constexpr int kProbeHeadroomMs = 10;
+
     auto* calendarView = new CalendarView(window);
     calendarView->setGeometry(32, 32, calendarView->sizeHint().width(), calendarView->sizeHint().height());
     calendarView->setVisibleMonth(QDate(2026, 5, 1));
@@ -873,8 +879,17 @@ TEST_F(CalendarViewTest, NoPhasePixelSameDirectionTailAfterAnimationUsesExtended
     QTest::qWait(190);
     processEvents();
     EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -60), QPoint()));
-    QTest::qWait(150);
+
+    QElapsedTimer probeTimer;
+    probeTimer.start();
+    QTest::qWait(kProbeGapMs);
     processEvents();
+    const qint64 actualProbeGapMs = probeTimer.elapsed();
+    ASSERT_GT(actualProbeGapMs, kDefaultClusterGapMs);
+    if (actualProbeGapMs >= kCommittedTailGapMs - kProbeHeadroomMs) {
+        GTEST_SKIP() << "Runner overslept the committed-tail probe window: "
+                     << actualProbeGapMs << " ms";
+    }
     EXPECT_TRUE(sendCalendarWheel(calendarView, wheelPoint, QPoint(0, -120), QPoint()));
 
     EXPECT_EQ(calendarView->visibleMonth(), QDate(2026, 6, 1));
