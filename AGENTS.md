@@ -42,7 +42,7 @@ ctest --preset vcpkg-osx --output-on-failure
 - [src/design/](src/design/) contains Fluent design tokens for color, spacing, typography, radius, material, elevation, animation, and breakpoints.
 - [src/compatibility/](src/compatibility/) contains Qt and platform compatibility helpers. Use `compatibility/QtCompat.h` and `FluentEnterEvent` instead of direct `QEnterEvent` in new `enterEvent` overrides.
 - [src/utils/](src/utils/) contains library-side Qt logging categories and debug
-  overlay helpers. Reusable code uses `qCDebug`, `qCInfo`, and `qCWarning` with
+  overlay/Inspector preview helpers. Reusable code uses `qCDebug`, `qCInfo`, and `qCWarning` with
   a `fluentqt.*` category. Gallery and test diagnostics use the non-exported
   facade in [support/logging/Log.h](support/logging/Log.h); never add a
   spdlog dependency to `FluentQt` itself.

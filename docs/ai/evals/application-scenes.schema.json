@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/calvinhxx/Fluent-Qt/blob/main/docs/ai/evals/application-scenes.schema.json",
+  "title": "FluentQt application quality scenes",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "suite_id",
+    "applications",
+    "scenes",
+    "deferred_coverage"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "suite_id": { "$ref": "#/$defs/nonEmptyString" },
+    "applications": { "$ref": "#/$defs/nonEmptyStringArray" },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/scene" }
+    },
+    "deferred_coverage": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/deferredCoverage" }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nonEmptyString" }
+    },
+    "viewport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height"],
+      "properties": {
+        "width": { "type": "integer", "minimum": 320 },
+        "height": { "type": "integer", "minimum": 320 }
+      }
+    },
+    "inspectorBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_findings", "allowed_codes"],
+      "properties": {
+        "max_findings": { "type": "integer", "minimum": 0 },
+        "allowed_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "application",
+        "automation",
+        "route",
+        "theme",
+        "viewport",
+        "coverage",
+        "review"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "application": { "$ref": "#/$defs/nonEmptyString" },
+        "automation": { "enum": ["automated", "manual"] },
+        "route": { "$ref": "#/$defs/nonEmptyString" },
+        "theme": { "enum": ["light", "dark"] },
+        "viewport": { "$ref": "#/$defs/viewport" },
+        "coverage": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "settle_ms": { "type": "integer", "minimum": 0 },
+        "inspector": { "$ref": "#/$defs/inspectorBudget" },
+        "interactions": { "$ref": "#/$defs/nonEmptyStringArray" },
+        "review": { "$ref": "#/$defs/nonEmptyStringArray" }
+      }
+    },
+    "deferredCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason"],
+      "properties": {
+        "state": { "$ref": "#/$defs/nonEmptyString" },
+        "reason": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    }
+  }
+}

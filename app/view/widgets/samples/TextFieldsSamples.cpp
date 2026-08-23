@@ -798,6 +798,7 @@ QVector<GallerySample> textEditSamples()
                    QStringLiteral("Auto height from visible lines"),
                    QStringLiteral("TextEdit grows between min and max visible lines before scrolling is needed."),
                    QStringLiteral("auto* textEdit = new TextEdit(this);\n"
+                                  "textEdit->setAccessibleName(\"Notes\");\n"
                                   "textEdit->setPlaceholderText(\"Type your notes here\");\n"
                                   "textEdit->setMinVisibleLines(2);\n"
                                   "textEdit->setMaxVisibleLines(4);\n"
@@ -812,6 +813,7 @@ QVector<GallerySample> textEditSamples()
                        auto* layout = static_cast<QVBoxLayout*>(surface->layout());
 
                        auto* textEdit = new TextEdit(surface);
+                       textEdit->setAccessibleName(QStringLiteral("Notes"));
                        textEdit->setPlaceholderText(QStringLiteral("Type your notes here"));
                        textEdit->setMinVisibleLines(2);
                        textEdit->setMaxVisibleLines(4);
@@ -832,12 +834,14 @@ QVector<GallerySample> textEditSamples()
                    QStringLiteral("Scrollable multi-line content"),
                    QStringLiteral("When text exceeds the maximum visible line count, the Fluent vertical scrollbar takes over."),
                    QStringLiteral("auto* textEdit = new TextEdit(this);\n"
+                                  "textEdit->setAccessibleName(\"Scrollable notes\");\n"
                                   "textEdit->setMinVisibleLines(3);\n"
                                   "textEdit->setMaxVisibleLines(3);\n"
                                   "textEdit->setLineHeight(28);\n"
                                   "textEdit->setPlainText(\"Alpha\\nBeta\\nGamma\\nDelta\\nEpsilon\\nZeta\");"),
                    [](QWidget* parent) {
                        auto* textEdit = new TextEdit(parent);
+                       textEdit->setAccessibleName(QStringLiteral("Scrollable notes"));
                        textEdit->setMinVisibleLines(3);
                        textEdit->setMaxVisibleLines(3);
                        textEdit->setLineHeight(28);
@@ -849,12 +853,14 @@ QVector<GallerySample> textEditSamples()
                    QStringLiteral("Read-only text surface"),
                    QStringLiteral("Read-only text keeps the Fluent frame and typography while blocking edits."),
                    QStringLiteral("auto* textEdit = new TextEdit(this);\n"
+                                  "textEdit->setAccessibleName(\"Review terms\");\n"
                                   "textEdit->setPlainText(\"Terms reviewed and locked for approval.\");\n"
                                   "textEdit->setReadOnly(true);\n"
                                   "textEdit->setFontRole(Typography::FontRole::BodyStrong);\n"
                                   "textEdit->setContentMargins(QMargins(12, 6, 12, 6));"),
                    [](QWidget* parent) {
                        auto* textEdit = new TextEdit(parent);
+                       textEdit->setAccessibleName(QStringLiteral("Review terms"));
                        textEdit->setPlainText(QStringLiteral("Terms reviewed and locked for approval."));
                        textEdit->setReadOnly(true);
                        textEdit->setFontRole(Typography::FontRole::BodyStrong);

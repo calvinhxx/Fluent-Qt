@@ -12,6 +12,7 @@ from PySide6 import QtWidgets as _QtWidgets
 from ._fluentqt import (
     bindingBuildInfo,
     initializeResources,
+    inspectWidgetForBinding,
     prepareHighDpiApplication,
 )
 from .basicinput import (
@@ -173,6 +174,72 @@ def binding_build_info():
     return dict(bindingBuildInfo())
 
 
+def inspect_widget(
+    widget,
+    *,
+    minimum_hit_area=(24, 24),
+    spacing_grid=4,
+    check_clipped_text=True,
+    check_accessibility_names=True,
+    check_hit_areas=True,
+    check_focus_order=True,
+    check_duplicate_actions=True,
+    check_nested_scrolling=True,
+    check_layout_grid=False,
+):
+    """Return a read-only, versioned quality report for a visible widget tree."""
+
+    if not isinstance(widget, _QtWidgets.QWidget):
+        raise TypeError("widget must be a QWidget")
+    if isinstance(minimum_hit_area, _QtCore.QSize):
+        minimum_width = minimum_hit_area.width()
+        minimum_height = minimum_hit_area.height()
+    elif isinstance(minimum_hit_area, (tuple, list)) and len(minimum_hit_area) == 2:
+        minimum_width, minimum_height = minimum_hit_area
+    else:
+        raise TypeError("minimum_hit_area must be QSize or (width, height)")
+    if (
+        not isinstance(minimum_width, int)
+        or isinstance(minimum_width, bool)
+        or not isinstance(minimum_height, int)
+        or isinstance(minimum_height, bool)
+    ):
+        raise TypeError("minimum_hit_area values must be integers")
+    if not isinstance(spacing_grid, int) or isinstance(spacing_grid, bool):
+        raise TypeError("spacing_grid must be an integer")
+    if minimum_width < 1 or minimum_height < 1:
+        raise ValueError("minimum_hit_area values must be positive")
+    if spacing_grid < 1:
+        raise ValueError("spacing_grid must be positive")
+
+    checks = {
+        "check_clipped_text": check_clipped_text,
+        "check_accessibility_names": check_accessibility_names,
+        "check_hit_areas": check_hit_areas,
+        "check_focus_order": check_focus_order,
+        "check_duplicate_actions": check_duplicate_actions,
+        "check_nested_scrolling": check_nested_scrolling,
+        "check_layout_grid": check_layout_grid,
+    }
+    if not all(isinstance(value, bool) for value in checks.values()):
+        raise TypeError("Inspector check options must be bool values")
+    return dict(
+        inspectWidgetForBinding(
+            widget,
+            minimum_width,
+            minimum_height,
+            spacing_grid,
+            check_clipped_text,
+            check_accessibility_names,
+            check_hit_areas,
+            check_focus_order,
+            check_duplicate_actions,
+            check_nested_scrolling,
+            check_layout_grid,
+        )
+    )
+
+
 __all__ = [
     "Accordion",
     "AnchorEdge",
@@ -294,6 +361,7 @@ __all__ = [
     "fontForRole",
     "initialize_resources",
     "initializeResources",
+    "inspect_widget",
     "prepare_high_dpi_application",
     "prepareHighDpiApplication",
     "reset_theme_tokens",

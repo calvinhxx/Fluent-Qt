@@ -37,6 +37,14 @@ PUBLIC_DUNDER_METHODS = {
 MODULE_FUNCTION_SIGNATURES = {
     ("fluentqt", "binding_build_info"): "() -> dict[str, object]",
     ("fluentqt", "initialize_resources"): "() -> bool",
+    ("fluentqt", "inspect_widget"):
+        "(widget: PySide6.QtWidgets.QWidget, *, "
+        "minimum_hit_area: PySide6.QtCore.QSize | tuple[int, int] = ..., "
+        "spacing_grid: int = ..., check_clipped_text: bool = ..., "
+        "check_accessibility_names: bool = ..., check_hit_areas: bool = ..., "
+        "check_focus_order: bool = ..., check_duplicate_actions: bool = ..., "
+        "check_nested_scrolling: bool = ..., check_layout_grid: bool = ...) "
+        "-> dict[str, object]",
     ("fluentqt", "prepare_high_dpi_application"): "() -> None",
     ("fluentqt.foundation", "accent_color"):
         "() -> PySide6.QtGui.QColor",
@@ -558,6 +566,8 @@ def generate_root_stub(package, package_dir):
         '"""Generated public typing surface for FluentQt."""',
         "",
         "from typing import Any",
+        "import PySide6.QtCore",
+        "import PySide6.QtWidgets",
     ]
     for node in imports:
         module = node.module or ""

@@ -8,6 +8,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     include/FluentQt/Collections.h
     include/FluentQt/DateTime.h
     include/FluentQt/Design.h
+    include/FluentQt/Diagnostics.h
     include/FluentQt/DialogsFlyouts.h
     include/FluentQt/FluentQt.h
     include/FluentQt/Foundation.h
@@ -130,6 +131,8 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/design/Spacing.h
     src/design/ThemeColors.h
     src/design/Typography.h
+
+    src/utils/Inspector.h
 
 )
 
