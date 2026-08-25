@@ -9,6 +9,7 @@
 - Use [docs/development/app-sample-optimization.md](docs/development/app-sample-optimization.md) when adding or editing Gallery live examples: Source code snippets must stay semantically aligned with the preview UI.
 - Use [docs/development/linux-workflow.md](docs/development/linux-workflow.md) for desktop Linux portability, supported Qt versions, CI baselines, and Linux build/test presets.
 - Use [docs/development/release-governance.md](docs/development/release-governance.md) for lightweight branch, Angular-style Conventional Commit, version, tag, changelog, and release checklist rules.
+- Use [docs/development/compatibility-policy.md](docs/development/compatibility-policy.md) before changing a public API, deprecating a surface, or raising a Qt, C++, CMake, or Python baseline.
 - Use [docs/development/packaging-workflow.md](docs/development/packaging-workflow.md) for macOS DMG, Windows installer, and Linux DEB packaging commands.
 - Use [docs/architecture/README.md](docs/architecture/README.md) for architecture contracts, especially [docs/architecture/overlay-behavior.md](docs/architecture/overlay-behavior.md) when touching popup, flyout, dropdown, drawer, or other same-window overlay behavior.
 

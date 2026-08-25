@@ -16,9 +16,11 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [WebAssembly Roadmap](webassembly-roadmap.md)
 - [High-DPI Workflow](high-dpi-workflow.md)
 - [Release Governance](release-governance.md)
+- Compatibility Policy: [English](compatibility-policy.md) ·
+  [简体中文](compatibility-policy.zh-CN.md)
 - [FluentQt 1.7 Roadmap](release-1.7-roadmap.md)
-- Adoption and AI Delivery Roadmap: [English](adoption-and-ai-roadmap.md) ·
-  [简体中文](adoption-and-ai-roadmap.zh-CN.md)
+- [AI Delivery Roadmap](adoption-and-ai-roadmap.md)
+- [Production Evidence Baselines](production-evidence.md)
 - [Field API Contract](field-api-proposal.md)
 - [DataGrid API Contract](datagrid-api-proposal.md)
 - [Accessibility Contract](accessibility-contract.md)
