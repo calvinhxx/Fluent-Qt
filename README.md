@@ -313,6 +313,7 @@ python -m fluentqt_gallery
 - [Testing and visual review](docs/development/testing-workflow.md)
 - [Packaging workflow](docs/development/packaging-workflow.md)
 - [Release governance](docs/development/release-governance.md)
+- [Compatibility policy](docs/development/compatibility-policy.md)
 - [Architecture contracts](docs/architecture/README.md)
 - [Fluent design reference and legacy-theme migration](docs/design-languages/README.md)
 - [WebAssembly compatibility](docs/development/webassembly-workflow.md)

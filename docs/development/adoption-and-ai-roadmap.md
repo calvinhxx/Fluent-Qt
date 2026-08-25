@@ -1,13 +1,12 @@
-# Adoption and AI Delivery Roadmap
-
-English | [简体中文](adoption-and-ai-roadmap.zh-CN.md)
+# AI Delivery Roadmap
 
 ## Purpose
 
 FluentQt 1.7 closed the main component, accessibility, binding, WebAssembly,
-and release gaps. The next constraint is adoption: a new user or agent must be
-able to choose the library, reach a working window quickly, and keep the
-result at Gallery-level quality.
+and release gaps. This roadmap now answers only two questions: can a new user
+or agent reach a working window quickly, and can an agent deliver a GUI that
+meets a verifiable Gallery-level quality bar? The roadmap closes when Phase 2
+passes.
 
 This roadmap treats AI support as a delivery loop rather than a documentation
 feature. Phases describe evidence levels, not a serial feature checklist. Work
@@ -26,23 +25,22 @@ This roadmap does not add another design language, a QML or mobile renderer,
 application business logic, or a hosted source-code collection service.
 Collection of project source, screenshots, or usage data remains opt-in.
 
-## North-star and Supporting Measures
+## Acceptance Measures
 
-The north-star measure is **verified external repositories that reach a
-working FluentQt window each month**. Stars and page views are discovery
-signals, not successful adoption.
+The primary measure is whether an agent can complete the fixed benchmark's
+build, workflow, and visual acceptance. Stars, page views, and unreviewed
+screenshots do not count.
 
 Supporting measures:
 
-| Measure | Target before broad promotion |
+| Measure | Closeout target |
 |---|---:|
 | Median trial time to first window after doctor passes | under 10 minutes |
 | Quick Start completion | at least 80% |
 | Agent build success on the benchmark set | at least 85% |
 | Agent workflow completion | at least 80% |
 | Blind visual review | every dimension at least 4/5 |
-| Pairwise preference over an unassisted baseline | at least 70% |
-| Independent successful integrations | at least 3 |
+| Same-package final-build cross-agent pairwise preference | winning result at least 70% |
 | Open blocker or major findings in accepted benchmark runs | 0 |
 
 These are FluentQt operating gates, not industry benchmarks. A run counts only
@@ -56,29 +54,20 @@ distribution evidence.
 | Phase | Outcome | Status |
 |---|---|---|
 | 0 Baseline and contract | One living roadmap, measures, evidence rules, and non-goals | Complete |
-| 1 First success | Diagnose, scaffold, build, and understand a minimal consumer | In progress |
-| 2 AI quality loop | Inspect a built application and publish cross-agent judged runs | In progress |
-| 3 Production evidence | Publish performance, accessibility, visual, and distribution evidence | Planned |
-| 4 External adoption | Convert real integrations into cases, feedback, and contributors | Planned |
+| 1 First success | Diagnose, scaffold, build, and understand a minimal consumer | Complete |
+| 2 AI quality loop | Inspect a built application and publish cross-agent judged runs | Complete |
 
 ## Lean Execution Queue
 
-Only three P0 items are active, with a work-in-progress limit of one engineering
-change and one live acceptance effort:
+Phase 2 closeout is complete:
 
-1. publish the generated API Explorer with the next promotion to `main`, then
-   verify its public entry point and component deep links;
-2. run the existing `agent-run-workspace` task once each in Codex, Claude Code,
-   and Cursor; change the Skill from evidence before specifying another task;
-3. help three external projects integrate and turn repeated failures into a
-   doctor, starter, catalog, or component fix.
-
-P1 contains only production evidence triggered by real integrations: startup
-and memory, a large DataGrid model, WebAssembly first load, macOS VoiceOver, and
-a concise ABI/Qt support policy. Four more agent tasks, advanced Inspector
-alignment/wheel probes, NVDA/Orca, multi-platform pixel lanes, multiple package
-registries, and the exploration queue are evidence-triggered later work. This
-avoids building an expensive evaluation system before there are user samples.
+1. Codex and Cursor completed clean runs with the same package, source, and
+   Qt/FluentQt prefix;
+2. both terminal records are sealed and pass content-hash validation;
+3. all thirteen automatable application scenes are covered, with the native
+   IME candidate surface assigned to platform manual compatibility review;
+4. five randomized X/Y final-build comparisons completed and the aggregate
+   gate passed.
 
 ## Phase 0: Baseline and Contract
 
@@ -86,7 +75,7 @@ Delivered:
 
 - the 1.7 component and quality closeout remains the engineering baseline;
 - the generated catalog records 69 components, 90 routes, and 205 samples;
-- the portable Skill defines Codex, Claude Code, and Cursor benchmark runs;
+- the portable Skill defines Codex and Cursor benchmark runs;
 - release, PyPI, TestPyPI, Gallery, and site events are evidence sources;
 - this document defines the adoption gate and privacy boundary.
 
@@ -151,8 +140,13 @@ copying C++ ownership details mechanically.
 
 ### 1C. Searchable public API
 
-Status: Local acceptance complete; Pages publication remains for the next
-promotion to `main`. The generated API Explorer covers all 69 catalog
+Status: Implementation and local acceptance are complete. Public Pages will be
+published by the next normal promotion to `main`; it is no longer a gate for
+this roadmap. On 2026-08-25 the public Chinese landing page returned
+200 while `/Fluent-Qt/api/` still returned 404, confirming that the remaining
+blocker is promotion from `release/1.7.x` into the Pages workflow that listens
+only to `main`, not generation or site assembly. The generated API Explorer
+covers all 69 catalog
 components and 114 installed public headers, with search, category filters,
 C++ / Python names, declaration links, focused tests, and Gallery routes. The
 WebAssembly Gallery deep link compiled and opened the requested DataGrid route
@@ -172,8 +166,9 @@ environments run `fluentqt trial` for the relevant starter with a median
 first-window-path time below ten minutes and at least 80% completion. The
 automated smoke reaches the real `show()` path; it is not an aesthetic review.
 
-The remote evidence for 1B exceeds this gate. Phase 1 remains in progress until
-1C is published on public Pages and its entry point plus deep links are checked.
+The remote evidence for 1B exceeds this gate, and 1C generation, entry points,
+and deep links pass locally. Phase 1 is therefore complete. Public deployment
+is a normal post-merge site check.
 
 ## Phase 2: AI Quality Loop
 
@@ -207,79 +202,58 @@ The Inspector reports evidence; it does not silently rewrite application UI.
 
 ### 2B. Application scenes
 
-Status: Automated coverage complete; manual IME acceptance remains. A v2 JSON
-Schema defines fourteen scenes across Gallery and both Workbench starters:
-thirteen automated Light/Dark, wide/narrow/minimum, empty, loading/error,
-long-text, dense-data, and scroll-boundary checks plus one manual IME review.
-Both starters expose an application-owned empty workspace with a real retry
-path, so empty coverage is no longer deferred.
+Status: Complete. A v2 JSON Schema defines fourteen scenes across Gallery and
+both Workbench starters. Thirteen automated scenes cover Light/Dark,
+wide/narrow/minimum, empty, loading/error, long text, dense data, and scroll
+boundaries. Empty, failure, and retry use real controller states in both the
+C++ and PySide6 starters rather than schematic placeholders.
 
-Define reusable scene manifests for Light, Dark, narrow, minimum, empty,
-loading, error, long text, IME, dense data, and scroll boundaries. Run them on
-the built application, not on schematic mockups.
+The fourteenth scene is a native IME compatibility check. The candidate window
+is owned by the operating system and input method, cannot be produced by an
+offscreen run, and would require taking the user's foreground input context to
+automate. It therefore remains a per-platform manual compatibility check, not
+an AI-quality roadmap gate. The benchmark keeps Qt's native editor and input
+method event path; no uncaptured candidate surface is reported as passed.
 
 ### 2C. Cross-agent benchmark
 
-Status: In progress. The first `agent-run-workspace` task now has a fixed prompt,
-a portable run-record Schema, and one tool that initializes, validates, and
-summarizes Codex, Claude Code, and Cursor runs using the same Skill hash. It
-records commits, commands, artifacts, Inspector and visual evidence, blockers,
-and independent nine-dimension review. A summary without human pairwise results
-remains `awaiting-preference`. Live runs and blind preference review remain
-open. The other four repository tasks are no longer a current gate; add a
-second task only if the first exposes a materially different integration shape.
+Status: Complete. The final Codex and Cursor runs used source commit
+`b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`, the same pinned Qt/FluentQt
+prefix, and Skill package SHA-256
+`29384c19ec821ecd37d92d63d0004d4ee5111b8231c0ceb1931bf2ce463de249`.
 
-Run the same repository task through Codex, Claude Code, and Cursor using the
-same versioned Skill. Publish prompts, commits, commands, screenshots,
-failures, nine-dimension blind scores, and pairwise preference. Deterministic
-catalog tests remain retrieval checks and must not be reported as model or
-visual quality.
+| Run | Build and workflow | Inspector | Nine-dimension review |
+|---|---|---:|---:|
+| Codex, user-selected Concept A | 3/3 CTest, strict structure, and v4 evidence pass | 0 | 36/45, every dimension 4/5 |
+| Cursor, final clean rerun | 6/6 CTest, strict structure, and v4 evidence pass | 0 | 36/45, every dimension 4/5 |
 
-Phase gate: the build, workflow, visual, preference, and blocker thresholds in
-this document pass. Use the run traces to remove or defer Skill instructions
-that do not affect results.
+Both terminal manifests and every referenced artifact are content-hashed by
+`benchmark_run.py seal` and pass `--require-current --require-pass`. Five
+state-matched final-build pairs were reviewed under randomized X/Y labels.
+After reveal, the Codex Concept A build was preferred in 5/5 comparisons, or
+100%. This is a relative result for these two same-package final runs, not an
+unassisted baseline or an industry benchmark.
 
-## Phase 3: Production Evidence
+The aggregate status is `pass`: build success 100%, workflow completion 100%,
+minimum visual dimension 4/5, pairwise preference 100%, and zero open blocker
+or major findings. The original 24/45 Cursor result remains historical evidence;
+it drove the responsive Workbench shell, wide-layout gate, independent final
+review, and sealed-artifact workflow rather than being overwritten.
 
-P1 deliverables:
+No external model credential was used. The result validates the real
+`QProcess` adapter, protocol mapping, streaming events, cancellation, retry,
+and fixture-backed local workflow; it does not claim an external-provider call.
 
-- repeatable startup, memory, DataGrid large-model, and WebAssembly first-load
-  measurements;
-- macOS VoiceOver first; add NVDA and Orca when Windows/Linux have a real user
-  or maintainer for those runs;
-- a concise ABI, deprecation, and supported-Qt policy;
-- add perceptual visual lanes, package-size/scrolling studies, or another
-  package registry only after a real regression or integration demands it;
-  aesthetic changes still require human approval.
+Phase gate: Passed on 2026-08-25.
 
-Phase gate: results are versioned, reproducible, and linked from releases.
+## Closeout Boundary
 
-## Phase 4: External Adoption
-
-Work from evidence outward. Start the first three external integrations now;
-do not wait for every Phase 3 item:
-
-1. support three independent integrations and record the failed steps;
-2. convert recurring failures into doctor, starter, catalog, or component
-   fixes;
-3. publish migration, large-data, and cross-agent benchmark case studies;
-4. add a verified “Built with FluentQt” surface;
-5. use scoped issues and component ownership to grow beyond one maintainer;
-6. expand promotion only after the Quick Start and integration gates pass.
-
-Phase gate: at least ten external repositories have reached a working window,
-three integrations are independently verified, and at least three people have
-made useful code or documentation contributions.
-
-## Exploration Queue
-
-These items require evidence from Phases 1–4 before they become commitments:
-
-- Qt Designer custom-widget integration;
-- Figma variables/components and semantic-token export;
-- docking-workbench recipes for established Qt docking libraries;
-- an optional MCP surface for live catalog queries, Gallery launch, builds,
-  diagnostics, and screenshot review.
-
-Static guidance, templates, and reference assets stay in the portable Skill.
-An MCP or plugin is justified only for live state or executable operations.
+This roadmap is closed. Phases 0, 1, and 2 are complete; the former Phases 3
+and 4 were removed and are not release gates. The existing
+[Production Evidence Baselines](production-evidence.md) and
+[Compatibility Policy](compatibility-policy.md) remain maintained references.
+Production Pages is a normal post-merge check, while the native IME candidate
+surface remains a per-platform manual compatibility check. VoiceOver,
+external-adoption counts, more platform pixel lanes, package registries,
+Figma, Designer, and MCP become separate projects only when an explicit need
+appears.

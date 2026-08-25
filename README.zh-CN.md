@@ -311,6 +311,7 @@ python -m fluentqt_gallery
 - [测试与视觉验收](docs/development/testing-workflow.md)
 - [打包工作流](docs/development/packaging-workflow.md)
 - [发布治理](docs/development/release-governance.md)
+- [兼容性策略](docs/development/compatibility-policy.zh-CN.md)
 - [架构约定](docs/architecture/README.md)
 - [Fluent 设计参考与旧主题迁移](docs/design-languages/README.md)
 - [WebAssembly 兼容](docs/development/webassembly-workflow.md)
