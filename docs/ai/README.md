@@ -193,7 +193,7 @@ uses [its own schema](project-analysis.schema.json).
 | M7: judged visual loop | Icon-aware nine-dimension concept board, contract v4, and independent visual review | Baseline implemented |
 | M8: design intelligence | Subject grounding, controlled risk, anti-genericity critique, tuning axes, and concept-to-code fidelity | Baseline implemented |
 | M9: application quality scenes | Manifest-driven built-app Inspector checks and manual interaction scenes | In progress |
-| M10: cross-agent run package | Portable run records, provenance checks, score aggregation, and an explicit human preference gate | Implemented; live runs pending |
+| M10: cross-agent run package | Maintainer-only portable run records and independent score comparison | Clean Cursor rerun passes; sealed same-package counterpart and preference remain |
 
 The Skill remains the distribution unit. A plugin is only warranted later if
 FluentQt needs MCP servers, apps, or several related Skills.
@@ -205,7 +205,8 @@ negative guard against generic chat/sidebar shell convergence—not end-to-end
 model or visual quality. The bundled
 `assets/benchmarks/agent-run-workspace.json` specification starts that judged
 layer. `scripts/benchmark_run.py` initializes and validates one portable record
-per agent, then summarizes the three records without treating missing human
+per agent, seals the terminal evidence against later workspace overwrites, then
+summarizes the Codex and Cursor records without treating missing human
 preference data as a pass. Live runs and pairwise preference results remain
 separate from deterministic catalog scores.
 

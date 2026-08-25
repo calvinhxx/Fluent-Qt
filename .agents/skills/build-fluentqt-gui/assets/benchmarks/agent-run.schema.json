@@ -27,7 +27,7 @@
     "schema_version": { "const": 1 },
     "benchmark_id": { "$ref": "#/$defs/nonEmptyString" },
     "run_id": { "$ref": "#/$defs/nonEmptyString" },
-    "agent": { "enum": ["codex", "claude-code", "cursor"] },
+    "agent": { "enum": ["codex", "cursor"] },
     "status": { "enum": ["planned", "running", "completed", "blocked"] },
     "author_id": { "$ref": "#/$defs/nonEmptyString" },
     "created_at": { "$ref": "#/$defs/nonEmptyString" },

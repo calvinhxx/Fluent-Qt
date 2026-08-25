@@ -19,7 +19,7 @@ from typing import Iterable
 
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SPEC = SKILL_ROOT / "assets/benchmarks/agent-run-workspace.json"
-AGENTS = ("codex", "claude-code", "cursor")
+AGENTS = ("codex", "cursor")
 ARTIFACTS = (
     "design_brief",
     "project_structure",
@@ -36,6 +36,7 @@ CHECKS = (
     "visual_evidence",
 )
 RUN_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+INTEGRITY_SCHEMA_VERSION = 1
 
 
 def _timestamp() -> str:
@@ -142,6 +143,133 @@ def _evidence_paths_exist(
             errors.append(f"{label} contains an empty evidence path")
         elif not _recorded_path(value, manifest_path).exists():
             errors.append(f"{label} does not exist: {value}")
+
+
+def _default_integrity_path(manifest_path: Path) -> Path:
+    return manifest_path.with_name(f"{manifest_path.stem}.integrity.json")
+
+
+def _recorded_evidence_paths(
+    manifest_path: Path, manifest: dict[str, object]
+) -> list[Path]:
+    values: list[str] = []
+    artifacts = manifest.get("artifacts")
+    if isinstance(artifacts, dict):
+        values.extend(value for value in artifacts.values() if isinstance(value, str))
+    commands = manifest.get("commands")
+    if isinstance(commands, list):
+        for command in commands:
+            if not isinstance(command, dict):
+                continue
+            evidence = command.get("evidence")
+            if isinstance(evidence, list):
+                values.extend(value for value in evidence if isinstance(value, str))
+    review = manifest.get("review")
+    if isinstance(review, dict):
+        dimensions = review.get("dimensions")
+        if isinstance(dimensions, dict):
+            for dimension in dimensions.values():
+                if not isinstance(dimension, dict):
+                    continue
+                evidence = dimension.get("evidence")
+                if isinstance(evidence, list):
+                    values.extend(
+                        value for value in evidence if isinstance(value, str)
+                    )
+    return sorted({_recorded_path(value, manifest_path) for value in values})
+
+
+def _integrity_entries(
+    manifest_path: Path, manifest: dict[str, object]
+) -> list[dict[str, object]]:
+    entries: list[dict[str, object]] = []
+    for path in _recorded_evidence_paths(manifest_path, manifest):
+        entries.append(
+            {
+                "path": _portable_path(path, manifest_path.parent),
+                "kind": "directory" if path.is_dir() else "file",
+                "sha256": _digest(path),
+            }
+        )
+    return entries
+
+
+def _validate_integrity(
+    manifest_path: Path,
+    manifest: dict[str, object],
+    integrity_path: Path,
+) -> list[str]:
+    errors: list[str] = []
+    if not integrity_path.is_file():
+        return [f"integrity sidecar does not exist: {integrity_path}"]
+    try:
+        integrity = _read_json(integrity_path)
+    except ValueError as error:
+        return [str(error)]
+    record = _exact_keys(
+        integrity,
+        ("schema_version", "manifest", "manifest_sha256", "sealed_at", "files"),
+        "integrity",
+        errors,
+    )
+    if record.get("schema_version") != INTEGRITY_SCHEMA_VERSION:
+        errors.append(
+            f"integrity.schema_version must be {INTEGRITY_SCHEMA_VERSION}"
+        )
+    expected_manifest = _portable_path(manifest_path, integrity_path.parent)
+    if record.get("manifest") != expected_manifest:
+        errors.append("integrity.manifest does not point to the validated run")
+    if record.get("manifest_sha256") != _digest(manifest_path):
+        errors.append("integrity.manifest_sha256 does not match the run manifest")
+    if not _valid_timestamp(record.get("sealed_at")):
+        errors.append("integrity.sealed_at must be an ISO-8601 timestamp")
+
+    files = record.get("files")
+    if not isinstance(files, list):
+        errors.append("integrity.files must be an array")
+        return errors
+    if not files and manifest.get("status") == "completed":
+        errors.append("completed run integrity must contain sealed evidence")
+    recorded_entries: dict[str, dict[str, object]] = {}
+    for index, value in enumerate(files):
+        entry = _exact_keys(
+            value, ("path", "kind", "sha256"), f"integrity.files[{index}]", errors
+        )
+        path_value = entry.get("path")
+        if not isinstance(path_value, str) or not path_value:
+            errors.append(f"integrity.files[{index}].path must be non-empty")
+            continue
+        if path_value in recorded_entries:
+            errors.append(f"integrity.files contains duplicate path: {path_value}")
+        recorded_entries[path_value] = entry
+        path = _recorded_path(path_value, manifest_path)
+        if not path.exists():
+            errors.append(f"sealed evidence does not exist: {path_value}")
+            continue
+        actual_kind = "directory" if path.is_dir() else "file"
+        if entry.get("kind") != actual_kind:
+            errors.append(f"sealed evidence kind changed: {path_value}")
+        if entry.get("sha256") != _digest(path):
+            errors.append(f"sealed evidence digest changed: {path_value}")
+
+    expected_paths = {
+        _portable_path(path, manifest_path.parent)
+        for path in _recorded_evidence_paths(manifest_path, manifest)
+    }
+    if set(recorded_entries) != expected_paths:
+        missing = expected_paths - set(recorded_entries)
+        extra = set(recorded_entries) - expected_paths
+        if missing:
+            errors.append(
+                "integrity.files is missing recorded evidence: "
+                + ", ".join(sorted(missing))
+            )
+        if extra:
+            errors.append(
+                "integrity.files contains unrecorded evidence: "
+                + ", ".join(sorted(extra))
+            )
+    return errors
 
 
 def validate_manifest(
@@ -486,6 +614,14 @@ def validate_run(args: argparse.Namespace) -> int:
             require_complete=args.require_complete or args.require_pass,
             require_pass=args.require_pass,
         )
+        if args.require_current:
+            errors.extend(
+                _validate_integrity(
+                    path,
+                    manifest,
+                    _default_integrity_path(path),
+                )
+            )
     except ValueError as error:
         errors = [str(error)]
     if errors:
@@ -498,6 +634,38 @@ def validate_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def seal_run(args: argparse.Namespace) -> int:
+    manifest_path = args.manifest.resolve()
+    output = _default_integrity_path(manifest_path)
+    if output.exists():
+        print(
+            f"Refusing to overwrite existing integrity sidecar: {output}",
+            file=sys.stderr,
+        )
+        return 2
+    try:
+        manifest = _read_json(manifest_path)
+        errors = validate_manifest(manifest_path, manifest, require_complete=True)
+        if errors:
+            for error in errors:
+                print(f"ERROR: {error}", file=sys.stderr)
+            return 1
+        entries = _integrity_entries(manifest_path, manifest)
+    except ValueError as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    sidecar: dict[str, object] = {
+        "schema_version": INTEGRITY_SCHEMA_VERSION,
+        "manifest": _portable_path(manifest_path, output.parent),
+        "manifest_sha256": _digest(manifest_path),
+        "sealed_at": _timestamp(),
+        "files": entries,
+    }
+    _write_json(output, sidecar)
+    print(output)
+    return 0
+
+
 def summarize_runs(args: argparse.Namespace) -> int:
     output = args.output.resolve()
     manifests: list[tuple[Path, dict[str, object]]] = []
@@ -507,6 +675,14 @@ def summarize_runs(args: argparse.Namespace) -> int:
         try:
             manifest = _read_json(path)
             run_errors = validate_manifest(path, manifest, require_complete=True)
+            if args.require_current:
+                run_errors.extend(
+                    _validate_integrity(
+                        path,
+                        manifest,
+                        _default_integrity_path(path),
+                    )
+                )
         except ValueError as error:
             run_errors = [str(error)]
             manifest = {}
@@ -678,15 +854,31 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     validate.add_argument("manifest", type=Path)
     validate.add_argument("--require-complete", action="store_true")
     validate.add_argument("--require-pass", action="store_true")
+    validate.add_argument(
+        "--require-current",
+        action="store_true",
+        help="Require a matching run.integrity.json sidecar",
+    )
     validate.set_defaults(handler=validate_run)
 
+    seal = subparsers.add_parser(
+        "seal", help="Hash the completed run manifest and all recorded evidence"
+    )
+    seal.add_argument("manifest", type=Path)
+    seal.set_defaults(handler=seal_run)
+
     summarize = subparsers.add_parser(
-        "summarize", help="Combine Codex, Claude Code, and Cursor runs"
+        "summarize", help="Combine Codex and Cursor runs"
     )
     summarize.add_argument("manifests", type=Path, nargs="+")
     summarize.add_argument("--output", type=Path, required=True)
     summarize.add_argument("--pairwise-preference-percent", type=float)
     summarize.add_argument("--preference-note")
+    summarize.add_argument(
+        "--require-current",
+        action="store_true",
+        help="Require matching integrity sidecars for every run",
+    )
     summarize.set_defaults(handler=summarize_runs)
 
     return parser.parse_args(argv)

@@ -83,6 +83,7 @@ teardown.
 | --- | --- |
 | New GUI, greenfield app, or changed integration boundary | The integration-boundary and vertical-slice sections in this Skill |
 | New application, full profile, new standalone GUI root, or an oversized shell | [Project architecture](references/project-architecture.md) |
+| Greenfield standalone C++ or PySide6 application | [Maintained workbench starter](references/polished-starter.md) |
 | New top-level GUI, application-owned shell, or window chrome | [Premium shell](references/premium-shell.md) |
 | Conversation, run timeline, document/object canvas, composer, sparse state, or pane chrome | [Signature surface](references/signature-surface.md) |
 | Any visible layout, density, typography, or interaction change | [Visual refinement](references/visual-refinement.md) |
@@ -95,7 +96,7 @@ teardown.
 | New GUI, major redesign, distinctive visual direction, taste feedback, concept rendering, or implementation fidelity | [Design intelligence](references/design-intelligence.md) |
 | New GUI, major redesign, visual concept generation, or user taste decision | [Art direction and human selection](references/art-direction.md) |
 | Full evidence matrix, dynamic layout, or transient/scroll acceptance | [Visual evidence contract](references/visual-evidence-contract.md) |
-| Evaluating this Skill across Codex, Claude Code, and Cursor | [Cross-agent benchmark](references/cross-agent-benchmark.md) |
+| Evaluating this Skill across Codex and Cursor | [Cross-agent benchmark](references/cross-agent-benchmark.md) |
 
 Query only catalog slices needed for the current decision:
 
@@ -135,9 +136,11 @@ python3 <onboarding> create /path/to/new-app \
 ```
 
 Use `existing-qt` for a bounded integration slice and `pyside6` only when the
-chosen delivery path is Python. Preserve the generated architecture manifest;
-product-specific composition and art direction still require the workflow
-below.
+chosen delivery path is Python. For a standalone app, keep the generated
+`WorkbenchShell` and replace `WorkspacePage` with the real primary workflow as
+described in [Maintained workbench starter](references/polished-starter.md).
+Preserve the architecture manifest. The starter supplies sound geometry and
+code boundaries; product identity and art direction still come from the target.
 
 For a new GUI or major redesign, initialize one of the bundled composition
 recipes instead of inventing the first shell from scratch:
@@ -380,7 +383,13 @@ Both profiles must:
    application-icon versus in-product-mark behavior;
 9. inspect product-owned visible copy for AI narration, duplicate explanation,
    unstable state vocabulary, awkward wrapping, and unnecessary text;
-10. record concrete defects, fix them, rebuild, and recapture the same state.
+10. inspect one representative wide state at 1x: primary content must keep a
+    readable measure and scale, every large quiet region must have a deliberate
+    compositional role, and a fixed footer/composer must not leave the active
+    workflow stranded in a shallow strip at the opposite edge;
+11. verify the promised product signature is plainly visible in final pixels
+    without a logo, zoom, annotation, or design-brief explanation;
+12. record concrete defects, fix them, rebuild, and recapture the same state.
 
 Full additionally exercises realistic sparse/dense cardinality, minimum width,
 loading, empty, error, cancellation, permission, streaming/settled layout,
@@ -394,8 +403,9 @@ interaction or pixel inspection. If automation cannot cover a state, report it
 as unverified rather than passing it.
 
 Any clipping, overlap, unreadable terminal row, unstable dynamic height, stale
-overlay, wrong density, or repeated alignment defect blocks visual acceptance
-even when the build and functional tests pass.
+overlay, wrong density, unowned dead field, visually disconnected primary
+regions, invisible signature move, or repeated alignment defect blocks visual
+acceptance even when the build and functional tests pass.
 
 After the implementation agent finishes the inspect-fix-recapture loop, render
 one local review board and give the raw brief, board, and final build
@@ -406,6 +416,11 @@ iconography, surface composition, responsiveness, and state polish. The
 reviewer identity must differ from the implementation `author_id`; every score
 must cite final-build evidence, and an open blocker or major finding fails
 acceptance.
+
+An implementation-authored evidence file does not become independent merely by
+using a different reviewer string. The final reviewer must run after the
+implementation session and record their own verdict in the acceptance or
+benchmark artifact.
 
 ## Validate visual evidence
 
@@ -556,11 +571,11 @@ preserved interfaces, design/component/theme decisions, implemented slice,
 exact validation results, visual coverage, and unverified platform or packaging
 boundaries.
 
-When changing this Skill's composition or review behavior, use
+Maintainers only: when changing this Skill's composition or review behavior, use
 `assets/benchmarks/agent-run-workspace.json` as the first blind forward test.
 Run the same packaged Skill in each target agent without leaking the intended
 layout or prior diagnosis. Follow
 [Cross-agent benchmark](references/cross-agent-benchmark.md), initialize and
 validate each `assets/benchmarks/agent-run.schema.json` record with
-`scripts/benchmark_run.py`, and compare judged artifacts rather than prose
-similarity.
+`scripts/benchmark_run.py`, seal the terminal evidence before reusing a
+workspace, and compare judged artifacts rather than prose similarity.
