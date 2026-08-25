@@ -318,7 +318,8 @@ For v4, the validator enforces profile-specific bookkeeping, known ids, local
 file existence, the window-material and signature fields, a validated design
 brief, and independent review metadata. Never convert script success alone into
 a claim that the pixels, interaction, or product hierarchy are good; the named
-reviewer owns that judgment. A manifest with `window_backdrop: "solid"` or
+reviewer owns that judgment. A manifest
+with `window_backdrop: "solid"` or
 `"host-owned"` and no reason fails. A manifest that declares `wireframe`,
 `filled-stickers`, `dead-space`, or `developer-labeled` is a failed product
 surface.

@@ -6,7 +6,12 @@ GUI build workflow.
 ## Fixed inputs
 
 - Package the Skill once and give the same archive, without local edits, to
-  Codex, Claude Code, and Cursor.
+  Codex and Cursor.
+- Pin the same FluentQt source revision or installed development package and Qt
+  toolchain for both runs. Record the selected prefix or source path and keep a
+  `CMakeCache.txt` or equivalent dependency-resolution artifact. Selecting a
+  different or Inspector-incapable install makes that machine check `false`;
+  a compatibility placeholder is not an Inspector pass.
 - Use the prompt in `assets/benchmarks/agent-run-workspace.json` verbatim.
 - Give each implementation agent the target repository and prompt only. Do not
   provide an intended layout, a previous result, or a diagnosis of likely
@@ -26,8 +31,8 @@ python3 <skill-root>/scripts/benchmark_run.py init \
   --output runs/codex/run.json
 ```
 
-Repeat with `claude-code` and `cursor`. Keep artifact and log paths relative to
-the run manifest so the run directory can be archived or published intact.
+Repeat with `cursor`. Keep artifact and log paths relative to the run manifest
+so the run directory can be archived or published intact.
 
 ## Record the run
 
@@ -44,23 +49,36 @@ For a completed run, the independent reviewer scores all nine dimensions from
 1 to 5 and attaches evidence paths. A blocked run records the blocker without
 inventing missing artifacts or scores.
 
-Validate structure and provenance:
+Do not copy the implementation agent's embedded visual verdict into the run
+manifest. The benchmark reviewer must inspect the final pixels independently,
+including a wide state at 1x, and record their own scores after implementation
+ends. A valid visual-evidence manifest proves evidence structure, not taste.
+
+Seal the terminal manifest and every recorded artifact, log, and review image
+before revising or reusing the workspace. The sidecar prevents a later capture
+from silently replacing the pixels that were scored:
+
+```bash
+python3 <skill-root>/scripts/benchmark_run.py seal runs/codex/run.json
+```
+
+Validate structure, provenance, and current evidence bytes:
 
 ```bash
 python3 <skill-root>/scripts/benchmark_run.py validate \
-  runs/codex/run.json --require-complete
+  runs/codex/run.json --require-complete --require-current
 ```
 
 Use `--require-pass` only when asserting that one run cleared every per-run
 gate. A valid failed or blocked run is still benchmark evidence.
 
-## Summarize the three runs
+## Summarize the two runs
 
 ```bash
 python3 <skill-root>/scripts/benchmark_run.py summarize \
   runs/codex/run.json \
-  runs/claude-code/run.json \
   runs/cursor/run.json \
+  --require-current \
   --output runs/summary.json
 ```
 
@@ -69,7 +87,8 @@ record the aggregate preference and its method:
 
 ```bash
 python3 <skill-root>/scripts/benchmark_run.py summarize \
-  runs/codex/run.json runs/claude-code/run.json runs/cursor/run.json \
+  runs/codex/run.json runs/cursor/run.json \
+  --require-current \
   --pairwise-preference-percent 75 \
   --preference-note "12 blind comparisons against the previous Skill release" \
   --output runs/summary.json

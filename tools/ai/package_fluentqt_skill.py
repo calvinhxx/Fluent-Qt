@@ -33,6 +33,7 @@ REQUIRED_SKILL_FILES = (
     "references/experience-differentiation.md",
     "references/iconography.md",
     "references/performance-lifecycle.md",
+    "references/polished-starter.md",
     "references/premium-shell.md",
     "references/product-reference-patterns.md",
     "references/project-architecture.md",

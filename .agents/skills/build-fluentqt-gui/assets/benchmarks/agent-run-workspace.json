@@ -31,14 +31,17 @@
     "Material deviations from the accepted full-window and detail comps are recorded and justified.",
     "Product-owned copy names objects, states, and actions without assistant narration or repeated explanation.",
     "Each visible operation has one owning region and primary entry; wide and narrow fallbacks are mutually exclusive.",
-    "The packaged application tile, transparent in-product mark, and semantic palette visibly belong to one restrained identity system."
+    "The packaged application tile, transparent in-product mark, and semantic palette visibly belong to one restrained identity system.",
+    "At 1x in a representative wide active state, primary content keeps a readable measure and scale; large quiet regions have an explicit role rather than separating the transcript from its composer.",
+    "The promised signature move is visibly legible in final pixels without a logo, zoom, annotation, or design-brief explanation."
   ],
   "engineering_checks": [
     "The project-structure validator passes in strict mode.",
     "The shell owns window composition and platform events, not protocol parsing, process launch, settings validation, or demo generation.",
     "Domain and application layers do not import Qt Widgets or FluentQt.",
     "The structured-process adapter owns process and protocol lifetime behind an application-facing boundary.",
-    "Growing events use a bounded model and delegate rather than one child widget per event."
+    "Growing events use a bounded model and delegate rather than one child widget per event.",
+    "Both cross-agent runs resolve the same pinned FluentQt dependency, and an actual Inspector report is produced; an unavailable compatibility placeholder fails the check."
   ],
   "blind_review_dimensions": [
     "workflow_fit",
@@ -68,6 +71,8 @@
     "Do not turn one sampled logo color into every pane, border, action, and status role.",
     "Do not leave two simultaneously visible controls wired to the same operation merely because they occupy different regions.",
     "Do not fill sparse space with assistant narration, procedural headings, duplicated help, or generic marketing copy.",
+    "Do not call a wide active layout intentional when useful content is compressed into a shallow edge strip and the fixed composer is separated by an unowned dead field.",
+    "Do not count a signature described in the brief when it is not recognizable at 1x in the final application.",
     "Do not keep a permanent navigation rail unless several stable destinations justify it.",
     "Do not default-select the first recipe or treat a schematic SVG as a high-fidelity comp.",
     "Do not let the implementation agent record human concept approval.",
@@ -78,7 +83,6 @@
   ],
   "cross_agent_runs": [
     "Codex with build-fluentqt-gui",
-    "Claude Code with the same installed Skill package",
     "Cursor with the same installed Skill package"
   ]
 }

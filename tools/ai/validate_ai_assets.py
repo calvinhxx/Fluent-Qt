@@ -225,6 +225,7 @@ def _validate_skill(project_root: Path) -> None:
         "references/component-selection.md",
         "references/experience-differentiation.md",
         "references/performance-lifecycle.md",
+        "references/polished-starter.md",
         "references/premium-shell.md",
         "references/product-reference-patterns.md",
         "references/project-architecture.md",
@@ -263,7 +264,8 @@ def _validate_skill(project_root: Path) -> None:
             "Fixed inputs",
             "Initialize one run",
             "Record the run",
-            "Summarize the three runs",
+            "Seal the terminal manifest",
+            "Summarize the two runs",
             "awaiting-preference",
         ),
         "references/design-intelligence.md": (
@@ -312,6 +314,13 @@ def _validate_skill(project_root: Path) -> None:
             "Preserve item-view virtualization",
             "Choose transient lifetime deliberately",
             "Acceptance gate",
+        ),
+        "references/polished-starter.md": (
+            "What the starter guarantees",
+            "Replace the sample, keep the invariants",
+            "Review the first replacement",
+            "WorkbenchShell",
+            "WorkspacePage",
         ),
         "references/premium-shell.md": (
             "Default window material",
@@ -424,7 +433,11 @@ def _validate_skill(project_root: Path) -> None:
     if (
         benchmark.get("schema_version") != 1
         or benchmark.get("id") != "agent-run-workspace"
-        or len(benchmark.get("cross_agent_runs", [])) < 3
+        or benchmark.get("cross_agent_runs")
+        != [
+            "Codex with build-fluentqt-gui",
+            "Cursor with the same installed Skill package",
+        ]
     ):
         raise AssertionError("Agent-run visual benchmark has an invalid shape")
     expected_review_dimensions = {
@@ -1624,7 +1637,7 @@ def _validate_benchmark_tooling(project_root: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="fluentqt-agent-benchmark-") as temp:
         root = Path(temp)
         manifests: list[Path] = []
-        for agent in ("codex", "claude-code", "cursor"):
+        for agent in ("codex", "cursor"):
             run_root = root / agent
             manifest_path = run_root / "run.json"
             initialized = subprocess.run(
@@ -1714,6 +1727,58 @@ def _validate_benchmark_tooling(project_root: Path) -> None:
                     "Benchmark run validator rejected a passing run: "
                     + (completed.stderr or completed.stdout).strip()
                 )
+            sealed = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "seal",
+                    str(manifest_path),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if sealed.returncode != 0:
+                raise AssertionError(
+                    "Benchmark run evidence sealing failed: "
+                    + (sealed.stderr or sealed.stdout).strip()
+                )
+            current = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "validate",
+                    str(manifest_path),
+                    "--require-pass",
+                    "--require-current",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if current.returncode != 0:
+                raise AssertionError(
+                    "Benchmark run validator rejected sealed evidence: "
+                    + (current.stderr or current.stdout).strip()
+                )
+            review_path.write_text("mutated review\n", encoding="utf-8")
+            stale = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "validate",
+                    str(manifest_path),
+                    "--require-current",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if stale.returncode == 0 or "digest changed" not in stale.stderr:
+                raise AssertionError(
+                    "Benchmark run validator accepts overwritten review evidence"
+                )
+            review_path.write_text("blind fixture review\n", encoding="utf-8")
             manifests.append(manifest_path)
 
         summary_path = root / "summary.json"
@@ -1722,6 +1787,7 @@ def _validate_benchmark_tooling(project_root: Path) -> None:
             str(script),
             "summarize",
             *(str(path) for path in manifests),
+            "--require-current",
             "--output",
             str(summary_path),
         ]
