@@ -1,0 +1,176 @@
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QBoxLayout, QHBoxLayout, QVBoxLayout, QWidget
+
+import fluentqt
+from fluentqt.basicinput import Button
+from fluentqt.layout import Card, Divider
+from fluentqt.status_info import InfoBadge
+from fluentqt.textfields import Label
+
+from @APP_MODULE@.application.workspace_controller import WorkspaceViewState
+
+
+def _detail_card(title: str, parent: QWidget) -> tuple[Card, QVBoxLayout]:
+    card = Card(parent)
+    card.setAppearance(Card.Appearance.LayerAlt)
+    layout = QVBoxLayout(card)
+    layout.setContentsMargins(20, 18, 20, 18)
+    layout.setSpacing(8)
+    heading = Label(title, card)
+    heading.setFluentTypography(fluentqt.FontRole.Subtitle)
+    layout.addWidget(heading)
+    return card, layout
+
+
+class WorkspacePage(QWidget):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._root = QVBoxLayout(self)
+        self._root.setContentsMargins(28, 24, 28, 28)
+        self._root.setSpacing(20)
+
+        header = QHBoxLayout()
+        title_stack = QVBoxLayout()
+        title_stack.setSpacing(4)
+        title = Label("Workspace", self)
+        title.setFluentTypography(fluentqt.FontRole.Title)
+        title_stack.addWidget(title)
+        subtitle = Label("Overview and connection status", self)
+        subtitle.setTextColorRole(Label.TextColorRole.Secondary)
+        title_stack.addWidget(subtitle)
+        header.addLayout(title_stack)
+        header.addStretch()
+        self.refresh_button = Button(self)
+        self.refresh_button.setFluentStyle(Button.ButtonStyle.Accent)
+        header.addWidget(self.refresh_button, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._root.addLayout(header)
+        self._root.addWidget(Divider(Qt.Orientation.Horizontal, self))
+
+        hero = Card(self)
+        hero.setAppearance(Card.Appearance.Canvas)
+        self._hero = QBoxLayout(QBoxLayout.Direction.LeftToRight, hero)
+        self._hero.setContentsMargins(24, 22, 24, 22)
+        self._hero.setSpacing(20)
+
+        status_column = QVBoxLayout()
+        status_column.setSpacing(8)
+
+        status_row = QHBoxLayout()
+        self._status_badge = InfoBadge(hero)
+        self._status_badge.setDisplayMode(InfoBadge.InfoBadgeDisplayMode.Dot)
+        status_row.addWidget(
+            self._status_badge, 0, Qt.AlignmentFlag.AlignVCenter
+        )
+        self._status = Label(hero)
+        self._status.setFluentTypography(fluentqt.FontRole.Subtitle)
+        status_row.addWidget(self._status)
+        status_row.addStretch()
+        status_column.addLayout(status_row)
+
+        self._status_detail = Label(hero)
+        self._status_detail.setTextColorRole(Label.TextColorRole.Secondary)
+        self._status_detail.setWordWrap(True)
+        status_column.addWidget(self._status_detail)
+        status_column.addStretch()
+        self._hero.addLayout(status_column, 1)
+
+        self._hero_divider = Divider(Qt.Orientation.Vertical, hero)
+        self._hero.addWidget(self._hero_divider)
+
+        workspace_column = QVBoxLayout()
+        workspace_column.setSpacing(8)
+        workspace_label = Label("Current workspace", hero)
+        workspace_label.setTextColorRole(Label.TextColorRole.Secondary)
+        workspace_column.addWidget(workspace_label)
+        self._workspace_name = Label(hero)
+        self._workspace_name.setFluentTypography(fluentqt.FontRole.Title)
+        workspace_column.addWidget(self._workspace_name)
+        self._workspace_path = Label(hero)
+        self._workspace_path.setTextColorRole(Label.TextColorRole.Secondary)
+        self._workspace_path.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+        workspace_column.addWidget(self._workspace_path)
+        workspace_column.addStretch()
+        self._hero.addLayout(workspace_column, 2)
+        self._root.addWidget(hero)
+
+        self._details = QBoxLayout(QBoxLayout.Direction.LeftToRight)
+        self._details.setContentsMargins(0, 0, 0, 0)
+        self._details.setSpacing(16)
+
+        structure, structure_layout = _detail_card("Structure", self)
+        structure_value = Label("Dependencies flow inward", structure)
+        structure_value.setFluentTypography(fluentqt.FontRole.BodyStrong)
+        structure_layout.addWidget(structure_value)
+        structure_layout.addWidget(Divider(Qt.Orientation.Horizontal, structure))
+        for layer in ("01  Domain", "02  Application", "03  Infrastructure", "04  UI"):
+            label = Label(layer, structure)
+            label.setTextColorRole(Label.TextColorRole.Secondary)
+            structure_layout.addWidget(label)
+        structure_layout.addStretch()
+        self._details.addWidget(structure, 1)
+
+        theme, theme_layout = _detail_card("Appearance", self)
+        self._theme_value = Label(theme)
+        self._theme_value.setTextColorRole(Label.TextColorRole.Secondary)
+        theme_layout.addWidget(self._theme_value)
+        accent_value = Label("Accent  @ACCENT@", theme)
+        accent_value.setTextColorRole(Label.TextColorRole.Secondary)
+        theme_layout.addWidget(accent_value)
+        material_value = Label("Mica backdrop", theme)
+        material_value.setTextColorRole(Label.TextColorRole.Secondary)
+        theme_layout.addWidget(material_value)
+        theme_layout.addStretch()
+        self.theme_button = Button(theme)
+        self.theme_button.setAccessibleName("Change color theme")
+        theme_layout.addWidget(
+            self.theme_button, 0, Qt.AlignmentFlag.AlignLeft
+        )
+        self._details.addWidget(theme, 1)
+        self._root.addLayout(self._details, 1)
+
+    def render(self, state: WorkspaceViewState) -> None:
+        self._workspace_name.setText(state.title)
+        self._workspace_path.setText(state.path)
+        self._status.setText(state.status)
+        self._status_detail.setText(
+            "The workspace is available."
+            if state.has_workspace
+            else "The workspace could not be opened."
+        )
+        self._status_badge.setStatus(
+            InfoBadge.InfoBadgeStatus.Success
+            if state.has_workspace
+            else InfoBadge.InfoBadgeStatus.Critical
+        )
+        self.refresh_button.setText("Refresh" if state.has_workspace else "Retry")
+        self.refresh_button.setAccessibleName(
+            "Refresh workspace"
+            if state.has_workspace
+            else "Retry workspace connection"
+        )
+        self._theme_value.setText(
+            "Dark theme" if state.dark_theme else "Light theme"
+        )
+        self.theme_button.setText(
+            "Use light theme" if state.dark_theme else "Use dark theme"
+        )
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        compact = self.width() < 680
+        self._details.setDirection(
+            QBoxLayout.Direction.TopToBottom
+            if compact
+            else QBoxLayout.Direction.LeftToRight
+        )
+        self._hero.setDirection(
+            QBoxLayout.Direction.TopToBottom
+            if compact
+            else QBoxLayout.Direction.LeftToRight
+        )
+        self._hero_divider.setOrientation(
+            Qt.Orientation.Horizontal if compact else Qt.Orientation.Vertical
+        )
+        horizontal = 20 if compact else 28
+        top = 20 if compact else 24
+        self._root.setContentsMargins(horizontal, top, horizontal, horizontal)

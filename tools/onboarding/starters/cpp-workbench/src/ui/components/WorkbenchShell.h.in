@@ -1,0 +1,35 @@
+#pragma once
+
+#include <QWidget>
+
+class QHBoxLayout;
+class QResizeEvent;
+class QVBoxLayout;
+
+namespace fluent::layout {
+class Card;
+}
+
+namespace @APP_NAMESPACE@::ui {
+
+class WorkbenchShell final : public QWidget {
+public:
+    explicit WorkbenchShell(QWidget* parent = nullptr);
+
+    void setNavigationWidget(QWidget* widget);
+    void setPrimaryWidget(QWidget* widget);
+
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+
+private:
+    void updateResponsiveLayout();
+
+    QWidget* m_stage = nullptr;
+    fluent::layout::Card* m_navigationSurface = nullptr;
+    QVBoxLayout* m_navigationLayout = nullptr;
+    QVBoxLayout* m_primaryLayout = nullptr;
+    QHBoxLayout* m_bodyLayout = nullptr;
+};
+
+} // namespace @APP_NAMESPACE@::ui

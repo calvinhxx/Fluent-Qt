@@ -2,9 +2,6 @@
 
 #include <FluentQt/Windowing.h>
 
-namespace fluent::basicinput {
-class Button;
-}
 namespace fluent::textfields {
 class Label;
 }
@@ -12,8 +9,8 @@ namespace @APP_NAMESPACE@::application {
 class WorkspaceController;
 struct WorkspaceViewState;
 }
-
 namespace @APP_NAMESPACE@::ui {
+class WorkspacePage;
 
 class MainWindow final : public fluent::windowing::Window {
 public:
@@ -23,11 +20,9 @@ private:
     void render(const application::WorkspaceViewState& state);
 
     application::WorkspaceController& m_controller;
-    fluent::textfields::Label* m_workspaceName = nullptr;
-    fluent::textfields::Label* m_workspacePath = nullptr;
-    fluent::textfields::Label* m_status = nullptr;
-    fluent::basicinput::Button* m_refreshButton = nullptr;
-    fluent::basicinput::Button* m_themeButton = nullptr;
+    WorkspacePage* m_page = nullptr;
+    fluent::textfields::Label* m_navigationTitle = nullptr;
+    fluent::textfields::Label* m_navigationPath = nullptr;
 };
 
 } // namespace @APP_NAMESPACE@::ui

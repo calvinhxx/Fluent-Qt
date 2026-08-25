@@ -104,6 +104,35 @@ class FluentQtCreateTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertIn("Ran 1 test", result.stdout + result.stderr)
 
+    def test_workbench_starters_separate_shell_from_product_page(self):
+        expectations = {
+            "cpp": (
+                "src/ui/components/WorkbenchShell.cpp",
+                "src/ui/pages/WorkspacePage.cpp",
+                "setMaximumWidth(1320)",
+            ),
+            "pyside6": (
+                "src/sample_python/ui/components/workbench_shell.py",
+                "src/sample_python/ui/pages/workspace_page.py",
+                "setMaximumWidth(1320)",
+            ),
+        }
+        for language, (shell_path, page_path, invariant) in expectations.items():
+            with self.subTest(language=language):
+                target, _ = self.create(language, "workbench")
+                shell = target / shell_path
+                page = target / page_path
+                self.assertTrue(shell.is_file())
+                self.assertTrue(page.is_file())
+                self.assertIn(invariant, shell.read_text(encoding="utf-8"))
+                self.assertNotIn("WorkspacePage", shell.read_text(encoding="utf-8"))
+                dependency_file = (
+                    target / "CMakeLists.txt"
+                    if language == "cpp"
+                    else target / "pyproject.toml"
+                )
+                self.assertIn("1.7.1", dependency_file.read_text(encoding="utf-8"))
+
     def test_existing_target_is_never_overwritten(self):
         target = self.root / "existing"
         target.mkdir()

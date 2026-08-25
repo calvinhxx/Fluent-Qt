@@ -139,6 +139,10 @@ class PySide6WorkbenchInspectorTest(unittest.TestCase):
                             QTimer.singleShot(settle_ms, settle_loop.quit)
                             settle_loop.exec()
 
+                        self.assertEqual(
+                            (window.width(), window.height()),
+                            (viewport["width"], viewport["height"]),
+                        )
                         report = fluentqt.inspect_widget(window.contentWidget())
                         budget = scene["inspector"]
                         self.assertLessEqual(

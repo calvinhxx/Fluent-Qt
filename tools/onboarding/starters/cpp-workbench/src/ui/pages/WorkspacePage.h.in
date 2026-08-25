@@ -1,0 +1,53 @@
+#pragma once
+
+#include <QWidget>
+
+class QBoxLayout;
+class QResizeEvent;
+
+namespace fluent::basicinput {
+class Button;
+}
+namespace fluent::status_info {
+class InfoBadge;
+}
+namespace fluent::layout {
+class Divider;
+}
+namespace fluent::textfields {
+class Label;
+}
+namespace @APP_NAMESPACE@::application {
+struct WorkspaceViewState;
+}
+
+namespace @APP_NAMESPACE@::ui {
+
+class WorkspacePage final : public QWidget {
+public:
+    explicit WorkspacePage(QWidget* parent = nullptr);
+
+    fluent::basicinput::Button* refreshButton() const;
+    fluent::basicinput::Button* themeButton() const;
+    void render(const application::WorkspaceViewState& state);
+
+protected:
+    void resizeEvent(QResizeEvent* event) override;
+
+private:
+    void updateResponsiveLayout();
+
+    QBoxLayout* m_detailLayout = nullptr;
+    QBoxLayout* m_heroLayout = nullptr;
+    fluent::layout::Divider* m_heroDivider = nullptr;
+    fluent::textfields::Label* m_workspaceName = nullptr;
+    fluent::textfields::Label* m_workspacePath = nullptr;
+    fluent::textfields::Label* m_status = nullptr;
+    fluent::textfields::Label* m_statusDetail = nullptr;
+    fluent::textfields::Label* m_themeValue = nullptr;
+    fluent::status_info::InfoBadge* m_statusBadge = nullptr;
+    fluent::basicinput::Button* m_refreshButton = nullptr;
+    fluent::basicinput::Button* m_themeButton = nullptr;
+};
+
+} // namespace @APP_NAMESPACE@::ui

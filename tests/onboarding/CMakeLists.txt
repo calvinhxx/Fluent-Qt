@@ -12,6 +12,10 @@ set(_fluent_qt_workbench_template_files
     src/application/WorkspaceController.h
     src/application/WorkspaceRepository.h
     src/domain/Workspace.h
+    src/ui/components/WorkbenchShell.cpp
+    src/ui/components/WorkbenchShell.h
+    src/ui/pages/WorkspacePage.cpp
+    src/ui/pages/WorkspacePage.h
     src/ui/shell/MainWindow.cpp
     src/ui/shell/MainWindow.h
     src/ui/theme/BrandTheme.cpp

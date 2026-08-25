@@ -1,0 +1,62 @@
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+
+from fluentqt.layout import Card
+
+_COMPACT_SHELL_BREAKPOINT = 960
+
+
+class WorkbenchShell(QWidget):
+    """Responsive material shell with one optional rail and one primary page."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName("workbenchShell")
+        self._outer = QHBoxLayout(self)
+        self._outer.setContentsMargins(20, 16, 20, 20)
+        self._outer.setSpacing(0)
+        self._outer.addStretch()
+
+        self._stage = QWidget(self)
+        self._stage.setMaximumWidth(1320)
+        stage_layout = QVBoxLayout(self._stage)
+        stage_layout.setContentsMargins(0, 0, 0, 0)
+
+        self._body = QHBoxLayout()
+        self._body.setContentsMargins(0, 0, 0, 0)
+        self._body.setSpacing(16)
+
+        self._navigation_surface = Card(self._stage)
+        self._navigation_surface.setObjectName("navigationSurface")
+        self._navigation_surface.setAppearance(Card.Appearance.LayerAlt)
+        self._navigation_surface.setFixedWidth(224)
+        self._navigation_layout = QVBoxLayout(self._navigation_surface)
+        self._navigation_layout.setContentsMargins(0, 0, 0, 0)
+        self._body.addWidget(self._navigation_surface)
+
+        primary_surface = Card(self._stage)
+        primary_surface.setObjectName("primarySurface")
+        primary_surface.setAppearance(Card.Appearance.Layer)
+        self._primary_layout = QVBoxLayout(primary_surface)
+        self._primary_layout.setContentsMargins(0, 0, 0, 0)
+        self._body.addWidget(primary_surface, 1)
+
+        stage_layout.addLayout(self._body, 1)
+        self._outer.addWidget(self._stage, 1)
+        self._outer.addStretch()
+
+    def set_navigation_widget(self, widget: QWidget) -> None:
+        widget.setParent(self._navigation_surface)
+        self._navigation_layout.addWidget(widget)
+
+    def set_primary_widget(self, widget: QWidget) -> None:
+        widget.setParent(self._primary_layout.parentWidget())
+        self._primary_layout.addWidget(widget)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        compact = self.width() < _COMPACT_SHELL_BREAKPOINT
+        self._navigation_surface.setVisible(not compact)
+        self._body.setSpacing(12 if compact else 16)
+        side = 12 if compact else 20
+        top = 12 if compact else 16
+        self._outer.setContentsMargins(side, top, side, side)

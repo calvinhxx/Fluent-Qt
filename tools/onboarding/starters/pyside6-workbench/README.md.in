@@ -1,7 +1,7 @@
 # @APP_NAME@
 
-PySide6 workbench using the native FluentQt components and explicit product
-boundaries.
+PySide6 workbench with a responsive shell, a balanced full-height workspace
+page, native FluentQt components, and explicit product boundaries.
 
 ```bash
 python -m venv .venv
@@ -13,6 +13,11 @@ python -m unittest discover -s tests
 The app package composes dependencies. Domain and application modules remain
 independent of Qt, infrastructure owns external state, and UI modules only
 render application state and publish user intent.
+
+`ui/components/workbench_shell.py` owns wide/narrow shell geometry. Replace the
+sample `ui/pages/workspace_page.py` with the product's primary workflow; keep
+the centered width, material gaps, and responsive rail until the approved
+design direction gives a concrete reason to change them.
 
 ## Quality report
 

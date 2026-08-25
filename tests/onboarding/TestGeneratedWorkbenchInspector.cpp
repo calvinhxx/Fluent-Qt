@@ -89,6 +89,8 @@ TEST(WorkbenchInspectorTest, Contract_ApplicationScenesPass)
         if (settleMs > 0)
             QTest::qWait(settleMs);
 
+        EXPECT_EQ(window.width(), viewportSize.width());
+        EXPECT_EQ(window.height(), viewportSize.height());
         QWidget* content = window.contentWidget();
         ASSERT_NE(content, nullptr);
         const auto findings = fluent::diagnostics::inspectFindings(content);

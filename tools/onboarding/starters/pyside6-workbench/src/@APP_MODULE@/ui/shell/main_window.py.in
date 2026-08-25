@@ -1,16 +1,17 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-from fluentqt.basicinput import Button
+import fluentqt
 from fluentqt.layout import Card
 from fluentqt.textfields import Label
 from fluentqt.windowing import Window
-import fluentqt
 
 from @APP_MODULE@.application.workspace_controller import (
     WorkspaceController,
     WorkspaceViewState,
 )
+from @APP_MODULE@.ui.components.workbench_shell import WorkbenchShell
+from @APP_MODULE@.ui.pages.workspace_page import WorkspacePage
 from @APP_MODULE@.ui.theme.brand_theme import apply_brand_theme
 
 
@@ -19,56 +20,51 @@ class MainWindow(Window):
         super().__init__()
         self._controller = controller
         self.setWindowTitle(@APP_NAME_PY@)
-        self.resize(880, 620)
+        self.setMinimumSize(720, 540)
+        self.resize(1080, 720)
 
-        content = QWidget()
-        root = QVBoxLayout(content)
-        root.setContentsMargins(32, 28, 32, 32)
-        root.setSpacing(20)
+        shell = WorkbenchShell()
+        navigation = QWidget(shell)
+        navigation_layout = QVBoxLayout(navigation)
+        navigation_layout.setContentsMargins(20, 22, 20, 20)
+        navigation_layout.setSpacing(8)
 
-        header = QHBoxLayout()
-        title = Label(@APP_NAME_PY@, content)
-        title.setFluentTypography(fluentqt.FontRole.Title)
-        header.addWidget(title)
-        header.addStretch()
-        self._theme_button = Button(content)
-        self._theme_button.setAccessibleName("Change color theme")
-        header.addWidget(self._theme_button)
-        root.addLayout(header)
+        app_name = Label(@APP_NAME_PY@, navigation)
+        app_name.setFluentTypography(fluentqt.FontRole.Subtitle)
+        app_name.setTextElideMode(Qt.TextElideMode.ElideRight)
+        navigation_layout.addWidget(app_name)
+        section = Label("Workspace", navigation)
+        section.setTextColorRole(Label.TextColorRole.Secondary)
+        navigation_layout.addWidget(section)
+        navigation_layout.addSpacing(8)
 
-        card = Card(content)
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(24, 22, 24, 22)
-        card_layout.setSpacing(10)
+        selected = Card(navigation)
+        selected.setAppearance(Card.Appearance.Canvas)
+        selected_layout = QVBoxLayout(selected)
+        selected_layout.setContentsMargins(16, 14, 16, 14)
+        selected_layout.setSpacing(4)
+        self._navigation_title = Label(selected)
+        self._navigation_title.setFluentTypography(fluentqt.FontRole.BodyStrong)
+        selected_layout.addWidget(self._navigation_title)
+        self._navigation_path = Label(selected)
+        self._navigation_path.setTextColorRole(Label.TextColorRole.Secondary)
+        self._navigation_path.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+        selected_layout.addWidget(self._navigation_path)
+        navigation_layout.addWidget(selected)
+        navigation_layout.addStretch()
 
-        eyebrow = Label("CURRENT WORKSPACE", card)
-        eyebrow.setFluentTypography(fluentqt.FontRole.Caption)
-        eyebrow.setTextColorRole(Label.TextColorRole.Secondary)
-        card_layout.addWidget(eyebrow)
+        hint = Label("FluentQt workbench", navigation)
+        hint.setFluentTypography(fluentqt.FontRole.Caption)
+        hint.setTextColorRole(Label.TextColorRole.Tertiary)
+        navigation_layout.addWidget(hint)
 
-        self._workspace_name = Label(card)
-        self._workspace_name.setFluentTypography(fluentqt.FontRole.Subtitle)
-        card_layout.addWidget(self._workspace_name)
-        self._workspace_path = Label(card)
-        self._workspace_path.setTextColorRole(Label.TextColorRole.Secondary)
-        self._workspace_path.setTextElideMode(Qt.ElideMiddle)
-        card_layout.addWidget(self._workspace_path)
+        self._page = WorkspacePage(shell)
+        shell.set_navigation_widget(navigation)
+        shell.set_primary_widget(self._page)
+        self.setContentWidget(shell)
 
-        actions = QHBoxLayout()
-        self._status = Label(card)
-        self._status.setTextColorRole(Label.TextColorRole.Secondary)
-        actions.addWidget(self._status)
-        actions.addStretch()
-        self._refresh_button = Button(card)
-        self._refresh_button.setFluentStyle(Button.ButtonStyle.Accent)
-        actions.addWidget(self._refresh_button)
-        card_layout.addLayout(actions)
-        root.addWidget(card)
-        root.addStretch()
-
-        self._refresh_button.clicked.connect(self._refresh)
-        self._theme_button.clicked.connect(self._toggle_theme)
-        self.setContentWidget(content)
+        self._page.refresh_button.clicked.connect(self._refresh)
+        self._page.theme_button.clicked.connect(self._toggle_theme)
         self._render(controller.state)
 
     def _refresh(self) -> None:
@@ -81,15 +77,6 @@ class MainWindow(Window):
         self._render(self._controller.state)
 
     def _render(self, state: WorkspaceViewState) -> None:
-        self._workspace_name.setText(state.title)
-        self._workspace_path.setText(state.path)
-        self._status.setText(state.status)
-        self._refresh_button.setText("Refresh" if state.has_workspace else "Retry")
-        self._refresh_button.setAccessibleName(
-            "Refresh workspace"
-            if state.has_workspace
-            else "Retry workspace connection"
-        )
-        self._theme_button.setText(
-            "Use light theme" if state.dark_theme else "Use dark theme"
-        )
+        self._navigation_title.setText(state.title)
+        self._navigation_path.setText(state.path)
+        self._page.render(state)

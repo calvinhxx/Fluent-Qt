@@ -1,7 +1,8 @@
 # @APP_NAME@
 
-Native FluentQt workbench starter with explicit domain, application,
-infrastructure, and UI boundaries.
+Native FluentQt workbench with a responsive shell, a balanced full-height
+workspace page, and explicit domain, application, infrastructure, and UI
+boundaries.
 
 ## Build
 
@@ -20,6 +21,11 @@ The composition root is `src/app/main.cpp`. Workflow state stays in
 `application`, external services belong in `infrastructure`, and FluentQt
 widgets stay in `ui`. Check `.fluentqt/architecture.json` before adding a new
 dependency direction.
+
+`ui/components/WorkbenchShell` owns wide/narrow shell geometry. Replace the
+sample `ui/pages/WorkspacePage` with the product's primary workflow; keep the
+shell's centered width, material gaps, and responsive navigation behavior until
+the approved design direction gives a concrete reason to change them.
 
 ## Quality report
 
