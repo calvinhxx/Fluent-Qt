@@ -1,0 +1,94 @@
+#include "ui/components/WorkbenchShell.h"
+
+#include <FluentQt/FluentQt.h>
+
+#include <QHBoxLayout>
+#include <QResizeEvent>
+#include <QVBoxLayout>
+
+namespace @APP_NAMESPACE@::ui {
+namespace {
+
+constexpr int CompactShellBreakpoint = 960;
+
+} // namespace
+
+WorkbenchShell::WorkbenchShell(QWidget* parent)
+    : QWidget(parent)
+{
+    setObjectName(QStringLiteral("workbenchShell"));
+    auto* outer = new QHBoxLayout(this);
+    outer->setContentsMargins(20, 16, 20, 20);
+    outer->setSpacing(0);
+    outer->addStretch();
+
+    m_stage = new QWidget(this);
+    m_stage->setMaximumWidth(1320);
+    auto* stageLayout = new QVBoxLayout(m_stage);
+    stageLayout->setContentsMargins(0, 0, 0, 0);
+    stageLayout->setSpacing(0);
+
+    m_bodyLayout = new QHBoxLayout;
+    m_bodyLayout->setContentsMargins(0, 0, 0, 0);
+    m_bodyLayout->setSpacing(16);
+
+    m_navigationSurface = new fluent::layout::Card(m_stage);
+    m_navigationSurface->setObjectName(QStringLiteral("navigationSurface"));
+    m_navigationSurface->setAppearance(fluent::layout::Card::LayerAlt);
+    m_navigationSurface->setFixedWidth(224);
+    m_navigationLayout = new QVBoxLayout(m_navigationSurface);
+    m_navigationLayout->setContentsMargins(0, 0, 0, 0);
+    m_navigationLayout->setSpacing(0);
+    m_bodyLayout->addWidget(m_navigationSurface);
+
+    auto* primarySurface = new fluent::layout::Card(m_stage);
+    primarySurface->setObjectName(QStringLiteral("primarySurface"));
+    primarySurface->setAppearance(fluent::layout::Card::Layer);
+    m_primaryLayout = new QVBoxLayout(primarySurface);
+    m_primaryLayout->setContentsMargins(0, 0, 0, 0);
+    m_primaryLayout->setSpacing(0);
+    m_bodyLayout->addWidget(primarySurface, 1);
+
+    stageLayout->addLayout(m_bodyLayout, 1);
+    outer->addWidget(m_stage, 1);
+    outer->addStretch();
+}
+
+void WorkbenchShell::setNavigationWidget(QWidget* widget)
+{
+    if (widget == nullptr)
+        return;
+    if (m_navigationLayout->count() != 0)
+        delete m_navigationLayout->takeAt(0);
+    widget->setParent(m_navigationSurface);
+    m_navigationLayout->addWidget(widget);
+}
+
+void WorkbenchShell::setPrimaryWidget(QWidget* widget)
+{
+    if (widget == nullptr)
+        return;
+    if (m_primaryLayout->count() != 0)
+        delete m_primaryLayout->takeAt(0);
+    widget->setParent(m_primaryLayout->parentWidget());
+    m_primaryLayout->addWidget(widget);
+}
+
+void WorkbenchShell::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    updateResponsiveLayout();
+}
+
+void WorkbenchShell::updateResponsiveLayout()
+{
+    const bool compact = width() < CompactShellBreakpoint;
+    m_navigationSurface->setVisible(!compact);
+    m_bodyLayout->setSpacing(compact ? 12 : 16);
+    layout()->setContentsMargins(compact ? 12 : 20,
+                                 compact ? 12 : 16,
+                                 compact ? 12 : 20,
+                                 compact ? 12 : 20);
+}
+
+} // namespace @APP_NAMESPACE@::ui

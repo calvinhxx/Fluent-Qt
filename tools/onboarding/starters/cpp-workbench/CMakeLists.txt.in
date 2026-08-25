@@ -17,7 +17,7 @@ if(FLUENTQT_SOURCE_DIR)
     add_subdirectory("${FLUENTQT_SOURCE_DIR}" "${CMAKE_BINARY_DIR}/_deps/fluentqt"
         EXCLUDE_FROM_ALL)
 else()
-    find_package(FluentQt 1.7 CONFIG REQUIRED)
+    find_package(FluentQt 1.7.1 CONFIG REQUIRED)
 endif()
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
@@ -41,6 +41,10 @@ target_link_libraries(@APP_TARGET@_infrastructure
 target_include_directories(@APP_TARGET@_infrastructure PUBLIC src)
 
 add_library(@APP_TARGET@_ui STATIC
+    src/ui/components/WorkbenchShell.cpp
+    src/ui/components/WorkbenchShell.h
+    src/ui/pages/WorkspacePage.cpp
+    src/ui/pages/WorkspacePage.h
     src/ui/shell/MainWindow.cpp
     src/ui/shell/MainWindow.h
     src/ui/theme/BrandTheme.cpp

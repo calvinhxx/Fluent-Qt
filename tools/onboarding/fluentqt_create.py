@@ -14,7 +14,7 @@ import tempfile
 from typing import Iterable, Mapping
 
 
-CREATOR_VERSION = "0.1.0"
+CREATOR_VERSION = "0.2.0"
 ONBOARDING_ROOT = Path(__file__).resolve().parent
 STARTERS_ROOT = ONBOARDING_ROOT / "starters"
 STARTER_MANIFEST = STARTERS_ROOT / "manifest.json"

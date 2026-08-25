@@ -16,7 +16,7 @@
       ]
     },
     "cpp-workbench": {
-      "description": "A layered native C++ workbench with application, domain, infrastructure, UI, tests, and CI.",
+      "description": "A responsive native C++ workbench with a maintained shell, replaceable primary page, application layers, tests, and CI.",
       "directory": "cpp-workbench",
       "profile": "full",
       "shell_files": [
@@ -43,7 +43,7 @@
       ]
     },
     "pyside6-workbench": {
-      "description": "A layered PySide6 workbench mirroring the native product boundaries without C++ ownership boilerplate.",
+      "description": "A responsive PySide6 workbench with the same maintained shell, replaceable primary page, and product boundaries.",
       "directory": "pyside6-workbench",
       "profile": "full",
       "shell_files": [

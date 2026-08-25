@@ -1,0 +1,220 @@
+#include "ui/pages/WorkspacePage.h"
+
+#include <FluentQt/FluentQt.h>
+
+#include <QBoxLayout>
+#include <QHBoxLayout>
+#include <QResizeEvent>
+#include <QString>
+#include <QVBoxLayout>
+
+#include "application/WorkspaceController.h"
+
+namespace @APP_NAMESPACE@::ui {
+namespace {
+
+QString text(const std::string& value)
+{
+    return QString::fromUtf8(value.data(), static_cast<int>(value.size()));
+}
+
+fluent::layout::Card* detailCard(const QString& title, QWidget* parent,
+                                 QVBoxLayout*& content)
+{
+    auto* card = new fluent::layout::Card(parent);
+    card->setAppearance(fluent::layout::Card::LayerAlt);
+    content = new QVBoxLayout(card);
+    content->setContentsMargins(20, 18, 20, 18);
+    content->setSpacing(8);
+    auto* heading = new fluent::textfields::Label(title, card);
+    heading->setFluentTypography(Typography::FontRole::Subtitle);
+    content->addWidget(heading);
+    return card;
+}
+
+} // namespace
+
+WorkspacePage::WorkspacePage(QWidget* parent)
+    : QWidget(parent)
+{
+    auto* root = new QVBoxLayout(this);
+    root->setContentsMargins(28, 24, 28, 28);
+    root->setSpacing(20);
+
+    auto* header = new QHBoxLayout;
+    auto* titleStack = new QVBoxLayout;
+    titleStack->setSpacing(4);
+    auto* title = new fluent::textfields::Label(
+        QStringLiteral("Workspace"), this);
+    title->setFluentTypography(Typography::FontRole::Title);
+    titleStack->addWidget(title);
+    auto* subtitle = new fluent::textfields::Label(
+        QStringLiteral("Overview and connection status"), this);
+    subtitle->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    titleStack->addWidget(subtitle);
+    header->addLayout(titleStack);
+    header->addStretch();
+    m_refreshButton = new fluent::basicinput::Button(this);
+    m_refreshButton->setFluentStyle(fluent::basicinput::Button::Accent);
+    header->addWidget(m_refreshButton, 0, Qt::AlignVCenter);
+    root->addLayout(header);
+
+    root->addWidget(new fluent::layout::Divider(Qt::Horizontal, this));
+
+    auto* hero = new fluent::layout::Card(this);
+    hero->setAppearance(fluent::layout::Card::Canvas);
+    m_heroLayout = new QBoxLayout(QBoxLayout::LeftToRight, hero);
+    m_heroLayout->setContentsMargins(24, 22, 24, 22);
+    m_heroLayout->setSpacing(20);
+
+    auto* statusColumn = new QVBoxLayout;
+    statusColumn->setSpacing(8);
+
+    auto* statusRow = new QHBoxLayout;
+    m_statusBadge = new fluent::status_info::InfoBadge(hero);
+    m_statusBadge->setDisplayMode(
+        fluent::status_info::InfoBadge::InfoBadgeDisplayMode::Dot);
+    statusRow->addWidget(m_statusBadge, 0, Qt::AlignVCenter);
+    m_status = new fluent::textfields::Label(hero);
+    m_status->setFluentTypography(Typography::FontRole::Subtitle);
+    statusRow->addWidget(m_status);
+    statusRow->addStretch();
+    statusColumn->addLayout(statusRow);
+
+    m_statusDetail = new fluent::textfields::Label(hero);
+    m_statusDetail->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    m_statusDetail->setWordWrap(true);
+    statusColumn->addWidget(m_statusDetail);
+    statusColumn->addStretch();
+    m_heroLayout->addLayout(statusColumn, 1);
+
+    m_heroDivider = new fluent::layout::Divider(Qt::Vertical, hero);
+    m_heroLayout->addWidget(m_heroDivider);
+
+    auto* workspaceColumn = new QVBoxLayout;
+    workspaceColumn->setSpacing(8);
+    auto* workspaceLabel = new fluent::textfields::Label(
+        QStringLiteral("Current workspace"), hero);
+    workspaceLabel->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    workspaceColumn->addWidget(workspaceLabel);
+
+    m_workspaceName = new fluent::textfields::Label(hero);
+    m_workspaceName->setFluentTypography(Typography::FontRole::Title);
+    workspaceColumn->addWidget(m_workspaceName);
+    m_workspacePath = new fluent::textfields::Label(hero);
+    m_workspacePath->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    m_workspacePath->setTextElideMode(Qt::ElideMiddle);
+    workspaceColumn->addWidget(m_workspacePath);
+    workspaceColumn->addStretch();
+    m_heroLayout->addLayout(workspaceColumn, 2);
+    root->addWidget(hero);
+
+    m_detailLayout = new QBoxLayout(QBoxLayout::LeftToRight);
+    m_detailLayout->setContentsMargins(0, 0, 0, 0);
+    m_detailLayout->setSpacing(16);
+
+    QVBoxLayout* structureLayout = nullptr;
+    auto* structure = detailCard(QStringLiteral("Structure"), this,
+                                 structureLayout);
+    auto* structureValue = new fluent::textfields::Label(
+        QStringLiteral("Dependencies flow inward"), structure);
+    structureValue->setFluentTypography(Typography::FontRole::BodyStrong);
+    structureLayout->addWidget(structureValue);
+    structureLayout->addWidget(
+        new fluent::layout::Divider(Qt::Horizontal, structure));
+    for (const QString& layer : {QStringLiteral("01  Domain"),
+                                 QStringLiteral("02  Application"),
+                                 QStringLiteral("03  Infrastructure"),
+                                 QStringLiteral("04  UI")}) {
+        auto* label = new fluent::textfields::Label(layer, structure);
+        label->setTextColorRole(
+            fluent::textfields::Label::TextColorRole::Secondary);
+        structureLayout->addWidget(label);
+    }
+    structureLayout->addStretch();
+    m_detailLayout->addWidget(structure, 1);
+
+    QVBoxLayout* themeLayout = nullptr;
+    auto* theme = detailCard(QStringLiteral("Appearance"), this, themeLayout);
+    m_themeValue = new fluent::textfields::Label(theme);
+    m_themeValue->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    themeLayout->addWidget(m_themeValue);
+    auto* accentValue = new fluent::textfields::Label(
+        QStringLiteral("Accent  @ACCENT@"), theme);
+    accentValue->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    themeLayout->addWidget(accentValue);
+    auto* materialValue = new fluent::textfields::Label(
+        QStringLiteral("Mica backdrop"), theme);
+    materialValue->setTextColorRole(
+        fluent::textfields::Label::TextColorRole::Secondary);
+    themeLayout->addWidget(materialValue);
+    themeLayout->addStretch();
+    m_themeButton = new fluent::basicinput::Button(theme);
+    m_themeButton->setAccessibleName(QStringLiteral("Change color theme"));
+    themeLayout->addWidget(m_themeButton, 0, Qt::AlignLeft);
+    m_detailLayout->addWidget(theme, 1);
+    root->addLayout(m_detailLayout, 1);
+}
+
+fluent::basicinput::Button* WorkspacePage::refreshButton() const
+{
+    return m_refreshButton;
+}
+
+fluent::basicinput::Button* WorkspacePage::themeButton() const
+{
+    return m_themeButton;
+}
+
+void WorkspacePage::render(const application::WorkspaceViewState& state)
+{
+    m_workspaceName->setText(text(state.title));
+    m_workspacePath->setText(text(state.path));
+    m_status->setText(text(state.status));
+    m_statusDetail->setText(
+        state.hasWorkspace ? QStringLiteral("The workspace is available.")
+                           : QStringLiteral("The workspace could not be opened."));
+    m_statusBadge->setStatus(
+        state.hasWorkspace
+            ? fluent::status_info::InfoBadge::InfoBadgeStatus::Success
+            : fluent::status_info::InfoBadge::InfoBadgeStatus::Critical);
+    m_refreshButton->setText(
+        state.hasWorkspace ? QStringLiteral("Refresh") : QStringLiteral("Retry"));
+    m_refreshButton->setAccessibleName(
+        state.hasWorkspace ? QStringLiteral("Refresh workspace")
+                           : QStringLiteral("Retry workspace connection"));
+    m_themeValue->setText(
+        state.darkTheme ? QStringLiteral("Dark theme")
+                        : QStringLiteral("Light theme"));
+    m_themeButton->setText(
+        state.darkTheme ? QStringLiteral("Use light theme")
+                        : QStringLiteral("Use dark theme"));
+}
+
+void WorkspacePage::resizeEvent(QResizeEvent* event)
+{
+    QWidget::resizeEvent(event);
+    updateResponsiveLayout();
+}
+
+void WorkspacePage::updateResponsiveLayout()
+{
+    m_detailLayout->setDirection(
+        width() < 680 ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+    m_heroLayout->setDirection(
+        width() < 680 ? QBoxLayout::TopToBottom : QBoxLayout::LeftToRight);
+    m_heroDivider->setOrientation(
+        width() < 680 ? Qt::Horizontal : Qt::Vertical);
+    layout()->setContentsMargins(width() < 680 ? 20 : 28,
+                                 width() < 680 ? 20 : 24,
+                                 width() < 680 ? 20 : 28,
+                                 width() < 680 ? 20 : 28);
+}
+
+} // namespace @APP_NAMESPACE@::ui

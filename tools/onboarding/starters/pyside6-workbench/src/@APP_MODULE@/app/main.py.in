@@ -31,10 +31,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if "--quality-report" in arguments:
         def write_quality_report() -> None:
-            QApplication.sendPostedEvents(None, QEvent.Type.LayoutRequest)
-            application.processEvents()
-            report = fluentqt.inspect_widget(window.contentWidget())
-            print(json.dumps(report, separators=(",", ":"), sort_keys=True))
+            try:
+                QApplication.sendPostedEvents(None, QEvent.Type.LayoutRequest)
+                application.processEvents()
+                report = fluentqt.inspect_widget(window.contentWidget())
+                print(json.dumps(report, separators=(",", ":"), sort_keys=True))
+            except Exception as error:
+                print(f"quality report failed: {error}", file=sys.stderr)
+                application.exit(2)
+                return
             application.quit()
 
         QTimer.singleShot(0, write_quality_report)
