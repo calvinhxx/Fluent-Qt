@@ -489,6 +489,105 @@ register_source_samples(
 )
 
 
+register_source_samples(
+    "multi-select-combobox",
+    ("MultiSelectComboBox",),
+    {
+        "multi-select-combobox-selection": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                layout = QVBoxLayout(root)
+                model = QStringListModel(
+                    ["Design", "Engineering", "Research", "Support"], root
+                )
+                box = fluentqt.MultiSelectComboBox(root)
+                box.setModel(model)
+                box.setPlaceholderText("Choose teams")
+                box.setSelectedRows([0, 2])
+                box.setFixedWidth(280)
+
+                status = fluentqt.Label(root)
+                status.setMinimumWidth(280)
+
+                def update_status(*_args):
+                    labels = [
+                        index.data() for index in box.selectedIndexes()
+                    ]
+                    status.setText(f"Selected: {', '.join(labels)}")
+
+                box.selectionChanged.connect(update_status)
+                update_status()
+                layout.addWidget(box)
+                layout.addWidget(status)
+                """,
+                "from PySide6.QtCore import QStringListModel\n" + _WIDGETS,
+            ),
+        ),
+        "multi-select-combobox-search": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                layout = QVBoxLayout(root)
+                model = QStringListModel(
+                    [
+                        "Amsterdam", "Athens", "Berlin", "Boston",
+                        "Lisbon", "London", "Paris", "Prague",
+                    ],
+                    root,
+                )
+                box = fluentqt.MultiSelectComboBox(root)
+                box.setModel(model)
+                box.setSearchEnabled(True)
+                box.setSearchPlaceholderText("Filter cities")
+                box.setSelectedRows([0, 2])
+                box.setFixedWidth(280)
+
+                status = fluentqt.Label("2 selected", root)
+                box.selectedCountChanged.connect(
+                    lambda count, status=status: status.setText(
+                        f"{count} selected"
+                    )
+                )
+                layout.addWidget(box)
+                layout.addWidget(status)
+                """,
+                "from PySide6.QtCore import QStringListModel\n" + _WIDGETS,
+            ),
+        ),
+        "multi-select-combobox-model": (
+            "root",
+            _script(
+                """
+                root = QWidget()
+                layout = QVBoxLayout(root)
+                model = QStringListModel(
+                    ["New York", "Paris", "Tokyo"], root
+                )
+                box = fluentqt.MultiSelectComboBox(root)
+                box.setModel(model)
+                box.setSelectedRows([1])
+                box.setFixedWidth(280)
+                add = fluentqt.Button("Add Berlin", root)
+
+                def add_berlin():
+                    model.setStringList(model.stringList() + ["Berlin"])
+                    box.setSelectedRows([1, model.rowCount() - 1])
+                    add.setEnabled(False)
+
+                add.clicked.connect(add_berlin)
+                layout.addWidget(box)
+                layout.addWidget(add)
+                """,
+                "from PySide6.QtCore import QStringListModel\n" + _WIDGETS,
+            ),
+        ),
+    },
+)
+
+
 def _menu_script(
     button_type: str,
     text: str,

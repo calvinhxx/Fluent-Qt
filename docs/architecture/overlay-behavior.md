@@ -1,6 +1,6 @@
 # Overlay Behavior Contract
 
-本项目的 transient overlay（`Popup`、`Flyout`、`ComboBox` dropdown、`DrawerView`、`Dialog` /
+本项目的 transient overlay（`Popup`、`Flyout`、`ComboBox` / `MultiSelectComboBox` dropdown、`DrawerView`、`Dialog` /
 `ContentDialog`、`CoachMark`、`TeachingTip`）使用 **same-window overlay** 模型：打开时挂载到
 owning top-level `QWidget`，保持 `Qt::Widget` 子控件语义，不创建独立 `Qt::Window` / `Qt::Dialog` /
 `Qt::Tool`。这与 WinUI Gallery 的 ContentDialog / Flyout / TeachingTip（绑在当前窗口 `XamlRoot`）对齐。
@@ -43,7 +43,7 @@ Overlay surface、border、shadow、smoke/scrim 均使用 Fluent token 和自绘
 
 ## Open State Machine
 
-Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / `TeachingTip`、`CoachMark` 与 `Dialog` / `ContentDialog` 保持各自的 Qt 基类；`DrawerView`、`ComboBox` dropdown、`SplitButton` / `DropDownButton`（QMenu）不并入同一基类。
+Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / `TeachingTip`、`CoachMark` 与 `Dialog` / `ContentDialog` 保持各自的 Qt 基类；`DrawerView`、`ComboBox` / `MultiSelectComboBox` dropdown、`SplitButton` / `DropDownButton`（QMenu）不并入同一基类。
 
 ### 三个“打开”分别指什么
 
@@ -149,11 +149,11 @@ CoachMark 不得跨窗口关闭，也不得抢先吞掉更上层菜单或 overla
 
 ### 不强制统一的继承
 
-不要把 `DrawerView`、`ComboBox`、`SplitButton`、`DropDownButton`、`Dialog` 收进同一个 overlay 基类。`SplitButton` / `DropDownButton` 的 `isOpen` 描述的是 QMenu 可见性，不是 same-window overlay 相位。`ComboBox` dropdown 继续组合 `Flyout`。`fluent::overlay::OverlayCoordinator` 保持内部实现。
+不要把 `DrawerView`、`ComboBox`、`MultiSelectComboBox`、`SplitButton`、`DropDownButton`、`Dialog` 收进同一个 overlay 基类。`SplitButton` / `DropDownButton` 的 `isOpen` 描述的是 QMenu 可见性，不是 same-window overlay 相位。`ComboBox` 与 `MultiSelectComboBox` dropdown 继续组合 `Flyout`。`fluent::overlay::OverlayCoordinator` 保持内部实现。
 
 ## Preserved Differences And Deferred Work
 
-`ComboBox` dropdown 保持非模态、非 dim，并保留当前 index、editable text 和 ListView selection 行为。`DrawerView` 保留 edge drag、normalized position、content widget ownership 和现有 public `ClosePolicy` API。
+`ComboBox` 与 `MultiSelectComboBox` dropdown 保持非模态、非 dim；前者保留当前 index、editable text 和 ListView 单选行为，后者保留即时多选、搜索与 filtered select-all 行为。`DrawerView` 保留 edge drag、normalized position、content widget ownership 和现有 public `ClosePolicy` API。
 
 暂不把 `Popup::ClosePolicy` 与 `DrawerView::ClosePolicy` 合并，也不让 `DrawerView` 继承 `Popup`。这些 public API consolidation 若需要，应通过后续独立设计与实现任务单独评估。
 

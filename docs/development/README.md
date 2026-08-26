@@ -23,6 +23,7 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [Production Evidence Baselines](production-evidence.md)
 - [Field API Contract](field-api-proposal.md)
 - [DataGrid API Contract](datagrid-api-proposal.md)
+- [MultiSelectComboBox API Proposal](multi-select-combobox-api-proposal.md)
 - [Accessibility Contract](accessibility-contract.md)
 - [Accessibility Inventory](accessibility-inventory.md)
 - [Packaging Workflow](packaging-workflow.md)

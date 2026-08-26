@@ -155,6 +155,7 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(issubclass(fluentqt.CheckBox, QCheckBox))
         self.assertTrue(issubclass(fluentqt.ColorPicker, QWidget))
         self.assertTrue(issubclass(fluentqt.ComboBox, QComboBox))
+        self.assertTrue(issubclass(fluentqt.MultiSelectComboBox, QWidget))
         self.assertTrue(
             issubclass(fluentqt.DropDownButton, fluentqt.Button)
         )
@@ -263,6 +264,10 @@ class FluentQtBindingTest(unittest.TestCase):
             fluentqt.DropDownButton,
         )
         self.assertIs(basicinput.HyperlinkButton, fluentqt.HyperlinkButton)
+        self.assertIs(
+            basicinput.MultiSelectComboBox,
+            fluentqt.MultiSelectComboBox,
+        )
         self.assertIs(basicinput.RatingControl, fluentqt.RatingControl)
         self.assertIs(basicinput.SplitButton, fluentqt.SplitButton)
         self.assertIs(
@@ -399,6 +404,12 @@ class FluentQtBindingTest(unittest.TestCase):
         )
         self.assertIsNot(native.fluent.ComboBox, fluentqt.ComboBox)
         self.assertNotIn("ComboBoxItemDelegate", dir(native.fluent))
+        self.assertIs(
+            native.fluent.MultiSelectComboBox,
+            fluentqt.MultiSelectComboBox,
+        )
+        self.assertNotIn("MultiSelectComboBoxPopup", dir(native.fluent))
+        self.assertNotIn("MultiSelectComboBoxTrigger", dir(native.fluent))
         self.assertIs(native.fluent.CompoundButton, fluentqt.CompoundButton)
         self.assertIs(native.fluent.FontIcon, fluentqt.FontIcon)
         self.assertIs(
@@ -791,6 +802,12 @@ class FluentQtBindingTest(unittest.TestCase):
         self.assertTrue(hasattr(fluentqt.ComboBox, "pressProgress"))
         self.assertTrue(hasattr(fluentqt.ComboBox, "setPressProgress"))
         self.assertFalse(hasattr(fluentqt.ComboBox, "onThemeUpdated"))
+        self.assertFalse(hasattr(fluentqt.MultiSelectComboBox, "anchors"))
+        self.assertFalse(hasattr(fluentqt.MultiSelectComboBox, "bind"))
+        self.assertFalse(hasattr(fluentqt.MultiSelectComboBox, "setState"))
+        self.assertFalse(
+            hasattr(fluentqt.MultiSelectComboBox, "onThemeUpdated")
+        )
         for command_surface_type in (
             fluentqt.CommandBar,
             fluentqt.CommandBarFlyout,
@@ -3915,6 +3932,50 @@ class FluentQtBindingTest(unittest.TestCase):
             self.assertIsNone(combo_ref())
             self.assertIsNone(model_ref())
             self.assertIsNone(editor_ref())
+
+    def test_multi_select_combo_box_model_selection_and_ownership(self):
+        class PythonMultiSelectComboBox(fluentqt.MultiSelectComboBox):
+            pass
+
+        box = PythonMultiSelectComboBox()
+        model = QStringListModel(["Alpha", "Beta", "Gamma"])
+        selection = QItemSelectionModel(model)
+        box.setModel(model)
+        box.setSelectionModel(selection)
+        box.setPlaceholderText("Choose options")
+        box.setSearchEnabled(True)
+        box.setSearchPlaceholderText("Filter options")
+        box.setMaximumVisibleItems(4)
+        box.setSelectedRows([0, 2])
+
+        self.assertIs(box.model(), model)
+        self.assertIs(box.selectionModel(), selection)
+        self.assertEqual(box.placeholderText(), "Choose options")
+        self.assertTrue(box.isSearchEnabled())
+        self.assertEqual(box.searchPlaceholderText(), "Filter options")
+        self.assertEqual(box.maximumVisibleItems(), 4)
+        self.assertEqual(box.selectedRows(), [0, 2])
+        self.assertEqual(box.selectedCount(), 2)
+        self.assertTrue(box.isRowSelected(0))
+        self.assertEqual(
+            [index.data() for index in box.selectedIndexes()],
+            ["Alpha", "Gamma"],
+        )
+
+        model_ref = weakref.ref(model)
+        selection_ref = weakref.ref(selection)
+        del model
+        del selection
+        gc.collect()
+        self.assertIs(box.model(), model_ref())
+        self.assertIs(box.selectionModel(), selection_ref())
+
+        box_ref = weakref.ref(box)
+        del box
+        gc.collect()
+        self.assertIsNone(box_ref())
+        self.assertIsNone(selection_ref())
+        self.assertIsNone(model_ref())
 
     def test_menu_buttons_properties_interaction_and_subclassing(self):
         class PythonSplitButton(fluentqt.SplitButton):

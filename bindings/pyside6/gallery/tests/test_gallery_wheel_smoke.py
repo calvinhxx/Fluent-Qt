@@ -84,11 +84,11 @@ def main():
     sample_count = sum(len(entry.samples) for entry in ENTRIES)
     if (
         len(CATEGORIES) != 12
-        or len(ENTRIES) != 69
-        or len(ROUTES) != 90
+        or len(ENTRIES) != 70
+        or len(ROUTES) != 91
         or len(SUPPORT_TYPES) != 20
-        or sample_count != 205
-        or len(ported_sample_keys()) != 205
+        or sample_count != 208
+        or len(ported_sample_keys()) != 208
     ):
         raise AssertionError("Standalone Gallery catalog has wrong coverage")
 

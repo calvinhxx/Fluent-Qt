@@ -11,7 +11,7 @@ component has one classification before release.
 | --- | ---: | --- |
 | Native | 22 | The Qt base class supplies the appropriate role, state, actions, and logical children. |
 | Augmented | 9 | Native semantics are retained while FluentQt manages additional text or events. |
-| Adapter | 34 | A private accessible interface represents custom-drawn or composite semantics. |
+| Adapter | 35 | A private accessible interface represents custom-drawn or composite semantics. |
 | Gap | 0 | No known inventory contract is open. |
 | Not applicable | 4 | The component is presentation-only; semantics belong to its containing control. |
 
@@ -172,6 +172,16 @@ adding public properties or changing application-owned content.
   visited state, notification updates, dismissal, child structure, busy state,
   event specificity, and no-op silence in
   `tests/components/TestSemanticPresentationAccessibility.cpp`.
+
+## Tenth focused gate: multi-selection dropdown
+
+MultiSelectComboBox enters the inventory as an **Adapter** because its one
+focusable field controls a private same-window popup and several selected
+model rows. The adapter exposes a button-menu root, selected labels as the
+accessible value, expanded state, a show-menu action, and a controller
+relation to the real popup ListView. Focused contracts cover its role, value,
+action, relation, and open-state behavior in
+`tests/components/basicinput/TestMultiSelectComboBox.cpp`.
 
 ## Risk-ordered queue
 

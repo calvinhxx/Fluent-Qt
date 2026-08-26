@@ -2,8 +2,8 @@
   "schema_version": 1,
   "canonical_source": "bindings/pyside6/gallery/src/fluentqt_gallery/samples.py",
   "summary": {
-    "component_count": 69,
-    "sample_count": 205
+    "component_count": 70,
+    "sample_count": 208
   },
   "samples": [
     {
@@ -120,6 +120,21 @@
       "route_id": "hyperlink-button",
       "sample_id": "hyperlink-button-underline",
       "source": "link = fluentqt.HyperlinkButton(\"Show underline\")\nlink.setShowUnderline(True)\n"
+    },
+    {
+      "route_id": "multi-select-combobox",
+      "sample_id": "multi-select-combobox-selection",
+      "source": "from PySide6.QtCore import QStringListModel\n\nmodel = QStringListModel(\n    ['Design', 'Engineering', 'Research', 'Support'],\n    root\n)\nbox = fluentqt.MultiSelectComboBox()\nbox.setModel(model)\nbox.setPlaceholderText('Choose teams')\nbox.setSelectedRows([0, 2])\ndef update_status(*_args):\n    labels = [index.data() for index in box.selectedIndexes()]\n    status.setText(f\"Selected: {', '.join(labels)}\")\nbox.selectionChanged.connect(update_status)\n"
+    },
+    {
+      "route_id": "multi-select-combobox",
+      "sample_id": "multi-select-combobox-search",
+      "source": "from PySide6.QtCore import QStringListModel\n\nmodel = QStringListModel(\n    [\n    \"Amsterdam\", \"Athens\", \"Berlin\", \"Boston\",\n    \"Lisbon\", \"London\", \"Paris\", \"Prague\",\n    ],\n    root\n)\nbox = fluentqt.MultiSelectComboBox()\nbox.setModel(model)\nbox.setSearchEnabled(True)\nbox.setSearchPlaceholderText('Filter cities')\nbox.setSelectedRows([0, 2])\nbox.selectedCountChanged.connect(\n    lambda count, status=status: status.setText(f\"{count} selected\")\n)\n"
+    },
+    {
+      "route_id": "multi-select-combobox",
+      "sample_id": "multi-select-combobox-model",
+      "source": "from PySide6.QtCore import QStringListModel\n\nmodel = QStringListModel(['New York', 'Paris', 'Tokyo'], root)\nbox = fluentqt.MultiSelectComboBox()\nbox.setModel(model)\nbox.setSelectedRows([1])\nadd = fluentqt.Button('Add Berlin')\ndef add_berlin():\n    model.setStringList(model.stringList() + ['Berlin'])\n    box.setSelectedRows([1, model.rowCount() - 1])\n    add.setEnabled(False)\nadd.clicked.connect(add_berlin)\n"
     },
     {
       "route_id": "radio-button",

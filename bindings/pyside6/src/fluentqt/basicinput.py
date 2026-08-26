@@ -9,6 +9,7 @@ _NativeComboBox = _native.fluent.ComboBox
 CompoundButton = _native.fluent.CompoundButton
 DropDownButton = _native.fluent.DropDownButton
 HyperlinkButton = _native.fluent.HyperlinkButton
+MultiSelectComboBox = _native.fluent.MultiSelectComboBox
 RadioButton = _native.fluent.RadioButton
 RatingControl = _native.fluent.RatingControl
 RepeatButton = _native.fluent.RepeatButton
@@ -62,6 +63,7 @@ __all__ = [
     "CompoundButton",
     "DropDownButton",
     "HyperlinkButton",
+    "MultiSelectComboBox",
     "RadioButton",
     "RatingControl",
     "RepeatButton",

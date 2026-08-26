@@ -293,7 +293,7 @@ platform contracts.
 | --- | --- | --- | --- |
 | `foundation` | FontIcon, FluentElement, QMLPlus, ThemeRegistry, UserTheme, WidgetOwnership | FontIcon focused visual contract present; infrastructure is covered by its owning contract suites | foundation contracts |
 | `layout` | Accordion, Card, Divider, Expander | Present for listed components | layout surface contracts |
-| `basicinput` | Button, CompoundButton, CheckBox, RadioButton, Slider, ComboBox, ColorPicker, ToggleSwitch, ToggleButton, SplitButton, ToggleSplitButton, DropDownButton, HyperlinkButton, RepeatButton, RatingControl | Present for listed components | combobox-dropdown-flyout |
+| `basicinput` | Button, CompoundButton, CheckBox, RadioButton, Slider, ComboBox, MultiSelectComboBox, ColorPicker, ToggleSwitch, ToggleButton, SplitButton, ToggleSplitButton, DropDownButton, HyperlinkButton, RepeatButton, RatingControl | Present for listed components | combobox-dropdown-flyout, multi-select-combobox-api-proposal |
 | `collections` | ListView, GridView, FlowView, TreeView, DataGrid, FlipView, SplitView, StackView, DrawerView | Present for listed components | data-grid, flow-view, gridview-drag-reorder, listview-wheel-input, listview-indicator-motion, tree-view, flipview-wheel-input, split-view, stack-view, drawer-view |
 | `date_time` | CalendarView, CalendarDatePicker, DatePicker, TimePicker | Present for listed components | calendar-date-picker, calendar-view-pager, date-picker, time-picker |
 | `dialogs_flyouts` | Dialog, ContentDialog, Popup, Flyout, TeachingTip | Present for listed components | dialog-winui3-polish, popup-overlay, flyout, teaching-tip |

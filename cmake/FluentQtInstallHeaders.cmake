@@ -33,6 +33,7 @@ set(FLUENT_QT_INSTALL_HEADERS
     src/components/basicinput/CompoundButton.h
     src/components/basicinput/DropDownButton.h
     src/components/basicinput/HyperlinkButton.h
+    src/components/basicinput/MultiSelectComboBox.h
     src/components/basicinput/RadioButton.h
     src/components/basicinput/RatingControl.h
     src/components/basicinput/RepeatButton.h

@@ -4,8 +4,11 @@
 #include <QPoint>
 #include <QSignalBlocker>
 #include <QStringList>
+#include <QStringListModel>
 #include <QUrl>
 
+#include "SampleBuilders.h"
+#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/basicinput/CheckBox.h"
 #include "components/basicinput/ColorPicker.h"
@@ -13,6 +16,7 @@
 #include "components/basicinput/CompoundButton.h"
 #include "components/basicinput/DropDownButton.h"
 #include "components/basicinput/HyperlinkButton.h"
+#include "components/basicinput/MultiSelectComboBox.h"
 #include "components/basicinput/RadioButton.h"
 #include "components/basicinput/RatingControl.h"
 #include "components/basicinput/RepeatButton.h"
@@ -23,9 +27,7 @@
 #include "components/basicinput/ToggleSwitch.h"
 #include "components/menus_toolbars/Menu.h"
 #include "components/textfields/Label.h"
-#include "compatibility/QtCompat.h"
 #include "design/Typography.h"
-#include "SampleBuilders.h"
 
 namespace fluent::gallery {
 namespace {
@@ -37,6 +39,7 @@ using fluent::basicinput::ComboBox;
 using fluent::basicinput::CompoundButton;
 using fluent::basicinput::DropDownButton;
 using fluent::basicinput::HyperlinkButton;
+using fluent::basicinput::MultiSelectComboBox;
 using fluent::basicinput::RadioButton;
 using fluent::basicinput::RatingControl;
 using fluent::basicinput::RepeatButton;
@@ -676,6 +679,151 @@ QVector<GallerySample> comboBoxSamples()
                        return comboBox;
                    })
     };
+}
+
+QVector<GallerySample> multiSelectComboBoxSamples() {
+  return {
+      makeSample(
+          QStringLiteral("multi-select-combobox-selection"),
+          QStringLiteral("Select several model rows"),
+          QStringLiteral("The selected rows are the value; toggling an item "
+                         "keeps the dropdown open."),
+          QStringLiteral(
+              "auto* model = new QStringListModel(\n"
+              "    {\"Design\", \"Engineering\", \"Research\", \"Support\"}, "
+              "this);\n"
+              "auto* box = new MultiSelectComboBox(this);\n"
+              "box->setModel(model);\n"
+              "box->setPlaceholderText(\"Choose teams\");\n"
+              "box->setSelectedRows({0, 2});\n\n"
+              "auto updateStatus = [box, status] {\n"
+              "    QStringList labels;\n"
+              "    for (const QModelIndex& index : box->selectedIndexes())\n"
+              "        labels << index.data().toString();\n"
+              "    status->setText(QStringLiteral(\"Selected: %1\")\n"
+              "                        .arg(labels.join(\", \")));\n"
+              "};\n"
+              "connect(box, &MultiSelectComboBox::selectionChanged,\n"
+              "        this, [=] { updateStatus(); });\n"
+              "updateStatus();"),
+          [](QWidget *parent) {
+            QWidget *group = verticalGroup(parent, 8);
+            auto *model = new QStringListModel(
+                {QStringLiteral("Design"), QStringLiteral("Engineering"),
+                 QStringLiteral("Research"), QStringLiteral("Support")},
+                group);
+            auto *box = new MultiSelectComboBox(group);
+            box->setModel(model);
+            box->setPlaceholderText(QStringLiteral("Choose teams"));
+            box->setSelectedRows({0, 2});
+            box->setFixedWidth(280);
+
+            auto *status = makeValueLabel(group, QString());
+            status->setMinimumWidth(280);
+            auto updateStatus = [box, status] {
+              QStringList labels;
+              for (const QModelIndex &index : box->selectedIndexes())
+                labels << index.data().toString();
+              status->setText(QStringLiteral("Selected: %1")
+                                  .arg(labels.join(QStringLiteral(", "))));
+            };
+            QObject::connect(
+                box, &MultiSelectComboBox::selectionChanged, status,
+                [updateStatus](const QItemSelection &, const QItemSelection &) {
+                  updateStatus();
+                });
+            updateStatus();
+
+            group->layout()->addWidget(box);
+            group->layout()->addWidget(status);
+            return group;
+          }),
+      makeSample(
+          QStringLiteral("multi-select-combobox-search"),
+          QStringLiteral("Search and filtered select all"),
+          QStringLiteral("Local search narrows the popup, and Select all "
+                         "affects only the filtered selectable rows."),
+          QStringLiteral(
+              "auto* model = new QStringListModel(\n"
+              "    {\"Amsterdam\", \"Athens\", \"Berlin\", \"Boston\",\n"
+              "     \"Lisbon\", \"London\", \"Paris\", \"Prague\"}, this);\n"
+              "auto* box = new MultiSelectComboBox(this);\n"
+              "box->setModel(model);\n"
+              "box->setSearchEnabled(true);\n"
+              "box->setSearchPlaceholderText(\"Filter cities\");\n"
+              "box->setSelectedRows({0, 2});\n"
+              "connect(box, &MultiSelectComboBox::selectedCountChanged,\n"
+              "        this, [=](int count) {\n"
+              "            status->setText(QString(\"%1 "
+              "selected\").arg(count));\n"
+              "        });"),
+          [](QWidget *parent) {
+            QWidget *group = verticalGroup(parent, 8);
+            auto *model = new QStringListModel(
+                {QStringLiteral("Amsterdam"), QStringLiteral("Athens"),
+                 QStringLiteral("Berlin"), QStringLiteral("Boston"),
+                 QStringLiteral("Lisbon"), QStringLiteral("London"),
+                 QStringLiteral("Paris"), QStringLiteral("Prague")},
+                group);
+            auto *box = new MultiSelectComboBox(group);
+            box->setModel(model);
+            box->setSearchEnabled(true);
+            box->setSearchPlaceholderText(QStringLiteral("Filter cities"));
+            box->setSelectedRows({0, 2});
+            box->setFixedWidth(280);
+
+            auto *status = makeValueLabel(group, QStringLiteral("2 selected"));
+            QObject::connect(box, &MultiSelectComboBox::selectedCountChanged,
+                             status, [status](int count) {
+                               status->setText(
+                                   QStringLiteral("%1 selected").arg(count));
+                             });
+
+            group->layout()->addWidget(box);
+            group->layout()->addWidget(status);
+            return group;
+          }),
+      makeSample(
+          QStringLiteral("multi-select-combobox-model"),
+          QStringLiteral("Caller-owned model updates"),
+          QStringLiteral("Applications keep ownership of the source model and "
+                         "can update its rows while the control is in use."),
+          QStringLiteral(
+              "auto* model = new QStringListModel(\n"
+              "    {\"New York\", \"Paris\", \"Tokyo\"}, this);\n"
+              "auto* box = new MultiSelectComboBox(this);\n"
+              "box->setModel(model);\n"
+              "box->setSelectedRows({1});\n\n"
+              "auto* add = new Button(\"Add Berlin\", this);\n"
+              "connect(add, &Button::clicked, this, [=] {\n"
+              "    model->setStringList(model->stringList() << \"Berlin\");\n"
+              "    box->setSelectedRows({1, model->rowCount() - 1});\n"
+              "    add->setEnabled(false);\n"
+              "});"),
+          [](QWidget *parent) {
+            QWidget *group = verticalGroup(parent, 8);
+            auto *model = new QStringListModel({QStringLiteral("New York"),
+                                                QStringLiteral("Paris"),
+                                                QStringLiteral("Tokyo")},
+                                               group);
+            auto *box = new MultiSelectComboBox(group);
+            box->setModel(model);
+            box->setSelectedRows({1});
+            box->setFixedWidth(280);
+
+            auto *add = new Button(QStringLiteral("Add Berlin"), group);
+            QObject::connect(add, &Button::clicked, group, [model, box, add] {
+              QStringList values = model->stringList();
+              values << QStringLiteral("Berlin");
+              model->setStringList(values);
+              box->setSelectedRows({1, model->rowCount() - 1});
+              add->setEnabled(false);
+            });
+
+            group->layout()->addWidget(box);
+            group->layout()->addWidget(add);
+            return group;
+          })};
 }
 
 QVector<GallerySample> dropDownButtonSamples()
@@ -1397,6 +1545,8 @@ QVector<GallerySample> basicInputSamples(const QString& routeId)
         return dropDownButtonSamples();
     if (routeId == QStringLiteral("hyperlink-button"))
         return hyperlinkButtonSamples();
+    if (routeId == QStringLiteral("multi-select-combobox"))
+      return multiSelectComboBoxSamples();
     if (routeId == QStringLiteral("radio-button"))
         return radioButtonSamples();
     if (routeId == QStringLiteral("rating-control"))
