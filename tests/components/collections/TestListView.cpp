@@ -513,6 +513,33 @@ TEST_F(ListViewTest, MultiplePointerSelectionTogglesRowsOnRelease) {
     EXPECT_EQ(lv->selectedRows(), QList<int>({3}));
 }
 
+TEST_F(ListViewTest, PointerSelectionIgnoresDisabledRows) {
+  window->setAttribute(Qt::WA_DontShowOnScreen, true);
+  auto *lv = new IndicatorListView(window);
+  lv->setGeometry(10, 10, 240, 160);
+  lv->setSelectionMode(SelectionMode::Multiple);
+  auto *model = new QStandardItemModel(lv);
+  model->appendRow(new QStandardItem(QStringLiteral("Enabled")));
+  auto *disabled = new QStandardItem(QStringLiteral("Disabled"));
+  disabled->setFlags(disabled->flags() & ~Qt::ItemIsEnabled &
+                     ~Qt::ItemIsSelectable);
+  model->appendRow(disabled);
+  lv->setModel(model);
+  attachFluentDelegate(lv);
+  window->show();
+  QTest::qWait(50);
+
+  QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
+                    lv->exposedVisualRect(1).center());
+  QApplication::processEvents();
+  EXPECT_TRUE(lv->selectedRows().isEmpty());
+
+  QTest::mouseClick(lv->viewport(), Qt::LeftButton, Qt::NoModifier,
+                    lv->exposedVisualRect(0).center());
+  QApplication::processEvents();
+  EXPECT_EQ(lv->selectedRows(), QList<int>({0}));
+}
+
 TEST_F(ListViewTest, ExtendedPointerSelectionSupportsControlAndShift) {
     window->setAttribute(Qt::WA_DontShowOnScreen, true);
     auto* lv = new IndicatorListView(window);
