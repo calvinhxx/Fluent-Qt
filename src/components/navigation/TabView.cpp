@@ -97,6 +97,9 @@ bool objectBelongsToWidget(QObject* object, QWidget* widget)
 
 namespace {
 constexpr int kDragIndicatorWidth = 2;
+constexpr int kSelectedTabShoulderWidth = CornerRadius::Overlay + CornerRadius::Control;
+constexpr int kSelectedTabShoulderHeight = CornerRadius::Overlay;
+constexpr qreal kQuarterCurveControl = 0.5522847498;
 
 QPainterPath topRoundedTabPath(const QRect& rect, int radius)
 {
@@ -113,6 +116,37 @@ QPainterPath topRoundedTabPath(const QRect& rect, int radius)
     path.closeSubpath();
     return path;
 }
+
+QPainterPath selectedTabPath(const QRect& rect)
+{
+    QPainterPath path;
+    if (rect.isEmpty())
+        return path;
+
+    const int topRadius = qMin(CornerRadius::Overlay,
+                               qMin(rect.width(), rect.height()) / 2);
+    const int shoulderWidth = qMin(kSelectedTabShoulderWidth, rect.width() / 2);
+    const int shoulderHeight = qMin(kSelectedTabShoulderHeight, rect.height() / 2);
+    const qreal left = rect.left();
+    const qreal right = rect.right();
+    const qreal top = rect.top();
+    const qreal bottom = rect.bottom() + 1.0;
+
+    path.moveTo(left - shoulderWidth, bottom);
+    path.cubicTo(left - shoulderWidth * (1.0 - kQuarterCurveControl), bottom,
+                 left, bottom - shoulderHeight * (1.0 - kQuarterCurveControl),
+                 left, bottom - shoulderHeight);
+    path.lineTo(left, top + topRadius);
+    path.quadTo(left, top, left + topRadius, top);
+    path.lineTo(right - topRadius, top);
+    path.quadTo(right, top, right, top + topRadius);
+    path.lineTo(right, bottom - shoulderHeight);
+    path.cubicTo(right, bottom - shoulderHeight * (1.0 - kQuarterCurveControl),
+                 right + shoulderWidth * (1.0 - kQuarterCurveControl), bottom,
+                 right + shoulderWidth, bottom);
+    path.closeSubpath();
+    return path;
+}
 } // namespace
 
 TabStrip::TabStrip(QWidget* parent)
@@ -123,6 +157,7 @@ TabStrip::TabStrip(QWidget* parent)
     , m_overflowBackButton(createIconButton(Typography::Icons::ChevronLeftMed, metrics().iconPixelSize))
     , m_overflowForwardButton(createIconButton(Typography::Icons::ChevronRightMed, metrics().iconPixelSize))
 {
+    setObjectName(QStringLiteral("TabViewTabStrip"));
     setAttribute(Qt::WA_Hover);
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -424,6 +459,7 @@ void TabStrip::paintEvent(QPaintEvent*)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
     paintRow(painter);
+    paintTabSeparators(painter);
     for (const TabRecord& record : m_tabRecords) {
         if (record.tabIndex != m_selectedIndex && !(m_dragActive && record.tabIndex == m_dragStartIndex))
             paintTab(painter, record);
@@ -1688,6 +1724,55 @@ void TabStrip::paintRow(QPainter& painter)
     painter.restore();
 }
 
+QVector<QRect> TabStrip::tabSeparatorRects() const
+{
+    QVector<QRect> separators;
+    if (m_dragActive)
+        return separators;
+
+    constexpr int separatorHeight = 16;
+    for (int i = 0; i + 1 < m_tabRecords.size(); ++i) {
+        const TabRecord& first = m_tabRecords.at(i);
+        const TabRecord& second = m_tabRecords.at(i + 1);
+        if (first.tabIndex == m_selectedIndex || second.tabIndex == m_selectedIndex)
+            continue;
+        if (tabFillColor(first).alpha() > 0 || tabFillColor(second).alpha() > 0)
+            continue;
+
+        const TabRecord firstVisual = visualRecordForRecord(first);
+        const TabRecord secondVisual = visualRecordForRecord(second);
+        if (firstVisual.tabRect.isEmpty() || secondVisual.tabRect.isEmpty())
+            continue;
+
+        const QRect& left = firstVisual.tabRect.left() < secondVisual.tabRect.left()
+            ? firstVisual.tabRect : secondVisual.tabRect;
+        const QRect& right = firstVisual.tabRect.left() < secondVisual.tabRect.left()
+            ? secondVisual.tabRect : firstVisual.tabRect;
+        const int height = qMin(separatorHeight, qMin(left.height(), right.height()));
+        const int top = qMax(left.top(), right.top())
+            + (qMin(left.height(), right.height()) - height) / 2;
+        separators.append(QRect(right.left(), top, 1, height));
+    }
+    return separators;
+}
+
+void TabStrip::paintTabSeparators(QPainter& painter)
+{
+    const QVector<QRect> separators = tabSeparatorRects();
+    QVariantList observableRects;
+    observableRects.reserve(separators.size());
+    for (const QRect& separator : separators)
+        observableRects.append(separator);
+    setProperty("tabSeparatorRects", observableRects);
+
+    painter.save();
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(themeColorsRef().strokeDivider);
+    for (const QRect& separator : separators)
+        painter.drawRect(separator);
+    painter.restore();
+}
+
 void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
 {
     if (record.tabRect.isEmpty() || !isValidIndex(record.tabIndex))
@@ -1703,34 +1788,22 @@ void TabStrip::paintTab(QPainter& painter, const TabRecord& record)
     painter.setOpacity(revealOpacity);
     painter.setPen(Qt::NoPen);
     painter.setBrush(fill);
-        if (selected) {
-            const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
-            const int radius = qMax(2, currentMetrics.cornerRadius + 2);
-            QRect tabVisualRect = visualRecord.tabRect;
-            tabVisualRect.setBottom(row.bottom());
-
-            painter.drawPath(topRoundedTabPath(tabVisualRect, radius));
-
-            QPainterPath leftJoin;
-            leftJoin.moveTo(tabVisualRect.left() - radius, tabVisualRect.bottom() + 1);
-            leftJoin.lineTo(tabVisualRect.left(), tabVisualRect.bottom() + 1);
-            leftJoin.lineTo(tabVisualRect.left(), tabVisualRect.bottom() - radius + 1);
-            leftJoin.quadTo(tabVisualRect.left(), tabVisualRect.bottom() + 1, tabVisualRect.left() - radius, tabVisualRect.bottom() + 1);
-            leftJoin.closeSubpath();
-            painter.drawPath(leftJoin);
-
-            QPainterPath rightJoin;
-            rightJoin.moveTo(tabVisualRect.right(), tabVisualRect.bottom() - radius + 1);
-            rightJoin.quadTo(tabVisualRect.right(), tabVisualRect.bottom() + 1, tabVisualRect.right() + radius, tabVisualRect.bottom() + 1);
-            rightJoin.lineTo(tabVisualRect.right(), tabVisualRect.bottom() + 1);
-            rightJoin.closeSubpath();
-            painter.drawPath(rightJoin);
-        } else if (fill.alpha() > 0) {
-            const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
-            QRect tabVisualRect = visualRecord.tabRect;
-            tabVisualRect.setBottom(row.bottom());
-            painter.drawPath(topRoundedTabPath(tabVisualRect, currentMetrics.cornerRadius));
-        }
+    if (selected) {
+        const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
+        QRect tabVisualRect = visualRecord.tabRect;
+        tabVisualRect.setBottom(row.bottom());
+        const QPainterPath path = selectedTabPath(tabVisualRect);
+        setProperty("selectedTabPathBounds", path.boundingRect());
+        setProperty("selectedTabTopRadius", CornerRadius::Overlay);
+        setProperty("selectedTabShoulderWidth", kSelectedTabShoulderWidth);
+        setProperty("selectedTabShoulderHeight", kSelectedTabShoulderHeight);
+        painter.drawPath(path);
+    } else if (fill.alpha() > 0) {
+        const QRect row(contentsRect().left(), contentsRect().top(), contentsRect().width(), currentMetrics.rowHeight);
+        QRect tabVisualRect = visualRecord.tabRect;
+        tabVisualRect.setBottom(row.bottom());
+        painter.drawPath(topRoundedTabPath(tabVisualRect, currentMetrics.cornerRadius));
+    }
 
     const QColor textColor = textColorForTab(record.tabIndex);
     if (!visualRecord.iconRect.isEmpty()) {
@@ -1823,12 +1896,18 @@ QColor TabStrip::tabFillColor(const TabRecord& record) const
     const HitRecord closeHit{HitKind::Close, record.tabIndex};
     const bool pressed = sameHit(m_pressedHit, tabHit) || sameHit(m_pressedHit, closeHit);
     const bool hovered = sameHit(m_hoveredHit, tabHit) || sameHit(m_hoveredHit, closeHit);
+    const bool dark = effectiveTheme() == Dark;
     if (selected)
         return themeColorsRef().bgLayer;
-    if (pressed)
-        return themeColorsRef().subtleTertiary;
+    if (pressed) {
+        QColor fill = themeColorsRef().subtleTertiary;
+        if (dark)
+            fill.setAlphaF(fill.alphaF() * 0.6);
+        return fill;
+    }
     if (hovered)
-        return themeColorsRef().subtleSecondary;
+        return dark ? themeColorsRef().subtleTertiary
+                    : themeColorsRef().subtleSecondary;
     return Qt::transparent;
 }
 

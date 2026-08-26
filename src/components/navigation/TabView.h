@@ -288,6 +288,7 @@ private:
     void emitCloseRequested(int index);
     void scrollOverflow(int direction);
     void paintRow(QPainter& painter);
+    void paintTabSeparators(QPainter& painter);
     void paintTab(QPainter& painter, const TabRecord& record);
     void paintDragInsertionIndicator(QPainter& painter);
     void paintSelectedIndicator(QPainter& painter);
@@ -296,6 +297,7 @@ private:
     QColor tabFillColor(const TabRecord& record) const;
     QColor textColorForTab(int index) const;
     QColor fillForHit(const HitRecord& hit) const;
+    QVector<QRect> tabSeparatorRects() const;
 
     QVector<TabViewItem> m_items;
     mutable QVector<TabRecord> m_tabRecords;
