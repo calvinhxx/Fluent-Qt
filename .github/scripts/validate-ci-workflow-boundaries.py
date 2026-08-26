@@ -96,7 +96,7 @@ def validate_boundaries() -> list[str]:
     release = contents["release.yml"]
     pages = contents["pages.yml"]
 
-    if len(orchestrator.splitlines()) > 280:
+    if len(orchestrator.splitlines()) > 300:
         errors.append("ci.yml must remain a compact orchestration-only workflow")
     for required in (
         "uses: ./.github/workflows/ci-cpp.yml",
@@ -107,6 +107,10 @@ def validate_boundaries() -> list[str]:
         "python_release_bundle:",
         'python_release_bundle="true"',
         "build_release_bundle: ${{ needs.plan.outputs.python_release_bundle == 'true' }}",
+        "run_compatibility_validation: true",
+        "release_max_parallel: 4",
+        "Require a current main base for release pull requests",
+        ".github/scripts/check-release-branch-freshness.py",
         "actions: read",
     ):
         if required not in orchestrator:
@@ -181,18 +185,36 @@ def validate_boundaries() -> list[str]:
         errors.append("ci-python.yml must own the PySide6 wheel matrix catalog")
     if "build_release_bundle:" not in python:
         errors.append("ci-python.yml must expose the optional Python release-bundle input")
+    if "run_compatibility_validation:" not in python:
+        errors.append("ci-python.yml must expose its representative compatibility lanes")
+    if "release_max_parallel:" not in python:
+        errors.append("ci-python.yml must expose its release-wheel concurrency cap")
     if python.count("inputs.build_release_bundle") < 4:
         errors.append(
             "ci-python.yml must gate matrix selection, release jobs, bundle, and summary"
         )
     pyside_release = job_section(python, "pyside6_release")
-    if "max-parallel: 4" not in pyside_release:
+    if "max-parallel: ${{ inputs.release_max_parallel }}" not in pyside_release:
         errors.append(
-            "ci-python.yml release matrix must cap parallel action downloads at 4"
+            "ci-python.yml release matrix must honor release_max_parallel"
+        )
+    for job_id in ("pyside6_linux", "pyside6_windows"):
+        if "if: ${{ inputs.run_compatibility_validation }}" not in job_section(
+            python, job_id
+        ):
+            errors.append(
+                f"ci-python.yml {job_id} must honor run_compatibility_validation"
+            )
+    if "inputs.run_compatibility_validation" in job_section(
+        python, "pyside6_macos"
+    ):
+        errors.append(
+            "ci-python.yml pyside6_macos must always build the publishable "
+            "macOS ARM64 CPython 3.11 wheel"
         )
     for required in (
         "actions: read",
-        "name: Platform status / ${{ matrix.display_name }}",
+        "name: Verify Python candidate platform coverage",
         ".github/scripts/verify-pyside-platform-artifacts.py",
         ".github/scripts/select-pyside-release-matrix.py",
         ".github/scripts/assemble-pyside-release-bundle.py",
@@ -206,12 +228,12 @@ def validate_boundaries() -> list[str]:
         "name: PySide6 release / macOS ARM64 / CPython 3.11 / Qt 6.9.3",
         "name: Assemble canonical Python release bundle",
         "name: fluentqt-python-release-bundle",
-        "display_name: Linux x64",
-        "display_name: Linux ARM64",
-        "display_name: Windows x64",
-        "display_name: Windows ARM64",
-        "display_name: macOS x64",
-        "display_name: macOS ARM64",
+        "Linux x64|linux|x64",
+        "Linux ARM64|linux|arm64",
+        "Windows x64|windows|x64",
+        "Windows ARM64|windows|arm64",
+        "macOS x64|macos|x64",
+        "macOS ARM64|macos|arm64",
     ):
         if required not in python:
             errors.append(f"ci-python.yml is missing platform summary: {required}")
@@ -261,6 +283,8 @@ def validate_boundaries() -> list[str]:
         "uses: ./.github/workflows/desktop-release-candidate.yml",
         "uses: ./.github/workflows/ci-python.yml",
         "build_release_bundle: true",
+        "run_compatibility_validation: false",
+        "release_max_parallel: 6",
         "name: Release Candidate ready",
         "refs/tags/$tag^{tag}",
         "docs/releases/$tag.md",

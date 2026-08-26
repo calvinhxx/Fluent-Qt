@@ -11,6 +11,16 @@ on:
         description: Build the complete publishable wheel matrix and bundle.
         required: true
         type: boolean
+      run_compatibility_validation:
+        description: Run the legacy Linux and Windows compatibility lanes.
+        required: false
+        default: true
+        type: boolean
+      release_max_parallel:
+        description: Maximum number of dynamic release-wheel jobs.
+        required: false
+        default: 4
+        type: number
 
 permissions:
   actions: read
@@ -82,6 +92,7 @@ jobs:
   pyside6_linux:
     name: PySide6 compatibility / Linux x64 / CPython 3.10 / Qt 6.2.4
     needs: plan
+    if: ${{ inputs.run_compatibility_validation }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     env:
@@ -455,6 +466,7 @@ jobs:
   pyside6_windows:
     name: PySide6 compatibility / Windows x64 / CPython 3.10 / Qt 6.2.4
     needs: plan
+    if: ${{ inputs.run_compatibility_validation }}
     runs-on: windows-2022
     timeout-minutes: 35
     env:
@@ -1104,9 +1116,11 @@ jobs:
     timeout-minutes: ${{ matrix.timeout_minutes }}
     strategy:
       fail-fast: false
-      # The release matrix shares one pinned Qt setup action. Throttle its
-      # initial downloads so GitHub codeload does not rate-limit the run.
-      max-parallel: 4
+      # Normal CI also runs two compatibility downloads and stays at four.
+      # The candidate skips those duplicate lanes and may safely use six while
+      # keeping the successful seven-job Qt setup peak (six plus macOS CPython
+      # 3.11) observed in v1.7.2.
+      max-parallel: ${{ inputs.release_max_parallel }}
       matrix: ${{ fromJson(needs.plan.outputs.pyside_release_matrix) }}
     steps:
       - name: Checkout
@@ -1756,7 +1770,7 @@ jobs:
           retention-days: 30
 
   pyside6_platform_summary:
-    name: Platform status / ${{ matrix.display_name }}
+    name: Verify Python candidate platform coverage
     needs:
       - plan
       - pyside6_linux
@@ -1766,28 +1780,6 @@ jobs:
     if: ${{ always() && needs.plan.outputs.mode == 'full' && inputs.build_release_bundle }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - display_name: Linux x64
-            platform: linux
-            arch: x64
-          - display_name: Linux ARM64
-            platform: linux
-            arch: arm64
-          - display_name: Windows x64
-            platform: windows
-            arch: x64
-          - display_name: Windows ARM64
-            platform: windows
-            arch: arm64
-          - display_name: macOS x64
-            platform: macos
-            arch: x64
-          - display_name: macOS ARM64
-            platform: macos
-            arch: arm64
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -1811,12 +1803,22 @@ jobs:
             --jq '.jobs[] | [.name, .conclusion] | @tsv' \
             > "${RUNNER_TEMP}/job-results.tsv"
 
-      - name: Verify ${{ matrix.display_name }} release evidence
+      - name: Verify every release platform
         shell: bash
         run: |
-          python3 .github/scripts/verify-pyside-platform-artifacts.py \
-            --platform "${{ matrix.platform }}" \
-            --arch "${{ matrix.arch }}" \
-            --display-name "${{ matrix.display_name }}" \
-            --artifacts "${RUNNER_TEMP}/artifact-names.txt" \
-            --jobs "${RUNNER_TEMP}/job-results.tsv"
+          set -euo pipefail
+          while IFS='|' read -r display_name platform arch; do
+            python3 .github/scripts/verify-pyside-platform-artifacts.py \
+              --platform "$platform" \
+              --arch "$arch" \
+              --display-name "$display_name" \
+              --artifacts "${RUNNER_TEMP}/artifact-names.txt" \
+              --jobs "${RUNNER_TEMP}/job-results.tsv"
+          done <<'PLATFORMS'
+          Linux x64|linux|x64
+          Linux ARM64|linux|arm64
+          Windows x64|windows|x64
+          Windows ARM64|windows|arm64
+          macOS x64|macos|x64
+          macOS ARM64|macos|arm64
+          PLATFORMS
