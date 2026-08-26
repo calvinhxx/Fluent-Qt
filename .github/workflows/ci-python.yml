@@ -1117,9 +1117,9 @@ jobs:
     strategy:
       fail-fast: false
       # Normal CI also runs two compatibility downloads and stays at four.
-      # The candidate skips those duplicate lanes and may safely use six while
-      # keeping the successful seven-job Qt setup peak (six plus macOS CPython
-      # 3.11) observed in v1.7.2.
+      # The candidate skips those duplicate lanes and can raise this input so
+      # the complete wheel set finishes in two waves. The fixed macOS CPython
+      # 3.11 lane runs beside this matrix and is not counted by max-parallel.
       max-parallel: ${{ inputs.release_max_parallel }}
       matrix: ${{ fromJson(needs.plan.outputs.pyside_release_matrix) }}
     steps:
