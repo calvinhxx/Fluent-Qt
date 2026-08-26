@@ -2,6 +2,8 @@
 
 #include <QApplication>
 #include <QCoreApplication>
+#include <QFont>
+#include <QFontMetrics>
 #include <QImage>
 #include <QLocale>
 #include <QPalette>
@@ -19,6 +21,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "QtTestEnvironment.h"
 
 using fluent::AnchorLayout;
 using fluent::basicinput::Button;
@@ -80,7 +83,7 @@ Button* buttonFor(Flyout* popup, const QString& objectName)
 
 QPoint nextRowCenter(QWidget* column)
 {
-    constexpr int kPickerRowHeight = 36;
+    constexpr int kPickerRowHeight = 40;
     return column->rect().center() + QPoint(0, kPickerRowHeight);
 }
 
@@ -438,6 +441,76 @@ TEST_F(TimePickerTest, FlyoutWheelRowsAndPeriodColumnUpdatePendingTime)
     EXPECT_EQ(picker->selectedTime(), QTime(23, 0));
 }
 
+TEST_F(TimePickerTest, FontChangeUpdatesEntryAndOpenFlyout)
+{
+    TimePicker* picker = new TimePicker(window);
+    picker->setSelectedTime(QTime(9, 30));
+    const QSize defaultEntrySize = picker->sizeHint();
+    picker->setGeometry(40, 60, defaultEntrySize.width(), defaultEntrySize.height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* hourColumn = columnFor(popup, QStringLiteral("TimePickerHourColumn"));
+    ASSERT_NE(hourColumn, nullptr);
+    const QSize defaultPopupSize = popup->size();
+    const int defaultColumnHeight = hourColumn->height();
+
+    QFont largeFont = picker->font();
+    largeFont.setPixelSize(30);
+    picker->setFont(largeFont);
+    picker->resize(picker->sizeHint());
+    processEvents();
+
+    EXPECT_EQ(picker->font().pixelSize(), 30);
+    EXPECT_GT(picker->sizeHint().height(), defaultEntrySize.height());
+    EXPECT_GT(popup->height(), defaultPopupSize.height());
+    EXPECT_GT(hourColumn->height(), defaultColumnHeight);
+    EXPECT_EQ(hourColumn->font().pixelSize(), 30);
+    EXPECT_EQ(hourColumn->property("selectedRowHeight").toInt(),
+              QFontMetrics(largeFont).height() + 12);
+}
+
+TEST_F(TimePickerTest, WinUiLayoutUsesContinuousSelectionAndStretchedActions)
+{
+    TimePicker* picker = new TimePicker(window);
+    picker->setSelectedTime(QTime(9, 30));
+    picker->setGeometry(40, 60, picker->sizeHint().width(), picker->sizeHint().height());
+
+    EXPECT_EQ(picker->sizeHint().width(), 242);
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* panel = popup->findChild<QWidget*>(QStringLiteral("TimePickerFlyoutPanel"));
+    QWidget* hourColumn = columnFor(popup, QStringLiteral("TimePickerHourColumn"));
+    QWidget* minuteColumn = columnFor(popup, QStringLiteral("TimePickerMinuteColumn"));
+    QWidget* periodColumn = columnFor(popup, QStringLiteral("TimePickerPeriodColumn"));
+    Button* confirm = buttonFor(popup, QStringLiteral("TimePickerConfirmButton"));
+    Button* cancel = buttonFor(popup, QStringLiteral("TimePickerCancelButton"));
+    ASSERT_NE(panel, nullptr);
+    ASSERT_NE(hourColumn, nullptr);
+    ASSERT_NE(minuteColumn, nullptr);
+    ASSERT_NE(periodColumn, nullptr);
+    ASSERT_NE(confirm, nullptr);
+    ASSERT_NE(cancel, nullptr);
+
+    EXPECT_EQ(panel->width(), 242);
+    EXPECT_NEAR(hourColumn->width(), minuteColumn->width(), 1);
+    EXPECT_NEAR(minuteColumn->width(), periodColumn->width(), 1);
+    EXPECT_TRUE(hourColumn->property("selectedRowContinuous").toBool());
+    EXPECT_EQ(hourColumn->property("selectedRowLeftInset").toInt(), 4);
+    EXPECT_EQ(hourColumn->property("selectedRowRightInset").toInt(), 0);
+    EXPECT_EQ(minuteColumn->property("selectedRowLeftInset").toInt(), 0);
+    EXPECT_EQ(minuteColumn->property("selectedRowRightInset").toInt(), 0);
+    EXPECT_EQ(periodColumn->property("selectedRowLeftInset").toInt(), 0);
+    EXPECT_EQ(periodColumn->property("selectedRowRightInset").toInt(), 4);
+    EXPECT_EQ(hourColumn->property("selectedRowHeight").toInt(), 40);
+
+    EXPECT_EQ(confirm->geometry().left(), 4);
+    EXPECT_EQ(panel->width() - 1 - cancel->geometry().right(), 4);
+    EXPECT_EQ(cancel->geometry().left() - confirm->geometry().right() - 1, 4);
+    EXPECT_EQ(confirm->size(), cancel->size());
+    EXPECT_GT(confirm->width(), 90);
+}
+
 TEST_F(TimePickerTest, FlyoutColumnsUseCaretGlyphsAndNoFocusFrame)
 {
     TimePicker* picker = new TimePicker(window);
@@ -584,8 +657,8 @@ TEST_F(TimePickerTest, VisualCheck)
 
     auto* afternoonLabel = new Label(QStringLiteral("Afternoon"), window);
     afternoonLabel->setFluentTypography(Typography::FontRole::Body);
-    afternoonLabel->anchors()->top = {simple, Edge::Bottom, 28};
-    afternoonLabel->anchors()->left = {simple, Edge::Left, 0};
+    afternoonLabel->anchors()->top = {simpleLabel, Edge::Top, 0};
+    afternoonLabel->anchors()->left = {simple, Edge::Right, 48};
     layout->addWidget(afternoonLabel);
 
     auto* afternoon = new TimePicker(window);
@@ -596,8 +669,8 @@ TEST_F(TimePickerTest, VisualCheck)
 
     auto* steppedLabel = new Label(QStringLiteral("15 minute increment"), window);
     steppedLabel->setFluentTypography(Typography::FontRole::Body);
-    steppedLabel->anchors()->top = {afternoon, Edge::Bottom, 28};
-    steppedLabel->anchors()->left = {afternoon, Edge::Left, 0};
+    steppedLabel->anchors()->top = {simple, Edge::Bottom, 28};
+    steppedLabel->anchors()->left = {simple, Edge::Left, 0};
     layout->addWidget(steppedLabel);
 
     auto* stepped = new TimePicker(window);
@@ -609,8 +682,8 @@ TEST_F(TimePickerTest, VisualCheck)
 
     auto* twentyFourLabel = new Label(QStringLiteral("24 hour"), window);
     twentyFourLabel->setFluentTypography(Typography::FontRole::Body);
-    twentyFourLabel->anchors()->top = {simpleLabel, Edge::Top, 0};
-    twentyFourLabel->anchors()->left = {simple, Edge::Right, 48};
+    twentyFourLabel->anchors()->top = {afternoon, Edge::Bottom, 28};
+    twentyFourLabel->anchors()->left = {afternoon, Edge::Left, 0};
     layout->addWidget(twentyFourLabel);
 
     auto* twentyFour = new TimePicker(window);
@@ -634,9 +707,24 @@ TEST_F(TimePickerTest, VisualCheck)
     disabled->anchors()->left = {disabledLabel, Edge::Left, 0};
     layout->addWidget(disabled);
 
+    auto* customFontLabel = new Label(QStringLiteral("Custom 20 px font"), window);
+    customFontLabel->setFluentTypography(Typography::FontRole::Body);
+    customFontLabel->anchors()->top = {stepped, Edge::Bottom, 28};
+    customFontLabel->anchors()->left = {stepped, Edge::Left, 0};
+    layout->addWidget(customFontLabel);
+
+    auto* customFont = new TimePicker(window);
+    customFont->setSelectedTime(QTime(9, 30));
+    QFont timePickerFont = customFont->font();
+    timePickerFont.setPixelSize(20);
+    customFont->setFont(timePickerFont);
+    customFont->anchors()->top = {customFontLabel, Edge::Bottom, 6};
+    customFont->anchors()->left = {customFontLabel, Edge::Left, 0};
+    layout->addWidget(customFont);
+
     auto* clearButton = new Button(QStringLiteral("Clear"), window);
     clearButton->setFixedSize(96, 32);
-    clearButton->anchors()->top = {stepped, Edge::Bottom, 28};
+    clearButton->anchors()->top = {customFont, Edge::Bottom, 28};
     clearButton->anchors()->left = {stepped, Edge::Left, 0};
     layout->addWidget(clearButton);
     QObject::connect(clearButton, &Button::clicked, simple, &TimePicker::clearSelectedTime);
@@ -664,5 +752,21 @@ TEST_F(TimePickerTest, VisualCheck)
 
     window->onThemeUpdated();
     window->show();
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        afternoon->openPicker();
+        processEvents();
+
+        tests::support::VisualSnapshotOptions light;
+        light.windowSize = QSize(920, 560);
+        light.variant = QStringLiteral("light");
+        light.theme = tests::support::VisualSnapshotTheme::Light;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window, light));
+
+        tests::support::VisualSnapshotOptions dark = light;
+        dark.variant = QStringLiteral("dark");
+        dark.theme = tests::support::VisualSnapshotTheme::Dark;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window, dark));
+        return;
+    }
     qApp->exec();
 }

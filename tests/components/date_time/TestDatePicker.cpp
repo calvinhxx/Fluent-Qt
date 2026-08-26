@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QCoreApplication>
 #include <QDate>
+#include <QFont>
+#include <QFontMetrics>
 #include <QLocale>
 #include <QPalette>
 #include <QPointer>
@@ -20,6 +22,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
+#include "QtTestEnvironment.h"
 
 using fluent::AnchorLayout;
 using fluent::basicinput::Button;
@@ -81,7 +84,7 @@ Button* buttonFor(Flyout* popup, const QString& objectName)
 
 QPoint nextRowCenter(QWidget* column)
 {
-    constexpr int kPickerRowHeight = 36;
+    constexpr int kPickerRowHeight = 40;
     return column->rect().center() + QPoint(0, kPickerRowHeight);
 }
 
@@ -436,6 +439,76 @@ TEST_F(DatePickerTest, FlyoutUsesNaturalColumnWidthForWideEntries)
     EXPECT_GT(popup->width(), 300);
 }
 
+TEST_F(DatePickerTest, FontChangeUpdatesEntryAndOpenFlyout)
+{
+    DatePicker* picker = new DatePicker(window);
+    picker->setSelectedDate(QDate(2026, 8, 25));
+    const QSize defaultEntrySize = picker->sizeHint();
+    picker->setGeometry(40, 60, defaultEntrySize.width(), defaultEntrySize.height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* monthColumn = columnFor(popup, QStringLiteral("DatePickerMonthColumn"));
+    ASSERT_NE(monthColumn, nullptr);
+    const QSize defaultPopupSize = popup->size();
+    const int defaultColumnHeight = monthColumn->height();
+
+    QFont largeFont = picker->font();
+    largeFont.setPixelSize(30);
+    picker->setFont(largeFont);
+    picker->resize(picker->sizeHint());
+    processEvents();
+
+    EXPECT_EQ(picker->font().pixelSize(), 30);
+    EXPECT_GT(picker->sizeHint().height(), defaultEntrySize.height());
+    EXPECT_GT(popup->height(), defaultPopupSize.height());
+    EXPECT_GT(monthColumn->height(), defaultColumnHeight);
+    EXPECT_EQ(monthColumn->font().pixelSize(), 30);
+    EXPECT_EQ(monthColumn->property("selectedRowHeight").toInt(),
+              QFontMetrics(largeFont).height() + 12);
+}
+
+TEST_F(DatePickerTest, WinUiLayoutUsesContinuousSelectionAndStretchedActions)
+{
+    DatePicker* picker = new DatePicker(window);
+    picker->setSelectedDate(QDate(2026, 8, 25));
+    picker->setGeometry(40, 60, picker->sizeHint().width(), picker->sizeHint().height());
+
+    EXPECT_EQ(picker->sizeHint().width(), 296);
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* panel = popup->findChild<QWidget*>(QStringLiteral("DatePickerFlyoutPanel"));
+    QWidget* monthColumn = columnFor(popup, QStringLiteral("DatePickerMonthColumn"));
+    QWidget* dayColumn = columnFor(popup, QStringLiteral("DatePickerDayColumn"));
+    QWidget* yearColumn = columnFor(popup, QStringLiteral("DatePickerYearColumn"));
+    Button* confirm = buttonFor(popup, QStringLiteral("DatePickerConfirmButton"));
+    Button* cancel = buttonFor(popup, QStringLiteral("DatePickerCancelButton"));
+    ASSERT_NE(panel, nullptr);
+    ASSERT_NE(monthColumn, nullptr);
+    ASSERT_NE(dayColumn, nullptr);
+    ASSERT_NE(yearColumn, nullptr);
+    ASSERT_NE(confirm, nullptr);
+    ASSERT_NE(cancel, nullptr);
+
+    EXPECT_EQ(panel->width(), 296);
+    EXPECT_GT(monthColumn->width(), dayColumn->width());
+    EXPECT_EQ(dayColumn->width(), yearColumn->width());
+    EXPECT_TRUE(monthColumn->property("selectedRowContinuous").toBool());
+    EXPECT_EQ(monthColumn->property("selectedRowLeftInset").toInt(), 4);
+    EXPECT_EQ(monthColumn->property("selectedRowRightInset").toInt(), 0);
+    EXPECT_EQ(dayColumn->property("selectedRowLeftInset").toInt(), 0);
+    EXPECT_EQ(dayColumn->property("selectedRowRightInset").toInt(), 0);
+    EXPECT_EQ(yearColumn->property("selectedRowLeftInset").toInt(), 0);
+    EXPECT_EQ(yearColumn->property("selectedRowRightInset").toInt(), 4);
+    EXPECT_EQ(monthColumn->property("selectedRowHeight").toInt(), 40);
+
+    EXPECT_EQ(confirm->geometry().left(), 4);
+    EXPECT_EQ(panel->width() - 1 - cancel->geometry().right(), 4);
+    EXPECT_EQ(cancel->geometry().left() - confirm->geometry().right() - 1, 4);
+    EXPECT_EQ(confirm->size(), cancel->size());
+    EXPECT_GT(confirm->width(), 100);
+}
+
 TEST_F(DatePickerTest, FlyoutLaysOutVisibleColumnsSideBySide)
 {
     DatePicker* picker = new DatePicker(window);
@@ -775,9 +848,24 @@ TEST_F(DatePickerTest, VisualCheck)
     disabled->anchors()->left = {disabledLabel, Edge::Left, 0};
     layout->addWidget(disabled);
 
+    auto* customFontLabel = new Label(QStringLiteral("Custom 20 px font"), window);
+    customFontLabel->setFluentTypography(Typography::FontRole::Body);
+    customFontLabel->anchors()->top = {numeric, Edge::Bottom, 28};
+    customFontLabel->anchors()->left = {numeric, Edge::Left, 0};
+    layout->addWidget(customFontLabel);
+
+    auto* customFont = new DatePicker(window);
+    customFont->setSelectedDate(QDate(2026, 8, 25));
+    QFont datePickerFont = customFont->font();
+    datePickerFont.setPixelSize(20);
+    customFont->setFont(datePickerFont);
+    customFont->anchors()->top = {customFontLabel, Edge::Bottom, 6};
+    customFont->anchors()->left = {customFontLabel, Edge::Left, 0};
+    layout->addWidget(customFont);
+
     auto* clearButton = new Button(QStringLiteral("Clear"), window);
     clearButton->setFixedSize(96, 32);
-    clearButton->anchors()->top = {numeric, Edge::Bottom, 28};
+    clearButton->anchors()->top = {customFont, Edge::Bottom, 28};
     clearButton->anchors()->left = {numeric, Edge::Left, 0};
     layout->addWidget(clearButton);
     QObject::connect(clearButton, &Button::clicked, simple, &DatePicker::clearSelectedDate);
@@ -805,5 +893,21 @@ TEST_F(DatePickerTest, VisualCheck)
 
     window->onThemeUpdated();
     window->show();
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        constrained->openPicker();
+        processEvents();
+
+        tests::support::VisualSnapshotOptions light;
+        light.windowSize = QSize(920, 560);
+        light.variant = QStringLiteral("light");
+        light.theme = tests::support::VisualSnapshotTheme::Light;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window, light));
+
+        tests::support::VisualSnapshotOptions dark = light;
+        dark.variant = QStringLiteral("dark");
+        dark.theme = tests::support::VisualSnapshotTheme::Dark;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window, dark));
+        return;
+    }
     qApp->exec();
 }

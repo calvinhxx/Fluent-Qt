@@ -217,6 +217,7 @@ private:
     bool setFieldVisible(DateField field, bool visible);
     QVector<FieldSegment> fieldSegments() const;
     QRect fieldSurfaceRect() const;
+    int preferredFieldWidth(DateField field) const;
 
     QString formatField(DateField field, const QDate& date) const;
     QDate normalizeDate(int year, int month, int day) const;

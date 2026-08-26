@@ -26,18 +26,94 @@ namespace fluent::date_time {
 
 namespace {
 constexpr int kEntryHeight = 32;
-constexpr int kMinEntryWidth = 128;
+constexpr int kDatePickerThemeMinWidth = 296;
 constexpr int kSegmentHPadding = 12;
 constexpr int kPopupShadowMargin = ::Spacing::Standard;
-constexpr int kPopupCardInset = 8;
+constexpr int kPopupTopInset = 8;
 constexpr int kColumnNavHeight = 24;
-constexpr int kColumnRowHeight = 36;
+constexpr int kColumnRowHeight = 40;
 constexpr int kColumnVisibleRows = 7;
-constexpr int kColumnHeight = kColumnNavHeight * 2 + kColumnRowHeight * kColumnVisibleRows;
-constexpr int kCommandBarHeight = 48;
+constexpr int kCommandBarHeight = 41;
 constexpr int kDividerWidth = 1;
+constexpr int kMonthColumnBaseWidth = 134;
+constexpr int kDayColumnBaseWidth = 80;
+constexpr int kYearColumnBaseWidth = 80;
 constexpr qreal kColumnWheelThreshold = 120.0;
 constexpr int kColumnWheelClusterGapMs = 120;
+
+int pickerEntryHeight(const QFont& font)
+{
+    return qMax(kEntryHeight, QFontMetrics(font).height() + 12);
+}
+
+int pickerRowHeight(const QFont& font)
+{
+    return qMax(kColumnRowHeight, QFontMetrics(font).height() + 12);
+}
+
+int pickerColumnHeight(const QFont& font)
+{
+    return kColumnNavHeight * 2 + pickerRowHeight(font) * kColumnVisibleRows;
+}
+
+QVector<int> distributedWidths(const QVector<int>& preferredWidths, int availableWidth)
+{
+    QVector<int> result;
+    if (preferredWidths.isEmpty() || availableWidth <= 0)
+        return result;
+
+    int totalWeight = 0;
+    for (int width : preferredWidths)
+        totalWeight += qMax(1, width);
+
+    int remainingWidth = availableWidth;
+    int remainingWeight = totalWeight;
+    for (int i = 0; i < preferredWidths.size(); ++i) {
+        const int weight = qMax(1, preferredWidths.at(i));
+        const int width = i == preferredWidths.size() - 1
+            ? remainingWidth
+            : qRound(static_cast<qreal>(remainingWidth) * weight / remainingWeight);
+        result.append(qMax(0, width));
+        remainingWidth -= width;
+        remainingWeight -= weight;
+    }
+    return result;
+}
+
+void drawSelectionSegment(QPainter& painter, const QRect& rect, const QColor& fill,
+                          qreal radius, bool roundLeft, bool roundRight)
+{
+    const QRectF bounds(rect);
+    const qreal leftRadius = roundLeft ? radius : 0.0;
+    const qreal rightRadius = roundRight ? radius : 0.0;
+    QPainterPath path;
+    path.moveTo(bounds.left() + leftRadius, bounds.top());
+    path.lineTo(bounds.right() - rightRadius, bounds.top());
+    if (roundRight)
+        path.quadTo(bounds.right(), bounds.top(), bounds.right(), bounds.top() + rightRadius);
+    else
+        path.lineTo(bounds.right(), bounds.top());
+    path.lineTo(bounds.right(), bounds.bottom() - rightRadius);
+    if (roundRight)
+        path.quadTo(bounds.right(), bounds.bottom(), bounds.right() - rightRadius, bounds.bottom());
+    else
+        path.lineTo(bounds.right(), bounds.bottom());
+    path.lineTo(bounds.left() + leftRadius, bounds.bottom());
+    if (roundLeft)
+        path.quadTo(bounds.left(), bounds.bottom(), bounds.left(), bounds.bottom() - leftRadius);
+    else
+        path.lineTo(bounds.left(), bounds.bottom());
+    path.lineTo(bounds.left(), bounds.top() + leftRadius);
+    if (roundLeft)
+        path.quadTo(bounds.left(), bounds.top(), bounds.left() + leftRadius, bounds.top());
+    else
+        path.lineTo(bounds.left(), bounds.top());
+    path.closeSubpath();
+
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(fill);
+    painter.drawPath(path);
+}
 
 const QString& pickerChevronUpGlyph()
 {
@@ -79,19 +155,17 @@ int wheelStepForDelta(qreal delta)
     return 0;
 }
 
-int monthColumnWidth(DatePicker::MonthFormat format)
+int dateFieldBaseWidth(DatePicker::DateField field)
 {
-    return format == DatePicker::MonthFormat::FullMonthName ? 142 : 96;
-}
-
-int dayColumnWidth(DatePicker::DayFormat format)
-{
-    return format == DatePicker::DayFormat::DayIntegerWithAbbreviatedWeekday ? 104 : 82;
-}
-
-int yearColumnWidth(DatePicker::YearFormat)
-{
-    return 96;
+    switch (field) {
+    case DatePicker::DateField::Month:
+        return kMonthColumnBaseWidth;
+    case DatePicker::DateField::Day:
+        return kDayColumnBaseWidth;
+    case DatePicker::DateField::Year:
+        return kYearColumnBaseWidth;
+    }
+    return kDayColumnBaseWidth;
 }
 
 int wrappedValue(int value, int minimum, int maximum)
@@ -126,7 +200,7 @@ public:
     PickerColumn(DatePickerFlyout* flyout, DatePicker::DateField field, QWidget* parent = nullptr);
 
     DatePicker::DateField field() const { return m_field; }
-    QSize sizeHint() const override { return QSize(m_widthHint, kColumnHeight); }
+    QSize sizeHint() const override { return QSize(m_widthHint, pickerColumnHeight(font())); }
     void setWidthHint(int width);
 
     QWidget* pickerColumnWidget() override { return this; }
@@ -201,6 +275,8 @@ public:
     bool isDateSelectable(const QDate& date) const;
     Qt::Alignment textAlignment(DatePicker::DateField field) const;
     QString displayText(DatePicker::DateField field, const QDate& date) const;
+    bool isFirstVisibleField(DatePicker::DateField field) const;
+    bool isLastVisibleField(DatePicker::DateField field) const;
     void shiftField(DatePicker::DateField field, int offset);
     void commit();
     void cancel();
@@ -242,6 +318,7 @@ protected:
 
 private:
     void layoutContent();
+    QVector<int> columnWidths() const;
 
     DatePickerFlyout* m_flyout = nullptr;
     PickerColumn* m_monthColumn = nullptr;
@@ -376,9 +453,12 @@ void PickerColumn::pickerColumnSetValue(const QVariant& value)
 
 void PickerColumn::setWidthHint(int width)
 {
-    if (m_widthHint == width)
+    if (m_widthHint == width) {
+        refreshProperties();
         return;
+    }
     m_widthHint = qMax(48, width);
+    refreshProperties();
     updateGeometry();
 }
 
@@ -394,7 +474,8 @@ QRect PickerColumn::nextButtonRect() const
 
 QRect PickerColumn::rowRect(int row) const
 {
-    return QRect(0, kColumnNavHeight + row * kColumnRowHeight, width(), kColumnRowHeight);
+    const int rowHeight = pickerRowHeight(font());
+    return QRect(0, kColumnNavHeight + row * rowHeight, width(), rowHeight);
 }
 
 PickerColumn::HitInfo PickerColumn::hitTest(const QPoint& pos) const
@@ -404,9 +485,10 @@ PickerColumn::HitInfo PickerColumn::hitTest(const QPoint& pos) const
     if (nextButtonRect().contains(pos))
         return {HitKind::Next, 1};
 
+    const int rowHeight = pickerRowHeight(font());
     const int rowAreaY = pos.y() - kColumnNavHeight;
-    if (rowAreaY >= 0 && rowAreaY < kColumnRowHeight * kColumnVisibleRows) {
-        const int row = rowAreaY / kColumnRowHeight;
+    if (rowAreaY >= 0 && rowAreaY < rowHeight * kColumnVisibleRows) {
+        const int row = rowAreaY / rowHeight;
         return {HitKind::Row, row - kColumnVisibleRows / 2};
     }
     return {};
@@ -452,23 +534,27 @@ void PickerColumn::paintEvent(QPaintEvent*)
                        m_hoverHit.kind == HitKind::Next);
     }
 
-    painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
+    painter.setFont(font());
     const int centerRow = kColumnVisibleRows / 2;
     const Qt::Alignment textAlignment = m_flyout ? m_flyout->textAlignment(m_field) : Qt::AlignLeft;
+    const bool firstVisible = m_flyout && m_flyout->isFirstVisibleField(m_field);
+    const bool lastVisible = m_flyout && m_flyout->isLastVisibleField(m_field);
     for (int row = 0; row < kColumnVisibleRows; ++row) {
         const int offset = row - centerRow;
-        const QRect r = rowRect(row).adjusted(4, 2, -4, -2);
         const QDate valueDate = m_flyout ? m_flyout->shifted(m_field, offset) : QDate();
         const bool selectable = m_flyout && m_flyout->isDateSelectable(valueDate);
         const bool selected = offset == 0;
         const bool hovered = m_hoverHit.kind == HitKind::Row && m_hoverHit.offset == offset;
+        const QRect rowBounds = selected
+            ? rowRect(row).adjusted(firstVisible ? 4 : 0, 0, lastVisible ? -4 : 0, 0)
+            : rowRect(row).adjusted(4, 2, -4, -2);
 
         // Per-language highlight + the text color that pairs with it. zh_CN: 各设计语言的高亮 + 与之搭配的文字色。
         QColor highlightFill = Qt::transparent; // guard against the invalid-QColor trap below.
         QColor selectedTextColor = colors.textOnAccent;
     // Fluent treatment. zh_CN: Fluent 样式。
             if (selected) {
-                highlightFill = m_columnHovered ? colors.accentSecondary : colors.accentDefault;
+                highlightFill = colors.accentDefault;
                 selectedTextColor = colors.textOnAccent;
             } else if (hovered && selectable) {
                 highlightFill = colors.subtleSecondary;
@@ -478,9 +564,14 @@ void PickerColumn::paintEvent(QPaintEvent*)
         // setBrush(invalid) paints SOLID BLACK. zh_CN: 守卫可选填充:默认构造 QColor 无效却 alpha==255,
         // setBrush(无效色) 会涂成纯黑。
         if (highlightFill.isValid() && highlightFill.alpha() > 0) {
-            painter.setPen(Qt::NoPen);
-            painter.setBrush(highlightFill);
-            painter.drawRoundedRect(r, radius.control, radius.control);
+            if (selected) {
+                drawSelectionSegment(painter, rowBounds, highlightFill, radius.control,
+                                     firstVisible, lastVisible);
+            } else {
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(highlightFill);
+                painter.drawRoundedRect(rowBounds, radius.control, radius.control);
+            }
         }
 
         QColor textColor = selectable ? colors.textPrimary : colors.textDisabled;
@@ -489,8 +580,9 @@ void PickerColumn::paintEvent(QPaintEvent*)
         painter.setPen(textColor);
 
         const QString text = m_flyout ? m_flyout->displayText(m_field, valueDate) : QString();
-        painter.drawText(r.adjusted(8, 0, -8, 0), Qt::AlignVCenter | textAlignment,
-                         painter.fontMetrics().elidedText(text, Qt::ElideRight, r.width() - 16));
+        painter.drawText(rowBounds.adjusted(8, 0, -8, 0), Qt::AlignVCenter | textAlignment,
+                         painter.fontMetrics().elidedText(
+                             text, Qt::ElideRight, qMax(0, rowBounds.width() - 16)));
     }
 
 }
@@ -655,6 +747,8 @@ void PickerColumn::resetWheelState()
 
 void PickerColumn::refreshProperties()
 {
+    const bool firstVisible = m_flyout && m_flyout->isFirstVisibleField(m_field);
+    const bool lastVisible = m_flyout && m_flyout->isLastVisibleField(m_field);
     setProperty("previousButtonGlyph", pickerChevronUpGlyph());
     setProperty("nextButtonGlyph", pickerChevronDownGlyph());
     setProperty("textAlignment", static_cast<int>(m_flyout ? m_flyout->textAlignment(m_field) : Qt::AlignLeft));
@@ -663,6 +757,10 @@ void PickerColumn::refreshProperties()
     setProperty("columnHovered", m_columnHovered);
     setProperty("focusFrameVisible", false);
     setProperty("selectedRowHasBackground", true);
+    setProperty("selectedRowContinuous", true);
+    setProperty("selectedRowLeftInset", firstVisible ? 4 : 0);
+    setProperty("selectedRowRightInset", lastVisible ? 4 : 0);
+    setProperty("selectedRowHeight", pickerRowHeight(font()));
 }
 
 DatePickerFlyoutPanel::DatePickerFlyoutPanel(DatePickerFlyout* flyout, QWidget* parent)
@@ -684,14 +782,14 @@ DatePickerFlyoutPanel::DatePickerFlyoutPanel(DatePickerFlyout* flyout, QWidget* 
     m_confirmButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     m_confirmButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_confirmButton->setIconGlyph(Typography::Icons::CheckMark, Typography::IconSize::Standard);
-    m_confirmButton->setFixedSize(48, 32);
+    m_confirmButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     m_cancelButton = new fluent::basicinput::Button(this);
     m_cancelButton->setObjectName(QStringLiteral("DatePickerCancelButton"));
     m_cancelButton->setFluentStyle(fluent::basicinput::Button::Subtle);
     m_cancelButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
     m_cancelButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard);
-    m_cancelButton->setFixedSize(48, 32);
+    m_cancelButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     refreshActionAccessibility();
 
     connect(m_confirmButton, &fluent::basicinput::Button::clicked, this, [this] {
@@ -709,14 +807,15 @@ QSize DatePickerFlyoutPanel::sizeHint() const
     if (!m_flyout)
         return QSize();
 
-    int width = kPopupCardInset * 2;
+    int width = 0;
     const auto fields = m_flyout->visibleFields();
     for (DatePicker::DateField field : fields)
         width += m_flyout->preferredColumnWidth(field);
     if (!fields.isEmpty())
         width += (fields.size() - 1) * kDividerWidth;
+    width = qMax(kDatePickerThemeMinWidth, width);
 
-    const int height = kPopupCardInset + kColumnHeight + kCommandBarHeight;
+    const int height = kPopupTopInset + pickerColumnHeight(font()) + kCommandBarHeight;
     return QSize(width, height);
 }
 
@@ -736,9 +835,12 @@ void DatePickerFlyoutPanel::refreshFromFlyout()
     if (!m_flyout)
         return;
 
+    const QFont pickerFont = m_flyout->owner() ? m_flyout->owner()->font() : font();
+    setFont(pickerFont);
     const auto fields = m_flyout->visibleFields();
-    auto configure = [this, &fields](PickerColumn* column, DatePicker::DateField field) {
+    auto configure = [this, &fields, &pickerFont](PickerColumn* column, DatePicker::DateField field) {
         const bool visible = fields.contains(field);
+        column->setFont(pickerFont);
         column->setVisible(visible);
         column->setEnabled(visible);
         column->setWidthHint(m_flyout->preferredColumnWidth(field));
@@ -797,16 +899,18 @@ void DatePickerFlyoutPanel::paintEvent(QPaintEvent*)
     const auto& colors = themeColorsRef();
 
     painter.setPen(colors.strokeDivider);
-    int x = kPopupCardInset;
+    int x = 0;
     const auto fields = m_flyout->visibleFields();
+    const auto widths = columnWidths();
     for (int i = 0; i < fields.size() - 1; ++i) {
-        x += m_flyout->preferredColumnWidth(fields.at(i));
-        painter.drawLine(x, kPopupCardInset, x, kPopupCardInset + kColumnHeight);
+        x += widths.value(i);
+        painter.drawLine(x, kPopupTopInset, x,
+                         kPopupTopInset + pickerColumnHeight(font()));
         x += kDividerWidth;
     }
 
-    painter.drawLine(0, kPopupCardInset + kColumnHeight,
-                     width(), kPopupCardInset + kColumnHeight);
+    const int dividerY = kPopupTopInset + pickerColumnHeight(font());
+    painter.drawLine(0, dividerY, width(), dividerY);
 }
 
 void DatePickerFlyoutPanel::resizeEvent(QResizeEvent* event)
@@ -824,31 +928,45 @@ void DatePickerFlyoutPanel::onThemeUpdated()
         m_cancelButton->onThemeUpdated();
 }
 
+QVector<int> DatePickerFlyoutPanel::columnWidths() const
+{
+    QVector<int> preferredWidths;
+    if (!m_flyout)
+        return preferredWidths;
+    const auto fields = m_flyout->visibleFields();
+    for (DatePicker::DateField field : fields)
+        preferredWidths.append(m_flyout->preferredColumnWidth(field));
+    const int dividerWidth = qMax(0, fields.size() - 1) * kDividerWidth;
+    return distributedWidths(preferredWidths, qMax(0, width() - dividerWidth));
+}
+
 void DatePickerFlyoutPanel::layoutContent()
 {
     if (rect().isEmpty())
         return;
 
-    int x = kPopupCardInset;
+    int x = 0;
+    int columnIndex = 0;
+    const auto widths = columnWidths();
 
-    auto placeColumn = [this, &x](PickerColumn* column, DatePicker::DateField field) {
+    auto placeColumn = [this, &x, &columnIndex, &widths](PickerColumn* column) {
         if (column->isHidden())
             return;
-        const int w = m_flyout->preferredColumnWidth(field);
-        column->setGeometry(x, kPopupCardInset, w, kColumnHeight);
+        const int w = widths.value(columnIndex++);
+        column->setGeometry(x, kPopupTopInset, w, pickerColumnHeight(font()));
         x += w + kDividerWidth;
     };
 
-    placeColumn(m_monthColumn, DatePicker::DateField::Month);
-    placeColumn(m_dayColumn, DatePicker::DateField::Day);
-    placeColumn(m_yearColumn, DatePicker::DateField::Year);
+    placeColumn(m_monthColumn);
+    placeColumn(m_dayColumn);
+    placeColumn(m_yearColumn);
 
-    const int buttonY = kPopupCardInset + kColumnHeight + (kCommandBarHeight - 32) / 2;
-    const int totalButtonW = m_confirmButton->width() + m_cancelButton->width() + 16;
-    const int startX = rect().center().x() - totalButtonW / 2;
-    m_confirmButton->setGeometry(startX, buttonY, m_confirmButton->width(), m_confirmButton->height());
-    m_cancelButton->setGeometry(startX + m_confirmButton->width() + 16, buttonY,
-                                m_cancelButton->width(), m_cancelButton->height());
+    const int buttonY = kPopupTopInset + pickerColumnHeight(font()) + 4;
+    const int buttonHeight = kCommandBarHeight - 8;
+    const int halfWidth = width() / 2;
+    m_confirmButton->setGeometry(4, buttonY, qMax(0, halfWidth - 6), buttonHeight);
+    m_cancelButton->setGeometry(halfWidth + 2, buttonY,
+                                qMax(0, width() - halfWidth - 6), buttonHeight);
 }
 
 DatePickerFlyout::DatePickerFlyout(DatePicker* owner)
@@ -887,16 +1005,20 @@ QVector<DatePicker::DateField> DatePickerFlyout::visibleFields() const
 int DatePickerFlyout::preferredColumnWidth(DatePicker::DateField field) const
 {
     if (!m_owner)
-        return 96;
-    switch (field) {
-    case DatePicker::DateField::Month:
-        return monthColumnWidth(m_owner->monthFormat());
-    case DatePicker::DateField::Day:
-        return dayColumnWidth(m_owner->dayFormat());
-    case DatePicker::DateField::Year:
-        return yearColumnWidth(m_owner->yearFormat());
-    }
-    return 96;
+        return dateFieldBaseWidth(field);
+    return m_owner->preferredFieldWidth(field);
+}
+
+bool DatePickerFlyout::isFirstVisibleField(DatePicker::DateField field) const
+{
+    const auto fields = visibleFields();
+    return !fields.isEmpty() && fields.first() == field;
+}
+
+bool DatePickerFlyout::isLastVisibleField(DatePicker::DateField field) const
+{
+    const auto fields = visibleFields();
+    return !fields.isEmpty() && fields.last() == field;
 }
 
 void DatePickerFlyout::showForPicker()
@@ -1204,6 +1326,7 @@ void DatePicker::setMonthFormat(MonthFormat format)
     if (m_monthFormat == format)
         return;
     m_monthFormat = format;
+    updateGeometry();
     if (m_flyout && m_flyout->isOpen())
         m_flyout->showForPicker();
     update();
@@ -1217,6 +1340,7 @@ void DatePicker::setDayFormat(DayFormat format)
     if (m_dayFormat == format)
         return;
     m_dayFormat = format;
+    updateGeometry();
     if (m_flyout && m_flyout->isOpen())
         m_flyout->showForPicker();
     update();
@@ -1230,6 +1354,7 @@ void DatePicker::setYearFormat(YearFormat format)
     if (m_yearFormat == format)
         return;
     m_yearFormat = format;
+    updateGeometry();
     if (m_flyout && m_flyout->isOpen())
         m_flyout->showForPicker();
     update();
@@ -1377,23 +1502,58 @@ QString DatePicker::placeholderText(DateField field) const
     return QString();
 }
 
+int DatePicker::preferredFieldWidth(DateField field) const
+{
+    const QFontMetrics metrics(font());
+    int textWidth = metrics.horizontalAdvance(placeholderText(field));
+    auto includeDate = [this, field, &metrics, &textWidth](const QDate& date) {
+        textWidth = qMax(textWidth, metrics.horizontalAdvance(formatField(field, date)));
+    };
+
+    switch (field) {
+    case DateField::Month:
+        for (int month = 1; month <= 12; ++month)
+            includeDate(QDate(2026, month, 1));
+        break;
+    case DateField::Day:
+        if (m_dayFormat == DayFormat::DayIntegerWithAbbreviatedWeekday) {
+            for (int dayOfWeek = 1; dayOfWeek <= 7; ++dayOfWeek) {
+                const QString text = QStringLiteral("31 (%1)").arg(
+                    locale().dayName(dayOfWeek, QLocale::ShortFormat));
+                textWidth = qMax(textWidth, metrics.horizontalAdvance(text));
+            }
+        } else {
+            includeDate(QDate(2026, 1, 31));
+        }
+        break;
+    case DateField::Year:
+        includeDate(QDate(1, 1, 1));
+        includeDate(QDate(8888, 1, 1));
+        includeDate(QDate(9999, 1, 1));
+        break;
+    }
+
+    return qMax(dateFieldBaseWidth(field), textWidth + kSegmentHPadding * 2);
+}
+
 QSize DatePicker::sizeHint() const
 {
-    int width = kMinEntryWidth;
+    int width = 0;
     if (m_monthVisible)
-        width += monthColumnWidth(m_monthFormat);
+        width += preferredFieldWidth(DateField::Month);
     if (m_dayVisible)
-        width += dayColumnWidth(m_dayFormat);
+        width += preferredFieldWidth(DateField::Day);
     if (m_yearVisible)
-        width += yearColumnWidth(m_yearFormat);
-    width = qMax(width, kMinEntryWidth);
+        width += preferredFieldWidth(DateField::Year);
+    width += qMax(0, visibleFieldCount() - 1) * kDividerWidth;
+    width = qMax(width, kDatePickerThemeMinWidth);
 
-    return QSize(width, kEntryHeight);
+    return QSize(width, pickerEntryHeight(font()));
 }
 
 QSize DatePicker::minimumSizeHint() const
 {
-    return QSize(kMinEntryWidth, kEntryHeight);
+    return QSize(kDatePickerThemeMinWidth, pickerEntryHeight(font()));
 }
 
 void DatePicker::paintEvent(QPaintEvent*)
@@ -1424,6 +1584,7 @@ void DatePicker::paintEvent(QPaintEvent*)
         painter.drawRoundedRect(QRectF(surface), radius.control, radius.control);
 
     const auto segments = fieldSegments();
+    painter.setFont(font());
     for (int i = 0; i < segments.size(); ++i) {
         const auto& segment = segments.at(i);
 
@@ -1437,7 +1598,6 @@ void DatePicker::paintEvent(QPaintEvent*)
             ? (active ? colors.textPrimary : colors.textSecondary)
             : colors.textDisabled;
         painter.setPen(segmentTextColor);
-        painter.setFont(themeFont(Typography::FontRole::Body).toQFont());
         const QString text = fieldDisplayText(segment.field);
         QRect textRect = segment.rect.adjusted(kSegmentHPadding, 0, -kSegmentHPadding, 0);
         const Qt::Alignment alignment = Qt::AlignVCenter | fieldTextAlignment(segment.field);
@@ -1464,6 +1624,12 @@ void DatePicker::keyPressEvent(QKeyEvent* event)
 void DatePicker::changeEvent(QEvent* event)
 {
     fluent::basicinput::Button::changeEvent(event);
+    if (event->type() == QEvent::FontChange) {
+        updateGeometry();
+        if (m_flyout && m_flyout->isOpen())
+            m_flyout->showForPicker();
+        update();
+    }
     if (event->type() == QEvent::LocaleChange
         && m_observedLocale != QWidget::locale()) {
         m_observedLocale = QWidget::locale();
@@ -1552,15 +1718,7 @@ QVector<DatePicker::FieldSegment> DatePicker::fieldSegments() const
 
     int totalWeight = 0;
     auto weightFor = [this](DateField field) {
-        switch (field) {
-        case DateField::Month:
-            return monthColumnWidth(m_monthFormat);
-        case DateField::Day:
-            return dayColumnWidth(m_dayFormat);
-        case DateField::Year:
-            return yearColumnWidth(m_yearFormat);
-        }
-        return 96;
+        return preferredFieldWidth(field);
     };
     for (DateField field : fields)
         totalWeight += weightFor(field);
@@ -1584,7 +1742,7 @@ QVector<DatePicker::FieldSegment> DatePicker::fieldSegments() const
 
 QRect DatePicker::fieldSurfaceRect() const
 {
-    return QRect(0, 0, width(), kEntryHeight);
+    return QRect(0, 0, width(), qMin(height(), pickerEntryHeight(font())));
 }
 
 QString DatePicker::formatField(DateField field, const QDate& date) const

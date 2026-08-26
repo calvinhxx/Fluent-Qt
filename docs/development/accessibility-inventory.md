@@ -110,7 +110,8 @@ ownership APIs.
   operable saturation/brightness surface, a semantic preview, and named native
   channel controls.
 - DatePicker and TimePicker expose button-menu roots whose committed values are
-  separate from bounded pending-value columns in the flyout.
+  separate from bounded pending-value columns in the flyout. Their stretched
+  confirm and dismiss actions remain named native buttons after visual relayout.
 - AnnotatedScrollBar exposes its bounded value plus one logical jump link for
   every authored annotation, including collision-filtered labels.
 - AutoSuggestBox retains editable-text interfaces while adding autocomplete,

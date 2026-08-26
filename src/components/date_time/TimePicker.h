@@ -148,6 +148,7 @@ private:
     bool isFieldVisible(TimeField field) const;
     QVector<FieldSegment> fieldSegments() const;
     QRect fieldSurfaceRect() const;
+    int preferredFieldWidth(TimeField field) const;
 
     QString formatField(TimeField field, const QTime& time) const;
     QTime normalizeTime(const QTime& time) const;
