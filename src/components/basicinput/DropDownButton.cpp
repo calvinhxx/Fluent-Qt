@@ -119,6 +119,8 @@ QSize DropDownButton::minimumSizeHint() const {
 QRectF DropDownButton::contentPaintRect(const QRectF& surfaceRect) const {
     const qreal reserve = qMin(surfaceRect.width(),
                                static_cast<qreal>(chevronReserveWidth()));
+    if (layoutDirection() == Qt::RightToLeft)
+        return surfaceRect.adjusted(reserve, 0, 0, 0);
     return surfaceRect.adjusted(0, 0, -reserve, 0);
 }
 
@@ -226,19 +228,22 @@ void DropDownButton::paintEvent(QPaintEvent* event) {
     painter.setPen(textColor);
 
     // Paint the glyph: it dips down along Y with the animation then rebounds,
-    // plus the developer offset; chevronOffset.x() is the right-edge padding and
+    // plus the developer offset; chevronOffset.x() is the trailing-edge padding and
     // chevronOffset.y() the vertical tweak. Snap the dip to whole pixels so the
     // compact optical chevron stays sharp while pressed.
     // zh_CN: 绘制图标——按动画进度沿 Y 轴下移后弹回，再叠加自定义偏移；
-    // chevronOffset.x() 为右缘间距，chevronOffset.y() 为垂直微调。下沉取整像素，
+    // chevronOffset.x() 为尾缘间距，chevronOffset.y() 为垂直微调。下沉取整像素，
     // 避免紧凑光学箭头在按下时发虚。
     // Dedicated chevron slot at the trailing edge (SplitButton pattern), not a
     // full-width AlignRight band. zh_CN: 尾缘独立箭头槽（对齐 SplitButton），非整行 AlignRight。
     const qreal maxOffset = 3.0;
     const qreal pressOffset = qRound(maxOffset * pressEffect);
     const QRectF bounds = QRectF(rect());
+    const qreal chevronX = layoutDirection() == Qt::RightToLeft
+        ? bounds.left() + m_chevronOffset.x()
+        : bounds.right() - m_chevronOffset.x() - m_chevronSize;
     QRectF chevronSlot(
-        bounds.right() - m_chevronOffset.x() - m_chevronSize,
+        chevronX,
         bounds.center().y() - m_chevronSize * 0.5,
         m_chevronSize,
         m_chevronSize);

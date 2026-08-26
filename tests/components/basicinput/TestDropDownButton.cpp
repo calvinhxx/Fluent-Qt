@@ -168,6 +168,21 @@ TEST_F(DropDownButtonTest, ContentPaintRectExcludesChevronReserve) {
     EXPECT_GT(tighterContentRect.width(), contentRect.width());
 }
 
+TEST_F(DropDownButtonTest, ContentPaintRectMirrorsChevronReserveInRightToLeft) {
+    InspectableDropDownButton button("Email");
+    button.setLayoutDirection(Qt::RightToLeft);
+    const QSize hinted = button.sizeHint();
+    const QRectF surfaceRect(0, 0, hinted.width(), hinted.height());
+    const QRectF contentRect = button.exposedContentPaintRect(surfaceRect);
+
+    const int expectedReserve = ::Spacing::Gap::Normal + button.chevronSize()
+                                + button.chevronOffset().x();
+    EXPECT_DOUBLE_EQ(contentRect.left(), surfaceRect.left() + expectedReserve);
+    EXPECT_DOUBLE_EQ(contentRect.top(), surfaceRect.top());
+    EXPECT_DOUBLE_EQ(contentRect.right(), surfaceRect.right());
+    EXPECT_DOUBLE_EQ(contentRect.bottom(), surfaceRect.bottom());
+}
+
 TEST_F(DropDownButtonTest, MenuInheritsThemeOverrideFromButtonParent) {
     fluent::FluentElement::setTheme(fluent::FluentElement::Light);
     window->onThemeUpdated();
