@@ -1,5 +1,6 @@
 
 #include <QApplication>
+#include <QImage>
 #include <QLabel>
 #include <QSignalSpy>
 #include <QTest>
@@ -14,6 +15,7 @@
 #include "components/textfields/Label.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "QtTestEnvironment.h"
 
 using namespace fluent::dialogs_flyouts;
 using fluent::AnchorLayout;
@@ -265,6 +267,32 @@ TEST_F(TeachingTipTest, ContentHostMatchesCardSizeAndPlacement) {
 
     ASSERT_TRUE(tip.isOpen());
     EXPECT_EQ(tip.contentHost()->size(), QSize(300, 160));
+}
+
+TEST_F(TeachingTipTest, ShadowDiffusesAroundAllCardEdges) {
+    auto* anchor = makeAnchor(QPoint(320, 280));
+
+    TeachingTip tip(window);
+    tip.setAnimationEnabled(false);
+    tip.setTailVisible(false);
+    tip.setCardSize({240, 120});
+    tip.setPreferredPlacement(TeachingTip::Bottom);
+    tip.showAt(anchor);
+    ASSERT_TRUE(tip.isOpen());
+
+    QImage image(tip.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    tip.render(&image);
+
+    const QRect card = tip.contentHost()->geometry();
+    ASSERT_GE(card.left(), 6);
+    ASSERT_GE(card.top(), 6);
+    ASSERT_LT(card.right() + 4, image.width());
+    ASSERT_LT(card.bottom() + 4, image.height());
+    EXPECT_GT(image.pixelColor(card.left() - 4, card.center().y()).alpha(), 0);
+    EXPECT_GT(image.pixelColor(card.right() + 4, card.center().y()).alpha(), 0);
+    EXPECT_GT(image.pixelColor(card.center().x(), card.top() - 4).alpha(), 0);
+    EXPECT_GT(image.pixelColor(card.center().x(), card.bottom() + 4).alpha(), 0);
 }
 
 TEST_F(TeachingTipTest, UserChildrenStayInsideContentHost) {
@@ -532,6 +560,23 @@ TEST_F(TeachingTipTest, VisualCheck) {
     });
 
     visual->show();
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        richTip->showAt(richAnchor);
+        QApplication::processEvents();
+
+        tests::support::VisualSnapshotOptions light;
+        light.windowSize = QSize(960, 720);
+        light.variant = QStringLiteral("light");
+        light.theme = tests::support::VisualSnapshotTheme::Light;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(visual, light));
+
+        tests::support::VisualSnapshotOptions dark = light;
+        dark.variant = QStringLiteral("dark");
+        dark.theme = tests::support::VisualSnapshotTheme::Dark;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(visual, dark));
+        delete visual;
+        return;
+    }
     qApp->exec();
     delete visual;
 }
