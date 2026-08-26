@@ -216,6 +216,8 @@ def validate_boundaries() -> list[str]:
         "actions: read",
         "name: Verify Python candidate platform coverage",
         ".github/scripts/verify-pyside-platform-artifacts.py",
+        'verification_scope="release"',
+        '--scope "$verification_scope"',
         ".github/scripts/select-pyside-release-matrix.py",
         ".github/scripts/assemble-pyside-release-bundle.py",
         "Prioritized representative scenarios:",

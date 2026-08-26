@@ -1807,13 +1807,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          verification_scope="all"
+          if [[ "${{ inputs.run_compatibility_validation }}" != "true" ]]; then
+            verification_scope="release"
+          fi
           while IFS='|' read -r display_name platform arch; do
             python3 .github/scripts/verify-pyside-platform-artifacts.py \
               --platform "$platform" \
               --arch "$arch" \
               --display-name "$display_name" \
               --artifacts "${RUNNER_TEMP}/artifact-names.txt" \
-              --jobs "${RUNNER_TEMP}/job-results.tsv"
+              --jobs "${RUNNER_TEMP}/job-results.tsv" \
+              --scope "$verification_scope"
           done <<'PLATFORMS'
           Linux x64|linux|x64
           Linux ARM64|linux|arm64
