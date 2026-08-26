@@ -123,10 +123,10 @@ public:
             && (actionName == QAccessibleActionInterface::pressAction()
                 || actionName
                     == QAccessibleActionInterface::showMenuAction())) {
-            if (DatePicker* picker = datePicker())
-                picker->openPicker();
-            else if (TimePicker* picker = timePicker())
-                picker->openPicker();
+            if (DatePicker* datePickerWidget = datePicker())
+                datePickerWidget->openPicker();
+            else if (TimePicker* timePickerWidget = timePicker())
+                timePickerWidget->openPicker();
             return;
         }
         QAccessibleWidget::doAction(actionName);

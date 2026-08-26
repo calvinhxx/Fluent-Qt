@@ -664,8 +664,7 @@ using FluentColorComponent = qreal;
 
 // Test helper for constructing wheel events.
 // zh_CN: 构造 wheel 事件的测试辅助宏。
-// Qt 6 removed the delta/orientation constructor used by Qt 5.
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+// Qt 5.15 and Qt 6 share the modern pixel/angle delta constructor.
 #define FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(name, localPos, globalPos, pixelDeltaValue, angleDeltaValue, buttonsValue, modifiersValue, phaseValue, invertedValue) \
     QWheelEvent name(QPointF{(localPos)}, \
                      QPointF{(globalPos)}, \
@@ -675,19 +674,6 @@ using FluentColorComponent = qreal;
                      (modifiersValue), \
                      (phaseValue), \
                      (invertedValue))
-#else
-#define FLUENT_MAKE_WHEEL_EVENT_WITH_PHASE(name, localPos, globalPos, pixelDeltaValue, angleDeltaValue, buttonsValue, modifiersValue, phaseValue, invertedValue) \
-    Q_UNUSED(phaseValue); \
-    Q_UNUSED(invertedValue); \
-    QWheelEvent name(QPointF{(localPos)}, \
-                     QPointF{(globalPos)}, \
-                     (pixelDeltaValue), \
-                     (angleDeltaValue), \
-                     (angleDeltaValue).y(), \
-                     Qt::Vertical, \
-                     (buttonsValue), \
-                     (modifiersValue))
-#endif
 
 // Common no-phase wheel constructor used by focused unit tests.
 // zh_CN: 单元测试常用的无 phase wheel 事件构造宏。
