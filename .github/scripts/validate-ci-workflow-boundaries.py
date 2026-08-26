@@ -286,7 +286,7 @@ def validate_boundaries() -> list[str]:
         "uses: ./.github/workflows/ci-python.yml",
         "build_release_bundle: true",
         "run_compatibility_validation: false",
-        "release_max_parallel: 6",
+        "release_max_parallel: 8",
         "name: Release Candidate ready",
         "refs/tags/$tag^{tag}",
         "docs/releases/$tag.md",
