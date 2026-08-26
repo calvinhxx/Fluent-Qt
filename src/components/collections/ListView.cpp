@@ -712,6 +712,11 @@ void ListView::applyPointerSelection(const QModelIndex& index, QMouseEvent* even
 {
     if (!selectionModel() || !index.isValid())
         return;
+    const Qt::ItemFlags flags = index.flags();
+    if (!flags.testFlag(Qt::ItemIsEnabled) ||
+        !flags.testFlag(Qt::ItemIsSelectable)) {
+      return;
+    }
 
     switch (m_selectionMode) {
     case SelectionMode::None:
