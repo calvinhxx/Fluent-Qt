@@ -24,6 +24,7 @@
 #include "components/textfields/LineEdit.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
+#include "QtTestEnvironment.h"
 
 using fluent::basicinput::CheckBox;
 using fluent::basicinput::MultiSelectComboBox;
@@ -864,6 +865,22 @@ TEST_F(MultiSelectComboBoxTest, VisualCheck) {
       });
 
   window->show();
+  if (tests::support::shouldCaptureVisualSnapshot()) {
+    basic->open();
+    QApplication::processEvents();
+
+    tests::support::VisualSnapshotOptions light;
+    light.windowSize = QSize(700, 440);
+    light.variant = QStringLiteral("light");
+    light.theme = tests::support::VisualSnapshotTheme::Light;
+    ASSERT_TRUE(tests::support::captureVisualSnapshot(window, light));
+
+    tests::support::VisualSnapshotOptions dark = light;
+    dark.variant = QStringLiteral("dark");
+    dark.theme = tests::support::VisualSnapshotTheme::Dark;
+    ASSERT_TRUE(tests::support::captureVisualSnapshot(window, dark));
+    return;
+  }
   QTimer::singleShot(0, basic, [basic]() { basic->open(); });
   qApp->exec();
 }
