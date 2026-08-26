@@ -33,11 +33,13 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def target_scenarios(
-    catalog: dict[str, Any], platform: str, arch: str
+    catalog: dict[str, Any], platform: str, arch: str, scope: str = "all"
 ) -> list[dict[str, Any]]:
     target = (platform, arch)
     if target not in SUPPORTED_TARGETS:
         raise ValueError(f"unsupported platform/architecture: {platform}/{arch}")
+    if scope not in {"all", "release"}:
+        raise ValueError(f"unsupported verification scope: {scope}")
 
     scenarios = catalog.get("scenarios")
     if not isinstance(scenarios, list):
@@ -49,10 +51,11 @@ def target_scenarios(
             continue
         if (scenario.get("platform"), scenario.get("arch")) != target:
             continue
-        if (
-            scenario.get("release") is not True
-            and scenario.get("compatibility") is not True
-        ):
+        is_release = scenario.get("release") is True
+        is_compatibility = scenario.get("compatibility") is True
+        if scope == "release" and not is_release:
+            continue
+        if scope == "all" and not (is_release or is_compatibility):
             continue
         selected.append(scenario)
 
@@ -62,9 +65,9 @@ def target_scenarios(
 
 
 def expected_artifacts(
-    catalog: dict[str, Any], platform: str, arch: str
+    catalog: dict[str, Any], platform: str, arch: str, scope: str = "all"
 ) -> list[str]:
-    scenarios = target_scenarios(catalog, platform, arch)
+    scenarios = target_scenarios(catalog, platform, arch, scope)
 
     artifacts: list[str] = []
     for scenario in scenarios:
@@ -83,10 +86,10 @@ def expected_artifacts(
 
 
 def expected_job_names(
-    catalog: dict[str, Any], platform: str, arch: str
+    catalog: dict[str, Any], platform: str, arch: str, scope: str = "all"
 ) -> list[str]:
     names: list[str] = []
-    for scenario in target_scenarios(catalog, platform, arch):
+    for scenario in target_scenarios(catalog, platform, arch, scope):
         name = scenario.get("name")
         if not isinstance(name, str) or not name:
             raise ValueError(f"scenario {scenario.get('id')!r} has no job name")
@@ -148,6 +151,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--artifacts", type=Path, required=True)
     parser.add_argument("--jobs", type=Path, required=True)
     parser.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG)
+    parser.add_argument(
+        "--scope",
+        choices=("all", "release"),
+        default="all",
+        help="verify release plus compatibility lanes, or release lanes only",
+    )
     return parser.parse_args()
 
 
@@ -155,8 +164,12 @@ def main() -> int:
     args = parse_args()
     try:
         catalog = load_json(args.catalog)
-        expected = expected_artifacts(catalog, args.platform, args.arch)
-        expected_jobs = expected_job_names(catalog, args.platform, args.arch)
+        expected = expected_artifacts(
+            catalog, args.platform, args.arch, args.scope
+        )
+        expected_jobs = expected_job_names(
+            catalog, args.platform, args.arch, args.scope
+        )
         actual = read_artifact_names(args.artifacts)
         job_results = read_job_results(args.jobs)
     except (OSError, ValueError, json.JSONDecodeError) as error:

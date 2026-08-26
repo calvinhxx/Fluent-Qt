@@ -5,8 +5,11 @@
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
+import sys
+import tempfile
 import unittest
+from pathlib import Path
+from unittest import mock
 
 
 SCRIPT_PATH = Path(__file__).with_name("verify-pyside-platform-artifacts.py")
@@ -56,6 +59,34 @@ class PySidePlatformArtifactTest(unittest.TestCase):
             names,
         )
 
+    def test_release_scope_excludes_compatibility_lanes(self):
+        expected_counts = {
+            ("linux", "x64"): 5,
+            ("linux", "arm64"): 4,
+            ("windows", "x64"): 5,
+            ("windows", "arm64"): 5,
+            ("macos", "x64"): 5,
+            ("macos", "arm64"): 5,
+        }
+
+        actual_counts = {
+            target: len(
+                VERIFY.expected_artifacts(
+                    self.catalog, *target, scope="release"
+                )
+            )
+            for target in expected_counts
+        }
+
+        self.assertEqual(actual_counts, expected_counts)
+        self.assertEqual(sum(actual_counts.values()), 29)
+        self.assertNotIn(
+            "PySide6 compatibility / Linux x64 / CPython 3.10 / Qt 6.2.4",
+            VERIFY.expected_job_names(
+                self.catalog, "linux", "x64", scope="release"
+            ),
+        )
+
     def test_job_names_follow_the_reviewed_matrix(self):
         names = VERIFY.expected_job_names(self.catalog, "macos", "x64")
 
@@ -80,6 +111,61 @@ class PySidePlatformArtifactTest(unittest.TestCase):
     def test_unsupported_target_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "unsupported"):
             VERIFY.expected_artifacts(self.catalog, "linux", "x86")
+
+    def test_unsupported_scope_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "scope"):
+            VERIFY.expected_artifacts(
+                self.catalog, "linux", "x64", scope="compatibility"
+            )
+
+    def test_release_scope_accepts_skipped_compatibility_job(self):
+        artifacts = VERIFY.expected_artifacts(
+            self.catalog, "linux", "x64", scope="release"
+        )
+        release_jobs = VERIFY.expected_job_names(
+            self.catalog, "linux", "x64", scope="release"
+        )
+        compatibility_job = (
+            "PySide6 compatibility / Linux x64 / CPython 3.10 / Qt 6.2.4"
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            artifact_path = temporary / "artifacts.txt"
+            jobs_path = temporary / "jobs.tsv"
+            artifact_path.write_text(
+                "\n".join(artifacts) + "\n", encoding="utf-8"
+            )
+            jobs_path.write_text(
+                "\n".join(
+                    [
+                        *(
+                            f"Build Python candidate / {name}\tsuccess"
+                            for name in release_jobs
+                        ),
+                        f"Build Python candidate / {compatibility_job}\tskipped",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            argv = [
+                str(SCRIPT_PATH),
+                "--platform",
+                "linux",
+                "--arch",
+                "x64",
+                "--display-name",
+                "Linux x64",
+                "--artifacts",
+                str(artifact_path),
+                "--jobs",
+                str(jobs_path),
+                "--scope",
+                "release",
+            ]
+            with mock.patch.object(sys, "argv", argv):
+                self.assertEqual(VERIFY.main(), 0)
 
 
 if __name__ == "__main__":
