@@ -206,8 +206,11 @@ The GitHub Release workflow publishes notes from this generator with
 
 Before creating a stable tag:
 
-1. Confirm the matching `release/X.Y.x` branch contains the intended release
-   commit and the maintainer has explicitly approved making the version public.
+1. On the matching `release/X.Y.x` branch, run
+   `python scripts/release/preflight.py --refresh`. This quick local gate checks
+   the current `main` ancestry, clean worktree, version, release notes, package
+   catalogs, and other deterministic release contracts before CI starts. Then
+   confirm the maintainer has explicitly approved making the version public.
 2. Add and review `docs/releases/vX.Y.Z.md`, then preview it with
    `--require-curated` and review the maintainer changelog from the previous
    release tag. The automatic candidate refuses to package an untagged version

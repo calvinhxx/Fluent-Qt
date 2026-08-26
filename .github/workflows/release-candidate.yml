@@ -103,6 +103,11 @@ jobs:
     with:
       mode: full
       build_release_bundle: true
+      # The exact same commit must pass the full CI workflow before promotion.
+      # Avoid rerunning its two legacy compatibility lanes here. The macOS
+      # CPython 3.11 lane stays because it supplies one publishable wheel.
+      run_compatibility_validation: false
+      release_max_parallel: 6
 
   ready:
     name: Release Candidate ready

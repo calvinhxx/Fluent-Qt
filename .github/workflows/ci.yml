@@ -51,11 +51,29 @@ jobs:
         shell: bash
         run: |
           python3 .github/scripts/test_classify_ci_changes.py
+          python3 .github/scripts/test_check_release_branch_freshness.py
           python3 .github/scripts/validate-ci-workflow-boundaries.py
+          python3 scripts/release/test_preflight.py
           python3 tools/ai/validate_ai_assets.py --project-root .
           python3 tools/onboarding/test_fluentqt_doctor.py
           python3 tools/onboarding/test_fluentqt_create.py
           python3 tools/onboarding/test_fluentqt_trial.py
+
+      - name: Require a current main base for release pull requests
+        if: >-
+          ${{
+            github.event_name == 'pull_request' &&
+            github.base_ref == 'main' &&
+            startsWith(github.head_ref, 'release/')
+          }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: >-
+          python3 .github/scripts/check-release-branch-freshness.py
+          --repository "$GITHUB_REPOSITORY"
+          --base-ref "${{ github.base_ref }}"
+          --head-sha "${{ github.event.pull_request.head.sha }}"
 
       - name: Classify pull-request changes
         id: changes
@@ -176,6 +194,8 @@ jobs:
     with:
       mode: ${{ needs.plan.outputs.mode }}
       build_release_bundle: ${{ needs.plan.outputs.python_release_bundle == 'true' }}
+      run_compatibility_validation: true
+      release_max_parallel: 4
 
   wasm:
     name: WebAssembly validation
