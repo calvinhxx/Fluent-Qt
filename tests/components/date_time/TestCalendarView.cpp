@@ -501,6 +501,27 @@ TEST_F(CalendarViewTest, DateIndicatorRectsAreCircularAndCentered)
     EXPECT_TRUE(cell.contains(indicator));
 }
 
+TEST_F(CalendarViewTest, MonthAndYearIndicatorsAreCircularAndCentered)
+{
+    CalendarView view;
+    const QVariantMap cells = view.property("contentCellRects").toMap();
+    const QVariantMap indicators = view.property("contentIndicatorRects").toMap();
+
+    ASSERT_EQ(cells.size(), 12);
+    ASSERT_EQ(indicators.size(), 12);
+    for (int index = 1; index <= 12; ++index) {
+        const QString key = QString::number(index);
+        const QRectF cell = QRectF(cells.value(key).toRect()).adjusted(8.0, 8.0, -8.0, -8.0);
+        const QRectF indicator = indicators.value(key).toRectF();
+        EXPECT_FALSE(indicator.isEmpty());
+        EXPECT_NEAR(indicator.width(), indicator.height(), 0.01);
+        EXPECT_NEAR(indicator.center().x(), cell.center().x(), 0.5);
+        EXPECT_NEAR(indicator.center().y(), cell.center().y(), 0.5);
+        EXPECT_TRUE(cell.contains(indicator));
+        EXPECT_LT(indicator.width(), cell.width());
+    }
+}
+
 TEST_F(CalendarViewTest, CurrentDateAndSelectedDateUseDistinctVisualStates)
 {
     CalendarView view;
@@ -1361,5 +1382,18 @@ TEST_F(CalendarViewTest, VisualCheck)
 
     window->onThemeUpdated();
     window->show();
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        tests::support::VisualSnapshotOptions light;
+        light.windowSize = QSize(1120, 560);
+        light.variant = QStringLiteral("light");
+        light.theme = tests::support::VisualSnapshotTheme::Light;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window, light));
+
+        tests::support::VisualSnapshotOptions dark = light;
+        dark.variant = QStringLiteral("dark");
+        dark.theme = tests::support::VisualSnapshotTheme::Dark;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(window, dark));
+        return;
+    }
     qApp->exec();
 }

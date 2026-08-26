@@ -188,6 +188,7 @@ private:
                                 bool selected, bool hovered, bool pressed);
     QColor contentCellTextColor(bool current, bool selected) const;
     QRectF dateIndicatorRectForCell(const QRectF& cell) const;
+    QRectF contentIndicatorRectForCell(const QRectF& cell) const;
     QString titleTextForLevel(CalendarContentLevel level, const QDate& visibleMonth) const;
     int decadeStartYear(const QDate& visibleMonth) const;
     DayPageKey dayPageKey(const QDate& visibleMonth) const;

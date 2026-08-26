@@ -28,6 +28,7 @@ constexpr int kDayCellHeight = 44;
 constexpr int kCalendarCardHeight = kCalendarHeaderHeight + kWeekHeaderHeight + kDayCellHeight * 6;
 constexpr int kNavButtonSize = 32;
 constexpr qreal kDateIndicatorDiameter = 34.0;
+constexpr qreal kContentIndicatorDiameter = 52.0;
 constexpr int kContentColumns = 3;
 constexpr int kContentRows = 4;
 constexpr qreal kWheelPageThreshold = 120.0;
@@ -1059,6 +1060,7 @@ void CalendarView::paintMonthContent(QPainter& painter, const QDate& visibleMont
         const int row = i / kContentColumns;
         const int column = i % kContentColumns;
         const QRectF cell = QRectF(contentCellRect(row, column)).adjusted(8.0, 8.0, -8.0, -8.0);
+        const QRectF indicator = contentIndicatorRectForCell(cell);
         const int month = i + 1;
         const bool selectable = isMonthSelectable(visibleMonth.year(), month);
         const bool hovered = selectable && m_hoveredMonth == month;
@@ -1068,10 +1070,10 @@ void CalendarView::paintMonthContent(QPainter& painter, const QDate& visibleMont
                               m_selectedDate.month() == month;
         const bool current = selectable && today.year() == visibleMonth.year() && today.month() == month;
 
-        paintContentCellChrome(painter, cell, current, selected, hovered, pressed);
+        paintContentCellChrome(painter, indicator, current, selected, hovered, pressed);
         painter.setPen(selectable ? contentCellTextColor(current, selected)
                                   : themeColorsRef().textDisabled);
-        painter.drawText(cell, Qt::AlignCenter,
+        painter.drawText(indicator, Qt::AlignCenter,
                          locale().standaloneMonthName(
                              month, QLocale::ShortFormat));
     }
@@ -1091,6 +1093,7 @@ void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth
         const int row = i / kContentColumns;
         const int column = i % kContentColumns;
         const QRectF cell = QRectF(contentCellRect(row, column)).adjusted(8.0, 8.0, -8.0, -8.0);
+        const QRectF indicator = contentIndicatorRectForCell(cell);
         const int year = startYear + i;
         const bool selectable = isYearSelectable(year);
         const bool hovered = selectable && m_hoveredYear == year;
@@ -1098,32 +1101,31 @@ void CalendarView::paintYearContent(QPainter& painter, const QDate& visibleMonth
         const bool selected = selectable && m_selectedDate.isValid() && m_selectedDate.year() == year;
         const bool current = selectable && today.year() == year;
 
-        paintContentCellChrome(painter, cell, current, selected, hovered, pressed);
+        paintContentCellChrome(painter, indicator, current, selected, hovered, pressed);
         painter.setPen(selectable ? contentCellTextColor(current, selected)
                                   : themeColorsRef().textDisabled);
-        painter.drawText(cell, Qt::AlignCenter, QString::number(year));
+        painter.drawText(indicator, Qt::AlignCenter, QString::number(year));
     }
     painter.restore();
 }
 
-void CalendarView::paintContentCellChrome(QPainter& painter, const QRectF& cell, bool current,
+void CalendarView::paintContentCellChrome(QPainter& painter, const QRectF& indicator, bool current,
                                           bool selected, bool hovered, bool pressed)
 {
     const auto& colors = themeColorsRef();
-    const int radius = themeRadius().control;
 
     if (current) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(colors.accentDefault);
-        painter.drawRoundedRect(cell, radius, radius);
+        painter.drawEllipse(indicator);
     } else if (hovered || pressed) {
         painter.setPen(Qt::NoPen);
         painter.setBrush(pressed ? colors.subtleTertiary : colors.subtleSecondary);
-        painter.drawRoundedRect(cell, radius, radius);
+        painter.drawEllipse(indicator);
     } else if (selected) {
         painter.setBrush(Qt::NoBrush);
         painter.setPen(QPen(colors.accentDefault, 1.5));
-        painter.drawRoundedRect(cell.adjusted(1.0, 1.0, -1.0, -1.0), radius, radius);
+        painter.drawEllipse(indicator.adjusted(1.0, 1.0, -1.0, -1.0));
     }
 }
 
@@ -1140,6 +1142,17 @@ QColor CalendarView::contentCellTextColor(bool current, bool selected) const
 QRectF CalendarView::dateIndicatorRectForCell(const QRectF& cell) const
 {
     const qreal diameter = qMin(kDateIndicatorDiameter, qMin(cell.width(), cell.height()) - 10.0);
+    const QPointF center = cell.center();
+    return QRectF(center.x() - diameter / 2.0,
+                  center.y() - diameter / 2.0,
+                  diameter,
+                  diameter);
+}
+
+QRectF CalendarView::contentIndicatorRectForCell(const QRectF& cell) const
+{
+    const qreal diameter = qMax<qreal>(0.0,
+        qMin(kContentIndicatorDiameter, qMin(cell.width(), cell.height())));
     const QPointF center = cell.center();
     return QRectF(center.x() - diameter / 2.0,
                   center.y() - diameter / 2.0,
@@ -1611,6 +1624,7 @@ void CalendarView::refreshProperties()
     QVariantMap indicatorRects;
     QVariantMap dateVisualStates;
     QVariantMap contentCellRects;
+    QVariantMap contentIndicatorRects;
     const QDate start = gridStartDate();
     const QDate today = QDate::currentDate();
     for (int i = 0; i < 42; ++i) {
@@ -1629,12 +1643,19 @@ void CalendarView::refreshProperties()
             state = QStringLiteral("focused");
         dateVisualStates.insert(date.toString(Qt::ISODate), state);
     }
-    for (int i = 0; i < 12; ++i)
-        contentCellRects.insert(QString::number(i + 1), contentCellRect(i / kContentColumns, i % kContentColumns));
+    for (int i = 0; i < 12; ++i) {
+        const QString key = QString::number(i + 1);
+        const QRect cell = contentCellRect(i / kContentColumns, i % kContentColumns);
+        contentCellRects.insert(key, cell);
+        contentIndicatorRects.insert(
+            key,
+            contentIndicatorRectForCell(QRectF(cell).adjusted(8.0, 8.0, -8.0, -8.0)));
+    }
     setProperty("dateCellRects", cellRects);
     setProperty("dateIndicatorRects", indicatorRects);
     setProperty("dateVisualStates", dateVisualStates);
     setProperty("contentCellRects", contentCellRects);
+    setProperty("contentIndicatorRects", contentIndicatorRects);
 }
 
 } // namespace fluent::date_time
