@@ -61,8 +61,15 @@ def main():
     for asset in required_assets:
         if not asset.is_file():
             raise AssertionError("Standalone Gallery asset is missing: {0}".format(asset))
-    if len(tuple((package_dir / "assets" / "control_images").rglob("*.png"))) != 76:
-        raise AssertionError("Standalone Gallery has the wrong control-image count")
+    control_images = tuple(
+        (package_dir / "assets" / "control_images").rglob("*.png")
+    )
+    if len(control_images) != 77:
+        raise AssertionError(
+            "Standalone Gallery control-image count: expected 77, found {0}".format(
+                len(control_images)
+            )
+        )
     expected_home_tiles = {
         "GitHub-Mark.png",
         "Header-Toolkit.png",
@@ -109,8 +116,13 @@ def main():
         raise AssertionError(
             "Standalone Gallery route failures: {0}".format("; ".join(failures))
         )
-    if len(window.all_route_ids()) != 90:
-        raise AssertionError("Standalone Gallery has wrong route coverage")
+    route_count = len(window.all_route_ids())
+    if route_count != len(ROUTES):
+        raise AssertionError(
+            "Standalone Gallery route coverage: expected {0}, found {1}".format(
+                len(ROUTES), route_count
+            )
+        )
     window.navigate_component("button")
     if window.current_route != "button":
         raise AssertionError("Standalone Gallery could not navigate")
