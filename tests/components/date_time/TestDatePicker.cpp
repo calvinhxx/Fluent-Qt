@@ -509,6 +509,77 @@ TEST_F(DatePickerTest, WinUiLayoutUsesContinuousSelectionAndStretchedActions)
     EXPECT_GT(confirm->width(), 100);
 }
 
+TEST_F(DatePickerTest, FlyoutAlignsSelectedRowWithClosedField)
+{
+    DatePicker* picker = new DatePicker(window);
+    picker->setSelectedDate(QDate(2026, 8, 25));
+    picker->setGeometry(220, 250, picker->sizeHint().width(), picker->sizeHint().height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* panel = popup->findChild<QWidget*>(QStringLiteral("DatePickerFlyoutPanel"));
+    ASSERT_NE(panel, nullptr);
+
+    const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
+    ASSERT_GT(selectedRowCenterY, 0);
+    const QPoint selectedRowCenter = panel->mapTo(
+        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
+    const QPoint panelTopLeft = panel->mapTo(window, QPoint(0, 0));
+    const QPoint fieldTopLeft = picker->mapTo(window, QPoint(0, 0));
+
+    EXPECT_NEAR(selectedRowCenter.y(), fieldCenter.y(), 1);
+    EXPECT_EQ(panelTopLeft.x(), fieldTopLeft.x());
+}
+
+TEST_F(DatePickerTest, FlyoutClampsAtTopEdgeWithoutLeavingSurface)
+{
+    DatePicker* picker = new DatePicker(window);
+    picker->setSelectedDate(QDate(2026, 8, 25));
+    picker->setGeometry(220, 0, picker->sizeHint().width(), picker->sizeHint().height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* panel = popup->findChild<QWidget*>(QStringLiteral("DatePickerFlyoutPanel"));
+    ASSERT_NE(panel, nullptr);
+
+    const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
+    const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
+    const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
+    const QPoint selectedRowCenter = panel->mapTo(
+        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
+
+    EXPECT_TRUE(usableSurface.contains(panelGeometry));
+    EXPECT_EQ(panelGeometry.top(), usableSurface.top());
+    EXPECT_GT(selectedRowCenter.y(), fieldCenter.y());
+}
+
+TEST_F(DatePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
+{
+    DatePicker* picker = new DatePicker(window);
+    picker->setSelectedDate(QDate(2026, 8, 25));
+    const QSize pickerSize = picker->sizeHint();
+    picker->setGeometry(220, window->height() - pickerSize.height(),
+                        pickerSize.width(), pickerSize.height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* panel = popup->findChild<QWidget*>(QStringLiteral("DatePickerFlyoutPanel"));
+    ASSERT_NE(panel, nullptr);
+
+    const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
+    const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
+    const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
+    const QPoint selectedRowCenter = panel->mapTo(
+        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
+
+    EXPECT_TRUE(usableSurface.contains(panelGeometry));
+    EXPECT_EQ(panelGeometry.bottom(), usableSurface.bottom());
+    EXPECT_LT(selectedRowCenter.y(), fieldCenter.y());
+}
+
 TEST_F(DatePickerTest, FlyoutLaysOutVisibleColumnsSideBySide)
 {
     DatePicker* picker = new DatePicker(window);
@@ -894,7 +965,9 @@ TEST_F(DatePickerTest, VisualCheck)
     window->onThemeUpdated();
     window->show();
     if (tests::support::shouldCaptureVisualSnapshot()) {
-        constrained->openPicker();
+        // Open the middle-row sample so the snapshot demonstrates the intended
+        // selected-row alignment without triggering the window-edge clamp.
+        numeric->openPicker();
         processEvents();
 
         tests::support::VisualSnapshotOptions light;
