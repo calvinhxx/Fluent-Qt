@@ -128,13 +128,13 @@ protected:
         QRectF r = rect().adjusted(2, 2, -2, -2);
 
         QLinearGradient grad(r.topLeft(), r.bottomLeft());
-        grad.setColorAt(0.0, QColor::fromHsvF(0.0, 1.0, 1.0));   // red
-        grad.setColorAt(1.0/6.0, QColor::fromHsvF(1.0/6.0, 1.0, 1.0)); // yellow
-        grad.setColorAt(2.0/6.0, QColor::fromHsvF(2.0/6.0, 1.0, 1.0)); // green
-        grad.setColorAt(3.0/6.0, QColor::fromHsvF(3.0/6.0, 1.0, 1.0)); // cyan
-        grad.setColorAt(4.0/6.0, QColor::fromHsvF(4.0/6.0, 1.0, 1.0)); // blue
-        grad.setColorAt(5.0/6.0, QColor::fromHsvF(5.0/6.0, 1.0, 1.0)); // magenta
-        grad.setColorAt(1.0, QColor::fromHsvF(1.0, 1.0, 1.0));   // back to red
+        grad.setColorAt(0.0, QColor::fromHsvF(0.0f, 1.0f, 1.0f)); // red
+        grad.setColorAt(1.0 / 6.0, QColor::fromHsvF(1.0f / 6.0f, 1.0f, 1.0f)); // yellow
+        grad.setColorAt(2.0 / 6.0, QColor::fromHsvF(2.0f / 6.0f, 1.0f, 1.0f)); // green
+        grad.setColorAt(3.0 / 6.0, QColor::fromHsvF(3.0f / 6.0f, 1.0f, 1.0f)); // cyan
+        grad.setColorAt(4.0 / 6.0, QColor::fromHsvF(4.0f / 6.0f, 1.0f, 1.0f)); // blue
+        grad.setColorAt(5.0 / 6.0, QColor::fromHsvF(5.0f / 6.0f, 1.0f, 1.0f)); // magenta
+        grad.setColorAt(1.0, QColor::fromHsvF(1.0f, 1.0f, 1.0f)); // back to red
 
         p.fillRect(r, grad);
 
