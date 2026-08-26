@@ -18,6 +18,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/date_time/private/PickerAccessibility_p.h"
+#include "components/date_time/private/PickerFlyoutGeometry_p.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -285,6 +286,7 @@ public:
     void onThemeUpdated() override;
 
 protected:
+    QPoint computePosition() const override;
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
@@ -306,6 +308,7 @@ public:
 
     QSize sizeHint() const override;
     PickerColumn* firstVisibleColumn() const;
+    int selectedRowCenterY() const;
     void refreshFromFlyout();
     void refreshTheme();
     void updateColumns();
@@ -830,6 +833,13 @@ PickerColumn* DatePickerFlyoutPanel::firstVisibleColumn() const
     return nullptr;
 }
 
+int DatePickerFlyoutPanel::selectedRowCenterY() const
+{
+    const int centerRow = kColumnVisibleRows / 2;
+    const int rowHeight = pickerRowHeight(font());
+    return kPopupTopInset + kColumnNavHeight + centerRow * rowHeight + rowHeight / 2;
+}
+
 void DatePickerFlyoutPanel::refreshFromFlyout()
 {
     if (!m_flyout)
@@ -849,6 +859,7 @@ void DatePickerFlyoutPanel::refreshFromFlyout()
     configure(m_dayColumn, DatePicker::DateField::Day);
     configure(m_yearColumn, DatePicker::DateField::Year);
 
+    setProperty("selectedRowCenterY", selectedRowCenterY());
     updateGeometry();
     layoutContent();
     updateColumns();
@@ -986,6 +997,19 @@ DatePickerFlyout::DatePickerFlyout(DatePicker* owner)
         if (m_owner)
             m_owner->handleFlyoutClosed();
     });
+}
+
+QPoint DatePickerFlyout::computePosition() const
+{
+    if (!m_owner || !m_panel || !m_owner->window())
+        return fluent::dialogs_flyouts::Flyout::computePosition();
+
+    return detail::alignedWheelFlyoutPosition(
+        m_owner,
+        size(),
+        kPopupShadowMargin,
+        m_panel->selectedRowCenterY(),
+        clampToWindow());
 }
 
 QVector<DatePicker::DateField> DatePickerFlyout::visibleFields() const

@@ -511,6 +511,77 @@ TEST_F(TimePickerTest, WinUiLayoutUsesContinuousSelectionAndStretchedActions)
     EXPECT_GT(confirm->width(), 90);
 }
 
+TEST_F(TimePickerTest, FlyoutAlignsSelectedRowWithClosedField)
+{
+    TimePicker* picker = new TimePicker(window);
+    picker->setSelectedTime(QTime(9, 30));
+    picker->setGeometry(220, 250, picker->sizeHint().width(), picker->sizeHint().height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* panel = popup->findChild<QWidget*>(QStringLiteral("TimePickerFlyoutPanel"));
+    ASSERT_NE(panel, nullptr);
+
+    const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
+    ASSERT_GT(selectedRowCenterY, 0);
+    const QPoint selectedRowCenter = panel->mapTo(
+        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
+    const QPoint panelTopLeft = panel->mapTo(window, QPoint(0, 0));
+    const QPoint fieldTopLeft = picker->mapTo(window, QPoint(0, 0));
+
+    EXPECT_NEAR(selectedRowCenter.y(), fieldCenter.y(), 1);
+    EXPECT_EQ(panelTopLeft.x(), fieldTopLeft.x());
+}
+
+TEST_F(TimePickerTest, FlyoutClampsAtTopEdgeWithoutLeavingSurface)
+{
+    TimePicker* picker = new TimePicker(window);
+    picker->setSelectedTime(QTime(9, 30));
+    picker->setGeometry(220, 0, picker->sizeHint().width(), picker->sizeHint().height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* panel = popup->findChild<QWidget*>(QStringLiteral("TimePickerFlyoutPanel"));
+    ASSERT_NE(panel, nullptr);
+
+    const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
+    const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
+    const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
+    const QPoint selectedRowCenter = panel->mapTo(
+        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
+
+    EXPECT_TRUE(usableSurface.contains(panelGeometry));
+    EXPECT_EQ(panelGeometry.top(), usableSurface.top());
+    EXPECT_GT(selectedRowCenter.y(), fieldCenter.y());
+}
+
+TEST_F(TimePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
+{
+    TimePicker* picker = new TimePicker(window);
+    picker->setSelectedTime(QTime(9, 30));
+    const QSize pickerSize = picker->sizeHint();
+    picker->setGeometry(220, window->height() - pickerSize.height(),
+                        pickerSize.width(), pickerSize.height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* panel = popup->findChild<QWidget*>(QStringLiteral("TimePickerFlyoutPanel"));
+    ASSERT_NE(panel, nullptr);
+
+    const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
+    const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
+    const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
+    const QPoint selectedRowCenter = panel->mapTo(
+        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
+
+    EXPECT_TRUE(usableSurface.contains(panelGeometry));
+    EXPECT_EQ(panelGeometry.bottom(), usableSurface.bottom());
+    EXPECT_LT(selectedRowCenter.y(), fieldCenter.y());
+}
+
 TEST_F(TimePickerTest, FlyoutColumnsUseCaretGlyphsAndNoFocusFrame)
 {
     TimePicker* picker = new TimePicker(window);
@@ -753,7 +824,9 @@ TEST_F(TimePickerTest, VisualCheck)
     window->onThemeUpdated();
     window->show();
     if (tests::support::shouldCaptureVisualSnapshot()) {
-        afternoon->openPicker();
+        // Use a lower sample so the selected row stays aligned without the
+        // window-edge clamp or popup overlap obscuring the page title.
+        customFont->openPicker();
         processEvents();
 
         tests::support::VisualSnapshotOptions light;

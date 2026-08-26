@@ -16,6 +16,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/date_time/private/PickerAccessibility_p.h"
+#include "components/date_time/private/PickerFlyoutGeometry_p.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -292,6 +293,7 @@ public:
     void onThemeUpdated() override;
 
 protected:
+    QPoint computePosition() const override;
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
@@ -313,6 +315,7 @@ public:
 
     QSize sizeHint() const override;
     TimePickerColumn* firstVisibleColumn() const;
+    int selectedRowCenterY() const;
     void refreshFromFlyout();
     void refreshTheme();
     void updateColumns();
@@ -846,6 +849,13 @@ TimePickerColumn* TimePickerFlyoutPanel::firstVisibleColumn() const
     return nullptr;
 }
 
+int TimePickerFlyoutPanel::selectedRowCenterY() const
+{
+    const int centerRow = kColumnVisibleRows / 2;
+    const int rowHeight = pickerRowHeight(font());
+    return kPopupTopInset + kColumnNavHeight + centerRow * rowHeight + rowHeight / 2;
+}
+
 void TimePickerFlyoutPanel::refreshFromFlyout()
 {
     if (!m_flyout)
@@ -865,6 +875,7 @@ void TimePickerFlyoutPanel::refreshFromFlyout()
     configure(m_minuteColumn, TimePicker::TimeField::Minute);
     configure(m_periodColumn, TimePicker::TimeField::Period);
 
+    setProperty("selectedRowCenterY", selectedRowCenterY());
     updateGeometry();
     layoutContent();
     updateColumns();
@@ -1002,6 +1013,19 @@ TimePickerFlyout::TimePickerFlyout(TimePicker* owner)
         if (m_owner)
             m_owner->handleFlyoutClosed();
     });
+}
+
+QPoint TimePickerFlyout::computePosition() const
+{
+    if (!m_owner || !m_panel || !m_owner->window())
+        return fluent::dialogs_flyouts::Flyout::computePosition();
+
+    return detail::alignedWheelFlyoutPosition(
+        m_owner,
+        size(),
+        kPopupShadowMargin,
+        m_panel->selectedRowCenterY(),
+        clampToWindow());
 }
 
 QVector<TimePicker::TimeField> TimePickerFlyout::visibleFields() const
