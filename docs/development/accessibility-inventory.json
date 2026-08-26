@@ -31,8 +31,8 @@
 
     {"id":"calendar-date-picker","classification":"augmented","risk":"medium","status":"covered","evidence":["tests/components/date_time/TestCalendarDatePicker.cpp"],"gap":""},
     {"id":"calendar-view","classification":"adapter","risk":"high","status":"covered","evidence":["tests/components/date_time/TestCalendarView.cpp"],"gap":""},
-    {"id":"date-picker","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/date_time/private/PickerAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp"],"gap":""},
-    {"id":"time-picker","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/date_time/private/PickerAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp"],"gap":""},
+    {"id":"date-picker","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/date_time/private/PickerAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp","tests/components/date_time/TestDatePicker.cpp"],"gap":""},
+    {"id":"time-picker","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/date_time/private/PickerAccessibility_p.cpp","tests/components/TestComplexInputAccessibility.cpp","tests/components/date_time/TestTimePicker.cpp"],"gap":""},
 
     {"id":"content-dialog","classification":"native","risk":"medium","status":"covered","evidence":["src/components/dialogs_flyouts/ContentDialog.h"],"gap":""},
     {"id":"dialog","classification":"native","risk":"medium","status":"covered","evidence":["src/components/dialogs_flyouts/Dialog.h"],"gap":""},
