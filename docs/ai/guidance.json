@@ -502,6 +502,11 @@
           "avoid_when": "All alternatives must remain visible for comparison, or the control is pane chrome on window material."
         },
         {
+          "component_id": "multi-select-combobox",
+          "choose_when": "Several rows must be selected from a compact model-backed list, optionally with local search and filtered select all.",
+          "avoid_when": "Users must author free-form tags, query a remote service, or compare every option at once."
+        },
+        {
           "component_id": "radio-button",
           "choose_when": "Exactly one option from a small visible group may be selected.",
           "avoid_when": "The option set is long, dynamic, or space constrained."

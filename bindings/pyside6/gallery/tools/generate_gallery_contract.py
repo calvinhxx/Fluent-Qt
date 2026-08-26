@@ -482,20 +482,20 @@ def generate_contract(project_root: Path) -> dict[str, object]:
             .format(", ".join(missing_bindings))
         )
     support_types = sorted(manifest_classes - routed_types)
-    if component_count != 69:
+    if component_count != 70:
         raise ValueError(
-            "native component route count changed from 69 to {0}; review the contract"
+            "native component route count changed from 70 to {0}; review the contract"
             .format(component_count)
         )
-    if sample_count != 205:
+    if sample_count != 208:
         raise ValueError(
-            "native sample count changed from 205 to {0}; review the contract".format(
+            "native sample count changed from 208 to {0}; review the contract".format(
                 sample_count
             )
         )
-    if len(routes) != 90:
+    if len(routes) != 91:
         raise ValueError(
-            "native navigation route count changed from 90 to {0}; review the contract"
+            "native navigation route count changed from 91 to {0}; review the contract"
             .format(len(routes))
         )
 

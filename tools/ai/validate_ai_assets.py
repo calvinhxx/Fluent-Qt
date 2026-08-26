@@ -2148,10 +2148,10 @@ def validate(project_root: Path) -> dict[str, int]:
 
     summary = committed["summary"]
     expected_counts = {
-        "route_count": 90,
-        "component_count": 69,
-        "sample_count": 205,
-        "guided_component_count": 69,
+        "route_count": 91,
+        "component_count": 70,
+        "sample_count": 208,
+        "guided_component_count": 70,
     }
     for key, expected in expected_counts.items():
         if summary.get(key) != expected:

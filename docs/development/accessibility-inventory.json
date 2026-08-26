@@ -9,6 +9,7 @@
     {"id":"combobox","classification":"native","risk":"medium","status":"covered","evidence":["src/components/basicinput/ComboBox.h"],"gap":""},
     {"id":"dropdown-button","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/basicinput/private/MenuButtonAccessibility_p.cpp","tests/components/TestAuxiliarySurfaceAccessibility.cpp"],"gap":""},
     {"id":"hyperlink-button","classification":"adapter","risk":"medium","status":"covered","evidence":["src/components/basicinput/private/HyperlinkButtonAccessibility_p.cpp","tests/components/TestSemanticPresentationAccessibility.cpp"],"gap":""},
+    {"id":"multi-select-combobox","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/MultiSelectComboBoxAccessibility_p.cpp","tests/components/basicinput/TestMultiSelectComboBox.cpp"],"gap":""},
     {"id":"radio-button","classification":"native","risk":"low","status":"covered","evidence":["src/components/basicinput/RadioButton.h"],"gap":""},
     {"id":"rating-control","classification":"adapter","risk":"high","status":"covered","evidence":["src/components/basicinput/private/BasicValueAccessibility_p.cpp","tests/components/TestValueAccessibility.cpp"],"gap":""},
     {"id":"repeat-button","classification":"native","risk":"low","status":"covered","evidence":["src/components/basicinput/RepeatButton.h"],"gap":""},

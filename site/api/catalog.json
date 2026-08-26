@@ -23,15 +23,15 @@
     "docs/ai/generated/fluentqt-ai-catalog.json"
   ],
   "summary": {
-    "components": 69,
-    "public_headers": 114,
+    "components": 70,
+    "public_headers": 115,
     "categories": 12
   },
   "categories": [
     {
       "id": "basic-input",
       "title": "Basic input",
-      "component_count": 15
+      "component_count": 16
     },
     {
       "id": "collections",
@@ -334,6 +334,41 @@
         }
       ],
       "sample_count": 2
+    },
+    {
+      "id": "multi-select-combobox",
+      "title": "MultiSelectComboBox",
+      "category_id": "basic-input",
+      "description": "A model-backed drop-down list for selecting, filtering, and clearing several options.",
+      "capabilities": [
+        "choices"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "installed_declaration_header": "<FluentQt/components/basicinput/MultiSelectComboBox.h>",
+        "qualified_type": "fluent::basicinput::MultiSelectComboBox",
+        "target": "FluentQt::FluentQt",
+        "declaration_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/MultiSelectComboBox.h"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "MultiSelectComboBox",
+        "import_statement": "from fluentqt.basicinput import MultiSelectComboBox"
+      },
+      "gallery": {
+        "route_id": "multi-select-combobox",
+        "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=multi-select-combobox",
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/BasicInputSamples.cpp"
+      },
+      "tests": [
+        {
+          "target": "test_multi_select_combo_box",
+          "ctest_label": "test_multi_select_combo_box",
+          "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/tests/components/basicinput/TestMultiSelectComboBox.cpp"
+        }
+      ],
+      "sample_count": 3
     },
     {
       "id": "radio-button",
@@ -2740,6 +2775,21 @@
         "HyperlinkButton"
       ],
       "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/HyperlinkButton.h"
+    },
+    {
+      "include": "<FluentQt/components/basicinput/MultiSelectComboBox.h>",
+      "source": "src/components/basicinput/MultiSelectComboBox.h",
+      "summary": "Model-backed Fluent dropdown for selecting several rows.",
+      "declarations": [
+        "QEvent",
+        "QFocusEvent",
+        "QKeyEvent",
+        "MultiSelectComboBoxPopup",
+        "MultiSelectComboBoxTrigger",
+        "MultiSelectComboBoxAccessible",
+        "MultiSelectComboBox"
+      ],
+      "source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/src/components/basicinput/MultiSelectComboBox.h"
     },
     {
       "include": "<FluentQt/components/basicinput/RadioButton.h>",

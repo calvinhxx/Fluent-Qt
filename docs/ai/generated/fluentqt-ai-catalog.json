@@ -546,6 +546,11 @@
           "avoid_when": "All alternatives must remain visible for comparison, or the control is pane chrome on window material."
         },
         {
+          "component_id": "multi-select-combobox",
+          "choose_when": "Several rows must be selected from a compact model-backed list, optionally with local search and filtered select all.",
+          "avoid_when": "Users must author free-form tags, query a remote service, or compare every option at once."
+        },
+        {
           "component_id": "radio-button",
           "choose_when": "Exactly one option from a small visible group may be selected.",
           "avoid_when": "The option set is long, dynamic, or space constrained."
@@ -915,6 +920,7 @@
         "combobox",
         "dropdown-button",
         "hyperlink-button",
+        "multi-select-combobox",
         "radio-button",
         "rating-control",
         "repeat-button",
@@ -1838,6 +1844,120 @@
           "title": "Underline feedback",
           "description": "Underline can stay enabled for links that need stronger affordance.",
           "cpp_snippet": "auto* link = new HyperlinkButton(\"Show underline\", this);\nlink->setShowUnderline(true);"
+        }
+      ]
+    },
+    {
+      "id": "multi-select-combobox",
+      "title": "MultiSelectComboBox",
+      "category_id": "basic-input",
+      "description": "A model-backed drop-down list for selecting, filtering, and clearing several options.",
+      "capabilities": [
+        "choices"
+      ],
+      "search_terms": [
+        "affects",
+        "all",
+        "applications",
+        "basic",
+        "caller-owned",
+        "can",
+        "choices",
+        "clearing",
+        "control",
+        "drop-down",
+        "dropdown",
+        "filtered",
+        "filtering",
+        "input",
+        "item",
+        "keep",
+        "keeps",
+        "list",
+        "local",
+        "model",
+        "model-backed",
+        "multi-select-combobox",
+        "multi-select-combobox-model",
+        "multi-select-combobox-search",
+        "multi-select-combobox-selection",
+        "multiselectcombobox",
+        "narrows",
+        "only",
+        "open.",
+        "options.",
+        "ownership",
+        "popup",
+        "rows",
+        "rows.",
+        "search",
+        "select",
+        "selectable",
+        "selected",
+        "selecting",
+        "several",
+        "source",
+        "toggling",
+        "update",
+        "updates",
+        "use.",
+        "value",
+        "while"
+      ],
+      "cpp": {
+        "public_header": "<FluentQt/BasicInput.h>",
+        "declaration": "src/components/basicinput/MultiSelectComboBox.h",
+        "qualified_type": "fluent::basicinput::MultiSelectComboBox",
+        "cmake_target": "FluentQt::FluentQt"
+      },
+      "python": {
+        "package": "FluentQt",
+        "module": "fluentqt.basicinput",
+        "type": "MultiSelectComboBox",
+        "import_statement": "from fluentqt.basicinput import MultiSelectComboBox"
+      },
+      "tests": [
+        {
+          "target": "test_multi_select_combo_box",
+          "source": "tests/components/basicinput/TestMultiSelectComboBox.cpp",
+          "ctest_label": "test_multi_select_combo_box"
+        }
+      ],
+      "gallery": {
+        "route_id": "multi-select-combobox",
+        "sample_source": "app/view/widgets/samples/BasicInputSamples.cpp",
+        "control_image": "app/assets/control_images/basic-input/MultiSelectComboBox.png"
+      },
+      "samples": [
+        {
+          "id": "multi-select-combobox-selection",
+          "title": "Select several model rows",
+          "description": "The selected rows are the value; toggling an item keeps the dropdown open.",
+          "cpp_snippet": "auto* model = new QStringListModel(\n    {\"Design\", \"Engineering\", \"Research\", \"Support\"}, this);\nauto* box = new MultiSelectComboBox(this);\nbox->setModel(model);\nbox->setPlaceholderText(\"Choose teams\");\nbox->setSelectedRows({0, 2});\n\nauto updateStatus = [box, status] {\n    QStringList labels;\n    for (const QModelIndex& index : box->selectedIndexes())\n        labels << index.data().toString();\n    status->setText(QStringLiteral(\"Selected: %1\")\n                        .arg(labels.join(\", \")));\n};\nconnect(box, &MultiSelectComboBox::selectionChanged,\n        this, [=] { updateStatus(); });\nupdateStatus();",
+          "preview_layout": {
+            "orientation": "vertical",
+            "spacing": 8
+          }
+        },
+        {
+          "id": "multi-select-combobox-search",
+          "title": "Search and filtered select all",
+          "description": "Local search narrows the popup, and Select all affects only the filtered selectable rows.",
+          "cpp_snippet": "auto* model = new QStringListModel(\n    {\"Amsterdam\", \"Athens\", \"Berlin\", \"Boston\",\n     \"Lisbon\", \"London\", \"Paris\", \"Prague\"}, this);\nauto* box = new MultiSelectComboBox(this);\nbox->setModel(model);\nbox->setSearchEnabled(true);\nbox->setSearchPlaceholderText(\"Filter cities\");\nbox->setSelectedRows({0, 2});\nconnect(box, &MultiSelectComboBox::selectedCountChanged,\n        this, [=](int count) {\n            status->setText(QString(\"%1 selected\").arg(count));\n        });",
+          "preview_layout": {
+            "orientation": "vertical",
+            "spacing": 8
+          }
+        },
+        {
+          "id": "multi-select-combobox-model",
+          "title": "Caller-owned model updates",
+          "description": "Applications keep ownership of the source model and can update its rows while the control is in use.",
+          "cpp_snippet": "auto* model = new QStringListModel(\n    {\"New York\", \"Paris\", \"Tokyo\"}, this);\nauto* box = new MultiSelectComboBox(this);\nbox->setModel(model);\nbox->setSelectedRows({1});\n\nauto* add = new Button(\"Add Berlin\", this);\nconnect(add, &Button::clicked, this, [=] {\n    model->setStringList(model->stringList() << \"Berlin\");\n    box->setSelectedRows({1, model->rowCount() - 1});\n    add->setEnabled(false);\n});",
+          "preview_layout": {
+            "orientation": "vertical",
+            "spacing": 8
+          }
         }
       ]
     },
@@ -8241,6 +8361,13 @@
       "description": "A button styled like a hyperlink that opens a URL when clicked."
     },
     {
+      "id": "multi-select-combobox",
+      "title": "MultiSelectComboBox",
+      "kind": "component",
+      "parent_id": "basic-input",
+      "description": "A model-backed drop-down list for selecting, filtering, and clearing several options."
+    },
+    {
       "id": "radio-button",
       "title": "RadioButton",
       "kind": "component",
@@ -8768,12 +8895,12 @@
     "Typography"
   ],
   "summary": {
-    "route_count": 90,
-    "component_count": 69,
-    "sample_count": 205,
+    "route_count": 91,
+    "component_count": 70,
+    "sample_count": 208,
     "integration_pattern_count": 6,
     "application_pattern_count": 17,
     "selection_guide_count": 12,
-    "guided_component_count": 69
+    "guided_component_count": 70
   }
 }

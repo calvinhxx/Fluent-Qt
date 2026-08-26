@@ -232,6 +232,34 @@
                 <modify-function signature="onThemeUpdated()"
                                  remove="all"/>
             </object-type>
+            <object-type name="MultiSelectComboBox">
+                <!-- The source model and an optional shared selection model
+                     remain caller-owned. Retain Python wrappers while they
+                     are installed without changing QObject parentage. -->
+                <modify-function signature="setModel(QAbstractItemModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="model()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function
+                    signature="setSelectionModel(QItemSelectionModel*)">
+                    <modify-argument index="1">
+                        <reference-count action="set"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="selectionModel()const">
+                    <modify-argument index="return">
+                        <define-ownership class="target" owner="default"/>
+                    </modify-argument>
+                </modify-function>
+                <modify-function signature="onThemeUpdated()"
+                                 remove="all"/>
+            </object-type>
             <object-type name="CompoundButton"/>
             <object-type name="DropDownButton">
                 <!-- Menus remain caller-owned. Retain the Python wrapper while
