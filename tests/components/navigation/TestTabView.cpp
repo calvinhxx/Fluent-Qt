@@ -511,6 +511,115 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
     EXPECT_EQ(scrollTabs.visibleTabIndexes(), visibleBeforeSelect);
 }
 
+TEST_F(TabViewTest, SeparatorsOnlyAppearBetweenUnselectedTabs)
+{
+    TabView tabs(window);
+    tabs.resize(760, 320);
+    tabs.addTab(QStringLiteral("One"));
+    tabs.addTab(QStringLiteral("Two"));
+    tabs.addTab(QStringLiteral("Three"));
+    tabs.addTab(QStringLiteral("Four"));
+    showAndProcess(tabs);
+
+    QWidget* strip = tabs.findChild<QWidget*>(QStringLiteral("TabViewTabStrip"));
+    ASSERT_NE(strip, nullptr);
+    QVariantList separators = strip->property("tabSeparatorRects").toList();
+    ASSERT_EQ(separators.size(), 2);
+    for (const QVariant& value : separators) {
+        const QRect separator = value.toRect();
+        EXPECT_EQ(separator.width(), 1);
+        EXPECT_EQ(separator.height(), 16);
+    }
+
+    tabs.setSelectedIndex(1);
+    QApplication::processEvents();
+    separators = strip->property("tabSeparatorRects").toList();
+    ASSERT_EQ(separators.size(), 1);
+    const QRect separator = separators.first().toRect();
+    EXPECT_EQ(separator.x(), tabs.tabGeometry(3).left());
+    EXPECT_EQ(separator.center().y(), tabs.tabGeometry(3).center().y());
+}
+
+TEST_F(TabViewTest, SelectedTabUsesFluentCornerProfile)
+{
+    TabView tabs(window);
+    tabs.resize(760, 320);
+    tabs.addTab(QStringLiteral("One"));
+    tabs.addTab(QStringLiteral("Two"));
+    tabs.addTab(QStringLiteral("Three"));
+    tabs.setSelectedIndex(1);
+    showAndProcess(tabs);
+
+    QWidget* strip = tabs.findChild<QWidget*>(QStringLiteral("TabViewTabStrip"));
+    ASSERT_NE(strip, nullptr);
+    EXPECT_EQ(strip->property("selectedTabTopRadius").toInt(), 8);
+    EXPECT_EQ(strip->property("selectedTabShoulderWidth").toInt(), 12);
+    EXPECT_EQ(strip->property("selectedTabShoulderHeight").toInt(), 8);
+
+    const QRect selectedRect = tabs.tabGeometry(1);
+    const QRectF pathBounds = strip->property("selectedTabPathBounds").toRectF();
+    EXPECT_EQ(pathBounds.top(), selectedRect.top());
+    EXPECT_EQ(pathBounds.left(), selectedRect.left() - 12);
+    EXPECT_EQ(pathBounds.right(), selectedRect.right() + 12);
+    EXPECT_EQ(pathBounds.bottom(), strip->rect().bottom() + 1);
+
+    tabs.setSelectedIndex(0);
+    QApplication::processEvents();
+    const QRect firstRect = tabs.tabGeometry(0);
+    const QRectF firstBounds = strip->property("selectedTabPathBounds").toRectF();
+    EXPECT_EQ(firstBounds.left(), firstRect.left() - 12);
+
+    tabs.setSelectedIndex(2);
+    QApplication::processEvents();
+    const QRect lastRect = tabs.tabGeometry(2);
+    const QRectF lastBounds = strip->property("selectedTabPathBounds").toRectF();
+    EXPECT_EQ(lastBounds.right(), lastRect.right() + 12);
+}
+
+TEST_F(TabViewTest, DarkHoverAndSelectedFillsKeepOrderedContrast)
+{
+    TabView tabs(window);
+    tabs.resize(600, 40);
+    tabs.setTabsClosable(false);
+    tabs.setAddTabButtonVisible(false);
+    tabs.addTab(QStringLiteral("One"));
+    tabs.addTab(QStringLiteral("Two"));
+    tabs.addTab(QStringLiteral("Three"));
+    fluent::FluentElement::setTheme(fluent::FluentElement::Dark);
+    tabs.onThemeUpdated();
+    showAndProcess(tabs);
+    const auto revealSettled = [&tabs]() {
+        const auto effects = tabs.findChildren<QGraphicsOpacityEffect*>();
+        return effects.size() >= tabs.tabCount()
+            && std::all_of(effects.cbegin(), effects.cend(), [](const auto* effect) {
+                   return effect && !effect->isEnabled();
+               });
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(revealSettled(), 500);
+
+    const auto renderTabs = [&tabs]() {
+        QImage image(tabs.size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        tabs.render(&image);
+        return image;
+    };
+    const auto stateSample = [&tabs](const QImage& image, int index) {
+        const QRect rect = tabs.tabGeometry(index);
+        return image.pixelColor(rect.center().x(), rect.bottom() - 2);
+    };
+
+    const QImage restImage = renderTabs();
+    const int restValue = qGray(stateSample(restImage, 2).rgb());
+    const int selectedValue = qGray(stateSample(restImage, 0).rgb());
+
+    QTest::mouseMove(&tabs, tabs.tabGeometry(1).center());
+    QApplication::processEvents();
+    const int hoverValue = qGray(stateSample(renderTabs(), 1).rgb());
+
+    EXPECT_LT(restValue, hoverValue);
+    EXPECT_LT(hoverValue, selectedValue);
+}
+
 TEST_F(TabViewTest, PointerAddCloseSelectDisabledAndReorderBehavior)
 {
     if (tests::support::isHeadlessPlatform()) {
@@ -846,5 +955,19 @@ TEST_F(TabViewTest, VisualCheck)
     });
 
     visual->show();
+    if (tests::support::shouldCaptureVisualSnapshot()) {
+        tests::support::VisualSnapshotOptions light;
+        light.windowSize = QSize(1080, 720);
+        light.variant = QStringLiteral("light");
+        light.theme = tests::support::VisualSnapshotTheme::Light;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(visual, light));
+
+        tests::support::VisualSnapshotOptions dark = light;
+        dark.variant = QStringLiteral("dark");
+        dark.theme = tests::support::VisualSnapshotTheme::Dark;
+        ASSERT_TRUE(tests::support::captureVisualSnapshot(visual, dark));
+        delete visual;
+        return;
+    }
     qApp->exec();
 }
