@@ -21,7 +21,7 @@ class PySideReleaseMatrixSelectorTest(unittest.TestCase):
     def setUp(self):
         self.catalog = SELECTOR.load_catalog(SELECTOR.DEFAULT_CATALOG)
 
-    def test_longest_representative_lane_is_queued_first(self):
+    def test_critical_representative_lane_is_queued_first(self):
         matrix = SELECTOR.select_release_matrix(self.catalog)
 
         self.assertEqual(
@@ -44,6 +44,29 @@ class PySideReleaseMatrixSelectorTest(unittest.TestCase):
         )
         self.assertTrue(
             all(scenario["extended_acceptance"] is True for scenario in first_wave)
+        )
+
+    def test_slow_non_representative_lanes_follow_the_first_wave(self):
+        matrix = SELECTOR.select_release_matrix(self.catalog)
+        representative_count = sum(
+            scenario["release"] is True
+            and scenario["fast"] is False
+            and scenario["extended_acceptance"] is True
+            for scenario in self.catalog["scenarios"]
+        )
+
+        self.assertEqual(
+            [
+                scenario["id"]
+                for scenario in matrix["include"][
+                    representative_count : representative_count + 3
+                ]
+            ],
+            [
+                "macos-x64-qt693-cp313",
+                "linux-x64-qt693-cp313",
+                "linux-arm64-qt693-cp313",
+            ],
         )
 
     def test_fixed_fast_and_compatibility_lanes_are_excluded(self):
@@ -78,6 +101,18 @@ class PySideReleaseMatrixSelectorTest(unittest.TestCase):
         ]
 
         with self.assertRaisesRegex(ValueError, "exactly once"):
+            SELECTOR.select_release_matrix(catalog)
+
+    def test_invalid_python_version_is_rejected(self):
+        catalog = copy.deepcopy(self.catalog)
+        scenario = next(
+            scenario
+            for scenario in catalog["scenarios"]
+            if scenario["id"] == "macos-x64-qt693-cp313"
+        )
+        scenario["python_version"] = "next"
+
+        with self.assertRaisesRegex(ValueError, "invalid python_version"):
             SELECTOR.select_release_matrix(catalog)
 
 
