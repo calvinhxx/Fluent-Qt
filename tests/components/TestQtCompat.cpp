@@ -128,6 +128,21 @@ TEST(QtCompat, AccessibleInterfaceCapabilitiesMatchQtVersion) {
 #endif
 }
 
+TEST(QtCompat, CheckBoxStateConnectionNormalizesState) {
+    QCheckBox checkBox;
+    checkBox.setTristate(true);
+    QVector<Qt::CheckState> observed;
+
+    const auto connection = fluentConnectCheckStateChanged(
+        &checkBox, &checkBox,
+        [&observed](Qt::CheckState state) { observed.push_back(state); });
+
+    EXPECT_TRUE(connection);
+    checkBox.setCheckState(Qt::PartiallyChecked);
+    ASSERT_EQ(observed.size(), 1);
+    EXPECT_EQ(observed.constFirst(), Qt::PartiallyChecked);
+}
+
 TEST(QtCompat, WheelPositionHelperReturnsLocalPosition) {
     FLUENT_MAKE_WHEEL_EVENT(event, 12, 18, 120, Qt::ControlModifier);
 

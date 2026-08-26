@@ -419,16 +419,12 @@ public:
                   notifyLogicalItemAccessibilityStructure(m_listView);
             });
 
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-    connect(m_selectAll, &QCheckBox::checkStateChanged, this,
-            [this](Qt::CheckState state) {
-#else
-    connect(m_selectAll, &QCheckBox::stateChanged, this, [this](int state) {
-#endif
-              if (m_updatingSelectAll)
-                return;
-              setVisibleRowsSelected(state == Qt::Checked);
-            });
+    fluentConnectCheckStateChanged(
+        m_selectAll, this, [this](Qt::CheckState state) {
+          if (m_updatingSelectAll)
+            return;
+          setVisibleRowsSelected(state == Qt::Checked);
+        });
 
     connect(this, &MultiSelectComboBoxPopup::closed, this, [this]() {
       if (m_searchEdit && !m_searchEdit->text().isEmpty())
