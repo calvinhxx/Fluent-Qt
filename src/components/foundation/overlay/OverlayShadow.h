@@ -3,6 +3,7 @@
 
 #include <QColor>
 #include <QPainter>
+#include <QPainterPath>
 #include <QRect>
 
 #include "design/Elevation.h"
@@ -59,6 +60,47 @@ inline void paintLayeredShadow(QPainter& painter,
         painter.drawRoundedRect(
             cardRect.adjusted(-i, -i, i, i).translated(0, verticalOffset),
             cornerRadius + i, cornerRadius + i);
+    }
+}
+
+/**
+ * @brief Paints the shared soft shadow around an arbitrary overlay outline.
+ * zh_CN: 沿任意浮层轮廓绘制共享的柔和阴影。
+ *
+ * Use this overload for callouts whose visible surface includes a pointer or
+ * another non-rectangular edge. Each layer expands the complete outline, so
+ * the shadow remains visible on all sides instead of looking like a vertical
+ * stack of duplicated shapes.
+ * zh_CN: 适用于包含指示尾或其他非矩形边缘的浮层。每层沿完整轮廓向外扩散，
+ * 避免阴影退化成仅向下重复叠印的形状。
+ */
+inline void paintLayeredShadow(QPainter& painter,
+                               const QPainterPath& outline,
+                               const Elevation::ShadowParams& params,
+                               qreal intensity = defaultShadowIntensity,
+                               int layerCount = defaultShadowLayerCount,
+                               int verticalOffset = defaultShadowVerticalOffset)
+{
+    if (outline.isEmpty())
+        return;
+
+    const int layers = layerCount > 0 ? layerCount : 1;
+    painter.setPen(Qt::NoPen);
+    for (int i = 0; i < layers; ++i) {
+        const qreal ratio = 1.0 - static_cast<qreal>(i) / layers;
+        QColor layerColor = params.color;
+        layerColor.setAlphaF(params.opacity * ratio * intensity);
+        painter.setBrush(layerColor);
+
+        QPainterPath expanded = outline;
+        if (i > 0) {
+            QPainterPathStroker stroker;
+            stroker.setWidth(i * 2.0);
+            stroker.setCapStyle(Qt::RoundCap);
+            stroker.setJoinStyle(Qt::RoundJoin);
+            expanded = expanded.united(stroker.createStroke(outline));
+        }
+        painter.drawPath(expanded.translated(0, verticalOffset));
     }
 }
 

@@ -11,6 +11,7 @@
 #include "compatibility/QtCompat.h"
 #include "components/dialogs_flyouts/private/TransientSurfaceAccessibility_p.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayShadow.h"
 #include "design/Spacing.h"
 
 namespace fluent::dialogs_flyouts {
@@ -260,14 +261,8 @@ void TeachingTip::paintEvent(QPaintEvent*) {
         }
     }
 
-    const auto& shadow = themeShadow(Elevation::High);
-    for (int layer = 0; layer < 8; ++layer) {
-        QColor shadowColor = shadow.color;
-        shadowColor.setAlphaF(shadow.opacity * (1.0 - (static_cast<double>(layer) / 8.0)) * 0.25);
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(shadowColor);
-        painter.drawPath(bubblePath.translated(0, 2 + layer / 2));
-    }
+    fluent::overlay::paintLayeredShadow(
+        painter, bubblePath, themeShadow(Elevation::High));
 
     const auto& colors = themeColorsRef();
     const QPen outlinePen(colors.strokeDefault, 1);
