@@ -30,6 +30,7 @@
 #include <QAbstractItemView>
 #include <QAccessible>
 #include <QAccessibleInterface>
+#include <QCheckBox>
 #include <QCoreApplication>
 #include <QEvent>
 #include <QFontDatabase>
@@ -293,6 +294,28 @@ QMetaObject::Connection fluentConnectSystemColorSchemeChanged(Context* context, 
     Q_UNUSED(context);
     Q_UNUSED(functor);
     return {};
+#endif
+}
+
+/**
+ * @brief Connects a checkbox state signal with one Qt 5/Qt 6 spelling.
+ * zh_CN: 使用统一的 Qt 5/Qt 6 写法连接复选框状态信号。
+ */
+template <typename Context, typename Functor>
+QMetaObject::Connection fluentConnectCheckStateChanged(
+    QCheckBox* checkBox, Context* context, Functor&& functor) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+    return QObject::connect(
+        checkBox, &QCheckBox::checkStateChanged, context,
+        [slot = std::forward<Functor>(functor)](Qt::CheckState state) mutable {
+            slot(state);
+        });
+#else
+    return QObject::connect(
+        checkBox, &QCheckBox::stateChanged, context,
+        [slot = std::forward<Functor>(functor)](int state) mutable {
+            slot(static_cast<Qt::CheckState>(state));
+        });
 #endif
 }
 
