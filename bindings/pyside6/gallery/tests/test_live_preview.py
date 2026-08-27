@@ -19,10 +19,11 @@ from PySide6.QtCore import (  # noqa: E402
     QCoreApplication,
     QElapsedTimer,
     QEvent,
+    QEventLoop,
+    QTimer,
     Qt,
 )
 from PySide6.QtGui import QPalette  # noqa: E402
-from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 LIVE_HOST = (
@@ -84,9 +85,15 @@ def wait_until(predicate, timeout_ms: int = 4000) -> bool:
         QApplication.processEvents()
         if predicate():
             return True
-        QTest.qWait(20)
+        wait_for_events(20)
     QApplication.processEvents()
     return predicate()
+
+
+def wait_for_events(duration_ms: int) -> None:
+    loop = QEventLoop()
+    QTimer.singleShot(duration_ms, loop.quit)
+    loop.exec()
 
 
 def flush_deferred_deletes() -> None:
@@ -235,7 +242,7 @@ class LivePreviewTest(unittest.TestCase):
             os.replace(replacement, scene)
 
             self.assertTrue(wait_until(lambda: window.generation >= 2))
-            QTest.qWait(300)
+            wait_for_events(300)
             QApplication.processEvents()
             self.assertEqual(window.generation, 2)
             self.assertEqual(int(window.winId()), window_id)
