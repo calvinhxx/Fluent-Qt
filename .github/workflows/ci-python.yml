@@ -141,17 +141,13 @@ jobs:
       - name: Configure PySide6 bindings
         shell: bash
         run: |
-          gallery=OFF
-          if [[ "$VALIDATION_MODE" == "full" ]]; then
-            gallery=ON
-          fi
           cmake -S . -B build/pyside6-qt62 \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
             -DPython_EXECUTABLE="$(command -v python)" \
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.10,<3.11" \
             -DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON \
-            -DFLUENT_QT_BUILD_PYSIDE6_GALLERY="$gallery" \
+            -DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON \
             -DFLUENT_QT_BUILD_EXAMPLES=OFF \
             -DFLUENT_QT_BUILD_GALLERY=OFF \
             -DFLUENT_QT_BUILD_TESTS=OFF \
@@ -555,7 +551,6 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $true
           $qtRoot = $env:QT_ROOT_DIR -replace '\\', '/'
           $python = (Get-Command python).Source -replace '\\', '/'
-          $gallery = if ($env:VALIDATION_MODE -eq "full") { "ON" } else { "OFF" }
           $configureArgs = @(
             "-S", ".",
             "-B", "build/pyside6-qt62-windows",
@@ -566,7 +561,7 @@ jobs:
             "-DPython_EXECUTABLE=$python",
             "-DFLUENT_QT_PYSIDE6_REQUIRES_PYTHON=>=3.10,<3.11",
             "-DFLUENT_QT_BUILD_PYSIDE6_BINDINGS=ON",
-            "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=$gallery",
+            "-DFLUENT_QT_BUILD_PYSIDE6_GALLERY=ON",
             "-DFLUENT_QT_BUILD_EXAMPLES=OFF",
             "-DFLUENT_QT_BUILD_GALLERY=OFF",
             "-DFLUENT_QT_BUILD_TESTS=OFF",

@@ -199,11 +199,14 @@ def validate_boundaries() -> list[str]:
             "ci-python.yml release matrix must honor release_max_parallel"
         )
     for job_id in ("pyside6_linux", "pyside6_windows"):
-        if "if: ${{ inputs.run_compatibility_validation }}" not in job_section(
-            python, job_id
-        ):
+        compatibility_job = job_section(python, job_id)
+        if "if: ${{ inputs.run_compatibility_validation }}" not in compatibility_job:
             errors.append(
                 f"ci-python.yml {job_id} must honor run_compatibility_validation"
+            )
+        if "FLUENT_QT_BUILD_PYSIDE6_GALLERY=ON" not in compatibility_job:
+            errors.append(
+                f"ci-python.yml {job_id} must test the Gallery on the Qt 6.2 baseline"
             )
     if "inputs.run_compatibility_validation" in job_section(
         python, "pyside6_macos"
@@ -266,6 +269,14 @@ def validate_boundaries() -> list[str]:
         ".github/scripts/assemble-desktop-release-candidate.py verify",
         "for attempt in 1 2 3",
         "smoke-launch-macos-gallery.sh",
+        "id: upload-package",
+        "continue-on-error: true",
+        "name: Retry package artifact upload",
+        "steps.upload-package.outcome == 'failure'",
+        "compression-level: 0",
+        "overwrite: true",
+        "failure() && steps.upload-package.outcome != 'failure'",
+        "timeout-minutes: 3",
         "diagnostics-desktop-release-${{ matrix.id }}-${{ github.run_attempt }}",
     ):
         if required not in desktop_candidate:
