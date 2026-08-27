@@ -323,16 +323,36 @@ jobs:
             -Destination (Join-Path $destination $targetName)
 
       - name: Upload package artifact
+        id: upload-package
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: fluentqt-desktop-package-${{ matrix.id }}
           if-no-files-found: error
           retention-days: 30
+          compression-level: 0
+          overwrite: true
+          path: ${{ runner.temp }}/release-artifact/*
+
+      - name: Back off after an artifact service failure
+        if: ${{ steps.upload-package.outcome == 'failure' }}
+        shell: pwsh
+        run: Start-Sleep -Seconds 20
+
+      - name: Retry package artifact upload
+        if: ${{ steps.upload-package.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fluentqt-desktop-package-${{ matrix.id }}
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+          overwrite: true
           path: ${{ runner.temp }}/release-artifact/*
 
       - name: Upload packaging diagnostics
-        if: failure()
-        timeout-minutes: 10
+        if: ${{ failure() && steps.upload-package.outcome != 'failure' }}
+        timeout-minutes: 3
         uses: actions/upload-artifact@v4
         with:
           name: diagnostics-desktop-release-${{ matrix.id }}-${{ github.run_attempt }}
