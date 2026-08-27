@@ -41,6 +41,8 @@ Fluent-Qt is a cross-platform Fluent UI component library for Qt Widgets. It pro
 
 Use [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md) in Codex, Claude Code, or Cursor, then describe the desktop app you want. [Example](https://calvinhxx.github.io/Fluent-Qt/#ai-build) · [Install and use](docs/ai/README.md)
 
+When tuning a Gallery sample, use Live Scene to see each saved change, then check the result in the compiled C++ sample. [How it works](docs/development/gallery-preview-workflow.md)
+
 ## 🧱 Dependencies
 
 | Scope | Dependencies |

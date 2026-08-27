@@ -41,6 +41,8 @@ Fluent-Qt 是面向 Qt Widgets 的跨平台 Fluent UI 组件库，提供输入�
 
 在 Codex、Claude Code 或 Cursor 中调用 [`build-fluentqt-gui`](.agents/skills/build-fluentqt-gui/SKILL.md)，直接描述要构建的桌面应用。[查看效果](https://calvinhxx.github.io/Fluent-Qt/zh-CN/#ai-build) · [安装与用法](docs/ai/README.md)
 
+调整 Gallery 示例时，可以先在 Live Scene 里边改边看，再用编译后的 C++ 示例确认最终效果。[查看用法](docs/development/gallery-preview-workflow.md)
+
 ## 🧱 依赖
 
 | 范围 | 依赖 |
