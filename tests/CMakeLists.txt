@@ -73,7 +73,9 @@ set(FLUENT_QT_CI_FULL_TARGETS
     test_window
 )
 if(FLUENT_QT_BUILD_GALLERY)
-    list(APPEND FLUENT_QT_CI_FULL_TARGETS test_gallery_content_pages)
+    list(APPEND FLUENT_QT_CI_FULL_TARGETS
+        test_gallery_content_pages
+        test_gallery_preview_cli)
 endif()
 
 set(FLUENT_QT_MANUAL_VISUAL_TESTS

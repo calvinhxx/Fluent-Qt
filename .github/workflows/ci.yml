@@ -58,6 +58,7 @@ jobs:
           python3 tools/onboarding/test_fluentqt_doctor.py
           python3 tools/onboarding/test_fluentqt_create.py
           python3 tools/onboarding/test_fluentqt_trial.py
+          python3 -m unittest discover -s tools/dev -p 'test_fluent_qt_*.py'
 
       - name: Require a current main base for release pull requests
         if: >-

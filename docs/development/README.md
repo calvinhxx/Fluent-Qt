@@ -34,6 +34,7 @@ Agent skills may link here, but they should not duplicate the full rules.
 - [PySide6 Publishing Runbook](../../bindings/pyside6/PUBLISHING.md)
 - [PySide6 Compatibility Roadmap](../../bindings/pyside6/ROADMAP.md)
 - [App Sample Optimization](app-sample-optimization.md)
+- [Gallery Live Scene and Native Verify](gallery-preview-workflow.md)
 - [App Visual Geometry Verification](app-visual-geometry-verification.md)
 - [System Capability Roadmap](system-capability-roadmap.md)
 - [Editing Command Router API Proposal](editing-command-router-proposal.md)

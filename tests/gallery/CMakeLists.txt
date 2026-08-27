@@ -57,6 +57,7 @@ add_dependencies(test_gallery_shell_framework test_gallery_single_instance_probe
 
 add_qt_test_module(test_gallery_content_pages
     TestGalleryContentPages.cpp
+    TestGalleryPreview.cpp
     TestGalleryInspectorScenes.cpp
     ${FLUENT_QT_GALLERY_SOURCES}
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
@@ -67,6 +68,13 @@ target_include_directories(test_gallery_content_pages PRIVATE ${FLUENT_QT_GALLER
 target_compile_definitions(test_gallery_content_pages PRIVATE
     FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}"
     FLUENT_QT_APPLICATION_SCENES_PATH="${CMAKE_SOURCE_DIR}/docs/ai/evals/application-scenes.json")
+
+add_qt_test_module(test_gallery_preview_cli
+    TestGalleryPreviewCli.cpp
+)
+target_compile_definitions(test_gallery_preview_cli PRIVATE
+    FLUENT_QT_GALLERY_PREVIEW_PATH="$<TARGET_FILE:fluent_qt_gallery>")
+add_dependencies(test_gallery_preview_cli fluent_qt_gallery)
 
 foreach(_gallery_acceptance_scale 1.25 2 3)
     string(REPLACE "." "" _gallery_acceptance_scale_id

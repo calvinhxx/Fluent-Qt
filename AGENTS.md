@@ -7,6 +7,7 @@
 - Use [.agents/skills/build-fluentqt-gui/SKILL.md](.agents/skills/build-fluentqt-gui/SKILL.md) as the canonical cross-agent workflow when adding a FluentQt GUI to an existing or greenfield project. Use [docs/ai/README.md](docs/ai/README.md) for discovery, component selection, compatibility, and catalog maintenance.
 - Use [docs/development/gallery-control-images.md](docs/development/gallery-control-images.md) when adding or regenerating Gallery component-card icons under `app/assets/control_images/` (transparent canvas, category color families, qrc registration).
 - Use [docs/development/app-sample-optimization.md](docs/development/app-sample-optimization.md) when adding or editing Gallery live examples: Source code snippets must stay semantically aligned with the preview UI.
+- Use [docs/development/gallery-preview-workflow.md](docs/development/gallery-preview-workflow.md) for persistent Python Live Scenes and compiled C++ Gallery sample verification.
 - Use [docs/development/linux-workflow.md](docs/development/linux-workflow.md) for desktop Linux portability, supported Qt versions, CI baselines, and Linux build/test presets.
 - Use [docs/development/release-governance.md](docs/development/release-governance.md) for lightweight branch, Angular-style Conventional Commit, version, tag, changelog, and release checklist rules.
 - Use [docs/development/compatibility-policy.md](docs/development/compatibility-policy.md) before changing a public API, deprecating a surface, or raising a Qt, C++, CMake, or Python baseline.
