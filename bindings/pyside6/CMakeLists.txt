@@ -800,6 +800,16 @@ if(BUILD_TESTING)
             LABELS "pyside;unit;ci_fast"
             TIMEOUT 240)
 
+        add_test(
+            NAME test_pyside6_live_preview
+            COMMAND "${Python_EXECUTABLE}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/gallery/tests/test_live_preview.py")
+        set_tests_properties(test_pyside6_live_preview PROPERTIES
+            ENVIRONMENT
+                "PYTHONPATH=${PROJECT_BINARY_DIR}/python;QT_QPA_PLATFORM=offscreen"
+            LABELS "pyside;unit;ci_fast"
+            TIMEOUT 60)
+
         # The checked-in WebAssembly teaching catalog is produced by the
         # official PySide6 release runtime. Older, non-published Qt 6.2
         # compatibility wheels can render equivalent enum expressions with
