@@ -199,6 +199,11 @@ When optimizing multiple components:
 
 ## Verification
 
+For fast visual iteration, use the persistent
+[Gallery preview workflow](gallery-preview-workflow.md), then verify the accepted
+result against the compiled C++ SampleCard. The Python scene is not canonical
+and does not replace the gates below.
+
 At minimum, verify the Gallery target:
 
 ```bash

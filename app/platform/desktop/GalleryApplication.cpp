@@ -6,7 +6,10 @@
 #include <QCoreApplication>
 #include <QGuiApplication>
 
+#include <cstdio>
+
 #include "support/logging/Log.h"
+#include "view/preview/GalleryPreviewApplication.h"
 #include "view/shell/AppIcon.h"
 #include "view/shell/GalleryApplicationController.h"
 #include "view/shell/GallerySingleInstance.h"
@@ -33,10 +36,31 @@ int runApplication(int argc, char** argv)
 #ifdef Q_OS_LINUX
     QGuiApplication::setDesktopFileName(QStringLiteral(FLUENT_QT_GALLERY_APP_ID));
 #endif
-    app.setQuitOnLastWindowClosed(false);
+
+    const GalleryPreviewParseResult preview =
+        parseGalleryPreviewArguments(app.arguments());
+    if (preview.options.requested && preview.options.helpRequested) {
+        const QByteArray help = preview.helpText.toLocal8Bit();
+        std::fputs(help.constData(), stdout);
+        return 0;
+    }
+    if (preview.options.requested && !preview.isValid()) {
+        const QByteArray error = preview.error.toLocal8Bit();
+        std::fprintf(stderr, "fluent_qt_preview: %s\n", error.constData());
+        return 2;
+    }
 
     fluent::initializeResources();
     app.setFont(Typography::Styles::Body.toQFont());
+
+    if (preview.options.requested) {
+        fluent::support::logging::InitializationOptions previewLogging;
+        previewLogging.defaultLevel = fluent::support::logging::Level::Warn;
+        fluent::support::logging::initialize(previewLogging);
+        return runGalleryPreviewApplication(app, preview.options);
+    }
+
+    app.setQuitOnLastWindowClosed(false);
     auto& settings = GallerySettings::instance();
 
     fluent::support::logging::InitializationOptions loggingOptions;

@@ -21,6 +21,8 @@ if(EMSCRIPTEN)
         "/Gallery(ApplicationController|SingleInstance|WindowPlacement)\\.(cpp|h)$")
     list(FILTER FLUENT_QT_GALLERY_SOURCES EXCLUDE REGEX
         "/GalleryCloseBehaviorPrompt\\.(cpp|h)$")
+    list(FILTER FLUENT_QT_GALLERY_SOURCES EXCLUDE REGEX
+        "/view/preview/.*\\.(cpp|h)$")
 endif()
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
     ${FLUENT_QT_GALLERY_SOURCES}
