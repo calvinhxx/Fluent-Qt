@@ -13,6 +13,7 @@ from typing import Iterable
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ADAPTIVE_BUILD_TOOL = Path(__file__).with_name("fluent_qt_build.py")
 
 
 def default_preset(system: str | None = None, machine: str | None = None) -> str:
@@ -99,15 +100,12 @@ def inferred_build_directory(args: argparse.Namespace) -> Path:
 
 
 def build_command(args: argparse.Namespace) -> list[str]:
+    command = [sys.executable, str(ADAPTIVE_BUILD_TOOL)]
     if args.build_dir is not None:
-        command = [
-            "cmake",
-            "--build",
-            str(args.build_dir.expanduser().resolve()),
-        ]
+        command.append(str(args.build_dir.expanduser().resolve()))
     else:
-        command = ["cmake", "--build", "--preset", args.preset]
-    command.extend(["--target", "fluent_qt_gallery", "--parallel"])
+        command.extend(["--preset", args.preset])
+    command.extend(["--target", "fluent_qt_gallery"])
     return command
 
 

@@ -216,6 +216,17 @@ def validate_boundaries() -> list[str]:
         errors.append(
             "ci-cpp.yml build matrix must cap parallel action downloads at 4"
         )
+    for required in (
+        "name: Smoke adaptive build parallelism",
+        "tools/dev/fluent_qt_build.py --print-jobs",
+        "--jobs auto",
+        "--dry-run",
+        'if ("${{ runner.os }}" -eq "Windows") { "python" } else { "python3" }',
+    ):
+        if required not in cpp_build:
+            errors.append(
+                f"ci-cpp.yml build matrix is missing adaptive build smoke: {required}"
+            )
     for forbidden in ("pip install PySide6", "shiboken6_generator==", "pyside6_release:"):
         if forbidden in cpp:
             errors.append(f"ci-cpp.yml contains PySide6 execution detail: {forbidden}")

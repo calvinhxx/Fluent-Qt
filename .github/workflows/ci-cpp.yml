@@ -82,6 +82,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Smoke adaptive build parallelism
+        shell: pwsh
+        run: |
+          $python = if ("${{ runner.os }}" -eq "Windows") { "python" } else { "python3" }
+          $selectedText = (& $python tools/dev/fluent_qt_build.py --print-jobs | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) {
+            throw "Adaptive build resource detection failed."
+          }
+          $selectedJobs = 0
+          if (-not [int]::TryParse($selectedText, [ref]$selectedJobs) -or $selectedJobs -lt 1) {
+            throw "Adaptive build returned an invalid job count: '$selectedText'."
+          }
+          Write-Host "Adaptive build selected $selectedJobs job(s) on ${{ runner.os }} ${{ runner.arch }}."
+          & $python tools/dev/fluent_qt_build.py `
+            --jobs auto `
+            --dry-run `
+            --preset "${{ matrix.preset }}" `
+            --target FluentQt
+          if ($LASTEXITCODE -ne 0) {
+            throw "Adaptive build dry-run failed."
+          }
+
       - name: Verify native ARM64 runner
         if: ${{ matrix.native_arm64 == true }}
         shell: pwsh

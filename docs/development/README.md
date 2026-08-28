@@ -17,6 +17,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 | Add a visible component | [Accessibility contract](accessibility-contract.md) | [Accessibility inventory](accessibility-inventory.md), [visual review](visual-review.md) |
 | Add or edit a Gallery sample | [App sample optimization](app-sample-optimization.md) | [Live Scene and native preview](gallery-preview-workflow.md) |
 | Add a Gallery card image | [Gallery control images](gallery-control-images.md) | qrc registration and Gallery build |
+| Build the repository locally | [Build workflow](build-workflow.md) | The selected job count printed by the adaptive wrapper |
 | Write or update a test | [Testing workflow](testing-workflow.md) | [Qt component test conventions](qt-component-test-conventions.md) |
 | Diagnose behavior | [Logging workflow](logging-workflow.md) | Focused component tests |
 | Change Linux or WebAssembly support | [Linux](linux-workflow.md) or [WebAssembly](webassembly-workflow.md) | The matching preset and CI lane |
@@ -34,6 +35,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 
 ### Build, tests, and diagnostics
 
+- [Build workflow](build-workflow.md)
 - [Testing workflow](testing-workflow.md)
 - [Qt component test conventions](qt-component-test-conventions.md)
 - [Logging workflow](logging-workflow.md)

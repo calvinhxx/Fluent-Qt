@@ -12,6 +12,7 @@
 - Use [docs/development/app-sample-optimization.md](docs/development/app-sample-optimization.md) when adding or editing Gallery live examples: Source code snippets must stay semantically aligned with the preview UI.
 - Use [docs/development/gallery-preview-workflow.md](docs/development/gallery-preview-workflow.md) for persistent Python Live Scenes and compiled C++ Gallery sample verification.
 - Use [docs/development/linux-workflow.md](docs/development/linux-workflow.md) for desktop Linux portability, supported Qt versions, CI baselines, and Linux build/test presets.
+- Use [docs/development/build-workflow.md](docs/development/build-workflow.md) for adaptive local build parallelism, resource detection, and explicit overrides.
 - Use [docs/development/release-governance.md](docs/development/release-governance.md) for lightweight branch, Angular-style Conventional Commit, version, tag, changelog, and release checklist rules.
 - Use [docs/development/compatibility-policy.md](docs/development/compatibility-policy.md) before changing a public API, deprecating a surface, or raising a Qt, C++, CMake, or Python baseline.
 - Use [docs/development/packaging-workflow.md](docs/development/packaging-workflow.md) for macOS DMG, Windows installer, and Linux DEB packaging commands.
@@ -27,18 +28,19 @@
 
 ```bash
 cmake --preset vcpkg-osx
-cmake --build --preset vcpkg-osx --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-osx
 ctest --preset vcpkg-osx --output-on-failure
 ```
 
-- Always enable parallel compilation for project builds. Use
-  `cmake --build --preset <preset> --parallel`, including focused target builds,
-  unless a diagnosed toolchain or resource issue requires an explicit lower
-  job count.
+- Use `python3 tools/dev/fluent_qt_build.py` for local project builds. It selects
+  a parallel job count from the current CPU affinity/quota and available memory;
+  shared presets do not impose a repository-wide cap. Use `--jobs <jobs>`,
+  `FLUENTQT_BUILD_JOBS`, or `CMAKE_BUILD_PARALLEL_LEVEL` only for a measured host
+  or a reproducible resource-constrained lane.
 - Build focused test targets with the current host preset, for example
-  `cmake --build --preset vcpkg-linux --target test_<name> --parallel` on Linux
-  or `cmake --build --preset vcpkg-osx --target test_<name> --parallel` on
-  macOS.
+  `python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux --target
+  test_<name>` on Linux or `python3 tools/dev/fluent_qt_build.py --preset
+  vcpkg-osx --target test_<name>` on macOS.
 - Prefer anchored CTest label filters, for example `ctest --preset vcpkg-linux -L '^test_<name>$' --output-on-failure`; see [docs/development/testing-workflow.md](docs/development/testing-workflow.md).
 - VisualCheck tests are interactive by design. Automated CTest runs set `SKIP_VISUAL_TEST=1`; run binaries directly with `--gtest_filter="*VisualCheck*"` for manual review or `VISUAL_SNAPSHOT=1` for snapshots.
 

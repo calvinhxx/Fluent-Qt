@@ -47,7 +47,7 @@ native builds leave that layer disabled:
 
 ```bash
 cmake --preset wasm
-cmake --build --preset wasm --parallel
+python3 tools/dev/fluent_qt_build.py --preset wasm
 ```
 
 The main browser entry points are:
@@ -246,7 +246,7 @@ cmake --install build/wasm \
   -B build/wasm-installed-consumer \
   -G Ninja \
   -DFluentQt_DIR=/tmp/fluentqt-wasm-install/lib/cmake/FluentQt
-cmake --build build/wasm-installed-consumer --parallel
+python3 tools/dev/fluent_qt_build.py build/wasm-installed-consumer
 ```
 
 This is the independent UILib proof: the Gallery is one consumer, not the only
