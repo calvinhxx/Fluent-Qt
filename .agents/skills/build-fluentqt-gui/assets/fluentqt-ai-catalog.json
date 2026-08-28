@@ -2,7 +2,7 @@
   "schema_version": 2,
   "project": {
     "name": "FluentQt",
-    "version": "1.7.3",
+    "version": "1.7.4",
     "api_version": "1.7",
     "cpp_standard": "C++17",
     "qt_versions": [
@@ -1634,7 +1634,7 @@
           "id": "combobox-editable",
           "title": "Custom value with suggestions",
           "description": "Type any value or choose a suggested size. Custom text stays valid without being added to the suggestion list.",
-          "cpp_snippet": "auto* row = new QWidget(this);\nauto* layout = new QVBoxLayout(row);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(8);\n\nauto* comboBox = new ComboBox(row);\ncomboBox->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\ncomboBox->setEditable(true);\ncomboBox->setInsertPolicy(QComboBox::NoInsert);\ncomboBox->setCurrentIndex(4);\ncomboBox->setFixedWidth(200);\n\nauto* status = new Label(row);\nstatus->setFixedWidth(200);\nstatus->setTextElideMode(Qt::ElideRight);\n\nauto updateStatus = [comboBox, status](const QString& text) {\n    const bool suggested = comboBox->findText(\n        text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >= 0;\n    status->setText(QStringLiteral(\"%1 value: %2\").arg(\n        suggested ? QStringLiteral(\"Suggested\") : QStringLiteral(\"Custom\"),\n        text.isEmpty() ? QStringLiteral(\"(empty)\") : text));\n};\nQObject::connect(comboBox, &QComboBox::editTextChanged,\n                 status, updateStatus);\nupdateStatus(comboBox->currentText());\n\nlayout->addWidget(comboBox);\nlayout->addWidget(status);",
+          "cpp_snippet": "auto* row = new QWidget(this);\nauto* layout = new QVBoxLayout(row);\nlayout->setContentsMargins(0, 0, 0, 0);\nlayout->setSpacing(8);\n\nauto* comboBox = new ComboBox(row);\ncomboBox->setAccessibleName(\"Editable size value\");\ncomboBox->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\ncomboBox->setEditable(true);\ncomboBox->lineEdit()->setAccessibleName(\"Editable size value\");\ncomboBox->setInsertPolicy(QComboBox::NoInsert);\ncomboBox->setCurrentIndex(4);\ncomboBox->setFixedWidth(200);\n\nauto* status = new Label(row);\nstatus->setFixedWidth(200);\nstatus->setTextElideMode(Qt::ElideRight);\n\nauto updateStatus = [comboBox, status](const QString& text) {\n    const bool suggested = comboBox->findText(\n        text, Qt::MatchFixedString | Qt::MatchCaseSensitive) >= 0;\n    status->setText(QStringLiteral(\"%1 value: %2\").arg(\n        suggested ? QStringLiteral(\"Suggested\") : QStringLiteral(\"Custom\"),\n        text.isEmpty() ? QStringLiteral(\"(empty)\") : text));\n};\nQObject::connect(comboBox, &QComboBox::editTextChanged,\n                 status, updateStatus);\nupdateStatus(comboBox->currentText());\n\nlayout->addWidget(comboBox);\nlayout->addWidget(status);",
           "preview_layout": {
             "orientation": "vertical",
             "spacing": 8
@@ -1933,7 +1933,7 @@
           "id": "multi-select-combobox-selection",
           "title": "Select several model rows",
           "description": "The selected rows are the value; toggling an item keeps the dropdown open.",
-          "cpp_snippet": "auto* model = new QStringListModel(\n    {\"Design\", \"Engineering\", \"Research\", \"Support\"}, this);\nauto* box = new MultiSelectComboBox(this);\nbox->setModel(model);\nbox->setPlaceholderText(\"Choose teams\");\nbox->setSelectedRows({0, 2});\n\nauto updateStatus = [box, status] {\n    QStringList labels;\n    for (const QModelIndex& index : box->selectedIndexes())\n        labels << index.data().toString();\n    status->setText(QStringLiteral(\"Selected: %1\")\n                        .arg(labels.join(\", \")));\n};\nconnect(box, &MultiSelectComboBox::selectionChanged,\n        this, [=] { updateStatus(); });\nupdateStatus();",
+          "cpp_snippet": "auto* model = new QStringListModel(\n    {\"Design\", \"Engineering\", \"Research\", \"Support\"}, this);\nauto* box = new MultiSelectComboBox(this);\nbox->setModel(model);\nbox->setPlaceholderText(\"Choose teams\");\nbox->setSelectedRows({0, 2});\nbox->setFixedWidth(280);\n\nauto* status = new Label(this);\nstatus->setFixedWidth(280);\nstatus->setWordWrap(true);\n\nauto updateStatus = [box, status] {\n    QStringList labels;\n    for (const QModelIndex& index : box->selectedIndexes())\n        labels << index.data().toString();\n    status->setText(QStringLiteral(\"Selected: %1\")\n                        .arg(labels.join(\", \")));\n};\nconnect(box, &MultiSelectComboBox::selectionChanged,\n        this, [=] { updateStatus(); });\nupdateStatus();",
           "preview_layout": {
             "orientation": "vertical",
             "spacing": 8
