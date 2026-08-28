@@ -2,7 +2,7 @@
   "schema_version": 1,
   "project": {
     "name": "FluentQt",
-    "version": "1.7.3",
+    "version": "1.7.4",
     "api_version": "1.7",
     "cpp_standard": "C++17",
     "qt_versions": [
@@ -954,7 +954,7 @@
       "gallery": {
         "route_id": "tree-view",
         "url": "https://calvinhxx.github.io/Fluent-Qt/gallery/?route=tree-view",
-        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsSamples.cpp"
+        "sample_source_url": "https://github.com/calvinhxx/Fluent-Qt/blob/main/app/view/widgets/samples/CollectionsTreeSamples.cpp"
       },
       "tests": [
         {
