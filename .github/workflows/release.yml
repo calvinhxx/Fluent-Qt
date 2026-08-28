@@ -365,6 +365,7 @@ jobs:
     with:
       mode: full
       build_release_bundle: true
+      run_macos_release_validation: true
 
   publish:
     name: Publish GitHub Release
