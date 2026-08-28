@@ -292,7 +292,8 @@ def _samples_in_body(body: str) -> list[dict[str, object]]:
 def _route_sample_functions(source: str) -> dict[str, str]:
     pattern = re.compile(
         r"if\s*\(\s*routeId\s*==\s*QStringLiteral\(\s*\"([^\"]+)\"\s*\)\s*\)"
-        r"\s*return\s+([A-Za-z0-9_]+Samples)\s*\(\s*\)\s*;",
+        r"\s*return\s+(?:[A-Za-z_][A-Za-z0-9_]*::)*"
+        r"([A-Za-z0-9_]+Samples)\s*\(\s*\)\s*;",
         re.S,
     )
     return {route_id: function_name for route_id, function_name in pattern.findall(source)}
@@ -365,14 +366,28 @@ def generate_contract(project_root: Path) -> dict[str, object]:
     component_titles = _component_titles(component_source)
     descriptions = _route_descriptions(content_source)
 
+    # Dispatch functions remain grouped by category, while large sample
+    # implementations may be split into companion translation units. Resolve
+    # function bodies across the whole sample directory so modularization does
+    # not silently remove routes from the generated Python contract.
+    bodies: dict[str, str] = {}
+    for source_path in sorted(samples_root.glob("*Samples.cpp")):
+        source = source_path.read_text(encoding="utf-8")
+        for function_name, body in _function_bodies(source).items():
+            if function_name in bodies:
+                raise ValueError(
+                    "duplicate native Gallery sample function {0}: {1}".format(
+                        function_name, source_path.name
+                    )
+                )
+            bodies[function_name] = body
+
     categories = []
     components = []
     seen_routes: set[str] = set()
     seen_samples: set[tuple[str, str]] = set()
     for category in CATEGORY_SOURCES:
-        source_path = samples_root / category.source_file
-        source = source_path.read_text(encoding="utf-8")
-        bodies = _function_bodies(source)
+        source = (samples_root / category.source_file).read_text(encoding="utf-8")
         route_functions = _route_sample_functions(source)
         category_components = []
         for route_id, function_name in route_functions.items():

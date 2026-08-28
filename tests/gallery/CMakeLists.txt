@@ -1,15 +1,9 @@
 if(NOT DEFINED FLUENT_QT_GALLERY_SOURCE_DIR)
     set(FLUENT_QT_GALLERY_SOURCE_DIR ${CMAKE_SOURCE_DIR}/app)
 endif()
-if(NOT DEFINED FLUENT_QT_GALLERY_SOURCES)
-    file(GLOB_RECURSE FLUENT_QT_GALLERY_SOURCES CONFIGURE_DEPENDS
-        ${FLUENT_QT_GALLERY_SOURCE_DIR}/model/*.h
-        ${FLUENT_QT_GALLERY_SOURCE_DIR}/model/*.cpp
-        ${FLUENT_QT_GALLERY_SOURCE_DIR}/view/*.h
-        ${FLUENT_QT_GALLERY_SOURCE_DIR}/view/*.cpp
-        ${FLUENT_QT_GALLERY_SOURCE_DIR}/viewmodel/*.h
-        ${FLUENT_QT_GALLERY_SOURCE_DIR}/viewmodel/*.cpp
-    )
+if(NOT TARGET FluentQtGalleryCore)
+    message(FATAL_ERROR
+        "Gallery tests require the shared FluentQtGalleryCore target")
 endif()
 if(NOT DEFINED FLUENT_QT_GALLERY_RESOURCES)
     set(FLUENT_QT_GALLERY_RESOURCES
@@ -45,12 +39,12 @@ add_dependencies(test_gallery_single_instance test_gallery_single_instance_probe
 
 add_qt_test_module(test_gallery_shell_framework
     TestGalleryShellFramework.cpp
-    ${FLUENT_QT_GALLERY_SOURCES}
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
     ${FLUENT_QT_GALLERY_RESOURCES}
     ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
 )
 target_include_directories(test_gallery_shell_framework PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_shell_framework PRIVATE FluentQtGalleryCore)
 target_compile_definitions(test_gallery_shell_framework PRIVATE
     FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
 add_dependencies(test_gallery_shell_framework test_gallery_single_instance_probe)
@@ -59,12 +53,12 @@ add_qt_test_module(test_gallery_content_pages
     TestGalleryContentPages.cpp
     TestGalleryPreview.cpp
     TestGalleryInspectorScenes.cpp
-    ${FLUENT_QT_GALLERY_SOURCES}
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/platform/desktop/GalleryPlatform.cpp
     ${FLUENT_QT_GALLERY_RESOURCES}
     ${FLUENT_QT_GALLERY_WEB_RESOURCES}
 )
 target_include_directories(test_gallery_content_pages PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_content_pages PRIVATE FluentQtGalleryCore)
 target_compile_definitions(test_gallery_content_pages PRIVATE
     FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}"
     FLUENT_QT_APPLICATION_SCENES_PATH="${CMAKE_SOURCE_DIR}/docs/ai/evals/application-scenes.json")

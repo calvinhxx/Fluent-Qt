@@ -3860,7 +3860,7 @@
       ],
       "gallery": {
         "route_id": "tree-view",
-        "sample_source": "app/view/widgets/samples/CollectionsSamples.cpp",
+        "sample_source": "app/view/widgets/samples/CollectionsTreeSamples.cpp",
         "control_image": "app/assets/control_images/collections/TreeView.png"
       },
       "samples": [
