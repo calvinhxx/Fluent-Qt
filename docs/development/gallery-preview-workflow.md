@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › Gallery and site
 
-[← App Sample Optimization](app-sample-optimization.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Gallery Control Images →](gallery-control-images.md)
+[← App Sample Optimization](app-sample-optimization.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [AI-assisted GUI verification →](gui-verification-workflow.md)
 <!-- docs-nav:top:end -->
 
 Use the Python Live Scene while adjusting a focused Gallery surface. It keeps
@@ -98,7 +98,9 @@ python3 tools/dev/fluent_qt_live_preview.py \
 ```
 
 Inspector findings are review prompts. They are not automatically treated as a
-CI failure.
+CI failure by this low-level preview command. The
+[AI-assisted GUI verification](gui-verification-workflow.md) runner applies an
+explicit Inspector budget and treats violations as deterministic failures.
 
 ## Verify the compiled C++ sample
 
@@ -116,6 +118,26 @@ python3 tools/dev/fluent_qt_preview.py \
 The wrapper builds `fluent_qt_gallery` in parallel unless `--no-build` is
 passed. Normal Gallery startup is unchanged when `--preview` is absent.
 
+The native report also records the Qt/platform/font/scale fingerprint and a
+logical geometry inventory for visible named widgets. Report schema 2 keeps
+those signals separate from the Inspector findings.
+
+To exercise a state before capture, pass a versioned action script:
+
+```bash
+python3 tools/dev/fluent_qt_preview.py \
+  --route combobox \
+  --sample combobox-editable \
+  --actions path/to/actions.json \
+  --snapshot build/preview/native.png \
+  --report build/preview/native.json
+```
+
+The action schema is `tools/dev/gallery-preview-actions.schema.json`. Steps
+target stable `objectName` values, send Qt mouse or keyboard events, and can
+assert observable properties. A failed action or assertion makes the preview
+exit nonzero while still writing the report for diagnosis.
+
 For a side-by-side review of an edited fork and the compiled sample:
 
 ```bash
@@ -132,6 +154,11 @@ The command writes `comparison.html`, both PNGs, and a small JSON manifest under
 theme, direction, and size. `ready-for-review` means those capture conditions
 match; it is not a visual verdict or pixel-equality gate.
 
+For a multi-state gate with approved baselines, native-resolution pixel and
+region comparison, geometry, Inspector budgets, interaction assertions, and a
+digest-bound independent review, use the
+[AI-assisted GUI verification workflow](gui-verification-workflow.md).
+
 ## Boundary
 
 The Python scene is an authoring aid, not a second production implementation.
@@ -147,5 +174,5 @@ authoring loop.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← App Sample Optimization](app-sample-optimization.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Gallery Control Images →](gallery-control-images.md)
+[← App Sample Optimization](app-sample-optimization.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [AI-assisted GUI verification →](gui-verification-workflow.md)
 <!-- docs-nav:bottom:end -->
