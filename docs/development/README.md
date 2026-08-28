@@ -15,7 +15,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 |---|---|---|
 | Add or change a public component | [Component API conventions](component-api-conventions.md) | [Compatibility policy](compatibility-policy.md), [installed-header allowlist](../../cmake/FluentQtInstallHeaders.cmake) |
 | Add a visible component | [Accessibility contract](accessibility-contract.md) | [Accessibility inventory](accessibility-inventory.md), [visual review](visual-review.md) |
-| Add or edit a Gallery sample | [App sample optimization](app-sample-optimization.md) | [Live Scene and native preview](gallery-preview-workflow.md) |
+| Add or edit a Gallery sample | [App sample optimization](app-sample-optimization.md) | [Live Scene and native preview](gallery-preview-workflow.md), [AI-assisted GUI verification](gui-verification-workflow.md) |
 | Add a Gallery card image | [Gallery control images](gallery-control-images.md) | qrc registration and Gallery build |
 | Build the repository locally | [Build workflow](build-workflow.md) | The selected job count printed by the adaptive wrapper |
 | Write or update a test | [Testing workflow](testing-workflow.md) | [Qt component test conventions](qt-component-test-conventions.md) |
@@ -49,6 +49,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 
 - [App sample optimization](app-sample-optimization.md)
 - [Gallery Live Scene and native preview](gallery-preview-workflow.md)
+- [AI-assisted GUI verification](gui-verification-workflow.md)
 - [Gallery control images](gallery-control-images.md)
 - [Tooltip usage](tooltip-usage.md)
 - [Project site workflow](site-workflow.md)

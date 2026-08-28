@@ -44,6 +44,7 @@ standalone reading tasks.
   - **Gallery and site**
     - [App Sample Optimization](development/app-sample-optimization.md)
     - [Gallery preview workflow](development/gallery-preview-workflow.md)
+    - [AI-assisted GUI verification](development/gui-verification-workflow.md)
     - [Gallery Control Images](development/gallery-control-images.md)
     - [Tooltip Usage](development/tooltip-usage.md)
     - [Project site workflow](development/site-workflow.md)

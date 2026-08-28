@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › Gallery and site
 
-[← Gallery preview workflow](gallery-preview-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Tooltip Usage →](tooltip-usage.md)
+[← AI-assisted GUI verification](gui-verification-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Tooltip Usage →](tooltip-usage.md)
 <!-- docs-nav:top:end -->
 
 Rules for Gallery component-card artwork under
@@ -100,5 +100,5 @@ Quick alpha sanity check for a candidate icon:
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Gallery preview workflow](gallery-preview-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Tooltip Usage →](tooltip-usage.md)
+[← AI-assisted GUI verification](gui-verification-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Tooltip Usage →](tooltip-usage.md)
 <!-- docs-nav:bottom:end -->

@@ -80,6 +80,12 @@ For Light/Dark/RTL *regression* against three checked-in PNGs, use the
 opt-in `visual_gate` in [Testing Workflow](testing-workflow.md). That gate is
 not a substitute for this interactive review.
 
+For repeatable AI-assisted review across a declared state matrix, use
+[AI-assisted GUI verification](gui-verification-workflow.md). It combines
+interaction assertions, named geometry, Inspector budgets, same-environment
+pixel evidence, and a different reviewer identity. It still keeps this manual
+VisualCheck path for animation and operating-system interaction risks.
+
 ## Review Checklist
 
 - Colors match semantic tokens in `ThemeColors.h`.
