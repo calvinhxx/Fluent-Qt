@@ -1,5 +1,13 @@
 # Python Publishing Runbook
 
+> **Status:** Current release guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../../docs/README.md) › [Python bindings](README.md) › Compatibility and delivery
+
+[← PySide6 manylinux build and audit policy](MANYLINUX.md) · [Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [PySide6 compatibility and coverage →](ROADMAP.md)
+<!-- docs-nav:top:end -->
+
 This document is the release contract for the `FluentQt` and
 `FluentQt-Gallery` Python distributions. It complements the general
 [release governance](../../docs/development/release-governance.md), the
@@ -268,3 +276,8 @@ and wheel smoke. An independent macOS ARM64 installation from public PyPI also
 passed `pip check`, UILib smoke, Gallery smoke, and the 67-component/88-route
 catalog walk. The tagged commit is synchronized to both `main` and
 `release/1.6.x`.
+
+<!-- docs-nav:bottom:start -->
+---
+[← PySide6 manylinux build and audit policy](MANYLINUX.md) · [Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [PySide6 compatibility and coverage →](ROADMAP.md)
+<!-- docs-nav:bottom:end -->

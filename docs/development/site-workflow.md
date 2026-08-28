@@ -1,5 +1,13 @@
 # Project site workflow
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Gallery and site
+
+[← Tooltip Usage](tooltip-usage.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:top:end -->
+
 The GitHub Pages site uses static language-specific HTML so crawlers and users
 receive one stable language at each URL:
 
@@ -54,3 +62,8 @@ GitHub project Pages are served below `/Fluent-Qt/`, but the robots exclusion
 protocol reads only the origin-root `https://calvinhxx.github.io/robots.txt`.
 This repository therefore does not publish a misleading project-path
 `robots.txt`; manage the origin-root file in the owning user-site repository.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Tooltip Usage](tooltip-usage.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:bottom:end -->

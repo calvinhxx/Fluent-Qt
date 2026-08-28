@@ -1,5 +1,13 @@
 # Security Policy
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](docs/README.md) › [Community](docs/community/README.md) › Participation and policy
+
+[← Support](SUPPORT.md) · [Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md) · [Contributor Covenant Code of Conduct →](CODE_OF_CONDUCT.md)
+<!-- docs-nav:top:end -->
+
 ## Supported versions
 
 Security reports are assessed against the current `main` branch and the latest
@@ -40,3 +48,8 @@ automation. Vulnerabilities in Qt, compilers, package registries, or other
 third-party dependencies should also be reported to the relevant upstream
 project; please still notify Fluent-Qt privately when its integration increases
 the impact.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Support](SUPPORT.md) · [Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md) · [Contributor Covenant Code of Conduct →](CODE_OF_CONDUCT.md)
+<!-- docs-nav:bottom:end -->

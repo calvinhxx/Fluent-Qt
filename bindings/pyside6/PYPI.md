@@ -1,4 +1,12 @@
-# FluentQt for Python
+# Install FluentQt from PyPI
+
+> **Status:** Current package guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../../docs/README.md) › [Python bindings](README.md) › Get started and examples
+
+[Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [FluentQt PySide6 Hello World →](examples/hello_world/README.md)
+<!-- docs-nav:top:end -->
 
 FluentQt is the official PySide6 compatibility distribution for
 [Fluent-Qt](https://github.com/calvinhxx/Fluent-Qt), a cross-platform
@@ -88,3 +96,8 @@ version and architecture.
 
 FluentQt is released under the MIT License. Microsoft product names and Fluent
 design references are used only to describe compatibility and visual style.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [FluentQt PySide6 Hello World →](examples/hello_world/README.md)
+<!-- docs-nav:bottom:end -->

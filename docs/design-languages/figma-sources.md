@@ -1,5 +1,13 @@
 # Fluent Design Kit Source
 
+> **Status:** Living reference
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Fluent design](README.md) › Design references
+
+[← Fluent (Windows) — Design Reference](fluent.md) · [Contents](../SUMMARY.md) · [Fluent design index](README.md)
+<!-- docs-nav:top:end -->
+
 FluentQt's canonical values live in `src/design/*.h` and are summarized in
 [fluent.md](fluent.md). The original visual measurement source is the
 [Windows UI kit (Community)](https://www.figma.com/design/qpecbg7hOfos9DcHWeKlfw/Windows-UI-kit--Community-?node-id=2434-129659)
@@ -20,3 +28,8 @@ The external kit is grounding evidence, not a vendored dependency. FluentQt
 does not redistribute its source layers or screenshots. Re-check a value
 against the linked kit, then update the repository-owned token headers and
 their focused tests together.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Fluent (Windows) — Design Reference](fluent.md) · [Contents](../SUMMARY.md) · [Fluent design index](README.md)
+<!-- docs-nav:bottom:end -->

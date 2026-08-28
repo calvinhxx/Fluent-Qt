@@ -1,5 +1,13 @@
 # FluentQt Onboarding Tools
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../../docs/README.md) › [AI-assisted development](../../docs/ai/README.md) › Workflow
+
+[Contents](../../docs/SUMMARY.md) · [AI-assisted development index](../../docs/ai/README.md) · [Add a FluentQt GUI to a project →](../../docs/ai/add-gui-to-project.md)
+<!-- docs-nav:top:end -->
+
 ## Environment doctor
 
 `fluentqt_doctor.py` performs a local, read-only preflight before a consumer
@@ -99,3 +107,8 @@ The report follows
 run proves that the starter reached `window.show()` through its packaged smoke
 path; it is not a visual-quality score. Keep reports from clean machines to
 measure completion rate and time-to-first-window instead of estimating them.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../../docs/SUMMARY.md) · [AI-assisted development index](../../docs/ai/README.md) · [Add a FluentQt GUI to a project →](../../docs/ai/add-gui-to-project.md)
+<!-- docs-nav:bottom:end -->

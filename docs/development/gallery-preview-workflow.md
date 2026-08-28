@@ -1,5 +1,13 @@
 # Gallery preview workflow
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Gallery and site
+
+[← App Sample Optimization](app-sample-optimization.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Gallery Control Images →](gallery-control-images.md)
+<!-- docs-nav:top:end -->
+
 Use the Python Live Scene while adjusting a focused Gallery surface. It keeps
 one process and window alive and replaces only the scene widget after a
 successful save. Use Native Verify when the result has been moved into C++ and
@@ -136,3 +144,8 @@ The workflow deliberately does not reload native code in process. FluentQt and
 the Gallery sample factories are linked into the executable, so safe arbitrary
 plugin unloading would add lifetime and ABI complexity without improving this
 authoring loop.
+
+<!-- docs-nav:bottom:start -->
+---
+[← App Sample Optimization](app-sample-optimization.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Gallery Control Images →](gallery-control-images.md)
+<!-- docs-nav:bottom:end -->

@@ -1,5 +1,13 @@
 # Inspector Report Contract
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
+
+[← Typography Resolution](typography-resolution.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+<!-- docs-nav:top:end -->
+
 The FluentQt Inspector is an opt-in, read-only diagnostic pass over a built
 `QWidget` tree. It reports evidence for people and coding agents; it never
 rewrites layout, text, accessibility metadata, focus order, or scroll policy.
@@ -98,3 +106,8 @@ PySide6 calls share the native implementation and versioned JSON contract.
 Repository acceptance is driven by the versioned
 [`application-scenes.json`](../ai/evals/application-scenes.json) manifest,
 which currently exercises both Gallery pages and the generated C++ Workbench.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Typography Resolution](typography-resolution.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md)
+<!-- docs-nav:bottom:end -->

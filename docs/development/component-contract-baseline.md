@@ -1,5 +1,13 @@
 # Component Contract Baseline
 
+> **Status:** Historical Phase 0/1 baseline with a maintained post-baseline addendum
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Baselines and historical records
+
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Production Evidence Baselines →](production-evidence.md)
+<!-- docs-nav:top:end -->
+
 - Date: 2026-07-24
 - Baseline: `release/1.4.x` at `a429e3d`
 
@@ -78,8 +86,9 @@ Tarjan-based diagnostic once. Implementation is in
 |---|---|---|---|---|
 | `FND-LAYOUT-002` | AnchorLayout | Item-derived size hints follow the anchored item chain; cyclic sibling anchors use a stable fallback and emit a Tarjan-based diagnostic once | `AnchorLayoutTest.Contract_SizeHintsComeFromAnchoredItemChain`, `Contract_SizeHintPreservesNaturalSizeBetweenOpposingAnchors`, `Contract_CyclicSiblingAnchorsUseStableFallback` | Resolved |
 
-Remaining Phase 2 foundation/overlay work is unchanged: theme transactions and
-persistence, plus overlay lifecycle/property semantics.
+Post-baseline status: AnchorLayout and overlay lifecycle/property semantics
+were resolved in 1.7. Theme transactions and persistence were not part of this
+baseline; any future public work requires its own scoped contract.
 
 ## Active Guardrails Added in Phases 0 and 1
 
@@ -105,19 +114,19 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 
 | Category | Public surface reviewed | Current disposition |
 |---|---|---|
-| Foundation | FluentElement, QMLPlus, AnchorLayout, ThemeRegistry, UserTheme, overlay helpers | Phase 1 state/lifetime/non-widget layout/oversized overlay defects resolved; `FND-LAYOUT-002` size hints and Tarjan cycle diagnostics resolved; theme transactions and persistence remain Phase 2 |
+| Foundation | FluentElement, QMLPlus, AnchorLayout, ThemeRegistry, UserTheme, overlay helpers | State/lifetime/non-widget layout/oversized overlay defects and `FND-LAYOUT-002` are resolved; theme transactions and persistence remain outside this baseline |
 | Layout | Accordion, Card, Divider, Expander | Reusable token-driven surfaces replace Gallery-local card, separator, and disclosure implementations; Accordion composes Expander with explicit item ownership, single/multiple coordination, and header-key navigation |
 | Basic input | Button, CompoundButton, CheckBox, ColorPicker, ComboBox, DropDownButton, HyperlinkButton, MultiSelectComboBox, RadioButton, RatingControl, RepeatButton, Slider, SplitButton, ToggleButton, ToggleSplitButton, ToggleSwitch | MultiSelectComboBox keeps a separate model/selection-model contract so ComboBox remains source-compatible and single-select; focused contracts cover keyboard, filtering, bulk selection, accessibility, and large models |
 | Collections | DrawerView, FlipView, FlowView, GridView, ListView, SplitView, StackView, TreeView | Phase 4 keeps FlowView large-model painting and hit testing viewport-bounded and uses one shared drag-displacement animation |
-| Date and time | CalendarDatePicker, CalendarView, DatePicker, TimePicker | Locale ownership and atomic range updates are Phase 2/3 |
-| Dialogs and flyouts | CoachMark, ContentDialog, Dialog, Flyout, Popup, TeachingTip | Overlay lifecycle/property semantics are Phase 2 |
+| Date and time | CalendarDatePicker, CalendarView, DatePicker, TimePicker | Locale ownership and atomic range updates were not locked by the 1.4 baseline; current behavior is covered by component tests and compatibility policy |
+| Dialogs and flyouts | CoachMark, ContentDialog, Dialog, Flyout, Popup, TeachingTip | Shared logical-open, lifecycle, close-reason, and no-op notification semantics are resolved by the 1.7 overlay contract |
 | Menus and toolbars | CommandBar, CommandBarFlyout, FluentMenu, FluentMenuItem, MenuBar | Capability Phase 1 completes the shared private text-editing context menu; Capability Phase 2 supplies stable EditingCommandRouter actions; Capability Phase 3 completes public command surfaces, private responsive presenters, same-window overflow/flyout behavior, accessibility, design-language rendering, router reuse, and deletion-safe borrowed-action teardown |
 | Navigation | Breadcrumb, NavigationView, Pivot, SelectorBar, StackContentHost, TabView | NavigationView/StackContentHost page and chrome ownership is explicit; global event filters, RTL, and accessibility remain Phase 2/3 |
 | Scrolling | AnnotatedScrollBar, PipsPager, ScrollBar, ScrollView | Empty-selection policy is intentionally unchanged; inherited API coherence is Phase 2 |
 | Status and info | Avatar, InfoBadge, InfoBar, ProgressBar, ProgressRing, Shimmer, ToolTip, Toast | Avatar adds caller-owned identity/image content and composes InfoBadge for presence; historical Phase 4 removes per-frame ProgressBar animation-token reconstruction; Capability Phase 4 adds InfoBadge value/visibility accessibility plus Toast announcements, borrowed actions, hover pause, dismissal reasons, and keyed in-place updates while preserving managed stacking |
 | Text fields | AutoSuggestBox, EditingCommandRouter, Label, LineEdit, NumberBox, PasswordBox, TextEdit | Historical Phase 1 resolves Label/TextEdit coherence, focus, sizing, and no-op defects; Capability Phase 1 privately shares the Fluent editing menu, and Capability Phase 2 adds window-scoped semantic editing actions |
-| Windowing | TitleBar, Window, backdrop contracts | Content ownership, caption accessibility, and platform surface lifecycle are Phase 2/3 |
-| Design | Animation, Breakpoints, CornerRadius, Elevation, IconCatalog, Material, Spacing, ThemeColors, Typography | Phase 4 centralizes dynamic token storage, avoids color snapshots in paint hot paths, and applies DPI-aligned FlowView strokes |
+| Windowing | TitleBar, Window, backdrop contracts | Current ownership, caption accessibility, and platform lifecycle rules live in the Window Chrome architecture contract |
+| Design | Animation, Breakpoints, CornerRadius, Elevation, IconCatalog, Spacing, ThemeColors, Typography | Fluent is the only visual contract; dynamic tokens avoid color snapshots in paint hot paths and FlowView uses DPI-aligned strokes |
 
 ## Phase 5 and 6 Guardrails
 
@@ -131,21 +140,18 @@ ownership, focus/input, locale/RTL/accessibility, DPI/painting, and tests.
 | Gallery DPI | Representative Gallery composition preserves logical geometry and physical DPR at 125%, 200%, and 300% | `GalleryAcceptanceScaleTest.*` |
 | Visual review | Button pointer/focus/disabled states and TreeView RTL receive deterministic Light/Dark snapshots; the 1.7 pixel gate compares three checked-in PNGs | `ComponentStateMatrixVisualCheck`; `VisualGate.CompareBaselines` |
 
-## Decisions Deliberately Deferred
+## Baseline deferrals and later resolutions
 
-These are not locked as 1.4.x behavior by Phase 0:
+Phase 0 deliberately avoided locking implementation accidents into the public
+contract. Later work resolved some of those questions:
 
-- Whether a zero-page `PipsPager` uses selected index `0` or `-1`.
-- Whether TextEdit line-count sizing remains a fixed-height policy or becomes
-  minimum/maximum size guidance.
-- Whether ComboBox, ScrollView, StackView, Label, and picker classes keep their
-  current Qt inheritance or move to composition.
-- Common open-state semantics across Popup, Flyout, Dialog, ContentDialog,
-  TeachingTip, and split buttons.
-- Public ownership names and migration strategy for externally supplied widgets.
-
-Locking these prematurely would turn an implementation accident into a public
-contract. They require the Phase 2 API migration proposal.
+| Question at the 1.4 baseline | Later disposition |
+|---|---|
+| Zero-page `PipsPager` index | Not decided by this baseline; follow current component tests and compatibility policy |
+| TextEdit line-count sizing policy | Not decided by this baseline; current sizing behavior is guarded by focused tests |
+| Qt inheritance versus composition for existing controls | No broad migration was approved; changes remain component-specific compatibility decisions |
+| Common open-state semantics | Resolved in 1.7 for Popup, Flyout, Dialog, ContentDialog, and TeachingTip; menu-backed split/dropdown buttons keep their own boundary |
+| Ownership names for externally supplied widgets | `WidgetOwnership` is the reusable public direction for new hosted-widget APIs; existing APIs are not mechanically migrated |
 
 ## Exit Criteria for Phases 0 and 1
 
@@ -161,5 +167,10 @@ contract. They require the Phase 2 API migration proposal.
   complete non-visual test sets.
 - TextEdit focus, auto-height, overflow scrolling, window resizing, and
   light/dark preview behavior receive a real Gallery interaction check.
-- Deferred API and AnchorLayout design decisions remain explicit rather than
-  being silently locked by implementation accidents.
+- Deferred API decisions remain explicit; AnchorLayout and overlay questions
+  resolved after this baseline point to their current contracts.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Production Evidence Baselines →](production-evidence.md)
+<!-- docs-nav:bottom:end -->

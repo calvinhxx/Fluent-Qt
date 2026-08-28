@@ -4,7 +4,7 @@
 
 ## AI-assisted GUI development
 
-- [AI-friendly entry point](docs/ai/README.md): scope, compatibility, commands, and roadmap
+- [AI-assisted development](docs/ai/README.md): task-oriented setup, catalog queries, integration boundaries, and validation
 - [Add a GUI to any project](docs/ai/add-gui-to-project.md): evidence-driven workflow for existing and greenfield projects
 - [Generated AI catalog](docs/ai/generated/fluentqt-ai-catalog.json): versioned integration patterns, public C++/Python APIs, components, tests, and samples
 - [AI catalog schema](docs/ai/fluentqt-ai-catalog.schema.json): JSON Schema draft 2020-12 contract
@@ -15,6 +15,8 @@
 
 ## Public integration
 
+- [Documentation map](docs/README.md): reader paths, document tree, status meanings, and sources of truth
+- [Complete documentation contents](docs/SUMMARY.md): every reader-facing guide, contract, record, release note, and binding document
 - [Project overview](README.md): supported Qt versions, CMake setup, Python bindings, and packaging
 - [Contributing](CONTRIBUTING.md): issue quality, local validation, public API, and pull-request scope
 - [C++ hello world](examples/hello_world): minimal in-tree and installed-package consumer
@@ -23,7 +25,7 @@
 
 ## Development and verification
 
-- [Development workflow](docs/development/README.md): canonical contributor workflow index
+- [Development tree](docs/development/README.md): task-oriented contributor and maintainer index
 - [Testing workflow](docs/development/testing-workflow.md): focused targets, CTest labels, and visual tests
 - [Component API conventions](docs/development/component-api-conventions.md): public API and implementation rules
 - [DataGrid API contract](docs/development/datagrid-api-proposal.md): model/view ownership, staged delivery, and acceptance matrix

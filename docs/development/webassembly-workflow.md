@@ -1,5 +1,13 @@
 # WebAssembly Workflow
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
+
+[← Linux Workflow](linux-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow to build FluentQt or the C++ Gallery for a browser, run the
 local Chromium smoke, or change the Pages deployment. The supported browser
 baseline is Qt 6.9.3 `wasm_singlethread` with Emscripten 3.1.70. Qt 5.15 and
@@ -276,3 +284,8 @@ The open-source WebAssembly binary statically links Qt and is distributed under
 GPLv3. FluentQt's own source remains MIT licensed. The deployed payload must
 retain the FluentQt, Qt, Emscripten, and bundled-asset notices plus the exact Qt
 corresponding-source link; see `THIRD_PARTY_NOTICES.md`.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Linux Workflow](linux-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:bottom:end -->

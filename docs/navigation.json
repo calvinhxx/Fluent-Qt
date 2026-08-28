@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "home": "README.md",
+  "summary": "SUMMARY.md",
+  "sections": [
+    {
+      "title": "AI-assisted development",
+      "index": "ai/README.md",
+      "groups": [
+        {
+          "title": "Workflow",
+          "pages": [
+            "../tools/onboarding/README.md",
+            "ai/add-gui-to-project.md"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Architecture",
+      "index": "architecture/README.md",
+      "groups": [
+        {
+          "title": "Runtime contracts",
+          "pages": [
+            "architecture/window-chrome.md",
+            "architecture/overlay-behavior.md",
+            "architecture/typography-resolution.md",
+            "architecture/inspector-report.md"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Fluent design",
+      "index": "design-languages/README.md",
+      "groups": [
+        {
+          "title": "Design references",
+          "pages": [
+            "design-languages/fluent.md",
+            "design-languages/figma-sources.md"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Development",
+      "index": "development/README.md",
+      "groups": [
+        {
+          "title": "API, policy, and writing",
+          "pages": [
+            "development/component-api-conventions.md",
+            "development/compatibility-policy.md",
+            "development/compatibility-policy.zh-CN.md",
+            "development/comment-style.md",
+            "development/documentation-style.md",
+            "development/accessibility-contract.md",
+            "development/accessibility-inventory.md"
+          ]
+        },
+        {
+          "title": "Build, tests, and diagnostics",
+          "pages": [
+            "development/testing-workflow.md",
+            "development/qt-component-test-conventions.md",
+            "development/logging-workflow.md",
+            "development/visual-review.md",
+            "development/app-visual-geometry-verification.md",
+            "development/high-dpi-workflow.md",
+            "development/linux-workflow.md",
+            "development/webassembly-workflow.md"
+          ]
+        },
+        {
+          "title": "Gallery and site",
+          "pages": [
+            "development/app-sample-optimization.md",
+            "development/gallery-preview-workflow.md",
+            "development/gallery-control-images.md",
+            "development/tooltip-usage.md",
+            "development/site-workflow.md"
+          ]
+        },
+        {
+          "title": "Packaging and release",
+          "pages": [
+            "development/packaging-workflow.md",
+            "development/release-governance.md"
+          ]
+        },
+        {
+          "title": "Accepted component contracts",
+          "pages": [
+            "development/field-api-proposal.md",
+            "development/datagrid-api-proposal.md",
+            "development/multi-select-combobox-api-proposal.md",
+            "development/editing-command-router-proposal.md",
+            "development/command-bar-proposal.md"
+          ]
+        },
+        {
+          "title": "Baselines and historical records",
+          "pages": [
+            "development/component-contract-baseline.md",
+            "development/production-evidence.md",
+            "development/release-1.7-roadmap.md",
+            "development/adoption-and-ai-roadmap.md",
+            "development/webassembly-roadmap.md",
+            "development/system-capability-roadmap.md",
+            "development/component-api-audit.md"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Python bindings",
+      "index": "../bindings/pyside6/README.md",
+      "groups": [
+        {
+          "title": "Get started and examples",
+          "pages": [
+            "../bindings/pyside6/PYPI.md",
+            "../bindings/pyside6/examples/hello_world/README.md",
+            "../bindings/pyside6/gallery/README.md",
+            "../bindings/pyside6/gallery/PYPI.md"
+          ]
+        },
+        {
+          "title": "Compatibility and delivery",
+          "pages": [
+            "../bindings/pyside6/API_COMPATIBILITY.md",
+            "../bindings/pyside6/MANYLINUX.md",
+            "../bindings/pyside6/PUBLISHING.md",
+            "../bindings/pyside6/ROADMAP.md"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Releases",
+      "index": "releases/README.md",
+      "groups": [
+        {
+          "title": "1.7",
+          "pages": [
+            "releases/v1.7.3.md",
+            "releases/v1.7.2.md",
+            "releases/v1.7.1.md",
+            "releases/v1.7.0.md"
+          ]
+        },
+        {
+          "title": "1.6",
+          "pages": [
+            "releases/v1.6.4.md",
+            "releases/v1.6.3.md",
+            "releases/v1.6.2.md",
+            "releases/v1.6.1.md",
+            "releases/v1.6.0.md"
+          ]
+        },
+        {
+          "title": "1.5",
+          "pages": [
+            "releases/v1.5.3.md",
+            "releases/v1.5.2.md",
+            "releases/v1.5.1.md",
+            "releases/v1.5.0.md"
+          ]
+        },
+        {
+          "title": "1.4",
+          "pages": [
+            "releases/v1.4.2.md",
+            "releases/v1.4.1.md",
+            "releases/v1.4.0.md"
+          ]
+        },
+        {
+          "title": "1.3",
+          "pages": [
+            "releases/v1.3.2.md",
+            "releases/v1.3.1.md",
+            "releases/v1.3.0.md"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Community",
+      "index": "community/README.md",
+      "groups": [
+        {
+          "title": "Participation and policy",
+          "pages": [
+            "../CONTRIBUTING.md",
+            "../SUPPORT.md",
+            "../SECURITY.md",
+            "../CODE_OF_CONDUCT.md"
+          ]
+        }
+      ]
+    }
+  ]
+}

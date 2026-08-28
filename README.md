@@ -89,33 +89,18 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 #### Source integration
 
-Place the Fluent-Qt source in the project's `Fluent-Qt` directory:
+After defining your application target, add the Fluent-Qt source directory and
+link the exported target:
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
-project(my_app LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 add_subdirectory(Fluent-Qt)
-
-add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
 
 #### Installed package integration
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
-project(my_app LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 find_package(FluentQt CONFIG REQUIRED)
-
-add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
 
@@ -171,45 +156,10 @@ Python through Shiboken6.
 python -m pip install FluentQt
 ```
 
-```python
-import sys
-
-import fluentqt
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
-from fluentqt.basicinput import Button
-from fluentqt.windowing import Window
-
-def main() -> int:
-    fluentqt.prepare_high_dpi_application()
-    app = QApplication(sys.argv)
-    fluentqt.initialize_resources()
-    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
-
-    window = Window()
-    window.setWindowTitle("FluentQt Hello World")
-    window.resize(480, 320)
-
-    content = QWidget()
-    layout = QVBoxLayout(content)
-    layout.setContentsMargins(32, 32, 32, 32)
-
-    button = Button("Hello from FluentQt", content)
-    button.setFluentStyle(Button.ButtonStyle.Accent)
-    layout.addStretch()
-    layout.addWidget(button, 0, Qt.AlignCenter)
-    layout.addStretch()
-
-    window.setContentWidget(content)
-    window.show()
-    return app.exec()
-
-if __name__ == "__main__":
-    sys.exit(main())
-```
-
-See [`bindings/pyside6/examples/hello_world`](bindings/pyside6/examples/hello_world/)
-for the complete Python example.
+Start with the [Python package guide](bindings/pyside6/PYPI.md) and its
+[Hello World example](bindings/pyside6/examples/hello_world/README.md). Source
+builds, compatibility boundaries, and maintainer workflows are indexed by the
+[PySide6 binding guide](bindings/pyside6/README.md).
 
 ## 🛠 Build
 
@@ -234,18 +184,10 @@ cmake --build build/fluentqt --target fluent_qt_source_package
 
 ### WebAssembly
 
-Build the WebAssembly Gallery with Qt 6.9.3 `wasm_singlethread` and Emscripten 3.1.70:
-
-```bash
-source "$HOME/Qt/Tools/emsdk/emsdk_env.sh"
-export QT_WASM_ROOT="$HOME/Qt/6.9.3/wasm_singlethread"
-export QT_HOST_ROOT="$HOME/Qt/6.9.3/macos"
-cmake --preset wasm
-cmake --build --preset wasm --parallel
-python3 -m http.server 4173 --bind 127.0.0.1 --directory build/wasm
-```
-
-Open `http://127.0.0.1:4173/app/index.html`. See the [WebAssembly workflow](docs/development/webassembly-workflow.md) for setup, testing, CI, deployment, and platform notes.
+Use the [live WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/)
+for evaluation. Local toolchain setup, builds, browser smoke tests, and Pages
+deployment are documented in the
+[WebAssembly workflow](docs/development/webassembly-workflow.md).
 
 ## 🖼 Gallery
 
@@ -257,23 +199,14 @@ Online: [project website](https://calvinhxx.github.io/Fluent-Qt/#gallery) · [st
 
 ### C++ Gallery packages
 
-Download the Gallery for the required platform, Qt version, and architecture from [GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest):
-
-| Platform | Qt 5 / x64 | Qt 6 / x64 | Qt 6 / ARM64 | Format |
-|---|---|---|---|---|
-| Windows | 5.15.2 | 6.2.4 | 6.9.3 | `.exe` |
-| macOS | 5.15.2 | 6.9.3 | 6.9.3 | `.dmg` |
-| Linux | 5.15 | 6.2.4 | 6.2.4 | `.deb` |
+Download the current Windows, macOS, or Linux Gallery package from
+[GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest).
+The maintained build and package matrix lives in the
+[packaging workflow](docs/development/packaging-workflow.md).
 
 ### Run the C++ Gallery locally
 
-| Platform | x64 preset | ARM64 preset |
-|---|---|---|
-| Windows | `vcpkg-windows` | `vcpkg-windows-arm64` |
-| macOS | `vcpkg-osx-x64` | `vcpkg-osx` |
-| Linux | `vcpkg-linux` | `vcpkg-linux-arm64` |
-
-Replace `PRESET` with a value from the table:
+Choose the host preset from `CMakePresets.json`, then build the Gallery target:
 
 ```bash
 cmake --preset PRESET
@@ -282,13 +215,8 @@ cmake --build --preset PRESET --target fluent_qt_gallery --parallel
 
 ### Package the C++ Gallery locally
 
-| Platform | x64 packaging preset | ARM64 packaging preset | Format |
-|---|---|---|---|
-| Windows | `vcpkg-windows-installer` | `vcpkg-windows-arm64-installer` | `.exe` |
-| macOS | `vcpkg-osx-x64-dmg` | `vcpkg-osx-dmg` | `.dmg` |
-| Linux | `vcpkg-linux-deb` | `vcpkg-linux-arm64-deb` | `.deb` |
-
-See the [Packaging Workflow](docs/development/packaging-workflow.md) for exact local packaging commands.
+Use the platform preset and verification steps in the
+[Packaging Workflow](docs/development/packaging-workflow.md).
 
 ### Python compatibility Gallery
 
@@ -304,22 +232,18 @@ python -m fluentqt_gallery
 
 ## 📚 Documentation
 
-- [Searchable public API](https://calvinhxx.github.io/Fluent-Qt/api/)
-- [Support and community](SUPPORT.md)
-- [Contributing](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
-- [AI-assisted app development](docs/ai/README.md)
-- [Environment checks and project starters](tools/onboarding/README.md)
-- [Development workflow](docs/development/README.md)
-- [Testing and visual review](docs/development/testing-workflow.md)
-- [Packaging workflow](docs/development/packaging-workflow.md)
-- [Release governance](docs/development/release-governance.md)
-- [Compatibility policy](docs/development/compatibility-policy.md)
-- [Architecture contracts](docs/architecture/README.md)
-- [Fluent design reference and legacy-theme migration](docs/design-languages/README.md)
-- [WebAssembly compatibility](docs/development/webassembly-workflow.md)
-- [Python compatibility](bindings/pyside6/README.md)
+Start with the [documentation map](docs/README.md), or choose a path:
+
+| Goal | Entry point |
+|---|---|
+| Evaluate controls | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/) |
+| Build an application | [AI-assisted development](docs/ai/README.md) · [Onboarding tools](tools/onboarding/README.md) · [PySide6](bindings/pyside6/README.md) |
+| Contribute to FluentQt | [Development tree](docs/development/README.md) · [Architecture](docs/architecture/README.md) · [Fluent design](docs/design-languages/README.md) |
+| Package or release | [Packaging](docs/development/packaging-workflow.md) · [Release governance](docs/development/release-governance.md) · [Release notes](docs/releases/README.md) |
+| Get help or report a problem | [Community](docs/community/README.md) · [Support](SUPPORT.md) · [Security](SECURITY.md) |
+
+See [Contributing](CONTRIBUTING.md) and the
+[Code of Conduct](CODE_OF_CONDUCT.md) before opening a change.
 
 ## 🔗 References
 

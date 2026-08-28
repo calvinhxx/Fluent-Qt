@@ -1,6 +1,12 @@
 # Field API Contract (1.7-B)
 
-Status: **Accepted and implemented** on `release/1.7.x`.
+> **Status:** Accepted contract, shipped in FluentQt 1.7.0
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Accepted component contracts
+
+[Contents](../SUMMARY.md) · [Development index](README.md) · [DataGrid API Contract →](datagrid-api-proposal.md)
+<!-- docs-nav:top:end -->
 
 `fluent::layout::Field` adds the form chrome around **any existing input
 control**: label, required marker, helper text, and validation feedback. It is
@@ -46,3 +52,8 @@ non-empty.
 
 `tests/components/layout/TestField.cpp` (`test_field`). Contract names use the
 `Contract_*` prefix. VisualCheck keeps `SKIP_VISUAL_TEST` and `qApp->exec()`.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../SUMMARY.md) · [Development index](README.md) · [DataGrid API Contract →](datagrid-api-proposal.md)
+<!-- docs-nav:bottom:end -->

@@ -1,5 +1,13 @@
 # Component API Conventions
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › API, policy, and writing
+
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Compatibility Policy →](compatibility-policy.md)
+<!-- docs-nav:top:end -->
+
 Use these conventions when adding, reviewing, or auditing public Fluent component
 APIs under `src/components/**`.
 
@@ -159,3 +167,8 @@ APIs under `src/components/**`.
 - VisualCheck tests must keep the `SKIP_VISUAL_TEST` guard, block with
   `qApp->exec()`, and use project Fluent controls for visible demo UI when
   practical.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Compatibility Policy →](compatibility-policy.md)
+<!-- docs-nav:bottom:end -->

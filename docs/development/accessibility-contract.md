@@ -1,5 +1,13 @@
 # Accessibility Contract
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › API, policy, and writing
+
+[← Documentation style](documentation-style.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Accessibility Inventory →](accessibility-inventory.md)
+<!-- docs-nav:top:end -->
+
 This contract applies to public visible FluentQt components. It turns existing
 accessibility work into a consistent acceptance surface; it does not claim that
 every current component already satisfies the full contract.
@@ -326,3 +334,8 @@ must remain complete against the canonical Gallery component catalog.
 The 1.7 roadmap tracks the inventory and focused fixes. Full assistive-
 technology certification remains a product-level test activity outside the
 library's deterministic contract suite.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Documentation style](documentation-style.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Accessibility Inventory →](accessibility-inventory.md)
+<!-- docs-nav:bottom:end -->

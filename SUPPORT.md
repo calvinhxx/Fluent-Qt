@@ -1,5 +1,13 @@
 # Support
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](docs/README.md) › [Community](docs/community/README.md) › Participation and policy
+
+[← Contributing to FluentQt](CONTRIBUTING.md) · [Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md) · [Security Policy →](SECURITY.md)
+<!-- docs-nav:top:end -->
+
 Fluent-Qt is maintained as an open-source project. Community support is best
 effort and does not have a guaranteed response time.
 
@@ -28,10 +36,12 @@ security-sensitive public reports while pointing to the appropriate channel.
 
 ## 中文说明
 
-安装、接入和使用问题请前往
-[Discussions Q&A](https://github.com/calvinhxx/Fluent-Qt/discussions/categories/q-a)；
-可复现错误请使用
-[Bug Report](https://github.com/calvinhxx/Fluent-Qt/issues/new?template=bug_report.yml)；
-早期想法请先在
-[Ideas](https://github.com/calvinhxx/Fluent-Qt/discussions/categories/ideas) 讨论。
-涉及安全漏洞时请遵循 [SECURITY.md](SECURITY.md)，不要公开披露细节。
+- 安装、接入和使用问题请前往 [Discussions Q&A](https://github.com/calvinhxx/Fluent-Qt/discussions/categories/q-a)。
+- 可复现错误请使用 [Bug Report](https://github.com/calvinhxx/Fluent-Qt/issues/new?template=bug_report.yml)。
+- 早期想法请先在 [Ideas](https://github.com/calvinhxx/Fluent-Qt/discussions/categories/ideas) 讨论。
+- 涉及安全漏洞时请遵循 [SECURITY.md](SECURITY.md)，不要公开披露细节。
+
+<!-- docs-nav:bottom:start -->
+---
+[← Contributing to FluentQt](CONTRIBUTING.md) · [Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md) · [Security Policy →](SECURITY.md)
+<!-- docs-nav:bottom:end -->

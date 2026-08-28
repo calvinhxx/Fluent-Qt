@@ -29,7 +29,7 @@ VISUAL_SNAPSHOT=1 VISUAL_UPDATE_BASELINE=1 QT_SCALE_FACTOR=1 QT_FONT_DPI=96 \
   ./build/vcpkg-osx/tests/components/test_visual_gate
 ```
 
-Then re-run the gate (see [Testing Workflow](../development/testing-workflow.md)).
+Then re-run the gate (see [Testing Workflow](../../docs/development/testing-workflow.md)).
 The test skips compare/update outside this approval-host fingerprint, including
 macOS x64, Linux, Windows, headless plugins, non-Fusion style, or different
 scale/DPI environment values. `QWidget::render()` on
