@@ -1687,6 +1687,37 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
             window.deleteLater()
             QApplication.processEvents()
 
+    def test_multi_select_status_wraps_complete_selection(self):
+        result = build_sample(
+            "multi-select-combobox",
+            "multi-select-combobox-selection",
+        )
+        try:
+            box = result.widget.findChild(fluentqt.MultiSelectComboBox)
+            self.assertIsNotNone(box)
+            status = next(
+                label
+                for label in result.widget.findChildren(fluentqt.Label)
+                if label.text().startswith("Selected:")
+            )
+
+            box.selectAll()
+            QApplication.processEvents()
+            self.assertEqual(
+                status.text(),
+                "Selected: Design, Engineering, Research, Support",
+            )
+            self.assertTrue(status.wordWrap())
+            self.assertEqual(status.width(), box.width())
+            self.assertGreater(
+                status.heightForWidth(status.width()),
+                status.fontMetrics().height(),
+            )
+            self.assertIn("status.setWordWrap(True)", result.preview_source)
+        finally:
+            if shiboken6.isValid(result.widget):
+                result.widget.close()
+
     def test_gallery_generated_pixels_match_cpp_argb_contract(self):
         tile = _acrylic_noise_tile()
         expected_noise = _qt_seeded_bytes(0xACE71C5E, 96 * 96)

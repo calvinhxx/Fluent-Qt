@@ -124,7 +124,7 @@
     {
       "route_id": "multi-select-combobox",
       "sample_id": "multi-select-combobox-selection",
-      "source": "from PySide6.QtCore import QStringListModel\n\nmodel = QStringListModel(\n    ['Design', 'Engineering', 'Research', 'Support'],\n    root\n)\nbox = fluentqt.MultiSelectComboBox()\nbox.setModel(model)\nbox.setPlaceholderText('Choose teams')\nbox.setSelectedRows([0, 2])\ndef update_status(*_args):\n    labels = [index.data() for index in box.selectedIndexes()]\n    status.setText(f\"Selected: {', '.join(labels)}\")\nbox.selectionChanged.connect(update_status)\n"
+      "source": "from PySide6.QtCore import QStringListModel\n\nmodel = QStringListModel(\n    ['Design', 'Engineering', 'Research', 'Support'],\n    root\n)\nbox = fluentqt.MultiSelectComboBox()\nbox.setModel(model)\nbox.setPlaceholderText('Choose teams')\nbox.setSelectedRows([0, 2])\nbox.setFixedWidth(280)\nstatus = fluentqt.Label()\nstatus.setFixedWidth(280)\nstatus.setWordWrap(True)\ndef update_status(*_args):\n    labels = [index.data() for index in box.selectedIndexes()]\n    status.setText(f\"Selected: {', '.join(labels)}\")\nbox.selectionChanged.connect(update_status)\n"
     },
     {
       "route_id": "multi-select-combobox",

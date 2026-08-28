@@ -509,7 +509,8 @@ register_source_samples(
                 box.setFixedWidth(280)
 
                 status = fluentqt.Label(root)
-                status.setMinimumWidth(280)
+                status.setFixedWidth(280)
+                status.setWordWrap(True)
 
                 def update_status(*_args):
                     labels = [
