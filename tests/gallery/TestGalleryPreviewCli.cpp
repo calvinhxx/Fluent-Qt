@@ -1,3 +1,4 @@
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
@@ -44,7 +45,7 @@ TEST(GalleryPreviewCliTest, RendersTargetedSampleAndPrintsJsonReport) {
       << parseError.errorString().toStdString();
   ASSERT_TRUE(document.isObject());
   const QJsonObject root = document.object();
-  EXPECT_EQ(root.value(QStringLiteral("schema_version")).toInt(), 1);
+  EXPECT_EQ(root.value(QStringLiteral("schema_version")).toInt(), 2);
   EXPECT_EQ(root.value(QStringLiteral("status")).toString(),
             QStringLiteral("ok"));
   const QJsonObject selection =
@@ -62,12 +63,35 @@ TEST(GalleryPreviewCliTest, RendersTargetedSampleAndPrintsJsonReport) {
   EXPECT_EQ(scene.value(QStringLiteral("actual_height")).toInt(), 540);
   const QJsonObject reportEnvironment =
       root.value(QStringLiteral("environment")).toObject();
+  EXPECT_EQ(reportEnvironment
+                .value(QStringLiteral("fingerprint_schema_version"))
+                .toInt(),
+            1);
   EXPECT_EQ(
       reportEnvironment.value(QStringLiteral("platform_plugin")).toString(),
       QStringLiteral("offscreen"));
   EXPECT_GT(
       reportEnvironment.value(QStringLiteral("device_pixel_ratio")).toDouble(),
       0.0);
+  EXPECT_GT(reportEnvironment.value(QStringLiteral("logical_dpi_x")).toDouble(),
+            0.0);
+  EXPECT_GT(reportEnvironment.value(QStringLiteral("screen"))
+                .toObject()
+                .value(QStringLiteral("depth"))
+                .toInt(),
+            0);
+  const QJsonObject geometry =
+      root.value(QStringLiteral("geometry_report")).toObject();
+  EXPECT_EQ(geometry.value(QStringLiteral("schema_version")).toInt(), 1);
+  EXPECT_GT(geometry.value(QStringLiteral("widget_count")).toInt(), 0);
+  bool foundSampleCard = false;
+  for (const QJsonValue &value :
+       geometry.value(QStringLiteral("widgets")).toArray()) {
+    foundSampleCard |=
+        value.toObject().value(QStringLiteral("object_name")).toString() ==
+        QStringLiteral("gallerySampleCard");
+  }
+  EXPECT_TRUE(foundSampleCard);
   EXPECT_EQ(root.value(QStringLiteral("quality_report"))
                 .toObject()
                 .value(QStringLiteral("schema_version"))

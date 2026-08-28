@@ -31,6 +31,7 @@ struct GalleryPreviewOptions {
   GalleryPreviewTheme theme = GalleryPreviewTheme::Light;
   bool rightToLeft = false;
   QSize viewportSize{800, 640};
+  QString actionsPath;
   QString snapshotPath;
   QString reportPath;
   int settleMs = 250;
@@ -94,7 +95,9 @@ private:
 QJsonObject galleryPreviewReport(GalleryPreviewWindow *window,
                                  const GalleryPreviewOptions &options,
                                  const QString &snapshotPath = QString(),
-                                 const QString &snapshotError = QString());
+                                 const QString &snapshotError = QString(),
+                                 const QJsonObject &interactionReport =
+                                     QJsonObject());
 
 /** @brief Runs the isolated preview path inside an initialized QApplication. */
 int runGalleryPreviewApplication(QApplication &app,

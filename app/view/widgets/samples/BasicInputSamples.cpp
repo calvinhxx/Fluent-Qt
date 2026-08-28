@@ -1,6 +1,7 @@
 #include "BasicInputSamples.h"
 
 #include <QLayout>
+#include <QLineEdit>
 #include <QPoint>
 #include <QSignalBlocker>
 #include <QStringList>
@@ -575,8 +576,10 @@ QVector<GallerySample> comboBoxSamples()
                                   "layout->setContentsMargins(0, 0, 0, 0);\n"
                                   "layout->setSpacing(8);\n\n"
                                   "auto* comboBox = new ComboBox(row);\n"
+                                  "comboBox->setAccessibleName(\"Editable size value\");\n"
                                   "comboBox->addItems({\"8\", \"9\", \"10\", \"11\", \"12\", \"14\", \"16\"});\n"
                                   "comboBox->setEditable(true);\n"
+                                  "comboBox->lineEdit()->setAccessibleName(\"Editable size value\");\n"
                                   "comboBox->setInsertPolicy(QComboBox::NoInsert);\n"
                                   "comboBox->setCurrentIndex(4);\n"
                                   "comboBox->setFixedWidth(200);\n\n"
@@ -604,7 +607,11 @@ QVector<GallerySample> comboBoxSamples()
                            4);
                        comboBox->setObjectName(
                            QStringLiteral("galleryEditableComboBox"));
+                       comboBox->setAccessibleName(
+                           QStringLiteral("Editable size value"));
                        comboBox->setEditable(true);
+                       comboBox->lineEdit()->setAccessibleName(
+                           QStringLiteral("Editable size value"));
                        comboBox->setInsertPolicy(QComboBox::NoInsert);
 
                        auto* status =
