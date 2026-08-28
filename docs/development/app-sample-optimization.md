@@ -1,5 +1,13 @@
 # App Sample Optimization
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Gallery and site
+
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Gallery preview workflow →](gallery-preview-workflow.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow when improving Gallery app examples for a component under
 `app/view/widgets/samples/` or its PySide6 counterpart under
 `bindings/pyside6/gallery/src/fluentqt_gallery/`.
@@ -234,3 +242,8 @@ Summarize:
 - How UT and WinUI Gallery references informed the grouping.
 - Build and focused test results.
 - Any dirty worktree state intentionally left untouched.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Gallery preview workflow →](gallery-preview-workflow.md)
+<!-- docs-nav:bottom:end -->

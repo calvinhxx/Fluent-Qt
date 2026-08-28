@@ -1,5 +1,13 @@
 # PySide6 manylinux build and audit policy
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../../docs/README.md) › [Python bindings](README.md) › Compatibility and delivery
+
+[← PySide6 API compatibility policy](API_COMPATIBILITY.md) · [Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [Python Publishing Runbook →](PUBLISHING.md)
+<!-- docs-nav:top:end -->
+
 Linux wheels intended for publication must be built and repaired at the same
 glibc floors as the exact pinned PySide6 runtime. For the first FluentQt
 Python release, PySide6-Essentials 6.9.3 publishes
@@ -90,3 +98,8 @@ regression gates and are not repaired.
 Upstream references: [PyPA manylinux images](https://github.com/pypa/manylinux),
 [auditwheel](https://github.com/pypa/auditwheel), and the
 [PySide6-Essentials 6.9.3 files](https://pypi.org/project/PySide6-Essentials/6.9.3/).
+
+<!-- docs-nav:bottom:start -->
+---
+[← PySide6 API compatibility policy](API_COMPATIBILITY.md) · [Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [Python Publishing Runbook →](PUBLISHING.md)
+<!-- docs-nav:bottom:end -->

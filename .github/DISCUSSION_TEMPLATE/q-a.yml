@@ -24,7 +24,7 @@ body:
     id: version
     attributes:
       label: FluentQt version or commit
-      placeholder: v1.7.1 or git commit
+      placeholder: Release tag or git commit
   - type: input
     id: environment
     attributes:

@@ -1,5 +1,13 @@
 # PySide6 API compatibility policy
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../../docs/README.md) › [Python bindings](README.md) › Compatibility and delivery
+
+[Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [PySide6 manylinux build and audit policy →](MANYLINUX.md)
+<!-- docs-nav:top:end -->
+
 This policy applies to the public Python surface exported by `fluentqt` and
 its documented category modules. The committed [`api-manifest.json`](api-manifest.json)
 is the machine-readable public API ledger; generated Shiboken implementation
@@ -85,3 +93,8 @@ symbols, replacements that are not public, future deprecation dates, and
 same-major removals. Stub generation verifies the version variables and the
 rest of the manifest, while build-tree and clean-wheel tests require runtime,
 native, metadata, and typing versions to agree.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../../docs/SUMMARY.md) · [Python bindings index](README.md) · [PySide6 manylinux build and audit policy →](MANYLINUX.md)
+<!-- docs-nav:bottom:end -->

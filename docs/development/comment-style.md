@@ -1,5 +1,13 @@
 # Source Comment Style
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › API, policy, and writing
+
+[← 兼容性策略](compatibility-policy.zh-CN.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Documentation style →](documentation-style.md)
+<!-- docs-nav:top:end -->
+
 Use this guide when adding or materially editing comments under `src/`.
 
 The goal is to make public contracts, design rationale, and non-obvious Qt
@@ -136,3 +144,8 @@ Use these terms consistently in comments and docs:
   speculation.
 - Comments are updated when the documented contract changes.
 - Untouched files are not rewritten just to normalize old comments.
+
+<!-- docs-nav:bottom:start -->
+---
+[← 兼容性策略](compatibility-policy.zh-CN.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Documentation style →](documentation-style.md)
+<!-- docs-nav:bottom:end -->

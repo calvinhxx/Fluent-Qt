@@ -1,5 +1,13 @@
 # High-DPI Workflow
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
+
+[← App Visual Geometry Verification](app-visual-geometry-verification.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Linux Workflow →](linux-workflow.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow when changing application startup, fonts, icons, raster
 buffers, custom painting, window chrome, or display-change behavior.
 
@@ -153,3 +161,8 @@ scale change. Use UILib helpers in `compatibility/QtCompat.h`:
 Gallery-only artwork may use `@2x`/`@3x` variants, but reusable FluentQt
 controls must not depend on Gallery assets, and Gallery must not reimplement
 these draw helpers locally.
+
+<!-- docs-nav:bottom:start -->
+---
+[← App Visual Geometry Verification](app-visual-geometry-verification.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Linux Workflow →](linux-workflow.md)
+<!-- docs-nav:bottom:end -->

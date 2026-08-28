@@ -1,5 +1,13 @@
 # Visual Review
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
+
+[← Logging Workflow](logging-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [App Visual Geometry Verification →](app-visual-geometry-verification.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow to run Fluent component `VisualCheck` tests for interactive UI
 review after visual, theme, painting, or layout changes.
 
@@ -17,28 +25,9 @@ fixed sizes, edge alignment, spacing, and containment, start with geometry
 assertions or a geometry dump before relying on screenshot interpretation.
 Reusable components under `src/components/` keep their existing component test
 contracts unless a specific component visual bug needs geometry evidence.
-
-## App Geometry-First Layout Checks
-
-See [App Visual Geometry Verification](app-visual-geometry-verification.md) for
-the canonical app-only workflow.
-
-Use geometry tests for deterministic app layout contracts:
-
-- Stable widget discovery through object names such as
-  `GalleryTitleBar.SearchBox`.
-- Center alignment, widget size, spacing, containment, and logical icon size.
-- Failure output that reports rectangles, centers, size hints, and visibility.
-
-Enable opt-in geometry dumps when a focused test needs textual layout evidence:
-
-```bash
-FLUENT_QT_GEOMETRY_DUMP=1 ctest --preset vcpkg-osx -L '^test_gallery_shell_framework$' --output-on-failure
-```
-
-Use screenshots after these checks when the question is visual polish rather
-than geometry: perceived balance, color, typography, icon sharpness, material,
-or animation.
+The [App Visual Geometry Verification](app-visual-geometry-verification.md)
+guide owns that workflow and its diagnostic command. Return here for perceived
+balance, color, typography, icon sharpness, material, and animation.
 
 ## Find the Test Binary
 
@@ -111,3 +100,8 @@ Run the focused automated validation without interactive VisualCheck windows:
 ```bash
 ctest --preset vcpkg-osx -L '^test_<name>$' --output-on-failure
 ```
+
+<!-- docs-nav:bottom:start -->
+---
+[← Logging Workflow](logging-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [App Visual Geometry Verification →](app-visual-geometry-verification.md)
+<!-- docs-nav:bottom:end -->

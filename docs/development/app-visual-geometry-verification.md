@@ -1,5 +1,13 @@
 # App Visual Geometry Verification
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
+
+[← Visual Review](visual-review.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [High-DPI Workflow →](high-dpi-workflow.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow for application-level UI under `app/`, especially gallery
 shell views where alignment bugs are faster to diagnose from widget geometry
 than from screenshots.
@@ -68,3 +76,8 @@ FLUENT_QT_GEOMETRY_DUMP=1 ctest --preset vcpkg-osx -L '^test_gallery_shell_frame
 
 Use the dump output before taking screenshots when the bug is about measurable
 geometry. Use screenshots after geometry checks when reviewing visual polish.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Visual Review](visual-review.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [High-DPI Workflow →](high-dpi-workflow.md)
+<!-- docs-nav:bottom:end -->

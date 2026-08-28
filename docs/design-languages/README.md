@@ -1,9 +1,28 @@
 # Fluent Design Contract
 
+> **Status:** Accepted visual contract
+
+[Documentation home](../README.md) · [Contents](../SUMMARY.md)
+
 Fluent is FluentQt's only visual language. Components share one geometry,
 interaction, accessibility, and state contract across Windows, macOS, Linux,
 and WebAssembly. Platform integration may differ, but component design does
 not switch to a second brand shell.
+
+```mermaid
+flowchart LR
+    Brand[Product identity]
+    Tokens[Light / Dark semantic tokens]
+    Components[FluentQt components]
+    Platform[Native platform capabilities]
+
+    Brand --> Tokens --> Components
+    Platform --> Components
+```
+
+Product identity changes content, accent, typography, and semantic tokens.
+Platform capability changes chrome and material. Neither creates a second
+component geometry or interaction language.
 
 ## 1.7 migration
 

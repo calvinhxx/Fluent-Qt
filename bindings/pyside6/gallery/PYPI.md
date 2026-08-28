@@ -1,4 +1,12 @@
-# FluentQt Gallery for Python
+# Install FluentQt Gallery from PyPI
+
+> **Status:** Current package guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../../../docs/README.md) › [Python bindings](../README.md) › Get started and examples
+
+[← Python Gallery package](README.md) · [Contents](../../../docs/SUMMARY.md) · [Python bindings index](../README.md)
+<!-- docs-nav:top:end -->
 
 `FluentQt-Gallery` is the installable Python Gallery for the
 [`FluentQt`](https://pypi.org/project/FluentQt/) PySide6 compatibility package.
@@ -42,8 +50,9 @@ Windows, macOS, or Linux desktop session.
 
 The Gallery is a pure-Python wheel and follows the platform, architecture,
 Python, and Qt runtime support of the exact `FluentQt` version it installs.
-Official 1.6.x releases support CPython 3.11–3.13, Windows and macOS x64/ARM64,
-and Linux x64/ARM64 where a matching native FluentQt wheel is published.
+The current downloadable combinations are defined by the core package's
+[`wheel-matrix.json`](../wheel-matrix.json); this page does not maintain a
+second version or platform matrix.
 
 ## Project links
 
@@ -55,3 +64,8 @@ and Linux x64/ARM64 where a matching native FluentQt wheel is published.
 - [Project website](https://calvinhxx.github.io/Fluent-Qt/)
 
 FluentQt Gallery is released under the MIT License.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Python Gallery package](README.md) · [Contents](../../../docs/SUMMARY.md) · [Python bindings index](../README.md)
+<!-- docs-nav:bottom:end -->

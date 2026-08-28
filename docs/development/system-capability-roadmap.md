@@ -1,12 +1,20 @@
-# System Capability Roadmap
+# System capability delivery record
+
+> **Status:** Historical record, closed on 2026-07-30
+>
+> **Current component work:** [Development documentation](README.md)
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Baselines and historical records
+
+[← WebAssembly delivery record](webassembly-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Component API Consistency Audit →](component-api-audit.md)
+<!-- docs-nav:top:end -->
 
 ## Purpose
 
-This roadmap separates reusable widget behavior from application policy and
-operating-system integration. Each capability phase is intended to be
-independently reviewable and reversible. A later capability phase does not
-begin until the previous phase's API, behavior, tests, and scope have been
-reviewed.
+This record preserves the accepted delivery sequence for shared editing
+commands, CommandBar surfaces, and in-window notification behavior. All phases
+are complete; it is not a queue for current work.
 
 Naming note: capability phases below are **not** the same numbering as the
 historical UILib contract phases in
@@ -281,3 +289,8 @@ Validation completed on 2026-07-30:
 - Computer Use verifies the actionable Toast, timeout reason, in-place
   25%-to-50% update with one active keyed Toast, and InfoBadge value/visibility
   examples in the Gallery.
+
+<!-- docs-nav:bottom:start -->
+---
+[← WebAssembly delivery record](webassembly-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Component API Consistency Audit →](component-api-audit.md)
+<!-- docs-nav:bottom:end -->

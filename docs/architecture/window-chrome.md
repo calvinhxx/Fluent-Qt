@@ -1,5 +1,13 @@
 # Window Chrome Architecture
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
+
+[Contents](../SUMMARY.md) · [Architecture index](README.md) · [Overlay Behavior Contract →](overlay-behavior.md)
+<!-- docs-nav:top:end -->
+
 ## Ownership and boundary
 
 The three window background choices—`Solid`, `Mica`, and `Acrylic`—are UILib
@@ -222,3 +230,8 @@ When changing backdrop behavior, verify:
    state consistently;
 7. Linux tests cover Wayland/unsupported compositor fallback as well as the X11
    compositor capability path.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../SUMMARY.md) · [Architecture index](README.md) · [Overlay Behavior Contract →](overlay-behavior.md)
+<!-- docs-nav:bottom:end -->

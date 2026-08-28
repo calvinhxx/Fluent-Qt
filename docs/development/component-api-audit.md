@@ -1,5 +1,15 @@
 # Component API Consistency Audit
 
+> **Status:** Historical audit with dated addenda
+>
+> **Current rules:** [Component API conventions](component-api-conventions.md)
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Baselines and historical records
+
+[← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:top:end -->
+
 Date: 2026-05-26
 Change: `audit-component-api-consistency`
 
@@ -366,3 +376,8 @@ platform contracts.
   SplitButton, ToggleSplitButton, and Menu binaries: 22 automated tests passed,
   0 failed, and 3 VisualCheck tests were skipped through `SKIP_VISUAL_TEST`.
 - Broad category audits that produced report-only findings did not need automated test changes because no production behavior was modified.
+
+<!-- docs-nav:bottom:start -->
+---
+[← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:bottom:end -->

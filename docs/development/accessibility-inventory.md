@@ -1,5 +1,13 @@
 # Accessibility Inventory
 
+> **Status:** Living reference
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › API, policy, and writing
+
+[← Accessibility Contract](accessibility-contract.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:top:end -->
+
 This is the review view of the machine-checked
 [accessibility-inventory.json](accessibility-inventory.json). The inventory is
 keyed by the canonical Gallery component catalog, so every public visible
@@ -202,3 +210,8 @@ When Python 3.10+ is available, CTest registers
 `contract`, and `local_full` labels. The validator rejects missing, duplicate,
 or unknown component IDs, invalid classifications, missing evidence paths, and
 open gaps without a next gate.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Accessibility Contract](accessibility-contract.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:bottom:end -->

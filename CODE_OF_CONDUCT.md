@@ -1,5 +1,13 @@
 # Contributor Covenant Code of Conduct
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](docs/README.md) › [Community](docs/community/README.md) › Participation and policy
+
+[← Security Policy](SECURITY.md) · [Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md)
+<!-- docs-nav:top:end -->
+
 ## Our Pledge
 
 We as members, contributors, and leaders pledge to make participation in our
@@ -115,3 +123,8 @@ This Code of Conduct is adapted from the
 [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html),
 available under the
 [Creative Commons Attribution 4.0 License](https://creativecommons.org/licenses/by/4.0/).
+
+<!-- docs-nav:bottom:start -->
+---
+[← Security Policy](SECURITY.md) · [Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md)
+<!-- docs-nav:bottom:end -->

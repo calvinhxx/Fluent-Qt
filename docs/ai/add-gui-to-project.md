@@ -1,243 +1,134 @@
-# Adding a FluentQt GUI to any project
+# Add a FluentQt GUI to a project
 
-Use this workflow for both existing and greenfield projects. An existing TUI is
-one possible signal, not a prerequisite and not the architectural boundary.
-The GUI should depend on reusable domain/application behavior rather than screen
-scraping or emulating another interface.
+> **Status:** Current workflow
+>
+> **Audience:** Application developers and coding agents
 
-## 0. Choose a proportional profile
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [AI-assisted development](README.md) › Workflow
 
-Use `lite` only for a focused bounded correction or a small single-surface
-utility with no new integration boundary, growing collection, asynchronous
-operation, transient surface, custom theme bridge, or application-shell
-decision. Use `full` for every new GUI or major surface and whenever any lite
-condition is false or uncertain.
+[← FluentQt Onboarding Tools](../../tools/onboarding/README.md) · [Contents](../SUMMARY.md) · [AI-assisted development index](README.md)
+<!-- docs-nav:top:end -->
 
-The profile scales planning artifacts and evidence breadth, not quality. Both
-profiles require a real build, Light/Dark and normal/narrow review, realistic
-text, measured geometry, safe close behavior, independent visual and
-engineering acceptance, the applicable premium-shell material path, and a
-finished signature surface. An application-owned top-level shell uses Mica or
-Acrylic with revealed pane gaps; an embedded GUI preserves its host-owned
-window. Both require quiet chrome on the owning surface and a designed primary
-object rather than a labeled log. Reclassify to full if implementation
-introduces a full trigger. The canonical Skill contains the reference-routing
-table.
+Use this workflow for an existing repository or a new application. A CLI or TUI
+may reveal useful behavior, but it is not automatically the architecture the
+GUI should copy. Build on reusable application behavior and public interfaces.
 
-## 1. Discover the target before choosing a UI
+```mermaid
+flowchart LR
+    Profile[Choose profile]
+    Discover[Inspect the project]
+    Boundary[Choose boundary]
+    Contract[Define one user slice]
+    Components[Select components]
+    Build[Implement]
+    Validate[Validate]
 
-Read the target repository's local agent instructions and inspect its build,
-package, test, release, and platform configuration. Record evidence for:
+    Profile --> Discover --> Boundary --> Contract --> Components --> Build --> Validate
+    Validate -. findings .-> Contract
+```
 
-- languages, build systems, supported platforms, and existing entry points;
-- domain modules and public APIs that already perform useful work;
-- long-running work, progress, cancellation, error, and retry behavior;
-- persistence, network, filesystem, process, plugin, and authentication edges;
-- current interfaces: library, CLI, TUI, service, plugin, GUI, or none;
-- user outcomes and workflows, not merely a list of desired widgets.
+## 0. Choose the profile
 
-For a large or ambiguous project, write a task-local analysis conforming to
-`project-analysis.schema.json`. Do not commit that record unless it is useful
-project documentation.
+| Profile | Use it for | Required evidence |
+|---|---|---|
+| `lite` | A bounded correction or small finite utility with no new shell, integration boundary, long-running work, growing collection, or complex transient surface | Real build; Light/Dark and normal/narrow review; applicable behavior tests; one finished signature surface |
+| `full` | A new GUI, redesign, application shell, new integration boundary, asynchronous workflow, growing collection, or any uncertain case | Everything in `lite`, plus three comparable concepts, human selection, explicit data/lifetime design, and independent final review |
 
-## 2. Choose one primary integration pattern from evidence
+The profile changes the amount of planning evidence, not the quality bar. If a
+`lite` implementation grows beyond its original boundary, reclassify it as
+`full`.
 
-Query an exact pattern with:
+## 1. Inspect the target project
+
+Read its local instructions before choosing widgets. Record evidence for:
+
+| Area | Questions to answer |
+|---|---|
+| Build and delivery | Which languages, build systems, platforms, packages, and entry points are supported? |
+| Reusable behavior | Which domain or application APIs already perform the work? |
+| Runtime | Which work is long-running? How do progress, cancellation, retry, and shutdown behave? |
+| Boundaries | Where do filesystem, network, process, plugin, authentication, and persistence calls live? |
+| Existing interfaces | Is the project a library, CLI, TUI, service, plugin, GUI, or a combination? |
+| User outcome | What complete task should become easier—not merely which widgets were requested? |
+
+For a large project, a task-local record may follow
+[project-analysis.schema.json](project-analysis.schema.json). Commit it only
+when it will remain useful project documentation.
+
+## 2. Choose one integration boundary
+
+Query the catalog before deciding:
 
 ```bash
 python3 tools/ai/query_ai_catalog.py --pattern direct-library
 ```
 
-Apply the returned machine-readable `window_ownership` before considering an
-application pattern's component candidates. `host-owned` means return an
-embedded child surface and do not construct a second `Window` or event loop;
-`caller-decides` requires target evidence before choosing a shell.
+| Pattern | Use it when | Boundary to preserve |
+|---|---|---|
+| `direct-library` | Stable behavior is callable in-process | Thread affinity, ownership, and cancellation |
+| `service-api` | A service is already authoritative | Transport types stay outside widgets |
+| `structured-process` | An executable is the only safe reusable surface | Structured input/output and stable errors; never terminal decoration |
+| `plugin-extension` | The host supports embedded frontends | Host lifecycle, event loop, ABI/API, and unload rules |
+| `extract-core` | Behavior is trapped inside another interface | Extract and test the smallest UI-independent service first |
+| `greenfield` | No reusable application layer exists | Define use cases and state before composing the view |
 
-| Pattern | Use it when | Important boundary |
-| --- | --- | --- |
-| `direct-library` | Stable domain/application APIs can be called in-process | Make ownership, thread affinity, and cancellation explicit |
-| `service-api` | A service is already the authoritative boundary | Keep transport DTOs out of widgets and expose connection state |
-| `structured-process` | A mature executable is the only safe reusable boundary | Require structured input/output and a stable error contract; do not parse terminal decoration |
-| `plugin-extension` | The host intentionally supports embedded frontends | Follow host lifecycle, ABI/API, event-loop, and unload rules |
-| `extract-core` | Useful behavior is trapped inside an existing interface | Extract and test the smallest UI-independent application service first |
-| `greenfield` | No reusable interaction or application layer exists | Define domain state and use cases before composing widgets |
+Apply the pattern's `window_ownership` field. `host-owned` means the GUI returns
+an embedded surface and does not create a second application window or event
+loop. If evidence is incomplete, test a small adapter before building the full
+interface.
 
-Reject alternatives explicitly when the choice changes process isolation,
-runtime dependencies, packaging, or supported platforms. If the evidence is
-insufficient, implement a small adapter spike and test it before building the
-full GUI.
+## 3. Define one complete user slice
 
-## 3. Define the GUI contract
+Describe the first slice as an observable state flow:
 
-Describe the smallest end-to-end user slice in terms of:
-
-1. input and validation;
-2. invoked use case;
-3. loading, progress, success, empty, and error states;
-4. result presentation and any persistent state;
-5. cancellation, retry, close, and cleanup behavior.
-
-Both profiles record the user outcome, affected surface, primary object, hero
-interaction, selected composition, one rejected alternative, one project or
-Gallery reference, major component decisions, exact density metrics, theme
-strategy, and applicable normal/narrow/long-text/focus/disabled/close states.
-
-Lite also records why its child/data count is finite and why no full trigger is
-present. It does not need three concepts, dual product references, or a
-data/lifetime table for states that cannot exist.
-
-Full additionally records:
-
-- a complete product-signature identity card;
-- subject materials, artifacts, instruments, verbs, and workflow tempo;
-- explicit user/project taste signals, recent patterns to avoid, and one
-  non-UI subject reference with transferred and rejected traits;
-- a specific visual world, signature element, typography/palette/motion voice,
-  concrete anti-goals, one controlled aesthetic risk with usability guard and
-  fallback, and one representative-content fixture;
-- a genericity critique with one concrete subject-specific revision and six
-  global tuning axes;
-- one coherent icon family with provenance, size, outline/filled, semantic
-  color, and icon-only accessibility rules;
-- aligned and contrastive product references with transferred and rejected
-  structural rules and excluded brand/screenshot copying;
-- exactly three structurally and aesthetically distinct concepts with
-  same-content high-fidelity full-window comps and a nine-dimension visual
-  scorecard;
-- a recorded human selection or rejection before production UI code;
-- a compact implementation design system extracted from the selected concept,
-  including locked decisions, allowed adaptations, risks, and comparison areas;
-- named Gallery/sample/`VisualCheck` evidence for every major surface;
-- full surface hierarchy, Light/Dark strategy, and normal/narrow/minimum layout;
-- semantic component-opportunity scan and decision table;
-- data/lifetime table covering cardinality, updates, item-model/delegate
-  ownership, paging/windowing, cache limits, and transient construction and
-  destruction;
-- cross-product similarity review when relevant prior GUI work exists;
-- complete state-by-region evidence matrix.
-
-Full concepts differ in primary surface, persistent/transient regions, hero
-interaction, subject translation, controlled aesthetic risk, or narrow
-behavior. Color and pane-width variants do not count.
-At most one concept may retain the aligned reference's complete topology. If
-the selected design matches four or more structural dimensions of a recent
-unrelated GUI, cite domain evidence or redesign it.
-
-Keep four responsibilities distinct even when the first slice is small:
-
-- **domain/application layer** owns business rules and use cases;
-- **adapter layer** translates library, service, process, or plugin contracts;
-- **view state/controller** makes UI state transitions explicit and testable;
-- **FluentQt view** renders state and emits user intent.
-
-Do not move business logic into signal handlers merely because the first GUI is
-small. Do not replace a working interface unless replacement is an explicit
-requirement; multiple frontends should share the same application behavior.
-
-## 4. Select components by behavior
-
-Start with an application pattern, then query specific decisions instead of
-loading every component:
-
-```bash
-python3 tools/ai/query_ai_catalog.py --pattern file-workbench
-python3 tools/ai/query_ai_catalog.py --guide status-and-identity
-python3 tools/ai/query_ai_catalog.py --search "determinate progress"
-python3 tools/ai/query_ai_catalog.py --component info-bar
+```mermaid
+stateDiagram-v2
+    [*] --> Ready
+    Ready --> Invalid: invalid input
+    Ready --> Running: submit
+    Running --> Success: completed
+    Running --> Failed: recoverable error
+    Running --> Ready: cancel
+    Failed --> Running: retry
+    Success --> Ready: start another task
 ```
 
-Treat catalog candidates as a shortlist. Verify the referenced public header or
-Python import, inspect the linked Gallery sample, and build on existing FluentQt
-components. Each catalog entry includes its focused test and sample source.
-Choose by semantics, lifetime, data shape, interaction, and density. Do not use
-a raw Qt widget merely because it is familiar; document and theme every raw
-widget that remains because FluentQt has no suitable public contract.
-Application patterns are hypotheses, not complete screen templates. Choose the
-information architecture from the product signature before applying a pattern's
-component shortlist.
+Remove states that cannot occur, but do not omit failure, cancellation, or
+cleanup when the underlying operation supports them. Record:
 
-For C++, link `FluentQt::FluentQt` and use installed headers such as
-`<FluentQt/FluentQt.h>` or the category header reported by the query. For
-Python, use the reported `fluentqt.<category>` import and keep PySide6, Qt, and
-Shiboken versions and architectures aligned.
+- input and validation;
+- the invoked use case;
+- loading, progress, success, empty, and error states;
+- results and persisted state;
+- retry, cancellation, close, and teardown behavior.
 
-## 5. Implement a vertical slice
+Keep responsibilities separate:
 
-Build one useful workflow before expanding navigation or visual polish:
+```mermaid
+flowchart LR
+    View[FluentQt view]
+    State[View state / controller]
+    Adapter[Integration adapter]
+    App[Application / domain]
 
-1. For a full new GUI or redesign, rerun the design-brief validator without
-   `--stage` and stop unless it reports human-approved `PASS`.
-2. Add the narrow application adapter and unit-test it without a window.
-3. Model deterministic view states and transitions.
-4. If the slice owns a top-level window, install the premium shell first:
-   Fluent `Window`, Mica, theme before construct, and unfilled hosts that
-   reveal window material. If it is embedded, keep the host-owned window and
-   lifecycle. Then finish the signature surface for the primary object, any
-   primary input, and pane chrome. Do not stamp opaque `bgCanvas` / `bgLayer`
-   fills onto every pane, wrap a composer in a `Card`, or use a filled
-   `ComboBox` as a pane title.
-5. Move blocking I/O or computation off the GUI thread.
-6. Marshal results back through Qt signals or queued invocations with clear
-   object ownership and cancellation.
-7. Preserve existing entry points and regression tests.
+    View -- user intent --> State
+    State --> Adapter --> App
+    App -- result / event --> Adapter --> State
+    State -- render state --> View
+```
 
-For every long or growing collection, use a Qt item model and delegate rather
-than a `ScrollView` layout containing one widget per record. Keep inserts and
-stream changes incremental, preserve a deliberate scroll position, and bound
-the model/transport/cache separately through pagination, windowing, retention,
-or a proven finite maximum. For one-shot dialogs and flyouts, construct on
-demand, guard deferred deletion, and destroy on finish; create repeat-use
-drawers lazily and cache them only when their state or measured cost warrants it.
+Business rules belong in the application layer, not signal handlers. Multiple
+frontends should share application behavior unless replacement is an explicit
+requirement.
 
-Use progress controls only for work that is actually observable. Disable or
-guard duplicate actions while work is running. Surface recoverable errors near
-the affected workflow and log diagnostic detail through the target project's
-existing logging boundary.
+### Full-profile design gate
 
-## 6. Validate behavior and appearance
-
-Validation is proportional to the change but must cover all of these layers:
-
-- existing domain and interface tests still pass;
-- adapter and view-state tests cover success, empty, validation, failure,
-  cancellation, and teardown paths that apply;
-- the target builds through its supported build/package flow;
-- relevant FluentQt focused tests pass when FluentQt itself changes;
-- interactive workflows remain responsive during long-running work;
-- long/growing collections prove viewport-bounded materialization, targeted
-  model signals, and a paging or retention contract under realistic stress;
-- repeated one-shot transient open/close cycles return live instances to the
-  idle baseline after deferred deletion;
-- Light/Dark themes, text fit, keyboard focus, disabled/hover/pressed states,
-  scaling, resize, and supported platforms receive visual review;
-- icons use one provenanced family and preserve optical alignment, semantic
-  color, accessible names, and state treatment at native scale;
-- deterministic representative data is inspected at normal and narrow widths,
-  concrete visual issues are fixed, and the same views are rechecked;
-- the full window and 100% crops of title bars, pane headers, selected rows,
-  pane footers, and the composer/input edge are reviewed so scaling cannot hide
-  small alignment or spacing defects;
-- repeated insets, alignments, row gaps, indicator/text separation, and
-  label/value spacing are measured on the 4 px grid; selected, focused,
-  text-preedit, and transient-surface states contain no overlap or stale layer;
-- the application is compared beside its named Gallery/component references in
-  a matching theme and scale, with no unexplained downgrade in token fidelity,
-  interaction states, or visual finish;
-- the rebuilt full window and high-risk detail are compared directly with the
-  accepted concept, and every material deviation is recorded and justified;
-- installers or wheels include the new GUI and required assets when shipping is
-  in scope.
-- the product signature is recognizable without its logo or accent color;
-  a run or conversation is a finished transcript, not a labeled log, and the
-  result is not merely a relabeled navigation/session/chat/inspector shell
-  when that is not the primary object.
-
-For a new GUI or major redesign, initialize design-brief contract v4. Fill its
-subject vernacular, taste context, controlled risk, genericity revision, and
-tuning axes from product evidence. Create the three declared high-fidelity comp
-files in two passes—broad visual exploration, then readable desktop anatomy—
-using the same content, theme, and viewport. Then render and validate the
-human-review stage:
+For a new GUI or major redesign, use the canonical Skill to ground the design
+in the product's subject matter, create three same-content full-window
+directions, and record a human selection before production UI work. The Skill
+contains the complete brief fields, reference rules, comparison rubric, and
+anti-genericity checks; this guide does not duplicate them.
 
 ```bash
 python3 .agents/skills/build-fluentqt-gui/scripts/init_design_brief.py \
@@ -249,52 +140,92 @@ python3 .agents/skills/build-fluentqt-gui/scripts/validate_design_brief.py \
   --stage concepts /path/to/design-brief.json
 ```
 
-`CONCEPTS READY` does not authorize C++ work. Show the board and raw comps to
-the user or named human design owner. Record their approval or rejection in the
-brief, then rerun `validate_design_brief.py` without `--stage`; only its `PASS`
-result unlocks implementation. A wireframe or component-region diagram does
-not count as a high-fidelity comp.
+`CONCEPTS READY` means “show the board for selection”; it does not authorize
+implementation. Run the validator without `--stage` after the decision and
+continue only when it reports `PASS`.
 
-After final captures, keep a task-local visual-evidence manifest with
-`"contract_version": 4` and `"profile": "lite"` or `"profile": "full"`.
-Render a local comparison board and have a human or fresh agent—never
-the implementation author—record the evidence-backed review:
+## 4. Select components by behavior
+
+Start with the application pattern, then query specific needs:
+
+```bash
+python3 tools/ai/query_ai_catalog.py --pattern file-workbench
+python3 tools/ai/query_ai_catalog.py --guide status-and-identity
+python3 tools/ai/query_ai_catalog.py --search "determinate progress"
+python3 tools/ai/query_ai_catalog.py --component info-bar
+```
+
+For each candidate, check its public header or Python import, Gallery example,
+focused test, semantics, data shape, lifetime, and density. Application patterns
+are shortlists, not screen templates. If FluentQt has no suitable public
+component, document why a raw Qt widget remains and apply the same theme,
+accessibility, and state review.
+
+C++ applications link `FluentQt::FluentQt` and include installed headers.
+Python applications use the reported `fluentqt.<category>` import and keep
+PySide6, Qt, and Shiboken versions and architectures aligned.
+
+## 5. Implement the vertical slice
+
+1. Add the narrow adapter and test it without a window.
+2. Model view states and effective transitions explicitly.
+3. For an application-owned shell, install theme and Window material before
+   composing content. For an embedded surface, preserve the host window.
+4. Build the primary object and input path before secondary navigation.
+5. Move blocking work off the GUI thread and marshal results back through Qt
+   signals or queued calls.
+6. Make cancellation, ownership, deferred deletion, and close behavior explicit.
+7. Preserve existing entry points and regression tests.
+
+Use Qt item models and delegates for long or growing collections. Bound the
+model, transport, and cache with pagination, windowing, retention, or a proven
+finite maximum. Construct one-shot dialogs and flyouts on demand; cache
+repeat-use surfaces only when their state or measured creation cost justifies
+it.
+
+Show progress only when work is observable. Guard duplicate actions while work
+is running, place recoverable errors near the affected workflow, and send
+diagnostic detail through the project's logging boundary.
+
+## 6. Validate the result
+
+| Layer | Required checks |
+|---|---|
+| Existing behavior | Domain and existing-interface tests still pass |
+| New behavior | Adapter and state tests cover applicable success, empty, validation, failure, cancellation, and teardown paths |
+| Build and package | Supported build flow passes; installers or wheels include the GUI and assets when in scope |
+| Responsiveness | Long work does not block the UI; growing collections stay viewport-bounded; transient instances return to baseline |
+| Interaction | Keyboard focus, disabled/hover/pressed states, text input, resize, and close behavior work |
+| Themes and content | Light/Dark, normal/narrow/minimum widths, long text, realistic data, and scaling are reviewed |
+| Visual finish | Compare the built window with the selected concept and named Gallery references at the same theme and scale |
+| Accessibility | Names, roles, focus order, hit areas, full values, and announcements match the component contracts |
+
+Review the full window and high-risk 100% crops. Measure repeated insets,
+alignment, row gaps, indicator/text spacing, and pane edges on the 4 px grid.
+Fix concrete findings and recapture the same states; scaled-down screenshots
+can hide small defects.
+
+For final visual evidence, render a comparison board and use a human or fresh
+agent—not the implementation author—for the recorded review:
 
 ```bash
 python3 .agents/skills/build-fluentqt-gui/scripts/render_visual_review.py \
   /path/to/visual-evidence.json
-```
-
-The default board links local captures. Add `--embed-images` only when a single
-portable file is required; full-resolution evidence can make embedded HTML
-large.
-
-Then run:
-
-```bash
 python3 .agents/skills/build-fluentqt-gui/scripts/validate_visual_evidence.py \
-  --require-current \
-  /path/to/visual-evidence.json
+  --require-current /path/to/visual-evidence.json
 ```
 
-From a consumer project, the same script is
-`<skill-root>/scripts/validate_visual_evidence.py`.
-
-The validator checks profile-specific coverage, local file existence, window
-material fields, signature-surface fields, the validated design brief, and a
-different reviewer with nine evidence-backed scores of at least 4/5, including
-iconography and surface composition. Legacy v1/v2/v3 manifests remain readable
-with a migration warning, but
-`--require-current` rejects them for new work. The script still does not infer
-taste from pixels; live inspection and the independent board review remain
-mandatory.
-
-For changes to FluentQt's own AI contract, finish with:
+For changes to FluentQt's AI contract, also run:
 
 ```bash
 python3 tools/ai/validate_ai_assets.py --project-root .
 ```
 
-Report the chosen integration pattern and evidence, preserved interfaces,
-implemented vertical slice, commands run, visual coverage, and any unverified
-platform or packaging boundary. Do not label feasibility as verified support.
+Report the chosen boundary and evidence, preserved interfaces, completed user
+slice, commands run, visual coverage, and any platform or packaging boundary
+that was not verified. Do not present feasibility as verified support.
+
+<!-- docs-nav:bottom:start -->
+---
+[← FluentQt Onboarding Tools](../../tools/onboarding/README.md) · [Contents](../SUMMARY.md) · [AI-assisted development index](README.md)
+<!-- docs-nav:bottom:end -->
