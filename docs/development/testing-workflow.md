@@ -112,10 +112,14 @@ reusable validation modules, and owns only the stable `CI Gate` and
   generation, compatibility baselines, native Python wheels, clean-environment
   tests, and the optional publishable wheel matrix. Fast CI clean-installs the
   core wheel on its Qt 6.2 compatibility lanes. Standard full CI adds Gallery,
-  typing, visible-example, and native-window acceptance on the two Qt 6.2 gates
-  and the macOS ARM64 release representative. `python_release_bundle=true`
-  additionally builds every declared release wheel, runs manylinux repair and
-  audit, assembles the immutable 18-wheel bundle, and reports six explicit
+  typing, visible-example, and native-window acceptance on representative
+  lanes. On an untagged release-ready `main` commit, Release Candidate owns the
+  macOS ARM64 CPython 3.11 representative so full CI does not compile it twice.
+  Scheduled and manual full runs keep that lane. `python_release_bundle=true`
+  additionally builds every declared release wheel, runs the complete binding
+  suite on the six extended-acceptance representatives, and clean-installs and
+  smoke-tests every other ABI wheel. It then runs manylinux repair and audit,
+  assembles the immutable 18-wheel bundle, and reports six explicit
   platform/architecture checks in the Actions UI. The module also owns
   [the wheel matrix](../../bindings/pyside6/wheel-matrix.json).
   Python release scenarios are queued critical-path first: Windows ARM64 with
@@ -126,6 +130,8 @@ reusable validation modules, and owns only the stable `CI Gate` and
   Qt 6.9.3 `wasm_singlethread` and Emscripten 3.1.70 toolchain, builds Hello
   World and the C++ Gallery, runs the fast/full Chromium smoke, and stages the
   Pages payload consumed by [the Pages workflow](../../.github/workflows/pages.yml).
+  A `main` CI run passes that artifact directly to the reusable Pages deploy;
+  the manual Pages entry rebuilds it only for recovery.
 
 Do not add compiler, SDK, package-manager, wheel, or platform steps to the
 orchestrator. Add them to the owning reusable workflow and update its catalog.
@@ -137,7 +143,9 @@ The separate [Release Candidate workflow](../../.github/workflows/release-candid
 runs for an untagged version on `main`: it invokes the reusable desktop
 packaging module and bundle-enabled PySide6 module in parallel, then emits
 `Release Candidate ready` only after both commit-bound manifests pass. The tag
-workflow promotes those artifacts; it does not rebuild them.
+workflow promotes those artifacts; it does not rebuild them. On an untagged
+release-ready `main` commit, the candidate also owns the fixed macOS ARM64
+Python representative omitted from the simultaneous full CI run.
 
 - GitHub Actions `matrix=fast` is the default pull-request and manual validation
   tier. It runs
@@ -152,8 +160,10 @@ workflow promotes those artifacts; it does not rebuild them.
   the weekly schedule, and is available manually. Weekly runs also enable the
   complete Python release bundle; ordinary `main` and manual full runs keep it
   disabled unless `python_release_bundle=true` is selected. The automatic
-  Release Candidate run owns the pre-tag publication bundle instead. macOS arm64
-  remains the broadest macOS test lane for the curated `ci_full` subset; Linux
+  Release Candidate run owns the pre-tag publication bundle instead. It also
+  owns the macOS ARM64 Python representative for that release commit; manual
+  and scheduled full runs retain the representative themselves. macOS arm64
+  remains the broadest native C++ lane for the curated `ci_full` subset; Linux
   covers Ubuntu 22.04 x64 and ARM64 with distro Qt 6.2.x plus official Qt
   5.15.2 `gcc_64` on x64; macOS x64 is a Gallery build smoke; Windows lanes
   cover targeted x64 and native ARM64 platform tests, Qt 5.15 API, and the

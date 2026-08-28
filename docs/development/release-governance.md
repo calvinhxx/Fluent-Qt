@@ -225,12 +225,17 @@ Before creating a stable tag:
    The GitHub Release workflow requires the exact tagged commit to have a
    successful `Release ready` check; do not substitute a tree-equivalent run
    from the release branch or disable `require_ci` for a standard release.
+   For an untagged release-ready version, this run leaves the macOS ARM64
+   CPython 3.11 representative to the simultaneous Release Candidate instead
+   of compiling the same wheel twice.
    If the change touches CMake, tests, Qt compatibility, platform behavior, or
    component input/windowing behavior, include the Ubuntu 22.04 Linux validation
    covered in [Linux Workflow](linux-workflow.md).
 6. Wait for `Release Candidate ready` on the same `main` SHA. It must contain
    the nine desktop packages, the 18-wheel Python bundle, and a receipt binding
-   both candidates to that repository and commit. For a post-tag recovery, run
+   both candidates to that repository and commit. Together with `Release ready`,
+   this is also the macOS ARM64 Python representative gate for the release
+   commit. For a post-tag recovery, run
    `Release Candidate` manually from the tag instead of weakening the identity
    checks. For Windows/macOS packages, verify the installed runtime notices and
    retain the exact corresponding Qt source required by their Qt `NOTICE.md`.

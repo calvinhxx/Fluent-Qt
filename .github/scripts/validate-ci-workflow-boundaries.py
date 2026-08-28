@@ -13,7 +13,15 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 
 EXPECTED_JOBS = {
-    "ci.yml": {"plan", "cpp", "python", "wasm", "ci-gate", "release-ready"},
+    "ci.yml": {
+        "plan",
+        "cpp",
+        "python",
+        "wasm",
+        "pages",
+        "ci-gate",
+        "release-ready",
+    },
     "ci-cpp.yml": {"plan", "build", "integration"},
     "ci-wasm.yml": {"build"},
     "ci-python.yml": {
@@ -102,12 +110,17 @@ def validate_boundaries() -> list[str]:
         "uses: ./.github/workflows/ci-cpp.yml",
         "uses: ./.github/workflows/ci-python.yml",
         "uses: ./.github/workflows/ci-wasm.yml",
+        "uses: ./.github/workflows/pages.yml",
         "name: CI Gate",
         "name: Release ready",
         "python_release_bundle:",
         'python_release_bundle="true"',
         "build_release_bundle: ${{ needs.plan.outputs.python_release_bundle == 'true' }}",
         "run_compatibility_validation: true",
+        "run_macos_release_validation: ${{ needs.plan.outputs.run_macos_release_validation == 'true' }}",
+        'run_macos_release_validation="false"',
+        'refs/tags/$tag^{tag}',
+        'docs/releases/$tag.md',
         "release_max_parallel: 4",
         "Require a current main base for release pull requests",
         ".github/scripts/check-release-branch-freshness.py",
@@ -130,6 +143,25 @@ def validate_boundaries() -> list[str]:
     ):
         if forbidden in orchestrator:
             errors.append(f"ci.yml contains module implementation detail: {forbidden}")
+    pages_call = job_section(orchestrator, "pages")
+    for required in (
+        "needs: [plan, wasm]",
+        "github.event_name == 'push'",
+        "needs.wasm.result == 'success'",
+        "pages: write",
+        "id-token: write",
+    ):
+        if required not in pages_call:
+            errors.append(
+                f"ci.yml automatic Pages deployment is missing contract: {required}"
+            )
+    release_ready = job_section(orchestrator, "release-ready")
+    for required in (
+        "needs: [plan, ci-gate]",
+        "CI_GATE_RESULT: ${{ needs.ci-gate.result }}",
+    ):
+        if required not in release_ready:
+            errors.append(f"ci.yml Release ready is missing gate contract: {required}")
 
     for name, module in (
         ("ci-cpp.yml", cpp),
@@ -162,13 +194,20 @@ def validate_boundaries() -> list[str]:
 
     for required in (
         "uses: ./.github/workflows/ci-wasm.yml",
+        "workflow_call:",
+        "workflow_dispatch:",
         "mode: full",
         "name: fluentqt-wasm-pages",
         "path: build/pages",
         "needs: wasm",
+        "github.event_name == 'workflow_dispatch'",
+        "github.event_name != 'workflow_dispatch'",
+        "needs.wasm.result == 'skipped'",
     ):
         if required not in pages:
             errors.append(f"pages.yml is missing WebAssembly deployment contract: {required}")
+    if re.search(r"^  push:\s*$", pages, re.MULTILINE):
+        errors.append("pages.yml must not rebuild WASM automatically outside main CI")
 
     if ".github/ci-cpp-matrix.json" not in cpp:
         errors.append("ci-cpp.yml must own the C++ matrix catalog")
@@ -187,6 +226,8 @@ def validate_boundaries() -> list[str]:
         errors.append("ci-python.yml must expose the optional Python release-bundle input")
     if "run_compatibility_validation:" not in python:
         errors.append("ci-python.yml must expose its representative compatibility lanes")
+    if "run_macos_release_validation:" not in python:
+        errors.append("ci-python.yml must expose its macOS representative lane")
     if "release_max_parallel:" not in python:
         errors.append("ci-python.yml must expose its release-wheel concurrency cap")
     if python.count("inputs.build_release_bundle") < 4:
@@ -198,6 +239,15 @@ def validate_boundaries() -> list[str]:
         errors.append(
             "ci-python.yml release matrix must honor release_max_parallel"
         )
+    release_bundle = job_section(python, "pyside6_release_bundle")
+    for required in (
+        "- pyside6_macos",
+        "needs.pyside6_macos.result == 'success'",
+    ):
+        if required not in release_bundle:
+            errors.append(
+                f"ci-python.yml release bundle is missing macOS artifact dependency: {required}"
+            )
     for job_id in ("pyside6_linux", "pyside6_windows"):
         compatibility_job = job_section(python, job_id)
         if "if: ${{ inputs.run_compatibility_validation }}" not in compatibility_job:
@@ -208,12 +258,14 @@ def validate_boundaries() -> list[str]:
             errors.append(
                 f"ci-python.yml {job_id} must test the Gallery on the Qt 6.2 baseline"
             )
-    if "inputs.run_compatibility_validation" in job_section(
-        python, "pyside6_macos"
-    ):
+    macos_job = job_section(python, "pyside6_macos")
+    if "if: ${{ inputs.run_macos_release_validation }}" not in macos_job:
         errors.append(
-            "ci-python.yml pyside6_macos must always build the publishable "
-            "macOS ARM64 CPython 3.11 wheel"
+            "ci-python.yml pyside6_macos must honor run_macos_release_validation"
+        )
+    if "inputs.run_compatibility_validation" in macos_job:
+        errors.append(
+            "ci-python.yml pyside6_macos must remain independent of legacy compatibility lanes"
         )
     for required in (
         "actions: read",
@@ -224,7 +276,7 @@ def validate_boundaries() -> list[str]:
         ".github/scripts/select-pyside-release-matrix.py",
         ".github/scripts/assemble-pyside-release-bundle.py",
         "Prioritized representative scenarios:",
-        "matrix.extended_acceptance == true",
+        "name: Test representative PySide6 bindings\n        if: ${{ matrix.extended_acceptance == true }}",
         "fluentqt-pyside6-qt624-cp310-linux-x64",
         "fluentqt-pyside6-qt624-cp310-windows-x64",
         "fluentqt-pyside6-qt693-cp311-macos-arm64",
@@ -297,6 +349,7 @@ def validate_boundaries() -> list[str]:
         "uses: ./.github/workflows/ci-python.yml",
         "build_release_bundle: true",
         "run_compatibility_validation: false",
+        "run_macos_release_validation: true",
         "release_max_parallel: 8",
         "name: Release Candidate ready",
         "refs/tags/$tag^{tag}",
@@ -372,6 +425,7 @@ def validate_boundaries() -> list[str]:
         "name: Build Python release candidate",
         "uses: ./.github/workflows/ci-python.yml",
         "build_release_bundle: true",
+        "run_macos_release_validation: true",
         "name: Resolve immutable release candidate",
         "name: fluentqt-desktop-release-candidate",
         "run-id: ${{ needs.preflight.outputs.candidate_run_id }}",

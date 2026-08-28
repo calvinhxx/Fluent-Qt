@@ -16,6 +16,11 @@ on:
         required: false
         default: true
         type: boolean
+      run_macos_release_validation:
+        description: Run the fixed macOS ARM64 CPython 3.11 representative lane.
+        required: false
+        default: true
+        type: boolean
       release_max_parallel:
         description: Maximum number of dynamic release-wheel jobs.
         required: false
@@ -819,6 +824,7 @@ jobs:
   pyside6_macos:
     name: PySide6 release / macOS ARM64 / CPython 3.11 / Qt 6.9.3
     needs: plan
+    if: ${{ inputs.run_macos_release_validation }}
     runs-on: macos-15
     timeout-minutes: 35
     steps:
@@ -1263,7 +1269,8 @@ jobs:
           }
           python @verifyArgs
 
-      - name: Test PySide6 bindings
+      - name: Test representative PySide6 bindings
+        if: ${{ matrix.extended_acceptance == true }}
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -1684,12 +1691,14 @@ jobs:
     name: Assemble canonical Python release bundle
     needs:
       - plan
+      - pyside6_macos
       - pyside6_release
     if: >-
       ${{
         always() &&
         needs.plan.outputs.mode == 'full' &&
         inputs.build_release_bundle &&
+        needs.pyside6_macos.result == 'success' &&
         needs.pyside6_release.result == 'success'
       }}
     runs-on: ubuntu-latest
