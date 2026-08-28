@@ -52,6 +52,7 @@ from PySide6.QtGui import (
 )
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QFrame,
     QHBoxLayout,
@@ -137,6 +138,7 @@ from fluentqt_gallery.update_checker import (
 )
 from fluentqt_gallery.window import (
     GalleryWindow,
+    _build_sample_card,
     _refresh_fluent_subtree,
     gallery_window_editing_command_router,
 )
@@ -978,6 +980,56 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         self.assertTrue(shiboken6.isValid(view))
         root.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+
+    def test_sample_cards_preserve_backgroundless_collection_surfaces(self):
+        parent = QWidget()
+        checked_views = 0
+        try:
+            for route_id in ("list-view", "tree-view"):
+                entry = ENTRY_BY_ROUTE_ID[route_id]
+                for sample in entry.samples:
+                    with self.subTest(route=route_id, sample=sample.id):
+                        card, result = _build_sample_card(
+                            entry, sample, parent
+                        )
+                        views = []
+                        if isinstance(
+                            result.widget, QAbstractItemView
+                        ):
+                            views.append(result.widget)
+                        views.extend(
+                            result.widget.findChildren(QAbstractItemView)
+                        )
+                        backgroundless_views = [
+                            view
+                            for view in views
+                            if callable(
+                                getattr(view, "backgroundVisible", None)
+                            )
+                            and not view.backgroundVisible()
+                        ]
+                        self.assertTrue(backgroundless_views)
+                        for view in backgroundless_views:
+                            self.assertTrue(
+                                view.property(
+                                    "fluentPreserveParentSurface"
+                                )
+                            )
+                            self.assertIsNotNone(view.viewport())
+                            self.assertTrue(
+                                view.viewport().property(
+                                    "fluentPreserveParentSurface"
+                                )
+                            )
+                            checked_views += 1
+                        card.deleteLater()
+                        QCoreApplication.sendPostedEvents(
+                            None, QEvent.DeferredDelete
+                        )
+            self.assertGreaterEqual(checked_views, 12)
+        finally:
+            parent.deleteLater()
+            QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
     def test_custom_samples_follow_the_local_preview_theme(self):
         original_theme = fluentqt.current_theme()

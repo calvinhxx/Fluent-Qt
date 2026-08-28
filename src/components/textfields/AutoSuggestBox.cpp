@@ -136,6 +136,15 @@ public:
         m_listView->setItemDelegate(m_itemDelegate);
         m_listView->setBorderVisible(false);
         m_listView->setBackgroundVisible(false);
+        // Flyout paints the opaque rounded suggestion surface. Preserve it
+        // when ListView is hosted by a composited Mica window; the collection
+        // viewport's normal transparent clear would otherwise erase the
+        // parent card and expose a rectangular patch of the window backdrop.
+        // zh_CN: Flyout 已绘制不透明圆角建议面。位于合成式 Mica 窗口时必须保留
+        // 该父级表面，否则集合 viewport 的透明清理会擦掉卡片并露出矩形窗口材质。
+        m_listView->setProperty("fluentPreserveParentSurface", true);
+        if (m_listView->viewport())
+            m_listView->viewport()->setProperty("fluentPreserveParentSurface", true);
         m_listView->setScrollChainingEnabled(false);
         m_listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
         m_listView->setSelectionMode(fluent::collections::ListView::SelectionMode::Single);
