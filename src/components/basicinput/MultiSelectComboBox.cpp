@@ -18,6 +18,7 @@
 #include <QPaintEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QScrollBar>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QSortFilterProxyModel>
@@ -34,7 +35,9 @@
 #include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
+#include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/LogicalItemAccessibility_p.h"
+#include "components/foundation/private/SurfacePainter_p.h"
 #include "components/textfields/LineEdit.h"
 #include "design/Spacing.h"
 #include "design/Typography.h"
@@ -49,7 +52,8 @@ constexpr int kPopupMinimumCardWidth = 240;
 constexpr int kPopupWindowMargin = 4;
 constexpr int kPopupShadowMargin = ::Spacing::Standard;
 constexpr int kPopupContentInset = ::Spacing::XSmall;
-constexpr int kPopupRowHeight = ::Spacing::ControlHeight::Large;
+constexpr int kPopupRowHeight =
+    ::Spacing::ControlHeight::Standard + ::Spacing::XSmall;
 constexpr int kPopupEmptyHeight = 56;
 constexpr int kCheckBoxSize = 20;
 constexpr int kOptionOuterInset = ::Spacing::XSmall;
@@ -57,6 +61,9 @@ constexpr int kOptionContentInset = ::Spacing::Small;
 constexpr int kOptionTextGap = ::Spacing::Small;
 constexpr int kSummaryBadgeHeight = 22;
 constexpr int kSummaryBadgeHorizontalPadding = ::Spacing::Small;
+constexpr qreal kPopupShadowIntensity = 0.18;
+constexpr int kPopupShadowLayerCount = 6;
+constexpr int kPopupShadowVerticalOffset = 1;
 constexpr auto kKeyboardFocusVisibleProperty = "fluentKeyboardFocusVisible";
 constexpr auto kKeyboardFocusOnOpenProperty = "fluentKeyboardFocusOnOpen";
 
@@ -179,18 +186,12 @@ class MultiSelectComboBoxSelectAll final : public CheckBox {
 public:
   explicit MultiSelectComboBoxSelectAll(QWidget *parent) : CheckBox(parent) {
     setTristate(true);
+    setHoverBackgroundEnabled(false);
   }
 
 protected:
   void nextCheckState() override {
     setCheckState(checkState() == Qt::Checked ? Qt::Unchecked : Qt::Checked);
-  }
-
-  void paintEvent(QPaintEvent *event) override {
-    CheckBox::paintEvent(event);
-    QPainter painter(this);
-    painter.setPen(QPen(themeColorsRef().strokeDivider, 1.0));
-    painter.drawLine(0, height() - 1, width(), height() - 1);
   }
 };
 
@@ -246,7 +247,7 @@ public:
     const QRect background =
         QStyle::visualRect(option.direction, option.rect, logicalBackground);
     QColor backgroundColor = Qt::transparent;
-    if (enabled && hovered && !keyboardFocused)
+    if (enabled && hovered)
       backgroundColor = colors.subtleSecondary;
     if (backgroundColor.alpha() > 0) {
       painter->setPen(Qt::NoPen);
@@ -330,13 +331,16 @@ public:
                       elided);
 
     if (keyboardFocused && enabled) {
-      QColor focusColor = colors.accentDefault;
-      focusColor.setAlpha(180);
-      painter->setPen(QPen(focusColor, 1.0));
       painter->setBrush(Qt::NoBrush);
+      painter->setPen(QPen(colors.strokeFocusOuter, 1.0));
       painter->drawRoundedRect(
           QRectF(background).adjusted(0.5, 0.5, -0.5, -0.5), radius.control,
           radius.control);
+      painter->setPen(QPen(colors.strokeFocusInner, 1.0));
+      painter->drawRoundedRect(
+          QRectF(background).adjusted(1.5, 1.5, -1.5, -1.5),
+          qMax<qreal>(0.0, radius.control - 1.0),
+          qMax<qreal>(0.0, radius.control - 1.0));
     }
 
     painter->restore();
@@ -354,7 +358,7 @@ public:
     setObjectName(QStringLiteral("MultiSelectComboBox.Popup"));
     setAnimationEnabled(false);
     setPlacement(Flyout::Auto);
-    setAnchorOffset(::Spacing::Small);
+    setAnchorOffset(0);
     setModal(false);
     setDim(false);
     setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
@@ -368,7 +372,7 @@ public:
     const int outerInset = kPopupShadowMargin + kPopupContentInset;
     m_layout->setContentsMargins(outerInset, outerInset, outerInset,
                                  outerInset);
-    m_layout->setSpacing(::Spacing::XSmall);
+    m_layout->setSpacing(0);
 
     m_searchEdit = new fluent::textfields::LineEdit(this);
     m_searchEdit->setObjectName(QStringLiteral("MultiSelectComboBox.Search"));
@@ -378,8 +382,9 @@ public:
 
     m_selectAll = new MultiSelectComboBoxSelectAll(this);
     m_selectAll->setObjectName(QStringLiteral("MultiSelectComboBox.SelectAll"));
-    m_selectAll->setHoverBackgroundEnabled(true);
-    m_selectAll->setFixedHeight(::Spacing::ControlHeight::Standard);
+    m_selectAll->setBoxMargin(kOptionOuterInset + kOptionContentInset);
+    m_selectAll->setTextGap(kOptionTextGap);
+    m_selectAll->setFixedHeight(kPopupRowHeight);
     m_layout->addWidget(m_selectAll);
 
     m_listView = new MultiSelectComboBoxListView(this);
@@ -570,8 +575,35 @@ public:
   }
 
 protected:
+  void paintEvent(QPaintEvent *) override {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // A dropdown is visually attached to its field, so use the compact menu
+    // elevation profile instead of Popup's denser floating-card shadow.
+    // zh_CN: 下拉菜单在视觉上与输入框相连，因此使用紧凑菜单高程，而不是
+    // Popup 更厚重的浮层阴影。
+    const QRect card =
+        ::fluent::overlay::visibleCardRect(rect(), kPopupShadowMargin);
+    const int radius = themeRadius().overlay;
+    ::fluent::overlay::paintLayeredShadow(
+        painter, card, radius, themeShadow(Elevation::High),
+        kPopupShadowIntensity, kPopupShadowLayerCount,
+        kPopupShadowVerticalOffset);
+
+    fluent::painting::RoundedSurfacePaint surface;
+    surface.fill = themeColorsRef().bgLayer;
+    surface.border = themeColorsRef().strokeCard;
+    surface.radius = radius;
+    fluent::painting::paintRoundedSurface(painter, QRectF(card), surface);
+  }
+
   bool eventFilter(QObject *watched, QEvent *event) override {
-    if (event && m_owner &&
+    const auto *watchedWidget = qobject_cast<QWidget *>(watched);
+    const bool wheelInsidePopup =
+        event && event->type() == QEvent::Wheel && watchedWidget &&
+        (watchedWidget == this || isAncestorOf(watchedWidget));
+    if (!wheelInsidePopup && event && m_owner &&
         ::fluent::overlay::anchorGeometryMayChange(watched, event, m_owner)) {
       queueGeometryUpdate();
     }
@@ -820,6 +852,9 @@ private:
     if (!m_owner || !m_listView)
       return;
 
+    QScrollBar *scrollBar = m_listView->verticalScrollBar();
+    const int scrollValue = scrollBar ? scrollBar->value() : 0;
+
     int cardWidth = qMax(m_owner->width(), kPopupMinimumCardWidth);
     if (QWidget *top = m_owner->window()) {
       const int available = ::fluent::overlay::overlaySurfaceRect(top).width() -
@@ -859,18 +894,16 @@ private:
                                 (anchorRect.bottom() + anchorOffset()) + 1;
       const int aboveCapacity = anchorRect.top() - anchorOffset() -
                                 (surface.top() + kPopupWindowMargin);
-      const int minimumListHeight =
-          rowCount > 0 ? kPopupRowHeight : kPopupEmptyHeight;
-      const int minimumCardHeight = chromeHeight + minimumListHeight;
-
       int cardCapacity = belowCapacity;
       placement = Flyout::Bottom;
-      if (belowCapacity < minimumCardHeight) {
-        if (aboveCapacity >= minimumCardHeight ||
-            aboveCapacity > belowCapacity) {
-          placement = Flyout::Top;
-          cardCapacity = aboveCapacity;
-        }
+      // Keep the preferred bottom placement only when it can show the whole
+      // menu. Otherwise use the roomier side before clipping the list and
+      // introducing a scrollbar.
+      // zh_CN: 下方能完整显示时才保留下置；否则优先选择空间更大的一侧，
+      // 避免明明上方有空间却先裁切列表并引入滚动条。
+      if (belowCapacity < desiredCardHeight && aboveCapacity > belowCapacity) {
+        placement = Flyout::Top;
+        cardCapacity = aboveCapacity;
       }
 
       const int availableListHeight = qMax(0, cardCapacity - chromeHeight);
@@ -888,6 +921,10 @@ private:
     m_layout->activate();
     setFixedSize(m_layout->sizeHint());
     m_listView->refreshFluentScrollChrome();
+    if (scrollBar) {
+      scrollBar->setValue(
+          qBound(scrollBar->minimum(), scrollValue, scrollBar->maximum()));
+    }
     if (isOpen() || isVisible())
       move(computePosition());
   }
@@ -909,7 +946,7 @@ private:
     const QVariant focusOnOpen =
         m_owner->property(kKeyboardFocusOnOpenProperty);
     const bool keyboardFocusVisible =
-        !focusOnOpen.isValid() || focusOnOpen.toBool();
+        focusOnOpen.isValid() && focusOnOpen.toBool();
     m_owner->setProperty(kKeyboardFocusOnOpenProperty, QVariant());
     setKeyboardFocusVisible(keyboardFocusVisible);
     if (m_owner->isSearchEnabled()) {
