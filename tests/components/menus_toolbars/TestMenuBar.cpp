@@ -411,6 +411,8 @@ TEST_F(
 
     EXPECT_EQ(menu.graphicsEffect(), nullptr);
     EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
+    const bool nativeMenuAnimationsEnabled =
+        QApplication::isEffectEnabled(Qt::UI_AnimateMenu);
 
     menu.popup(
         window->mapToGlobal(QPoint(24, 24)));
@@ -418,6 +420,9 @@ TEST_F(
 
     EXPECT_TRUE(menu.isVisible());
     EXPECT_DOUBLE_EQ(menu.windowOpacity(), 1.0);
+    EXPECT_EQ(
+        QApplication::isEffectEnabled(Qt::UI_AnimateMenu),
+        nativeMenuAnimationsEnabled);
     QTRY_VERIFY_WITH_TIMEOUT(
         menu.findChild<QVariantAnimation*>(
             QStringLiteral(
@@ -431,13 +436,18 @@ TEST_F(
     menu.close();
 }
 
-TEST_F(MenuBarTest, TriggeredHandlerCanSynchronouslyDeleteMenu)
+TEST_F(MenuBarTest, TriggeredHandlerCanScheduleMenuDeletion)
 {
     auto* menu = new FluentMenu(QStringLiteral("Actions"), window);
     QAction* action = menu->addAction(QStringLiteral("Delete menu"));
     QPointer<FluentMenu> guard(menu);
+    QSignalSpy triggeredSpy(action, &QAction::triggered);
     QObject::connect(action, &QAction::triggered, window, [menu] {
-        delete menu;
+        // QAction::triggered is emitted from QMenu's native event frame.
+        // Older supported Qt releases must finish that frame before the menu
+        // is destroyed. zh_CN: QAction::triggered 从 QMenu 的原生事件栈发出；
+        // 较旧的受支持 Qt 版本需要先退出该栈，再销毁菜单。
+        menu->deleteLater();
     });
 
     menu->popup(window->mapToGlobal(QPoint(24, 24)));
@@ -445,6 +455,10 @@ TEST_F(MenuBarTest, TriggeredHandlerCanSynchronouslyDeleteMenu)
     const QPoint actionCenter = menu->actionGeometry(action).center();
     QTest::mouseClick(menu, Qt::LeftButton, Qt::NoModifier, actionCenter);
 
+    EXPECT_EQ(triggeredSpy.count(), 1);
+    ASSERT_FALSE(guard.isNull());
+    EXPECT_FALSE(menu->isVisible());
+    QCoreApplication::sendPostedEvents(menu, QEvent::DeferredDelete);
     EXPECT_TRUE(guard.isNull());
 }
 
@@ -517,11 +531,15 @@ TEST_F(MenuBarTest, AccessKeysAndShortcutsRemainInvokable)
     window->show();
     QApplication::processEvents();
 
-    QKeyEvent altFile(QEvent::KeyPress, Qt::Key_F, Qt::AltModifier, QStringLiteral("f"));
-    QApplication::sendEvent(sample.bar, &altFile);
+    // The access-key press opens a popup and transfers keyboard routing to it;
+    // deliver the matching release to that popup just as the window system does.
+    // zh_CN: 访问键按下后会打开 popup，并将键盘路由转交给它；像窗口系统
+    // 一样将配对的释放事件发送给该 popup。
+    QTest::keyPress(sample.bar, Qt::Key_F, Qt::AltModifier);
     QApplication::processEvents();
     EXPECT_EQ(sample.bar->openAction(), sample.fileAction);
     EXPECT_TRUE(sample.fileMenu->isVisible());
+    QTest::keyRelease(sample.fileMenu, Qt::Key_F, Qt::AltModifier);
 
     closeMenus(sample);
     window->activateWindow();
