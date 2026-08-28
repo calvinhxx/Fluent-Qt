@@ -66,6 +66,11 @@ def parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--size", type=parse_size, default="800x640")
     parser.add_argument("--snapshot", type=Path, help="Write a settled PNG snapshot.")
     parser.add_argument(
+        "--actions",
+        type=Path,
+        help="Execute a versioned JSON interaction script before capture.",
+    )
+    parser.add_argument(
         "--report", help="Write the Inspector JSON report; use '-' for stdout."
     )
     parser.add_argument("--settle-ms", type=int, default=250)
@@ -173,6 +178,8 @@ def preview_arguments(args: argparse.Namespace) -> list[str]:
         command.append("--rtl")
     if args.snapshot:
         command.extend(["--snapshot", str(args.snapshot.expanduser().resolve())])
+    if args.actions:
+        command.extend(["--actions", str(args.actions.expanduser().resolve())])
     if args.report:
         report = (
             args.report

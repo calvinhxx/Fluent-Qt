@@ -3,11 +3,16 @@
 #include <QApplication>
 #include <QEvent>
 #include <QEventLoop>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
+#include <QLineEdit>
+#include <QPushButton>
 
 #include <gtest/gtest.h>
 
 #include "components/foundation/FluentElement.h"
+#include "view/preview/GalleryPreviewActions.h"
 #include "view/preview/GalleryPreviewApplication.h"
 #include "view/widgets/GallerySampleCard.h"
 
@@ -42,7 +47,8 @@ TEST(GalleryPreviewTest, ParsesDeterministicSceneAndArtifactArguments) {
        QStringLiteral("--sample"), QStringLiteral("button-styles"),
        QStringLiteral("--theme"), QStringLiteral("dark"),
        QStringLiteral("--rtl"), QStringLiteral("--size"),
-       QStringLiteral("920x680"), QStringLiteral("--snapshot"),
+       QStringLiteral("920x680"), QStringLiteral("--actions"),
+       QStringLiteral("actions.json"), QStringLiteral("--snapshot"),
        QStringLiteral("preview.png"), QStringLiteral("--report"),
        QStringLiteral("-"), QStringLiteral("--settle-ms"),
        QStringLiteral("40")});
@@ -54,9 +60,154 @@ TEST(GalleryPreviewTest, ParsesDeterministicSceneAndArtifactArguments) {
   EXPECT_EQ(result.options.theme, GalleryPreviewTheme::Dark);
   EXPECT_TRUE(result.options.rightToLeft);
   EXPECT_EQ(result.options.viewportSize, QSize(920, 680));
+  EXPECT_EQ(result.options.actionsPath, QStringLiteral("actions.json"));
   EXPECT_EQ(result.options.snapshotPath, QStringLiteral("preview.png"));
   EXPECT_EQ(result.options.reportPath, QStringLiteral("-"));
   EXPECT_EQ(result.options.settleMs, 40);
+}
+
+TEST(GalleryPreviewTest, ExecutesInputAndStateInteractionStepsWithAssertions) {
+  QWidget root;
+  root.setObjectName(QStringLiteral("interactionRoot"));
+  root.resize(320, 240);
+  QPushButton button(QStringLiteral("Probe"), &root);
+  button.setObjectName(QStringLiteral("probeButton"));
+  button.setCheckable(true);
+  button.setGeometry(40, 40, 120, 40);
+  QWidget editorHost(&root);
+  editorHost.setObjectName(QStringLiteral("editorHost"));
+  editorHost.setGeometry(40, 100, 160, 40);
+  QLineEdit editor(&editorHost);
+  editor.setGeometry(0, 0, 150, 32);
+  root.show();
+  QApplication::processEvents();
+
+  const QJsonObject script{
+      {QStringLiteral("schema_version"), 1},
+      {QStringLiteral("steps"),
+       QJsonArray{
+           QJsonObject{{QStringLiteral("id"), QStringLiteral("focus")},
+                       {QStringLiteral("action"), QStringLiteral("focus")},
+                       {QStringLiteral("target"),
+                        QStringLiteral("probeButton")},
+                       {QStringLiteral("expect"),
+                        QJsonObject{{QStringLiteral("has_focus"), true}}}},
+           QJsonObject{{QStringLiteral("id"), QStringLiteral("activate")},
+                       {QStringLiteral("action"), QStringLiteral("click")},
+                       {QStringLiteral("target"),
+                        QStringLiteral("probeButton")},
+                       {QStringLiteral("expect"),
+                        QJsonObject{{QStringLiteral("checked"), true}}},
+                       {QStringLiteral("observe"),
+                        QJsonArray{QStringLiteral("enabled")}}},
+           QJsonObject{{QStringLiteral("id"), QStringLiteral("disable")},
+                       {QStringLiteral("action"),
+                        QStringLiteral("set_property")},
+                       {QStringLiteral("target"),
+                        QStringLiteral("probeButton")},
+                       {QStringLiteral("property"),
+                        QStringLiteral("enabled")},
+                       {QStringLiteral("value"), false},
+                       {QStringLiteral("expect"),
+                        QJsonObject{{QStringLiteral("enabled"), false}}}},
+           QJsonObject{{QStringLiteral("id"),
+                        QStringLiteral("focus-descendant")},
+                       {QStringLiteral("action"), QStringLiteral("focus")},
+                       {QStringLiteral("target"), QStringLiteral("editorHost")},
+                       {QStringLiteral("descendant_class"),
+                        QStringLiteral("QLineEdit")},
+                       {QStringLiteral("expect"),
+                        QJsonObject{{QStringLiteral("has_focus"), true}}}},
+           QJsonObject{{QStringLiteral("id"), QStringLiteral("type")},
+                       {QStringLiteral("action"),
+                        QStringLiteral("type_text")},
+                       {QStringLiteral("target"), QStringLiteral("@focus")},
+                       {QStringLiteral("text"), QStringLiteral("42")},
+                       {QStringLiteral("expect"),
+                        QJsonObject{{QStringLiteral("text"),
+                                     QStringLiteral("42")}}}}}}};
+
+  const auto result = fluent::gallery::executeGalleryPreviewActions(
+      &root, script, QStringLiteral("memory://interaction-test"));
+  EXPECT_TRUE(result.passed)
+      << QJsonDocument(result.report).toJson().toStdString();
+  EXPECT_EQ(result.report.value(QStringLiteral("status")).toString(),
+            QStringLiteral("pass"));
+  EXPECT_EQ(result.report.value(QStringLiteral("summary"))
+                .toObject()
+                .value(QStringLiteral("passed"))
+                .toInt(),
+            5);
+  EXPECT_TRUE(button.isChecked());
+  EXPECT_FALSE(button.isEnabled());
+  EXPECT_EQ(editor.text(), QStringLiteral("42"));
+
+  root.close();
+  QApplication::processEvents();
+}
+
+TEST(GalleryPreviewTest, RejectsMissingInteractionTargetsWithoutClaimingPass) {
+  QWidget root;
+  root.setObjectName(QStringLiteral("interactionRoot"));
+  const QJsonObject script{
+      {QStringLiteral("schema_version"), 1},
+      {QStringLiteral("steps"),
+       QJsonArray{QJsonObject{
+           {QStringLiteral("action"), QStringLiteral("click")},
+           {QStringLiteral("target"), QStringLiteral("missingWidget")}}}}};
+
+  const auto result =
+      fluent::gallery::executeGalleryPreviewActions(&root, script);
+  EXPECT_FALSE(result.passed);
+  EXPECT_EQ(result.report.value(QStringLiteral("status")).toString(),
+            QStringLiteral("fail"));
+  EXPECT_TRUE(result.report.value(QStringLiteral("steps"))
+                  .toArray()
+                  .first()
+                  .toObject()
+                  .value(QStringLiteral("message"))
+                  .toString()
+                  .contains(QStringLiteral("missingWidget")));
+}
+
+TEST(GalleryPreviewTest, RejectsUnsafeInteractionDelayWithoutWaiting) {
+  QWidget root;
+  const QJsonObject script{
+      {QStringLiteral("schema_version"), 1},
+      {QStringLiteral("steps"),
+       QJsonArray{QJsonObject{
+           {QStringLiteral("action"), QStringLiteral("wait")},
+           {QStringLiteral("milliseconds"), 0},
+           {QStringLiteral("after_ms"), 10001}}}}};
+
+  const auto result =
+      fluent::gallery::executeGalleryPreviewActions(&root, script);
+  EXPECT_FALSE(result.passed);
+  EXPECT_TRUE(result.report.value(QStringLiteral("steps"))
+                  .toArray()
+                  .first()
+                  .toObject()
+                  .value(QStringLiteral("message"))
+                  .toString()
+                  .contains(QStringLiteral("after_ms")));
+
+  const QJsonObject fractionalWaitScript{
+      {QStringLiteral("schema_version"), 1},
+      {QStringLiteral("steps"),
+       QJsonArray{QJsonObject{
+           {QStringLiteral("action"), QStringLiteral("wait")},
+           {QStringLiteral("milliseconds"), 0.5}}}}};
+  const auto fractionalWaitResult =
+      fluent::gallery::executeGalleryPreviewActions(&root,
+                                                    fractionalWaitScript);
+  EXPECT_FALSE(fractionalWaitResult.passed);
+  EXPECT_TRUE(fractionalWaitResult.report.value(QStringLiteral("steps"))
+                  .toArray()
+                  .first()
+                  .toObject()
+                  .value(QStringLiteral("message"))
+                  .toString()
+                  .contains(QStringLiteral("milliseconds")));
 }
 
 TEST(GalleryPreviewTest, RejectsInvalidThemeSizeAndMissingRoute) {
@@ -130,7 +281,7 @@ TEST(GalleryPreviewTest, HostsOneRealCardAndBuildsVersionedInspectorReport) {
 
   const QJsonObject report =
       fluent::gallery::galleryPreviewReport(&window, options);
-  EXPECT_EQ(report.value(QStringLiteral("schema_version")).toInt(), 1);
+  EXPECT_EQ(report.value(QStringLiteral("schema_version")).toInt(), 2);
   EXPECT_EQ(report.value(QStringLiteral("status")).toString(),
             QStringLiteral("ok"));
   const QJsonObject selectionObject =
@@ -145,10 +296,47 @@ TEST(GalleryPreviewTest, HostsOneRealCardAndBuildsVersionedInspectorReport) {
             fluent::diagnostics::Inspector::ReportSchemaVersion);
   const QJsonObject environment =
       report.value(QStringLiteral("environment")).toObject();
+  EXPECT_EQ(environment.value(QStringLiteral("fingerprint_schema_version"))
+                .toInt(),
+            1);
   EXPECT_FALSE(
       environment.value(QStringLiteral("qt_version")).toString().isEmpty());
   EXPECT_GT(environment.value(QStringLiteral("device_pixel_ratio")).toDouble(),
             0.0);
+  EXPECT_GT(environment.value(QStringLiteral("logical_dpi_x")).toDouble(),
+            0.0);
+  EXPECT_FALSE(environment.value(QStringLiteral("font"))
+                   .toObject()
+                   .value(QStringLiteral("family"))
+                   .toString()
+                   .isEmpty());
+  EXPECT_FALSE(environment.value(QStringLiteral("system"))
+                   .toObject()
+                   .value(QStringLiteral("cpu_architecture"))
+                   .toString()
+                   .isEmpty());
+  EXPECT_GT(environment.value(QStringLiteral("screen"))
+                .toObject()
+                .value(QStringLiteral("depth"))
+                .toInt(),
+            0);
+
+  const QJsonObject geometry =
+      report.value(QStringLiteral("geometry_report")).toObject();
+  EXPECT_EQ(geometry.value(QStringLiteral("schema_version")).toInt(), 1);
+  EXPECT_GT(geometry.value(QStringLiteral("widget_count")).toInt(), 0);
+  bool foundSampleCard = false;
+  bool foundPreviewWidget = false;
+  for (const QJsonValue &value :
+       geometry.value(QStringLiteral("widgets")).toArray()) {
+    const QString objectName =
+        value.toObject().value(QStringLiteral("object_name")).toString();
+    foundSampleCard |= objectName == QStringLiteral("gallerySampleCard");
+    foundPreviewWidget |=
+        objectName == QStringLiteral("gallerySamplePreviewWidget");
+  }
+  EXPECT_TRUE(foundSampleCard);
+  EXPECT_TRUE(foundPreviewWidget);
 
   window.close();
   QApplication::processEvents();
