@@ -94,7 +94,7 @@ x64:
 ```bash
 export VCPKG_ROOT=/home/<user>/vcpkg
 cmake --preset vcpkg-linux -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=ON -DVCPKG_MANIFEST_FEATURES=tests
-cmake --build --preset vcpkg-linux --target fluent_qt_ci_fast_tests --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux --target fluent_qt_ci_fast_tests
 ctest --preset vcpkg-linux -L '^ci_fast$' --output-on-failure
 ```
 
@@ -103,14 +103,14 @@ ARM64, on a native ARM64 Linux host such as Lima or an ARM64 VM:
 ```bash
 export VCPKG_ROOT=/home/<user>/vcpkg
 cmake --preset vcpkg-linux-arm64 -DFLUENT_QT_BUILD_GALLERY=OFF -DFLUENT_QT_BUILD_TESTS=ON -DVCPKG_MANIFEST_FEATURES=tests
-cmake --build --preset vcpkg-linux-arm64 --target fluent_qt_ci_fast_tests --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux-arm64 --target fluent_qt_ci_fast_tests
 ctest --preset vcpkg-linux-arm64 -L '^ci_fast$' --output-on-failure
 ```
 
 Run the broader Linux lane locally with:
 
 ```bash
-cmake --build --preset vcpkg-linux --target fluent_qt_ci_full_tests --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux --target fluent_qt_ci_full_tests
 ctest --preset vcpkg-linux -L '^ci_full$' --output-on-failure
 ```
 
@@ -143,7 +143,7 @@ cmake -S . -B build/vcpkg-linux-qt5 \
   -DFLUENT_QT_BUILD_GALLERY=OFF \
   -DCMAKE_PREFIX_PATH=$QT5_ROOT
 
-cmake --build build/vcpkg-linux-qt5 --target fluent_qt_ci_full_tests --parallel
+python3 tools/dev/fluent_qt_build.py build/vcpkg-linux-qt5 --target fluent_qt_ci_full_tests
 LD_LIBRARY_PATH=$QT5_ROOT/lib:$LD_LIBRARY_PATH \
   ctest --test-dir build/vcpkg-linux-qt5 -L '^ci_full$' -LE '^local_desktop$' --output-on-failure
 ```
@@ -159,7 +159,7 @@ target you want to review, or build `fluent_qt_all_tests`, before listing the
 preset:
 
 ```bash
-cmake --build --preset vcpkg-linux --target fluent_qt_all_tests --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux --target fluent_qt_all_tests
 ctest --preset vcpkg-linux-local-desktop -N
 ```
 

@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
 
-[Contents](../SUMMARY.md) · [Development index](README.md) · [Qt Component Test Conventions →](qt-component-test-conventions.md)
+[← Build Workflow](build-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Qt Component Test Conventions →](qt-component-test-conventions.md)
 <!-- docs-nav:top:end -->
 
 Use this workflow when choosing Qt/GTest/CTest validation commands, filtering
@@ -197,13 +197,13 @@ Python representative omitted from the simultaneous full CI run.
 
 ```bash
 cmake --preset vcpkg-osx
-cmake --build --preset vcpkg-osx --target fluent_qt_all_tests --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-osx --target fluent_qt_all_tests
 ctest --preset vcpkg-osx -L '^local_full$' --output-on-failure --timeout 180
 ```
 
 ```powershell
 cmake --preset vcpkg-windows
-cmake --build --preset vcpkg-windows --target fluent_qt_all_tests --parallel
+python tools/dev/fluent_qt_build.py --preset vcpkg-windows --target fluent_qt_all_tests
 ctest --preset vcpkg-windows -L '^local_full$' --output-on-failure --timeout 180
 ```
 
@@ -229,7 +229,7 @@ batch:
 
 ```bash
 cmake --preset vcpkg-linux
-cmake --build --preset vcpkg-linux --target fluent_qt_all_tests --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux --target fluent_qt_all_tests
 ctest --preset vcpkg-linux -L '^local_full$' --output-on-failure --timeout 180
 ```
 
@@ -255,7 +255,7 @@ receives `known_contract_gap`. Known gaps are excluded from `local_full`,
 test; the naming and label remain available for future target-behavior work.
 
 ```bash
-cmake --build --preset vcpkg-linux --target fluent_qt_contract_tests --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux --target fluent_qt_contract_tests
 ctest --preset vcpkg-linux -L '^contract$' -LE '^known_contract_gap$' --output-on-failure
 ctest --preset vcpkg-linux -N -L '^known_contract_gap$'
 ```
@@ -270,7 +270,7 @@ Linux also provides a focused ASan/UBSan preset:
 
 ```bash
 cmake --preset vcpkg-linux-sanitized
-cmake --build --preset vcpkg-linux-sanitized --target fluent_qt_contract_tests --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-linux-sanitized --target fluent_qt_contract_tests
 ctest --preset vcpkg-linux-sanitized --output-on-failure
 ```
 
@@ -340,7 +340,7 @@ Run the gate on the approval host (macOS arm64 / `vcpkg-osx`, Fusion, bundled
 fonts, `QT_SCALE_FACTOR=1`, `QT_FONT_DPI=96`):
 
 ```bash
-cmake --build --preset vcpkg-osx --target test_visual_gate --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-osx --target test_visual_gate
 ctest --preset vcpkg-osx -L '^visual_gate$' --output-on-failure
 ```
 
@@ -409,5 +409,5 @@ ctest --preset vcpkg-osx -L '^test_<name>$' --output-on-failure
 
 <!-- docs-nav:bottom:start -->
 ---
-[Contents](../SUMMARY.md) · [Development index](README.md) · [Qt Component Test Conventions →](qt-component-test-conventions.md)
+[← Build Workflow](build-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Qt Component Test Conventions →](qt-component-test-conventions.md)
 <!-- docs-nav:bottom:end -->

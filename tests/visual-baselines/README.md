@@ -24,7 +24,7 @@ renders will not match these files.
 ## Update
 
 ```bash
-cmake --build --preset vcpkg-osx --target test_visual_gate --parallel
+python3 tools/dev/fluent_qt_build.py --preset vcpkg-osx --target test_visual_gate
 VISUAL_SNAPSHOT=1 VISUAL_UPDATE_BASELINE=1 QT_SCALE_FACTOR=1 QT_FONT_DPI=96 \
   ./build/vcpkg-osx/tests/components/test_visual_gate
 ```

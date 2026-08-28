@@ -63,6 +63,7 @@
         {
           "title": "Build, tests, and diagnostics",
           "pages": [
+            "development/build-workflow.md",
             "development/testing-workflow.md",
             "development/qt-component-test-conventions.md",
             "development/logging-workflow.md",
