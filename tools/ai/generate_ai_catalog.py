@@ -107,6 +107,10 @@ TEST_SOURCE_OVERRIDES = {
     "title-bar": "TestWindow.cpp",
 }
 
+SAMPLE_SOURCE_OVERRIDES = {
+    "tree-view": "CollectionsTreeSamples.cpp",
+}
+
 WORD_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9+.-]*")
 PROJECT_VERSION_PATTERN = re.compile(
     r"project\(FluentQt\s+VERSION\s+([0-9]+(?:\.[0-9]+)+)"
@@ -395,7 +399,9 @@ def generate_catalog(project_root: Path) -> dict[str, object]:
             / "view"
             / "widgets"
             / "samples"
-            / category_api["sample_source"]
+            / SAMPLE_SOURCE_OVERRIDES.get(
+                component["id"], category_api["sample_source"]
+            )
         ).as_posix()
         capability_ids = sorted(capability_map[component["id"]])
         components.append(
