@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
+from pathlib import Path, PurePath
 import re
 import subprocess
 import sys
@@ -36,6 +36,12 @@ LIST_ITEM_RE = re.compile(r"^\s*(?:[-+*]|\d+[.)])\s+")
 NON_PROSE_RE = re.compile(
     r"^\s*(?:#{1,6}\s|>|\||<!--|-->|<[/!?A-Za-z]|(?:---+|===+|___+)\s*$)"
 )
+
+
+def relative_posix_path(path: PurePath, root: PurePath) -> str:
+    """Return a root-relative path with navigation-manifest separators."""
+
+    return path.relative_to(root).as_posix()
 
 
 def markdown_files(project_root: Path) -> list[Path]:
@@ -149,7 +155,7 @@ def validate(project_root: Path) -> list[str]:
         for relative in sorted(listed):
             path = (project_root / "docs" / relative).resolve()
             try:
-                display_path = path.relative_to(project_root)
+                display_path = relative_posix_path(path, project_root)
             except ValueError:
                 errors.append(f"document escapes project root: docs/{relative}")
                 listed_files_exist = False
@@ -164,7 +170,7 @@ def validate(project_root: Path) -> list[str]:
                 errors.append(f"missing document status: {display_path}")
 
         actual = {
-            str(path.relative_to(project_root / "docs"))
+            relative_posix_path(path, project_root / "docs")
             for path in (project_root / "docs").rglob("*.md")
         }
         internal = {relative for relative in listed if not relative.startswith("../")}
@@ -177,7 +183,7 @@ def validate(project_root: Path) -> list[str]:
 
     for path in markdown_files(project_root):
         text = path.read_text(encoding="utf-8")
-        relative = path.relative_to(project_root)
+        relative = relative_posix_path(path, project_root)
 
         if len(FENCE_RE.findall(text)) % 2:
             errors.append(f"unbalanced fenced code block: {relative}")
