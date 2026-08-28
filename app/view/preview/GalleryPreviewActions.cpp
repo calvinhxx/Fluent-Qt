@@ -14,6 +14,8 @@
 #include <QVector>
 #include <QWidget>
 
+#include "compatibility/QtCompat.h"
+
 namespace fluent::gallery {
 namespace {
 
@@ -213,13 +215,8 @@ QPoint localPosition(QWidget *target, const QJsonObject &step, QString &error) {
 void sendMouse(QWidget *target, QEvent::Type type, const QPoint &position,
                Qt::MouseButton button, Qt::MouseButtons buttons,
                Qt::KeyboardModifiers modifiers) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-  QMouseEvent event(type, QPointF(position),
-                    QPointF(target->mapToGlobal(position)), button, buttons,
-                    modifiers);
-#else
-  QMouseEvent event(type, QPointF(position), button, buttons, modifiers);
-#endif
+  FLUENT_MAKE_MOUSE_EVENT(event, type, target, position, button, buttons,
+                          modifiers);
   QApplication::sendEvent(target, &event);
 }
 
