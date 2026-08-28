@@ -5,13 +5,13 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import tempfile
 import unittest
 from unittest import mock
 
 from generate_navigation import generate as generate_navigation
-from validate_documentation import validate
+from validate_documentation import relative_posix_path, validate
 
 
 class DocumentationValidationTest(unittest.TestCase):
@@ -90,6 +90,15 @@ class DocumentationValidationTest(unittest.TestCase):
 
     def test_complete_navigation_manifest_passes(self) -> None:
         self.assertEqual([], self._validate())
+
+    def test_windows_paths_use_navigation_manifest_separators(self) -> None:
+        project_root = PureWindowsPath("C:/workspace/FluentQt")
+        document = project_root / "docs/section/guide.md"
+
+        self.assertEqual(
+            "docs/section/guide.md",
+            relative_posix_path(document, project_root),
+        )
 
     def test_internal_reader_page_requires_status(self) -> None:
         self._remove_status("docs/section/guide.md")
