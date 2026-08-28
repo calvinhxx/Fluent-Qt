@@ -32,7 +32,6 @@ permissions:
   actions: read
   contents: read
   pull-requests: read
-
 jobs:
   plan:
     name: Plan validation
@@ -55,6 +54,7 @@ jobs:
           python3 .github/scripts/test_check_release_branch_freshness.py
           python3 .github/scripts/validate-ci-workflow-boundaries.py
           python3 scripts/release/test_preflight.py
+          python3 tools/docs/validate_documentation.py --project-root . --self-test
           python3 tools/ai/validate_ai_assets.py --project-root .
           python3 tools/onboarding/test_fluentqt_doctor.py
           python3 tools/onboarding/test_fluentqt_create.py
