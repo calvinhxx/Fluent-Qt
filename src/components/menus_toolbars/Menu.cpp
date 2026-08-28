@@ -1,6 +1,7 @@
 #include "Menu.h"
 
 #include <QActionEvent>
+#include <QApplication>
 #include <QEasingCurve>
 #include <QEvent>
 #include <QFontMetrics>
@@ -27,6 +28,8 @@ namespace fluent::menus_toolbars {
 namespace {
 constexpr char kEntranceAnimationName[] =
     "fluentMenuEntranceAnimation";
+constexpr char kRestoreNativeMenuAnimationsProperty[] =
+    "_fluent_restoreNativeMenuAnimations";
 
 QString menuLabelText(const QString& text)
 {
@@ -176,6 +179,32 @@ FluentMenu::FluentMenu(const QString& title, QWidget* parent)
     setAttribute(Qt::WA_Hover);
     setAutoFillBackground(false);
     setContentsMargins(m_shadowSize, m_shadowSize, m_shadowSize, m_shadowSize);
+
+    connect(this, &QMenu::aboutToShow, this, [this]() {
+        if (!QApplication::isEffectEnabled(Qt::UI_AnimateMenu))
+            return;
+
+        // QMenu selects its process-wide platform animation after emitting
+        // aboutToShow(). Suppress that selection only until showEvent() starts;
+        // FluentMenu supplies its own paint-only entrance transition below.
+        // zh_CN: QMenu 会在发出 aboutToShow() 后选择进程级平台动画；仅在
+        // showEvent() 开始前暂时抑制该选择，FluentMenu 在下方提供自绘入场动画。
+        setProperty(kRestoreNativeMenuAnimationsProperty, true);
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, false);
+
+        // Empty menus can return before showEvent(), and aboutToShow handlers
+        // may delete the menu. Always retain a queued restoration fallback.
+        // zh_CN: 空菜单可能在 showEvent() 前返回，aboutToShow 处理器也可能
+        // 删除菜单，因此始终保留一次队列恢复兜底。
+        const QPointer<FluentMenu> guard(this);
+        QTimer::singleShot(0, qApp, [guard]() {
+            if (guard && !guard->property(kRestoreNativeMenuAnimationsProperty).toBool())
+                return;
+            if (guard)
+                guard->setProperty(kRestoreNativeMenuAnimationsProperty, false);
+            QApplication::setEffectEnabled(Qt::UI_AnimateMenu, true);
+        });
+    });
 
     setFont(themeFont(m_fontStyle).toQFont());
     onThemeUpdated();
@@ -622,6 +651,11 @@ QSize FluentMenu::sizeHint() const
 
 void FluentMenu::showEvent(QShowEvent* event) {
     QMenu::showEvent(event);
+
+    if (property(kRestoreNativeMenuAnimationsProperty).toBool()) {
+        setProperty(kRestoreNativeMenuAnimationsProperty, false);
+        QApplication::setEffectEnabled(Qt::UI_AnimateMenu, true);
+    }
 
     if (::fluent::overlay::syncInheritedThemeOverride(this, parentWidget()))
         onThemeUpdated();
