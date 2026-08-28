@@ -107,6 +107,7 @@ jobs:
       # Avoid rerunning its two legacy compatibility lanes here. The macOS
       # CPython 3.11 lane stays because it supplies one publishable wheel.
       run_compatibility_validation: false
+      run_macos_release_validation: true
       # Eight dynamic lanes plus the fixed macOS CPython 3.11 lane leave room
       # for the nine desktop package lanes while avoiding a third wheel wave.
       release_max_parallel: 8

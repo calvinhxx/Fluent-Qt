@@ -40,6 +40,7 @@ jobs:
     outputs:
       mode: ${{ steps.mode.outputs.mode }}
       python_release_bundle: ${{ steps.mode.outputs.python_release_bundle }}
+      run_macos_release_validation: ${{ steps.mode.outputs.run_macos_release_validation }}
       should_build: ${{ steps.changes.outputs.should_build }}
       should_build_pyside: ${{ steps.changes.outputs.should_build_pyside }}
       should_build_wasm: ${{ steps.changes.outputs.should_build_wasm }}
@@ -153,11 +154,20 @@ jobs:
 
           mode="fast"
           python_release_bundle="false"
+          run_macos_release_validation="true"
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
             mode="full"
             python_release_bundle="true"
           elif [[ "${{ github.event_name }}" == "push" ]]; then
             mode="full"
+            version="$(sed -nE 's/^[[:space:]]*project[[:space:]]*\([[:space:]]*FluentQt[[:space:]]+VERSION[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt | head -n 1)"
+            tag="v$version"
+            git fetch --force --tags origin
+            if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ &&
+                  -f "docs/releases/$tag.md" ]] &&
+               ! git rev-parse -q --verify "refs/tags/$tag^{tag}" >/dev/null; then
+              run_macos_release_validation="false"
+            fi
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             mode="${{ github.event.inputs.matrix }}"
             python_release_bundle="${{ github.event.inputs.python_release_bundle }}"
@@ -177,7 +187,8 @@ jobs:
 
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
           echo "python_release_bundle=$python_release_bundle" >> "$GITHUB_OUTPUT"
-          echo "Selected $mode validation (Python release bundle: $python_release_bundle)."
+          echo "run_macos_release_validation=$run_macos_release_validation" >> "$GITHUB_OUTPUT"
+          echo "Selected $mode validation (Python release bundle: $python_release_bundle; macOS release validation: $run_macos_release_validation)."
 
   cpp:
     name: C++ validation
@@ -196,6 +207,7 @@ jobs:
       mode: ${{ needs.plan.outputs.mode }}
       build_release_bundle: ${{ needs.plan.outputs.python_release_bundle == 'true' }}
       run_compatibility_validation: true
+      run_macos_release_validation: ${{ needs.plan.outputs.run_macos_release_validation == 'true' }}
       release_max_parallel: 4
 
   wasm:
@@ -205,6 +217,17 @@ jobs:
     uses: ./.github/workflows/ci-wasm.yml
     with:
       mode: ${{ needs.plan.outputs.mode }}
+
+  pages:
+    name: Deploy validated WebAssembly Gallery
+    needs: [plan, wasm]
+    if: ${{ github.event_name == 'push' && needs.wasm.result == 'success' }}
+    permissions:
+      actions: read
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml
 
   ci-gate:
     name: CI Gate
@@ -259,39 +282,19 @@ jobs:
 
   release-ready:
     name: Release ready
-    needs: [plan, cpp, python, wasm]
+    needs: [plan, ci-gate]
     if: ${{ always() && needs.plan.outputs.mode == 'full' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Verify full validation
         env:
-          PLAN_RESULT: ${{ needs.plan.result }}
-          CPP_RESULT: ${{ needs.cpp.result }}
-          PYTHON_RESULT: ${{ needs.python.result }}
-          WASM_RESULT: ${{ needs.wasm.result }}
-          SHOULD_BUILD: ${{ needs.plan.outputs.should_build }}
-          SHOULD_BUILD_PYSIDE: ${{ needs.plan.outputs.should_build_pyside }}
-          SHOULD_BUILD_WASM: ${{ needs.plan.outputs.should_build_wasm }}
+          CI_GATE_RESULT: ${{ needs.ci-gate.result }}
         shell: bash
         run: |
           set -euo pipefail
-
-          [[ "$PLAN_RESULT" == "success" ]] || {
-            echo "::error::CI planning finished with result: $PLAN_RESULT"
-            exit 1
-          }
-          if [[ "$SHOULD_BUILD" == "true" && "$CPP_RESULT" != "success" ]]; then
-            echo "::error::The full C++ validation module finished with result: $CPP_RESULT"
+          if [[ "$CI_GATE_RESULT" != "success" ]]; then
+            echo "::error::The full CI gate finished with result: $CI_GATE_RESULT"
             exit 1
           fi
-          if [[ "$SHOULD_BUILD_PYSIDE" == "true" && "$PYTHON_RESULT" != "success" ]]; then
-            echo "::error::The full PySide6 validation module finished with result: $PYTHON_RESULT"
-            exit 1
-          fi
-          if [[ "$SHOULD_BUILD_WASM" == "true" && "$WASM_RESULT" != "success" ]]; then
-            echo "::error::The full WebAssembly validation module finished with result: $WASM_RESULT"
-            exit 1
-          fi
-
           echo "The full modular validation matrix passed."
