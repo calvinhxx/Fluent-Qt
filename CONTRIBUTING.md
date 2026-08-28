@@ -1,5 +1,13 @@
 # Contributing to FluentQt
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](docs/README.md) › [Community](docs/community/README.md) › Participation and policy
+
+[Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md) · [Support →](SUPPORT.md)
+<!-- docs-nav:top:end -->
+
 Bug reports, focused fixes, documentation improvements, and component proposals
 are welcome. Small, reproducible changes are easier to review and validate
 across C++, PySide6, and WebAssembly.
@@ -62,3 +70,8 @@ Before requesting review, run `git diff --check`, describe what you tested, and
 call out any platform or surface you could not verify. Full cross-platform CI
 is expected on the pull request; contributors do not need every toolchain on
 one machine.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](docs/SUMMARY.md) · [Community index](docs/community/README.md) · [Support →](SUPPORT.md)
+<!-- docs-nav:bottom:end -->

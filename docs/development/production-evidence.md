@@ -1,5 +1,13 @@
 # Production Evidence Baselines
 
+> **Status:** Living collection of dated measurements
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Baselines and historical records
+
+[← Component Contract Baseline](component-contract-baseline.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [FluentQt 1.7 delivery record →](release-1.7-roadmap.md)
+<!-- docs-nav:top:end -->
+
 This file records small, reproducible production-oriented baselines. These are
 trend measurements, not performance promises or cross-platform guarantees.
 Structural component contracts remain the regression gate; wall-clock and
@@ -93,3 +101,8 @@ macOS VoiceOver acceptance remains a platform-specific manual check for each
 release build. It is not a performance baseline or an automated release gate.
 Record the release build, macOS version, tested workflow, and dated result here
 when the check is run.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Component Contract Baseline](component-contract-baseline.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [FluentQt 1.7 delivery record →](release-1.7-roadmap.md)
+<!-- docs-nav:bottom:end -->

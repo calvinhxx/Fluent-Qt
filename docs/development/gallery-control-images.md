@@ -1,5 +1,13 @@
 # Gallery Control Images
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Gallery and site
+
+[← Gallery preview workflow](gallery-preview-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Tooltip Usage →](tooltip-usage.md)
+<!-- docs-nav:top:end -->
+
 Rules for Gallery component-card artwork under
 `app/assets/control_images/`.
 
@@ -89,3 +97,8 @@ Quick alpha sanity check for a candidate icon:
 - transparent pixel ratio is roughly in the same band as neighboring icons in
   that category (often about 15–25% for full rounded tiles)
 - opaque content stays inside the rounded tile, not flush to the bitmap edge
+
+<!-- docs-nav:bottom:start -->
+---
+[← Gallery preview workflow](gallery-preview-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Tooltip Usage →](tooltip-usage.md)
+<!-- docs-nav:bottom:end -->

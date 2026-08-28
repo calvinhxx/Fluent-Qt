@@ -1,5 +1,13 @@
 # Release Governance
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Packaging and release
+
+[← Packaging Workflow](packaging-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow when planning branches, commit messages, release tags,
 changelog generation, and release automation.
 
@@ -281,3 +289,8 @@ contract that CI, changelog, and packaging workflows should enforce.
 
 The package catalog lives in `.github/package-matrix.json`; `standard` and
 `smoke` are selected from that shared source of truth.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Packaging Workflow](packaging-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
+<!-- docs-nav:bottom:end -->

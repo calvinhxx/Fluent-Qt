@@ -1,5 +1,13 @@
 # Packaging Workflow
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Packaging and release
+
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Release Governance →](release-governance.md)
+<!-- docs-nav:top:end -->
+
 Use CPack for release artifacts. The Gallery app is the packaged runtime
 surface; the reusable component library is installed through the separate
 `Development` install component and exported as `FluentQt::FluentQt`.
@@ -269,3 +277,8 @@ its log as a packaging diagnostic.
 The root CMake `project(FluentQt VERSION X.Y.Z ...)` value is the package
 version. Keep release tags, generated changelog entries, and CPack artifact
 names aligned with that version.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Release Governance →](release-governance.md)
+<!-- docs-nav:bottom:end -->

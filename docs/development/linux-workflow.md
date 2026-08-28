@@ -1,5 +1,13 @@
 # Linux Workflow
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
+
+[← High-DPI Workflow](high-dpi-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [WebAssembly Workflow →](webassembly-workflow.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow for desktop Linux development, CI, testing, and packaging.
 WSL2 is one optional local host for that workflow; product code must not depend
 on WSL paths, environment variables, or Windows-installed resources.
@@ -181,3 +189,8 @@ tests, Gallery, and a DEB smoke package for both architectures, plus the Ubuntu
 The standard release matrix publishes an Ubuntu 22.04 x64 Qt 5 Gallery DEB plus
 Ubuntu 22.04 x64 and ARM64 Qt 6 Gallery DEBs through `vcpkg-linux-deb` and
 `vcpkg-linux-arm64-deb`. See [Packaging Workflow](packaging-workflow.md).
+
+<!-- docs-nav:bottom:start -->
+---
+[← High-DPI Workflow](high-dpi-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [WebAssembly Workflow →](webassembly-workflow.md)
+<!-- docs-nav:bottom:end -->

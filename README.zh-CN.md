@@ -89,33 +89,17 @@ target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 
 #### 源码集成
 
-将 Fluent-Qt 源码放入项目的 `Fluent-Qt` 目录：
+定义好应用目标后，加入 Fluent-Qt 源码目录并链接导出目标：
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
-project(my_app LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 add_subdirectory(Fluent-Qt)
-
-add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
 
 #### 安装包集成
 
 ```cmake
-cmake_minimum_required(VERSION 3.16)
-project(my_app LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 find_package(FluentQt CONFIG REQUIRED)
-
-add_executable(my_app main.cpp)
 target_link_libraries(my_app PRIVATE FluentQt::FluentQt)
 ```
 
@@ -170,45 +154,7 @@ PySide6 兼容层通过 Shiboken6 将 Fluent-Qt 的原生 C++ 控件提供给 Py
 python -m pip install FluentQt
 ```
 
-```python
-import sys
-
-import fluentqt
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
-from fluentqt.basicinput import Button
-from fluentqt.windowing import Window
-
-def main() -> int:
-    fluentqt.prepare_high_dpi_application()
-    app = QApplication(sys.argv)
-    fluentqt.initialize_resources()
-    app.setFont(fluentqt.font_for_role(fluentqt.FontRole.Body))
-
-    window = Window()
-    window.setWindowTitle("FluentQt Hello World")
-    window.resize(480, 320)
-
-    content = QWidget()
-    layout = QVBoxLayout(content)
-    layout.setContentsMargins(32, 32, 32, 32)
-
-    button = Button("Hello from FluentQt", content)
-    button.setFluentStyle(Button.ButtonStyle.Accent)
-    layout.addStretch()
-    layout.addWidget(button, 0, Qt.AlignCenter)
-    layout.addStretch()
-
-    window.setContentWidget(content)
-    window.show()
-    return app.exec()
-
-if __name__ == "__main__":
-    sys.exit(main())
-```
-
-完整 Python 工程见
-[`bindings/pyside6/examples/hello_world`](bindings/pyside6/examples/hello_world/)。
+先阅读 [Python 包使用指南](bindings/pyside6/PYPI.md)及其 [Hello World 示例](bindings/pyside6/examples/hello_world/README.md)。源码构建、兼容边界和维护者工作流统一收录在 [PySide6 绑定指南](bindings/pyside6/README.md)中。
 
 ## 🛠 构建
 
@@ -233,18 +179,7 @@ cmake --build build/fluentqt --target fluent_qt_source_package
 
 ### WebAssembly
 
-使用 Qt 6.9.3 `wasm_singlethread` 和 Emscripten 3.1.70 构建 WebAssembly Gallery：
-
-```bash
-source "$HOME/Qt/Tools/emsdk/emsdk_env.sh"
-export QT_WASM_ROOT="$HOME/Qt/6.9.3/wasm_singlethread"
-export QT_HOST_ROOT="$HOME/Qt/6.9.3/macos"
-cmake --preset wasm
-cmake --build --preset wasm --parallel
-python3 -m http.server 4173 --bind 127.0.0.1 --directory build/wasm
-```
-
-浏览器打开 `http://127.0.0.1:4173/app/index.html`。环境配置、测试、CI、部署和平台限制见 [WebAssembly 工作流](docs/development/webassembly-workflow.md)。
+评估项目时可直接使用[在线 WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/)。本地工具链、构建、浏览器冒烟测试和 Pages 部署统一见 [WebAssembly 工作流](docs/development/webassembly-workflow.md)。
 
 ## 🖼 Gallery
 
@@ -256,23 +191,11 @@ Gallery 用于浏览、演示和验证 FluentQt 组件。
 
 ### C++ Gallery 安装包
 
-从 [GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest) 下载对应平台、Qt 版本和架构的 Gallery：
-
-| 平台 | Qt 5 / x64 | Qt 6 / x64 | Qt 6 / ARM64 | 格式 |
-|---|---|---|---|---|
-| Windows | 5.15.2 | 6.2.4 | 6.9.3 | `.exe` |
-| macOS | 5.15.2 | 6.9.3 | 6.9.3 | `.dmg` |
-| Linux | 5.15 | 6.2.4 | 6.2.4 | `.deb` |
+从 [GitHub Releases](https://github.com/calvinhxx/Fluent-Qt/releases/latest) 下载当前 Windows、macOS 或 Linux Gallery 安装包。持续维护的构建与打包矩阵见[打包工作流](docs/development/packaging-workflow.md)。
 
 ### 本地运行 C++ Gallery
 
-| 平台 | x64 preset | ARM64 preset |
-|---|---|---|
-| Windows | `vcpkg-windows` | `vcpkg-windows-arm64` |
-| macOS | `vcpkg-osx-x64` | `vcpkg-osx` |
-| Linux | `vcpkg-linux` | `vcpkg-linux-arm64` |
-
-将 `PRESET` 替换为表中的值：
+从 `CMakePresets.json` 选择当前主机对应的 preset，然后构建 Gallery 目标：
 
 ```bash
 cmake --preset PRESET
@@ -281,13 +204,7 @@ cmake --build --preset PRESET --target fluent_qt_gallery --parallel
 
 ### 本地打包 C++ Gallery
 
-| 平台 | x64 打包 preset | ARM64 打包 preset | 格式 |
-|---|---|---|---|
-| Windows | `vcpkg-windows-installer` | `vcpkg-windows-arm64-installer` | `.exe` |
-| macOS | `vcpkg-osx-x64-dmg` | `vcpkg-osx-dmg` | `.dmg` |
-| Linux | `vcpkg-linux-deb` | `vcpkg-linux-arm64-deb` | `.deb` |
-
-具体本地打包命令见[打包工作流](docs/development/packaging-workflow.md)。
+使用[打包工作流](docs/development/packaging-workflow.md)中的平台 preset 和验证步骤。
 
 ### Python 兼容 Gallery
 
@@ -302,22 +219,17 @@ python -m fluentqt_gallery
 
 ## 📚 文档
 
-- [可搜索的公开 API](https://calvinhxx.github.io/Fluent-Qt/api/)
-- [支持与社区](SUPPORT.md)
-- [参与贡献](CONTRIBUTING.md)
-- [安全策略](SECURITY.md)
-- [社区行为准则](CODE_OF_CONDUCT.md)
-- [AI 辅助应用开发](docs/ai/README.md)
-- [环境检查与项目模板](tools/onboarding/README.md)
-- [开发工作流](docs/development/README.md)
-- [测试与视觉验收](docs/development/testing-workflow.md)
-- [打包工作流](docs/development/packaging-workflow.md)
-- [发布治理](docs/development/release-governance.md)
-- [兼容性策略](docs/development/compatibility-policy.zh-CN.md)
-- [架构约定](docs/architecture/README.md)
-- [Fluent 设计参考与旧主题迁移](docs/design-languages/README.md)
-- [WebAssembly 兼容](docs/development/webassembly-workflow.md)
-- [Python 兼容](bindings/pyside6/README.md)
+可以从[文档导航](docs/README.md)开始，也可以按目标直接进入：
+
+| 目标 | 入口 |
+|---|---|
+| 体验和查找控件 | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/) |
+| 构建应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) · [PySide6](bindings/pyside6/README.md) |
+| 参与 FluentQt 开发 | [开发文档树](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计](docs/design-languages/README.md) |
+| 打包或发布 | [打包工作流](docs/development/packaging-workflow.md) · [发布治理](docs/development/release-governance.md) · [版本记录](docs/releases/README.md) |
+| 提问或报告问题 | [社区入口](docs/community/README.md) · [支持](SUPPORT.md) · [安全报告](SECURITY.md) |
+
+提交改动前请阅读[参与贡献](CONTRIBUTING.md)和[社区行为准则](CODE_OF_CONDUCT.md)。
 
 ## 🔗 参考
 

@@ -1,0 +1,107 @@
+# Documentation contents
+
+> **Status:** Current guide (generated index)
+
+[Documentation home](README.md) · [Search docs](https://github.com/calvinhxx/Fluent-Qt/search?q=language%3AMarkdown&type=code)
+
+This is the complete reader-facing tree. Generated catalogs and JSON
+schemas remain linked from their owning guides instead of appearing as
+standalone reading tasks.
+
+- [AI-assisted development](ai/README.md)
+  - **Workflow**
+    - [FluentQt Onboarding Tools](../tools/onboarding/README.md)
+    - [Add a FluentQt GUI to a project](ai/add-gui-to-project.md)
+- [Architecture](architecture/README.md)
+  - **Runtime contracts**
+    - [Window Chrome Architecture](architecture/window-chrome.md)
+    - [Overlay Behavior Contract](architecture/overlay-behavior.md)
+    - [Typography Resolution](architecture/typography-resolution.md)
+    - [Inspector Report Contract](architecture/inspector-report.md)
+- [Fluent design](design-languages/README.md)
+  - **Design references**
+    - [Fluent (Windows) — Design Reference](design-languages/fluent.md)
+    - [Fluent Design Kit Source](design-languages/figma-sources.md)
+- [Development](development/README.md)
+  - **API, policy, and writing**
+    - [Component API Conventions](development/component-api-conventions.md)
+    - [Compatibility Policy](development/compatibility-policy.md)
+    - [兼容性策略](development/compatibility-policy.zh-CN.md)
+    - [Source Comment Style](development/comment-style.md)
+    - [Documentation style](development/documentation-style.md)
+    - [Accessibility Contract](development/accessibility-contract.md)
+    - [Accessibility Inventory](development/accessibility-inventory.md)
+  - **Build, tests, and diagnostics**
+    - [Testing Workflow](development/testing-workflow.md)
+    - [Qt Component Test Conventions](development/qt-component-test-conventions.md)
+    - [Logging Workflow](development/logging-workflow.md)
+    - [Visual Review](development/visual-review.md)
+    - [App Visual Geometry Verification](development/app-visual-geometry-verification.md)
+    - [High-DPI Workflow](development/high-dpi-workflow.md)
+    - [Linux Workflow](development/linux-workflow.md)
+    - [WebAssembly Workflow](development/webassembly-workflow.md)
+  - **Gallery and site**
+    - [App Sample Optimization](development/app-sample-optimization.md)
+    - [Gallery preview workflow](development/gallery-preview-workflow.md)
+    - [Gallery Control Images](development/gallery-control-images.md)
+    - [Tooltip Usage](development/tooltip-usage.md)
+    - [Project site workflow](development/site-workflow.md)
+  - **Packaging and release**
+    - [Packaging Workflow](development/packaging-workflow.md)
+    - [Release Governance](development/release-governance.md)
+  - **Accepted component contracts**
+    - [Field API Contract](development/field-api-proposal.md)
+    - [DataGrid API Contract](development/datagrid-api-proposal.md)
+    - [MultiSelectComboBox API Contract](development/multi-select-combobox-api-proposal.md)
+    - [Editing Command Router API Contract](development/editing-command-router-proposal.md)
+    - [Command Bar API and Behavior Contract](development/command-bar-proposal.md)
+  - **Baselines and historical records**
+    - [Component Contract Baseline](development/component-contract-baseline.md)
+    - [Production Evidence Baselines](development/production-evidence.md)
+    - [FluentQt 1.7 delivery record](development/release-1.7-roadmap.md)
+    - [AI delivery record](development/adoption-and-ai-roadmap.md)
+    - [WebAssembly delivery record](development/webassembly-roadmap.md)
+    - [System capability delivery record](development/system-capability-roadmap.md)
+    - [Component API Consistency Audit](development/component-api-audit.md)
+- [Python bindings](../bindings/pyside6/README.md)
+  - **Get started and examples**
+    - [Install FluentQt from PyPI](../bindings/pyside6/PYPI.md)
+    - [FluentQt PySide6 Hello World](../bindings/pyside6/examples/hello_world/README.md)
+    - [Python Gallery package](../bindings/pyside6/gallery/README.md)
+    - [Install FluentQt Gallery from PyPI](../bindings/pyside6/gallery/PYPI.md)
+  - **Compatibility and delivery**
+    - [PySide6 API compatibility policy](../bindings/pyside6/API_COMPATIBILITY.md)
+    - [PySide6 manylinux build and audit policy](../bindings/pyside6/MANYLINUX.md)
+    - [Python Publishing Runbook](../bindings/pyside6/PUBLISHING.md)
+    - [PySide6 compatibility and coverage](../bindings/pyside6/ROADMAP.md)
+- [Releases](releases/README.md)
+  - **1.7**
+    - [Fluent-Qt 1.7.3](releases/v1.7.3.md)
+    - [Fluent-Qt 1.7.2](releases/v1.7.2.md)
+    - [Fluent-Qt 1.7.1](releases/v1.7.1.md)
+    - [Fluent-Qt 1.7.0](releases/v1.7.0.md)
+  - **1.6**
+    - [Fluent-Qt 1.6.4](releases/v1.6.4.md)
+    - [Fluent-Qt 1.6.3](releases/v1.6.3.md)
+    - [Fluent-Qt 1.6.2](releases/v1.6.2.md)
+    - [Fluent-Qt 1.6.1](releases/v1.6.1.md)
+    - [Fluent-Qt 1.6.0](releases/v1.6.0.md)
+  - **1.5**
+    - [Fluent-Qt 1.5.3](releases/v1.5.3.md)
+    - [Fluent-Qt 1.5.2](releases/v1.5.2.md)
+    - [Fluent-Qt 1.5.1](releases/v1.5.1.md)
+    - [Fluent-Qt 1.5.0](releases/v1.5.0.md)
+  - **1.4**
+    - [Fluent-Qt 1.4.2](releases/v1.4.2.md)
+    - [Fluent-Qt 1.4.1](releases/v1.4.1.md)
+    - [Fluent-Qt 1.4.0](releases/v1.4.0.md)
+  - **1.3**
+    - [Fluent-Qt 1.3.2](releases/v1.3.2.md)
+    - [Fluent-Qt 1.3.1](releases/v1.3.1.md)
+    - [Fluent-Qt 1.3.0](releases/v1.3.0.md)
+- [Community](community/README.md)
+  - **Participation and policy**
+    - [Contributing to FluentQt](../CONTRIBUTING.md)
+    - [Support](../SUPPORT.md)
+    - [Security Policy](../SECURITY.md)
+    - [Contributor Covenant Code of Conduct](../CODE_OF_CONDUCT.md)

@@ -1,5 +1,13 @@
 # Logging Workflow
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
+
+[← Qt Component Test Conventions](qt-component-test-conventions.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Visual Review →](visual-review.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow when adding, reviewing, or debugging logs in the reusable
 library, Gallery, or tests.
 
@@ -120,3 +128,8 @@ same sinks and retain their category name. Validate bridge behavior through
 - Prefer a clearer assertion when a failing test already exposes the state.
 - Do not broaden logging across unrelated components in a feature change.
 - Do not expose `support/logging/` through install rules or exported targets.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Qt Component Test Conventions](qt-component-test-conventions.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Visual Review →](visual-review.md)
+<!-- docs-nav:bottom:end -->

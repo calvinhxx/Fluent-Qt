@@ -1,17 +1,17 @@
-# Editing Command Router API Proposal
+# Editing Command Router API Contract
 
-## Status
+> **Status:** Accepted contract, shipped in FluentQt 1.5.2
 
-- Capability track: Phase 2
-- Proposal state: Accepted on 2026-07-28
-- Implementation state: Complete; Capability Phase 2 review gate accepted on
-  2026-07-28
-- Public API impact: New installed `EditingCommandRouter` type
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Accepted component contracts
+
+[← MultiSelectComboBox API Contract](multi-select-combobox-api-proposal.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Command Bar API and Behavior Contract →](command-bar-proposal.md)
+<!-- docs-nav:top:end -->
 
 This document defines the accepted semantic editing-command layer that can
-later feed `FluentMenuBar`, application menus, shortcuts, and Capability Phase
-3 [command surfaces](command-bar-proposal.md). It intentionally does not make
-the Capability Phase 1 private context-menu helper public.
+feed `FluentMenuBar`, application menus, shortcuts, and
+[command surfaces](command-bar-proposal.md). It intentionally does not make the
+private context-menu helper public.
 
 ## Goals
 
@@ -230,28 +230,17 @@ The completed `test_editing_command_router` target covers:
    editing shortcuts.
 5. Use Qt-derived default captions with caller-overridable presentation.
 
-These decisions were accepted on 2026-07-28. The implementation remains
-separate from Capability Phase 3 command presentation.
+Command routing remains separate from command presentation.
 
-## Completed Implementation Slices
+## Verification
 
-1. Added target-behavior contracts and locked the public API declaration.
-2. Implemented private LineEdit/TextEdit adapters and the window-scoped router.
-3. Activated lifecycle, focus, clipboard, read-only, password, and
-   menu-focus-restoration contracts.
-4. Added a Gallery example that reuses the router actions in `FluentMenuBar`.
-5. Verified installed headers, default/caller-owned captions, multi-window
-   behavior, and Qt 5.15/Qt 6 compatibility.
+The maintained `test_editing_command_router` target covers action identity,
+lifetime, focus, clipboard, read-only and password policy, multi-window
+isolation, menu focus restoration, shortcuts, and Qt 5/Qt 6 behavior. Gallery
+and installed-package fixtures verify that the same borrowed actions work
+through public menu and command surfaces.
 
-## Validation Completed on 2026-07-28
-
-- Windows Qt 6.9.3 and Linux Qt 5.15.2 each pass all 15
-  `test_editing_command_router` contracts.
-- The Gallery builds and its focused action-identity/focus-routing test passes;
-  the complete sample-code/public-component audit also accepts the new card.
-- Source-subproject and installed-package integration fixtures compile the
-  category header and exported public type.
-- The Capability Phase 1 `LineEdit`, `TextEdit`, and `PasswordBox` regression
-  group discovers 43 tests on both Windows Qt 6.9.3 and Linux Qt 5.15.2:
-  39 automated contracts pass and four manual visual tests are intentionally
-  skipped by the automated preset.
+<!-- docs-nav:bottom:start -->
+---
+[← MultiSelectComboBox API Contract](multi-select-combobox-api-proposal.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Command Bar API and Behavior Contract →](command-bar-proposal.md)
+<!-- docs-nav:bottom:end -->

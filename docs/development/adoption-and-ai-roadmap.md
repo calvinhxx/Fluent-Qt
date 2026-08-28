@@ -1,259 +1,137 @@
-# AI Delivery Roadmap
+# AI delivery record
 
-## Purpose
+> **Status:** Historical record, closed on 2026-08-25
+>
+> **Current guidance:** [AI-assisted GUI development](../ai/README.md)
 
-FluentQt 1.7 closed the main component, accessibility, binding, WebAssembly,
-and release gaps. This roadmap now answers only two questions: can a new user
-or agent reach a working window quickly, and can an agent deliver a GUI that
-meets a verifiable Gallery-level quality bar? The roadmap closes when Phase 2
-passes.
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Baselines and historical records
 
-This roadmap treats AI support as a delivery loop rather than a documentation
-feature. Phases describe evidence levels, not a serial feature checklist. Work
-follows the lean queue below.
+[← FluentQt 1.7 delivery record](release-1.7-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [WebAssembly delivery record →](webassembly-roadmap.md)
+<!-- docs-nav:top:end -->
 
-## Product Boundary
+This record explains what FluentQt delivered to shorten the path from a
+repository to a reviewed desktop interface. It preserves dated acceptance
+evidence; generated catalogs and current guides remain the source of truth for
+today's API surface.
 
-FluentQt remains an MIT, native C++ Fluent component system for Qt Widgets,
-with optional PySide6 and WebAssembly delivery. The primary scenarios are:
+## Delivery loop
 
-1. modernizing an existing Qt Widgets application;
-2. adding a native desktop client to a CLI, TUI, service, data tool, or agent;
-3. using PySide6 while retaining the same native component implementation.
+```mermaid
+flowchart LR
+    Doctor[Check the environment]
+    Create[Create a maintained starter]
+    Build[Build and test a real window]
+    Inspect[Run read-only Inspector]
+    Review[Review states and visuals]
+    Compare[Compare sealed agent runs]
 
-This roadmap does not add another design language, a QML or mobile renderer,
-application business logic, or a hosted source-code collection service.
-Collection of project source, screenshots, or usage data remains opt-in.
+    Doctor --> Create --> Build --> Inspect --> Review --> Compare
+```
 
-## Acceptance Measures
+## Product boundary
 
-The primary measure is whether an agent can complete the fixed benchmark's
-build, workflow, and visual acceptance. Stars, page views, and unreviewed
-screenshots do not count.
+The work supports three cases:
 
-Supporting measures:
+- modernize an existing Qt Widgets application;
+- add a native desktop client to a library, CLI, TUI, service, data tool, or
+  agent;
+- build the same interface through PySide6 while retaining the native FluentQt
+  implementation.
 
-| Measure | Closeout target |
-|---|---:|
-| Median trial time to first window after doctor passes | under 10 minutes |
-| Quick Start completion | at least 80% |
-| Agent build success on the benchmark set | at least 85% |
-| Agent workflow completion | at least 80% |
-| Blind visual review | every dimension at least 4/5 |
-| Same-package final-build cross-agent pairwise preference | winning result at least 70% |
-| Open blocker or major findings in accepted benchmark runs | 0 |
+It did not add another design language, a QML/mobile renderer, business logic,
+or a hosted source-code service. Source, screenshots, and usage data remain
+local unless a user deliberately publishes them.
 
-These are FluentQt operating gates, not industry benchmarks. A run counts only
-when its repository, command, result, and review evidence are recorded.
-The trial clock starts after Qt and FluentQt are available and the doctor can
-pass; package acquisition and installation are tracked separately as
-distribution evidence.
+## Delivered outcomes
 
-## Status
-
-| Phase | Outcome | Status |
+| Area | Result | Current entry point |
 |---|---|---|
-| 0 Baseline and contract | One living roadmap, measures, evidence rules, and non-goals | Complete |
-| 1 First success | Diagnose, scaffold, build, and understand a minimal consumer | Complete |
-| 2 AI quality loop | Inspect a built application and publish cross-agent judged runs | Complete |
+| Environment | Read-only C++ and Python doctor with human and JSON output | [Onboarding tools](../../tools/onboarding/README.md) |
+| Project creation | Maintained `existing-qt` and `workbench` starters for C++ and PySide6 | `fluentqt create` |
+| First window | `fluentqt trial` checks, creates, builds, tests, and reaches the real `show()` path | `fluentqt trial` |
+| API discovery | Searchable public API and a queryable machine catalog | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [AI catalog](../ai/generated/fluentqt-ai-catalog.json) |
+| Built-app diagnostics | One read-only native Inspector used by C++ and PySide6 | [Inspector contract](../architecture/inspector-report.md) |
+| Visual review | Versioned application scenes plus a manual IME compatibility check | [Scene manifest](../ai/evals/application-scenes.json) |
+| Agent workflow | One portable `build-fluentqt-gui` Skill shared by compatible agents | [Skill](../../.agents/skills/build-fluentqt-gui/SKILL.md) |
 
-## Lean Execution Queue
+## Acceptance evidence
 
-Phase 2 closeout is complete:
+### First-window trials
 
-1. Codex and Cursor completed clean runs with the same package, source, and
-   Qt/FluentQt prefix;
-2. both terminal records are sealed and pass content-hash validation;
-3. all thirteen automatable application scenes are covered, with the native
-   IME candidate surface assigned to platform manual compatibility review;
-4. five randomized X/Y final-build comparisons completed and the aggregate
-   gate passed.
+[Full CI run #32654501221](https://github.com/calvinhxx/Fluent-Qt/actions/runs/32654501221)
+passed all five clean C++ consumer environments across Linux x64/ARM64, Qt 5/6,
+macOS, and Windows. The median time from a ready doctor result to the first
+window path was 9.692 seconds. Linux, Windows, and macOS Python wheel lanes also
+passed, with a 0.546-second median.
 
-## Phase 0: Baseline and Contract
+These figures measure the maintained starter on the recorded CI machines. They
+do not include package acquisition and are not general application startup
+benchmarks.
 
-Delivered:
+### Application scenes
 
-- the 1.7 component and quality closeout remains the engineering baseline;
-- the generated catalog records 69 components, 90 routes, and 205 samples;
-- the portable Skill defines Codex and Cursor benchmark runs;
-- release, PyPI, TestPyPI, Gallery, and site events are evidence sources;
-- this document defines the adoption gate and privacy boundary.
+The scene manifest defines fourteen checks across Gallery and the generated C++
+and PySide6 Workbenches:
 
-Phase gate: the roadmap and measures are reviewable without presenting a
-repository inventory as proof of end-to-end AI quality.
+- thirteen deterministic scenes cover Light/Dark, width changes, empty,
+  loading, error, long text, dense data, and scroll boundaries;
+- one native IME scene remains a manual platform check because the candidate
+  window belongs to the operating system and input method.
 
-## Phase 1: First Success
+The automated scenes passed with zero Inspector findings at closeout. Inspector
+findings are engineering signals, not a substitute for visual judgment.
 
-### 1A. Environment doctor
+### Cross-agent comparison
 
-Status: Complete. The C++ and Python profiles, versioned JSON Schema, source
-archive coverage, development-package install, unit tests, and native CI
-preflight are in place.
+Codex and Cursor used the same source commit, Qt/FluentQt prefix, Skill archive,
+content fixtures, and review rubric. Their terminal manifests and referenced
+artifacts were sealed with content hashes before comparison.
 
-Deliver a standard-library-only, read-only preflight tool for C++ and Python.
-It must provide concise human output, stable JSON output for agents, actionable
-repair hints, and a non-zero exit status only for blocking findings.
-
-Acceptance:
-
-- C++ checks CMake 3.16+, a compiler, and the same Qt Widgets discovery path
-  used by a consumer CMake project;
-- Python distinguishes published-wheel support from source-only versions and
-  verifies PySide6 plus FluentQt imports;
-- the tool performs no network requests and writes only to a temporary probe
-  directory;
-- unit tests cover ready and blocked paths without requiring Qt;
-- the source archive contains the tool.
-
-### 1B. Project creation
-
-Status: Complete. [Full CI #32654501221](https://github.com/calvinhxx/Fluent-Qt/actions/runs/32654501221)
-produced passing reports in all five C++ clean-consumer environments across
-Linux x64/ARM64, Qt 5/6, macOS, and Windows. Completion was 100% with a median
-time to first window of 9.692 seconds. The three Linux, Windows, and macOS
-Python wheel lanes also passed, with a 0.546-second median. All eight reports
-reached the real window path with no blockers.
-
-The portable command, four maintained C++ / PySide6 starters, architecture
-manifests, versioned report contract, source/development-package delivery, and
-CI acceptance jobs are implemented. Both C++ starters build against an
-installed FluentQt package and pass application plus offscreen UI smoke tests;
-the Python starters compile and execute their application tests. The standalone
-Skill archive also carries `doctor`, `create`, and all four starters.
-`fluentqt trial` now combines preflight, creation, build, tests, and the real
-window show path in one versioned report. Fast CI selects three representative
-C++ lanes; full CI selects exactly five across Linux x64/ARM64, Qt 5/6, macOS,
-and Windows. The Linux, Windows, and macOS wheel jobs publish the same Python
-report. These jobs install existing build outputs and compile only the small
-generated starter, so the evidence does not duplicate the FluentQt build.
-
-Add `fluentqt create` only after the doctor output contract is stable. Generate
-two maintained starters rather than a generic empty shell:
-
-- an existing-Qt integration slice;
-- a greenfield native workbench with app/application/domain/infrastructure/UI
-  boundaries, Light/Dark identity, tests, and CI.
-
-The generated project must build without editing absolute paths. The C++
-starter is canonical; the Python starter mirrors its product structure without
-copying C++ ownership details mechanically.
-
-### 1C. Searchable public API
-
-Status: Implementation and local acceptance are complete. Public Pages will be
-published by the next normal promotion to `main`; it is no longer a gate for
-this roadmap. On 2026-08-25 the public Chinese landing page returned
-200 while `/Fluent-Qt/api/` still returned 404, confirming that the remaining
-blocker is promotion from `release/1.7.x` into the Pages workflow that listens
-only to `main`, not generation or site assembly. The generated API Explorer
-covers all 69 catalog
-components and 114 installed public headers, with search, category filters,
-C++ / Python names, declaration links, focused tests, and Gallery routes. The
-WebAssembly Gallery deep link compiled and opened the requested DataGrid route
-locally. A full run on `release/1.7.x` produces the site artifact, but
-production Pages is published only from `main`; local files and CI artifacts
-are therefore not reported as a public launch. Generation is checked against
-the installed-header allowlist and the existing AI catalog rather than a
-second hand-maintained index.
-
-Publish generated API reference for installed public headers and link every
-catalog component to the relevant declaration, Gallery route, and focused
-test. Keep the Quick Start task-oriented; do not turn the README into the API
-manual.
-
-Phase gate: after the doctor prerequisites are available, five clean consumer
-environments run `fluentqt trial` for the relevant starter with a median
-first-window-path time below ten minutes and at least 80% completion. The
-automated smoke reaches the real `show()` path; it is not an aesthetic review.
-
-The remote evidence for 1B exceeds this gate, and 1C generation, entry points,
-and deep links pass locally. Phase 1 is therefore complete. Public deployment
-is a normal post-merge site check.
-
-## Phase 2: AI Quality Loop
-
-### 2A. FluentQt Inspector
-
-Status: Public v1 complete locally. The installed C++ API and
-`fluentqt.inspect_widget(...)` now share one read-only native implementation
-and versioned JSON report. Generated C++ and PySide6 Workbench projects expose
-the same report through `--quality-report`; both freshly generated command-line
-paths now pass real runtime tests. Rules cover clipped text, accessibility names, desktop hit areas, focus
-reachability, duplicate semantic actions, nested scroll boundaries, and an
-opt-in 4 px layout-grid check. Gallery scene review removed false positives for
-structural scrollers, selectable static text, focus proxies, and components
-with an explicit scroll-chaining contract. Seven Gallery scenes and three scenes
-from each generated C++ and PySide6 Workbench now pass with zero findings.
-Internal finding objects remain private so rule evolution does not expand the
-public compatibility surface. Application evidence no longer depends on
-Gallery alone. Baseline/optical-alignment and runtime wheel-boundary probes
-remain deferred until they have low-noise component semantics.
-
-Extend the existing debug-overlay foundation into an opt-in application
-inspector. Its first contract should report machine-readable evidence for:
-
-- clipped or elided text without an accessible full value;
-- focus order, accessible names, and minimum hit areas;
-- 4 px spacing and baseline/alignment outliers;
-- duplicate visible entries bound to the same semantic action;
-- scroll ownership and nested-wheel boundary behavior.
-
-The Inspector reports evidence; it does not silently rewrite application UI.
-
-### 2B. Application scenes
-
-Status: Complete. A v2 JSON Schema defines fourteen scenes across Gallery and
-both Workbench starters. Thirteen automated scenes cover Light/Dark,
-wide/narrow/minimum, empty, loading/error, long text, dense data, and scroll
-boundaries. Empty, failure, and retry use real controller states in both the
-C++ and PySide6 starters rather than schematic placeholders.
-
-The fourteenth scene is a native IME compatibility check. The candidate window
-is owned by the operating system and input method, cannot be produced by an
-offscreen run, and would require taking the user's foreground input context to
-automate. It therefore remains a per-platform manual compatibility check, not
-an AI-quality roadmap gate. The benchmark keeps Qt's native editor and input
-method event path; no uncaptured candidate surface is reported as passed.
-
-### 2C. Cross-agent benchmark
-
-Status: Complete. The final Codex and Cursor runs used source commit
-`b150a551b8d465e31e418e1b2eaf5e79bbb7d28e`, the same pinned Qt/FluentQt
-prefix, and Skill package SHA-256
-`29384c19ec821ecd37d92d63d0004d4ee5111b8231c0ceb1931bf2ce463de249`.
-
-| Run | Build and workflow | Inspector | Nine-dimension review |
+| Run | Tests and structure | Inspector | Visual review |
 |---|---|---:|---:|
-| Codex, user-selected Concept A | 3/3 CTest, strict structure, and v4 evidence pass | 0 | 36/45, every dimension 4/5 |
-| Cursor, final clean rerun | 6/6 CTest, strict structure, and v4 evidence pass | 0 | 36/45, every dimension 4/5 |
+| Codex, selected Concept A | 3/3 CTest and strict evidence checks passed | 0 findings | 36/45; every dimension 4/5 |
+| Cursor, clean rerun | 6/6 CTest and strict evidence checks passed | 0 findings | 36/45; every dimension 4/5 |
 
-Both terminal manifests and every referenced artifact are content-hashed by
-`benchmark_run.py seal` and pass `--require-current --require-pass`. Five
-state-matched final-build pairs were reviewed under randomized X/Y labels.
-After reveal, the Codex Concept A build was preferred in 5/5 comparisons, or
-100%. This is a relative result for these two same-package final runs, not an
-unassisted baseline or an industry benchmark.
+Five state-matched final-build pairs were reviewed under randomized X/Y labels.
+The Codex build was preferred in all five comparisons. This is a relative result
+for two recorded runs, not an industry benchmark or proof that one agent is
+generally better.
 
-The aggregate status is `pass`: build success 100%, workflow completion 100%,
-minimum visual dimension 4/5, pairwise preference 100%, and zero open blocker
-or major findings. The original 24/45 Cursor result remains historical evidence;
-it drove the responsive Workbench shell, wide-layout gate, independent final
-review, and sealed-artifact workflow rather than being overwritten.
+No external model credential was used during the fixture-backed workflow. The
+result covered process integration, streaming events, cancellation, and retry;
+it did not claim a live provider call.
 
-No external model credential was used. The result validates the real
-`QProcess` adapter, protocol mapping, streaming events, cancellation, retry,
-and fixture-backed local workflow; it does not claim an external-provider call.
+## Measures used at closeout
 
-Phase gate: Passed on 2026-08-25.
+| Measure | Gate | Recorded result |
+|---|---:|---:|
+| Median trial time after doctor passes | under 10 minutes | passed |
+| Clean-environment build success | at least 85% | 100% |
+| Workflow completion | at least 80% | 100% |
+| Blind visual review | every dimension at least 4/5 | passed |
+| Same-package pairwise preference | winning result at least 70% | 100% in 5 comparisons |
+| Open blocker or major findings | 0 | 0 |
 
-## Closeout Boundary
+These were project closeout gates, not broad claims about the software industry.
 
-This roadmap is closed. Phases 0, 1, and 2 are complete; the former Phases 3
-and 4 were removed and are not release gates. The existing
-[Production Evidence Baselines](production-evidence.md) and
-[Compatibility Policy](compatibility-policy.md) remain maintained references.
-Production Pages is a normal post-merge check, while the native IME candidate
-surface remains a per-platform manual compatibility check. VoiceOver,
-external-adoption counts, more platform pixel lanes, package registries,
-Figma, Designer, and MCP become separate projects only when an explicit need
-appears.
+## What remains current
+
+- Generated API and component facts come from the
+  [AI catalog](../ai/generated/fluentqt-ai-catalog.json) and
+  [API catalog](../../site/api/catalog.json).
+- Workflow instructions live in [AI-assisted GUI development](../ai/README.md)
+  and the canonical Skill.
+- Dated performance measurements live in
+  [Production Evidence Baselines](production-evidence.md).
+- VoiceOver and native IME behavior remain platform-specific manual release
+  checks.
+
+New registries, Figma integration, MCP services, telemetry, or broader adoption
+tracking should be separate projects with an explicit user need and privacy
+boundary; they are not unfinished phases of this record.
+
+<!-- docs-nav:bottom:start -->
+---
+[← FluentQt 1.7 delivery record](release-1.7-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [WebAssembly delivery record →](webassembly-roadmap.md)
+<!-- docs-nav:bottom:end -->

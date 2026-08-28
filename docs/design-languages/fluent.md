@@ -1,5 +1,13 @@
 # Fluent (Windows) — Design Reference
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Fluent design](README.md) › Design references
+
+[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [Fluent Design Kit Source →](figma-sources.md)
+<!-- docs-nav:top:end -->
+
 Source of truth: **Windows UI kit (Community)** — file `qpecbg7hOfos9DcHWeKlfw`.
 Fluent is the project's only supported visual contract. The values below are quoted directly from our own
 design headers (`src/design/*.h`), which seed the runtime `ThemeRegistry`; the Figma kit was
@@ -217,3 +225,8 @@ Everything above is the **default** the app boots into. Concretely:
   `fluent.json` semantic-token overrides.
 - `ThemeRegistry::applySnapshot()` lets C++ applications commit a complete
   branded Light/Dark Fluent token set atomically.
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../SUMMARY.md) · [Fluent design index](README.md) · [Fluent Design Kit Source →](figma-sources.md)
+<!-- docs-nav:bottom:end -->

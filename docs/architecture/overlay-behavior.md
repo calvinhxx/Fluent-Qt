@@ -1,13 +1,16 @@
 # Overlay Behavior Contract
 
-本项目的 transient overlay（`Popup`、`Flyout`、`ComboBox` / `MultiSelectComboBox` dropdown、`DrawerView`、`Dialog` /
-`ContentDialog`、`CoachMark`、`TeachingTip`）使用 **same-window overlay** 模型：打开时挂载到
-owning top-level `QWidget`，保持 `Qt::Widget` 子控件语义，不创建独立 `Qt::Window` / `Qt::Dialog` /
-`Qt::Tool`。这与 WinUI Gallery 的 ContentDialog / Flyout / TeachingTip（绑在当前窗口 `XamlRoot`）对齐。
+> **Status:** Accepted contract
 
-相关 helper 的 canonical 位置是 `src/components/foundation/overlay/`，命名空间是 `fluent::overlay`。
-`OverlayCoordinator` 是 UILib 内部协调器，集中处理 top-level 挂载、宿主 resize、scrim 生命周期与
-stacking；它不会进入安装头文件或成为应用层 API。
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
+
+[← Window Chrome Architecture](window-chrome.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Typography Resolution →](typography-resolution.md)
+<!-- docs-nav:top:end -->
+
+本项目的 transient overlay（`Popup`、`Flyout`、`ComboBox` / `MultiSelectComboBox` dropdown、`DrawerView`、`Dialog` / `ContentDialog`、`CoachMark`、`TeachingTip`）使用 **same-window overlay** 模型：打开时挂载到 owning top-level `QWidget`，保持 `Qt::Widget` 子控件语义，不创建独立 `Qt::Window` / `Qt::Dialog` / `Qt::Tool`。这与 WinUI Gallery 的 ContentDialog / Flyout / TeachingTip（绑在当前窗口 `XamlRoot`）对齐。
+
+相关 helper 的 canonical 位置是 `src/components/foundation/overlay/`，命名空间是 `fluent::overlay`。`OverlayCoordinator` 是 UILib 内部协调器，集中处理 top-level 挂载、宿主 resize、scrim 生命周期与 stacking；它不会进入安装头文件或成为应用层 API。
 
 ## Geometry
 
@@ -75,10 +78,7 @@ Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / 
 
 `Dialog` / `ContentDialog` 使用同一顺序。`QDialog::finished(int)` / `accepted()` / `rejected()` 保留；它们不是 overlay 相位信号。`TeachingTip::closing(TeachingTip::CloseReason)` 保留为组件特定信号，数值 0–4 与 `Popup::CloseReason` 对齐。
 
-`CoachMark` 保留既有 `open` 属性、`isOpen()` / `setOpen()` 和
-`openChanged(bool)`，不在 1.7 中新增一组同义公开 API。`openChanged` 在逻辑请求态
-变化时发出；`opened` 在淡入完成后发出，`closed` 在淡出完成并隐藏后发出。打开中
-关闭或关闭中重开会反转当前过渡，不得为被取消的方向发出完成信号。
+`CoachMark` 保留既有 `open` 属性、`isOpen()` / `setOpen()` 和 `openChanged(bool)`，不在 1.7 中新增一组同义公开 API。`openChanged` 在逻辑请求态变化时发出；`opened` 在淡入完成后发出，`closed` 在淡出完成并隐藏后发出。打开中关闭或关闭中重开会反转当前过渡，不得为被取消的方向发出完成信号。
 
 ### 重入
 
@@ -107,9 +107,7 @@ Overlay 组件统一可观察语义，不统一继承树。`Popup` / `Flyout` / 
 
 未标明时默认为 `Programmatic`。重复 `close()` 不重复发 `closing`。
 
-应用级事件过滤器只能处理所属顶层窗口内的 Escape。若按键来自原生菜单、
-其他顶层窗口，或当前事件位于另一个同窗口 overlay 内，应先交给该表面处理；
-CoachMark 不得跨窗口关闭，也不得抢先吞掉更上层菜单或 overlay 的 Escape。
+应用级事件过滤器只能处理所属顶层窗口内的 Escape。若按键来自原生菜单、其他顶层窗口，或当前事件位于另一个同窗口 overlay 内，应先交给该表面处理；CoachMark 不得跨窗口关闭，也不得抢先吞掉更上层菜单或 overlay 的 Escape。
 
 ### `modal`、`dim`、`closePolicy` 正交
 
@@ -158,3 +156,8 @@ CoachMark 不得跨窗口关闭，也不得抢先吞掉更上层菜单或 overla
 暂不把 `Popup::ClosePolicy` 与 `DrawerView::ClosePolicy` 合并，也不让 `DrawerView` 继承 `Popup`。这些 public API consolidation 若需要，应通过后续独立设计与实现任务单独评估。
 
 需要真正跨应用边界的系统对话框时，应使用独立 `Window`，不要让 `ContentDialog` / `Dialog` 再走原生顶层旁路。
+
+<!-- docs-nav:bottom:start -->
+---
+[← Window Chrome Architecture](window-chrome.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Typography Resolution →](typography-resolution.md)
+<!-- docs-nav:bottom:end -->

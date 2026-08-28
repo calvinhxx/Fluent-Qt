@@ -1,5 +1,13 @@
 # Typography Resolution
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Architecture](README.md) › Runtime contracts
+
+[← Overlay Behavior Contract](overlay-behavior.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Inspector Report Contract →](inspector-report.md)
+<!-- docs-nav:top:end -->
+
 ## Contract
 
 FluentQt owns typography face resolution. Applications select semantic roles
@@ -103,3 +111,8 @@ strategy, and hinting preference. It verifies the TrueType hint tables through
 `QRawFont`, checks the complete icon catalog against representative semantic
 shortcuts, and renders Regular and Semibold to confirm that the real glyph
 masks differ.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Overlay Behavior Contract](overlay-behavior.md) · [Contents](../SUMMARY.md) · [Architecture index](README.md) · [Inspector Report Contract →](inspector-report.md)
+<!-- docs-nav:bottom:end -->

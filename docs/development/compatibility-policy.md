@@ -1,5 +1,13 @@
 # Compatibility Policy
 
+> **Status:** Accepted contract
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › API, policy, and writing
+
+[← Component API Conventions](component-api-conventions.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [兼容性策略 →](compatibility-policy.zh-CN.md)
+<!-- docs-nav:top:end -->
+
 [简体中文](compatibility-policy.zh-CN.md)
 
 This policy applies from FluentQt 1.7 onward. It keeps the public contract
@@ -49,3 +57,8 @@ Python, and Shiboken runtimes.
 Raising a minimum Qt, C++, CMake, or Python version is an incompatible build
 contract change and follows the major-release process unless an upstream
 security or distribution constraint makes that impossible.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Component API Conventions](component-api-conventions.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [兼容性策略 →](compatibility-policy.zh-CN.md)
+<!-- docs-nav:bottom:end -->

@@ -1,5 +1,13 @@
 # Qt Component Test Conventions
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
+
+[← Testing Workflow](testing-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Logging Workflow →](logging-workflow.md)
+<!-- docs-nav:top:end -->
+
 Apply these rules whenever adding or editing components under `src/components/` or
 tests under `tests/components/`, especially `VisualCheck` cases.
 
@@ -77,3 +85,8 @@ synchronization, use [Testing Workflow](testing-workflow.md).
 - Ensure non-interactive runs can use offscreen mode when `SKIP_VISUAL_TEST=1`.
 - Prefer terminal-native validation commands from
   [Testing Workflow](testing-workflow.md) instead of IDE-specific test launchers.
+
+<!-- docs-nav:bottom:start -->
+---
+[← Testing Workflow](testing-workflow.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [Logging Workflow →](logging-workflow.md)
+<!-- docs-nav:bottom:end -->

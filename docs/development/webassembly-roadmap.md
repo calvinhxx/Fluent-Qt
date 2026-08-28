@@ -1,11 +1,19 @@
-# WebAssembly Roadmap
+# WebAssembly delivery record
 
-This roadmap tracks implementation and verification of Fluent-Qt in a browser.
-It is the single canonical development status source; a milestone is complete
-only when its listed evidence exists on `release/1.6.x`. Production Pages
-acceptance is tracked separately because deployment is intentionally triggered
-only after a maintainer promotes the release branch to `main`. Desktop Qt 5.15+
-and Qt 6.2+ support remains unchanged.
+> **Status:** Historical `release/1.6.x` delivery record
+>
+> **Current workflow:** [WebAssembly workflow](webassembly-workflow.md)
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Baselines and historical records
+
+[← AI delivery record](adoption-and-ai-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [System capability delivery record →](system-capability-roadmap.md)
+<!-- docs-nav:top:end -->
+
+This record preserves the implementation and acceptance evidence that first
+delivered FluentQt in a browser. Its route counts and deployment notes are
+dated snapshots, not current project status. Desktop Qt 5.15+ and Qt 6.2+
+support remains independent of WebAssembly delivery.
 
 ## Status
 
@@ -162,3 +170,8 @@ log in the same change. Record commands and concrete pass/fail evidence in the
 log; do not mark browser support verified from a native build alone. This file
 is the only roadmap status source. A pending production-acceptance item does not
 reopen a completed development milestone unless it reveals a product defect.
+
+<!-- docs-nav:bottom:start -->
+---
+[← AI delivery record](adoption-and-ai-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [System capability delivery record →](system-capability-roadmap.md)
+<!-- docs-nav:bottom:end -->

@@ -1,5 +1,13 @@
 # Testing Workflow
 
+> **Status:** Current guide
+
+<!-- docs-nav:top:start -->
+[Documentation](../README.md) › [Development](README.md) › Build, tests, and diagnostics
+
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Qt Component Test Conventions →](qt-component-test-conventions.md)
+<!-- docs-nav:top:end -->
+
 Use this workflow when choosing Qt/GTest/CTest validation commands, filtering
 tests by CTest labels, running or skipping VisualCheck tests, adding test
 targets with `add_qt_test_module`, or synchronizing new component directories
@@ -373,32 +381,10 @@ See [Visual Review](visual-review.md) for manual UI review workflow.
 
 ## App Visual Geometry Verification
 
-See [App Visual Geometry Verification](app-visual-geometry-verification.md) for
-the canonical app-only workflow.
-
-- Use geometry assertions for application-level UI under `app/` when layout
-  contracts can be expressed as numbers: center alignment, fixed sizes, edge
-  offsets, spacing, containment, and logical icon dimensions.
-- Do not apply this as a blanket rule to stable reusable components under
-  `src/components/`; keep component tests focused on their existing API and
-  behavior contracts unless a component-specific visual issue explicitly needs
-  geometry evidence.
-- Give visually important app-owned widgets stable object names before writing
-  geometry tests. Use scoped names such as `GalleryTitleBar.BackButton` and
-  `GalleryTitleBar.SearchBox` so tests do not depend on implementation-local
-  pointers.
-- Use helpers from `tests/support/VisualGeometryTestUtils.h` for named-widget
-  lookup, geometry assertions, and opt-in dumps from app/gallery tests.
-  Assertion failures should be readable without opening a screenshot.
-- Keep geometry dump output disabled during normal CTest runs. Enable it only
-  when investigating an app layout issue:
-
-```bash
-FLUENT_QT_GEOMETRY_DUMP=1 ctest --preset vcpkg-osx -L '^test_gallery_shell_framework$' --output-on-failure
-```
-
-- Use VisualCheck or screenshots after geometry checks for subjective polish:
-  typography, color, material, animation, perceived balance, and brand fidelity.
+The [App Visual Geometry Verification](app-visual-geometry-verification.md)
+guide owns the app-only scope, object-name convention, assertion helpers,
+geometry-dump command, and the boundary between measurable layout checks and
+subjective visual review.
 
 ## Component Directories
 
@@ -420,3 +406,8 @@ FLUENT_QT_GEOMETRY_DUMP=1 ctest --preset vcpkg-osx -L '^test_gallery_shell_frame
 ```bash
 ctest --preset vcpkg-osx -L '^test_<name>$' --output-on-failure
 ```
+
+<!-- docs-nav:bottom:start -->
+---
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Qt Component Test Conventions →](qt-component-test-conventions.md)
+<!-- docs-nav:bottom:end -->
