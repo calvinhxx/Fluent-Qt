@@ -27,6 +27,7 @@ class ClassifyCiChangesTest(unittest.TestCase):
                 "README.md",
                 "docs/development/testing-workflow.md",
                 "site/index.html",
+                "tools/docs/validate_documentation.py",
                 "tools/site/generate_localized_site.py",
             ],
             native=False,
