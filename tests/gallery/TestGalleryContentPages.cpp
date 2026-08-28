@@ -39,6 +39,7 @@
 #include "components/basicinput/Button.h"
 #include "components/basicinput/ComboBox.h"
 #include "components/basicinput/CompoundButton.h"
+#include "components/basicinput/MultiSelectComboBox.h"
 #include "components/basicinput/Slider.h"
 #include "components/basicinput/ToggleButton.h"
 #include "compatibility/QtCompat.h"
@@ -123,6 +124,7 @@ using fluent::textfields::LineEdit;
 using fluent::textfields::TextEdit;
 using fluent::basicinput::Button;
 using fluent::basicinput::ComboBox;
+using fluent::basicinput::MultiSelectComboBox;
 
 namespace {
 
@@ -1338,6 +1340,41 @@ TEST_F(GalleryContentPagesTest, ExtractedComponentsHaveDedicatedLiveSamples)
         compoundPreview->findChild<fluent::basicinput::CompoundButton*>();
     ASSERT_NE(compoundButton, nullptr);
     EXPECT_FALSE(compoundButton->secondaryText().isEmpty());
+}
+
+TEST_F(GalleryContentPagesTest, MultiSelectStatusWrapsCompleteSelection)
+{
+    fluent::gallery::GallerySample sample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("multi-select-combobox"),
+        QStringLiteral("multi-select-combobox-selection"),
+        &sample));
+    EXPECT_TRUE(sample.codeSnippet.contains(
+        QStringLiteral("status->setWordWrap(true)")));
+
+    std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+    ASSERT_NE(preview, nullptr);
+    auto* box = preview->findChild<MultiSelectComboBox*>();
+    ASSERT_NE(box, nullptr);
+
+    fluent::textfields::Label* status = nullptr;
+    for (auto* label : preview->findChildren<fluent::textfields::Label*>()) {
+        if (label->text().startsWith(QStringLiteral("Selected:"))) {
+            status = label;
+            break;
+        }
+    }
+    ASSERT_NE(status, nullptr);
+
+    box->selectAll();
+    QApplication::processEvents();
+    EXPECT_EQ(status->text(),
+              QStringLiteral(
+                  "Selected: Design, Engineering, Research, Support"));
+    EXPECT_TRUE(status->wordWrap());
+    EXPECT_EQ(status->width(), box->width());
+    EXPECT_GT(status->heightForWidth(status->width()),
+              status->fontMetrics().height());
 }
 
 TEST_F(

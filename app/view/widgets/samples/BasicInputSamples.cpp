@@ -695,7 +695,11 @@ QVector<GallerySample> multiSelectComboBoxSamples() {
               "auto* box = new MultiSelectComboBox(this);\n"
               "box->setModel(model);\n"
               "box->setPlaceholderText(\"Choose teams\");\n"
-              "box->setSelectedRows({0, 2});\n\n"
+              "box->setSelectedRows({0, 2});\n"
+              "box->setFixedWidth(280);\n\n"
+              "auto* status = new Label(this);\n"
+              "status->setFixedWidth(280);\n"
+              "status->setWordWrap(true);\n\n"
               "auto updateStatus = [box, status] {\n"
               "    QStringList labels;\n"
               "    for (const QModelIndex& index : box->selectedIndexes())\n"
@@ -719,7 +723,8 @@ QVector<GallerySample> multiSelectComboBoxSamples() {
             box->setFixedWidth(280);
 
             auto *status = makeValueLabel(group, QString());
-            status->setMinimumWidth(280);
+            status->setFixedWidth(280);
+            status->setWordWrap(true);
             auto updateStatus = [box, status] {
               QStringList labels;
               for (const QModelIndex &index : box->selectedIndexes())
