@@ -169,13 +169,20 @@ void FluentMenuBar::resizeEvent(QResizeEvent* event)
 void FluentMenuBar::actionEvent(QActionEvent* event)
 {
     if (event->type() == QEvent::ActionAdded && event->action()) {
-        connect(event->action(), &QAction::changed, this, [this]() {
+        QAction* added = event->action();
+        if (added->menu())
+            added->menu()->installEventFilter(this);
+        connect(added, &QAction::changed, this, [this, added]() {
+            if (added->menu())
+                added->menu()->installEventFilter(this);
             invalidateLayout();
             updateGeometry();
             update();
         });
     } else if (event->type() == QEvent::ActionRemoved && event->action()) {
         QAction* removed = event->action();
+        if (removed->menu())
+            removed->menu()->removeEventFilter(this);
         m_actionRects.remove(removed);
         if (m_hoveredAction == removed) m_hoveredAction = nullptr;
         if (m_pressedAction == removed) m_pressedAction = nullptr;
@@ -276,17 +283,28 @@ void FluentMenuBar::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    if (event->modifiers().testFlag(Qt::AltModifier) && !event->text().isEmpty()) {
-        const QString key = event->text().left(1).toUpper();
-        for (QAction* action : actions()) {
-            if (!action || !action->isVisible() || !action->isEnabled())
-                continue;
-            if (accessKeyText(action) != key)
-                continue;
-            setFocusedAction(action);
-            activateAction(action);
-            event->accept();
-            return;
+    if (event->modifiers().testFlag(Qt::AltModifier)) {
+        QString key = event->text().left(1).toUpper();
+        if (key.isEmpty()
+            && ((event->key() >= Qt::Key_A && event->key() <= Qt::Key_Z)
+                || (event->key() >= Qt::Key_0 && event->key() <= Qt::Key_9))) {
+            // Windows synthetic/system-key delivery can retain the Latin key
+            // code while omitting text(). Keep mnemonic routing deterministic.
+            // zh_CN: Windows 的合成/系统按键事件可能保留拉丁键码却省略
+            // text()；使用键码回退，确保助记键路由一致。
+            key = QString(QChar(static_cast<ushort>(event->key()))).toUpper();
+        }
+        if (!key.isEmpty()) {
+            for (QAction* action : actions()) {
+                if (!action || !action->isVisible() || !action->isEnabled())
+                    continue;
+                if (accessKeyText(action) != key)
+                    continue;
+                setFocusedAction(action);
+                activateAction(action);
+                event->accept();
+                return;
+            }
         }
     }
 
@@ -330,6 +348,21 @@ void FluentMenuBar::keyPressEvent(QKeyEvent* event)
 
 bool FluentMenuBar::eventFilter(QObject* watched, QEvent* event)
 {
+    if (event->type() == QEvent::Show) {
+        for (QAction* action : actions()) {
+            if (!action || action->menu() != watched)
+                continue;
+            // QMenuBar can route native mnemonics directly to its QMenu.
+            // Mirror that popup lifecycle into FluentMenuBar state as well.
+            // zh_CN: QMenuBar 可能把原生助记键直接路由到 QMenu；同时将该
+            // popup 生命周期同步到 FluentMenuBar 状态。
+            m_openAction = action;
+            setFocusedAction(action);
+            setHoveredAction(action);
+            update();
+            break;
+        }
+    }
     if ((event->type() == QEvent::Hide || event->type() == QEvent::Close) && m_openAction && watched == m_openAction->menu()) {
         m_openAction = nullptr;
         m_hoveredAction = nullptr;
