@@ -6,10 +6,12 @@
 #include <QImage>
 #include <QItemSelectionModel>
 #include <QKeySequence>
+#include <QScrollBar>
 #include <QSignalSpy>
 #include <QStandardItemModel>
 #include <QStringListModel>
 #include <QTimer>
+#include <QWheelEvent>
 #include <QtTest/QTest>
 
 #include "components/basicinput/Button.h"
@@ -90,6 +92,20 @@ QRect visiblePopupGeometry(const QWidget &popup, const QWidget &window) {
   const QRect visible =
       fluent::overlay::visibleCardRect(QRect(QPoint(), popup.size()));
   return QRect(popup.mapTo(&window, visible.topLeft()), visible.size());
+}
+
+bool sendWheel(QWidget *target, QPoint pixelDelta, QPoint angleDelta,
+               Qt::ScrollPhase phase) {
+  const QPoint local = target->rect().center();
+  QWheelEvent event(QPointF(local), QPointF(target->mapToGlobal(local)),
+                    pixelDelta, angleDelta, Qt::NoButton, Qt::NoModifier, phase,
+                    false);
+  QApplication::sendEvent(target, &event);
+  return event.isAccepted();
+}
+
+bool sendWheel(QWidget *target, int angleDeltaY) {
+  return sendWheel(target, QPoint(), QPoint(0, angleDeltaY), Qt::NoScrollPhase);
 }
 
 } // namespace
@@ -367,7 +383,7 @@ TEST_F(MultiSelectComboBoxTest, DestroyingHostWithPopupOpenDoesNotCrash) {
   window = nullptr;
 }
 
-TEST_F(MultiSelectComboBoxTest, LimitedSpaceCapsPopupBelow) {
+TEST_F(MultiSelectComboBoxTest, PopupUsesRoomierSideBeforeClipping) {
   QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"),
                           QStringLiteral("Gamma"), QStringLiteral("Delta"),
                           QStringLiteral("Epsilon"), QStringLiteral("Zeta"),
@@ -385,12 +401,47 @@ TEST_F(MultiSelectComboBoxTest, LimitedSpaceCapsPopupBelow) {
 
   const QRect card = visiblePopupGeometry(*popup, *window);
   const QRect surface = fluent::overlay::overlaySurfaceRect(window);
-  EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Bottom);
-  EXPECT_GT(card.top(), box.geometry().bottom());
-  EXPECT_LE(card.bottom(), surface.bottom() - 4);
-  EXPECT_GE(list->height(), Spacing::ControlHeight::Large);
-  EXPECT_LT(list->height(),
-            box.maximumVisibleItems() * Spacing::ControlHeight::Large);
+  EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Top);
+  EXPECT_EQ(card.bottom() + 1, box.geometry().top());
+  EXPECT_GE(card.top(), surface.top() + 4);
+  EXPECT_EQ(list->height(),
+            box.maximumVisibleItems() *
+                (Spacing::ControlHeight::Standard + Spacing::XSmall));
+}
+
+TEST_F(MultiSelectComboBoxTest, ConstrainedPopupAcceptsWheelAndTrackpadScroll) {
+  QStringListModel model({QStringLiteral("Alpha"), QStringLiteral("Beta"),
+                          QStringLiteral("Gamma"), QStringLiteral("Delta"),
+                          QStringLiteral("Epsilon"), QStringLiteral("Zeta"),
+                          QStringLiteral("Eta"), QStringLiteral("Theta")});
+  MultiSelectComboBox box(window);
+  box.setGeometry(40, 190, 260, Spacing::ControlHeight::Standard);
+  box.setModel(&model);
+  box.setMaximumVisibleItems(8);
+
+  auto *popup = openPopup(box, *window);
+  ASSERT_NE(popup, nullptr);
+  auto *list = window->findChild<fluent::collections::ListView *>(
+      QStringLiteral("MultiSelectComboBox.ListView"));
+  ASSERT_NE(list, nullptr);
+
+  QScrollBar *scrollBar = list->verticalScrollBar();
+  ASSERT_NE(scrollBar, nullptr);
+  ASSERT_GT(scrollBar->maximum(), scrollBar->minimum());
+
+  const int beforeWheel = scrollBar->value();
+  EXPECT_TRUE(sendWheel(list->viewport(), -120));
+  const int afterDispatch = scrollBar->value();
+  EXPECT_GT(afterDispatch, beforeWheel);
+  QTest::qWait(20);
+  EXPECT_EQ(scrollBar->value(), afterDispatch);
+
+  scrollBar->setValue(scrollBar->minimum());
+  sendWheel(list->viewport(), QPoint(), QPoint(), Qt::ScrollBegin);
+  EXPECT_TRUE(
+      sendWheel(list->viewport(), QPoint(0, -24), QPoint(), Qt::ScrollUpdate));
+  QTest::qWait(20);
+  EXPECT_GT(scrollBar->value(), scrollBar->minimum());
 }
 
 TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard) {
@@ -417,6 +468,12 @@ TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard) {
   ASSERT_NE(selectAll, nullptr);
   ASSERT_NE(list, nullptr);
   ASSERT_NE(list->viewport(), nullptr);
+  EXPECT_EQ(selectAll->boxMargin(), Spacing::Medium);
+  EXPECT_EQ(selectAll->textGap(), Spacing::Small);
+  EXPECT_EQ(selectAll->height(),
+            Spacing::ControlHeight::Standard + Spacing::XSmall);
+  EXPECT_EQ(popup->anchorOffset(), 0);
+  EXPECT_EQ(list->geometry().top(), selectAll->geometry().bottom() + 1);
   EXPECT_FALSE(list->backgroundVisible());
   EXPECT_TRUE(list->property("fluentPreserveParentSurface").toBool());
   EXPECT_TRUE(
@@ -430,6 +487,8 @@ TEST_F(MultiSelectComboBoxTest, PopupContentStaysInsideVisibleCard) {
   const QRect restingRow =
       static_cast<QListView *>(list)->visualRect(list->model()->index(1, 0));
   ASSERT_TRUE(restingRow.isValid());
+  EXPECT_EQ(restingRow.height(),
+            Spacing::ControlHeight::Standard + Spacing::XSmall);
   const QPoint surfaceSample = list->viewport()->mapTo(
       window, QPoint(restingRow.center().x(), restingRow.top() + 1));
   ASSERT_TRUE(composite.rect().contains(surfaceSample));
@@ -479,10 +538,10 @@ TEST_F(MultiSelectComboBoxTest, OpenPopupReflowsAfterHostResize) {
 
   const QRect card = visiblePopupGeometry(*popup, *window);
   const QRect surface = fluent::overlay::overlaySurfaceRect(window);
-  EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Bottom);
+  EXPECT_EQ(popup->placement(), fluent::dialogs_flyouts::Flyout::Top);
   EXPECT_LT(list->height(), initialListHeight);
-  EXPECT_GT(card.top(), box.geometry().bottom());
-  EXPECT_LE(card.bottom(), surface.bottom() - 4);
+  EXPECT_EQ(card.bottom() + 1, box.geometry().top());
+  EXPECT_GE(card.top(), surface.top() + 4);
 }
 
 TEST_F(MultiSelectComboBoxTest, SearchAndKeyboardToggleKeepPopupOpen) {
@@ -616,7 +675,7 @@ TEST_F(MultiSelectComboBoxTest, PopupFocusVisualTracksInputModality) {
   auto *list = window->findChild<fluent::collections::ListView *>(
       QStringLiteral("MultiSelectComboBox.ListView"));
   ASSERT_NE(list, nullptr);
-  EXPECT_TRUE(list->property("fluentKeyboardFocusVisible").toBool());
+  EXPECT_FALSE(list->property("fluentKeyboardFocusVisible").toBool());
 
   const QRect firstRow =
       static_cast<QListView *>(list)->visualRect(model.index(0, 0));
@@ -644,6 +703,10 @@ TEST_F(MultiSelectComboBoxTest, ClosedKeyboardContractOpensAndCloses) {
   QTest::keyClick(&box, Qt::Key_F4);
   QApplication::processEvents();
   EXPECT_TRUE(box.isOpen());
+  auto *list = window->findChild<fluent::collections::ListView *>(
+      QStringLiteral("MultiSelectComboBox.ListView"));
+  ASSERT_NE(list, nullptr);
+  EXPECT_TRUE(list->property("fluentKeyboardFocusVisible").toBool());
   box.close();
   QApplication::processEvents();
   EXPECT_FALSE(box.isOpen());
@@ -879,6 +942,19 @@ TEST_F(MultiSelectComboBoxTest, VisualCheck) {
     dark.variant = QStringLiteral("dark");
     dark.theme = tests::support::VisualSnapshotTheme::Dark;
     ASSERT_TRUE(tests::support::captureVisualSnapshot(window, dark));
+
+    basic->close();
+    QApplication::processEvents();
+    narrow->open();
+    QApplication::processEvents();
+
+    tests::support::VisualSnapshotOptions noSearchLight = light;
+    noSearchLight.variant = QStringLiteral("no-search-light");
+    ASSERT_TRUE(tests::support::captureVisualSnapshot(window, noSearchLight));
+
+    tests::support::VisualSnapshotOptions noSearchDark = dark;
+    noSearchDark.variant = QStringLiteral("no-search-dark");
+    ASSERT_TRUE(tests::support::captureVisualSnapshot(window, noSearchDark));
     return;
   }
   QTimer::singleShot(0, basic, [basic]() { basic->open(); });
