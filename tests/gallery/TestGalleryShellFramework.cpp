@@ -346,6 +346,11 @@ TEST_F(GalleryShellFrameworkTest, HomeHeroStartsWithFluentResourceCards)
     ASSERT_NE(linkStrip, nullptr);
     ASSERT_NE(linkStrip->model(), nullptr);
     ASSERT_GE(linkStrip->model()->rowCount(), 3);
+    EXPECT_TRUE(linkStrip->property("fluentPreserveParentSurface").toBool());
+    ASSERT_NE(linkStrip->viewport(), nullptr);
+    EXPECT_TRUE(linkStrip->viewport()
+                    ->property("fluentPreserveParentSurface")
+                    .toBool());
     const QString externalLinkIconName =
         linkStrip->property("externalLinkIconName").toString();
     EXPECT_EQ(externalLinkIconName,
