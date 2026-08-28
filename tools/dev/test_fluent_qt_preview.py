@@ -66,6 +66,8 @@ class FluentQtPreviewToolTest(unittest.TestCase):
                 "--rtl",
                 "--size",
                 "920x680",
+                "--actions",
+                "actions.json",
                 "--report",
                 "-",
                 "--no-build",
@@ -78,6 +80,10 @@ class FluentQtPreviewToolTest(unittest.TestCase):
         self.assertIn("dark", command)
         self.assertIn("920x680", command)
         self.assertIn("--rtl", command)
+        self.assertEqual(
+            Path(command[command.index("--actions") + 1]).name,
+            "actions.json",
+        )
         self.assertEqual(command[command.index("--report") + 1], "-")
 
     def test_gallery_build_uses_adaptive_parallelism_wrapper(self):
