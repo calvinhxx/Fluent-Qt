@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fluent-qt.dev/schemas/gallery-preview-actions.schema.json",
+  "title": "FluentQt Gallery preview action script",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "steps"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "stop_on_failure": {"type": "boolean", "default": true},
+    "steps": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/step"}
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "action": {
+          "enum": [
+            "focus",
+            "click",
+            "mouse_move",
+            "mouse_press",
+            "mouse_release",
+            "mouse_leave",
+            "key",
+            "type_text",
+            "set_property",
+            "wait"
+          ]
+        },
+        "target": {"type": "string"},
+        "descendant_class": {"type": "string", "minLength": 1},
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {
+            "x": {"type": "integer"},
+            "y": {"type": "integer"}
+          }
+        },
+        "button": {"enum": ["left", "right", "middle"]},
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "enum": ["shift", "control", "ctrl", "alt", "meta", "shortcut"]
+          },
+          "uniqueItems": true
+        },
+        "key": {"type": "string", "minLength": 1},
+        "text": {"type": "string"},
+        "property": {"type": "string", "minLength": 1},
+        "value": {},
+        "milliseconds": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "after_ms": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "observe": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        },
+        "expect": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

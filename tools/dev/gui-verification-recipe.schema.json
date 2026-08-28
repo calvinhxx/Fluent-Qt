@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fluent-qt.dev/schemas/gui-verification-recipe.schema.json",
+  "title": "FluentQt GUI verification recipe",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "path_base",
+    "author",
+    "selection",
+    "coverage",
+    "defaults",
+    "scenarios"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"$ref": "#/$defs/id"},
+    "path_base": {
+      "description": "Base directory for relative baseline and external action paths.",
+      "enum": ["repository", "recipe"]
+    },
+    "author": {"$ref": "#/$defs/identity"},
+    "selection": {"$ref": "#/$defs/selection"},
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_tags"],
+      "properties": {
+        "required_tags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "environment": {"$ref": "#/$defs/environment"},
+    "defaults": {"$ref": "#/$defs/defaults"},
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/scenario"}
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["ai", "human"]}
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route"],
+      "properties": {
+        "route": {"type": "string", "minLength": 1},
+        "sample": {"type": "string", "minLength": 1}
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": {"type": ["string", "number", "boolean"]}
+    },
+    "inspector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_findings": {"type": "integer", "minimum": 0},
+        "max_by_severity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "info": {"type": "integer", "minimum": 0},
+            "warning": {"type": "integer", "minimum": 0},
+            "error": {"type": "integer", "minimum": 0}
+          }
+        },
+        "allowed_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "geometry_probe": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {
+          "type": "object",
+          "required": ["object_name"],
+          "properties": {
+            "object_name": {"type": "string", "minLength": 1},
+            "tolerance": {"type": "integer", "minimum": 0},
+            "not_clipped": {"type": "boolean"},
+            "min_width": {"type": "integer", "minimum": 1},
+            "min_height": {"type": "integer", "minimum": 1},
+            "max_width": {"type": "integer", "minimum": 1},
+            "max_height": {"type": "integer", "minimum": 1},
+            "rect": {
+              "type": "object",
+              "required": ["x", "y", "width", "height"],
+              "properties": {
+                "x": {"type": "integer"},
+                "y": {"type": "integer"},
+                "width": {"type": "integer", "minimum": 1},
+                "height": {"type": "integer", "minimum": 1}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "geometry": {
+      "type": "object",
+      "required": ["required"],
+      "properties": {
+        "tolerance": {"type": "integer", "minimum": 0},
+        "required": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/geometry_probe"}
+        }
+      }
+    },
+    "geometry_override": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "tolerance": {"type": "integer", "minimum": 0},
+        "required": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/geometry_probe"}
+        }
+      }
+    },
+    "pixel": {
+      "type": "object",
+      "properties": {
+        "channel_threshold": {"type": "integer", "minimum": 0, "maximum": 255},
+        "max_different_pixels": {"type": "integer", "minimum": 0},
+        "max_different_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+        "search_radius": {"type": "integer", "minimum": 0},
+        "max_translation": {"type": "integer", "minimum": 0},
+        "edge_threshold": {"type": "integer", "minimum": 0, "maximum": 255},
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "rect"],
+            "properties": {
+              "id": {"$ref": "#/$defs/id"},
+              "rect": {
+                "type": "array",
+                "prefixItems": [
+                  {"type": "integer"},
+                  {"type": "integer"},
+                  {"type": "integer", "minimum": 1},
+                  {"type": "integer", "minimum": 1}
+                ],
+                "minItems": 4,
+                "maxItems": 4
+              },
+              "coordinate_space": {"enum": ["logical", "device"]},
+              "policy": {"type": "object"}
+            }
+          }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inspector", "geometry", "pixel"],
+      "properties": {
+        "settle_ms": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "timeout_seconds": {"type": "integer", "minimum": 1},
+        "require_native_desktop": {"type": "boolean"},
+        "inspector": {"$ref": "#/$defs/inspector"},
+        "geometry": {"$ref": "#/$defs/geometry"},
+        "pixel": {"$ref": "#/$defs/pixel"}
+      }
+    },
+    "baseline": {
+      "description": "Absolute or path_base-relative approved baseline directory.",
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"type": "string", "minLength": 1}
+        }
+      ]
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "theme", "size", "tags", "baseline", "review"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "selection": {"$ref": "#/$defs/selection"},
+        "theme": {"enum": ["light", "dark"]},
+        "direction": {"enum": ["ltr", "rtl"]},
+        "size": {"type": "string", "pattern": "^[1-9][0-9]*x[1-9][0-9]*$"},
+        "tags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "baseline": {"$ref": "#/$defs/baseline"},
+        "review": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "actions": {
+          "description": "Inline action object or absolute/path_base-relative action script.",
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "object"}
+          ]
+        },
+        "environment": {"$ref": "#/$defs/environment"},
+        "settle_ms": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "timeout_seconds": {"type": "integer", "minimum": 1},
+        "require_native_desktop": {"type": "boolean"},
+        "inspector": {"$ref": "#/$defs/inspector"},
+        "geometry": {"$ref": "#/$defs/geometry_override"},
+        "pixel": {"$ref": "#/$defs/pixel"}
+      }
+    }
+  }
+}
