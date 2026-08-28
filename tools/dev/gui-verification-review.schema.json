@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fluent-qt.dev/schemas/gui-verification-review.schema.json",
+  "title": "FluentQt independent GUI review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "reviewer",
+    "evidence_sha256",
+    "verdict",
+    "summary",
+    "reviewed_scenarios",
+    "attestation",
+    "findings"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "reviewer": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "kind": {"enum": ["ai", "human"]},
+        "tool": {"type": "string"},
+        "model": {"type": "string"}
+      }
+    },
+    "evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "verdict": {"enum": ["pass", "fail"]},
+    "summary": {"type": "string", "minLength": 1},
+    "reviewed_scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["independent", "visual_artifacts_opened", "interaction_evidence_reviewed"],
+      "properties": {
+        "independent": {"const": true},
+        "visual_artifacts_opened": {"const": true},
+        "interaction_evidence_reviewed": {"type": "boolean"}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "scenario_id", "region", "artifact", "message"],
+        "properties": {
+          "severity": {"enum": ["blocker", "major", "minor", "note"]},
+          "scenario_id": {"type": "string", "minLength": 1},
+          "region": {"type": "string", "minLength": 1},
+          "artifact": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

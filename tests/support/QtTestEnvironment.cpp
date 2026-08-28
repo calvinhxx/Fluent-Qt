@@ -1,4 +1,5 @@
 #include "QtTestEnvironment.h"
+#include "VisualComparison.h"
 
 #include <FluentQt/FluentQt.h>
 
@@ -7,7 +8,6 @@
 
 #include <QAccessible>
 #include <QApplication>
-#include <QColor>
 #include <QCoreApplication>
 #include <QDir>
 #include <QEvent>
@@ -77,15 +77,6 @@ QString visualDiffFilePath(const QString& actualPath)
 {
     const QFileInfo info(actualPath);
     return info.dir().filePath(info.completeBaseName() + QStringLiteral(".diff.png"));
-}
-
-QImage normalizeSnapshotImage(const QImage& image)
-{
-    if (image.isNull())
-        return image;
-    if (image.format() == QImage::Format_ARGB32)
-        return image;
-    return image.convertToFormat(QImage::Format_ARGB32);
 }
 
 bool envFlagIsOn(const char* name)
@@ -224,48 +215,11 @@ QString visualBaselineFilePath(const QString& variant)
 
 ::testing::AssertionResult compareVisualImages(const QImage& actual, const QImage& expected)
 {
-    if (actual.isNull())
-        return ::testing::AssertionFailure() << "Actual visual snapshot image is null";
-    if (expected.isNull())
-        return ::testing::AssertionFailure() << "Expected visual baseline image is null";
-
-    const QImage actualArgb = normalizeSnapshotImage(actual);
-    const QImage expectedArgb = normalizeSnapshotImage(expected);
-    if (actualArgb.size() != expectedArgb.size()) {
-        return ::testing::AssertionFailure()
-               << "Visual snapshot size " << actualArgb.width() << "x" << actualArgb.height()
-               << " does not match baseline " << expectedArgb.width() << "x"
-               << expectedArgb.height();
-    }
-
-    int mismatchedPixels = 0;
-    int maxChannelDelta = 0;
-    for (int y = 0; y < actualArgb.height(); ++y) {
-        const auto* actualLine = reinterpret_cast<const QRgb*>(actualArgb.constScanLine(y));
-        const auto* expectedLine = reinterpret_cast<const QRgb*>(expectedArgb.constScanLine(y));
-        for (int x = 0; x < actualArgb.width(); ++x) {
-            const QRgb actualPixel = actualLine[x];
-            const QRgb expectedPixel = expectedLine[x];
-            if (actualPixel == expectedPixel)
-                continue;
-
-            ++mismatchedPixels;
-            const int delta = qMax(qMax(qAbs(qRed(actualPixel) - qRed(expectedPixel)),
-                                        qAbs(qGreen(actualPixel) - qGreen(expectedPixel))),
-                                   qMax(qAbs(qBlue(actualPixel) - qBlue(expectedPixel)),
-                                        qAbs(qAlpha(actualPixel) - qAlpha(expectedPixel))));
-            maxChannelDelta = qMax(maxChannelDelta, delta);
-        }
-    }
-
-    if (mismatchedPixels == 0)
+    const VisualComparisonResult comparison = analyzeVisualDifference(expected, actual);
+    if (comparison.passed)
         return ::testing::AssertionSuccess();
-
     return ::testing::AssertionFailure()
-           << mismatchedPixels << " of "
-           << (actualArgb.width() * actualArgb.height())
-           << " pixels differ from the visual baseline (max channel delta "
-           << maxChannelDelta << ")";
+           << visualComparisonSummary(comparison).toStdString();
 }
 
 ::testing::AssertionResult compareVisualSnapshotToBaseline(const QString& actualPath,
@@ -286,24 +240,8 @@ QString visualBaselineFilePath(const QString& variant)
     if (comparison)
         return comparison;
 
-    const QImage actualArgb = normalizeSnapshotImage(actual);
-    const QImage expectedArgb = normalizeSnapshotImage(expected);
-    if (!actualArgb.isNull() && actualArgb.size() == expectedArgb.size()) {
-        QImage diff(actualArgb.size(), QImage::Format_ARGB32);
-        for (int y = 0; y < actualArgb.height(); ++y) {
-            const auto* actualLine = reinterpret_cast<const QRgb*>(actualArgb.constScanLine(y));
-            const auto* expectedLine = reinterpret_cast<const QRgb*>(expectedArgb.constScanLine(y));
-            auto* diffLine = reinterpret_cast<QRgb*>(diff.scanLine(y));
-            for (int x = 0; x < actualArgb.width(); ++x) {
-                if (actualLine[x] == expectedLine[x]) {
-                    const QColor dim = QColor::fromRgba(actualLine[x]);
-                    diffLine[x] = QColor(dim.red() / 3, dim.green() / 3, dim.blue() / 3, 255).rgba();
-                } else {
-                    diffLine[x] = qRgb(220, 32, 32);
-                }
-            }
-        }
-
+    if (!actual.isNull() && actual.size() == expected.size()) {
+        const QImage diff = renderVisualDifference(expected, actual);
         const QString diffPath = visualDiffFilePath(actualPath);
         QFile::remove(diffPath);
         if (!diff.save(diffPath, "PNG")) {

@@ -7,6 +7,7 @@ find_package(Python3 3.10 COMPONENTS Interpreter QUIET)
 set(FLUENT_QT_CI_FAST_TARGETS
     test_qt_compat
     test_qt_test_environment
+    test_visual_comparison
 )
 if(FLUENT_QT_BUILD_GALLERY)
     list(APPEND FLUENT_QT_CI_FAST_TARGETS test_gallery_single_instance)
@@ -132,6 +133,35 @@ set(FLUENT_QT_QT_GTEST_SUPPORT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/support/QtTestEnvironment.cpp
 )
 
+add_library(FluentQtVisualComparison STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/support/VisualComparison.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/support/VisualComparison.h
+)
+fluent_qt_configure_cpp_target(FluentQtVisualComparison)
+fluent_qt_enable_sanitizers(FluentQtVisualComparison)
+target_include_directories(FluentQtVisualComparison
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
+target_link_libraries(FluentQtVisualComparison
+    PUBLIC Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Gui)
+
+add_executable(fluent_qt_visual_compare
+    ${CMAKE_SOURCE_DIR}/tools/dev/FluentQtVisualCompare.cpp
+)
+fluent_qt_configure_cpp_target(fluent_qt_visual_compare)
+fluent_qt_enable_sanitizers(fluent_qt_visual_compare)
+target_link_libraries(fluent_qt_visual_compare
+    PRIVATE FluentQtVisualComparison)
+set_target_properties(fluent_qt_visual_compare PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tools/dev"
+)
+foreach(_fluent_qt_visual_compare_config Debug Release RelWithDebInfo MinSizeRel)
+    string(TOUPPER "${_fluent_qt_visual_compare_config}"
+        _fluent_qt_visual_compare_config_upper)
+    set_target_properties(fluent_qt_visual_compare PROPERTIES
+        "RUNTIME_OUTPUT_DIRECTORY_${_fluent_qt_visual_compare_config_upper}"
+        "${CMAKE_BINARY_DIR}/tools/dev")
+endforeach()
+
 # 定义一个便捷的宏：添加一个新的 Qt GTest 模块（可在子目录中调用）
 # 可执行文件输出到当前 CMake 子目录，便于按目录结构归类。
 # 发现到的测试会带有 qt/unit/<目录>/<组件> 标签，便于用 ctest -L 分层筛选。
@@ -166,6 +196,7 @@ macro(add_qt_test_module module_name source_file)
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Test
         Qt${QT_VERSION_MAJOR}::Network
+        FluentQtVisualComparison
         GTest::gtest
     )
     target_include_directories(${module_name} PRIVATE
@@ -301,6 +332,10 @@ endmacro()
 # 按源码目录结构添加子目录，Qt Creator 工程树会呈现层级
 add_qt_test_module(test_project_logging TestProjectLogging.cpp)
 add_qt_test_module(test_qt_test_environment TestQtTestEnvironment.cpp)
+add_qt_test_module(test_visual_comparison TestVisualComparison.cpp)
+target_compile_definitions(test_visual_comparison PRIVATE
+    FLUENT_QT_VISUAL_COMPARE_PATH="$<TARGET_FILE:fluent_qt_visual_compare>")
+add_dependencies(test_visual_comparison fluent_qt_visual_compare)
 add_qt_test_module(test_high_dpi TestHighDpi.cpp)
 
 if(Python3_Interpreter_FOUND)

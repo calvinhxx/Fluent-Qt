@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "id": "combobox-editable-core-states",
+  "path_base": "repository",
+  "author": {
+    "id": "replace-with-implementation-agent-id",
+    "kind": "ai"
+  },
+  "selection": {
+    "route": "combobox",
+    "sample": "combobox-editable"
+  },
+  "coverage": {
+    "required_tags": [
+      "theme:light",
+      "theme:dark",
+      "width:normal",
+      "width:narrow",
+      "state:default",
+      "state:focus",
+      "input:keyboard"
+    ]
+  },
+  "environment": {
+    "QT_SCALE_FACTOR": "1",
+    "QT_FONT_DPI": "96"
+  },
+  "defaults": {
+    "settle_ms": 250,
+    "timeout_seconds": 45,
+    "require_native_desktop": true,
+    "inspector": {
+      "max_findings": 0,
+      "max_by_severity": {
+        "info": 0,
+        "warning": 0,
+        "error": 0
+      },
+      "allowed_codes": []
+    },
+    "geometry": {
+      "tolerance": 0,
+      "required": [
+        "gallerySampleCard",
+        "gallerySamplePreviewWidget",
+        "galleryEditableComboBox",
+        "galleryEditableComboBoxStatus"
+      ]
+    },
+    "pixel": {
+      "channel_threshold": 0,
+      "max_different_pixels": 0,
+      "max_different_ratio": 0,
+      "search_radius": 4,
+      "max_translation": 0,
+      "edge_threshold": 16,
+      "regions": [
+        {
+          "id": "sample-detail",
+          "rect": [16, 96, 560, 300]
+        }
+      ]
+    }
+  },
+  "scenarios": [
+    {
+      "id": "light-normal-default",
+      "theme": "light",
+      "direction": "ltr",
+      "size": "920x600",
+      "tags": ["theme:light", "width:normal", "state:default"],
+      "baseline": "tests/visual-baselines/gui/combobox-editable/light-normal-default",
+      "review": [
+        "The editor and status label have a clear relationship and share a deliberate width.",
+        "Text, border, focus affordance, and sample-card hierarchy remain crisp at native resolution."
+      ]
+    },
+    {
+      "id": "dark-normal-default",
+      "theme": "dark",
+      "direction": "ltr",
+      "size": "920x600",
+      "tags": ["theme:dark", "width:normal", "state:default"],
+      "baseline": "tests/visual-baselines/gui/combobox-editable/dark-normal-default",
+      "review": [
+        "Editor, popup affordance, status text, and card surfaces retain sufficient contrast.",
+        "Dark surfaces remain distinguishable without halos or muddy separators."
+      ]
+    },
+    {
+      "id": "light-narrow-keyboard",
+      "theme": "light",
+      "direction": "ltr",
+      "size": "640x520",
+      "tags": ["theme:light", "width:narrow", "state:focus", "input:keyboard"],
+      "baseline": "tests/visual-baselines/gui/combobox-editable/light-narrow-keyboard",
+      "actions": {
+        "schema_version": 1,
+        "steps": [
+          {
+            "id": "focus-editor",
+            "action": "focus",
+            "target": "galleryEditableComboBox",
+            "descendant_class": "fluent::textfields::LineEdit",
+            "observe": ["text"]
+          },
+          {
+            "id": "move-to-end",
+            "action": "key",
+            "target": "@focus",
+            "key": "end"
+          },
+          {
+            "id": "erase-last-digit",
+            "action": "key",
+            "target": "@focus",
+            "key": "backspace"
+          },
+          {
+            "id": "erase-first-digit",
+            "action": "key",
+            "target": "@focus",
+            "key": "backspace",
+            "expect": {"text": ""}
+          },
+          {
+            "id": "enter-custom-value",
+            "action": "type_text",
+            "target": "@focus",
+            "text": "42",
+            "expect": {"text": "42"}
+          },
+          {
+            "id": "verify-derived-status",
+            "action": "wait",
+            "target": "galleryEditableComboBoxStatus",
+            "milliseconds": 30,
+            "expect": {"text": "Custom value: 42"}
+          }
+        ]
+      },
+      "review": [
+        "Keyboard focus is unmistakable but does not change surrounding geometry.",
+        "The custom value and derived status are both fully visible at narrow width."
+      ]
+    },
+    {
+      "id": "dark-narrow-keyboard",
+      "theme": "dark",
+      "direction": "ltr",
+      "size": "640x520",
+      "tags": ["theme:dark", "width:narrow", "state:focus", "input:keyboard"],
+      "baseline": "tests/visual-baselines/gui/combobox-editable/dark-narrow-keyboard",
+      "actions": {
+        "schema_version": 1,
+        "steps": [
+          {
+            "id": "focus-editor",
+            "action": "focus",
+            "target": "galleryEditableComboBox",
+            "descendant_class": "fluent::textfields::LineEdit"
+          },
+          {
+            "id": "move-to-end",
+            "action": "key",
+            "target": "@focus",
+            "key": "end"
+          },
+          {
+            "id": "erase-last-digit",
+            "action": "key",
+            "target": "@focus",
+            "key": "backspace"
+          },
+          {
+            "id": "erase-first-digit",
+            "action": "key",
+            "target": "@focus",
+            "key": "backspace",
+            "expect": {"text": ""}
+          },
+          {
+            "id": "enter-custom-value",
+            "action": "type_text",
+            "target": "@focus",
+            "text": "42",
+            "expect": {"text": "42"}
+          },
+          {
+            "id": "verify-derived-status",
+            "action": "wait",
+            "target": "galleryEditableComboBoxStatus",
+            "milliseconds": 30,
+            "expect": {"text": "Custom value: 42"}
+          }
+        ]
+      },
+      "review": [
+        "Focused editor text and caret stay legible against the dark field surface.",
+        "No clipping, one-pixel jump, or contrast regression appears after keyboard input."
+      ]
+    }
+  ]
+}
