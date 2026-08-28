@@ -20,7 +20,21 @@ def main() -> int:
     project_root = args.project_root.resolve()
     tools_dir = Path(__file__).resolve().parents[1] / "tools"
     sys.path.insert(0, str(tools_dir))
-    from generate_gallery_contract import generate_contract
+    from generate_gallery_contract import (
+        _route_sample_functions,
+        generate_contract,
+    )
+
+    qualified_dispatch = _route_sample_functions(
+        'if (routeId == QStringLiteral("tree-view"))\n'
+        '    return detail::treeViewSamples();'
+    )
+    if qualified_dispatch != {"tree-view": "treeViewSamples"}:
+        raise AssertionError(
+            "qualified split-sample dispatch is not recognized: {0!r}".format(
+                qualified_dispatch
+            )
+        )
 
     generated = generate_contract(project_root)
     packaged = json.loads(args.contract.resolve().read_text(encoding="utf-8"))
