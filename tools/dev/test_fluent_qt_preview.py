@@ -80,5 +80,25 @@ class FluentQtPreviewToolTest(unittest.TestCase):
         self.assertIn("--rtl", command)
         self.assertEqual(command[command.index("--report") + 1], "-")
 
+    def test_gallery_build_uses_adaptive_parallelism_wrapper(self):
+        args = MODULE.parse_args(["--route", "button", "--preset", "vcpkg-osx"])
+
+        command = MODULE.build_command(args)
+
+        self.assertEqual(command[0], sys.executable)
+        self.assertEqual(
+            Path(command[1]).name,
+            "fluent_qt_build.py",
+        )
+        self.assertEqual(
+            command[2:],
+            [
+                "--preset",
+                "vcpkg-osx",
+                "--target",
+                "fluent_qt_gallery",
+            ],
+        )
+
 if __name__ == "__main__":
     unittest.main()

@@ -174,6 +174,10 @@ cmake --install build/fluentqt --config Release \
   --component Development --prefix /path/to/install
 ```
 
+For local repository development, the [build workflow](docs/development/build-workflow.md)
+provides a wrapper that selects parallelism from current CPU and memory
+headroom instead of using a fixed job count.
+
 ### Source package
 
 Create the reduced library source package for offline or source integration:
@@ -206,12 +210,33 @@ The maintained build and package matrix lives in the
 
 ### Run the C++ Gallery locally
 
-Choose the host preset from `CMakePresets.json`, then build the Gallery target:
+List the presets available on the current host:
 
 ```bash
-cmake --preset PRESET
-cmake --build --preset PRESET --target fluent_qt_gallery --parallel
+cmake --list-presets
 ```
+
+On Apple Silicon, use `vcpkg-osx`:
+
+```bash
+cmake --preset vcpkg-osx
+python3 tools/dev/fluent_qt_build.py \
+  --preset vcpkg-osx \
+  --target fluent_qt_gallery
+```
+
+Use the matching preset on other platforms:
+
+| Platform | Preset |
+|---|---|
+| Apple Silicon Mac | `vcpkg-osx` |
+| Intel Mac or Rosetta | `vcpkg-osx-x64` |
+| Linux x64 | `vcpkg-linux` |
+| Linux ARM64 | `vcpkg-linux-arm64` |
+| Windows x64 | `vcpkg-windows` |
+| Windows ARM64 | `vcpkg-windows-arm64` |
+
+Use the matching `-release` preset when packaging.
 
 ### Package the C++ Gallery locally
 

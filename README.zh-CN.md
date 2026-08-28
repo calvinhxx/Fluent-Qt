@@ -169,6 +169,8 @@ cmake --install build/fluentqt --config Release \
   --component Development --prefix /path/to/install
 ```
 
+本地仓库开发可使用[构建工作流](docs/development/build-workflow.md)提供的包装脚本。它根据当前可用 CPU 和内存余量选择并发数，不写死全局并发上限。
+
 ### 源码包
 
 生成用于离线或源码集成的精简组件库源码包：
@@ -195,12 +197,33 @@ Gallery 用于浏览、演示和验证 FluentQt 组件。
 
 ### 本地运行 C++ Gallery
 
-从 `CMakePresets.json` 选择当前主机对应的 preset，然后构建 Gallery 目标：
+先查看当前平台可用的构建配置：
 
 ```bash
-cmake --preset PRESET
-cmake --build --preset PRESET --target fluent_qt_gallery --parallel
+cmake --list-presets
 ```
+
+Apple Silicon Mac 使用 `vcpkg-osx`：
+
+```bash
+cmake --preset vcpkg-osx
+python3 tools/dev/fluent_qt_build.py \
+  --preset vcpkg-osx \
+  --target fluent_qt_gallery
+```
+
+其他平台使用对应的 preset：
+
+| 平台 | preset |
+|---|---|
+| Apple Silicon Mac | `vcpkg-osx` |
+| Intel Mac 或 Rosetta | `vcpkg-osx-x64` |
+| Linux x64 | `vcpkg-linux` |
+| Linux ARM64 | `vcpkg-linux-arm64` |
+| Windows x64 | `vcpkg-windows` |
+| Windows ARM64 | `vcpkg-windows-arm64` |
+
+打包时使用对应的 `-release` preset。
 
 ### 本地打包 C++ Gallery
 

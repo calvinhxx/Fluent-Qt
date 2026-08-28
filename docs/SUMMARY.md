@@ -32,6 +32,7 @@ standalone reading tasks.
     - [Accessibility Contract](development/accessibility-contract.md)
     - [Accessibility Inventory](development/accessibility-inventory.md)
   - **Build, tests, and diagnostics**
+    - [Build Workflow](development/build-workflow.md)
     - [Testing Workflow](development/testing-workflow.md)
     - [Qt Component Test Conventions](development/qt-component-test-conventions.md)
     - [Logging Workflow](development/logging-workflow.md)
