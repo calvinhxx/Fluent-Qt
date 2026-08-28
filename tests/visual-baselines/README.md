@@ -1,7 +1,9 @@
 # Visual baselines
 
-Checked-in PNGs for the representative 1.7 Light/Dark/RTL visual gate.
-This is not a screenshot farm.
+The root PNGs are checked-in evidence for the representative 1.7
+Light/Dark/RTL visual gate. This is not a screenshot farm. Approved
+multi-state GUI verification bundles, when added, live under `gui/` and keep
+their image, capture report, and approval metadata together.
 
 ## Contents
 
@@ -35,3 +37,22 @@ macOS x64, Linux, Windows, headless plugins, non-Fusion style, or different
 scale/DPI environment values. `QWidget::render()` on
 macOS may omit native TreeView chrome (chevrons); RTL text alignment is the
 signal this gate checks.
+
+## AI-assisted GUI bundles
+
+Use the
+[AI-assisted GUI verification workflow](../../docs/development/gui-verification-workflow.md)
+for baseline directories under `gui/`. Each scenario bundle contains:
+
+- `baseline.png` — the native-resolution approved pixels;
+- `baseline-report.json` — environment, named geometry, actions, and Inspector evidence;
+- `baseline.json` — independent approver identity plus recipe-contract, image, and report hashes.
+
+Create or supersede those bundles only with
+`python3 tools/dev/fluent_qt_gui_verify.py approve`. The GUI runner refuses an
+unapproved, self-approved, stale-contract, changed-fingerprint, or modified
+bundle before pixel comparison. The `VISUAL_UPDATE_BASELINE` command above is
+only for the three representative root PNGs. GUI recipes should declare
+`"path_base": "repository"` and use paths such as
+`tests/visual-baselines/gui/<component>/<scenario>` so moving a recipe under
+`build/` cannot redirect baseline approval.

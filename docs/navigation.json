@@ -79,6 +79,7 @@
           "pages": [
             "development/app-sample-optimization.md",
             "development/gallery-preview-workflow.md",
+            "development/gui-verification-workflow.md",
             "development/gallery-control-images.md",
             "development/tooltip-usage.md",
             "development/site-workflow.md"
