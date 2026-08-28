@@ -6,6 +6,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QAbstractItemView>
 #include <QAbstractScrollArea>
 #include <QBoxLayout>
 #include <QClipboard>
@@ -41,6 +42,7 @@
 #include "components/basicinput/Slider.h"
 #include "components/basicinput/ToggleButton.h"
 #include "compatibility/QtCompat.h"
+#include "components/collections/ListView.h"
 #include "components/collections/TreeView.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/FontIcon.h"
@@ -2585,6 +2587,39 @@ TEST_F(GalleryContentPagesTest, CollectionAndNavigationSamplesHostLivePreviews)
     ASSERT_NE(tabPage, nullptr);
     ASSERT_GE(tabPage->sampleCount(), 1);
     EXPECT_NE(tabPage->sampleCards().first()->previewWidget(), nullptr);
+}
+
+TEST_F(GalleryContentPagesTest, BackgroundlessCollectionSamplesPreservePreviewSurface)
+{
+    int checkedViews = 0;
+    for (const QString& routeId : {QStringLiteral("list-view"),
+                                   QStringLiteral("tree-view")}) {
+        const auto samples = fluent::gallery::gallerySamplesForRoute(routeId);
+        ASSERT_FALSE(samples.isEmpty()) << routeId.toStdString();
+        for (const auto& sample : samples) {
+            if (!sample.createPreview)
+                continue;
+            GallerySampleCard card(sample);
+            QVector<QAbstractItemView*> views;
+            for (auto* view : card.findChildren<fluent::collections::ListView*>())
+                views.append(view);
+            for (auto* view : card.findChildren<TreeView*>())
+                views.append(view);
+            ASSERT_FALSE(views.isEmpty())
+                << routeId.toStdString() << ":" << sample.id.toStdString();
+            for (QAbstractItemView* view : views) {
+                EXPECT_TRUE(view->property("fluentPreserveParentSurface").toBool())
+                    << routeId.toStdString() << ":" << sample.id.toStdString();
+                ASSERT_NE(view->viewport(), nullptr);
+                EXPECT_TRUE(view->viewport()
+                                ->property("fluentPreserveParentSurface")
+                                .toBool())
+                    << routeId.toStdString() << ":" << sample.id.toStdString();
+                ++checkedViews;
+            }
+        }
+    }
+    EXPECT_GE(checkedViews, 12);
 }
 
 // Task 6.6: content page and sample card refresh their surfaces on theme change.

@@ -33,6 +33,7 @@ from PySide6.QtGui import (
     QPen,
 )
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QFrame,
     QGridLayout,
@@ -765,6 +766,22 @@ def _refresh_fluent_subtree(root: QWidget) -> None:
     _native.refreshWidgetThemeForBinding(root)
 
 
+def _preserve_backgroundless_collection_surfaces(root: QWidget) -> None:
+    """Keep a sample card's painted preview surface beneath transparent views."""
+
+    views = list(root.findChildren(QAbstractItemView))
+    if isinstance(root, QAbstractItemView):
+        views.insert(0, root)
+    for view in views:
+        background_visible = getattr(view, "backgroundVisible", None)
+        if not callable(background_visible) or background_visible():
+            continue
+        view.setProperty("fluentPreserveParentSurface", True)
+        viewport = view.viewport()
+        if viewport is not None:
+            viewport.setProperty("fluentPreserveParentSurface", True)
+
+
 class _GallerySampleCardLayout(QVBoxLayout):
     """Preserve AnchorLayout's explicit gaps inside a styled QFrame."""
 
@@ -954,6 +971,7 @@ def _build_sample_card(
     preview_layout.setContentsMargins(20, 20, 20, 20)
     preview_layout.setSpacing(16)
     result = build_sample(entry.route_id, sample.id, preview_surface)
+    _preserve_backgroundless_collection_surfaces(result.widget)
     result.widget.setObjectName("gallerySamplePreviewWidget")
     preview_layout.addWidget(result.widget)
     preview_layout.addStretch(1)

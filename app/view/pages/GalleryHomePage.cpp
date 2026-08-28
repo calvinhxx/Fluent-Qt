@@ -410,6 +410,16 @@ public:
         setSelectionMode(SelectionMode::None);
         setBackgroundVisible(false);
         setBorderVisible(false);
+        // This transparent viewport sits over artwork painted by the hero. On
+        // composited Mica windows, ListView normally clears a backgroundless
+        // viewport with CompositionMode_Source to avoid stale rows. Opt out
+        // here so that cleanup does not erase the hero gradient and expose a
+        // rectangular patch of the window backdrop.
+        // zh_CN: 此透明 viewport 叠在 hero 自绘渐变上。合成式 Mica 下 ListView
+        // 通常会用 Source 模式清理无背景 viewport 以避免残影；这里必须保留父层，
+        // 否则会擦掉 hero 渐变并露出一块矩形窗口材质。
+        setProperty("fluentPreserveParentSurface", true);
+        viewport()->setProperty("fluentPreserveParentSurface", true);
         setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
         setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);

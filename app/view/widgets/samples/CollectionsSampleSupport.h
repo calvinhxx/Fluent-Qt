@@ -19,6 +19,14 @@ View* flatPreviewSurface(View* view)
     if (view) {
         view->setBackgroundVisible(false);
         view->setBorderVisible(false);
+        // These transparent views sit on GallerySampleCard's painted LayerAlt
+        // preview surface. Keep that local surface on composited Mica windows
+        // instead of clearing through it to the OS backdrop.
+        // zh_CN: 这些透明集合视图位于 GallerySampleCard 自绘的 LayerAlt 预览面上；
+        // 合成式 Mica 下应保留该局部表面，不能向下擦穿到系统背景材质。
+        view->setProperty("fluentPreserveParentSurface", true);
+        if (view->viewport())
+            view->viewport()->setProperty("fluentPreserveParentSurface", true);
     }
     return view;
 }

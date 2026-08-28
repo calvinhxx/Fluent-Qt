@@ -519,6 +519,11 @@ TEST_F(AutoSuggestBoxTest, SuggestionsUseFluentScrollChromeAndContainBoundaryWhe
     ASSERT_NE(popup, nullptr);
     auto* listView = popup->findChild<ListView*>("AutoSuggestBoxSuggestionList");
     ASSERT_NE(listView, nullptr);
+    EXPECT_TRUE(listView->property("fluentPreserveParentSurface").toBool());
+    ASSERT_NE(listView->viewport(), nullptr);
+    EXPECT_TRUE(listView->viewport()
+                    ->property("fluentPreserveParentSurface")
+                    .toBool());
     EXPECT_FALSE(listView->isScrollChainingEnabled());
 
     auto* fluentBar = listView->verticalFluentScrollBar();
