@@ -1715,7 +1715,7 @@ _NAV_EXACT_HELPER = dedent(
             painter.setFont(fluentqt.font_for_role(fluentqt.FontRole.Caption))
             y = panel.top() + 38
             for row_text in self.spec[6]:
-                row_rect = QRect(panel.left() + 14, y, panel.width() - 28, 24)
+                row_rect = QRect(panel.left() + 14, y, panel.width() - 28, 36)
                 painter.setPen(colors["strokeDivider"])
                 painter.drawLine(row_rect.topLeft(), row_rect.topRight())
                 painter.setPen(colors["textSecondary"])
@@ -1723,10 +1723,10 @@ _NAV_EXACT_HELPER = dedent(
                     row_rect.adjusted(2, 0, -2, 0),
                     Qt.AlignmentFlag.AlignVCenter
                     | Qt.AlignmentFlag.AlignLeft
-                    | Qt.TextFlag.TextSingleLine,
+                    | Qt.TextFlag.TextWordWrap,
                     row_text,
                 )
-                y += 28
+                y += 40
                 if y > panel.bottom() - 16:
                     break
 
@@ -1836,6 +1836,16 @@ _NAV_EXACT_HELPER = dedent(
         label.setTextColorRole(fluentqt.Label.TextColorRole.Primary)
         label.setWordWrap(True)
         return label
+
+
+    def configure_navigation_preview(nav, height, object_name):
+        nav.setObjectName(object_name)
+        nav.setMinimumWidth(440)
+        nav.setMaximumWidth(620)
+        nav.setFixedHeight(height)
+        nav.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
     """
 )
 
@@ -1860,7 +1870,9 @@ register_source_samples(
                     surface = NavigationSampleSurface(root, 8)
 
                     nav = fluentqt.NavigationView(surface)
-                    nav.setFixedSize(620, 340)
+                    configure_navigation_preview(
+                        nav, 340, "navigationViewChromeSlotsPreview"
+                    )
                     nav.setDisplayMode(fluentqt.NavigationView.DisplayMode.Left)
                     nav.setExpandedPaneWidth(180)
 
@@ -1966,7 +1978,9 @@ register_source_samples(
                         mode_buttons.append((button, mode))
 
                     nav = fluentqt.NavigationView(surface)
-                    nav.setFixedSize(620, 340)
+                    configure_navigation_preview(
+                        nav, 340, "navigationViewDisplayModesPreview"
+                    )
                     nav.setAnimationEnabled(True)
                     nav.setExpandedPaneWidth(180)
                     nav.setCompactPaneWidth(52)
@@ -2100,7 +2114,9 @@ register_source_samples(
                     )
                     surface = NavigationSampleSurface(root, 8)
                     nav = fluentqt.NavigationView(surface)
-                    nav.setFixedSize(620, 320)
+                    configure_navigation_preview(
+                        nav, 320, "navigationViewContentHostPreview"
+                    )
                     nav.setAnimationEnabled(True)
                     nav.setDisplayMode(fluentqt.NavigationView.DisplayMode.Left)
                     nav.setExpandedPaneWidth(180)
@@ -2599,18 +2615,27 @@ register_source_samples(
                             )
 
                     surface = NavigationSampleSurface(root)
-                    surface.setFixedSize(560, 186)
+                    surface.setObjectName("tabViewHostedPagesSurface")
+                    surface.setMinimumWidth(360)
+                    surface.setMaximumWidth(560)
+                    surface.setFixedHeight(186)
+                    surface.setSizePolicy(
+                        QSizePolicy.Policy.Expanding,
+                        QSizePolicy.Policy.Fixed,
+                    )
                     surface_layout = QVBoxLayout(surface)
                     surface_layout.setContentsMargins(0, 0, 0, 0)
                     surface_layout.setSpacing(0)
 
                     tabs = fluentqt.TabView(surface)
-                    tabs.setFixedSize(560, 40)
+                    tabs.setObjectName("tabViewHostedPagesTabs")
+                    tabs.setFixedHeight(40)
+                    tabs.setSizePolicy(
+                        QSizePolicy.Policy.Expanding,
+                        QSizePolicy.Policy.Fixed,
+                    )
                     tabs.setTabWidthMode(fluentqt.TabView.TabWidthMode.SizeToContent)
                     tabs.setTabReorderEnabled(True)
-                    tabs.setCloseButtonOverlayMode(
-                        fluentqt.TabView.CloseButtonOverlayMode.OnHover
-                    )
                     tabs.setTabsClosable(False)
                     tabs.setAddTabButtonVisible(False)
                     initial_tabs = (
@@ -2619,7 +2644,12 @@ register_source_samples(
                         fluentqt.TabViewItem("Activity", "\ue787"),
                     )
                     host = fluentqt.StackContentHost(surface)
-                    host.setFixedSize(560, 146)
+                    host.setObjectName("tabViewHostedPagesHost")
+                    host.setFixedHeight(146)
+                    host.setSizePolicy(
+                        QSizePolicy.Policy.Expanding,
+                        QSizePolicy.Policy.Fixed,
+                    )
                     for tab in initial_tabs:
                         tabs.addTab(tab)
                         host.addOwnedPage(
@@ -2636,7 +2666,7 @@ register_source_samples(
 
                     def select_tab(index):
                         if 0 <= index < host.count():
-                            host.setCurrentIndex(index)
+                            host.setCurrentIndex(index, 0, True)
                             status.setText(
                                 "Selected tab: {0}".format(tabs.tabAt(index).text)
                             )
@@ -2659,6 +2689,7 @@ register_source_samples(
                     """
                 ),
                 "from PySide6.QtGui import QPainter, QPen\n"
+                "from PySide6.QtWidgets import QSizePolicy\n"
                 "from fluentqt_gallery.foundation_pages import _theme_tokens\n"
                 + _WIDGETS,
             ),

@@ -89,11 +89,13 @@ QVector<GallerySample> treeViewSamples()
                                   "tree->setItemDelegate(new TreeRowDelegate(\n"
                                   "    themeHost, rowHeight, tree, tree));\n"
                                   "tree->setModel(model);\n"
+                                  "tree->setAccessibleName(\"Folders\");\n"
                                   "tree->expandAll();"),
                    [folderColor, fileColor, rowHeight](QWidget* parent) {
                        auto* tree = flatPreviewSurface(new TreeView(parent));
                        tree->setHeaderHidden(true);
                        tree->setFixedHeight(252);
+                       tree->setAccessibleName(QStringLiteral("Folders"));
                        tree->setItemDelegate(new TreeRowDelegate(
                            static_cast<fluent::FluentElement*>(tree), rowHeight, tree, tree));
 
@@ -111,11 +113,13 @@ QVector<GallerySample> treeViewSamples()
                                   "    themeHost, rowHeight, tree, tree);\n"
                                   "d->setCheckBoxVisible(true);\n"
                                   "tree->setItemDelegate(d);\n"
+                                  "tree->setAccessibleName(\"Sync settings\");\n"
                                   "// clicks cascade down + roll the tri-state up"),
                    [folderColor, rowHeight](QWidget* parent) {
                        auto* tree = flatPreviewSurface(new TreeView(parent));
                        tree->setHeaderHidden(true);
                        tree->setFixedHeight(258);
+                       tree->setAccessibleName(QStringLiteral("Sync settings"));
                        auto* delegate = new TreeRowDelegate(
                            static_cast<fluent::FluentElement*>(tree), rowHeight, tree, tree);
                        delegate->setCheckBoxVisible(true);

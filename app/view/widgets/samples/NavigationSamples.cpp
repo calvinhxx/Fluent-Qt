@@ -430,14 +430,14 @@ protected:
         painter.setFont(themeFont(Typography::FontRole::Caption).toQFont());
         int y = panel.top() + 38;
         for (const QString& row : m_activityRows) {
-            const QRect rowRect(panel.left() + 14, y, panel.width() - 28, 24);
+            const QRect rowRect(panel.left() + 14, y, panel.width() - 28, 36);
             painter.setPen(colors.strokeDivider);
             painter.drawLine(rowRect.topLeft(), rowRect.topRight());
             painter.setPen(colors.textSecondary);
             painter.drawText(rowRect.adjusted(2, 0, -2, 0),
-                             Qt::AlignVCenter | Qt::AlignLeft | Qt::TextSingleLine,
+                             Qt::AlignVCenter | Qt::AlignLeft | Qt::TextWordWrap,
                              row);
-            y += 28;
+            y += 40;
             if (y > panel.bottom() - 16)
                 break;
         }
@@ -491,6 +491,17 @@ NavigationSampleSurface* makeNavigationPreviewSurface(QWidget* parent, int spaci
     layout->setSpacing(spacing);
     surface->setLayout(layout);
     return surface;
+}
+
+void configureResponsiveNavigationPreview(NavigationView* navigationView,
+                                          int height,
+                                          const QString& objectName)
+{
+    navigationView->setObjectName(objectName);
+    navigationView->setMinimumWidth(440);
+    navigationView->setMaximumWidth(620);
+    navigationView->setFixedHeight(height);
+    navigationView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 }
 
 struct NavigationPageSpec {
@@ -940,6 +951,10 @@ QVector<GallerySample> navigationViewSamples()
                    QStringLiteral("Chrome slots"),
                    QStringLiteral("Header, main, and footer chrome are caller-owned widgets; NavigationView only assigns their shell geometry."),
                    QStringLiteral("auto* navView = new NavigationView(this);\n"
+                                  "navView->setMinimumWidth(440);\n"
+                                  "navView->setMaximumWidth(620);\n"
+                                  "navView->setFixedHeight(340);\n"
+                                  "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
                                   "navView->setDisplayMode(NavigationView::DisplayMode::Left);\n"
                                   "navView->setExpandedPaneWidth(180);\n"
                                   "navView->setHeaderChromeWidget(headerSection);\n"
@@ -958,7 +973,9 @@ QVector<GallerySample> navigationViewSamples()
                        auto* surface = makeNavigationPreviewSurface(group);
 
                        auto* navView = new NavigationView(surface);
-                       navView->setFixedSize(620, 340);
+                       configureResponsiveNavigationPreview(
+                           navView, 340,
+                           QStringLiteral("navigationViewChromeSlotsPreview"));
                        navView->setDisplayMode(NavigationView::DisplayMode::Left);
                        navView->setExpandedPaneWidth(180);
 
@@ -999,9 +1016,15 @@ QVector<GallerySample> navigationViewSamples()
         makeSample(QStringLiteral("navigation-view-display-modes"),
                    QStringLiteral("DisplayMode and chrome presentation"),
                    QStringLiteral("Switching display mode changes shell geometry; the app also updates chrome orientation and content transition semantics."),
-                   QStringLiteral("navView->setAnimationEnabled(true);\n"
+                   QStringLiteral("auto* navView = new NavigationView(this);\n"
+                                  "navView->setMinimumWidth(440);\n"
+                                  "navView->setMaximumWidth(620);\n"
+                                  "navView->setFixedHeight(340);\n"
+                                  "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                                  "navView->setAnimationEnabled(true);\n"
                                   "navView->setExpandedPaneWidth(180);\n"
                                   "navView->setCompactPaneWidth(52);\n"
+                                  "navView->setTopBarHeight(48);\n"
                                   "auto applyDisplayMode = [&](NavigationView::DisplayMode mode) {\n"
                                   "    const bool top = mode == NavigationView::DisplayMode::Top;\n"
                                   "    const bool compact = mode != NavigationView::DisplayMode::Left;\n"
@@ -1055,7 +1078,9 @@ QVector<GallerySample> navigationViewSamples()
                        }
 
                        auto* navView = new NavigationView(surface);
-                       navView->setFixedSize(620, 340);
+                       configureResponsiveNavigationPreview(
+                           navView, 340,
+                           QStringLiteral("navigationViewDisplayModesPreview"));
                        navView->setAnimationEnabled(true);
                        navView->setExpandedPaneWidth(180);
                        navView->setCompactPaneWidth(52);
@@ -1139,6 +1164,12 @@ QVector<GallerySample> navigationViewSamples()
                    QStringLiteral("StackContentHost page routing"),
                    QStringLiteral("Navigation rows are app-owned; item activation selects pages inserted into NavigationView::contentHost()."),
                    QStringLiteral("auto* navView = new NavigationView(this);\n"
+                                  "navView->setMinimumWidth(440);\n"
+                                  "navView->setMaximumWidth(620);\n"
+                                  "navView->setFixedHeight(320);\n"
+                                  "navView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                                  "navView->setAnimationEnabled(true);\n"
+                                  "navView->setDisplayMode(NavigationView::DisplayMode::Left);\n"
                                   "StackContentHost* host = navView->contentHost();\n"
                                   "navView->setExpandedPaneWidth(180);\n"
                                   "populateNavigationPages(host);\n"
@@ -1152,7 +1183,9 @@ QVector<GallerySample> navigationViewSamples()
                        auto* surface = makeNavigationPreviewSurface(group);
 
                        auto* navView = new NavigationView(surface);
-                       navView->setFixedSize(620, 320);
+                       configureResponsiveNavigationPreview(
+                           navView, 320,
+                           QStringLiteral("navigationViewContentHostPreview"));
                        navView->setAnimationEnabled(true);
                        navView->setDisplayMode(NavigationView::DisplayMode::Left);
                        navView->setExpandedPaneWidth(180);
@@ -1609,7 +1642,17 @@ QVector<GallerySample> tabViewSamples()
         makeSample(QStringLiteral("tab-view-hosted-pages"),
                    QStringLiteral("TabView with hosted pages"),
                    QStringLiteral("currentChanged selects the external StackContentHost page; tabMoved keeps tab order and page order aligned."),
-                   QStringLiteral("auto* tabs = new TabView(this);\n"
+                   QStringLiteral("auto* surface = new QWidget(this);\n"
+                                  "surface->setMinimumWidth(360);\n"
+                                  "surface->setMaximumWidth(560);\n"
+                                  "surface->setFixedHeight(186);\n"
+                                  "surface->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
+                                  "auto* layout = new QVBoxLayout(surface);\n"
+                                  "layout->setContentsMargins(0, 0, 0, 0);\n"
+                                  "layout->setSpacing(0);\n\n"
+                                  "auto* tabs = new TabView(surface);\n"
+                                  "tabs->setFixedHeight(40);\n"
+                                  "tabs->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
                                   "tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);\n"
                                   "tabs->setTabReorderEnabled(true);\n"
                                   "tabs->setTabsClosable(false);\n"
@@ -1617,31 +1660,42 @@ QVector<GallerySample> tabViewSamples()
                                   "tabs->addTab(TabViewItem(\"Home\", Typography::Icons::Home));\n"
                                   "tabs->addTab(TabViewItem(\"Details\", Typography::Icons::Document));\n"
                                   "tabs->addTab(TabViewItem(\"Activity\", Typography::Icons::Calendar));\n\n"
-                                  "auto* host = new StackContentHost(this);\n"
+                                  "auto* host = new StackContentHost(surface);\n"
+                                  "host->setFixedHeight(146);\n"
+                                  "host->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);\n"
                                   "for (int i = 0; i < tabs->tabCount(); ++i)\n"
                                   "    host->insertPage(i, createPage(tabs->tabAt(i).text));\n\n"
                                   "connect(tabs, &TabView::currentChanged,\n"
                                   "        host, [host](int index) { host->setCurrentIndex(index, 0, true); });\n"
                                   "connect(tabs, &TabView::tabMoved,\n"
-                                  "        host, [host](int from, int to) { host->movePage(from, to); });"),
+                                  "        host, [host](int from, int to) { host->movePage(from, to); });\n"
+                                  "layout->addWidget(tabs);\n"
+                                  "layout->addWidget(host);"),
                    [](QWidget* parent) {
                        auto* container = verticalGroup(parent, 8);
                        auto* surface = new NavigationSampleSurface(container);
-                       surface->setFixedSize(560, 186);
+                       surface->setObjectName(QStringLiteral("tabViewHostedPagesSurface"));
+                       surface->setMinimumWidth(360);
+                       surface->setMaximumWidth(560);
+                       surface->setFixedHeight(186);
+                       surface->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
                        auto* surfaceLayout = new QVBoxLayout(surface);
                        surfaceLayout->setContentsMargins(0, 0, 0, 0);
                        surfaceLayout->setSpacing(0);
 
                        auto* tabView = new TabView(surface);
-                       tabView->setFixedSize(560, 40);
+                       tabView->setObjectName(QStringLiteral("tabViewHostedPagesTabs"));
+                       tabView->setFixedHeight(40);
+                       tabView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
                        tabView->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
                        tabView->setTabReorderEnabled(true);
-                       tabView->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::OnHover);
                        tabView->setAddTabButtonVisible(false);
                        tabView->setTabsClosable(false);
 
                        auto* contentHost = new StackContentHost(surface);
-                       contentHost->setFixedSize(560, 146);
+                       contentHost->setObjectName(QStringLiteral("tabViewHostedPagesHost"));
+                       contentHost->setFixedHeight(146);
+                       contentHost->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
                        auto makePage = [contentHost](const QString& title) {
                            return makeHostPage(
                                contentHost,
@@ -1665,7 +1719,7 @@ QVector<GallerySample> tabViewSamples()
                        QObject::connect(tabView, &TabView::currentChanged,
                                         contentHost, [contentHost, status, tabView](int index) {
                                             if (index >= 0 && index < contentHost->count())
-                                                contentHost->setCurrentIndex(index);
+                                                contentHost->setCurrentIndex(index, 0, true);
                                             if (index >= 0)
                                                 status->setText(QStringLiteral("Selected tab: %1")
                                                                     .arg(tabView->tabAt(index).text));
