@@ -248,6 +248,27 @@ TEST_F(TabViewTest, CompletedTabRevealDisablesOpacityEffects)
     QTRY_VERIFY_WITH_TIMEOUT(allEffectsDisabled(), 500);
 }
 
+TEST_F(TabViewTest, SizeToContentLeavesEnoughRoomForFullLabels)
+{
+    auto* tabs = new TabView(window);
+    tabs->setGeometry(20, 20, 560, 40);
+    tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+    tabs->setTabsClosable(false);
+    tabs->setAddTabButtonVisible(false);
+    tabs->addTab(TabViewItem(QStringLiteral("Home"), Typography::Icons::Home));
+    tabs->addTab(TabViewItem(QStringLiteral("Details"), Typography::Icons::Document));
+    tabs->addTab(TabViewItem(QStringLiteral("Activity"), Typography::Icons::Calendar));
+
+    showAndProcess(*tabs);
+
+    const auto labels = tabs->findChildren<Label*>();
+    ASSERT_EQ(labels.size(), tabs->tabCount());
+    for (const Label* label : labels) {
+        ASSERT_NE(label, nullptr);
+        EXPECT_FALSE(label->isTextElided()) << label->text().toStdString();
+    }
+}
+
 TEST_F(TabViewTest, SelectionHandlerCanSynchronouslyDeleteTabView)
 {
     auto* tabs = new TabView;
