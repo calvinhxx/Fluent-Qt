@@ -77,6 +77,27 @@ emits a warning in the `fluentqt.typography` category, and falls back to Qt's
 current system UI family. An icon registration failure also returns `false`,
 but no unrelated system symbol font is substituted.
 
+## Component font precedence
+
+`Button` and `ToggleSwitch` start in theme-managed mode with `fontRole` set to
+`Body`. In this mode, the resolved font follows `ThemeRegistry`, including
+family overrides and font scaling. `setFontRole(...)` selects another semantic
+role while preserving that automatic theme refresh behavior.
+
+Calling `setFont(...)` switches that individual control to explicit-font mode.
+Later theme refreshes do not replace the caller-provided font. The `fontRole`
+property still records the semantic role that will be used if theme management
+is restored; it does not claim that the explicit font currently matches that
+role. Calling `setFontRole(...)` restores theme-managed mode even when the
+requested role equals the stored role. `fontRoleChanged` is emitted only when
+the stored property value changes.
+
+`DatePicker` and `TimePicker` inherit this precedence contract from `Button`.
+Their entry text and an open picker flyout follow the resolved button font, so
+theme-managed updates and explicit per-control overrides remain synchronized.
+The PySide6 bindings expose the inherited `fontRole` property and
+`setFontRole(...)` method with the same behavior.
+
 ## Regeneration
 
 The committed runtime assets are deterministically generated from pinned
