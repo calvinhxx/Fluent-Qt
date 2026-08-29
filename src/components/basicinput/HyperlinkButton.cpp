@@ -58,7 +58,7 @@ void HyperlinkButton::onThemeUpdated() {
     // HyperlinkButton wants accent text even in the Subtle style.
     // zh_CN: 强制使用 Accent 文本色——Button::paintEvent 按 m_style 取色，而
     // HyperlinkButton 即使是 Subtle 样式也希望文本用 Accent 色。
-    update();
+    Button::onThemeUpdated();
 }
 
 void HyperlinkButton::paintEvent(QPaintEvent* event) {

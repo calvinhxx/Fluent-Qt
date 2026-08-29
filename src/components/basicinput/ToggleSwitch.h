@@ -1,6 +1,7 @@
 #ifndef TOGGLESWITCH_H
 #define TOGGLESWITCH_H
 
+#include <QFont>
 #include <QWidget>
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
@@ -37,8 +38,8 @@ class ToggleSwitch : public QWidget, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(QString offContent READ offContent WRITE setOffContent NOTIFY offContentChanged)
     /**
-     * @brief Fluent typography role used for text rendering.
-     * zh_CN: 文本绘制使用的 Fluent 排版角色。
+     * @brief Fluent typography role used while the switch follows theme fonts.
+     * zh_CN: 开关跟随主题字体时用于文本绘制的 Fluent 排版角色。
      */
     Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
@@ -64,6 +65,12 @@ public:
     Typography::FontRole fontRole() const { return m_fontRole; }
     void setFontRole(Typography::FontRole role);
 
+    /**
+     * @brief Sets an explicit font that remains unchanged by later theme refreshes.
+     * zh_CN: 设置显式字体；后续主题刷新不会覆盖该字体。
+     */
+    void setFont(const QFont& font);
+
     qreal knobPosition() const { return m_knobPosition; }
     void setKnobPosition(qreal pos);
 
@@ -85,8 +92,10 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
 private:
+    void applyFontRole();
     void toggle();
     void animateKnob(bool toOn);
     void updateAccessibleText();
@@ -100,6 +109,8 @@ private:
     QString m_onContent;
     QString m_offContent;
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
+    bool m_hasExplicitFont = false;
+    bool m_applyingFontRole = false;
 
     qreal m_knobPosition = 0.0;  // 0.0 = Off, 1.0 = On
     bool m_isHovered = false;

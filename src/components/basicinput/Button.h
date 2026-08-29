@@ -6,6 +6,7 @@
 #include <QEvent>
 #include <QMouseEvent>
 #include <QFocusEvent>
+#include <QFont>
 #include <QPainter>
 #include <QStyleOptionButton>
 #include <QPoint>
@@ -36,10 +37,15 @@ class Button : public QPushButton, public FluentElement, public QMLPlus {
      */
     Q_PROPERTY(ButtonStyle fluentStyle READ fluentStyle WRITE setFluentStyle NOTIFY fluentStyleChanged)
     /**
-     * @brief Density token that controls height and padding, not the font.
-     * zh_CN: 按钮密度 token，仅控制高度与内边距；字体仍通过 setFont()/font() 管理。
+     * @brief Density token that controls height and padding, not typography.
+     * zh_CN: 按钮密度 token，仅控制高度与内边距；字体由 fontRole 或 setFont() 管理。
      */
     Q_PROPERTY(ButtonSize fluentSize READ fluentSize WRITE setFluentSize NOTIFY fluentSizeChanged)
+    /**
+     * @brief Fluent typography role used while the button follows theme fonts.
+     * zh_CN: 按钮跟随主题字体时使用的 Fluent 排版角色。
+     */
+    Q_PROPERTY(Typography::FontRole fontRole READ fontRole WRITE setFontRole NOTIFY fontRoleChanged)
     /**
      * @brief Content layout for text and icon placement.
      * zh_CN: 文本与图标的内容排列方式。
@@ -140,6 +146,15 @@ public:
     ButtonSize fluentSize() const { return m_size; }
     void setFluentSize(ButtonSize size);
 
+    Typography::FontRole fontRole() const { return m_fontRole; }
+    void setFontRole(Typography::FontRole role);
+
+    /**
+     * @brief Sets an explicit font that remains unchanged by later theme refreshes.
+     * zh_CN: 设置显式字体；后续主题刷新不会覆盖该字体。
+     */
+    void setFont(const QFont& font);
+
     ButtonLayout fluentLayout() const { return m_layout; }
     void setFluentLayout(ButtonLayout layout);
 
@@ -168,7 +183,7 @@ public:
     qreal contentOpacity() const { return m_contentOpacity; }
     void setContentOpacity(qreal opacity);
 
-    void onThemeUpdated() override { update(); }
+    void onThemeUpdated() override;
 
     // Size hints include Fluent padding, text, and iconfont content.
     // zh_CN: 尺寸提示会综合 Fluent 内边距、文本和 iconfont 内容。
@@ -197,6 +212,7 @@ public:
 signals:
     void fluentStyleChanged();
     void fluentSizeChanged();
+    void fontRoleChanged();
     void fluentLayoutChanged();
     void focusVisualChanged();
     void interactionStateChanged();
@@ -207,6 +223,7 @@ protected:
     // Paints the full Fluent button surface instead of delegating to QStyle.
     // zh_CN: 自绘完整 Fluent 按钮表面，而不是交给 QStyle 绘制。
     void paintEvent(QPaintEvent* event) override;
+    void changeEvent(QEvent* event) override;
 
     /**
      * @brief Returns the rectangle used to lay out painted icon and text content.
@@ -231,12 +248,17 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
 
 private:
+    void applyFontRole();
+
     ButtonStyle m_style = Standard;
     ButtonSize m_size = StandardSize;
+    Typography::FontRole m_fontRole = Typography::FontRole::Body;
     ButtonLayout m_layout = TextOnly;
     InteractionState m_interactionState = Rest;
     bool m_focusVisual = false;
     bool m_criticalOnHover = false;
+    bool m_hasExplicitFont = false;
+    bool m_applyingFontRole = false;
     bool m_hasCustomCornerRadii = false;
     QMargins m_cornerRadii;
     QPoint m_iconOffset {0, 0}; // Fine-tunes iconfont centering for glyphs with uneven metrics.

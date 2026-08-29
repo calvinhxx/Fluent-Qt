@@ -29,6 +29,7 @@ public:
 class ToggleSwitchTest : public ::testing::Test {
 protected:
     void SetUp() override {
+        fluent::ThemeRegistry::instance().resetToDefaults();
         window = new ToggleSwitchTestWindow();
         window->setFixedSize(500, 500);
         window->setWindowTitle("Fluent ToggleSwitch Visual Test");
@@ -37,6 +38,7 @@ protected:
 
     void TearDown() override {
         delete window;
+        fluent::ThemeRegistry::instance().resetToDefaults();
     }
 
     ToggleSwitchTestWindow* window = nullptr;
@@ -143,6 +145,42 @@ TEST_F(ToggleSwitchTest, SetSameFontRoleNoSignal) {
     QSignalSpy spy(&ts, &ToggleSwitch::fontRoleChanged);
     ts.setFontRole(Typography::FontRole::Body);  // same as default
     EXPECT_EQ(spy.count(), 0);
+}
+
+TEST_F(ToggleSwitchTest, RoleFontTracksThemeAndExplicitFontTakesPrecedence) {
+    ToggleSwitch ts;
+    ts.setAttribute(Qt::WA_DontShowOnScreen);
+    ts.setOnContent(QStringLiteral("On"));
+    ts.show();
+    ASSERT_TRUE(ts.isVisible());
+
+    auto& registry = fluent::ThemeRegistry::instance();
+    auto themed = registry.snapshot();
+    themed.fontFamilyOverride = QStringLiteral("Issue 50 Toggle Theme Font");
+    themed.fontScale = 1.5;
+    ASSERT_TRUE(registry.applySnapshot(themed));
+
+    const QFont roleFont = ts.themeFont(Typography::FontRole::Body).toQFont();
+    EXPECT_EQ(ts.font().family(), roleFont.family());
+    EXPECT_EQ(ts.font().pixelSize(), roleFont.pixelSize());
+    EXPECT_EQ(ts.font().weight(), roleFont.weight());
+
+    QFont explicitFont(QStringLiteral("Issue 50 Toggle Explicit Font"));
+    explicitFont.setPixelSize(23);
+    ts.setFont(explicitFont);
+    const QFont appliedExplicitFont = ts.font();
+
+    themed.fontScale = 1.75;
+    ASSERT_TRUE(registry.applySnapshot(themed));
+    EXPECT_EQ(ts.font(), appliedExplicitFont);
+
+    QSignalSpy spy(&ts, &ToggleSwitch::fontRoleChanged);
+    ts.setFontRole(Typography::FontRole::Body);
+    EXPECT_EQ(spy.count(), 0);
+    const QFont restoredRoleFont = ts.themeFont(Typography::FontRole::Body).toQFont();
+    EXPECT_EQ(ts.font().family(), restoredRoleFont.family());
+    EXPECT_EQ(ts.font().pixelSize(), restoredRoleFont.pixelSize());
+    EXPECT_EQ(ts.font().weight(), restoredRoleFont.weight());
 }
 
 // ── KnobPosition 属性 ────────────────────────────────────────────────────────

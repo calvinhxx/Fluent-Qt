@@ -3,6 +3,7 @@
 #include <QLinearGradient>
 #include <QPainterPath>
 #include <QPointer>
+#include <QScopedValueRollback>
 
 #include "components/foundation/private/DpiPaintMetrics_p.h"
 
@@ -139,7 +140,7 @@ Button::Button(const QString& text, QWidget* parent) : QPushButton(text, parent)
 #ifdef Q_OS_MAC
     setAttribute(Qt::WA_MacShowFocusRect, false);
 #endif
-    setFont(themeFont(Typography::FontRole::Body).toQFont()); // Body by default; callers may setFont() later. zh_CN: 默认 Body，后续可用 setFont() 覆盖。
+    applyFontRole();
 }
 
 Button::Button(QWidget* parent) : QPushButton(parent) {
@@ -147,7 +148,7 @@ Button::Button(QWidget* parent) : QPushButton(parent) {
 #ifdef Q_OS_MAC
     setAttribute(Qt::WA_MacShowFocusRect, false);
 #endif
-    setFont(themeFont(Typography::FontRole::Body).toQFont());
+    applyFontRole();
 }
 
 void Button::setFluentStyle(ButtonStyle style) {
@@ -161,6 +162,56 @@ void Button::setFluentSize(ButtonSize size) {
         update(); 
         emit fluentSizeChanged(); 
     }
+}
+
+void Button::setFontRole(Typography::FontRole role)
+{
+    const bool roleChanged = m_fontRole != role;
+    if (!roleChanged && !m_hasExplicitFont)
+        return;
+
+    m_fontRole = role;
+    m_hasExplicitFont = false;
+    applyFontRole();
+    updateGeometry();
+    update();
+    if (roleChanged)
+        emit fontRoleChanged();
+}
+
+void Button::setFont(const QFont& font)
+{
+    m_hasExplicitFont = true;
+    QPushButton::setFont(font);
+}
+
+void Button::onThemeUpdated()
+{
+    if (!m_hasExplicitFont)
+        applyFontRole();
+    update();
+}
+
+void Button::changeEvent(QEvent* event)
+{
+    QPushButton::changeEvent(event);
+    if (event->type() != QEvent::FontChange)
+        return;
+
+    if (!m_applyingFontRole)
+        m_hasExplicitFont = true;
+    updateGeometry();
+    update();
+}
+
+void Button::applyFontRole()
+{
+    const QFont resolvedFont = themeFont(m_fontRole).toQFont();
+    if (font() == resolvedFont)
+        return;
+
+    const QScopedValueRollback<bool> applyingFontRole(m_applyingFontRole, true);
+    QPushButton::setFont(resolvedFont);
 }
 
 void Button::setFluentLayout(ButtonLayout layout) {

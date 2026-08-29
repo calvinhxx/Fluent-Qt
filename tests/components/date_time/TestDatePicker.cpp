@@ -117,6 +117,7 @@ protected:
 
     void SetUp() override
     {
+        fluent::ThemeRegistry::instance().resetToDefaults();
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
         window = new DatePickerTestWindow();
         window->resize(760, 540);
@@ -127,6 +128,7 @@ protected:
     {
         delete window;
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+        fluent::ThemeRegistry::instance().resetToDefaults();
     }
 
     DatePickerTestWindow* window = nullptr;
@@ -159,12 +161,24 @@ TEST_F(DatePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_NE(dynamic_cast<QWidget*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<fluent::FluentElement*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&picker), nullptr);
+    EXPECT_EQ(picker.fontRole(), Typography::FontRole::Body);
+    EXPECT_EQ(picker.font(), picker.themeFont(Typography::FontRole::Body).toQFont());
 
     picker.setLocale(QLocale(QLocale::Chinese, QLocale::China));
     picker.setSelectedDate(QDate(2026, 7, 21));
     picker.setMonthFormat(DatePicker::MonthFormat::FullMonthName);
     EXPECT_EQ(picker.fieldDisplayText(DatePicker::DateField::Month),
               QLocale(QLocale::Chinese, QLocale::China).monthName(7, QLocale::LongFormat));
+}
+
+TEST_F(DatePickerTest, InheritedFontRoleResolvesThemeTypography)
+{
+    DatePicker picker;
+
+    picker.setFontRole(Typography::FontRole::Caption);
+
+    EXPECT_EQ(picker.fontRole(), Typography::FontRole::Caption);
+    EXPECT_EQ(picker.font(), picker.themeFont(Typography::FontRole::Caption).toQFont());
 }
 
 TEST_F(DatePickerTest, SelectedDateClearAndFormattingDriveSegments)
@@ -466,6 +480,50 @@ TEST_F(DatePickerTest, FontChangeUpdatesEntryAndOpenFlyout)
     EXPECT_EQ(monthColumn->font().pixelSize(), 30);
     EXPECT_EQ(monthColumn->property("selectedRowHeight").toInt(),
               QFontMetrics(largeFont).height() + 12);
+}
+
+TEST_F(DatePickerTest, ThemeFontRefreshPreservesPendingFlyoutDate)
+{
+    DatePicker* picker = new DatePicker(window);
+    picker->setDateRange(QDate(2026, 5, 1), QDate(2026, 5, 31));
+    picker->setSelectedDate(QDate(2026, 5, 21));
+    const QSize defaultEntrySize = picker->sizeHint();
+    picker->setGeometry(40, 60, defaultEntrySize.width(), defaultEntrySize.height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* dayColumn = columnFor(popup, QStringLiteral("DatePickerDayColumn"));
+    ASSERT_NE(dayColumn, nullptr);
+    const QSize defaultPopupSize = popup->size();
+    const int defaultColumnHeight = dayColumn->height();
+
+    QTest::keyClick(dayColumn, Qt::Key_Down);
+    QWidget* focusedBeforeTheme = QApplication::focusWidget();
+    ASSERT_NE(focusedBeforeTheme, nullptr);
+
+    auto& registry = fluent::ThemeRegistry::instance();
+    auto themed = registry.snapshot();
+    themed.fontScale = 2.25;
+    ASSERT_TRUE(registry.applySnapshot(themed));
+    processEvents();
+
+    EXPECT_TRUE(picker->isDropDownOpen());
+    EXPECT_TRUE(popup->isOpen());
+    EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 21));
+    EXPECT_EQ(QApplication::focusWidget(), focusedBeforeTheme);
+    EXPECT_EQ(picker->font(), picker->themeFont(Typography::FontRole::Body).toQFont());
+    EXPECT_EQ(dayColumn->font(), picker->font());
+    EXPECT_GT(picker->sizeHint().height(), defaultEntrySize.height());
+    EXPECT_GT(popup->height(), defaultPopupSize.height());
+    EXPECT_GT(dayColumn->height(), defaultColumnHeight);
+
+    Button* confirm = buttonFor(popup, QStringLiteral("DatePickerConfirmButton"));
+    ASSERT_NE(confirm, nullptr);
+    QTest::mouseClick(confirm, Qt::LeftButton);
+    processEvents();
+
+    EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 22));
+    EXPECT_FALSE(picker->isDropDownOpen());
 }
 
 TEST_F(DatePickerTest, WinUiLayoutUsesContinuousSelectionAndStretchedActions)
