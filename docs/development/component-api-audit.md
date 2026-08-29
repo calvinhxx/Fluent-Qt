@@ -31,6 +31,24 @@ platform matrix lane.
 This gate changes no public C++ behavior. Notify additions, compatibility
 aliases, and eventual removals remain separate reviewed API changes.
 
+## 2026-08-29 Button typography addendum
+
+- Issue #50 identified that `Button`, `DatePicker`, and `TimePicker` bypassed
+  the semantic `fontRole` contract used by other Fluent controls.
+- `Button` now defaults to the `Body` role in theme-managed mode.
+  `setFont(...)` remains a supported explicit per-control override, while a
+  later `setFontRole(...)` restores theme following even when the stored role
+  does not change. During an explicit override, `fontRole` is the role retained
+  for restoration rather than a description of the active `QFont`.
+- `DatePicker` and `TimePicker` inherit the same contract. The PySide6 public
+  surface and API manifest expose the inherited `fontRole` and
+  `setFontRole(...)` members.
+- `ToggleSwitch` keeps its existing `fontRole` API and now applies the same
+  explicit-font precedence instead of overwriting `setFont(...)` on refresh.
+- The focused C++ component family, PySide6 bindings/stubs, component API,
+  documentation, accessibility inventory, and site API catalog gates passed on
+  the Qt 6.9.3 macOS lane; exact working-tree evidence is recorded below.
+
 Date: 2026-05-26
 Change: `audit-component-api-consistency`
 
@@ -350,6 +368,7 @@ platform contracts.
 | API-009 | Medium | Boolean getter aliases | `src/components/collections/ListView.h`, `src/components/collections/GridView.h`, `src/components/collections/FlowView.h`, `src/components/collections/TreeView.h`, `src/components/collections/FlipView.h`, `src/components/navigation/TabView.h`, `src/components/status_info/ProgressRing.h` | Several public bool getters used noun-style names such as `borderVisible()`, `backgroundVisible()`, `showNavigationButtons()`, or `addTabButtonVisible()` while nearby components already use `is*`, `are*`, or `has*` for state queries. | Applied compatible alias getters and focused tests. Existing getters remain public. |
 | API-010 | Low | Open setter alias | `src/components/basicinput/DropDownButton.h` | `DropDownButton` exposes `isOpen()` but only had `setOpen(bool)`, while other open-state components expose `setIsOpen(bool)`. | Applied compatible `setIsOpen(bool)` alias and focused test. Existing `setOpen(bool)` remains public. |
 | API-011 | Medium | Popup property notify gaps | `src/components/dialogs_flyouts/Popup.h`, `src/components/dialogs_flyouts/TeachingTip.h`, `src/components/dialogs_flyouts/ContentDialog.h` | Some overlay properties do not expose NOTIFY signals, but adding these signals should be paired with overlay-state semantics and binding tests rather than rushed into an API audit sweep. | Applied in 1.7-A with overlay-state semantics: NOTIFY + no-op on overlay bindable properties; focused `Contract_*` tests. |
+| API-012 | Medium | Typography precedence | `src/components/basicinput/Button.h`, `src/components/basicinput/ToggleSwitch.h`, `src/components/date_time/DatePicker.h`, `src/components/date_time/TimePicker.h` | Direct font initialization bypassed the semantic role property and left theme refresh versus caller `setFont(...)` precedence implicit; ToggleSwitch overwrote explicit fonts during refresh. | Added a source-compatible `Button::fontRole` contract and aligned ToggleSwitch precedence: theme-managed by default, explicit per-control font until the next `setFontRole(...)`; pickers and PySide6 inherit the Button contract. |
 
 ## Intentional Deviations
 
@@ -379,6 +398,12 @@ platform contracts.
   replacement/external destruction are covered by focused tests.
 - Added direct `FluentMenu` and `FluentMenuItem` tests for typography change
   notification and QAction trigger behavior.
+- Added `Button::fontRole` with `Body` as the default semantic role, retained
+  explicit `setFont(...)` overrides across theme refreshes, and made
+  `setFontRole(...)` the explicit boundary for restoring theme management.
+  `DatePicker` and `TimePicker` inherit the contract, including through
+  PySide6. `ToggleSwitch` now follows the same precedence with its existing
+  `fontRole` API.
 - Added focused tests for the new aliases in DropDownButton, ListView, GridView, FlowView, TreeView, FlipView, TabView, and ProgressRing.
 - Published the durable checklist as [Component API Conventions](component-api-conventions.md) so future work can use it without depending on an agent skill path.
 
@@ -399,6 +424,16 @@ platform contracts.
   SplitButton, ToggleSplitButton, and Menu binaries: 22 automated tests passed,
   0 failed, and 3 VisualCheck tests were skipped through `SKIP_VISUAL_TEST`.
 - Broad category audits that produced report-only findings did not need automated test changes because no production behavior was modified.
+- Issue #50 focused C++ coverage passed across 11 Button-family and picker test
+  binaries: 122 automated tests passed and 10 interactive VisualCheck cases
+  were skipped through `SKIP_VISUAL_TEST=1`.
+- The Qt/PySide6 6.9.3 binding regenerated and verified stubs for 90 classes,
+  then passed the complete `test_pyside6_bindings` CTest target. The API policy
+  reported 0 active deprecations, and the component API gate validated 514
+  properties.
+- Documentation navigation and validation, the 70-component accessibility
+  inventory, and `site/api/catalog.json` checks passed for the same working
+  tree.
 
 <!-- docs-nav:bottom:start -->
 ---
