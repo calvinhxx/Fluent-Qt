@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › API, policy, and writing
 
-[← Component API Conventions](component-api-conventions.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [兼容性策略 →](compatibility-policy.zh-CN.md)
+[← Technical debt roadmap](technical-debt-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [兼容性策略 →](compatibility-policy.zh-CN.md)
 <!-- docs-nav:top:end -->
 
 [简体中文](compatibility-policy.zh-CN.md)
@@ -60,5 +60,5 @@ security or distribution constraint makes that impossible.
 
 <!-- docs-nav:bottom:start -->
 ---
-[← Component API Conventions](component-api-conventions.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [兼容性策略 →](compatibility-policy.zh-CN.md)
+[← Technical debt roadmap](technical-debt-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md) · [兼容性策略 →](compatibility-policy.zh-CN.md)
 <!-- docs-nav:bottom:end -->

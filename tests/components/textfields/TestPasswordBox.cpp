@@ -317,9 +317,7 @@ TEST_F(PasswordBoxTest, Contract_HiddenPasswordUsesInheritedFluentContextMenu)
     EXPECT_EQ(box->password(), QStringLiteral("secret"));
 }
 
-TEST_F(
-    PasswordBoxTest,
-    Contract_PeekContextMenuEndsRevealAndNeverExportsText)
+TEST_F(PasswordBoxTest, Contract_PeekContextMenuEndsRevealAndNeverExportsText)
 {
     auto* box = new PasswordBox(window);
     box->setFixedWidth(240);

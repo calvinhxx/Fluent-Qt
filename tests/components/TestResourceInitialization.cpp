@@ -16,8 +16,7 @@ const int kPreApplicationCatalogSize =
 const bool kPreApplicationInitializationResult =
     fluent::initializeResources();
 
-TEST(ResourceInitializationTest,
-     Contract_PreApplicationAccessDoesNotPoisonResourceInitialization)
+TEST(ResourceInitializationTest, Contract_PreApplicationAccessDoesNotPoisonResourceInitialization)
 {
     EXPECT_FALSE(kPreApplicationInitializationResult);
     EXPECT_GT(kPreApplicationCatalogSize, 0);

@@ -327,8 +327,7 @@ TEST(CommandBarFlyoutTest, PointAndAnchorInvocationCanBeRetargeted)
     EXPECT_NE(sample.flyout.pos(), pointPosition);
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_PresentersTrackActionStateAndActivationRestoresFocus)
+TEST(CommandBarFlyoutTest, Contract_PresentersTrackActionStateAndActivationRestoresFocus)
 {
     FlyoutFixture sample;
     QAction primary(QStringLiteral("&Open"));
@@ -399,8 +398,7 @@ TEST(CommandBarFlyoutTest,
     EXPECT_EQ(QApplication::focusWidget(), &sample.editor);
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_TriggerAndActionDestructionAreDeletionSafe)
+TEST(CommandBarFlyoutTest, Contract_TriggerAndActionDestructionAreDeletionSafe)
 {
     QWidget window;
     window.resize(520, 260);
@@ -468,8 +466,7 @@ TEST(CommandBarFlyoutTest,
     EXPECT_FALSE(repairing.isOpen());
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_DestroyedActionsAreDroppedBeforeCloseLayout)
+TEST(CommandBarFlyoutTest, Contract_DestroyedActionsAreDroppedBeforeCloseLayout)
 {
     QWidget window;
     window.resize(520, 260);
@@ -498,8 +495,7 @@ TEST(CommandBarFlyoutTest,
     EXPECT_FALSE(flyout.isOpen());
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_TransientPointerMoreKeepsMenuRowsUnfocusedUntilKeyboardInput)
+TEST(CommandBarFlyoutTest, Contract_TransientPointerMoreKeepsMenuRowsUnfocusedUntilKeyboardInput)
 {
     FlyoutFixture sample;
     ASSERT_TRUE(
@@ -540,8 +536,7 @@ TEST(CommandBarFlyoutTest,
         QApplication::focusWidget(), secondaryRow);
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_KeyboardCycleExpansionAndEscapeRestoreFocus)
+TEST(CommandBarFlyoutTest, Contract_KeyboardCycleExpansionAndEscapeRestoreFocus)
 {
     FlyoutFixture sample;
     QAction disabled(QStringLiteral("Disabled"));
@@ -617,8 +612,7 @@ TEST(CommandBarFlyoutTest,
     EXPECT_EQ(QApplication::focusWidget(), &sample.editor);
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_NarrowHostUsesStablePriorityOverflowAndRtl)
+TEST(CommandBarFlyoutTest, Contract_NarrowHostUsesStablePriorityOverflowAndRtl)
 {
     QWidget window;
     window.resize(820, 320);
@@ -710,8 +704,7 @@ TEST(CommandBarFlyoutTest,
     EXPECT_GT(firstPresenter->x(), lowFirstPresenter->x());
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_LongSecondaryListScrollsInsideHostCard)
+TEST(CommandBarFlyoutTest, Contract_LongSecondaryListScrollsInsideHostCard)
 {
     QWidget window;
     window.resize(360, 240);
@@ -767,8 +760,7 @@ TEST(CommandBarFlyoutTest,
     EXPECT_GE(rows.first()->height(), 40);
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_AccessibleRolesNamesAcceleratorsAndExpansion)
+TEST(CommandBarFlyoutTest, Contract_AccessibleRolesNamesAcceleratorsAndExpansion)
 {
 #if QT_CONFIG(accessibility)
     FlyoutFixture sample;
@@ -847,8 +839,7 @@ TEST(CommandBarFlyoutTest,
 #endif
 }
 
-TEST(CommandBarFlyoutTest,
-     Contract_ClosedThemeRefreshKeepsSecondaryRowsVisible)
+TEST(CommandBarFlyoutTest, Contract_ClosedThemeRefreshKeepsSecondaryRowsVisible)
 {
     QWidget window;
     window.resize(520, 320);

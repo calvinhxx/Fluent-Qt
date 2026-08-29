@@ -351,7 +351,5 @@ TEST_F(AnchorLayoutTest, FullScenarioVisualCheck) {
         return;
     }
 
-    if (!qEnvironmentVariableIsSet("QT_QPA_PLATFORM") || qEnvironmentVariable("QT_QPA_PLATFORM") != "offscreen") {
-        qApp->exec();
-    }
+    qApp->exec();
 }
