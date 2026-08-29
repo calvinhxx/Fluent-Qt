@@ -18,10 +18,10 @@
     "schema_version": {"const": 1},
     "reviewer": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": ["id", "kind"],
       "properties": {
-        "id": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$"},
         "kind": {"enum": ["ai", "human"]},
         "tool": {"type": "string"},
         "model": {"type": "string"}
@@ -29,12 +29,20 @@
     },
     "evidence_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "verdict": {"enum": ["pass", "fail"]},
-    "summary": {"type": "string", "minLength": 1},
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\S(?:.*\\S)?$"
+    },
     "reviewed_scenarios": {
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": {"type": "string", "minLength": 1}
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^\\S(?:.*\\S)?$"
+      }
     },
     "attestation": {
       "type": "object",
@@ -54,10 +62,10 @@
         "required": ["severity", "scenario_id", "region", "artifact", "message"],
         "properties": {
           "severity": {"enum": ["blocker", "major", "minor", "note"]},
-          "scenario_id": {"type": "string", "minLength": 1},
-          "region": {"type": "string", "minLength": 1},
-          "artifact": {"type": "string", "minLength": 1},
-          "message": {"type": "string", "minLength": 1}
+          "scenario_id": {"type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$"},
+          "region": {"type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$"},
+          "artifact": {"type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$"},
+          "message": {"type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$"}
         }
       }
     }

@@ -6,7 +6,9 @@
 #include <QByteArray>
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QCryptographicHash>
 #include <QDir>
+#include <QFile>
 #include <QEvent>
 #include <QEventLoop>
 #include <QFileInfo>
@@ -38,6 +40,16 @@
 
 namespace fluent::gallery {
 namespace {
+
+QString fileSha256(const QString &path) {
+  QFile file(path);
+  if (!file.open(QIODevice::ReadOnly))
+    return {};
+  QCryptographicHash hash(QCryptographicHash::Sha256);
+  while (!file.atEnd())
+    hash.addData(file.read(1024 * 1024));
+  return QString::fromLatin1(hash.result().toHex());
+}
 
 constexpr int kMinimumPreviewWidth = 320;
 constexpr int kMinimumPreviewHeight = 240;
@@ -567,7 +579,11 @@ GalleryPreviewWindow::GalleryPreviewWindow(const GalleryPreviewOptions &options,
   canvasLayout->setSpacing(0);
   canvasLayout->setSizeConstraint(QLayout::SetMinAndMaxSize);
 
-  m_sampleCard = new GallerySampleCard(m_routeId, sample, m_canvas);
+  // The compiled preview runs through the desktop adapter and must mirror the
+  // installed C++ Gallery's C++-only source presentation. Passing the route id
+  // would request the WebAssembly-only bilingual catalog, which is deliberately
+  // absent from desktop binaries and produces a misleading resource warning.
+  m_sampleCard = new GallerySampleCard(sample, m_canvas);
   m_sampleCard->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   canvasLayout->addWidget(m_sampleCard, 0, Qt::AlignTop);
   canvasLayout->addStretch(1);
@@ -614,6 +630,8 @@ QJsonObject galleryPreviewReport(GalleryPreviewWindow *window,
        QJsonObject{{QStringLiteral("requested"), snapshotRequested},
                    {QStringLiteral("written"), snapshotWritten},
                    {QStringLiteral("path"), snapshotPath},
+                   {QStringLiteral("sha256"),
+                    snapshotWritten ? fileSha256(snapshotPath) : QString()},
                    {QStringLiteral("error"), snapshotError}}}};
 
   const QJsonObject resolvedInteractionReport =
