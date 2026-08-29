@@ -49,6 +49,118 @@ class ClassifyCiChangesTest(unittest.TestCase):
             wasm=False,
         )
 
+    def test_component_api_policy_runs_native_validation(self):
+        self.assert_classification(
+            ["docs/development/component-api-policy.json"],
+            native=True,
+            pyside=False,
+            wasm=False,
+        )
+
+    def test_visual_evidence_inventory_runs_native_validation(self):
+        self.assert_classification(
+            ["docs/development/visual-evidence-inventory.json"],
+            native=True,
+            pyside=False,
+            wasm=False,
+        )
+
+    def test_technical_debt_roadmap_runs_native_validation(self):
+        self.assert_classification(
+            ["docs/development/technical-debt-roadmap.md"],
+            native=True,
+            pyside=False,
+            wasm=False,
+        )
+
+    def test_canonical_component_catalog_runs_native_validation(self):
+        self.assert_classification(
+            ["site/api/catalog.json"],
+            native=True,
+            pyside=False,
+            wasm=False,
+        )
+
+    def test_renamed_governance_files_keep_native_validation(self):
+        rename_pairs = (
+            (
+                "docs/development/component-api-policy-v2.json",
+                "docs/development/component-api-policy.json",
+            ),
+            (
+                "docs/development/technical-debt-roadmap-v2.md",
+                "docs/development/technical-debt-roadmap.md",
+            ),
+            (
+                "docs/development/visual-evidence-inventory-v2.json",
+                "docs/development/visual-evidence-inventory.json",
+            ),
+            ("site/api/catalog-v2.json", "site/api/catalog.json"),
+        )
+        for current_path, previous_path in rename_pairs:
+            with self.subTest(previous_path=previous_path):
+                self.assert_classification(
+                    [current_path, previous_path],
+                    native=True,
+                    pyside=False,
+                    wasm=False,
+                )
+
+    def test_github_pages_include_rename_sources(self):
+        result = MODULE.classify_github_file_pages(
+            [
+                [
+                    {
+                        "filename": (
+                            "docs/development/visual-evidence-inventory-v2.json"
+                        ),
+                        "previous_filename": (
+                            "docs/development/visual-evidence-inventory.json"
+                        ),
+                    }
+                ]
+            ],
+            1,
+        )
+        self.assertEqual(
+            result,
+            MODULE.ChangeClassification(True, False, False),
+        )
+
+    def test_github_pages_preserve_exact_documentation_only_classification(self):
+        result = MODULE.classify_github_file_pages(
+            [
+                [{"filename": "README.md"}],
+                [{"filename": "docs/development/testing-workflow.md"}],
+            ],
+            2,
+        )
+        self.assertEqual(
+            result,
+            MODULE.ChangeClassification(False, False, False),
+        )
+
+    def test_github_file_cap_and_count_mismatch_enable_every_matrix(self):
+        pages = [[{"filename": "README.md"}]]
+        for expected_count in (2, MODULE.GITHUB_PULL_FILES_LIMIT + 1):
+            with self.subTest(expected_count=expected_count):
+                self.assertEqual(
+                    MODULE.classify_github_file_pages(pages, expected_count),
+                    MODULE.ChangeClassification(True, True, True),
+                )
+
+    def test_github_file_payload_is_closed(self):
+        invalid_payloads = (
+            {},
+            [["README.md"]],
+            [[{"previous_filename": "README.md"}]],
+            [[{"filename": "README.md", "previous_filename": ""}]],
+        )
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                with self.assertRaises(ValueError):
+                    MODULE.classify_github_file_pages(payload, 1)
+
     def test_library_change_runs_both_matrices(self):
         self.assert_classification(
             ["src/components/basicinput/Button.cpp"],
