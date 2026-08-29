@@ -161,7 +161,7 @@ TEST_F(ToggleSwitchTest, SizeHintIncludesTrackAndContent) {
     ToggleSwitch ts;
     QSize hint = ts.sizeHint();
     EXPECT_GE(hint.width(), 40);  // at least track width
-    EXPECT_GE(hint.height(), 20); // at least track height
+    EXPECT_GE(hint.height(), Spacing::ControlHeight::Small);
 }
 
 TEST_F(ToggleSwitchTest, SizeHintReflectsContentWidth) {
@@ -173,11 +173,11 @@ TEST_F(ToggleSwitchTest, SizeHintReflectsContentWidth) {
     EXPECT_EQ(longHint.height(), shortHint.height());
 }
 
-TEST_F(ToggleSwitchTest, MinimumSizeHintIsTrack) {
+TEST_F(ToggleSwitchTest, MinimumSizeHintPreservesTrackAndHitHeight) {
     ToggleSwitch ts;
     QSize minHint = ts.minimumSizeHint();
     EXPECT_EQ(minHint.width(), 40);
-    EXPECT_EQ(minHint.height(), 20);
+    EXPECT_EQ(minHint.height(), Spacing::ControlHeight::Small);
 }
 
 // ── Disabled 状态 ────────────────────────────────────────────────────────────

@@ -113,9 +113,12 @@ int ToggleSwitch::contentAreaX() const
 
 QRectF ToggleSwitch::trackRect() const
 {
-    // Center vertically in the control row. zh_CN: 垂直居中到控件行。
-    int rowH = qMax(kTrackH, QFontMetrics(font()).height());
-    int trackY = (rowH - kTrackH) / 2;
+    // Keep the WinUI 20 px visual track centred inside the larger interactive
+    // surface. The extra vertical space improves pointer and touch targeting
+    // without changing the painted control metric.
+    // zh_CN: 保持 WinUI 20 px 可视轨道不变，仅在更大的交互区域内垂直居中，
+    // 从而改善鼠标和触控命中而不改变绘制尺寸。
+    const int trackY = (height() - kTrackH) / 2;
     return QStyle::visualRect(layoutDirection(), rect(),
                               QRect(0, trackY, kTrackW, kTrackH));
 }
@@ -154,14 +157,15 @@ QSize ToggleSwitch::sizeHint() const
     int contentTextW = qMax(fm.horizontalAdvance(m_onContent),
                             fm.horizontalAdvance(m_offContent));
     int w = kTrackW + kContentGap + contentTextW;
-    int h = qMax(kTrackH, fm.height());
+    int h = qMax(::Spacing::ControlHeight::Small,
+                 qMax(kTrackH, fm.height()));
 
     return QSize(w, h);
 }
 
 QSize ToggleSwitch::minimumSizeHint() const
 {
-    return QSize(kTrackW, kTrackH);
+    return QSize(kTrackW, ::Spacing::ControlHeight::Small);
 }
 
 // ── Animation. zh_CN: 动画 ───────────────────────────────────────────────────
