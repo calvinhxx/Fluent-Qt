@@ -985,6 +985,59 @@ class FluentQtBindingTest(unittest.TestCase):
         line_edit.setFontRole(fluentqt.FontRole.BodyStrong)
         self.assertEqual(line_edit.fontRole(), fluentqt.FontRole.BodyStrong)
 
+    def test_button_font_role_is_inherited_by_date_time_pickers(self):
+        fluentqt.reset_theme_tokens()
+        try:
+            for widget_type in (
+                fluentqt.Button,
+                fluentqt.DatePicker,
+                fluentqt.TimePicker,
+            ):
+                with self.subTest(widget_type=widget_type.__name__):
+                    widget = widget_type()
+                    changes = []
+                    widget.fontRoleChanged.connect(
+                        lambda: changes.append(widget.fontRole())
+                    )
+
+                    self.assertEqual(widget.fontRole(), fluentqt.FontRole.Body)
+                    widget.setFontRole(fluentqt.FontRole.BodyStrong)
+                    widget.setFontRole(fluentqt.FontRole.BodyStrong)
+
+                    self.assertEqual(
+                        widget.fontRole(), fluentqt.FontRole.BodyStrong
+                    )
+                    self.assertEqual(
+                        widget.font(),
+                        fluentqt.font_for_role(fluentqt.FontRole.BodyStrong),
+                    )
+                    self.assertEqual(changes, [fluentqt.FontRole.BodyStrong])
+
+            button = fluentqt.Button("Explicit font")
+            button.show()
+            explicit_font = button.font()
+            explicit_font.setPixelSize(23)
+            button.setFont(explicit_font)
+            applied_explicit_font = button.font()
+
+            fluentqt.set_font_scale(1.5)
+            QApplication.processEvents()
+            self.assertEqual(button.font(), applied_explicit_font)
+
+            role_changes = []
+            button.fontRoleChanged.connect(lambda: role_changes.append(True))
+            button.setFontRole(button.fontRole())
+            expected_role_font = fluentqt.font_for_role(fluentqt.FontRole.Body)
+            self.assertEqual(role_changes, [])
+            self.assertEqual(button.font().family(), expected_role_font.family())
+            self.assertEqual(
+                button.font().pixelSize(), expected_role_font.pixelSize()
+            )
+            self.assertEqual(button.font().weight(), expected_role_font.weight())
+            button.close()
+        finally:
+            fluentqt.reset_theme_tokens()
+
     def test_font_icon_properties_and_signals(self):
         empty_icon = fluentqt.FontIcon()
         self.assertEqual(empty_icon.glyph(), "")

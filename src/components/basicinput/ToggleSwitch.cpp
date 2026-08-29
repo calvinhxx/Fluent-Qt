@@ -9,6 +9,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPropertyAnimation>
+#include <QScopedValueRollback>
 #include <QStyle>
 
 namespace fluent::basicinput {
@@ -33,8 +34,7 @@ ToggleSwitch::ToggleSwitch(QWidget* parent)
     setCursor(Qt::PointingHandCursor);
     setFocusPolicy(Qt::StrongFocus);
 
-    auto fs = themeFont(m_fontRole);
-    setFont(fs.toQFont());
+    applyFontRole();
 
     m_knobAnimation = new QPropertyAnimation(
         this, "knobPosition", this);
@@ -45,8 +45,8 @@ ToggleSwitch::ToggleSwitch(QWidget* parent)
 
 void ToggleSwitch::onThemeUpdated()
 {
-    auto fs = themeFont(m_fontRole);
-    setFont(fs.toQFont());
+    if (!m_hasExplicitFont)
+        applyFontRole();
     update();
 }
 
@@ -87,13 +87,45 @@ void ToggleSwitch::setOffContent(const QString& content)
 
 void ToggleSwitch::setFontRole(Typography::FontRole role)
 {
-    if (m_fontRole == role) return;
+    const bool roleChanged = m_fontRole != role;
+    if (!roleChanged && !m_hasExplicitFont)
+        return;
+
     m_fontRole = role;
-    auto fs = themeFont(m_fontRole);
-    setFont(fs.toQFont());
+    m_hasExplicitFont = false;
+    applyFontRole();
     updateGeometry();
     update();
-    emit fontRoleChanged();
+    if (roleChanged)
+        emit fontRoleChanged();
+}
+
+void ToggleSwitch::setFont(const QFont& font)
+{
+    m_hasExplicitFont = true;
+    QWidget::setFont(font);
+}
+
+void ToggleSwitch::changeEvent(QEvent* event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() != QEvent::FontChange)
+        return;
+
+    if (!m_applyingFontRole)
+        m_hasExplicitFont = true;
+    updateGeometry();
+    update();
+}
+
+void ToggleSwitch::applyFontRole()
+{
+    const QFont resolvedFont = themeFont(m_fontRole).toQFont();
+    if (font() == resolvedFont)
+        return;
+
+    const QScopedValueRollback<bool> applyingFontRole(m_applyingFontRole, true);
+    QWidget::setFont(resolvedFont);
 }
 
 void ToggleSwitch::setKnobPosition(qreal pos)

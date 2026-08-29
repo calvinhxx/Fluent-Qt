@@ -112,6 +112,7 @@ protected:
 
     void SetUp() override
     {
+        fluent::ThemeRegistry::instance().resetToDefaults();
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
         window = new TimePickerTestWindow();
         window->resize(760, 540);
@@ -122,6 +123,7 @@ protected:
     {
         delete window;
         fluent::FluentElement::setTheme(fluent::FluentElement::Light);
+        fluent::ThemeRegistry::instance().resetToDefaults();
     }
 
     TimePickerTestWindow* window = nullptr;
@@ -151,6 +153,18 @@ TEST_F(TimePickerTest, DefaultsAndInheritanceMatchComponentPattern)
     EXPECT_NE(dynamic_cast<Button*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<fluent::FluentElement*>(&picker), nullptr);
     EXPECT_NE(dynamic_cast<fluent::QMLPlus*>(&picker), nullptr);
+    EXPECT_EQ(picker.fontRole(), Typography::FontRole::Body);
+    EXPECT_EQ(picker.font(), picker.themeFont(Typography::FontRole::Body).toQFont());
+}
+
+TEST_F(TimePickerTest, InheritedFontRoleResolvesThemeTypography)
+{
+    TimePicker picker;
+
+    picker.setFontRole(Typography::FontRole::Caption);
+
+    EXPECT_EQ(picker.fontRole(), Typography::FontRole::Caption);
+    EXPECT_EQ(picker.font(), picker.themeFont(Typography::FontRole::Caption).toQFont());
 }
 
 TEST_F(TimePickerTest, SelectedTimeClearAndFormattingDriveSegments)
@@ -468,6 +482,50 @@ TEST_F(TimePickerTest, FontChangeUpdatesEntryAndOpenFlyout)
     EXPECT_EQ(hourColumn->font().pixelSize(), 30);
     EXPECT_EQ(hourColumn->property("selectedRowHeight").toInt(),
               QFontMetrics(largeFont).height() + 12);
+}
+
+TEST_F(TimePickerTest, ThemeFontRefreshPreservesPendingFlyoutTime)
+{
+    TimePicker* picker = new TimePicker(window);
+    picker->setMinuteIncrement(15);
+    picker->setSelectedTime(QTime(9, 30));
+    const QSize defaultEntrySize = picker->sizeHint();
+    picker->setGeometry(40, 60, defaultEntrySize.width(), defaultEntrySize.height());
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* minuteColumn = columnFor(popup, QStringLiteral("TimePickerMinuteColumn"));
+    ASSERT_NE(minuteColumn, nullptr);
+    const QSize defaultPopupSize = popup->size();
+    const int defaultColumnHeight = minuteColumn->height();
+
+    QTest::keyClick(minuteColumn, Qt::Key_Down);
+    QWidget* focusedBeforeTheme = QApplication::focusWidget();
+    ASSERT_NE(focusedBeforeTheme, nullptr);
+
+    auto& registry = fluent::ThemeRegistry::instance();
+    auto themed = registry.snapshot();
+    themed.fontScale = 2.25;
+    ASSERT_TRUE(registry.applySnapshot(themed));
+    processEvents();
+
+    EXPECT_TRUE(picker->isDropDownOpen());
+    EXPECT_TRUE(popup->isOpen());
+    EXPECT_EQ(picker->selectedTime(), QTime(9, 30));
+    EXPECT_EQ(QApplication::focusWidget(), focusedBeforeTheme);
+    EXPECT_EQ(picker->font(), picker->themeFont(Typography::FontRole::Body).toQFont());
+    EXPECT_EQ(minuteColumn->font(), picker->font());
+    EXPECT_GT(picker->sizeHint().height(), defaultEntrySize.height());
+    EXPECT_GT(popup->height(), defaultPopupSize.height());
+    EXPECT_GT(minuteColumn->height(), defaultColumnHeight);
+
+    Button* confirm = buttonFor(popup, QStringLiteral("TimePickerConfirmButton"));
+    ASSERT_NE(confirm, nullptr);
+    QTest::mouseClick(confirm, Qt::LeftButton);
+    processEvents();
+
+    EXPECT_EQ(picker->selectedTime(), QTime(9, 45));
+    EXPECT_FALSE(picker->isDropDownOpen());
 }
 
 TEST_F(TimePickerTest, WinUiLayoutUsesContinuousSelectionAndStretchedActions)
