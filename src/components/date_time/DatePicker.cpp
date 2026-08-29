@@ -270,6 +270,7 @@ public:
     QDate pendingDate() const { return m_pendingDate; }
 
     void showForPicker();
+    void refreshLayout();
     void setPendingDate(const QDate& date);
     QDate shifted(DatePicker::DateField field, int offset) const;
     bool canShift(DatePicker::DateField field, int offset) const;
@@ -1052,17 +1053,9 @@ void DatePickerFlyout::showForPicker()
 
     const QDate selected = m_owner->selectedDate();
     setPendingDate(selected.isValid() ? selected : m_owner->date());
-    m_panel->refreshFromFlyout();
-
-    const QSize cardSize = m_panel->sizeHint();
-    const int cardW = cardSize.width();
-    const int cardH = cardSize.height();
-    setFixedSize(cardW + kPopupShadowMargin * 2, cardH + kPopupShadowMargin * 2);
-    m_panel->setGeometry(kPopupShadowMargin, kPopupShadowMargin, cardW, cardH);
-    setAnchor(m_owner);
+    refreshLayout();
 
     if (isOpen() || isVisible()) {
-        move(computePosition());
         show();
         raise();
         setFocus(Qt::PopupFocusReason);
@@ -1072,6 +1065,24 @@ void DatePickerFlyout::showForPicker()
 
     if (auto* column = m_panel->firstVisibleColumn())
         column->setFocus(Qt::PopupFocusReason);
+}
+
+void DatePickerFlyout::refreshLayout()
+{
+    if (!m_owner)
+        return;
+
+    m_panel->refreshFromFlyout();
+
+    const QSize cardSize = m_panel->sizeHint();
+    const int cardW = cardSize.width();
+    const int cardH = cardSize.height();
+    setFixedSize(cardW + kPopupShadowMargin * 2, cardH + kPopupShadowMargin * 2);
+    m_panel->setGeometry(kPopupShadowMargin, kPopupShadowMargin, cardW, cardH);
+    setAnchor(m_owner);
+
+    if (isOpen() || isVisible())
+        move(computePosition());
 }
 
 void DatePickerFlyout::setPendingDate(const QDate& date)
@@ -1651,7 +1662,7 @@ void DatePicker::changeEvent(QEvent* event)
     if (event->type() == QEvent::FontChange) {
         updateGeometry();
         if (m_flyout && m_flyout->isOpen())
-            m_flyout->showForPicker();
+            m_flyout->refreshLayout();
         update();
     }
     if (event->type() == QEvent::LocaleChange
@@ -1674,9 +1685,9 @@ void DatePicker::changeEvent(QEvent* event)
 
 void DatePicker::onThemeUpdated()
 {
+    fluent::basicinput::Button::onThemeUpdated();
     if (m_flyout)
         m_flyout->onThemeUpdated();
-    update();
 }
 
 int DatePicker::visibleFieldCount() const

@@ -26,6 +26,7 @@ public:
 class HyperlinkButtonTest : public ::testing::Test {
 protected:
     void SetUp() override {
+        ThemeRegistry::instance().resetToDefaults();
         window = new HyperlinkButtonTestWindow();
         window->setFixedSize(600, 800);
         window->setWindowTitle("Fluent HyperlinkButton Visual Test");
@@ -93,6 +94,7 @@ protected:
 
     void TearDown() override {
         delete window;
+        ThemeRegistry::instance().resetToDefaults();
     }
 
     HyperlinkButtonTestWindow* window = nullptr;
@@ -154,6 +156,25 @@ TEST_F(HyperlinkButtonTest, Contract_LightAndDarkRestPaintsWithoutOpaqueBlackFil
 
     ThemeRegistry::instance().resetToDefaults();
     FluentElement::setTheme(FluentElement::Light);
+}
+
+TEST_F(HyperlinkButtonTest, Contract_ThemeTypographyUsesButtonBaseContract)
+{
+    HyperlinkButton link(QStringLiteral("Docs"));
+    link.setAttribute(Qt::WA_DontShowOnScreen);
+    link.setFontRole(Typography::FontRole::BodyStrong);
+    link.show();
+
+    auto& registry = ThemeRegistry::instance();
+    auto themed = registry.snapshot();
+    themed.fontScale = 1.5;
+    ASSERT_TRUE(registry.applySnapshot(themed));
+
+    const QFont expected = link.themeFont(Typography::FontRole::BodyStrong).toQFont();
+    EXPECT_EQ(link.fontRole(), Typography::FontRole::BodyStrong);
+    EXPECT_EQ(link.font().family(), expected.family());
+    EXPECT_EQ(link.font().pixelSize(), expected.pixelSize());
+    EXPECT_EQ(link.font().weight(), expected.weight());
 }
 
 TEST_F(HyperlinkButtonTest, VisualCheck) {

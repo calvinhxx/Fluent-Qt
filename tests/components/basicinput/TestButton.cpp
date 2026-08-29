@@ -112,6 +112,16 @@ QImage renderButtonToImage(Button& button)
     return image;
 }
 
+void expectFontMatchesRole(const Button& button, Typography::FontRole role)
+{
+    const QFont expected = button.themeFont(role).toQFont();
+    EXPECT_EQ(button.font().family(), expected.family());
+    if (!expected.styleName().isEmpty())
+        EXPECT_EQ(button.font().styleName(), expected.styleName());
+    EXPECT_EQ(button.font().pixelSize(), expected.pixelSize());
+    EXPECT_EQ(button.font().weight(), expected.weight());
+}
+
 } // namespace
 
 class FluentTestWindow : public QWidget, public fluent::FluentElement {
@@ -126,6 +136,7 @@ public:
 class ButtonTest : public ::testing::Test {
 protected:
     void SetUp() override {
+        ThemeRegistry::instance().resetToDefaults();
         window = new FluentTestWindow();
         window->setFixedSize(600, 850); // 增加高度以容纳新内容
         window->setWindowTitle("Button Properties Comprehensive Test");
@@ -136,11 +147,136 @@ protected:
 
     void TearDown() override {
         delete window;
+        ThemeRegistry::instance().resetToDefaults();
     }
 
     FluentTestWindow* window;
     AnchorLayout* layout;
 };
+
+TEST_F(ButtonTest, DefaultFontRoleUsesBodyTypography) {
+    Button emptyButton;
+    Button textButton(QStringLiteral("Default"));
+
+    EXPECT_EQ(emptyButton.fontRole(), Typography::FontRole::Body);
+    EXPECT_EQ(textButton.fontRole(), Typography::FontRole::Body);
+    expectFontMatchesRole(emptyButton, Typography::FontRole::Body);
+    expectFontMatchesRole(textButton, Typography::FontRole::Body);
+}
+
+TEST_F(ButtonTest, SetFontRoleEmitsOnlyWhenRoleChanges) {
+    Button button;
+    QSignalSpy spy(&button, &Button::fontRoleChanged);
+
+    button.setFontRole(Typography::FontRole::Caption);
+
+    EXPECT_EQ(button.fontRole(), Typography::FontRole::Caption);
+    EXPECT_EQ(spy.count(), 1);
+    expectFontMatchesRole(button, Typography::FontRole::Caption);
+
+    button.setFontRole(Typography::FontRole::Caption);
+
+    EXPECT_EQ(spy.count(), 1);
+    expectFontMatchesRole(button, Typography::FontRole::Caption);
+}
+
+TEST_F(ButtonTest, RoleFontTracksThemeRegistryFamilyAndScale) {
+    Button button(QStringLiteral("Theme typography"));
+    button.setAttribute(Qt::WA_DontShowOnScreen);
+    button.setFontRole(Typography::FontRole::BodyStrong);
+    button.show();
+    ASSERT_TRUE(button.isVisible());
+
+    auto& registry = ThemeRegistry::instance();
+    auto themed = registry.snapshot();
+    themed.fontFamilyOverride = QStringLiteral("Issue 50 Theme Font");
+    themed.fontScale = 1.5;
+
+    ASSERT_TRUE(registry.applySnapshot(themed));
+
+    EXPECT_EQ(button.fontRole(), Typography::FontRole::BodyStrong);
+    expectFontMatchesRole(button, Typography::FontRole::BodyStrong);
+    EXPECT_EQ(button.font().family(), themed.fontFamilyOverride);
+    EXPECT_EQ(button.font().pixelSize(),
+              qRound(Typography::FontSize::Body * themed.fontScale));
+}
+
+TEST_F(ButtonTest, ExplicitFontSurvivesThemeRegistryRefresh) {
+    Button button(QStringLiteral("Explicit typography"));
+    button.setAttribute(Qt::WA_DontShowOnScreen);
+    button.show();
+    ASSERT_TRUE(button.isVisible());
+
+    QFont explicitFont(QStringLiteral("Issue 50 Explicit Font"));
+    explicitFont.setPixelSize(23);
+    explicitFont.setWeight(QFont::DemiBold);
+    button.setFont(explicitFont);
+    const QFont appliedExplicitFont = button.font();
+
+    auto& registry = ThemeRegistry::instance();
+    auto themed = registry.snapshot();
+    themed.fontFamilyOverride = QStringLiteral("Issue 50 Theme Font");
+    themed.fontScale = 1.5;
+
+    ASSERT_TRUE(registry.applySnapshot(themed));
+
+    EXPECT_EQ(button.font(), appliedExplicitFont);
+    EXPECT_EQ(button.fontRole(), Typography::FontRole::Body);
+}
+
+TEST_F(ButtonTest, BaseClassAndPropertyFontOverridesSurviveThemeRefresh) {
+    Button baseOverride(QStringLiteral("Base override"));
+    Button propertyOverride(QStringLiteral("Property override"));
+    baseOverride.setAttribute(Qt::WA_DontShowOnScreen);
+    propertyOverride.setAttribute(Qt::WA_DontShowOnScreen);
+    baseOverride.show();
+    propertyOverride.show();
+
+    QFont baseFont(QStringLiteral("Issue 50 Base Font"));
+    baseFont.setPixelSize(22);
+    static_cast<QWidget*>(&baseOverride)->setFont(baseFont);
+    const QFont appliedBaseFont = baseOverride.font();
+
+    QFont propertyFont(QStringLiteral("Issue 50 Property Font"));
+    propertyFont.setPixelSize(24);
+    ASSERT_TRUE(propertyOverride.setProperty("font", propertyFont));
+    const QFont appliedPropertyFont = propertyOverride.font();
+
+    auto& registry = ThemeRegistry::instance();
+    auto themed = registry.snapshot();
+    themed.fontScale = 1.5;
+    ASSERT_TRUE(registry.applySnapshot(themed));
+
+    EXPECT_EQ(baseOverride.font(), appliedBaseFont);
+    EXPECT_EQ(propertyOverride.font(), appliedPropertyFont);
+}
+
+TEST_F(ButtonTest, SetSameFontRoleRestoresRoleModeAfterExplicitFont) {
+    Button button(QStringLiteral("Restore role typography"));
+    button.setAttribute(Qt::WA_DontShowOnScreen);
+    button.setFontRole(Typography::FontRole::Caption);
+
+    QFont explicitFont(QStringLiteral("Issue 50 Explicit Font"));
+    explicitFont.setPixelSize(23);
+    button.setFont(explicitFont);
+    ASSERT_EQ(button.font().pixelSize(), 23);
+
+    QSignalSpy spy(&button, &Button::fontRoleChanged);
+    button.setFontRole(Typography::FontRole::Caption);
+
+    EXPECT_EQ(spy.count(), 0);
+    EXPECT_EQ(button.fontRole(), Typography::FontRole::Caption);
+    expectFontMatchesRole(button, Typography::FontRole::Caption);
+
+    button.show();
+    ASSERT_TRUE(button.isVisible());
+    auto& registry = ThemeRegistry::instance();
+    auto themed = registry.snapshot();
+    themed.fontScale = 1.5;
+    ASSERT_TRUE(registry.applySnapshot(themed));
+
+    expectFontMatchesRole(button, Typography::FontRole::Caption);
+}
 
 TEST_F(ButtonTest, MouseClickHandlerCanSynchronouslyDeleteButtonOwner) {
     auto* owner = new QWidget;

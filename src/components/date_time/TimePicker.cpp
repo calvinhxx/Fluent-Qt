@@ -278,6 +278,7 @@ public:
     QTime pendingTime() const { return m_pendingTime; }
 
     void showForPicker();
+    void refreshLayout();
     void setPendingTime(const QTime& time);
     QTime shifted(TimePicker::TimeField field, int offset) const;
     bool canShift(TimePicker::TimeField field, int offset) const;
@@ -1058,17 +1059,9 @@ void TimePickerFlyout::showForPicker()
         return;
 
     setPendingTime(m_owner->time());
-    m_panel->refreshFromFlyout();
-
-    const QSize cardSize = m_panel->sizeHint();
-    const int cardW = cardSize.width();
-    const int cardH = cardSize.height();
-    setFixedSize(cardW + kPopupShadowMargin * 2, cardH + kPopupShadowMargin * 2);
-    m_panel->setGeometry(kPopupShadowMargin, kPopupShadowMargin, cardW, cardH);
-    setAnchor(m_owner);
+    refreshLayout();
 
     if (isOpen() || isVisible()) {
-        move(computePosition());
         show();
         raise();
         setFocus(Qt::PopupFocusReason);
@@ -1078,6 +1071,24 @@ void TimePickerFlyout::showForPicker()
 
     if (auto* column = m_panel->firstVisibleColumn())
         column->setFocus(Qt::PopupFocusReason);
+}
+
+void TimePickerFlyout::refreshLayout()
+{
+    if (!m_owner)
+        return;
+
+    m_panel->refreshFromFlyout();
+
+    const QSize cardSize = m_panel->sizeHint();
+    const int cardW = cardSize.width();
+    const int cardH = cardSize.height();
+    setFixedSize(cardW + kPopupShadowMargin * 2, cardH + kPopupShadowMargin * 2);
+    m_panel->setGeometry(kPopupShadowMargin, kPopupShadowMargin, cardW, cardH);
+    setAnchor(m_owner);
+
+    if (isOpen() || isVisible())
+        move(computePosition());
 }
 
 void TimePickerFlyout::setPendingTime(const QTime& time)
@@ -1567,7 +1578,7 @@ void TimePicker::changeEvent(QEvent* event)
     if (event->type() == QEvent::FontChange) {
         updateGeometry();
         if (m_flyout && m_flyout->isOpen())
-            m_flyout->showForPicker();
+            m_flyout->refreshLayout();
         update();
     }
     if (event->type() == QEvent::LocaleChange
@@ -1590,9 +1601,9 @@ void TimePicker::changeEvent(QEvent* event)
 
 void TimePicker::onThemeUpdated()
 {
+    fluent::basicinput::Button::onThemeUpdated();
     if (m_flyout)
         m_flyout->onThemeUpdated();
-    update();
 }
 
 QVector<TimePicker::TimeField> TimePicker::visibleFields() const

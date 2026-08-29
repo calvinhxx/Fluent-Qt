@@ -199,6 +199,10 @@
       "suggestionItemHeight",
       "suggestions"
     ],
+    "Button": [
+      "fontRole",
+      "setFontRole"
+    ],
     "CommandBar": [
       "addAction",
       "addPrimaryAction",
