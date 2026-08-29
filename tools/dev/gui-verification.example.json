@@ -136,6 +136,13 @@
             "target": "galleryEditableComboBoxStatus",
             "milliseconds": 30,
             "expect": {"text": "Custom value: 42"}
+          },
+          {
+            "id": "verify-final-focus",
+            "action": "wait",
+            "target": "@focus",
+            "milliseconds": 0,
+            "expect": {"has_focus": true}
           }
         ]
       },
@@ -192,6 +199,13 @@
             "target": "galleryEditableComboBoxStatus",
             "milliseconds": 30,
             "expect": {"text": "Custom value: 42"}
+          },
+          {
+            "id": "verify-final-focus",
+            "action": "wait",
+            "target": "@focus",
+            "milliseconds": 0,
+            "expect": {"has_focus": true}
           }
         ]
       },

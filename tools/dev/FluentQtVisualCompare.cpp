@@ -3,6 +3,7 @@
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -134,6 +135,17 @@ bool writeImage(const QString& path, const QImage& image, QString& error)
         return false;
     }
     return true;
+}
+
+QString fileSha256(const QString& path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return {};
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    while (!file.atEnd())
+        hash.addData(file.read(1024 * 1024));
+    return QString::fromLatin1(hash.result().toHex());
 }
 
 QJsonValue regionValue(const std::optional<QRect>& region)
@@ -288,7 +300,11 @@ int main(int argc, char* argv[])
     QJsonObject report = tests::support::visualComparisonReport(result);
     report.insert(QStringLiteral("inputs"),
                   QJsonObject{{QStringLiteral("baseline"), baselinePath},
+                              {QStringLiteral("baseline_sha256"),
+                               fileSha256(baselinePath)},
                               {QStringLiteral("actual"), actualPath},
+                              {QStringLiteral("actual_sha256"),
+                               fileSha256(actualPath)},
                               {QStringLiteral("region"), regionValue(region)}});
 
     QString diffPath;
