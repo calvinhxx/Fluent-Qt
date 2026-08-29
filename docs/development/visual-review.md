@@ -76,6 +76,22 @@ Run only VisualCheck tests. The window closes when the reviewer closes it.
 Do not set `SKIP_VISUAL_TEST` for manual review. Automated CTest runs set
 `SKIP_VISUAL_TEST=1` to skip interactive cases.
 
+The checked-in
+[visual evidence inventory](visual-evidence-inventory.json) registers the
+review surface for each high-risk component. A registered `VisualCheck` or
+Gallery route means only that a reviewer has somewhere reproducible to inspect;
+it never means the surface was opened, reviewed, or accepted. Nonstandard
+interactive test names must be listed in `FLUENT_QT_MANUAL_VISUAL_TESTS` so
+they cannot leak into unattended CI lanes.
+
+Automated inventory records distinguish `ci` from `registered-only` execution.
+That field is derived from the configured fast/full and contract lanes; it does
+not turn a locally registered test into CI evidence. Both automated and manual
+evidence must resolve to a CMake-registered source, and test macros stay on one
+line so the current `gtest_add_tests` scanner can discover them. Likewise,
+opening an overlay and verifying its placement are separate states and need
+separate assertions.
+
 For Light/Dark/RTL *regression* against three checked-in PNGs, use the
 opt-in `visual_gate` in [Testing Workflow](testing-workflow.md). That gate is
 not a substitute for this interactive review.
@@ -85,6 +101,8 @@ For repeatable AI-assisted review across a declared state matrix, use
 interaction assertions, named geometry, Inspector budgets, same-environment
 pixel evidence, and a different reviewer identity. It still keeps this manual
 VisualCheck path for animation and operating-system interaction risks.
+Using a desktop Qt platform plugin, including `xcb` under Xvfb, is not proof of
+native input, compositor, screen-reader, IME, or window-manager behavior.
 
 ## Review Checklist
 

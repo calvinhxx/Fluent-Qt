@@ -1,9 +1,12 @@
 # Visual baselines
 
-The root PNGs are checked-in evidence for the representative 1.7
-Light/Dark/RTL visual gate. This is not a screenshot farm. Approved
+The root PNGs are checked-in legacy representative evidence for the 1.7
+Light/Dark/RTL visual gate. They predate digest-bound independent approval
+metadata and do not record the Qt or OS version, display, or reviewer. This is
+not a screenshot farm. Approved
 multi-state GUI verification bundles, when added, live under `gui/` and keep
-their image, capture report, and approval metadata together.
+their image, capture report, sanitized provenance, and approval metadata
+together.
 
 ## Contents
 
@@ -45,14 +48,22 @@ Use the
 for baseline directories under `gui/`. Each scenario bundle contains:
 
 - `baseline.png` — the native-resolution approved pixels;
-- `baseline-report.json` — environment, named geometry, actions, and Inspector evidence;
-- `baseline.json` — independent approver identity plus recipe-contract, image, and report hashes.
+- `baseline-report.json` — an environment-fingerprint digest plus only the recipe-required named rectangles, minimal action results, and Inspector summary, without unrelated widgets, environment strings, artifact/action paths, action payloads, widget labels, individual findings, secrets, or display hardware identifiers;
+- `source-evidence.json` — sanitized source-evidence, recipe, scenario, artifact, binary, and Git digests without absolute paths, commands, logs, or host timestamps;
+- `baseline.json` — independent approver identity plus recipe-contract, image, report, and provenance hashes.
 
 Create or supersede those bundles only with
-`python3 tools/dev/fluent_qt_gui_verify.py approve`. The GUI runner refuses an
-unapproved, self-approved, stale-contract, changed-fingerprint, or modified
-bundle before pixel comparison. The `VISUAL_UPDATE_BASELINE` command above is
-only for the three representative root PNGs. GUI recipes should declare
+`python3 tools/dev/fluent_qt_gui_verify.py approve`. The GUI runner binds the
+complete acceptance policy and refuses an unapproved, stale-contract,
+changed-fingerprint, or modified bundle before pixel comparison. Finalization
+recomputes recipe, capture, baseline, binary, and comparator-report integrity.
+The complete run `evidence.json` remains an ignored local or CI artifact; do
+not copy it into a checked-in bundle because it contains host-specific paths,
+commands, logs, timestamps, and unsanitized screen identity fields.
+Approver/reviewer IDs are declared identities, not an
+external identity proof; keep the human review record outside the generated
+evidence when stronger provenance is required. The `VISUAL_UPDATE_BASELINE`
+command above is only for the three representative root PNGs. GUI recipes should declare
 `"path_base": "repository"` and use paths such as
 `tests/visual-baselines/gui/<component>/<scenario>` so moving a recipe under
 `build/` cannot redirect baseline approval.

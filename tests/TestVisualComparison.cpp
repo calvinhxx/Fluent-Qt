@@ -1,5 +1,7 @@
 #include "VisualComparison.h"
 
+#include <QCryptographicHash>
+#include <QFile>
 #include <QFileInfo>
 #include <QImage>
 #include <QJsonDocument>
@@ -156,6 +158,23 @@ TEST(VisualComparisonCliTest, WritesMachineReadableFailureEvidence)
                   .value(QStringLiteral("different_pixels"))
                   .toDouble(),
               0.0);
+    const QJsonObject inputs = report.value(QStringLiteral("inputs")).toObject();
+    QFile baselineFile(baselinePath);
+    QFile actualFile(actualPath);
+    ASSERT_TRUE(baselineFile.open(QIODevice::ReadOnly));
+    ASSERT_TRUE(actualFile.open(QIODevice::ReadOnly));
+    EXPECT_EQ(
+        inputs.value(QStringLiteral("baseline_sha256")).toString(),
+        QString::fromLatin1(
+            QCryptographicHash::hash(baselineFile.readAll(),
+                                     QCryptographicHash::Sha256)
+                .toHex()));
+    EXPECT_EQ(
+        inputs.value(QStringLiteral("actual_sha256")).toString(),
+        QString::fromLatin1(
+            QCryptographicHash::hash(actualFile.readAll(),
+                                     QCryptographicHash::Sha256)
+                .toHex()));
     EXPECT_TRUE(QFileInfo(diffPath).isFile());
 }
 

@@ -32,7 +32,11 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$"
+          }
         }
       }
     },
@@ -54,7 +58,7 @@
       "additionalProperties": false,
       "required": ["id", "kind"],
       "properties": {
-        "id": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "minLength": 1, "pattern": "^\\S(?:.*\\S)?$"},
         "kind": {"enum": ["ai", "human"]}
       }
     },
@@ -75,14 +79,14 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "max_findings": {"type": "integer", "minimum": 0},
+        "max_findings": {"type": "integer", "minimum": 0, "maximum": 100},
         "max_by_severity": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "info": {"type": "integer", "minimum": 0},
-            "warning": {"type": "integer", "minimum": 0},
-            "error": {"type": "integer", "minimum": 0}
+            "info": {"type": "integer", "minimum": 0, "maximum": 100},
+            "warning": {"type": "integer", "minimum": 0, "maximum": 100},
+            "error": {"type": "integer", "minimum": 0, "maximum": 100}
           }
         },
         "allowed_codes": {
@@ -97,10 +101,11 @@
         {"type": "string", "minLength": 1},
         {
           "type": "object",
+          "additionalProperties": false,
           "required": ["object_name"],
           "properties": {
             "object_name": {"type": "string", "minLength": 1},
-            "tolerance": {"type": "integer", "minimum": 0},
+            "tolerance": {"type": "integer", "minimum": 0, "maximum": 32},
             "not_clipped": {"type": "boolean"},
             "min_width": {"type": "integer", "minimum": 1},
             "min_height": {"type": "integer", "minimum": 1},
@@ -108,6 +113,7 @@
             "max_height": {"type": "integer", "minimum": 1},
             "rect": {
               "type": "object",
+              "additionalProperties": false,
               "required": ["x", "y", "width", "height"],
               "properties": {
                 "x": {"type": "integer"},
@@ -122,9 +128,10 @@
     },
     "geometry": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["required"],
       "properties": {
-        "tolerance": {"type": "integer", "minimum": 0},
+        "tolerance": {"type": "integer", "minimum": 0, "maximum": 32},
         "required": {
           "type": "array",
           "minItems": 1,
@@ -134,9 +141,10 @@
     },
     "geometry_override": {
       "type": "object",
+      "additionalProperties": false,
       "minProperties": 1,
       "properties": {
-        "tolerance": {"type": "integer", "minimum": 0},
+        "tolerance": {"type": "integer", "minimum": 0, "maximum": 32},
         "required": {
           "type": "array",
           "minItems": 1,
@@ -146,37 +154,105 @@
     },
     "pixel": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "channel_threshold": {"type": "integer", "minimum": 0, "maximum": 255},
+        "channel_threshold": {"type": "integer", "minimum": 0, "maximum": 64},
         "max_different_pixels": {"type": "integer", "minimum": 0},
-        "max_different_ratio": {"type": "number", "minimum": 0, "maximum": 1},
-        "search_radius": {"type": "integer", "minimum": 0},
-        "max_translation": {"type": "integer", "minimum": 0},
-        "edge_threshold": {"type": "integer", "minimum": 0, "maximum": 255},
+        "max_different_ratio": {"type": "number", "minimum": 0, "maximum": 0.1},
+        "search_radius": {"type": "integer", "minimum": 0, "maximum": 32},
+        "max_translation": {"type": "integer", "minimum": 0, "maximum": 32},
+        "edge_threshold": {"type": "integer", "minimum": 1, "maximum": 255},
         "regions": {
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "required": ["id", "rect"],
             "properties": {
               "id": {"$ref": "#/$defs/id"},
               "rect": {
                 "type": "array",
                 "prefixItems": [
-                  {"type": "integer"},
-                  {"type": "integer"},
-                  {"type": "integer", "minimum": 1},
-                  {"type": "integer", "minimum": 1}
+                  {"type": "integer", "minimum": 0, "maximum": 32768},
+                  {"type": "integer", "minimum": 0, "maximum": 32768},
+                  {"type": "integer", "minimum": 1, "maximum": 32768},
+                  {"type": "integer", "minimum": 1, "maximum": 32768}
                 ],
                 "minItems": 4,
                 "maxItems": 4
               },
               "coordinate_space": {"enum": ["logical", "device"]},
-              "policy": {"type": "object"}
+              "policy": {"$ref": "#/$defs/pixel_override"}
             }
           }
         }
       }
+    },
+    "pixel_override": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "channel_threshold": {"type": "integer", "minimum": 0, "maximum": 64},
+        "max_different_pixels": {"type": "integer", "minimum": 0},
+        "max_different_ratio": {"type": "number", "minimum": 0, "maximum": 0.1},
+        "search_radius": {"type": "integer", "minimum": 0, "maximum": 32},
+        "max_translation": {"type": "integer", "minimum": 0, "maximum": 32},
+        "edge_threshold": {"type": "integer", "minimum": 1, "maximum": 255}
+      }
+    },
+    "action_script": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "steps"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "stop_on_failure": {"type": "boolean"},
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/action_step"}
+        }
+      }
+    },
+    "action_step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "action": {"enum": ["focus", "click", "mouse_move", "mouse_press", "mouse_release", "mouse_leave", "key", "type_text", "set_property", "wait"]},
+        "target": {"type": "string", "minLength": 1},
+        "descendant_class": {"type": "string", "minLength": 1},
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}}
+        },
+        "button": {"enum": ["left", "right", "middle"]},
+        "modifiers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["shift", "control", "ctrl", "alt", "meta", "shortcut"]}
+        },
+        "key": {"type": "string", "minLength": 1},
+        "text": {"type": "string", "minLength": 1},
+        "property": {"type": "string", "minLength": 1},
+        "value": {},
+        "milliseconds": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "after_ms": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "observe": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "expect": {"type": "object", "minProperties": 1}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"action": {"const": "type_text"}},
+            "required": ["action"]
+          },
+          "then": {"required": ["text"]}
+        }
+      ]
     },
     "defaults": {
       "type": "object",
@@ -184,7 +260,7 @@
       "required": ["inspector", "geometry", "pixel"],
       "properties": {
         "settle_ms": {"type": "integer", "minimum": 0, "maximum": 10000},
-        "timeout_seconds": {"type": "integer", "minimum": 1},
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 300},
         "require_native_desktop": {"type": "boolean"},
         "inspector": {"$ref": "#/$defs/inspector"},
         "geometry": {"$ref": "#/$defs/geometry"},
@@ -222,18 +298,22 @@
         "review": {
           "type": "array",
           "minItems": 1,
-          "items": {"type": "string", "minLength": 1}
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^\\S(?:.*\\S)?$"
+          }
         },
         "actions": {
           "description": "Inline action object or absolute/path_base-relative action script.",
           "oneOf": [
             {"type": "string", "minLength": 1},
-            {"type": "object"}
+            {"$ref": "#/$defs/action_script"}
           ]
         },
         "environment": {"$ref": "#/$defs/environment"},
         "settle_ms": {"type": "integer", "minimum": 0, "maximum": 10000},
-        "timeout_seconds": {"type": "integer", "minimum": 1},
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 300},
         "require_native_desktop": {"type": "boolean"},
         "inspector": {"$ref": "#/$defs/inspector"},
         "geometry": {"$ref": "#/$defs/geometry_override"},

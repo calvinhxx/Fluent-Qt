@@ -363,6 +363,10 @@ bool performAction(QWidget *target, const QJsonObject &step, QString &mechanism,
   }
   if (action == QStringLiteral("type_text")) {
     const QString text = step.value(QStringLiteral("text")).toString();
+    if (text.isEmpty()) {
+      error = QStringLiteral("type_text requires non-empty text.");
+      return false;
+    }
     mechanism = QStringLiteral("input-event");
     for (const QChar character : text) {
       QKeyEvent press(QEvent::KeyPress, 0, modifiers, QString(character));
@@ -467,6 +471,12 @@ executeGalleryPreviewActions(QWidget *root, const QJsonObject &script,
   }
 
   const QJsonArray steps = script.value(QStringLiteral("steps")).toArray();
+  if (steps.isEmpty()) {
+    return {failedReport(
+                sourcePath,
+                QStringLiteral("Action script steps must not be empty.")),
+            false};
+  }
   const bool stopOnFailure =
       script.value(QStringLiteral("stop_on_failure")).toBool(true);
   QJsonArray results;
@@ -487,6 +497,7 @@ executeGalleryPreviewActions(QWidget *root, const QJsonObject &script,
     }
 
     const QJsonObject step = stepValue.toObject();
+    result.insert(QStringLiteral("request"), step);
     const QString id = step.value(QStringLiteral("id"))
                            .toString(QStringLiteral("step-%1").arg(index + 1));
     const QString action =

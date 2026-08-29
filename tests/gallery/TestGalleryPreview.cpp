@@ -14,6 +14,7 @@
 #include "components/foundation/FluentElement.h"
 #include "view/preview/GalleryPreviewActions.h"
 #include "view/preview/GalleryPreviewApplication.h"
+#include "view/widgets/GalleryCodeBlock.h"
 #include "view/widgets/GallerySampleCard.h"
 
 namespace {
@@ -170,6 +171,46 @@ TEST(GalleryPreviewTest, RejectsMissingInteractionTargetsWithoutClaimingPass) {
                   .contains(QStringLiteral("missingWidget")));
 }
 
+TEST(GalleryPreviewTest, RejectsEmptyInteractionScriptWithoutClaimingPass) {
+  QWidget root;
+  const QJsonObject script{
+      {QStringLiteral("schema_version"), 1},
+      {QStringLiteral("steps"), QJsonArray{}}};
+
+  const auto result =
+      fluent::gallery::executeGalleryPreviewActions(&root, script);
+  EXPECT_FALSE(result.passed);
+  EXPECT_EQ(result.report.value(QStringLiteral("status")).toString(),
+            QStringLiteral("fail"));
+  EXPECT_TRUE(result.report.value(QStringLiteral("error"))
+                  .toString()
+                  .contains(QStringLiteral("must not be empty")));
+}
+
+TEST(GalleryPreviewTest, RejectsEmptyTypedTextWithoutClaimingInput) {
+  QWidget root;
+  QLineEdit editor(&root);
+  editor.setObjectName(QStringLiteral("editor"));
+  const QJsonObject script{
+      {QStringLiteral("schema_version"), 1},
+      {QStringLiteral("steps"),
+       QJsonArray{QJsonObject{
+           {QStringLiteral("action"), QStringLiteral("type_text")},
+           {QStringLiteral("target"), QStringLiteral("editor")},
+           {QStringLiteral("text"), QString()}}}}};
+
+  const auto result =
+      fluent::gallery::executeGalleryPreviewActions(&root, script);
+  EXPECT_FALSE(result.passed);
+  EXPECT_TRUE(result.report.value(QStringLiteral("steps"))
+                  .toArray()
+                  .first()
+                  .toObject()
+                  .value(QStringLiteral("message"))
+                  .toString()
+                  .contains(QStringLiteral("non-empty text")));
+}
+
 TEST(GalleryPreviewTest, RejectsUnsafeInteractionDelayWithoutWaiting) {
   QWidget root;
   const QJsonObject script{
@@ -278,6 +319,9 @@ TEST(GalleryPreviewTest, HostsOneRealCardAndBuildsVersionedInspectorReport) {
   EXPECT_EQ(window.layoutDirection(), Qt::RightToLeft);
   EXPECT_EQ(window.sampleCard()->sampleId(), QStringLiteral("button-styles"));
   EXPECT_NE(window.sampleCard()->previewWidget(), nullptr);
+  ASSERT_NE(window.sampleCard()->codeBlock(), nullptr);
+  EXPECT_FALSE(window.sampleCard()->codeBlock()->hasPythonCode());
+  EXPECT_EQ(window.sampleCard()->codeBlock()->languageSelector(), nullptr);
 
   const QJsonObject report =
       fluent::gallery::galleryPreviewReport(&window, options);
