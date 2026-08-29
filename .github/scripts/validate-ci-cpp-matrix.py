@@ -73,6 +73,30 @@ REQUIRED_FIELDS = {
     "windows_arm64_cross",
 }
 
+REQUIRED_EXECUTION_LANES = {
+    "ci_fast": {
+        "id": "linux-x64-qt62-fast",
+        "mode": "fast",
+        "build_target": "fluent_qt_ci_fast_tests",
+        "test_labels": "^ci_fast$",
+        "exclude_labels": "^(manual_visual|local_desktop)$",
+    },
+    "ci_full": {
+        "id": "linux-x64-qt62-full",
+        "mode": "full",
+        "build_target": "fluent_qt_all_tests",
+        "test_labels": "^ci_full$",
+        "exclude_labels": "^(manual_visual|local_desktop)$",
+    },
+    "contract": {
+        "id": "linux-x64-qt62-contract-sanitizers",
+        "mode": "full",
+        "build_target": "fluent_qt_contract_tests",
+        "test_labels": "^contract$",
+        "exclude_labels": "^(known_contract_gap|manual_visual|local_desktop)$",
+    },
+}
+
 
 def validate_catalog(data: Any) -> list[str]:
     errors: list[str] = []
@@ -89,6 +113,7 @@ def validate_catalog(data: Any) -> list[str]:
     ids_by_mode = {mode: set() for mode in EXPECTED_IDS}
     trial_ids_by_mode = {mode: set() for mode in EXPECTED_IDS}
     all_ids: set[str] = set()
+    scenarios_by_id: dict[str, dict[str, Any]] = {}
     for index, scenario in enumerate(scenarios):
         context = f"scenarios[{index}]"
         if not isinstance(scenario, dict):
@@ -107,6 +132,7 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(f"duplicate scenario id: {scenario_id}")
         else:
             all_ids.add(scenario_id)
+            scenarios_by_id[scenario_id] = scenario
             if mode in ids_by_mode:
                 ids_by_mode[mode].add(scenario_id)
 
@@ -154,6 +180,35 @@ def validate_catalog(data: Any) -> list[str]:
             errors.append(
                 f"{mode} first-window trials have unexpected ids: "
                 f"{', '.join(unexpected_trials)}"
+            )
+
+    for lane, contract in REQUIRED_EXECUTION_LANES.items():
+        scenario_id = contract["id"]
+        scenario = scenarios_by_id.get(scenario_id)
+        if scenario is None:
+            continue
+        context = f"{lane} execution lane {scenario_id}"
+        if scenario.get("mode") != contract["mode"]:
+            errors.append(f"{context} must use mode={contract['mode']}")
+        if scenario.get("build") is not True:
+            errors.append(f"{context} must build")
+        if scenario.get("test") is not True:
+            errors.append(f"{context} must test")
+        targets = scenario.get("build_targets")
+        if (
+            not isinstance(targets, str)
+            or contract["build_target"] not in targets.split()
+        ):
+            errors.append(
+                f"{context} must build target {contract['build_target']}"
+            )
+        if scenario.get("test_labels") != contract["test_labels"]:
+            errors.append(
+                f"{context} must select labels {contract['test_labels']}"
+            )
+        if scenario.get("exclude_labels") != contract["exclude_labels"]:
+            errors.append(
+                f"{context} must exclude labels {contract['exclude_labels']}"
             )
 
     return errors

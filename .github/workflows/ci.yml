@@ -46,13 +46,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
       - name: Validate CI orchestration contracts
         shell: bash
         run: |
           python3 .github/scripts/test_classify_ci_changes.py
           python3 .github/scripts/test_check_release_branch_freshness.py
-          python3 .github/scripts/validate-ci-workflow-boundaries.py
+          python3 .github/scripts/test_validate_ci_workflow_boundaries.py
           python3 scripts/release/test_preflight.py
           python3 tools/docs/validate_documentation.py --project-root . --self-test
           python3 tools/ai/validate_ai_assets.py --project-root .
@@ -60,7 +59,6 @@ jobs:
           python3 tools/onboarding/test_fluentqt_create.py
           python3 tools/onboarding/test_fluentqt_trial.py
           python3 -m unittest discover -s tools/dev -p 'test_fluent_qt_*.py'
-
       - name: Require a current main base for release pull requests
         if: >-
           ${{
@@ -76,33 +74,32 @@ jobs:
           --repository "$GITHUB_REPOSITORY"
           --base-ref "${{ github.base_ref }}"
           --head-sha "${{ github.event.pull_request.head.sha }}"
-
       - name: Classify pull-request changes
         id: changes
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
         shell: bash
         run: |
           set -euo pipefail
-
           should_build=true
           should_build_pyside=true
           should_build_wasm=true
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            changed_files="$(
-              gh api --paginate \
+            changed_files_json="$(
+              gh api --paginate --slurp \
                 "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/files?per_page=100" \
-                --jq '.[].filename'
+                --header "X-GitHub-Api-Version: 2022-11-28"
             )"
-            if [[ -z "$changed_files" ]]; then
+            if [[ -z "$changed_files_json" ]]; then
               echo "::error::The pull request did not report any changed files."
               exit 1
             fi
-
             classification="$(
-              python3 .github/scripts/classify_ci_changes.py \
-                <<< "$changed_files"
+              python3 .github/scripts/classify_ci_changes.py --github-files-json \
+                --expected-count "$PR_CHANGED_FILES" \
+                <<< "$changed_files_json"
             )"
             should_build="$(
               sed -n 's/^should_build=//p' <<< "$classification"
@@ -114,7 +111,6 @@ jobs:
               sed -n 's/^should_build_wasm=//p' <<< "$classification"
             )"
           fi
-
           for value in "$should_build" "$should_build_pyside" "$should_build_wasm"; do
             [[ "$value" == "true" || "$value" == "false" ]] || {
               echo "::error::Invalid CI change classification value: $value"
@@ -126,7 +122,6 @@ jobs:
             echo "::error::A specialized module cannot run when native validation is skipped."
             exit 1
           fi
-
           echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
           echo "should_build_pyside=$should_build_pyside" >> "$GITHUB_OUTPUT"
           echo "should_build_wasm=$should_build_wasm" >> "$GITHUB_OUTPUT"
@@ -145,13 +140,11 @@ jobs:
           else
             echo "No browser-affecting files changed: skipping WebAssembly validation."
           fi
-
       - name: Select validation tier
         id: mode
         shell: bash
         run: |
           set -euo pipefail
-
           mode="fast"
           python_release_bundle="false"
           run_macos_release_validation="true"
@@ -253,6 +246,12 @@ jobs:
             echo "::error::CI planning finished with result: $PLAN_RESULT"
             exit 1
           fi
+          for value in "$SHOULD_BUILD" "$SHOULD_BUILD_PYSIDE" "$SHOULD_BUILD_WASM"; do
+            [[ "$value" == "true" || "$value" == "false" ]] || {
+              echo "::error::Invalid or missing CI classification output: $value"
+              exit 1
+            }
+          done
           if [[ "$SHOULD_BUILD" == "true" && "$CPP_RESULT" != "success" ]]; then
             echo "::error::The C++ validation module finished with result: $CPP_RESULT"
             exit 1

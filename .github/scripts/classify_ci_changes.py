@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import sys
 from dataclasses import dataclass
 
@@ -20,6 +22,13 @@ DOCUMENTATION_PREFIXES = (
 
 DOCUMENTATION_ROOT_FILES = {
     "llms.txt",
+}
+
+NON_DOCUMENTATION_PATHS = {
+    "docs/development/component-api-policy.json",
+    "docs/development/technical-debt-roadmap.md",
+    "docs/development/visual-evidence-inventory.json",
+    "site/api/catalog.json",
 }
 
 PYSIDE_PREFIXES = (
@@ -91,6 +100,8 @@ WASM_CI_FILES = {
     ".github/workflows/pages.yml",
 }
 
+GITHUB_PULL_FILES_LIMIT = 3000
+
 
 @dataclass(frozen=True)
 class ChangeClassification:
@@ -101,6 +112,8 @@ class ChangeClassification:
 
 def is_documentation_path(path: str) -> bool:
     """Return whether a path is covered by the documentation-only gate."""
+    if path in NON_DOCUMENTATION_PATHS:
+        return False
     return (
         path.endswith(".md")
         or path == "LICENSE"
@@ -146,10 +159,70 @@ def classify_changes(paths: list[str]) -> ChangeClassification:
     )
 
 
+def classify_github_file_pages(
+    value: object, expected_count: int
+) -> ChangeClassification:
+    """Classify slurped PR-file pages, failing closed on API truncation."""
+    if (
+        not isinstance(expected_count, int)
+        or isinstance(expected_count, bool)
+        or expected_count < 1
+    ):
+        raise ValueError("Expected pull-request changed_files must be positive")
+    if not isinstance(value, list) or not all(
+        isinstance(page, list) for page in value
+    ):
+        raise ValueError("GitHub pull-request files must be a list of pages")
+
+    current_paths: list[str] = []
+    previous_paths: list[str] = []
+    for page in value:
+        for item in page:
+            if not isinstance(item, dict):
+                raise ValueError("GitHub pull-request file entries must be objects")
+            filename = item.get("filename")
+            if not isinstance(filename, str) or not filename:
+                raise ValueError("GitHub pull-request file entry has no filename")
+            current_paths.append(filename)
+            previous = item.get("previous_filename")
+            if previous is not None:
+                if not isinstance(previous, str) or not previous:
+                    raise ValueError(
+                        "GitHub pull-request previous_filename must be non-empty"
+                    )
+                previous_paths.append(previous)
+
+    api_is_incomplete = (
+        expected_count > GITHUB_PULL_FILES_LIMIT
+        or len(current_paths) != expected_count
+        or len(set(current_paths)) != len(current_paths)
+    )
+    if api_is_incomplete:
+        return ChangeClassification(True, True, True)
+    return classify_changes([*current_paths, *previous_paths])
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--github-files-json", action="store_true")
+    parser.add_argument("--expected-count", type=int)
+    args = parser.parse_args()
     try:
-        result = classify_changes(sys.stdin.read().splitlines())
-    except ValueError as error:
+        if args.github_files_json:
+            if args.expected_count is None:
+                raise ValueError(
+                    "--expected-count is required with --github-files-json"
+                )
+            result = classify_github_file_pages(
+                json.loads(sys.stdin.read()), args.expected_count
+            )
+        else:
+            if args.expected_count is not None:
+                raise ValueError(
+                    "--expected-count requires --github-files-json"
+                )
+            result = classify_changes(sys.stdin.read().splitlines())
+    except (ValueError, RecursionError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
 
