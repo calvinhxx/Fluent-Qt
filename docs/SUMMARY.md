@@ -25,6 +25,7 @@ standalone reading tasks.
 - [Development](development/README.md)
   - **API, policy, and writing**
     - [Component API Conventions](development/component-api-conventions.md)
+    - [Technical debt roadmap](development/technical-debt-roadmap.md)
     - [Compatibility Policy](development/compatibility-policy.md)
     - [兼容性策略](development/compatibility-policy.zh-CN.md)
     - [Source Comment Style](development/comment-style.md)

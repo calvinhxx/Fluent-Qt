@@ -1,0 +1,1342 @@
+{
+  "schema_version": 1,
+  "phase_status": "active",
+  "source_catalog": "site/api/catalog.json",
+  "evidence_status_model": [
+    "surface-registered",
+    "execution-observed",
+    "artifacts-verified",
+    "comparison-passed",
+    "independent-review-required"
+  ],
+  "risk_families": [
+    {
+      "id": "transient-overlay",
+      "severity": "high",
+      "owner": "fluentqt-maintainers:transient-surfaces",
+      "rationale": "Transient surfaces combine placement, focus, dismissal, stacking, and animation state that is easy to regress without changing an API.",
+      "components": [
+        "auto-suggest-box",
+        "calendar-date-picker",
+        "coach-mark",
+        "color-picker",
+        "combobox",
+        "content-dialog",
+        "date-picker",
+        "dialog",
+        "drawer-view",
+        "dropdown-button",
+        "flyout",
+        "multi-select-combobox",
+        "popup",
+        "split-button",
+        "teaching-tip",
+        "time-picker",
+        "toast",
+        "toggle-split-button",
+        "tooltip"
+      ],
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "open",
+        "placement",
+        "keyboard-focus",
+        "dismissed",
+        "narrow",
+        "native-animation"
+      ],
+      "manual_contract": {
+        "status": "human-required",
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "procedure": "docs/development/visual-review.md",
+        "reason": "Native popup stacking, focus transfer, light-dismiss behavior, and animation polish require a real desktop review."
+      }
+    },
+    {
+      "id": "calendar-layout",
+      "severity": "high",
+      "owner": "fluentqt-maintainers:date-time",
+      "rationale": "Calendar geometry changes across month data, selection, locale, direction, and responsive width.",
+      "components": [
+        "calendar-view"
+      ],
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "selection",
+        "keyboard-focus",
+        "narrow",
+        "rtl",
+        "native-animation"
+      ],
+      "manual_contract": {
+        "status": "human-required",
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "procedure": "docs/development/visual-review.md",
+        "reason": "Locale typography, focus visibility, and native animation timing remain human-reviewed desktop behavior."
+      }
+    },
+    {
+      "id": "command-layering",
+      "severity": "high",
+      "owner": "fluentqt-maintainers:command-surfaces",
+      "rationale": "Commands redistribute into overflow layers whose order, clipping, focus, and popup z-order must remain stable.",
+      "components": [
+        "command-bar",
+        "command-bar-flyout",
+        "menu",
+        "menu-bar"
+      ],
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "open-layering",
+        "keyboard-focus",
+        "narrow",
+        "rtl",
+        "native-popup"
+      ],
+      "manual_contract": {
+        "status": "human-required",
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "procedure": "docs/development/visual-review.md",
+        "reason": "Native menu activation, popup stacking, access keys, and animation cannot be certified by injected Qt events alone."
+      }
+    },
+    {
+      "id": "collection-scroll",
+      "severity": "high",
+      "owner": "fluentqt-maintainers:collections-and-scrolling",
+      "rationale": "Model/view controls combine viewport geometry, selection, scrolling, delegates, and direction-sensitive hit testing.",
+      "components": [
+        "annotated-scrollbar",
+        "data-grid",
+        "flip-view",
+        "flow-view",
+        "grid-view",
+        "list-view",
+        "pips-pager",
+        "scroll-view",
+        "scrollbar",
+        "stack-view",
+        "tree-view"
+      ],
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "selection",
+        "scroll-end",
+        "narrow",
+        "rtl",
+        "native-input"
+      ],
+      "manual_contract": {
+        "status": "human-required",
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "procedure": "docs/development/visual-review.md",
+        "reason": "Physical wheel, trackpad, touch, and drag behavior plus raster polish require human review on native desktops."
+      }
+    },
+    {
+      "id": "responsive-navigation",
+      "severity": "high",
+      "owner": "fluentqt-maintainers:navigation",
+      "rationale": "Navigation controls change structure and overflow behavior at responsive thresholds and under RTL layout.",
+      "components": [
+        "breadcrumb",
+        "navigation-view",
+        "pivot",
+        "selector-bar",
+        "tab-view"
+      ],
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "selection",
+        "keyboard-focus",
+        "narrow",
+        "rtl"
+      ],
+      "manual_contract": {
+        "status": "human-required",
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "procedure": "docs/development/visual-review.md",
+        "reason": "Focus traversal, transition polish, and platform input behavior remain explicit human-review evidence."
+      }
+    },
+    {
+      "id": "window-material",
+      "severity": "high",
+      "owner": "fluentqt-maintainers:windowing",
+      "rationale": "Window chrome and materials depend on OS composition, activation, resizing, display configuration, and theme state.",
+      "components": [
+        "title-bar",
+        "window"
+      ],
+      "required_states": [
+        "normal-light",
+        "normal-dark",
+        "narrow",
+        "native-window-management"
+      ],
+      "manual_contract": {
+        "status": "human-required",
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "procedure": "docs/development/visual-review.md",
+        "reason": "Mica or Acrylic composition, native title-bar behavior, multi-display movement, and activation must be reviewed on each target OS."
+      }
+    }
+  ],
+  "standard_risk_components": {
+    "status": "catalog-tracked",
+    "reason": "No TD-3 high-risk family rule matched; these components remain under focused test, accessibility, API, and manual VisualCheck policy.",
+    "component_ids": [
+      "accordion",
+      "avatar",
+      "button",
+      "card",
+      "checkbox",
+      "compound-button",
+      "divider",
+      "expander",
+      "field",
+      "font-icon",
+      "hyperlink-button",
+      "info-badge",
+      "info-bar",
+      "label",
+      "line-edit",
+      "number-box",
+      "password-box",
+      "progress-bar",
+      "progress-ring",
+      "radio-button",
+      "rating-control",
+      "repeat-button",
+      "shimmer",
+      "slider",
+      "split-view",
+      "text-edit",
+      "toggle-button",
+      "toggle-switch"
+    ]
+  },
+  "components": [
+    {
+      "id": "annotated-scrollbar",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "AnnotatedScrollBarTest.ConfigurableLayoutMetricsAffectHintsAndLabelDensity",
+          "states": [
+            "narrow"
+          ],
+          "execution": "registered-only"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "AnnotatedScrollBarTest.RenderReflectsThemeAndDisabledState",
+          "states": [
+            "normal-light",
+            "normal-dark"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "AnnotatedScrollBarTest.VisualCheck"
+      }
+    },
+    {
+      "id": "auto-suggest-box",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "AutoSuggestBoxTest.UserInputOpensAndEscapeClosesSuggestions",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "AutoSuggestBoxTest.VisualCheck"
+      }
+    },
+    {
+      "id": "breadcrumb",
+      "family": "responsive-navigation",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "BreadcrumbTest.LayoutHelpersExposeStandardAndLargeMetrics",
+          "states": [
+            "narrow"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "BreadcrumbTest.VisualCheck"
+      }
+    },
+    {
+      "id": "calendar-date-picker",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "CalendarDatePickerTest.OpenCloseAndLightDismiss",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "CalendarDatePickerTest.VisualCheck"
+      }
+    },
+    {
+      "id": "calendar-view",
+      "family": "calendar-layout",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "CalendarViewTest.CurrentDateAndSelectedDateUseDistinctVisualStates",
+          "states": [
+            "normal-light",
+            "selection"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "CalendarViewTest.KeyboardNavigationActivatesFocusedDate",
+          "states": [
+            "keyboard-focus"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "CalendarViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "coach-mark",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "CoachMarkTest.SameWindowSurfaceCentersInsideOwnerAndTracksResize",
+          "states": [
+            "open",
+            "placement"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "CoachMarkTest.VisualCheck"
+      }
+    },
+    {
+      "id": "color-picker",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ColorPickerContractTest.InternalLabelsUseOwnPrimaryThemeColor",
+          "states": [
+            "normal-light"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ColorPickerTest.VisualCheck"
+      }
+    },
+    {
+      "id": "combobox",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ComboBoxTest.PopupFitIncludesAnchorGapAndSurfaceMargin",
+          "states": [
+            "open",
+            "placement"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "ComboBoxTest.EscapeAndOutsidePressDismissPopup",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ComboBoxTest.VisualCheck"
+      }
+    },
+    {
+      "id": "command-bar",
+      "family": "command-layering",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "CommandBarTest.Contract_LightAndDarkThemesPaintInlineSurface",
+          "states": [
+            "normal-light",
+            "normal-dark"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "CommandBarTest.Contract_ResponsiveOverflowUsesPriorityAndLogicalTailOrder",
+          "states": [
+            "open-layering",
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
+      }
+    },
+    {
+      "id": "command-bar-flyout",
+      "family": "command-layering",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "CommandBarFlyoutTest.Contract_LightAndDarkThemesRenderAndPreserveState",
+          "states": [
+            "normal-light",
+            "normal-dark"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "CommandBarFlyoutTest.Contract_NarrowHostUsesStablePriorityOverflowAndRtl",
+          "states": [
+            "open-layering",
+            "narrow",
+            "rtl"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "CommandBarFlyoutTest.VisualCheck"
+      }
+    },
+    {
+      "id": "content-dialog",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "ContentDialogTest.Contract_IsOpenAndNotifyNoOps",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ContentDialogTest.VisualCheck"
+      }
+    },
+    {
+      "id": "data-grid",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "DataGridTest.Contract_LargeModelScrollAndResizeRemainViewportBounded",
+          "states": [
+            "scroll-end",
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "DataGridTest.VisualCheck_ReadOnlyCore"
+      }
+    },
+    {
+      "id": "date-picker",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "DatePickerTest.FlyoutCommitCancelEscapeAndLightDismiss",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "DatePickerTest.VisualCheck"
+      }
+    },
+    {
+      "id": "dialog",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "DialogTest.Contract_OpenStateAndAliases",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "DialogTest.VisualCheck"
+      }
+    },
+    {
+      "id": "drawer-view",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "DrawerViewTest.EdgeGeometryAndPartialPosition",
+          "states": [
+            "open",
+            "placement"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "DrawerViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "dropdown-button",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "DropDownButtonTest.MenuLifecycleTracksVisibilityReplacementAndDestruction",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "DropDownButtonTest.VisualCheck"
+      }
+    },
+    {
+      "id": "flip-view",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "FlipViewTest.GoNextIncrementsIndex",
+          "states": [
+            "selection"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "FlipViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "flow-view",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "FlowViewTest.RowWrapLayoutVisualRectAndHitTestingUseVariableSizes",
+          "states": [
+            "narrow"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "FlowViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "flyout",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "FlyoutTest.TopLevelResizeRepositionsAndRaisesAboveSiblings",
+          "states": [
+            "open",
+            "placement"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "FlyoutTest.VisualCheck"
+      }
+    },
+    {
+      "id": "grid-view",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "GridViewTest.ColumnsChangeOnResize",
+          "states": [
+            "narrow"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "GridViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "list-view",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ListViewTest.Contract_SelectedIndicatorPaintsAccentInLightAndDark",
+          "states": [
+            "normal-light",
+            "normal-dark",
+            "selection"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ListViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "menu",
+      "family": "command-layering",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "MenuTest.OpaquePopupSurfaceUsesRoundedWindowMask",
+          "states": [
+            "normal-light"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
+      }
+    },
+    {
+      "id": "menu-bar",
+      "family": "command-layering",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "MenuBarTest.FluentMenuContentPatternsExposeDeterministicGeometry",
+          "states": [
+            "open-layering",
+            "narrow"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "MenuBarTest.VisualCheck"
+      }
+    },
+    {
+      "id": "multi-select-combobox",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "MultiSelectComboBoxTest.PopupUsesRoomierSideBeforeClipping",
+          "states": [
+            "open",
+            "placement",
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "MultiSelectComboBoxTest.ClosedKeyboardContractOpensAndCloses",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "MultiSelectComboBoxTest.VisualCheck"
+      }
+    },
+    {
+      "id": "navigation-view",
+      "family": "responsive-navigation",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "NavigationViewTest.AutoCompactAndMinimalModesOnlyAffectShellGeometry",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "NavigationViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "pips-pager",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "PipsPagerTest.VisiblePipWindowCentersSelectedPageWhenPossible",
+          "states": [
+            "selection",
+            "narrow"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "PipsPagerTest.VisualCheck"
+      }
+    },
+    {
+      "id": "pivot",
+      "family": "responsive-navigation",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "PivotTest.GeometryOverflowAndResizeRecomputeDeterministically",
+          "states": [
+            "narrow"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "PivotTest.VisualCheck"
+      }
+    },
+    {
+      "id": "popup",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "PopupTest.Contract_CloseReasonsAndNotifyNoOps",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "PopupTest.VisualCheck"
+      }
+    },
+    {
+      "id": "scroll-view",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ScrollViewTest.FloatingVisibleVerticalBarTracksViewportRightEdgeAfterResize",
+          "states": [
+            "narrow"
+          ],
+          "execution": "ci"
+        },
+        {
+          "kind": "geometry",
+          "test_case": "ScrollViewTest.ScrollToAndScrollByClampToValidRange",
+          "states": [
+            "scroll-end"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ScrollViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "scrollbar",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ScrollBarTest.VerticalThumbKeepsRoundedCapsAtExtremes",
+          "states": [
+            "normal-light"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ScrollBarTest.VisualPropertyVerification"
+      }
+    },
+    {
+      "id": "selector-bar",
+      "family": "responsive-navigation",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "SelectorBarTest.LayoutOverflowAndGeometryAreDeterministic",
+          "states": [
+            "narrow"
+          ],
+          "execution": "registered-only"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "SelectorBarTest.PointerKeyboardThemeAndAccessibilityBehaveAsSelector",
+          "states": [
+            "normal-light",
+            "normal-dark",
+            "selection",
+            "keyboard-focus"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "SelectorBarTest.VisualCheck"
+      }
+    },
+    {
+      "id": "split-button",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "SplitButtonTest.MenuLifecycleTracksVisibilityReplacementAndDestruction",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "SplitButtonTest.VisualCheck"
+      }
+    },
+    {
+      "id": "stack-view",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "StackViewTest.KeyboardBackAndLayoutThemeBehavior",
+          "states": [
+            "normal-dark",
+            "selection"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "StackViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "tab-view",
+      "family": "responsive-navigation",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "TabViewTest.GeometryWidthModesCloseModesAndOverflowAreDeterministic",
+          "states": [
+            "narrow"
+          ],
+          "execution": "registered-only"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TabViewTest.KeyboardAcceleratorsFocusAndThemeAccessibilityStayStable",
+          "states": [
+            "normal-light",
+            "normal-dark",
+            "selection",
+            "keyboard-focus"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "TabViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "teaching-tip",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "TeachingTipTest.AutoPlacementFallsBackToTopNearBottomEdge",
+          "states": [
+            "open",
+            "placement"
+          ],
+          "execution": "registered-only"
+        },
+        {
+          "kind": "interaction",
+          "test_case": "TeachingTipTest.LightDismissClosesWithLightDismissReason",
+          "states": [
+            "open",
+            "dismissed"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "TeachingTipTest.VisualCheck"
+      }
+    },
+    {
+      "id": "time-picker",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "interaction",
+          "test_case": "TimePickerTest.FlyoutCommitCancelEscapeAndLightDismiss",
+          "states": [
+            "open",
+            "keyboard-focus",
+            "dismissed"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "TimePickerTest.VisualCheck"
+      }
+    },
+    {
+      "id": "title-bar",
+      "family": "window-material",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "WindowTest.LocalThemeOverrideRefreshesTitleBarAndContent",
+          "states": [
+            "normal-light",
+            "normal-dark"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "WindowTest.VisualCheck"
+      }
+    },
+    {
+      "id": "toast",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ToastTest.Contract_CornerPlacementAndNormalizedMargins",
+          "states": [
+            "open",
+            "placement",
+            "narrow"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "gallery"
+      }
+    },
+    {
+      "id": "toggle-split-button",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ToggleSplitButtonTest.Contract_LightAndDarkCheckedStatePaintsDistinctly",
+          "states": [
+            "normal-light",
+            "normal-dark"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ToggleSplitButtonTest.VisualCheck"
+      }
+    },
+    {
+      "id": "tooltip",
+      "family": "transient-overlay",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "ToolTipTest.AttachedToolTipUsesFluentBubbleAboveTarget",
+          "states": [
+            "open",
+            "placement"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "ToolTipTest.VisualGallery"
+      }
+    },
+    {
+      "id": "tree-view",
+      "family": "collection-scroll",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "TreeViewTest.SelectionIndicatorPaintsAccentPillNearLeftOfSelectedRow",
+          "states": [
+            "selection"
+          ],
+          "execution": "registered-only"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "TreeViewTest.VisualCheck"
+      }
+    },
+    {
+      "id": "window",
+      "family": "window-material",
+      "automated_evidence": [
+        {
+          "kind": "geometry",
+          "test_case": "WindowTest.BackdropBackingStoreMatchesResolvedSurface",
+          "states": [
+            "normal-light"
+          ],
+          "execution": "ci"
+        }
+      ],
+      "manual_evidence": {
+        "status": "manual-required",
+        "coverage": "all-required-states",
+        "surface": "visual-check",
+        "test_case": "WindowTest.VisualCheck"
+      }
+    }
+  ],
+  "approval_host": {
+    "id": "macos-arm64-cocoa-fusion-1x-96dpi",
+    "operating_system": "macos",
+    "architecture": "arm64",
+    "platform_plugin": "cocoa",
+    "style": "Fusion",
+    "qt_scale_factor": "1",
+    "qt_font_dpi": "96",
+    "font_source": "bundled",
+    "execution": "local-desktop-only"
+  },
+  "future_bundle_policy": {
+    "runner": "tools/dev/fluent_qt_gui_verify.py",
+    "missing_baseline_status": "human-required",
+    "passing_pixels_status": "review-required",
+    "final_acceptance": "independent-review",
+    "automatic_baseline_updates": false
+  },
+  "platform_boundary": {
+    "automated_event_scope": "qt-injected-events",
+    "native_state_prefix": "native-",
+    "python_gallery_role": "authoring-and-parity-smoke-only",
+    "wasm_gallery_role": "browser-delivery-smoke-only",
+    "cross_platform_pixel_claim": "not-established"
+  },
+  "representative_pixel_gates": [
+    {
+      "id": "button-dark-ltr",
+      "kind": "legacy-representative",
+      "component_ids": [
+        "button"
+      ],
+      "test_case": "VisualGateTest.ButtonStatesDarkLtr",
+      "baseline": "tests/visual-baselines/test_visual_gate__VisualGateTest__ButtonStatesDarkLtr__button-states-dark-ltr.png",
+      "sha256": "a706884ce67f07bb748069d1058c228441f454dd05950d48d3e307cfeaf4c463",
+      "state_ids": [
+        "normal-dark",
+        "hover",
+        "pressed",
+        "keyboard-focus",
+        "disabled"
+      ],
+      "execution": "approval-host-only",
+      "known_gap": "The representative root PNGs predate digest-bound independent approval metadata and do not bind a Qt version; new coverage must use approved GUI verification bundles."
+    },
+    {
+      "id": "button-light-ltr",
+      "kind": "legacy-representative",
+      "component_ids": [
+        "button"
+      ],
+      "test_case": "VisualGateTest.ButtonStatesLightLtr",
+      "baseline": "tests/visual-baselines/test_visual_gate__VisualGateTest__ButtonStatesLightLtr__button-states-light-ltr.png",
+      "sha256": "858fd70ee79000fdf1eabdd103a326d381ba4dbdfe281517173047a8379911d8",
+      "state_ids": [
+        "normal-light",
+        "hover",
+        "pressed",
+        "keyboard-focus",
+        "disabled"
+      ],
+      "execution": "approval-host-only",
+      "known_gap": "The representative root PNGs predate digest-bound independent approval metadata and do not bind a Qt version; new coverage must use approved GUI verification bundles."
+    },
+    {
+      "id": "tree-view-light-rtl",
+      "kind": "legacy-representative",
+      "component_ids": [
+        "tree-view"
+      ],
+      "test_case": "VisualGateTest.TreeViewRtl",
+      "baseline": "tests/visual-baselines/test_visual_gate__VisualGateTest__TreeViewRtl__tree-view-rtl.png",
+      "sha256": "6d21caca861c7bb99f60e85655dfe803f3599db5df9d766de69b35dbe963c1c6",
+      "state_ids": [
+        "normal-light",
+        "rtl"
+      ],
+      "execution": "approval-host-only",
+      "known_gap": "The representative root PNGs predate digest-bound independent approval metadata and do not bind a Qt version; new coverage must use approved GUI verification bundles."
+    }
+  ],
+  "open_gaps": [
+    {
+      "id": "automated-evidence-ci-execution",
+      "owner": "fluentqt-maintainers:test-governance",
+      "status": "open",
+      "summary": "Some high-risk automated evidence is registered only for local test targets and is not selected by a reusable CI lane.",
+      "next_gate": "Promote high-value registered-only evidence into measured CI lanes without hiding local-only execution behind an automated label."
+    },
+    {
+      "id": "new-approved-high-risk-bundles",
+      "owner": "fluentqt-maintainers:visual-governance",
+      "status": "open",
+      "summary": "No tests/visual-baselines/gui scenario currently has a complete, digest-bound approval bundle.",
+      "next_gate": "Add and independently review at least one approved high-risk GUI bundle before TD-3 can become Complete."
+    },
+    {
+      "id": "legacy-root-baseline-metadata",
+      "owner": "fluentqt-maintainers:visual-governance",
+      "status": "open",
+      "summary": "The three root PNG baselines predate Qt-version, OS-version, display, and independent approval metadata.",
+      "next_gate": "Keep them legacy-representative or migrate them into verified GUI bundles without silently upgrading their trust level."
+    },
+    {
+      "id": "source-to-binary-provenance",
+      "owner": "fluentqt-maintainers:visual-tooling",
+      "status": "open",
+      "summary": "Evidence binds Gallery and comparator paths and digests, but a --no-build run has no reproducible source-to-binary attestation.",
+      "next_gate": "Bind formal evidence to a build manifest and source revision or require a verified build step for release acceptance."
+    },
+    {
+      "id": "runtime-specific-baseline-routing",
+      "owner": "fluentqt-maintainers:visual-tooling",
+      "status": "open",
+      "summary": "Approved GUI baseline lookup currently separates OS and architecture but not every Qt, DPR, font, compositor, or display variant.",
+      "next_gate": "Introduce measured runtime partitions only when real platform evidence shows that one approved host profile is insufficient."
+    },
+    {
+      "id": "external-review-identity-provenance",
+      "owner": "fluentqt-maintainers:visual-governance",
+      "status": "open",
+      "summary": "Approver and final reviewer identities are digest-bound declarations, not externally authenticated identities.",
+      "next_gate": "Use a repository review, signed record, or trusted service identity when release policy requires stronger provenance than local evidence."
+    }
+  ]
+}

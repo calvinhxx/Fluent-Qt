@@ -80,6 +80,10 @@ if(FLUENT_QT_BUILD_GALLERY)
 endif()
 
 set(FLUENT_QT_MANUAL_VISUAL_TESTS
+    ButtonTest.VisualPropertyVerification
+    FluentElementTest.VisualExample
+    ScrollBarTest.VisualPropertyVerification
+    ToolTipTest.VisualGallery
     TypographyTest.VisualCheck
     SliderTest.VisualSliderGalleryLike
 )
@@ -339,6 +343,28 @@ add_dependencies(test_visual_comparison fluent_qt_visual_compare)
 add_qt_test_module(test_high_dpi TestHighDpi.cpp)
 
 if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME ComponentApi.Contract_Stable
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/quality/validate_component_api.py
+            --project-root ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(ComponentApi.Contract_Stable PROPERTIES
+        LABELS "quality;contract;local_full"
+        TIMEOUT 30
+    )
+
+    add_test(
+        NAME VisualEvidenceInventory.Contract_Complete
+        COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/tools/quality/validate_visual_evidence_inventory.py
+            --project-root ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(VisualEvidenceInventory.Contract_Complete PROPERTIES
+        LABELS "quality;contract;local_full"
+        TIMEOUT 30
+    )
+
     add_test(
         NAME AccessibilityInventory.Contract_Complete
         COMMAND ${Python3_EXECUTABLE}

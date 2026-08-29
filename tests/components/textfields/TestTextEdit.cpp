@@ -816,9 +816,7 @@ TEST_F(TextEditTest, StandardEditingActionsUseFluentContextMenu) {
     EXPECT_TRUE(sawSelectAllGlyph);
 }
 
-TEST_F(
-    TextEditTest,
-    StandardEditingActionsReceiveIconsAndShortcutTextWithoutPlatformMetadata)
+TEST_F(TextEditTest, StandardEditingActionsReceiveIconsAndShortcutTextWithoutPlatformMetadata)
 {
     window->show();
     QApplication::processEvents();
