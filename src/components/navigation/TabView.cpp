@@ -32,6 +32,7 @@ namespace fluent::navigation {
 
 namespace {
 constexpr int kDefaultWidth = 640;
+constexpr int kTextElideSafetyMargin = 2;
 QPointer<TabView> s_activeShortcutOwner;
 
 TabStrip::WidthMode toStripWidthMode(TabView::TabWidthMode mode)
@@ -1254,7 +1255,16 @@ int TabStrip::naturalTabWidth(int index, const QFontMetrics& fontMetrics, bool r
     int widthValue = currentMetrics.horizontalPadding * 2;
     if (!m_items.at(index).iconGlyph.isEmpty() || m_widthMode == WidthMode::Compact)
         widthValue += currentMetrics.iconSlot + currentMetrics.textGap;
-    widthValue += fontMetrics.horizontalAdvance(m_items.at(index).text);
+    // QFontMetrics::elidedText can still elide at an exactly equal integer
+    // advance because glyph positioning is fractional on some font/DPR pairs.
+    // Reserve a tiny layout-only margin so SizeToContent means the full label
+    // is actually rendered, not merely that its rounded advance fits.
+    const QString& text = m_items.at(index).text;
+    if (!text.isEmpty()) {
+        widthValue += qMax(fontMetrics.horizontalAdvance(text),
+                           fontMetrics.boundingRect(text).width())
+                      + kTextElideSafetyMargin;
+    }
     if (reserveClose)
         widthValue += currentMetrics.textGap + currentMetrics.closeButtonSize;
     return qBound(currentMetrics.minTabWidth, widthValue, currentMetrics.maxTabWidth);
