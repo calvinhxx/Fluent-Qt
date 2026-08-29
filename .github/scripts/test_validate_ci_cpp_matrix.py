@@ -69,6 +69,45 @@ class ValidateCiCppMatrixTest(unittest.TestCase):
             )
         )
 
+    def test_required_execution_lanes_cannot_disable_build_or_test(self):
+        for contract in MODULE.REQUIRED_EXECUTION_LANES.values():
+            for field in ("build", "test"):
+                with self.subTest(lane=contract["id"], field=field):
+                    catalog = copy.deepcopy(self.catalog)
+                    scenario = next(
+                        item
+                        for item in catalog["scenarios"]
+                        if item["id"] == contract["id"]
+                    )
+                    scenario[field] = False
+                    errors = MODULE.validate_catalog(catalog)
+                    self.assertTrue(
+                        any("execution lane" in error for error in errors),
+                        errors,
+                    )
+
+    def test_required_execution_lane_targets_and_labels_are_locked(self):
+        for contract in MODULE.REQUIRED_EXECUTION_LANES.values():
+            mutations = {
+                "build_targets": "",
+                "test_labels": "^nothing$",
+                "exclude_labels": "",
+            }
+            for field, value in mutations.items():
+                with self.subTest(lane=contract["id"], field=field):
+                    catalog = copy.deepcopy(self.catalog)
+                    scenario = next(
+                        item
+                        for item in catalog["scenarios"]
+                        if item["id"] == contract["id"]
+                    )
+                    scenario[field] = value
+                    errors = MODULE.validate_catalog(catalog)
+                    self.assertTrue(
+                        any("execution lane" in error for error in errors),
+                        errors,
+                    )
+
 
 if __name__ == "__main__":
     unittest.main()

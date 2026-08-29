@@ -25,10 +25,11 @@ jobs:
       - name: Validate C++ CI catalogs
         shell: bash
         run: |
-          python3 .github/scripts/validate-ci-cpp-matrix.py
           python3 .github/scripts/test_validate_ci_cpp_matrix.py
           python3 .github/scripts/validate-package-matrix.py
           python3 .github/scripts/validate-project-metadata.py
+          python3 tools/quality/validate_component_api.py --project-root . --self-test
+          python3 tools/quality/validate_visual_evidence_inventory.py --project-root . --self-test
 
       - name: Select C++ validation matrix
         id: matrix
