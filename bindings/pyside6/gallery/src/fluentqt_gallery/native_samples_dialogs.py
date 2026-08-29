@@ -743,7 +743,12 @@ register_source_samples(
                 top = sample_button(controls, "Top")
                 right_top = sample_button(controls, "RightTop")
                 automatic = sample_button(controls, "Auto")
+                top.setObjectName("teachingTipTopAnchor")
+                right_top.setObjectName("teachingTipRightTopAnchor")
+                automatic.setObjectName("teachingTipAutoAnchor")
                 tail = fluentqt.ToggleSwitch(controls)
+                tail.setObjectName("teachingTipTailToggle")
+                tail.setAccessibleName("Show TeachingTip tail")
                 tail.setIsOn(True)
                 tail.setOnContent("Tail")
                 tail.setOffContent("No tail")
@@ -769,11 +774,14 @@ register_source_samples(
                 def show_tip(anchor, placement):
                     name = placement_names[placement]
                     tip = fluentqt.TeachingTip(anchor.window())
+                    tip.setObjectName("teachingTipPlacementPreview")
+                    tip.setAccessibleName(f"{name} placement tip")
                     tip.setPreferredPlacement(placement)
                     tip.setTailVisible(tail.isOn())
                     tip.setLightDismissEnabled(True)
                     tip.setCardSize(QSize(300, 136))
                     host = tip.contentHost()
+                    host.setObjectName("teachingTipContentHost")
                     host_layout = QVBoxLayout(host)
                     host_layout.setContentsMargins(14, 12, 14, 12)
                     host_layout.setSpacing(8)
@@ -784,6 +792,8 @@ register_source_samples(
                     )
                     title_row.addStretch(1)
                     close_button = fluentqt.Button("", host)
+                    close_button.setObjectName("teachingTipCloseButton")
+                    close_button.setAccessibleName("Close tip")
                     close_button.setFluentLayout(
                         fluentqt.Button.ButtonLayout.IconOnly
                     )

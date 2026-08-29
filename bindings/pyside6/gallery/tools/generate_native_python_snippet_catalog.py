@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Iterable
 
 import fluentqt
+import fluentqt_gallery
 
 fluentqt.prepare_high_dpi_application()
 
@@ -28,8 +29,30 @@ _GENERATOR_APPLICATION: QApplication | None = None
 _GENERATED_RESULTS: list[object] = []
 
 
+def _stale_runtime_package_files() -> list[str]:
+    """Return Gallery modules not refreshed into the active build package."""
+
+    source_dir = Path(__file__).resolve().parents[1] / "src/fluentqt_gallery"
+    runtime_dir = Path(fluentqt_gallery.__file__).resolve().parent
+    return [
+        source.name
+        for source in sorted(source_dir.glob("*.py"))
+        if not (runtime_dir / source.name).is_file()
+        or (runtime_dir / source.name).read_bytes() != source.read_bytes()
+    ]
+
+
 def generate_catalog() -> dict[str, object]:
     """Build a deterministic catalog from the tested PySide6 sample sources."""
+
+    stale_files = _stale_runtime_package_files()
+    if stale_files:
+        raise RuntimeError(
+            "PySide6 Gallery runtime package is stale; rebuild the configured "
+            "PySide6 tree before generating snippets: {0}".format(
+                ", ".join(stale_files)
+            )
+        )
 
     global _GENERATOR_APPLICATION
     _GENERATOR_APPLICATION = QApplication.instance() or QApplication([])

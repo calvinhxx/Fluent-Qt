@@ -702,6 +702,7 @@ QVector<GallerySample> multiSelectComboBoxSamples() {
               "auto* box = new MultiSelectComboBox(this);\n"
               "box->setModel(model);\n"
               "box->setPlaceholderText(\"Choose teams\");\n"
+              "box->setAccessibleName(\"Teams\");\n"
               "box->setSelectedRows({0, 2});\n"
               "box->setFixedWidth(280);\n\n"
               "auto* status = new Label(this);\n"
@@ -726,6 +727,7 @@ QVector<GallerySample> multiSelectComboBoxSamples() {
             auto *box = new MultiSelectComboBox(group);
             box->setModel(model);
             box->setPlaceholderText(QStringLiteral("Choose teams"));
+            box->setAccessibleName(QStringLiteral("Teams"));
             box->setSelectedRows({0, 2});
             box->setFixedWidth(280);
 
@@ -763,6 +765,7 @@ QVector<GallerySample> multiSelectComboBoxSamples() {
               "box->setModel(model);\n"
               "box->setSearchEnabled(true);\n"
               "box->setSearchPlaceholderText(\"Filter cities\");\n"
+              "box->setAccessibleName(\"Cities\");\n"
               "box->setSelectedRows({0, 2});\n"
               "connect(box, &MultiSelectComboBox::selectedCountChanged,\n"
               "        this, [=](int count) {\n"
@@ -781,6 +784,7 @@ QVector<GallerySample> multiSelectComboBoxSamples() {
             box->setModel(model);
             box->setSearchEnabled(true);
             box->setSearchPlaceholderText(QStringLiteral("Filter cities"));
+            box->setAccessibleName(QStringLiteral("Cities"));
             box->setSelectedRows({0, 2});
             box->setFixedWidth(280);
 
@@ -805,6 +809,7 @@ QVector<GallerySample> multiSelectComboBoxSamples() {
               "    {\"New York\", \"Paris\", \"Tokyo\"}, this);\n"
               "auto* box = new MultiSelectComboBox(this);\n"
               "box->setModel(model);\n"
+              "box->setAccessibleName(\"Locations\");\n"
               "box->setSelectedRows({1});\n\n"
               "auto* add = new Button(\"Add Berlin\", this);\n"
               "connect(add, &Button::clicked, this, [=] {\n"
@@ -820,6 +825,7 @@ QVector<GallerySample> multiSelectComboBoxSamples() {
                                                group);
             auto *box = new MultiSelectComboBox(group);
             box->setModel(model);
+            box->setAccessibleName(QStringLiteral("Locations"));
             box->setSelectedRows({1});
             box->setFixedWidth(280);
 

@@ -2176,29 +2176,154 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
     if key == ("list-view", "list-view-basic"):
         return focused(
             """
+            def make_initials_avatar(name, background, size=28):
+                screen = QGuiApplication.primaryScreen()
+                dpr = max(
+                    1.0,
+                    screen.devicePixelRatio() if screen is not None else 1.0,
+                )
+                physical = max(1, round(size * dpr))
+                pixmap = QPixmap(physical, physical)
+                pixmap.setDevicePixelRatio(dpr)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(background)
+                tile = QRectF(0, 0, size, size)
+                painter.drawEllipse(tile)
+                font = QFont()
+                font.setPixelSize(round(size * 0.42))
+                font.setWeight(QFont.Weight.DemiBold)
+                painter.setFont(font)
+                painter.setPen(Qt.GlobalColor.white)
+                initials = "".join(word[0].upper() for word in name.split()[:2])
+                painter.drawText(tile, Qt.AlignmentFlag.AlignCenter, initials)
+                painter.end()
+                return pixmap
+
+            accent_palette = (
+                QColor(0x00, 0x78, 0xD4), QColor(0x03, 0x83, 0x87),
+                QColor(0xCA, 0x50, 0x10), QColor(0x87, 0x64, 0xB8),
+                QColor(0xC2, 0x39, 0xB3), QColor(0x49, 0x82, 0x05),
+            )
             list_view = fluentqt.ListView()
-            for contact in contacts:
+            list_view.setBackgroundVisible(False)
+            list_view.setBorderVisible(False)
+            list_view.setProperty("fluentPreserveParentSurface", True)
+            list_view.viewport().setProperty("fluentPreserveParentSurface", True)
+            list_view.setFixedSize(320, 234)
+            list_view.setHeaderText("Contacts")
+            list_view.setAccessibleName("Contacts")
+            list_view.setIconSize(QSize(28, 28))
+            model = QStandardItemModel(list_view)
+            contacts = (
+                "Kendall Collins", "Henry Ross", "Nicole Wagner",
+                "Adam Wolfe", "Stephanie Meyer", "Maya Patel",
+                "Alex Chen", "Priya Shah", "Omar Rivera",
+                "Elena Rossi", "Jordan Lee", "Riley Brooks",
+            )
+            for index, contact in enumerate(contacts):
                 item = QStandardItem(contact)
+                item.setEditable(False)
                 item.setData(
-                    initials_avatar(contact),
+                    make_initials_avatar(
+                        contact, accent_palette[index % len(accent_palette)]
+                    ),
                     Qt.ItemDataRole.DecorationRole,
                 )
                 model.appendRow(item)
             list_view.setModel(model)
-            list_view.setHeaderText("Contacts")
+            list_view.setSelectedIndex(0)
             """,
             imports=(
-                "from PySide6.QtCore import Qt\n"
-                "from PySide6.QtGui import QStandardItem"
+                "from PySide6.QtCore import QRectF, QSize, Qt\n"
+                "from PySide6.QtGui import (\n"
+                "    QColor, QFont, QGuiApplication, QPainter, QPixmap,\n"
+                "    QStandardItem, QStandardItemModel,\n"
+                ")"
             ),
         )
     if key == ("list-view", "list-view-multi-select"):
         return focused(
             """
+            def make_glyph_pixmap(glyph, background, size):
+                screen = QGuiApplication.primaryScreen()
+                dpr = max(
+                    1.0,
+                    screen.devicePixelRatio() if screen is not None else 1.0,
+                )
+                physical = max(1, round(size * dpr))
+                pixmap = QPixmap(physical, physical)
+                pixmap.setDevicePixelRatio(dpr)
+                pixmap.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.setBrush(background)
+                tile = QRectF(0, 0, size, size)
+                painter.drawRoundedRect(tile, size / 4.0, size / 4.0)
+                font = QFont("FluentQt Icons")
+                font.setPixelSize(round(size * 0.55))
+                painter.setFont(font)
+                painter.setPen(Qt.GlobalColor.white)
+                painter.drawText(tile, Qt.AlignmentFlag.AlignCenter, glyph)
+                painter.end()
+                return pixmap
+
+            accent_palette = (
+                QColor(0x00, 0x78, 0xD4), QColor(0x03, 0x83, 0x87),
+                QColor(0xCA, 0x50, 0x10), QColor(0x87, 0x64, 0xB8),
+                QColor(0xC2, 0x39, 0xB3), QColor(0x49, 0x82, 0x05),
+            )
+            list_view = fluentqt.ListView()
+            list_view.setBackgroundVisible(False)
+            list_view.setBorderVisible(False)
+            list_view.setProperty("fluentPreserveParentSurface", True)
+            list_view.viewport().setProperty("fluentPreserveParentSurface", True)
+            list_view.setFixedSize(320, 234)
+            list_view.setHeaderText("Filters")
+            list_view.setAccessibleName("Message filters")
+            list_view.setIconSize(QSize(24, 24))
             list_view.setSelectionMode(fluentqt.SelectionMode.Multiple)
+            filter_model = QStandardItemModel(list_view)
+            for index, (text, glyph) in enumerate((
+                ("Unread", fluentqt.Typography.Icons.Mail),
+                ("Flagged", fluentqt.Typography.Icons.Flag),
+                ("Has photos", fluentqt.Typography.Icons.Camera),
+                ("From contacts", fluentqt.Typography.Icons.People),
+                ("Favorites", fluentqt.Typography.Icons.FavoriteStar),
+                ("With documents", fluentqt.Typography.Icons.Document),
+                ("Pinned", fluentqt.Typography.Icons.Pin),
+                ("Scheduled", fluentqt.Typography.Icons.Calendar),
+                ("Archived", fluentqt.Typography.Icons.Folder),
+            )):
+                item = QStandardItem(text)
+                item.setEditable(False)
+                item.setData(
+                    make_glyph_pixmap(
+                        glyph, accent_palette[index % len(accent_palette)], 24
+                    ),
+                    Qt.ItemDataRole.DecorationRole,
+                )
+                filter_model.appendRow(item)
             list_view.setModel(filter_model)
-            # Each click toggles that row's selection.
-            """
+            for row in (0, 2):
+                list_view.selectionModel().select(
+                    filter_model.index(row, 0),
+                    QItemSelectionModel.SelectionFlag.Select
+                    | QItemSelectionModel.SelectionFlag.Rows,
+                )
+            """,
+            imports=(
+                "from PySide6.QtCore import QItemSelectionModel, QRectF, QSize, Qt\n"
+                "from PySide6.QtGui import (\n"
+                "    QColor, QFont, QGuiApplication, QPainter, QPixmap,\n"
+                "    QStandardItem, QStandardItemModel,\n"
+                ")"
+            ),
         )
     if key == ("list-view", "list-view-horizontal"):
         return focused(
@@ -2853,12 +2978,50 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             large.setFixedHeight(40)
             """
         )
+    if key == ("navigation-view", "navigation-view-chrome-slots"):
+        return focused(
+            """
+            nav = fluentqt.NavigationView()
+            nav.setMinimumWidth(440)
+            nav.setMaximumWidth(620)
+            nav.setFixedHeight(340)
+            nav.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
+            nav.setDisplayMode(fluentqt.NavigationView.DisplayMode.Left)
+            nav.setExpandedPaneWidth(180)
+            nav.setHeaderChromeWidget(header_section)
+            nav.setMainChromeWidget(main_section)
+            nav.setFooterChromeWidget(footer_section)
+            populate_navigation_pages(nav.contentHost())
+
+            def route_to_page(page_index):
+                host = nav.contentHost()
+                direction = 1 if page_index >= host.currentIndex() else -1
+                host.setCurrentIndex(page_index, direction, True)
+
+            header_section.on_activated = route_to_page
+            main_section.on_activated = route_to_page
+            footer_section.on_activated = route_to_page
+            """,
+            imports="from PySide6.QtWidgets import QSizePolicy",
+        )
     if key == ("navigation-view", "navigation-view-display-modes"):
         return focused(
             """
+            nav = fluentqt.NavigationView()
+            nav.setMinimumWidth(440)
+            nav.setMaximumWidth(620)
+            nav.setFixedHeight(340)
+            nav.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
             nav.setAnimationEnabled(True)
             nav.setExpandedPaneWidth(180)
             nav.setCompactPaneWidth(52)
+            nav.setTopBarHeight(48)
 
             def apply_display_mode(mode):
                 top = mode == fluentqt.NavigationView.DisplayMode.Top
@@ -2913,7 +3076,38 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 )
             )
             """,
-            imports="from PySide6.QtCore import Qt",
+            imports=(
+                "from PySide6.QtCore import Qt\n"
+                "from PySide6.QtWidgets import QSizePolicy"
+            ),
+        )
+    if key == ("navigation-view", "navigation-view-content-host"):
+        return focused(
+            """
+            nav = fluentqt.NavigationView()
+            nav.setMinimumWidth(440)
+            nav.setMaximumWidth(620)
+            nav.setFixedHeight(320)
+            nav.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
+            nav.setAnimationEnabled(True)
+            nav.setDisplayMode(fluentqt.NavigationView.DisplayMode.Left)
+            host = nav.contentHost()
+            nav.setExpandedPaneWidth(180)
+            populate_navigation_pages(host)
+            host.setTransitionEffect(
+                fluentqt.StackContentHost.TransitionEffect.SlideFromLeft
+            )
+
+            def route_to_page(page_index):
+                direction = 1 if page_index >= host.currentIndex() else -1
+                host.setCurrentIndex(page_index, direction, True)
+
+            main_section.on_activated = route_to_page
+            """,
+            imports="from PySide6.QtWidgets import QSizePolicy",
         )
     if key == ("pivot", "pivot-basic"):
         return focused(
@@ -3116,7 +3310,24 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
     if key == ("tab-view", "tab-view-hosted-pages"):
         return focused(
             """
-            tabs = fluentqt.TabView()
+            surface = QWidget()
+            surface.setMinimumWidth(360)
+            surface.setMaximumWidth(560)
+            surface.setFixedHeight(186)
+            surface.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
+            surface_layout = QVBoxLayout(surface)
+            surface_layout.setContentsMargins(0, 0, 0, 0)
+            surface_layout.setSpacing(0)
+
+            tabs = fluentqt.TabView(surface)
+            tabs.setFixedHeight(40)
+            tabs.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
             tabs.setTabWidthMode(
                 fluentqt.TabView.TabWidthMode.SizeToContent
             )
@@ -3139,7 +3350,12 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 )
             )
 
-            host = fluentqt.StackContentHost()
+            host = fluentqt.StackContentHost(surface)
+            host.setFixedHeight(146)
+            host.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
             for index in range(tabs.tabCount()):
                 host.insertOwnedPage(
                     index,
@@ -3150,7 +3366,13 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
                 lambda index: host.setCurrentIndex(index, 0, True)
             )
             tabs.tabMoved.connect(host.movePage)
-            """
+            surface_layout.addWidget(tabs)
+            surface_layout.addWidget(host)
+            """,
+            imports=(
+                "from PySide6.QtWidgets import "
+                "QSizePolicy, QVBoxLayout, QWidget"
+            ),
         )
     if key == ("tab-view", "tab-view-add-close"):
         return focused(
@@ -3917,14 +4139,71 @@ def _explicit_display_override(route_id: str, sample_id: str) -> str | None:
             "stack_view.pop()",
         )
     if key == ("teaching-tip", "teaching-tip-placement-tail"):
-        return _source(
-            "tip = fluentqt.TeachingTip(window)",
-            "tip.setPreferredPlacement(",
-            "    fluentqt.TeachingTip.PreferredPlacement.RightTop",
-            ")",
-            "tip.setTailVisible(show_tail)",
-            "tip.setCardSize(QSize(300, 136))",
-            "tip.showAt(anchor_button)",
+        return focused(
+            """
+            top = fluentqt.Button("Top")
+            right_top = fluentqt.Button("RightTop")
+            automatic = fluentqt.Button("Auto")
+            tail = fluentqt.ToggleSwitch()
+            tail.setAccessibleName("Show TeachingTip tail")
+            tail.setIsOn(True)
+            tail.setOnContent("Tail")
+            tail.setOffContent("No tail")
+            status = fluentqt.Label("Placement: none")
+
+            placement_names = {
+                fluentqt.TeachingTip.PreferredPlacement.Top: "Top",
+                fluentqt.TeachingTip.PreferredPlacement.RightTop: "RightTop",
+                fluentqt.TeachingTip.PreferredPlacement.Auto: "Auto",
+            }
+
+            def show_tip(anchor, placement):
+                name = placement_names[placement]
+                tip = fluentqt.TeachingTip(anchor.window())
+                tip.setAccessibleName(f"{name} placement tip")
+                tip.setPreferredPlacement(placement)
+                tip.setTailVisible(tail.isOn())
+                tip.setLightDismissEnabled(True)
+                tip.setCardSize(QSize(300, 136))
+                populate_teaching_tip(
+                    tip,
+                    f"{name} placement",
+                    (
+                        "The tail points back to the control that opened "
+                        "the tip."
+                        if tail.isOn()
+                        else "Hide the tail when the surrounding layout "
+                        "already makes context clear."
+                    ),
+                    status,
+                )
+                tip.opened.connect(
+                    lambda: status.setText(
+                        f"Placement: {name}, "
+                        f"tail {'on' if tail.isOn() else 'off'}"
+                    )
+                )
+                tip.closed.connect(tip.deleteLater)
+                tip.showAt(anchor)
+
+            top.clicked.connect(
+                lambda: show_tip(
+                    top, fluentqt.TeachingTip.PreferredPlacement.Top
+                )
+            )
+            right_top.clicked.connect(
+                lambda: show_tip(
+                    right_top,
+                    fluentqt.TeachingTip.PreferredPlacement.RightTop,
+                )
+            )
+            automatic.clicked.connect(
+                lambda: show_tip(
+                    automatic,
+                    fluentqt.TeachingTip.PreferredPlacement.Auto,
+                )
+            )
+            """,
             imports="from PySide6.QtCore import QSize",
         )
     if key == ("coach-mark", "coach-mark-targeted-glide"):
@@ -5787,6 +6066,9 @@ def _list_view(sample_id: str, parent: QWidget | None) -> PreviewResult:
     view = fluentqt.ListView(parent)
     view.setBackgroundVisible(False)
     view.setBorderVisible(False)
+    view.setProperty("fluentPreserveParentSurface", True)
+    if view.viewport() is not None:
+        view.viewport().setProperty("fluentPreserveParentSurface", True)
     model = QStandardItemModel(view)
     delegate: _GalleryListRowDelegate | None = None
 
@@ -5812,6 +6094,8 @@ def _list_view(sample_id: str, parent: QWidget | None) -> PreviewResult:
         "model = QStandardItemModel(view)",
         "view.setBackgroundVisible(False)",
         "view.setBorderVisible(False)",
+        "view.setProperty('fluentPreserveParentSurface', True)",
+        "view.viewport().setProperty('fluentPreserveParentSurface', True)",
     ]
     if sample_id == "list-view-placeholder":
         view.setHeaderText("Downloads")
@@ -5862,13 +6146,15 @@ def _list_view(sample_id: str, parent: QWidget | None) -> PreviewResult:
                 )
                 model.appendRow(item)
             view.setHeaderText("Contacts")
+            view.setAccessibleName("Contacts")
             view.setIconSize(QSize(28, 28))
-            view.setFixedSize(320, 240)
+            view.setFixedSize(320, 234)
             source_lines.extend(
                 (
                     "view.setHeaderText('Contacts')",
+                    "view.setAccessibleName('Contacts')",
                     "view.setIconSize(QSize(28, 28))",
-                    "view.setFixedSize(320, 240)",
+                    "view.setFixedSize(320, 234)",
                 )
             )
         elif sample_id == "list-view-multi-select":
@@ -5887,14 +6173,16 @@ def _list_view(sample_id: str, parent: QWidget | None) -> PreviewResult:
             source_icon_size = 24
             source_values = tuple(text for text, _glyph in rows)
             populate_glyph_rows(rows, 24)
-            view.setFixedSize(320, 244)
+            view.setFixedSize(320, 234)
             view.setHeaderText("Filters")
+            view.setAccessibleName("Message filters")
             view.setIconSize(QSize(24, 24))
             view.setSelectionMode(fluentqt.SelectionMode.Multiple)
             source_lines.extend(
                 (
-                    "view.setFixedSize(320, 244)",
+                    "view.setFixedSize(320, 234)",
                     "view.setHeaderText('Filters')",
+                    "view.setAccessibleName('Message filters')",
                     "view.setIconSize(QSize(24, 24))",
                     "view.setSelectionMode(fluentqt.SelectionMode.Multiple)",
                 )
