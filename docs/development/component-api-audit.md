@@ -10,6 +10,27 @@
 [← System capability delivery record](system-capability-roadmap.md) · [Contents](../SUMMARY.md) · [Development index](README.md)
 <!-- docs-nav:top:end -->
 
+## 2026-08-29 static governance addendum
+
+The deferred component API static check is now implemented by
+`tools/quality/validate_component_api.py` and the machine-readable
+[component API policy](component-api-policy.json). The gate cross-checks the
+installed-header allowlist, generated component catalog, declaration classes,
+focused test sources, property accessors, writable properties without notify
+signals, and legacy noun-style boolean readers.
+
+Existing 1.x exceptions are classified by exact header, class, and property.
+They are not wildcarded: a new exception fails, and a removed property or
+resolved exception leaves a stale policy entry that also fails. The validator
+runs in the reusable C++ CI planning job and as
+`ComponentApi.Contract_Stable` in the `quality`, `contract`, and `local_full`
+CTest labels. The planning job owns fast-CI execution; the full contract lane
+keeps an independent CTest registration check without repeating it in every
+platform matrix lane.
+
+This gate changes no public C++ behavior. Notify additions, compatibility
+aliases, and eventual removals remain separate reviewed API changes.
+
 Date: 2026-05-26
 Change: `audit-component-api-consistency`
 
@@ -365,7 +386,9 @@ platform contracts.
 
 - `standardize-overlay-open-state-semantics`: resolved in 1.7-A ([overlay-behavior.md](../architecture/overlay-behavior.md), [release-1.7-roadmap.md](release-1.7-roadmap.md)). CoachMark and DrawerView are not on the shared inheritance tree; SplitButton/DropDownButton remain QMenu `isOpen`.
 - `add-overlay-property-notify-signals`: resolved in 1.7-A for the overlay bindable properties covered by API-011 and the overlay state machine.
-- `add-component-api-static-checks`: consider a later static or meta-object based checker after the checklist stabilizes.
+- `add-component-api-static-checks`: resolved by the repository-wide static
+  property/catalog gate recorded in the 2026-08-29 addendum and the active
+  [technical debt roadmap](technical-debt-roadmap.md).
 - `document-public-property-comments`: add targeted header comments for ambiguous public properties as components are touched.
 
 ## Validation Notes

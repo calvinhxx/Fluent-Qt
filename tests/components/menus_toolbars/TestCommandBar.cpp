@@ -288,8 +288,7 @@ TEST(CommandBarTest, BorrowedLifetimeAndActionDestructionAreSafe)
     EXPECT_TRUE(surfaceOwned.isNull());
 }
 
-TEST(CommandBarTest,
-     Contract_WindowTeardownDoesNotRebuildAfterBorrowedActionDestruction)
+TEST(CommandBarTest, Contract_WindowTeardownDoesNotRebuildAfterBorrowedActionDestruction)
 {
     auto* window = new QWidget;
     auto* action =
@@ -318,8 +317,7 @@ TEST(CommandBarTest, OneBorrowedActionCanServeMultipleCommandSurfaces)
     EXPECT_EQ(flyout.secondaryActions(), (QList<QAction*>{&shared}));
 }
 
-TEST(CommandBarTest,
-     Contract_ResponsiveOverflowUsesPriorityAndLogicalTailOrder)
+TEST(CommandBarTest, Contract_ResponsiveOverflowUsesPriorityAndLogicalTailOrder)
 {
     QWidget window;
     window.resize(900, 200);
@@ -365,8 +363,7 @@ TEST(CommandBarTest,
     EXPECT_EQ(overflowSpy.count(), 2);
 }
 
-TEST(CommandBarTest,
-     Contract_OverflowProjectionNormalizesSeparatorsAndSections)
+TEST(CommandBarTest, Contract_OverflowProjectionNormalizesSeparatorsAndSections)
 {
     QWidget window;
     window.resize(720, 360);
@@ -456,8 +453,7 @@ TEST(CommandBarTest,
     EXPECT_FALSE(openSpy.at(1).at(0).toBool());
 }
 
-TEST(CommandBarTest,
-     Contract_DisablingDynamicOverflowKeepsPrimaryCommandsInline)
+TEST(CommandBarTest, Contract_DisablingDynamicOverflowKeepsPrimaryCommandsInline)
 {
     QWidget window;
     window.resize(720, 200);
@@ -501,8 +497,7 @@ TEST(CommandBarTest,
     EXPECT_FALSE(more->isVisible());
 }
 
-TEST(CommandBarTest,
-     Contract_PresentersTrackActionStateAndCollapsedLabels)
+TEST(CommandBarTest, Contract_PresentersTrackActionStateAndCollapsedLabels)
 {
     QWidget window;
     window.resize(720, 200);
@@ -546,8 +541,7 @@ TEST(CommandBarTest,
     EXPECT_FALSE(iconPresenter->isVisible());
 }
 
-TEST(CommandBarTest,
-     Contract_RtlMirrorsVisualOrderWithoutChangingOverflowChoice)
+TEST(CommandBarTest, Contract_RtlMirrorsVisualOrderWithoutChangingOverflowChoice)
 {
     QWidget window;
     window.resize(900, 200);
@@ -594,8 +588,7 @@ TEST(CommandBarTest,
     EXPECT_LT(secondPresenter->x(), firstPresenter->x());
 }
 
-TEST(CommandBarTest,
-     Contract_CompositeKeyboardFocusAndOverflowNavigation)
+TEST(CommandBarTest, Contract_CompositeKeyboardFocusAndOverflowNavigation)
 {
     QWidget window;
     window.resize(760, 240);
@@ -678,8 +671,7 @@ TEST(CommandBarTest,
     EXPECT_EQ(QApplication::focusWidget(), &after);
 }
 
-TEST(CommandBarTest,
-     Contract_PointerOverflowOpenKeepsFocusOnMoreUntilKeyboardNavigation)
+TEST(CommandBarTest, Contract_PointerOverflowOpenKeepsFocusOnMoreUntilKeyboardNavigation)
 {
     QWidget window;
     window.resize(520, 180);
@@ -719,8 +711,7 @@ TEST(CommandBarTest,
     EXPECT_EQ(QApplication::focusWidget(), row);
 }
 
-TEST(CommandBarTest,
-     Contract_FocusRepairsToNearestCommandBeforeMore)
+TEST(CommandBarTest, Contract_FocusRepairsToNearestCommandBeforeMore)
 {
     QWidget window;
     window.resize(720, 180);
@@ -791,8 +782,7 @@ TEST(CommandBarTest,
         << " moreFocusPolicy=" << int(more->focusPolicy());
 }
 
-TEST(CommandBarTest,
-     Contract_OverflowDismissAndActivationRespectFocusDestination)
+TEST(CommandBarTest, Contract_OverflowDismissAndActivationRespectFocusDestination)
 {
     QWidget window;
     window.resize(640, 240);
@@ -876,8 +866,7 @@ TEST(CommandBarTest,
     EXPECT_EQ(QApplication::focusWidget(), &editor);
 }
 
-TEST(CommandBarTest,
-     Contract_PresenterActivationIsExactAndDeletionSafe)
+TEST(CommandBarTest, Contract_PresenterActivationIsExactAndDeletionSafe)
 {
     QWidget window;
     window.resize(480, 180);
@@ -906,8 +895,7 @@ TEST(CommandBarTest,
     delete action;
 }
 
-TEST(CommandBarTest,
-     Contract_AccessibleToolbarCommandsAndMoreExpansion)
+TEST(CommandBarTest, Contract_AccessibleToolbarCommandsAndMoreExpansion)
 {
 #if QT_CONFIG(accessibility)
     QWidget window;

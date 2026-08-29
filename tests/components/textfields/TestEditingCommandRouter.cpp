@@ -538,8 +538,7 @@ TEST_F(EditingCommandRouterTest, Contract_MenuActivationRetainsEditorTarget)
     EXPECT_TRUE(router.canExecute(Command::Copy));
 }
 
-TEST_F(EditingCommandRouterTest,
-       Contract_CommandSurfacesRetainAndRestoreEditorTarget)
+TEST_F(EditingCommandRouterTest, Contract_CommandSurfacesRetainAndRestoreEditorTarget)
 {
     auto* edit = addEditor<LineEdit>();
     edit->setText(QStringLiteral("Alpha Beta"));
@@ -616,8 +615,7 @@ TEST_F(EditingCommandRouterTest,
     EXPECT_EQ(QApplication::focusWidget(), edit);
 }
 
-TEST_F(EditingCommandRouterTest,
-       Contract_WindowScopedActionsRejectCrossWindowSurfaces)
+TEST_F(EditingCommandRouterTest, Contract_WindowScopedActionsRejectCrossWindowSurfaces)
 {
     EditingCommandRouter router(window);
     secondaryWindow = new QWidget();

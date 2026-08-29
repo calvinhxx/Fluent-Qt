@@ -62,6 +62,8 @@ ToggleSwitch, RatingControl, NumberBox, ProgressBar, and ProgressRing moved from
 exposes:
 
 - checkable state and the standard toggle action for ToggleSwitch;
+- a 24 px minimum interactive ToggleSwitch surface while retaining the 20 px
+  Fluent visual track;
 - bounded half-step rating values and increase/decrease actions;
 - NumberBox spin-box values without losing editable text, selection, invalid
   state, or unbounded-range semantics; and
@@ -189,7 +191,8 @@ focusable field controls a private same-window popup and several selected
 model rows. The adapter exposes a button-menu root, selected labels as the
 accessible value, expanded state, a show-menu action, and a controller
 relation to the real popup ListView. Focused contracts cover its role, value,
-action, relation, and open-state behavior in
+action, relation, open-state behavior, and non-empty names for its internal
+trigger, search field, and option list in
 `tests/components/basicinput/TestMultiSelectComboBox.cpp`.
 
 ## Risk-ordered queue

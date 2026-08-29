@@ -402,9 +402,7 @@ TEST_F(MenuBarTest, CommandIconsPaintInsideStandardWinUiSlot)
             markerBounds.center()));
 }
 
-TEST_F(
-    MenuBarTest,
-    EntranceAnimationUsesPaintOpacityInsteadOfNativeWindowOpacity)
+TEST_F(MenuBarTest, EntranceAnimationUsesPaintOpacityInsteadOfNativeWindowOpacity)
 {
     FluentMenu menu(QStringLiteral("Editing"), window);
     menu.addAction(QStringLiteral("Copy"));

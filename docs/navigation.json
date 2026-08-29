@@ -52,6 +52,7 @@
           "title": "API, policy, and writing",
           "pages": [
             "development/component-api-conventions.md",
+            "development/technical-debt-roadmap.md",
             "development/compatibility-policy.md",
             "development/compatibility-policy.zh-CN.md",
             "development/comment-style.md",

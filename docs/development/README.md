@@ -13,6 +13,7 @@ so a dated roadmap cannot be mistaken for current guidance.
 
 | Task | Read first | Then verify with |
 |---|---|---|
+| Choose or close a cross-cutting maintenance phase | [Technical debt roadmap](technical-debt-roadmap.md) | The phase's checked-in exit condition and CI/CTest evidence |
 | Add or change a public component | [Component API conventions](component-api-conventions.md) | [Compatibility policy](compatibility-policy.md), [installed-header allowlist](../../cmake/FluentQtInstallHeaders.cmake) |
 | Add a visible component | [Accessibility contract](accessibility-contract.md) | [Accessibility inventory](accessibility-inventory.md), [visual review](visual-review.md) |
 | Add or edit a Gallery sample | [App sample optimization](app-sample-optimization.md) | [Live Scene and native preview](gallery-preview-workflow.md), [AI-assisted GUI verification](gui-verification-workflow.md) |
@@ -67,6 +68,10 @@ inventory disagree, the generated inventory wins.
 - [Accessibility contract](accessibility-contract.md)
 - [Accessibility inventory](accessibility-inventory.md) ·
   [machine-readable data](accessibility-inventory.json)
+- [Visual evidence inventory](visual-evidence-inventory.json) — machine-checked
+  high-risk families, exact evidence locators, manual boundaries, and open gaps
+- [Technical debt roadmap](technical-debt-roadmap.md) — current cross-cutting
+  maintenance phases and exit conditions
 - [Component contract baseline](component-contract-baseline.md) — historical
   Phase 0/1 evidence plus a clearly marked current addendum
 - [Production evidence baselines](production-evidence.md) — dated measurements,

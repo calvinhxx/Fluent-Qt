@@ -5,7 +5,7 @@
 <!-- docs-nav:top:start -->
 [Documentation](../README.md) › [Development](README.md) › API, policy, and writing
 
-[Contents](../SUMMARY.md) · [Development index](README.md) · [Compatibility Policy →](compatibility-policy.md)
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Technical debt roadmap →](technical-debt-roadmap.md)
 <!-- docs-nav:top:end -->
 
 Use these conventions when adding, reviewing, or auditing public Fluent component
@@ -36,6 +36,12 @@ APIs under `src/components/**`.
 - When performing an audit, update [Component API Audit](component-api-audit.md)
   with inventory, findings, intentional deviations, applied fixes, deferred
   follow-ups, and validation notes.
+- Run `python3 tools/quality/validate_component_api.py --project-root .` after
+  changing an installed component header, generated API catalog entry, or
+  focused component-test mapping. The machine-readable compatibility freeze
+  list is [component-api-policy.json](component-api-policy.json); a new entry
+  requires a documented compatibility reason rather than normalizing a new
+  exception into the baseline.
 
 ## Inheritance and Ownership
 
@@ -145,6 +151,9 @@ APIs under `src/components/**`.
   hosted-content semantics are not yet specified.
 - Defer direct menu test expansion if the current change does not touch menu
   behavior; record the follow-up in the audit report.
+- Remove obsolete entries from `component-api-policy.json` in the same change
+  that adds a notify signal or clearer boolean reader. The validator rejects
+  stale entries so the exception inventory can only shrink deliberately.
 
 ## Tests and VisualCheck
 
@@ -170,5 +179,5 @@ APIs under `src/components/**`.
 
 <!-- docs-nav:bottom:start -->
 ---
-[Contents](../SUMMARY.md) · [Development index](README.md) · [Compatibility Policy →](compatibility-policy.md)
+[Contents](../SUMMARY.md) · [Development index](README.md) · [Technical debt roadmap →](technical-debt-roadmap.md)
 <!-- docs-nav:bottom:end -->
