@@ -723,6 +723,7 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction) {
   box.setGeometry(40, 40, 260, Spacing::ControlHeight::Standard);
   box.setAccessibleName(QStringLiteral("Included regions"));
   box.setModel(&model);
+  box.setSearchEnabled(true);
   box.setSelectedRows({0, 2});
   MultiSelectComboBox other(window);
   other.setGeometry(40, 96, 260, Spacing::ControlHeight::Standard);
@@ -756,7 +757,20 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction) {
 
   QWidget *list = window->findChild<QWidget *>(
       QStringLiteral("MultiSelectComboBox.ListView"));
+  QWidget *trigger = window->findChild<QWidget *>(
+      QStringLiteral("MultiSelectComboBox.Trigger"));
+  QWidget *search = window->findChild<QWidget *>(
+      QStringLiteral("MultiSelectComboBox.Search"));
   ASSERT_NE(list, nullptr);
+  ASSERT_NE(trigger, nullptr);
+  ASSERT_NE(search, nullptr);
+  for (QWidget *namedWidget : {trigger, search, list}) {
+    QAccessibleInterface *namedInterface =
+        QAccessible::queryAccessibleInterface(namedWidget);
+    ASSERT_NE(namedInterface, nullptr);
+    EXPECT_FALSE(namedInterface->text(QAccessible::Name).isEmpty())
+        << namedWidget->objectName().toStdString();
+  }
   QAccessibleInterface *listInterface =
       QAccessible::queryAccessibleInterface(list);
   ASSERT_NE(listInterface, nullptr);

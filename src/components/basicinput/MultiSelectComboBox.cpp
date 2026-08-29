@@ -91,6 +91,7 @@ public:
   explicit MultiSelectComboBoxTrigger(MultiSelectComboBox *owner)
       : DropDownButton(owner), m_owner(owner) {
     setObjectName(QStringLiteral("MultiSelectComboBox.Trigger"));
+    setAccessibleName(owner->tr("Open options"));
     setText(QString());
     setFluentStyle(Button::Standard);
     setFluentSize(Button::StandardSize);
@@ -376,6 +377,7 @@ public:
 
     m_searchEdit = new fluent::textfields::LineEdit(this);
     m_searchEdit->setObjectName(QStringLiteral("MultiSelectComboBox.Search"));
+    m_searchEdit->setAccessibleName(owner->tr("Search options"));
     m_searchEdit->setClearButtonEnabled(true);
     m_searchEdit->setFixedHeight(::Spacing::ControlHeight::Standard);
     m_layout->addWidget(m_searchEdit);
@@ -389,6 +391,7 @@ public:
 
     m_listView = new MultiSelectComboBoxListView(this);
     m_listView->setObjectName(QStringLiteral("MultiSelectComboBox.ListView"));
+    m_listView->setAccessibleName(owner->tr("Options"));
     m_listView->setBorderVisible(false);
     m_listView->setBackgroundVisible(false);
     m_listView->setProperty("fluentPreserveParentSurface", true);
