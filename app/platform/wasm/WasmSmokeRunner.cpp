@@ -3,29 +3,43 @@
 #include <FluentQt/WebAssembly.h>
 
 #include <QAbstractItemModel>
+#include <QAbstractItemView>
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QContextMenuEvent>
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontMetrics>
 #include <QKeyEvent>
 #include <QLineEdit>
+#include <QPointer>
 #include <QRegion>
+#include <QScrollArea>
 #include <QScrollBar>
+#include <QSet>
 #include <QSettings>
+#include <QSizePolicy>
 #include <QTimer>
 #include <QUrlQuery>
 
 #include <emscripten/emscripten.h>
 #include <emscripten/heap.h>
 
+#include "components/basicinput/Button.h"
+#include "components/basicinput/MultiSelectComboBox.h"
 #include "components/collections/DataGrid.h"
+#include "components/collections/ListView.h"
 #include "components/dialogs_flyouts/Dialog.h"
+#include "components/dialogs_flyouts/TeachingTip.h"
 #include "components/menus_toolbars/Menu.h"
+#include "components/navigation/NavigationView.h"
+#include "components/navigation/StackContentHost.h"
+#include "components/navigation/TabView.h"
 #include "components/textfields/LineEdit.h"
+#include "components/textfields/Label.h"
 #include "components/textfields/PasswordBox.h"
 #include "components/windowing/TitleBar.h"
 #include "components/windowing/Window.h"
@@ -89,12 +103,72 @@ qint64 heapBreakMiB()
         : 0;
 }
 
+const QStringList& changedSampleProbeRoutes()
+{
+    static const QStringList routes{
+        QStringLiteral("multi-select-combobox"),
+        QStringLiteral("list-view"),
+        QStringLiteral("navigation-view"),
+        QStringLiteral("tab-view"),
+        QStringLiteral("teaching-tip"),
+    };
+    return routes;
+}
+
+bool rejectSmoke(QString* failure, const QString& reason)
+{
+    if (failure)
+        *failure = reason;
+    return false;
+}
+
+QRect globalWidgetRect(const QWidget* widget)
+{
+    return widget
+        ? QRect(widget->mapToGlobal(QPoint(0, 0)), widget->size())
+        : QRect();
+}
+
+QString rectSummary(const QRect& rect)
+{
+    return QStringLiteral("%1,%2 %3x%4")
+        .arg(rect.x())
+        .arg(rect.y())
+        .arg(rect.width())
+        .arg(rect.height());
+}
+
+bool widgetContainedIn(const QWidget* widget,
+                       const QWidget* container,
+                       int tolerance = 0)
+{
+    if (!widget || !container)
+        return false;
+    return globalWidgetRect(container)
+        .adjusted(-tolerance, -tolerance, tolerance, tolerance)
+        .contains(globalWidgetRect(widget));
+}
+
+QWidget* samplePreviewSurface(QWidget* widget)
+{
+    for (QWidget* current = widget ? widget->parentWidget() : nullptr;
+         current;
+         current = current->parentWidget()) {
+        if (current->objectName()
+            == QStringLiteral("gallerySampleCardPreview")) {
+            return current;
+        }
+    }
+    return nullptr;
+}
+
 class WasmSmokeRunner final : public QObject {
 public:
     WasmSmokeRunner(GalleryWindow* window, bool full)
         : QObject(window)
         , m_window(window)
         , m_requireDataGridInteraction(full)
+        , m_requireChangedSampleProbes(full)
     {
         const QStringList available = window->navigationEntryIds();
         if (full) {
@@ -154,29 +228,47 @@ private:
     void waitForCurrentRoute()
     {
         if (currentRouteReady(m_currentRoute)) {
+            QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+            QApplication::processEvents();
             if (m_currentRoute == QStringLiteral("data-grid")) {
                 QString failure;
                 if (!verifyDataGridRoute(&failure))
                     return fail(failure);
                 m_dataGridInteractionPassed = true;
             }
-            const qint64 routeMs = m_routeTimer.elapsed();
-            if (routeMs > m_slowestRouteMs) {
-                m_slowestRouteMs = routeMs;
-                m_slowestRoute = m_currentRoute;
+            if (changedSampleProbeRoutes().contains(m_currentRoute)) {
+                QString failure;
+                if (m_currentRoute == QStringLiteral("teaching-tip")) {
+                    if (!beginTeachingTipRouteProbe(&failure))
+                        return fail(failure);
+                    return;
+                }
+                if (!verifyChangedSampleRoute(&failure))
+                    return fail(failure);
+                m_changedSampleRoutesPassed.insert(m_currentRoute);
             }
-            LOG_INFO(QStringLiteral(
-                         "WasmSmoke route ready id=%1 index=%2 total=%3 elapsedMs=%4")
-                         .arg(m_currentRoute)
-                         .arg(m_routeIndex)
-                         .arg(m_routes.size())
-                         .arg(routeMs));
-            QTimer::singleShot(0, this, [this]() { visitNextRoute(); });
+            finishCurrentRoute();
             return;
         }
         if (m_routeTimer.elapsed() > 30000)
             return fail(QStringLiteral("Timed out waiting for route %1").arg(m_currentRoute));
         QTimer::singleShot(25, this, [this]() { waitForCurrentRoute(); });
+    }
+
+    void finishCurrentRoute()
+    {
+        const qint64 routeMs = m_routeTimer.elapsed();
+        if (routeMs > m_slowestRouteMs) {
+            m_slowestRouteMs = routeMs;
+            m_slowestRoute = m_currentRoute;
+        }
+        LOG_INFO(QStringLiteral(
+                     "WasmSmoke route ready id=%1 index=%2 total=%3 elapsedMs=%4")
+                     .arg(m_currentRoute)
+                     .arg(m_routeIndex)
+                     .arg(m_routes.size())
+                     .arg(routeMs));
+        QTimer::singleShot(0, this, [this]() { visitNextRoute(); });
     }
 
     bool verifyDataGridRoute(QString* failure) const
@@ -251,6 +343,399 @@ private:
         if (editableIndex.data(Qt::EditRole).toString() != committedValue)
             return reject(QStringLiteral("DataGrid delegate editor did not commit"));
 
+        return true;
+    }
+
+    bool verifyChangedSampleRoute(QString* failure) const
+    {
+        if (m_currentRoute == QStringLiteral("multi-select-combobox"))
+            return verifyMultiSelectRoute(failure);
+        if (m_currentRoute == QStringLiteral("list-view"))
+            return verifyListViewRoute(failure);
+        if (m_currentRoute == QStringLiteral("navigation-view"))
+            return verifyNavigationViewRoute(failure);
+        if (m_currentRoute == QStringLiteral("tab-view"))
+            return verifyTabViewRoute(failure);
+        if (m_currentRoute == QStringLiteral("teaching-tip")) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral(
+                    "TeachingTip changed-sample probe must run asynchronously"));
+        }
+        return rejectSmoke(
+            failure,
+            QStringLiteral("No changed-sample probe is registered for route %1")
+                .arg(m_currentRoute));
+    }
+
+    bool verifyMultiSelectRoute(QString* failure) const
+    {
+        GalleryContentPage* page = m_window ? m_window->currentContentPage()
+                                            : nullptr;
+        if (!page) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral("MultiSelectComboBox Gallery page is unavailable"));
+        }
+
+        fluent::basicinput::MultiSelectComboBox* box = nullptr;
+        const auto boxes = page->findChildren<
+            fluent::basicinput::MultiSelectComboBox*>();
+        for (auto* candidate : boxes) {
+            if (candidate
+                && candidate->accessibleName() == QStringLiteral("Teams")) {
+                box = candidate;
+                break;
+            }
+        }
+        if (!box || !box->model() || box->model()->rowCount() != 4
+            || box->selectedCount() != 2 || box->width() != 280) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral("MultiSelectComboBox primary sample state is incomplete"));
+        }
+
+        auto* scrollArea = page->findChild<QScrollArea*>(
+            QStringLiteral("galleryContentScrollArea"));
+        if (!scrollArea) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral("MultiSelectComboBox page scroll host is unavailable"));
+        }
+        scrollArea->ensureWidgetVisible(box, 24, 48);
+        QApplication::processEvents();
+        box->open();
+        QApplication::processEvents();
+
+        QWidget* popupHost = box->window();
+        auto* popup = popupHost
+            ? popupHost->findChild<QWidget*>(
+                  QStringLiteral("MultiSelectComboBox.Popup"))
+            : nullptr;
+        auto* listView = popup
+            ? popup->findChild<QAbstractItemView*>(
+                  QStringLiteral("MultiSelectComboBox.ListView"))
+            : nullptr;
+        const bool wasOpen = box->isOpen();
+        const bool popupWasVisible = popup && popup->isVisible();
+        const bool valid = wasOpen && popup && popupWasVisible
+            && listView && listView->model()
+            && listView->model()->rowCount() == 4
+            && popupHost && widgetContainedIn(popup, popupHost, 1)
+            && widgetContainedIn(listView, popup, 1);
+        box->close();
+        QApplication::processEvents();
+        if (!valid) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral(
+                    "MultiSelectComboBox browser popup state or geometry is invalid "
+                    "open=%1 popup=%2 visible=%3 list=%4 rows=%5 "
+                    "popupRect=%6 windowRect=%7 listRect=%8")
+                    .arg(wasOpen)
+                    .arg(popup != nullptr)
+                    .arg(popupWasVisible)
+                    .arg(listView != nullptr)
+                    .arg(listView && listView->model()
+                             ? listView->model()->rowCount()
+                             : -1)
+                    .arg(popup ? rectSummary(globalWidgetRect(popup))
+                               : QStringLiteral("<none>"))
+                    .arg(popupHost
+                             ? rectSummary(globalWidgetRect(popupHost))
+                             : QStringLiteral("<none>"))
+                    .arg(listView ? rectSummary(globalWidgetRect(listView))
+                                  : QStringLiteral("<none>")));
+        }
+        return true;
+    }
+
+    bool verifyListViewRoute(QString* failure) const
+    {
+        GalleryContentPage* page = m_window ? m_window->currentContentPage()
+                                            : nullptr;
+        if (!page)
+            return rejectSmoke(failure, QStringLiteral("ListView Gallery page is unavailable"));
+
+        struct ListCase {
+            QString accessibleName;
+            int rowCount;
+            int selectedRows;
+        };
+        const auto views = page->findChildren<fluent::collections::ListView*>();
+        for (const ListCase& listCase : {
+                 ListCase{QStringLiteral("Contacts"), 12, 1},
+                 ListCase{QStringLiteral("Message filters"), 9, 2}}) {
+            fluent::collections::ListView* listView = nullptr;
+            for (auto* candidate : views) {
+                if (candidate
+                    && candidate->accessibleName()
+                        == listCase.accessibleName) {
+                    listView = candidate;
+                    break;
+                }
+            }
+            QWidget* previewSurface = samplePreviewSurface(listView);
+            if (!listView || !previewSurface || !listView->model()
+                || listView->model()->rowCount() != listCase.rowCount
+                || listView->size() != QSize(320, 234)
+                || listView->selectionModel()->selectedRows().size()
+                    != listCase.selectedRows
+                || !widgetContainedIn(listView, previewSurface, 1)) {
+                return rejectSmoke(
+                    failure,
+                    QStringLiteral(
+                        "ListView sample state or containing surface is invalid: %1")
+                        .arg(listCase.accessibleName));
+            }
+
+            listView->doItemsLayout();
+            const QRect viewportRect = listView->viewport()->rect();
+            int visibleRows = 0;
+            for (int row = 0; row < listView->model()->rowCount(); ++row) {
+                const QRect rowRect = static_cast<QAbstractItemView*>(listView)
+                                          ->visualRect(
+                                              listView->model()->index(row, 0));
+                if (!viewportRect.intersects(rowRect))
+                    continue;
+                ++visibleRows;
+                if (!viewportRect.contains(rowRect)) {
+                    return rejectSmoke(
+                        failure,
+                        QStringLiteral(
+                            "ListView browser viewport clips a visible row: %1/%2")
+                            .arg(listCase.accessibleName)
+                            .arg(row));
+                }
+            }
+            if (visibleRows != 5) {
+                return rejectSmoke(
+                    failure,
+                    QStringLiteral(
+                        "ListView browser viewport expected 5 complete rows: %1/%2")
+                        .arg(listCase.accessibleName)
+                        .arg(visibleRows));
+            }
+        }
+        return true;
+    }
+
+    bool verifyNavigationViewRoute(QString* failure) const
+    {
+        GalleryContentPage* page = m_window ? m_window->currentContentPage()
+                                            : nullptr;
+        if (!page) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral("NavigationView Gallery page is unavailable"));
+        }
+
+        struct NavigationCase {
+            QString objectName;
+            int height;
+        };
+        for (const NavigationCase& navigationCase : {
+                 NavigationCase{QStringLiteral("navigationViewChromeSlotsPreview"), 340},
+                 NavigationCase{QStringLiteral("navigationViewDisplayModesPreview"), 340},
+                 NavigationCase{QStringLiteral("navigationViewContentHostPreview"), 320}}) {
+            auto* navigation = page->findChild<
+                fluent::navigation::NavigationView*>(
+                navigationCase.objectName);
+            QWidget* previewSurface = samplePreviewSurface(navigation);
+            QWidget* contentHost = navigation ? navigation->contentHost()
+                                              : nullptr;
+            if (!navigation || !previewSurface || !contentHost
+                || navigation->width() < 440 || navigation->width() > 620
+                || navigation->height() != navigationCase.height
+                || navigation->sizePolicy().horizontalPolicy()
+                    != QSizePolicy::Expanding
+                || !widgetContainedIn(navigation, previewSurface, 1)
+                || !widgetContainedIn(contentHost, navigation, 1)) {
+                return rejectSmoke(
+                    failure,
+                    QStringLiteral(
+                        "NavigationView browser sample is clipped or incorrectly sized: %1")
+                        .arg(navigationCase.objectName));
+            }
+        }
+        return true;
+    }
+
+    bool verifyTabViewRoute(QString* failure) const
+    {
+        GalleryContentPage* page = m_window ? m_window->currentContentPage()
+                                            : nullptr;
+        if (!page)
+            return rejectSmoke(failure, QStringLiteral("TabView Gallery page is unavailable"));
+
+        auto* surface = page->findChild<QWidget*>(
+            QStringLiteral("tabViewHostedPagesSurface"));
+        auto* tabs = page->findChild<fluent::navigation::TabView*>(
+            QStringLiteral("tabViewHostedPagesTabs"));
+        auto* host = page->findChild<QWidget*>(
+            QStringLiteral("tabViewHostedPagesHost"));
+        QWidget* previewSurface = samplePreviewSurface(surface);
+        if (!surface || !tabs || !host || !previewSurface
+            || surface->width() < 360 || surface->width() > 560
+            || surface->height() != 186 || tabs->height() != 40
+            || host->height() != 146 || tabs->tabCount() != 3
+            || tabs->selectedIndex() != 0
+            || tabs->visibleTabIndexes().size() != 3
+            || !widgetContainedIn(surface, previewSurface, 1)
+            || !widgetContainedIn(tabs, surface, 1)
+            || !widgetContainedIn(host, surface, 1)) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral("TabView browser sample state or geometry is invalid"));
+        }
+        for (int index = 0; index < tabs->tabCount(); ++index) {
+            const QRect tabRect = tabs->tabGeometry(index);
+            if (tabRect.isEmpty() || !tabs->rect().contains(tabRect)) {
+                return rejectSmoke(
+                    failure,
+                    QStringLiteral("TabView browser tab geometry is clipped: %1")
+                        .arg(index));
+            }
+        }
+        const auto labels = tabs->findChildren<fluent::textfields::Label*>();
+        QSet<QString> expectedLabels{
+            QStringLiteral("Home"),
+            QStringLiteral("Details"),
+            QStringLiteral("Activity"),
+        };
+        if (labels.size() != tabs->tabCount()) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral("TabView browser sample exposed %1/%2 labels")
+                    .arg(labels.size())
+                    .arg(tabs->tabCount()));
+        }
+        for (const auto* label : labels) {
+            if (!label || !label->isVisible() || label->isTextElided()
+                || !expectedLabels.remove(label->text())) {
+                return rejectSmoke(
+                    failure,
+                    QStringLiteral(
+                        "TabView browser label is missing, hidden, duplicated, or elided: %1")
+                        .arg(label ? label->text()
+                                   : QStringLiteral("<null>")));
+            }
+        }
+        if (!expectedLabels.isEmpty()) {
+            const QStringList missingLabels(expectedLabels.values());
+            return rejectSmoke(
+                failure,
+                QStringLiteral("TabView browser labels are incomplete: %1")
+                    .arg(missingLabels.join(QStringLiteral(", "))));
+        }
+        return true;
+    }
+
+    bool beginTeachingTipRouteProbe(QString* failure)
+    {
+        GalleryContentPage* page = m_window ? m_window->currentContentPage()
+                                            : nullptr;
+        if (!page) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral("TeachingTip Gallery page is unavailable"));
+        }
+
+        auto* anchor = page->findChild<fluent::basicinput::Button*>(
+            QStringLiteral("teachingTipTopAnchor"));
+        auto* scrollArea = page->findChild<QScrollArea*>(
+            QStringLiteral("galleryContentScrollArea"));
+        if (!anchor || !scrollArea) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral("TeachingTip placement sample is incomplete"));
+        }
+
+        scrollArea->ensureWidgetVisible(anchor, 24, 160);
+        QApplication::processEvents();
+        anchor->click();
+        QApplication::processEvents();
+
+        QWidget* tipHost = anchor->window();
+        auto* tip = tipHost
+            ? tipHost->findChild<fluent::dialogs_flyouts::TeachingTip*>(
+                  QStringLiteral("teachingTipPlacementPreview"))
+            : nullptr;
+        if (!tip || !tipHost) {
+            return rejectSmoke(
+                failure,
+                QStringLiteral(
+                    "TeachingTip browser placement instance is unavailable"));
+        }
+
+        m_teachingTipOpened = qFuzzyCompare(tip->popupProgress(), 1.0);
+        QPointer<fluent::dialogs_flyouts::TeachingTip> tipGuard(tip);
+        QPointer<fluent::basicinput::Button> anchorGuard(anchor);
+        QPointer<QWidget> hostGuard(tipHost);
+        QPointer<GalleryContentPage> pageGuard(page);
+        connect(tip, &fluent::dialogs_flyouts::Popup::opened, this,
+                [this, tipGuard]() {
+                    if (tipGuard)
+                        m_teachingTipOpened = true;
+                });
+        QTimer::singleShot(
+            400, this,
+            [this, tipGuard, anchorGuard, hostGuard, pageGuard]() mutable {
+                if (!tipGuard || !anchorGuard || !hostGuard || !pageGuard) {
+                    fail(QStringLiteral(
+                        "TeachingTip browser placement lifetime ended before settle"));
+                    return;
+                }
+
+                bool statusUpdated = false;
+                const auto statusLabels =
+                    pageGuard->findChildren<fluent::textfields::Label*>();
+                for (const auto* label : statusLabels) {
+                    if (label
+                        && label->text()
+                            == QStringLiteral("Placement: Top, tail on")) {
+                        statusUpdated = true;
+                        break;
+                    }
+                }
+                const bool settled =
+                    qFuzzyCompare(tipGuard->popupProgress(), 1.0);
+                const bool valid = m_teachingTipOpened && settled
+                    && statusUpdated && tipGuard->isOpen()
+                    && tipGuard->isVisible()
+                    && tipGuard->target() == anchorGuard
+                    && tipGuard->preferredPlacement()
+                        == fluent::dialogs_flyouts::TeachingTip::Top
+                    && tipGuard->cardSize() == QSize(300, 136)
+                    && tipGuard->isTailVisible()
+                    && tipGuard->isLightDismissEnabled()
+                    && tipGuard->accessibleName()
+                        == QStringLiteral("Top placement tip")
+                    && tipGuard->contentHost()
+                    && widgetContainedIn(tipGuard, hostGuard, 1)
+                    && widgetContainedIn(tipGuard->contentHost(), tipGuard, 1);
+
+                tipGuard->setExitAnimationEnabled(false);
+                tipGuard->close();
+                QCoreApplication::sendPostedEvents(
+                    nullptr, QEvent::DeferredDelete);
+                QApplication::processEvents();
+                QCoreApplication::sendPostedEvents(
+                    nullptr, QEvent::DeferredDelete);
+                const bool deletedAfterClose = tipGuard.isNull();
+                if (!valid || !deletedAfterClose) {
+                    fail(QStringLiteral(
+                             "TeachingTip browser state, settle, geometry, status, or lifetime is invalid "
+                             "opened=%1 settled=%2 status=%3 deleted=%4")
+                             .arg(m_teachingTipOpened)
+                             .arg(settled)
+                             .arg(statusUpdated)
+                             .arg(deletedAfterClose));
+                    return;
+                }
+                m_changedSampleRoutesPassed.insert(m_currentRoute);
+                finishCurrentRoute();
+            });
         return true;
     }
 
@@ -569,21 +1054,49 @@ private:
             return fail(QStringLiteral(
                 "Full smoke did not exercise the DataGrid Gallery route"));
         }
+        if (m_requireChangedSampleProbes) {
+            QStringList missing;
+            for (const QString& routeId : changedSampleProbeRoutes()) {
+                if (!m_changedSampleRoutesPassed.contains(routeId))
+                    missing.append(routeId);
+            }
+            if (!missing.isEmpty()) {
+                return fail(QStringLiteral(
+                    "Full smoke did not exercise changed Gallery samples: %1")
+                                .arg(missing.join(QStringLiteral(", "))));
+            }
+        }
         const qint64 totalMs = m_totalTimer.elapsed();
         const qint64 finalHeapMiB = heapCapacityMiB();
         const qint64 finalHeapBreakMiB = heapBreakMiB();
+        QString changedSampleSummary;
+        if (m_requireChangedSampleProbes) {
+            changedSampleSummary = QStringLiteral(
+                "changed sample probes passed for all 5 routes; ");
+        } else if (!m_changedSampleRoutesPassed.isEmpty()) {
+            QStringList passedRoutes;
+            for (const QString& routeId : changedSampleProbeRoutes()) {
+                if (m_changedSampleRoutesPassed.contains(routeId))
+                    passedRoutes.append(routeId);
+            }
+            changedSampleSummary = QStringLiteral(
+                "changed sample probes passed for %1; ")
+                                       .arg(passedRoutes.join(
+                                           QStringLiteral(", ")));
+        }
         publishSmokeState("pass",
                           QStringLiteral(
                               "%1 routes, storage, window, dialog, menu, browser text input, and text menu passed in %2 ms; "
-                              "%3"
+                              "%3%4"
                               "CJK fallback passed; "
-                              "slowest route %4 took %5 ms; heap %6 -> %7 MiB; "
-                              "break %8 -> %9 MiB")
+                              "slowest route %5 took %6 ms; heap %7 -> %8 MiB; "
+                              "break %9 -> %10 MiB")
                               .arg(m_routes.size())
                               .arg(totalMs)
                               .arg(m_dataGridInteractionPassed
                                        ? QStringLiteral("DataGrid scroll, keyboard selection, and editing passed; ")
                                        : QString())
+                              .arg(changedSampleSummary)
                               .arg(m_slowestRoute)
                               .arg(m_slowestRouteMs)
                               .arg(m_initialHeapMiB)
@@ -614,6 +1127,9 @@ private:
     GalleryWindow* m_window = nullptr;
     bool m_requireDataGridInteraction = false;
     bool m_dataGridInteractionPassed = false;
+    bool m_requireChangedSampleProbes = false;
+    bool m_teachingTipOpened = false;
+    QSet<QString> m_changedSampleRoutesPassed;
     QStringList m_routes;
     QString m_currentRoute;
     int m_routeIndex = 0;
