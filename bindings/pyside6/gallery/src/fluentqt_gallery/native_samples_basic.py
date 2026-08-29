@@ -507,6 +507,7 @@ register_source_samples(
                 box = fluentqt.MultiSelectComboBox(root)
                 box.setModel(model)
                 box.setPlaceholderText("Choose teams")
+                box.setAccessibleName("Teams")
                 box.setSelectedRows([0, 2])
                 box.setFixedWidth(280)
 
@@ -545,6 +546,7 @@ register_source_samples(
                 box.setModel(model)
                 box.setSearchEnabled(True)
                 box.setSearchPlaceholderText("Filter cities")
+                box.setAccessibleName("Cities")
                 box.setSelectedRows([0, 2])
                 box.setFixedWidth(280)
 
@@ -571,6 +573,7 @@ register_source_samples(
                 )
                 box = fluentqt.MultiSelectComboBox(root)
                 box.setModel(model)
+                box.setAccessibleName("Locations")
                 box.setSelectedRows([1])
                 box.setFixedWidth(280)
                 add = fluentqt.Button("Add Berlin", root)

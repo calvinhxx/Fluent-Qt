@@ -224,6 +224,7 @@ void populateFlyout(Flyout *flyout, const QString &title, const QString &body) {
 void populateTeachingTip(TeachingTip *tip, const QString &titleText,
                          const QString &bodyText, Label *status) {
   auto *host = tip->contentHost();
+  host->setObjectName(QStringLiteral("teachingTipContentHost"));
   auto *layout = new QVBoxLayout(host);
   layout->setContentsMargins(14, 12, 14, 12);
   layout->setSpacing(8);
@@ -234,6 +235,8 @@ void populateTeachingTip(TeachingTip *tip, const QString &titleText,
   titleRow->addStretch(1);
 
   auto *closeButton = new Button(QString(), host);
+  closeButton->setObjectName(QStringLiteral("teachingTipCloseButton"));
+  closeButton->setAccessibleName(tip->tr("Close tip"));
   closeButton->setFluentLayout(Button::IconOnly);
   closeButton->setFluentStyle(Button::Subtle);
   closeButton->setIconGlyph(Typography::Icons::ChromeClose,
@@ -877,18 +880,58 @@ QVector<GallerySample> teachingTipSamples() {
           QStringLiteral("Placement and tail"),
           QStringLiteral("Preferred placement, tail visibility, and card size "
                          "are independent so tips can fit the surrounding UI."),
-          QStringLiteral("auto* tip = new TeachingTip(window());\n"
-                         "tip->setPreferredPlacement(TeachingTip::RightTop);\n"
-                         "tip->setTailVisible(showTail);\n"
-                         "tip->setCardSize(QSize(300, 136));\n"
-                         "tip->showAt(anchorButton);"),
+          QStringLiteral("auto* top = new Button(\"Top\", this);\n"
+                         "auto* rightTop = new Button(\"RightTop\", this);\n"
+                         "auto* automatic = new Button(\"Auto\", this);\n"
+                         "auto* tail = new ToggleSwitch(this);\n"
+                         "tail->setAccessibleName(\"Show TeachingTip tail\");\n"
+                         "tail->setIsOn(true);\n"
+                         "tail->setOnContent(\"Tail\");\n"
+                         "tail->setOffContent(\"No tail\");\n"
+                         "auto* status = new Label(\"Placement: none\", this);\n\n"
+                         "auto showTip = [tail, status](\n"
+                         "    Button* anchor, TeachingTip::PreferredPlacement placement) {\n"
+                         "    const QString name = teachingTipPlacementText(placement);\n"
+                         "    auto* tip = new TeachingTip(anchor->window());\n"
+                         "    tip->setAccessibleName(name + \" placement tip\");\n"
+                         "    tip->setPreferredPlacement(placement);\n"
+                         "    tip->setTailVisible(tail->isOn());\n"
+                         "    tip->setLightDismissEnabled(true);\n"
+                         "    tip->setCardSize(QSize(300, 136));\n"
+                         "    populateTeachingTip(\n"
+                         "        tip, name + \" placement\",\n"
+                         "        tail->isOn()\n"
+                         "            ? \"The tail points back to the control that opened the tip.\"\n"
+                         "            : \"Hide the tail when the surrounding layout already makes context clear.\",\n"
+                         "        status);\n"
+                         "    QObject::connect(tip, &Popup::opened, status, [=] {\n"
+                         "        status->setText(\"Placement: \" + name + \", tail \" +\n"
+                         "                        (tail->isOn() ? \"on\" : \"off\"));\n"
+                         "    });\n"
+                         "    QObject::connect(tip, &Popup::closed, tip, &QObject::deleteLater);\n"
+                         "    tip->showAt(anchor);\n"
+                         "};\n"
+                         "QObject::connect(top, &Button::clicked, top, [=] {\n"
+                         "    showTip(top, TeachingTip::Top);\n"
+                         "});\n"
+                         "QObject::connect(rightTop, &Button::clicked, rightTop, [=] {\n"
+                         "    showTip(rightTop, TeachingTip::RightTop);\n"
+                         "});\n"
+                         "QObject::connect(automatic, &Button::clicked, automatic, [=] {\n"
+                         "    showTip(automatic, TeachingTip::Auto);\n"
+                         "});"),
           [](QWidget *parent) {
             auto *surface = sampleSurface(parent);
             auto *controls = horizontalGroup(surface, 8);
             auto *top = sampleButton(controls, QStringLiteral("Top"));
             auto *rightTop = sampleButton(controls, QStringLiteral("RightTop"));
             auto *automatic = sampleButton(controls, QStringLiteral("Auto"));
+            top->setObjectName(QStringLiteral("teachingTipTopAnchor"));
+            rightTop->setObjectName(QStringLiteral("teachingTipRightTopAnchor"));
+            automatic->setObjectName(QStringLiteral("teachingTipAutoAnchor"));
             auto *tail = new ToggleSwitch(controls);
+            tail->setObjectName(QStringLiteral("teachingTipTailToggle"));
+            tail->setAccessibleName(QStringLiteral("Show TeachingTip tail"));
             tail->setIsOn(true);
             tail->setOnContent(QStringLiteral("Tail"));
             tail->setOffContent(QStringLiteral("No tail"));
@@ -899,6 +942,11 @@ QVector<GallerySample> teachingTipSamples() {
                             status](Button *anchor,
                                     TeachingTip::PreferredPlacement placement) {
               auto *tip = new TeachingTip(anchor->window());
+              tip->setObjectName(
+                  QStringLiteral("teachingTipPlacementPreview"));
+              tip->setAccessibleName(
+                  QStringLiteral("%1 placement tip")
+                      .arg(teachingTipPlacementText(placement)));
               tip->setPreferredPlacement(placement);
               tip->setTailVisible(tail->isOn());
               tip->setLightDismissEnabled(true);

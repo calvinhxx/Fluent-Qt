@@ -1506,18 +1506,38 @@ QVector<GallerySample> listViewSamples()
                    QStringLiteral("ListView with avatars"),
                    QStringLiteral("Rows pair an avatar with text; selection shows the animated indicator."),
                    QStringLiteral("auto* listView = new ListView(this);\n"
+                                  "listView->setBackgroundVisible(false);\n"
+                                  "listView->setBorderVisible(false);\n"
+                                  "listView->setProperty(\"fluentPreserveParentSurface\", true);\n"
+                                  "listView->viewport()->setProperty(\n"
+                                  "    \"fluentPreserveParentSurface\", true);\n"
+                                  "listView->setFixedSize(320, 234);\n"
+                                  "listView->setHeaderText(\"Contacts\");\n"
+                                  "listView->setAccessibleName(\"Contacts\");\n"
+                                  "listView->setIconSize(QSize(28, 28));\n"
+                                  "auto* model = new QStandardItemModel(listView);\n"
+                                  "const QStringList contacts{\n"
+                                  "    \"Kendall Collins\", \"Henry Ross\", \"Nicole Wagner\",\n"
+                                  "    \"Adam Wolfe\", \"Stephanie Meyer\", \"Maya Patel\",\n"
+                                  "    \"Alex Chen\", \"Priya Shah\", \"Omar Rivera\",\n"
+                                  "    \"Elena Rossi\", \"Jordan Lee\", \"Riley Brooks\"};\n"
+                                  "int colorIndex = 0;\n"
                                   "for (const QString& contact : contacts) {\n"
                                   "    auto* item = new QStandardItem(contact);\n"
-                                  "    item->setData(initialsAvatar(contact),\n"
+                                  "    item->setEditable(false);\n"
+                                  "    item->setData(initialsAvatar(\n"
+                                  "        contact, accentPalette().at(\n"
+                                  "            colorIndex++ % accentPalette().size())),\n"
                                   "                  Qt::DecorationRole);\n"
                                   "    model->appendRow(item);\n"
                                   "}\n"
                                   "listView->setModel(model);\n"
-                                  "listView->setHeaderText(\"Contacts\");"),
+                                  "listView->setSelectedIndex(0);"),
                    [](QWidget* parent) {
                        auto* listView = flatPreviewSurface(new ListView(parent));
-                       listView->setFixedSize(320, 240);
+                       listView->setFixedSize(320, 234);
                        listView->setHeaderText(QStringLiteral("Contacts"));
+                       listView->setAccessibleName(QStringLiteral("Contacts"));
                        listView->setIconSize(QSize(28, 28));
                        const QStringList names{
                            QStringLiteral("Kendall Collins"), QStringLiteral("Henry Ross"),
@@ -1543,14 +1563,41 @@ QVector<GallerySample> listViewSamples()
         makeSample(QStringLiteral("list-view-multi-select"),
                    QStringLiteral("Multiple selection"),
                    QStringLiteral("In Multiple mode each click toggles a row; every selected row keeps its fill and indicator."),
-                   QStringLiteral("listView->setSelectionMode(\n"
+                   QStringLiteral("auto* listView = new ListView(this);\n"
+                                  "listView->setBackgroundVisible(false);\n"
+                                  "listView->setBorderVisible(false);\n"
+                                  "listView->setProperty(\"fluentPreserveParentSurface\", true);\n"
+                                  "listView->viewport()->setProperty(\n"
+                                  "    \"fluentPreserveParentSurface\", true);\n"
+                                  "listView->setFixedSize(320, 234);\n"
+                                  "listView->setHeaderText(\"Filters\");\n"
+                                  "listView->setAccessibleName(\"Message filters\");\n"
+                                  "listView->setIconSize(QSize(24, 24));\n"
+                                  "listView->setSelectionMode(\n"
                                   "    ListView::SelectionMode::Multiple);\n"
+                                  "auto* filterModel = makeGlyphListModel(\n"
+                                  "    listView,\n"
+                                  "    {{\"Unread\", Typography::Icons::Mail},\n"
+                                  "     {\"Flagged\", Typography::Icons::Flag},\n"
+                                  "     {\"Has photos\", Typography::Icons::Camera},\n"
+                                  "     {\"From contacts\", Typography::Icons::People},\n"
+                                  "     {\"Favorites\", Typography::Icons::FavoriteStar},\n"
+                                  "     {\"With documents\", Typography::Icons::Document},\n"
+                                  "     {\"Pinned\", Typography::Icons::Pin},\n"
+                                  "     {\"Scheduled\", Typography::Icons::Calendar},\n"
+                                  "     {\"Archived\", Typography::Icons::Folder}},\n"
+                                  "    24);\n"
                                   "listView->setModel(filterModel);\n"
-                                  "// each click toggles that row's selection"),
+                                  "for (int row : {0, 2}) {\n"
+                                  "    listView->selectionModel()->select(\n"
+                                  "        filterModel->index(row, 0),\n"
+                                  "        QItemSelectionModel::Select | QItemSelectionModel::Rows);\n"
+                                  "}"),
                    [](QWidget* parent) {
                        auto* listView = flatPreviewSurface(new ListView(parent));
-                       listView->setFixedSize(320, 244);
+                       listView->setFixedSize(320, 234);
                        listView->setHeaderText(QStringLiteral("Filters"));
+                       listView->setAccessibleName(QStringLiteral("Message filters"));
                        listView->setIconSize(QSize(24, 24));
                        listView->setSelectionMode(ListView::SelectionMode::Multiple);
                        listView->setModel(makeGlyphListModel(

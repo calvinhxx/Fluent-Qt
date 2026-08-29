@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <tuple>
 
 #include <QAction>
 #include <QApplication>
@@ -42,6 +43,7 @@
 #include "components/basicinput/MultiSelectComboBox.h"
 #include "components/basicinput/Slider.h"
 #include "components/basicinput/ToggleButton.h"
+#include "components/basicinput/ToggleSwitch.h"
 #include "compatibility/QtCompat.h"
 #include "components/collections/ListView.h"
 #include "components/collections/TreeView.h"
@@ -1070,8 +1072,7 @@ TEST_F(GalleryContentPagesTest, EntryGridExpandsCardsForWrappedDescriptions)
     EXPECT_GT(narrowHeight, wideHeight);
 }
 
-TEST_F(GalleryContentPagesTest,
-       EntryGridExpandsOnlyRowsThatNeedWrappedDescriptions)
+TEST_F(GalleryContentPagesTest, EntryGridExpandsOnlyRowsThatNeedWrappedDescriptions)
 {
     const GalleryEntryGrid::Entry wrappedEntry{
         QStringLiteral("wrapped"),
@@ -1377,9 +1378,310 @@ TEST_F(GalleryContentPagesTest, MultiSelectStatusWrapsCompleteSelection)
               status->fontMetrics().height());
 }
 
-TEST_F(
-    GalleryContentPagesTest,
-    NotificationLifecycleSamplesMatchPreviewBehavior)
+TEST_F(GalleryContentPagesTest, NarrowCardsKeepNavigationPreviewsInsideTheirSurface)
+{
+    struct SampleCase {
+        QString routeId;
+        QString sampleId;
+        QString childObjectName;
+    };
+    const QVector<SampleCase> cases{
+        {QStringLiteral("navigation-view"),
+         QStringLiteral("navigation-view-display-modes"),
+         QStringLiteral("navigationViewDisplayModesPreview")},
+        {QStringLiteral("tab-view"),
+         QStringLiteral("tab-view-hosted-pages"),
+         QStringLiteral("tabViewHostedPagesSurface")},
+    };
+
+    for (const SampleCase& sampleCase : cases) {
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(sampleCase.routeId, sampleCase.sampleId,
+                                   &sample));
+        GallerySampleCard card(sample);
+        card.resize(600, card.sizeHint().height());
+        card.show();
+        QApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QApplication::processEvents();
+        QApplication::processEvents();
+
+        auto* previewSurface = card.findChild<QWidget*>(
+            QStringLiteral("gallerySampleCardPreview"));
+        auto* responsiveChild = card.findChild<QWidget*>(
+            sampleCase.childObjectName);
+        ASSERT_NE(previewSurface, nullptr)
+            << sampleCase.sampleId.toStdString();
+        ASSERT_NE(responsiveChild, nullptr)
+            << sampleCase.sampleId.toStdString();
+        EXPECT_TRUE(isContainedIn(responsiveChild, previewSurface, 1))
+            << sampleCase.sampleId.toStdString();
+    }
+}
+
+TEST_F(GalleryContentPagesTest, ListSamplesStartOnCompleteRows)
+{
+    for (const QString& sampleId : {
+             QStringLiteral("list-view-basic"),
+             QStringLiteral("list-view-multi-select")}) {
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(QStringLiteral("list-view"), sampleId,
+                                   &sample));
+        std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+        ASSERT_NE(preview, nullptr);
+        auto* listView = qobject_cast<fluent::collections::ListView*>(
+            preview.get());
+        if (!listView) {
+            listView = preview->findChild<fluent::collections::ListView*>();
+        }
+        ASSERT_NE(listView, nullptr) << sampleId.toStdString();
+        ASSERT_NE(listView->model(), nullptr);
+        EXPECT_FALSE(listView->accessibleName().isEmpty())
+            << sampleId.toStdString();
+
+        listView->show();
+        QApplication::processEvents();
+        const QRect viewportRect = listView->viewport()->rect();
+        int visibleRows = 0;
+        for (int row = 0; row < listView->model()->rowCount(); ++row) {
+            const QRect rowRect = static_cast<QAbstractItemView*>(listView)
+                                      ->visualRect(
+                                          listView->model()->index(row, 0));
+            if (!viewportRect.intersects(rowRect))
+                continue;
+            ++visibleRows;
+            EXPECT_TRUE(viewportRect.contains(rowRect))
+                << sampleId.toStdString() << " row=" << row;
+        }
+        EXPECT_EQ(visibleRows, 5) << sampleId.toStdString();
+    }
+}
+
+TEST_F(GalleryContentPagesTest, ChangedSampleSnippetsMatchPreviewSemantics)
+{
+    struct SnippetCase {
+        QString routeId;
+        QString sampleId;
+        QStringList required;
+        QStringList forbidden;
+    };
+    const QVector<SnippetCase> cases{
+        {QStringLiteral("list-view"),
+         QStringLiteral("list-view-basic"),
+         {QStringLiteral("setBackgroundVisible(false)"),
+          QStringLiteral("setBorderVisible(false)"),
+          QStringLiteral("fluentPreserveParentSurface"),
+          QStringLiteral("setFixedSize(320, 234)"),
+          QStringLiteral("setIconSize(QSize(28, 28))"),
+          QStringLiteral("setAccessibleName(\"Contacts\")"),
+          QStringLiteral("accentPalette().at("),
+          QStringLiteral("setSelectedIndex(0)")},
+         {QStringLiteral("initialsAvatar(contact)")}},
+        {QStringLiteral("list-view"),
+         QStringLiteral("list-view-multi-select"),
+         {QStringLiteral("setBackgroundVisible(false)"),
+          QStringLiteral("setBorderVisible(false)"),
+          QStringLiteral("fluentPreserveParentSurface"),
+          QStringLiteral("setFixedSize(320, 234)"),
+          QStringLiteral("setHeaderText(\"Filters\")"),
+          QStringLiteral("setIconSize(QSize(24, 24))"),
+          QStringLiteral("setSelectionMode("),
+          QStringLiteral("selectionModel()->select("),
+          QStringLiteral("{\"Archived\", Typography::Icons::Folder}")},
+         {}},
+        {QStringLiteral("navigation-view"),
+         QStringLiteral("navigation-view-chrome-slots"),
+         {QStringLiteral("setMinimumWidth(440)"),
+          QStringLiteral("setMaximumWidth(620)"),
+          QStringLiteral("setFixedHeight(340)"),
+          QStringLiteral("QSizePolicy::Expanding, QSizePolicy::Fixed")},
+         {}},
+        {QStringLiteral("navigation-view"),
+         QStringLiteral("navigation-view-display-modes"),
+         {QStringLiteral("setMinimumWidth(440)"),
+          QStringLiteral("setMaximumWidth(620)"),
+          QStringLiteral("setFixedHeight(340)"),
+          QStringLiteral("setTopBarHeight(48)")},
+         {}},
+        {QStringLiteral("navigation-view"),
+         QStringLiteral("navigation-view-content-host"),
+         {QStringLiteral("setMinimumWidth(440)"),
+          QStringLiteral("setMaximumWidth(620)"),
+          QStringLiteral("setFixedHeight(320)"),
+          QStringLiteral("setAnimationEnabled(true)")},
+         {}},
+        {QStringLiteral("tab-view"),
+         QStringLiteral("tab-view-hosted-pages"),
+         {QStringLiteral("auto* surface = new QWidget(this)"),
+          QStringLiteral("surface->setMinimumWidth(360)"),
+          QStringLiteral("surface->setMaximumWidth(560)"),
+          QStringLiteral("tabs->setFixedHeight(40)"),
+          QStringLiteral("host->setFixedHeight(146)"),
+          QStringLiteral("host->setCurrentIndex(index, 0, true)"),
+          QStringLiteral("layout->addWidget(host)")},
+         {QStringLiteral("setCloseButtonOverlayMode")}},
+        {QStringLiteral("teaching-tip"),
+         QStringLiteral("teaching-tip-placement-tail"),
+         {QStringLiteral("new Button(\"Top\", this)"),
+          QStringLiteral("new Button(\"RightTop\", this)"),
+          QStringLiteral("new Button(\"Auto\", this)"),
+          QStringLiteral("setAccessibleName(\"Show TeachingTip tail\")"),
+          QStringLiteral("name + \" placement tip\""),
+          QStringLiteral("setLightDismissEnabled(true)"),
+          QStringLiteral("showTip(automatic, TeachingTip::Auto)")},
+         {QStringLiteral("setAccessibleName(\"Placement preview\")")}},
+    };
+
+    for (const SnippetCase& sampleCase : cases) {
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(sampleCase.routeId, sampleCase.sampleId,
+                                   &sample));
+        for (const QString& fragment : sampleCase.required) {
+            EXPECT_TRUE(sample.codeSnippet.contains(fragment))
+                << sampleCase.sampleId.toStdString()
+                << " missing: " << fragment.toStdString();
+        }
+        for (const QString& fragment : sampleCase.forbidden) {
+            EXPECT_FALSE(sample.codeSnippet.contains(fragment))
+                << sampleCase.sampleId.toStdString()
+                << " keeps redundant: " << fragment.toStdString();
+        }
+    }
+
+    struct ListPreviewCase {
+        QString sampleId;
+        QString header;
+        QString accessibleName;
+        QSize iconSize;
+        int selectedRows;
+    };
+    for (const ListPreviewCase& listCase : {
+             ListPreviewCase{QStringLiteral("list-view-basic"),
+                             QStringLiteral("Contacts"),
+                             QStringLiteral("Contacts"), QSize(28, 28), 1},
+             ListPreviewCase{QStringLiteral("list-view-multi-select"),
+                             QStringLiteral("Filters"),
+                             QStringLiteral("Message filters"), QSize(24, 24),
+                             2}}) {
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(QStringLiteral("list-view"),
+                                   listCase.sampleId, &sample));
+        std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+        auto* listView = qobject_cast<fluent::collections::ListView*>(
+            preview.get());
+        if (!listView)
+            listView = preview->findChild<fluent::collections::ListView*>();
+        ASSERT_NE(listView, nullptr);
+        EXPECT_EQ(listView->minimumSize(), QSize(320, 234));
+        EXPECT_EQ(listView->maximumSize(), QSize(320, 234));
+        EXPECT_EQ(listView->headerText(), listCase.header);
+        EXPECT_EQ(listView->accessibleName(), listCase.accessibleName);
+        EXPECT_EQ(listView->iconSize(), listCase.iconSize);
+        EXPECT_FALSE(listView->isBackgroundVisible());
+        EXPECT_FALSE(listView->isBorderVisible());
+        EXPECT_TRUE(listView->property(
+                                "fluentPreserveParentSurface")
+                        .toBool());
+        ASSERT_NE(listView->viewport(), nullptr);
+        EXPECT_TRUE(listView->viewport()
+                        ->property("fluentPreserveParentSurface")
+                        .toBool());
+        EXPECT_EQ(listView->selectionModel()->selectedRows().size(),
+                  listCase.selectedRows);
+    }
+
+    for (const auto& navigationCase : {
+             std::make_tuple(QStringLiteral("navigation-view-chrome-slots"),
+                             QStringLiteral("navigationViewChromeSlotsPreview"),
+                             340),
+             std::make_tuple(QStringLiteral("navigation-view-display-modes"),
+                             QStringLiteral("navigationViewDisplayModesPreview"),
+                             340),
+             std::make_tuple(QStringLiteral("navigation-view-content-host"),
+                             QStringLiteral("navigationViewContentHostPreview"),
+                             320)}) {
+        fluent::gallery::GallerySample sample;
+        ASSERT_TRUE(findSampleById(QStringLiteral("navigation-view"),
+                                   std::get<0>(navigationCase), &sample));
+        std::unique_ptr<QWidget> preview(sample.createPreview(nullptr));
+        auto* navigation = preview->findChild<QWidget*>(
+            std::get<1>(navigationCase));
+        ASSERT_NE(navigation, nullptr);
+        EXPECT_EQ(navigation->minimumWidth(), 440);
+        EXPECT_EQ(navigation->maximumWidth(), 620);
+        EXPECT_EQ(navigation->minimumHeight(), std::get<2>(navigationCase));
+        EXPECT_EQ(navigation->maximumHeight(), std::get<2>(navigationCase));
+        EXPECT_EQ(navigation->sizePolicy().horizontalPolicy(),
+                  QSizePolicy::Expanding);
+        EXPECT_EQ(navigation->sizePolicy().verticalPolicy(),
+                  QSizePolicy::Fixed);
+    }
+
+    fluent::gallery::GallerySample tabSample;
+    ASSERT_TRUE(findSampleById(QStringLiteral("tab-view"),
+                               QStringLiteral("tab-view-hosted-pages"),
+                               &tabSample));
+    std::unique_ptr<QWidget> tabPreview(tabSample.createPreview(nullptr));
+    auto* tabSurface = tabPreview->findChild<QWidget*>(
+        QStringLiteral("tabViewHostedPagesSurface"));
+    auto* tabStrip = tabPreview->findChild<QWidget*>(
+        QStringLiteral("tabViewHostedPagesTabs"));
+    auto* tabHost = tabPreview->findChild<QWidget*>(
+        QStringLiteral("tabViewHostedPagesHost"));
+    ASSERT_NE(tabSurface, nullptr);
+    ASSERT_NE(tabStrip, nullptr);
+    ASSERT_NE(tabHost, nullptr);
+    EXPECT_EQ(tabSurface->minimumWidth(), 360);
+    EXPECT_EQ(tabSurface->maximumWidth(), 560);
+    EXPECT_EQ(tabSurface->minimumHeight(), 186);
+    EXPECT_EQ(tabSurface->maximumHeight(), 186);
+    EXPECT_EQ(tabStrip->minimumHeight(), 40);
+    EXPECT_EQ(tabStrip->maximumHeight(), 40);
+    EXPECT_EQ(tabHost->minimumHeight(), 146);
+    EXPECT_EQ(tabHost->maximumHeight(), 146);
+}
+
+TEST_F(GalleryContentPagesTest, InteractiveSampleRootsHaveAccessibleNames)
+{
+    fluent::gallery::GallerySample multiSelectSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("multi-select-combobox"),
+        QStringLiteral("multi-select-combobox-selection"),
+        &multiSelectSample));
+    std::unique_ptr<QWidget> multiSelectPreview(
+        multiSelectSample.createPreview(nullptr));
+    auto* multiSelect = multiSelectPreview->findChild<MultiSelectComboBox*>();
+    ASSERT_NE(multiSelect, nullptr);
+    EXPECT_EQ(multiSelect->accessibleName(), QStringLiteral("Teams"));
+
+    fluent::gallery::GallerySample treeSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("tree-view"), QStringLiteral("tree-view-checkboxes"),
+        &treeSample));
+    std::unique_ptr<QWidget> treePreview(treeSample.createPreview(nullptr));
+    auto* tree = qobject_cast<TreeView*>(treePreview.get());
+    if (!tree)
+        tree = treePreview->findChild<TreeView*>();
+    ASSERT_NE(tree, nullptr);
+    EXPECT_EQ(tree->accessibleName(), QStringLiteral("Sync settings"));
+
+    fluent::gallery::GallerySample teachingTipSample;
+    ASSERT_TRUE(findSampleById(
+        QStringLiteral("teaching-tip"),
+        QStringLiteral("teaching-tip-placement-tail"),
+        &teachingTipSample));
+    std::unique_ptr<QWidget> teachingTipPreview(
+        teachingTipSample.createPreview(nullptr));
+    auto* tail = teachingTipPreview->findChild<
+        fluent::basicinput::ToggleSwitch*>(
+        QStringLiteral("teachingTipTailToggle"));
+    ASSERT_NE(tail, nullptr);
+    EXPECT_EQ(tail->accessibleName(),
+              QStringLiteral("Show TeachingTip tail"));
+    EXPECT_GE(tail->minimumSizeHint().height(),
+              Spacing::ControlHeight::Small);
+}
+
+TEST_F(GalleryContentPagesTest, NotificationLifecycleSamplesMatchPreviewBehavior)
 {
     fluent::gallery::GallerySample badgeSample;
     ASSERT_TRUE(findSampleById(
@@ -1491,9 +1793,7 @@ TEST_F(
     QCoreApplication::processEvents();
 }
 
-TEST_F(
-    GalleryContentPagesTest,
-    EditableComboBoxSampleMakesCustomValueContractVisible)
+TEST_F(GalleryContentPagesTest, EditableComboBoxSampleMakesCustomValueContractVisible)
 {
     fluent::gallery::GallerySample sample;
     ASSERT_TRUE(findSampleById(
@@ -1835,8 +2135,7 @@ TEST_F(GalleryContentPagesTest, EditingCommandSampleReusesRouterActions)
     EXPECT_EQ(router->scopeWindow(), card.window());
 }
 
-TEST_F(GalleryContentPagesTest,
-       EditingCommandSamplesShareOneRouterPerGalleryWindow)
+TEST_F(GalleryContentPagesTest, EditingCommandSamplesShareOneRouterPerGalleryWindow)
 {
     fluent::gallery::GallerySample menuSample;
     fluent::gallery::GallerySample barSample;
@@ -1875,8 +2174,7 @@ TEST_F(GalleryContentPagesTest,
     }
 }
 
-TEST_F(GalleryContentPagesTest,
-       ParentedPrewarmSampleUsesGalleryWindowRouter)
+TEST_F(GalleryContentPagesTest, ParentedPrewarmSampleUsesGalleryWindowRouter)
 {
     fluent::gallery::GallerySample sample;
     ASSERT_TRUE(findSampleById(
@@ -1908,8 +2206,7 @@ TEST_F(GalleryContentPagesTest,
     }
 }
 
-TEST_F(GalleryContentPagesTest,
-       CommandBarRoutesExposePublicSamplesAndBundledArtwork)
+TEST_F(GalleryContentPagesTest, CommandBarRoutesExposePublicSamplesAndBundledArtwork)
 {
     const auto barReference =
         galleryComponentReference(QStringLiteral("command-bar"));
@@ -3180,9 +3477,7 @@ TEST_F(GalleryContentPagesTest, CodeBlockUsesFluentReadOnlyContextMenu)
         QStringLiteral("auto"));
 }
 
-TEST_F(
-    GalleryContentPagesTest,
-    ComponentReferenceValuesUseSharedFluentContextMenu)
+TEST_F(GalleryContentPagesTest, ComponentReferenceValuesUseSharedFluentContextMenu)
 {
     const fluent::gallery::GalleryComponentReference reference{
         QStringLiteral("<FluentQt/MenusToolbars.h>"),

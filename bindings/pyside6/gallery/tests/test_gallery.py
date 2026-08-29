@@ -157,6 +157,8 @@ from fluentqt_gallery.single_instance import (
 
 
 MANIFEST_PATH = Path(__file__).resolve().parents[2] / "api-manifest.json"
+SOURCE_PACKAGE_DIR = Path(__file__).resolve().parents[1] / "src/fluentqt_gallery"
+RUNTIME_PACKAGE_DIR = Path(application_controller_module.__file__).resolve().parent
 EXPECTED_SUPPORT_TYPES = frozenset(
     {
         "AnchorLayout",
@@ -272,6 +274,14 @@ FORBIDDEN_DISPLAY_HELPERS = frozenset(
         "set_action_glyph",
     }
 )
+SELF_CONTAINED_DISPLAY_HELPERS = {
+    ("list-view", "list-view-basic"): frozenset(
+        {"make_initials_avatar"}
+    ),
+    ("list-view", "list-view-multi-select"): frozenset(
+        {"make_glyph_pixmap"}
+    ),
+}
 
 # PySide 6.2 can release the Python QApplication wrapper during long-running
 # test methods unless the module keeps an explicit strong reference.
@@ -336,6 +346,21 @@ def _wait_until(
 
 
 class PythonGalleryTest(unittest.TestCase):
+    def test_runtime_package_matches_gallery_sources(self):
+        stale_files = [
+            source.name
+            for source in sorted(SOURCE_PACKAGE_DIR.glob("*.py"))
+            if not (RUNTIME_PACKAGE_DIR / source.name).is_file()
+            or (RUNTIME_PACKAGE_DIR / source.name).read_bytes()
+            != source.read_bytes()
+        ]
+        self.assertEqual(
+            stale_files,
+            [],
+            "PySide6 Gallery build package is stale; rebuild the configured "
+            "PySide6 tree before running Gallery tests",
+        )
+
     @classmethod
     def setUpClass(cls):
         global _TEST_APPLICATION
@@ -2370,11 +2395,33 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
                                 sample.id,
                             ),
                         )
+                        allowed_helpers = SELF_CONTAINED_DISPLAY_HELPERS.get(
+                            (entry.route_id, sample.id), frozenset()
+                        )
+                        helper_definitions = {
+                            node.name: node
+                            for node in displayed_tree.body
+                            if isinstance(node, ast.FunctionDef)
+                            and node.name in allowed_helpers
+                        }
+                        self.assertEqual(
+                            set(helper_definitions),
+                            set(allowed_helpers),
+                            "{0}/{1} lost its self-contained rendering helper"
+                            .format(entry.route_id, sample.id),
+                        )
+                        helper_statement_ids = {
+                            id(node)
+                            for helper in helper_definitions.values()
+                            for node in ast.walk(helper)
+                            if isinstance(node, ast.stmt)
+                        }
                         displayed_semantic_statements = sum(
                             isinstance(node, ast.stmt)
                             and not isinstance(
                                 node, (ast.Import, ast.ImportFrom)
                             )
+                            and id(node) not in helper_statement_ids
                             for node in ast.walk(displayed_tree)
                         )
                         cpp_semantic_statements = max(
@@ -2915,6 +2962,62 @@ print(json.dumps([name for name in heavy_modules if name in sys.modules]))
         )
         self.assertLessEqual(maximum_displayed_lines, 80)
         self.assertLessEqual(maximum_displayed_width, 88)
+
+    def test_list_view_display_sources_execute_with_preview_surface_semantics(self):
+        for sample_id, row_count, selected_rows in (
+            ("list-view-basic", 12, 1),
+            ("list-view-multi-select", 9, 2),
+        ):
+            with self.subTest(sample=sample_id):
+                result = build_sample("list-view", sample_id)
+                namespace: dict[str, object] = {
+                    "__name__": "fluentqt_gallery_display_snippet",
+                    "fluentqt": fluentqt,
+                }
+                source_widgets: tuple[QWidget, ...] = ()
+                try:
+                    exec(
+                        compile(
+                            result.source,
+                            "<fluentqt-gallery-display-list-view>",
+                            "exec",
+                        ),
+                        namespace,
+                    )
+                    list_view = namespace.get("list_view")
+                    self.assertIsInstance(list_view, fluentqt.ListView)
+                    self.assertEqual(list_view.size(), QSize(320, 234))
+                    self.assertFalse(list_view.isBackgroundVisible())
+                    self.assertFalse(list_view.isBorderVisible())
+                    self.assertTrue(
+                        list_view.property(
+                            "fluentPreserveParentSurface"
+                        )
+                    )
+                    self.assertTrue(
+                        list_view.viewport().property(
+                            "fluentPreserveParentSurface"
+                        )
+                    )
+                    self.assertEqual(list_view.model().rowCount(), row_count)
+                    self.assertEqual(
+                        len(list_view.selectionModel().selectedRows()),
+                        selected_rows,
+                    )
+                    decoration = list_view.model().index(0, 0).data(
+                        Qt.ItemDataRole.DecorationRole
+                    )
+                    self.assertIsInstance(decoration, QPixmap)
+                    self.assertFalse(decoration.isNull())
+                finally:
+                    source_widgets = _take_top_level_widgets(namespace)
+                    if shiboken6.isValid(result.widget):
+                        result.widget.close()
+                    for source_widget in source_widgets:
+                        if shiboken6.isValid(source_widget):
+                            source_widget.close()
+                    namespace.clear()
+                    QApplication.processEvents()
 
     def test_window_builds_all_91_routes_and_208_sample_cards(self):
         window = GalleryWindow()
