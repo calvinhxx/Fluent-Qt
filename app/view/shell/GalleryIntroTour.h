@@ -66,6 +66,8 @@ private:
     void syncScrimSurfaceRadius();
     void applyStepSpotlight(int index, bool animate);   // glide / pop the dim cut-out onto the target
     QRect spotlightRectFor(QWidget* target) const;      // target geometry in scrim-local coords + padding
+    void focusPrimaryActionIfActive();
+    void settleFocusForHostState();
     void finishTour();
 
     QWidget* m_host = nullptr;
@@ -81,6 +83,7 @@ private:
     fluent::basicinput::Button* m_prev = nullptr;
     fluent::basicinput::Button* m_next = nullptr;
     fluent::basicinput::Button* m_close = nullptr;
+    QPointer<QWidget> m_focusBeforeStart;
 
     QVector<Step> m_steps;
     int m_index = -1;

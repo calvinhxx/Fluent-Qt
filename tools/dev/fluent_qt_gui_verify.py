@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from html import escape
 import hashlib
 import json
+import locale
 import math
 import os
 from pathlib import Path
@@ -1424,6 +1425,60 @@ def resolve_comparator_executable(build_dir: Path) -> Path:
     raise VerificationError(f"Could not find fluent_qt_visual_compare under {tool_dir}")
 
 
+def decode_captured_output(value: bytes | str | None) -> str:
+    """Decode captured process output without assuming the Windows code page."""
+
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if not isinstance(value, (bytes, bytearray)):
+        return str(value)
+
+    payload = bytes(value)
+    try:
+        return payload.decode("utf-8", errors="strict")
+    except UnicodeDecodeError:
+        preferred_encoding = locale.getpreferredencoding(False) or "utf-8"
+        try:
+            return payload.decode(preferred_encoding, errors="replace")
+        except LookupError:
+            return payload.decode("utf-8", errors="replace")
+
+
+def normalize_completed_process_output(
+    completed: subprocess.CompletedProcess[Any],
+) -> subprocess.CompletedProcess[str]:
+    completed.stdout = decode_captured_output(completed.stdout)
+    completed.stderr = decode_captured_output(completed.stderr)
+    return completed
+
+
+def normalize_timeout_output(error: subprocess.TimeoutExpired) -> subprocess.TimeoutExpired:
+    error.output = decode_captured_output(error.output)
+    error.stderr = decode_captured_output(error.stderr)
+    return error
+
+
+def run_captured_command(
+    command: Sequence[str], **kwargs: Any
+) -> subprocess.CompletedProcess[str]:
+    """Run a command with byte capture and normalize both success and timeout output."""
+
+    try:
+        completed = subprocess.run(
+            command,
+            text=False,
+            capture_output=True,
+            check=False,
+            **kwargs,
+        )
+    except subprocess.TimeoutExpired as error:
+        normalize_timeout_output(error)
+        raise
+    return normalize_completed_process_output(completed)
+
+
 def command_record(command: Sequence[str], completed: subprocess.CompletedProcess[str]) -> dict[str, object]:
     return {
         "command": list(command),
@@ -1442,12 +1497,9 @@ def build_dependencies(args: argparse.Namespace) -> dict[str, object]:
     else:
         command.extend(["--preset", args.preset])
     command.extend(["--target", "fluent_qt_gallery", "fluent_qt_visual_compare"])
-    completed = subprocess.run(
+    completed = run_captured_command(
         command,
         cwd=PROJECT_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
     )
     result = command_record(command, completed)
     result.update({"requested": True, "status": "pass" if completed.returncode == 0 else "fail"})
@@ -1456,12 +1508,9 @@ def build_dependencies(args: argparse.Namespace) -> dict[str, object]:
 
 def git_state() -> dict[str, object]:
     def run(*arguments: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
+        return run_captured_command(
             ["git", *arguments],
             cwd=PROJECT_ROOT,
-            text=True,
-            capture_output=True,
-            check=False,
         )
 
     revision = run("rev-parse", "HEAD")
@@ -3669,12 +3718,9 @@ def run_pixel_comparison(
         ]
         if region is not None:
             command.extend(["--region", ",".join(str(value) for value in region)])
-        completed = subprocess.run(
+        completed = run_captured_command(
             command,
             cwd=PROJECT_ROOT,
-            text=True,
-            capture_output=True,
-            check=False,
         )
         execution = command_record(command, completed)
         execution.update(
@@ -3793,13 +3839,10 @@ def run_scenario(
     environment, environment_overrides = relevant_environment(recipe, scenario)
     timeout = int(scenario.get("timeout_seconds", defaults.get("timeout_seconds", 45)))
     try:
-        completed = subprocess.run(
+        completed = run_captured_command(
             command,
             cwd=PROJECT_ROOT,
             env=environment,
-            text=True,
-            capture_output=True,
-            check=False,
             timeout=timeout,
         )
         execution = command_record(command, completed)

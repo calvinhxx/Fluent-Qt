@@ -538,7 +538,9 @@ executeGalleryPreviewActions(QWidget *root, const QJsonObject &script,
 
     const bool allowFocused =
         action == QStringLiteral("key") ||
-        action == QStringLiteral("type_text");
+        action == QStringLiteral("type_text") ||
+        (action == QStringLiteral("wait") &&
+         selector == QStringLiteral("@focus"));
     TargetResolution target;
     if (action == QStringLiteral("wait") && selector.isEmpty())
       target = {root, QString()};

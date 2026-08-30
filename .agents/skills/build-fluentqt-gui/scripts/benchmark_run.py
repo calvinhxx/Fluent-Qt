@@ -67,7 +67,13 @@ def _digest(path: Path) -> str:
 
 
 def _portable_path(path: Path, base: Path) -> str:
-    return Path(os.path.relpath(path.resolve(), start=base.resolve())).as_posix()
+    resolved = path.resolve()
+    try:
+        return Path(os.path.relpath(resolved, start=base.resolve())).as_posix()
+    except ValueError:
+        # Windows cannot express a relative path across drive letters.  Keep
+        # the absolute path in that case; _recorded_path already supports it.
+        return resolved.as_posix()
 
 
 def _recorded_path(value: str, manifest_path: Path) -> Path:
