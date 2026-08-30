@@ -482,6 +482,15 @@ TEST_F(GalleryShellFrameworkTest, IntroTourExposesStepTextAndTrapsActionFocus)
     GalleryWindow window;
     window.resize(900, 700);
     window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    // Native compositors may reject foreground activation for a test launched
+    // from a background terminal.  Give this logical focus-contract test a
+    // deterministic Qt active window without weakening the focus assertions.
+    QT_WARNING_PUSH
+    QT_WARNING_DISABLE_DEPRECATED
+    QApplication::setActiveWindow(&window);
+    QT_WARNING_POP
+    window.activateWindow();
     QApplication::processEvents();
 
     GalleryIntroTour tour(&window);
@@ -544,6 +553,71 @@ TEST_F(GalleryShellFrameworkTest, IntroTourExposesStepTextAndTrapsActionFocus)
 
     window.close();
 #endif
+}
+
+TEST_F(GalleryShellFrameworkTest, IntroTourRestoresPrimaryActionOnHostActivation)
+{
+    GalleryWindow window;
+    window.resize(900, 700);
+    QWidget foregroundWindow;
+    foregroundWindow.resize(240, 120);
+    Button foregroundAction(QStringLiteral("Foreground action"),
+                            &foregroundWindow);
+    foregroundAction.setGeometry(24, 24, 160, 32);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    foregroundWindow.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&foregroundWindow));
+    QT_WARNING_PUSH
+    QT_WARNING_DISABLE_DEPRECATED
+    QApplication::setActiveWindow(&foregroundWindow);
+    QT_WARNING_POP
+    QApplication::processEvents();
+    foregroundAction.setFocus(Qt::OtherFocusReason);
+    QApplication::processEvents();
+    ASSERT_EQ(QApplication::activeWindow(), &foregroundWindow);
+    ASSERT_EQ(QApplication::focusWidget(), &foregroundAction);
+
+    GalleryIntroTour tour(&window);
+    GalleryIntroTour::Step step;
+    step.title = QStringLiteral("Welcome");
+    step.body = QStringLiteral("Intro content");
+    step.centered = true;
+    tour.setSteps({step});
+    tour.start();
+
+    auto* nextButton = window.findChild<Button*>(
+        QStringLiteral("GalleryIntroTour.NextButton"));
+    auto* closeButton = window.findChild<Button*>(
+        QStringLiteral("GalleryIntroTour.CloseButton"));
+    ASSERT_NE(nextButton, nullptr);
+    ASSERT_NE(closeButton, nullptr);
+
+    // Both immediate and queued startup focus passes must respect the inactive
+    // host instead of stealing focus from whichever application is foreground.
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::activeWindow(), &foregroundWindow,
+                              1000);
+    const auto focusIsOutsideHost = [&]() {
+        QWidget* focused = QApplication::focusWidget();
+        return !focused
+            || (focused != &window && !window.isAncestorOf(focused));
+    };
+    QTRY_VERIFY_WITH_TIMEOUT(focusIsOutsideHost(), 1000);
+    QWidget* focusedAfterStart = QApplication::focusWidget();
+    ASSERT_TRUE(!focusedAfterStart || focusedAfterStart == &foregroundAction
+                || foregroundWindow.isAncestorOf(focusedAfterStart));
+
+    // Qt's logical activation emits the same WindowActivate event delivered
+    // after a native compositor finally foregrounds the first-launch window.
+    QT_WARNING_PUSH
+    QT_WARNING_DISABLE_DEPRECATED
+    QApplication::setActiveWindow(&window);
+    QT_WARNING_POP
+    QTRY_COMPARE_WITH_TIMEOUT(QApplication::focusWidget(), nextButton, 1000);
+
+    QTest::mouseClick(closeButton, Qt::LeftButton);
+    QTRY_VERIFY_WITH_TIMEOUT(window.isChromeInteractive(), 1000);
+    window.close();
 }
 
 TEST_F(GalleryShellFrameworkTest, IntroTourSpotlightsAnchoredTarget)

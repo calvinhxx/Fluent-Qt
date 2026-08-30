@@ -8,6 +8,7 @@
 #include <QJsonObject>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QTest>
 
 #include <gtest/gtest.h>
 
@@ -126,6 +127,15 @@ TEST(GalleryPreviewTest, ExecutesInputAndStateInteractionStepsWithAssertions) {
                        {QStringLiteral("text"), QStringLiteral("42")},
                        {QStringLiteral("expect"),
                         QJsonObject{{QStringLiteral("text"),
+                                     QStringLiteral("42")}}}},
+           QJsonObject{{QStringLiteral("id"),
+                        QStringLiteral("wait-for-focused-editor")},
+                       {QStringLiteral("action"), QStringLiteral("wait")},
+                       {QStringLiteral("target"), QStringLiteral("@focus")},
+                       {QStringLiteral("milliseconds"), 0},
+                       {QStringLiteral("expect"),
+                        QJsonObject{{QStringLiteral("has_focus"), true},
+                                    {QStringLiteral("text"),
                                      QStringLiteral("42")}}}}}}};
 
   const auto result = fluent::gallery::executeGalleryPreviewActions(
@@ -138,12 +148,60 @@ TEST(GalleryPreviewTest, ExecutesInputAndStateInteractionStepsWithAssertions) {
                 .toObject()
                 .value(QStringLiteral("passed"))
                 .toInt(),
-            5);
+            6);
   EXPECT_TRUE(button.isChecked());
   EXPECT_FALSE(button.isEnabled());
   EXPECT_EQ(editor.text(), QStringLiteral("42"));
 
   root.close();
+  QApplication::processEvents();
+}
+
+TEST(GalleryPreviewTest, RejectsWaitForFocusedWidgetOutsidePreviewRoot) {
+  QWidget window;
+  window.resize(320, 240);
+  QWidget root(&window);
+  root.setObjectName(QStringLiteral("interactionRoot"));
+  root.setGeometry(0, 0, 200, 240);
+  QLineEdit outsideEditor(&window);
+  outsideEditor.setObjectName(QStringLiteral("outsideEditor"));
+  outsideEditor.setGeometry(220, 40, 80, 32);
+  window.show();
+  ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+  QT_WARNING_PUSH
+  QT_WARNING_DISABLE_DEPRECATED
+  QApplication::setActiveWindow(&window);
+  QT_WARNING_POP
+  window.activateWindow();
+  QApplication::processEvents();
+  outsideEditor.setFocus(Qt::OtherFocusReason);
+  QApplication::processEvents();
+  ASSERT_EQ(QApplication::focusWidget(), &outsideEditor);
+
+  const QJsonObject script{
+      {QStringLiteral("schema_version"), 1},
+      {QStringLiteral("steps"),
+       QJsonArray{QJsonObject{
+           {QStringLiteral("action"), QStringLiteral("wait")},
+           {QStringLiteral("target"), QStringLiteral("@focus")},
+           {QStringLiteral("milliseconds"), 0},
+           {QStringLiteral("expect"),
+            QJsonObject{{QStringLiteral("has_focus"), true}}}}}}};
+
+  const auto result =
+      fluent::gallery::executeGalleryPreviewActions(&root, script);
+  EXPECT_FALSE(result.passed);
+  EXPECT_EQ(result.report.value(QStringLiteral("status")).toString(),
+            QStringLiteral("fail"));
+  EXPECT_TRUE(result.report.value(QStringLiteral("steps"))
+                  .toArray()
+                  .first()
+                  .toObject()
+                  .value(QStringLiteral("message"))
+                  .toString()
+                  .contains(QStringLiteral("belongs to the preview")));
+
+  window.close();
   QApplication::processEvents();
 }
 

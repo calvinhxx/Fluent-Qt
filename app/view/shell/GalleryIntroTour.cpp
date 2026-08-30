@@ -12,6 +12,7 @@
 #include <QPropertyAnimation>
 #include <QRect>
 #include <QSize>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include "components/basicinput/Button.h"
@@ -246,6 +247,7 @@ void GalleryIntroTour::start()
         return;
     }
 
+    m_focusBeforeStart = QApplication::focusWidget();
     build();
     // Modal: the scrim blocks clicks; lock the window chrome so it can't be moved or resized.
     // zh_CN: 模态:遮罩拦截点击;锁定窗口 chrome,使其不可移动或缩放。
@@ -263,7 +265,43 @@ void GalleryIntroTour::start()
     applyStep(0, /*animateSpotlight*/ false);
     m_card->open();  // CoachMark positions + fades itself in
     m_card->raise();
+    settleFocusForHostState();
+    QTimer::singleShot(0, this, [this]() { settleFocusForHostState(); });
+}
+
+void GalleryIntroTour::focusPrimaryActionIfActive()
+{
+    QWidget* win = m_host ? m_host->window() : nullptr;
+    if (m_finished || !win || !win->isActiveWindow() || !m_card
+        || !m_card->isOpen() || !m_next || !m_next->isVisible()) {
+        return;
+    }
+
+    QWidget* focused = QApplication::focusWidget();
+    if (focused == m_close || focused == m_prev || focused == m_next)
+        return;
     m_next->setFocus(Qt::TabFocusReason);
+}
+
+void GalleryIntroTour::settleFocusForHostState()
+{
+    QWidget* win = m_host ? m_host->window() : nullptr;
+    if (m_finished || !win)
+        return;
+    if (win->isActiveWindow()) {
+        focusPrimaryActionIfActive();
+        return;
+    }
+
+    // Wayland may briefly activate an inactive host while showing a child
+    // overlay, then correct the active window on a later WindowDeactivate.
+    // Restore the foreground focus when possible and never leave it in the
+    // inactive tour host.
+    if (m_focusBeforeStart && m_focusBeforeStart->window()->isActiveWindow())
+        m_focusBeforeStart->setFocus(Qt::OtherFocusReason);
+    QWidget* focused = QApplication::focusWidget();
+    if (focused && (focused == win || win->isAncestorOf(focused)))
+        focused->clearFocus();
 }
 
 void GalleryIntroTour::applyStep(int index, bool animateSpotlight)
@@ -340,11 +378,20 @@ void GalleryIntroTour::finishTour()
         m_dimAnim->start();
     }
 
+    m_focusBeforeStart.clear();
     emit finished();
 }
 
 bool GalleryIntroTour::eventFilter(QObject* watched, QEvent* event)
 {
+    if (event && m_host && watched == m_host->window()
+        && (event->type() == QEvent::WindowActivate
+            || event->type() == QEvent::WindowDeactivate)) {
+        // Native compositors can settle first-launch activation after the tour
+        // is visible. Defer until Qt has committed the new active top-level.
+        QTimer::singleShot(0, this, [this]() { settleFocusForHostState(); });
+    }
+
     if (event && event->type() == QEvent::KeyPress
         && (watched == m_close || watched == m_prev || watched == m_next)) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);

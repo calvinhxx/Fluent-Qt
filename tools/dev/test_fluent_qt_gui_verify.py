@@ -389,6 +389,93 @@ def recipe(baseline: str) -> dict[str, object]:
 
 
 class FluentQtGuiVerifyTest(unittest.TestCase):
+    def test_captured_command_decodes_utf8_before_windows_preferred_encoding(self):
+        completed = subprocess.CompletedProcess(
+            ["probe"],
+            0,
+            "标准输出".encode("utf-8"),
+            "错误输出".encode("gbk"),
+        )
+        with (
+            mock.patch.object(
+                MODULE.locale, "getpreferredencoding", return_value="gbk"
+            ),
+            mock.patch.object(MODULE.subprocess, "run", return_value=completed) as run,
+        ):
+            result = MODULE.run_captured_command(["probe"], cwd=Path("work"))
+
+        self.assertEqual(result.stdout, "标准输出")
+        self.assertEqual(result.stderr, "错误输出")
+        run.assert_called_once_with(
+            ["probe"],
+            text=False,
+            capture_output=True,
+            check=False,
+            cwd=Path("work"),
+        )
+
+    def test_captured_command_normalizes_timeout_output(self):
+        timeout = subprocess.TimeoutExpired(
+            ["probe"],
+            3,
+            output="部分输出".encode("utf-8"),
+            stderr="超时错误".encode("gbk"),
+        )
+        with (
+            mock.patch.object(
+                MODULE.locale, "getpreferredencoding", return_value="gbk"
+            ),
+            mock.patch.object(MODULE.subprocess, "run", side_effect=timeout),
+            self.assertRaises(subprocess.TimeoutExpired) as raised,
+        ):
+            MODULE.run_captured_command(["probe"], timeout=3)
+
+        self.assertIs(raised.exception, timeout)
+        self.assertEqual(raised.exception.stdout, "部分输出")
+        self.assertEqual(raised.exception.stderr, "超时错误")
+
+    def test_captured_output_replaces_invalid_preferred_encoding_bytes(self):
+        with mock.patch.object(
+            MODULE.locale, "getpreferredencoding", return_value="cp1252"
+        ):
+            self.assertEqual(MODULE.decode_captured_output(b"\x81"), "\ufffd")
+        self.assertEqual(MODULE.decode_captured_output(None), "")
+        self.assertEqual(
+            MODULE.decode_captured_output("already decoded"), "already decoded"
+        )
+
+    def test_capture_timeout_record_always_contains_decoded_strings(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            value = recipe("baselines/missing")
+            recipe_path = root / "recipe.json"
+            recipe_path.write_text(json.dumps(value), encoding="utf-8")
+            timeout = subprocess.TimeoutExpired(
+                ["gallery"],
+                45,
+                output="部分输出".encode("utf-8"),
+                stderr="超时错误".encode("gbk"),
+            )
+            with (
+                mock.patch.object(
+                    MODULE.locale, "getpreferredencoding", return_value="gbk"
+                ),
+                mock.patch.object(MODULE.subprocess, "run", side_effect=timeout),
+            ):
+                result = MODULE.run_scenario(
+                    value,
+                    recipe_path,
+                    value["scenarios"][0],
+                    root / "output",
+                    root / "gallery",
+                    root / "comparator",
+                )
+
+        self.assertEqual(result["status"], "incomplete")
+        self.assertTrue(result["capture"]["timed_out"])
+        self.assertEqual(result["capture"]["stdout"], "部分输出")
+        self.assertEqual(result["capture"]["stderr"], "超时错误")
+
     def test_read_json_wraps_numeric_and_nesting_parser_limits(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "hostile.json"
