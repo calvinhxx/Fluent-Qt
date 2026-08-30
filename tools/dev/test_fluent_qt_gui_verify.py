@@ -83,6 +83,12 @@ def geometry_report(x: int = 16) -> dict[str, object]:
 
 
 def capture_report(snapshot: Path, x: int = 16) -> dict[str, object]:
+    host_system = MODULE.host_key()[0]
+    platform_plugin, product_type, kernel_type, style = {
+        "macos": ("cocoa", "macos", "darwin", "macos"),
+        "windows": ("windows", "windows", "windows", "windowsvista"),
+        "linux": ("xcb", "ubuntu", "linux", "fusion"),
+    }[host_system]
     return {
         "schema_version": 2,
         "tool": "FluentQt Gallery Preview",
@@ -101,8 +107,8 @@ def capture_report(snapshot: Path, x: int = 16) -> dict[str, object]:
         "environment": {
             "fingerprint_schema_version": 1,
             "qt_version": "6.9.3",
-            "platform_plugin": "cocoa",
-            "style": "macos",
+            "platform_plugin": platform_plugin,
+            "style": style,
             "device_pixel_ratio": 2,
             "logical_dpi_x": 72,
             "logical_dpi_y": 72,
@@ -132,11 +138,11 @@ def capture_report(snapshot: Path, x: int = 16) -> dict[str, object]:
                 "physical_dpi_y": 220,
             },
             "system": {
-                "product_type": "macos",
+                "product_type": product_type,
                 "product_version": "15.0",
-                "kernel_type": "darwin",
+                "kernel_type": kernel_type,
                 "kernel_version": "24.0",
-                "cpu_architecture": "arm64",
+                "cpu_architecture": MODULE.platform.machine(),
             },
             "scale_environment": {
                 "QT_SCALE_FACTOR": "1",
@@ -1502,6 +1508,7 @@ class FluentQtGuiVerifyTest(unittest.TestCase):
                 report["environment"]["platform_plugin"] = plugin
                 report["environment"]["system"]["product_type"] = product
                 report["environment"]["system"]["kernel_type"] = kernel
+                report["environment"]["system"]["cpu_architecture"] = "arm64"
                 with (
                     mock.patch.object(
                         MODULE.platform, "system", return_value=host_system
@@ -1517,6 +1524,14 @@ class FluentQtGuiVerifyTest(unittest.TestCase):
 
     def test_capture_architecture_must_match_baseline_routing_host(self):
         report = capture_report(Path("actual.png"))
+        report["environment"]["platform_plugin"] = "cocoa"
+        report["environment"]["system"].update(
+            {
+                "product_type": "macos",
+                "kernel_type": "darwin",
+                "cpu_architecture": "arm64",
+            }
+        )
         with (
             mock.patch.object(MODULE.platform, "system", return_value="Darwin"),
             mock.patch.object(MODULE.platform, "machine", return_value="arm64"),

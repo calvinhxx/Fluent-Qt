@@ -58,6 +58,8 @@ MAX_DEVICE_PIXEL_RATIO = 16.0
 MAX_PIXEL_COORDINATE = 32768
 MAX_SETTLE_MS = 10_000
 MAX_TIMEOUT_SECONDS = 300
+MAX_JSON_INTEGER_DIGITS = 4096
+MAX_JSON_NESTING_DEPTH = 128
 ACTION_NAMES = {
     "focus",
     "click",
@@ -315,9 +317,35 @@ def canonical_json(value: object) -> bytes:
     ).encode("utf-8")
 
 
+def parse_json_integer(raw: str) -> int:
+    digits = raw[1:] if raw.startswith("-") else raw
+    if len(digits) > MAX_JSON_INTEGER_DIGITS:
+        raise ValueError(
+            f"JSON integer exceeds {MAX_JSON_INTEGER_DIGITS} digits"
+        )
+    return int(raw)
+
+
+def validate_json_nesting(value: object) -> None:
+    pending: list[tuple[object, int]] = [(value, 1)]
+    while pending:
+        current, depth = pending.pop()
+        if depth > MAX_JSON_NESTING_DEPTH:
+            raise ValueError(
+                f"JSON nesting exceeds {MAX_JSON_NESTING_DEPTH} levels"
+            )
+        if isinstance(current, dict):
+            pending.extend((item, depth + 1) for item in current.values())
+        elif isinstance(current, list):
+            pending.extend((item, depth + 1) for item in current)
+
+
 def read_json(path: Path) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(
+            path.read_text(encoding="utf-8"), parse_int=parse_json_integer
+        )
+        validate_json_nesting(value)
     except OSError as error:
         raise VerificationError(f"Could not read JSON {path}: {error}") from error
     except (ValueError, RecursionError) as error:
