@@ -31,6 +31,7 @@ REQUIRED_SKILL_FILES = (
     "references/cross-agent-benchmark.md",
     "references/design-intelligence.md",
     "references/experience-differentiation.md",
+    "references/fluentqt-maintainer-gates.md",
     "references/iconography.md",
     "references/performance-lifecycle.md",
     "references/polished-starter.md",
