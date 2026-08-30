@@ -115,6 +115,11 @@ The repository contains one canonical Skill. Codex, Claude Code, Cursor, and
 other compatible agents use the same instructions and assets; there are no
 agent-specific copies to keep synchronized.
 
+Invoke it once with the application outcome. The agent owns FluentQt project
+analysis, scaffolding or integration, implementation, build, launch,
+refinement, and evidence, while requesting input only for material product
+decisions.
+
 Build the installable archive:
 
 ```bash

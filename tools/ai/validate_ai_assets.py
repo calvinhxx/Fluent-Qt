@@ -220,6 +220,7 @@ def _validate_skill(project_root: Path) -> None:
         "references/art-direction.md",
         "references/cross-agent-benchmark.md",
         "references/design-intelligence.md",
+        "references/fluentqt-maintainer-gates.md",
         "references/iconography.md",
         "references/product-copy.md",
         "references/component-selection.md",
@@ -297,6 +298,13 @@ def _validate_skill(project_root: Path) -> None:
             "Generate structurally distinct concepts",
             "Scan semantic component opportunities",
             "Differentiation acceptance gate",
+        ),
+        "references/fluentqt-maintainer-gates.md": (
+            "Confirm maintainer mode",
+            "Select gates from the change",
+            "Use repository GUI evidence",
+            "Keep platform claims separate",
+            "Maintainer acceptance gate",
         ),
         "references/product-reference-patterns.md": (
             "Reference-synthesis protocol",
