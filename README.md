@@ -78,7 +78,7 @@ include(FetchContent)
 FetchContent_Declare(
     fluentqt
     GIT_REPOSITORY https://github.com/calvinhxx/Fluent-Qt.git
-    GIT_TAG v1.7.4
+    GIT_TAG v1.7.5
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(fluentqt)
