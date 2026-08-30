@@ -1,13 +1,49 @@
 ---
 name: build-fluentqt-gui
-description: Analyze existing or greenfield projects and architect, art-direct, build, performance-test, and independently review distinctive FluentQt C++ or PySide6 desktop GUIs. Use when adding a GUI to a library, CLI, TUI, service, plugin, data tool, or project with no current interface; when creating or redesigning a FluentQt application; when deriving a subject-grounded visual identity, editing concise product copy, generating or refining application icons, expanding brand assets into semantic Light/Dark themes, exploring three high-fidelity concepts, and preserving an approved concept in production code; when establishing a maintainable application structure, choosing FluentQt components and model/view architecture, installing Mica/Acrylic window material and revealed layer hierarchy, finishing a conversation, run timeline, document canvas, or composer, or correcting density, alignment, wrapping, dynamic height, scrolling, transient lifetime, responsiveness, and visual detail to Gallery-equivalent quality.
+description: Build or improve complete desktop GUIs from one request using FluentQt. Use when creating a C++ or PySide6 application, adding a GUI to an existing CLI, library, service, plugin, or data tool, or redesigning and fixing a FluentQt interface. Own project analysis, scaffolding or integration, component selection, implementation, build, launch, performance and lifecycle checks, visual refinement, and independent review. Do not use for Qt or QML work that will not use FluentQt.
 ---
 
-# Build a Polished FluentQt GUI
+# Build a GUI with FluentQt end to end
+
+## Own the complete delivery
+
+Treat this Skill as the single entry point from a user's application goal to a
+runnable, polished FluentQt desktop GUI. Do not require the user to translate
+their goal into Qt architecture, component names, build commands, or a review
+plan. Unless they explicitly ask only for advice, a plan, or an audit, own the
+whole loop:
+
+1. inspect the target and run the read-only preflight;
+2. select C++ or PySide6 and the correct integration boundary;
+3. scaffold a new application or integrate with the existing project;
+4. implement one complete user workflow with FluentQt components;
+5. build and launch the actual application;
+6. refine the live UI across applicable themes, sizes, and states;
+7. run engineering and visual gates, fix findings, and rebuild; and
+8. report the runnable path, evidence, and any genuinely unverified platform
+   boundary.
+
+One invocation means end-to-end ownership. It does not waive the material
+direction checkpoint below, but keep that checkpoint focused; do not turn
+ordinary implementation details into a series of approval prompts.
+
+Choose and record one delivery mode:
+
+- `create`: build a new standalone FluentQt C++ or PySide6 application;
+- `integrate`: add a FluentQt interface to an existing CLI, library, service,
+  plugin, TUI, or data tool while preserving its existing entry points;
+- `improve`: redesign, repair, or complete an existing FluentQt GUI; or
+- `maintain-library`: change FluentQt itself, including its components,
+  Gallery surfaces, bindings, WebAssembly delivery, or GUI verification.
+
+The delivery mode says what is being changed. The lite/full profile below says
+how much discovery and evidence the change needs; the two classifications are
+independent.
 
 Build from target-project evidence and public FluentQt contracts. Deliver a
-working vertical slice and an intentional visual system; do not stop when the
-first window compiles.
+working vertical slice and an intentional visual system; do not stop at a
+plan, wireframe, isolated snippets, the first successful compile, or an
+unlaunched binary.
 
 For a new GUI or major redesign, do not start production UI code from a recipe
 or wireframe. First define a visual world, produce three comparable
@@ -96,6 +132,7 @@ teardown.
 | New GUI, major redesign, distinctive visual direction, taste feedback, concept rendering, or implementation fidelity | [Design intelligence](references/design-intelligence.md) |
 | New GUI, major redesign, visual concept generation, or user taste decision | [Art direction and human selection](references/art-direction.md) |
 | Full evidence matrix, dynamic layout, or transient/scroll acceptance | [Visual evidence contract](references/visual-evidence-contract.md) |
+| Target is FluentQt itself, or work changes FluentQt components, Gallery, bindings, WebAssembly, AI assets, or CI | [FluentQt maintainer gates](references/fluentqt-maintainer-gates.md) |
 | Evaluating this Skill across Codex and Cursor | [Cross-agent benchmark](references/cross-agent-benchmark.md) |
 
 Query only catalog slices needed for the current decision:
@@ -475,6 +512,11 @@ viewport-bounded materialization, scroll-anchor behavior, and a retention or
 pagination contract. For one-shot surfaces, prove repeated close returns live
 instances to baseline after deferred deletion.
 
+In `maintain-library` mode, select the repository-owned gates in
+[FluentQt maintainer gates](references/fluentqt-maintainer-gates.md). Do not
+run every platform lane indiscriminately, and do not present a Python or
+WebAssembly smoke result as desktop C++ pixel approval.
+
 For a new application, full-profile GUI, or architecture migration, validate
 the actual source tree before declaring engineering acceptance:
 
@@ -557,14 +599,6 @@ Before finishing, require:
   navigation/session/chat/inspector template.
 - one controlled aesthetic risk grounded in the subject, with everything else
   edited and restrained; no generic fallback silently replacing it.
-
-When modifying FluentQt's catalog, guidance, docs, or this Skill inside a full
-FluentQt checkout, run from that checkout:
-
-```bash
-python3 tools/ai/evaluate_ai_catalog.py --project-root .
-python3 tools/ai/validate_ai_assets.py --project-root .
-```
 
 Report the selected profile, integration pattern and evidence when applicable,
 preserved interfaces, design/component/theme decisions, implemented slice,

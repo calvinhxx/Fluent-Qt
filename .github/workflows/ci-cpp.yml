@@ -654,6 +654,7 @@ jobs:
               .agents/skills/build-fluentqt-gui/references/cross-agent-benchmark.md \
               .agents/skills/build-fluentqt-gui/references/design-intelligence.md \
               .agents/skills/build-fluentqt-gui/references/experience-differentiation.md \
+              .agents/skills/build-fluentqt-gui/references/fluentqt-maintainer-gates.md \
               .agents/skills/build-fluentqt-gui/references/iconography.md \
               .agents/skills/build-fluentqt-gui/references/performance-lifecycle.md \
               .agents/skills/build-fluentqt-gui/references/polished-starter.md \
