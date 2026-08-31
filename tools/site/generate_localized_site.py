@@ -20,6 +20,7 @@ SITE_ROOT = ROOT / "site"
 TEMPLATE_PATH = Path(__file__).with_name("index.template.html")
 SITE_SCRIPT_PATH = SITE_ROOT / "site.js"
 ERROR_PAGE_PATH = SITE_ROOT / "404.html"
+LEGACY_GALLERY_REDIRECT_PATH = SITE_ROOT / "app" / "index.html"
 BASE_URL = "https://calvinhxx.github.io/Fluent-Qt/"
 REPOSITORY_URL = "https://github.com/calvinhxx/Fluent-Qt"
 OG_IMAGE_URL = f"{BASE_URL}assets/og.png"
@@ -367,6 +368,29 @@ def validate_error_page() -> None:
             fail(f"site/404.html must not infer language from browser state: {forbidden}")
 
 
+def validate_legacy_gallery_redirect() -> None:
+    try:
+        page = LEGACY_GALLERY_REDIRECT_PATH.read_text(encoding="utf-8")
+    except OSError as error:
+        fail(f"cannot read {LEGACY_GALLERY_REDIRECT_PATH}: {error}")
+
+    requirements = (
+        '<link rel="canonical" href="https://calvinhxx.github.io/Fluent-Qt/gallery/">',
+        '<meta http-equiv="refresh" content="0; url=../gallery/">',
+        'new URL("../gallery/", window.location.href)',
+        "target.search = window.location.search",
+        "target.hash = window.location.hash",
+        "window.location.replace(target)",
+        '<a href="../gallery/">Open the Fluent-Qt Gallery</a>',
+    )
+    for requirement in requirements:
+        if requirement not in page:
+            fail(
+                "site/app/index.html is missing legacy Gallery redirect contract: "
+                f"{requirement}"
+            )
+
+
 def output_digest(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:12]
 
@@ -401,6 +425,7 @@ def main() -> int:
     localized_values = translations()
     version = project_version()
     validate_error_page()
+    validate_legacy_gallery_redirect()
     outputs: list[tuple[Path, str]] = []
 
     for locale in LOCALES:

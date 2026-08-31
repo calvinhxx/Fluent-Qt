@@ -24,6 +24,10 @@ render Chinese, while all other missing paths render English. It must not read
 browser-language state, and its assets and home links resolve from the
 `/Fluent-Qt/` project root even for deeply nested missing URLs.
 
+The legacy `/Fluent-Qt/app/` path is retained as a no-index redirect to the
+canonical `/Fluent-Qt/gallery/` page. Keep `site/app/index.html` when changing
+the Pages layout so links from older posts and bookmarks continue to work.
+
 ## Editing
 
 1. Edit the shared HTML structure in
@@ -49,8 +53,8 @@ python3 tools/site/generate_localized_site.py --check
 
 The check requires matching translation keys, static localized text and
 attributes, valid JSON-LD and sitemap XML, canonical URLs, reciprocal
-`hreflang` links, the URL-owned 404 language contract, and the current CMake
-project version in structured data.
+`hreflang` links, the URL-owned 404 language contract, the legacy Gallery
+redirect, and the current CMake project version in structured data.
 The Pages workflow also verifies that both localized pages and `sitemap.xml`
 are present before deployment.
 
