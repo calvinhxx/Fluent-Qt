@@ -12,7 +12,7 @@ need, and the development tree when you are changing the project itself.
 
 | Goal | Start here | Continue with |
 |---|---|---|
-| Try controls and copy an example | [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/) | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) |
+| Try controls and copy an example | [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) |
 | Add FluentQt to a C++ or PySide6 application | [Project README](../README.md) | [Onboarding tools](../tools/onboarding/README.md) |
 | Add a GUI with a coding agent | [AI-assisted development](ai/README.md) | [Integration workflow](ai/add-gui-to-project.md) |
 | Add or change a component | [Development tree](development/README.md) | [Component API conventions](development/component-api-conventions.md) |

@@ -181,7 +181,7 @@ cmake --build build/fluentqt --target fluent_qt_source_package
 
 ### WebAssembly
 
-评估项目时可直接使用[在线 WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/)。本地工具链、构建、浏览器冒烟测试和 Pages 部署统一见 [WebAssembly 工作流](docs/development/webassembly-workflow.md)。
+评估项目时可直接使用[在线 WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/)。本地工具链、构建、浏览器冒烟测试和 Pages 部署统一见 [WebAssembly 工作流](docs/development/webassembly-workflow.md)。
 
 ## 🖼 Gallery
 
@@ -246,7 +246,7 @@ python -m fluentqt_gallery
 
 | 目标 | 入口 |
 |---|---|
-| 体验和查找控件 | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/) |
+| 体验和查找控件 | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) |
 | 构建应用 | [AI 辅助开发](docs/ai/README.md) · [环境检查与项目模板](tools/onboarding/README.md) · [PySide6](bindings/pyside6/README.md) |
 | 参与 FluentQt 开发 | [开发文档树](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计](docs/design-languages/README.md) |
 | 打包或发布 | [打包工作流](docs/development/packaging-workflow.md) · [发布治理](docs/development/release-governance.md) · [版本记录](docs/releases/README.md) |

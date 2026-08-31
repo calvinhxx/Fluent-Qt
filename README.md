@@ -188,7 +188,7 @@ cmake --build build/fluentqt --target fluent_qt_source_package
 
 ### WebAssembly
 
-Use the [live WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/)
+Use the [live WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/)
 for evaluation. Local toolchain setup, builds, browser smoke tests, and Pages
 deployment are documented in the
 [WebAssembly workflow](docs/development/webassembly-workflow.md).
@@ -261,7 +261,7 @@ Start with the [documentation map](docs/README.md), or choose a path:
 
 | Goal | Entry point |
 |---|---|
-| Evaluate controls | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/app/) |
+| Evaluate controls | [API Explorer](https://calvinhxx.github.io/Fluent-Qt/api/) · [WebAssembly Gallery](https://calvinhxx.github.io/Fluent-Qt/gallery/) |
 | Build an application | [AI-assisted development](docs/ai/README.md) · [Onboarding tools](tools/onboarding/README.md) · [PySide6](bindings/pyside6/README.md) |
 | Contribute to FluentQt | [Development tree](docs/development/README.md) · [Architecture](docs/architecture/README.md) · [Fluent design](docs/design-languages/README.md) |
 | Package or release | [Packaging](docs/development/packaging-workflow.md) · [Release governance](docs/development/release-governance.md) · [Release notes](docs/releases/README.md) |
