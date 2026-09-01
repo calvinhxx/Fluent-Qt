@@ -463,7 +463,7 @@ jobs:
           path: publisher-candidate
 
       - name: Publish signed ${{ matrix.distribution }} wheels to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: publisher-candidate/
@@ -596,7 +596,7 @@ jobs:
           path: publisher-candidate
 
       - name: Publish signed ${{ matrix.distribution }} wheels to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1
         with:
           packages-dir: publisher-candidate/
           verify-metadata: true

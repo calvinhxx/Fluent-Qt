@@ -19,9 +19,12 @@ jobs:
     env:
       QT_VERSION: 6.9.3
       EMSCRIPTEN_VERSION: 3.1.70
+      EMSDK_REPOSITORY_REVISION: 2514ec738de72cebbba7f4fdba0cf2fabcb779a5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
 
       - name: Configure runner paths
         shell: bash
@@ -39,7 +42,7 @@ jobs:
           esac
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 
@@ -52,7 +55,7 @@ jobs:
 
       - name: Cache Qt WebAssembly and host kits
         id: qt-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ runner.temp }}/Qt
           key: fluentqt-qt-wasm-${{ runner.os }}-${{ runner.arch }}-6.9.3
@@ -86,28 +89,44 @@ jobs:
           "$qt_host_cmake" --version
 
       - name: Cache Emscripten SDK
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ runner.temp }}/emsdk
-          key: fluentqt-emsdk-${{ runner.os }}-${{ runner.arch }}-3.1.70
+          key: fluentqt-emsdk-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5
 
       - name: Install and activate Emscripten
         shell: bash
         run: |
-          if [[ ! -x "$EMSDK_ROOT/emsdk" ]]; then
-            git clone --depth 1 https://github.com/emscripten-core/emsdk.git \
-              "$EMSDK_ROOT"
+          set -euo pipefail
+          if [[ ! -d "$EMSDK_ROOT/.git" ]]; then
+            mkdir -p "$EMSDK_ROOT"
+            git -C "$EMSDK_ROOT" init
+            git -C "$EMSDK_ROOT" remote add origin \
+              https://github.com/emscripten-core/emsdk.git
           fi
+          remote_url="$(git -C "$EMSDK_ROOT" remote get-url origin)"
+          if [[ "$remote_url" != "https://github.com/emscripten-core/emsdk.git" ]]; then
+            echo "::error::Unexpected emsdk origin: $remote_url"
+            exit 1
+          fi
+          git -C "$EMSDK_ROOT" fetch --depth 1 origin \
+            "refs/tags/$EMSCRIPTEN_VERSION"
+          fetched_revision="$(git -C "$EMSDK_ROOT" rev-parse FETCH_HEAD)"
+          if [[ "$fetched_revision" != "$EMSDK_REPOSITORY_REVISION" ]]; then
+            echo "::error::Emscripten tag resolved to unexpected revision: $fetched_revision"
+            exit 1
+          fi
+          git -C "$EMSDK_ROOT" checkout --detach "$EMSDK_REPOSITORY_REVISION"
           if [[ ! -x "$EMSDK_ROOT/upstream/emscripten/emcc" ]]; then
             "$EMSDK_ROOT/emsdk" install "$EMSCRIPTEN_VERSION"
           fi
           "$EMSDK_ROOT/emsdk" activate "$EMSCRIPTEN_VERSION"
 
       - name: Cache Emscripten system libraries
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ runner.temp }}/emscripten-cache
-          key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-3.1.70
+          key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5
 
       - name: Configure and build WebAssembly targets
         shell: bash
@@ -135,7 +154,7 @@ jobs:
           test -f build/wasm-installed-consumer/fluentqt_hello_world.wasm
 
       - name: Cache Chromium
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.cache/ms-playwright
           key: fluentqt-playwright-${{ runner.os }}-${{ runner.arch }}-1.58.0
@@ -170,7 +189,7 @@ jobs:
             --commit "$GITHUB_SHA"
 
       - name: Upload WebAssembly Pages payload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: fluentqt-wasm-pages
           path: build/wasm-pages

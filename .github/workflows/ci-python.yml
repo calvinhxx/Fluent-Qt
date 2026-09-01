@@ -111,7 +111,7 @@ jobs:
         run: bash .github/scripts/install-linux-dependencies.sh aqt
 
       - name: Install Qt 6.2.4 SDK
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: "6.2.4"
           arch: gcc_64
@@ -484,7 +484,7 @@ jobs:
           cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install Qt 6.2.4 SDK
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: "6.2.4"
           arch: win64_msvc2019_64
@@ -839,7 +839,7 @@ jobs:
           cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install Qt 6.9.3 SDK
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: "6.9.3"
           arch: clang_64
@@ -1148,7 +1148,7 @@ jobs:
           cache-dependency-path: bindings/pyside6/wheel-matrix.json
 
       - name: Install Qt ${{ matrix.qt_version }} SDK
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: ${{ matrix.qt_version }}
           host: ${{ matrix.qt_host }}
