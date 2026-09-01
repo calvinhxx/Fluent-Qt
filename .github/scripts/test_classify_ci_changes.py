@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import re
+import subprocess
 import sys
 import unittest
 from pathlib import Path
 
 
 SCRIPT = Path(__file__).with_name("classify_ci_changes.py")
+PROJECT_ROOT = SCRIPT.parents[2]
 SPEC = importlib.util.spec_from_file_location("classify_ci_changes", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -20,6 +23,12 @@ class ClassifyCiChangesTest(unittest.TestCase):
         self.assertEqual(result.should_build, native)
         self.assertEqual(result.should_build_pyside, pyside)
         self.assertEqual(result.should_build_wasm, wasm)
+
+    def assert_cpp_selection(self, paths, *, scope, labels, targets):
+        result = MODULE.select_cpp_tests(paths)
+        self.assertEqual(result.scope, scope)
+        self.assertEqual(result.label_regex, labels)
+        self.assertEqual(result.targets, tuple(targets))
 
     def test_documentation_only_skips_all_builds(self):
         self.assert_classification(
@@ -147,6 +156,12 @@ class ClassifyCiChangesTest(unittest.TestCase):
                 self.assertEqual(
                     MODULE.classify_github_file_pages(pages, expected_count),
                     MODULE.ChangeClassification(True, True, True),
+                )
+                self.assertEqual(
+                    MODULE.select_cpp_tests_from_github_file_pages(
+                        pages, expected_count
+                    ),
+                    MODULE.CppTestSelection("all"),
                 )
 
     def test_github_file_payload_is_closed(self):
@@ -309,6 +324,170 @@ class ClassifyCiChangesTest(unittest.TestCase):
     def test_empty_input_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "No changed files"):
             MODULE.classify_changes([])
+        with self.assertRaisesRegex(ValueError, "No changed files"):
+            MODULE.select_cpp_tests([])
+
+    def test_each_component_directory_has_a_precise_test_selection(self):
+        for group in MODULE.CPP_COMPONENT_TEST_GROUPS:
+            with self.subTest(group=group):
+                self.assert_cpp_selection(
+                    [f"src/components/{group}/Changed.cpp"],
+                    scope="selected",
+                    labels=f"^({group})$",
+                    targets=[f"fluent_qt_{group}_tests"],
+                )
+
+    def test_component_groups_match_registered_subdirectories(self):
+        contents = (PROJECT_ROOT / "tests/components/CMakeLists.txt").read_text(
+            encoding="utf-8"
+        )
+        registered = set(re.findall(r"add_subdirectory\(([a-z_]+)\)", contents))
+        self.assertEqual(registered, set(MODULE.CPP_COMPONENT_TEST_GROUPS))
+
+    def test_component_test_path_selects_its_own_group(self):
+        self.assert_cpp_selection(
+            ["tests/components/date_time/TestDatePicker.cpp"],
+            scope="selected",
+            labels="^(date_time)$",
+            targets=["fluent_qt_date_time_tests"],
+        )
+
+    def test_multiple_component_groups_are_stable_and_deduplicated(self):
+        self.assert_cpp_selection(
+            [
+                "src/components/collections/ListView.cpp",
+                "tests/components/basicinput/TestButton.cpp",
+                "src/components/basicinput/Button.h",
+            ],
+            scope="selected",
+            labels="^(basicinput|collections)$",
+            targets=[
+                "fluent_qt_basicinput_tests",
+                "fluent_qt_collections_tests",
+            ],
+        )
+
+    def test_wide_cpp_paths_fail_closed_to_all_tests(self):
+        paths = (
+            "src/components/foundation/FluentElement.cpp",
+            "src/design/FluentTheme.cpp",
+            "src/compatibility/QtCompat.h",
+            "src/utils/FluentQtLogging.cpp",
+            "include/FluentQt/FluentQt.h",
+            "CMakeLists.txt",
+            "cmake/FluentQtInstallHeaders.cmake",
+            "tests/CMakeLists.txt",
+            "tests/components/CMakeLists.txt",
+            "tests/support/QtGTestMain.cpp",
+            "src/components/unknown/NewComponent.cpp",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.assert_cpp_selection(
+                    [path],
+                    scope="all",
+                    labels="^qt$",
+                    targets=["fluent_qt_all_tests"],
+                )
+
+    def test_non_cpp_product_surfaces_do_not_select_component_tests(self):
+        paths = (
+            "README.md",
+            "docs/development/testing-workflow.md",
+            "app/pages/basicinput_page.py",
+            "bindings/pyside6/native/typesystem_fluentqt.xml",
+            "site/api/catalog.json",
+            "tools/docs/validate_documentation.py",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.assert_cpp_selection(
+                    [path], scope="none", labels="", targets=[]
+                )
+
+    def test_irrelevant_path_does_not_widen_a_precise_component_change(self):
+        self.assert_cpp_selection(
+            [
+                "app/pages/basicinput_page.py",
+                "src/components/basicinput/Button.cpp",
+            ],
+            scope="selected",
+            labels="^(basicinput)$",
+            targets=["fluent_qt_basicinput_tests"],
+        )
+
+    def test_component_rename_selects_source_and_destination_groups(self):
+        selection = MODULE.select_cpp_tests_from_github_file_pages(
+            [
+                [
+                    {
+                        "filename": "src/components/layout/Card.cpp",
+                        "previous_filename": (
+                            "src/components/status_info/Card.cpp"
+                        ),
+                    }
+                ]
+            ],
+            1,
+        )
+        self.assertEqual(selection.scope, "selected")
+        self.assertEqual(selection.label_regex, "^(layout|status_info)$")
+        self.assertEqual(
+            selection.targets,
+            ("fluent_qt_layout_tests", "fluent_qt_status_info_tests"),
+        )
+
+    def test_unknown_or_unsafe_component_names_cannot_reach_outputs(self):
+        paths = (
+            "src/components/basicinput|all/Injected.cpp",
+            "src/components/basicinput/../../foundation/FluentElement.cpp",
+            "src/components/basicinput\\Injected.cpp",
+            " src/components/basicinput/Button.cpp",
+            "src/components/basicinput/Button.cpp\rmalicious=true",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.assert_cpp_selection(
+                    [path],
+                    scope="all",
+                    labels="^qt$",
+                    targets=["fluent_qt_all_tests"],
+                )
+        with self.assertRaisesRegex(ValueError, "Unknown C\\+\\+ component"):
+            MODULE._cpp_tests_for_groups({"basicinput|all"})
+        invalid_selections = (
+            MODULE.CppTestSelection("all\nmalicious=true"),
+            MODULE.CppTestSelection("all", ("basicinput",)),
+            MODULE.CppTestSelection("selected", ("basicinput|all",)),
+        )
+        for selection in invalid_selections:
+            with self.subTest(selection=selection):
+                with self.assertRaises(ValueError):
+                    selection.output_values()
+
+    def test_cli_outputs_only_single_line_allowlisted_values(self):
+        completed = subprocess.run(
+            [sys.executable, str(SCRIPT)],
+            input=(
+                "src/components/collections/ListView.cpp\n"
+                "src/components/basicinput/Button.cpp\n"
+            ),
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        output = completed.stdout.splitlines()
+        self.assertEqual(output[3], "cpp_test_scope=selected")
+        self.assertEqual(
+            output[4], "cpp_test_label_regex=^(basicinput|collections)$"
+        )
+        self.assertEqual(
+            output[5],
+            "cpp_test_targets=fluent_qt_basicinput_tests fluent_qt_collections_tests",
+        )
+        self.assertEqual(len(output), 6)
+        for value in output[3:]:
+            self.assertNotIn("\r", value)
 
 
 if __name__ == "__main__":
