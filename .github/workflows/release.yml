@@ -71,13 +71,20 @@ jobs:
       - name: Resolve release tag
         id: release
         shell: bash
+        env:
+          RELEASE_EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG_INPUT: ${{ inputs.tag }}
+          RELEASE_DRAFT_INPUT: ${{ inputs.draft }}
+          RELEASE_REQUIRE_CI_INPUT: ${{ inputs.require_ci }}
+          RELEASE_PACKAGE_SET_INPUT: ${{ inputs.package_set }}
+          RELEASE_PUBLISH_INPUT: ${{ inputs.publish }}
         run: |
           set -euo pipefail
 
           git fetch --force --tags
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            tag="${{ inputs.tag }}"
+          if [[ "$RELEASE_EVENT_NAME" == "workflow_dispatch" ]]; then
+            tag="$RELEASE_TAG_INPUT"
           else
             tag="${GITHUB_REF_NAME}"
           fi
@@ -118,11 +125,11 @@ jobs:
             prerelease="true"
           fi
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            draft="${{ inputs.draft }}"
-            require_ci="${{ inputs.require_ci }}"
-            package_set="${{ inputs.package_set }}"
-            publish="${{ inputs.publish }}"
+          if [[ "$RELEASE_EVENT_NAME" == "workflow_dispatch" ]]; then
+            draft="$RELEASE_DRAFT_INPUT"
+            require_ci="$RELEASE_REQUIRE_CI_INPUT"
+            package_set="$RELEASE_PACKAGE_SET_INPUT"
+            publish="$RELEASE_PUBLISH_INPUT"
           elif [[ "$prerelease" == "true" ]]; then
             draft="true"
             require_ci="true"
@@ -148,7 +155,7 @@ jobs:
           fi
 
           tag_sha="$(git rev-list -n 1 "$tag")"
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" &&
+          if [[ "$RELEASE_EVENT_NAME" == "workflow_dispatch" &&
                 "$publish" == "true" &&
                 "$draft" == "false" &&
                 "$prerelease" == "false" &&

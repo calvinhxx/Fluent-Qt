@@ -34,6 +34,23 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
         errors = MODULE.validate_cpp_integration_contract(workflow)
         self.assertTrue(errors, "mutated C++ integration job unexpectedly passed")
 
+    def workflow_errors_with_replacement(
+        self, workflow_name: str, original: str, replacement: str
+    ) -> list[str]:
+        original_read = MODULE.read_workflow
+
+        def with_replacement(name: str) -> str:
+            contents = original_read(name)
+            if name != workflow_name:
+                return contents
+            self.assertIn(original, contents)
+            return contents.replace(original, replacement, 1)
+
+        with mock.patch.object(
+            MODULE, "read_workflow", side_effect=with_replacement
+        ):
+            return MODULE.validate_boundaries()
+
     @staticmethod
     def reindent_job(workflow: str, job_id: str, entry: str) -> str:
         section = MODULE.job_section(workflow, job_id)
@@ -60,6 +77,539 @@ class ValidateCiWorkflowBoundariesTest(unittest.TestCase):
 
     def test_repository_workflow_boundaries_are_valid(self):
         self.assertEqual(MODULE.validate_boundaries(), [])
+
+    def test_audited_third_party_actions_require_immutable_revisions(self):
+        cases = (
+            (
+                "pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # release/v1",
+                "pypa/gh-action-pypi-publish@release/v1",
+            ),
+            (
+                "jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1",
+                "jurplel/install-qt-action@v4",
+            ),
+        )
+        for pinned, mutable in cases:
+            with self.subTest(action=mutable):
+                prefix = "      - uses: "
+                self.assertEqual(
+                    MODULE.pinned_action_errors("fixture.yml", prefix + pinned), []
+                )
+                errors = MODULE.pinned_action_errors(
+                    "fixture.yml", prefix + mutable
+                )
+                self.assertTrue(
+                    any("must pin" in error for error in errors),
+                    f"workflow validator accepted mutable action {mutable}",
+                )
+                quoted_errors = MODULE.pinned_action_errors(
+                    "fixture.yml", prefix + f'"{mutable}"'
+                )
+                self.assertTrue(
+                    any("must pin" in error for error in quoted_errors),
+                    f"workflow validator accepted quoted mutable action {mutable}",
+                )
+
+    def test_pages_pipeline_actions_require_audited_revisions(self):
+        for workflow_name, actions in MODULE.PAGES_PIPELINE_ACTION_REVISIONS.items():
+            workflow = MODULE.read_workflow(workflow_name)
+            for action, (revision, _) in actions.items():
+                with self.subTest(workflow=workflow_name, action=action):
+                    pinned = f"{action}@{revision}"
+                    mutable = f"{action}@v0"
+                    self.assertIn(pinned, workflow)
+                    errors = MODULE.required_action_revision_errors(
+                        workflow_name, workflow.replace(pinned, mutable, 1)
+                    )
+                    self.assertTrue(
+                        any("must pin" in error for error in errors),
+                        f"workflow validator accepted mutable action {action}",
+                    )
+
+    def test_pages_pipeline_rejects_an_unaudited_remote_action(self):
+        pages = MODULE.read_workflow("pages.yml")
+        errors = MODULE.required_action_revision_errors(
+            "pages.yml",
+            pages.replace(
+                "    steps:\n",
+                "    steps:\n      - uses: example/unreviewed-action@main\n",
+                1,
+            ),
+        )
+        self.assertTrue(
+            any("unaudited remote action" in error for error in errors),
+            "workflow validator accepted a new remote action in the Pages chain",
+        )
+
+    def test_pages_authorization_requires_main(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            '          if [[ "$DEPLOY_REF" != "refs/heads/main" ]]; then\n',
+            '          if [[ -z "$DEPLOY_REF" ]]; then\n',
+        )
+        self.assertTrue(
+            any("source authorization" in error for error in errors),
+            "workflow validator accepted Pages deployment from a non-main ref",
+        )
+
+    def test_pages_authorization_rejects_unlisted_events(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "            push|workflow_dispatch) ;;\n",
+            "            *) ;;\n",
+        )
+        self.assertTrue(
+            any("source authorization" in error for error in errors),
+            "workflow validator accepted every Pages caller event",
+        )
+
+    def test_pages_header_rejects_quoted_direct_push_trigger(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "  workflow_dispatch:\n",
+            "  workflow_dispatch:\n"
+            '  "push":\n',
+        )
+        self.assertTrue(
+            any("workflow header" in error for error in errors),
+            "workflow validator accepted a quoted direct Pages push trigger",
+        )
+
+    def test_pages_header_rejects_write_permissions(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "permissions:\n  contents: read\n",
+            "permissions:\n  actions: write\n  contents: write\n",
+        )
+        self.assertTrue(
+            any("workflow header" in error for error in errors),
+            "workflow validator accepted write permissions for every Pages job",
+        )
+
+    def test_pages_authorize_job_cannot_gain_job_level_permissions(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "    timeout-minutes: 5\n",
+            "    timeout-minutes: 5\n"
+            "    permissions: write-all\n",
+        )
+        self.assertTrue(
+            any("authorize job" in error for error in errors),
+            "workflow validator accepted a privileged authorization job",
+        )
+
+    def test_pages_deploy_must_depend_on_authorization(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "    needs: [authorize, wasm]\n",
+            "    needs: wasm\n",
+        )
+        self.assertTrue(
+            any("job-level structure" in error for error in errors),
+            "workflow validator accepted deployment without source authorization",
+        )
+
+    def test_pages_deploy_needs_cannot_hide_in_the_job_name(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "    name: Deploy GitHub Pages\n"
+            "    needs: [authorize, wasm]\n",
+            "    name: Deploy GitHub Pages / needs: [authorize, wasm]\n"
+            "    needs: wasm\n",
+        )
+        self.assertTrue(
+            any("job-level structure" in error for error in errors),
+            "workflow validator accepted deploy dependencies hidden in the job name",
+        )
+
+    def test_pages_manual_wasm_cannot_bypass_authorization_with_a_comment(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "    needs: authorize\n",
+            "    needs: []\n"
+            "    # needs: authorize\n",
+        )
+        self.assertTrue(
+            any("manual WASM recovery job" in error for error in errors),
+            "workflow validator accepted a comment decoy for WASM authorization",
+        )
+
+    def test_pages_manual_wasm_cannot_run_on_every_event_with_a_comment(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "    if: ${{ github.event_name == 'workflow_dispatch' }}\n",
+            "    if: ${{ true }}\n"
+            "    # if: ${{ github.event_name == 'workflow_dispatch' }}\n",
+        )
+        self.assertTrue(
+            any("manual WASM recovery job" in error for error in errors),
+            "workflow validator accepted a comment decoy for the manual WASM event",
+        )
+
+    def test_pages_deploy_cannot_accept_every_non_dispatch_event(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "         (github.event_name == 'push' && needs.wasm.result == 'skipped'))\n",
+            "         (github.event_name != 'workflow_dispatch' && needs.wasm.result == 'skipped'))\n",
+        )
+        self.assertTrue(
+            any("deployment condition" in error for error in errors),
+            "workflow validator accepted an open-ended Pages caller event",
+        )
+
+    def test_pages_deploy_condition_cannot_be_made_unconditionally_true(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "         (github.event_name == 'push' && needs.wasm.result == 'skipped'))\n",
+            "         (github.event_name == 'push' && needs.wasm.result == 'skipped')) || true\n",
+        )
+        self.assertTrue(
+            any("deployment condition" in error for error in errors),
+            "workflow validator accepted an additive Pages condition bypass",
+        )
+
+    def test_pages_checkout_cannot_use_a_comment_as_commit_provenance(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "          ref: ${{ github.sha }}\n",
+            "          ref: refs/heads/main\n"
+            "          # ref: ${{ github.sha }}\n",
+        )
+        self.assertTrue(
+            any("deploy checkout" in error for error in errors),
+            "workflow validator accepted a comment decoy for the checkout commit",
+        )
+
+    def test_pages_download_cannot_override_the_current_run(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "          run-id: ${{ github.run_id }}\n",
+            "          run-id: ${{ github.run_id }}\n"
+            "          run-id: 1\n",
+        )
+        self.assertTrue(
+            any("artifact download" in error for error in errors),
+            "workflow validator accepted a duplicate run-id override",
+        )
+
+    def test_pages_deploy_rejects_an_extra_post_provenance_tamper_step(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "      - name: Assemble Pages site\n",
+            "      - name: Tamper with verified WebAssembly\n"
+            "        run: echo changed > build/wasm-pages/index.html\n\n"
+            "      - name: Assemble Pages site\n",
+        )
+        self.assertTrue(
+            any("exact audited set" in error for error in errors),
+            "workflow validator accepted an extra post-provenance tamper step",
+        )
+
+    def test_pages_deploy_rejects_provenance_after_deployment(self):
+        original_read = MODULE.read_workflow
+        pages = original_read("pages.yml")
+        deploy = MODULE.job_section(pages, "deploy")
+        provenance = MODULE.named_step_section(
+            deploy, "Verify C++ Web Gallery provenance"
+        )
+        self.assertTrue(provenance)
+        mutated_pages = pages.replace(provenance, "", 1)
+        deploy_action = (
+            "        uses: actions/deploy-pages@"
+            "d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5\n"
+        )
+        mutated_pages = mutated_pages.replace(
+            deploy_action,
+            deploy_action + "\n" + provenance,
+            1,
+        )
+
+        def with_reordered_provenance(name: str) -> str:
+            return mutated_pages if name == "pages.yml" else original_read(name)
+
+        with mock.patch.object(
+            MODULE, "read_workflow", side_effect=with_reordered_provenance
+        ):
+            errors = MODULE.validate_boundaries()
+        self.assertTrue(
+            any("provenance order" in error for error in errors),
+            "workflow validator accepted provenance verification after deployment",
+        )
+
+    def test_pages_final_deploy_step_cannot_be_silently_disabled(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "        id: deployment\n",
+            "        id: deployment\n"
+            "        if: ${{ false }}\n",
+        )
+        self.assertTrue(
+            any("final Deploy step" in error for error in errors),
+            "workflow validator accepted a disabled final Pages deployment",
+        )
+
+    def test_pages_caller_requires_exact_read_and_deploy_permissions(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci.yml",
+            "    permissions:\n"
+            "      actions: read\n"
+            "      contents: read\n"
+            "      pages: write\n"
+            "      id-token: write\n"
+            "    uses: ./.github/workflows/pages.yml\n",
+            "    permissions:\n"
+            "      pages: write\n"
+            "      id-token: write\n"
+            "    uses: ./.github/workflows/pages.yml\n",
+        )
+        self.assertTrue(
+            any("automatic Pages caller" in error for error in errors),
+            "workflow validator accepted a Pages caller without artifact read permissions",
+        )
+
+    def test_pages_caller_condition_cannot_hide_in_the_job_name(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci.yml",
+            "    name: Deploy validated WebAssembly Gallery\n"
+            "    needs: [plan, wasm]\n"
+            "    if: ${{ github.event_name == 'push' && needs.wasm.result == 'success' }}\n",
+            "    name: Deploy validated WebAssembly Gallery / github.event_name == 'push' / needs.wasm.result == 'success'\n"
+            "    needs: [plan, wasm]\n"
+            "    if: ${{ true }}\n",
+        )
+        self.assertTrue(
+            any("automatic Pages caller" in error for error in errors),
+            "workflow validator accepted a caller condition hidden in its name",
+        )
+
+    def test_pages_artifact_commit_provenance_cannot_be_removed(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            '          if [[ "$actual_commit" != "$EXPECTED_COMMIT" ]]; then\n',
+            '          if [[ -z "$actual_commit" ]]; then\n',
+        )
+        self.assertTrue(
+            any("WASM artifact commit" in error for error in errors),
+            "workflow validator accepted an artifact without commit provenance",
+        )
+
+    def test_pages_requires_a_full_validation_artifact(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            '          if [[ "$validation_mode" != "full" ]]; then\n',
+            '          if [[ -z "$validation_mode" ]]; then\n',
+        )
+        self.assertTrue(
+            any("full-validation provenance" in error for error in errors),
+            "workflow validator accepted a non-full Pages artifact",
+        )
+
+    def test_pages_permissions_stay_on_the_deploy_job(self):
+        errors = self.workflow_errors_with_replacement(
+            "pages.yml",
+            "permissions:\n  contents: read\n",
+            "permissions:\n  contents: read\n  pages: write\n  id-token: write\n",
+        )
+        self.assertTrue(
+            any("workflow header" in error for error in errors),
+            "workflow validator accepted workflow-wide Pages write permissions",
+        )
+
+    def test_wasm_emsdk_revision_cannot_drift(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci-wasm.yml",
+            MODULE.EMSDK_REPOSITORY_REVISION,
+            "0" * 40,
+        )
+        self.assertTrue(
+            any("emsdk revision" in error for error in errors),
+            "workflow validator accepted an unaudited emsdk revision",
+        )
+
+    def test_wasm_cannot_clone_the_mutable_emsdk_default_branch(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci-wasm.yml",
+            '          git -C "$EMSDK_ROOT" fetch --depth 1 origin \\\n'
+            '            "refs/tags/$EMSCRIPTEN_VERSION"\n',
+            "          git clone --depth 1 https://github.com/emscripten-core/emsdk.git \\\n"
+            '            "$EMSDK_ROOT"\n',
+        )
+        self.assertTrue(
+            any("exactly install and activate" in error for error in errors),
+            "workflow validator accepted the mutable emsdk default branch",
+        )
+
+    def test_wasm_cannot_change_refs_after_verifying_emsdk_revision(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci-wasm.yml",
+            '          git -C "$EMSDK_ROOT" checkout --detach "$EMSDK_REPOSITORY_REVISION"\n',
+            '          git -C "$EMSDK_ROOT" checkout --detach "$EMSDK_REPOSITORY_REVISION"\n'
+            '          git -C "$EMSDK_ROOT" fetch origin main\n'
+            '          git -C "$EMSDK_ROOT" checkout --detach FETCH_HEAD\n',
+        )
+        self.assertTrue(
+            any("exactly install and activate" in error for error in errors),
+            "workflow validator accepted a mutable ref after emsdk verification",
+        )
+
+    def test_wasm_cannot_mutate_emsdk_in_a_later_step(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci-wasm.yml",
+            "      - name: Configure and build WebAssembly targets\n",
+            "      - name: Replace verified Emscripten checkout\n"
+            "        shell: bash\n"
+            "        run: |\n"
+            '          git -C "$EMSDK_ROOT" fetch origin main\n'
+            '          git -C "$EMSDK_ROOT" checkout --detach FETCH_HEAD\n\n'
+            "      - name: Configure and build WebAssembly targets\n",
+        )
+        self.assertTrue(
+            any(
+                "exact audited set" in error
+                or "outside its audited install step" in error
+                for error in errors
+            ),
+            "workflow validator accepted a cross-step mutable emsdk checkout",
+        )
+
+    def test_wasm_build_cannot_source_an_alternate_emsdk(self):
+        errors = self.workflow_errors_with_replacement(
+            "ci-wasm.yml",
+            '          source "$EMSDK_ROOT/emsdk_env.sh"\n',
+            '          source "/tmp/other-emsdk/emsdk_env.sh"\n',
+        )
+        self.assertTrue(
+            any(
+                "configure/build step" in error
+                or "source only the audited emsdk" in error
+                for error in errors
+            ),
+            "workflow validator accepted an alternate Emscripten environment",
+        )
+
+    def test_wasm_emsdk_cache_key_cannot_use_a_revision_comment_decoy(self):
+        expected_key = (
+            "          key: fluentqt-emsdk-${{ runner.os }}-${{ runner.arch }}-"
+            "3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5\n"
+        )
+        errors = self.workflow_errors_with_replacement(
+            "ci-wasm.yml",
+            expected_key,
+            "          key: fluentqt-emsdk-${{ runner.os }}-${{ runner.arch }}-3.1.70\n"
+            "          # 2514ec738de72cebbba7f4fdba0cf2fabcb779a5\n",
+        )
+        self.assertTrue(
+            any("exactly cache emsdk" in error for error in errors),
+            "workflow validator accepted a comment decoy for the emsdk cache revision",
+        )
+
+    def test_wasm_system_library_cache_key_requires_the_audited_revision(self):
+        expected_key = (
+            "          key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-"
+            "3.1.70-2514ec738de72cebbba7f4fdba0cf2fabcb779a5\n"
+        )
+        errors = self.workflow_errors_with_replacement(
+            "ci-wasm.yml",
+            expected_key,
+            "          key: fluentqt-em-cache-${{ runner.os }}-${{ runner.arch }}-3.1.70\n"
+            "          # 2514ec738de72cebbba7f4fdba0cf2fabcb779a5\n",
+        )
+        self.assertTrue(
+            any("system libraries" in error for error in errors),
+            "workflow validator accepted a stale Emscripten system-library cache key",
+        )
+
+    def test_release_inputs_cannot_be_interpolated_into_shell_source(self):
+        release = MODULE.read_workflow("release.yml")
+        errors = MODULE.release_input_boundary_errors(
+            release.replace(
+                '            tag="$RELEASE_TAG_INPUT"',
+                '            tag="${{ inputs.tag }}"',
+                1,
+            )
+        )
+        self.assertTrue(
+            any("must not interpolate workflow inputs" in error for error in errors),
+            "workflow validator accepted a workflow input in shell source",
+        )
+
+    def test_release_inputs_require_explicit_environment_mappings(self):
+        release = MODULE.read_workflow("release.yml")
+        errors = MODULE.release_input_boundary_errors(
+            release.replace(
+                "          RELEASE_TAG_INPUT: ${{ inputs.tag }}\n", "", 1
+            )
+        )
+        self.assertTrue(
+            any("RELEASE_TAG_INPUT" in error for error in errors),
+            "workflow validator accepted a missing release input mapping",
+        )
+
+    def test_cpp_test_selection_must_reach_reusable_workflow(self):
+        original_read = MODULE.read_workflow
+
+        def without_selected_targets(name: str) -> str:
+            contents = original_read(name)
+            if name != "ci.yml":
+                return contents
+            return contents.replace(
+                "      cpp_test_targets: ${{ needs.plan.outputs.cpp_test_targets }}\n",
+                "",
+                1,
+            )
+
+        with mock.patch.object(
+            MODULE, "read_workflow", side_effect=without_selected_targets
+        ):
+            errors = MODULE.validate_boundaries()
+        self.assertTrue(
+            any("cpp_test_targets" in error for error in errors),
+            "workflow validator accepted a disconnected C++ test selection",
+        )
+
+    def test_cpp_changed_format_check_cannot_be_noop(self):
+        original_read = MODULE.read_workflow
+
+        def with_noop_format_check(name: str) -> str:
+            contents = original_read(name)
+            if name != "ci-cpp.yml":
+                return contents
+            return contents.replace(
+                "          python3 tools/quality/check_cpp_format.py --changed-from \"$PR_BASE_SHA\" --clang-format \"$formatter\"\n",
+                "          true || python3 tools/quality/check_cpp_format.py --changed-from \"$PR_BASE_SHA\" --clang-format \"$formatter\"\n",
+                1,
+            )
+
+        with mock.patch.object(
+            MODULE, "read_workflow", side_effect=with_noop_format_check
+        ):
+            errors = MODULE.validate_boundaries()
+        self.assertTrue(
+            any("changed-file format check" in error for error in errors),
+            "workflow validator accepted a disabled C++ format check",
+        )
+
+    def test_cpp_selected_matrix_must_build_selected_targets(self):
+        original_read = MODULE.read_workflow
+
+        def without_selected_build_targets(name: str) -> str:
+            contents = original_read(name)
+            if name != "ci-cpp.yml":
+                return contents
+            return contents.replace(
+                '                  .build_targets = (\n',
+                '                  .name = (\n',
+                1,
+            )
+
+        with mock.patch.object(
+            MODULE, "read_workflow", side_effect=without_selected_build_targets
+        ):
+            errors = MODULE.validate_boundaries()
+        self.assertTrue(
+            any("matrix-selection script" in error for error in errors),
+            "workflow validator accepted selected tests that were not built",
+        )
 
     def test_duplicate_or_noncanonical_job_ids_are_rejected(self):
         original_read = MODULE.read_workflow

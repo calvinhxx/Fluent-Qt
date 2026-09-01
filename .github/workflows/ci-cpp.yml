@@ -220,7 +220,7 @@ jobs:
 
       - name: Install host Qt ${{ matrix.qt_version }}
         if: ${{ matrix.qt_source == 'aqt' && matrix.windows_arm64_cross == true }}
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: ${{ matrix.qt_version }}
           arch: ${{ matrix.host_qt_arch }}
@@ -235,7 +235,7 @@ jobs:
 
       - name: Install Qt ${{ matrix.qt_version }}
         if: ${{ matrix.qt_source == 'aqt' && matrix.qt_archives == '' && matrix.windows_arm64_native != true }}
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: ${{ matrix.qt_version }}
           arch: ${{ matrix.qt_arch }}
@@ -243,7 +243,7 @@ jobs:
 
       - name: Install native Windows ARM64 Qt ${{ matrix.qt_version }}
         if: ${{ matrix.qt_source == 'aqt' && matrix.windows_arm64_native == true }}
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: ${{ matrix.qt_version }}
           host: windows_arm64
@@ -253,7 +253,7 @@ jobs:
 
       - name: Install Qt ${{ matrix.qt_version }} archives
         if: ${{ matrix.qt_source == 'aqt' && matrix.qt_archives != '' }}
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
         with:
           version: ${{ matrix.qt_version }}
           arch: ${{ matrix.qt_arch }}
