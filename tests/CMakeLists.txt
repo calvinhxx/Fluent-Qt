@@ -199,7 +199,6 @@ macro(add_qt_test_module module_name source_file)
         FluentQtLoggingSupport
         Qt${QT_VERSION_MAJOR}::Widgets
         Qt${QT_VERSION_MAJOR}::Test
-        Qt${QT_VERSION_MAJOR}::Network
         FluentQtVisualComparison
         GTest::gtest
     )

@@ -33,6 +33,7 @@ add_qt_test_module(test_gallery_single_instance
     ${FLUENT_QT_GALLERY_SOURCE_DIR}/view/shell/GallerySingleInstance.h
 )
 target_include_directories(test_gallery_single_instance PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
+target_link_libraries(test_gallery_single_instance PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 target_compile_definitions(test_gallery_single_instance PRIVATE
     FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
 add_dependencies(test_gallery_single_instance test_gallery_single_instance_probe)
@@ -44,7 +45,8 @@ add_qt_test_module(test_gallery_shell_framework
     ${CMAKE_SOURCE_DIR}/tests/support/VisualGeometryTestUtils.cpp
 )
 target_include_directories(test_gallery_shell_framework PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-target_link_libraries(test_gallery_shell_framework PRIVATE FluentQtGalleryCore)
+target_link_libraries(test_gallery_shell_framework
+    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
 target_compile_definitions(test_gallery_shell_framework PRIVATE
     FLUENT_QT_GALLERY_SINGLE_INSTANCE_PROBE_PATH="$<TARGET_FILE:test_gallery_single_instance_probe>")
 add_dependencies(test_gallery_shell_framework test_gallery_single_instance_probe)
@@ -58,7 +60,8 @@ add_qt_test_module(test_gallery_content_pages
     ${FLUENT_QT_GALLERY_WEB_RESOURCES}
 )
 target_include_directories(test_gallery_content_pages PRIVATE ${FLUENT_QT_GALLERY_SOURCE_DIR})
-target_link_libraries(test_gallery_content_pages PRIVATE FluentQtGalleryCore)
+target_link_libraries(test_gallery_content_pages
+    PRIVATE FluentQtGalleryCore Qt${QT_VERSION_MAJOR}::Network)
 target_compile_definitions(test_gallery_content_pages PRIVATE
     FLUENT_QT_GALLERY_VERSION="${PROJECT_VERSION}"
     FLUENT_QT_APPLICATION_SCENES_PATH="${CMAKE_SOURCE_DIR}/docs/ai/evals/application-scenes.json")
