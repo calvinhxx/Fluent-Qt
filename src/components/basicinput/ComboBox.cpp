@@ -17,6 +17,7 @@
 #include "compatibility/QtCompat.h"
 #include "compatibility/TextPaintCompat.h"
 #include "components/collections/ListView.h"
+#include "components/dialogs_flyouts/Flyout.h"
 #include "components/foundation/overlay/OverlayGeometry.h"
 #include "components/foundation/overlay/OverlayShadow.h"
 #include "components/foundation/private/DpiPaintMetrics_p.h"
@@ -42,9 +43,11 @@ static constexpr int kPopupShadowVerticalOffset = 1;
 // Suppress QStyle's PE_PanelLineEdit native panel — ComboBox paints its own bg
 class TransparentLineEditStyle : public QProxyStyle {
 public:
-    void drawPrimitive(PrimitiveElement pe, const QStyleOption* opt,
-                       QPainter* p, const QWidget* w = nullptr) const override {
-        if (pe == PE_PanelLineEdit) return;
+    void drawPrimitive(PrimitiveElement pe, const QStyleOption* opt, QPainter* p,
+                       const QWidget* w = nullptr) const override
+    {
+        if (pe == PE_PanelLineEdit)
+            return;
         QProxyStyle::drawPrimitive(pe, opt, p, w);
     }
 };
@@ -52,16 +55,38 @@ public:
 
 namespace fluent::basicinput {
 
+// ─── ComboBox popup window. zh_CN: ComboBox 弹层窗口 ───────────────────────
+
+class ComboBox::ComboBoxPopup : public fluent::dialogs_flyouts::Flyout {
+public:
+    explicit ComboBoxPopup(ComboBox* comboBox);
+
+    void showForComboBox();
+    void onThemeUpdated() override;
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    QPoint computePosition() const override;
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
+private:
+    ComboBox* m_comboBox;
+    fluent::collections::ListView* m_listView;
+    ComboBoxItemDelegate* m_delegate;
+};
+
 // ─── ComboBoxItemDelegate implementation. zh_CN: ComboBoxItemDelegate 实现 ──
 
 ComboBoxItemDelegate::ComboBoxItemDelegate(FluentElement* themeHost, QAbstractItemView* view,
                                            QObject* parent)
-    : QStyledItemDelegate(parent), m_themeHost(themeHost), m_view(view) {
-}
+    : QStyledItemDelegate(parent), m_themeHost(themeHost), m_view(view)
+{}
 
 void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& option,
-                                 const QModelIndex& index) const {
-    if (!index.isValid()) return;
+                                 const QModelIndex& index) const
+{
+    if (!index.isValid())
+        return;
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
 
@@ -81,18 +106,16 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
             }
         }
     }
-    const QRect logicalBgRect =
-        option.rect.adjusted(kPopupItemOuterInset, 3, -itemRightInset, -3);
-    const QRectF bgRect =
-        QStyle::visualRect(option.direction, option.rect, logicalBgRect);
+    const QRect logicalBgRect = option.rect.adjusted(kPopupItemOuterInset, 3, -itemRightInset, -3);
+    const QRectF bgRect = QStyle::visualRect(option.direction, option.rect, logicalBgRect);
     const int cornerR = radius.control > 0 ? radius.control : 4;
 
     const bool isSelected = option.state & QStyle::State_Selected;
-    const bool isHovered  = option.state & QStyle::State_MouseOver;
-    const bool isPressed  = (option.state & QStyle::State_Sunken) && isHovered;
-    const bool isEnabled  = option.state & QStyle::State_Enabled;
+    const bool isHovered = option.state & QStyle::State_MouseOver;
+    const bool isPressed = (option.state & QStyle::State_Sunken) && isHovered;
+    const bool isEnabled = option.state & QStyle::State_Enabled;
 
-    QColor bgColor   = Qt::transparent;
+    QColor bgColor = Qt::transparent;
     QColor textColor = colors.textPrimary;
 
     if (!isEnabled) {
@@ -121,34 +144,31 @@ void ComboBoxItemDelegate::paint(QPainter* painter, const QStyleOptionViewItem& 
     // row background and text; drawing another indicator here creates a double
     // blue pill in ComboBox flyouts.
     const QRect logicalTextRect =
-        logicalBgRect.adjusted(kPopupItemTextLeftInset, 0,
-                               -kPopupItemTextRightInset, 0);
-    const QRectF textSlot =
-        QStyle::visualRect(option.direction, option.rect, logicalTextRect);
+        logicalBgRect.adjusted(kPopupItemTextLeftInset, 0, -kPopupItemTextRightInset, 0);
+    const QRectF textSlot = QStyle::visualRect(option.direction, option.rect, logicalTextRect);
     painter->setPen(textColor);
     painter->setFont(option.font);
     const QString text = index.data(Qt::DisplayRole).toString();
     const QFontMetricsF metrics(painter->font());
-    const QString elidedText = metrics.elidedText(
-        text, Qt::ElideRight, qRound(textSlot.width()));
-    const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
-        textSlot, metrics, elidedText);
+    const QString elidedText = metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
+    const QRectF textRect =
+        fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
     painter->drawText(textRect,
-                      QStyle::visualAlignment(option.direction,
-                                              Qt::AlignLeft | Qt::AlignVCenter),
+                      QStyle::visualAlignment(option.direction, Qt::AlignLeft | Qt::AlignVCenter),
                       elidedText);
 
     painter->restore();
 }
 
-QSize ComboBoxItemDelegate::sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const {
+QSize ComboBoxItemDelegate::sizeHint(const QStyleOptionViewItem&, const QModelIndex&) const
+{
     return QSize(0, ::Spacing::ControlHeight::Large);
 }
 
 // ─── ComboBoxPopup implementation. zh_CN: ComboBoxPopup 实现 ────────────────
 
-ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox)
-    : Flyout(comboBox), m_comboBox(comboBox) {
+ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox) : Flyout(comboBox), m_comboBox(comboBox)
+{
     setObjectName("ComboBoxPopup");
     setAnimationEnabled(false);
     setPlacement(fluent::dialogs_flyouts::Flyout::Auto);
@@ -193,13 +213,15 @@ ComboBox::ComboBoxPopup::ComboBoxPopup(ComboBox* comboBox)
     });
 
     connect(this, &ComboBoxPopup::closed, this, [this]() {
-        if (m_comboBox) m_comboBox->onPopupHidden();
+        if (m_comboBox)
+            m_comboBox->onPopupHidden();
     });
 
     onThemeUpdated();
 }
 
-void ComboBox::ComboBoxPopup::showForComboBox() {
+void ComboBox::ComboBoxPopup::showForComboBox()
+{
     m_listView->setModel(m_comboBox->model());
     m_listView->setRootIndex(m_comboBox->rootModelIndex());
     m_listView->setModelColumn(m_comboBox->modelColumn());
@@ -210,16 +232,15 @@ void ComboBox::ComboBoxPopup::showForComboBox() {
     }
 
     const int itemCount = m_comboBox->count();
-    const int itemH     = ::Spacing::ControlHeight::Large;
+    const int itemH = ::Spacing::ControlHeight::Large;
     const int maxVisible = qMin(itemCount, 6);
-    const int rowsH     = maxVisible * itemH;
-    const int sSize     = kPopupShadowMargin;
+    const int rowsH = maxVisible * itemH;
+    const int sSize = kPopupShadowMargin;
     const int cardInset = kPopupContentInset;
     int widestText = 0;
     const QFontMetrics popupMetrics(m_listView->font());
     for (int index = 0; index < itemCount; ++index)
-        widestText = qMax(widestText,
-                          popupMetrics.horizontalAdvance(m_comboBox->itemText(index)));
+        widestText = qMax(widestText, popupMetrics.horizontalAdvance(m_comboBox->itemText(index)));
 
     int scrollClearance = 0;
     if (itemCount > maxVisible) {
@@ -227,14 +248,10 @@ void ComboBox::ComboBoxPopup::showForComboBox() {
         if (auto* scrollBar = m_listView->verticalFluentScrollBar())
             scrollClearance = qMax(scrollClearance, scrollBar->thickness());
     }
-    const int textChrome = cardInset * 2
-        + kPopupItemOuterInset * 2
-        + kPopupItemTextLeftInset
-        + kPopupItemTextRightInset
-        + scrollClearance
-        + ::Spacing::Standard;
+    const int textChrome = cardInset * 2 + kPopupItemOuterInset * 2 + kPopupItemTextLeftInset +
+                           kPopupItemTextRightInset + scrollClearance + ::Spacing::Standard;
     const int cardW = qMax(qMax(m_comboBox->width(), 120), widestText + textChrome);
-    const int cardH     = rowsH + cardInset * 2;
+    const int cardH = rowsH + cardInset * 2;
     const QSize totalSize = ::fluent::overlay::outerSizeForVisibleCard(QSize(cardW, cardH), sSize);
 
     setFixedSize(totalSize);
@@ -260,7 +277,8 @@ void ComboBox::ComboBoxPopup::showForComboBox() {
     }
 }
 
-void ComboBox::ComboBoxPopup::onThemeUpdated() {
+void ComboBox::ComboBoxPopup::onThemeUpdated()
+{
     Flyout::onThemeUpdated();
     QPalette pal = palette();
     pal.setColor(QPalette::Window, themeColorsRef().bgLayer);
@@ -269,10 +287,12 @@ void ComboBox::ComboBoxPopup::onThemeUpdated() {
     if (m_comboBox) {
         m_listView->setFont(m_comboBox->themeFont(m_comboBox->fontRole()).toQFont());
     }
-    if (m_listView && m_listView->viewport()) m_listView->viewport()->update();
+    if (m_listView && m_listView->viewport())
+        m_listView->viewport()->update();
 }
 
-void ComboBox::ComboBoxPopup::paintEvent(QPaintEvent*) {
+void ComboBox::ComboBoxPopup::paintEvent(QPaintEvent*)
+{
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
@@ -282,28 +302,24 @@ void ComboBox::ComboBoxPopup::paintEvent(QPaintEvent*) {
     // painting back across the closed field in either placement direction.
     // zh_CN: ComboBox 下拉紧邻输入框，使用更轻、更窄的菜单高程，而不是 Popup
     // 的高强度浮层阴影；配合默认 8px 间距，向上或向下弹出时都不会反压输入框。
-    const QRect contentRect = ::fluent::overlay::visibleCardRect(
-        rect(), kPopupShadowMargin);
+    const QRect contentRect = ::fluent::overlay::visibleCardRect(rect(), kPopupShadowMargin);
     const int radius = themeRadius().overlay;
-    ::fluent::overlay::paintLayeredShadow(
-        painter,
-        contentRect,
-        radius,
-        themeShadow(Elevation::High),
-        kPopupShadowIntensity,
-        kPopupShadowLayerCount,
-        kPopupShadowVerticalOffset);
+    ::fluent::overlay::paintLayeredShadow(painter, contentRect, radius,
+                                          themeShadow(Elevation::High), kPopupShadowIntensity,
+                                          kPopupShadowLayerCount, kPopupShadowVerticalOffset);
 
     const auto& colors = themeColorsRef();
     fluent::painting::RoundedSurfacePaint surface;
     surface.fill = colors.bgLayer;
     surface.radius = radius;
-        surface.border = colors.strokeCard;
+    surface.border = colors.strokeCard;
     fluent::painting::paintRoundedSurface(painter, QRectF(contentRect), surface);
 }
 
-QPoint ComboBox::ComboBoxPopup::computePosition() const {
-    if (!m_comboBox || !m_comboBox->window()) return Flyout::computePosition();
+QPoint ComboBox::ComboBoxPopup::computePosition() const
+{
+    if (!m_comboBox || !m_comboBox->window())
+        return Flyout::computePosition();
 
     QWidget* top = m_comboBox->window();
     const int shadow = kPopupShadowMargin;
@@ -324,24 +340,25 @@ QPoint ComboBox::ComboBoxPopup::computePosition() const {
     const bool fitsAbove = spaceAbove >= requiredSpace;
     const bool placeAbove = !fitsBelow && (fitsAbove || spaceAbove > spaceBelow);
 
-    QPoint cardTopLeft(anchor.left(), placeAbove
-        ? anchor.top() - anchorOffset() - cardH
-        : anchor.bottom() + 1 + anchorOffset());
+    QPoint cardTopLeft(anchor.left(), placeAbove ? anchor.top() - anchorOffset() - cardH
+                                                 : anchor.bottom() + 1 + anchorOffset());
 
     if (clampToWindow()) {
-        cardTopLeft = ::fluent::overlay::clampCardTopLeft(
-            cardTopLeft, cardSize, surface, kPopupWindowMargin);
+        cardTopLeft =
+            ::fluent::overlay::clampCardTopLeft(cardTopLeft, cardSize, surface, kPopupWindowMargin);
     }
 
     return ::fluent::overlay::outerTopLeftForVisibleCard(cardTopLeft, shadow);
 }
 
-bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event) {
+bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event)
+{
     if (event && event->type() == QEvent::MouseButtonPress && m_comboBox) {
         auto* mouseEvent = static_cast<QMouseEvent*>(event);
         const QPoint comboLocal = m_comboBox->mapFromGlobal(fluentMouseGlobalPos(mouseEvent));
         const bool pressOnOwner = m_comboBox->rect().contains(comboLocal);
-        const bool pressInsidePopup = ::fluent::overlay::visibleCardContains(rect(), mapFromGlobal(fluentMouseGlobalPos(mouseEvent)), kPopupShadowMargin);
+        const bool pressInsidePopup = ::fluent::overlay::visibleCardContains(
+            rect(), mapFromGlobal(fluentMouseGlobalPos(mouseEvent)), kPopupShadowMargin);
         if (pressOnOwner && !pressInsidePopup) {
             m_comboBox->m_ignoreNextPopupPress = true;
         }
@@ -352,7 +369,8 @@ bool ComboBox::ComboBoxPopup::eventFilter(QObject* watched, QEvent* event) {
 
 // ─── ComboBox implementation. zh_CN: ComboBox 主体实现 ─────────────────────
 
-ComboBox::ComboBox(QWidget* parent) : QComboBox(parent) {
+ComboBox::ComboBox(QWidget* parent) : QComboBox(parent)
+{
     setAttribute(Qt::WA_Hover);
     // QComboBox defaults to WheelFocus, which grants focus before wheelEvent and changes the
     // selection merely by hovering and scrolling. Fluent ComboBox accepts wheel selection only
@@ -366,18 +384,22 @@ ComboBox::ComboBox(QWidget* parent) : QComboBox(parent) {
     onThemeUpdated();
 }
 
-ComboBox::~ComboBox() {
+ComboBox::~ComboBox()
+{
     delete m_popup.data();
 }
 
-void ComboBox::initAnimation() {
+void ComboBox::initAnimation()
+{
     m_pressAnimation = new QPropertyAnimation(this, "pressProgress", this);
     m_pressAnimation->setDuration(themeAnimation().slow);
     m_pressAnimation->setEasingCurve(themeAnimation().decelerate);
 }
 
-void ComboBox::setFontRole(Typography::FontRole role) {
-    if (m_fontRole == role) return;
+void ComboBox::setFontRole(Typography::FontRole role)
+{
+    if (m_fontRole == role)
+        return;
     m_fontRole = role;
     setFont(themeFont(m_fontRole).toQFont());
     updateGeometry();
@@ -385,55 +407,69 @@ void ComboBox::setFontRole(Typography::FontRole role) {
     update();
 }
 
-void ComboBox::setContentPaddingH(int px) {
-    if (m_contentPaddingH == px) return;
+void ComboBox::setContentPaddingH(int px)
+{
+    if (m_contentPaddingH == px)
+        return;
     m_contentPaddingH = px;
     updateGeometry();
     emit layoutChanged();
     update();
 }
 
-void ComboBox::setContentPaddingV(int px) {
-    if (m_contentPaddingV == px) return;
+void ComboBox::setContentPaddingV(int px)
+{
+    if (m_contentPaddingV == px)
+        return;
     m_contentPaddingV = px;
     updateGeometry();
     emit layoutChanged();
     update();
 }
 
-void ComboBox::setChevronGlyph(const QString& glyph) {
-    if (m_chevronGlyph == glyph) return;
+void ComboBox::setChevronGlyph(const QString& glyph)
+{
+    if (m_chevronGlyph == glyph)
+        return;
     m_chevronGlyph = glyph;
     emit chevronChanged();
     update();
 }
 
-void ComboBox::setChevronSize(int size) {
-    if (m_chevronSize == size) return;
+void ComboBox::setChevronSize(int size)
+{
+    if (m_chevronSize == size)
+        return;
     m_chevronSize = size;
     emit chevronChanged();
     update();
 }
 
-void ComboBox::setChevronOffset(const QPoint& offset) {
-    if (m_chevronOffset == offset) return;
+void ComboBox::setChevronOffset(const QPoint& offset)
+{
+    if (m_chevronOffset == offset)
+        return;
     m_chevronOffset = offset;
     emit chevronChanged();
     update();
 }
 
-void ComboBox::setPopupOffset(int offset) {
-    if (m_popupOffset == offset) return;
+void ComboBox::setPopupOffset(int offset)
+{
+    if (m_popupOffset == offset)
+        return;
     m_popupOffset = offset;
     emit layoutChanged();
 }
 
-void ComboBox::setPressProgress(qreal p) {
+void ComboBox::setPressProgress(qreal p)
+{
     m_pressProgress = p;
     update();
 }
 
-void ComboBox::onThemeUpdated() {
+void ComboBox::onThemeUpdated()
+{
     setFont(themeFont(m_fontRole).toQFont());
     if (m_popup) {
         m_popup->onThemeUpdated();
@@ -445,7 +481,8 @@ void ComboBox::onThemeUpdated() {
     update();
 }
 
-QSize ComboBox::sizeHint() const {
+QSize ComboBox::sizeHint() const
+{
     const auto& sp = themeSpacing();
     QFontMetrics fm(font());
     // Find widest item
@@ -467,7 +504,8 @@ QSize ComboBox::sizeHint() const {
 
 // ── Editable ─────────────────────────────────────────────────────────────────
 
-void ComboBox::setEditable(bool editable) {
+void ComboBox::setEditable(bool editable)
+{
     if (editable == QComboBox::isEditable())
         return;
 
@@ -483,8 +521,7 @@ void ComboBox::setEditable(bool editable) {
         style->setParent(editor);
         editor->setStyle(style);
         editor->setFocusPolicy(Qt::ClickFocus);
-        const Qt::ContextMenuPolicy contextMenuPolicy =
-            editor->contextMenuPolicy();
+        const Qt::ContextMenuPolicy contextMenuPolicy = editor->contextMenuPolicy();
         QComboBox::setLineEdit(editor);
         // QComboBox forces its editor to NoContextMenu. Restore the editor's
         // policy so the Fluent LineEdit keeps its standard editing surface.
@@ -495,9 +532,8 @@ void ComboBox::setEditable(bool editable) {
         applyLineEditStyle();
         layoutLineEdit();
         editor->show();
-        connect(editor, &fluent::textfields::LineEdit::returnPressed, this, [this]() {
-            hidePopup();
-        });
+        connect(editor, &fluent::textfields::LineEdit::returnPressed, this,
+                [this]() { hidePopup(); });
     } else {
         QPointer<QLineEdit> previousEditor = m_observedLineEdit;
         if (m_observedLineEdit)
@@ -514,11 +550,11 @@ void ComboBox::setEditable(bool editable) {
     update();
 }
 
-void ComboBox::setLineEdit(QLineEdit* edit) {
+void ComboBox::setLineEdit(QLineEdit* edit)
+{
     if (!edit)
         return;
-    const Qt::ContextMenuPolicy contextMenuPolicy =
-        edit->contextMenuPolicy();
+    const Qt::ContextMenuPolicy contextMenuPolicy = edit->contextMenuPolicy();
     m_editorMutationInProgress = true;
     if (!QComboBox::isEditable())
         QComboBox::setEditable(true);
@@ -533,17 +569,20 @@ void ComboBox::setLineEdit(QLineEdit* edit) {
     update();
 }
 
-fluent::textfields::LineEdit* ComboBox::fluentLineEdit() const {
+fluent::textfields::LineEdit* ComboBox::fluentLineEdit() const
+{
     return qobject_cast<fluent::textfields::LineEdit*>(QComboBox::lineEdit());
 }
 
-void ComboBox::setModel(QAbstractItemModel* model) {
+void ComboBox::setModel(QAbstractItemModel* model)
+{
     QComboBox::setModel(model);
     if (m_popupVisible && m_popup)
         m_popup->showForComboBox();
 }
 
-void ComboBox::synchronizeLineEdit() {
+void ComboBox::synchronizeLineEdit()
+{
     if (m_editorMutationInProgress)
         return;
     QLineEdit* editor = QComboBox::isEditable() ? QComboBox::lineEdit() : nullptr;
@@ -556,35 +595,35 @@ void ComboBox::synchronizeLineEdit() {
         m_observedLineEdit->installEventFilter(this);
 }
 
-void ComboBox::layoutLineEdit() {
+void ComboBox::layoutLineEdit()
+{
     synchronizeLineEdit();
     QLineEdit* editor = m_observedLineEdit.data();
     if (!editor)
         return;
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
     const int gap = ::Spacing::Gap::Tight;
-    const QRect logicalTextRect =
-        rect().adjusted(m_contentPaddingH, m_contentPaddingV,
-                        -(chevronAreaW + gap), -m_contentPaddingV);
-    const QRect textRect =
-        QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
+    const QRect logicalTextRect = rect().adjusted(m_contentPaddingH, m_contentPaddingV,
+                                                  -(chevronAreaW + gap), -m_contentPaddingV);
+    const QRect textRect = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
     editor->setGeometry(textRect);
 }
 
-void ComboBox::applyLineEditStyle() {
+void ComboBox::applyLineEditStyle()
+{
     synchronizeLineEdit();
     QLineEdit* editor = m_observedLineEdit.data();
     if (!editor)
         return;
     editor->setFont(themeFont(m_fontRole).toQFont());
-    if (auto* fluentEditor =
-            qobject_cast<fluent::textfields::LineEdit*>(editor)) {
+    if (auto* fluentEditor = qobject_cast<fluent::textfields::LineEdit*>(editor)) {
         fluentEditor->setFontRole(m_fontRole);
         fluentEditor->onThemeUpdated();
     }
 }
 
-bool ComboBox::event(QEvent* event) {
+bool ComboBox::event(QEvent* event)
+{
     const bool handled = QComboBox::event(event);
     synchronizeLineEdit();
     if (event && event->type() == QEvent::LayoutDirectionChange) {
@@ -594,15 +633,18 @@ bool ComboBox::event(QEvent* event) {
     return handled;
 }
 
-void ComboBox::resizeEvent(QResizeEvent* event) {
+void ComboBox::resizeEvent(QResizeEvent* event)
+{
     QComboBox::resizeEvent(event);
     layoutLineEdit();
 }
 
 // ── Popup ────────────────────────────────────────────────────────────────────
 
-void ComboBox::showPopup() {
-    if (m_popupVisible && m_popup) return;
+void ComboBox::showPopup()
+{
+    if (m_popupVisible && m_popup)
+        return;
     m_popupVisible = true;
 
     if (!m_popup)
@@ -612,8 +654,10 @@ void ComboBox::showPopup() {
     update();
 }
 
-void ComboBox::hidePopup() {
-    if (!m_popupVisible) return;
+void ComboBox::hidePopup()
+{
+    if (!m_popupVisible)
+        return;
     m_popupVisible = false;
     m_pressed = false;
 
@@ -625,32 +669,36 @@ void ComboBox::hidePopup() {
 }
 
 // Private helper called from the popup close lifecycle.
-void ComboBox::onPopupHidden() {
+void ComboBox::onPopupHidden()
+{
     const bool needsUpdate = m_popupVisible || m_pressed;
     m_popupVisible = false;
     m_pressed = false;
-    if (needsUpdate) update();
+    if (needsUpdate)
+        update();
 }
 
 // ── Input events. zh_CN: 输入事件 ────────────────────────────────────────────
 
-void ComboBox::enterEvent(FluentEnterEvent* event) {
+void ComboBox::enterEvent(FluentEnterEvent* event)
+{
     m_hovered = true;
     update();
     QComboBox::enterEvent(event);
 }
 
-void ComboBox::leaveEvent(QEvent* event) {
+void ComboBox::leaveEvent(QEvent* event)
+{
     m_hovered = false;
     m_chevronHovered = false;
     update();
     QComboBox::leaveEvent(event);
 }
 
-void ComboBox::wheelEvent(QWheelEvent* event) {
+void ComboBox::wheelEvent(QWheelEvent* event)
+{
     synchronizeLineEdit();
-    const bool ownsFocus = hasFocus()
-        || (m_observedLineEdit && m_observedLineEdit->hasFocus());
+    const bool ownsFocus = hasFocus() || (m_observedLineEdit && m_observedLineEdit->hasFocus());
     if (!ownsFocus) {
         event->ignore();
         return;
@@ -658,10 +706,10 @@ void ComboBox::wheelEvent(QWheelEvent* event) {
     QComboBox::wheelEvent(event);
 }
 
-void ComboBox::keyPressEvent(QKeyEvent* event) {
+void ComboBox::keyPressEvent(QKeyEvent* event)
+{
     synchronizeLineEdit();
-    const bool ownsFocus = hasFocus()
-        || (m_observedLineEdit && m_observedLineEdit->hasFocus());
+    const bool ownsFocus = hasFocus() || (m_observedLineEdit && m_observedLineEdit->hasFocus());
     if (!ownsFocus) {
         event->ignore();
         return;
@@ -669,7 +717,8 @@ void ComboBox::keyPressEvent(QKeyEvent* event) {
     QComboBox::keyPressEvent(event);
 }
 
-void ComboBox::mousePressEvent(QMouseEvent* event) {
+void ComboBox::mousePressEvent(QMouseEvent* event)
+{
     if (event->button() == Qt::LeftButton) {
         if (!hasFocus())
             setFocus(Qt::MouseFocusReason);
@@ -698,7 +747,8 @@ void ComboBox::mousePressEvent(QMouseEvent* event) {
     event->accept();
 }
 
-void ComboBox::mouseReleaseEvent(QMouseEvent* event) {
+void ComboBox::mouseReleaseEvent(QMouseEvent* event)
+{
     if (event->button() == Qt::LeftButton) {
         m_pressed = false;
         update();
@@ -706,14 +756,13 @@ void ComboBox::mouseReleaseEvent(QMouseEvent* event) {
     event->accept();
 }
 
-void ComboBox::mouseMoveEvent(QMouseEvent* event) {
+void ComboBox::mouseMoveEvent(QMouseEvent* event)
+{
     synchronizeLineEdit();
     if (m_observedLineEdit) {
         const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
-        const QRect logicalChevronRect(width() - chevronAreaW, 0,
-                                       chevronAreaW, height());
-        const QRect chevronRect =
-            QStyle::visualRect(layoutDirection(), rect(), logicalChevronRect);
+        const QRect logicalChevronRect(width() - chevronAreaW, 0, chevronAreaW, height());
+        const QRect chevronRect = QStyle::visualRect(layoutDirection(), rect(), logicalChevronRect);
         const bool over = chevronRect.contains(event->pos());
         if (over != m_chevronHovered) {
             m_chevronHovered = over;
@@ -723,29 +772,22 @@ void ComboBox::mouseMoveEvent(QMouseEvent* event) {
     QComboBox::mouseMoveEvent(event);
 }
 
-bool ComboBox::eventFilter(QObject* watched, QEvent* event) {
+bool ComboBox::eventFilter(QObject* watched, QEvent* event)
+{
     if (watched == m_observedLineEdit) {
         if (event->type() == QEvent::FocusIn) {
             m_observedLineEdit->selectAll();
             update();
         } else if (event->type() == QEvent::FocusOut) {
             update();
-        } else if (
-            event->type() == QEvent::ContextMenu
-            && !qobject_cast<fluent::textfields::LineEdit*>(
-                m_observedLineEdit.data())
-            && m_observedLineEdit->contextMenuPolicy()
-                == Qt::DefaultContextMenu) {
-            auto* contextEvent =
-                static_cast<QContextMenuEvent*>(event);
-            if (fluent::menus_toolbars::detail::
-                    showTextEditingContextMenu(
-                        m_observedLineEdit.data(),
-                        m_observedLineEdit
-                            ->createStandardContextMenu(),
-                        contextEvent->globalPos(),
-                        QStringLiteral(
-                            "FluentComboBox.LineEdit.ContextMenu"))) {
+        } else if (event->type() == QEvent::ContextMenu &&
+                   !qobject_cast<fluent::textfields::LineEdit*>(m_observedLineEdit.data()) &&
+                   m_observedLineEdit->contextMenuPolicy() == Qt::DefaultContextMenu) {
+            auto* contextEvent = static_cast<QContextMenuEvent*>(event);
+            if (fluent::menus_toolbars::detail::showTextEditingContextMenu(
+                    m_observedLineEdit.data(), m_observedLineEdit->createStandardContextMenu(),
+                    contextEvent->globalPos(),
+                    QStringLiteral("FluentComboBox.LineEdit.ContextMenu"))) {
                 contextEvent->accept();
                 return true;
             }
@@ -762,7 +804,8 @@ bool ComboBox::eventFilter(QObject* watched, QEvent* event) {
 
 // ── Painting. zh_CN: 绘制 ────────────────────────────────────────────────────
 
-void ComboBox::paintEvent(QPaintEvent*) {
+void ComboBox::paintEvent(QPaintEvent*)
+{
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
@@ -778,8 +821,7 @@ void ComboBox::paintEvent(QPaintEvent*) {
     // Outer wrapper
     QColor outerBg = Qt::transparent;
     synchronizeLineEdit();
-    const bool lineEditFocused =
-        m_observedLineEdit && m_observedLineEdit->hasFocus();
+    const bool lineEditFocused = m_observedLineEdit && m_observedLineEdit->hasFocus();
     if (!enabled) {
         outerBg = colors.controlDisabled;
     } else if (m_popupVisible) {
@@ -795,59 +837,52 @@ void ComboBox::paintEvent(QPaintEvent*) {
     }
 
     // Fluent treatment. zh_CN: Fluent 样式。
-        // Draw the control background with 1px inset for border
-        const qreal outerR = radius.control; // 4px
-        const qreal innerR = outerR - 1;     // 3px
+    // Draw the control background with 1px inset for border
+    const qreal outerR = radius.control; // 4px
+    const qreal innerR = outerR - 1;     // 3px
 
-        // Fill background
-        const auto borderStroke = paintMetrics.alignedStroke(r, 1.0);
-        QPainterPath bgPath;
-        bgPath.addRoundedRect(borderStroke.rect, outerR, outerR);
+    // Fill background
+    const auto borderStroke = paintMetrics.alignedStroke(r, 1.0);
+    QPainterPath bgPath;
+    bgPath.addRoundedRect(borderStroke.rect, outerR, outerR);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(outerBg);
+    painter.drawPath(bgPath);
+
+    // ── Border ───────────────────────────────────────────────────────────
+    // Figma: border rgba(0,0,0,0.06) → strokeDefault
+    const QColor borderColor = colors.strokeDefault;
+
+    // Bottom accent stroke when focused/open (WinUI 3 pattern)
+    if (lineEditFocused && enabled) {
+        // Draw normal border first
+        painter.setPen(QPen(borderColor, borderStroke.width));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRoundedRect(borderStroke.rect, outerR, outerR);
+
+        // Accent bottom border (2px)
+        const qreal accentH = 2.0;
+        QRectF bottomRect(r.left() + 0.5, r.bottom() - accentH - 0.5, r.width() - 1.0, accentH);
+        QPainterPath bp;
+        bp.addRoundedRect(bottomRect, innerR, innerR);
         painter.setPen(Qt::NoPen);
-        painter.setBrush(outerBg);
-        painter.drawPath(bgPath);
+        painter.setBrush(colors.accentDefault);
+        painter.drawPath(bp);
+    } else {
+        // Normal border
+        painter.setPen(QPen(borderColor, borderStroke.width));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRoundedRect(borderStroke.rect, outerR, outerR);
 
-        // ── Border ───────────────────────────────────────────────────────────
-        // Figma: border rgba(0,0,0,0.06) → strokeDefault
-        QColor borderColor = colors.strokeDefault;
-        if (!enabled) {
-            borderColor = colors.strokeDefault;
-        } else if (m_popupVisible) {
-            borderColor = colors.strokeDefault;
-        }
-
-        // Bottom accent stroke when focused/open (WinUI 3 pattern)
-        if (lineEditFocused && enabled) {
-            // Draw normal border first
-            painter.setPen(QPen(borderColor, borderStroke.width));
-            painter.setBrush(Qt::NoBrush);
-            painter.drawRoundedRect(borderStroke.rect, outerR, outerR);
-
-            // Accent bottom border (2px)
-            const qreal accentH = 2.0;
-            QRectF bottomRect(r.left() + 0.5, r.bottom() - accentH - 0.5,
-                              r.width() - 1.0, accentH);
+        // Bottom edge gradient (WinUI 3 ControlElevation): slightly darker at bottom
+        if (enabled && !m_pressed) {
+            const qreal accentH = 1.0;
+            QRectF bottomRect(r.left() + 1, r.bottom() - accentH - 0.5, r.width() - 2, accentH);
             QPainterPath bp;
-            bp.addRoundedRect(bottomRect, innerR, innerR);
+            bp.addRoundedRect(bottomRect, 1.0, 1.0);
             painter.setPen(Qt::NoPen);
-            painter.setBrush(colors.accentDefault);
+            painter.setBrush(colors.strokeSecondary);
             painter.drawPath(bp);
-        } else {
-            // Normal border
-            painter.setPen(QPen(borderColor, borderStroke.width));
-            painter.setBrush(Qt::NoBrush);
-            painter.drawRoundedRect(borderStroke.rect, outerR, outerR);
-
-            // Bottom edge gradient (WinUI 3 ControlElevation): slightly darker at bottom
-            if (enabled && !m_pressed) {
-                const qreal accentH = 1.0;
-                QRectF bottomRect(r.left() + 1, r.bottom() - accentH - 0.5,
-                                  r.width() - 2, accentH);
-                QPainterPath bp;
-                bp.addRoundedRect(bottomRect, 1.0, 1.0);
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(colors.strokeSecondary);
-                painter.drawPath(bp);
         }
     }
 
@@ -858,10 +893,8 @@ void ComboBox::paintEvent(QPaintEvent*) {
     // Chevron area calculation
     const int chevronAreaW = m_chevronOffset.x() + m_chevronSize + ::Spacing::Gap::Tight;
     const QRect logicalTextRect =
-        rect().adjusted(m_contentPaddingH, m_contentPaddingV,
-                        -chevronAreaW, -m_contentPaddingV);
-    const QRectF textSlot =
-        QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
+        rect().adjusted(m_contentPaddingH, m_contentPaddingV, -chevronAreaW, -m_contentPaddingV);
+    const QRectF textSlot = QStyle::visualRect(layoutDirection(), rect(), logicalTextRect);
 
     // In editable mode, QLineEdit handles text display
     if (!m_observedLineEdit) {
@@ -869,14 +902,13 @@ void ComboBox::paintEvent(QPaintEvent*) {
         painter.setFont(font());
         const QString text = currentText();
         const QFontMetricsF metrics(painter.font());
-        const QString elidedText = metrics.elidedText(
-            text, Qt::ElideRight, qRound(textSlot.width()));
-        const QRectF textRect = fluent::painting::verticallyCenteredTextInkRect(
-            textSlot, metrics, elidedText);
-        painter.drawText(textRect,
-                         QStyle::visualAlignment(layoutDirection(),
-                                                 Qt::AlignLeft | Qt::AlignVCenter),
-                         elidedText);
+        const QString elidedText =
+            metrics.elidedText(text, Qt::ElideRight, qRound(textSlot.width()));
+        const QRectF textRect =
+            fluent::painting::verticallyCenteredTextInkRect(textSlot, metrics, elidedText);
+        painter.drawText(
+            textRect, QStyle::visualAlignment(layoutDirection(), Qt::AlignLeft | Qt::AlignVCenter),
+            elidedText);
     }
 
     // ── Chevron ──────────────────────────────────────────────────────────
@@ -900,13 +932,9 @@ void ComboBox::paintEvent(QPaintEvent*) {
     const qreal pad = 4.0;
     const qreal btnW = m_chevronSize + pad * 2;
     const qreal btnH = m_chevronSize + pad * 2;
-    const QRect logicalChevronSlot(
-        qRound(r.right() - m_chevronOffset.x() - m_chevronSize - pad),
-        qRound(r.center().y() - btnH / 2.0),
-        qRound(btnW),
-        qRound(btnH));
-    QRectF chevronSlot =
-        QStyle::visualRect(layoutDirection(), rect(), logicalChevronSlot);
+    const QRect logicalChevronSlot(qRound(r.right() - m_chevronOffset.x() - m_chevronSize - pad),
+                                   qRound(r.center().y() - btnH / 2.0), qRound(btnW), qRound(btnH));
+    QRectF chevronSlot = QStyle::visualRect(layoutDirection(), rect(), logicalChevronSlot);
     chevronSlot.translate(0, pressOffset + m_chevronOffset.y());
 
     // Editable mode: draw chevron button hover/press background
@@ -928,8 +956,8 @@ void ComboBox::paintEvent(QPaintEvent*) {
     }
 
     painter.setPen(chevronColor);
-    Typography::Icons::paintGlyph(
-        painter, chevronSlot, m_chevronGlyph, m_chevronSize, Qt::AlignCenter);
+    Typography::Icons::paintGlyph(painter, chevronSlot, m_chevronGlyph, m_chevronSize,
+                                  Qt::AlignCenter);
 }
 
 } // namespace fluent::basicinput

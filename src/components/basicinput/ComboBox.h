@@ -8,19 +8,18 @@
 #include "compatibility/QtCompat.h"
 #include "components/foundation/FluentElement.h"
 #include "components/foundation/QMLPlus.h"
-#include "components/dialogs_flyouts/Flyout.h"
 #include "design/Typography.h"
 #include "design/Spacing.h"
 
+class QAbstractItemView;
 class QPropertyAnimation;
 class QKeyEvent;
 class QLineEdit;
 class QWheelEvent;
 
-namespace fluent::collections {
-class ListView;
+namespace fluent::textfields {
+class LineEdit;
 }
-namespace fluent::textfields { class LineEdit; }
 
 namespace fluent::basicinput {
 
@@ -43,8 +42,7 @@ public:
 
     void paint(QPainter* painter, const QStyleOptionViewItem& option,
                const QModelIndex& index) const override;
-    QSize sizeHint(const QStyleOptionViewItem& option,
-                   const QModelIndex& index) const override;
+    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
     FluentElement* m_themeHost = nullptr;
@@ -71,12 +69,14 @@ class ComboBox : public QComboBox, public FluentElement, public QMLPlus {
      * @brief Horizontal content padding in pixels.
      * zh_CN: 内容区域水平内边距，单位为像素。
      */
-    Q_PROPERTY(int contentPaddingH READ contentPaddingH WRITE setContentPaddingH NOTIFY layoutChanged)
+    Q_PROPERTY(
+        int contentPaddingH READ contentPaddingH WRITE setContentPaddingH NOTIFY layoutChanged)
     /**
      * @brief Vertical content padding in pixels.
      * zh_CN: 内容区域垂直内边距，单位为像素。
      */
-    Q_PROPERTY(int contentPaddingV READ contentPaddingV WRITE setContentPaddingV NOTIFY layoutChanged)
+    Q_PROPERTY(
+        int contentPaddingV READ contentPaddingV WRITE setContentPaddingV NOTIFY layoutChanged)
     /**
      * @brief Iconfont glyph used for the chevron affordance.
      * zh_CN: 下拉箭头使用的 iconfont 字符。
@@ -185,19 +185,19 @@ private:
 
     // --- Configurable design tokens ---
     Typography::FontRole m_fontRole = Typography::FontRole::Body;
-    int     m_contentPaddingH = ::Spacing::Padding::ComboBoxHorizontal;
-    int     m_contentPaddingV = ::Spacing::Padding::ComboBoxVertical;
-    QString m_chevronGlyph   = Typography::Icons::ChevronDownMed;
-    int     m_chevronSize    = Typography::IconSize::Compact;
-    QPoint  m_chevronOffset  {::Spacing::Padding::ComboBoxHorizontal, 0};
-    int     m_popupOffset    = ::Spacing::Small; // 8px keeps the dropdown shadow clear of its anchor
+    int m_contentPaddingH = ::Spacing::Padding::ComboBoxHorizontal;
+    int m_contentPaddingV = ::Spacing::Padding::ComboBoxVertical;
+    QString m_chevronGlyph = Typography::Icons::ChevronDownMed;
+    int m_chevronSize = Typography::IconSize::Compact;
+    QPoint m_chevronOffset{::Spacing::Padding::ComboBoxHorizontal, 0};
+    int m_popupOffset = ::Spacing::Small; // 8px keeps the dropdown shadow clear of its anchor
 
     // --- State ---
-    bool  m_hovered  = false;
-    bool  m_pressed  = false;
-    bool  m_chevronHovered = false;
-    bool  m_popupVisible = false;
-    bool  m_ignoreNextPopupPress = false;
+    bool m_hovered = false;
+    bool m_pressed = false;
+    bool m_chevronHovered = false;
+    bool m_popupVisible = false;
+    bool m_ignoreNextPopupPress = false;
     qreal m_pressProgress = 0.0;
 
     QPropertyAnimation* m_pressAnimation = nullptr;
@@ -209,35 +209,6 @@ private:
     // --- Popup ---
     class ComboBoxPopup;
     QPointer<ComboBoxPopup> m_popup;
-};
-
-// ─── ComboBox popup window. zh_CN: ComboBox 弹层窗口 ───────────────────────
-
-/**
- * @brief Flyout-backed dropdown host used internally by ComboBox.
- * zh_CN: ComboBox 内部使用的 Flyout 下拉宿主。
- *
- * ComboBoxPopup hosts the popup ListView inside shared overlay behavior so
- * placement, light-dismiss, and clipping follow the common flyout contract.
- * zh_CN: ComboBoxPopup 在统一浮层行为中承载下拉 ListView，使定位、light-dismiss
- * 和裁剪遵循通用 Flyout 契约。
- */
-class ComboBox::ComboBoxPopup : public fluent::dialogs_flyouts::Flyout {
-public:
-    explicit ComboBoxPopup(ComboBox* comboBox);
-
-    void showForComboBox();
-    void onThemeUpdated() override;
-
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    QPoint computePosition() const override;
-    bool eventFilter(QObject* watched, QEvent* event) override;
-
-private:
-    ComboBox* m_comboBox;
-    fluent::collections::ListView* m_listView;
-    ComboBoxItemDelegate* m_delegate;
 };
 
 } // namespace fluent::basicinput
