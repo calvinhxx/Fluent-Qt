@@ -2,7 +2,7 @@
   "schema_version": 1,
   "project": {
     "name": "FluentQt",
-    "version": "1.7.5",
+    "version": "1.7.6",
     "api_version": "1.7",
     "cpp_standard": "C++17",
     "qt_versions": [
@@ -2736,11 +2736,12 @@
       "source": "src/components/basicinput/ComboBox.h",
       "summary": "Delegate that paints ComboBox popup rows with Fluent metrics.",
       "declarations": [
+        "QAbstractItemView",
         "QPropertyAnimation",
         "QKeyEvent",
         "QLineEdit",
         "QWheelEvent",
-        "ListView",
+        "LineEdit",
         "ComboBoxItemDelegate",
         "ComboBox",
         "ComboBoxPopup"
