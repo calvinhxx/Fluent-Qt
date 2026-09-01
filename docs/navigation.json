@@ -148,6 +148,7 @@
         {
           "title": "1.7",
           "pages": [
+            "releases/v1.7.6.md",
             "releases/v1.7.5.md",
             "releases/v1.7.4.md",
             "releases/v1.7.3.md",
