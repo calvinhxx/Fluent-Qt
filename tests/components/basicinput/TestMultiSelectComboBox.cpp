@@ -738,10 +738,8 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction) {
   EXPECT_EQ(interface->role(), QAccessible::ButtonMenu);
   EXPECT_EQ(interface->text(QAccessible::Name),
             QStringLiteral("Included regions"));
-  EXPECT_TRUE(
-      interface->text(QAccessible::Value).contains(QStringLiteral("Alpha")));
-  EXPECT_TRUE(
-      interface->text(QAccessible::Value).contains(QStringLiteral("Gamma")));
+  EXPECT_EQ(interface->text(QAccessible::Value),
+            QString::fromUtf8("Alpha、Gamma"));
   EXPECT_TRUE(interface->state().hasPopup);
   EXPECT_TRUE(interface->state().collapsed);
   EXPECT_EQ(interface->childCount(), 0);
@@ -800,6 +798,8 @@ TEST_F(MultiSelectComboBoxTest, AccessibleRootExposesValueAndPopupAction) {
   betaActions->doAction(QAccessibleActionInterface::pressAction());
   QApplication::processEvents();
   EXPECT_TRUE(beta->state().selected);
+  EXPECT_EQ(interface->text(QAccessible::Value),
+            QString::fromUtf8("Alpha、Beta、Gamma"));
   EXPECT_TRUE(box.isOpen());
 
   QAccessibleInterface *otherInterface =
