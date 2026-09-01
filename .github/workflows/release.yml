@@ -64,7 +64,7 @@ jobs:
       candidate_run_attempt: ${{ steps.candidate.outputs.run_attempt }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -329,7 +329,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.tag }}
 
@@ -348,7 +348,7 @@ jobs:
             --version "${{ needs.preflight.outputs.version }}"
 
       - name: Upload source and Agent Skill packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-source
           if-no-files-found: error
@@ -399,7 +399,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.preflight.outputs.tag }}
           fetch-depth: 0
@@ -416,7 +416,7 @@ jobs:
             --output release-notes.md
 
       - name: Download immutable desktop candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: fluentqt-desktop-release-candidate
           path: ${{ runner.temp }}/fluentqt-desktop-release-candidate
@@ -451,7 +451,7 @@ jobs:
           cp "$candidate/dist/"* release-dist/
 
       - name: Download source packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: release-source
           path: release-dist
@@ -556,7 +556,7 @@ jobs:
       contents: read
     steps:
       - name: Download synchronized Python candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: fluentqt-python-release-bundle
           path: ${{ runner.temp }}/fluentqt-python-release-bundle

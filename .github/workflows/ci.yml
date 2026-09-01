@@ -48,7 +48,7 @@ jobs:
       cpp_test_targets: ${{ steps.changes.outputs.cpp_test_targets }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Validate CI orchestration contracts
         shell: bash
         run: |

@@ -29,7 +29,7 @@ jobs:
       count: ${{ steps.packages.outputs.count }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Validate package catalog
         shell: bash
@@ -111,14 +111,14 @@ jobs:
       SKIP_VISUAL_TEST: 1
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Prepare vcpkg binary cache
         shell: pwsh
         run: New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
 
       - name: Cache vcpkg binary packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .vcpkg-binary-cache
           key: desktop-compat-${{ runner.os }}-${{ runner.arch }}-${{ matrix.id }}-${{ hashFiles('vcpkg.json', 'CMakePresets.json') }}
@@ -334,7 +334,7 @@ jobs:
           }
 
       - name: Upload package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-compat-${{ matrix.id }}-${{ env.SHORT_SHA }}
           if-no-files-found: error
@@ -344,7 +344,7 @@ jobs:
       - name: Upload packaging diagnostics
         if: failure()
         timeout-minutes: 5
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-compat-${{ matrix.id }}-diagnostics
           if-no-files-found: ignore
