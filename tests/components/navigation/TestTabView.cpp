@@ -22,6 +22,7 @@
 #include "components/foundation/ThemeRegistry.h"
 #include "components/navigation/StackContentHost.h"
 #include "components/navigation/TabView.h"
+#include "components/navigation/private/TabViewVisualGeometry_p.h"
 #include "components/scrolling/ScrollView.h"
 #include "components/textfields/Label.h"
 #include "design/Typography.h"
@@ -91,7 +92,8 @@ QWidget* createContent(const QString& text, QWidget* parent = nullptr)
     addAnchored(layout, title);
 
     auto* description = new Label(QStringLiteral("ContentHost page with mixed controls and a "
-                               "generated preview image."), page);
+                                                 "generated preview image."),
+                                  page);
     description->setFluentTypography(Typography::FontRole::Caption);
     description->setTextElideMode(Qt::ElideRight);
     description->anchors()->top = {title, Edge::Bottom, 8};
@@ -135,17 +137,15 @@ StackContentHost* createBoundHost(TabView* tabs, QWidget* parent, const QString&
     for (int index = 0; index < tabs->tabCount(); ++index) {
         const TabViewItem item = tabs->tabAt(index);
         const QString pageTitle = item.text.trimmed().isEmpty()
-            ? QStringLiteral("%1 %2").arg(pagePrefix).arg(index + 1)
-            : item.text;
+                                      ? QStringLiteral("%1 %2").arg(pagePrefix).arg(index + 1)
+                                      : item.text;
         host->insertPage(index, createContent(pageTitle));
     }
 
-    QObject::connect(tabs, &TabView::currentChanged, host, [host](int index) {
-        host->setCurrentIndex(index, 0, true);
-    });
-    QObject::connect(tabs, &TabView::tabMoved, host, [host](int from, int to) {
-        host->movePage(from, to);
-    });
+    QObject::connect(tabs, &TabView::currentChanged, host,
+                     [host](int index) { host->setCurrentIndex(index, 0, true); });
+    QObject::connect(tabs, &TabView::tabMoved, host,
+                     [host](int from, int to) { host->movePage(from, to); });
     QObject::connect(tabs, &TabView::tabCloseRequested, tabs, [tabs, host](int index) {
         QWidget* page = host->takePage(index);
         if (page)
@@ -241,8 +241,7 @@ TEST_F(TabViewTest, CompletedTabRevealDisablesOpacityEffects)
         if (effects.size() < tabs->tabCount())
             return false;
         return std::all_of(effects.cbegin(), effects.cend(), [](const auto* effect) {
-            return effect && !effect->isEnabled()
-                && qFuzzyCompare(effect->opacity(), 1.0);
+            return effect && !effect->isEnabled() && qFuzzyCompare(effect->opacity(), 1.0);
         });
     };
     QTRY_VERIFY_WITH_TIMEOUT(allEffectsDisabled(), 500);
@@ -273,11 +272,7 @@ TEST_F(TabViewTest, SelectionHandlerCanSynchronouslyDeleteTabView)
 {
     auto* tabs = new TabView;
     QPointer<TabView> guard(tabs);
-    QObject::connect(
-        tabs, &TabView::selectedIndexChanged, qApp,
-        [tabs](int) {
-            delete tabs;
-        });
+    QObject::connect(tabs, &TabView::selectedIndexChanged, qApp, [tabs](int) { delete tabs; });
 
     tabs->addTab(QStringLiteral("Document"));
 
@@ -295,7 +290,8 @@ TEST_F(TabViewTest, ItemManagementPreservesOrderMetadataAndInvalidIndexes)
     EXPECT_EQ(tabs.selectedIndex(), 0);
     EXPECT_EQ(tabs.tabAt(0).text, QStringLiteral("Document 1"));
 
-    TabViewItem rich(QStringLiteral("Rich"), Typography::Icons::Document, false, false, QStringLiteral("payload"), QStringLiteral("Readable Rich"));
+    TabViewItem rich(QStringLiteral("Rich"), Typography::Icons::Document, false, false,
+                     QStringLiteral("payload"), QStringLiteral("Readable Rich"));
     EXPECT_EQ(tabs.addTab(rich), 1);
     EXPECT_EQ(tabs.tabAt(1).iconGlyph, Typography::Icons::Document);
     EXPECT_FALSE(tabs.tabAt(1).closable);
@@ -397,12 +393,10 @@ TEST_F(TabViewTest, SelectionCanDriveExternalStackContentHostPages)
     host->insertPage(0, first);
     host->insertPage(1, second);
 
-    QObject::connect(tabs, &TabView::currentChanged, host, [host](int index) {
-        host->setCurrentIndex(index, 0, true);
-    });
-    QObject::connect(tabs, &TabView::tabMoved, host, [host](int from, int to) {
-        host->movePage(from, to);
-    });
+    QObject::connect(tabs, &TabView::currentChanged, host,
+                     [host](int index) { host->setCurrentIndex(index, 0, true); });
+    QObject::connect(tabs, &TabView::tabMoved, host,
+                     [host](int from, int to) { host->movePage(from, to); });
     host->setCurrentIndex(tabs->selectedIndex(), 0, false);
     showAndProcess(*window);
 
@@ -499,7 +493,8 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
     QApplication::processEvents();
     EXPECT_NE(tabs.visibleTabIndexes(), visibleBeforeBack);
     const QVector<int> visibleBeforeForward = tabs.visibleTabIndexes();
-    QTest::mouseClick(&tabs, Qt::LeftButton, Qt::NoModifier, tabs.overflowForwardGeometry().center());
+    QTest::mouseClick(&tabs, Qt::LeftButton, Qt::NoModifier,
+                      tabs.overflowForwardGeometry().center());
     QApplication::processEvents();
     EXPECT_NE(tabs.visibleTabIndexes(), visibleBeforeForward);
     const QVector<int> visibleBeforeWheel = tabs.visibleTabIndexes();
@@ -519,17 +514,54 @@ TEST_F(TabViewTest, GeometryWidthModesCloseModesAndOverflowAreDeterministic)
     scrollTabs.resize(560, 40);
     scrollTabs.setTabWidthMode(TabView::TabWidthMode::SizeToContent);
     for (int index = 0; index < 8; ++index)
-        scrollTabs.addTab(TabViewItem(QStringLiteral("Doc %1").arg(index), Typography::Icons::Document));
+        scrollTabs.addTab(
+            TabViewItem(QStringLiteral("Doc %1").arg(index), Typography::Icons::Document));
     showAndProcess(scrollTabs);
     scrollTabs.setSelectedIndex(6);
     QApplication::processEvents();
     const QVector<int> visibleBeforeSelect = scrollTabs.visibleTabIndexes();
     ASSERT_GT(visibleBeforeSelect.size(), 1);
-    const int visibleTarget = visibleBeforeSelect.first() == scrollTabs.selectedIndex() ? visibleBeforeSelect.last() : visibleBeforeSelect.first();
-    QTest::mouseClick(&scrollTabs, Qt::LeftButton, Qt::NoModifier, scrollTabs.tabGeometry(visibleTarget).center());
+    const int visibleTarget = visibleBeforeSelect.first() == scrollTabs.selectedIndex()
+                                  ? visibleBeforeSelect.last()
+                                  : visibleBeforeSelect.first();
+    QTest::mouseClick(&scrollTabs, Qt::LeftButton, Qt::NoModifier,
+                      scrollTabs.tabGeometry(visibleTarget).center());
     QApplication::processEvents();
     EXPECT_EQ(scrollTabs.selectedIndex(), visibleTarget);
     EXPECT_EQ(scrollTabs.visibleTabIndexes(), visibleBeforeSelect);
+}
+
+TEST_F(TabViewTest, VisibleIconButtonsExposeAccessibleNames)
+{
+    TabView tabs(window);
+    tabs.resize(240, 240);
+    tabs.setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+    tabs.setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
+    for (int index = 0; index < 8; ++index)
+        tabs.addTab(QStringLiteral("Very long document %1").arg(index));
+    tabs.setSelectedIndex(6);
+    showAndProcess(tabs);
+
+    bool sawAdd = false;
+    bool sawBack = false;
+    bool sawForward = false;
+    bool sawClose = false;
+    for (Button* button : tabs.findChildren<Button*>()) {
+        if (!button->isVisible())
+            continue;
+
+        const QString name = button->accessibleName();
+        EXPECT_FALSE(name.isEmpty());
+        sawAdd |= name == QStringLiteral("Add tab");
+        sawBack |= name == QStringLiteral("Scroll tabs backward");
+        sawForward |= name == QStringLiteral("Scroll tabs forward");
+        sawClose |= name.startsWith(QStringLiteral("Close Very long document "));
+    }
+
+    EXPECT_TRUE(sawAdd);
+    EXPECT_TRUE(sawBack);
+    EXPECT_TRUE(sawForward);
+    EXPECT_TRUE(sawClose);
 }
 
 TEST_F(TabViewTest, SeparatorsOnlyAppearBetweenUnselectedTabs)
@@ -542,23 +574,70 @@ TEST_F(TabViewTest, SeparatorsOnlyAppearBetweenUnselectedTabs)
     tabs.addTab(QStringLiteral("Four"));
     showAndProcess(tabs);
 
-    QWidget* strip = tabs.findChild<QWidget*>(QStringLiteral("TabViewTabStrip"));
-    ASSERT_NE(strip, nullptr);
-    QVariantList separators = strip->property("tabSeparatorRects").toList();
+    auto separatorItems = [&tabs]() {
+        QVector<fluent::navigation::detail::TabSeparatorGeometryItem> items;
+        for (int index = 0; index < tabs.tabCount(); ++index) {
+            items.append({tabs.tabGeometry(index), index == tabs.selectedIndex(), false});
+        }
+        return items;
+    };
+
+    QVector<QRect> separators =
+        fluent::navigation::detail::tabSeparatorRects(separatorItems(), false);
     ASSERT_EQ(separators.size(), 2);
-    for (const QVariant& value : separators) {
-        const QRect separator = value.toRect();
+    for (const QRect& separator : separators) {
         EXPECT_EQ(separator.width(), 1);
         EXPECT_EQ(separator.height(), 16);
     }
 
     tabs.setSelectedIndex(1);
     QApplication::processEvents();
-    separators = strip->property("tabSeparatorRects").toList();
+    separators = fluent::navigation::detail::tabSeparatorRects(separatorItems(), false);
     ASSERT_EQ(separators.size(), 1);
-    const QRect separator = separators.first().toRect();
+    const QRect separator = separators.first();
     EXPECT_EQ(separator.x(), tabs.tabGeometry(3).left());
     EXPECT_EQ(separator.center().y(), tabs.tabGeometry(3).center().y());
+
+    QVector<fluent::navigation::detail::TabSeparatorGeometryItem> filledItems = separatorItems();
+    filledItems.last().filled = true;
+    EXPECT_TRUE(fluent::navigation::detail::tabSeparatorRects(filledItems, false).isEmpty());
+    EXPECT_TRUE(fluent::navigation::detail::tabSeparatorRects(separatorItems(), true).isEmpty());
+}
+
+TEST_F(TabViewTest, RealTabStripSuppressesSelectedAndFilledSeparators)
+{
+    fluent::navigation::TabStrip strip(window);
+    strip.resize(760, 40);
+    strip.setItems({TabViewItem(QStringLiteral("One")), TabViewItem(QStringLiteral("Two")),
+                    TabViewItem(QStringLiteral("Three")), TabViewItem(QStringLiteral("Four")),
+                    TabViewItem(QStringLiteral("Five"))});
+    strip.setSelectedIndex(0);
+    showAndProcess(strip);
+
+    auto separatorPoint = [&strip](int rightIndex) {
+        const QRect rightTab = strip.tabGeometry(rightIndex);
+        return QPoint(rightTab.left(), rightTab.center().y());
+    };
+    auto renderStrip = [&strip]() {
+        QImage image(strip.size(), QImage::Format_ARGB32_Premultiplied);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        strip.render(&painter);
+        painter.end();
+        return image;
+    };
+
+    const QPoint selectedBoundary = separatorPoint(1);
+    const QPoint neutralBoundary = separatorPoint(4);
+    const QImage resting = renderStrip();
+    const QColor dividerColor = resting.pixelColor(neutralBoundary);
+    EXPECT_NE(dividerColor, resting.pixelColor(neutralBoundary + QPoint(2, 0)));
+    EXPECT_NE(resting.pixelColor(selectedBoundary), dividerColor);
+
+    QTest::mouseMove(&strip, strip.tabGeometry(3).center());
+    QApplication::processEvents();
+    const QImage hovered = renderStrip();
+    EXPECT_NE(hovered.pixelColor(neutralBoundary), dividerColor);
 }
 
 TEST_F(TabViewTest, SelectedTabUsesFluentCornerProfile)
@@ -573,12 +652,15 @@ TEST_F(TabViewTest, SelectedTabUsesFluentCornerProfile)
 
     QWidget* strip = tabs.findChild<QWidget*>(QStringLiteral("TabViewTabStrip"));
     ASSERT_NE(strip, nullptr);
-    EXPECT_EQ(strip->property("selectedTabTopRadius").toInt(), 8);
-    EXPECT_EQ(strip->property("selectedTabShoulderWidth").toInt(), 12);
-    EXPECT_EQ(strip->property("selectedTabShoulderHeight").toInt(), 8);
+    EXPECT_EQ(fluent::navigation::detail::kSelectedTabTopRadius, 8);
+    EXPECT_EQ(fluent::navigation::detail::kSelectedTabShoulderWidth, 12);
+    EXPECT_EQ(fluent::navigation::detail::kSelectedTabShoulderHeight, 8);
 
     const QRect selectedRect = tabs.tabGeometry(1);
-    const QRectF pathBounds = strip->property("selectedTabPathBounds").toRectF();
+    QRect selectedVisualRect = selectedRect;
+    selectedVisualRect.setBottom(strip->rect().bottom());
+    const QRectF pathBounds =
+        fluent::navigation::detail::selectedTabPath(selectedVisualRect).boundingRect();
     EXPECT_EQ(pathBounds.top(), selectedRect.top());
     EXPECT_EQ(pathBounds.left(), selectedRect.left() - 12);
     EXPECT_EQ(pathBounds.right(), selectedRect.right() + 12);
@@ -587,14 +669,38 @@ TEST_F(TabViewTest, SelectedTabUsesFluentCornerProfile)
     tabs.setSelectedIndex(0);
     QApplication::processEvents();
     const QRect firstRect = tabs.tabGeometry(0);
-    const QRectF firstBounds = strip->property("selectedTabPathBounds").toRectF();
+    QRect firstVisualRect = firstRect;
+    firstVisualRect.setBottom(strip->rect().bottom());
+    const QRectF firstBounds =
+        fluent::navigation::detail::selectedTabPath(firstVisualRect).boundingRect();
     EXPECT_EQ(firstBounds.left(), firstRect.left() - 12);
 
     tabs.setSelectedIndex(2);
     QApplication::processEvents();
     const QRect lastRect = tabs.tabGeometry(2);
-    const QRectF lastBounds = strip->property("selectedTabPathBounds").toRectF();
+    QRect lastVisualRect = lastRect;
+    lastVisualRect.setBottom(strip->rect().bottom());
+    const QRectF lastBounds =
+        fluent::navigation::detail::selectedTabPath(lastVisualRect).boundingRect();
     EXPECT_EQ(lastBounds.right(), lastRect.right() + 12);
+}
+
+TEST_F(TabViewTest, PaintingDoesNotMutateDynamicProperties)
+{
+    fluent::navigation::TabStrip strip(window);
+    strip.resize(640, 40);
+    strip.setItems({TabViewItem(QStringLiteral("One")), TabViewItem(QStringLiteral("Two")),
+                    TabViewItem(QStringLiteral("Three"))});
+    strip.setSelectedIndex(1);
+
+    const QList<QByteArray> propertiesBefore = strip.dynamicPropertyNames();
+    QImage image(strip.size(), QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    strip.render(&painter);
+    painter.end();
+
+    EXPECT_EQ(strip.dynamicPropertyNames(), propertiesBefore);
 }
 
 TEST_F(TabViewTest, DarkHoverAndSelectedFillsKeepOrderedContrast)
@@ -611,10 +717,9 @@ TEST_F(TabViewTest, DarkHoverAndSelectedFillsKeepOrderedContrast)
     showAndProcess(tabs);
     const auto revealSettled = [&tabs]() {
         const auto effects = tabs.findChildren<QGraphicsOpacityEffect*>();
-        return effects.size() >= tabs.tabCount()
-            && std::all_of(effects.cbegin(), effects.cend(), [](const auto* effect) {
-                   return effect && !effect->isEnabled();
-               });
+        return effects.size() >= tabs.tabCount() &&
+               std::all_of(effects.cbegin(), effects.cend(),
+                           [](const auto* effect) { return effect && !effect->isEnabled(); });
     };
     QTRY_VERIFY_WITH_TIMEOUT(revealSettled(), 500);
 
@@ -665,9 +770,8 @@ TEST_F(TabViewTest, PointerAddCloseSelectDisabledAndReorderBehavior)
     EXPECT_EQ(tabs.selectedIndex(), 1);
 
     QSignalSpy addSpy(&tabs, &TabView::addTabRequested);
-    QObject::connect(&tabs, &TabView::addTabRequested, &tabs, [&tabs]() {
-        tabs.addTab(QStringLiteral("Added"));
-    });
+    QObject::connect(&tabs, &TabView::addTabRequested, &tabs,
+                     [&tabs]() { tabs.addTab(QStringLiteral("Added")); });
     const int selectedBeforeAdd = tabs.selectedIndex();
     QTest::mouseClick(&tabs, Qt::LeftButton, Qt::NoModifier, tabs.addButtonGeometry().center());
     EXPECT_EQ(addSpy.count(), 1);
@@ -696,7 +800,8 @@ TEST_F(TabViewTest, PointerAddCloseSelectDisabledAndReorderBehavior)
     QApplication::processEvents();
     QSignalSpy movedSpy(&tabs, &TabView::tabMoved);
     const QPoint firstTabCenter = tabs.tabGeometry(0).center();
-    const QPoint beforeSecondMidpoint = QPoint(tabs.tabGeometry(1).left() + 6, tabs.tabGeometry(1).center().y());
+    const QPoint beforeSecondMidpoint =
+        QPoint(tabs.tabGeometry(1).left() + 6, tabs.tabGeometry(1).center().y());
     QTest::mousePress(&tabs, Qt::LeftButton, Qt::NoModifier, firstTabCenter);
     QTest::mouseMove(&tabs, firstTabCenter + QPoint(QApplication::startDragDistance() + 4, 0), 50);
     QTest::mouseMove(&tabs, beforeSecondMidpoint, 50);
@@ -760,8 +865,7 @@ TEST_F(TabViewTest, KeyboardAcceleratorsFocusAndThemeAccessibilityStayStable)
 
     tabs.setLayoutDirection(Qt::RightToLeft);
     QApplication::processEvents();
-    EXPECT_GT(tabs.tabGeometry(0).center().x(),
-              tabs.tabGeometry(1).center().x());
+    EXPECT_GT(tabs.tabGeometry(0).center().x(), tabs.tabGeometry(1).center().x());
     QTest::keyClick(&tabs, Qt::Key_Home);
     QTest::keyClick(&tabs, Qt::Key_Return);
     QTest::keyClick(&tabs, Qt::Key_Left);
@@ -779,9 +883,8 @@ TEST_F(TabViewTest, KeyboardAcceleratorsFocusAndThemeAccessibilityStayStable)
     QObject::connect(&shortcutTabs, &TabView::addTabRequested, &shortcutTabs, [&shortcutTabs]() {
         shortcutTabs.addTab(TabViewItem(QStringLiteral("Added"), Typography::Icons::Document));
     });
-    QObject::connect(&shortcutTabs, &TabView::tabCloseRequested, &shortcutTabs, [&shortcutTabs](int index) {
-        shortcutTabs.closeTab(index);
-    });
+    QObject::connect(&shortcutTabs, &TabView::tabCloseRequested, &shortcutTabs,
+                     [&shortcutTabs](int index) { shortcutTabs.closeTab(index); });
     shortcutTabs.setFocus();
     const int countBeforeShortcutAdd = shortcutTabs.tabCount();
     QTest::keyClick(&shortcutTabs, Qt::Key_T, Qt::ControlModifier);
@@ -878,7 +981,9 @@ TEST_F(TabViewTest, VisualCheck)
         StackContentHost* host = nullptr;
     };
 
-    auto addSection = [content, contentLayout](QWidget* topAnchor, int topMargin, int hostHeight, const QString& pagePrefix, auto configureTabs) -> DemoSection {
+    auto addSection = [content, contentLayout](QWidget* topAnchor, int topMargin, int hostHeight,
+                                               const QString& pagePrefix,
+                                               auto configureTabs) -> DemoSection {
         auto* tabs = new TabView(content);
         configureTabs(tabs);
         tabs->setFixedHeight(40);
@@ -896,84 +1001,107 @@ TEST_F(TabViewTest, VisualCheck)
         return {tabs, host};
     };
 
-    const DemoSection workspace = addSection(title, 24, 220, QStringLiteral("Workspace"), [](TabView* tabs) {
-        tabs->addTab(TabViewItem(QStringLiteral("Home.cpp"), Typography::Icons::Document));
-        tabs->addTab(TabViewItem(QStringLiteral("Notes.md"), Typography::Icons::Edit));
-        tabs->addTab(TabViewItem(QStringLiteral("Locked"), Typography::Icons::Lock, true, false));
-        tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Auto);
-        tabs->setTabReorderEnabled(true);
-    });
+    const DemoSection workspace =
+        addSection(title, 24, 220, QStringLiteral("Workspace"), [](TabView* tabs) {
+            tabs->addTab(TabViewItem(QStringLiteral("Home.cpp"), Typography::Icons::Document));
+            tabs->addTab(TabViewItem(QStringLiteral("Notes.md"), Typography::Icons::Edit));
+            tabs->addTab(
+                TabViewItem(QStringLiteral("Locked"), Typography::Icons::Lock, true, false));
+            tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Auto);
+            tabs->setTabReorderEnabled(true);
+        });
 
-    const DemoSection alwaysClose = addSection(workspace.host, 28, 184, QStringLiteral("Always close"), [](TabView* tabs) {
-        tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
-        tabs->addTab(TabViewItem(QStringLiteral("Primary"), Typography::Icons::AppIconDefault));
-        tabs->addTab(TabViewItem(QStringLiteral("Always close"), Typography::Icons::Document));
-        tabs->addTab(TabViewItem(QStringLiteral("Reference"), Typography::Icons::Document));
-    });
+    const DemoSection alwaysClose =
+        addSection(workspace.host, 28, 184, QStringLiteral("Always close"), [](TabView* tabs) {
+            tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
+            tabs->addTab(TabViewItem(QStringLiteral("Primary"), Typography::Icons::AppIconDefault));
+            tabs->addTab(TabViewItem(QStringLiteral("Always close"), Typography::Icons::Document));
+            tabs->addTab(TabViewItem(QStringLiteral("Reference"), Typography::Icons::Document));
+        });
 
-    const DemoSection compact = addSection(alwaysClose.host, 28, 184, QStringLiteral("Compact"), [](TabView* tabs) {
-        tabs->setTabWidthMode(TabView::TabWidthMode::Compact);
-        tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::OnHover);
-        tabs->addTab(TabViewItem(QString(), Typography::Icons::Calendar, true, true, QVariant(), QStringLiteral("Calendar")));
-        tabs->addTab(TabViewItem(QStringLiteral("Mail"), Typography::Icons::Mail));
-        tabs->addTab(TabViewItem(QString(), Typography::Icons::Settings, true, true, QVariant(), QStringLiteral("Settings")));
-        tabs->addTab(TabViewItem(QString(), Typography::Icons::Document, true, true, QVariant(), QStringLiteral("Document")));
-        tabs->setSelectedIndex(1);
-    });
+    const DemoSection compact =
+        addSection(alwaysClose.host, 28, 184, QStringLiteral("Compact"), [](TabView* tabs) {
+            tabs->setTabWidthMode(TabView::TabWidthMode::Compact);
+            tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::OnHover);
+            tabs->addTab(TabViewItem(QString(), Typography::Icons::Calendar, true, true, QVariant(),
+                                     QStringLiteral("Calendar")));
+            tabs->addTab(TabViewItem(QStringLiteral("Mail"), Typography::Icons::Mail));
+            tabs->addTab(TabViewItem(QString(), Typography::Icons::Settings, true, true, QVariant(),
+                                     QStringLiteral("Settings")));
+            tabs->addTab(TabViewItem(QString(), Typography::Icons::Document, true, true, QVariant(),
+                                     QStringLiteral("Document")));
+            tabs->setSelectedIndex(1);
+        });
 
-    const DemoSection overflow = addSection(compact.host, 28, 184, QStringLiteral("Overflow"), [](TabView* tabs) {
-        tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
-        for (int index = 1; index <= 10; ++index)
-            tabs->addTab(TabViewItem(QStringLiteral("Document %1 with longer title").arg(index), Typography::Icons::Document));
-        tabs->setSelectedIndex(7);
-    });
+    const DemoSection overflow =
+        addSection(compact.host, 28, 184, QStringLiteral("Overflow"), [](TabView* tabs) {
+            tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+            for (int index = 1; index <= 10; ++index)
+                tabs->addTab(TabViewItem(QStringLiteral("Document %1 with longer title").arg(index),
+                                         Typography::Icons::Document));
+            tabs->setSelectedIndex(7);
+        });
 
-    const DemoSection pinned = addSection(overflow.host, 28, 184, QStringLiteral("Pinned"), [](TabView* tabs) {
-        tabs->setAddTabButtonVisible(false);
-        tabs->setTabsClosable(false);
-        tabs->addTab(TabViewItem(QStringLiteral("Pinned"), Typography::Icons::Pin, false));
-        tabs->addTab(TabViewItem(QStringLiteral("Read only"), Typography::Icons::Document, false));
-        tabs->addTab(TabViewItem(QStringLiteral("Protected"), Typography::Icons::Lock, false));
-    });
+    const DemoSection pinned =
+        addSection(overflow.host, 28, 184, QStringLiteral("Pinned"), [](TabView* tabs) {
+            tabs->setAddTabButtonVisible(false);
+            tabs->setTabsClosable(false);
+            tabs->addTab(TabViewItem(QStringLiteral("Pinned"), Typography::Icons::Pin, false));
+            tabs->addTab(
+                TabViewItem(QStringLiteral("Read only"), Typography::Icons::Document, false));
+            tabs->addTab(TabViewItem(QStringLiteral("Protected"), Typography::Icons::Lock, false));
+        });
 
-    const DemoSection equal = addSection(pinned.host, 28, 184, QStringLiteral("Equal"), [](TabView* tabs) {
-        tabs->setTabWidthMode(TabView::TabWidthMode::Equal);
-        tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
-        tabs->addTab(TabViewItem(QStringLiteral("Equal A"), Typography::Icons::Document));
-        tabs->addTab(TabViewItem(QStringLiteral("Equal B"), Typography::Icons::Document));
-        tabs->addTab(TabViewItem(QStringLiteral("Equal C"), Typography::Icons::Document));
-    });
+    const DemoSection equal =
+        addSection(pinned.host, 28, 184, QStringLiteral("Equal"), [](TabView* tabs) {
+            tabs->setTabWidthMode(TabView::TabWidthMode::Equal);
+            tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::Always);
+            tabs->addTab(TabViewItem(QStringLiteral("Equal A"), Typography::Icons::Document));
+            tabs->addTab(TabViewItem(QStringLiteral("Equal B"), Typography::Icons::Document));
+            tabs->addTab(TabViewItem(QStringLiteral("Equal C"), Typography::Icons::Document));
+        });
 
-    const DemoSection hover = addSection(equal.host, 28, 184, QStringLiteral("Hover"), [](TabView* tabs) {
-        tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
-        tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::OnHover);
-        tabs->setKeyboardAcceleratorsEnabled(false);
-        tabs->addTab(TabViewItem(QStringLiteral("Hover close"), Typography::Icons::Document));
-        tabs->addTab(TabViewItem(QStringLiteral("Keyboard off"), Typography::Icons::Keyboard));
-        tabs->addTab(TabViewItem(QStringLiteral("Disabled"), Typography::Icons::Lock, true, false));
-    });
+    const DemoSection hover =
+        addSection(equal.host, 28, 184, QStringLiteral("Hover"), [](TabView* tabs) {
+            tabs->setTabWidthMode(TabView::TabWidthMode::SizeToContent);
+            tabs->setCloseButtonOverlayMode(TabView::CloseButtonOverlayMode::OnHover);
+            tabs->setKeyboardAcceleratorsEnabled(false);
+            tabs->addTab(TabViewItem(QStringLiteral("Hover close"), Typography::Icons::Document));
+            tabs->addTab(TabViewItem(QStringLiteral("Keyboard off"), Typography::Icons::Keyboard));
+            tabs->addTab(
+                TabViewItem(QStringLiteral("Disabled"), Typography::Icons::Lock, true, false));
+        });
 
-    const DemoSection keyboard = addSection(hover.host, 28, 184, QStringLiteral("Keyboard"), [](TabView* tabs) {
-        tabs->setTabReorderEnabled(true);
-        for (int index = 0; index < 10; ++index)
-            tabs->addTab(TabViewItem(QStringLiteral("Document %1").arg(index), Typography::Icons::Document));
-        tabs->setSelectedIndex(3);
-    });
+    const DemoSection keyboard =
+        addSection(hover.host, 28, 184, QStringLiteral("Keyboard"), [](TabView* tabs) {
+            tabs->setTabReorderEnabled(true);
+            for (int index = 0; index < 10; ++index)
+                tabs->addTab(TabViewItem(QStringLiteral("Document %1").arg(index),
+                                         Typography::Icons::Document));
+            tabs->setSelectedIndex(3);
+        });
 
-    const QVector<TabView*> tabViews = {workspace.tabs, alwaysClose.tabs, compact.tabs, overflow.tabs, pinned.tabs, equal.tabs, hover.tabs, keyboard.tabs};
-    const QVector<StackContentHost*> hosts = {workspace.host, alwaysClose.host, compact.host, overflow.host, pinned.host, equal.host, hover.host, keyboard.host};
-    QObject::connect(themeButton, &Button::clicked, [visual, content, themeButton, title, tabViews, hosts]() {
-        const bool useDark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Light;
-        fluent::FluentElement::setTheme(useDark ? fluent::FluentElement::Dark : fluent::FluentElement::Light);
-        visual->onThemeUpdated();
-        content->onThemeUpdated();
-        title->onThemeUpdated();
-        for (TabView* tabs : tabViews)
-            tabs->onThemeUpdated();
-        for (StackContentHost* host : hosts)
-            host->onThemeUpdated();
-        themeButton->setText(useDark ? QStringLiteral("Light") : QStringLiteral("Dark"));
-    });
+    const QVector<TabView*> tabViews = {workspace.tabs, alwaysClose.tabs, compact.tabs,
+                                        overflow.tabs,  pinned.tabs,      equal.tabs,
+                                        hover.tabs,     keyboard.tabs};
+    const QVector<StackContentHost*> hosts = {workspace.host, alwaysClose.host, compact.host,
+                                              overflow.host,  pinned.host,      equal.host,
+                                              hover.host,     keyboard.host};
+    QObject::connect(
+        themeButton, &Button::clicked, [visual, content, themeButton, title, tabViews, hosts]() {
+            const bool useDark =
+                fluent::FluentElement::currentTheme() == fluent::FluentElement::Light;
+            fluent::FluentElement::setTheme(useDark ? fluent::FluentElement::Dark
+                                                    : fluent::FluentElement::Light);
+            visual->onThemeUpdated();
+            content->onThemeUpdated();
+            title->onThemeUpdated();
+            for (TabView* tabs : tabViews)
+                tabs->onThemeUpdated();
+            for (StackContentHost* host : hosts)
+                host->onThemeUpdated();
+            themeButton->setText(useDark ? QStringLiteral("Light") : QStringLiteral("Dark"));
+        });
 
     visual->show();
     if (tests::support::shouldCaptureVisualSnapshot()) {
