@@ -251,6 +251,13 @@ python -m fluentqt_gallery
 | 参与 FluentQt 开发 | [开发文档树](docs/development/README.md) · [架构约定](docs/architecture/README.md) · [Fluent 设计](docs/design-languages/README.md) |
 | 打包或发布 | [打包工作流](docs/development/packaging-workflow.md) · [发布治理](docs/development/release-governance.md) · [版本记录](docs/releases/README.md) |
 | 提问或报告问题 | [社区入口](docs/community/README.md) · [支持](SUPPORT.md) · [安全报告](SECURITY.md) |
+| 中文即时交流 | QQ 群 `1109997685` |
+
+QQ群用于中文即时交流、作品展示与贡献协作；需要持续追踪的问题请继续使用 GitHub Discussions 或 Issues。
+
+<p align="center">
+  <img src="docs/assets/community/qq-group-1109997685.png" width="280" alt="Fluent-Qt QQ 群入群二维码">
+</p>
 
 提交改动前请阅读[参与贡献](CONTRIBUTING.md)和[社区行为准则](CODE_OF_CONDUCT.md)。
 
