@@ -13,7 +13,6 @@
 #include <QIcon>
 #include <QKeyEvent>
 #include <QKeySequence>
-#include <QLocale>
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
@@ -1576,7 +1575,7 @@ QString MultiSelectComboBox::displayTextForWidth(int width) const {
 }
 
 QString MultiSelectComboBox::accessibleValueText() const {
-  return QLocale().createSeparatedList(m_selectedLabels);
+  return m_selectedLabels.join(QString::fromUtf8("、"));
 }
 
 void MultiSelectComboBox::togglePopupFromTrigger() {
