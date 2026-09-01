@@ -1,8 +1,10 @@
 # ListView 仅为视图库组件；FluentListItemDelegate 与 model 组装放在测试中作为业务示例。
 add_qt_test_module(test_list_view TestListView.cpp FluentListItemDelegate.cpp)
+target_link_libraries(test_list_view PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 # GridView
 add_qt_test_module(test_grid_view TestGridView.cpp FluentGridItemDelegate.cpp)
+target_link_libraries(test_grid_view PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 # FlowView
 add_qt_test_module(test_flow_view TestFlowView.cpp)
@@ -12,6 +14,7 @@ add_qt_test_module(test_tree_view TestTreeView.cpp FluentTreeItemDelegate.cpp)
 
 # FlipView
 add_qt_test_module(test_flip_view TestFlipView.cpp)
+target_link_libraries(test_flip_view PRIVATE Qt${QT_VERSION_MAJOR}::Network)
 
 # StackView
 add_qt_test_module(test_stack_view TestStackView.cpp)
