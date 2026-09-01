@@ -220,8 +220,7 @@ TEST_F(TimePickerTest, ApplicationOwnedTextUpdatesEntryAndFlyoutActions)
     EXPECT_EQ(placeholderSpy.count(), 3);
     EXPECT_EQ(confirmSpy.count(), 1);
     EXPECT_EQ(cancelSpy.count(), 1);
-    EXPECT_EQ(picker->fieldDisplayText(TimePicker::TimeField::Hour),
-              QStringLiteral("hour"));
+    EXPECT_EQ(picker->fieldDisplayText(TimePicker::TimeField::Hour), QStringLiteral("hour"));
 
     Flyout* popup = openPopupFor(picker, window);
     ASSERT_NE(popup, nullptr);
@@ -250,8 +249,7 @@ TEST_F(TimePickerTest, LocaleTracksTheInheritedQWidgetProperty)
     base->setLocale(targetLocale);
 
     EXPECT_EQ(picker.locale(), targetLocale);
-    EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Period),
-              targetLocale.pmText());
+    EXPECT_EQ(picker.fieldDisplayText(TimePicker::TimeField::Period), targetLocale.pmText());
     EXPECT_EQ(localeSpy.count(), 1);
 }
 
@@ -334,12 +332,10 @@ TEST_F(TimePickerTest, OpenStateHandlerCanSynchronouslyDeletePicker)
 {
     auto* picker = new TimePicker(window);
     QPointer<TimePicker> guard(picker);
-    QObject::connect(
-        picker, &TimePicker::dropDownOpenChanged, qApp,
-        [picker](bool open) {
-            if (open)
-                delete picker;
-        });
+    QObject::connect(picker, &TimePicker::dropDownOpenChanged, qApp, [picker](bool open) {
+        if (open)
+            delete picker;
+    });
 
     picker->openPicker();
 
@@ -582,8 +578,8 @@ TEST_F(TimePickerTest, FlyoutAlignsSelectedRowWithClosedField)
 
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
     ASSERT_GT(selectedRowCenterY, 0);
-    const QPoint selectedRowCenter = panel->mapTo(
-        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter =
+        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
     const QPoint panelTopLeft = panel->mapTo(window, QPoint(0, 0));
     const QPoint fieldTopLeft = picker->mapTo(window, QPoint(0, 0));
@@ -606,8 +602,8 @@ TEST_F(TimePickerTest, FlyoutClampsAtTopEdgeWithoutLeavingSurface)
     const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
     const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
-    const QPoint selectedRowCenter = panel->mapTo(
-        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter =
+        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
 
     EXPECT_TRUE(usableSurface.contains(panelGeometry));
@@ -620,8 +616,8 @@ TEST_F(TimePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
     TimePicker* picker = new TimePicker(window);
     picker->setSelectedTime(QTime(9, 30));
     const QSize pickerSize = picker->sizeHint();
-    picker->setGeometry(220, window->height() - pickerSize.height(),
-                        pickerSize.width(), pickerSize.height());
+    picker->setGeometry(220, window->height() - pickerSize.height(), pickerSize.width(),
+                        pickerSize.height());
 
     Flyout* popup = openPopupFor(picker, window);
     ASSERT_NE(popup, nullptr);
@@ -631,8 +627,8 @@ TEST_F(TimePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
     const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
     const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
-    const QPoint selectedRowCenter = panel->mapTo(
-        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter =
+        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
 
     EXPECT_TRUE(usableSurface.contains(panelGeometry));
@@ -663,7 +659,8 @@ TEST_F(TimePickerTest, FlyoutColumnsUseCaretGlyphsAndNoFocusFrame)
 #endif
     EXPECT_TRUE(minuteColumn->property("selectedRowHasBackground").toBool());
 
-    FLUENT_MAKE_ENTER_EVENT(enterEvent, minuteColumn->rect().center().x(), minuteColumn->rect().center().y());
+    FLUENT_MAKE_ENTER_EVENT(enterEvent, minuteColumn->rect().center().x(),
+                            minuteColumn->rect().center().y());
     QApplication::sendEvent(minuteColumn, &enterEvent);
     QTest::qWait(180);
     processEvents();
@@ -738,6 +735,45 @@ TEST_F(TimePickerTest, FlyoutWheelUsesThresholdAccumulation)
     EXPECT_EQ(picker->selectedTime(), QTime(9, 31));
 }
 
+TEST_F(TimePickerTest, SharedWheelColumnNavigationStaysPendingUntilCommit)
+{
+    TimePicker* picker = new TimePicker(window);
+    picker->setGeometry(80, 60, 360, picker->sizeHint().height());
+    picker->setMinuteIncrement(5);
+    picker->setSelectedTime(QTime(9, 10));
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* minuteColumn = columnFor(popup, QStringLiteral("TimePickerMinuteColumn"));
+    ASSERT_NE(minuteColumn, nullptr);
+    QTest::keyClick(minuteColumn, Qt::Key_PageDown);
+    EXPECT_EQ(picker->selectedTime(), QTime(9, 10));
+    QTest::mouseClick(buttonFor(popup, QStringLiteral("TimePickerConfirmButton")), Qt::LeftButton);
+    processEvents();
+    EXPECT_EQ(picker->selectedTime(), QTime(9, 35));
+
+    popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    minuteColumn = columnFor(popup, QStringLiteral("TimePickerMinuteColumn"));
+    ASSERT_NE(minuteColumn, nullptr);
+    QTest::keyClick(minuteColumn, Qt::Key_PageUp);
+    EXPECT_EQ(picker->selectedTime(), QTime(9, 35));
+    QTest::mouseClick(buttonFor(popup, QStringLiteral("TimePickerConfirmButton")), Qt::LeftButton);
+    processEvents();
+    EXPECT_EQ(picker->selectedTime(), QTime(9, 10));
+
+    popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    minuteColumn = columnFor(popup, QStringLiteral("TimePickerMinuteColumn"));
+    ASSERT_NE(minuteColumn, nullptr);
+    const QPoint nextButtonCenter(minuteColumn->rect().center().x(), minuteColumn->height() - 12);
+    QTest::mouseClick(minuteColumn, Qt::LeftButton, Qt::NoModifier, nextButtonCenter);
+    EXPECT_EQ(picker->selectedTime(), QTime(9, 10));
+    QTest::mouseClick(buttonFor(popup, QStringLiteral("TimePickerConfirmButton")), Qt::LeftButton);
+    processEvents();
+    EXPECT_EQ(picker->selectedTime(), QTime(9, 15));
+}
+
 TEST_F(TimePickerTest, ThemeUpdateRefreshesVisiblePopup)
 {
     TimePicker* picker = new TimePicker(window);
@@ -751,7 +787,6 @@ TEST_F(TimePickerTest, ThemeUpdateRefreshesVisiblePopup)
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
     EXPECT_TRUE(popup->isVisible());
 }
-
 
 TEST_F(TimePickerTest, VisualCheck)
 {
@@ -875,7 +910,8 @@ TEST_F(TimePickerTest, VisualCheck)
     layout->addWidget(themeButton);
     QObject::connect(themeButton, &Button::clicked, themeButton, [themeButton]() {
         const bool dark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Dark;
-        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light : fluent::FluentElement::Dark);
+        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light
+                                             : fluent::FluentElement::Dark);
         themeButton->setText(dark ? QStringLiteral("Dark") : QStringLiteral("Light"));
     });
 

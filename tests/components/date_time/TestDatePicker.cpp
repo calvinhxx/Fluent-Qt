@@ -242,8 +242,7 @@ TEST_F(DatePickerTest, ApplicationOwnedTextUpdatesEntryAndFlyoutActions)
     EXPECT_EQ(placeholderSpy.count(), 3);
     EXPECT_EQ(confirmSpy.count(), 1);
     EXPECT_EQ(cancelSpy.count(), 1);
-    EXPECT_EQ(picker->fieldDisplayText(DatePicker::DateField::Month),
-              QStringLiteral("month"));
+    EXPECT_EQ(picker->fieldDisplayText(DatePicker::DateField::Month), QStringLiteral("month"));
 
     Flyout* popup = openPopupFor(picker, window);
     ASSERT_NE(popup, nullptr);
@@ -355,12 +354,10 @@ TEST_F(DatePickerTest, OpenStateHandlerCanSynchronouslyDeletePicker)
 {
     auto* picker = new DatePicker(window);
     QPointer<DatePicker> guard(picker);
-    QObject::connect(
-        picker, &DatePicker::dropDownOpenChanged, qApp,
-        [picker](bool open) {
-            if (open)
-                delete picker;
-        });
+    QObject::connect(picker, &DatePicker::dropDownOpenChanged, qApp, [picker](bool open) {
+        if (open)
+            delete picker;
+    });
 
     picker->openPicker();
 
@@ -580,8 +577,8 @@ TEST_F(DatePickerTest, FlyoutAlignsSelectedRowWithClosedField)
 
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
     ASSERT_GT(selectedRowCenterY, 0);
-    const QPoint selectedRowCenter = panel->mapTo(
-        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter =
+        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
     const QPoint panelTopLeft = panel->mapTo(window, QPoint(0, 0));
     const QPoint fieldTopLeft = picker->mapTo(window, QPoint(0, 0));
@@ -604,8 +601,8 @@ TEST_F(DatePickerTest, FlyoutClampsAtTopEdgeWithoutLeavingSurface)
     const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
     const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
-    const QPoint selectedRowCenter = panel->mapTo(
-        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter =
+        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
 
     EXPECT_TRUE(usableSurface.contains(panelGeometry));
@@ -618,8 +615,8 @@ TEST_F(DatePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
     DatePicker* picker = new DatePicker(window);
     picker->setSelectedDate(QDate(2026, 8, 25));
     const QSize pickerSize = picker->sizeHint();
-    picker->setGeometry(220, window->height() - pickerSize.height(),
-                        pickerSize.width(), pickerSize.height());
+    picker->setGeometry(220, window->height() - pickerSize.height(), pickerSize.width(),
+                        pickerSize.height());
 
     Flyout* popup = openPopupFor(picker, window);
     ASSERT_NE(popup, nullptr);
@@ -629,8 +626,8 @@ TEST_F(DatePickerTest, FlyoutClampsAtBottomEdgeWithoutLeavingSurface)
     const QRect panelGeometry(panel->mapTo(window, QPoint(0, 0)), panel->size());
     const QRect usableSurface = window->rect().adjusted(4, 4, -4, -4);
     const int selectedRowCenterY = panel->property("selectedRowCenterY").toInt();
-    const QPoint selectedRowCenter = panel->mapTo(
-        window, QPoint(panel->rect().center().x(), selectedRowCenterY));
+    const QPoint selectedRowCenter =
+        panel->mapTo(window, QPoint(panel->rect().center().x(), selectedRowCenterY));
     const QPoint fieldCenter = picker->mapTo(window, picker->rect().center());
 
     EXPECT_TRUE(usableSurface.contains(panelGeometry));
@@ -689,7 +686,8 @@ TEST_F(DatePickerTest, FlyoutColumnsUseCaretGlyphsAndNoFocusFrame)
 #endif
     EXPECT_TRUE(dayColumn->property("selectedRowHasBackground").toBool());
 
-    FLUENT_MAKE_ENTER_EVENT(enterEvent, dayColumn->rect().center().x(), dayColumn->rect().center().y());
+    FLUENT_MAKE_ENTER_EVENT(enterEvent, dayColumn->rect().center().x(),
+                            dayColumn->rect().center().y());
     QApplication::sendEvent(dayColumn, &enterEvent);
     QTest::qWait(180);
     processEvents();
@@ -838,6 +836,45 @@ TEST_F(DatePickerTest, FlyoutWheelUsesThresholdAccumulation)
     EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 22));
 }
 
+TEST_F(DatePickerTest, SharedWheelColumnNavigationStaysPendingUntilCommit)
+{
+    DatePicker* picker = new DatePicker(window);
+    picker->setGeometry(80, 60, 360, picker->sizeHint().height());
+    picker->setDateRange(QDate(2026, 5, 1), QDate(2026, 5, 31));
+    picker->setSelectedDate(QDate(2026, 5, 10));
+
+    Flyout* popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    QWidget* dayColumn = columnFor(popup, QStringLiteral("DatePickerDayColumn"));
+    ASSERT_NE(dayColumn, nullptr);
+    QTest::keyClick(dayColumn, Qt::Key_PageDown);
+    EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 10));
+    QTest::mouseClick(buttonFor(popup, QStringLiteral("DatePickerConfirmButton")), Qt::LeftButton);
+    processEvents();
+    EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 15));
+
+    popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    dayColumn = columnFor(popup, QStringLiteral("DatePickerDayColumn"));
+    ASSERT_NE(dayColumn, nullptr);
+    QTest::keyClick(dayColumn, Qt::Key_PageUp);
+    EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 15));
+    QTest::mouseClick(buttonFor(popup, QStringLiteral("DatePickerConfirmButton")), Qt::LeftButton);
+    processEvents();
+    EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 10));
+
+    popup = openPopupFor(picker, window);
+    ASSERT_NE(popup, nullptr);
+    dayColumn = columnFor(popup, QStringLiteral("DatePickerDayColumn"));
+    ASSERT_NE(dayColumn, nullptr);
+    const QPoint nextButtonCenter(dayColumn->rect().center().x(), dayColumn->height() - 12);
+    QTest::mouseClick(dayColumn, Qt::LeftButton, Qt::NoModifier, nextButtonCenter);
+    EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 10));
+    QTest::mouseClick(buttonFor(popup, QStringLiteral("DatePickerConfirmButton")), Qt::LeftButton);
+    processEvents();
+    EXPECT_EQ(picker->selectedDate(), QDate(2026, 5, 11));
+}
+
 TEST_F(DatePickerTest, FlyoutNormalizesMonthYearAndWheelChanges)
 {
     DatePicker* picker = new DatePicker(window);
@@ -888,7 +925,6 @@ TEST_F(DatePickerTest, ThemeUpdateRefreshesVisiblePopup)
     EXPECT_EQ(fluent::FluentElement::currentTheme(), fluent::FluentElement::Dark);
     EXPECT_TRUE(popup->isVisible());
 }
-
 
 TEST_F(DatePickerTest, VisualCheck)
 {
@@ -1016,7 +1052,8 @@ TEST_F(DatePickerTest, VisualCheck)
     layout->addWidget(themeButton);
     QObject::connect(themeButton, &Button::clicked, themeButton, [themeButton]() {
         const bool dark = fluent::FluentElement::currentTheme() == fluent::FluentElement::Dark;
-        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light : fluent::FluentElement::Dark);
+        fluent::FluentElement::setTheme(dark ? fluent::FluentElement::Light
+                                             : fluent::FluentElement::Dark);
         themeButton->setText(dark ? QStringLiteral("Dark") : QStringLiteral("Light"));
     });
 

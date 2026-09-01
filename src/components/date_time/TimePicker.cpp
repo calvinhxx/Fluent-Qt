@@ -1,156 +1,28 @@
 #include "TimePicker.h"
 
-#include <QDateTime>
-#include <QFocusEvent>
+#include <QCoreApplication>
 #include <QFontMetrics>
 #include <QKeyEvent>
-#include <QMouseEvent>
 #include <QPainter>
-#include <QPainterPath>
 #include <QResizeEvent>
 #include <QTime>
-#include <QVariantAnimation>
-#include <QWheelEvent>
 #include <QtMath>
 
-#include "compatibility/QtCompat.h"
 #include "components/basicinput/Button.h"
 #include "components/date_time/private/PickerAccessibility_p.h"
 #include "components/date_time/private/PickerFlyoutGeometry_p.h"
+#include "components/date_time/private/PickerWheel_p.h"
 #include "components/dialogs_flyouts/Flyout.h"
 #include "design/Spacing.h"
-#include "design/Typography.h"
 
 namespace fluent::date_time {
 
 namespace {
-constexpr int kEntryHeight = 32;
 constexpr int kTimePickerThemeMinWidth = 242;
 constexpr int kSegmentHPadding = 12;
 constexpr int kPopupShadowMargin = ::Spacing::Standard;
-constexpr int kPopupTopInset = 8;
-constexpr int kColumnNavHeight = 24;
-constexpr int kColumnRowHeight = 40;
-constexpr int kColumnVisibleRows = 7;
-constexpr int kCommandBarHeight = 41;
 constexpr int kDividerWidth = 1;
 constexpr int kColumnBaseWidth = 80;
-constexpr qreal kColumnWheelThreshold = 120.0;
-constexpr int kColumnWheelClusterGapMs = 120;
-
-int pickerEntryHeight(const QFont& font)
-{
-    return qMax(kEntryHeight, QFontMetrics(font).height() + 12);
-}
-
-int pickerRowHeight(const QFont& font)
-{
-    return qMax(kColumnRowHeight, QFontMetrics(font).height() + 12);
-}
-
-int pickerColumnHeight(const QFont& font)
-{
-    return kColumnNavHeight * 2 + pickerRowHeight(font) * kColumnVisibleRows;
-}
-
-QVector<int> distributedWidths(const QVector<int>& preferredWidths, int availableWidth)
-{
-    QVector<int> result;
-    if (preferredWidths.isEmpty() || availableWidth <= 0)
-        return result;
-
-    int totalWeight = 0;
-    for (int width : preferredWidths)
-        totalWeight += qMax(1, width);
-
-    int remainingWidth = availableWidth;
-    int remainingWeight = totalWeight;
-    for (int i = 0; i < preferredWidths.size(); ++i) {
-        const int weight = qMax(1, preferredWidths.at(i));
-        const int width = i == preferredWidths.size() - 1
-            ? remainingWidth
-            : qRound(static_cast<qreal>(remainingWidth) * weight / remainingWeight);
-        result.append(qMax(0, width));
-        remainingWidth -= width;
-        remainingWeight -= weight;
-    }
-    return result;
-}
-
-void drawSelectionSegment(QPainter& painter, const QRect& rect, const QColor& fill,
-                          qreal radius, bool roundLeft, bool roundRight)
-{
-    const QRectF bounds(rect);
-    const qreal leftRadius = roundLeft ? radius : 0.0;
-    const qreal rightRadius = roundRight ? radius : 0.0;
-    QPainterPath path;
-    path.moveTo(bounds.left() + leftRadius, bounds.top());
-    path.lineTo(bounds.right() - rightRadius, bounds.top());
-    if (roundRight)
-        path.quadTo(bounds.right(), bounds.top(), bounds.right(), bounds.top() + rightRadius);
-    else
-        path.lineTo(bounds.right(), bounds.top());
-    path.lineTo(bounds.right(), bounds.bottom() - rightRadius);
-    if (roundRight)
-        path.quadTo(bounds.right(), bounds.bottom(), bounds.right() - rightRadius, bounds.bottom());
-    else
-        path.lineTo(bounds.right(), bounds.bottom());
-    path.lineTo(bounds.left() + leftRadius, bounds.bottom());
-    if (roundLeft)
-        path.quadTo(bounds.left(), bounds.bottom(), bounds.left(), bounds.bottom() - leftRadius);
-    else
-        path.lineTo(bounds.left(), bounds.bottom());
-    path.lineTo(bounds.left(), bounds.top() + leftRadius);
-    if (roundLeft)
-        path.quadTo(bounds.left(), bounds.top(), bounds.left() + leftRadius, bounds.top());
-    else
-        path.lineTo(bounds.left(), bounds.top());
-    path.closeSubpath();
-
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(fill);
-    painter.drawPath(path);
-}
-
-const QString& pickerChevronUpGlyph()
-{
-    return Typography::Icons::FlipViewPrevV;
-}
-
-const QString& pickerChevronDownGlyph()
-{
-    return Typography::Icons::FlipViewNextV;
-}
-
-Qt::Alignment normalizedHorizontalAlignment(Qt::Alignment alignment, Qt::Alignment fallback)
-{
-    const Qt::Alignment horizontal = alignment & Qt::AlignHorizontal_Mask;
-    if (horizontal.testFlag(Qt::AlignHCenter))
-        return Qt::AlignHCenter;
-    if (horizontal.testFlag(Qt::AlignRight))
-        return Qt::AlignRight;
-    if (horizontal.testFlag(Qt::AlignLeft))
-        return Qt::AlignLeft;
-    return fallback;
-}
-
-qreal normalizedWheelDelta(const QWheelEvent* event)
-{
-    if (!event->pixelDelta().isNull())
-        return static_cast<qreal>(event->pixelDelta().y());
-    if (!event->angleDelta().isNull())
-        return static_cast<qreal>(event->angleDelta().y());
-    return 0.0;
-}
-
-int wheelStepForDelta(qreal delta)
-{
-    if (delta > 0.0)
-        return -1;
-    if (delta < 0.0)
-        return 1;
-    return 0;
-}
 
 int timeFieldBaseWidth(TimePicker::TimeField field)
 {
@@ -166,17 +38,6 @@ int timeFieldBaseWidth(TimePicker::TimeField field)
 int clampMinuteIncrement(int increment)
 {
     return qBound(1, increment, 59);
-}
-
-int wrappedValue(int value, int minimum, int maximum)
-{
-    const int span = maximum - minimum + 1;
-    if (span <= 0)
-        return minimum;
-    int normalized = (value - minimum) % span;
-    if (normalized < 0)
-        normalized += span;
-    return minimum + normalized;
 }
 
 bool isPm(const QTime& time)
@@ -200,74 +61,39 @@ int hourFromDisplay12(int displayHour, bool pm)
 } // namespace
 
 class TimePickerFlyout;
-class TimePickerFlyoutPanel;
 
-class TimePickerColumn : public QWidget,
-                         public FluentElement,
-                         public detail::PickerColumnAccessibilityHost {
+class TimePickerColumn : public detail::PickerWheelColumn {
 public:
-    TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeField field, QWidget* parent = nullptr);
+    TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeField field,
+                     QWidget* parent = nullptr);
 
     TimePicker::TimeField field() const { return m_field; }
-    QSize sizeHint() const override { return QSize(m_widthHint, pickerColumnHeight(font())); }
-    void setWidthHint(int width);
 
-    QWidget* pickerColumnWidget() override { return this; }
     QString pickerColumnName() const override;
     QString pickerColumnValueText() const override;
     QVariant pickerColumnCurrentValue() const override;
     QVariant pickerColumnMinimumValue() const override;
     QVariant pickerColumnMaximumValue() const override;
     QVariant pickerColumnStepSize() const override;
-    bool pickerColumnCanShift(int direction) const override;
-    void pickerColumnShift(int direction) override;
     void pickerColumnSetValue(const QVariant& value) override;
 
 protected:
-    void paintEvent(QPaintEvent* event) override;
-    void enterEvent(FluentEnterEvent* event) override;
-    void mouseMoveEvent(QMouseEvent* event) override;
-    void leaveEvent(QEvent* event) override;
-    void mouseReleaseEvent(QMouseEvent* event) override;
-    void wheelEvent(QWheelEvent* event) override;
-    void keyPressEvent(QKeyEvent* event) override;
-    void focusInEvent(QFocusEvent* event) override;
-    void focusOutEvent(QFocusEvent* event) override;
-
-    void onThemeUpdated() override { update(); }
+    bool canShiftBy(int offset) const override;
+    void shiftBy(int offset) override;
+    void commitPickerValue() override;
+    void cancelPickerValue() override;
+    QString displayTextForOffset(int offset) const override;
+    bool isRowSelectable(int offset) const override;
+    bool isRowTextEnabled(int offset) const override;
+    Qt::Alignment columnTextAlignment() const override;
+    bool isFirstVisibleColumn() const override;
+    bool isLastVisibleColumn() const override;
+    int visibleItemCountProperty() const override;
+    bool refreshPropertiesOnFocus() const override { return true; }
 
 private:
-    enum class HitKind {
-        None,
-        Previous,
-        Next,
-        Row
-    };
-
-    struct HitInfo {
-        HitKind kind = HitKind::None;
-        int offset = 0;
-    };
-
-    HitInfo hitTest(const QPoint& pos) const;
-    QRect rowRect(int row) const;
-    QRect previousButtonRect() const;
-    QRect nextButtonRect() const;
-    void setColumnHovered(bool hovered);
-    void resetWheelState();
-    void refreshProperties();
-
     TimePickerFlyout* m_flyout = nullptr;
     TimePicker::TimeField m_field;
-    int m_widthHint = 82;
-    HitInfo m_hoverHit;
-    bool m_columnHovered = false;
-    qreal m_navButtonOpacity = 0.0;
-    qreal m_navButtonTargetOpacity = 0.0;
-    QVariantAnimation* m_navButtonAnimation = nullptr;
-    qreal m_wheelAccum = 0.0;
-    int m_wheelDir = 0;
-    qint64 m_lastWheelTs = 0;
 };
 
 class TimePickerFlyout : public fluent::dialogs_flyouts::Flyout {
@@ -298,8 +124,6 @@ protected:
     void keyPressEvent(QKeyEvent* event) override;
 
 private:
-    friend class TimePickerFlyoutPanel;
-
     QVector<TimePicker::TimeField> visibleFields() const;
     int preferredColumnWidth(TimePicker::TimeField field) const;
     void notifyColumnValueChanges(const QTime& before, const QTime& after);
@@ -307,59 +131,17 @@ private:
 
     TimePicker* m_owner = nullptr;
     QTime m_pendingTime;
-    TimePickerFlyoutPanel* m_panel = nullptr;
-};
-
-class TimePickerFlyoutPanel : public QWidget, public FluentElement {
-public:
-    explicit TimePickerFlyoutPanel(TimePickerFlyout* flyout, QWidget* parent = nullptr);
-
-    QSize sizeHint() const override;
-    TimePickerColumn* firstVisibleColumn() const;
-    int selectedRowCenterY() const;
-    void refreshFromFlyout();
-    void refreshTheme();
-    void updateColumns();
-    void refreshActionAccessibility();
-
-protected:
-    void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
-    void onThemeUpdated() override;
-
-private:
-    void layoutContent();
-    QVector<int> columnWidths() const;
-
-    TimePickerFlyout* m_flyout = nullptr;
+    detail::PickerWheelPanel* m_panel = nullptr;
     TimePickerColumn* m_hourColumn = nullptr;
     TimePickerColumn* m_minuteColumn = nullptr;
     TimePickerColumn* m_periodColumn = nullptr;
-    fluent::basicinput::Button* m_confirmButton = nullptr;
-    fluent::basicinput::Button* m_cancelButton = nullptr;
 };
 
-TimePickerColumn::TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeField field, QWidget* parent)
-    : QWidget(parent)
-    , m_flyout(flyout)
-    , m_field(field)
+TimePickerColumn::TimePickerColumn(TimePickerFlyout* flyout, TimePicker::TimeField field,
+                                   QWidget* parent)
+    : detail::PickerWheelColumn(82, parent), m_flyout(flyout), m_field(field)
 {
-    setAttribute(Qt::WA_Hover);
-#ifdef Q_OS_MAC
-    setAttribute(Qt::WA_MacShowFocusRect, false);
-#endif
-    setMouseTracking(true);
-    setFocusPolicy(Qt::StrongFocus);
-
-    m_navButtonAnimation = new QVariantAnimation(this);
-    m_navButtonAnimation->setDuration(themeAnimation().fast);
-    m_navButtonAnimation->setEasingCurve(themeAnimation().decelerate);
-    connect(m_navButtonAnimation, &QVariantAnimation::valueChanged, this, [this](const QVariant& value) {
-        m_navButtonOpacity = value.toReal();
-        refreshProperties();
-        update();
-    });
-    refreshProperties();
+    refreshColumnProperties();
 }
 
 QString TimePickerColumn::pickerColumnName() const
@@ -377,9 +159,7 @@ QString TimePickerColumn::pickerColumnName() const
 
 QString TimePickerColumn::pickerColumnValueText() const
 {
-    return m_flyout
-        ? m_flyout->displayText(m_field, m_flyout->pendingTime())
-        : QString();
+    return m_flyout ? m_flyout->displayText(m_field, m_flyout->pendingTime()) : QString();
 }
 
 QVariant TimePickerColumn::pickerColumnCurrentValue() const
@@ -389,8 +169,8 @@ QVariant TimePickerColumn::pickerColumnCurrentValue() const
         return {};
     switch (m_field) {
     case TimePicker::TimeField::Hour:
-        if (m_flyout->owner()->clockIdentifier()
-            == TimePicker::ClockIdentifier::TwentyFourHourClock) {
+        if (m_flyout->owner()->clockIdentifier() ==
+            TimePicker::ClockIdentifier::TwentyFourHourClock) {
             return value.hour();
         }
         return displayHour12(value.hour());
@@ -404,9 +184,8 @@ QVariant TimePickerColumn::pickerColumnCurrentValue() const
 
 QVariant TimePickerColumn::pickerColumnMinimumValue() const
 {
-    if (m_field == TimePicker::TimeField::Hour && m_flyout
-        && m_flyout->owner()->clockIdentifier()
-            == TimePicker::ClockIdentifier::TwentyFourHourClock) {
+    if (m_field == TimePicker::TimeField::Hour && m_flyout &&
+        m_flyout->owner()->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock) {
         return 0;
     }
     if (m_field == TimePicker::TimeField::Period)
@@ -418,9 +197,8 @@ QVariant TimePickerColumn::pickerColumnMaximumValue() const
 {
     if (m_field == TimePicker::TimeField::Period)
         return 1;
-    if (m_field == TimePicker::TimeField::Hour && m_flyout
-        && m_flyout->owner()->clockIdentifier()
-            == TimePicker::ClockIdentifier::TwentyFourHourClock) {
+    if (m_field == TimePicker::TimeField::Hour && m_flyout &&
+        m_flyout->owner()->clockIdentifier() == TimePicker::ClockIdentifier::TwentyFourHourClock) {
         return 23;
     }
     if (m_field == TimePicker::TimeField::Minute && m_flyout) {
@@ -433,18 +211,8 @@ QVariant TimePickerColumn::pickerColumnMaximumValue() const
 QVariant TimePickerColumn::pickerColumnStepSize() const
 {
     return m_field == TimePicker::TimeField::Minute && m_flyout
-        ? QVariant(m_flyout->owner()->minuteIncrement()) : QVariant(1);
-}
-
-bool TimePickerColumn::pickerColumnCanShift(int direction) const
-{
-    return m_flyout && m_flyout->canShift(m_field, direction);
-}
-
-void TimePickerColumn::pickerColumnShift(int direction)
-{
-    if (m_flyout)
-        m_flyout->shiftField(m_field, direction);
+               ? QVariant(m_flyout->owner()->minuteIncrement())
+               : QVariant(1);
 }
 
 void TimePickerColumn::pickerColumnSetValue(const QVariant& value)
@@ -464,542 +232,75 @@ void TimePickerColumn::pickerColumnSetValue(const QVariant& value)
     int offset = requested - current;
     if (m_field == TimePicker::TimeField::Minute) {
         const int increment = m_flyout->owner()->minuteIncrement();
-        requested = qBound(0,
-                           qRound(static_cast<qreal>(requested) / increment)
-                               * increment,
+        requested = qBound(0, qRound(static_cast<qreal>(requested) / increment) * increment,
                            pickerColumnMaximumValue().toInt());
         offset = requested / increment - current / increment;
     }
     m_flyout->shiftField(m_field, offset);
 }
 
-void TimePickerColumn::setWidthHint(int width)
+bool TimePickerColumn::canShiftBy(int offset) const
 {
-    if (m_widthHint == width) {
-        refreshProperties();
-        return;
-    }
-    m_widthHint = qMax(48, width);
-    refreshProperties();
-    updateGeometry();
+    return m_flyout && m_flyout->canShift(m_field, offset);
 }
 
-QRect TimePickerColumn::previousButtonRect() const
+void TimePickerColumn::shiftBy(int offset)
 {
-    return QRect(0, 0, width(), kColumnNavHeight);
+    if (m_flyout)
+        m_flyout->shiftField(m_field, offset);
 }
 
-QRect TimePickerColumn::nextButtonRect() const
+void TimePickerColumn::commitPickerValue()
 {
-    return QRect(0, height() - kColumnNavHeight, width(), kColumnNavHeight);
-}
-
-QRect TimePickerColumn::rowRect(int row) const
-{
-    const int rowHeight = pickerRowHeight(font());
-    return QRect(0, kColumnNavHeight + row * rowHeight, width(), rowHeight);
-}
-
-TimePickerColumn::HitInfo TimePickerColumn::hitTest(const QPoint& pos) const
-{
-    if (previousButtonRect().contains(pos))
-        return {HitKind::Previous, -1};
-    if (nextButtonRect().contains(pos))
-        return {HitKind::Next, 1};
-
-    const int rowHeight = pickerRowHeight(font());
-    const int rowAreaY = pos.y() - kColumnNavHeight;
-    if (rowAreaY >= 0 && rowAreaY < rowHeight * kColumnVisibleRows) {
-        const int row = rowAreaY / rowHeight;
-        return {HitKind::Row, row - kColumnVisibleRows / 2};
-    }
-    return {};
-}
-
-void TimePickerColumn::paintEvent(QPaintEvent*)
-{
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-
-    const auto& colors = themeColorsRef();
-    const auto radius = themeRadius();
-
-    painter.fillRect(rect(), colors.bgLayer);
-
-    const bool canPrevious = m_flyout && m_flyout->canShift(m_field, -1);
-    const bool canNext = m_flyout && m_flyout->canShift(m_field, 1);
-
-    if (m_navButtonOpacity > 0.01) {
-        auto paintNavButton = [&](const QRect& rect, const QString& glyph, bool enabled, bool hovered) {
-            painter.save();
-            painter.setOpacity(m_navButtonOpacity);
-            if (hovered && enabled) {
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(colors.subtleSecondary);
-                painter.drawRoundedRect(rect.adjusted(5, 2, -5, -2), radius.control, radius.control);
-            }
-            const QColor iconColor = enabled
-                ? (hovered ? colors.textPrimary : colors.textSecondary)
-                : colors.textDisabled;
-            painter.setPen(iconColor);
-            Typography::Icons::paintGlyph(
-                painter, QRectF(rect), glyph, Typography::IconSize::Compact, Qt::AlignCenter);
-            painter.restore();
-        };
-
-        paintNavButton(previousButtonRect(), pickerChevronUpGlyph(), canPrevious,
-                       m_hoverHit.kind == HitKind::Previous);
-        paintNavButton(nextButtonRect(), pickerChevronDownGlyph(), canNext,
-                       m_hoverHit.kind == HitKind::Next);
-    }
-
-    painter.setFont(font());
-    const int centerRow = kColumnVisibleRows / 2;
-    const Qt::Alignment textAlignment = m_flyout ? m_flyout->textAlignment(m_field) : Qt::AlignLeft;
-    const bool firstVisible = m_flyout && m_flyout->isFirstVisibleField(m_field);
-    const bool lastVisible = m_flyout && m_flyout->isLastVisibleField(m_field);
-    for (int row = 0; row < kColumnVisibleRows; ++row) {
-        const int offset = row - centerRow;
-        const QTime valueTime = m_flyout ? m_flyout->shifted(m_field, offset) : QTime();
-        const bool selectable = m_flyout && m_flyout->canShift(m_field, offset);
-        const bool selected = offset == 0;
-        const bool hovered = m_hoverHit.kind == HitKind::Row && m_hoverHit.offset == offset;
-        const QRect rowBounds = selected
-            ? rowRect(row).adjusted(firstVisible ? 4 : 0, 0, lastVisible ? -4 : 0, 0)
-            : rowRect(row).adjusted(4, 2, -4, -2);
-
-        // Resolve the highlight fill + selected text color per language. Init highlightFill to a real
-        // value (Qt::transparent) — a default-constructed QColor is INVALID yet alpha()==255, so a bare
-        // alpha()>0 guard would fire and setBrush() would paint SOLID BLACK. zh_CN: 按语言解析高亮填充与选中
-        // 文字色。highlightFill 必须初始化为真实值(Qt::transparent)——默认构造的 QColor 无效却 alpha()==255,
-        // 裸 alpha()>0 会命中,setBrush() 会涂成纯黑。
-        QColor highlightFill = Qt::transparent;
-        QColor selectedText = colors.textOnAccent;
-    // Fluent treatment. zh_CN: Fluent 样式。
-            if (selected)
-                highlightFill = colors.accentDefault;
-            else if (hovered && selectable)
-                highlightFill = colors.subtleSecondary;
-            selectedText = colors.textOnAccent;
-
-        if (highlightFill.isValid() && highlightFill.alpha() > 0) {
-            if (selected) {
-                drawSelectionSegment(painter, rowBounds, highlightFill, radius.control,
-                                     firstVisible, lastVisible);
-            } else {
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(highlightFill);
-                painter.drawRoundedRect(rowBounds, radius.control, radius.control);
-            }
-        }
-
-        QColor textColor = selectable || selected ? colors.textPrimary : colors.textDisabled;
-        if (selected)
-            textColor = selectedText;
-        painter.setPen(textColor);
-        const QString text = m_flyout ? m_flyout->displayText(m_field, valueTime) : QString();
-        painter.drawText(rowBounds.adjusted(8, 0, -8, 0), Qt::AlignVCenter | textAlignment,
-                         painter.fontMetrics().elidedText(
-                             text, Qt::ElideRight, qMax(0, rowBounds.width() - 16)));
-    }
-}
-
-void TimePickerColumn::enterEvent(FluentEnterEvent* event)
-{
-    setColumnHovered(true);
-    QWidget::enterEvent(event);
-}
-
-void TimePickerColumn::mouseMoveEvent(QMouseEvent* event)
-{
-    setColumnHovered(true);
-    m_hoverHit = hitTest(fluentMousePos(event));
-    refreshProperties();
-    update();
-    QWidget::mouseMoveEvent(event);
-}
-
-void TimePickerColumn::leaveEvent(QEvent* event)
-{
-    setColumnHovered(false);
-    m_hoverHit = {};
-    refreshProperties();
-    update();
-    QWidget::leaveEvent(event);
-}
-
-void TimePickerColumn::mouseReleaseEvent(QMouseEvent* event)
-{
-    if (!m_flyout || event->button() != Qt::LeftButton) {
-        QWidget::mouseReleaseEvent(event);
-        return;
-    }
-
-    const HitInfo hit = hitTest(fluentMousePos(event));
-    if (hit.kind == HitKind::Previous || hit.kind == HitKind::Next) {
-        m_flyout->shiftField(m_field, hit.offset);
-        event->accept();
-        return;
-    }
-    if (hit.kind == HitKind::Row && hit.offset != 0) {
-        m_flyout->shiftField(m_field, hit.offset);
-        event->accept();
-        return;
-    }
-    QWidget::mouseReleaseEvent(event);
-}
-
-void TimePickerColumn::wheelEvent(QWheelEvent* event)
-{
-    if (!m_flyout) {
-        QWidget::wheelEvent(event);
-        return;
-    }
-
-    const qreal delta = normalizedWheelDelta(event);
-    const int step = wheelStepForDelta(delta);
-    if (step == 0) {
-        event->accept();
-        return;
-    }
-
-    const qint64 now = QDateTime::currentMSecsSinceEpoch();
-    const bool clusterExpired = m_lastWheelTs != 0 && now - m_lastWheelTs > kColumnWheelClusterGapMs;
-    const bool directionChanged = m_wheelDir != 0 && m_wheelDir != step;
-    if (m_lastWheelTs == 0 || clusterExpired || directionChanged)
-        resetWheelState();
-
-    m_lastWheelTs = now;
-    m_wheelDir = step;
-    m_wheelAccum += qAbs(delta);
-    if (m_wheelAccum < kColumnWheelThreshold) {
-        event->accept();
-        return;
-    }
-
-    m_wheelAccum = 0.0;
-    m_flyout->shiftField(m_field, step);
-    event->accept();
-}
-
-void TimePickerColumn::keyPressEvent(QKeyEvent* event)
-{
-    if (!m_flyout) {
-        QWidget::keyPressEvent(event);
-        return;
-    }
-
-    switch (event->key()) {
-    case Qt::Key_Up:
-        m_flyout->shiftField(m_field, -1);
-        event->accept();
-        return;
-    case Qt::Key_Down:
-        m_flyout->shiftField(m_field, 1);
-        event->accept();
-        return;
-    case Qt::Key_PageUp:
-        m_flyout->shiftField(m_field, -5);
-        event->accept();
-        return;
-    case Qt::Key_PageDown:
-        m_flyout->shiftField(m_field, 5);
-        event->accept();
-        return;
-    case Qt::Key_Return:
-    case Qt::Key_Enter:
+    if (m_flyout)
         m_flyout->commit();
-        event->accept();
-        return;
-    case Qt::Key_Escape:
+}
+
+void TimePickerColumn::cancelPickerValue()
+{
+    if (m_flyout)
         m_flyout->cancel();
-        event->accept();
-        return;
-    default:
-        break;
-    }
-
-    QWidget::keyPressEvent(event);
 }
 
-void TimePickerColumn::focusInEvent(QFocusEvent* event)
-{
-    QWidget::focusInEvent(event);
-    refreshProperties();
-    update();
-}
-
-void TimePickerColumn::focusOutEvent(QFocusEvent* event)
-{
-    QWidget::focusOutEvent(event);
-    refreshProperties();
-    update();
-}
-
-void TimePickerColumn::setColumnHovered(bool hovered)
-{
-    const qreal target = hovered ? 1.0 : 0.0;
-    if (m_columnHovered == hovered && qFuzzyCompare(m_navButtonTargetOpacity + 1.0, target + 1.0))
-        return;
-
-    m_columnHovered = hovered;
-    m_navButtonTargetOpacity = target;
-    if (!m_navButtonAnimation) {
-        m_navButtonOpacity = target;
-        refreshProperties();
-        return;
-    }
-
-    m_navButtonAnimation->stop();
-    m_navButtonAnimation->setStartValue(m_navButtonOpacity);
-    m_navButtonAnimation->setEndValue(target);
-    m_navButtonAnimation->start();
-    refreshProperties();
-}
-
-void TimePickerColumn::resetWheelState()
-{
-    m_wheelAccum = 0.0;
-    m_wheelDir = 0;
-    m_lastWheelTs = 0;
-}
-
-void TimePickerColumn::refreshProperties()
-{
-    const bool firstVisible = m_flyout && m_flyout->isFirstVisibleField(m_field);
-    const bool lastVisible = m_flyout && m_flyout->isLastVisibleField(m_field);
-    setProperty("previousButtonGlyph", pickerChevronUpGlyph());
-    setProperty("nextButtonGlyph", pickerChevronDownGlyph());
-    setProperty("textAlignment", static_cast<int>(m_flyout ? m_flyout->textAlignment(m_field) : Qt::AlignLeft));
-    setProperty("visibleItemCount", m_field == TimePicker::TimeField::Period ? 2 : kColumnVisibleRows);
-    setProperty("navButtonOpacity", m_navButtonOpacity);
-    setProperty("navButtonTargetOpacity", m_navButtonTargetOpacity);
-    setProperty("columnHovered", m_columnHovered);
-    setProperty("focusFrameVisible", false);
-    setProperty("selectedRowHasBackground", true);
-    setProperty("selectedRowContinuous", true);
-    setProperty("selectedRowLeftInset", firstVisible ? 4 : 0);
-    setProperty("selectedRowRightInset", lastVisible ? 4 : 0);
-    setProperty("selectedRowHeight", pickerRowHeight(font()));
-}
-
-TimePickerFlyoutPanel::TimePickerFlyoutPanel(TimePickerFlyout* flyout, QWidget* parent)
-    : QWidget(parent)
-    , m_flyout(flyout)
-{
-    setObjectName(QStringLiteral("TimePickerFlyoutPanel"));
-    setAttribute(Qt::WA_NoSystemBackground);
-
-    m_hourColumn = new TimePickerColumn(flyout, TimePicker::TimeField::Hour, this);
-    m_hourColumn->setObjectName(QStringLiteral("TimePickerHourColumn"));
-    m_minuteColumn = new TimePickerColumn(flyout, TimePicker::TimeField::Minute, this);
-    m_minuteColumn->setObjectName(QStringLiteral("TimePickerMinuteColumn"));
-    m_periodColumn = new TimePickerColumn(flyout, TimePicker::TimeField::Period, this);
-    m_periodColumn->setObjectName(QStringLiteral("TimePickerPeriodColumn"));
-
-    m_confirmButton = new fluent::basicinput::Button(this);
-    m_confirmButton->setObjectName(QStringLiteral("TimePickerConfirmButton"));
-    m_confirmButton->setFluentStyle(fluent::basicinput::Button::Subtle);
-    m_confirmButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
-    m_confirmButton->setIconGlyph(Typography::Icons::CheckMark, Typography::IconSize::Standard);
-    m_confirmButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-
-    m_cancelButton = new fluent::basicinput::Button(this);
-    m_cancelButton->setObjectName(QStringLiteral("TimePickerCancelButton"));
-    m_cancelButton->setFluentStyle(fluent::basicinput::Button::Subtle);
-    m_cancelButton->setFluentLayout(fluent::basicinput::Button::IconOnly);
-    m_cancelButton->setIconGlyph(Typography::Icons::Cancel, Typography::IconSize::Standard);
-    m_cancelButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    refreshActionAccessibility();
-
-    connect(m_confirmButton, &fluent::basicinput::Button::clicked, this, [this] {
-        if (m_flyout)
-            m_flyout->commit();
-    });
-    connect(m_cancelButton, &fluent::basicinput::Button::clicked, this, [this] {
-        if (m_flyout)
-            m_flyout->cancel();
-    });
-}
-
-QSize TimePickerFlyoutPanel::sizeHint() const
+QString TimePickerColumn::displayTextForOffset(int offset) const
 {
     if (!m_flyout)
-        return QSize();
-
-    int width = 0;
-    const auto fields = m_flyout->visibleFields();
-    for (TimePicker::TimeField field : fields)
-        width += m_flyout->preferredColumnWidth(field);
-    if (!fields.isEmpty())
-        width += (fields.size() - 1) * kDividerWidth;
-    width = qMax(kTimePickerThemeMinWidth, width);
-
-    const int height = kPopupTopInset + pickerColumnHeight(font()) + kCommandBarHeight;
-    return QSize(width, height);
+        return {};
+    return m_flyout->displayText(m_field, m_flyout->shifted(m_field, offset));
 }
 
-TimePickerColumn* TimePickerFlyoutPanel::firstVisibleColumn() const
+bool TimePickerColumn::isRowSelectable(int offset) const
 {
-    if (m_hourColumn && !m_hourColumn->isHidden())
-        return m_hourColumn;
-    if (m_minuteColumn && !m_minuteColumn->isHidden())
-        return m_minuteColumn;
-    if (m_periodColumn && !m_periodColumn->isHidden())
-        return m_periodColumn;
-    return nullptr;
+    return m_flyout && m_flyout->canShift(m_field, offset);
 }
 
-int TimePickerFlyoutPanel::selectedRowCenterY() const
+bool TimePickerColumn::isRowTextEnabled(int offset) const
 {
-    const int centerRow = kColumnVisibleRows / 2;
-    const int rowHeight = pickerRowHeight(font());
-    return kPopupTopInset + kColumnNavHeight + centerRow * rowHeight + rowHeight / 2;
+    return offset == 0 || isRowSelectable(offset);
 }
 
-void TimePickerFlyoutPanel::refreshFromFlyout()
+Qt::Alignment TimePickerColumn::columnTextAlignment() const
 {
-    if (!m_flyout)
-        return;
-
-    const QFont pickerFont = m_flyout->owner() ? m_flyout->owner()->font() : font();
-    setFont(pickerFont);
-    const auto fields = m_flyout->visibleFields();
-    auto configure = [this, &fields, &pickerFont](TimePickerColumn* column, TimePicker::TimeField field) {
-        const bool visible = fields.contains(field);
-        column->setFont(pickerFont);
-        column->setVisible(visible);
-        column->setEnabled(visible);
-        column->setWidthHint(m_flyout->preferredColumnWidth(field));
-    };
-    configure(m_hourColumn, TimePicker::TimeField::Hour);
-    configure(m_minuteColumn, TimePicker::TimeField::Minute);
-    configure(m_periodColumn, TimePicker::TimeField::Period);
-
-    setProperty("selectedRowCenterY", selectedRowCenterY());
-    updateGeometry();
-    layoutContent();
-    updateColumns();
+    return m_flyout ? m_flyout->textAlignment(m_field) : Qt::AlignLeft;
 }
 
-void TimePickerFlyoutPanel::updateColumns()
+bool TimePickerColumn::isFirstVisibleColumn() const
 {
-    if (m_hourColumn)
-        m_hourColumn->update();
-    if (m_minuteColumn)
-        m_minuteColumn->update();
-    if (m_periodColumn)
-        m_periodColumn->update();
-    update();
+    return m_flyout && m_flyout->isFirstVisibleField(m_field);
 }
 
-void TimePickerFlyoutPanel::refreshActionAccessibility()
+bool TimePickerColumn::isLastVisibleColumn() const
 {
-    TimePicker* owner = m_flyout ? m_flyout->owner() : nullptr;
-    if (m_confirmButton) {
-        const QString overrideName = owner
-            ? owner->confirmButtonAccessibleName() : QString();
-        m_confirmButton->setAccessibleName(overrideName.isEmpty()
-            ? QCoreApplication::translate("PickerAccessibility", "Confirm time")
-            : overrideName);
-    }
-    if (m_cancelButton) {
-        const QString overrideName = owner
-            ? owner->cancelButtonAccessibleName() : QString();
-        m_cancelButton->setAccessibleName(overrideName.isEmpty()
-            ? QCoreApplication::translate("PickerAccessibility", "Cancel")
-            : overrideName);
-    }
+    return m_flyout && m_flyout->isLastVisibleField(m_field);
 }
 
-void TimePickerFlyoutPanel::refreshTheme()
+int TimePickerColumn::visibleItemCountProperty() const
 {
-    onThemeUpdated();
-}
-
-void TimePickerFlyoutPanel::paintEvent(QPaintEvent*)
-{
-    if (!m_flyout)
-        return;
-
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    const auto& colors = themeColorsRef();
-
-    painter.setPen(colors.strokeDivider);
-    int x = 0;
-    const auto fields = m_flyout->visibleFields();
-    const auto widths = columnWidths();
-    for (int i = 0; i < fields.size() - 1; ++i) {
-        x += widths.value(i);
-        painter.drawLine(x, kPopupTopInset, x,
-                         kPopupTopInset + pickerColumnHeight(font()));
-        x += kDividerWidth;
-    }
-
-    const int dividerY = kPopupTopInset + pickerColumnHeight(font());
-    painter.drawLine(0, dividerY, width(), dividerY);
-}
-
-void TimePickerFlyoutPanel::resizeEvent(QResizeEvent* event)
-{
-    QWidget::resizeEvent(event);
-    layoutContent();
-}
-
-void TimePickerFlyoutPanel::onThemeUpdated()
-{
-    updateColumns();
-    if (m_confirmButton)
-        m_confirmButton->onThemeUpdated();
-    if (m_cancelButton)
-        m_cancelButton->onThemeUpdated();
-}
-
-QVector<int> TimePickerFlyoutPanel::columnWidths() const
-{
-    QVector<int> preferredWidths;
-    if (!m_flyout)
-        return preferredWidths;
-    const auto fields = m_flyout->visibleFields();
-    for (TimePicker::TimeField field : fields)
-        preferredWidths.append(m_flyout->preferredColumnWidth(field));
-    const int dividerWidth = qMax(0, fields.size() - 1) * kDividerWidth;
-    return distributedWidths(preferredWidths, qMax(0, width() - dividerWidth));
-}
-
-void TimePickerFlyoutPanel::layoutContent()
-{
-    if (rect().isEmpty())
-        return;
-
-    int x = 0;
-    int columnIndex = 0;
-    const auto widths = columnWidths();
-
-    auto placeColumn = [this, &x, &columnIndex, &widths](TimePickerColumn* column) {
-        if (column->isHidden())
-            return;
-        const int w = widths.value(columnIndex++);
-        column->setGeometry(x, kPopupTopInset, w, pickerColumnHeight(font()));
-        x += w + kDividerWidth;
-    };
-
-    placeColumn(m_hourColumn);
-    placeColumn(m_minuteColumn);
-    placeColumn(m_periodColumn);
-
-    const int buttonY = kPopupTopInset + pickerColumnHeight(font()) + 4;
-    const int buttonHeight = kCommandBarHeight - 8;
-    const int halfWidth = width() / 2;
-    m_confirmButton->setGeometry(4, buttonY, qMax(0, halfWidth - 6), buttonHeight);
-    m_cancelButton->setGeometry(halfWidth + 2, buttonY,
-                                qMax(0, width() - halfWidth - 6), buttonHeight);
+    return m_field == TimePicker::TimeField::Period ? 2 : 7;
 }
 
 TimePickerFlyout::TimePickerFlyout(TimePicker* owner)
-    : fluent::dialogs_flyouts::Flyout(owner)
-    , m_owner(owner)
+    : fluent::dialogs_flyouts::Flyout(owner), m_owner(owner)
 {
     setObjectName(QStringLiteral("TimePickerFlyout"));
     setAnimationEnabled(false);
@@ -1009,7 +310,19 @@ TimePickerFlyout::TimePickerFlyout(TimePicker* owner)
     setDim(false);
     setClosePolicy(ClosePolicy(CloseOnPressOutside | CloseOnEscape));
 
-    m_panel = new TimePickerFlyoutPanel(this, this);
+    m_panel = new detail::PickerWheelPanel(QStringLiteral("TimePickerFlyoutPanel"),
+                                           kTimePickerThemeMinWidth, this);
+    m_hourColumn = new TimePickerColumn(this, TimePicker::TimeField::Hour, m_panel);
+    m_hourColumn->setObjectName(QStringLiteral("TimePickerHourColumn"));
+    m_minuteColumn = new TimePickerColumn(this, TimePicker::TimeField::Minute, m_panel);
+    m_minuteColumn->setObjectName(QStringLiteral("TimePickerMinuteColumn"));
+    m_periodColumn = new TimePickerColumn(this, TimePicker::TimeField::Period, m_panel);
+    m_periodColumn->setObjectName(QStringLiteral("TimePickerPeriodColumn"));
+    m_panel->setColumns({m_hourColumn, m_minuteColumn, m_periodColumn});
+    m_panel->initializeActions(
+        QStringLiteral("TimePickerConfirmButton"), QStringLiteral("TimePickerCancelButton"),
+        [this] { commit(); }, [this] { cancel(); });
+    refreshActionAccessibility();
     connect(this, &TimePickerFlyout::closed, this, [this] {
         if (m_owner)
             m_owner->handleFlyoutClosed();
@@ -1021,12 +334,8 @@ QPoint TimePickerFlyout::computePosition() const
     if (!m_owner || !m_panel || !m_owner->window())
         return fluent::dialogs_flyouts::Flyout::computePosition();
 
-    return detail::alignedWheelFlyoutPosition(
-        m_owner,
-        size(),
-        kPopupShadowMargin,
-        m_panel->selectedRowCenterY(),
-        clampToWindow());
+    return detail::alignedWheelFlyoutPosition(m_owner, size(), kPopupShadowMargin,
+                                              m_panel->selectedRowCenterY(), clampToWindow());
 }
 
 QVector<TimePicker::TimeField> TimePickerFlyout::visibleFields() const
@@ -1078,7 +387,14 @@ void TimePickerFlyout::refreshLayout()
     if (!m_owner)
         return;
 
-    m_panel->refreshFromFlyout();
+    const auto fields = visibleFields();
+    m_panel->configureColumns(m_owner->font(),
+                              {fields.contains(TimePicker::TimeField::Hour),
+                               fields.contains(TimePicker::TimeField::Minute),
+                               fields.contains(TimePicker::TimeField::Period)},
+                              {preferredColumnWidth(TimePicker::TimeField::Hour),
+                               preferredColumnWidth(TimePicker::TimeField::Minute),
+                               preferredColumnWidth(TimePicker::TimeField::Period)});
 
     const QSize cardSize = m_panel->sizeHint();
     const int cardW = cardSize.width();
@@ -1154,8 +470,16 @@ void TimePickerFlyout::cancel()
 
 void TimePickerFlyout::refreshActionAccessibility()
 {
-    if (m_panel)
-        m_panel->refreshActionAccessibility();
+    if (!m_panel)
+        return;
+    const QString confirmOverride = m_owner ? m_owner->confirmButtonAccessibleName() : QString();
+    const QString cancelOverride = m_owner ? m_owner->cancelButtonAccessibleName() : QString();
+    m_panel->setActionAccessibleNames(
+        confirmOverride.isEmpty()
+            ? QCoreApplication::translate("PickerAccessibility", "Confirm time")
+            : confirmOverride,
+        cancelOverride.isEmpty() ? QCoreApplication::translate("PickerAccessibility", "Cancel")
+                                 : cancelOverride);
 }
 
 void TimePickerFlyout::onThemeUpdated()
@@ -1187,27 +511,19 @@ void TimePickerFlyout::updateColumns()
     update();
 }
 
-void TimePickerFlyout::notifyColumnValueChanges(
-    const QTime& before, const QTime& after)
+void TimePickerFlyout::notifyColumnValueChanges(const QTime& before, const QTime& after)
 {
     if (!m_panel || before == after)
         return;
-    auto notify = [this](const char* objectName) {
-        if (QWidget* column = m_panel->findChild<QWidget*>(
-                QString::fromLatin1(objectName))) {
-            detail::notifyPickerColumnValueChanged(column);
-        }
-    };
     if (before.hour() != after.hour())
-        notify("TimePickerHourColumn");
+        detail::notifyPickerColumnValueChanged(m_hourColumn);
     if (before.minute() != after.minute())
-        notify("TimePickerMinuteColumn");
+        detail::notifyPickerColumnValueChanged(m_minuteColumn);
     if (isPm(before) != isPm(after))
-        notify("TimePickerPeriodColumn");
+        detail::notifyPickerColumnValueChanged(m_periodColumn);
 }
 
-TimePicker::TimePicker(QWidget* parent)
-    : fluent::basicinput::Button(parent)
+TimePicker::TimePicker(QWidget* parent) : fluent::basicinput::Button(parent)
 {
     detail::ensurePickerAccessibilityFactory();
     m_observedLocale = QWidget::locale();
@@ -1478,7 +794,8 @@ void TimePicker::setFieldTextAlignment(TimeField field, Qt::Alignment alignment)
     if (!target)
         return;
 
-    const Qt::Alignment normalized = normalizedHorizontalAlignment(alignment, *target);
+    const Qt::Alignment normalized =
+        detail::normalizedPickerHorizontalAlignment(alignment, *target);
     if (*target == normalized)
         return;
 
@@ -1496,12 +813,12 @@ QSize TimePicker::sizeHint() const
     width += qMax(0, visibleFields().size() - 1) * kDividerWidth;
     width = qMax(width, kTimePickerThemeMinWidth);
 
-    return QSize(width, pickerEntryHeight(font()));
+    return QSize(width, detail::pickerEntryHeight(font()));
 }
 
 QSize TimePicker::minimumSizeHint() const
 {
-    return QSize(kTimePickerThemeMinWidth, pickerEntryHeight(font()));
+    return QSize(kTimePickerThemeMinWidth, detail::pickerEntryHeight(font()));
 }
 
 void TimePicker::paintEvent(QPaintEvent*)
@@ -1519,17 +836,17 @@ void TimePicker::paintEvent(QPaintEvent*)
     const QRectF r(surface);
 
     // Fluent treatment. zh_CN: Fluent 样式。
-        QColor bg = colors.controlDefault;
-        if (!isEnabled())
-            bg = colors.controlDisabled;
-        else if (isDown())
-            bg = colors.subtleTertiary;
-        else if (underMouse())
-            bg = colors.subtleSecondary;
+    QColor bg = colors.controlDefault;
+    if (!isEnabled())
+        bg = colors.controlDisabled;
+    else if (isDown())
+        bg = colors.subtleTertiary;
+    else if (underMouse())
+        bg = colors.subtleSecondary;
 
-        painter.setPen(Qt::NoPen);
-        painter.setBrush(bg);
-        painter.drawRoundedRect(QRectF(surface), radius.control, radius.control);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(bg);
+    painter.drawRoundedRect(QRectF(surface), radius.control, radius.control);
 
     const auto segments = fieldSegments();
     painter.setFont(font());
@@ -1538,13 +855,12 @@ void TimePicker::paintEvent(QPaintEvent*)
 
         if (i > 0) {
             painter.setPen(colors.strokeDivider);
-            painter.drawLine(segment.rect.left(), surface.top() + 1,
-                             segment.rect.left(), surface.bottom() - 1);
+            painter.drawLine(segment.rect.left(), surface.top() + 1, segment.rect.left(),
+                             surface.bottom() - 1);
         }
 
-        QColor textColor = isEnabled()
-            ? (active ? colors.textPrimary : colors.textSecondary)
-            : colors.textDisabled;
+        QColor textColor = isEnabled() ? (active ? colors.textPrimary : colors.textSecondary)
+                                       : colors.textDisabled;
         painter.setPen(textColor);
         const QString text = fieldDisplayText(segment.field);
         QRect textRect = segment.rect.adjusted(kSegmentHPadding, 0, -kSegmentHPadding, 0);
@@ -1561,10 +877,9 @@ void TimePicker::resizeEvent(QResizeEvent* event)
 void TimePicker::keyPressEvent(QKeyEvent* event)
 {
     if (!m_dropDownOpen && isEnabled() &&
-        (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return
-         || event->key() == Qt::Key_Enter || event->key() == Qt::Key_F4
-         || (event->key() == Qt::Key_Down
-             && event->modifiers().testFlag(Qt::AltModifier)))) {
+        (event->key() == Qt::Key_Space || event->key() == Qt::Key_Return ||
+         event->key() == Qt::Key_Enter || event->key() == Qt::Key_F4 ||
+         (event->key() == Qt::Key_Down && event->modifiers().testFlag(Qt::AltModifier)))) {
         openPicker();
         event->accept();
         return;
@@ -1581,8 +896,7 @@ void TimePicker::changeEvent(QEvent* event)
             m_flyout->refreshLayout();
         update();
     }
-    if (event->type() == QEvent::LocaleChange
-        && m_observedLocale != QWidget::locale()) {
+    if (event->type() == QEvent::LocaleChange && m_observedLocale != QWidget::locale()) {
         m_observedLocale = QWidget::locale();
         if (m_flyout && m_flyout->isOpen())
             m_flyout->showForPicker();
@@ -1637,8 +951,10 @@ QVector<TimePicker::FieldSegment> TimePicker::fieldSegments() const
     int remainingW = surface.width();
     for (int i = 0; i < fields.size(); ++i) {
         const int weight = preferredFieldWidth(fields.at(i));
-        int w = i == fields.size() - 1 ? remainingW
-            : qMax(32, qRound(double(surface.width()) * double(weight) / double(totalWeight)));
+        int w =
+            i == fields.size() - 1
+                ? remainingW
+                : qMax(32, qRound(double(surface.width()) * double(weight) / double(totalWeight)));
         w = qMin(w, remainingW);
         result.append({fields.at(i), QRect(x, surface.top(), w, surface.height())});
         x += w;
@@ -1649,7 +965,7 @@ QVector<TimePicker::FieldSegment> TimePicker::fieldSegments() const
 
 QRect TimePicker::fieldSurfaceRect() const
 {
-    return QRect(0, 0, width(), qMin(height(), pickerEntryHeight(font())));
+    return QRect(0, 0, width(), qMin(height(), detail::pickerEntryHeight(font())));
 }
 
 QString TimePicker::formatField(TimeField field, const QTime& time) const
@@ -1685,8 +1001,9 @@ QTime TimePicker::shiftedTime(const QTime& time, TimeField field, int offset) co
     switch (field) {
     case TimeField::Hour: {
         if (m_clockIdentifier == ClockIdentifier::TwentyFourHourClock)
-            return QTime(wrappedValue(base.hour() + offset, 0, 23), base.minute());
-        const int nextDisplayHour = wrappedValue(displayHour12(base.hour()) + offset, 1, 12);
+            return QTime(detail::wrappedPickerValue(base.hour() + offset, 0, 23), base.minute());
+        const int nextDisplayHour =
+            detail::wrappedPickerValue(displayHour12(base.hour()) + offset, 1, 12);
         return QTime(hourFromDisplay12(nextDisplayHour, isPm(base)), base.minute());
     }
     case TimeField::Minute: {
@@ -1695,7 +1012,7 @@ QTime TimePicker::shiftedTime(const QTime& time, TimeField field, int offset) co
         int index = values.indexOf(current);
         if (index < 0)
             index = 0;
-        const int nextIndex = wrappedValue(index + offset, 0, values.size() - 1);
+        const int nextIndex = detail::wrappedPickerValue(index + offset, 0, values.size() - 1);
         return QTime(base.hour(), values.at(nextIndex));
     }
     case TimeField::Period:
