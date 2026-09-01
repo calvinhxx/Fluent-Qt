@@ -36,6 +36,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
       - name: Validate C++ CI catalogs
         shell: bash
@@ -43,8 +45,26 @@ jobs:
           python3 .github/scripts/test_validate_ci_cpp_matrix.py
           python3 .github/scripts/validate-package-matrix.py
           python3 .github/scripts/validate-project-metadata.py
+          python3 tools/quality/test_check_cpp_format.py
           python3 tools/quality/validate_component_api.py --project-root . --self-test
           python3 tools/quality/validate_visual_evidence_inventory.py --project-root . --self-test
+
+      - name: Check changed C++ formatting
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed_files="$(
+            git diff --name-only --diff-filter=ACMR "$PR_BASE_SHA...HEAD" --
+          )"
+          if grep -Eiq '\.(c|cc|cpp|cxx|h|hh|hpp|hxx)$' <<< "$changed_files"; then
+            formatter="$(npm exec --yes --package=clang-format@1.8.0 -- which clang-format)"
+            python3 tools/quality/check_cpp_format.py --changed-from "$PR_BASE_SHA" --clang-format "$formatter"
+          else
+            echo "No changed C++ files require formatting checks."
+          fi
 
       - name: Select C++ validation matrix
         id: matrix

@@ -1,0 +1,54 @@
+# FluentQt C++ formatting contract.
+#
+# The repository adopts this contract incrementally: format and check only
+# files changed by the current work. tools/quality/check_cpp_format.py pins the
+# formatter to clang-format 15.0.0 so local and CI output stays deterministic.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+Standard: c++17
+ColumnLimit: 100
+IndentWidth: 4
+ContinuationIndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+AccessModifierOffset: -4
+NamespaceIndentation: None
+IndentCaseLabels: false
+IndentPPDirectives: None
+
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+SortIncludes: Never
+IncludeBlocks: Preserve
+SortUsingDeclarations: false
+ReflowComments: false
+...
