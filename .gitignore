@@ -8,6 +8,14 @@ build/
 __pycache__/
 *.py[cod]
 .venv*/
+.pytest_cache/
+*.egg-info/
+.coverage
+coverage.xml
+htmlcov/
+
+# CMake tooling
+compile_commands.json
 
 # custom user files
 *.user
