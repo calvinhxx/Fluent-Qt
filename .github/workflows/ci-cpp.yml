@@ -7,6 +7,21 @@ on:
         description: Validation tier selected by the CI orchestrator.
         required: true
         type: string
+      cpp_test_scope:
+        description: Pull-request C++ test scope (none, selected, or all).
+        required: false
+        default: none
+        type: string
+      cpp_test_label_regex:
+        description: Trusted CTest label regex selected by the orchestrator.
+        required: false
+        default: ""
+        type: string
+      cpp_test_targets:
+        description: Trusted space-separated CMake test targets selected by the orchestrator.
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -35,6 +50,9 @@ jobs:
         id: matrix
         env:
           VALIDATION_MODE: ${{ inputs.mode }}
+          CPP_TEST_SCOPE: ${{ inputs.cpp_test_scope }}
+          CPP_TEST_LABEL_REGEX: ${{ inputs.cpp_test_label_regex }}
+          CPP_TEST_TARGETS: ${{ inputs.cpp_test_targets }}
         shell: bash
         run: |
           set -euo pipefail
@@ -47,12 +65,56 @@ jobs:
               ;;
           esac
 
+          selected_label_pattern='^\^\([a-z_]+(\|[a-z_]+)*\)\$$'
+          selected_target_pattern='^fluent_qt_[a-z_]+_tests( fluent_qt_[a-z_]+_tests)*$'
+          case "$CPP_TEST_SCOPE" in
+            none)
+              [[ -z "$CPP_TEST_LABEL_REGEX" && -z "$CPP_TEST_TARGETS" ]] || {
+                echo "::error::The none C++ test scope must not provide labels or targets."
+                exit 1
+              }
+              ;;
+            selected)
+              [[ "$CPP_TEST_LABEL_REGEX" =~ $selected_label_pattern &&
+                 "$CPP_TEST_TARGETS" =~ $selected_target_pattern ]] || {
+                echo "::error::Invalid selected C++ test labels or targets."
+                exit 1
+              }
+              ;;
+            all)
+              [[ "$CPP_TEST_LABEL_REGEX" == '^qt$' &&
+                 "$CPP_TEST_TARGETS" == 'fluent_qt_all_tests' ]] || {
+                echo "::error::Invalid all-tests C++ selection."
+                exit 1
+              }
+              ;;
+            *)
+              echo "::error::Unsupported C++ test scope: $CPP_TEST_SCOPE"
+              exit 1
+              ;;
+          esac
+
           matrix="$(
             jq -c \
               --arg mode "$VALIDATION_MODE" \
+              --arg test_scope "$CPP_TEST_SCOPE" \
+              --arg test_label_regex "$CPP_TEST_LABEL_REGEX" \
+              --arg test_targets "$CPP_TEST_TARGETS" \
               '{include: [.scenarios[] |
                 select(.mode == $mode) |
-                del(.mode)]}' \
+                del(.mode) |
+                if $mode == "fast" and
+                   .id == "linux-x64-qt62-fast" and
+                   $test_scope != "none"
+                then
+                  .build_targets = (
+                    if $test_scope == "all" then $test_targets
+                    else .build_targets + " " + $test_targets
+                    end
+                  ) |
+                  .test_labels = "(" + .test_labels + "|" + $test_label_regex + ")"
+                else .
+                end]}' \
               .github/ci-cpp-matrix.json
           )"
           scenario_count="$(jq '.include | length' <<< "$matrix")"
@@ -63,7 +125,7 @@ jobs:
 
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
           echo "mode=$VALIDATION_MODE" >> "$GITHUB_OUTPUT"
-          echo "Selected $scenario_count C++ $VALIDATION_MODE scenarios."
+          echo "Selected $scenario_count C++ $VALIDATION_MODE scenarios (PR tests: $CPP_TEST_SCOPE)."
 
   build:
     name: ${{ matrix.name }}

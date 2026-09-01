@@ -43,6 +43,9 @@ jobs:
       should_build: ${{ steps.changes.outputs.should_build }}
       should_build_pyside: ${{ steps.changes.outputs.should_build_pyside }}
       should_build_wasm: ${{ steps.changes.outputs.should_build_wasm }}
+      cpp_test_scope: ${{ steps.changes.outputs.cpp_test_scope }}
+      cpp_test_label_regex: ${{ steps.changes.outputs.cpp_test_label_regex }}
+      cpp_test_targets: ${{ steps.changes.outputs.cpp_test_targets }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -83,9 +86,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          should_build=true
-          should_build_pyside=true
-          should_build_wasm=true
+          classification=$'should_build=true\nshould_build_pyside=true\nshould_build_wasm=true\ncpp_test_scope=none\ncpp_test_label_regex=\ncpp_test_targets='
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             changed_files_json="$(
               gh api --paginate --slurp \
@@ -101,16 +102,15 @@ jobs:
                 --expected-count "$PR_CHANGED_FILES" \
                 <<< "$changed_files_json"
             )"
-            should_build="$(
-              sed -n 's/^should_build=//p' <<< "$classification"
-            )"
-            should_build_pyside="$(
-              sed -n 's/^should_build_pyside=//p' <<< "$classification"
-            )"
-            should_build_wasm="$(
-              sed -n 's/^should_build_wasm=//p' <<< "$classification"
-            )"
           fi
+
+          output_value() { sed -n "s/^$1=//p" <<< "$classification"; }
+          should_build="$(output_value should_build)"
+          should_build_pyside="$(output_value should_build_pyside)"
+          should_build_wasm="$(output_value should_build_wasm)"
+          cpp_test_scope="$(output_value cpp_test_scope)"
+          cpp_test_label_regex="$(output_value cpp_test_label_regex)"
+          cpp_test_targets="$(output_value cpp_test_targets)"
           for value in "$should_build" "$should_build_pyside" "$should_build_wasm"; do
             [[ "$value" == "true" || "$value" == "false" ]] || {
               echo "::error::Invalid CI change classification value: $value"
@@ -122,24 +122,33 @@ jobs:
             echo "::error::A specialized module cannot run when native validation is skipped."
             exit 1
           fi
-          echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
-          echo "should_build_pyside=$should_build_pyside" >> "$GITHUB_OUTPUT"
-          echo "should_build_wasm=$should_build_wasm" >> "$GITHUB_OUTPUT"
-          if [[ "$should_build" == "true" ]]; then
-            echo "The C++ validation module is required."
-          else
-            echo "Documentation-only pull request: skipping build validation."
-          fi
-          if [[ "$should_build_pyside" == "true" ]]; then
-            echo "The PySide6 validation module is required."
-          else
-            echo "No binding-affecting files changed: skipping PySide6 validation."
-          fi
-          if [[ "$should_build_wasm" == "true" ]]; then
-            echo "The WebAssembly validation module is required."
-          else
-            echo "No browser-affecting files changed: skipping WebAssembly validation."
-          fi
+          label_pattern='^[a-z0-9_^$()|]*$'
+          target_pattern='^[a-z0-9_ ]*$'
+          [[ "$cpp_test_label_regex" =~ $label_pattern &&
+             "$cpp_test_targets" =~ $target_pattern ]] || {
+            echo "::error::Unsafe C++ test selection output."
+            exit 1
+          }
+          case "$cpp_test_scope" in
+            none)
+              [[ -z "$cpp_test_label_regex" && -z "$cpp_test_targets" ]] || exit 1
+              ;;
+            selected)
+              [[ -n "$cpp_test_label_regex" && -n "$cpp_test_targets" &&
+                 "$should_build" == "true" ]] || exit 1
+              ;;
+            all)
+              [[ "$cpp_test_label_regex" == '^qt$' &&
+                 "$cpp_test_targets" == 'fluent_qt_all_tests' &&
+                 "$should_build" == "true" ]] || exit 1
+              ;;
+            *)
+              echo "::error::Invalid C++ test scope: $cpp_test_scope"
+              exit 1
+              ;;
+          esac
+          printf '%s\n' "$classification" >> "$GITHUB_OUTPUT"
+          echo "CI selection: native=$should_build, PySide6=$should_build_pyside, WebAssembly=$should_build_wasm, C++ tests=$cpp_test_scope."
       - name: Select validation tier
         id: mode
         shell: bash
@@ -190,6 +199,9 @@ jobs:
     uses: ./.github/workflows/ci-cpp.yml
     with:
       mode: ${{ needs.plan.outputs.mode }}
+      cpp_test_scope: ${{ needs.plan.outputs.cpp_test_scope }}
+      cpp_test_label_regex: ${{ needs.plan.outputs.cpp_test_label_regex }}
+      cpp_test_targets: ${{ needs.plan.outputs.cpp_test_targets }}
 
   python:
     name: PySide6 validation
